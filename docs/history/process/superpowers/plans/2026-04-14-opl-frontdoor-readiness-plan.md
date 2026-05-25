@@ -1,16 +1,23 @@
-# OPL frontdoor readiness surface Implementation Plan
+# 历史实施计划：OPL frontdoor readiness surface
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+Owner: `One Person Lab`
+Purpose: `historical_superpowers_worker_plan`
+State: `history_only`
+Machine boundary: 本文是早期 worker plan 归档。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、App/operator read model、App repo release surfaces 和真实验证 evidence。
 
-**Goal:** Add one top-level `frontdoor-readiness` surface that truthfully tells operators whether `OPL` is directly usable now, which domain entries are ready, and what to fix next.
+> 历史读法：本文保留 2026-04-14 的旧 `frontdoor-readiness` 任务包。下面的 `Goal`、`Architecture`、`Task`、checkbox、命令和 expected result 不定义当前 product/workbench surface；当前 App/operator drilldown、safe action route 和 product boundary 回到 `docs/product/`、runtime read model、App repo 和核心五件套。`frontdoor` / `opl web` wording 只按历史语境读取。
 
-**Architecture:** Reuse already frozen surfaces instead of inventing a second truth source. The new surface derives from `frontdoor-service-status`, `hosted_runtime_readiness`, `frontdoor-domain-wiring`, `domain-manifests`, and existing domain `product_entry_readiness / preflight / quickstart` companions, then expose it through both CLI and `opl web`.
+> 历史生成说明：本文由早期 Superpowers worker-flow 生成；原文要求 agent 按 sub-skill 和 checkbox 执行。当前只保留为历史 provenance，不再作为执行指令。
 
-**Tech Stack:** TypeScript CLI, Node.js HTTP server, node:test, existing Hermes/file-backed local state integrations
+**历史目标：** Add one top-level `frontdoor-readiness` surface that truthfully tells operators whether `OPL` is directly usable now, which domain entries are ready, and what to fix next.
+
+**历史架构：** Reuse already frozen surfaces instead of inventing a second truth source. The new surface derives from `frontdoor-service-status`, `hosted_runtime_readiness`, `frontdoor-domain-wiring`, `domain-manifests`, and existing domain `product_entry_readiness / preflight / quickstart` companions, then expose it through both CLI and `opl web`.
+
+**历史技术栈：** TypeScript CLI, Node.js HTTP server, node:test, existing Hermes/file-backed local state integrations
 
 ---
 
-### Task 1: Lock the new readiness contract with failing tests
+### 历史步骤 1： Lock the new readiness contract with failing tests
 
 **Files:**
 - Modify: `tests/src/cli.test.ts`
@@ -18,7 +25,7 @@
 - Test: `tests/src/cli.test.ts`
 - Test: `tests/built/cli.test.mjs`
 
-- [ ] **Step 1: Add the new source CLI assertions before touching implementation**
+- 历史项：**Step 1: Add the new source CLI assertions before touching implementation**
 
 ```ts
 const output = await runCliAsync(['frontdoor-readiness'], {
@@ -35,7 +42,7 @@ assert.equal(output.frontdoor_readiness.summary.usable_now_projects_count, 0);
 assert.equal(output.frontdoor_readiness.endpoints.frontdoor_readiness, '/api/frontdoor-readiness');
 ```
 
-- [ ] **Step 2: Extend the bound-manifest fixture test with readiness expectations**
+- 历史项：**Step 2: Extend the bound-manifest fixture test with readiness expectations**
 
 ```ts
 const readinessOutput = await runCliAsync(['frontdoor-readiness'], env);
@@ -46,7 +53,7 @@ assert.equal(readinessOutput.frontdoor_readiness.summary.fully_automatic_project
 assert.equal(readinessOutput.frontdoor_readiness.summary.ready_for_opl_start_count, 3);
 ```
 
-- [ ] **Step 3: Add built CLI and web assertions for discoverability**
+- 历史项：**Step 3: Add built CLI and web assertions for discoverability**
 
 ```js
 assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdoor-readiness'));
@@ -54,13 +61,13 @@ assert.equal(readinessPayload.frontdoor_readiness.surface_id, 'opl_frontdoor_rea
 assert.match(pageHtml, /Frontdoor Readiness/);
 ```
 
-- [ ] **Step 4: Run the focused source tests and confirm RED**
+- 历史项：**Step 4: Run the focused source tests and confirm RED**
 
 Run: `NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/cli.test.ts --test-name-pattern='frontdoor-readiness|domain-manifests resolves real family manifest fixtures|web starts a local front-door pilot and serves dashboard plus ask surfaces|help advertises the local web front-door pilot command surface'`
 
 Expected: FAIL because `frontdoor-readiness` command and API do not exist yet.
 
-### Task 2: Implement the derived readiness surface and expose it through CLI + web
+### 历史步骤 2： Implement the derived readiness surface and expose it through CLI + web
 
 **Files:**
 - Modify: `src/frontdoor-paths.ts`
@@ -69,7 +76,7 @@ Expected: FAIL because `frontdoor-readiness` command and API do not exist yet.
 - Modify: `src/cli.ts`
 - Modify: `src/web-frontdoor.ts`
 
-- [ ] **Step 1: Add the new endpoint and surface builder**
+- 历史项：**Step 1: Add the new endpoint and surface builder**
 
 ```ts
 // src/frontdoor-paths.ts
@@ -86,7 +93,7 @@ export async function buildFrontdoorReadiness(contracts: FrameworkContracts, opt
 }
 ```
 
-- [ ] **Step 2: Register the CLI command and thread the new surface refs into existing hosted-friendly surfaces**
+- 历史项：**Step 2: Register the CLI command and thread the new surface refs into existing hosted-friendly surfaces**
 
 ```ts
 'frontdoor-readiness': {
@@ -96,7 +103,7 @@ export async function buildFrontdoorReadiness(contracts: FrameworkContracts, opt
 },
 ```
 
-- [ ] **Step 3: Add the web API and browser card**
+- 历史项：**Step 3: Add the web API and browser card**
 
 ```ts
 // src/web-frontdoor.ts
@@ -112,13 +119,13 @@ if (method === 'GET' && routedPath === '/api/frontdoor-readiness') {
 fetch(bootstrap.web_frontdoor.api.frontdoor_readiness)
 ```
 
-- [ ] **Step 4: Re-run the focused source tests and confirm GREEN**
+- 历史项：**Step 4: Re-run the focused source tests and confirm GREEN**
 
 Run: `NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/cli.test.ts --test-name-pattern='frontdoor-readiness|domain-manifests resolves real family manifest fixtures|web starts a local front-door pilot and serves dashboard plus ask surfaces|help advertises the local web front-door pilot command surface'`
 
 Expected: PASS.
 
-### Task 3: Sync docs and full verification
+### 历史步骤 3： Sync docs and full verification
 
 **Files:**
 - Modify: `docs/status.md`
@@ -128,14 +135,14 @@ Expected: PASS.
 - Modify: `contracts/opl-framework/README.md`
 - Modify: `contracts/opl-framework/README.zh-CN.md`
 
-- [ ] **Step 1: Update repo-tracked truth surfaces**
+- 历史项：**Step 1: Update repo-tracked truth surfaces**
 
 ```md
 - `opl frontdoor-readiness` 现在把 local service / hosted pilot / domain direct-entry readiness 收成单一 operator-facing truth surface。
 - `opl web` 现在额外暴露 `/api/frontdoor-readiness`，让 browser front desk 与 future hosted shell 不必自己拼接多份状态。
 ```
 
-- [ ] **Step 2: Run the full verification stack**
+- 历史项：**Step 2: Run the full verification stack**
 
 Run: `./scripts/verify.sh full`
 Expected: PASS
@@ -143,7 +150,7 @@ Expected: PASS
 Run: `git diff --check`
 Expected: no output
 
-- [ ] **Step 3: Commit the slice**
+- 历史项：**Step 3: Commit the slice**
 
 ```bash
 git add src/frontdoor-paths.ts src/management/* src/frontdoor-service.ts src/cli.ts src/web-frontdoor.ts tests/src/cli.test.ts tests/built/cli.test.mjs docs/status.md docs/README.md docs/README.md docs/references/opl-frontdoor-delivery-board.md contracts/opl-framework/README.md contracts/opl-framework/README.zh-CN.md docs/history/process/superpowers/plans/2026-04-14-opl-frontdoor-readiness-plan.md

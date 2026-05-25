@@ -1,6 +1,13 @@
 # 2026-04-17 Multica family reuse program 实施计划
 
-## 背景
+Owner: `One Person Lab`
+Purpose: `historical_superpowers_worker_plan`
+State: `history_only`
+Machine boundary: 本文是早期 worker plan 归档。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实验证 evidence。
+
+> 历史读法：本文保留 2026-04-17 的 Multica-inspired shared helper 实施计划。下面的目标、复用矩阵、验证和完成标准只记录当时 shared-boundary lane 的计划形态；当前 shared runtime/domain 边界回到 `docs/specs/shared-runtime-contract.md`、`docs/specs/shared-domain-contract.md`、active gap 和 machine contracts。`Multica` 不作为 OPL runtime、provider、executor 或 direct dependency 读取。
+
+## 历史背景
 
 对本地仓库与历史 `shared-family-modules` lane 的 fresh audit 已经确认四件事：
 
@@ -11,21 +18,21 @@
 
 因此这轮 implementation 不再把“抽第一批共享 helper”当主任务。当前最值钱的做法是先把 `product_entry_quickstart / product_entry_overview / product_entry_readiness` 这组 shared companion helper 收成中央模块，再以这条 tranche 为模板继续扩 `runtime inventory / task lifecycle / skill catalog / automation`。
 
-## 目标
+## 历史目标
 
 1. 继续以 `OPL` 为中央 source-of-truth，先落下 `product_entry_quickstart / product_entry_overview / product_entry_readiness` 这组 family shared companion helper。
 2. 让 `MAS / MAG / RCA` 接入同一套 shared helper，同时保留各自的 domain truth、action graph、gate、route 和 session/runtime 真相。
 3. 更新 `MAS` 的旧 gate 与相关测试，使“family shared modules 的跨仓收口”成为当前 live truth。
 4. 把这条 tranche 作为后续 `runtime inventory / task lifecycle / skill catalog / automation` 的复用模板，并明确它与 `MAS` future monorepo internal module 的边界。
 
-## 非目标
+## 历史非目标
 
 - 不引入 `Multica` 作为直接运行时依赖。
 - 不新开独立 shared repo。
 - 不把 domain-owned durable truth 搬进 `OPL`。
 - 不重做已经 landed 的 `managed_runtime_contract` 抽取。
 
-## 复用优先矩阵
+## 历史复用矩阵
 
 ### OPL：中央共享基座
 
@@ -166,7 +173,7 @@
 2. `OPL domain-manifests / dashboard / handoff-envelope / web frontdoor` 继续消费 domain 产物，不额外发明第二套 truth。
 3. `MAS` future monorepo internal modules 继续留在 MAS 自己的 phase ladder，不跟这一层 family shared companion 混写。
 
-## 并行开发与吸收顺序
+## 历史并行开发与吸收顺序
 
 推荐 worktree：
 
@@ -189,7 +196,7 @@
 3. `MAG` 与 `RCA` shared companion intake
 4. 下一轮 shared boundary tranche
 
-## 验证
+## 历史验证
 
 ### OPL
 
@@ -213,14 +220,14 @@
 - `npm test -- tests/product-entry.test.js`
 - `npm run test:meta`
 
-## 风险
+## 历史风险
 
 - `MAS` 当前有一整串 docs/tests 绑定旧 gate wording；这条 lane 必须把代码、文档、测试一起改，才会形成稳定 live truth。
 - `MAG` 与 `RCA` 已经在 live main 里吃 OPL git pin；新增 shared modules 后，依赖 pin 与 helper export 必须同步更新，避免仓间 helper version 漂移。
 - `OPL` 当前已经把 `domain-manifests / dashboard / handoff-envelope / web frontdoor` 建成统一 consumer；三仓若只接一半 companion 字段，顶层很快会长出 partial truth。
 - 历史 `shared-family-modules` lane 的价值现在主要已经吸收到 live main；这轮继续新开 main-based worktree，能减少和旧 lane 并行重写同一文件的冲突。
 
-## 完成标准
+## 历史完成标准
 
 - `OPL` 已持有四类 shared module 的 machine-readable contract、JS helper、Python helper 与 conformance tests。
 - `MAS` 已经切到 shared helper，并完成 gate/docs/tests 改写。

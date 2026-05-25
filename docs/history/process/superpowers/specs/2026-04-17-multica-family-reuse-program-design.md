@@ -1,6 +1,13 @@
-# Multica family reuse program design
+# 历史设计：Multica family reuse program
 
-## Context
+Owner: `One Person Lab`
+Purpose: `historical_superpowers_worker_spec`
+State: `history_only`
+Machine boundary: 本文是早期 worker spec 归档。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实验证 evidence。
+
+> 历史读法：本文保留 2026-04-17 的 Multica-inspired family reuse 设计草稿。下面的 goals、decision、design 和 validation 只按当时 design provenance 阅读；当前 shared boundary 回到 shared runtime/domain contracts、runtime naming boundary、active gap 和 machine read models。`Multica` 只作外部产品语义学习来源，不是 OPL runtime、provider、executor 或 dependency。
+
+## 历史背景
 
 - `OPL` family 目前已经在四个仓里分别落下了 `product-entry manifest / frontdoor / family_orchestration / progress or runtime watch` 这一层能力，但实现仍然分散在 Python 与 JavaScript 两套代码里。
 - `Multica` 值得吸收的核心不是整个平台依赖，而是它在 `runtime inventory`、`task lifecycle`、`shared skills`、`automation/autopilot`、`agent operations visibility` 这些产品语义上的成熟做法。
@@ -8,7 +15,7 @@
 - 本轮按用户直接授权更新 `MAS` 当前 gate：允许为 family 共享模块进行跨仓收口、跨仓重构与完整复用实现。后续文档、gate 与状态表述需要同步改写到这一新前提。
 - 对本地 `shared-family-modules` 与四仓 live `main` 的 fresh audit 已经确认：`OPL main` 现已持有 `src/managed-runtime-contract.ts` 与 `python/opl-harness-shared/` 这组第一批共享实现；`MAS main`、`MAG main`、`RCA main` 都已经吃到这第一批 helper intake。当前真正还在重复的是第二层 family boundary modules，尤其是三仓各自手写的 `product_entry_quickstart / product_entry_overview / product_entry_readiness` companion payload。当前 program 要直接沿这条已落地基座继续扩，把同功能 companion helper 收成单一 source-of-truth。
 
-## Goals
+## 历史目标
 
 1. 把 `Multica` 中适合 OPL family 的能力吸收到中央共享层，而不是把 `Multica` 直接拉成核心运行时依赖。
 2. 在 `OPL` 建立 family-level 单一 source-of-truth，覆盖共享 schema、共享 corpus、共享 builder 规则、共享 conformance 验证。
@@ -16,7 +23,7 @@
 4. 提高多仓复用率，让今后 family companion、frontdoor companion、runtime/task/skill/automation surface 的新增变化优先改一处、同步三仓。
 5. 保持 `MAS` 未来 monorepo 目标的内部模块边界清晰：family shared modules 只收 family boundary surface，不提前吞掉 `MAS` 自己的 monorepo internal core。
 
-## Non-goals
+## 历史非目标
 
 - 不引入 `Multica` 作为 OPL、MAS、MAG、RCA 的直接产品依赖。
 - 不把 `OPL` 改写成 domain runtime owner。
@@ -24,7 +31,7 @@
 - 不在本轮引入新的 hosted runtime owner 叙事，`Hermes-Agent` 的定位继续保持为外部 runtime substrate。
 - 不把 `MAS` 的 `controller_charter / runtime / eval_hygiene` 一类未来 monorepo internal module 提前抽成 family shared core。
 
-## Decision
+## 历史取舍
 
 ### 方案 A：继续按仓分别吸收，再靠文档和 schema 保持一致
 
@@ -44,7 +51,7 @@
 
 结论：采用方案 C。
 
-## Design
+## 历史设计
 
 ### 0. 先吸收已落地的 shared-family-modules 成果，再做增量扩展
 
@@ -234,7 +241,7 @@
 - `product-entry manifest` 的 `quickstart / overview / readiness` 改为直接复用 `opl-framework-shared/product-entry-companions`
 - conformance tests
 
-## Validation
+## 历史验证
 
 - `OPL`：`npm run build`、`npm test`、`npm run test:meta`、`pytest python/opl-harness-shared/tests -q`
 - `MAS`：`pytest tests/test_product_entry.py tests/test_mainline_status.py tests/test_runtime_contract_docs.py -q`、`scripts/verify.sh meta`、`scripts/verify.sh`
@@ -242,12 +249,12 @@
 - `RCA`：`npm test`、`npm run test:meta`、`scripts/verify.sh`
 - 四仓都要有 conformance coverage，证明共享模块 shape、映射与 consumer projection 对齐
 
-## Risks
+## 历史风险
 
 - 共享层如果只收 schema 不收 builder/validator，三仓很快会继续漂移。
 - 共享层如果越权承接 domain truth，会破坏 family owner split。
 - 四仓同时推进时，若没有统一的 fixture corpus 与 conformance tests，很容易出现“字段同名、语义不同”的隐性分叉。
 
-## Recommendation
+## 历史建议
 
 这轮应直接踩在当前已吸收到 `main` 的 shared helper 基座上继续做第二条 family boundary 收口：先把三仓同型的 `product_entry_quickstart / overview / readiness` 抽成中央共享 helper，再继续往 runtime/task/skill/automation 扩。这样最符合“同功能模块尽量复用”和“MAS 长线走 monorepo 但 family boundary 继续单源维护”这两个目标。

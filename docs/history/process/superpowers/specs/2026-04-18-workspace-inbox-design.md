@@ -1,12 +1,19 @@
-# OPL Workspace Inbox design
+# 历史设计：OPL Workspace Inbox
 
-## Context
+Owner: `One Person Lab`
+Purpose: `historical_superpowers_worker_spec`
+State: `history_only`
+Machine boundary: 本文是早期 worker spec 归档。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、App/operator read model、App repo release surfaces 和真实验证 evidence。
+
+> 历史读法：本文保留 2026-04-18 的旧 `opl web` Workspace Inbox 设计草稿。下面的 goal、technical route、design、validation 和 conclusion 只按历史 product/workbench idea 阅读；当前 App/workbench owner 回到 `docs/product/`、One Person Lab App repo、App/operator drilldown 和 core docs。`frontdoor` / `opl web` wording 不定义当前 active product entry。
+
+## 历史背景
 
 - `opl web` 已经完成第一版 `workspace-first` 首页，当前有 `Current Task`、`Progress Feed` 和 `Files & Deliverables`。
 - 用户还缺一层更自然的任务视图：进入某个 workspace 后，想直接知道一共有多少任务、谁正在跑、谁在等待、谁已经形成交付。
 - 这层视图必须继续沿用现有 truth surface，尤其是 `workspace_cockpit` 的 `studies` 队列、domain manifest 的 `task_lifecycle`、`session_ledger` 和 `project_progress`，不发明第二套 runtime 状态系统。
 
-## Goal
+## 历史目标
 
 这次 slice 只做四件事：
 
@@ -15,14 +22,14 @@
 3. 在 `opl web` 首页主栏新增 `Workspace Inbox`，让用户一眼看懂运行中、等待中和已交付任务。
 4. 保持当前 `Progress Feed`、`Files & Deliverables` 和 operator surfaces 的结构不回退。
 
-## Non-goals
+## 历史非目标
 
 - 不引入新的前端框架、组件库或状态管理层。
 - 不重写 `opl web` 的整体布局。
 - 不改 Hermes runtime、domain repo runtime 或 task 执行协议。
 - 不把 task board 做成可交互调度器；当前只做 honest summary，不做控制面。
 
-## Technical route
+## 历史技术路线
 
 技术路线是 `contract-first + server-side aggregation + thin frontdoor rendering`：
 
@@ -36,7 +43,7 @@
 3. `workspace_inbox` 在 server 侧统一组装成用户态卡片，前端只做薄渲染。
 4. 卡片分组只输出 `running / waiting / ready / delivered` 四类，文案继续使用人话字段，不直接暴露机器字段。
 
-## Design
+## 历史设计
 
 ### 1. `workspace_inbox` surface
 
@@ -106,7 +113,7 @@
 
 `Workspace Inbox` 顶部先显示 summary chips，再按 section 展示卡片。
 
-## Validation
+## 历史验证
 
 - source tests 覆盖 `workspace_inbox` payload 结构和关键分组
 - web tests 覆盖 `Workspace Inbox` 页面文案和 section 呈现
@@ -114,7 +121,7 @@
 - `npm test`
 - `./scripts/verify.sh typecheck`
 
-## Risks
+## 历史风险
 
 - 当前 repo 对“任务”最强的真实面仍然是 `MAS study queue`，其他项目更多依赖 `task_lifecycle` 和 session 信息，所以 `Workspace Inbox` 的丰富度会随项目类型不同。
 - 这次 slice 会坚持 honest summary：只展示当前真能读到的任务，不伪造完整 task graph。

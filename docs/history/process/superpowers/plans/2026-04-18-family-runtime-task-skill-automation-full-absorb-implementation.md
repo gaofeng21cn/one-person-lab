@@ -1,16 +1,23 @@
-# Family Runtime/Task/Skill/Automation Full Absorb Implementation Plan
+# 历史实施计划：Family Runtime/Task/Skill/Automation Full Absorb
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+Owner: `One Person Lab`
+Purpose: `historical_superpowers_worker_plan`
+State: `history_only`
+Machine boundary: 本文是早期 worker plan 归档。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实验证 evidence。
 
-**Goal:** Centralize family orchestration, runtime/task descriptors, skill catalog, and automation descriptors in `OPL`, then migrate `MAS / MAG / RCA` to thin adapters that consume the same shared modules.
+> 历史读法：本文保留 2026-04-18 的 family runtime/task/skill/automation absorb 任务包。下面的 `Goal`、`Architecture`、file map、task list 和 verification 只按当时 implementation plan 阅读；当前 generated/hosted surface、standard domain pack、private-platform retirement 和 production-evidence tail 回到 active gap、runtime boundary、shared contracts 和 current read models。
 
-**Architecture:** `OPL` owns JS/Python shared builders, validators, and top-level consumer normalization. `MAS / MAG / RCA` keep domain truth extraction and domain-specific wording, then map that truth into the shared family surfaces through repo-local adapters. `MAS` keeps `MedDeepScientist`-dependent runtime internals local while aligning its outward family surfaces with the other repos.
+> 历史生成说明：本文由早期 Superpowers worker-flow 生成；原文要求 agent 按 sub-skill 和 checkbox 执行。当前只保留为历史 provenance，不再作为执行指令。
 
-**Tech Stack:** TypeScript, Node.js test runner, Python, pytest, git worktrees, existing OPL shared package exports
+**历史目标：** Centralize family orchestration, runtime/task descriptors, skill catalog, and automation descriptors in `OPL`, then migrate `MAS / MAG / RCA` to thin adapters that consume the same shared modules.
+
+**历史架构：** `OPL` owns JS/Python shared builders, validators, and top-level consumer normalization. `MAS / MAG / RCA` keep domain truth extraction and domain-specific wording, then map that truth into the shared family surfaces through repo-local adapters. `MAS` keeps `MedDeepScientist`-dependent runtime internals local while aligning its outward family surfaces with the other repos.
+
+**历史技术栈：** TypeScript, Node.js test runner, Python, pytest, git worktrees, existing OPL shared package exports
 
 ---
 
-## File Map
+## 历史文件图
 
 ### OPL shared layer
 
@@ -82,7 +89,7 @@
 
 ---
 
-### Task 1: Freeze OPL shared family-orchestration core
+### 历史步骤 1： Freeze OPL shared family-orchestration core
 
 **Files:**
 - Create: `src/family-orchestration.ts`
@@ -91,7 +98,7 @@
 - Test: `tests/src/family-orchestration.test.ts`
 - Test: `python/opl-harness-shared/tests/test_family_orchestration.py`
 
-- [ ] **Step 1: Write the failing JS tests for shared family-orchestration builder**
+- 历史项：**Step 1: Write the failing JS tests for shared family-orchestration builder**
 
 Create `tests/src/family-orchestration.test.ts` with coverage for:
 
@@ -143,13 +150,13 @@ test('buildFamilyOrchestrationCompanion materializes event envelope and checkpoi
 });
 ```
 
-- [ ] **Step 2: Run JS tests to verify they fail**
+- 历史项：**Step 2: Run JS tests to verify they fail**
 
 Run: `NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/family-orchestration.test.ts`
 
 Expected: FAIL because `src/family-orchestration.ts` does not exist yet.
 
-- [ ] **Step 3: Write the minimal JS implementation**
+- 历史项：**Step 3: Write the minimal JS implementation**
 
 Implement `src/family-orchestration.ts` by extracting the currently repeated family-orchestration core semantics:
 
@@ -162,7 +169,7 @@ Implement `src/family-orchestration.ts` by extracting the currently repeated fam
 
 Keep graph nodes, route ids, and domain wording outside this file.
 
-- [ ] **Step 4: Write the failing Python tests**
+- 历史项：**Step 4: Write the failing Python tests**
 
 Create `python/opl-harness-shared/tests/test_family_orchestration.py` with equivalent coverage:
 
@@ -207,17 +214,17 @@ def test_build_family_orchestration_companion_materializes_event_and_lineage() -
     assert payload["event_envelope"]["session"]["active_run_id"] == "run-1"
 ```
 
-- [ ] **Step 5: Run Python tests to verify they fail**
+- 历史项：**Step 5: Run Python tests to verify they fail**
 
 Run: `PYTHONPATH=python/opl-harness-shared/src uv run --directory python/opl-harness-shared pytest tests/test_family_orchestration.py -q`
 
 Expected: FAIL because the new module is not exported yet.
 
-- [ ] **Step 6: Write the minimal Python implementation and export it**
+- 历史项：**Step 6: Write the minimal Python implementation and export it**
 
 Implement `family_orchestration.py` with the same normalized behavior as the JS module and export it from `__init__.py`.
 
-- [ ] **Step 7: Run focused JS and Python tests to verify they pass**
+- 历史项：**Step 7: Run focused JS and Python tests to verify they pass**
 
 Run:
 
@@ -226,7 +233,7 @@ Run:
 
 Expected: PASS
 
-- [ ] **Step 8: Commit**
+- 历史项：**Step 8: Commit**
 
 ```bash
 git add \
@@ -238,7 +245,7 @@ git add \
 git commit -m "feat: add shared family orchestration helpers"
 ```
 
-### Task 2: Freeze OPL shared runtime/task, skill, and automation descriptors
+### 历史步骤 2： Freeze OPL shared runtime/task, skill, and automation descriptors
 
 **Files:**
 - Create: `src/runtime-task-companions.ts`
@@ -255,7 +262,7 @@ git commit -m "feat: add shared family orchestration helpers"
 - Test: `python/opl-harness-shared/tests/test_skill_catalog.py`
 - Test: `python/opl-harness-shared/tests/test_automation_companions.py`
 
-- [ ] **Step 1: Write failing JS tests for runtime/task descriptors**
+- 历史项：**Step 1: Write failing JS tests for runtime/task descriptors**
 
 Cover normalized builders for:
 
@@ -266,20 +273,20 @@ Cover normalized builders for:
 
 Use one MAS-like sample, one MAG-like sample, and one RCA-like sample in the tests.
 
-- [ ] **Step 2: Verify the runtime/task tests fail**
+- 历史项：**Step 2: Verify the runtime/task tests fail**
 
 Run: `NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/runtime-task-companions.test.ts`
 
 Expected: FAIL because the new module does not exist.
 
-- [ ] **Step 3: Implement minimal JS runtime/task builders**
+- 历史项：**Step 3: Implement minimal JS runtime/task builders**
 
 Keep them generic and fail-closed:
 
 - required ids, status, summary, surface refs
 - optional domain-specific payload nested under `domain_projection`
 
-- [ ] **Step 4: Write failing JS tests for skill catalog and automation descriptors**
+- 历史项：**Step 4: Write failing JS tests for skill catalog and automation descriptors**
 
 Cover:
 
@@ -294,7 +301,7 @@ Use current repo data patterns:
 - MAG `supported_commands / command_contracts / automation_scope`
 - RCA frontdoor/operator commands and autopilot continuation metadata
 
-- [ ] **Step 5: Verify the skill and automation tests fail**
+- 历史项：**Step 5: Verify the skill and automation tests fail**
 
 Run:
 
@@ -303,7 +310,7 @@ Run:
 
 Expected: FAIL
 
-- [ ] **Step 6: Implement minimal JS skill and automation builders**
+- 历史项：**Step 6: Implement minimal JS skill and automation builders**
 
 Require canonical shared fields:
 
@@ -314,11 +321,11 @@ Require canonical shared fields:
 - distribution mode
 - readiness or gate policy
 
-- [ ] **Step 7: Write failing Python equivalents**
+- 历史项：**Step 7: Write failing Python equivalents**
 
 Create matching pytest files for runtime/task, skill catalog, and automation helpers.
 
-- [ ] **Step 8: Verify the Python tests fail**
+- 历史项：**Step 8: Verify the Python tests fail**
 
 Run:
 
@@ -328,11 +335,11 @@ Run:
 
 Expected: FAIL
 
-- [ ] **Step 9: Implement the Python modules and export them**
+- 历史项：**Step 9: Implement the Python modules and export them**
 
 Mirror the JS contract names and fail-closed rules.
 
-- [ ] **Step 10: Run all new shared helper tests**
+- 历史项：**Step 10: Run all new shared helper tests**
 
 Run:
 
@@ -341,7 +348,7 @@ Run:
 
 Expected: PASS
 
-- [ ] **Step 11: Commit**
+- 历史项：**Step 11: Commit**
 
 ```bash
 git add \
@@ -361,7 +368,7 @@ git add \
 git commit -m "feat: add shared runtime task skill and automation helpers"
 ```
 
-### Task 3: Upgrade OPL top-level consumers to normalize and expose the new shared surfaces
+### 历史步骤 3： Upgrade OPL top-level consumers to normalize and expose the new shared surfaces
 
 **Files:**
 - Modify: `src/domain-manifest.ts`
@@ -371,7 +378,7 @@ git commit -m "feat: add shared runtime task skill and automation helpers"
 - Modify: `src/web-frontdoor.ts`
 - Test: focused consumer tests already covering manifests, handoff, management, and web startup payloads
 
-- [ ] **Step 1: Add failing OPL consumer tests for new normalized surfaces**
+- 历史项：**Step 1: Add failing OPL consumer tests for new normalized surfaces**
 
 Update existing tests to assert that normalized manifests and downstream bundles now include:
 
@@ -380,21 +387,21 @@ Update existing tests to assert that normalized manifests and downstream bundles
 - `skill_catalog`
 - `automation`
 
-- [ ] **Step 2: Run the focused consumer tests to verify they fail**
+- 历史项：**Step 2: Run the focused consumer tests to verify they fail**
 
 Run the smallest relevant existing test commands for domain manifest, handoff bundle, management, and web frontdoor payloads.
 
 Expected: FAIL because the new surfaces are not normalized yet.
 
-- [ ] **Step 3: Implement the normalization changes**
+- 历史项：**Step 3: Implement the normalization changes**
 
 Use the new shared helper contracts to normalize the four surfaces in `domain-manifest.ts`, then thread them through handoff, management, product-entry, and web frontdoor.
 
-- [ ] **Step 4: Re-run the focused consumer tests**
+- 历史项：**Step 4: Re-run the focused consumer tests**
 
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- 历史项：**Step 5: Commit**
 
 ```bash
 git add \
@@ -407,7 +414,7 @@ git add \
 git commit -m "feat: expose shared runtime task skill and automation surfaces"
 ```
 
-### Task 4: Migrate MAS to shared family boundary modules while preserving the MAS monorepo seam
+### 历史步骤 4： Migrate MAS to shared family boundary modules while preserving the MAS monorepo seam
 
 **Files:**
 - Modify: `src/med_autoscience/controllers/study_runtime_family_orchestration.py`
@@ -420,14 +427,14 @@ git commit -m "feat: expose shared runtime task skill and automation surfaces"
 - Modify: `uv.lock`
 - Test: focused MAS tests
 
-- [ ] **Step 1: Write or update failing MAS tests for the new family surfaces**
+- 历史项：**Step 1: Write or update failing MAS tests for the new family surfaces**
 
 Cover:
 
 - manifest exposes shared `family_orchestration / runtime_inventory / task_lifecycle / skill_catalog / automation`
 - runtime watch and runtime decision still produce the same domain truth, but now project through shared helpers
 
-- [ ] **Step 2: Run focused MAS tests to verify they fail**
+- 历史项：**Step 2: Run focused MAS tests to verify they fail**
 
 Run:
 
@@ -436,7 +443,7 @@ Run:
 
 Expected: FAIL on missing new surfaces or old builder assumptions.
 
-- [ ] **Step 3: Implement the MAS adapters**
+- 历史项：**Step 3: Implement the MAS adapters**
 
 Rules:
 
@@ -446,11 +453,11 @@ Rules:
 - use shared automation descriptors for automation-ready summary and runtime supervision readiness
 - keep MDS-dependent runtime extraction local
 
-- [ ] **Step 4: Run focused MAS tests to verify they pass**
+- 历史项：**Step 4: Run focused MAS tests to verify they pass**
 
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- 历史项：**Step 5: Commit**
 
 ```bash
 git add \
@@ -466,7 +473,7 @@ git add \
 git commit -m "refactor: align mas family surfaces with shared modules"
 ```
 
-### Task 5: Migrate MAG to shared family boundary modules
+### 历史步骤 5： Migrate MAG to shared family boundary modules
 
 **Files:**
 - Modify: `src/med_autogrant/product_entry.py`
@@ -478,7 +485,7 @@ git commit -m "refactor: align mas family surfaces with shared modules"
 - Modify: `uv.lock`
 - Test: focused MAG tests
 
-- [ ] **Step 1: Write or update failing MAG tests for the new family surfaces**
+- 历史项：**Step 1: Write or update failing MAG tests for the new family surfaces**
 
 Assert manifest and related projections expose:
 
@@ -487,13 +494,13 @@ Assert manifest and related projections expose:
 - shared skill catalog
 - shared automation descriptor
 
-- [ ] **Step 2: Run focused MAG tests to verify they fail**
+- 历史项：**Step 2: Run focused MAG tests to verify they fail**
 
 Run the smallest product-entry, route report, hosted bundle, and submission readiness tests that exercise those surfaces.
 
 Expected: FAIL
 
-- [ ] **Step 3: Implement the MAG adapters**
+- 历史项：**Step 3: Implement the MAG adapters**
 
 Map:
 
@@ -501,11 +508,11 @@ Map:
 - domain entry command contracts -> shared skill catalog
 - automation scope and route-driven readiness -> shared automation
 
-- [ ] **Step 4: Run focused MAG tests to verify they pass**
+- 历史项：**Step 4: Run focused MAG tests to verify they pass**
 
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- 历史项：**Step 5: Commit**
 
 ```bash
 git add \
@@ -520,7 +527,7 @@ git add \
 git commit -m "refactor: align mag family surfaces with shared modules"
 ```
 
-### Task 6: Migrate RCA to shared family boundary modules
+### 历史步骤 6： Migrate RCA to shared family boundary modules
 
 **Files:**
 - Modify: `packages/redcube-gateway/src/actions/family-orchestration-companion.js`
@@ -531,7 +538,7 @@ git commit -m "refactor: align mag family surfaces with shared modules"
 - Modify: `package-lock.json`
 - Test: focused RCA tests
 
-- [ ] **Step 1: Write or update failing RCA tests for the new family surfaces**
+- 历史项：**Step 1: Write or update failing RCA tests for the new family surfaces**
 
 Assert manifest and session outputs expose:
 
@@ -540,7 +547,7 @@ Assert manifest and session outputs expose:
 - shared skill catalog
 - shared automation descriptor
 
-- [ ] **Step 2: Run focused RCA tests to verify they fail**
+- 历史项：**Step 2: Run focused RCA tests to verify they fail**
 
 Run:
 
@@ -549,7 +556,7 @@ Run:
 
 Expected: FAIL
 
-- [ ] **Step 3: Implement the RCA adapters**
+- 历史项：**Step 3: Implement the RCA adapters**
 
 Map:
 
@@ -557,11 +564,11 @@ Map:
 - product/frontdoor command surfaces -> shared skill catalog
 - autopilot continuation board and governance truth -> shared automation descriptor
 
-- [ ] **Step 4: Run focused RCA tests to verify they pass**
+- 历史项：**Step 4: Run focused RCA tests to verify they pass**
 
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- 历史项：**Step 5: Commit**
 
 ```bash
 git add \
@@ -575,21 +582,21 @@ git add \
 git commit -m "refactor: align rca family surfaces with shared modules"
 ```
 
-### Task 7: Sync docs/status truth and perform cross-repo verification + absorb
+### 历史步骤 7： Sync docs/status truth and perform cross-repo verification + absorb
 
 **Files:**
 - Modify: `docs/status.md` in OPL, MAS, MAG, RCA
 - Modify: any affected repo docs that describe live shared boundary truth
 
-- [ ] **Step 1: Update docs/status truth**
+- 历史项：**Step 1: Update docs/status truth**
 
 Make each repo state clearly that `family_orchestration / runtime_inventory / task_lifecycle / skill_catalog / automation` shared boundary modules are now centrally owned by `OPL`.
 
-- [ ] **Step 2: Run fresh focused verification in all four worktrees**
+- 历史项：**Step 2: Run fresh focused verification in all four worktrees**
 
 Use the focused commands proven during implementation, plus repo-specific meta lanes where docs or contracts changed.
 
-- [ ] **Step 3: Fast-forward absorb to each root `main`**
+- 历史项：**Step 3: Fast-forward absorb to each root `main`**
 
 Run, in order:
 
@@ -598,11 +605,11 @@ Run, in order:
 - MAG root `git merge --ff-only codex/family-runtime-task-skill-automation`
 - RCA root `git merge --ff-only codex/family-runtime-task-skill-automation`
 
-- [ ] **Step 4: Push all four `main` branches**
+- 历史项：**Step 4: Push all four `main` branches**
 
 Run: `git push origin main` in each root checkout.
 
-- [ ] **Step 5: Clean up worktrees and branches**
+- 历史项：**Step 5: Clean up worktrees and branches**
 
 Run:
 
@@ -611,7 +618,7 @@ git worktree remove <path>
 git branch -d codex/family-runtime-task-skill-automation
 ```
 
-- [ ] **Step 6: Final status check**
+- 历史项：**Step 6: Final status check**
 
 Run in each repo:
 
@@ -622,7 +629,7 @@ git worktree list
 
 Expected: root `main...origin/main`, no residue from this lane.
 
-## Self-Review
+## 历史自检
 
 - Spec coverage: this plan covers the shared central modules, OPL consumer upgrades, MAS monorepo-compatible adapter seam, MAG adapter seam, RCA adapter seam, docs sync, verification, absorb, push, and cleanup.
 - Placeholder scan: command placeholders remain only where the exact existing focused test file depends on current repo test names and must be filled from live repo context during execution. Before claiming completion, replace every `<focused-...>` placeholder with the actual file paths used in this rollout.

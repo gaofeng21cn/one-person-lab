@@ -1,22 +1,29 @@
-# medautoscience action_graph coverage Implementation Plan
+# 历史实施计划：medautoscience action_graph coverage
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+Owner: `One Person Lab`
+Purpose: `historical_superpowers_worker_plan`
+State: `history_only`
+Machine boundary: 本文是早期 worker plan 归档。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned MAS surfaces 和真实验证 evidence。
 
-**Goal:** Ensure the medautoscience manifest/dashboard/handoff consumers expose the MAS family action graph reference, id, and node/edge counts so regressions are caught in the CLI tests.
+> 历史读法：本文保留 2026-04-13 的 MAS action graph consumer coverage 任务包。下面的 `Goal`、`Architecture`、`Task`、checkbox、命令和 expected result 只按当时计划阅读；当前 action/stage/domain projection 边界回到核心五件套、active gap、MAS owner surfaces 和 OPL read models，不作为当前 implementation queue 或 readiness evidence。
 
-**Architecture:** Extend the existing CLI fixtures-based tests to assert the MAS action graph payload at every consumption point (domain manifests, dashboard recommended surfaces, and handoff bundles) by referencing the fixture in `tests/src/cli.test.ts`.
+> 历史生成说明：本文由早期 Superpowers worker-flow 生成；原文要求 agent 按 sub-skill 和 checkbox 执行。当前只保留为历史 provenance，不再作为执行指令。
 
-**Tech Stack:** Node 20+ test runner (`node --test`), TypeScript CLI sources under `src/`, CLI fixture JSON files.
+**历史目标：** Ensure the medautoscience manifest/dashboard/handoff consumers expose the MAS family action graph reference, id, and node/edge counts so regressions are caught in the CLI tests.
+
+**历史架构：** Extend the existing CLI fixtures-based tests to assert the MAS action graph payload at every consumption point (domain manifests, dashboard recommended surfaces, and handoff bundles) by referencing the fixture in `tests/src/cli.test.ts`.
+
+**历史技术栈：** Node 20+ test runner (`node --test`), TypeScript CLI sources under `src/`, CLI fixture JSON files.
 
 ---
 
-### Task 1: Increase CLI test coverage for MAS action graph fields
+### 历史步骤 1： Increase CLI test coverage for MAS action graph fields
 
 **Files:**
 - Modify: `tests/src/cli.test.ts`
 - Test: `tests/src/cli.test.ts`
 
-- [ ] **Step 1: Write the failing assertions for the domain-manifests test**
+- 历史项：**Step 1: Write the failing assertions for the domain-manifests test**
 
 ```ts
 assert.equal(
@@ -37,7 +44,7 @@ assert.equal(
 );
 ```
 
-- [ ] **Step 2: Run the domain CLI test suite to capture the new failure**
+- 历史项：**Step 2: Run the domain CLI test suite to capture the new failure**
 
 ```
 npm run test:fast
@@ -96,7 +103,7 @@ test('handoff-envelope routes a manuscript request to medautoscience and exposes
 > Notes: `fixtures` (from `loadFamilyManifestFixtures()` near the domain-manifest test) supplies the MAS manifest fixture, and `repoRoot`/`buildManifestCommand` helpers already exist earlier in the file.
 ```
 
-- [ ] **Step 4: Re-run `npm run test:fast` to confirm all assertions now pass**
+- 历史项：**Step 4: Re-run `npm run test:fast` to confirm all assertions now pass**
 
 ```
 npm run test:fast
@@ -104,7 +111,7 @@ npm run test:fast
 
 Expected: PASS; the CLI outputs already include the MAS action graph fields, so the new assertions succeed.
 
-- [ ] **Step 5: Commit the tests**
+- 历史项：**Step 5: Commit the tests**
 
 ```bash
 git add tests/src/cli.test.ts

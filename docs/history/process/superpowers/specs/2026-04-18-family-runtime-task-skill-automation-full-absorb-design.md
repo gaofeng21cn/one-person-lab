@@ -1,13 +1,20 @@
-# Family Runtime/Task/Skill/Automation Full Absorb Design
+# 历史设计：Family Runtime/Task/Skill/Automation Full Absorb
 
-## Context
+Owner: `One Person Lab`
+Purpose: `historical_superpowers_worker_spec`
+State: `history_only`
+Machine boundary: 本文是早期 worker spec 归档。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实验证 evidence。
+
+> 历史读法：本文保留 2026-04-18 的 family runtime/task/skill/automation absorb 设计草稿。下面的 goals、decision、module list、consumer upgrades 和 validation 只按历史 shared-boundary design 阅读；当前 generated/hosted surface、domain pack、runtime/provider/executor 与 production evidence 边界回到 active gap、shared contracts、runtime boundary 和 machine read models。
+
+## 历史背景
 
 - `OPL` 当前已经是 family shared boundary modules 的中央 owner。live `main` 已持有 `managed-runtime-contract`、`hermes_supervision`、`product-entry-companions` 这三批共享 helper，并已被 `MAS / MAG / RCA` 消费。
 - 三个 domain repo 当前仍保留四类明显的重复 boundary logic：`family_orchestration` core builder、runtime/task descriptor projection、skill catalog projection、automation/autopilot projection。
 - 用户这轮要求按全量版推进，目标是把 family-shared modules 尽量一步到位吸收到中央层，减少今后跨仓修 bug 和重复维护成本。
 - `MAS` 当前仍与 `MedDeepScientist` 有更深的 runtime 依赖和研究域差异，但长期目标依然是 `MAS` 自己向 monorepo 演化；因此这轮设计需要把 family shared boundary 和 MAS internal monorepo seam 明确分层。
 
-## Goals
+## 历史目标
 
 1. 继续以 `OPL` 为 family shared boundary modules 的唯一中央 owner。
 2. 把 `family_orchestration`、`runtime inventory / task lifecycle descriptor`、`skill catalog descriptor`、`automation descriptor` 四类共享模块集中进 `OPL` 的 JS/Python shared helper。
@@ -15,7 +22,7 @@
 4. 让 `OPL` 顶层 consumer 同步读取并暴露这四类 shared surface，避免顶层再长出 repo-local partial truth。
 5. 让 `MAS` 即使未来走 monorepo，也继续通过同一套 family boundary modules 对外暴露 shared surface。
 
-## Non-goals
+## 历史非目标
 
 - 不引入 `Multica` 作为运行时或开发依赖。
 - 不新建独立 shared repo。
@@ -23,7 +30,7 @@
 - 不让 `OPL` 升格成 domain runtime owner。
 - 不把 `MAS` 未来的 monorepo internal modules 直接抽成 family shared core。
 
-## Decision
+## 历史取舍
 
 采用 `OPL central shared modules + thin repo adapters + four-repo immediate absorb-back-to-main`。
 
@@ -33,7 +40,7 @@
 - 三个业务仓已经能消费 OPL git pin，继续向同一 source-of-truth 收拢最稳。
 - `MAS` 可以把 monorepo internal core 与 family shared outer contract 分开，长期演化空间最大。
 
-## Shared Ownership Boundary
+## 历史共享 owner 边界
 
 ### OPL centrally owns
 
@@ -56,7 +63,7 @@
 - `MAS` inward runtime implementation 可以继续保留 `MedDeepScientist` 依赖、study runtime、controller、eval hygiene 等 monorepo internal concerns。
 - 这轮只抽 outward family boundary seam，不抽 MAS inward research core。
 
-## Central Modules To Add
+## 历史新增模块清单
 
 ### 1. Family orchestration core
 
@@ -159,7 +166,7 @@ Python 侧新增：
 
 - `python/opl-harness-shared/src/opl_harness_shared/automation_companions.py`
 
-## Consumer Upgrades
+## 历史 consumer upgrade 清单
 
 ### OPL
 
@@ -233,7 +240,7 @@ MAS 的目标状态：
 - deliverable/review/publication wording
 - visual-domain runtime/session specifics
 
-## Cross-language Strategy
+## 历史跨语言策略
 
 - 所有 shared boundary modules 都在 `OPL` 同时维护 JS + Python 实现。
 - contract 名称、字段名、fail-closed rule、fixture corpus 由 `OPL` 单点冻结。
@@ -241,7 +248,7 @@ MAS 的目标状态：
 - JS consumer 统一走 `opl-framework-shared` export。
 - 新增 shared module 必须同步有 JS/Python tests，避免一边领先一边漂移。
 
-## Repo Surfaces To Land In This Tranche
+## 历史 tranche 文件面
 
 这轮落地后，三个业务仓的 `product_entry_manifest` 或同等级 family surface 至少应统一新增并导出：
 
@@ -253,7 +260,7 @@ MAS 的目标状态：
 
 `OPL` 顶层 consumer 应能统一读取并展示这些 surface。
 
-## Worktree Strategy
+## 历史 worktree 策略
 
 统一使用新开的四个 worktree：
 
@@ -271,7 +278,7 @@ MAS 的目标状态：
 5. push
 6. 清理 worktree 和 feature branch
 
-## Validation
+## 历史验证
 
 ### OPL
 
@@ -294,12 +301,12 @@ MAS 的目标状态：
 - focused `product-entry / product-entry-session / mcp-gateway` tests
 - related meta verification
 
-## Risks
+## 历史风险
 
 - 若这轮把 domain truth 一起抽进 `OPL`，会破坏长期 owner split。
 - 若只抽 helper，不同步改 OPL 顶层 consumer，顶层会继续长 partial truth。
 - 若 MAS outward seam 继续跟 `MDS` inward detail 混写，未来 monorepo 与 family shared layer 仍会互相拖拽。
 
-## Recommendation
+## 历史建议
 
 这轮全量版要一次性把 `family_orchestration + runtime/task descriptors + skill catalog + automation descriptors` 都收进 `OPL`，并让 `MAS / MAG / RCA` 改成薄 adapter。这样后续跨仓 bug 会优先在中央 shared layer 修一次，三个 domain 仓只需要同步 pin 和少量 adapter，最符合“共享模块尽量复用”和“MAS 长线走 monorepo 但 family boundary 继续单源维护”的目标。
