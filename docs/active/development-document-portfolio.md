@@ -204,6 +204,47 @@ Next tranche write scope:
 - Continue whole-docs portfolio audit in one remaining repo at a time, preferably a repo whose main checkout is clean and whose active worktrees are either absent or outside docs scope.
 - For each chosen repo, inventory all `README*` and `docs/**/*.md`, compare active claims to source/contracts/tests/CLI read-model truth, then update this ledger with reviewed docs, edited docs, archive/tombstone/delete actions, unreviewed docs, stale/retire candidates and next prompt scope.
 
+Date: `2026-05-25 16:11 CST`
+Tranche: `strict-source-purity-implementation-cutover`
+State: `tranche_verified`
+
+本轮按 strict OPL standard-agent 口径推进 MAS、MAG、RCA 与 OMA 的源码/合同/测试落地，并吸收回各自 `main`。边界是：保留 domain pack、machine-readable contracts、minimal authority functions、domain handler target、refs-only owner/typed-blocker/receipt materialization 与必要 native/helper；不把 repo-local generic control plane、wrapper、compat alias、run store、workbench/status/product shell 写成长期标准智能体组成。
+
+Fresh live truth inputs:
+
+- OPL `opl agents conformance --family-defaults --json`
+- OPL `opl runtime app-operator-drilldown --json`
+- OPL `opl framework readiness --family-defaults --json`
+- MAS/MAG/RCA/OMA 各自 repo-native tests、contracts 与 status docs
+
+Fresh read-model result:
+
+- `opl agents conformance` 读为 `status=passed`、`passed_count=4`、`blocked_count=0`、`structural_conformance_status=passed`；这只证明当前 standard-agent structural conformance 可读，不授权 domain ready 或 production ready。
+- `app-operator-drilldown` 读为 `functional_privatization_action_required_count=0`、`functional_privatization_active_private_generic_residue_count=0`、`default_caller_deletion_evidence_open_requirement_count=0`、`domain_ready_claim_count=0`；这些读数不授权 domain repo 物理删除或 owner receipt 生成。
+- `framework readiness` 在本轮 OMA test morphology 修复前曾因 `tests/source-purity.test.ts` 中 active forbidden role 字面量阻塞；修复后 OMA `physical_morphology_checks.status=passed`、`active_forbidden_name_residue_count=0`。
+
+Implementation landed:
+
+| Repo | Commit | Landed boundary | Verification |
+| --- | --- | --- | --- |
+| `med-autoscience` | `38e6f945 Retire MAS active compatibility alias purity proof` | current proof 字段从 `active_compatibility_aliases` 切到 `retired_alias_residue_refs`，源常量、functional closure 判定、provider-ready handoff、`functional_privatization_audit`、test-lane manifest 与 focused tests 同步；current purity proof 不再承认 active compat alias 字段。 | focused pytest `41 passed`; `make test-meta` `260 passed, 3784 deselected`; `git diff --check` |
+| `med-autogrant` | `466e383 Clarify MAG OPL source-purity deletion gate` | machine truth 拆成 `claims_opl_replacement_exists=true` 与 `claims_domain_repo_physical_delete_authorized=false`；OPL replacement/cutover readiness 与 MAG repo physical delete authority 分离，避免把 direct handler / refs-only adapter 硬删成功能降级。 | `scripts/verify.sh` fast `226 passed, 154 subtests passed`; `make test-meta` `64 passed, 19 subtests passed`; focused tests `72 passed, 263 subtests passed`; `git diff --check` |
+| `redcube-ai` | `f9641b2 rca: neutralize route-run record adapter api` | Hermes-named run/event API 收薄为 neutral route-run API；合同和 docs 明确 RCA 只保留 route policy、neutral route-run refs 与 receipt refs，runtime record/event log、stale audit 和 attempt ledger 属于 OPL default-caller tail。 | `npm run test:fast` passed; `npm run test:meta` `289 passed`; focused tests `8 passed`; `contracts:current-program:check` `292 leaf refs`; `git diff --check` |
+| `opl-meta-agent` | `1db4e2a Tighten OMA source purity guard`; `17db095 Fix OMA source purity test morphology residue` | 新增 source-purity 专项测试和 `runtime/authority_functions` receipt；scripts 仅按 authority implementation、smoke helper、fixture/proof helper 或 work-order materializer 读取。随后修复测试自身的 active forbidden role 字面量，避免测试文件成为 morphology residue。 | `npm test` `41 passed`; OPL conformance `passed_count=4`, `blocked_count=0`; `git diff --check` |
+
+Current strict boundary after this tranche:
+
+- MAS：active product/status/workbench/sidecar/controller/progress shell 仍只能作为 domain handler、refs-only projection source、owner refs / typed blocker / diagnostic refs target 读取；不能作为长期 MAS generic wrapper。当前已清理的是 active compat alias proof 字段，不是所有 wrapper physical delete。
+- MAG：OPL replacement exists 已入 machine truth，但 `claims_domain_repo_physical_delete_authorized=false`；不能物理删除仍被 direct path / domain handler 消费的 active shell，直到 MAG owner receipt/no-active-caller/no-forbidden-write proof 到位。
+- RCA：route-run record adapter 已 neutralized；旧 Hermes-named API 不再是 active public route-run API。剩余是 OPL Agent Executor Adapter default caller、attempt ledger/runtime record/event log 与 stale audit read-model 默认化后的 deletion/thinning tail。
+- OMA：repo shape 现在由 `agent/`、`contracts/`、`runtime/authority_functions/` 与 scripts authority/materializer/helper refs 组成；普通测试文件不再携带 active forbidden morphology token。
+
+Remaining stale / retire candidates:
+
+- MAS/MAG/RCA 的 physical delete 仍需要 domain owner receipt 或 stable typed blocker、no-active-caller proof、direct/hosted parity、no-forbidden-write proof 与 OPL default-caller parity；当前 read-model 的 zero open requirement 不等于 physical delete authorization。
+- OMA 后续只做证据/hygiene 扩面，不新增 repo-owned generic CLI/MCP/Skill/product/status/workbench wrapper、Agent Lab runner、promotion gate、queue、attempt ledger 或 target truth writer。
+- OPL framework 当前仍有 provider worker stale attention；这是 provider lifecycle repair，不是 standard-agent source-purity blocker，也不授权 domain ready / production ready。
+
 ## 验证
 
 Docs-only 整理：
