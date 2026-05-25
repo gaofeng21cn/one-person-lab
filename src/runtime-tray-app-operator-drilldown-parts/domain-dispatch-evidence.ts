@@ -161,6 +161,11 @@ function hasDefaultActionableEvidenceGap(attempt: DomainDispatchAttemptEvidence)
     && attempt.typed_blocker_refs.length === 0;
 }
 
+function stageAttemptHasAcceptedTypedCloseout(attempt: DomainDispatchAttemptEvidence) {
+  return attempt.local_status === 'completed'
+    && attempt.closeout_receipt_status === 'accepted_typed_closeout';
+}
+
 function timestampMs(value: unknown) {
   const text = stringValue(value);
   if (!text) {
@@ -200,6 +205,7 @@ function annotateDefaultActionability(attempts: DomainDispatchAttemptEvidence[])
           ...attempt,
           default_actionability_status: 'not_actionable_evidence_refs_observed',
           default_actionable: false,
+          default_actionability_blocker: null,
           superseded_by_stage_attempt_id: null,
           superseded_reason: null,
         };
@@ -208,6 +214,7 @@ function annotateDefaultActionability(attempts: DomainDispatchAttemptEvidence[])
         ...attempt,
         default_actionability_status: 'not_actionable_unbound_dispatch_identity',
         default_actionable: false,
+        default_actionability_blocker: 'bound_dispatch_identity_required_before_domain_dispatch_evidence_record',
         superseded_by_stage_attempt_id: null,
         superseded_reason: null,
       };
@@ -221,10 +228,22 @@ function annotateDefaultActionability(attempts: DomainDispatchAttemptEvidence[])
         ...attempt,
         default_actionability_status: 'superseded',
         default_actionable: false,
+        default_actionability_blocker: null,
         superseded_by_stage_attempt_id: currentAttemptId,
         superseded_reason: supersededByExactIdentity
           ? 'newer_stage_attempt_with_same_domain_dispatch_identity'
           : 'newer_stage_attempt_with_same_domain_dispatch_supersession_identity',
+      };
+    }
+    if (!stageAttemptHasAcceptedTypedCloseout(attempt)) {
+      return {
+        ...attempt,
+        default_actionability_status: 'not_actionable_stage_attempt_not_closed',
+        default_actionable: false,
+        default_actionability_blocker:
+          'stage_attempt_closeout_required_before_domain_dispatch_evidence_record',
+        superseded_by_stage_attempt_id: null,
+        superseded_reason: null,
       };
     }
     if (!hasDefaultActionableEvidenceGap(attempt)) {
@@ -232,6 +251,7 @@ function annotateDefaultActionability(attempts: DomainDispatchAttemptEvidence[])
         ...attempt,
         default_actionability_status: 'not_actionable_evidence_refs_observed',
         default_actionable: false,
+        default_actionability_blocker: null,
         superseded_by_stage_attempt_id: null,
         superseded_reason: null,
       };
@@ -240,6 +260,7 @@ function annotateDefaultActionability(attempts: DomainDispatchAttemptEvidence[])
       ...attempt,
       default_actionability_status: 'current',
       default_actionable: true,
+      default_actionability_blocker: null,
       superseded_by_stage_attempt_id: null,
       superseded_reason: null,
     };

@@ -303,6 +303,7 @@ function domainDispatchEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) {
     const superseded = stringValue(attempt.default_actionability_status) === 'superseded';
     const unboundDispatchIdentity =
       stringValue(attempt.default_actionability_status) === 'not_actionable_unbound_dispatch_identity';
+    const actionabilityBlocker = stringValue(attempt.default_actionability_blocker);
     return envelope({
       envelopeId: `domain_dispatch:${domainId}:${attemptId}`,
       owner: domainId,
@@ -318,10 +319,11 @@ function domainDispatchEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) {
             receiptRefs,
             typedBlockerRefs,
             open: receiptRefs.length === 0 && typedBlockerRefs.length === 0,
-            blocked: unboundDispatchIdentity,
+            blocked: unboundDispatchIdentity || Boolean(actionabilityBlocker),
           }),
       receiptRefs,
       typedBlockerRefs,
+      blockedReasons: actionabilityBlocker ? [actionabilityBlocker] : [],
       evidenceRefs,
       sourceRefs: sourceRefs(stringValue(attempt.ref)),
       nextRoute: routeRef(route),

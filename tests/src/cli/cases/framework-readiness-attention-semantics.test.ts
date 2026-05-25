@@ -217,6 +217,7 @@ test('framework readiness separates operator-actionable and domain-blocked atten
       && summary.operator_actionable_attention_tail_count === 0
       && summary.domain_blocked_attention_tail_count > 0
     ) {
+      const nextSafeActions = readiness.attention_first_payload.next_safe_actions;
       assert.equal(
         readiness.status,
         'framework_control_plane_available_with_blocked_refs_only_attention',
@@ -226,6 +227,22 @@ test('framework readiness separates operator-actionable and domain-blocked atten
         'framework_control_plane_available_with_blocked_refs_only_attention',
       );
       assert.notEqual(readiness.status, 'framework_control_plane_available_with_operator_attention');
+      assert.deepEqual(
+        nextSafeActions.map((action: { action_id: string }) => action.action_id),
+        ['review_blocked_refs_only_attention'],
+      );
+      assert.equal(nextSafeActions[0].action_kind, 'blocked_refs_only_attention_review');
+      assert.equal(nextSafeActions[0].authority, 'refs_only_review');
+      assert.equal(nextSafeActions[0].can_submit_record_to_safe_action_shell, false);
+      assert.equal(nextSafeActions[0].can_create_owner_receipt, false);
+      assert.equal(nextSafeActions[0].can_close_domain_ready, false);
+      assert.equal(nextSafeActions[0].can_claim_production_ready, false);
+      assert.equal(
+        nextSafeActions.some((action: { action_kind?: string }) =>
+          action.action_kind === 'domain_dispatch_evidence_group_workorder'
+        ),
+        false,
+      );
     }
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
