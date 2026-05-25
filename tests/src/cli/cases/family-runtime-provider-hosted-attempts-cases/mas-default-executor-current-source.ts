@@ -295,3 +295,130 @@ test('family-runtime tick does not select newer MAS default executor row while s
     db.close();
   }
 });
+
+test('family-runtime tick ignores terminal MAS default executor attempts when selecting refreshed dispatch row', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      insertDefaultExecutorTask(db, {
+        taskId: 'task-mas-default-terminal-old',
+        sourceFingerprint: 'source-before',
+        createdAt: '2026-05-25T16:30:00.000Z',
+        status: 'succeeded',
+        attempts: 1,
+      });
+      insertQueuedDefaultExecutorTask(db, {
+        taskId: 'task-mas-default-newer-after-terminal',
+        sourceFingerprint: 'source-after',
+        createdAt: '2026-05-25T16:40:00.000Z',
+      });
+      const oldRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-terminal-old',
+      ) as FamilyRuntimeTaskRow;
+      const oldPayload = JSON.parse(oldRow.payload_json) as Record<string, unknown>;
+      const oldAttempt = ensureProviderHostedStageAttempt(db, oldRow, oldPayload);
+      assert.ok(oldAttempt);
+      db.prepare(`
+        UPDATE stage_attempts
+        SET status = 'failed',
+          blocked_reason = 'temporal_workflow_failed',
+          provider_run_json = json_set(provider_run_json, '$.provider_status', 'failed')
+        WHERE stage_attempt_id = ?
+      `).run(oldAttempt.stage_attempt_id);
+
+      let dispatchCount = 0;
+      const tick = await runFamilyRuntimeQueueTick(db, familyRuntimePaths(), {
+        source: 'test-terminal-source-selection',
+        limit: 2,
+        hydrate: false,
+        taskScope: {
+          domainId: 'medautoscience',
+          taskKind: 'domain_owner/default-executor-dispatch',
+          payloadMatches: [
+            {
+              path: 'study_id',
+              value: '002-dm-china-us-mortality-attribution',
+            },
+          ],
+        },
+      }, {
+        enqueueTask: () => ({ accepted: false }),
+        dispatchTask: (_db, _paths, row: FamilyRuntimeTaskRow) => {
+          dispatchCount += 1;
+          return { task_id: row.task_id };
+        },
+      });
+
+      assert.equal(tick.selected_count, 1);
+      assert.equal(tick.mas_default_executor_live_skipped_count, 0);
+      assert.equal(dispatchCount, 1);
+      assert.equal(tick.dispatches[0].task_id, 'task-mas-default-newer-after-terminal');
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime tick ignores stale live MAS default executor attempts once linked task is terminal', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      insertDefaultExecutorTask(db, {
+        taskId: 'task-mas-default-terminal-with-stale-live-attempt',
+        sourceFingerprint: 'source-before',
+        createdAt: '2026-05-25T16:30:00.000Z',
+        status: 'blocked',
+        attempts: 1,
+      });
+      insertQueuedDefaultExecutorTask(db, {
+        taskId: 'task-mas-default-newer-after-stale-live-attempt',
+        sourceFingerprint: 'source-after',
+        createdAt: '2026-05-25T16:40:00.000Z',
+      });
+      const oldRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-terminal-with-stale-live-attempt',
+      ) as FamilyRuntimeTaskRow;
+      const oldPayload = JSON.parse(oldRow.payload_json) as Record<string, unknown>;
+      const oldAttempt = ensureProviderHostedStageAttempt(db, oldRow, oldPayload);
+      assert.ok(oldAttempt);
+      db.prepare(`
+        UPDATE stage_attempts
+        SET status = 'running',
+          provider_run_json = json_set(provider_run_json, '$.provider_status', 'running')
+        WHERE stage_attempt_id = ?
+      `).run(oldAttempt.stage_attempt_id);
+
+      let dispatchCount = 0;
+      const tick = await runFamilyRuntimeQueueTick(db, familyRuntimePaths(), {
+        source: 'test-stale-live-source-selection',
+        limit: 2,
+        hydrate: false,
+        taskScope: {
+          domainId: 'medautoscience',
+          taskKind: 'domain_owner/default-executor-dispatch',
+          payloadMatches: [
+            {
+              path: 'study_id',
+              value: '002-dm-china-us-mortality-attribution',
+            },
+          ],
+        },
+      }, {
+        enqueueTask: () => ({ accepted: false }),
+        dispatchTask: (_db, _paths, row: FamilyRuntimeTaskRow) => {
+          dispatchCount += 1;
+          return { task_id: row.task_id };
+        },
+      });
+
+      assert.equal(tick.selected_count, 1);
+      assert.equal(tick.mas_default_executor_live_skipped_count, 0);
+      assert.equal(dispatchCount, 1);
+      assert.equal(tick.dispatches[0].task_id, 'task-mas-default-newer-after-stale-live-attempt');
+    });
+  } finally {
+    db.close();
+  }
+});

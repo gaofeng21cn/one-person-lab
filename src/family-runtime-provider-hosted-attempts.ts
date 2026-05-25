@@ -71,6 +71,8 @@ export const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-exe
 const MAS_DEFAULT_EXECUTOR_NEXT_OWNERS = new Set(['write', 'ai_reviewer', 'write/ai_reviewer']);
 const MAS_DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
 const MAS_DEFAULT_EXECUTOR_CROSS_TASK_STARTED_ATTEMPT_STATUSES = new Set(['running', 'checkpointed', 'human_gate']);
+const MAS_DEFAULT_EXECUTOR_CROSS_TASK_LIVE_TASK_STATUSES = new Set(['queued', 'running', 'retry_waiting', 'succeeded']);
+const MAS_DEFAULT_EXECUTOR_TERMINAL_PROVIDER_STATUSES = new Set(['completed', 'failed', 'blocked', 'timed_out']);
 const MAS_DEFAULT_EXECUTOR_TASK_LEASE_MS = 5 * 60 * 1000;
 
 function hasActiveMasDefaultExecutorTaskLease(db: DatabaseSync, taskId: string | null) {
@@ -94,12 +96,30 @@ function isCrossTaskLiveMasDefaultExecutorAttempt(
   attempt: ReturnType<typeof listStageAttempts>[number],
   workspaceLocator: Record<string, unknown>,
 ) {
+  if (MAS_DEFAULT_EXECUTOR_TERMINAL_PROVIDER_STATUSES.has(optionalString(attempt.provider_run.provider_status) ?? '')) {
+    return false;
+  }
+  if (!hasLiveMasDefaultExecutorLinkedTask(db, attempt.task_id)) {
+    return false;
+  }
   if (MAS_DEFAULT_EXECUTOR_CROSS_TASK_STARTED_ATTEMPT_STATUSES.has(attempt.status)) {
     return true;
   }
   return attempt.status === 'queued'
     && hasActiveMasDefaultExecutorTaskLease(db, attempt.task_id)
     && sameOptionalStringField(attempt.workspace_locator, workspaceLocator, 'domain_source_fingerprint');
+}
+
+function hasLiveMasDefaultExecutorLinkedTask(db: DatabaseSync, taskId: string | null) {
+  if (!taskId) {
+    return false;
+  }
+  const row = db.prepare(`
+    SELECT status
+    FROM tasks
+    WHERE task_id = ?
+  `).get(taskId) as Pick<FamilyRuntimeTaskRow, 'status'> | undefined;
+  return Boolean(row && MAS_DEFAULT_EXECUTOR_CROSS_TASK_LIVE_TASK_STATUSES.has(row.status));
 }
 
 function workspaceRootFromProfile(profile: string | null) {
