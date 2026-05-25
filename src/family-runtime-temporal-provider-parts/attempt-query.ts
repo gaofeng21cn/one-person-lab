@@ -19,6 +19,10 @@ function terminalFailureWorkflowStatus(status: string) {
   return status === 'FAILED' || status === 'TIMED_OUT';
 }
 
+function terminalCompletedWorkflowStatus(status: string) {
+  return status === 'COMPLETED';
+}
+
 export async function queryTemporalStageAttemptWorkflow(
   attempt: TemporalAttemptQueryPayload,
   options: TemporalClientOptions = {},
@@ -30,6 +34,23 @@ export async function queryTemporalStageAttemptWorkflow(
     const handle = client.workflow.getHandle(attempt.workflow_id);
     const description = await handle.describe();
     const workflowStatus = description.status.name;
+    if (terminalCompletedWorkflowStatus(workflowStatus)) {
+      const query = await handle.result() as TemporalStageAttemptWorkflowState;
+      return {
+        surface_kind: 'temporal_stage_attempt_query_receipt',
+        provider_kind: 'temporal',
+        stage_attempt_id: attempt.stage_attempt_id,
+        workflow_id: attempt.workflow_id,
+        run_id: description.runId,
+        workflow_status: workflowStatus,
+        query_source: 'workflow_result_after_terminal_completed',
+        query,
+        authority_boundary: {
+          opl: 'temporal_workflow_transport_and_control_metadata_only',
+          domain: 'truth_quality_artifact_gate_owner',
+        },
+      };
+    }
     if (terminalFailureWorkflowStatus(workflowStatus)) {
       return {
         surface_kind: 'temporal_stage_attempt_query_receipt',
