@@ -1859,6 +1859,66 @@ Next tranche write scope:
 - Switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell, or choose the next exact OPL non-reference uncovered body from the fresh coverage ledger and inventory.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 03:48 CST`
+Tranche: `mas-owner-route-control-boundary-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAS owner-route / controller shell / current-control-state 文档边界，并吸收回 MAS `main`。目标是把 MAS core entry、stage-route handoff 和 runtime control support 中容易误读成 MAS 长期自有 CLI/MCP/product-entry/sidecar/controller wrapper、MAS child scheduler 或 MAS provider-control 写入口的段落，统一校准到 current OPL standard-agent 目标：MAS 保留医学 truth、domain handler target、authority refs、owner receipt / typed blocker producer、AI reviewer / publication gate 和必要医学 helper；OPL generated/default callers、queue、attempt、retry/dead-letter、provider worker、current-control-state、generic transition transport、App/workbench shell 和长期 runtime owner 归 OPL。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`、`TASTE.md`、核心五件套、`docs/active/mas-ideal-state-gap-plan.md`、`docs/references/positioning/mas_ideal_state.md`、MAS docs-governance ledger。
+- MAS docs: `README.zh-CN.md`, `docs/project.md`, `docs/architecture.md`, `docs/runtime/control/controllers.md`, `docs/runtime/control/study_runtime_control_surface.md`, `docs/runtime/control/study_runtime_orchestration.md`, `docs/runtime/stage_route_handoff_standard.md`.
+- MAS machine/source refs: `contracts/action_catalog.json`, `contracts/generated_surface_handoff.json`, `contracts/functional_privatization_audit.json`, `contracts/stage_control_plane.json`, `src/med_autoscience/controllers/owner_route_handoff_parts/owner_route_handoff_tasks.py`, `src/med_autoscience/controllers/owner_route_reconcile_parts/opl_owner_route_handoff.py`, `src/med_autoscience/controllers/study_progress_parts/opl_current_control_state_handoff.py`, `src/med_autoscience/runtime_control/ports.py`.
+- CodeGraph context/explore for `owner_route_handoff`, `owner_route_handoff_task`, `request_opl_stage_attempt`, `opl_current_control_state_handoff_path`, and `opl_current_control_state_study_handoff_projection`.
+- CLI/read-model: MAS clean-runner `scripts/run-python-clean.sh -m med_autoscience.cli runtime --help`.
+
+Fresh semantic result:
+
+- `contracts/action_catalog.json` declares `generated_surface_owner=one-person-lab` and `domain_repo_runtime_role=domain_handler_target_and_authority_functions`; `contracts/generated_surface_handoff.json` declares generated CLI/MCP/Skill/product-entry/sidecar/status/workbench/test-harness surfaces as OPL-owned and not domain-owned.
+- MAS root `agent/` is the canonical OPL Agent semantic pack source; current MAS CLI/MCP/product-entry/sidecar/controller surfaces are discoverable direct/operator surfaces, migration input, diagnostic refs, generated/default caller targets, domain handler targets or minimal authority implementation, not MAS-owned generic runtime/product wrappers.
+- `owner_route_handoff` / `owner_route_handoff_task` prove refs-only owner-route handoff: `queue_owner=one-person-lab`, `domain_truth_owner=med-autoscience`, `runtime_state_mutated=false`, route is not stage, OPL owns stage lifecycle/runtime transition/queue, and forbidden writes include runtime state, user message queue, retry/dead-letter/worker liveness truth, publication eval, controller decisions and `current_package`.
+- OPL current-control-state handoff is read from `artifacts/supervision/opl_current_control_state/latest.json` as observability/status projection; MAS consumes it for operator/status/read-model context and does not turn it into MAS runtime truth.
+- `request_opl_stage_attempt(...)`, pause/stop/relaunch and orchestration persistence wording now separates MAS-facing intent / owner authorization / owner receipt / typed blocker / owner-route refs from OPL-owned provider pause/stop/relaunch, attempt hydration, queue/retry/dead-letter, worker liveness and current-control-state mutation.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Core entry positioning in `README.zh-CN.md`, `docs/project.md`, `docs/architecture.md`; controller boundary in `docs/runtime/control/controllers.md`; `docs/runtime/stage_route_handoff_standard.md` full file; stop/pause/relaunch/current-control-state sections in `docs/runtime/control/study_runtime_control_surface.md` and `docs/runtime/control/study_runtime_orchestration.md`; MAS docs-governance ledger entries for standard-agent direct/control boundary, stage-route handoff currentness and runtime-control owner-route/current-control-state. | `README.zh-CN.md`; `docs/project.md`; `docs/architecture.md`; `docs/runtime/control/controllers.md`; `docs/runtime/control/study_runtime_control_surface.md`; `docs/runtime/control/study_runtime_orchestration.md`; `docs/runtime/stage_route_handoff_standard.md`; `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Verification:
+
+- MAS worktree/main verification: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor `finding_count=0`, active truth `pass`, missing=0, next-not-ready=0; MAS clean-runner CLI help for `med_autoscience.cli runtime`.
+- MAS docs commits now on `origin/main`: `54aa77dd docs: reconcile MAS control handoff boundaries` and follow-up `f5b05e58 docs: clarify MAS tranche follow-up scope`.
+- Current MAS tranche worktree/branch was removed after the docs commits were superseded/absorbed into `main`; unrelated external MAS source/test dirty files in the root checkout and the external `standard-agent-purity-clean-mas` worktree were left untouched.
+
+Archived / tombstoned / deleted docs:
+
+- none. The touched MAS files remain active entry/current-truth/support docs; this tranche corrected owner-boundary wording in place and did not prove physical deletion authorization.
+
+Unreviewed docs:
+
+- MAS paragraph-level runtime contract body coverage remains open for `docs/runtime/contracts/**`, especially `stage_route_contract.md`, `stage_surfaces.md`, `workspace_knowledge_and_literature_contract.md` and other long support bodies not covered by prior runtime-id/current-control tranches.
+- MAS product/status/workbench and progress/domain-ref projection coverage remains open outside prior Portal/projection/App-workbench, inspection-package, runtime-binding and owner-route/control-boundary blocks.
+- OPL full README/docs coverage still remains open outside the covered OPL chunks named in earlier ledger entries; exact remaining non-reference scope should be selected from the latest inventory before the next OPL tranche.
+- App docs remain delayed until active release/GUI lanes close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+
+Remaining stale / retire candidates:
+
+- Future MAS prose must not call MAS CLI/MCP/product-entry/sidecar/controller shell a long-term generic capability owner. Keep it as direct path, migration input, diagnostic ref, generated/default caller target, domain handler target or minimal authority implementation.
+- MAS must not claim OPL queue, attempt ledger, provider worker, retry/dead-letter, current-control-state, App/workbench shell or generic runtime lifecycle ownership through controller wording.
+- Any future prose that treats `route_transition_contract`, `stage_graph_handoff`, descriptor parity, zero forbidden writes, provider completion or OPL runner pass as MAS owner receipt, publication-ready, submission-ready, artifact-ready, App release ready, physical delete authorization or domain completion is stale.
+- Historical transport helper names such as `_resume_quest(...)`, `_relaunch_stopped_quest(...)`, `_pause_quest(...)` and daemon result remain retired provenance / diagnostic mapping / test-only patch-target context only.
+
+Next tranche write scope:
+
+- MAS paragraph-level coverage for bounded `docs/runtime/contracts/**` bodies such as `stage_route_contract.md`, `stage_surfaces.md`, or `workspace_knowledge_and_literature_contract.md`.
+- Or MAS product/status/workbench and progress/domain-ref projection shell reconciliation outside the Portal/projection/App-workbench and inspection-package blocks already covered.
+- Or choose the next exact OPL non-reference uncovered body from the fresh coverage ledger and inventory.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
