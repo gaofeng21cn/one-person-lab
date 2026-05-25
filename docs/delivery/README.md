@@ -5,7 +5,7 @@ Purpose: `generic_delivery_lifecycle_support`
 State: `active_support`
 Machine boundary: 人读索引。机器真相继续归合同、源码、artifact locator、package/export ledger 与 domain owner receipts。
 
-本目录只承接通用 artifact/package/export lifecycle shell、locator、refs、retention、restore 与 projection 支撑。MAS/MAG/RCA 的 manuscript、grant package、deck、visual artifact、review/export verdict 和最终交付 authority 仍由各 domain repo 持有。runtime artifact root 外置与 developer checkout 禁入规则归 [Workspace / File Lifecycle 政策](../policies/runtime-artifact-hygiene-policy.md)。
+本目录只承接通用 artifact/package/export lifecycle shell、locator、refs、retention、restore 与 projection 支撑。One Person Lab App 可以消费这些 framework/provider 与 domain-owned projection 来展示 artifact gallery、package/export refs、lifecycle refs 和 owner-aware action，但不持有 artifact body、quality/export verdict、domain owner receipt 或 release/production readiness。MAS/MAG/RCA 的 manuscript、grant package、deck、visual artifact、review/export verdict 和最终交付 authority 仍由各 domain repo 持有。runtime artifact root 外置与 developer checkout 禁入规则归 [Workspace / File Lifecycle 政策](../policies/runtime-artifact-hygiene-policy.md)。
 
 当前入口先看：
 

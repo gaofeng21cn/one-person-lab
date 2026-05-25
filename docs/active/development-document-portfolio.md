@@ -1353,6 +1353,55 @@ Next tranche write scope:
 - Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 01:30 CST`
+Tranche: `opl-delivery-docs-coverage`
+State: `tranche_verified_and_foldback_pending`
+
+本轮覆盖 OPL `docs/delivery/**` 的通用 artifact/package/export lifecycle 支撑文档。目标是把 delivery 支撑面校准到当前 `OPL Framework -> One Person Lab App -> Foundry Agents` 分层，避免把 artifact locator、package/export refs、lifecycle apply/reconcile、artifact gallery、restore proof、external evidence receipt 或 App/operator projection 写成 artifact authority、quality/export verdict、domain ready、App release ready 或 production ready。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`、`TASTE.md`、核心五件套、`docs/active/current-state-vs-ideal-gap.md`、`docs/references/runtime-substrate/opl-family-agent-ideal-state.md`、`contracts/README.md`。
+- Delivery docs: `docs/delivery/README.md`, `docs/delivery/artifact-package-lifecycle-boundary.md`.
+- Machine-readable / source refs: `contracts/opl-framework/generic-substrate-projection-contract.json`, `contracts/opl-framework/family-product-operator-projection.json`, `contracts/opl-framework/public-surface-index.json`, `contracts/family-orchestration/family-lifecycle-ledger.schema.json`, `tests/src/generic-substrate-projection.test.ts`, `tests/src/family-runtime-lifecycle-index.test.ts`, `tests/src/cli/cases/runtime-app-operator-drilldown-lifecycle.test.ts`.
+- CLI/read-model surfaces: `opl help --text`, `opl substrate projections --json`, `opl substrate workbench --json`, `opl runtime app-operator-drilldown --json`, `opl runtime lifecycle apply --help`, `opl runtime lifecycle reconcile --help`.
+
+Fresh read-model result:
+
+- `opl substrate projections --json` read `total_projects_count=3`, `resolved_manifest_count=3`, `substrate_refs_resolved_count=3`, `substrate_refs_partial_count=0`, `blocked_count=0`; notes state OPL carries locators and lifecycle status only while domain agents retain truth/body/verdict/authority.
+- `opl substrate workbench --json` read `total_projects_count=3`, `workspace_ref_count=3`, `source_ref_count=12`, `artifact_ref_count=22`, `memory_ref_count=3`, all projections resolved, and authority boundary `opl_owns=[locator_index, ref_transport, lifecycle_projection, operator_projection, workbench_grouping]` while domain agents own workspace/source/artifact/memory truth and quality verdict. Non-authority flags still forbid OPL memory body reads/writes, memory writeback apply, domain truth writes, source truth interpretation, artifact body mutation, artifact authority and quality/fundability/publication authorization.
+- `opl runtime app-operator-drilldown --json` read `availability=available`, `artifact_gallery_item_count=37`, `package_ref_count=0`, `export_ref_count=0`, `lifecycle_index_ref_count=3`, `lifecycle_restore_proof_ref_count=3`, `lifecycle_domain_artifact_mutation_receipt_ref_count=2`, `lifecycle_domain_physical_delete_can_execute=false`, `lifecycle_opl_cleanup_apply_can_execute=true`, `evidence_envelope_artifact_authority_claim_count=0`, and refs-only authority boundary still forbids domain truth writes, artifact mutation, quality/export verdict authorization and provider-completion-as-domain-ready.
+- `opl runtime lifecycle apply --help` confirms the App/operator lifecycle apply surface reuses the OPL family-runtime lifecycle ledger; `opl runtime lifecycle reconcile --help` confirms reconciliation does not give OPL domain delete authority.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | `docs/delivery/README.md` lifecycle header, scope paragraph, current entries and artifact authority boundary; `docs/delivery/artifact-package-lifecycle-boundary.md` lifecycle header, current responsibilities, forbidden authority paragraph, product-layer role table and final routing rule. | `docs/delivery/README.md`; `docs/delivery/artifact-package-lifecycle-boundary.md`; this coverage ledger |
+
+Archived / tombstoned / deleted docs:
+
+- none. Both delivery files remain active support. This tranche rewrote stale product-layer wording instead of moving files.
+
+Unreviewed docs:
+
+- OPL full README/docs coverage remains open outside previously covered entry/core, gateway-federation history, frontdoor-legacy history, process/specs history, process/plans history, process/convergence-governance history, process/domain-admission history, process/shared-boundary history, process/superpowers history, runtime-substrate history, current-support reference blocks, runtime docs, product docs, specs docs and this `docs/delivery/**` tranche, especially `docs/source/**`, `docs/public/**`, `docs/references/runtime-substrate/**`, `docs/references/operating-governance/**`, `docs/references/convergence-governance/**`, `docs/references/governance/**` and other long support bodies not listed above.
+- MAS paragraph-level semantic coverage remains open outside prior lifecycle/history and Portal/projection/App-workbench blocks.
+- App docs remain delayed until active release/GUI worktrees close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+- Future changes in OMA/MAG/RCA can reopen coverage even though their recorded scopes were previously closed.
+
+Remaining stale / retire candidates:
+
+- OPL remaining source/public/reference body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-first, Hermes provider, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only or support-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
+- App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
+
+Next tranche write scope:
+
+- Continue OPL full docs coverage in another bounded support chunk, preferably `docs/source/**`, `docs/public/**` or focused `docs/references/**`.
+- Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
