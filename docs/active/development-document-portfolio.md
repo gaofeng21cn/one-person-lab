@@ -346,6 +346,55 @@ Next tranche write scope:
 - Continue MAG body coverage on `docs/history/specs/*.md` in batches, adding per-file lifecycle notes only where needed and avoiding promotion of historical wording.
 - Or switch to OPL/MAS/RCA/App full README/docs coverage; keep App delayed until active release/GUI worktrees close.
 
+Date: `2026-05-25 16:46 CST`
+Tranche: `mag-history-foundation-specs-coverage`
+State: `tranche_verified_scope_pending`
+
+本轮覆盖 `med-autogrant` 的 `docs/history/specs/2026-04-06-*.md` foundation history specs。目标是把上一轮 MAG history specs body coverage 的第一批直接文件入口收紧：每份历史 foundation spec 首屏都持有文件级 `Owner`、`Purpose`、`State`、`Machine boundary`，明确这些文件只保留 2026-04-06 foundation 形成过程，当前 MAG role、OPL/Temporal runtime owner、active specs、schema/source/CLI/API truth 与机器行为回到核心五件套、`docs/specs/README.md`、`docs/specs/specs_lifecycle_map.md`、contracts、schemas、source 和 `contracts/runtime-program/current-program.json`。
+
+Fresh live truth inputs:
+
+- MAG `AGENTS.md`、`TASTE.md`
+- MAG `README.md`、`README.zh-CN.md`、`docs/README.md`、`docs/status.md`、`docs/active/mag-ideal-state-cross-repo-gap-plan.md`、`docs/history/specs/README.md`
+- MAG `contracts/runtime-program/current-program.json`
+- MAG `contracts/functional_privatization_audit.json`
+- MAG `contracts/external_evidence/mag-evidence-receipt-ledger.json`
+- MAG `docs/active/opl-private-implementation-migration-inventory.md`
+
+Fresh contract result:
+
+- `runtime_owner.default_task_runtime_owner=one-person-lab`、`default_runtime_substrate=temporal`、`default_stage_executor=codex_cli`、`mag_implements_daemon=false`、`mag_implements_scheduler=false`、`mag_implements_attempt_loop=false`、`mag_owns_attempt_ledger=false` remain current.
+- `claims_opl_replacement_exists=true`、`claims_domain_repo_physical_delete_authorized=false`、`claims_production_long_run_soak_complete=false` remain current in functional privatization audit.
+- `standard_agent_source_shape_status=landed` remains a structural classification signal only; it is not strict source-purity physical completion.
+- External evidence ledger summary keeps `claims_temporal_provider_long_soak_complete=false` and `claims_grant_or_fundability_ready=false`; remaining real evidence gap is `temporal_provider_long_soak_window_evidence`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autogrant` | `docs/history/specs/2026-04-06-med-auto-grant-top-level-design.md`, `docs/history/specs/2026-04-06-med-autogrant-mainline-and-omx-bridge.md`, `docs/history/specs/2026-04-06-nsfc-main-flow-and-critique-loop.md`, `docs/history/specs/2026-04-06-object-model-schema-v1.md`; sections reviewed include title, lifecycle note, goal, role/priority, flow/schema/long-run handoff content, historical next-step/current-priority language and references to old host-agent / OMX / local runtime surfaces. | same four files |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. These four files still carry useful foundation provenance and direct-file reader value; the governance action was first-screen lifecycle clarification, not physical archive/delete.
+
+Unreviewed docs:
+
+- `med-autogrant`: remaining `docs/history/specs/*.md` files outside the 2026-04-06 foundation batch are not paragraph-governed in this tranche. `docs/history/plans/**`, `docs/history/product/**`, `docs/history/runtime/**`, `docs/history/positioning/**` and non-index `docs/references/**/*.md` still need separate body-level coverage unless covered by earlier ledger entries.
+- Other repos remain under the previous ledger's unreviewed scope except OMA full coverage and the MAG current/support specs / thin indexes already covered.
+- App docs remain excluded while dirty/recent App release and GUI worktrees own local changes.
+
+Remaining stale / retire candidates:
+
+- MAG remaining history specs still contain dated `Current Truth`, `Activation Status`, Hermes/Gateway/local-runtime and hosted/provider wording. Directory inheritance covers them, but later direct-file body passes should add or normalize file-level lifecycle four-signal notes when a file is likely to be opened directly.
+- MAG non-index references such as grant strategy memory policy, OPL family contract adoption and governance checklist still need paragraph-level checks against current contracts/source.
+
+Next tranche write scope:
+
+- Continue MAG `docs/history/specs/*.md` in date/topic batches, prioritizing 2026-04-07 authoring-flow provenance and 2026-04-11/2026-04-12 Hermes / hosted-caller specs because direct-file stale provider wording risk is higher there.
+- Or switch to OPL/MAS/RCA/App full README/docs coverage; keep App delayed until active release/GUI worktrees close.
+
 ## 验证
 
 Docs-only 整理：
