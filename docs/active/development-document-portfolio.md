@@ -1201,6 +1201,59 @@ Next tranche write scope:
 - Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 00:41 CST`
+Tranche: `opl-runtime-docs-coverage`
+State: `tranche_verified_scope_pending`
+
+本轮覆盖 OPL `docs/runtime/**` 的当前 runtime 支撑文档。目标是把 runtime 命名、stage graph / route transition、Agent Lab control plane 与目录索引都读回当前 OPL Framework / App / Foundry Agent 分层，避免把旧四仓口径、host-agent deployment shape、plan table、provider completion、App user-path evidence、Agent Lab read model 或 work-order primitive 写成 domain ready、release ready、production ready、artifact authority、quality verdict 或 active `/goal` baton。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`、`TASTE.md`、核心五件套、`docs/active/current-state-vs-ideal-gap.md`、`docs/references/runtime-substrate/opl-family-agent-ideal-state.md`。
+- Current runtime docs: `docs/runtime/README.md`, `docs/runtime/opl-runtime-naming-and-boundary-contract.md`, `docs/runtime/stage-graph-route-transition-runtime.md`, `docs/runtime/opl-agent-lab-control-plane.md`.
+- Code/source surfaces: CodeGraph context for Developer Mode / Agent Lab / work-order execution, `src/agent-lab-work-order-execution.ts`, `src/agent-lab-developer-mode.ts`, `src/developer-mode.ts`, `src/codex.ts`.
+- CLI/read-model surfaces: `opl framework readiness --family-defaults --json`, `opl runtime app-operator-drilldown --json`, `opl family-runtime status --json`, `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`, `opl agents conformance --family-defaults --json`, `opl agents interfaces --repo-dir /Users/gaofeng/workspace/med-autoscience --json`.
+- CLI help surfaces: `opl work-order execute --help`, `opl agent-lab complete --help`, `opl agent-lab workbench --help`, `opl system developer-supervisor --help`, `opl runtime developer-mode-closeout record --help`.
+
+Fresh read-model result:
+
+- `opl family-runtime status --json` read `provider_ready=true`, `full_online_ready=true`, `durable_online_ready=true`, `default_standard_agent_runtime_path=opl_temporal_hosted_autonomous`, `temporal_hosted_autonomy_default_enabled=true`, `provider_managed_long_running_tasks=true`, `domain_agent_internal_daemon_allowed=false`, `domain_agent_internal_scheduler_allowed=false`, `domain_agent_internal_attempt_loop_allowed=false`, `codex_app_drives_long_running_tasks=false`, selected provider `temporal` ready, managed worker source current, and `local_sqlite` classified as dev/CI/offline diagnostic baseline.
+- `opl framework readiness --family-defaults --json` read `status=framework_control_plane_available_with_blocked_refs_only_attention`, `hard_blocker_count=0`, `operator_actionable_attention_tail_count=0`, `operator_payload_required_attention_tail_count=0`, `domain_blocked_attention_tail_count=224`, `evidence_envelope_blocked_count=211`, provider cadence/capability SLO satisfied, and authority boundary still `can_claim_domain_ready=false`, `can_claim_production_ready=false`.
+- `opl runtime app-operator-drilldown --json` read `availability=available`, provider cadence/capability SLO satisfied, `functional_privatization_action_required_count=0`, `domain_dispatch_evidence_current_default_actionable_attempt_count=0`, `app_release_user_path_production_user_path_ready=true`, `app_release_user_path_release_ready_claimed=false`, `app_release_user_path_production_ready_claimed=false`, `opl_meta_agent_production_consumption_ready=true`, `opl_meta_agent_claims_domain_ready=false`, `codex_app_runtime_role_status=opl_temporal_hosted_autonomous`, `codex_app_drives_long_running_tasks=false`, and no default next safe action.
+- `opl family-runtime evidence-worklist ... --detail full --json` read `open_worklist_item_count=0`, `open_safe_action_payload_required_item_count=0`, `open_safe_action_payload_free_item_count=0`, `zero_open_worklist_blocked_refs_only_envelope_count=211`, `domain_ready_authorized=false`, `production_ready_authorized=false`, `zero_open_worklist_is_domain_ready=false`, `zero_open_worklist_is_production_ready=false`, and `default_caller_delete_ready` remains not authorized.
+- `opl agents conformance --family-defaults --json` read `status=passed`, `passed_count=4`, `blocked_count=0`, `structural_conformance_status=passed`, `production_evidence_tail_count=4`; this is structural conformance only.
+- `opl agents interfaces --repo-dir /Users/gaofeng/workspace/med-autoscience --json` read `status=ready` for generated CLI/MCP/Skill/product-entry descriptors, with `generated_surface_owner=one-person-lab`, `domain_repo_can_own_generated_surface=false`, and authority boundary forbidding generated interface from writing domain truth, memory body, artifact mutation or quality/export verdict.
+- `opl work-order execute --help` confirms the canonical OPL Codex CLI worktree primitive exists and emits refs-only closeout receipts; `agent-lab complete/workbench` help confirms Agent Lab subcommands are concrete command surfaces; `system developer-supervisor` and `runtime developer-mode-closeout record` help confirm Developer Mode config and refs-only closeout intake surfaces.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | `docs/runtime/README.md` directory role and file state table; `docs/runtime/opl-runtime-naming-and-boundary-contract.md` current status note, purpose, scope, fixed terminology, current family positioning, host-agent / Temporal / managed runtime distinction, MDS boundary; `docs/runtime/stage-graph-route-transition-runtime.md` lifecycle header, route/stage semantics, landed capability vs evidence-gate table, route/stage acceptance boundaries; `docs/runtime/opl-agent-lab-control-plane.md` Developer Mode, work-order primitive, Agent Lab / OMA split, landed CLI surfaces, longline suite and test-convergence rules. | `docs/runtime/README.md`; `docs/runtime/opl-runtime-naming-and-boundary-contract.md`; `docs/runtime/stage-graph-route-transition-runtime.md`; this coverage ledger |
+
+Archived / tombstoned / deleted docs:
+
+- none. All four files remain current runtime support. This tranche rewrote stale lifecycle/state and scope wording instead of moving files.
+
+Unreviewed docs:
+
+- OPL full README/docs coverage remains open outside previously covered entry/core, gateway-federation history, frontdoor-legacy history, process/specs history, process/plans history, process/convergence-governance history, process/domain-admission history, process/shared-boundary history, process/superpowers history, runtime-substrate history, current-support reference blocks and this `docs/runtime/**` tranche, especially `docs/product/**`, `docs/source/**`, `docs/delivery/**`, `docs/public/**`, `docs/specs/**`, `docs/references/runtime-substrate/**`, `docs/references/operating-governance/**`, `docs/references/convergence-governance/**`, `docs/references/governance/**` and other long support bodies not listed above.
+- MAS paragraph-level semantic coverage remains open outside prior lifecycle/history and Portal/projection/App-workbench blocks.
+- App docs remain delayed until active release/GUI worktrees close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+- Future changes in OMA/MAG/RCA can reopen coverage even though their recorded scopes were previously closed.
+
+Remaining stale / retire candidates:
+
+- OPL remaining product/source/delivery/public/specs/reference body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-first, Hermes provider, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only or support-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
+- App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
+
+Next tranche write scope:
+
+- Continue OPL full docs coverage in another bounded support chunk, preferably `docs/product/**`, `docs/specs/**` or `docs/source/**`.
+- Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
