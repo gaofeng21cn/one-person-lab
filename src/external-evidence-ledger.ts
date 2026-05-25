@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from './contracts.ts';
+import {
+  normalizeExternalEvidenceReceiptSemantics,
+  type ExternalEvidenceReceiptSemantics,
+} from './external-evidence-receipt-classification.ts';
 import { resolveOplStatePaths } from './runtime-state-paths.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -23,6 +27,7 @@ export type ExternalEvidenceApplyInput = {
   owner_chain_refs?: string[];
   source_scope_refs?: string[];
   runtime_event_refs?: string[];
+  receipt_semantics?: ExternalEvidenceReceiptSemantics | null;
   receipt_ref?: string | null;
 };
 
@@ -44,6 +49,7 @@ export type ExternalEvidenceReceipt = {
   owner_chain_refs: string[];
   source_scope_refs: string[];
   runtime_event_refs: string[];
+  receipt_semantics: ExternalEvidenceReceiptSemantics | null;
   authority_boundary: {
     opl_can_write_domain_truth: false;
     opl_can_read_memory_body: false;
@@ -141,6 +147,7 @@ function readLedger(): ExternalEvidenceLedger {
       owner_chain_refs: uniqueStrings(receipt.owner_chain_refs),
       source_scope_refs: uniqueStrings(receipt.source_scope_refs),
       runtime_event_refs: uniqueStrings(receipt.runtime_event_refs),
+      receipt_semantics: normalizeExternalEvidenceReceiptSemantics(receipt.receipt_semantics),
       authority_boundary: refsOnlyAuthorityBoundary(),
     })),
   };
@@ -177,6 +184,7 @@ function normalizedReceipt(input: ExternalEvidenceApplyInput): ExternalEvidenceR
   const owner_chain_refs = uniqueStrings(input.owner_chain_refs);
   const source_scope_refs = uniqueStrings(input.source_scope_refs);
   const runtime_event_refs = uniqueStrings(input.runtime_event_refs);
+  const receipt_semantics = normalizeExternalEvidenceReceiptSemantics(input.receipt_semantics);
   const evidenceRefs = [
     ...evidence_refs,
     ...receipt_refs,
@@ -221,6 +229,7 @@ function normalizedReceipt(input: ExternalEvidenceApplyInput): ExternalEvidenceR
     owner_chain_refs,
     source_scope_refs,
     runtime_event_refs,
+    receipt_semantics,
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
 }
@@ -386,9 +395,23 @@ export function parseExternalEvidenceApplyArgs(args: string[]): ExternalEvidence
       case '--runtime-event-ref':
         input.runtime_event_refs!.push(...splitList(takeValue()));
         break;
+      case '--receipt-semantics': {
+        const semantics = normalizeExternalEvidenceReceiptSemantics(takeValue());
+        if (!semantics) {
+          throw new FrameworkContractError('cli_usage_error', 'agents evidence apply --receipt-semantics requires receipt or typed-blocker semantics.', {
+            option: token,
+            allowed: [
+              'domain_owned_receipt_ref',
+              'domain_owned_typed_blocker_ref',
+            ],
+          });
+        }
+        input.receipt_semantics = semantics;
+        break;
+      }
       default:
         throw new FrameworkContractError('cli_usage_error', `Unknown agents evidence apply option: ${token}.`, {
-          usage: 'opl agents evidence apply --domain <domain> --request-id <id> [--mode record|verify] [--evidence-ref <ref>] [--domain-receipt-ref <ref>] [--typed-blocker-ref <ref>] [--source-scope-ref <ref>] [--runtime-event-ref <ref>]',
+          usage: 'opl agents evidence apply --domain <domain> --request-id <id> [--mode record|verify] [--evidence-ref <ref>] [--domain-receipt-ref <ref>] [--typed-blocker-ref <ref>] [--source-scope-ref <ref>] [--runtime-event-ref <ref>] [--receipt-semantics <domain_owned_receipt_ref|domain_owned_typed_blocker_ref>]',
         });
     }
   }

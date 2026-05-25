@@ -194,6 +194,152 @@ test('family-runtime evidence-worklist classifies verified external blockers wit
   }
 });
 
+test('family-runtime evidence-worklist treats domain-declared external closures as receipts', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-external-closure-'));
+  const domainWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-domain-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const manifest = withEvidenceWorklistSurfaces(
+    loadFamilyManifestFixtures().medautogrant,
+    ['fundability_strategy'],
+    { externalEvidenceRequestCount: 1 },
+  );
+  const closureRef = 'contracts/external_evidence/fixture-ledger.json#/request_closures/0';
+  fs.mkdirSync(path.join(domainWorkspaceRoot, 'contracts', 'external_evidence'), { recursive: true });
+  fs.writeFileSync(path.join(
+    domainWorkspaceRoot,
+    'contracts',
+    'external_evidence',
+    'fixture-ledger.json',
+  ), JSON.stringify({
+    surface_kind: 'fixture_external_evidence_receipt_ledger.v1',
+    summary: {
+      closed_request_count: 1,
+      domain_owned_typed_blocker_count: 0,
+    },
+    request_closures: [
+      {
+        request_id: 'external_evidence_1',
+        closure_state: 'closed_by_verified_external_receipt_ref',
+        accepted_return_shape: 'domain_owner_receipt',
+        receipt_shape: 'domain_owner_receipt',
+        receipt_ref: 'fixture://receipts/external-evidence-1',
+        typed_blocker_ref: null,
+      },
+    ],
+  }, null, 2));
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautogrant',
+      '--path',
+      domainWorkspaceRoot,
+      '--manifest-command',
+      buildManifestCommand(manifest),
+    ], familyRuntimeEnv(stateRoot, fixtureContractsRoot));
+
+    const before = runCli([
+      'family-runtime',
+      'evidence-worklist',
+      '--family-defaults',
+      '--provider',
+      'temporal',
+      '--executor-kind',
+      'codex_cli',
+      '--detail',
+      'full',
+    ], familyRuntimeEnv(stateRoot, fixtureContractsRoot)).family_runtime_evidence_worklist;
+    const recordItem = before.worklist_items.find((item: { claim_scope: string }) =>
+      item.claim_scope === 'external_evidence_receipt'
+    );
+    assert.ok(recordItem);
+
+    const recorded = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      recordItem.action_id,
+      '--payload',
+      JSON.stringify({ typed_blocker_refs: [closureRef] }),
+    ], familyRuntimeEnv(stateRoot, fixtureContractsRoot)).runtime_operator_action_execution;
+    assert.equal(recorded.execution.result.external_evidence_apply.status, 'recorded');
+
+    const recordedWorklist = runCli([
+      'family-runtime',
+      'evidence-worklist',
+      '--family-defaults',
+      '--provider',
+      'temporal',
+      '--executor-kind',
+      'codex_cli',
+      '--detail',
+      'full',
+    ], familyRuntimeEnv(stateRoot, fixtureContractsRoot)).family_runtime_evidence_worklist;
+    const verifyItem = recordedWorklist.worklist_items.find((item: { action_kind: string }) =>
+      item.action_kind === 'external_evidence_receipt_verify'
+    );
+    assert.ok(verifyItem);
+
+    const verified = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      verifyItem.action_id,
+    ], familyRuntimeEnv(stateRoot, fixtureContractsRoot)).runtime_operator_action_execution;
+    assert.equal(verified.execution.result.external_evidence_apply.status, 'verified');
+
+    const afterDrilldown = runCli([
+      'runtime',
+      'app-operator-drilldown',
+      '--detail',
+      'full',
+    ], familyRuntimeEnv(stateRoot, fixtureContractsRoot)).app_operator_drilldown;
+    const receiptEnvelope = afterDrilldown.evidence_envelope.envelopes.find(
+      (envelope: { envelope_id: string }) =>
+        envelope.envelope_id === 'external_evidence_receipt:med-autogrant:external_evidence_1',
+    );
+    assert.equal(receiptEnvelope.status, 'closed');
+    assert.equal(receiptEnvelope.payload_kind, 'domain_owned_receipt_refs');
+    assert.deepEqual(receiptEnvelope.typed_blocker_refs, []);
+    assert.equal(receiptEnvelope.receipt_refs.includes(closureRef), true);
+
+    const afterWorklist = runCli([
+      'family-runtime',
+      'evidence-worklist',
+      '--family-defaults',
+      '--provider',
+      'temporal',
+      '--executor-kind',
+      'codex_cli',
+      '--detail',
+      'full',
+    ], familyRuntimeEnv(stateRoot, fixtureContractsRoot)).family_runtime_evidence_worklist;
+    const verifiedItem = afterWorklist.worklist_items.find((item: {
+      claim_scope: string;
+      domain_id: string;
+      action_id: string;
+    }) =>
+      item.claim_scope === 'external_evidence_receipt'
+      && item.domain_id === 'med-autogrant'
+      && item.action_id.endsWith(':external_evidence_1:verified')
+    );
+    assert.ok(verifiedItem);
+    assert.equal(verifiedItem.status, 'closed_by_receipt_ref');
+    assert.equal(verifiedItem.worklist_status_detail, 'closed_by_opl_external_evidence_ledger_receipt');
+    assert.deepEqual(verifiedItem.typed_blocker_refs, []);
+    assert.equal(verifiedItem.receipt_refs.includes(closureRef), true);
+    assert.equal(afterWorklist.next_action_ledger.summary.typed_blocker_tail_item_count, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(domainWorkspaceRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime evidence-worklist classifies blocked cleanup plans as route-back blockers', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-cleanup-blocker-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();

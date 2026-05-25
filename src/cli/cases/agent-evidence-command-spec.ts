@@ -5,7 +5,7 @@ import {
 import type { CommandSpec } from '../modules/support.ts';
 
 export const agentsEvidenceApplySpec: CommandSpec = {
-  usage: 'opl agents evidence apply --domain <domain> --request-id <id> [--mode record|verify] [--request-pack-id <id>] [--source-ref <ref>] [--evidence-ref <ref>] [--domain-receipt-ref <ref>] [--typed-blocker-ref <ref>] [--no-regression-ref <ref>] [--release-dist-ref <ref>] [--direct-hosted-parity-ref <ref>] [--owner-chain-ref <ref>] [--receipt-ref <ref>]',
+  usage: 'opl agents evidence apply --domain <domain> --request-id <id> [--mode record|verify] [--request-pack-id <id>] [--source-ref <ref>] [--evidence-ref <ref>] [--domain-receipt-ref <ref>] [--typed-blocker-ref <ref>] [--no-regression-ref <ref>] [--release-dist-ref <ref>] [--direct-hosted-parity-ref <ref>] [--owner-chain-ref <ref>] [--receipt-semantics <domain_owned_receipt_ref|domain_owned_typed_blocker_ref>] [--receipt-ref <ref>]',
   summary:
     'Record or verify OPL-owned refs-only external evidence receipts for domain-declared evidence requests without reading domain bodies.',
   examples: [

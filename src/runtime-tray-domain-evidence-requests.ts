@@ -3,6 +3,9 @@ import {
   listExternalEvidenceReceipts,
   type ExternalEvidenceReceipt,
 } from './external-evidence-ledger.ts';
+import {
+  classifyExternalEvidenceReceiptRefs,
+} from './external-evidence-receipt-classification.ts';
 import type { JsonRecord } from './runtime-tray-snapshot-types.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -81,6 +84,14 @@ function summarizeExternalEvidenceReceipts(receipts: ExternalEvidenceReceipt[]) 
   };
 }
 
+function classifyReceipt(receipt: ExternalEvidenceReceipt, domainWorkspacePath: string | null, requestId: string) {
+  return classifyExternalEvidenceReceiptRefs({
+    receipt: receipt as unknown as JsonRecord,
+    domainWorkspacePath,
+    requestId,
+  });
+}
+
 function functionalAuditModules(audit: JsonRecord | null | undefined) {
   return [
     ...recordList(audit?.modules),
@@ -149,6 +160,7 @@ export function buildDomainEvidenceRequestRefs(
         forbidden_payload_classes: request.forbidden_payload_classes,
         accepted_payload_policy: request.accepted_payload_policy,
         source_field: audit.source_field,
+        domain_workspace_path: project.workspace_path,
         evidence_apply_command:
           `opl agents evidence apply --domain ${domainId} --request-id ${request.request_id}`,
         evidence_verify_command:
@@ -160,23 +172,33 @@ export function buildDomainEvidenceRequestRefs(
     });
   });
   const externalReceiptRefs = uniqueRefs(externalRequests.flatMap((request) =>
-    request.observed_receipts.map((receipt) => ({
-      ref: receipt.receipt_ref,
-      role: 'external_evidence_receipt',
-      domain_id: request.domain_id,
-      request_id: request.request_id,
-      request_pack_id: request.request_pack_id,
-      receipt_status: receipt.receipt_status,
-      evidence_refs: receipt.evidence_refs,
-      domain_receipt_refs: receipt.receipt_refs,
-      typed_blocker_refs: receipt.typed_blocker_refs,
-      no_regression_refs: receipt.no_regression_refs,
-      release_dist_refs: receipt.release_dist_refs,
-      direct_hosted_parity_refs: receipt.direct_hosted_parity_refs,
-      owner_chain_refs: receipt.owner_chain_refs,
-      authority_boundary: refsOnlyAuthorityBoundary(),
-      can_execute: false,
-    }))
+    request.observed_receipts.map((receipt) => {
+      const classification = classifyReceipt(
+        receipt,
+        request.domain_workspace_path,
+        request.request_id,
+      );
+      return {
+        ref: receipt.receipt_ref,
+        role: 'external_evidence_receipt',
+        domain_id: request.domain_id,
+        domain_workspace_path: request.domain_workspace_path,
+        request_id: request.request_id,
+        request_pack_id: request.request_pack_id,
+        receipt_status: receipt.receipt_status,
+        evidence_refs: receipt.evidence_refs,
+        domain_receipt_refs: classification.receipt_refs,
+        typed_blocker_refs: classification.typed_blocker_refs,
+        reclassified_typed_blocker_refs: classification.reclassified_typed_blocker_refs,
+        receipt_semantics: receipt.receipt_semantics ?? classification.receipt_semantics,
+        no_regression_refs: receipt.no_regression_refs,
+        release_dist_refs: receipt.release_dist_refs,
+        direct_hosted_parity_refs: receipt.direct_hosted_parity_refs,
+        owner_chain_refs: receipt.owner_chain_refs,
+        authority_boundary: refsOnlyAuthorityBoundary(),
+        can_execute: false,
+      };
+    })
   ));
   const evidenceGates = resolvedProjects.flatMap((project) => {
     const audit = project.manifest?.functional_privatization_audit;
@@ -203,6 +225,7 @@ export function buildDomainEvidenceRequestRefs(
         gate_status: receiptStatus === 'verified' ? 'verified' : 'open',
         external_receipt_status: receiptStatus,
         source_refs: gates.source_refs,
+        domain_workspace_path: project.workspace_path,
         evidence_apply_command:
           `opl agents evidence apply --domain ${domainId} --request-id ${gateId}`,
         evidence_verify_command:
@@ -217,24 +240,34 @@ export function buildDomainEvidenceRequestRefs(
     gate.external_receipt_status !== 'verified'
   );
   const evidenceGateReceiptRefs = uniqueRefs(evidenceGates.flatMap((gate) =>
-    gate.observed_receipts.map((receipt) => ({
-      ref: receipt.receipt_ref,
-      role: 'evidence_gate_receipt',
-      domain_id: gate.domain_id,
-      gate_id: gate.gate_id,
-      request_id: gate.request_id,
-      request_pack_id: gate.request_pack_id,
-      receipt_status: receipt.receipt_status,
-      evidence_refs: receipt.evidence_refs,
-      domain_receipt_refs: receipt.receipt_refs,
-      typed_blocker_refs: receipt.typed_blocker_refs,
-      no_regression_refs: receipt.no_regression_refs,
-      release_dist_refs: receipt.release_dist_refs,
-      direct_hosted_parity_refs: receipt.direct_hosted_parity_refs,
-      owner_chain_refs: receipt.owner_chain_refs,
-      authority_boundary: refsOnlyAuthorityBoundary(),
-      can_execute: false,
-    }))
+    gate.observed_receipts.map((receipt) => {
+      const classification = classifyReceipt(
+        receipt,
+        gate.domain_workspace_path,
+        gate.request_id,
+      );
+      return {
+        ref: receipt.receipt_ref,
+        role: 'evidence_gate_receipt',
+        domain_id: gate.domain_id,
+        domain_workspace_path: gate.domain_workspace_path,
+        gate_id: gate.gate_id,
+        request_id: gate.request_id,
+        request_pack_id: gate.request_pack_id,
+        receipt_status: receipt.receipt_status,
+        evidence_refs: receipt.evidence_refs,
+        domain_receipt_refs: classification.receipt_refs,
+        typed_blocker_refs: classification.typed_blocker_refs,
+        reclassified_typed_blocker_refs: classification.reclassified_typed_blocker_refs,
+        receipt_semantics: receipt.receipt_semantics ?? classification.receipt_semantics,
+        no_regression_refs: receipt.no_regression_refs,
+        release_dist_refs: receipt.release_dist_refs,
+        direct_hosted_parity_refs: receipt.direct_hosted_parity_refs,
+        owner_chain_refs: receipt.owner_chain_refs,
+        authority_boundary: refsOnlyAuthorityBoundary(),
+        can_execute: false,
+      };
+    })
   ));
   const replacementExpectations = resolvedProjects.flatMap((project) => {
     const audit = project.manifest?.functional_privatization_audit;

@@ -97,6 +97,7 @@ test('runtime action execute records and verifies external evidence request rout
         domain_receipt_refs: ['mas://receipts/package-lifecycle/latest.json'],
         typed_blocker_refs: ['mas://blockers/package-lifecycle-currentness.json'],
         no_regression_refs: ['mas://proof/no-regression/package-lifecycle.json'],
+        receipt_semantics: 'domain_owned_receipt_ref',
       }),
     ], {
       OPL_STATE_DIR: stateRoot,
@@ -134,9 +135,27 @@ test('runtime action execute records and verifies external evidence request rout
 
     assert.equal(verifyExecution.execution.execution_kind, 'opl_cli_external_evidence_apply');
     assert.equal(verifyExecution.execution.result.external_evidence_apply.status, 'verified');
+    assert.equal(
+      verifyExecution.execution.result.external_evidence_apply.receipt.receipt_semantics,
+      'domain_owned_receipt_ref',
+    );
     assert.equal(verifyExecution.execution.result.external_evidence_apply.receipt.receipt_refs.includes(
       'mas://receipts/package-lifecycle/latest.json',
     ), true);
+    const verifiedDrilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).app_operator_drilldown;
+    const verifiedReceipt = verifiedDrilldown.domain_evidence_request_refs.external_receipts.find(
+      (receipt: { request_id: string }) =>
+        receipt.request_id === 'app_workbench_package_ref_consumption',
+    );
+    assert.equal(verifiedReceipt.receipt_semantics, 'domain_owned_receipt_ref');
+    assert.equal(verifiedReceipt.typed_blocker_refs.length, 0);
+    assert.equal(
+      verifiedReceipt.domain_receipt_refs.includes('mas://blockers/package-lifecycle-currentness.json'),
+      true,
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

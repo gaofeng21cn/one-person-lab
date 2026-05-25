@@ -486,6 +486,7 @@ function externalEvidenceApplyArgs(
   const sourceScopeRefs = refsFromPayload(payload, ['source_scope_refs', 'source_scope_ref']);
   const runtimeEventRefs = refsFromPayload(payload, ['runtime_event_refs', 'runtime_event_ref']);
   const receiptRef = stringValue(payload.receipt_ref);
+  const receiptSemantics = stringValue(payload.receipt_semantics);
   const extraArgs = [
     ...evidenceRefs.flatMap((ref) => ['--evidence-ref', ref]),
     ...domainReceiptRefs.flatMap((ref) => ['--domain-receipt-ref', ref]),
@@ -496,6 +497,7 @@ function externalEvidenceApplyArgs(
     ...ownerChainRefs.flatMap((ref) => ['--owner-chain-ref', ref]),
     ...sourceScopeRefs.flatMap((ref) => ['--source-scope-ref', ref]),
     ...runtimeEventRefs.flatMap((ref) => ['--runtime-event-ref', ref]),
+    ...(receiptSemantics ? ['--receipt-semantics', receiptSemantics] : []),
     ...(receiptRef ? ['--receipt-ref', receiptRef] : []),
   ];
   if (extraArgs.length === 0) {
