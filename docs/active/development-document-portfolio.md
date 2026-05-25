@@ -746,6 +746,57 @@ Next tranche write scope:
 - Move to another repo's full README/docs paragraph coverage, preferably OPL, RCA, or MAS depending on clean worktree availability.
 - Keep App delayed until active release/GUI worktrees close or an explicit owner decision makes their current state safe to govern.
 
+Date: `2026-05-25 18:37 CST`
+Tranche: `rca-readme-docs-full-coverage`
+State: `tranche_verified_rca_scope_closed`
+
+本轮覆盖 `redcube-ai` 的 repo-root `README*`、`agent/README.md`、`contracts/README.md`、`runtime/README.md`、`config/local/README.md`、prompt README 支撑入口和全部 `docs/**/*.md`。目标是确认 RCA 当前文档组合没有把旧 Hermes/Gateway/runtime/session/domain_action_adapter wording 读成 current owner truth，没有缺失直接入口 lifecycle 四信号，也没有重复 active truth owner。
+
+Fresh live truth inputs:
+
+- RCA `AGENTS.md`、`TASTE.md`
+- RCA `README.md`、`README.zh-CN.md`、核心五件套、`docs/active/rca-ideal-state-gap-plan.md`、`docs/references/rca-visual-deliverable-agent-ideal-state.md`
+- RCA `contracts/runtime-program/current-program.json`
+- RCA `contracts/functional_privatization_audit.json`
+- RCA `contracts/generated_surface_handoff.json`
+- RCA `contracts/production_acceptance/rca-production-acceptance.json`
+- RCA OPL Doc Governance doctor、README/docs lifecycle scan、docs conflict-marker scan
+
+Fresh contract result:
+
+- `product_release_metadata.positioning=Foundry Agent / OPL-compatible package built on OPL Framework` remains current.
+- RCA still owns visual truth、review/export verdict、route owner、artifact authority、visual memory body、owner receipt and native helper implementation; OPL does not own visual truth、review/export verdict、canonical artifacts、domain memory content or native helper implementation.
+- `functional_structure_gap_count=0` remains a legacy/generic runtime owner closure signal with production evidence gates open; it is not visual ready、exportable、handoffable or visual-stage long-soak completion.
+- `generated_surface_owner=one-person-lab` and `domain_repo_can_own_generated_surface=false` remain current; RCA local surfaces are domain handler targets、direct protocol adapters、refs-only adapters or visual authority/native helper surfaces.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `redcube-ai` | Current git inventory for `README*`, `agent/README.md`, `contracts/README.md`, `runtime/README.md`, `config/local/README.md`, prompt README support files and all `docs/**/*.md` (97 Markdown files in this scoped inventory). Review covered primary current docs, active plan, ideal-state reference, docs portfolio owner, lifecycle four-signal scan, old Hermes/Gateway/frontdoor/federation/docs/program/capabilities wording, current/support/history owner boundaries and stale production-ready/readiness wording. | `config/local/README.md`, `contracts/README.md`, `prompts/node/aligned/自动小红书/README.md`, `prompts/node/aligned/自动小红书/故事指南/候选/README.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The RCA action was direct lifecycle clarification for four support README files. Existing history/tombstone files remain useful provenance and no reviewed current/support doc required archive/delete.
+
+Unreviewed docs:
+
+- `redcube-ai`: none remaining in the current repo-root `README*` / `agent/README.md` / `contracts/README.md` / `runtime/README.md` / `config/local/README.md` / prompt README / `docs/**/*.md` scoped inventory. RCA README/docs coverage can be treated as closed for the global ledger, subject to future repo changes creating new docs.
+- OMA and MAG README/docs coverage are already closed by prior ledger entries.
+- OPL, MAS and App README/docs coverage remain open. App docs are still risky while active release/GUI worktrees own local changes.
+
+Remaining stale / retire candidates:
+
+- RCA still has runtime/evidence/source-purity tails around production evidence scaleout、generated/default caller thinning、naming/contract hygiene and compatibility-free retirement; these remain active plan/runtime/source tasks, not README/docs coverage gaps.
+- Historical Hermes/Gateway/frontdoor/federation/runtime/session/domain_action_adapter wording still appears in history/provenance, explicit tombstone or negative-guard contexts; no current-doc rewrite was required in this tranche.
+- `npm run build` in the RCA coverage worktree exposed an existing worktree dependency-resolution limitation: Node resolved `@redcube/runtime-protocol` through the parent checkout's `node_modules` symlink and read stale parent `dist` declarations. Docs-only verification stayed valid; source/build verification should be rerun from a dependency-synced checkout if the next RCA tranche touches source/contracts/tests.
+
+Next tranche write scope:
+
+- Move to OPL or MAS full README/docs paragraph coverage when a clean owner lane is available.
+- Keep App delayed until active release/GUI worktrees close, App `main` is updated to the current release commits, or an explicit owner decision makes current App docs safe to govern.
+
 
 Docs-only 整理：
 
