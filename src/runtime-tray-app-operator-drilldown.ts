@@ -91,6 +91,9 @@ import {
   buildAppExecutionBridge,
 } from './runtime-tray-app-operator-drilldown-parts/execution-bridge.ts';
 import {
+  buildRuntimeVisualizationProjection,
+} from './runtime-tray-app-operator-drilldown-parts/runtime-visualization-projection.ts';
+import {
   booleanValue,
   cleanupCommandDomainId,
   nestedRef,
@@ -969,6 +972,23 @@ export function buildAppOperatorDrilldown(input: {
   const lifecycleRefs = lifecycleLedgerRefs();
   const safeActions = safeActionRefs(actionRefs, lifecycleRefs);
   const executionBridge = buildAppExecutionBridge(actionRefs, periodicRefs, lifecycleRefs);
+  const runtimeVisualizationProjection = buildRuntimeVisualizationProjection({
+    attempts,
+    routeRefs,
+    decisionRefs,
+    artifactRefs,
+    packageLifecycle,
+    memoryRefs,
+    qualityRefs,
+    actionRefs,
+    ownerReceipts,
+    typedBlockers,
+    domainProjectionIngestion: input.domainProjectionIngestion,
+    routeTransitionDrilldown: routeTransitionDrilldownRefs,
+    stageProductionEvidence,
+    domainDispatchEvidence,
+    safeActions,
+  });
   const summary = {
     ...buildAppOperatorDrilldownSummary({
       attempts,
@@ -1042,6 +1062,14 @@ export function buildAppOperatorDrilldown(input: {
     current_control_state_blocked_count: record(currentControlState.summary).blocked_control_state_count,
     current_control_state_accepted_typed_closeout_count:
       record(currentControlState.summary).accepted_typed_closeout_count,
+    runtime_visualization_node_count:
+      record(runtimeVisualizationProjection.summary).node_count,
+    runtime_visualization_edge_count:
+      record(runtimeVisualizationProjection.summary).edge_count,
+    runtime_visualization_timeline_event_count:
+      record(runtimeVisualizationProjection.summary).timeline_event_count,
+    runtime_visualization_paper_route_lens_ref_count:
+      record(runtimeVisualizationProjection.summary).paper_route_lens_ref_count,
   };
   const sourceRefs: RuntimeTraySourceRef[] = uniqueByRef([
     sourceRef('/runtime_tray_snapshot/stage_attempt_workbench', 'stage_attempt_workbench'),
@@ -1060,6 +1088,10 @@ export function buildAppOperatorDrilldown(input: {
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/domain_legacy_cleanup_plan_refs', 'domain_legacy_cleanup_plan_refs'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/default_caller_deletion_evidence_refs', 'default_caller_deletion_evidence_refs'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/evidence_envelope', 'evidence_envelope'),
+    sourceRef(
+      '/runtime_tray_snapshot/app_operator_drilldown/runtime_visualization_projection',
+      'runtime_visualization_projection',
+    ),
     sourceRef(
       '/runtime_tray_snapshot/app_operator_drilldown/standard_agent_template_consumption_refs',
       'standard_agent_template_consumption_refs',
@@ -1150,6 +1182,7 @@ export function buildAppOperatorDrilldown(input: {
     domain_evidence_request_refs: evidenceRequests,
     production_evidence_tail_ledger: productionEvidenceTailLedger,
     evidence_envelope: evidenceEnvelope,
+    runtime_visualization_projection: runtimeVisualizationProjection,
     domain_legacy_cleanup_plan_refs: legacyCleanupPlans,
     standard_agent_template_consumption_refs: standardAgentTemplateConsumption,
     opl_meta_agent_workbench_refs: oplMetaAgentRegistry,

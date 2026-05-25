@@ -428,6 +428,10 @@ export function assertEvidenceTailAndDomainRefs(drilldown: any, snapshot: any) {
     snapshot.source_refs.some((ref: { role: string }) => ref.role === 'domain_legacy_cleanup_plan_refs'),
     true,
   );
+  assert.equal(
+    snapshot.source_refs.some((ref: { role: string }) => ref.role === 'runtime_visualization_projection'),
+    true,
+  );
 }
 
 export function buildMasAppOperatorDrilldownFixtureManifest() {
@@ -558,6 +562,33 @@ export function buildMasAppOperatorDrilldownFixtureManifest() {
       research_runtime_control_projection: {
         surface_kind: 'research_runtime_control_projection',
         source_refs: ['mas://runtime/control/latest.json'],
+      },
+      paper_route_lens: {
+        surface_kind: 'mas_opl_paper_route_lens',
+        schema_version: 1,
+        mode: 'refs_only_paper_route_lens',
+        study_id: 'dm-cvd',
+        status: 'available',
+        body_included: false,
+        manuscript_body_included: false,
+        artifact_body_included: false,
+        claims_publication_ready: false,
+        publication_ready_authorized: false,
+        paper_route_lens_refs: ['mas://studies/dm-cvd/paper-route-lens/latest.json'],
+        owner_receipt_refs: ['mas://receipts/dm-cvd/write-owner-route.json'],
+        typed_blocker_refs: ['mas://blockers/dm-cvd/reviewer-refresh.json'],
+        reviewer_gate_refs: ['mas://reviewer-gates/dm-cvd/currentness.json'],
+        artifact_refs: ['mas://artifacts/dm-cvd/current-package.zip'],
+        source_refs: ['mas://sources/dm-cvd/source-scope.json'],
+        workspace_refs: ['mas://workspaces/dm-cvd'],
+        next_route_refs: ['mas://routes/dm-cvd/reviewer-refresh'],
+        next_action_refs: ['mas://actions/dm-cvd/run-reviewer-refresh'],
+        authority: {
+          can_read_paper_body: false,
+          can_write_paper_truth: false,
+          can_authorize_publication_ready: false,
+          can_authorize_quality_verdict: false,
+        },
       },
       route_decision_graph_ref: 'mas://runtime/route-decision/latest.json',
       quality_readiness_ref: 'mas://publication_eval/latest.json',

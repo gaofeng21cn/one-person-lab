@@ -217,6 +217,10 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.memory_writeback_ref_count, 1);
     assert.equal(drilldown.summary.quality_ref_count, 1);
     assert.equal(drilldown.summary.readiness_ref_count, 1);
+    assert.equal(drilldown.summary.runtime_visualization_node_count > 0, true);
+    assert.equal(drilldown.summary.runtime_visualization_edge_count > 0, true);
+    assert.equal(drilldown.summary.runtime_visualization_timeline_event_count > 0, true);
+    assert.equal(drilldown.summary.runtime_visualization_paper_route_lens_ref_count, 1);
     assert.equal(drilldown.summary.provider_slo_action_count, 1);
     assert.equal(drilldown.summary.provider_cadence_window_status, 'window_evidence_incomplete');
     assert.equal(drilldown.summary.provider_cadence_window_long_evidence_ready, false);
@@ -328,6 +332,53 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
 
     assert.equal(drilldown.route_graph_refs.surface_kind, 'opl_app_drilldown_route_graph_refs');
     assert.equal(drilldown.route_graph_refs.refs[0].ref, `/stage_attempt_workbench/attempts/${attemptId}/route_decision_graph`);
+    assert.equal(
+      drilldown.runtime_visualization_projection.surface_kind,
+      'opl_app_runtime_visualization_projection',
+    );
+    assert.equal(
+      drilldown.runtime_visualization_projection.projection_policy,
+      'refs_only_no_domain_truth_memory_body_artifact_body_or_verdict',
+    );
+    assert.equal(
+      drilldown.runtime_visualization_projection.graph.nodes.some(
+        (node: { node_kind: string; stage_attempt_id: string }) =>
+          node.node_kind === 'stage_attempt' && node.stage_attempt_id === attemptId,
+      ),
+      true,
+    );
+    assert.equal(
+      drilldown.runtime_visualization_projection.graph.edges.some(
+        (edge: { edge_kind: string; stage_attempt_id: string }) =>
+          edge.edge_kind === 'attempt_has_route_graph' && edge.stage_attempt_id === attemptId,
+      ),
+      true,
+    );
+    assert.equal(
+      drilldown.runtime_visualization_projection.timeline.events.some(
+        (event: { event_kind: string; stage_attempt_id: string }) =>
+          event.event_kind === 'stage_attempt_status' && event.stage_attempt_id === attemptId,
+      ),
+      true,
+    );
+    assert.deepEqual(
+      drilldown.runtime_visualization_projection.research_lens.paper_route_lens_refs.map(
+        (ref: { ref: string }) => ref.ref,
+      ),
+      ['mas://studies/dm-cvd/paper-route-lens/latest.json'],
+    );
+    assert.equal(
+      drilldown.runtime_visualization_projection.research_lens.authority_boundary.can_read_paper_body,
+      false,
+    );
+    assert.equal(
+      drilldown.runtime_visualization_projection.authority_boundary.can_create_owner_receipt,
+      false,
+    );
+    assert.equal(
+      drilldown.runtime_visualization_projection.authority_boundary.can_authorize_publication_ready,
+      false,
+    );
     assert.equal(drilldown.review_repair_queue_refs.items[0].repair_target, `opl family-runtime attempt query ${attemptId}`);
     assert.equal(drilldown.artifact_gallery_refs.content_policy, 'locator_only_no_artifact_content');
     assert.equal(drilldown.artifact_gallery_refs.refs.length, 3);

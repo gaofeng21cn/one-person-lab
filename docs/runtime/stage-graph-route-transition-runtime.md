@@ -92,7 +92,7 @@ MAS 负责：
 | lane | 当前读法 | 剩余门槛 |
 | --- | --- | --- |
 | `graph_runtime_contract` | stage、route、node、child graph、authority function 与 receipt owner 已进入 runtime docs / contracts / invariants 读法。 | 后续只在新增 graph primitive 或 machine contract 时同步本文；不作为独立 backlog 保存。 |
-| `operator_drilldown` | `runtime app-operator-drilldown` summary-first read model 已可投影 provider SLO、queue/attempt/control state、evidence envelope、owner payload groups、App release evidence、OMA consumption 和 route support。 | projection 继续保持 refs-only；full detail 可以定位 owner receipt / typed blocker / no-regression refs，但不生成 verdict。 |
+| `operator_drilldown` | `runtime app-operator-drilldown` summary-first read model 已可投影 provider SLO、queue/attempt/control state、evidence envelope、owner payload groups、App release evidence、OMA consumption、route support 和 `runtime_visualization_projection` graph/timeline/research lens。 | projection 继续保持 refs-only；full detail 可以定位 owner receipt / typed blocker / no-regression refs、MAS paper route lens refs 和 safe action refs，但不生成 verdict。 |
 | `mas_route_contract_consumption` | `runtime_manager_route_support` 已把 MAS route support 作为 refs-only catalog 投到 App/operator read model。 | MAS sidecar 继续只输出 owner-route handoff；OPL hydrate/dispatch/retry/dead-letter；MAS 不写 OPL liveness/redrive/runtime_state 仲裁。 |
 | `executor_reviewer_split` | AI-first independent reviewer/auditor gate 已冻结为 invariants / Agent Lab / stage-control-plane 规则。 | 真实 quality gate 仍只能由独立 reviewer/auditor record、domain owner receipt 或 typed blocker 关闭；同一 invocation 自审不得 close gate。 |
 | `human_gate_transport` | OPL runtime 已持有 human gate transport 的边界和 provider route 语义。 | pause/resume/stop/approve/reject 由 OPL transport 承载；domain repo 只给 gate schema、authority boundary 和 receipt。 |
@@ -115,6 +115,7 @@ MAS 负责：
 可以声明：
 
 - OPL 已具备承载 MAS route-as-transition 的基础运行面：stage graph projection、family transition runner、provider-backed stage attempt、typed queue、receipt ledger、runtime manager MAS route projection 和 App/operator drilldown。
+- App/operator full detail 已具备 refs-only runtime visualization projection，可展示 stage/route/receipt/blocker timeline 与 MAS paper route lens refs。
 - MAS 应继续作为 declarative medical research pack + minimal authority functions，而不是私有 runtime platform。
 
 不能声明：
@@ -122,4 +123,5 @@ MAS 负责：
 - transition runner pass 等于 MAS paper closure。
 - provider completion 等于 publication-ready、artifact-ready、quality-ready 或 submission-ready。
 - route graph visible 等于 owner receipt chain 已闭合。
+- paper route lens visible 等于论文正文已读、论文路线已成功或 publication ready。
 - MAS retained adapter 已物理删除，除非 deletion gate 的所有 receipt/proof 都成立。

@@ -54,6 +54,7 @@ const SUMMARY_DRILLDOWN_KEYS = [
   'domain_evidence_request_refs',
   'production_evidence_tail_ledger',
   'evidence_envelope',
+  'runtime_visualization_projection',
   'domain_legacy_cleanup_plan_refs',
   'standard_agent_template_consumption_refs',
   'opl_meta_agent_workbench_refs',
@@ -956,6 +957,10 @@ export function applyAppOperatorDrilldownDetail<T extends JsonRecord>(
         markFullRefsObject(record(fullDrilldown.domain_dispatch_evidence), 'attempts'),
       stage_production_evidence:
         markFullRefsObject(record(fullDrilldown.stage_production_evidence), 'stages'),
+      runtime_visualization_projection: {
+        ...record(fullDrilldown.runtime_visualization_projection),
+        detail_policy: 'complete_graph_and_timeline_explicit_full_detail',
+      },
     } as AppOperatorDrilldownDetailResult<T>;
   }
 
