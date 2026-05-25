@@ -1,4 +1,5 @@
 import { processIsAlive } from './worker-state.ts';
+import { execFileSync } from 'node:child_process';
 
 const WORKER_STOP_GRACE_MS = 2_000;
 const WORKER_STOP_POLL_MS = 50;
@@ -43,4 +44,54 @@ export function signalManagedWorker(pid: number, signal: NodeJS.Signals) {
   }
   result.errors = errors;
   return result;
+}
+
+export function findTemporalForegroundWorkerPids(input: {
+  modulePath: string;
+  excludePids?: number[];
+}) {
+  if (process.platform === 'win32') {
+    return [];
+  }
+  const exclude = new Set([process.pid, process.ppid, ...(input.excludePids ?? [])]);
+  let output = '';
+  try {
+    output = execFileSync('ps', ['-axo', 'pid=,command='], {
+      encoding: 'utf8',
+      maxBuffer: 1024 * 1024,
+    });
+  } catch {
+    return [];
+  }
+  const pids: number[] = [];
+  for (const line of output.split('\n')) {
+    const trimmed = line.trim();
+    const match = /^(\d+)\s+(.+)$/.exec(trimmed);
+    if (!match) {
+      continue;
+    }
+    const pid = Number(match[1]);
+    const command = match[2];
+    if (
+      Number.isInteger(pid)
+      && !exclude.has(pid)
+      && command.includes(input.modulePath)
+      && command.includes('--temporal-worker-foreground')
+      && processIsAlive(pid)
+    ) {
+      pids.push(pid);
+    }
+  }
+  return [...new Set(pids)].sort((a, b) => a - b);
+}
+
+export async function stopWorkerPid(pid: number) {
+  const actions = [signalManagedWorker(pid, 'SIGTERM')];
+  const exitedAfterTerm = await waitForProcessExit(pid);
+  if (exitedAfterTerm) {
+    return { status: 'stopped', actions };
+  }
+  actions.push(signalManagedWorker(pid, 'SIGKILL'));
+  const exitedAfterKill = await waitForProcessExit(pid);
+  return { status: exitedAfterKill ? 'force_stopped' : 'stop_incomplete', actions };
 }

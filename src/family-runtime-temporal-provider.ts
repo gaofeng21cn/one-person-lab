@@ -55,8 +55,8 @@ import {
   writeTemporalWorkerState,
 } from './family-runtime-temporal-provider-parts/worker-state.ts';
 import {
-  signalManagedWorker,
-  waitForProcessExit,
+  findTemporalForegroundWorkerPids,
+  stopWorkerPid,
 } from './family-runtime-temporal-provider-parts/worker-process.ts';
 
 type StageAttemptPayload = Parameters<typeof buildTemporalStageAttemptWorkflowInput>[0] & {
@@ -951,17 +951,33 @@ export async function stopTemporalWorkerLifecycle(paths: TemporalWorkerPaths) {
   let stoppedPid: number | null = null;
   let stopStatus = 'not_running';
   const stop_actions: Record<string, unknown>[] = [];
+  const orphan_stop_actions: Record<string, unknown>[] = [];
+  const orphan_stopped_pids: number[] = [];
+  const orphan_stop_incomplete_pids: number[] = [];
   if (state && processIsAlive(state.pid)) {
     stoppedPid = state.pid;
-    stop_actions.push(signalManagedWorker(state.pid, 'SIGTERM'));
-    const exitedAfterTerm = await waitForProcessExit(state.pid);
-    if (exitedAfterTerm) {
-      stopStatus = 'stopped';
+    const stopped = await stopWorkerPid(state.pid);
+    stop_actions.push(...stopped.actions);
+    stopStatus = stopped.status;
+  }
+  const orphanPids = findTemporalForegroundWorkerPids({
+    modulePath: fileURLToPath(import.meta.url),
+    excludePids: state?.pid ? [state.pid] : [],
+  });
+  for (const orphanPid of orphanPids) {
+    const stopped = await stopWorkerPid(orphanPid);
+    orphan_stop_actions.push(...stopped.actions.map((action) => ({ ...action, orphan: true })));
+    if (stopped.status === 'stopped' || stopped.status === 'force_stopped') {
+      orphan_stopped_pids.push(orphanPid);
     } else {
-      stop_actions.push(signalManagedWorker(state.pid, 'SIGKILL'));
-      const exitedAfterKill = await waitForProcessExit(state.pid);
-      stopStatus = exitedAfterKill ? 'force_stopped' : 'stop_incomplete';
+      orphan_stop_incomplete_pids.push(orphanPid);
     }
+  }
+  if (stopStatus === 'not_running' && orphan_stopped_pids.length > 0) {
+    stopStatus = 'stopped';
+  }
+  if (orphan_stop_incomplete_pids.length > 0) {
+    stopStatus = 'stop_incomplete';
   }
   removeTemporalWorkerState(paths);
   return {
@@ -970,6 +986,9 @@ export async function stopTemporalWorkerLifecycle(paths: TemporalWorkerPaths) {
     stop_status: stopStatus,
     stopped_pid: stoppedPid,
     stop_actions,
+    orphan_stopped_pids,
+    orphan_stop_incomplete_pids,
+    orphan_stop_actions,
     before,
     status: await inspectTemporalWorkerLifecycle(paths),
   };
