@@ -2870,6 +2870,63 @@ Next tranche write scope:
 - Or the next exact OPL/MAG/App uncovered body from the family coverage ledger.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 07:40 CST`
+Tranche: `rca-product-entry-support-current-caller`
+State: `tranche_verified`
+
+本轮覆盖 RCA product-entry support reference 三件套，并吸收回 RCA `main`。目标是把 2026-04-12 direct / hosted product-entry support brief 读回当前 live CLI/source/tests/contract truth：repo-local `redcube product` 只保留 `invoke` direct domain target；product `status` / `session` / `manifest` / `domain_action_adapter` generated/default wrapper 归 OPL generated/hosted shell；RCA 当前 target 是 direct `invokeProductEntry`、direct `getProductEntrySession` API 与 `domain-handler export|dispatch`，不是长期 generic wrapper owner。
+
+Fresh live truth inputs:
+
+- RCA `AGENTS.md`, `TASTE.md`, core docs, `docs/active/rca-ideal-state-gap-plan.md`, RCA docs-governance ledger and prior active-doc retired-alias coverage entry.
+- RCA product-entry support docs: `docs/references/product-entry/redcube_product_entry_mvp.md`, `docs/references/product-entry/product_entry_session_continuity.md`, `docs/references/product-entry/opl_framework_hosted_product_entry.md`, plus role/index review of `docs/references/product-entry/README.md`.
+- RCA machine/source refs: `contracts/runtime-program/redcube-product-entry-mvp.json`, `contracts/runtime-program/product-entry-session-continuity.json`, `contracts/runtime-program/opl-framework-hosted-product-entry.json`, `contracts/runtime-program/current-program.json`, `contracts/physical_source_morphology_policy.json`, `apps/redcube-cli/src/cli-parts/dispatch.ts`, `apps/redcube-cli/src/cli-parts/help.ts`, and `packages/redcube-domain-entry/src/index.ts`.
+- RCA test refs: `tests/product-entry-cases/direct-and-oplHosted-entry.test.ts`, `tests/product-domain-action-api-cases/product-and-operator-surfaces.test.ts`, `tests/product-domain-action-api-cases/definitions-and-delegation.test.ts`, `tests/product-entry-cases/runtime-and-domain_action_adapter-surfaces.test.ts`, and `tests/rca-retired-surface-guard.test.ts`.
+- CodeGraph evidence for product-entry live source found `invokeProductEntry`, `ProductEntryRequest`, and `ProductEntryResponse` under the RCA domain-entry / product-entry source.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `redcube-ai` | Full paragraph read of the three product-entry support briefs; role/index read of `docs/references/product-entry/README.md`; live source/contract/test refs listed above. | `docs/docs_portfolio_consolidation.md`; `docs/references/product-entry/redcube_product_entry_mvp.md`; `docs/references/product-entry/product_entry_session_continuity.md`; `docs/references/product-entry/opl_framework_hosted_product_entry.md` |
+| `one-person-lab` | coverage ledger owner only | this coverage ledger |
+
+Fresh semantic result:
+
+- `redcube_product_entry_mvp.md` now states that repo-local `redcube product` keeps only `invoke`; generated/default product wrapper surfaces belong to OPL generated/hosted shell.
+- `product_entry_session_continuity.md` now states that `getProductEntrySession` is a direct API and generated session-shell continuation target, but only as refs-only entry-session domain snapshot adapter; it does not create RCA-owned generic session runtime.
+- `opl_framework_hosted_product_entry.md` now points OPL generated `domain_action_adapter` descriptor/shell consumption to RCA `domain-handler export|dispatch`, replacing the obsolete `redcube product domain_action_adapter dispatch` CLI wording.
+- RCA repo-local `docs/docs_portfolio_consolidation.md` records this coverage tranche and leaves runtimeWatch/runtime architecture, integration support, delivery/source support and history/reference bodies as open coverage.
+
+Verification / absorb:
+
+- RCA commit `70d3483 docs: align RCA product-entry support ownership` is on RCA `main` and aligned with `origin/main`.
+- RCA verification before absorb: `git diff --check`; strict README/docs/contracts/tests/src/agent/profiles/scripts conflict-marker scan had no hits; OPL Doc Governance doctor `finding_count=0`, active truth `pass`; focused product/domain tests read `46 passed`.
+- RCA tranche worktree `/Users/gaofeng/workspace/redcube-ai/.worktrees/rca-support-docs-coverage-20260526` and branch `codex/rca-support-docs-coverage-20260526` were removed after absorb.
+
+Archived / tombstoned / deleted docs:
+
+- none. RCA product-entry support briefs remain contract-linked support references; stale current-caller wording was corrected in place.
+
+Unreviewed docs:
+
+- RCA product-entry support reference bodies are now covered for current-caller / generated-wrapper ownership.
+- RCA runtimeWatch / runtime architecture, integration support, delivery/source support, policies/references/history bodies remain open outside already-covered chunks.
+- OPL, MAS, MAG and App repo-wide coverage remains open outside already-recorded chunks; OMA README/docs coverage remains covered by the earlier OMA tranche.
+
+Remaining stale / retire candidates:
+
+- Future RCA support prose that treats `redcube product status/session/manifest/domain_action_adapter` as current repo-local CLI surfaces or RCA-owned wrapper owners is stale pollution.
+- Future RCA prose that treats OPL-generated `domain_action_adapter` descriptor as RCA-owned generic runtime/workbench/session shell is stale pollution.
+- Future session-continuity prose that implies artifact body, visual truth, memory body, review/export verdict or generic session runtime ownership moved into RCA product-entry continuity is stale pollution.
+
+Next tranche write scope:
+
+- RCA runtimeWatch / runtime architecture support and integration docs that mention OPL generated/default caller thinning, `domain_action_adapter`, operator projection, `runtimeWatch`, or retired route vocabulary.
+- Or RCA delivery/source support docs that mention route-run records, artifact lifecycle, source truth, review/repair transport, native-helper envelope or retired route vocabulary.
+- Or MAS product/status/workbench and progress/domain-ref projection shell reconciliation outside already-covered blocks.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
