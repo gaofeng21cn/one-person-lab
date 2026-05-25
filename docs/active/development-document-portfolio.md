@@ -2644,6 +2644,63 @@ Next tranche write scope:
 - Or choose the next exact OPL uncovered body from the family coverage ledger.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 16:05 CST`
+Tranche: `mas-medical-display-template-pack-plan-lifecycle`
+State: `tranche_verified`
+
+本轮覆盖 MAS medical-display template-pack plan 生命周期，并吸收回 MAS `main`。目标是把 template-pack architecture / implementation-plan 读回当前 live display-pack source、tests、contracts 和已完成迁移事实：架构文档保留为 active support design；Phase 1-2 逐步实施计划保留为 history/provenance，不能继续留在 active `plans/` 下作为当前 agent work queue、checkbox 任务包、expected-failure 流水或 commit 指令来源。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`, `TASTE.md`, `docs/active/mas-ideal-state-gap-plan.md`, MAS docs-governance ledger, and preceding medical-display delivery authority / audit-protocol coverage entries.
+- MAS medical-display docs: `docs/delivery/medical-display/plans/medical_display_template_pack_architecture.md`, `docs/delivery/medical-display/plans/medical_display_template_pack_implementation_plan.md`, `docs/delivery/medical-display/README.md`, `docs/delivery/medical-display/portfolio/medical_display_portfolio_consolidation.md`, and `docs/history/capabilities/medical-display/README.md`.
+- MAS machine/source/test refs: CodeGraph context for `LoadedDisplayPack`, `LoadedDisplayTemplate`, `DisplayPackManifest`, `load_display_pack_manifest`, `load_enabled_local_display_pack_records`, and `load_enabled_local_display_template_records`; source/test evidence from `display_pack_contract`, `display_pack_loader`, `display_pack_resolver`, `display_pack_lock`, and focused display-pack tests.
+- Focused test evidence: MAS focused pytest for display-pack contract, loader, resolver, lock, runtime and submission-minimal display surface read `34 passed`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full paragraph read of `docs/delivery/medical-display/plans/medical_display_template_pack_architecture.md` and the full moved Phase 1-2 implementation plan; role/index review of `docs/delivery/medical-display/README.md`, `docs/delivery/medical-display/portfolio/medical_display_portfolio_consolidation.md`, and `docs/history/capabilities/medical-display/README.md`, plus live source/test evidence listed above. | `docs/docs_portfolio_consolidation.md`; `docs/delivery/medical-display/README.md`; `docs/delivery/medical-display/plans/medical_display_template_pack_architecture.md`; `docs/delivery/medical-display/portfolio/medical_display_portfolio_consolidation.md`; `docs/history/capabilities/medical-display/README.md`; `docs/history/capabilities/medical-display/medical_display_template_pack_implementation_plan_2026_04.md` |
+| `one-person-lab` | coverage ledger owner only | this coverage ledger |
+
+Fresh semantic result:
+
+- The template-pack plan is no longer a current implementation queue. Live source already contains the package manifest contract, enabled pack/template record loader, resolver, display-pack lock payload and provenance write path; focused tests cover namespaced ids, local pack loading, runtime consumption, lock provenance and submission-minimal display surface integration.
+- `medical_display_template_pack_architecture.md` remains active support because it explains the split between MAS host-platform duties and pack ecosystem duties, exact-version / repo-paper configuration intent, pack-local assets and remaining ecosystem gaps.
+- `docs/delivery/medical-display/plans/medical_display_template_pack_implementation_plan.md` was moved to `docs/history/capabilities/medical-display/medical_display_template_pack_implementation_plan_2026_04.md`, marked `history_provenance`, and prefaced so its checkboxes, expected failures, code snippets, command sequences and commit instructions are historical provenance only.
+- Active medical-display README and portfolio map now route users to template-pack architecture as current support design and to the moved file as implementation provenance, avoiding a second active work queue under `docs/delivery/medical-display/plans/`.
+
+Verification / absorb:
+
+- MAS commit `e8c81dae docs: archive MAS display pack plan` was fast-forwarded into MAS `main` and pushed to `origin/main`.
+- MAS verification before absorb: `git diff --check`; strict README/docs/contracts/tests/agent conflict-marker scan had no hits; OPL Doc Governance doctor `finding_count=0`, active truth `pass`; focused pytest `tests/test_display_pack_contract.py tests/test_display_pack_loader.py tests/test_display_pack_resolver.py tests/test_display_pack_lock.py tests/test_display_pack_runtime.py tests/test_submission_minimal_display_surface.py -q` read `34 passed`.
+- MAS tranche worktree `/Users/gaofeng/workspace/med-autoscience/.worktrees/mas-medical-display-pack-plan-docs-coverage-20260526` and branch `codex/mas-medical-display-pack-plan-docs-coverage-20260526` were removed after absorb.
+- External MAS worktree `/Users/gaofeng/workspace/med-autoscience/.worktrees/mas-display-template-pack-docs-coverage-20260526` was retained because it has unrelated uncommitted/recent writes and was not owned by this tranche.
+
+Archived / tombstoned / deleted docs:
+
+- Moved `docs/delivery/medical-display/plans/medical_display_template_pack_implementation_plan.md` to `docs/history/capabilities/medical-display/medical_display_template_pack_implementation_plan_2026_04.md`.
+
+Unreviewed docs:
+
+- MAS remaining long medical-display inventory / catalog / provenance bodies: `medical_display_arsenal.md`, `medical_display_template_backlog.md`, `medical_display_template_catalog.md`, `medical_figure_route_cookbook.md`, `medical_display_family_roadmap.md`, and `medical_display_anchor_paper_audit.md`.
+- MAS product/status/workbench, progress/domain-ref projection and source/delivery shell coverage remains open outside the already-covered blocks.
+- OPL full README/docs coverage remains open outside the covered OPL chunks named in earlier ledger entries.
+- App docs remain delayed until active release/GUI lanes close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+
+Remaining stale / retire candidates:
+
+- Future MAS active prose that links the Phase 1-2 implementation plan as current work, preserves its checkbox tasks as open execution, or tells agents to run its historical command sequence is stale pollution.
+- Future template-pack prose must not downgrade live package contracts, loader/resolver/lock surfaces, namespaced template ids, generated catalog/provenance and focused tests back into “not started” plan language.
+- Display pack presence, lock presence, pack source/version refs and generated catalog provenance still do not authorize source readiness, publication quality, submission readiness, artifact mutation, `current_package` freshness, delivery sync, paper closure, domain ready or production ready.
+
+Next tranche write scope:
+
+- MAS paragraph-level coverage for `medical_display_arsenal.md` + `medical_display_template_backlog.md` + `medical_display_template_catalog.md`, or `medical_figure_route_cookbook.md` + `medical_display_family_roadmap.md` + `medical_display_anchor_paper_audit.md`.
+- Or choose the next exact OPL uncovered body from the family coverage ledger.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
