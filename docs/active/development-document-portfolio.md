@@ -593,6 +593,55 @@ Next tranche write scope:
 - Continue MAG `docs/history/specs/*.md` body coverage with 2026-04-08 P5 / R-series future/runtime-productization records or 2026-04-09 / 2026-04-10 post-R5A fail-closed hardening records.
 - Or switch to OPL/MAS/RCA/App full README/docs coverage; keep App delayed until active release/GUI worktrees close.
 
+Date: `2026-05-25 17:49 CST`
+Tranche: `mag-post-r5a-history-specs-coverage`
+State: `tranche_verified_scope_pending`
+
+本轮覆盖 `med-autogrant` 的 2026-04-09 / 2026-04-10 post-R5A local-runtime closeout、R3/R4/R5 activation、final-package fail-closed 与 hosted-contract fail-closed history specs。目标是补齐这批直接文件入口的文件级 `Owner`、`Purpose`、`State`、`Machine boundary`，明确 post-R5A local runtime、journal、attempt ledger、host-agent、Gateway、hosted-contract bundle 与 hostedization wording 只保留为 provenance；当前 OPL/Temporal runtime owner、Codex CLI default executor、package/artifact lifecycle shell、quality/export authority、hosted caller evidence 与机器行为回到核心五件套、active plan、active specs index、specs lifecycle map、contracts、schemas、source、CLI/API 行为和 `contracts/runtime-program/current-program.json`。
+
+Fresh live truth inputs:
+
+- MAG `AGENTS.md`、`TASTE.md`
+- MAG `docs/status.md`、`docs/active/mag-ideal-state-cross-repo-gap-plan.md`、`docs/history/specs/README.md`、`docs/specs/specs_lifecycle_map.md`
+- MAG `contracts/runtime-program/current-program.json`
+- MAG `contracts/functional_privatization_audit.json`
+- MAG `contracts/external_evidence/mag-evidence-receipt-ledger.json`
+
+Fresh contract result:
+
+- `runtime_owner.default_task_runtime_owner=one-person-lab`、`default_runtime_substrate=temporal`、`default_stage_executor=codex_cli` remain current.
+- `mag_implements_daemon=false`、`mag_implements_scheduler=false`、`mag_implements_attempt_loop=false`、`mag_owns_attempt_ledger=false` remain current.
+- `claims_opl_replacement_exists=true`、`claims_domain_repo_physical_delete_authorized=false`、`claims_production_long_run_soak_complete=false` remain current.
+- `standard_agent_source_shape_status=landed` remains structural classification only, not strict source-purity physical completion.
+- External evidence still keeps `claims_temporal_provider_long_soak_complete=false` and `claims_grant_or_fundability_ready=false`; the live evidence tail remains `temporal_provider_long_soak_window_evidence`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autogrant` | `docs/history/specs/2026-04-09-post-r5a-local-runtime-hardening-brief.md`, `docs/history/specs/2026-04-09-r3a-machine-applicable-revision-mutation-contract.md`, `docs/history/specs/2026-04-09-r4a-final-freeze-and-export-package-activation-package.md`, `docs/history/specs/2026-04-09-r5a-hosted-friendly-session-boundary-activation-package.md`, all `docs/history/specs/2026-04-10-post-r5a-final-package-*.md`, all `docs/history/specs/2026-04-10-post-r5a-hosted-contract-bundle-*.md`, `docs/history/specs/2026-04-10-post-r5a-local-runtime-validation-failed-route-checkpoint-shape-alignment-activation-package.md`, `docs/history/specs/2026-04-10-post-r5a-local-runtime-walkthrough-and-output-consistency-current-truth.md`, `docs/history/specs/2026-04-10-post-r5a-revised-workspace-validator-and-operator-alignment.md`, `docs/history/specs/2026-04-10-post-r5a-stage-route-report-checkpoint-status-output-consistency-activation-package.md`, `docs/history/specs/2026-04-10-post-r5a-worktree-aware-hosted-contract-control-plane-root-resolution-activation-package.md`; sections reviewed include title/lifecycle note, activation status, goal/purpose, hard boundary docs, object boundaries, fail-closed package/hosted-contract slices, local runtime walkthrough, checkpoint output consistency and old local-runtime / Gateway / hosted wording. | same thirty files |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. These files remain useful post-R5A fail-closed, local-runtime closeout, package/export and hosted-contract provenance; this tranche clarified first-screen lifecycle and direct-reader guards.
+
+Unreviewed docs:
+
+- `med-autogrant`: core current/support specs, thin indexes, entry indexes, 2026-04-06 foundation, 2026-04-07 authoring/review, 2026-04-08 P3/P4, 2026-04-08 P5/R-series/runtime-first, 2026-04-09/10 post-R5A and 2026-04-11/12 Hermes-hosted history specs are now covered by ledger entries. Remaining MAG coverage still includes `docs/history/plans/**`, `docs/history/product/**`, `docs/history/runtime/**`, `docs/history/positioning/**` and non-index `docs/references/**/*.md` unless covered by earlier ledger entries.
+- Other repos remain under previous ledger scopes except OMA full coverage.
+- App docs remain excluded while active release/GUI worktrees own local changes.
+
+Remaining stale / retire candidates:
+
+- MAG non-index references such as grant strategy memory policy, OPL family contract adoption and governance checklist still need paragraph-level checks against current contracts/source.
+- MAG history plans/product/runtime/positioning folders may still contain completed process packets or old product/runtime wording that should be compacted to provenance or tombstone context.
+
+Next tranche write scope:
+
+- Continue MAG with `docs/history/plans/**`, `docs/history/product/**`, `docs/history/runtime/**`, `docs/history/positioning/**` and non-index `docs/references/**/*.md`, or switch to OPL/MAS/RCA/App full README/docs coverage.
+- Keep App delayed until active release/GUI worktrees close or an explicit owner decision makes their current state safe to govern.
+
 ## 验证
 
 Docs-only 整理：
