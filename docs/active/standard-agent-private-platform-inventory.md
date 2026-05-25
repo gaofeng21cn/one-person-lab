@@ -91,7 +91,7 @@ Machine boundary: 本文是跨 repo 人读治理台账。机器真相继续归 O
 Docs-only inventory updates:
 
 - `git diff --check`
-- `rg -n '<<<<<<<|>>>>>>>' docs`
+- `rg -n '^(<<<<<<<|>>>>>>>)' docs`
 - targeted stale wording scan for `compatibility alias`、`provider proof = ready`、`generated surface = domain ready` and old Gateway/frontdoor/Hermes-default wording outside `docs/history/**`
 
 When this inventory drives code or contract changes, use the owning repo verification rather than Markdown wording tests:
