@@ -4,13 +4,15 @@ Purpose: `references_convergence_governance_docs_lifecycle_management_playbook`
 State: `support_reference`
 Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
 
-Status: `active reference`
-Date: `2026-05-07`
+Status: `support_reference`
+Date: `2026-05-26`
 Owner: `One Person Lab`
 
 ## 用途
 
 这份 playbook 是后续开发新增、更新、归档文档时的判断清单。它服务整个 OPL family，但不接管各 domain 仓自己的 truth。OPL 只提供文档治理经验、生命周期语言和反历史污染规则。
+
+2026-05-26 读法：本文是文档生命周期 reference，不是 active truth owner。新增、更新或归档材料时仍必须先读核心五件套、`docs/active/current-state-vs-ideal-gap.md`、相关 contracts/source 和 fresh CLI/read-model；不能用本文的目录例子声明 domain ready、production ready、App release ready、artifact authority、quality/export verdict 或物理删除授权。
 
 ## 四个准入问题
 
@@ -74,15 +76,15 @@ tombstone 必须短，不能写成新的执行手册。它只回答：
 
 ### Gateway / federation
 
-旧 `gateway / federation / routed-action` 文档曾经是 OPL 的顶层公开集成语言。当前主线已经是 `Codex-default session/runtime + explicit activation + domain agent skill entry`，所以旧语料进入 `docs/history/compatibility/gateway-federation/`。active 文档只把它称为历史来源材料或负向 guard，并指向当前 core truth；不得恢复 machine-readable compatibility surface。
+旧 `gateway / federation / routed-action` 文档曾经是 OPL 的顶层公开集成语言。当前主线已经是 `Codex CLI first-class executor -> explicit OPL activation -> typed family queue / Temporal-backed provider -> selected domain agent entry`，所以旧语料进入 `docs/history/compatibility/gateway-federation/`。active 文档只把它称为历史来源材料或负向 guard，并指向当前 core truth；不得恢复 machine-readable compatibility surface。
 
 ### Frontdoor
 
-旧 `frontdoor` 和本地 Product API / UI-adapter 时代材料容易误导读者以为 OPL 仍维护前台服务主线。它们进入 `docs/history/frontdoor-legacy/`，由 tombstone 说明当前 GUI/WebUI 真相回到 OPL-branded AionUI shell 和 Codex-default runtime。
+旧 `frontdoor` 和本地 Product API / UI-adapter 时代材料容易误导读者以为 OPL 仍维护前台服务主线。它们进入 `docs/history/frontdoor-legacy/`，由 tombstone 说明当前 App / GUI 只消费 OPL CLI/API-backed machine-readable surfaces 和 refs-only operator projection；App 不驱动 long-running task loop，也不持有 domain truth、artifact body、quality verdict 或 release-ready authority。
 
 ### MAS 经验
 
-MAS 的 `docs/docs_portfolio_consolidation.md` 值得复用：它把 `owner / purpose / state / machine boundary` 写成准入信号，并把 `runtime / policies / program / capabilities / references / history` 分成不同职责。OPL family 借鉴这套治理语言，但不把 MAS 的目录结构强套给 MAG、RCA、MDS。
+MAS 的 `docs/docs_portfolio_consolidation.md` 值得复用：它把 `owner / purpose / state / machine boundary` 写成准入信号，并把 `runtime / policies / program / capabilities / references / history` 分成不同职责。OPL family 借鉴这套治理语言，但不把 MAS 的目录结构强套给 MAG、RCA、OMA 或 App；MDS 只按 MAS archived provenance / backend audit / oracle companion 语境阅读。
 
 ## 验收清单
 

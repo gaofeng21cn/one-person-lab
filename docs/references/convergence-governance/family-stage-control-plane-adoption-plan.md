@@ -2,13 +2,15 @@
 
 Owner: `One Person Lab`
 Purpose: `support_reference`
-State: `active_support`
-Machine boundary: this is the adoption plan and rationale. The narrow shared descriptor schema now lives at `contracts/family-orchestration/family-stage-control-plane.schema.json`; domain-specific projections must remain repo-owned manifest/adoption surfaces.
-Date: `2026-05-10`
+State: `support_reference`
+Machine boundary: this is a support reference and rationale. Machine truth lives in `contracts/family-orchestration/family-stage-control-plane.schema.json`, domain product-entry manifests, `opl stages list|inspect|readiness`, launch-admission gates, runtime ledgers and domain-owned receipts.
+Date: `2026-05-26`
+
+2026-05-26 读法：本文是 stage control plane 的 adoption rationale，不是 active execution board。当前 live read-model 显示 OPL control plane 可用但仍有 blocked refs-only attention；4 repo structural conformance passed 只证明 descriptor / pack / authority boundary 可读；App drilldown 只做 refs-only operator projection；zero-open evidence worklist 不授权 domain ready 或 production ready。因此，本文的 MAS/RCA/MAG stage sequence、inventory 和实施顺序只能作为 design/adoption 支撑，不能被当成 workflow engine landed、domain default caller complete、owner-chain closeout、artifact authority、quality verdict 或 App release-ready 证据。
 
 ## 结论
 
-`MAS` 恢复以 `stage` 为控制面的方向是正确的，并且值得提升为 `OPL` family 的通用设计原则。
+`stage` 作为控制面的方向已经从 MAS 经验提升为 OPL family 的通用支撑面：当前 OPL 能通过 `family-stage-control-plane` contract 和 domain manifest 发现 MAS、MAG、RCA 的 stage pack，并由 `opl stages list|inspect|readiness` 提供只读 discovery、parity、admission 和 readiness drilldown。
 
 关键不是把程序写得更“弱”，而是把程序的责任从“替专家和 Codex CLI 决定每一步怎么做”收回到“定义阶段目标、可用 skill、提示词、输入输出、评价方法、交接条件与审计证据”。真正的创作、判断、拆解、修订和问题解决，应交给具备自主能力的 `Codex CLI` 与 domain-owned AI workflow。
 
@@ -59,7 +61,7 @@ Date: `2026-05-10`
 
 ## 与现有 OPL shared contracts 的关系
 
-这个计划已经进入最小 machine-readable companion 阶段，但仍然复用并连接已经存在的 shared surfaces：
+这个支撑面已经进入 machine-readable companion 与只读 discovery 阶段，但仍然复用并连接已经存在的 shared surfaces：
 
 - `family-action-graph`：继续描述 stage / action 拓扑、入口、出口和 checkpoint policy。
 - `family-action-catalog`：继续描述可调用 action metadata，以及 CLI / MCP / Skill / product-entry / OpenAI / AI SDK descriptor 派生。
@@ -68,7 +70,9 @@ Date: `2026-05-10`
 - `family-persistence-policy`、`family-lifecycle-ledger`、`family-owner-route`：继续描述状态角色、receipt 与 next-owner routing。
 - `family-product-entry-manifest-v2`：继续作为 OPL 发现 domain-owned stage/action/gate/projection refs 的入口。
 
-新增的 `family-stage-control-plane` companion 是窄 schema，不是完整流程引擎。它只声明 stage descriptor、skill/prompt/evaluation refs、handoff refs 与 authority boundary，并通过 manifest discovery 暴露。`opl stages list|inspect` 只做只读发现与 parity，不执行 stage，也不给 domain quality verdict。
+`family-stage-control-plane` companion 是窄 schema，不是完整流程引擎。它只声明 stage descriptor、skill/prompt/evaluation refs、handoff refs 与 authority boundary，并通过 manifest discovery 暴露。`opl stages list|inspect|readiness` 只做发现、inspection、admission/parity 和 readiness drilldown；launch admission 可以阻断未声明 stage 或缺少启动安全 refs 的 attempt，但不执行 domain action，不给 domain quality verdict，也不关闭 domain ready / production ready。
+
+Fresh `opl stages list --json` at 2026-05-26 CST currently reads 3 resolved planes, 18 admitted stages and 0 blocked stages across `med-autoscience`、`med-autogrant` and `redcube-ai`. This is structural/admission evidence only; production evidence, owner receipt, artifact mutation, quality/export verdict and memory body authority remain domain-owned.
 
 ## Research Harness 学习记录
 
@@ -230,37 +234,37 @@ Date: `2026-05-10`
 
 ### S0. 文档冻结
 
-当前文档冻结原则和边界：stage control plane 是 family design direction；最小 schema 与只读 discovery 已落在 OPL，执行内核和质量判断仍由 domain 持有。
+当前文档冻结原则和边界：stage control plane 是 family design direction；最小 schema、admission/parity helper 与只读 discovery 已落在 OPL，执行内核、owner receipt、artifact authority 和质量判断仍由 domain 持有。
 
 ### S1. Domain inventory
 
-在 `MAS`、`RCA`、`MAG` 各自仓内盘点已有 product-entry manifest、action catalog、prompt / skill refs、review surface 和 runtime projection，标出哪些已经等价于 stage。
+在 `MAS`、`RCA`、`MAG` 各自仓内继续维护 product-entry manifest、action catalog、prompt / skill refs、review surface 和 runtime projection 的 current mapping，标出哪些已经等价于 stage，哪些只是 read-model、guard、router、dispatcher 或 evaluator。
 
 `MAS` 必须先执行上面的 MAS inventory。它不能跳过 inventory 直接改 stage 名称或 stage 数量；第一轮目标是分类和映射，不是重构。
 
-### S2. Stage descriptor draft
+### S2. Stage descriptor and discovery
 
-在 OPL 侧落地最小 `family-stage-control-plane` descriptor。第一轮只做 companion schema、normalizer、parity 和 `opl stages` 只读 discovery，不要求 domain 改执行内核。
+OPL 侧当前已有最小 `family-stage-control-plane` descriptor、normalizer、parity 和 `opl stages` 只读 discovery / readiness drilldown。后续只按 source/contract/test 证据扩展，不把 diagnostic lenses 升级为新 workflow runtime。
 
-### S3. RCA 先做轻量 adapter
+### S3. RCA stage pack maintenance
 
 `RCA` 最适合先验证这个思路，因为它已有 source-first fanout、managed deliverable、review state、render proof 与 package manifest。第一轮把现有 PPT / Xiaohongshu / poster 流程映射到 stage，不大改生成逻辑。
 
-落地时先做 stage projection / adapter：把现有 `source_intake`、`communication_strategy`、`artifact_creation`、`review_and_revision`、`package_and_handoff` 映射到 managed deliverable、review、render proof 与 package surfaces；暂不重写 PPT / Xiaohongshu / poster 生成内核，也不改变默认 route。
+当前 RCA stage plane 已由 `opl stages list --json` 读到 6 个 admitted stage。后续维护重点是保持 source pack、visual strategy、artifact creation、review/revision、package handoff 与 RCA owner receipts / visual authority 对齐；不重写 PPT / Xiaohongshu / poster 生成内核，也不改变默认 route。
 
-### S4. MAS 做参考深 adapter
+### S4. MAS reference-depth stage pack maintenance
 
-`MAS` 用 inventory 结果把现有 route contract、study charter、evidence ledger、review ledger、publication eval、runtime status 和 controller decisions 映射成完整 descriptor。重点是解释现有 stage 和控制面的职责边界，而不是改 stage 数量、替换 route id，或把医学质量 gate 程序化成僵硬脚本。
+MAS 当前 stage plane 已映射现有 route contract、study charter、evidence ledger、review ledger、publication eval、runtime status 和 controller decisions。重点继续是解释现有 stage 和控制面的职责边界，而不是改 stage 数量、替换 route id，或把医学质量 gate 程序化成僵硬脚本。
 
-### S5. MAG 做 grant stage pack
+### S5. MAG grant stage pack maintenance
 
 `MAG` 在 fundability、specific aims、proposal authoring、review/rebuttal、package gate 上提供 stage pack。重点是复用 shared descriptor，而不是复制 MAS 的医学研究字段。
 
-落地时先做 grant stage pack 与 manifest projection：把指南匹配、资助策略、aims、正文写作、模拟评审和提交包检查映射为可发现 stage；暂不先改写更深的 runtime/controller 内核。
+当前 MAG stage plane 已把指南匹配、资助策略、aims、正文写作、模拟评审和提交包检查映射为可发现 stage。后续维护重点是 grant-owned owner receipt / typed blocker / no-regression refs 与 stage projection 对齐；不先改写更深的 runtime/controller 内核。
 
 ### S6. OPL discovery / workbench
 
-`OPL` 只做 discovery、index、parity、projection 和 typed queue dispatch：显示当前 stage、可用 skill、下一步、blocker、source refs 和 handoff，不接管执行或质量 verdict。
+`OPL` 只做 discovery、index、parity、admission、projection 和 typed queue dispatch：显示当前 stage、可用 skill、下一步、blocker、source refs 和 handoff，不接管执行或质量 verdict。
 
 ## 验收口径
 

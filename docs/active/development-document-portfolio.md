@@ -759,6 +759,62 @@ Next tranche write scope:
 - Continue MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell, or switch back to another bounded OPL history/reference/support chunk.
 - Keep App docs delayed until the active release/GUI lane is safe to govern.
 
+Date: `2026-05-26 11:34 CST`
+Tranche: `opl-convergence-governance-reference-coverage`
+State: `tranche_verified_scope_pending`
+
+本轮覆盖 OPL `docs/references/convergence-governance/**` 当前 reference 支撑块。目标是把 convergence governance 的可复用规则从旧四仓 / dated adoption / stale shared-release closeout 口径刷新到当前 OPL series truth：治理范围是 6 仓 OPL series；stage control plane 已落地为 contract + manifest + `opl stages` 只读 discovery/admission/readiness 支撑，不是 workflow runtime；family shared release 当前存在 MAS consumer pin drift attention，不能写成全员 aligned closeout。
+
+Fresh live truth inputs:
+
+- `opl framework readiness --family-defaults --json`
+- `opl agents conformance --family-defaults --json`
+- `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`
+- `opl runtime app-operator-drilldown --json`
+- `opl stages list --json`
+- `npm run family:shared-release -- check`
+- `contracts/family-release/shared-owner-release.json`
+- `contracts/family-orchestration/family-stage-control-plane.schema.json`
+- OPL core docs、active truth owner、reference index 和 convergence-governance docs full text.
+
+Fresh read-model / contract result:
+
+- `framework readiness` 读为 `framework_control_plane_available_with_blocked_refs_only_attention`、`hard_blocker_count=0`、`evidence_envelope_blocked_count=216`、`domain_blocked_attention_tail_count=229`；provider cadence / capability SLO satisfied，但 blocked refs-only attention 不授权 domain ready、production ready 或 App release ready。
+- `agents conformance` 读为 `status=passed`、`passed_count=4`、`blocked_count=0`、`structural_conformance_status=passed`；这只证明 standard-agent structural conformance。
+- `family-runtime evidence-worklist` 读为 `open_worklist_item_count=0`、`zero_open_worklist_blocked_refs_only_envelope_count=216`、`domain_ready_authorized=false`、`production_ready_authorized=false`、not-authorized claims 包含 `domain_repo_physical_delete_authorization` 与 `default_caller_delete_ready`。
+- `app-operator-drilldown` 读为 `availability=available`、provider SLO cadence/capability satisfied、`functional_privatization_action_required_count=0`、`default_caller_deletion_evidence_open_requirement_count=0`、`app_release_user_path_release_ready_claimed=false`、`app_release_user_path_production_ready_claimed=false`，同时 next safe action 仍是 OPL-owned Temporal worker source-stale restart。
+- `opl stages list --json` 读为 3 resolved planes、18 admitted stages、0 blocked stages；这是 discovery/admission 证据，不是 stage execution、quality verdict、owner receipt 或 production evidence closeout。
+- `family:shared-release -- check` 读为 contract owner commit `c5d4a93bd4bb64adf1228ecf7f2a9038c7dce278`；MAG/RCA aligned，MAS `pyproject.toml` 与 `uv.lock` 仍 pin `e3fd0b6be41e858958d42ea400a3e63c4205ff8a`，因此当前 shared release state 是 `drift_attention`。
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | `docs/references/convergence-governance/README.md`; `docs/references/convergence-governance/docs-lifecycle-management-playbook.md`; `docs/references/convergence-governance/family-shared-release-maintenance.md`; `docs/references/convergence-governance/family-stage-control-plane-adoption-plan.md`; `docs/references/convergence-governance/series-doc-intake-template.md` renamed from the old four-repo intake template; `docs/references/convergence-governance/opl-positioning-convergence-lessons.md`; `docs/references/README.md`; source/contract/read-model surfaces listed above. | `docs/references/convergence-governance/README.md`; `docs/references/convergence-governance/docs-lifecycle-management-playbook.md`; `docs/references/convergence-governance/family-shared-release-maintenance.md`; `docs/references/convergence-governance/family-stage-control-plane-adoption-plan.md`; `docs/references/convergence-governance/opl-positioning-convergence-lessons.md`; `docs/references/convergence-governance/series-doc-intake-template.md`; `docs/references/README.md`; this coverage ledger |
+
+Archived / tombstoned / deleted docs:
+
+- Renamed active reference template `docs/references/convergence-governance/four-repo-doc-intake-template.md` to `docs/references/convergence-governance/series-doc-intake-template.md`. The old four-repo template identity remains only in history process records; current OPL series governance uses the six-repo template.
+- No document was physically moved to `docs/history/**` in this tranche. The edited reference docs remain support references with refreshed owner/purpose/state/machine-boundary signals.
+
+Unreviewed docs:
+
+- OPL convergence-governance reference directory is covered for this tranche.
+- OPL `docs/references/governance/**`, `docs/references/domain-admission/**` and any remaining uncovered support/reference bodies still need chunked paragraph governance.
+- MAS paragraph-level semantic coverage remains open outside previously covered Portal/projection/App-workbench block.
+- App docs remain delayed until active release/GUI worktrees close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+
+Remaining stale / retire candidates:
+
+- MAS shared release pin drift is an operational consumer alignment tail, not a doc-only closeout. Future shared release work should either align MAS pins with the current owner contract or intentionally update the owner contract/pins through the release flow.
+- OPL remaining governance/domain-admission references may still carry old Gateway, frontdoor, federation, Product API, Hermes-first, MDS default, hosted pilot, local-manager, managed-runtime or direct-entry wording; those must stay history/provenance/diagnostic/negative-guard only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- Stage control plane support docs must keep discovery/admission/readiness separate from execution, owner receipt, artifact authority, quality/export verdict and production/domain ready.
+
+Next tranche write scope:
+
+- Continue OPL reference body coverage with `docs/references/governance/**` or `docs/references/domain-admission/**`, or switch to MAS non-history paragraph reconciliation.
+- Keep App docs delayed until the active release/GUI lane is safe to govern.
+
 Date: `2026-05-25 21:08 CST`
 Tranche: `opl-frontdoor-legacy-history-coverage`
 State: `tranche_verified_scope_pending`
