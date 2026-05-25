@@ -67,7 +67,24 @@ test('runtime action execute records and verifies external evidence request rout
     assert.equal(recordRoute.route_target_kind, 'opl_cli');
     assert.equal(recordRoute.execution_policy, 'opl_safe_action_shell');
     assert.equal(recordRoute.authority_boundary.can_write_domain_truth, false);
+    assert.equal(recordRoute.authority_boundary.can_read_memory_body, false);
+    assert.equal(recordRoute.authority_boundary.can_read_artifact_body, false);
+    assert.equal(recordRoute.authority_boundary.can_authorize_export_verdict, false);
     assert.equal(recordRoute.required_return_shapes.includes('domain_owner_receipt'), true);
+    assert.deepEqual(recordRoute.required_operator_payload_refs, [
+      'evidence_refs',
+      'domain_receipt_refs',
+      'typed_blocker_refs',
+      'no_regression_refs',
+      'release_dist_refs',
+      'direct_hosted_parity_refs',
+      'owner_chain_refs',
+      'memory_writeback_receipt_refs',
+      'artifact_mutation_receipt_refs',
+      'package_lifecycle_receipt_refs',
+      'lifecycle_receipt_refs',
+      'restore_proof_refs',
+    ]);
 
     const dryRun = runCli([
       'runtime',
@@ -97,6 +114,11 @@ test('runtime action execute records and verifies external evidence request rout
         domain_receipt_refs: ['mas://receipts/package-lifecycle/latest.json'],
         typed_blocker_refs: ['mas://blockers/package-lifecycle-currentness.json'],
         no_regression_refs: ['mas://proof/no-regression/package-lifecycle.json'],
+        memory_writeback_receipt_refs: ['mas://memory/writeback/package-lifecycle.json'],
+        artifact_mutation_receipt_refs: ['mas://artifact/mutation/package-lifecycle.json'],
+        package_lifecycle_receipt_refs: ['mas://package/lifecycle/package-lifecycle.json'],
+        lifecycle_receipt_refs: ['mas://lifecycle/cleanup/package-lifecycle.json'],
+        restore_proof_refs: ['mas://restore/proof/package-lifecycle.json'],
         receipt_semantics: 'domain_owned_receipt_ref',
       }),
     ], {
@@ -142,6 +164,26 @@ test('runtime action execute records and verifies external evidence request rout
     assert.equal(verifyExecution.execution.result.external_evidence_apply.receipt.receipt_refs.includes(
       'mas://receipts/package-lifecycle/latest.json',
     ), true);
+    assert.deepEqual(
+      verifyExecution.execution.result.external_evidence_apply.receipt.memory_writeback_receipt_refs,
+      ['mas://memory/writeback/package-lifecycle.json'],
+    );
+    assert.deepEqual(
+      verifyExecution.execution.result.external_evidence_apply.receipt.artifact_mutation_receipt_refs,
+      ['mas://artifact/mutation/package-lifecycle.json'],
+    );
+    assert.deepEqual(
+      verifyExecution.execution.result.external_evidence_apply.receipt.package_lifecycle_receipt_refs,
+      ['mas://package/lifecycle/package-lifecycle.json'],
+    );
+    assert.deepEqual(
+      verifyExecution.execution.result.external_evidence_apply.receipt.lifecycle_receipt_refs,
+      ['mas://lifecycle/cleanup/package-lifecycle.json'],
+    );
+    assert.deepEqual(
+      verifyExecution.execution.result.external_evidence_apply.receipt.restore_proof_refs,
+      ['mas://restore/proof/package-lifecycle.json'],
+    );
     const verifiedDrilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,

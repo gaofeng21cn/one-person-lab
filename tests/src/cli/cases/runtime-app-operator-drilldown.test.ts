@@ -85,6 +85,16 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       'mas://blockers/package-lifecycle-currentness.json',
       '--no-regression-ref',
       'mas://proof/no-regression/package-lifecycle.json',
+      '--memory-writeback-receipt-ref',
+      'mas://memory/writeback/receipt.json',
+      '--artifact-mutation-receipt-ref',
+      'mas://artifacts/mutation/receipt.json',
+      '--package-lifecycle-receipt-ref',
+      'mas://receipts/package-lifecycle/latest.json',
+      '--lifecycle-receipt-ref',
+      'mas://lifecycle/cleanup/receipt.json',
+      '--restore-proof-ref',
+      'mas://restore/proof/latest.json',
     ], testEnv);
     runCli([
       'agents',
@@ -258,6 +268,11 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.domain_verified_evidence_receipt_request_count, 1);
     assert.equal(drilldown.summary.domain_external_evidence_receipt_count, 1);
     assert.equal(drilldown.summary.domain_external_verified_evidence_receipt_count, 1);
+    assert.equal(drilldown.summary.domain_external_verified_memory_writeback_receipt_ref_count, 1);
+    assert.equal(drilldown.summary.domain_external_verified_artifact_mutation_receipt_ref_count, 1);
+    assert.equal(drilldown.summary.domain_external_verified_package_lifecycle_receipt_ref_count, 1);
+    assert.equal(drilldown.summary.domain_external_verified_lifecycle_receipt_ref_count, 1);
+    assert.equal(drilldown.summary.domain_external_verified_restore_proof_ref_count, 1);
     assert.equal(drilldown.summary.domain_evidence_gate_count, 1);
     assert.equal(drilldown.summary.domain_remaining_evidence_gate_count, 0);
     assert.equal(drilldown.summary.domain_open_evidence_gate_request_count, 0);

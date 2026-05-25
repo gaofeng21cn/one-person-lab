@@ -81,6 +81,17 @@ function summarizeExternalEvidenceReceipts(receipts: ExternalEvidenceReceipt[]) 
       receipt.direct_hosted_parity_refs
     ))),
     owner_chain_refs: uniqueStrings(receipts.flatMap((receipt) => receipt.owner_chain_refs)),
+    memory_writeback_receipt_refs: uniqueStrings(receipts.flatMap((receipt) => (
+      receipt.memory_writeback_receipt_refs
+    ))),
+    artifact_mutation_receipt_refs: uniqueStrings(receipts.flatMap((receipt) => (
+      receipt.artifact_mutation_receipt_refs
+    ))),
+    package_lifecycle_receipt_refs: uniqueStrings(receipts.flatMap((receipt) => (
+      receipt.package_lifecycle_receipt_refs
+    ))),
+    lifecycle_receipt_refs: uniqueStrings(receipts.flatMap((receipt) => receipt.lifecycle_receipt_refs)),
+    restore_proof_refs: uniqueStrings(receipts.flatMap((receipt) => receipt.restore_proof_refs)),
   };
 }
 
@@ -195,6 +206,11 @@ export function buildDomainEvidenceRequestRefs(
         release_dist_refs: receipt.release_dist_refs,
         direct_hosted_parity_refs: receipt.direct_hosted_parity_refs,
         owner_chain_refs: receipt.owner_chain_refs,
+        memory_writeback_receipt_refs: receipt.memory_writeback_receipt_refs,
+        artifact_mutation_receipt_refs: receipt.artifact_mutation_receipt_refs,
+        package_lifecycle_receipt_refs: receipt.package_lifecycle_receipt_refs,
+        lifecycle_receipt_refs: receipt.lifecycle_receipt_refs,
+        restore_proof_refs: receipt.restore_proof_refs,
         authority_boundary: refsOnlyAuthorityBoundary(),
         can_execute: false,
       };
@@ -264,6 +280,11 @@ export function buildDomainEvidenceRequestRefs(
         release_dist_refs: receipt.release_dist_refs,
         direct_hosted_parity_refs: receipt.direct_hosted_parity_refs,
         owner_chain_refs: receipt.owner_chain_refs,
+        memory_writeback_receipt_refs: receipt.memory_writeback_receipt_refs,
+        artifact_mutation_receipt_refs: receipt.artifact_mutation_receipt_refs,
+        package_lifecycle_receipt_refs: receipt.package_lifecycle_receipt_refs,
+        lifecycle_receipt_refs: receipt.lifecycle_receipt_refs,
+        restore_proof_refs: receipt.restore_proof_refs,
         authority_boundary: refsOnlyAuthorityBoundary(),
         can_execute: false,
       };
@@ -370,6 +391,31 @@ export function buildDomainEvidenceRequestRefs(
       external_evidence_receipt_count: externalReceiptRefs.length,
       external_verified_receipt_count: externalReceiptRefs.filter((receipt) =>
         receipt.receipt_status === 'verified'
+      ).length,
+      external_verified_memory_writeback_receipt_ref_count: uniqueStrings(
+        externalReceiptRefs
+          .filter((receipt) => receipt.receipt_status === 'verified')
+          .flatMap((receipt) => receipt.memory_writeback_receipt_refs),
+      ).length,
+      external_verified_artifact_mutation_receipt_ref_count: uniqueStrings(
+        externalReceiptRefs
+          .filter((receipt) => receipt.receipt_status === 'verified')
+          .flatMap((receipt) => receipt.artifact_mutation_receipt_refs),
+      ).length,
+      external_verified_package_lifecycle_receipt_ref_count: uniqueStrings(
+        externalReceiptRefs
+          .filter((receipt) => receipt.receipt_status === 'verified')
+          .flatMap((receipt) => receipt.package_lifecycle_receipt_refs),
+      ).length,
+      external_verified_lifecycle_receipt_ref_count: uniqueStrings(
+        externalReceiptRefs
+          .filter((receipt) => receipt.receipt_status === 'verified')
+          .flatMap((receipt) => receipt.lifecycle_receipt_refs),
+      ).length,
+      external_verified_restore_proof_ref_count: uniqueStrings(
+        externalReceiptRefs
+          .filter((receipt) => receipt.receipt_status === 'verified')
+          .flatMap((receipt) => receipt.restore_proof_refs),
       ).length,
     },
     authority_boundary: refsOnlyAuthorityBoundary(),

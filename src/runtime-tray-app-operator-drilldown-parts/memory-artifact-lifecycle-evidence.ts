@@ -31,6 +31,16 @@ export function buildMemoryArtifactLifecycleEvidence(drilldown: JsonRecord) {
   const restoreProofRefCount = numberValue(summary.lifecycle_restore_proof_ref_count);
   const artifactMutationReceiptRefCount =
     numberValue(summary.lifecycle_domain_artifact_mutation_receipt_ref_count);
+  const externalMemoryWritebackReceiptRefCount =
+    numberValue(summary.domain_external_verified_memory_writeback_receipt_ref_count);
+  const externalArtifactMutationReceiptRefCount =
+    numberValue(summary.domain_external_verified_artifact_mutation_receipt_ref_count);
+  const externalPackageLifecycleReceiptRefCount =
+    numberValue(summary.domain_external_verified_package_lifecycle_receipt_ref_count);
+  const externalLifecycleReceiptRefCount =
+    numberValue(summary.domain_external_verified_lifecycle_receipt_ref_count);
+  const externalRestoreProofRefCount =
+    numberValue(summary.domain_external_verified_restore_proof_ref_count);
   const reconcileMissingRefCount = numberValue(summary.lifecycle_reconcile_missing_ref_count);
   const reconcileExtraRefCount = numberValue(summary.lifecycle_reconcile_extra_ref_count);
   const reconcileStaleRefCount = numberValue(summary.lifecycle_reconcile_stale_ref_count);
@@ -42,7 +52,12 @@ export function buildMemoryArtifactLifecycleEvidence(drilldown: JsonRecord) {
     + artifactRefCount
     + lifecycleIndexRefCount
     + restoreProofRefCount
-    + artifactMutationReceiptRefCount;
+    + artifactMutationReceiptRefCount
+    + externalMemoryWritebackReceiptRefCount
+    + externalArtifactMutationReceiptRefCount
+    + externalPackageLifecycleReceiptRefCount
+    + externalLifecycleReceiptRefCount
+    + externalRestoreProofRefCount;
   const reconcileIssueCount = reconcileMissingRefCount
     + reconcileExtraRefCount
     + reconcileStaleRefCount;
@@ -65,6 +80,11 @@ export function buildMemoryArtifactLifecycleEvidence(drilldown: JsonRecord) {
     lifecycle_index_ref_count: lifecycleIndexRefCount,
     restore_proof_ref_count: restoreProofRefCount,
     domain_artifact_mutation_receipt_ref_count: artifactMutationReceiptRefCount,
+    external_verified_memory_writeback_receipt_ref_count: externalMemoryWritebackReceiptRefCount,
+    external_verified_artifact_mutation_receipt_ref_count: externalArtifactMutationReceiptRefCount,
+    external_verified_package_lifecycle_receipt_ref_count: externalPackageLifecycleReceiptRefCount,
+    external_verified_lifecycle_receipt_ref_count: externalLifecycleReceiptRefCount,
+    external_verified_restore_proof_ref_count: externalRestoreProofRefCount,
     lifecycle_reconcile_status: stringValue(lifecycleSummary.lifecycle_reconcile_status),
     lifecycle_reconcile_missing_ref_count: reconcileMissingRefCount,
     lifecycle_reconcile_extra_ref_count: reconcileExtraRefCount,
@@ -80,6 +100,7 @@ export function buildMemoryArtifactLifecycleEvidence(drilldown: JsonRecord) {
       'artifact_gallery_refs',
       'package_export_lifecycle_refs',
       'domain_dispatch_evidence',
+      'domain_evidence_request_refs',
       'lifecycle_ledger_refs',
     ],
     authority_boundary: {

@@ -41,6 +41,26 @@ export function assertMemoryArtifactLifecycleEvidence(summaryDrilldown: JsonReco
     evidence.domain_artifact_mutation_receipt_ref_count,
     summary.lifecycle_domain_artifact_mutation_receipt_ref_count,
   );
+  assert.equal(
+    evidence.external_verified_memory_writeback_receipt_ref_count,
+    summary.domain_external_verified_memory_writeback_receipt_ref_count,
+  );
+  assert.equal(
+    evidence.external_verified_artifact_mutation_receipt_ref_count,
+    summary.domain_external_verified_artifact_mutation_receipt_ref_count,
+  );
+  assert.equal(
+    evidence.external_verified_package_lifecycle_receipt_ref_count,
+    summary.domain_external_verified_package_lifecycle_receipt_ref_count,
+  );
+  assert.equal(
+    evidence.external_verified_lifecycle_receipt_ref_count,
+    summary.domain_external_verified_lifecycle_receipt_ref_count,
+  );
+  assert.equal(
+    evidence.external_verified_restore_proof_ref_count,
+    summary.domain_external_verified_restore_proof_ref_count,
+  );
   assert.equal(numberValue(evidence.observed_ref_count) > 0, true);
   assert.equal(authorityBoundary.can_read_memory_body, false);
   assert.equal(authorityBoundary.can_accept_or_reject_memory_writeback, false);

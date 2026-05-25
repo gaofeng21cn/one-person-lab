@@ -83,6 +83,26 @@ export function externalEvidenceApplyArgs(
   const ownerChainRefs = refsFromPayload(payload, ['owner_chain_refs', 'owner_chain_ref']);
   const sourceScopeRefs = refsFromPayload(payload, ['source_scope_refs', 'source_scope_ref']);
   const runtimeEventRefs = refsFromPayload(payload, ['runtime_event_refs', 'runtime_event_ref']);
+  const memoryWritebackReceiptRefs = refsFromPayload(payload, [
+    'memory_writeback_receipt_refs',
+    'memory_writeback_receipt_ref',
+  ]);
+  const artifactMutationReceiptRefs = refsFromPayload(payload, [
+    'artifact_mutation_receipt_refs',
+    'artifact_mutation_receipt_ref',
+  ]);
+  const packageLifecycleReceiptRefs = refsFromPayload(payload, [
+    'package_lifecycle_receipt_refs',
+    'package_lifecycle_receipt_ref',
+  ]);
+  const lifecycleReceiptRefs = refsFromPayload(payload, [
+    'lifecycle_receipt_refs',
+    'lifecycle_receipt_ref',
+  ]);
+  const restoreProofRefs = refsFromPayload(payload, [
+    'restore_proof_refs',
+    'restore_proof_ref',
+  ]);
   const receiptRef = stringValue(payload.receipt_ref);
   const receiptSemantics = stringValue(payload.receipt_semantics);
   const extraArgs = [
@@ -95,6 +115,11 @@ export function externalEvidenceApplyArgs(
     ...ownerChainRefs.flatMap((ref) => ['--owner-chain-ref', ref]),
     ...sourceScopeRefs.flatMap((ref) => ['--source-scope-ref', ref]),
     ...runtimeEventRefs.flatMap((ref) => ['--runtime-event-ref', ref]),
+    ...memoryWritebackReceiptRefs.flatMap((ref) => ['--memory-writeback-receipt-ref', ref]),
+    ...artifactMutationReceiptRefs.flatMap((ref) => ['--artifact-mutation-receipt-ref', ref]),
+    ...packageLifecycleReceiptRefs.flatMap((ref) => ['--package-lifecycle-receipt-ref', ref]),
+    ...lifecycleReceiptRefs.flatMap((ref) => ['--lifecycle-receipt-ref', ref]),
+    ...restoreProofRefs.flatMap((ref) => ['--restore-proof-ref', ref]),
     ...(receiptSemantics ? ['--receipt-semantics', receiptSemantics] : []),
     ...(receiptRef ? ['--receipt-ref', receiptRef] : []),
   ];
@@ -114,6 +139,11 @@ export function externalEvidenceApplyArgs(
         'release_dist_refs',
         'direct_hosted_parity_refs',
         'owner_chain_refs',
+        'memory_writeback_receipt_refs',
+        'artifact_mutation_receipt_refs',
+        'package_lifecycle_receipt_refs',
+        'lifecycle_receipt_refs',
+        'restore_proof_refs',
       ],
     });
   }

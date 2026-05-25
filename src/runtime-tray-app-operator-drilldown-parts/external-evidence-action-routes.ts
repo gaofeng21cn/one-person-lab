@@ -41,6 +41,21 @@ function refsOnlyAuthorityBoundary() {
   };
 }
 
+const EXTERNAL_EVIDENCE_RECORD_PAYLOAD_REFS = [
+  'evidence_refs',
+  'domain_receipt_refs',
+  'typed_blocker_refs',
+  'no_regression_refs',
+  'release_dist_refs',
+  'direct_hosted_parity_refs',
+  'owner_chain_refs',
+  'memory_writeback_receipt_refs',
+  'artifact_mutation_receipt_refs',
+  'package_lifecycle_receipt_refs',
+  'lifecycle_receipt_refs',
+  'restore_proof_refs',
+];
+
 function baseApplyArgs(input: {
   domainId: string;
   requestId: string;
@@ -105,15 +120,7 @@ function recordRoute(input: {
     request_pack_id: input.requestPackId ?? null,
     evidence_route_kind: input.routeKind,
     evidence_source_ref: input.sourceRef ?? input.routeRef,
-    required_operator_payload_refs: [
-      'evidence_refs',
-      'domain_receipt_refs',
-      'typed_blocker_refs',
-      'no_regression_refs',
-      'release_dist_refs',
-      'direct_hosted_parity_refs',
-      'owner_chain_refs',
-    ],
+    required_operator_payload_refs: EXTERNAL_EVIDENCE_RECORD_PAYLOAD_REFS,
     required_evidence_refs: input.requiredEvidenceRefs ?? [],
     required_return_shapes: input.requiredReturnShapes ?? [],
     required_receipt_shapes: input.requiredReceiptShapes ?? [],
