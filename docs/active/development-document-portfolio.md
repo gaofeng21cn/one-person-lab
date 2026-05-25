@@ -296,6 +296,56 @@ Next tranche write scope:
 - Continue with MAG full-body docs coverage in chunks: first `docs/specs/*.md` and public/product/runtime/delivery/source/policies README files, then historical specs by lifecycle-note coverage. Do not promote history wording to current truth; extract any still-current rule into core docs, active gap plan, specs lifecycle map, contract or source.
 - Or switch to another clean remaining repo (`one-person-lab`, `redcube-ai`, or App after active worktrees close) and repeat README/docs section-by-section coverage with ledger update.
 
+Date: `2026-05-25 16:31 CST`
+Tranche: `mag-specs-thin-index-coverage`
+State: `tranche_verified`
+
+本轮覆盖 `med-autogrant` 的 `docs/specs/*.md`、`docs/specs/specs_lifecycle_map.md` 和 `docs/public|product|runtime|delivery|source|policies/README.md` 薄索引。目标是把上一轮 MAG entry coverage 留下的 support specs / thin index 缺口收窄：逐段核对 specs 的 lifecycle note、active/support/historical 分层、ready verdict 边界和旧 Hermes/Gateway/local-runtime 词族处置；薄索引只保留目录职责与当前入口，不复制 active plan、contract 或 product-entry manifest。
+
+Fresh live truth inputs:
+
+- MAG `contracts/runtime-program/current-program.json`
+- MAG `contracts/functional_privatization_audit.json`
+- MAG `contracts/production_acceptance/mag-production-acceptance.json`
+- MAG `contracts/external_evidence/mag-evidence-receipt-ledger.json`
+- MAG `schemas/v1/schema-index.json` and source/test refs for product-entry, progress, user-loop, submission-ready, quality/autonomy and executor surfaces
+- MAG OPL Doc Governance doctor on the tranche worktree
+
+Fresh contract result:
+
+- `runtime_owner.default_task_runtime_owner=one-person-lab`、`default_runtime_substrate=temporal`、`default_stage_executor=codex_cli` remain current.
+- `claims_opl_replacement_exists=true`、`claims_domain_repo_physical_delete_authorized=false`、`claims_production_long_run_soak_complete=false` remain current.
+- `mag_functional_structure_gap_count=0`、`standard_agent_source_shape_status=landed` remain structural classification signals only.
+- `authority_boundary.opl_can_authorize_grant_domain_ready=false` and `provider_completion_equals_domain_ready=false` remain current.
+- external evidence ledger still reads `claims_temporal_provider_long_soak_complete=false` and `claims_grant_or_fundability_ready=false`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autogrant` | `docs/specs/README.md`, `docs/specs/specs_lifecycle_map.md`, all 13 `docs/specs/*.md` records, `docs/public/README.md`, `docs/product/README.md`, `docs/runtime/README.md`, `docs/delivery/README.md`, `docs/source/README.md`, `docs/policies/README.md`; scan covered `Current Truth`, `Activation Status`, Hermes/Gateway/local-runtime wording, compatibility wording, hosted runtime / Web UI claims, and ready-verdict terms. | `docs/specs/README.md`, `docs/specs/specs_lifecycle_map.md`, `docs/public/README.md`, `docs/product/README.md`, `docs/runtime/README.md`, `docs/delivery/README.md`, `docs/source/README.md`, `docs/policies/README.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The specs files already have lifecycle notes and current/support/historical routing. This tranche only removed process-lane wording from current specs indexes and normalized thin-index owner signals.
+
+Unreviewed docs:
+
+- `med-autogrant`: root README, core docs, active plan, ideal-state reference, entry indexes and current `docs/specs/*.md` are now covered at current/support level. Remaining MAG body coverage is primarily historical specs/plans/support reference prose under `docs/history/**` and non-index reference docs that were not paragraph-governed in this tranche.
+- Other repos remain under the previous ledger's unreviewed scope except OMA full coverage.
+- App docs remain excluded while dirty/recent App release and GUI worktrees own local changes.
+
+Remaining stale / retire candidates:
+
+- MAG `docs/history/specs/*.md` still contains dated `Current Truth`, `Activation Status`, Hermes/Gateway/local-runtime and hosted/provider wording. History index inheritance now covers them, but direct-file body notes should be normalized later where missing or likely to be opened directly.
+- MAG non-index references such as grant strategy memory and OPL family contract adoption still need a separate paragraph-level pass against current contracts/source.
+
+Next tranche write scope:
+
+- Continue MAG body coverage on `docs/history/specs/*.md` in batches, adding per-file lifecycle notes only where needed and avoiding promotion of historical wording.
+- Or switch to OPL/MAS/RCA/App full README/docs coverage; keep App delayed until active release/GUI worktrees close.
+
 ## 验证
 
 Docs-only 整理：
