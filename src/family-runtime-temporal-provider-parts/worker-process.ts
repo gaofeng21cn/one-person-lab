@@ -95,3 +95,27 @@ export async function stopWorkerPid(pid: number) {
   const exitedAfterKill = await waitForProcessExit(pid);
   return { status: exitedAfterKill ? 'force_stopped' : 'stop_incomplete', actions };
 }
+
+export async function stopOrphanTemporalForegroundWorkers(input: {
+  modulePath: string;
+  excludePids?: number[];
+}) {
+  const orphan_stop_actions: Record<string, unknown>[] = [];
+  const orphan_stopped_pids: number[] = [];
+  const orphan_stop_incomplete_pids: number[] = [];
+  const orphanPids = findTemporalForegroundWorkerPids(input);
+  for (const orphanPid of orphanPids) {
+    const stopped = await stopWorkerPid(orphanPid);
+    orphan_stop_actions.push(...stopped.actions.map((action) => ({ ...action, orphan: true })));
+    if (stopped.status === 'stopped' || stopped.status === 'force_stopped') {
+      orphan_stopped_pids.push(orphanPid);
+    } else {
+      orphan_stop_incomplete_pids.push(orphanPid);
+    }
+  }
+  return {
+    orphan_stop_actions,
+    orphan_stopped_pids,
+    orphan_stop_incomplete_pids,
+  };
+}
