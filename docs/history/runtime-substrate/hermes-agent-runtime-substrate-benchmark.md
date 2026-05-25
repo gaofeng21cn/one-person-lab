@@ -1,8 +1,15 @@
 # Hermes Agent Runtime Substrate 对标与吸收清单
 
+Owner: `One Person Lab`
+Purpose: `historical_runtime_substrate_hermes_agent_benchmark`
+State: `history_only`
+Machine boundary: 本文是人读历史归档；机器可读行为必须回到 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 或 `human_doc:*` 语义标识。
+
 状态锚点：`2026-04-11`
 
 > 2026-05-14 生命周期说明：本文是历史 runtime substrate benchmark。正文中的 `gateway owner process`、`Domain Harness OS`、`OPL Gateway` 与 gateway-first 落地顺序反映 2026-04 Hermes 学习阶段，不再代表当前 OPL runtime target、provider target 或默认执行路线。当前 active owner 是 stage-led OPL framework roadmap、Temporal provider plan、runtime naming/boundary contract 和 Hermes executor evaluation；`hermes_agent` 只作为显式非默认 executor adapter/backend 保留，旧 Hermes provider / Gateway / readiness / compatibility surface 只按 provenance、diagnostic 或 negative-guard 阅读。
+
+历史读法：本文仍可作为 Hermes runtime substrate 学习来源，但正文中的 `gateway`、`cron`、`delivery`、`profile`、`session store`、`OPL Gateway`、`Domain Gateway` 和四仓落地优先级只按 2026-04 benchmark 阅读。当前 OPL runtime target 是 Temporal/provider-backed stage runtime；Hermes 只在 `hermes_agent` 显式 executor adapter/backend 评估中保留 active 角色。
 
 ## 文档目的
 
@@ -58,7 +65,7 @@
 - `tools/approval.py`
 - `hermes_cli/profiles.py`
 
-## 一、当前最值得学习的部分
+## 一、历史当时最值得学习的部分
 
 ### 1. runtime profile 是一等隔离单元
 
@@ -369,7 +376,7 @@
 
 吸收 substrate，不等于取消 domain 边界。
 
-## 五、对 OPL 的直接启发
+## 五、历史对 OPL 的直接启发
 
 如果把这次对标压成一句话，那么最值得吸收的是：
 
@@ -387,7 +394,7 @@
 
 这七项一旦冻结，后面无论是本地 host-agent runtime，还是 future managed runtime，都有一条稳定的迁移骨架。
 
-## 六、四仓落地优先级
+## 六、历史四仓落地优先级
 
 ### 1. one-person-lab
 
@@ -439,13 +446,13 @@
 
 它更适合在 external gate 清除后，再把 substrate contract 吸收进去，而不是现在重构主线。
 
-## 七、当前最合理的执行顺序
+## 七、历史当时最合理的执行顺序
 
-### Step 1
+### 历史 Step 1
 
 先在 `one-person-lab` 冻结 `Runtime Substrate Contract v1` 的参考级合同文档。
 
-### Step 2
+### 历史 Step 2
 
 优先在 `redcube-ai` 和 `med-autogrant` 各落一轮 repo-side hydration：
 
@@ -455,11 +462,11 @@
 - approval / interrupt / resume
 - report / audit linkage
 
-### Step 3
+### 历史 Step 3
 
 等 `med-autoscience` 的 external runtime gate 清掉后，再判断如何把同一 substrate contract 吸收进它的 runtime 主线。
 
-## 最终结论
+## 历史最终结论
 
 `Hermes Agent` 最值得 `OPL` 学习的，不是“通用长期在线 agent 平台”这层产品形态，而是它背后已经相对成熟的 runtime substrate：
 

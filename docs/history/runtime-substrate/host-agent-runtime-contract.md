@@ -1,9 +1,16 @@
 # Codex-default Host-Agent Runtime 合同
 
+Owner: `One Person Lab`
+Purpose: `historical_runtime_substrate_host_agent_runtime_contract`
+State: `history_only`
+Machine boundary: 本文是人读历史归档；机器可读行为必须回到 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 或 `human_doc:*` 语义标识。
+
 Tombstone note 2026-05-11: 本文件已经从 `docs/references/runtime-substrate/` 迁入历史归档。它保留为早期 Codex-default host-agent runtime 口径来源；有效内容已经吸收到 `docs/runtime/opl-runtime-naming-and-boundary-contract.md`、`docs/specs/opl-domain-onboarding-contract.md` 和 executor adapter defaults。当前活跃执行主线是 Codex-default executor + explicit OPL activation + provider-backed stage runtime，不再按本文整份执行。
 
 > 历史说明（2026-04-11 OMX offboarding）：本文件保留为历史/迁移参考；当前活跃执行口径以 Codex-only 文档为准。
 > 当前已同步的现实状态是：三个业务仓都已把 repo-local control-plane state 迁回各自的 repo-tracked truth；OMX 不再作为当前 OPL 开发环境或执行入口。
+
+历史读法：本文中的“当前本地默认 runtime”“兼容宿主”“完成判据”和 `Gateway / Federation` / `Domain Harness OS` / `MedDeepScientist` 语境只作为早期 host-agent runtime provenance。当前执行主线以 `Codex CLI` 第一公民 executor、Temporal/provider-backed stage runtime、explicit non-default executor adapter 和 domain-owned authority boundary 为准。
 
 ## 文档目的
 
@@ -31,7 +38,7 @@ Tombstone note 2026-05-11: 本文件已经从 `docs/references/runtime-substrate
 - `OPL` 不是 domain-local runtime owner
 - 这份合同不把 `OPL` 变成第四个 `Domain Harness OS`
 
-## 二、统一结论
+## 二、历史统一结论
 
 当前 `OPL` 体系下，三个业务仓的本地默认执行形态统一表述为：
 
@@ -246,7 +253,7 @@ Tombstone note 2026-05-11: 本文件已经从 `docs/references/runtime-substrate
 - 现在优先统一的是平面语义、合同语义与控制边界
 - 不是一上来就做彻底重构
 
-## 九、当前不应该做的事
+## 九、历史当时不应该做的事
 
 - 不为了“统一实现”而立即重写 `Med Auto Science` 的历史执行面
 - 不把“当前统一 runtime 合同”误写成“已经统一 shared runtime core”
@@ -254,7 +261,7 @@ Tombstone note 2026-05-11: 本文件已经从 `docs/references/runtime-substrate
 - 不把 managed web runtime 的未来形态提前写成已完成现实
 - 不把 `OPL` 顶层 gateway 误写成 domain runtime owner
 
-## 十、建议的落实顺序
+## 十、历史建议落实顺序
 
 当前最合理的顺序是：
 
@@ -265,7 +272,7 @@ Tombstone note 2026-05-11: 本文件已经从 `docs/references/runtime-substrate
 5. 先修 formal entry、artifact truth、review/gate、watch/status 等合同缺口
 6. 只有在至少两个 domain 的 runtime contract 长期稳定后，再讨论是否抽共享代码框架
 
-## 十一、完成判据
+## 十一、历史完成判据
 
 只有当下面这些条件成立时，才可说“当前本地默认 runtime 已基本统一”：
 

@@ -1102,6 +1102,55 @@ Next tranche write scope:
 - Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 00:01 CST`
+Tranche: `opl-runtime-substrate-history-coverage`
+State: `tranche_verified_scope_pending`
+
+本轮覆盖 OPL `docs/history/runtime-substrate/**` 的 runtime / product-entry / migration 整文档历史块。目标是让这些文件即使从搜索结果或首屏直接打开，也不会把 `当前`、`目标结构`、`推进顺序`、`完成判据`、`Gateway`、`frontdoor`、`direct-entry`、`Hermes Kernel`、`Host-Agent Runtime`、`Managed Runtime`、`Product Entry`、`Domain Harness OS`、`MDS` / `MedDeepScientist` wording 误读成当前 active roadmap、provider contract、runtime readiness path、App release plan、domain admission rule、domain truth、artifact authority、production/domain ready claim 或 `/goal` baton。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`、`TASTE.md`、核心五件套、`docs/active/current-state-vs-ideal-gap.md`、`docs/active/current-development-lines.md`、`docs/references/runtime-substrate/opl-family-agent-ideal-state.md`、`docs/runtime/opl-runtime-naming-and-boundary-contract.md`、`docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md`、`docs/specs/opl-domain-onboarding-contract.md`、`docs/specs/shared-runtime-contract.md`、`docs/specs/shared-domain-contract.md`、`docs/references/runtime-substrate/hermes-agent-executor-evaluation.md`、`docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md`。
+- OPL Doc Governance doctor preflight for this worktree: active truth pass, `finding_count=0`.
+- `opl agents conformance --family-defaults --json`.
+- `opl framework readiness --family-defaults --json`.
+- `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`.
+
+Fresh read-model result:
+
+- `opl agents conformance` summary read `status=passed`, `passed_count=4`, `blocked_count=0`, `structural_conformance_status=passed`, `production_evidence_tail_count=4`; conformance report still cannot claim domain ready or production ready.
+- `framework readiness` read `status=framework_control_plane_available_with_blocked_refs_only_attention`, `hard_blocker_count=0`, `operator_actionable_attention_tail_count=0`, `operator_payload_required_attention_tail_count=0`, `domain_blocked_attention_tail_count=220`, `evidence_envelope_open_count=0`, `evidence_envelope_blocked_count=207`, `provider_slo_cadence_window_status=window_cadence_satisfied`, `provider_slo_capability_status=capability_slo_satisfied`; refs-only blocked attention remains and does not authorize readiness claims.
+- `family-runtime evidence-worklist` read `open_worklist_item_count=0`, `open_safe_action_payload_required_item_count=0`, `open_safe_action_payload_free_item_count=0`, `zero_open_worklist_blocked_refs_only_envelope_count=207`, `domain_dispatch_evidence_workorder_count=0`, `domain_ready_authorized=false`, `production_ready_authorized=false`, `zero_open_worklist_is_domain_ready=false`, `zero_open_worklist_is_production_ready=false`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | `docs/history/runtime-substrate/README.md` directory role, current-owner jump table, read rules, file table and tombstone rules; all 8 historical files under `docs/history/runtime-substrate/*.md`: family lightweight direct-entry rollout board, family product-entry and domain handoff architecture, Hermes runtime substrate benchmark, host-agent runtime contract, managed-runtime migration readiness checklist, MAS top-level cutover board, OPL product-entry / Hermes kernel integration decision, and vertical online-agent platform roadmap. Support evidence came from the live truth inputs listed above. | `docs/history/runtime-substrate/README.md`; all 8 existing historical files under `docs/history/runtime-substrate/*.md`; this coverage ledger |
+
+Archived / tombstoned / deleted docs:
+
+- none physically moved or deleted. These files already live under runtime-substrate history and remain useful dated provenance; this tranche normalized lifecycle headers, added current-owner jumps and historical read-mode guards, and reworded active-looking headings instead of deleting provenance.
+
+Unreviewed docs:
+
+- OPL full README/docs coverage remains open outside previously covered entry/core, gateway-federation history, frontdoor-legacy history, process/specs history, process/plans history, process/convergence-governance history, process/domain-admission history, process/shared-boundary history, process/superpowers history and runtime-substrate history blocks, especially `docs/references/**`, `docs/runtime/**`, `docs/product/**`, `docs/source/**`, `docs/delivery/**`, `docs/public/**`, `docs/specs/**` and long support bodies not listed above.
+- MAS paragraph-level semantic coverage remains open outside prior lifecycle/history and Portal/projection/App-workbench blocks.
+- App docs remain delayed until active release/GUI worktrees close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+- Future changes in OMA/MAG/RCA can reopen coverage even though their recorded scopes were previously closed.
+
+Remaining stale / retire candidates:
+
+- OPL remaining reference/support body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-first, Hermes provider, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
+- App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
+
+Next tranche write scope:
+
+- Continue OPL full docs coverage in another bounded reference/support chunk, preferably `docs/references/current-support/**`, `docs/runtime/**` or `docs/product/**`.
+- Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：

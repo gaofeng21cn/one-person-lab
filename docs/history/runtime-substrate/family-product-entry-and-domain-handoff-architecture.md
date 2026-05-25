@@ -1,6 +1,13 @@
 # OPL 家族产品入口与 Domain Handoff 架构
 
+Owner: `One Person Lab`
+Purpose: `historical_runtime_substrate_family_product_entry_domain_handoff_architecture`
+State: `history_only`
+Machine boundary: 本文是人读历史归档；机器可读行为必须回到 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 或 `human_doc:*` 语义标识。
+
 Lifecycle note 2026-05-11: 本文保留为早期 product-entry / domain handoff 架构参考。当前有效的 taxonomy、handoff envelope、frontdoor/operator 分层和 domain authority boundary 已经吸收到 `docs/active/development-document-portfolio.md`、`docs/active/current-development-lines.md`、domain admission contract、public docs 与 OPL stage-led framework roadmap。文中 Hermes Kernel、Gateway 和 direct-entry 目标链路不再作为当前默认 runtime 主线。
+
+历史读法：本文中的“当前真相”“目标真相”“实施顺序”、`OPL Gateway`、`Hermes Kernel`、`Domain Gateway`、`frontdoor` 和旧 `opl web` / `frontdoor` 命令只保留为 2026-04 product-entry 迁移语境。当前用户工作台、provider-backed stage runtime、domain handoff 与 entry taxonomy 回到核心五件套、domain admission contract、App/product owner docs 和 machine-readable contracts。
 
 ## 1. 要解决的问题
 
@@ -41,9 +48,9 @@ Lifecycle note 2026-05-11: 本文保留为早期 product-entry / domain handoff 
 - 第三层现在已经在 `OPL` 顶层先落下一版本地入口壳：`opl` 作为默认 front desk、`opl <request...>` 作为 quick ask、`opl start / doctor / ask / chat / web` 作为顶层入口，而 `opl contract ... / domain ... / status ... / workspace ... / frontdoor ... / session ... / runtime repair-gateway` 作为显式分组命令面；
 - 但全家族都还没有真正成熟。
 
-## 3. 家族级目标结构
+## 3. 历史家族级目标结构
 
-### 顶层入口
+### 历史顶层入口
 
 `OPL` 已经开始成为整个 family 的 direct product entry：
 
@@ -131,15 +138,15 @@ Lifecycle note 2026-05-11: 本文保留为早期 product-entry / domain handoff 
 - 持有 grant-only lightweight direct entry；
 - 既可从 `OPL` handoff 进入，也可独立服务纯基金申请主线用户。
 
-## 7. 当前真相与目标真相
+## 7. 历史当时真相与目标真相
 
-### 当前真相
+### 历史当时真相
 
 - `OPL` 仍主要通过 `Codex + CLI / MCP` 被间接调用；
 - domain 仓有的已经有可运行 `CLI` / runtime baseline；
 - 但四仓都还没有成熟的 product entry。
 
-### 目标真相
+### 历史目标真相
 
 - 顶层：`OPL Product Entry`
 - 单仓：`Domain Product Entry`
@@ -147,23 +154,23 @@ Lifecycle note 2026-05-11: 本文保留为早期 product-entry / domain handoff 
 - 衔接：统一 handoff envelope
 - `Codex`：开发宿主 / operator brain，不再是产品前提
 
-## 8. 实施顺序
+## 8. 历史实施顺序
 
-### F1. 冻结 family-level truth
+### 历史 F1. 冻结 family-level truth
 
 - 先把顶层入口、domain lightweight entry、handoff envelope 写进 repo-tracked docs 与 tests。
 
-### F2. 先做 entry shell
+### 历史 F2. 先做 entry shell
 
 - `OPL` 形成 direct entry shell；
 - 各 domain 仓形成各自 lightweight direct entry shell。
 
-### F3. 接上 Hermes-backed runtime
+### 历史 F3. 接上 Hermes-backed runtime
 
 - 让这些入口都不再依赖 `Codex` 才能成立；
 - `Codex` 退回开发宿主与高级 operator。
 
-### F4. 再进入 hosted / web 化
+### 历史 F4. 再进入 hosted / web 化
 
 - 顶层与 domain 入口都沿同一 substrate 迁移到 hosted shape。
 
@@ -190,7 +197,7 @@ Lifecycle note 2026-05-11: 本文保留为早期 product-entry / domain handoff 
 
 - `mas-top-level-cutover-board.md`
 
-## 10. 一句话结论
+## 10. 历史一句话结论
 
 四仓后续不应再按“只有顶层像产品，业务仓只是内部能力”来演进。
 正确方向是：

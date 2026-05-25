@@ -1,8 +1,15 @@
 # OPL 垂类在线 Agent 平台演进蓝图
 
+Owner: `One Person Lab`
+Purpose: `historical_runtime_substrate_vertical_online_agent_platform_roadmap`
+State: `history_only`
+Machine boundary: 本文是人读历史归档；机器可读行为必须回到 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 或 `human_doc:*` 语义标识。
+
 状态锚点：`2026-04-11`
 
 Lifecycle note 2026-05-11: 本文保留为早期 online-agent-platform / Gateway / runtime-substrate 演进参考。当前总路线图已经收敛为 stage-led、以 Agent executor 为最小执行单位的 OPL framework：以 `Codex CLI` 为 stage 内默认执行单元，以 provider-backed stage attempt、typed queue、human gate、receipt/projection 和 domain-agent skeleton 为主线。当前 owner 入口是 `docs/active/development-document-portfolio.md`、`docs/active/current-development-lines.md` 和 `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md`。
+
+历史读法：本文中的“当前状态”“目标结构”“阶段梯度”“当前最推荐的推进顺序”、`Gateway / Federation`、`Domain Harness OS` 和 online-agent-platform 语言只按 2026-04 roadmap provenance 阅读。当前 active roadmap 回到 stage-led OPL framework、Temporal provider、domain-agent skeleton 和 App/operator refs-only projection；本文不作为 active platform plan、runtime provider contract、readiness oracle 或 production/domain ready claim。
 
 ## 文档目的
 
@@ -18,7 +25,7 @@ Lifecycle note 2026-05-11: 本文保留为早期 online-agent-platform / Gateway
 - `contracts/README.md`
 - `contracts/opl-framework/README.md`
 
-## 一句话结论
+## 历史一句话结论
 
 `OPL` 不应变成像 `Hermes Agent` 那样的通用长期在线 agent 平台，但应逐步演进为一套面向研究、基金、视觉交付等垂类场景的在线 agent 平台族。
 
@@ -99,7 +106,7 @@ Lifecycle note 2026-05-11: 本文保留为早期 online-agent-platform / Gateway
 - 当前活跃开发控制面仍是 `Codex-only`
 - 当前公开主线仍未拥有统一平台 runtime 或托管式 Web runtime
 
-## 目标结构
+## 历史目标结构
 
 长期理想结构应收敛为：
 
@@ -190,7 +197,7 @@ User / Operator / Agent
 
 ## 阶段梯度
 
-### S0：当前状态
+### S0：历史当时状态
 
 当前已经成立的部分：
 
@@ -292,7 +299,7 @@ User / Operator / Agent
 - 单体 runtime
 - domain truth 全部上收到 `OPL`
 
-## 当前最推荐的推进顺序
+## 历史当时最推荐的推进顺序
 
 按现在的仓库成熟度，最合理的顺序是：
 
@@ -308,7 +315,7 @@ User / Operator / Agent
 2. 先做统一平台 runtime
 3. 再回头看 domain 是否真的能接住
 
-## 当前四仓的对应关系
+## 历史当时四仓对应关系
 
 ### `one-person-lab`
 
@@ -350,7 +357,7 @@ User / Operator / Agent
 - 本地产品 runtime 的 revision / final / export 路线
 - 用较清楚的对象和输出闭环证明“可用的本地产品 runtime”该是什么样子
 
-## 当前不应做的事
+## 历史当时不应做的事
 
 - 直接宣布 `OPL` 已经是垂类在线 agent 平台
 - 直接宣布 `Shared Runtime Contract` 已经实现完成

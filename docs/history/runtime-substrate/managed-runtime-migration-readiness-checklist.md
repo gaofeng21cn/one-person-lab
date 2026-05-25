@@ -1,8 +1,15 @@
 # Managed Runtime 迁移准备清单
 
+Owner: `One Person Lab`
+Purpose: `historical_runtime_substrate_managed_runtime_migration_readiness_checklist`
+State: `history_only`
+Machine boundary: 本文是人读历史归档；机器可读行为必须回到 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 或 `human_doc:*` 语义标识。
+
 状态锚点：`2026-04-11`
 
 Tombstone note 2026-05-11: 本文件已经从 `docs/references/runtime-substrate/` 迁入历史归档。它保留为早期 host-agent -> managed runtime readiness snapshot；R1-R8 readiness 维度已经吸收到 `docs/runtime/opl-runtime-naming-and-boundary-contract.md`。逐仓 blocker 和推进顺序是 dated snapshot，不再作为当前迁移队列执行。
+
+历史读法：本文中的“当前中央判断”“逐仓 readiness”“当前下一步”和 `Gateway / Federation` / `Domain Gateway` / `Domain Harness OS` 语言只描述 2026-04 host-agent -> managed runtime snapshot。当前 managed/runtime-provider 读法回到 `docs/runtime/opl-runtime-naming-and-boundary-contract.md`、Temporal provider 计划和核心五件套；本文不作为 active migration queue、readiness oracle 或 hosted runtime 计划执行。
 
 ## 文档目的
 
@@ -15,13 +22,7 @@ Tombstone note 2026-05-11: 本文件已经从 `docs/references/runtime-substrate
 3. 四仓分别还卡在哪些 blocker 上。
 4. 后续最合理的推进顺序是什么。
 
-这份文档属于 `docs/references/` 下的参考级同步面。
-它不反向抬升为 `OPL` 公开主线 truth owner；统一命名与边界定义仍以：
-
-- `docs/opl-runtime-naming-and-boundary-contract.zh-CN.md`
-- `AGENTS.md`
-
-为准。
+这份文档曾属于 `docs/references/` 下的参考级同步面。它不反向抬升为 `OPL` 公开主线 truth owner；当前统一命名与边界定义以 `docs/runtime/opl-runtime-naming-and-boundary-contract.md`、核心五件套和机器读面为准。
 
 ## 一、迁移对象到底是什么
 
@@ -68,7 +69,7 @@ Tombstone note 2026-05-11: 本文件已经从 `docs/references/runtime-substrate
 | `R7 / external dependency clearance` | 进入 cutover / hostedization 前依赖的 external runtime、workspace、human gate 是否已经清掉 |
 | `R8 / platform-owned lifecycle` | 平台托管的 session / watch / resume / replay / sandbox 是否已经存在 |
 
-## 三、当前中央判断
+## 三、历史当时中央判断
 
 ### 总体结论
 
@@ -107,7 +108,7 @@ Tombstone note 2026-05-11: 本文件已经从 `docs/references/runtime-substrate
 | `R7 / external dependency clearance` | 低 | `med-autoscience` 明确仍被 external runtime gate 阻塞 |
 | `R8 / platform-owned lifecycle` | 很低 | 当前没有 actual hosted runtime、remote execution、multi-tenant、platform-owned session lifecycle |
 
-## 四、逐仓 readiness 判断
+## 四、历史逐仓 readiness 判断
 
 ### 1. one-person-lab
 
@@ -235,7 +236,7 @@ Tombstone note 2026-05-11: 本文件已经从 `docs/references/runtime-substrate
 2. 围绕 `post-R5A local runtime hardening` 继续收紧 validator / checkpoint truth、operator walkthrough 与 docs/runtime 对齐。
 3. 继续明确把 hostedization prep 与 actual hosted runtime 分开。
 
-## 五、当前统一迁移顺序
+## 五、历史统一迁移顺序
 
 当前最合理的顺序不是“三仓一起做 hosted runtime”，而是：
 
@@ -248,7 +249,7 @@ Tombstone note 2026-05-11: 本文件已经从 `docs/references/runtime-substrate
 4. `redcube-ai`
    quickstart 已吸收；只有在形成新的 concrete contract-export delta 时，才补首个 hostedization-prep contract slice。
 
-## 六、当前不应做的事
+## 六、历史当时不应做的事
 
 以下动作当前仍应明确后置：
 
@@ -259,7 +260,7 @@ Tombstone note 2026-05-11: 本文件已经从 `docs/references/runtime-substrate
 - 把 `med-autogrant` 的 `hosted-friendly contract bundle` 误写成 actual hosted platform
 - 直接跳到统一平台 runtime、web runtime、multi-tenant、shared execution core
 
-## 七、当前结论
+## 七、历史当时结论
 
 当前这次语义对齐带来的最大收益，确实是：
 

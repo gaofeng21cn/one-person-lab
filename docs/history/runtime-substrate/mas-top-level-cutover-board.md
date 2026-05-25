@@ -1,6 +1,13 @@
 # MAS 顶层切换板
 
+Owner: `One Person Lab`
+Purpose: `historical_runtime_substrate_mas_top_level_cutover_board`
+State: `history_only`
+Machine boundary: 本文是人读历史归档；机器可读行为必须回到 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 或 `human_doc:*` 语义标识。
+
 Lifecycle note 2026-05-11: 本文保留为早期 `OPL -> MAS` 顶层切换和 Hermes-first/runtime cutover provenance。当前 MAS 迁移顺序以 OPL framework-first 主线为准：先完成 OPL stage-led framework，再迁移 MAS domain-agent skeleton / sidecar / receipt / artifact locator / authority refs，随后退役旧默认面，最后做真实 paper-line soak。当前 owner 入口是 `docs/active/development-document-portfolio.md`、`docs/active/current-development-lines.md`、`docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md`，以及 MAS 仓内的 `docs/active/current-development-lines.md` / `docs/active/program_portfolio_consolidation.md`。
+
+历史读法：本文中的“当前顶层真相”“切换阶段”“提升条件”、Hermes-first runtime cutover 和 `MedDeepScientist` backend 事实只按 2026-04 / early 2026-05 OPL -> MAS 迁移语境阅读。当前 MAS truth、owner-route、artifact authority、publication quality 和 paper-line 证据回到 MAS 仓 repo-owned docs/contracts/read-model；OPL 只持有 refs-only projection、stage runtime 和 handoff boundary。
 
 ## 1. 目的
 
@@ -13,7 +20,7 @@ Lifecycle note 2026-05-11: 本文保留为早期 `OPL -> MAS` 顶层切换和 He
 - `Med Auto Science` 需要在不丢稳定性的前提下，逐步把 outer runtime substrate 切到真实上游 `Hermes-Agent` 协作形态；
 - 这个切换必须在顶层口径上保持诚实，不把 repo-side seam、adapter scaffold 或 transition shell 写成“已经完全替换 backend”。
 
-## 2. 当前顶层真相
+## 2. 历史当时顶层真相
 
 - `OPL` 顶层现在已经可以直接通过 `opl` 进入 family-level front desk。
 - `OPL <-> MAS` 的下一个真实目标，不是重写论文配图能力，而是收紧 `Research Ops` 主线的 family handoff、domain product entry 与 runtime substrate 边界。
@@ -66,32 +73,32 @@ Lifecycle note 2026-05-11: 本文保留为早期 `OPL -> MAS` 顶层切换和 He
 - 顶层只冻结字段语义；
 - 具体 study object、workspace object、publication object 仍由 `MAS` 域内真相拥有。
 
-## 6. 切换阶段
+## 6. 历史切换阶段
 
-### C0. 顶层真相冻结
+### 历史 C0. 顶层真相冻结
 
 - `OPL` 公开文档、reference docs、family entry 文档对齐
 - 不再把 `MAS` 写成“已经完成 Hermes-Agent 执行器等价切换”
 - 不再把 display 线混入主切换线
 
-### C1. Domain product entry 对齐
+### 历史 C1. Domain product entry 对齐
 
 - `MAS` 域内明确 research-only lightweight direct entry
 - 与 `OPL Front Desk` 的 handoff envelope 对齐
 - 不要求这一步就替换掉所有 backend 执行器
 
-### C2. Runtime substrate 切换
+### 历史 C2. Runtime substrate 切换
 
 - 把 outer runtime substrate 迁到真实的 `Hermes-Agent` 协作形态
 - pause / resume / stop / watch / session binding 的顶层语义与 `OPL` 保持一致
 - 仍允许 inner-loop 通过受控 backend 执行，只要 truth surface 诚实
 
-### C3. Backend 吸收或替换评估
+### 历史 C3. Backend 吸收或替换评估
 
 - 只有在上一步已经稳定后，才评估哪些 backend 能力值得继续吸收、替换或保留
 - 这一阶段才讨论 `MedDeepScientist` 的进一步解构
 
-## 7. 提升条件
+## 7. 历史提升条件
 
 只有同时满足以下条件，`OPL` 才能把 `MAS` 的集成深度继续往上提升：
 
@@ -100,7 +107,7 @@ Lifecycle note 2026-05-11: 本文保留为早期 `OPL -> MAS` 顶层切换和 He
 - repo-tracked docs、tests、runtime evidence 一致
 - 没有再把 transition seam 写成“已完成 backend 替换”
 
-## 8. 当前结论
+## 8. 历史当时结论
 
 当前最合理的做法是：
 

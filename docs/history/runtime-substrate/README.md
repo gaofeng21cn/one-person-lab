@@ -1,20 +1,38 @@
 # Runtime Substrate 历史归档
 
-Status: `historical_archive`
 Owner: `One Person Lab`
+Purpose: `history_runtime_substrate_index`
+State: `history_only`
 Machine boundary: 仅人读历史归档；机器可读行为必须使用 `contracts/`、源码、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 或 `human_doc:*` 语义标识。
 
 本目录收纳已经被 2026-05-11 framework-first 定位吸收或取代的 runtime / product-entry / migration 整文档。它们仍保留来源追溯价值，但不再作为当前 backlog、roadmap、runtime contract 或 product-entry 计划执行。
 旧文档中的双语方案、旧路径和旧命令只保留为 provenance；`docs/**` 当前只维护中文 canonical 内容。
 
-当前入口：
+## 当前 owner
+
+| 当前问题 | 当前 owner |
+| --- | --- |
+| OPL 当前状态、边界和不能声明项 | [OPL 当前状态](../../status.md)、[OPL 架构](../../architecture.md)、[OPL 硬约束](../../invariants.md) |
+| OPL family 当前差距、下一轮 baton 与 coverage ledger | [OPL Family 当前状态与理想目标差距](../../active/current-state-vs-ideal-gap.md)、[OPL 开发文档组合整理](../../active/development-document-portfolio.md) |
+| Codex-default executor、Temporal provider、explicit executor adapter 与 runtime 命名 | [OPL Runtime 命名与边界合同](../../runtime/opl-runtime-naming-and-boundary-contract.md)、[Temporal family runtime provider 落地计划](../../references/runtime-substrate/temporal-family-runtime-provider-plan.md) |
+| Domain-agent admission、handoff、product/operator/agent entry taxonomy | [OPL Domain-Agent Admission Contract](../../specs/opl-domain-onboarding-contract.md) |
+| Stage-led framework roadmap 与 north-star target | [OPL Stage-Led Agent Framework Roadmap](../../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md)、[OPL 与 Foundry Agents 理想目标态](../../references/runtime-substrate/opl-family-agent-ideal-state.md) |
+| `hermes_agent` 作为显式非默认 executor adapter 的评估 | [Hermes-Agent 备选执行器评估](../../references/runtime-substrate/hermes-agent-executor-evaluation.md) |
+
+## 历史读法
+
+本目录正文中的 `当前`、`目标`、`推进顺序`、`Gateway`、`frontdoor`、`direct-entry`、`Hermes Kernel`、`Host-Agent Runtime`、`Managed Runtime`、`Product Entry`、`Domain Harness OS`、`MDS` / `MedDeepScientist` 等词汇，只按对应文档冻结日期的迁移语境阅读。当前活跃主线回到 `Codex CLI first-class executor -> explicit OPL activation -> Temporal/provider-backed stage runtime -> selected domain-agent entry`；`hermes_agent`、`claude_code`、`antigravity_cli` 只按显式非默认 executor adapter/backend 阅读。
+
+## 当前入口
 
 - [OPL 当前开发线路](../../active/current-development-lines.md)
 - [OPL 开发文档组合整理](../../active/development-document-portfolio.md)
+- [OPL Family 当前状态与理想目标差距](../../active/current-state-vs-ideal-gap.md)
 - [OPL Runtime 命名与边界合同](../../runtime/opl-runtime-naming-and-boundary-contract.md)
 - [OPL Domain-Agent Admission Contract](../../specs/opl-domain-onboarding-contract.md)
 - [OPL stage-led agent framework roadmap](../../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md)
 - [Temporal family runtime provider 落地计划](../../references/runtime-substrate/temporal-family-runtime-provider-plan.md)
+- [Hermes-Agent 备选执行器评估](../../references/runtime-substrate/hermes-agent-executor-evaluation.md)
 
 ## 已吸收内容
 
