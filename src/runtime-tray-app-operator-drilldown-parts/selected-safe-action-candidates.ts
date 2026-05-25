@@ -105,6 +105,7 @@ function routeEligibleForDefaultSelectedAction(action: JsonRecord) {
   return actionKind === 'app_release_user_path_evidence_receipt_verify'
     || actionKind === 'app_release_user_path_evidence_receipt_record'
     || actionKind === 'oma_production_consumption_receipt_record'
+    || actionKind === 'provider_worker_start'
     || actionKind === 'provider_worker_restart'
     || actionKind === 'provider_slo_cadence_execution'
     || actionKind === 'stage_production_attempt_request'
@@ -143,7 +144,8 @@ function actionPriority(action: JsonRecord) {
     || actionKind === 'oma_production_consumption_receipt_record') {
     return 1;
   }
-  if (actionKind === 'provider_worker_restart') {
+  if (actionKind === 'provider_worker_start'
+    || actionKind === 'provider_worker_restart') {
     return 2;
   }
   if (actionKind === 'provider_slo_cadence_execution') {

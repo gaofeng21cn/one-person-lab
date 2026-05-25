@@ -40,17 +40,54 @@ function workerReadinessFromStageWorkbench(stageAttemptWorkbench: JsonRecord) {
   return {};
 }
 
+function actionableRepair(readiness: JsonRecord) {
+  const lifecycleStatus = stringValue(readiness.lifecycle_status)
+    ?? stringValue(readiness.readiness_status);
+  const repairActionId = stringValue(record(readiness.repair_action).action_id);
+  return (
+    (lifecycleStatus === 'worker_not_ready' && repairActionId === 'start_temporal_worker')
+    || (lifecycleStatus === 'worker_source_stale' && repairActionId === 'restart_temporal_worker')
+  );
+}
+
 export function buildProviderWorkerActionRoutes(input: {
   stageAttemptWorkbench: JsonRecord;
   providerInspection?: JsonRecord;
 }) {
   const providerReadiness = workerReadinessFromProviderInspection(input.providerInspection);
-  const readiness = Object.keys(providerReadiness).length > 0 ? providerReadiness
-    : workerReadinessFromStageWorkbench(input.stageAttemptWorkbench);
+  const stageWorkbenchReadiness = workerReadinessFromStageWorkbench(input.stageAttemptWorkbench);
+  const readiness = actionableRepair(providerReadiness) || !actionableRepair(stageWorkbenchReadiness)
+    ? providerReadiness
+    : stageWorkbenchReadiness;
   const lifecycleStatus = stringValue(readiness.lifecycle_status)
     ?? stringValue(readiness.readiness_status);
   const repairAction = record(readiness.repair_action);
   const repairActionId = stringValue(repairAction.action_id);
+  if (lifecycleStatus === 'worker_not_ready' && repairActionId === 'start_temporal_worker') {
+    return uniqueRefs([{
+      ref: 'opl family-runtime worker start --provider temporal',
+      opl_cli_args: ['worker', 'start', '--provider', 'temporal'],
+      role: 'operator_action_route',
+      action_id: 'provider-worker:temporal:start',
+      action_kind: 'provider_worker_start',
+      owner: 'opl',
+      route_target_kind: 'opl_cli',
+      execution_policy: 'opl_safe_action_shell',
+      execution_surface: 'opl runtime action execute',
+      stage_attempt_id: null,
+      domain_id: null,
+      stage_id: null,
+      provider_kind: 'temporal',
+      provider_worker_lifecycle_status: lifecycleStatus,
+      provider_worker_repair_action_id: repairActionId,
+      provider_worker_repair_command: stringValue(repairAction.next_command),
+      provider_worker_required_next_action:
+        'Start Temporal worker before rerunning provider proof or provider-backed Codex stages.',
+      expected_surface_kind: 'temporal_worker_lifecycle_start',
+      can_execute: false as const,
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    }]);
+  }
   if (lifecycleStatus !== 'worker_source_stale' || repairActionId !== 'restart_temporal_worker') {
     return [];
   }

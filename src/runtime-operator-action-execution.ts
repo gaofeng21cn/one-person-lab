@@ -600,6 +600,7 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
       'app_release_user_path_evidence_receipt_record',
       'app_release_user_path_evidence_receipt_verify',
       'oma_production_consumption_receipt_record',
+      'provider_worker_start',
       'provider_worker_restart',
       'provider_slo_cadence_execution',
       'provider_scheduler_status',
@@ -695,7 +696,8 @@ async function executeRoute(
     const omaProductionConsumption = omaProductionConsumptionAction
       ? omaProductionConsumptionExecution(options.payload, { dryRun: options.dryRun })
       : null;
-    const providerWorkerRepair = actionKind === 'provider_worker_restart'
+    const providerWorkerRepair = actionKind === 'provider_worker_start'
+      || actionKind === 'provider_worker_restart'
       ? providerWorkerArgs(route, commandOrSurfaceRef)
       : null;
     const { executionKind, runtimeArgs } = appReleaseUserPathEvidence
@@ -731,7 +733,7 @@ async function executeRoute(
       executed_runtime_command: appReleaseUserPathEvidenceAction || omaProductionConsumptionAction
         ? `opl ${runtimeArgs.join(' ')}`
         : providerWorkerRepair
-          ? providerWorkerCommand()
+          ? providerWorkerCommand(providerWorkerRepair)
         : externalEvidenceAction
         ? `opl ${runtimeArgs.join(' ')}`
         : legacyCleanupAction

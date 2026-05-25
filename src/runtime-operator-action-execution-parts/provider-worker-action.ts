@@ -17,11 +17,25 @@ export function providerWorkerArgs(route: JsonRecord, commandOrSurfaceRef: strin
   if (args.length === 0) {
     throw new FrameworkContractError('contract_shape_invalid', 'Unsupported OPL provider worker action route.', {
       command_or_surface_ref: commandOrSurfaceRef,
-      supported_command: 'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
+      supported_commands: [
+        'opl family-runtime worker start --provider temporal',
+        'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
+      ],
     });
   }
   const providerIndex = args.indexOf('--provider');
   const actionIndex = args.indexOf('--action');
+  if (
+    args[0] === 'worker'
+    && args[1] === 'start'
+    && providerIndex >= 0
+    && args[providerIndex + 1] === 'temporal'
+  ) {
+    return {
+      mode: 'start',
+      startArgs: ['worker', 'start', '--provider', 'temporal'],
+    } as const;
+  }
   if (
     args[0] !== 'worker'
     || args[1] !== 'repair'
@@ -36,21 +50,29 @@ export function providerWorkerArgs(route: JsonRecord, commandOrSurfaceRef: strin
     });
   }
   return {
+    mode: 'restart',
     stopArgs: ['worker', 'stop', '--provider', 'temporal'],
     startArgs: ['worker', 'start', '--provider', 'temporal'],
-  };
+  } as const;
 }
 
-export function providerWorkerCommand() {
-  return 'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal';
+export function providerWorkerCommand(repair: ReturnType<typeof providerWorkerArgs>) {
+  return repair.mode === 'start'
+    ? 'opl family-runtime worker start --provider temporal'
+    : 'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal';
 }
 
 export async function runProviderWorkerRepair(
   repair: ReturnType<typeof providerWorkerArgs>,
   runFamilyRuntime: (args: string[]) => Promise<unknown>,
 ) {
+  if (repair.mode === 'start') {
+    return {
+      start: await runFamilyRuntime([...repair.startArgs]),
+    };
+  }
   return {
-    stop: await runFamilyRuntime(repair.stopArgs),
-    start: await runFamilyRuntime(repair.startArgs),
+    stop: await runFamilyRuntime([...repair.stopArgs]),
+    start: await runFamilyRuntime([...repair.startArgs]),
   };
 }
