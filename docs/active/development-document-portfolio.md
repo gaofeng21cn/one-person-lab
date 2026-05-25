@@ -2431,6 +2431,56 @@ Next tranche write scope:
 - Or choose the next exact OPL uncovered body from the family coverage ledger.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 06:02 CST`
+Tranche: `mas-study-workflow-policy-boundary-rebase-followup`
+State: `tranche_verified`
+
+本轮延续上一条 MAS study-workflow policy coverage，并在 fresh MAS `origin/main` 上重新吸收。期间 MAS `origin/main` 已先落地 `0ed003c7 docs: cover MAS study workflow policies`；本轮把该 coverage 与本轮补读的 seed fixture、source index、workspace knowledge/runtime contract、submission revision boundary 合并成最新 MAS commit `9e9989dd docs: cover MAS study workflow policy boundaries`。旧 `0ed003c7` 记录保持为 provenance；当前引用最新落点时使用 `9e9989dd`。
+
+Reviewed / edited delta:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full paragraph read of all `docs/policies/study-workflow/*` Markdown files plus `publication_route_memory_seed_fixture.json`; support read of `docs/source/README.md`, `docs/runtime/contracts/workspace_knowledge_and_literature_contract.md`, and `docs/runtime/contracts/stage_route_contract.md`; live contract/source/test evidence from stage route, stage knowledge, workspace literature, data assets, Semantic Scholar provider runtime and OPL family adoption surfaces. | `docs/docs_portfolio_consolidation.md`; `docs/policies/study-workflow/study_route_contract.md`; `docs/policies/study-workflow/bounded_analysis_frontier_policy.md`; `docs/policies/study-workflow/submission_revision_operating_contract.md`; `docs/policies/study-workflow/workspace_autoscience_rules.md` |
+| `one-person-lab` | coverage ledger owner only | this coverage ledger |
+
+Fresh semantic result:
+
+- `study_route_contract.md` now states stage packet is stage handoff / read-model input, not route authority; go / stop / reroute / human-gate decisions still need controller decision, evidence/review ledgers, publication eval, owner receipt or typed blocker.
+- `bounded_analysis_frontier_policy.md` now combines candidate-board audit semantics with claim/source/artifact/human-gate boundary checks; selected path / stop reason can feed controller, AI reviewer, publication gate and later stages, but cannot itself declare scientific success or package freshness.
+- `submission_revision_operating_contract.md` now explicitly scopes same-line revision and submission delivery, distinguishing controller-authorized `paper/` sources from current-package / DOCX / PDF / ZIP projections and review overlays.
+- `workspace_autoscience_rules.md` now names MAS controller / owner surfaces for data, gate and delivery updates, while OPL remains provider/runtime/projection shell owner. Workspace literature, data asset registry, ToolUniverse output, provider cache/ranking, quest-local materialization, provider completion, file presence, test pass and package freshness cannot become source readiness, quality verdict, artifact authority, domain ready or paper closure.
+
+Verification / absorb:
+
+- MAS commit `9e9989dd docs: cover MAS study workflow policy boundaries` was fast-forwarded into MAS `main` and pushed to `origin/main`.
+- MAS verification after rebase onto fresh `origin/main`: `git diff --check` passed; strict `README* docs contracts profiles agent src tests` conflict-marker scan had no hits; OPL Doc Governance doctor reported `finding_count=0`, active truth `pass`; focused pytest `tests/test_stage_route_contract.py tests/test_stage_knowledge_plane.py tests/test_stage_knowledge_entry_injection.py tests/test_semantic_scholar_provider_runtime_contract.py tests/test_data_asset_gate.py -q` read `45 passed`.
+- MAS tranche worktree `/Users/gaofeng/workspace/med-autoscience/.worktrees/mas-study-workflow-policy-docs-coverage-20260526` and branch `codex/mas-study-workflow-policy-docs-coverage-20260526` were removed after absorb.
+
+Archived / tombstoned / deleted docs:
+
+- none. All changed files remain active policy / docs-governance surfaces with distinct roles.
+
+Unreviewed docs:
+
+- `docs/policies/study-workflow/` is paragraph-covered for this source/stage-workflow authority-boundary pass.
+- MAS delivery / medical-display docs outside the already-covered inspection, artifact/baseline/retention and delivery index blocks remain open when they mention artifact lifecycle, source truth, package authority or display-pack authority.
+- MAS runtime/control support docs under `docs/runtime/contracts/**` and `docs/runtime/control/**` remain open outside previously covered projection/display/inspection/controller/stage route snippets.
+- OPL full README/docs coverage remains open outside the covered OPL chunks named in earlier ledger entries.
+- App docs remain delayed until active release/GUI lanes are safe to govern.
+
+Remaining stale / retire candidates:
+
+- Future MAS prose must not treat stage packet, candidate board, route memory, archetype, route-bias prose, data asset registry, workspace literature, ToolUniverse output, provider cache/ranking, quest-local materialization, file presence, package freshness, local test pass, provider completion or OPL projection as source readiness verdict, publication quality verdict, submission readiness, artifact mutation authorization, `current_package` update, controller decision, domain ready or production ready.
+- Future MAS prose must not make OPL read or mutate MAS memory body, accept/reject memory writebacks, choose publication route, write MAS truth, sign artifact authority or interpret medical quality.
+
+Next tranche write scope:
+
+- MAS delivery / medical-display docs that mention artifact lifecycle, source truth, package authority or display-pack authority.
+- Or MAS runtime/control support docs under `docs/runtime/contracts/**` and `docs/runtime/control/**` not already covered.
+- Or choose the next exact OPL uncovered body from the family coverage ledger.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 Date: `2026-05-26 06:10 CST`
 Tranche: `mas-medical-display-delivery-authority-coverage`
 State: `tranche_verified`
