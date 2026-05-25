@@ -847,6 +847,58 @@ Next tranche write scope:
 - Continue MAS with full `README*` and `docs/**/*.md` paragraph-level reconciliation, or switch to OPL full README/docs coverage from a clean owner lane.
 - Keep App delayed until active release/GUI worktrees close, App `main` is updated to current release commits, or an explicit owner decision makes current App docs safe to govern.
 
+Date: `2026-05-25 19:16 CST`
+Tranche: `mas-history-lifecycle-coverage`
+State: `tranche_verified_scope_pending`
+
+本轮覆盖 `med-autoscience` repo-root `README*` 与 `docs/history/**` 的 lifecycle / provenance 首屏信号。目标是让 MAS 历史归档、旧 program、runtime、OMX、superpowers 和 medical-display provenance 文档明确只保留历史形成过程、退役路线、参考证据或 tombstone 上下文；当前 MAS 医学研究 truth、runtime-facing owner surface、quality/publication verdict、OPL generated/default caller 边界和机器行为继续回到核心五件套、active truth owner、ideal-state reference、contracts、source、tests、CLI/read-model 与 domain owner receipts。本轮不关闭 MAS 全仓 README/docs 逐段语义覆盖。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`、`TASTE.md`
+- MAS `README.md`、`README.zh-CN.md`、核心五件套、`docs/active/mas-ideal-state-gap-plan.md`、`docs/references/positioning/mas_ideal_state.md`
+- MAS `contracts/functional_privatization_audit.json`
+- MAS `contracts/production_acceptance/mas-production-acceptance.json`
+- MAS `contracts/generated_surface_handoff.json`
+- MAS `contracts/test-lane-manifest.json`
+- MAS CLI public surface smoke: `medautosci --help`
+- OPL Doc Governance doctor on the MAS coverage worktree and absorbed main
+
+Fresh contract / CLI result:
+
+- MAS public CLI still exposes doctor/workspace/data/runtime/study/publication/sidecar/product command groups; this remains a public surface smoke, not publication/domain/production readiness.
+- MAS generated surface owner remains `one-person-lab`; OPL generated surfaces dispatch to MAS handler/minimal authority and cannot write MAS truth, publication memory body, AI reviewer verdict, publication verdict, artifact authority, source body or `current_package`.
+- MAS production acceptance still keeps production/publication ready non-authorization boundaries; `claims_production_long_run_soak_complete=false` remains current.
+- `functional_privatization_audit` and adjacent active plan still leave MAS source-purity / wrapper-thinning / generated-default-caller follow-through as semantic coverage and implementation tails.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | `README.md`, `README.zh-CN.md`, `docs/history/README.md`, `docs/history/capabilities/README.md`, `docs/history/capabilities/medical-display/**`, `docs/history/omx/**`, `docs/history/positioning/**`, `docs/history/program/**`, `docs/history/runtime/**`, `docs/history/superpowers/README.md`, `docs/history/superpowers/plans/**`, `docs/history/superpowers/specs/**`; review focused on first-screen lifecycle role, history/provenance state and machine-boundary wording against current MAS contracts and active owner docs. | 98 files: repo-root READMEs plus history/provenance files under capabilities, OMX, positioning, program, runtime and superpowers. |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The edited MAS files remain useful history/provenance/tombstone material; the governance action was direct-file lifecycle clarification and inherited history semantics, not physical archive/delete.
+
+Unreviewed docs:
+
+- `med-autoscience`: full README/docs paragraph-level semantic coverage remains open. This tranche covered root README lifecycle comments and `docs/history/**` lifecycle/provenance headers only; non-history `docs/**/*.md`, active-plan semantic reconciliation, support/reference body claims and history body paragraphs still need later coverage.
+- OMA, MAG and RCA README/docs coverage are already closed by prior ledger entries.
+- OPL and App README/docs coverage remain open. App docs remain risky while active release/GUI worktrees or behind-origin state are unresolved.
+
+Remaining stale / retire candidates:
+
+- MAS product/status/workbench, owner-route handoff, progress/domain-ref projection, controller shell, non-history support body wording and generated/default-caller replacement boundaries still require full semantic reconciliation.
+- MAS history body text may still contain old local-runtime, MDS/DeepScientist, OMX, Hermes, publication-ready or owner-route wording; the new headers bind those files to history/provenance, but body-level direct-reader cleanup remains open where stale wording could be misread as current truth.
+
+Next tranche write scope:
+
+- Continue MAS with non-history `README*` and `docs/**/*.md` paragraph-level reconciliation, prioritizing product/status/workbench, owner-route handoff, progress/domain-ref projection, controller shell and generated/default-caller boundaries.
+- Or switch to OPL full README/docs coverage from a clean owner lane.
+- Keep App delayed until active release/GUI worktrees close, App `main` is updated to current release commits, or an explicit owner decision makes current App docs safe to govern.
+
 
 Docs-only 整理：
 
