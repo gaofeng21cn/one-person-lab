@@ -395,6 +395,56 @@ Next tranche write scope:
 - Continue MAG `docs/history/specs/*.md` in date/topic batches, prioritizing 2026-04-07 authoring-flow provenance and 2026-04-11/2026-04-12 Hermes / hosted-caller specs because direct-file stale provider wording risk is higher there.
 - Or switch to OPL/MAS/RCA/App full README/docs coverage; keep App delayed until active release/GUI worktrees close.
 
+Date: `2026-05-25 16:58 CST`
+Tranche: `mag-20260407-authoring-flow-history-coverage`
+State: `tranche_verified_scope_pending`
+
+本轮覆盖 `med-autogrant` 的 `docs/history/specs/2026-04-07-*.md` authoring-flow / review-gate history specs。目标是把 P2.A / P2.B / P2.C authoring flow 和 P3.A review-gate 的直接文件入口收紧：每份历史 spec 首屏都持有文件级 `Owner`、`Purpose`、`State`、`Machine boundary`，明确这些文件只保留 2026-04-07 route/object/verdict 形成过程，当前 route truth、authoring pass、executor boundary、AI-first quality gate、OPL/Temporal runtime owner 与机器行为回到核心五件套、active specs index、specs lifecycle map、contracts、schemas、source、CLI/API 行为和 `contracts/runtime-program/current-program.json`。
+
+Fresh live truth inputs:
+
+- MAG `AGENTS.md`、`TASTE.md`
+- MAG `README.md`、`docs/README.md`、`docs/status.md`、`docs/active/mag-ideal-state-cross-repo-gap-plan.md`、`docs/history/specs/README.md`
+- MAG `contracts/runtime-program/current-program.json`
+- MAG `contracts/functional_privatization_audit.json`
+- MAG `contracts/external_evidence/mag-evidence-receipt-ledger.json`
+
+Fresh contract result:
+
+- `runtime_owner.default_task_runtime_owner=one-person-lab`、`default_runtime_substrate=temporal`、`default_stage_executor=codex_cli` remain current.
+- `mag_implements_daemon=false`、`mag_implements_scheduler=false`、`mag_implements_attempt_loop=false`、`mag_owns_attempt_ledger=false` remain current.
+- `claims_opl_replacement_exists=true`、`claims_domain_repo_physical_delete_authorized=false`、`claims_production_long_run_soak_complete=false` remain current.
+- `standard_agent_source_shape_status=landed` remains structural classification only, not strict source-purity physical completion.
+- External evidence ledger keeps `claims_temporal_provider_long_soak_complete=false` and `claims_grant_or_fundability_ready=false`; remaining real evidence gap is `temporal_provider_long_soak_window_evidence`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autogrant` | `docs/history/specs/2026-04-07-p2a-intake-direction-question-mainline-current-truth.md`, `docs/history/specs/2026-04-07-p2b-argument-fit-outline-mainline-current-truth.md`, `docs/history/specs/2026-04-07-p2c-draft-critique-revision-skeleton-mainline-current-truth.md`, `docs/history/specs/2026-04-07-p3a-mentor-verdict-contract-freeze-current-truth.md`; sections reviewed include title, lifecycle note, goal, current pointer, canonical route/object/artifact/audit surface, non-goals and old formal-entry / CLI/runtime wording. | same four files |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. These four files remain useful authoring-flow / review-gate provenance; the governance action was first-screen lifecycle clarification, not physical archive/delete.
+
+Unreviewed docs:
+
+- `med-autogrant`: remaining `docs/history/specs/*.md` files outside the 2026-04-06 foundation and 2026-04-07 authoring-flow/review-gate batches are not paragraph-governed in this tranche. `docs/history/plans/**`, `docs/history/product/**`, `docs/history/runtime/**`, `docs/history/positioning/**` and non-index `docs/references/**/*.md` still need separate body-level coverage unless covered by earlier ledger entries.
+- Other repos remain under previous ledger scopes except OMA full coverage and MAG current/support specs / thin indexes / 2026-04-06 foundation / 2026-04-07 authoring-flow batches.
+- App docs remain excluded while active release/GUI worktrees own local changes.
+
+Remaining stale / retire candidates:
+
+- MAG remaining history specs with higher stale-provider risk are 2026-04-11 / 2026-04-12 Hermes, hosted-caller, hosted contract bundle, OPL alignment and lightweight product-entry handoff records.
+- MAG non-index references such as grant strategy memory policy, OPL family contract adoption and governance checklist still need paragraph-level checks against current contracts/source.
+
+Next tranche write scope:
+
+- Continue MAG `docs/history/specs/*.md` in date/topic batches, prioritizing 2026-04-11 Hermes/reset/local-runtime closeout and 2026-04-12 hosted-caller / OPL alignment / lightweight handoff specs.
+- Or switch to OPL/MAS/RCA/App full README/docs coverage; keep App delayed until active release/GUI worktrees close.
+
+
 ## 验证
 
 Docs-only 整理：
