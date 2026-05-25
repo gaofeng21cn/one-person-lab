@@ -197,6 +197,35 @@ test('runtime action execute records and verifies domain dispatch evidence recei
     );
     assert.equal(openEnvelope.status, 'open');
     assert.equal(openEnvelope.next_route, recordRoute.ref);
+    const bridgeRecordRoute = drilldown.app_execution_bridge.safe_action_routes.find(
+      (ref: { action_id: string }) => ref.action_id === recordActionId,
+    );
+    assert.equal(bridgeRecordRoute.action_kind, 'domain_dispatch_evidence_receipt_record');
+    assert.equal(
+      bridgeRecordRoute.payload_workorder.surface_kind,
+      'opl_domain_dispatch_evidence_payload_workorder',
+    );
+    assert.deepEqual(
+      bridgeRecordRoute.payload_workorder.accepted_payload_paths.typed_blocker_path.required_operator_payload_refs,
+      ['typed_blocker_refs'],
+    );
+    assert.equal(bridgeRecordRoute.accepted_payload_paths.typed_blocker_path.success_claimed, false);
+    assert.equal(
+      bridgeRecordRoute.payload_preflight_policy,
+      'domain_dispatch_evidence_payload_must_pass_success_refs_or_typed_blocker_path_preflight',
+    );
+    assert.equal(
+      bridgeRecordRoute.identity_binding_policy,
+      'record_payload_identity_must_not_conflict_with_stage_attempt_target_identity',
+    );
+    assert.equal(
+      bridgeRecordRoute.payload_workorder.authority_boundary.can_generate_domain_owner_receipt,
+      false,
+    );
+    assert.equal(bridgeRecordRoute.can_write_domain_truth, false);
+    assert.equal(bridgeRecordRoute.can_create_owner_receipt, false);
+    assert.equal(bridgeRecordRoute.can_close_domain_ready, false);
+    assert.equal(bridgeRecordRoute.can_claim_production_ready, false);
     const openWorklist = runCli([
       'family-runtime',
       'evidence-worklist',
