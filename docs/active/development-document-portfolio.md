@@ -2756,6 +2756,63 @@ Next tranche write scope:
 - Or choose the next exact OPL uncovered body from the family coverage ledger.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 07:10 CST`
+Tranche: `rca-active-doc-retired-alias-wording`
+State: `tranche_verified`
+
+本轮覆盖 RCA active plan / status 中的 retired-alias wording，并吸收回 RCA `main`。目标是关闭 OPL Doc Governance doctor 对 RCA active docs 的两个 legacy-vocabulary warning：active prose 不再把旧 `compatibility alias` 词组写成当前治理语言；machine contract field id `managed_runtime_compatibility_alias` 继续只作为 forbidden payload / forbidden receipt negative guard 由 RCA contracts/tests 持有。
+
+Fresh live truth inputs:
+
+- RCA `AGENTS.md`, `TASTE.md`, `docs/docs_portfolio_consolidation.md`, `docs/status.md`, `docs/active/rca-ideal-state-gap-plan.md`.
+- RCA machine contracts: `contracts/physical_source_morphology_policy.json`, `contracts/production_acceptance/rca-production-acceptance.json`, and runtime-program current leaf refs that carry retired surface guards.
+- RCA tests: `tests/rca-retired-surface-guard.test.ts` and `tests/rca-production-acceptance.test.ts`.
+- OPL Doc Governance doctor before/after signal: previous six-repo doctor showed RCA `finding_count=2`; after this tranche RCA doctor reads `finding_count=0`, active truth `pass`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `redcube-ai` | `docs/active/rca-ideal-state-gap-plan.md` completion truth, source hygiene tail, production evidence tail and next prompt wording; `docs/status.md` current evidence/accounting and naming hygiene tail; RCA live contract/test guard surfaces listed above. | `docs/active/rca-ideal-state-gap-plan.md`; `docs/status.md`; `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | coverage ledger owner only | this coverage ledger |
+
+Fresh semantic result:
+
+- RCA root cause was active-doc wording pollution: live machine contracts already classify retired managed runtime compatibility fields as forbidden / negative-guard / tombstone policy, while active prose still used the retired literal phrase as current language.
+- Active docs now use `retired-alias no-resurrection`, `retired-alias resurrection` or `active public alias` where prose describes current governance. This preserves no-resurrection meaning without reintroducing an active compatibility promise.
+- `managed_runtime_compatibility_alias` remains allowed as a machine-readable field name only where the RCA policy/tests identify retired forbidden payload / receipt guard fields; this tranche did not change contracts or tests.
+- RCA production evidence tails remain open for memory/lifecycle receipt scaleout, Temporal controlled visual-stage long soak, and repeated no-regression evidence. This wording tranche does not close domain ready, artifact/export readiness or production ready.
+
+Verification / absorb:
+
+- RCA commit `3b56693 docs: clarify RCA retired alias wording` was fast-forwarded into RCA `main` and pushed/aligned with `origin/main`.
+- RCA verification before absorb: `git diff --check`; strict README/docs/contracts/tests/agent conflict-marker scan had no hits; OPL Doc Governance doctor `finding_count=0`, active truth `pass`; focused `npm test -- tests/rca-retired-surface-guard.test.ts tests/rca-production-acceptance.test.ts` read `177 passed`, then serialized route-heavy batches `25 passed`, `33 passed`, and native PPT batch `28 passed`.
+- RCA tranche worktree `/Users/gaofeng/workspace/redcube-ai/.worktrees/rca-active-doc-retired-name-wording-20260526` and branch `codex/rca-active-doc-retired-name-wording-20260526` were removed after absorb.
+
+Archived / tombstoned / deleted docs:
+
+- none. RCA active plan and status remain the current owner docs; this tranche only rewrote stale active wording and added RCA's own coverage ledger entry.
+
+Unreviewed docs:
+
+- RCA full repo-wide paragraph coverage remains open for product/runtime/delivery/source/policies/references/history bodies outside the touched active plan/status sections and previously recorded coverage.
+- OPL full README/docs coverage remains open outside the covered OPL chunks named in earlier ledger entries.
+- MAS paragraph-level semantic coverage remains open for remaining delivery / medical-display route / roadmap / provenance bodies, product/status/workbench, progress/domain-ref projection and source/delivery shell outside already-covered blocks.
+- App docs remain delayed until active release/GUI lanes close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+
+Remaining stale / retire candidates:
+
+- Future RCA active prose that reintroduces retired alias terminology as active public path, active caller, active payload template, success payload, readiness claim, runtime owner, wrapper, facade or compatibility promise is stale pollution.
+- RCA machine contracts/tests may keep `compatibility_alias` tokens only when they identify forbidden negative-guard fields or policy ids; those tokens are machine truth, not active prose authority.
+- RCA support docs that mention generated/default caller thinning, domain handler, product-entry/session, runtimeWatch, domain_action_adapter or retired route vocabulary still need later section-by-section governance.
+
+Next tranche write scope:
+
+- RCA product/runtime/delivery/source support docs that mention generated/default caller thinning, product-entry/session, runtimeWatch, domain_action_adapter or retired route vocabulary.
+- Or MAS remaining medical-display route / roadmap / provenance bodies.
+- Or the next exact OPL uncovered body from the family coverage ledger.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
