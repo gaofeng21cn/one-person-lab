@@ -415,6 +415,91 @@ test('Temporal worker lifecycle rejects stale managed worker source version', as
   }
 });
 
+test('Temporal worker stop force-cleans detached workers that ignore SIGTERM', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-force-stop-'));
+  const workerRoot = path.join(stateRoot, 'family-runtime');
+  const server = net.createServer((socket) => socket.end());
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
+  const child = spawn(process.execPath, [
+    '-e',
+    'process.on("SIGTERM", () => {}); console.log("ready"); setInterval(() => {}, 30_000);',
+  ], {
+    detached: true,
+    stdio: ['ignore', 'pipe', 'ignore'],
+  });
+  const previousAddress = process.env.OPL_TEMPORAL_ADDRESS;
+  const previousNamespace = process.env.OPL_TEMPORAL_NAMESPACE;
+  const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
+  const previousWorkerStatus = process.env.OPL_TEMPORAL_WORKER_STATUS;
+  const previousSourceVersion = process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+  try {
+    assert.equal(typeof child.pid, 'number');
+    await new Promise<void>((resolve) => child.stdout.once('data', () => resolve()));
+    fs.mkdirSync(workerRoot, { recursive: true });
+    fs.writeFileSync(path.join(workerRoot, 'temporal-worker.json'), `${JSON.stringify({
+      provider_kind: 'temporal',
+      pid: child.pid,
+      address,
+      namespace: 'opl-worker-force-stop-test',
+      task_queue: 'opl-worker-force-stop',
+      started_at: new Date().toISOString(),
+      status: 'ready',
+      source_version: 'git:force-stop-current',
+    }, null, 2)}\n`);
+
+    process.env.OPL_TEMPORAL_ADDRESS = address;
+    process.env.OPL_TEMPORAL_NAMESPACE = 'opl-worker-force-stop-test';
+    process.env.OPL_TEMPORAL_TASK_QUEUE = 'opl-worker-force-stop';
+    process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = 'git:force-stop-current';
+    delete process.env.OPL_TEMPORAL_WORKER_STATUS;
+
+    const stop = await stopTemporalWorkerLifecycle({ root: workerRoot });
+
+    assert.equal(stop.stop_status, 'force_stopped');
+    assert.equal(stop.stopped_pid, child.pid);
+    assert.deepEqual(
+      stop.stop_actions.map((action: any) => action.signal),
+      ['SIGTERM', 'SIGKILL'],
+    );
+    assert.equal(stop.status.lifecycle_status, 'worker_not_ready');
+    assert.throws(() => process.kill(child.pid!, 0));
+  } finally {
+    if (previousAddress === undefined) {
+      delete process.env.OPL_TEMPORAL_ADDRESS;
+    } else {
+      process.env.OPL_TEMPORAL_ADDRESS = previousAddress;
+    }
+    if (previousNamespace === undefined) {
+      delete process.env.OPL_TEMPORAL_NAMESPACE;
+    } else {
+      process.env.OPL_TEMPORAL_NAMESPACE = previousNamespace;
+    }
+    if (previousTaskQueue === undefined) {
+      delete process.env.OPL_TEMPORAL_TASK_QUEUE;
+    } else {
+      process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
+    }
+    if (previousWorkerStatus === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_STATUS;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_STATUS = previousWorkerStatus;
+    }
+    if (previousSourceVersion === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = previousSourceVersion;
+    }
+    try {
+      process.kill(child.pid!, 'SIGKILL');
+    } catch {
+      // The lifecycle under test should have removed the fixture process.
+    }
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('Temporal detached worker keeps source version after foreground state rewrite', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-detached-source-'));
   const workerRoot = path.join(stateRoot, 'family-runtime');

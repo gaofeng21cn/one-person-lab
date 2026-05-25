@@ -66,9 +66,54 @@ type TemporalSchedulerInfoProjection = {
   running_actions?: unknown[];
 };
 
+const WORKER_STOP_GRACE_MS = 2_000;
+const WORKER_STOP_POLL_MS = 50;
+
 function workflowModulePath() {
   const extension = path.extname(fileURLToPath(import.meta.url)) === '.ts' ? '.ts' : '.js';
   return fileURLToPath(new URL(`./family-runtime-temporal-workflows${extension}`, import.meta.url));
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForProcessExit(pid: number, timeoutMs = WORKER_STOP_GRACE_MS) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!processIsAlive(pid)) {
+      return true;
+    }
+    await sleep(WORKER_STOP_POLL_MS);
+  }
+  return !processIsAlive(pid);
+}
+
+function signalManagedWorker(pid: number, signal: NodeJS.Signals) {
+  const result: Record<string, unknown> = {
+    pid,
+    signal,
+    process_signaled: false,
+    process_group_signaled: false,
+    errors: [],
+  };
+  const errors: string[] = [];
+  if (process.platform !== 'win32') {
+    try {
+      process.kill(-pid, signal);
+      result.process_group_signaled = true;
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  try {
+    process.kill(pid, signal);
+    result.process_signaled = true;
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
+  }
+  result.errors = errors;
+  return result;
 }
 
 export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths) {
@@ -945,16 +990,27 @@ export async function stopTemporalWorkerLifecycle(paths: TemporalWorkerPaths) {
   const before = await inspectTemporalWorkerLifecycle(paths);
   const state = readTemporalWorkerState(paths);
   let stoppedPid: number | null = null;
+  let stopStatus = 'not_running';
+  const stop_actions: Record<string, unknown>[] = [];
   if (state && processIsAlive(state.pid)) {
-    process.kill(state.pid, 'SIGTERM');
     stoppedPid = state.pid;
+    stop_actions.push(signalManagedWorker(state.pid, 'SIGTERM'));
+    const exitedAfterTerm = await waitForProcessExit(state.pid);
+    if (exitedAfterTerm) {
+      stopStatus = 'stopped';
+    } else {
+      stop_actions.push(signalManagedWorker(state.pid, 'SIGKILL'));
+      const exitedAfterKill = await waitForProcessExit(state.pid);
+      stopStatus = exitedAfterKill ? 'force_stopped' : 'stop_incomplete';
+    }
   }
   removeTemporalWorkerState(paths);
   return {
     surface_kind: 'temporal_worker_lifecycle_stop',
     provider_kind: 'temporal',
-    stop_status: stoppedPid ? 'stopped' : 'not_running',
+    stop_status: stopStatus,
     stopped_pid: stoppedPid,
+    stop_actions,
     before,
     status: await inspectTemporalWorkerLifecycle(paths),
   };
