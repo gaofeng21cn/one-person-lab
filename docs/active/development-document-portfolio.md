@@ -2093,6 +2093,63 @@ Next tranche write scope:
 - Or choose the next exact OPL uncovered body from the family coverage ledger.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 04:43 CST`
+Tranche: `mas-runtime-core-convergence-contract-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAS runtime contract 中的 runtime core convergence / controlled cutover 支撑文档，并吸收回 MAS `main`。目标是确认该文档继续把 MAS functional monolith closeout 读作 default independence，而不是旧 MDS resident daemon、WebUI、workspace-local service、MAS local scheduler、runtime lifecycle SQLite、turn runner 或 `mas_runtime_core` 的 full behavior equivalence 或当前 runtime owner 复活。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`、`TASTE.md`、MAS docs-governance ledger, `docs/status.md`, `docs/architecture.md`, `docs/active/mas-ideal-state-gap-plan.md`, and preceding runtime owner / runtime-event / runtime-boundary ledger entries.
+- MAS runtime / parity docs: `docs/runtime/contracts/runtime_core_convergence_and_controlled_cutover.md` and `docs/references/mds-parity/mds_behavior_equivalence_gap_matrix.md`.
+- MAS machine/source refs: `contracts/functional_privatization_audit.json`, `contracts/test-lane-manifest.json`, `contracts/production_acceptance/mas-production-acceptance.json`, `contracts/runtime/legacy-active-path-tombstones.json`, `src/med_autoscience/opl_runtime_contract.py`, `src/med_autoscience/controllers/mds_capability_parity_parts/behavior_equivalence.py`, `src/med_autoscience/controllers/mds_capability_parity_parts/paper_progress_degradation.py`, `src/med_autoscience/controllers/owner_route_reconcile_parts/scan_output.py`, and `src/med_autoscience/controllers/workspace_monolith_migration.py`.
+- Focused test inventory: `tests/test_mds_capability_parity.py`, `tests/test_opl_runtime_contract.py`, `tests/test_module_boundary_audit.py`, `tests/test_architecture_owner_boundary.py`, and study-progress runtime owner naming guard cases.
+
+Fresh semantic result:
+
+- `runtime_core_convergence_and_controlled_cutover.md` remains aligned with current contracts: default operation no longer requires external MDS repo, daemon, runtime root or WebUI; MDS is source provenance, historical fixture, explicit archive import, backend audit and parity oracle reference only.
+- The document separates `default_independence` / `functional_monolith_completion=landed` from full resident daemon behavior equivalence. The MDS behavior-equivalence matrix remains the owner for retained differences such as resident WebSocket/session continuity, connector background delivery, in-memory session API and interactive console parity.
+- OPL provider-backed stage runtime / OPL scheduler replacement remains the default generic runtime and cadence owner. MAS keeps domain authority refs, owner receipt, typed blocker, artifact/source/quality refs, paper-progress SLO explanation and diagnostic projection.
+- MAS local scheduler / LaunchAgent and Hermes gateway cron are only explicit legacy diagnostic / cleanup / provenance contexts, not current MAS active scheduler options or default runtime truth.
+- No reviewed paragraph currently reintroduces MDS daemon/WebUI/default backend dependency, workspace-local launchd/systemd/cron/docker service, MAS-owned generic runtime owner, `mas_runtime_core` active adapter, publication-ready, submission-ready, artifact-ready, App release ready, domain-ready or production-ready leakage.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full paragraph read of `docs/runtime/contracts/runtime_core_convergence_and_controlled_cutover.md`, plus support read of `docs/references/mds-parity/mds_behavior_equivalence_gap_matrix.md` and source/contract/test inventory listed above. | `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | coverage ledger owner only | this coverage ledger |
+
+Verification / absorb:
+
+- MAS commit `2704046e docs: cover MAS runtime core convergence` was fast-forwarded into MAS `main` and pushed to `origin/main`.
+- MAS worktree verification before absorb: `git diff --check`; strict README/docs/contracts conflict-marker scan had no hits; OPL Doc Governance doctor `finding_count=0`, active truth `pass`; focused pytest `tests/test_mds_capability_parity.py tests/test_opl_runtime_contract.py tests/test_module_boundary_audit.py tests/test_architecture_owner_boundary.py -q` read `18 passed`.
+- Current MAS tranche worktree `/Users/gaofeng/workspace/med-autoscience/.worktrees/mas-runtime-core-convergence-coverage-20260526` and branch `codex/mas-runtime-core-convergence-coverage-20260526` were removed after absorb.
+
+Archived / tombstoned / deleted docs:
+
+- none. The reviewed MAS runtime contract file remains an active runtime-support / behavior-equivalence reference bridge with a distinct role.
+
+Unreviewed docs:
+
+- MAS paragraph-level coverage remains open for delivery/artifact/source-adjacent runtime contracts not covered by prior focused tranches.
+- MAS product/status/workbench, progress/domain-ref projection and source/delivery shell coverage remains open outside the already-covered Portal/projection/App-workbench, inspection-package, runtime-binding, owner-route/control-boundary, stage/knowledge, runtime-event/durable-workflow, runtime-boundary/backend/handle and this runtime-core-convergence block.
+- OPL full README/docs coverage remains open outside the covered OPL chunks named in earlier ledger entries.
+- App docs remain delayed until active release/GUI lanes close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+
+Remaining stale / retire candidates:
+
+- Future MAS prose must not treat `functional_monolith_completion=landed`, default independence, Portal/Live Console read-only parity, behavior-equivalence purpose equivalence or zero external-MDS requirement as full resident-daemon equivalence, domain completion, production readiness or App release readiness.
+- MDS resident daemon, WebUI, connector background delivery, in-memory session API, workspace-local launchd/systemd/cron/docker service, MAS local scheduler, Hermes gateway cron and `mas_runtime_core` can appear only as historical fixture, backend audit, parity oracle, explicit diagnostic / cleanup adapter or tombstone/provenance context.
+- Behavior-equivalence matrix gaps should remain parity / UX / evidence candidates. They must not reopen MDS as default runtime owner or let UI/connector/old daemon surfaces bypass MAS study truth, publication gate, quality authority, artifact authority or OPL current-control-state.
+
+Next tranche write scope:
+
+- MAS paragraph-level coverage for delivery/artifact/source-adjacent runtime contracts, or MAS product/status/workbench and progress/domain-ref projection shell reconciliation outside the already-covered blocks.
+- Or choose the next exact OPL uncovered body from the family coverage ledger.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
