@@ -2325,6 +2325,52 @@ Next tranche write scope:
 - Or choose the next exact OPL uncovered body from the family coverage ledger.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 05:44 CST`
+Tranche: `mas-workspace-profile-source-policy-correction`
+State: `tranche_verified`
+
+本轮在 MAS workspace/source reference coverage 之后补齐 residual profile/runtime wording drift，并吸收回 MAS `main`。目标是把 MAS workspace architecture、profile template 和 data-asset policy 对齐当前 live profile/runtime/source truth：active profile field 是 `opl_runtime_ref`，默认值是 `opl_hosted_stage_runtime`，runtime engine id 是 `opl-hosted-stage-runtime`；OPL/Temporal provider-backed 是 owner/topology 语义；Hermes 只作显式非默认 executor adapter、proof lane、diagnostic 或 history reference；ToolUniverse 只作外部工具适配层，不能替代 MAS source readiness、study truth、quality gate、artifact authority 或 OPL provider/runtime owner。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`, `TASTE.md`, preceding runtime-id / standard skeleton / workspace-source coverage entries.
+- MAS docs/templates: `docs/references/workspace/workspace_architecture.md`, `docs/policies/study-workflow/data_asset_management.md`, `profiles/workspace.profile.template.toml`, with support reads of `docs/source/README.md`, `docs/references/workspace/disease_workspace_quickstart.md`, `docs/runtime/contracts/workspace_knowledge_and_literature_contract.md`, and `docs/policies/study-workflow/workspace_autoscience_rules.md`.
+- MAS machine/source refs: `src/med_autoscience/profiles.py`, `src/med_autoscience/opl_runtime_contract.py`, `src/med_autoscience/runtime_protocol/study_runtime.py`, `src/med_autoscience/runtime_protocol/workspace_literature_status.py`, `src/med_autoscience/stage_knowledge_contract.py`, `contracts/functional_privatization_audit.json`, `contracts/test-lane-manifest.json`, and `contracts/stage_control_plane.json`.
+- Focused test evidence: MAS `tests/test_profiles.py` read `17 passed`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Focused correction read of `workspace_architecture.md` profile contract section, `data_asset_management.md` ToolUniverse principle, `profiles/workspace.profile.template.toml` Hermes comments, plus support reads listed above. | `docs/docs_portfolio_consolidation.md`; `docs/references/workspace/workspace_architecture.md`; `docs/policies/study-workflow/data_asset_management.md`; `profiles/workspace.profile.template.toml` |
+| `one-person-lab` | coverage ledger owner only | this coverage ledger |
+
+Verification / absorb:
+
+- MAS commit `153f0dcc docs: align MAS workspace profile references` was fast-forwarded into MAS `main` and pushed to `origin/main`.
+- MAS verification before absorb: `git diff --check`; strict README/docs/profiles conflict-marker scan had no hits; OPL Doc Governance doctor `finding_count=0`, active truth `pass`; `scripts/run-pytest-clean.sh tests/test_profiles.py -q` read `17 passed`.
+- MAS tranche worktree `/Users/gaofeng/workspace/med-autoscience/.worktrees/mas-source-workspace-support-coverage-20260526` and branch `codex/mas-source-workspace-support-coverage-20260526` were removed after absorb.
+
+Archived / tombstoned / deleted docs:
+
+- none. The changed MAS docs and template remain active support/template surfaces; this was current wording correction, not no-active-caller retirement.
+
+Unreviewed docs:
+
+- Same as the preceding MAS workspace/source reference coverage entry: full paragraph-level governance remains open for other `docs/policies/study-workflow/*.md` files, delivery/medical-display docs with artifact/source/package authority claims, MAS product/status/workbench and progress/domain-ref projection shell, and OPL series coverage outside MAS.
+
+Remaining stale / retire candidates:
+
+- Future prose must not write `managed_runtime_backend_id` or `opl_provider_backed_stage_runtime` as current workspace profile machine truth; use `opl_runtime_ref=opl_hosted_stage_runtime` for profile/runtime ref identity and reserve OPL/Temporal provider-backed wording for owner/topology.
+- Future prose must not write Hermes as default outer runtime substrate, default scheduler owner or required workspace bootstrap dependency unless it is explicitly history/provenance.
+- Future prose must not use ToolUniverse, data asset registry, workspace literature, provider output or test pass as source readiness verdict, publication quality verdict, artifact mutation authority, `current_package` freshness proof or OPL provider completion.
+
+Next tranche write scope:
+
+- MAS paragraph-level coverage for remaining study-workflow source-readiness / data-asset policy docs, or delivery / medical-display docs that mention artifact lifecycle, source truth, package authority or display-pack authority.
+- Or choose the next exact OPL uncovered body from the family coverage ledger.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
