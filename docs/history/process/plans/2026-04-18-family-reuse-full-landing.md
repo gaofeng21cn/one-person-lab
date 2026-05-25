@@ -1,10 +1,18 @@
 # Family Reuse Full Landing Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+Owner: `One Person Lab`
+Purpose: `historical_family_reuse_landing_plan`
+State: `historical_archive`
+Machine boundary: 本文是人读 historical implementation plan。机器 truth 继续归当前 OPL contracts/helpers/generated surfaces、domain repo contracts/source/tests、runtime ledger、provider receipt 和 domain-owned manifest。
+Date: `2026-04-18`
+
+> Historical plan：本文记录 family shared-surface landing 计划。当前 shared primitives、generated/hosted surfaces 和 standard domain-agent skeleton 以 live contracts/source/read-model 为准；MAS/MAG/RCA domain truth、quality/export verdict、artifact authority 和 owner receipts 仍归各 domain repo。
+
+> **Historical worker instruction:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Land the remaining high-reuse surfaces across OPL, MedAutoScience, MedAutoGrant, and RedCube AI so family contracts/builders live centrally in OPL and consumer repos keep only domain truth plus thin adapters.
 
-**Architecture:** OPL remains the shared owner for reusable product-entry builders, orchestration graph helpers, manifest normalization, and machine-readable family contracts. MAS, MAG, and RCA consume the shared surfaces, preserve domain-owned semantics, and converge on the same family release/update path.
+**Historical architecture:** OPL remains the shared owner for reusable product-entry builders, orchestration graph helpers, manifest normalization, and machine-readable family contracts. MAS, MAG, and RCA consume the shared surfaces, preserve domain-owned semantics, and converge on the same family release/update path.
 
 **Tech Stack:** TypeScript, Python, JSON Schema, `uv`, `npm`, repo-native verify scripts
 

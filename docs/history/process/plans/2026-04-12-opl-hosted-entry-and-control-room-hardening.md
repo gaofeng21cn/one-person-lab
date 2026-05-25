@@ -1,10 +1,16 @@
 # Historical OPL Hosted Entry And Control Room Hardening Plan
 
+Owner: `One Person Lab`
+Purpose: `historical_hosted_frontdoor_hardening_plan`
+State: `historical_archive`
+Machine boundary: 本文是人读 historical implementation outline。机器 truth 继续归当前 Temporal-backed provider、typed queue、stage attempt ledger、safe action shell、contracts、source、runtime ledger 和 App/operator projection。
+Date: `2026-04-12`
+
 > Historical unfinished plan. This document preserves one retired hosted-frontdoor hardening outline from `2026-04-12`. Current truth now lives in `README.md`, `docs/project.md`, `docs/status.md`, and `docs/architecture.md`.
 
 **Historical goal:** 把 `OPL Front Desk` 从“本地 pilot + 只读控制台”推进到“hosted-pilot-ready + 可写工作区管理 + OPL-managed session ledger + 顶层到 domain 的可交接入口”。
 
-**Historical architecture:** 继续沿现有 `opl / opl web / frontdoor-service-*` 主线推进，不另起第二套前台。`OPL` 继续只持有 family-level front desk、workspace binding、session ledger 与 handoff contract；`Hermes` 继续是 external runtime substrate；domain direct entry 仍通过 handoff bundle 与可配置 binding 连接，不在本仓伪造 domain runtime。
+**Historical architecture:** 继续沿当时 `opl / opl web / frontdoor-service-*` 主线推进，不另起第二套前台。`OPL` 当时只持有 family-level front desk、workspace binding、session ledger 与 handoff contract；`Hermes` 当时仍被当作 external runtime substrate；domain direct entry 仍通过 handoff bundle 与可配置 binding 连接，不在本仓伪造 domain runtime。
 
 **Historical tech stack:** TypeScript CLI, Node.js HTTP server, file-backed local state, Hermes CLI integration, node:test
 

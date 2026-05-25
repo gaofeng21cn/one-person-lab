@@ -1,10 +1,18 @@
 # OPL Product API Reset Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+Owner: `One Person Lab`
+Purpose: `historical_product_api_reset_plan`
+State: `historical_archive`
+Machine boundary: 本文是人读 historical implementation plan。机器 truth 继续归当前 core docs、runtime naming boundary、contracts、source、CLI/API 行为、runtime ledger、provider receipt 和 App/operator projection。
+Date: `2026-04-20`
+
+> Historical plan：本文记录 Product API reset 形成过程。当前 product model、session/runtime、App/workbench 和 domain-agent boundary 回到核心五件套、`docs/runtime/`、`docs/product/`、active plans 和 live read-model；本文不是 active Product API spec。
+
+> **Historical worker instruction:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 把 `OPL` 从历史 `frontdoor` 公开语义重置为新的 `Product API` 模型，并先完成主仓文档收束，再推进主线接口与实现重组。
 
-**Architecture:** 公开产品模型统一收敛为 `system / engines / modules / agents / workspaces / sessions / progress / artifacts`。`frontdoor`、`readiness`、`domain-wiring` 等历史概念退出当前主线，只保留为内部实现遗留或历史归档。各 domain 仓继续保持独立 agent entry，`OPL` 只持有 family-level shared runtime 与 API truth。
+**Historical architecture:** 公开产品模型统一收敛为 `system / engines / modules / agents / workspaces / sessions / progress / artifacts`。`frontdoor`、`readiness`、`domain-wiring` 等历史概念退出当时主线，只保留为内部实现遗留或历史归档。各 domain 仓继续保持独立 agent entry，`OPL` 只持有 family-level shared runtime 与 API truth。
 
 **Tech Stack:** TypeScript CLI, JSON contracts, Markdown docs, repo-tracked API surfaces
 

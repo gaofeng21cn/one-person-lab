@@ -1,14 +1,16 @@
 # G3 thin handoff planning brief
 
-状态：`planning freeze`
-
-日期锚点：`2026-04-07`
+Owner: `One Person Lab`
+Purpose: `historical_g3_thin_handoff_planning_brief`
+State: `historical_planning_freeze`
+Machine boundary: 本文是人读 historical planning brief。机器 truth 继续归当前 contracts、source、CLI/API 行为、runtime ledger、domain-owned manifest、stage pack admission 和 App/operator projection。
+Date: `2026-04-07`
 
 > Historical / completed planning brief：该 brief 对应的 `G3 thin handoff planning freeze` 已完成并被后续 `Phase 1 exit + next-stage activation package freeze` 与 `Phase 2 / Minimal admitted-domain federation activation package` 作为前序门槛吸收；它不再代表当前 active follow-on。
 
 ## 目的
 
-这份 brief 只服务当前 `Phase 1` 的下一棒：
+这份 brief 只服务 2026-04-07 当时 `Phase 1` 的下一棒：
 
 - 在 `G2 stable public baseline` 收口之后，
 - 预冻结 `G3 thin handoff planning` 的最小边界，
@@ -42,7 +44,7 @@
 
 ## no-bypass 规则
 
-当前必须把下面这条规则写成硬边界，而不是偏好建议：
+当时必须把下面这条规则写成硬边界，而不是偏好建议：
 
 > `OPL` 不得绕过 `domain gateway`，也不得直接 targeting `domain harness`.
 

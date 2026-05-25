@@ -16,7 +16,7 @@
 
 ## 归档分区
 
-- [Plans](./plans/)：已经完成的实施计划和 closeout brief。
+- [Plans](./plans/)：已经完成或被取代的 implementation plans、planning freeze、closeout brief 和过程归档；其中 `Goal`、`current`、`next` 和 checkbox task 均按历史文件日期阅读。
 - [Specs](./specs/)：已被当前产品边界取代的历史设计规格，包括 Product API / ACP native 形成过程。
 - [Convergence Governance](./convergence-governance/)：已退出 active/reference 层的四仓同步、executor 评估、用户面成熟度和外部 orchestration learning 快照。
 - [Domain Admission](./domain-admission/)：已完成的 candidate workstream closeout、Phase 1/2 activation package、central reference sync board 和 ecosystem owner-line 过程记录。

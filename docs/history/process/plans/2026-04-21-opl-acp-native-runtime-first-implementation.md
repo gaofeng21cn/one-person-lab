@@ -1,8 +1,16 @@
 # OPL ACP-native Runtime First Implementation Plan
 
+Owner: `One Person Lab`
+Purpose: `historical_acp_native_runtime_first_plan`
+State: `historical_archive`
+Machine boundary: 本文是人读 historical implementation plan。机器 truth 继续归当前 Codex-default runtime、activation layer、Temporal-backed provider、App/shell contracts、source、CLI/API 行为和 runtime ledger。
+Date: `2026-04-21`
+
+> Historical plan：本文记录 ACP-native runtime / shell projection 形成过程。当前 `Product API`、`ACP`、`opl web`、GUI / hosted entry 和 AionUI wording 只按历史计划读取；当前 active boundary 回到 core docs、runtime naming boundary、App repo contracts 和 live read-model。
+
 **Goal:** 把 `OPL` 从 `Product API` 主语切换成 `ACP-native session runtime` 主语，先落地本地 `opl` shell / TUI，再让 `AionUI` 成为第一外部壳。
 
-**Architecture:** `OPL` 的 canonical truth 收敛到 family-level session runtime。`Product API`、`opl web` 与未来 GUI / hosted 入口都降为 projection。实现顺序按 `runtime -> local shell -> ACP bridge -> AionUI shell` 推进。
+**Historical architecture:** `OPL` 的 canonical truth 收敛到 family-level session runtime。`Product API`、`opl web` 与未来 GUI / hosted 入口都降为 projection。实现顺序按 `runtime -> local shell -> ACP bridge -> AionUI shell` 推进。
 
 **Tech Stack:** TypeScript CLI、Node test runner、现有 `opl web` adapter、future ACP compatibility bridge、独立外部 shell repo
 

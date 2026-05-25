@@ -1,10 +1,18 @@
 # Unified Harness Engineering Substrate Doc Alignment Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+Owner: `One Person Lab`
+Purpose: `historical_uhs_doc_alignment_plan`
+State: `historical_archive`
+Machine boundary: 本文是人读 historical cross-repo doc alignment plan。机器 truth 继续归当前核心五件套、domain repo owner docs、contracts、source、CLI/API 行为、runtime ledger 和 live read-model。
+Date: `2026-04-07`
+
+> Historical plan：本文记录 Unified Harness Engineering Substrate / OPL Gateway / Domain Harness OS 时代的四仓文档对齐计划。当前产品读法已收敛为 `OPL Framework -> One Person Lab App -> Foundry Agents`，旧 gateway / harness wording 只作 provenance / tombstone。
+
+> **Historical worker instruction:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 统一四个项目对 `Unified Harness Engineering Substrate`、`OPL Gateway`、`Domain Harness OS` 与部署形态的文档口径。
 
-**Architecture:** 以 `OPL` 为顶层总纲，冻结共享架构语言；三个 domain 仓库分别补齐“我如何落在同一 substrate 上”的 README 与内部映射文档。公开 README 保持人类专家可读，内部文档承接完整技术语义。
+**Historical architecture:** 以 `OPL` 为顶层总纲，冻结共享架构语言；三个 domain 仓库分别补齐“我如何落在同一 substrate 上”的 README 与内部映射文档。公开 README 保持人类专家可读，内部文档承接完整技术语义。
 
 **Tech Stack:** Markdown, repository contracts, bilingual public docs, Chinese internal docs
 

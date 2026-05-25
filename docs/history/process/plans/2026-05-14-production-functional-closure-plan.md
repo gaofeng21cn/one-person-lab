@@ -8,7 +8,7 @@ Date: `2026-05-14`
 
 > 归档说明（`2026-05-14`）：本计划是一次性并行 functional closure closeout 记录。当前 active follow-through owner 已收口到 [生产级框架闭环差距矩阵](../../../active/production-framework-closure-gap-matrix.md)。后续不要在本文继续扩写新 recurring plan。
 
-## 当前真实状态
+## 归档时真实状态
 
 当前不是“只剩跑真实论文”。OPL 已具备完整生产级智能体框架的控制面骨架；2026-05-14 本轮已经把主要 functional closure surface 收口到机器可读 contracts、refs、focused tests、typed blockers 和跨仓 status/docs。canonical `./bin/opl agents descriptors --json` 统一 domain-agent descriptor CLI 已可用，`node dist/cli.js agents descriptors --json` 也已验证同步；显式 Temporal service / worker / production proof 已在本机 managed provider 上通过，proof receipt 已进入 runtime event ledger，并持久化为 latest production proof，由 `framework production-closeout` 汇总为 `provider_continuous_proof` 与 `runtime_ledger.provider_continuous_proof`，同时由 `runtime snapshot` 投影成 provider proof operator item；MAS `paper_autonomy/guarded-apply` queue dispatch 已能自动建立 task-bound provider-backed stage attempt，并在 MAS sidecar 返回 dispatch receipt / typed blocker 时写入 OPL typed closeout ledger；`family-runtime intake/tick --hydrate` 现在能从 active workspace binding 派生 MAS sidecar export command，并自动携带 latest persisted Temporal production proof；stage-attempt workbench 现在还会派生 `opl:stage-attempt:<id>` operator item，展示 controlled apply refs、artifact locator / restore proof、memory refs、writeback receipt refs、rejected writes 和明确 owner 的 action route refs；runtime snapshot 也已有 refs-only native-helper execution envelope，读取现有 native index / helper receipt metadata，但不触发 helper 执行；runtime snapshot 还新增 refs-only domain projection ingestion，从 normalized domain manifests 汇总 domain-owned projection refs、surface kind、owner 和 source refs，但不执行 projection builder、不读取 truth body、不授权 ready / quality / export verdict；MAG/RCA 显式 provider-hosted / controlled sidecar task 也已有 live task-bound attempt 与 typed closeout 证据，MAG sidecar closeout 的 `route_impact.no_regression_evidence_ref` 现在会进入 controlled apply contract 和 production closeout domain breakdown。使用 operator 超时预算重跑 `framework production-closeout` 时，当前 closeout 已返回 `functional_closure_ready_for_live_soak`、`typed_blocker_count=0`。但原计划里仍有几项 live evidence / follow-through 不能写成已完成：破坏性物理目录迁移、真实 memory body / writeback apply、legacy 最终物理删除、长时 provider/operator SLO 和真实 domain owner chain。
 
@@ -94,7 +94,7 @@ Date: `2026-05-14`
 
 `typed blocker` 是真实完成结果，前提是它来自机器可读 owner surface，并附带 source refs、owner、repair/next action 和 forbidden-write proof。
 
-## 当前剩余项
+## 归档时剩余项
 
 剩余项只应写成 evidence gate 或 follow-through，不应写成“还缺基础功能”：
 

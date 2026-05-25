@@ -1,10 +1,18 @@
 # Family Executor Adapter Next Phase Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+Owner: `One Person Lab`
+Purpose: `historical_family_executor_adapter_followup_plan`
+State: `historical_archive`
+Machine boundary: 本文是人读 historical implementation plan。机器 truth 继续归当前 stage-level executor policy、contracts、source、CLI/API 行为、runtime ledger、provider receipt 和 explicit executor adapter receipts。
+Date: `2026-04-13`
+
+> Historical plan：本文记录 family executor adapter 下一阶段计划。当前默认 executor 是 `Codex CLI`；`hermes_agent`、`claude_code`、`antigravity_cli` 等只作为显式非默认 executor adapter/backend，以 receipt/audit/fail-closed 证明连接。
+
+> **Historical worker instruction:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 把家族统一执行器从“参考文档口径”推进成稳定的 contract-first 现实，并收掉 RedCube 吸收前后仍会继续制造第二真相的文档漂移。
 
-**Architecture:** `OPL` 继续只持有顶层 gateway / federation / contract 语言，不接管 domain runtime owner。当前先把 family 默认执行器与 guardrail 固化成 machine-readable contract，同时同步 OPL / MDS 的根级 truth；RedCube 仍保持单独 gated absorb lane，`Hermes-native` proof 继续后置，不和当前默认主线混写。
+**Historical architecture:** `OPL` 当时继续只持有顶层 gateway / federation / contract 语言，不接管 domain runtime owner。当时先把 family 默认执行器与 guardrail 固化成 machine-readable contract，同时同步 OPL / MDS 的根级 truth；RedCube 仍保持单独 gated absorb lane，`Hermes-native` proof 继续后置，不和当时默认主线混写。
 
 **Tech Stack:** repo-tracked Markdown docs, JSON contracts, Node.js contract tests, Python doc-only sync
 

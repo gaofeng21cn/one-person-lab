@@ -1,8 +1,12 @@
 # G3 thin handoff planning closeout note
 
-状态：`planning-freeze-closeout`
+Owner: `One Person Lab`
+Purpose: `historical_g3_thin_handoff_closeout`
+State: `historical_closeout`
+Machine boundary: 本文是人读 planning closeout。机器 truth 继续归当前 core docs、contracts、source、CLI/API 行为、runtime ledger、domain-owned manifest 和 App/operator projection。
+Date: `2026-04-07`
 
-日期锚点：`2026-04-07`
+> Historical closeout：本文记录 2026-04-07 G3 thin handoff planning freeze hardening。正文中的 gateway / routed-action / handoff wording 不再是 current runtime、launcher、provider contract 或 active implementation queue。
 
 ## 目的
 
@@ -12,7 +16,7 @@
 它是 repo-tracked 的 planning closeout 记录，
 不是新的公开主线真相面，也不是 routed-action runtime 的启动面。
 
-## 当前已冻结边界
+## 当时已冻结边界
 
 截至 `2026-04-07`，当前仓库对 `G3` 只冻结三项 planning-level contract 操作：
 
@@ -45,7 +49,7 @@ OPL Gateway -> domain_gateway
 OPL Gateway -> domain_harness
 ```
 
-## 当前明确不包含
+## 当时明确不包含
 
 本轮 `Phase 1 / G3 thin handoff planning freeze hardening` 明确不包含：
 

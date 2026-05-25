@@ -4,6 +4,7 @@ Owner: `One Person Lab`
 Purpose: 保存 2026-05 OPL family 文档治理、gap 校准、proof 流水和 closeout 摘要，避免主文档被历史演变污染。
 State: `history_provenance`
 Machine boundary: 本文是人读过程归档，不是 current truth、active plan、runtime contract 或机器接口。当前事实回到核心五件套、`docs/active/current-state-vs-ideal-gap.md`、`docs/active/production-framework-closure-gap-matrix.md`、contracts、source、CLI/API、runtime ledger 和 domain-owned manifest。
+Date: `2026-05-18`
 
 ## 读取规则
 
@@ -37,7 +38,7 @@ Machine boundary: 本文是人读过程归档，不是 current truth、active pl
 
 这些过程仍有追溯价值，但它们不应该在 current docs 里占据结论区。
 
-## 当前主文档分工
+## 归档时主文档分工
 
 - `docs/status.md`：当前公开角色、当前真实状态、当前功能/结构差距、测试/证据差距和禁止误写口径。
 - `docs/active/current-state-vs-ideal-gap.md`：family-level 当前 gap、MAS/MAG/RCA 单仓差距摘要和实施顺序。

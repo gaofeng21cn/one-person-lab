@@ -4,6 +4,7 @@ Owner: `One Person Lab`
 Purpose: `docs_lifecycle_closeout`
 State: `history_provenance`
 Machine boundary: 本文是人读过程归档。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 与真实 workspace / App evidence。
+Date: `2026-05-22`
 
 ## 背景
 
@@ -21,7 +22,7 @@ OPL 本轮发现的主要污染点是：
 - `standard-agent-private-platform-inventory.md` 收敛为当前 private-platform 分类台账：只保留 OPL-owned generic subdomains、per-agent migration ledger、high-risk surface groups、primitive gaps 和 forbidden claims，不保存逐日拆文件流水。
 - `docs/README.md`、`docs/active/README.md`、`docs/docs_portfolio_consolidation.md`、`docs/policies/docs-lifecycle-policy.md` 与 `docs/history/process/README.md` 同步写明：active 文档只能保存当前 owner、当前 gap、完成口径和下一跳；过程 proof、receipt 事件、具体命令输出、line-count closeout 和阶段流水进入 history/provenance。
 
-## 当前读法
+## 归档后读法
 
 当前 production closure truth 继续回到：
 

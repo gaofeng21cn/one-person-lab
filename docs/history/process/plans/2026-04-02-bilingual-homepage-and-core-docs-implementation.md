@@ -1,10 +1,18 @@
 # Bilingual Homepage And Core Docs Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+Owner: `One Person Lab`
+Purpose: `historical_bilingual_public_docs_rollout_plan`
+State: `historical_archive`
+Machine boundary: 本文是人读 historical implementation plan。机器 truth 继续归当前 `README*`、`docs/README.md`、`docs/public/`、核心五件套、contracts、source、CLI/API 行为和真实 release / App evidence。
+Date: `2026-04-02`
+
+> Historical plan：本文记录早期 bilingual homepage / public docs rollout 计划。下方 agent worker 指令、checkbox、文件路径和验收项只按 2026-04-02 附近的历史计划读取；当前 docs taxonomy 已收敛到中文 canonical `docs/**`、root `README*`、`docs/public/` 和核心五件套。
+
+> **Historical worker instruction:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 将 `one-person-lab` 改造成英文默认首页，并补齐中文镜像首页和四份核心公开文档的双语镜像，同时保持首页与文档跳转的语言一致性。
 
-**Architecture:** 保持现有 banner、HTML 总览和公开入口结构不变，只重构语言层。`README.md` 作为英文默认公开面，`README.zh-CN.md` 作为中文镜像；`docs/operating-model.md`、`docs/task-map.md`、`docs/shared-foundation.md`、`docs/roadmap.md` 改为英文默认文档，对应新增 `.zh-CN.md` 中文镜像。所有英文页面只链接英文文档，所有中文页面只链接中文文档。
+**Historical architecture:** 保持现有 banner、HTML 总览和公开入口结构不变，只重构语言层。`README.md` 作为英文默认公开面，`README.zh-CN.md` 作为中文镜像；`docs/operating-model.md`、`docs/task-map.md`、`docs/shared-foundation.md`、`docs/roadmap.md` 改为英文默认文档，对应新增 `.zh-CN.md` 中文镜像。所有英文页面只链接英文文档，所有中文页面只链接中文文档。
 
 **Tech Stack:** Markdown, Git
 
