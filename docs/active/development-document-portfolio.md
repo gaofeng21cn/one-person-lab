@@ -2180,7 +2180,7 @@ Reviewed documents:
 Verification / absorb:
 
 - MAS commit `bf578b47 docs: cover MAS artifact lifecycle contracts` was fast-forwarded into MAS `main`.
-- MAS worktree verification before absorb: `git diff --check`; strict README/docs/contracts/tests conflict-marker scan had no hits; OPL Doc Governance doctor `finding_count=0`, active truth `pass`; focused pytest for artifact retention, storage governance, canonical artifact, MCP/domain-entry cleanup non-exposure and baseline stage surface read `43 passed`; final installed MCP smoke rerun read `6 passed`.
+- MAS worktree verification before absorb: `git diff --check`; strict README/docs/contracts/tests conflict-marker scan had no hits; OPL Doc Governance doctor `finding_count=0`, active truth `pass`; focused pytest for artifact retention, lifecycle report, storage governance, canonical artifact, baseline/stage surface, product-entry authority manifest, installed MCP smoke and domain-entry cleanup non-exposure read `58 passed in 13.82s`.
 
 Archived / tombstoned / deleted docs:
 
