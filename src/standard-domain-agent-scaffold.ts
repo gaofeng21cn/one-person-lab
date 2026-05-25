@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 
 import {
@@ -44,7 +43,7 @@ interface ScaffoldValidateInput {
   repoDir: string;
 }
 
-const DEFAULT_TEMPLATE_CONSUMPTION_SAMPLE_DOMAINS = [
+export const DEFAULT_TEMPLATE_CONSUMPTION_SAMPLE_DOMAINS = [
   { domainId: 'award-foundry', domainLabel: 'Award Foundry' },
   { domainId: 'thesis-foundry', domainLabel: 'Thesis Foundry' },
   { domainId: 'review-foundry', domainLabel: 'Review Foundry' },
@@ -828,6 +827,15 @@ export function buildStandardDomainAgentTemplateConsumptionReadModel() {
       app_operator_consumable_ref_count: 1,
       default_consumption_sample_count: DEFAULT_TEMPLATE_CONSUMPTION_SAMPLE_DOMAINS.length,
       repeat_consumption_supported: true,
+      consumed_surface_count_per_sample: 4,
+      consumed_surfaces: [
+        'scaffold_validation',
+        'standard_agent_conformance',
+        'agent_readiness',
+        'app_operator_projection',
+      ],
+      readiness_surface_consumed: true,
+      app_operator_surface_consumed: true,
       domain_ready_claim_count: 0,
       production_ready_claim_count: 0,
       artifact_authority_claim_count: 0,
@@ -841,121 +849,6 @@ export function buildStandardDomainAgentTemplateConsumptionReadModel() {
       can_claim_domain_ready: false,
       can_claim_artifact_authority: false,
       can_claim_production_ready: false,
-    },
-  };
-}
-
-function buildStandardDomainAgentScaffoldConsumptionEvidenceSample(input: Required<Pick<ScaffoldInput, 'domainId' | 'domainLabel'>>) {
-  const domainId = normalizeDomainId(input.domainId);
-  const domainLabel = domainLabelFromId(domainId, input.domainLabel);
-  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-agent-consumption-'));
-  try {
-    const generated = buildStandardDomainAgentScaffold({
-      targetDir,
-      domainId,
-      domainLabel,
-      force: true,
-    }).standard_domain_agent_scaffold;
-    const validation =
-      validateStandardDomainAgentScaffold({ repoDir: targetDir }).standard_domain_agent_scaffold_validation;
-    const refs = buildScaffoldConsumptionRefs({
-      mode: 'consumption_evidence',
-      domainId,
-      targetDir,
-      templateFileCount: Array.isArray(generated.template_files) ? generated.template_files.length : 0,
-      writtenCount: numberValue(recordValue(generated.write_summary).written_count),
-      validation,
-      ephemeralTargetRemoved: true,
-    });
-    return {
-      version: 'g2',
-      standard_domain_agent_template_consumption_evidence: {
-        surface_kind: 'opl_standard_agent_template_consumption_evidence',
-        owner: 'one-person-lab',
-        status: validation.status === 'passed' ? 'passed' : 'blocked',
-        proof_kind: 'ephemeral_generate_then_validate_new_agent_skeleton',
-        domain_id: domainId,
-        scaffold_ref: 'contracts/opl-framework/standard-domain-agent-skeleton-contract.json',
-        generated_repo_dir_ref: targetDir,
-        generated_repo_dir_policy: 'ephemeral_removed_after_validation',
-        generation_summary: {
-          generated_written_file_count: refs.generated_written_file_count,
-          generated_template_file_count: refs.generated_template_file_count,
-        },
-        validation_summary: {
-          validation_status: refs.validation_status,
-          blocker_count: refs.blocker_count,
-          consumed_pack_path_count: refs.consumed_pack_path_count,
-          consumed_stage_count: refs.consumed_stage_count,
-          selected_executor_binding_observed_count: refs.selected_executor_binding_observed_count,
-          default_codex_executor_binding_count: refs.default_codex_executor_binding_count,
-          quality_gate_ref_resolved_stage_count: refs.quality_gate_ref_resolved_stage_count,
-          generated_surface_owner_verified: refs.generated_surface_owner_verified,
-          private_surface_policy_guarded: refs.private_surface_policy_guarded,
-          stage_pack_v2_status: refs.stage_pack_v2_status,
-        },
-        scaffold_consumption_refs: refs,
-        non_goals: [
-          'does_not_claim_domain_ready',
-          'does_not_claim_artifact_authority',
-          'does_not_claim_production_ready',
-          'does_not_authorize_quality_or_export',
-        ],
-        authority_boundary: refs.authority_boundary,
-      },
-    };
-  } finally {
-    fs.rmSync(targetDir, { recursive: true, force: true });
-  }
-}
-
-export function buildStandardDomainAgentScaffoldConsumptionEvidence(input: ScaffoldInput = {}) {
-  const explicitSampleRequested = Boolean(input.domainId || input.domainLabel);
-  const samples = explicitSampleRequested
-    ? [{
-      domainId: normalizeDomainId(input.domainId),
-      domainLabel: domainLabelFromId(normalizeDomainId(input.domainId), input.domainLabel),
-    }]
-    : DEFAULT_TEMPLATE_CONSUMPTION_SAMPLE_DOMAINS;
-  const sampleEvidence = samples.map((sample) =>
-    buildStandardDomainAgentScaffoldConsumptionEvidenceSample(sample)
-      .standard_domain_agent_template_consumption_evidence
-  );
-  const primary = sampleEvidence[0];
-  const blockedSamples = sampleEvidence.filter((sample) => sample.status !== 'passed');
-  const passedSamples = sampleEvidence.filter((sample) => sample.status === 'passed');
-
-  return {
-    version: 'g2',
-    standard_domain_agent_template_consumption_evidence: {
-      ...primary,
-      status: blockedSamples.length === 0 ? 'passed' : 'blocked',
-      proof_kind: sampleEvidence.length > 1
-        ? 'repeat_ephemeral_generate_then_validate_new_agent_skeletons'
-        : primary.proof_kind,
-      domain_id: primary.domain_id,
-      sample_domain_ids: sampleEvidence.map((sample) => sample.domain_id),
-      consumption_cohort: {
-        surface_kind: 'opl_standard_agent_template_consumption_cohort_evidence',
-        sample_count: sampleEvidence.length,
-        passed_sample_count: passedSamples.length,
-        blocked_sample_count: blockedSamples.length,
-        all_samples_passed: blockedSamples.length === 0,
-        explicit_sample_requested: explicitSampleRequested,
-        sample_domain_ids: sampleEvidence.map((sample) => sample.domain_id),
-        samples: sampleEvidence.map((sample) => ({
-          domain_id: sample.domain_id,
-          status: sample.status,
-          proof_kind: sample.proof_kind,
-          generated_repo_dir_policy: sample.generated_repo_dir_policy,
-          generation_summary: sample.generation_summary,
-          validation_summary: sample.validation_summary,
-          scaffold_consumption_ref_status: recordValue(sample.scaffold_consumption_refs).status,
-          authority_boundary: sample.authority_boundary,
-        })),
-      },
-      repeat_consumption_policy:
-        'default_command_runs_a_small_multi_domain_ephemeral_cohort_without_claiming_domain_ready_or_production_ready',
     },
   };
 }

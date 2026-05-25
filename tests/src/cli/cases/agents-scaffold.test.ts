@@ -498,6 +498,19 @@ test('agents scaffold consumption evidence generates and validates an ephemeral 
   assert.equal(evidence.validation_summary.generated_surface_owner_verified, true);
   assert.equal(evidence.validation_summary.private_surface_policy_guarded, true);
   assert.equal(evidence.validation_summary.stage_pack_v2_status, 'passed');
+  assert.equal(
+    evidence.surface_consumption_proof.consumed_surface_status,
+    'scaffold_conformance_readiness_and_app_operator_surfaces_consumed',
+  );
+  assert.equal(evidence.surface_consumption_proof.conformance_status, 'passed');
+  assert.equal(evidence.surface_consumption_proof.conformance_passed_count, 1);
+  assert.equal(evidence.surface_consumption_proof.conformance_blocked_count, 0);
+  assert.equal(evidence.surface_consumption_proof.readiness_structural_conformance_status, 'passed');
+  assert.equal(evidence.surface_consumption_proof.readiness_scaffold_gate_status, 'passed');
+  assert.equal(
+    evidence.surface_consumption_proof.app_operator_refs.status,
+    'app_operator_projection_consumable',
+  );
   assert.equal(evidence.scaffold_consumption_refs.status, 'validated_template_consumed');
   assert.equal(evidence.scaffold_consumption_refs.validation_consumed_generated_repo, true);
   assert.equal(evidence.scaffold_consumption_refs.default_codex_executor_binding_count, 1);
@@ -560,9 +573,36 @@ test('agents scaffold consumption evidence repeats generate and validate across 
     ),
     [1, 1, 1],
   );
+  assert.equal(evidence.consumption_cohort.consumed_surface_count_per_sample, 4);
+  assert.deepEqual(evidence.consumption_cohort.consumed_surfaces, [
+    'scaffold_validation',
+    'standard_agent_conformance',
+    'agent_readiness',
+    'app_operator_projection',
+  ]);
+  assert.deepEqual(
+    evidence.consumption_cohort.samples.map((
+      sample: {
+        surface_consumption_proof: {
+          conformance_status: string;
+          readiness_structural_conformance_status: string;
+          app_operator_refs: { status: string };
+        };
+      },
+    ) => [
+      sample.surface_consumption_proof.conformance_status,
+      sample.surface_consumption_proof.readiness_structural_conformance_status,
+      sample.surface_consumption_proof.app_operator_refs.status,
+    ]),
+    [
+      ['passed', 'passed', 'app_operator_projection_consumable'],
+      ['passed', 'passed', 'app_operator_projection_consumable'],
+      ['passed', 'passed', 'app_operator_projection_consumable'],
+    ],
+  );
   assert.equal(
     evidence.repeat_consumption_policy,
-    'default_command_runs_a_small_multi_domain_ephemeral_cohort_without_claiming_domain_ready_or_production_ready',
+    'default_command_runs_a_small_multi_domain_ephemeral_cohort_through_scaffold_conformance_readiness_and_app_operator_projection_without_claiming_domain_ready_or_production_ready',
   );
 });
 

@@ -366,6 +366,12 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       numberValue(standardAgentTemplateSummary.default_consumption_sample_count),
     standard_agent_template_consumption_repeat_supported:
       standardAgentTemplateSummary.repeat_consumption_supported === true,
+    standard_agent_template_consumption_consumed_surface_count_per_sample:
+      numberValue(standardAgentTemplateSummary.consumed_surface_count_per_sample),
+    standard_agent_template_consumption_readiness_surface_consumed:
+      standardAgentTemplateSummary.readiness_surface_consumed === true,
+    standard_agent_template_consumption_app_operator_surface_consumed:
+      standardAgentTemplateSummary.app_operator_surface_consumed === true,
     standard_agent_template_consumption_domain_ready_claim_count:
       numberValue(standardAgentTemplateSummary.domain_ready_claim_count),
     standard_agent_template_consumption_production_ready_claim_count:

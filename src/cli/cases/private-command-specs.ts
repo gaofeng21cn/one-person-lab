@@ -9,9 +9,9 @@ import { buildObservabilityExport, renderObservabilityOpenMetrics } from '../../
 import { buildNativeIndexSummary } from '../../native-index-summary.ts';
 import {
   buildStandardDomainAgentScaffold,
-  buildStandardDomainAgentScaffoldConsumptionEvidence,
   buildStandardDomainAgentScaffoldValidation,
 } from '../../standard-domain-agent-scaffold.ts';
+import { buildStandardDomainAgentScaffoldConsumptionEvidence } from '../../standard-domain-agent-template-consumption.ts';
 import { runAgentExecutor, runAgentExecutorDoctor, runAgentExecutorRequestFile } from '../../agent-executor.ts';
 import { launchDomainEntry } from '../../domain-launch.ts';
 import { buildDomainManifestCatalog } from '../../domain-manifest/catalog-builder.ts';

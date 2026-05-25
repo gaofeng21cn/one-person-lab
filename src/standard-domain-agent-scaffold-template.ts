@@ -18,6 +18,250 @@ export interface ScaffoldFile {
   content: string;
 }
 
+const STARTER_ACTION_ID = 'domain_intake_owner_handoff';
+
+function toolNamePrefix(domainId: string) {
+  return domainId
+    .replace(/[^A-Za-z0-9_]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'new_domain_agent';
+}
+
+function generatedSurfaceDescriptors() {
+  return OPL_GENERATED_SURFACES.map((surface) => ({
+    ...surface,
+    status: 'descriptor_source_available',
+  }));
+}
+
+function generatedSurfaceHandoffSurfaces() {
+  return [
+    {
+      surface_id: 'cli',
+      current_paths: ['agent/cli.ts'],
+      current_role: 'domain_handler_target',
+      target_role: 'opl_generated_command_surface',
+    },
+    {
+      surface_id: 'mcp',
+      current_paths: ['agent/mcp.ts'],
+      current_role: 'domain_handler_target',
+      target_role: 'opl_generated_mcp_descriptor_surface',
+    },
+    {
+      surface_id: 'skill',
+      current_paths: ['agent/skills/domain_execution.md'],
+      current_role: 'domain_handler_target',
+      target_role: 'opl_generated_skill_descriptor_surface',
+    },
+    {
+      surface_id: 'product_entry_manifest',
+      current_paths: ['agent/product-entry.ts'],
+      current_role: 'domain_handler_target',
+      target_role: 'opl_generated_product_entry_surface',
+    },
+    {
+      surface_id: 'domain_action_adapter_export_dispatch',
+      current_paths: ['runtime/authority_functions/README.md'],
+      current_role: 'domain_authority_function_target',
+      target_role: 'opl_generated_domain_action_adapter_handoff_surface',
+    },
+    {
+      surface_id: 'status_read_model',
+      current_paths: ['contracts/owner_receipt_contract.json'],
+      current_role: 'domain_projection_refs',
+      target_role: 'opl_generated_status_read_model_surface',
+    },
+    {
+      surface_id: 'workbench_drilldown',
+      current_paths: ['contracts/artifact_locator_contract.json'],
+      current_role: 'projection_refs',
+      target_role: 'opl_hosted_workbench_shell_consuming_domain_refs',
+    },
+    {
+      surface_id: 'functional_harness_cases',
+      current_paths: ['runtime/fixtures/README.md'],
+      current_role: 'oracle_fixture_refs',
+      target_role: 'opl_generated_functional_harness_cases',
+    },
+  ];
+}
+
+function starterAction(domainId: string) {
+  const toolPrefix = toolNamePrefix(domainId);
+  return {
+    action_id: STARTER_ACTION_ID,
+    title: 'Domain intake owner handoff',
+    summary: 'Route the scaffolded domain intake stage to the domain owner and return owner receipt or typed blocker refs.',
+    owner: domainId,
+    effect: 'mutating',
+    source_command: {
+      command: `${domainId} intake --workspace-root <workspace_root>`,
+      surface_kind: 'domain_cli',
+    },
+    input_schema_ref: 'contracts/domain-intake.input.schema.json',
+    output_schema_ref: 'contracts/domain-intake.output.schema.json',
+    workspace_locator_fields: ['workspace_root'],
+    human_gate_ids: ['domain_owner_review'],
+    supported_surfaces: {
+      cli: {
+        command: `${domainId} intake --workspace-root <workspace_root>`,
+        surface_kind: 'domain_cli',
+      },
+      mcp: {
+        tool_name: `${toolPrefix}_domain_intake_owner_handoff`,
+        surface_kind: 'domain_mcp_descriptor',
+        descriptor_only: true,
+        public_runtime: false,
+      },
+      skill: {
+        command_contract_id: `${domainId}.${STARTER_ACTION_ID}`,
+        surface_kind: 'domain_skill_contract',
+      },
+      product_entry: {
+        action_key: STARTER_ACTION_ID,
+        command: `${domainId} product intake --workspace-root <workspace_root>`,
+        surface_kind: 'domain_product_entry',
+      },
+      openai: { tool_name: `${toolPrefix}_domain_intake_owner_handoff` },
+      ai_sdk: { tool_name: `${toolPrefix}_domain_intake_owner_handoff` },
+    },
+    authority_boundary: {
+      opl_can_write_domain_truth: false,
+      opl_can_write_memory_body: false,
+      opl_can_authorize_quality_or_export: false,
+      domain_owner_receipt_or_typed_blocker_required: true,
+    },
+  };
+}
+
+function functionalPrivatizationModules(domainId: string) {
+  return [
+    {
+      module_id: `${domainId}.generated-wrapper-handler-targets`,
+      classification: 'domain_handler_target',
+      migration_class: 'domain_handler_target',
+      code_paths: ['agent/cli.ts', 'agent/mcp.ts', 'agent/product-entry.ts'],
+      current_surface_refs: ['cli', 'mcp', 'skill', 'product_entry_manifest'],
+      active_callers: ['OPL generated CLI', 'OPL generated MCP', 'OPL generated skill', 'OPL generated product-entry'],
+      active_caller_status: 'domain_handlers_active_opl_generated_wrapper_metadata_consumed',
+      migration_action: 'derive_wrapper_metadata_from_family_action_catalog_and_opl_generated_surfaces',
+      retained_domain_authority: ['domain_action_handler', 'owner_receipt_or_typed_blocker'],
+      semantic_equivalence_status: 'cleared_by_boundary',
+      audit_visibility: 'hidden_by_default',
+    },
+    {
+      module_id: `${domainId}.domain-action-adapter-target`,
+      classification: 'domain_handler_target',
+      migration_class: 'domain_handler_target',
+      code_paths: ['runtime/authority_functions/README.md'],
+      current_surface_refs: ['domain_action_adapter_export_dispatch'],
+      active_callers: ['OPL generated domain action adapter dispatch'],
+      active_caller_status: 'domain_handler_target_returns_owner_receipt_or_typed_blocker',
+      migration_action: 'route_generated_domain_action_adapter_to_minimal_authority_function_targets',
+      retained_domain_authority: ['owner_receipt_or_typed_blocker'],
+      semantic_equivalence_status: 'cleared_by_boundary',
+      audit_visibility: 'hidden_by_default',
+    },
+    {
+      module_id: `${domainId}.refs-only-status-and-workbench-projection`,
+      classification: 'refs_only_domain_adapter',
+      migration_class: 'refs_only_domain_adapter',
+      code_paths: ['contracts/owner_receipt_contract.json', 'contracts/artifact_locator_contract.json'],
+      current_surface_refs: ['status_read_model', 'workbench_drilldown'],
+      active_callers: ['OPL generated status read model', 'OPL hosted workbench'],
+      active_caller_status: 'refs_only_projection_consumed_by_opl_generated_or_hosted_surface',
+      migration_action: 'project_domain_refs_without_repo_owned_status_or_workbench_shell',
+      retained_domain_authority: ['status_projection_refs', 'artifact_locator_refs', 'owner_receipt_refs'],
+      semantic_equivalence_status: 'cleared_by_boundary',
+      audit_visibility: 'hidden_by_default',
+    },
+    {
+      module_id: `${domainId}.functional-harness-fixtures`,
+      classification: 'provenance_or_fixture',
+      migration_class: 'provenance_or_fixture',
+      code_paths: ['runtime/fixtures/README.md'],
+      current_surface_refs: ['functional_harness_cases'],
+      active_callers: ['OPL generated functional harness cases'],
+      active_caller_status: 'fixture_refs_consumed_by_opl_generated_functional_harness',
+      migration_action: 'derive_harness_cases_from_pack_contracts_and_fixture_refs',
+      retained_domain_authority: ['fixture_oracle_refs'],
+      semantic_equivalence_status: 'cleared_by_boundary',
+      audit_visibility: 'hidden_by_default',
+    },
+    {
+      module_id: `${domainId}.owner-receipt-signer`,
+      classification: 'minimal_authority_function',
+      migration_class: 'minimal_authority_function',
+      code_paths: ['runtime/authority_functions/README.md'],
+      active_callers: ['domain owner quality gate', 'OPL generated adapter receipt target'],
+      active_caller_status: 'domain_authority_active_minimal_function',
+      cannot_absorb_reason: 'OPL cannot sign target domain owner receipts or typed blockers.',
+      receipt_schema_ref: 'contracts/owner_receipt_contract.json',
+      no_forbidden_write_evidence_ref: 'contracts/owner_receipt_contract.json#forbidden_claims',
+      retained_domain_authority: ['owner_receipt_signing', 'typed_blocker_materialization'],
+      semantic_equivalence_status: 'cleared_by_boundary',
+      audit_visibility: 'hidden_by_default',
+    },
+  ];
+}
+
+function physicalSourceMorphologyPolicy(domainId: string) {
+  const requiredSurfaceIds = [
+    'agent_semantic_pack',
+    'domain_handler_targets',
+    'refs_only_adapters',
+    'minimal_authority_functions',
+    'fixture_or_provenance_refs',
+  ];
+  return {
+    policy_id: `${domainId}.physical-source-morphology.v1`,
+    state: 'classified_no_generic_runtime_reflow',
+    required_surface_ids: requiredSurfaceIds,
+    classification_buckets: [
+      'declarative_domain_pack',
+      'domain_handler_target',
+      'refs_only_adapter',
+      'minimal_authority_function',
+      'provenance_or_fixture',
+    ],
+    surface_classifications: [
+      {
+        surface_id: 'agent_semantic_pack',
+        classification: 'declarative_domain_pack',
+        source_refs: ['agent/'],
+      },
+      {
+        surface_id: 'domain_handler_targets',
+        classification: 'domain_handler_target',
+        source_refs: ['contracts/action_catalog.json', 'agent/skills/domain_execution.md'],
+      },
+      {
+        surface_id: 'refs_only_adapters',
+        classification: 'refs_only_adapter',
+        source_refs: [
+          'contracts/memory_descriptor.json',
+          'contracts/artifact_locator_contract.json',
+          'contracts/owner_receipt_contract.json',
+        ],
+      },
+      {
+        surface_id: 'minimal_authority_functions',
+        classification: 'minimal_authority_function',
+        source_refs: ['runtime/authority_functions/README.md'],
+      },
+      {
+        surface_id: 'fixture_or_provenance_refs',
+        classification: 'provenance_or_fixture',
+        source_refs: ['runtime/fixtures/README.md', 'docs/history/'],
+      },
+    ],
+    authority_boundary: {
+      domain_can_claim_generic_runtime_owner: false,
+      domain_repo_can_own_generated_surface: false,
+    },
+  };
+}
+
 export function buildScaffoldFiles(domainId: string, domainLabel: string): ScaffoldFile[] {
   const json = (payload: unknown) => `${JSON.stringify(payload, null, 2)}\n`;
   return [
@@ -132,7 +376,8 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
         generated_surface_owner: 'one-person-lab',
         domain_repo_can_own_generated_surface: false,
         source_contract_ref: 'contracts/pack_compiler_input.json',
-        generated_surfaces: OPL_GENERATED_SURFACES,
+        generated_surfaces: generatedSurfaceDescriptors(),
+        handoff_surfaces: generatedSurfaceHandoffSurfaces(),
         required_domain_handoff: [
           'owner_receipt_schema',
           'typed_blocker_schema',
@@ -202,7 +447,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
                 role: 'stage_prompt',
               },
             ],
-            allowed_action_refs: [],
+            allowed_action_refs: [STARTER_ACTION_ID],
             outputs: [
               {
                 ref_kind: 'domain_ref',
@@ -287,8 +532,9 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
           opl_role: 'projection_consumer_only',
           write_policy: 'no_domain_truth_writes',
         },
-        actions: [],
+        actions: [starterAction(domainId)],
         forbidden_generic_owner_roles: FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
+        notes: [],
         marker: SCAFFOLD_MARKER,
       }),
     },
@@ -365,12 +611,13 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
         minimal_authority_functions: MINIMAL_AUTHORITY_FUNCTIONS,
         domain_retained_thin_surfaces_deprecated: DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED,
         forbidden_generic_owner_roles: FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
-        modules: [],
+        modules: functionalPrivatizationModules(domainId),
         authority_boundary: {
           opl_can_write_domain_truth: false,
           opl_can_write_memory_body: false,
           opl_can_authorize_quality_or_export: false,
           domain_can_claim_generic_runtime_owner: false,
+          domain_repo_can_own_generated_surface: false,
         },
       }),
     },
@@ -379,6 +626,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
       content: json({
         ...PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY,
         domain_id: domainId,
+        physical_source_morphology_policy: physicalSourceMorphologyPolicy(domainId),
         marker: SCAFFOLD_MARKER,
       }),
     },

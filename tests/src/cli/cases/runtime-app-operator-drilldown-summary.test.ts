@@ -171,6 +171,9 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_app_operator_ref_count, 1);
     assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_default_sample_count, 3);
     assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_repeat_supported, true);
+    assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_consumed_surface_count_per_sample, 4);
+    assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_readiness_surface_consumed, true);
+    assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_app_operator_surface_consumed, true);
     assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_domain_ready_claim_count, 0);
     assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_production_ready_claim_count, 0);
     assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_artifact_authority_claim_count, 0);
@@ -755,6 +758,15 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       fullDrilldown.standard_agent_template_consumption_refs.summary.repeat_consumption_supported,
       true,
     );
+    assert.equal(fullDrilldown.standard_agent_template_consumption_refs.summary.consumed_surface_count_per_sample, 4);
+    assert.deepEqual(fullDrilldown.standard_agent_template_consumption_refs.summary.consumed_surfaces, [
+      'scaffold_validation',
+      'standard_agent_conformance',
+      'agent_readiness',
+      'app_operator_projection',
+    ]);
+    assert.equal(fullDrilldown.standard_agent_template_consumption_refs.summary.readiness_surface_consumed, true);
+    assert.equal(fullDrilldown.standard_agent_template_consumption_refs.summary.app_operator_surface_consumed, true);
     assert.equal(
       fullDrilldown.standard_agent_template_consumption_refs.authority_boundary.can_claim_domain_ready,
       false,
