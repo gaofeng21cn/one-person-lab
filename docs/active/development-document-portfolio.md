@@ -1402,6 +1402,56 @@ Next tranche write scope:
 - Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 01:43 CST`
+Tranche: `opl-source-docs-coverage`
+State: `tranche_verified_and_foldback_pending`
+
+本轮覆盖 OPL `docs/source/**` 的通用 workspace/source intake 支撑文档。目标是把 source 支撑面校准到当前 `OPL Framework -> One Person Lab App -> Foundry Agents` 分层，避免把 source locator、source refs/status projection、workspace locator、App/workbench inspect command 或 source provenance ref 写成 source body ownership、source readiness verdict、domain truth、artifact authority、quality/export verdict、domain ready、App release ready 或 production ready。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`、`TASTE.md`、核心五件套、`docs/active/current-state-vs-ideal-gap.md`、`docs/references/runtime-substrate/opl-family-agent-ideal-state.md`、`contracts/README.md`。
+- Source docs: `docs/source/README.md`, `docs/source/workspace-source-intake-boundary.md`.
+- Machine-readable / source refs: `contracts/opl-framework/generic-substrate-projection-contract.json`, `contracts/opl-framework/family-product-operator-projection.json`, `src/generic-substrate-projection.ts`, `tests/src/generic-substrate-projection.test.ts`.
+- CLI/read-model surfaces: `opl help --text`, `opl substrate projections --json`, `opl substrate workbench --json`.
+
+Fresh read-model result:
+
+- `opl substrate projections --json` read `total_projects_count=3`, `resolved_manifest_count=3`, `substrate_refs_resolved_count=3`, `substrate_refs_partial_count=0`, `blocked_count=0`; project ids were `medautogrant`, `medautoscience`, and `redcube`.
+- Each substrate projection read workspace and source refs as `resolved`, with lifecycle role `locator_index_lifecycle_projection_only`; notes state OPL carries locators and lifecycle status only while domain agents retain truth/body/verdict/authority.
+- `opl substrate workbench --json` read `total_projects_count=3`, `workspace_ref_count=3`, `source_ref_count=12`, `artifact_ref_count=22`, `memory_ref_count=3`, `substrate_refs_missing_count=0`, `blocked_count=0`.
+- Workbench authority boundary read `opl_owns=[locator_index, ref_transport, lifecycle_projection, operator_projection, workbench_grouping]` while domain agents own `workspace_truth`, `source_truth_body`, `artifact_body`, `artifact_authority`, `memory_body`, `memory_writeback_accept_reject`, `domain_truth`, `quality_verdict`, and `publication_fundability_visual_verdict`; non-authority flags still forbid OPL memory body reads/writes, memory writeback apply, domain truth writes, source truth interpretation, artifact mutation, artifact authority and quality/fundability/publication authorization.
+- `opl help --text` confirms active `opl substrate projections`, `opl substrate projection --domain <domain>`, `opl substrate workbench`, `opl workspace ...`, `opl status workspace`, and `opl status dashboard` source/workspace/operator projection surfaces.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | `docs/source/README.md` lifecycle header, directory role paragraph, entry links and content table; `docs/source/workspace-source-intake-boundary.md` lifecycle header, current responsibilities, source/domain non-authority paragraph, owner split table and final routing rule. | `docs/source/README.md`; `docs/source/workspace-source-intake-boundary.md`; this coverage ledger |
+
+Archived / tombstoned / deleted docs:
+
+- none. Both source files remain active support. This tranche rewrote stale "四仓分工" and `source readiness projection` wording into current Framework/App/Foundry Agents owner split and refs/status projection language.
+
+Unreviewed docs:
+
+- OPL full README/docs coverage remains open outside previously covered entry/core, gateway-federation history, frontdoor-legacy history, process/specs history, process/plans history, process/convergence-governance history, process/domain-admission history, process/shared-boundary history, process/superpowers history, runtime-substrate history, current-support reference blocks, runtime docs, product docs, specs docs, delivery docs and this `docs/source/**` tranche, especially `docs/public/**`, `docs/references/runtime-substrate/**`, `docs/references/operating-governance/**`, `docs/references/convergence-governance/**`, `docs/references/governance/**` and other long support bodies not listed above.
+- MAS paragraph-level semantic coverage remains open outside prior lifecycle/history and Portal/projection/App-workbench blocks.
+- App docs remain delayed until active release/GUI worktrees close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+- Future changes in OMA/MAG/RCA can reopen coverage even though their recorded scopes were previously closed.
+
+Remaining stale / retire candidates:
+
+- OPL remaining public/reference body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-first, Hermes provider, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only or support-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
+- App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
+
+Next tranche write scope:
+
+- Continue OPL full docs coverage in another bounded support chunk, preferably `docs/public/**` or focused `docs/references/**`.
+- Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：

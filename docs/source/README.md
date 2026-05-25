@@ -5,7 +5,7 @@ Purpose: `generic_source_workspace_support`
 State: `active_support`
 Machine boundary: 人读索引。机器真相继续归 workspace registry、source/artifact contracts、runtime evidence、domain manifests 与 owner receipts。
 
-本目录承接通用 workspace/source intake shell、workspace registry、source locator、source scope refs、source readiness projection 与 source truth transport 边界。领域 source semantics、研究来源、基金材料和视觉素材判断继续归 MAS/MAG/RCA。workspace / file lifecycle 的长期隔离纪律归 [Workspace / File Lifecycle 政策](../policies/runtime-artifact-hygiene-policy.md)。
+本目录承接通用 workspace/source intake shell、workspace registry、source locator、source scope refs、source refs/status projection 与 source ref transport 边界。领域 source semantics、研究来源、基金材料和视觉素材判断继续归 MAS/MAG/RCA。workspace / file lifecycle 的长期隔离纪律归 [Workspace / File Lifecycle 政策](../policies/runtime-artifact-hygiene-policy.md)。
 
 当前入口先看：
 
