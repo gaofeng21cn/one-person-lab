@@ -2712,7 +2712,7 @@ Fresh live truth inputs:
 - MAS `AGENTS.md`, `TASTE.md`, `docs/status.md`, `docs/active/mas-ideal-state-gap-plan.md`, `docs/invariants.md`, `docs/decisions.md`, MAS docs-governance ledger, and preceding medical-display delivery authority / audit-protocol / template-pack lifecycle coverage entries.
 - MAS medical-display docs: `docs/delivery/medical-display/catalogs/medical_display_arsenal.md`, `docs/delivery/medical-display/catalogs/medical_display_template_backlog.md`, `docs/delivery/medical-display/catalogs/medical_display_template_catalog.md`, plus role/index review of `docs/delivery/medical-display/README.md` and `docs/delivery/medical-display/portfolio/medical_display_portfolio_consolidation.md`.
 - MAS machine/source/test refs: `display_registry`, `display_schema_contract`, `display_schema_contract_parts`, `display_pack_contract`, `display_pack_loader`, `display_pack_resolver`, `display_pack_lock`, `display_pack_bootstrap`, `display_pack_runtime`, display materialization, layout QC, medical publication surface and submission-minimal display consumers.
-- Focused test evidence: MAS focused pytest for display-pack contract / loader / resolver / runtime / lock / bootstrap / surface-sync / renderer-structure and submission-minimal display surface read `51 passed`.
+- Focused test evidence: MAS focused pytest for display-pack contract / loader / resolver / runtime / lock / bootstrap / surface-sync / renderer-structure / materialization / submission-minimal display surface and schema-doc contract case read `259 passed`.
 
 Reviewed documents:
 
@@ -2730,8 +2730,8 @@ Fresh semantic result:
 
 Verification / absorb:
 
-- MAS commit `ed01d417 docs: cover MAS display catalog inventory` was fast-forwarded into MAS `main` and pushed to `origin/main`.
-- MAS verification before and after absorb: `git diff --check`; strict docs conflict-marker scan had no hits; OPL Doc Governance doctor `finding_count=0`; focused pytest `tests/test_display_pack_contract.py tests/test_display_pack_loader.py tests/test_display_pack_resolver.py tests/test_display_pack_runtime.py tests/test_display_pack_lock.py tests/test_display_pack_bootstrap.py tests/test_display_pack_surface_sync.py tests/test_display_pack_renderer_structure.py tests/test_submission_minimal_display_surface.py -q` read `51 passed`.
+- MAS commits `ed01d417 docs: cover MAS display catalog inventory` and `0db65ef6 docs: align MAS display inventory wording` were fast-forwarded into MAS `main` and pushed to `origin/main`.
+- MAS verification before and after absorb: `git diff --check`; strict README/docs/contracts/tests/src/agent/profiles/scripts conflict-marker scan had no hits; OPL Doc Governance doctor `finding_count=0`; focused pytest `tests/test_display_pack_contract.py tests/test_display_pack_loader.py tests/test_display_pack_resolver.py tests/test_display_pack_runtime.py tests/test_display_pack_lock.py tests/test_display_pack_bootstrap.py tests/test_display_pack_surface_sync.py tests/test_display_pack_renderer_structure.py tests/test_display_surface_materialization.py tests/test_submission_minimal_display_surface.py tests/display_schema_contract_cases/shap_templates_and_docs_contracts.py -q` read `259 passed`.
 - MAS tranche worktree `/Users/gaofeng/workspace/med-autoscience/.worktrees/mas-medical-display-catalog-docs-coverage-20260526` and branch `codex/mas-medical-display-catalog-docs-coverage-20260526` were removed after absorb.
 
 Archived / tombstoned / deleted docs:
