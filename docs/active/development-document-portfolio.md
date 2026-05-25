@@ -2813,6 +2813,63 @@ Next tranche write scope:
 - Or the next exact OPL uncovered body from the family coverage ledger.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 07:25 CST`
+Tranche: `mas-medical-display-route-roadmap-provenance`
+State: `tranche_verified`
+
+本轮覆盖 MAS medical-display route / roadmap / provenance 三件套，并吸收回 MAS `main`。目标是把 `medical_figure_route_cookbook.md`、`medical_display_family_roadmap.md` 与 `medical_display_anchor_paper_audit.md` 读回当前 live figure-route source、domain-handler route contract、display audit / catalog truth 和 anchor-paper closure lifecycle：cookbook 是 paper-facing route family support，不是 dispatchable route registry；roadmap 是 long-horizon paper-family target，不是当前 execution queue；anchor audit 是 `001/003` closure snapshot provenance，不是当前 package freshness、publication quality、submission readiness、artifact mutation、paper closure、domain ready 或 production ready 判据。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`, `TASTE.md`, `docs/active/mas-ideal-state-gap-plan.md`, MAS docs-governance ledger, and preceding medical-display delivery authority / audit-protocol / catalog inventory / template-pack lifecycle coverage entries.
+- MAS medical-display docs: `docs/delivery/medical-display/catalogs/medical_figure_route_cookbook.md`, `docs/delivery/medical-display/portfolio/medical_display_family_roadmap.md`, `docs/delivery/medical-display/provenance/medical_display_anchor_paper_audit.md`, plus role/index review of `docs/delivery/medical-display/portfolio/medical_display_portfolio_consolidation.md`.
+- MAS machine/source/test refs: `src/med_autoscience/figure_routes.py`, `src/med_autoscience/controllers/figure_loop_guard.py`, `docs/delivery/medical-display/contracts/domain_handler_figure_routes.md`, `docs/delivery/medical-display/contracts/medical_display_platform_mainline.md`, display audit guide, generated template catalog, registry/schema contracts and display-pack source/tests.
+- CodeGraph evidence for `FigureRoute`, `build_figure_route`, `parse_figure_route`, `normalize_required_route`, `partition_required_routes` and figure-loop guard route consumption.
+- Focused test evidence: MAS focused pytest for figure routes, figure loop guard, display pack contract / loader / resolver / runtime / lock / bootstrap / surface-sync / renderer-structure / materialization / submission-minimal display surface and schema-doc contract case read `275 passed`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full paragraph read of `docs/delivery/medical-display/catalogs/medical_figure_route_cookbook.md`, `docs/delivery/medical-display/portfolio/medical_display_family_roadmap.md`, and `docs/delivery/medical-display/provenance/medical_display_anchor_paper_audit.md`; role/index review of `docs/delivery/medical-display/portfolio/medical_display_portfolio_consolidation.md`, plus live source/test evidence listed above. | `docs/docs_portfolio_consolidation.md`; `docs/delivery/medical-display/catalogs/medical_figure_route_cookbook.md`; `docs/delivery/medical-display/portfolio/medical_display_family_roadmap.md`; `docs/delivery/medical-display/portfolio/medical_display_portfolio_consolidation.md`; `docs/delivery/medical-display/provenance/medical_display_anchor_paper_audit.md` |
+| `one-person-lab` | coverage ledger owner only | this coverage ledger |
+
+Fresh semantic result:
+
+- `medical_figure_route_cookbook.md` now distinguishes paper-facing route families from executable MAS/OPL route ids. Dispatchable figure-route truth stays in `figure_routes.py` and the domain-handler route contract; only `figure_script_fix:<figure-id>` and `figure_illustration_program:<figure-id>` are current parseable figure-route metadata. `sidecar:<figure-id>`, autofigure and external drawing routes remain retired / fail-closed.
+- `medical_display_family_roadmap.md` remains active support for the long-horizon `A-H` paper-family roadmap. Its anchor-paper recovery section now reads as post-recovery direction rather than an open figure-QA queue, and it explicitly keeps roadmap progress separate from source readiness, publication quality, submission readiness, artifact mutation, `current_package` freshness, paper closure, domain ready and production ready.
+- `medical_display_anchor_paper_audit.md` remains `history_provenance` for the `001/003` closure snapshot. It now labels its authority / verification wording as closure-time provenance and prevents historical `fresh` / `clear` language from being used as current package freshness, publication quality, submission readiness, paper closure, domain ready or production ready evidence.
+- `medical_display_portfolio_consolidation.md` separates route references from anchor-paper provenance in the portfolio map.
+
+Verification / absorb:
+
+- MAS commit `6c72f4b4 docs: mark MAS display route provenance boundaries` is on MAS `main` and aligned with `origin/main`.
+- MAS verification before/after absorb: `git diff --check`; strict README/docs/contracts/tests/src/agent/profiles/scripts conflict-marker scan had no hits; OPL Doc Governance doctor `finding_count=0`, active truth `pass`; focused pytest `tests/test_figure_routes.py tests/test_figure_loop_guard.py tests/test_display_pack_contract.py tests/test_display_pack_loader.py tests/test_display_pack_resolver.py tests/test_display_pack_runtime.py tests/test_display_pack_lock.py tests/test_display_pack_bootstrap.py tests/test_display_pack_surface_sync.py tests/test_display_pack_renderer_structure.py tests/test_display_surface_materialization.py tests/test_submission_minimal_display_surface.py tests/display_schema_contract_cases/shap_templates_and_docs_contracts.py -q` read `275 passed`.
+- MAS tranche worktree `/Users/gaofeng/workspace/med-autoscience/.worktrees/mas-medical-display-route-roadmap-provenance-20260526` and branch `codex/mas-medical-display-route-roadmap-provenance-20260526` were removed after absorb. External MAS worktree `codex/visual-workbench-mas` was retained.
+
+Archived / tombstoned / deleted docs:
+
+- none. MAS cookbook and roadmap remain active support with distinct route-family and roadmap roles; anchor audit remains history provenance.
+
+Unreviewed docs:
+
+- MAS bounded medical-display delivery authority, audit protocol, catalog/inventory, template-pack lifecycle, route cookbook, roadmap and anchor-paper provenance bodies now have paragraph-level coverage entries.
+- MAS product/status/workbench, progress/domain-ref projection and source/delivery shell coverage remains open outside already-covered blocks.
+- OPL, RCA, MAG and App repo-wide coverage remains open outside already-recorded chunks.
+
+Remaining stale / retire candidates:
+
+- Future MAS route cookbook prose that treats cookbook route families as dispatchable MAS/OPL route ids, revives `sidecar:<figure-id>` / autofigure / external drawing routes, or treats figure-route metadata as artifact authority, quality verdict, source readiness, submission readiness or paper closure is stale pollution.
+- Future MAS roadmap prose that turns `A-H` target families into an active execution queue, checklist-completion gate or production/domain readiness claim is stale pollution.
+- Future MAS anchor-paper audit prose that uses `001/003` historical clear/fresh results as current package freshness, current workspace authority, publication quality, submission readiness, artifact mutation authorization, paper closure, domain ready or production ready evidence is stale pollution.
+
+Next tranche write scope:
+
+- MAS product/status/workbench and progress/domain-ref projection shell reconciliation outside the already-covered blocks, or source/delivery shell docs that still mention artifact lifecycle, source truth or package authority.
+- Or RCA product/runtime/delivery/source support docs that mention generated/default caller thinning, product-entry/session, runtimeWatch, domain_action_adapter or retired route vocabulary.
+- Or the next exact OPL/MAG/App uncovered body from the family coverage ledger.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
