@@ -642,6 +642,56 @@ Next tranche write scope:
 - Continue MAG with `docs/history/plans/**`, `docs/history/product/**`, `docs/history/runtime/**`, `docs/history/positioning/**` and non-index `docs/references/**/*.md`, or switch to OPL/MAS/RCA/App full README/docs coverage.
 - Keep App delayed until active release/GUI worktrees close or an explicit owner decision makes their current state safe to govern.
 
+Date: `2026-05-25 17:58 CST`
+Tranche: `mag-history-reference-coverage`
+State: `tranche_verified_scope_pending`
+
+本轮覆盖 `med-autogrant` 剩余的 history plans / product / runtime / positioning 与 non-index references。目标是让 MAG 已完成计划、旧 product/runtime/positioning 说明和 reference 层都具备明确 lifecycle 角色：旧计划与旧 runtime/product/positioning 文件只保留 provenance；reference 文件继续作为 stable support/reference，不替代 current owner docs 或 machine contracts。
+
+Fresh live truth inputs:
+
+- MAG `AGENTS.md`、`TASTE.md`
+- MAG `README.md`、`docs/README.md`、`docs/status.md`、`docs/active/mag-ideal-state-cross-repo-gap-plan.md`
+- MAG `docs/history/README.md`、`docs/history/plans/README.md`、`docs/references/README.md`
+- MAG `contracts/runtime-program/current-program.json`
+- MAG `contracts/functional_privatization_audit.json`
+- MAG `contracts/external_evidence/mag-evidence-receipt-ledger.json`
+
+Fresh contract result:
+
+- `runtime_owner.default_task_runtime_owner=one-person-lab`、`default_runtime_substrate=temporal`、`default_stage_executor=codex_cli` remain current.
+- `mag_implements_daemon=false`、`mag_implements_scheduler=false`、`mag_implements_attempt_loop=false`、`mag_owns_attempt_ledger=false` remain current.
+- `claims_opl_replacement_exists=true`、`claims_domain_repo_physical_delete_authorized=false`、`claims_production_long_run_soak_complete=false` remain current.
+- `standard_agent_source_shape_status=landed` remains structural classification only, not strict source-purity physical completion.
+- External evidence still keeps `claims_temporal_provider_long_soak_complete=false` and `claims_grant_or_fundability_ready=false`; the live evidence tail remains `temporal_provider_long_soak_window_evidence`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autogrant` | `docs/history/plans/2026-04-06-med-autogrant-minimal-scaffold-plan.md`, `docs/history/plans/2026-04-07-p1-formal-entry-and-durability-planning-brief.md`, `docs/history/plans/2026-04-12-opl-aligned-target-shape-and-hosted-caller-plan.md`, `docs/history/plans/2026-04-13-grant-writing-full-coverage-landing-plan.md`, `docs/history/plans/README.md`, `docs/history/plans/mag-standard-agent-doc-process-history-2026-05.md`, `docs/history/product/lightweight-product-entry-and-opl-handoff.md`, `docs/history/runtime/opl-managed-runtime-three-layer-contract.md`, `docs/history/positioning/domain-harness-os-positioning.md`, `docs/references/README.md`, `docs/references/grant_strategy_memory_policy.md`, `docs/references/med-auto-grant-ideal-state.md`, `docs/references/governance/series-doc-governance-checklist.md`, `docs/references/integration/opl-family-contract-adoption.md`; sections reviewed include title/lifecycle note, owner/purpose/state/machine boundary, historical/completed plan wording, old Hermes/Gateway/local-runtime/product-entry wording and reference/current owner boundaries. | seven files missing direct lifecycle signals: four historical plan files plus `docs/history/product/lightweight-product-entry-and-opl-handoff.md`, `docs/history/runtime/opl-managed-runtime-three-layer-contract.md`, `docs/history/positioning/domain-harness-os-positioning.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The seven edited files remain useful provenance; the governance action was direct-file lifecycle clarification. The reference files already had durable `reference` roles and were reviewed without content edits.
+
+Unreviewed docs:
+
+- `med-autogrant`: current/support specs, thin indexes, entry indexes, history specs batches, history plans/product/runtime/positioning and non-index references have now been covered by ledger entries. Remaining MAG docs still require final whole-repo coverage reconciliation against `README*` and all `docs/**/*.md` before MAG can be marked fully covered.
+- Other repos remain under previous ledger scopes except OMA full coverage.
+- App docs remain excluded while active release/GUI worktrees own local changes.
+
+Remaining stale / retire candidates:
+
+- MAG final reconciliation should verify no leftover historical `docs/plans` path claims, stale Gateway/Hermes/local-runtime owner claims, or reference docs acting as current truth owners outside the core five / active plan / contracts.
+- Cross-repo work remains open for OPL/MAS/RCA/App full README/docs coverage.
+
+Next tranche write scope:
+
+- Run a MAG final whole-doc reconciliation pass over `README*`, `agent/README.md`, `contracts/README.md`, `runtime/README.md`, and all `docs/**/*.md` against the coverage ledger; then either close MAG uncovered list or record exact remaining MAG files/sections.
+- Or switch to OPL/MAS/RCA/App full README/docs coverage; keep App delayed until active release/GUI worktrees close or an explicit owner decision makes their current state safe to govern.
+
 ## 验证
 
 Docs-only 整理：
