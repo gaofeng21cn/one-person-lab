@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `development_plan`
 State: `active_support; production residency proven; long domain soak pending`
 Machine boundary: 本文是人工可读开发计划。机器真相必须落在 `contracts/`、source code、CLI/API 行为、runtime ledger 或 domain-owned manifests。
-Date: `2026-05-14`
+Date: `2026-05-26`
 
 Master entry: OPL family agent framework 的总开发入口是 `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md`。本文只承接其中 `Master P1-P5` 的 Temporal provider 技术细化：provider skeleton、Codex stage activity、human-gate signal/query、visibility、domain soak 和 retired runtime interface cleanup。跨仓定位、执行语言、依赖取舍、domain-agent 边界和旧面退役纪律以总入口为准。
 
@@ -16,7 +16,7 @@ Temporal 负责 durable execution：workflow history、activity retry/timeout、
 
 `hermes_agent`、`claude_code` 与 `antigravity_cli` 的定位是显式非默认 executor adapter/backend；旧 Hermes runtime / Gateway / provider 只归历史 provenance、诊断语料、负向 guard 或历史参考材料。Temporal provider 是生产在线路径的必需底座；Hermes 不再作为目标 session/wakeup substrate、active provider interface、Gateway bridge、provider proof surface、install/update target 或 readiness surface；local provider 只作为 dev/CI/offline diagnostic baseline。
 
-2026-05-14 closeout：Temporal provider 的 repo code path、worker lifecycle contract、CLI start/query/signal、typed closeout ingestion、fail-closed readiness、repo-native Temporal live residency proof、Agent Executor Adapter 接入链路和本机 managed production proof 都已经落地。显式 Temporal provider view 为 `full_online_ready=true`、`durable_online_ready=true`，`opl family-runtime residency proof --provider temporal --production` 返回 `production_residency_proven`，并把 proof receipt 写入 runtime event ledger；`framework production-closeout` 可读到 `provider_continuous_proof.continuous_proof_status=all_observed_proofs_proven`，`runtime snapshot` 已把 provider proof 投到 operator attention/recent item。task-bound bridge 当前 ledger `total=4` / `completed=4`，已覆盖 MAS typed blocker、MAG sidecar receipt refs 和 RCA no-regression evidence refs。剩余验收集中在周期性长时 residency / SLO、真实 domain stage activity soak、MAS owner-chain guarded apply 和真实 cost/progress 校准。
+2026-05-14 closeout 证明 Temporal provider 的 repo code path、worker lifecycle contract、CLI start/query/signal、typed closeout ingestion、fail-closed readiness、repo-native Temporal live residency proof、Agent Executor Adapter 接入链路和本机 managed production proof 已经落地；当时显式 Temporal provider view 为 `full_online_ready=true`、`durable_online_ready=true`，`opl family-runtime residency proof --provider temporal --production` 返回 `production_residency_proven`，并把 proof receipt 写入 runtime event ledger。2026-05-26 live read-model 需要按更新口径读取：`framework readiness` 当前是 `framework_control_plane_available_with_blocked_refs_only_attention`，hard blocker 为 0，provider cadence/capability SLO satisfied，但 `domain_blocked_attention_tail_count=226`、`evidence_envelope_blocked_count=213`，OPL 仍不能声明 domain ready、production ready、quality/export verdict 或 artifact mutation authority。`family-runtime evidence-worklist` 读为 `open_worklist_item_count=0` 也只表示没有可执行 OPL evidence workorder，不关闭 blocked refs-only envelope、domain owner-chain、App release-ready 或 long-soak evidence。剩余验收集中在周期性长时 residency / SLO、真实 domain stage activity soak、MAS owner-chain guarded apply、MAG/RCA controlled soak 和真实 cost/progress 校准。
 
 ## 顶层设计
 
@@ -67,7 +67,7 @@ Provider 层不持有：
 交付：
 
 - 已冻结 provider 枚举：`local_sqlite`、`temporal`，其中 `temporal` 是 production required provider；无显式 provider 选择时默认解析到 `temporal`，未配置 Temporal service / worker / production proof 时 fail-closed。`local_sqlite` 只服务显式 dev/CI/offline diagnostic baseline，不参与 production online readiness。`hermes_legacy` 已退役为非法 provider selection，旧配置必须 fail-closed。
-- 已统一 provider readiness、attempt status、receipt 与 dead-letter 字段；Temporal provider code、repo-native live residency proof 与本机 managed production proof 已落地；`opl family-runtime service start|status|stop --provider temporal` 已作为本机托管 Temporal service lifecycle 入口落地，`opl family-runtime residency proof --provider temporal --production` 可消费本机 managed service + worker state。未配置、服务不可达、launcher 缺失、worker 未 ready 或 worker transport probe 失败时均 fail-closed；2026-05-17 fresh 本机 managed service/worker 已 ready 且 production proof 已通过，provider continuous proof 当前为 `latest_proof_proven` / `fresh` / `proof_fresh`。真实 MAS domain soak 仍属 P2 后续证据。
+- 已统一 provider readiness、attempt status、receipt 与 dead-letter 字段；Temporal provider code、repo-native live residency proof 与本机 managed production proof 已落地；`opl family-runtime service start|status|stop --provider temporal` 已作为本机托管 Temporal service lifecycle 入口落地，`opl family-runtime residency proof --provider temporal --production` 可消费本机 managed service + worker state。未配置、服务不可达、launcher 缺失、worker 未 ready 或 worker transport probe 失败时均 fail-closed；2026-05-17 dated proof 显示本机 managed service/worker ready 且 production proof 已通过，provider continuous proof 当时为 `latest_proof_proven` / `fresh` / `proof_fresh`。最新 provider/readiness 状态以 live CLI/read-model 为准；真实 MAS domain soak 仍属 P2 后续证据。
 - `OPL Runtime Manager` 与 `opl family-runtime` 文案和输出已改为 provider-backed 口径。
 - `opl family-runtime attempt create|list|inspect` 已可写入 / 读取 SQLite stage attempt ledger。
 
@@ -79,7 +79,7 @@ Provider 层不持有：
 
 ### P1. Temporal Stage Workflow Core
 
-状态：已落地到 repo/test 可用实现，并补齐本机托管 production proof 入口。OPL 已引入 Temporal TypeScript SDK，新增真实 `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start/query/signal`、worker helper、worker lifecycle contract 和本机 Temporal service lifecycle。缺少 Temporal 地址且没有 managed local service state 时 CLI 明确 fail-closed 为 production required dependency blocker；provider readiness 需要 Temporal service 可达与 worker ready 信号同时存在。2026-05-12 已补齐 worker resident state re-query / restart already-ready / stop 后 worker-not-ready 的直接 proof test，Codex live runner timeout / checkpoint heartbeat / process output summary proof test，`opl family-runtime residency proof --provider temporal --live` 的 Temporal test server + real worker code-path proof，`service start|status|stop` 本机托管入口，以及 `--production` 对本机 managed service / managed worker 的 fail-closed 验收入口。2026-05-17 fresh 本机 managed service/worker 当前 ready，显式 Temporal provider view full/durable ready，production proof 返回 `production_residency_proven`，production closeout provider proof 为 `latest_proof_proven` / `fresh` / `proof_fresh`。尚未完成的是周期性长时 SLO、真实 activity retry 运行证据和 MAS 真实 paper line 的 provider-hosted guarded apply owner chain。
+状态：已落地到 repo/test 可用实现，并补齐本机托管 production proof 入口。OPL 已引入 Temporal TypeScript SDK，新增真实 `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start/query/signal`、worker helper、worker lifecycle contract 和本机 Temporal service lifecycle。缺少 Temporal 地址且没有 managed local service state 时 CLI 明确 fail-closed 为 production required dependency blocker；provider readiness 需要 Temporal service 可达与 worker ready 信号同时存在。2026-05-12 已补齐 worker resident state re-query / restart already-ready / stop 后 worker-not-ready 的直接 proof test，Codex live runner timeout / checkpoint heartbeat / process output summary proof test，`opl family-runtime residency proof --provider temporal --live` 的 Temporal test server + real worker code-path proof，`service start|status|stop` 本机托管入口，以及 `--production` 对本机 managed service / managed worker 的 fail-closed 验收入口。2026-05-17 dated proof 显示本机 managed service/worker ready，显式 Temporal provider view full/durable ready，production proof 返回 `production_residency_proven`，production closeout provider proof 为 `latest_proof_proven` / `fresh` / `proof_fresh`；后续必须用 live read-model 复核这些状态。尚未完成的是周期性长时 SLO、真实 activity retry 运行证据和 MAS 真实 paper line 的 provider-hosted guarded apply owner chain。
 
 交付：
 
@@ -91,7 +91,7 @@ Provider 层不持有：
 - 已完成：repo-native Temporal live residency proof 可启动 Temporal test server 与真实 worker，跑通 completed attempt、human/user/resume signals、worker restart 后 re-query、missing-closeout blocked 和 domain-truth boundary。
 - 已完成：本机 production service 入口 `opl family-runtime service start|status|stop --provider temporal`；默认优先使用 PATH 上的 `temporal server start-dev`，也可用 `OPL_TEMPORAL_SERVICE_START_COMMAND` 显式指定 launcher。service state 写入 OPL family-runtime state root，worker 与 production proof 可在没有额外 `OPL_TEMPORAL_ADDRESS` 的情况下消费 managed local service address。
 - 已完成：production proof 入口 `opl family-runtime residency proof --provider temporal --production`；它只使用配置好的 Temporal service / managed worker，未配置、不可达、launcher 缺失、worker 未 ready 或 worker transport probe 失败时返回 typed platform blocker、operator repair action、runtime snapshot 和 blocked proof receipt，配置完成后证明 completed / blocked attempt、signal history、restart re-query、typed-closeout required 和 authority boundary。
-- 已完成：2026-05-17 fresh production proof 在本机 managed Temporal service / worker 上返回 `production_residency_proven`；checks 覆盖 service reachable、worker ready、completed attempt、restart re-query、signal history、typed closeout required、missing closeout blocked、retry/dead-letter boundary 和 domain-truth boundary。
+- 已完成：2026-05-17 dated production proof 在本机 managed Temporal service / worker 上返回 `production_residency_proven`；checks 覆盖 service reachable、worker ready、completed attempt、restart re-query、signal history、typed closeout required、missing closeout blocked、retry/dead-letter boundary 和 domain-truth boundary。最新 provider / readiness 状态以当前 CLI/read-model 为准。
 - 待完成：真实长时 domain activity soak、domain sidecar live dispatch、生产 retry/dead-letter 运行证据，以及 token/cost/progress 观测校准。
 
 验收：
@@ -120,7 +120,7 @@ Provider 层不持有：
 
 ### P3. MAG/RCA Controlled Attempts
 
-状态：task-bound ingestion 已落地，long soak 仍后移。OPL 已把显式 provider-hosted MAG guarded-run task 和 RCA `emit_no_regression_evidence` task 写入 stage attempt ledger，并 ingest MAG sidecar receipt refs / RCA no-regression evidence refs；ledger 当前与 MAS 合计 `total=21` / `completed=21`，domain breakdown 为 MAS `9`、MAG `11`、RCA `1`。这证明 OPL provider-hosted attempt bridge 可跨 research / grant / visual domain 运转。它仍不等于 MAG grant-stage owner receipt、RCA artifact-producing owner receipt、grant/visual quality verdict 或长时 controlled soak 已完成。
+状态：task-bound ingestion 已落地，long soak 仍后移。OPL 已把显式 provider-hosted MAG guarded-run task 和 RCA `emit_no_regression_evidence` task 写入 stage attempt ledger，并 ingest MAG sidecar receipt refs / RCA no-regression evidence refs；2026-05-14/17 dated ledger 曾读到与 MAS 合计 `total=21` / `completed=21`，domain breakdown 为 MAS `9`、MAG `11`、RCA `1`。这些 dated counters 只证明 OPL provider-hosted attempt bridge 可跨 research / grant / visual domain 运转；latest 数字必须重跑 read-model。它仍不等于 MAG grant-stage owner receipt、RCA artifact-producing owner receipt、grant/visual quality verdict 或长时 controlled soak 已完成。
 
 交付：
 

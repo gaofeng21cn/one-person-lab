@@ -1546,6 +1546,55 @@ Next tranche write scope:
 - Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+
+Date: `2026-05-26 02:42 CST`
+Tranche: `opl-runtime-substrate-reference-currentness-coverage`
+State: `tranche_verified`
+
+本轮覆盖 OPL `docs/references/runtime-substrate/**` 的核心当前支撑文档，重点是把 AI-first / executor-first 调研入口、stage-led roadmap 与 Temporal provider 计划从 2026-05-14/17 dated proof 校准到 2026-05-26 live read-model。目标是避免把 provider proof、task-bound bridge 旧计数、App user-path evidence、OMA production-consumption、conformance pass 或 zero-open worklist 写成 domain ready、production ready、App release ready、artifact authority、quality/export verdict、owner-chain closure 或 long-soak closeout。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`、`TASTE.md`、核心五件套、`docs/active/current-state-vs-ideal-gap.md`、`contracts/README.md`。
+- Runtime-substrate reference docs: `docs/references/runtime-substrate/README.md`, `ai-first-executor-first-long-horizon-optimization.md`, `opl-stage-led-agent-framework-roadmap.md`, `temporal-family-runtime-provider-plan.md`, `opl-runtime-manager-target.md`, `family-executor-adapter-defaults.md`, `family-runtime-attempt-contract.md`, `family-orchestration-contract-absorb-crewai.md`, `opl-managed-runtime-three-layer-contract.md`, `hermes-agent-executor-evaluation.md`, `hermes-agent-truth-reset-and-target-state.md`, `opl-family-agent-ideal-state.md`, `graphflow-gfl-contract-vocabulary.md`。
+- CLI/read-model surfaces: `opl framework readiness --family-defaults --json`, `opl agents conformance --family-defaults --json`, `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`, `opl runtime app-operator-drilldown --json`。
+
+Fresh read-model result:
+
+- `opl framework readiness --family-defaults --json` read `status=framework_control_plane_available_with_blocked_refs_only_attention`, `hard_blocker_count=0`, `operator_actionable_attention_tail_count=0`, `operator_payload_required_attention_tail_count=0`, `domain_blocked_attention_tail_count=226`, `evidence_envelope_blocked_count=213`, provider cadence/capability SLO satisfied, and authority boundary still forbids domain ready, production ready, quality/export verdict and artifact mutation authority claims.
+- `opl agents conformance --family-defaults --json` read four repos structural conformance passed and `blocked_count=0`; this proves standard pack / descriptor / authority boundary readability only, not production ready.
+- `opl family-runtime evidence-worklist ... --detail full --json` read `open_worklist_item_count=0`, `closed_refs_only_item_count=246`, `zero_open_worklist_blocked_refs_only_envelope_count=213`, `domain_ready_authorized=false`, and `production_ready_authorized=false`; zero-open worklist is not a completion, domain-ready or production-ready claim.
+- `opl runtime app-operator-drilldown --json` read `availability=available`, `stage_attempt_count=25`, provider cadence/capability SLO satisfied, App user-path production user path ready, but `app_release_user_path_release_ready_claimed=false` and `app_release_user_path_production_ready_claimed=false`; Codex App role remains start / observe / intervene / display, while long-running task driver owner is OPL on Temporal and default stage executor is `codex_cli`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | `docs/references/runtime-substrate/README.md` current/legacy index boundary; `ai-first-executor-first-long-horizon-optimization.md` current conclusion, evidence priority, established system assessment and next directions; `opl-stage-led-agent-framework-roadmap.md` current landing assessment and dated proof sections; `temporal-family-runtime-provider-plan.md` conclusion, P1/P3 proof wording; `opl-runtime-manager-target.md` owner split and route-support sections; `family-executor-adapter-defaults.md` default executor and non-default adapter boundary; `family-runtime-attempt-contract.md` owner split / scheduler boundary; `family-orchestration-contract-absorb-crewai.md` external framework absorption boundary; Hermes / ideal-state / GraphFlow reference docs spot-checked for active-surface leakage. | `docs/references/runtime-substrate/ai-first-executor-first-long-horizon-optimization.md`; `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md`; `docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md`; this coverage ledger |
+
+Archived / tombstoned / deleted docs:
+
+- none. Runtime-substrate reference docs remain active support or explicit history/provenance references. This tranche corrected currentness and authority wording instead of moving files.
+
+Unreviewed docs:
+
+- OPL reference body coverage remains open outside this runtime-substrate tranche, especially `docs/references/operating-governance/**`, `docs/references/convergence-governance/**`, `docs/references/governance/**` and any long support bodies not listed above.
+- MAS paragraph-level semantic coverage remains open outside prior lifecycle/history, Portal/projection/App-workbench and inspection-package blocks.
+- App docs remain delayed until active release/GUI lanes close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+
+Remaining stale / retire candidates:
+
+- OPL runtime-substrate docs now have an explicit 2026-05-26 live read-model guard, but older dated proof sections still intentionally retain historical counters as provenance. Future edits must keep dated counters separate from latest read-model and rerun CLI evidence before making status claims.
+- OPL remaining operating/convergence/governance references may still carry old Gateway, frontdoor, federation, Product API, Hermes-first, Hermes provider, AionUI shell, MDS default, Domain Harness OS, hosted pilot, local-manager, managed-runtime or direct-entry wording; those must stay history/provenance/diagnostic/negative-guard only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
+- App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
+
+Next tranche write scope:
+
+- Continue OPL full docs coverage in `docs/references/operating-governance/**` or `docs/references/convergence-governance/**`.
+- Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：

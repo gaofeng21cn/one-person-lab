@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `development_reference`
 State: `active_support`
 Machine boundary: this is a human-readable development roadmap. Machine-readable truth must live in `contracts/`, source code, CLI/API behavior, runtime ledgers, or domain-owned manifests.
-Date: `2026-05-18`
+Date: `2026-05-26`
 
 ## 结论
 
@@ -51,9 +51,20 @@ Date: `2026-05-18`
 - 已被退役或降级的旧面不得通过别名、帮助文案、测试 fixture 或 product wording 重新变成默认路径；确认无 active caller 后直接删除或迁入 history/tombstone。
 - 如果需要改变本文的 owner split 或语言/runtime 选择，必须同步更新上述配套入口，不能只改单个 repo 的局部文档。
 
-## 2026-05-14 当前落地评估
+## 2026-05-26 live read-model 校准
 
-结论：前一轮 stage-led / provider-backed 计划已经落到一批可调用 surface；stage、domain-memory descriptor 与 standard domain-agent skeleton discovery / validation 当前均已在 MAS/MAG/RCA 三仓 resolved/aligned。Temporal TypeScript SDK、`StageAttemptWorkflow`、activity、signal/query、CLI start/query/signal、worker lifecycle contract、typed closeout ingestion、Codex stage runner repo/test harness、stage attempt workbench、Aion 白名单 signal bridge和本机 managed Temporal service / worker proof 入口均已落地。2026-05-17 fresh proof 显示 Temporal provider view 为 `full_online_ready=true` / `durable_online_ready=true`，`residency proof --provider temporal --production` 返回 `production_residency_proven`，latest proof 可进入 runtime ledger 并被 closeout gate / MAS hydrate 使用；provider continuous proof 当前为 `latest_proof_proven` / `fresh` / `proof_fresh`。task-bound provider bridge 当前 ledger `total=21` / `completed=21`：MAS `9`、MAG `11`、RCA `1`；MAG sidecar receipt ingestion、MAS owner stable blocker receipt 和 RCA no-regression evidence ingestion 均已进入同一 OPL typed queue。当前 production closure 的优先级是继续证明 MAS 三篇真实 paper line 的 owner-chain guarded apply progress evidence，MAG/RCA grant/visual long soak 后移但不得让 descriptor/index 退化。
+2026-05-26 重新读取当前 CLI/read-model 后，本 roadmap 的旧 proof 数字只能作为 dated evidence 使用，不能当作 latest completion counter。当前读法是：
+
+- `opl framework readiness --family-defaults --json`：`status=framework_control_plane_available_with_blocked_refs_only_attention`，`hard_blocker_count=0`，`operator_actionable_attention_tail_count=0`，`operator_payload_required_attention_tail_count=0`，provider cadence/capability SLO satisfied；同时 `domain_blocked_attention_tail_count=226`、`evidence_envelope_blocked_count=213`，且 authority boundary 仍禁止 OPL 声明 domain ready、production ready、quality/export verdict 或 artifact mutation authority。
+- `opl agents conformance --family-defaults --json`：四仓 structural conformance passed、blocked_count=0，production evidence tail 单独读取；它证明 standard pack / descriptor / authority boundary 可读，不证明 production ready。
+- `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`：`open_worklist_item_count=0`、`closed_refs_only_item_count=246`，但 `zero_open_worklist_blocked_refs_only_envelope_count=213`，`domain_ready_authorized=false`、`production_ready_authorized=false`。zero-open worklist 只表示当前没有可执行 OPL evidence workorder，不表示 domain owner-chain、artifact authority、App release 或 long-soak 完成。
+- `opl runtime app-operator-drilldown --json`：`availability=available`，`stage_attempt_count=25`，provider cadence/capability SLO satisfied，App user-path production user path ready；但 release-ready / production-ready claim 均为 false。Codex App 角色是 start、observe、intervene、display；long-running task driver owner 是 `one-person-lab`，substrate 是 `temporal`，默认 stage executor 是 `codex_cli`。
+
+因此，本文的准确当前状态是：OPL control plane、Temporal required provider path、standard domain-agent conformance、App/operator refs-only drilldown 和 several provider/domain evidence envelopes 已经可读可审计；真实 domain owner-chain、MAS paper-line guarded apply progress、MAG/RCA long soak、artifact/memory/lifecycle apply receipt、App release-ready 和 family production-ready 仍是 evidence-after-contract 尾项。
+
+## 2026-05-14 / 2026-05-17 dated proof 回顾
+
+结论：前一轮 stage-led / provider-backed 计划已经落到一批可调用 surface；stage、domain-memory descriptor 与 standard domain-agent skeleton discovery / validation 在当时的 MAS/MAG/RCA 三仓 resolved/aligned。Temporal TypeScript SDK、`StageAttemptWorkflow`、activity、signal/query、CLI start/query/signal、worker lifecycle contract、typed closeout ingestion、Codex stage runner repo/test harness、stage attempt workbench、Aion 白名单 signal bridge和本机 managed Temporal service / worker proof 入口均已落地。2026-05-17 proof 显示 Temporal provider view 为 `full_online_ready=true` / `durable_online_ready=true`，`residency proof --provider temporal --production` 返回 `production_residency_proven`，latest proof 可进入 runtime ledger 并被 closeout gate / MAS hydrate 使用；provider continuous proof 当时为 `latest_proof_proven` / `fresh` / `proof_fresh`。task-bound provider bridge 当时 ledger `total=21` / `completed=21`：MAS `9`、MAG `11`、RCA `1`；MAG sidecar receipt ingestion、MAS owner stable blocker receipt 和 RCA no-regression evidence ingestion 均已进入同一 OPL typed queue。这些数字是 dated proof，不应替代 2026-05-26 live read-model；当前 production closure 的优先级仍是继续证明 MAS 三篇真实 paper line 的 owner-chain guarded apply progress evidence，MAG/RCA grant/visual long soak 后移但不得让 descriptor/index 退化。
 
 2026-05-14 fresh CLI / proof 读模型校准：
 
