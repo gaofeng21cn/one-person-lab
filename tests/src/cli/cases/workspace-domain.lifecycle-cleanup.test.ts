@@ -234,7 +234,7 @@ function manifestWithMasCurrentStandardAgentEvidence() {
         active_private_generic_residue_count: 0,
         default_caller_count: 0,
         runtime_package_residue_count: 0,
-        active_compatibility_aliases: [],
+        retired_alias_residue_refs: [],
         history_detail_in_default_read_model: false,
       },
       standard_agent_purity_guard: {

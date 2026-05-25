@@ -137,13 +137,13 @@ function masStandardAgentNoActiveCallerObserved(boundary: JsonRecord | null) {
   if (!purity || !guard || !generated) {
     return false;
   }
-  const activeCompatibilityAliases = Array.isArray(purity.active_compatibility_aliases)
-    ? purity.active_compatibility_aliases
+  const retiredAliasResidueRefs = Array.isArray(purity.retired_alias_residue_refs)
+    ? purity.retired_alias_residue_refs
     : null;
   return optionalString(purity.status) === 'pure_standard_agent_active'
     && optionalNumber(purity.default_caller_count) === 0
     && optionalNumber(purity.active_private_generic_residue_count) === 0
-    && activeCompatibilityAliases?.length === 0
+    && retiredAliasResidueRefs?.length === 0
     && optionalString(guard.status) === 'standard_agent_purity_guard'
     && optionalNumber(guard.default_caller_count) === 0
     && optionalString(generated.status) === 'opl_generated_hosted_shell_is_default_caller'

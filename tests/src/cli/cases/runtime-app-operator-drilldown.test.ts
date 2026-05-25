@@ -137,7 +137,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       '--provider',
       'local_sqlite',
       '--workspace-locator',
-      '{"workspace_root":"/tmp/mas","artifact_root":"/tmp/mas/artifacts","source_refs":["source:dataset"],"missing_material_refs":["material:irb"],"restore_refs":["restore:study-run"]}',
+      '{"workspace_root":"/tmp/mas","artifact_root":"/tmp/mas/artifacts","dispatch_ref":"mas-domain-dispatch:dm-cvd:app-drilldown","source_refs":["source:dataset"],"missing_material_refs":["material:irb"],"restore_refs":["restore:study-run"]}',
       '--task',
       'task-app-drilldown',
       '--checkpoint-ref',

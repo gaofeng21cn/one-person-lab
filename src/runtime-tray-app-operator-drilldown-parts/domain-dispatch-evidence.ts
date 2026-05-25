@@ -194,8 +194,8 @@ function annotateDefaultActionability(attempts: DomainDispatchAttemptEvidence[])
       }
       return {
         ...attempt,
-        default_actionability_status: 'current_without_dispatch_identity',
-        default_actionable: true,
+        default_actionability_status: 'not_actionable_unbound_dispatch_identity',
+        default_actionable: false,
         superseded_by_stage_attempt_id: null,
         superseded_reason: null,
       };
@@ -397,7 +397,7 @@ export function buildDomainDispatchEvidence(attempts: JsonRecord[]) {
     surface_kind: 'opl_app_drilldown_domain_dispatch_evidence',
     projection_policy: 'refs_only_owner_chain_dispatch_evidence_no_domain_verdict_authority',
     default_actionability_policy:
-      'only_latest_attempt_per_bound_dispatch_identity_is_default_actionable_superseded_attempts_remain_full_detail_provenance',
+      'only_latest_attempt_per_bound_dispatch_identity_is_default_actionable_unbound_attempts_remain_full_detail_provenance',
     summary: {
       domain_count: domainGroups.length,
       attempt_count: attemptEvidence.length,
