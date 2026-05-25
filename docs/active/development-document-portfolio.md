@@ -1977,6 +1977,63 @@ Next tranche write scope:
 - Or choose the next exact OPL uncovered body from the family coverage ledger.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 04:28 CST`
+Tranche: `mas-runtime-event-durable-workflow-contract-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAS runtime contracts 中的 runtime event / outer-loop input 与 durable workflow 两个长支撑文档，并吸收回 MAS `main`。目标是确认这些人读 support docs 与 MAS live source/contracts/tests 当前事实一致：OPL/current-control-state 持有 runtime event refs、attempt、retry/dead-letter、human-gate transport、provider liveness 和 repair projection；MAS 只消费 refs 并输出 domain authority refs、outer-loop judgment、owner receipt、typed blocker、runtime escalation 与 diagnostic blocker refs。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`、`TASTE.md`、MAS docs-governance ledger, `docs/active/mas-ideal-state-gap-plan.md`, and preceding runtime id / owner-route control / stage-knowledge ledger entries.
+- MAS runtime docs: `docs/runtime/contracts/runtime_event_and_outer_loop_input_contract.md`, `docs/runtime/contracts/durable_workflow_contract.md`, with support reads of `docs/runtime/contracts/delivery_plane_contract_map.md`, `docs/runtime/control/study_runtime_control_surface.md`, and `docs/runtime/control/study_runtime_orchestration.md`.
+- MAS machine/source refs: `src/med_autoscience/controllers/study_outer_loop.py`, `contracts/functional_privatization_audit.json`, `contracts/stage_control_plane.json`, and `contracts/test-lane-manifest.json`.
+- Focused test inventory: `tests/test_durable_workflow_contract.py`, `tests/test_study_outer_loop.py`, and `tests/test_study_outer_loop_cases/controller_and_manifest_cases.py` runtime event, runtime escalation, supervisor tick freshness, retry budget and family human-gate cases.
+
+Fresh semantic result:
+
+- `runtime_event_and_outer_loop_input_contract.md` remains aligned with live outer-loop behavior: `runtime_event_ref` comes from OPL current_control_state / provider-backed stage runtime, MAS may consume and expose refs, and managed runtime inputs fail closed when runtime event identity, supervisor freshness or runtime escalation refs are missing or mismatched.
+- `durable_workflow_contract.md` remains a human-readable support contract for pause/resume, replay, idempotent ticks, human-gate durability and retry budget semantics. The durable event log, attempt/retry/dead-letter/provider repair owner remains OPL; MAS writes only bounded projection, domain health diagnostic, runtime escalation and controller decision refs where its domain authority applies.
+- Focused tests assert replay from `restore_point_id`, reconstruction of `retry_budget_remaining`, `retry_budget_decremented`, retry-budget exhaustion requiring `runtime_escalation_record.json`, duplicate tick idempotency, and durable human-gate decision requirements.
+- No reviewed paragraph currently reintroduces MAS-owned generic queue, attempt ledger, worker liveness, runtime lifecycle scheduler, publication-ready, submission-ready, artifact-ready, App release ready, domain-ready or production-ready leakage.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full paragraph read of `docs/runtime/contracts/runtime_event_and_outer_loop_input_contract.md` and `docs/runtime/contracts/durable_workflow_contract.md`, plus source/contract/test inventory listed above. | `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | coverage ledger owner only | this coverage ledger |
+
+Verification / absorb:
+
+- MAS commit `59b7033c docs: cover MAS runtime event contracts` was fast-forwarded into MAS `main` and pushed to `origin/main`.
+- MAS worktree verification before absorb: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor `finding_count=0`, active truth `pass`; focused pytest `tests/test_durable_workflow_contract.py tests/test_study_outer_loop.py -q` read `68 passed`.
+- Current MAS tranche worktree `/Users/gaofeng/workspace/med-autoscience/.worktrees/mas-runtime-event-contracts-coverage-20260526` and branch `codex/mas-runtime-event-contracts-coverage-20260526` were removed after absorb.
+
+Archived / tombstoned / deleted docs:
+
+- none. The reviewed MAS runtime contract files remain active support docs with distinct roles.
+
+Unreviewed docs:
+
+- MAS paragraph-level coverage remains open for other long support bodies under `docs/runtime/contracts/**`, especially `runtime_boundary.md`, `runtime_core_convergence_and_controlled_cutover.md`, `runtime_backend_interface_contract.md`, `runtime_handle_and_durable_surface_contract.md`, `agent_runtime_interface.md`, and delivery/artifact/source adjacent contracts not covered by prior focused tranches.
+- MAS product/status/workbench, progress/domain-ref projection and source/delivery shell coverage remains open outside the already-covered Portal/projection/App-workbench, inspection-package, runtime-binding, owner-route/control-boundary, stage/knowledge and this runtime-event/durable-workflow block.
+- OPL full README/docs coverage remains open outside the covered OPL chunks named in earlier ledger entries.
+- App docs remain delayed until active release/GUI lanes close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+
+Remaining stale / retire candidates:
+
+- Future MAS prose must not treat missing or fallback `runtime_event_ref`, stale supervisor tick, runtime escalation, retry budget exhaustion, human-gate signal, domain health diagnostic, OPL provider closeout, queue completion or current_control_state projection as MAS domain completion, publication-ready, submission-ready, artifact-ready, quality-ready, App release ready or production-ready.
+- `runtime_escalation_record.json`, `domain_health_diagnostic`, owner-route handoff refs and typed blockers are MAS diagnostic / blocker outputs; they must not become MAS-owned retry/dead-letter, provider repair, worker liveness, generic resume or runtime lifecycle truth.
+- Durable human gate remains a decision ref with scope and evidence refs; it must not be rewritten as chat permission, executor self-approval, controller shortcut or automatic publication/quality override.
+
+Next tranche write scope:
+
+- MAS paragraph-level coverage for another bounded `docs/runtime/contracts/**` group, preferably `runtime_boundary.md` with runtime backend / handle contracts, or delivery/artifact/source adjacent contracts if owner wording drifts.
+- Or MAS product/status/workbench and progress/domain-ref projection shell reconciliation outside the already-covered blocks.
+- Or choose the next exact OPL uncovered body from the family coverage ledger.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
