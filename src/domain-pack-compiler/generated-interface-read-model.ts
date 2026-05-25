@@ -57,6 +57,14 @@ export const GENERATED_SURFACES = [
   },
 ] as const;
 
+const GENERATED_WRAPPER_CANONICAL_TARGET_IDS: Record<string, string[]> = {
+  product_entry: ['product_entry_manifest'],
+  product_status: ['status_read_model'],
+  product_session: ['product_session', 'product_entry_manifest', 'status_read_model'],
+  domain_handler: ['domain_action_adapter_export_dispatch', 'domain_action_adapter', 'domain_handler'],
+  workbench: ['workbench_drilldown'],
+};
+
 const GENERATED_WRAPPER_DESCRIPTOR_SCOPE = [
   {
     surface_id: 'cli',
@@ -223,7 +231,21 @@ function generatedSurfaceAliases(surfaceId: string) {
     mcp: ['mcp'],
     skill: ['skill'],
     product_entry_manifest: ['product_entry_manifest'],
-    domain_handler: ['domain_handler'],
+    domain_action_adapter_export_dispatch: [
+      'domain_action_adapter_export_dispatch',
+      'domain_action_adapter',
+      'domain_handler',
+    ],
+    domain_action_adapter: [
+      'domain_action_adapter',
+      'domain_action_adapter_export_dispatch',
+      'domain_handler',
+    ],
+    domain_handler: [
+      'domain_handler',
+      'domain_action_adapter_export_dispatch',
+      'domain_action_adapter',
+    ],
     status_read_model: ['status_read_model'],
     workbench_drilldown: ['workbench_drilldown'],
     functional_harness_cases: ['functional_harness_cases', 'test_lane_harness', 'harness'],
@@ -716,7 +738,22 @@ function buildGeneratedWrapperBundle(
   );
   const descriptorScope = GENERATED_WRAPPER_DESCRIPTOR_SCOPE.map((scope) => {
     const block = isRecord(blocks[scope.block_key]) ? blocks[scope.block_key] as JsonRecord : null;
-    const target = targetBySurface.get(scope.target_surface_id);
+    const canonicalTargetSurfaceIds =
+      GENERATED_WRAPPER_CANONICAL_TARGET_IDS[scope.surface_id] ?? [scope.target_surface_id];
+    const candidateTargets = canonicalTargetSurfaceIds
+      .map((targetSurfaceId) => targetBySurface.get(targetSurfaceId))
+      .filter((target): target is JsonRecord => isRecord(target));
+    const readyTargets = candidateTargets.filter((target) => (
+      !optionalString(target.proof_status)?.startsWith('blocked')
+      && generatedSurfaceTargetAllowed(optionalString(target.target_kind) ?? '')
+    ));
+    const target = readyTargets.find((candidate) => (
+      optionalString(candidate.active_caller_module_id)
+      || stringList(candidate.current_surface_refs).length > 0
+      || isRecord(candidate.bridge_exit_gate)
+    ))
+      ?? readyTargets[0]
+      ?? candidateTargets[0];
     const status = optionalString(block?.status);
     const targetStatus = optionalString(target?.proof_status);
     const targetKind = optionalString(target?.target_kind);
@@ -739,6 +776,7 @@ function buildGeneratedWrapperBundle(
       active_caller_target_kind: targetKind,
       active_caller_proof_status: targetStatus,
       active_caller_module_id: optionalString(target?.active_caller_module_id),
+      canonical_target_surface_ids: canonicalTargetSurfaceIds,
       target_boundary: {
         allowed_target_kinds: [
           'domain_handler_target',

@@ -107,7 +107,7 @@ const DEFAULT_CALLER_CANONICAL_TARGET_IDS: Record<string, string[]> = {
   product_entry: ['product_entry', 'product_entry_manifest'],
   product_status: ['product_status', 'status_read_model'],
   product_session: ['product_session', 'product_entry_manifest', 'status_read_model'],
-  domain_handler: ['domain_handler'],
+  domain_handler: ['domain_action_adapter_export_dispatch', 'domain_action_adapter', 'domain_handler'],
   workbench: ['workbench', 'workbench_drilldown'],
 };
 
