@@ -928,6 +928,7 @@ test('runtime tray summary can use a non-authoritative manifest projection cache
     fs.writeFileSync(
       slowCommandPath,
       `const fs = require('node:fs');\n`
+        + `if (process.env.OPL_TEST_FORCE_MANIFEST_FAILURE === '1') process.exit(42);\n`
         + `setTimeout(() => process.stdout.write(fs.readFileSync(${JSON.stringify(manifestPath)}, 'utf8')), 11000);\n`,
       'utf8',
     );
@@ -954,12 +955,14 @@ test('runtime tray summary can use a non-authoritative manifest projection cache
     const previousContractsDir = process.env.OPL_CONTRACTS_DIR;
     process.env.OPL_STATE_DIR = stateRoot;
     process.env.OPL_CONTRACTS_DIR = fixtureContractsRoot;
+    process.env.OPL_TEST_FORCE_MANIFEST_FAILURE = '1';
     try {
       const snapshot = await buildRuntimeTraySnapshot(loadFrameworkContracts(), {
-        appOperatorDrilldownDetailLevel: 'summary',
+        appOperatorDrilldownDetailLevel: 'full',
       });
       const tray = snapshot.runtime_tray_snapshot;
       assert.equal(tray.app_operator_drilldown.summary.stage_production_evidence_stage_count, 2);
+      assert.equal(tray.app_operator_drilldown.stage_production_evidence.summary.stage_count, 2);
       assert.equal(tray.domain_manifest_projection_cache.summary.cache_used_count, 1);
       assert.deepEqual(tray.domain_manifest_projection_cache.summary.live_failed_project_ids, ['medautoscience']);
       assert.equal(
@@ -981,6 +984,7 @@ test('runtime tray summary can use a non-authoritative manifest projection cache
       } else {
         process.env.OPL_CONTRACTS_DIR = previousContractsDir;
       }
+      delete process.env.OPL_TEST_FORCE_MANIFEST_FAILURE;
     }
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

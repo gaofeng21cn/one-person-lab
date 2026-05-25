@@ -710,7 +710,7 @@ export async function buildRuntimeTraySnapshot(
       ? RUNTIME_TRAY_SUMMARY_MANIFEST_COMMAND_TIMEOUT_MS
       : RUNTIME_TRAY_FULL_MANIFEST_COMMAND_TIMEOUT_MS,
     manifestCommandTimeoutPolicy: 'fixed',
-    useProjectionCacheOnFailure: summaryDetail,
+    useProjectionCacheOnFailure: true,
   }).domain_manifests;
   const masManagedProviderProjection =
     projectionFromMasManifestEntry(domainManifests.projects.find((entry) => (
@@ -858,7 +858,7 @@ export async function buildRuntimeTraySnapshot(
       domain_manifest_projection_cache: {
         surface_kind: 'opl_runtime_tray_domain_manifest_projection_cache',
         projection_policy:
-          'summary_reads_may_use_stale_projection_cache_when_live_domain_manifest_times_out_full_detail_requires_live_refresh',
+          'runtime_tray_reads_may_use_stale_projection_cache_when_live_domain_manifest_refresh_fails',
         summary: {
           cache_used_count: domainManifests.summary.projection_cache_used_count ?? 0,
           live_failed_project_ids: domainManifests.summary.live_failed_project_ids ?? [],
