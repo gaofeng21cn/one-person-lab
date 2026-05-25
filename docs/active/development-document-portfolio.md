@@ -1452,6 +1452,53 @@ Next tranche write scope:
 - Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 01:58 CST`
+Tranche: `mas-inspection-package-product-delivery-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAS `inspection_package` 产品、交付与 delivery-plane contract 文档，并吸收回 MAS `main`。目标是把 human-inspection-only inspection surface 读回 live source / tests / product-entry 事实，明确它可以物化 blocked snapshot，也可以在 existing controller-authorized current package 已 current 时只返回 `authorized_current_package_available` review pointer；两条路径都不能授权投稿、质量放行、`current_package` 写入、`submission_minimal` 写入或 eval / decision artifact 更新。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`、`TASTE.md`、核心五件套、`docs/active/mas-ideal-state-gap-plan.md`、MAS docs-governance ledger。
+- MAS product / delivery / runtime docs: `docs/product/inspection_package.md`, `docs/delivery/inspection_package.md`, `docs/runtime/contracts/delivery_plane_contract_map.md`, `docs/runtime/control/controllers.md`.
+- MAS source / tests: `src/med_autoscience/controllers/submission_inspection_export.py`, `src/med_autoscience/controllers/delivery_visibility_projection.py`, `src/med_autoscience/action_catalog.py`, `src/med_autoscience/controllers/product_entry_parts/manifest_shell_surfaces.py`, `tests/test_inspection_package_contract.py`, `tests/test_submission_inspection_export.py`, `tests/product_entry_cases/delivery_inspection_visibility.py`.
+- CodeGraph context / explore for `inspection_package`, `human_inspection_only`, `not_for_submission`, `gate_blocked_snapshot`, and related tests.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | `docs/product/inspection_package.md` full file; `docs/delivery/inspection_package.md` full file; `docs/runtime/contracts/delivery_plane_contract_map.md` inspection-package sections and delivery-plane artifact row; `docs/runtime/control/controllers.md` inspection package contract section; `docs/product/README.md` and `docs/delivery/README.md` inspection-package index rows. | `docs/product/inspection_package.md`; `docs/delivery/inspection_package.md`; `docs/runtime/contracts/delivery_plane_contract_map.md`; `docs/runtime/control/controllers.md`; `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Verification:
+
+- MAS worktree and rebased branch: `git diff --check`; strict README/docs/contracts/tests/src conflict-marker scan; OPL Doc Governance doctor `finding_count=0` and active truth status `pass`; `scripts/run-pytest-clean.sh tests/test_inspection_package_contract.py tests/test_submission_inspection_export.py tests/product_entry_cases/delivery_inspection_visibility.py -q` read `11 passed`.
+- MAS main after fast-forward: same diff/conflict/doctor checks passed; focused pytest again read `11 passed`.
+- MAS commit `cbbe1ce1 docs: cover MAS inspection package boundary` was pushed to `origin/main`; the tranche worktree `/Users/gaofeng/workspace/med-autoscience/.worktrees/mas-inspection-package-docs-coverage-20260526` and branch `codex/mas-inspection-package-docs-coverage-20260526` were removed.
+
+Archived / tombstoned / deleted docs:
+
+- none. The MAS product, delivery and runtime contract docs remain active support because they hold distinct product, export and delivery-plane boundary roles.
+
+Unreviewed docs:
+
+- MAS integration references under `docs/references/integration/*.md` that mention product/workbench/Portal/owner-route current-truth claims remain open.
+- MAS runtime support docs outside the touched delivery-plane contract and controller section remain open, especially other `docs/runtime/contracts/**` and `docs/runtime/control/**` files.
+- OPL full README/docs coverage remains open outside recorded OPL coverage tranches; App docs remain delayed until active release/GUI lanes are safe to govern.
+
+Remaining stale / retire candidates:
+
+- `inspection_package` is not a retire candidate in this tranche; live source and tests prove it is an active human-inspection-only delivery surface.
+- Future MAS prose must keep blocked snapshot materialization separate from `authorized_current_package_available` pointer mode, and must not describe either mode as `current_package` freshness proof, formal submission package, publication verdict, quality gate closeout, delivery-sync dispatch, or artifact mutation authority.
+
+Next tranche write scope:
+
+- MAS integration references under `docs/references/integration/*.md`, or runtime support docs under `docs/runtime/contracts/**` / `docs/runtime/control/**` that still carry product/workbench/Portal/owner-route current-truth claims.
+- Or continue OPL full docs coverage in another bounded support chunk, preferably `docs/public/**` or focused `docs/references/**`.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
