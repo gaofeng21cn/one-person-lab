@@ -245,6 +245,57 @@ Remaining stale / retire candidates:
 - OMA 后续只做证据/hygiene 扩面，不新增 repo-owned generic CLI/MCP/Skill/product/status/workbench wrapper、Agent Lab runner、promotion gate、queue、attempt ledger 或 target truth writer。
 - OPL framework 当前仍有 provider worker stale attention；这是 provider lifecycle repair，不是 standard-agent source-purity blocker，也不授权 domain ready / production ready。
 
+Date: `2026-05-25 16:18 CST`
+Tranche: `mag-docs-portfolio-entry-coverage`
+State: `tranche_verified`
+
+本轮覆盖 `med-autogrant` 的 docs portfolio 入口、12 个主参考文档中的 MAG ideal-state reference / active truth owner、核心五件套、当前 specs / references / history 索引和 root / agent / contracts / runtime README 支撑。MAG Markdown 总 inventory 为 120 份，其中 68 份是 `docs/history/specs/*.md` 历史 specs；本轮不逐篇改写历史正文，只在历史索引层补上继承 lifecycle 规则，避免把旧 `Current Truth`、Hermes/Gateway/local-runtime wording 或 dated completion claim 重新读成当前 owner。
+
+Fresh live truth inputs:
+
+- MAG `contracts/runtime-program/current-program.json`
+- MAG `contracts/functional_privatization_audit.json`
+- MAG `contracts/production_acceptance/mag-production-acceptance.json`
+- MAG `contracts/generated_surface_handoff.json`
+- MAG `contracts/external_evidence/mag-evidence-receipt-ledger.json`
+- MAG OPL Doc Governance doctor on the tranche worktree
+
+Fresh contract result:
+
+- `runtime_owner.default_task_runtime_owner=one-person-lab`、`default_runtime_substrate=temporal`、`default_stage_executor=codex_cli`；MAG 不实现 daemon / scheduler / attempt loop / attempt ledger。
+- `claims_opl_replacement_exists=true`、`claims_domain_repo_physical_delete_authorized=false`、`claims_production_long_run_soak_complete=false`；OPL replacement/cutover 结构证据不授权 MAG repo 物理删除 active handler/adapter，也不授权 production ready。
+- `mag_functional_structure_gap_count=0`、`standard_agent_source_shape_status=landed` 仍按历史结构分类读取，不写成 strict source-purity 物理完成。
+- `mag-production-acceptance` 持有 MAG-owned owner receipt / typed blocker refs；`authority_boundary.opl_can_authorize_grant_domain_ready=false`、`provider_completion_equals_domain_ready=false`、`structural_conformance_equals_domain_ready=false`。
+- external evidence ledger 中 `claims_direct_hosted_parity_passed=true`、`claims_temporal_provider_long_soak_complete=false`、`claims_grant_or_fundability_ready=false`。
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autogrant` | `README.md`, `README.zh-CN.md`, `agent/README.md`, `contracts/README.md`, `runtime/README.md`, `docs/README.md`, `docs/project.md`, `docs/status.md`, `docs/architecture.md`, `docs/invariants.md`, `docs/decisions.md`, `docs/docs_portfolio_consolidation.md`, `docs/active/README.md`, `docs/active/mag-ideal-state-cross-repo-gap-plan.md`, `docs/active/opl-private-implementation-migration-inventory.md`, `docs/references/med-auto-grant-ideal-state.md`, `docs/references/README.md`, `docs/specs/README.md`, `docs/specs/specs_lifecycle_map.md`, `docs/history/README.md`, `docs/history/specs/README.md`, `docs/history/plans/README.md`, `docs/history/omx/README.md`, plus heading/metadata inventory for all 120 Markdown files. | `contracts/README.md`, `docs/history/README.md`, `docs/history/specs/README.md`, `docs/history/plans/README.md`, `docs/history/omx/README.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The active issue was missing first-screen lifecycle inheritance on MAG history/contract indexes, not a doc-path retirement with new no-active-caller proof.
+
+Unreviewed docs:
+
+- `med-autogrant`: the remaining 95 Markdown files are inventoried and route-checked by heading/metadata/stale-risk scan, but not fully paragraph-governed in this tranche. They stay under the global unreviewed scope until a later MAG full-body tranche covers each historical spec / support spec / public and product/runtime/source/delivery/policies README section.
+- Other repos remain under the previous ledger's unreviewed scope except OMA, whose README/docs coverage was completed in `oma-readme-docs-full-coverage`.
+- App docs remain excluded while dirty/recent App release and GUI worktrees own local changes.
+
+Remaining stale / retire candidates:
+
+- MAG history specs still contain dated `Current Truth`, `Activation Status`, Hermes/Gateway/local-runtime and hosted/provider wording; history index now declares inherited lifecycle semantics, but a later body-level pass should add or normalize per-file lifecycle notes only where a file lacks one and is likely to be opened directly.
+- MAG support specs under `docs/specs/*.md` still need a later paragraph-level pass to confirm each current subsection against contracts/schema/source and the specs lifecycle map.
+- MAG product/runtime/delivery/source/policies README files are thin indexes; keep them as directory duty anchors unless a later pass finds duplicate current truth.
+
+Next tranche write scope:
+
+- Continue with MAG full-body docs coverage in chunks: first `docs/specs/*.md` and public/product/runtime/delivery/source/policies README files, then historical specs by lifecycle-note coverage. Do not promote history wording to current truth; extract any still-current rule into core docs, active gap plan, specs lifecycle map, contract or source.
+- Or switch to another clean remaining repo (`one-person-lab`, `redcube-ai`, or App after active worktrees close) and repeat README/docs section-by-section coverage with ledger update.
+
 ## 验证
 
 Docs-only 整理：
