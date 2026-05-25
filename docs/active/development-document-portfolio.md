@@ -711,6 +711,54 @@ Next tranche write scope:
 - Continue OPL full docs coverage in another bounded history/reference/support chunk, or switch to MAS non-history paragraph reconciliation.
 - Keep App delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-25 20:41 CST`
+Tranche: `mas-portal-workbench-boundary-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAS 非 history 文档中的 Progress Portal / study-progress projection / OPL App workbench 边界块。目标是把 MAS local Progress Portal 从“固定用户入口 / MAS-owned workbench”风险口径收束为 workspace-local read-model / diagnostic / no-App 展示入口，同时确认主用户运行工作台、notification、approval transport、terminal UI shell、provider drilldown 和长期 App-native workbench 归 OPL App / OPL Runtime Manager。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`、`TASTE.md`、`docs/active/mas-ideal-state-gap-plan.md`、`docs/references/positioning/mas_ideal_state.md`、`docs/status.md`。
+- MAS `contracts/functional_privatization_audit.json`、`contracts/generated_surface_handoff.json`、`contracts/production_acceptance/mas-production-acceptance.json`、`contracts/test-lane-manifest.json`。
+- MAS source/test references for `progress_portal_parts/workspace_carrier.py`, `mas_progress_portal_workspace_carrier_boundary`, `OPL current_control_state` and focused Portal/workbench lanes.
+- MAS support docs: `docs/runtime/display/progress_portal.md`, `docs/runtime/projections/study_progress_projection.md`, `docs/references/integration/progress_portal_opl_app_integration.md`, `docs/active/opl_app_mas_runtime_workbench_program.md`.
+
+Fresh semantic result:
+
+- MAS Progress Portal payload / HTML / workspace helper / optional local read-only service are landed read-model/display surfaces, but remain part of `workbench_sidecar_status_cutover` and strict source-purity tail until OPL App default progress carrier, workspace helper no-active-caller proof and focused tests allow further thinning or deletion.
+- OPL App / OPL Runtime Manager owns the long-term user workbench, notification/approval transport, terminal UI shell, provider drilldown and App-native study workbench.
+- Portal, study-progress, workspace cockpit, product-entry-status, MCP compact/markdown and OPL App workbench should consume the same `study_progress.user_visible_projection`; none of them may rewrite study truth, publication verdict, artifact authority, runtime authority or `current_package`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | `docs/runtime/display/progress_portal.md` header, entry conclusion, form decision, OPL App integration conclusion; `docs/runtime/projections/study_progress_projection.md` core conclusion and MAS Progress Portal relation; `docs/references/integration/progress_portal_opl_app_integration.md` App boundary; `docs/active/opl_app_mas_runtime_workbench_program.md` P1 owner boundary; `docs/status.md` product/status/workbench source-purity clauses; MAS active plan / ideal-state references and contracts listed above. | `docs/runtime/display/progress_portal.md`; `docs/runtime/projections/study_progress_projection.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. This tranche clarified active support docs; it did not prove no-active-caller for the MAS workspace carrier or Portal helper, so no physical delete was authorized.
+
+Unreviewed docs:
+
+- MAS full paragraph-level semantic coverage remains open outside this bounded Portal/projection/App-workbench block, including remaining product/status/workbench, owner-route handoff, progress/domain-ref projection, controller shell and non-history body wording not listed above.
+- OPL full README/docs coverage remains open outside previously covered entry/core and gateway-federation history blocks.
+- App docs remain delayed until active release/GUI worktrees close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+- Future changes in OMA/MAG/RCA can reopen coverage even though their recorded scopes were previously closed.
+
+Remaining stale / retire candidates:
+
+- MAS product-entry / status / workbench projection shell, sidecar export/dispatch, controller-authorized shell and progress/domain-ref consumers still need default-caller cutover, no-active-caller proof, focused tests and tombstone/provenance proof before deletion.
+- MAS local Progress Portal workspace carrier remains a read-model/display tail, not a long-term MAS generic workbench.
+- MAS real paper-line owner receipt, memory/artifact/lifecycle receipt, human gate/resume and provider SLO long-soak evidence gaps remain open.
+
+Next tranche write scope:
+
+- Continue MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell, or switch back to another bounded OPL history/reference/support chunk.
+- Keep App docs delayed until the active release/GUI lane is safe to govern.
+
 ## 验证
 
 Docs-only 整理：
