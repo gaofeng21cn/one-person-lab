@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `family_ideal_state_gap_plan`
 State: `active_plan`
 Machine boundary: 本文是人读 gap / completion map。机器真相继续归 `contracts/`、源码、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、真实 workspace 与 App 证据。
-Date: `2026-05-24`
+Date: `2026-05-25`
 
 ## 读法
 
@@ -41,7 +41,7 @@ Declarative Domain Pack
 | Standard agent structural conformance | `passed_with_production_evidence_tail` | Fresh `opl agents conformance --family-defaults --json` 显示 4 个 repo 通过、0 个 repo blocked，active forbidden-name residue 清零；结构通过不等于 production caller / long soak 通过。 |
 | App/user path evidence | `user_path_evidence_ready` | App release/user-path ledger 已验证同 cohort release package、screenshot、reload prompt、provider linkage 与 long operator evidence；`framework readiness` 读为 App user-path evidence ready，但 `release_ready_claimed=false`、`production_ready_claimed=false`，不等于 App release ready。 |
 | OMA/new agent consumption | `production_consumption_ready` | New-agent scaffold/structural consumption、managed install/update、App live path、owner receipt/typed blocker scaleout 和 verified long-soak 已进入读面；OMA production-consumption ready 不授权 MAS/MAG/RCA 或 family production ready。 |
-| Domain production evidence | `partial` | MAS/MAG/RCA 的 owner receipt refs、typed blocker refs、no-regression refs 可进入 OPL refs-only ledger；worklist/readiness 已把重复 domain-owned typed blocker refs 作为 attention group 去重展示，同时保留 raw item / envelope 审计数量；真实 paper/grant/visual owner-chain、memory/artifact/lifecycle receipt 和 repeated no-regression 仍需扩面。 |
+| Domain production evidence | `partial` | MAS/MAG/RCA 的 owner receipt refs、typed blocker refs、no-regression refs 可进入 OPL refs-only ledger；worklist/readiness 已把重复 domain-owned typed blocker refs 作为 attention group 去重展示，同时保留 raw item / envelope 审计数量；当前 dynamic worklist 可把 MAS domain-dispatch owner-payload-required workorder 暴露为 operator attention，但这仍是 MAS owner evidence tail，不是 OPL 自闭合或 domain ready；真实 paper/grant/visual owner-chain、memory/artifact/lifecycle receipt 和 repeated no-regression 仍需扩面。 |
 | Docs lifecycle | `current_doc_compacted` | 本文只保留当前真相、当前 gap 和下一步；已闭合 lane、历史 proof 和细节长清单不再作为 active plan 展开。 |
 
 ## 功能/结构差距
@@ -64,7 +64,7 @@ Declarative Domain Pack
 | Provider long SLO | Temporal provider cadence/capability SLO 已有机器读面；读数以 `framework readiness` 和 App drilldown 为准。 | 持续窗口 satisfied，并在真实 domain owner-chain dispatch 中保持 restart re-query、signal history、typed closeout、retry/dead-letter 和 no-forbidden-write proof。 |
 | App long operator evidence | `26.5.19` 同 cohort long operator evidence 已 verified，并使 App user-path evidence ready。 | 后续只需守住同 cohort 规则和 release-owner boundary；不把 user-path evidence ready 写成 App release ready。 |
 | OMA long soak | OMA production-consumption ledger 已观察 verified real long-soak ref。 | 后续只需守住 refs-only intake 和 target-owner authority boundary；不把 OMA ready 写成 family/domain production ready。 |
-| MAS real paper chain | MAS guarded-apply、owner-route、aftercare、default-executor typed blocker payload 可被 OPL record/verify 消费。 | 多条真实 paper line 产生 progress delta、AI reviewer update、artifact delta、human gate、stop-loss、owner receipt 或 stable typed blocker。 |
+| MAS real paper chain | MAS guarded-apply、owner-route、aftercare、default-executor typed blocker payload 可被 OPL record/verify 消费；当前 worklist 会把缺 owner payload refs 的 MAS domain-dispatch route 暴露为 refs-only action surface。 | 多条真实 paper line 产生 progress delta、AI reviewer update、artifact delta、human gate、stop-loss、owner receipt、owner-chain / no-regression refs 或 stable typed blocker。 |
 | MAG grant soak | MAG transition oracle、owner receipt contract、refs-only handoff 边界清晰。 | 真实 OPL-hosted grant-stage attempt 持续返回 grant-owned receipt、typed blocker 或 no-regression evidence。 |
 | RCA visual soak | RCA transition/evidence fixture、refs-only projection 和 visual authority boundary 清晰。 | 真实 artifact-producing owner receipt、visual memory reuse、workspace receipt scaleout 和 repeated no-regression evidence。 |
 | Cross-family regression | MAS/MAG/RCA/OMA structural conformance 与 generated/readiness consumer boundary 可读。 | direct/hosted parity、generated default consumption、legacy no-active-caller、no-forbidden-write 和 release/dist consumption 反复通过。 |
