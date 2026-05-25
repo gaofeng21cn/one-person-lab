@@ -521,6 +521,18 @@ test('agents legacy-cleanup apply records controlled cleanup receipts from the s
       throw new Error('Expected lifecycle apply to return a batch receipt ref.');
     }
 
+    const duplicateApply = runFamilyAgentLegacyCleanupApply(contracts, [
+      '--domain',
+      'mag',
+      '--mode',
+      'apply',
+      '--source-ref',
+      'mag://legacy-cleanup/physical-gate',
+    ], { domainManifests });
+    const duplicateLifecycleApply = duplicateApply.family_agent_legacy_cleanup_apply
+      .lifecycle_apply as JsonRecord;
+    assert.equal(duplicateLifecycleApply.receipt_ref, applyReceiptRef);
+
     const verified = runFamilyAgentLegacyCleanupApply(contracts, [
       '--domain',
       'mag',
@@ -537,6 +549,17 @@ test('agents legacy-cleanup apply records controlled cleanup receipts from the s
       verifiedSummary.verified_receipt_count,
       1,
     );
+
+    const verifiedAll = runFamilyAgentLegacyCleanupApply(contracts, [
+      '--domain',
+      'mag',
+      '--mode',
+      'verify',
+    ], { domainManifests });
+    const verifiedAllLifecycleApply = verifiedAll.family_agent_legacy_cleanup_apply
+      .lifecycle_apply as JsonRecord;
+    const verifiedAllSummary = verifiedAllLifecycleApply.summary as JsonRecord;
+    assert.equal(verifiedAllSummary.verified_receipt_count, 3);
   } finally {
     if (previous === undefined) {
       delete process.env.OPL_STATE_DIR;

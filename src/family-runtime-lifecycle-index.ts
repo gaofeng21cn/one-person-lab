@@ -742,7 +742,14 @@ function lifecycleApplyReceiptRef(input: {
   sourceRef: string;
   actionId: string;
   targetRef: string;
-  createdAt: string;
+  actionKind: string;
+  ownerScope: string;
+  manifestRef: string | null;
+  restoreProofRefs: string[];
+  domainArtifactMutationReceiptRefs: string[];
+  domainOwnerHandoffReceiptRefs: string[];
+  noActiveCallerRefs: string[];
+  replacementParityRefs: string[];
 }) {
   const digest = sha256(input).slice(0, 24);
   return `opl://family-runtime/lifecycle-apply/${input.targetDomainId}/${input.actionId}/${digest}`;
@@ -773,7 +780,14 @@ function decideLifecycleAction(
     sourceRef: input.sourceRef,
     actionId: action.action_id,
     targetRef: action.target_ref,
-    createdAt: input.createdAt,
+    actionKind: action.action_kind,
+    ownerScope: action.owner_scope,
+    manifestRef: action.manifest_ref ?? input.manifestRef,
+    restoreProofRefs: action.restore_proof_refs,
+    domainArtifactMutationReceiptRefs: action.domain_artifact_mutation_receipt_refs,
+    domainOwnerHandoffReceiptRefs: action.domain_owner_handoff_receipt_refs,
+    noActiveCallerRefs: action.no_active_caller_refs,
+    replacementParityRefs: action.replacement_parity_refs,
   });
 
   if (forbiddenScope || (!safeOplScope && !domainReceiptScope)) {
@@ -1093,7 +1107,6 @@ export function runFamilyRuntimeLifecycleApply(input: LifecycleApplyInput) {
     targetDomainId,
     sourceRef,
     manifestRef,
-    createdAt,
     actions,
   }).slice(0, 24)}`;
 
