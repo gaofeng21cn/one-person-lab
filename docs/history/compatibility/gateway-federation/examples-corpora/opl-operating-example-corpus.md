@@ -1,8 +1,13 @@
 # OPL Operating Example Corpus
 
+Owner: `One Person Lab`
+Purpose: `legacy_operating_example_corpus_provenance`
+State: `history_only`
+Machine boundary: 本文只保存旧 gateway-derived operating examples 的人读 provenance。当前仓库不再发布这组 examples 的 active machine-readable artifact；当前机器真相继续归 active contracts、source、CLI/API 行为、runtime ledger、provider receipts 与 domain-owned manifests / receipts。本文不得作为 active operating contract、workflow runtime、truth surface、test oracle 或 compatibility interface。
+
 ## 目的
 
-这份文档索引已冻结 `P5.M1` 与 `P5.M2` operating surface 的 canonical machine-readable operating-record examples。
+这份文档历史上索引已冻结 `P5.M1` 与 `P5.M2` operating surface 的 canonical machine-readable operating-record examples。
 
 它的目标是：在不把 example 误读成 workflow runtime 或 truth surface 的前提下，让顶层 governance、review-index、publish-readiness、publish-outcome 与 promotion-surface record 更容易被检查。
 

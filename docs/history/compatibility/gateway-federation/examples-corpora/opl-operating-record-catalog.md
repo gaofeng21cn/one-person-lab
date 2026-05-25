@@ -1,14 +1,15 @@
 # OPL Operating Record Catalog
 
+Owner: `One Person Lab`
+Purpose: `legacy_operating_record_catalog_provenance`
+State: `history_only`
+Machine boundary: 本文只保存旧 operating record catalog 的人读 provenance。当前仓库没有发布 `operating-record-catalog.json` 机器可读合同；当前机器真相继续归 active contracts、source、CLI/API 行为、runtime ledger、provider receipts 与 domain-owned manifests / receipts。本文不得作为 active catalog contract、runtime manifest、truth surface、test oracle 或 compatibility interface。
+
 ## 目的
 
-这份文档索引已冻结 `P5.M1` / `P5.M2` 顶层 operating record kind 的 machine-readable catalog。
+这份文档历史上索引已冻结 `P5.M1` / `P5.M2` 顶层 operating record kind 的 machine-readable catalog。
 
 它的作用是：在不把 catalog 升格成 runtime manifest 或第二真相源的前提下，把 operating-stage 语义、schema ownership、canonical example ref 与 follow-on routing boundary 集中暴露出来。
-
-## Machine Boundary
-
-当前仓库没有发布 `operating-record-catalog.json` 机器可读合同。本文只是基于 operating examples 与当前 framework contracts 的人读 derived reference。
 
 ## 非目标
 

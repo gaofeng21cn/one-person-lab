@@ -664,6 +664,53 @@ Next tranche write scope:
 - Continue OPL full docs coverage in a bounded history/reference/support chunk, or pick a domain physical-delete/evidence-tail tranche with repo-native verification before refreshing OPL read-model docs.
 - Keep App delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-25 20:21 CST`
+Tranche: `opl-gateway-federation-history-coverage`
+State: `tranche_verified`
+
+本轮覆盖 OPL `docs/history/compatibility/gateway-federation/**` 的 gateway / federation / routed-action 历史块。目标是把这些旧 gateway-first 文件逐段绑定到 history/provenance/tombstone 语境，避免 `OPL Gateway`、`domain_gateway`、`domain harness`、routed-action、surface matrix 或 old acceptance spec wording 被读成当前 runtime、compatibility interface、machine-readable contract、test oracle、domain-ready 或 production-ready 授权。
+
+Fresh live truth inputs:
+
+- `opl agents conformance --family-defaults --json`
+- `opl framework readiness --family-defaults --json`
+- `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`
+- `docs/history/compatibility/gateway-federation/**/*.md` full text and current lifecycle headers
+
+Fresh read-model result:
+
+- `opl agents conformance` 读为 `passed_count=4`、`blocked_count=0`、`structural_conformance_status=passed`、`production_evidence_tail_count=4`；这只证明 standard-agent structural conformance，不授权 physical delete、domain ready 或 production ready。
+- `framework readiness` 读为 `hard_blocker_count=0`、`operator_actionable_attention_tail_count=0`、`domain_blocked_attention_tail_count=209`、`evidence_envelope_blocked_count=196`。
+- `family-runtime evidence-worklist` 读为 `open_worklist_item_count=0`、`zero_open_worklist_blocked_refs_only_envelope_count=196`、`domain_ready_authorized=false`、`production_ready_authorized=false`。Zero-open worklist 不等于 domain ready、production ready、App release ready、provider maintenance complete 或旧 gateway path 复活。
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | `docs/history/compatibility/gateway-federation/README.md`; `gateway-federation.md`; `opl-federation-contract.md`; `opl-gateway-acceptance-test-spec.md`; `opl-gateway-rollout.md`; `opl-minimal-admitted-domain-federation-activation-package.md`; `opl-read-only-discovery-gateway.md`; `opl-routed-action-gateway.md`; `examples-corpora/README.md`; `examples-corpora/opl-gateway-example-corpus.md`; `examples-corpora/opl-operating-example-corpus.md`; `examples-corpora/opl-operating-record-catalog.md`; `examples-corpora/opl-routed-safety-example-corpus.md`; `operating-governance/README.md`; `operating-governance/opl-governance-audit-operating-surface.md`; `operating-governance/opl-publish-promotion-operating-surface.md`; `operating-governance/opl-surface-authority-matrix.md`; `operating-governance/opl-surface-lifecycle-map.md`; `operating-governance/opl-surface-review-matrix.md` | `docs/history/compatibility/gateway-federation/README.md`; `gateway-federation.md`; `opl-federation-contract.md`; `opl-gateway-acceptance-test-spec.md`; `opl-gateway-rollout.md`; `opl-minimal-admitted-domain-federation-activation-package.md`; `opl-read-only-discovery-gateway.md`; `opl-routed-action-gateway.md`; `examples-corpora/opl-gateway-example-corpus.md`; `examples-corpora/opl-operating-example-corpus.md`; `examples-corpora/opl-operating-record-catalog.md`; `examples-corpora/opl-routed-safety-example-corpus.md`; `operating-governance/opl-governance-audit-operating-surface.md`; `operating-governance/opl-publish-promotion-operating-surface.md`; `operating-governance/opl-surface-authority-matrix.md`; `operating-governance/opl-surface-lifecycle-map.md`; `operating-governance/opl-surface-review-matrix.md`; this coverage ledger |
+
+Archived / tombstoned / deleted docs:
+
+- none physically moved or deleted. The whole covered subtree now carries history-only / provenance / tombstone boundaries, and the two directory README files already held compatible history-only directory-level boundaries.
+
+Unreviewed docs:
+
+- OPL full README/docs coverage remains open outside this bounded subtree, especially other `docs/history/**`, `docs/references/**`, `docs/runtime/**`, `docs/product/**`, `docs/source/**`, `docs/delivery/**`, `docs/public/**`, `docs/specs/**` and long support bodies not listed above.
+- MAS paragraph-level semantic coverage remains open, especially product/status/workbench, owner-route handoff, progress/domain-ref projection, controller shell, non-history body wording and generated/default-caller replacement boundaries.
+- App docs remain delayed until active release/GUI worktrees close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+- Future changes in OMA/MAG/RCA can reopen coverage even though their recorded scopes were previously closed.
+
+Remaining stale / retire candidates:
+
+- OPL remaining history/reference/support body coverage still needs chunked paragraph governance; no other old gateway/frontdoor/federation language should be promoted to current truth without live source/contract/read-model proof.
+- MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
+- App release-ready / production-ready remains separate from already observed App user-path evidence and is still owned by active release/GUI lanes.
+
+Next tranche write scope:
+
+- Continue OPL full docs coverage in another bounded history/reference/support chunk, or switch to MAS non-history paragraph reconciliation.
+- Keep App delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：

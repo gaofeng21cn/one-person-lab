@@ -1,5 +1,10 @@
 # OPL Federation Contract
 
+Owner: `One Person Lab`
+Purpose: `legacy_federation_contract_provenance`
+State: `history_only`
+Machine boundary: 本文只保存 gateway-first `G1` federation contract 的历史冻结件。当前机器真相继续归 active contracts、source、CLI/API 行为、runtime ledger、provider receipts、domain-owned manifests / receipts 与 App/workbench projection；本文不得作为 active contract、compatibility interface、runtime route owner 或 test oracle。
+
 > 历史说明（`2026-04-24`）：这份文档保留的是 gateway-first 阶段的旧冻结件。当前 `OPL` 主线已经收口为 `Codex-default session/runtime + explicit activation layer + family skill sync/discovery`。不要把这份文件当成默认实现依据；当前真相请回到 [项目概览](../../../project.md)、[当前状态](../../../status.md)、[架构](../../../architecture.md)、[关键决策](../../../decisions.md) 与 [合同目录说明](../../../../contracts/README.md)。
 
 ## 目的

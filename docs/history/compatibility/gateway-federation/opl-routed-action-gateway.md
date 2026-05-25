@@ -1,5 +1,10 @@
 # OPL Routed Action Gateway
 
+Owner: `One Person Lab`
+Purpose: `legacy_routed_action_gateway_provenance`
+State: `history_only`
+Machine boundary: 本文只保存 gateway-first routed-action planning contract 的历史冻结件。当前机器真相继续归 active contracts、source、CLI/API 行为、runtime ledger、provider receipts、domain-owned manifests / receipts 与 App/workbench projection；本文不得作为 active mutation entry、launcher、compatibility interface、machine contract 或 test oracle。
+
 > 历史说明（`2026-04-24`）：这份文档保留的是 gateway-first 阶段 planning-only 的 routed-action 冻结件。当前 `OPL` 不再把它当作默认 runtime/activation 合同。
 > 当前入口真相：活跃工作从 `Codex-default session/runtime -> explicit OPL activation -> selected domain agent entry` 进入。下文 `OPL Gateway`、`domain_gateway` 或 `domain harness` 都是旧兼容词汇，不是 `MAS`、`MAG`、`RCA` 当前对外第一主语。
 

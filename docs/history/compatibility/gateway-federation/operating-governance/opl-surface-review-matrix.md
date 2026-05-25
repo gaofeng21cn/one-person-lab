@@ -1,8 +1,9 @@
 # OPL Surface Review Matrix
 
-State: `support_reference_legacy_derived`
-Current owner: `docs/references/operating-governance/README.md`
-Machine boundary: 仅作为 legacy-derived 人读参考；当前仓库没有发布 `surface-review-matrix.json` 机器可读合同。
+Owner: `One Person Lab`
+Purpose: `legacy_surface_review_matrix_provenance`
+State: `history_only`
+Machine boundary: 本文只保存旧 surface review matrix 的人读 provenance。当前仓库没有发布 `surface-review-matrix.json` 机器可读合同；当前机器真相继续归 active contracts、source、CLI/API 行为、runtime ledger、provider receipts 与 domain-owned manifests / receipts。本文不得作为 approval engine、publish controller、release engine、test oracle 或 compatibility interface。
 
 ## 目的
 

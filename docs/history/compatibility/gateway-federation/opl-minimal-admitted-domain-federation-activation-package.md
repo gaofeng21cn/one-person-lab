@@ -1,8 +1,13 @@
 # OPL Minimal admitted-domain federation activation package
 
+Owner: `One Person Lab`
+Purpose: `legacy_minimal_admitted_domain_activation_package_provenance`
+State: `history_only`
+Machine boundary: 本文只保存旧 admitted-domain federation activation package 的历史记录。当前机器真相继续归 active contracts、source、CLI/API 行为、runtime ledger、provider receipts、domain-owned manifests / receipts 与 App/workbench projection；本文不得作为 active activation package、domain admission authority、runtime owner、compatibility interface 或 readiness gate。
+
 ## 目的
 
-这份 reference-grade package 用来冻结在先前 `Phase 1 exit activation package` 之后、当前最小且诚实的 follow-on。
+这份 reference-grade package 历史上用来冻结在先前 `Phase 1 exit activation package` 之后、当时最小且诚实的 follow-on。
 
 它现在可以被激活，是因为 `2026-04-08` 的 repo-tracked 四仓同步面已经显示：至少两个 admitted domain surface 终于稳定到足以支撑更强的顶层 federation 表达：
 

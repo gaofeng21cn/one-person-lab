@@ -2,6 +2,9 @@
 
 Status: `retired`
 Owner: `One Person Lab`
+Purpose: `legacy_gateway_federation_tombstone`
+State: `history_only`
+Machine boundary: 本目录只保存旧 gateway / federation / routed-action 路线的人读 provenance 与 tombstone。当前机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipts、domain-owned manifests / receipts 与 App/workbench projection；本文档树不得作为 active runtime、compatibility interface、machine-readable contract、test oracle 或保留旧 alias/facade 的依据。
 
 本目录是早期 `gateway / federation / routed-action` 定位的 tombstone 与归档入口。
 

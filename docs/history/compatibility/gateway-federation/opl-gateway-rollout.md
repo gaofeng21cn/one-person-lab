@@ -1,16 +1,21 @@
 # OPL Gateway 落地路线
 
+Owner: `One Person Lab`
+Purpose: `legacy_gateway_rollout_provenance`
+State: `history_only`
+Machine boundary: 本文只保存 2026-04 gateway-first rollout 路线的人读 provenance。当前机器真相继续归 active contracts、source、CLI/API 行为、runtime ledger、provider receipts、domain-owned manifests / receipts 与 App/workbench projection；本文不得作为当前 rollout plan、active runtime、compatibility interface、machine contract 或 readiness gate。
+
 ## 目的
 
-这份文档说明：`OPL Gateway` 应该如何从“文档优先的公开表面”，逐步推进成“真实入口”，同时又不压扁 domain 边界。
+这份文档历史上说明：`OPL Gateway` 应该如何从“文档优先的公开表面”，逐步推进成“真实入口”，同时又不压扁 domain 边界。
 状态锚点：`2026-04-08`。
 
-目标不是单体 runtime。
-目标是一个能把任务路由到独立 domain system 的真实顶层 gateway。
+历史目标不是单体 runtime。
+历史目标是一个能把任务路由到独立 domain system 的真实顶层 gateway；当前目标拓扑以 stage-led OPL framework、provider-backed runtime、显式 activation 与 selected domain agent entry 为准。
 
 ## 目标形态
 
-长期控制链保持不变：
+历史 gateway-first 控制链曾写作：
 
 ```text
 Human / Agent

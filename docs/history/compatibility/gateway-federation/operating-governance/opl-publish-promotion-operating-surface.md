@@ -1,12 +1,13 @@
 # OPL Publish / Promotion Operating Surface
 
-State: `support_reference_legacy_derived`
-Current owner: `docs/references/operating-governance/README.md`
-Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、schemas、source、CLI/API 行为、生成产物或语义化 `human_doc:*` id。
+Owner: `One Person Lab`
+Purpose: `legacy_publish_promotion_operating_surface_provenance`
+State: `history_only`
+Machine boundary: 本文只保存旧 gateway-derived publish / promotion operating surface 的人读 provenance。当前机器真相继续归 active contracts、schemas、source、CLI/API 行为、runtime ledger、provider receipts、domain-owned manifests / receipts、生成产物或语义化 `human_doc:*` id；本文不得作为 active operating contract、publish runtime、promotion authority、test oracle 或 compatibility interface。
 
 ## 目的
 
-这份文档冻结 `OPL` 顶层最小化的 publish / promotion operating surface。
+这份文档历史上冻结 `OPL` 顶层最小化的 publish / promotion operating surface。
 
 它的目标是定义：在 domain-owned publish gate 与 domain-owned release / export / submission outcome 已经存在之后，`OPL` 在顶层还能合法索引哪些 publish / promotion record。
 

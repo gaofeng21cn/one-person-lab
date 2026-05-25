@@ -1,10 +1,15 @@
 # OPL Gateway 契约面
 
+Owner: `One Person Lab`
+Purpose: `legacy_read_only_discovery_gateway_provenance`
+State: `history_only`
+Machine boundary: 本文只保存 gateway-first `G2` 只读 discovery 契约面历史。当前机器真相继续归 active contracts、source、CLI/API 行为、runtime ledger、provider receipts、domain-owned manifests / receipts 与 App/workbench projection；本文不得作为 active discovery API、compatibility interface、machine contract 或 test oracle。
+
 ## 目的
 
-这份文档冻结 `OPL Gateway` 的 `G2` 目标。
+这份文档历史上冻结 `OPL Gateway` 的 `G2` 目标。
 
-`G2` 是 `OPL` 第一次成为真实入口表面，但仅限于只读 discovery。
+`G2` 当时被定义为 `OPL` 第一次成为真实入口表面，但仅限于只读 discovery。
 截至 `2026-04-07`，`OPL` 公开主线仍是 `Phase 1`，且当前仓库已具备可运行的本地 `TypeScript CLI`-first / framework contract baseline；当前重点是把它收口成稳定、单一、repo-tracked 的 `G2 stable public baseline`。
 
 目标不是 mutation domain state。

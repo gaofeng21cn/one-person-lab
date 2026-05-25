@@ -1,6 +1,11 @@
 # OPL Gateway Federation
 
-> 历史说明（`2026-04-24`）：这份文档保留的是 gateway-first 阶段的边界语料。当前 `OPL` 主线已经转成 runtime-first、skill-first；这里只应作为历史或兼容背景阅读。
+Owner: `One Person Lab`
+Purpose: `legacy_gateway_federation_boundary_provenance`
+State: `history_only`
+Machine boundary: 本文只保存 gateway-first 阶段的边界语料。当前 OPL 拓扑是 stage-led、以 Agent executor 为最小执行单位；当前机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipts、domain-owned manifests / receipts 与 App/workbench projection。本文不得作为 active runtime、domain gateway、domain harness、compatibility interface、machine contract 或 test oracle。
+
+> 历史说明（`2026-04-24`）：这份文档保留的是 gateway-first 阶段的边界语料。当前 `OPL` 主线已经转成 stage-led framework；这里只应作为历史 provenance 阅读。
 
 ## 目的
 
@@ -10,14 +15,14 @@
 - 独立 `domain agent` 仓内部的 `domain gateway`
 - 独立 `domain agent` 仓内部的 `domain harness`
 
-它的作用是避免两个常见误判：
+历史上它的作用是避免两个常见误判：
 
 - 把 `OPL` 继续只理解成静态蓝图
 - 把 `OPL` 理解成一个应该吞掉所有 domain 的单体 runtime
 
 ## 核心判断
 
-正确控制链应是：
+历史 gateway-first 控制链曾写作：
 
 ```text
 Human / Agent
@@ -29,7 +34,7 @@ Human / Agent
 `OPL` 掌握顶层产品语言和路由语义。
 每个独立 `domain agent` 仓掌握自己的正式执行与交付面。
 
-在当前定位下，更准确的公开主语是：
+在当前 OPL 定位下，更准确的公开主语是：
 
 - `OPL`：family-level session/runtime/projection 与 shared modules/contracts/indexes
 - `MAS`、`MAG`、`RCA`：独立 `domain agent`
@@ -56,8 +61,8 @@ Human / Agent
 - 提供 domain-specific 的 review 与 delivery 语义
 - 在需要时支持独立使用
 
-这也是为什么即使有 `OPL`，domain gateway 仍必须保留。
-它是 `domain agent` 仓内部的稳定边界层，不是已经过时的历史残留。
+这也是为什么当时即使有 `OPL`，仍要求 domain gateway 保留。
+当前 domain repo 的稳定入口、handler、authority refs 与 generated/default-caller 边界以各 repo 的 live source、contracts、tests 与 OPL domain admission / runtime boundary 文档为准，不由本文保留旧 `domain gateway` 兼容面。
 
 ## Domain Harness 的职责
 

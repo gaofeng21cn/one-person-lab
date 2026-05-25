@@ -1,8 +1,13 @@
 # OPL Gateway Acceptance Test Spec
 
+Owner: `One Person Lab`
+Purpose: `legacy_gateway_acceptance_spec_provenance`
+State: `history_only`
+Machine boundary: 本文只保存 gateway-first acceptance / test-spec 历史。当前测试与机器真相继续归 active contracts、source、CLI/API 行为、runtime ledger、provider receipts、domain-owned manifests / receipts、repo-native tests 与 App/workbench projection；本文不得作为 active test oracle、runtime verification gate、compatibility interface 或 machine contract。
+
 ## 目的
 
-这份文档冻结当前 `OPL Gateway` 文档/合同体系的 acceptance / test-spec。
+这份文档历史上冻结 `OPL Gateway` 文档/合同体系的 acceptance / test-spec。
 
 它的作用是：让 gateway 的推进变成“可检查”，而不是每次都重新解释一遍架构。
 

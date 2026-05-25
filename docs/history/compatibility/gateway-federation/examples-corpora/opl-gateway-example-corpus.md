@@ -1,8 +1,9 @@
 # OPL Gateway Example Corpus
 
-State: `support_reference_legacy_derived`
-Current owner: `docs/references/README.md`
-Machine boundary: 只作为 legacy/provenance 人读配套。当前仓库不再发布这组 corpus 的 active `examples/opl-framework/*.json` artifact。
+Owner: `One Person Lab`
+Purpose: `legacy_gateway_example_corpus_provenance`
+State: `history_only`
+Machine boundary: 本文只作为 legacy/provenance 人读配套。当前仓库不再发布这组 corpus 的 active `examples/opl-framework/*.json` artifact；当前机器真相继续归 active contracts、source、CLI/API 行为、runtime ledger、provider receipts 与 domain-owned manifests / receipts。本文不得作为 active examples contract、test oracle 或 compatibility interface。
 
 ## 目的
 
