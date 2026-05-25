@@ -270,7 +270,7 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
     const taskId = enqueue.family_runtime_enqueue.task.task_id;
 
     const result = await worker.runUntil(async () => {
-      const result = await runFamilyRuntime(['tick', '--source', 'test']) as {
+      const result = await runFamilyRuntime(['tick', '--source', 'test']) as unknown as {
         family_runtime_tick: {
           dispatches: Array<{
             status: string;
@@ -441,7 +441,7 @@ test('family-runtime queue inspect syncs a completed MAS default executor Tempor
     const taskId = enqueue.family_runtime_enqueue.task.task_id;
 
     const result = await worker.runUntil(async () => {
-      const result = await runFamilyRuntime(['tick', '--source', 'test']) as {
+      const result = await runFamilyRuntime(['tick', '--source', 'test']) as unknown as {
         family_runtime_tick: {
           dispatches: Array<{
             status: string;

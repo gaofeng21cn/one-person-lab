@@ -88,7 +88,7 @@ function dropSupersededMasDefaultExecutorRows(
   return { rows, supersededCount };
 }
 
-export async function runFamilyRuntimeQueueTick(
+export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
   db: DatabaseSync,
   paths: ReturnType<typeof familyRuntimePaths>,
   input: {
@@ -104,7 +104,7 @@ export async function runFamilyRuntimeQueueTick(
       db: DatabaseSync,
       paths: ReturnType<typeof familyRuntimePaths>,
       row: FamilyRuntimeTaskRow,
-    ) => unknown | Promise<unknown>;
+    ) => TDispatch | Promise<TDispatch>;
   },
 ) {
   const hydration = input.hydrate
