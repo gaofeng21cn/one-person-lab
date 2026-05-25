@@ -18,6 +18,7 @@ import {
 const PROVIDER_TRANSPORT_REDRIVE_REASONS = [
   'temporal_stage_attempt_start_failed',
   'temporal_stage_attempt_not_completed',
+  'temporal_stage_attempt_failed',
 ] as const;
 
 type ProviderTransportRedriveReason = typeof PROVIDER_TRANSPORT_REDRIVE_REASONS[number];

@@ -1,4 +1,5 @@
 import './family-runtime-provider-hosted-attempts-cases/mas-default-executor.ts';
+import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-redrive.ts';
 
 import {
   assert,
