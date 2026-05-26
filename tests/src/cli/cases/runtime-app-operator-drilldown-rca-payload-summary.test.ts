@@ -182,6 +182,25 @@ test('runtime App drilldown exposes RCA owner payload summaries as refs-only gui
   assert.equal(summary.summary.domain_owner_payload_summary_stage_count, 1);
   assert.equal(summary.summary.domain_owner_payload_summary_domain_ready_claim_count, 0);
   assert.equal(summary.summary.domain_owner_payload_summary_production_ready_claim_count, 0);
+  const summaryAttention = summary.attention_first_payload.evidence_after_contract
+    .domain_owner_payload_summary_attention;
+  assert.equal(summaryAttention.surface_kind, 'opl_domain_owner_payload_summary_attention');
+  assert.equal(summaryAttention.projection_policy, 'bounded_refs_only_payload_summary_guidance_no_record_route');
+  assert.equal(summaryAttention.domain_count, 1);
+  assert.equal(summaryAttention.owner_payload_work_item_count, 2);
+  assert.equal(summaryAttention.stage_expected_receipt_payload_stage_count, 1);
+  assert.equal(summaryAttention.owner_payload_domains[0].domain_id, 'redcube');
+  assert.equal(summaryAttention.owner_payload_domains[0].owner, 'redcube_ai');
+  assert.equal(summaryAttention.owner_payload_domains[0].owner_payload_work_item_count, 2);
+  assert.equal(summaryAttention.owner_payload_domains[0].stage_expected_receipt_payload_stage_count, 1);
+  assert.equal(summaryAttention.owner_payload_domains[0].full_detail_section, 'domain_owner_payload_summary_refs');
+  assert.equal(summaryAttention.owner_payload_domains[0].copyable_runtime_action_execute_commands, undefined);
+  assert.equal(summaryAttention.payload_body_allowed_count, 0);
+  assert.equal(summaryAttention.domain_ready_claim_count, 0);
+  assert.equal(summaryAttention.production_ready_claim_count, 0);
+  assert.equal(summaryAttention.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(summaryAttention.authority_boundary.can_generate_typed_blocker, false);
+  assert.equal(summaryAttention.authority_boundary.can_claim_production_ready, false);
 
   const full = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
     .app_operator_drilldown;
@@ -221,5 +240,28 @@ test('runtime App drilldown exposes RCA owner payload summaries as refs-only gui
   assert.equal(
     rca.stage_expected_receipt_payload_summary.stages[0].authority_boundary.can_claim_domain_ready,
     false,
+  );
+
+  const readiness = runCli(['framework', 'readiness', '--family-defaults'], env)
+    .framework_readiness;
+  const readinessAttention = readiness.attention_first_payload.domain_owner_payload_summary_attention;
+  assert.equal(readinessAttention.surface_kind, 'opl_domain_owner_payload_summary_attention');
+  assert.equal(readinessAttention.source_command, 'opl runtime app-operator-drilldown --json');
+  assert.equal(readinessAttention.domain_count, 1);
+  assert.equal(readinessAttention.owner_payload_work_item_count, 2);
+  assert.equal(readinessAttention.stage_expected_receipt_payload_stage_count, 1);
+  assert.deepEqual(
+    readinessAttention.owner_payload_domains.map((domain: { domain_id: string }) => domain.domain_id),
+    ['redcube'],
+  );
+  assert.equal(readinessAttention.owner_payload_domains[0].copyable_runtime_action_execute_commands, undefined);
+  assert.equal(readinessAttention.authority_boundary.can_write_domain_truth, false);
+  assert.equal(readinessAttention.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(readinessAttention.authority_boundary.can_generate_typed_blocker, false);
+  assert.equal(readinessAttention.authority_boundary.can_claim_domain_ready, false);
+  assert.equal(readinessAttention.authority_boundary.can_claim_production_ready, false);
+  assert.equal(
+    readiness.domain_owner_payload_summary_attention.owner_payload_work_item_count,
+    readinessAttention.owner_payload_work_item_count,
   );
 });

@@ -17,6 +17,9 @@ import {
 import {
   codexAppRuntimeEvidenceNextStep,
 } from './codex-app-runtime-role.ts';
+import {
+  buildDomainOwnerPayloadSummaryAttention,
+} from './domain-owner-payload-summary-attention.ts';
 import { buildMemoryArtifactLifecycleEvidence } from './memory-artifact-lifecycle-evidence.ts';
 import { functionalPrivatizationNextSteps } from './functional-privatization-next-step.ts';
 import { summarizeSelectedSafeAction } from './selected-safe-action.ts';
@@ -409,6 +412,8 @@ function providerHealth(drilldown: JsonRecord) {
 function evidenceAfterContractAttention(drilldown: JsonRecord) {
   const summary = record(drilldown.summary);
   const ownerPayloadGroups = ownerPayloadAttentionGroups(drilldown);
+  const domainOwnerPayloadSummary =
+    buildDomainOwnerPayloadSummaryAttention(drilldown);
   const domainDispatchWorkorders = domainDispatchEvidenceWorkorders(drilldown);
   const omaProductionConsumption =
     buildOmaProductionConsumptionFollowthroughAttention(drilldown);
@@ -473,6 +478,7 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
     owner_payload_group_attention_policy:
       'top_owner_payload_groups_by_open_then_blocked_counts_refs_only',
     owner_payload_groups: ownerPayloadGroups.items,
+    domain_owner_payload_summary_attention: domainOwnerPayloadSummary,
     owner_handoff_packet: ownerHandoffPacket,
     memory_artifact_lifecycle_evidence: buildMemoryArtifactLifecycleEvidence(drilldown),
     app_release_user_path_evidence: appReleaseUserPathEvidence,

@@ -35,6 +35,7 @@ export function frameworkAttentionFirstPayload(input: {
   ownerPayloadGroupAttentionCount: number;
   ownerPayloadGroupAttentionOmittedCount: number;
   ownerPayloadGroups: JsonRecord[];
+  domainOwnerPayloadSummaryAttention: JsonRecord;
   ownerHandoffPacket: JsonRecord;
   memoryArtifactLifecycleEvidence: JsonRecord;
   appReleaseUserPathEvidence: JsonRecord;
@@ -192,6 +193,10 @@ export function frameworkAttentionFirstPayload(input: {
     owner_payload_group_attention_count: input.ownerPayloadGroupAttentionCount,
     owner_payload_group_attention_omitted_count: input.ownerPayloadGroupAttentionOmittedCount,
     owner_payload_groups: input.ownerPayloadGroups,
+    domain_owner_payload_summary_attention: {
+      source_command: SOURCE_COMMANDS.app_operator_drilldown,
+      ...input.domainOwnerPayloadSummaryAttention,
+    },
     owner_handoff_packet: input.ownerHandoffPacket,
     memory_artifact_lifecycle_evidence: input.memoryArtifactLifecycleEvidence,
     app_release_user_path_evidence:

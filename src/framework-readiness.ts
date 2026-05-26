@@ -293,6 +293,8 @@ export async function buildFrameworkReadinessSummary(
   });
   const appEvidenceAfterContract = record(record(appOperatorDrilldown.attention_first_payload).evidence_after_contract);
   const ownerPayloadGroups = recordList(appEvidenceAfterContract.owner_payload_groups);
+  const domainOwnerPayloadSummaryAttention =
+    record(appEvidenceAfterContract.domain_owner_payload_summary_attention);
   const ownerHandoffPacket = record(appEvidenceAfterContract.owner_handoff_packet);
   const memoryArtifactLifecycleEvidence = record(
     appEvidenceAfterContract.memory_artifact_lifecycle_evidence,
@@ -474,6 +476,7 @@ export async function buildFrameworkReadinessSummary(
         ownerPayloadGroupAttentionCount,
         ownerPayloadGroupAttentionOmittedCount,
         ownerPayloadGroups,
+        domainOwnerPayloadSummaryAttention,
         ownerHandoffPacket,
         memoryArtifactLifecycleEvidence,
         appReleaseUserPathEvidence,
@@ -755,6 +758,10 @@ export async function buildFrameworkReadinessSummary(
       owner_handoff_packet: {
         source_command: SOURCE_COMMANDS.app_operator_drilldown,
         ...ownerHandoffPacket,
+      },
+      domain_owner_payload_summary_attention: {
+        source_command: SOURCE_COMMANDS.app_operator_drilldown,
+        ...domainOwnerPayloadSummaryAttention,
       },
       app_release_user_path_evidence: {
         source_command: SOURCE_COMMANDS.app_operator_drilldown,
