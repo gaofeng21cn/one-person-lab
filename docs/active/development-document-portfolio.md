@@ -4021,6 +4021,63 @@ Next tranche write scope:
 - Separately route the pre-existing `workspace cockpit` / `product direct-entry` CLI test drift to a source/test owner lane.
 - Or choose RCA uncovered reference bodies, OPL uncovered docs, or App docs once their main checkout and active worktrees are safe.
 
+Date: `2026-05-26 16:10 CST`
+Tranche: `mag-20260412-hosted-opl-handoff-fast-cutover-history-specs-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAG `docs/history/specs/` 下 2026-04-12 hosted caller consumption、hosted contract bundle / route catalog、lightweight product-entry / OPL handoff、OPL-aligned phase map 与 upstream Hermes fast-cutover 历史 specs。目标是确认这些 direct-file 历史入口不会把旧 hosted caller proof、hosted bundle export、`direct` / `opl-handoff` envelope、P1-P4 phase map、Hermes fast-cutover、`runtime-run` / `runtime-resume`、SessionDB attempt durability、`probe-upstream-hermes` 或 future `OPL Gateway` 语义误读成当前 default runtime owner、actual hosted runtime、active public/domain command catalog、App/workbench readiness、production/default caller completion、grant/submission readiness、physical-delete authority 或 compatibility interface。
+
+Fresh live truth inputs:
+
+- MAG `AGENTS.md`, `TASTE.md`, core docs, `docs/active/mag-ideal-state-cross-repo-gap-plan.md`, `docs/specs/README.md`, `docs/specs/specs_lifecycle_map.md`, `docs/history/specs/README.md`, and MAG `docs/docs_portfolio_consolidation.md`.
+- Reviewed history specs: `docs/history/specs/2026-04-12-hosted-caller-consumption-proof-current-truth.md`, `docs/history/specs/2026-04-12-hosted-contract-bundle-entry-and-route-catalog-current-truth.md`, `docs/history/specs/2026-04-12-lightweight-product-entry-and-opl-handoff-current-truth.md`, `docs/history/specs/2026-04-12-opl-aligned-ideal-target-and-phase-map-current-truth.md`, `docs/history/specs/2026-04-12-upstream-hermes-agent-fast-cutover-board.md`, and `docs/history/specs/2026-04-12-upstream-hermes-agent-fast-cutover-current-truth.md`.
+- MAG machine/source truth surfaces: `contracts/runtime-program/current-program.json`, `src/med_autogrant/domain_entry.py`, `src/med_autogrant/domain_entry_contract.py`, `src/med_autogrant/domain_runtime_parts/contracts.py`, `src/med_autogrant/hosted_contract_bundle.py`, `src/med_autogrant/public_cli.py`, `tests/test_domain_entry.py`, `tests/test_hosted_contract_bundle.py`, `tests/test_program_control_surfaces.py`, active specs listed by `docs/specs/README.md`, schemas/source/CLI/API behavior.
+- Fresh read-model probe: clean Python import of `SERVICE_SAFE_DOMAIN_COMMANDS`, `build_domain_entry_contract()` and `build_hosted_authoring_contract()`.
+
+Fresh semantic result:
+
+- All six reviewed files already carried first-screen lifecycle notes plus `Owner` / `Purpose` / `State` / `Machine boundary`.
+- All six files needed small post-2026-05 reading guards because their bodies still contain high-risk direct-file wording: hosted caller proof completed, hosted contract bundle route catalog, `direct` / `opl-handoff`, P1/P3 completed, Hermes substrate cutover, `runtime-run` / `runtime-resume`, `probe-upstream-hermes`, SessionDB attempt durability and future `OPL Gateway`.
+- `contracts/runtime-program/current-program.json` still states `default_task_runtime_owner=one-person-lab`, `default_runtime_substrate=temporal`, `default_stage_executor=codex_cli`, `optional_hosted_carriers=["hermes_agent"]`, `mag_implements_daemon=false`, `mag_implements_scheduler=false`, `mag_implements_attempt_loop=false`, and `mag_owns_attempt_ledger=false`.
+- Fresh command-catalog probe found `SERVICE_SAFE_DOMAIN_COMMANDS` and `domain_entry_contract.supported_commands` both contain 30 current commands. `run-local`, `runtime-run`, `runtime-resume` and `probe-upstream-hermes` are absent from both active domain-entry and grouped public CLI catalogs.
+- Fresh hosted authoring contract probe returned the current route id set `direction_screening`, `question_refinement`, `argument_building`, `fit_alignment`, `outline`, `drafting`, `critique`, `revision`, `frozen`, `artifact_bundle`, `final_package`, `hosted_contract_bundle`; historical early landed / pending route splits in these files remain 2026-04-12 snapshots and must not override current source/contracts/tests.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autogrant` | Full paragraph read of the six 2026-04-12 hosted / OPL handoff / fast-cutover history specs listed above; support read of history specs index, specs lifecycle map, active gap plan, current-program runtime owner fields, domain-entry contract source, hosted authoring contract source, hosted bundle source and retired command no-resurrection surfaces. | `docs/docs_portfolio_consolidation.md`; `docs/history/specs/2026-04-12-hosted-caller-consumption-proof-current-truth.md`; `docs/history/specs/2026-04-12-hosted-contract-bundle-entry-and-route-catalog-current-truth.md`; `docs/history/specs/2026-04-12-lightweight-product-entry-and-opl-handoff-current-truth.md`; `docs/history/specs/2026-04-12-opl-aligned-ideal-target-and-phase-map-current-truth.md`; `docs/history/specs/2026-04-12-upstream-hermes-agent-fast-cutover-board.md`; `docs/history/specs/2026-04-12-upstream-hermes-agent-fast-cutover-current-truth.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. These six MAG files remain useful history provenance; no body move, tombstone, or delete was required.
+
+Unreviewed docs:
+
+- `med-autogrant`: remaining `docs/history/specs/*.md` files outside recorded batches remain open for paragraph-level governance, including `2026-04-12-author-side-executor-routing-contract-current-truth.md`, `2026-04-12-critique-pending-handoff-contract-current-truth.md`, `2026-04-12-pending-authoring-route-handoff-matrix-current-truth.md`, `2026-04-13-hermes-native-critique-proof-tombstone.md`, and the large 2026-04-10 final-package artifact-bundle fail-closed family not yet covered by a focused tranche.
+- MAG non-index references such as grant strategy memory policy, OPL family contract adoption and governance checklist still need paragraph-level checks against current contracts/source unless already covered by a later MAG or OPL ledger entry.
+- OPL, MAS, RCA and App repo-wide coverage remains open outside recorded chunks. OMA is covered by its earlier full README/docs tranche.
+
+Remaining stale / retire candidates:
+
+- Any future direct-file use of these 2026-04-12 specs as current runtime owner, default provider, Hermes default route, public `runtime-run` / `runtime-resume`, `probe-upstream-hermes`, local run journal, attempt ledger, hosted runtime readiness, App/release readiness, production readiness, physical-delete authority or active implementation queue is stale pollution.
+- Historical `P1` / `P2` / `P3` completed and P4.A/B/C landed wording must remain proof / contract-consumption / product-entry snapshot vocabulary. It must not be upgraded to domain-ready, production-ready, grant-ready, submission-ready, App/workbench ready or physical-delete-ready.
+- Historical early route splits and supported-command lists must not override current service-safe command catalog, grouped public CLI or current route catalog. Retired runtime commands have no current grouped public command and must remain retired.
+- `direct` / `opl-handoff` vocabulary in these files remains historical product-entry handoff shape. It is not a compatibility interface, production hosted caller, App release gate or external default-caller completion claim.
+
+Verification / absorb:
+
+- MAG docs check passed: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`.
+- OPL ledger docs check passed: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`.
+- MAG focused tests passed: `tests/test_domain_entry.py`, `tests/test_hosted_contract_bundle.py`, and `tests/test_program_control_surfaces.py` returned 39 pytest cases plus 34 subtests passed.
+
+Next tranche write scope:
+
+- Continue MAG `docs/history/specs/*.md` in date/topic batches, prioritizing the remaining 2026-04-12 route/handoff snapshots, 2026-04-13 Hermes-native tombstone, or the large 2026-04-10 final-package artifact-bundle fail-closed family.
+- Separately route the pre-existing `workspace cockpit` / `product direct-entry` CLI test drift to a source/test owner lane.
+- Or choose RCA uncovered reference bodies, OPL uncovered docs, or App docs once their main checkout and active worktrees are safe.
+
 ## 验证
 
 Docs-only 整理：
