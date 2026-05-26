@@ -4367,6 +4367,66 @@ Next tranche write scope:
 - Continue MAG non-index references such as grant strategy memory policy, OPL family contract adoption and governance checklist; or choose RCA uncovered reference bodies, OPL uncovered docs, or App docs once their main checkout and active worktrees are safe.
 - Keep the pre-existing `workspace cockpit` / `product direct-entry` CLI test drift routed to a source/test owner lane, not docs-governance closeout.
 
+Date: `2026-05-26 18:09 CST`
+Tranche: `mag-references-nonindex-coverage`
+State: `tranche_pending_verification_absorb`
+
+本轮覆盖 MAG `docs/references/**` 下剩余非索引支撑文档：grant strategy memory policy、OPL family contract adoption、series doc governance checklist，并复核 references index。目标是关闭上一轮 MAG ledger 中 carry-forward 的 non-index references 缺口，同时校准六仓 OPL series scope、MAG memory authority、OPL projection consumer 和 OMA/App role，不关闭全局 `/goal`。
+
+Fresh live truth inputs:
+
+- MAG `AGENTS.md`, `TASTE.md`, core docs, `docs/active/mag-ideal-state-cross-repo-gap-plan.md`, `docs/references/med-auto-grant-ideal-state.md`, `docs/docs_portfolio_consolidation.md`, and `docs/references/README.md`.
+- MAG reviewed references: `docs/references/grant_strategy_memory_policy.md`, `docs/references/integration/opl-family-contract-adoption.md`, `docs/references/governance/series-doc-governance-checklist.md`, and `docs/references/README.md`.
+- MAG machine/source truth surfaces: `contracts/runtime-program/current-program.json`, `contracts/runtime-program/opl-family-contract-adoption.json`, `contracts/memory_descriptor.json`, `contracts/pack_compiler_input.json`, `contracts/stage_control_plane.json`, product-entry memory / substrate / manifest source surfaces, `tests/test_opl_family_contract_adoption.py`, and product-entry memory / receipt focused tests.
+- OPL support truth: `docs/references/operating-governance/family-domain-memory-governance.md` exists and remains the family-level memory governance reference.
+
+Fresh semantic result:
+
+- MAG grant strategy memory policy already matched current machine truth: memory body and accept/reject authority stay MAG-owned; OPL receives locator / receipt refs only and cannot write memory body or accept/reject writeback.
+- MAG OPL family contract adoption already matched current machine truth: OPL is a family-level projection consumer; MAG keeps grant authoring runtime / route truth, quality/fundability/export authority and submission-ready gate.
+- MAG pack compiler and stage control contracts confirm `agent/` remains the canonical Declarative Grant Pack and six-stage descriptor/projection surface; this is not a new MAG private runtime or App/workbench readiness claim.
+- MAG series governance checklist had stale four-repo wording. It now uses the current six-repo OPL series scope: `one-person-lab`, `one-person-lab-app`, `med-autoscience`, `med-autogrant`, `redcube-ai`, `opl-meta-agent`.
+- The same checklist now states that One Person Lab App is App/workbench and operator projection consumer, and OPL Meta Agent is Agent Foundry / new-agent builder-test managed module, not domain truth, artifact authority or owner receipt authority.
+- MAG references index now links the governance checklist so support references are discoverable from `docs/references/README.md`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autogrant` | Full paragraph read of the four references listed above; support read of MAG core docs, ideal-state reference, active gap plan, runtime-program owner fields, OPL family adoption contract, memory descriptor, pack compiler input, stage control plane and relevant memory/adoption tests. | `docs/docs_portfolio_consolidation.md`; `docs/references/README.md`; `docs/references/governance/series-doc-governance-checklist.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. MAG references remain active support references; the correction was stale family-scope wording and index discoverability, not path retirement.
+
+Unreviewed docs:
+
+- `med-autogrant`: the previously named non-index reference gap is now covered. Remaining MAG uncovered scope follows the cumulative ledger: any `docs/history/**` process/history bodies not explicitly covered by focused later ledgers, future newly added docs, and sections reopened by later code/contract changes.
+- `one-person-lab`: root `README*`, contracts README files, most active/runtime/delivery/source/policies/specs/references/history docs remain open outside recorded focused tranches.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks.
+- `redcube-ai`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused RCA chunks.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App dirty lanes are closed or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Any future MAG reference wording that turns MAG memory into OPL-owned grant strategy content, fundability / quality / export verdict, submission-ready authority, repo-source memory body store or automatic recipe engine is stale pollution.
+- Any future MAG adoption wording that turns OPL projection consumption, descriptor index, `agent/` pack, stage control plane or substrate adapter export into MAG private runtime, OPL grant truth owner, quality/export authority, App/workbench readiness, production ready or long-soak completion is stale pollution.
+- Any future MAG governance checklist wording that reverts to four-repo scope, omits One Person Lab App, or promotes OPL Meta Agent into domain truth / artifact / owner receipt authority is stale pollution.
+
+Verification before absorb:
+
+- MAG docs verification passed: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- MAG focused memory/adoption/stage-control tests passed: `tests/test_opl_family_contract_adoption.py`, `tests/product_entry_cases/test_domain_memory_descriptor.py`, `tests/product_entry_cases/test_memory_receipt_projection.py`, `tests/product_entry_cases/test_domain_memory_receipt_evidence.py`, `tests/product_entry_cases/test_family_stage_control_plane.py`, and `tests/product_entry_cases/test_opl_substrate_adapter.py` returned 26 pytest cases plus 45 subtests.
+- OPL ledger worktree verification passed: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- A broader MAG product family orchestration focused run still exposes a pre-existing product user-loop runtime-state root expectation drift; keep that source/test issue outside this docs-governance tranche.
+
+Next tranche write scope:
+
+- Continue another safe repo/doc cluster: OPL uncovered support docs, MAS remaining repo-wide docs, RCA remaining bodies after external implementation dirt is isolated, or App docs once active App dirty lanes are closed or explicitly assigned.
+- Keep the pre-existing MAG `workspace cockpit` / `product direct-entry` / `product user-loop` CLI and runtime-state expectation drift routed to a source/test owner lane, not docs-governance closeout.
+
 ## 验证
 
 Docs-only 整理：
