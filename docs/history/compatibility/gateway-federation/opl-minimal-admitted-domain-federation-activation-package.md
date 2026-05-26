@@ -9,7 +9,7 @@ Machine boundary: 本文只保存旧 admitted-domain federation activation packa
 
 这份 reference-grade package 历史上用来冻结在先前 `Phase 1 exit activation package` 之后、当时最小且诚实的 follow-on。
 
-它现在可以被激活，是因为 `2026-04-08` 的 repo-tracked 四仓同步面已经显示：至少两个 admitted domain surface 终于稳定到足以支撑更强的顶层 federation 表达：
+它在 `2026-04-08` 当时被判定可以激活，是因为当时的 repo-tracked 四仓同步面显示：至少两个 admitted domain surface 稳定到足以支撑更强的顶层 federation 表达：
 
 - `research_ops` -> `MedAutoScience`
 - `presentation_ops` -> `RedCube AI`
@@ -20,31 +20,31 @@ Machine boundary: 本文只保存旧 admitted-domain federation activation packa
 
 曾经规划过的 machine-readable 工件 `contracts/opl-framework/minimal-admitted-domain-federation-activation-package.json` 未保留为当前 active contract；本文只作为历史 activation package 记录。
 
-## 为什么门槛现在满足
+## 为什么门槛当时满足
 
 前序的 `Phase 1 exit activation package` 当时仍 blocked 在 external readiness。
 这份历史 freeze 继续保留为 repo-tracked truth。
 
-当前重评估只改变了一件事：
+当时的重评估只改变了一件事：
 
 - `MedAutoScience` 已把 repo-side `integration harness activation baseline` absorb 到 `main`
 - `RedCube AI` 已把 repo-side `source intake + shared source truth baseline` absorb 到 `main`
 
-因此，这两条 admitted domain surface 现在已经稳定到足以支撑此前已预冻结的最小 stronger federation wording。
+因此，这两条 admitted domain surface 当时被视为已稳定到足以支撑此前已预冻结的最小 stronger federation wording。
 
 ## 这份 Package 实际激活了什么
 
-它只激活最小的 contract-first federation follow-on：
+它在当时只激活最小的 contract-first federation follow-on：
 
 - 只针对已 admitted domain 收紧顶层 federation wording
-- 把当前两条已 admitted domain surface 显式写成更强 federation 表达的依据
+- 把当时两条已 admitted domain surface 显式写成更强 federation 表达的依据
 - 保持 `OPL` 的 formal entry 仍然是当前本地 `TypeScript CLI`-first / framework contract surface
 
 换句话说，这是一份 docs+contracts+tests activation package，不是 runtime package。
 
-## 当前已激活的 Admitted Domain Surface
+## 当时激活的 Admitted Domain Surface
 
-当前被激活进这份 package 的 admitted domain surface 只有两条：
+当时被激活进这份 package 的 admitted domain surface 只有两条：
 
 1. `research_ops` -> `MedAutoScience`
 2. `presentation_ops` -> `RedCube AI`
@@ -64,7 +64,7 @@ Machine boundary: 本文只保存旧 admitted-domain federation activation packa
 
 ## 继续保持的硬边界
 
-当前 activation 继续显式保持这些硬边界：
+当时的 activation 显式保持这些硬边界：
 
 - 不实现 routed-action runtime
 - 不新增 mutation entry
@@ -76,9 +76,9 @@ Machine boundary: 本文只保存旧 admitted-domain federation activation packa
 
 任何未来 successful handoff 仍然只能 targeting `domain_gateway`，并继续遵守不得直达 harness 的 no-bypass 规则。
 
-## 当前最诚实的状态
+## 历史冻结状态
 
-在当前 repo-tracked freeze 下，最小的 stronger-federation follow-on **当前已激活**。
+在当时的 repo-tracked freeze 下，最小的 stronger-federation follow-on **已被历史冻结为激活**。
 
 但它**不会**制造一个更大的 runtime phase。
-它只记录：此前的 `Phase 1 exit activation package`，现在已经被当前 `Minimal admitted-domain federation activation package` 这份仅面向已 admitted domain 的最小激活包诚实接续。
+它只记录：此前的 `Phase 1 exit activation package`，当时已被 `Minimal admitted-domain federation activation package` 这份仅面向已 admitted domain 的最小激活包诚实接续。

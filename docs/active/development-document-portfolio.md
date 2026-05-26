@@ -4727,6 +4727,63 @@ Next tranche write scope:
 - Continue OPL uncovered root/contract README or active-support docs only if existing external worktrees are safe to absorb/avoid; otherwise pick MAS remaining repo-wide docs.
 - Good OPL next clusters after current-support are `contracts/opl-framework/README.zh-CN.md`, `docs/active/opl-family-development-reference.md`, `docs/active/production-framework-closure-gap-matrix.md`, or history/gateway-federation tombstone bodies.
 
+Date: `2026-05-26 19:54 CST`
+Tranche: `opl-history-compatibility-coverage`
+State: `tranche_verified`
+
+本轮覆盖 OPL `docs/history/compatibility/**` 的 gateway / federation / routed-action 历史兼容语料。目标是确认这组文档全部停留在 history / tombstone / provenance 语境，不作为当前 runtime、compatibility interface、machine contract、test oracle、domain admission authority 或保留旧 alias/facade 的依据。本轮不关闭全局 `/goal`，也不表示 OPL `README*`、contracts README、active support 或 `docs/history/process/**` 已逐段覆盖。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`, `TASTE.md`, `docs/docs_portfolio_consolidation.md`, `docs/active/current-state-vs-ideal-gap.md`, `docs/references/runtime-substrate/opl-family-agent-ideal-state.md`, `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md`, and `contracts/README.md`.
+- Compatibility history docs: `docs/history/compatibility/README.md`, all `docs/history/compatibility/gateway-federation/*.md`, `docs/history/compatibility/gateway-federation/examples-corpora/*.md`, and `docs/history/compatibility/gateway-federation/operating-governance/*.md`.
+- Fresh OPL read models: `opl framework readiness --family-defaults --json`, `opl agents conformance --family-defaults --json`, and `opl agents default-callers --family-defaults --json`.
+
+Fresh semantic result:
+
+- The current OPL truth remains stage-led, Codex-default, provider-backed framework runtime with explicit domain-agent activation. Gateway / federation / routed-action wording is historical vocabulary, not current entrypoint, runtime owner, compatibility surface, domain truth owner or production readiness proof.
+- Fresh `opl framework readiness --family-defaults --json` returned `status=framework_control_plane_available_with_blocked_refs_only_attention`, `hard_blocker_count=0`, `open_tail_count=0`, `operator_payload_required_attention_tail_count=0`, `domain_blocked_attention_tail_count=268`, and provider SLO cadence/capability satisfied. Refs-only / typed-blocker attention does not authorize domain ready or production ready.
+- Fresh `opl agents conformance --family-defaults --json` returned `status=passed`, `passed_count=4`, `blocked_count=0`, and `production_evidence_tail_count=4`; this is structural conformance, not domain / production completion.
+- Fresh `opl agents default-callers --family-defaults --json` returned `status=ready_domain_evidence_required`, `generated_default_caller_surface_count=32`, `blocked_surface_count=0`, and zero missing domain-owner / no-forbidden-write / tombstone refs. The report still declares `physical_delete_authorized=false` and cannot claim domain ready, quality verdict, artifact authority or production ready.
+- `docs/history/compatibility/README.md` lacked explicit `Purpose`, `State` and `Machine boundary` signals as a standalone long-lived directory index; it now inherits the same tombstone boundary as the gateway-federation subtree.
+- `docs/history/compatibility/gateway-federation/opl-minimal-admitted-domain-federation-activation-package.md` contained stale-risk present-tense phrases such as “现在可以被激活” and “当前已激活”. These were rewritten as dated historical activation / freeze wording so the old admitted-domain federation package cannot be read as current active activation, admission or runtime authority.
+- Other compatibility history bodies already carry `history_only` / provenance boundaries or explicit non-runtime / non-truth / non-test-oracle notes; long acceptance snippets and embedded historical examples remain useful archaeology, not current verification requirements.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | Full paragraph / heading review of `docs/history/compatibility/README.md`, `docs/history/compatibility/gateway-federation/README.md`, `docs/history/compatibility/gateway-federation/gateway-federation.md`, `docs/history/compatibility/gateway-federation/opl-federation-contract.md`, `docs/history/compatibility/gateway-federation/opl-read-only-discovery-gateway.md`, `docs/history/compatibility/gateway-federation/opl-routed-action-gateway.md`, `docs/history/compatibility/gateway-federation/opl-gateway-rollout.md`, `docs/history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md`, `docs/history/compatibility/gateway-federation/opl-minimal-admitted-domain-federation-activation-package.md`, `docs/history/compatibility/gateway-federation/examples-corpora/README.md`, `docs/history/compatibility/gateway-federation/examples-corpora/opl-gateway-example-corpus.md`, `docs/history/compatibility/gateway-federation/examples-corpora/opl-routed-safety-example-corpus.md`, `docs/history/compatibility/gateway-federation/examples-corpora/opl-operating-example-corpus.md`, `docs/history/compatibility/gateway-federation/examples-corpora/opl-operating-record-catalog.md`, `docs/history/compatibility/gateway-federation/operating-governance/README.md`, `docs/history/compatibility/gateway-federation/operating-governance/opl-governance-audit-operating-surface.md`, `docs/history/compatibility/gateway-federation/operating-governance/opl-publish-promotion-operating-surface.md`, `docs/history/compatibility/gateway-federation/operating-governance/opl-surface-authority-matrix.md`, `docs/history/compatibility/gateway-federation/operating-governance/opl-surface-lifecycle-map.md`, and `docs/history/compatibility/gateway-federation/operating-governance/opl-surface-review-matrix.md`; support read of OPL core active docs, ideal-state reference, stage-led roadmap, contracts README and fresh read-model outputs. | `docs/history/compatibility/README.md`; `docs/history/compatibility/gateway-federation/opl-minimal-admitted-domain-federation-activation-package.md`; `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. These files are already in `docs/history/compatibility/**` and remain useful provenance / tombstone material; the tranche corrected lifecycle signals and stale-risk tense rather than moving or deleting paths.
+
+Unreviewed docs:
+
+- `one-person-lab`: current inventory remains 175 `README*` / `docs/**/*.md` / contracts README files. After this compatibility-history coverage, remaining open clusters include OPL root `README*`, `contracts/opl-framework/README.zh-CN.md`, active support docs such as `docs/active/opl-family-development-reference.md` and `docs/active/production-framework-closure-gap-matrix.md`, `docs/history/process/**` convergence / domain-admission / plans / specs / superpowers bodies, and `docs/references/operating-governance/family-domain-quality-projection-contract.md`.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks.
+- `med-autogrant`: current 120-file recorded scope was closed by the MAG final inventory reconcile unless new docs or later source/contract changes reopen a section.
+- `redcube-ai`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused RCA chunks; current main checkout still carries external dirty implementation/test files.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App dirty lanes are closed or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Any future compatibility-history wording that presents gateway/federation/routed-action/frontdoor/domain-gateway examples as current entrypoint, default runtime, active domain admission gate, mutation route, compatibility interface, machine contract or test oracle is stale pollution.
+- Any future history wording that treats old admitted-domain federation activation as current MAS/MAG/RCA/OMA/App readiness, domain-ready, production-ready, physical-delete authorization or default-caller completion is stale pollution.
+- Any future use of historical acceptance snippets to pin current tests to Markdown prose, old path names or retired JSON artifacts must be replaced with active contracts, source, CLI/API behavior, generated artifacts, semantic `human_doc:*` IDs or repo-native tests.
+
+Verification before absorb:
+
+- OPL docs verification passed in the tranche worktree: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- OPL compatibility support read models above were rerun fresh in the tranche worktree; no source or machine-readable contract edit was made.
+
+Next tranche write scope:
+
+- Continue OPL `docs/history/process/**` bodies, `contracts/opl-framework/README.zh-CN.md`, or active-support docs if no external worktree owns them; otherwise pick MAS remaining repo-wide docs.
+- Delay RCA/App docs write passes until external implementation/release dirty lanes are isolated or explicitly assigned.
+
 ## 验证
 
 Docs-only 整理：
