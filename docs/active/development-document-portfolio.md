@@ -4488,6 +4488,65 @@ Next tranche write scope:
 
 - Continue MAS remaining repo-wide docs, OPL uncovered support docs, RCA remaining bodies after external implementation dirt is isolated, or App docs once active App dirty lanes are closed or explicitly assigned.
 
+Date: `2026-05-26 19:00 CST`
+Tranche: `mag-nonspec-history-coverage`
+State: `tranche_verified_pending_opl_absorb`
+
+本轮覆盖 MAG `docs/history/**` 下非 specs 历史入口：历史 plans、product handoff、runtime owner split、positioning 和 OMX index。目标是把旧 scaffold/P1 plan、hosted caller proof、Hermes/Gateway/local-runtime/Domain Harness OS 词汇、轻量 product-entry shell 和 `.omx` / `.runtime-program` 语境限定在 provenance，不关闭全局 `/goal`，也不表示 OPL/MAS/RCA/App repo-wide README/docs 已全量覆盖。
+
+Fresh live truth inputs:
+
+- MAG `AGENTS.md`, `TASTE.md`, `docs/status.md`, `docs/active/mag-ideal-state-cross-repo-gap-plan.md`, `docs/references/med-auto-grant-ideal-state.md`, `contracts/runtime-program/current-program.json`, and `contracts/production_acceptance/mag-production-acceptance.json`.
+- MAG reviewed history docs: `docs/history/README.md`, `docs/history/plans/README.md`, `docs/history/plans/2026-04-06-med-autogrant-minimal-scaffold-plan.md`, `docs/history/plans/2026-04-07-p1-formal-entry-and-durability-planning-brief.md`, `docs/history/plans/2026-04-12-opl-aligned-target-shape-and-hosted-caller-plan.md`, `docs/history/plans/2026-04-13-grant-writing-full-coverage-landing-plan.md`, `docs/history/plans/mag-standard-agent-doc-process-history-2026-05.md`, `docs/history/product/lightweight-product-entry-and-opl-handoff.md`, `docs/history/runtime/opl-managed-runtime-three-layer-contract.md`, `docs/history/positioning/domain-harness-os-positioning.md`, and `docs/history/omx/README.md`.
+- Source/read-model support: `MagDomainRuntime.describe_topology` source reports OPL runtime ownership, no generic MAG runtime ownership, `Codex CLI` default stage attempt executor, and `Hermes-Agent` as explicit opt-in proof executor; `PUBLIC_GROUP_COMMANDS` exposes grouped workspace/mainline/domain-handler/authority/pass/package commands.
+
+Fresh semantic result:
+
+- History root, plans index, runtime history, positioning history and OMX index already carry owner / purpose / state / machine-boundary signals or directory inheritance sufficient for direct-file reading.
+- Old scaffold, P1 durability, hosted caller and full authoring landing plans are correctly scoped as completed history. Their unchecked task lists, old `docs/plans` paths, `MCP/controller`, `.runtime-program` and hosted proof wording do not reopen active backlog.
+- MAG product handoff history had one stale-risk body phrase: “真实 upstream `Hermes-Agent` substrate 已经 landed”. It now states that this was a hosted / upstream proof lane and migration-background claim; current default runtime owner remains OPL/Temporal, and `Hermes-Agent` remains a non-default proof / executor adapter lane.
+- No archive, tombstone or deletion action was needed.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autogrant` | Full paragraph read of the MAG non-spec history docs listed above; support read of MAG current status, active gap plan, ideal-state reference, runtime-program owner fields, production acceptance authority boundaries, domain runtime topology source and grouped public CLI shape. | `docs/docs_portfolio_consolidation.md`; `docs/history/product/lightweight-product-entry-and-opl-handoff.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. These MAG non-spec history files remain useful provenance; the issue was one stale-risk wording correction, not path retirement.
+
+Unreviewed docs:
+
+- `med-autogrant`: root README, core docs, active plan, ideal-state reference, specs, thin indexes, non-index references, history specs focused batches and this non-spec history cluster now have recorded coverage. Remaining MAG uncovered scope is future new docs, historical bodies not named by final reconcile, or sections reopened by later code/contract changes.
+- `one-person-lab`: root `README*`, contracts README files, most active/runtime/delivery/source/policies/specs/references/history docs remain open outside recorded focused tranches.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks.
+- `redcube-ai`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused RCA chunks.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App dirty lanes are closed or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Any future MAG history wording that turns hosted / upstream Hermes proof lane into current default runtime owner, provider owner, production-ready claim or Codex-equivalent executor is stale pollution.
+- Any future MAG history plan wording that revives `.omx`, `.runtime-program`, old `docs/plans`, Gateway/local-manager, flat CLI alias, local journal, attempt ledger, product-sidecar or compatibility aggregate tests as active surfaces is stale pollution.
+- Any future MAG product handoff wording that turns lightweight product-entry / OPL handoff provenance into mature App/workbench readiness, final UX, grant-ready, submission-ready, export-ready or production-ready evidence is stale pollution.
+
+Verification before absorb:
+
+- MAG docs verification passed before absorb: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- MAG live surface probes confirmed `MagDomainRuntime.describe_topology()` reports `runtime_owner="one-person-lab"`, `can_claim_generic_runtime_owner=false`, default stage attempt executor `Codex CLI`, and optional proof executor `Hermes-Agent` with `explicit opt-in only`; grouped public CLI exposes workspace/mainline/domain-handler/authority/pass/package command groups.
+- MAG focused tests passed: `./scripts/run-pytest-clean.sh tests/test_program_control_surfaces.py tests/test_domain_entry.py -q` returned 25 pytest cases plus 19 subtests.
+- OPL ledger worktree verification passed before commit: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- MAG commit `39e4460 docs: cover MAG non-spec history boundaries` is on MAG `main`.
+- Pending after this edit: OPL ledger commit/absorb and final six-repo lightweight verification.
+
+Next tranche write scope:
+
+- Continue OPL uncovered support docs or MAS remaining repo-wide docs while RCA/App main checkouts still carry external dirty implementation/release lanes.
+- If returning to MAG, run a final inventory/reconcile pass against all `README*` and `docs/**/*.md` to confirm no new docs appeared after the recorded MAG coverage tranches.
+
 ## 验证
 
 Docs-only 整理：
