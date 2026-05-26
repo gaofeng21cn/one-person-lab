@@ -6335,3 +6335,64 @@ Next tranche write scope:
 - Continue OPL series whole-docs coverage outside OPL/MAS/MAG/OMA, prioritizing a repo whose main checkout and worktrees are safe for this automation.
 - Start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
 - Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
+
+Date: `2026-05-27 04:59 CST`
+Tranche: `rca-exact-history-product-index-reconcile`
+State: `tranche_verified`
+
+本轮覆盖 RCA final inventory reconcile 之后留下的 47 个 exact-path ledger gap，并把结果回写到 RCA 本地 coverage ledger 与本 OPL family ledger。目标是把 grouped coverage 与当前 RCA `README*` / `docs/**/*.md` exact inventory 对齐，避免把“路径没有逐字出现在本地 ledger”误读成未审文档。本轮不关闭全局 `/goal`，也不表示 OPL series 六仓 `README*` 与 `docs/**/*.md` 已全部逐段覆盖完成。
+
+Fresh live truth inputs:
+
+- RCA `AGENTS.md`, `TASTE.md`, root `README.md`, `docs/README.md`, core five, `docs/active/rca-ideal-state-gap-plan.md`, `docs/references/rca-visual-deliverable-agent-ideal-state.md`, `contracts/runtime-program/current-program.json`, `contracts/production_acceptance/rca-production-acceptance.json`, `contracts/functional_privatization_audit.json`, and `docs/docs_portfolio_consolidation.md`.
+- RCA current inventory script over repo-root `README*` plus all `docs/**/*.md`, compared against existing RCA coverage-ledger exact path strings.
+- First-screen / role read of the 47 exact paths missing from the RCA ledger before this tranche: `docs/active/README.md`, `docs/active/opl-private-implementation-migration-inventory.md`, `docs/decisions.md`, all 11 `docs/history/hermes/*.md` bodies, all 17 non-index `docs/history/phase-2/*.md` bodies, seven `docs/history/plans/*.md` bodies, both `docs/history/tombstones/*.md` bodies, `docs/invariants.md`, all four `docs/product/*.md` files, `docs/public/README.md`, and `docs/specs/README.md`.
+
+Fresh semantic result:
+
+- Current RCA truth remains `Declarative Visual Pack + OPL generated/hosted surfaces + minimal visual authority functions`: RCA owns visual truth, source readiness, communication/visual direction, review/export verdict, artifact authority, visual memory accept/reject, owner receipt, typed blocker and native helper implementation; OPL owns/generated-hosts generic runtime, queue, wakeup, attempt ledger, workbench, wrapper and refs-only projection surfaces.
+- The 47 exact paths already had durable roles through first-screen `Owner` / `Purpose` / `State` / `Machine boundary`, directory index current-read rules, or prior focused tranches. No RCA prose body needed rewrite; the local gap was exact-path accounting.
+- RCA active/core/product/public/spec paths remain active support, active inventory or current policy/index surfaces. History/Hermes/Phase 2/plans/tombstones remain provenance/tombstone surfaces and cannot authorize current visual ready, exportable, handoffable, domain ready, production ready, generic runtime owner or OPL-owned RCA visual truth.
+- The RCA local exact inventory now has no uncovered repo-root `README*` / `docs/**/*.md` path in the current 91-file scope once this entry is counted.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `redcube-ai` | First-screen / role read of the 47 exact paths listed above, with supporting current-boundary read of RCA core docs, active truth plan, ideal-state reference and machine contracts. | `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | OPL family coverage ledger foldback for this RCA exact-path reconcile tranche; no OPL active truth / source / contract semantics changed. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The reviewed RCA paths already have legitimate long-term roles as active support, active inventory, current policy, product/public/spec index, history provenance or tombstone.
+
+Unreviewed docs:
+
+- `redcube-ai`: exact-string inventory now has no uncovered `README*` / `docs/**/*.md` path in the current 91-file scope once this entry is counted. RCA remains part of the larger OPL series goal, and global closure still depends on all six repos.
+- `one-person-lab`: no new OPL body docs were governed in this tranche; previous exact coverage claims remain as recorded.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active release / GUI lanes are safe or explicitly assigned.
+- `opl-meta-agent`, `med-autoscience`, and `med-autogrant`: previous full/exact reconcile coverage remains as recorded unless later changes reopen their docs.
+
+Remaining stale / retire candidates:
+
+- RCA: docs coverage is now exact-path reconciled; implementation/evidence/source-purity tails remain separate from docs coverage: production evidence scaleout, generated/default-caller thinning, naming/contract hygiene, compatibility-free retirement, and future source/contract/test drift.
+- RCA: any future prose that promotes historical Hermes / Phase 2 / managed / gateway / runtime / session / domain_action_adapter wording, product support guides, public/spec indexes, structural conformance, provider completion, OPL projection or zero open worklist into visual ready, exportable, handoffable, domain ready, production ready, generic runtime owner or OPL-owned RCA visual truth is stale pollution.
+- App: release / GUI / implementation docs remain gated by unrelated dirty or active lanes.
+
+Worktree / branch cleanup:
+
+- No external stale worktree/branch qualified for cleanup before this tranche. RCA external CI lane and unrelated OPL/App lanes were not attributable to this automation or were not safe to clean.
+- This tranche's RCA and OPL worktrees should be removed after fast-forward absorb.
+
+Verification before absorb:
+
+- RCA exact-path reconcile worktree: exact inventory script expected `missing_by_exact_string=0`; `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- OPL ledger worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- Six-repo doctor sweep should remain clean before closeout.
+- No source/runtime tests are required because this tranche changes only narrative coverage ledgers.
+
+Next tranche write scope:
+
+- Start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
+- If App remains unsafe, continue with any newly reopened exact inventory tail in OPL/MAS/MAG/RCA/OMA caused by later edits.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
