@@ -3664,6 +3664,64 @@ Next tranche write scope:
 - Continue MAG `docs/history/specs/*.md` in date/topic batches, prioritizing 2026-04-08 P5/R activation packages or 2026-04-11/2026-04-12 Hermes / hosted handoff specs because stale provider/hosted wording risk is higher there.
 - Or choose RCA uncovered reference bodies or App docs once their main checkout and active worktrees are safe.
 
+Date: `2026-05-26 12:25 CST`
+Tranche: `mag-20260408-p5r1-history-specs-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAG `docs/history/specs/` 下 2026-04-08 P5 second-family / federation future activation packages 与 R1 local-runtime activation packages，并把结果吸收回 MAG `main`。目标是确认这些 direct-file 历史入口不会把旧 future P5、Gateway/federation、local `runtime-run` / `runtime-resume`、run journal、stage action envelope、MCP/controller 或 runtime-productization 词汇误读成当前 active P5 backlog、federation-ready、public CLI command、MAG-owned generic runtime、daemon/scheduler/attempt-loop、attempt ledger、production readiness、compatibility interface 或 active implementation plan；本轮语义结果是既有 lifecycle guard 和 specs lifecycle map 足够，MAG 历史 spec 正文不需要改写。
+
+Fresh live truth inputs:
+
+- MAG `AGENTS.md`, `TASTE.md`, core docs, `docs/active/mag-ideal-state-cross-repo-gap-plan.md`, `docs/specs/README.md`, `docs/specs/specs_lifecycle_map.md`, `docs/history/specs/README.md`, and MAG `docs/docs_portfolio_consolidation.md`.
+- Reviewed history specs: `docs/history/specs/2026-04-08-p5a-second-grant-family-onboarding-activation-package.md`, `docs/history/specs/2026-04-08-p5b-federation-contract-freeze-activation-package.md`, `docs/history/specs/2026-04-08-r1a-local-main-loop-entry-and-stop-reason-activation-package.md`, and `docs/history/specs/2026-04-08-r1b-stage-action-executor-envelope-activation-package.md`.
+- MAG machine/source truth surfaces: `contracts/runtime-program/current-program.json`, `src/med_autogrant/public_cli.py`, `src/med_autogrant/domain_runtime_parts/substrate.py`, `src/med_autogrant/domain_entry.py`, `src/med_autogrant/product_entry_parts/functional_closure_skeleton.py`, `tests/test_domain_entry.py`, `tests/product_entry_cases/test_functional_closure.py`, active specs listed by `docs/specs/README.md`, schemas/source/CLI/API behavior.
+- Fresh read-model probe: `MagDomainRuntime().describe_topology()` plus `public_cli_command("stage-route-report", ...)` and `PUBLIC_GROUP_COMMANDS["workspace"]`.
+
+Fresh semantic result:
+
+- The four reviewed files already carry first-screen lifecycle notes plus `Owner` / `Purpose` / `State` / `Machine boundary`.
+- P5.A / P5.B are correctly scoped as `future_activation_history` / historical second-family and federation activation provenance. They are not current second-family admitted claims, active P5 backlog, Gateway-ready / federation-ready claims, cross-domain runtime owner claims or public runtime entries.
+- R1.A / R1.B are correctly scoped as `historical_activation_package` / local runtime and stage action envelope provenance. They are not current MAG-owned daemon, scheduler, attempt loop, attempt ledger, public `runtime-run` / `runtime-resume` command, local runtime product plan or generic runtime authority.
+- `contracts/runtime-program/current-program.json` still states `default_task_runtime_owner=one-person-lab`, `default_runtime_substrate=temporal`, `mag_implements_daemon=false`, `mag_implements_scheduler=false`, `mag_implements_attempt_loop=false`, and `mag_owns_attempt_ledger=false`.
+- `MagDomainRuntime().describe_topology()` still reports `runtime_owner=one-person-lab`, `can_claim_generic_runtime_owner=False`, `default_formal_entry=CLI`, `supported_protocol_layer=MCP`, `internal_controller_surface=controller`, and `optional_proof_executor_boundary=explicit opt-in only`.
+- Current public CLI shape remains grouped; historical bare `stage-route-report` maps through `public_cli` as `workspace route-report`. `runtime-run`、`runtime-resume` 和 `probe-upstream-hermes` are covered by no-resurrection source/tests and must not be restored as active public/domain commands.
+- Stale-risk scan found P5/R1 risk terms only inside lifecycle-guarded history/provenance text, explicit future-scope/precondition/stop-condition guardrails, or no-resurrection surfaces.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autogrant` | Full paragraph read of the four 2026-04-08 P5/R1 history specs listed above; support read of history specs index, specs lifecycle map, active gap plan, status, current-program runtime owner fields, public CLI mapping, domain runtime topology and retired command no-resurrection surfaces. | `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. These four MAG files remain useful history provenance; no body move, tombstone, or delete was required.
+
+Unreviewed docs:
+
+- `med-autogrant`: remaining `docs/history/specs/*.md` files outside the 2026-04-06 foundation batch, 2026-04-07 P2/P3A batch, 2026-04-08 P3/P4 batch and this 2026-04-08 P5/R1 batch remain open for paragraph-level governance.
+- Higher-risk remaining MAG batches include 2026-04-08 R2/R3/runtime-first program records, 2026-04-09 R3/R4/R5 / post-R5A records, 2026-04-10 fail-closed / hosted-bundle records, 2026-04-11 Hermes/reset/local-runtime records and 2026-04-12 hosted/OPL handoff records.
+- MAG non-index references such as grant strategy memory policy, OPL family contract adoption and governance checklist still need paragraph-level checks against current contracts/source unless already covered by a later MAG or OPL ledger entry.
+- OPL, MAS, RCA and App repo-wide coverage remains open outside recorded chunks. OMA is covered by its earlier full README/docs tranche.
+
+Remaining stale / retire candidates:
+
+- Any future direct-file use of these P5/R1 specs as current public CLI command shape, runtime owner, default runtime, Gateway/federation readiness, controller capability, local run journal authority, attempt ledger, submission/export-ready verdict, production readiness, physical-delete authority or compatibility-interface source is stale pollution.
+- Historical `runtime-run` / `runtime-resume` / run journal / stage action envelope vocabulary must remain provenance unless a current active owner and source/contract/tests explicitly re-admit it; current no-resurrection tests guard these commands from reappearing as active public/domain commands.
+- P5 second-family and federation language must not be upgraded to admitted family, Grant Foundry readiness, Gateway route, OPL generated/hosted caller readiness, App/release readiness or production-ready claims.
+
+Verification / absorb:
+
+- MAG commit `53425d2 docs: cover MAG 2026-04-08 P5/R1 specs` is on MAG `main`; tranche worktree and branch were removed after fast-forward absorb.
+- MAG verification before absorb: `git diff --check`; strict README/docs/contracts conflict-marker scan had no hits; OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- Representative read-model probe confirmed `MagDomainRuntime().describe_topology()` runtime owner and public CLI grouping.
+
+Next tranche write scope:
+
+- Continue MAG `docs/history/specs/*.md` in date/topic batches, prioritizing 2026-04-08 R2/R3/runtime-first records or 2026-04-11/2026-04-12 Hermes / hosted handoff specs because stale local-runtime/provider/hosted wording risk is higher there.
+- Or choose RCA uncovered reference bodies or App docs once their main checkout and active worktrees are safe.
+
 ## 验证
 
 Docs-only 整理：
