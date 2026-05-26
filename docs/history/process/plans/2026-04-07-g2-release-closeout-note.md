@@ -10,7 +10,7 @@ Date: `2026-04-07`
 
 ## 目的
 
-这份 note 用来冻结当前 `Phase 1 / G2 stable public baseline` 的完成边界，
+这份 note 用来冻结当时 `Phase 1 / G2 stable public baseline` 的完成边界，
 避免顶层公开文档与四仓状态同步继续漂移。
 
 它是 repo-tracked 的 closeout 记录，
@@ -39,25 +39,25 @@ Date: `2026-04-07`
 - shared truth store
 - shared execution core
 
-`Unified Harness Engineering Substrate` 在当前阶段仍然只是共享架构基座，不是共享代码框架。
+`Unified Harness Engineering Substrate` 在当时阶段仍然只是共享架构基座，不是共享代码框架。
 
 ## G3 当时边界
 
 `G3` 仍未激活。
 
-当前只允许把 `G3` 理解为 `thin handoff planning freeze`，即：
+当时只允许把 `G3` 理解为 `thin handoff planning freeze`，即：
 
 - 只预冻结 `route_request`
 - 只预冻结 `build_handoff_payload`
 - 只预冻结 `audit_routing_decision`
 
-当前不实现真正的 `G3 mutation/routed-action runtime`。
+当时不实现真正的 `G3 mutation/routed-action runtime`。
 
 ## no-bypass / no-overclaim
 
 - 不得绕过 `domain gateway`
 - 不得把 planned workstream 写成已实现能力
-- 不得把 planned routed-action 写成当前可执行能力
+- 不得把 planned routed-action 写成当时可执行能力
 - 不得把 `docs/references/**` 反向抬升为 `OPL` 公开主线真相
 
 ## 当时下一棒

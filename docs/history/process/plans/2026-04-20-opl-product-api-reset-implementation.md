@@ -18,7 +18,7 @@ Date: `2026-04-20`
 
 ---
 
-### Task 1: 收束 OPL 主仓当前文档真相
+### Task 1: 收束 OPL 主仓当时文档真相
 
 **Files:**
 - Modify: `README.md`
@@ -34,8 +34,8 @@ Date: `2026-04-20`
 
 - [ ] 让 `README*` 只面向潜在使用者，统一讲清 `OPL` 的产品定位、使用方式、产品家族与交付逻辑。
 - [ ] 让核心五件套统一使用新的 `Product API` 叙事，明确 `OPL` 负责 shared runtime 与 API，domain 仓负责 agent entry 与领域逻辑。
-- [ ] 在 `docs/decisions.md` 与 `docs/status.md` 里冻结“`frontdoor` 公开语义退役”的当前决策。
-- [ ] 把旧 `frontdoor / handoff / readiness` 相关表述从当前主线文档中删干净。
+- [ ] 在 `docs/decisions.md` 与 `docs/status.md` 里冻结“`frontdoor` 公开语义退役”的当时决策。
+- [ ] 把旧 `frontdoor / handoff / readiness` 相关表述从当时主线文档中删干净。
 - [ ] 验证：`rg -n "frontdoor|readiness|entry-guide|domain-wiring|hosted-bundle|hosted-package" README* docs/{README*,project.md,status.md,architecture.md,decisions.md,invariants.md}`
 
 ### Task 2: 清理 OPL 主仓历史文档入口，避免继续污染主线
@@ -49,8 +49,8 @@ Date: `2026-04-20`
 - Modify: `docs/history/process/plans/2026-04-12-opl-frontdoor-and-family-entry-implementation.md`
 
 - [ ] 给仍然保留的历史 `frontdoor` 设计和计划文档加上“已退役 / superseded”标识。
-- [ ] 更新历史索引和参考索引，明确这些文档只作历史审计，不再作为当前实现依据。
-- [ ] 保证当前读者从 `README*` 和 `docs/README*` 进入时，不会再被引导到旧主线。
+- [ ] 更新历史索引和参考索引，明确这些文档只作历史审计，不再作为当时实现依据。
+- [ ] 保证当时读者从 `README*` 和 `docs/README*` 进入时，不会再被引导到旧主线。
 - [ ] 验证：人工检查 `README* -> docs/README* -> core working set` 的链接链路。
 
 ### Task 3: 对齐其他三个仓的用户面文档口径
@@ -62,9 +62,9 @@ Date: `2026-04-20`
 - Modify: `/Users/gaofeng/workspace/med-autogrant/README.zh-CN.md`
 - Modify: `/Users/gaofeng/workspace/redcube-ai/README.md`
 - Modify: `/Users/gaofeng/workspace/redcube-ai/README.zh-CN.md`
-- Modify: 这三个仓里与当前入口定位直接相关的核心 docs 索引文件
+- Modify: 这三个仓里与当时入口定位直接相关的核心 docs 索引文件
 
-- [ ] 统一口径：这些仓是独立 domain agents / current implementation，不是 `OPL` 的 GUI 子模块。
+- [ ] 统一当时口径：这些仓是独立 domain agents / current implementation，不是 `OPL` 的 GUI 子模块。
 - [ ] 统一写法：README 面向潜在使用者，突出“解决什么问题、适合什么场景、怎么开始”，不暴露底层 `frontdoor / handoff` 历史术语。
 - [ ] 明确它们与 `OPL` 的关系：可被 `OPL` 调用，也可被 `Codex` 直接调用，行为语义一致。
 - [ ] 验证：逐仓 `rg -n "frontdoor|handoff|readiness|entry-guide|domain-wiring"` 仅允许出现在历史/参考区。
@@ -90,8 +90,8 @@ Date: `2026-04-20`
   - `/api/opl/sessions`
   - `/api/opl/sessions/{id}/progress`
   - `/api/opl/sessions/{id}/artifacts`
-- [ ] 保留旧实现文件时，只允许作为过渡内部实现，不再把 `frontdoor` 作为当前公开产品命名。
-- [ ] 把当前 `/ask`、`/task-status`、`/project-progress` 的公开概念逐步收口到 `sessions / progress / artifacts`。
+- [ ] 保留旧实现文件时，只允许作为过渡内部实现，不再把 `frontdoor` 作为当时公开产品命名。
+- [ ] 把当时 `/ask`、`/task-status`、`/project-progress` 的公开概念逐步收口到 `sessions / progress / artifacts`。
 - [ ] 在 CLI 帮助和 API root payload 里改写公开资源名。
 - [ ] 验证：`tests/src/cli.test.ts` 和相关契约测试更新后通过。
 
@@ -114,7 +114,7 @@ Date: `2026-04-20`
   - `src/status-narration.ts`
 
 - [x] 把历史 `frontdoor-installation.ts` 与 `management.ts` 聚合入口中混杂的公开职责拆开；当前实现使用 `system-installation/*` 与 `management/*` leaf surfaces。
-- [ ] 明确 `OPL` 内部真正保留的 shared runtime 组成：
+- [ ] 明确当时计划中 `OPL` 内部真正保留的 shared runtime 组成：
   - engine adapter
   - agent registry
   - workspace registry
@@ -134,6 +134,6 @@ Date: `2026-04-20`
 - [ ] Run: `npm run typecheck`
 - [ ] 对其他三个仓至少做 README / 核心 docs 的 `rg` 验证
 - [ ] 汇总：
-  - 当前公开 API 还残留哪些旧路径
+  - 当时公开 API 还残留哪些旧路径
   - 哪些历史 surface 已经正式退役
   - 哪些功能清理进入下一 tranche

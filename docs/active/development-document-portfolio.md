@@ -4898,6 +4898,62 @@ Next tranche write scope:
 - Continue OPL `docs/history/process/plans/**`, `docs/history/process/specs/**`, or `docs/history/process/superpowers/**` in small clusters; alternatively pick MAS remaining repo-wide docs if OPL external lanes make a cluster unsafe.
 - Delay RCA/App docs write passes until external implementation/release dirty lanes are isolated or explicitly assigned.
 
+Date: `2026-05-26 21:01 CST`
+Tranche: `opl-history-plans-coverage`
+State: `tranche_verified`
+
+本轮覆盖 OPL `docs/history/process/plans/**` 的 historical implementation plan / closeout note 正文。目标是确认早期 bilingual docs、G2/G3 handoff、UHS、历史前台/托管入口、executor adapter、shared reuse、历史产品 API reset、历史 runtime-first pivot、production functional closure、App repo split 和 2026-05 docs process closeout 都停留在 historical plan / closeout / provenance 语境，不作为当前 active implementation queue、runtime owner、历史产品 API spec、旧 gateway 兼容面、外部 executor 默认 provider path、domain admission authority、App release-ready 证据或 production-ready 证据。本轮不关闭全局 `/goal`，也不表示 OPL `docs/history/process/specs/**` 或 `docs/history/process/superpowers/**` 已逐段覆盖。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`, `TASTE.md`, `README.md`, `docs/README.md`, core five, `docs/active/current-state-vs-ideal-gap.md`, `docs/references/runtime-substrate/opl-family-agent-ideal-state.md`, `docs/history/process/plans/README.md`, and `docs/active/development-document-portfolio.md`.
+- OPL machine/read-model surfaces: `contracts/opl-framework/domains.json`, `contracts/opl-framework/workstreams.json`, `contracts/opl-framework/task-topology.json`, `opl agents conformance --family-defaults --json`, and `opl agents default-callers --family-defaults --json`.
+- Plans history docs: `docs/history/process/plans/README.md` plus all 15 body files in `docs/history/process/plans/*.md`.
+
+Fresh semantic result:
+
+- Current active domain-agent catalog remains MAS / MAG / RCA through the OPL family contracts, with active workstreams `research_ops`, `grant_ops`, and `presentation_ops`. Candidate topology signals from old plans do not become admitted domains or routed-action targets.
+- Fresh `opl agents conformance --family-defaults --json` returned `status=passed`, `passed_count=4`, `blocked_count=0`, `production_evidence_tail_count=4`, and `conformance_report_can_claim_domain_ready=false`; this is structural conformance, not domain readiness, production readiness, historical product API readiness, App release readiness, or old gateway activation.
+- Fresh `opl agents default-callers --family-defaults --json` returned `status=ready_domain_evidence_required`, `generated_default_caller_surface_count=32`, `blocked_surface_count=0`, and `physical_delete_authorized_by_this_report=false`; default-caller availability does not authorize physical delete, legacy surface removal without owner proof, or domain ready claims.
+- `docs/history/process/plans/README.md` already carried the correct historical_archive boundary and current-owner jumps.
+- Four body files carried stale-risk present-tense wording inside historical plan bodies: G2 release closeout, G3 planning brief, G3 planning closeout, and historical product API reset plan. These were rewritten from unqualified `当前` wording to `当时` / dated historical wording so old gateway / historical entry / historical product API / routed-action tasks cannot be read as current work queue or current runtime truth.
+- The remaining plan bodies already had sufficient historical headers, machine-boundary statements, or explicit current-owner jumps. Their checkbox lists, file paths, old command examples and verification criteria remain as process provenance only.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | Full paragraph / heading review of `docs/history/process/plans/README.md`, `docs/history/process/plans/2026-04-02-bilingual-homepage-and-core-docs-implementation.md`, `docs/history/process/plans/2026-04-07-g2-release-closeout-note.md`, `docs/history/process/plans/2026-04-07-g3-thin-handoff-planning-brief.md`, `docs/history/process/plans/2026-04-07-g3-thin-handoff-planning-closeout-note.md`, `docs/history/process/plans/2026-04-07-unified-harness-engineering-substrate-doc-alignment.md`, `docs/history/process/plans/2026-04-12-opl-frontdoor-and-family-entry-implementation.md`, `docs/history/process/plans/2026-04-12-opl-hosted-entry-and-control-room-hardening.md`, `docs/history/process/plans/2026-04-13-family-executor-adapter-next-phase.md`, `docs/history/process/plans/2026-04-18-family-reuse-full-landing.md`, `docs/history/process/plans/2026-04-20-opl-product-api-reset-implementation.md`, `docs/history/process/plans/2026-04-21-opl-acp-native-runtime-first-implementation.md`, `docs/history/process/plans/2026-05-14-production-functional-closure-plan.md`, `docs/history/process/plans/2026-05-15-one-person-lab-app-repo-split-closeout.md`, `docs/history/process/plans/2026-05-18-opl-family-doc-process-history.md`, and `docs/history/process/plans/2026-05-22-opl-doc-lifecycle-active-ledger-consolidation.md`; support read of core docs, active truth owner, ideal-state reference, framework contracts and fresh conformance/default-caller read models. | `docs/history/process/plans/2026-04-07-g2-release-closeout-note.md`; `docs/history/process/plans/2026-04-07-g3-thin-handoff-planning-brief.md`; `docs/history/process/plans/2026-04-07-g3-thin-handoff-planning-closeout-note.md`; `docs/history/process/plans/2026-04-20-opl-product-api-reset-implementation.md`; `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. These files already live in `docs/history/process/plans/**` and remain useful process provenance; this tranche corrected stale-risk tense and recorded coverage rather than moving or deleting paths.
+
+Unreviewed docs:
+
+- `one-person-lab`: current inventory remains 175 `README*` / `docs/**/*.md` / contracts README files. After this tranche, remaining exact-missing clusters are `docs/history/process/specs/**` and `docs/history/process/superpowers/**`; plus any non-exact grouped coverage still listed in prior tranche notes such as root/contract README or active support docs if not separately reconciled.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks.
+- `med-autogrant`: current 120-file recorded scope was closed by the MAG final inventory reconcile unless new docs or later source/contract changes reopen a section.
+- `redcube-ai`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused RCA chunks; current main checkout still carries external dirty implementation/test files.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App dirty lanes are closed or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Any future plans-history wording that turns old bilingual rollout, G2/G3 planning, UHS, historical entry/hosted entry, historical product API, historical runtime-first pivot, executor adapter, shared reuse, App split or production functional closeout material into current active plan, current implementation queue, current API spec, default runtime, release-ready evidence, domain-ready evidence, production-ready evidence, compatibility surface or no-active-caller proof is stale pollution.
+- Any future wording that makes old gateway-era plans, historical entry plans, historical product API plans, historical runtime-first pivot plans, external shell plans or local manager plans current owner surfaces must be rejected unless live source/contracts/read-model explicitly reintroduce a narrow current surface.
+- Any future agent prompt copied from these historical checkbox lists must first be re-derived from current active truth docs, live code/contracts/tests/CLI read models and current owner boundaries.
+
+Verification before absorb:
+
+- OPL docs verification passed in the tranche worktree: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- OPL plans support contracts and conformance/default-caller read models above were rerun fresh in the tranche worktree; no source or machine-readable contract edit was made.
+
+Next tranche write scope:
+
+- Continue OPL `docs/history/process/specs/**` or `docs/history/process/superpowers/**` in small clusters; alternatively pick MAS remaining repo-wide docs if OPL external lanes make a cluster unsafe.
+- Delay RCA/App docs write passes until external implementation/release dirty lanes are isolated or explicitly assigned.
+
 ## 验证
 
 Docs-only 整理：
