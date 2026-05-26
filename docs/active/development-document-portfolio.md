@@ -4480,7 +4480,9 @@ Verification / absorb:
 - MAS docs verification passed before absorb: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
 - OPL ledger worktree verification passed before absorb: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
 - MAS commit `a1aaff60 docs: cover MAS governance reference scope` is on MAS `main`; OPL commit `8c5dc5f3 docs: record MAS governance reference coverage` is on OPL `main`.
-- This tranche's MAS and OPL worktrees / branches are ready for removal after final lightweight six-repo verification.
+- This tranche's MAS and OPL worktrees / branches were removed after fast-forward absorb.
+- Final lightweight six-repo verification passed after absorb: all six repos passed `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- Retained external lanes: OPL `codex/opl-stage-attempt-support-for-oma` has uncommitted source/test edits and recent writes; MAS `codex/mas-guarded-apply-task-id-20260526`, `codex/mas-paper-line-stage-evidence-handoff-20260526`, `fix/dm002-story-surface-workunit-fix`, and `fix/dm002-terminal-stall-bridged-handoff` have uncommitted edits or recent writes; App `codex/full-first-run-stable-gate-20260525` and `codex/nightly-release-20260525` have uncommitted release/docs/test edits. They were not cleaned by this tranche.
 
 Next tranche write scope:
 
