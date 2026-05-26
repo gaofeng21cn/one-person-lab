@@ -5288,6 +5288,63 @@ Next tranche write scope:
 - Continue MAS repo-wide paragraph coverage from the remaining uncovered doc list if active owner-route dirty lanes are safe or explicitly assigned.
 - Keep App docs delayed until active release / GUI lanes are safe or explicitly assigned.
 
+Date: `2026-05-26 22:40 CST`
+Tranche: `mas-policy-governance-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAS `docs/policies/**` 中尚未进入 coverage ledger 的 policy index、runtime-governance、repo-ops、quality、publication-route memory 与 study-workflow policy 文档，并吸收回 MAS `main`。目标是把 policy 目录整体读回当前 MAS / OPL owner split：policy 是稳定人读规则，不是 active backlog、runtime truth、publication verdict、artifact authority、submission authorization、`current_package` freshness proof、domain ready 或 production ready 判据。本轮不关闭全局 `/goal`，也不表示 MAS repo-wide README/docs 覆盖完成。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`, `TASTE.md`, `docs/status.md`, `docs/architecture.md`, `docs/active/mas-ideal-state-gap-plan.md`, `docs/docs_portfolio_consolidation.md`.
+- MAS policy docs under `docs/policies/**`, with focused reads of policy indexes, runtime-governance policies, repo-ops policies, quality policy group, publication-route memory policy group, study archetypes and research route bias support.
+- MAS contracts: `contracts/functional_privatization_audit.json`, `contracts/generated_surface_handoff.json`, `contracts/production_acceptance/mas-production-acceptance.json`, `contracts/action_catalog.json`, and `contracts/test-lane-manifest.json`.
+
+Fresh semantic result:
+
+- Policy docs remain stable human-readable rules and cannot be used as runtime truth, active backlog, production evidence or artifact/publication authority.
+- Runtime-governance and repo-ops policies already keep Hermes / MDS / DeepScientist in explicit proof, historical fixture, archive import, backend audit, upstream intake, parity oracle, history/provenance or dev/CI/offline roles; they do not make those surfaces MAS default runtime owners.
+- MAS contract evidence continues to prohibit OPL authorization of MAS domain ready, publication ready, medical ready, artifact mutation, memory body, publication verdict or `current_package`.
+- One stale active-surface phrase in `docs/policies/runtime-governance/platform_operating_model.md` was narrowed from `gateway / controller` to `domain-agent entry`, controller, and generated descriptor / read-model surface.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | All tracked Markdown under `docs/policies/**` at policy-directory / owner-boundary level, with focused paragraph reads of the policy index, runtime-governance, repo-ops, study-workflow index and current authority-boundary policy groups. | `docs/policies/runtime-governance/platform_operating_model.md`; `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | OPL family ledger foldback for this MAS policy tranche. | `docs/active/development-document-portfolio.md` |
+
+Exact MAS policy paths newly recorded by this tranche: `docs/policies/domain_memory_markdown_first_policy.md`; `docs/policies/quality/ai_first_quality_boundary.md`; `docs/policies/quality/ai_reviewer_calibration_corpus.md`; `docs/policies/quality/dm002_manuscript_quality_self_evolution_20260518.md`; `docs/policies/quality/dm003_manuscript_quality_self_evolution_20260522.md`; `docs/policies/quality/evidence_review_contract.md`; `docs/policies/quality/medical_manuscript_first_draft_quality.md`; `docs/policies/quality/publication_gate_policy.md`; `docs/policies/runtime-governance/manual_runtime_stabilization_checklist.md`; `docs/policies/study-workflow/publication_route_memory_library.md`; `docs/policies/study-workflow/publication_route_memory_policy.md`; `docs/policies/study-workflow/research_route_bias_policy.md`; `docs/policies/study-workflow/study_archetypes.md`.
+
+Archived / tombstoned / deleted docs:
+
+- none. MAS policy docs remain active policy/support documents; stale current-surface wording was corrected in place.
+
+Unreviewed docs:
+
+- `one-person-lab`: none by exact inventory coverage for the current OPL inventory.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks and this policy tranche. Remaining exact uncovered clusters include large history/provenance trees, selected references, and `docs/runtime/projections/artifact_inventory_projection.md`, `runtime_health_kernel.md`, and `study_truth_kernel.md`.
+- `med-autogrant`: current recorded scope was closed by the MAG final inventory reconcile unless new docs or later source/contract changes reopen a section.
+- `redcube-ai`: none by current tracked repo-root `README*` + `docs/**/*.md` inventory reconcile unless new docs or substantive edits reopen coverage.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App release / GUI lanes are safe or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Future MAS policy prose that writes `gateway` as a current MAS owner surface, or treats Hermes / MDS / DeepScientist / local scheduler as default runtime owner, default diagnostic owner, production substrate, study truth, publication quality authority, artifact authority or `current_package` authority is stale pollution.
+- Future policy prose must keep merge/verification gates separate from runtime cutover, OPL provider soak, MAS owner receipts, typed blockers and real paper-line evidence; docs coverage, descriptor conformance or provider completion cannot become paper closure or production ready.
+- App docs remain unsafe for automatic governance while main and release/GUI lanes carry unrelated dirty changes.
+
+Verification before absorb:
+
+- MAS policy tranche worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings; policy inventory-vs-ledger recheck confirmed no remaining `docs/policies/**` exact path missing after this ledger entry.
+- OPL ledger worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+
+Next tranche write scope:
+
+- Continue MAS exact uncovered inventory, preferably the remaining runtime projection support docs or a bounded references/history tranche.
+- Keep App docs delayed until active release / GUI lanes are safe or explicitly assigned.
+
 ## 验证
 
 Docs-only 整理：
