@@ -5345,6 +5345,62 @@ Next tranche write scope:
 - Continue MAS exact uncovered inventory, preferably the remaining runtime projection support docs or a bounded references/history tranche.
 - Keep App docs delayed until active release / GUI lanes are safe or explicitly assigned.
 
+Date: `2026-05-26 22:35 CST`
+Tranche: `mas-active-support-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAS `docs/active/` 中尚未进入 coverage ledger 的 4 个 active/support 文档，并吸收回 MAS `main`。目标是确认 active 层仍只有 single Active Truth plan、内容线索引、论文自治验收、MDS provenance guard 与 canary registry guard 等唯一 owner 角色；active docs 不保存 dated proof ledger、长执行流水、OPL provider truth、App/workbench backlog 或旧 MDS/Hermes/local scheduler 复活口径。本轮不关闭全局 `/goal`，也不表示 MAS repo-wide README/docs 覆盖完成。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`, `TASTE.md`, `docs/status.md`, `docs/active/mas-ideal-state-gap-plan.md`, `docs/active/current-development-lines.md`, `docs/active/program_portfolio_consolidation.md`, and `docs/docs_portfolio_consolidation.md`.
+- MAS active docs: `docs/active/README.md`, `docs/active/ai_first_paper_autonomy_closure_program.md`, `docs/active/mas_single_project_mds_absorb_program.md`, and `docs/active/unique_control_plane_canary_registry.md`.
+- MAS contracts and source context: `contracts/unique_control_plane_canary_registry.json`, `contracts/functional_privatization_audit.json`, `contracts/generated_surface_handoff.json`, `contracts/production_acceptance/mas-production-acceptance.json`, `contracts/test-lane-manifest.json`, plus CodeGraph context for autonomy governance, OPL runtime refs and unique control-plane canary registry surfaces.
+
+Fresh semantic result:
+
+- `docs/active/README.md` already routes active reading to `mas-ideal-state-gap-plan.md` as single Active Truth owner and keeps process proof / closeout material in history.
+- `ai_first_paper_autonomy_closure_program.md` remains paper autonomy target / acceptance owner. It was updated so provider-hosted paper apply records DM002 owner receipt success refs observed with scaleout still pending; this does not authorize paper closure, submission readiness, publication-ready, artifact mutation, or `current_package` freshness.
+- `mas_single_project_mds_absorb_program.md` remains landed foundation support for MDS provenance, archive/import, backend audit, upstream learning and parity oracle. It does not reopen MDS default backend, MDS WebUI, MDS daemon, workspace-local service or Git runtime lifecycle.
+- `unique_control_plane_canary_registry.md` matches live registry contract: OPL is canonical control-plane owner; MAS owns study truth, quality verdict, artifact authority, owner route facts and owner receipt authority.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full paragraph read of `docs/active/README.md`, `docs/active/ai_first_paper_autonomy_closure_program.md`, `docs/active/mas_single_project_mds_absorb_program.md`, and `docs/active/unique_control_plane_canary_registry.md`, with support evidence from core active docs, contracts and CodeGraph surfaces. | `docs/active/ai_first_paper_autonomy_closure_program.md`; `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | OPL family ledger foldback for this MAS active-support tranche. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. All four active/support docs retain unique roles; stale currentness wording was corrected in place.
+
+Unreviewed docs:
+
+- `one-person-lab`: none by exact inventory coverage for the current OPL inventory.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks and this active-support tranche. Remaining exact uncovered clusters are mostly `docs/history/**`, `docs/references/med-deepscientist/**`, selected `docs/references/mainline/**`, selected integration / MDS parity references, `docs/public/README.md`, and `docs/specs/README.md`.
+- `med-autogrant`: current recorded scope was closed by the MAG final inventory reconcile unless new docs or later source/contract changes reopen a section.
+- `redcube-ai`: none by current tracked repo-root `README*` + `docs/**/*.md` inventory reconcile unless new docs or substantive edits reopen coverage.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App release / GUI lanes are safe or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Future MAS active docs that add dated proof ledgers, attempt ids, branch names, command traces or closeout chronology should be folded into `docs/history/**`, runtime ledgers, real workspace receipts or the coverage ledger rather than active owner docs.
+- Future paper-autonomy prose must not upgrade DM002 owner receipt refs, OPL provider completion, queue completion, repo tests or provider attempt completion into paper closure, publication-ready, artifact mutation authorization, submission readiness or `current_package` freshness.
+- Future MDS / DeepScientist / Hermes wording in active docs must stay in provenance, archive/import, backend audit, upstream learning, parity oracle, explicit executor/proof, or history roles; it must not return as default runtime owner, diagnostic owner, quality owner, artifact authority or hidden runnable substitute.
+- App docs remain unsafe for automatic governance while main and release/GUI lanes carry unrelated dirty changes.
+
+Verification before absorb:
+
+- MAS active-support tranche worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings; active-doc inventory-vs-ledger recheck confirmed no remaining `docs/active/**` exact path missing after this ledger entry.
+- OPL ledger worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+
+Next tranche write scope:
+
+- Continue MAS exact uncovered inventory, preferably `docs/references/med-deepscientist/**` or a bounded history index/provenance tranche.
+- Keep App docs delayed until active release / GUI lanes are safe or explicitly assigned.
+
 ## 验证
 
 Docs-only 整理：
