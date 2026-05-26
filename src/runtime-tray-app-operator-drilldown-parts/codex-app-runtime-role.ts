@@ -136,12 +136,15 @@ function codexAppRuntimeEvidenceObservationCommands() {
 function buildCodexAppRuntimeEvidenceFollowthrough(authorityBoundary: JsonRecord) {
   const gateId = 'temporal_hosted_long_soak_refs';
   const receiptSummary = codexAppRuntimeEvidenceReceiptSummary();
-  const observedRefs = uniqueStrings([
-    ...receiptSummary.temporalHostedLongSoakRefs,
+  const observedSupportRefs = uniqueStrings([
     ...receiptSummary.providerStateLinkageRefs,
     ...receiptSummary.operatorEvidenceRefs,
   ]);
-  const refsObservedForAllGates = observedRefs.length > 0
+  const observedRefs = uniqueStrings([
+    ...receiptSummary.temporalHostedLongSoakRefs,
+    ...observedSupportRefs,
+  ]);
+  const refsObservedForAllGates = receiptSummary.temporalHostedLongSoakRefs.length > 0
     && receiptSummary.recordedReceipts.length === 0
     && receiptSummary.typedBlockerRefs.length === 0;
   const activeGateOpen = !refsObservedForAllGates;
@@ -203,6 +206,10 @@ function buildCodexAppRuntimeEvidenceFollowthrough(authorityBoundary: JsonRecord
       ],
       observed_refs: observedRefs,
       observed_ref_count: observedRefs.length,
+      observed_support_refs: observedSupportRefs,
+      missing_required_refs: receiptSummary.temporalHostedLongSoakRefs.length > 0
+        ? []
+        : ['temporal_hosted_long_soak_refs'],
       current_contract_status: 'not_claimed_by_contract',
       full_detail_section: 'codex_app_runtime_role',
       authority_boundary: {
@@ -221,6 +228,13 @@ function buildCodexAppRuntimeEvidenceFollowthrough(authorityBoundary: JsonRecord
       'operator_evidence_ref',
       'typed_blocker_ref',
     ],
+    success_required_return_shapes: [
+      'temporal_hosted_long_soak_ref',
+    ],
+    supplemental_return_shapes: [
+      'provider_state_linkage_ref',
+      'operator_evidence_ref',
+    ],
     payload_owner: 'app_live_operator_or_opl_provider_owner',
     payload_template: activeGateOpen ? codexAppRuntimeEvidencePayloadTemplate() : null,
     payload_ref_hints: activeGateOpen ? codexAppRuntimeEvidencePayloadRefHints() : null,
@@ -236,8 +250,10 @@ function buildCodexAppRuntimeEvidenceFollowthrough(authorityBoundary: JsonRecord
         'real_temporal_hosted_long_soak_refs_or_typed_blocker_path_empty_template_blocks',
       accepted_payload_paths: {
         temporal_hosted_long_soak_refs_path: {
-          required_any_operator_payload_refs: [
+          required_operator_payload_refs: [
             'temporal_hosted_long_soak_refs',
+          ],
+          supplemental_operator_payload_refs: [
             'provider_state_linkage_refs',
             'operator_evidence_refs',
           ],
@@ -254,15 +270,19 @@ function buildCodexAppRuntimeEvidenceFollowthrough(authorityBoundary: JsonRecord
       },
       required_operator_payload_refs: [
         'temporal_hosted_long_soak_refs',
+        'typed_blocker_refs',
+      ],
+      supplemental_operator_payload_refs: [
         'provider_state_linkage_refs',
         'operator_evidence_refs',
-        'typed_blocker_refs',
       ],
       required_return_shapes: [
         'temporal_hosted_long_soak_ref',
+        'typed_blocker_ref',
+      ],
+      supplemental_return_shapes: [
         'provider_state_linkage_ref',
         'operator_evidence_ref',
-        'typed_blocker_ref',
       ],
       payload_template: codexAppRuntimeEvidencePayloadTemplate(),
       payload_ref_hints: codexAppRuntimeEvidencePayloadRefHints(),
@@ -372,6 +392,8 @@ export function codexAppRuntimeEvidenceNextStep(runtimeRole: JsonRecord) {
           status: stringValue(gate.status),
           required_refs_any_of: stringList(gate.required_refs_any_of),
           observed_ref_count: numberValue(gate.observed_ref_count),
+          observed_support_refs: stringList(gate.observed_support_refs),
+          missing_required_refs: stringList(gate.missing_required_refs),
           current_contract_status: stringValue(gate.current_contract_status),
         }))
       : [],
@@ -560,9 +582,11 @@ export function buildCodexAppRuntimeEvidenceActionRoutes(runtimeRole: JsonRecord
     can_close_without_domain_or_app_payload: false,
     required_operator_payload_refs: [
       'temporal_hosted_long_soak_refs',
+      'typed_blocker_refs',
+    ],
+    supplemental_operator_payload_refs: [
       'provider_state_linkage_refs',
       'operator_evidence_refs',
-      'typed_blocker_refs',
     ],
     required_evidence_refs: stringList(followthrough.open_gate_ids),
     required_return_shapes: stringList(followthrough.required_return_shapes),

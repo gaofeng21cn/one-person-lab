@@ -72,21 +72,46 @@ function codexAppRuntimeEvidenceDryRunPreflight(input: CodexAppRuntimeEvidenceRe
   const refCount = codexAppRuntimeEvidenceRefCount(input);
   const forbiddenPlaceholderRefs = codexAppRuntimeEvidenceRefs(input)
     .filter(looksLikePlaceholderRef);
+  const typedBlockerRefs = input.typed_blocker_refs ?? [];
+  const successRefs = [
+    ...(input.temporal_hosted_long_soak_refs ?? []),
+    ...(input.provider_state_linkage_refs ?? []),
+    ...(input.operator_evidence_refs ?? []),
+  ];
+  const missingRequiredRefs = typedBlockerRefs.length > 0
+    ? []
+    : (input.temporal_hosted_long_soak_refs ?? []).length > 0
+      ? []
+      : ['temporal_hosted_long_soak_refs'];
+  const mixedTypedBlockerAndSuccessRefs = typedBlockerRefs.length > 0 && successRefs.length > 0;
+  const canRecordRefsOnlyReceipt = refCount > 0
+    && forbiddenPlaceholderRefs.length === 0
+    && missingRequiredRefs.length === 0
+    && !mixedTypedBlockerAndSuccessRefs;
+  const status = forbiddenPlaceholderRefs.length > 0
+    ? 'blocked'
+    : mixedTypedBlockerAndSuccessRefs
+      ? 'blocked'
+      : missingRequiredRefs.length > 0
+        ? 'payload_required'
+        : refCount > 0
+          ? 'payload_refs_observed'
+          : 'payload_required';
   return {
     surface_kind: 'opl_codex_app_runtime_evidence_payload_preflight',
-    status: forbiddenPlaceholderRefs.length > 0
-      ? 'blocked'
-      : refCount > 0
-        ? 'payload_refs_observed'
-        : 'payload_required',
+    status,
     required_any: [
       'temporal_hosted_long_soak_refs',
-      'provider_state_linkage_refs',
-      'operator_evidence_refs',
       'typed_blocker_refs',
     ],
+    supplemental_refs: [
+      'provider_state_linkage_refs',
+      'operator_evidence_refs',
+    ],
+    missing_required_refs: missingRequiredRefs,
+    mixed_typed_blocker_and_success_refs: mixedTypedBlockerAndSuccessRefs,
     forbidden_placeholder_refs: forbiddenPlaceholderRefs,
-    can_record_refs_only_receipt: refCount > 0 && forbiddenPlaceholderRefs.length === 0,
+    can_record_refs_only_receipt: canRecordRefsOnlyReceipt,
     empty_payload_template_is_success_evidence: false,
     payload_owner: 'app_live_operator_or_opl_provider_owner',
     authority_boundary: {
