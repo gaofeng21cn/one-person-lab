@@ -5,6 +5,11 @@ import {
   type CodexAppRuntimeEvidenceReceiptInput,
 } from '../../codex-app-runtime-evidence-ledger.ts';
 import {
+  finishCodexAppRuntimeLongSoakObservation,
+  recordCodexAppRuntimeLongSoakObservationEvent,
+  startCodexAppRuntimeLongSoakObservation,
+} from '../../codex-app-runtime-long-soak-observation.ts';
+import {
   assertNoArgs,
   assertSinglePayloadSource,
   buildUsageError,
@@ -144,6 +149,162 @@ function parseRuntimeCodexAppRuntimeEvidenceVerifyArgs(
   return { receipt_ref: receiptRef };
 }
 
+function parsePositiveInteger(
+  value: string | undefined,
+  option: string,
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  if (!value) {
+    throw buildUsageError(
+      `runtime codex-app-runtime-evidence long-soak start requires ${option}.`,
+      spec,
+      { option },
+    );
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw buildUsageError(`${option} must be a positive integer.`, spec, {
+      option,
+      value,
+    });
+  }
+  return parsed;
+}
+
+function parseRuntimeCodexAppRuntimeLongSoakStartArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  let evidenceDir: string | null = null;
+  let minimumDurationMinutes: number | null = null;
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    const value = args[index + 1];
+    if (token === '--evidence-dir' && value) {
+      evidenceDir = value;
+      index += 1;
+      continue;
+    }
+    if (token === '--minimum-duration-minutes') {
+      minimumDurationMinutes = parsePositiveInteger(value, token, spec);
+      index += 1;
+      continue;
+    }
+    throw buildUsageError(
+      `Unknown option for runtime codex-app-runtime-evidence long-soak start: ${token}.`,
+      spec,
+      { option: token },
+    );
+  }
+  if (!minimumDurationMinutes) {
+    throw buildUsageError(
+      'runtime codex-app-runtime-evidence long-soak start requires --minimum-duration-minutes.',
+      spec,
+      { required: ['--minimum-duration-minutes'] },
+    );
+  }
+  if (!evidenceDir) {
+    throw buildUsageError(
+      'runtime codex-app-runtime-evidence long-soak start requires --evidence-dir.',
+      spec,
+      { required: ['--evidence-dir'] },
+    );
+  }
+  return {
+    evidenceDir,
+    minimumDurationMinutes,
+  };
+}
+
+function parseRuntimeCodexAppRuntimeLongSoakEventArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  let workorderFile = '';
+  let eventKind = '';
+  let observedAt: string | null = null;
+  let evidenceRef: string | null = null;
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    const value = args[index + 1];
+    if (token === '--workorder-file' && value) {
+      workorderFile = value;
+      index += 1;
+      continue;
+    }
+    if (token === '--event-kind' && value) {
+      eventKind = value;
+      index += 1;
+      continue;
+    }
+    if (token === '--observed-at' && value) {
+      observedAt = value;
+      index += 1;
+      continue;
+    }
+    if (token === '--evidence-ref' && value) {
+      evidenceRef = value;
+      index += 1;
+      continue;
+    }
+    throw buildUsageError(
+      `Unknown option for runtime codex-app-runtime-evidence long-soak event: ${token}.`,
+      spec,
+      { option: token },
+    );
+  }
+  if (!workorderFile) {
+    throw buildUsageError(
+      'runtime codex-app-runtime-evidence long-soak event requires --workorder-file.',
+      spec,
+      { required: ['--workorder-file'] },
+    );
+  }
+  if (!eventKind) {
+    throw buildUsageError(
+      'runtime codex-app-runtime-evidence long-soak event requires --event-kind.',
+      spec,
+      { required: ['--event-kind'] },
+    );
+  }
+  return { workorderFile, eventKind, observedAt, evidenceRef };
+}
+
+function parseRuntimeCodexAppRuntimeLongSoakFinishArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  let workorderFile = '';
+  let finishedAt: string | null = null;
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    const value = args[index + 1];
+    if (token === '--workorder-file' && value) {
+      workorderFile = value;
+      index += 1;
+      continue;
+    }
+    if (token === '--finished-at' && value) {
+      finishedAt = value;
+      index += 1;
+      continue;
+    }
+    throw buildUsageError(
+      `Unknown option for runtime codex-app-runtime-evidence long-soak finish: ${token}.`,
+      spec,
+      { option: token },
+    );
+  }
+  if (!workorderFile) {
+    throw buildUsageError(
+      'runtime codex-app-runtime-evidence long-soak finish requires --workorder-file.',
+      spec,
+      { required: ['--workorder-file'] },
+    );
+  }
+  return { workorderFile, finishedAt };
+}
+
 export function buildRuntimeCodexAppRuntimeEvidenceCommandSpecs(): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
     'runtime codex-app-runtime-evidence record': {
@@ -212,6 +373,60 @@ export function buildRuntimeCodexAppRuntimeEvidenceCommandSpecs(): Record<string
           },
         };
       },
+    },
+    'runtime codex-app-runtime-evidence long-soak start': {
+      usage:
+        'opl runtime codex-app-runtime-evidence long-soak start --minimum-duration-minutes <n> --evidence-dir <path>',
+      summary:
+        'Prepare a local Codex App runtime long-soak observation workorder without recording runtime evidence.',
+      examples: [
+        'opl runtime codex-app-runtime-evidence long-soak start --minimum-duration-minutes 240 --evidence-dir /tmp/opl-codex-app-runtime-long-soak',
+      ],
+      handler: (args) => ({
+        codex_app_runtime_long_soak_observation_start:
+          startCodexAppRuntimeLongSoakObservation(
+            parseRuntimeCodexAppRuntimeLongSoakStartArgs(
+              args,
+              commandSpecs['runtime codex-app-runtime-evidence long-soak start'],
+            ),
+          ),
+      }),
+    },
+    'runtime codex-app-runtime-evidence long-soak event': {
+      usage:
+        'opl runtime codex-app-runtime-evidence long-soak event --workorder-file <path> --event-kind <kind> [--observed-at <iso>] [--evidence-ref <ref>]',
+      summary:
+        'Append a constrained Codex App runtime long-soak observation event to the local workorder log without recording runtime evidence.',
+      examples: [
+        'opl runtime codex-app-runtime-evidence long-soak event --workorder-file /tmp/opl-codex-app-runtime-long-soak/codex-app-runtime-long-soak-workorder.json --event-kind provider_state_linkage_checked --evidence-ref provider-state:temporal/cadence-current',
+      ],
+      handler: (args) => ({
+        codex_app_runtime_long_soak_observation_event:
+          recordCodexAppRuntimeLongSoakObservationEvent(
+            parseRuntimeCodexAppRuntimeLongSoakEventArgs(
+              args,
+              commandSpecs['runtime codex-app-runtime-evidence long-soak event'],
+            ),
+          ),
+      }),
+    },
+    'runtime codex-app-runtime-evidence long-soak finish': {
+      usage:
+        'opl runtime codex-app-runtime-evidence long-soak finish --workorder-file <path> [--finished-at <iso>]',
+      summary:
+        'Materialize Codex App runtime evidence refs and a record payload only after the local observation workorder passes preflight.',
+      examples: [
+        'opl runtime codex-app-runtime-evidence long-soak finish --workorder-file /tmp/opl-codex-app-runtime-long-soak/codex-app-runtime-long-soak-workorder.json',
+      ],
+      handler: (args) => ({
+        codex_app_runtime_long_soak_observation_finish:
+          finishCodexAppRuntimeLongSoakObservation(
+            parseRuntimeCodexAppRuntimeLongSoakFinishArgs(
+              args,
+              commandSpecs['runtime codex-app-runtime-evidence long-soak finish'],
+            ),
+          ),
+      }),
     },
   };
   return commandSpecs;

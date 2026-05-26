@@ -109,6 +109,33 @@ export function buildPublicRuntimeCommandSpecs(
         examples: ['opl runtime codex-app-runtime-evidence list --json'],
         group: 'runtime',
       }),
+    'runtime codex-app-runtime-evidence long-soak start':
+      cloneCommandSpec(commandSpecs['runtime codex-app-runtime-evidence long-soak start'], {
+        usage:
+          'opl runtime codex-app-runtime-evidence long-soak start --minimum-duration-minutes <n> --evidence-dir <path>',
+        examples: [
+          'opl runtime codex-app-runtime-evidence long-soak start --minimum-duration-minutes 240 --evidence-dir /tmp/opl-codex-app-runtime-long-soak',
+        ],
+        group: 'runtime',
+      }),
+    'runtime codex-app-runtime-evidence long-soak event':
+      cloneCommandSpec(commandSpecs['runtime codex-app-runtime-evidence long-soak event'], {
+        usage:
+          'opl runtime codex-app-runtime-evidence long-soak event --workorder-file <path> --event-kind <kind> [--observed-at <iso>] [--evidence-ref <ref>]',
+        examples: [
+          'opl runtime codex-app-runtime-evidence long-soak event --workorder-file /tmp/opl-codex-app-runtime-long-soak/codex-app-runtime-long-soak-workorder.json --event-kind provider_state_linkage_checked --evidence-ref provider-state:temporal/cadence-current',
+        ],
+        group: 'runtime',
+      }),
+    'runtime codex-app-runtime-evidence long-soak finish':
+      cloneCommandSpec(commandSpecs['runtime codex-app-runtime-evidence long-soak finish'], {
+        usage:
+          'opl runtime codex-app-runtime-evidence long-soak finish --workorder-file <path> [--finished-at <iso>]',
+        examples: [
+          'opl runtime codex-app-runtime-evidence long-soak finish --workorder-file /tmp/opl-codex-app-runtime-long-soak/codex-app-runtime-long-soak-workorder.json',
+        ],
+        group: 'runtime',
+      }),
     ...developerModeCloseoutCommandSpecs,
     'runtime oma-app-live-path record':
       cloneCommandSpec(commandSpecs['runtime oma-app-live-path record'], {

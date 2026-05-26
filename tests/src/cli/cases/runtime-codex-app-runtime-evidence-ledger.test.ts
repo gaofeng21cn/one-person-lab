@@ -233,3 +233,262 @@ test('runtime Codex App runtime evidence typed blocker refs keep the long-soak g
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
+
+test('runtime Codex App runtime evidence long-soak start writes a workorder without closing evidence', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-app-runtime-long-soak-start-state-'));
+  try {
+    const evidenceDir = path.join(stateRoot, 'codex-app-runtime-long-soak-start');
+    const startOutput = runCli([
+      'runtime',
+      'codex-app-runtime-evidence',
+      'long-soak',
+      'start',
+      '--minimum-duration-minutes',
+      '60',
+      '--evidence-dir',
+      evidenceDir,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).codex_app_runtime_long_soak_observation_start;
+
+    assert.equal(startOutput.status, 'started');
+    assert.equal(startOutput.target_surface, 'codex_app_runtime_role');
+    assert.equal(startOutput.runtime_policy, 'opl_temporal_hosted_autonomous');
+    assert.equal(startOutput.minimum_duration_minutes, 60);
+    assert.deepEqual(startOutput.temporal_hosted_long_soak_refs, []);
+    assert.deepEqual(startOutput.provider_state_linkage_refs, []);
+    assert.deepEqual(startOutput.operator_evidence_refs, []);
+    assert.equal(startOutput.record_payload_file, null);
+    assert.equal(startOutput.authority_boundary.can_close_long_soak, false);
+    assert.equal(startOutput.authority_boundary.can_claim_production_ready, false);
+    assert.equal(startOutput.authority_boundary.can_drive_long_running_task_loop, false);
+    assert.equal(fs.existsSync(startOutput.workorder_file), true);
+    assert.equal(fs.existsSync(startOutput.operator_log_file), true);
+
+    const listOutput = runCli(['runtime', 'codex-app-runtime-evidence', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    }).codex_app_runtime_evidence_ledger;
+    assert.equal(listOutput.receipt_count, 0);
+
+    const drilldown = runCli(['runtime', 'app-operator-drilldown'], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
+    assert.equal(drilldown.summary.codex_app_runtime_evidence_open_gate_count, 1);
+    assert.equal(drilldown.summary.codex_app_runtime_evidence_ledger_receipt_ref_count, 0);
+    assert.equal(drilldown.summary.codex_app_production_long_soak_claimed, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime Codex App runtime evidence long-soak finish materializes a record payload after the observation window', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-app-runtime-long-soak-finish-state-'));
+  try {
+    const evidenceDir = path.join(stateRoot, 'codex-app-runtime-long-soak-finish');
+    const startOutput = runCli([
+      'runtime',
+      'codex-app-runtime-evidence',
+      'long-soak',
+      'start',
+      '--minimum-duration-minutes',
+      '60',
+      '--evidence-dir',
+      evidenceDir,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).codex_app_runtime_long_soak_observation_start;
+
+    const workorder = JSON.parse(fs.readFileSync(startOutput.workorder_file, 'utf8'));
+    fs.writeFileSync(
+      startOutput.workorder_file,
+      `${JSON.stringify({
+        ...workorder,
+        started_at: '2026-05-24T00:00:00.000Z',
+        earliest_finish_at: '2026-05-24T01:00:00.000Z',
+      }, null, 2)}\n`,
+    );
+    const eventKinds = [
+      ['temporal_hosted_stage_or_worker_window_observed', '2026-05-24T00:05:00.000Z'],
+      ['provider_state_linkage_checked', '2026-05-24T00:15:00.000Z'],
+      ['codex_app_operator_observation_recorded', '2026-05-24T00:30:00.000Z'],
+      ['operator_continuity_window_observed', '2026-05-24T01:05:00.000Z'],
+    ];
+    for (const [eventKind, observedAt] of eventKinds) {
+      const eventOutput = runCli([
+        'runtime',
+        'codex-app-runtime-evidence',
+        'long-soak',
+        'event',
+        '--workorder-file',
+        startOutput.workorder_file,
+        '--event-kind',
+        eventKind,
+        '--observed-at',
+        observedAt,
+        '--evidence-ref',
+        `operator-evidence:codex-app-runtime/${eventKind}`,
+      ], {
+        OPL_STATE_DIR: stateRoot,
+      }).codex_app_runtime_long_soak_observation_event;
+      assert.equal(eventOutput.status, 'recorded');
+      assert.deepEqual(eventOutput.temporal_hosted_long_soak_refs, []);
+      assert.equal(eventOutput.record_payload_file, null);
+      assert.equal(eventOutput.authority_boundary.can_claim_production_ready, false);
+    }
+
+    const finishOutput = runCli([
+      'runtime',
+      'codex-app-runtime-evidence',
+      'long-soak',
+      'finish',
+      '--workorder-file',
+      startOutput.workorder_file,
+      '--finished-at',
+      '2026-05-24T01:10:00.000Z',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).codex_app_runtime_long_soak_observation_finish;
+
+    assert.equal(finishOutput.status, 'evidence_ready');
+    assert.equal(finishOutput.target_surface, 'codex_app_runtime_role');
+    assert.equal(finishOutput.elapsed_minutes >= 60, true);
+    assert.equal(finishOutput.required_event_kinds_observed, true);
+    assert.equal(finishOutput.temporal_hosted_long_soak_refs.length, 1);
+    assert.equal(
+      finishOutput.temporal_hosted_long_soak_refs[0].startsWith(
+        'temporal_hosted_long_soak_ref://one-person-lab/codex-app-runtime/operator-window/',
+      ),
+      true,
+    );
+    assert.equal(finishOutput.provider_state_linkage_refs.length, 1);
+    assert.equal(finishOutput.operator_evidence_refs.length, 1);
+    assert.match(finishOutput.operator_log_sha256, /^[0-9a-f]{64}$/);
+    assert.match(finishOutput.manifest_sha256, /^[0-9a-f]{64}$/);
+    assert.equal(fs.existsSync(finishOutput.manifest_file), true);
+    assert.equal(fs.existsSync(finishOutput.record_payload_file), true);
+    assert.equal(finishOutput.authority_boundary.can_close_long_soak, false);
+    assert.equal(finishOutput.authority_boundary.can_claim_production_ready, false);
+
+    const payload = JSON.parse(fs.readFileSync(finishOutput.record_payload_file, 'utf8'));
+    assert.deepEqual(payload.temporal_hosted_long_soak_refs, finishOutput.temporal_hosted_long_soak_refs);
+    assert.deepEqual(payload.provider_state_linkage_refs, finishOutput.provider_state_linkage_refs);
+    assert.deepEqual(payload.operator_evidence_refs, finishOutput.operator_evidence_refs);
+
+    const recordOutput = runCli([
+      'runtime',
+      'codex-app-runtime-evidence',
+      'record',
+      '--payload-file',
+      finishOutput.record_payload_file,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).codex_app_runtime_evidence_ledger_record;
+    assert.equal(recordOutput.status, 'recorded');
+    assert.deepEqual(
+      recordOutput.receipts[0].temporal_hosted_long_soak_refs,
+      finishOutput.temporal_hosted_long_soak_refs,
+    );
+    assert.equal(recordOutput.receipts[0].authority_boundary.can_close_long_soak, false);
+    assert.equal(recordOutput.receipts[0].authority_boundary.can_claim_production_ready, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime Codex App runtime evidence long-soak event rejects unknown event kinds', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-app-runtime-long-soak-event-invalid-state-'));
+  try {
+    const startOutput = runCli([
+      'runtime',
+      'codex-app-runtime-evidence',
+      'long-soak',
+      'start',
+      '--minimum-duration-minutes',
+      '60',
+      '--evidence-dir',
+      path.join(stateRoot, 'codex-app-runtime-long-soak-event-invalid'),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).codex_app_runtime_long_soak_observation_start;
+
+    assert.throws(
+      () => runCli([
+        'runtime',
+        'codex-app-runtime-evidence',
+        'long-soak',
+        'event',
+        '--workorder-file',
+        startOutput.workorder_file,
+        '--event-kind',
+        'freeform_operator_note',
+      ], {
+        OPL_STATE_DIR: stateRoot,
+      }),
+      /event_kind must be one of:/,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime Codex App runtime evidence long-soak finish blocks before minimum duration', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-app-runtime-long-soak-blocked-state-'));
+  try {
+    const evidenceDir = path.join(stateRoot, 'codex-app-runtime-long-soak-blocked');
+    const startOutput = runCli([
+      'runtime',
+      'codex-app-runtime-evidence',
+      'long-soak',
+      'start',
+      '--minimum-duration-minutes',
+      '60',
+      '--evidence-dir',
+      evidenceDir,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).codex_app_runtime_long_soak_observation_start;
+    for (const eventKind of [
+      'temporal_hosted_stage_or_worker_window_observed',
+      'provider_state_linkage_checked',
+      'codex_app_operator_observation_recorded',
+      'operator_continuity_window_observed',
+    ]) {
+      runCli([
+        'runtime',
+        'codex-app-runtime-evidence',
+        'long-soak',
+        'event',
+        '--workorder-file',
+        startOutput.workorder_file,
+        '--event-kind',
+        eventKind,
+      ], {
+        OPL_STATE_DIR: stateRoot,
+      });
+    }
+
+    const finishOutput = runCli([
+      'runtime',
+      'codex-app-runtime-evidence',
+      'long-soak',
+      'finish',
+      '--workorder-file',
+      startOutput.workorder_file,
+      '--finished-at',
+      startOutput.started_at,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).codex_app_runtime_long_soak_observation_finish;
+
+    assert.equal(finishOutput.status, 'blocked');
+    assert.equal(
+      finishOutput.blocker.blocker_id,
+      'codex_app_runtime_long_soak_minimum_duration_not_satisfied',
+    );
+    assert.deepEqual(finishOutput.temporal_hosted_long_soak_refs, []);
+    assert.equal(finishOutput.record_payload_file, null);
+    assert.equal(finishOutput.authority_boundary.can_claim_production_ready, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});

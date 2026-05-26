@@ -102,11 +102,9 @@ function codexAppRuntimeEvidenceObservationCommands() {
   return {
     start: [
       'runtime',
-      'app-release-evidence',
-      'long-operator',
+      'codex-app-runtime-evidence',
+      'long-soak',
       'start',
-      '--cohort',
-      '<version>',
       '--minimum-duration-minutes',
       '<n>',
       '--evidence-dir',
@@ -114,8 +112,8 @@ function codexAppRuntimeEvidenceObservationCommands() {
     ],
     event: [
       'runtime',
-      'app-release-evidence',
-      'long-operator',
+      'codex-app-runtime-evidence',
+      'long-soak',
       'event',
       '--workorder-file',
       '<path>',
@@ -126,8 +124,8 @@ function codexAppRuntimeEvidenceObservationCommands() {
     ],
     finish: [
       'runtime',
-      'app-release-evidence',
-      'long-operator',
+      'codex-app-runtime-evidence',
+      'long-soak',
       'finish',
       '--workorder-file',
       '<path>',

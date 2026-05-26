@@ -79,14 +79,38 @@ test('runtime App drilldown exposes Codex App runtime role without long-running 
     summaryRole.production_evidence_followthrough.observation_workorder_commands.start,
     [
       'runtime',
-      'app-release-evidence',
-      'long-operator',
+      'codex-app-runtime-evidence',
+      'long-soak',
       'start',
-      '--cohort',
-      '<version>',
       '--minimum-duration-minutes',
       '<n>',
       '--evidence-dir',
+      '<path>',
+    ],
+  );
+  assert.deepEqual(
+    summaryRole.production_evidence_followthrough.observation_workorder_commands.event,
+    [
+      'runtime',
+      'codex-app-runtime-evidence',
+      'long-soak',
+      'event',
+      '--workorder-file',
+      '<path>',
+      '--event-kind',
+      '<kind>',
+      '--evidence-ref',
+      '<ref>',
+    ],
+  );
+  assert.deepEqual(
+    summaryRole.production_evidence_followthrough.observation_workorder_commands.finish,
+    [
+      'runtime',
+      'codex-app-runtime-evidence',
+      'long-soak',
+      'finish',
+      '--workorder-file',
       '<path>',
     ],
   );
@@ -135,6 +159,10 @@ test('runtime App drilldown exposes Codex App runtime role without long-running 
     'app_release_verify_receipt' in runtimeEvidenceStep.payload_workorder
       .observation_workorder_commands,
     false,
+  );
+  assert.equal(
+    runtimeEvidenceStep.payload_workorder.observation_workorder_commands.start[1],
+    'codex-app-runtime-evidence',
   );
   assert.equal(runtimeEvidenceStep.can_close_long_soak, false);
   assert.equal(runtimeEvidenceStep.can_claim_production_ready, false);
