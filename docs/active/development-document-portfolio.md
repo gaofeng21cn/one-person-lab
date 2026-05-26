@@ -3962,6 +3962,65 @@ Next tranche write scope:
 - Separately route the pre-existing `workspace cockpit` / `product direct-entry` CLI test drift to a source/test owner lane.
 - Or choose RCA uncovered reference bodies, OPL uncovered docs, or App docs once their main checkout and active worktrees are safe.
 
+Date: `2026-05-26 15:20 CST`
+Tranche: `mag-20260411-hermes-reset-local-runtime-history-specs-coverage`
+State: `tranche_verified_pending_absorb`
+
+本轮覆盖 MAG `docs/history/specs/` 下 2026-04-11 Hermes-backed runtime capability migration map、Hermes-backed runtime substrate program、post-R5A local-runtime upper-bound honest-stop 与 upstream Hermes-Agent truth reset 历史 specs。目标是确认这些 direct-file 历史入口不会把旧 Hermes-first provider proposal、Hermes substrate owner path、repo-local runtime helper、`runtime-run` / `runtime-resume`、local journal、host-agent compatibility bridge、future Hermes host 或 “接入上游 Hermes-Agent” 词汇误读成当前 default runtime owner、active provider owner、MAG-owned daemon/scheduler/attempt-loop、attempt ledger、public runtime command、compatibility bridge、hosted runtime readiness、App/release readiness、production readiness、physical-delete authority 或 active implementation queue。
+
+Fresh live truth inputs:
+
+- MAG `AGENTS.md`, `TASTE.md`, core docs, `docs/active/mag-ideal-state-cross-repo-gap-plan.md`, `docs/specs/README.md`, `docs/specs/specs_lifecycle_map.md`, `docs/history/specs/README.md`, and MAG `docs/docs_portfolio_consolidation.md`.
+- Reviewed history specs: `docs/history/specs/2026-04-11-hermes-backed-runtime-capability-migration-map-current-truth.md`, `docs/history/specs/2026-04-11-hermes-backed-runtime-substrate-program-current-truth.md`, `docs/history/specs/2026-04-11-post-r5a-local-runtime-upper-bound-honest-stop-current-truth.md`, and `docs/history/specs/2026-04-11-upstream-hermes-agent-truth-reset-current-truth.md`.
+- MAG machine/source truth surfaces: `contracts/runtime-program/current-program.json`, `src/med_autogrant/public_cli.py`, `src/med_autogrant/domain_entry.py`, `src/med_autogrant/domain_runtime_parts/substrate.py`, `src/med_autogrant/product_entry_parts/functional_closure_skeleton.py`, `src/med_autogrant/critique_executor.py`, `src/med_autogrant/hermes_native_executor.py`, `tests/test_domain_entry.py`, `tests/test_critique_executor.py`, `tests/test_hermes_native_executor.py`, `tests/test_program_control_surfaces.py`, active specs listed by `docs/specs/README.md`, schemas/source/CLI/API behavior.
+- Fresh read-model probes: `MagDomainRuntime().describe_topology()`, grouped public CLI help for root/workspace/pass/package, `PUBLIC_GROUP_COMMANDS`, `INTERNAL_TO_PUBLIC_COMMAND`, `SERVICE_SAFE_DOMAIN_COMMANDS`, and `retired_public_command_scan`.
+
+Fresh semantic result:
+
+- All four reviewed files carry first-screen lifecycle notes plus `Owner` / `Purpose` / `State` / `Machine boundary`.
+- The capability migration map is correctly scoped as historical Hermes capability split provenance; its Hermes command mapping is not current runtime owner, default provider, public command catalog, hosted runtime readiness or compatibility target.
+- Three higher-risk history specs needed small post-2026-05 reading guards:
+  - `2026-04-11-hermes-backed-runtime-substrate-program-current-truth.md` now guards `Hermes-backed runtime substrate`, `runtime-run` / `runtime-resume`, local host-agent compatibility bridge and “切到 Hermes substrate owner path” as 2026-04-11 proposal/proof context only.
+  - `2026-04-11-post-r5a-local-runtime-upper-bound-honest-stop-current-truth.md` now guards “Current Repo-Verified Local Runtime Surface” as an honest-stop historical snapshot, not current executable command catalog.
+  - `2026-04-11-upstream-hermes-agent-truth-reset-current-truth.md` now guards “当前真实状态”、“仍然成立的本地能力”、“长线目标” and “下一步允许做什么” as 2026-04-11 truth-reset context only.
+- `contracts/runtime-program/current-program.json` still states `default_task_runtime_owner=one-person-lab`, `default_runtime_owner=configured_family_runtime_provider`, `default_runtime_substrate=temporal`, `mag_implements_daemon=false`, `mag_implements_scheduler=false`, `mag_implements_attempt_loop=false`, `mag_owns_attempt_ledger=false`, `default_stage_executor=codex_cli`, and `optional_hosted_carriers=["hermes_agent"]`.
+- `MagDomainRuntime().describe_topology()` still reports `runtime_owner=one-person-lab`, `can_claim_generic_runtime_owner=False`, `default_formal_entry=CLI`, `supported_protocol_layer=MCP`, `internal_controller_surface=controller`, `optional_proof_executor=Hermes-Agent`, and `optional_proof_executor_boundary=explicit opt-in only`.
+- Current public CLI shape is grouped under root groups `workspace`, `mainline`, `domain-handler`, `authority`, `pass`, and `package`. `run-local`, `runtime-run`, `runtime-resume` and `probe-upstream-hermes` remain absent from active domain-entry and grouped public CLI catalogs; retired command scan returned `state=passed`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autogrant` | Full paragraph read of the four 2026-04-11 Hermes/reset/local-runtime history specs listed above; support read of history specs index, specs lifecycle map, active gap plan, current-program runtime owner fields, grouped public CLI mapping, domain runtime topology, explicit Hermes proof lane source/tests, and retired command no-resurrection surfaces. | `docs/docs_portfolio_consolidation.md`; `docs/history/specs/2026-04-11-hermes-backed-runtime-substrate-program-current-truth.md`; `docs/history/specs/2026-04-11-post-r5a-local-runtime-upper-bound-honest-stop-current-truth.md`; `docs/history/specs/2026-04-11-upstream-hermes-agent-truth-reset-current-truth.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. These four MAG files remain useful history provenance; no body move, tombstone, or delete was required.
+
+Unreviewed docs:
+
+- `med-autogrant`: remaining `docs/history/specs/*.md` files outside the 2026-04-06 foundation batch, 2026-04-07 P2/P3A batch, 2026-04-08 P3/P4 batch, 2026-04-08 P5/R1 batch, 2026-04-08 R2/R3/runtime-first batch, 2026-04-09 R3/R4/R5/post-R5A batch, 2026-04-10 hosted-contract bundle fail-closed batch, 2026-04-10 local-runtime/stage-route/revised/walkthrough batch and this 2026-04-11 Hermes/reset/local-runtime batch remain open for paragraph-level governance.
+- Higher-risk remaining MAG batches include 2026-04-12 hosted/OPL handoff and upstream Hermes fast-cutover records.
+- MAG non-index references such as grant strategy memory policy, OPL family contract adoption and governance checklist still need paragraph-level checks against current contracts/source unless already covered by a later MAG or OPL ledger entry.
+- OPL, MAS, RCA and App repo-wide coverage remains open outside recorded chunks. OMA is covered by its earlier full README/docs tranche.
+
+Remaining stale / retire candidates:
+
+- Any future direct-file use of these 2026-04-11 specs as current runtime owner, default provider, Hermes-backed default route, public `runtime-run` / `runtime-resume`, local run journal, attempt ledger, host-agent bridge, compatibility target, hosted runtime readiness, App/release readiness, production readiness, physical-delete authority or active implementation queue is stale pollution.
+- Historical bare command examples must be mapped through current grouped public CLI where a mapped public command exists; `runtime-run`, `runtime-resume`, `run-local` and `probe-upstream-hermes` have no current grouped public command and must remain retired.
+- `hermes_agent` vocabulary must remain explicit opt-in executor / receipt / proof lane vocabulary. It must not be upgraded to default task runtime owner, provider owner, grant truth owner, quality/export verdict owner or long-soak completion claim.
+
+Verification / absorb:
+
+- Pending this tranche closeout: MAG and OPL docs-only verification, focused no-resurrection/domain-entry tests, fast-forward absorb into both `main` checkouts, worktree cleanup, then final six-repo lightweight verification.
+
+Next tranche write scope:
+
+- Continue MAG `docs/history/specs/*.md` in date/topic batches, prioritizing 2026-04-12 hosted/OPL handoff and upstream Hermes fast-cutover records because stale hosted/provider wording risk remains high.
+- Separately route the pre-existing `workspace cockpit` / `product direct-entry` CLI test drift to a source/test owner lane.
+- Or choose RCA uncovered reference bodies, OPL uncovered docs, or App docs once their main checkout and active worktrees are safe.
+
 ## 验证
 
 Docs-only 整理：
