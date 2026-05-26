@@ -6210,3 +6210,66 @@ Next tranche write scope:
 - Continue OPL series whole-docs coverage outside this MAS history tranche, preferably a remaining clean repo whose worktrees are not externally dirty or recent.
 - Start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
 - Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
+
+Date: `2026-05-27 04:55 CST`
+Tranche: `mag-exact-active-spec-path-reconcile`
+State: `tranche_verified`
+
+本轮覆盖 MAG final inventory reconcile 之后留下的 17 个 exact-path ledger gap，并把结果回写到 MAG 本地 coverage ledger 与本 OPL family ledger。目标是把 grouped coverage 与当前 MAG `README*` / `docs/**/*.md` exact inventory 对齐，避免把“路径没有逐字出现在本地 ledger”误读成未审文档。本轮不关闭全局 `/goal`，也不表示 OPL series 六仓 `README*` 与 `docs/**/*.md` 已全部逐段覆盖完成。
+
+Fresh live truth inputs:
+
+- MAG `AGENTS.md`, `TASTE.md`, core five, `docs/active/mag-ideal-state-cross-repo-gap-plan.md`, `docs/references/med-auto-grant-ideal-state.md`, `docs/docs_portfolio_consolidation.md`, `docs/specs/README.md`, `docs/specs/specs_lifecycle_map.md`, and `docs/history/specs/README.md`.
+- MAG current inventory script over repo-root `README*` plus all `docs/**/*.md`, compared against existing MAG coverage-ledger exact path strings.
+- First-screen / role read of the 17 exact paths missing from the ledger before this tranche: four 2026-04-06 history foundation specs, two 2026-04-07 support current-truth specs, seven 2026-04-12 / 2026-04-13 product-entry / route / package support specs, and four active current specs for critique executor, quality/autonomy, authoring completion and AI-first quality boundary.
+
+Fresh semantic result:
+
+- Current MAG truth remains `Declarative Grant Pack + OPL generated/hosted surfaces + minimal authority functions`: OPL/Temporal owns hosted task runtime; `Codex CLI` is the default stage executor; `Hermes-Agent` remains explicit opt-in proof / executor adapter provenance; MAG owns grant truth, fundability / quality / export verdicts, package authority, memory decision and owner receipts.
+- The four 2026-04-06 history specs already have first-screen lifecycle guards and remain historical foundation provenance.
+- `docs/specs/2026-04-07-durability-model-clarification.md` and `docs/specs/2026-04-07-formal-entry-matrix-current-truth.md` remain support records only; they do not restore local journal, attempt ledger, old public runtime commands, Gateway/local-manager path or MAG-owned generic runtime.
+- The 2026-04-12 / 2026-04-13 P4 product-entry / route / package specs remain support current-truth by subsection under source, schemas, product-entry manifest and `contracts/runtime-program/current-program.json`; they do not claim mature App/workbench, hosted runtime completion, external submission, grant ready, production ready or physical-delete authorization.
+- The critique executor, quality/autonomy, authoring completion and AI-first quality-boundary specs remain active current specs within the narrow boundaries listed by MAG `docs/specs/specs_lifecycle_map.md`.
+- No MAG prose body required rewrite. The MAG ledger now records the 17 exact paths directly, closing the local accounting ambiguity without changing current machine truth.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autogrant` | First-screen / role read of the 17 exact paths missing from MAG local ledger, with supporting current-boundary read of MAG specs lifecycle map, history specs index, core docs, active truth plan and ideal-state reference. | `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | OPL family coverage ledger foldback for this MAG exact-path reconcile tranche; no OPL active truth / source / contract semantics changed. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The reviewed MAG paths already have legitimate long-term roles as history provenance, support current-truth records or narrow active current specs.
+
+Unreviewed docs:
+
+- `med-autogrant`: exact-string inventory now has no uncovered `README*` / `docs/**/*.md` path in the current 117-file scope once this entry is counted. MAG remains part of the larger OPL series goal, and global closure still depends on all six repos.
+- `one-person-lab`: no new OPL body docs were governed in this tranche; previous exact coverage claims remain as recorded.
+- `redcube-ai`, `one-person-lab-app`: full docs coverage remains open and should wait until active dirty/recent lanes are safe or explicitly handed to this governance goal.
+- `opl-meta-agent` and `med-autoscience`: previous full/exact reconcile coverage remains as recorded unless later changes reopen their docs.
+
+Remaining stale / retire candidates:
+
+- MAG: any future prose that promotes historical foundation specs, support current-truth records, active current specs, lifecycle-map rows, OPL projection, Temporal provider completion, optional Hermes proof lane or zero open worklist into grant-domain ready, fundability ready, submission/export ready, production ready, MAG-owned generic runtime or App/workbench ownership is stale pollution.
+- MAG: implementation/evidence tails remain separate from docs coverage: physical delete authorization, production long-soak, submission-ready human gate, sustained real consumption and long-soak evidence still require their own source/test/receipt closeout.
+- App/RCA: release / GUI / implementation docs remain gated by unrelated dirty or active lanes.
+
+Worktree / branch cleanup:
+
+- No external stale worktree/branch qualified for cleanup before this tranche. Existing unrelated OPL/App/RCA lanes were not attributable to this automation or were not safe to clean.
+- This tranche's MAG and OPL worktrees should be removed after fast-forward absorb.
+
+Verification before absorb:
+
+- MAG exact-path reconcile worktree: exact inventory script expected `missing_by_exact_string=0`; `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- OPL ledger worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- Six-repo doctor sweep should remain clean before closeout.
+- No source/runtime tests are required because this tranche changes only narrative coverage ledgers.
+
+Next tranche write scope:
+
+- Continue OPL series whole-docs coverage outside MAG, preferably a remaining clean repo whose main checkout and worktrees are safe for this automation.
+- Start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
