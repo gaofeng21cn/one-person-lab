@@ -5822,6 +5822,69 @@ Next tranche write scope:
 - Start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
 - Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
 
+Date: `2026-05-27 02:50 CST`
+Tranche: `mas-history-positioning-no-resurrection-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAS `docs/history/positioning/**` 历史/provenance cluster，并把结果回写到 MAS 本地 coverage ledger 与本 OPL family ledger。目标是让旧 `Domain Harness OS`、`Open Harness OS`、`Research Foundry`、`domain gateway`、MAS Runtime OS、local scheduler、MDS / DeepScientist backend 与 repo-split 品牌建议继续保留历史价值，同时避免 dated “当前默认 runtime”“当前正式判断”“推荐公开口径”被读成今天的 active runtime topology、public current truth、generic framework owner 或 runnable CLI surface。本轮不关闭全局 `/goal`，也不表示 MAS repo-wide README/docs 覆盖完成。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`, `TASTE.md`, `docs/status.md`, `docs/architecture.md`, `docs/invariants.md`, `docs/active/mas-ideal-state-gap-plan.md`, `docs/references/positioning/mas_ideal_state.md`, `contracts/functional_privatization_audit.json`, `contracts/production_acceptance/mas-production-acceptance.json`, and MAS local docs-governance ledger.
+- MAS target docs: `docs/history/positioning/README.md`, `domain-harness-os-positioning.md`, `open_harness_os_architecture.md`, `repo_split_between_research_foundry_and_med_autoscience.md`, `research_foundry_medical_phase_ladder.md`, and `research_foundry_positioning.md`.
+- CLI currentness probe: `scripts/run-python-clean.sh -m med_autoscience.cli --help`, which shows the current grouped `medautosci <group> <command>` command surface rather than old `mainline-status` / `mainline-phase` examples.
+- Six-repo worktree / branch preflight and doctor preflight from `/Users/gaofeng/workspace/opl-doc-governance/scripts/opl_doc_doctor.py`.
+
+Fresh semantic result:
+
+- Current MAS truth remains `Declarative Medical Research Pack + OPL generated/hosted surfaces + minimal medical authority functions`: OPL/Temporal owns hosted autonomous runtime, stage attempt, queue, wakeup, retry/dead-letter, attempt ledger, worker residency and generated shells; MAS owns study truth, stage semantics, AI reviewer / auditor quality gate, publication route, artifact authority, memory decision, owner receipts and typed blockers.
+- `docs/history/positioning/README.md` already carried the correct directory-level rule that `Domain Harness OS`, `Open Harness OS`, `Domain Gateway`, `Research Foundry`, Hermes-first, MDS/DeepScientist backend and local scheduler default-chain wording are historical positioning materials only.
+- `domain-harness-os-positioning.md` now marks `MAS Runtime OS` and local scheduler sections as historical runtime-shape material.
+- `research_foundry_medical_phase_ladder.md` now marks the MAS Runtime OS / local scheduler closeout, old command examples and Phase 1 / Phase 2 progress language as historical ladder material.
+- `open_harness_os_architecture.md` and `research_foundry_positioning.md` now mark public positioning / Research Foundry recommendations as historical proposals, not standalone authorization for repo identity, runtime owner, CLI/package/import naming or public readiness changes.
+- `repo_split_between_research_foundry_and_med_autoscience.md` already read as `history_provenance`; no body edit was needed.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full paragraph read of all 6 `docs/history/positioning/*.md` files, with supporting current-boundary read of MAS active truth, core docs, ideal-state reference, functional privatization audit, production acceptance contract and current CLI help. | `docs/history/positioning/domain-harness-os-positioning.md`; `docs/history/positioning/open_harness_os_architecture.md`; `docs/history/positioning/research_foundry_medical_phase_ladder.md`; `docs/history/positioning/research_foundry_positioning.md`; `docs/history/docs-portfolio-coverage-ledger/2026-05-27-part-5.md` |
+| `one-person-lab` | OPL family coverage ledger foldback for this MAS history tranche; no OPL active truth / source / contract semantics changed. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. Positioning materials stay in `docs/history/positioning/**` as historical provenance and no-resurrection guard material.
+
+Unreviewed docs:
+
+- `med-autoscience`: `docs/history/positioning/**` exact cluster is now covered. MAS repo-wide full paragraph coverage remains open for other history-heavy groups: `docs/history/program`, `docs/history/runtime`, `docs/history/superpowers/**`, `docs/history/capabilities/medical-display/**`, and remaining history directory indexes.
+- `one-person-lab`: no new OPL body docs were governed in this tranche; previous exact coverage claims remain as recorded.
+- `med-autogrant`, `redcube-ai`, `opl-meta-agent`: no new docs governed in this tranche; previous coverage state remains unchanged.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active release / GUI lanes are safe or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- MAS: any future prose that treats `Domain Harness OS`, `Open Harness OS`, `Research Foundry`, `Domain Gateway`, MAS Runtime OS, MAS-owned local scheduler, old `mainline-status` / `mainline-phase`, MDS backend or Hermes gateway cron as current default runtime owner, public product identity, runnable CLI truth or generic framework owner is stale pollution.
+- MAS: future public-positioning changes must start from current README/core docs/active plan/contracts and OPL family docs, not from these historical proposals alone.
+- App: release / GUI docs remain blocked by unrelated dirty work in main and external worktrees.
+
+Worktree / branch cleanup:
+
+- No external stale worktree/branch qualified for cleanup before this tranche. OPL/MAS/App external worktrees remain dirty, recently written, not safely attributable to this automation, detached probes, or outside the current tranche.
+- This tranche's MAS and OPL worktrees should be removed after fast-forward absorb.
+
+Verification before absorb:
+
+- MAS positioning history worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- OPL ledger worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- No source/runtime tests are required because this tranche changes only narrative docs and coverage ledgers.
+
+Next tranche write scope:
+
+- Continue MAS bounded history inventory, preferably `docs/history/runtime`, `docs/history/program`, `docs/history/superpowers/**`, or `docs/history/capabilities/medical-display/**`.
+- Start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
+
 ## 验证
 
 Docs-only 整理：
