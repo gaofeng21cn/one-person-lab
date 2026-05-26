@@ -3337,6 +3337,63 @@ Next tranche write scope:
 - Continue MAS runtime/control support docs under `docs/runtime/contracts/**` / `docs/runtime/control/**`, or MAS product/status/workbench/progress/domain-ref projection shell reconciliation outside already-covered blocks.
 - Or choose RCA uncovered reference bodies or App docs once active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 16:32 CST`
+Tranche: `mas-journal-package-design-currentness`
+State: `tranche_verified`
+
+本轮覆盖 MAS `docs/runtime/designs/journal_package_builtins_upgrade_design.md`，并把结果吸收回 MAS `main`。目标是把该 runtime design support 文档从早期“待新增 controller / workflow”读法收敛到当前 live source/test 事实：`journal_requirements`、`journal_package`、publication gate 状态解析与 supervisor sync 已落地；文档继续保留为设计边界支撑，不能重新打开已落地 checklist，也不能把 target-specific projection 写成最终投稿 ready、publication ready、quality verdict 或 artifact authority。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`, `TASTE.md`, `docs/active/mas-ideal-state-gap-plan.md`, MAS `docs/docs_portfolio_consolidation.md`, and `docs/history/program/journal_package_builtins_upgrade_plan.md`.
+- MAS design doc: `docs/runtime/designs/journal_package_builtins_upgrade_design.md`.
+- MAS source / CLI refs: `src/med_autoscience/journal_requirements.py`, `src/med_autoscience/controllers/journal_requirements.py`, `src/med_autoscience/controllers/journal_package.py`, `src/med_autoscience/controllers/publication_gate_parts/state_resolvers.py`, `src/med_autoscience/controllers/publication_gate_parts/report_builders.py`, `src/med_autoscience/controllers/publication_gate_parts/supervisor_and_cli.py`, `src/med_autoscience/cli.py`, and `src/med_autoscience/cli_parts/parser.py`.
+- MAS support docs: `docs/delivery/inspection_package.md` and `docs/runtime/contracts/delivery_plane_contract_map.md`.
+- Focused tests: `tests/test_journal_requirements_controller.py`, `tests/test_journal_package_controller.py`, `tests/test_publication_gate_cases/drift_and_state_cases.py`, `tests/test_publication_gate_cases/supervisor_cases.py`, `tests/test_cli_cases/public_entry_commands.py`, and `tests/test_cli_cases/domain_handler_and_submission_commands.py`.
+- CodeGraph context / explore for `resolve_journal_requirements`, `materialize_journal_package`, `resolve_journal_requirement_state`, `resolve_journal_package_state`, publication gate sync and `submission_packages/<journal_slug>`.
+
+Fresh semantic result:
+
+- `publication resolve-journal-requirements` and `publication materialize-journal-package` are current CLI/controller surfaces, not future design proposals.
+- `journal_requirements` writes study-local durable `paper/journal_requirements/<journal_slug>/requirements.json` / `.md`; source authority still depends on official guideline URL and structured payload provenance.
+- `materialize_journal_package` writes shallow `submission_packages/<journal_slug>/`, `audit/submission_manifest.json`, `audit/journal_requirements_snapshot.json`, target-confirmation metadata, formatting boundary and zip; unconfirmed targets remain `journal_targeted_projection`.
+- publication gate reports `journal_requirements_status`, `journal_package_status`, missing-package blockers and can materialize stale/missing package when requirements are resolved.
+- Inspection package remains human-inspection-only and must not call journal package materialization; journal package projection also does not authorize `current_package`, publication eval, controller decisions, final submission or quality gate closure.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full paragraph read of `docs/runtime/designs/journal_package_builtins_upgrade_design.md`, with supporting source/test/doc evidence listed above. | `docs/runtime/designs/journal_package_builtins_upgrade_design.md`; `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The MAS design remains active runtime support because it records current journal requirement / target-specific package boundary. The implementation plan already lives under MAS `docs/history/program/` as provenance.
+
+Unreviewed docs:
+
+- Other MAS files under `docs/runtime/designs/**` were not paragraph-covered in this tranche.
+- Remaining MAS runtime/control support docs under `docs/runtime/contracts/**` / `docs/runtime/control/**` not already covered by prior ledger entries remain open.
+- MAS product/status/workbench and progress/domain-ref projection shell reconciliation outside already-covered blocks remains open.
+- OPL, RCA and App repo-wide coverage remains open outside recorded chunks. OMA is covered by its earlier full README/docs tranche; MAG/RCA coverage remains as recorded in compacted ledger scope and later chunks.
+
+Remaining stale / retire candidates:
+
+- Future MAS journal-package prose that says journal requirements or journal package controllers are missing, still only skill/manual/study-local temporary materialization, or still a future CLI addition is stale.
+- Future prose that treats `submission_packages/<journal_slug>/`, requirements snapshot, package zip, package currentness, or publication gate missing-package sync as final journal-ready formatting, confirmed submission package, publication quality verdict, artifact mutation authorization, `current_package` freshness proof or paper closure is stale.
+- Cover letter / DOCX title-page wording must stay aligned with current materializer output; if future code adds these outputs, docs should cite the source/test surface rather than revive early design suggestions.
+
+Verification / absorb:
+
+- MAS commit `1b3791f6 docs: cover journal package design currentness` is on MAS `main`; tranche worktree and branch were removed after fast-forward absorb.
+- MAS verification before absorb: `git diff --check`; strict README/docs/contracts conflict-marker scan had no hits; OPL Doc Governance doctor `finding_count=0`, active truth `pass`; publication CLI help listed `resolve-journal-requirements` and `materialize-journal-package`; focused journal-package / publication-gate / CLI tests `118 passed`.
+
+Next tranche write scope:
+
+- MAS paragraph-level coverage for another bounded runtime design/support group, or remaining `docs/runtime/contracts/**` / `docs/runtime/control/**` bodies not covered by prior tranches.
+- Or choose RCA uncovered reference bodies or App docs once active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
