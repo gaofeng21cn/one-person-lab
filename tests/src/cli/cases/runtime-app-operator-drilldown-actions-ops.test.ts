@@ -375,6 +375,102 @@ test('runtime App drilldown selects provider worker repair before provider proof
   ]);
 });
 
+test('runtime App drilldown selects blocked transport redrive before MAS owner handoff record', () => {
+  const ownerHandoffRecordRoute = {
+    action_id: 'domain_dispatch:medautoscience:attempt-1:record',
+    action_kind: 'domain_dispatch_evidence_receipt_record',
+    owner: 'opl',
+    route_target_kind: 'opl_cli',
+    execution_surface: 'opl runtime action execute',
+    submit_via: 'opl runtime action execute',
+    route_requires_domain_or_app_payload: true,
+    can_close_without_domain_or_app_payload: false,
+    can_submit_to_safe_action_shell: true,
+    payload_owner: 'domain_repository_or_app_live_operator',
+    authority_split: {
+      opl_transport_liveness_owner: true,
+      mas_publication_quality_owner: true,
+      mas_artifact_package_authority_owner: true,
+      mas_owner_receipt_owner: true,
+    },
+    payload_template: {
+      domain_receipt_refs: [],
+      typed_blocker_refs: [],
+      owner_chain_refs: [],
+      no_regression_refs: [],
+      evidence_refs: [],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  };
+  const drilldown = applyAppOperatorDrilldownDetail({
+    operator_action_routing_refs: {
+      refs: [
+        ownerHandoffRecordRoute,
+        {
+          ref: 'opl family-runtime queue redrive task-dm002 --reason provider_transport_retry_requested --source app-operator',
+          action_id: 'family-runtime-queue:task-dm002:redrive',
+          action_kind: 'blocked_transport_redrive',
+          owner: 'opl',
+          route_target_kind: 'opl_cli',
+          execution_policy: 'opl_safe_action_shell',
+          execution_surface: 'opl runtime action execute',
+          submit_via: 'opl runtime action execute',
+          can_submit_to_safe_action_shell: true,
+          domain_id: 'medautoscience',
+          task_id: 'task-dm002',
+          task_kind: 'domain_owner/default-executor-dispatch',
+          blocked_transport_dead_letter_reason: 'temporal_stage_attempt_not_completed',
+          provider_transport_redrive_command:
+            'opl family-runtime queue redrive task-dm002 --reason provider_transport_retry_requested --source app-operator',
+          authority_split: {
+            opl_transport_liveness_owner: true,
+            mas_publication_quality_owner: true,
+            mas_artifact_package_authority_owner: true,
+            mas_owner_receipt_owner: true,
+          },
+          authority_boundary: {
+            can_write_domain_truth: false,
+            can_authorize_quality_verdict: false,
+            can_authorize_artifact_package: false,
+            can_create_owner_receipt: false,
+            can_claim_production_ready: false,
+          },
+        },
+      ],
+    },
+    app_execution_bridge: {
+      safe_action_routes: [],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  }, 'summary');
+  const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
+  assert.ok(nextSafeAction);
+
+  assert.equal(nextSafeAction.action_id, 'family-runtime-queue:task-dm002:redrive');
+  assert.equal(nextSafeAction.action_kind, 'blocked_transport_redrive');
+  assert.equal(nextSafeAction.blocked_transport_dead_letter_reason, 'temporal_stage_attempt_not_completed');
+  assert.equal(
+    nextSafeAction.provider_transport_redrive_command,
+    'opl family-runtime queue redrive task-dm002 --reason provider_transport_retry_requested --source app-operator',
+  );
+  assert.deepEqual(nextSafeAction.submit_args, [
+    'runtime',
+    'action',
+    'execute',
+    '--action',
+    'family-runtime-queue:task-dm002:redrive',
+  ]);
+  assert.equal(nextSafeAction.authority_split.opl_transport_liveness_owner, true);
+  assert.equal(nextSafeAction.authority_split.mas_publication_quality_owner, true);
+  assert.equal(nextSafeAction.can_execute_domain_action_directly, false);
+});
+
 test('runtime App drilldown does not select closed provider SLO routes as next action', () => {
   const route = (action: string, actionKind: string) => ({
     action_id: `provider-scheduler:temporal:${action}`,
@@ -413,6 +509,80 @@ test('runtime App drilldown does not select closed provider SLO routes as next a
 
   assert.equal(drilldown.attention_first_payload.next_safe_action, null);
   assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 0);
+});
+
+test('runtime App drilldown MAS owner handoff record exposes owner split without authority claims', () => {
+  const drilldown = applyAppOperatorDrilldownDetail({
+    operator_action_routing_refs: {
+      refs: [
+        {
+          action_id: 'domain_dispatch:medautoscience:attempt-1:record',
+          action_kind: 'domain_dispatch_evidence_receipt_record',
+          owner: 'opl',
+          route_target_kind: 'opl_cli',
+          execution_surface: 'opl runtime action execute',
+          submit_via: 'opl runtime action execute',
+          route_requires_domain_or_app_payload: true,
+          can_close_without_domain_or_app_payload: false,
+          can_submit_to_safe_action_shell: true,
+          domain_id: 'medautoscience',
+          stage_id: 'domain_owner/default-executor-dispatch',
+          stage_attempt_id: 'attempt-1',
+          payload_owner: 'domain_repository_or_app_live_operator',
+          payload_template: {
+            domain_receipt_refs: [],
+            typed_blocker_refs: [],
+            owner_chain_refs: [],
+            no_regression_refs: [],
+            evidence_refs: [],
+          },
+          authority_split: {
+            opl_transport_liveness_owner: true,
+            mas_publication_quality_owner: true,
+            mas_artifact_package_authority_owner: true,
+            mas_owner_receipt_owner: true,
+          },
+          read_model_owner_split: {
+            opl_can_repair: ['transport_liveness'],
+            mas_must_close: [
+              'publication_quality',
+              'artifact_package_authority',
+              'owner_receipt',
+            ],
+          },
+          authority_boundary: {
+            can_write_domain_truth: false,
+            can_authorize_quality_verdict: false,
+            can_authorize_artifact_package: false,
+            can_create_owner_receipt: false,
+            can_claim_production_ready: false,
+          },
+        },
+      ],
+    },
+    app_execution_bridge: {
+      safe_action_routes: [],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  }, 'summary');
+  const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
+  assert.ok(nextSafeAction);
+
+  assert.equal(nextSafeAction.action_kind, 'domain_dispatch_evidence_receipt_record');
+  assert.equal(nextSafeAction.authority_split.opl_transport_liveness_owner, true);
+  assert.equal(nextSafeAction.authority_split.mas_publication_quality_owner, true);
+  assert.deepEqual(nextSafeAction.read_model_owner_split.opl_can_repair, ['transport_liveness']);
+  assert.deepEqual(nextSafeAction.read_model_owner_split.mas_must_close, [
+    'publication_quality',
+    'artifact_package_authority',
+    'owner_receipt',
+  ]);
+  assert.equal(nextSafeAction.can_authorize_quality_verdict, false);
+  assert.equal(nextSafeAction.can_authorize_artifact_package, false);
+  assert.equal(nextSafeAction.can_create_owner_receipt, false);
 });
 
 test('runtime App drilldown keeps historical provider repair receipts from reopening current scheduler routes', () => {
