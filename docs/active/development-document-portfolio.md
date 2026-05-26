@@ -4369,7 +4369,7 @@ Next tranche write scope:
 
 Date: `2026-05-26 18:09 CST`
 Tranche: `mag-references-nonindex-coverage`
-State: `tranche_pending_verification_absorb`
+State: `tranche_verified_absorbed`
 
 本轮覆盖 MAG `docs/references/**` 下剩余非索引支撑文档：grant strategy memory policy、OPL family contract adoption、series doc governance checklist，并复核 references index。目标是关闭上一轮 MAG ledger 中 carry-forward 的 non-index references 缺口，同时校准六仓 OPL series scope、MAG memory authority、OPL projection consumer 和 OMA/App role，不关闭全局 `/goal`。
 
@@ -4421,6 +4421,8 @@ Verification before absorb:
 - MAG focused memory/adoption/stage-control tests passed: `tests/test_opl_family_contract_adoption.py`, `tests/product_entry_cases/test_domain_memory_descriptor.py`, `tests/product_entry_cases/test_memory_receipt_projection.py`, `tests/product_entry_cases/test_domain_memory_receipt_evidence.py`, `tests/product_entry_cases/test_family_stage_control_plane.py`, and `tests/product_entry_cases/test_opl_substrate_adapter.py` returned 26 pytest cases plus 45 subtests.
 - OPL ledger worktree verification passed: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
 - A broader MAG product family orchestration focused run still exposes a pre-existing product user-loop runtime-state root expectation drift; keep that source/test issue outside this docs-governance tranche.
+- MAG commit `adfefd2 docs: cover MAG reference support boundaries` is on MAG `main`; OPL commit `2c152829 docs: record MAG references coverage` is on OPL `main`.
+- This tranche's MAG and OPL worktrees / branches were removed after fast-forward absorb.
 
 Next tranche write scope:
 
