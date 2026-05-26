@@ -6458,3 +6458,64 @@ Next tranche write scope:
 - Start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
 - If App remains unsafe, continue only with newly reopened exact-inventory tails in OPL/MAS/MAG/RCA/OMA caused by later edits.
 - Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
+
+Date: `2026-05-27 05:19 CST`
+Tranche: `app-repo-local-doc-ledger-bootstrap`
+State: `tranche_verified`
+
+本轮为 `one-person-lab-app` 新增 repo-local docs governance ledger，并把结果回写到本 OPL family ledger。目标是让 App 仓有本地 coverage accounting 入口，记录当前 App 文档 owner/purpose/state/machine-boundary 读法和未覆盖正文范围。本轮不改 App active truth，不接管 App main checkout 里的 dirty release/testing 文件，不新增 release-ready / production-ready claim，不关闭 OPL series 全局 `/goal`。
+
+Fresh live truth inputs:
+
+- App `AGENTS.md`, `TASTE.md`, root `README.md`, `README.zh-CN.md`, `docs/README.md`, `docs/active/app-ideal-state-gap-plan.md`, `docs/status.md`, `docs/project.md`, `docs/architecture.md`, and `docs/invariants.md`.
+- App machine refs: `contracts/app-product-profile.json`, `contracts/app-shell-adapter.json`, `contracts/app-first-run-test-matrix.json`, `contracts/app-page-state-matrix.json`, and `package.json`.
+- Current App exact inventory over repo-root `README*` plus `docs/**/*.md`, plus support read of `scripts/README.md`.
+- Main checkout safety read: App main remains dirty in release/testing files, so this tranche used an isolated worktree and only added a new ledger file.
+
+Fresh semantic result:
+
+- App already has one active truth owner (`docs/active/app-ideal-state-gap-plan.md`), one docs entry, durable current product-boundary docs, and App-owned contracts for product profile, active shell, first-run and page-state behavior.
+- The missing piece was App repo-local governance ledger / exact-coverage accounting. Because the App main checkout has unrelated dirty release/testing files, this tranche intentionally does not rewrite existing App prose bodies.
+- Current contracts confirm the App boundary: the App owns product defaults, release assets, updater metadata, first-run UX checks, GUI page-state tests and user documentation; it consumes framework contracts, OPL CLI JSON outputs, runtime snapshots, provider receipts and domain-owned projections; it does not own runtime truth, provider implementation, domain truth, domain quality verdict or domain artifact authority.
+- Active shell remains `aionui` under `shells/aionui`, sourced from `gaofeng21cn/opl-aion-shell` with `history_policy=external_checkout_not_merged_into_app_default_branch`.
+- First-run and page-state contracts keep release evidence and runtime-page behavior contract-backed but not domain-ready or production-ready proof.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab-app` | First-screen / role read of App `README*`, current docs index, active plan, core product-boundary docs, release/testing/user-guide/screenshot/history indexes, support `scripts/README.md`, and App contracts listed above. | `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | OPL family coverage ledger foldback for this App repo-local ledger bootstrap; no OPL active truth / source / contract semantics changed. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The reviewed App paths currently have legitimate long-term roles as public entry, docs index, active plan, current product truth, release/testing/user support, screenshot guide, history provenance, or script support.
+
+Unreviewed docs:
+
+- `one-person-lab-app`: existing App docs were first-screen / role-read in this tranche, but full paragraph-level semantic governance remains open because release / GUI lanes were dirty and outside this tranche's ownership. Future App tranche should cover the body text of `README*`, `docs/status.md`, `docs/release/README.md`, `docs/testing/README.md`, `docs/user-guides/**`, `docs/screenshots/**`, `docs/history/**`, and `scripts/README.md` once the dirty release/testing lane is safe or explicitly assigned.
+- OPL/MAS/MAG/RCA/OMA previous full/exact reconcile coverage remains as recorded unless later changes reopen their docs.
+
+Remaining stale / retire candidates:
+
+- App: any prose that treats App UI rendering, active shell validation, updater metadata, release artifact existence, provider completion, OPL read-model availability, release collector output, or first-run contract presence as MAS/MAG/RCA/OMA domain ready, quality verdict, artifact authority, owner receipt authority, App release ready without evidence, or family production ready is stale pollution.
+- App: any future prose that moves active shell implementation truth, shell history, OPL runtime/provider ownership, domain truth, release evidence bodies, owner receipt bodies, memory bodies, artifact bodies, or domain action authority into this repo reopens the active plan.
+- App: dirty release/testing lanes remain the gating factor for body-level docs governance in this repo.
+
+Worktree / branch cleanup:
+
+- No external stale worktree/branch qualified for cleanup before this tranche. OPL `dm002-scheduler-workflow-not-found` and MAS `dm002-opl-live-projection` had recent writes; App main was dirty; App release/GUI worktrees were not safe to absorb into dirty main; RCA CI lane and unrelated OPL/MAS/App lanes were not attributable to this automation.
+- This tranche's App and OPL ledger worktrees should be removed after fast-forward absorb.
+
+Verification before absorb:
+
+- App repo-local ledger worktree: exact inventory should include `docs/docs_portfolio_consolidation.md`; `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- OPL ledger worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- Six-repo doctor sweep should remain clean before closeout.
+- No source/runtime tests are required because this tranche changes only narrative docs and coverage ledgers.
+
+Next tranche write scope:
+
+- When the dirty App release/testing lane is safe or explicitly assigned, perform paragraph-level governance of App `README*`, `docs/status.md`, `docs/release/README.md`, `docs/testing/README.md`, `docs/user-guides/**`, `docs/screenshots/**`, `docs/history/**`, and `scripts/README.md` against App contracts, release/evidence scripts, shell validation and real release artifacts.
+- Until then, continue only newly reopened exact-inventory tails in OPL/MAS/MAG/RCA/OMA or App ledger/accounting items that do not touch externally dirty files.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
