@@ -131,6 +131,36 @@ function masDefaultExecutorBlockedRedriveDecision(
   };
 }
 
+function masDefaultExecutorCloseoutRedriveDecision(
+  existing: FamilyRuntimeTaskRow,
+  existingPayload: Record<string, unknown>,
+  nextPayload: Record<string, unknown>,
+) {
+  if (
+    existing.status !== 'succeeded'
+    || !isMasDefaultExecutorDispatch(existing, existingPayload)
+    || !isMasDefaultExecutorDispatch(existing, nextPayload)
+  ) {
+    return null;
+  }
+  const redriveContext = recordValue(nextPayload.redrive_context);
+  if (!redriveContext) {
+    return null;
+  }
+  if (optionalString(redriveContext.status) !== 'non_consumable_closeout'
+    || optionalString(redriveContext.next_action) !== 'redrive_owner_route_with_closeout_context') {
+    return null;
+  }
+  return {
+    reason: 'mas_default_executor_non_consumable_closeout_redrive',
+    receipt_ref: optionalString(redriveContext.receipt_ref),
+    execution_id: optionalString(redriveContext.execution_id),
+    closeout_reason: optionalString(redriveContext.reason),
+    previous_source_fingerprint: sourceFingerprint(existingPayload),
+    next_source_fingerprint: sourceFingerprint(nextPayload),
+  };
+}
+
 export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
   const createdAt = nowIso();
   const dedupeKey = input.dedupeKey?.trim() || null;
@@ -155,6 +185,64 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         && exportedTaskChanged
         && isMasDefaultExecutorDispatch(existing, existingPayload)
         && isMasDefaultExecutorDispatchInput(input.domainId, taskKind, payload);
+      const closeoutRedrive = masDefaultExecutorSucceededAdmissionRefresh
+        ? masDefaultExecutorCloseoutRedriveDecision(existing, existingPayload, payload)
+        : null;
+      if (exportedTaskChanged && closeoutRedrive) {
+        const nextStatus: FamilyRuntimeTaskStatus = input.requiresApproval ? 'waiting_approval' : 'queued';
+        db.prepare(`
+          UPDATE tasks
+          SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
+            attempts = 0, source = ?, requires_approval = ?, approved_at = NULL,
+            lease_owner = NULL, lease_expires_at = NULL, last_error = NULL,
+            dead_letter_reason = NULL, updated_at = ?
+          WHERE task_id = ?
+        `).run(
+          input.domainId,
+          taskKind,
+          exportedPayloadJson,
+          input.priority ?? 0,
+          nextStatus,
+          input.source ?? 'opl-cli',
+          input.requiresApproval ? 1 : 0,
+          createdAt,
+          existing.task_id,
+        );
+        const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
+        insertEvent(db, {
+          taskId: refreshed.task_id,
+          domainId: refreshed.domain_id,
+          eventType: 'task_requeued_from_mas_default_executor_redrive_context',
+          source: input.source ?? 'opl-cli',
+          payload: {
+            dedupe_key: dedupeKey,
+            previous_status: existing.status,
+            next_status: nextStatus,
+            ...closeoutRedrive,
+            authority_boundary: {
+              opl: 'provider_transport_redrive_from_mas_closeout_context_only',
+              domain: 'truth_quality_artifact_gate_owner',
+              domain_truth_mutation: false,
+              publication_quality_mutation: false,
+              artifact_gate_mutation: false,
+              current_package_mutation: false,
+            },
+          },
+        });
+        insertNotification(db, {
+          taskId: refreshed.task_id,
+          severity: 'info',
+          title: 'Family runtime task requeued from MAS closeout redrive',
+          body: `${input.domainId}:${taskKind}`,
+          payload: { status: nextStatus, dedupe_key: dedupeKey },
+        });
+        return {
+          accepted: true,
+          requeued_from_terminal: true,
+          idempotent_noop: false,
+          task: taskToPayload(refreshed),
+        };
+      }
       const metadataRefresh = masDefaultExecutorSucceededAdmissionRefresh
         ? masDefaultExecutorMetadataRefresh(existingPayload, payload)
         : null;

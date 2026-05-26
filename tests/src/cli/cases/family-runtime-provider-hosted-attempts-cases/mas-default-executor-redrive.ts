@@ -200,6 +200,84 @@ PY
   }
 });
 
+test('family-runtime requeues succeeded MAS default executor dispatch when MAS exports non-consumable closeout redrive', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-default-executor-closeout-redrive-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    });
+    const dedupeKey = 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:redrive-context';
+    const first = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      JSON.stringify(defaultExecutorPayload('source-current')),
+      '--dedupe-key',
+      dedupeKey,
+      '--source',
+      'test-domain-export',
+    ], env);
+    const taskId = first.family_runtime_enqueue.task.task_id;
+    const queueDb = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+    try {
+      queueDb.prepare(`
+        UPDATE tasks
+        SET status = 'succeeded', last_error = NULL, dead_letter_reason = NULL,
+          lease_owner = NULL, lease_expires_at = NULL
+        WHERE task_id = ?
+      `).run(taskId);
+    } finally {
+      queueDb.close();
+    }
+
+    const redrive = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      JSON.stringify({
+        ...defaultExecutorPayload('source-current'),
+        redrive_context: {
+          status: 'non_consumable_closeout',
+          receipt_kind: 'default_executor_execution',
+          receipt_ref: 'artifacts/supervision/consumer/default_executor_execution/sat_dm002.closeout.json',
+          execution_id: 'sat_dm002',
+          action_type: 'run_quality_repair_batch',
+          reason: 'manuscript_story_surface_delta_missing',
+          next_action: 'redrive_owner_route_with_closeout_context',
+        },
+      }),
+      '--dedupe-key',
+      dedupeKey,
+      '--source',
+      'test-domain-export',
+    ], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const event = task.family_runtime_task.events.find((item: { event_type: string }) =>
+      item.event_type === 'task_requeued_from_mas_default_executor_redrive_context'
+    );
+
+    assert.equal(redrive.family_runtime_enqueue.accepted, true);
+    assert.equal(redrive.family_runtime_enqueue.requeued_from_terminal, true);
+    assert.equal(redrive.family_runtime_enqueue.idempotent_noop, false);
+    assert.equal(redrive.family_runtime_enqueue.task.status, 'queued');
+    assert.equal(task.family_runtime_task.task.status, 'queued');
+    assert.equal(task.family_runtime_task.task.payload.redrive_context.status, 'non_consumable_closeout');
+    assert.ok(event);
+    assert.equal(event.payload.reason, 'mas_default_executor_non_consumable_closeout_redrive');
+    assert.equal(event.payload.authority_boundary.domain_truth_mutation, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime operator redrive reruns blocked MAS default executor provider transport without source changes', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-default-executor-operator-redrive-'));
   const dispatch = createDispatchFixture(`
