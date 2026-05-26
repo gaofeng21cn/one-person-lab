@@ -33,6 +33,7 @@ import { providerWorkerArgs, providerWorkerCommand, runProviderWorkerRepair } fr
 import { providerSchedulerArgs } from './runtime-operator-action-execution-parts/provider-scheduler-action.ts';
 import { externalEvidenceApplyArgs } from './runtime-operator-action-execution-parts/external-evidence-action.ts';
 import { domainDispatchExternalEvidenceApplyArgs } from './runtime-operator-action-execution-parts/domain-dispatch-evidence-action.ts';
+import { codexAppRuntimeEvidenceExecution } from './runtime-operator-action-execution-parts/codex-app-runtime-evidence-action.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -535,17 +536,23 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
     || actionKind === 'domain_dispatch_evidence_receipt_verify'
     || actionKind === 'app_release_user_path_evidence_receipt_record'
     || actionKind === 'app_release_user_path_evidence_receipt_verify'
+    || actionKind === 'codex_app_runtime_evidence_receipt_record'
+    || actionKind === 'codex_app_runtime_evidence_receipt_verify'
     || actionKind === 'oma_production_consumption_receipt_record'
   ) {
     if (
       actionKind === 'app_release_user_path_evidence_receipt_record'
       || actionKind === 'app_release_user_path_evidence_receipt_verify'
+      || actionKind === 'codex_app_runtime_evidence_receipt_record'
+      || actionKind === 'codex_app_runtime_evidence_receipt_verify'
       || actionKind === 'oma_production_consumption_receipt_record'
     ) {
       return {
         executionKind: actionKind === 'oma_production_consumption_receipt_record'
           ? 'opl_cli_oma_production_consumption_apply'
-          : 'opl_cli_app_release_user_path_evidence_apply',
+          : actionKind.startsWith('codex_app_runtime_evidence_')
+            ? 'opl_cli_codex_app_runtime_evidence_apply'
+            : 'opl_cli_app_release_user_path_evidence_apply',
         runtimeArgs: stringList(route.opl_cli_args),
       };
     }
@@ -599,6 +606,8 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
       'domain_dispatch_evidence_receipt_verify',
       'app_release_user_path_evidence_receipt_record',
       'app_release_user_path_evidence_receipt_verify',
+      'codex_app_runtime_evidence_receipt_record',
+      'codex_app_runtime_evidence_receipt_verify',
       'oma_production_consumption_receipt_record',
       'provider_worker_start',
       'provider_worker_restart',
@@ -673,6 +682,9 @@ async function executeRoute(
     const appReleaseUserPathEvidenceAction =
       actionKind === 'app_release_user_path_evidence_receipt_record'
       || actionKind === 'app_release_user_path_evidence_receipt_verify';
+    const codexAppRuntimeEvidenceAction =
+      actionKind === 'codex_app_runtime_evidence_receipt_record'
+      || actionKind === 'codex_app_runtime_evidence_receipt_verify';
     const omaProductionConsumptionAction =
       actionKind === 'oma_production_consumption_receipt_record';
     const legacyCleanupAction = actionKind === 'legacy_cleanup_apply'
@@ -693,6 +705,9 @@ async function executeRoute(
     const appReleaseUserPathEvidence = appReleaseUserPathEvidenceAction
       ? appReleaseUserPathEvidenceExecution(route, options.payload, { dryRun: options.dryRun })
       : null;
+    const codexAppRuntimeEvidence = codexAppRuntimeEvidenceAction
+      ? codexAppRuntimeEvidenceExecution(route, options.payload, { dryRun: options.dryRun })
+      : null;
     const omaProductionConsumption = omaProductionConsumptionAction
       ? omaProductionConsumptionExecution(options.payload, { dryRun: options.dryRun })
       : null;
@@ -704,6 +719,11 @@ async function executeRoute(
       ? {
           executionKind: appReleaseUserPathEvidence.executionKind,
           runtimeArgs: appReleaseUserPathEvidence.runtimeArgs,
+        }
+      : codexAppRuntimeEvidence
+      ? {
+          executionKind: codexAppRuntimeEvidence.executionKind,
+          runtimeArgs: codexAppRuntimeEvidence.runtimeArgs,
         }
       : omaProductionConsumption
       ? {
@@ -730,7 +750,9 @@ async function executeRoute(
       execution_kind: executionKind,
       route_ref: commandOrSurfaceRef,
       action_kind: actionKind,
-      executed_runtime_command: appReleaseUserPathEvidenceAction || omaProductionConsumptionAction
+      executed_runtime_command: appReleaseUserPathEvidenceAction
+        || codexAppRuntimeEvidenceAction
+        || omaProductionConsumptionAction
         ? `opl ${runtimeArgs.join(' ')}`
         : providerWorkerRepair
           ? providerWorkerCommand(providerWorkerRepair)
@@ -741,6 +763,8 @@ async function executeRoute(
           : `opl family-runtime ${runtimeArgs.join(' ')}`,
       result: appReleaseUserPathEvidence
         ? appReleaseUserPathEvidence.result
+        : codexAppRuntimeEvidence
+          ? codexAppRuntimeEvidence.result
         : omaProductionConsumption
           ? omaProductionConsumption.result
         : options.dryRun

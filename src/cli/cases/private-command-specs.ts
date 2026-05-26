@@ -27,6 +27,7 @@ import { explainDomainBoundary, selectDomainAgentEntry } from '../../resolver.ts
 import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog } from '../../workspace-registry.ts';
 import type { FrameworkContracts } from '../../types.ts';
 import { buildRuntimeAppReleaseEvidenceCommandSpecs } from './runtime-app-release-evidence-command-spec.ts';
+import { buildRuntimeCodexAppRuntimeEvidenceCommandSpecs } from './runtime-codex-app-runtime-evidence-command-spec.ts';
 import { buildRuntimeDeveloperModeCloseoutCommandSpecs } from './runtime-developer-mode-closeout-command-spec.ts';
 import { buildRuntimeOmaAppLivePathCommandSpecs } from './runtime-oma-app-live-path-command-spec.ts';
 import { buildRuntimeOmaProductionConsumptionCommandSpecs } from './runtime-oma-production-consumption-command-spec.ts';
@@ -338,6 +339,7 @@ export function buildInternalCommandSpecs(
       },
     },
     ...buildRuntimeAppReleaseEvidenceCommandSpecs(),
+    ...buildRuntimeCodexAppRuntimeEvidenceCommandSpecs(),
     ...buildRuntimeDeveloperModeCloseoutCommandSpecs(),
     ...buildRuntimeOmaAppLivePathCommandSpecs(),
     ...buildRuntimeOmaProductionConsumptionCommandSpecs(),

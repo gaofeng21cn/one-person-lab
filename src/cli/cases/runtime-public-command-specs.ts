@@ -85,6 +85,30 @@ export function buildPublicRuntimeCommandSpecs(
         ],
         group: 'runtime',
       }),
+    'runtime codex-app-runtime-evidence record':
+      cloneCommandSpec(commandSpecs['runtime codex-app-runtime-evidence record'], {
+        usage:
+          'opl runtime codex-app-runtime-evidence record (--payload <json>|--payload-file <path>)',
+        examples: [
+          'opl runtime codex-app-runtime-evidence record --payload \'{"temporal_hosted_long_soak_refs":["temporal:soak"],"provider_state_linkage_refs":["provider:slo"]}\'',
+          'opl runtime codex-app-runtime-evidence record --payload-file payload.json',
+        ],
+        group: 'runtime',
+      }),
+    'runtime codex-app-runtime-evidence verify':
+      cloneCommandSpec(commandSpecs['runtime codex-app-runtime-evidence verify'], {
+        usage: 'opl runtime codex-app-runtime-evidence verify [--receipt-ref <ref>]',
+        examples: [
+          'opl runtime codex-app-runtime-evidence verify --receipt-ref opl://codex-app-runtime-evidence/temporal%3Asoak',
+        ],
+        group: 'runtime',
+      }),
+    'runtime codex-app-runtime-evidence list':
+      cloneCommandSpec(commandSpecs['runtime codex-app-runtime-evidence list'], {
+        usage: 'opl runtime codex-app-runtime-evidence list',
+        examples: ['opl runtime codex-app-runtime-evidence list --json'],
+        group: 'runtime',
+      }),
     ...developerModeCloseoutCommandSpecs,
     'runtime oma-app-live-path record':
       cloneCommandSpec(commandSpecs['runtime oma-app-live-path record'], {

@@ -2,6 +2,9 @@ import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import {
   appReleaseUserPathEvidenceSummary,
 } from './app-release-user-path.ts';
+import {
+  codexAppRuntimeEvidenceSummary,
+} from './codex-app-runtime-role.ts';
 
 type AppOperatorDrilldownSummaryInput = {
   attempts: unknown[];
@@ -35,6 +38,7 @@ type AppOperatorDrilldownSummaryInput = {
   standardAgentTemplateConsumption: JsonRecord;
   evidenceEnvelope: JsonRecord;
   runtimeManagerRouteSupport: JsonRecord;
+  codexAppRuntimeRole: JsonRecord;
   appReleaseUserPathEvidence: JsonRecord;
 };
 
@@ -87,6 +91,8 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
   const evidenceEnvelopeSummary = record(input.evidenceEnvelope.summary);
   const appReleaseUserPathSummary =
     appReleaseUserPathEvidenceSummary(input.appReleaseUserPathEvidence);
+  const codexAppRuntimeEvidence =
+    codexAppRuntimeEvidenceSummary(input.codexAppRuntimeRole);
   const routeSupport = record(input.runtimeManagerRouteSupport.mas_domain_route_projection);
   const supportedTaskKinds = stringList(routeSupport.supported_task_kinds);
   const routeSupportActionRefs = stringList(routeSupport.action_refs);
@@ -273,6 +279,18 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       countBy(input.actionRefs, (ref) =>
         ref.action_kind === 'app_release_user_path_evidence_receipt_verify'
       ),
+    codex_app_runtime_evidence_action_route_count: countBy(input.actionRefs, (ref) => (
+      ref.action_kind === 'codex_app_runtime_evidence_receipt_record'
+      || ref.action_kind === 'codex_app_runtime_evidence_receipt_verify'
+    )),
+    codex_app_runtime_evidence_record_action_route_count:
+      countBy(input.actionRefs, (ref) =>
+        ref.action_kind === 'codex_app_runtime_evidence_receipt_record'
+      ),
+    codex_app_runtime_evidence_verify_action_route_count:
+      countBy(input.actionRefs, (ref) =>
+        ref.action_kind === 'codex_app_runtime_evidence_receipt_verify'
+      ),
     oma_production_consumption_action_route_count: countBy(input.actionRefs, (ref) => (
       ref.action_kind === 'oma_production_consumption_receipt_record'
     )),
@@ -430,5 +448,18 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       appReleaseUserPathSummary.release_ready_claimed,
     app_release_user_path_production_ready_claimed:
       appReleaseUserPathSummary.production_ready_claimed,
+    codex_app_runtime_evidence_gate_count: codexAppRuntimeEvidence.gate_count,
+    codex_app_runtime_evidence_open_gate_count:
+      codexAppRuntimeEvidence.open_gate_count,
+    codex_app_runtime_evidence_ledger_receipt_ref_count:
+      codexAppRuntimeEvidence.ledger_receipt_ref_count,
+    codex_app_runtime_evidence_typed_blocker_ref_count:
+      codexAppRuntimeEvidence.typed_blocker_ref_count,
+    codex_app_runtime_evidence_recorded_ledger_receipt_ref_count:
+      codexAppRuntimeEvidence.recorded_ledger_receipt_ref_count,
+    codex_app_runtime_evidence_verified_ledger_receipt_ref_count:
+      codexAppRuntimeEvidence.verified_ledger_receipt_ref_count,
+    codex_app_runtime_evidence_pending_verify_receipt_ref_count:
+      codexAppRuntimeEvidence.pending_verify_receipt_ref_count,
   };
 }

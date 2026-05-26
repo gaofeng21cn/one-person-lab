@@ -43,6 +43,7 @@ import {
   buildAppDrilldownRefsOnlyAuthorityBoundary as refsOnlyAuthorityBoundary,
 } from './runtime-tray-app-operator-drilldown-parts/authority-boundary.ts';
 import {
+  buildCodexAppRuntimeEvidenceActionRoutes,
   buildCodexAppRuntimeRole,
 } from './runtime-tray-app-operator-drilldown-parts/codex-app-runtime-role.ts';
 import {
@@ -954,6 +955,7 @@ export function buildAppOperatorDrilldown(input: {
     ...buildDomainDispatchEvidenceReceiptRoutes(record(domainDispatchEvidence)),
     ...buildExternalEvidenceActionRoutes(record(evidenceRequests)),
     ...buildFunctionalPrivatizationSemanticEquivalenceActionRoutes(record(functionalAuditRefs)),
+    ...buildCodexAppRuntimeEvidenceActionRoutes(record(appRuntimeRole)),
     ...buildAppReleaseUserPathEvidenceActionRoutes(record(appReleaseUserPathEvidence)),
     ...buildOmaProductionConsumptionActionRoutes(oplMetaAgentProductionConsumption),
     ...buildProviderWorkerActionRoutes({ stageAttemptWorkbench: input.stageAttemptWorkbench, providerInspection: input.providerInspection }),
@@ -1022,6 +1024,7 @@ export function buildAppOperatorDrilldown(input: {
       oplMetaAgentRegistry,
       standardAgentTemplateConsumption,
       evidenceEnvelope,
+      codexAppRuntimeRole: appRuntimeRole,
       appReleaseUserPathEvidence,
     }),
     codex_app_runtime_role_status: appRuntimeRole.runtime_policy,

@@ -236,7 +236,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.operator_action_route_count >= 26, true);
     assert.equal(
       drilldown.summary.operator_action_route_count,
-      29,
+      30,
     );
     assert.equal(
       drilldown.summary.operator_executable_route_count,
@@ -245,7 +245,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.operator_executable_route_count >= 16, true);
     assert.equal(
       drilldown.summary.operator_executable_route_count,
-      19,
+      20,
     );
     assert.equal(drilldown.summary.stage_production_evidence_receipt_action_route_count, 2);
     assert.equal(
@@ -263,6 +263,10 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     );
     assert.equal(drilldown.summary.domain_dispatch_evidence_receipt_record_payload_template_count, 1);
     assert.equal(drilldown.summary.oma_production_consumption_action_route_count, 1);
+    assert.equal(drilldown.summary.codex_app_runtime_evidence_action_route_count, 1);
+    assert.equal(drilldown.summary.codex_app_runtime_evidence_record_action_route_count, 1);
+    assert.equal(drilldown.summary.codex_app_runtime_evidence_verify_action_route_count, 0);
+    assert.equal(drilldown.summary.codex_app_runtime_evidence_open_gate_count, 1);
     assert.equal(drilldown.summary.domain_owned_action_route_count, 2);
     assert.equal(drilldown.summary.functional_privatization_default_watchlist_count, 0);
     assert.equal(drilldown.summary.functional_privatization_semantic_equivalence_review_count, 0);
