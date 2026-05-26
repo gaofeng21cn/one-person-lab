@@ -6519,3 +6519,56 @@ Next tranche write scope:
 - When the dirty App release/testing lane is safe or explicitly assigned, perform paragraph-level governance of App `README*`, `docs/status.md`, `docs/release/README.md`, `docs/testing/README.md`, `docs/user-guides/**`, `docs/screenshots/**`, `docs/history/**`, and `scripts/README.md` against App contracts, release/evidence scripts, shell validation and real release artifacts.
 - Until then, continue only newly reopened exact-inventory tails in OPL/MAS/MAG/RCA/OMA or App ledger/accounting items that do not touch externally dirty files.
 - Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
+
+Date: `2026-05-27 05:30 CST`
+Tranche: `opl-harness-shared-readme-governance`
+State: `tranche_verified`
+
+本轮覆盖 OPL nested package README：`python/opl-harness-shared/README.md`。此前 OPL exact coverage ledger 的机器对账范围是仓根 `README*` 加 `docs/**/*.md`，因此不会把这个 Python subpackage README 计入 exact closure；但它仍是 repo-tracked human README，按文档生命周期规则需要有 owner / purpose / state / machine boundary。目标是补齐该 README 的四信号和当前导出模块清单，避免它成为未标注的人读入口或第二真相源。本轮不改 contracts/source/tests，不关闭 OPL series 全局 `/goal`。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`, `TASTE.md`, `docs/docs_portfolio_consolidation.md`, this OPL family ledger, `python/opl-harness-shared/README.md`, `python/opl-harness-shared/pyproject.toml`, `python/opl-harness-shared/src/opl_harness_shared/__init__.py`, package source tree, package tests, `contracts/family-release/shared-owner-release.json`, `src/family-shared-release.ts`, and `tests/src/verification-command-surfaces.test.ts`.
+- Repository status/worktree safety read: OPL main was clean; unrelated OPL worktrees remained external or recent, so this tranche used a new isolated worktree and did not absorb unrelated lanes.
+
+Fresh semantic result:
+
+- `python/opl-harness-shared/README.md` is the package-local human index for the OPL-owned family-level Python shared substrate. It is not a current active plan, runtime truth, domain truth, domain-specific authority, release SHA authority, or shared-release consumer ledger.
+- Machine truth remains in `pyproject.toml`, `src/opl_harness_shared/`, bundled contracts, root `contracts/`, package tests and family shared-release contracts.
+- The previous README had the correct high-level boundary, but lacked explicit lifecycle four-signal metadata and its export list had fallen behind current package modules. The rewrite adds owner/purpose/state/machine-boundary and updates the export list to match current source-level public helpers.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | Full read of `python/opl-harness-shared/README.md`; support read of OPL docs governance, family ledger, package metadata/source/tests and shared-release contracts listed above. | `python/opl-harness-shared/README.md`; `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The reviewed README has a legitimate long-term role as active package support.
+
+Unreviewed docs:
+
+- OPL scoped exact inventory over repo-root `README*` plus `docs/**/*.md` remains previously reconciled. This tranche additionally covers the nested Python package README but does not expand the established exact-accounting scope to every nested package/support README in all repos.
+- App full paragraph-level semantic governance remains open while dirty release/testing lanes are outside this goal's ownership.
+
+Remaining stale / retire candidates:
+
+- Future OPL nested package/support README files should either carry owner/purpose/state/machine-boundary or be recorded as support README context in the relevant repo-local or family ledger.
+- Any future `opl-harness-shared` prose that treats this package README as runtime truth, domain truth, consumer pin truth, release SHA authority, domain readiness, production readiness, or replacement for root contracts/tests is stale pollution.
+
+Worktree / branch cleanup:
+
+- No external stale worktree/branch qualified for cleanup before this tranche. OPL `codex/opl-owner-payload-ledger-intake` had recent writes, OPL other external lanes were dirty or out of scope, MAS `dm002-opl-live-projection` had recent writes, App main remained dirty, and App release/GUI worktrees remained dirty/external.
+- This tranche's OPL worktree should be removed after fast-forward absorb.
+
+Verification before absorb:
+
+- `git diff --check`; strict README/docs/contracts conflict-marker scan; focused package README/source export sanity read; OPL Doc Governance doctor active truth pass / no findings; final OPL scoped exact inventory remains `missing_by_exact_string=0`.
+- No source/runtime tests are required because this tranche changes only narrative docs and coverage ledger accounting.
+
+Next tranche write scope:
+
+- If App remains dirty, continue only with newly reopened OPL/MAS/MAG/RCA/OMA/App ledger or support README accounting items that do not touch externally dirty files.
+- When the dirty App release/testing lane is safe or explicitly assigned, perform App paragraph-level body governance as recorded in the App repo-local ledger.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
