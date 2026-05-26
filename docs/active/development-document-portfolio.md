@@ -4841,6 +4841,63 @@ Next tranche write scope:
 - Continue OPL `docs/history/process/convergence-governance/**`, `docs/history/process/plans/**`, `docs/history/process/specs/**`, or `docs/history/process/superpowers/**` in small clusters; alternatively pick MAS remaining repo-wide docs if OPL external lanes make a cluster unsafe.
 - Delay RCA/App docs write passes until external implementation/release dirty lanes are isolated or explicitly assigned.
 
+Date: `2026-05-26 20:17 CST`
+Tranche: `opl-history-convergence-governance-coverage`
+State: `tranche_verified`
+
+本轮覆盖 OPL `docs/history/process/convergence-governance/**` 的 convergence governance 过程归档。目标是确认 contract convergence、四仓同步、executor/Hermes 评估、用户面成熟度、外部 orchestration 学习、docs lifecycle rollout、GUI pivot 和产品分层 closeout 都停留在 history / provenance 语境，不作为当前 active plan、roadmap、provider/readiness path、legacy entry 兼容面、Hermes-default 路线、domain admission authority、release-ready 或 production-ready 证据。本轮不关闭全局 `/goal`，也不表示 OPL `docs/history/process/plans/**`、`docs/history/process/specs/**` 或 `docs/history/process/superpowers/**` 已逐段覆盖。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`, `TASTE.md`, `README.md`, `docs/README.md`, core five, `docs/active/current-state-vs-ideal-gap.md`, `docs/references/runtime-substrate/opl-family-agent-ideal-state.md`, `docs/references/convergence-governance/README.md`, and `docs/history/process/convergence-governance/README.md`.
+- OPL machine/read-model surfaces: `contracts/opl-framework/domains.json`, `contracts/opl-framework/workstreams.json`, `contracts/opl-framework/task-topology.json`, `opl framework readiness --family-defaults --json`, `opl agents conformance --family-defaults --json`, `opl agents default-callers --family-defaults --json`, and `opl runtime app-operator-drilldown --json`.
+- Convergence history docs: `docs/history/process/convergence-governance/README.md`, `docs/history/process/convergence-governance/contract-convergence-v1-decision-note-2026-04-08.md`, `docs/history/process/convergence-governance/contract-convergence-v1-execution-board-2026-04-11.md`, `docs/history/process/convergence-governance/ecosystem-status-matrix-2026-04.md`, `docs/history/process/convergence-governance/family-content-level-docs-consolidation-2026-05-11.md`, `docs/history/process/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.md`, `docs/history/process/convergence-governance/family-external-orchestration-learning-board-2026-04-30.md`, `docs/history/process/convergence-governance/family-user-facing-maturity-roadmap-2026-04-13.md`, `docs/history/process/convergence-governance/four-repo-doc-series-sync-summary-2026-04-14.md`, `docs/history/process/convergence-governance/four-repo-executor-follow-up-and-hermes-evaluation-2026-04.md`, `docs/history/process/convergence-governance/gui-mainline-pivot-to-aionui-2026-04-21.md`, and `docs/history/process/convergence-governance/opl-product-layer-foundry-agent-rollout-2026-05-12.md`.
+
+Fresh semantic result:
+
+- Current active domain-agent catalog still contains `medautoscience`, `medautogrant`, and `redcube`; active workstreams remain `research_ops`, `grant_ops`, and `presentation_ops`. Candidate topology entries such as thesis/review/IP/award remain under-definition signals, not admitted domains.
+- Fresh `opl framework readiness --family-defaults --json` returned `status=framework_control_plane_available_with_blocked_refs_only_attention`, `hard_blocker_count=0`, `operator_payload_required_attention_tail_count=0`, `domain_blocked_attention_tail_count=275`, and provider SLO cadence/capability satisfied. Domain-blocked refs-only attention is not domain ready or production ready.
+- Fresh `opl agents conformance --family-defaults --json` returned `status=passed`, `passed_count=4`, `blocked_count=0`, `production_evidence_tail_count=4`, and `conformance_report_can_claim_domain_ready=false`; this is structural conformance, not readiness or admission authority.
+- Fresh `opl agents default-callers --family-defaults --json` returned `status=ready_domain_evidence_required`, `generated_default_caller_surface_count=32`, `blocked_surface_count=0`, zero missing domain-owner / no-forbidden-write / tombstone refs, and `physical_delete_authorized_by_this_report=false`.
+- Fresh `opl runtime app-operator-drilldown --json` returned `availability=available`, `functional_privatization_action_required_count=0`, `default_caller_deletion_evidence_open_requirement_count=0`, `app_release_user_path_release_ready_claimed=false`, `app_release_user_path_production_ready_claimed=false`, and authority boundaries that do not write domain truth or authorize quality/export verdicts. App/operator drilldown remains refs-only projection.
+- The convergence directory index already carried correct history-only owner jumps and no-resurrection guardrails.
+- Four history body docs had stale-risk present-tense wording inside archived action records: product-entry companion wording in the user-facing maturity roadmap, 2026-05-12 RH read-model evidence in the external orchestration board, current/default-executor capability wording in the Hermes executor follow-up, and current repo-tracked truth wording in the ecosystem status matrix. These were rewritten as dated historical wording so the archived records cannot be read as current active baton, default runtime proof, App/release readiness, or live read-model authority.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | Full paragraph / heading review of all 12 `docs/history/process/convergence-governance/*.md` files; support read of core docs, active truth owner, ideal-state reference, convergence reference index, framework contracts and fresh framework/conformance/default-caller/App drilldown read models. | `docs/history/process/convergence-governance/ecosystem-status-matrix-2026-04.md`; `docs/history/process/convergence-governance/contract-convergence-v1-execution-board-2026-04-11.md`; `docs/history/process/convergence-governance/family-user-facing-maturity-roadmap-2026-04-13.md`; `docs/history/process/convergence-governance/family-external-orchestration-learning-board-2026-04-30.md`; `docs/history/process/convergence-governance/four-repo-executor-follow-up-and-hermes-evaluation-2026-04.md`; `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. These files already live in `docs/history/process/convergence-governance/**` and remain useful convergence provenance; this tranche corrected stale-risk tense and recorded coverage rather than moving or deleting paths.
+
+Unreviewed docs:
+
+- `one-person-lab`: current inventory remains 175 `README*` / `docs/**/*.md` / contracts README files. After this tranche, remaining exact-missing clusters are `docs/history/process/plans/**`, `docs/history/process/specs/**`, and `docs/history/process/superpowers/**`; plus any non-exact grouped coverage still listed in prior tranche notes such as root/contract README or active support docs if not separately reconciled.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks.
+- `med-autogrant`: current 120-file recorded scope was closed by the MAG final inventory reconcile unless new docs or later source/contract changes reopen a section.
+- `redcube-ai`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused RCA chunks; current main checkout still carries external dirty implementation/test files.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App dirty lanes are closed or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Any future convergence-history wording that turns Contract Convergence v1, Phase C boards, four-repo sync, user-facing maturity ladder, product-entry companions, external orchestration learning, GUI pivot, AionUI switch, or Foundry Agent product-layer closeout into current roadmap, active plan, provider/readiness path, App release-ready proof, domain-ready proof, production-ready proof, or active compatibility interface is stale pollution.
+- Any future wording that makes Hermes-Agent the default OPL executor/provider, revives retired gateway-era entry or routed-action vocabulary as active topology, or makes MDS / DeepScientist an OPL top-level active domain agent must be rejected unless a current contract/source/read-model explicitly reintroduces a narrow surface.
+- Any future external-orchestration learning must stay OPL-owned contract/projection vocabulary or domain-owned template work; generic fallback, external scheduler/tracker, SQLite schema, web dashboard, persona library, or domain authority migration remains outside OPL core.
+
+Verification before absorb:
+
+- OPL docs verification passed in the tranche worktree: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- OPL convergence support read models and contract probes above were rerun fresh in the tranche worktree; no source or machine-readable contract edit was made.
+
+Next tranche write scope:
+
+- Continue OPL `docs/history/process/plans/**`, `docs/history/process/specs/**`, or `docs/history/process/superpowers/**` in small clusters; alternatively pick MAS remaining repo-wide docs if OPL external lanes make a cluster unsafe.
+- Delay RCA/App docs write passes until external implementation/release dirty lanes are isolated or explicitly assigned.
+
 ## 验证
 
 Docs-only 整理：

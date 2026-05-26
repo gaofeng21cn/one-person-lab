@@ -50,9 +50,9 @@ Machine boundary: 本文只保存 2026-04 用户面成熟度 snapshot。当前 A
   - dashboard recommended entry surfaces
   - `contract handoff-envelope`
   - 当时的 web project cards
-- 三个业务仓的 manifest 现在还会统一带出 `product_entry_quickstart` companion，给出用户第一组可执行步骤、resume 合同与 human gate id；`OPL` 顶层 discovery / dashboard / handoff / web 同步消费这层用户面。
-- 三个业务仓的 manifest 现在也会统一带出 `product_entry_overview` companion，把当前入口摘要、progress / resume 句柄、remaining gaps 与 human gate id 收成同型前台看板，避免用户还要手工从 status/loop/quickstart 几层自己拼。
-- 三个业务仓的 manifest 现在还会统一带出轻量 `product_entry_readiness` companion，直接回答“现在能不能用、是否已经好用、是不是全自动、建议从哪进、目前还差什么”；`OPL` 顶层 discovery / dashboard / handoff / web 也同步消费这层成熟度摘要。
+- 三个业务仓的 manifest 当时继续带出 `product_entry_quickstart` companion，给出用户第一组可执行步骤、resume 合同与 human gate id；`OPL` 顶层 discovery / dashboard / handoff / web 当时同步消费这层用户面。
+- 三个业务仓的 manifest 当时也带出 `product_entry_overview` companion，把当时入口摘要、progress / resume 句柄、remaining gaps 与 human gate id 收成同型前台看板，避免用户还要手工从 status/loop/quickstart 几层自己拼。
+- 三个业务仓的 manifest 当时还带出轻量 `product_entry_readiness` companion，直接回答当时“能不能用、是否已经好用、是不是全自动、建议从哪进、目前还差什么”；`OPL` 顶层 discovery / dashboard / handoff / web 当时也同步消费这层成熟度摘要。
 
 ## 四仓当时落点
 
