@@ -4429,6 +4429,60 @@ Next tranche write scope:
 - Continue another safe repo/doc cluster: OPL uncovered support docs, MAS remaining repo-wide docs, RCA remaining bodies after external implementation dirt is isolated, or App docs once active App dirty lanes are closed or explicitly assigned.
 - Keep the pre-existing MAG `workspace cockpit` / `product direct-entry` / `product user-loop` CLI and runtime-state expectation drift routed to a source/test owner lane, not docs-governance closeout.
 
+Date: `2026-05-26 18:29 CST`
+Tranche: `mas-governance-reference-six-repo-scope-coverage`
+State: `tranche_pending_verification_absorb`
+
+本轮覆盖 MAS `docs/references/governance/series-doc-governance-checklist.md` 与 references index discoverability。目标是把 MAS governance support reference 从旧四仓 wording 校准到当前六仓 OPL series scope，并把 MAS runtime-facing refs / OPL hosted runtime split、One Person Lab App、OPL Meta Agent 角色写清。本轮不关闭全局 `/goal`，也不表示 MAS repo-wide README/docs 已全量逐段覆盖。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`, `TASTE.md`, `docs/status.md`, `docs/architecture.md`, `docs/active/mas-ideal-state-gap-plan.md`, `docs/references/positioning/mas_ideal_state.md`, `docs/docs_portfolio_consolidation.md`, and `docs/references/README.md`.
+- MAS reviewed references: `docs/references/governance/series-doc-governance-checklist.md`, plus prior `docs/references/integration/*.md` coverage ledger to avoid duplicate integration coverage.
+- MAS machine refs: `contracts/generated_surface_handoff.json`, `contracts/functional_privatization_audit.json`, and `contracts/production_acceptance/mas-production-acceptance.json`.
+- OPL/App/OMA role truth: OPL current status / decisions / coverage ledger for `OPL Framework -> One Person Lab App -> Foundry Agents`, App README/status for desktop workbench ownership, and OMA README/status for Agent Foundry / new-agent builder-test managed module boundary.
+
+Fresh semantic result:
+
+- MAS series governance checklist now names the current six-repo OPL series scope: `one-person-lab`, `one-person-lab-app`, `med-autoscience`, `med-autogrant`, `redcube-ai`, `opl-meta-agent`.
+- The checklist now says MAS owns runtime-facing domain authority refs, owner receipt and typed blocker while default hosted autonomous runtime is OPL/Temporal-owned.
+- One Person Lab App is App/workbench and operator projection consumer.
+- OPL Meta Agent is Agent Foundry / new-agent builder-test managed module, not MAS/MAG/RCA domain truth, artifact authority or owner receipt authority.
+- MAS references index now links the governance directory.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full paragraph read of `docs/references/governance/series-doc-governance-checklist.md`; support read of MAS references index, core/current docs, prior integration-reference coverage ledger, generated-surface / functional-privatization / production-acceptance contracts, and OPL/App/OMA role docs. | `docs/references/governance/series-doc-governance-checklist.md`; `docs/references/README.md`; `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. MAS governance references remain active support references; stale family-scope wording and index discoverability were corrected in place.
+
+Unreviewed docs:
+
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks.
+- `one-person-lab`: root `README*`, contracts README files, most active/runtime/delivery/source/policies/specs/references/history docs remain open outside recorded focused tranches.
+- `med-autogrant`: remaining history/support bodies follow the cumulative MAG ledger; MAG non-index references were covered in the previous tranche.
+- `redcube-ai`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused RCA chunks.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App dirty lanes are closed or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Any future MAS governance wording that reverts to four-repo scope, omits One Person Lab App, or promotes OPL Meta Agent into domain truth / artifact / owner receipt authority is stale pollution.
+- Any future MAS reference wording that treats MAS runtime-facing refs or owner receipts as MAS-owned generic queue/provider/worker runtime ownership is stale; default hosted autonomous runtime remains OPL/Temporal.
+
+Verification / absorb:
+
+- Pending this tranche closeout: MAS and OPL docs-only verification, fast-forward absorb into both `main` checkouts, worktree cleanup, then final six-repo lightweight verification.
+
+Next tranche write scope:
+
+- Continue MAS remaining repo-wide docs, OPL uncovered support docs, RCA remaining bodies after external implementation dirt is isolated, or App docs once active App dirty lanes are closed or explicitly assigned.
+
 ## 验证
 
 Docs-only 整理：
