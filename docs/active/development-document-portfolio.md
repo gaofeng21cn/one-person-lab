@@ -4542,7 +4542,7 @@ Verification before absorb:
 - MAG commit `39e4460 docs: cover MAG non-spec history boundaries` is on MAG `main`.
 - OPL commits `ea2d7bdd docs: record MAG non-spec history coverage` and this closeout status update are on OPL `main`.
 - This tranche's MAG and OPL worktrees / branches were removed after fast-forward absorb.
-- Pending after this edit: final six-repo lightweight verification.
+- Final lightweight six-repo verification passed after absorb: all six repos returned `git diff --check` exit 0, strict README/docs/contracts conflict-marker scan had no hits, and OPL Doc Governance doctor returned `finding_count=0`, active truth `pass`, `missing=0`, `next_not_ready=0`.
 
 Next tranche write scope:
 
