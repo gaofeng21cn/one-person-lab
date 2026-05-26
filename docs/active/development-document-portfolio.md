@@ -5231,6 +5231,63 @@ Next tranche write scope:
 - Prefer RCA final inventory reconcile if the checkout remains clean, or continue MAS repo-wide paragraph coverage from the remaining uncovered doc list.
 - Keep App docs delayed until active release / GUI lanes are safe or explicitly assigned.
 
+Date: `2026-05-26 22:15 CST`
+Tranche: `rca-final-inventory-reconcile`
+State: `tranche_verified`
+
+本轮对 RCA tracked `README*` 与 `docs/**/*.md` 做 final inventory reconcile，并把结果折回 RCA 本地 docs portfolio ledger 与本 OPL series ledger。目标是把前序 RCA focused tranches 的分组覆盖记录转成当前 inventory closeout：RCA 当前 tracked docs/readme inventory 已按 current truth、active plan、support reference、policy/spec、history/provenance、tombstone 或 prompt/support asset 角色归位。本轮不关闭全局 `/goal`，不表示 RCA visual ready / production ready，也不表示 MAS/App repo-wide coverage 已完成。
+
+Fresh live truth inputs:
+
+- RCA `AGENTS.md`, `TASTE.md`, `README.md`, `README.zh-CN.md`, `docs/README.md`, core five, `docs/active/rca-ideal-state-gap-plan.md`, `docs/references/rca-visual-deliverable-agent-ideal-state.md`, and `docs/docs_portfolio_consolidation.md`.
+- RCA inventory scripts over tracked repo-root `README*`, `docs/**/*.md`, and all tracked README files under repo support roots.
+- RCA support README spot checks: `agent/README.md`, `contracts/README.md`, `runtime/README.md`, `config/local/README.md`, and xiaohongshu prompt asset README files under `prompts/node/aligned/自动小红书/**/README.md`.
+- Doctor evidence: RCA OPL Doc Governance doctor reported `finding_count=0`, active truth `pass`; this was used only as a shape/risk input.
+
+Fresh semantic result:
+
+- RCA current root/docs inventory is `91` tracked paths for repo-root `README*` plus `docs/**/*.md`.
+- RCA current all-README/docs inventory is `97` tracked paths when repo-local support README files outside `docs/` are included.
+- Prior focused tranches already covered RCA active/status, product-entry references, runtime/integration support, delivery/source support, policy support, references including north-star, Hermes history, Phase 2 history, and plans/runtime/tombstone history.
+- This reconcile explicitly closes the grouped coverage accounting gap for `docs/history/hermes/*.md`, `docs/history/phase-2/*.md`, `docs/references/product-entry/*.md`, root bilingual README, support README roots and prompt asset README files.
+- The prompt README files remain prompt asset support, not active runtime truth, production evidence or generated wrapper owners.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `redcube-ai` | Final reconcile over 91 tracked repo-root `README*` / `docs/**/*.md` paths and 97 tracked all-README/docs paths including repo-local support README files; support read of RCA core docs, active truth owner, target-state reference, support README roots and doctor output listed above. | `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | OPL family ledger foldback for this RCA final reconcile. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. This tranche is an inventory/accounting reconcile only; prior RCA tranches already routed current truth, support reference, policy/spec and history/tombstone material.
+
+Unreviewed docs:
+
+- `one-person-lab`: none by exact inventory coverage for the current OPL inventory.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks.
+- `med-autogrant`: current recorded scope was closed by the MAG final inventory reconcile unless new docs or later source/contract changes reopen a section.
+- `redcube-ai`: none by current tracked repo-root `README*` + `docs/**/*.md` inventory reconcile. Future new README/docs files, or substantive edits after this tranche, must be covered by a new ledger entry.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App release / GUI lanes are safe or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- RCA: no current inventory path remains uncovered by role. Remaining RCA risk is future new-doc drift, stale wording introduced after this reconcile, or live source/contract/read-model changes that make an already-covered section stale.
+- RCA historical `managed`, `gateway`, `runtime`, `session`, `domain_action_adapter`, Hermes-first, bridge/frontdoor/federation and old route wording remain allowed only in history/provenance/tombstone, semantic-id, negative guard, package/protocol boundary, refs-only adapter, domain handler target or explicit support-reference contexts.
+- MAS and App repo-wide docs remain the global OPL series carry-forward.
+
+Verification before absorb:
+
+- RCA docs verification in the tranche worktree: inventory counts `91` root/docs paths and `97` all README/docs paths; `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- OPL ledger verification in the tranche worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+
+Next tranche write scope:
+
+- Continue MAS repo-wide paragraph coverage from the remaining uncovered doc list if active owner-route dirty lanes are safe or explicitly assigned.
+- Keep App docs delayed until active release / GUI lanes are safe or explicitly assigned.
+
 ## 验证
 
 Docs-only 整理：
