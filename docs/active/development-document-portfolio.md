@@ -348,7 +348,7 @@ Next tranche write scope:
 
 Date: `2026-05-25 16:46 CST`
 Tranche: `mag-history-foundation-specs-coverage`
-State: `tranche_verified_scope_pending`
+State: `tranche_verified`
 
 本轮覆盖 `med-autogrant` 的 `docs/history/specs/2026-04-06-*.md` foundation history specs。目标是把上一轮 MAG history specs body coverage 的第一批直接文件入口收紧：每份历史 foundation spec 首屏都持有文件级 `Owner`、`Purpose`、`State`、`Machine boundary`，明确这些文件只保留 2026-04-06 foundation 形成过程，当前 MAG role、OPL/Temporal runtime owner、active specs、schema/source/CLI/API truth 与机器行为回到核心五件套、`docs/specs/README.md`、`docs/specs/specs_lifecycle_map.md`、contracts、schemas、source 和 `contracts/runtime-program/current-program.json`。
 
@@ -3131,6 +3131,52 @@ Remaining stale / retire candidates:
 Next tranche write scope:
 
 - Continue RCA remaining references and non-Hermes history bodies with old managed/gateway/runtime/session/domain_action_adapter vocabulary, after confirming current role and no-resurrection boundaries from live contracts/tests.
+- Or MAS product/status/workbench and progress/domain-ref projection shell reconciliation outside already-covered blocks.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
+Date: `2026-05-26 08:54 CST`
+Tranche: `rca-phase-2-history-provenance-index`
+State: `tranche_verified_scope_pending`
+
+本轮覆盖 RCA `docs/history/phase-2/` history/provenance 文档，目标是把 absorbed Phase 2 tranche、continuation board、proof lane、manual-test brief、HTML/native route closeout 继续锁在 provenance / proof 语境，并明确当前 truth 回到核心五件套、active gap plan、runtime/delivery/source/policy owner docs 和 machine-readable contracts。
+
+Fresh live truth inputs:
+
+- RCA `AGENTS.md`, `TASTE.md`, `docs/status.md`, `docs/architecture.md`, `docs/active/rca-ideal-state-gap-plan.md`, RCA `docs/docs_portfolio_consolidation.md`。
+- RCA `docs/history/README.md`, `docs/history/phase-2/README.md`, and all 17 `docs/history/phase-2/*.md` bodies。
+- RCA `contracts/runtime-program/current-program.json`, Phase 2 runtime-program contracts, `ppt-image-first-production-route.json`, `ppt-native-authoring-proof-lane.json`, current-program leaf refs for source intake, publication projection, native PPT operator UX, `runtimeWatch`, retired `domain_action_adapter` tombstones, physical morphology and default-caller deletion evidence。
+
+Fresh semantic result:
+
+- 17 个 Phase 2 history 正文都已有 `Owner` / `Purpose` / `State` / `Machine boundary` 或 first-screen lifecycle note；其中保留的旧 `当前状态`、`Backlog`、`下一步`、`停车结论` 或 closeout wording 按原始 tranche context 读取。
+- 需要治理的是目录索引：`docs/history/phase-2/README.md` 原本已有生命周期规则，但仍是 English-first title 和裸文件清单。现在已改成中文 canonical history index，列出 current truth owner refs、每份 brief 的历史角色 / 当前读法，以及 stale wording / no-resurrection boundary。
+- 唯一带 current support 语义的 Phase 2 brief 是 `phase_2_ppt_native_authoring_proof_lane.md`：它仍支持 optional native editable PPTX route；默认 PPT 路线仍是 image-first，native PPTX 不绕过 source truth、review、`runtimeWatch` 或 export gate。
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `redcube-ai` | Full paragraph read of `docs/history/phase-2/README.md` and all 17 `docs/history/phase-2/*.md` bodies; role read of `docs/history/README.md`; live contract/core-doc refs listed above. | `docs/history/phase-2/README.md`; `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | coverage ledger owner only | this coverage ledger |
+
+Archived / tombstoned / deleted docs:
+
+- none. Phase 2 history bodies remain provenance/proof records; directory-level index now carries the missing per-brief canonical read, so no body-level rewrite or doc move was needed.
+
+Unreviewed docs:
+
+- RCA `docs/history/phase-2/` bodies are now covered for current owner, historical role, current optional-route support and no-resurrection boundaries.
+- RCA remaining reference bodies and non-Hermes/non-Phase-2 history bodies remain open outside already-covered chunks.
+- OPL, MAS, MAG and App repo-wide coverage remains open outside already-recorded chunks; OMA README/docs coverage remains covered by the earlier OMA tranche.
+
+Remaining stale / retire candidates:
+
+- Future RCA prose that treats Phase 2 history, continuation boards, old manual-test brief, old HTML lane closeout, old `gateway` / `harness` / `managed` wording, or old OPL-hosted runtime language as current default runtime owner, active backlog, generated/default caller, public identity, visual ready, exportable, handoffable, domain ready, production ready or production visual-stage long-soak evidence is stale pollution.
+- Any current rule still embedded only in a Phase 2 history body must be extracted to core docs, active gap plan, runtime/delivery/source/policy owner docs, machine-readable contracts or source/test surface before being relied on.
+
+Next tranche write scope:
+
+- Continue RCA `docs/history/plans/`, `docs/history/positioning/`, `docs/history/runtime/`, `docs/history/tombstones/` and uncovered reference bodies with old managed/gateway/runtime/session/domain_action_adapter vocabulary.
 - Or MAS product/status/workbench and progress/domain-ref projection shell reconciliation outside already-covered blocks.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
