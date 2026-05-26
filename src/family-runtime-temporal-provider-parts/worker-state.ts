@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -59,16 +60,62 @@ function gitHeadVersion(repoRoot: string) {
   }
 }
 
+function runtimeSourceVersion(modulePath: string) {
+  const sourceRoot = path.dirname(modulePath);
+  try {
+    const files: string[] = [];
+    const collect = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const filePath = path.join(dir, entry.name);
+        if (
+          entry.isDirectory()
+          && (entry.name.startsWith('family-runtime-') || dir !== sourceRoot)
+        ) {
+          collect(filePath);
+          continue;
+        }
+        if (
+          entry.isFile()
+          && (entry.name.endsWith('.ts') || entry.name.endsWith('.js'))
+          && (dir !== sourceRoot || entry.name.startsWith('family-runtime-'))
+        ) {
+          files.push(filePath);
+        }
+      }
+    };
+    collect(sourceRoot);
+    files.sort();
+    if (files.length === 0) {
+      return null;
+    }
+    const hash = crypto.createHash('sha256');
+    for (const file of files) {
+      const relativePath = path.relative(sourceRoot, file);
+      hash.update(relativePath);
+      hash.update('\0');
+      hash.update(fs.readFileSync(file));
+      hash.update('\0');
+    }
+    return `worker-runtime:${sourceRoot}:${hash.digest('hex')}`;
+  } catch {
+    return null;
+  }
+}
+
 export function currentWorkerSourceVersion(moduleUrl: string) {
   if (process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION?.trim()) {
     return process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION.trim();
+  }
+  const modulePath = fileURLToPath(moduleUrl);
+  const runtimeVersion = runtimeSourceVersion(modulePath);
+  if (runtimeVersion) {
+    return runtimeVersion;
   }
   const repoVersion = gitHeadVersion(repoRootFromModulePath(moduleUrl));
   if (repoVersion) {
     return repoVersion;
   }
   try {
-    const modulePath = fileURLToPath(moduleUrl);
     const stat = fs.statSync(modulePath);
     return `worker-module:${modulePath}:${stat.mtimeMs}:${stat.size}`;
   } catch {

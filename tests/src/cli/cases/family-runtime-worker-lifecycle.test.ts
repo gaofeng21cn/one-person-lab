@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import net from 'node:net';
+import { pathToFileURL } from 'node:url';
 
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 
@@ -15,6 +16,48 @@ import {
   startTemporalWorkerLifecycle,
   stopTemporalWorkerLifecycle,
 } from '../../../../src/family-runtime-temporal-provider.ts';
+import { currentWorkerSourceVersion } from '../../../../src/family-runtime-temporal-provider-parts/worker-state.ts';
+
+test('Temporal worker source version ignores documentation-only git HEAD drift', () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-worker-runtime-source-version-'));
+  const srcRoot = path.join(repoRoot, 'src');
+  const modulePath = path.join(srcRoot, 'family-runtime-temporal-provider.ts');
+  const helperPath = path.join(srcRoot, 'family-runtime-temporal-provider-parts', 'worker-state.ts');
+  const docsPath = path.join(repoRoot, 'docs', 'status.md');
+  const headPath = path.join(repoRoot, '.git', 'refs', 'heads', 'main');
+  const previousSourceVersion = process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+  try {
+    delete process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+    fs.mkdirSync(path.dirname(modulePath), { recursive: true });
+    fs.mkdirSync(path.dirname(helperPath), { recursive: true });
+    fs.mkdirSync(path.dirname(docsPath), { recursive: true });
+    fs.mkdirSync(path.dirname(headPath), { recursive: true });
+    fs.writeFileSync(path.join(repoRoot, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+    fs.writeFileSync(headPath, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n');
+    fs.writeFileSync(modulePath, 'export const workerRuntime = 1;\n');
+    fs.writeFileSync(helperPath, 'export const helperRuntime = 1;\n');
+    fs.writeFileSync(docsPath, 'initial docs\n');
+
+    const initial = currentWorkerSourceVersion(pathToFileURL(modulePath).href);
+    fs.writeFileSync(headPath, 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n');
+    fs.writeFileSync(docsPath, 'updated docs\n');
+    const docsOnly = currentWorkerSourceVersion(pathToFileURL(modulePath).href);
+    fs.writeFileSync(modulePath, 'export const workerRuntime = 2;\n');
+    const runtimeChanged = currentWorkerSourceVersion(pathToFileURL(modulePath).href);
+
+    assert.equal(docsOnly, initial);
+    assert.notEqual(runtimeChanged, initial);
+    fs.writeFileSync(helperPath, 'export const helperRuntime = 2;\n');
+    assert.notEqual(currentWorkerSourceVersion(pathToFileURL(modulePath).href), runtimeChanged);
+  } finally {
+    if (previousSourceVersion === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = previousSourceVersion;
+    }
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
 
 test('Temporal worker lifecycle re-query proves resident state and stop transition', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-requery-'));
