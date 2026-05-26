@@ -6273,3 +6273,65 @@ Next tranche write scope:
 - Continue OPL series whole-docs coverage outside MAG, preferably a remaining clean repo whose main checkout and worktrees are safe for this automation.
 - Start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
 - Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
+
+Date: `2026-05-27 05:18 CST`
+Tranche: `opl-history-process-ledger-exact-reconcile`
+State: `tranche_verified`
+
+本轮覆盖 OPL 主仓当前 exact inventory 中唯一未逐字入账的 history/process ledger 文件，并把结果回写到本 OPL family ledger。目标是关闭 OPL 本仓 `README*` / `docs/**/*.md` exact coverage accounting tail，避免把历史 coverage ledger 文件误读成 active truth、runtime truth、当前执行队列或未审正文。本轮不关闭全局 `/goal`，也不表示 OPL series 六仓 `README*` 与 `docs/**/*.md` 已全部逐段覆盖完成。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`, `TASTE.md`, root `README.md`, `docs/README.md`, core five, `docs/docs_portfolio_consolidation.md`, `docs/active/current-state-vs-ideal-gap.md`, `docs/references/runtime-substrate/opl-family-agent-ideal-state.md`, and `docs/history/process/plans/README.md`.
+- Target exact path: `docs/history/process/plans/2026-05-26-opl-doc-governance-tranche-ledger.md`.
+- OPL current inventory script over repo-root `README*` plus all `docs/**/*.md`, compared against this coverage ledger.
+- Fresh OPL read-model probes: `opl agents conformance --family-defaults --json`, `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`, and `opl framework readiness --family-defaults --json`.
+
+Fresh semantic result:
+
+- Current OPL truth remains owned by the core five, `docs/active/current-state-vs-ideal-gap.md`, contracts, source, CLI/read-model output, runtime ledger, provider receipts, domain-owned manifests and real App evidence.
+- `docs/history/process/plans/2026-05-26-opl-doc-governance-tranche-ledger.md` already carries `Owner`, `Purpose`, `State=history_provenance`, and a machine boundary that points current truth back to active/core docs and live machine/read-model surfaces.
+- `docs/history/process/plans/README.md` already lists this file as `OPL docs governance tranche coverage ledger` and says its current owner is active gap plan, core docs and live CLI/read-model; ledger body is coverage provenance only.
+- Fresh conformance read-model summary: structural conformance `passed`, `passed_count=4`, `blocked_count=0`, `production_evidence_tail_count=4`.
+- Fresh evidence-worklist summary: `open_worklist_item_count=1`, `open_safe_action_payload_required_item_count=1`, `open_safe_action_payload_free_item_count=0`, `domain_dispatch_evidence_workorder_count=1`, `domain_ready_authorized=false`, `production_ready_authorized=false`; zero-open guards still say worklist status is not domain ready or production ready.
+- Fresh framework-readiness summary: `hard_blocker_count=0`, `operator_actionable_attention_tail_count=1`, `operator_payload_required_attention_tail_count=1`, `operator_payload_free_attention_tail_count=0`, provider cadence/capability SLO satisfied. These live counts remain dynamic read-model truth and are not frozen into the history ledger.
+- No OPL prose body required rewrite. This tranche records exact coverage only and leaves active truth unchanged.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | First-screen / role read of `docs/history/process/plans/2026-05-26-opl-doc-governance-tranche-ledger.md`, support read of process-plans history index, docs portfolio governance, core docs, active gap plan, ideal-state reference and fresh OPL read-model summaries. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The reviewed path already has a legitimate long-term role as history/provenance coverage ledger.
+
+Unreviewed docs:
+
+- `one-person-lab`: exact-string inventory now has no uncovered `README*` / `docs/**/*.md` path in the current 171-file scope once this entry is counted. OPL remains part of the larger OPL series goal, and global closure still depends on all six repos.
+- `redcube-ai`, `one-person-lab-app`: full docs coverage remains open and should wait until active dirty/recent lanes are safe or explicitly handed to this governance goal.
+- `opl-meta-agent`, `med-autoscience`, and `med-autogrant`: previous full/exact reconcile coverage remains as recorded unless later changes reopen their docs.
+
+Remaining stale / retire candidates:
+
+- OPL: any future prose that promotes process ledger files, old tranche checklists, historical worktree/branch names, stale read-model counters, Gateway/frontdoor/Hermes-first wording or coverage accounting into current runtime truth, active execution queue, domain ready, App release ready or production ready is stale pollution.
+- OPL: live evidence-worklist currently still has one payload-required operator workorder; that is domain/app live refs follow-through, not a docs coverage gap and not a reason to close the global goal.
+- App/RCA: release / GUI / implementation docs remain gated by unrelated dirty or active lanes.
+
+Worktree / branch cleanup:
+
+- No external stale worktree/branch qualified for cleanup before this tranche. Existing unrelated OPL/App/RCA/MAS lanes were not attributable to this automation or were not safe to clean.
+- This tranche's OPL worktree should be removed after fast-forward absorb.
+
+Verification before absorb:
+
+- OPL history-process ledger reconcile worktree: exact inventory script expected `missing_by_exact_string=0`; `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- Six-repo doctor sweep should remain clean before closeout.
+- No source/runtime tests are required because this tranche changes only narrative coverage ledger accounting.
+
+Next tranche write scope:
+
+- Continue OPL series whole-docs coverage outside OPL/MAS/MAG/OMA, prioritizing a repo whose main checkout and worktrees are safe for this automation.
+- Start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
