@@ -1,8 +1,10 @@
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
+import { ServiceError } from '@temporalio/client';
 
 import * as activities from '../../../../src/family-runtime-temporal-activities.ts';
 import { buildTemporalStageAttemptWorkflowInputForTest } from '../../../../src/family-runtime-temporal-provider.ts';
+import { queryTemporalStageAttemptReadModel } from '../../../../src/family-runtime-temporal-query.ts';
 import type {
   TemporalStageAttemptWorkflowInput,
   TemporalStageAttemptWorkflowState,
@@ -169,6 +171,40 @@ test('family-runtime temporal terminal failure syncs even when terminal workflow
     await testEnv.teardown();
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
+});
+
+test('family-runtime temporal query classifies post-describe query failures as worker query unavailable', async () => {
+  const attempt = {
+    provider_kind: 'temporal',
+    stage_attempt_id: 'sat-worker-query-unavailable',
+    workflow_id: 'wf-worker-query-unavailable',
+  } as Parameters<typeof queryTemporalStageAttemptReadModel>[0];
+
+  const result = await queryTemporalStageAttemptReadModel(attempt, {
+    queryTemporalStageAttemptWorkflow: async () => {
+      const error = new ServiceError('Failed to query Workflow');
+      Object.assign(error, {
+        temporal_query_phase: 'workflow_query',
+        workflow_status: 'RUNNING',
+        run_id: 'run-worker-query-unavailable',
+      });
+      throw error;
+    },
+  });
+
+  assert.ok(result);
+  assert.equal(result.surface_kind, 'temporal_stage_attempt_query_unavailable');
+  assert.equal('reason' in result, true);
+  assert.equal('error' in result, true);
+  assert.equal('workflow_status' in result, true);
+  assert.equal('run_id' in result, true);
+  if (!('reason' in result) || !('error' in result) || !('workflow_status' in result) || !('run_id' in result)) {
+    throw new Error('expected temporal unavailable query projection');
+  }
+  assert.equal(result.reason, 'temporal_stage_attempt_query_unavailable');
+  assert.equal(result.error.code, 'temporal_stage_attempt_query_unavailable');
+  assert.equal(result.workflow_status, 'RUNNING');
+  assert.equal(result.run_id, 'run-worker-query-unavailable');
 });
 
 test('family-runtime temporal completed workflow syncs from result when query replay is nondeterministic', async () => {

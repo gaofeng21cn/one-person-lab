@@ -1,11 +1,96 @@
 import { spawnSync } from 'node:child_process';
 
 import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import {
+  familyRuntimePaths,
+} from '../../../../src/family-runtime-store.ts';
+import {
+  maybeRepairTemporalWorkerForProviderSlo,
+} from '../../../../src/family-runtime-provider-slo-executor.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
     OPL_STATE_DIR: stateRoot,
     ...extra,
+  };
+}
+
+function temporalWorkerStatus(status: 'worker_not_ready' | 'ready') {
+  return {
+    surface_kind: 'temporal_worker_lifecycle_status',
+    provider_kind: 'temporal',
+    lifecycle_status: status,
+    readiness_status: status,
+    worker_ready: status === 'ready',
+    server_reachable: true,
+    address: '127.0.0.1:7233',
+    address_source: 'managed_local_service_state',
+    namespace: 'default',
+    task_queue: 'opl-stage-attempts',
+    default_task_queue: 'opl-stage-attempts',
+    live_probe_started_worker: false,
+    unreachable_reason: null,
+    managed_worker_pid: status === 'ready' ? 12345 : null,
+    managed_worker_state_path: '/tmp/temporal-worker.json',
+    managed_worker_source_version: status === 'ready' ? 'worker-runtime:test' : null,
+    expected_worker_source_version: 'worker-runtime:test',
+    managed_worker_source_current: status === 'ready' ? true : null,
+    stale_worker_pid: null,
+    temporal_service_lifecycle: {
+      surface_kind: 'temporal_service_lifecycle_status',
+      provider_kind: 'temporal',
+      service_status: 'running',
+      address: '127.0.0.1:7233',
+      server_reachable: true,
+    },
+    blockers: status === 'ready' ? [] : ['temporal_worker_not_ready'],
+    repair_action: {
+      surface_kind: 'temporal_worker_repair_action',
+      provider_kind: 'temporal',
+      action_id: status === 'ready' ? 'none' : 'start_temporal_worker',
+      required_env: ['OPL_TEMPORAL_ADDRESS or managed local service state'],
+      current_address: '127.0.0.1:7233',
+      namespace: 'default',
+      task_queue: 'opl-stage-attempts',
+      next_command: status === 'ready'
+        ? 'opl family-runtime residency proof --provider temporal --production'
+        : 'opl family-runtime worker start --provider temporal',
+      repair_commands: {
+        start_local_temporal_service:
+          'opl family-runtime service start --provider temporal',
+        configure_temporal_address:
+          'export OPL_TEMPORAL_ADDRESS=127.0.0.1:7233',
+        verify_temporal_server:
+          'opl family-runtime worker status --provider temporal',
+        start_managed_worker:
+          'opl family-runtime worker start --provider temporal',
+        rerun_production_proof:
+          'opl family-runtime residency proof --provider temporal --production',
+      },
+    },
+    lifecycle: {
+      surface_kind: 'temporal_worker_lifecycle_contract',
+      provider_kind: 'temporal',
+      workflow_name: 'StageAttemptWorkflow',
+      task_queue: 'opl-stage-attempts',
+      default_task_queue: 'opl-stage-attempts',
+      namespace: 'default',
+      worker_helper: 'runTemporalStageAttemptWorkerUntil',
+      fail_closed_when_unconfigured: true,
+      required_env: ['OPL_TEMPORAL_ADDRESS'],
+      activities: [
+        'codexStageActivity',
+        'domainHandlerDispatchActivity',
+      ],
+      authority_boundary: {
+        opl: 'worker_lifecycle_and_activity_transport_only',
+        domain: 'truth_quality_artifact_gate_owner',
+      },
+    },
+    authority_boundary: {
+      opl: 'worker_lifecycle_readiness_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
   };
 }
 
@@ -94,6 +179,43 @@ test('family-runtime provider-slo tick executes production proof when provider S
     assert.equal(sloEvents.length, 2);
     assert.equal(sloEvents.at(-1).payload.execution_status, 'executed');
   } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime provider-slo auto-starts OPL managed Temporal worker before proof', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-slo-worker-autostart-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    let startCount = 0;
+    const receipt = await maybeRepairTemporalWorkerForProviderSlo(familyRuntimePaths(), {
+      inspectTemporalWorkerLifecycle: async () =>
+        startCount === 0 ? temporalWorkerStatus('worker_not_ready') : temporalWorkerStatus('ready'),
+      startTemporalWorkerLifecycle: async () => {
+        startCount += 1;
+        return {
+          surface_kind: 'temporal_worker_lifecycle_start',
+          provider_kind: 'temporal',
+          start_status: 'started',
+          status: temporalWorkerStatus('ready'),
+        };
+      },
+    });
+
+    assert.equal(startCount, 1);
+    assert.equal(receipt.repair_status, 'executed');
+    assert.equal(receipt.repair_action_id, 'start_temporal_worker');
+    assert.equal(receipt.before.lifecycle_status, 'worker_not_ready');
+    assert.ok(receipt.after);
+    assert.equal(receipt.after.lifecycle_status, 'ready');
+    assert.equal(receipt.authority_boundary.can_write_domain_truth, false);
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

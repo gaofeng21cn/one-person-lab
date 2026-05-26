@@ -16,6 +16,103 @@ import {
 } from './family-runtime-store.ts';
 
 type RuntimePaths = ReturnType<typeof familyRuntimePaths>;
+type TemporalProviderModule = typeof import('./family-runtime-temporal-provider.ts');
+type TemporalWorkerLifecycle = Awaited<ReturnType<TemporalProviderModule['inspectTemporalWorkerLifecycle']>>;
+
+type TemporalWorkerRepairDeps = {
+  inspectTemporalWorkerLifecycle?: TemporalProviderModule['inspectTemporalWorkerLifecycle'];
+  startTemporalWorkerLifecycle?: TemporalProviderModule['startTemporalWorkerLifecycle'];
+};
+
+function stringValue(value: unknown) {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function workerRepairActionId(status: TemporalWorkerLifecycle) {
+  const repairAction = status.repair_action;
+  return repairAction && typeof repairAction === 'object' && !Array.isArray(repairAction)
+    ? stringValue((repairAction as Record<string, unknown>).action_id)
+    : null;
+}
+
+function workerLifecycleReceipt(input: {
+  status: 'skipped' | 'blocked' | 'executed';
+  before: TemporalWorkerLifecycle;
+  after: TemporalWorkerLifecycle | null;
+  repairActionId: string | null;
+  error?: unknown;
+}) {
+  return {
+    surface_kind: 'opl_temporal_provider_worker_repair_receipt',
+    provider_kind: 'temporal',
+    trigger: 'provider_slo_tick',
+    repair_status: input.status,
+    repair_action_id: input.repairActionId,
+    command: input.repairActionId === 'start_temporal_worker'
+      ? 'opl family-runtime worker start --provider temporal'
+      : null,
+    before: input.before,
+    after: input.after,
+    error: input.error
+      ? {
+          message: input.error instanceof Error ? input.error.message : String(input.error),
+        }
+      : null,
+    can_execute_domain_repair: false,
+    authority_boundary: {
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_artifact_export: false,
+      can_write_domain_truth: false,
+      can_execute_domain_repair: false,
+    },
+  };
+}
+
+async function temporalProviderModule() {
+  return await import('./family-runtime-temporal-provider.ts');
+}
+
+export async function maybeRepairTemporalWorkerForProviderSlo(
+  paths: RuntimePaths,
+  deps: TemporalWorkerRepairDeps = {},
+) {
+  const provider = await temporalProviderModule();
+  const inspectTemporalWorkerLifecycle = deps.inspectTemporalWorkerLifecycle
+    ?? provider.inspectTemporalWorkerLifecycle;
+  const startTemporalWorkerLifecycle = deps.startTemporalWorkerLifecycle
+    ?? provider.startTemporalWorkerLifecycle;
+  const before = await inspectTemporalWorkerLifecycle(paths);
+  const repairActionId = workerRepairActionId(before);
+  if (before.lifecycle_status !== 'worker_not_ready' || repairActionId !== 'start_temporal_worker') {
+    return workerLifecycleReceipt({
+      status: 'skipped',
+      before,
+      after: before,
+      repairActionId,
+    });
+  }
+  try {
+    const started = await startTemporalWorkerLifecycle(paths);
+    const after = 'status' in started && started.status
+      ? started.status as TemporalWorkerLifecycle
+      : await inspectTemporalWorkerLifecycle(paths);
+    return workerLifecycleReceipt({
+      status: after.lifecycle_status === 'ready' ? 'executed' : 'blocked',
+      before,
+      after,
+      repairActionId,
+    });
+  } catch (error) {
+    return workerLifecycleReceipt({
+      status: 'blocked',
+      before,
+      after: null,
+      repairActionId,
+      error,
+    });
+  }
+}
 
 function cadenceAction(projection: ReturnType<typeof buildProviderContinuousProof>) {
   return projection.operator_slo_repair_loop.operator_cadence_action;
@@ -90,8 +187,20 @@ export async function runTemporalProviderSloTick(
   paths: RuntimePaths,
   input: {
     force?: boolean;
+    workerRepairDeps?: TemporalWorkerRepairDeps;
   } = {},
 ) {
+  const providerWorkerRepairReceipt = await maybeRepairTemporalWorkerForProviderSlo(
+    paths,
+    input.workerRepairDeps,
+  );
+  if (providerWorkerRepairReceipt.repair_status !== 'skipped') {
+    insertEvent(db, {
+      eventType: 'temporal_provider_worker_repair_receipt',
+      source: 'opl-cli',
+      payload: providerWorkerRepairReceipt,
+    });
+  }
   const before = buildProviderContinuousProof(listEvents(db));
   const due = input.force === true || before.proof_slo_status !== 'proof_fresh';
 
@@ -108,6 +217,7 @@ export async function runTemporalProviderSloTick(
       execution_status: 'skipped',
       skipped: true,
       force: input.force === true,
+      provider_worker_repair_receipt: providerWorkerRepairReceipt,
       before,
       after: buildProviderContinuousProof(listEvents(db)),
       provider_slo_execution_receipt: receipt,
@@ -158,6 +268,7 @@ export async function runTemporalProviderSloTick(
     execution_status: 'executed',
     skipped: false,
     force: input.force === true,
+    provider_worker_repair_receipt: providerWorkerRepairReceipt,
     before,
     after: buildProviderContinuousProof(listEvents(db)),
     proof,

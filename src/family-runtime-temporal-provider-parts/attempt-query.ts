@@ -69,7 +69,19 @@ export async function queryTemporalStageAttemptWorkflow(
         },
       };
     }
-    const query = await handle.query<TemporalStageAttemptWorkflowState>(stageAttemptQuery);
+    let query: TemporalStageAttemptWorkflowState;
+    try {
+      query = await handle.query<TemporalStageAttemptWorkflowState>(stageAttemptQuery);
+    } catch (error) {
+      if (error && typeof error === 'object') {
+        Object.assign(error, {
+          temporal_query_phase: 'workflow_query',
+          workflow_status: workflowStatus,
+          run_id: description.runId,
+        });
+      }
+      throw error;
+    }
     return {
       surface_kind: 'temporal_stage_attempt_query_receipt',
       provider_kind: 'temporal',
