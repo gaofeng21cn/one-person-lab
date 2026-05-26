@@ -4954,6 +4954,62 @@ Next tranche write scope:
 - Continue OPL `docs/history/process/specs/**` or `docs/history/process/superpowers/**` in small clusters; alternatively pick MAS remaining repo-wide docs if OPL external lanes make a cluster unsafe.
 - Delay RCA/App docs write passes until external implementation/release dirty lanes are isolated or explicitly assigned.
 
+Date: `2026-05-26 20:56 CST`
+Tranche: `opl-history-specs-coverage`
+State: `tranche_verified`
+
+本轮覆盖 OPL `docs/history/process/specs/**` 的 historical design spec 正文。目标是确认早期 bilingual public-doc design、MAG 顶层设计迁移记录、UHS 命名分层、旧产品入口设计、历史产品资源模型 / domain-agent 边界设计、历史 shell projection pivot 都停留在 historical spec / design provenance 语境，不作为当前 active spec、roadmap、implementation queue、runtime provider contract、App release plan、domain admission authority、default executor/provider path、readiness oracle、domain-ready 或 production-ready 证据。本轮不关闭全局 `/goal`，也不表示 OPL `docs/history/process/superpowers/**` 已逐段覆盖。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`, `TASTE.md`, `README.md`, `docs/README.md`, core five, `docs/active/current-state-vs-ideal-gap.md`, `docs/references/runtime-substrate/opl-family-agent-ideal-state.md`, `docs/history/process/specs/README.md`, and `docs/active/development-document-portfolio.md`.
+- OPL machine/read-model surfaces: `contracts/opl-framework/domains.json`, `contracts/opl-framework/workstreams.json`, `contracts/opl-framework/task-topology.json`, `opl agents conformance --family-defaults --json`, and `opl agents default-callers --family-defaults --json`.
+- Specs history docs: `docs/history/process/specs/README.md` plus all 6 body files in `docs/history/process/specs/*.md`.
+
+Fresh semantic result:
+
+- Current active domain-agent catalog remains MAS / MAG / RCA through the OPL family contracts. Active workstreams remain `research_ops`, `grant_ops`, and `presentation_ops`; `thesis_ops`, `review_ops`, `ip_ops`, and `award_ops` remain topology signals, not admitted domain agents.
+- Fresh `opl agents conformance --family-defaults --json` returned `status=passed`, `passed_count=4`, `blocked_count=0`, `production_evidence_tail_count=4`, and `conformance_report_can_claim_domain_ready=false`; this is structural conformance, not domain readiness, production readiness, historical product-resource readiness, App release readiness, or old entry activation.
+- Fresh `opl agents default-callers --family-defaults --json` returned `status=ready_domain_evidence_required`, `generated_default_caller_surface_count=32`, `blocked_surface_count=0`, and `physical_delete_authorized_by_this_report=false`; default-caller availability does not authorize physical delete, compatibility-surface retention, or domain ready claims.
+- `docs/history/process/specs/README.md` already carried the correct historical_archive boundary and current-owner jumps.
+- Five body files carried stale-risk present-tense wording inside historical design bodies: bilingual public-doc design, UHS naming design, old product-entry design, historical product-resource boundary design, and historical shell projection design. These were rewritten from unqualified `当前` wording to `当时` / dated historical wording so old public-doc, entry, product-resource, shell projection, executor/provider, GUI/API, and historical topology tasks cannot be read as current active specs or current runtime truth.
+- The MAG top-level design migration record already points current authority to the independent `med-autogrant` repo and required no body edit.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | Full paragraph / heading review of `docs/history/process/specs/README.md`, `docs/history/process/specs/2026-04-02-bilingual-homepage-and-core-docs-design.md`, `docs/history/process/specs/2026-04-06-med-auto-grant-top-level-design.md`, `docs/history/process/specs/2026-04-07-unified-harness-engineering-substrate-design.md`, `docs/history/process/specs/2026-04-12-opl-frontdoor-and-family-entry-design.md`, `docs/history/process/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`, and `docs/history/process/specs/2026-04-21-opl-acp-native-runtime-and-shell-projection-design.md`; support read of core docs, active truth owner, ideal-state reference, framework contracts and fresh conformance/default-caller read models. | `docs/history/process/specs/2026-04-02-bilingual-homepage-and-core-docs-design.md`; `docs/history/process/specs/2026-04-07-unified-harness-engineering-substrate-design.md`; `docs/history/process/specs/2026-04-12-opl-frontdoor-and-family-entry-design.md`; `docs/history/process/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`; `docs/history/process/specs/2026-04-21-opl-acp-native-runtime-and-shell-projection-design.md`; `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. These files already live in `docs/history/process/specs/**` and remain useful design provenance; this tranche corrected stale-risk tense and recorded coverage rather than moving or deleting paths.
+
+Unreviewed docs:
+
+- `one-person-lab`: current inventory remains 175 `README*` / `docs/**/*.md` / contracts README files. After this tranche, the remaining exact-missing cluster is `docs/history/process/superpowers/**`; plus any non-exact grouped coverage still listed in prior tranche notes such as root/contract README or active support docs if not separately reconciled.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks.
+- `med-autogrant`: current 120-file recorded scope was closed by the MAG final inventory reconcile unless new docs or later source/contract changes reopen a section.
+- `redcube-ai`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused RCA chunks; current main checkout still carries external dirty implementation/test files.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App dirty lanes are closed or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Any future specs-history wording that turns bilingual public-doc design, MAG migration design, UHS naming, old product-entry design, historical product-resource boundary design or shell projection pivot into current active spec, current implementation queue, current API spec, default runtime, release-ready evidence, domain-ready evidence, production-ready evidence, compatibility surface or no-active-caller proof is stale pollution.
+- Any future wording that makes old topology, historical entry plans, historical product-resource plans, historical shell projection plans, external shell plans or local manager plans current owner surfaces must be rejected unless live source/contracts/read-model explicitly reintroduce a narrow current surface.
+- Any future agent prompt copied from these historical acceptance criteria must first be re-derived from current active truth docs, live code/contracts/tests/CLI read models and current owner boundaries.
+
+Verification before absorb:
+
+- OPL docs verification passed in the tranche worktree: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- OPL specs support contracts and conformance/default-caller read models above were rerun fresh in the tranche worktree; no source or machine-readable contract edit was made.
+
+Next tranche write scope:
+
+- Continue OPL `docs/history/process/superpowers/**` as the remaining exact-missing history-process cluster; alternatively pick MAS remaining repo-wide docs if OPL external lanes make that cluster unsafe.
+- Delay RCA/App docs write passes until external implementation/release dirty lanes are isolated or explicitly assigned.
+
 ## 验证
 
 Docs-only 整理：

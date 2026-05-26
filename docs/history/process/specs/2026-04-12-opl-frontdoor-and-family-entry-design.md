@@ -80,10 +80,10 @@ Machine boundary: 本文只保留 `2026-04-12` frontdoor / family entry 设计 p
 
 ### 4. 为 MAS 主线补顶层对齐的 cutover board
 
-`MedAutoScience` 当前最重，且真实长跑能力最关键。
+`MedAutoScience` 当时最重，且真实长跑能力最关键。
 本轮不在 `OPL` 仓里直接改 MAS 实现，但需要把下面这件事写清：
 
-- `OPL` 顶层入口如何与 MAS 当前 `real adapter cutover` 主线协作
+- `OPL` 顶层入口如何与 MAS 当时 `real adapter cutover` 主线协作
 - `OPL` 顶层入口需要 MAS 提供哪些稳定 entry / return surface
 - 在 MAS 还没完全完成 runtime cutover 前，`OPL` 顶层不应如何越权描述
 
@@ -167,9 +167,9 @@ Machine boundary: 本文只保留 `2026-04-12` frontdoor / family entry 设计 p
 
 ### 与现有 framework contract 的关系
 
-这次新增的 front desk 不会替代当前 formal contract。
+这次新增的 front desk 不会替代当时 formal contract。
 
-当前仍然并行存在两层：
+当时仍然并行存在两层：
 
 1. `Phase 1` framework contract surface
 2. 本地 `OPL` product-entry / front-door surface

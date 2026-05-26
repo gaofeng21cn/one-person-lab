@@ -25,7 +25,7 @@ Machine boundary: 本文是人读设计记录；机器可读行为必须使用 c
 
 `OPL` 的 canonical interaction 到底是什么？
 
-对当前真实使用路径而言，答案并不是“API”。
+对当时真实使用路径而言，答案并不是“API”。
 开发者和用户真正的一等路径是：
 
 - 在本地目录里进入 `opl` shell / TUI
@@ -130,10 +130,10 @@ Machine boundary: 本文是人读设计记录；机器可读行为必须使用 c
 
 ### 3. Executor Layer
 
-具体执行器继续按当前家族共识保持：
+具体执行器继续按当时家族共识保持：
 
 - `Codex CLI` 是默认执行器
-- `Hermes-Agent` 是迁移期 legacy/optional provider 或显式 executor/proof lane；当前长期在线生产目标以 provider-backed runtime 和 Temporal 候选为准
+- `Hermes-Agent` 是迁移期 legacy/optional provider 或显式 executor/proof lane；当时长期在线生产目标以 provider-backed runtime 和 Temporal 候选为准
 
 这层负责真正执行 prompt、命令与工具调用。
 

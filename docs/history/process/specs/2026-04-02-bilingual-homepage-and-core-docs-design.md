@@ -13,7 +13,7 @@ This document records the early bilingual homepage and core-docs design. Phrases
 
 ## Context
 
-`one-person-lab` 当前已经具备：
+`one-person-lab` 当时已经具备：
 
 - 一个相对稳定的顶层 banner 与首页结构
 - 明确的 `OPL -> Shared Foundation -> Workstreams -> MedAutoScience` 叙事
@@ -25,7 +25,7 @@ This document records the early bilingual homepage and core-docs design. Phrases
 - 下游核心文档也仍是中文
 - 这会让国际读者在第一屏就失去可读性，也会让 GitHub 默认公开面不够国际化
 
-同时，当前叙事还有一个容易被误读的点：
+同时，当时叙事还有一个容易被误读的点：
 
 - `OPL` 的首个成熟样板来自医学实验室和医学自动科研
 - 如果不明确说明，外部读者会自然把 `OPL` 理解为“只服务医学”的体系
@@ -35,11 +35,11 @@ This document records the early bilingual homepage and core-docs design. Phrases
 1. `README.md` 改成英文默认首页。
 2. 首页顶部增加明显的 `English | 中文` 语言入口。
 3. 不是只改首页，而是连同核心公开文档一起补双语，避免点击后退回中文。
-4. 首页应明确写出：当前样板来自医学实验室，但欢迎各个领域的 `PI` 创建自己领域的 `OPL`。
+4. 首页应明确写出：当时样板来自医学实验室，但欢迎各个领域的 `PI` 创建自己领域的 `OPL`。
 
 ## Problem Statement
 
-当前的主要问题不是信息缺失，而是公开表达层没有完成国际化分层。
+当时的主要问题不是信息缺失，而是公开表达层没有完成国际化分层。
 
 具体有三类问题：
 
@@ -67,7 +67,7 @@ GitHub 仓库的默认入口是 `README.md`。
 
 ### 3. OPL needs to be framed as medical-origin, not medical-only
 
-当前 `OPL` 的最成熟子项目是 `MedAutoScience`，它天然带有医学研究语境。
+当时 `OPL` 的最成熟子项目是 `MedAutoScience`，它天然带有医学研究语境。
 
 这既是优势，也是风险：
 
@@ -76,7 +76,7 @@ GitHub 仓库的默认入口是 `README.md`。
 
 因此首页必须更明确地表达：
 
-- 当前样板来自医学实验室
+- 当时样板来自医学实验室
 - 但 `OPL` 作为实验室任务体系并不限定于医学
 - 欢迎不同领域的 `PI` 在各自学科里建立自己的 `OPL`
 
@@ -259,7 +259,7 @@ GitHub 仓库的默认入口是 `README.md`。
 英文首页必须明确表达三层信息：
 
 1. `OPL` 是一个 top-level blueprint，不是单一产品。
-2. 当前最成熟样板来自医学实验室，即 `MedAutoScience`。
+2. 当时最成熟样板来自医学实验室，即 `MedAutoScience`。
 3. `OPL` 不是 medical-only framework；欢迎不同领域的 `PI` 在各自学科中创建自己的 `OPL`。
 
 推荐加入一段明确表述：
@@ -268,7 +268,7 @@ GitHub 仓库的默认入口是 `README.md`。
 
 中文镜像则表达为：
 
-> 当前样板来自医学实验室，因为首个成熟 workstream 诞生于这一环境。但 `OPL` 并不限定于医学。欢迎不同学科领域的 `PI` 围绕同样的 operating idea，建立各自领域的 `OPL`。
+> 当时样板来自医学实验室，因为首个成熟 workstream 诞生于这一环境。但 `OPL` 并不限定于医学。欢迎不同学科领域的 `PI` 围绕同样的 operating idea，建立各自领域的 `OPL`。
 
 ### E. Document Translation Scope
 
@@ -297,4 +297,4 @@ GitHub 仓库的默认入口是 `README.md`。
 3. 英文首页点击核心 docs 后不会退回中文。
 4. 中文首页点击核心 docs 后不会跳回英文。
 5. 首页明确表达 `OPL` 是 medical-origin but not medical-only。
-6. `MedAutoScience` 仍然清楚地呈现为当前最成熟子项目，而不是整个 `OPL` 的同义词。
+6. `MedAutoScience` 仍然清楚地呈现为当时最成熟子项目，而不是整个 `OPL` 的同义词。

@@ -15,13 +15,13 @@ Machine boundary: 本文只保留 `2026-04-07` UHS / Gateway / Domain Harness OS
 
 1. 顶层 `OPL Gateway / Federation`
 2. domain-local `Domain Harness OS`
-3. 当前本地运行形态与开发控制面
+3. 当时本地运行形态与开发控制面
 
 如果继续沿用旧表述，后续会反复出现这些冲突：
 
 - 把 `OPL` 误写成统一 runtime
 - 把三个 domain project 写成彼此无关的系统
-- 把当前 `Codex` 本地宿主形态误写成体系本体
+- 把当时 `Codex` 本地宿主形态误写成体系本体
 - 把开发控制面（`Codex App + OMX`）误写成产品运行时
 
 ## 本轮设计结论
@@ -96,7 +96,7 @@ Human / Agent
 公开 README 必须：
 
 - 首先服务非 AI 的人类专家
-- 先讲项目价值、对象、边界与当前能力
+- 先讲项目价值、对象、边界与当时能力
 - 再在合适位置补充与 `Unified Harness Engineering Substrate` 的关系
 
 公开 README 不应：
@@ -111,7 +111,7 @@ Human / Agent
 
 - 共享约束上收至 `Unified Harness Engineering Substrate`
 - domain-specific contract 继续留在各自仓库
-- 当前部署形态与未来托管形态分开写
+- 当时部署形态与未来托管形态分开写
 - 开发控制面与产品运行时分开写
 
 ## 本轮落地范围
@@ -125,5 +125,5 @@ Human / Agent
 
 - 不宣布已经存在独立公共 kernel 仓库
 - 不把三个 domain 的对象模型或 route vocabulary 强行统一
-- 不修改当前 phase order 或 product maturity claim
+- 不修改当时 phase order 或 product maturity claim
 - 不把 `OPL` 写成统一 execution owner

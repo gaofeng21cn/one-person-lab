@@ -24,7 +24,7 @@ Machine boundary: 本文是人读设计记录；机器可读行为必须使用 c
 - `Hermes-Agent` 在当前 owner surface 中只保留为迁移期 legacy/optional provider 或显式 executor/proof lane；本文后续旧说法按历史背景理解
 - `MAS`、`MAG`、`RCA` 等领域仓是可被 `Codex` 直接调用的专用智能体仓
 
-当前的主要问题已经从“界面长什么样”切换成“`OPL` 应该向 GUI 暴露什么样的产品接口”。历史 `frontdoor` 体系把多种阶段性语义揉在了一起：
+当时的主要问题已经从“界面长什么样”切换成“`OPL` 应该向 GUI 暴露什么样的产品接口”。历史 `frontdoor` 体系把多种阶段性语义揉在了一起：
 
 - GUI 启动
 - 环境安装与升级
@@ -34,14 +34,14 @@ Machine boundary: 本文是人读设计记录；机器可读行为必须使用 c
 - hosted pilot / package
 - readiness / entry guide / dashboard
 
-这导致当前公开路径和公开名词里出现了大量产品层冗余，例如：
+这导致当时公开路径和公开名词里出现了大量产品层冗余，例如：
 
 - `/api/opl/frontdoor/environment`
 - `/api/opl/frontdoor/initialize`
 - `/api/opl/frontdoor/modules`
 - `/api/opl/frontdoor/domain-wiring`
 
-这些名字保留了历史阶段的实现痕迹，已经不再适合当前的 `OPL + 独立 GUI 壳` 目标形态。
+这些名字保留了历史阶段的实现痕迹，已经不再适合当时的 `OPL + 独立 GUI 壳` 目标形态。
 
 这份设计的目标，是把 `OPL` 重做成一个清晰、稳定、长期可维护的 `Product API`，同时明确它和各个领域仓之间的边界。
 
@@ -118,7 +118,7 @@ GUI 只消费下面几类资源：
 
 - OPL 版本
 - state dir
-- 当前默认执行模式
+- 当时默认执行模式
 - 健康状态
 - 更新通道
 
@@ -132,7 +132,7 @@ GUI 只消费下面几类资源：
 每个 engine 提供：
 
 - 安装状态
-- 当前版本
+- 当时版本
 - 安装路径
 - 健康状态
 - install / update / reinstall / remove 动作
@@ -149,7 +149,7 @@ GUI 只消费下面几类资源：
 每个 module 提供：
 
 - 安装状态
-- 当前版本
+- 当时版本
 - checkout path
 - 健康状态
 - install / update / reinstall / remove 动作
@@ -182,7 +182,7 @@ GUI 只消费下面几类资源：
 
 `workspace` 是一次工作容器的启动元数据。
 
-对当前产品来说，最关键的字段是：
+对当时产品来说，最关键的字段是：
 
 - `cwd`
 
@@ -275,7 +275,7 @@ GUI 只消费下面几类资源：
 
 ### 3. handoff 的产品语义处理
 
-当前公开语义中的 `handoff`、`domain wiring` 更像历史设计阶段留下的解释层。
+当时公开语义中的 `handoff`、`domain wiring` 更像历史设计阶段留下的解释层。
 
 新的产品模型里，公开概念统一收敛成：
 
@@ -367,7 +367,7 @@ GUI 只消费下面几类资源：
 - 创建 session
 - 给 session 发消息
 - 展示最近输出
-- 展示当前状态
+- 展示当时状态
 
 ### 右侧侧栏
 
@@ -381,7 +381,7 @@ GUI 只消费下面几类资源：
 
 - 人话进度
 - 任务卡片
-- 当前交付文件
+- 当时交付文件
 - 环境与模块状态
 
 ## 共享模块的收敛原则
@@ -437,7 +437,7 @@ GUI 只消费下面几类资源：
 
 ## 对用户理解的直接结论
 
-当前产品定义下，下面这些判断成立：
+当时产品定义下，下面这些判断成立：
 
 1. `OPL` 负责统一产品入口、共享运行时、系统管理与 GUI API
 2. `MAS`、`MAG`、`RCA` 等领域仓继续作为独立专用智能体仓存在
@@ -457,7 +457,7 @@ GUI 只消费下面几类资源：
 
 ### 不做
 
-- 不保留面向当前产品主线的公开兼容层
+- 不保留面向当时产品主线的公开兼容层
 - 不继续给旧 `frontdoor` 体系增加新能力
 - 不再把历史阶段解释面继续暴露为 GUI 主线真相
 
