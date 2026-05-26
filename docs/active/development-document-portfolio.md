@@ -6147,3 +6147,66 @@ Next tranche write scope:
 - Reconcile remaining MAS history directory indexes and exact inventory against coverage ledgers.
 - Start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
 - Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
+
+Date: `2026-05-27 04:10 CST`
+Tranche: `mas-history-index-ledger-inventory-reconcile`
+State: `tranche_verified`
+
+本轮覆盖 MAS history directory indexes 与 docs-governance coverage-ledger archive files 的自举对账，并把结果回写到 MAS 本地 coverage ledger 与本 OPL family ledger。目标是关闭上一轮留下的“remaining history directory indexes and exact inventory reconcile”尾项：确认历史索引第一屏已经把 current truth / active owner / machine boundary 指回当前核心 docs、active owner docs、contracts、source、tests、runtime/controller surfaces 与 owner receipts；确认 coverage ledger archive files 自身只保存治理 provenance，不成为第二个 current truth、runtime truth 或 active backlog。本轮不关闭全局 `/goal`，也不表示 OPL series 六仓 `README*` 与 `docs/**/*.md` 已全部逐段覆盖完成。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`, `TASTE.md`, `README.md`, `docs/README.md`, `docs/status.md`, `docs/architecture.md`, `docs/invariants.md`, `docs/decisions.md`, `docs/active/mas-ideal-state-gap-plan.md`, `docs/references/positioning/mas_ideal_state.md`, and `docs/docs_portfolio_consolidation.md`.
+- MAS target indexes: `docs/history/README.md`, `docs/history/capabilities/README.md`, `docs/history/capabilities/medical-display/README.md`, `docs/history/omx/README.md`, `docs/history/positioning/README.md`, `docs/history/program/README.md`, `docs/history/runtime/README.md`, and `docs/history/superpowers/README.md`.
+- MAS target coverage-ledger archives: all 7 Markdown files under `docs/history/docs-portfolio-coverage-ledger/`.
+- Inventory check over MAS repo-root `README*` plus all `docs/**/*.md`, compared against existing coverage-ledger exact path strings.
+- Six-repo worktree / branch preflight and doctor preflight from `/Users/gaofeng/workspace/opl-doc-governance/scripts/opl_doc_doctor.py`.
+
+Fresh semantic result:
+
+- Current MAS truth remains `Declarative Medical Research Pack + OPL generated/hosted surfaces + minimal authority functions`: OPL/Temporal owns hosted autonomous runtime, stage attempt, queue, wakeup, retry/dead-letter, attempt ledger, worker residency and generated shells; `Codex CLI` is the default stage executor; MAS owns study truth, AI reviewer / auditor quality gates, publication route, artifact authority, memory decision, owner receipts and typed blockers.
+- MAS `docs/history/README.md` already marks the history tree as read-only provenance. It does not own active backlog, runtime truth, controller decisions, publication readiness, artifact authority or policy truth.
+- MAS history cluster indexes now align with the no-resurrection coverage already recorded for OMX, positioning, runtime, medical-display history, program history and superpowers history.
+- All MAS coverage-ledger archive files already carry `history_provenance` lifecycle headers and a machine boundary that forbids treating the ledger as MAS runtime, controller, publication, artifact or study truth.
+- A conservative exact-string inventory check over 246 MAS `README*` / `docs/**/*.md` files found that the only paths still absent from the ledger text were the 7 coverage-ledger archive files themselves. This tranche records those files explicitly and confirms they are provenance artifacts, not active owner docs.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | First-screen / role read of all 8 history directory indexes and all 7 coverage-ledger archive files; supporting current-boundary read of MAS core docs, active truth plan, ideal-state reference and docs portfolio governance. | `docs/docs_portfolio_consolidation.md`; `docs/history/docs-portfolio-coverage-ledger/2026-05-27-part-6.md` |
+| `one-person-lab` | OPL family coverage ledger foldback for this MAS history-index / inventory-reconcile tranche; no OPL active truth / source / contract semantics changed. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The reviewed files already have a legitimate long-term role as history/provenance indexes or coverage-ledger archives.
+
+Unreviewed docs:
+
+- `med-autoscience`: this tranche closes the remaining history directory index and coverage-ledger self-archive exact-inventory tail. MAS remains part of the larger OPL series goal, and global closure still depends on all six repos.
+- `one-person-lab`: no new OPL body docs were governed in this tranche; previous exact coverage claims remain as recorded.
+- `med-autogrant`, `redcube-ai`, `opl-meta-agent`: no new docs governed in this tranche; previous coverage state remains unchanged.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active release / GUI lanes are safe or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- MAS: any future prose that promotes history materials, coverage ledgers, old program boards, old superpowers drafts, OMX-era instructions, legacy runtime inventories, positioning proposals or capability history into active execution queue, current CLI truth, default runtime owner, publication/artifact authority, domain-ready or production-ready evidence is stale pollution.
+- MAS: future coverage-ledger entries must stay provenance-only and must not become a parallel current truth plan.
+- App: release / GUI docs remain blocked by unrelated dirty work in main and external worktrees.
+
+Worktree / branch cleanup:
+
+- No external stale worktree/branch qualified for cleanup before this tranche. OPL/MAS/App/RCA external worktrees remain dirty, recently written, not safely attributable to this automation, detached probes, or outside the current tranche.
+- This tranche's MAS and OPL worktrees should be removed after fast-forward absorb.
+
+Verification before absorb:
+
+- MAS history-index reconcile worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- OPL ledger worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- No source/runtime tests are required because this tranche changes only narrative docs and coverage ledgers.
+
+Next tranche write scope:
+
+- Continue OPL series whole-docs coverage outside this MAS history tranche, preferably a remaining clean repo whose worktrees are not externally dirty or recent.
+- Start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
