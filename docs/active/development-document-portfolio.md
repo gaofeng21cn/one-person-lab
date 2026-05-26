@@ -5122,6 +5122,60 @@ Next tranche write scope:
 - Pick MAS repo-wide coverage if its main checkout is clean enough, or a safe focused MAS doc cluster if external owner-route changes continue to move.
 - Delay RCA/App docs write passes until external implementation/release dirty lanes are isolated or explicitly assigned.
 
+Date: `2026-05-26 21:32 CST`
+Tranche: `mas-stage-surface-support-owner-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAS `docs/active/stage_surface_standardization_program.md`，并吸收回 MAS `main`。目标是把该 active support owner 从旧“stage 统一计划 / 后续执行计划”读法收窄到当前 live stage-surface support 角色：它维护 stage card / route / prompt / skill / knowledge / closeout / review-index / memory / quality pack / workbench projection 边界与剩余 evidence tail；它不作为 MAS production closure 总计划、OPL framework closure 平行计划、按日期增长的执行流水或 Markdown-only stage truth。本轮不关闭全局 `/goal`，也不表示 MAS repo-wide README/docs 覆盖完成。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`, `TASTE.md`, `docs/active/mas-ideal-state-gap-plan.md`, `docs/docs_portfolio_consolidation.md`, and `docs/runtime/contracts/stage_surfaces.md`.
+- MAS machine/source surfaces: `agent/stages/stage_route_contract.yaml`, `src/med_autoscience/stage_surface_contract.py`, `src/med_autoscience/stage_knowledge_contract.py`, `src/med_autoscience/stage_quality_contract.py`, `src/med_autoscience/controllers/progress_portal_parts/stage_review_parts/locator.py`, `src/med_autoscience/controllers/progress_portal_parts/stage_review_parts/materializer.py`, `src/med_autoscience/controllers/progress_portal_parts/runtime_workbench_projection.py`, generated-surface handoff and functional-privatization contracts.
+- Focused test/source inventory read as evidence: stage-surface, stage-knowledge, stage-quality, Progress Portal, memory/skeleton and workbench projection test lanes referenced by MAS contracts.
+- CodeGraph context for `build_stage_surface_contract`, stage knowledge closeout packets, stage quality pack projections, stage deliverable review locator/materializer and `mas_opl_runtime_workbench_projection`.
+
+Fresh semantic result:
+
+- `stage_surface_standardization_program.md` remains active support because it is the content-level owner tying stage surface shape, AI-first verdict wording, stage quality pack maturity, Stage Deliverable Review / Index, publication-route memory receipt scaleout and workbench projection together.
+- MAS commit `46b36725 docs: cover MAS stage surface support owner` was fast-forwarded into MAS `main`; the tranche worktree and branch were removed.
+- The MAS coverage ledger now records full paragraph coverage for this document and keeps remaining MAS repo-wide README/docs coverage open.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full paragraph read of `docs/active/stage_surface_standardization_program.md`, with live route / stage-surface / stage-knowledge / stage-quality / stage-review / workbench projection evidence listed above. | `docs/active/stage_surface_standardization_program.md`; `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | OPL family ledger foldback for this MAS tranche. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The MAS stage-surface support file remains active support with a unique owner role; stale plan wording was narrowed in place.
+
+Unreviewed docs:
+
+- `one-person-lab`: none by exact inventory coverage for the current 175-file OPL inventory.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks and this stage-surface support owner tranche.
+- `med-autogrant`: current 120-file recorded scope was closed by the MAG final inventory reconcile unless new docs or later source/contract changes reopen a section.
+- `redcube-ai`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused RCA chunks; current main checkout still carries external dirty implementation/test files.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App dirty lanes are closed or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Future MAS stage-surface prose that treats `stage_surface_standardization_program.md` as MAS production closure plan, OPL framework closure owner, execution diary, commit checklist, generated `stage_surfaces.md` truth source or proof ledger is stale pollution.
+- Future prose must not treat stage card, generated Markdown, quality pack descriptor, stage review page, deliverable index, publication-route memory refs, workbench projection, provider completion, queue completion or product-entry descriptor as source readiness, publication quality verdict, submission readiness, artifact mutation authorization, `current_package` freshness, paper closure, domain ready or production ready.
+- RCA/App docs write passes remain unsafe until their unrelated dirty implementation/release lanes are isolated or explicitly assigned.
+
+Verification before absorb:
+
+- MAS docs verification after rebase passed: `git diff --check`; strict README/docs conflict-marker scan had no hits; OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+
+Next tranche write scope:
+
+- Continue MAS repo-wide paragraph coverage from the remaining exact uncovered doc list, or choose the next OPL/RCA/MAG/App uncovered body according to dirty-lane safety.
+- Keep RCA/App docs delayed while their main checkouts carry unrelated dirty implementation / release changes.
+
 ## 验证
 
 Docs-only 整理：
