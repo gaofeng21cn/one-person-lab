@@ -297,6 +297,43 @@ test('family-runtime attempt query exposes blocked identity as typed envelopes',
   }
 });
 
+test('family-runtime attempt query classifies Codex unsupported function calls as OPL retryable blockers', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-codex-tool-blocker-'));
+  try {
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'domain_owner/default-executor-dispatch',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas"}',
+      '--source-fingerprint',
+      'sha256:codex-unsupported-function-call',
+      '--blocked-reason',
+      'codex_cli_unsupported_function_call',
+    ], familyRuntimeEnv(stateRoot));
+    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
+    const query = runCli(['family-runtime', 'attempt', 'query', attemptId], familyRuntimeEnv(stateRoot));
+    const envelopes = query.family_runtime_stage_attempt_query.stage_attempt_query.conflict_or_blocker_envelopes;
+    const retryable = envelopes.find((envelope: { reason: string }) =>
+      envelope.reason === 'codex_cli_unsupported_function_call'
+    );
+
+    assert.equal(retryable.classification, 'execution_retryable');
+    assert.equal(retryable.owner, 'infrastructure');
+    assert.equal(retryable.authority, 'opl_runtime');
+    assert.equal(retryable.status, 'retry_scheduled');
+    assert.equal(retryable.operator_questions.automatic_retry, 'available');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime Temporal production proof writes provider SLO execution receipt', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-slo-receipt-'));
   try {

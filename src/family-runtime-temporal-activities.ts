@@ -77,6 +77,7 @@ export async function domainHandlerDispatchActivity(input: TemporalStageAttemptW
     stage_id: input.stage_id,
   });
   if (!input.closeout_packet) {
+    const providerBlockerReason = input.provider_blocker?.blocked_reason?.trim() || null;
     return {
       surface_kind: 'temporal_domain_handler_dispatch_receipt',
       activity_kind: 'domain_handler_dispatch_activity',
@@ -90,8 +91,8 @@ export async function domainHandlerDispatchActivity(input: TemporalStageAttemptW
       rejected_writes: [],
       next_owner: input.domain_id,
       domain_ready_verdict: null,
-      route_impact: {},
-      blocked_reason: 'typed_closeout_packet_required',
+      route_impact: input.provider_blocker?.route_impact ?? {},
+      blocked_reason: providerBlockerReason ?? 'typed_closeout_packet_required',
       closeout_packet_surface_kind: null,
       authority_boundary: {
         opl: 'domain_handler_transport_only',

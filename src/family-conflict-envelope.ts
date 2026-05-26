@@ -376,6 +376,12 @@ export function buildReceiptConflictEnvelope(input: {
 
 function blockerClassification(reason: string): FamilyConflictClassification {
   const normalized = reason.toLowerCase();
+  if (
+    normalized.includes('codex_cli_unsupported_function_call')
+    || normalized.includes('unsupported_tool_protocol')
+  ) {
+    return 'execution_retryable';
+  }
   if (normalized.includes('quality')) {
     return 'quality_blocker';
   }
@@ -474,8 +480,13 @@ export function buildStageAttemptConflictOrBlockerEnvelopes(input: StageAttemptE
     envelopes.push(buildFamilyConflictOrBlockerEnvelope({
       subject: input.subject,
       classification,
-      owner: classification === 'authority_conflict' ? 'domain_agent' : 'domain_agent',
-      status: 'blocked',
+      owner: classification === 'execution_retryable'
+        ? 'infrastructure'
+        : classification === 'authority_conflict'
+          ? 'domain_agent'
+          : 'domain_agent',
+      authority: classification === 'execution_retryable' ? 'opl_runtime' : undefined,
+      status: classification === 'execution_retryable' ? 'retry_scheduled' : 'blocked',
       reason: input.blockedReason,
     }));
   }

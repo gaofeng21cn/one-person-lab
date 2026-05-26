@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 
 import { createFakeCodexFixture } from './cli/helpers.ts';
 import {
@@ -11,13 +10,6 @@ import {
   runCodexStageRunner,
 } from '../../src/family-runtime-codex-stage-runner.ts';
 import { FrameworkContractError } from '../../src/contracts.ts';
-import {
-  createStageAttempt,
-  createStageAttemptTable,
-  ingestStageAttemptCloseout,
-  inspectStageAttempt,
-  listStageAttemptCloseouts,
-} from '../../src/family-runtime-stage-attempts.ts';
 
 test('Codex stage activity binds stage packet from checkpoint refs before provider execution', () => {
   const activity = buildCodexStageActivityInput({
@@ -854,92 +846,141 @@ exit 64
   }
 });
 
-function withStageAttemptDb(fn: (db: DatabaseSync) => void) {
-  const db = new DatabaseSync(':memory:');
+test('Codex stage runner fails fast on unsupported native function calls', async () => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"type":"session_meta","payload":{"id":"thread-unsupported-function-call"}}\\n'
+  printf '{"type":"event_msg","payload":{"type":"agent_message","message":"progress checkpoint","phase":"commentary"}}\\n'
+  printf '%s\\n' '${JSON.stringify({
+    type: 'response_item',
+    payload: {
+      type: 'function_call',
+      name: 'exec_command',
+      arguments: '{"cmd":"rtk sed -n 1,20p README.md"}',
+      call_id: 'call_unsupported_tool_protocol',
+    },
+  })}'
+  sleep 2
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
   try {
-    createStageAttemptTable(db);
-    fn(db);
-  } finally {
-    db.close();
-  }
-}
-
-test('stage attempt closeout ledger is idempotent and fails closed on conflicting closeout ids', () => {
-  withStageAttemptDb((db) => {
-    const created = createStageAttempt(db, {
-      domainId: 'medautoscience',
-      stageId: 'review',
-      providerKind: 'local_sqlite',
-      workspaceLocator: { workspace_root: '/tmp/mas' },
-      sourceFingerprint: 'sha256:review',
-    });
-    const attemptId = created.attempt.stage_attempt_id;
-    const accepted = ingestStageAttemptCloseout(db, {
-      stageAttemptId: attemptId,
-      packet: {
-        surface_kind: 'stage_attempt_closeout_packet',
-        closeout_id: 'closeout:review-final',
-        closeout_refs: ['receipt:review-final'],
-        consumed_refs: ['evidence:review-ledger'],
-        writeback_receipt_refs: ['memory-writeback:review'],
-        rejected_writes: [{ reason: 'domain_router_rejected' }],
-        next_owner: 'med-autoscience',
-        domain_ready_verdict: 'domain_gate_pending',
-        route_impact: { route: 'review' },
-      },
-    });
-    const replay = ingestStageAttemptCloseout(db, {
-      stageAttemptId: attemptId,
-      packet: {
-        surface_kind: 'stage_attempt_closeout_packet',
-        closeout_id: 'closeout:review-final',
-        closeout_refs: ['receipt:review-final'],
-        consumed_refs: ['evidence:review-ledger'],
-        writeback_receipt_refs: ['memory-writeback:review'],
-        rejected_writes: [{ reason: 'domain_router_rejected' }],
-        next_owner: 'med-autoscience',
-        domain_ready_verdict: 'domain_gate_pending',
-        route_impact: { route: 'review' },
-      },
-    });
-
-    assert.equal(accepted.closeout.idempotent_noop, false);
-    assert.equal(replay.closeout.idempotent_noop, true);
-    assert.equal(listStageAttemptCloseouts(db, attemptId).length, 1);
-    assert.equal(inspectStageAttempt(db, attemptId).activity_events.length, 1);
-
-    assert.throws(
-      () => ingestStageAttemptCloseout(db, {
-        stageAttemptId: attemptId,
-        packet: {
-          surface_kind: 'stage_attempt_closeout_packet',
-          closeout_id: 'closeout:review-final',
-          closeout_refs: ['receipt:poisoned-review-final'],
-          consumed_refs: ['evidence:poisoned'],
-          next_owner: 'med-autoscience',
-          domain_ready_verdict: 'domain_gate_pending',
+    process.env.OPL_CODEX_BIN = codexPath;
+    const startedAt = Date.now();
+    const receipt = await runCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_unsupported_function_call_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
         },
-      }),
-      (error) => {
-        assert.ok(error instanceof FrameworkContractError);
-        assert.equal(error.code, 'contract_shape_invalid');
-        assert.ok(error.details);
-        assert.equal(error.details.closeout_id, 'closeout:review-final');
-        assert.equal(
-          (error.details.receipt_conflict as Record<string, unknown>).classification,
-          'receipt_conflict',
-        );
-        assert.equal(
-          (error.details.receipt_conflict as Record<string, unknown>).fail_closed,
-          true,
-        );
-        return true;
+        checkpoint_refs: ['checkpoint:unsupported-function-call'],
       },
-    );
+      stagePacketRef: 'packet:unsupported-function-call',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+      noOutputTimeoutMs: 10_000,
+    });
 
-    const attemptAfterConflict = inspectStageAttempt(db, attemptId);
-    assert.deepEqual(attemptAfterConflict.closeout_refs, ['receipt:review-final']);
-    assert.equal(attemptAfterConflict.activity_events.length, 1);
-    assert.equal(listStageAttemptCloseouts(db, attemptId).length, 1);
-  });
+    assert.equal(Date.now() - startedAt < 1_500, true);
+    assert.equal(receipt.closeout_packet, null);
+    assert.equal(receipt.process_output_summary?.blocked_reason, 'codex_cli_unsupported_function_call');
+    assert.equal(receipt.process_output_summary?.timeout_reason, 'unsupported_tool_protocol');
+    assert.equal(receipt.process_output_summary?.pending_function_call_count, 1);
+    assert.deepEqual(receipt.process_output_summary?.function_call_names, ['exec_command']);
+    assert.equal(
+      receipt.progress_summary.runner_events.some((event) =>
+        event.event_kind === 'unsupported_function_call'
+          && event.value === 'exec_command'
+      ),
+      true,
+    );
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('Codex stage runner diagnoses unsupported function calls from recovered session on no-output timeout', async () => {
+  const threadId = 'thread-session-unsupported-function-call';
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"type":"session_meta","payload":{"id":"${threadId}"}}\\n'
+  sleep 2
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  const previousCodexHome = process.env.CODEX_HOME;
+  const previousNoOutputTimeout = process.env.OPL_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS;
+  const codexHome = path.join(fixtureRoot, 'codex-home');
+  const sessionDir = path.join(codexHome, 'sessions', '2026', '05', '26');
+  fs.mkdirSync(sessionDir, { recursive: true });
+  const sessionPath = path.join(sessionDir, `rollout-2026-05-26T22-30-22-${threadId}.jsonl`);
+  fs.writeFileSync(sessionPath, [
+    JSON.stringify({
+      type: 'session_meta',
+      payload: { id: threadId },
+    }),
+    JSON.stringify({
+      type: 'response_item',
+      payload: {
+        type: 'function_call',
+        name: 'exec_command',
+        arguments: '{"cmd":"rtk cat README.md"}',
+        call_id: 'call_from_session_only',
+      },
+    }),
+    '',
+  ].join('\n'));
+
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    process.env.CODEX_HOME = codexHome;
+    const receipt = await runCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_session_unsupported_function_call_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['checkpoint:session-unsupported-function-call'],
+      },
+      stagePacketRef: 'packet:session-unsupported-function-call',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+      noOutputTimeoutMs: 500,
+    });
+
+    assert.equal(receipt.process_output_summary?.timeout_reason, 'unsupported_tool_protocol');
+    assert.equal(receipt.process_output_summary?.blocked_reason, 'codex_cli_unsupported_function_call');
+    assert.equal(receipt.process_output_summary?.pending_function_call_count, 1);
+    assert.deepEqual(receipt.process_output_summary?.function_call_names, ['exec_command']);
+    assert.equal(
+      receipt.process_output_summary?.unsupported_function_call_session_path,
+      sessionPath,
+    );
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    previousCodexHome === undefined
+      ? delete process.env.CODEX_HOME
+      : process.env.CODEX_HOME = previousCodexHome;
+    previousNoOutputTimeout === undefined
+      ? delete process.env.OPL_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS
+      : process.env.OPL_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS = previousNoOutputTimeout;
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 });

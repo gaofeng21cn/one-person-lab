@@ -282,6 +282,65 @@ test('Temporal StageAttemptWorkflow blocks provider completion when typed closeo
   }
 });
 
+test('Temporal StageAttemptWorkflow surfaces Codex runner protocol blockers before domain dispatch', async () => {
+  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const taskQueue = `opl-stage-attempt-runner-blocker-test-${Date.now()}`;
+  try {
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      activities: {
+        ...activities,
+        codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
+          surface_kind: 'temporal_codex_stage_activity_receipt',
+          activity_kind: 'codex_stage_activity',
+          activity_status: 'completed',
+          stage_attempt_id: input.stage_attempt_id,
+          stage_id: input.stage_id,
+          checkpoint_refs: input.checkpoint_refs ?? [],
+          closeout_packet: null,
+          process_output_summary: {
+            exit_code: 124,
+            timeout_reason: 'unsupported_tool_protocol',
+            blocked_reason: 'codex_cli_unsupported_function_call',
+            pending_function_call_count: 1,
+            function_call_names: ['exec_command'],
+          },
+        }),
+      },
+    });
+
+    const result = await worker.runUntil(async () => {
+      const input = workflowInput();
+      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
+        args: [{
+          ...input,
+          closeout_packet: null,
+        }],
+        taskQueue,
+        workflowId: `wf-temporal-runner-blocker-test-${Date.now()}`,
+      });
+      return await handle.result();
+    });
+
+    assert.equal(result.status, 'blocked');
+    assert.equal(result.closeout_packet?.blocked_reason, 'codex_cli_unsupported_function_call');
+    const dispatchEvent = result.activity_events.find(
+      (event) => event.activity_kind === 'domain_handler_dispatch_activity',
+    );
+    assert.equal(dispatchEvent?.activity_status, 'blocked');
+    assert.equal(dispatchEvent?.blocked_reason, 'codex_cli_unsupported_function_call');
+    assert.equal(
+      (dispatchEvent?.route_impact as Record<string, unknown>)?.provider_blocker_reason,
+      'codex_cli_unsupported_function_call',
+    );
+  } finally {
+    await testEnv.teardown();
+  }
+});
+
 test('Temporal StageAttemptWorkflow consumes Codex activity typed closeout for provider completion', async () => {
   const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
   const taskQueue = `opl-stage-attempt-codex-closeout-test-${Date.now()}`;

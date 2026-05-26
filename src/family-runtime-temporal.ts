@@ -54,6 +54,10 @@ export type TemporalStageAttemptWorkflowInput = {
   stage_packet_ref?: string | null;
   checkpoint_refs?: string[];
   closeout_packet?: Record<string, unknown> | null;
+  provider_blocker?: {
+    blocked_reason?: string | null;
+    route_impact?: Record<string, unknown>;
+  } | null;
   codex_stage_runner?: {
     runner_mode?: 'dry_run' | 'live_dry_run' | 'codex_cli';
     timeout_ms?: number;

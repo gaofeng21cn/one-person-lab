@@ -1,9 +1,17 @@
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 
+import {
+  recoverCodexExecOutputFromSession,
+  type CodexSessionRecoveryResult,
+} from './codex-session-recovery.ts';
 import { FrameworkContractError } from './contracts.ts';
+
+export {
+  recoverCodexExecOutputFromSession,
+  type CodexSessionRecoveryResult,
+};
 
 export type CodexBinarySource = 'env' | 'path';
 
@@ -16,8 +24,13 @@ export interface CodexCommandResult {
   exitCode: number;
   stdout: string;
   stderr: string;
-  timeoutReason?: 'total_timeout' | 'no_output_timeout';
+  timeoutReason?: 'total_timeout' | 'no_output_timeout' | 'unsupported_tool_protocol';
   noOutputTimeoutMs?: number | null;
+  unsupportedFunctionCalls?: Array<{
+    name: string;
+    callId: string | null;
+  }>;
+  unsupportedFunctionCallSessionPath?: string | null;
 }
 
 export interface CodexPassthroughResult {
@@ -51,12 +64,6 @@ export interface ParsedCodexExecOutput {
   messages: string[];
 }
 
-export interface CodexSessionRecoveryResult {
-  threadId: string;
-  sessionPath: string;
-  output: string;
-}
-
 export type CodexExecEvent =
   | {
       type: 'thread.started';
@@ -79,6 +86,12 @@ export type CodexExecEvent =
       title: string;
       status: 'pending' | 'in_progress' | 'completed' | 'failed';
       output: string | null;
+    }
+  | {
+      type: 'unsupported_function_call';
+      callId: string | null;
+      name: string;
+      arguments: string | null;
     };
 
 type CodexExecEventParserState = {
@@ -232,6 +245,7 @@ export async function runCodexCommandStreaming(
   return await new Promise<CodexCommandResult>((resolve, reject) => {
     const child = spawn(codexBinary.path, args, {
       env: process.env,
+      detached: true,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     const stdoutEventParserState = createCodexExecEventParserState();
@@ -243,13 +257,45 @@ export async function runCodexCommandStreaming(
     let completed = false;
     let timeout: NodeJS.Timeout | null = null;
     let noOutputTimeout: NodeJS.Timeout | null = null;
+    const unsupportedFunctionCalls: NonNullable<CodexCommandResult['unsupportedFunctionCalls']> = [];
+    let threadId: string | null = null;
+    let unsupportedFunctionCallSessionPath: string | null = null;
+
+    const recordUnsupportedFunctionCalls = (
+      calls: NonNullable<CodexCommandResult['unsupportedFunctionCalls']>,
+      sessionPath?: string | null,
+    ) => {
+      const seen = new Set(unsupportedFunctionCalls.map((call) => `${call.callId ?? ''}:${call.name}`));
+      for (const call of calls) {
+        const key = `${call.callId ?? ''}:${call.name}`;
+        if (seen.has(key)) {
+          continue;
+        }
+        seen.add(key);
+        unsupportedFunctionCalls.push(call);
+      }
+      unsupportedFunctionCallSessionPath = sessionPath ?? unsupportedFunctionCallSessionPath;
+    };
+
+    const detectSessionUnsupportedFunctionCalls = () => {
+      const recovered = recoverCodexExecOutputFromSession(threadId);
+      if (!recovered) {
+        return false;
+      }
+      const calls = findPendingUnsupportedFunctionCalls(recovered.output);
+      if (calls.length === 0) {
+        return false;
+      }
+      recordUnsupportedFunctionCalls(calls, recovered.sessionPath);
+      return true;
+    };
 
     options.onProcessStarted?.(typeof child.pid === 'number' ? child.pid : null);
     if (options.timeoutMs && options.timeoutMs > 0) {
       timeout = setTimeout(() => {
         timedOut = true;
         timeoutReason = 'total_timeout';
-        child.kill('SIGTERM');
+        terminateChildProcessGroup(child.pid);
       }, options.timeoutMs);
     }
 
@@ -270,8 +316,10 @@ export async function runCodexCommandStreaming(
       if (options.noOutputTimeoutMs && options.noOutputTimeoutMs > 0) {
         noOutputTimeout = setTimeout(() => {
           timedOut = true;
-          timeoutReason = 'no_output_timeout';
-          child.kill('SIGTERM');
+          timeoutReason = detectSessionUnsupportedFunctionCalls()
+            ? 'unsupported_tool_protocol'
+            : 'no_output_timeout';
+          terminateChildProcessGroup(child.pid);
         }, options.noOutputTimeoutMs);
       }
     };
@@ -284,6 +332,18 @@ export async function runCodexCommandStreaming(
       const event = parseCodexExecEventFromLine(line, stdoutEventParserState);
       if (event) {
         options.onStdoutEvent?.(event);
+        if (event.type === 'thread.started') {
+          threadId = event.threadId;
+        }
+        if (event.type === 'unsupported_function_call') {
+          recordUnsupportedFunctionCalls([{
+            name: event.name,
+            callId: event.callId,
+          }]);
+          timedOut = true;
+          timeoutReason = 'unsupported_tool_protocol';
+          terminateChildProcessGroup(child.pid);
+        }
       }
     });
     const flushStderr = attachLineBuffer(child.stderr, (line) => {
@@ -321,9 +381,19 @@ export async function runCodexCommandStreaming(
       clearNoOutputTimeout();
       flushStdout();
       flushStderr();
+      if (
+        timedOut
+        && timeoutReason === 'no_output_timeout'
+        && unsupportedFunctionCalls.length === 0
+        && detectSessionUnsupportedFunctionCalls()
+      ) {
+        timeoutReason = 'unsupported_tool_protocol';
+      }
       const timeoutMessage = timeoutReason === 'no_output_timeout'
         ? 'Codex command produced no output before the progress watchdog expired.'
-        : 'Codex command timed out.';
+        : timeoutReason === 'unsupported_tool_protocol'
+          ? 'Codex command emitted an unsupported native function_call without an OPL tool host.'
+          : 'Codex command timed out.';
       resolve({
         exitCode: timedOut ? 124 : code ?? 1,
         stdout,
@@ -332,6 +402,8 @@ export async function runCodexCommandStreaming(
           : stderr,
         ...(timeoutReason ? { timeoutReason } : {}),
         noOutputTimeoutMs: options.noOutputTimeoutMs ?? null,
+        ...(unsupportedFunctionCalls.length > 0 ? { unsupportedFunctionCalls } : {}),
+        ...(unsupportedFunctionCallSessionPath ? { unsupportedFunctionCallSessionPath } : {}),
       });
     });
 
@@ -421,6 +493,21 @@ function attachLineBuffer(
     }
     return remainder;
   };
+}
+
+function terminateChildProcessGroup(pid: number | undefined) {
+  if (typeof pid !== 'number') {
+    return;
+  }
+  try {
+    process.kill(-pid, 'SIGTERM');
+  } catch {
+    try {
+      process.kill(pid, 'SIGTERM');
+    } catch {
+      // The process may already have exited after the triggering event.
+    }
+  }
 }
 
 function normalizeInlineText(value: unknown) {
@@ -637,6 +724,15 @@ function parseCodexExecEventFromResponseItem(
   }
 
   const payloadType = normalizeInlineText(payloadRecord.type);
+  if (payloadType === 'function_call') {
+    return {
+      type: 'unsupported_function_call',
+      callId: normalizeInlineText(payloadRecord.call_id) ?? normalizeInlineText(payloadRecord.id),
+      name: normalizeInlineText(payloadRecord.name) ?? 'function_call',
+      arguments: normalizeInlineText(payloadRecord.arguments),
+    } satisfies CodexExecEvent;
+  }
+
   if (payloadType !== 'message' || normalizeInlineText(payloadRecord.role) !== 'assistant') {
     return null;
   }
@@ -785,72 +881,62 @@ export function parseCodexExecOutput(output: string): ParsedCodexExecOutput {
   };
 }
 
-export function recoverCodexExecOutputFromSession(threadId: string | null): CodexSessionRecoveryResult | null {
-  const normalizedThreadId = normalizeInlineText(threadId);
-  if (!normalizedThreadId) {
-    return null;
-  }
-
-  const codexHome = normalizeInlineText(process.env.CODEX_HOME) ?? path.join(os.homedir(), '.codex');
-  const sessionsRoot = path.join(codexHome, 'sessions');
-  const sessionPath = findCodexSessionJsonl(sessionsRoot, normalizedThreadId);
-  if (!sessionPath) {
-    return null;
-  }
-
-  const stat = fs.statSync(sessionPath);
-  const maxSessionBytes = 25 * 1024 * 1024;
-  if (!stat.isFile() || stat.size > maxSessionBytes) {
-    return null;
-  }
-
-  return {
-    threadId: normalizedThreadId,
-    sessionPath,
-    output: fs.readFileSync(sessionPath, 'utf8'),
-  };
-}
-
-function findCodexSessionJsonl(sessionsRoot: string, threadId: string) {
-  if (!fs.existsSync(sessionsRoot)) {
-    return null;
-  }
-
-  const maxDepth = 6;
-  const maxFiles = 10_000;
-  const stack: Array<{ dir: string; depth: number }> = [{ dir: sessionsRoot, depth: 0 }];
-  let scannedFiles = 0;
-
-  while (stack.length > 0) {
-    const current = stack.pop()!;
-    let entries: fs.Dirent[];
-    try {
-      entries = fs.readdirSync(current.dir, { withFileTypes: true });
-    } catch {
+export function findPendingUnsupportedFunctionCalls(output: string) {
+  const parserState = createCodexExecEventParserState();
+  const pending = new Map<string, { name: string; callId: string | null }>();
+  const resolved = new Set<string>();
+  for (const rawLine of output.split(/\r?\n/)) {
+    const event = parseCodexExecEventFromLine(rawLine, parserState);
+    if (!event) {
       continue;
     }
-
-    for (const entry of entries) {
-      const entryPath = path.join(current.dir, entry.name);
-      if (entry.isDirectory()) {
-        if (current.depth < maxDepth) {
-          stack.push({ dir: entryPath, depth: current.depth + 1 });
-        }
-        continue;
-      }
-
-      if (!entry.isFile()) {
-        continue;
-      }
-
-      scannedFiles += 1;
-      if (scannedFiles > maxFiles) {
-        return null;
-      }
-      if (entry.name.endsWith('.jsonl') && entry.name.includes(threadId)) {
-        return entryPath;
-      }
+    if (event.type === 'unsupported_function_call') {
+      const key = event.callId ?? `${event.name}:${pending.size}`;
+      pending.set(key, {
+        name: event.name,
+        callId: event.callId,
+      });
+      continue;
     }
+    const rawEvent = parseCodexJsonLine(rawLine);
+    const toolResultCallId = toolResultCallIdFromEvent(rawEvent);
+    if (toolResultCallId) {
+      resolved.add(toolResultCallId);
+    }
+  }
+  return [...pending.entries()]
+    .filter(([key]) => !resolved.has(key))
+    .map(([, value]) => value);
+}
+
+function toolResultCallIdFromEvent(event: Record<string, unknown> | null) {
+  if (!event) {
+    return null;
+  }
+  const directPayload = event.payload;
+  const payloadRecord = directPayload && typeof directPayload === 'object' && !Array.isArray(directPayload)
+    ? directPayload as Record<string, unknown>
+    : null;
+  const directType = normalizeInlineText(payloadRecord?.type);
+  if (
+    directType === 'function_call_output'
+    || directType === 'tool_call_output'
+    || directType === 'tool_result'
+  ) {
+    return normalizeInlineText(payloadRecord?.call_id) ?? normalizeInlineText(payloadRecord?.tool_call_id);
+  }
+
+  const item = event.item;
+  const itemRecord = item && typeof item === 'object' && !Array.isArray(item)
+    ? item as Record<string, unknown>
+    : null;
+  const itemType = normalizeInlineText(itemRecord?.type);
+  if (
+    itemType === 'function_call_output'
+    || itemType === 'tool_call_output'
+    || itemType === 'tool_result'
+  ) {
+    return normalizeInlineText(itemRecord?.call_id) ?? normalizeInlineText(itemRecord?.tool_call_id);
   }
 
   return null;

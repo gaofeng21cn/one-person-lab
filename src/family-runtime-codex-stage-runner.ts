@@ -81,8 +81,12 @@ type CodexStageRunnerProcessOutputSummary = {
   exit_code: number;
   final_message_chars: number;
   stderr_tail: string[];
-  timeout_reason?: 'total_timeout' | 'no_output_timeout';
+  timeout_reason?: 'total_timeout' | 'no_output_timeout' | 'unsupported_tool_protocol';
   no_output_timeout_ms?: number | null;
+  blocked_reason?: string;
+  pending_function_call_count?: number;
+  function_call_names?: string[];
+  unsupported_function_call_session_path?: string;
   recovered_session_path?: string;
   recovered_final_message_chars?: number;
   session_recovery_status?: string;
@@ -188,6 +192,9 @@ function eventSummary(event: CodexExecEvent): RunnerEventSummary {
       event_kind: event.type,
       value: [event.status, event.title, event.output].filter(Boolean).join(' | ').slice(0, 240),
     };
+  }
+  if (event.type === 'unsupported_function_call') {
+    return { event_kind: event.type, value: event.name.slice(0, 240) };
   }
   return { event_kind: event.type, value: null };
 }
@@ -503,7 +510,7 @@ export async function runCodexStageRunner(input: CodexStageRunnerInput): Promise
   let recoveredFinalMessageChars = 0;
   let sessionRecoveryAttempts = 0;
   let sessionRecoveryStatus: string | null = null;
-  if (!closeoutPacket) {
+  if (!closeoutPacket && result.timeoutReason !== 'unsupported_tool_protocol') {
     const recovered = await recoverCloseoutFromCodexSessionWithRetry({
       threadId: parsed.threadId,
       timeoutMs: normalizeTimeoutMs(process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS, 5_000),
@@ -540,6 +547,16 @@ export async function runCodexStageRunner(input: CodexStageRunnerInput): Promise
       stderr_tail: result.stderr.split(/\r?\n/).filter(Boolean).slice(-5),
       ...(result.timeoutReason ? { timeout_reason: result.timeoutReason } : {}),
       no_output_timeout_ms: result.noOutputTimeoutMs ?? noOutputTimeoutMs,
+      ...(result.timeoutReason === 'unsupported_tool_protocol'
+        ? {
+            blocked_reason: 'codex_cli_unsupported_function_call',
+            pending_function_call_count: result.unsupportedFunctionCalls?.length ?? 0,
+            function_call_names: [...new Set((result.unsupportedFunctionCalls ?? []).map((call) => call.name))],
+            ...(result.unsupportedFunctionCallSessionPath
+              ? { unsupported_function_call_session_path: result.unsupportedFunctionCallSessionPath }
+              : {}),
+          }
+        : {}),
       ...(recoveredSessionPath
         ? {
             recovered_session_path: recoveredSessionPath,

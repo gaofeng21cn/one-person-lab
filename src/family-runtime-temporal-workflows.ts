@@ -75,6 +75,30 @@ function closeoutPacketFromCodexResult(value: Record<string, unknown>) {
   return Object.keys(closeout).length > 0 ? closeout : null;
 }
 
+function providerBlockerFromCodexResult(value: Record<string, unknown>) {
+  const summary = asRecord(value.process_output_summary);
+  const blockedReason = typeof summary.blocked_reason === 'string' && summary.blocked_reason.trim()
+    ? summary.blocked_reason.trim()
+    : null;
+  if (!blockedReason) {
+    return null;
+  }
+  return {
+    blocked_reason: blockedReason,
+    route_impact: {
+      provider_blocker_reason: blockedReason,
+      provider_blocker_surface: 'codex_stage_activity.process_output_summary',
+      runner_timeout_reason: typeof summary.timeout_reason === 'string' ? summary.timeout_reason : null,
+      pending_function_call_count: typeof summary.pending_function_call_count === 'number'
+        ? summary.pending_function_call_count
+        : null,
+      function_call_names: Array.isArray(summary.function_call_names)
+        ? summary.function_call_names.filter((entry): entry is string => typeof entry === 'string')
+        : [],
+    },
+  };
+}
+
 export async function StageAttemptWorkflow(
   input: TemporalStageAttemptWorkflowInput,
 ): Promise<TemporalStageAttemptWorkflowState> {
@@ -167,9 +191,11 @@ export async function StageAttemptWorkflow(
     };
 
     const codexCloseoutPacket = closeoutPacketFromCodexResult(codexResult);
+    const providerBlocker = providerBlockerFromCodexResult(codexResult);
     const dispatchResult = await domainHandlerDispatchActivity({
       ...input,
       closeout_packet: codexCloseoutPacket ?? input.closeout_packet ?? null,
+      provider_blocker: providerBlocker,
     });
     const closeoutRefs = closeoutRefsFrom(dispatchResult);
     const routeImpact = asRecord(dispatchResult.route_impact);
