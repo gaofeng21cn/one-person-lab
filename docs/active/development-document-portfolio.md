@@ -4078,6 +4078,62 @@ Next tranche write scope:
 - Separately route the pre-existing `workspace cockpit` / `product direct-entry` CLI test drift to a source/test owner lane.
 - Or choose RCA uncovered reference bodies, OPL uncovered docs, or App docs once their main checkout and active worktrees are safe.
 
+Date: `2026-05-26 16:07 CST`
+Tranche: `six-repo-doc-governance-preflight-and-coverage-ledger`
+State: `tranche_verified_docs_only`
+
+本轮按 OPL Doc Governance Goal Mode 重新校准默认 OPL series 范围为六仓：`one-person-lab`、`med-autoscience`、`med-autogrant`、`redcube-ai`、`opl-meta-agent`、`one-person-lab-app`。本条是 portfolio-level preflight 与 coverage ledger 修正，不关闭全局 `/goal`，也不把 doctor shape pass 写成六仓 `README*` 与 `docs/**/*.md` 已逐段覆盖。
+
+Fresh live truth inputs:
+
+- 固定 skill 入口 `/Users/gaofeng/workspace/opl-doc-governance/skills/opl-doc-governance/SKILL.md` 与当前 active `/goal`。
+- 六仓 `git status --short --branch`、`git worktree list --porcelain`、branch / worktree 最近写入时间和 App 主 checkout 脏状态。
+- 六仓 OPL Doc Governance doctor fallback：6/6 `finding_count=0`、`active_truth_status=pass`、`missing=0`、`next_not_ready=0`。doctor 只作为 shape / risk map，不作为语义覆盖证明。
+- 六仓主参考 inventory：每仓根层 `README*`、核心 docs 与本仓 active truth owner / ideal-state reference 路径。
+
+Fresh semantic result:
+
+- 六仓均有 active truth baton shape，且 doctor 未发现 prompt 结构缺失；这只说明 active-truth 入口可读，不证明整个 docs portfolio 已语义审计完成。
+- `one-person-lab-app` 已纳入默认六仓 governance 范围。App 主 checkout 当前存在外部未提交改动：`README.md`、`docs/status.md`、`docs/testing/README.md`、`package.json`、`scripts/README.md`、`tests/release/app-release-boundary.test.ts`。本轮未触碰这些文件。
+- 当前 worktree 清理不满足安全吸收条件：OPL / MAG 有 1 小时内写入的 worktree；MAS 与 App 的附加 worktree 有未提交改动或外部活跃工作痕迹。只清理本轮新建并验证的短 ledger lane。
+- 轻量 read-model 探测返回的 JSON 顶层字段与旧记忆字段不一致，本轮不采用旧顶层键作为 readiness / production / domain-ready 语义证据。
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | OPL governance owner docs, six-repo scope checklist, current coverage ledger tail, doctor summary, worktree / branch / App dirty-state evidence. | `docs/active/development-document-portfolio.md` |
+| `med-autoscience` | Doctor shape, primary doc inventory, main checkout status and worktree recency only. | none |
+| `med-autogrant` | Doctor shape, primary doc inventory, main checkout status and worktree recency only; previous MAG focused history-spec tranche remains the latest paragraph-level write pass. | none |
+| `redcube-ai` | Doctor shape, primary doc inventory and clean main checkout status only. | none |
+| `opl-meta-agent` | Doctor shape, primary doc inventory and clean main checkout status only; earlier OMA full README/docs tranche remains the paragraph-level coverage owner. | none |
+| `one-person-lab-app` | Doctor shape, primary doc inventory and dirty-state / active-lane exclusion only. | none |
+
+Archived / tombstoned / deleted docs:
+
+- none. This tranche only records fresh six-repo governance state and cleanup boundaries.
+
+Unreviewed docs:
+
+- `one-person-lab`: README/docs sections outside already recorded focused OPL / governance chunks remain open for paragraph-level coverage.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks.
+- `med-autogrant`: remaining `docs/history/specs/*.md` batches and non-index references listed in prior MAG ledger entries remain open.
+- `redcube-ai`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused RCA chunks.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche; future work is evidence / hygiene unless docs change.
+- `one-person-lab-app`: full App docs coverage remains open. Defer write pass until current App dirty files and release / GUI worktrees are closed or explicitly assigned to this governance lane.
+
+Remaining stale / retire candidates:
+
+- The global stale / retire candidate set remains unchanged: MAG remaining history specs / route-handoff snapshots, MAS evidence / runtime-read / artifact authority wording, RCA reference bodies and runtime/provenance wording, OPL uncovered support docs, and App release-ready / production-ready boundary docs.
+- App release-ready / production-ready language remains high risk because App user-path evidence, release artifact evidence and production readiness are separate owner gates.
+- Any future cleanup must continue to distinguish doctor shape pass, descriptor/conformance pass, zero-open worklist, refs-only ledger visibility and provider SLO from domain-ready / production-ready / App-release-ready claims.
+
+Next tranche write scope:
+
+- Choose exactly one safe repo / doc cluster at a time. Prefer MAG remaining 2026-04-12 route/handoff snapshots or 2026-04-13 Hermes-native tombstone; RCA uncovered reference bodies; OPL uncovered support docs; or App docs only after the active App dirty lane is resolved or explicitly handed to this goal.
+- For each chosen cluster, read live source/contracts/tests/CLI-read-model surfaces first, then update this ledger with reviewed docs, edited docs, archive/tombstone/delete actions, unreviewed docs, stale/retire candidates and next prompt scope.
+- Do not mark the global `/goal` complete until all six repos' `README*` and `docs/**/*.md` are paragraph-covered, unreviewed lists are empty, and any remaining gap is closed or moved into the next-round Agent prompt.
+
 ## 验证
 
 Docs-only 整理：
