@@ -5639,6 +5639,67 @@ Next tranche write scope:
 - Otherwise continue MAS bounded `docs/history/**` index/provenance body coverage, or run an RCA support/history body tranche while RCA stays clean.
 - Do not clean older worktrees unless they become clean, attributed to this automation, and safely merged or explicitly abandoned.
 
+Date: `2026-05-27 01:35 CST`
+Tranche: `mas-history-omx-no-resurrection-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAS `docs/history/omx/**` 历史/provenance cluster，并把结果回写到 MAS 本地 coverage ledger 与本 OPL family ledger。目标是保留 OMX-era worktree 手册的审计价值，同时让第一屏明确它不是当前 MAS 执行入口，不得复活项目级 `.omx` / `.codex` / hook / tmux / session state 或旧 owner-worktree 便签。本轮不关闭全局 `/goal`，也不表示 MAS repo-wide README/docs 覆盖完成。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`, `TASTE.md`, `docs/invariants.md`, `docs/decisions.md`, `docs/delivery/medical-display/contracts/medical_display_platform_mainline.md`, `docs/delivery/medical-display/board/medical_display_active_board.md`, and `docs/docs_portfolio_consolidation.md`.
+- MAS target docs: `docs/history/omx/README.md` and `docs/history/omx/omx_worktree_startup_and_closeout.md`.
+- Six-repo `git status --short --branch`, `git worktree list --porcelain`, branch heads, and doctor preflight from `/Users/gaofeng/workspace/opl-doc-governance/scripts/opl_doc_doctor.py`.
+
+Fresh semantic result:
+
+- MAS current truth already says project-level `.codex` and `.omx` are retired; repo-tracked contracts, durable runtime/controller surfaces, generated artifacts, source/tests, CLI/API behavior and owner receipts remain authoritative.
+- MAS `docs/decisions.md` records the 2026-04-11 OMX retirement decision: OMX remains only as `docs/history/omx/` material and `.omx/` is forbidden as current workflow entry.
+- Medical-display active docs already route current owner-round state to tracked active board / contract surfaces and keep `docs/history/omx/` as audit provenance only.
+- `docs/history/omx/README.md` now carries a first-screen dated-read / no-resurrection guard.
+- `docs/history/omx/omx_worktree_startup_and_closeout.md` now warns that its "current/recommended/must" wording belongs to the OMX era only; operational details remain as historical provenance.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | `docs/history/omx/README.md`, `docs/history/omx/omx_worktree_startup_and_closeout.md`, plus supporting current-boundary read of `docs/decisions.md`, `docs/invariants.md`, medical-display mainline contract, medical-display active board and MAS local coverage ledger. | `docs/history/omx/README.md`; `docs/history/omx/omx_worktree_startup_and_closeout.md`; `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | OPL family coverage ledger foldback for this MAS history tranche; no OPL active truth / source / contract semantics changed. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. OMX materials stay in `docs/history/omx/**` as audit provenance and no-resurrection guard material.
+
+Unreviewed docs:
+
+- `med-autoscience`: `docs/history/omx/**` exact cluster is now covered. MAS repo-wide full paragraph coverage remains open for other history-heavy groups: `docs/history/program`, `docs/history/runtime`, `docs/history/positioning`, `docs/history/superpowers/**`, `docs/history/capabilities/medical-display/**`, and history directory indexes.
+- `one-person-lab`: no new OPL body docs were governed in this tranche; previous exact coverage claims remain as recorded.
+- `med-autogrant`, `redcube-ai`, `opl-meta-agent`: no new docs governed in this tranche; previous coverage state remains unchanged.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active release / GUI lanes are safe or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- MAS: any future prose that treats project-level `.omx`, `.codex`, root hook scanning, tmux/session pointer files, OMX prompt/report state, or old owner worktree notes as current execution surface is stale pollution.
+- MAS: other history clusters still need bounded first-screen lifecycle/no-resurrection review.
+- App: release / GUI docs remain blocked by unrelated dirty work in main and external worktrees.
+
+Worktree / branch cleanup:
+
+- No external stale worktree/branch qualified for cleanup before this tranche. MAS and App main checkouts carry unrelated dirty files; OPL/MAS/App external worktrees remain dirty, not merged, recently written, or outside this automation's ownership.
+- This tranche's MAS and OPL worktrees should be removed after fast-forward absorb.
+
+Verification before absorb:
+
+- MAS OMX history worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- OPL ledger worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- No source/runtime tests are required because this tranche changes only narrative docs and coverage ledgers.
+
+Next tranche write scope:
+
+- Continue MAS bounded history inventory, preferably `docs/history/program`, `docs/history/runtime`, `docs/history/positioning`, `docs/history/superpowers/**`, or `docs/history/capabilities/medical-display/**`.
+- Keep App docs delayed until active release / GUI lanes are safe or explicitly assigned.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
+
 ## 验证
 
 Docs-only 整理：
