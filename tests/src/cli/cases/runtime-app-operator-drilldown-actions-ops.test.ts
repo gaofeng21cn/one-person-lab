@@ -226,7 +226,6 @@ test('runtime App drilldown skips current provider SLO proof and surfaces domain
     execution_surface: 'opl runtime action execute',
     submit_via: 'opl runtime action execute',
     route_requires_domain_or_app_payload: true,
-    can_close_without_domain_or_app_payload: false,
     can_submit_to_safe_action_shell: true,
     payload_owner: 'domain_repository_or_app_live_operator',
     payload_template: {
@@ -287,6 +286,7 @@ test('runtime App drilldown skips current provider SLO proof and surfaces domain
     '<payload.json>',
   ]);
   assert.equal(nextSafeAction.route_requires_domain_or_app_payload, true);
+  assert.equal(nextSafeAction.can_close_without_domain_or_app_payload, false);
   assert.equal(nextSafeAction.can_execute_domain_action_directly, false);
   const payloadWorkorder = record(nextSafeAction.payload_workorder);
   const authorityBoundary = record(payloadWorkorder.authority_boundary);
