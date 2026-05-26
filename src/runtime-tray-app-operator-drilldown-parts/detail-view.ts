@@ -14,6 +14,9 @@ import {
   appReleaseUserPathEvidenceNextStep,
   buildAppReleaseUserPathEvidence,
 } from './app-release-user-path.ts';
+import {
+  codexAppRuntimeEvidenceNextStep,
+} from './codex-app-runtime-role.ts';
 import { buildMemoryArtifactLifecycleEvidence } from './memory-artifact-lifecycle-evidence.ts';
 import { functionalPrivatizationNextSteps } from './functional-privatization-next-step.ts';
 import { summarizeSelectedSafeAction } from './selected-safe-action.ts';
@@ -667,6 +670,9 @@ function evidenceNextSteps(drilldown: JsonRecord) {
   const advisory = advisoryItems(drilldown);
   const appReleaseUserPathEvidence = record(attention.app_release_user_path_evidence);
   const omaProductionConsumption = record(attention.oma_production_consumption_followthrough);
+  const codexAppRuntimeRole = record(drilldown.codex_app_runtime_role);
+  const codexAppRuntimeFollowthrough =
+    record(codexAppRuntimeRole.production_evidence_followthrough);
   const functionalPrivatizationSteps = functionalPrivatizationNextSteps(drilldown);
   const dispatchOwner = topDispatchEvidenceOwner(domainDispatchGroups, domainDispatchWorkorders)
     ?? 'domain_repository_or_app_live_operator';
@@ -834,6 +840,9 @@ function evidenceNextSteps(drilldown: JsonRecord) {
       can_create_owner_receipt: false,
       can_close_domain_ready: false,
     });
+  }
+  if (numberValue(codexAppRuntimeFollowthrough.open_gate_count) > 0) {
+    steps.push(codexAppRuntimeEvidenceNextStep(codexAppRuntimeRole));
   }
   for (const item of recordList(missingEvidence.items)) {
     steps.push({
