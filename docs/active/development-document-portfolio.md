@@ -4134,6 +4134,63 @@ Next tranche write scope:
 - For each chosen cluster, read live source/contracts/tests/CLI-read-model surfaces first, then update this ledger with reviewed docs, edited docs, archive/tombstone/delete actions, unreviewed docs, stale/retire candidates and next prompt scope.
 - Do not mark the global `/goal` complete until all six repos' `README*` and `docs/**/*.md` are paragraph-covered, unreviewed lists are empty, and any remaining gap is closed or moved into the next-round Agent prompt.
 
+Date: `2026-05-26 16:21 CST`
+Tranche: `mag-20260410-final-package-artifact-bundle-failclosed-history-specs-coverage`
+State: `tranche_verified_pending_absorb`
+
+本轮覆盖 MAG `docs/history/specs/` 下 2026-04-10 final-package artifact-bundle fail-closed family：14 个 artifact-bundle value/shape hardening specs 加 1 个 malformed artifact bundle spec。目标是确认这些 direct-file 历史入口不会把旧 `build-final-package` fail-closed hardening、artifact bundle value-type proof、local runtime wording 或 package export proof 误读成当前 active implementation queue、public CLI shape、generic OPL artifact owner、submission-ready/export-ready verdict、App release ready、production ready、actual hosted runtime 或 compatibility interface。
+
+Fresh live truth inputs:
+
+- MAG `AGENTS.md`, `TASTE.md`, core docs, `docs/active/mag-ideal-state-cross-repo-gap-plan.md`, `docs/specs/README.md`, `docs/specs/specs_lifecycle_map.md`, `docs/history/specs/README.md`, and MAG `docs/docs_portfolio_consolidation.md`.
+- Reviewed history specs: `docs/history/specs/2026-04-10-post-r5a-final-package-artifact-bundle-artifacts-list-element-linked-object-ids-field-value-types-fail-closed-activation-package.md`, `docs/history/specs/2026-04-10-post-r5a-final-package-artifact-bundle-artifacts-list-element-linked-object-ids-list-element-value-types-fail-closed-activation-package.md`, `docs/history/specs/2026-04-10-post-r5a-final-package-artifact-bundle-artifacts-list-element-required-string-value-types-fail-closed-activation-package.md`, `docs/history/specs/2026-04-10-post-r5a-final-package-artifact-bundle-artifacts-list-element-shapes-fail-closed-activation-package.md`, `docs/history/specs/2026-04-10-post-r5a-final-package-artifact-bundle-artifacts-list-value-types-fail-closed-activation-package.md`, `docs/history/specs/2026-04-10-post-r5a-final-package-artifact-bundle-artifacts-object-linkage-id-fields-fail-closed-activation-package.md`, `docs/history/specs/2026-04-10-post-r5a-final-package-artifact-bundle-artifacts-object-primary-id-fields-fail-closed-activation-package.md`, `docs/history/specs/2026-04-10-post-r5a-final-package-artifact-bundle-artifacts-object-required-list-element-value-types-fail-closed-activation-package.md`, `docs/history/specs/2026-04-10-post-r5a-final-package-artifact-bundle-artifacts-object-required-list-fields-fail-closed-activation-package.md`, `docs/history/specs/2026-04-10-post-r5a-final-package-artifact-bundle-artifacts-object-required-string-fields-fail-closed-activation-package.md`, `docs/history/specs/2026-04-10-post-r5a-final-package-artifact-bundle-artifacts-object-value-types-fail-closed-activation-package.md`, `docs/history/specs/2026-04-10-post-r5a-final-package-artifact-bundle-required-nested-fields-fail-closed-activation-package.md`, `docs/history/specs/2026-04-10-post-r5a-final-package-artifact-bundle-required-scalar-value-types-fail-closed-activation-package.md`, `docs/history/specs/2026-04-10-post-r5a-final-package-artifact-bundle-summary-count-value-types-fail-closed-activation-package.md`, and `docs/history/specs/2026-04-10-post-r5a-final-package-malformed-artifact-bundle-fail-closed-activation-package.md`.
+- MAG machine/source truth surfaces: `contracts/runtime-program/current-program.json`, `contracts/generated_surface_handoff.json`, `contracts/production_acceptance/mag-production-acceptance.json`, `contracts/external_evidence/mag-evidence-receipt-ledger.json`, `src/med_autogrant/final_package.py`, `src/med_autogrant/final_package_validation.py`, `src/med_autogrant/public_cli.py`, `src/med_autogrant/domain_entry_contract.py`, `src/med_autogrant/hosted_contract_bundle.py`, `tests/test_final_package.py`, `tests/test_hosted_contract_bundle.py`, active specs listed by `docs/specs/README.md`, schemas/source/CLI/API behavior.
+- Fresh read-model probes: grouped public CLI / domain-entry command catalog, `build_domain_entry_contract()`, `_build_hosted_authoring_contract()`, and current package command mapping.
+
+Fresh semantic result:
+
+- All 15 reviewed files already carry first-screen lifecycle notes plus `Owner` / `Purpose` / `State` / `Machine boundary`.
+- These files are correctly scoped as historical post-R5A final-package artifact-bundle fail-closed provenance. They record malformed artifact bundle hardening, not current active implementation work.
+- Current final package behavior is source/test owned by `final_package.build_final_package_payload()`, `final_package_validation` / artifact bundle validation helpers, and focused tests in `tests/test_final_package.py`.
+- `contracts/runtime-program/current-program.json` still states `default_task_runtime_owner=one-person-lab`, `default_runtime_owner=configured_family_runtime_provider`, `default_runtime_substrate=temporal`, `mag_implements_daemon=false`, `mag_implements_scheduler=false`, `mag_implements_attempt_loop=false`, `mag_owns_attempt_ledger=false`, `default_stage_executor=codex_cli`, and `optional_hosted_carriers=["hermes_agent"]`.
+- `contracts/production_acceptance/mag-production-acceptance.json` keeps `provider_completion_equals_submission_ready=false`, `structural_conformance_equals_domain_ready=false`, `claims_package_existence_is_submission_ready=false`, and MAG-owned package / submission-ready authority. External evidence remains refs-only and does not carry grant artifact body, package archive body or submission-ready verdict body.
+- Current public CLI shape is grouped: historical internal labels `build-artifact-bundle`, `build-final-package`, `build-hosted-contract-bundle`, and `build-submission-ready-package` map to `package artifact-bundle`, `package final-package`, `package hosted-contract-bundle`, and `package submission-ready`.
+- Fresh command-catalog probe found 30 current domain-entry supported commands, and retired runtime commands `run-local`, `runtime-run`, `runtime-resume`, and `probe-upstream-hermes` are absent.
+- No body rewrite was needed. MAG local ledger was updated; existing lifecycle guards, specs lifecycle map and history specs index are sufficient for the reviewed history files.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autogrant` | Full paragraph read of the 15 final-package artifact-bundle fail-closed history specs listed above; support read of MAG history specs index, specs lifecycle map, active gap plan, current-program runtime owner fields, production acceptance authority boundaries, generated surface handoff, external evidence ledger, final package source/tests, hosted bundle source/tests, grouped public CLI mapping and command catalog. | `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. These 15 MAG files remain useful history provenance; no body move, tombstone, or delete was required.
+
+Unreviewed docs:
+
+- `med-autogrant`: remaining history specs outside recorded batches remain open for paragraph-level governance, including `2026-04-12-author-side-executor-routing-contract-current-truth.md`, `2026-04-12-critique-pending-handoff-contract-current-truth.md`, `2026-04-12-pending-authoring-route-handoff-matrix-current-truth.md`, `2026-04-13-hermes-native-critique-proof-tombstone.md`, and older final-package / presubmission / R2 artifact-bundle provenance not yet covered by focused later ledgers.
+- MAG non-index references such as grant strategy memory policy, OPL family contract adoption and governance checklist still need paragraph-level checks against current contracts/source unless already covered by a later MAG or OPL ledger entry.
+- OPL, MAS, RCA and App repo-wide coverage remains open outside recorded chunks. OMA is covered by its earlier full README/docs tranche.
+
+Remaining stale / retire candidates:
+
+- Any future direct-file use of these 2026-04-10 specs as current implementation queue, public CLI command shape, runtime owner, default runtime, active local runtime ladder, actual hosted runtime, App/release readiness, external portal submission authorization, production readiness, physical-delete authority or compatibility-interface source is stale pollution.
+- Historical bare package commands must be mapped through current grouped public CLI: `package artifact-bundle`, `package final-package`, `package hosted-contract-bundle`, and `package submission-ready`.
+- `final_package` and `artifact_bundle` fail-closed vocabulary must remain within MAG package/export authority, source/test validation evidence and history/provenance boundaries. It must not be upgraded to generic OPL artifact lifecycle ownership, provider-hosted completion, domain ready, grant ready, fundability ready or submission-ready export verdict.
+
+Verification / absorb:
+
+- Pending this tranche closeout: MAG and OPL docs-only verification, focused package fail-closed tests, fast-forward absorb into both `main` checkouts, worktree cleanup, then final lightweight status check.
+
+Next tranche write scope:
+
+- Continue MAG `docs/history/specs/*.md` in date/topic batches, prioritizing remaining 2026-04-12 route/handoff snapshots, `2026-04-13-hermes-native-critique-proof-tombstone.md`, or MAG non-index references such as grant strategy memory policy and OPL family contract adoption.
+- Keep the pre-existing `workspace cockpit` / `product direct-entry` CLI test drift routed to a source/test owner lane, not docs-governance closeout.
+- Or choose RCA uncovered reference bodies, OPL uncovered docs, or App docs once their main checkout and active worktrees are safe.
+
 Date: `2026-05-26 16:42 CST`
 Tranche: `rca-references-family-scope-memory-locator-coverage`
 State: `tranche_verified_absorbed`
