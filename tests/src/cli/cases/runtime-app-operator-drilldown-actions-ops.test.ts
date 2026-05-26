@@ -471,6 +471,105 @@ test('runtime App drilldown selects blocked transport redrive before MAS owner h
   assert.equal(nextSafeAction.can_execute_domain_action_directly, false);
 });
 
+test('runtime App drilldown prioritizes provider worker repair before transport redrive and MAS owner handoff payload work', () => {
+  const workerRestartRoute = {
+    ref: 'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
+    action_id: 'provider-worker:temporal:restart',
+    action_kind: 'provider_worker_restart',
+    owner: 'opl',
+    route_target_kind: 'opl_cli',
+    execution_policy: 'opl_safe_action_shell',
+    execution_surface: 'opl runtime action execute',
+    submit_via: 'opl runtime action execute',
+    can_submit_to_safe_action_shell: true,
+    provider_kind: 'temporal',
+    provider_worker_lifecycle_status: 'worker_source_stale',
+    provider_worker_repair_action_id: 'restart_temporal_worker',
+    provider_worker_repair_command:
+      'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
+    provider_worker_required_next_action:
+      'Restart stale Temporal worker before redriving blocked transport or recording MAS owner refs.',
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  };
+  const transportRedriveRoute = {
+    action_id: 'family-runtime:redrive:mas-default-executor:task-1',
+    action_kind: 'blocked_transport_redrive',
+    owner: 'opl',
+    route_target_kind: 'opl_cli',
+    execution_policy: 'opl_safe_action_shell',
+    execution_surface: 'opl runtime action execute',
+    submit_via: 'opl runtime action execute',
+    can_submit_to_safe_action_shell: true,
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  };
+  const ownerHandoffRoute = {
+    action_id: 'domain_dispatch:medautoscience:attempt-1:record',
+    action_kind: 'domain_dispatch_evidence_receipt_record',
+    owner: 'opl',
+    route_target_kind: 'opl_cli',
+    execution_surface: 'opl runtime action execute',
+    submit_via: 'opl runtime action execute',
+    route_requires_domain_or_app_payload: true,
+    can_close_without_domain_or_app_payload: false,
+    can_submit_to_safe_action_shell: true,
+    payload_owner: 'med-autoscience',
+    payload_template: {
+      domain_receipt_refs: [],
+      typed_blocker_refs: [],
+      owner_chain_refs: [],
+      no_regression_refs: [],
+      evidence_refs: [],
+    },
+    required_operator_payload_refs: [
+      'domain_receipt_refs',
+      'typed_blocker_refs',
+      'owner_chain_refs',
+      'no_regression_refs',
+    ],
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+      mas_closes_publication_quality: true,
+      mas_closes_artifact_package_authority: true,
+      mas_closes_owner_receipt: true,
+    },
+  };
+  const drilldown = applyAppOperatorDrilldownDetail({
+    operator_action_routing_refs: {
+      refs: [
+        ownerHandoffRoute,
+        transportRedriveRoute,
+        workerRestartRoute,
+      ],
+    },
+    app_execution_bridge: {
+      safe_action_routes: [
+        ownerHandoffRoute,
+        transportRedriveRoute,
+        workerRestartRoute,
+      ],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  }, 'summary');
+
+  const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
+  assert.ok(nextSafeAction);
+  assert.equal(nextSafeAction.action_id, 'provider-worker:temporal:restart');
+  assert.equal(nextSafeAction.action_kind, 'provider_worker_restart');
+  assert.equal(nextSafeAction.can_execute_domain_action_directly, false);
+  assert.equal(nextSafeAction.can_submit_to_safe_action_shell, true);
+  assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 2);
+});
+
 test('runtime App drilldown does not select closed provider SLO routes as next action', () => {
   const route = (action: string, actionKind: string) => ({
     action_id: `provider-scheduler:temporal:${action}`,
