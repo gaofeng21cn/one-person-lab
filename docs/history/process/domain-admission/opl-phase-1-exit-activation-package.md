@@ -63,7 +63,7 @@ Machine boundary: 本文只保存早期 exit activation package 的历史 freeze
 
 1. **本仓 public truth / contracts / tests 继续稳定**
    顶层 docs、machine-readable contracts 与 regression tests 持续对齐。
-2. **candidate-domain path 已在当前定义层完成收口**
+2. **candidate-domain path 已在当时定义层完成收口**
    `Grant Ops`、`Review Ops`、`Thesis Ops` 都继续保持 blocked / under definition / non-admitted / non-ready。
 3. **最小下一阶段 tranche 先被诚实冻结**
    该 tranche 必须先有明确名称、scope、non-goals 与 verification requirements。
@@ -82,16 +82,16 @@ Machine boundary: 本文只保存早期 exit activation package 的历史 freeze
 - anti-runtime-drift 门槛：**已满足**
 - “至少两个 admitted domain surface 足够稳定”这条门槛：**尚未满足**
 
-当前 repo-tracked 的 blocker 是外部 readiness：
+当时 repo-tracked 的 blocker 是外部 readiness：
 
 - 四仓同步面仍把 `redcube-ai` 记录在 `P0 credible green baseline repair`，其 active-mainline truth 与 formal-entry closeout 仍在推进中
-- 因此 `OPL` 现在还不能诚实声称：至少两个 admitted domain surface 已经稳定到足以激活更强 federation activation package
+- 因此 `OPL` 当时还不能诚实声称：至少两个 admitted domain surface 已经稳定到足以激活更强 federation activation package
 
 ## 当时 `OPL` 仍可自行继续完成的内容
 
 在这条外部门槛变化前，`OPL` 仍可继续：
 
-- 维护当前 admitted-domain gateway baseline 的 docs/contracts/tests 对齐
+- 维护当时 admitted-domain gateway baseline 的 docs/contracts/tests 对齐
 - 继续把 candidate-domain path 显式保持为 blocked，而不伪造 admission 或 readiness
 - 维护 reference-grade sync surfaces，但不把它们抬升成 public-mainline truth
 - 仅在外部 admitted-domain readiness 真实变绿之后，再推进更强 federation wording/contracts

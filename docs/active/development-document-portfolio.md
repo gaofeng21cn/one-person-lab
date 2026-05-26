@@ -4784,6 +4784,63 @@ Next tranche write scope:
 - Continue OPL `docs/history/process/**` bodies, `contracts/opl-framework/README.zh-CN.md`, or active-support docs if no external worktree owns them; otherwise pick MAS remaining repo-wide docs.
 - Delay RCA/App docs write passes until external implementation/release dirty lanes are isolated or explicitly assigned.
 
+Date: `2026-05-26 20:05 CST`
+Tranche: `opl-history-domain-admission-coverage`
+State: `tranche_verified`
+
+本轮覆盖 OPL `docs/history/process/domain-admission/**` 的 domain admission 过程归档。目标是确认 Phase 1/2、candidate workstream closeout、central reference sync 和 ecosystem owner-line 全部停留在 process history / provenance 语境，不作为当前 active plan、runtime activation package、domain admission authority、gateway/federation 兼容面、OMX continuation 或 recurring material 默认落点。本轮不关闭全局 `/goal`，也不表示 OPL `docs/history/process/**` 其余 convergence / plans / specs / superpowers bodies 已逐段覆盖。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`, `TASTE.md`, `docs/active/current-state-vs-ideal-gap.md`, `docs/specs/opl-domain-onboarding-contract.md`, `docs/references/domain-admission/opl-candidate-domain-backlog.md`, `contracts/opl-framework/README.md`, `contracts/opl-framework/domains.json`, `contracts/opl-framework/workstreams.json`, and `contracts/opl-framework/task-topology.json`.
+- Domain-admission history docs: `docs/history/process/domain-admission/README.md`, `docs/history/process/domain-admission/opl-candidate-workstream-tranche-closeout.md`, `docs/history/process/domain-admission/opl-phase-1-exit-activation-package.md`, `docs/history/process/domain-admission/opl-phase-2-admitted-domain-delta-intake-refresh.md`, `docs/history/process/domain-admission/opl-phase-2-central-reference-sync-board.md`, and `docs/history/process/domain-admission/opl-phase2-ecosystem-sync-owner-line.md`.
+- Fresh read models: `opl framework readiness --family-defaults --json`, `opl agents conformance --family-defaults --json`, `opl agents default-callers --family-defaults --json`, `opl agents descriptors --json`, and `opl stages list --json`.
+
+Fresh semantic result:
+
+- Current active domain-agent catalog still contains `medautoscience`, `medautogrant`, and `redcube`; active workstreams remain `research_ops`, `grant_ops`, and `presentation_ops`. `IP Ops`, `Award Ops`, `Thesis Ops`, and `Review Ops` remain candidate / under-definition topology signals that require full admission packages before formal inclusion.
+- Fresh `opl agents conformance --family-defaults --json` returned `status=passed`, `passed_count=4`, `blocked_count=0`, and `production_evidence_tail_count=4`; this is structural conformance, not new domain admission or production readiness.
+- Fresh `opl agents default-callers --family-defaults --json` returned `status=ready_domain_evidence_required`, `generated_default_caller_surface_count=32`, `blocked_surface_count=0`, zero missing domain-owner / no-forbidden-write / tombstone refs, and `physical_delete_authorized=false`.
+- Fresh `opl framework readiness --family-defaults --json` returned `status=framework_control_plane_available_with_operator_attention`, `hard_blocker_count=0`, `open_tail_count=0`, `domain_blocked_attention_tail_count=268`, and provider SLO cadence/capability satisfied. Operator attention and domain-blocked refs do not authorize domain ready or production ready.
+- `opl agents descriptors --json` and `opl stages list --json` returned four family descriptor / stage-domain surfaces; this proves read-model visibility, not candidate admission.
+- `docs/history/process/domain-admission/README.md` already carried the correct history-only owner table and current owner jumps.
+- Five history body files had stale-risk present-tense or unqualified “latest/current” wording inside historical tranche descriptions. These were rewritten to “当时 / 当时 latest / 当时 absorbed truth” so dated Phase 1/2 process material cannot be read as current active truth, current sync scope, current blocker, or current readiness state.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | Full paragraph / heading review of all six `docs/history/process/domain-admission/*.md` files; support read of current active gap plan, domain onboarding spec, candidate backlog, OPL framework contracts, active domains/workstreams/task topology, and fresh conformance/default-caller/framework/descriptors/stages read models. | `docs/history/process/domain-admission/opl-candidate-workstream-tranche-closeout.md`; `docs/history/process/domain-admission/opl-phase-1-exit-activation-package.md`; `docs/history/process/domain-admission/opl-phase-2-admitted-domain-delta-intake-refresh.md`; `docs/history/process/domain-admission/opl-phase-2-central-reference-sync-board.md`; `docs/history/process/domain-admission/opl-phase2-ecosystem-sync-owner-line.md`; `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. These files already live in `docs/history/process/domain-admission/**` and remain useful provenance; this tranche corrected stale-risk tense and recorded coverage rather than moving or deleting paths.
+
+Unreviewed docs:
+
+- `one-person-lab`: current inventory remains 175 `README*` / `docs/**/*.md` / contracts README files. After this tranche, remaining open exact-missing clusters are `docs/history/process/convergence-governance/**`, `docs/history/process/plans/**`, `docs/history/process/specs/**`, and `docs/history/process/superpowers/**`; plus any non-exact grouped coverage still listed in prior tranche notes such as contracts README / active support docs if not separately reconciled.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks.
+- `med-autogrant`: current 120-file recorded scope was closed by the MAG final inventory reconcile unless new docs or later source/contract changes reopen a section.
+- `redcube-ai`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused RCA chunks; current main checkout still carries external dirty implementation/test files.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App dirty lanes are closed or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Any future domain-admission history wording that turns Phase 1/2, central reference sync, owner-line or candidate workstream closeout material into current active plan, runtime activation, domain admission authority, gateway/federation compatibility surface, or recurring worktree/prompt entry is stale pollution.
+- Any future wording that treats candidate backlog visibility, descriptor/stage read-model visibility, structural conformance, default-caller readiness, or provider/operator attention as formal admission, discovery target, routed-action target, handoff-ready surface, domain ready or production ready is stale pollution.
+- Any future use of retired `docs/references/opl-phase-*`, `contracts/opl-framework/phase-*`, OMX, `domain_gateway`, G2/G3 or gateway/federation literals must remain historical provenance unless an active contract/source/read-model explicitly reintroduces a narrow current surface.
+
+Verification before absorb:
+
+- OPL docs verification passed in the tranche worktree: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- OPL domain-admission support read models and contract probes above were rerun fresh in the tranche worktree; no source or machine-readable contract edit was made.
+
+Next tranche write scope:
+
+- Continue OPL `docs/history/process/convergence-governance/**`, `docs/history/process/plans/**`, `docs/history/process/specs/**`, or `docs/history/process/superpowers/**` in small clusters; alternatively pick MAS remaining repo-wide docs if OPL external lanes make a cluster unsafe.
+- Delay RCA/App docs write passes until external implementation/release dirty lanes are isolated or explicitly assigned.
+
 ## 验证
 
 Docs-only 整理：

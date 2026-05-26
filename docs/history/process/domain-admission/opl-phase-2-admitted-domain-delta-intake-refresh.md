@@ -16,22 +16,22 @@ Machine boundary: 本文只保存早期 admitted-domain delta intake 的历史 p
 
 它只负责一件事：
 
-- 把最新 absorbed admitted-domain delta 先同步进中央 reference surfaces，
-- 让后续 wording sync、历史迁移参考清理与 regression refresh 有同一个最新起点。
+- 把当时最新 absorbed admitted-domain delta 先同步进中央 reference surfaces，
+- 让后续 wording sync、历史迁移参考清理与 regression refresh 有同一个当时起点。
 
 ## 当时要 intake 的 absorbed delta
 
 ### 1. `RedCube AI`
 
-- latest absorbed commit：`c124c5d`
+- 当时 latest absorbed commit：`c124c5d`
 - 当时 absorbed 主线锚点：已经不再只是 `Phase 2 / runtime watch locator integrity hardening`；当时 repo-tracked truth 已推进到 upstream runtime-owner cutover 与 `Repo-Verified Product Entry And OPL Federation`
 - 中央 sync 最小要求：
   - 不再把 `RedCube AI` 写成 upstream pilot prep、待吸收默认执行器，或只停留在 quickstart provenance
-  - 要把 upstream runtime-owner cutover、`redcube product frontdoor`、federated product entry、session continuity、family manifest companion，以及 latest `product_entry_readiness` companion 一并写回中央参考面
+  - 要把 upstream runtime-owner cutover、`redcube product frontdoor`、federated product entry、session continuity、family manifest companion，以及当时 latest `product_entry_readiness` companion 一并写回中央参考面
 
 ### 2. `MedAutoScience`
 
-- latest absorbed commit：`6c64264`
+- 当时 latest absorbed commit：`6c64264`
 - 当时 repo-side 仍停在 `EXTERNAL_RUNTIME_DEPENDENCY_BLOCKED_AFTER_ABSORB`
 - 中央 sync 最小要求：
   - 不再把 `5366d18` 单独写成 repo-side hardening 的最新 absorbed edge
@@ -54,6 +54,6 @@ Machine boundary: 本文只保存早期 admitted-domain delta intake 的历史 p
 
 ## 当时成功标准
 
-- 中央执行板、状态矩阵、任务板都能准确指向 `RedCube AI` 与 `MedAutoScience` 的当前 absorbed truth
+- 中央执行板、状态矩阵、任务板都能准确指向 `RedCube AI` 与 `MedAutoScience` 的当时 absorbed truth
 - `Grant Foundry -> Med Auto Grant` 继续保持 signal-only / non-admitted wording
 - closeout 后可以继续顺着 board 进入下一条 wording sync tranche；如果没有后续漂移，也可以直接 honest stop

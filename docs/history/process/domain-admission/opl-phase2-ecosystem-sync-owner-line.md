@@ -42,7 +42,7 @@ Machine boundary: 本文只保存早期生态同步 owner-line 简报。当前 O
 - 作为四仓中央 sync owner，
 - 在已有 admitted-domain 证据边界内，
 - 持续吸收 `MedAutoScience` 与 `RedCube AI` 等 admitted domain 新落地的 repo-tracked truth，
-- 并把顶层 federation wording、中央状态表、执行板、任务板、提示词模板与 acceptance/reference surfaces 同步到最新一致状态。
+- 并把顶层 federation wording、中央状态表、执行板、任务板、提示词模板与 acceptance/reference surfaces 同步到当时最新一致状态。
 
 当时这条线要同步的 admitted-domain delta，包括：
 
@@ -80,7 +80,7 @@ Machine boundary: 本文只保存早期生态同步 owner-line 简报。当前 O
 这条线的目标固定为：
 
 1. 保持 `OPL` 作为顶层 `Gateway / Federation / control language / public system surface` 的诚实表述；
-2. 把 admitted-domain 最新已吸收证据同步回中央参考面；
+2. 把 admitted-domain 当时最新已吸收证据同步回中央参考面；
 3. 把四仓统一 program 的阶段、完成标准与下一棒保持最新；
 4. 每个 same-mainline slice 先更新 machine-readable / repo-tracked truth，再更新 README / docs / tests；
 5. 继续守住：
@@ -93,7 +93,7 @@ Machine boundary: 本文只保存早期生态同步 owner-line 简报。当前 O
 
 - `phase_2_admitted_domain_delta_intake_refresh`
 
-也就是先把 latest absorbed admitted-domain delta 收进中央执行板、状态矩阵与任务板，再决定是否继续下一条 wording / historical-reference / regression sync tranche。
+也就是先把当时 latest absorbed admitted-domain delta 收进中央执行板、状态矩阵与任务板，再决定是否继续下一条 wording / historical-reference / regression sync tranche。
 
 ## 当时 In Scope
 
@@ -102,7 +102,7 @@ Machine boundary: 本文只保存早期生态同步 owner-line 简报。当前 O
 - `docs/references/runtime-alignment-taskboard.md`
 - `docs/references/opl-phase-2-central-reference-sync-board.md`
 - `docs/references/opl-phase-2-admitted-domain-delta-intake-refresh.md`
-- admitted-domain 最新真相落地后，必要的：
+- admitted-domain 当时最新真相落地后，必要的：
   - `README*`
   - `docs/roadmap*`
   - `contracts/opl-framework/README*`
@@ -159,4 +159,4 @@ Machine boundary: 本文只保存早期生态同步 owner-line 简报。当前 O
 - `NO_NEW_ADMITTED_DOMAIN_DELTA_HONEST_STOP`
 
 前者表示本轮中央 reference convergence sync 已完成并吸收；
-后者表示当前没有新的 admitted-domain truth 可以诚实同步。
+后者表示当时没有新的 admitted-domain truth 可以诚实同步。
