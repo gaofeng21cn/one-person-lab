@@ -5762,6 +5762,66 @@ Next tranche write scope:
 - Continue MAS bounded history inventory, or start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
 - Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
 
+Date: `2026-05-27 02:04 CST`
+Tranche: `opl-source-docs-coverage`
+State: `tranche_verified`
+
+本轮覆盖 `one-person-lab` 的 `docs/source/**` 两份 active-support 文档。目标是确认 OPL workspace/source intake shell 的人读边界仍与 live contract、source implementation 和 CLI read model 一致：OPL 只持有 locator、registry、refs transport、lifecycle/status projection 与 App/operator workbench grouping；source truth body、workspace truth、source readiness verdict、domain truth、artifact authority、memory body 与质量/交付判断继续归 domain agents。本轮不关闭全局 `/goal`，也不表示 OPL repo-wide README/docs 全覆盖完成。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`, `TASTE.md`, core docs, `docs/docs_portfolio_consolidation.md`, `docs/source/README.md`, and `docs/source/workspace-source-intake-boundary.md`.
+- `contracts/opl-framework/generic-substrate-projection-contract.json`.
+- Source implementation context from `src/runtime-tray-workspace-source-intake.ts` and `src/workspace-registry.ts`.
+- `./bin/opl substrate workbench --json` and `./bin/opl substrate projections --json`.
+
+Fresh semantic result:
+
+- `generic-substrate-projection-contract` still defines OPL scope as framework-owned locator, index, lifecycle and projection surface over domain-declared workspace/source/artifact/memory refs.
+- `runtime-tray-workspace-source-intake` builds `opl_workspace_source_intake_projection` with `projection_policy=locator_and_handoff_only_no_source_readiness_authority`; authority flags keep `can_authorize_source_readiness=false`, `can_select_domain_profile=false`, and `can_write_domain_truth=false`.
+- `workspace-registry` only records allowed OPL/domain project workspace bindings and locator fields; it does not interpret source quality or readiness.
+- `./bin/opl substrate workbench --json` returned `surface_kind=opl_generic_substrate_workbench`, `blocked_count=0`, `workspace_ref_count=3`, `source_ref_count=12`, `artifact_ref_count=22`, and `memory_ref_count=3`; its authority boundary keeps OPL at locator/ref transport/lifecycle/operator projection and domain agents at workspace/source/artifact/memory/domain/quality authority.
+- `./bin/opl substrate projections --json` returned `surface_kind=opl_generic_substrate_projection_index`, `resolved_manifest_count=3`, `substrate_refs_resolved_count=3`, `blocked_count=0`, and notes that OPL carries locators/lifecycle status only while domain agents retain truth/body/verdict/authority.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | Full paragraph read of `docs/source/README.md` and `docs/source/workspace-source-intake-boundary.md`, with supporting contract/source/read-model evidence listed above. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. `docs/source/**` remains current active support; no duplicate active truth role or no-active-role retirement requirement was found.
+
+Unreviewed docs:
+
+- `one-person-lab`: `docs/source/**` exact cluster is now covered. Other OPL body docs remain governed by prior ledger entries; future OPL-only tranche should still reconcile support/history/reference body coverage where previous exact inventory and body-level claims disagree.
+- `med-autoscience`: repo-wide full paragraph coverage remains open mainly in history-heavy groups and any docs changed after the latest MAS entries.
+- `med-autogrant`, `redcube-ai`, `opl-meta-agent`: no new docs governed in this tranche; previous coverage state remains unchanged.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active release / GUI lanes are safe or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Future OPL source/workspace prose that treats `substrate workbench`, `workspace registry`, `workspace_source_intake_projection`, `source_ref_count`, or `substrate_refs_resolved` as source readiness, source-body import, domain truth, domain profile selection, artifact authority, memory writeback authority, quality verdict or production readiness is stale pollution.
+- App docs remain unsafe for automatic governance while main and release/GUI lanes carry unrelated dirty changes.
+- MAS history-heavy uncovered inventory remains a safe next body-coverage target once current MAS dirty work is owned or folded.
+
+Worktree / branch cleanup:
+
+- No external stale worktree/branch qualified for cleanup before this tranche. OPL/MAS/App extra worktrees are dirty, not safely attributable to this automation, recently written, detached probes, or outside the current tranche.
+- This tranche's OPL worktree and branch should be removed after fast-forward absorb.
+
+Verification before absorb:
+
+- OPL source docs coverage worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- No source/runtime tests are required because this tranche changes only the coverage ledger and does not change machine-readable contracts, source, CLI/API, schema, generated artifacts or runtime semantics.
+
+Next tranche write scope:
+
+- Continue MAS bounded history inventory, preferably `docs/history/program`, `docs/history/runtime`, `docs/history/positioning`, `docs/history/superpowers/**`, or `docs/history/capabilities/medical-display/**`.
+- Start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
+
 ## 验证
 
 Docs-only 整理：
