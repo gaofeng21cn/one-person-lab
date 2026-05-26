@@ -6572,3 +6572,62 @@ Next tranche write scope:
 - If App remains dirty, continue only with newly reopened OPL/MAS/MAG/RCA/OMA/App ledger or support README accounting items that do not touch externally dirty files.
 - When the dirty App release/testing lane is safe or explicitly assigned, perform App paragraph-level body governance as recorded in the App repo-local ledger.
 - Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
+
+Date: `2026-05-27 05:48 CST`
+Tranche: `oma-agent-pack-readme-lifecycle`
+State: `tranche_verified`
+
+本轮覆盖 OMA tracked support READMEs：`agent/knowledge/README.md`、`agent/prompts/README.md`、`agent/quality_gates/README.md`、`agent/skills/README.md` 和 `agent/stages/README.md`。这些文件在 OMA exact README/docs scope 外，但已由 OMA repo-local ledger 标记为 domain pack 支撑索引；本轮补齐每个长期文档的 owner / purpose / state / machine boundary，并把 coverage foldback 写回 OMA 本地 ledger 和本 OPL family ledger。目标是维护 support README 生命周期，不改 active truth、不新增 readiness claim、不关闭 OPL series 全局 `/goal`。
+
+Fresh live truth inputs:
+
+- OMA `AGENTS.md`, `TASTE.md`, `docs/README.md`, `docs/status.md`, `docs/architecture.md`, `docs/docs_portfolio_consolidation.md`, and `docs/active/opl-meta-agent-ideal-state-gap-plan.md`.
+- Agent pack support READMEs: `agent/knowledge/README.md`, `agent/prompts/README.md`, `agent/quality_gates/README.md`, `agent/skills/README.md`, and `agent/stages/README.md`.
+- Machine refs: `contracts/pack_compiler_input.json`, `contracts/stage_control_plane.json`, `tests/contracts.test.ts`, and current tracked `agent/**/*.md` files.
+
+Fresh semantic result:
+
+- The five support README file lists already matched tracked non-README pack files under their directories.
+- `contracts/pack_compiler_input.json` `required_domain_pack_paths` matched every tracked non-README `agent/**/*.md` file and excluded all README files.
+- The rewrite therefore only adds lifecycle metadata and preserves the support-index role. Machine truth remains in contracts, non-README pack files and tests.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `opl-meta-agent` | `agent/knowledge/README.md`, `agent/prompts/README.md`, `agent/quality_gates/README.md`, `agent/skills/README.md`, `agent/stages/README.md`, plus machine refs listed above. | Five agent pack README files; `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | OPL family coverage ledger foldback for this OMA support README lifecycle tranche; no OPL active truth / source / contract semantics changed. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. These README files remain legitimate support indexes for domain pack maintainers.
+
+Unreviewed docs:
+
+- `opl-meta-agent`: none for current repo-root `README*`, `docs/**/*.md`, or tracked `agent/*/README.md` support indexes once this tranche is counted.
+- Agent pack non-README semantic files were used as machine truth refs for file-list and boundary checks; they remain pack body files, not separate docs-governance targets in this tranche.
+- App full paragraph-level semantic governance remains open while dirty release/testing lanes are outside this goal's ownership.
+
+Remaining stale / retire candidates:
+
+- OMA doc-path retirement remains empty for the currently reviewed root README/docs and agent-pack README surface.
+- OMA evidence/hygiene tails remain: App live render/runtime drilldown evidence, repeat long-soak, real target patch-loop owner receipts or typed blockers, standard target-agent handoff convergence, and script-to-pack / OPL primitive hygiene.
+- Future OMA prose that treats README support indexes, generated-surface proof, registry readiness, App projection readiness, suite pass, schema completeness, OPL refs-only consumption, work-order shape, script materializer presence or source-shape conformance as target domain ready, quality verdict, App live rendering, owner receipt, artifact readiness, production ready or default promotion is stale pollution.
+
+Worktree / branch cleanup:
+
+- No external stale worktree/branch qualified for cleanup before this tranche. OPL/MAS/App active lanes remained dirty, recent, unrelated, or externally owned; RCA CI lane remained an external branch and was not safe to absorb or delete.
+- This tranche's OMA and OPL worktrees should be removed after fast-forward absorb.
+
+Verification before absorb:
+
+- OMA support README worktree: per-directory README file-list sanity `missing=0` and `extra=0`; `contracts/pack_compiler_input.json` required paths matched tracked non-README `agent/**/*.md`; all edited support README / ledger files had owner/purpose/state/machine-boundary; `git diff --check`; strict README/docs/agent conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- OPL ledger worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- Six-repo doctor sweep should remain clean before closeout.
+- No source/runtime tests are required because this tranche changes only narrative support READMEs and coverage ledgers.
+
+Next tranche write scope:
+
+- If App remains dirty, continue only with newly reopened OPL/MAS/MAG/RCA/OMA/App ledger or support README accounting items that do not touch externally dirty files.
+- When the dirty App release/testing lane is safe or explicitly assigned, perform App paragraph-level body governance as recorded in the App repo-local ledger.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
