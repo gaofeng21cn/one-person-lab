@@ -4136,7 +4136,7 @@ Next tranche write scope:
 
 Date: `2026-05-26 16:21 CST`
 Tranche: `mag-20260410-final-package-artifact-bundle-failclosed-history-specs-coverage`
-State: `tranche_verified_pending_absorb`
+State: `tranche_verified_absorbed`
 
 本轮覆盖 MAG `docs/history/specs/` 下 2026-04-10 final-package artifact-bundle fail-closed family：14 个 artifact-bundle value/shape hardening specs 加 1 个 malformed artifact bundle spec。目标是确认这些 direct-file 历史入口不会把旧 `build-final-package` fail-closed hardening、artifact bundle value-type proof、local runtime wording 或 package export proof 误读成当前 active implementation queue、public CLI shape、generic OPL artifact owner、submission-ready/export-ready verdict、App release ready、production ready、actual hosted runtime 或 compatibility interface。
 
@@ -4183,7 +4183,10 @@ Remaining stale / retire candidates:
 
 Verification / absorb:
 
-- Pending this tranche closeout: MAG and OPL docs-only verification, focused package fail-closed tests, fast-forward absorb into both `main` checkouts, worktree cleanup, then final lightweight status check.
+- MAG commit `2cbc052 docs: record final package artifact history coverage` is on MAG `main`; OPL commit `3e6f813a docs: record MAG artifact bundle history coverage` is on OPL `main`.
+- MAG focused package tests passed before absorb: `tests/test_final_package.py` and `tests/test_hosted_contract_bundle.py` returned 35 pytest cases plus 186 subtests.
+- MAG and OPL docs verification passed before absorb: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor active-truth shape.
+- The tranche worktree was no longer present during final cleanup audit; no remaining OPL worktree or branch for this tranche was listed by `git worktree list --porcelain` / merged branch scan.
 
 Next tranche write scope:
 
