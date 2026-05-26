@@ -5575,6 +5575,70 @@ Next tranche write scope:
 - Continue MAS exact uncovered history inventory, preferably a bounded `docs/history/**` index/provenance group.
 - Keep App docs delayed until active release / GUI lanes are safe or explicitly assigned.
 
+Date: `2026-05-27 00:48 CST`
+Tranche: `series-safety-preflight-and-next-scope-ledger`
+State: `tranche_verified`
+
+本轮覆盖 OPL series 6 仓的安全 preflight、doctor active-truth shape、worktree / branch ownership 边界和下一轮可写范围，不改写 MAS/App 外部脏文件，不吸收或清理无法确认本自动化所有权的 worktree。本轮不关闭全局 `/goal`，也不表示 6 仓 `README*` 与 `docs/**/*.md` 已逐段全覆盖。
+
+Fresh live truth inputs:
+
+- OPL Doc Governance skill: `/Users/gaofeng/workspace/opl-doc-governance/skills/opl-doc-governance/SKILL.md`.
+- `/goal` state: active long-horizon OPL Doc Governance objective for 6 repos; this tranche is a checkpoint, not global completion.
+- 6 仓 `git status --short --branch`, `git worktree list --porcelain`, branch recency, dirty-file paths, and doctor preflight from `/Users/gaofeng/workspace/opl-doc-governance/scripts/opl_doc_doctor.py`.
+- Subagent read-only audits for OPL/OMA, MAS/App, and MAG/RCA; all reported no file edits, no commits, no worktree cleanup.
+
+Fresh semantic result:
+
+- Doctor preflight shows all six active truth owners have current completion progress, current-state-vs-ideal gaps, and ready next-round Agent prompt shape: OPL `docs/active/current-state-vs-ideal-gap.md`; MAS `docs/active/mas-ideal-state-gap-plan.md`; MAG `docs/active/mag-ideal-state-cross-repo-gap-plan.md`; RCA `docs/active/rca-ideal-state-gap-plan.md`; OMA `docs/active/opl-meta-agent-ideal-state-gap-plan.md`; App `docs/active/app-ideal-state-gap-plan.md`.
+- No stale worktree was safe to auto-absorb or delete. OPL, MAS, and App side worktrees are older than one hour but carry uncommitted source / docs / test / release changes or branch ancestry that cannot be attributed to this automation. They remain external active or uncertain lanes.
+- MAS main and App main have unrelated dirty files. MAS dirty scope includes `docs/decisions.md`, owner-route / dispatch / workspace-init source and tests, plus new owner-route reconcile files. App dirty scope includes `README.md`, `docs/status.md`, `docs/testing/README.md`, `scripts/README.md`, `package.json`, and release-boundary tests. These paths are protected from this tranche.
+- MAG and RCA currently have clean main checkouts for docs governance purposes, but the read-only audit found no urgent semantic drift that justified editing source/contracts/tests; future write work should stay ledger / active-plan scoped unless fresh machine evidence proves drift.
+- OMA repo-root `README*` and `docs/**/*.md` remain covered by the earlier full OMA tranche unless docs changed later; follow-up risk is mainly script-to-pack hygiene and OPL-generated default-caller consumption tail, not a missing active-truth owner.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | Skill, `AGENTS.md`, `TASTE.md`, `README.md`, `docs/README.md`, core five docs, `docs/docs_portfolio_consolidation.md`, active truth owner, ideal-state reference, main active support docs, doctor preflight, worktree / branch status. | `docs/active/development-document-portfolio.md` |
+| `med-autoscience` | `AGENTS.md`, `TASTE.md`, root READMEs, core five docs, `docs/docs_portfolio_consolidation.md`, active truth owner, ideal-state reference, current-development support, doctor preflight, dirty scope and worktree status. | none |
+| `med-autogrant` | `AGENTS.md`, `TASTE.md`, root READMEs, core five docs, active truth owner, ideal-state reference, portfolio owner, private implementation inventory, machine evidence entry list, doctor preflight. | none |
+| `redcube-ai` | `AGENTS.md`, `TASTE.md`, root READMEs, core five docs, active truth owner, ideal-state reference, portfolio owner, private implementation inventory, machine evidence entry list, doctor preflight. | none |
+| `opl-meta-agent` | `AGENTS.md`, `TASTE.md`, root READMEs, core docs, active truth owner, ideal-state reference, private implementation inventory, doctor preflight, agent pack README pattern scan. | none |
+| `one-person-lab-app` | `AGENTS.md`, `TASTE.md`, root READMEs, core docs, active truth owner, release/testing/scripts README risk scan, doctor preflight, dirty scope and worktree status. | none |
+
+Archived / tombstoned / deleted docs:
+
+- none. This tranche is a safety and coverage-ledger checkpoint.
+
+Unreviewed docs:
+
+- `one-person-lab`: subagent marked remaining reference/history/support docs as not newly governed in this checkpoint, especially `docs/references/runtime-substrate/**` and `docs/history/**`, despite earlier exact inventory coverage claims. Future OPL-only tranche should reconcile exact inventory state with support/history body coverage.
+- `med-autoscience`: repo-wide full paragraph coverage remains open mainly in `docs/history/**`, selected history indexes, `docs/history/capabilities/medical-display/**`, and any docs changed after the latest MAS coverage entries.
+- `med-autogrant`: current recorded scope remains closed unless new docs or source/contract changes reopen a section; remaining watch items are historical specs / active-support dated specs and `agent/README.md`, `contracts/README.md`, `runtime/README.md` if included in governance scope.
+- `redcube-ai`: current tracked repo-root `README*` + `docs/**/*.md` inventory was previously reconciled, but read-only audit still flags body-level history/support risk in `docs/history/phase-2/**`, `docs/history/hermes/**`, delivery/product/runtime/source/support references, and product-entry references.
+- `opl-meta-agent`: repo-root `README*` and `docs/**/*.md` remain covered; `agent/knowledge`, `agent/prompts`, `agent/stages`, `agent/skills`, and `agent/quality_gates` were pattern-scanned but not treated as full docs-taxonomy coverage.
+- `one-person-lab-app`: full App docs coverage remains open. Do not write App docs until dirty release / GUI lanes are safe or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- App docs are the highest-priority blocked scope: `docs/active/app-ideal-state-gap-plan.md`, `docs/release/README.md`, release/testing/scripts README surfaces, and possible missing `docs/decisions.md` need governance after external dirty lanes settle.
+- MAS history-heavy uncovered inventory remains the next safe MAS body-coverage target once current source/docs dirty work is owned or folded.
+- OPL active support docs that overlap `docs/active/current-state-vs-ideal-gap.md` should be checked for duplicate current-state ownership before adding more active prose.
+- RCA delivery/product/runtime/source/reference support docs and Hermes / phase-2 history bodies should keep lifecycle boundaries from being read as current runtime or production readiness.
+- MAG dated specs/history tails should continue to route current truth back to active specs index, lifecycle map, contracts and current-program evidence.
+
+Verification before absorb:
+
+- OPL ledger worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings; final `git status --short --branch`.
+- No repo-native source/runtime tests required because this tranche only edits the OPL coverage ledger and does not change machine-readable contracts, source, CLI/API, schema, generated artifacts or runtime semantics.
+
+Next tranche write scope:
+
+- If App dirty lanes are resolved or explicitly assigned, start with App `docs/active/app-ideal-state-gap-plan.md` plus release evidence docs, and protect all unrelated release / GUI changes.
+- Otherwise continue MAS bounded `docs/history/**` index/provenance body coverage, or run an RCA support/history body tranche while RCA stays clean.
+- Do not clean older worktrees unless they become clean, attributed to this automation, and safely merged or explicitly abandoned.
+
 ## 验证
 
 Docs-only 整理：
