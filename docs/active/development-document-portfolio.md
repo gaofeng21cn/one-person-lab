@@ -4666,6 +4666,67 @@ Next tranche write scope:
 - Continue OPL uncovered support docs or MAS remaining repo-wide docs while RCA/App main checkouts still carry external dirty implementation/release lanes.
 - Good OPL next clusters are root `README*` / contracts README coverage, active support docs (`opl-family-development-reference.md`, `production-framework-closure-gap-matrix.md`), current-support references, or history/gateway-federation tombstone bodies.
 
+Date: `2026-05-26 19:41 CST`
+Tranche: `opl-current-support-docs-coverage`
+State: `tranche_verified`
+
+本轮覆盖 OPL `docs/references/current-support/**` 当前支撑参考文档。目标是确认安装、GUI/WebUI、发布包、skills、quality details 和 test lane 治理参考仍是 support reference，且行为真相由 CLI/source/contracts/scripts/tests/App release owner 持有。本轮不关闭全局 `/goal`，也不表示 OPL root `README*`、contracts README、active support docs 或 history bodies 已逐段覆盖。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`, `TASTE.md`, `docs/docs_portfolio_consolidation.md`, `docs/active/current-state-vs-ideal-gap.md`, and `docs/references/runtime-substrate/opl-family-agent-ideal-state.md`.
+- Current-support docs: `docs/references/current-support/README.md`, `docs/references/current-support/opl-default-skill-ecosystem.md`, `docs/references/current-support/opl-docker-webui-deployment.md`, `docs/references/current-support/opl-fresh-install-and-gui-first-launch-testing.md`, `docs/references/current-support/opl-gui-shell-adapter-boundary.md`, `docs/references/current-support/opl-quality-details.md`, `docs/references/current-support/opl-release-packages-modular-distribution.md`, and `docs/references/current-support/opl-test-lane-governance.md`.
+- Machine/support surfaces: `package.json`, `scripts/test-lanes.mjs`, `scripts/verify.sh`, `scripts/run-with-repo-temp-env.sh`, `scripts/run-structural-quality-gate.sh`, `.github/actions/quality-details/action.yml`, `.github/workflows/packages.yml`, `.github/workflows/verify.yml`, `.github/workflows/sentrux-advisory.yml`, `contracts/opl-framework/fresh-install-test-matrix.json`, `contracts/README.md`, `contracts/family-orchestration/README.md`, `src/install-companions.ts`, `src/install-companions/gui-shell.ts`, `src/opl-release.ts`, `src/system-installation/initialize.ts`, `src/system-installation/first-run-contract.ts`, `src/system-installation/turnkey.ts`, `src/aionui-acp-shell.ts`, `src/cli/cases/public-command-specs.ts`, `src/cli/cases/private-command-specs.ts`, and related verification tests surfaced by `rg`.
+- Fresh read-only commands: `opl packages manifest --json`, `opl quality details --root . --format json --limit 3`, `opl skill companion status --superpowers lite`, `opl system initialize --json`, `node scripts/test-lanes.mjs list`, and `node scripts/test-lanes.mjs assert-coverage`.
+
+Fresh semantic result:
+
+- All eight current-support docs already carry owner, purpose, state and machine-boundary signals. No support-reference body needed stale wording correction this tranche.
+- `README.md` correctly scopes current-support docs as operator references, not runtime topology owners.
+- `opl-default-skill-ecosystem.md` remains aligned with live `skill companion` / `skill sync` surfaces: `opl skill companion status --superpowers lite` returned `surface_id=opl_companion_skill_sync`, `mode=observe`, `superpowers_profile=lite`, and `item_count=8`; observe mode does not mutate user state.
+- `opl-docker-webui-deployment.md` and `opl-gui-shell-adapter-boundary.md` remain aligned with App/shell owner split: `one-person-lab-app` owns App/WebUI release and `opl-aion-shell` / `shells/aionui` shell implementation, while OPL owns CLI/runtime/contracts/projection surfaces.
+- `opl-fresh-install-and-gui-first-launch-testing.md` remains aligned with `contracts/opl-framework/fresh-install-test-matrix.json`, `npm run test:fresh-install`, `fresh-install:smoke`, and App-owned VM proof. OPL main holds CLI clean-room truth; release App VM proof remains in `one-person-lab-app`.
+- `opl-quality-details.md` remains aligned with the live `opl quality details` sidecar and Sentrux boundary: fresh JSON returned `surface_kind=opl_code_quality_details.v1` and 3 `agent_triage_targets`; Sentrux remains structural gate/advisory owner, while OPL emits deterministic triage details.
+- `opl-release-packages-modular-distribution.md` remains aligned with current Packages status: fresh `opl packages manifest --json` returned `manifest_version=1`, `opl_version=26.4.27`, `module_install_update_source=git_checkout`, `package_consumption_status=packages_defined_not_consumed_by_install_update`, `package_count=4`, and `release_automation_status=prepared_not_consumed_by_module_install_update`. Packages are defined but not the active module install/update source.
+- `opl-test-lane-governance.md` remains aligned with `package.json`, `scripts/test-lanes.mjs` and `scripts/verify.sh`: `node scripts/test-lanes.mjs assert-coverage` returned all 194 active test files assigned to a lane. `npm test` still maps to `test:fast`; `test:meta`, `test:read-model-gates`, `fresh-install`, `native`, `structure` and `full` remain separate lanes.
+- `opl system initialize --json` returned the `system_initialize` envelope with `setup_flow`, `gui_shell`, `first_run_log`, `gui_first_run_automation`, `recommended_skills`, `online_management`, `readiness`, and domain module surfaces, matching the fresh-install / GUI automation support docs.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | Full paragraph read of all 8 `docs/references/current-support/*.md` files; support read of OPL active docs, ideal-state reference, package scripts, test-lane registry, verify runner, fresh-install contract, Packages manifest surfaces, skill companion surfaces, quality details surfaces, GUI/App shell owner surfaces, workflows and related tests. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The current-support docs remain support references; the tranche only recorded coverage and supporting live evidence.
+
+Unreviewed docs:
+
+- `one-person-lab`: current inventory remains 175 `README*` / `docs/**/*.md` / contracts README files. Before this ledger entry, 72 paths were not exact substrings in this coverage ledger; after this current-support coverage, remaining open clusters are OPL root `README*`, `contracts/opl-framework/README.zh-CN.md`, active support docs such as `docs/active/opl-family-development-reference.md` and `docs/active/production-framework-closure-gap-matrix.md`, most `docs/history/**` compatibility/process bodies, and `docs/references/operating-governance/family-domain-quality-projection-contract.md`.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks.
+- `med-autogrant`: current 120-file recorded scope was closed by the MAG final inventory reconcile unless new docs or later source/contract changes reopen a section.
+- `redcube-ai`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused RCA chunks; current main checkout still carries external dirty implementation/test files.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App dirty lanes are closed or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Any future current-support wording that turns `one-person-lab-app`, `opl-aion-shell`, WebUI Docker, Full DMG, App user-path evidence, `opl system initialize`, package manifest, quality details, Sentrux advisory, or test lane prose into OPL runtime/domain truth, release-ready verdict, production-ready verdict, or domain owner authority is stale pollution.
+- Any future Packages wording that claims `opl module install/update` already consumes GHCR/Packages as the current source before code/read-model support lands is stale pollution; current source remains `git_checkout`.
+- Any future GUI/WebUI wording that makes `opl-aion-shell` or App shell an OPL runtime owner, or revives headless Product API as user WebUI entry, is stale pollution.
+- Any future test-lane wording that makes prose the lane registry, skips `scripts/test-lanes.mjs assert-coverage`, or treats GUI/App VM proof as OPL main fast/integration lane is stale pollution.
+
+Verification before absorb:
+
+- OPL docs verification passed in the tranche worktree: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- OPL current-support read-only support commands above were rerun fresh in the tranche worktree; no behavior-changing source/contract edit was made.
+
+Next tranche write scope:
+
+- Continue OPL uncovered root/contract README or active-support docs only if existing external worktrees are safe to absorb/avoid; otherwise pick MAS remaining repo-wide docs.
+- Good OPL next clusters after current-support are `contracts/opl-framework/README.zh-CN.md`, `docs/active/opl-family-development-reference.md`, `docs/active/production-framework-closure-gap-matrix.md`, or history/gateway-federation tombstone bodies.
+
 ## 验证
 
 Docs-only 整理：
