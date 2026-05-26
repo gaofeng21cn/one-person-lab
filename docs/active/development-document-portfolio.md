@@ -5885,6 +5885,69 @@ Next tranche write scope:
 - Start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
 - Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
 
+Date: `2026-05-27 03:24 CST`
+Tranche: `mas-history-runtime-no-resurrection-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAS `docs/history/runtime/**` 历史/provenance cluster，并把结果回写到 MAS 本地 coverage ledger 与本 OPL family ledger。目标是把旧 `Domain Gateway` / `Domain Harness OS`、`MAS Runtime OS`、MedDeepScientist authoritative runtime、Hermes active adapter、workspace-local scheduler、MAS private console / Live Console、outer-loop supervision 与 private implementation inventory 统一读回历史语境，避免 dated “当前”“默认”“正式”“active inventory” 被误读成今天的 default runtime owner、active adapter、runnable CLI surface、physical delete authorization 或 production readiness。本轮不关闭全局 `/goal`，也不表示 MAS repo-wide README/docs 覆盖完成。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`, `TASTE.md`, `docs/status.md`, `docs/architecture.md`, `docs/runtime/README.md`, `docs/runtime/contracts/runtime_boundary.md`, `docs/runtime/control/study_runtime_control_surface.md`, `docs/active/mas-ideal-state-gap-plan.md`, `docs/docs_portfolio_consolidation.md`, `contracts/functional_privatization_audit.json`, `contracts/production_acceptance/mas-production-acceptance.json`, and MAS local docs-governance ledger.
+- MAS target docs: all 14 Markdown files under `docs/history/runtime/`.
+- Six-repo worktree / branch preflight and doctor preflight from `/Users/gaofeng/workspace/opl-doc-governance/scripts/opl_doc_doctor.py`.
+
+Fresh semantic result:
+
+- Current MAS runtime truth remains OPL/Temporal hosted runtime + MAS domain authority refs, owner receipts, typed blockers and minimal authority functions. OPL owns stage attempt, queue, wakeup, retry/dead-letter, attempt ledger, worker residency, provider transport, generic lifecycle/index and App/workbench shell; MAS owns study truth, publication quality, AI reviewer / auditor verdict, artifact authority, publication-route memory decision, owner receipts, typed blockers and domain transition semantics.
+- `docs/history/runtime/README.md` now owns the complete runtime history index and maps every file in the cluster to its current owner surface. It no longer names `MedAutoScience Runtime OS` as the index owner.
+- `historical_framework_positioning.md` now opens with a historical read rule. Its `Domain Gateway` / `Domain Harness OS` and `MAS Runtime OS` prose is preserved as positioning provenance, not current public positioning or default runtime topology.
+- `legacy_runtime_boundary.md` now marks its `med-deepscientist` authoritative runtime and `runtime_transport` dependency rules as early adapter-boundary history. They cannot be reused as today's MAS runtime owner, production dependency, active adapter or compatibility argument.
+- `legacy_active_path_tombstones.md`, `runtime_core_convergence_and_controlled_cutover_implementation_plan.md`, `runtime_event_and_outer_loop_input_implementation_plan.md`, and `workspace_knowledge_and_literature_implementation_plan.md` now point current runtime owner language back to OPL/Temporal hosted runtime plus MAS authority refs. Hermes gateway cron is no longer described as a current active adapter.
+- `opl-private-implementation-migration-inventory.md` and `opl_private_implementation_migration_inventory.md` now read as runtime-history snapshots. Current functional/private-surface truth stays in machine-readable contracts and the active MAS gap plan; their old active inventory wording is not an execution queue.
+- `runtime_supervision_loop.md`, `outer_loop_wakeup_and_decision_loop.md`, `opl_unique_control_plane_boundary_contract.md`, `live_console_ui_contract.md`, and `mas_live_console_mds_webui_parity_plan.md` already carried adequate tombstone / OPL-owner / Progress Portal boundaries after full paragraph read; no body edit was needed.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full paragraph read of all 14 `docs/history/runtime/*.md` files, with supporting current-boundary read of MAS active truth, runtime current docs, docs portfolio governance, functional privatization audit and production acceptance contract. | `docs/history/runtime/README.md`; `docs/history/runtime/historical_framework_positioning.md`; `docs/history/runtime/legacy_active_path_tombstones.md`; `docs/history/runtime/legacy_runtime_boundary.md`; `docs/history/runtime/opl-private-implementation-migration-inventory.md`; `docs/history/runtime/opl_private_implementation_migration_inventory.md`; `docs/history/runtime/runtime_core_convergence_and_controlled_cutover_implementation_plan.md`; `docs/history/runtime/runtime_event_and_outer_loop_input_implementation_plan.md`; `docs/history/runtime/workspace_knowledge_and_literature_implementation_plan.md`; `docs/history/docs-portfolio-coverage-ledger/2026-05-27-part-5.md` |
+| `one-person-lab` | OPL family coverage ledger foldback for this MAS history tranche; no OPL active truth / source / contract semantics changed. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. Runtime history materials stay in `docs/history/runtime/**` as historical provenance and no-resurrection guard material.
+
+Unreviewed docs:
+
+- `med-autoscience`: `docs/history/runtime/**` exact cluster is now covered. MAS repo-wide full paragraph coverage remains open for other history-heavy groups: `docs/history/program`, `docs/history/superpowers/**`, `docs/history/capabilities/medical-display/**`, and remaining history directory indexes.
+- `one-person-lab`: no new OPL body docs were governed in this tranche; previous exact coverage claims remain as recorded.
+- `med-autogrant`, `redcube-ai`, `opl-meta-agent`: no new docs governed in this tranche; previous coverage state remains unchanged.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active release / GUI lanes are safe or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- MAS: any future prose that treats `Domain Gateway`, `Domain Harness OS`, `MAS Runtime OS`, MedDeepScientist authoritative runtime, Hermes active adapter, workspace-local scheduler, MAS private Live Console, `runtime_transport` / `runtime_protocol` as production default runtime owner, runnable CLI truth, active adapter, generic framework owner or physical-delete authorization is stale pollution.
+- MAS: future private-surface inventory prose must start from live `contracts/functional_privatization_audit.json`, production acceptance contract and active gap plan. Runtime-history inventory snapshots cannot be used to reopen closed functional / structural gaps or to claim production evidence tail is complete.
+- App: release / GUI docs remain blocked by unrelated dirty work in main and external worktrees.
+
+Worktree / branch cleanup:
+
+- No external stale worktree/branch qualified for cleanup before this tranche. OPL/MAS/App external worktrees remain dirty, recently written, not safely attributable to this automation, detached probes, or outside the current tranche.
+- This tranche's MAS and OPL worktrees should be removed after fast-forward absorb.
+
+Verification before absorb:
+
+- MAS runtime history worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- OPL ledger worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- No source/runtime tests are required because this tranche changes only narrative docs and coverage ledgers.
+
+Next tranche write scope:
+
+- Continue MAS bounded history inventory, preferably `docs/history/program`, `docs/history/superpowers/**`, or `docs/history/capabilities/medical-display/**`.
+- Start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
+
 ## 验证
 
 Docs-only 整理：
