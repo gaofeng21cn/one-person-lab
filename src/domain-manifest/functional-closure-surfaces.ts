@@ -25,6 +25,9 @@ export function normalizeFunctionalClosureSurfaces(manifest: JsonRecord) {
     controlled_stage_attempt_projection: isRecord(manifest.controlled_stage_attempt_projection)
       ? manifest.controlled_stage_attempt_projection
       : null,
+    operator_evidence_readiness_projection: isRecord(manifest.operator_evidence_readiness_projection)
+      ? manifest.operator_evidence_readiness_projection
+      : null,
     controlled_soak_no_regression_attempt: isRecord(manifest.controlled_soak_no_regression_attempt)
       ? manifest.controlled_soak_no_regression_attempt
       : null,

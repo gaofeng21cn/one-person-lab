@@ -32,6 +32,7 @@ type AppOperatorDrilldownSummaryInput = {
   lifecycleRefs: JsonRecord;
   functionalSummary: JsonRecord;
   evidenceRequests: JsonRecord;
+  domainOwnerPayloadSummaryRefs: JsonRecord;
   productionEvidenceTailLedger: JsonRecord;
   legacyCleanupPlans: JsonRecord;
   oplMetaAgentRegistry: JsonRecord;
@@ -81,6 +82,7 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
   const executionBridgeSummary = record(input.executionBridge.summary);
   const lifecycleSummary = record(input.lifecycleRefs.summary);
   const evidenceRequestSummary = record(input.evidenceRequests.summary);
+  const domainOwnerPayloadSummary = record(input.domainOwnerPayloadSummaryRefs.summary);
   const productionTailSummary = record(input.productionEvidenceTailLedger.summary);
   const legacyCleanupSummary = record(input.legacyCleanupPlans.summary);
   const oplMetaAgentSummary = record(input.oplMetaAgentRegistry.summary);
@@ -359,6 +361,21 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     domain_opl_replacement_expectation_count: evidenceRequestSummary.opl_replacement_expectation_count,
     domain_replacement_surface_available_count: evidenceRequestSummary.replacement_surface_available_count,
     domain_remaining_bridge_module_count: evidenceRequestSummary.remaining_bridge_module_count,
+    domain_owner_payload_summary_domain_count: domainOwnerPayloadSummary.domain_count,
+    domain_owner_payload_summary_owner_payload_item_summary_count:
+      domainOwnerPayloadSummary.owner_payload_item_summary_count,
+    domain_owner_payload_summary_work_item_count:
+      domainOwnerPayloadSummary.owner_payload_work_item_count,
+    domain_owner_payload_summary_stage_expected_receipt_summary_count:
+      domainOwnerPayloadSummary.stage_expected_receipt_payload_summary_count,
+    domain_owner_payload_summary_stage_count:
+      domainOwnerPayloadSummary.stage_expected_receipt_payload_stage_count,
+    domain_owner_payload_summary_payload_body_allowed_count:
+      domainOwnerPayloadSummary.payload_body_allowed_count,
+    domain_owner_payload_summary_domain_ready_claim_count:
+      domainOwnerPayloadSummary.domain_ready_claim_count,
+    domain_owner_payload_summary_production_ready_claim_count:
+      domainOwnerPayloadSummary.production_ready_claim_count,
     app_operator_production_evidence_tail_item_count: productionEvidenceTailItemCount,
     app_operator_production_evidence_tail_open_item_count: productionEvidenceTailOpenItemCount,
     app_operator_production_evidence_tail_owner_group_count: productionEvidenceTailOwnerGroupCount,
