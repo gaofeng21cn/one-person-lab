@@ -1,5 +1,10 @@
 # OPL Framework 合同
 
+Owner: `One Person Lab`
+Purpose: `opl_framework_contract_support_index`
+State: `active_support`
+Machine boundary: 本文是 OPL Framework contracts 的人读支撑索引。机器 truth 继续归 JSON contract files、source、tests、CLI/read-model、runtime ledger 和 provider/domain receipts。
+
 这个目录保留 `OPL Framework` 当前活跃的 framework、runtime 与 family control-plane 合同语料。`One Person Lab App` 和 Foundry Agents 可以消费这些合同，但不在本目录定义自己的第二套运行时真相。
 
 它继续被仓库跟踪，是因为当前 framework 需要稳定的机器可读输入：
@@ -45,6 +50,10 @@
 - `workstreams.json`
 - `domains.json`
 - `stage-selection-vocabulary.json`
+- `agent-lab-contract.json`
+- `agent-lab-mag-live-acceptance-suite.json`
+- `agent-platform-surface-ownership-contract.json`
+- `codex-default-profile.json`
 - `family-executor-adapter-defaults.json`
 - `managed-runtime-three-layer-contract.json`
 - `runtime-manager-contract.json`
@@ -52,11 +61,16 @@
 - `family-runtime-attempt-contract.json`
 - `stage-route-scheduler-contract.json`
 - `family-transition-runner-contract.json`
+- `family-domain-quality-projection-contract.json`
+- `family-incident-learning-loop.json`
+- `family-product-operator-projection.json`
 - `functional-agent-runtime-harness-contract.json`
 - `domain-pack-compiler-contract.json`
 - `generic-substrate-projection-contract.json`
 - `standard-domain-agent-skeleton-contract.json`
 - `functional-privatization-audit-envelope-contract.json`
+- `fresh-install-test-matrix.json`
+- `native-helper-contract.json`
 - `surface-budget-policy.json`
 - `public-surface-index.json`
 - `task-topology.json`

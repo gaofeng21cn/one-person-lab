@@ -2,6 +2,11 @@
 
 # Family Orchestration Contracts
 
+Owner: `One Person Lab`
+Purpose: `family_orchestration_contract_support_index`
+State: `active_support`
+Machine boundary: 本文是 family orchestration schemas 的人读支撑索引。机器 truth 继续归 schema 文件、source、tests、CLI/read-model、runtime ledger 和 domain-owned receipts。
+
 这个目录冻结的是当前 active 四仓线（`one-person-lab`、`med-autoscience`、`med-autogrant`、`redcube-ai`）共享的 family-level orchestration machine-readable companion schemas。
 
 这里吸收的是 `CrewAI` 一类编排框架里最值得复用的思想，但吸收方式是 contract-first，而不是把 `CrewAI` 直接引入为 family runtime dependency，也不是改写现有 owner split：

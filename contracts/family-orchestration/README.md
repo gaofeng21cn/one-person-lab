@@ -2,6 +2,11 @@
 
 # Family Orchestration Contracts
 
+Owner: `One Person Lab`
+Purpose: `family_orchestration_contract_support_index`
+State: `active_support`
+Machine boundary: This document is a human-readable support index for family orchestration schemas. Machine truth remains in schema files, source, tests, CLI/read-model output, runtime ledgers, and domain-owned receipts.
+
 This directory freezes the machine-readable companion schemas for the family-level orchestration surfaces shared across the current active four-repository line: `one-person-lab`, `med-autoscience`, `med-autogrant`, and `redcube-ai`.
 
 These contracts absorb useful orchestration ideas from tools such as `CrewAI` in a contract-first way, but they do not make `CrewAI` a required runtime dependency and they do not replace the existing ownership split:

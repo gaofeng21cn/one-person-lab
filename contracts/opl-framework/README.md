@@ -1,5 +1,10 @@
 # OPL Framework Contracts
 
+Owner: `One Person Lab`
+Purpose: `opl_framework_contract_support_index`
+State: `active_support`
+Machine boundary: This document is a human-readable support index for OPL Framework contracts. Machine truth remains in JSON contract files, source, tests, CLI/read-model output, runtime ledgers, and provider/domain receipts.
+
 This directory preserves the active `OPL Framework` runtime and family control-plane contract corpus. `One Person Lab App` and Foundry Agents may consume these contracts, but this directory does not define a second runtime truth for the App or any domain agent.
 
 It is repo-tracked because the current framework needs stable machine-readable inputs for:
@@ -47,6 +52,10 @@ Read the linked domain repositories when you need the current repo-owned capabil
 - `workstreams.json`
 - `domains.json`
 - `stage-selection-vocabulary.json`
+- `agent-lab-contract.json`
+- `agent-lab-mag-live-acceptance-suite.json`
+- `agent-platform-surface-ownership-contract.json`
+- `codex-default-profile.json`
 - `family-executor-adapter-defaults.json`
 - `managed-runtime-three-layer-contract.json`
 - `runtime-manager-contract.json`
@@ -54,13 +63,16 @@ Read the linked domain repositories when you need the current repo-owned capabil
 - `family-runtime-attempt-contract.json`
 - `stage-route-scheduler-contract.json`
 - `family-transition-runner-contract.json`
+- `family-domain-quality-projection-contract.json`
+- `family-incident-learning-loop.json`
+- `family-product-operator-projection.json`
 - `functional-agent-runtime-harness-contract.json`
-- `agent-lab-mag-live-acceptance-suite.json`
 - `domain-pack-compiler-contract.json`
 - `generic-substrate-projection-contract.json`
 - `standard-domain-agent-skeleton-contract.json`
 - `functional-privatization-audit-envelope-contract.json`
 - `fresh-install-test-matrix.json`
+- `native-helper-contract.json`
 - `surface-budget-policy.json`
 - `public-surface-index.json`
 - `task-topology.json`

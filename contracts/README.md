@@ -1,5 +1,10 @@
 # 合同目录说明
 
+Owner: `One Person Lab`
+Purpose: `contract_surface_support_index`
+State: `active_support`
+Machine boundary: 本文是人读合同目录说明和边界索引。机器 truth 继续归 contracts 下的 JSON / schema 文件、source、tests、CLI/read-model、runtime ledger 和 provider/domain receipts。
+
 这个目录只保留 `OPL` 的 machine-readable contract surface 与其目录说明。
 
 - narrative 协作规则看仓库根 `AGENTS.md`

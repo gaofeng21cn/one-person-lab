@@ -6573,6 +6573,65 @@ Next tranche write scope:
 - When the dirty App release/testing lane is safe or explicitly assigned, perform App paragraph-level body governance as recorded in the App repo-local ledger.
 - Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
 
+Date: `2026-05-27 06:04 CST`
+Tranche: `opl-contracts-readme-lifecycle`
+State: `tranche_verified`
+
+本轮覆盖 OPL tracked contracts support READMEs：`contracts/README.md`、`contracts/family-orchestration/README.md`、`contracts/family-orchestration/README.zh-CN.md`、`contracts/opl-framework/README.md` 和 `contracts/opl-framework/README.zh-CN.md`。这些文件在 OPL repo-root `README*` + `docs/**/*.md` exact scope 外，但属于长期人读合同支撑入口。本轮补齐 owner / purpose / state / machine boundary，并把 OPL framework README 的 tracked JSON contract inventory 同步到当前 `contracts/opl-framework/*.json`。本轮不改 JSON/schema/source/test，不新增 readiness claim，不关闭 OPL series 全局 `/goal`。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`, `TASTE.md`, `docs/docs_portfolio_consolidation.md`, this OPL family ledger, and the five contracts support README files listed above.
+- Machine refs: current tracked `contracts/opl-framework/*.json`, `contracts/family-orchestration/*.schema.json`, and existing OPL docs governance rules that `contracts/` only holds machine-readable contract surface.
+- Worktree safety read: OPL main was clean; unrelated OPL worktrees were dirty/recent and did not qualify for cleanup or absorption; App and MAS dirty/recent lanes remained outside this tranche.
+
+Fresh semantic result:
+
+- The five contracts support README files had legitimate support-index roles but lacked explicit lifecycle four-signal metadata.
+- `contracts/family-orchestration/README*.md` already listed all tracked `contracts/family-orchestration/*.schema.json` files.
+- `contracts/opl-framework/README*.md` File Inventory was missing current tracked JSON contracts: `agent-lab-contract.json`, `agent-platform-surface-ownership-contract.json`, `codex-default-profile.json`, `family-domain-quality-projection-contract.json`, `family-incident-learning-loop.json`, `family-product-operator-projection.json`, and `native-helper-contract.json`; the English README already listed `agent-lab-mag-live-acceptance-suite.json` and `fresh-install-test-matrix.json`, while the Chinese README needed `fresh-install-test-matrix.json` as well. The updated inventories now match tracked OPL framework JSON contracts.
+- Machine truth remains in JSON/schema files, source, tests, CLI/read-model output, runtime ledgers and provider/domain receipts; README files remain human support indexes only.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | `contracts/README.md`, `contracts/family-orchestration/README.md`, `contracts/family-orchestration/README.zh-CN.md`, `contracts/opl-framework/README.md`, `contracts/opl-framework/README.zh-CN.md`; support read of tracked OPL framework JSON and family orchestration schema inventories. | The five contracts support README files; `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. These README files remain legitimate support indexes for machine-readable contract directories.
+
+Unreviewed docs:
+
+- OPL scoped exact inventory over repo-root `README*` plus `docs/**/*.md` remains previously reconciled. This tranche additionally covers tracked contracts support READMEs but does not expand the established exact-accounting scope to every nested/package/support README in all repos.
+- App full paragraph-level semantic governance remains open while dirty release/testing lanes are outside this goal's ownership.
+
+Remaining stale / retire candidates:
+
+- Future OPL contracts support README files should carry owner/purpose/state/machine-boundary or be recorded as support README context in this ledger.
+- Any future contracts README prose that treats human support indexes as machine truth, runtime truth, domain truth, readiness authorization, quality/export verdict, artifact authority, production readiness, or replacement for JSON/schema/source/tests is stale pollution.
+
+Worktree / branch cleanup:
+
+- No external stale worktree/branch qualified for cleanup before this tranche. OPL `codex/opl-owner-payload-ledger-intake` had recent writes, other OPL/MAS/App lanes were dirty, recent, unrelated or externally owned, and RCA CI lane remained an external branch.
+- This tranche's OPL worktree should be removed after fast-forward absorb.
+
+Verification before absorb:
+
+- Lifecycle signal check on the five contracts support README files.
+- OPL framework README inventory check: tracked `contracts/opl-framework/*.json` equals JSON entries in `contracts/opl-framework/README*.md`.
+- Family orchestration README inventory check: tracked `contracts/family-orchestration/*.schema.json` equals schema entries in `contracts/family-orchestration/README*.md`.
+- `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- Six-repo doctor sweep should remain clean before closeout.
+- No source/runtime tests are required because this tranche changes only narrative support README and coverage ledger text.
+
+Next tranche write scope:
+
+- If App remains dirty, continue only with newly reopened OPL/MAS/MAG/RCA/OMA/App ledger or support README accounting items that do not touch externally dirty files.
+- When the dirty App release/testing lane is safe or explicitly assigned, perform App paragraph-level body governance as recorded in the App repo-local ledger.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
+
 Date: `2026-05-27 05:48 CST`
 Tranche: `oma-agent-pack-readme-lifecycle`
 State: `tranche_verified`
