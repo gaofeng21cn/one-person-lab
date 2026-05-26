@@ -164,45 +164,158 @@ function stageExpectedReceiptPayloadSummary(value: JsonRecord) {
   };
 }
 
+const DOMAIN_OWNER_PAYLOAD_REQUIRED_REFS = [
+  'domain_owner_receipt_refs',
+  'no_regression_evidence_refs',
+  'owner_chain_refs',
+  'typed_blocker_refs',
+];
+
+const DOMAIN_OWNER_PAYLOAD_REQUIRED_RETURN_SHAPES = [
+  'domain_owner_receipt_ref',
+  'no_regression_evidence_ref',
+  'owner_chain_ref',
+  'typed_blocker_ref',
+];
+
+function refsFromRecordOrTopLevel(value: JsonRecord, key: string) {
+  const payload = record(value.record_payload);
+  const refs = stringList(payload[key]);
+  return refs.length > 0 ? refs : stringList(value[key]);
+}
+
+function masPaperLineOwnerPayloadWorkItem(value: JsonRecord, index: number) {
+  const typedBlockerRefs = refsFromRecordOrTopLevel(value, 'typed_blocker_refs');
+  const successRefsPathPayload = {
+    domain_owner_receipt_refs: refsFromRecordOrTopLevel(value, 'domain_owner_receipt_refs'),
+    no_regression_evidence_refs: refsFromRecordOrTopLevel(value, 'no_regression_evidence_refs'),
+    owner_chain_refs: refsFromRecordOrTopLevel(value, 'owner_chain_refs'),
+    typed_blocker_refs: typedBlockerRefs,
+  };
+  return ownerPayloadWorkItem({
+    item_id:
+      stringValue(value.study_id)
+      ?? stringValue(value.task_kind)
+      ?? `paper_line_owner_payload_${index + 1}`,
+    sequence: index + 1,
+    remaining_gap_id: stringValue(value.reason),
+    workorder_item_ref:
+      `/real_paper_autonomy_guarded_apply_proof/paper_line_provider_canary_closeout/`
+      + `paper_line_domain_dispatch_evidence_record_payloads/${index}`,
+    payload_kind: 'domain_owner_receipt_or_typed_blocker_refs',
+    current_payload_template: {
+      domain_owner_receipt_refs: [],
+      no_regression_evidence_refs: [],
+      owner_chain_refs: [],
+      typed_blocker_refs: [],
+    },
+    success_refs_path_payload: successRefsPathPayload,
+    typed_blocker_path_payload: {
+      typed_blocker_refs: typedBlockerRefs,
+    },
+    operator_payload_submitted: booleanValue(value.operator_payload_submitted) === true,
+    recommended_current_payload_path:
+      typedBlockerRefs.length > 0 ? 'typed_blocker_path' : 'success_refs_path',
+  });
+}
+
+function masPaperLineOwnerPayloadItemSummary(closeout: JsonRecord) {
+  const payloads = recordList(closeout.paper_line_domain_dispatch_evidence_record_payloads);
+  const paperLineOwnerSummary = record(closeout.paper_line_owner_payload_summary);
+  if (payloads.length === 0 || Object.keys(paperLineOwnerSummary).length === 0) {
+    return null;
+  }
+  return ownerPayloadItemSummary({
+    surface_kind: 'mas_paper_line_owner_payload_item_summary',
+    owner: 'med-autoscience',
+    consumer: 'one_person_lab',
+    status: 'per_paper_line_owner_payload_refs_ready',
+    payload_kind: 'domain_owner_receipt_or_typed_blocker_refs',
+    payload_path_policy:
+      'operator_reads_domain_owned_paper_line_success_refs_or_typed_blocker_refs_no_body',
+    payload_body_allowed: false,
+    empty_payload_template_is_success_evidence: false,
+    required_operator_payload_refs: DOMAIN_OWNER_PAYLOAD_REQUIRED_REFS,
+    required_return_shapes: DOMAIN_OWNER_PAYLOAD_REQUIRED_RETURN_SHAPES,
+    accepted_payload_paths_ref: stringValue(closeout.accepted_payload_paths_ref),
+    work_items: payloads.map(masPaperLineOwnerPayloadWorkItem),
+  });
+}
+
+function domainOwnerPayloadSummaryFromOperatorEvidence(project: DomainManifestCatalogEntry) {
+  const manifest = project.status === 'resolved' ? project.manifest : null;
+  const projection = record(manifest?.operator_evidence_readiness_projection);
+  if (Object.keys(projection).length === 0) {
+    return null;
+  }
+  const productionScaleoutRefs = record(projection.production_evidence_scaleout_refs);
+  const expectedReceiptHandoff =
+    record(projection.opl_expected_receipt_monitor_freshness_handoff);
+  const ownerSummarySource = record(productionScaleoutRefs.owner_payload_item_summary);
+  const stageSummarySource =
+    record(expectedReceiptHandoff.stage_expected_receipt_payload_summary);
+  if (Object.keys(ownerSummarySource).length === 0
+    && Object.keys(stageSummarySource).length === 0) {
+    return null;
+  }
+  const ownerSummary = Object.keys(ownerSummarySource).length > 0
+    ? ownerPayloadItemSummary(ownerSummarySource)
+    : null;
+  const stageSummary = Object.keys(stageSummarySource).length > 0
+    ? stageExpectedReceiptPayloadSummary(stageSummarySource)
+    : null;
+  return {
+    domain_id: project.project_id,
+    project: project.project,
+    target_domain_id: manifest?.target_domain_id ?? null,
+    owner: stringValue(ownerSummary?.owner) ?? stringValue(stageSummary?.owner),
+    source_surface: 'operator_evidence_readiness_projection',
+    source_ref: '/operator_evidence_readiness_projection',
+    owner_payload_item_summary: ownerSummary,
+    stage_expected_receipt_payload_summary: stageSummary,
+    payload_body_allowed: false,
+    projection_closes_domain_ready: false,
+    projection_claims_production_ready: false,
+    authority_boundary: authorityBoundary(),
+  };
+}
+
+function domainOwnerPayloadSummaryFromMasPaperLineCloseout(project: DomainManifestCatalogEntry) {
+  const manifest = project.status === 'resolved' ? project.manifest : null;
+  const proof = record(manifest?.real_paper_autonomy_guarded_apply_proof);
+  const closeout = record(proof.paper_line_provider_canary_closeout);
+  if (Object.keys(closeout).length === 0) {
+    return null;
+  }
+  const ownerSummary = masPaperLineOwnerPayloadItemSummary(closeout);
+  if (!ownerSummary) {
+    return null;
+  }
+  return {
+    domain_id: project.project_id,
+    project: project.project,
+    target_domain_id: manifest?.target_domain_id ?? null,
+    owner: stringValue(ownerSummary.owner),
+    source_surface: 'real_paper_autonomy_guarded_apply_proof',
+    source_ref:
+      '/real_paper_autonomy_guarded_apply_proof/paper_line_provider_canary_closeout',
+    owner_payload_item_summary: ownerSummary,
+    stage_expected_receipt_payload_summary: null,
+    payload_body_allowed: false,
+    projection_closes_domain_ready: false,
+    projection_claims_production_ready: false,
+    authority_boundary: authorityBoundary(),
+  };
+}
+
 export function buildDomainOwnerPayloadSummaryRefs(input: {
   domainManifestProjects: DomainManifestCatalogEntry[];
 }) {
   const domains = input.domainManifestProjects.flatMap((project) => {
-    const manifest = project.status === 'resolved' ? project.manifest : null;
-    const projection = record(manifest?.operator_evidence_readiness_projection);
-    if (Object.keys(projection).length === 0) {
-      return [];
-    }
-    const productionScaleoutRefs = record(projection.production_evidence_scaleout_refs);
-    const expectedReceiptHandoff =
-      record(projection.opl_expected_receipt_monitor_freshness_handoff);
-    const ownerSummarySource = record(productionScaleoutRefs.owner_payload_item_summary);
-    const stageSummarySource =
-      record(expectedReceiptHandoff.stage_expected_receipt_payload_summary);
-    if (Object.keys(ownerSummarySource).length === 0
-      && Object.keys(stageSummarySource).length === 0) {
-      return [];
-    }
-    const ownerSummary = Object.keys(ownerSummarySource).length > 0
-      ? ownerPayloadItemSummary(ownerSummarySource)
-      : null;
-    const stageSummary = Object.keys(stageSummarySource).length > 0
-      ? stageExpectedReceiptPayloadSummary(stageSummarySource)
-      : null;
-    return [{
-      domain_id: project.project_id,
-      project: project.project,
-      target_domain_id: manifest?.target_domain_id ?? null,
-      owner: stringValue(ownerSummary?.owner) ?? stringValue(stageSummary?.owner),
-      source_surface: 'operator_evidence_readiness_projection',
-      source_ref: '/operator_evidence_readiness_projection',
-      owner_payload_item_summary: ownerSummary,
-      stage_expected_receipt_payload_summary: stageSummary,
-      payload_body_allowed: false,
-      projection_closes_domain_ready: false,
-      projection_claims_production_ready: false,
-      authority_boundary: authorityBoundary(),
-    }];
+    return [
+      domainOwnerPayloadSummaryFromOperatorEvidence(project),
+      domainOwnerPayloadSummaryFromMasPaperLineCloseout(project),
+    ].filter((domain): domain is Exclude<typeof domain, null> => domain !== null);
   });
   const ownerPayloadItemSummaryCount =
     domains.filter((domain) => domain.owner_payload_item_summary !== null).length;

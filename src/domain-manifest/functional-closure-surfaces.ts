@@ -28,6 +28,10 @@ export function normalizeFunctionalClosureSurfaces(manifest: JsonRecord) {
     operator_evidence_readiness_projection: isRecord(manifest.operator_evidence_readiness_projection)
       ? manifest.operator_evidence_readiness_projection
       : null,
+    real_paper_autonomy_guarded_apply_proof:
+      isRecord(manifest.real_paper_autonomy_guarded_apply_proof)
+        ? manifest.real_paper_autonomy_guarded_apply_proof
+        : null,
     controlled_soak_no_regression_attempt: isRecord(manifest.controlled_soak_no_regression_attempt)
       ? manifest.controlled_soak_no_regression_attempt
       : null,
