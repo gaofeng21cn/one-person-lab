@@ -6396,3 +6396,65 @@ Next tranche write scope:
 - Start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
 - If App remains unsafe, continue with any newly reopened exact inventory tail in OPL/MAS/MAG/RCA/OMA caused by later edits.
 - Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
+
+Date: `2026-05-27 05:02 CST`
+Tranche: `oma-repo-local-doc-ledger-bootstrap`
+State: `tranche_verified`
+
+本轮为 `opl-meta-agent` 新增 repo-local docs governance ledger，并把结果回写到本 OPL family ledger。目标是把此前记录在 OPL family ledger 的 OMA full README/docs coverage 回写成 OMA 本仓可审计入口，使本仓 `README*` / `docs/**/*.md` exact inventory 能自证。本轮不改 OMA active truth，不新增 readiness claim，不关闭 OPL series 全局 `/goal`。
+
+Fresh live truth inputs:
+
+- OMA `AGENTS.md`, `TASTE.md`, root `README.md`, `README.zh-CN.md`, `docs/README.md`, core five, `docs/active/opl-meta-agent-ideal-state-gap-plan.md`, `docs/active/opl-private-implementation-migration-inventory.md`, and `docs/references/opl-meta-agent-ideal-state.md`.
+- OMA machine refs: `contracts/functional_privatization_audit.json`, `contracts/default_caller_deletion_evidence.json`, `contracts/production_acceptance/meta-agent-production-acceptance.json`, `contracts/production_acceptance/oma-production-consumption-long-soak-typed-blocker.json`, `runtime/authority_functions/meta-agent-authority-functions.json`, `package.json`, `tests/contracts.test.ts`, and `tests/source-purity.test.ts`.
+- OPL family ledger prior OMA coverage: `oma-readme-docs-full-coverage` and `oma-ai-first-baseline-delta-coverage`.
+- Current OMA exact inventory over repo-root `README*` plus `docs/**/*.md` and support read of `agent/{knowledge,prompts,quality_gates,skills,stages}/README.md`.
+
+Fresh semantic result:
+
+- OMA already has one active truth owner, one ideal-state reference, one private implementation inventory and one docs entry index. The missing piece was repo-local governance ledger / exact-coverage accounting, not stale current-truth prose.
+- Live contracts still read `functional_structure_gap_count=0`, `domain_repo_retained_generic_surface_count=0`, and `remaining_tail_kinds=[opl_generated_default_caller_consumption_tail, domain_refs_only_adapter_thinning, script_to_pack_hygiene, evidence_tail]`. This remains structural/source-shape evidence only; it does not authorize target domain ready, quality verdict, App live rendering, production ready, owner receipt body, artifact readiness or default promotion.
+- Production-consumption long-soak remains blocked by `typed_blocker_ref://opl-meta-agent/production-consumption/long-soak-pending`; contract presence and OPL refs-only consumption are not App live closeout or production ready.
+- Agent pack README files are support indexes only; machine-required pack files remain non-README markdown files listed by `contracts/pack_compiler_input.json` and verified by tests.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `opl-meta-agent` | First-screen / role read of all current repo-root `README*`, `docs/**/*.md`, agent pack README support files, active truth plan, ideal-state reference, private inventory and live contracts/tests listed above. | `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | OPL family coverage ledger foldback for this OMA repo-local ledger bootstrap; no OPL active truth / source / contract semantics changed. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The reviewed OMA paths already have legitimate long-term roles as public entry, docs index, current truth, active plan, active inventory, target-state reference or domain-pack support index.
+
+Unreviewed docs:
+
+- `opl-meta-agent`: none for current repo-root `README*` and `docs/**/*.md` inventory once this repo-local ledger is counted. Future README/docs files, or substantive edits after this tranche, must be covered by a new ledger entry.
+- `one-person-lab`: no new OPL body docs were governed in this tranche; previous exact coverage claims remain as recorded.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active release / GUI lanes are safe or explicitly assigned.
+- OPL, MAS, MAG and RCA previous full/exact reconcile coverage remains as recorded unless later changes reopen their docs.
+
+Remaining stale / retire candidates:
+
+- OMA: remaining work is evidence/hygiene, not doc-path retirement: repeat long-soak / App live render-runtime drilldown evidence, more real target patch-loop owner receipt or typed blocker samples, standard target-agent handoff convergence, and continued script-to-pack / OPL primitive hygiene.
+- OMA: any future prose that treats generated-surface proof, registry readiness, App projection readiness, suite pass, schema completeness, OPL refs-only consumption, work-order shape, script materializer presence or source-shape conformance as target domain ready, quality verdict, App live rendering, owner receipt, artifact readiness, production ready or default promotion is stale pollution.
+- App: release / GUI / implementation docs remain gated by unrelated dirty or active lanes.
+
+Worktree / branch cleanup:
+
+- No external stale worktree/branch qualified for cleanup before this tranche. App remains dirty; OPL external OMA-support and DM002 scheduler worktrees are unrelated and were not safe to clean.
+- This tranche's OMA and OPL ledger worktrees should be removed after fast-forward absorb.
+
+Verification before absorb:
+
+- OMA repo-local ledger worktree: exact inventory expected `missing_by_exact_string=0`; `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- OPL ledger worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- Six-repo doctor sweep should remain clean before closeout.
+- No source/runtime tests are required because this tranche changes only narrative docs and coverage ledgers.
+
+Next tranche write scope:
+
+- Start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
+- If App remains unsafe, continue only with newly reopened exact-inventory tails in OPL/MAS/MAG/RCA/OMA caused by later edits.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
