@@ -4605,6 +4605,67 @@ Next tranche write scope:
 - Continue OPL uncovered support docs or MAS remaining repo-wide docs while RCA/App main checkouts still carry external dirty implementation/release lanes.
 - Return to MAG only if new MAG docs appear, later code/contract changes reopen a section, or a source/test owner lane closes one of the remaining runtime/evidence/physical-cleanup tails and requires doc foldback.
 
+Date: `2026-05-26 19:28 CST`
+Tranche: `opl-policies-docs-coverage`
+State: `tranche_verified`
+
+本轮覆盖 OPL `docs/policies/**` 的稳定治理政策文档。目标是确认 docs lifecycle、domain private functional surface、GitHub CI automation 和 workspace/file lifecycle 政策仍是人读 stable policy，且其硬约束已由核心五件套、contracts、CLI/read-model、scripts 和 tests 承接。本轮不关闭全局 `/goal`，也不表示 OPL repo-root `README*`、contracts README 或所有 `docs/**/*.md` 已逐段覆盖。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`, `TASTE.md`, `docs/docs_portfolio_consolidation.md`, `docs/active/current-state-vs-ideal-gap.md`, and `docs/references/runtime-substrate/opl-family-agent-ideal-state.md`.
+- OPL policy docs: `docs/policies/README.md`, `docs/policies/docs-lifecycle-policy.md`, `docs/policies/domain-private-functional-surface-policy.md`, `docs/policies/github-ci-automation-policy.md`, and `docs/policies/runtime-artifact-hygiene-policy.md`.
+- Machine/support surfaces: `docs/invariants.md`, `contracts/family-orchestration/README.md`, `contracts/family-orchestration/README.zh-CN.md`, `contracts/opl-framework/standard-domain-agent-skeleton-contract.json`, `package.json`, `scripts/run-with-repo-temp-env.sh`, `scripts/repo-hygiene.sh`, `scripts/verify.sh`, `tests/src/verification-command-surfaces.test.ts`, `tests/src/cli/cases/agents-scaffold.test.ts`, `tests/src/cli/cases/agents-default-callers.test.ts`, `tests/src/cli/cases/workspace-domain.lifecycle-cleanup.test.ts`, and App/operator / framework readiness tests surfaced by `rg`.
+- Fresh OPL read models: `opl framework readiness --family-defaults --json`, `opl agents conformance --family-defaults --json`, `opl agents default-callers --family-defaults --json`, and `opl runtime app-operator-drilldown --json`.
+
+Fresh semantic result:
+
+- All five policy docs already carry owner, purpose, state and machine-boundary signals; no policy body needed stale wording correction this tranche.
+- `docs-lifecycle-policy.md` remains a stable human policy: docs prose is not a machine interface, active ledger must not become process log, and hard constraints continue to live in core docs or machine contracts.
+- `domain-private-functional-surface-policy.md` remains aligned with the current standard-agent target: `Declarative Domain Pack + OPL generated/hosted surfaces + standard authority functions`. It is supported by scaffold/default-caller/audit contracts and read models; it does not authorize domain repo physical deletion, domain ready or production ready.
+- `github-ci-automation-policy.md` remains a human maintenance policy. It separates current failures, queued/in-progress current surfaces, superseded historical failures and manual actions; no repo source or workflow change was required in this tranche.
+- `runtime-artifact-hygiene-policy.md` remains aligned with current checkout hygiene: `scripts/verify.sh` enters `scripts/run-with-repo-temp-env.sh`, Python/Node/npm/Cargo/cache paths are routed to a repo-external temp root, and `scripts/repo-hygiene.sh` blocks forbidden tracked/unignored generated paths.
+- Fresh conformance read model returned `status=passed`, `passed_count=4`, `blocked_count=0`, `production_evidence_tail_count=4`.
+- Fresh default-caller read model returned `status=ready_domain_evidence_required`, `generated_default_caller_surface_count=32`, `blocked_surface_count=0`, `missing_domain_owner_receipt_or_typed_blocker_count=0`, `missing_no_forbidden_write_proof_count=0`, `missing_tombstone_or_provenance_ref_count=0`.
+- Fresh framework readiness returned `status=framework_control_plane_available_with_blocked_refs_only_attention`, `control_plane_available=true`, `framework_kernel_hard_blocker_count=0`, `open_tail_count=0`, `domain_blocked_attention_tail_count=266`, and `provider_slo_*` statuses satisfied. These refs-only / typed-blocker attention counts do not authorize domain ready or production ready.
+- Fresh App/operator drilldown returned `availability=available`, `functional_privatization_action_required_count=0`, `functional_privatization_active_private_generic_residue_count=0`, `default_caller_deletion_evidence_open_requirement_count=0`, `app_release_user_path_release_ready_claimed=false`, and `app_release_user_path_production_ready_claimed=false`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | Full paragraph read of `docs/policies/README.md`, `docs/policies/docs-lifecycle-policy.md`, `docs/policies/domain-private-functional-surface-policy.md`, `docs/policies/github-ci-automation-policy.md`, and `docs/policies/runtime-artifact-hygiene-policy.md`; support read of OPL core active docs, ideal-state reference, invariants, package scripts, hygiene / verification scripts, and relevant tests/contracts/read-models. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The policy docs remain active stable policies; the tranche only recorded coverage and supporting live evidence.
+
+Unreviewed docs:
+
+- `one-person-lab`: current inventory is 175 `README*` / `docs/**/*.md` / contracts README files. Before this ledger entry, 81 paths were not exact substrings in this coverage ledger; after this policy coverage, OPL root `README*`, contracts README files, `docs/active/opl-family-development-reference.md`, `docs/active/production-framework-closure-gap-matrix.md`, most `docs/history/**`, several `docs/references/current-support/**`, `docs/references/operating-governance/family-domain-quality-projection-contract.md`, and `docs/references/runtime-substrate/graphflow-gfl-contract-vocabulary.md` remain open outside recorded focused tranches.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks.
+- `med-autogrant`: current 120-file recorded scope was closed by the MAG final inventory reconcile unless new docs or later source/contract changes reopen a section.
+- `redcube-ai`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused RCA chunks; current main checkout still carries external dirty implementation/test files.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App dirty lanes are closed or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Any future OPL policy wording that treats prose docs as machine-stable interfaces, revives active execution diaries, or pins tests to Markdown wording/path text is stale pollution.
+- Any future policy wording that turns structural conformance, default-caller evidence, App/operator drilldown, provider SLO, doctor clean, zero open worklist, refs-only external evidence, or typed blocker accounting into domain ready, App release ready, physical delete authorized or production ready is stale pollution.
+- Any future domain-private-surface policy wording that broadens `refs_only_domain_adapter` into a repo-local default caller, workbench/status/product shell, scheduler, queue, attempt ledger, runtime owner, memory/artifact body transport or generated-surface owner reopens the standard-agent source-purity guard.
+- Any future workspace/file lifecycle wording that accepts checkout-local `.venv`, `__pycache__`, `.pytest_cache`, egg-info, runtime-state, workspace state or artifact body as normal repo-source output is stale pollution; producer routing must be fixed rather than papered over by ignore rules.
+
+Verification before absorb:
+
+- OPL docs verification passed in the tranche worktree: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- OPL policy support read models and focused evidence commands above were rerun fresh in the tranche worktree.
+
+Next tranche write scope:
+
+- Continue OPL uncovered support docs or MAS remaining repo-wide docs while RCA/App main checkouts still carry external dirty implementation/release lanes.
+- Good OPL next clusters are root `README*` / contracts README coverage, active support docs (`opl-family-development-reference.md`, `production-framework-closure-gap-matrix.md`), current-support references, or history/gateway-federation tombstone bodies.
+
 ## 验证
 
 Docs-only 整理：
