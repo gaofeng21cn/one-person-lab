@@ -3283,6 +3283,60 @@ Next tranche write scope:
 
 - Continue with the next uncovered exact body from the global coverage ledger, with good candidates being RCA uncovered references, MAS product/status/workbench and progress/domain-ref projection shell reconciliation, or App docs after active release/GUI lanes are safe.
 
+Date: `2026-05-26 16:10 CST`
+Tranche: `mas-mainline-reference-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAS `docs/references/mainline/*.md` 七份 mainline support/reference 文档，并把结果吸收回 MAS `main`。目标是把 quality/autonomy、AI-first Research OS、ARS / nature-skills learning intake、modularity、test-lane governance 和旧 repair-priority map 统一固定为 support reference / dated snapshot / external pattern provenance，而不是 current active queue、runtime truth、publication readiness、artifact authority、domain ready 或 production ready。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`, `TASTE.md`, `README.md`, `docs/README.md`, `docs/references/README.md`, `docs/active/mas-ideal-state-gap-plan.md`, and MAS `docs/docs_portfolio_consolidation.md`.
+- MAS mainline docs: `docs/references/mainline/ai_first_research_os_architecture.md`, `ars_learning_intake.md`, `nature_skills_learning_intake.md`, `mas_single_project_quality_and_autonomy_mainline.md`, `mas_modularity_assessment_2026_05_07.md`, `project_repair_priority_map.md`, `test_lane_governance_2026_05_08.md`.
+- MAS machine/source refs: `src/med_autoscience/ars_learning_projection.py`, `contracts/opl-framework/family-contract-adoption.json#academic_research_skills_learning_projection`, `src/med_autoscience/stage_quality_contract.py`, `contracts/stage_control_plane.json`, `contracts/test-lane-manifest.json`, `contracts/action_catalog.json`, `src/med_autoscience/controllers/mainline_status.py`, `src/med_autoscience/controllers/module_boundary_audit.py`, and `src/med_autoscience/controllers/architecture_owner_boundary.py`.
+- CodeGraph context / explore for `build_ars_learning_projection`, `build_stage_quality_pack_contract`, `read_mainline_status`, `build_module_boundary_audit_report`, and `build_architecture_owner_boundary_report`.
+
+Fresh semantic result:
+
+- ARS and nature-skills references remain clean-room / external-pattern learning surfaces. Live projection and quality-pack contracts keep them descriptor/ref/freshness/locator only, with no vendor dependency, runtime provider, publication gate, quality verdict, submission readiness or artifact authority.
+- `project_repair_priority_map.md` and `test_lane_governance_2026_05_08.md` already route current execution and durable lane intent back to active plan / contracts / test-lane manifest.
+- `mas_single_project_quality_and_autonomy_mainline.md` was tightened so “当前 tranche” language is explicitly the formation-time tranche and not the current active execution queue.
+- `mas_modularity_assessment_2026_05_07.md` was tightened so 2026-05-08 Sentrux / boundary-fitness / hub-role evidence is dated support and not a permanent quality budget or current completion proof.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full paragraph read of all seven `docs/references/mainline/*.md` files; boundary review against ARS projection, family contract adoption, stage quality pack, stage control plane, test-lane manifest, mainline status, module boundary audit and architecture owner boundary surfaces. | `docs/references/mainline/mas_single_project_quality_and_autonomy_mainline.md`; `docs/references/mainline/mas_modularity_assessment_2026_05_07.md`; `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The mainline references still carry useful support/provenance roles; stale risk was corrected in place.
+
+Unreviewed docs:
+
+- MAS `docs/references/mainline/*.md` is now covered at paragraph level for the current inventory.
+- MAS runtime/control support docs under `docs/runtime/contracts/**` / `docs/runtime/control/**`, and product/status/workbench / progress/domain-ref projection shell docs outside already-covered blocks, remain open.
+- OPL, RCA and App repo-wide coverage remains open outside recorded chunks. OMA is covered by its earlier full README/docs tranche; MAG/RCA coverage remains as recorded in compacted ledger scope and later RCA chunks.
+
+Remaining stale / retire candidates:
+
+- Future MAS mainline prose that adds undated “current tranche”, “fresh evidence”, phase checklist, Sentrux numbers, collected test counts or repair priority language is stale pollution unless explicitly bounded as support/reference.
+- Modularity/test-lane snapshots must not be used as current source-shape completion, production readiness, domain readiness, physical-delete authorization, permanent test budget or substitute for repo-native verification.
+
+Verification / absorb:
+
+- MAS commit `61f770a2 docs: cover MAS mainline references` is on MAS `main`.
+- MAS verification before absorb: `git diff --check`; strict README/docs/contracts conflict-marker scan had no hits; OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- MAS tranche worktree `/Users/gaofeng/workspace/med-autoscience/.worktrees/codex/mas-runtime-artifact-contract-docs-20260526` and branch `codex/mas-runtime-artifact-contract-docs-20260526` were removed after fast-forward absorb.
+- MAS main has unrelated external dirty source edits retained; this tranche only changed documentation files.
+
+Next tranche write scope:
+
+- Continue MAS runtime/control support docs under `docs/runtime/contracts/**` / `docs/runtime/control/**`, or MAS product/status/workbench/progress/domain-ref projection shell reconciliation outside already-covered blocks.
+- Or choose RCA uncovered reference bodies or App docs once active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
