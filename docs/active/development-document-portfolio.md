@@ -3900,6 +3900,68 @@ Next tranche write scope:
 - Continue MAG `docs/history/specs/*.md` in date/topic batches, prioritizing remaining 2026-04-10 local-runtime validation / stage-route / revised / walkthrough records or 2026-04-11/2026-04-12 Hermes / hosted handoff specs because stale local-runtime/provider/hosted wording risk is higher there.
 - Or choose RCA uncovered reference bodies, OPL uncovered docs, or App docs once their main checkout and active worktrees are safe.
 
+Date: `2026-05-26 14:32 CST`
+Tranche: `mag-20260410-local-runtime-stage-route-history-specs-coverage`
+State: `tranche_verified_with_existing_test_drift_noted`
+
+本轮覆盖 MAG `docs/history/specs/` 下 2026-04-10 revised workspace validator、validation-failed local-runtime route/checkpoint shape、stage-route checkpoint output consistency 与 local-runtime walkthrough 历史 specs，并把结果吸收回 MAG `main`。目标是确认这些 direct-file 历史入口不会把旧 `runtime-run` / `runtime-resume`、local journal、local runtime ladder、bare command walkthrough、stage-route mirror、same-repo HITL、MCP/controller public formal entry 或 post-R5A hardening wording误读成当前 public CLI command shape、MAG-owned generic runtime、attempt ledger、actual hosted runtime、App/release readiness、production readiness、compatibility interface 或 active implementation queue。
+
+Fresh live truth inputs:
+
+- MAG `AGENTS.md`, `TASTE.md`, core docs, `docs/active/mag-ideal-state-cross-repo-gap-plan.md`, `docs/specs/README.md`, `docs/specs/specs_lifecycle_map.md`, `docs/history/specs/README.md`, and MAG `docs/docs_portfolio_consolidation.md`.
+- Reviewed history specs: `docs/history/specs/2026-04-10-post-r5a-revised-workspace-validator-and-operator-alignment.md`, `docs/history/specs/2026-04-10-post-r5a-local-runtime-validation-failed-route-checkpoint-shape-alignment-activation-package.md`, `docs/history/specs/2026-04-10-post-r5a-stage-route-report-checkpoint-status-output-consistency-activation-package.md`, and `docs/history/specs/2026-04-10-post-r5a-local-runtime-walkthrough-and-output-consistency-current-truth.md`.
+- MAG machine/source truth surfaces: `contracts/runtime-program/current-program.json`, `src/med_autogrant/route_report.py`, `src/med_autogrant/public_cli.py`, `src/med_autogrant/cli.py`, `src/med_autogrant/domain_runtime_parts/substrate.py`, `src/med_autogrant/domain_entry.py`, `src/med_autogrant/product_entry_parts/functional_closure_skeleton.py`, `tests/test_domain_entry.py`, `tests/test_revision_executor.py`, `tests/test_cli_validate_workspace_revision_cases.py`, active specs listed by `docs/specs/README.md`, schemas/source/CLI/API behavior.
+- Fresh verification probes: `med_autogrant workspace --help`, `med_autogrant pass --help`, `med_autogrant package --help`, `workspace route-report` on `examples/nsfc_workspace_p2c_critique.json`, `pass revision` on `examples/nsfc_workspace_p3b_re_review_major_revision.json` followed by `workspace validate` and `workspace route-report`, `public_cli_command()` mapping, focused route/revision/domain-entry pytest, and retired public command scan.
+
+Fresh semantic result:
+
+- The four reviewed files already carry first-screen lifecycle notes plus `Owner` / `Purpose` / `State` / `Machine boundary`.
+- `2026-04-10-post-r5a-revised-workspace-validator-and-operator-alignment.md` needed one small post-2026-05 reading guard because its body still used imperative `runtime-run` / `runtime-resume` language in the historical local runtime ladder. The added note keeps historical body text as provenance and routes current executable operator path to grouped CLI plus no-resurrection scan.
+- The validation-failed route/checkpoint, stage-route checkpoint output consistency and local-runtime walkthrough files are correctly scoped as historical local-runtime closeout / fail-closed / output-consistency provenance. Existing lifecycle headers and `specs_lifecycle_map.md` are sufficient for these files; no body rewrite was needed.
+- Current route checkpoint behavior is source-owned by `route_report.build_stage_route_report()`: it returns top-level `checkpoint_status` and `verification_checkpoint.checkpoint_status` from the same checkpoint object. Fresh `workspace route-report` on the critique example returned matching `forward_progress` values and a populated route object.
+- Generated revised workspace still re-enters current validator/route surfaces. Fresh `pass revision` on the P3.B re-review example followed by `workspace validate` and `workspace route-report` returned `validate.ok=True` and matching `forward_progress` checkpoint values.
+- `contracts/runtime-program/current-program.json` still states `default_task_runtime_owner=one-person-lab`, `default_runtime_owner=configured_family_runtime_provider`, `default_runtime_substrate=temporal`, `mag_implements_daemon=false`, `mag_implements_scheduler=false`, `mag_implements_attempt_loop=false`, `mag_owns_attempt_ledger=false`, `default_stage_executor=codex_cli`, `optional_hosted_carriers=["hermes_agent"]`, and `historical_baseline=NO_NEW_POST_R5A_LOCAL_RUNTIME_DELTA_HONEST_STOP`.
+- Current public CLI shape is grouped: workspace behavior is under `workspace validate|summarize|next-step|critique-summary|route-report`; revision is under `pass revision`; package behavior is under `package artifact-bundle|final-package|hosted-contract-bundle|submission-ready`. Historical bare command examples remain provenance and must not be copied into current operator docs without mapping through `public_cli`.
+- `run-local`, `runtime-run`, `runtime-resume` and `probe-upstream-hermes` remain retired/no-resurrection terms. The retired public command scan returned `state=passed` and each retired command was absent from active domain-entry and grouped public CLI catalogs.
+- Current verification gap discovered during the audit: `tests/test_cli_validate_workspace_revision_cases.py` still contains two tests for `workspace cockpit` and `product direct-entry`, while current CLI help and parser do not expose those grouped commands. The same focused file passes when those two existing drifted cases are excluded; `tests/test_revision_executor.py` and `tests/test_domain_entry.py` pass. This is a pre-existing product/CLI test drift outside this docs coverage tranche, not a failure of the four history specs' lifecycle classification.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autogrant` | Full paragraph read of the four 2026-04-10 local-runtime / stage-route / revised / walkthrough history specs listed above; support read of history specs index, specs lifecycle map, active gap plan, current-program runtime owner fields, grouped public CLI mapping, route-report source, domain runtime topology, retired command no-resurrection scan and focused route/revision/domain-entry tests. | `docs/docs_portfolio_consolidation.md`; `docs/history/specs/2026-04-10-post-r5a-revised-workspace-validator-and-operator-alignment.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. These four MAG files remain useful history provenance; no body move, tombstone, or delete was required.
+
+Unreviewed docs:
+
+- `med-autogrant`: remaining `docs/history/specs/*.md` files outside the 2026-04-06 foundation batch, 2026-04-07 P2/P3A batch, 2026-04-08 P3/P4 batch, 2026-04-08 P5/R1 batch, 2026-04-08 R2/R3/runtime-first batch, 2026-04-09 R3/R4/R5/post-R5A batch, 2026-04-10 hosted-contract bundle fail-closed batch and this 2026-04-10 local-runtime/stage-route/revised/walkthrough batch remain open for paragraph-level governance.
+- Higher-risk remaining MAG batches include 2026-04-11 Hermes/reset/local-runtime records and 2026-04-12 hosted/OPL handoff records.
+- MAG non-index references such as grant strategy memory policy, OPL family contract adoption and governance checklist still need paragraph-level checks against current contracts/source unless already covered by a later MAG or OPL ledger entry.
+- OPL, MAS, RCA and App repo-wide coverage remains open outside recorded chunks. OMA is covered by its earlier full README/docs tranche.
+
+Remaining stale / retire candidates:
+
+- Any future direct-file use of these 2026-04-10 specs as current public CLI command shape, runtime owner, default runtime, active local runtime ladder, local journal, `runtime-run` / `runtime-resume`, Gateway/federation readiness, daemon/scheduler/attempt ledger, controller public formal entry, submission/export-ready verdict, App release readiness, production readiness, physical-delete authority or compatibility-interface source is stale pollution.
+- Historical bare `validate-workspace`, `summarize-workspace`, `next-step`, `critique-summary`, `stage-route-report`, `execute-revision-pass`, `build-artifact-bundle`, `build-final-package` and `build-hosted-contract-bundle` examples must be mapped through current grouped public CLI as `workspace validate`, `workspace summarize`, `workspace next-step`, `workspace critique-summary`, `workspace route-report`, `pass revision`, `package artifact-bundle`, `package final-package` and `package hosted-contract-bundle`.
+- `stage-route-report` checkpoint mirror and revised workspace validation vocabulary must remain workspace route/checkpoint semantics. They must not be upgraded to actual hosted runtime, generic OPL artifact lifecycle owner, App/release readiness, external submission authorization, provider-hosted completion or production-ready claim.
+
+Verification / absorb:
+
+- MAG commit `1bebd9b docs: cover MAG 2026-04-10 local runtime specs` is on MAG `main`; tranche worktree and branch were removed after fast-forward absorb.
+- MAG verification before absorb: `git diff --check`; strict README/docs/contracts conflict-marker scan had no hits; OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- Focused tests passed: `tests/test_revision_executor.py` and `tests/test_domain_entry.py` returned 34 pytest cases plus 3 subtests; `tests/test_cli_validate_workspace_revision_cases.py` passed 29 cases plus 2 subtests with two pre-existing CLI drift cases deselected.
+- Full `tests/test_cli_validate_workspace_revision_cases.py` currently fails two existing tests for unavailable `workspace cockpit` and `product direct-entry` grouped CLI commands; route this to a source/test owner lane before using that file as a green full-suite proof.
+
+Next tranche write scope:
+
+- Continue MAG `docs/history/specs/*.md` in date/topic batches, prioritizing 2026-04-11 Hermes/reset/local-runtime records or 2026-04-12 hosted/OPL handoff specs because stale provider/hosted wording risk is higher there.
+- Separately route the pre-existing `workspace cockpit` / `product direct-entry` CLI test drift to a source/test owner lane.
+- Or choose RCA uncovered reference bodies, OPL uncovered docs, or App docs once their main checkout and active worktrees are safe.
+
 ## 验证
 
 Docs-only 整理：
