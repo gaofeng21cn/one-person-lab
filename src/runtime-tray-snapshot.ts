@@ -5,7 +5,7 @@ import {
   inspectFamilyRuntimeProviderWithLifecycle,
   resolveFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
-import { buildDomainManifestCatalog } from './management/domain-manifest-catalog.ts';
+import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest, NormalizedSurfaceRef } from './domain-manifest/types.ts';
 import type { FrameworkContracts } from './types.ts';
 import { actionContext, actionCountsForItems, noActionContext, runningActionContext } from './runtime-tray-action.ts';

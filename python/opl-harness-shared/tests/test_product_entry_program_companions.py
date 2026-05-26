@@ -201,7 +201,7 @@ def test_build_detailed_readiness_and_lane_companions() -> None:
         summary="Converge to monorepo-ready topology.",
         sequence_scope="monorepo_landing_readiness",
         current_step_id="stabilize_user_product_loop",
-        current_readiness_summary="gateway/runtime truth is frozen",
+        current_readiness_summary="provider/stage runtime truth is frozen",
         north_star_topology={
             "domain_agent_entry": "Example Domain",
             "default_runtime_owner": "domain_runtime_core",
@@ -211,10 +211,10 @@ def test_build_detailed_readiness_and_lane_companions() -> None:
         target_internal_modules=["controller_charter", "runtime"],
         landing_sequence=[
             build_program_sequence_step(
-                step_id="freeze_gateway_runtime_truth",
+                step_id="freeze_provider_stage_runtime_truth",
                 phase_id="phase_1",
                 status="completed",
-                summary="Freeze gateway/runtime truth.",
+                summary="Freeze provider/stage runtime truth.",
             ),
             build_program_sequence_step(
                 step_id="stabilize_user_product_loop",
@@ -223,7 +223,7 @@ def test_build_detailed_readiness_and_lane_companions() -> None:
                 summary="Stabilize the user product loop.",
             ),
         ],
-        completed_step_ids=["freeze_gateway_runtime_truth"],
+        completed_step_ids=["freeze_provider_stage_runtime_truth"],
         remaining_step_ids=["stabilize_user_product_loop"],
         promotion_gates=["external_runtime_gate"],
         recommended_phase_command="uv run python -m domain mainline-phase --phase phase_5",

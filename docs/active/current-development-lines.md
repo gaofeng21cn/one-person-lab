@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `current_execution_map`
 State: `active_support`
 Machine boundary: 本文是人读执行地图。机器真相继续归 `contracts/`、source code、CLI/API behavior、runtime ledgers、provider receipts、domain-owned manifests 和真实 workspace / App evidence。
-Date: `2026-05-26`
+Date: `2026-05-27`
 
 ## 当前结论
 
@@ -28,7 +28,7 @@ dated proof、receipt 事件、具体命令输出和阶段 closeout 摘要归档
 
 当前清理口径按 strict standard-agent source purity 读取：OPL 自身持有 `family-runtime*`、Temporal provider、App/operator drilldown、standard conformance、generated surface 和 legacy cleanup guard 等 framework owner surface；这些是目标 runtime/control plane。MAS/MAG/RCA/OMA 中凡仍有或未来重新出现 active caller 的 hand-written product/status/workbench/sidecar、runtime projection、executor adapter shell、script materializer、compat alias、facade、re-export wrapper 或 compatibility-only 聚合测试，只能作为迁移输入，不再写成标准智能体长期组成。历史 `gateway` / `frontdoor` / `Hermes-first` / `managed runtime` / compatibility 相关文件只允许留在 `docs/history/**`、外部 provenance、negative guard 或 focused no-resurrection test 中；不保留 repo-local tombstone code path。若某个旧模块、旧接口、旧测试、旧文档入口已经没有 active caller，且 replacement proof / no-active-caller / owner receipt 或 history/provenance proof 成立，执行动作是删除 active source；不新增兼容 alias、facade、re-export wrapper 或 compatibility-only 聚合测试。
 
-当前 JS/TS source hygiene 由 fallow 辅助读取。OPL 的 `.fallowrc.json` 只登记真实 package export、CLI/runtime/product/system 入口和动态 CLI case/module 入口，不把 `opl-aion-shell` 或历史 facade 当作本仓 active surface；`npm run hygiene:fallow -- --format json --summary` 是人工检查入口。当前 production fallow 已关闭 unused-file、unlisted-dependency 和 unresolved-import 问题；剩余 public-export、duplicate helper 与 import-cycle tail 只按 owner surface 收薄、shared helper 上收或 runtime cycle 拆分处理。`family-runtime` 本轮已把 queue dispatch 从 `src/family-runtime.ts` 拆到 `family-runtime-task-dispatch.ts`，并通过 `family-runtime-scheduler-tick-runner.ts` 让 CLI tick 与 Temporal scheduler activity 共享同一 dispatch runner；该拆分降低入口文件耦合，但剩余 Temporal provider / activities / scheduler / provider-hosted attempt cycle 仍是后续结构 hygiene gate，不写成 production evidence。
+当前 JS/TS source hygiene 由 fallow 辅助读取。OPL 的 `.fallowrc.json` 只登记真实 package export、CLI/runtime/product/system 入口和动态 CLI case/module 入口，不把 `opl-aion-shell` 或历史 facade 当作本仓 active surface；`npm run hygiene:fallow -- --format json --summary` 是人工检查入口。当前 production fallow 已关闭 unused-file、unlisted-dependency 和 unresolved-import 问题；`src/management/domain-manifest-catalog.ts` 纯转发 facade 已删除，调用方直接读取 canonical domain-manifest builder/types，Python program companion 测试 fixture 也不再使用旧 `gateway/runtime truth` step id。剩余 public-export、duplicate helper 与 import-cycle tail 只按 owner surface 收薄、shared helper 上收或 runtime cycle 拆分处理。`family-runtime` 本轮已把 queue dispatch 从 `src/family-runtime.ts` 拆到 `family-runtime-task-dispatch.ts`，并通过 `family-runtime-scheduler-tick-runner.ts` 让 CLI tick 与 Temporal scheduler activity 共享同一 dispatch runner；该拆分降低入口文件耦合，但剩余 Temporal provider / activities / scheduler / provider-hosted attempt cycle 仍是后续结构 hygiene gate，不写成 production evidence。
 
 ## 当前顺序
 

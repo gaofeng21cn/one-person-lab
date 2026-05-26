@@ -28,9 +28,11 @@ import {
 } from './shared.ts';
 import {
   buildDomainManifestCatalog,
-  type DomainManifestCatalogEntry,
-  type NormalizedDomainManifest,
-} from './domain-manifest-catalog.ts';
+} from '../domain-manifest/catalog-builder.ts';
+import type {
+  DomainManifestCatalogEntry,
+  NormalizedDomainManifest,
+} from '../domain-manifest/types.ts';
 
 function buildPaperFacingSnapshot(options: {
   studyRoot: string | null;

@@ -21,9 +21,9 @@ import { buildOplRuntimeEndpoints } from '../opl-runtime-paths/current.ts';
 import { readOplRuntimeModes } from '../runtime-modes.ts';
 import { buildWorkspaceCatalog, getActiveWorkspaceBinding } from '../workspace-registry.ts';
 import type { FrameworkContracts } from '../types.ts';
+import { buildDomainManifestCatalog } from '../domain-manifest/catalog-builder.ts';
 
 import type { DashboardOptions, StartSurfaceOptions } from './types.ts';
-import { buildDomainManifestCatalog } from './domain-manifest-catalog.ts';
 import { buildCurrentDashboardSurfaceRefs } from './readiness.ts';
 import { buildRuntimeStatus, buildWorkspaceStatus } from './workspace-runtime.ts';
 

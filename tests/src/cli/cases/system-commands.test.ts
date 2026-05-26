@@ -5,7 +5,7 @@ import {
   familyStageDiagnosticLensCommands,
   familyStageDerivedLensByCommand,
 } from '../../../../src/family-stage-derived-lenses.ts';
-import { buildDomainManifestCatalog } from '../../../../src/management/domain-manifest-catalog.ts';
+import { buildDomainManifestCatalog } from '../../../../src/domain-manifest/catalog-builder.ts';
 import { buildCurrentDashboardSurfaceRefs, buildCurrentReadinessProjection } from '../../../../src/management/readiness.ts';
 import { buildOplDashboard } from '../../../../src/management/runtime-dashboard.ts';
 import { buildWorkspaceCatalog } from '../../../../src/workspace-registry.ts';

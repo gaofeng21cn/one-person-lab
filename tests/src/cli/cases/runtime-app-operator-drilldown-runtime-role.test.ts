@@ -1,5 +1,8 @@
 import {
   assert,
+  fs,
+  os,
+  path,
   test,
 } from '../helpers.ts';
 import {
@@ -17,6 +20,10 @@ function emptyDrilldown(detailLevel?: 'summary' | 'full') {
 }
 
 test('runtime App drilldown exposes Codex App runtime role without long-running task authority', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-app-runtime-role-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
   const summaryDrilldown = emptyDrilldown();
   assert.equal(summaryDrilldown.codex_app_runtime_role, undefined);
   assert.equal(
@@ -170,4 +177,12 @@ test('runtime App drilldown exposes Codex App runtime role without long-running 
     fullDrilldown.attention_first_payload.codex_app_runtime_role.runtime_policy,
     'opl_temporal_hosted_autonomous',
   );
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
 });

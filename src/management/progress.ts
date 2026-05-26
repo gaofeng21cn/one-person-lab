@@ -1,7 +1,7 @@
 import { buildWorkspaceCatalog } from '../workspace-registry.ts';
 import type { FrameworkContracts } from '../types.ts';
+import { buildDomainManifestCatalog } from '../domain-manifest/catalog-builder.ts';
 
-import { buildDomainManifestCatalog } from './domain-manifest-catalog.ts';
 import { buildCurrentReadinessProjection } from './readiness.ts';
 import { buildProgressFeedback, buildWorkspaceInbox } from './progress-feedback.ts';
 import {
