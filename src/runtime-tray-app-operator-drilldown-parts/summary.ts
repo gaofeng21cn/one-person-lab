@@ -5,6 +5,9 @@ import {
 import {
   codexAppRuntimeEvidenceSummary,
 } from './codex-app-runtime-role.ts';
+import {
+  listDomainOwnerPayloadSummaryReceipts,
+} from '../domain-owner-payload-summary-ledger.ts';
 
 type AppOperatorDrilldownSummaryInput = {
   attempts: unknown[];
@@ -95,6 +98,11 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     appReleaseUserPathEvidenceSummary(input.appReleaseUserPathEvidence);
   const codexAppRuntimeEvidence =
     codexAppRuntimeEvidenceSummary(input.codexAppRuntimeRole);
+  const domainOwnerPayloadSummaryReceipts = listDomainOwnerPayloadSummaryReceipts();
+  const domainOwnerPayloadSummaryRecordedReceiptCount =
+    domainOwnerPayloadSummaryReceipts.filter((receipt) => receipt.receipt_status === 'recorded').length;
+  const domainOwnerPayloadSummaryVerifiedReceiptCount =
+    domainOwnerPayloadSummaryReceipts.filter((receipt) => receipt.receipt_status === 'verified').length;
   const routeSupport = record(input.runtimeManagerRouteSupport.mas_domain_route_projection);
   const supportedTaskKinds = stringList(routeSupport.supported_task_kinds);
   const routeSupportActionRefs = stringList(routeSupport.action_refs);
@@ -376,6 +384,26 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       domainOwnerPayloadSummary.domain_ready_claim_count,
     domain_owner_payload_summary_production_ready_claim_count:
       domainOwnerPayloadSummary.production_ready_claim_count,
+    domain_owner_payload_summary_ledger_receipt_ref_count:
+      domainOwnerPayloadSummaryReceipts.length,
+    domain_owner_payload_summary_recorded_ledger_receipt_ref_count:
+      domainOwnerPayloadSummaryRecordedReceiptCount,
+    domain_owner_payload_summary_verified_ledger_receipt_ref_count:
+      domainOwnerPayloadSummaryVerifiedReceiptCount,
+    domain_owner_payload_summary_pending_verify_receipt_ref_count:
+      domainOwnerPayloadSummaryRecordedReceiptCount,
+    domain_owner_payload_summary_action_route_count: countBy(input.actionRefs, (ref) => (
+      ref.action_kind === 'domain_owner_payload_summary_receipt_record'
+      || ref.action_kind === 'domain_owner_payload_summary_receipt_verify'
+    )),
+    domain_owner_payload_summary_record_action_route_count:
+      countBy(input.actionRefs, (ref) =>
+        ref.action_kind === 'domain_owner_payload_summary_receipt_record'
+      ),
+    domain_owner_payload_summary_verify_action_route_count:
+      countBy(input.actionRefs, (ref) =>
+        ref.action_kind === 'domain_owner_payload_summary_receipt_verify'
+      ),
     app_operator_production_evidence_tail_item_count: productionEvidenceTailItemCount,
     app_operator_production_evidence_tail_open_item_count: productionEvidenceTailOpenItemCount,
     app_operator_production_evidence_tail_owner_group_count: productionEvidenceTailOwnerGroupCount,

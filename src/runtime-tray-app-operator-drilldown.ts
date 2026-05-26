@@ -43,6 +43,9 @@ import {
   buildDomainOwnerPayloadSummaryRefs,
 } from './runtime-tray-app-operator-drilldown-parts/domain-owner-payload-summary-refs.ts';
 import {
+  buildDomainOwnerPayloadSummaryActionRoutes,
+} from './runtime-tray-app-operator-drilldown-parts/domain-owner-payload-summary-action-routes.ts';
+import {
   buildAppDrilldownRefsOnlyAuthorityBoundary as refsOnlyAuthorityBoundary,
 } from './runtime-tray-app-operator-drilldown-parts/authority-boundary.ts';
 import {
@@ -961,6 +964,7 @@ export function buildAppOperatorDrilldown(input: {
     ...buildDomainDispatchEvidenceReceiptRoutes(record(domainDispatchEvidence)),
     ...buildExternalEvidenceActionRoutes(record(evidenceRequests)),
     ...buildFunctionalPrivatizationSemanticEquivalenceActionRoutes(record(functionalAuditRefs)),
+    ...buildDomainOwnerPayloadSummaryActionRoutes(record(domainOwnerPayloadSummaryRefs)),
     ...buildCodexAppRuntimeEvidenceActionRoutes(record(appRuntimeRole)),
     ...buildAppReleaseUserPathEvidenceActionRoutes(record(appReleaseUserPathEvidence)),
     ...buildOmaProductionConsumptionActionRoutes(oplMetaAgentProductionConsumption),

@@ -8,6 +8,7 @@ import {
   path,
   repoRoot,
   runCli,
+  runCliFailure,
   test,
 } from '../helpers.ts';
 
@@ -185,7 +186,10 @@ test('runtime App drilldown exposes RCA owner payload summaries as refs-only gui
   const summaryAttention = summary.attention_first_payload.evidence_after_contract
     .domain_owner_payload_summary_attention;
   assert.equal(summaryAttention.surface_kind, 'opl_domain_owner_payload_summary_attention');
-  assert.equal(summaryAttention.projection_policy, 'bounded_refs_only_payload_summary_guidance_no_record_route');
+  assert.equal(
+    summaryAttention.projection_policy,
+    'bounded_refs_only_payload_summary_guidance_with_refs_only_ledger_route',
+  );
   assert.equal(summaryAttention.domain_count, 1);
   assert.equal(summaryAttention.owner_payload_work_item_count, 2);
   assert.equal(summaryAttention.stage_expected_receipt_payload_stage_count, 1);
@@ -194,7 +198,6 @@ test('runtime App drilldown exposes RCA owner payload summaries as refs-only gui
   assert.equal(summaryAttention.owner_payload_domains[0].owner_payload_work_item_count, 2);
   assert.equal(summaryAttention.owner_payload_domains[0].stage_expected_receipt_payload_stage_count, 1);
   assert.equal(summaryAttention.owner_payload_domains[0].full_detail_section, 'domain_owner_payload_summary_refs');
-  assert.equal(summaryAttention.owner_payload_domains[0].copyable_runtime_action_execute_commands, undefined);
   assert.equal(summaryAttention.payload_body_allowed_count, 0);
   assert.equal(summaryAttention.domain_ready_claim_count, 0);
   assert.equal(summaryAttention.production_ready_claim_count, 0);
@@ -214,6 +217,50 @@ test('runtime App drilldown exposes RCA owner payload summaries as refs-only gui
   assert.equal(projection.authority_boundary.can_create_owner_receipt, false);
   assert.equal(projection.authority_boundary.can_generate_typed_blocker, false);
   assert.equal(projection.authority_boundary.can_claim_production_ready, false);
+
+  const ownerRecordRoute = full.operator_action_routing_refs.refs.find(
+    (route: { action_kind: string; target_identity?: { item_id?: string } }) =>
+      route.action_kind === 'domain_owner_payload_summary_receipt_record'
+      && route.target_identity?.item_id === 'owner_chain_apply',
+  );
+  assert.ok(ownerRecordRoute);
+  assert.equal(ownerRecordRoute.route_requires_domain_or_app_payload, true);
+  assert.equal(ownerRecordRoute.payload_body_allowed, false);
+  assert.equal(ownerRecordRoute.payload_workorder.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(ownerRecordRoute.payload_workorder.authority_boundary.can_close_domain_ready, false);
+  assert.equal(ownerRecordRoute.payload_workorder.authority_boundary.can_claim_production_ready, false);
+  const stageRecordRoute = full.operator_action_routing_refs.refs.find(
+    (route: { action_kind: string; target_identity?: { stage_id?: string } }) =>
+      route.action_kind === 'domain_owner_payload_summary_receipt_record'
+      && route.target_identity?.stage_id === 'visual_direction',
+  );
+  assert.ok(stageRecordRoute);
+  assert.deepEqual(stageRecordRoute.required_operator_payload_refs, [
+    'domain_receipt_refs',
+    'monitor_freshness_refs',
+    'runtime_event_refs',
+    'typed_blocker_refs',
+  ]);
+  const actionLedgerReceiptRefOnly = runCliFailure([
+    'runtime',
+    'action',
+    'execute',
+    '--action',
+    stageRecordRoute.action_id,
+    '--payload',
+    JSON.stringify({
+      receipt_ref: 'opl://domain-owner-payload-summary/stage-ledger-override',
+    }),
+  ], env);
+  assert.equal(actionLedgerReceiptRefOnly.payload.error.code, 'cli_usage_error');
+  assert.equal(
+    actionLedgerReceiptRefOnly.payload.error.details.error_kind,
+    'domain_owner_payload_summary_payload_preflight_blocked',
+  );
+  assert.deepEqual(
+    actionLedgerReceiptRefOnly.payload.error.details.preflight.missing_payload_fields,
+    ['domain_owner_or_stage_success_refs_or_typed_blocker_refs'],
+  );
 
   const rca = projection.domains[0];
   assert.equal(rca.domain_id, 'redcube');
@@ -254,7 +301,6 @@ test('runtime App drilldown exposes RCA owner payload summaries as refs-only gui
     readinessAttention.owner_payload_domains.map((domain: { domain_id: string }) => domain.domain_id),
     ['redcube'],
   );
-  assert.equal(readinessAttention.owner_payload_domains[0].copyable_runtime_action_execute_commands, undefined);
   assert.equal(readinessAttention.authority_boundary.can_write_domain_truth, false);
   assert.equal(readinessAttention.authority_boundary.can_create_owner_receipt, false);
   assert.equal(readinessAttention.authority_boundary.can_generate_typed_blocker, false);

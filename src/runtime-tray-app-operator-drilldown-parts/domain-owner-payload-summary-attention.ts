@@ -97,7 +97,7 @@ export function buildDomainOwnerPayloadSummaryAttention(drilldown: JsonRecord) {
   const limitedDomains = limitedItems(domains);
   return {
     surface_kind: 'opl_domain_owner_payload_summary_attention',
-    projection_policy: 'bounded_refs_only_payload_summary_guidance_no_record_route',
+    projection_policy: 'bounded_refs_only_payload_summary_guidance_with_refs_only_ledger_route',
     status: domains.length > 0 ? 'owner_payload_summary_available' : 'clear',
     domain_count: numberValue(summary.domain_count),
     domain_attention_count: limitedDomains.total_count,

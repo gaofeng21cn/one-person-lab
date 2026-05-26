@@ -136,6 +136,29 @@ export function buildPublicRuntimeCommandSpecs(
         ],
         group: 'runtime',
       }),
+    'runtime domain-owner-payload-summary record':
+      cloneCommandSpec(commandSpecs['runtime domain-owner-payload-summary record'], {
+        usage:
+          'opl runtime domain-owner-payload-summary record --target-identity <json> (--payload <json>|--payload-file <path>)',
+        examples: [
+          'opl runtime domain-owner-payload-summary record --target-identity \'{"domain_id":"redcube","summary_kind":"owner_payload_item","item_id":"owner_chain_apply"}\' --payload \'{"owner_chain_refs":["rca:owner-chain"]}\'',
+        ],
+        group: 'runtime',
+      }),
+    'runtime domain-owner-payload-summary verify':
+      cloneCommandSpec(commandSpecs['runtime domain-owner-payload-summary verify'], {
+        usage: 'opl runtime domain-owner-payload-summary verify [--receipt-ref <ref>]',
+        examples: [
+          'opl runtime domain-owner-payload-summary verify --receipt-ref opl://domain-owner-payload-summary/redcube%2Fowner_payload_item%2Fowner_chain_apply',
+        ],
+        group: 'runtime',
+      }),
+    'runtime domain-owner-payload-summary list':
+      cloneCommandSpec(commandSpecs['runtime domain-owner-payload-summary list'], {
+        usage: 'opl runtime domain-owner-payload-summary list',
+        examples: ['opl runtime domain-owner-payload-summary list --json'],
+        group: 'runtime',
+      }),
     ...developerModeCloseoutCommandSpecs,
     'runtime oma-app-live-path record':
       cloneCommandSpec(commandSpecs['runtime oma-app-live-path record'], {
