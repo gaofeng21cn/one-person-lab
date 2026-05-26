@@ -5458,6 +5458,64 @@ Next tranche write scope:
 - Continue MAS exact uncovered inventory, preferably bounded `docs/history/**` index/provenance groups or remaining selected `docs/references/mainline/**`, `docs/references/integration/**`, `docs/references/mds-parity/**`, `docs/public/README.md`, and `docs/specs/README.md`.
 - Keep App docs delayed until active release / GUI lanes are safe or explicitly assigned.
 
+Date: `2026-05-26 23:30 CST`
+Tranche: `mas-mds-parity-runtime-drift-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAS `docs/references/mds-parity/**` 中剩余 exact uncovered 的 3 份 support-reference 文档，并吸收同 cluster 的 stale runtime / Live Console wording 修正。目标是把 MDS WebUI / Live Console / terminal attach parity 参考重新对齐当前 MAS / OPL owner split：MAS owns paper/domain Progress Portal projection；OPL owns runtime drilldown through `current_control_state` / provider attempt projection。本轮不关闭全局 `/goal`，也不表示 MAS repo-wide README/docs 覆盖完成。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`, `TASTE.md`, `docs/status.md`, `docs/active/mas-ideal-state-gap-plan.md`, `docs/active/opl_app_mas_runtime_workbench_program.md`, and `docs/docs_portfolio_consolidation.md`.
+- MAS mds-parity docs: `docs/references/mds-parity/mds_capability_parity_matrix.md`, `docs/references/mds-parity/mds_webui_cleanroom_behavior_spec.md`, `docs/references/mds-parity/mds_webui_user_parity_gap_review.md`, with supporting correction in `docs/references/mds-parity/mds_behavior_equivalence_gap_matrix.md`.
+- MAS machine/test truth: `src/med_autoscience/controllers/mds_capability_parity.py`, `src/med_autoscience/controllers/mds_capability_parity_parts/behavior_equivalence.py`, `src/med_autoscience/controllers/progress_portal_parts/workspace_carrier.py`, `contracts/functional_privatization_audit.json`, `contracts/test-lane-manifest.json`, `tests/test_mds_capability_parity.py`, `tests/test_progress_portal.py`, `tests/progress_portal_cases/test_materialized_surfaces.py`, `tests/test_mas_mds_absorb_governance.py`, and `tests/test_mds_truth_boundary.py`.
+
+Fresh semantic result:
+
+- MAS mds-parity docs now say MAS Progress Portal keeps payload/static per-study pages, route-decision read-only projection, source/artifact refs, owner receipts and typed blockers.
+- MAS private Live Console, conversation/session read model, terminal attach gate and Portal local action endpoint are now written as physically retired / history-provenance only.
+- Runtime conversation, terminal/log/provider drilldown and future attach/control are routed to OPL `current_control_state` / provider attempt projection; MAS Portal cannot be read as runtime owner, terminal owner, command queue, local HTTP service or action endpoint.
+- `mds_behavior_equivalence_gap_matrix.md` was corrected as supporting stale prose even though it was previously ledger-covered, because its old wording conflicted with current machine truth and focused tests.
+- MAS inventory-vs-ledger after this tranche reports `docs/references/mds-parity/**` exact missing count `0`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full paragraph read of `docs/references/mds-parity/mds_capability_parity_matrix.md`, `docs/references/mds-parity/mds_webui_cleanroom_behavior_spec.md`, and `docs/references/mds-parity/mds_webui_user_parity_gap_review.md`; focused stale correction of `docs/references/mds-parity/mds_behavior_equivalence_gap_matrix.md`, with live source/contract/test evidence listed above. | `docs/references/mds-parity/mds_capability_parity_matrix.md`; `docs/references/mds-parity/mds_webui_cleanroom_behavior_spec.md`; `docs/references/mds-parity/mds_webui_user_parity_gap_review.md`; `docs/references/mds-parity/mds_behavior_equivalence_gap_matrix.md`; `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | OPL family ledger foldback for this MAS mds-parity tranche. | `docs/active/development-document-portfolio.md` |
+
+Exact MAS mds-parity reference paths newly recorded by this tranche: `docs/references/mds-parity/mds_capability_parity_matrix.md`; `docs/references/mds-parity/mds_webui_cleanroom_behavior_spec.md`; `docs/references/mds-parity/mds_webui_user_parity_gap_review.md`.
+
+Archived / tombstoned / deleted docs:
+
+- none. The mds-parity cluster remains support-reference material; stale current-surface wording was corrected in place.
+
+Unreviewed docs:
+
+- `one-person-lab`: none by exact inventory coverage for the current OPL inventory.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks and this mds-parity tranche. Remaining exact uncovered clusters are now history-heavy plus selected `docs/references/mainline/**` and `docs/references/integration/**`.
+- `med-autogrant`: current recorded scope was closed by the MAG final inventory reconcile unless new docs or later source/contract changes reopen a section.
+- `redcube-ai`: none by current tracked repo-root `README*` + `docs/**/*.md` inventory reconcile unless new docs or substantive edits reopen coverage.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App release / GUI lanes are safe or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Future MAS mds-parity prose that claims MAS private Live Console, MAS conversation/session read model, terminal attach owner gate, Portal `--serve --enable-actions`, MAS runtime owner apply, terminal command queue, local HTTP action endpoint or MAS-owned terminal attach/input/resize/detach is stale pollution.
+- Future MDS WebUI parity prose must keep old WebUI / daemon as clean-room UX oracle and historical fixture; it must not become source import, default runtime owner, diagnostic owner, quality/publication authority, artifact authority, terminal owner or hidden runnable substitute.
+- App docs remain unsafe for automatic governance while main and release/GUI lanes carry unrelated dirty changes.
+
+Verification before absorb:
+
+- MAS mds-parity tranche worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings; mds-parity inventory-vs-ledger recheck confirmed no remaining `docs/references/mds-parity/**` exact path missing after this ledger entry.
+- OPL ledger worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+
+Next tranche write scope:
+
+- Continue MAS exact uncovered inventory, preferably selected `docs/references/mainline/**`, selected `docs/references/integration/**`, or bounded `docs/history/**` index/provenance groups.
+- Keep App docs delayed until active release / GUI lanes are safe or explicitly assigned.
+
 ## 验证
 
 Docs-only 整理：
