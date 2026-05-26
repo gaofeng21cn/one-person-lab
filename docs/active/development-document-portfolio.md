@@ -4305,7 +4305,7 @@ Verification:
 
 Date: `2026-05-26 17:31 CST`
 Tranche: `mag-20260412-route-handoff-20260413-hermes-tombstone-coverage`
-State: `tranche_verified_pending_absorb`
+State: `tranche_verified_absorbed`
 
 本轮覆盖 MAG `docs/history/specs/` 下剩余 2026-04-12 route / handoff snapshots 和 2026-04-13 Hermes-native critique proof tombstone。目标是确认这些 direct-file 历史入口不会把旧 author-side route snapshot、pending handoff matrix、`runtime-run`、裸 package command、`hermes_native_proof`、Hermes / Gateway wording 或 experimental proof lane 误读成当前 route catalog、public CLI shape、default executor owner、default runtime owner、compatibility interface、App/release readiness、production readiness 或 physical-delete authority。
 
@@ -4359,7 +4359,8 @@ Verification / absorb:
 - MAG docs verification passed before absorb: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
 - MAG focused tests passed before absorb: `tests/test_domain_entry.py`, `tests/test_critique_executor.py`, `tests/test_program_control_surfaces.py`, and `tests/test_hosted_contract_bundle.py` returned 46 pytest cases plus 36 subtests.
 - OPL ledger worktree verification passed before absorb: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
-- Pending absorb: fast-forward MAG and OPL commits into both `main` checkouts, cleanup this tranche's worktrees/branches, then final six-repo lightweight verification.
+- MAG commit `670d589 docs: cover MAG route handoff history specs` is on MAG `main`; OPL commit `f3e2d769 docs: record MAG route handoff coverage` is on OPL `main`.
+- This tranche's MAG and OPL worktrees / branches were removed after fast-forward absorb.
 
 Next tranche write scope:
 
