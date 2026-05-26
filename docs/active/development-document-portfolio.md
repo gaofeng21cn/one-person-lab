@@ -5066,6 +5066,62 @@ Next tranche write scope:
 - Run a final OPL inventory reconcile over `README*`, `docs/**/*.md`, and contracts README files to convert exact zero-missing into a reviewed OPL closeout statement, then pick MAS/RCA/App remaining repo-wide docs according to dirty-lane safety.
 - Delay RCA/App docs write passes until external implementation/release dirty lanes are isolated or explicitly assigned.
 
+Date: `2026-05-26 21:13 CST`
+Tranche: `opl-final-inventory-reconcile`
+State: `tranche_verified`
+
+本轮对 OPL `README*`、`docs/**/*.md` 与 contracts README 文件做 final inventory reconcile。目标是把前序 focused tranches 的 exact zero-missing 状态转成 reviewed OPL closeout statement：当前 OPL 175 个 inventory path 都已在本 ledger 中显式出现，且其语义覆盖分别落入 current truth、active plan、support reference、history/tombstone 或 policy/spec 层。本轮不新增历史正文改写，不关闭全局 `/goal`，也不把 OPL docs coverage 写成 OPL production ready、domain ready、App release ready 或 MAS/RCA/App docs coverage complete。
+
+Fresh live truth inputs:
+
+- OPL `TASTE.md`, `README.md`, `docs/README.md`, `docs/active/current-state-vs-ideal-gap.md`, `docs/references/runtime-substrate/opl-family-agent-ideal-state.md`, and `docs/active/development-document-portfolio.md`.
+- OPL inventory script over repo-root `README*`, `docs/**/*.md`, and `contracts/**/README*.md`.
+- OPL Doc Governance doctor fallback for active-truth shape.
+- OPL machine/read-model surfaces: `contracts/opl-framework/domains.json`, `contracts/opl-framework/workstreams.json`, `contracts/opl-framework/task-topology.json`, `opl agents conformance --family-defaults --json`, and `opl agents default-callers --family-defaults --json`.
+
+Fresh semantic result:
+
+- OPL inventory is `175` files; `not_explicitly_named_count=0`. This means the OPL coverage ledger explicitly names every current repo-root README, docs Markdown file and contracts README file in the governed OPL inventory.
+- OPL Doc Governance doctor returned `finding_count=0`, active truth `pass`, `missing_item_count=0`, and `next_round_agent_prompt_not_ready_count=0`.
+- Current active domain-agent catalog remains MAS / MAG / RCA through the OPL family contracts. Active workstreams remain `grant_ops`, `research_ops`, and `presentation_ops`; `thesis_ops`, `review_ops`, `ip_ops`, and `award_ops` remain topology signals, not admitted domain agents.
+- Fresh `opl agents conformance --family-defaults --json` returned `status=passed`, `passed_count=4`, `blocked_count=0`, and `production_evidence_tail_count=4`; this is structural conformance, not domain readiness, App release readiness, production readiness or docs-governance completion.
+- Fresh `opl agents default-callers --family-defaults --json` returned `status=ready_domain_evidence_required`, `generated_default_caller_surface_count=32`, `blocked_surface_count=0`, and `physical_delete_authorized_by_this_report=false`; generated/default-caller readiness does not authorize physical delete, compatibility-surface retention or production default promotion.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | Final inventory reconcile over all 175 current `README*`, `docs/**/*.md`, and `contracts/**/README*.md` paths; support read of OPL entry docs, active truth owner, ideal-state reference, framework contracts and fresh conformance/default-caller read models. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. This tranche is an inventory/accounting reconcile only; prior tranches already routed current truth, support reference and history/tombstone material.
+
+Unreviewed docs:
+
+- `one-person-lab`: none by exact inventory coverage for the current 175-file OPL inventory. Future new README/docs/contracts README files must be added to this ledger or a successor coverage ledger before OPL can remain closed.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks.
+- `med-autogrant`: current 120-file recorded scope was closed by the MAG final inventory reconcile unless new docs or later source/contract changes reopen a section.
+- `redcube-ai`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused RCA chunks; current main checkout still carries external dirty implementation/test files.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App dirty lanes are closed or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- OPL: no exact uncovered path remains in the current inventory; remaining OPL risk is new-doc drift, stale wording introduced after this reconcile, or future source/contract/read-model changes that make an already-covered section stale.
+- OPL historical gateway/frontdoor/Hermes/MDS/local-manager/worker-flow vocabulary remains allowed only in `docs/history/**`, retired/tombstone/provenance context, explicit negative guard, or dated process history; it must not return to active docs as current owner surface.
+- Global OPL series: MAS, RCA and App repo-wide docs still need future passes according to dirty-lane safety and repo-owned active truth.
+
+Verification before absorb:
+
+- OPL final reconcile verification passed in the tranche worktree: inventory `175`, `not_explicitly_named_count=0`; OPL Doc Governance doctor `finding_count=0`, active truth `pass`; `git diff --check`; strict README/docs/contracts conflict-marker scan.
+- OPL support contracts and conformance/default-caller read models above were rerun fresh in the tranche worktree; no source or machine-readable contract edit was made.
+
+Next tranche write scope:
+
+- Pick MAS repo-wide coverage if its main checkout is clean enough, or a safe focused MAS doc cluster if external owner-route changes continue to move.
+- Delay RCA/App docs write passes until external implementation/release dirty lanes are isolated or explicitly assigned.
+
 ## 验证
 
 Docs-only 整理：
