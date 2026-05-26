@@ -4303,6 +4303,69 @@ Verification:
 - Strict README/docs/contracts conflict marker scan: passed.
 - `python3 /Users/gaofeng/workspace/opl-doc-governance/scripts/opl_doc_doctor.py doctor . --format json`: `finding_count=0`, active truth status `pass`.
 
+Date: `2026-05-26 17:31 CST`
+Tranche: `mag-20260412-route-handoff-20260413-hermes-tombstone-coverage`
+State: `tranche_verified_pending_absorb`
+
+本轮覆盖 MAG `docs/history/specs/` 下剩余 2026-04-12 route / handoff snapshots 和 2026-04-13 Hermes-native critique proof tombstone。目标是确认这些 direct-file 历史入口不会把旧 author-side route snapshot、pending handoff matrix、`runtime-run`、裸 package command、`hermes_native_proof`、Hermes / Gateway wording 或 experimental proof lane 误读成当前 route catalog、public CLI shape、default executor owner、default runtime owner、compatibility interface、App/release readiness、production readiness 或 physical-delete authority。
+
+Fresh live truth inputs:
+
+- MAG `AGENTS.md`, `TASTE.md`, core docs, `docs/active/mag-ideal-state-cross-repo-gap-plan.md`, `docs/specs/README.md`, `docs/specs/specs_lifecycle_map.md`, `docs/history/specs/README.md`, and MAG `docs/docs_portfolio_consolidation.md`.
+- Reviewed history specs: `docs/history/specs/2026-04-12-author-side-executor-routing-contract-current-truth.md`, `docs/history/specs/2026-04-12-critique-pending-handoff-contract-current-truth.md`, `docs/history/specs/2026-04-12-pending-authoring-route-handoff-matrix-current-truth.md`, and `docs/history/specs/2026-04-13-hermes-native-critique-proof-tombstone.md`.
+- MAG machine/source truth surfaces: `contracts/runtime-program/current-program.json`, `src/med_autogrant/public_cli.py`, `src/med_autogrant/domain_entry.py`, `src/med_autogrant/domain_entry_contract.py`, `src/med_autogrant/hosted_contract_bundle.py`, `src/med_autogrant/domain_runtime_parts/substrate.py`, `src/med_autogrant/critique_executor.py`, `src/med_autogrant/hermes_native_executor.py`, `tests/test_domain_entry.py`, `tests/test_critique_executor.py`, `tests/test_program_control_surfaces.py`, active specs listed by `docs/specs/README.md`, schemas/source/CLI/API behavior.
+- Fresh read-model probes: `contracts/runtime-program/current-program.json` runtime owner / executor defaults, `MagDomainRuntime().describe_topology()`, `build_domain_entry_contract()`, `_build_hosted_authoring_contract()`, grouped public CLI mapping, active service-safe command catalog, current critique executor vocabulary and retired command absence.
+
+Fresh semantic result:
+
+- All four reviewed files carry first-screen lifecycle signals plus `Owner` / `Purpose` / `State` / `Machine boundary`.
+- `2026-04-12-author-side-executor-routing-contract-current-truth.md` remains useful historical author-side executor routing snapshot. It gained one post-2026-05 reading guard because the body still mentions `runtime-run` and bare `build-*` commands. Current operator commands map through grouped CLI, and current route catalog / hosted contract truth is source / contract owned.
+- `2026-04-12-critique-pending-handoff-contract-current-truth.md` is already a concise superseded critique pending snapshot. Existing lifecycle guard is sufficient; no body rewrite was needed.
+- `2026-04-12-pending-authoring-route-handoff-matrix-current-truth.md` remains useful historical pending handoff matrix. It gained one post-2026-05 reading guard because the body still describes pending authoring routes, Hermes / Gateway collaboration and old surface names. Current `direction_screening -> frozen` routes are landed service-safe commands, and historical workspace surface names map through grouped CLI.
+- `2026-04-13-hermes-native-critique-proof-tombstone.md` remains a historical proof tombstone. It gained one post-2026-05 reading guard because the body still uses the superseded `hermes_native_proof` vocabulary. Current explicit non-default executor vocabulary is `executor_kind=hermes_agent`, default critique executor is still `codex_cli`, and non-default executor use requires OPL `AgentExecutionReceipt` style proof with no silent fallback or equivalence claim.
+- `contracts/runtime-program/current-program.json` still states `default_task_runtime_owner=one-person-lab`, `default_runtime_owner=configured_family_runtime_provider`, `default_runtime_substrate=temporal`, `default_stage_executor=codex_cli`, `mag_implements_daemon=false`, `mag_implements_scheduler=false`, `mag_implements_attempt_loop=false`, `mag_owns_attempt_ledger=false`, and optional hosted carrier `hermes_agent`.
+- Current public CLI shape is grouped. Historical `summarize-workspace`, `stage-route-report`, `critique-summary`, `build-artifact-bundle`, `build-final-package`, `build-hosted-contract-bundle` and `build-submission-ready-package` map to `workspace summarize`, `workspace route-report`, `workspace critique-summary`, `package artifact-bundle`, `package final-package`, `package hosted-contract-bundle` and `package submission-ready`.
+- Fresh command-catalog probe found `SERVICE_SAFE_DOMAIN_COMMANDS` has 30 active commands; `run-local`, `runtime-run`, `runtime-resume` and `probe-upstream-hermes` remain absent from active service-safe and grouped public command catalogs.
+- Fresh hosted authoring contract probe returned current route ids `direction_screening`, `question_refinement`, `argument_building`, `fit_alignment`, `outline`, `drafting`, `critique`, `revision`, `frozen`, `artifact_bundle`, `final_package`, and `hosted_contract_bundle`; historical pending / landed split text must not override current source/contracts/tests.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autogrant` | Full paragraph read of the four history specs listed above; support read of MAG history specs index, specs lifecycle map, active gap plan, current-program runtime owner / executor defaults, domain-entry contract source, hosted authoring contract source, critique executor source/tests, explicit Hermes adapter proof source/tests and retired command no-resurrection surfaces. | `docs/docs_portfolio_consolidation.md`; `docs/history/specs/2026-04-12-author-side-executor-routing-contract-current-truth.md`; `docs/history/specs/2026-04-12-pending-authoring-route-handoff-matrix-current-truth.md`; `docs/history/specs/2026-04-13-hermes-native-critique-proof-tombstone.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. These four MAG files remain useful history provenance; no body move, tombstone, or delete was required.
+
+Unreviewed docs:
+
+- `med-autogrant`: remaining MAG non-index references such as grant strategy memory policy, OPL family contract adoption and governance checklist still need paragraph-level checks against current contracts/source unless already covered by a later MAG or OPL ledger entry.
+- `one-person-lab`: root `README*`, contracts README files, most active/runtime/delivery/source/policies/specs/references/history docs remain open outside recorded focused tranches.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks.
+- `redcube-ai`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused RCA chunks.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App dirty lanes are closed or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Any future direct-file use of these 2026-04-12 / 2026-04-13 files as current route catalog, public CLI command shape, default executor owner, default runtime owner, active `runtime-run` / `runtime-resume`, Gateway/federation readiness, production hosted caller, App release gate, compatibility interface, domain ready, production ready or physical-delete authority is stale pollution.
+- `hermes_agent` vocabulary must remain explicit opt-in executor / receipt / proof lane vocabulary. It must not be upgraded to default task runtime owner, provider owner, grant truth owner, quality/export verdict owner, Codex-equivalent executor, long-soak completion or production-ready claim.
+- Historical pending matrix and early route split wording must remain 2026-04-12 migration provenance. Current route truth comes from active specs, contracts/source, hosted authoring contract and tests.
+
+Verification / absorb:
+
+- MAG docs verification passed before absorb: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- MAG focused tests passed before absorb: `tests/test_domain_entry.py`, `tests/test_critique_executor.py`, `tests/test_program_control_surfaces.py`, and `tests/test_hosted_contract_bundle.py` returned 46 pytest cases plus 36 subtests.
+- OPL ledger worktree verification passed before absorb: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- Pending absorb: fast-forward MAG and OPL commits into both `main` checkouts, cleanup this tranche's worktrees/branches, then final six-repo lightweight verification.
+
+Next tranche write scope:
+
+- Continue MAG non-index references such as grant strategy memory policy, OPL family contract adoption and governance checklist; or choose RCA uncovered reference bodies, OPL uncovered docs, or App docs once their main checkout and active worktrees are safe.
+- Keep the pre-existing `workspace cockpit` / `product direct-entry` CLI test drift routed to a source/test owner lane, not docs-governance closeout.
+
 ## 验证
 
 Docs-only 整理：
