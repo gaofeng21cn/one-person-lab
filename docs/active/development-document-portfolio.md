@@ -5700,6 +5700,68 @@ Next tranche write scope:
 - Keep App docs delayed until active release / GUI lanes are safe or explicitly assigned.
 - Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
 
+Date: `2026-05-27 01:40 CST`
+Tranche: `oma-ai-first-baseline-delta-coverage`
+State: `tranche_verified`
+
+本轮覆盖 `opl-meta-agent` 在 `c2fca93 Make OMA baseline generation AI-first` 之后重新打开的 README/docs/agent-pack 文案 delta。目标是确认新 AI-first / Codex `stage-decomposition` typed closeout 口径已经和 live scripts、contracts、tests 与 OPL read-model 对齐；本轮不改 OMA 文档，不关闭全局 `/goal`，也不把 OMA generated surface、registry/App consumption 或 conformance 读数写成 target domain ready、quality verdict、App live rendering 或 default promotion。
+
+Fresh live truth inputs:
+
+- OMA `AGENTS.md`, `TASTE.md`, repo-root `README.md`, `README.zh-CN.md`, `docs/README.md`, core docs, active truth owner, ideal-state reference and private implementation inventory.
+- OMA agent-pack support README files under `agent/knowledge`, `agent/prompts`, `agent/quality_gates`, `agent/skills`, and `agent/stages`; focused changed pack files `agent/prompts/stage-decomposition.md`, `agent/skills/agent-baseline-build.md`, and `agent/skills/opl-meta-agent-domain-skill.md`.
+- OMA live source/tests/contracts: `scripts/bootstrap-sample-agent.ts`, `scripts/lib/stage-decomposition-runner.ts`, `scripts/lib/stage-decomposition-pack-draft.ts`, `scripts/lib/bootstrap-domain-packs.ts`, `tests/stage-decomposition-materializer.test.ts`, `tests/bootstrap-loop.test.ts`, `package.json`, `runtime/authority_functions/meta-agent-authority-functions.json`, and `contracts/functional_privatization_audit.json`.
+- OPL read models: `opl agents interfaces --repo-dir /Users/gaofeng/workspace/opl-meta-agent --json`, `opl agents conformance --family-defaults --json`, and `opl runtime app-operator-drilldown --json`.
+
+Fresh semantic result:
+
+- OMA docs now correctly state that the default `build-agent-baseline` path launches or consumes a Codex `stage-decomposition` typed closeout, and that the closeout is the authority for stage graph, action refs, pack files, independent gate policy and quality gate declarations.
+- The implementation matches that claim: `build-agent-baseline` calls `runStageDecompositionAttempt`, then `validateStageDecompositionCloseoutPacket` and `materializeStageDecompositionPackDraft`; free text closeout, partial refs, missing independent gate policy, missing quality gate declaration and self-review fail closed to blocker before baseline receipt signing.
+- `scripts/lib/bootstrap-domain-packs.ts` is now only a 28-line compatibility fixture adapter that builds a fixture typed closeout and hands it to the strict materializer. It no longer authors the default stage graph.
+- OPL generated interface read-model remains `status=ready` and OPL-owned, with `domain_repo_can_own_generated_surface=false` and generated interface `can_write_domain_truth=false`. Its `build-agent-baseline` descriptor still points to `npm run bootstrap:sample`, so current prose must continue to present `bootstrap:sample` as an explicit secondary command name rather than claiming all generated descriptors have switched to the new npm script name.
+- OPL App/operator drilldown reads `opl_meta_agent_registry_status=resolved`, `opl_meta_agent_production_consumption_ready=true`, `opl_meta_agent_claims_domain_ready=false`, `opl_meta_agent_claims_quality_verdict=false`, `opl_meta_agent_claims_default_promotion=false`, `app_release_user_path_release_ready_claimed=false`, and `app_release_user_path_production_ready_claimed=false`. This is OPL refs-only consumption evidence, not target domain readiness or default promotion authority.
+- Family conformance still has `passed_count=4`, `blocked_count=0`, and `production_evidence_tail_count=4`; structural conformance is not a production/domain-ready claim.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `opl-meta-agent` | Delta reread of `README.md`, `README.zh-CN.md`, `docs/project.md`, `docs/status.md`, `docs/architecture.md`, `docs/invariants.md`, `docs/decisions.md`, `docs/active/opl-meta-agent-ideal-state-gap-plan.md`, `docs/active/opl-private-implementation-migration-inventory.md`, `docs/references/opl-meta-agent-ideal-state.md`, `docs/README.md`, and agent README support files; focused changed pack docs listed above; support read of scripts/tests/contracts/read-model evidence listed above. | none |
+| `one-person-lab` | OPL family coverage ledger foldback for this OMA delta tranche; no OPL active truth / source / contract semantics changed. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. OMA docs remain current; no doc path gained a duplicate active-truth role or a proven no-active-role retirement requirement.
+
+Unreviewed docs:
+
+- `opl-meta-agent`: repo-root `README*`, `docs/**/*.md`, and agent README support files remain covered after this delta refresh. Non-README semantic pack files outside the focused changed stage/skill docs were used as support surfaces, not re-governed as full docs-taxonomy bodies in this tranche.
+- `one-person-lab`: no new OPL body docs were governed in this tranche; previous exact coverage claims remain as recorded.
+- `med-autoscience`, `med-autogrant`, `redcube-ai`: no new docs governed in this tranche; previous coverage state remains unchanged.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active release / GUI lanes are safe or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- OMA: future docs or generated descriptors that treat `bootstrap:sample` as the default AI-first authority would be stale; it is now an explicit secondary command / generated descriptor command while `build-agent-baseline` is the documented action implementation.
+- OMA: future prose that treats fixture typed closeout, sample smoke, generated surface readiness, registry/App projection, conformance pass, suite pass or OPL refs-only production consumption as real target delivery, target domain ready, quality verdict, App live rendering, owner receipt, production ready or default promotion is stale pollution.
+- OMA: `scripts/lib/stage-decomposition-pack-draft.ts` is 788 lines and remains a split-pressure helper; future growth should split fixture builder, validator and materializer, not turn it into a private scaffold generator or Agent Lab runner.
+- App docs remain unsafe for automatic governance while main and release/GUI lanes carry unrelated dirty changes.
+
+Worktree / branch cleanup:
+
+- No external stale worktree/branch qualified for cleanup. OPL, MAS and App extra worktrees are older than one hour but carry uncommitted source/docs/test/release changes or branch ancestry outside this automation's ownership. They remain retained.
+- This tranche's OPL ledger worktree should be removed after fast-forward absorb.
+
+Verification before absorb:
+
+- OMA main: `git diff --check`; strict README/docs/agent/contracts/runtime/scripts/tests conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings; `npm test`; `npm run typecheck`.
+- OPL ledger worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+
+Next tranche write scope:
+
+- Continue MAS bounded history inventory, or start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
+
 ## 验证
 
 Docs-only 整理：
