@@ -34,6 +34,10 @@ export function summarizeSelectedSafeAction(action: JsonRecord | null) {
   }
   const actionId = stringValue(action.action_id);
   const routeRequiresPayload = action.route_requires_domain_or_app_payload === true;
+  const canCloseWithoutDomainOrAppPayload =
+    typeof action.can_close_without_domain_or_app_payload === 'boolean'
+      ? action.can_close_without_domain_or_app_payload
+      : !routeRequiresPayload;
   const submitArgs = actionId
     ? [
         'runtime',
@@ -125,7 +129,7 @@ export function summarizeSelectedSafeAction(action: JsonRecord | null) {
     required_operator_payload_refs: requiredOperatorPayloadRefs,
     optional_operator_payload_refs: stringList(action.optional_operator_payload_refs),
     route_requires_domain_or_app_payload: routeRequiresPayload,
-    can_close_without_domain_or_app_payload: action.can_close_without_domain_or_app_payload !== false,
+    can_close_without_domain_or_app_payload: canCloseWithoutDomainOrAppPayload,
     authority_split: record(action.authority_split),
     read_model_owner_split: record(action.read_model_owner_split),
     authority_boundary: authorityBoundary,
