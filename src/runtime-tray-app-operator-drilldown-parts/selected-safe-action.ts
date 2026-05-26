@@ -47,6 +47,7 @@ export function summarizeSelectedSafeAction(action: JsonRecord | null) {
   const copyableCommands = record(action.copyable_runtime_action_execute_commands);
   const payloadTemplate = record(action.payload_template);
   const payloadWorkorder = record(action.payload_workorder);
+  const authorityBoundary = record(action.authority_boundary);
   const requiredOperatorPayloadRefs = stringList(action.required_operator_payload_refs);
   const requiredReturnShapes = stringList(action.required_return_shapes);
   return {
@@ -78,6 +79,8 @@ export function summarizeSelectedSafeAction(action: JsonRecord | null) {
     provider_worker_repair_action_id: stringValue(action.provider_worker_repair_action_id),
     provider_worker_repair_command: stringValue(action.provider_worker_repair_command),
     provider_worker_required_next_action: stringValue(action.provider_worker_required_next_action),
+    blocked_transport_dead_letter_reason: stringValue(action.blocked_transport_dead_letter_reason),
+    provider_transport_redrive_command: stringValue(action.provider_transport_redrive_command),
     payload_requirement: stringValue(action.payload_requirement),
     payload_owner: stringValue(action.payload_owner),
     payload_template: payloadTemplate,
@@ -121,5 +124,11 @@ export function summarizeSelectedSafeAction(action: JsonRecord | null) {
     optional_operator_payload_refs: stringList(action.optional_operator_payload_refs),
     route_requires_domain_or_app_payload: routeRequiresPayload,
     can_close_without_domain_or_app_payload: action.can_close_without_domain_or_app_payload !== false,
+    authority_split: record(action.authority_split),
+    read_model_owner_split: record(action.read_model_owner_split),
+    authority_boundary: authorityBoundary,
+    can_authorize_quality_verdict: action.can_authorize_quality_verdict === true || authorityBoundary.can_authorize_quality_verdict === true,
+    can_authorize_artifact_package: action.can_authorize_artifact_package === true || authorityBoundary.can_authorize_artifact_package === true,
+    can_create_owner_receipt: action.can_create_owner_receipt === true || authorityBoundary.can_create_owner_receipt === true,
   };
 }

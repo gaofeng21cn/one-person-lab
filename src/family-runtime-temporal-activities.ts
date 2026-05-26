@@ -6,11 +6,17 @@ import {
   DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
   DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
 } from './family-runtime-temporal-constants.ts';
-import { runFamilyRuntime } from './family-runtime.ts';
+import { runSchedulerTick } from './family-runtime-scheduler.ts';
+import { runSchedulerQueueTick } from './family-runtime-scheduler-tick-runner.ts';
+import { openQueueDb } from './family-runtime-store.ts';
 import {
   normalizeTypedStageCloseoutPacket,
   runAgentStageRunner,
 } from './family-runtime-codex-stage-runner.ts';
+
+async function temporalProviderModule() {
+  return await import('./family-runtime-temporal-provider.ts');
+}
 
 export async function codexStageActivity(input: TemporalStageAttemptWorkflowInput) {
   const observedAt = new Date().toISOString();
@@ -128,14 +134,28 @@ export async function schedulerTickActivity(input: {
     tick_source: input.tick_source ?? 'temporal-schedule',
     limit: input.limit ?? 10,
   });
-  return await runFamilyRuntime([
-    'scheduler',
-    'tick',
-    '--provider',
-    input.provider_kind,
-    ...(input.force ? ['--force'] : []),
-    '--limit',
-    String(input.limit ?? 10),
-    ...(input.hydrate === false ? ['--no-hydrate'] : []),
-  ]);
+  const { db, paths } = openQueueDb();
+  return {
+    version: 'g2',
+    family_runtime_scheduler_tick: await runSchedulerTick(
+      db,
+      paths,
+      {
+        providerKind: input.provider_kind,
+        force: input.force,
+        limit: input.limit,
+        hydrate: input.hydrate,
+      },
+      (source, limit, hydrate, taskScope) => runSchedulerQueueTick(
+        db,
+        paths,
+        source,
+        limit,
+        hydrate,
+        taskScope,
+        undefined,
+        { temporalProviderModule },
+      ),
+    ),
+  };
 }

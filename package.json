@@ -66,6 +66,7 @@
     "repo:hygiene": "scripts/repo-hygiene.sh",
     "repo:hygiene:fix": "scripts/repo-hygiene.sh --fix",
     "lint": "node ./scripts/lint.mjs && node ./scripts/line-budget.mjs",
+    "hygiene:fallow": "npx --yes fallow@latest --root . --no-cache --production",
     "test:smoke": "node ./scripts/test-lanes.mjs run smoke",
     "test:fast": "node ./scripts/test-lanes.mjs run fast",
     "test:fast:parallel": "node ./scripts/test-lanes.mjs run fast-parallel",

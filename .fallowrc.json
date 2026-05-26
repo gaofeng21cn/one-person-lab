@@ -1,0 +1,51 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "entry": [
+    "bin/opl",
+    "src/cli.ts",
+    "src/automation-companions.ts",
+    "src/agent-lab.ts",
+    "src/agent-lab-complete.ts",
+    "src/family-action-catalog.ts",
+    "src/family-domain-agent-descriptor.ts",
+    "src/domain-pack-compiler.ts",
+    "src/functional-agent-runtime-harness.ts",
+    "src/family-runtime-lifecycle-index.ts",
+    "src/generic-substrate-projection.ts",
+    "src/family-transition-runner.ts",
+    "src/family-shared-release.ts",
+    "src/family-domain-catalog.ts",
+    "src/family-entry-contracts.ts",
+    "src/family-orchestration.ts",
+    "src/managed-runtime-contract.ts",
+    "src/product-entry-companions.ts",
+    "src/product-entry-program-companions.ts",
+    "src/runtime-task-companions.ts",
+    "src/skill-catalog.ts",
+    "scripts/*.mjs",
+    "src/cli/main.ts",
+    "src/aionui-acp-shell.ts",
+    "src/native-helper-doctor.ts",
+    "src/opl-session-runtime.ts",
+    "src/product-entry.ts",
+    "src/system-installation.ts",
+    "src/management/progress.ts"
+  ],
+  "ignoreDependencies": [
+    "node:sqlite"
+  ],
+  "duplicates": {
+    "ignore": [
+      "tests/**"
+    ]
+  },
+  "health": {
+    "ignore": [
+      "tests/**"
+    ]
+  },
+  "dynamicallyLoaded": [
+    "src/cli/cases/**/*.ts",
+    "src/cli/modules/**/*.ts"
+  ]
+}

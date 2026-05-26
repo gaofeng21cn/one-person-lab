@@ -3,8 +3,6 @@ import { DatabaseSync } from 'node:sqlite';
 import { FrameworkContractError, loadFrameworkContracts } from './contracts.ts';
 import {
   parseFamilyRuntimeCommand,
-  type FamilyRuntimeDomainProfiles,
-  type FamilyRuntimeTaskScope,
 } from './family-runtime-command.ts';
 import {
   ensureFamilyRuntimeProvider,
@@ -23,7 +21,6 @@ import {
   createStageAttempt,
   inspectStageAttempt,
   inspectStageAttemptWithCurrentProviderReadiness,
-  ingestStageAttemptCloseout,
   listStageAttemptsForTask,
   listStageAttempts,
   listStageAttemptsWithCurrentProviderReadiness,
@@ -32,11 +29,7 @@ import {
   signalStageAttempt,
   stageAttemptSummary,
   syncStageAttemptFromTemporalTerminalObservation,
-  updateStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
-import { ensureProviderHostedStageAttempt } from './family-runtime-provider-hosted-attempts.ts';
-import { isMasDefaultExecutorDispatchTask } from './family-runtime-provider-hosted-attempts.ts';
-import { closeoutPacketFromDomainHandlerOutput } from './family-runtime-domain-handler-closeout.ts';
 import { residencyProofReceipt } from './family-runtime-residency-proof-events.ts';
 import {
   persistTemporalProductionProof,
@@ -60,22 +53,14 @@ import {
   type FamilyRuntimeTaskStatus,
 } from './family-runtime-store.ts';
 import { enqueueTask } from './family-runtime-enqueue.ts';
+import { runSchedulerQueueTick } from './family-runtime-scheduler-tick-runner.ts';
+import { hydrateDomainTasks, readMasManagedProviderProjection } from './family-runtime-task-dispatch.ts';
 import { redriveFamilyRuntimeTask } from './family-runtime-redrive.ts';
-import { writeFamilyRuntimeDispatchTask } from './family-runtime-dispatch-task.ts';
-import { blockTaskForStageAdmissionGate, buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
-import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
-import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
-import { dispatchCommandForDomain, parseDispatchOutput } from './family-runtime-dispatch-command.ts';
-import {
-  runFamilyRuntimeDomainHandlerCommand,
-  domainHandlerResultErrorMessage,
-} from './family-runtime-domain-handler-process.ts';
 import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-query.ts';
 import { reconcileFamilyRuntimeLifecycleRefs, runFamilyRuntimeLifecycleApply } from './family-runtime-lifecycle-index.ts';
+import { buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
 import { buildFamilyStageLaunchAdmissionGate } from './family-stage-control-plane.ts';
 import { runFamilyRuntimeEvidenceWorklistCommand } from './family-runtime-evidence-worklist-command.ts';
-import { runFamilyRuntimeQueueTick } from './family-runtime-tick.ts';
-import { startMasDefaultExecutorDispatchAttempt } from './family-runtime-mas-default-executor-start.ts';
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
@@ -91,218 +76,6 @@ async function syncTemporalStageAttemptsForTask(
     const temporalQuery = await queryTemporalStageAttemptReadModel(attempt, { paths });
     syncStageAttemptFromTemporalTerminalObservation(db, temporalQuery);
   }
-}
-
-async function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePaths>, row: FamilyRuntimeTaskRow) {
-  const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
-  if (payload.domain_truth_write === true || payload.artifact_gate_override === true) {
-    const updatedAt = nowIso();
-    db.prepare(`
-      UPDATE tasks
-      SET status = 'blocked', last_error = ?, dead_letter_reason = ?, updated_at = ?
-      WHERE task_id = ?
-    `).run(
-      'Domain truth or artifact gate writes are forbidden through the OPL family runtime queue.',
-      'domain_forbidden_write',
-      updatedAt,
-      row.task_id,
-    );
-    insertEvent(db, {
-      taskId: row.task_id,
-      domainId: row.domain_id,
-      eventType: 'task_blocked_domain_forbidden_write',
-      source: 'opl-family-runtime',
-      payload,
-    });
-    insertNotification(db, {
-      taskId: row.task_id,
-      severity: 'error',
-      title: 'Family runtime task blocked',
-      body: 'OPL queue cannot write domain truth, quality verdicts, or artifact gates.',
-      payload: { reason: 'domain_forbidden_write' },
-    });
-    const stageAttempts = updateStageAttemptsForTask(db, {
-      taskId: row.task_id,
-      status: 'blocked',
-      blockedReason: 'domain_forbidden_write',
-    });
-    return { task_id: row.task_id, status: 'blocked', reason: 'domain_forbidden_write', stage_attempts: stageAttempts };
-  }
-  const providerHostedAttempt = ensureProviderHostedStageAttempt(db, row, payload);
-  if (providerHostedAttempt?.status === 'blocked' && providerHostedAttempt.blocked_reason?.startsWith('stage_admission_')) {
-    return blockTaskForStageAdmissionGate(db, row, providerHostedAttempt);
-  }
-  if (isMasDefaultExecutorDispatchTask(row, payload)) {
-    return startMasDefaultExecutorDispatchAttempt(db, paths, {
-      row,
-      payload,
-      providerHostedAttempt,
-      temporalProviderModule,
-    });
-  }
-  const activeStageAttempts = listStageAttemptsForTask(db, row.task_id).filter((attempt) => (
-    attempt.status === 'queued'
-    || attempt.status === 'running'
-    || attempt.status === 'checkpointed'
-    || attempt.status === 'blocked'
-    || attempt.status === 'human_gate'
-    || attempt.status === 'failed'
-  ));
-  const activeStageAttemptIds = activeStageAttempts.map((attempt) => attempt.stage_attempt_id);
-
-  const leaseOwner = `opl-family-runtime:${process.pid}`;
-  const leaseExpiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-  const attempt = row.attempts + 1;
-  const runningAt = nowIso();
-  db.prepare(`
-    UPDATE tasks
-    SET status = 'running', attempts = ?, lease_owner = ?, lease_expires_at = ?, updated_at = ?
-    WHERE task_id = ? AND status IN ('queued', 'retry_waiting')
-  `).run(attempt, leaseOwner, leaseExpiresAt, runningAt, row.task_id);
-  insertEvent(db, {
-    taskId: row.task_id,
-    domainId: row.domain_id,
-    eventType: 'task_dispatch_started',
-    source: 'opl-family-runtime',
-    payload: { attempt, lease_owner: leaseOwner, lease_expires_at: leaseExpiresAt },
-  });
-  const runningStageAttempts = updateStageAttemptsForTask(db, {
-    taskId: row.task_id,
-    stageAttemptIds: activeStageAttemptIds,
-    status: 'running',
-    incrementAttempt: true,
-    activityEvent: {
-      activity_kind: 'domain_handler_dispatch_activity',
-      activity_status: 'running',
-    },
-  });
-
-  const dispatchPath = writeFamilyRuntimeDispatchTask(paths, { ...row, attempts: attempt });
-  const command = dispatchCommandForDomain(row.domain_id, dispatchPath, payload);
-  const result = runFamilyRuntimeDomainHandlerCommand(command.command_preview, {
-    cwd: command.cwd,
-    env: process.env,
-  });
-
-  const stdout = result.stdout ?? '';
-  const stderr = result.stderr ?? '';
-  const exitCode = result.exit_code;
-  const output = parseDispatchOutput(stdout);
-  const succeeded = exitCode === 0 && output.forbidden_domain_truth_write !== true;
-
-  if (succeeded) {
-    const completedAt = nowIso();
-    db.prepare(`
-      UPDATE tasks
-      SET status = 'succeeded', lease_owner = NULL, lease_expires_at = NULL, last_error = NULL, updated_at = ?
-      WHERE task_id = ?
-    `).run(completedAt, row.task_id);
-    insertEvent(db, {
-      taskId: row.task_id,
-      domainId: row.domain_id,
-      eventType: 'task_dispatch_succeeded',
-      source: 'opl-family-runtime',
-      payload: { command_preview: command.command_preview, command_cwd: command.cwd, output },
-    });
-    insertNotification(db, {
-      taskId: row.task_id,
-      severity: 'info',
-      title: 'Family runtime task dispatched',
-      body: `${row.domain_id}:${row.task_kind}`,
-      payload: { output },
-    });
-    const closeoutRefs = Array.isArray(output.closeout_refs)
-      ? output.closeout_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
-      : undefined;
-    const typedCloseoutPacket = closeoutPacketFromDomainHandlerOutput(output);
-    const checkpointedStageAttempts = updateStageAttemptsForTask(db, {
-      taskId: row.task_id,
-      stageAttemptIds: activeStageAttemptIds,
-      status: 'completed',
-      closeoutRefs,
-      activityEvent: {
-        activity_kind: 'domain_handler_dispatch_activity',
-        activity_status: typedCloseoutPacket ? 'typed_closeout_received' : 'checkpointed',
-        closeout_refs: closeoutRefs ?? [],
-      },
-    });
-    const stageAttempts = typedCloseoutPacket
-      ? listStageAttemptsForTask(db, row.task_id).filter((attempt) => (
-          activeStageAttemptIds.length === 0 || activeStageAttemptIds.includes(attempt.stage_attempt_id)
-        )).map((attempt) => ingestStageAttemptCloseout(db, {
-          stageAttemptId: attempt.stage_attempt_id,
-          packet: typedCloseoutPacket,
-        }).attempt)
-      : checkpointedStageAttempts;
-    return { task_id: row.task_id, status: 'succeeded', command_preview: command.command_preview, command_cwd: command.cwd, output, stage_attempts: stageAttempts };
-  }
-
-  const errorMessage = domainHandlerResultErrorMessage(result, 'Domain dispatch');
-  const nextStatus: FamilyRuntimeTaskStatus = attempt >= row.max_attempts ? 'dead_letter' : 'retry_waiting';
-  const failedAt = nowIso();
-  db.prepare(`
-    UPDATE tasks
-    SET status = ?, lease_owner = NULL, lease_expires_at = NULL, last_error = ?, dead_letter_reason = ?, updated_at = ?
-    WHERE task_id = ?
-  `).run(
-    nextStatus,
-    errorMessage,
-    nextStatus === 'dead_letter' ? 'retry_budget_exhausted' : null,
-    failedAt,
-    row.task_id,
-  );
-  insertEvent(db, {
-    taskId: row.task_id,
-    domainId: row.domain_id,
-    eventType: nextStatus === 'dead_letter' ? 'task_dead_lettered' : 'task_dispatch_retry_queued',
-    source: 'opl-family-runtime',
-    payload: { command_preview: command.command_preview, command_cwd: command.cwd, exit_code: exitCode, stderr, stdout },
-  });
-  insertNotification(db, {
-    taskId: row.task_id,
-    severity: nextStatus === 'dead_letter' ? 'error' : 'warning',
-    title: nextStatus === 'dead_letter' ? 'Family runtime task dead-lettered' : 'Family runtime task queued for retry',
-    body: errorMessage,
-    payload: { attempt, max_attempts: row.max_attempts },
-  });
-  const stageAttempts = updateStageAttemptsForTask(db, {
-    taskId: row.task_id,
-    stageAttemptIds: activeStageAttemptIds,
-    status: nextStatus === 'dead_letter' ? 'dead_lettered' : 'failed',
-    blockedReason: nextStatus === 'dead_letter' ? 'retry_budget_exhausted' : errorMessage,
-    activityEvent: {
-      activity_kind: 'domain_handler_dispatch_activity',
-      activity_status: nextStatus === 'dead_letter' ? 'dead_lettered' : 'failed',
-      error: errorMessage,
-    },
-  });
-  return {
-    task_id: row.task_id,
-    status: nextStatus,
-    command_preview: command.command_preview,
-    command_cwd: command.cwd,
-    exit_code: exitCode,
-    error: errorMessage,
-    stage_attempts: stageAttempts.length > 0 ? stageAttempts : runningStageAttempts,
-  };
-}
-
-async function runTick(
-  db: DatabaseSync,
-  paths: ReturnType<typeof familyRuntimePaths>,
-  source: string,
-  limit: number,
-  hydrate: boolean,
-  taskScope?: FamilyRuntimeTaskScope,
-  domainProfiles?: FamilyRuntimeDomainProfiles,
-) {
-  return runFamilyRuntimeQueueTick(db, paths, {
-    source,
-    limit,
-    hydrate,
-    taskScope,
-    domainProfiles,
-  }, { enqueueTask, dispatchTask });
 }
 
 function approveTask(
@@ -533,7 +306,9 @@ export async function runFamilyRuntime(args: string[]) {
           db,
           paths,
           parsed,
-          (source, limit, hydrate, taskScope) => runTick(db, paths, source, limit, hydrate, taskScope),
+          (source, limit, hydrate, taskScope) => runSchedulerQueueTick(db, paths, source, limit, hydrate, taskScope, undefined, {
+            temporalProviderModule,
+          }),
         ),
       };
     }
@@ -577,7 +352,7 @@ export async function runFamilyRuntime(args: string[]) {
         version: 'g2',
         family_runtime_tick: {
           surface_id: 'opl_family_runtime_tick',
-          ...await runTick(
+          ...await runSchedulerQueueTick(
             db,
             paths,
             parsed.source ?? 'manual',
@@ -585,6 +360,9 @@ export async function runFamilyRuntime(args: string[]) {
             parsed.hydrate ?? false,
             parsed.taskScope,
             parsed.domainProfiles,
+            {
+              temporalProviderModule,
+            },
           ),
           queue: queueSummary(db),
         },
