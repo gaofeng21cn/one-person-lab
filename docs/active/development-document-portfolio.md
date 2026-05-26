@@ -4134,6 +4134,59 @@ Next tranche write scope:
 - For each chosen cluster, read live source/contracts/tests/CLI-read-model surfaces first, then update this ledger with reviewed docs, edited docs, archive/tombstone/delete actions, unreviewed docs, stale/retire candidates and next prompt scope.
 - Do not mark the global `/goal` complete until all six repos' `README*` and `docs/**/*.md` are paragraph-covered, unreviewed lists are empty, and any remaining gap is closed or moved into the next-round Agent prompt.
 
+Date: `2026-05-26 16:42 CST`
+Tranche: `rca-references-family-scope-memory-locator-coverage`
+State: `tranche_verified_pending_absorb`
+
+本轮覆盖 RCA `docs/references/**` 中仍开放的 support reference bodies，重点是 references index、domain memory locator、series governance checklist、executor routing、product-entry support 和 integration support。目标是确认这些 support docs 不把早期“四仓”治理范围、英文旧 lifecycle header、memory descriptor proof、Hermes profile、OPL handoff、`domain_action_adapter` 或 generated/default caller wording 误读成 current active plan、runtime owner、memory body owner、generated wrapper owner、visual ready、domain ready 或 production ready。
+
+Fresh live truth inputs:
+
+- RCA `AGENTS.md`, `TASTE.md`, `docs/status.md`, `docs/project.md`, `docs/architecture.md`, `docs/active/rca-ideal-state-gap-plan.md`, `docs/docs_portfolio_consolidation.md`.
+- RCA reviewed references: `docs/references/README.md`, `docs/references/domain_memory_descriptor_locator.md`, `docs/references/governance/series-doc-governance-checklist.md`, `docs/references/rca_executor_routing_config.md`, `docs/references/product-entry/README.md`, all three `docs/references/product-entry/*.md`, and both `docs/references/integration/*.md`.
+- RCA machine refs: `contracts/runtime-program/current-program.json`, `contracts/functional_privatization_audit.json`, `contracts/production_acceptance/rca-production-acceptance.json`, and current-program `domain_memory_descriptor_locator` / controlled memory apply proof refs.
+- OPL status/product docs for current `OPL Framework -> One Person Lab App -> Foundry Agents` layering and six-repo governance scope.
+- OPL Doc Governance doctor preflight for RCA as shape/risk map only, not semantic proof.
+
+Fresh semantic result:
+
+- `docs/references/domain_memory_descriptor_locator.md` now has Chinese canonical title, explicit support-reference `Purpose` / `State`, human-readable machine boundary, and lifecycle note for `descriptor_proof_contract_landed_runtime_writeback_pending`.
+- The memory locator support now states that OPL can consume locator/provenance/receipt refs, but cannot store memory content, choose RCA route, accept/reject writeback, issue review/export verdicts, write owner receipt bodies or mutate canonical artifacts.
+- `docs/references/governance/series-doc-governance-checklist.md` was updated from older four-repo scope to current six-repo OPL family scope: `one-person-lab`, `one-person-lab-app`, `med-autoscience`, `med-autogrant`, `redcube-ai`, `opl-meta-agent`.
+- Product-entry and integration support references already matched prior current-caller / generated-wrapper tranches and were rechecked without body edits.
+- Executor routing remains an opt-in operator reference: default executor remains `codex_cli`; `hermes_agent` remains explicit non-default proof/backend vocabulary and cannot become default runtime owner.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `redcube-ai` | Full read of the reference docs listed above; live contract/core-doc/OPL layering refs listed above. | `docs/references/domain_memory_descriptor_locator.md`; `docs/references/governance/series-doc-governance-checklist.md`; `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. RCA reference files remain active support references; the correction was lifecycle metadata and family-scope currentness, not path retirement.
+
+Unreviewed docs:
+
+- RCA root/product-entry/integration/executor-routing/memory-locator/governance reference bodies listed above are now covered for current owner, support role and no-resurrection boundaries.
+- RCA remaining uncovered bodies are mainly the long `docs/references/rca-visual-deliverable-agent-ideal-state.md` north-star body if future changes reopen it, plus any new docs created after this tranche. History coverage remains per the prior RCA Hermes / Phase 2 / history plans-runtime-tombstone tranches.
+- OPL, MAS, MAG and App repo-wide coverage remains open outside already-recorded chunks. OMA README/docs coverage remains covered by the earlier OMA tranche.
+
+Remaining stale / retire candidates:
+
+- Any future RCA reference wording that uses old four-repo governance scope, omits One Person Lab App / OPL Meta Agent from OPL family governance, or moves domain truth / owner receipt / artifact authority into OPL/App is stale pollution.
+- Any future RCA memory reference wording that lets OPL store memory body, accept/reject writeback, choose visual route, issue review/export verdict, write owner receipt body, mutate artifacts, or claim runtime writeback complete from descriptor proof alone is stale pollution.
+- Any future executor-routing reference wording that treats `hermes_agent`, route-specific Hermes profile, or fallback-with-proof as default executor equivalence, hidden fallback chain, domain ready, production ready, visual ready or export readiness is stale pollution.
+
+Verification / absorb:
+
+- Pending this tranche closeout: RCA and OPL docs-only verification, fast-forward absorb into both `main` checkouts, worktree cleanup, then final six-repo lightweight verification.
+
+Next tranche write scope:
+
+- Continue OPL / MAS / App uncovered docs, or RCA north-star body only if future edits reopen it. Keep App docs delayed until active release / GUI lanes are safe or explicitly handed to this governance goal.
+
 ## 验证
 
 Docs-only 整理：
