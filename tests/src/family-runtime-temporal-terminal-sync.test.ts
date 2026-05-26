@@ -69,7 +69,7 @@ function insertMasDefaultExecutorTask(
   db: DatabaseSync,
   input: {
     taskId: string;
-    status: 'succeeded' | 'blocked';
+    status: 'queued' | 'succeeded' | 'blocked';
     createdAt: string;
     lastError?: string | null;
     deadLetterReason?: string | null;
@@ -196,6 +196,24 @@ function failedTemporalObservation(input: {
   } as const;
 }
 
+function missingWorkflowObservation(input: {
+  stageAttemptId: string;
+  workflowId: string;
+}) {
+  return {
+    surface_kind: 'temporal_stage_attempt_query_unavailable',
+    provider_kind: 'temporal',
+    stage_attempt_id: input.stageAttemptId,
+    workflow_id: input.workflowId,
+    status: 'unavailable',
+    reason: 'temporal_workflow_not_started_or_not_found',
+    error: {
+      code: 'temporal_workflow_not_found',
+      message: 'workflow not found',
+    },
+  } as const;
+}
+
 function createMasDefaultExecutorAttempt(
   db: DatabaseSync,
   input: {
@@ -214,6 +232,34 @@ function createMasDefaultExecutorAttempt(
     checkpointRefs: ['dispatch:mas-default-writer-start'],
   }).attempt;
 }
+
+test('missing Temporal workflow does not fail an unclaimed queued attempt', () => {
+  withStageAttemptDb((db) => {
+    const createdAt = new Date().toISOString();
+    createQueueTables(db);
+    insertMasDefaultExecutorTask(db, {
+      taskId: 'task-unclaimed-queued-workflow-missing',
+      status: 'queued',
+      createdAt,
+    });
+    const attempt = createMasDefaultExecutorAttempt(db, {
+      taskId: 'task-unclaimed-queued-workflow-missing',
+    });
+    const synced = syncStageAttemptFromTemporalTerminalObservation(
+      db,
+      missingWorkflowObservation({
+        stageAttemptId: attempt.stage_attempt_id,
+        workflowId: attempt.workflow_id,
+      }),
+    );
+    const inspected = inspectStageAttempt(db, attempt.stage_attempt_id);
+
+    assert.equal(synced, null);
+    assert.equal(inspected.status, 'queued');
+    assert.equal(inspected.blocked_reason, null);
+    assert.equal(inspected.provider_run.provider_status, 'registered');
+  });
+});
 
 test('Temporal blocked terminal observation blocks MAS default executor task without typed closeout', () => {
   withStageAttemptDb((db) => {

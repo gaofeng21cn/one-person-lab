@@ -43,6 +43,9 @@ import {
 import {
   type TemporalStageAttemptWorkflowState,
 } from './family-runtime-temporal.ts';
+import {
+  syncStageAttemptFromTemporalUnavailableObservation,
+} from './family-runtime-temporal-observation-sync.ts';
 
 export {
   createStageAttemptTable,
@@ -130,6 +133,24 @@ function appendActivityEventToRow(row: StageAttemptRow, event: Record<string, un
     ),
     normalizeActivityEvent(event),
   ];
+}
+
+function stageAttemptOrdinalForNewAttempt(
+  db: DatabaseSync,
+  input: {
+    domainId: FamilyRuntimeDomainId;
+    stageId: string;
+    providerKind: FamilyRuntimeProviderKind;
+    taskId: string | null;
+  },
+) {
+  const row = db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM stage_attempts
+    WHERE domain_id = ? AND stage_id = ? AND provider_kind = ?
+      AND COALESCE(task_id, '') = COALESCE(?, '')
+  `).get(input.domainId, input.stageId, input.providerKind, input.taskId) as { count: number };
+  return row.count + 1;
 }
 
 type TemporalStageAttemptTerminalObservation = {
@@ -235,8 +256,16 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     sourceFingerprint,
     taskId,
   ]);
+  const newAttemptOrdinal = input.newAttempt
+    ? stageAttemptOrdinalForNewAttempt(db, {
+        domainId: input.domainId,
+        stageId,
+        providerKind,
+        taskId,
+      })
+    : null;
   const idempotencyKey = input.newAttempt
-    ? stableId('idem', [baseIdempotencyKey, 'new_attempt', createdAt])
+    ? stableId('idem', [baseIdempotencyKey, 'new_attempt', newAttemptOrdinal])
     : baseIdempotencyKey;
   if (!input.newAttempt) {
     const existing = db.prepare(`
@@ -272,7 +301,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     input.workspaceLocator,
     sourceFingerprint,
     input.taskId ?? null,
-    createdAt,
+    input.newAttempt ? newAttemptOrdinal : createdAt,
   ]);
   const workflowId = stableId('wf', [input.domainId, stageId, stageAttemptId]);
   const providerReceipt = buildStageAttemptProviderReceipt({
@@ -419,7 +448,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
   observation: unknown,
 ) {
   if (!isTemporalStageAttemptTerminalObservation(observation)) {
-    return null;
+    return syncStageAttemptFromTemporalUnavailableObservation(db, observation);
   }
   const failureReason = temporalTerminalFailureReason(observation);
   const nonCompletionBlocker = temporalNonCompletionBlocker(observation);

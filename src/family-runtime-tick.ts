@@ -219,7 +219,31 @@ function isLiveMasDefaultExecutorAttempt(attempt: StageAttemptPayload | null) {
   return Boolean(attempt && ['queued', 'running', 'checkpointed', 'human_gate'].includes(attempt.status));
 }
 
-function isObservableRunningMasDefaultExecutorAttempt(attempt: StageAttemptPayload) {
+function isExpiredMasDefaultExecutorTaskLease(row: FamilyRuntimeTaskRow) {
+  if (row.status !== 'running' || !row.lease_expires_at) {
+    return false;
+  }
+  const leaseExpiresAt = Date.parse(row.lease_expires_at);
+  return Number.isFinite(leaseExpiresAt) && leaseExpiresAt <= Date.now();
+}
+
+function isObservableRunningMasDefaultExecutorAttempt(row: FamilyRuntimeTaskRow) {
+  return (attempt: StageAttemptPayload) => {
+    const observableStarted = attempt.provider_kind === 'temporal'
+      && attempt.executor_kind === 'codex_cli'
+      && ['running', 'checkpointed', 'human_gate'].includes(attempt.status);
+    if (observableStarted) {
+      return true;
+    }
+    return isExpiredMasDefaultExecutorTaskLease(row)
+      && attempt.provider_kind === 'temporal'
+      && attempt.executor_kind === 'codex_cli'
+      && attempt.status === 'queued'
+      && attempt.provider_run.provider_status === 'registered';
+  };
+}
+
+function isProviderStartedMasDefaultExecutorAttempt(attempt: StageAttemptPayload) {
   return attempt.provider_kind === 'temporal'
     && attempt.executor_kind === 'codex_cli'
     && ['running', 'checkpointed', 'human_gate'].includes(attempt.status);
@@ -305,14 +329,16 @@ async function syncRunningMasDefaultExecutorTaskAttempts(
     if (!isMasDefaultExecutorDispatchTask(row, payload)) {
       continue;
     }
-    const attempts = listStageAttemptsForTask(db, row.task_id).filter(isObservableRunningMasDefaultExecutorAttempt);
+    const attempts = listStageAttemptsForTask(db, row.task_id).filter(
+      isObservableRunningMasDefaultExecutorAttempt(row),
+    );
     for (const attempt of attempts) {
       const syncedAttempt = await syncObservableMasDefaultExecutorAttempt(
         db,
         attempt,
         options.queryTemporalStageAttempt,
       );
-      if (!isLiveMasDefaultExecutorAttempt(syncedAttempt)) {
+      if (!isProviderStartedMasDefaultExecutorAttempt(syncedAttempt)) {
         terminalSyncedCount += 1;
       }
     }
@@ -363,12 +389,14 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     scopedRowsBeforeAutoRedrive,
     { queryTemporalStageAttempt: handlers.queryTemporalStageAttempt },
   );
+  const allRowsAfterTerminalSync = db.prepare('SELECT * FROM tasks').all() as FamilyRuntimeTaskRow[];
+  const scopedRowsAfterTerminalSync = allRowsAfterTerminalSync.filter((row) => taskRowMatchesScope(row, input.taskScope));
   const {
     autoRedrivenCount: masDefaultExecutorAutoRedrivenCount,
     autoDeadLetteredCount: masDefaultExecutorAutoDeadLetteredCount,
   } = autoRedriveBlockedMasDefaultExecutorProviderTasks(
     db,
-    scopedRowsBeforeAutoRedrive,
+    scopedRowsAfterTerminalSync,
     `${input.source}:auto-redrive`,
   );
   const candidateRows = db.prepare(`

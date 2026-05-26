@@ -176,7 +176,10 @@ export function blockLinkedMasDefaultExecutorTask(
     row: StageAttemptRow;
     reason: string;
     observedAt: string;
-    taskDeadLetterReason: 'temporal_stage_attempt_failed' | 'temporal_stage_attempt_not_completed';
+    taskDeadLetterReason:
+      | 'temporal_stage_attempt_failed'
+      | 'temporal_stage_attempt_not_completed'
+      | 'temporal_stage_attempt_start_failed';
     eventType: string;
   },
 ) {

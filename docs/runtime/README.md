@@ -23,6 +23,8 @@ Machine boundary: 人读索引。机器真相继续归 `contracts/`、源码、C
 
 MAS default-executor dispatch 的 task row 与 provider-hosted stage attempt 必须作为同一 OPL typed queue / attempt lifecycle 投影同步：当 linked Temporal attempt 的 terminal observation 显示 failed 或 not-completed，OPL 可以把仍处于 `queued`、`running`、`succeeded` 或 provider-only blocked 的同一 task 收敛到 `blocked`，并设置 provider dead-letter reason 以开放 formal redrive；当 linked attempt 产出 accepted typed closeout，OPL 可以把同一 task 收敛到 `succeeded` 并清除 provider-only blocker。该同步只表达 provider transport completion / failure / non-completion，不写 MAS study truth、不改 publication verdict、不签 owner receipt，也不把 provider completion 或 redrive 解释成 paper ready。
 
+当 OPL tick 观察到 MAS default-executor task 仍是 `running`、lease 已过期、linked Temporal attempt 仍停在 `registered/queued`，但 Temporal query 返回 `temporal_workflow_not_started_or_not_found` 时，该状态属于 OPL provider admission / liveness failure。OPL 必须把 linked attempt 记录为 provider transport failure、把 task 收敛到 provider-only blocked reason，并在 retry budget 内由同一个 tick 自动 redrive；普通未 claim 的 queued attempt 不能因为 workflow not found 被误判为失败。自动 redrive 产生的新 stage attempt 使用同 task/stage/provider 下的 ordinal 保证可审计唯一性，不能依赖同毫秒时间戳或人工 queue update。
+
 ## 内容
 
 | 文件 | 生命周期状态 | 当前 owner | 阅读规则 |
