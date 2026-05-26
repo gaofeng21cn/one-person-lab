@@ -3040,6 +3040,54 @@ Next tranche write scope:
 - Or MAS product/status/workbench and progress/domain-ref projection shell reconciliation outside already-covered blocks.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 08:27 CST`
+Tranche: `rca-policy-support-visual-memory-boundary`
+State: `tranche_verified_scope_pending`
+
+本轮覆盖 RCA policy support 文档中与 AI-first、deliverable contract、runtime operating model、TypeScript migration 和 visual pattern memory 相关的长期规则。目标是把 policy support 读回 current RCA contracts/tests/source：policy 可以固定人读治理边界，但不能把 OPL / Agent Lab / generated shell / product projection / mechanical scorecard 写成 RCA visual truth、route choice、review/export verdict、artifact authority、visual memory body、domain ready 或 production ready owner。
+
+Fresh live truth inputs:
+
+- RCA `AGENTS.md`, `TASTE.md`, `docs/status.md`, `docs/active/rca-ideal-state-gap-plan.md`, `docs/references/rca-visual-deliverable-agent-ideal-state.md`, and RCA docs-governance ledger.
+- RCA policy docs: `docs/policies/README.md`, `docs/policies/ai_first_quality_boundary.md`, `docs/policies/deliverable_contract_model.md`, `docs/policies/runtime_operating_model.md`, `docs/policies/typescript_migration_policy.md`, `docs/policies/visual_pattern_memory_policy.md`.
+- RCA machine/source refs: `contracts/memory_descriptor.json`, `contracts/production_acceptance/rca-production-acceptance.json`, `contracts/functional_privatization_audit.json`, `contracts/pack_compiler_input.json`, `contracts/stage_control_plane.json`, `contracts/runtime-program/js-residue-line-lock.json`, `contracts/runtime-program/typescript-package-build-contract.json`, plus AI-first review helper source surfaced by CodeGraph.
+- RCA test refs: `tests/ai-first-authoring-boundary.test.ts`, `tests/screenshot-review-ai-first.test.ts`, `tests/ppt-creative-ownership.test.ts`, `tests/xiaohongshu-creative-ownership.test.ts`, `tests/poster-creative-ownership.test.ts`, `tests/review-platform.test.ts`, `tests/product-entry-cases/domain-memory-ref-adapter.test.ts`, `tests/rca-production-acceptance.test.ts`, TypeScript closeout / baseline / package / service-boundary tests.
+
+Fresh semantic result:
+
+- AI-first quality, runtime operating model, deliverable contract model and TypeScript migration policy already matched live boundaries: final visual/review/export judgment remains RCA-owned and AI-first; TypeScript remains default implementation surface with repo-tracked JS retired to zero product-source budget.
+- Visual pattern memory policy was the only policy with lifecycle drift: it was still an English dated process note with Now/Next/Defer framing. It is now a Chinese current policy that states owner/purpose/state/machine boundary, `descriptor_proof_contract_landed_runtime_writeback_pending`, locator-only OPL boundary, and the remaining evidence tail.
+- `contracts/memory_descriptor.json` and `tests/product-entry-cases/domain-memory-ref-adapter.test.ts` prove OPL consumes domain-memory locator / receipt refs only; OPL cannot write memory body, choose route, accept/reject writeback, issue review/export verdict or mutate artifacts.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `redcube-ai` | Full paragraph read of all six `docs/policies/*.md`; live contract/test/source refs listed above. | `docs/policies/visual_pattern_memory_policy.md`; `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | coverage ledger owner only | this coverage ledger |
+
+Archived / tombstoned / deleted docs:
+
+- none. RCA policy support docs remain active support/current policy; stale process framing in visual memory policy was rewritten in place.
+
+Unreviewed docs:
+
+- RCA policy support docs are now covered for AI-first, route/review/export authority, visual memory locator/writeback boundary, TypeScript migration and production-readiness wording.
+- RCA remaining reference bodies and history/provenance bodies remain open outside already-covered chunks.
+- OPL, MAS, MAG and App repo-wide coverage remains open outside already-recorded chunks; OMA README/docs coverage remains covered by the earlier OMA tranche.
+
+Remaining stale / retire candidates:
+
+- Future RCA policy/support wording that lets OPL, Agent Lab, product shell, generated wrapper, memory descriptor, mechanical scorecard or projection authorize RCA visual ready, exportable, handoffable, domain ready, production ready, route choice, artifact mutation or review/export verdict is stale pollution.
+- Future visual memory wording that writes memory body, current deliverable content, review verdict, export truth, artifact state or hidden layout recipe into memory is stale pollution.
+- Future TypeScript policy wording that reopens repo-tracked JS implementation/test/script surfaces without explicit contract and audit support is stale pollution.
+
+Next tranche write scope:
+
+- Continue RCA remaining references/history bodies with old managed/gateway/runtime/session/domain_action_adapter vocabulary, after confirming current role and no-resurrection boundaries from live contracts/tests.
+- Or MAS product/status/workbench and progress/domain-ref projection shell reconciliation outside already-covered blocks.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
