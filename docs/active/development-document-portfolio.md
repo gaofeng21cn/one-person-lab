@@ -4431,7 +4431,7 @@ Next tranche write scope:
 
 Date: `2026-05-26 18:29 CST`
 Tranche: `mas-governance-reference-six-repo-scope-coverage`
-State: `tranche_pending_verification_absorb`
+State: `tranche_verified_absorbed`
 
 本轮覆盖 MAS `docs/references/governance/series-doc-governance-checklist.md` 与 references index discoverability。目标是把 MAS governance support reference 从旧四仓 wording 校准到当前六仓 OPL series scope，并把 MAS runtime-facing refs / OPL hosted runtime split、One Person Lab App、OPL Meta Agent 角色写清。本轮不关闭全局 `/goal`，也不表示 MAS repo-wide README/docs 已全量逐段覆盖。
 
@@ -4477,7 +4477,10 @@ Remaining stale / retire candidates:
 
 Verification / absorb:
 
-- Pending this tranche closeout: MAS and OPL docs-only verification, fast-forward absorb into both `main` checkouts, worktree cleanup, then final six-repo lightweight verification.
+- MAS docs verification passed before absorb: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- OPL ledger worktree verification passed before absorb: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- MAS commit `a1aaff60 docs: cover MAS governance reference scope` is on MAS `main`; OPL commit `8c5dc5f3 docs: record MAS governance reference coverage` is on OPL `main`.
+- This tranche's MAS and OPL worktrees / branches are ready for removal after final lightweight six-repo verification.
 
 Next tranche write scope:
 
