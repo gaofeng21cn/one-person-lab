@@ -14,7 +14,7 @@ OPL 开发文档现在不能按“每份旧计划都继续完整执行”阅读�
 1. 先完成 OPL 作为 stage-led、以 Agent executor 为最小执行单位的完整智能体框架的 framework foundation。
 2. 再让 MAS/MAG/RCA 迁移为 OPL-admitted domain agents，保持 direct skill path 与 OPL-hosted path 等价。
 3. 同步把旧功能逐块分层：framework-generic 能力上收到 OPL，domain truth 留在 domain，退役路线只保留为历史诊断、provenance、tombstone 或负向 guard。
-4. 旧 Hermes-first、Gateway-era、direct-entry、local-manager、MDS-default 等路线在替代证据存在后立即退役清理；无 active caller 的模块、接口和测试直接删除或迁入 tombstone，不保留兼容入口。
+4. 旧 Hermes-default、Gateway-era、direct-entry、local-manager、MDS-default 等路线在替代证据存在后立即退役清理；无 active caller 的模块、接口和测试直接删除或迁入 tombstone，不保留兼容入口。
 5. 最后用 App workbench 和真实 domain soak 验证目标形态，而不是用旧路径证明旧计划。
 
 因此，开发文档的整理原则是：**保留有效内容，合并到当前 owner；旧文档不再作为整份待办执行；旧路线保留为 provenance、migration reference 或 tombstone。**
@@ -47,12 +47,12 @@ OPL 开发文档现在不能按“每份旧计划都继续完整执行”阅读�
 | `docs/history/process/specs/2026-04-20-*`, `docs/history/process/specs/2026-04-21-*` | archived Product API / ACP 规格历史 | 八类产品资源模型、session-runtime-first pivot、shell/projection 边界和 domain truth 边界已吸收到核心五件套、current development lines、domain onboarding 与 stage-led roadmap；整文档不再作为活跃 specs 保留。 |
 | `docs/references/runtime-substrate/opl-runtime-manager-target.md` | Runtime Manager / provider readiness / state index 目标支撑 | 保持 support reference；App/workbench 和 runtime snapshot 相关内容以当前实现和 contracts 为准。 |
 | `docs/references/runtime-substrate/family-runtime-attempt-contract.md` | stage attempt 语义参考 | 有效内容合入 framework contracts / current roadmap；文档继续作为参考，不成为 machine contract。 |
-| `docs/references/runtime-substrate/family-executor-adapter-defaults.md` | executor adapter 默认策略参考 | 按 roadmap 复核后保留；旧 Hermes-first 或非 Codex-default wording 不再扩写为主线。 |
+| `docs/references/runtime-substrate/family-executor-adapter-defaults.md` | executor adapter 默认策略参考 | 按 roadmap 复核后保留；旧 Hermes-default 或非 Codex-default wording 不再扩写为主线。 |
 | `docs/references/runtime-substrate/family-orchestration-contract-absorb-crewai.md` | 外部 orchestration 模式吸收记录 | 保留为 external learning reference；只吸收 contract vocabulary，不引入外部 runtime truth。 |
 | `docs/history/runtime-substrate/family-product-entry-and-domain-handoff-architecture.md` | 早期 product-entry / handoff 架构历史 | operator / agent / product entry taxonomy、handoff envelope、domain authority boundary 已吸收到 Domain-Agent Admission Contract；Hermes Kernel / Gateway wording 只保留为历史。 |
 | `docs/history/runtime-substrate/family-lightweight-direct-entry-rollout-board.md` | 早期 direct-entry 推进板历史 | entry surface / operator loop 区分、direct path 与 OPL handoff 对齐经验已吸收到 Domain-Agent Admission Contract。 |
 | `docs/history/runtime-substrate/mas-top-level-cutover-board.md` | 早期 OPL->MAS 切换板历史 | OPL -> MAS handoff 字段与 transition honesty 已吸收；当前 MAS 迁移顺序以 OPL roadmap 和 MAS active portfolio/current development lines 为准。 |
-| `docs/history/runtime-substrate/opl-product-entry-and-hermes-kernel-integration.md` | Hermes-first product-entry 决策历史 | 不 fork/vendor 外部 runtime、不要把用户暴露给底层 runtime 拼装、Hermes-first 误写禁止项已吸收；当前目标是 provider-backed runtime。 |
+| `docs/history/runtime-substrate/opl-product-entry-and-hermes-kernel-integration.md` | Hermes-default product-entry 决策历史 | 不 fork/vendor 外部 runtime、不要把用户暴露给底层 runtime 拼装、Hermes-default 误写禁止项已吸收；当前目标是 provider-backed runtime。 |
 | `docs/references/runtime-substrate/hermes-agent-truth-reset-and-target-state.md` 与 `docs/history/runtime-substrate/hermes-agent-runtime-substrate-benchmark.md` | Hermes 命名/迁移边界与历史 benchmark | truth reset 只因 stale-compat / executor 边界 guard 保留在 reference 层，生命周期是 `history_boundary_support`；benchmark 已归 history。两者都不得作为 provider/readiness/Gateway/compatibility 计划读取。 |
 | `docs/references/runtime-substrate/hermes-agent-executor-evaluation.md` | `hermes_agent` 显式非默认 executor adapter 评估 | 只评估 full agent loop、tool event、receipt 与 fail-closed 证据；不影响默认 `Codex CLI`，不声明行为等价。 |
 | `docs/history/runtime-substrate/host-agent-runtime-contract.md` | Codex-default host-agent runtime 历史合同 | Codex-default runtime、formal-entry matrix、execution handle、durable truth、fail-closed 规则已吸收到 runtime boundary 和 domain onboarding。 |
@@ -77,7 +77,7 @@ OPL 开发文档现在不能按“每份旧计划都继续完整执行”阅读�
 | MAG grant strategy、fundability / proposal quality、specific aims authority | MAG |
 | RCA visual direction、visual artifact、review/export gate | RCA |
 | MDS / DeepScientist backend facts | MAS provenance / parity oracle / explicit archive import，不回到 OPL 默认 runtime |
-| Hermes-first online substrate、Hermes Kernel as default product runtime | history / provenance / diagnostic / negative-guard reference；当前默认主线是 provider-backed framework |
+| Hermes-default online substrate、Hermes Kernel as default product runtime | history / provenance / diagnostic / negative-guard reference；当前默认主线是 provider-backed framework |
 | Gateway-era federation/routed-action 旧路线 | history / tombstone / negative guard；active docs 只作为历史上下文引用，不保留兼容入口 |
 | Dated implementation board、activation package、one-off closeout | `docs/history/process/**` 或对应 references/history；有效结论提升到当前 owner doc |
 | 外部框架学习 | references / convergence-governance；只吸收 vocabulary、contract pattern、provenance/gate 方法 |
@@ -95,7 +95,7 @@ OPL 开发文档现在不能按“每份旧计划都继续完整执行”阅读�
 
 | 旧计划 | 当前处置 |
 | --- | --- |
-| Hermes-first product-entry / kernel integration | 不再作为目标 runtime 主线。保留为历史决策和 provenance 背景。 |
+| Hermes-default product-entry / kernel integration | 不再作为目标 runtime 主线。保留为历史决策和 provenance 背景。 |
 | Lightweight direct-entry 全家族推进板 | 不再作为当前完整 backlog。保留 entry taxonomy、handoff envelope 和 entry/operator 边界经验。 |
 | OPL vertical online-agent platform roadmap | 不再作为总路线图。有效内容已被 stage-led framework / public roadmap 吸收。 |
 | MAS top-level cutover board | 不再作为 MAS 当前迁移顺序。当前 MAS 迁移按 OPL framework-first + MAS active portfolio 执行。 |
@@ -807,7 +807,7 @@ Unreviewed docs:
 Remaining stale / retire candidates:
 
 - MAS shared release pin drift is an operational consumer alignment tail, not a doc-only closeout. Future shared release work should either align MAS pins with the current owner contract or intentionally update the owner contract/pins through the release flow.
-- OPL remaining governance/domain-admission references may still carry old Gateway, frontdoor, federation, Product API, Hermes-first, MDS default, hosted pilot, local-manager, managed-runtime or direct-entry wording; those must stay history/provenance/diagnostic/negative-guard only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- OPL remaining governance/domain-admission references may still carry old Gateway, frontdoor, federation, Product API, Hermes-default, MDS default, hosted pilot, local-manager, managed-runtime or direct-entry wording; those must stay history/provenance/diagnostic/negative-guard only unless current source/contracts/read-model explicitly re-admit a narrow surface.
 - Stage control plane support docs must keep discovery/admission/readiness separate from execution, owner receipt, artifact authority, quality/export verdict and production/domain ready.
 
 Next tranche write scope:
@@ -854,7 +854,7 @@ Unreviewed docs:
 
 Remaining stale / retire candidates:
 
-- OPL remaining history/reference/support body coverage still needs chunked paragraph governance; old frontdoor, Product API, OMX, Gateway/federation, hosted shell, Hermes-first, local-manager and desktop bootstrap wording must stay history-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- OPL remaining history/reference/support body coverage still needs chunked paragraph governance; old frontdoor, Product API, OMX, Gateway/federation, hosted shell, Hermes-default, local-manager and desktop bootstrap wording must stay history-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
 - MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
 - App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
 
@@ -903,7 +903,7 @@ Unreviewed docs:
 
 Remaining stale / retire candidates:
 
-- OPL remaining history/reference/support body coverage still needs chunked paragraph governance; old Product API, ACP, Gateway, Domain Harness OS, frontdoor, Hermes-first, AionUI shell, local-manager, hosted shell and desktop bootstrap wording must stay history-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- OPL remaining history/reference/support body coverage still needs chunked paragraph governance; old Product API, ACP, Gateway, Domain Harness OS, frontdoor, Hermes-default, AionUI shell, local-manager, hosted shell and desktop bootstrap wording must stay history-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
 - MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
 - App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
 
@@ -952,7 +952,7 @@ Unreviewed docs:
 
 Remaining stale / retire candidates:
 
-- OPL remaining history/reference/support body coverage still needs chunked paragraph governance; old Gateway, frontdoor, Product API, ACP, UHS, Domain Harness OS, Hermes-first, AionUI shell, hosted pilot, local-manager, G2/G3 and checkbox task wording must stay history-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- OPL remaining history/reference/support body coverage still needs chunked paragraph governance; old Gateway, frontdoor, Product API, ACP, UHS, Domain Harness OS, Hermes-default, AionUI shell, hosted pilot, local-manager, G2/G3 and checkbox task wording must stay history-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
 - MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
 - App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
 
@@ -1001,7 +1001,7 @@ Unreviewed docs:
 
 Remaining stale / retire candidates:
 
-- OPL remaining history/reference/support body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-first, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager and product-layer rollout wording must stay history-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- OPL remaining history/reference/support body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-default, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager and product-layer rollout wording must stay history-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
 - MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
 - App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
 
@@ -1050,7 +1050,7 @@ Unreviewed docs:
 
 Remaining stale / retire candidates:
 
-- OPL remaining history/reference/support body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-first, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, old Phase package and old reference-sync wording must stay history-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- OPL remaining history/reference/support body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-default, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, old Phase package and old reference-sync wording must stay history-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
 - MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
 - App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
 
@@ -1099,7 +1099,7 @@ Unreviewed docs:
 
 Remaining stale / retire candidates:
 
-- OPL remaining history/reference/support body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-first, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, shared foundation and shared-index wording must stay history-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- OPL remaining history/reference/support body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-default, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, shared foundation and shared-index wording must stay history-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
 - MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
 - App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
 
@@ -1148,7 +1148,7 @@ Unreviewed docs:
 
 Remaining stale / retire candidates:
 
-- OPL remaining history/reference/support body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-first, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, old `opl web`, Superpowers generated task packets, shared foundation and shared-index wording must stay history-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- OPL remaining history/reference/support body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-default, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, old `opl web`, Superpowers generated task packets, shared foundation and shared-index wording must stay history-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
 - MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
 - App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
 
@@ -1197,7 +1197,7 @@ Unreviewed docs:
 
 Remaining stale / retire candidates:
 
-- OPL remaining reference/support body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-first, Hermes provider, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- OPL remaining reference/support body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-default, Hermes provider, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
 - MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
 - App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
 
@@ -1247,7 +1247,7 @@ Unreviewed docs:
 
 Remaining stale / retire candidates:
 
-- OPL remaining runtime/product/source/delivery/public/specs/reference body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-first, Hermes provider, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only or support-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- OPL remaining runtime/product/source/delivery/public/specs/reference body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-default, Hermes provider, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only or support-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
 - MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
 - App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
 
@@ -1300,7 +1300,7 @@ Unreviewed docs:
 
 Remaining stale / retire candidates:
 
-- OPL remaining product/source/delivery/public/specs/reference body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-first, Hermes provider, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only or support-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- OPL remaining product/source/delivery/public/specs/reference body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-default, Hermes provider, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only or support-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
 - MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
 - App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
 
@@ -1350,7 +1350,7 @@ Unreviewed docs:
 
 Remaining stale / retire candidates:
 
-- OPL remaining source/delivery/public/specs/reference body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-first, Hermes provider, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only or support-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- OPL remaining source/delivery/public/specs/reference body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-default, Hermes provider, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only or support-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
 - MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
 - App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
 
@@ -1399,7 +1399,7 @@ Unreviewed docs:
 
 Remaining stale / retire candidates:
 
-- OPL remaining source/delivery/public/reference body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-first, Hermes provider, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only or support-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- OPL remaining source/delivery/public/reference body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-default, Hermes provider, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only or support-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
 - MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
 - App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
 
@@ -1448,7 +1448,7 @@ Unreviewed docs:
 
 Remaining stale / retire candidates:
 
-- OPL remaining source/public/reference body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-first, Hermes provider, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only or support-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- OPL remaining source/public/reference body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-default, Hermes provider, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only or support-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
 - MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
 - App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
 
@@ -1498,7 +1498,7 @@ Unreviewed docs:
 
 Remaining stale / retire candidates:
 
-- OPL remaining public/reference body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-first, Hermes provider, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only or support-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- OPL remaining public/reference body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-default, Hermes provider, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only or support-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
 - MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
 - App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
 
@@ -1592,7 +1592,7 @@ Unreviewed docs:
 
 Remaining stale / retire candidates:
 
-- OPL remaining reference body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-first, Hermes provider, AionUI shell, MDS default, Domain Harness OS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only or support-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- OPL remaining reference body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-default, Hermes provider, AionUI shell, MDS default, Domain Harness OS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only or support-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
 - MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
 - App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
 
@@ -1641,7 +1641,7 @@ Unreviewed docs:
 Remaining stale / retire candidates:
 
 - OPL runtime-substrate docs now have an explicit 2026-05-26 live read-model guard, but older dated proof sections still intentionally retain historical counters as provenance. Future edits must keep dated counters separate from latest read-model and rerun CLI evidence before making status claims.
-- OPL remaining operating/convergence/governance references may still carry old Gateway, frontdoor, federation, Product API, Hermes-first, Hermes provider, AionUI shell, MDS default, Domain Harness OS, hosted pilot, local-manager, managed-runtime or direct-entry wording; those must stay history/provenance/diagnostic/negative-guard only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- OPL remaining operating/convergence/governance references may still carry old Gateway, frontdoor, federation, Product API, Hermes-default, Hermes provider, AionUI shell, MDS default, Domain Harness OS, hosted pilot, local-manager, managed-runtime or direct-entry wording; those must stay history/provenance/diagnostic/negative-guard only unless current source/contracts/read-model explicitly re-admit a narrow surface.
 - MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
 - App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
 
@@ -1747,7 +1747,7 @@ Unreviewed docs:
 Remaining stale / retire candidates:
 
 - Operating-governance docs now have explicit refs-only / dated-snapshot guards, but future edits must rerun CLI/read-model before quoting exact counts because framework readiness, evidence worklist and app drilldown snapshots can legitimately differ.
-- OPL remaining convergence/governance/domain-admission references may still carry old Gateway, frontdoor, federation, Product API, Hermes-first, Hermes provider, AionUI shell, MDS default, Domain Harness OS, hosted pilot, local-manager, managed-runtime or direct-entry wording; those must stay history/provenance/diagnostic/negative-guard only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- OPL remaining convergence/governance/domain-admission references may still carry old Gateway, frontdoor, federation, Product API, Hermes-default, Hermes provider, AionUI shell, MDS default, Domain Harness OS, hosted pilot, local-manager, managed-runtime or direct-entry wording; those must stay history/provenance/diagnostic/negative-guard only unless current source/contracts/read-model explicitly re-admit a narrow surface.
 - MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
 - App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
 
@@ -1800,7 +1800,7 @@ Remaining stale / retire candidates:
 
 - Future governance/checklist prose that reverts to the older five-repo series scope is stale; OPL series governance must include `one-person-lab-app`.
 - Any current-support wording that treats descriptor/conformance/stage discovery, zero-open worklist, provider SLO satisfied, OMA production-consumption refs or App user-path evidence as domain ready, production ready, App release ready, owner receipt closure, artifact authority or physical-delete authorization is stale.
-- OPL remaining domain-admission references may still carry old Gateway, frontdoor, federation, Product API, Hermes-first, Hermes provider, AionUI shell, MDS default, Domain Harness OS, hosted pilot, local-manager, managed-runtime or direct-entry wording; those must stay history/provenance/diagnostic/negative-guard only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- OPL remaining domain-admission references may still carry old Gateway, frontdoor, federation, Product API, Hermes-default, Hermes provider, AionUI shell, MDS default, Domain Harness OS, hosted pilot, local-manager, managed-runtime or direct-entry wording; those must stay history/provenance/diagnostic/negative-guard only unless current source/contracts/read-model explicitly re-admit a narrow surface.
 
 Next tranche write scope:
 
@@ -3966,7 +3966,7 @@ Date: `2026-05-26 15:20 CST`
 Tranche: `mag-20260411-hermes-reset-local-runtime-history-specs-coverage`
 State: `tranche_verified_pending_absorb`
 
-本轮覆盖 MAG `docs/history/specs/` 下 2026-04-11 Hermes-backed runtime capability migration map、Hermes-backed runtime substrate program、post-R5A local-runtime upper-bound honest-stop 与 upstream Hermes-Agent truth reset 历史 specs。目标是确认这些 direct-file 历史入口不会把旧 Hermes-first provider proposal、Hermes substrate owner path、repo-local runtime helper、`runtime-run` / `runtime-resume`、local journal、host-agent compatibility bridge、future Hermes host 或 “接入上游 Hermes-Agent” 词汇误读成当前 default runtime owner、active provider owner、MAG-owned daemon/scheduler/attempt-loop、attempt ledger、public runtime command、compatibility bridge、hosted runtime readiness、App/release readiness、production readiness、physical-delete authority 或 active implementation queue。
+本轮覆盖 MAG `docs/history/specs/` 下 2026-04-11 Hermes-backed runtime capability migration map、Hermes-backed runtime substrate program、post-R5A local-runtime upper-bound honest-stop 与 upstream Hermes-Agent truth reset 历史 specs。目标是确认这些 direct-file 历史入口不会把旧 Hermes-default provider proposal、Hermes substrate owner path、repo-local runtime helper、`runtime-run` / `runtime-resume`、local journal、host-agent compatibility bridge、future Hermes host 或 “接入上游 Hermes-Agent” 词汇误读成当前 default runtime owner、active provider owner、MAG-owned daemon/scheduler/attempt-loop、attempt ledger、public runtime command、compatibility bridge、hosted runtime readiness、App/release readiness、production readiness、physical-delete authority 或 active implementation queue。
 
 Fresh live truth inputs:
 
@@ -5275,7 +5275,7 @@ Unreviewed docs:
 Remaining stale / retire candidates:
 
 - RCA: no current inventory path remains uncovered by role. Remaining RCA risk is future new-doc drift, stale wording introduced after this reconcile, or live source/contract/read-model changes that make an already-covered section stale.
-- RCA historical `managed`, `gateway`, `runtime`, `session`, `domain_action_adapter`, Hermes-first, bridge/frontdoor/federation and old route wording remain allowed only in history/provenance/tombstone, semantic-id, negative guard, package/protocol boundary, refs-only adapter, domain handler target or explicit support-reference contexts.
+- RCA historical `managed`, `gateway`, `runtime`, `session`, `domain_action_adapter`, Hermes-default, bridge/frontdoor/federation and old route wording remain allowed only in history/provenance/tombstone, semantic-id, negative guard, package/protocol boundary, refs-only adapter, domain handler target or explicit support-reference contexts.
 - MAS and App repo-wide docs remain the global OPL series carry-forward.
 
 Verification before absorb:
@@ -5838,7 +5838,7 @@ Fresh live truth inputs:
 Fresh semantic result:
 
 - Current MAS truth remains `Declarative Medical Research Pack + OPL generated/hosted surfaces + minimal medical authority functions`: OPL/Temporal owns hosted autonomous runtime, stage attempt, queue, wakeup, retry/dead-letter, attempt ledger, worker residency and generated shells; MAS owns study truth, stage semantics, AI reviewer / auditor quality gate, publication route, artifact authority, memory decision, owner receipts and typed blockers.
-- `docs/history/positioning/README.md` already carried the correct directory-level rule that `Domain Harness OS`, `Open Harness OS`, `Domain Gateway`, `Research Foundry`, Hermes-first, MDS/DeepScientist backend and local scheduler default-chain wording are historical positioning materials only.
+- `docs/history/positioning/README.md` already carried the correct directory-level rule that `Domain Harness OS`, `Open Harness OS`, `Domain Gateway`, `Research Foundry`, Hermes-default, MDS/DeepScientist backend and local scheduler default-chain wording are historical positioning materials only.
 - `domain-harness-os-positioning.md` now marks `MAS Runtime OS` and local scheduler sections as historical runtime-shape material.
 - `research_foundry_medical_phase_ladder.md` now marks the MAS Runtime OS / local scheduler closeout, old command examples and Phase 1 / Phase 2 progress language as historical ladder material.
 - `open_harness_os_architecture.md` and `research_foundry_positioning.md` now mark public positioning / Research Foundry recommendations as historical proposals, not standalone authorization for repo identity, runtime owner, CLI/package/import naming or public readiness changes.
@@ -6018,6 +6018,69 @@ Docs-only 整理：
 - `git diff --check`
 - `rg` spot-check 新链接与旧文档引用
 - 不新增依赖 Markdown prose 的测试
+
+Date: `2026-05-27 04:25 CST`
+Tranche: `mas-program-history-no-resurrection-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAS `docs/history/program/**` 历史/provenance cluster，并把结果回写到 MAS 本地 coverage ledger 与本 OPL family ledger。目标是让旧 program boards、Hermes-default cutover/activation packages、Research Foundry / Domain Harness OS execution maps、journal package checkbox plan、P2 runtime-retirement program、learning intake snapshots、full records 和 closeout ledgers 保留审计价值，同时避免 dated “当前”“默认”“activation rule”“next step”“P2”“required sub-skill”“checkbox” 被误读成今天的 active execution queue、default runtime topology、runnable CLI truth、publication/artifact authority 或 production readiness。本轮不关闭全局 `/goal`，也不表示 MAS repo-wide README/docs 覆盖完成。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`, `TASTE.md`, `docs/status.md`, `docs/invariants.md`, `docs/active/mas-ideal-state-gap-plan.md`, `docs/docs_portfolio_consolidation.md`, `docs/references/positioning/mas_ideal_state.md`, `docs/runtime/contracts/runtime_boundary.md`, and MAS local docs-governance ledger.
+- MAS target docs: all 34 Markdown files under `docs/history/program/`.
+- Six-repo worktree / branch preflight and doctor preflight from `/Users/gaofeng/workspace/opl-doc-governance/scripts/opl_doc_doctor.py`.
+
+Fresh semantic result:
+
+- Current MAS truth remains `Declarative Medical Research Pack + OPL generated/hosted surfaces + minimal medical authority functions`: OPL/Temporal owns hosted autonomous runtime, stage attempt, queue, wakeup, retry/dead-letter, attempt ledger, worker residency and generated shells; `Codex CLI` is the default stage executor; MAS owns study truth, AI reviewer / auditor quality gates, publication route, artifact authority, memory decision, owner receipts and typed blockers.
+- `docs/history/program/README.md` already works as a history index and points current program governance to active owner docs.
+- `hermes_backend_activation_package.md`, `hermes_backend_continuation_board.md`, and `upstream_hermes_agent_fast_cutover_board.md` now carry first-screen read rules so Hermes-default default-substrate / activation / cutover language cannot override current OPL/Temporal default runtime and explicit non-default executor/proof/provenance role.
+- `research_foundry_medical_mainline.md`, `research_foundry_medical_execution_map.md`, and `open_harness_os_freeze_plan.md` now mark Research Foundry / Domain Harness OS / Open Harness OS phase and freeze wording as historical.
+- `journal_package_builtins_upgrade_plan.md` now marks its required sub-skill, checkbox implementation plan and old file list as historical implementation provenance.
+- `opl_temporal_mas_runtime_retirement_program.md` now explicitly reads as P2 framework-transition history/provenance rather than a second active plan, and its stale relative link to the active MAS ideal-state gap plan now points to the current active plan.
+- Full-record, closeout, ledger and learning-intake docs already carried adequate `program_history_record` / `history_provenance` metadata after full paragraph read. They remain dated provenance and do not become active queue or current truth.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full paragraph read of all 34 `docs/history/program/*.md` files, with supporting current-boundary read of MAS active truth, status, invariants, docs portfolio governance, ideal-state reference and runtime boundary. | `docs/history/program/hermes_backend_activation_package.md`; `docs/history/program/hermes_backend_continuation_board.md`; `docs/history/program/upstream_hermes_agent_fast_cutover_board.md`; `docs/history/program/research_foundry_medical_mainline.md`; `docs/history/program/research_foundry_medical_execution_map.md`; `docs/history/program/journal_package_builtins_upgrade_plan.md`; `docs/history/program/opl_temporal_mas_runtime_retirement_program.md`; `docs/history/program/open_harness_os_freeze_plan.md`; `docs/history/docs-portfolio-coverage-ledger/2026-05-27-part-5.md` |
+| `one-person-lab` | OPL family coverage ledger foldback for this MAS history tranche; no OPL active truth / source / contract semantics changed. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The program cluster stays in `docs/history/program/**` as history/provenance and no-resurrection guard material.
+
+Unreviewed docs:
+
+- `med-autoscience`: `docs/history/program/**` exact cluster is now covered. MAS repo-wide full paragraph coverage remains open for `docs/history/superpowers/**` and remaining history directory indexes.
+- `one-person-lab`: no new OPL body docs were governed in this tranche; previous exact coverage claims remain as recorded.
+- `med-autogrant`, `redcube-ai`, `opl-meta-agent`: no new docs governed in this tranche; previous coverage state remains unchanged.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active release / GUI lanes are safe or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- MAS: any future prose that treats old Hermes-default activation/cutover, Research Foundry / Domain Harness OS phase ladders, Open Harness OS freeze status, journal package checkbox plans, old P2 lanes, learning intake snapshots or full-record checklists as current active queue, default runtime owner, runnable CLI truth, publication/artifact authority, domain-ready or production-ready evidence is stale pollution.
+- MAS: future runtime/program prose must keep OPL/Temporal as default hosted runtime owner, `Codex CLI` as stage executor, and Hermes / MDS / DeepScientist / Research Foundry vocabulary in explicit adapter/proof/provenance/history roles unless live contracts/source/tests prove a new active owner.
+- App: release / GUI docs remain blocked by unrelated dirty work in main and external worktrees.
+
+Worktree / branch cleanup:
+
+- No external stale worktree/branch qualified for cleanup before this tranche. OPL/MAS/App/RCA external worktrees remain dirty, recently written, not safely attributable to this automation, detached probes, or outside the current tranche.
+- This tranche's MAS and OPL worktrees should be removed after fast-forward absorb.
+
+Verification before absorb:
+
+- MAS program history worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- OPL ledger worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- No source/runtime tests are required because this tranche changes only narrative docs and coverage ledgers.
+
+Next tranche write scope:
+
+- Continue MAS bounded history inventory, preferably `docs/history/superpowers/**` or remaining history directory indexes.
+- Start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
 
 涉及 contracts/source/runtime/App 的变更：
 
