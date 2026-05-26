@@ -3607,6 +3607,63 @@ Next tranche write scope:
 - Continue MAG `docs/history/specs/*.md` in date/topic batches, prioritizing 2026-04-08 P3/P4 rollback / verification records or 2026-04-11/2026-04-12 Hermes / hosted handoff specs because stale provider wording risk is higher there.
 - Or choose RCA uncovered reference bodies or App docs once active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 12:18 CST`
+Tranche: `mag-20260408-p3p4-history-specs-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAG `docs/history/specs/` 下 2026-04-08 P3/P4 rollback、presubmission、verification gate 与 checkpoint 历史 specs，并把结果吸收回 MAG `main`。目标是确认这些 direct-file 历史入口不会把旧 `Current Truth` 标题、裸 `stage-route-report` verification command、CLI-only validation surface、MCP/controller future scope、`ready_for_submission` / `presubmission_frozen` 或 checkpoint vocabulary 误读成当前 public CLI shape、runtime owner、submission/export authority、production readiness、compatibility interface 或 active backlog；本轮语义结果是既有 lifecycle guard 和 specs lifecycle map 足够，MAG 正文不需要改写。
+
+Fresh live truth inputs:
+
+- MAG `AGENTS.md`, `TASTE.md`, core docs, `docs/active/mag-ideal-state-cross-repo-gap-plan.md`, `docs/specs/README.md`, `docs/specs/specs_lifecycle_map.md`, `docs/history/specs/README.md`, and MAG `docs/docs_portfolio_consolidation.md`.
+- Reviewed history specs: `docs/history/specs/2026-04-08-p3b-revision-transition-and-re-review-hardening-current-truth.md`, `docs/history/specs/2026-04-08-p3c-forced-rollback-and-presubmission-gate-current-truth.md`, `docs/history/specs/2026-04-08-p4a-verification-gate-surface-current-truth.md`, and `docs/history/specs/2026-04-08-p4b-verification-os-and-checkpoint-surface-current-truth.md`.
+- MAG machine/source truth surfaces: `contracts/runtime-program/current-program.json`, `src/med_autogrant/route_report.py`, `src/med_autogrant/domain_runtime_parts/substrate.py`, `src/med_autogrant/public_cli.py`, `src/med_autogrant/cli.py`, `src/med_autogrant/domain_entry.py`, active specs listed by `docs/specs/README.md`, schemas/source/CLI/API behavior.
+- Fresh CLI/read-model probes: `med_autogrant --help`, `med_autogrant workspace --help`, `workspace route-report` on gate-open and gate-closed examples, `workspace next-step` on forced-rollback example, and `MagDomainRuntime().describe_topology()`.
+
+Fresh semantic result:
+
+- The four reviewed files already carry first-screen lifecycle notes plus `Owner` / `Purpose` / `State` / `Machine boundary`.
+- P3.B / P3.C are correctly scoped as historical review / rollback / presubmission provenance; P4.A / P4.B are correctly scoped as historical verification-gate / checkpoint provenance.
+- Current public CLI shape is grouped: `med_autogrant workspace route-report`, not the historical bare `stage-route-report` command examples. The historical examples remain useful provenance but must not be copied into current operator docs without mapping through `public_cli`.
+- Current checkpoint aggregation is source-owned by `route_report.build_stage_route_report()` / `build_verification_checkpoint()` and domain entry dispatch; representative fresh probes returned `freeze_ready`, `submission_frozen`, and `argument_building` for the expected gate-open, gate-closed and forced-rollback examples.
+- `MagDomainRuntime().describe_topology()` still reports `runtime_owner=one-person-lab`, `can_claim_generic_runtime_owner=False`, `default_formal_entry=CLI`, `supported_protocol_layer=MCP`. These historical specs therefore do not grant MAG a generic runtime, controller, provider, submission-ready or production-ready authority.
+- Stale-risk scan found no unguarded Hermes/Gateway/local-manager/local-runtime/attempt-ledger/default-runtime wording in this batch. `Current Truth`, `ready_for_submission`, `MCP/controller`, formal-entry and submission wording appears in historical titles/body text and is guarded by file-level lifecycle notes.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autogrant` | Full paragraph read of the four 2026-04-08 P3/P4 history specs listed above; support read of history specs index, specs lifecycle map, active gap plan, current-program runtime owner fields, route-report source, domain runtime topology, public CLI mapping and representative CLI outputs. | `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. These four MAG files remain useful history provenance; no body move, tombstone, or delete was required.
+
+Unreviewed docs:
+
+- `med-autogrant`: remaining `docs/history/specs/*.md` files outside the 2026-04-06 foundation batch, 2026-04-07 P2/P3A batch and this 2026-04-08 P3/P4 batch remain open for paragraph-level governance.
+- Higher-risk remaining MAG batches include 2026-04-08 P5 / R-series activation packages, 2026-04-09 R3/R4/R5 / post-R5A records, 2026-04-10 fail-closed / hosted-bundle records, 2026-04-11 Hermes/reset/local-runtime records and 2026-04-12 hosted/OPL handoff records.
+- MAG non-index references such as grant strategy memory policy, OPL family contract adoption and governance checklist still need paragraph-level checks against current contracts/source unless already covered by a later MAG or OPL ledger entry.
+- OPL, MAS, RCA and App repo-wide coverage remains open outside recorded chunks. OMA is covered by its earlier full README/docs tranche.
+
+Remaining stale / retire candidates:
+
+- Any future direct-file use of these 2026-04-08 specs as current public CLI command shape, runtime owner, default CLI/API contract, controller capability, submission-ready/export-ready verdict, production readiness, physical-delete authority or compatibility-interface source is stale pollution.
+- Historical bare `stage-route-report` command examples must be mapped through current public CLI as `workspace route-report`; otherwise they are old verification-package provenance, not active operator docs.
+- `ready_for_submission`, `presubmission_frozen`, `freeze_ready`, `submission_frozen` and rollback checkpoint vocabulary remain route/checkpoint semantics. They must not be upgraded to final external submission, export authorization, grant package authority, human-gate approval, provider completion, App/release readiness or production-ready claims.
+
+Verification / absorb:
+
+- MAG commit `4c6a551 docs: cover MAG 2026-04-08 history specs` is on MAG `main`; tranche worktree and branch were removed after fast-forward absorb.
+- MAG verification before absorb: `git diff --check`; strict README/docs/contracts conflict-marker scan had no hits; OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- Representative current CLI/read-model probes succeeded: `workspace route-report` returned `freeze_ready` for `p3a_ready_for_submission`, `submission_frozen` for `p3c_presubmission_frozen`, and `workspace next-step` returned `argument_building` for the forced-rollback example.
+
+Next tranche write scope:
+
+- Continue MAG `docs/history/specs/*.md` in date/topic batches, prioritizing 2026-04-08 P5/R activation packages or 2026-04-11/2026-04-12 Hermes / hosted handoff specs because stale provider/hosted wording risk is higher there.
+- Or choose RCA uncovered reference bodies or App docs once their main checkout and active worktrees are safe.
+
 ## 验证
 
 Docs-only 整理：
