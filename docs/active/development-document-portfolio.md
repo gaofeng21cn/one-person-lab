@@ -6087,3 +6087,63 @@ Next tranche write scope:
 - 跑触及线路的 focused tests
 - 修改 machine-readable contracts、schema、CLI/API 或 runtime semantics 时跑对应 repo-native verification
 - 真实 provider/domain soak 必须提供 provider receipts、domain owner receipts、progress delta / human gate / stop-loss / typed blocker evidence
+
+Date: `2026-05-27 04:55 CST`
+Tranche: `mas-superpowers-history-no-resurrection-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAS `docs/history/superpowers/**` 历史/provenance cluster，并把结果回写到 MAS 本地 coverage ledger 与本 OPL family ledger。目标是让 repo-tracked Superpowers plan / spec 草稿保留可审计 design / plan provenance，同时避免正文中的 REQUIRED SUB-SKILL、checkbox、File Structure、旧 CLI/MCP/runtime/workspace 路径、DeepScientist/MDS/Hermes 默认口径、绝对路径或当时的 current/default 表述被误读成今天的 active execution queue、current CLI truth、runtime owner、regression oracle、publication/artifact authority 或 production readiness。本轮不关闭全局 `/goal`，也不表示 MAS repo-wide README/docs 覆盖完成。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`, `TASTE.md`, `docs/status.md`, `docs/invariants.md`, `docs/active/mas-ideal-state-gap-plan.md`, `docs/docs_portfolio_consolidation.md`, and MAS local docs-governance ledger.
+- MAS target docs: all 47 Markdown files under `docs/history/superpowers/`.
+- Six-repo worktree / branch preflight and doctor preflight from `/Users/gaofeng/workspace/opl-doc-governance/scripts/opl_doc_doctor.py`.
+
+Fresh semantic result:
+
+- Current MAS truth remains `Declarative Medical Research Pack + OPL generated/hosted surfaces + minimal authority functions`: OPL/Temporal owns hosted autonomous runtime, stage attempt, queue, wakeup, retry/dead-letter, attempt ledger, worker residency and generated shells; `Codex CLI` is the default stage executor; MAS owns study truth, AI reviewer / auditor quality gates, publication route, artifact authority, memory decision, owner receipts and typed blockers.
+- `docs/history/superpowers/README.md` now carries a directory-level read rule explaining that `plans/` and `specs/` may preserve old process/checklist/current/default language and must be read only as history/provenance and no-resurrection reference.
+- All 46 plan/spec files under `plans/` and `specs/` now carry the same first-screen read rule after `Machine boundary`. This protects old implementation checklists, old DeepScientist/MDS/Hermes runtime assumptions, old CLI/MCP/workspace paths, old compatibility wording and old absolute paths from being reused as current execution instructions.
+- No current docs, machine-readable contracts, source, tests, CLI/API behavior, runtime/controller durable surfaces, owner receipts, real workspace artifact or active plan semantics changed.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full paragraph / first-screen read of all 47 `docs/history/superpowers/**/*.md` files, with supporting current-boundary read of MAS active truth, status, invariants and docs portfolio governance. | `docs/history/superpowers/README.md`; all `docs/history/superpowers/plans/*.md`; all `docs/history/superpowers/specs/*.md`; `docs/history/docs-portfolio-coverage-ledger/2026-05-27-part-5.md` |
+| `one-person-lab` | OPL family coverage ledger foldback for this MAS history tranche; no OPL active truth / source / contract semantics changed. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The superpowers history cluster stays in `docs/history/superpowers/**` as history/provenance and no-resurrection guard material.
+
+Unreviewed docs:
+
+- `med-autoscience`: `docs/history/superpowers/**` exact cluster is now covered. MAS repo-wide full paragraph coverage remains open for remaining history directory indexes and any exact inventory items not yet reconciled against the ledger.
+- `one-person-lab`: no new OPL body docs were governed in this tranche; previous exact coverage claims remain as recorded.
+- `med-autogrant`, `redcube-ai`, `opl-meta-agent`: no new docs governed in this tranche; previous coverage state remains unchanged.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active release / GUI lanes are safe or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- MAS: any future prose that treats old Superpowers plan/spec checklists, REQUIRED SUB-SKILL lines, File Structure lists, old DeepScientist/MDS/Hermes default runtime assumptions, old CLI/MCP/workspace paths, or historical absolute paths as current active queue, current CLI truth, default runtime owner, regression oracle, publication/artifact authority, domain-ready or production-ready evidence is stale pollution.
+- MAS: future active work must start from active owner docs, core docs, contracts, source, tests, runtime/controller surfaces, owner receipts and live read-model, not from these history drafts.
+- App: release / GUI docs remain blocked by unrelated dirty work in main and external worktrees.
+
+Worktree / branch cleanup:
+
+- No external stale worktree/branch qualified for cleanup before this tranche. OPL/MAS/App/RCA external worktrees remain dirty, recently written, not safely attributable to this automation, detached probes, or outside the current tranche.
+- This tranche's MAS and OPL worktrees should be removed after fast-forward absorb.
+
+Verification before absorb:
+
+- MAS superpowers history worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- OPL ledger worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- No source/runtime tests are required because this tranche changes only narrative docs and coverage ledgers.
+
+Next tranche write scope:
+
+- Reconcile remaining MAS history directory indexes and exact inventory against coverage ledgers.
+- Start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
