@@ -26,6 +26,10 @@ function readStringList(value: unknown) {
     .filter((entry): entry is string => Boolean(entry));
 }
 
+function stringListIsEmpty(value: unknown) {
+  return Array.isArray(value) && value.length === 0;
+}
+
 function uniqueStrings(values: string[]) {
   return [...new Set(values)];
 }
@@ -152,7 +156,26 @@ function masStandardAgentNoActiveCallerObserved(boundary: JsonRecord | null) {
     && optionalString(guard.status) === 'standard_agent_purity_cutover_guard'
     && optionalString(purity.default_caller_readiness_status) === 'opl_generated_default_caller_ready'
     && optionalString(purity.source_purity_cutover_status) === 'physical_wrapper_retirement_pending';
-  return noDefaultCallerObserved && (pureStandardAgentActive || cutoverPendingNoActiveCaller);
+  const landedStandardAgentSourceShape = optionalString(purity.status) === 'standard_agent_source_shape_landed'
+    && optionalString(guard.status) === 'standard_agent_purity_cutover_guard'
+    && optionalString(purity.default_caller_readiness_status) === 'opl_generated_default_caller_ready'
+    && optionalString(purity.source_purity_cutover_status) === 'standard_agent_source_shape_landed'
+    && optionalNumber(purity.repo_local_wrapper_tail_count) === 0
+    && stringListIsEmpty(purity.repo_local_wrapper_tail_module_ids)
+    && optionalNumber(purity.runtime_package_residue_count) === 0
+    && optionalString(purity.domain_projection_policy) === 'refs_receipts_blockers_only_no_body_verdict_or_blob'
+    && purity.history_detail_in_default_read_model === false
+    && optionalString(guard.default_caller_readiness_status) === 'opl_generated_default_caller_ready'
+    && optionalString(guard.source_purity_cutover_status) === 'standard_agent_source_shape_landed'
+    && optionalNumber(guard.repo_local_wrapper_tail_count) === 0
+    && stringListIsEmpty(guard.repo_local_wrapper_tail_module_ids)
+    && optionalNumber(guard.runtime_package_residue_count) === 0
+    && stringListIsEmpty(guard.retired_alias_residue_refs);
+  return noDefaultCallerObserved && (
+    pureStandardAgentActive
+    || cutoverPendingNoActiveCaller
+    || landedStandardAgentSourceShape
+  );
 }
 
 function masStandardAgentNoActiveCallerRefs(boundary: JsonRecord | null) {
