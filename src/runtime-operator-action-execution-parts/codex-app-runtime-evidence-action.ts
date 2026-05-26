@@ -27,6 +27,10 @@ function refsFromPayload(payload: JsonRecord, keys: string[]) {
   });
 }
 
+function looksLikePlaceholderRef(ref: string) {
+  return ref.startsWith('<') && ref.endsWith('>');
+}
+
 function codexAppRuntimeEvidencePayload(payload: JsonRecord): CodexAppRuntimeEvidenceReceiptInput {
   return {
     temporal_hosted_long_soak_refs: refsFromPayload(payload, [
@@ -55,18 +59,34 @@ function codexAppRuntimeEvidenceRefCount(input: CodexAppRuntimeEvidenceReceiptIn
   ].length;
 }
 
+function codexAppRuntimeEvidenceRefs(input: CodexAppRuntimeEvidenceReceiptInput) {
+  return [
+    ...(input.temporal_hosted_long_soak_refs ?? []),
+    ...(input.provider_state_linkage_refs ?? []),
+    ...(input.operator_evidence_refs ?? []),
+    ...(input.typed_blocker_refs ?? []),
+  ];
+}
+
 function codexAppRuntimeEvidenceDryRunPreflight(input: CodexAppRuntimeEvidenceReceiptInput) {
+  const refCount = codexAppRuntimeEvidenceRefCount(input);
+  const forbiddenPlaceholderRefs = codexAppRuntimeEvidenceRefs(input)
+    .filter(looksLikePlaceholderRef);
   return {
     surface_kind: 'opl_codex_app_runtime_evidence_payload_preflight',
-    status: codexAppRuntimeEvidenceRefCount(input) > 0
-      ? 'payload_refs_observed'
-      : 'payload_required',
+    status: forbiddenPlaceholderRefs.length > 0
+      ? 'blocked'
+      : refCount > 0
+        ? 'payload_refs_observed'
+        : 'payload_required',
     required_any: [
       'temporal_hosted_long_soak_refs',
       'provider_state_linkage_refs',
       'operator_evidence_refs',
       'typed_blocker_refs',
     ],
+    forbidden_placeholder_refs: forbiddenPlaceholderRefs,
+    can_record_refs_only_receipt: refCount > 0 && forbiddenPlaceholderRefs.length === 0,
     empty_payload_template_is_success_evidence: false,
     payload_owner: 'app_live_operator_or_opl_provider_owner',
     authority_boundary: {
@@ -107,13 +127,17 @@ export function codexAppRuntimeEvidenceExecution(
   }
 
   const input = codexAppRuntimeEvidencePayload(payload);
-  if (!options.dryRun && codexAppRuntimeEvidenceRefCount(input) === 0) {
+  const preflight = codexAppRuntimeEvidenceDryRunPreflight(input);
+  if (!options.dryRun && preflight.can_record_refs_only_receipt !== true) {
     throw new FrameworkContractError(
       'cli_usage_error',
       'Codex App runtime evidence record action requires refs-only payload evidence.',
       {
         action_id: stringValue(route.action_id),
-        required_any: codexAppRuntimeEvidenceDryRunPreflight(input).required_any,
+        error_kind: 'codex_app_runtime_evidence_payload_preflight_blocked',
+        required_any: preflight.required_any,
+        empty_payload_template_is_success_evidence: false,
+        preflight,
       },
     );
   }
@@ -123,7 +147,7 @@ export function codexAppRuntimeEvidenceExecution(
     result: options.dryRun
       ? {
           codex_app_runtime_evidence_payload_preflight:
-            codexAppRuntimeEvidenceDryRunPreflight(input),
+            preflight,
         }
       : {
           codex_app_runtime_evidence_ledger_record:

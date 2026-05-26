@@ -4,6 +4,7 @@ import {
   os,
   path,
   runCli,
+  runCliFailure,
   test,
 } from '../helpers.ts';
 
@@ -229,6 +230,41 @@ test('runtime Codex App runtime evidence typed blocker refs keep the long-soak g
     assert.equal(followthrough.refs_observed_for_all_gates, false);
     assert.equal(followthrough.production_long_soak_claimed, false);
     assert.equal(followthrough.authority_boundary.can_claim_production_ready, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime Codex App runtime evidence record action rejects placeholder refs', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-app-runtime-placeholder-state-'));
+  try {
+    const failure = runCliFailure([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'codex_app_runtime_evidence:codex_app_runtime_role:record',
+      '--payload',
+      JSON.stringify({
+        temporal_hosted_long_soak_refs: ['<temporal-hosted-long-soak-ref>'],
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(failure.payload.error.code, 'cli_usage_error');
+    assert.equal(
+      failure.payload.error.details.error_kind,
+      'codex_app_runtime_evidence_payload_preflight_blocked',
+    );
+    assert.deepEqual(
+      failure.payload.error.details.preflight.forbidden_placeholder_refs,
+      ['<temporal-hosted-long-soak-ref>'],
+    );
+
+    const listOutput = runCli(['runtime', 'codex-app-runtime-evidence', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    }).codex_app_runtime_evidence_ledger;
+    assert.equal(listOutput.receipt_count, 0);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
