@@ -3234,6 +3234,55 @@ Next tranche write scope:
 - Or MAS product/status/workbench and progress/domain-ref projection shell reconciliation outside already-covered blocks.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 15:28 CST`
+Tranche: `mag-thin-support-index-local-ledger`
+State: `tranche_verified`
+
+本轮把 MAG thin support index 覆盖结果补写回 `med-autogrant` repo-local docs portfolio，而不是重新扩大 MAG 全仓覆盖范围。此前全局 ledger 已记录 `mag-specs-thin-index-coverage` 覆盖 MAG `docs/product/README.md`、`docs/runtime/README.md`、`docs/delivery/README.md`、`docs/source/README.md` 与 `docs/policies/README.md`；本轮补齐的是 MAG 本仓 `docs/docs_portfolio_consolidation.md` 中缺失的 coverage ledger，让本地治理入口也能说明这些目录当前保持 thin support role。
+
+Fresh live truth inputs:
+
+- MAG `AGENTS.md`, `TASTE.md`, core docs, `docs/active/mag-ideal-state-cross-repo-gap-plan.md`, `docs/references/med-auto-grant-ideal-state.md`, and `docs/docs_portfolio_consolidation.md`.
+- MAG thin support indexes: `docs/product/README.md`, `docs/runtime/README.md`, `docs/delivery/README.md`, `docs/source/README.md`, `docs/policies/README.md`.
+- MAG machine/source refs: `contracts/runtime-program/current-program.json`, `contracts/private_functional_surface_policy.json`, `contracts/production_acceptance/mag-production-acceptance.json`, `contracts/runtime-program/opl-family-contract-adoption.json`, `MedAutoGrantDomainEntry`, `MagDomainRuntime.describe_topology()`, `build_product_entry_manifest()`, `build_domain_handler_export()`, `build_source_provenance_surface()`, and `build_opl_substrate_adapter_export()`.
+
+Fresh semantic result:
+
+- The five MAG thin support indexes already carry owner / purpose / state / machine-boundary headers and remain valid active support indexes.
+- No runtime owner, source truth, delivery authority, policy owner or product-entry authority leakage was found.
+- `MagDomainRuntime.describe_topology()` and current runtime contracts keep OPL/Temporal as runtime owner; MAG stays grant-domain handler, refs-only projection, owner receipt, typed blocker and authority-ref owner.
+- `build_source_provenance_surface()` and domain handler export keep OPL source consumption body-free and refs-only.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autogrant` | Full paragraph read of `docs/product/README.md`, `docs/runtime/README.md`, `docs/delivery/README.md`, `docs/source/README.md`, `docs/policies/README.md`; role read of MAG local docs portfolio and live contract/source refs listed above. | `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The five directories currently only contain README indexes; thin support state is intentional and current.
+
+Unreviewed docs:
+
+- This local-ledger catch-up does not close additional MAG whole-repo docs beyond the earlier `mag-specs-thin-index-coverage` tranche. MAG remaining support/reference/history body coverage stays governed by the global ledger and later tranche scopes.
+- OPL, MAS, RCA and App repo-wide coverage remains open outside already-recorded chunks; OMA README/docs coverage remains covered by the earlier OMA tranche.
+
+Remaining stale / retire candidates:
+
+- Future MAG prose in these directories must not promote thin indexes into second active truth, MAG-owned generic runtime/workbench/scheduler, retired route families, legacy alias shells, or production/domain readiness claim.
+- Future source/delivery/product/runtime support prose must continue to point to contracts/source/CLI/read-model surfaces for machine truth and keep grant truth, verdicts, package bodies, memory bodies and owner receipt authority inside MAG-owned boundaries.
+
+Verification / absorb:
+
+- MAG commit `68bf945 docs: record MAG support index coverage` is on MAG `main`; tranche worktree and branch were removed after fast-forward absorb.
+- MAG verification before absorb: `git diff --check`; strict README/docs conflict-marker scan had no hits; OPL Doc Governance doctor `finding_count=0`, active truth `pass`; MAG CLI help succeeded through `scripts/run-python-clean.sh`.
+
+Next tranche write scope:
+
+- Continue with the next uncovered exact body from the global coverage ledger, with good candidates being RCA uncovered references, MAS product/status/workbench and progress/domain-ref projection shell reconciliation, or App docs after active release/GUI lanes are safe.
+
 ## 验证
 
 Docs-only 整理：
