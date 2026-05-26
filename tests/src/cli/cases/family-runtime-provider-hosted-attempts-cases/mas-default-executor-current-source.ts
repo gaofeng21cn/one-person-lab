@@ -519,6 +519,127 @@ test('family-runtime tick syncs terminal cross-task MAS default executor attempt
   }
 });
 
+test('family-runtime tick syncs a completed running MAS default executor attempt without queued work', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      insertDefaultExecutorTask(db, {
+        taskId: 'task-mas-default-running-temporal-completed-no-queued-row',
+        sourceFingerprint: 'source-stable-completed-no-queued-row',
+        createdAt: '2026-05-25T16:30:00.000Z',
+        status: 'running',
+        attempts: 1,
+        leaseOwner: 'opl-family-runtime:stale',
+        leaseExpiresAt: new Date(Date.now() + 60_000).toISOString(),
+      });
+      const runningRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-running-temporal-completed-no-queued-row',
+      ) as FamilyRuntimeTaskRow;
+      const runningPayload = JSON.parse(runningRow.payload_json) as Record<string, unknown>;
+      const runningAttempt = ensureProviderHostedStageAttempt(db, runningRow, runningPayload);
+      assert.ok(runningAttempt);
+      db.prepare("UPDATE stage_attempts SET status = 'running' WHERE stage_attempt_id = ?").run(
+        runningAttempt.stage_attempt_id,
+      );
+
+      let queryCount = 0;
+      let dispatchCount = 0;
+      const tick = await runFamilyRuntimeQueueTick(db, familyRuntimePaths(), {
+        source: 'test-sync-running-completed-no-queued-row',
+        limit: 2,
+        hydrate: false,
+        taskScope: {
+          domainId: 'medautoscience',
+          taskKind: 'domain_owner/default-executor-dispatch',
+          payloadMatches: [
+            {
+              path: 'study_id',
+              value: '002-dm-china-us-mortality-attribution',
+            },
+          ],
+        },
+      }, {
+        enqueueTask: () => ({ accepted: false }),
+        queryTemporalStageAttempt: async () => {
+          queryCount += 1;
+          return {
+            surface_kind: 'temporal_stage_attempt_query_receipt',
+            provider_kind: 'temporal',
+            stage_attempt_id: runningAttempt.stage_attempt_id,
+            workflow_id: runningAttempt.workflow_id,
+            workflow_status: 'COMPLETED',
+            query: {
+              status: 'completed',
+              closeout_refs: ['receipt:dm002/repaired-package'],
+              consumed_refs: ['dispatch:dm002/quality-repair'],
+              consumed_memory_refs: [],
+              writeback_receipt_refs: ['receipt:dm002/owner-writeback'],
+              rejected_writes: [],
+              next_owner: 'medautoscience',
+              route_impact: {
+                study_id: '002-dm-china-us-mortality-attribution',
+              },
+              completion_boundary: {
+                provider_completion: 'completed',
+                domain_ready_verdict: 'domain_gate_pending',
+                provider_completion_is_domain_ready: false,
+              },
+              closeout_packet: {
+                surface_kind: 'domain_stage_closeout_packet',
+                closeout_refs: ['receipt:dm002/repaired-package'],
+                consumed_refs: ['dispatch:dm002/quality-repair'],
+                writeback_receipt_refs: ['receipt:dm002/owner-writeback'],
+                next_owner: 'medautoscience',
+                domain_ready_verdict: 'domain_gate_pending',
+              },
+            },
+          };
+        },
+        dispatchTask: (_db, _paths, selectedRow: FamilyRuntimeTaskRow) => {
+          dispatchCount += 1;
+          return { task_id: selectedRow.task_id };
+        },
+      });
+      const completedTask = db.prepare(`
+        SELECT status, last_error, dead_letter_reason, lease_owner, lease_expires_at
+        FROM tasks
+        WHERE task_id = ?
+      `).get('task-mas-default-running-temporal-completed-no-queued-row') as {
+        status: string;
+        last_error: string | null;
+        dead_letter_reason: string | null;
+        lease_owner: string | null;
+        lease_expires_at: string | null;
+      };
+      const [completedAttempt] = db.prepare(`
+        SELECT status, closeout_receipt_status, closeout_refs_json
+        FROM stage_attempts
+        WHERE task_id = ?
+      `).all('task-mas-default-running-temporal-completed-no-queued-row') as Array<{
+        status: string;
+        closeout_receipt_status: string | null;
+        closeout_refs_json: string;
+      }>;
+
+      assert.equal(tick.selected_count, 0);
+      assert.equal(tick.mas_default_executor_terminal_synced_count, 1);
+      assert.equal(queryCount, 1);
+      assert.equal(dispatchCount, 0);
+      assert.equal(completedTask.status, 'succeeded');
+      assert.equal(completedTask.last_error, null);
+      assert.equal(completedTask.dead_letter_reason, null);
+      assert.equal(completedTask.lease_owner, null);
+      assert.equal(completedTask.lease_expires_at, null);
+      assert.equal(completedAttempt.status, 'completed');
+      assert.equal(completedAttempt.closeout_receipt_status, 'accepted_typed_closeout');
+      assert.deepEqual(JSON.parse(completedAttempt.closeout_refs_json), ['receipt:dm002/repaired-package']);
+    });
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime tick auto-redrives retryable MAS default executor provider blockers without new source row', async () => {
   const db = new DatabaseSync(':memory:');
   try {

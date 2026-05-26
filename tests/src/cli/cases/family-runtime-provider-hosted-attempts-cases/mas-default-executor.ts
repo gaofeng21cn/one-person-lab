@@ -290,7 +290,7 @@ test('family-runtime does not auto-requeue succeeded MAS default executor dispat
   }
 });
 
-test('family-runtime requeues succeeded MAS default executor dispatch when domain owner fingerprint changes', () => {
+test('family-runtime refreshes succeeded MAS default executor dispatch metadata when domain owner fingerprint changes', () => {
   const db = new DatabaseSync(':memory:');
   try {
     createQueueTables(db);
@@ -327,23 +327,25 @@ test('family-runtime requeues succeeded MAS default executor dispatch when domai
       'task-mas-default-succeeded-owner-fingerprint-redrive',
     ) as { status: string; payload_json: string };
     const payload = JSON.parse(task.payload_json);
-    const requeueEvent = db.prepare(`
+    const refreshEvent = db.prepare(`
       SELECT payload_json
       FROM events
-      WHERE task_id = ? AND event_type = 'task_requeued_from_succeeded_after_domain_owner_update'
+      WHERE task_id = ? AND event_type = 'task_metadata_refreshed_from_domain_export'
       LIMIT 1
     `).get('task-mas-default-succeeded-owner-fingerprint-redrive') as { payload_json: string } | undefined;
 
-    assert.equal(result.accepted, true);
-    assert.equal(result.requeued_from_terminal, true);
-    assert.equal(result.idempotent_noop, false);
-    assert.equal(task.status, 'queued');
+    assert.equal(result.accepted, false);
+    assert.equal(result.idempotent_noop, true);
+    assert.equal(task.status, 'succeeded');
     assert.equal(
       payload.opl_domain_export_context.owner_fingerprint,
       'module_exec_profile:/tmp/profile.toml:medautoscience:managed_root:head-after:/tmp/modules/med-autoscience',
     );
-    assert.ok(requeueEvent);
-    assert.equal(JSON.parse(requeueEvent.payload_json).reason, 'domain_export_owner_changed_after_succeeded');
+    assert.ok(refreshEvent);
+    assert.equal(
+      JSON.parse(refreshEvent.payload_json).reason,
+      'domain_export_owner_fingerprint_changed_after_succeeded',
+    );
   } finally {
     db.close();
   }

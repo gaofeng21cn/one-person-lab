@@ -57,21 +57,50 @@ function recordValue(value: unknown) {
     : null;
 }
 
-function masDefaultExecutorEvidencePayloadRefresh(
+function masDefaultExecutorMetadataRefresh(
   existingPayload: Record<string, unknown>,
   nextPayload: Record<string, unknown>,
 ) {
+  const refreshedFields: string[] = [];
+  const refreshedPayload = { ...existingPayload };
+  const refreshReasons: string[] = [];
+
   const evidencePayload = recordValue(nextPayload.domain_dispatch_evidence_record_payload);
-  if (!evidencePayload) {
-    return null;
+  if (evidencePayload) {
+    const currentEvidencePayload = recordValue(existingPayload.domain_dispatch_evidence_record_payload);
+    if (JSON.stringify(currentEvidencePayload) !== JSON.stringify(evidencePayload)) {
+      refreshedPayload.domain_dispatch_evidence_record_payload = evidencePayload;
+      refreshedFields.push('domain_dispatch_evidence_record_payload');
+      refreshReasons.push('domain_dispatch_evidence_payload_changed_after_succeeded');
+    }
   }
-  const currentEvidencePayload = recordValue(existingPayload.domain_dispatch_evidence_record_payload);
-  if (JSON.stringify(currentEvidencePayload) === JSON.stringify(evidencePayload)) {
+
+  const nextExportContext = recordValue(nextPayload.opl_domain_export_context);
+  if (nextExportContext) {
+    const currentExportContext = recordValue(existingPayload.opl_domain_export_context);
+    if (JSON.stringify(currentExportContext) !== JSON.stringify(nextExportContext)) {
+      refreshedPayload.opl_domain_export_context = nextExportContext;
+      refreshedFields.push('opl_domain_export_context');
+      const existingOwnerFingerprint = exportOwnerFingerprint(existingPayload);
+      const nextOwnerFingerprint = exportOwnerFingerprint(nextPayload);
+      refreshReasons.push(
+        existingOwnerFingerprint !== nextOwnerFingerprint
+          ? 'domain_export_owner_fingerprint_changed_after_succeeded'
+          : 'domain_export_context_changed_after_succeeded',
+      );
+    }
+  }
+
+  if (refreshedFields.length === 0) {
     return null;
   }
   return {
-    ...existingPayload,
-    domain_dispatch_evidence_record_payload: evidencePayload,
+    payload: refreshedPayload,
+    refreshed_fields: refreshedFields,
+    reason: refreshReasons[0],
+    reasons: refreshReasons,
+    previous_export_owner_fingerprint: exportOwnerFingerprint(existingPayload),
+    next_export_owner_fingerprint: exportOwnerFingerprint(nextPayload),
   };
 }
 
@@ -102,40 +131,6 @@ function masDefaultExecutorBlockedRedriveDecision(
   };
 }
 
-function masDefaultExecutorSucceededOwnerRedriveDecision(
-  existing: FamilyRuntimeTaskRow,
-  existingPayload: Record<string, unknown>,
-  nextPayload: Record<string, unknown>,
-) {
-  if (
-    existing.domain_id !== 'medautoscience'
-    || existing.task_kind !== MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
-    || existing.status !== 'succeeded'
-  ) {
-    return null;
-  }
-  const nextOwnerFingerprint = exportOwnerFingerprint(nextPayload);
-  if (!nextOwnerFingerprint) {
-    return null;
-  }
-  const existingOwnerFingerprint = exportOwnerFingerprint(existingPayload);
-  if (!existingOwnerFingerprint) {
-    return {
-      reason: 'domain_export_context_added_after_succeeded',
-      previous_export_owner_fingerprint: null,
-      next_export_owner_fingerprint: nextOwnerFingerprint,
-    };
-  }
-  if (existingOwnerFingerprint !== nextOwnerFingerprint) {
-    return {
-      reason: 'domain_export_owner_changed_after_succeeded',
-      previous_export_owner_fingerprint: existingOwnerFingerprint,
-      next_export_owner_fingerprint: nextOwnerFingerprint,
-    };
-  }
-  return null;
-}
-
 export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
   const createdAt = nowIso();
   const dedupeKey = input.dedupeKey?.trim() || null;
@@ -160,73 +155,16 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         && exportedTaskChanged
         && isMasDefaultExecutorDispatch(existing, existingPayload)
         && isMasDefaultExecutorDispatchInput(input.domainId, taskKind, payload);
-      const succeededOwnerRedrive = masDefaultExecutorSucceededAdmissionRefresh
-        ? masDefaultExecutorSucceededOwnerRedriveDecision(existing, existingPayload, payload)
+      const metadataRefresh = masDefaultExecutorSucceededAdmissionRefresh
+        ? masDefaultExecutorMetadataRefresh(existingPayload, payload)
         : null;
-      if (succeededOwnerRedrive) {
-        const nextStatus: FamilyRuntimeTaskStatus = input.requiresApproval ? 'waiting_approval' : 'queued';
-        db.prepare(`
-          UPDATE tasks
-          SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
-            source = ?, requires_approval = ?, approved_at = NULL, lease_owner = NULL,
-            lease_expires_at = NULL, last_error = NULL, dead_letter_reason = NULL, updated_at = ?
-          WHERE task_id = ?
-        `).run(
-          input.domainId,
-          taskKind,
-          exportedPayloadJson,
-          input.priority ?? 0,
-          nextStatus,
-          input.source ?? 'opl-cli',
-          input.requiresApproval ? 1 : 0,
-          createdAt,
-          existing.task_id,
-        );
-        const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
-        insertEvent(db, {
-          taskId: refreshed.task_id,
-          domainId: refreshed.domain_id,
-          eventType: 'task_requeued_from_succeeded_after_domain_owner_update',
-          source: input.source ?? 'opl-cli',
-          payload: {
-            dedupe_key: dedupeKey,
-            previous_status: existing.status,
-            next_status: nextStatus,
-            ...succeededOwnerRedrive,
-            authority_boundary: {
-              opl: 'queue_redrive_after_domain_owner_update_only',
-              domain: 'truth_quality_artifact_gate_owner',
-              domain_truth_mutation: false,
-              publication_quality_mutation: false,
-              artifact_gate_mutation: false,
-              current_package_mutation: false,
-            },
-          },
-        });
-        insertNotification(db, {
-          taskId: refreshed.task_id,
-          severity: 'info',
-          title: 'Family runtime task requeued after domain owner update',
-          body: `${input.domainId}:${taskKind}`,
-          payload: { status: nextStatus, dedupe_key: dedupeKey },
-        });
-        return {
-          accepted: true,
-          requeued_from_terminal: true,
-          idempotent_noop: false,
-          task: taskToPayload(refreshed),
-        };
-      }
-      const masDefaultExecutorMetadataRefresh = masDefaultExecutorSucceededAdmissionRefresh
-        ? masDefaultExecutorEvidencePayloadRefresh(existingPayload, payload)
-        : null;
-      if (masDefaultExecutorMetadataRefresh) {
+      if (metadataRefresh) {
         db.prepare(`
           UPDATE tasks
           SET payload_json = ?, source = ?, updated_at = ?
           WHERE task_id = ?
         `).run(
-          JSON.stringify(masDefaultExecutorMetadataRefresh),
+          JSON.stringify(metadataRefresh.payload),
           input.source ?? 'opl-cli',
           createdAt,
           existing.task_id,
@@ -241,7 +179,22 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
             dedupe_key: dedupeKey,
             previous_status: existing.status,
             retained_status: refreshed.status,
-            refreshed_fields: ['domain_dispatch_evidence_record_payload'],
+            reason: metadataRefresh.reason,
+            reasons: metadataRefresh.reasons,
+            previous_export_owner_fingerprint:
+              metadataRefresh.previous_export_owner_fingerprint,
+            next_export_owner_fingerprint:
+              metadataRefresh.next_export_owner_fingerprint,
+            refreshed_fields: metadataRefresh.refreshed_fields,
+            authority_boundary: {
+              opl: 'queue_metadata_refresh_after_domain_export_update_only',
+              domain: 'truth_quality_artifact_gate_owner',
+              domain_truth_mutation: false,
+              publication_quality_mutation: false,
+              artifact_gate_mutation: false,
+              current_package_mutation: false,
+              provider_stage_attempt_started: false,
+            },
           },
         });
         return {

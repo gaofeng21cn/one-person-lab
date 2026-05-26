@@ -9,7 +9,7 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
   };
 }
 
-test('family-runtime hydrate requeues succeeded MAS default executor dispatch after module owner update', () => {
+test('family-runtime hydrate keeps succeeded MAS default executor dispatch terminal after module owner update', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-profile-succeeded-owner-redrive-home-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-profile-succeeded-owner-redrive-'));
   const profilePath = path.join(fixtureRoot, 'dm-cvd.workspace.toml');
@@ -164,18 +164,18 @@ exit 64
     const attempts = refreshed.family_runtime_task.stage_attempts;
     const events = refreshed.family_runtime_task.events;
 
-    assert.equal(updatedOwner.family_runtime_tick.hydration.enqueued_count, 1);
-    assert.equal(updatedOwner.family_runtime_tick.hydration.requeued_count, 1);
-    assert.equal(updatedOwner.family_runtime_tick.selected_count, 1);
-    assert.equal(updatedOwner.family_runtime_tick.dispatches[0].status, 'blocked');
-    assert.equal(task.status, 'blocked');
-    assert.equal(attempts.length, 2);
+    assert.equal(updatedOwner.family_runtime_tick.hydration.enqueued_count, 0);
+    assert.equal(updatedOwner.family_runtime_tick.hydration.idempotent_noop_count, 1);
+    assert.equal(updatedOwner.family_runtime_tick.selected_count, 0);
+    assert.equal(updatedOwner.family_runtime_tick.dispatches.length, 0);
+    assert.equal(task.status, 'succeeded');
+    assert.equal(attempts.length, 1);
     assert.notEqual(task.payload.opl_domain_export_context.owner_fingerprint, firstOwnerFingerprint);
     assert.match(task.payload.opl_domain_export_context.owner_fingerprint, new RegExp(nextSha));
     assert.equal(
       events.some((event: { event_type: string; payload: { reason?: string } }) =>
-        event.event_type === 'task_requeued_from_succeeded_after_domain_owner_update'
-        && event.payload.reason === 'domain_export_owner_changed_after_succeeded'
+        event.event_type === 'task_metadata_refreshed_from_domain_export'
+        && event.payload.reason === 'domain_export_owner_fingerprint_changed_after_succeeded'
       ),
       true,
     );

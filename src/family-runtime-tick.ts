@@ -9,7 +9,10 @@ import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
 import type { familyRuntimePaths, taskToPayload } from './family-runtime-store.ts';
 import { insertEvent, type FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import { taskRowMatchesScope } from './family-runtime-task-scope.ts';
-import { syncStageAttemptFromTemporalTerminalObservation } from './family-runtime-stage-attempts.ts';
+import {
+  listStageAttemptsForTask,
+  syncStageAttemptFromTemporalTerminalObservation,
+} from './family-runtime-stage-attempts.ts';
 import {
   findLiveMasDefaultExecutorDispatchAttempt,
   isMasDefaultExecutorDispatchTask,
@@ -216,6 +219,12 @@ function isLiveMasDefaultExecutorAttempt(attempt: StageAttemptPayload | null) {
   return Boolean(attempt && ['queued', 'running', 'checkpointed', 'human_gate'].includes(attempt.status));
 }
 
+function isObservableRunningMasDefaultExecutorAttempt(attempt: StageAttemptPayload) {
+  return attempt.provider_kind === 'temporal'
+    && attempt.executor_kind === 'codex_cli'
+    && ['running', 'checkpointed', 'human_gate'].includes(attempt.status);
+}
+
 async function syncObservableMasDefaultExecutorAttempt(
   db: DatabaseSync,
   attempt: StageAttemptPayload,
@@ -277,6 +286,40 @@ async function dropLiveMasDefaultExecutorRows(
   return { rows, liveSkippedCount };
 }
 
+async function syncRunningMasDefaultExecutorTaskAttempts(
+  db: DatabaseSync,
+  rows: FamilyRuntimeTaskRow[],
+  options: {
+    queryTemporalStageAttempt?: QueryTemporalStageAttempt;
+  } = {},
+) {
+  if (!options.queryTemporalStageAttempt) {
+    return 0;
+  }
+  let terminalSyncedCount = 0;
+  for (const row of rows) {
+    if (row.status !== 'running') {
+      continue;
+    }
+    const payload = payloadFromTask(row);
+    if (!isMasDefaultExecutorDispatchTask(row, payload)) {
+      continue;
+    }
+    const attempts = listStageAttemptsForTask(db, row.task_id).filter(isObservableRunningMasDefaultExecutorAttempt);
+    for (const attempt of attempts) {
+      const syncedAttempt = await syncObservableMasDefaultExecutorAttempt(
+        db,
+        attempt,
+        options.queryTemporalStageAttempt,
+      );
+      if (!isLiveMasDefaultExecutorAttempt(syncedAttempt)) {
+        terminalSyncedCount += 1;
+      }
+    }
+  }
+  return terminalSyncedCount;
+}
+
 export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
   db: DatabaseSync,
   paths: ReturnType<typeof familyRuntimePaths>,
@@ -315,6 +358,11 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     };
   const allRowsBeforeAutoRedrive = db.prepare('SELECT * FROM tasks').all() as FamilyRuntimeTaskRow[];
   const scopedRowsBeforeAutoRedrive = allRowsBeforeAutoRedrive.filter((row) => taskRowMatchesScope(row, input.taskScope));
+  const masDefaultExecutorTerminalSyncedCount = await syncRunningMasDefaultExecutorTaskAttempts(
+    db,
+    scopedRowsBeforeAutoRedrive,
+    { queryTemporalStageAttempt: handlers.queryTemporalStageAttempt },
+  );
   const {
     autoRedrivenCount: masDefaultExecutorAutoRedrivenCount,
     autoDeadLetteredCount: masDefaultExecutorAutoDeadLetteredCount,
@@ -351,6 +399,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       filtered_count: filteredCount,
       mas_default_executor_superseded_count: masDefaultExecutorSupersededCount,
       mas_default_executor_live_skipped_count: masDefaultExecutorLiveSkippedCount,
+      mas_default_executor_terminal_synced_count: masDefaultExecutorTerminalSyncedCount,
       mas_default_executor_auto_redriven_count: masDefaultExecutorAutoRedrivenCount,
       mas_default_executor_auto_dead_lettered_count: masDefaultExecutorAutoDeadLetteredCount,
       task_scope: input.taskScope ?? null,
@@ -370,6 +419,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     filtered_count: filteredCount,
     mas_default_executor_superseded_count: masDefaultExecutorSupersededCount,
     mas_default_executor_live_skipped_count: masDefaultExecutorLiveSkippedCount,
+    mas_default_executor_terminal_synced_count: masDefaultExecutorTerminalSyncedCount,
     mas_default_executor_auto_redriven_count: masDefaultExecutorAutoRedrivenCount,
     mas_default_executor_auto_dead_lettered_count: masDefaultExecutorAutoDeadLetteredCount,
     dispatches,

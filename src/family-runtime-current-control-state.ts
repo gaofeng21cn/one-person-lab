@@ -168,6 +168,15 @@ function terminalAttemptRefs(attempts: ControlAttemptRow[], current: ControlAtte
     .map((attempt) => `opl://stage_attempts/${attempt.stage_attempt_id}`);
 }
 
+function isLiveProviderAttempt(attempt: ControlAttemptRow | undefined, providerRun: Record<string, unknown>) {
+  if (!attempt) {
+    return false;
+  }
+  const providerStatus = stringValue(providerRun.provider_status);
+  return ['running', 'checkpointed', 'human_gate'].includes(attempt.status)
+    || ['running', 'checkpointed', 'human_gate'].includes(providerStatus ?? '');
+}
+
 export function deriveCurrentControlStateForTask(db: DatabaseSync, taskId: string) {
   const task = readTask(db, taskId);
   const attempts = readAttempts(db, taskId);
@@ -192,6 +201,7 @@ function deriveCurrentControlStateFromRows(
   const taskPayload = parseRecord(task?.payload_json);
   const latestCloseout = current ? readLatestCloseoutPacket(db, current.stage_attempt_id) : {};
   const providerRun = current ? parseRecord(current.provider_run_json) : {};
+  const liveProviderAttempt = isLiveProviderAttempt(current, providerRun);
   const closeoutRefs = current ? stringList(parseList(current.closeout_refs_json)) : [];
   const missingIdentity = requiredIdentityMissing(task, current);
   const staleEpochs = task && current ? staleEpochKinds(taskPayload, current) : [];
@@ -214,6 +224,10 @@ function deriveCurrentControlStateFromRows(
     task_id: taskId,
     domain_id: task?.domain_id ?? current?.domain_id ?? null,
     task_kind: task?.task_kind ?? null,
+    active_run_id: liveProviderAttempt && current ? `opl-stage-attempt://${current.stage_attempt_id}` : null,
+    active_stage_attempt_id: liveProviderAttempt ? current?.stage_attempt_id ?? null : null,
+    active_workflow_id: liveProviderAttempt ? current?.workflow_id ?? null : null,
+    running_provider_attempt: liveProviderAttempt,
     current_stage_attempt_id: current?.stage_attempt_id ?? null,
     workflow_id: current?.workflow_id ?? null,
     provider_kind: current?.provider_kind ?? null,

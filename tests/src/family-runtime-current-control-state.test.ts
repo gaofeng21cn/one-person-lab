@@ -137,6 +137,36 @@ test('current control state binds MAS default executor task freshness to domain 
   });
 });
 
+test('current control state exposes active provider attempt identity without domain readiness claims', () => {
+  withDb((db) => {
+    const task = enqueueDefaultTask(db, {
+      study_id: '002-dm-china-us-mortality-attribution',
+      quest_id: '002-dm-china-us-mortality-attribution',
+      source_fingerprint: 'mas-domain-source:fresh',
+    });
+    const attempt = createTaskAttempt(db, task, {
+      sourceFingerprint: 'opl-stage-source:derived',
+      workspaceEpochs: {
+        domain_source_fingerprint: 'mas-domain-source:fresh',
+      },
+      start: true,
+    });
+
+    const state = deriveCurrentControlStateForTask(db, task.task_id);
+
+    assert.equal(state.reconciliation_status, 'running');
+    assert.equal(state.current_attempt_state, 'running');
+    assert.equal(state.active_run_id, `opl-stage-attempt://${attempt.stage_attempt_id}`);
+    assert.equal(state.active_stage_attempt_id, attempt.stage_attempt_id);
+    assert.equal(state.running_provider_attempt, true);
+    assert.equal(state.task_id, task.task_id);
+    assert.equal(state.workflow_id, attempt.workflow_id);
+    assert.equal(Object.hasOwn(state, 'domain_ready'), false);
+    assert.equal(Object.hasOwn(state, 'publication_ready'), false);
+    assert.equal(Object.hasOwn(state, 'artifact_ready'), false);
+  });
+});
+
 test('current control state fails closed when task or attempt identity is incomplete', () => {
   withDb((db) => {
     const task = enqueueDefaultTask(db);
