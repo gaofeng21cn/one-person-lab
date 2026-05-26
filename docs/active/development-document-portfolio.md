@@ -4136,7 +4136,7 @@ Next tranche write scope:
 
 Date: `2026-05-26 16:42 CST`
 Tranche: `rca-references-family-scope-memory-locator-coverage`
-State: `tranche_verified_pending_absorb`
+State: `tranche_verified_absorbed`
 
 本轮覆盖 RCA `docs/references/**` 中仍开放的 support reference bodies，重点是 references index、domain memory locator、series governance checklist、executor routing、product-entry support 和 integration support。目标是确认这些 support docs 不把早期“四仓”治理范围、英文旧 lifecycle header、memory descriptor proof、Hermes profile、OPL handoff、`domain_action_adapter` 或 generated/default caller wording 误读成 current active plan、runtime owner、memory body owner、generated wrapper owner、visual ready、domain ready 或 production ready。
 
@@ -4181,11 +4181,67 @@ Remaining stale / retire candidates:
 
 Verification / absorb:
 
-- Pending this tranche closeout: RCA and OPL docs-only verification, fast-forward absorb into both `main` checkouts, worktree cleanup, then final six-repo lightweight verification.
+- RCA main now includes `4cff9e0 docs: cover RCA reference support boundaries`.
+- OPL main now includes `e23381f6 docs: record RCA references coverage tranche`.
+- Remaining RCA dirty files are external implementation/test edits unrelated to this docs-governance tranche and were not touched.
 
 Next tranche write scope:
 
 - Continue OPL / MAS / App uncovered docs, or RCA north-star body only if future edits reopen it. Keep App docs delayed until active release / GUI lanes are safe or explicitly handed to this governance goal.
+
+Date: `2026-05-26 16:52 CST`
+Tranche: `opl-public-product-support-coverage`
+State: `tranche_verified`
+
+本轮重读 OPL `docs/public/**` 公开支撑文档与 `docs/product/opl-public-surface-index.md`，在凌晨 public docs 覆盖 tranche 之后补上公共/产品支撑的 currentness 修正。重点校准公共叙事是否仍被读成旧“三个 domain 仓就是全部 family scope”。本轮不关闭全局 `/goal`，也不表示 OPL 仓 README/docs 已全量逐段覆盖。
+
+Fresh live truth inputs:
+
+- OPL core docs: `docs/README.md`, `docs/status.md`, `docs/project.md`, `docs/architecture.md`.
+- Public/product support docs: `docs/public/README.md`, `docs/public/roadmap.md`, `docs/public/task-map.md`, `docs/public/operating-model.md`, `docs/public/unified-harness-engineering-substrate.md`, `docs/product/opl-public-surface-index.md`.
+- OPL read models from this worktree:
+  - `./bin/opl agents descriptors --json`: descriptor summary reports 3 resolved domain projects and 0 blocked descriptors.
+  - `./bin/opl agents conformance --family-defaults --json`: `status=passed`, `passed_count=4`, `blocked_count=0`, `structural_conformance_status=passed`, `production_evidence_tail_count=4`.
+  - `./bin/opl runtime app-operator-drilldown --json`: `availability=available`, provider cadence/capability SLO satisfied in summary.
+  - `./bin/opl framework readiness --family-defaults --json`: `status=framework_control_plane_available_with_blocked_refs_only_attention`, hard blocker counts 0, open tail count 0, provider cadence/capability SLO satisfied, with refs-only/domain-blocked attention still not a ready claim.
+
+Fresh semantic result:
+
+- Public docs now consistently keep `OPL Framework -> One Person Lab App -> Foundry Agents` as the product layering.
+- `docs/public/unified-harness-engineering-substrate.md` now states that UHS first applies to OPL Framework and App/workbench projection, then to the three currently admitted domain capability surfaces: MAS, MAG and RCA.
+- `docs/public/unified-harness-engineering-substrate.md` now explicitly keeps `OPL Meta Agent` as Agent Foundry / new-agent builder-test managed module, not a domain truth owner.
+- `docs/product/opl-public-surface-index.md` now separates domain capability surfaces from App workbench product surface and OPL Meta Agent managed module / generated plugin consumption.
+- No archive/tombstone/delete action was needed; the stale issue was scope wording, not an obsolete document path.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | Re-read of `docs/public/README.md`, `docs/public/roadmap.md`, `docs/public/task-map.md`, `docs/public/operating-model.md`, `docs/public/unified-harness-engineering-substrate.md`, `docs/product/opl-public-surface-index.md`, and supporting core docs listed above. | `docs/public/unified-harness-engineering-substrate.md`; `docs/product/opl-public-surface-index.md`; `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. Public/product support docs remain active support references with single owner/purpose/state/machine boundary.
+
+Unreviewed docs:
+
+- OPL root `README*`, contracts README files, most `docs/active/**`, `docs/runtime/**`, `docs/delivery/**`, `docs/source/**`, `docs/policies/**`, `docs/specs/**`, most `docs/references/**`, and `docs/history/**` remain open for future paragraph-level coverage outside previously recorded focused tranches.
+- MAS, MAG, RCA and App repo-wide coverage remains open outside already-recorded chunks. OMA README/docs coverage remains covered by the earlier OMA tranche.
+
+Remaining stale / retire candidates:
+
+- Any future public/product wording that treats MAS/MAG/RCA descriptor index as the full product layering, omits One Person Lab App from public scope, or promotes OPL Meta Agent into a domain truth / artifact / owner receipt authority is stale pollution.
+- Any future wording that turns `agents conformance` pass, descriptor index resolution, App/operator availability, provider SLO satisfied, or zero open tail into domain ready, App release ready or family production ready is stale pollution.
+
+Next tranche write scope:
+
+- Continue OPL uncovered docs cluster by cluster, or switch to MAS/App only when active dirty lanes are safe or explicitly assigned. For OPL, good next clusters are root README/contract README support, runtime support docs, or the remaining current-support references; each needs live contracts/source/CLI read-model truth before edits.
+
+Verification:
+
+- `git diff --check`: passed.
+- Strict README/docs/contracts conflict marker scan: passed.
+- `python3 /Users/gaofeng/workspace/opl-doc-governance/scripts/opl_doc_doctor.py doctor . --format json`: `finding_count=0`, active truth status `pass`.
 
 ## 验证
 

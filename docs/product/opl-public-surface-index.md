@@ -17,6 +17,7 @@ Machine boundary: 本文是人读 public surface 索引。机器可读 surface t
 - `stage attempt / typed family queue / wakeup / receipt / recovery / projection`
 - `shared modules / contracts / indexes`
 - `family domain skill sync / discovery`
+- `One Person Lab App` workbench / operator projection
 
 `OPL` 已经不再把旧的 gateway/federation/routed-action 语料作为活跃合同或样例层。
 那批语料只保留在 history/reference 页面中，用于 provenance 和设计复盘。
@@ -42,7 +43,7 @@ Machine boundary: 本文是人读 public surface 索引。机器可读 surface t
 
 ### 2. 已链接的 domain capability surface
 
-这些 surface 由 `OPL` 索引，但 ownership 仍留在各自仓：
+这些 surface 由 `OPL` 索引，但 ownership 仍留在各自仓。当前机器 descriptor index 只把 MAS/MAG/RCA 作为已收录 domain capability surface 读取：
 
 - `Med Auto Science`
 - `Med Auto Grant`
@@ -50,6 +51,8 @@ Machine boundary: 本文是人读 public surface 索引。机器可读 surface t
 
 `OPL` 通过 `opl skill sync` 和各 domain 仓自己的 CLI / 程序 / 脚本 / contract surface 来发现并激活它们。
 所以当前顶层集成单元其实是 repo-owned 的 domain app skill 及其底下的 command contract，而不是 OPL 自己再造一套 gateway handoff 词汇。
+
+`One Person Lab App` 是工作台产品 surface，消费 framework/provider 状态和 domain-owned projection；它不持有 domain truth、runtime provider 或 artifact authority。`OPL Meta Agent` 是 Agent Foundry / new-agent builder-test managed module，用于创建、测试接管和机制改进；它可以被 OPL managed environment 与 generated plugin surface 消费，但不是第四个 domain truth owner，也不替 MAS/MAG/RCA 或 future domain 签发 quality/export verdict、artifact authority 或 owner receipt。
 
 ### 3. 共享边界配套界面
 
@@ -87,7 +90,7 @@ Machine boundary: 本文是人读 public surface 索引。机器可读 surface t
 把这份索引理解成一张 **runtime/activation 地图**。
 
 - 如果你要恢复当前 `OPL` 真相，先读核心工作集和 [合同目录说明](../../contracts/README.md)。
-- 如果你要恢复当前跨仓集成单元，去读已收录 domain 仓及其 app skill surface。
+- 如果你要恢复当前跨仓集成单元，去读已收录 domain 仓及其 app skill surface；App 与 OPL Meta Agent 分别按 workbench product surface 和 Agent Foundry managed module 读取。
 - 如果某份文档仍然把主语写成 `OPL Gateway`、`domain_gateway`、routed handoff payload 或 gateway-owned public-surface indexing，都应按历史来源材料理解。
 
 ## 完成定义
@@ -95,6 +98,7 @@ Machine boundary: 本文是人读 public surface 索引。机器可读 surface t
 只有当下面这些条件都成立时，这份 public surface index 才算合格：
 
 - 它把当前 `Codex-default executor + activation + provider-backed stage runtime + shared modules/contracts/indexes + skill sync` 主线讲清楚
+- 它把 `One Person Lab App` 与 `OPL Meta Agent` 放回 workbench / managed module 角色，不把它们误写成 domain truth owner
 - 它区分 OPL-owned 的 runtime/activation surface 与 repo-owned 的 domain capability surface
 - 它明确标出旧 gateway/federation 语料已经退到 reference/provenance 层
 - 它把保留的旧名限制在退役 provider 负向 guard、provenance 或历史 fixture 语境
