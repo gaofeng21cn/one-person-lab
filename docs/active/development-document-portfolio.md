@@ -5401,6 +5401,63 @@ Next tranche write scope:
 - Continue MAS exact uncovered inventory, preferably `docs/references/med-deepscientist/**` or a bounded history index/provenance tranche.
 - Keep App docs delayed until active release / GUI lanes are safe or explicitly assigned.
 
+Date: `2026-05-26 22:55 CST`
+Tranche: `mas-med-deepscientist-reference-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAS `docs/references/med-deepscientist/**` 中尚未进入 coverage ledger 的 8 份 support-reference 文档，并吸收回 MAS `main`。目标是把 MDS / DeepScientist 学习、解构、upstream intake、source provenance 与 legacy fork intake 语义读回当前 MAS / OPL owner split：MDS 只能作为 historical source archive、parity fixture、explicit legacy diagnostic、backend audit、source provenance、upstream intake 或 parity oracle reference。本轮不关闭全局 `/goal`，也不表示 MAS repo-wide README/docs 覆盖完成。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`, `TASTE.md`, `docs/status.md`, `docs/architecture.md`, `docs/active/mas-ideal-state-gap-plan.md`, `docs/active/program_portfolio_consolidation.md`, and `docs/docs_portfolio_consolidation.md`.
+- MAS med-deepscientist reference docs: `docs/references/med-deepscientist/README.md`, `deepscientist_continuous_learning_policy.md`, `deepscientist_latest_update_learning_protocol.md`, `med_deepscientist_continuous_learning_plan.md`, `med_deepscientist_deconstruction_map.md`, `med_deepscientist_method_learning_disciplines.md`, `med_deepscientist_upstream_source_provenance.md`, and `upstream_intake.md`.
+- MAS source/contracts: `src/med_autoscience/med_deepscientist_repo_manifest.py`, `src/med_autoscience/controllers/backend_audit.py`, `contracts/functional_privatization_audit.json`, and `contracts/test-lane-manifest.json`.
+
+Fresh semantic result:
+
+- The reference cluster already kept MDS in support/reference roles and did not require prose corrections beyond coverage ledger recording.
+- `med_deepscientist_repo_manifest.py` exposes MDS as `truth_authority_role=event_source_only` and forbids authority/runtime-health surfaces including canonical next action, publication/package/delivery state, runtime health epoch, worker liveness and allowed controller actions.
+- `backend_audit.py` keeps external runtime optional and does not block default operation when the controlled backend repo is unconfigured.
+- MAS functional privatization contract continues to say generic runtime has been removed from MAS, OPL replacement exists, production long-run soak is not complete, MAS cannot claim generic runtime owner, and OPL cannot authorize quality/export or write domain truth.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full paragraph read of all 8 tracked Markdown files under `docs/references/med-deepscientist/**`, with support evidence from MAS core/current docs, MDS manifest inspection source, backend-audit source, functional privatization contract and test-lane manifest. | `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | OPL family ledger foldback for this MAS reference tranche. | `docs/active/development-document-portfolio.md` |
+
+Exact MAS med-deepscientist reference paths newly recorded by this tranche: `docs/references/med-deepscientist/README.md`; `docs/references/med-deepscientist/deepscientist_continuous_learning_policy.md`; `docs/references/med-deepscientist/deepscientist_latest_update_learning_protocol.md`; `docs/references/med-deepscientist/med_deepscientist_continuous_learning_plan.md`; `docs/references/med-deepscientist/med_deepscientist_deconstruction_map.md`; `docs/references/med-deepscientist/med_deepscientist_method_learning_disciplines.md`; `docs/references/med-deepscientist/med_deepscientist_upstream_source_provenance.md`; `docs/references/med-deepscientist/upstream_intake.md`.
+
+Archived / tombstoned / deleted docs:
+
+- none. The MAS med-deepscientist reference cluster remains useful support/reference material with a consistent owner/purpose/state/machine-boundary shape.
+
+Unreviewed docs:
+
+- `one-person-lab`: none by exact inventory coverage for the current OPL inventory.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks and this reference tranche. Remaining exact uncovered clusters are mostly `docs/history/**`, selected `docs/references/mainline/**`, selected integration / MDS parity references, `docs/public/README.md`, and `docs/specs/README.md`.
+- `med-autogrant`: current recorded scope was closed by the MAG final inventory reconcile unless new docs or later source/contract changes reopen a section.
+- `redcube-ai`: none by current tracked repo-root `README*` + `docs/**/*.md` inventory reconcile unless new docs or substantive edits reopen coverage.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App release / GUI lanes are safe or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Future MDS / DeepScientist reference prose that treats MDS as default runtime owner, default backend, default diagnostic owner, WebUI/daemon surface, quality/publication authority, artifact authority, `current_package` authority, hosted package surface or hidden runnable substitute is stale pollution.
+- Future upstream-learning prose must keep provider/UI/marketing changes out of MAS owner truth unless a MAS-owned contract/template/code slice and verification target are explicitly defined.
+- App docs remain unsafe for automatic governance while main and release/GUI lanes carry unrelated dirty changes.
+
+Verification before absorb:
+
+- MAS med-deepscientist reference tranche worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings; med-deepscientist inventory-vs-ledger recheck confirmed no remaining `docs/references/med-deepscientist/**` exact path missing after this ledger entry.
+- OPL ledger worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+
+Next tranche write scope:
+
+- Continue MAS exact uncovered inventory, preferably bounded `docs/history/**` index/provenance groups or remaining selected `docs/references/mainline/**`, `docs/references/integration/**`, `docs/references/mds-parity/**`, `docs/public/README.md`, and `docs/specs/README.md`.
+- Keep App docs delayed until active release / GUI lanes are safe or explicitly assigned.
+
 ## 验证
 
 Docs-only 整理：
