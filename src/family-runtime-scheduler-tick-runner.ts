@@ -32,6 +32,10 @@ export function runSchedulerQueueTick(
     domainProfiles,
   }, {
     enqueueTask,
+    queryTemporalStageAttempt: async (attempt) => {
+      const providerModule = await options.temporalProviderModule();
+      return providerModule.queryTemporalStageAttemptWorkflow?.(attempt, { paths }) ?? null;
+    },
     dispatchTask: (queueDb, queuePaths, row) => dispatchFamilyRuntimeTask(queueDb, queuePaths, row, {
       temporalProviderModule: options.temporalProviderModule,
     }),

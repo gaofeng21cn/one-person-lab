@@ -10,6 +10,7 @@ import {
 import {
   inspectStageAttempt,
   listStageAttemptsForTask,
+  syncStageAttemptFromTemporalTerminalObservation,
   updateStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
 import {
@@ -20,6 +21,10 @@ import {
 type FamilyRuntimePaths = ReturnType<typeof familyRuntimePaths>;
 type StageAttemptPayload = ReturnType<typeof listStageAttemptsForTask>[number];
 type TemporalProviderModule = () => Promise<{
+  queryTemporalStageAttemptWorkflow?: (
+    attempt: StageAttemptPayload,
+    options: { paths: FamilyRuntimePaths },
+  ) => Promise<unknown>;
   startTemporalStageAttemptWorkflow: (
     attempt: StageAttemptPayload,
     options: { paths: FamilyRuntimePaths },
@@ -33,6 +38,57 @@ function contractErrorMessage(error: unknown) {
     return error.message;
   }
   return error instanceof Error ? error.message : 'Unexpected provider start failure.';
+}
+
+function isLiveStageAttempt(attempt: StageAttemptPayload | null) {
+  return Boolean(attempt && LIVE_STAGE_ATTEMPT_STATUSES.has(attempt.status));
+}
+
+async function syncTerminalStageAttemptIfObservable(
+  db: DatabaseSync,
+  paths: FamilyRuntimePaths,
+  attempt: StageAttemptPayload,
+  temporalProviderModule: TemporalProviderModule,
+) {
+  const { queryTemporalStageAttemptWorkflow } = await temporalProviderModule();
+  if (!queryTemporalStageAttemptWorkflow) {
+    return attempt;
+  }
+  const observation = await queryTemporalStageAttemptWorkflow(attempt, { paths });
+  return syncStageAttemptFromTemporalTerminalObservation(db, observation) ?? attempt;
+}
+
+function terminalTaskResultAfterProviderSync(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  stageAttempts: StageAttemptPayload[],
+) {
+  const refreshed = db.prepare(`
+    SELECT status, last_error, dead_letter_reason
+    FROM tasks
+    WHERE task_id = ?
+  `).get(row.task_id) as Pick<FamilyRuntimeTaskRow, 'status' | 'last_error' | 'dead_letter_reason'> | undefined;
+  if (!refreshed) {
+    return null;
+  }
+  if (refreshed.status === 'blocked') {
+    return {
+      task_id: row.task_id,
+      status: 'blocked',
+      reason: refreshed.dead_letter_reason ?? refreshed.last_error ?? 'provider_terminal_observed',
+      error: refreshed.last_error ?? refreshed.dead_letter_reason ?? 'provider_terminal_observed',
+      stage_attempts: stageAttempts,
+    };
+  }
+  if (refreshed.status === 'succeeded') {
+    return {
+      task_id: row.task_id,
+      status: 'succeeded',
+      reason: 'provider_terminal_completed',
+      stage_attempts: stageAttempts,
+    };
+  }
+  return null;
 }
 
 function markStageAttemptTemporalStarted(
@@ -141,6 +197,14 @@ export async function startMasDefaultExecutorDispatchAttempt(
     && LIVE_STAGE_ATTEMPT_STATUSES.has(attempt.status)
   )) ?? null;
   if (liveAttempt) {
+    const syncedAttempt = await syncTerminalStageAttemptIfObservable(db, paths, liveAttempt, temporalProviderModule);
+    if (!isLiveStageAttempt(syncedAttempt)) {
+      const stageAttempts = listStageAttemptsForTask(db, row.task_id);
+      const terminalResult = terminalTaskResultAfterProviderSync(db, row, stageAttempts);
+      if (terminalResult) {
+        return terminalResult;
+      }
+    }
     refreshMasDefaultExecutorLiveAttemptTaskLease(db, {
       attempt: liveAttempt,
       reason: 'same_task_live_stage_attempt_exists',

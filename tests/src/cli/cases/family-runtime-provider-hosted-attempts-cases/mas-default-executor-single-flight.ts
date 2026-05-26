@@ -367,6 +367,92 @@ test('family-runtime keeps MAS default executor admission single-flight across s
   }
 });
 
+test('family-runtime syncs terminal same-task MAS default executor attempt before live skip', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const payload = defaultExecutorPayload('source-terminal-before-live-skip');
+      const taskId = 'task-mas-default-same-task-terminal-sync';
+      insertSucceededTask(db, {
+        taskId,
+        payload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:same-task-terminal-sync',
+      });
+      db.prepare(`
+        UPDATE tasks
+        SET status = 'running', attempts = 1, lease_owner = 'opl-family-runtime:stale',
+          lease_expires_at = ?
+        WHERE task_id = ?
+      `).run(new Date(Date.now() + 60_000).toISOString(), taskId);
+      const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as Parameters<
+        typeof startMasDefaultExecutorDispatchAttempt
+      >[2]['row'];
+      const attempt = ensureProviderHostedStageAttempt(db, row, payload);
+      assert.ok(attempt);
+      db.prepare("UPDATE stage_attempts SET status = 'running' WHERE stage_attempt_id = ?").run(
+        attempt.stage_attempt_id,
+      );
+
+      let temporalStartCount = 0;
+      const result = await startMasDefaultExecutorDispatchAttempt(db, familyRuntimePaths(), {
+        row,
+        payload,
+        providerHostedAttempt: null,
+        temporalProviderModule: async () => ({
+          queryTemporalStageAttemptWorkflow: async () => ({
+            surface_kind: 'temporal_stage_attempt_query_receipt',
+            provider_kind: 'temporal',
+            stage_attempt_id: attempt.stage_attempt_id,
+            workflow_id: attempt.workflow_id,
+            workflow_status: 'FAILED',
+            query_error: {
+              code: 'temporal_stage_attempt_query_unavailable_after_terminal',
+              message: 'Temporal workflow is already FAILED; terminal failure is sufficient for provider sync.',
+            },
+          }),
+          startTemporalStageAttemptWorkflow: async () => {
+            temporalStartCount += 1;
+            return { surface_kind: 'temporal_stage_attempt_start_receipt' };
+          },
+        }),
+      });
+      const task = db.prepare(`
+        SELECT status, last_error, dead_letter_reason, lease_owner, lease_expires_at
+        FROM tasks
+        WHERE task_id = ?
+      `).get(taskId) as {
+        status: string;
+        last_error: string | null;
+        dead_letter_reason: string | null;
+        lease_owner: string | null;
+        lease_expires_at: string | null;
+      };
+      const syncedAttempt = listStageAttemptsForTask(db, taskId)[0];
+      const skipEvent = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_default_executor_live_attempt_skip'
+        LIMIT 1
+      `).get(taskId) as { payload_json: string } | undefined;
+
+      assert.equal(result.status, 'blocked');
+      assert.equal(result.reason, 'temporal_stage_attempt_failed');
+      assert.equal(temporalStartCount, 0);
+      assert.equal(task.status, 'blocked');
+      assert.equal(task.last_error, 'temporal_workflow_failed');
+      assert.equal(task.dead_letter_reason, 'temporal_stage_attempt_failed');
+      assert.equal(task.lease_owner, null);
+      assert.equal(task.lease_expires_at, null);
+      assert.equal(syncedAttempt.status, 'failed');
+      assert.equal(syncedAttempt.blocked_reason, 'temporal_workflow_failed');
+      assert.equal(skipEvent, undefined);
+    });
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime treats MAS default executor Temporal admission as running until provider closeout', async () => {
   const db = new DatabaseSync(':memory:');
   try {

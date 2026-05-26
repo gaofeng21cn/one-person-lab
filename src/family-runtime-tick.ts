@@ -9,12 +9,15 @@ import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
 import type { familyRuntimePaths, taskToPayload } from './family-runtime-store.ts';
 import { insertEvent, type FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import { taskRowMatchesScope } from './family-runtime-task-scope.ts';
+import { syncStageAttemptFromTemporalTerminalObservation } from './family-runtime-stage-attempts.ts';
 import {
   findLiveMasDefaultExecutorDispatchAttempt,
+  isMasDefaultExecutorDispatchTask,
   masDefaultExecutorDispatchIdentity,
   masDefaultExecutorDomainSourceFingerprint,
   refreshMasDefaultExecutorLiveAttemptTaskLease,
 } from './family-runtime-provider-hosted-attempts.ts';
+import { ensureProviderHostedStageAttempt } from './family-runtime-provider-hosted-attempts.ts';
 
 type EnqueueTaskResult = {
   accepted?: boolean;
@@ -24,6 +27,14 @@ type EnqueueTaskResult = {
 };
 
 type EnqueueTask = (db: DatabaseSync, input: EnqueueInput) => EnqueueTaskResult;
+type StageAttemptPayload = NonNullable<ReturnType<typeof findLiveMasDefaultExecutorDispatchAttempt>>;
+type QueryTemporalStageAttempt = (attempt: StageAttemptPayload) => unknown | Promise<unknown>;
+
+const PROVIDER_TRANSPORT_REDRIVE_REASONS = new Set([
+  'temporal_stage_attempt_start_failed',
+  'temporal_stage_attempt_not_completed',
+  'temporal_stage_attempt_failed',
+]);
 
 type MasDefaultExecutorCurrentTask = {
   task_id: string;
@@ -90,20 +101,161 @@ function dropSupersededMasDefaultExecutorRows(
   return { rows, supersededCount };
 }
 
-function dropLiveMasDefaultExecutorRows(
+function attemptCountForTask(db: DatabaseSync, taskId: string) {
+  const row = db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM stage_attempts
+    WHERE task_id = ?
+  `).get(taskId) as { count: number };
+  return row.count;
+}
+
+function autoRedriveBlockedMasDefaultExecutorProviderTasks(
+  db: DatabaseSync,
+  rows: FamilyRuntimeTaskRow[],
+  source: string,
+) {
+  let autoRedrivenCount = 0;
+  let autoDeadLetteredCount = 0;
+  const redrivenAt = new Date().toISOString();
+  const currentByIdentity = currentMasDefaultExecutorTasksByDispatch(rows);
+  for (const row of rows) {
+    if (
+      row.status !== 'blocked'
+      || !PROVIDER_TRANSPORT_REDRIVE_REASONS.has(row.dead_letter_reason ?? '')
+    ) {
+      continue;
+    }
+    const payload = payloadFromTask(row);
+    if (!isMasDefaultExecutorDispatchTask(row, payload)) {
+      continue;
+    }
+    const identity = masDefaultExecutorDispatchIdentity(row, payload);
+    const current = identity ? currentByIdentity.get(identity) : null;
+    const sourceFingerprint = masDefaultExecutorDomainSourceFingerprint(payload);
+    if (
+      current
+      && current.task_id !== row.task_id
+      && current.source_fingerprint
+      && sourceFingerprint
+      && current.source_fingerprint !== sourceFingerprint
+    ) {
+      continue;
+    }
+    const usedAttempts = attemptCountForTask(db, row.task_id);
+    if (usedAttempts >= row.max_attempts) {
+      db.prepare(`
+        UPDATE tasks
+        SET status = 'dead_letter', lease_owner = NULL, lease_expires_at = NULL,
+          last_error = ?, dead_letter_reason = ?, updated_at = ?
+        WHERE task_id = ?
+      `).run('retry_budget_exhausted', 'retry_budget_exhausted', redrivenAt, row.task_id);
+      insertEvent(db, {
+        taskId: row.task_id,
+        domainId: row.domain_id,
+        eventType: 'task_auto_dead_lettered_after_provider_transport_retries',
+        source,
+        payload: {
+          previous_status: row.status,
+          previous_dead_letter_reason: row.dead_letter_reason,
+          used_attempts: usedAttempts,
+          max_attempts: row.max_attempts,
+          authority_boundary: {
+            opl: 'provider_transport_retry_budget_only',
+            domain: 'truth_quality_artifact_gate_owner',
+            domain_truth_mutation: false,
+            publication_quality_mutation: false,
+            artifact_gate_mutation: false,
+            current_package_mutation: false,
+          },
+        },
+      });
+      autoDeadLetteredCount += 1;
+      continue;
+    }
+    const redrivenAttempt = ensureProviderHostedStageAttempt(db, row, payload, {
+      newAttempt: true,
+      eventSource: source,
+    });
+    const nextStatus = row.requires_approval ? 'waiting_approval' : 'queued';
+    db.prepare(`
+      UPDATE tasks
+      SET status = ?, attempts = 0, lease_owner = NULL, lease_expires_at = NULL,
+        last_error = NULL, dead_letter_reason = NULL, updated_at = ?
+      WHERE task_id = ?
+    `).run(nextStatus, redrivenAt, row.task_id);
+    insertEvent(db, {
+      taskId: row.task_id,
+      domainId: row.domain_id,
+      eventType: 'task_auto_redrive_from_blocked_provider_transport',
+      source,
+      payload: {
+        previous_status: row.status,
+        next_status: nextStatus,
+        previous_dead_letter_reason: row.dead_letter_reason,
+        previous_last_error: row.last_error,
+        redriven_stage_attempt_id: redrivenAttempt?.stage_attempt_id ?? null,
+        used_attempts: usedAttempts,
+        max_attempts: row.max_attempts,
+        authority_boundary: {
+          opl: 'provider_transport_auto_redrive_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          domain_truth_mutation: false,
+          publication_quality_mutation: false,
+          artifact_gate_mutation: false,
+          current_package_mutation: false,
+        },
+      },
+    });
+    autoRedrivenCount += 1;
+  }
+  return { autoRedrivenCount, autoDeadLetteredCount };
+}
+
+function isLiveMasDefaultExecutorAttempt(attempt: StageAttemptPayload | null) {
+  return Boolean(attempt && ['queued', 'running', 'checkpointed', 'human_gate'].includes(attempt.status));
+}
+
+async function syncObservableMasDefaultExecutorAttempt(
+  db: DatabaseSync,
+  attempt: StageAttemptPayload,
+  queryTemporalStageAttempt?: QueryTemporalStageAttempt,
+) {
+  if (!queryTemporalStageAttempt) {
+    return attempt;
+  }
+  const observation = await queryTemporalStageAttempt(attempt);
+  return syncStageAttemptFromTemporalTerminalObservation(db, observation) ?? attempt;
+}
+
+async function dropLiveMasDefaultExecutorRows(
   db: DatabaseSync,
   candidateRows: FamilyRuntimeTaskRow[],
+  options: {
+    queryTemporalStageAttempt?: QueryTemporalStageAttempt;
+  } = {},
 ) {
   let liveSkippedCount = 0;
-  const rows = candidateRows.filter((row) => {
+  const rows: FamilyRuntimeTaskRow[] = [];
+  for (const row of candidateRows) {
     const payload = payloadFromTask(row);
     const liveAttempt = findLiveMasDefaultExecutorDispatchAttempt(db, row, payload);
     if (!liveAttempt) {
-      return true;
+      rows.push(row);
+      continue;
+    }
+    const syncedAttempt = await syncObservableMasDefaultExecutorAttempt(
+      db,
+      liveAttempt,
+      options.queryTemporalStageAttempt,
+    );
+    if (!isLiveMasDefaultExecutorAttempt(syncedAttempt)) {
+      rows.push(row);
+      continue;
     }
     liveSkippedCount += 1;
     refreshMasDefaultExecutorLiveAttemptTaskLease(db, {
-      attempt: liveAttempt,
+      attempt: syncedAttempt,
       source: 'opl-family-runtime-tick',
       reason: 'same_dispatch_live_stage_attempt_exists',
     });
@@ -121,8 +273,7 @@ function dropLiveMasDefaultExecutorRows(
         study_id: payload.study_id ?? null,
       },
     });
-    return false;
-  });
+  }
   return { rows, liveSkippedCount };
 }
 
@@ -143,6 +294,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       paths: ReturnType<typeof familyRuntimePaths>,
       row: FamilyRuntimeTaskRow,
     ) => TDispatch | Promise<TDispatch>;
+    queryTemporalStageAttempt?: QueryTemporalStageAttempt;
   },
 ) {
   const hydration = input.hydrate
@@ -161,6 +313,16 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       filtered_count: 0,
       exports: [],
     };
+  const allRowsBeforeAutoRedrive = db.prepare('SELECT * FROM tasks').all() as FamilyRuntimeTaskRow[];
+  const scopedRowsBeforeAutoRedrive = allRowsBeforeAutoRedrive.filter((row) => taskRowMatchesScope(row, input.taskScope));
+  const {
+    autoRedrivenCount: masDefaultExecutorAutoRedrivenCount,
+    autoDeadLetteredCount: masDefaultExecutorAutoDeadLetteredCount,
+  } = autoRedriveBlockedMasDefaultExecutorProviderTasks(
+    db,
+    scopedRowsBeforeAutoRedrive,
+    `${input.source}:auto-redrive`,
+  );
   const candidateRows = db.prepare(`
     SELECT * FROM tasks
     WHERE status IN ('queued', 'retry_waiting')
@@ -175,7 +337,9 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
   const {
     rows: scopedRows,
     liveSkippedCount: masDefaultExecutorLiveSkippedCount,
-  } = dropLiveMasDefaultExecutorRows(db, scopedRowsAfterSuperseded);
+  } = await dropLiveMasDefaultExecutorRows(db, scopedRowsAfterSuperseded, {
+    queryTemporalStageAttempt: handlers.queryTemporalStageAttempt,
+  });
   const rows = scopedRows.slice(0, input.limit);
   const filteredCount = candidateRows.length - scopedRows.length;
   insertEvent(db, {
@@ -187,6 +351,8 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       filtered_count: filteredCount,
       mas_default_executor_superseded_count: masDefaultExecutorSupersededCount,
       mas_default_executor_live_skipped_count: masDefaultExecutorLiveSkippedCount,
+      mas_default_executor_auto_redriven_count: masDefaultExecutorAutoRedrivenCount,
+      mas_default_executor_auto_dead_lettered_count: masDefaultExecutorAutoDeadLetteredCount,
       task_scope: input.taskScope ?? null,
     },
   });
@@ -204,6 +370,8 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     filtered_count: filteredCount,
     mas_default_executor_superseded_count: masDefaultExecutorSupersededCount,
     mas_default_executor_live_skipped_count: masDefaultExecutorLiveSkippedCount,
+    mas_default_executor_auto_redriven_count: masDefaultExecutorAutoRedrivenCount,
+    mas_default_executor_auto_dead_lettered_count: masDefaultExecutorAutoDeadLetteredCount,
     dispatches,
   };
 }
