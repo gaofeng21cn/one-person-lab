@@ -103,7 +103,7 @@ test('handoff-envelope routes a manuscript request to medautoscience and exposes
 > Notes: `fixtures` (from `loadFamilyManifestFixtures()` near the domain-manifest test) supplies the MAS manifest fixture, and `repoRoot`/`buildManifestCommand` helpers already exist earlier in the file.
 ```
 
-- 历史项：**Step 4: Re-run `npm run test:fast` to confirm all assertions now pass**
+- 历史项：**Step 4: Re-run `npm run test:fast` to confirm all assertions passed in that historical plan**
 
 ```
 npm run test:fast

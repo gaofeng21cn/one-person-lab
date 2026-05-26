@@ -9,7 +9,7 @@ Machine boundary: 本文是早期 worker plan 归档。机器真相继续归 `co
 
 > 历史生成说明：本文由早期 Superpowers worker-flow 生成；原文要求 agent 按 sub-skill 和 checkbox 执行。当前只保留为历史 provenance，不再作为执行指令。
 
-**历史目标：** Add one top-level `frontdoor-readiness` surface that truthfully tells operators whether `OPL` is directly usable now, which domain entries are ready, and what to fix next.
+**历史目标：** Add one top-level `frontdoor-readiness` surface that truthfully told operators whether `OPL` was directly usable in that historical slice, which domain entries were ready, and what to fix next.
 
 **历史架构：** Reuse already frozen surfaces instead of inventing a second truth source. The new surface derives from `frontdoor-service-status`, `hosted_runtime_readiness`, `frontdoor-domain-wiring`, `domain-manifests`, and existing domain `product_entry_readiness / preflight / quickstart` companions, then expose it through both CLI and `opl web`.
 

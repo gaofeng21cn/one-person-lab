@@ -5010,6 +5010,62 @@ Next tranche write scope:
 - Continue OPL `docs/history/process/superpowers/**` as the remaining exact-missing history-process cluster; alternatively pick MAS remaining repo-wide docs if OPL external lanes make that cluster unsafe.
 - Delay RCA/App docs write passes until external implementation/release dirty lanes are isolated or explicitly assigned.
 
+Date: `2026-05-26 21:06 CST`
+Tranche: `opl-history-superpowers-coverage`
+State: `tranche_verified`
+
+本轮覆盖 OPL `docs/history/process/superpowers/**` 的 early Superpowers worker-flow process materials。目标是确认早期 MAS action graph consumer coverage、旧 `frontdoor-readiness`、Multica-inspired shared helper、family runtime/task/skill/automation absorb、domain-agent entry spec v1 和 Workspace Inbox 设计都停留在 history-only worker plan/spec 语境，不作为当前 active spec、implementation queue、runtime/provider contract、App/workbench owner、domain admission authority、readiness oracle、domain-ready、App release-ready 或 production-ready 证据。本轮不关闭全局 `/goal`，也不表示 MAS/RCA/App repo-wide README/docs 覆盖已经完成。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`, `TASTE.md`, `README.md`, `docs/README.md`, core five, `docs/active/current-state-vs-ideal-gap.md`, `docs/references/runtime-substrate/opl-family-agent-ideal-state.md`, `docs/history/process/superpowers/README.md`, `docs/history/process/superpowers/plans/README.md`, `docs/history/process/superpowers/specs/README.md`, and `docs/active/development-document-portfolio.md`.
+- OPL machine/read-model surfaces: `contracts/opl-framework/domains.json`, `contracts/opl-framework/workstreams.json`, `contracts/opl-framework/task-topology.json`, `opl agents conformance --family-defaults --json`, and `opl agents default-callers --family-defaults --json`.
+- Superpowers history docs: all 5 body files in `docs/history/process/superpowers/plans/*.md` and all 4 body files in `docs/history/process/superpowers/specs/*.md`.
+
+Fresh semantic result:
+
+- Current active domain-agent catalog remains MAS / MAG / RCA through the OPL family contracts. Active workstreams remain `grant_ops`, `research_ops`, and `presentation_ops`; `thesis_ops`, `review_ops`, `ip_ops`, and `award_ops` remain topology signals, not admitted domain agents.
+- Fresh `opl agents conformance --family-defaults --json` returned `status=passed`, `passed_count=4`, `blocked_count=0`, and `production_evidence_tail_count=4`; this is structural conformance, not domain readiness, production readiness, App release readiness, old frontdoor readiness or historical worker-flow completion.
+- Fresh `opl agents default-callers --family-defaults --json` returned `status=ready_domain_evidence_required`, `generated_default_caller_surface_count=32`, `blocked_surface_count=0`, and `physical_delete_authorized_by_this_report=false`; generated/default-caller readiness does not authorize physical delete, compatibility-surface retention or old worker-plan execution.
+- `docs/history/process/superpowers/README.md`, `plans/README.md`, and `specs/README.md` already carried the correct `history_only` boundary and current-owner jumps.
+- Eight body files carried stale-risk natural-language wording such as unqualified `当前`, `current`, `now`, or "now centrally owned" inside historical worker plans/specs. These were rewritten to `当时` / historical-slice wording so old action graph, frontdoor, Multica, shared helper, runtime/task/skill/automation, domain-entry and Workspace Inbox work packages cannot be read as current active specs or current runtime truth.
+- `docs/history/process/superpowers/plans/2026-04-22-domain-agent-entry-spec-v1-implementation.md` already pointed current owner to `docs/specs/opl-domain-onboarding-contract.md` and `opl agents descriptors`, so no body edit was needed.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | Full paragraph / heading review of `docs/history/process/superpowers/README.md`, `docs/history/process/superpowers/plans/README.md`, `docs/history/process/superpowers/plans/2026-04-13-medautoscience-action-graph-plan.md`, `docs/history/process/superpowers/plans/2026-04-14-opl-frontdoor-readiness-plan.md`, `docs/history/process/superpowers/plans/2026-04-17-multica-family-reuse-program-implementation.md`, `docs/history/process/superpowers/plans/2026-04-18-family-runtime-task-skill-automation-full-absorb-implementation.md`, `docs/history/process/superpowers/plans/2026-04-22-domain-agent-entry-spec-v1-implementation.md`, `docs/history/process/superpowers/specs/README.md`, `docs/history/process/superpowers/specs/2026-04-13-medautoscience-action-graph-design.md`, `docs/history/process/superpowers/specs/2026-04-17-multica-family-reuse-program-design.md`, `docs/history/process/superpowers/specs/2026-04-18-family-runtime-task-skill-automation-full-absorb-design.md`, and `docs/history/process/superpowers/specs/2026-04-18-workspace-inbox-design.md`; support read of core docs, active truth owner, ideal-state reference, framework contracts and fresh conformance/default-caller read models. | `docs/history/process/superpowers/plans/2026-04-13-medautoscience-action-graph-plan.md`; `docs/history/process/superpowers/plans/2026-04-14-opl-frontdoor-readiness-plan.md`; `docs/history/process/superpowers/plans/2026-04-17-multica-family-reuse-program-implementation.md`; `docs/history/process/superpowers/plans/2026-04-18-family-runtime-task-skill-automation-full-absorb-implementation.md`; `docs/history/process/superpowers/specs/2026-04-13-medautoscience-action-graph-design.md`; `docs/history/process/superpowers/specs/2026-04-17-multica-family-reuse-program-design.md`; `docs/history/process/superpowers/specs/2026-04-18-family-runtime-task-skill-automation-full-absorb-design.md`; `docs/history/process/superpowers/specs/2026-04-18-workspace-inbox-design.md`; `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. These files already live in `docs/history/process/superpowers/**` and remain useful worker-flow provenance; this tranche corrected stale-risk wording and recorded coverage rather than moving or deleting paths.
+
+Unreviewed docs:
+
+- `one-person-lab`: current inventory remains 175 `README*` / `docs/**/*.md` / contracts README files. After this tranche, no exact-missing OPL path remains in the coverage ledger; any non-exact grouped coverage still listed in prior tranche notes such as root/contract README or active support docs should be reconciled in a future final OPL inventory pass.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks.
+- `med-autogrant`: current 120-file recorded scope was closed by the MAG final inventory reconcile unless new docs or later source/contract changes reopen a section.
+- `redcube-ai`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused RCA chunks; current main checkout still carries external dirty implementation/test files.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App dirty lanes are closed or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Any future wording that turns early Superpowers worker plans/specs into current active plan, current implementation queue, current API spec, default runtime, App/workbench owner, release-ready evidence, domain-ready evidence, production-ready evidence, compatibility surface or no-active-caller proof is stale pollution.
+- Any future wording that makes old `frontdoor-readiness`, `opl web`, Multica-inspired shared helper plans, old `src/management.ts` aggregate target, historical workspace inbox, historical generated helper acceptance criteria or worker-flow checkbox lists current owner surfaces must be rejected unless live source/contracts/read-model explicitly reintroduce a narrow current surface.
+- Any future agent prompt copied from these historical acceptance criteria must first be re-derived from current active truth docs, live code/contracts/tests/CLI read models and current owner boundaries.
+
+Verification before absorb:
+
+- OPL docs verification passed in the tranche worktree: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
+- OPL superpowers support contracts and conformance/default-caller read models above were rerun fresh in the tranche worktree; no source or machine-readable contract edit was made.
+
+Next tranche write scope:
+
+- Run a final OPL inventory reconcile over `README*`, `docs/**/*.md`, and contracts README files to convert exact zero-missing into a reviewed OPL closeout statement, then pick MAS/RCA/App remaining repo-wide docs according to dirty-lane safety.
+- Delay RCA/App docs write passes until external implementation/release dirty lanes are isolated or explicitly assigned.
+
 ## 验证
 
 Docs-only 整理：

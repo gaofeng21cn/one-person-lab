@@ -11,9 +11,9 @@ Machine boundary: 本文是早期 worker spec 归档。机器真相继续归 `co
 
 - `OPL` family 目前已经在四个仓里分别落下了 `product-entry manifest / frontdoor / family_orchestration / progress or runtime watch` 这一层能力，但实现仍然分散在 Python 与 JavaScript 两套代码里。
 - `Multica` 值得吸收的核心不是整个平台依赖，而是它在 `runtime inventory`、`task lifecycle`、`shared skills`、`automation/autopilot`、`agent operations visibility` 这些产品语义上的成熟做法。
-- 当前 family 目标已经从“每仓先独立长能力”进入“把重复语义收敛成共享模块”的阶段。本轮的目标是完整推进到可复用模块状态，而不是停在最小 adoption。
-- 本轮按用户直接授权更新 `MAS` 当前 gate：允许为 family 共享模块进行跨仓收口、跨仓重构与完整复用实现。后续文档、gate 与状态表述需要同步改写到这一新前提。
-- 对本地 `shared-family-modules` 与四仓 live `main` 的 fresh audit 已经确认：`OPL main` 现已持有 `src/managed-runtime-contract.ts` 与 `python/opl-harness-shared/` 这组第一批共享实现；`MAS main`、`MAG main`、`RCA main` 都已经吃到这第一批 helper intake。当前真正还在重复的是第二层 family boundary modules，尤其是三仓各自手写的 `product_entry_quickstart / product_entry_overview / product_entry_readiness` companion payload。当前 program 要直接沿这条已落地基座继续扩，把同功能 companion helper 收成单一 source-of-truth。
+- 当时 family 目标已经从“每仓先独立长能力”进入“把重复语义收敛成共享模块”的阶段。本轮的目标是完整推进到可复用模块状态，而不是停在最小 adoption。
+- 本轮按用户直接授权更新 `MAS` 当时 gate：允许为 family 共享模块进行跨仓收口、跨仓重构与完整复用实现。后续文档、gate 与状态表述需要同步改写到这一新前提。
+- 对本地 `shared-family-modules` 与四仓 live `main` 的 fresh audit 当时确认：`OPL main` 持有 `src/managed-runtime-contract.ts` 与 `python/opl-harness-shared/` 这组第一批共享实现；`MAS main`、`MAG main`、`RCA main` 都已经吃到这第一批 helper intake。当时真正还在重复的是第二层 family boundary modules，尤其是三仓各自手写的 `product_entry_quickstart / product_entry_overview / product_entry_readiness` companion payload。当时 program 要直接沿这条已落地基座继续扩，把同功能 companion helper 收成单一 source-of-truth。
 
 ## 历史目标
 
@@ -45,7 +45,7 @@ Machine boundary: 本文是早期 worker spec 归档。机器真相继续归 `co
 
 ### 方案 C：`OPL` 中央 source-of-truth + 共享模块 + 三仓完整接入
 
-- 优点：最符合当前 family topology。
+- 优点：最符合当时 family topology。
 - 优点：定义、schema、fixtures、validation、normalization 可以集中维护。
 - 优点：能同时兼容 Python 与 JavaScript 仓。
 
@@ -55,10 +55,10 @@ Machine boundary: 本文是早期 worker spec 归档。机器真相继续归 `co
 
 ### 0. 先吸收已落地的 shared-family-modules 成果，再做增量扩展
 
-- `OPL` 当前中央共享层已经不是纯 contract-only 状态，现有 JS helper 与 Python 子包就是本轮 program 的统一基座。
-- `MAS`、`MAG` 与 `RCA` 当前都已经完成第一步 consumer intake，因此本轮不再重开一轮 `managed_runtime_contract` 抽取。
-- 当前第一条 value-for-effort 最高的 family shared lane，是把三仓同型的 `product_entry_quickstart / product_entry_overview / product_entry_readiness` 抽成共享 helper。它们已经是稳定的 family boundary surface，而且同时服务顶层 `OPL` discovery、单仓 frontdoor 和未来 monorepo 收口。
-- `MAS` 当前仍有一个必须同步解决的残留：旧 gate wording 还停在“external runtime gate 未清除前，不做 physical migration 或 cross-repo refactor”。这轮要把它改成“family shared modules program 已允许，domain truth migration 继续按 phase gate 推进”。
+- `OPL` 当时中央共享层已经不是纯 contract-only 状态，现有 JS helper 与 Python 子包就是本轮 program 的统一基座。
+- `MAS`、`MAG` 与 `RCA` 当时都已经完成第一步 consumer intake，因此本轮不再重开一轮 `managed_runtime_contract` 抽取。
+- 当时第一条 value-for-effort 最高的 family shared lane，是把三仓同型的 `product_entry_quickstart / product_entry_overview / product_entry_readiness` 抽成共享 helper。它们已经是稳定的 family boundary surface，而且同时服务顶层 `OPL` discovery、单仓 frontdoor 和未来 monorepo 收口。
+- `MAS` 当时仍有一个必须同步解决的残留：旧 gate wording 还停在“external runtime gate 未清除前，不做 physical migration 或 cross-repo refactor”。这轮要把它改成“family shared modules program 已允许，domain truth migration 继续按 phase gate 推进”。
 - 本轮所有新增共享能力都继续放进同一布局：`OPL/contracts/` 持有 machine-readable truth，`OPL/src/` 持有 JS helper，`OPL/python/opl-harness-shared/` 持有 Python helper；不新开独立 shared repo。
 
 ### 1. 中央共享层放在 `OPL`
@@ -73,7 +73,7 @@ Machine boundary: 本文是早期 worker spec 归档。机器真相继续归 `co
 - family consumer projection rules
 
 这层是单一 source-of-truth。三个 domain 仓不再各自重新定义共享 companion 的 shape 与规则。
-当前这层的第一批已落地实现就是：
+当时这层的第一批已落地实现就是：
 
 - `src/managed-runtime-contract.ts`
 - `python/opl-harness-shared/src/opl_harness_shared/managed_runtime.py`
@@ -99,7 +99,7 @@ Machine boundary: 本文是早期 worker spec 归档。机器真相继续归 `co
 - 收敛 family 统一的 runtime device、provider、availability、health、owner、workspace binding、capability projection。
 - `OPL` 负责定义 schema 与 consumer。
 - `MAS / MAG / RCA` 负责把各自现有 runtime/status/watch surface 映射到统一 companion。
-- 这一层以当前 `managed_runtime_contract + hermes_supervision` 为基础继续扩展，而不是旁路新造 runtime helper。
+- 这一层以当时 `managed_runtime_contract + hermes_supervision` 为基础继续扩展，而不是旁路新造 runtime helper。
 
 #### c. Family task lifecycle / run ledger
 
@@ -108,14 +108,14 @@ Machine boundary: 本文是早期 worker spec 归档。机器真相继续归 `co
 - `MAS` 重点接 study runtime / runtime watch / controller decisions。
 - `MAG` 重点接 grant progress / route truth / checkpoint summary。
 - `RCA` 重点接 product-entry session continuity / rerun lineage / review state。
-- `MAG` 当前已经有最完整的 `checkpoint_status / verification_checkpoint / route truth` durable truth；`RCA` 当前已经有最完整的 `product_entry_session / runtime watch / rerun linkage`；`MAS` 当前已经有最完整的 `study_runtime_status / controller_decisions / recovery lane`。本层应直接把这三类现成 truth 投影成 shared ledger，而不是让三仓再各写一个“run status summary”。
+- `MAG` 当时已经有最完整的 `checkpoint_status / verification_checkpoint / route truth` durable truth；`RCA` 当时已经有最完整的 `product_entry_session / runtime watch / rerun linkage`；`MAS` 当时已经有最完整的 `study_runtime_status / controller_decisions / recovery lane`。本层应直接把这三类现成 truth 投影成 shared ledger，而不是让三仓再各写一个“run status summary”。
 
 #### d. Family skill catalog
 
 - 对齐 `Multica` 的 local skills + workspace skills 双层模型。
 - family 统一 shared skill descriptor、scope、owner、distribution mode、consumer surface、repo readiness。
 - 本机 executor 原生 skills 继续保持本地能力；family 共享层只冻结 repo-tracked shared skills catalog 与 domain adoption contract。
-- `MAG` 当前 `supported_commands / command_contracts` 已经最接近 catalog-ready 形态；`OPL` 与 `RCA` 当前的 product/frontdoor 命令面可以直接作为 catalog consumer；`MAS` 则重点提供 workspace/study/runtime 类 skill descriptor。
+- `MAG` 当时 `supported_commands / command_contracts` 已经最接近 catalog-ready 形态；`OPL` 与 `RCA` 当时的 product/frontdoor 命令面可以直接作为 catalog consumer；`MAS` 则重点提供 workspace/study/runtime 类 skill descriptor。
 
 #### e. Family automation / autopilot
 
@@ -123,7 +123,7 @@ Machine boundary: 本文是早期 worker spec 归档。机器真相继续归 `co
 - family 统一 automation descriptor、trigger、target surface、resume contract、gate policy、output expectation。
 - `OPL` 提供统一 contract 与 frontdoor 可见性。
 - 各 domain 仓接入自己的计划任务、long-run、watch、review 或 publication routine。
-- `RCA` 当前的 `phase_2_family_parity_autopilot_continuation_board`、`phase_2_family_parity_governance_surface_convergence` 与 `autopilot closeout evidence` 是这层最直接的 baseline；`MAS` 的 `phase3_clearance_lane / runtime supervision` 和 `MAG` 的 route/action contract 提供另外两条成熟输入。
+- `RCA` 当时的 `phase_2_family_parity_autopilot_continuation_board`、`phase_2_family_parity_governance_surface_convergence` 与 `autopilot closeout evidence` 是这层最直接的 baseline；`MAS` 的 `phase3_clearance_lane / runtime supervision` 和 `MAG` 的 route/action contract 提供另外两条成熟输入。
 
 #### f. Family product-entry companion expansion
 
@@ -205,7 +205,7 @@ Machine boundary: 本文是早期 worker spec 归档。机器真相继续归 `co
 
 这轮继续使用独立 worktree，但工作树策略按“已吸收到哪、剩余哪里要写”来分配：
 
-1. `OPL` 当前这条 `multica-family-reuse-program` worktree 继续承担 program authority、中央共享层增量与后续 central consumer 收口。
+1. `OPL` 当时这条 `multica-family-reuse-program` worktree 继续承担 program authority、中央共享层增量与后续 central consumer 收口。
 2. `MAS` 新开 fresh `main` worktree，承担 shared companion helper intake 与 gate 改写。
 3. `MAG` 新开 fresh `main` worktree，承担 shared companion helper intake。
 4. `RCA` 新开 fresh `main` worktree，承担 shared companion helper intake。
@@ -257,4 +257,4 @@ Machine boundary: 本文是早期 worker spec 归档。机器真相继续归 `co
 
 ## 历史建议
 
-这轮应直接踩在当前已吸收到 `main` 的 shared helper 基座上继续做第二条 family boundary 收口：先把三仓同型的 `product_entry_quickstart / overview / readiness` 抽成中央共享 helper，再继续往 runtime/task/skill/automation 扩。这样最符合“同功能模块尽量复用”和“MAS 长线走 monorepo 但 family boundary 继续单源维护”这两个目标。
+这轮当时建议直接踩在已吸收到 `main` 的 shared helper 基座上继续做第二条 family boundary 收口：先把三仓同型的 `product_entry_quickstart / overview / readiness` 抽成中央共享 helper，再继续往 runtime/task/skill/automation 扩。这样最符合当时“同功能模块尽量复用”和“MAS 长线走 monorepo 但 family boundary 继续单源维护”这两个目标。

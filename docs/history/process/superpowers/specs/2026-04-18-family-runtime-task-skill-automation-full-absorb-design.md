@@ -9,10 +9,10 @@ Machine boundary: 本文是早期 worker spec 归档。机器真相继续归 `co
 
 ## 历史背景
 
-- `OPL` 当前已经是 family shared boundary modules 的中央 owner。live `main` 已持有 `managed-runtime-contract`、`hermes_supervision`、`product-entry-companions` 这三批共享 helper，并已被 `MAS / MAG / RCA` 消费。
-- 三个 domain repo 当前仍保留四类明显的重复 boundary logic：`family_orchestration` core builder、runtime/task descriptor projection、skill catalog projection、automation/autopilot projection。
+- `OPL` 当时已经是 family shared boundary modules 的中央 owner。live `main` 已持有 `managed-runtime-contract`、`hermes_supervision`、`product-entry-companions` 这三批共享 helper，并已被 `MAS / MAG / RCA` 消费。
+- 三个 domain repo 当时仍保留四类明显的重复 boundary logic：`family_orchestration` core builder、runtime/task descriptor projection、skill catalog projection、automation/autopilot projection。
 - 用户这轮要求按全量版推进，目标是把 family-shared modules 尽量一步到位吸收到中央层，减少今后跨仓修 bug 和重复维护成本。
-- `MAS` 当前仍与 `MedDeepScientist` 有更深的 runtime 依赖和研究域差异，但长期目标依然是 `MAS` 自己向 monorepo 演化；因此这轮设计需要把 family shared boundary 和 MAS internal monorepo seam 明确分层。
+- `MAS` 当时仍与 `MedDeepScientist` 有更深的 runtime 依赖和研究域差异，但长期目标依然是 `MAS` 自己向 monorepo 演化；因此这轮设计需要把 family shared boundary 和 MAS internal monorepo seam 明确分层。
 
 ## 历史目标
 
@@ -34,7 +34,7 @@ Machine boundary: 本文是早期 worker spec 归档。机器真相继续归 `co
 
 采用 `OPL central shared modules + thin repo adapters + four-repo immediate absorb-back-to-main`。
 
-这条路线最符合当前 family topology：
+这条路线最符合当时 family topology：
 
 - `OPL` 已经有 JS + Python 双语共享基座，继续扩展成本最低。
 - 三个业务仓已经能消费 OPL git pin，继续向同一 source-of-truth 收拢最稳。
@@ -186,7 +186,7 @@ Python 侧新增：
 
 ### MAS
 
-从 `MAS` 当前代码里抽出 shared seam：
+从 `MAS` 当时代码里抽出 shared seam：
 
 - `study_runtime_family_orchestration.py`
 - `product_entry.py`
@@ -209,7 +209,7 @@ MAS 的目标状态：
 
 ### MAG
 
-从 `MAG` 当前代码里抽出 shared seam：
+从 `MAG` 当时代码里抽出 shared seam：
 
 - `product_entry.py`
 - `route_report.py`
@@ -226,7 +226,7 @@ MAS 的目标状态：
 
 ### RCA
 
-从 `RCA` 当前代码里抽出 shared seam：
+从 `RCA` 当时代码里抽出 shared seam：
 
 - `packages/redcube-gateway/src/actions/family-orchestration-companion.js`
 - `packages/redcube-gateway/src/actions/get-product-entry-manifest.js`

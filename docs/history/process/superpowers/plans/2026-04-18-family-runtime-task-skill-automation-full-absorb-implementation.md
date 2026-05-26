@@ -378,9 +378,9 @@ git commit -m "feat: add shared runtime task skill and automation helpers"
 - Modify: `src/web-frontdoor.ts`
 - Test: focused consumer tests already covering manifests, handoff, management, and web startup payloads
 
-- 历史项：**Step 1: Add failing OPL consumer tests for new normalized surfaces**
+- 历史项：**Step 1: Add failing OPL consumer tests for then-new normalized surfaces**
 
-Update existing tests to assert that normalized manifests and downstream bundles now include:
+Update existing tests to assert that normalized manifests and downstream bundles would include:
 
 - `runtime_inventory`
 - `task_lifecycle`
@@ -432,7 +432,7 @@ git commit -m "feat: expose shared runtime task skill and automation surfaces"
 Cover:
 
 - manifest exposes shared `family_orchestration / runtime_inventory / task_lifecycle / skill_catalog / automation`
-- runtime watch and runtime decision still produce the same domain truth, but now project through shared helpers
+- runtime watch and runtime decision still produce the same domain truth, but would project through shared helpers in that plan
 
 - 历史项：**Step 2: Run focused MAS tests to verify they fail**
 
@@ -590,7 +590,7 @@ git commit -m "refactor: align rca family surfaces with shared modules"
 
 - 历史项：**Step 1: Update docs/status truth**
 
-Make each repo state clearly that `family_orchestration / runtime_inventory / task_lifecycle / skill_catalog / automation` shared boundary modules are now centrally owned by `OPL`.
+Make each repo state clearly that `family_orchestration / runtime_inventory / task_lifecycle / skill_catalog / automation` shared boundary modules were centrally owned by `OPL` in that historical target.
 
 - 历史项：**Step 2: Run fresh focused verification in all four worktrees**
 

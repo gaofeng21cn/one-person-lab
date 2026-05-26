@@ -13,16 +13,16 @@ Machine boundary: 本文是早期 worker plan 归档。机器真相继续归 `co
 
 1. `OPL main` 已经持有第一批 family-shared implementation substrate：`src/managed-runtime-contract.ts` 与 `python/opl-harness-shared/`。
 2. `MAS main`、`MAG main` 与 `RCA main` 都已经完成第一步 shared helper intake。
-3. 三个 domain repo 当前仍各自手写 `product_entry_quickstart / product_entry_overview / product_entry_readiness`，这是当下最清晰、最稳定、最值得先抽的重复 family boundary module。
-4. `MAS` 当前仍保留旧 gate wording，因此除了代码复用之外，还要同步把“允许 family shared modules 收口”和“MAS internal monorepo 继续按 phase gate 推进”写成同一份 live truth。
+3. 三个 domain repo 当时仍各自手写 `product_entry_quickstart / product_entry_overview / product_entry_readiness`，这是当时最清晰、最稳定、最值得先抽的重复 family boundary module。
+4. `MAS` 当时仍保留旧 gate wording，因此除了代码复用之外，还要同步把“允许 family shared modules 收口”和“MAS internal monorepo 继续按 phase gate 推进”写成同一份当时 live truth。
 
-因此这轮 implementation 不再把“抽第一批共享 helper”当主任务。当前最值钱的做法是先把 `product_entry_quickstart / product_entry_overview / product_entry_readiness` 这组 shared companion helper 收成中央模块，再以这条 tranche 为模板继续扩 `runtime inventory / task lifecycle / skill catalog / automation`。
+因此这轮 implementation 不再把“抽第一批共享 helper”当主任务。当时最值钱的做法是先把 `product_entry_quickstart / product_entry_overview / product_entry_readiness` 这组 shared companion helper 收成中央模块，再以这条 tranche 为模板继续扩 `runtime inventory / task lifecycle / skill catalog / automation`。
 
 ## 历史目标
 
 1. 继续以 `OPL` 为中央 source-of-truth，先落下 `product_entry_quickstart / product_entry_overview / product_entry_readiness` 这组 family shared companion helper。
 2. 让 `MAS / MAG / RCA` 接入同一套 shared helper，同时保留各自的 domain truth、action graph、gate、route 和 session/runtime 真相。
-3. 更新 `MAS` 的旧 gate 与相关测试，使“family shared modules 的跨仓收口”成为当前 live truth。
+3. 更新 `MAS` 的旧 gate 与相关测试，使“family shared modules 的跨仓收口”成为当时 live truth。
 4. 把这条 tranche 作为后续 `runtime inventory / task lifecycle / skill catalog / automation` 的复用模板，并明确它与 `MAS` future monorepo internal module 的边界。
 
 ## 历史非目标
@@ -150,7 +150,7 @@ Machine boundary: 本文是早期 worker plan 归档。机器真相继续归 `co
 
 1. 给 `med-autoscience` 更新 `opl-harness-shared` 依赖 SHA。
 2. 把 `controllers/product_entry.py` 中手写的 `product_entry_quickstart / overview / readiness` 换成 shared helper。
-3. 把 `AGENTS.md` 与状态文档上的旧 gate wording 改成当前 live truth。
+3. 把 `AGENTS.md` 与状态文档上的旧 gate wording 改成当时 live truth。
 4. 补跑 focused product-entry 与 meta 验证。
 
 `MAG`：
@@ -169,7 +169,7 @@ Machine boundary: 本文是早期 worker plan 归档。机器真相继续归 `co
 
 ### 3. 完成后再进入下一轮 shared boundary modules
 
-1. 当前 tranche merge 完成后，继续按同样 pattern 扩到 `runtime inventory / task lifecycle / skill catalog / automation`。
+1. 当时 tranche merge 完成后，继续按同样 pattern 扩到 `runtime inventory / task lifecycle / skill catalog / automation`。
 2. `OPL domain-manifests / dashboard / handoff-envelope / web frontdoor` 继续消费 domain 产物，不额外发明第二套 truth。
 3. `MAS` future monorepo internal modules 继续留在 MAS 自己的 phase ladder，不跟这一层 family shared companion 混写。
 
@@ -187,7 +187,7 @@ Machine boundary: 本文是早期 worker plan 归档。机器真相继续归 `co
 1. `OPL` 先冻结 `product-entry-companions` 的 export 与测试。
 2. `MAS / MAG / RCA` 基于同一 OPL commit 并行推进。
 3. 每仓 focused 验证通过后立刻吸收回 `main`。
-4. 当前 tranche 清掉后，再开下一条 shared boundary lane。
+4. 当时 tranche 清掉后，再开下一条 shared boundary lane。
 
 推荐吸收顺序：
 
@@ -222,9 +222,9 @@ Machine boundary: 本文是早期 worker plan 归档。机器真相继续归 `co
 
 ## 历史风险
 
-- `MAS` 当前有一整串 docs/tests 绑定旧 gate wording；这条 lane 必须把代码、文档、测试一起改，才会形成稳定 live truth。
+- `MAS` 当时有一整串 docs/tests 绑定旧 gate wording；这条 lane 必须把代码、文档、测试一起改，才会形成稳定的当时 live truth。
 - `MAG` 与 `RCA` 已经在 live main 里吃 OPL git pin；新增 shared modules 后，依赖 pin 与 helper export 必须同步更新，避免仓间 helper version 漂移。
-- `OPL` 当前已经把 `domain-manifests / dashboard / handoff-envelope / web frontdoor` 建成统一 consumer；三仓若只接一半 companion 字段，顶层很快会长出 partial truth。
+- `OPL` 当时已经把 `domain-manifests / dashboard / handoff-envelope / web frontdoor` 建成统一 consumer；三仓若只接一半 companion 字段，顶层很快会长出当时的 partial truth。
 - 历史 `shared-family-modules` lane 的价值现在主要已经吸收到 live main；这轮继续新开 main-based worktree，能减少和旧 lane 并行重写同一文件的冲突。
 
 ## 历史完成标准

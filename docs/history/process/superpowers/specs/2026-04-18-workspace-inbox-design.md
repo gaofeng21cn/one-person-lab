@@ -9,7 +9,7 @@ Machine boundary: 本文是早期 worker spec 归档。机器真相继续归 `co
 
 ## 历史背景
 
-- `opl web` 已经完成第一版 `workspace-first` 首页，当前有 `Current Task`、`Progress Feed` 和 `Files & Deliverables`。
+- `opl web` 当时已经完成第一版 `workspace-first` 首页，已有 `Current Task`、`Progress Feed` 和 `Files & Deliverables`。
 - 用户还缺一层更自然的任务视图：进入某个 workspace 后，想直接知道一共有多少任务、谁正在跑、谁在等待、谁已经形成交付。
 - 这层视图必须继续沿用现有 truth surface，尤其是 `workspace_cockpit` 的 `studies` 队列、domain manifest 的 `task_lifecycle`、`session_ledger` 和 `project_progress`，不发明第二套 runtime 状态系统。
 
@@ -20,20 +20,20 @@ Machine boundary: 本文是早期 worker spec 归档。机器真相继续归 `co
 1. 在 `project-progress` 里新增一个用户态 `workspace_inbox` 摘要面。
 2. 优先用真实 `studies` 队列派生任务卡，补上 workspace 级任务分组。
 3. 在 `opl web` 首页主栏新增 `Workspace Inbox`，让用户一眼看懂运行中、等待中和已交付任务。
-4. 保持当前 `Progress Feed`、`Files & Deliverables` 和 operator surfaces 的结构不回退。
+4. 保持当时 `Progress Feed`、`Files & Deliverables` 和 operator surfaces 的结构不回退。
 
 ## 历史非目标
 
 - 不引入新的前端框架、组件库或状态管理层。
 - 不重写 `opl web` 的整体布局。
 - 不改 Hermes runtime、domain repo runtime 或 task 执行协议。
-- 不把 task board 做成可交互调度器；当前只做 honest summary，不做控制面。
+- 不把 task board 做成可交互调度器；当时只做 honest summary，不做控制面。
 
 ## 历史技术路线
 
 技术路线是 `contract-first + server-side aggregation + thin frontdoor rendering`：
 
-1. 历史版本曾由 `src/management.ts` 负责聚合；当前实现已退役该顶层 barrel，改为直接维护 `src/management/*` leaf surfaces。
+1. 历史版本曾由 `src/management.ts` 负责聚合；当前实现已退役该顶层 barrel，改为直接维护 `src/management/*` leaf surfaces。此句是当前 no-resurrection guard，不把旧 barrel 恢复为 active target。
 2. 任务 truth 优先级按：
    - `workspace_cockpit.studies`
    - `project_progress.current_study`
@@ -77,15 +77,15 @@ Machine boundary: 本文是早期 worker spec 归档。机器真相继续归 `co
 
 ### 2. Study queue first
 
-如果当前 workspace 能读到 `workspace_cockpit.studies`：
+如果当时 workspace 能读到 `workspace_cockpit.studies`：
 
 - 每个 study 变成一张 inbox 卡。
 - `live / recovering` 归到 `running`。
 - 明确 blocker、human gate 或 runtime blocked 的 study 归到 `waiting`。
-- 有可恢复入口但当前不活跃的 study 归到 `ready`。
-- 当前 study 若已经产出 deliverable，则额外补一张 `delivered` 卡，用来把“任务”和“文件”显式串起来。
+- 有可恢复入口但当时不活跃的 study 归到 `ready`。
+- 当时 active study 若已经产出 deliverable，则额外补一张 `delivered` 卡，用来把“任务”和“文件”显式串起来。
 
-这样 `MAS` 这类 workspace 可以直接显示真实 study 队列，而不是只显示当前一篇论文。
+这样 `MAS` 这类 workspace 当时可以直接显示真实 study 队列，而不是只显示当时的 active paper。
 
 ### 3. Fallback path
 
@@ -123,9 +123,9 @@ Machine boundary: 本文是早期 worker spec 归档。机器真相继续归 `co
 
 ## 历史风险
 
-- 当前 repo 对“任务”最强的真实面仍然是 `MAS study queue`，其他项目更多依赖 `task_lifecycle` 和 session 信息，所以 `Workspace Inbox` 的丰富度会随项目类型不同。
-- 这次 slice 会坚持 honest summary：只展示当前真能读到的任务，不伪造完整 task graph。
+- 当时 repo 对“任务”最强的真实面仍然是 `MAS study queue`，其他项目更多依赖 `task_lifecycle` 和 session 信息，所以 `Workspace Inbox` 的丰富度会随项目类型不同。
+- 这次 slice 会坚持 honest summary：只展示当时真能读到的任务，不伪造完整 task graph。
 
 ## Conclusion
 
-这次不是在首页再堆一块状态面板，而是把 `workspace -> task -> file` 这条用户心智补完整，让 OPL frontdoor 从“只看当前论文和文件”升级成“能看懂整个 workspace 的任务分布和推进状态”。
+这次在当时不是在首页再堆一块状态面板，而是把 `workspace -> task -> file` 这条用户心智补完整，让 OPL frontdoor 从“只看当时 active paper 和文件”升级成“能看懂整个 workspace 的任务分布和推进状态”。
