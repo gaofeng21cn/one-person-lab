@@ -5948,6 +5948,69 @@ Next tranche write scope:
 - Start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
 - Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
 
+Date: `2026-05-27 03:32 CST`
+Tranche: `mas-medical-display-history-no-resurrection-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAS `docs/history/capabilities/medical-display/**` 历史/provenance cluster，并把结果回写到 MAS 本地 coverage ledger 与本 OPL family ledger。目标是让 medical-display 历史扩库账本、已完成 `A-H` first-baseline program、旧 `G` owner brief、template-pack Phase 1-2 实施包和 PaperPlotHub 只读 intake / exhaustion ledger 保留 provenance 价值，同时避免 dated “current / 当前 / owner round / worktree / backlog / checkbox plan” 被读成今天的 active board、当前 owner round、可直接执行计划或 strict inventory 真相。本轮不关闭全局 `/goal`，也不表示 MAS repo-wide README/docs 覆盖完成。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`, `TASTE.md`, `docs/active/mas-ideal-state-gap-plan.md`, `docs/delivery/medical-display/README.md`, `docs/delivery/medical-display/board/medical_display_active_board.md`, `docs/delivery/medical-display/contracts/medical_display_platform_mainline.md`, `docs/delivery/medical-display/contracts/medical_display_audit_guide.md`, `docs/delivery/medical-display/catalogs/medical_display_template_catalog.md`, `docs/delivery/medical-display/catalogs/medical_display_arsenal.md`, `docs/delivery/medical-display/catalogs/medical_display_template_backlog.md`, `docs/delivery/medical-display/portfolio/medical_display_portfolio_consolidation.md`, and MAS local docs-governance ledger.
+- MAS target docs: all 7 Markdown files under `docs/history/capabilities/medical-display/`.
+- Live source read: `scripts/run-python-clean.sh` import of `med_autoscience.display_registry`, confirming current strict inventory as `84` evidence figures, `7` illustration shells, `7` table shells, `98` total display templates.
+- Six-repo worktree / branch preflight and doctor preflight from `/Users/gaofeng/workspace/opl-doc-governance/scripts/opl_doc_doctor.py`.
+
+Fresh semantic result:
+
+- Current medical-display execution truth is `docs/delivery/medical-display/board/medical_display_active_board.md`: `A-H` first audited baseline is `8/8`, current strict inventory is `84 / 7 / 7 / 98`, the latest absorbed cluster is `A/E / confusion_matrix_heatmap_binary`, and the state is `Phase 4 / post-absorb reroute` with `owner worktree=not_opened`.
+- Current inventory truth is `medical_display_audit_guide.md` plus generated `medical_display_template_catalog.md`; `medical_display_arsenal.md` is the human-readable current inventory narrative; `medical_display_template_backlog.md` is candidate-pool support, not active owner board.
+- `medical_display_arsenal_history.md` now opens with a read rule for its `当前状态` column.
+- `medical_display_family_baseline_program.md` now reads as completed first-baseline program provenance and points current owner round / reroute truth to the active board.
+- `medical_display_g_pathway_integrated_composite_owner_brief.md` now marks the `2026-04-19` `G` owner round as historical and closed. Its branch/worktree and recommended implementation order cannot be reused as current worktree instructions.
+- `README.md`, `medical_display_template_pack_implementation_plan_2026_04.md`, `paperplothub_exemplar_intake.md`, and `paperplothub_exemplar_exhaustion_ledger.md` already carried adequate history/provenance, link-only exemplar, checkbox-plan and no-runtime-dependency guards after full paragraph read; no body edit was needed.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full paragraph read of all 7 `docs/history/capabilities/medical-display/*.md` files, with supporting current-boundary read of medical-display active board, platform mainline, audit guide, template catalog, arsenal, backlog, portfolio map and live registry inventory. | `docs/history/capabilities/medical-display/medical_display_arsenal_history.md`; `docs/history/capabilities/medical-display/medical_display_family_baseline_program.md`; `docs/history/capabilities/medical-display/medical_display_g_pathway_integrated_composite_owner_brief.md`; `docs/history/docs-portfolio-coverage-ledger/2026-05-27-part-5.md` |
+| `one-person-lab` | OPL family coverage ledger foldback for this MAS history tranche; no OPL active truth / source / contract semantics changed. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The medical-display history cluster stays in `docs/history/capabilities/medical-display/**` as history/provenance and no-resurrection guard material.
+
+Unreviewed docs:
+
+- `med-autoscience`: `docs/history/capabilities/medical-display/**` exact cluster is now covered. MAS repo-wide full paragraph coverage remains open for other history-heavy groups: `docs/history/program`, `docs/history/superpowers/**`, and remaining history directory indexes.
+- `one-person-lab`: no new OPL body docs were governed in this tranche; previous exact coverage claims remain as recorded.
+- `med-autogrant`, `redcube-ai`, `opl-meta-agent`: no new docs governed in this tranche; previous coverage state remains unchanged.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active release / GUI lanes are safe or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- MAS: any future medical-display prose that treats historical `A-H` first-baseline completion program, old owner brief branch/worktree names, historical implementation checkboxes, PaperPlotHub candidate gaps, or retired `.omx/.codex` execution state as current active board, current backlog, current owner round, runnable worktree instruction, or strict inventory truth is stale pollution.
+- MAS: PaperPlotHub records remain link-only exemplar/provenance. They do not authorize script/image copying, runtime dependency, display-pack source, new template promotion, or owner round without a real MAS paper demand and explicit schema/renderer/QC/submission-surface evidence.
+- App: release / GUI docs remain blocked by unrelated dirty work in main and external worktrees.
+
+Worktree / branch cleanup:
+
+- No external stale worktree/branch qualified for cleanup before this tranche. OPL/MAS/App/RCA external worktrees remain dirty, recently written, not safely attributable to this automation, detached probes, or outside the current tranche.
+- This tranche's MAS and OPL worktrees should be removed after fast-forward absorb.
+
+Verification before absorb:
+
+- MAS medical-display history worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- OPL ledger worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- No source/runtime tests are required because this tranche changes only narrative docs and coverage ledgers; a live read-only registry probe confirmed current inventory counts.
+
+Next tranche write scope:
+
+- Continue MAS bounded history inventory, preferably `docs/history/program`, `docs/history/superpowers/**`, or remaining history directory indexes.
+- Start App docs only when release / GUI dirty lanes are safe or explicitly handed to this governance goal.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
+
 ## 验证
 
 Docs-only 整理：
