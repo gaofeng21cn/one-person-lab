@@ -4490,7 +4490,7 @@ Next tranche write scope:
 
 Date: `2026-05-26 19:00 CST`
 Tranche: `mag-nonspec-history-coverage`
-State: `tranche_verified_pending_opl_absorb`
+State: `tranche_verified_absorbed`
 
 本轮覆盖 MAG `docs/history/**` 下非 specs 历史入口：历史 plans、product handoff、runtime owner split、positioning 和 OMX index。目标是把旧 scaffold/P1 plan、hosted caller proof、Hermes/Gateway/local-runtime/Domain Harness OS 词汇、轻量 product-entry shell 和 `.omx` / `.runtime-program` 语境限定在 provenance，不关闭全局 `/goal`，也不表示 OPL/MAS/RCA/App repo-wide README/docs 已全量覆盖。
 
@@ -4540,7 +4540,9 @@ Verification before absorb:
 - MAG focused tests passed: `./scripts/run-pytest-clean.sh tests/test_program_control_surfaces.py tests/test_domain_entry.py -q` returned 25 pytest cases plus 19 subtests.
 - OPL ledger worktree verification passed before commit: `git diff --check`, strict README/docs/contracts conflict-marker scan, and OPL Doc Governance doctor `finding_count=0`, active truth `pass`.
 - MAG commit `39e4460 docs: cover MAG non-spec history boundaries` is on MAG `main`.
-- Pending after this edit: OPL ledger commit/absorb and final six-repo lightweight verification.
+- OPL commits `ea2d7bdd docs: record MAG non-spec history coverage` and this closeout status update are on OPL `main`.
+- This tranche's MAG and OPL worktrees / branches were removed after fast-forward absorb.
+- Pending after this edit: final six-repo lightweight verification.
 
 Next tranche write scope:
 
