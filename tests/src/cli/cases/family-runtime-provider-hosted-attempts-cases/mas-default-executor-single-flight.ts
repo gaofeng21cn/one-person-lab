@@ -1,4 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
+import { WorkflowNotFoundError } from '@temporalio/common';
 
 import {
   assert,
@@ -400,20 +401,25 @@ test('family-runtime syncs terminal same-task MAS default executor attempt befor
         payload,
         providerHostedAttempt: null,
         temporalProviderModule: async () => ({
-          queryTemporalStageAttemptWorkflow: async () => ({
-            surface_kind: 'temporal_stage_attempt_query_receipt',
-            provider_kind: 'temporal',
-            stage_attempt_id: attempt.stage_attempt_id,
-            workflow_id: attempt.workflow_id,
-            workflow_status: 'FAILED',
-            query_error: {
-              code: 'temporal_stage_attempt_query_unavailable_after_terminal',
-              message: 'Temporal workflow is already FAILED; terminal failure is sufficient for provider sync.',
-            },
-          }),
           startTemporalStageAttemptWorkflow: async () => {
             temporalStartCount += 1;
             return { surface_kind: 'temporal_stage_attempt_start_receipt' };
+          },
+        }),
+        queryTemporalStageAttemptReadModel: async () => ({
+          surface_kind: 'temporal_stage_attempt_query_receipt',
+          provider_kind: 'temporal',
+          stage_attempt_id: attempt.stage_attempt_id,
+          workflow_id: attempt.workflow_id,
+          run_id: 'test-run',
+          workflow_status: 'FAILED',
+          query_error: {
+            code: 'temporal_stage_attempt_query_unavailable_after_terminal',
+            message: 'Temporal workflow is already FAILED; terminal failure is sufficient for provider sync.',
+          },
+          authority_boundary: {
+            opl: 'temporal_workflow_transport_and_control_metadata_only',
+            domain: 'truth_quality_artifact_gate_owner',
           },
         }),
       });
@@ -446,6 +452,111 @@ test('family-runtime syncs terminal same-task MAS default executor attempt befor
       assert.equal(task.lease_expires_at, null);
       assert.equal(syncedAttempt.status, 'failed');
       assert.equal(syncedAttempt.blocked_reason, 'temporal_workflow_failed');
+      assert.equal(skipEvent, undefined);
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime syncs missing same-task MAS default executor workflow before live skip', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const payload = defaultExecutorPayload('source-missing-workflow-before-live-skip');
+      const taskId = 'task-mas-default-same-task-missing-workflow-sync';
+      insertSucceededTask(db, {
+        taskId,
+        payload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:same-task-missing-workflow-sync',
+      });
+      db.prepare(`
+        UPDATE tasks
+        SET status = 'queued', attempts = 1
+        WHERE task_id = ?
+      `).run(taskId);
+      const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as Parameters<
+        typeof startMasDefaultExecutorDispatchAttempt
+      >[2]['row'];
+      const attempt = ensureProviderHostedStageAttempt(db, row, payload);
+      assert.ok(attempt);
+      db.prepare("UPDATE stage_attempts SET status = 'running' WHERE stage_attempt_id = ?").run(
+        attempt.stage_attempt_id,
+      );
+
+      let rawQueryCount = 0;
+      let safeQueryCount = 0;
+      let temporalStartCount = 0;
+      const result = await startMasDefaultExecutorDispatchAttempt(db, familyRuntimePaths(), {
+        row,
+        payload,
+        providerHostedAttempt: null,
+        temporalProviderModule: async () => ({
+          queryTemporalStageAttemptWorkflow: async () => {
+            rawQueryCount += 1;
+            throw new WorkflowNotFoundError(
+              `workflow not found for ID: ${attempt.workflow_id}`,
+              attempt.workflow_id,
+              undefined,
+            );
+          },
+          startTemporalStageAttemptWorkflow: async () => {
+            temporalStartCount += 1;
+            return { surface_kind: 'temporal_stage_attempt_start_receipt' };
+          },
+        }),
+        queryTemporalStageAttemptReadModel: async (observedAttempt) => {
+          safeQueryCount += 1;
+          return {
+            surface_kind: 'temporal_stage_attempt_query_unavailable',
+            provider_kind: 'temporal',
+            stage_attempt_id: observedAttempt.stage_attempt_id,
+            workflow_id: observedAttempt.workflow_id,
+            status: 'unavailable',
+            reason: 'temporal_workflow_not_started_or_not_found',
+            error: {
+              code: 'temporal_workflow_not_found',
+              message: 'workflow not found',
+            },
+            authority_boundary: {
+              opl: 'local_stage_attempt_ledger_projection_only',
+              domain: 'truth_quality_artifact_gate_owner',
+            },
+          };
+        },
+      });
+      const task = db.prepare(`
+        SELECT status, last_error, dead_letter_reason, lease_owner, lease_expires_at
+        FROM tasks
+        WHERE task_id = ?
+      `).get(taskId) as {
+        status: string;
+        last_error: string | null;
+        dead_letter_reason: string | null;
+        lease_owner: string | null;
+        lease_expires_at: string | null;
+      };
+      const syncedAttempt = listStageAttemptsForTask(db, taskId)[0];
+      const skipEvent = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_default_executor_live_attempt_skip'
+        LIMIT 1
+      `).get(taskId) as { payload_json: string } | undefined;
+
+      assert.equal(rawQueryCount, 0);
+      assert.equal(safeQueryCount, 1);
+      assert.equal(result.status, 'blocked');
+      assert.equal(result.reason, 'temporal_stage_attempt_start_failed');
+      assert.equal(temporalStartCount, 0);
+      assert.equal(task.status, 'blocked');
+      assert.equal(task.last_error, 'temporal_workflow_not_started_or_not_found');
+      assert.equal(task.dead_letter_reason, 'temporal_stage_attempt_start_failed');
+      assert.equal(task.lease_owner, null);
+      assert.equal(task.lease_expires_at, null);
+      assert.equal(syncedAttempt.status, 'failed');
+      assert.equal(syncedAttempt.blocked_reason, 'temporal_workflow_not_started_or_not_found');
       assert.equal(skipEvent, undefined);
     });
   } finally {

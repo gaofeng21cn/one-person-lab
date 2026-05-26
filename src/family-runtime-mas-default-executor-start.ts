@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError } from './contracts.ts';
+import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-query.ts';
 import type { familyRuntimePaths, FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import {
   insertEvent,
@@ -20,11 +21,8 @@ import {
 
 type FamilyRuntimePaths = ReturnType<typeof familyRuntimePaths>;
 type StageAttemptPayload = ReturnType<typeof listStageAttemptsForTask>[number];
+type QueryTemporalStageAttemptReadModel = typeof queryTemporalStageAttemptReadModel;
 type TemporalProviderModule = () => Promise<{
-  queryTemporalStageAttemptWorkflow?: (
-    attempt: StageAttemptPayload,
-    options: { paths: FamilyRuntimePaths },
-  ) => Promise<unknown>;
   startTemporalStageAttemptWorkflow: (
     attempt: StageAttemptPayload,
     options: { paths: FamilyRuntimePaths },
@@ -48,13 +46,9 @@ async function syncTerminalStageAttemptIfObservable(
   db: DatabaseSync,
   paths: FamilyRuntimePaths,
   attempt: StageAttemptPayload,
-  temporalProviderModule: TemporalProviderModule,
+  queryStageAttempt: QueryTemporalStageAttemptReadModel,
 ) {
-  const { queryTemporalStageAttemptWorkflow } = await temporalProviderModule();
-  if (!queryTemporalStageAttemptWorkflow) {
-    return attempt;
-  }
-  const observation = await queryTemporalStageAttemptWorkflow(attempt, { paths });
+  const observation = await queryStageAttempt(attempt, { paths });
   return syncStageAttemptFromTemporalTerminalObservation(db, observation) ?? attempt;
 }
 
@@ -187,9 +181,11 @@ export async function startMasDefaultExecutorDispatchAttempt(
     payload: Record<string, unknown>;
     providerHostedAttempt: StageAttemptPayload | null;
     temporalProviderModule: TemporalProviderModule;
+    queryTemporalStageAttemptReadModel?: QueryTemporalStageAttemptReadModel;
   },
 ) {
   const { row, payload, providerHostedAttempt, temporalProviderModule } = input;
+  const queryStageAttempt = input.queryTemporalStageAttemptReadModel ?? queryTemporalStageAttemptReadModel;
   let temporalStart: Record<string, unknown> | null = null;
   const liveAttempt = listStageAttemptsForTask(db, row.task_id).find((attempt) => (
     attempt.provider_kind === 'temporal'
@@ -197,7 +193,7 @@ export async function startMasDefaultExecutorDispatchAttempt(
     && LIVE_STAGE_ATTEMPT_STATUSES.has(attempt.status)
   )) ?? null;
   if (liveAttempt) {
-    const syncedAttempt = await syncTerminalStageAttemptIfObservable(db, paths, liveAttempt, temporalProviderModule);
+    const syncedAttempt = await syncTerminalStageAttemptIfObservable(db, paths, liveAttempt, queryStageAttempt);
     if (!isLiveStageAttempt(syncedAttempt)) {
       const stageAttempts = listStageAttemptsForTask(db, row.task_id);
       const terminalResult = terminalTaskResultAfterProviderSync(db, row, stageAttempts);
