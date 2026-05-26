@@ -5176,6 +5176,61 @@ Next tranche write scope:
 - Continue MAS repo-wide paragraph coverage from the remaining exact uncovered doc list, or choose the next OPL/RCA/MAG/App uncovered body according to dirty-lane safety.
 - Keep RCA/App docs delayed while their main checkouts carry unrelated dirty implementation / release changes.
 
+Date: `2026-05-26 22:05 CST`
+Tranche: `rca-northstar-reference-coverage`
+State: `tranche_verified`
+
+本轮覆盖 RCA north-star reference 主体 `docs/references/rca-visual-deliverable-agent-ideal-state.md`，并把结果折回 RCA 本地 docs portfolio ledger 与本 OPL series ledger。目标是关闭上一轮 RCA references ledger 中明确留下的 north-star body uncovered 项；本轮不关闭全局 `/goal`，不表示 RCA production ready / domain ready / visual ready，也不表示 MAS/App repo-wide coverage 已完成。
+
+Fresh live truth inputs:
+
+- RCA `AGENTS.md`, `TASTE.md`, `README.md`, `docs/README.md`, `docs/project.md`, `docs/status.md`, `docs/architecture.md`, `docs/active/rca-ideal-state-gap-plan.md`, `docs/docs_portfolio_consolidation.md`, and `docs/references/rca-visual-deliverable-agent-ideal-state.md`.
+- RCA machine refs: `contracts/functional_privatization_audit.json`, `contracts/physical_source_morphology_policy.json`, `contracts/production_acceptance/rca-production-acceptance.json`, `contracts/stage_control_plane.json`, and `package.json`.
+- Doctor evidence: RCA OPL Doc Governance doctor preflight reported `finding_count=0`, active truth `pass`; this was used only as a risk map.
+
+Fresh semantic result:
+
+- RCA north-star reference already keeps the correct role: target-state / owner-boundary support, not active completion plan, proof ledger or current CLI/readiness truth.
+- The reference matches live contracts on owner split: RCA retains visual truth, route truth, review/export verdict, artifact authority, visual memory accept/reject, owner receipt and native helper implementation; OPL owns/generated-hosts generic runtime, queue, wakeup, attempt ledger, workbench, wrapper and refs-only projection surfaces.
+- The reference does not upgrade OPL descriptor readiness, structural conformance, provider completion, transition proof or no-regression refs into visual ready, exportable, handoffable, domain ready, production ready or production visual-stage long-soak completion.
+- No RCA north-star body rewrite was needed; the only RCA repo edit was its coverage ledger.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `redcube-ai` | Full paragraph read of `docs/references/rca-visual-deliverable-agent-ideal-state.md`; support read of RCA core docs, active truth owner, local docs portfolio and machine refs listed above. | `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | OPL family ledger foldback for this RCA tranche. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. RCA north-star reference remains active support; stale body rewrite or doc-path retirement was not required.
+
+Unreviewed docs:
+
+- `one-person-lab`: none by exact inventory coverage for the current 175-file OPL inventory.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks.
+- `med-autogrant`: current 120-file recorded scope was closed by the MAG final inventory reconcile unless new docs or later source/contract changes reopen a section.
+- `redcube-ai`: prior RCA tranches now cover active/status, product-entry, runtime/integration, delivery/source, policy, references including north-star, Hermes history, Phase 2 history, and plans/runtime/tombstone history chunks. RCA still needs a final inventory reconcile to prove no current `README*` / `docs/**/*.md` path remains outside the recorded chunks, especially after any new docs or external edits.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App release / GUI lanes are safe or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Future RCA north-star wording that treats target-state examples, ideal direct product commands, structural conformance, OPL generated/default-caller consumption, provider completion or proof refs as current CLI availability, visual ready, exportable, handoffable, domain ready, production ready, production visual-stage long-soak evidence or OPL ownership of RCA visual truth is stale pollution.
+- RCA final inventory reconcile may still find docs not exact-mapped by the current chunk ledger; do not close RCA repo-wide coverage until that reconcile has a zero-missing inventory.
+- App docs remain unsafe for automatic governance while main and release/GUI lanes carry unrelated dirty changes.
+
+Verification before absorb:
+
+- RCA docs verification in the tranche worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- OPL ledger verification in the tranche worktree: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+
+Next tranche write scope:
+
+- Prefer RCA final inventory reconcile if the checkout remains clean, or continue MAS repo-wide paragraph coverage from the remaining uncovered doc list.
+- Keep App docs delayed until active release / GUI lanes are safe or explicitly assigned.
+
 ## 验证
 
 Docs-only 整理：
