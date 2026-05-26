@@ -71,6 +71,12 @@ Date: `2026-05-18`
 
 该 tranche 关闭的是 structural / refs-only consumption 证据：OPL scaffold、pack compiler、generated interfaces、conformance 和 readiness 能重复消费临时新 Agent 样本和真实 OMA repo。它不声明 OMA managed install/update、App live rendering、owner receipt scaleout、domain ready、artifact authority、production ready 或 long-soak 完成。
 
+## 2026-05-26 new-agent template consumption refresh
+
+本轮在 `codex/opl-template-consumption-proof-20260526` 隔离 worktree 重新运行 `opl agents scaffold --consumption-evidence`，对 `award-foundry`、`thesis-foundry`、`review-foundry` 三个默认临时新 Agent 样本执行 generate -> scaffold validation -> standard conformance -> agent readiness -> App/operator projection -> cleanup。三样本均 `passed`；每个样本写入 30 个模板文件、消费 5 个 pack path、观察 1 个默认 `codex_cli` executor binding、解析 1 个 quality gate ref，并在 `surface_consumption_proof` 中读到 `conformance_status=passed`、`readiness_status=passed_with_production_evidence_tail`、`production_evidence_tail_count=2`、App/operator projection `status=app_operator_projection_consumable`。cohort summary 读为 `sample_count=3`、`passed_sample_count=3`、`blocked_sample_count=0`、`all_samples_passed=true`、`consumed_surface_count_per_sample=4`，消费 surface 为 scaffold validation、standard agent conformance、agent readiness 和 App/operator projection。
+
+同轮 focused tests 运行 `node --experimental-strip-types --test tests/src/cli/cases/agents-scaffold.test.ts tests/src/cli/cases/runtime-app-operator-drilldown-summary.test.ts`，结果 11/11 通过。该 refresh 只刷新 structural / refs-only consumption evidence：证明默认新 Agent 模板仍可重复被 scaffold、conformance、readiness 和 App/operator read model 消费；不声明 App live rendering、managed install/update、owner receipt、domain ready、artifact authority、production ready、OMA 默认 promotion 或 family production ready。
+
 ## 2026-05-22 domain-dispatch refs-only ledger tranche
 
 本轮 OPL domain-dispatch workorder 从逐条 route 列表，收敛到 group-first、identity-guarded、refs-only ledger consumption：

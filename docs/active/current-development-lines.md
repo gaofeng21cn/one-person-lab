@@ -57,7 +57,7 @@ dated proof、receipt 事件、具体命令输出和阶段 closeout 摘要归档
    MAS 完成真实 paper-line provider apply 证据；MAG/RCA 分别完成 controlled grant / visual stage attempt、owner receipt / no-regression evidence、expected receipt instance、monitor freshness 和 long SLO。
 
 7. `new_domain_admission`
-   新 domain 只按 OPL scaffold、descriptor、stage/action/memory/artifact locator、authority function ABI、stage evidence workorder policy 和 docs taxonomy 接入；旧 gateway/frontdoor/local-runtime 路线已退役且不得恢复。OMA / New Agent 已有 structural consumption proof；production-consumption follow-through 现在按 managed install/update、App live path、owner receipt / typed blocker scaleout 和 long-soak 四个 gate 进入 App/framework 默认读面，当前四类 gate 均有 observed refs，OMA production-consumption ready；后续重点是更多真实 target patch/rerun/owner receipt 样本，而不是把 OMA ready 外推成目标 domain ready、family production ready 或默认 promotion。
+   新 domain 只按 OPL scaffold、descriptor、stage/action/memory/artifact locator、authority function ABI、stage evidence workorder policy 和 docs taxonomy 接入；旧 gateway/frontdoor/local-runtime 路线已退役且不得恢复。OMA / New Agent 已有 structural consumption proof；2026-05-26 fresh `opl agents scaffold --consumption-evidence` 再次让 `award-foundry`、`thesis-foundry`、`review-foundry` 三个临时样本穿过 generate、scaffold validation、standard conformance、agent readiness 和 App/operator projection，三样本均 `passed`，每个样本消费 5 个 pack path 和 4 类 surface，并按 ephemeral policy 清理临时目录。production-consumption follow-through 现在按 managed install/update、App live path、owner receipt / typed blocker scaleout 和 long-soak 四个 gate 进入 App/framework 默认读面，当前四类 gate 均有 observed refs，OMA production-consumption ready；后续重点是更多真实 target patch/rerun/owner receipt 样本，而不是把 OMA ready 外推成目标 domain ready、family production ready 或默认 promotion。
 
 ## 内容线路
 
