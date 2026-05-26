@@ -28,18 +28,6 @@ export function buildOplRecommendedSkillSpecs(options: {
       supports: ['planning', 'debugging', 'verification', 'branch_finish', 'skill_methodology'],
     },
     {
-      skill_id: 'opl-meta-agent',
-      label: 'OPL Meta Agent skill',
-      required: false,
-      source: 'skills_manager',
-      expected_paths: [
-        path.join(skillsManagerHome, 'skills', 'opl-meta-agent', 'SKILL.md'),
-        ...(packagedSkillsRoot ? [path.join(packagedSkillsRoot, 'opl-meta-agent', 'SKILL.md')] : []),
-      ],
-      install_hint: 'Install the OPL Meta Agent skill so Codex can design, test, and improve OPL-compatible Foundry Agents.',
-      supports: ['opl_meta_agent', 'agent_foundry', 'agent_lab'],
-    },
-    {
       skill_id: 'officecli',
       label: 'officecli core skill',
       required: false,

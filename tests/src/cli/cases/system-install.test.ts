@@ -468,11 +468,11 @@ test('recommended system companion skills keep family domain skills plugin-only 
     };
 
     const syncedById = new Map(output.install.companion_skill_sync.items.map((item) => [item.skill_id, item.status]));
-    for (const skillId of ['mas', 'mag', 'rca']) {
+    for (const skillId of ['mas', 'mag', 'rca', 'opl-meta-agent']) {
       assert.equal(syncedById.has(skillId), false);
       assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillId, 'SKILL.md')), false);
     }
-    for (const skillId of ['opl-meta-agent', 'mineru-document-extractor']) {
+    for (const skillId of ['mineru-document-extractor']) {
       assert.equal(syncedById.get(skillId), 'synced');
       assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillId, 'SKILL.md')), true);
     }

@@ -56,6 +56,13 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
     repo_name: 'redcube-ai',
     legacy_standalone_mcp_server_ids: ['redcube-ai', 'redcube', 'rca'],
   },
+  {
+    module_id: 'oplmetaagent',
+    marketplace_id: 'opl-meta-agent-local',
+    plugin_id: 'opl-meta-agent',
+    repo_name: 'opl-meta-agent',
+    legacy_standalone_mcp_server_ids: ['opl-meta-agent', 'oplmetaagent', 'oma'],
+  },
 ];
 
 function resolveHomeDir() {

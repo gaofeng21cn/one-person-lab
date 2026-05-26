@@ -251,7 +251,36 @@ test('system startup-maintenance installs clean managed modules and returns App 
     for (const skillName of ['mas', 'mag', 'rca']) {
       assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillName, 'SKILL.md')), false);
     }
-    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'opl-meta-agent', 'SKILL.md')), true);
+    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'opl-meta-agent', 'SKILL.md')), false);
+    assert.equal(
+      fs.existsSync(path.join(
+        homeRoot,
+        'opl-state',
+        'generated-codex-plugins',
+        'opl-meta-agent-local',
+        'plugins',
+        'opl-meta-agent',
+        '.codex-plugin',
+        'plugin.json',
+      )),
+      true,
+    );
+    assert.equal(
+      fs.existsSync(path.join(
+        homeRoot,
+        'opl-state',
+        'generated-codex-plugins',
+        'opl-meta-agent-local',
+        'plugins',
+        'opl-meta-agent',
+        'skills',
+        'opl-meta-agent',
+        'SKILL.md',
+      )),
+      true,
+    );
+    const codexConfig = fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8');
+    assert.match(codexConfig, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
     const previousStateDir = process.env.OPL_STATE_DIR;
     process.env.OPL_STATE_DIR = path.join(homeRoot, 'opl-state');
     try {

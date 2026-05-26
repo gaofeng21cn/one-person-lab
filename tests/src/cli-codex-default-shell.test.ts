@@ -419,14 +419,16 @@ exit 0
 test('opl skill list discovers the family plugin packs through the configured sibling workspace root', () => {
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-list-'));
   const { workspaceRoot, syncLogPath } = createFakeFamilySkillWorkspace(captureDir);
+  const stateDir = path.join(captureDir, 'opl-state');
 
   try {
-  const output = runCli(['skill', 'list'], {
-    OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
-  });
+    const output = runCli(['skill', 'list'], {
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+      OPL_STATE_DIR: stateDir,
+    });
 
-  assert.equal(output.skill_catalog.summary.total, 4);
-  assert.equal(output.skill_catalog.summary.ready_to_sync, 4);
+    assert.equal(output.skill_catalog.summary.total, 4);
+    assert.equal(output.skill_catalog.summary.ready_to_sync, 4);
     assert.deepEqual(
       output.skill_catalog.packs.map((entry: { domain_id: string }) => entry.domain_id),
       ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent'],
@@ -437,16 +439,23 @@ test('opl skill list discovers the family plugin packs through the configured si
     );
     assert.match(output.skill_catalog.packs[0].plugin_manifest_path, /plugins\/mas\/\.codex-plugin\/plugin\.json$/);
     assert.match(output.skill_catalog.packs[0].skill_entry_path, /plugins\/mas\/skills\/mas\/SKILL\.md$/);
-  assert.deepEqual(
-    output.skill_catalog.packs.map((entry: { skill_entry_valid: boolean }) => entry.skill_entry_valid),
-    [true, true, true, false],
-  );
-  const metaPack = output.skill_catalog.packs.find((entry: { domain_id: string }) => entry.domain_id === 'oplmetaagent');
-  assert.equal(metaPack?.plugin_manifest_found, false);
-  assert.equal(metaPack?.installer_found, false);
-  assert.equal(metaPack?.generated_skill_surface_ready, true);
-  assert.equal(metaPack?.ready_to_sync, true);
-  assert.equal(fs.existsSync(syncLogPath), false);
+    assert.deepEqual(
+      output.skill_catalog.packs.map((entry: { skill_entry_valid: boolean }) => entry.skill_entry_valid),
+      [true, true, true, false],
+    );
+    const metaPack = output.skill_catalog.packs.find((entry: { domain_id: string }) => entry.domain_id === 'oplmetaagent');
+    assert.equal(metaPack?.plugin_manifest_found, false);
+    assert.equal(metaPack?.installer_found, false);
+    assert.equal(metaPack?.generated_skill_surface_ready, true);
+    assert.equal(metaPack?.source_kind, 'opl_generated_plugin_surface');
+    assert.equal(metaPack?.ready_to_sync, true);
+    assert.deepEqual(metaPack?.command_preview?.slice(0, 3), ['opl', 'agents', 'interfaces']);
+    const previewOutput = runCli(metaPack.command_preview.slice(1), {
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+      OPL_STATE_DIR: stateDir,
+    });
+    assert.equal(previewOutput.generated_agent_interfaces.status, 'ready');
+    assert.equal(fs.existsSync(syncLogPath), false);
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -621,9 +630,25 @@ test('opl skill sync runs the lightweight family plugin installers and returns m
     assert.equal(output.skill_sync.packs[0].installer_result.repo, 'med-autoscience');
     assert.equal(output.skill_sync.packs[1].installer_result.repo, 'med-autogrant');
     assert.equal(output.skill_sync.packs[2].installer_result.repo, 'redcube-ai');
-    assert.equal(output.skill_sync.packs[3].installer_result.generated_surface, 'opl_generated_skill_descriptor');
+    assert.equal(output.skill_sync.packs[3].installer_result.generated_surface, 'opl_generated_codex_plugin_descriptor');
+    assert.match(
+      output.skill_sync.packs[3].installer_result.generated_codex_plugin.plugin_root,
+      /generated-codex-plugins\/opl-meta-agent-local\/plugins\/opl-meta-agent$/,
+    );
+    assert.equal(
+      fs.existsSync(output.skill_sync.packs[3].installer_result.generated_codex_plugin.plugin_manifest_path),
+      true,
+    );
+    assert.equal(
+      fs.existsSync(output.skill_sync.packs[3].installer_result.generated_codex_plugin.marketplace_path),
+      true,
+    );
+    assert.equal(
+      fs.existsSync(output.skill_sync.packs[3].installer_result.generated_codex_plugin.codex_plugin_cache_path),
+      true,
+    );
     assert.equal(output.skill_sync.codex_plugin_registry.surface_id, 'opl_codex_plugin_registry');
-    assert.equal(output.skill_sync.codex_plugin_registry.summary.registered, 3);
+    assert.equal(output.skill_sync.codex_plugin_registry.summary.registered, 4);
     assert.equal(output.skill_sync.codex_plugin_registry.summary.removed_standalone_mcp_servers, 1);
     assert.equal(output.skill_sync.companion_skills.surface_id, 'opl_companion_skill_sync');
     assert.equal(output.skill_sync.companion_skills.mode, 'observe');
@@ -631,23 +656,29 @@ test('opl skill sync runs the lightweight family plugin installers and returns m
     for (const skillName of ['mas', 'mag', 'rca']) {
       assert.equal(fs.existsSync(path.join(homeDir, '.codex', 'skills', skillName, 'SKILL.md')), false);
     }
-    {
-      const skillName = 'opl-meta-agent';
-      const skillPath = path.join(homeDir, '.codex', 'skills', skillName, 'SKILL.md');
-      const metadataPath = path.join(homeDir, '.codex', 'skills', skillName, 'agents', 'openai.yaml');
-      const content = fs.readFileSync(skillPath, 'utf8');
-      const metadata = fs.readFileSync(metadataPath, 'utf8');
-      assert.match(content, /^---\nname: /);
-      assert.doesNotMatch(content, /test skill/i);
-      assert.match(metadata, /display_name: "OPL Meta Agent"/);
-      assert.match(metadata, new RegExp(`default_prompt: "Use \\$${skillName}\\b`));
-    }
+    assert.equal(fs.existsSync(path.join(homeDir, '.codex', 'skills', 'opl-meta-agent', 'SKILL.md')), false);
+    assert.equal(
+      fs.existsSync(path.join(
+        homeDir,
+        '.codex',
+        'plugins',
+        'cache',
+        'opl-meta-agent-local',
+        'opl-meta-agent',
+        '0.1.0',
+        'skills',
+        'opl-meta-agent',
+        'SKILL.md',
+      )),
+      true,
+    );
     const config = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
     assert.match(config, /\[mcp_servers\.sentrux\]/);
     assert.doesNotMatch(config, /\[mcp_servers\.redcube-ai\]/);
     assert.match(config, /\[plugins\."mas@mas-local"\]/);
     assert.match(config, /\[plugins\."mag@mag-local"\]/);
     assert.match(config, /\[plugins\."rca@rca-local"\]/);
+    assert.match(config, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });

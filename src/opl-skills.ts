@@ -23,7 +23,7 @@ export const resolveDefaultFamilyWorkspaceRoot = resolveDefaultFamilyWorkspaceRo
 export const resolveFamilyWorkspaceRootFromRepoRoot = resolveFamilyWorkspaceRootFromRepoRootImpl;
 
 type SkillPackInstallerKind = 'bash' | 'node';
-type SkillPackSourceKind = 'repo_plugin_installer' | 'opl_generated_skill_surface';
+type SkillPackSourceKind = 'repo_plugin_installer' | 'opl_generated_plugin_surface';
 
 type SkillPackSpec = {
   domain_id: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent';
@@ -64,6 +64,7 @@ type InspectFamilySkillPack = {
 type SyncFamilySkillPack = InspectFamilySkillPack & {
   sync_status: 'synced' | 'skipped';
   installer_result: Record<string, unknown> | null;
+  registry_repo_root: string | null;
   stdout: string;
   stderr: string;
 };
@@ -122,7 +123,7 @@ const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
     label: 'OPL Meta Agent',
     plugin_name: 'opl-meta-agent',
     canonical_plugin_name: 'opl-meta-agent',
-    source_kind: 'opl_generated_skill_surface',
+    source_kind: 'opl_generated_plugin_surface',
     installer_kind: 'node',
     installer_relative_paths: [],
   },
@@ -168,6 +169,27 @@ function normalizeOptionalString(value: string | undefined | null) {
 
 function resolveCodexHome(home: string) {
   return normalizeOptionalString(process.env.CODEX_HOME) ?? path.join(home, '.codex');
+}
+
+function resolveOplStateDirForHome(home?: string) {
+  const explicitStateDir = normalizeOptionalString(process.env.OPL_STATE_DIR);
+  if (explicitStateDir) {
+    return path.resolve(explicitStateDir);
+  }
+  if (home) {
+    return path.join(path.resolve(home), 'Library', 'Application Support', 'OPL', 'state');
+  }
+  return resolveOplStatePaths().state_dir;
+}
+
+function resolveGeneratedPluginRootForName(canonicalPluginName: string, home?: string) {
+  return path.join(
+    resolveOplStateDirForHome(home),
+    'generated-codex-plugins',
+    `${canonicalPluginName}-local`,
+    'plugins',
+    canonicalPluginName,
+  );
 }
 
 function normalizeDomainSelection(domains: string[] | undefined) {
@@ -221,6 +243,14 @@ function resolveRepoRoot(spec: SkillPackSpec) {
 }
 
 function buildPluginManifestPath(spec: SkillPackSpec, repoRoot: string) {
+  if (spec.source_kind === 'opl_generated_plugin_surface') {
+    return path.join(
+      resolveGeneratedPluginRootForName(spec.canonical_plugin_name),
+      '.codex-plugin',
+      'plugin.json',
+    );
+  }
+
   return resolveFirstExistingPath([
     path.join(repoRoot, 'plugins', spec.canonical_plugin_name, '.codex-plugin', 'plugin.json'),
     path.join(repoRoot, 'plugins', spec.plugin_name, '.codex-plugin', 'plugin.json'),
@@ -228,6 +258,15 @@ function buildPluginManifestPath(spec: SkillPackSpec, repoRoot: string) {
 }
 
 function buildSkillEntryPath(spec: SkillPackSpec, repoRoot: string) {
+  if (spec.source_kind === 'opl_generated_plugin_surface') {
+    return path.join(
+      resolveGeneratedPluginRootForName(spec.canonical_plugin_name),
+      'skills',
+      spec.canonical_plugin_name,
+      'SKILL.md',
+    );
+  }
+
   return resolveFirstExistingPath([
     path.join(repoRoot, 'plugins', spec.canonical_plugin_name, 'skills', spec.canonical_plugin_name, 'SKILL.md'),
     path.join(repoRoot, 'plugins', spec.plugin_name, 'skills', spec.plugin_name, 'SKILL.md'),
@@ -256,7 +295,7 @@ function buildInstallerCommandPreview(
     sharedArgs.push('--home', home);
   }
 
-  if (spec.source_kind === 'opl_generated_skill_surface') {
+  if (spec.source_kind === 'opl_generated_plugin_surface') {
     return ['opl', 'agents', 'interfaces', '--repo-dir', repoRoot, '--format', 'skill'];
   }
 
@@ -374,7 +413,7 @@ function buildRepoGeneratedSkillBundle(repoRoot: string) {
 }
 
 function inspectGeneratedSkillSurface(spec: SkillPackSpec, repoRoot: string) {
-  if (spec.source_kind !== 'opl_generated_skill_surface') {
+  if (spec.source_kind !== 'opl_generated_plugin_surface') {
     return {
       ready: false,
       status: null,
@@ -481,8 +520,104 @@ function syncCodexSkillMirror(inspected: InspectFamilySkillPack, home?: string) 
   };
 }
 
-function writeOplGeneratedSkillSurface(inspected: InspectFamilySkillPack, home?: string) {
-  if (inspected.source_kind !== 'opl_generated_skill_surface' || !inspected.generated_skill_surface_ready) {
+function buildOplGeneratedSkillMarkdown(
+  inspected: InspectFamilySkillPack,
+  descriptors: Array<Record<string, unknown>>,
+) {
+  const workflowLines = descriptors.map((descriptor) => [
+    `- \`${String(descriptor.action_id ?? descriptor.command_contract_id ?? 'unknown_action')}\`: ${String(descriptor.summary ?? '').trim()}`,
+    `  Command contract: \`${String(descriptor.command_contract_id ?? 'unknown_contract')}\``,
+  ].join('\n')).join('\n');
+
+  return [
+    '---',
+    `name: ${inspected.canonical_plugin_name}`,
+    'description: Use when Codex should operate OPL Meta Agent to design, test, improve, or take over testing for OPL-compatible Foundry Agents.',
+    '---',
+    '',
+    '# OPL Meta Agent',
+    '',
+    'Use this skill for OPL Meta Agent foundry workflows. This surface is generated by OPL Framework from the OMA contract pack and packaged as an OPL-owned Codex plugin.',
+    '',
+    '## Generated Action Contracts',
+    '',
+    workflowLines || '- No generated action contracts were exposed.',
+    '',
+    '## Authority Boundary',
+    '',
+    '- OPL owns the generated Skill and Codex plugin surfaces.',
+    '- OPL Meta Agent owns agent-building semantics and refs-only work-order materialization.',
+    '- Do not treat generated interface readiness as target domain ready, production ready, artifact ready, or quality verdict.',
+    '',
+  ].join('\n');
+}
+
+function buildOplGeneratedSkillAgentMetadata(inspected: InspectFamilySkillPack) {
+  return [
+    'interface:',
+    '  display_name: "OPL Meta Agent"',
+    '  short_description: "Foundry Agent for OPL-compatible knowledge-work agents"',
+    `  default_prompt: "Use $${inspected.canonical_plugin_name} to build, test, or improve an OPL-compatible Foundry Agent."`,
+    '',
+  ].join('\n');
+}
+
+function writeJsonFile(filePath: string, value: unknown) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+}
+
+function resolveGeneratedPluginRoot(inspected: InspectFamilySkillPack, home?: string) {
+  return resolveGeneratedPluginRootForName(inspected.canonical_plugin_name, home);
+}
+
+function writeGeneratedPluginMarketplace(inspected: InspectFamilySkillPack, pluginRoot: string) {
+  const marketplacePath = path.join(path.dirname(path.dirname(pluginRoot)), '.agents', 'plugins', 'marketplace.json');
+  writeJsonFile(marketplacePath, {
+    name: `${inspected.canonical_plugin_name}-local`,
+    interface: {
+      displayName: 'OPL Generated Family Plugins',
+    },
+    plugins: [
+      {
+        name: inspected.canonical_plugin_name,
+        source: {
+          source: 'local',
+          path: `./plugins/${inspected.canonical_plugin_name}`,
+        },
+        policy: {
+          installation: 'AVAILABLE',
+          authentication: 'ON_INSTALL',
+        },
+        category: 'Productivity',
+      },
+    ],
+  });
+  return marketplacePath;
+}
+
+function syncGeneratedPluginCache(
+  inspected: InspectFamilySkillPack,
+  pluginRoot: string,
+  home: string,
+  version: string,
+) {
+  const cacheRoot = path.join(
+    resolveCodexHome(home),
+    'plugins',
+    'cache',
+    `${inspected.canonical_plugin_name}-local`,
+    inspected.canonical_plugin_name,
+    version,
+  );
+  fs.rmSync(cacheRoot, { recursive: true, force: true });
+  fs.mkdirSync(path.dirname(cacheRoot), { recursive: true });
+  fs.cpSync(pluginRoot, cacheRoot, { recursive: true });
+  return cacheRoot;
+}
+
+function writeOplGeneratedPluginSurface(inspected: InspectFamilySkillPack, home?: string) {
+  if (inspected.source_kind !== 'opl_generated_plugin_surface' || !inspected.generated_skill_surface_ready) {
     return null;
   }
 
@@ -496,53 +631,75 @@ function writeOplGeneratedSkillSurface(inspected: InspectFamilySkillPack, home?:
   const descriptors = recordList(skillBlock?.descriptors);
   const codexSkillDir = path.join(resolveCodexHome(resolvedHome), 'skills', inspected.canonical_plugin_name);
   fs.rmSync(codexSkillDir, { recursive: true, force: true });
-  fs.mkdirSync(path.join(codexSkillDir, 'agents'), { recursive: true });
-  const workflowLines = descriptors.map((descriptor) => [
-    `- \`${String(descriptor.action_id ?? descriptor.command_contract_id ?? 'unknown_action')}\`: ${String(descriptor.summary ?? '').trim()}`,
-    `  Command contract: \`${String(descriptor.command_contract_id ?? 'unknown_contract')}\``,
-  ].join('\n')).join('\n');
+
+  const pluginRoot = resolveGeneratedPluginRoot(inspected, resolvedHome);
+  const pluginVersion = '0.1.0';
+  fs.rmSync(pluginRoot, { recursive: true, force: true });
+  fs.mkdirSync(path.join(pluginRoot, 'skills', inspected.canonical_plugin_name, 'agents'), { recursive: true });
+  writeJsonFile(path.join(pluginRoot, '.codex-plugin', 'plugin.json'), {
+    name: inspected.canonical_plugin_name,
+    version: pluginVersion,
+    description: 'OPL-generated Codex plugin shell for OPL Meta Agent.',
+    author: {
+      name: 'Gao Feng',
+      url: 'https://github.com/gaofeng21cn',
+    },
+    homepage: 'https://github.com/gaofeng21cn/opl-meta-agent',
+    repository: 'https://github.com/gaofeng21cn/opl-meta-agent',
+    license: 'Apache-2.0',
+    keywords: [
+      'opl',
+      'meta-agent',
+      'codex',
+      'foundry-agent',
+    ],
+    skills: './skills/',
+    interface: {
+      displayName: 'OPL Meta Agent',
+      shortDescription: 'Foundry Agent for OPL-compatible agents.',
+      longDescription: 'Adds an OPL-generated Codex plugin entry for OPL Meta Agent while preserving OMA as a standard declarative domain pack with OPL-owned generated surfaces.',
+      developerName: 'Gao Feng',
+      category: 'Productivity',
+      capabilities: [
+        'Interactive',
+        'Write',
+      ],
+      websiteURL: 'https://github.com/gaofeng21cn/opl-meta-agent',
+      defaultPrompt: [
+        'Build an OPL-compatible agent from this natural-language request.',
+        'Take over testing for this existing OPL-compatible agent repo.',
+        'Improve this target agent from an Agent Lab suite result.',
+      ],
+      brandColor: '#3F6FB5',
+    },
+  });
   fs.writeFileSync(
-    path.join(codexSkillDir, 'SKILL.md'),
-    [
-      '---',
-      `name: ${inspected.canonical_plugin_name}`,
-      'description: Use when Codex should operate OPL Meta Agent to design, test, improve, or take over testing for OPL-compatible Foundry Agents.',
-      '---',
-      '',
-      '# OPL Meta Agent',
-      '',
-      'Use this skill for OPL Meta Agent foundry workflows. This surface is generated by OPL Framework from the OMA contract pack; the OMA repo does not own a repo-local Codex plugin wrapper.',
-      '',
-      '## Generated Action Contracts',
-      '',
-      workflowLines || '- No generated action contracts were exposed.',
-      '',
-      '## Authority Boundary',
-      '',
-      '- OPL owns the generated Skill surface.',
-      '- OPL Meta Agent owns agent-building semantics and refs-only work-order materialization.',
-      '- Do not treat generated interface readiness as target domain ready, production ready, artifact ready, or quality verdict.',
-      '',
-    ].join('\n'),
+    path.join(pluginRoot, 'skills', inspected.canonical_plugin_name, 'SKILL.md'),
+    buildOplGeneratedSkillMarkdown(inspected, descriptors),
     'utf8',
   );
   fs.writeFileSync(
-    path.join(codexSkillDir, 'agents', 'openai.yaml'),
-    [
-      'interface:',
-      '  display_name: "OPL Meta Agent"',
-      '  short_description: "Foundry Agent for OPL-compatible knowledge-work agents"',
-      `  default_prompt: "Use $${inspected.canonical_plugin_name} to build, test, or improve an OPL-compatible Foundry Agent."`,
-      '',
-    ].join('\n'),
+    path.join(pluginRoot, 'skills', inspected.canonical_plugin_name, 'agents', 'openai.yaml'),
+    buildOplGeneratedSkillAgentMetadata(inspected),
     'utf8',
+  );
+  const marketplacePath = writeGeneratedPluginMarketplace(inspected, pluginRoot);
+  const codexPluginCachePath = syncGeneratedPluginCache(
+    inspected,
+    pluginRoot,
+    resolvedHome,
+    pluginVersion,
   );
 
   return {
-    skill_root: codexSkillDir,
-    skill_entry_path: path.join(codexSkillDir, 'SKILL.md'),
+    plugin_root: pluginRoot,
+    plugin_manifest_path: path.join(pluginRoot, '.codex-plugin', 'plugin.json'),
+    marketplace_path: marketplacePath,
+    skill_entry_path: path.join(pluginRoot, 'skills', inspected.canonical_plugin_name, 'SKILL.md'),
+    codex_plugin_cache_path: codexPluginCachePath,
+    removed_standalone_skill_root: codexSkillDir,
     descriptor_count: descriptors.length,
-    source: 'opl_generated_agent_interface_bundle',
+    source: 'opl_generated_agent_interface_bundle_codex_plugin',
   };
 }
 
@@ -600,20 +757,22 @@ function runInstaller(
       ...inspected,
       sync_status: 'skipped',
       installer_result: null,
+      registry_repo_root: null,
       stdout: '',
       stderr: '',
     };
   }
 
-  if (inspected.source_kind === 'opl_generated_skill_surface') {
-    const codexSkillMirror = writeOplGeneratedSkillSurface(inspected, home);
+  if (inspected.source_kind === 'opl_generated_plugin_surface') {
+    const codexPluginSurface = writeOplGeneratedPluginSurface(inspected, home);
     return {
       ...inspected,
       sync_status: 'synced',
       installer_result: {
-        generated_surface: 'opl_generated_skill_descriptor',
-        generated_skill_mirror: codexSkillMirror,
+        generated_surface: 'opl_generated_codex_plugin_descriptor',
+        generated_codex_plugin: codexPluginSurface,
       },
+      registry_repo_root: codexPluginSurface ? path.dirname(path.dirname(codexPluginSurface.plugin_root)) : null,
       stdout: '',
       stderr: '',
     };
@@ -668,6 +827,7 @@ function runInstaller(
       ...(installerResult ?? {}),
       ...(codexSkillMirror ? { codex_skill_mirror: codexSkillMirror } : {}),
     },
+    registry_repo_root: inspected.repo_root,
     stdout: result.stdout ?? '',
     stderr: result.stderr ?? '',
   };
@@ -678,6 +838,7 @@ export function syncFamilySkillPackFromRepoRoot(
   repoRoot: string,
   options: Partial<{
     home: string;
+    registerPlugin?: boolean;
   }> = {},
 ) {
   const spec = FAMILY_SKILL_PACK_SPECS.find((entry) => entry.domain_id === domainId);
@@ -692,10 +853,26 @@ export function syncFamilySkillPackFromRepoRoot(
     );
   }
 
-  return runInstaller(
+  const result = runInstaller(
     inspectFamilySkillPackAtRepoRoot(spec, path.resolve(repoRoot)),
     normalizeOptionalString(options.home) ?? undefined,
   );
+  if (options.registerPlugin !== false && result.sync_status === 'synced' && result.registry_repo_root) {
+    const codexPluginRegistry = registerOplFamilyCodexPlugins(
+      [domainId],
+      new Map([[domainId, result.registry_repo_root]]),
+      normalizeOptionalString(options.home) ?? undefined,
+    );
+    return {
+      ...result,
+      installer_result: {
+        ...(result.installer_result ?? {}),
+        codex_plugin_registry: codexPluginRegistry,
+      },
+    };
+  }
+
+  return result;
 }
 
 export function readFamilySkillPacks(options: ReadFamilySkillPacksOptions = {}) {
@@ -728,11 +905,12 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
   const packs = inspectedPacks.map((inspected) => runInstaller(inspected, resolvedHome ?? undefined));
   const syncedFamilyPluginPacks = packs.filter((pack): pack is SyncFamilySkillPack & { domain_id: OplModuleId } => (
     pack.sync_status === 'synced'
-    && ['medautoscience', 'medautogrant', 'redcube'].includes(pack.domain_id)
+    && ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent'].includes(pack.domain_id)
+    && Boolean(pack.registry_repo_root)
   ));
   const codex_plugin_registry = registerOplFamilyCodexPlugins(
     syncedFamilyPluginPacks.map((pack) => pack.domain_id),
-    new Map(syncedFamilyPluginPacks.map((pack) => [pack.domain_id, pack.repo_root])),
+    new Map(syncedFamilyPluginPacks.map((pack) => [pack.domain_id, pack.registry_repo_root ?? pack.repo_root])),
     resolvedHome ?? undefined,
   );
   const companion_skills = syncOplCompanionSkills(resolvedHome ?? undefined, {

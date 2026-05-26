@@ -26,6 +26,7 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
     ['medautoscience', path.join(reposRoot, 'med-autoscience')],
     ['medautogrant', path.join(reposRoot, 'med-autogrant')],
     ['redcube', path.join(reposRoot, 'redcube-ai')],
+    ['oplmetaagent', path.join(reposRoot, 'opl-meta-agent-generated')],
   ]);
 
   try {
@@ -62,11 +63,11 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
       'utf8',
     );
 
-    const selectedModules: OplModuleId[] = ['medautoscience', 'medautogrant', 'redcube'];
+    const selectedModules: OplModuleId[] = ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent'];
     const result = registerOplFamilyCodexPlugins(selectedModules, repoPaths, homeRoot);
     const config = fs.readFileSync(configPath, 'utf8');
 
-    assert.equal(result.summary.registered, 3);
+    assert.equal(result.summary.registered, 4);
     assert.equal(result.summary.removed_standalone_mcp_servers, 2);
     assert.match(config, /\[mcp_servers\.sentrux\]/);
     assert.doesNotMatch(config, /\[mcp_servers\.redcube-ai\]/);
@@ -74,6 +75,7 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
     assert.match(config, /\[plugins\."mas@mas-local"\]/);
     assert.match(config, /\[plugins\."mag@mag-local"\]/);
     assert.match(config, /\[plugins\."rca@rca-local"\]/);
+    assert.match(config, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
