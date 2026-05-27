@@ -148,8 +148,8 @@ test('family-runtime attempt query marks missing telemetry as unavailable instea
   }
 });
 
-test('family-runtime attempt query exposes a unified stage execution log with intent actual usage and timeline', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-stage-execution-log-'));
+test('family-runtime attempt query exposes a unified stage progress log with intent actual usage and timeline', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-stage-progress-log-'));
   try {
     const created = runCli([
       'family-runtime',
@@ -249,11 +249,13 @@ db.close();`;
     assert.equal(result.status, 0, result.stderr);
 
     const query = runCli(['family-runtime', 'attempt', 'query', attemptId], familyRuntimeEnv(stateRoot));
-    const log = query.family_runtime_stage_attempt_query.stage_attempt_query.stage_execution_log;
+    const log = query.family_runtime_stage_attempt_query.stage_attempt_query.stage_progress_log;
 
-    assert.equal(log.surface_kind, 'opl_stage_execution_log');
+    assert.equal(log.surface_kind, 'opl_stage_progress_log');
     assert.equal(log.projection_scope, 'stage_attempt');
     assert.equal(log.stage_attempt_id, attemptId);
+    assert.equal(log.temporal_visibility, null);
+    assert.equal(log.temporal_webui_ref, null);
     assert.equal(log.intended_work.domain_id, 'medautoscience');
     assert.equal(log.intended_work.stage_id, 'paper-repair');
     assert.equal(log.intended_work.task_id, 'task-dm002-paper-repair');
@@ -280,7 +282,7 @@ db.close();`;
     assert.equal(log.authority_boundary.can_write_domain_truth, false);
     assert.equal(log.authority_boundary.can_authorize_quality_verdict, false);
     assert.equal(
-      query.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.stage_execution_log.stage_attempt_id,
+      query.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.stage_progress_log.stage_attempt_id,
       attemptId,
     );
   } finally {
@@ -358,9 +360,11 @@ test('runtime snapshot projects stage attempt usage pressure into workbench grou
     assert.equal(workbench.summary.usage_projection.observed_attempt_count, 2);
     assert.equal(workbench.summary.usage_projection.retry_pressure_attempt_count, 1);
     assert.equal(workbench.summary.usage_projection.retry_budget_exhausted_count, 1);
-    assert.equal(workbench.stage_execution_log.surface_kind, 'opl_stage_execution_log_summary');
-    assert.equal(workbench.stage_execution_log.summary.attempt_count, 2);
-    assert.equal(workbench.stage_execution_log.summary.usage_unavailable_attempt_count, 1);
+    assert.equal(workbench.stage_progress_log.surface_kind, 'opl_stage_progress_log_summary');
+    assert.equal(workbench.stage_progress_log.summary.attempt_count, 2);
+    assert.equal(workbench.stage_progress_log.summary.usage_unavailable_attempt_count, 1);
+    assert.equal(workbench.stage_progress_log.summary.temporal_visibility_count, 0);
+    assert.equal(workbench.stage_progress_log.summary.temporal_webui_ref_count, 0);
     assert.equal(workbench.groups.by_domain.medautoscience.usage_projection.observed_attempt_count, 1);
     assert.equal(workbench.groups.by_domain.medautogrant.usage_projection.retry_budget_exhausted_count, 1);
     assert.equal(deadLetterAttempt.usage_projection.retry_budget.pressure_status, 'retry_budget_exhausted');
@@ -373,7 +377,7 @@ test('runtime snapshot projects stage attempt usage pressure into workbench grou
       'retry_budget_exhausted',
     );
     assert.equal(
-      deadLetterItem.stage_attempt_workbench.stage_execution_log.stage_attempt_id,
+      deadLetterItem.stage_attempt_workbench.stage_progress_log.stage_attempt_id,
       deadLetterAttemptId,
     );
   } finally {

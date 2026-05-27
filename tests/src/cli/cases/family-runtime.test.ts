@@ -1,5 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
+import { TestWorkflowEnvironment } from '@temporalio/testing';
+
 import {
   assert,
   buildManifestCommand,
@@ -411,8 +413,57 @@ test('family-runtime temporal provider reports landed code separately from live 
     assert.equal(provider.capabilities.includes('stage_attempt_workflow_provider_code'), true);
     assert.equal(provider.details.worker_readiness.surface_kind, 'temporal_worker_lifecycle_status');
     assert.equal(provider.details.worker_readiness.readiness_status, 'not_configured');
+    assert.equal(provider.details.worker_readiness.visibility_readiness, null);
     assert.deepEqual(provider.details.worker_readiness.blockers, ['temporal_runtime_not_configured']);
   } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime temporal provider repair installs visibility Search Attributes when service is reachable', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-provider-repair-'));
+  const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
+  const testEnv = await TestWorkflowEnvironment.createLocal({
+    server: {
+      searchAttributes: [],
+    },
+  });
+  try {
+    const result = spawnSync(process.execPath, [
+      '--experimental-strip-types',
+      path.join(repoRoot, 'src', 'cli.ts'),
+      'family-runtime',
+      'repair',
+      '--provider',
+      'temporal',
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        OPL_STATE_DIR: stateRoot,
+        OPL_TEMPORAL_ADDRESS: testEnv.address,
+        OPL_TEMPORAL_NAMESPACE: testEnv.namespace ?? 'default',
+      },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const output = JSON.parse(result.stdout);
+    const repair = output.family_runtime_provider.temporal_visibility_repair;
+    assert.equal(repair.surface_kind, 'temporal_visibility_repair_receipt');
+    assert.equal(repair.repair_status, 'ready');
+    assert.deepEqual(repair.installed_search_attributes, [
+      'OplStageAttemptId',
+      'OplDomainId',
+      'OplStageId',
+      'OplTaskId',
+      'OplSourceFingerprint',
+      'OplExecutorKind',
+    ]);
+    assert.equal(repair.visibility_readiness.readiness_status, 'ready');
+    assert.equal(fs.existsSync(queueDb), true);
+  } finally {
+    await testEnv.teardown();
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

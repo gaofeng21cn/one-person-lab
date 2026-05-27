@@ -198,7 +198,7 @@ export function buildStageAttemptTrayItems(input: {
         workspace_source_intake: record(attempt.workspace_source_intake),
         memory_locator_index: record(attempt.memory_locator_index),
         usage_projection: record(attempt.usage_projection),
-        stage_execution_log: record(attempt.stage_execution_log),
+        stage_progress_log: record(attempt.stage_progress_log),
         package_export_lifecycle: record(attempt.package_export_lifecycle),
         action_routing: record(attempt.action_routing),
         transition_bridge_evidence: record(attempt.transition_bridge_evidence),

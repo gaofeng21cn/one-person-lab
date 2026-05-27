@@ -125,8 +125,10 @@ test('runtime tray full detail keeps manifest live refresh bounded and uses proj
       assert.equal(tray.domain_manifest_projection_cache.summary.cache_used_count, 1);
       assert.deepEqual(tray.domain_manifest_projection_cache.summary.live_failed_project_ids, ['medautoscience']);
       const cachedProject = tray.domain_manifest_projection_cache.projects[0];
+      assert.ok(cachedProject.cache);
       assert.equal(cachedProject.cache.source_status, 'command_timeout');
-      assert.equal(cachedProject.cache.source_error.timeout_ms, 5000);
+      assert.ok(cachedProject.cache.source_error && typeof cachedProject.cache.source_error === 'object');
+      assert.equal((cachedProject.cache.source_error as { timeout_ms?: number }).timeout_ms, 5000);
     } finally {
       restoreEnvVar('OPL_STATE_DIR', previousStateDir);
       restoreEnvVar('OPL_CONTRACTS_DIR', previousContractsDir);

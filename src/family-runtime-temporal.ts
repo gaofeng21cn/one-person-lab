@@ -22,6 +22,15 @@ export const SCHEDULER_TICK_ACTIVITY_NAME = 'SchedulerTickActivity';
 export const DEFAULT_TEMPORAL_TASK_QUEUE = 'opl-stage-attempts';
 export const TEMPORAL_MAX_INLINE_PAYLOAD_BYTES = 128 * 1024;
 
+export const TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTE_NAMES = [
+  'OplStageAttemptId',
+  'OplDomainId',
+  'OplStageId',
+  'OplTaskId',
+  'OplSourceFingerprint',
+  'OplExecutorKind',
+] as const;
+
 export const TEMPORAL_STAGE_ATTEMPT_SIGNALS = [
   'HumanGateSignal',
   'UserInstructionSignal',
@@ -147,6 +156,7 @@ export function buildTemporalStageAttemptWorkflowContract() {
     },
     signals: [...TEMPORAL_STAGE_ATTEMPT_SIGNALS],
     queries: [...TEMPORAL_STAGE_ATTEMPT_QUERIES],
+    required_search_attributes: [...TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTE_NAMES],
     default_task_queue: DEFAULT_TEMPORAL_TASK_QUEUE,
     scheduler_tick_timeout_policy: {
       workflow_run_timeout: SCHEDULER_TICK_WORKFLOW_RUN_TIMEOUT,

@@ -7,6 +7,10 @@ import {
 import {
   maybeRepairTemporalWorkerForProviderSlo,
 } from '../../../../src/family-runtime-provider-slo-executor.ts';
+import {
+  buildTemporalVisibilityReadiness,
+  buildTemporalWorkerLifecycleContract,
+} from '../../../../src/family-runtime-temporal-provider.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -16,6 +20,22 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
 }
 
 function temporalWorkerStatus(status: 'worker_not_ready' | 'ready') {
+  const visibilityReadiness = buildTemporalVisibilityReadiness({
+    namespace: 'default',
+    presentSearchAttributes: [
+      'OplStageAttemptId',
+      'OplDomainId',
+      'OplStageId',
+      'OplTaskId',
+      'OplSourceFingerprint',
+      'OplExecutorKind',
+    ],
+  });
+  const lifecycle = {
+    ...buildTemporalWorkerLifecycleContract(),
+    task_queue: 'opl-stage-attempts',
+    namespace: 'default',
+  };
   return {
     surface_kind: 'temporal_worker_lifecycle_status',
     provider_kind: 'temporal',
@@ -47,6 +67,7 @@ function temporalWorkerStatus(status: 'worker_not_ready' | 'ready') {
       address: '127.0.0.1:7233',
       server_reachable: true,
     },
+    visibility_readiness: visibilityReadiness,
     blockers: status === 'ready' ? [] : ['temporal_worker_not_ready'],
     repair_action: {
       surface_kind: 'temporal_worker_repair_action',
@@ -72,30 +93,7 @@ function temporalWorkerStatus(status: 'worker_not_ready' | 'ready') {
           'opl family-runtime residency proof --provider temporal --production',
       },
     },
-    lifecycle: {
-      surface_kind: 'temporal_worker_lifecycle_contract',
-      provider_kind: 'temporal',
-      workflow_name: 'StageAttemptWorkflow',
-      task_queue: 'opl-stage-attempts',
-      default_task_queue: 'opl-stage-attempts',
-      namespace: 'default',
-      worker_helper: 'runTemporalStageAttemptWorkerUntil',
-      fail_closed_when_unconfigured: true,
-      required_env: ['OPL_TEMPORAL_ADDRESS'],
-      activities: [
-        'codexStageActivity',
-        'domainHandlerDispatchActivity',
-      ],
-      workflow_bundle_policy: {
-        production_worker_uses_prebuilt_bundle: true,
-        workflows_path_allowed_for_managed_worker: false,
-        workflow_bundle_source_version_tied_to_worker_source_version: true,
-      },
-      authority_boundary: {
-        opl: 'worker_lifecycle_and_activity_transport_only',
-        domain: 'truth_quality_artifact_gate_owner',
-      },
-    },
+    lifecycle,
     authority_boundary: {
       opl: 'worker_lifecycle_readiness_projection_only',
       domain: 'truth_quality_artifact_gate_owner',

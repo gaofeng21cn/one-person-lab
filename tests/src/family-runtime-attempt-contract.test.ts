@@ -86,7 +86,9 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'owner_route_boundary',
     'control_loop_summary',
     'usage_projection',
-    'stage_execution_log',
+    'stage_progress_log',
+    'temporal_visibility',
+    'temporal_webui_ref',
     'resource_pressure',
     'observability_export',
   ]) {
@@ -122,33 +124,59 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'closeout_receipt_status',
     'route_impact',
     'usage_projection',
-    'stage_execution_log',
+    'stage_progress_log',
+    'temporal_visibility',
+    'temporal_webui_ref',
   ]) {
     assert.ok((contract.operator_visibility_fields as string[]).includes(field));
   }
   for (const field of [
     'control_loop_summary',
     'usage_projection',
-    'stage_execution_log',
+    'stage_progress_log',
     'resource_pressure',
     'runtime_observability_export',
   ]) {
     assert.ok((contract.stability_projection_fields as string[]).includes(field));
   }
-  const stageExecutionLog = contract.stage_execution_log_projection as Record<string, any>;
-  assert.equal(stageExecutionLog.surface_kind, 'opl_stage_execution_log');
-  assert.deepEqual(stageExecutionLog.required_sections, [
+  const temporalProvider = (contract.provider_lifecycle_contract as Record<string, any>).temporal;
+  assert.deepEqual(temporalProvider.required_search_attributes, [
+    'OplStageAttemptId',
+    'OplDomainId',
+    'OplStageId',
+    'OplTaskId',
+    'OplSourceFingerprint',
+    'OplExecutorKind',
+  ]);
+  assert.equal(
+    temporalProvider.visibility_payload_policy,
+    'refs_and_indexable_summary_only_no_transcript_artifact_memory_or_domain_body',
+  );
+  const stageProgressLog = contract.stage_progress_log_contract as Record<string, any>;
+  assert.equal(stageProgressLog.surface_kind, 'opl_stage_progress_log');
+  assert.equal(
+    stageProgressLog.projection_policy,
+    'temporal_backed_opl_refs_only_stage_observability_no_domain_truth',
+  );
+  assert.deepEqual(stageProgressLog.required_sections, [
     'intended_work',
     'actual_work',
     'timeline',
     'usage',
     'evidence_refs',
+    'temporal_visibility',
+    'temporal_webui_ref',
     'authority_boundary',
   ]);
-  assert.equal(stageExecutionLog.authority_boundary.can_execute_domain_action, false);
-  assert.equal(stageExecutionLog.authority_boundary.can_write_domain_truth, false);
-  assert.equal(stageExecutionLog.authority_boundary.can_authorize_quality_verdict, false);
-  assert.equal(stageExecutionLog.authority_boundary.provider_completion_is_domain_ready, false);
+  assert.equal(stageProgressLog.temporal_visibility_contract.surface_kind, 'temporal_stage_attempt_visibility');
+  assert.equal(stageProgressLog.temporal_visibility_contract.required_for_provider, 'temporal');
+  assert.equal(stageProgressLog.temporal_webui_ref_contract.surface_kind, 'temporal_webui_ref');
+  assert.equal(stageProgressLog.temporal_webui_ref_contract.ref_role, 'operator_debug_link_only');
+  assert.equal(stageProgressLog.temporal_webui_ref_contract.user_primary_app_surface, false);
+  assert.equal(stageProgressLog.authority_boundary.can_execute_domain_action, false);
+  assert.equal(stageProgressLog.authority_boundary.can_write_domain_truth, false);
+  assert.equal(stageProgressLog.authority_boundary.can_authorize_quality_verdict, false);
+  assert.equal(stageProgressLog.authority_boundary.provider_completion_is_domain_ready, false);
   const stabilityBoundary = contract.stability_projection_authority_boundary as Record<string, unknown>;
   assert.equal(stabilityBoundary.can_execute_domain_action, false);
   assert.equal(stabilityBoundary.can_change_executor, false);

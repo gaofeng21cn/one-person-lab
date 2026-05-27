@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { ScheduleAlreadyRunning, ScheduleNotFoundError, ScheduleOverlapPolicy } from '@temporalio/client';
+import temporalProto from '@temporalio/proto';
 import { WorkflowIdConflictPolicy, WorkflowIdReusePolicy } from '@temporalio/common';
 import { NativeConnection, Worker } from '@temporalio/worker';
 
@@ -14,6 +15,7 @@ import {
   guardTemporalStageAttemptWorkflowInputPayload,
   resolveTemporalNamespace,
   resolveTemporalTaskQueue,
+  TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTE_NAMES,
   SCHEDULER_TICK_WORKFLOW_RUN_TIMEOUT,
   SCHEDULER_TICK_WORKFLOW_NAME,
   type TemporalStageAttemptSignalKind,
@@ -23,10 +25,12 @@ import {
 } from './family-runtime-temporal.ts';
 import {
   buildTemporalWorkerLifecycleContract,
+  buildTemporalVisibilityReadiness,
   buildTemporalWorkerReadiness,
 } from './family-runtime-temporal-readiness.ts';
 export {
   buildTemporalWorkerLifecycleContract,
+  buildTemporalVisibilityReadiness,
   buildTemporalWorkerReadiness,
   resolveTemporalWorkerReadinessStatus,
   type TemporalWorkerReadinessStatus,
@@ -48,6 +52,9 @@ import {
   type TemporalWorkerPaths,
   withTemporalClient,
 } from './family-runtime-temporal-client.ts';
+import {
+  temporalStageAttemptTypedSearchAttributes,
+} from './family-runtime-temporal-visibility.ts';
 import {
   currentWorkerSourceVersion,
   processIsAlive,
@@ -85,6 +92,17 @@ type TemporalSchedulerInfoProjection = {
   running_actions?: unknown[];
 };
 
+const { temporal } = temporalProto;
+
+const TEMPORAL_SEARCH_ATTRIBUTE_VALUE_TYPES = {
+  OplStageAttemptId: temporal.api.enums.v1.IndexedValueType.INDEXED_VALUE_TYPE_KEYWORD,
+  OplDomainId: temporal.api.enums.v1.IndexedValueType.INDEXED_VALUE_TYPE_KEYWORD,
+  OplStageId: temporal.api.enums.v1.IndexedValueType.INDEXED_VALUE_TYPE_KEYWORD,
+  OplTaskId: temporal.api.enums.v1.IndexedValueType.INDEXED_VALUE_TYPE_KEYWORD,
+  OplSourceFingerprint: temporal.api.enums.v1.IndexedValueType.INDEXED_VALUE_TYPE_KEYWORD,
+  OplExecutorKind: temporal.api.enums.v1.IndexedValueType.INDEXED_VALUE_TYPE_KEYWORD,
+} as const;
+
 function workflowModulePath() {
   const extension = path.extname(fileURLToPath(import.meta.url)) === '.ts' ? '.ts' : '.js';
   return fileURLToPath(new URL(`./family-runtime-temporal-workflows${extension}`, import.meta.url));
@@ -111,6 +129,14 @@ export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths)
     || process.env.OPL_TEMPORAL_WORKER_STATUS?.trim() === 'ready';
   const serverReachable = address ? await probeTemporalServer(address) : false;
   const workerReady = Boolean(serverReachable && (pidAlive || envWorkerReady));
+  const visibilityReadiness = serverReachable
+    ? await inspectTemporalVisibilityReadiness({ paths }).catch(() =>
+        buildTemporalVisibilityReadiness({
+          namespace: resolveTemporalNamespace(),
+          presentSearchAttributes: [],
+        })
+      )
+    : null;
   const readiness = buildTemporalWorkerReadiness({
     address,
     addressSource,
@@ -129,6 +155,7 @@ export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths)
     managedWorkerWorkflowBundleSourceVersion: state?.workflow_bundle_source_version ?? null,
     staleWorkerPid: statePidAlive && !stateSourceCurrent && state ? state.pid : null,
     temporalServiceLifecycle: service,
+    visibilityReadiness,
   });
   if (state && !stateProcessAlive && state.status === 'ready') {
     removeTemporalWorkerState(paths);
@@ -138,6 +165,56 @@ export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths)
     surface_kind: 'temporal_worker_lifecycle_status',
     lifecycle_status: readiness.readiness_status,
   };
+}
+
+export async function inspectTemporalVisibilityReadiness(options: TemporalClientOptions = {}) {
+  return withTemporalClient(async (_client, connection) => {
+    const response = await connection.operatorService.listSearchAttributes({
+      namespace: resolveTemporalNamespace(),
+    });
+    return buildTemporalVisibilityReadiness({
+      namespace: resolveTemporalNamespace(),
+      presentSearchAttributes: Object.keys(response.customAttributes ?? {}),
+    });
+  }, options);
+}
+
+export async function ensureTemporalVisibilityReadiness(options: TemporalClientOptions = {}) {
+  return withTemporalClient(async (_client, connection) => {
+    const before = buildTemporalVisibilityReadiness({
+      namespace: resolveTemporalNamespace(),
+      presentSearchAttributes: Object.keys((await connection.operatorService.listSearchAttributes({
+        namespace: resolveTemporalNamespace(),
+      })).customAttributes ?? {}),
+    });
+    if (before.missing_search_attributes.length > 0) {
+      await connection.operatorService.addSearchAttributes({
+        namespace: resolveTemporalNamespace(),
+        searchAttributes: Object.fromEntries(before.missing_search_attributes.map((name) => [
+          name,
+          TEMPORAL_SEARCH_ATTRIBUTE_VALUE_TYPES[name as keyof typeof TEMPORAL_SEARCH_ATTRIBUTE_VALUE_TYPES],
+        ])),
+      });
+    }
+    const after = buildTemporalVisibilityReadiness({
+      namespace: resolveTemporalNamespace(),
+      presentSearchAttributes: Object.keys((await connection.operatorService.listSearchAttributes({
+        namespace: resolveTemporalNamespace(),
+      })).customAttributes ?? {}),
+    });
+    return {
+      surface_kind: 'temporal_visibility_repair_receipt',
+      provider_kind: 'temporal',
+      namespace: resolveTemporalNamespace(),
+      installed_search_attributes: before.missing_search_attributes,
+      visibility_readiness: after,
+      repair_status: after.readiness_status === 'ready' ? 'ready' : 'blocked',
+      authority_boundary: {
+        opl: 'temporal_visibility_metadata_repair_only',
+        domain: 'truth_quality_artifact_gate_owner',
+      },
+    };
+  }, options);
 }
 
 function signalNameFor(kind: TemporalStageAttemptSignalKind) {
@@ -164,11 +241,40 @@ export async function startTemporalStageAttemptWorkflow(
     buildTemporalStageAttemptWorkflowInput(attempt),
   );
   if (!resolveTemporalAddressForPaths(options.paths).address) requireTemporalAddress();
+  const visibilityReadiness = await inspectTemporalVisibilityReadiness(options);
+  if (visibilityReadiness.readiness_status !== 'ready') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Temporal provider requires OPL stage attempt Search Attributes before starting searchable stage attempts.',
+      {
+        provider_kind: 'temporal',
+        stage_attempt_id: attempt.stage_attempt_id,
+        workflow_id: attempt.workflow_id,
+        missing_search_attributes: visibilityReadiness.missing_search_attributes,
+        repair_action: visibilityReadiness.repair_action,
+      },
+    );
+  }
   return withTemporalClient(async (client) => {
     const handle = await client.workflow.start('StageAttemptWorkflow', {
       args: [workflowInput],
       taskQueue: resolveTemporalTaskQueue(),
       workflowId: attempt.workflow_id,
+      searchAttributes: temporalStageAttemptTypedSearchAttributes({
+        stageAttemptId: attempt.stage_attempt_id,
+        domainId: attempt.domain_id,
+        stageId: attempt.stage_id,
+        taskId: attempt.task_id,
+        sourceFingerprint: attempt.source_fingerprint,
+        executorKind: attempt.executor_kind,
+      }),
+      staticSummary: `OPL stage attempt ${attempt.stage_attempt_id}`,
+      staticDetails: [
+        `OPL stage attempt: ${attempt.stage_attempt_id}`,
+        `Domain: ${attempt.domain_id}`,
+        `Stage: ${attempt.stage_id}`,
+        `Executor: ${attempt.executor_kind}`,
+      ].join('\n'),
       workflowIdConflictPolicy: WorkflowIdConflictPolicy.USE_EXISTING,
       workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
     });
@@ -181,6 +287,8 @@ export async function startTemporalStageAttemptWorkflow(
       eagerly_started: handle.eagerlyStarted,
       namespace: resolveTemporalNamespace(),
       task_queue: resolveTemporalTaskQueue(),
+      search_attribute_refs: TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTE_NAMES
+        .map((name) => `temporal-search-attribute:${name}`),
       authority_boundary: {
         opl: 'temporal_workflow_transport_and_control_metadata_only',
         domain: 'truth_quality_artifact_gate_owner',

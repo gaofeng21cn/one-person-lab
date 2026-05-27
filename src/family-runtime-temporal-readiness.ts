@@ -3,6 +3,7 @@ import {
   resolveTemporalAddress,
   resolveTemporalNamespace,
   resolveTemporalTaskQueue,
+  TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTE_NAMES,
 } from './family-runtime-temporal.ts';
 
 export type TemporalWorkerReadinessStatus =
@@ -32,6 +33,28 @@ type TemporalWorkerReadinessInput = {
   managedWorkerWorkflowBundleSourceVersion?: string | null;
   staleWorkerPid?: number | null;
   temporalServiceLifecycle?: Record<string, unknown> | null;
+  visibilityReadiness?: TemporalVisibilityReadiness | null;
+};
+
+export type TemporalVisibilityReadiness = {
+  surface_kind: 'temporal_visibility_readiness';
+  provider_kind: 'temporal';
+  namespace: string;
+  required_search_attributes: string[];
+  present_search_attributes: string[];
+  missing_search_attributes: string[];
+  readiness_status: 'ready' | 'missing_search_attributes';
+  repair_action: {
+    surface_kind: 'temporal_visibility_repair_action';
+    provider_kind: 'temporal';
+    action_id: 'none' | 'install_temporal_search_attributes';
+    next_command: string | null;
+    required_before: 'searchable_stage_attempt_visibility';
+  };
+  authority_boundary: {
+    opl: 'temporal_visibility_metadata_readiness_only';
+    domain: 'truth_quality_artifact_gate_owner';
+  };
 };
 
 type ResolvedTemporalWorkerReadiness = {
@@ -202,6 +225,8 @@ export function buildTemporalWorkerLifecycleContract() {
       'codexStageActivity',
       'domainHandlerDispatchActivity',
     ],
+    required_search_attributes: [...TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTE_NAMES],
+    visibility_payload_policy: 'refs_and_indexable_summary_only_no_transcript_artifact_memory_or_domain_body',
     workflow_bundle_policy: {
       production_worker_uses_prebuilt_bundle: true,
       workflows_path_allowed_for_managed_worker: false,
@@ -209,6 +234,37 @@ export function buildTemporalWorkerLifecycleContract() {
     },
     authority_boundary: {
       opl: 'worker_lifecycle_and_activity_transport_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
+  };
+}
+
+export function buildTemporalVisibilityReadiness(input: {
+  namespace?: string | null;
+  presentSearchAttributes?: string[] | null;
+} = {}): TemporalVisibilityReadiness {
+  const namespace = input.namespace ?? resolveTemporalNamespace();
+  const present = input.presentSearchAttributes ?? [];
+  const missing = TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTE_NAMES
+    .filter((name) => !present.includes(name));
+  const ready = missing.length === 0;
+  return {
+    surface_kind: 'temporal_visibility_readiness',
+    provider_kind: 'temporal',
+    namespace,
+    required_search_attributes: [...TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTE_NAMES],
+    present_search_attributes: present,
+    missing_search_attributes: missing,
+    readiness_status: ready ? 'ready' : 'missing_search_attributes',
+    repair_action: {
+      surface_kind: 'temporal_visibility_repair_action',
+      provider_kind: 'temporal',
+      action_id: ready ? 'none' : 'install_temporal_search_attributes',
+      next_command: ready ? null : 'opl family-runtime provider repair --provider temporal',
+      required_before: 'searchable_stage_attempt_visibility',
+    },
+    authority_boundary: {
+      opl: 'temporal_visibility_metadata_readiness_only',
       domain: 'truth_quality_artifact_gate_owner',
     },
   };
@@ -253,6 +309,7 @@ export function buildTemporalWorkerReadiness(input: TemporalWorkerReadinessInput
         : null,
     stale_worker_pid: input.staleWorkerPid ?? null,
     temporal_service_lifecycle: input.temporalServiceLifecycle ?? null,
+    visibility_readiness: input.visibilityReadiness ?? null,
     blockers,
     repair_action: repairAction,
     lifecycle: buildTemporalWorkerLifecycleContract(),

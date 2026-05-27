@@ -150,15 +150,24 @@ export async function runFamilyRuntime(args: string[]) {
     if (parsed.mode === 'install' || parsed.mode === 'repair') {
       const providerKind = resolveFamilyRuntimeProviderKind(parsed.providerKind);
       const provider = ensureFamilyRuntimeProvider(providerKind, parsed.mode);
+      const temporalVisibilityRepair = providerKind === 'temporal' && parsed.mode === 'repair'
+        ? await (await temporalProviderModule()).ensureTemporalVisibilityReadiness({ paths })
+        : null;
       insertEvent(db, {
         eventType: `provider_${parsed.mode}`,
         source: 'opl-cli',
-        payload: { provider_kind: providerKind, status: provider.status, actions: provider.actions },
+        payload: {
+          provider_kind: providerKind,
+          status: temporalVisibilityRepair?.repair_status ?? provider.status,
+          actions: provider.actions,
+          temporal_visibility_repair: temporalVisibilityRepair,
+        },
       });
       return {
         version: 'g2',
         family_runtime_provider: {
           ...provider,
+          temporal_visibility_repair: temporalVisibilityRepair,
         },
       };
     }

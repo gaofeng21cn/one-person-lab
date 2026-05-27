@@ -1,8 +1,12 @@
 import type { StageAttemptUsageProjection } from './family-runtime-stage-attempt-usage.ts';
+import {
+  buildTemporalStageAttemptVisibility,
+  buildTemporalWebUiRef,
+} from './family-runtime-temporal-visibility.ts';
 
 type JsonRecord = Record<string, unknown>;
 
-export type StageExecutionLogInput = {
+export type StageProgressLogInput = {
   stageAttemptId: string;
   projectionScope?: string;
   providerKind: string;
@@ -88,7 +92,7 @@ function packetLikeRef(value: string) {
     || value.endsWith('/stage-packet.json');
 }
 
-function stagePacketRefs(input: StageExecutionLogInput) {
+function stagePacketRefs(input: StageProgressLogInput) {
   return uniqueStrings([
     ...input.activityEvents.filter(isRecord).flatMap((event) => refsFromUnknown(event.stage_packet_ref)),
     ...input.checkpointRefs.filter(packetLikeRef),
@@ -97,7 +101,7 @@ function stagePacketRefs(input: StageExecutionLogInput) {
   ]);
 }
 
-function activityEventRefs(input: StageExecutionLogInput) {
+function activityEventRefs(input: StageProgressLogInput) {
   return input.activityEvents
     .map((event, index) => isRecord(event)
       ? [
@@ -117,9 +121,9 @@ function latestActivityAt(events: JsonRecord[]) {
   return events.map((event) => stringValue(event.event_time)).filter((value): value is string => Boolean(value)).at(-1) ?? null;
 }
 
-function stageExecutionAuthorityBoundary() {
+function stageProgressAuthorityBoundary() {
   return {
-    opl: 'stage_execution_observability_projection_only',
+    opl: 'stage_progress_observability_projection_only',
     domain: 'truth_quality_artifact_gate_owner',
     provider: 'runtime_lifecycle_owner_not_domain_ready_owner',
     can_execute_domain_action: false,
@@ -131,7 +135,7 @@ function stageExecutionAuthorityBoundary() {
   };
 }
 
-export function buildStageExecutionLog(input: StageExecutionLogInput) {
+export function buildStageProgressLog(input: StageProgressLogInput) {
   const activityEvents = input.activityEvents.filter(isRecord);
   const ownerReceiptRefs = uniqueStrings([
     ...refsFromRecord(input.latestCloseout, [
@@ -173,13 +177,28 @@ export function buildStageExecutionLog(input: StageExecutionLogInput) {
   ]);
   const durationMsObserved = numberValue(input.usageProjection.duration.duration_ms_observed);
   const durationTelemetryStatus = Number(input.usageProjection.duration.observed_count) > 0 ? 'observed' : 'missing';
+  const temporalVisibility = buildTemporalStageAttemptVisibility({
+    providerKind: input.providerKind,
+    stageAttemptId: input.stageAttemptId,
+    workflowId: input.workflowId,
+    domainId: input.domainId,
+    stageId: input.stageId,
+    taskId: input.taskId,
+    sourceFingerprint: input.sourceFingerprint,
+    executorKind: input.executorKind,
+    providerRun: input.providerRun,
+  });
   return {
-    surface_kind: 'opl_stage_execution_log',
+    surface_kind: 'opl_stage_progress_log',
     projection_scope: input.projectionScope ?? 'stage_attempt',
-    projection_policy: 'opl_refs_only_observability_no_domain_truth',
+    projection_policy: 'temporal_backed_opl_refs_only_stage_observability_no_domain_truth',
     stage_attempt_id: input.stageAttemptId,
     domain_id: input.domainId,
     stage_id: input.stageId,
+    temporal_visibility: temporalVisibility,
+    temporal_webui_ref: temporalVisibility
+      ? buildTemporalWebUiRef(temporalVisibility)
+      : null,
     intended_work: {
       provider_kind: input.providerKind,
       executor_kind: input.executorKind,
@@ -248,6 +267,6 @@ export function buildStageExecutionLog(input: StageExecutionLogInput) {
       activity_event_refs: activityEventRefs(input),
       activity_event_count: activityEvents.length,
     },
-    authority_boundary: stageExecutionAuthorityBoundary(),
+    authority_boundary: stageProgressAuthorityBoundary(),
   };
 }

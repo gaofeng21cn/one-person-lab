@@ -1,11 +1,14 @@
 import { spawn, spawnSync } from 'node:child_process';
 import net from 'node:net';
 
+import { SearchAttributeType } from '@temporalio/common';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 
 import * as activities from '../../../../src/family-runtime-temporal-activities.ts';
-import { buildTemporalStageAttemptWorkflowInputForTest } from '../../../../src/family-runtime-temporal-provider.ts';
+import {
+  buildTemporalStageAttemptWorkflowInputForTest,
+} from '../../../../src/family-runtime-temporal-provider.ts';
 import {
   CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
   CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
@@ -53,7 +56,9 @@ type TemporalStageAttemptQueryOutput = {
         status: string;
         codex_stage_activity_timeout_policy: Record<string, unknown> | null;
         provider_run: Record<string, unknown>;
+        stage_progress_log: Record<string, any>;
       };
+      stage_progress_log: Record<string, any>;
       completion_boundary: {
         provider_completion_is_domain_ready: boolean;
       };
@@ -88,6 +93,21 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
     OPL_STATE_DIR: stateRoot,
     ...extra,
   };
+}
+
+function createSearchableTemporalTestEnvironment() {
+  return TestWorkflowEnvironment.createLocal({
+    server: {
+      searchAttributes: [
+        { name: 'OplStageAttemptId', type: SearchAttributeType.KEYWORD },
+        { name: 'OplDomainId', type: SearchAttributeType.KEYWORD },
+        { name: 'OplStageId', type: SearchAttributeType.KEYWORD },
+        { name: 'OplTaskId', type: SearchAttributeType.KEYWORD },
+        { name: 'OplSourceFingerprint', type: SearchAttributeType.KEYWORD },
+        { name: 'OplExecutorKind', type: SearchAttributeType.KEYWORD },
+      ],
+    },
+  });
 }
 
 test('family-runtime temporal attempt start fails closed when Temporal address is not configured', () => {
@@ -191,7 +211,7 @@ test('family-runtime temporal workflow input carries checkpoint stage packet and
 test('family-runtime tick starts MAS default executor dispatch as Temporal Codex writer workflow', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-default-start-'));
   const runtimeRoot = path.join(stateRoot, 'family-runtime');
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const testEnv = await createSearchableTemporalTestEnvironment();
   const taskQueue = `opl-stage-mas-default-${Date.now()}`;
   const previousEnv = {
     OPL_STATE_DIR: process.env.OPL_STATE_DIR,
@@ -248,7 +268,6 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
     process.env.OPL_TEMPORAL_WORKER_STATUS = '';
     process.env.OPL_TEMPORAL_WORKER_ENABLED = '';
     process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = 'git:mas-default-start-current';
-
     const dispatchRef = 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json';
     const enqueue = await runFamilyRuntime([
       'enqueue',
@@ -350,7 +369,7 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
 test('family-runtime queue inspect syncs a completed MAS default executor Temporal closeout', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-default-completed-'));
   const runtimeRoot = path.join(stateRoot, 'family-runtime');
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const testEnv = await createSearchableTemporalTestEnvironment();
   const taskQueue = `opl-stage-mas-default-completed-${Date.now()}`;
   const previousEnv = {
     OPL_STATE_DIR: process.env.OPL_STATE_DIR,
@@ -419,7 +438,6 @@ test('family-runtime queue inspect syncs a completed MAS default executor Tempor
     process.env.OPL_TEMPORAL_WORKER_STATUS = '';
     process.env.OPL_TEMPORAL_WORKER_ENABLED = '';
     process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = 'git:mas-default-completed-current';
-
     const dispatchRef = 'studies/002-dm/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json';
     const enqueue = await runFamilyRuntime([
       'enqueue',
@@ -683,7 +701,7 @@ test('family-runtime temporal attempt query keeps local ledger readable when Tem
 test('family-runtime temporal attempt query reads managed local service state when env address is absent', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-query-managed-'));
   const runtimeRoot = path.join(stateRoot, 'family-runtime');
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const testEnv = await createSearchableTemporalTestEnvironment();
   const taskQueue = `opl-stage-query-managed-${Date.now()}`;
   const { fixtureRoot: codexFixtureRoot, codexPath } = createTemporalCloseoutCodexFixture(
     ['receipt:managed-query'],
@@ -738,7 +756,6 @@ test('family-runtime temporal attempt query reads managed local service state wh
     process.env.OPL_TEMPORAL_WORKER_ENABLED = '';
     process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = 'git:query-managed-current';
     process.env.OPL_CODEX_BIN = codexPath;
-
     const created = await runFamilyRuntime([
       'attempt',
       'create',
@@ -792,6 +809,25 @@ test('family-runtime temporal attempt query reads managed local service state wh
     assert.ok(temporalQuery.query);
     assert.equal(['registered', 'running', 'checkpointed', 'completed'].includes(temporalQuery.query.status), true);
     assert.equal(temporalQuery.query.provider_kind, 'temporal');
+    const stageProgressLog = result.family_runtime_stage_attempt_query.stage_attempt_query.stage_progress_log;
+    assert.equal(stageProgressLog.surface_kind, 'opl_stage_progress_log');
+    assert.equal(stageProgressLog.temporal_visibility.surface_kind, 'temporal_stage_attempt_visibility');
+    assert.equal(stageProgressLog.temporal_visibility.workflow_id, attempt.workflow_id);
+    assert.deepEqual(stageProgressLog.temporal_visibility.search_attribute_refs, [
+      'temporal-search-attribute:OplStageAttemptId',
+      'temporal-search-attribute:OplDomainId',
+      'temporal-search-attribute:OplStageId',
+      'temporal-search-attribute:OplTaskId',
+      'temporal-search-attribute:OplSourceFingerprint',
+      'temporal-search-attribute:OplExecutorKind',
+    ]);
+    assert.equal(stageProgressLog.temporal_webui_ref.surface_kind, 'temporal_webui_ref');
+    assert.equal(stageProgressLog.temporal_webui_ref.ref_role, 'operator_debug_link_only');
+    assert.equal(
+      result.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility
+        .stage_progress_log.temporal_webui_ref.workflow_id,
+      attempt.workflow_id,
+    );
   } finally {
     for (const [key, value] of Object.entries(previousEnv)) {
       if (typeof value === 'string') {
@@ -809,7 +845,7 @@ test('family-runtime temporal attempt query reads managed local service state wh
 test('family-runtime temporal terminal failure is projected into local attempt query and inspect', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-failed-projection-'));
   const runtimeRoot = path.join(stateRoot, 'family-runtime');
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const testEnv = await createSearchableTemporalTestEnvironment();
   const taskQueue = `opl-stage-query-failed-${Date.now()}`;
   const previousEnv = {
     OPL_STATE_DIR: process.env.OPL_STATE_DIR,
@@ -864,7 +900,6 @@ test('family-runtime temporal terminal failure is projected into local attempt q
     process.env.OPL_TEMPORAL_WORKER_STATUS = '';
     process.env.OPL_TEMPORAL_WORKER_ENABLED = '';
     process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = 'git:query-failed-current';
-
     const created = await runFamilyRuntime([
       'attempt',
       'create',

@@ -28,6 +28,7 @@ import {
 } from '../../src/family-runtime-temporal-workflows.ts';
 import {
   buildTemporalStageAttemptWorkflowInputForTest,
+  buildTemporalVisibilityReadiness,
   buildTemporalSchedulerHealthProjection,
   buildTemporalStageAttemptReplayGateForTest,
   buildTemporalWorkerReadiness,
@@ -107,6 +108,45 @@ test('Temporal stage attempt contract exposes Codex runner total and no-output b
     contract.scheduler_tick_timeout_policy.stale_overlap_release_policy,
     'fail_scheduler_tick_workflow_when_worker_does_not_pick_up_workflow_or_activity',
   );
+  assert.deepEqual(contract.required_search_attributes, [
+    'OplStageAttemptId',
+    'OplDomainId',
+    'OplStageId',
+    'OplTaskId',
+    'OplSourceFingerprint',
+    'OplExecutorKind',
+  ]);
+});
+
+test('Temporal visibility readiness requires OPL stage attempt Search Attributes', () => {
+  const blocked = buildTemporalVisibilityReadiness({
+    namespace: 'opl-test',
+    presentSearchAttributes: ['OplStageAttemptId'],
+  });
+  const ready = buildTemporalVisibilityReadiness({
+    namespace: 'opl-test',
+    presentSearchAttributes: [
+      'OplStageAttemptId',
+      'OplDomainId',
+      'OplStageId',
+      'OplTaskId',
+      'OplSourceFingerprint',
+      'OplExecutorKind',
+    ],
+  });
+
+  assert.equal(blocked.readiness_status, 'missing_search_attributes');
+  assert.deepEqual(blocked.missing_search_attributes, [
+    'OplDomainId',
+    'OplStageId',
+    'OplTaskId',
+    'OplSourceFingerprint',
+    'OplExecutorKind',
+  ]);
+  assert.equal(blocked.repair_action.action_id, 'install_temporal_search_attributes');
+  assert.equal(ready.readiness_status, 'ready');
+  assert.deepEqual(ready.missing_search_attributes, []);
+  assert.equal(ready.repair_action.action_id, 'none');
 });
 
 test('Temporal StageAttemptWorkflow exposes activity state, signals, and completion boundary', async () => {

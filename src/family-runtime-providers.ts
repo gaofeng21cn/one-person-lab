@@ -1,5 +1,6 @@
 import { DEFAULT_TEMPORAL_TASK_QUEUE, resolveTemporalNamespace, resolveTemporalTaskQueue } from './family-runtime-temporal.ts';
 import {
+  buildTemporalVisibilityReadiness,
   buildTemporalWorkerLifecycleContract,
   buildTemporalWorkerReadiness,
 } from './family-runtime-temporal-readiness.ts';
@@ -174,6 +175,7 @@ export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): F
         task_queue: resolveTemporalTaskQueue(),
         worker_ready: workerReady,
         worker_readiness: workerReadiness,
+        visibility_readiness: buildTemporalVisibilityReadiness(),
         worker_lifecycle: {
           worker_required: true,
           task_queue: resolveTemporalTaskQueue(),
@@ -351,18 +353,29 @@ export async function inspectSelectedFamilyRuntimeProvidersWithLifecycle(
 export function ensureFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind, mode: 'install' | 'repair') {
   if (kind === 'temporal') {
     const inspection = inspectFamilyRuntimeProvider(kind);
+    const visibilityReadiness = buildTemporalVisibilityReadiness();
     return {
       surface_id: 'opl_family_runtime_provider',
       provider_kind: kind,
       mode,
-      status: inspection.ready ? 'ready' : 'attention_needed',
-      actions: [],
-      provider: inspection,
-      repair_guidance: inspection.ready
+      status: inspection.ready && visibilityReadiness.readiness_status === 'ready' ? 'ready' : 'attention_needed',
+      actions: visibilityReadiness.repair_action.action_id === 'none'
         ? []
-        : [
-            'Configure OPL_TEMPORAL_ADDRESS and run a Temporal worker that implements the OPL stage attempt contract.',
-          ],
+        : [visibilityReadiness.repair_action],
+      provider: inspection,
+      visibility_readiness: visibilityReadiness,
+      repair_guidance: [
+        ...inspection.ready
+          ? []
+          : [
+              'Configure OPL_TEMPORAL_ADDRESS and run a Temporal worker that implements the OPL stage attempt contract.',
+            ],
+        ...visibilityReadiness.readiness_status === 'ready'
+          ? []
+          : [
+              'Install OPL Temporal stage attempt Search Attributes before relying on searchable stage attempt visibility.',
+            ],
+      ],
     };
   }
   return {

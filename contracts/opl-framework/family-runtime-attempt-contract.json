@@ -95,7 +95,9 @@
     "owner_route_boundary",
     "control_loop_summary",
     "usage_projection",
-    "stage_execution_log",
+    "stage_progress_log",
+    "temporal_visibility",
+    "temporal_webui_ref",
     "resource_pressure",
     "observability_export"
   ],
@@ -149,6 +151,15 @@
       "queries": [
         "StageAttemptQuery"
       ],
+      "required_search_attributes": [
+        "OplStageAttemptId",
+        "OplDomainId",
+        "OplStageId",
+        "OplTaskId",
+        "OplSourceFingerprint",
+        "OplExecutorKind"
+      ],
+      "visibility_payload_policy": "refs_and_indexable_summary_only_no_transcript_artifact_memory_or_domain_body",
       "fixture_mode_allowed_without_temporal_server": true
     },
     "local_sqlite": {
@@ -199,23 +210,45 @@
     "closeout_receipt_status",
     "route_impact",
     "usage_projection",
-    "stage_execution_log",
+    "stage_progress_log",
+    "temporal_visibility",
+    "temporal_webui_ref",
     "rejected_writes",
     "next_owner",
     "human_gate_refs",
     "dead_letter"
   ],
-  "stage_execution_log_projection": {
-    "surface_kind": "opl_stage_execution_log",
-    "projection_policy": "opl_refs_only_observability_no_domain_truth",
+  "stage_progress_log_contract": {
+    "surface_kind": "opl_stage_progress_log",
+    "projection_policy": "temporal_backed_opl_refs_only_stage_observability_no_domain_truth",
     "required_sections": [
       "intended_work",
       "actual_work",
       "timeline",
       "usage",
       "evidence_refs",
+      "temporal_visibility",
+      "temporal_webui_ref",
       "authority_boundary"
     ],
+    "temporal_visibility_contract": {
+      "surface_kind": "temporal_stage_attempt_visibility",
+      "required_for_provider": "temporal",
+      "search_attributes": [
+        "OplStageAttemptId",
+        "OplDomainId",
+        "OplStageId",
+        "OplTaskId",
+        "OplSourceFingerprint",
+        "OplExecutorKind"
+      ],
+      "payload_policy": "refs_and_indexable_summary_only_no_transcript_artifact_memory_or_domain_body"
+    },
+    "temporal_webui_ref_contract": {
+      "surface_kind": "temporal_webui_ref",
+      "ref_role": "operator_debug_link_only",
+      "user_primary_app_surface": false
+    },
     "intended_work_fields": [
       "provider_kind",
       "executor_kind",
@@ -314,7 +347,7 @@
   "stability_projection_fields": [
     "control_loop_summary",
     "usage_projection",
-    "stage_execution_log",
+    "stage_progress_log",
     "resource_pressure",
     "runtime_observability_export"
   ],
