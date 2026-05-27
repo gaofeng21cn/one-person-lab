@@ -343,6 +343,8 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
   const providerRun = {
     provider_kind: providerKind,
     workflow_id: workflowId,
+    namespace: providerKind === 'temporal' ? process.env.OPL_TEMPORAL_NAMESPACE?.trim() || 'default' : null,
+    task_queue: providerKind === 'temporal' ? process.env.OPL_TEMPORAL_TASK_QUEUE?.trim() || 'opl-stage-attempts' : null,
     provider_status: 'registered',
     started_at: null,
     completed_at: null,

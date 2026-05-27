@@ -3,6 +3,10 @@ import {
   buildTemporalWorkerLifecycleContract,
   buildTemporalWorkerReadiness,
 } from './family-runtime-temporal-readiness.ts';
+import {
+  buildTemporalStageAttemptVisibilityReadiness,
+  inspectTemporalStageAttemptVisibilityReadiness,
+} from './family-runtime-temporal-visibility.ts';
 import type { MasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 import { FrameworkContractError } from './contracts.ts';
@@ -167,6 +171,7 @@ export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): F
         'query_projection_provider_code',
         'workflow_history_provider_code',
         'worker_lifecycle_contract',
+        'stage_attempt_visibility_search_attributes',
       ],
       details: {
         address,
@@ -174,6 +179,11 @@ export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): F
         task_queue: resolveTemporalTaskQueue(),
         worker_ready: workerReady,
         worker_readiness: workerReadiness,
+        temporal_visibility_readiness: buildTemporalStageAttemptVisibilityReadiness({
+          address,
+          namespace: resolveTemporalNamespace(),
+          taskQueue: resolveTemporalTaskQueue(),
+        }),
         worker_lifecycle: {
           worker_required: true,
           task_queue: resolveTemporalTaskQueue(),
@@ -237,6 +247,7 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
       'query_projection_provider_code',
       'workflow_history_provider_code',
       'worker_lifecycle_contract',
+      'stage_attempt_visibility_search_attributes',
       ...(managedTemporalProjection ? ['mas_managed_temporal_state_consistency_projection'] : []),
     ],
     details: {
@@ -246,6 +257,7 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
       task_queue: effectiveWorkerReadiness.task_queue,
       worker_ready: workerReady,
       worker_readiness: effectiveWorkerReadiness,
+      temporal_visibility_readiness: await inspectTemporalStageAttemptVisibilityReadiness(paths),
       managed_temporal_state_consistency: managedTemporalProjection,
       managed_domain_projection_summary: managedProviderProjection
         ? {

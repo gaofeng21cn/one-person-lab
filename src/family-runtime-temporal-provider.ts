@@ -31,9 +31,11 @@ import {
   ensureTemporalStageAttemptVisibilityReady,
 } from './family-runtime-temporal-visibility.ts';
 export {
+  inspectTemporalStageAttemptVisibilityReadiness,
+} from './family-runtime-temporal-visibility.ts';
+export {
   buildTemporalWorkerLifecycleContract,
   buildTemporalWorkerReadiness,
-  inspectTemporalStageAttemptVisibilityReadiness,
   resolveTemporalWorkerReadinessStatus,
   type TemporalWorkerReadinessStatus,
 } from './family-runtime-temporal-readiness.ts';
