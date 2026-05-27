@@ -1,5 +1,9 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../../local-codex-defaults.ts';
 import { buildOplFrameworkSemanticHygieneAudit } from '../../framework-semantic-hygiene.ts';
+import { syncOplCompanionSkills } from '../../install-companions.ts';
 import { buildOplEnvironment } from '../../system-installation/environment.ts';
 import { buildOplInitialize } from '../../system-installation/initialize.ts';
 import { runOplSystemAction } from '../../system-installation/system-actions.ts';
@@ -25,6 +29,41 @@ async function readStdinText() {
     input += chunk;
   }
   return input;
+}
+
+function resolvePackagedFullSkillsRoot() {
+  const explicit = process.env.OPL_PACKAGED_SKILLS_ROOT?.trim();
+  const runtimeHome = process.env.OPL_FULL_RUNTIME_HOME?.trim();
+  const candidates = [
+    explicit || null,
+    runtimeHome ? path.join(runtimeHome, 'skills') : null,
+  ];
+  return candidates.find((candidate) => (
+    Boolean(candidate)
+    && fs.existsSync(path.join(candidate!, 'officecli', 'SKILL.md'))
+  )) ?? null;
+}
+
+function syncPackagedFullCompanionSkillsIfAvailable() {
+  const packagedSkillsRoot = resolvePackagedFullSkillsRoot();
+  if (!packagedSkillsRoot) {
+    return null;
+  }
+
+  const previousDisableRemoteInstall = process.env.OPL_COMPANION_DISABLE_REMOTE_INSTALL;
+  process.env.OPL_COMPANION_DISABLE_REMOTE_INSTALL = '1';
+  try {
+    return syncOplCompanionSkills(undefined, {
+      mode: 'managed',
+      superpowersProfile: 'keep',
+    });
+  } finally {
+    if (previousDisableRemoteInstall === undefined) {
+      delete process.env.OPL_COMPANION_DISABLE_REMOTE_INSTALL;
+    } else {
+      process.env.OPL_COMPANION_DISABLE_REMOTE_INSTALL = previousDisableRemoteInstall;
+    }
+  }
 }
 
 function buildNoArgSpec(
@@ -107,6 +146,7 @@ export function buildPublicSystemCommandSpecs(
         provider_api_key: apiKey,
         overwrite_existing: true,
       });
+      const companionSkillSync = syncPackagedFullCompanionSkillsIfAvailable();
       return {
         version: 'g2',
         codex_config: {
@@ -122,6 +162,7 @@ export function buildPublicSystemCommandSpecs(
             provider_base_url: bootstrap.provider_base_url,
             api_key_present: bootstrap.api_key_present,
           },
+          ...(companionSkillSync ? { companion_skill_sync: companionSkillSync } : {}),
         },
       };
     },

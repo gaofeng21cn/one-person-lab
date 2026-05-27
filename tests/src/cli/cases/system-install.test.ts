@@ -726,6 +726,94 @@ test('system configure-codex completes a plugin-only Codex config created during
   }
 });
 
+test('system configure-codex syncs packaged Full companion skills after API key setup', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-full-skills-home-'));
+  const runtimeHome = path.join(homeRoot, 'Library', 'Application Support', 'OPL', 'runtime', 'current');
+  const packagedSkillsRoot = path.join(runtimeHome, 'skills');
+  const toolBin = path.join(runtimeHome, 'bin');
+  const codexHome = path.join(homeRoot, 'codex-home');
+
+  try {
+    for (const skillId of [
+      'officecli',
+      'officecli-docx',
+      'officecli-pptx',
+      'officecli-xlsx',
+      'ui-ux-pro-max',
+      'mineru-document-extractor',
+    ]) {
+      fs.mkdirSync(path.join(packagedSkillsRoot, skillId), { recursive: true });
+      fs.writeFileSync(
+        path.join(packagedSkillsRoot, skillId, 'SKILL.md'),
+        `---\nname: ${skillId}\ndescription: packaged ${skillId}\n---\n\n# ${skillId}\n`,
+        'utf8',
+      );
+    }
+    fs.mkdirSync(toolBin, { recursive: true });
+    fs.writeFileSync(
+      path.join(toolBin, 'officecli'),
+      '#!/usr/bin/env bash\nif [ "${1:-}" = "--version" ]; then echo "1.0.70-test"; else echo officecli; fi\n',
+      { mode: 0o755 },
+    );
+    fs.writeFileSync(
+      path.join(toolBin, 'mineru-open-api'),
+      '#!/usr/bin/env bash\nif [ "${1:-}" = "version" ]; then echo "mineru-open-api version v0.1.3-test"; else echo mineru-open-api; fi\n',
+      { mode: 0o755 },
+    );
+
+    const output = runCliWithStdin(
+      ['system', 'configure-codex', '--api-key-stdin'],
+      'secret-full-key\n',
+      {
+        HOME: homeRoot,
+        CODEX_HOME: codexHome,
+        OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+        OPL_FULL_RUNTIME_HOME: runtimeHome,
+        OPL_PACKAGED_SKILLS_ROOT: packagedSkillsRoot,
+        OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+        PATH: `${toolBin}:/usr/bin:/bin`,
+      },
+    ) as {
+      codex_config: {
+        companion_skill_sync: {
+          mode: string;
+          items: Array<{ skill_id: string; status: string; action: string }>;
+          tools: Array<{ tool_id: string; status: string; action: string; binary_path: string | null }>;
+        };
+      };
+    };
+
+    assert.equal(output.codex_config.companion_skill_sync.mode, 'managed');
+    const itemById = new Map(output.codex_config.companion_skill_sync.items.map((item) => [item.skill_id, item]));
+    for (const skillId of [
+      'officecli',
+      'officecli-docx',
+      'officecli-pptx',
+      'officecli-xlsx',
+      'ui-ux-pro-max',
+      'mineru-document-extractor',
+    ]) {
+      assert.equal(itemById.get(skillId)?.status, 'synced');
+      assert.equal(itemById.get(skillId)?.action, 'symlink');
+      assert.equal(fs.existsSync(path.join(codexHome, 'skills', skillId, 'SKILL.md')), true);
+    }
+    assert.deepEqual(
+      output.codex_config.companion_skill_sync.tools.map((entry) => [
+        entry.tool_id,
+        entry.status,
+        entry.action,
+        entry.binary_path,
+      ]),
+      [
+        ['officecli', 'ready', 'none', path.join(toolBin, 'officecli')],
+        ['mineru-open-api', 'ready', 'none', path.join(toolBin, 'mineru-open-api')],
+      ],
+    );
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('system initialize blocks launch when compatible Codex CLI lacks configured API key', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-codex-config-home-'));
   const codexFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-codex-config-bin-'));
