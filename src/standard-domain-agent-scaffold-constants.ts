@@ -195,6 +195,44 @@ export const STANDARD_AGENT_DEFAULT_RUNTIME_POLICY = {
   },
 } as const;
 
+export const STANDARD_USER_STAGE_LOG_CONTRACT = {
+  surface_kind: 'opl_standard_agent_user_stage_log_contract',
+  version: 'standard-user-stage-log.v1',
+  owner: 'one-person-lab',
+  standard_agent_requirement: 'domain_stage_closeout_must_return_user_readable_stage_semantics_or_typed_blocker',
+  opl_projection_surface: 'stage_progress_log.user_stage_log',
+  domain_semantic_sources: [
+    'typed_closeout_packet.user_stage_log',
+    'typed_closeout_packet.stage_log_summary',
+    'route_impact.user_stage_log',
+    'route_impact.stage_log_summary',
+  ],
+  required_domain_semantic_fields: [
+    'stage_name',
+    'problem_summary',
+    'stage_goal',
+    'stage_work_done',
+    'changed_stage_surfaces',
+    'outcome',
+    'remaining_blockers',
+    'evidence_refs',
+  ],
+  required_observability_fields: [
+    'duration',
+    'token_usage',
+    'cost',
+  ],
+  missing_semantics_policy: 'typed_blocker_or_missing_domain_semantic_summary_no_opl_inference',
+  token_policy: 'observed_or_explicit_missing_null_no_zero_fill',
+  authority_boundary: {
+    opl_can_infer_domain_semantics: false,
+    opl_can_read_artifact_body: false,
+    opl_can_write_domain_truth: false,
+    opl_can_authorize_quality_or_export: false,
+    provider_completion_can_claim_stage_semantics_complete: false,
+  },
+} as const;
+
 export const FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES = [
   'generic_scheduler_owner',
   'generic_daemon_owner',
@@ -228,6 +266,7 @@ export const REQUIRED_CONTRACT_SURFACES = [
   'domain_memory_descriptor_locator',
   'artifact_locator_contract',
   'owner_receipt_contract',
+  'user_stage_log_contract',
   'quality_or_export_gate_refs',
   'physical_skeleton_follow_through',
   'legacy_retirement_tombstone_proof',
@@ -243,6 +282,7 @@ export const REQUIRED_VERIFICATION = [
   'no_active_generic_owner_caller',
   'replacement_or_no_regression_evidence',
   'receipt_ref_reconciliation',
+  'user_stage_log_semantics_or_typed_blocker',
   'git_diff_check',
   'agent_pack_required_paths_resolve',
   'stage_prompt_skill_knowledge_quality_gate_refs_resolve',
@@ -378,8 +418,10 @@ export const AGENT_PACK_CONTRACT = {
     'user_stage_log_requirement:domain provides human-readable stage semantics; OPL projects timing usage refs only',
     'stage_contract.requires and stage_contract.ensures',
     'stage_contract.expected_receipt_refs',
+    'stage_contract.user_stage_log_contract',
     'independent_gate_policy:execution_review_separation',
   ],
+  user_stage_log_contract: STANDARD_USER_STAGE_LOG_CONTRACT,
   conformance_version: STANDARD_STAGE_PACK_CONFORMANCE_VERSION,
   validator: 'opl agents scaffold --validate <repo-dir>',
   empty_agent_directory_policy: 'blocked',

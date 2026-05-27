@@ -5,6 +5,19 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-05-27
+
+### 决策：用户可读 stage log 成为标准 OPL Agent admission 要求
+
+原因：stage attempt 的时长、token、cost 和 closeout refs 是 OPL 通用可观察性，但用户真正关心的是每个 stage 里问题是什么、目标是什么、对论文/基金/视觉交付/agent 构建做了什么、结果如何、还剩什么 blocker 和证据在哪里。这个语义不能由 OPL 从 artifact body 或领域 truth 里推断；必须由 domain stage closeout 明确返回，或明确返回 typed blocker。
+
+影响：
+
+- `stage_progress_log.user_stage_log` 是 OPL 投影面；OPL 负责 attempt ledger、duration、token、cost、closeout refs、receipt refs 和 missing/null 语义，不生成领域解释。
+- 标准 domain agent scaffold / admission contract 现在要求 `user_stage_log_contract`，并要求每个 stage closeout 提供 `stage_name`、`problem_summary`、`stage_goal`、`stage_work_done`、`changed_stage_surfaces`、`outcome`、`remaining_blockers` 和 `evidence_refs`，或给出 typed blocker。
+- `token_usage` / `cost` 缺失时只能显式保留为 observed-missing/null，不允许填 0 或事后猜测。
+- MAG、RCA、OMA 这类 Foundry Agent 需要在各自 stage plane 中声明同一合同，并由各自 owner 提供 grant-facing、visual-facing 或 agent-building-facing 的人话摘要。OPL admission / App / Agent Lab 只消费该摘要和 refs，不写 domain truth、不读 artifact body、不授权质量或 export ready。
+
 ## 2026-05-21
 
 ### 决策：OPL stage / route 调度固定为 graph hydration reconciliation attempt-ledger 模型

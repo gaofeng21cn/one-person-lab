@@ -80,6 +80,28 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     true,
   );
   assert.equal(
+    scaffold.required_contract_surfaces.includes('user_stage_log_contract'),
+    true,
+  );
+  assert.equal(
+    scaffold.required_verification.includes('user_stage_log_semantics_or_typed_blocker'),
+    true,
+  );
+  assert.equal(
+    scaffold.user_stage_log_contract.surface_kind,
+    'opl_standard_agent_user_stage_log_contract',
+  );
+  assert.equal(
+    scaffold.user_stage_log_contract.standard_agent_requirement,
+    'domain_stage_closeout_must_return_user_readable_stage_semantics_or_typed_blocker',
+  );
+  assert.deepEqual(scaffold.user_stage_log_contract.required_observability_fields, [
+    'duration',
+    'token_usage',
+    'cost',
+  ]);
+  assert.equal(scaffold.user_stage_log_contract.authority_boundary.opl_can_infer_domain_semantics, false);
+  assert.equal(
     scaffold.agent_pack_contract.stage_ref_requirements.includes(
       'selected_executor:codex_cli default binding or explicit non-default executor binding',
     ),
@@ -406,6 +428,25 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
         role: 'route_back_or_blocker',
       },
     ]);
+    assert.equal(
+      stageControlPlane.stages[0].stage_contract.user_stage_log_contract.surface_kind,
+      'opl_standard_agent_user_stage_log_contract',
+    );
+    assert.equal(
+      stageControlPlane.stages[0].stage_contract.user_stage_log_contract
+        .required_domain_semantic_fields.includes('problem_summary'),
+      true,
+    );
+    assert.equal(
+      stageControlPlane.stages[0].stage_contract.user_stage_log_contract
+        .required_domain_semantic_fields.includes('stage_work_done'),
+      true,
+    );
+    assert.equal(
+      stageControlPlane.stages[0].stage_contract.user_stage_log_contract
+        .required_domain_semantic_fields.includes('changed_stage_surfaces'),
+      true,
+    );
     const generatedSurfaceHandoff = JSON.parse(
       fs.readFileSync(path.join(targetDir, 'contracts/generated_surface_handoff.json'), 'utf8'),
     );
@@ -473,6 +514,9 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       ],
     );
     assert.equal(validated.validation.stage_ref_validation.stage_count, 1);
+    assert.equal(validated.validation.user_stage_log_validation.status, 'passed');
+    assert.equal(validated.validation.user_stage_log_validation.required_for_standard_agent, true);
+    assert.deepEqual(validated.validation.user_stage_log_validation.blockers, []);
     assert.equal(validated.validation.stage_pack_v2_validation.status, 'passed');
     assert.equal(validated.validation.stage_pack_v2_validation.required_for_repo, true);
     assert.equal(
@@ -731,6 +775,7 @@ test('agents scaffold validation blocks generated skeletons missing stage pack v
     delete stageControlPlane.stage_pack_conformance_version;
     delete stageControlPlane.stages[0].selected_executor;
     delete stageControlPlane.stages[0].stage_contract.expected_receipt_refs;
+    delete stageControlPlane.stages[0].stage_contract.user_stage_log_contract;
     stageControlPlane.stages[0].independent_gate_policy.execution_review_separation_required = false;
     fs.writeFileSync(stageControlPlanePath, `${JSON.stringify(stageControlPlane, null, 2)}\n`);
 
@@ -744,6 +789,7 @@ test('agents scaffold validation blocks generated skeletons missing stage pack v
     assert.equal(validated.state, 'validation_blocked');
     assert.equal(validated.validation.status, 'blocked');
     assert.equal(validated.validation.stage_pack_v2_validation.status, 'blocked');
+    assert.equal(validated.validation.user_stage_log_validation.status, 'blocked');
     assert.equal(validated.validation.stage_pack_v2_validation.required_for_repo, true);
     assert.equal(
       validated.validation.blockers.includes('stage_pack_v2_plane_version_missing'),
@@ -763,6 +809,10 @@ test('agents scaffold validation blocks generated skeletons missing stage pack v
     );
     assert.equal(
       validated.validation.blockers.includes('stage_pack_v2_independent_gate_separation_required:domain_intake'),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes('stage_user_stage_log_contract_missing:domain_intake'),
       true,
     );
   } finally {

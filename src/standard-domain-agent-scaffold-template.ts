@@ -10,6 +10,7 @@ import {
   SCAFFOLD_MARKER,
   STARTER_STAGE_ID,
   STANDARD_STAGE_PACK_CONFORMANCE_VERSION,
+  STANDARD_USER_STAGE_LOG_CONTRACT,
   WORKSPACE_FILE_LIFECYCLE_POLICY,
 } from './standard-domain-agent-scaffold-constants.ts';
 
@@ -495,6 +496,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
                   role: 'route_back_or_blocker',
                 },
               ],
+              user_stage_log_contract: STANDARD_USER_STAGE_LOG_CONTRACT,
             },
             handoff: {
               next_owner: domainId,

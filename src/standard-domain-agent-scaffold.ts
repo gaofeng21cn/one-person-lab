@@ -19,6 +19,7 @@ import {
   REQUIRED_REPO_SOURCE_DIRS,
   REQUIRED_VERIFICATION,
   STANDARD_AGENT_DEFAULT_RUNTIME_POLICY,
+  STANDARD_USER_STAGE_LOG_CONTRACT,
   WORKSPACE_FILE_LIFECYCLE_POLICY,
 } from './standard-domain-agent-scaffold-constants.ts';
 import {
@@ -393,6 +394,55 @@ function validateStageRefs(repoDir: string, stageControlPlane: unknown) {
   };
 }
 
+function validateUserStageLogContracts(stageControlPlane: unknown) {
+  const stages = isPlainRecord(stageControlPlane) ? readRecordArray(stageControlPlane.stages) : [];
+  const stageStatuses = stages.map((stage) => {
+    const stageId = readOptionalString(stage.stage_id) ?? 'unknown_stage';
+    const stageContract = isPlainRecord(stage.stage_contract) ? stage.stage_contract : null;
+    const userStageLogContract = isPlainRecord(stageContract?.user_stage_log_contract)
+      ? stageContract.user_stage_log_contract
+      : null;
+    const fields = readStringArray(userStageLogContract?.required_domain_semantic_fields);
+    const observabilityFields = readStringArray(userStageLogContract?.required_observability_fields);
+    const findings = [
+      userStageLogContract ? null : `stage_user_stage_log_contract_missing:${stageId}`,
+      readOptionalString(userStageLogContract?.surface_kind) === STANDARD_USER_STAGE_LOG_CONTRACT.surface_kind
+        ? null
+        : `stage_user_stage_log_contract_surface_kind_invalid:${stageId}`,
+      readOptionalString(userStageLogContract?.standard_agent_requirement)
+        === STANDARD_USER_STAGE_LOG_CONTRACT.standard_agent_requirement
+        ? null
+        : `stage_user_stage_log_requirement_invalid:${stageId}`,
+      fields.includes('problem_summary') ? null : `stage_user_stage_log_missing_problem_summary:${stageId}`,
+      fields.includes('stage_work_done') ? null : `stage_user_stage_log_missing_stage_work_done:${stageId}`,
+      fields.includes('changed_stage_surfaces') ? null : `stage_user_stage_log_missing_changed_stage_surfaces:${stageId}`,
+      fields.includes('remaining_blockers') ? null : `stage_user_stage_log_missing_remaining_blockers:${stageId}`,
+      observabilityFields.includes('duration') ? null : `stage_user_stage_log_missing_duration:${stageId}`,
+      observabilityFields.includes('token_usage') ? null : `stage_user_stage_log_missing_token_usage:${stageId}`,
+    ].filter((entry): entry is string => Boolean(entry));
+    return {
+      stage_id: stageId,
+      status: findings.length === 0 ? 'passed' : 'blocked',
+      required_domain_semantic_fields: fields,
+      required_observability_fields: observabilityFields,
+      blockers: findings,
+    };
+  });
+  const blockers = [
+    stages.length > 0 ? null : 'missing_stage_control_plane_stages',
+    ...stageStatuses.flatMap((stage) => stage.blockers),
+  ].filter((entry): entry is string => Boolean(entry));
+  return {
+    surface_kind: 'opl_standard_agent_user_stage_log_validation',
+    contract_ref: 'contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/new_agent_scaffold/user_stage_log_contract',
+    status: blockers.length === 0 ? 'passed' : 'blocked',
+    required_for_standard_agent: true,
+    stage_statuses: stageStatuses,
+    blockers,
+    authority_boundary: STANDARD_USER_STAGE_LOG_CONTRACT.authority_boundary,
+  };
+}
+
 export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput) {
   const repoDir = path.resolve(input.repoDir);
   const missingRequiredDirs = REQUIRED_REPO_SOURCE_DIRS.filter((dir) => !fs.existsSync(path.join(repoDir, dir)));
@@ -424,6 +474,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
   const stagePackV2Required = requiresStagePackV2(packCompilerInput, stageControlPlane);
   const agentPackValidation = validateAgentPackFiles(repoDir, packCompilerInput);
   const stageRefValidation = validateStageRefs(repoDir, stageControlPlane);
+  const userStageLogValidation = validateUserStageLogContracts(stageControlPlane);
   const stagePackV2Validation = validateStagePackV2(stageControlPlane, packCompilerInput, stagePackV2Required);
   const authorityViolations = [
     authority.opl_can_write_domain_truth === false ? null : 'opl_can_write_domain_truth_must_be_false',
@@ -450,6 +501,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     ...authorityViolations,
     ...agentPackValidation.blockers,
     ...stageRefValidation.blockers,
+    ...userStageLogValidation.blockers,
     ...stagePackV2Validation.blockers,
   ];
   return {
@@ -468,6 +520,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
       authority_violations: authorityViolations,
       agent_pack_validation: agentPackValidation,
       stage_ref_validation: stageRefValidation,
+      user_stage_log_validation: userStageLogValidation,
       stage_pack_v2_validation: stagePackV2Validation,
       functional_privatization_audit_required: true,
       blockers,
@@ -686,6 +739,7 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
       generated_surface_contract: GENERATED_SURFACE_CONTRACT,
       agent_pack_contract: AGENT_PACK_CONTRACT,
       default_runtime_policy: STANDARD_AGENT_DEFAULT_RUNTIME_POLICY,
+      user_stage_log_contract: STANDARD_USER_STAGE_LOG_CONTRACT,
       opl_generated_surfaces: OPL_GENERATED_SURFACES,
       domain_retained_thin_surfaces: DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED,
       domain_retained_thin_surfaces_deprecated: DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED,
