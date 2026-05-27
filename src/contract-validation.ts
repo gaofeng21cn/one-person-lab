@@ -11,6 +11,7 @@ export type ErrorCode =
   | 'missing_family_stage_control_plane'
   | 'framework_locator_invalid_root'
   | 'framework_locator_not_found'
+  | 'runtime_state_lock_timeout'
   | 'cli_usage_error'
   | 'unknown_command'
   | 'codex_command_failed';
@@ -33,6 +34,7 @@ export function defaultExitCode(code: ErrorCode): number {
     case 'missing_family_stage_control_plane':
     case 'framework_locator_invalid_root':
     case 'framework_locator_not_found':
+    case 'runtime_state_lock_timeout':
     case 'codex_command_failed':
       return 4;
   }
