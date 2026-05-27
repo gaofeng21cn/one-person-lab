@@ -485,11 +485,7 @@ exit 1
     assert.equal(output.system_initialize.setup_flow.ready_to_launch, true);
     assert.equal(output.system_initialize.setup_flow.phase, 'modules');
     assert.deepEqual(output.system_initialize.setup_flow.blocking_items, []);
-    assert.deepEqual(output.system_initialize.setup_flow.maintenance_items, [
-      'family_runtime_provider',
-      'domain_modules',
-      'recommended_skills',
-    ]);
+    assert.deepEqual(output.system_initialize.setup_flow.maintenance_items, ['family_runtime_provider', 'native_helpers', 'domain_modules', 'recommended_skills']);
     assert.equal(output.system_initialize.setup_flow.progress.ready_required_count, 3);
     assert.equal(output.system_initialize.setup_flow.progress.total_required_count, 3);
     assert.equal(output.system_initialize.setup_flow.progress.ready_full_readiness_count, 0);

@@ -78,6 +78,7 @@
       "expected_maintenance_items": [
         "domain_modules",
         "family_runtime_provider",
+        "native_helpers",
         "recommended_skills"
       ],
       "expected_online_management": {
@@ -98,6 +99,7 @@
       "expected_maintenance_items": [
         "domain_modules",
         "family_runtime_provider",
+        "native_helpers",
         "recommended_skills"
       ],
       "expected_online_management": {
@@ -119,6 +121,7 @@
       "expected_maintenance_items": [
         "domain_modules",
         "family_runtime_provider",
+        "native_helpers",
         "recommended_skills"
       ],
       "expected_online_management": {
@@ -136,6 +139,7 @@
       "expected_core_blockers": [],
       "expected_maintenance_items": [
         "family_runtime_provider",
+        "native_helpers",
         "recommended_skills"
       ],
       "expected_online_management": {
