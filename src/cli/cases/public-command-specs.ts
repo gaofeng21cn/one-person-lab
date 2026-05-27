@@ -391,10 +391,11 @@ export function buildPublicCommandSpecs(
     }),
     'family-runtime': cloneCommandSpec(commandSpecs['family-runtime'], {
       usage:
-        'opl family-runtime status|doctor|install|repair|intake|tick|enqueue|evidence-worklist|queue list|queue inspect|approve|notify list|events export [options]',
+        'opl family-runtime status|doctor|install|repair|provider repair|intake|tick|enqueue|evidence-worklist|queue list|queue inspect|approve|notify list|events export [options]',
       examples: [
         'opl family-runtime status',
         'opl family-runtime repair',
+        'opl family-runtime provider repair --provider temporal',
         'opl family-runtime tick --source provider-cron --hydrate',
         'opl family-runtime lifecycle apply --mode dry-run --domain medautogrant --source-ref mag://cleanup/plan --action \'{"action_id":"mark-opl-tombstone","owner_scope":"opl_owned_tombstone_ref","target_ref":"opl://history/mag/tombstone"}\'',
         'opl family-runtime provider-slo tick --provider temporal',
