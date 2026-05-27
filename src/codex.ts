@@ -24,7 +24,7 @@ export interface CodexCommandResult {
   exitCode: number;
   stdout: string;
   stderr: string;
-  timeoutReason?: 'total_timeout' | 'no_output_timeout' | 'unsupported_tool_protocol';
+  timeoutReason?: 'total_timeout' | 'no_output_timeout' | 'unsupported_tool_protocol' | 'activity_cancelled';
   noOutputTimeoutMs?: number | null;
   unsupportedFunctionCalls?: Array<{
     name: string;
@@ -46,6 +46,7 @@ export interface CodexStreamingCommandOptions {
   onStderrLine?: (line: string) => void;
   onStdoutEvent?: (event: CodexExecEvent) => void;
   onProcessStarted?: (pid: number | null) => void;
+  signal?: AbortSignal;
   timeoutMs?: number;
   noOutputTimeoutMs?: number;
 }
@@ -260,6 +261,53 @@ export async function runCodexCommandStreaming(
     const unsupportedFunctionCalls: NonNullable<CodexCommandResult['unsupportedFunctionCalls']> = [];
     let threadId: string | null = null;
     let unsupportedFunctionCallSessionPath: string | null = null;
+    const clearProcessTimeout = () => {
+      if (timeout) {
+        clearTimeout(timeout);
+        timeout = null;
+      }
+    };
+    const clearNoOutputTimeout = () => {
+      if (noOutputTimeout) {
+        clearTimeout(noOutputTimeout);
+        noOutputTimeout = null;
+      }
+    };
+    const timeoutMessageFor = (reason: CodexCommandResult['timeoutReason']) => reason === 'no_output_timeout'
+      ? 'Codex command produced no output before the progress watchdog expired.'
+      : reason === 'unsupported_tool_protocol'
+        ? 'Codex command emitted an unsupported native function_call without an OPL tool host.'
+        : reason === 'activity_cancelled'
+          ? 'Codex command cancelled by Temporal activity cancellation.'
+        : 'Codex command timed out.';
+    const finishTimedOut = (reason: NonNullable<CodexCommandResult['timeoutReason']>) => {
+      if (completed) {
+        return;
+      }
+      completed = true;
+      timedOut = true;
+      timeoutReason = reason;
+      options.signal?.removeEventListener('abort', abortCommand);
+      clearProcessTimeout();
+      clearNoOutputTimeout();
+      terminateChildProcessGroup(child.pid);
+      const timeoutMessage = timeoutMessageFor(reason);
+      resolve({
+        exitCode: reason === 'activity_cancelled' ? 130 : 124,
+        stdout,
+        stderr: `${stderr}${stderr.endsWith('\n') || stderr.length === 0 ? '' : '\n'}${timeoutMessage}\n`,
+        timeoutReason: reason,
+        noOutputTimeoutMs: options.noOutputTimeoutMs ?? null,
+        ...(unsupportedFunctionCalls.length > 0 ? { unsupportedFunctionCalls } : {}),
+        ...(unsupportedFunctionCallSessionPath ? { unsupportedFunctionCallSessionPath } : {}),
+      });
+    };
+    const abortCommand = () => {
+      finishTimedOut('activity_cancelled');
+    };
+    const expireCommand = () => {
+      finishTimedOut('total_timeout');
+    };
 
     const recordUnsupportedFunctionCalls = (
       calls: NonNullable<CodexCommandResult['unsupportedFunctionCalls']>,
@@ -291,35 +339,24 @@ export async function runCodexCommandStreaming(
     };
 
     options.onProcessStarted?.(typeof child.pid === 'number' ? child.pid : null);
-    if (options.timeoutMs && options.timeoutMs > 0) {
+    if (options.signal?.aborted) {
+      abortCommand();
+    } else {
+      options.signal?.addEventListener('abort', abortCommand, { once: true });
+    }
+    if (!completed && options.timeoutMs && options.timeoutMs > 0) {
       timeout = setTimeout(() => {
-        timedOut = true;
-        timeoutReason = 'total_timeout';
-        terminateChildProcessGroup(child.pid);
+        expireCommand();
       }, options.timeoutMs);
     }
 
-    const clearProcessTimeout = () => {
-      if (timeout) {
-        clearTimeout(timeout);
-        timeout = null;
-      }
-    };
-    const clearNoOutputTimeout = () => {
-      if (noOutputTimeout) {
-        clearTimeout(noOutputTimeout);
-        noOutputTimeout = null;
-      }
-    };
     const resetNoOutputTimeout = () => {
       clearNoOutputTimeout();
-      if (options.noOutputTimeoutMs && options.noOutputTimeoutMs > 0) {
+      if (!completed && options.noOutputTimeoutMs && options.noOutputTimeoutMs > 0) {
         noOutputTimeout = setTimeout(() => {
-          timedOut = true;
-          timeoutReason = detectSessionUnsupportedFunctionCalls()
+          finishTimedOut(detectSessionUnsupportedFunctionCalls()
             ? 'unsupported_tool_protocol'
-            : 'no_output_timeout';
-          terminateChildProcessGroup(child.pid);
+            : 'no_output_timeout');
         }, options.noOutputTimeoutMs);
       }
     };
@@ -340,9 +377,7 @@ export async function runCodexCommandStreaming(
             name: event.name,
             callId: event.callId,
           }]);
-          timedOut = true;
-          timeoutReason = 'unsupported_tool_protocol';
-          terminateChildProcessGroup(child.pid);
+          finishTimedOut('unsupported_tool_protocol');
         }
       }
     });
@@ -357,6 +392,7 @@ export async function runCodexCommandStreaming(
         return;
       }
       completed = true;
+      options.signal?.removeEventListener('abort', abortCommand);
       clearProcessTimeout();
       clearNoOutputTimeout();
       reject(
@@ -377,6 +413,7 @@ export async function runCodexCommandStreaming(
         return;
       }
       completed = true;
+      options.signal?.removeEventListener('abort', abortCommand);
       clearProcessTimeout();
       clearNoOutputTimeout();
       flushStdout();
@@ -389,11 +426,7 @@ export async function runCodexCommandStreaming(
       ) {
         timeoutReason = 'unsupported_tool_protocol';
       }
-      const timeoutMessage = timeoutReason === 'no_output_timeout'
-        ? 'Codex command produced no output before the progress watchdog expired.'
-        : timeoutReason === 'unsupported_tool_protocol'
-          ? 'Codex command emitted an unsupported native function_call without an OPL tool host.'
-          : 'Codex command timed out.';
+      const timeoutMessage = timeoutMessageFor(timeoutReason);
       resolve({
         exitCode: timedOut ? 124 : code ?? 1,
         stdout,

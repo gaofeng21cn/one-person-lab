@@ -1,4 +1,4 @@
-import { heartbeat } from '@temporalio/activity';
+import { Context, heartbeat } from '@temporalio/activity';
 
 import type { TemporalStageAttemptWorkflowInput } from './family-runtime-temporal.ts';
 import {
@@ -16,9 +16,24 @@ import {
   normalizeTypedStageCloseoutPacket,
   runAgentStageRunner,
 } from './family-runtime-codex-stage-runner.ts';
+import { codexActivityEventForTemporalHistory } from './family-runtime-temporal-history-summary.ts';
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function closeoutPacketFromRunnerReceipt(receipt: Record<string, unknown>) {
+  if (isRecord(receipt.closeout_packet)) {
+    return receipt.closeout_packet;
+  }
+  const agentReceipt = isRecord(receipt.agent_execution_receipt)
+    ? receipt.agent_execution_receipt
+    : null;
+  return isRecord(agentReceipt?.closeout_packet) ? agentReceipt.closeout_packet : null;
 }
 
 function recordActivityHeartbeat(input: {
@@ -66,7 +81,32 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
     });
   }, DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS);
   try {
-    return {
+    const runnerReceipt = await runAgentStageRunner({
+      attempt: input as unknown as Record<string, unknown>,
+      stagePacketRef: input.stage_packet_ref,
+      runnerMode: input.codex_stage_runner?.runner_mode,
+      observedAt,
+      timeoutMs: input.codex_stage_runner?.timeout_ms ?? DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
+      noOutputTimeoutMs: input.codex_stage_runner?.no_output_timeout_ms
+        ?? DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
+      signal: Context.current().cancellationSignal,
+      onRunnerProgress(event) {
+        heartbeat({
+          stage_attempt_id: input.stage_attempt_id,
+          stage_id: input.stage_id,
+          checkpoint_refs: input.checkpoint_refs ?? [],
+          heartbeat_kind: 'codex_stage_activity_runner_progress',
+          runner_event_kind: event.event_kind,
+        });
+        recordActivityHeartbeat({
+          stageAttemptId: input.stage_attempt_id,
+          heartbeatKind: 'codex_stage_activity_runner_progress',
+          runnerEventKind: event.event_kind,
+          checkpointRefs: input.checkpoint_refs ?? [],
+        });
+      },
+    });
+    const activityReceipt = {
       surface_kind: 'temporal_codex_stage_activity_receipt',
       activity_kind: 'codex_stage_activity',
       activity_status: 'completed',
@@ -75,34 +115,15 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
       executor_kind: input.executor_kind,
       checkpoint_refs: input.checkpoint_refs ?? [],
       stage_packet_ref: input.stage_packet_ref ?? null,
-      ...await runAgentStageRunner({
-        attempt: input as unknown as Record<string, unknown>,
-        stagePacketRef: input.stage_packet_ref,
-        runnerMode: input.codex_stage_runner?.runner_mode,
-        observedAt,
-        timeoutMs: input.codex_stage_runner?.timeout_ms ?? DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
-        noOutputTimeoutMs: input.codex_stage_runner?.no_output_timeout_ms
-          ?? DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
-        onRunnerProgress(event) {
-          heartbeat({
-            stage_attempt_id: input.stage_attempt_id,
-            stage_id: input.stage_id,
-            checkpoint_refs: input.checkpoint_refs ?? [],
-            heartbeat_kind: 'codex_stage_activity_runner_progress',
-            runner_event_kind: event.event_kind,
-          });
-          recordActivityHeartbeat({
-            stageAttemptId: input.stage_attempt_id,
-            heartbeatKind: 'codex_stage_activity_runner_progress',
-            runnerEventKind: event.event_kind,
-            checkpointRefs: input.checkpoint_refs ?? [],
-          });
-        },
-      }),
+      ...runnerReceipt,
       authority_boundary: {
         opl: 'activity_packet_and_receipt_transport_only',
         domain: 'truth_quality_artifact_gate_owner',
       },
+    };
+    return {
+      ...codexActivityEventForTemporalHistory(activityReceipt),
+      closeout_packet: closeoutPacketFromRunnerReceipt(runnerReceipt),
     };
   } finally {
     clearInterval(heartbeatInterval);

@@ -11,6 +11,7 @@ import { familyRuntimePaths } from './family-runtime-store.ts';
 import * as activities from './family-runtime-temporal-activities.ts';
 import {
   buildTemporalStageAttemptWorkflowInput, requireTemporalStageAttemptWorkflowInputLaunchable,
+  guardTemporalStageAttemptWorkflowInputPayload,
   resolveTemporalNamespace,
   resolveTemporalTaskQueue,
   SCHEDULER_TICK_WORKFLOW_RUN_TIMEOUT,
@@ -68,6 +69,16 @@ import {
   stopOrphanTemporalForegroundWorkers,
   stopWorkerPid,
 } from './family-runtime-temporal-provider-parts/worker-process.ts';
+import {
+  buildTemporalStageAttemptWorkerOptions,
+} from './family-runtime-temporal-provider-parts/workflow-bundle.ts';
+import {
+  runTemporalStageAttemptReplayGate,
+} from './family-runtime-temporal-provider-parts/replay-gate.ts';
+import {
+  temporalProductionProbeInput,
+  temporalProductionTypedCloseoutPacket,
+} from './family-runtime-temporal-provider-parts/production-proof.ts';
 export {
   queryTemporalStageAttemptWorkflow,
 } from './family-runtime-temporal-provider-parts/attempt-query.ts';
@@ -122,6 +133,9 @@ export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths)
     managedWorkerSourceVersion: state?.source_version ?? null,
     expectedWorkerSourceVersion,
     managedWorkerSourceCurrent: stateMatchesConfig && state ? stateSourceCurrent : null,
+    managedWorkerWorkflowBundlePath: state?.workflow_bundle_path ?? null,
+    managedWorkerWorkflowBundleVersion: state?.workflow_bundle_version ?? null,
+    managedWorkerWorkflowBundleSourceVersion: state?.workflow_bundle_source_version ?? null,
     staleWorkerPid: statePidAlive && !stateSourceCurrent && state ? state.pid : null,
     temporalServiceLifecycle: service,
   });
@@ -444,56 +458,19 @@ export async function triggerTemporalSchedulerCadence(paths: TemporalWorkerPaths
   }, { addressOverride: temporalAddressForScheduler(paths) });
 }
 
-function temporalProductionProbeInput(
-  suffix: string,
-  closeoutPacket: Record<string, unknown> | null,
-): TemporalStageAttemptWorkflowInput {
-  return {
-    stage_attempt_id: `sat_temporal_production_${suffix}`,
-    workflow_id: `wf_temporal_production_${suffix}`,
-    domain_id: 'medautoscience',
-    stage_id: 'production-residency-proof',
-    workspace_locator: {
-      workspace_root: '/tmp/opl-temporal-production-residency-proof',
-      artifact_root: '/tmp/opl-temporal-production-residency-proof/artifacts',
-    },
-    source_fingerprint: `sha256:temporal-production-residency-${suffix}`,
-    executor_kind: 'codex_cli',
-    retry_budget: {
-      max_attempts: 3,
-    },
-    task_id: `task-temporal-production-residency-${suffix}`,
-    stage_packet_ref: `packet:temporal-production-residency:${suffix}`,
-    checkpoint_refs: [`checkpoint:temporal-production-residency:${suffix}`],
-    closeout_packet: closeoutPacket,
-  };
-}
-
-function temporalProductionTypedCloseoutPacket() {
-  return {
-    surface_kind: 'stage_attempt_closeout_packet',
-    closeout_refs: ['receipt:temporal-production-residency-domain-closeout'],
-    consumed_refs: ['evidence:temporal-production-residency'],
-    consumed_memory_refs: ['memory:publication-route-production-residency'],
-    writeback_receipt_refs: ['memory-writeback:temporal-production-residency-receipt'],
-    next_owner: 'med-autoscience',
-    domain_ready_verdict: 'domain_gate_pending',
-    route_impact: {
-      decision: 'production_residency_transport_probe',
-      next_owner: 'med-autoscience',
-    },
-  };
-}
-
 export async function runTemporalStageAttemptWorkerUntil<T>(fn: () => Promise<T>) {
+  const sourceVersion = currentWorkerSourceVersion(import.meta.url);
+  const built = await buildTemporalStageAttemptWorkerOptions({
+    paths: familyRuntimePaths(),
+    workflowsPath: workflowModulePath(),
+    activities,
+    sourceVersion,
+  });
   const nativeConnection = await NativeConnection.connect({ address: requireTemporalAddress() });
   try {
     const worker = await Worker.create({
       connection: nativeConnection,
-      namespace: resolveTemporalNamespace(),
-      taskQueue: resolveTemporalTaskQueue(),
-      workflowsPath: workflowModulePath(),
-      activities,
+      ...built.worker_options,
     });
     return await worker.runUntil(fn);
   } finally {
@@ -831,6 +808,12 @@ export async function runTemporalWorkerForeground(paths: TemporalWorkerPaths) {
     );
   }
   const sourceVersion = currentWorkerSourceVersion(import.meta.url);
+  const built = await buildTemporalStageAttemptWorkerOptions({
+    paths,
+    workflowsPath: workflowModulePath(),
+    activities,
+    sourceVersion,
+  });
   writeTemporalWorkerState(paths, {
     provider_kind: 'temporal',
     pid: process.pid,
@@ -840,15 +823,15 @@ export async function runTemporalWorkerForeground(paths: TemporalWorkerPaths) {
     started_at: new Date().toISOString(),
     status: 'starting',
     source_version: sourceVersion,
+    workflow_bundle_path: built.workflow_bundle.code_path,
+    workflow_bundle_version: built.workflow_bundle.workflow_bundle_version,
+    workflow_bundle_source_version: built.workflow_bundle.workflow_bundle_source_version,
   });
   const nativeConnection = await NativeConnection.connect({ address });
   try {
     const worker = await Worker.create({
       connection: nativeConnection,
-      namespace: resolveTemporalNamespace(),
-      taskQueue: resolveTemporalTaskQueue(),
-      workflowsPath: workflowModulePath(),
-      activities,
+      ...built.worker_options,
     });
     writeTemporalWorkerState(paths, {
       provider_kind: 'temporal',
@@ -859,6 +842,9 @@ export async function runTemporalWorkerForeground(paths: TemporalWorkerPaths) {
       started_at: new Date().toISOString(),
       status: 'ready',
       source_version: sourceVersion,
+      workflow_bundle_path: built.workflow_bundle.code_path,
+      workflow_bundle_version: built.workflow_bundle.workflow_bundle_version,
+      workflow_bundle_source_version: built.workflow_bundle.workflow_bundle_source_version,
     });
     await worker.run();
   } finally {
@@ -920,6 +906,13 @@ export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, i
     },
   );
   child.unref();
+  const sourceVersion = currentWorkerSourceVersion(import.meta.url);
+  const workflowBundle = await buildTemporalStageAttemptWorkerOptions({
+    paths,
+    workflowsPath: workflowModulePath(),
+    activities,
+    sourceVersion,
+  });
   writeTemporalWorkerState(paths, {
     provider_kind: 'temporal',
     pid: child.pid ?? 0,
@@ -928,7 +921,10 @@ export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, i
     task_queue: status.task_queue,
     started_at: new Date().toISOString(),
     status: 'ready',
-    source_version: currentWorkerSourceVersion(import.meta.url),
+    source_version: sourceVersion,
+    workflow_bundle_path: workflowBundle.workflow_bundle.code_path,
+    workflow_bundle_version: workflowBundle.workflow_bundle.workflow_bundle_version,
+    workflow_bundle_source_version: workflowBundle.workflow_bundle.workflow_bundle_source_version,
   });
   return {
     surface_kind: 'temporal_worker_lifecycle_start',
@@ -975,7 +971,30 @@ export async function stopTemporalWorkerLifecycle(paths: TemporalWorkerPaths) {
   };
 }
 
-export function buildTemporalStageAttemptWorkflowInputForTest(input: TemporalStageAttemptWorkflowInput): TemporalStageAttemptWorkflowInput { return input; }
+export function buildTemporalStageAttemptWorkflowInputForTest(input: TemporalStageAttemptWorkflowInput): TemporalStageAttemptWorkflowInput {
+  return guardTemporalStageAttemptWorkflowInputPayload(input);
+}
+
+export async function buildTemporalStageAttemptWorkerOptionsForTest(
+  paths: TemporalWorkerPaths,
+  input: { sourceVersion?: string } = {},
+) {
+  return buildTemporalStageAttemptWorkerOptions({
+    paths,
+    workflowsPath: workflowModulePath(),
+    activities,
+    sourceVersion: input.sourceVersion ?? currentWorkerSourceVersion(import.meta.url),
+  });
+}
+
+export async function buildTemporalStageAttemptReplayGateForTest(history: unknown, workflowId?: string) {
+  return runTemporalStageAttemptReplayGate({
+    history,
+    workflowId,
+    workflowsPath: workflowModulePath(),
+    sourceModuleUrl: import.meta.url,
+  });
+}
 
 export function resolveTemporalWorkerForegroundPaths(): TemporalWorkerPaths { return familyRuntimePaths(); }
 

@@ -35,6 +35,10 @@ function temporalWorkerStatus(status: 'worker_not_ready' | 'ready') {
     managed_worker_source_version: status === 'ready' ? 'worker-runtime:test' : null,
     expected_worker_source_version: 'worker-runtime:test',
     managed_worker_source_current: status === 'ready' ? true : null,
+    managed_worker_workflow_bundle_path: status === 'ready' ? '/tmp/temporal-workflow-bundle/stage-attempt.js' : null,
+    managed_worker_workflow_bundle_version: status === 'ready' ? 'workflow-bundle:sha256:test' : null,
+    managed_worker_workflow_bundle_source_version: status === 'ready' ? 'worker-runtime:test' : null,
+    managed_worker_workflow_bundle_source_current: status === 'ready' ? true : null,
     stale_worker_pid: null,
     temporal_service_lifecycle: {
       surface_kind: 'temporal_service_lifecycle_status',
@@ -82,6 +86,11 @@ function temporalWorkerStatus(status: 'worker_not_ready' | 'ready') {
         'codexStageActivity',
         'domainHandlerDispatchActivity',
       ],
+      workflow_bundle_policy: {
+        production_worker_uses_prebuilt_bundle: true,
+        workflows_path_allowed_for_managed_worker: false,
+        workflow_bundle_source_version_tied_to_worker_source_version: true,
+      },
       authority_boundary: {
         opl: 'worker_lifecycle_and_activity_transport_only',
         domain: 'truth_quality_artifact_gate_owner',

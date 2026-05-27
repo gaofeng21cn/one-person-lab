@@ -86,7 +86,7 @@ type CodexStageRunnerProcessOutputSummary = {
   exit_code: number;
   final_message_chars: number;
   stderr_tail: string[];
-  timeout_reason?: 'total_timeout' | 'no_output_timeout' | 'unsupported_tool_protocol';
+  timeout_reason?: 'total_timeout' | 'no_output_timeout' | 'unsupported_tool_protocol' | 'activity_cancelled';
   no_output_timeout_ms?: number | null;
   blocked_reason?: string;
   pending_function_call_count?: number;
@@ -111,6 +111,7 @@ type CodexStageRunnerInput = {
   timeoutMs?: number | null;
   noOutputTimeoutMs?: number | null;
   onRunnerProgress?: (event: RunnerEventSummary) => void;
+  signal?: AbortSignal;
 };
 
 type CodexStageRunnerReceipt = CodexStageRunnerBaseReceipt & {
@@ -679,6 +680,7 @@ export async function runCodexStageRunner(input: CodexStageRunnerInput): Promise
   const result = await runCodexCommandStreaming(args, {
     timeoutMs,
     noOutputTimeoutMs,
+    signal: input.signal,
     onProcessStarted(pid) {
       processId = pid;
     },
@@ -697,7 +699,11 @@ export async function runCodexStageRunner(input: CodexStageRunnerInput): Promise
   let domainReceiptRecoveryStatus: string | null = null;
   let domainReceiptRecoveryRef: string | null = null;
   let closeoutRejection: ReturnType<typeof validateCloseoutPacketForAttempt>['rejection'] = null;
-  if (!closeoutPacket && result.timeoutReason !== 'unsupported_tool_protocol') {
+  if (
+    !closeoutPacket
+    && result.timeoutReason !== 'unsupported_tool_protocol'
+    && result.timeoutReason !== 'activity_cancelled'
+  ) {
     const recovered = await recoverCloseoutFromCodexSessionWithRetry({
       threadId: parsed.threadId,
       timeoutMs: normalizeTimeoutMs(process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS, 5_000),
@@ -759,6 +765,9 @@ export async function runCodexStageRunner(input: CodexStageRunnerInput): Promise
               : {}),
           }
         : {}),
+      ...(result.timeoutReason === 'activity_cancelled'
+        ? { blocked_reason: 'codex_cli_activity_cancelled' }
+        : {}),
       ...(recoveredSessionPath
         ? {
             recovered_session_path: recoveredSessionPath,
@@ -800,6 +809,7 @@ export async function runAgentStageRunner(input: {
   timeoutMs?: number | null;
   noOutputTimeoutMs?: number | null;
   onRunnerProgress?: (event: RunnerEventSummary) => void;
+  signal?: AbortSignal;
   env?: Record<string, string | undefined>;
 }) {
   const executorKind = normalizeAgentExecutorStageMode(input.runnerMode)

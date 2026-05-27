@@ -3,6 +3,10 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  defaultPayloadConverter,
+  fromPayloadsAtIndex,
+} from '@temporalio/common/lib/converter/payload-converter.js';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 
@@ -23,13 +27,21 @@ import {
   userInstructionSignal,
 } from '../../src/family-runtime-temporal-workflows.ts';
 import {
+  buildTemporalStageAttemptWorkflowInputForTest,
   buildTemporalSchedulerHealthProjection,
+  buildTemporalStageAttemptReplayGateForTest,
   buildTemporalWorkerReadiness,
   resolveTemporalWorkerReadinessStatus,
 } from '../../src/family-runtime-temporal-provider.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
+
+function firstActivityResultFromHistory(history: { events?: Array<Record<string, any>> | null }) {
+  const completion = (history.events ?? []).find((event) => event.activityTaskCompletedEventAttributes);
+  const payloads = completion?.activityTaskCompletedEventAttributes?.result?.payloads;
+  return fromPayloadsAtIndex<Record<string, any>>(defaultPayloadConverter, 0, payloads);
+}
 
 function workflowInput(): TemporalStageAttemptWorkflowInput {
   return {
@@ -154,11 +166,65 @@ test('Temporal StageAttemptWorkflow exposes activity state, signals, and complet
     assert.equal(codexCompletion?.runner_status.live_process_started, false);
     assert.equal(codexCompletion?.heartbeat_summary.checkpoint_count, 1);
     assert.equal(codexCompletion?.progress_summary.progress_status, 'checkpointed');
-    assert.equal(codexCompletion?.cost_summary.estimated_cost_usd, 0);
+    assert.equal(codexCompletion?.cost_summary.cost_status, 'not_measured_dry_run');
+    assert.equal(codexCompletion?.cost_summary.estimated_cost_usd, null);
     assert.ok(result.finalState.activity_events.some((event) => event.activity_kind === 'domain_handler_dispatch_activity'));
     assert.equal(result.queriedState.signals.length, 2);
     assert.deepEqual(result.queriedState.human_gate_refs, ['gate:operator-review']);
     assert.equal(result.queriedState.authority_boundary.domain, 'truth_quality_artifact_gate_owner');
+  } finally {
+    await testEnv.teardown();
+  }
+});
+
+test('Temporal replay gate replays completed StageAttemptWorkflow history with the production bundle', async () => {
+  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const taskQueue = `opl-stage-attempt-replay-test-${Date.now()}`;
+  try {
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      activities,
+    });
+    const workflowId = `wf-temporal-replay-test-${Date.now()}`;
+
+    const history = await worker.runUntil(async () => {
+      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
+        args: [workflowInput()],
+        taskQueue,
+        workflowId,
+      });
+      await handle.signal(humanGateSignal, {
+        signal_kind: 'human_gate',
+        payload: {
+          human_gate_ref: 'gate:replay-operator-review',
+          reason: 'replay_gate_signal_history',
+        },
+        source: 'replay-test',
+      });
+      await handle.signal(userInstructionSignal, {
+        signal_kind: 'user_instruction',
+        payload: {
+          instruction_ref: 'user:replay-revision-request',
+        },
+        source: 'replay-test',
+      });
+      await handle.result();
+      return await handle.fetchHistory();
+    });
+
+    const gate = await buildTemporalStageAttemptReplayGateForTest(history, workflowId);
+
+    assert.equal(gate.surface_kind, 'temporal_stage_attempt_replay_gate');
+    assert.equal(gate.replay_status, 'passed');
+    assert.equal(gate.workflow_id, workflowId);
+    const replayBundle = gate.worker_options.workflowBundle;
+    assert.ok(replayBundle && 'codePath' in replayBundle);
+    assert.equal(replayBundle.codePath, gate.workflow_bundle.code_path);
+    assert.equal('workflowsPath' in gate.worker_options, false);
+    assert.match(gate.workflow_bundle.workflow_bundle_version, /^workflow-bundle:sha256:/);
   } finally {
     await testEnv.teardown();
   }
@@ -184,6 +250,21 @@ test('Temporal worker readiness helper reports live configured state without sta
   );
   assert.equal(readiness.lifecycle.worker_helper, 'runTemporalStageAttemptWorkerUntil');
   assert.deepEqual(readiness.blockers, []);
+});
+
+test('Temporal stage attempt contract exposes Codex cancellation and payload-history guards', () => {
+  const input = buildTemporalStageAttemptWorkflowInputForTest({
+    ...workflowInput(),
+    stage_packet_ref: `packet:${'x'.repeat(140_000)}`,
+  });
+
+  const contract = buildTemporalStageAttemptWorkflowContract();
+  assert.equal(contract.activity_timeout_policy.codex_stage_activity.cancellation_delivered_by_heartbeat, true);
+  assert.equal(contract.payload_history_policy.max_inline_string_bytes, 131_072);
+  assert.equal(contract.payload_history_policy.large_payload_storage, 'external_ref_required');
+  assert.equal(input.stage_packet_ref, 'payload_ref:sha256:bd0056ae8e68b912');
+  assert.equal(input.payload_guard?.truncated_fields[0].field, 'stage_packet_ref');
+  assert.equal(input.payload_guard?.policy.large_payload_storage, 'external_ref_required');
 });
 
 test('Temporal scheduler health projection surfaces current stale action repair without domain authority', () => {
@@ -356,6 +437,124 @@ test('Temporal StageAttemptWorkflow surfaces Codex runner protocol blockers befo
       (dispatchEvent?.route_impact as Record<string, unknown>)?.provider_blocker_reason,
       'codex_cli_unsupported_function_call',
     );
+  } finally {
+    await testEnv.teardown();
+  }
+});
+
+test('Temporal Codex activity result stored in history is refs-only by default', async () => {
+  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const taskQueue = `opl-stage-attempt-activity-summary-test-${Date.now()}`;
+  try {
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      activities,
+    });
+
+    const history = await worker.runUntil(async () => {
+      const input = workflowInput();
+      const workflowId = `wf-temporal-activity-summary-test-${Date.now()}`;
+      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
+        args: [{
+          ...input,
+          closeout_packet: null,
+          executor_kind: 'codex_cli',
+          codex_stage_runner: {
+            runner_mode: 'dry_run',
+          },
+        }],
+        taskQueue,
+        workflowId,
+      });
+      await handle.result();
+      return await handle.fetchHistory();
+    });
+
+    const activityReceipt = firstActivityResultFromHistory(history);
+    assert.equal(activityReceipt.stdout, undefined);
+    assert.equal(activityReceipt.stderr, undefined);
+    assert.equal(activityReceipt.log_body, undefined);
+    assert.equal(activityReceipt.agent_execution_receipt, undefined);
+    assert.equal(JSON.stringify(activityReceipt).includes('command_preview'), false);
+  } finally {
+    await testEnv.teardown();
+  }
+});
+
+test('Temporal StageAttemptWorkflow stores refs-only Codex activity summaries in workflow state', async () => {
+  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const taskQueue = `opl-stage-attempt-payload-guard-test-${Date.now()}`;
+  try {
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      activities: {
+        ...activities,
+        codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
+          surface_kind: 'temporal_codex_stage_activity_receipt',
+          activity_kind: 'codex_stage_activity',
+          activity_status: 'completed',
+          stage_attempt_id: input.stage_attempt_id,
+          stage_id: input.stage_id,
+          checkpoint_refs: input.checkpoint_refs ?? [],
+          process_output_summary: {
+            exit_code: 130,
+            final_message_chars: 180_000,
+            stderr_tail: ['y'.repeat(4_000)],
+            timeout_reason: 'activity_cancelled',
+            blocked_reason: 'codex_cli_activity_cancelled',
+            recovered_session_path: '/tmp/codex/session.jsonl',
+          },
+          progress_summary: {
+            runner_events: [{
+              event_kind: 'agent_message',
+              value: 'x'.repeat(4_000),
+            }],
+          },
+          stdout: 'must-not-enter-workflow-history',
+          stderr: 'must-not-enter-workflow-history',
+          log_body: 'must-not-enter-workflow-history',
+        }),
+      },
+    });
+
+    const result = await worker.runUntil(async () => {
+      const input = workflowInput();
+      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
+        args: [{
+          ...input,
+          closeout_packet: null,
+        }],
+        taskQueue,
+        workflowId: `wf-temporal-payload-guard-test-${Date.now()}`,
+      });
+      return await handle.result();
+    });
+
+    const codexEvent = result.activity_events.find(
+      (event) => event.activity_kind === 'codex_stage_activity' && event.activity_status === 'completed',
+    ) as Record<string, any> | undefined;
+    assert.ok(codexEvent, 'workflow state must keep a small Codex activity event summary.');
+    assert.equal(codexEvent.stdout, undefined);
+    assert.equal(codexEvent.stderr, undefined);
+    assert.equal(codexEvent.log_body, undefined);
+    assert.equal(codexEvent.closeout_packet, undefined);
+    assert.equal(codexEvent.process_output_summary.final_message_chars, 180_000);
+    assert.deepEqual(codexEvent.process_output_summary.stderr_tail, []);
+    assert.equal(codexEvent.process_output_summary.recovered_session_path, '/tmp/codex/session.jsonl');
+    assert.deepEqual(codexEvent.progress_summary.runner_events, [{
+      event_kind: 'agent_message',
+      value: '[omitted:4000 chars]',
+    }]);
+    assert.equal(codexEvent.provider_blocker.blocked_reason, 'codex_cli_activity_cancelled');
+    assert.equal(JSON.stringify(codexEvent).includes('must-not-enter-workflow-history'), false);
+    assert.equal(JSON.stringify(codexEvent).includes('xxxx'), false);
+    assert.equal(JSON.stringify(codexEvent).includes('yyyy'), false);
   } finally {
     await testEnv.teardown();
   }
