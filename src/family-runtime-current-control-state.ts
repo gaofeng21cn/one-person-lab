@@ -45,6 +45,57 @@ function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
+function latestProviderActivityHeartbeat(
+  activityEvents: unknown[],
+  providerRun: Record<string, unknown>,
+) {
+  const ledgerLastHeartbeatAt = stringValue(providerRun.last_heartbeat_at);
+  const activityHeartbeatEvents = activityEvents
+    .filter((entry): entry is Record<string, unknown> =>
+      typeof entry === 'object' && entry !== null && !Array.isArray(entry)
+    )
+    .filter((entry) =>
+      stringValue(entry.activity_kind) === 'codex_stage_activity'
+      && [
+        'codex_stage_activity_supervision',
+        'codex_stage_activity_runner_progress',
+      ].includes(stringValue(entry.heartbeat_kind) ?? '')
+    )
+    .map((entry) => ({
+      event_time: stringValue(entry.event_time),
+      heartbeat_kind: stringValue(entry.heartbeat_kind),
+      runner_event_kind: stringValue(entry.runner_event_kind),
+    }))
+    .filter((entry): entry is {
+      event_time: string;
+      heartbeat_kind: string | null;
+      runner_event_kind: string | null;
+    } => Boolean(entry.event_time))
+    .sort((left, right) => left.event_time.localeCompare(right.event_time));
+  const activityHeartbeat = activityHeartbeatEvents.at(-1) ?? null;
+  if (
+    activityHeartbeat
+    && (!ledgerLastHeartbeatAt || activityHeartbeat.event_time >= ledgerLastHeartbeatAt)
+  ) {
+    return {
+      ...providerRun,
+      last_heartbeat_at: activityHeartbeat.event_time,
+      ledger_last_heartbeat_at: ledgerLastHeartbeatAt,
+      liveness_source: 'provider_activity_event',
+      last_activity_heartbeat_kind: activityHeartbeat.heartbeat_kind,
+      last_runner_event_kind: activityHeartbeat.runner_event_kind,
+    };
+  }
+  return {
+    ...providerRun,
+    last_heartbeat_at: ledgerLastHeartbeatAt,
+    ledger_last_heartbeat_at: ledgerLastHeartbeatAt,
+    liveness_source: ledgerLastHeartbeatAt ? 'provider_run' : null,
+    last_activity_heartbeat_kind: stringValue(providerRun.last_activity_heartbeat_kind),
+    last_runner_event_kind: stringValue(providerRun.last_runner_event_kind),
+  };
+}
+
 function refListFromRecord(value: Record<string, unknown>, keys: string[]) {
   return uniqueStrings(keys.flatMap((key) => {
     const entry = value[key];
@@ -53,6 +104,15 @@ function refListFromRecord(value: Record<string, unknown>, keys: string[]) {
     }
     return stringList(entry);
   }));
+}
+
+function typedBlockerRefsFromCloseoutRefs(refs: string[]) {
+  return refs.filter((ref) =>
+    ref.startsWith('typed-blocker:')
+    || ref.startsWith('typed-blocker://')
+    || ref.includes('-typed-blocker:')
+    || ref.includes('domain-dispatch-typed-blocker:')
+  );
 }
 
 function currentControlAuthorityBoundary() {
@@ -201,6 +261,8 @@ function deriveCurrentControlStateFromRows(
   const taskPayload = parseRecord(task?.payload_json);
   const latestCloseout = current ? readLatestCloseoutPacket(db, current.stage_attempt_id) : {};
   const providerRun = current ? parseRecord(current.provider_run_json) : {};
+  const activityEvents = current ? parseList(current.activity_events_json) : [];
+  const livenessProviderRun = latestProviderActivityHeartbeat(activityEvents, providerRun);
   const liveProviderAttempt = isLiveProviderAttempt(current, providerRun);
   const closeoutRefs = current ? stringList(parseList(current.closeout_refs_json)) : [];
   const missingIdentity = requiredIdentityMissing(task, current);
@@ -217,6 +279,7 @@ function deriveCurrentControlStateFromRows(
   const typedBlockerRefs = uniqueStrings([
     ...refListFromRecord(latestCloseout, ['typed_blocker_ref', 'typed_blocker_refs']),
     ...refListFromRecord(parseRecord(current?.route_impact_json), ['typed_blocker_ref', 'typed_blocker_refs']),
+    ...typedBlockerRefsFromCloseoutRefs(closeoutRefs),
   ]);
   const base = {
     surface_kind: 'opl_current_control_state',
@@ -241,7 +304,11 @@ function deriveCurrentControlStateFromRows(
     provider_run: {
       provider_status: stringValue(providerRun.provider_status),
       completed_at: stringValue(providerRun.completed_at),
-      last_heartbeat_at: stringValue(providerRun.last_heartbeat_at),
+      last_heartbeat_at: stringValue(livenessProviderRun.last_heartbeat_at),
+      ledger_last_heartbeat_at: stringValue(livenessProviderRun.ledger_last_heartbeat_at),
+      liveness_source: stringValue(livenessProviderRun.liveness_source),
+      last_activity_heartbeat_kind: stringValue(livenessProviderRun.last_activity_heartbeat_kind),
+      last_runner_event_kind: stringValue(livenessProviderRun.last_runner_event_kind),
     },
     superseded_terminal_attempt_refs: terminalAttemptRefs(attempts, current),
     derivation_sources: [

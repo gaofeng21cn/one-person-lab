@@ -44,6 +44,9 @@ export function buildOplShellMcpWiring() {
 }
 
 export function buildOplAionRuntimeConsumptionContract() {
+  const summaryCommand = ['runtime', 'app-operator-drilldown', '--json'];
+  const fullDetailCommand = ['runtime', 'app-operator-drilldown', '--detail', 'full', '--json'];
+
   return {
     surface_kind: 'opl_aion_runtime_consumption_contract',
     shell_adapter: 'aionui',
@@ -78,6 +81,34 @@ export function buildOplAionRuntimeConsumptionContract() {
       can_authorize_quality_verdict: false,
       can_authorize_export_verdict: false,
       provider_completion_is_domain_ready: false,
+    },
+    adapter_boundary: {
+      app_repo: 'gui_product_contract_and_release_wrapper_owner',
+      shell_adapter: 'replaceable_gui_adapter_implementation',
+      bridge_abstraction_owner: 'one_person_lab_app',
+      runtime_protocol_owner: 'one_person_lab',
+    },
+    bridge_contract: {
+      summary_command: summaryCommand,
+      full_detail_command: fullDetailCommand,
+      action_command: [
+        'runtime',
+        'action',
+        'execute',
+        '--action',
+        '<action_id>',
+        '[--payload refs-only-json]',
+        '[--dry-run]',
+      ],
+      app_contract_ref: 'one-person-lab-app/contracts/app-runtime-bridge.json',
+      forbidden_truth_sources: [
+        'direct_domain_repo_reads',
+        'direct_runtime_state_file_reads',
+        'domain_artifact_body_reads',
+        'domain_memory_body_reads',
+        'shell_private_runtime_status',
+      ],
+      shell_adapter_may_replace_ui_without_runtime_protocol_change: true,
     },
   };
 }

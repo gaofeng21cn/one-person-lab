@@ -670,6 +670,22 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       summaryDrilldown.attention_first_payload.next_safe_action.submit_via,
     );
     assert.equal(aionConsumption.authority_boundary.can_write_domain_truth, false);
+    assert.equal(aionConsumption.adapter_boundary.app_repo, 'gui_product_contract_and_release_wrapper_owner');
+    assert.equal(aionConsumption.adapter_boundary.shell_adapter, 'replaceable_gui_adapter_implementation');
+    assert.equal(aionConsumption.adapter_boundary.bridge_abstraction_owner, 'one_person_lab_app');
+    assert.deepEqual(aionConsumption.bridge_contract.summary_command, [
+      'runtime',
+      'app-operator-drilldown',
+      '--json',
+    ]);
+    assert.deepEqual(aionConsumption.bridge_contract.forbidden_truth_sources, [
+      'direct_domain_repo_reads',
+      'direct_runtime_state_file_reads',
+      'domain_artifact_body_reads',
+      'domain_memory_body_reads',
+      'shell_private_runtime_status',
+    ]);
+    assert.equal(aionConsumption.bridge_contract.shell_adapter_may_replace_ui_without_runtime_protocol_change, true);
 
     const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,

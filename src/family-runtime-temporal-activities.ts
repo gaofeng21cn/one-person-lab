@@ -10,12 +10,34 @@ import { runSchedulerTick } from './family-runtime-scheduler.ts';
 import { runSchedulerQueueTick } from './family-runtime-scheduler-tick-runner.ts';
 import { openQueueDb } from './family-runtime-store.ts';
 import {
+  recordStageAttemptActivityHeartbeat,
+} from './family-runtime-stage-attempts.ts';
+import {
   normalizeTypedStageCloseoutPacket,
   runAgentStageRunner,
 } from './family-runtime-codex-stage-runner.ts';
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
+}
+
+function recordActivityHeartbeat(input: {
+  stageAttemptId: string;
+  heartbeatKind: string;
+  runnerEventKind?: string | null;
+  checkpointRefs?: string[];
+}) {
+  try {
+    const { db } = openQueueDb();
+    try {
+      recordStageAttemptActivityHeartbeat(db, input);
+    } finally {
+      db.close();
+    }
+  } catch {
+    // Temporal heartbeat remains authoritative for activity timeout; the SQLite
+    // projection is operator liveness metadata and must not fail the activity.
+  }
 }
 
 export async function codexStageActivity(input: TemporalStageAttemptWorkflowInput) {
@@ -25,12 +47,22 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
     stage_id: input.stage_id,
     checkpoint_refs: input.checkpoint_refs ?? [],
   });
+  recordActivityHeartbeat({
+    stageAttemptId: input.stage_attempt_id,
+    heartbeatKind: 'codex_stage_activity_started',
+    checkpointRefs: input.checkpoint_refs ?? [],
+  });
   const heartbeatInterval = setInterval(() => {
     heartbeat({
       stage_attempt_id: input.stage_attempt_id,
       stage_id: input.stage_id,
       checkpoint_refs: input.checkpoint_refs ?? [],
       heartbeat_kind: 'codex_stage_activity_supervision',
+    });
+    recordActivityHeartbeat({
+      stageAttemptId: input.stage_attempt_id,
+      heartbeatKind: 'codex_stage_activity_supervision',
+      checkpointRefs: input.checkpoint_refs ?? [],
     });
   }, DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS);
   try {
@@ -58,6 +90,12 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
             checkpoint_refs: input.checkpoint_refs ?? [],
             heartbeat_kind: 'codex_stage_activity_runner_progress',
             runner_event_kind: event.event_kind,
+          });
+          recordActivityHeartbeat({
+            stageAttemptId: input.stage_attempt_id,
+            heartbeatKind: 'codex_stage_activity_runner_progress',
+            runnerEventKind: event.event_kind,
+            checkpointRefs: input.checkpoint_refs ?? [],
           });
         },
       }),

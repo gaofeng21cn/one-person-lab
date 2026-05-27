@@ -726,6 +726,56 @@ export function signalStageAttempt(
   };
 }
 
+export function recordStageAttemptActivityHeartbeat(
+  db: DatabaseSync,
+  input: {
+    stageAttemptId: string;
+    heartbeatKind: string;
+    runnerEventKind?: string | null;
+    checkpointRefs?: string[];
+    observedAt?: string | null;
+  },
+) {
+  const row = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
+    input.stageAttemptId,
+  ) as StageAttemptRow | undefined;
+  if (!row) {
+    return null;
+  }
+  const observedAt = input.observedAt ?? nowIso();
+  const providerRun = {
+    ...parseStageAttemptJsonObject(row.provider_run_json),
+    last_heartbeat_at: observedAt,
+    liveness_source: 'provider_activity_event',
+    last_activity_heartbeat_kind: input.heartbeatKind,
+    last_runner_event_kind: input.runnerEventKind ?? null,
+  };
+  const activityEvents = appendActivityEventToRow(row, {
+    event_time: observedAt,
+    activity_kind: 'codex_stage_activity',
+    activity_status: 'running',
+    heartbeat_kind: input.heartbeatKind,
+    runner_event_kind: input.runnerEventKind ?? null,
+    checkpoint_refs: normalizeJsonList(input.checkpointRefs),
+    authority_boundary: {
+      opl: 'provider_activity_liveness_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+      provider_completion_is_domain_ready: false,
+    },
+  });
+  db.prepare(`
+    UPDATE stage_attempts
+    SET provider_run_json = ?, activity_events_json = ?, updated_at = ?
+    WHERE stage_attempt_id = ?
+  `).run(
+    JSON.stringify(providerRun),
+    JSON.stringify(activityEvents),
+    observedAt,
+    input.stageAttemptId,
+  );
+  return inspectStageAttempt(db, input.stageAttemptId);
+}
+
 export function ingestStageAttemptCloseout(
   db: DatabaseSync,
   input: {
