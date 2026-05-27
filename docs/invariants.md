@@ -126,6 +126,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `OPL` 主仓跟踪 family-level session runtime、`opl` shell / TUI、release distribution 与 activation contracts，不跟踪外部 GUI 外壳实现。
 - 本地 8787 `Product API` / `opl web` 模块已退役，不再作为 projection surface 或用户入口保留。
 - 外部壳不得反向定义 `workspace / session / agent / progress / artifacts` 的 canonical truth。
+- One Person Lab App 持有 GUI runtime bridge 产品合同和 active shell validation；`opl-aion-shell` 只持有当前 GUI shell adapter 实现。更换 GUI shell 不得改变 OPL runtime CLI/projection protocol，不得把 runtime truth、domain truth、artifact body、memory body 或 quality/export verdict 下沉到 shell repo。
 - 外部壳不得反向改写默认 runtime 合同；GUI 定制只能建立在 Codex-default 路径之上。
 - 外部产品名只能在基准、上游参考或规划中的界面目标语境出现。
 
