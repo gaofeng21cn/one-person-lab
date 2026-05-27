@@ -326,3 +326,217 @@ test('runtime app-operator-drilldown reconciles MAS refs-only payload with OPL l
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('runtime app-operator-drilldown summary exposes running provider attempts as liveness refs only', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-live-control-'));
+  try {
+    const enqueued = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      JSON.stringify({
+        study_id: 'DM002',
+        action_type: 'run_quality_repair_batch',
+        dispatch_ref: 'studies/DM002/default-executor-dispatch.json',
+        workspace_root: '/tmp/mas-live-control',
+        source_fingerprint: 'mas-default-executor-source:live-control',
+      }),
+      '--dedupe-key',
+      'mas:DM002:default-executor:live-control-summary',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const taskId = enqueued.family_runtime_enqueue.task.task_id;
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'write',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      JSON.stringify({
+        workspace_root: '/tmp/mas-live-control',
+        runtime_root: '/tmp/mas-live-control/runtime',
+        artifact_root: '/tmp/mas-live-control/artifacts',
+        domain_source_fingerprint: 'mas-default-executor-source:live-control',
+        source_refs: ['source:dm002-live-control'],
+      }),
+      '--source-fingerprint',
+      'sha256:mas-live-control',
+      '--task',
+      taskId,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
+
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      attemptId,
+      '--stage-packet-ref',
+      'packet:mas-live-control',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const summaryOutput = runCli(['runtime', 'app-operator-drilldown'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const summary = summaryOutput.app_operator_drilldown.summary;
+
+    assert.equal(summary.current_control_state_count, 1);
+    assert.equal(summary.current_control_state_running_count, 1);
+    assert.equal(summary.current_control_state_running_provider_attempt_count, 1);
+    assert.deepEqual(summary.current_control_state_running_provider_attempt_domain_ids, [
+      'medautoscience',
+    ]);
+    assert.deepEqual(summary.current_control_state_running_provider_attempt_task_kinds, [
+      'domain_owner/default-executor-dispatch',
+    ]);
+    assert.deepEqual(summary.current_control_state_running_provider_attempt_stage_attempt_ids, [
+      attemptId,
+    ]);
+    assert.equal(summary.current_control_state_running_provider_attempt_domain_id_omitted_count, 0);
+    assert.equal(summary.current_control_state_running_provider_attempt_task_kind_omitted_count, 0);
+    assert.equal(summary.current_control_state_running_provider_attempt_stage_attempt_id_omitted_count, 0);
+    assert.equal(
+      typeof summary.current_control_state_latest_running_provider_heartbeat_at,
+      'string',
+    );
+    assert.equal(
+      summary.current_control_state_running_provider_attempt_summary_policy,
+      'refs_only_liveness_projection_no_domain_ready_publication_ready_or_artifact_ready',
+    );
+    assert.equal(Object.hasOwn(summary, 'domain_ready'), false);
+    assert.equal(Object.hasOwn(summary, 'publication_ready'), false);
+    assert.equal(Object.hasOwn(summary, 'artifact_ready'), false);
+
+    const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const full = fullOutput.app_operator_drilldown;
+
+    assert.equal(full.current_control_state.summary.running_provider_attempt_count, 1);
+    assert.deepEqual(
+      full.current_control_state.summary.running_provider_attempt_stage_attempt_ids,
+      [attemptId],
+    );
+    assert.equal(full.current_control_state.states[0].running_provider_attempt, true);
+    assert.equal(full.current_control_state.states[0].reconciliation_status, 'running');
+    assert.equal(full.current_control_state.authority_boundary.provider_completion_is_domain_ready, false);
+    assert.equal(Object.hasOwn(full.current_control_state.states[0], 'domain_ready'), false);
+    assert.equal(Object.hasOwn(full.current_control_state.states[0], 'publication_ready'), false);
+    assert.equal(Object.hasOwn(full.current_control_state.states[0], 'artifact_ready'), false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime app-operator-drilldown bounds running provider attempt liveness samples in default summary', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-live-control-bounded-'));
+  try {
+    const attemptIds: string[] = [];
+    for (let index = 0; index < 7; index += 1) {
+      const enqueued = runCli([
+        'family-runtime',
+        'enqueue',
+        '--domain',
+        'medautoscience',
+        '--task-kind',
+        'domain_owner/default-executor-dispatch',
+        '--payload',
+        JSON.stringify({
+          study_id: `DM${String(index).padStart(3, '0')}`,
+          action_type: 'run_quality_repair_batch',
+          dispatch_ref: `studies/DM${String(index).padStart(3, '0')}/default-executor-dispatch.json`,
+          workspace_root: `/tmp/mas-live-control-${index}`,
+          source_fingerprint: `mas-default-executor-source:live-control-${index}`,
+        }),
+        '--dedupe-key',
+        `mas:DM${String(index).padStart(3, '0')}:default-executor:live-control-summary`,
+      ], {
+        OPL_STATE_DIR: stateRoot,
+      });
+      const created = runCli([
+        'family-runtime',
+        'attempt',
+        'create',
+        '--domain',
+        'medautoscience',
+        '--stage',
+        'write',
+        '--provider',
+        'local_sqlite',
+        '--workspace-locator',
+        JSON.stringify({
+          workspace_root: `/tmp/mas-live-control-${index}`,
+          runtime_root: `/tmp/mas-live-control-${index}/runtime`,
+          artifact_root: `/tmp/mas-live-control-${index}/artifacts`,
+          domain_source_fingerprint: `mas-default-executor-source:live-control-${index}`,
+          source_refs: [`source:dm${index}-live-control`],
+        }),
+        '--source-fingerprint',
+        `sha256:mas-live-control-${index}`,
+        '--task',
+        enqueued.family_runtime_enqueue.task.task_id,
+      ], {
+        OPL_STATE_DIR: stateRoot,
+      });
+      const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
+      attemptIds.push(attemptId);
+      runCli([
+        'family-runtime',
+        'attempt',
+        'fixture-run',
+        attemptId,
+        '--stage-packet-ref',
+        `packet:mas-live-control-${index}`,
+      ], {
+        OPL_STATE_DIR: stateRoot,
+      });
+    }
+
+    const summaryOutput = runCli(['runtime', 'app-operator-drilldown'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const summary = summaryOutput.app_operator_drilldown.summary;
+
+    assert.equal(summary.current_control_state_running_provider_attempt_count, 7);
+    assert.deepEqual(summary.current_control_state_running_provider_attempt_domain_ids, [
+      'medautoscience',
+    ]);
+    assert.equal(summary.current_control_state_running_provider_attempt_domain_id_omitted_count, 0);
+    assert.deepEqual(summary.current_control_state_running_provider_attempt_task_kinds, [
+      'domain_owner/default-executor-dispatch',
+    ]);
+    assert.equal(summary.current_control_state_running_provider_attempt_task_kind_omitted_count, 0);
+    assert.equal(summary.current_control_state_running_provider_attempt_stage_attempt_ids.length, 5);
+    assert.equal(summary.current_control_state_running_provider_attempt_stage_attempt_id_omitted_count, 2);
+    assert.equal(
+      summary.current_control_state_running_provider_attempt_stage_attempt_ids.every(
+        (stageAttemptId: string) => attemptIds.includes(stageAttemptId),
+      ),
+      true,
+    );
+
+    const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(fullOutput.app_operator_drilldown.current_control_state.states.length, 7);
+    const fullAttemptIds = fullOutput.app_operator_drilldown.current_control_state.states
+      .map((state: Record<string, unknown>) => state.active_stage_attempt_id);
+    assert.equal(attemptIds.every((attemptId) => fullAttemptIds.includes(attemptId)), true);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
