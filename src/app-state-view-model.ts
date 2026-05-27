@@ -310,7 +310,7 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
       visible_action_count: input.actions.length,
       profile: input.profile,
     },
-    full_detail_surface: 'opl runtime app-operator-drilldown --detail full',
+    full_detail_surface: 'opl runtime app-operator-drilldown --detail full --json',
     workbench: {
       view_model_schema: 'opl_app_operator_workbench.v1',
       summary_cards: buildSummaryCards(input),
@@ -333,6 +333,7 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
         global_map_renderer: 'bounded_typed_view_model',
         graph_layout_recompute: 'on_input_hash_change',
         shell_must_not_derive_layout_from_raw_runtime_projection: true,
+        shell_must_not_use_full_drilldown_as_normal_state: true,
       },
       lazy_refs: lazyRefs,
     },

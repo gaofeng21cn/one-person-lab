@@ -129,19 +129,19 @@
         },
         {
           "ref_kind": "machine_cli",
-          "ref": "opl app state --profile fast"
+          "ref": "opl app state --profile fast --json"
         },
         {
           "ref_kind": "machine_cli",
-          "ref": "opl app state --profile full"
+          "ref": "opl app state --profile full --json"
         },
         {
           "ref_kind": "machine_cli",
-          "ref": "opl app action execute"
+          "ref": "opl app action execute --json"
         },
         {
           "ref_kind": "machine_cli",
-          "ref": "opl runtime app-operator-drilldown --detail full"
+          "ref": "opl runtime app-operator-drilldown --detail full --json"
         },
         {
           "ref_kind": "human_doc_surface",
@@ -157,9 +157,10 @@
       "notes": [
         "Represents the app as the user-facing workbench for OPL Framework and installed Foundry Agents.",
         "The app consumes framework and domain projections; it does not own domain truth, runtime provider truth, quality verdicts, or artifact authority.",
-        "Default GUI page state comes from `opl app state --profile fast`; explicit refresh or diagnostic panes may request `opl app state --profile full`.",
-        "`opl app action execute` is the App mutating boundary; GUI pages must not stitch together module, developer-supervisor, worker, system-info, release, or provider commands as independent truth sources.",
-        "`opl runtime app-operator-drilldown --detail full` remains the explicit full runtime drilldown exception for operator/status pages."
+        "OPL Framework is the GUI-ready state/action producer only; one-person-lab-app owns GUI product truth and release/page-state contracts, while opl-aion-shell is a replaceable implementation adapter.",
+        "Default GUI page state comes from `opl app state --profile fast --json`; explicit refresh or diagnostic panes may request `opl app state --profile full --json`.",
+        "`opl app action execute --json` is the App mutating boundary; GUI pages must not stitch together module, developer-supervisor, worker, system-info, release, or provider commands as independent truth sources.",
+        "`opl runtime app-operator-drilldown --detail full --json` remains an explicit full runtime drilldown exception for operator/status diagnostics and must not be used as normal GUI page state."
       ],
       "surface_budget": {
         "default_surface": true,

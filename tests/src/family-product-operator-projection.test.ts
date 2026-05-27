@@ -86,6 +86,32 @@ test('family product operator projection preserves Codex-default runtime and pre
   }
 });
 
+test('family product operator projection pins OPL as App state/action producer only', () => {
+  const contract = readJson('contracts/opl-framework/family-product-operator-projection.json');
+  const boundary = contract.app_runtime_boundary as Record<string, any>;
+
+  assert.equal(boundary.framework_role, 'gui_ready_state_action_producer_only');
+  assert.equal(boundary.default_state_command, 'opl app state --profile fast --json');
+  assert.equal(boundary.full_state_command, 'opl app state --profile full --json');
+  assert.equal(
+    boundary.action_command,
+    'opl app action execute --action <id> [--payload <json>] [--dry-run] --json',
+  );
+  assert.equal(
+    boundary.full_runtime_drilldown_exception,
+    'opl runtime app-operator-drilldown --detail full --json',
+  );
+  assert.equal(boundary.state_owner, 'one-person-lab');
+  assert.equal(boundary.gui_product_truth_owner, 'one-person-lab-app');
+  assert.equal(boundary.shell_role, 'implementation_adapter_only');
+  assert.equal(
+    boundary.rules.some((rule: string) =>
+      rule.includes('must not use it as normal GUI page state')
+    ),
+    true,
+  );
+});
+
 test('family product operator projection documents safe learning from rejected generic runtime mechanisms', () => {
   const contract = readJson('contracts/opl-framework/family-product-operator-projection.json');
   const policy = contract.external_stability_learning_policy as Record<string, any>;
