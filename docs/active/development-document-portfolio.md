@@ -107,6 +107,59 @@ OPL 开发文档现在不能按“每份旧计划都继续完整执行”阅读�
 
 ## Coverage Ledger
 
+Date: `2026-05-28 07:00 CST`
+Tranche: `opl-quality-projection-reference-revalidation`
+State: `tranche_verified`
+
+本轮重验 OPL `docs/references/operating-governance/family-domain-quality-projection-contract.md`，目标是把 quality projection 人读合同重新对齐到当前 JSON contract、focused contract test、operating-governance 索引和 active truth docs。本轮只维护 projection / owner split / currentness guard，不改 JSON contract/schema/source/test，不新增 MAS paper closure、MAG fundability / submission readiness、RCA visual ready / export proof、domain ready、production ready、artifact authority、quality/export verdict、publication judgment 或 App release ready 结论。
+
+Fresh live truth inputs:
+
+- `TASTE.md`, `docs/status.md`, `docs/active/current-state-vs-ideal-gap.md`, `docs/references/operating-governance/README.md`, `docs/references/runtime-substrate/opl-family-agent-ideal-state.md`.
+- Machine contract and focused guard from `contracts/opl-framework/family-domain-quality-projection-contract.json` and `tests/src/family-domain-quality-projection-contract.test.ts`.
+- Support read of prior OPL read-model currentness wording in operating-governance references and active truth docs.
+
+Fresh semantic result:
+
+- `family-domain-quality-projection-contract.md` already has owner, purpose, state and machine-boundary signals and remains a support reference, not a machine contract.
+- The machine contract still limits OPL authority to projection vocabulary、operator-facing status、source refs and freshness, while MAS/MAG/RCA keep quality/publication/fundability/visual/export authority.
+- The document needed one currentness guard: OPL read-model、worklist、App/operator drilldown、refs-only receipt 和 `projection_only` summary can expose visibility and freshness only; they cannot close domain quality gates or become readiness / verdict claims without domain-owned eval/proof/package pointers and `assessment_owner=domain_owned`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | `docs/references/operating-governance/family-domain-quality-projection-contract.md`; support read of `contracts/opl-framework/family-domain-quality-projection-contract.json`, `tests/src/family-domain-quality-projection-contract.test.ts`, `docs/references/operating-governance/README.md`, `docs/status.md`, `docs/active/current-state-vs-ideal-gap.md`, `docs/references/runtime-substrate/opl-family-agent-ideal-state.md`. | `docs/references/operating-governance/family-domain-quality-projection-contract.md`; `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The document remains the current support reference for family quality projection owner split.
+
+Unreviewed docs:
+
+- `one-person-lab`: repo-wide `README*` and `docs/**/*.md` sections outside prior covered chunks and this quality-projection reference remain under global unreviewed scope, especially root `README*`, active support docs such as `docs/active/opl-family-development-reference.md` and `docs/active/production-framework-closure-gap-matrix.md`, and most `docs/history/**` process bodies.
+- `med-autoscience`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused MAS chunks and current retained conflicting lane.
+- `med-autogrant`: current recorded scope remains closed by the MAG final inventory reconcile unless new docs or later source/contract changes reopen a section.
+- `redcube-ai`: repo-wide `README*` and `docs/**/*.md` full paragraph coverage remains open outside prior focused RCA chunks; current clean RCA same-main worktree remains in freshness window at this run's start.
+- `opl-meta-agent`: no unreviewed repo-root `README*` or `docs/**/*.md` from the earlier full OMA tranche unless docs changed after that tranche.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until active App release/VM smoke lanes are closed or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Any quality-projection wording that upgrades OPL worklist/readiness/drilldown, refs-only receipts, `projection_only` summary, generic persona QA, claim-only ready, chat summary, memory or terminal prose into MAS/MAG/RCA quality authority is stale pollution.
+- Any wording that treats zero open worklist, verified refs-only transport, structural conformance, App/operator visibility or OPL-side projection as paper closure、grant submission ready、visual export proof、domain ready、production ready、artifact authority、quality/export verdict 或 publication judgment is stale pollution.
+
+Verification before absorb:
+
+- `git diff --check` passed.
+- Strict conflict-marker scan over `README.md docs contracts` returned no matches.
+- `node --test tests/src/family-domain-quality-projection-contract.test.ts` passed.
+- OPL Doc Governance doctor reported `finding_count=0` and active truth health `pass`.
+
+Next tranche write scope:
+
+- Continue OPL uncovered root README / active support docs / history process bodies, or switch to MAS remaining repo-wide docs after conflicting lanes are routed. Keep App body governance delayed while active release/VM smoke lanes own local state. Do not close the global `/goal` until all six repos have empty uncovered README/docs ledgers or remaining gaps are carried into executable next-round Agent prompts.
+
 Date: `2026-05-28 06:43 CST`
 Tranche: `opl-framework-contract-zh-index-revalidation`
 State: `tranche_verified`
