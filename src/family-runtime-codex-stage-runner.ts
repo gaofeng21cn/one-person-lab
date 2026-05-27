@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 import { FrameworkContractError } from './contracts.ts';
 import {
   buildCodexCliPreview,
@@ -93,6 +96,8 @@ type CodexStageRunnerProcessOutputSummary = {
   recovered_final_message_chars?: number;
   session_recovery_status?: string;
   session_recovery_attempts?: number;
+  domain_receipt_recovery_status?: string;
+  domain_receipt_recovery_ref?: string;
   closeout_rejection_reason?: 'stage_attempt_id_mismatch' | 'idempotency_key_mismatch';
   rejected_closeout_stage_attempt_id?: string;
   rejected_closeout_idempotency_key?: string;
@@ -136,6 +141,15 @@ function readRecordList(value: unknown) {
     return [];
   }
   return value.filter(isRecord);
+}
+
+function readJsonRecordFile(filePath: string): JsonRecord | null {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
+    return isRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
 function stageIdFromAttempt(attempt: JsonRecord) {
@@ -219,16 +233,13 @@ function costSummaryFrom(output: string, runnerMode: CodexStageRunnerMode) {
   const tokenUsage = usageLines
     .map((entry) => (isRecord(entry.token_usage) ? entry.token_usage : null))
     .find((entry): entry is JsonRecord => Boolean(entry));
-  const hasTokenUsage = Boolean(tokenUsage);
   return {
-    cost_status: hasTokenUsage
-      ? 'observed'
-      : (runnerMode === 'codex_cli' ? 'not_reported_by_codex_cli' : 'not_measured_dry_run'),
-    estimated_cost_usd: typeof tokenUsage?.estimated_cost_usd === 'number' ? tokenUsage.estimated_cost_usd : null,
+    cost_status: runnerMode === 'codex_cli' ? 'observed_or_unreported' : 'not_measured_dry_run',
+    estimated_cost_usd: typeof tokenUsage?.estimated_cost_usd === 'number' ? tokenUsage.estimated_cost_usd : 0,
     token_usage: {
-      input_tokens: typeof tokenUsage?.input_tokens === 'number' ? tokenUsage.input_tokens : null,
-      output_tokens: typeof tokenUsage?.output_tokens === 'number' ? tokenUsage.output_tokens : null,
-      total_tokens: typeof tokenUsage?.total_tokens === 'number' ? tokenUsage.total_tokens : null,
+      input_tokens: typeof tokenUsage?.input_tokens === 'number' ? tokenUsage.input_tokens : 0,
+      output_tokens: typeof tokenUsage?.output_tokens === 'number' ? tokenUsage.output_tokens : 0,
+      total_tokens: typeof tokenUsage?.total_tokens === 'number' ? tokenUsage.total_tokens : 0,
     },
     billing_boundary: 'codex_cli_activity_runner_reports_only_observed_or_declared_usage',
   };
@@ -312,6 +323,138 @@ async function recoverCloseoutFromCodexSessionWithRetry(input: {
 
     await sleep(Math.min(intervalMs, Math.max(0, timeoutMs - elapsedMs)));
   }
+}
+
+function defaultExecutorExecutionRefFromStagePacketRef(stagePacketRef: string) {
+  const marker = '/artifacts/supervision/consumer/default_executor_dispatches/';
+  const markerIndex = stagePacketRef.indexOf(marker);
+  if (markerIndex < 0) {
+    return null;
+  }
+  return `${stagePacketRef.slice(0, markerIndex)}`
+    + '/artifacts/supervision/consumer/default_executor_execution/latest.json';
+}
+
+function findMatchingDefaultExecutorExecution(input: {
+  executionIndex: JsonRecord;
+  stagePacket: JsonRecord | null;
+}) {
+  const executions = [
+    ...readRecordList(input.executionIndex.executions).map((execution) => ({
+      execution,
+      receiptRefSuffix: '',
+    })),
+    ...readRecordList(input.executionIndex.execution_ledger).map((execution) => ({
+      execution,
+      receiptRefSuffix: '#execution_ledger',
+    })),
+  ];
+  if (executions.length === 0) {
+    return null;
+  }
+  const studyId = optionalString(input.stagePacket?.study_id);
+  const actionType = optionalString(input.stagePacket?.action_type);
+  const actionFingerprint = optionalString(input.stagePacket?.action_fingerprint);
+  const idempotencyKey = optionalString(input.stagePacket?.idempotency_key);
+  if (!studyId || !actionType || (!actionFingerprint && !idempotencyKey)) {
+    return null;
+  }
+  return executions.find(({ execution }) => {
+    const matchesStudy = optionalString(execution.study_id) === studyId;
+    const matchesAction = optionalString(execution.action_type) === actionType;
+    const executionFingerprint = optionalString(execution.action_fingerprint);
+    const matchesFingerprint = actionFingerprint && executionFingerprint
+      ? executionFingerprint === actionFingerprint
+      : false;
+    const matchesIdempotency = idempotencyKey
+      ? optionalString(execution.idempotency_key) === idempotencyKey
+      : false;
+    return matchesStudy && matchesAction && (matchesIdempotency || matchesFingerprint);
+  }) ?? null;
+}
+
+function closeoutPacketFromDefaultExecutorExecution(input: {
+  execution: JsonRecord;
+  receiptRef: string;
+}): TypedStageCloseoutPacket | null {
+  const executionStatus = optionalString(input.execution.execution_status);
+  if (!executionStatus || !['blocked', 'completed', 'succeeded', 'executed'].includes(executionStatus)) {
+    return null;
+  }
+  const ownerResult = isRecord(input.execution.owner_result) ? input.execution.owner_result : {};
+  const blockedReason = optionalString(ownerResult.blocked_reason)
+    ?? optionalString(input.execution.blocked_reason)
+    ?? optionalString(input.execution.error);
+  return normalizeTypedStageCloseoutPacket({
+    surface_kind: 'domain_stage_closeout_packet',
+    closeout_refs: [input.receiptRef],
+    consumed_refs: readStringList(input.execution.source_refs),
+    consumed_memory_refs: readStringList(input.execution.consumed_memory_refs),
+    writeback_receipt_refs: readStringList(input.execution.writeback_receipt_refs),
+    rejected_writes: [
+      ...readRecordList(input.execution.typed_blockers),
+      ...(blockedReason
+        ? [{
+            blocker_id: blockedReason,
+            reason: blockedReason,
+            execution_status: executionStatus,
+          }]
+        : []),
+    ],
+    next_owner: optionalString(input.execution.next_owner)
+      ?? optionalString((isRecord(input.execution.current_owner_route) ? input.execution.current_owner_route : {}).next_owner)
+      ?? 'med-autoscience',
+    domain_ready_verdict: 'domain_gate_pending',
+    route_impact: {
+      decision: executionStatus,
+      execution_id: optionalString(input.execution.execution_id),
+      action_type: optionalString(input.execution.action_type),
+      owner_callable_surface: optionalString(input.execution.owner_callable_surface),
+      required_output_surface: optionalString(input.execution.required_output_surface),
+      blocked_reason: blockedReason,
+      owner_result_status: optionalString(ownerResult.status),
+      quality_authorized: ownerResult.quality_authorized === true,
+      submission_authorized: ownerResult.submission_authorized === true,
+      current_package_write_authorized: ownerResult.current_package_write_authorized === true,
+      writes_performed: false,
+    },
+    authority_boundary: {
+      opl: 'default_executor_execution_receipt_transport_only',
+      domain: 'truth_quality_artifact_gate_owner',
+      can_write_domain_truth: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_submission: false,
+    },
+  });
+}
+
+function recoverMasDefaultExecutorReceiptCloseout(input: {
+  workspaceRoot: string;
+  stagePacketRef: string;
+}) {
+  const receiptRef = defaultExecutorExecutionRefFromStagePacketRef(input.stagePacketRef);
+  if (!receiptRef) {
+    return { status: 'not_default_executor_dispatch' as const, closeoutPacket: null, receiptRef: null };
+  }
+  const receiptPath = path.join(input.workspaceRoot, receiptRef);
+  const executionIndex = readJsonRecordFile(receiptPath);
+  if (!executionIndex) {
+    return { status: 'receipt_not_found' as const, closeoutPacket: null, receiptRef };
+  }
+  const stagePacket = readJsonRecordFile(path.join(input.workspaceRoot, input.stagePacketRef));
+  const match = findMatchingDefaultExecutorExecution({ executionIndex, stagePacket });
+  if (!match) {
+    return { status: 'matching_execution_not_found' as const, closeoutPacket: null, receiptRef };
+  }
+  const closeoutPacket = closeoutPacketFromDefaultExecutorExecution({
+    execution: match.execution,
+    receiptRef: `${receiptRef}${match.receiptRefSuffix}`,
+  });
+  return {
+    status: closeoutPacket ? 'closeout_found' as const : 'execution_not_terminal' as const,
+    closeoutPacket,
+    receiptRef,
+  };
 }
 
 function validateCloseoutPacketForAttempt(input: {
@@ -417,11 +560,11 @@ function buildAgentStageRunnerReceipt(input: {
     },
     cost_summary: {
       cost_status: 'not_measured_agent_executor_receipt',
-      estimated_cost_usd: null,
+      estimated_cost_usd: 0,
       token_usage: {
-        input_tokens: null,
-        output_tokens: null,
-        total_tokens: null,
+        input_tokens: 0,
+        output_tokens: 0,
+        total_tokens: 0,
       },
       billing_boundary: 'agent_executor_adapter_reports_only_declared_or_observed_usage',
     },
@@ -553,6 +696,8 @@ export async function runCodexStageRunner(input: CodexStageRunnerInput): Promise
   let recoveredFinalMessageChars = 0;
   let sessionRecoveryAttempts = 0;
   let sessionRecoveryStatus: string | null = null;
+  let domainReceiptRecoveryStatus: string | null = null;
+  let domainReceiptRecoveryRef: string | null = null;
   let closeoutRejection: ReturnType<typeof validateCloseoutPacketForAttempt>['rejection'] = null;
   if (
     !closeoutPacket
@@ -571,6 +716,15 @@ export async function runCodexStageRunner(input: CodexStageRunnerInput): Promise
       recoveredSessionPath = recovered.recovered.sessionPath;
       recoveredFinalMessageChars = recovered.parsed?.finalMessage.length ?? 0;
     }
+  }
+  if (!closeoutPacket && result.timeoutReason !== 'unsupported_tool_protocol') {
+    const domainReceiptRecovery = recoverMasDefaultExecutorReceiptCloseout({
+      workspaceRoot,
+      stagePacketRef,
+    });
+    domainReceiptRecoveryStatus = domainReceiptRecovery.status;
+    domainReceiptRecoveryRef = domainReceiptRecovery.receiptRef;
+    closeoutPacket = domainReceiptRecovery.closeoutPacket;
   }
   const validatedCloseout = validateCloseoutPacketForAttempt({
     closeoutPacket,
@@ -624,6 +778,12 @@ export async function runCodexStageRunner(input: CodexStageRunnerInput): Promise
         ? {
             session_recovery_status: sessionRecoveryStatus,
             session_recovery_attempts: sessionRecoveryAttempts,
+          }
+        : {}),
+      ...(domainReceiptRecoveryStatus
+        ? {
+            domain_receipt_recovery_status: domainReceiptRecoveryStatus,
+            ...(domainReceiptRecoveryRef ? { domain_receipt_recovery_ref: domainReceiptRecoveryRef } : {}),
           }
         : {}),
       ...(closeoutRejection

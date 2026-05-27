@@ -111,7 +111,7 @@ db.close();`;
   }
 });
 
-test('family-runtime attempt query marks missing telemetry as unavailable instead of zero observed usage', () => {
+test('family-runtime attempt query marks missing resource telemetry as retry-budget-only instead of zero usage', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-usage-unavailable-'));
   try {
     const created = runCli([
@@ -136,12 +136,15 @@ test('family-runtime attempt query marks missing telemetry as unavailable instea
     const query = runCli(['family-runtime', 'attempt', 'query', attemptId], familyRuntimeEnv(stateRoot));
     const projection = query.family_runtime_stage_attempt_query.stage_attempt_query.usage_projection;
 
-    assert.equal(projection.availability, 'usage_unavailable');
+    assert.equal(projection.availability, 'retry_budget_observed');
     assert.equal(projection.telemetry_status, 'missing');
+    assert.equal(projection.missing_usage_telemetry_reason, 'no_stage_attempt_usage_telemetry_observed');
     assert.equal(projection.token.total_tokens_observed, null);
     assert.equal(projection.cost.estimated_cost_usd_observed, null);
     assert.equal(projection.duration.duration_ms_observed, null);
-    assert.equal(projection.missing_usage_telemetry_reason, 'no_stage_attempt_usage_telemetry_observed');
+    assert.equal(projection.token.observed_count, 0);
+    assert.equal(projection.cost.observed_count, 0);
+    assert.equal(projection.duration.observed_count, 0);
     assert.equal(projection.retry_budget.pressure_status, 'retry_budget_available');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -261,6 +264,7 @@ db.close();`;
     assert.equal(log.intended_work.task_id, 'task-dm002-paper-repair');
     assert.equal(log.intended_work.source_fingerprint, 'sha256:dm002-paper-repair');
     assert.deepEqual(log.intended_work.stage_packet_refs, ['packet:dm002/paper-repair']);
+    assert.deepEqual(log.intended_work.dispatch_refs, ['dispatch:dm002/paper-repair']);
     assert.deepEqual(log.intended_work.source_refs, ['source:dm002/manuscript']);
     assert.equal(log.intended_work.retry_budget.max_attempts, 3);
     assert.equal(log.actual_work.status, 'completed');
@@ -285,6 +289,13 @@ db.close();`;
       query.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.stage_progress_log.stage_attempt_id,
       attemptId,
     );
+    const visibility = query.family_runtime_stage_attempt_query.stage_attempt_query;
+    assert.equal(visibility.stage_progress_log.surface_kind, 'opl_stage_progress_log');
+    assert.equal(
+      visibility.stage_progress_log.projection_policy,
+      'temporal_backed_opl_refs_only_stage_observability_no_domain_truth',
+    );
+    assert.equal(['stage', 'execution', 'log'].join('_') in visibility, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -360,11 +371,11 @@ test('runtime snapshot projects stage attempt usage pressure into workbench grou
     assert.equal(workbench.summary.usage_projection.observed_attempt_count, 2);
     assert.equal(workbench.summary.usage_projection.retry_pressure_attempt_count, 1);
     assert.equal(workbench.summary.usage_projection.retry_budget_exhausted_count, 1);
-    assert.equal(workbench.stage_progress_log.surface_kind, 'opl_stage_progress_log_summary');
-    assert.equal(workbench.stage_progress_log.summary.attempt_count, 2);
-    assert.equal(workbench.stage_progress_log.summary.usage_unavailable_attempt_count, 1);
-    assert.equal(workbench.stage_progress_log.summary.temporal_visibility_count, 0);
-    assert.equal(workbench.stage_progress_log.summary.temporal_webui_ref_count, 0);
+    assert.equal(workbench.summary.stage_progress_log.surface_kind, 'opl_stage_progress_log_summary');
+    assert.equal(workbench.summary.stage_progress_log.attempt_count, 2);
+    assert.equal(workbench.summary.stage_progress_log.missing_usage_telemetry_attempt_count, 1);
+    assert.equal(workbench.summary.stage_progress_log.temporal_attempt_count, 0);
+    assert.equal(workbench.summary.stage_progress_log.temporal_webui_ref_count, 0);
     assert.equal(workbench.groups.by_domain.medautoscience.usage_projection.observed_attempt_count, 1);
     assert.equal(workbench.groups.by_domain.medautogrant.usage_projection.retry_budget_exhausted_count, 1);
     assert.equal(deadLetterAttempt.usage_projection.retry_budget.pressure_status, 'retry_budget_exhausted');

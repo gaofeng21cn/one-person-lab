@@ -151,10 +151,16 @@
       "queries": [
         "StageAttemptQuery"
       ],
+      "updates": [
+        "StageAttemptOperatorUpdate"
+      ],
       "required_search_attributes": [
         "OplStageAttemptId",
         "OplDomainId",
         "OplStageId",
+        "OplAttemptStatus",
+        "OplStagePhase",
+        "OplBlockedReason",
         "OplTaskId",
         "OplSourceFingerprint",
         "OplExecutorKind"
@@ -219,8 +225,23 @@
     "dead_letter"
   ],
   "stage_progress_log_contract": {
+    "surface_name": "stage_progress_log",
     "surface_kind": "opl_stage_progress_log",
     "projection_policy": "temporal_backed_opl_refs_only_stage_observability_no_domain_truth",
+    "required_derivation_sources": [
+      "stage_attempt_ledger",
+      "provider_run_projection",
+      "activity_events",
+      "typed_closeout_packet_refs",
+      "domain_owned_receipt_refs",
+      "stage_attempt_usage_projection"
+    ],
+    "forbidden_derivation_sources": [
+      "domain_truth_body",
+      "domain_memory_body",
+      "artifact_body",
+      "quality_verdict_body"
+    ],
     "required_sections": [
       "intended_work",
       "actual_work",
@@ -238,6 +259,9 @@
         "OplStageAttemptId",
         "OplDomainId",
         "OplStageId",
+        "OplAttemptStatus",
+        "OplStagePhase",
+        "OplBlockedReason",
         "OplTaskId",
         "OplSourceFingerprint",
         "OplExecutorKind"
@@ -308,6 +332,8 @@
       "can_execute_domain_action": false,
       "can_write_domain_truth": false,
       "can_write_domain_memory_body": false,
+      "can_read_memory_body": false,
+      "can_read_artifact_body": false,
       "can_authorize_domain_ready": false,
       "can_authorize_quality_verdict": false,
       "provider_completion_is_domain_ready": false

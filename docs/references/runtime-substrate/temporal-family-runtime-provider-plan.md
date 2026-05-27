@@ -16,6 +16,8 @@ Temporal 负责 durable execution：workflow history、activity retry/timeout、
 
 `hermes_agent`、`claude_code` 与 `antigravity_cli` 的定位是显式非默认 executor adapter/backend；旧 Hermes runtime / Gateway / provider 只归历史 provenance、诊断语料、负向 guard 或历史参考材料。Temporal provider 是生产在线路径的必需底座；Hermes 不再作为目标 session/wakeup substrate、active provider interface、Gateway bridge、provider proof surface、install/update target 或 readiness surface；local provider 只作为 dev/CI/offline diagnostic baseline。
 
+Temporal Event History、Visibility 与 Updates/Signals 属于 provider durable-execution 层：它们证明 workflow/activity/signal/update/query/retry/timeout/replay 事实。OPL SQLite attempt ledger 属于 framework control-plane 层：它记录 attempt identity、typed queue linkage、idempotency/source fingerprint、checkpoint/closeout refs、owner receipt refs、typed blocker refs、human-gate/dead-letter state 和 read-model currentness。`stage_progress_log` 是 OPL family-runtime attempt/progress projection，只从 Temporal provider refs、SQLite ledger refs、domain receipt/typed blocker refs 和 closeout refs 派生。Agent Lab 可以消费该 projection 的 refs 做 eval/improvement/root-cause/follow-up read model，但不拥有 runtime log，也不能写 provider history、SQLite ledger、domain truth、owner receipt、artifact body、memory body 或 quality verdict。退役 `stage_execution_log` 名称只允许在 tombstone/provenance 语境中出现。
+
 2026-05-14 closeout 证明 Temporal provider 的 repo code path、worker lifecycle contract、CLI start/query/signal、typed closeout ingestion、fail-closed readiness、repo-native Temporal live residency proof、Agent Executor Adapter 接入链路和本机 managed production proof 已经落地；当时显式 Temporal provider view 为 `full_online_ready=true`、`durable_online_ready=true`，`opl family-runtime residency proof --provider temporal --production` 返回 `production_residency_proven`，并把 proof receipt 写入 runtime event ledger。2026-05-26 live read-model 需要按更新口径读取：`framework readiness` 当前是 `framework_control_plane_available_with_blocked_refs_only_attention`，hard blocker 为 0，provider cadence/capability SLO satisfied，但 `domain_blocked_attention_tail_count=226`、`evidence_envelope_blocked_count=213`，OPL 仍不能声明 domain ready、production ready、quality/export verdict 或 artifact mutation authority。`family-runtime evidence-worklist` 读为 `open_worklist_item_count=0` 也只表示没有可执行 OPL evidence workorder，不关闭 blocked refs-only envelope、domain owner-chain、App release-ready 或 long-soak evidence。剩余验收集中在周期性长时 residency / SLO、真实 domain stage activity soak、MAS owner-chain guarded apply、MAG/RCA controlled soak 和真实 cost/progress 校准。
 
 ## 顶层设计
@@ -57,6 +59,8 @@ Provider 层不持有：
 | `progress projection` | Query | OPL App / CLI 读取当前状态、next owner、blocked reason；provider proof 作为 operator item 展示，但不升级为 domain ready。 |
 | `retry/dead-letter` | Retry policy / failure state | Provider 只表达运行失败和重试预算，不解释 domain quality。 |
 | `history/replay` | Workflow history | 作为 runtime audit，不替代 domain truth。 |
+
+Temporal Visibility 只提供 provider 运行发现与过滤索引，不是 OPL attempt ledger。Temporal Updates/Signals 只承载 workflow 内的人类指令、human gate、pause/resume/stop 或修复信号，不直接写 domain truth。OPL SQLite attempt ledger 和 `stage_progress_log` 引用这些 provider refs 后，仍只表达 control-plane progress 与 operator projection。
 
 ## 开发优先级
 

@@ -803,8 +803,15 @@ test('system initialize blocks launch when compatible Codex CLI lacks configured
           phase: string;
           ready_to_launch: boolean;
           blocking_items: string[];
+          maintenance_items: string[];
         };
-        checklist: Array<{ item_id: string; blocking: boolean }>;
+        checklist: Array<{
+          item_id: string;
+          blocking: boolean;
+          readiness_layer: string;
+          severity: string;
+          action_command_ref: string | null;
+        }>;
         core_engines: {
           codex: {
             config_status: string;
@@ -819,6 +826,9 @@ test('system initialize blocks launch when compatible Codex CLI lacks configured
     assert.equal(output.system_initialize.setup_flow.blocking_items.includes('codex_config'), true);
     const codexConfigItem = output.system_initialize.checklist.find((entry) => entry.item_id === 'codex_config');
     assert.equal(codexConfigItem?.blocking, true);
+    assert.equal(codexConfigItem?.readiness_layer, 'core_launch');
+    assert.equal(codexConfigItem?.severity, 'blocking');
+    assert.equal(codexConfigItem?.action_command_ref, 'opl system configure-codex --api-key-stdin');
     assert.equal(output.system_initialize.core_engines.codex.config_status, 'not_detected');
     assert.equal(output.system_initialize.core_engines.codex.api_key_present, false);
   } finally {

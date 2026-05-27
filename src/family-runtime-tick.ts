@@ -20,7 +20,7 @@ import {
   masDefaultExecutorDomainSourceFingerprint,
   refreshMasDefaultExecutorLiveAttemptTaskLease,
 } from './family-runtime-provider-hosted-attempts.ts';
-import { ensureProviderHostedStageAttempt } from './family-runtime-provider-hosted-attempts.ts';
+import { redriveBlockedMasDefaultExecutorProviderTransportTask } from './family-runtime-redrive.ts';
 
 type EnqueueTaskResult = {
   accepted?: boolean;
@@ -176,41 +176,16 @@ function autoRedriveBlockedMasDefaultExecutorProviderTasks(
       autoDeadLetteredCount += 1;
       continue;
     }
-    const redrivenAttempt = ensureProviderHostedStageAttempt(db, row, payload, {
-      newAttempt: true,
-      eventSource: source,
-    });
-    const nextStatus = row.requires_approval ? 'waiting_approval' : 'queued';
-    db.prepare(`
-      UPDATE tasks
-      SET status = ?, attempts = 0, lease_owner = NULL, lease_expires_at = NULL,
-        last_error = NULL, dead_letter_reason = NULL, updated_at = ?
-      WHERE task_id = ?
-    `).run(nextStatus, redrivenAt, row.task_id);
-    insertEvent(db, {
-      taskId: row.task_id,
-      domainId: row.domain_id,
-      eventType: 'task_auto_redrive_from_blocked_provider_transport',
+    const redrive = redriveBlockedMasDefaultExecutorProviderTransportTask(db, row, payload, {
+      trigger: 'auto',
       source,
-      payload: {
-        previous_status: row.status,
-        next_status: nextStatus,
-        previous_dead_letter_reason: row.dead_letter_reason,
-        previous_last_error: row.last_error,
-        redriven_stage_attempt_id: redrivenAttempt?.stage_attempt_id ?? null,
-        used_attempts: usedAttempts,
-        max_attempts: row.max_attempts,
-        authority_boundary: {
-          opl: 'provider_transport_auto_redrive_only',
-          domain: 'truth_quality_artifact_gate_owner',
-          domain_truth_mutation: false,
-          publication_quality_mutation: false,
-          artifact_gate_mutation: false,
-          current_package_mutation: false,
-        },
-      },
+      usedAttempts,
+      maxAttempts: row.max_attempts,
+      redrivenAt,
     });
-    autoRedrivenCount += 1;
+    if (redrive.redriven) {
+      autoRedrivenCount += 1;
+    }
   }
   return { autoRedrivenCount, autoDeadLetteredCount };
 }

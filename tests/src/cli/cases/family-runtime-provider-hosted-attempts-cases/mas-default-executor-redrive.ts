@@ -11,6 +11,8 @@ import {
   runCliFailure,
   test,
 } from './helpers.ts';
+import { redriveBlockedMasDefaultExecutorProviderTransportTask } from '../../../../../src/family-runtime-redrive.ts';
+import type { FamilyRuntimeTaskRow } from '../../../../../src/family-runtime-store.ts';
 
 function defaultExecutorPayload(sourceFingerprint: string) {
   return {
@@ -105,6 +107,110 @@ PY
       )),
       true,
     );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime stale auto redrive does not duplicate an operator-owned provider transport redrive', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-default-executor-stale-auto-redrive-'));
+  const dispatch = createDispatchFixture(`
+python3 - "$TASK_PATH" <<'PY'
+import json
+print(json.dumps({
+  "accepted": True,
+  "surface_kind": "mas_family_domain_handler_dispatch_receipt",
+  "dispatch": {
+    "execution_policy": "opl_default_executor_stage_attempt_admission",
+    "result": {"status": "admitted"}
+  }
+}))
+PY
+`);
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      JSON.stringify(defaultExecutorPayload('source-stale-auto-redrive')),
+      '--dedupe-key',
+      'mas:dm-cvd:002:default-executor:run_quality_repair_batch:stale-auto-redrive',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    runCli(['family-runtime', 'tick', '--source', 'test'], env);
+    const blockedTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const queueDbPath = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
+    const staleDb = new DatabaseSync(queueDbPath, { readOnly: true });
+    let staleRow: FamilyRuntimeTaskRow;
+    try {
+      staleRow = staleDb.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as FamilyRuntimeTaskRow;
+    } finally {
+      staleDb.close();
+    }
+    const stalePayload = JSON.parse(staleRow.payload_json) as Record<string, unknown>;
+
+    const operatorRedrive = runCli([
+      'family-runtime',
+      'queue',
+      'redrive',
+      taskId,
+      '--reason',
+      'provider_runtime_fixed_after_worker_restart',
+      '--source',
+      'test-operator-redrive',
+    ], env);
+
+    const queueDb = new DatabaseSync(queueDbPath);
+    try {
+      const staleAutoRedrive = redriveBlockedMasDefaultExecutorProviderTransportTask(
+        queueDb,
+        staleRow,
+        stalePayload,
+        {
+          source: 'test-stale-auto-redrive',
+          trigger: 'auto',
+        },
+      );
+      const attempts = queueDb.prepare(`
+        SELECT stage_attempt_id, status
+        FROM stage_attempts
+        WHERE task_id = ?
+        ORDER BY created_at ASC
+      `).all(taskId) as Array<{ stage_attempt_id: string; status: string }>;
+      const task = queueDb.prepare(`
+        SELECT status, last_error, dead_letter_reason
+        FROM tasks
+        WHERE task_id = ?
+      `).get(taskId) as { status: string; last_error: string | null; dead_letter_reason: string | null };
+      const duplicateAutoEvents = queueDb.prepare(`
+        SELECT COUNT(*) AS count
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_auto_redrive_from_blocked_provider_transport'
+      `).get(taskId) as { count: number };
+
+      assert.equal(blockedTask.family_runtime_task.task.status, 'blocked');
+      assert.equal(operatorRedrive.family_runtime_redrive.redriven, true);
+      assert.equal(staleAutoRedrive.redriven, false);
+      assert.equal(staleAutoRedrive.skip_reason, 'task_no_longer_blocked_for_provider_transport_redrive');
+      assert.equal(task.status, 'queued');
+      assert.equal(task.last_error, null);
+      assert.equal(task.dead_letter_reason, null);
+      assert.equal(attempts.length, 2);
+      assert.equal(attempts[0].status, 'blocked');
+      assert.equal(attempts[1].status, 'queued');
+      assert.equal(duplicateAutoEvents.count, 0);
+    } finally {
+      queueDb.close();
+    }
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });

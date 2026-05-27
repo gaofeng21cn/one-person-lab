@@ -99,6 +99,13 @@ export type OplInitializeChecklistItem = {
   status: string;
   required: boolean;
   blocking: boolean;
+  readiness_layer: 'core_launch' | 'full_readiness' | 'optional';
+  severity: 'blocking' | 'maintenance' | 'info';
+  user_action_required: boolean;
+  auto_action_available: boolean;
+  action_command_ref: string | null;
+  last_attempt: Record<string, unknown> | null;
+  next_visible_step: string;
   section_id: OplInitializeSectionId;
   detail_summary: string;
   endpoint: string;

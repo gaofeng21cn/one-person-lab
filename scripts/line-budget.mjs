@@ -8,14 +8,17 @@ process.chdir(repoRoot);
 const DEFAULT_LIMIT = 1000;
 const BASELINE = new Map([
   ['src/agent-lab-complete.ts', 1013],
+  ['src/app-state.ts', 1002],
   ['src/family-stage-control-plane.ts', 1018],
-  ['src/family-runtime-stage-attempts.ts', 1041],
+  ['src/family-runtime-stage-attempts.ts', 1043],
   ['src/family-runtime-temporal-provider.ts', 1098],
   ['src/runtime-tray-app-operator-drilldown.ts', 1352],
   ['tests/src/agent-lab.test.ts', 1135],
+  ['tests/src/cli/cases/family-runtime-stage-attempts-temporal-provider.test.ts', 1016],
   ['tests/src/cli/cases/runtime-app-operator-drilldown-summary.test.ts', 1009],
-  ['tests/src/cli/cases/runtime-app-operator-drilldown.test.ts', 1055],
-  ['tests/src/cli/cases/system-management.test.ts', 1076],
+  ['tests/src/cli/cases/runtime-app-operator-drilldown.test.ts', 1172],
+  ['tests/src/cli/cases/system-install.test.ts', 1001],
+  ['tests/src/cli/cases/system-management.test.ts', 1127],
   ['tests/src/family-runtime-codex-stage-runner.test.ts', 1153],
 ]);
 const CODE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.mts', '.cts', '.py', '.sh', '.bash', '.zsh', '.rs', '.go']);

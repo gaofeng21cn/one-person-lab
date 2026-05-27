@@ -83,6 +83,38 @@ function refNodes(refs: JsonRecord[], nodeKind: string, fallbackRole: string) {
     .filter(nonNullRef));
 }
 
+function progressLogRefs(attempts: JsonRecord[]) {
+  return attempts
+    .map((attempt) => {
+      const stageAttemptId = stringValue(attempt.stage_attempt_id);
+      const progressLog = record(attempt.stage_progress_log);
+      if (!stageAttemptId || Object.keys(progressLog).length === 0) {
+        return null;
+      }
+      const temporalWebUiRef = record(progressLog.temporal_webui_ref);
+      return {
+        ref: `/stage_attempt_workbench/attempts/${stageAttemptId}/stage_progress_log`,
+        role: 'stage_attempt_progress_log',
+        domain_id: stringValue(attempt.domain_id),
+        stage_id: stringValue(attempt.stage_id),
+        stage_attempt_id: stageAttemptId,
+        status: stringValue(record(progressLog.actual_work).status),
+        duration_telemetry_status: stringValue(record(progressLog.timeline).duration_telemetry_status),
+        temporal_webui_url: stringValue(temporalWebUiRef.url),
+      };
+    })
+    .filter((entry): entry is {
+      ref: string;
+      role: string;
+      domain_id: string | null;
+      stage_id: string | null;
+      stage_attempt_id: string;
+      status: string | null;
+      duration_telemetry_status: string | null;
+      temporal_webui_url: string | null;
+    } => Boolean(entry));
+}
+
 function packageExportNodes(packageLifecycle: JsonRecord) {
   return uniqueRefsByValue([
     ...stringList(packageLifecycle.package_refs).map((ref) => ({
@@ -228,6 +260,27 @@ function stageProductionEdges(attempts: JsonRecord[], stageProductionEvidence: J
 
 function timelineEvents(input: RuntimeVisualizationInput) {
   return [
+    ...input.attempts.flatMap((attempt) => {
+      const stageAttemptId = stringValue(attempt.stage_attempt_id);
+      const progressLog = record(attempt.stage_progress_log);
+      const progressEvents = recordList(record(progressLog.timeline).events);
+      if (!stageAttemptId || progressEvents.length === 0) {
+        return [];
+      }
+      return progressEvents.map((event, index) => ({
+        event_id: `stage_progress:${stageAttemptId}:${index}`,
+        event_kind: 'stage_progress_event',
+        ref: stringValue(event.ref) ?? `/stage_attempt_workbench/attempts/${stageAttemptId}/stage_progress_log`,
+        node_id: `stage_progress_log:${stageAttemptId}`,
+        domain_id: stringValue(attempt.domain_id),
+        stage_id: stringValue(attempt.stage_id),
+        stage_attempt_id: stageAttemptId,
+        activity_kind: stringValue(event.activity_kind),
+        activity_status: stringValue(event.activity_status),
+        runner_event_kind: stringValue(event.runner_event_kind),
+        observed_at: stringValue(event.observed_at),
+      }));
+    }),
     ...input.attempts.flatMap((attempt) => {
       const stageAttemptId = stringValue(attempt.stage_attempt_id);
       if (!stageAttemptId) {
@@ -581,8 +634,10 @@ function buildRuntimeWorkbench(
 }
 
 export function buildRuntimeVisualizationProjection(input: RuntimeVisualizationInput) {
+  const progressRefs = progressLogRefs(input.attempts);
   const nodes = uniqueRefsByValue([
     ...attemptNodes(input.attempts),
+    ...refNodes(progressRefs, 'stage_progress_log', 'stage_attempt_progress_log'),
     ...refNodes(input.routeRefs, 'route_graph', 'stage_attempt_route_decision_graph'),
     ...refNodes(input.decisionRefs, 'decision_map', 'stage_attempt_decision_map'),
     ...refNodes(input.artifactRefs, 'artifact_ref', 'artifact_or_receipt_ref'),
@@ -595,6 +650,7 @@ export function buildRuntimeVisualizationProjection(input: RuntimeVisualizationI
     ...stageProductionNodes(input.stageProductionEvidence),
   ]);
   const edges = uniqueRefsByValue([
+    ...attemptEdges(progressRefs, 'stage_progress_log', 'attempt_has_stage_progress_log'),
     ...attemptEdges(input.routeRefs, 'route_graph', 'attempt_has_route_graph'),
     ...attemptEdges(input.decisionRefs, 'decision_map', 'attempt_has_decision_map'),
     ...attemptEdges(input.artifactRefs, 'artifact_ref', 'attempt_references_artifact'),
@@ -615,6 +671,7 @@ export function buildRuntimeVisualizationProjection(input: RuntimeVisualizationI
     owner_receipt_node_count: nodes.filter((node) => node.node_kind === 'owner_receipt').length,
     typed_blocker_node_count: nodes.filter((node) => node.node_kind === 'typed_blocker').length,
     safe_action_node_count: nodes.filter((node) => node.node_kind === 'safe_action').length,
+    stage_progress_log_node_count: nodes.filter((node) => node.node_kind === 'stage_progress_log').length,
   };
 
   return {
@@ -641,6 +698,8 @@ export function buildRuntimeVisualizationProjection(input: RuntimeVisualizationI
           timeline.filter((event) => event.event_kind === 'owner_receipt_ref_observed').length,
         typed_blocker_event_count:
           timeline.filter((event) => event.event_kind === 'typed_blocker_ref_observed').length,
+        stage_progress_event_count:
+          timeline.filter((event) => event.event_kind === 'stage_progress_event').length,
       },
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
@@ -652,6 +711,7 @@ export function buildRuntimeVisualizationProjection(input: RuntimeVisualizationI
       owner_receipt_refs: input.ownerReceipts,
       typed_blocker_refs: recordList(input.typedBlockers.refs),
       safe_action_refs: input.safeActions,
+      stage_progress_log_refs: progressRefs,
       domain_dispatch_evidence_summary: record(input.domainDispatchEvidence.summary),
       stage_production_evidence_summary: record(input.stageProductionEvidence.summary),
     },
@@ -662,6 +722,10 @@ export function buildRuntimeVisualizationProjection(input: RuntimeVisualizationI
         record(record(lens).summary).paper_route_lens_ref_count ?? 0,
       research_stage_attempt_ref_count:
         record(record(lens).summary).stage_attempt_ref_count ?? 0,
+      stage_progress_event_count:
+        timeline.filter((event) => event.event_kind === 'stage_progress_event').length,
+      temporal_stage_progress_ref_count:
+        progressRefs.filter((ref) => ref.temporal_webui_url).length,
     },
     authority_boundary: {
       ...refsOnlyAuthorityBoundary(),

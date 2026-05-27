@@ -187,6 +187,15 @@ export function buildPublicSystemCommandSpecs(
       'Run App startup maintenance for clean managed modules, plugin cache freshness, and reload guidance.',
       'startup_maintenance',
     ),
+    'system repair-native-helpers': buildNoArgSpec(
+      {
+        usage: 'opl system repair-native-helpers',
+        summary: 'Build or refresh OPL native helper binaries used for local doctor, watch, and indexing checks.',
+        examples: ['opl system repair-native-helpers'],
+        group: 'system',
+      },
+      async () => buildPublicSystemActionPayload(await runOplSystemAction(getContracts(), 'repair_native_helpers')),
+    ),
     'system update-channel': systemUpdateChannelSpec,
     'system developer-supervisor': systemDeveloperSupervisorSpec,
   };

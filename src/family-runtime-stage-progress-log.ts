@@ -40,6 +40,9 @@ export type StageProgressLogInput = {
   updatedAt?: string | null;
 };
 
+export type StageProgressLogProjection = ReturnType<typeof buildStageProgressLog>;
+export type StageProgressLogSummary = ReturnType<typeof summarizeStageProgressLogs>;
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -87,6 +90,7 @@ function recordList(value: unknown) {
 
 function packetLikeRef(value: string) {
   return value.startsWith('packet:')
+    || value.includes('/default_executor_dispatches/')
     || value.includes('/stage_packets/')
     || value.endsWith('.stage-packet.json')
     || value.endsWith('/stage-packet.json');
@@ -113,30 +117,82 @@ function activityEventRefs(input: StageProgressLogInput) {
     .filter((ref): ref is string => Boolean(ref));
 }
 
+function eventTime(event: JsonRecord) {
+  return stringValue(event.event_time) ?? stringValue(event.observed_at) ?? stringValue(event.created_at);
+}
+
 function firstActivityAt(events: JsonRecord[]) {
-  return events.map((event) => stringValue(event.event_time)).find((value): value is string => Boolean(value)) ?? null;
+  return events.map(eventTime).find((value): value is string => Boolean(value)) ?? null;
 }
 
 function latestActivityAt(events: JsonRecord[]) {
-  return events.map((event) => stringValue(event.event_time)).filter((value): value is string => Boolean(value)).at(-1) ?? null;
+  return events.map(eventTime).filter((value): value is string => Boolean(value)).at(-1) ?? null;
+}
+
+function eventKind(event: JsonRecord) {
+  return stringValue(event.event_kind)
+    ?? stringValue(event.heartbeat_kind)
+    ?? stringValue(event.activity_kind)
+    ?? 'activity_event';
+}
+
+function activityTimeline(input: StageProgressLogInput) {
+  return input.activityEvents.filter(isRecord).map((event, index) => ({
+    event_id: `stage_attempt:${input.stageAttemptId}:activity_event:${index}`,
+    event_kind: eventKind(event),
+    activity_kind: stringValue(event.activity_kind),
+    activity_status: stringValue(event.activity_status),
+    runner_event_kind: stringValue(event.runner_event_kind),
+    stage_packet_ref: stringValue(event.stage_packet_ref),
+    checkpoint_refs: uniqueStrings(refsFromUnknown(event.checkpoint_refs)),
+    observed_at: eventTime(event),
+    ref: `stage_attempt:${input.stageAttemptId}#activity_events[${index}]`,
+  }));
+}
+
+function runnerProgressEvents(events: JsonRecord[]) {
+  return events.filter((event) =>
+    stringValue(event.heartbeat_kind) === 'codex_stage_activity_runner_progress'
+    || Boolean(stringValue(event.runner_event_kind))
+  );
 }
 
 function stageProgressAuthorityBoundary() {
   return {
-    opl: 'stage_progress_observability_projection_only',
+    opl: 'stage_attempt_progress_observability_projection_only',
     domain: 'truth_quality_artifact_gate_owner',
     provider: 'runtime_lifecycle_owner_not_domain_ready_owner',
     can_execute_domain_action: false,
     can_write_domain_truth: false,
     can_write_domain_memory_body: false,
+    can_read_memory_body: false,
+    can_read_artifact_body: false,
     can_authorize_domain_ready: false,
     can_authorize_quality_verdict: false,
     provider_completion_is_domain_ready: false,
   };
 }
 
+function usageTelemetry(input: StageProgressLogInput) {
+  const usage = input.usageProjection;
+  const observedCount =
+    Number(usage.token.observed_count)
+    + Number(usage.cost.observed_count)
+    + Number(usage.api_calls.observed_count)
+    + Number(usage.duration.observed_count);
+  return {
+    telemetry_status: observedCount > 0 ? 'observed' : 'missing',
+    token_observed: Number(usage.token.observed_count) > 0,
+    cost_observed: Number(usage.cost.observed_count) > 0,
+    api_calls_observed: Number(usage.api_calls.observed_count) > 0,
+    duration_observed: Number(usage.duration.observed_count) > 0,
+    missing_usage_telemetry_reason: observedCount > 0 ? null : 'no_stage_attempt_usage_telemetry_observed',
+  };
+}
+
 export function buildStageProgressLog(input: StageProgressLogInput) {
   const activityEvents = input.activityEvents.filter(isRecord);
+  const runnerEvents = runnerProgressEvents(activityEvents);
   const ownerReceiptRefs = uniqueStrings([
     ...refsFromRecord(input.latestCloseout, [
       'owner_receipt_ref',
@@ -176,13 +232,15 @@ export function buildStageProgressLog(input: StageProgressLogInput) {
     ...refsFromUnknown(input.workspaceLocator.dispatch_refs),
   ]);
   const durationMsObserved = numberValue(input.usageProjection.duration.duration_ms_observed);
-  const durationTelemetryStatus = Number(input.usageProjection.duration.observed_count) > 0 ? 'observed' : 'missing';
   const temporalVisibility = buildTemporalStageAttemptVisibility({
     providerKind: input.providerKind,
     stageAttemptId: input.stageAttemptId,
     workflowId: input.workflowId,
     domainId: input.domainId,
     stageId: input.stageId,
+    status: input.status,
+    stagePhase: stringValue(input.providerRun.current_phase) ?? input.status,
+    blockedReason: input.blockedReason,
     taskId: input.taskId,
     sourceFingerprint: input.sourceFingerprint,
     executorKind: input.executorKind,
@@ -196,9 +254,7 @@ export function buildStageProgressLog(input: StageProgressLogInput) {
     domain_id: input.domainId,
     stage_id: input.stageId,
     temporal_visibility: temporalVisibility,
-    temporal_webui_ref: temporalVisibility
-      ? buildTemporalWebUiRef(temporalVisibility)
-      : null,
+    temporal_webui_ref: buildTemporalWebUiRef(temporalVisibility),
     intended_work: {
       provider_kind: input.providerKind,
       executor_kind: input.executorKind,
@@ -247,10 +303,14 @@ export function buildStageProgressLog(input: StageProgressLogInput) {
       first_activity_event_at: firstActivityAt(activityEvents),
       latest_activity_event_at: latestActivityAt(activityEvents),
       activity_event_count: activityEvents.length,
+      runner_progress_event_count: runnerEvents.length,
+      runner_progress_latest_event_kind: stringValue(runnerEvents.at(-1)?.runner_event_kind),
       duration_ms_observed: durationMsObserved,
-      duration_telemetry_status: durationTelemetryStatus,
+      duration_telemetry_status: Number(input.usageProjection.duration.observed_count) > 0 ? 'observed' : 'missing',
+      events: activityTimeline(input),
     },
     usage: input.usageProjection,
+    usage_telemetry: usageTelemetry(input),
     evidence_refs: {
       checkpoint_refs: input.checkpointRefs,
       closeout_refs: input.closeoutRefs,
@@ -267,6 +327,55 @@ export function buildStageProgressLog(input: StageProgressLogInput) {
       activity_event_refs: activityEventRefs(input),
       activity_event_count: activityEvents.length,
     },
+    authority_boundary: stageProgressAuthorityBoundary(),
+  };
+}
+
+export function summarizeStageProgressLogs(
+  projections: StageProgressLogProjection[],
+  projectionScope = 'stage_attempt_workbench',
+) {
+  const temporalLogs = projections.filter((projection) => projection.temporal_visibility);
+  const temporalWebUiRefs = temporalLogs
+    .map((projection) => stringValue(projection.temporal_webui_ref?.url))
+    .filter((ref): ref is string => Boolean(ref));
+  const usageMissing = projections.filter((projection) =>
+    projection.usage_telemetry.telemetry_status === 'missing'
+  );
+  const durationObserved = projections.filter((projection) =>
+    projection.timeline.duration_telemetry_status === 'observed'
+  );
+  const activityEventRefs = uniqueStrings(projections.flatMap((projection) =>
+    projection.evidence_refs.activity_event_refs
+  ));
+  return {
+    surface_kind: 'opl_stage_progress_log_summary',
+    projection_scope: projectionScope,
+    attempt_count: projections.length,
+    temporal_attempt_count: temporalLogs.length,
+    completed_attempt_count: projections.filter((projection) =>
+      projection.actual_work.status === 'completed'
+    ).length,
+    blocked_attempt_count: projections.filter((projection) =>
+      ['blocked', 'failed', 'dead_lettered', 'human_gate'].includes(projection.actual_work.status)
+    ).length,
+    activity_event_count: projections.reduce((count, projection) =>
+      count + projection.timeline.activity_event_count, 0
+    ),
+    runner_progress_event_count: projections.reduce((count, projection) =>
+      count + projection.timeline.runner_progress_event_count, 0
+    ),
+    duration_observed_attempt_count: durationObserved.length,
+    missing_usage_telemetry_attempt_count: usageMissing.length,
+    temporal_webui_ref_count: uniqueStrings(temporalWebUiRefs).length,
+    temporal_visibility_readiness_statuses: uniqueStrings(temporalLogs
+      .map((projection) => stringValue(projection.temporal_visibility?.visibility_readiness.readiness_status))
+      .filter((entry): entry is string => Boolean(entry))),
+    activity_event_ref_count: activityEventRefs.length,
+    attempt_refs: projections.map((projection) =>
+      `/stage_attempt_workbench/attempts/${projection.stage_attempt_id}/stage_progress_log`
+    ),
+    temporal_webui_refs: uniqueStrings(temporalWebUiRefs),
     authority_boundary: stageProgressAuthorityBoundary(),
   };
 }

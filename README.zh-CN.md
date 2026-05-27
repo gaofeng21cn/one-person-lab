@@ -121,7 +121,7 @@ opl family-runtime attempt list
 
 OPL 采用 AI-first、contract-light 的 surface 模型：active 框架叙事统一为 `Minimal Trust Kernel + Readiness + Derived Diagnostic Lenses + Surface Budget + AI Capability Aperture`。Kernel 负责 stage pack 准入和 owner boundary、权限、expected receipt、audit、replay、route-back 证据；prompt/tools/knowledge/rubric refs 是为了可审计、可复用和可交接的 AI 策略引用，不是 OPL launch hard gate。Readiness 聚合启动和证据缺口，不签发 domain verdict；Diagnostic lenses 解释 blocker、stale assumption、replay gap 或 route-back evidence，但不升级为 runtime planner、proof assistant、workflow compiler 或质量权威。Surface Budget 限制新增 default surface：不满足启动安全、权威边界、证据/replay/audit/route-back 或 App/runtime 反复消费的学习点，只能进入 refs、warning、diagnostic 或 history。AI Capability Aperture 保持专家工作对更强 executor 开放，让 Codex 和后续更强 AI 能力直接受益；质量、publication、fundability、visual 和 export 判断仍回到独立 AI reviewer 或 domain-owner receipt。
 
-生产在线运行目标由 Temporal 支撑的运行时提供者承接；本地提供者用于开发、测试和离线诊断。Codex CLI 是当前第一公民执行器；Hermes-Agent、Claude Code 等工具可以作为显式执行器适配器接入，并通过回执与审计信息证明运行过程。
+生产在线运行由 Temporal-backed provider 承接；Temporal 是 production online substrate，负责 durable workflow、activity retry/timeout、signal/update、query、visibility 和 event history。local provider 只用于开发、CI 和离线诊断，不能替代 production online readiness。OPL SQLite attempt ledger 记录 stage attempt identity、queue linkage、checkpoint/closeout refs、owner receipt refs、typed blocker refs、human gate 和 dead-letter state；`stage_progress_log` 只是从 Temporal provider refs、OPL ledger refs 和 domain-owned refs 派生的进度投影。Agent Lab 只消费这些 refs 做评估和改进，不拥有 runtime log 或 domain truth。Codex CLI 是当前第一公民执行器；Hermes-Agent、Claude Code 等工具可以作为显式执行器适配器接入，并通过回执与审计信息证明运行过程。
 
 ### 文档
 

@@ -18,6 +18,84 @@ import {
   createOmaContractFixture,
   insertProviderProof,
 } from './runtime-app-operator-drilldown-helpers.ts';
+import { buildRuntimeVisualizationProjection } from '../../../../src/runtime-tray-app-operator-drilldown-parts/runtime-visualization-projection.ts';
+
+test('runtime visualization projection exposes canonical stage progress and Temporal refs only', () => {
+  const projection = buildRuntimeVisualizationProjection({
+    attempts: [
+      {
+        domain_id: 'medautoscience',
+        stage_id: 'write',
+        stage_attempt_id: 'attempt-stage-progress',
+        task_id: 'task-stage-progress',
+        status: 'running',
+        stage_progress_log: {
+          actual_work: { status: 'running' },
+          timeline: {
+            duration_telemetry_status: 'observed',
+            events: [
+              {
+                activity_kind: 'codex_stage_activity',
+                activity_status: 'running',
+                runner_event_kind: 'codex_delta',
+                observed_at: '2026-05-27T00:00:00.000Z',
+                ref: 'stage_attempt:attempt-stage-progress#activity_events[0]',
+              },
+            ],
+          },
+          temporal_webui_ref: {
+            url: 'http://localhost:8233/namespaces/default/workflows/attempt-stage-progress/run-1/history',
+          },
+          memory_body: 'must-not-be-projected',
+          artifact_body: 'must-not-be-projected',
+        },
+      },
+    ],
+    routeRefs: [],
+    decisionRefs: [],
+    artifactRefs: [],
+    packageLifecycle: {},
+    memoryRefs: {},
+    qualityRefs: {},
+    actionRefs: [],
+    ownerReceipts: [],
+    typedBlockers: {},
+    domainProjectionIngestion: {},
+    routeTransitionDrilldown: {},
+    stageProductionEvidence: {},
+    domainDispatchEvidence: {},
+    safeActions: [],
+  });
+
+  assert.equal(projection.visual_ref_groups.stage_progress_log_refs.length, 1);
+  assert.equal(
+    projection.visual_ref_groups.stage_progress_log_refs[0].ref,
+    '/stage_attempt_workbench/attempts/attempt-stage-progress/stage_progress_log',
+  );
+  assert.equal(
+    projection.visual_ref_groups.stage_progress_log_refs[0].temporal_webui_url,
+    'http://localhost:8233/namespaces/default/workflows/attempt-stage-progress/run-1/history',
+  );
+  assert.equal(projection.summary.stage_progress_event_count, 1);
+  assert.equal(projection.summary.temporal_stage_progress_ref_count, 1);
+  assert.equal(
+    projection.graph.nodes.some((node: any) =>
+      node.node_kind === 'stage_progress_log' && node.stage_attempt_id === 'attempt-stage-progress'
+    ),
+    true,
+  );
+  assert.equal(
+    projection.graph.edges.some((edge: any) =>
+      edge.edge_kind === 'attempt_has_stage_progress_log'
+      && edge.stage_attempt_id === 'attempt-stage-progress'
+    ),
+    true,
+  );
+  assert.equal(JSON.stringify(projection).includes('must-not-be-projected'), false);
+  assert.equal(projection.authority_boundary.can_read_memory_body, false);
+  assert.equal(projection.authority_boundary.can_read_artifact_body, false);
+  assert.equal(projection.authority_boundary.can_claim_domain_ready, false);
+});
 
 test('runtime snapshot exposes App operator drilldown as refs-only owner-aware read model', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-state-'));
@@ -221,6 +299,8 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.runtime_visualization_edge_count > 0, true);
     assert.equal(drilldown.summary.runtime_visualization_timeline_event_count > 0, true);
     assert.equal(drilldown.summary.runtime_visualization_paper_route_lens_ref_count, 1);
+    assert.equal(drilldown.summary.runtime_visualization_stage_progress_event_count >= 0, true);
+    assert.equal(drilldown.summary.runtime_visualization_temporal_stage_progress_ref_count >= 0, true);
     assert.equal(drilldown.summary.provider_slo_action_count, 1);
     assert.equal(drilldown.summary.provider_cadence_window_status, 'window_evidence_incomplete');
     assert.equal(drilldown.summary.provider_cadence_window_long_evidence_ready, false);
@@ -364,6 +444,43 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
           event.event_kind === 'stage_attempt_status' && event.stage_attempt_id === attemptId,
       ),
       true,
+    );
+    assert.equal(drilldown.stage_progress_log.surface_kind, 'opl_stage_progress_log_summary');
+    assert.equal(drilldown.stage_progress_log.attempt_count, 1);
+    assert.equal(Array.isArray(drilldown.stage_progress_log.attempt_refs), true);
+    assert.equal(
+      drilldown.stage_progress_log.attempt_refs.includes(
+        `/stage_attempt_workbench/attempts/${attemptId}/stage_progress_log`,
+      ),
+      true,
+    );
+    assert.equal(drilldown.stage_progress_log.authority_boundary.can_read_memory_body, false);
+    assert.equal(drilldown.stage_progress_log.authority_boundary.can_read_artifact_body, false);
+    assert.equal(
+      drilldown.stage_progress_log.authority_boundary.provider_completion_is_domain_ready,
+      false,
+    );
+    assert.deepEqual(
+      drilldown.runtime_workbench,
+      drilldown.runtime_visualization_projection.runtime_workbench,
+    );
+    assert.deepEqual(
+      drilldown.visual_ref_groups,
+      drilldown.runtime_visualization_projection.visual_ref_groups,
+    );
+    assert.equal(
+      drilldown.visual_ref_groups.stage_progress_log_refs.some(
+        (ref: { ref: string; stage_attempt_id: string }) =>
+          ref.ref === `/stage_attempt_workbench/attempts/${attemptId}/stage_progress_log`
+          && ref.stage_attempt_id === attemptId,
+      ),
+      true,
+    );
+    assert.equal(
+      drilldown.runtime_visualization_projection.summary.temporal_stage_progress_ref_count,
+      drilldown.visual_ref_groups.stage_progress_log_refs.filter(
+        (ref: { temporal_webui_url?: string }) => Boolean(ref.temporal_webui_url),
+      ).length,
     );
     assert.deepEqual(
       drilldown.runtime_visualization_projection.research_lens.paper_route_lens_refs.map(

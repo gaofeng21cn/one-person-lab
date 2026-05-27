@@ -4,6 +4,10 @@ import {
   buildTemporalWorkerLifecycleContract,
   buildTemporalWorkerReadiness,
 } from './family-runtime-temporal-readiness.ts';
+import {
+  buildTemporalStageAttemptVisibilityReadiness,
+  inspectTemporalStageAttemptVisibilityReadiness,
+} from './family-runtime-temporal-visibility.ts';
 import type { MasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 import { FrameworkContractError } from './contracts.ts';
@@ -168,6 +172,7 @@ export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): F
         'query_projection_provider_code',
         'workflow_history_provider_code',
         'worker_lifecycle_contract',
+        'stage_attempt_visibility_search_attributes',
       ],
       details: {
         address,
@@ -175,7 +180,11 @@ export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): F
         task_queue: resolveTemporalTaskQueue(),
         worker_ready: workerReady,
         worker_readiness: workerReadiness,
-        visibility_readiness: buildTemporalVisibilityReadiness(),
+        temporal_visibility_readiness: buildTemporalStageAttemptVisibilityReadiness({
+          address,
+          namespace: resolveTemporalNamespace(),
+          taskQueue: resolveTemporalTaskQueue(),
+        }),
         worker_lifecycle: {
           worker_required: true,
           task_queue: resolveTemporalTaskQueue(),
@@ -239,6 +248,7 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
       'query_projection_provider_code',
       'workflow_history_provider_code',
       'worker_lifecycle_contract',
+      'stage_attempt_visibility_search_attributes',
       ...(managedTemporalProjection ? ['mas_managed_temporal_state_consistency_projection'] : []),
     ],
     details: {
@@ -248,6 +258,7 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
       task_queue: effectiveWorkerReadiness.task_queue,
       worker_ready: workerReady,
       worker_readiness: effectiveWorkerReadiness,
+      temporal_visibility_readiness: await inspectTemporalStageAttemptVisibilityReadiness(paths),
       managed_temporal_state_consistency: managedTemporalProjection,
       managed_domain_projection_summary: managedProviderProjection
         ? {
@@ -353,13 +364,13 @@ export async function inspectSelectedFamilyRuntimeProvidersWithLifecycle(
 export function ensureFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind, mode: 'install' | 'repair') {
   if (kind === 'temporal') {
     const inspection = inspectFamilyRuntimeProvider(kind);
-    const visibilityReadiness = buildTemporalVisibilityReadiness();
+    const visibilityReadiness = buildTemporalStageAttemptVisibilityReadiness();
     return {
       surface_id: 'opl_family_runtime_provider',
       provider_kind: kind,
       mode,
       status: inspection.ready && visibilityReadiness.readiness_status === 'ready' ? 'ready' : 'attention_needed',
-      actions: visibilityReadiness.repair_action.action_id === 'none'
+      actions: visibilityReadiness.repair_action === null
         ? []
         : [visibilityReadiness.repair_action],
       provider: inspection,

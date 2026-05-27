@@ -1,6 +1,16 @@
-import { condition, defineQuery, defineSignal, proxyActivities, setHandler } from '@temporalio/workflow';
+import {
+  condition,
+  defineQuery,
+  defineSignal,
+  defineUpdate,
+  patched,
+  proxyActivities,
+  setHandler,
+  upsertSearchAttributes,
+} from '@temporalio/workflow';
 
 import type {
+  TemporalStageAttemptOperatorUpdateReceipt,
   TemporalStageAttemptSignalPayload,
   TemporalStageAttemptWorkflowInput,
   TemporalStageAttemptWorkflowState,
@@ -30,6 +40,10 @@ export const schedulerTickQuery = defineQuery<TemporalSchedulerTickWorkflowState
 export const humanGateSignal = defineSignal<[TemporalStageAttemptSignalPayload]>('HumanGateSignal');
 export const userInstructionSignal = defineSignal<[TemporalStageAttemptSignalPayload]>('UserInstructionSignal');
 export const resumeSignal = defineSignal<[TemporalStageAttemptSignalPayload]>('ResumeSignal');
+export const stageAttemptOperatorUpdate = defineUpdate<
+  TemporalStageAttemptOperatorUpdateReceipt,
+  [TemporalStageAttemptSignalPayload]
+>('StageAttemptOperatorUpdate');
 
 const { codexStageActivity } = proxyActivities<Pick<StageAttemptActivities, 'codexStageActivity'>>({
   startToCloseTimeout: CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
@@ -44,7 +58,7 @@ const { domainHandlerDispatchActivity, schedulerTickActivity } = proxyActivities
   startToCloseTimeout: SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
   heartbeatTimeout: SHORT_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
   retry: {
-    maximumAttempts: 1,
+    maximumAttempts: 3,
   },
 });
 
@@ -66,6 +80,22 @@ function asRecord(value: unknown) {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {};
+}
+
+function upsertStageAttemptVisibility(input: {
+  enabled?: boolean;
+  status: TemporalStageAttemptWorkflowState['status'];
+  phase: string;
+  blockedReason?: string | null;
+}) {
+  if (!input.enabled || !patched('opl-stage-attempt-visibility-status-v1')) {
+    return;
+  }
+  upsertSearchAttributes({
+    OplAttemptStatus: [input.status],
+    OplStagePhase: [input.phase],
+    OplBlockedReason: input.blockedReason ? [input.blockedReason] : [],
+  });
 }
 
 function closeoutRefsFrom(value: Record<string, unknown>) {
@@ -109,6 +139,36 @@ function validateCloseoutPacketForWorkflow(input: {
   return { closeoutPacket, providerBlocker: null };
 }
 
+function validateOperatorActionPayload(signal: TemporalStageAttemptSignalPayload) {
+  if (signal.signal_kind === 'human_gate') {
+    const humanGateRef = typeof signal.payload.human_gate_ref === 'string'
+      ? signal.payload.human_gate_ref.trim()
+      : '';
+    if (!humanGateRef) {
+      throw new Error('human_gate update requires payload.human_gate_ref');
+    }
+  }
+  if (signal.signal_kind === 'user_instruction') {
+    const instructionRef = typeof signal.payload.instruction_ref === 'string'
+      ? signal.payload.instruction_ref.trim()
+      : '';
+    if (!instructionRef) {
+      throw new Error('user_instruction update requires payload.instruction_ref');
+    }
+  }
+  if (signal.signal_kind === 'resume') {
+    const reason = typeof signal.payload.reason === 'string'
+      ? signal.payload.reason.trim()
+      : '';
+    const resumeRef = typeof signal.payload.resume_ref === 'string'
+      ? signal.payload.resume_ref.trim()
+      : '';
+    if (!reason && !resumeRef) {
+      throw new Error('resume update requires payload.reason or payload.resume_ref');
+    }
+  }
+}
+
 export async function StageAttemptWorkflow(
   input: TemporalStageAttemptWorkflowInput,
 ): Promise<TemporalStageAttemptWorkflowState> {
@@ -123,6 +183,30 @@ export async function StageAttemptWorkflow(
     started_at: nowIso(),
     updated_at: nowIso(),
     activity_events: [],
+    stage_progress_log: {
+      surface_kind: 'temporal_workflow_stage_progress_log',
+      planned_work: {
+        stage_attempt_id: input.stage_attempt_id,
+        workflow_id: input.workflow_id,
+        domain_id: input.domain_id,
+        stage_id: input.stage_id,
+        executor_kind: input.executor_kind,
+        task_id: input.task_id ?? null,
+        stage_packet_ref: input.stage_packet_ref ?? null,
+        checkpoint_refs: asStringList(input.checkpoint_refs),
+      },
+      timeline: [],
+      visibility: {
+        query: 'StageAttemptQuery',
+        search_attribute_refs: {
+          OplStageAttemptId: input.stage_attempt_id,
+          OplDomainId: input.domain_id,
+          OplStageId: input.stage_id,
+          OplExecutorKind: input.executor_kind,
+          OplTaskId: input.task_id ?? null,
+        },
+      },
+    },
     checkpoint_refs: asStringList(input.checkpoint_refs),
     closeout_refs: [],
     consumed_refs: [],
@@ -144,30 +228,76 @@ export async function StageAttemptWorkflow(
       domain: 'truth_quality_artifact_gate_owner',
     },
   };
+  const visibilitySearchAttributesUpsertEnabled =
+    input.visibility_search_attributes_upsert_enabled === true;
+  const updateVisibility = (
+    phase: string,
+    blockedReason?: string | null,
+  ) => upsertStageAttemptVisibility({
+    enabled: visibilitySearchAttributesUpsertEnabled,
+    status: state.status,
+    phase,
+    blockedReason,
+  });
+  updateVisibility('registered');
 
   const recordSignal = (signal: TemporalStageAttemptSignalPayload) => {
+    const status = signal.signal_kind === 'human_gate' ? 'human_gate' : state.status;
     state = {
       ...state,
-      status: signal.signal_kind === 'human_gate' ? 'human_gate' : state.status,
+      status,
       updated_at: nowIso(),
       signals: [...state.signals, signal],
       human_gate_refs: signal.signal_kind === 'human_gate' && typeof signal.payload.human_gate_ref === 'string'
         ? [...new Set([...state.human_gate_refs, signal.payload.human_gate_ref])]
         : state.human_gate_refs,
     };
+    updateVisibility(signal.signal_kind === 'human_gate' ? 'human_gate' : 'operator_update');
+  };
+
+  const recordResume = (signal: TemporalStageAttemptSignalPayload) => {
+    const status = state.status === 'human_gate' || state.status === 'failed' ? 'running' : state.status;
+    state = {
+      ...state,
+      status,
+      updated_at: nowIso(),
+      signals: [...state.signals, signal],
+    };
+    updateVisibility('resume_requested');
   };
 
   setHandler(stageAttemptQuery, () => state);
   setHandler(humanGateSignal, recordSignal);
   setHandler(userInstructionSignal, recordSignal);
-  setHandler(resumeSignal, (signal) => {
-    state = {
-      ...state,
-      status: state.status === 'human_gate' || state.status === 'failed' ? 'running' : state.status,
-      updated_at: nowIso(),
-      signals: [...state.signals, signal],
-    };
-  });
+  setHandler(resumeSignal, recordResume);
+  setHandler(
+    stageAttemptOperatorUpdate,
+    (signal) => {
+      if (signal.signal_kind === 'resume') {
+        recordResume(signal);
+      } else {
+        recordSignal(signal);
+      }
+      return {
+        surface_kind: 'temporal_stage_attempt_operator_update_receipt',
+        provider_kind: 'temporal',
+        update_status: 'accepted',
+        stage_attempt_id: state.stage_attempt_id,
+        workflow_id: state.workflow_id,
+        signal_kind: signal.signal_kind,
+        signal_count: state.signals.length,
+        updated_at: state.updated_at,
+        authority_boundary: {
+          opl: 'temporal_update_ack_and_transport_metadata_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          provider_completion_is_domain_ready: false,
+        },
+      };
+    },
+    {
+      validator: validateOperatorActionPayload,
+    },
+  );
 
   try {
     state = {
@@ -182,7 +312,21 @@ export async function StageAttemptWorkflow(
           stage_packet_ref: input.stage_packet_ref ?? null,
         },
       ],
+      stage_progress_log: {
+        ...state.stage_progress_log,
+        timeline: [
+          ...state.stage_progress_log.timeline,
+          {
+            event_kind: 'codex_stage_activity_started',
+            activity_kind: 'codex_stage_activity',
+            activity_status: 'running',
+            observed_at: nowIso(),
+            stage_packet_ref: input.stage_packet_ref ?? null,
+          },
+        ],
+      },
     };
+    updateVisibility('codex_stage_activity_running');
     const codexResult = await codexStageActivity(input);
     const codexCheckpointRefs = asStringList(codexResult.checkpoint_refs);
     const codexActivityEvent = codexActivityEventForTemporalHistory(codexResult);
@@ -195,7 +339,21 @@ export async function StageAttemptWorkflow(
         ...state.activity_events,
         codexActivityEvent,
       ],
+      stage_progress_log: {
+        ...state.stage_progress_log,
+        timeline: [
+          ...state.stage_progress_log.timeline,
+          {
+            event_kind: 'codex_stage_activity_completed',
+            activity_kind: 'codex_stage_activity',
+            activity_status: 'completed',
+            observed_at: nowIso(),
+            checkpoint_refs: codexCheckpointRefs,
+          },
+        ],
+      },
     };
+    updateVisibility('codex_stage_activity_completed');
 
     const codexCloseoutValidation = validateCloseoutPacketForWorkflow({
       closeoutPacket: closeoutPacketFromCodexResult(codexResult),
@@ -234,6 +392,20 @@ export async function StageAttemptWorkflow(
           ...dispatchResult,
         },
       ],
+      stage_progress_log: {
+        ...state.stage_progress_log,
+        timeline: [
+          ...state.stage_progress_log.timeline,
+          {
+            event_kind: 'domain_handler_dispatch_activity_completed',
+            activity_kind: 'domain_handler_dispatch_activity',
+            activity_status: 'completed',
+            observed_at: nowIso(),
+            closeout_refs: closeoutRefs,
+            blocked_reason: dispatchBlockedReason,
+          },
+        ],
+      },
       completion_boundary: {
         provider_completion: providerCompleted ? 'completed' : 'not_completed',
         domain_ready_verdict: providerCompleted && typeof dispatchResult.domain_ready_verdict === 'string'
@@ -242,7 +414,12 @@ export async function StageAttemptWorkflow(
         provider_completion_is_domain_ready: false,
       },
     };
+    updateVisibility(
+      providerCompleted ? 'domain_handler_dispatch_completed' : 'domain_handler_dispatch_blocked',
+      dispatchBlockedReason,
+    );
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     state = {
       ...state,
       status: 'failed',
@@ -252,10 +429,24 @@ export async function StageAttemptWorkflow(
         {
           activity_kind: 'temporal_stage_attempt_workflow',
           activity_status: 'failed',
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage,
         },
       ],
+      stage_progress_log: {
+        ...state.stage_progress_log,
+        timeline: [
+          ...state.stage_progress_log.timeline,
+          {
+            event_kind: 'temporal_stage_attempt_workflow_failed',
+            activity_kind: 'temporal_stage_attempt_workflow',
+            activity_status: 'failed',
+            observed_at: nowIso(),
+            error: errorMessage,
+          },
+        ],
+      },
     };
+    updateVisibility('temporal_stage_attempt_workflow_failed', errorMessage.slice(0, 200));
     throw error;
   }
 

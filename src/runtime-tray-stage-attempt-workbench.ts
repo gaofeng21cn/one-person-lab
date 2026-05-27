@@ -11,7 +11,9 @@ import {
 import {
   buildStageAttemptUsageProjection,
 } from './family-runtime-stage-attempt-usage.ts';
-import { buildStageProgressLog } from './family-runtime-stage-progress-log.ts';
+import {
+  buildStageProgressLog,
+} from './family-runtime-stage-progress-log.ts';
 import {
   inspectFamilyRuntimeProviderWithLifecycle,
   isFamilyRuntimeProviderKind,
@@ -583,6 +585,8 @@ function attemptProjection(
     operator_label: conflictOrBlockerEnvelopes[0]?.operator_label ?? null,
     usage_projection: usageProjection,
     stage_progress_log: stageProgressLog,
+    temporal_visibility: stageProgressLog.temporal_visibility,
+    temporal_webui_ref: stageProgressLog.temporal_webui_ref,
     ...genericProjections,
     next_owner: nextOwner,
     human_gate_refs: humanGateRefs,

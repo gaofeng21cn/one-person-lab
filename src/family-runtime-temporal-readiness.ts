@@ -5,6 +5,9 @@ import {
   resolveTemporalTaskQueue,
   TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTE_NAMES,
 } from './family-runtime-temporal.ts';
+import type {
+  TemporalStageAttemptVisibilityReadiness,
+} from './family-runtime-temporal-visibility.ts';
 
 export type TemporalWorkerReadinessStatus =
   | 'not_configured'
@@ -33,7 +36,7 @@ type TemporalWorkerReadinessInput = {
   managedWorkerWorkflowBundleSourceVersion?: string | null;
   staleWorkerPid?: number | null;
   temporalServiceLifecycle?: Record<string, unknown> | null;
-  visibilityReadiness?: TemporalVisibilityReadiness | null;
+  visibilityReadiness?: TemporalStageAttemptVisibilityReadiness | null;
 };
 
 export type TemporalVisibilityReadiness = {

@@ -24,16 +24,19 @@ import {
   humanGateSignal,
   stageAttemptQuery,
   StageAttemptWorkflow,
+  stageAttemptOperatorUpdate,
   userInstructionSignal,
 } from '../../src/family-runtime-temporal-workflows.ts';
 import {
   buildTemporalStageAttemptWorkflowInputForTest,
-  buildTemporalVisibilityReadiness,
   buildTemporalSchedulerHealthProjection,
   buildTemporalStageAttemptReplayGateForTest,
   buildTemporalWorkerReadiness,
   resolveTemporalWorkerReadinessStatus,
 } from '../../src/family-runtime-temporal-provider.ts';
+import {
+  buildTemporalStageAttemptVisibilityReadiness,
+} from '../../src/family-runtime-temporal-visibility.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -96,6 +99,9 @@ test('Temporal stage attempt contract exposes Codex runner total and no-output b
     contract.activity_timeout_policy.short_stage_activities.stale_schedule_release_policy,
     'fail_short_activity_when_worker_does_not_pick_up_scheduled_task',
   );
+  assert.equal(contract.activity_timeout_policy.short_stage_activities.retry.maximum_attempts, 3);
+  assert.equal(contract.activity_timeout_policy.codex_stage_activity.retry.maximum_attempts, 1);
+  assert.equal(contract.operator_action_updates[0], 'StageAttemptOperatorUpdate');
   assert.equal(
     contract.scheduler_tick_timeout_policy.workflow_run_timeout,
     '12 minutes',
@@ -112,6 +118,9 @@ test('Temporal stage attempt contract exposes Codex runner total and no-output b
     'OplStageAttemptId',
     'OplDomainId',
     'OplStageId',
+    'OplAttemptStatus',
+    'OplStagePhase',
+    'OplBlockedReason',
     'OplTaskId',
     'OplSourceFingerprint',
     'OplExecutorKind',
@@ -119,34 +128,210 @@ test('Temporal stage attempt contract exposes Codex runner total and no-output b
 });
 
 test('Temporal visibility readiness requires OPL stage attempt Search Attributes', () => {
-  const blocked = buildTemporalVisibilityReadiness({
+  const blocked = buildTemporalStageAttemptVisibilityReadiness({
     namespace: 'opl-test',
-    presentSearchAttributes: ['OplStageAttemptId'],
+    observedCustomAttributes: { OplStageAttemptId: 'Keyword' },
   });
-  const ready = buildTemporalVisibilityReadiness({
+  const ready = buildTemporalStageAttemptVisibilityReadiness({
     namespace: 'opl-test',
-    presentSearchAttributes: [
-      'OplStageAttemptId',
-      'OplDomainId',
-      'OplStageId',
-      'OplTaskId',
-      'OplSourceFingerprint',
-      'OplExecutorKind',
-    ],
+    observedCustomAttributes: {
+      OplStageAttemptId: 'Keyword',
+      OplDomainId: 'Keyword',
+      OplStageId: 'Keyword',
+      OplAttemptStatus: 'Keyword',
+      OplStagePhase: 'Keyword',
+      OplBlockedReason: 'Keyword',
+      OplTaskId: 'Keyword',
+      OplSourceFingerprint: 'Keyword',
+      OplExecutorKind: 'Keyword',
+    },
   });
 
   assert.equal(blocked.readiness_status, 'missing_search_attributes');
-  assert.deepEqual(blocked.missing_search_attributes, [
+  assert.deepEqual(blocked.missing_search_attributes.map((attribute) => attribute.name), [
     'OplDomainId',
     'OplStageId',
+    'OplAttemptStatus',
+    'OplStagePhase',
+    'OplBlockedReason',
     'OplTaskId',
     'OplSourceFingerprint',
     'OplExecutorKind',
   ]);
-  assert.equal(blocked.repair_action.action_id, 'install_temporal_search_attributes');
+  assert.equal(blocked.repair_action?.action_id, 'install_temporal_stage_attempt_search_attributes');
   assert.equal(ready.readiness_status, 'ready');
   assert.deepEqual(ready.missing_search_attributes, []);
-  assert.equal(ready.repair_action.action_id, 'none');
+  assert.equal(ready.repair_action, null);
+});
+
+test('Temporal StageAttemptWorkflow acks operator actions through Updates', async () => {
+  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const taskQueue = `opl-stage-attempt-update-test-${Date.now()}`;
+  try {
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      activities,
+    });
+
+    const result = await worker.runUntil(async () => {
+      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
+        args: [workflowInput()],
+        taskQueue,
+        workflowId: `wf-temporal-update-test-${Date.now()}`,
+      });
+      const humanGateAck = await handle.executeUpdate(stageAttemptOperatorUpdate, {
+        args: [{
+          signal_kind: 'human_gate',
+          payload: {
+            human_gate_ref: 'gate:update-review',
+            reason: 'needs_review',
+          },
+          source: 'test-update',
+        }],
+      });
+      const instructionAck = await handle.executeUpdate(stageAttemptOperatorUpdate, {
+        args: [{
+          signal_kind: 'user_instruction',
+          payload: {
+            instruction_ref: 'user:update-instruction',
+          },
+          source: 'test-update',
+        }],
+      });
+      const finalState = await handle.result();
+      return { humanGateAck, instructionAck, finalState };
+    });
+
+    assert.equal(result.humanGateAck.update_status, 'accepted');
+    assert.equal(result.humanGateAck.signal_kind, 'human_gate');
+    assert.equal(result.humanGateAck.stage_attempt_id, 'sat_temporal_test');
+    assert.equal(result.instructionAck.update_status, 'accepted');
+    assert.equal(result.finalState.signals.length, 2);
+    assert.deepEqual(result.finalState.human_gate_refs, ['gate:update-review']);
+    assert.equal(
+      result.finalState.signals.map((signal) => signal.source).includes('test-update'),
+      true,
+    );
+  } finally {
+    await testEnv.teardown();
+  }
+});
+
+test('Temporal StageAttemptWorkflow rejects invalid operator Updates before mutation', async () => {
+  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const taskQueue = `opl-stage-attempt-update-reject-test-${Date.now()}`;
+  try {
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      activities,
+    });
+
+    const result = await worker.runUntil(async () => {
+      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
+        args: [workflowInput()],
+        taskQueue,
+        workflowId: `wf-temporal-update-reject-test-${Date.now()}`,
+      });
+      await assert.rejects(
+        handle.executeUpdate(stageAttemptOperatorUpdate, {
+          args: [{
+            signal_kind: 'human_gate',
+            payload: {
+              reason: 'missing_ref',
+            },
+            source: 'test-update',
+          }],
+        }),
+        (error) => error instanceof Error
+          && error.name === 'WorkflowUpdateFailedError'
+          && error.cause instanceof Error
+          && /human_gate update requires payload\.human_gate_ref/.test(error.cause.message),
+      );
+      const queriedState = await handle.query<TemporalStageAttemptWorkflowState>(stageAttemptQuery);
+      const finalState = await handle.result();
+      return { queriedState, finalState };
+    });
+
+    assert.equal(result.queriedState.signals.length, 0);
+    assert.equal(result.finalState.signals.length, 0);
+    assert.deepEqual(result.finalState.human_gate_refs, []);
+  } finally {
+    await testEnv.teardown();
+  }
+});
+
+test('Temporal StageAttemptWorkflow retries short idempotent activities without retrying Codex activity', async () => {
+  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const taskQueue = `opl-stage-attempt-short-retry-test-${Date.now()}`;
+  let codexAttempts = 0;
+  let dispatchAttempts = 0;
+  try {
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      activities: {
+        ...activities,
+        codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => {
+          codexAttempts += 1;
+          return {
+            surface_kind: 'temporal_codex_stage_activity_receipt',
+            activity_kind: 'codex_stage_activity',
+            activity_status: 'completed',
+            stage_attempt_id: input.stage_attempt_id,
+            stage_id: input.stage_id,
+            checkpoint_refs: input.checkpoint_refs ?? [],
+            closeout_packet: input.closeout_packet,
+          };
+        },
+        domainHandlerDispatchActivity: async (input: TemporalStageAttemptWorkflowInput) => {
+          dispatchAttempts += 1;
+          if (dispatchAttempts === 1) {
+            throw new Error('transient dispatch store failure');
+          }
+          return {
+            surface_kind: 'temporal_domain_handler_dispatch_receipt',
+            activity_kind: 'domain_handler_dispatch_activity',
+            activity_status: 'completed',
+            stage_attempt_id: input.stage_attempt_id,
+            domain_id: input.domain_id,
+            closeout_refs: ['receipt:retried-dispatch'],
+            consumed_refs: [],
+            consumed_memory_refs: [],
+            writeback_receipt_refs: [],
+            rejected_writes: [],
+            next_owner: 'med-autoscience',
+            domain_ready_verdict: 'domain_gate_pending',
+            route_impact: { retry_observed: true },
+            closeout_packet_surface_kind: 'stage_attempt_closeout_packet',
+          };
+        },
+      },
+    });
+
+    const result = await worker.runUntil(async () => {
+      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
+        args: [workflowInput()],
+        taskQueue,
+        workflowId: `wf-temporal-short-retry-test-${Date.now()}`,
+      });
+      return await handle.result();
+    });
+
+    assert.equal(result.status, 'completed');
+    assert.equal(codexAttempts, 1);
+    assert.equal(dispatchAttempts, 2);
+    assert.deepEqual(result.closeout_refs, ['receipt:retried-dispatch']);
+  } finally {
+    await testEnv.teardown();
+  }
 });
 
 test('Temporal StageAttemptWorkflow exposes activity state, signals, and completion boundary', async () => {
@@ -207,7 +392,7 @@ test('Temporal StageAttemptWorkflow exposes activity state, signals, and complet
     assert.equal(codexCompletion?.heartbeat_summary.checkpoint_count, 1);
     assert.equal(codexCompletion?.progress_summary.progress_status, 'checkpointed');
     assert.equal(codexCompletion?.cost_summary.cost_status, 'not_measured_dry_run');
-    assert.equal(codexCompletion?.cost_summary.estimated_cost_usd, null);
+    assert.equal(codexCompletion?.cost_summary.estimated_cost_usd, 0);
     assert.ok(result.finalState.activity_events.some((event) => event.activity_kind === 'domain_handler_dispatch_activity'));
     assert.equal(result.queriedState.signals.length, 2);
     assert.deepEqual(result.queriedState.human_gate_refs, ['gate:operator-review']);

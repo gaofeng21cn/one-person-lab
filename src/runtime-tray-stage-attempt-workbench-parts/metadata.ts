@@ -5,6 +5,12 @@ import type {
   StageAttemptUsageProjection,
 } from '../family-runtime-stage-attempt-usage.ts';
 import {
+  summarizeStageProgressLogs,
+} from '../family-runtime-stage-progress-log.ts';
+import type {
+  StageProgressLogProjection,
+} from '../family-runtime-stage-progress-log.ts';
+import {
   buildFamilyHumanReviewBurdenBudget,
 } from '../family-human-review-budget.ts';
 import {
@@ -20,7 +26,7 @@ type StageAttemptProjection = StageAttemptGenericProjectionInput & {
   local_status: string;
   filter_keys: JsonRecord;
   usage_projection: StageAttemptUsageProjection;
-  stage_progress_log?: unknown;
+  stage_progress_log?: StageProgressLogProjection;
   control_loop_summary?: unknown;
   transition_bridge_evidence?: unknown;
   operator_conflicts?: unknown;
@@ -153,65 +159,6 @@ function attemptControlLoopReceipts(attempt: StageAttemptProjection): JsonRecord
   return isRecord(summary.receipts) ? summary.receipts : {};
 }
 
-function attemptStageProgressLog(attempt: StageAttemptProjection): JsonRecord {
-  return isRecord(attempt.stage_progress_log) ? attempt.stage_progress_log : {};
-}
-
-function attemptExecutionTimeline(attempt: StageAttemptProjection): JsonRecord {
-  const log = attemptStageProgressLog(attempt);
-  return isRecord(log.timeline) ? log.timeline : {};
-}
-
-function attemptExecutionEvidenceRefs(attempt: StageAttemptProjection): JsonRecord {
-  const log = attemptStageProgressLog(attempt);
-  return isRecord(log.evidence_refs) ? log.evidence_refs : {};
-}
-
-function buildWorkbenchStageProgressLog(attempts: StageAttemptProjection[]) {
-  const stagePacketRefs = uniqueStrings(attempts.flatMap((attempt) =>
-    stringListFrom(attemptExecutionEvidenceRefs(attempt).stage_packet_refs)
-  ));
-  const ownerReceiptRefs = uniqueStrings(attempts.flatMap((attempt) =>
-    stringListFrom(attemptExecutionEvidenceRefs(attempt).owner_receipt_refs)
-  ));
-  const typedBlockerRefs = uniqueStrings(attempts.flatMap((attempt) =>
-    stringListFrom(attemptExecutionEvidenceRefs(attempt).typed_blocker_refs)
-  ));
-  const temporalWebUiRefCount = attempts.filter((attempt) =>
-    isRecord(attemptStageProgressLog(attempt).temporal_webui_ref)
-  ).length;
-  const temporalVisibilityCount = attempts.filter((attempt) =>
-    isRecord(attemptStageProgressLog(attempt).temporal_visibility)
-  ).length;
-  return {
-    surface_kind: 'opl_stage_progress_log_summary',
-    projection_scope: 'stage_attempt_workbench',
-    projection_policy: 'temporal_backed_opl_refs_only_stage_observability_no_domain_truth',
-    summary: {
-      attempt_count: attempts.length,
-      provider_completed_count: attempts.filter((attempt) =>
-        optionalString(attemptExecutionTimeline(attempt).provider_completed_at)
-      ).length,
-      duration_observed_attempt_count: attempts.filter((attempt) =>
-        attemptExecutionTimeline(attempt).duration_telemetry_status === 'observed'
-      ).length,
-      usage_unavailable_attempt_count: attempts.filter((attempt) =>
-        attempt.usage_projection.availability === 'usage_unavailable'
-      ).length,
-      stage_packet_ref_count: stagePacketRefs.length,
-      owner_receipt_ref_count: ownerReceiptRefs.length,
-      typed_blocker_ref_count: typedBlockerRefs.length,
-      temporal_visibility_count: temporalVisibilityCount,
-      temporal_webui_ref_count: temporalWebUiRefCount,
-    },
-    stage_packet_refs: stagePacketRefs,
-    owner_receipt_refs: ownerReceiptRefs,
-    typed_blocker_refs: typedBlockerRefs,
-    attempt_refs: attempts.map((attempt) => `/stage_attempt_workbench/attempts/${attempt.stage_attempt_id}/stage_progress_log`),
-    authority_boundary: controlLoopAuthorityBoundary(),
-  };
-}
-
 function buildWorkbenchControlLoopSummary(attempts: StageAttemptProjection[], projectionScope = 'stage_attempt_workbench') {
   const receiptRefs = uniqueStrings(attempts.flatMap((attempt) =>
     stringListFrom(attemptControlLoopReceipts(attempt).receipt_refs)
@@ -267,6 +214,12 @@ function groupAttempts(attempts: StageAttemptProjection[], keyFor: (attempt: Sta
       memory_ref_counters: memoryRefCounters(groupAttempts),
       usage_projection: summarizeStageAttemptUsageProjections(
         groupAttempts.map((attempt) => attempt.usage_projection),
+        'stage_attempt_group',
+      ),
+      stage_progress_log: summarizeStageProgressLogs(
+        groupAttempts
+          .map((attempt) => attempt.stage_progress_log)
+          .filter((projection): projection is StageProgressLogProjection => Boolean(projection)),
         'stage_attempt_group',
       ),
     },
@@ -326,7 +279,12 @@ export function buildWorkbenchMetadata(attempts: StageAttemptProjection[]) {
         attempts.map((attempt) => attempt.usage_projection),
         'stage_attempt_workbench',
       ),
-      stage_progress_log: buildWorkbenchStageProgressLog(attempts),
+      stage_progress_log: summarizeStageProgressLogs(
+        attempts
+          .map((attempt) => attempt.stage_progress_log)
+          .filter((projection): projection is StageProgressLogProjection => Boolean(projection)),
+        'stage_attempt_workbench',
+      ),
       ...buildWorkbenchGenericProjections(attempts),
       operator_conflict_count: operatorConflicts.length,
       control_loop_summary: buildWorkbenchControlLoopSummary(attempts),
@@ -374,7 +332,7 @@ export const EMPTY_WORKBENCH_METADATA = {
       attempts_with_writeback_receipt_refs: 0,
     },
     usage_projection: summarizeStageAttemptUsageProjections([], 'stage_attempt_workbench'),
-    stage_progress_log: buildWorkbenchStageProgressLog([]),
+    stage_progress_log: summarizeStageProgressLogs([], 'stage_attempt_workbench'),
     ...buildWorkbenchGenericProjections([]),
     control_loop_summary: buildWorkbenchControlLoopSummary([]),
     human_review_burden_budget: buildFamilyHumanReviewBurdenBudget({

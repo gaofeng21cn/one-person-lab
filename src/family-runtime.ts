@@ -78,6 +78,43 @@ async function syncTemporalStageAttemptsForTask(
   }
 }
 
+function temporalStartProviderRun(attempt: { provider_run: Record<string, unknown> }, temporalStart: unknown) {
+  if (!temporalStart || typeof temporalStart !== 'object' || Array.isArray(temporalStart)) {
+    return null;
+  }
+  const receipt = temporalStart as Record<string, unknown>;
+  return {
+    ...attempt.provider_run,
+    provider_status: 'started',
+    namespace: typeof receipt.namespace === 'string' ? receipt.namespace : attempt.provider_run.namespace ?? null,
+    task_queue: typeof receipt.task_queue === 'string' ? receipt.task_queue : attempt.provider_run.task_queue ?? null,
+    first_execution_run_id: typeof receipt.first_execution_run_id === 'string'
+      ? receipt.first_execution_run_id
+      : null,
+    temporal_start_receipt: receipt,
+    temporal_visibility_readiness: receipt.visibility_readiness ?? null,
+    started_at: typeof attempt.provider_run.started_at === 'string' ? attempt.provider_run.started_at : nowIso(),
+    last_heartbeat_at: nowIso(),
+  };
+}
+
+function recordTemporalStartOnAttempt(
+  db: DatabaseSync,
+  attempt: { stage_attempt_id: string; provider_run: Record<string, unknown> },
+  temporalStart: unknown,
+) {
+  const providerRun = temporalStartProviderRun(attempt, temporalStart);
+  if (!providerRun) {
+    return;
+  }
+  const updatedAt = nowIso();
+  db.prepare(`
+    UPDATE stage_attempts
+    SET provider_run_json = ?, updated_at = ?
+    WHERE stage_attempt_id = ?
+  `).run(JSON.stringify(providerRun), updatedAt, attempt.stage_attempt_id);
+}
+
 function approveTask(
   db: DatabaseSync,
   input: { taskId: string; decision: 'approve' | 'deny'; reason?: string },
@@ -499,8 +536,10 @@ export async function runFamilyRuntime(args: string[]) {
         && attempt.status !== 'blocked'
           ? await (await temporalProviderModule()).startTemporalStageAttemptWorkflow(attempt, { paths })
         : null;
+      recordTemporalStartOnAttempt(db, attempt, temporal_start);
+      const projectedAttempt = inspectStageAttempt(db, attempt.stage_attempt_id);
       insertEvent(db, {
-        taskId: attempt.task_id,
+        taskId: projectedAttempt.task_id,
         domainId: parsed.input.domainId,
         eventType: stageLaunchBlockedByAdmission
           ? 'stage_attempt_launch_admission_blocked'
@@ -527,7 +566,7 @@ export async function runFamilyRuntime(args: string[]) {
           surface_id: 'opl_family_runtime_stage_attempt',
           created: result.created,
           idempotent_noop: result.idempotent_noop,
-          attempt,
+          attempt: projectedAttempt,
           stage_launch_admission_gate: stageLaunchAdmissionGate,
           launch_invocation: launchInvocation,
           conflict_or_blocker_envelopes: 'conflict_or_blocker_envelopes' in result
@@ -544,9 +583,11 @@ export async function runFamilyRuntime(args: string[]) {
       const attempt = inspectStageAttempt(db, parsed.stageAttemptId);
       const { startTemporalStageAttemptWorkflow } = await temporalProviderModule();
       const temporal_start = await startTemporalStageAttemptWorkflow(attempt, { paths });
+      recordTemporalStartOnAttempt(db, attempt, temporal_start);
+      const projectedAttempt = inspectStageAttempt(db, parsed.stageAttemptId);
       insertEvent(db, {
-        taskId: attempt.task_id,
-        domainId: attempt.domain_id,
+        taskId: projectedAttempt.task_id,
+        domainId: projectedAttempt.domain_id,
         eventType: 'stage_attempt_temporal_started',
         source: 'opl-cli',
         payload: {
@@ -559,7 +600,7 @@ export async function runFamilyRuntime(args: string[]) {
         version: 'g2',
         family_runtime_stage_attempt_start: {
           surface_id: 'opl_family_runtime_stage_attempt_start',
-          attempt,
+          attempt: projectedAttempt,
           temporal_start,
         },
       };

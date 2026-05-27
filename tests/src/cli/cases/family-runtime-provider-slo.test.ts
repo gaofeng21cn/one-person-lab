@@ -8,9 +8,11 @@ import {
   maybeRepairTemporalWorkerForProviderSlo,
 } from '../../../../src/family-runtime-provider-slo-executor.ts';
 import {
-  buildTemporalVisibilityReadiness,
   buildTemporalWorkerLifecycleContract,
 } from '../../../../src/family-runtime-temporal-provider.ts';
+import {
+  buildTemporalStageAttemptVisibilityReadiness,
+} from '../../../../src/family-runtime-temporal-visibility.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -20,16 +22,16 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
 }
 
 function temporalWorkerStatus(status: 'worker_not_ready' | 'ready') {
-  const visibilityReadiness = buildTemporalVisibilityReadiness({
+  const visibilityReadiness = buildTemporalStageAttemptVisibilityReadiness({
     namespace: 'default',
-    presentSearchAttributes: [
-      'OplStageAttemptId',
-      'OplDomainId',
-      'OplStageId',
-      'OplTaskId',
-      'OplSourceFingerprint',
-      'OplExecutorKind',
-    ],
+    observedCustomAttributes: {
+      OplStageAttemptId: 'Keyword',
+      OplDomainId: 'Keyword',
+      OplStageId: 'Keyword',
+      OplAttemptStatus: 'Keyword',
+      OplTaskId: 'Keyword',
+      OplExecutorKind: 'Keyword',
+    },
   });
   const lifecycle = {
     ...buildTemporalWorkerLifecycleContract(),

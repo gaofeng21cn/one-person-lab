@@ -126,6 +126,12 @@ function assertInitializeState(output, expected) {
   const initialize = output.system_initialize;
   assert.equal(initialize.setup_flow.phase, expected.phase);
   assert.deepEqual(initialize.setup_flow.blocking_items.sort(), [...expected.blocking].sort());
+  if (expected.maintenance) {
+    assert.deepEqual(initialize.setup_flow.maintenance_items.sort(), [...expected.maintenance].sort());
+  }
+  if (expected.readyToLaunch !== undefined) {
+    assert.equal(initialize.setup_flow.ready_to_launch, expected.readyToLaunch);
+  }
   assert.equal(initialize.first_run_log.surface_id, 'opl_first_run_log');
   assert.equal(initialize.online_management.blocking, expected.onlineManagementBlocking ?? false);
   if (expected.fullOnlineBlocking !== undefined) {
@@ -173,7 +179,9 @@ function cleanUserMissingCodex(root) {
   const output = runOpl(['system', 'initialize'], env);
   assertInitializeState(output, {
     phase: 'environment',
-    blocking: ['codex', 'codex_config', 'domain_modules', 'family_runtime_provider'],
+    blocking: ['codex', 'codex_config'],
+    maintenance: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
+    readyToLaunch: false,
     onlineManagementBlocking: true,
     onlineManagementStatus: 'initializing',
     fullOnlineBlocking: true,
@@ -187,7 +195,9 @@ function compatibleCodexMissingModules(root) {
   const output = runOpl(['system', 'initialize'], env);
   assertInitializeState(output, {
     phase: 'environment',
-    blocking: ['codex_config', 'domain_modules', 'family_runtime_provider'],
+    blocking: ['codex_config'],
+    maintenance: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
+    readyToLaunch: false,
     onlineManagementBlocking: true,
     onlineManagementStatus: 'initializing',
     fullOnlineBlocking: true,
@@ -201,7 +211,9 @@ function outdatedCodex(root) {
   const output = runOpl(['system', 'initialize'], env);
   assertInitializeState(output, {
     phase: 'environment',
-    blocking: ['codex', 'codex_config', 'domain_modules', 'family_runtime_provider'],
+    blocking: ['codex', 'codex_config'],
+    maintenance: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
+    readyToLaunch: false,
     onlineManagementBlocking: true,
     onlineManagementStatus: 'initializing',
     fullOnlineBlocking: true,
@@ -218,12 +230,13 @@ function readyBaseline(root) {
   const output = runOpl(['system', 'initialize'], env);
   assertInitializeState(output, {
     phase: 'environment',
-    blocking: ['family_runtime_provider'],
+    blocking: [],
+    maintenance: ['family_runtime_provider', 'recommended_skills'],
+    readyToLaunch: true,
     onlineManagementBlocking: true,
     onlineManagementStatus: 'initializing',
     fullOnlineBlocking: true,
   });
-  assert.equal(output.system_initialize.setup_flow.ready_to_launch, false);
   return { observations: { installed_modules_count: output.system_initialize.module_summary.installed_modules_count } };
 }
 

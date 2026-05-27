@@ -3,7 +3,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { ScheduleAlreadyRunning, ScheduleNotFoundError, ScheduleOverlapPolicy } from '@temporalio/client';
-import temporalProto from '@temporalio/proto';
 import { WorkflowIdConflictPolicy, WorkflowIdReusePolicy } from '@temporalio/common';
 import { NativeConnection, Worker } from '@temporalio/worker';
 
@@ -15,7 +14,6 @@ import {
   guardTemporalStageAttemptWorkflowInputPayload,
   resolveTemporalNamespace,
   resolveTemporalTaskQueue,
-  TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTE_NAMES,
   SCHEDULER_TICK_WORKFLOW_RUN_TIMEOUT,
   SCHEDULER_TICK_WORKFLOW_NAME,
   type TemporalStageAttemptSignalKind,
@@ -25,21 +23,28 @@ import {
 } from './family-runtime-temporal.ts';
 import {
   buildTemporalWorkerLifecycleContract,
-  buildTemporalVisibilityReadiness,
   buildTemporalWorkerReadiness,
 } from './family-runtime-temporal-readiness.ts';
+import {
+  buildTemporalStageAttemptMemo,
+  buildTemporalStageAttemptSearchAttributes,
+  buildTemporalStageAttemptVisibilityReadiness,
+  inspectTemporalStageAttemptVisibilityReadiness,
+  ensureTemporalStageAttemptVisibilityReady,
+  temporalTestServerAllowsUnindexedVisibility,
+} from './family-runtime-temporal-visibility.ts';
+export {
+  inspectTemporalStageAttemptVisibilityReadiness,
+} from './family-runtime-temporal-visibility.ts';
 export {
   buildTemporalWorkerLifecycleContract,
-  buildTemporalVisibilityReadiness,
   buildTemporalWorkerReadiness,
   resolveTemporalWorkerReadinessStatus,
   type TemporalWorkerReadinessStatus,
 } from './family-runtime-temporal-readiness.ts';
 import {
-  humanGateSignal,
-  resumeSignal,
+  stageAttemptOperatorUpdate,
   stageAttemptQuery,
-  userInstructionSignal,
 } from './family-runtime-temporal-workflows.ts';
 import {
   inspectTemporalServiceLifecycle,
@@ -52,9 +57,6 @@ import {
   type TemporalWorkerPaths,
   withTemporalClient,
 } from './family-runtime-temporal-client.ts';
-import {
-  temporalStageAttemptTypedSearchAttributes,
-} from './family-runtime-temporal-visibility.ts';
 import {
   currentWorkerSourceVersion,
   processIsAlive,
@@ -92,17 +94,6 @@ type TemporalSchedulerInfoProjection = {
   running_actions?: unknown[];
 };
 
-const { temporal } = temporalProto;
-
-const TEMPORAL_SEARCH_ATTRIBUTE_VALUE_TYPES = {
-  OplStageAttemptId: temporal.api.enums.v1.IndexedValueType.INDEXED_VALUE_TYPE_KEYWORD,
-  OplDomainId: temporal.api.enums.v1.IndexedValueType.INDEXED_VALUE_TYPE_KEYWORD,
-  OplStageId: temporal.api.enums.v1.IndexedValueType.INDEXED_VALUE_TYPE_KEYWORD,
-  OplTaskId: temporal.api.enums.v1.IndexedValueType.INDEXED_VALUE_TYPE_KEYWORD,
-  OplSourceFingerprint: temporal.api.enums.v1.IndexedValueType.INDEXED_VALUE_TYPE_KEYWORD,
-  OplExecutorKind: temporal.api.enums.v1.IndexedValueType.INDEXED_VALUE_TYPE_KEYWORD,
-} as const;
-
 function workflowModulePath() {
   const extension = path.extname(fileURLToPath(import.meta.url)) === '.ts' ? '.ts' : '.js';
   return fileURLToPath(new URL(`./family-runtime-temporal-workflows${extension}`, import.meta.url));
@@ -130,12 +121,7 @@ export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths)
   const serverReachable = address ? await probeTemporalServer(address) : false;
   const workerReady = Boolean(serverReachable && (pidAlive || envWorkerReady));
   const visibilityReadiness = serverReachable
-    ? await inspectTemporalVisibilityReadiness({ paths }).catch(() =>
-        buildTemporalVisibilityReadiness({
-          namespace: resolveTemporalNamespace(),
-          presentSearchAttributes: [],
-        })
-      )
+    ? await inspectTemporalStageAttemptVisibilityReadiness(paths)
     : null;
   const readiness = buildTemporalWorkerReadiness({
     address,
@@ -168,63 +154,46 @@ export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths)
 }
 
 export async function inspectTemporalVisibilityReadiness(options: TemporalClientOptions = {}) {
-  return withTemporalClient(async (_client, connection) => {
-    const response = await connection.operatorService.listSearchAttributes({
-      namespace: resolveTemporalNamespace(),
-    });
-    return buildTemporalVisibilityReadiness({
-      namespace: resolveTemporalNamespace(),
-      presentSearchAttributes: Object.keys(response.customAttributes ?? {}),
-    });
-  }, options);
+  return inspectTemporalStageAttemptVisibilityReadiness(options.paths);
+}
+
+export function buildTemporalVisibilityReadiness(input: {
+  namespace?: string | null;
+  presentSearchAttributes?: string[] | null;
+} = {}) {
+  const namespace = input.namespace ?? resolveTemporalNamespace();
+  const present = input.presentSearchAttributes ?? null;
+  return buildTemporalStageAttemptVisibilityReadiness({
+    namespace,
+    taskQueue: resolveTemporalTaskQueue(),
+    observedCustomAttributes: present
+      ? Object.fromEntries(present.map((attribute) => [attribute, 'Keyword']))
+      : null,
+  });
 }
 
 export async function ensureTemporalVisibilityReadiness(options: TemporalClientOptions = {}) {
   return withTemporalClient(async (_client, connection) => {
-    const before = buildTemporalVisibilityReadiness({
+    const before = await inspectTemporalStageAttemptVisibilityReadiness(options.paths);
+    const after = await ensureTemporalStageAttemptVisibilityReady(connection, {
       namespace: resolveTemporalNamespace(),
-      presentSearchAttributes: Object.keys((await connection.operatorService.listSearchAttributes({
-        namespace: resolveTemporalNamespace(),
-      })).customAttributes ?? {}),
-    });
-    if (before.missing_search_attributes.length > 0) {
-      await connection.operatorService.addSearchAttributes({
-        namespace: resolveTemporalNamespace(),
-        searchAttributes: Object.fromEntries(before.missing_search_attributes.map((name) => [
-          name,
-          TEMPORAL_SEARCH_ATTRIBUTE_VALUE_TYPES[name as keyof typeof TEMPORAL_SEARCH_ATTRIBUTE_VALUE_TYPES],
-        ])),
-      });
-    }
-    const after = buildTemporalVisibilityReadiness({
-      namespace: resolveTemporalNamespace(),
-      presentSearchAttributes: Object.keys((await connection.operatorService.listSearchAttributes({
-        namespace: resolveTemporalNamespace(),
-      })).customAttributes ?? {}),
+      address: resolveTemporalAddressForPaths(options.paths).address,
     });
     return {
       surface_kind: 'temporal_visibility_repair_receipt',
       provider_kind: 'temporal',
       namespace: resolveTemporalNamespace(),
-      installed_search_attributes: before.missing_search_attributes,
+      installed_search_attributes: before.missing_search_attributes.map((attribute) => attribute.name),
       visibility_readiness: after,
-      repair_status: after.readiness_status === 'ready' ? 'ready' : 'blocked',
+      repair_status: after.readiness_status === 'ready' || after.readiness_status === 'test_server_unindexed_visibility'
+        ? 'ready'
+        : 'blocked',
       authority_boundary: {
         opl: 'temporal_visibility_metadata_repair_only',
         domain: 'truth_quality_artifact_gate_owner',
       },
     };
   }, options);
-}
-
-function signalNameFor(kind: TemporalStageAttemptSignalKind) {
-  if (kind === 'human_gate') {
-    return humanGateSignal;
-  }
-  if (kind === 'user_instruction') {
-    return userInstructionSignal;
-  }
-  return resumeSignal;
 }
 
 export async function startTemporalStageAttemptWorkflow(
@@ -241,33 +210,19 @@ export async function startTemporalStageAttemptWorkflow(
     buildTemporalStageAttemptWorkflowInput(attempt),
   );
   if (!resolveTemporalAddressForPaths(options.paths).address) requireTemporalAddress();
-  const visibilityReadiness = await inspectTemporalVisibilityReadiness(options);
-  if (visibilityReadiness.readiness_status !== 'ready') {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Temporal provider requires OPL stage attempt Search Attributes before starting searchable stage attempts.',
-      {
-        provider_kind: 'temporal',
-        stage_attempt_id: attempt.stage_attempt_id,
-        workflow_id: attempt.workflow_id,
-        missing_search_attributes: visibilityReadiness.missing_search_attributes,
-        repair_action: visibilityReadiness.repair_action,
-      },
-    );
-  }
-  return withTemporalClient(async (client) => {
+  return withTemporalClient(async (client, connection) => {
+    const visibilityReadiness = await ensureTemporalStageAttemptVisibilityReady(connection, {
+      namespace: resolveTemporalNamespace(),
+      address: resolveTemporalAddressForPaths(options.paths).address,
+    });
+    const launchInput: TemporalStageAttemptWorkflowInput = {
+      ...workflowInput,
+      visibility_search_attributes_upsert_enabled: visibilityReadiness.readiness_status === 'ready',
+    };
     const handle = await client.workflow.start('StageAttemptWorkflow', {
-      args: [workflowInput],
+      args: [launchInput],
       taskQueue: resolveTemporalTaskQueue(),
       workflowId: attempt.workflow_id,
-      searchAttributes: temporalStageAttemptTypedSearchAttributes({
-        stageAttemptId: attempt.stage_attempt_id,
-        domainId: attempt.domain_id,
-        stageId: attempt.stage_id,
-        taskId: attempt.task_id,
-        sourceFingerprint: attempt.source_fingerprint,
-        executorKind: attempt.executor_kind,
-      }),
       staticSummary: `OPL stage attempt ${attempt.stage_attempt_id}`,
       staticDetails: [
         `OPL stage attempt: ${attempt.stage_attempt_id}`,
@@ -277,6 +232,10 @@ export async function startTemporalStageAttemptWorkflow(
       ].join('\n'),
       workflowIdConflictPolicy: WorkflowIdConflictPolicy.USE_EXISTING,
       workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
+      memo: buildTemporalStageAttemptMemo(launchInput),
+      ...temporalTestServerAllowsUnindexedVisibility()
+        ? {}
+        : { searchAttributes: buildTemporalStageAttemptSearchAttributes(launchInput) },
     });
     return {
       surface_kind: 'temporal_stage_attempt_start_receipt',
@@ -287,8 +246,7 @@ export async function startTemporalStageAttemptWorkflow(
       eagerly_started: handle.eagerlyStarted,
       namespace: resolveTemporalNamespace(),
       task_queue: resolveTemporalTaskQueue(),
-      search_attribute_refs: TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTE_NAMES
-        .map((name) => `temporal-search-attribute:${name}`),
+      visibility_readiness: visibilityReadiness,
       authority_boundary: {
         opl: 'temporal_workflow_transport_and_control_metadata_only',
         domain: 'truth_quality_artifact_gate_owner',
@@ -315,16 +273,20 @@ export async function signalTemporalStageAttemptWorkflow(input: {
       source: input.source ?? 'opl-cli',
       received_at: new Date().toISOString(),
     };
-    await handle.signal(signalNameFor(input.signalKind), signal);
+    const updateReceipt = await handle.executeUpdate(stageAttemptOperatorUpdate, {
+      args: [signal],
+    });
     return {
-      surface_kind: 'temporal_stage_attempt_signal_receipt',
+      surface_kind: 'temporal_stage_attempt_operator_update_receipt',
       provider_kind: 'temporal',
       stage_attempt_id: input.attempt.stage_attempt_id,
       workflow_id: input.attempt.workflow_id,
       signal_kind: input.signalKind,
+      update_receipt: updateReceipt,
       authority_boundary: {
-        opl: 'temporal_signal_transport_only',
+        opl: 'temporal_update_ack_and_transport_metadata_only',
         domain: 'truth_quality_artifact_gate_owner',
+        provider_completion_is_domain_ready: false,
       },
     };
   }, { paths: input.paths });
@@ -662,29 +624,29 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
       workflowIdConflictPolicy: WorkflowIdConflictPolicy.FAIL,
       workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
     });
-    await completedHandle.signal(humanGateSignal, {
+    await completedHandle.executeUpdate(stageAttemptOperatorUpdate, { args: [{
       signal_kind: 'human_gate',
       payload: {
         human_gate_ref: 'gate:temporal-production-residency-proof',
         reason: 'operator_review',
       },
       source: 'temporal-production-residency-proof',
-    });
-    await completedHandle.signal(userInstructionSignal, {
+    }] });
+    await completedHandle.executeUpdate(stageAttemptOperatorUpdate, { args: [{
       signal_kind: 'user_instruction',
       payload: {
         instruction_ref: 'user:production-residency-revision-request',
       },
       source: 'temporal-production-residency-proof',
-    });
-    await completedHandle.signal(resumeSignal, {
+    }] });
+    await completedHandle.executeUpdate(stageAttemptOperatorUpdate, { args: [{
       signal_kind: 'resume',
       payload: {
         resume_ref: 'resume:temporal-production-residency-proof',
         reason: 'proof_resume',
       },
       source: 'temporal-production-residency-proof',
-    });
+    }] });
     const queriedWhileResident = await completedHandle.query<TemporalStageAttemptWorkflowState>(stageAttemptQuery);
     const completedState = await completedHandle.result();
 

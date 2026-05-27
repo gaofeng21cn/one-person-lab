@@ -51,6 +51,30 @@ function buildRecommendedSkillsStatus() {
   return buildOplRecommendedSkills().some((skill) => skill.status === 'ready') ? 'ready' : 'attention_needed';
 }
 
+function buildInitializeChecklistItem(input: OplInitializeChecklistItem): OplInitializeChecklistItem {
+  return input;
+}
+
+function actionCommandRef(action: OplInitializeActionDescriptor | null) {
+  if (!action) return null;
+  if (action.action_id === 'install_or_configure_codex') return 'opl engine install --engine codex';
+  if (action.action_id === 'configure_codex_api_key') return 'opl system configure-codex --api-key-stdin';
+  if (action.action_id === 'repair_native_helpers') return 'opl system repair-native-helpers';
+  if (action.action_id === 'review_modules') return 'opl system startup-maintenance';
+  if (action.action_id === 'review_family_runtime_provider') return 'opl family-runtime worker status --provider temporal';
+  if (action.action_id === 'set_workspace_root') return 'opl system workspace-root --path <path>';
+  if (action.action_id === 'developer_supervisor') return 'opl system developer-supervisor';
+  return null;
+}
+
+function lastAttempt(status: string, detail: Record<string, unknown> = {}) {
+  return {
+    status,
+    observed_at: new Date().toISOString(),
+    ...detail,
+  };
+}
+
 export async function buildOplInitialize(contracts: FrameworkContracts) {
   const environmentPayload = await buildOplEnvironment(contracts);
   const modulesPayload = buildOplModules();
@@ -82,7 +106,7 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
       && familyRuntimeProvider.status === 'provider_code_landed_unconfigured'
       ? 'initializing'
       : 'attention_needed';
-  const launchReady = coreReady && domainReady;
+  const launchReady = coreReady;
   const fullReady = coreReady && domainReady && providerReady;
 
   const setWorkspaceRootAction = buildInitializeActionDescriptor({
@@ -167,12 +191,21 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
   });
 
   const checklist: OplInitializeChecklistItem[] = [
-    {
+    buildInitializeChecklistItem({
       item_id: 'workspace_root',
       label: 'Workspace Root',
       status: workspaceRoot.health_status,
       required: true,
       blocking: workspaceRoot.health_status !== 'ready',
+      readiness_layer: 'core_launch',
+      severity: workspaceRoot.health_status === 'ready' ? 'info' : 'blocking',
+      user_action_required: workspaceRoot.health_status !== 'ready',
+      auto_action_available: false,
+      action_command_ref: actionCommandRef(workspaceRoot.health_status === 'ready' ? openWorkspaceRootAction : setWorkspaceRootAction),
+      last_attempt: lastAttempt(workspaceRoot.health_status, { selected_path: workspaceRoot.selected_path }),
+      next_visible_step: workspaceRoot.health_status === 'ready'
+        ? 'Continue to Codex readiness.'
+        : 'Choose a writable workspace root.',
       section_id: 'workspace_root',
       detail_summary: workspaceRoot.selected_path
         ? `Selected root: ${workspaceRoot.selected_path}`
@@ -180,13 +213,25 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
       endpoint: endpoints.workspace_root,
       action_endpoint: endpoints.workspace_root,
       action: workspaceRoot.health_status === 'ready' ? openWorkspaceRootAction : setWorkspaceRootAction,
-    },
-    {
+    }),
+    buildInitializeChecklistItem({
       item_id: 'codex',
       label: 'Codex CLI',
       status: codex.health_status,
       required: true,
       blocking: !codexCliReady,
+      readiness_layer: 'core_launch',
+      severity: codexCliReady ? 'info' : 'blocking',
+      user_action_required: !codexCliReady,
+      auto_action_available: !codexCliReady,
+      action_command_ref: actionCommandRef(codexCliReady ? openEnvironmentAction : installCodexAction),
+      last_attempt: lastAttempt(codex.health_status, {
+        version: codex.version ?? null,
+        binary_path: codex.binary_path ?? null,
+      }),
+      next_visible_step: codexCliReady
+        ? 'Continue to Codex API configuration.'
+        : 'Install or update Codex CLI from the App-managed action.',
       section_id: 'environment',
       detail_summary: codex.installed
         ? `Installed at ${codex.binary_path ?? 'unknown path'}`
@@ -196,13 +241,26 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
       action: codexCliReady
         ? openEnvironmentAction
         : installCodexAction,
-    },
-    {
+    }),
+    buildInitializeChecklistItem({
       item_id: 'codex_config',
       label: 'Codex API Configuration',
       status: codexConfigReady ? 'ready' : codex.config_status,
       required: true,
       blocking: !codexConfigReady,
+      readiness_layer: 'core_launch',
+      severity: codexConfigReady ? 'info' : 'blocking',
+      user_action_required: !codexConfigReady,
+      auto_action_available: false,
+      action_command_ref: actionCommandRef(codexConfigReady ? openEnvironmentAction : configureCodexAction),
+      last_attempt: lastAttempt(codexConfigReady ? 'ready' : codex.config_status, {
+        config_path: codex.config_path ?? null,
+        api_key_present: codex.api_key_present,
+        provider_base_url: codex.provider_base_url ?? null,
+      }),
+      next_visible_step: codexConfigReady
+        ? 'Core readiness is available.'
+        : 'Enter a Codex API key; the product default provider endpoint and model profile stay App-managed.',
       section_id: 'environment',
       detail_summary: codexConfigReady
         ? `Codex provider is configured for ${codex.default_model ?? 'the local default model'}.`
@@ -210,13 +268,25 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
       endpoint: endpoints.system_environment,
       action_endpoint: endpoints.system_action,
       action: codexConfigReady ? openEnvironmentAction : configureCodexAction,
-    },
-    {
+    }),
+    buildInitializeChecklistItem({
       item_id: 'family_runtime_provider',
       label: 'Family Runtime Provider',
       status: onlineManagementStatus,
       required: true,
-      blocking: !providerReady,
+      blocking: false,
+      readiness_layer: 'full_readiness',
+      severity: providerReady ? 'info' : 'maintenance',
+      user_action_required: !providerReady,
+      auto_action_available: false,
+      action_command_ref: actionCommandRef(providerReady ? openEnvironmentAction : reviewFamilyRuntimeProviderAction),
+      last_attempt: lastAttempt(onlineManagementStatus, {
+        provider_kind: familyRuntimeProvider.provider_kind,
+        degraded_reason: familyRuntimeProvider.degraded_reason ?? null,
+      }),
+      next_visible_step: providerReady
+        ? 'Full runtime provider readiness is available.'
+        : 'Continue using Core readiness while provider setup remains visible in Settings.',
       section_id: 'environment',
       detail_summary: providerReady
         ? `Provider ${familyRuntimeProvider.provider_kind} is ready for family runtime attempts.`
@@ -228,13 +298,22 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
       action: providerReady
         ? openEnvironmentAction
         : reviewFamilyRuntimeProviderAction,
-    },
-    {
+    }),
+    buildInitializeChecklistItem({
       item_id: 'native_helpers',
       label: 'OPL Native Helpers',
       status: environment.native_helpers.health_status,
       required: false,
       blocking: false,
+      readiness_layer: 'optional',
+      severity: environment.native_helpers.health_status === 'ready' ? 'info' : 'maintenance',
+      user_action_required: false,
+      auto_action_available: environment.native_helpers.health_status !== 'ready',
+      action_command_ref: actionCommandRef(environment.native_helpers.health_status === 'ready' ? openEnvironmentAction : repairNativeHelpersAction),
+      last_attempt: lastAttempt(environment.native_helpers.health_status),
+      next_visible_step: environment.native_helpers.health_status === 'ready'
+        ? 'Native helper checks are available.'
+        : 'Run native helper repair from Settings when faster local checks are needed.',
       section_id: 'environment',
       detail_summary: environment.native_helpers.health_status === 'ready'
         ? 'Rust helper binaries are available for native doctor, watch, and indexing checks.'
@@ -242,37 +321,72 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
       endpoint: endpoints.system_environment,
       action_endpoint: endpoints.system_action,
       action: environment.native_helpers.health_status === 'ready' ? openEnvironmentAction : repairNativeHelpersAction,
-    },
-    {
+    }),
+    buildInitializeChecklistItem({
       item_id: 'domain_modules',
       label: 'Domain Modules',
       status: buildInitializeOptionalStatus(defaultModuleReady),
       required: true,
-      blocking: defaultModuleReady < defaultModuleTotal,
+      blocking: false,
+      readiness_layer: 'full_readiness',
+      severity: defaultModuleReady < defaultModuleTotal ? 'maintenance' : 'info',
+      user_action_required: false,
+      auto_action_available: defaultModuleReady < defaultModuleTotal,
+      action_command_ref: actionCommandRef(reviewModulesAction),
+      last_attempt: lastAttempt(buildInitializeOptionalStatus(defaultModuleReady), {
+        ready_default_modules_count: defaultModuleReady,
+        total_default_modules_count: defaultModuleTotal,
+      }),
+      next_visible_step: defaultModuleReady < defaultModuleTotal
+        ? 'Start Core workflows now; background maintenance can install or refresh default modules.'
+        : 'Domain modules are available for full workflows.',
       section_id: 'modules',
       detail_summary: `${defaultModuleReady}/${defaultModuleTotal} default modules ready.`,
       endpoint: endpoints.modules,
       action_endpoint: endpoints.module_action,
       action: reviewModulesAction,
-    },
-    {
+    }),
+    buildInitializeChecklistItem({
       item_id: 'recommended_skills',
       label: 'Recommended Skills',
       status: buildRecommendedSkillsStatus(),
       required: false,
       blocking: false,
+      readiness_layer: 'optional',
+      severity: buildRecommendedSkillsStatus() === 'ready' ? 'info' : 'maintenance',
+      user_action_required: false,
+      auto_action_available: buildRecommendedSkillsStatus() !== 'ready',
+      action_command_ref: 'opl system startup-maintenance',
+      last_attempt: lastAttempt(buildRecommendedSkillsStatus(), {
+        ready_skills_count: recommendedSkills.filter((skill) => skill.status === 'ready').length,
+        total_skills_count: recommendedSkills.length,
+      }),
+      next_visible_step: buildRecommendedSkillsStatus() === 'ready'
+        ? 'Recommended Codex skills are visible.'
+        : 'Run startup maintenance to sync missing companion skills when their sources are available.',
       section_id: 'modules',
       detail_summary: `${recommendedSkills.filter((skill) => skill.status === 'ready').length}/${recommendedSkills.length} companion skill groups detected for MAS/MAG/RCA workflows.`,
       endpoint: endpoints.system_initialize,
       action_endpoint: endpoints.system_initialize,
       action: reviewInitializeAction,
-    },
-    {
+    }),
+    buildInitializeChecklistItem({
       item_id: 'gui_shell',
       label: 'OPL Desktop GUI',
       status: guiShell.sibling_checkout_found ? 'ready' : 'attention_needed',
       required: false,
       blocking: false,
+      readiness_layer: 'optional',
+      severity: guiShell.sibling_checkout_found ? 'info' : 'maintenance',
+      user_action_required: false,
+      auto_action_available: false,
+      action_command_ref: null,
+      last_attempt: lastAttempt(guiShell.sibling_checkout_found ? 'ready' : 'attention_needed', {
+        sibling_checkout_path: guiShell.sibling_checkout_path ?? null,
+      }),
+      next_visible_step: guiShell.sibling_checkout_found
+        ? 'Desktop shell is available.'
+        : 'Use a prebuilt release package or source checkout for GUI work.',
       section_id: 'system',
       detail_summary: guiShell.sibling_checkout_found
         ? `OPL GUI shell checkout found at ${guiShell.sibling_checkout_path}`
@@ -280,23 +394,34 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
       endpoint: endpoints.system_initialize,
       action_endpoint: endpoints.system_initialize,
       action: reviewInitializeAction,
-    },
-    {
+    }),
+    buildInitializeChecklistItem({
       item_id: 'developer_mode',
       label: 'Developer Mode',
       status: developerMode.enabled === 'off' ? 'disabled' : developerMode.setting_status,
       required: false,
       blocking: false,
+      readiness_layer: 'optional',
+      severity: 'info',
+      user_action_required: false,
+      auto_action_available: false,
+      action_command_ref: actionCommandRef(developerMode.action),
+      last_attempt: lastAttempt(developerMode.enabled === 'off' ? 'disabled' : developerMode.setting_status, {
+        enabled: developerMode.enabled,
+        effective_state: developerMode.effective_state,
+      }),
+      next_visible_step: 'Developer Mode can be managed from Settings when repository repair routing is needed.',
       section_id: 'settings',
       detail_summary:
         'Expose the App settings switch for supervised developer inspection and repository repair routing.',
       endpoint: endpoints.system_settings,
       action_endpoint: endpoints.system_action,
       action: developerMode.action,
-    },
+    }),
   ];
 
-  const requiredChecklist = checklist.filter((item) => item.required);
+  const coreLaunchChecklist = checklist.filter((item) => item.readiness_layer === 'core_launch');
+  const fullReadinessChecklist = checklist.filter((item) => item.readiness_layer === 'full_readiness');
   const optionalChecklist = checklist.filter((item) => !item.required);
   const blockingItems = checklist
     .filter((item) => item.blocking)
@@ -306,14 +431,14 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
     fullReady
       ? 'ready_to_finalize'
       : launchReady
-        ? 'ready_with_degraded_online_runtime'
-      : 'attention_needed';
+        ? 'ready_with_background_maintenance'
+        : 'attention_needed';
   const setupPhase: OplInitializePhase =
     workspaceRoot.health_status !== 'ready'
       ? 'workspace_root'
       : (!codexCliReady || !codexConfigReady)
         ? 'environment'
-        : defaultModuleReady < defaultModuleTotal
+        : !domainReady
           ? 'modules'
           : !providerReady
             ? 'environment'
@@ -329,10 +454,13 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
             : !providerReady
               ? reviewFamilyRuntimeProviderAction
               : openEnvironmentAction)
-        : setupPhase === 'modules'
+        : setupPhase === 'modules' && !domainReady
           ? reviewModulesAction
-          : reviewInitializeAction;
-  const requiredCompletedCount = requiredChecklist.filter((item) => !item.blocking).length;
+          : !providerReady
+            ? reviewFamilyRuntimeProviderAction
+            : reviewInitializeAction;
+  const requiredCompletedCount = coreLaunchChecklist.filter((item) => !item.blocking).length;
+  const fullCompletedCount = fullReadinessChecklist.filter((item) => item.status === 'ready').length;
   const optionalCompletedCount = optionalChecklist.filter((item) => item.status === 'ready').length;
   const isFirstRun = workspaceRoot.source === 'default_home' && overallState !== 'ready_to_finalize';
 
@@ -344,18 +472,23 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
       setup_flow: {
         is_first_run: isFirstRun,
         phase: setupPhase,
-        ready_to_launch: requiredChecklist.every((item) => !item.blocking),
+        ready_to_launch: launchReady,
         progress: {
           required_completed_count: requiredCompletedCount,
-          required_total_count: requiredChecklist.length,
+          required_total_count: coreLaunchChecklist.length,
           optional_completed_count: optionalCompletedCount,
           optional_total_count: optionalChecklist.length,
           ready_required_count: requiredCompletedCount,
-          total_required_count: requiredChecklist.length,
+          total_required_count: coreLaunchChecklist.length,
+          ready_full_readiness_count: fullCompletedCount,
+          total_full_readiness_count: fullReadinessChecklist.length,
           ready_optional_count: optionalCompletedCount,
           total_optional_count: optionalChecklist.length,
         },
         blocking_items: blockingItems,
+        maintenance_items: checklist
+          .filter((item) => item.severity === 'maintenance')
+          .map((item) => item.item_id),
       },
       checklist,
       readiness: {
