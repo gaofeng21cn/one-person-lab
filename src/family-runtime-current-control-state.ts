@@ -2,6 +2,11 @@ import type { DatabaseSync } from 'node:sqlite';
 
 import type { FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import type { StageAttemptRow } from './family-runtime-stage-attempt-ledger.ts';
+import { buildStageAttemptUsageProjection } from './family-runtime-stage-attempt-usage.ts';
+import {
+  buildStageProgressLog,
+  summarizeStageProgressLogs,
+} from './family-runtime-stage-progress-log.ts';
 
 type ControlAttemptRow = StageAttemptRow & { rowid: number };
 
@@ -165,6 +170,65 @@ function readLatestCloseoutPacket(db: DatabaseSync, stageAttemptId: string) {
   return row ? parseRecord(row.packet_json) : {};
 }
 
+function currentStageProgressLog(
+  current: ControlAttemptRow | undefined,
+  providerRun: Record<string, unknown>,
+  activityEvents: unknown[],
+  latestCloseout: Record<string, unknown>,
+) {
+  if (!current) {
+    return null;
+  }
+  const workspaceLocator = parseRecord(current.workspace_locator_json);
+  const routeImpact = parseRecord(current.route_impact_json);
+  const retryBudget = parseRecord(current.retry_budget_json);
+  const checkpointRefs = stringList(parseList(current.checkpoint_refs_json));
+  const closeoutRefs = stringList(parseList(current.closeout_refs_json));
+  const usageProjection = buildStageAttemptUsageProjection({
+    stageAttemptId: current.stage_attempt_id,
+    status: current.status,
+    blockedReason: current.blocked_reason,
+    retryBudget,
+    attemptCount: current.attempt_count,
+    providerRun,
+    activityEvents,
+    routeImpact,
+  });
+  return buildStageProgressLog({
+    stageAttemptId: current.stage_attempt_id,
+    projectionScope: 'current_control_state',
+    providerKind: current.provider_kind,
+    executorKind: current.executor_kind,
+    domainId: current.domain_id,
+    stageId: current.stage_id,
+    workflowId: current.workflow_id,
+    taskId: current.task_id,
+    workspaceLocator,
+    sourceFingerprint: current.source_fingerprint,
+    status: current.status,
+    blockedReason: current.blocked_reason,
+    checkpointRefs,
+    closeoutRefs,
+    consumedRefs: stringList(latestCloseout.consumed_refs),
+    consumedMemoryRefs: stringList(latestCloseout.consumed_memory_refs),
+    writebackReceiptRefs: stringList(latestCloseout.writeback_receipt_refs),
+    humanGateRefs: stringList(parseList(current.human_gate_refs_json)),
+    retryBudget,
+    attemptCount: current.attempt_count,
+    providerRun,
+    activityEvents,
+    routeImpact,
+    latestCloseout,
+    closeoutReceiptStatus: current.closeout_receipt_status,
+    nextOwner: stringValue(latestCloseout.next_owner) ?? stringValue(routeImpact.next_owner) ?? current.domain_id,
+    domainReadyVerdict: stringValue(latestCloseout.domain_ready_verdict) ?? stringValue(routeImpact.domain_ready_verdict),
+    canonicalOutcome: statusForCurrentAttempt(current),
+    usageProjection,
+    createdAt: current.created_at,
+    updatedAt: current.updated_at,
+  });
+}
+
 function requiredIdentityMissing(task: FamilyRuntimeTaskRow | undefined, attempt: ControlAttemptRow | undefined) {
   return [
     task?.task_id ? null : 'task_id',
@@ -265,6 +329,7 @@ function deriveCurrentControlStateFromRows(
   const livenessProviderRun = latestProviderActivityHeartbeat(activityEvents, providerRun);
   const liveProviderAttempt = isLiveProviderAttempt(current, providerRun);
   const closeoutRefs = current ? stringList(parseList(current.closeout_refs_json)) : [];
+  const stageProgressLog = currentStageProgressLog(current, livenessProviderRun, activityEvents, latestCloseout);
   const missingIdentity = requiredIdentityMissing(task, current);
   const staleEpochs = task && current ? staleEpochKinds(taskPayload, current) : [];
   const ownerReceiptRefs = uniqueStrings([
@@ -310,6 +375,12 @@ function deriveCurrentControlStateFromRows(
       last_activity_heartbeat_kind: stringValue(livenessProviderRun.last_activity_heartbeat_kind),
       last_runner_event_kind: stringValue(livenessProviderRun.last_runner_event_kind),
     },
+    stage_progress_log: stageProgressLog
+      ? summarizeStageProgressLogs([stageProgressLog], 'current_control_state')
+      : summarizeStageProgressLogs([], 'current_control_state'),
+    active_stage_attempt_stage_progress_log_ref: current
+      ? `/stage_attempt_workbench/attempts/${current.stage_attempt_id}/stage_progress_log`
+      : null,
     superseded_terminal_attempt_refs: terminalAttemptRefs(attempts, current),
     derivation_sources: [
       'family_runtime_queue_task',

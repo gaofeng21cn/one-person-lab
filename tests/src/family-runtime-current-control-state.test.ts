@@ -174,6 +174,46 @@ test('current control state exposes active provider attempt identity without dom
   });
 });
 
+test('current control state carries stage progress log observability for the active attempt', () => {
+  withDb((db) => {
+    const task = enqueueDefaultTask(db, {
+      study_id: '002-dm-china-us-mortality-attribution',
+      quest_id: '002-dm-china-us-mortality-attribution',
+      source_fingerprint: 'mas-domain-source:fresh',
+    });
+    const attempt = createTaskAttempt(db, task, {
+      sourceFingerprint: 'opl-stage-source:derived',
+      workspaceEpochs: {
+        domain_source_fingerprint: 'mas-domain-source:fresh',
+      },
+      start: true,
+    });
+    recordStageAttemptActivityHeartbeat(db, {
+      stageAttemptId: attempt.stage_attempt_id,
+      heartbeatKind: 'codex_stage_activity_runner_progress',
+      runnerEventKind: 'agent_message',
+      checkpointRefs: ['studies/002-dm/dispatch.json'],
+      observedAt: '2026-05-27T05:07:17.035Z',
+    });
+
+    const state = deriveCurrentControlStateForTask(db, task.task_id);
+
+    assert.equal(state.stage_progress_log.surface_kind, 'opl_stage_progress_log_summary');
+    assert.equal(state.stage_progress_log.attempt_count, 1);
+    assert.equal(state.stage_progress_log.runner_progress_event_count, 1);
+    assert.deepEqual(state.stage_progress_log.attempt_refs, [
+      `/stage_attempt_workbench/attempts/${attempt.stage_attempt_id}/stage_progress_log`,
+    ]);
+    assert.equal(state.stage_progress_log.authority_boundary.can_authorize_quality_verdict, false);
+    assert.equal(state.active_stage_attempt_stage_progress_log_ref, (
+      `/stage_attempt_workbench/attempts/${attempt.stage_attempt_id}/stage_progress_log`
+    ));
+    assert.equal(Object.hasOwn(state, 'domain_ready'), false);
+    assert.equal(Object.hasOwn(state, 'publication_ready'), false);
+    assert.equal(Object.hasOwn(state, 'artifact_ready'), false);
+  });
+});
+
 test('current control state uses provider activity heartbeat as running liveness projection', () => {
   withDb((db) => {
     const task = enqueueDefaultTask(db, {
