@@ -2,6 +2,7 @@ import type { StageAttemptUsageProjection } from './family-runtime-stage-attempt
 import {
   buildTemporalStageAttemptVisibility,
   buildTemporalWebUiRef,
+  type TemporalStageAttemptVisibilityReadiness,
 } from './family-runtime-temporal-visibility.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -28,6 +29,7 @@ export type StageProgressLogInput = {
   retryBudget: JsonRecord;
   attemptCount: number;
   providerRun: JsonRecord;
+  temporalVisibilityReadiness?: TemporalStageAttemptVisibilityReadiness | null;
   activityEvents: unknown[];
   routeImpact: JsonRecord;
   latestCloseout?: JsonRecord | null;
@@ -466,6 +468,7 @@ export function buildStageProgressLog(input: StageProgressLogInput) {
     sourceFingerprint: input.sourceFingerprint,
     executorKind: input.executorKind,
     providerRun: input.providerRun,
+    visibilityReadiness: input.temporalVisibilityReadiness,
   });
   return {
     surface_kind: 'opl_stage_progress_log',

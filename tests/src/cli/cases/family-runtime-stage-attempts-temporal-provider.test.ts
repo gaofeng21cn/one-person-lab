@@ -59,6 +59,7 @@ type TemporalStageAttemptQueryOutput = {
         stage_progress_log: Record<string, any>;
       };
       stage_progress_log: Record<string, any>;
+      attempt_true_path_proof: Record<string, any>;
       completion_boundary: {
         provider_completion_is_domain_ready: boolean;
       };
@@ -478,12 +479,16 @@ test('family-runtime queue inspect syncs a completed MAS default executor Tempor
             last_error: string | null;
             dead_letter_reason: string | null;
           };
+          app_operator_drilldown_ref?: string;
           stage_attempts: Array<{
+            stage_attempt_id: string;
             status: string;
             closeout_refs: string[];
             closeout_receipt_status: string;
             provider_run: { provider_status: string };
             route_impact: { domain_ready_verdict?: string };
+            stage_progress_log?: Record<string, any>;
+            attempt_true_path_proof?: Record<string, any>;
           }>;
         };
       };
@@ -491,6 +496,11 @@ test('family-runtime queue inspect syncs a completed MAS default executor Tempor
     });
     const { tick, task } = result;
     const attempt = task.family_runtime_task.stage_attempts[0];
+    const query = await runFamilyRuntime(['attempt', 'query', attempt.stage_attempt_id]) as TemporalStageAttemptQueryOutput;
+    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
+    const queryProjection = query.family_runtime_stage_attempt_query.stage_attempt_query;
 
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'running');
     assert.equal(task.family_runtime_task.task.status, 'succeeded');
@@ -501,6 +511,42 @@ test('family-runtime queue inspect syncs a completed MAS default executor Tempor
     assert.equal(attempt.closeout_receipt_status, 'accepted_typed_closeout');
     assert.equal(attempt.provider_run.provider_status, 'completed');
     assert.equal(attempt.route_impact.domain_ready_verdict, 'domain_gate_pending');
+    assert.equal(attempt.stage_progress_log?.surface_kind, 'opl_stage_progress_log');
+    assert.equal(
+      attempt.stage_progress_log?.temporal_visibility.visibility_readiness.readiness_status,
+      'ready',
+    );
+    assert.equal(queryProjection.stage_progress_log.temporal_visibility.visibility_readiness.readiness_status, 'ready');
+    assert.equal(queryProjection.attempt_true_path_proof.surface_kind, 'opl_stage_attempt_true_path_proof');
+    assert.equal(queryProjection.attempt_true_path_proof.proof_status, 'observed');
+    assert.equal(queryProjection.attempt_true_path_proof.same_attempt_refs.stage_attempt_id, attempt.stage_attempt_id);
+    assert.equal(queryProjection.attempt_true_path_proof.same_attempt_refs.task_id, taskId);
+    assert.equal(
+      queryProjection.attempt_true_path_proof.surfaces.queue_inspect_ref,
+      `/family_runtime_task/${taskId}/stage_attempts/${attempt.stage_attempt_id}`,
+    );
+    assert.equal(
+      queryProjection.attempt_true_path_proof.surfaces.app_drilldown_ref,
+      `/runtime_tray_snapshot/app_operator_drilldown/stage_attempts/${attempt.stage_attempt_id}`,
+    );
+    assert.equal(queryProjection.attempt_true_path_proof.authority_boundary.can_claim_domain_ready, false);
+    assert.equal(queryProjection.attempt_true_path_proof.authority_boundary.can_claim_long_soak, false);
+    assert.equal(
+      attempt.attempt_true_path_proof?.same_attempt_refs.stage_attempt_id,
+      queryProjection.attempt_true_path_proof.same_attempt_refs.stage_attempt_id,
+    );
+    assert.equal(
+      drilldown.attempt_true_path_proofs.some((proof: Record<string, any>) =>
+        proof.same_attempt_refs.stage_attempt_id === attempt.stage_attempt_id
+        && proof.same_attempt_refs.task_id === taskId
+        && proof.surfaces.temporal_webui_ref === queryProjection.attempt_true_path_proof.surfaces.temporal_webui_ref
+      ),
+      true,
+    );
+    assert.equal(
+      drilldown.stage_progress_log.temporal_visibility_readiness_statuses.includes('ready'),
+      true,
+    );
   } finally {
     for (const [key, value] of Object.entries(previousEnv)) {
       if (typeof value === 'string') {

@@ -96,6 +96,7 @@
     "control_loop_summary",
     "usage_projection",
     "stage_progress_log",
+    "attempt_true_path_proof",
     "temporal_visibility",
     "temporal_webui_ref",
     "resource_pressure",
@@ -220,6 +221,7 @@
     "route_impact",
     "usage_projection",
     "stage_progress_log",
+    "attempt_true_path_proof",
     "temporal_visibility",
     "temporal_webui_ref",
     "rejected_writes",
@@ -375,6 +377,51 @@
       "can_read_memory_body": false,
       "can_read_artifact_body": false,
       "can_authorize_domain_ready": false,
+      "can_authorize_quality_verdict": false,
+      "provider_completion_is_domain_ready": false
+    }
+  },
+  "attempt_true_path_proof_contract": {
+    "surface_name": "attempt_true_path_proof",
+    "surface_kind": "opl_stage_attempt_true_path_proof",
+    "projection_policy": "same_stage_attempt_refs_only_no_domain_truth_no_long_soak_claim",
+    "required_derivation_sources": [
+      "stage_attempt_ledger",
+      "stage_progress_log",
+      "temporal_query_receipt",
+      "temporal_visibility_refs",
+      "temporal_webui_ref"
+    ],
+    "forbidden_derivation_sources": [
+      "domain_truth_body",
+      "domain_memory_body",
+      "artifact_body",
+      "quality_verdict_body",
+      "long_soak_claim"
+    ],
+    "required_sections": [
+      "same_attempt_refs",
+      "surfaces",
+      "provider_truth_refs",
+      "non_claims",
+      "authority_boundary"
+    ],
+    "surface_refs": [
+      "attempt_query_ref",
+      "queue_inspect_ref",
+      "app_drilldown_ref",
+      "stage_progress_log_ref",
+      "temporal_visibility_ref",
+      "temporal_webui_ref",
+      "temporal_cli_ref"
+    ],
+    "authority_boundary": {
+      "can_write_domain_truth": false,
+      "can_read_memory_body": false,
+      "can_read_artifact_body": false,
+      "can_claim_domain_ready": false,
+      "can_claim_long_soak": false,
+      "can_claim_artifact_authority": false,
       "can_authorize_quality_verdict": false,
       "provider_completion_is_domain_ready": false
     }

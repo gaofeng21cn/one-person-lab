@@ -15,6 +15,12 @@ import {
   buildStageProgressLog,
 } from './family-runtime-stage-progress-log.ts';
 import {
+  buildStageAttemptTruePathProof,
+} from './family-runtime-stage-attempt-true-path-proof.ts';
+import type {
+  TemporalStageAttemptVisibilityReadiness,
+} from './family-runtime-temporal-visibility.ts';
+import {
   inspectFamilyRuntimeProviderWithLifecycle,
   isFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
@@ -347,6 +353,13 @@ function currentProviderReadinessProjection(
   };
 }
 
+function temporalVisibilityReadinessFromProvider(
+  provider: Awaited<ReturnType<typeof inspectFamilyRuntimeProviderWithLifecycle>> | null,
+) {
+  const readiness = provider?.details?.temporal_visibility_readiness;
+  return isRecord(readiness) ? readiness as TemporalStageAttemptVisibilityReadiness : null;
+}
+
 async function currentProviderReadinessByKind(
   rows: StageAttemptWorkbenchRow[],
   paths: Pick<ReturnType<typeof familyRuntimePaths>, 'root'>,
@@ -485,6 +498,7 @@ function attemptProjection(
     retryBudget: parseRecord(row.retry_budget_json),
     attemptCount: row.attempt_count,
     providerRun,
+    temporalVisibilityReadiness: temporalVisibilityReadinessFromProvider(providerReadiness),
     activityEvents,
     routeImpact,
     latestCloseout,
@@ -495,6 +509,16 @@ function attemptProjection(
     usageProjection,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  });
+  const attemptTruePathProof = buildStageAttemptTruePathProof({
+    stageAttemptId: row.stage_attempt_id,
+    taskId: row.task_id,
+    workflowId: row.workflow_id,
+    providerKind: row.provider_kind,
+    domainId: row.domain_id,
+    stageId: row.stage_id,
+    status: row.status,
+    stageProgressLog,
   });
   const genericProjections = buildAttemptGenericProjections({
     stage_attempt_id: row.stage_attempt_id,
@@ -585,6 +609,7 @@ function attemptProjection(
     operator_label: conflictOrBlockerEnvelopes[0]?.operator_label ?? null,
     usage_projection: usageProjection,
     stage_progress_log: stageProgressLog,
+    attempt_true_path_proof: attemptTruePathProof,
     temporal_visibility: stageProgressLog.temporal_visibility,
     temporal_webui_ref: stageProgressLog.temporal_webui_ref,
     ...genericProjections,

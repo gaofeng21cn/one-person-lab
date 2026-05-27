@@ -183,6 +183,12 @@ function decisionMapRefs(attempts: JsonRecord[]): DrilldownRef[] {
     } => Boolean(entry));
 }
 
+function attemptTruePathProofs(attempts: JsonRecord[]) {
+  return attempts
+    .map((attempt) => record(attempt.attempt_true_path_proof))
+    .filter((proof) => Object.keys(proof).length > 0);
+}
+
 function reviewRepairItems(workbench: JsonRecord) {
   return recordList(record(workbench.review_repair_queue).items)
     .map((item) => ({
@@ -925,6 +931,7 @@ export function buildAppOperatorDrilldown(input: {
   const attempts = recordList(input.stageAttemptWorkbench.attempts);
   const evidenceAttempts = recordList(input.stageAttemptWorkbench.evidence_attempts);
   const operatorEvidenceAttempts = evidenceAttempts.length > 0 ? evidenceAttempts : attempts;
+  const truePathProofs = attemptTruePathProofs(operatorEvidenceAttempts);
   const routeRefs = routeGraphRefs(attempts);
   const decisionRefs = decisionMapRefs(attempts);
   const reviewItems = reviewRepairItems(input.stageAttemptWorkbench);
@@ -1141,6 +1148,10 @@ export function buildAppOperatorDrilldown(input: {
       record(runtimeVisualizationProjection.summary).stage_progress_event_count,
     runtime_visualization_temporal_stage_progress_ref_count:
       record(runtimeVisualizationProjection.summary).temporal_stage_progress_ref_count,
+    attempt_true_path_proof_count: truePathProofs.length,
+    attempt_true_path_observed_count: truePathProofs.filter((proof) =>
+      stringValue(proof.proof_status) === 'observed'
+    ).length,
   };
   const sourceRefs: RuntimeTraySourceRef[] = uniqueByRef([
     sourceRef('/runtime_tray_snapshot/stage_attempt_workbench', 'stage_attempt_workbench'),
@@ -1181,6 +1192,7 @@ export function buildAppOperatorDrilldown(input: {
     projection_policy: 'refs_only_no_domain_truth_memory_body_artifact_body_or_verdict',
     summary,
     stage_progress_log: record(input.stageAttemptWorkbench.stage_progress_log),
+    attempt_true_path_proofs: truePathProofs,
     codex_app_runtime_role: appRuntimeRole,
     route_graph_refs: {
       surface_kind: 'opl_app_drilldown_route_graph_refs',

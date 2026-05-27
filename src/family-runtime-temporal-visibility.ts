@@ -256,6 +256,7 @@ export function buildTemporalStageAttemptVisibility(input: {
   sourceFingerprint?: string | null;
   executorKind: string;
   providerRun: JsonRecord;
+  visibilityReadiness?: TemporalStageAttemptVisibilityReadiness | null;
 }) {
   if (input.providerKind !== 'temporal') {
     return null;
@@ -280,7 +281,8 @@ export function buildTemporalStageAttemptVisibility(input: {
     blocked_reason: input.blockedReason ?? null,
     search_attributes: temporalStageAttemptTypedSearchAttributes(input),
     search_attribute_refs: temporalSearchAttributeRefs(),
-    visibility_readiness: buildTemporalStageAttemptVisibilityReadiness({ namespace }),
+    visibility_readiness: input.visibilityReadiness
+      ?? buildTemporalStageAttemptVisibilityReadiness({ namespace }),
     visibility_payload_policy: 'refs_and_indexable_summary_only_no_transcript_artifact_memory_or_domain_body',
     temporal_cli_ref: runId
       ? `temporal workflow show --namespace ${namespace} --workflow-id ${input.workflowId} --run-id ${runId}`

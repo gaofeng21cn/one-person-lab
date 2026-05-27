@@ -18,6 +18,13 @@ import { buildTemporalStageAttemptWorkflowContract, buildTemporalStageAttemptWor
 import { buildAttemptGenericProjections } from './runtime-tray-stage-attempt-generic-projections.ts';
 import { buildAttemptHumanReviewBurdenBudget } from './family-human-review-budget.ts';
 import { buildStageProgressLog } from './family-runtime-stage-progress-log.ts';
+import { buildStageAttemptTruePathProof } from './family-runtime-stage-attempt-true-path-proof.ts';
+import type { TemporalStageAttemptVisibilityReadiness } from './family-runtime-temporal-visibility.ts';
+
+type QueryStageAttemptOptions = {
+  temporalVisibilityReadiness?: TemporalStageAttemptVisibilityReadiness | null;
+  temporalQuery?: Record<string, unknown> | null;
+};
 
 function stringListFrom(value: unknown) {
   return Array.isArray(value)
@@ -55,7 +62,11 @@ function taskDeadLetterForAttempt(db: DatabaseSync, attempt: NonNullable<ReturnT
   };
 }
 
-export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
+export function queryStageAttempt(
+  db: DatabaseSync,
+  stageAttemptId: string,
+  options: QueryStageAttemptOptions = {},
+) {
   const attempt = inspectStageAttemptPayload(db, stageAttemptId);
   if (!attempt) {
     throw new FrameworkContractError('cli_usage_error', 'Family runtime stage attempt not found.', {
@@ -190,6 +201,7 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
     retryBudget: attempt.retry_budget,
     attemptCount: attempt.attempt_count,
     providerRun: attempt.provider_run,
+    temporalVisibilityReadiness: options.temporalVisibilityReadiness,
     activityEvents: attempt.activity_events,
     routeImpact: attempt.route_impact,
     latestCloseout: latestCloseout ?? null,
@@ -200,6 +212,17 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
     usageProjection: attempt.usage_projection,
     createdAt: attempt.created_at,
     updatedAt: attempt.updated_at,
+  });
+  const attemptTruePathProof = buildStageAttemptTruePathProof({
+    stageAttemptId: attempt.stage_attempt_id,
+    taskId: attempt.task_id,
+    workflowId: attempt.workflow_id,
+    providerKind: attempt.provider_kind,
+    domainId: attempt.domain_id,
+    stageId: attempt.stage_id,
+    status: attempt.status,
+    stageProgressLog,
+    temporalQuery: options.temporalQuery,
   });
   return {
     stage_attempt_query: {
@@ -219,6 +242,7 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
       ...genericProjections,
       usage_projection: attempt.usage_projection,
       stage_progress_log: stageProgressLog,
+      attempt_true_path_proof: attemptTruePathProof,
       temporal_visibility: stageProgressLog.temporal_visibility,
       temporal_webui_ref: stageProgressLog.temporal_webui_ref,
       human_review_burden_budget: humanReviewBurdenBudget,
@@ -257,6 +281,7 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
         operator_conflicts: conflictOrBlockerEnvelopes,
         usage_projection: attempt.usage_projection,
         stage_progress_log: stageProgressLog,
+        attempt_true_path_proof: attemptTruePathProof,
         temporal_visibility: stageProgressLog.temporal_visibility,
         temporal_webui_ref: stageProgressLog.temporal_webui_ref,
         authority_boundary: {

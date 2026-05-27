@@ -110,6 +110,7 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'control_loop_summary',
     'usage_projection',
     'stage_progress_log',
+    'attempt_true_path_proof',
     'temporal_visibility',
     'temporal_webui_ref',
     'resource_pressure',
@@ -151,6 +152,7 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'route_impact',
     'usage_projection',
     'stage_progress_log',
+    'attempt_true_path_proof',
     'temporal_visibility',
     'temporal_webui_ref',
   ]) {
@@ -247,6 +249,21 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
   assert.equal(stageProgressLog.authority_boundary.can_write_domain_truth, false);
   assert.equal(stageProgressLog.authority_boundary.can_authorize_quality_verdict, false);
   assert.equal(stageProgressLog.authority_boundary.provider_completion_is_domain_ready, false);
+  const truePathProof = contract.attempt_true_path_proof_contract as Record<string, any>;
+  assert.equal(truePathProof.surface_name, 'attempt_true_path_proof');
+  assert.equal(truePathProof.surface_kind, 'opl_stage_attempt_true_path_proof');
+  assert.equal(
+    truePathProof.projection_policy,
+    'same_stage_attempt_refs_only_no_domain_truth_no_long_soak_claim',
+  );
+  assert.equal(truePathProof.surface_refs.includes('attempt_query_ref'), true);
+  assert.equal(truePathProof.surface_refs.includes('queue_inspect_ref'), true);
+  assert.equal(truePathProof.surface_refs.includes('app_drilldown_ref'), true);
+  assert.equal(truePathProof.surface_refs.includes('temporal_webui_ref'), true);
+  assert.equal(truePathProof.forbidden_derivation_sources.includes('long_soak_claim'), true);
+  assert.equal(truePathProof.authority_boundary.can_claim_domain_ready, false);
+  assert.equal(truePathProof.authority_boundary.can_claim_long_soak, false);
+  assert.equal(truePathProof.authority_boundary.can_claim_artifact_authority, false);
   const stabilityBoundary = contract.stability_projection_authority_boundary as Record<string, unknown>;
   assert.equal(stabilityBoundary.can_execute_domain_action, false);
   assert.equal(stabilityBoundary.can_change_executor, false);
@@ -310,6 +327,7 @@ test('family runtime attempt contract defines stage_progress_log as the canonica
   assert.equal(userStageLog.authority_boundary.can_infer_domain_semantics, false);
   assert.equal(userStageLog.authority_boundary.can_write_domain_truth, false);
   assert.equal((contract.operator_visibility_fields as string[]).includes('stage_progress_log'), true);
+  assert.equal((contract.operator_visibility_fields as string[]).includes('attempt_true_path_proof'), true);
   assert.equal((contract.operator_visibility_fields as string[]).includes(retiredStageExecutionLogName), false);
   assert.equal((contract.stability_projection_fields as string[]).includes('stage_progress_log'), true);
   assert.equal((contract.stability_projection_fields as string[]).includes(retiredStageExecutionLogName), false);

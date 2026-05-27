@@ -309,6 +309,18 @@ export function inspectTask(db: DatabaseSync, taskId: string) {
   };
 }
 
+export function inspectTaskWithStageAttemptProjections(
+  db: DatabaseSync,
+  taskId: string,
+  stageAttempts: unknown[],
+) {
+  return {
+    ...inspectTask(db, taskId),
+    stage_attempts: stageAttempts,
+    app_operator_drilldown_ref: '/runtime_tray_snapshot/app_operator_drilldown',
+  };
+}
+
 export function listEvents(db: DatabaseSync) {
   return (db.prepare(`
     SELECT * FROM events ORDER BY created_at ASC

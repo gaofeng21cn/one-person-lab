@@ -31,6 +31,7 @@ import {
   stageAttemptSummary,
   syncStageAttemptFromTemporalTerminalObservation,
 } from './family-runtime-stage-attempts.ts';
+import { queryStageAttemptWithCurrentProviderReadiness } from './family-runtime-stage-attempt-current-query.ts';
 import { residencyProofReceipt } from './family-runtime-residency-proof-events.ts';
 import {
   persistTemporalProductionProof,
@@ -40,6 +41,7 @@ import { runTemporalProviderSloTick } from './family-runtime-provider-slo-execut
 import {
   familyRuntimePaths,
   inspectTask,
+  inspectTaskWithStageAttemptProjections,
   insertEvent,
   insertNotification,
   listEvents,
@@ -449,11 +451,20 @@ export async function runFamilyRuntime(args: string[]) {
     }
     if (parsed.mode === 'queue_inspect') {
       await syncTemporalStageAttemptsForTask(db, paths, parsed.taskId);
+      const stageAttempts = await Promise.all(listStageAttemptsForTask(db, parsed.taskId).map(async (attempt) => {
+        const projection = (await queryStageAttemptWithCurrentProviderReadiness(db, attempt.stage_attempt_id, paths, {
+          managedProviderProjection: readMasManagedProviderProjection(),
+        })).stage_attempt_query;
+        return {
+          ...projection.attempt,
+          ...projection,
+        };
+      }));
       return {
         version: 'g2',
         family_runtime_task: {
           surface_id: 'opl_family_runtime_task',
-          ...inspectTask(db, parsed.taskId),
+          ...inspectTaskWithStageAttemptProjections(db, parsed.taskId, stageAttempts),
         },
       };
     }
@@ -639,8 +650,14 @@ export async function runFamilyRuntime(args: string[]) {
       const localQuery = queryStageAttempt(db, parsed.stageAttemptId);
       const attempt = localQuery.stage_attempt_query.attempt;
       const temporal_query = await queryTemporalStageAttemptReadModel(attempt, { paths });
-      const syncedAttempt = syncStageAttemptFromTemporalTerminalObservation(db, temporal_query);
-      const projectedQuery = syncedAttempt ? queryStageAttempt(db, parsed.stageAttemptId) : localQuery;
+      syncStageAttemptFromTemporalTerminalObservation(db, temporal_query);
+      const projectedQuery = await queryStageAttemptWithCurrentProviderReadiness(db, parsed.stageAttemptId, paths, {
+        managedProviderProjection: readMasManagedProviderProjection(),
+      }, {
+        temporalQuery: temporal_query && typeof temporal_query === 'object' && !Array.isArray(temporal_query)
+          ? temporal_query
+          : null,
+      });
       return {
         version: 'g2',
         family_runtime_stage_attempt_query: {
