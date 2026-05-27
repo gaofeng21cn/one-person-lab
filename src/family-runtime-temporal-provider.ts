@@ -41,10 +41,8 @@ export {
   type TemporalWorkerReadinessStatus,
 } from './family-runtime-temporal-readiness.ts';
 import {
-  humanGateSignal,
-  resumeSignal,
+  stageAttemptOperatorUpdate,
   stageAttemptQuery,
-  userInstructionSignal,
 } from './family-runtime-temporal-workflows.ts';
 import {
   inspectTemporalServiceLifecycle,
@@ -149,16 +147,6 @@ export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths)
   };
 }
 
-function signalNameFor(kind: TemporalStageAttemptSignalKind) {
-  if (kind === 'human_gate') {
-    return humanGateSignal;
-  }
-  if (kind === 'user_instruction') {
-    return userInstructionSignal;
-  }
-  return resumeSignal;
-}
-
 export async function startTemporalStageAttemptWorkflow(
   attempt: StageAttemptPayload,
   options: TemporalClientOptions = {},
@@ -223,16 +211,20 @@ export async function signalTemporalStageAttemptWorkflow(input: {
       source: input.source ?? 'opl-cli',
       received_at: new Date().toISOString(),
     };
-    await handle.signal(signalNameFor(input.signalKind), signal);
+    const updateReceipt = await handle.executeUpdate(stageAttemptOperatorUpdate, {
+      args: [signal],
+    });
     return {
-      surface_kind: 'temporal_stage_attempt_signal_receipt',
+      surface_kind: 'temporal_stage_attempt_operator_update_receipt',
       provider_kind: 'temporal',
       stage_attempt_id: input.attempt.stage_attempt_id,
       workflow_id: input.attempt.workflow_id,
       signal_kind: input.signalKind,
+      update_receipt: updateReceipt,
       authority_boundary: {
-        opl: 'temporal_signal_transport_only',
+        opl: 'temporal_update_ack_and_transport_metadata_only',
         domain: 'truth_quality_artifact_gate_owner',
+        provider_completion_is_domain_ready: false,
       },
     };
   }, { paths: input.paths });

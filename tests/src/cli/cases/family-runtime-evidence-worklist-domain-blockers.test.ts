@@ -44,6 +44,32 @@ function completedTemporalObservationWithTypedBlocker(input: {
     started_at: input.createdAt,
     updated_at: input.createdAt,
     activity_events: [] as Record<string, unknown>[],
+    stage_progress_log: {
+      surface_kind: 'temporal_workflow_stage_progress_log' as const,
+      planned_work: {
+        stage_attempt_id: input.stageAttemptId,
+        workflow_id: input.workflowId,
+        domain_id: 'medautoscience',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        executor_kind: 'codex_cli',
+        checkpoint_refs: ['dispatch:terminal-currentness-start'],
+      },
+      timeline: [{
+        event_kind: 'temporal_query_terminal_observation',
+        status: 'completed',
+        ref: 'dispatch:terminal-currentness-typed-blocker-closeout',
+      }],
+      visibility: {
+        query: 'StageAttemptQuery',
+        search_attribute_refs: {
+          OplStageAttemptId: input.stageAttemptId,
+          OplDomainId: 'medautoscience',
+          OplStageId: 'domain_owner/default-executor-dispatch',
+          OplExecutorKind: 'codex_cli',
+          OplTaskId: null,
+        },
+      },
+    },
     checkpoint_refs: ['dispatch:terminal-currentness-start'],
     closeout_refs: ['dispatch:terminal-currentness-typed-blocker-closeout'],
     consumed_refs: ['dispatch:terminal-currentness-start'],

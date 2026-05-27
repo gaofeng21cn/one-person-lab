@@ -1,6 +1,14 @@
-import { condition, defineQuery, defineSignal, proxyActivities, setHandler } from '@temporalio/workflow';
+import {
+  condition,
+  defineQuery,
+  defineSignal,
+  defineUpdate,
+  proxyActivities,
+  setHandler,
+} from '@temporalio/workflow';
 
 import type {
+  TemporalStageAttemptOperatorUpdateReceipt,
   TemporalStageAttemptSignalPayload,
   TemporalStageAttemptWorkflowInput,
   TemporalStageAttemptWorkflowState,
@@ -30,6 +38,10 @@ export const schedulerTickQuery = defineQuery<TemporalSchedulerTickWorkflowState
 export const humanGateSignal = defineSignal<[TemporalStageAttemptSignalPayload]>('HumanGateSignal');
 export const userInstructionSignal = defineSignal<[TemporalStageAttemptSignalPayload]>('UserInstructionSignal');
 export const resumeSignal = defineSignal<[TemporalStageAttemptSignalPayload]>('ResumeSignal');
+export const stageAttemptOperatorUpdate = defineUpdate<
+  TemporalStageAttemptOperatorUpdateReceipt,
+  [TemporalStageAttemptSignalPayload]
+>('StageAttemptOperatorUpdate');
 
 const { codexStageActivity } = proxyActivities<Pick<StageAttemptActivities, 'codexStageActivity'>>({
   startToCloseTimeout: CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
@@ -44,7 +56,7 @@ const { domainHandlerDispatchActivity, schedulerTickActivity } = proxyActivities
   startToCloseTimeout: SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
   heartbeatTimeout: SHORT_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
   retry: {
-    maximumAttempts: 1,
+    maximumAttempts: 3,
   },
 });
 
@@ -107,6 +119,36 @@ function validateCloseoutPacketForWorkflow(input: {
     };
   }
   return { closeoutPacket, providerBlocker: null };
+}
+
+function validateOperatorActionPayload(signal: TemporalStageAttemptSignalPayload) {
+  if (signal.signal_kind === 'human_gate') {
+    const humanGateRef = typeof signal.payload.human_gate_ref === 'string'
+      ? signal.payload.human_gate_ref.trim()
+      : '';
+    if (!humanGateRef) {
+      throw new Error('human_gate update requires payload.human_gate_ref');
+    }
+  }
+  if (signal.signal_kind === 'user_instruction') {
+    const instructionRef = typeof signal.payload.instruction_ref === 'string'
+      ? signal.payload.instruction_ref.trim()
+      : '';
+    if (!instructionRef) {
+      throw new Error('user_instruction update requires payload.instruction_ref');
+    }
+  }
+  if (signal.signal_kind === 'resume') {
+    const reason = typeof signal.payload.reason === 'string'
+      ? signal.payload.reason.trim()
+      : '';
+    const resumeRef = typeof signal.payload.resume_ref === 'string'
+      ? signal.payload.resume_ref.trim()
+      : '';
+    if (!reason && !resumeRef) {
+      throw new Error('resume update requires payload.reason or payload.resume_ref');
+    }
+  }
 }
 
 export async function StageAttemptWorkflow(
@@ -181,17 +223,47 @@ export async function StageAttemptWorkflow(
     };
   };
 
-  setHandler(stageAttemptQuery, () => state);
-  setHandler(humanGateSignal, recordSignal);
-  setHandler(userInstructionSignal, recordSignal);
-  setHandler(resumeSignal, (signal) => {
+  const recordResume = (signal: TemporalStageAttemptSignalPayload) => {
     state = {
       ...state,
       status: state.status === 'human_gate' || state.status === 'failed' ? 'running' : state.status,
       updated_at: nowIso(),
       signals: [...state.signals, signal],
     };
-  });
+  };
+
+  setHandler(stageAttemptQuery, () => state);
+  setHandler(humanGateSignal, recordSignal);
+  setHandler(userInstructionSignal, recordSignal);
+  setHandler(resumeSignal, recordResume);
+  setHandler(
+    stageAttemptOperatorUpdate,
+    (signal) => {
+      if (signal.signal_kind === 'resume') {
+        recordResume(signal);
+      } else {
+        recordSignal(signal);
+      }
+      return {
+        surface_kind: 'temporal_stage_attempt_operator_update_receipt',
+        provider_kind: 'temporal',
+        update_status: 'accepted',
+        stage_attempt_id: state.stage_attempt_id,
+        workflow_id: state.workflow_id,
+        signal_kind: signal.signal_kind,
+        signal_count: state.signals.length,
+        updated_at: state.updated_at,
+        authority_boundary: {
+          opl: 'temporal_update_ack_and_transport_metadata_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          provider_completion_is_domain_ready: false,
+        },
+      };
+    },
+    {
+      validator: validateOperatorActionPayload,
+    },
+  );
 
   try {
     state = {
