@@ -4,6 +4,10 @@ import type { OplRecommendedSkill } from '../install-companions.ts';
 
 type RecommendedSkillSpec = Omit<OplRecommendedSkill, 'status'>;
 
+function packagedSkillPath(packagedSkillsRoot: string | null, skillId: string): string[] {
+  return packagedSkillsRoot ? [path.join(packagedSkillsRoot, skillId, 'SKILL.md')] : [];
+}
+
 export function buildOplRecommendedSkillSpecs(options: {
   codexHome: string;
   superpowersRepoDir: string;
@@ -32,7 +36,10 @@ export function buildOplRecommendedSkillSpecs(options: {
       label: 'officecli core skill',
       required: false,
       source: 'skills_manager',
-      expected_paths: [path.join(skillsManagerHome, 'skills', 'officecli', 'SKILL.md')],
+      expected_paths: [
+        path.join(skillsManagerHome, 'skills', 'officecli', 'SKILL.md'),
+        ...packagedSkillPath(packagedSkillsRoot, 'officecli'),
+      ],
       required_tools: ['officecli'],
       install_hint: 'Install the officecli skill and binary so MAS/MAG/RCA can handle Office deliverables.',
       supports: ['docx', 'pptx', 'xlsx'],
@@ -42,7 +49,10 @@ export function buildOplRecommendedSkillSpecs(options: {
       label: 'UI UX Pro Max skill',
       required: false,
       source: 'github',
-      expected_paths: [path.join(skillsManagerHome, 'skills', 'ui-ux-pro-max', 'SKILL.md')],
+      expected_paths: [
+        path.join(skillsManagerHome, 'skills', 'ui-ux-pro-max', 'SKILL.md'),
+        ...packagedSkillPath(packagedSkillsRoot, 'ui-ux-pro-max'),
+      ],
       install_hint: 'Install https://github.com/nextlevelbuilder/ui-ux-pro-max-skill so RCA can review and improve visual deliverables.',
       supports: ['rca', 'ui_review', 'ux_design', 'presentation_visuals'],
     },
@@ -53,7 +63,7 @@ export function buildOplRecommendedSkillSpecs(options: {
       source: 'skills_manager',
       expected_paths: [
         path.join(skillsManagerHome, 'skills', 'mineru-document-extractor', 'SKILL.md'),
-        ...(packagedSkillsRoot ? [path.join(packagedSkillsRoot, 'mineru-document-extractor', 'SKILL.md')] : []),
+        ...packagedSkillPath(packagedSkillsRoot, 'mineru-document-extractor'),
       ],
       required_tools: ['mineru-open-api'],
       install_hint: 'Install the MinerU document extraction skill and mineru-open-api binary so Codex can extract PDFs, scans, images, Office files, and web pages. MinerU flash-extract works without a token; extract and crawl use MINERU_TOKEN or mineru-open-api auth.',
@@ -64,7 +74,10 @@ export function buildOplRecommendedSkillSpecs(options: {
       label: 'officecli Word skill',
       required: false,
       source: 'skills_manager',
-      expected_paths: [path.join(skillsManagerHome, 'skills', 'officecli-docx', 'SKILL.md')],
+      expected_paths: [
+        path.join(skillsManagerHome, 'skills', 'officecli-docx', 'SKILL.md'),
+        ...packagedSkillPath(packagedSkillsRoot, 'officecli-docx'),
+      ],
       required_tools: ['officecli'],
       install_hint: 'Install officecli-docx for Word document creation and editing.',
       supports: ['docx', 'academic_paper'],
@@ -74,7 +87,10 @@ export function buildOplRecommendedSkillSpecs(options: {
       label: 'officecli PowerPoint skill',
       required: false,
       source: 'skills_manager',
-      expected_paths: [path.join(skillsManagerHome, 'skills', 'officecli-pptx', 'SKILL.md')],
+      expected_paths: [
+        path.join(skillsManagerHome, 'skills', 'officecli-pptx', 'SKILL.md'),
+        ...packagedSkillPath(packagedSkillsRoot, 'officecli-pptx'),
+      ],
       required_tools: ['officecli'],
       install_hint: 'Install officecli-pptx for presentation creation and editing.',
       supports: ['pptx', 'pitch_deck'],
@@ -84,7 +100,10 @@ export function buildOplRecommendedSkillSpecs(options: {
       label: 'officecli Excel skill',
       required: false,
       source: 'skills_manager',
-      expected_paths: [path.join(skillsManagerHome, 'skills', 'officecli-xlsx', 'SKILL.md')],
+      expected_paths: [
+        path.join(skillsManagerHome, 'skills', 'officecli-xlsx', 'SKILL.md'),
+        ...packagedSkillPath(packagedSkillsRoot, 'officecli-xlsx'),
+      ],
       required_tools: ['officecli'],
       install_hint: 'Install officecli-xlsx for spreadsheet and dashboard work.',
       supports: ['xlsx', 'dashboard'],

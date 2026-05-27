@@ -444,7 +444,18 @@ test('recommended system companion skills keep family domain skills plugin-only 
   const packagedSkillsRoot = path.join(homeRoot, 'runtime', 'current', 'skills');
 
   try {
-    for (const skillId of ['mas', 'mag', 'rca', 'opl-meta-agent', 'mineru-document-extractor']) {
+    for (const skillId of [
+      'mas',
+      'mag',
+      'rca',
+      'opl-meta-agent',
+      'officecli',
+      'officecli-docx',
+      'officecli-pptx',
+      'officecli-xlsx',
+      'ui-ux-pro-max',
+      'mineru-document-extractor',
+    ]) {
       fs.mkdirSync(path.join(packagedSkillsRoot, skillId), { recursive: true });
       fs.writeFileSync(
         path.join(packagedSkillsRoot, skillId, 'SKILL.md'),
@@ -458,7 +469,7 @@ test('recommended system companion skills keep family domain skills plugin-only 
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_PACKAGED_SKILLS_ROOT: packagedSkillsRoot,
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
-      PATH: '/usr/bin:/bin',
+      PATH: `${path.join(homeRoot, '.local', 'bin')}:/usr/bin:/bin`,
     }) as {
       install: {
         companion_skill_sync: {
@@ -472,9 +483,43 @@ test('recommended system companion skills keep family domain skills plugin-only 
       assert.equal(syncedById.has(skillId), false);
       assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillId, 'SKILL.md')), false);
     }
-    for (const skillId of ['mineru-document-extractor']) {
+    for (const skillId of [
+      'officecli',
+      'officecli-docx',
+      'officecli-pptx',
+      'officecli-xlsx',
+      'ui-ux-pro-max',
+      'mineru-document-extractor',
+    ]) {
       assert.equal(syncedById.get(skillId), 'synced');
       assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillId, 'SKILL.md')), true);
+    }
+
+    const ready = runCli(['system', 'initialize'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_PACKAGED_SKILLS_ROOT: packagedSkillsRoot,
+      PATH: `${path.join(homeRoot, '.local', 'bin')}:/usr/bin:/bin`,
+    }) as {
+      system_initialize: {
+        recommended_skills: {
+          skills: Array<{ skill_id: string; status: string }>;
+        };
+      };
+    };
+    const readyById = new Map(
+      ready.system_initialize.recommended_skills.skills.map((skill) => [skill.skill_id, skill.status]),
+    );
+    for (const skillId of [
+      'officecli',
+      'officecli-docx',
+      'officecli-pptx',
+      'officecli-xlsx',
+      'ui-ux-pro-max',
+      'mineru-document-extractor',
+    ]) {
+      assert.equal(readyById.get(skillId), 'ready');
     }
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
