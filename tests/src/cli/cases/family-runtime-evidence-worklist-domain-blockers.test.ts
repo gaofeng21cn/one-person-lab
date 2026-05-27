@@ -3,6 +3,7 @@ import {
   buildManifestCommand,
   createFamilyContractsFixtureRoot,
   fs,
+  loadFrameworkContracts,
   loadFamilyManifestFixtures,
   os,
   path,
@@ -19,6 +20,73 @@ import {
 import {
   buildProductionTailNextActionLedger,
 } from '../../../../src/production-evidence-tail-ledger.ts';
+import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/family-runtime-evidence-worklist.ts';
+import { openQueueDb } from '../../../../src/family-runtime-store.ts';
+import {
+  createStageAttempt,
+  ingestStageAttemptCloseout,
+} from '../../../../src/family-runtime-stage-attempts.ts';
+
+function completedTemporalObservationWithTypedBlocker(input: {
+  stageAttemptId: string;
+  workflowId: string;
+  createdAt: string;
+  typedBlockerRef: string;
+}) {
+  const query = {
+    surface_kind: 'temporal_stage_attempt_query' as const,
+    provider_kind: 'temporal' as const,
+    stage_attempt_id: input.stageAttemptId,
+    workflow_id: input.workflowId,
+    domain_id: 'medautoscience' as const,
+    stage_id: 'domain_owner/default-executor-dispatch',
+    status: 'completed' as const,
+    started_at: input.createdAt,
+    updated_at: input.createdAt,
+    activity_events: [] as Record<string, unknown>[],
+    checkpoint_refs: ['dispatch:terminal-currentness-start'],
+    closeout_refs: ['dispatch:terminal-currentness-typed-blocker-closeout'],
+    consumed_refs: ['dispatch:terminal-currentness-start'],
+    consumed_memory_refs: [] as string[],
+    writeback_receipt_refs: [] as string[],
+    rejected_writes: [] as Record<string, unknown>[],
+    next_owner: 'med-autoscience',
+    route_impact: {
+      typed_blocker_refs: [input.typedBlockerRef],
+      next_owner: 'med-autoscience',
+    },
+    human_gate_refs: [] as string[],
+    signals: [],
+    closeout_packet: {
+      surface_kind: 'temporal_domain_handler_dispatch_receipt',
+      closeout_packet_surface_kind: 'domain_stage_closeout_packet',
+      closeout_refs: ['dispatch:terminal-currentness-typed-blocker-closeout'],
+    },
+    completion_boundary: {
+      provider_completion: 'completed' as const,
+      domain_ready_verdict: 'domain_gate_pending',
+      provider_completion_is_domain_ready: false as const,
+    },
+    authority_boundary: {
+      opl: 'temporal_workflow_transport_and_control_metadata_only' as const,
+      domain: 'truth_quality_artifact_gate_owner' as const,
+    },
+  };
+  return {
+    surface_kind: 'temporal_stage_attempt_query_receipt' as const,
+    provider_kind: 'temporal' as const,
+    stage_attempt_id: input.stageAttemptId,
+    workflow_id: input.workflowId,
+    run_id: 'run-terminal-currentness',
+    workflow_status: 'COMPLETED' as const,
+    query_source: 'workflow_result_after_terminal_completed' as const,
+    query,
+    authority_boundary: {
+      opl: 'temporal_workflow_transport_and_control_metadata_only' as const,
+      domain: 'truth_quality_artifact_gate_owner' as const,
+    },
+  };
+}
 
 test('production tail next-action ledger groups repeated typed blocker refs without hiding raw items', () => {
   const ledger = buildProductionTailNextActionLedger({
@@ -84,6 +152,103 @@ test('production tail next-action ledger groups repeated typed blocker refs with
   assert.equal(repeatedGroup.stage_or_request_count, 2);
   assert.equal(ledger.authority_boundary.can_claim_production_ready, false);
   assert.equal(ledger.authority_boundary.can_claim_domain_ready, false);
+});
+
+test('family-runtime evidence-worklist syncs terminal Temporal closeout before exposing domain-dispatch workorders', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-terminal-sync-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  const createdAt = new Date().toISOString();
+
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    const { db } = openQueueDb();
+    let stageAttemptId = '';
+    let workflowId = '';
+    try {
+      const attempt = createStageAttempt(db, {
+        domainId: 'medautoscience',
+        stageId: 'domain_owner/default-executor-dispatch',
+        providerKind: 'temporal',
+        workspaceLocator: {
+          workspace_root: '/tmp/mas-terminal-currentness',
+          study_id: 'DM002',
+          action_type: 'run_quality_repair_batch',
+          dispatch_ref: 'dispatch:terminal-currentness',
+          dispatch_authority: 'mas-owner-route',
+        },
+        sourceFingerprint: 'sha256:terminal-currentness',
+        executorKind: 'codex_cli',
+        checkpointRefs: ['dispatch:terminal-currentness-start'],
+      }).attempt;
+      stageAttemptId = attempt.stage_attempt_id;
+      workflowId = attempt.workflow_id;
+      ingestStageAttemptCloseout(db, {
+        stageAttemptId,
+        packet: {
+          surface_kind: 'domain_stage_closeout_packet',
+          closeout_refs: ['dispatch:stale-closeout-without-owner-evidence'],
+          consumed_refs: ['dispatch:terminal-currentness-start'],
+          consumed_memory_refs: [],
+          writeback_receipt_refs: [],
+          rejected_writes: [],
+          next_owner: 'med-autoscience',
+          domain_ready_verdict: 'domain_gate_pending',
+          route_impact: {},
+          authority_boundary: {
+            opl: 'test_projection_only',
+            domain: 'truth_quality_artifact_gate_owner',
+          },
+        },
+      });
+    } finally {
+      db.close();
+    }
+
+    let queryCount = 0;
+    const typedBlockerRef = 'mas://typed-blockers/terminal-currentness-observed';
+    const result = await runFamilyRuntimeEvidenceWorklist(
+      loadFrameworkContracts(fixtureContractsRoot),
+      {
+        familyDefaults: true,
+        providerKind: 'temporal',
+        executorKind: 'codex_cli',
+        detailLevel: 'full',
+        queryTemporalStageAttemptReadModel: async (attempt: { stage_attempt_id: string; workflow_id: string }) => {
+          queryCount += 1;
+          assert.equal(attempt.stage_attempt_id, stageAttemptId);
+          return completedTemporalObservationWithTypedBlocker({
+            stageAttemptId,
+            workflowId,
+            createdAt,
+            typedBlockerRef,
+          });
+        },
+      },
+    );
+    const worklist = result.family_runtime_evidence_worklist;
+    assert.equal(worklist.detail_level, 'full');
+    if (!('worklist_items' in worklist)) {
+      throw new Error('expected full evidence worklist payload');
+    }
+    const staleRecordItem = worklist.worklist_items.find((item: { action_id: string }) =>
+      item.action_id === `domain_dispatch:medautoscience:${stageAttemptId}:record`
+    );
+
+    assert.equal(queryCount, 1);
+    assert.equal(staleRecordItem, undefined);
+    assert.equal(worklist.summary.domain_dispatch_evidence_workorder_count, 0);
+    assert.equal(worklist.terminal_observation_sync.synced_attempt_count, 1);
+    assert.equal(worklist.terminal_observation_sync.authority_boundary.can_generate_domain_owner_receipt, false);
+  } finally {
+    if (typeof previousStateDir === 'string') {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    } else {
+      delete process.env.OPL_STATE_DIR;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 });
 
 test('family-runtime evidence-worklist classifies verified external blockers without production authority', () => {

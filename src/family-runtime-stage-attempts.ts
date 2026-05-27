@@ -162,6 +162,37 @@ type TemporalStageAttemptTerminalObservation = {
   query?: TemporalStageAttemptWorkflowState;
 };
 
+function providerRunWithTerminalCompletedObservation(
+  row: StageAttemptRow,
+  observation: TemporalStageAttemptTerminalObservation,
+  observedAt: string,
+) {
+  return {
+    ...parseStageAttemptJsonObject(row.provider_run_json),
+    provider_kind: 'temporal',
+    workflow_id: observation.workflow_id,
+    provider_status: 'completed',
+    completed_at: observedAt,
+    last_heartbeat_at: observedAt,
+    terminal_observation: {
+      source: 'temporal_stage_attempt_query',
+      workflow_status: observation.workflow_status ?? null,
+      query_status: observation.query?.status ?? null,
+      reason: 'temporal_stage_attempt_completed_observed',
+    },
+  };
+}
+
+function rowHasCompletedTerminalObservation(row: StageAttemptRow) {
+  const terminalObservation = parseStageAttemptJsonObject(row.provider_run_json).terminal_observation;
+  if (!terminalObservation || typeof terminalObservation !== 'object' || Array.isArray(terminalObservation)) {
+    return false;
+  }
+  return (terminalObservation as Record<string, unknown>).source === 'temporal_stage_attempt_query'
+    && (terminalObservation as Record<string, unknown>).workflow_status === 'COMPLETED'
+    && (terminalObservation as Record<string, unknown>).query_status === 'completed';
+}
+
 function isTemporalStageAttemptTerminalObservation(
   observation: unknown,
 ): observation is TemporalStageAttemptTerminalObservation {
@@ -458,11 +489,42 @@ export function syncStageAttemptFromTemporalTerminalObservation(
   if (!row || row.provider_kind !== 'temporal' || row.workflow_id !== observation.workflow_id) {
     return null;
   }
-  if (row.status === 'completed' && row.closeout_receipt_status) {
-    markLinkedMasDefaultExecutorTaskCompleted(db, { row, observedAt: nowIso() });
-    return stageAttemptToPayload(row);
-  }
   const completedCloseoutPacket = closeoutPacketFromTemporalCompletedObservation(observation);
+  if (row.status === 'completed' && row.closeout_receipt_status) {
+    const existingCloseoutRefs = parseStageAttemptJsonList(row.closeout_refs_json)
+      .filter((entry): entry is string => typeof entry === 'string');
+    const terminalCloseoutRefs = completedCloseoutPacket?.closeout_refs ?? [];
+    const hasNewTerminalCloseoutRef = terminalCloseoutRefs.some((ref) =>
+      !existingCloseoutRefs.includes(ref)
+    );
+    if (completedCloseoutPacket && hasNewTerminalCloseoutRef) {
+      const synced = ingestStageAttemptCloseout(db, {
+        stageAttemptId: observation.stage_attempt_id,
+        packet: completedCloseoutPacket,
+      }).attempt;
+      const syncedRow = getStageAttemptRow(db, observation.stage_attempt_id);
+      if (syncedRow) {
+        markLinkedMasDefaultExecutorTaskCompleted(db, {
+          row: syncedRow,
+          observedAt: nowIso(),
+        });
+      }
+      return synced;
+    }
+    if (rowHasCompletedTerminalObservation(row)) {
+      markLinkedMasDefaultExecutorTaskCompleted(db, { row, observedAt: nowIso() });
+      return null;
+    }
+    const observedAt = nowIso();
+    const providerRun = providerRunWithTerminalCompletedObservation(row, observation, observedAt);
+    db.prepare(`
+      UPDATE stage_attempts
+      SET provider_run_json = ?, updated_at = ?
+      WHERE stage_attempt_id = ?
+    `).run(JSON.stringify(providerRun), observedAt, observation.stage_attempt_id);
+    markLinkedMasDefaultExecutorTaskCompleted(db, { row, observedAt });
+    return inspectStageAttempt(db, observation.stage_attempt_id);
+  }
   if (!failureReason && !nonCompletionBlocker && !completedCloseoutPacket) {
     return null;
   }

@@ -2,10 +2,7 @@ import type { FrameworkContracts } from './types.ts';
 import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 import type { FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 import { buildProductionTailNextActionLedger } from './production-evidence-tail-ledger.ts';
-import {
-  EVIDENCE_REQUIREMENT_MODEL_VERSION,
-  evidenceRequirementFromTailItem,
-} from './evidence-requirement.ts';
+import { EVIDENCE_REQUIREMENT_MODEL_VERSION, evidenceRequirementFromTailItem } from './evidence-requirement.ts';
 import type { EvidenceRequirement } from './evidence-requirement.ts';
 import { readFamilyRuntimeLifecycleApplyReceipts } from './family-runtime-lifecycle-index.ts';
 import { listExternalEvidenceReceipts } from './external-evidence-ledger.ts';
@@ -17,16 +14,10 @@ import {
 } from './domain-dispatch-evidence-workorder-packet.ts';
 import { defaultCallerDeletionEvidenceRoutes } from './family-runtime-evidence-worklist-parts/default-caller-deletion-evidence-routes.ts';
 import { attentionQueueItem, nextSafeActions } from './family-runtime-evidence-worklist-parts/attention-actions.ts';
-import {
-  buildZeroOpenCompletionGuard,
-  zeroOpenCompletionGuardSummaryFields,
-} from './family-runtime-evidence-worklist-parts/zero-open-completion-guard.ts';
-import {
-  operatorRoutesByActionId,
-  payloadHandoffProjection,
-  routeWithOperatorHandoff,
-} from './family-runtime-evidence-worklist-parts/operator-route-handoff.ts';
+import { buildZeroOpenCompletionGuard, zeroOpenCompletionGuardSummaryFields } from './family-runtime-evidence-worklist-parts/zero-open-completion-guard.ts';
+import { operatorRoutesByActionId, payloadHandoffProjection, routeWithOperatorHandoff } from './family-runtime-evidence-worklist-parts/operator-route-handoff.ts';
 import { readOnlyRouteMatchesDefaults } from './family-runtime-evidence-worklist-parts/route-defaults.ts';
+import { domainDispatchRecordRouteAttemptIds, syncTerminalTemporalAttemptsForEvidenceWorklist, type EvidenceWorklistTemporalQuery } from './family-runtime-evidence-worklist-parts/terminal-observation-sync.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -36,6 +27,7 @@ type EvidenceWorklistInput = {
   executorKind: 'codex_cli';
   detailLevel?: 'summary' | 'full';
   runtimeSnapshot?: Awaited<ReturnType<typeof buildRuntimeTraySnapshot>>;
+  queryTemporalStageAttemptReadModel?: EvidenceWorklistTemporalQuery;
 };
 
 const NOT_AUTHORIZED_CLAIMS = [
@@ -812,11 +804,25 @@ export async function runFamilyRuntimeEvidenceWorklist(
   contracts: FrameworkContracts,
   input: EvidenceWorklistInput,
 ) {
-  const snapshot = input.runtimeSnapshot
+  const preliminarySnapshot = input.runtimeSnapshot
     ?? await buildRuntimeTraySnapshot(contracts, {
       appOperatorDrilldownDetailLevel: 'full',
       providerKind: input.providerKind,
     });
+  const terminalObservationSync = await syncTerminalTemporalAttemptsForEvidenceWorklist({
+    ...input,
+    candidateStageAttemptIds: input.runtimeSnapshot
+      ? []
+      : domainDispatchRecordRouteAttemptIds(preliminarySnapshot),
+  });
+  const snapshot = input.runtimeSnapshot
+    ? preliminarySnapshot
+    : countValue(record(terminalObservationSync).synced_attempt_count) > 0
+      ? await buildRuntimeTraySnapshot(contracts, {
+          appOperatorDrilldownDetailLevel: 'full',
+          providerKind: input.providerKind,
+        })
+      : preliminarySnapshot;
   const drilldown = record(snapshot.runtime_tray_snapshot.app_operator_drilldown);
   const bridge = record(drilldown.app_execution_bridge);
   const operatorActionRouting = record(drilldown.operator_action_routing_refs);
@@ -949,7 +955,9 @@ export async function runFamilyRuntimeEvidenceWorklist(
       app_operator_drilldown_ref: '/runtime_tray_snapshot/app_operator_drilldown',
       app_execution_bridge_ref: '/runtime_tray_snapshot/app_operator_drilldown/app_execution_bridge',
       evidence_envelope_ref: '/runtime_tray_snapshot/app_operator_drilldown/evidence_envelope',
+      terminal_observation_sync_ref: '/family_runtime_evidence_worklist/terminal_observation_sync',
     },
+    terminal_observation_sync: terminalObservationSync,
     evidence_envelope: compactEvidenceEnvelope,
     zero_open_worklist_guard: zeroOpenWorklistGuard,
     authority_boundary: authorityBoundary(),
