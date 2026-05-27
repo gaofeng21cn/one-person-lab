@@ -45,7 +45,7 @@ function staticCommand(
   };
 }
 
-export const FAMILY_RUNTIME_COMMAND_USAGE = 'opl family-runtime status|doctor|install|repair|service start|service status|service stop|worker start|worker status|worker stop|scheduler status|scheduler install|scheduler remove|scheduler trigger|scheduler tick|evidence-worklist|intake|tick|enqueue|lifecycle apply|attempt create|attempt start|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|queue redrive|approve|notify list|events export';
+export const FAMILY_RUNTIME_COMMAND_USAGE = 'opl family-runtime status|doctor|install|repair|provider repair|service start|service status|service stop|worker start|worker status|worker stop|scheduler status|scheduler install|scheduler remove|scheduler trigger|scheduler tick|evidence-worklist|intake|tick|enqueue|lifecycle apply|attempt create|attempt start|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|queue redrive|approve|notify list|events export';
 
 export const FAMILY_RUNTIME_COMMAND_REGISTRY: FamilyRuntimeCommandParser[] = [
   {
@@ -63,6 +63,11 @@ export const FAMILY_RUNTIME_COMMAND_REGISTRY: FamilyRuntimeCommandParser[] = [
   {
     command_path: 'repair',
     parse: (mode, rest) => mode === 'repair' ? parseProviderOnlyArgs('repair', rest) : null,
+  },
+  {
+    command_path: 'provider repair',
+    parse: (mode, rest) =>
+      mode === 'provider' && rest[0] === 'repair' ? parseProviderOnlyArgs('repair', rest.slice(1)) : null,
   },
   {
     command_path: 'worker/service',

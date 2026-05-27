@@ -105,6 +105,7 @@ opl module exec --module medautoscience -- doctor entry-modes
 opl skill sync
 opl family-runtime status
 opl family-runtime repair
+opl family-runtime provider repair --provider temporal
 opl family-runtime attempt list
 ```
 

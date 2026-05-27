@@ -6,6 +6,7 @@ import {
 } from './family-runtime-command.ts';
 import {
   ensureFamilyRuntimeProvider,
+  ensureFamilyRuntimeProviderWithLifecycle,
   inspectFamilyRuntimeProviders,
   resolveFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
@@ -186,10 +187,12 @@ export async function runFamilyRuntime(args: string[]) {
     }
     if (parsed.mode === 'install' || parsed.mode === 'repair') {
       const providerKind = resolveFamilyRuntimeProviderKind(parsed.providerKind);
-      const provider = ensureFamilyRuntimeProvider(providerKind, parsed.mode);
       const temporalVisibilityRepair = providerKind === 'temporal' && parsed.mode === 'repair'
         ? await (await temporalProviderModule()).ensureTemporalVisibilityReadiness({ paths })
         : null;
+      const provider = parsed.mode === 'repair'
+        ? await ensureFamilyRuntimeProviderWithLifecycle(providerKind, parsed.mode, paths)
+        : ensureFamilyRuntimeProvider(providerKind, parsed.mode);
       insertEvent(db, {
         eventType: `provider_${parsed.mode}`,
         source: 'opl-cli',

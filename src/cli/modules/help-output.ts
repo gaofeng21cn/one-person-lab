@@ -152,6 +152,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl family-runtime status',
         'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli',
         'opl family-runtime repair',
+        'opl family-runtime provider repair --provider temporal',
         'opl install --modules mas,mag,rca',
         'opl doctor',
         'opl quality details --root . --format markdown',

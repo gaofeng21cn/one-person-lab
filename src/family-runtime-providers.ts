@@ -399,6 +399,41 @@ export function ensureFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind, mod
   };
 }
 
+export async function ensureFamilyRuntimeProviderWithLifecycle(
+  kind: FamilyRuntimeProviderKind,
+  mode: 'install' | 'repair',
+  paths: Pick<ReturnType<typeof familyRuntimePaths>, 'root'>,
+) {
+  if (kind !== 'temporal') {
+    return ensureFamilyRuntimeProvider(kind, mode);
+  }
+  const inspection = await inspectFamilyRuntimeProviderWithLifecycle(kind, paths);
+  const visibilityReadiness = await inspectTemporalStageAttemptVisibilityReadiness(paths);
+  return {
+    surface_id: 'opl_family_runtime_provider',
+    provider_kind: kind,
+    mode,
+    status: inspection.ready && visibilityReadiness.readiness_status === 'ready' ? 'ready' : 'attention_needed',
+    actions: visibilityReadiness.repair_action === null
+      ? []
+      : [visibilityReadiness.repair_action],
+    provider: inspection,
+    visibility_readiness: visibilityReadiness,
+    repair_guidance: [
+      ...inspection.ready
+        ? []
+        : [
+            'Start or repair the OPL-managed Temporal service and worker before relying on live provider execution.',
+          ],
+      ...visibilityReadiness.readiness_status === 'ready'
+        ? []
+        : [
+            'Install OPL Temporal stage attempt Search Attributes before relying on searchable stage attempt visibility.',
+          ],
+    ],
+  };
+}
+
 export function buildStageAttemptProviderReceipt(input: {
   providerKind: FamilyRuntimeProviderKind;
   stageAttemptId: string;
