@@ -562,29 +562,29 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
       workflowIdConflictPolicy: WorkflowIdConflictPolicy.FAIL,
       workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
     });
-    await completedHandle.signal(humanGateSignal, {
+    await completedHandle.executeUpdate(stageAttemptOperatorUpdate, { args: [{
       signal_kind: 'human_gate',
       payload: {
         human_gate_ref: 'gate:temporal-production-residency-proof',
         reason: 'operator_review',
       },
       source: 'temporal-production-residency-proof',
-    });
-    await completedHandle.signal(userInstructionSignal, {
+    }] });
+    await completedHandle.executeUpdate(stageAttemptOperatorUpdate, { args: [{
       signal_kind: 'user_instruction',
       payload: {
         instruction_ref: 'user:production-residency-revision-request',
       },
       source: 'temporal-production-residency-proof',
-    });
-    await completedHandle.signal(resumeSignal, {
+    }] });
+    await completedHandle.executeUpdate(stageAttemptOperatorUpdate, { args: [{
       signal_kind: 'resume',
       payload: {
         resume_ref: 'resume:temporal-production-residency-proof',
         reason: 'proof_resume',
       },
       source: 'temporal-production-residency-proof',
-    });
+    }] });
     const queriedWhileResident = await completedHandle.query<TemporalStageAttemptWorkflowState>(stageAttemptQuery);
     const completedState = await completedHandle.result();
 

@@ -341,7 +341,7 @@ test('Temporal StageAttemptWorkflow exposes activity state, signals, and complet
     assert.equal(codexCompletion?.heartbeat_summary.checkpoint_count, 1);
     assert.equal(codexCompletion?.progress_summary.progress_status, 'checkpointed');
     assert.equal(codexCompletion?.cost_summary.cost_status, 'not_measured_dry_run');
-    assert.equal(codexCompletion?.cost_summary.estimated_cost_usd, null);
+    assert.equal(codexCompletion?.cost_summary.estimated_cost_usd, 0);
     assert.ok(result.finalState.activity_events.some((event) => event.activity_kind === 'domain_handler_dispatch_activity'));
     assert.equal(result.queriedState.signals.length, 2);
     assert.deepEqual(result.queriedState.human_gate_refs, ['gate:operator-review']);
