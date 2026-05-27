@@ -619,14 +619,27 @@ export function buildFamilyStageLaunchAdmissionGate(
   };
 }
 
-function parseStageReadinessArgs(args: string[]) {
+type StageReadinessArgs =
+  | {
+      domain: null;
+      detail: FamilyStageReadinessDetail;
+      familyDefaults: true;
+    }
+  | {
+      domain: string;
+      detail: FamilyStageReadinessDetail;
+      familyDefaults: false;
+    };
+
+function parseStageReadinessArgs(args: string[]): StageReadinessArgs {
   const { parsed, flags } = parseOptionArgs(args, [], ['family-defaults']);
-  if (flags.has('family-defaults') && parsed.domain) {
+  const familyDefaults = flags.has('family-defaults');
+  if (familyDefaults && parsed.domain) {
     throw new FrameworkContractError('cli_usage_error', 'stages readiness accepts --family-defaults or --domain, not both.', {
       mutually_exclusive: ['--family-defaults', '--domain'],
     });
   }
-  if (!flags.has('family-defaults') && !parsed.domain) {
+  if (!familyDefaults && !parsed.domain) {
     throw new FrameworkContractError('cli_usage_error', 'stages readiness requires --domain or --family-defaults.', {
       required_one_of: ['--domain', '--family-defaults'],
     });
@@ -637,10 +650,17 @@ function parseStageReadinessArgs(args: string[]) {
       allowed_detail: ['summary', 'full'],
     });
   }
+  if (familyDefaults) {
+    return {
+      domain: null,
+      detail,
+      familyDefaults: true,
+    };
+  }
   return {
-    domain: parsed.domain ?? null,
+    domain: parsed.domain,
     detail,
-    familyDefaults: flags.has('family-defaults'),
+    familyDefaults: false,
   };
 }
 
