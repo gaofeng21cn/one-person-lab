@@ -126,26 +126,7 @@ function readWorkspaceRegistryFile(): WorkspaceRegistryFile {
 
     return {
       version: 'g2',
-      bindings: parsed.bindings.map((binding) => ({
-        binding_id: String(binding.binding_id),
-        project_id: String(binding.project_id),
-        project: String(binding.project),
-        workspace_path: String(binding.workspace_path),
-        label: normalizeOptionalString(String(binding.label ?? '')),
-        status:
-          binding.status === 'active' || binding.status === 'inactive' || binding.status === 'archived'
-            ? binding.status
-            : 'inactive',
-        direct_entry: {
-          command: normalizeOptionalString(binding.direct_entry?.command),
-          manifest_command: normalizeOptionalString(binding.direct_entry?.manifest_command),
-          url: normalizeOptionalString(binding.direct_entry?.url),
-          workspace_locator: normalizeWorkspaceLocator(binding.direct_entry?.workspace_locator),
-        },
-        created_at: String(binding.created_at),
-        updated_at: String(binding.updated_at),
-        archived_at: binding.archived_at ? String(binding.archived_at) : null,
-      })),
+      bindings: parsed.bindings.map(normalizeWorkspaceBinding),
     };
   } catch (error) {
     throw new FrameworkContractError(
@@ -157,6 +138,31 @@ function readWorkspaceRegistryFile(): WorkspaceRegistryFile {
       },
     );
   }
+}
+
+function normalizeWorkspaceBinding(binding: Partial<WorkspaceBinding>): WorkspaceBinding {
+  const normalized: WorkspaceBinding = {
+    binding_id: String(binding.binding_id),
+    project_id: String(binding.project_id),
+    project: String(binding.project),
+    workspace_path: String(binding.workspace_path),
+    label: normalizeOptionalString(String(binding.label ?? '')),
+    status:
+      binding.status === 'active' || binding.status === 'inactive' || binding.status === 'archived'
+        ? binding.status
+        : 'inactive',
+    direct_entry: {
+      command: normalizeOptionalString(binding.direct_entry?.command),
+      manifest_command: normalizeOptionalString(binding.direct_entry?.manifest_command),
+      url: normalizeOptionalString(binding.direct_entry?.url),
+      workspace_locator: normalizeWorkspaceLocator(binding.direct_entry?.workspace_locator),
+    },
+    created_at: String(binding.created_at),
+    updated_at: String(binding.updated_at),
+    archived_at: binding.archived_at ? String(binding.archived_at) : null,
+  };
+
+  return rehydrateGeneratedDirectEntryLocator(normalized);
 }
 
 function writeWorkspaceRegistryFile(payload: WorkspaceRegistryFile) {
@@ -259,6 +265,17 @@ function buildMasGeneratedProductEntryMaterializer(
   profileRef: string,
   methodName: 'build_product_entry_status' | 'build_product_entry_manifest',
 ) {
+  const cleanRunnerPath = path.join(workspaceRoot, 'scripts', 'run-python-clean.sh');
+  if (!fs.existsSync(cleanRunnerPath) || !fs.statSync(cleanRunnerPath).isFile()) {
+    throw new FrameworkContractError(
+      'cli_usage_error',
+      'MAS generated product-entry materializer requires scripts/run-python-clean.sh in the bound workspace.',
+      {
+        workspace_root: workspaceRoot,
+        required_path: cleanRunnerPath,
+      },
+    );
+  }
   const python = [
     'from med_autoscience.profiles import load_profile',
     'from med_autoscience.controllers.product_entry import build_product_entry_manifest, build_product_entry_status',
@@ -267,11 +284,7 @@ function buildMasGeneratedProductEntryMaterializer(
     `print(json.dumps(${methodName}(profile=load_profile(profile_ref), profile_ref=profile_ref), ensure_ascii=False))`,
   ].join('; ');
   return [
-    'uv',
-    'run',
-    '--directory',
-    shellSingleQuote(workspaceRoot),
-    'python',
+    shellSingleQuote(cleanRunnerPath),
     '-c',
     shellSingleQuote(python),
   ].join(' ');
@@ -467,6 +480,45 @@ function buildDerivedDirectEntryLocator(workspaceLocator: BoundWorkspaceLocator 
   };
 }
 
+function isGeneratedMasProductEntryCommand(command: string | null | undefined) {
+  return Boolean(command?.match(
+    /(?:^|(?:&&|\|\||[;&])\s*)uv\s+run\s+--directory\s+\S+\s+(?:python|python3)\s+-c\s+.*med_autoscience\.controllers\.product_entry/,
+  ));
+}
+
+function shouldRehydrateGeneratedLocator(binding: WorkspaceBinding) {
+  if (binding.direct_entry.url || !binding.direct_entry.workspace_locator) {
+    return false;
+  }
+
+  if (binding.project_id === 'medautoscience') {
+    return isGeneratedMasProductEntryCommand(binding.direct_entry.command)
+      || isGeneratedMasProductEntryCommand(binding.direct_entry.manifest_command);
+  }
+
+  return false;
+}
+
+function rehydrateGeneratedDirectEntryLocator(binding: WorkspaceBinding) {
+  if (!shouldRehydrateGeneratedLocator(binding)) {
+    return binding;
+  }
+
+  const derivedDirectEntry = buildDerivedDirectEntryLocator(binding.direct_entry.workspace_locator);
+  const commandIsGenerated = isGeneratedMasProductEntryCommand(binding.direct_entry.command);
+  const manifestCommandIsGenerated = isGeneratedMasProductEntryCommand(binding.direct_entry.manifest_command);
+  return {
+    ...binding,
+    direct_entry: {
+      ...binding.direct_entry,
+      command: commandIsGenerated ? derivedDirectEntry.command : binding.direct_entry.command,
+      manifest_command: manifestCommandIsGenerated
+        ? derivedDirectEntry.manifest_command
+        : binding.direct_entry.manifest_command,
+    },
+  };
+}
+
 function setProjectActiveBinding(
   bindings: WorkspaceBinding[],
   projectId: string,
@@ -502,9 +554,9 @@ function buildProjectBindingContract(
       required_locator_fields: ['profile_ref'],
       optional_locator_fields: [],
       derived_entry_command_template:
-        'uv run --directory <workspace_path> python -c <mas_generated_product_status_materializer>',
+        '<workspace_path>/scripts/run-python-clean.sh -c <mas_generated_product_status_materializer>',
       derived_manifest_command_template:
-        'uv run --directory <workspace_path> python -c <mas_generated_product_entry_manifest_materializer>',
+        '<workspace_path>/scripts/run-python-clean.sh -c <mas_generated_product_entry_manifest_materializer>',
       quick_bind_hint: '绑定现有 MAS workspace_path 后，再给 profile_ref，OPL 就能稳定派生 direct entry 与 manifest surface。',
     };
   }

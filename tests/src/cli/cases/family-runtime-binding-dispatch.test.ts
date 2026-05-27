@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, shellSingleQuote, test } from '../helpers.ts';
+import { assert, fs, os, path, runCli, shellSingleQuote, test, writeMasCleanRunnerFixture } from '../helpers.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -19,6 +19,7 @@ test('family-runtime binding tick dispatches MAS tasks through the active worksp
   const uvCwdPath = path.join(fixtureRoot, 'uv.cwd');
   const dispatchedTaskPath = path.join(fixtureRoot, 'dispatched-task.json');
   fs.mkdirSync(boundMasWorkspacePath, { recursive: true });
+  writeMasCleanRunnerFixture(boundMasWorkspacePath);
   fs.mkdirSync(managedModulePath, { recursive: true });
   fs.writeFileSync(boundProfilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
   fs.writeFileSync(

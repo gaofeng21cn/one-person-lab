@@ -10,6 +10,7 @@ import {
   runCli,
   shellSingleQuote,
   test,
+  writeMasCleanRunnerFixture,
 } from '../helpers.ts';
 
 test('workspace-bind derives family direct-entry locators from structured project locators', () => {
@@ -35,6 +36,10 @@ test('workspace-bind derives family direct-entry locators from structured projec
   fs.mkdirSync(magWorkspacePath, { recursive: true });
   fs.mkdirSync(redcubeWorkspacePath, { recursive: true });
   fs.writeFileSync(masProfilePath, '[workspace]\nname = "fixture"\n', 'utf8');
+  writeMasCleanRunnerFixture(masWorkspacePath, {
+    profilePath: masProfilePath,
+    manifest: fixtures.medautoscience,
+  });
   fs.writeFileSync(magInputPath, '{}\n', 'utf8');
   const redcubeDomainEntryDist = path.join(
     redcubeWorkspacePath,
@@ -102,13 +107,13 @@ test('workspace-bind derives family direct-entry locators from structured projec
         )
       }`;
     const expectedMasEntryCommand =
-      `uv run --directory ${shellSingleQuote(path.resolve(masWorkspacePath))} python -c ${
+      `${shellSingleQuote(path.join(path.resolve(masWorkspacePath), 'scripts', 'run-python-clean.sh'))} -c ${
         shellSingleQuote(
           `from med_autoscience.profiles import load_profile; from med_autoscience.controllers.product_entry import build_product_entry_manifest, build_product_entry_status; import json; profile_ref = ${JSON.stringify(path.resolve(masProfilePath))}; print(json.dumps(build_product_entry_status(profile=load_profile(profile_ref), profile_ref=profile_ref), ensure_ascii=False))`,
         )
       }`;
     const expectedMasManifestCommand =
-      `uv run --directory ${shellSingleQuote(path.resolve(masWorkspacePath))} python -c ${
+      `${shellSingleQuote(path.join(path.resolve(masWorkspacePath), 'scripts', 'run-python-clean.sh'))} -c ${
         shellSingleQuote(
           `from med_autoscience.profiles import load_profile; from med_autoscience.controllers.product_entry import build_product_entry_manifest, build_product_entry_status; import json; profile_ref = ${JSON.stringify(path.resolve(masProfilePath))}; print(json.dumps(build_product_entry_manifest(profile=load_profile(profile_ref), profile_ref=profile_ref), ensure_ascii=False))`,
         )
@@ -213,11 +218,11 @@ test('workspace-bind derives family direct-entry locators from structured projec
     );
     assert.equal(
       masProject.binding_contract.derived_entry_command_template,
-      'uv run --directory <workspace_path> python -c <mas_generated_product_status_materializer>',
+      '<workspace_path>/scripts/run-python-clean.sh -c <mas_generated_product_status_materializer>',
     );
     assert.equal(
       masProject.binding_contract.derived_manifest_command_template,
-      'uv run --directory <workspace_path> python -c <mas_generated_product_entry_manifest_materializer>',
+      '<workspace_path>/scripts/run-python-clean.sh -c <mas_generated_product_entry_manifest_materializer>',
     );
     assert.deepEqual(redcubeProject.binding_contract.optional_locator_fields, ['workspace_root']);
     assert.equal(
@@ -278,5 +283,165 @@ test('workspace-bind derives family direct-entry locators from structured projec
     fs.rmSync(locatorRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace catalog rehydrates legacy generated MAS product-entry locators from structured locator truth', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-binding-legacy-mas-state-'));
+  const fixtures = loadFamilyManifestFixtures();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const locatorRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-binding-legacy-mas-'));
+  const masWorkspacePath = path.join(locatorRoot, 'medautoscience-workspace');
+  const masProfilePath = path.join(locatorRoot, 'profile.local.toml');
+  const registryPath = path.join(stateRoot, 'workspace-registry.json');
+  const now = new Date().toISOString();
+  const pythonStatus =
+    `from med_autoscience.profiles import load_profile; from med_autoscience.controllers.product_entry import build_product_entry_manifest, build_product_entry_status; import json; profile_ref = ${JSON.stringify(path.resolve(masProfilePath))}; print(json.dumps(build_product_entry_status(profile=load_profile(profile_ref), profile_ref=profile_ref), ensure_ascii=False))`;
+  const pythonManifest =
+    `from med_autoscience.profiles import load_profile; from med_autoscience.controllers.product_entry import build_product_entry_manifest, build_product_entry_status; import json; profile_ref = ${JSON.stringify(path.resolve(masProfilePath))}; print(json.dumps(build_product_entry_manifest(profile=load_profile(profile_ref), profile_ref=profile_ref), ensure_ascii=False))`;
+  const legacyStatusCommand =
+    `uv run --directory ${shellSingleQuote(path.resolve(masWorkspacePath))} python -c ${shellSingleQuote(pythonStatus)}`;
+  const legacyManifestCommand =
+    `uv run --directory ${shellSingleQuote(path.resolve(masWorkspacePath))} python -c ${shellSingleQuote(pythonManifest)}`;
+  const expectedStatusCommand =
+    `${shellSingleQuote(path.join(path.resolve(masWorkspacePath), 'scripts', 'run-python-clean.sh'))} -c ${shellSingleQuote(pythonStatus)}`;
+  const expectedManifestCommand =
+    `${shellSingleQuote(path.join(path.resolve(masWorkspacePath), 'scripts', 'run-python-clean.sh'))} -c ${shellSingleQuote(pythonManifest)}`;
+
+  try {
+    fs.mkdirSync(masWorkspacePath, { recursive: true });
+    fs.mkdirSync(stateRoot, { recursive: true });
+    fs.writeFileSync(masProfilePath, '[workspace]\nname = "fixture"\n', 'utf8');
+    writeMasCleanRunnerFixture(masWorkspacePath, {
+      profilePath: masProfilePath,
+      manifest: fixtures.medautoscience,
+    });
+    fs.writeFileSync(
+      registryPath,
+      `${JSON.stringify({
+        version: 'g2',
+        bindings: [
+          {
+            binding_id: 'legacy-mas-binding',
+            project_id: 'medautoscience',
+            project: 'med-autoscience',
+            workspace_path: path.resolve(masWorkspacePath),
+            label: null,
+            status: 'active',
+            direct_entry: {
+              command: legacyStatusCommand,
+              manifest_command: legacyManifestCommand,
+              url: null,
+              workspace_locator: {
+                surface_kind: 'med_autoscience_workspace_profile',
+                workspace_root: path.resolve(masWorkspacePath),
+                profile_ref: path.resolve(masProfilePath),
+                input_path: null,
+              },
+            },
+            created_at: now,
+            updated_at: now,
+            archived_at: null,
+          },
+        ],
+      }, null, 2)}\n`,
+      'utf8',
+    );
+
+    const env = {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    };
+    const catalog = runCli(['workspace', 'list'], env);
+    const masProject = catalog.workspace_catalog.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautoscience',
+    );
+    assert.equal(masProject.active_binding.direct_entry.command, expectedStatusCommand);
+    assert.equal(masProject.active_binding.direct_entry.manifest_command, expectedManifestCommand);
+
+    const manifestOutput = runCli(['domain', 'manifests'], env);
+    const masManifest = manifestOutput.domain_manifests.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautoscience',
+    );
+    assert.equal(masManifest.status, 'resolved');
+    assert.equal(masManifest.manifest.target_domain_id, 'med-autoscience');
+    assert.equal(masManifest.manifest_command, expectedManifestCommand);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(locatorRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace catalog preserves manual MAS entry command while rehydrating legacy generated manifest command', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-binding-mixed-mas-state-'));
+  const fixtures = loadFamilyManifestFixtures();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const locatorRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-binding-mixed-mas-'));
+  const masWorkspacePath = path.join(locatorRoot, 'medautoscience-workspace');
+  const masProfilePath = path.join(locatorRoot, 'profile.local.toml');
+  const registryPath = path.join(stateRoot, 'workspace-registry.json');
+  const now = new Date().toISOString();
+  const manualEntryCommand = 'mas-custom-entry --workspace current';
+  const pythonManifest =
+    `from med_autoscience.profiles import load_profile; from med_autoscience.controllers.product_entry import build_product_entry_manifest, build_product_entry_status; import json; profile_ref = ${JSON.stringify(path.resolve(masProfilePath))}; print(json.dumps(build_product_entry_manifest(profile=load_profile(profile_ref), profile_ref=profile_ref), ensure_ascii=False))`;
+  const legacyManifestCommand =
+    `uv run --directory ${shellSingleQuote(path.resolve(masWorkspacePath))} python -c ${shellSingleQuote(pythonManifest)}`;
+  const expectedManifestCommand =
+    `${shellSingleQuote(path.join(path.resolve(masWorkspacePath), 'scripts', 'run-python-clean.sh'))} -c ${shellSingleQuote(pythonManifest)}`;
+
+  try {
+    fs.mkdirSync(masWorkspacePath, { recursive: true });
+    fs.mkdirSync(stateRoot, { recursive: true });
+    fs.writeFileSync(masProfilePath, '[workspace]\nname = "fixture"\n', 'utf8');
+    writeMasCleanRunnerFixture(masWorkspacePath, {
+      profilePath: masProfilePath,
+      manifest: fixtures.medautoscience,
+    });
+    fs.writeFileSync(
+      registryPath,
+      `${JSON.stringify({
+        version: 'g2',
+        bindings: [
+          {
+            binding_id: 'mixed-mas-binding',
+            project_id: 'medautoscience',
+            project: 'med-autoscience',
+            workspace_path: path.resolve(masWorkspacePath),
+            label: null,
+            status: 'active',
+            direct_entry: {
+              command: manualEntryCommand,
+              manifest_command: legacyManifestCommand,
+              url: null,
+              workspace_locator: {
+                surface_kind: 'med_autoscience_workspace_profile',
+                workspace_root: path.resolve(masWorkspacePath),
+                profile_ref: path.resolve(masProfilePath),
+                input_path: null,
+              },
+            },
+            created_at: now,
+            updated_at: now,
+            archived_at: null,
+          },
+        ],
+      }, null, 2)}\n`,
+      'utf8',
+    );
+
+    const catalog = runCli(['workspace', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const masProject = catalog.workspace_catalog.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautoscience',
+    );
+    assert.equal(masProject.active_binding.direct_entry.command, manualEntryCommand);
+    assert.equal(masProject.active_binding.direct_entry.manifest_command, expectedManifestCommand);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(locatorRoot, { recursive: true, force: true });
   }
 });

@@ -348,6 +348,50 @@ printf '%s\\n' "$*" >> "${capturePath}"
   };
 }
 
+export function writeMasCleanRunnerFixture(
+  workspaceRoot: string,
+  options: {
+    profilePath?: string;
+    manifest?: Record<string, unknown>;
+  } = {},
+) {
+  const runnerPath = path.join(workspaceRoot, 'scripts', 'run-python-clean.sh');
+  fs.mkdirSync(path.dirname(runnerPath), { recursive: true });
+  if (options.profilePath && options.manifest) {
+    fs.writeFileSync(
+      runnerPath,
+      [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        `if [[ "$*" == *${shellSingleQuote(path.resolve(options.profilePath))}* && "$*" == *med_autoscience.controllers.product_entry* ]]; then`,
+        '  cat <<\'JSON\'',
+        JSON.stringify(options.manifest, null, 2),
+        'JSON',
+        '  exit 0',
+        'fi',
+        'echo "unexpected MAS clean runner args: $*" >&2',
+        'exit 1',
+        '',
+      ].join('\n'),
+      { encoding: 'utf8', mode: 0o755 },
+    );
+    return runnerPath;
+  }
+
+  fs.writeFileSync(
+    runnerPath,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'echo "MAS clean runner fixture should not be executed in this test" >&2',
+      'exit 64',
+      '',
+    ].join('\n'),
+    { encoding: 'utf8', mode: 0o755 },
+  );
+  return runnerPath;
+}
+
 export function createFamilyLocatorResolverFixture(options: {
   masProfile: string;
   magInput: string;

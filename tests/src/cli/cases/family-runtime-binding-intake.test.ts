@@ -1,4 +1,4 @@
-import { assert, createGitModuleRemoteFixture, fs, os, path, runCli, shellSingleQuote, test } from '../helpers.ts';
+import { assert, createGitModuleRemoteFixture, fs, os, path, runCli, shellSingleQuote, test, writeMasCleanRunnerFixture } from '../helpers.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -17,6 +17,7 @@ test('family-runtime intake derives MAS domain-handler export from active worksp
   const uvArgvPath = path.join(fixtureRoot, 'uv.argv');
   const uvCwdPath = path.join(fixtureRoot, 'uv.cwd');
   fs.mkdirSync(masWorkspacePath, { recursive: true });
+  writeMasCleanRunnerFixture(masWorkspacePath);
   fs.writeFileSync(profilePath, '[workspace]\nname = "nfpitnet"\n', 'utf8');
   fs.mkdirSync(path.dirname(proofPath), { recursive: true });
   fs.writeFileSync(proofPath, '{"closeout_status":"production_residency_proven"}\n', 'utf8');
@@ -24,6 +25,28 @@ test('family-runtime intake derives MAS domain-handler export from active worksp
     uvPath,
     `#!/usr/bin/env bash
 set -euo pipefail
+function fail() {
+  echo "$1" >&2
+  exit 9
+}
+function assert_external_env() {
+  local name="$1"
+  local value="\${!name:-}"
+  test -n "$value" || fail "$name is not set"
+  case "$value" in
+    ${shellSingleQuote(`${masWorkspacePath}/`)}*|${shellSingleQuote(masWorkspacePath)})
+      fail "$name points inside the MAS workspace: $value"
+      ;;
+  esac
+}
+test "\${PYTHONDONTWRITEBYTECODE:-}" = "1" || fail "PYTHONDONTWRITEBYTECODE is not enabled"
+assert_external_env PYTHONPYCACHEPREFIX
+assert_external_env UV_PROJECT_ENVIRONMENT
+assert_external_env UV_CACHE_DIR
+assert_external_env XDG_CACHE_HOME
+assert_external_env PIP_CACHE_DIR
+assert_external_env OPL_DOMAIN_COMMAND_TMP_ROOT
+assert_external_env MAS_CLEAN_RUNNER_TMP_ROOT
 printf '%s\\n' "$PWD" > ${shellSingleQuote(uvCwdPath)}
 printf '%s\\n' "$@" > ${shellSingleQuote(uvArgvPath)}
 cat <<'JSON'
@@ -78,10 +101,10 @@ JSON
     ], env);
     const queue = runCli(['family-runtime', 'queue', 'list'], env);
     const exportResult = intake.family_runtime_intake.exports[0];
-    const uvArgv = fs.readFileSync(uvArgvPath, 'utf8').trim().split('\n');
 
     assert.equal(intake.family_runtime_intake.enqueued_count, 1);
     assert.equal(exportResult.status, 'completed');
+    const uvArgv = fs.readFileSync(uvArgvPath, 'utf8').trim().split('\n');
     assert.equal(exportResult.command_source, 'workspace_binding');
     assert.equal(exportResult.command_cwd, path.resolve(masWorkspacePath));
     assert.deepEqual(exportResult.command_preview, [
@@ -233,6 +256,7 @@ test('family-runtime intake --profile overrides active MAS workspace binding', (
   const uvCwdPath = path.join(fixtureRoot, 'uv.cwd');
   const masFixture = createGitModuleRemoteFixture('med-autoscience');
   fs.mkdirSync(boundMasWorkspacePath, { recursive: true });
+  writeMasCleanRunnerFixture(boundMasWorkspacePath);
   fs.writeFileSync(boundProfilePath, '[workspace]\nname = "nfpitnet"\n', 'utf8');
   fs.writeFileSync(explicitProfilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
   fs.writeFileSync(

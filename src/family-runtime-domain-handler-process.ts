@@ -1,6 +1,7 @@
 import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
 
 import { FrameworkContractError } from './contracts.ts';
+import { buildManagedShellCommandEnv } from './managed-shell-command-env.ts';
 
 const DEFAULT_DOMAIN_HANDLER_TIMEOUT_MS = 30_000;
 const DEFAULT_DOMAIN_HANDLER_MAX_BUFFER = 10 * 1024 * 1024;
@@ -44,7 +45,7 @@ export function runFamilyRuntimeDomainHandlerCommand(
   const result = spawnSync(command[0], command.slice(1), {
     cwd: options.cwd,
     encoding: 'utf8',
-    env: options.env ?? process.env,
+    env: buildManagedShellCommandEnv(options.cwd, options.env ?? process.env),
     maxBuffer: options.maxBuffer ?? DEFAULT_DOMAIN_HANDLER_MAX_BUFFER,
     timeout: timeoutMs,
     killSignal: 'SIGTERM',
