@@ -359,6 +359,8 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       evidenceRequestSummary.external_verified_lifecycle_receipt_ref_count,
     domain_external_verified_restore_proof_ref_count:
       evidenceRequestSummary.external_verified_restore_proof_ref_count,
+    domain_external_verified_no_regression_ref_count:
+      evidenceRequestSummary.external_verified_no_regression_ref_count,
     domain_evidence_gate_count: evidenceRequestSummary.evidence_gate_count,
     domain_remaining_evidence_gate_count: evidenceRequestSummary.remaining_evidence_gate_count,
     domain_open_evidence_gate_request_count: evidenceRequestSummary.open_evidence_gate_request_count,

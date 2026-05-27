@@ -113,12 +113,13 @@ function dedicatedRuntimeReceiptRequestId(requestId: string) {
     || requestId.startsWith('stage_production_evidence:');
 }
 
-function hasMemoryArtifactLifecycleReceiptRefs(receipt: ExternalEvidenceReceipt) {
+function hasStandaloneExternalReceiptRefs(receipt: ExternalEvidenceReceipt) {
   return receipt.memory_writeback_receipt_refs.length > 0
     || receipt.artifact_mutation_receipt_refs.length > 0
     || receipt.package_lifecycle_receipt_refs.length > 0
     || receipt.lifecycle_receipt_refs.length > 0
-    || receipt.restore_proof_refs.length > 0;
+    || receipt.restore_proof_refs.length > 0
+    || receipt.no_regression_refs.length > 0;
 }
 
 function summarizeExternalEvidenceReceipts(receipts: ExternalEvidenceReceipt[]) {
@@ -363,7 +364,7 @@ export function buildDomainEvidenceRequestRefs(
     const domainIds = domainIdCandidates(domainId, project.project_id, project.project);
     return externalEvidenceReceiptsForDomainCandidates(domainIds)
       .filter((receipt) =>
-        hasMemoryArtifactLifecycleReceiptRefs(receipt)
+        hasStandaloneExternalReceiptRefs(receipt)
         && !dedicatedRuntimeReceiptRequestId(receipt.request_id)
       )
       .filter((receipt) => !projectedReceiptRefs.has(ledgerReceiptKey({
@@ -443,7 +444,7 @@ export function buildDomainEvidenceRequestRefs(
   return {
     surface_kind: 'opl_app_drilldown_domain_evidence_request_refs',
     projection_policy:
-      'domain_declared_requests_and_standalone_memory_artifact_lifecycle_receipts_refs_only_no_domain_truth_or_verdict',
+      'domain_declared_requests_and_standalone_external_proof_receipts_refs_only_no_domain_truth_or_verdict',
     external_requests: uniqueRefs(externalRequests),
     external_receipts: allExternalReceiptRefs,
     evidence_gates: uniqueRefs(remainingEvidenceGates),
@@ -511,6 +512,11 @@ export function buildDomainEvidenceRequestRefs(
         allExternalReceiptRefs
           .filter((receipt) => receipt.receipt_status === 'verified')
           .flatMap((receipt) => receipt.restore_proof_refs),
+      ).length,
+      external_verified_no_regression_ref_count: uniqueStrings(
+        allExternalReceiptRefs
+          .filter((receipt) => receipt.receipt_status === 'verified')
+          .flatMap((receipt) => receipt.no_regression_refs),
       ).length,
     },
     authority_boundary: refsOnlyAuthorityBoundary(),

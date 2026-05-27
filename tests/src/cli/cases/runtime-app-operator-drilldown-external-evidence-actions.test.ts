@@ -368,6 +368,130 @@ test('standalone verified external evidence receipts feed memory artifact lifecy
   }
 });
 
+test('standalone verified no-regression receipts remain visible without readiness authority', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standalone-evidence-no-regression-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const rcaManifest = structuredClone(loadFamilyManifestFixtures().redcube);
+  rcaManifest.functional_privatization_audit = {
+    target_domain_id: 'redcube_ai',
+  };
+  const receiptRef =
+    'opl://external-evidence/redcube_ai/rca-cross-family-repeated-no-regression-20260528-4-refs';
+  const noRegressionRefs = [
+    'rca-no-regression:visual-stage:2026-05-27-opl-family-cross-family-repeat-a',
+    'rca-no-regression:visual-stage:2026-05-27-opl-family-cross-family-repeat-b',
+    'rca-no-regression:visual-stage:2026-05-28-opl-family-ppt-deck-window2',
+    'rca-no-regression:visual-stage:2026-05-28-opl-family-xiaohongshu-window2',
+  ];
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(rcaManifest),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    runCli([
+      'agents',
+      'evidence',
+      'apply',
+      '--domain',
+      'redcube_ai',
+      '--request-id',
+      'rca-cross-family-repeated-no-regression-20260528-4-refs',
+      '--receipt-ref',
+      receiptRef,
+      '--source-ref',
+      'user-runtime-state:redcube-ai/evidence-scaleout/20260528-rca-no-regression-evidence',
+      ...noRegressionRefs.flatMap((ref) => ['--no-regression-ref', ref]),
+      '--receipt-semantics',
+      'domain_owned_receipt_ref',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    runCli([
+      'agents',
+      'evidence',
+      'apply',
+      '--domain',
+      'redcube_ai',
+      '--request-id',
+      'rca-cross-family-repeated-no-regression-20260528-4-refs',
+      '--receipt-ref',
+      receiptRef,
+      '--mode',
+      'verify',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).app_operator_drilldown;
+
+    assert.equal(drilldown.summary.domain_external_evidence_request_count, 0);
+    assert.equal(drilldown.summary.domain_external_evidence_receipt_count, 1);
+    assert.equal(drilldown.summary.domain_external_verified_evidence_receipt_count, 1);
+    assert.equal(drilldown.summary.domain_external_verified_no_regression_ref_count, 4);
+    assert.equal(drilldown.summary.domain_external_verified_memory_writeback_receipt_ref_count, 0);
+    const receipt = drilldown.domain_evidence_request_refs.external_receipts.find(
+      (entry: { ref: string }) => entry.ref === receiptRef,
+    );
+    assert.ok(receipt);
+    assert.equal(receipt.role, 'standalone_external_evidence_receipt');
+    assert.equal(receipt.domain_id, 'redcube_ai');
+    assert.equal(receipt.receipt_status, 'verified');
+    assert.deepEqual(receipt.no_regression_refs, noRegressionRefs);
+    assert.equal(receipt.authority_boundary.can_write_domain_truth, false);
+    assert.equal(receipt.authority_boundary.can_read_artifact_body, false);
+    assert.equal(receipt.authority_boundary.can_mutate_artifact, false);
+    assert.equal(receipt.authority_boundary.can_authorize_quality_verdict, false);
+
+    const worklist = runCli([
+      'family-runtime',
+      'evidence-worklist',
+      '--family-defaults',
+      '--provider',
+      'temporal',
+      '--executor-kind',
+      'codex_cli',
+      '--detail',
+      'full',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).family_runtime_evidence_worklist;
+    const worklistItem = worklist.worklist_items.find(
+      (item: { receipt_ref: string }) => item.receipt_ref === receiptRef,
+    );
+    assert.ok(worklistItem);
+    assert.equal(worklistItem.status, 'closed_by_receipt_ref');
+    assert.equal(worklistItem.claim_scope, 'external_evidence_receipt');
+    assert.equal(worklistItem.receipt_refs.includes(receiptRef), true);
+    for (const ref of noRegressionRefs) {
+      assert.equal(worklistItem.receipt_refs.includes(ref), true);
+    }
+    assert.equal(worklist.summary.domain_ready_authorized, false);
+    assert.equal(worklist.summary.production_ready_authorized, false);
+    assert.equal(worklistItem.evidence_requirement.can_claim_domain_ready, false);
+    assert.equal(worklistItem.evidence_requirement.can_claim_production_ready, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime action execute records functional semantic equivalence refs through payload file only', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-functional-semantic-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
