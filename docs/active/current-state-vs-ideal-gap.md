@@ -47,6 +47,8 @@ Declarative Domain Pack
 | Legacy cleanup ledger | `source_purity_clean_not_physical_delete_authorized` | OPL normalizer 可消费 MAS/MAG/RCA/OMA 当前 standard-agent evidence；fresh default-caller deletion evidence 已清零。该状态证明 OPL cleanup ledger/read-model 可定位并关闭 source-purity 结构门，不授权 domain repo 物理删除。最终标准智能体不保留 repo-local generic adapter / compat facade / hand-written default caller；后续是 no-resurrection、防回归和 production evidence。 |
 | Docs lifecycle | `current_doc_compacted` | 本文只保留当前真相、当前 gap 和下一步；已闭合 lane、历史 proof 和细节长清单不再作为 active plan 展开。 |
 
+2026-05-28 fresh read：`opl framework readiness --family-defaults --json` 仍为 `framework_control_plane_available_with_open_production_tail`，hard blocker 为 0，但 `stage_receipt_freshness_tail_open_count=12`、`evidence_envelope_open_count=1`、`domain_dispatch_attention_count=12`。`opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json` 读到 `open_worklist_item_count=13`、`open_safe_action_payload_required_item_count=13`、`open_safe_action_payload_free_item_count=0`、`stage_receipt_freshness_open_workorder_count=12`、`domain_dispatch_evidence_workorder_count=1`；唯一 open domain-dispatch workorder 是 MAS DM-CVD `003-dpcc-primary-care-phenotype-treatment-gap` / `run_quality_repair_batch` / `sat_e21cc5d7afb36b92cb6239bd`。MAS owner surface fresh `dispatch-evidence-payload` 对该 workorder 返回 `blocked: ai_reviewer_currentness_supersession_not_observed`，未给出可 record 的 success refs 或 typed-blocker refs；OPL 只能保留 payload-required route 和 false authority flags，不能生成 owner receipt、typed blocker、owner-chain ref 或 no-regression ref。
+
 ## 功能/结构差距
 
 | gap | 当前状态 | 完成口径 |
