@@ -886,6 +886,11 @@ export function findPendingUnsupportedFunctionCalls(output: string) {
   const pending = new Map<string, { name: string; callId: string | null }>();
   const resolved = new Set<string>();
   for (const rawLine of output.split(/\r?\n/)) {
+    const rawEvent = parseCodexJsonLine(rawLine);
+    const toolResultCallId = toolResultCallIdFromEvent(rawEvent);
+    if (toolResultCallId) {
+      resolved.add(toolResultCallId);
+    }
     const event = parseCodexExecEventFromLine(rawLine, parserState);
     if (!event) {
       continue;
@@ -897,11 +902,6 @@ export function findPendingUnsupportedFunctionCalls(output: string) {
         callId: event.callId,
       });
       continue;
-    }
-    const rawEvent = parseCodexJsonLine(rawLine);
-    const toolResultCallId = toolResultCallIdFromEvent(rawEvent);
-    if (toolResultCallId) {
-      resolved.add(toolResultCallId);
     }
   }
   return [...pending.entries()]

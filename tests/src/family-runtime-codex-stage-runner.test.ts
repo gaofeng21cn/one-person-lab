@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { createFakeCodexFixture } from './cli/helpers.ts';
+import { findPendingUnsupportedFunctionCalls } from '../../src/codex.ts';
 import {
   buildCodexStageActivityInput,
   runCodexStageRunner,
@@ -983,4 +984,33 @@ exit 64
       : process.env.OPL_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS = previousNoOutputTimeout;
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
+});
+
+test('Codex session recovery ignores function calls already resolved by Codex CLI outputs', () => {
+  const output = [
+    JSON.stringify({
+      type: 'session_meta',
+      payload: { id: 'thread-resolved-function-call' },
+    }),
+    JSON.stringify({
+      type: 'response_item',
+      payload: {
+        type: 'function_call',
+        name: 'exec_command',
+        arguments: '{"cmd":"rtk pwd"}',
+        call_id: 'call_resolved_tool_protocol',
+      },
+    }),
+    JSON.stringify({
+      type: 'response_item',
+      payload: {
+        type: 'function_call_output',
+        call_id: 'call_resolved_tool_protocol',
+        output: 'ok',
+      },
+    }),
+    '',
+  ].join('\n');
+
+  assert.deepEqual(findPendingUnsupportedFunctionCalls(output), []);
 });
