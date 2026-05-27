@@ -21,12 +21,12 @@ import { runFamilyRuntime } from './family-runtime.ts';
 import { runOplEngineAction } from './system-installation/engine-actions.ts';
 import { resolveProjectRoot, type OplEngineAction, type OplModuleAction, type OplModuleId } from './system-installation/shared.ts';
 import { buildActionCatalog } from './app-state-action-catalog.ts';
+import { parseAppStateProfile, type AppStateProfile } from './app-state-profile.ts';
 import { buildOplAppOperatorViewModel } from './app-state-view-model.ts';
 import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 
-type AppStateProfile = 'fast' | 'full';
 type JsonRecord = Record<string, unknown>;
 
 type AppActionExecuteOptions = {
@@ -51,24 +51,6 @@ function parseJsonObject(value: string, context: string): JsonRecord {
     });
   }
   return parsed;
-}
-
-function parseAppStateProfile(profile: string | undefined): AppStateProfile {
-  if (!profile || profile === 'fast') {
-    return 'fast';
-  }
-  if (profile === 'full') {
-    return 'full';
-  }
-  throw new FrameworkContractError(
-    'cli_usage_error',
-    'app state requires --profile fast or --profile full.',
-    {
-      profile,
-      allowed_profiles: ['fast', 'full'],
-    },
-    2,
-  );
 }
 
 export function parseAppStateArgs(args: string[]): { profile: AppStateProfile } {

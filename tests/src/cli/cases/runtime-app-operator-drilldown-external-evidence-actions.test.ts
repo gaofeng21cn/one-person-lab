@@ -492,6 +492,154 @@ test('standalone verified no-regression receipts remain visible without readines
   }
 });
 
+test('RCA workspace receipt scaleout projects workspace memory and lifecycle refs into the evidence worklist', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-rca-workspace-scaleout-evidence-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const rcaManifest = structuredClone(loadFamilyManifestFixtures().redcube);
+  rcaManifest.functional_privatization_audit = {
+    target_domain_id: 'redcube_ai',
+  };
+  const receiptRef =
+    'opl://external-evidence/redcube_ai/rca-workspace-receipt-scaleout-20260528-6-workspaces';
+  const workspaceIds = ['01', '02', '03', '04', '05', '06'];
+  const domainReceiptRefs = workspaceIds.map((workspaceId) =>
+    `rca-owner-receipt:visual-stage:20260528-rca-workspace-receipt-scaleout-refresh-workspace-${workspaceId}-domain-owner`
+  );
+  const memoryReceiptRefs = workspaceIds.flatMap((workspaceId) => [
+    `rca-memory-receipt:visual-pattern:20260528-rca-workspace-receipt-scaleout-refresh-workspace-${workspaceId}-rejected-memory-rejected`,
+    `rca-memory-receipt:visual-pattern:20260528-rca-workspace-receipt-scaleout-refresh-workspace-${workspaceId}-accepted-memory-accepted`,
+  ]);
+  const lifecycleReceiptRefs = workspaceIds.flatMap((workspaceId) => [
+    `rca-lifecycle-receipt:retention:20260528-rca-workspace-receipt-scaleout-refresh-workspace-${workspaceId}-retention`,
+    `rca-lifecycle-receipt:restore:20260528-rca-workspace-receipt-scaleout-refresh-workspace-${workspaceId}-restore`,
+    `rca-lifecycle-receipt:cleanup:20260528-rca-workspace-receipt-scaleout-refresh-workspace-${workspaceId}-cleanup`,
+  ]);
+  const restoreProofRefs = lifecycleReceiptRefs.filter((ref) =>
+    ref.startsWith('rca-lifecycle-receipt:restore:')
+  );
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(rcaManifest),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    runCli([
+      'agents',
+      'evidence',
+      'apply',
+      '--domain',
+      'redcube_ai',
+      '--request-id',
+      'rca-workspace-receipt-scaleout-20260528-6-workspaces',
+      '--receipt-ref',
+      receiptRef,
+      '--source-ref',
+      'redcube-ai/contracts/production_acceptance/rca-workspace-receipt-scaleout-evidence-20260528.json#actual_workspace_receipt_refs',
+      '--evidence-ref',
+      'rca.workspace_receipt_scaleout.2026-05-28.6-workspaces',
+      ...domainReceiptRefs.flatMap((ref) => ['--domain-receipt-ref', ref]),
+      ...memoryReceiptRefs.flatMap((ref) => ['--memory-writeback-receipt-ref', ref]),
+      ...lifecycleReceiptRefs.flatMap((ref) => ['--lifecycle-receipt-ref', ref]),
+      ...restoreProofRefs.flatMap((ref) => ['--restore-proof-ref', ref]),
+      '--receipt-semantics',
+      'domain_owned_receipt_ref',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    runCli([
+      'agents',
+      'evidence',
+      'apply',
+      '--domain',
+      'redcube_ai',
+      '--request-id',
+      'rca-workspace-receipt-scaleout-20260528-6-workspaces',
+      '--receipt-ref',
+      receiptRef,
+      '--mode',
+      'verify',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).app_operator_drilldown;
+
+    assert.equal(drilldown.summary.domain_external_evidence_receipt_count, 1);
+    assert.equal(drilldown.summary.domain_external_verified_evidence_receipt_count, 1);
+    assert.equal(drilldown.summary.domain_external_verified_memory_writeback_receipt_ref_count, 12);
+    assert.equal(drilldown.summary.domain_external_verified_lifecycle_receipt_ref_count, 18);
+    assert.equal(drilldown.summary.domain_external_verified_restore_proof_ref_count, 6);
+    assert.equal(drilldown.summary.domain_external_verified_no_regression_ref_count, 0);
+    assert.equal(drilldown.summary.memory_writeback_ref_count, 12);
+    const receipt = drilldown.domain_evidence_request_refs.external_receipts.find(
+      (entry: { ref: string }) => entry.ref === receiptRef,
+    );
+    assert.ok(receipt);
+    assert.equal(receipt.role, 'standalone_external_evidence_receipt');
+    assert.equal(receipt.domain_id, 'redcube_ai');
+    assert.deepEqual(receipt.domain_receipt_refs, domainReceiptRefs);
+    assert.deepEqual(receipt.memory_writeback_receipt_refs, memoryReceiptRefs);
+    assert.deepEqual(receipt.lifecycle_receipt_refs, lifecycleReceiptRefs);
+    assert.deepEqual(receipt.restore_proof_refs, restoreProofRefs);
+    assert.equal(receipt.authority_boundary.can_write_domain_truth, false);
+    assert.equal(receipt.authority_boundary.can_read_memory_body, false);
+    assert.equal(receipt.authority_boundary.can_read_artifact_body, false);
+    assert.equal(receipt.authority_boundary.can_authorize_quality_verdict, false);
+
+    const worklist = runCli([
+      'family-runtime',
+      'evidence-worklist',
+      '--family-defaults',
+      '--provider',
+      'temporal',
+      '--executor-kind',
+      'codex_cli',
+      '--detail',
+      'full',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).family_runtime_evidence_worklist;
+    const worklistItem = worklist.worklist_items.find(
+      (item: { receipt_ref: string }) => item.receipt_ref === receiptRef,
+    );
+    assert.ok(worklistItem);
+    assert.equal(worklistItem.status, 'closed_by_receipt_ref');
+    assert.equal(worklistItem.claim_scope, 'external_evidence_receipt');
+    for (const ref of [
+      receiptRef,
+      ...domainReceiptRefs,
+      ...memoryReceiptRefs,
+      ...lifecycleReceiptRefs,
+      ...restoreProofRefs,
+    ]) {
+      assert.equal(worklistItem.receipt_refs.includes(ref), true);
+    }
+    assert.equal(worklist.summary.domain_ready_authorized, false);
+    assert.equal(worklist.summary.production_ready_authorized, false);
+    assert.equal(worklistItem.evidence_requirement.can_claim_domain_ready, false);
+    assert.equal(worklistItem.evidence_requirement.can_claim_production_ready, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime action execute records functional semantic equivalence refs through payload file only', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-functional-semantic-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();

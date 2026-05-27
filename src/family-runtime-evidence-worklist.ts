@@ -420,6 +420,11 @@ function externalEvidenceReceiptWorklistItems(drilldown: JsonRecord) {
       ...stringList(receipt.release_dist_refs),
       ...stringList(receipt.direct_hosted_parity_refs),
       ...stringList(receipt.owner_chain_refs),
+      ...stringList(receipt.memory_writeback_receipt_refs),
+      ...stringList(receipt.artifact_mutation_receipt_refs),
+      ...stringList(receipt.package_lifecycle_receipt_refs),
+      ...stringList(receipt.lifecycle_receipt_refs),
+      ...stringList(receipt.restore_proof_refs),
     ].filter((ref): ref is string => Boolean(ref));
     const typedBlockerOnly = typedBlockerRefs.length > 0
       && stringList(receipt.domain_receipt_refs).length === 0;
