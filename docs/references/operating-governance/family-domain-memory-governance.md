@@ -1,7 +1,7 @@
 # Family Domain Memory Governance
 
 Status: `active reference`
-Date: `2026-05-26`
+Date: `2026-05-28`
 Owner: `One Person Lab`
 Purpose: 给 OPL / MAS / MAG / RCA 的领域经验记忆提供总入口，明确哪些内容应先做自然语言 memory，哪些必须保持结构化 contract。
 State: `active_support`
@@ -136,11 +136,11 @@ OPL family 需要统一的 domain memory 管理纪律，但不应该把领域经
 
 当前已落地的部分仍是 descriptor / receipt projection：`opl domain-memory list` 可在每个 resolved descriptor 上投影 writeback contract、receipt contract、writeback receipt locator 和 receipt readiness；`inspect` 与 `migration-plan` 会把 receipt projection 展开给 operator。该投影明确 `can_accept_memory_write=false`、`can_write_domain_truth=false`、`retrieval_apply_landed=false`、`writeback_apply_landed=false`、`memory_body_migration_landed=false`。这不是 retrieval landed、writeback apply landed，也不是历史 memory body 迁移 landed。
 
-2026-05-26 live read-model 校准：
+2026-05-28 live read-model 校准：
 
-- `opl domain-memory list --json` 仍为 `resolved_memory_descriptor_count=3`、`missing_memory_descriptor_count=0`，说明 MAS/MAG/RCA 三个 active domain 的 memory descriptor 都能被 OPL family index 解析。
-- `opl runtime app-operator-drilldown --json` 读到 `memory_writeback_ref_count=2`，但 `memory_ref_count=0`、`quality_ref_count=0`；这只表示 App/operator projection 能展示 writeback refs，不表示 OPL 读取 memory body、执行 retrieval/apply、接受或拒绝 writeback，或关闭质量门。
-- `opl framework readiness --family-defaults --json` 与 `opl family-runtime evidence-worklist ... --detail full --json` 仍显示 blocked refs-only evidence envelope；zero-open worklist 不能写成 domain memory lane 完成、domain ready 或 production ready。
+- `opl domain-memory list --json` 读为 `resolved_memory_descriptor_count=3`、`missing_memory_descriptor_count=0`，runtime receipt evidence `closeout_count=730`，`consumed_memory_ref_count=1`，`writeback_receipt_ref_count=4`，`rejected_write_count=691`，且 `opl_writes_memory_body=false`。这说明 OPL 可投影 domain-owned memory descriptor、receipt 与 rejected writeback reason，但不持有 memory body。
+- `opl runtime app-operator-drilldown --json` 读到 `memory_writeback_ref_count=12`，但 `memory_ref_count=0`、`quality_ref_count=0`；这只表示 App/operator projection 能展示 writeback refs，不表示 OPL 读取 memory body、执行 retrieval/apply、接受或拒绝 writeback，或关闭质量门。
+- `opl framework readiness --family-defaults --json` 读为 `framework_control_plane_available_with_open_production_tail`，`opl family-runtime evidence-worklist ... --detail full --json` 仍有 12 条 payload-required stage-evidence workorder；zero-open domain-dispatch workorder 不能写成 domain memory lane 完成、domain ready、production ready 或 writeback apply 完成。
 
 2026-05-12 dated proof 仍可作为 provenance 读取：
 

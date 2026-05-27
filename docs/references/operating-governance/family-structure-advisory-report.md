@@ -12,6 +12,8 @@ machine boundary: generated from `npm run --silent family:structure-advisory -- 
 
 2026-05-26 02:38 CST 读法：本文是 tracked advisory snapshot，不是结构阻断门。复用精确文件清单、line count、needs-design-pass 或 public-surface-risk 前必须重跑 `npm run --silent family:structure-advisory -- --format=json|markdown`。本轮 fresh scan 仍显示 advisory-only；它覆盖 `one-person-lab`、`med-autogrant`、`med-deepscientist` 和 `one-person-lab-app`，不扫描 MAS、RCA、OMA，也不再把 `opl-aion-shell` 当作当前 OPL series scan 对象。任何条目都只能进入 design-pass 或 contract-surface review queue，不能直接变成 fail-closed backlog 或机械拆分任务。
 
+2026-05-28 OPL docs tranche 复核：从本 worktree 运行 `npm run --silent family:structure-advisory -- --format=markdown` 时，只扫描到当前 `one-person-lab` worktree；按 sibling layout 推断的其他 repo root 在该 worktree 路径下不可见。因此，本报告的 family-wide 文件清单仍是 dated snapshot；任何精确跨仓 line count、needs-design-pass、mechanical-residue 或 public-surface-risk 复用前，必须从根 checkout 或显式配置 sibling repo layout 重新生成。
+
 ## Scope
 
 This report covers tracked files in:

@@ -46,9 +46,9 @@ Hygiene audit 只检查明确的路径段和 root 文件，不做字符串子串
 
 如果未来出现 repo-specific 例外，例外必须在对应仓库的 hygiene 测试中显式列出，并写明 owner、purpose、state 和退役条件。
 
-## 2026-05-26 目录标准化状态
+## 2026-05-28 目录标准化状态
 
-当前 OPL 读模型证明的是 standard domain-agent conformance 与 descriptor / memory discovery 可读：`opl agents conformance --family-defaults --json` 读为 4 个 repo structural conformance passed、blocked_count=0；`opl domain-memory list --json` 读为 `resolved_memory_descriptor_count=3`、`missing_memory_descriptor_count=0`。这表示 OPL 能读取 standard pack / descriptor / authority boundary 和 MAS/MAG/RCA memory descriptor；它不表示物理目录已经全部重组、domain ready、production ready、App release ready、artifact authority 或 memory body/writeback apply 已完成。
+当前 OPL 读模型证明的是 standard domain-agent conformance、descriptor / memory discovery 和 App/operator refs-only projection 可读：`opl agents conformance --family-defaults --json` 读为 4 个 repo structural conformance passed、blocked_count=0；`opl domain-memory list --json` 读为 `resolved_memory_descriptor_count=3`、`missing_memory_descriptor_count=0`；`opl runtime app-operator-drilldown --json` 能看到 lifecycle refs、memory writeback refs 和 App release/user-path evidence refs；functional privatization active residue 仍为 0。但 `framework readiness` 仍有 open production tail，`family-runtime evidence-worklist` 仍有 12 条 payload-required stage-evidence workorder。这表示 OPL 能读取 standard pack / descriptor / authority boundary 和 MAS/MAG/RCA memory descriptor；它不表示物理目录已经全部重组、domain ready、production ready、App release ready、artifact authority 或 memory body/writeback apply 已完成。
 
 目录治理的当前目标仍是降低多重语义污染：repo-source 只保存 source、contracts、builder、policy 与 docs；真实 workspace/runtime artifact、receipt instance、memory body、中间产物和最终交付物继续留在 workspace / runtime artifact root，并通过 locator、receipt ref、restore proof 或 provenance proof 被 OPL 读取。
 
