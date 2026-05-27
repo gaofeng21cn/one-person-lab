@@ -1,6 +1,5 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { DatabaseSync } from 'node:sqlite';
 import {
   inspectFamilyRuntimeProviderWithLifecycle,
   resolveFamilyRuntimeProviderKind,
@@ -20,6 +19,7 @@ import { readMasManagedProviderProjection } from './family-runtime-mas-managed-p
 import { projectionFromMasManifestEntry } from './family-runtime-mas-managed-provider-projection.ts';
 import { buildProviderContinuousProof } from './family-runtime-provider-continuous-proof.ts';
 import { buildProviderProofTrayItem } from './runtime-tray-provider-proof-items.ts';
+import { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
 import { familyRuntimePaths, listEvents } from './family-runtime-store.ts';
 import { buildNativeHelperExecutionEnvelope } from './runtime-tray-native-helper-envelope.ts';
 import { buildDomainProjectionIngestion } from './runtime-tray-domain-projection-ingestion.ts';
@@ -75,7 +75,7 @@ function buildRuntimeProviderContinuousProof() {
   if (!fs.existsSync(paths.queue_db)) {
     return buildProviderContinuousProof([]);
   }
-  const db = new DatabaseSync(paths.queue_db, { readOnly: true });
+  const db = openFamilyRuntimeSqlite(paths.queue_db, { readOnly: true });
   try {
     return buildProviderContinuousProof(listEvents(db));
   } finally {

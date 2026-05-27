@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import { DatabaseSync } from 'node:sqlite';
 
 import {
   familyRuntimeLifecycleIndexPaths,
@@ -15,6 +14,7 @@ import {
   uniqueStrings,
   type JsonRecord,
 } from './family-runtime-lifecycle-store.ts';
+import { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
 export {
   familyRuntimeLifecycleIndexPaths,
   openFamilyRuntimeLifecycleIndexDb,
@@ -219,7 +219,7 @@ export function readFamilyRuntimeLifecycleApplyReceipts(input: {
     });
   }
 
-  const db = new DatabaseSync(paths.lifecycle_index_db, { readOnly: true });
+  const db = openFamilyRuntimeSqlite(paths.lifecycle_index_db, { readOnly: true });
   try {
     const table = db.prepare(`
       SELECT name FROM sqlite_master
@@ -308,7 +308,7 @@ export function readFamilyRuntimeLifecycleRefs(input: { domain_id?: string } = {
     });
   }
 
-  const db = new DatabaseSync(paths.lifecycle_index_db, { readOnly: true });
+  const db = openFamilyRuntimeSqlite(paths.lifecycle_index_db, { readOnly: true });
   try {
     const rows = input.domain_id?.trim()
       ? db.prepare(`

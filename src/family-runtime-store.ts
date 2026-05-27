@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
+import type { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError } from './contracts.ts';
 import { stableId } from './family-runtime-ids.ts';
@@ -9,6 +9,7 @@ import { masDomainRouteProjection } from './family-runtime-mas-domain-route.ts';
 import { paperAutonomyProjection } from './family-runtime-paper-autonomy.ts';
 import { deriveCurrentControlStateForTask } from './family-runtime-current-control-state.ts';
 import { createStageAttemptTable, listStageAttemptsForTask } from './family-runtime-stage-attempt-ledger.ts';
+import { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 import { resolveOplStatePaths } from './runtime-state-paths.ts';
 
@@ -98,7 +99,7 @@ export function openQueueDb() {
   fs.mkdirSync(paths.dispatch_dir, { recursive: true });
   fs.mkdirSync(paths.proof_dir, { recursive: true });
   fs.mkdirSync(paths.scheduler_dir, { recursive: true });
-  const db = new DatabaseSync(paths.queue_db);
+  const db = openFamilyRuntimeSqlite(paths.queue_db);
   db.exec(`
     PRAGMA journal_mode = WAL;
     CREATE TABLE IF NOT EXISTS meta (

@@ -1,10 +1,11 @@
 import fs from 'node:fs';
-import { DatabaseSync } from 'node:sqlite';
+import type { DatabaseSync } from 'node:sqlite';
 
 import {
   buildProviderContinuousProof,
   providerProofStatusIsCurrentlyProven,
 } from './family-runtime-provider-continuous-proof.ts';
+import { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
 import { familyRuntimePaths, listEvents } from './family-runtime-store.ts';
 
 function tableExists(db: DatabaseSync, tableName: string) {
@@ -17,7 +18,7 @@ export function readProviderContinuousProof() {
   if (!fs.existsSync(paths.queue_db)) {
     return buildProviderContinuousProof([]);
   }
-  const db = new DatabaseSync(paths.queue_db, { readOnly: true });
+  const db = openFamilyRuntimeSqlite(paths.queue_db, { readOnly: true });
   try {
     if (!tableExists(db, 'events')) {
       return buildProviderContinuousProof([]);
