@@ -24,9 +24,16 @@ import {
   buildTemporalWorkerLifecycleContract,
   buildTemporalWorkerReadiness,
 } from './family-runtime-temporal-readiness.ts';
+import {
+  buildTemporalStageAttemptMemo,
+  buildTemporalStageAttemptSearchAttributes,
+  inspectTemporalStageAttemptVisibilityReadiness,
+  ensureTemporalStageAttemptVisibilityReady,
+} from './family-runtime-temporal-visibility.ts';
 export {
   buildTemporalWorkerLifecycleContract,
   buildTemporalWorkerReadiness,
+  inspectTemporalStageAttemptVisibilityReadiness,
   resolveTemporalWorkerReadinessStatus,
   type TemporalWorkerReadinessStatus,
 } from './family-runtime-temporal-readiness.ts';
@@ -150,13 +157,19 @@ export async function startTemporalStageAttemptWorkflow(
     buildTemporalStageAttemptWorkflowInput(attempt),
   );
   if (!resolveTemporalAddressForPaths(options.paths).address) requireTemporalAddress();
-  return withTemporalClient(async (client) => {
+  return withTemporalClient(async (client, connection) => {
+    const visibilityReadiness = await ensureTemporalStageAttemptVisibilityReady(connection, {
+      namespace: resolveTemporalNamespace(),
+      address: resolveTemporalAddressForPaths(options.paths).address,
+    });
     const handle = await client.workflow.start('StageAttemptWorkflow', {
       args: [workflowInput],
       taskQueue: resolveTemporalTaskQueue(),
       workflowId: attempt.workflow_id,
       workflowIdConflictPolicy: WorkflowIdConflictPolicy.USE_EXISTING,
       workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
+      memo: buildTemporalStageAttemptMemo(workflowInput),
+      searchAttributes: buildTemporalStageAttemptSearchAttributes(workflowInput),
     });
     return {
       surface_kind: 'temporal_stage_attempt_start_receipt',
@@ -167,6 +180,7 @@ export async function startTemporalStageAttemptWorkflow(
       eagerly_started: handle.eagerlyStarted,
       namespace: resolveTemporalNamespace(),
       task_queue: resolveTemporalTaskQueue(),
+      visibility_readiness: visibilityReadiness,
       authority_boundary: {
         opl: 'temporal_workflow_transport_and_control_metadata_only',
         domain: 'truth_quality_artifact_gate_owner',

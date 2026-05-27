@@ -281,6 +281,7 @@ test('family-runtime does not auto-requeue succeeded MAS default executor dispat
 
     assert.equal(result.accepted, false);
     assert.equal(result.idempotent_noop, true);
+    assert.ok(result.task);
     assert.equal(result.task.status, 'succeeded');
     assert.equal(task.status, 'succeeded');
     assert.equal(JSON.parse(task.payload_json).source_fingerprint, 'source-before');
@@ -791,6 +792,7 @@ test('family-runtime refreshes refs-only evidence payloads on succeeded MAS defa
 
     assert.equal(result.accepted, false);
     assert.equal(result.idempotent_noop, true);
+    assert.ok(result.task);
     assert.equal(result.task.status, 'succeeded');
     assert.equal(task.status, 'succeeded');
     assert.equal(payload.domain_dispatch_evidence_record_payload.surface_kind, 'mas_domain_dispatch_evidence_record_payload');

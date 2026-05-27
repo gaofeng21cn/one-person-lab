@@ -111,183 +111,6 @@ db.close();`;
   }
 });
 
-test('family-runtime attempt query marks missing telemetry as unavailable instead of zero observed usage', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-usage-unavailable-'));
-  try {
-    const created = runCli([
-      'family-runtime',
-      'attempt',
-      'create',
-      '--domain',
-      'medautoscience',
-      '--stage',
-      'paper-repair',
-      '--provider',
-      'local_sqlite',
-      '--workspace-locator',
-      '{"workspace_root":"/tmp/mas"}',
-      '--retry-budget',
-      '{"max_attempts":2}',
-      '--source-fingerprint',
-      'sha256:usage-unavailable',
-    ], familyRuntimeEnv(stateRoot));
-    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
-
-    const query = runCli(['family-runtime', 'attempt', 'query', attemptId], familyRuntimeEnv(stateRoot));
-    const projection = query.family_runtime_stage_attempt_query.stage_attempt_query.usage_projection;
-
-    assert.equal(projection.availability, 'usage_unavailable');
-    assert.equal(projection.telemetry_status, 'missing');
-    assert.equal(projection.token.total_tokens_observed, null);
-    assert.equal(projection.cost.estimated_cost_usd_observed, null);
-    assert.equal(projection.duration.duration_ms_observed, null);
-    assert.equal(projection.missing_usage_telemetry_reason, 'no_stage_attempt_usage_telemetry_observed');
-    assert.equal(projection.retry_budget.pressure_status, 'retry_budget_available');
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('family-runtime attempt query exposes a unified stage execution log with intent actual usage and timeline', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-stage-execution-log-'));
-  try {
-    const created = runCli([
-      'family-runtime',
-      'attempt',
-      'create',
-      '--domain',
-      'medautoscience',
-      '--stage',
-      'paper-repair',
-      '--provider',
-      'local_sqlite',
-      '--workspace-locator',
-      JSON.stringify({
-        workspace_root: '/tmp/mas',
-        runtime_root: '/tmp/mas/runtime',
-        artifact_root: '/tmp/mas/artifacts',
-        profile_ref: 'profile:dm002',
-        dispatch_ref: 'dispatch:dm002/paper-repair',
-        source_refs: ['source:dm002/manuscript'],
-        stage_packet_ref: 'packet:dm002/paper-repair',
-      }),
-      '--retry-budget',
-      '{"max_attempts":3,"cadence_ref":"cadence:hourly"}',
-      '--source-fingerprint',
-      'sha256:dm002-paper-repair',
-      '--task',
-      'task-dm002-paper-repair',
-    ], familyRuntimeEnv(stateRoot));
-    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
-    const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
-    runCli([
-      'family-runtime',
-      'attempt',
-      'fixture-run',
-      attemptId,
-      '--checkpoint-ref',
-      'checkpoint:dm002-paper-repair-midpoint',
-      '--closeout-packet',
-      JSON.stringify({
-        surface_kind: 'stage_attempt_closeout_packet',
-        closeout_refs: ['receipt:dm002-paper-repair-closeout'],
-        consumed_refs: ['evidence:figure5-layout'],
-        consumed_memory_refs: ['memory:dm002-review-feedback'],
-        writeback_receipt_refs: ['memory-writeback:dm002-paper-repair'],
-        next_owner: 'med-autoscience',
-        domain_ready_verdict: 'domain_gate_pending',
-        route_impact: {
-          decision: 'bounded_repair',
-          owner_receipt_refs: ['owner-receipt:mas/dm002/paper-repair'],
-          typed_blocker_refs: ['typed-blocker:mas/dm002/reviewer-refresh-required'],
-          usage_projection: {
-            token_usage: { input_tokens: 100, output_tokens: 40, total_tokens: 140 },
-            estimated_cost_usd: 0.02,
-            duration_ms: 120000,
-          },
-        },
-      }),
-    ], familyRuntimeEnv(stateRoot));
-    const updateUsageSql = `
-import { DatabaseSync } from 'node:sqlite';
-const db = new DatabaseSync(${JSON.stringify(queueDb)});
-const row = db.prepare('SELECT provider_run_json, activity_events_json FROM stage_attempts WHERE stage_attempt_id = ?').get(${JSON.stringify(attemptId)});
-const providerRun = {
-  ...JSON.parse(row.provider_run_json),
-  provider_status: 'completed',
-  started_at: '2026-05-27T00:00:00.000Z',
-  completed_at: '2026-05-27T00:18:00.000Z',
-  last_heartbeat_at: '2026-05-27T00:17:00.000Z'
-};
-const events = JSON.parse(row.activity_events_json);
-events.push({
-  event_time: '2026-05-27T00:10:00.000Z',
-  event_kind: 'codex_stage_progress',
-  stage_packet_ref: 'packet:dm002/paper-repair',
-  activity_kind: 'codex_stage_activity',
-  activity_status: 'checkpointed',
-  duration_ms: 600000,
-  cost_summary: {
-    token_usage: {
-      input_tokens: 2000,
-      output_tokens: 900,
-      total_tokens: 2900
-    },
-    estimated_cost_usd: 0.37
-  }
-});
-db.prepare('UPDATE stage_attempts SET provider_run_json = ?, activity_events_json = ? WHERE stage_attempt_id = ?').run(JSON.stringify(providerRun), JSON.stringify(events), ${JSON.stringify(attemptId)});
-db.close();`;
-    const result = spawnSync(process.execPath, ['--experimental-strip-types', '-e', updateUsageSql], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        NODE_NO_WARNINGS: '1',
-      },
-    });
-    assert.equal(result.status, 0, result.stderr);
-
-    const query = runCli(['family-runtime', 'attempt', 'query', attemptId], familyRuntimeEnv(stateRoot));
-    const log = query.family_runtime_stage_attempt_query.stage_attempt_query.stage_execution_log;
-
-    assert.equal(log.surface_kind, 'opl_stage_execution_log');
-    assert.equal(log.projection_scope, 'stage_attempt');
-    assert.equal(log.stage_attempt_id, attemptId);
-    assert.equal(log.intended_work.domain_id, 'medautoscience');
-    assert.equal(log.intended_work.stage_id, 'paper-repair');
-    assert.equal(log.intended_work.task_id, 'task-dm002-paper-repair');
-    assert.equal(log.intended_work.source_fingerprint, 'sha256:dm002-paper-repair');
-    assert.deepEqual(log.intended_work.stage_packet_refs, ['packet:dm002/paper-repair']);
-    assert.deepEqual(log.intended_work.source_refs, ['source:dm002/manuscript']);
-    assert.equal(log.intended_work.retry_budget.max_attempts, 3);
-    assert.equal(log.actual_work.status, 'completed');
-    assert.equal(log.actual_work.closeout_receipt_status, 'accepted_typed_closeout');
-    assert.equal(log.actual_work.next_owner, 'med-autoscience');
-    assert.equal(log.actual_work.domain_ready_verdict, 'domain_gate_pending');
-    assert.deepEqual(log.actual_work.closeout_refs, ['receipt:dm002-paper-repair-closeout']);
-    assert.deepEqual(log.evidence_refs.owner_receipt_refs, ['owner-receipt:mas/dm002/paper-repair']);
-    assert.deepEqual(log.evidence_refs.typed_blocker_refs, ['typed-blocker:mas/dm002/reviewer-refresh-required']);
-    assert.equal(log.evidence_refs.activity_event_count >= 2, true);
-    assert.equal(log.timeline.provider_started_at, '2026-05-27T00:00:00.000Z');
-    assert.equal(log.timeline.provider_completed_at, '2026-05-27T00:18:00.000Z');
-    assert.equal(log.timeline.last_heartbeat_at, '2026-05-27T00:17:00.000Z');
-    assert.equal(log.timeline.duration_ms_observed, 1800000);
-    assert.equal(log.timeline.duration_telemetry_status, 'observed');
-    assert.equal(log.usage.token.total_tokens_observed, 3040);
-    assert.equal(log.usage.cost.estimated_cost_usd_observed, 0.39);
-    assert.equal(log.authority_boundary.can_execute_domain_action, false);
-    assert.equal(log.authority_boundary.can_write_domain_truth, false);
-    assert.equal(log.authority_boundary.can_authorize_quality_verdict, false);
-    assert.equal(
-      query.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.stage_execution_log.stage_attempt_id,
-      attemptId,
-    );
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
 test('runtime snapshot projects stage attempt usage pressure into workbench groups and tray items', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-usage-workbench-'));
   try {
@@ -358,9 +181,6 @@ test('runtime snapshot projects stage attempt usage pressure into workbench grou
     assert.equal(workbench.summary.usage_projection.observed_attempt_count, 2);
     assert.equal(workbench.summary.usage_projection.retry_pressure_attempt_count, 1);
     assert.equal(workbench.summary.usage_projection.retry_budget_exhausted_count, 1);
-    assert.equal(workbench.stage_execution_log.surface_kind, 'opl_stage_execution_log_summary');
-    assert.equal(workbench.stage_execution_log.summary.attempt_count, 2);
-    assert.equal(workbench.stage_execution_log.summary.usage_unavailable_attempt_count, 1);
     assert.equal(workbench.groups.by_domain.medautoscience.usage_projection.observed_attempt_count, 1);
     assert.equal(workbench.groups.by_domain.medautogrant.usage_projection.retry_budget_exhausted_count, 1);
     assert.equal(deadLetterAttempt.usage_projection.retry_budget.pressure_status, 'retry_budget_exhausted');
@@ -371,10 +191,6 @@ test('runtime snapshot projects stage attempt usage pressure into workbench grou
     assert.equal(
       deadLetterItem.stage_attempt_workbench.usage_projection.retry_budget.pressure_status,
       'retry_budget_exhausted',
-    );
-    assert.equal(
-      deadLetterItem.stage_attempt_workbench.stage_execution_log.stage_attempt_id,
-      deadLetterAttemptId,
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

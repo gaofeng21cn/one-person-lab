@@ -184,6 +184,10 @@ test('help advertises initialize and environment management command surfaces', (
   assert.equal(commands.includes('system repair'), true);
   assert.equal(commands.includes('system reinstall-support'), false);
   assert.equal(commands.includes('system update'), true);
+  assert.equal(commands.includes('system startup-maintenance'), true);
+  assert.equal(commands.includes('system reconcile-modules'), true);
+  assert.equal(commands.includes('system configure-codex'), true);
+  assert.equal(commands.includes('system repair-native-helpers'), true);
   assert.equal(commands.includes('system update-channel'), true);
   assert.equal(commands.includes('system developer-supervisor'), true);
   assert.equal(commands.includes('modules'), true);

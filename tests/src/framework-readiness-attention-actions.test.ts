@@ -167,8 +167,9 @@ test('framework readiness keeps blocked refs-only attention out of executable ne
       'domain_dispatch_attention',
     ],
   });
-  assert.equal(actions[0].top_owner_payload_groups.length, 1);
-  assert.deepEqual(actions[0].top_owner_payload_groups[0], {
+  const topOwnerPayloadGroups = actions[0].top_owner_payload_groups as Array<Record<string, unknown>>;
+  assert.equal(topOwnerPayloadGroups.length, 1);
+  assert.deepEqual(topOwnerPayloadGroups[0], {
     owner: 'med-autoscience',
     payload_kind: 'domain_owner_receipt_or_typed_blocker_refs',
     status: 'blocked_by_domain_typed_blocker_refs',

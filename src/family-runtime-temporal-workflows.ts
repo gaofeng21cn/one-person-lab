@@ -143,6 +143,30 @@ export async function StageAttemptWorkflow(
     started_at: nowIso(),
     updated_at: nowIso(),
     activity_events: [],
+    stage_progress_log: {
+      surface_kind: 'temporal_workflow_stage_progress_log',
+      planned_work: {
+        stage_attempt_id: input.stage_attempt_id,
+        workflow_id: input.workflow_id,
+        domain_id: input.domain_id,
+        stage_id: input.stage_id,
+        executor_kind: input.executor_kind,
+        task_id: input.task_id ?? null,
+        stage_packet_ref: input.stage_packet_ref ?? null,
+        checkpoint_refs: asStringList(input.checkpoint_refs),
+      },
+      timeline: [],
+      visibility: {
+        query: 'StageAttemptQuery',
+        search_attribute_refs: {
+          OplStageAttemptId: input.stage_attempt_id,
+          OplDomainId: input.domain_id,
+          OplStageId: input.stage_id,
+          OplExecutorKind: input.executor_kind,
+          OplTaskId: input.task_id ?? null,
+        },
+      },
+    },
     checkpoint_refs: asStringList(input.checkpoint_refs),
     closeout_refs: [],
     consumed_refs: [],
@@ -202,6 +226,19 @@ export async function StageAttemptWorkflow(
           stage_packet_ref: input.stage_packet_ref ?? null,
         },
       ],
+      stage_progress_log: {
+        ...state.stage_progress_log,
+        timeline: [
+          ...state.stage_progress_log.timeline,
+          {
+            event_kind: 'codex_stage_activity_started',
+            activity_kind: 'codex_stage_activity',
+            activity_status: 'running',
+            observed_at: nowIso(),
+            stage_packet_ref: input.stage_packet_ref ?? null,
+          },
+        ],
+      },
     };
     const codexResult = await codexStageActivity(input);
     const codexCheckpointRefs = asStringList(codexResult.checkpoint_refs);
@@ -218,6 +255,19 @@ export async function StageAttemptWorkflow(
           ...codexResult,
         },
       ],
+      stage_progress_log: {
+        ...state.stage_progress_log,
+        timeline: [
+          ...state.stage_progress_log.timeline,
+          {
+            event_kind: 'codex_stage_activity_completed',
+            activity_kind: 'codex_stage_activity',
+            activity_status: 'completed',
+            observed_at: nowIso(),
+            checkpoint_refs: codexCheckpointRefs,
+          },
+        ],
+      },
     };
 
     const codexCloseoutValidation = validateCloseoutPacketForWorkflow({
@@ -257,6 +307,20 @@ export async function StageAttemptWorkflow(
           ...dispatchResult,
         },
       ],
+      stage_progress_log: {
+        ...state.stage_progress_log,
+        timeline: [
+          ...state.stage_progress_log.timeline,
+          {
+            event_kind: 'domain_handler_dispatch_activity_completed',
+            activity_kind: 'domain_handler_dispatch_activity',
+            activity_status: 'completed',
+            observed_at: nowIso(),
+            closeout_refs: closeoutRefs,
+            blocked_reason: dispatchBlockedReason,
+          },
+        ],
+      },
       completion_boundary: {
         provider_completion: providerCompleted ? 'completed' : 'not_completed',
         domain_ready_verdict: providerCompleted && typeof dispatchResult.domain_ready_verdict === 'string'
@@ -278,6 +342,19 @@ export async function StageAttemptWorkflow(
           error: error instanceof Error ? error.message : String(error),
         },
       ],
+      stage_progress_log: {
+        ...state.stage_progress_log,
+        timeline: [
+          ...state.stage_progress_log.timeline,
+          {
+            event_kind: 'temporal_stage_attempt_workflow_failed',
+            activity_kind: 'temporal_stage_attempt_workflow',
+            activity_status: 'failed',
+            observed_at: nowIso(),
+            error: error instanceof Error ? error.message : String(error),
+          },
+        ],
+      },
     };
     throw error;
   }

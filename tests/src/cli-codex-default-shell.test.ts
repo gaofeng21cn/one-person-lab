@@ -332,6 +332,40 @@ exit 0
   }
 });
 
+test('installed opl launcher routes App state to OPL instead of Codex passthrough', () => {
+  const capturePath = path.join(os.tmpdir(), `opl-launcher-app-state-capture-${process.pid}.txt`);
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-launcher-app-state-'));
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli 0.125.0"
+  exit 0
+fi
+printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}
+echo "SHOULD NOT RUN CODEX"
+exit 0
+`);
+
+  try {
+    const result = runEntryPathRaw(binPath, ['app', 'state', '--profile', 'fast'], {
+      OPL_CODEX_BIN: codexPath,
+      OPL_SKIP_SKILL_SYNC: '1',
+      OPL_STATE_DIR: stateDir,
+      OPL_CODEX_CLI_LATEST_VERSION: '0.125.0',
+      OPL_DEVELOPER_MODE_GH_BINARY: path.join(stateDir, 'missing-gh'),
+    });
+
+    const payload = JSON.parse(result.stdout);
+    assert.equal(payload.app_state.schema_version, 'opl_app_state.v1');
+    assert.equal(payload.app_state.core.executor.default_executor_id, 'codex_cli');
+    assert.equal(result.stderr, '');
+    assert.equal(fs.existsSync(capturePath), false);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(capturePath, { force: true });
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
+
 test('installed opl launcher routes family discovery commands to OPL instead of Codex passthrough', () => {
   const commandMatrix = [
     {
@@ -647,6 +681,17 @@ test('opl skill sync runs the lightweight family plugin installers and returns m
       fs.existsSync(output.skill_sync.packs[3].installer_result.generated_codex_plugin.codex_plugin_cache_path),
       true,
     );
+    const generatedPluginRoot = output.skill_sync.packs[3].installer_result.generated_codex_plugin.plugin_root;
+    const generatedPluginManifest = JSON.parse(fs.readFileSync(
+      output.skill_sync.packs[3].installer_result.generated_codex_plugin.plugin_manifest_path,
+      'utf8',
+    ));
+    assert.equal(generatedPluginManifest.interface.composerIcon, './assets/icon.svg');
+    assert.equal(generatedPluginManifest.interface.logo, './assets/icon.svg');
+    const generatedPluginIcon = fs.readFileSync(path.join(generatedPluginRoot, 'assets', 'icon.svg'), 'utf8');
+    assert.match(generatedPluginIcon, /aria-label="OPL Meta Agent icon"/);
+    assert.match(generatedPluginIcon, /M11 44V20L21 34L31 20V44/);
+    assert.match(generatedPluginIcon, /M36 44L46 20L56 44/);
     assert.equal(output.skill_sync.codex_plugin_registry.surface_id, 'opl_codex_plugin_registry');
     assert.equal(output.skill_sync.codex_plugin_registry.summary.registered, 4);
     assert.equal(output.skill_sync.codex_plugin_registry.summary.removed_standalone_mcp_servers, 1);

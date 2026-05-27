@@ -11,7 +11,9 @@ import {
 import {
   buildStageAttemptUsageProjection,
 } from './family-runtime-stage-attempt-usage.ts';
-import { buildStageExecutionLog } from './family-runtime-stage-execution-log.ts';
+import {
+  buildStageProgressLog,
+} from './family-runtime-stage-progress-log.ts';
 import {
   inspectFamilyRuntimeProviderWithLifecycle,
   isFamilyRuntimeProviderKind,
@@ -462,7 +464,7 @@ function attemptProjection(
     activityEvents,
     routeImpact,
   });
-  const stageExecutionLog = buildStageExecutionLog({
+  const stageProgressLog = buildStageProgressLog({
     stageAttemptId: row.stage_attempt_id,
     providerKind: row.provider_kind,
     executorKind: row.executor_kind,
@@ -582,7 +584,9 @@ function attemptProjection(
     operator_conflicts: conflictOrBlockerEnvelopes,
     operator_label: conflictOrBlockerEnvelopes[0]?.operator_label ?? null,
     usage_projection: usageProjection,
-    stage_execution_log: stageExecutionLog,
+    stage_progress_log: stageProgressLog,
+    temporal_visibility: stageProgressLog.temporal_visibility,
+    temporal_webui_ref: stageProgressLog.temporal_webui_ref,
     ...genericProjections,
     next_owner: nextOwner,
     human_gate_refs: humanGateRefs,
@@ -683,7 +687,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       workspace_source_intake: EMPTY_WORKBENCH_METADATA.summary.workspace_source_intake,
       memory_locator_index: EMPTY_WORKBENCH_METADATA.summary.memory_locator_index,
       usage_projection: EMPTY_WORKBENCH_METADATA.summary.usage_projection,
-      stage_execution_log: EMPTY_WORKBENCH_METADATA.summary.stage_execution_log,
+      stage_progress_log: EMPTY_WORKBENCH_METADATA.summary.stage_progress_log,
       package_export_lifecycle: EMPTY_WORKBENCH_METADATA.summary.package_export_lifecycle,
       action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,
       transition_bridge_evidence: EMPTY_WORKBENCH_METADATA.summary.transition_bridge_evidence,
@@ -744,7 +748,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       workspace_source_intake: metadata.summary.workspace_source_intake,
       memory_locator_index: metadata.summary.memory_locator_index,
       usage_projection: metadata.summary.usage_projection,
-      stage_execution_log: metadata.summary.stage_execution_log,
+      stage_progress_log: metadata.summary.stage_progress_log,
       package_export_lifecycle: metadata.summary.package_export_lifecycle,
       action_routing: metadata.summary.action_routing,
       transition_bridge_evidence: metadata.summary.transition_bridge_evidence,
@@ -775,7 +779,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       workspace_source_intake: EMPTY_WORKBENCH_METADATA.summary.workspace_source_intake,
       memory_locator_index: EMPTY_WORKBENCH_METADATA.summary.memory_locator_index,
       usage_projection: EMPTY_WORKBENCH_METADATA.summary.usage_projection,
-      stage_execution_log: EMPTY_WORKBENCH_METADATA.summary.stage_execution_log,
+      stage_progress_log: EMPTY_WORKBENCH_METADATA.summary.stage_progress_log,
       package_export_lifecycle: EMPTY_WORKBENCH_METADATA.summary.package_export_lifecycle,
       action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,
       transition_bridge_evidence: EMPTY_WORKBENCH_METADATA.summary.transition_bridge_evidence,

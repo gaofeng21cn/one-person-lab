@@ -1,4 +1,4 @@
-import { FrameworkContractError } from './contracts.ts';
+import { FrameworkContractError, loadFrameworkContracts } from './contracts.ts';
 import { readBundledCodexDefaultProfile, readLocalCodexDefaultsIfAvailable } from './local-codex-defaults.ts';
 import { getOplReleaseRepo, getOplReleaseVersion, buildOplReleaseTag } from './opl-release.ts';
 import { resolveOplStatePaths, ensureOplStateDir } from './runtime-state-paths.ts';
@@ -19,6 +19,7 @@ import { runFamilyRuntime } from './family-runtime.ts';
 import { runOplEngineAction } from './system-installation/engine-actions.ts';
 import type { OplEngineAction, OplModuleAction, OplModuleId } from './system-installation/shared.ts';
 import { buildOplAppOperatorViewModel } from './app-state-view-model.ts';
+import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 
 type AppStateProfile = 'fast' | 'full';
 type JsonRecord = Record<string, unknown>;
@@ -409,6 +410,65 @@ function buildUiDefaults() {
   };
 }
 
+function fullRuntimeWorkbenchSummary(fullDrilldown: JsonRecord | null) {
+  if (!fullDrilldown) {
+    return {
+      surface_kind: 'opl_app_state_runtime_workbench_summary',
+      availability: 'lazy',
+      source_surface: 'opl runtime app-operator-drilldown --detail full --json',
+      authority_boundary: {
+        opl: 'app_state_summary_projection_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        provider_completion_is_domain_ready: false,
+      },
+    };
+  }
+  const runtimeWorkbench = isRecord(fullDrilldown.runtime_workbench)
+    ? fullDrilldown.runtime_workbench
+    : null;
+  const visualRefGroups = isRecord(fullDrilldown.visual_ref_groups)
+    ? fullDrilldown.visual_ref_groups
+    : {};
+  const visualization = isRecord(fullDrilldown.runtime_visualization_projection)
+    ? fullDrilldown.runtime_visualization_projection
+    : {};
+  const visualizationSummary = isRecord(visualization.summary) ? visualization.summary : {};
+  const stageProgressRefs = Array.isArray(visualRefGroups.stage_progress_log_refs)
+    ? visualRefGroups.stage_progress_log_refs
+    : [];
+  return {
+    surface_kind: 'opl_app_state_runtime_workbench_summary',
+    availability: runtimeWorkbench ? 'available' : 'unavailable',
+    source_surface: 'opl runtime app-operator-drilldown --detail full --json',
+    runtime_workbench: runtimeWorkbench
+      ? {
+          surface_kind: runtimeWorkbench.surface_kind,
+          summary_cards: Array.isArray(runtimeWorkbench.summary_cards) ? runtimeWorkbench.summary_cards : [],
+          action_queue_item_count: Array.isArray(isRecord(runtimeWorkbench.action_queue) ? runtimeWorkbench.action_queue.items : null)
+            ? ((runtimeWorkbench.action_queue as JsonRecord).items as unknown[]).length
+            : 0,
+          domain_lane_count: Array.isArray(isRecord(runtimeWorkbench.domain_lane_map) ? runtimeWorkbench.domain_lane_map.lanes : null)
+            ? ((runtimeWorkbench.domain_lane_map as JsonRecord).lanes as unknown[]).length
+            : 0,
+        }
+      : null,
+    stage_progress_log: {
+      summary: isRecord(fullDrilldown.stage_progress_log) ? fullDrilldown.stage_progress_log : null,
+      visual_ref_count: stageProgressRefs.length,
+      temporal_stage_progress_ref_count: Number(visualizationSummary.temporal_stage_progress_ref_count ?? 0),
+      stage_progress_event_count: Number(visualizationSummary.stage_progress_event_count ?? 0),
+    },
+    authority_boundary: {
+      opl: 'app_state_summary_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+      can_write_domain_truth: false,
+      can_read_memory_body: false,
+      can_read_artifact_body: false,
+      provider_completion_is_domain_ready: false,
+    },
+  };
+}
+
 export async function buildOplAppState(input: { profile?: AppStateProfile } = {}) {
   const startedAt = Date.now();
   const profile = input.profile ?? 'fast';
@@ -422,6 +482,11 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const core = buildCoreState(profile);
   const actions = buildActionCatalog();
   const uiDefaults = buildUiDefaults();
+  const fullRuntimeDrilldown = profile === 'full'
+    ? (await buildRuntimeTraySnapshot(loadFrameworkContracts() as FrameworkContracts, {
+        appOperatorDrilldownDetailLevel: 'full',
+      })).runtime_tray_snapshot.app_operator_drilldown as JsonRecord
+    : null;
   const paths = {
     home_dir: statePaths.home_dir,
     state_dir: statePaths.state_dir,
@@ -490,6 +555,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
       },
       release,
       operator,
+      runtime_workbench: fullRuntimeWorkbenchSummary(fullRuntimeDrilldown),
       paths,
       actions,
       ui_defaults: uiDefaults,

@@ -11,6 +11,10 @@ import {
   SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
   SCHEDULER_TICK_WORKFLOW_RUN_TIMEOUT,
 } from './family-runtime-temporal-constants.ts';
+import {
+  buildTemporalStageAttemptVisibilityReadiness,
+  TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTES,
+} from './family-runtime-temporal-visibility.ts';
 
 export const STAGE_ATTEMPT_WORKFLOW_NAME = 'StageAttemptWorkflow';
 export const SCHEDULER_TICK_WORKFLOW_NAME = 'SchedulerTickWorkflow';
@@ -79,6 +83,12 @@ export type TemporalStageAttemptWorkflowState = {
   started_at: string;
   updated_at: string;
   activity_events: Array<Record<string, unknown>>;
+  stage_progress_log: {
+    surface_kind: 'temporal_workflow_stage_progress_log';
+    planned_work: Record<string, unknown>;
+    timeline: Array<Record<string, unknown>>;
+    visibility: Record<string, unknown>;
+  };
   checkpoint_refs: string[];
   closeout_refs: string[];
   consumed_refs: string[];
@@ -137,6 +147,12 @@ export function buildTemporalStageAttemptWorkflowContract() {
     signals: [...TEMPORAL_STAGE_ATTEMPT_SIGNALS],
     queries: [...TEMPORAL_STAGE_ATTEMPT_QUERIES],
     default_task_queue: DEFAULT_TEMPORAL_TASK_QUEUE,
+    visibility_contract: buildTemporalStageAttemptVisibilityReadiness(),
+    search_attributes: TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTES.map((attribute) => ({
+      name: attribute.name,
+      type: attribute.type,
+      source: attribute.source,
+    })),
     scheduler_tick_timeout_policy: {
       workflow_run_timeout: SCHEDULER_TICK_WORKFLOW_RUN_TIMEOUT,
       workflow_execution_timeout: SCHEDULER_TICK_WORKFLOW_RUN_TIMEOUT,

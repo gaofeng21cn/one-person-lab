@@ -380,11 +380,14 @@ exit 1
           ready_to_launch: boolean;
           blocking_items: string[];
           progress: {
-            ready_required_count: number;
-            total_required_count: number;
-            ready_optional_count: number;
-            total_optional_count: number;
-          };
+          ready_required_count: number;
+          total_required_count: number;
+          ready_full_readiness_count: number;
+          total_full_readiness_count: number;
+          ready_optional_count: number;
+          total_optional_count: number;
+        };
+        maintenance_items: string[];
         };
         module_summary: {
           installed_modules_count: number;
@@ -406,6 +409,13 @@ exit 1
           required: boolean;
           blocking: boolean;
           status: string;
+          readiness_layer: string;
+          severity: string;
+          user_action_required: boolean;
+          auto_action_available: boolean;
+          action_command_ref: string | null;
+          last_attempt: Record<string, unknown> | null;
+          next_visible_step: string;
           action: {
             action_id: string;
             payload_template: Record<string, string> | null;
@@ -470,19 +480,20 @@ exit 1
     };
 
     assert.equal(output.system_initialize.surface_id, 'opl_system_initialize');
-    assert.equal(output.system_initialize.overall_state, 'attention_needed');
+    assert.equal(output.system_initialize.overall_state, 'ready_with_background_maintenance');
     assert.equal(output.system_initialize.setup_flow.is_first_run, false);
-    assert.equal(output.system_initialize.setup_flow.ready_to_launch, false);
+    assert.equal(output.system_initialize.setup_flow.ready_to_launch, true);
     assert.equal(output.system_initialize.setup_flow.phase, 'modules');
-    assert.deepEqual(output.system_initialize.setup_flow.blocking_items, [
+    assert.deepEqual(output.system_initialize.setup_flow.blocking_items, []);
+    assert.deepEqual(output.system_initialize.setup_flow.maintenance_items, [
       'family_runtime_provider',
       'domain_modules',
+      'recommended_skills',
     ]);
-    assert.equal(
-      output.system_initialize.setup_flow.progress.ready_required_count <
-      output.system_initialize.setup_flow.progress.total_required_count,
-      true,
-    );
+    assert.equal(output.system_initialize.setup_flow.progress.ready_required_count, 3);
+    assert.equal(output.system_initialize.setup_flow.progress.total_required_count, 3);
+    assert.equal(output.system_initialize.setup_flow.progress.ready_full_readiness_count, 0);
+    assert.equal(output.system_initialize.setup_flow.progress.total_full_readiness_count, 2);
     assert.equal(output.system_initialize.core_engines.codex.installed, true);
     assert.equal(Object.hasOwn(output.system_initialize.core_engines, 'hermes'), false);
     assert.equal(output.system_initialize.native_helpers.lifecycle.commands.repair, 'npm run native:repair');
@@ -510,6 +521,16 @@ exit 1
       assert.deepEqual(nativeHelperItem.action?.payload_template, { action: 'repair_native_helpers' });
     }
     assert.equal(nativeHelperItem.status, output.system_initialize.native_helpers.health_status);
+    const domainModulesItem = output.system_initialize.checklist.find((entry) => entry.item_id === 'domain_modules');
+    assert.ok(domainModulesItem);
+    assert.equal(domainModulesItem.readiness_layer, 'full_readiness');
+    assert.equal(domainModulesItem.blocking, false);
+    assert.equal(domainModulesItem.severity, 'maintenance');
+    assert.equal(domainModulesItem.user_action_required, false);
+    assert.equal(domainModulesItem.auto_action_available, true);
+    assert.equal(domainModulesItem.action_command_ref, 'opl system startup-maintenance');
+    assert.equal(typeof domainModulesItem.last_attempt?.observed_at, 'string');
+    assert.match(domainModulesItem.next_visible_step, /Core workflows/);
     assert.equal(output.system_initialize.domain_modules.summary.total_modules_count, 5);
     assert.deepEqual(output.system_initialize.module_summary, output.system_initialize.domain_modules.summary);
     assert.equal(
@@ -539,9 +560,11 @@ exit 1
     assert.match(output.system_initialize.first_run_log.log_path, /Library\/Logs\/One Person Lab\/first-run\.jsonl$/);
     assert.equal(output.system_initialize.gui_first_run_automation.surface_id, 'opl_gui_first_run_automation');
     assert.deepEqual(output.system_initialize.gui_first_run_automation.command_flow, [
-      'opl system initialize',
-      'opl install --skip-gui-open',
-      'opl modules',
+      'opl system initialize --json',
+      'opl install --skip-gui-open --skip-modules --skip-native-helper-repair --json',
+      'opl system configure-codex --api-key-stdin --json',
+      'opl system startup-maintenance --json',
+      'opl system reconcile-modules --json',
     ]);
     assert.equal(
       output.system_initialize.gui_first_run_automation.accessibility_labels.window,
@@ -642,6 +665,13 @@ exit 1
           label: string;
           required: boolean;
           blocking: boolean;
+          readiness_layer: string;
+          severity: string;
+          user_action_required: boolean;
+          auto_action_available: boolean;
+          action_command_ref: string | null;
+          last_attempt: Record<string, unknown> | null;
+          next_visible_step: string;
           detail_summary: string;
         }>;
         recommended_next_action: {
@@ -650,7 +680,7 @@ exit 1
       };
     };
 
-    assert.equal(output.system_initialize.overall_state, 'ready_with_degraded_online_runtime');
+    assert.equal(output.system_initialize.overall_state, 'ready_with_background_maintenance');
     assert.deepEqual(output.system_initialize.readiness, {
       core_ready: true,
       domain_ready: true,
@@ -660,8 +690,8 @@ exit 1
       full_ready: false,
     });
     assert.equal(output.system_initialize.setup_flow.phase, 'environment');
-    assert.equal(output.system_initialize.setup_flow.ready_to_launch, false);
-    assert.deepEqual(output.system_initialize.setup_flow.blocking_items, ['family_runtime_provider']);
+    assert.equal(output.system_initialize.setup_flow.ready_to_launch, true);
+    assert.deepEqual(output.system_initialize.setup_flow.blocking_items, []);
     assert.equal(output.system_initialize.online_management.surface_id, 'opl_online_management');
     assert.equal(output.system_initialize.online_management.status, 'initializing');
     assert.equal(output.system_initialize.online_management.provider_kind, 'temporal');
@@ -683,7 +713,14 @@ exit 1
     assert.ok(onlineManagementItem);
     assert.equal(onlineManagementItem.label, 'Family Runtime Provider');
     assert.equal(onlineManagementItem.required, true);
-    assert.equal(onlineManagementItem.blocking, true);
+    assert.equal(onlineManagementItem.blocking, false);
+    assert.equal(onlineManagementItem.readiness_layer, 'full_readiness');
+    assert.equal(onlineManagementItem.severity, 'maintenance');
+    assert.equal(onlineManagementItem.user_action_required, true);
+    assert.equal(onlineManagementItem.auto_action_available, false);
+    assert.equal(onlineManagementItem.action_command_ref, 'opl family-runtime worker status --provider temporal');
+    assert.equal(typeof onlineManagementItem.last_attempt?.observed_at, 'string');
+    assert.match(onlineManagementItem.next_visible_step, /Core readiness/);
     assert.match(onlineManagementItem.detail_summary, /temporal/i);
     assert.equal(output.system_initialize.recommended_next_action.action_id, 'review_family_runtime_provider');
   } finally {
@@ -842,6 +879,13 @@ test('system initialize exposes first-run blocker metadata and actionable payloa
           item_id: string;
           required: boolean;
           blocking: boolean;
+          readiness_layer: string;
+          severity: string;
+          user_action_required: boolean;
+          auto_action_available: boolean;
+          action_command_ref: string | null;
+          last_attempt: Record<string, unknown> | null;
+          next_visible_step: string;
           action: {
             action_id: string;
             method: string;
@@ -865,7 +909,7 @@ test('system initialize exposes first-run blocker metadata and actionable payloa
     assert.equal(output.system_initialize.setup_flow.ready_to_launch, false);
     assert.equal(output.system_initialize.setup_flow.phase, 'environment');
     assert.equal(output.system_initialize.setup_flow.blocking_items.includes('codex'), true);
-    assert.equal(output.system_initialize.setup_flow.blocking_items.includes('domain_modules'), true);
+    assert.equal(output.system_initialize.setup_flow.blocking_items.includes('domain_modules'), false);
     assert.equal(
       output.system_initialize.setup_flow.progress.ready_required_count <
         output.system_initialize.setup_flow.progress.total_required_count,
@@ -889,6 +933,13 @@ test('system initialize exposes first-run blocker metadata and actionable payloa
     assert.deepEqual(workspaceRootItem.action?.request_fields, []);
     assert.equal(codexItem.required, true);
     assert.equal(codexItem.blocking, true);
+    assert.equal(codexItem.readiness_layer, 'core_launch');
+    assert.equal(codexItem.severity, 'blocking');
+    assert.equal(codexItem.user_action_required, true);
+    assert.equal(codexItem.auto_action_available, true);
+    assert.equal(codexItem.action_command_ref, 'opl engine install --engine codex');
+    assert.equal(typeof codexItem.last_attempt?.observed_at, 'string');
+    assert.match(codexItem.next_visible_step, /Codex CLI/);
     assert.equal(codexItem.action?.action_id, 'install_or_configure_codex');
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });

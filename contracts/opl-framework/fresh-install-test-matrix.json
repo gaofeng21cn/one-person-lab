@@ -25,9 +25,11 @@
     ]
   },
   "cli_first_run_commands": [
-    "opl system initialize",
-    "opl install --skip-gui-open",
-    "opl modules"
+    "opl system initialize --json",
+    "opl install --skip-gui-open --skip-modules --skip-native-helper-repair --json",
+    "opl system configure-codex --api-key-stdin --json",
+    "opl system startup-maintenance --json",
+    "opl system reconcile-modules --json"
   ],
   "first_run_log": {
     "surface_id": "opl_first_run_log",
@@ -68,15 +70,20 @@
       "layer": "local_cli",
       "setup": "temporary HOME and OPL_STATE_DIR, no codex on PATH, empty managed modules root",
       "expected_phase": "environment",
-      "expected_blockers": [
+      "expected_ready_to_launch": false,
+      "expected_core_blockers": [
         "codex",
-        "codex_config",
-        "domain_modules"
+        "codex_config"
+      ],
+      "expected_maintenance_items": [
+        "domain_modules",
+        "family_runtime_provider",
+        "recommended_skills"
       ],
       "expected_online_management": {
-        "status": "ready",
-        "blocking": false,
-        "full_online_blocking": false
+        "status": "initializing",
+        "blocking": true,
+        "full_online_blocking": true
       }
     },
     {
@@ -84,14 +91,19 @@
       "layer": "local_cli",
       "setup": "temporary HOME and OPL_STATE_DIR, fake compatible codex on PATH, empty managed modules root",
       "expected_phase": "environment",
-      "expected_blockers": [
-        "codex_config",
-        "domain_modules"
+      "expected_ready_to_launch": false,
+      "expected_core_blockers": [
+        "codex_config"
+      ],
+      "expected_maintenance_items": [
+        "domain_modules",
+        "family_runtime_provider",
+        "recommended_skills"
       ],
       "expected_online_management": {
-        "status": "ready",
-        "blocking": false,
-        "full_online_blocking": false
+        "status": "initializing",
+        "blocking": true,
+        "full_online_blocking": true
       }
     },
     {
@@ -99,27 +111,37 @@
       "layer": "local_cli",
       "setup": "temporary HOME and OPL_STATE_DIR, fake outdated codex on PATH",
       "expected_phase": "environment",
-      "expected_blockers": [
+      "expected_ready_to_launch": false,
+      "expected_core_blockers": [
         "codex",
-        "codex_config",
-        "domain_modules"
+        "codex_config"
+      ],
+      "expected_maintenance_items": [
+        "domain_modules",
+        "family_runtime_provider",
+        "recommended_skills"
       ],
       "expected_online_management": {
-        "status": "ready",
-        "blocking": false,
-        "full_online_blocking": false
+        "status": "initializing",
+        "blocking": true,
+        "full_online_blocking": true
       }
     },
     {
       "scenario_id": "ready_baseline",
       "layer": "local_cli",
       "setup": "temporary HOME and OPL_STATE_DIR, fake compatible codex, and git-backed managed module fixtures",
-      "expected_phase": "review",
-      "expected_blockers": [],
+      "expected_phase": "environment",
+      "expected_ready_to_launch": true,
+      "expected_core_blockers": [],
+      "expected_maintenance_items": [
+        "family_runtime_provider",
+        "recommended_skills"
+      ],
       "expected_online_management": {
-        "status": "ready",
-        "blocking": false,
-        "full_online_blocking": false
+        "status": "initializing",
+        "blocking": true,
+        "full_online_blocking": true
       }
     },
     {

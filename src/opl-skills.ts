@@ -567,6 +567,22 @@ function writeJsonFile(filePath: string, value: unknown) {
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
+function writeOplMetaAgentPluginIcon(pluginRoot: string) {
+  const iconPath = path.join(pluginRoot, 'assets', 'icon.svg');
+  const iconSvg = [
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="OPL Meta Agent icon">',
+    '<rect width="64" height="64" rx="14" fill="#214F9A"/>',
+    '<path d="M11 44V20L21 34L31 20V44" fill="none" stroke="#FFFFFF" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    '<path d="M36 44L46 20L56 44" fill="none" stroke="#FFFFFF" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    '<path d="M40 35H52" stroke="#8AD6FF" stroke-width="5.5" stroke-linecap="round"/>',
+    '</svg>',
+    '',
+  ].join('\n');
+  fs.mkdirSync(path.dirname(iconPath), { recursive: true });
+  fs.writeFileSync(iconPath, iconSvg, 'utf8');
+  return './assets/icon.svg';
+}
+
 function resolveGeneratedPluginRoot(inspected: InspectFamilySkillPack, home?: string) {
   return resolveGeneratedPluginRootForName(inspected.canonical_plugin_name, home);
 }
@@ -636,6 +652,7 @@ function writeOplGeneratedPluginSurface(inspected: InspectFamilySkillPack, home?
   const pluginVersion = '0.1.0';
   fs.rmSync(pluginRoot, { recursive: true, force: true });
   fs.mkdirSync(path.join(pluginRoot, 'skills', inspected.canonical_plugin_name, 'agents'), { recursive: true });
+  const pluginIconPath = writeOplMetaAgentPluginIcon(pluginRoot);
   writeJsonFile(path.join(pluginRoot, '.codex-plugin', 'plugin.json'), {
     name: inspected.canonical_plugin_name,
     version: pluginVersion,
@@ -665,6 +682,8 @@ function writeOplGeneratedPluginSurface(inspected: InspectFamilySkillPack, home?
         'Write',
       ],
       websiteURL: 'https://github.com/gaofeng21cn/opl-meta-agent',
+      composerIcon: pluginIconPath,
+      logo: pluginIconPath,
       defaultPrompt: [
         'Build an OPL-compatible agent from this natural-language request.',
         'Take over testing for this existing OPL-compatible agent repo.',
