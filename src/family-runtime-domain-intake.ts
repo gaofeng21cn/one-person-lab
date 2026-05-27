@@ -169,6 +169,10 @@ function canonicalFamilyRuntimeDomainId(value: unknown): FamilyRuntimeDomainId |
     redcube: 'redcube',
     'redcube-ai': 'redcube',
     redcube_ai: 'redcube',
+    oma: 'opl-meta-agent',
+    oplmetaagent: 'opl-meta-agent',
+    'opl-meta-agent': 'opl-meta-agent',
+    opl_meta_agent: 'opl-meta-agent',
   };
   return aliases[normalized] ?? null;
 }

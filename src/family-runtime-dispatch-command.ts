@@ -78,8 +78,12 @@ export function dispatchCommandForDomain(
     };
   }
 
+  const adapter = DOMAIN_ADAPTERS[domainId];
+  if (!adapter) {
+    throw new Error(`Domain dispatch adapter is not configured for ${domainId}; use stage attempt runner or explicit OPL work-order surfaces.`);
+  }
   return {
-    command_preview: [...DOMAIN_ADAPTERS[domainId].dispatch_command, '--task', taskPath, '--format', 'json'],
+    command_preview: [...adapter.dispatch_command, '--task', taskPath, '--format', 'json'],
     cwd: process.cwd(),
   };
 }

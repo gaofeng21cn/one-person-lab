@@ -72,6 +72,70 @@ test('family-runtime stage attempt create is idempotent by semantic attempt key 
   }
 });
 
+test('family-runtime stage attempt admits OPL Meta Agent stage-decomposition attempts', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-oma-attempt-'));
+  try {
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'opl-meta-agent',
+      '--stage',
+      'stage-decomposition',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/oma","stage_packet_path":"/tmp/oma/stage-decomposition-input.json"}',
+      '--checkpoint-ref',
+      'stage-packet:opl-meta-agent/research-workbench-agent/stage-decomposition',
+      '--source-fingerprint',
+      'oma:build-agent-baseline:research-workbench-agent',
+      '--new-attempt',
+    ], familyRuntimeEnv(stateRoot));
+
+    const attempt = created.family_runtime_stage_attempt.attempt;
+    assert.equal(attempt.domain_id, 'opl-meta-agent');
+    assert.equal(attempt.stage_id, 'stage-decomposition');
+    assert.equal(attempt.executor_kind, 'codex_cli');
+    assert.equal(attempt.status, 'queued');
+    assert.deepEqual(attempt.checkpoint_refs, [
+      'stage-packet:opl-meta-agent/research-workbench-agent/stage-decomposition',
+    ]);
+
+    const closeoutPacket = {
+      surface_kind: 'stage_attempt_closeout_packet',
+      closeout_refs: ['receipt:opl-meta-agent/research-workbench-agent/stage-decomposition-pack-draft'],
+      consumed_refs: ['stage-packet:opl-meta-agent/research-workbench-agent/stage-decomposition'],
+      next_owner: 'opl-meta-agent',
+      domain_ready_verdict: 'domain_gate_pending',
+    };
+    const fixtureRun = runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      attempt.stage_attempt_id,
+      '--stage-packet-ref',
+      'stage-packet:opl-meta-agent/research-workbench-agent/stage-decomposition',
+      '--closeout-packet',
+      JSON.stringify(closeoutPacket),
+    ], familyRuntimeEnv(stateRoot));
+    assert.equal(fixtureRun.family_runtime_stage_attempt_fixture_run.attempt.status, 'completed');
+
+    const query = runCli([
+      'family-runtime',
+      'attempt',
+      'query',
+      attempt.stage_attempt_id,
+    ], familyRuntimeEnv(stateRoot));
+    assert.equal(query.family_runtime_stage_attempt_query.stage_attempt_query.attempt.domain_id, 'opl-meta-agent');
+    assert.deepEqual(query.family_runtime_stage_attempt_query.stage_attempt_query.attempt.closeout_refs, closeoutPacket.closeout_refs);
+    assert.equal(query.family_runtime_stage_attempt_query.stage_attempt_query.completion_boundary.provider_completion, 'completed');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime attempt create projects launch invocation and gates non-default executor binding', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-launch-invocation-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();

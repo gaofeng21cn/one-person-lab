@@ -150,11 +150,13 @@ export type FamilyRuntimeCommandInput =
   }
   | { mode: 'approve'; taskId: string; decision: 'approve' | 'deny'; reason?: string };
 
-export const DOMAIN_ADAPTERS: Record<FamilyRuntimeDomainId, {
+export type FamilyRuntimeDomainAdapter = {
   repo_id: string;
   truth_owner: string;
   dispatch_command: string[];
-}> = {
+};
+
+export const DOMAIN_ADAPTERS: Partial<Record<FamilyRuntimeDomainId, FamilyRuntimeDomainAdapter>> = {
   medautoscience: {
     repo_id: 'med-autoscience',
     truth_owner: 'med-autoscience',

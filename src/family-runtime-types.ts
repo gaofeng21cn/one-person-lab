@@ -1,4 +1,4 @@
-export const FAMILY_RUNTIME_DOMAIN_IDS = ['medautoscience', 'medautogrant', 'redcube'] as const;
+export const FAMILY_RUNTIME_DOMAIN_IDS = ['medautoscience', 'medautogrant', 'redcube', 'opl-meta-agent'] as const;
 
 export type FamilyRuntimeDomainId = typeof FAMILY_RUNTIME_DOMAIN_IDS[number];
 
