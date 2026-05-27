@@ -239,15 +239,27 @@ function packageExportLifecycle(workbench: JsonRecord) {
   };
 }
 
-function memoryWritebackRefs(workbench: JsonRecord) {
+function externalVerifiedMemoryWritebackReceiptRefs(evidenceRequests: JsonRecord) {
+  return uniqueStrings(recordList(evidenceRequests.external_receipts)
+    .filter((receipt) => stringValue(receipt.receipt_status) === 'verified')
+    .flatMap((receipt) => stringList(receipt.memory_writeback_receipt_refs)));
+}
+
+function memoryWritebackRefs(workbench: JsonRecord, evidenceRequests: JsonRecord) {
   const memory = record(workbench.memory_locator_index);
   return {
     surface_kind: 'opl_app_drilldown_memory_writeback_refs',
     projection_policy: 'memory_refs_and_writeback_receipts_only_no_memory_body',
     consumed_memory_refs: uniqueStrings(stringList(memory.consumed_memory_refs)),
-    writeback_receipt_refs: uniqueStrings(stringList(memory.writeback_receipt_refs)),
+    writeback_receipt_refs: uniqueStrings([
+      ...stringList(memory.writeback_receipt_refs),
+      ...externalVerifiedMemoryWritebackReceiptRefs(evidenceRequests),
+    ]),
     rejected_write_count: recordList(memory.rejected_writes).length,
-    authority_boundary: refsOnlyAuthorityBoundary(),
+    authority_boundary: {
+      ...refsOnlyAuthorityBoundary(),
+      can_accept_or_reject_memory_writeback: false,
+    },
   };
 }
 
@@ -452,7 +464,7 @@ function freshnessRefs(attempts: JsonRecord[], domainProjectionIngestion: JsonRe
   ]);
 }
 
-function refFamilyRefs(workbench: JsonRecord) {
+function refFamilyRefs(workbench: JsonRecord, memoryRefsProjection: JsonRecord) {
   const workspace = record(workbench.workspace_source_intake);
   const artifacts = record(workbench.artifact_gallery);
   const memory = record(workbench.memory_locator_index);
@@ -481,7 +493,7 @@ function refFamilyRefs(workbench: JsonRecord) {
     } => Boolean(entry.ref)));
   const memoryRefs = uniqueRefs([
     ...stringList(memory.consumed_memory_refs).map((ref) => ({ ref, role: 'consumed_memory_ref' })),
-    ...stringList(memory.writeback_receipt_refs).map((ref) => ({
+    ...stringList(memoryRefsProjection.writeback_receipt_refs).map((ref) => ({
       ref,
       role: 'memory_writeback_receipt_ref',
     })),
@@ -937,7 +949,11 @@ export function buildAppOperatorDrilldown(input: {
   const reviewItems = reviewRepairItems(input.stageAttemptWorkbench);
   const artifactRefs = artifactGalleryRefs(input.stageAttemptWorkbench);
   const packageLifecycle = packageExportLifecycle(input.stageAttemptWorkbench);
-  const memoryRefs = memoryWritebackRefs(input.stageAttemptWorkbench);
+  const evidenceRequests = buildDomainEvidenceRequestRefs(
+    input.domainManifestProjects,
+    replacementCoverage,
+  );
+  const memoryRefs = memoryWritebackRefs(input.stageAttemptWorkbench, record(evidenceRequests));
   const qualityRefs = qualityReadinessRefs(input.stageAttemptWorkbench);
   const providerActionRefs = providerSloRefs(input.providerContinuousProof);
   const providerCadenceWindow = providerCadenceWindowSummary(input.providerContinuousProof);
@@ -959,16 +975,12 @@ export function buildAppOperatorDrilldown(input: {
     attempts: operatorEvidenceAttempts,
   });
   const freshness = freshnessRefs(attempts, input.domainProjectionIngestion);
-  const refFamilies = refFamilyRefs(input.stageAttemptWorkbench);
+  const refFamilies = refFamilyRefs(input.stageAttemptWorkbench, record(memoryRefs));
   const currentControlState = currentControlStateProjection(operatorEvidenceAttempts);
   const functionalSummary = functionalPrivatizationSummary(input.domainManifestProjects);
   const functionalAuditRefs = functionalPrivatizationAuditRefs(input.domainManifestProjects);
   const defaultCallerDeletionEvidenceRefs =
     buildDefaultCallerDeletionEvidenceRefs(input.domainManifestProjects);
-  const evidenceRequests = buildDomainEvidenceRequestRefs(
-    input.domainManifestProjects,
-    replacementCoverage,
-  );
   const domainOwnerPayloadSummaryRefs = buildDomainOwnerPayloadSummaryRefs({
     domainManifestProjects: input.domainManifestProjects,
   });

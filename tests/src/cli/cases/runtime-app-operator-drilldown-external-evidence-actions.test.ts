@@ -312,6 +312,28 @@ test('standalone verified external evidence receipts feed memory artifact lifecy
     assert.equal(drilldown.summary.domain_external_verified_package_lifecycle_receipt_ref_count, 1);
     assert.equal(drilldown.summary.domain_external_verified_lifecycle_receipt_ref_count, 1);
     assert.equal(drilldown.summary.domain_external_verified_restore_proof_ref_count, 1);
+    assert.equal(drilldown.summary.memory_writeback_ref_count, 1);
+    assert.deepEqual(
+      drilldown.memory_writeback_refs.writeback_receipt_refs,
+      ['mas://memory/writeback/live-receipt.json'],
+    );
+    assert.equal(
+      drilldown.memory_writeback_refs.authority_boundary.can_read_memory_body,
+      false,
+    );
+    assert.equal(
+      drilldown.memory_writeback_refs.authority_boundary.can_accept_or_reject_memory_writeback,
+      false,
+    );
+    assert.equal(drilldown.ref_family_refs.summary.memory_ref_count, 1);
+    assert.equal(
+      drilldown.runtime_visualization_projection.graph.nodes.some(
+        (node: { node_kind: string; ref: string }) =>
+          node.node_kind === 'memory_writeback_receipt'
+          && node.ref === 'mas://memory/writeback/live-receipt.json',
+      ),
+      true,
+    );
     assert.equal(
       drilldown.domain_evidence_request_refs.external_receipts[0].role,
       'standalone_external_evidence_receipt',
