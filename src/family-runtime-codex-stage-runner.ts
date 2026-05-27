@@ -23,6 +23,8 @@ type JsonRecord = Record<string, unknown>;
 
 export type TypedStageCloseoutPacket = {
   surface_kind: 'stage_attempt_closeout_packet' | 'stage_memory_closeout_packet' | 'domain_stage_closeout_packet';
+  stage_attempt_id?: string;
+  idempotency_key?: string;
   closeout_id?: string;
   closeout_refs: string[];
   consumed_refs: string[];
@@ -91,6 +93,9 @@ type CodexStageRunnerProcessOutputSummary = {
   recovered_final_message_chars?: number;
   session_recovery_status?: string;
   session_recovery_attempts?: number;
+  closeout_rejection_reason?: 'stage_attempt_id_mismatch' | 'idempotency_key_mismatch';
+  rejected_closeout_stage_attempt_id?: string;
+  rejected_closeout_idempotency_key?: string;
 };
 
 type CodexStageRunnerInput = {
@@ -305,6 +310,39 @@ async function recoverCloseoutFromCodexSessionWithRetry(input: {
   }
 }
 
+function validateCloseoutPacketForAttempt(input: {
+  closeoutPacket: TypedStageCloseoutPacket | null;
+  attempt: JsonRecord;
+}) {
+  const closeoutPacket = input.closeoutPacket;
+  if (!closeoutPacket) {
+    return { closeoutPacket: null, rejection: null };
+  }
+  const attemptId = optionalString(input.attempt.stage_attempt_id);
+  if (attemptId && closeoutPacket.stage_attempt_id && closeoutPacket.stage_attempt_id !== attemptId) {
+    return {
+      closeoutPacket: null,
+      rejection: {
+        reason: 'stage_attempt_id_mismatch' as const,
+        stage_attempt_id: closeoutPacket.stage_attempt_id,
+        idempotency_key: closeoutPacket.idempotency_key ?? null,
+      },
+    };
+  }
+  const idempotencyKey = optionalString(input.attempt.idempotency_key);
+  if (idempotencyKey && closeoutPacket.idempotency_key && closeoutPacket.idempotency_key !== idempotencyKey) {
+    return {
+      closeoutPacket: null,
+      rejection: {
+        reason: 'idempotency_key_mismatch' as const,
+        stage_attempt_id: closeoutPacket.stage_attempt_id ?? null,
+        idempotency_key: closeoutPacket.idempotency_key,
+      },
+    };
+  }
+  return { closeoutPacket, rejection: null };
+}
+
 function normalizeAgentExecutorStageMode(value?: string | null): AgentExecutorKind | null {
   const normalized = value?.trim().replace(/-/g, '_');
   if (AGENT_EXECUTOR_KINDS.includes(normalized as AgentExecutorKind)) {
@@ -510,6 +548,7 @@ export async function runCodexStageRunner(input: CodexStageRunnerInput): Promise
   let recoveredFinalMessageChars = 0;
   let sessionRecoveryAttempts = 0;
   let sessionRecoveryStatus: string | null = null;
+  let closeoutRejection: ReturnType<typeof validateCloseoutPacketForAttempt>['rejection'] = null;
   if (!closeoutPacket && result.timeoutReason !== 'unsupported_tool_protocol') {
     const recovered = await recoverCloseoutFromCodexSessionWithRetry({
       threadId: parsed.threadId,
@@ -524,6 +563,12 @@ export async function runCodexStageRunner(input: CodexStageRunnerInput): Promise
       recoveredFinalMessageChars = recovered.parsed?.finalMessage.length ?? 0;
     }
   }
+  const validatedCloseout = validateCloseoutPacketForAttempt({
+    closeoutPacket,
+    attempt: input.attempt,
+  });
+  closeoutPacket = validatedCloseout.closeoutPacket;
+  closeoutRejection = validatedCloseout.rejection;
   return {
     ...buildCodexStageRunnerReceipt({
       ...input,
@@ -567,6 +612,17 @@ export async function runCodexStageRunner(input: CodexStageRunnerInput): Promise
         ? {
             session_recovery_status: sessionRecoveryStatus,
             session_recovery_attempts: sessionRecoveryAttempts,
+          }
+        : {}),
+      ...(closeoutRejection
+        ? {
+            closeout_rejection_reason: closeoutRejection.reason,
+            ...(closeoutRejection.stage_attempt_id
+              ? { rejected_closeout_stage_attempt_id: closeoutRejection.stage_attempt_id }
+              : {}),
+            ...(closeoutRejection.idempotency_key
+              ? { rejected_closeout_idempotency_key: closeoutRejection.idempotency_key }
+              : {}),
           }
         : {}),
     },
@@ -665,6 +721,8 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
 
   return {
     surface_kind: surfaceKind,
+    ...(optionalString(value.stage_attempt_id) ? { stage_attempt_id: optionalString(value.stage_attempt_id)! } : {}),
+    ...(optionalString(value.idempotency_key) ? { idempotency_key: optionalString(value.idempotency_key)! } : {}),
     ...(optionalString(value.closeout_id) ? { closeout_id: optionalString(value.closeout_id)! } : {}),
     closeout_refs: [...new Set(closeoutRefs)],
     consumed_refs: readStringList(value.consumed_refs),

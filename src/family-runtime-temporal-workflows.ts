@@ -77,6 +77,34 @@ function closeoutPacketFromCodexResult(value: Record<string, unknown>) {
   return Object.keys(closeout).length > 0 ? closeout : null;
 }
 
+function validateCloseoutPacketForWorkflow(input: {
+  closeoutPacket: Record<string, unknown> | null;
+  workflowInput: TemporalStageAttemptWorkflowInput;
+}) {
+  const closeoutPacket = input.closeoutPacket;
+  if (!closeoutPacket) {
+    return { closeoutPacket: null, providerBlocker: null };
+  }
+  const closeoutAttemptId = typeof closeoutPacket.stage_attempt_id === 'string' && closeoutPacket.stage_attempt_id.trim()
+    ? closeoutPacket.stage_attempt_id.trim()
+    : null;
+  if (closeoutAttemptId && closeoutAttemptId !== input.workflowInput.stage_attempt_id) {
+    return {
+      closeoutPacket: null,
+      providerBlocker: {
+        blocked_reason: 'typed_closeout_stage_attempt_id_mismatch',
+        route_impact: {
+          provider_blocker_reason: 'typed_closeout_stage_attempt_id_mismatch',
+          provider_blocker_surface: 'codex_stage_activity.closeout_packet.stage_attempt_id',
+          expected_stage_attempt_id: input.workflowInput.stage_attempt_id,
+          actual_stage_attempt_id: closeoutAttemptId,
+        },
+      },
+    };
+  }
+  return { closeoutPacket, providerBlocker: null };
+}
+
 function providerBlockerFromCodexResult(value: Record<string, unknown>) {
   const summary = asRecord(value.process_output_summary);
   const blockedReason = typeof summary.blocked_reason === 'string' && summary.blocked_reason.trim()
@@ -192,8 +220,12 @@ export async function StageAttemptWorkflow(
       ],
     };
 
-    const codexCloseoutPacket = closeoutPacketFromCodexResult(codexResult);
-    const providerBlocker = providerBlockerFromCodexResult(codexResult);
+    const codexCloseoutValidation = validateCloseoutPacketForWorkflow({
+      closeoutPacket: closeoutPacketFromCodexResult(codexResult),
+      workflowInput: input,
+    });
+    const codexCloseoutPacket = codexCloseoutValidation.closeoutPacket;
+    const providerBlocker = codexCloseoutValidation.providerBlocker ?? providerBlockerFromCodexResult(codexResult);
     const dispatchResult = await domainHandlerDispatchActivity({
       ...input,
       closeout_packet: codexCloseoutPacket ?? input.closeout_packet ?? null,

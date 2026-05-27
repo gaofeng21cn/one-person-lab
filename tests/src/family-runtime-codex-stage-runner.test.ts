@@ -275,6 +275,57 @@ exit 64
   }
 });
 
+test('Codex stage runner rejects typed closeout packets for a different stage attempt', async () => {
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    stage_attempt_id: 'sat_previous_attempt',
+    closeout_refs: [
+      'studies/003/artifacts/supervision/consumer/stage_attempt_closeouts/sat_previous_attempt.json',
+    ],
+    consumed_refs: ['paper:draft.md'],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'domain_gate_pending',
+  };
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"type":"thread.started","thread_id":"thread-stale-closeout"}\\n'
+  printf '{"type":"turn.started"}\\n'
+  printf '%s\\n' '${JSON.stringify({ type: 'item.completed', item: { type: 'agent_message', id: 'msg-1', text: JSON.stringify(closeout) } })}'
+  printf '{"type":"turn.completed"}\\n'
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    const receipt = await runCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_current_attempt',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['checkpoint:stale-closeout'],
+      },
+      stagePacketRef: 'packet:stale-closeout',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+    });
+
+    assert.equal(receipt.closeout_packet, null);
+    assert.equal(receipt.process_output_summary?.closeout_rejection_reason, 'stage_attempt_id_mismatch');
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('Codex stage runner captures terminal typed closeout from assistant message events', async () => {
   const closeout = {
     surface_kind: 'domain_stage_closeout_packet',

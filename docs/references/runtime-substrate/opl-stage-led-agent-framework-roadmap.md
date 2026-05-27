@@ -500,6 +500,7 @@ Codex CLI 负责：
 
 - 已完成：stage packet ref、workspace locator、authority boundary 可进入 fixture activity input。
 - 已完成：typed closeout packet 强制要求 `closeout_refs`，并投影 consumed refs、consumed memory refs、writeback receipt refs、rejected writes、route impact、next owner、domain ready verdict。
+- 已完成：typed closeout packet 在 provider completion 前校验 current `stage_attempt_id`，runner 对可用的 `idempotency_key` 也校验 currentness；旧 attempt/session 的 closeout 不得完成新 attempt。
 - 已完成：typed closeout ledger 对同一 `closeout_id` 的完全相同 packet 重放保持幂等，对同一 id 的冲突 packet fail-closed，避免污染 closeout refs、activity ledger 或 route impact。
 - 已完成：checkpoint refs、human gate ledger、user instruction ledger、resume ledger 和 dead-letter task ledger 进入 attempt ledger/query/workbench projection。
 - 已完成：缺少 typed closeout 的 domain dispatch 只进入 checkpointed，不能被标成 completed。
