@@ -605,6 +605,9 @@ test('runtime snapshot projects stage attempt usage pressure into workbench grou
     assert.equal(workbench.summary.usage_projection.retry_budget_exhausted_count, 1);
     assert.equal(workbench.summary.stage_progress_log.surface_kind, 'opl_stage_progress_log_summary');
     assert.equal(workbench.summary.stage_progress_log.attempt_count, 2);
+    assert.equal(workbench.summary.stage_progress_log.duration_observed_attempt_count, 1);
+    assert.equal(workbench.summary.stage_progress_log.user_duration_observed_attempt_count, 2);
+    assert.equal(workbench.summary.stage_progress_log.user_duration_fallback_attempt_count, 1);
     assert.equal(workbench.summary.stage_progress_log.missing_usage_telemetry_attempt_count, 1);
     assert.equal(workbench.summary.stage_progress_log.temporal_attempt_count, 0);
     assert.equal(workbench.summary.stage_progress_log.temporal_webui_ref_count, 0);

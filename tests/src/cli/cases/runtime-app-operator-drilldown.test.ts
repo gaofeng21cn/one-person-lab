@@ -447,6 +447,8 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     );
     assert.equal(drilldown.stage_progress_log.surface_kind, 'opl_stage_progress_log_summary');
     assert.equal(drilldown.stage_progress_log.attempt_count, 1);
+    assert.equal(drilldown.stage_progress_log.user_duration_observed_attempt_count, 1);
+    assert.equal(drilldown.stage_progress_log.user_duration_fallback_attempt_count, 0);
     assert.equal(Array.isArray(drilldown.stage_progress_log.attempt_refs), true);
     assert.equal(
       drilldown.stage_progress_log.attempt_refs.includes(

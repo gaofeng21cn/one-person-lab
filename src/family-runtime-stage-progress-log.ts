@@ -578,6 +578,12 @@ export function summarizeStageProgressLogs(
   const durationObserved = projections.filter((projection) =>
     projection.timeline.duration_telemetry_status === 'observed'
   );
+  const userDurationObserved = projections.filter((projection) =>
+    projection.user_stage_log.duration.status === 'observed'
+  );
+  const userDurationFallback = userDurationObserved.filter((projection) =>
+    projection.user_stage_log.duration.telemetry_fallback_used === true
+  );
   const activityEventRefs = uniqueStrings(projections.flatMap((projection) =>
     projection.evidence_refs.activity_event_refs
   ));
@@ -599,6 +605,8 @@ export function summarizeStageProgressLogs(
       count + projection.timeline.runner_progress_event_count, 0
     ),
     duration_observed_attempt_count: durationObserved.length,
+    user_duration_observed_attempt_count: userDurationObserved.length,
+    user_duration_fallback_attempt_count: userDurationFallback.length,
     missing_usage_telemetry_attempt_count: usageMissing.length,
     temporal_webui_ref_count: uniqueStrings(temporalWebUiRefs).length,
     temporal_visibility_readiness_statuses: uniqueStrings(temporalLogs
