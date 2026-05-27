@@ -319,7 +319,7 @@ export function refreshMasDefaultExecutorLiveAttemptTaskLease(
   };
 }
 
-function stageIdForProviderHostedTask(row: FamilyRuntimeTaskRow, payload: Record<string, unknown>) {
+export function stageIdForProviderHostedTask(row: FamilyRuntimeTaskRow, payload: Record<string, unknown>) {
   if (isMasOwnerRouteTask(row.domain_id, row.task_kind)) {
     return row.task_kind;
   }

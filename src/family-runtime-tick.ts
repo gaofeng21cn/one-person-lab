@@ -20,6 +20,7 @@ import {
   masDefaultExecutorDispatchIdentity,
   masDefaultExecutorDomainSourceFingerprint,
   refreshMasDefaultExecutorLiveAttemptTaskLease,
+  stageIdForProviderHostedTask,
 } from './family-runtime-provider-hosted-attempts.ts';
 import { redriveBlockedMasDefaultExecutorProviderTransportTask } from './family-runtime-redrive.ts';
 
@@ -127,6 +128,10 @@ function isExpiredOrUnleasedRunningTask(row: FamilyRuntimeTaskRow) {
   return Number.isFinite(leaseExpiresAt) && leaseExpiresAt <= Date.now();
 }
 
+function requiresProviderHostedStageAttemptIdentity(row: FamilyRuntimeTaskRow, payload: Record<string, unknown>) {
+  return stageIdForProviderHostedTask(row, payload) !== null;
+}
+
 function repairRunningTasksWithoutStageAttemptIdentity(
   db: DatabaseSync,
   rows: FamilyRuntimeTaskRow[],
@@ -141,6 +146,9 @@ function repairRunningTasksWithoutStageAttemptIdentity(
       continue;
     }
     const payload = payloadFromTask(row);
+    if (!requiresProviderHostedStageAttemptIdentity(row, payload)) {
+      continue;
+    }
     const nextStatus = row.attempts >= row.max_attempts ? 'dead_letter' : 'retry_waiting';
     db.prepare(`
       UPDATE tasks

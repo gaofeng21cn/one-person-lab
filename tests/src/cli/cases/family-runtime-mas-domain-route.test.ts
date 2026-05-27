@@ -717,3 +717,52 @@ JSON
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('family-runtime missing identity repair ignores non-provider-hosted running domain handler tasks', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-non-provider-running-'));
+  const dispatch = createDispatchFixture(`
+cat <<'JSON'
+{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receipt"}
+JSON
+`);
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'custom/non-provider-task',
+      '--payload',
+      '{"study_id":"DM002"}',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
+    const db = new DatabaseSync(queueDb);
+    db.prepare(`
+      UPDATE tasks
+      SET status = 'running',
+        attempts = 1,
+        lease_owner = 'stale-worker',
+        lease_expires_at = '2026-05-27T00:00:00.000Z'
+      WHERE task_id = ?
+    `).run(taskId);
+    db.close();
+
+    const before = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test-repair-scope'], env);
+    const after = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+
+    assert.equal(before.family_runtime_task.task.current_control_state.reconciliation_status, 'blocked_missing_identity');
+    assert.equal(tick.family_runtime_tick.repaired_missing_identity_running_count, 0);
+    assert.equal(tick.family_runtime_tick.selected_count, 0);
+    assert.equal(after.family_runtime_task.task.status, 'running');
+    assert.equal(after.family_runtime_task.stage_attempts.length, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
+  }
+});
