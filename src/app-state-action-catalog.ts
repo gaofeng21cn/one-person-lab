@@ -29,6 +29,14 @@ export function buildActionCatalog() {
       mutates: 'opl_developer_supervisor_config',
     },
     {
+      action_id: 'developer_supervisor_refresh',
+      label: 'Refresh Developer Mode authority',
+      surface: 'opl app action execute',
+      delegated_surface: 'opl system developer-supervisor',
+      payload_fields: [],
+      mutates: 'none_read_only',
+    },
+    {
       action_id: 'update_channel',
       label: 'Configure release channel',
       surface: 'opl app action execute',

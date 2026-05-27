@@ -68,6 +68,7 @@ export type OplDeveloperModeProjection = {
   allowed_route: DeveloperModeAllowedRoute;
   github_identity: GithubIdentityProjection;
   repo_authority: RepoAuthoritySummary;
+  inspection_detail?: 'fast' | 'full';
 };
 
 type GhFixture = {
@@ -305,6 +306,25 @@ function buildDisabledRepoAuthority(status: RepoAuthorityStatus, reason: string)
   };
 }
 
+function buildNotCheckedRepoAuthority(reason: string): RepoAuthoritySummary {
+  const targets = buildRepoTargets();
+  return {
+    status: 'not_checked',
+    required_repo_count: targets.length,
+    direct_write_repo_count: 0,
+    pr_route_repo_count: 0,
+    blocked_repo_count: 0,
+    repos: targets.map((target) => ({
+      ...target,
+      status: 'not_checked',
+      permission: null,
+      direct_write_allowed: false,
+      allowed_route: 'blocked',
+      reason,
+    })),
+  };
+}
+
 function readRepoPermission(target: RepoAuthorityTarget, login: string, fixture: GhFixture | null) {
   const fixturePermission = readFixturePermission(fixture, target.repo);
   if (fixturePermission) {
@@ -432,6 +452,7 @@ function buildSkippedIdentity(status: GithubIdentityStatus, reason: string | nul
 
 export function buildOplDeveloperModeProjection(
   config: OplDeveloperSupervisorConfigFile = readOplDeveloperSupervisorConfig(),
+  options: { detail?: 'fast' | 'full' } = {},
 ): OplDeveloperModeProjection {
   if (config.enabled === 'off') {
     return {
@@ -445,6 +466,40 @@ export function buildOplDeveloperModeProjection(
       allowed_route: 'disabled',
       github_identity: buildSkippedIdentity('skipped', 'developer_mode_disabled'),
       repo_authority: buildDisabledRepoAuthority('disabled', 'developer_mode_disabled'),
+      inspection_detail: options.detail ?? 'full',
+    };
+  }
+
+  if (options.detail === 'fast') {
+    const repoAuthority = buildNotCheckedRepoAuthority('fast_profile_defers_github_permission_check');
+    const githubIdentity = buildSkippedIdentity('skipped', 'fast_profile_defers_github_identity_check');
+    if (config.enabled === 'auto') {
+      return {
+        surface_id: 'opl_developer_mode',
+        status: 'inactive',
+        enabled: config.enabled,
+        effective_state: 'inactive_auto_identity_mismatch',
+        mode: config.mode,
+        config_source: config.source,
+        auto_enable_github_login: config.auto_enable_github_login,
+        allowed_route: 'blocked',
+        github_identity: githubIdentity,
+        repo_authority: repoAuthority,
+        inspection_detail: 'fast',
+      };
+    }
+    return {
+      surface_id: 'opl_developer_mode',
+      status: 'ready',
+      enabled: config.enabled,
+      effective_state: config.mode === 'external_observe' ? 'observe_only' : 'active_direct',
+      mode: config.mode,
+      config_source: config.source,
+      auto_enable_github_login: config.auto_enable_github_login,
+      allowed_route: config.mode === 'external_observe' ? 'observe_only' : 'direct_repo_fix',
+      github_identity: githubIdentity,
+      repo_authority: repoAuthority,
+      inspection_detail: 'fast',
     };
   }
 
@@ -462,6 +517,7 @@ export function buildOplDeveloperModeProjection(
       allowed_route: 'blocked',
       github_identity: identity,
       repo_authority: buildDisabledRepoAuthority('blocked', 'github_identity_unavailable'),
+      inspection_detail: 'full',
     };
   }
 
@@ -477,6 +533,7 @@ export function buildOplDeveloperModeProjection(
       allowed_route: 'blocked',
       github_identity: identity,
       repo_authority: buildDisabledRepoAuthority('not_checked', 'auto_identity_mismatch'),
+      inspection_detail: 'full',
     };
   }
 
@@ -493,6 +550,7 @@ export function buildOplDeveloperModeProjection(
       allowed_route: repoAuthority.status === 'blocked' ? 'blocked' : 'observe_only',
       github_identity: identity,
       repo_authority: repoAuthority,
+      inspection_detail: 'full',
     };
   }
 
@@ -515,5 +573,6 @@ export function buildOplDeveloperModeProjection(
     allowed_route: allowedRoute,
     github_identity: identity,
     repo_authority: repoAuthority,
+    inspection_detail: 'full',
   };
 }

@@ -300,12 +300,16 @@ export function projectionFromMasManifestEntry(entry: DomainManifestCatalogEntry
   });
 }
 
-function projectionFromManifest() {
+function projectionFromManifest(options: { manifestTimeoutMs?: number } = {}) {
   const binding = getActiveWorkspaceBinding('medautoscience');
   if (!binding?.direct_entry.manifest_command) {
     return null;
   }
-  return projectionFromMasManifestEntry(resolveBindingManifest('medautoscience', 'med-autoscience', binding));
+  return projectionFromMasManifestEntry(resolveBindingManifest('medautoscience', 'med-autoscience', binding, {
+    timeoutMs: options.manifestTimeoutMs,
+    timeoutPolicy: options.manifestTimeoutMs === undefined ? 'env_or_default' : 'fixed',
+    materializeFamilyTransitions: false,
+  }));
 }
 
 function projectionFromDomainHandler() {
@@ -335,7 +339,7 @@ function projectionFromDomainHandler() {
 }
 
 export function readMasManagedProviderProjection(
-  options: { includeManifest?: boolean } = {},
+  options: { includeManifest?: boolean; manifestTimeoutMs?: number } = {},
 ): MasManagedProviderProjection | null {
-  return (options.includeManifest === false ? null : projectionFromManifest()) ?? projectionFromDomainHandler();
+  return (options.includeManifest === false ? null : projectionFromManifest(options)) ?? projectionFromDomainHandler();
 }

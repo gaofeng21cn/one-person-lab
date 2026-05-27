@@ -42,6 +42,7 @@ function temporalWorkerStatus(status: 'worker_not_ready' | 'ready') {
     surface_kind: 'temporal_worker_lifecycle_status',
     provider_kind: 'temporal',
     lifecycle_status: status,
+    inspection_detail: 'full',
     readiness_status: status,
     inspection_detail: 'full',
     worker_ready: status === 'ready',

@@ -23,8 +23,11 @@ export function buildOplDeveloperModeAction(endpoints: OplEndpoints): OplInitial
   };
 }
 
-export function buildOplDeveloperModeSurface(endpoints: OplEndpoints) {
-  const projection = buildOplDeveloperModeProjection();
+export function buildOplDeveloperModeSurface(
+  endpoints: OplEndpoints,
+  options: { detail?: 'fast' | 'full' } = {},
+) {
+  const projection = buildOplDeveloperModeProjection(undefined, options);
   const action = buildOplDeveloperModeAction(endpoints);
 
   return {

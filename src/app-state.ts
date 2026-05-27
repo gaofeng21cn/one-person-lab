@@ -217,7 +217,9 @@ async function buildProviderState(profile: AppStateProfile) {
     familyRuntimePaths(),
     {
       detail: profile,
-      managedProviderProjection: readMasManagedProviderProjection(),
+      managedProviderProjection: profile === 'fast'
+        ? readMasManagedProviderProjection({ includeManifest: false })
+        : readMasManagedProviderProjection(),
     },
   );
   return {
@@ -392,7 +394,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const statePaths = ensureOplStateDir(resolveOplStatePaths());
   const modules = publicModuleItems(profile);
   const moduleSource = resolveModuleSource(modules);
-  const developerMode = buildOplDeveloperModeSurface(buildOplEndpoints());
+  const developerMode = buildOplDeveloperModeSurface(buildOplEndpoints(), { detail: profile });
   const provider = await buildProviderState(profile);
   const release = buildReleaseState();
   const workspaceRoot = readOplWorkspaceRoot();
@@ -412,7 +414,9 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
       selected_path: resolveDefaultFamilyWorkspaceRoot(),
       source: process.env.OPL_FAMILY_WORKSPACE_ROOT?.trim()
         ? 'env'
-        : 'repo_sibling_discovery',
+        : profile === 'fast'
+          ? 'repo_sibling_discovery_fast'
+          : 'repo_sibling_discovery',
       role: 'developer_mode_module_checkout_discovery_root',
     },
     workspace_root: workspaceRoot,
@@ -718,6 +722,21 @@ async function executeDirectAppAction(
           developerSupervisorAutoEnableGithubLogin:
             stringPayloadField(options.payload, 'developerSupervisorAutoEnableGithubLogin') ?? undefined,
         }),
+    };
+  }
+
+  if (options.actionId === 'developer_supervisor_refresh') {
+    return {
+      delegatedSurface: 'opl system developer-supervisor',
+      result: options.dryRun
+        ? {
+            system_action: {
+              action: 'developer_supervisor',
+              status: 'dry_run',
+              requested: {},
+            },
+          }
+        : await runOplSystemAction(contracts, 'developer_supervisor'),
     };
   }
 
