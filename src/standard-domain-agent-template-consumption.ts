@@ -288,6 +288,8 @@ export function buildStandardDomainAgentScaffoldConsumptionEvidence(input: Scaff
         : primary.proof_kind,
       domain_id: primary.domain_id,
       sample_domain_ids: sampleEvidence.map((sample) => sample.domain_id),
+      read_model_contract_ref:
+        '/runtime_tray_snapshot/app_operator_drilldown/standard_agent_template_consumption_refs/evidence_contract',
       consumption_cohort: {
         surface_kind: 'opl_standard_agent_template_consumption_cohort_evidence',
         sample_count: sampleEvidence.length,

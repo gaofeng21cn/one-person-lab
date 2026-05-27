@@ -553,6 +553,10 @@ test('agents scaffold consumption evidence repeats generate and validate across 
     'thesis-foundry',
     'review-foundry',
   ]);
+  assert.equal(
+    evidence.read_model_contract_ref,
+    '/runtime_tray_snapshot/app_operator_drilldown/standard_agent_template_consumption_refs/evidence_contract',
+  );
   assert.equal(evidence.consumption_cohort.sample_count, 3);
   assert.equal(evidence.consumption_cohort.passed_sample_count, 3);
   assert.equal(evidence.consumption_cohort.blocked_sample_count, 0);

@@ -791,16 +791,49 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
 }
 
 export function buildStandardDomainAgentTemplateConsumptionReadModel() {
+  const proofCommand = ['agents', 'scaffold', '--consumption-evidence'];
+  const proofCommandShell = 'opl agents scaffold --consumption-evidence';
   return {
     surface_kind: 'opl_standard_agent_template_consumption_read_model',
     owner: 'one-person-lab',
     status: 'explicit_repeat_consumption_proof_command_available',
     projection_policy: 'refs_only_operator_projection_no_implicit_temp_generation',
-    proof_command: ['agents', 'scaffold', '--consumption-evidence'],
-    proof_command_shell: 'opl agents scaffold --consumption-evidence',
+    proof_command: proofCommand,
+    proof_command_shell: proofCommandShell,
     default_consumption_sample_domain_ids: DEFAULT_TEMPLATE_CONSUMPTION_SAMPLE_DOMAINS.map((sample) =>
       sample.domainId
     ),
+    evidence_contract: {
+      surface_kind: 'opl_standard_agent_template_consumption_evidence_contract',
+      contract_role: 'replayable_expected_shape_for_template_consumption_proof',
+      replay_command: proofCommand,
+      replay_command_shell: proofCommandShell,
+      expected_output_root: '/standard_domain_agent_template_consumption_evidence',
+      expected_status_path: '/standard_domain_agent_template_consumption_evidence/status',
+      expected_success_status: 'passed',
+      expected_sample_domain_ids_path:
+        '/standard_domain_agent_template_consumption_evidence/sample_domain_ids',
+      expected_consumption_cohort_path:
+        '/standard_domain_agent_template_consumption_evidence/consumption_cohort',
+      expected_sample_success_path:
+        '/standard_domain_agent_template_consumption_evidence/consumption_cohort/samples/*/status',
+      expected_sample_success_status: 'passed',
+      expected_consumed_surfaces: [
+        'scaffold_validation',
+        'standard_agent_conformance',
+        'agent_readiness',
+        'app_operator_projection',
+      ],
+      expected_authority_boundary_path:
+        '/standard_domain_agent_template_consumption_evidence/authority_boundary',
+      forbidden_claim_fields: [
+        'domain_ready',
+        'artifact_authority',
+        'production_ready',
+        'quality_or_export_authorized',
+      ],
+      implicit_temp_generation_by_drilldown_allowed: false,
+    },
     consumed_surface_refs: [
       'contracts/opl-framework/standard-domain-agent-skeleton-contract.json',
       'contracts/pack_compiler_input.json',
