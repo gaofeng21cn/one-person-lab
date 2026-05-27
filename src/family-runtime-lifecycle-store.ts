@@ -1,8 +1,10 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 
+import type { DatabaseSync } from 'node:sqlite';
+
+import { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
 import { resolveOplStatePaths } from './runtime-state-paths.ts';
 
 export type JsonRecord = Record<string, unknown>;
@@ -111,7 +113,7 @@ export function familyRuntimeLifecycleIndexPaths() {
 export function openFamilyRuntimeLifecycleIndexDb() {
   const paths = familyRuntimeLifecycleIndexPaths();
   fs.mkdirSync(paths.root, { recursive: true });
-  const db = new DatabaseSync(paths.lifecycle_index_db);
+  const db = openFamilyRuntimeSqlite(paths.lifecycle_index_db);
   db.exec(`
     PRAGMA journal_mode = WAL;
     CREATE TABLE IF NOT EXISTS lifecycle_refs (

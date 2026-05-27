@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import { DatabaseSync } from 'node:sqlite';
 
 import type { FrameworkContracts } from './types.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
@@ -10,6 +9,7 @@ import {
   listStageAttemptCloseouts,
   listStageAttempts,
 } from './family-runtime-stage-attempts.ts';
+import { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
 import { familyRuntimePaths } from './family-runtime-store.ts';
 
 function normalizeDomainSelection(value: string) {
@@ -208,7 +208,7 @@ function readRuntimeReceiptEvidenceByDomain(): RuntimeReceiptEvidenceIndex {
     };
   }
 
-  const db = new DatabaseSync(paths.queue_db, { readOnly: true });
+  const db = openFamilyRuntimeSqlite(paths.queue_db, { readOnly: true });
   try {
     const attemptsTable = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'stage_attempts'").get();
     const closeoutsTable = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'stage_attempt_closeouts'").get();

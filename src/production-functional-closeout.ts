@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { DatabaseSync } from 'node:sqlite';
+import type { DatabaseSync } from 'node:sqlite';
 
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import { resolveManifestCommandTimeoutMs } from './domain-manifest/resolver.ts';
@@ -23,6 +23,7 @@ import {
   buildProviderContinuousProof,
   providerProofStatusIsCurrentlyProven,
 } from './family-runtime-provider-continuous-proof.ts';
+import { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
 import {
   listStageAttemptCloseouts,
   listStageAttemptSignals,
@@ -87,7 +88,7 @@ function safeReadAttemptLedger(paths: ReturnType<typeof familyRuntimePaths>) {
     };
   }
 
-  const db = new DatabaseSync(paths.queue_db, { readOnly: true });
+  const db = openFamilyRuntimeSqlite(paths.queue_db, { readOnly: true });
   try {
     const tasksReady = tableExists(db, 'tasks');
     const attemptsReady = tableExists(db, 'stage_attempts');

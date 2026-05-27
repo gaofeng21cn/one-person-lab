@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { DatabaseSync } from 'node:sqlite';
+import type { DatabaseSync } from 'node:sqlite';
 
 import { buildFamilyRuntimeControlledApplyContract } from './family-runtime-controlled-apply.ts';
 import { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
@@ -15,6 +15,7 @@ import {
   inspectFamilyRuntimeProviderWithLifecycle,
   isFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
+import { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
 import { familyRuntimePaths } from './family-runtime-store.ts';
 import {
   deriveCurrentControlStateForAttempt,
@@ -661,7 +662,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
     };
   }
 
-  const db = new DatabaseSync(queueDb, { readOnly: true });
+  const db = openFamilyRuntimeSqlite(queueDb, { readOnly: true });
   try {
     const allRows = listStageAttemptRows(db) as StageAttemptWorkbenchRow[];
     const rows = allRows.slice(0, 25);
