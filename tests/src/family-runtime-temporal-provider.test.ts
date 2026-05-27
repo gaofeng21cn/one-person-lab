@@ -75,6 +75,26 @@ test('Temporal stage attempt contract exposes Codex runner total and no-output b
     contract.activity_timeout_policy.codex_stage_activity.runner_no_output_timeout_ms,
     DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
   );
+  assert.equal(
+    contract.activity_timeout_policy.short_stage_activities.schedule_to_close_timeout,
+    '10 minutes',
+  );
+  assert.equal(
+    contract.activity_timeout_policy.short_stage_activities.stale_schedule_release_policy,
+    'fail_short_activity_when_worker_does_not_pick_up_scheduled_task',
+  );
+  assert.equal(
+    contract.scheduler_tick_timeout_policy.workflow_run_timeout,
+    '12 minutes',
+  );
+  assert.equal(
+    contract.scheduler_tick_timeout_policy.workflow_execution_timeout,
+    '12 minutes',
+  );
+  assert.equal(
+    contract.scheduler_tick_timeout_policy.stale_overlap_release_policy,
+    'fail_scheduler_tick_workflow_when_worker_does_not_pick_up_workflow_or_activity',
+  );
 });
 
 test('Temporal StageAttemptWorkflow exposes activity state, signals, and completion boundary', async () => {

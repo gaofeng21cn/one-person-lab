@@ -7,7 +7,9 @@ import {
   DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
   DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
   SHORT_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
+  SHORT_STAGE_ACTIVITY_SCHEDULE_TO_CLOSE_TIMEOUT,
   SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
+  SCHEDULER_TICK_WORKFLOW_RUN_TIMEOUT,
 } from './family-runtime-temporal-constants.ts';
 
 export const STAGE_ATTEMPT_WORKFLOW_NAME = 'StageAttemptWorkflow';
@@ -32,6 +34,7 @@ export type { TemporalStageAttemptSignalKind } from './family-runtime-types.ts';
 export {
   DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
   DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
+  SCHEDULER_TICK_WORKFLOW_RUN_TIMEOUT,
 };
 
 export type TemporalStageAttemptSignalPayload = {
@@ -134,6 +137,12 @@ export function buildTemporalStageAttemptWorkflowContract() {
     signals: [...TEMPORAL_STAGE_ATTEMPT_SIGNALS],
     queries: [...TEMPORAL_STAGE_ATTEMPT_QUERIES],
     default_task_queue: DEFAULT_TEMPORAL_TASK_QUEUE,
+    scheduler_tick_timeout_policy: {
+      workflow_run_timeout: SCHEDULER_TICK_WORKFLOW_RUN_TIMEOUT,
+      workflow_execution_timeout: SCHEDULER_TICK_WORKFLOW_RUN_TIMEOUT,
+      stale_overlap_release_policy:
+        'fail_scheduler_tick_workflow_when_worker_does_not_pick_up_workflow_or_activity',
+    },
     provider_completion_boundary: {
       provider_completion: 'workflow/activity transport completed',
       domain_ready_verdict: 'read from domain-owned quality or gate surface',
@@ -152,8 +161,11 @@ export function buildTemporalStageAttemptWorkflowContract() {
         runner_no_output_timeout_ms: DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
       },
       short_stage_activities: {
+        schedule_to_close_timeout: SHORT_STAGE_ACTIVITY_SCHEDULE_TO_CLOSE_TIMEOUT,
         start_to_close_timeout: SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
         heartbeat_timeout: SHORT_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
+        stale_schedule_release_policy:
+          'fail_short_activity_when_worker_does_not_pick_up_scheduled_task',
       },
     },
   };

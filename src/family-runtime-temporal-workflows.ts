@@ -11,6 +11,7 @@ import {
   CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
   CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
   SHORT_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
+  SHORT_STAGE_ACTIVITY_SCHEDULE_TO_CLOSE_TIMEOUT,
   SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
 } from './family-runtime-temporal-constants.ts';
 
@@ -35,6 +36,7 @@ const { codexStageActivity } = proxyActivities<Pick<StageAttemptActivities, 'cod
 });
 
 const { domainHandlerDispatchActivity, schedulerTickActivity } = proxyActivities<Omit<StageAttemptActivities, 'codexStageActivity'>>({
+  scheduleToCloseTimeout: SHORT_STAGE_ACTIVITY_SCHEDULE_TO_CLOSE_TIMEOUT,
   startToCloseTimeout: SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
   heartbeatTimeout: SHORT_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
   retry: {
