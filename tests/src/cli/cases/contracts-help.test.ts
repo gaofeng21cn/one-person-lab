@@ -748,6 +748,25 @@ test('domain explain-boundary --help advertises the xiaohongshu family-boundary 
   );
 });
 
+test('family-runtime nested --help returns command help without executing runtime subcommands', () => {
+  for (const args of [
+    ['family-runtime', 'queue', 'list', '--help'],
+    ['family-runtime', 'tick', '--help'],
+    ['family-runtime', 'provider-slo', 'tick', '--help'],
+  ]) {
+    const output = runCli(args);
+
+    assertNoContractsProvenance(output);
+    assert.equal(output.version, 'g2');
+    assert.equal(output.help.command, 'family-runtime');
+    assert.match(output.help.usage, /provider-slo tick/);
+    assert.match(output.help.usage, /queue list/);
+    assert.equal(Object.hasOwn(output, 'family_runtime_queue'), false);
+    assert.equal(Object.hasOwn(output, 'family_runtime_tick'), false);
+    assert.equal(Object.hasOwn(output, 'family_runtime_provider_slo_tick'), false);
+  }
+});
+
 test('command help literal returns a usage error instead of command-scoped help', () => {
   const { status, payload } = runCliFailure(['contract', 'domain', 'help']);
 

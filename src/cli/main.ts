@@ -60,6 +60,11 @@ export async function main() {
   }
 
   const { command, spec, args } = resolved;
+  const passthroughIndex = args.indexOf('--');
+  const scopedHelpRequested = args.some((arg, index) =>
+    arg === '--help'
+    && (passthroughIndex < 0 || index < passthroughIndex)
+  );
   if (command !== 'help' && args.length === 1 && args[0] === 'help') {
     throw buildUsageError(
       `Use "opl ${command} --help" for command-scoped help.`,
@@ -74,8 +79,7 @@ export async function main() {
   if (
     parsedInput.helpRequested
     || (
-      args.length === 1
-      && args[0] === '--help'
+      scopedHelpRequested
       && !CODEX_COMMAND_HELP_PASSTHROUGH.has(command)
     )
   ) {
