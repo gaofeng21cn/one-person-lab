@@ -136,6 +136,9 @@ exit 1
           repo: string;
           opl_framework_version: string;
           framework_version: string;
+          opl_framework_revision: string;
+          framework_revision: string;
+          framework_revision_source: string;
           prerelease_included: boolean;
         };
         operator: {
@@ -176,6 +179,12 @@ exit 1
     assert.equal(output.app_state.release.repo, 'gaofeng21cn/one-person-lab-app');
     assert.equal(output.app_state.release.opl_framework_version, '0.1.0');
     assert.equal(output.app_state.release.framework_version, '0.1.0');
+    assert.match(output.app_state.release.opl_framework_revision, /^[0-9a-f]{12}$|^\d{4}-\d{2}-\d{2}$/);
+    assert.equal(output.app_state.release.framework_revision, output.app_state.release.opl_framework_revision);
+    assert.match(
+      output.app_state.release.framework_revision_source,
+      /^(OPL_FRAMEWORK_REVISION|full_package_manifest|git_head|build_date|package_json_mtime)$/,
+    );
     assert.equal(output.app_state.operator.status, 'attention_needed');
     assert.equal(output.app_state.operator.summary.profile, 'fast');
     assert.equal(output.app_state.operator.summary.visible_action_count, output.app_state.actions.length);

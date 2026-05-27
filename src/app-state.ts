@@ -23,6 +23,7 @@ import { resolveProjectRoot, type OplEngineAction, type OplModuleAction, type Op
 import { buildActionCatalog } from './app-state-action-catalog.ts';
 import { buildOplAppOperatorViewModel } from './app-state-view-model.ts';
 import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 
 type AppStateProfile = 'fast' | 'full';
@@ -253,12 +254,16 @@ async function buildProviderState(profile: AppStateProfile) {
 function buildReleaseState() {
   const updateChannel = readOplUpdateChannel();
   const oplFrameworkVersion = readOplFrameworkPackageVersion();
+  const oplFrameworkRevision = readOplFrameworkRevision();
   return {
     version: getOplReleaseVersion(),
     tag: buildOplReleaseTag(),
     repo: getOplReleaseRepo(),
     opl_framework_version: oplFrameworkVersion,
     framework_version: oplFrameworkVersion,
+    opl_framework_revision: oplFrameworkRevision.value,
+    framework_revision: oplFrameworkRevision.value,
+    framework_revision_source: oplFrameworkRevision.source,
     channel: updateChannel.channel,
     channel_source_updated_at: updateChannel.updated_at,
     prerelease_included: updateChannel.channel === 'preview',
@@ -283,6 +288,69 @@ function readOplFrameworkPackageVersion() {
     });
   }
   return version;
+}
+
+function shortCommit(commit: string) {
+  const trimmed = commit.trim();
+  return /^[0-9a-f]{40}$/i.test(trimmed) ? trimmed.slice(0, 12) : trimmed;
+}
+
+function readPackagedFrameworkRevision(): string | null {
+  const projectRoot = resolveProjectRoot();
+  const manifestPaths = [
+    path.join(projectRoot, '..', 'manifest', 'full-package-manifest.json'),
+    path.join(projectRoot, '..', '..', 'manifest', 'full-package-manifest.json'),
+  ];
+
+  for (const manifestPath of manifestPaths) {
+    if (!fs.existsSync(manifestPath)) continue;
+    try {
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as JsonRecord;
+      const components = isRecord(manifest.components) ? manifest.components : {};
+      const opl = isRecord(components.opl) ? components.opl : {};
+      const commit = typeof opl.git_commit === 'string' ? opl.git_commit.trim() : '';
+      if (commit) return shortCommit(commit);
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
+function readGitFrameworkRevision(): string | null {
+  const result = spawnSync('git', ['rev-parse', '--short=12', 'HEAD'], {
+    cwd: resolveProjectRoot(),
+    encoding: 'utf8',
+    stdio: 'pipe',
+  });
+  return result.status === 0 ? result.stdout.trim() || null : null;
+}
+
+function readOplFrameworkRevision() {
+  const override = process.env.OPL_FRAMEWORK_REVISION?.trim();
+  if (override) {
+    return { value: shortCommit(override), source: 'OPL_FRAMEWORK_REVISION' };
+  }
+
+  const packagedRevision = readPackagedFrameworkRevision();
+  if (packagedRevision) {
+    return { value: packagedRevision, source: 'full_package_manifest' };
+  }
+
+  const gitRevision = readGitFrameworkRevision();
+  if (gitRevision) {
+    return { value: gitRevision, source: 'git_head' };
+  }
+
+  const dateOverride = process.env.OPL_FRAMEWORK_BUILD_DATE?.trim() || process.env.OPL_RELEASE_DATE?.trim();
+  if (dateOverride) {
+    return { value: dateOverride, source: 'build_date' };
+  }
+
+  const packageJsonPath = path.join(resolveProjectRoot(), 'package.json');
+  const packageDate = fs.statSync(packageJsonPath).mtime.toISOString().slice(0, 10);
+  return { value: packageDate, source: 'package_json_mtime' };
 }
 
 function buildCoreState(profile: AppStateProfile) {
