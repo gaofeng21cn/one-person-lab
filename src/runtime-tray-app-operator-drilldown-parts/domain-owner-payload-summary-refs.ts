@@ -184,6 +184,15 @@ function refsFromRecordOrTopLevel(value: JsonRecord, key: string) {
   return refs.length > 0 ? refs : stringList(value[key]);
 }
 
+function refsFromMagOwnerPayloadResponse(value: JsonRecord, key: string) {
+  const recordPayload = record(value.record_payload);
+  const refs = stringList(recordPayload[key]);
+  if (refs.length > 0) {
+    return refs;
+  }
+  return stringList(value[key]);
+}
+
 function masPaperLineOwnerPayloadWorkItem(value: JsonRecord, index: number) {
   const typedBlockerRefs = refsFromRecordOrTopLevel(value, 'typed_blocker_refs');
   const successRefsPathPayload = {
@@ -240,6 +249,96 @@ function masPaperLineOwnerPayloadItemSummary(closeout: JsonRecord) {
     accepted_payload_paths_ref: stringValue(closeout.accepted_payload_paths_ref),
     work_items: payloads.map(masPaperLineOwnerPayloadWorkItem),
   });
+}
+
+function magOwnerPayloadWorkItem(value: JsonRecord, sourceRef: string) {
+  const typedBlockerRefs = refsFromMagOwnerPayloadResponse(value, 'typed_blocker_refs');
+  return ownerPayloadWorkItem({
+    item_id: 'mag_owner_payload_response',
+    sequence: 1,
+    remaining_gap_id: stringValue(value.status),
+    workorder_item_ref: `${sourceRef}/record_payload`,
+    payload_kind: 'domain_owner_receipt_or_typed_blocker_refs',
+    current_payload_template: {
+      domain_owner_receipt_refs: [],
+      no_regression_evidence_refs: [],
+      owner_chain_refs: [],
+      typed_blocker_refs: [],
+    },
+    success_refs_path_payload: {
+      domain_owner_receipt_refs:
+        refsFromMagOwnerPayloadResponse(value, 'domain_owner_receipt_refs'),
+      no_regression_evidence_refs:
+        refsFromMagOwnerPayloadResponse(value, 'no_regression_evidence_refs'),
+      owner_chain_refs: refsFromMagOwnerPayloadResponse(value, 'owner_chain_refs'),
+    },
+    typed_blocker_path_payload: {
+      typed_blocker_refs: typedBlockerRefs,
+    },
+    operator_payload_submitted: booleanValue(value.operator_payload_submitted) === true,
+    recommended_current_payload_path:
+      typedBlockerRefs.length > 0 ? 'typed_blocker_path' : 'success_refs_path',
+  });
+}
+
+function magOwnerPayloadItemSummary(value: JsonRecord, sourceRef: string) {
+  return ownerPayloadItemSummary({
+    surface_kind: 'mag_owner_payload_item_summary',
+    owner: stringValue(value.owner) ?? 'med-autogrant',
+    consumer: 'one_person_lab',
+    status: stringValue(value.status),
+    payload_kind: 'domain_owner_receipt_or_typed_blocker_refs',
+    payload_path_policy: stringValue(value.payload_path_policy),
+    payload_body_allowed: false,
+    empty_payload_template_is_success_evidence: false,
+    required_operator_payload_refs: DOMAIN_OWNER_PAYLOAD_REQUIRED_REFS,
+    required_return_shapes: stringList(value.required_return_shapes).length > 0
+      ? stringList(value.required_return_shapes)
+      : DOMAIN_OWNER_PAYLOAD_REQUIRED_RETURN_SHAPES,
+    accepted_payload_paths_ref: `${sourceRef}/accepted_payload_paths`,
+    work_items: [magOwnerPayloadWorkItem(value, sourceRef)],
+  });
+}
+
+function magOwnerPayloadResponseCandidate(manifest: JsonRecord) {
+  const productEntryManifest = record(manifest.product_entry_manifest);
+  const candidates: Array<{ source_ref: string; payload: JsonRecord }> = [
+    {
+      source_ref: '/owner_payload_response',
+      payload: record(manifest.owner_payload_response),
+    },
+    {
+      source_ref: '/opl_owner_payload_response',
+      payload: record(manifest.opl_owner_payload_response),
+    },
+    {
+      source_ref: '/mag_opl_owner_payload_response',
+      payload: record(manifest.mag_opl_owner_payload_response),
+    },
+    {
+      source_ref: '/workspace_receipt_scaleout_evidence/owner_payload_response',
+      payload: record(record(manifest.workspace_receipt_scaleout_evidence).owner_payload_response),
+    },
+    {
+      source_ref: '/product_entry_manifest/owner_payload_response',
+      payload: record(productEntryManifest.owner_payload_response),
+    },
+    {
+      source_ref: '/product_entry_manifest/opl_owner_payload_response',
+      payload: record(productEntryManifest.opl_owner_payload_response),
+    },
+    {
+      source_ref: (
+        '/product_entry_manifest/workspace_receipt_scaleout_evidence/owner_payload_response'
+      ),
+      payload: record(
+        record(productEntryManifest.workspace_receipt_scaleout_evidence).owner_payload_response,
+      ),
+    },
+  ];
+  return candidates.find((candidate) => (
+    stringValue(candidate.payload.surface_kind) === 'mag_opl_owner_payload_response'
+  )) ?? null;
 }
 
 function domainOwnerPayloadSummaryFromOperatorEvidence(project: DomainManifestCatalogEntry) {
@@ -308,6 +407,44 @@ function domainOwnerPayloadSummaryFromMasPaperLineCloseout(project: DomainManife
   };
 }
 
+function domainOwnerPayloadSummaryFromMagOwnerPayloadResponse(project: DomainManifestCatalogEntry) {
+  const manifest = project.status === 'resolved' ? project.manifest : null;
+  const candidate = magOwnerPayloadResponseCandidate(record(manifest));
+  if (!candidate) {
+    return null;
+  }
+  const ownerPayloadResponse = candidate.payload;
+  const ownerSummary = magOwnerPayloadItemSummary(
+    ownerPayloadResponse,
+    candidate.source_ref,
+  );
+  const stageSummarySource =
+    record(ownerPayloadResponse.stage_expected_receipt_payload_summary);
+  const stageSummary = Object.keys(stageSummarySource).length > 0
+    ? stageExpectedReceiptPayloadSummary(stageSummarySource)
+    : null;
+  if (!ownerSummary && !stageSummary) {
+    return null;
+  }
+  return {
+    domain_id: project.project_id,
+    project: project.project,
+    target_domain_id:
+      stringValue(ownerPayloadResponse.target_domain_id)
+      ?? stringValue(record(manifest).target_domain_id)
+      ?? null,
+    owner: stringValue(ownerSummary?.owner) ?? stringValue(stageSummary?.owner),
+    source_surface: 'mag_opl_owner_payload_response',
+    source_ref: candidate.source_ref,
+    owner_payload_item_summary: ownerSummary,
+    stage_expected_receipt_payload_summary: stageSummary,
+    payload_body_allowed: false,
+    projection_closes_domain_ready: false,
+    projection_claims_production_ready: false,
+    authority_boundary: authorityBoundary(),
+  };
+}
+
 export function buildDomainOwnerPayloadSummaryRefs(input: {
   domainManifestProjects: DomainManifestCatalogEntry[];
 }) {
@@ -315,6 +452,7 @@ export function buildDomainOwnerPayloadSummaryRefs(input: {
     return [
       domainOwnerPayloadSummaryFromOperatorEvidence(project),
       domainOwnerPayloadSummaryFromMasPaperLineCloseout(project),
+      domainOwnerPayloadSummaryFromMagOwnerPayloadResponse(project),
     ].filter((domain): domain is Exclude<typeof domain, null> => domain !== null);
   });
   const ownerPayloadItemSummaryCount =
