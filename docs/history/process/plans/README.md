@@ -38,6 +38,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-18-opl-family-doc-process-history.md` | 2026-05 OPL family docs process / proof archive。 | 当前 docs truth 归 active owner docs；本文只作 process provenance。 |
 | `2026-05-22-opl-doc-lifecycle-active-ledger-consolidation.md` | active ledger consolidation closeout。 | 当前 docs lifecycle policy 归 docs portfolio / active gap plan / docs lifecycle policy。 |
 | `2026-05-26-opl-doc-governance-tranche-ledger.md` | OPL docs governance tranche coverage ledger。 | 当前 truth 归 active gap plan、core docs 和 live CLI/read-model；ledger 只记录本轮覆盖范围与未覆盖范围。 |
+| `2026-05-28-opl-series-doc-governance-tranche-ledger.md` | OPL series docs governance / stale-lane cleanup tranche ledger。 | 当前 truth 归各 repo active truth owner、core docs 和 live code/contracts/tests/read-model；ledger 只记录本轮覆盖、验证、阻塞与下一轮写入范围。 |
 
 ## Tombstone Rules
 
