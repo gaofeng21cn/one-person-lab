@@ -157,6 +157,18 @@ export function assertMasLifecycleDrilldownProjection(drilldown: any) {
   assert.deepEqual(drilldown.domain_dispatch_evidence.attempts[0].writeback_receipt_refs, [
     'memory-writeback:receipt-1',
   ]);
+  assert.deepEqual(drilldown.memory_writeback_refs.writeback_receipt_refs, [
+    'memory-writeback:receipt-1',
+    'mas://memory/writeback/receipt.json',
+  ]);
+  assert.equal(
+    drilldown.runtime_visualization_projection.graph.nodes.some(
+      (node: { node_kind: string; ref: string }) =>
+        node.node_kind === 'memory_writeback_receipt'
+        && node.ref === 'mas://memory/writeback/receipt.json',
+    ),
+    true,
+  );
   assert.equal(
     drilldown.freshness_refs.refs.some((ref: { source_fingerprint: string }) =>
       ref.source_fingerprint === 'sha256:mas-drilldown-source'

@@ -9,18 +9,10 @@ import type {
   FamilyStageKind,
   FamilyStageSurfaceRef,
 } from './family-stage-control-plane-contract.ts';
-import {
-  buildFamilyStageAdmissionReview,
-} from './family-stage-admission.ts';
-import {
-  buildFamilyStageAssumptionLifecycleProjection,
-} from './family-stage-assumption-lifecycle.ts';
-import {
-  buildFamilyStageCohortLoopProjection,
-} from './family-stage-cohort-loop.ts';
-import {
-  buildFamilyStageRuntimeBudgetProjection,
-} from './family-stage-runtime-budget.ts';
+import { buildFamilyStageAdmissionReview } from './family-stage-admission.ts';
+import { buildFamilyStageAssumptionLifecycleProjection } from './family-stage-assumption-lifecycle.ts';
+import { buildFamilyStageCohortLoopProjection } from './family-stage-cohort-loop.ts';
+import { buildFamilyStageRuntimeBudgetProjection } from './family-stage-runtime-budget.ts';
 import {
   buildFamilyStagePackRegistryEntry,
   buildFamilyStagePackRegistryProjection,
@@ -43,6 +35,10 @@ import {
 import {
   buildFamilyStagePackSourceSpecProjection,
 } from './family-stage-source-spec.ts';
+import {
+  buildFamilyStageGuaranteeProjection,
+  type FamilyStageGuaranteeMode,
+} from './family-stage-guarantee-projection.ts';
 import type { ManifestCommandTimeoutPolicy } from './domain-manifest/resolver.ts';
 import type { FamilyStageProofBundleIntegrity } from './family-stage-proof-bundle.ts';
 import type {
@@ -92,12 +88,6 @@ export interface FamilyStageListEntry {
   trust_lane: string | null;
   admission_status: string | null;
 }
-
-export type FamilyStageGuaranteeMode =
-  | 'static_admission_only'
-  | 'runtime_enforced'
-  | 'domain_owned_judgment'
-  | 'observability_only';
 
 export interface FamilyStageLaunchAdmissionGate {
   surface_kind: 'opl_family_stage_launch_admission_gate';
@@ -203,45 +193,11 @@ function refsCount(refs: FamilyStageSurfaceRef[] | undefined) {
   return refs?.length ?? 0;
 }
 
-function readBoolean(record: JsonRecord, key: string) {
-  return typeof record[key] === 'boolean' ? record[key] as boolean : null;
-}
-
 function readStringList(value: unknown) {
   if (!Array.isArray(value)) {
     return [];
   }
   return value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0);
-}
-
-function buildFamilyStageGuaranteeProjection(stage: FamilyStageDescriptor) {
-  const trust = stage.trust_boundary;
-  const oplRole = optionalString(stage.authority_boundary.opl_role);
-  const runtimeEnforced = trust?.effect_boundary === true
-    || trust?.runtime_guard_required === true
-    || ['ai_decision', 'human_gate', 'external_system'].includes(trust?.lane ?? '');
-  const domainOwnedJudgment = trust?.owner_receipt_required === true
-    || trust?.human_gate_required === true
-    || readBoolean(stage.authority_boundary, 'no_quality_verdict') === true
-    || readBoolean(stage.authority_boundary, 'can_authorize_quality_verdict') === false
-    || readBoolean(stage.authority_boundary, 'can_write_domain_truth') === false;
-  const observabilityOnly = trust?.lane === 'app_projection'
-    || oplRole === 'projection_consumer_only'
-    || oplRole === 'descriptor_only'
-    || oplRole === 'discovery_only';
-  const modes: FamilyStageGuaranteeMode[] = [
-    runtimeEnforced ? 'runtime_enforced' : 'static_admission_only',
-    ...(domainOwnedJudgment ? ['domain_owned_judgment' as const] : []),
-    ...(observabilityOnly ? ['observability_only' as const] : []),
-  ];
-  return {
-    primary_mode: modes[0],
-    modes: [...new Set(modes)],
-    runtime_enforced: runtimeEnforced,
-    domain_owned_judgment: domainOwnedJudgment,
-    observability_only: observabilityOnly,
-    authority_boundary: 'projection_only_no_domain_verdict_authority',
-  };
 }
 
 function normalizeDomainSelection(value: string) {

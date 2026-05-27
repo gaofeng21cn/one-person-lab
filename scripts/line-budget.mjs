@@ -9,7 +9,6 @@ const DEFAULT_LIMIT = 1000;
 const BASELINE = new Map([
   ['src/agent-lab-complete.ts', 1013],
   ['src/app-state.ts', 1002],
-  ['src/family-stage-control-plane.ts', 1018],
   ['src/family-runtime-stage-attempts.ts', 1043],
   ['src/family-runtime-temporal-provider.ts', 1098],
   ['src/runtime-tray-app-operator-drilldown.ts', 1352],

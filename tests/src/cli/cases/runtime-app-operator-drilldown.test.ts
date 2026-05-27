@@ -572,15 +572,10 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.deepEqual(drilldown.package_export_lifecycle_refs.package_refs, ['package:submission-minimal']);
     assert.deepEqual(drilldown.package_export_lifecycle_refs.export_refs, ['export:current-package']);
     assert.deepEqual(drilldown.memory_writeback_refs.consumed_memory_refs, ['memory:route-policy']);
-    assert.deepEqual(drilldown.memory_writeback_refs.writeback_receipt_refs, ['memory-writeback:receipt-1', 'mas://memory/writeback/receipt.json']);
     assert.equal(drilldown.ref_family_refs.summary.memory_ref_count, 3);
-    assert.equal(drilldown.runtime_visualization_projection.graph.nodes.some((node: { node_kind: string; ref: string }) => node.node_kind === 'memory_writeback_receipt' && node.ref === 'mas://memory/writeback/receipt.json'), true);
     assert.deepEqual(drilldown.quality_readiness_refs.quality_refs, ['publication_eval/latest.json']);
     assert.deepEqual(drilldown.quality_readiness_refs.readiness_refs, ['controller_decisions/latest.json']);
-    assert.equal(
-      drilldown.provider_slo_operator_action_refs.refs[0].ref,
-      'opl family-runtime residency proof --provider temporal --production',
-    );
+    assert.equal(drilldown.provider_slo_operator_action_refs.refs[0].ref, 'opl family-runtime residency proof --provider temporal --production');
     assert.equal(drilldown.provider_slo_operator_action_refs.refs[0].execution_owner, 'operator_or_infrastructure');
     assert.equal(drilldown.periodic_execution_refs.surface_kind, 'opl_app_drilldown_periodic_execution_refs');
     assert.equal(drilldown.periodic_execution_refs.schedule_id, 'opl-family-runtime-provider-scheduler');
