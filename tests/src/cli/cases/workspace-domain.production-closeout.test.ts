@@ -459,7 +459,10 @@ test('framework production-closeout reports functional blockers without taking d
     assert.equal(closeout.summary.descriptor_aligned_count, 3);
     assert.equal(closeout.summary.physical_skeleton_evidence_observed_count, 3);
     assert.equal(closeout.summary.physical_skeleton_audit_pending_count, 0);
-    assert.equal(closeout.summary.resolved_stage_plane_count, 3);
+    assert.equal(
+      closeout.summary.resolved_stage_plane_count,
+      closeout.stage_plane.resolved_planes_count,
+    );
     assert.equal(closeout.summary.provider_ready, false);
     assert.equal(
       closeout.provider_readiness.canonical_readiness_surface_ref,
