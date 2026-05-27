@@ -11,6 +11,56 @@ async function temporalProviderModule() {
 
 type QueryTemporalStageAttemptWorkflow = typeof import('./family-runtime-temporal-provider.ts')['queryTemporalStageAttemptWorkflow'];
 
+export const DEFAULT_TEMPORAL_STAGE_ATTEMPT_QUERY_TIMEOUT_MS = 3_000;
+
+function readTemporalStageAttemptQueryTimeoutMs() {
+  const value = Number.parseInt(process.env.OPL_TEMPORAL_STAGE_ATTEMPT_QUERY_TIMEOUT_MS ?? '', 10);
+  return Number.isFinite(value) && value > 0 ? value : DEFAULT_TEMPORAL_STAGE_ATTEMPT_QUERY_TIMEOUT_MS;
+}
+
+function timeoutObservation(
+  attempt: ReturnType<typeof queryStageAttempt>['stage_attempt_query']['attempt'],
+  timeoutMs: number,
+) {
+  return {
+    surface_kind: 'temporal_stage_attempt_query_unavailable',
+    provider_kind: 'temporal',
+    stage_attempt_id: attempt.stage_attempt_id,
+    workflow_id: attempt.workflow_id,
+    status: 'unavailable',
+    reason: 'temporal_stage_attempt_query_timeout',
+    error: {
+      code: 'temporal_stage_attempt_query_timeout',
+      message: `Temporal stage attempt read-model query exceeded ${timeoutMs}ms.`,
+      timeout_ms: timeoutMs,
+    },
+    authority_boundary: {
+      opl: 'local_stage_attempt_ledger_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
+  };
+}
+
+async function withReadModelTimeout<T>(
+  promise: Promise<T>,
+  attempt: ReturnType<typeof queryStageAttempt>['stage_attempt_query']['attempt'],
+  timeoutMs: number,
+): Promise<T | ReturnType<typeof timeoutObservation>> {
+  let timeout: NodeJS.Timeout | null = null;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<ReturnType<typeof timeoutObservation>>((resolve) => {
+        timeout = setTimeout(() => resolve(timeoutObservation(attempt, timeoutMs)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  }
+}
+
 function isTemporalServiceUnreachable(error: unknown, message: string) {
   return error instanceof ServiceError
     || message === 'Failed to connect before the deadline'
@@ -52,11 +102,17 @@ export async function queryTemporalStageAttemptReadModel(
     return null;
   }
   try {
+    const timeoutMs = readTemporalStageAttemptQueryTimeoutMs();
     const queryTemporalStageAttemptWorkflow = options.queryTemporalStageAttemptWorkflow
       ?? (await temporalProviderModule()).queryTemporalStageAttemptWorkflow;
-    return await queryTemporalStageAttemptWorkflow(attempt, {
-      paths: options.paths,
-    });
+    return await withReadModelTimeout(
+      queryTemporalStageAttemptWorkflow(attempt, {
+        paths: options.paths,
+        connectTimeoutMs: timeoutMs,
+      }),
+      attempt,
+      timeoutMs,
+    );
   } catch (error) {
     if (
       error instanceof FrameworkContractError

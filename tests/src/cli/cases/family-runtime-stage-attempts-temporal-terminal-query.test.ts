@@ -1,10 +1,14 @@
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 import { ServiceError } from '@temporalio/client';
+import { DatabaseSync } from 'node:sqlite';
 
 import * as activities from '../../../../src/family-runtime-temporal-activities.ts';
 import { buildTemporalStageAttemptWorkflowInputForTest } from '../../../../src/family-runtime-temporal-provider.ts';
 import { queryTemporalStageAttemptReadModel } from '../../../../src/family-runtime-temporal-query.ts';
+import { createStageAttempt, ingestStageAttemptCloseout } from '../../../../src/family-runtime-stage-attempts.ts';
+import { enqueueTask } from '../../../../src/family-runtime-enqueue.ts';
+import { openQueueDb } from '../../../../src/family-runtime-store.ts';
 import type {
   TemporalStageAttemptWorkflowInput,
   TemporalStageAttemptWorkflowState,
@@ -24,6 +28,24 @@ type TemporalStageAttemptCreateOutput = {
     attempt: TemporalStageAttemptWorkflowInput;
   };
 };
+
+async function withEnv<T>(updates: Record<string, string>, fn: () => Promise<T>): Promise<T> {
+  const previous = Object.fromEntries(Object.keys(updates).map((key) => [key, process.env[key]]));
+  try {
+    for (const [key, value] of Object.entries(updates)) {
+      process.env[key] = value;
+    }
+    return await fn();
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (typeof value === 'string') {
+        process.env[key] = value;
+      } else {
+        delete process.env[key];
+      }
+    }
+  }
+}
 
 type TemporalStageAttemptQueryOutput = {
   family_runtime_stage_attempt_query: {
@@ -205,6 +227,127 @@ test('family-runtime temporal query classifies post-describe query failures as w
   assert.equal(result.error.code, 'temporal_stage_attempt_query_unavailable');
   assert.equal(result.workflow_status, 'RUNNING');
   assert.equal(result.run_id, 'run-worker-query-unavailable');
+});
+
+test('family-runtime temporal read-model query is bounded when provider query hangs', async () => {
+  const attempt = {
+    provider_kind: 'temporal',
+    stage_attempt_id: 'sat-provider-query-timeout',
+    workflow_id: 'wf-provider-query-timeout',
+  } as Parameters<typeof queryTemporalStageAttemptReadModel>[0];
+
+  const startedAt = Date.now();
+  const result = await withEnv({ OPL_TEMPORAL_STAGE_ATTEMPT_QUERY_TIMEOUT_MS: '20' }, async () =>
+    await queryTemporalStageAttemptReadModel(attempt, {
+      queryTemporalStageAttemptWorkflow: async () => await new Promise(() => {}),
+    })
+  );
+
+  assert.ok(result);
+  assert.equal(result.surface_kind, 'temporal_stage_attempt_query_unavailable');
+  assert.equal('reason' in result, true);
+  assert.equal('error' in result, true);
+  if (!('reason' in result) || !('error' in result)) {
+    throw new Error('expected temporal query timeout projection');
+  }
+  assert.equal(result.reason, 'temporal_stage_attempt_query_timeout');
+  assert.equal(result.error.code, 'temporal_stage_attempt_query_timeout');
+  assert.equal((result.error as Record<string, unknown>).timeout_ms, 20);
+  assert.equal(Date.now() - startedAt < 1_000, true);
+});
+
+test('family-runtime queue inspect skips Temporal replay for completed typed closeout attempts', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-queue-inspect-completed-no-replay-'));
+  let db: DatabaseSync | null = null;
+  const previousEnv = {
+    OPL_STATE_DIR: process.env.OPL_STATE_DIR,
+    OPL_TEMPORAL_ADDRESS: process.env.OPL_TEMPORAL_ADDRESS,
+    TEMPORAL_ADDRESS: process.env.TEMPORAL_ADDRESS,
+    OPL_TEMPORAL_STAGE_ATTEMPT_QUERY_TIMEOUT_MS: process.env.OPL_TEMPORAL_STAGE_ATTEMPT_QUERY_TIMEOUT_MS,
+  };
+
+  try {
+    fs.mkdirSync(stateRoot, { recursive: true });
+    process.env.OPL_STATE_DIR = stateRoot;
+    db = openQueueDb().db;
+    const enqueue = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: {
+        study_id: '002-dm-china-us-mortality-attribution',
+        action_type: 'run_quality_repair_batch',
+        dispatch_ref: 'studies/002-dm/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json',
+        next_executable_owner: 'write',
+        executor_kind: 'codex_cli_default',
+      },
+      dedupeKey: 'mas:dm002:completed:no-replay',
+    });
+    if (!enqueue.task) {
+      throw new Error('expected queued task for completed no-replay fixture');
+    }
+    const taskId = enqueue.task.task_id;
+    const created = createStageAttempt(db, {
+      domainId: 'medautoscience',
+      stageId: 'domain_owner/default-executor-dispatch',
+      providerKind: 'temporal',
+      workspaceLocator: {
+        workspace_root: '/tmp/dm-cvd',
+        dispatch_ref: 'studies/002-dm/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json',
+      },
+      sourceFingerprint: 'completed-no-replay',
+      executorKind: 'codex_cli',
+      taskId,
+    });
+    const closeoutRef = 'studies/002-dm/artifacts/supervision/consumer/default_executor_execution/latest.json';
+    ingestStageAttemptCloseout(db, {
+      stageAttemptId: created.attempt.stage_attempt_id,
+      packet: {
+        surface_kind: 'domain_stage_closeout_packet',
+        closeout_refs: [closeoutRef],
+        consumed_refs: ['dispatch:completed-no-replay'],
+        writeback_receipt_refs: ['receipt:completed-no-replay'],
+        next_owner: 'medautoscience',
+        domain_ready_verdict: 'domain_gate_pending',
+      },
+    });
+    db.prepare(`
+      UPDATE tasks
+      SET status = 'succeeded', last_error = NULL, dead_letter_reason = NULL
+      WHERE task_id = ?
+    `).run(taskId);
+    process.env.OPL_TEMPORAL_ADDRESS = '127.0.0.1:1';
+    process.env.TEMPORAL_ADDRESS = '';
+    process.env.OPL_TEMPORAL_STAGE_ATTEMPT_QUERY_TIMEOUT_MS = '20';
+
+    const result = await runFamilyRuntime(['queue', 'inspect', taskId]) as {
+      family_runtime_task: {
+        task: { status: string };
+        stage_attempts: Array<{
+          status: string;
+          closeout_refs: string[];
+          closeout_receipt_status: string | null;
+          provider_run: Record<string, unknown>;
+        }>;
+      };
+    };
+
+    const attempt = result.family_runtime_task.stage_attempts[0];
+    assert.equal(result.family_runtime_task.task.status, 'succeeded');
+    assert.equal(attempt.status, 'completed');
+    assert.equal(attempt.closeout_receipt_status, 'accepted_typed_closeout');
+    assert.deepEqual(attempt.closeout_refs, [closeoutRef]);
+    assert.equal('terminal_observation' in attempt.provider_run, false);
+  } finally {
+    for (const [key, value] of Object.entries(previousEnv)) {
+      if (typeof value === 'string') {
+        process.env[key] = value;
+      } else {
+        delete process.env[key];
+      }
+    }
+    db?.close();
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
 });
 
 test('family-runtime temporal completed workflow syncs from result when query replay is nondeterministic', async () => {

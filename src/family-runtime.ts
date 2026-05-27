@@ -76,6 +76,9 @@ async function syncTemporalStageAttemptsForTask(
 ) {
   const attempts = listStageAttemptsForTask(db, taskId).filter((attempt) => attempt.provider_kind === 'temporal');
   for (const attempt of attempts) {
+    if (attempt.status === 'completed' && attempt.closeout_receipt_status) {
+      continue;
+    }
     const temporalQuery = await queryTemporalStageAttemptReadModel(attempt, { paths });
     syncStageAttemptFromTemporalTerminalObservation(db, temporalQuery);
   }
