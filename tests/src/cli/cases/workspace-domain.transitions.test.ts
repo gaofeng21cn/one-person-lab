@@ -659,6 +659,105 @@ test('domain manifests materializes descriptor-only MAS transition specs through
   }
 });
 
+test('domain manifests keeps live manifest resolved when transition materialization times out', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-transition-materialize-timeout-'));
+  const materializerRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-transition-materializer-timeout-'));
+  const materializerPath = path.join(materializerRoot, 'slow-study-state-matrix.js');
+  const fixtures = loadFamilyManifestFixtures();
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const command = `${process.execPath} ${shellSingleQuote(materializerPath)}`;
+  const manifest = {
+    ...withMasFamilyTransitionDescriptor(fixtures.medautoscience),
+    family_action_catalog: {
+      ...((fixtures.medautoscience.family_action_catalog as JsonRecord | undefined) ?? {
+        surface_kind: 'family_action_catalog',
+        version: 'family-action-catalog.v1',
+        catalog_id: 'medautoscience.action-catalog.v1',
+        target_domain_id: 'medautoscience',
+        owner: 'med-autoscience',
+        authority_boundary: {
+          opl_role: 'generated_action_transport_only',
+          domain_role: 'medical_research_action_authority',
+        },
+        notes: [],
+      }),
+      actions: [
+        {
+          action_id: 'study_state_matrix',
+          title: 'Slow MAS study state matrix',
+          summary: 'Read-only study-state-matrix materialization that exceeds the OPL projection budget.',
+          owner: 'med-autoscience',
+          effect: 'read_only',
+          source_command: {
+            command,
+            surface_kind: 'study_state_matrix',
+          },
+          input_schema_ref: 'contracts/schemas/v1/mas-action.input.schema.json',
+          output_schema_ref: 'contracts/schemas/v1/mas-action.output.schema.json',
+          supported_surfaces: {
+            cli: {
+              command,
+              surface_kind: 'study_state_matrix',
+            },
+          },
+          authority_boundary: {
+            runner_owner: 'OPL Framework',
+            domain_transition_owner: 'MedAutoScience',
+            can_write_domain_truth: false,
+            can_execute_domain_action: false,
+          },
+        },
+      ],
+    },
+  };
+  fs.mkdirSync(materializerRoot, { recursive: true });
+  fs.writeFileSync(
+    materializerPath,
+    'setTimeout(() => {}, 5000);\n',
+    'utf8',
+  );
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS: '5000',
+  };
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(manifest),
+    ], env);
+
+    const manifestOutput = runCli(['domain', 'manifests'], env);
+    const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) =>
+      entry.project_id === 'medautoscience'
+    );
+
+    assert.equal(manifestOutput.domain_manifests.summary.failed_count, 0);
+    assert.deepEqual(manifestOutput.domain_manifests.summary.live_failed_project_ids, []);
+    assert.equal(medautoscience.status, 'resolved');
+    assert.equal(medautoscience.error, null);
+    assert.equal(medautoscience.manifest_cache, undefined);
+    assert.equal(medautoscience.manifest.family_transition_materialization.status, 'failed');
+    assert.equal(
+      medautoscience.manifest.family_transition_materialization.blocked_reason,
+      'study_state_matrix_materialization_timeout',
+    );
+    assert.equal(medautoscience.manifest.family_transition_materialization.timeout_ms, 1000);
+    assert.equal(medautoscience.manifest.family_transition.status, 'descriptor_only');
+    assert.equal(medautoscience.manifest.family_transition.refresh_required, true);
+  } finally {
+    fs.rmSync(materializerRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('domain manifests skips MAS transition materialization when study-state-matrix action is not read-only', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-transition-materialize-blocked-'));
   const fixtures = loadFamilyManifestFixtures();

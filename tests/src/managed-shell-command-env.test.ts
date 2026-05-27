@@ -13,6 +13,7 @@ import {
 test('managed shell command env routes python, uv, and pytest artifacts outside the checkout', () => {
   const checkoutRoot = path.join(os.tmpdir(), 'opl-managed-shell-checkout');
   const env: Record<string, string | undefined> = buildManagedShellCommandEnv(checkoutRoot, {
+    OPL_DOMAIN_COMMAND_TMP_ROOT: path.join(os.tmpdir(), 'opl-managed-shell-domain-root'),
     PYTHONPYCACHEPREFIX: path.join(checkoutRoot, '__pycache__'),
     UV_PROJECT_ENVIRONMENT: path.join(checkoutRoot, '.venv'),
     PYTEST_ADDOPTS: [
@@ -24,6 +25,10 @@ test('managed shell command env routes python, uv, and pytest artifacts outside 
   });
 
   assert.equal(env.PYTHONDONTWRITEBYTECODE, '1');
+  assert.equal(
+    env.OPL_DOMAIN_COMMAND_TMP_ROOT,
+    path.join(os.tmpdir(), 'opl-managed-shell-domain-root', path.basename(checkoutRoot)),
+  );
   assert.equal(env.PYTEST_ADDOPTS?.includes('-q'), true);
   assert.equal(env.PYTEST_ADDOPTS?.includes('cache_dir='), true);
   assert.equal(env.PYTEST_ADDOPTS?.includes(checkoutRoot), false);
@@ -48,6 +53,34 @@ test('managed shell command env routes python, uv, and pytest artifacts outside 
       false,
       `${name} must not point inside the checkout`,
     );
+  }
+});
+
+test('managed shell command env isolates project venvs per bound workspace', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-shell-domain-root-'));
+  const masWorkspace = path.join(os.tmpdir(), 'med-autoscience');
+  const magWorkspace = path.join(os.tmpdir(), 'med-autogrant');
+
+  try {
+    const masEnv = buildManagedShellCommandEnv(masWorkspace, {
+      OPL_DOMAIN_COMMAND_TMP_ROOT: root,
+      UV_PROJECT_ENVIRONMENT: path.join(root, 'shared-uv-project'),
+      PYTHONPYCACHEPREFIX: path.join(root, 'shared-pycache'),
+    });
+    const magEnv = buildManagedShellCommandEnv(magWorkspace, {
+      OPL_DOMAIN_COMMAND_TMP_ROOT: root,
+      UV_PROJECT_ENVIRONMENT: path.join(root, 'shared-uv-project'),
+      PYTHONPYCACHEPREFIX: path.join(root, 'shared-pycache'),
+    });
+
+    assert.equal(masEnv.OPL_DOMAIN_COMMAND_TMP_ROOT, path.join(root, 'med-autoscience'));
+    assert.equal(magEnv.OPL_DOMAIN_COMMAND_TMP_ROOT, path.join(root, 'med-autogrant'));
+    assert.equal(masEnv.UV_PROJECT_ENVIRONMENT, path.join(root, 'med-autoscience', 'uv-project'));
+    assert.equal(magEnv.UV_PROJECT_ENVIRONMENT, path.join(root, 'med-autogrant', 'uv-project'));
+    assert.notEqual(masEnv.UV_PROJECT_ENVIRONMENT, magEnv.UV_PROJECT_ENVIRONMENT);
+    assert.notEqual(masEnv.PYTHONPYCACHEPREFIX, magEnv.PYTHONPYCACHEPREFIX);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });
 

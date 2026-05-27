@@ -15,6 +15,21 @@ function stableWorkspaceId(cwd: string) {
   return path.basename(path.resolve(cwd)).replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'workspace';
 }
 
+function workspaceScopedExternalRoot(
+  env: NodeJS.ProcessEnv,
+  cwd: string,
+  workspaceId: string,
+) {
+  const configuredRoot = env.OPL_DOMAIN_COMMAND_TMP_ROOT?.trim();
+  const baseRoot = configuredRoot && !isInsidePath(cwd, configuredRoot)
+    ? configuredRoot
+    : path.join(os.tmpdir(), 'opl-domain-command');
+  const normalizedBase = normalizePath(baseRoot);
+  return path.basename(normalizedBase) === workspaceId
+    ? normalizedBase
+    : path.join(normalizedBase, workspaceId);
+}
+
 function externalPath(env: NodeJS.ProcessEnv, cwd: string, name: string, fallback: string) {
   const value = env[name]?.trim();
   if (value && !isInsidePath(cwd, value)) {
@@ -65,17 +80,12 @@ function appendPytestCacheOption(existing: string | undefined, cacheDir: string)
 
 export function buildManagedShellCommandEnv(cwd: string, env: NodeJS.ProcessEnv = process.env) {
   const workspaceId = stableWorkspaceId(cwd);
-  const tmpRoot = externalPath(
-    env,
-    cwd,
-    'OPL_DOMAIN_COMMAND_TMP_ROOT',
-    path.join(os.tmpdir(), 'opl-domain-command', workspaceId),
-  );
-  const pycacheRoot = externalPath(env, cwd, 'PYTHONPYCACHEPREFIX', path.join(tmpRoot, 'pycache'));
-  const uvProjectEnvironment = externalPath(env, cwd, 'UV_PROJECT_ENVIRONMENT', path.join(tmpRoot, 'uv-project'));
-  const uvCacheDir = externalPath(env, cwd, 'UV_CACHE_DIR', path.join(tmpRoot, 'uv-cache'));
-  const xdgCacheHome = externalPath(env, cwd, 'XDG_CACHE_HOME', path.join(tmpRoot, 'xdg-cache'));
-  const pipCacheDir = externalPath(env, cwd, 'PIP_CACHE_DIR', path.join(tmpRoot, 'pip-cache'));
+  const tmpRoot = workspaceScopedExternalRoot(env, cwd, workspaceId);
+  const pycacheRoot = path.join(tmpRoot, 'pycache');
+  const uvProjectEnvironment = path.join(tmpRoot, 'uv-project');
+  const uvCacheDir = path.join(tmpRoot, 'uv-cache');
+  const xdgCacheHome = path.join(tmpRoot, 'xdg-cache');
+  const pipCacheDir = path.join(tmpRoot, 'pip-cache');
   const masCleanRunnerRoot = externalPath(env, cwd, 'MAS_CLEAN_RUNNER_TMP_ROOT', path.join(tmpRoot, 'mas'));
   const magCleanRunnerRoot = externalPath(env, cwd, 'MAG_CLEAN_RUNNER_TMP_ROOT', path.join(tmpRoot, 'mag'));
   const rcaCleanRunnerRoot = externalPath(env, cwd, 'RCA_CLEAN_RUNNER_TMP_ROOT', path.join(tmpRoot, 'rca'));

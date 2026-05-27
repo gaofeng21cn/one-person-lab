@@ -266,6 +266,7 @@ export function materializeFamilyTransitionSurfaces(
   input: {
     binding: WorkspaceBinding;
     timeoutMs: number;
+    materializationTimeoutMs?: number;
   },
 ) {
   const root = rootPayload(payload);
@@ -290,7 +291,7 @@ export function materializeFamilyTransitionSurfaces(
   const result = executeMaterializationCommand(
     input.binding,
     commandDescriptor.command,
-    input.timeoutMs,
+    input.materializationTimeoutMs ?? input.timeoutMs,
   );
   if (commandTimedOut(result)) {
     return updateRootPayload(payload, {
@@ -302,7 +303,7 @@ export function materializeFamilyTransitionSurfaces(
         reason: 'study_state_matrix_materialization_timeout',
         stdout: result.stdout ?? '',
         stderr: result.stderr ?? '',
-        timeoutMs: input.timeoutMs,
+        timeoutMs: input.materializationTimeoutMs ?? input.timeoutMs,
       }),
     });
   }

@@ -30,6 +30,7 @@ export function buildDomainManifestCatalog(
     manifestCommandTimeoutMs?: number;
     manifestCommandTimeoutPolicy?: ManifestCommandTimeoutPolicy;
     materializeFamilyTransitions?: boolean;
+    transitionMaterializationTimeoutMs?: number;
     useProjectionCacheOnFailure?: boolean;
     writeProjectionCache?: boolean;
   } = {},
@@ -53,6 +54,7 @@ export function buildDomainManifestCatalog(
       timeoutMs: options.manifestCommandTimeoutMs,
       timeoutPolicy: options.manifestCommandTimeoutPolicy,
       materializeFamilyTransitions: options.materializeFamilyTransitions,
+      transitionMaterializationTimeoutMs: options.transitionMaterializationTimeoutMs,
     });
   });
   if (options.writeProjectionCache !== false) {

@@ -13,6 +13,7 @@ import type { DomainManifestCatalogEntry } from './types.ts';
 type DomainManifestErrorCode = 'command_failed' | 'command_timeout' | 'invalid_json' | 'invalid_manifest';
 type JsonRecord = Record<string, unknown>;
 export type ManifestCommandTimeoutPolicy = 'env_or_default' | 'fixed';
+const DEFAULT_TRANSITION_MATERIALIZATION_TIMEOUT_MS = 1_000;
 
 export function resolveManifestCommandTimeoutMs(
   defaultTimeoutMs = 30_000,
@@ -93,13 +94,18 @@ function buildResolvedManifestEntry(
   manifestCommand: string,
   parsed: JsonRecord,
   timeoutMs: number,
-  options: { materializeFamilyTransitions?: boolean } = {},
+  options: {
+    materializeFamilyTransitions?: boolean;
+    transitionMaterializationTimeoutMs?: number;
+  } = {},
 ): DomainManifestCatalogEntry {
   const materialized = options.materializeFamilyTransitions === false
     ? parsed
     : materializeFamilyTransitionSurfaces(parsed, {
       binding,
       timeoutMs,
+      materializationTimeoutMs:
+        options.transitionMaterializationTimeoutMs ?? DEFAULT_TRANSITION_MATERIALIZATION_TIMEOUT_MS,
     });
   return {
     project_id: projectId,
@@ -129,6 +135,7 @@ export function resolveBindingManifest(
     timeoutMs?: number;
     timeoutPolicy?: ManifestCommandTimeoutPolicy;
     materializeFamilyTransitions?: boolean;
+    transitionMaterializationTimeoutMs?: number;
   } = {},
 ): DomainManifestCatalogEntry {
   const manifestCommand = binding.direct_entry.manifest_command;
@@ -154,6 +161,7 @@ export function resolveBindingManifest(
     const parsed = parseManifestPayload(result.stdout ?? '');
     return buildResolvedManifestEntry(projectId, project, binding, manifestCommand, parsed, timeoutMs, {
       materializeFamilyTransitions: options.materializeFamilyTransitions,
+      transitionMaterializationTimeoutMs: options.transitionMaterializationTimeoutMs,
     });
   };
 
