@@ -47,6 +47,7 @@ type TemporalVisibilityReadinessInput = {
   taskQueue?: string | null;
   observedCustomAttributes?: Record<string, string | number> | null;
   inspectionError?: string | null;
+  unindexedTestServer?: boolean;
 };
 
 function temporalCliAddressArg(address: string | null) {
@@ -109,6 +110,7 @@ export function buildTemporalStageAttemptVisibilityReadiness(
   const namespace = input.namespace ?? resolveTemporalNamespace();
   const taskQueue = input.taskQueue ?? resolveTemporalTaskQueue();
   const address = input.address ?? resolveTemporalAddress();
+  const unindexedTestServer = input.unindexedTestServer === true;
   const observed = input.observedCustomAttributes
     ? normalizeCustomAttributes(input.observedCustomAttributes)
     : null;
@@ -116,10 +118,12 @@ export function buildTemporalStageAttemptVisibilityReadiness(
     ? TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTES.filter((attribute) =>
       observed[attribute.name] !== attribute.type
     )
-    : TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTES;
+    : unindexedTestServer ? [] : TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTES;
   const readinessStatus = input.inspectionError
     ? 'inspection_failed'
-    : observed
+    : unindexedTestServer
+      ? 'test_server_unindexed_visibility'
+      : observed
       ? missing.length === 0 ? 'ready' : 'missing_search_attributes'
       : 'not_verified';
   return {
@@ -132,6 +136,7 @@ export function buildTemporalStageAttemptVisibilityReadiness(
     address_source: input.addressSource ?? (address ? 'environment' : 'not_configured'),
     required_search_attributes: requiredSearchAttributesSummary(namespace, address),
     observed_custom_attributes: observed,
+    unindexed_visibility_allowed_for_test_server: unindexedTestServer,
     missing_search_attributes: missing.map((attribute) => ({
       ...attribute,
       repair_command: repairCommand(attribute.name, attribute.type, namespace, address),
@@ -149,7 +154,9 @@ export function buildTemporalStageAttemptVisibilityReadiness(
       : null,
     inspection_error: input.inspectionError ?? null,
     visibility_policy:
-      'search_attributes_hold_small_stage_attempt_refs_only_no_transcript_artifact_memory_or_domain_truth_body',
+      unindexedTestServer
+        ? 'test_server_unindexed_visibility_refs_only_no_production_searchability_claim'
+        : 'search_attributes_hold_small_stage_attempt_refs_only_no_transcript_artifact_memory_or_domain_truth_body',
     authority_boundary: {
       opl: 'temporal_visibility_readiness_and_debug_ref_projection_only',
       domain: 'truth_quality_artifact_gate_owner',
@@ -159,6 +166,10 @@ export function buildTemporalStageAttemptVisibilityReadiness(
       provider_completion_is_domain_ready: false,
     },
   };
+}
+
+export function temporalTestServerAllowsUnindexedVisibility() {
+  return process.env.OPL_TEMPORAL_TEST_ALLOW_UNINDEXED_VISIBILITY?.trim() === '1';
 }
 
 export function buildTemporalStageAttemptMemo(input: TemporalStageAttemptWorkflowInput) {
@@ -259,7 +270,36 @@ export async function ensureTemporalStageAttemptVisibilityReady(
 ) {
   const namespace = input.namespace ?? resolveTemporalNamespace();
   const address = input.address ?? resolveTemporalAddress();
-  const observed = await listTemporalCustomSearchAttributes(connection, namespace);
+  if (temporalTestServerAllowsUnindexedVisibility()) {
+    return buildTemporalStageAttemptVisibilityReadiness({
+      address,
+      namespace,
+      taskQueue: resolveTemporalTaskQueue(),
+      unindexedTestServer: true,
+    });
+  }
+  let observed: Record<string, string>;
+  try {
+    observed = await listTemporalCustomSearchAttributes(connection, namespace);
+  } catch (error) {
+    const readiness = buildTemporalStageAttemptVisibilityReadiness({
+      address,
+      namespace,
+      taskQueue: resolveTemporalTaskQueue(),
+      inspectionError: error instanceof Error ? error.message : String(error),
+    });
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Temporal stage attempt visibility Search Attributes could not be inspected.',
+      {
+        provider_kind: 'temporal',
+        namespace,
+        required_search_attributes: readiness.required_search_attributes,
+        repair_action: readiness.repair_action,
+        error: readiness.inspection_error,
+      },
+    );
+  }
   const readiness = buildTemporalStageAttemptVisibilityReadiness({
     address,
     namespace,

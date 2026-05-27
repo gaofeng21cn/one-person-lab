@@ -203,6 +203,7 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
     OPL_TEMPORAL_WORKER_STATUS: process.env.OPL_TEMPORAL_WORKER_STATUS,
     OPL_TEMPORAL_WORKER_ENABLED: process.env.OPL_TEMPORAL_WORKER_ENABLED,
     OPL_TEMPORAL_WORKER_SOURCE_VERSION: process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION,
+    OPL_TEMPORAL_TEST_ALLOW_UNINDEXED_VISIBILITY: process.env.OPL_TEMPORAL_TEST_ALLOW_UNINDEXED_VISIBILITY,
   };
 
   try {
@@ -248,6 +249,7 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
     process.env.OPL_TEMPORAL_WORKER_STATUS = '';
     process.env.OPL_TEMPORAL_WORKER_ENABLED = '';
     process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = 'git:mas-default-start-current';
+    process.env.OPL_TEMPORAL_TEST_ALLOW_UNINDEXED_VISIBILITY = '1';
 
     const dispatchRef = 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json';
     const enqueue = await runFamilyRuntime([
@@ -362,6 +364,7 @@ test('family-runtime queue inspect syncs a completed MAS default executor Tempor
     OPL_TEMPORAL_WORKER_STATUS: process.env.OPL_TEMPORAL_WORKER_STATUS,
     OPL_TEMPORAL_WORKER_ENABLED: process.env.OPL_TEMPORAL_WORKER_ENABLED,
     OPL_TEMPORAL_WORKER_SOURCE_VERSION: process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION,
+    OPL_TEMPORAL_TEST_ALLOW_UNINDEXED_VISIBILITY: process.env.OPL_TEMPORAL_TEST_ALLOW_UNINDEXED_VISIBILITY,
   };
 
   try {
@@ -419,6 +422,7 @@ test('family-runtime queue inspect syncs a completed MAS default executor Tempor
     process.env.OPL_TEMPORAL_WORKER_STATUS = '';
     process.env.OPL_TEMPORAL_WORKER_ENABLED = '';
     process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = 'git:mas-default-completed-current';
+    process.env.OPL_TEMPORAL_TEST_ALLOW_UNINDEXED_VISIBILITY = '1';
 
     const dispatchRef = 'studies/002-dm/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json';
     const enqueue = await runFamilyRuntime([
@@ -485,6 +489,87 @@ test('family-runtime queue inspect syncs a completed MAS default executor Tempor
     assert.equal(attempt.closeout_receipt_status, 'accepted_typed_closeout');
     assert.equal(attempt.provider_run.provider_status, 'completed');
     assert.equal(attempt.route_impact.domain_ready_verdict, 'domain_gate_pending');
+  } finally {
+    for (const [key, value] of Object.entries(previousEnv)) {
+      if (typeof value === 'string') {
+        process.env[key] = value;
+      } else {
+        delete process.env[key];
+      }
+    }
+    await testEnv.teardown();
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime Temporal start fails closed when visibility cannot be inspected', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-visibility-inspect-fail-'));
+  const runtimeRoot = path.join(stateRoot, 'family-runtime');
+  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const taskQueue = `opl-stage-visibility-fail-${Date.now()}`;
+  const previousEnv = {
+    OPL_STATE_DIR: process.env.OPL_STATE_DIR,
+    OPL_TEMPORAL_ADDRESS: process.env.OPL_TEMPORAL_ADDRESS,
+    TEMPORAL_ADDRESS: process.env.TEMPORAL_ADDRESS,
+    OPL_TEMPORAL_NAMESPACE: process.env.OPL_TEMPORAL_NAMESPACE,
+    OPL_TEMPORAL_TASK_QUEUE: process.env.OPL_TEMPORAL_TASK_QUEUE,
+    OPL_TEMPORAL_TEST_ALLOW_UNINDEXED_VISIBILITY: process.env.OPL_TEMPORAL_TEST_ALLOW_UNINDEXED_VISIBILITY,
+  };
+
+  try {
+    fs.mkdirSync(runtimeRoot, { recursive: true });
+    fs.writeFileSync(path.join(runtimeRoot, 'temporal-service.json'), `${JSON.stringify({
+      provider_kind: 'temporal',
+      service_kind: 'custom_command',
+      pid: process.pid,
+      address: testEnv.address,
+      started_at: new Date().toISOString(),
+      status: 'running',
+      command: 'temporal test server',
+    }, null, 2)}\n`);
+    process.env.OPL_STATE_DIR = stateRoot;
+    process.env.OPL_TEMPORAL_ADDRESS = '';
+    process.env.TEMPORAL_ADDRESS = '';
+    process.env.OPL_TEMPORAL_NAMESPACE = testEnv.namespace ?? 'default';
+    process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
+    delete process.env.OPL_TEMPORAL_TEST_ALLOW_UNINDEXED_VISIBILITY;
+
+    const created = await runFamilyRuntime([
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'review',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas"}',
+      '--checkpoint-ref',
+      'packet:visibility-fail',
+    ]) as TemporalStageAttemptCreateOutput;
+    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
+    const start = spawnSync(process.execPath, [
+      '--experimental-strip-types',
+      path.join(repoRoot, 'src', 'cli.ts'),
+      'family-runtime',
+      'attempt',
+      'start',
+      attemptId,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+      },
+    });
+    const output = JSON.parse(start.stdout || start.stderr);
+
+    assert.notEqual(start.status, 0);
+    assert.equal(output.error.code, 'contract_shape_invalid');
+    assert.match(output.error.message, /Search Attributes could not be inspected/);
+    assert.match(output.error.details.error, /ListSearchAttributes/);
   } finally {
     for (const [key, value] of Object.entries(previousEnv)) {
       if (typeof value === 'string') {

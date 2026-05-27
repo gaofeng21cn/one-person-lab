@@ -30,6 +30,7 @@ import {
   buildTemporalStageAttemptSearchAttributes,
   inspectTemporalStageAttemptVisibilityReadiness,
   ensureTemporalStageAttemptVisibilityReady,
+  temporalTestServerAllowsUnindexedVisibility,
 } from './family-runtime-temporal-visibility.ts';
 export {
   inspectTemporalStageAttemptVisibilityReadiness,
@@ -173,7 +174,9 @@ export async function startTemporalStageAttemptWorkflow(
       workflowIdConflictPolicy: WorkflowIdConflictPolicy.USE_EXISTING,
       workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
       memo: buildTemporalStageAttemptMemo(workflowInput),
-      searchAttributes: buildTemporalStageAttemptSearchAttributes(workflowInput),
+      ...temporalTestServerAllowsUnindexedVisibility()
+        ? {}
+        : { searchAttributes: buildTemporalStageAttemptSearchAttributes(workflowInput) },
     });
     return {
       surface_kind: 'temporal_stage_attempt_start_receipt',
