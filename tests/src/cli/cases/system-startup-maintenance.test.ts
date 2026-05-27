@@ -314,6 +314,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
 test('system startup-maintenance refreshes Codex CLI before module maintenance when latest is newer', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-codex-home-'));
   const logPath = path.join(homeRoot, 'codex-update.log');
+  const developerCheckout = path.join(homeRoot, 'developer-module-checkout');
   const codexFixture = createFakeCodexFixture(`
 if [[ "$1" == "--version" ]]; then
   echo "codex-cli 0.130.0"
@@ -333,6 +334,19 @@ exit 1
     ].join('\n'),
     { mode: 0o755 },
   );
+  fs.mkdirSync(developerCheckout, { recursive: true });
+  runGitFixtureCommand(developerCheckout, ['init', '--initial-branch', 'main']);
+  fs.writeFileSync(path.join(developerCheckout, 'README.md'), '# Developer checkout\n', 'utf8');
+  runGitFixtureCommand(developerCheckout, ['add', 'README.md']);
+  runGitFixtureCommand(developerCheckout, [
+    '-c',
+    'user.name=OPL Test',
+    '-c',
+    'user.email=opl@example.test',
+    'commit',
+    '-m',
+    'Initial developer checkout',
+  ]);
 
   try {
     const output = runCli(['system', 'startup-maintenance'], {
@@ -342,6 +356,10 @@ exit 1
       OPL_MODULES_ROOT: path.join(homeRoot, 'managed-modules'),
       OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
       OPL_CODEX_UPDATE_COMMAND: updateScript,
+      OPL_MODULE_PATH_MEDAUTOSCIENCE: developerCheckout,
+      OPL_MODULE_PATH_MEDAUTOGRANT: developerCheckout,
+      OPL_MODULE_PATH_REDCUBE: developerCheckout,
+      OPL_MODULE_PATH_OPLMETAAGENT: developerCheckout,
       PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
     }) as {
