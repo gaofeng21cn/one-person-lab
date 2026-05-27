@@ -109,7 +109,7 @@ test('active operator closeout surfaces keep the current provider-backed boundar
   ].forEach(assertCurrentBoundary);
 });
 
-test('active gap docs do not freeze stale checkout or compatibility-audit baselines', () => {
+test('active gap docs do not freeze stale checkout, compatibility-audit baselines, or volatile read-model counters', () => {
   const scannedActiveDocs = [
     'docs/active/current-development-lines.md',
     'docs/active/current-state-vs-ideal-gap.md',
@@ -118,6 +118,14 @@ test('active gap docs do not freeze stale checkout or compatibility-audit baseli
   const forbiddenPatterns = [
     /四仓根 checkout 都在 `main\.\.\.origin\/main` 且 clean/,
     /path compatibility audit/i,
+    /open_worklist_item_count=\d+/,
+    /open_safe_action_payload_required_item_count=\d+/,
+    /open_safe_action_payload_free_item_count=\d+/,
+    /domain_dispatch_evidence_workorder_count=\d+/,
+    /domain_dispatch_evidence_receipt_action_route_count=\d+/,
+    /domain_dispatch_evidence_receipt_record_requires_domain_or_app_payload_count=\d+/,
+    /domain_dispatch_evidence_current_default_actionable_attempt_count=\d+/,
+    /evidence_envelope_open_count=\d+/,
   ];
   const violations: string[] = [];
 
