@@ -4,9 +4,9 @@ Owner: `One Person Lab`
 Purpose: `support_reference`
 State: `support_reference`
 Machine boundary: this is a support reference and rationale. Machine truth lives in `contracts/family-orchestration/family-stage-control-plane.schema.json`, domain product-entry manifests, `opl stages list|inspect|readiness`, launch-admission gates, runtime ledgers and domain-owned receipts.
-Date: `2026-05-26`
+Date: `2026-05-28`
 
-2026-05-26 读法：本文是 stage control plane 的 adoption rationale，不是 active execution board。当前 live read-model 显示 OPL control plane 可用但仍有 blocked refs-only attention；4 repo structural conformance passed 只证明 descriptor / pack / authority boundary 可读；App drilldown 只做 refs-only operator projection；zero-open evidence worklist 不授权 domain ready 或 production ready。因此，本文的 MAS/RCA/MAG stage sequence、inventory 和实施顺序只能作为 design/adoption 支撑，不能被当成 workflow engine landed、domain default caller complete、owner-chain closeout、artifact authority、quality verdict 或 App release-ready 证据。
+2026-05-28 读法：本文是 stage control plane 的 adoption rationale，不是 active execution board。Fresh stage discovery/readiness 证明 4 个 resolved planes、19 个 admitted stages、0 blocked stages、hard blocker 0，但 readiness 状态仍是 `launch_warning`，且明确不能 claim domain ready、artifact authority 或 production ready；4 repo structural conformance pass 和 32 个 generated/default caller surfaces 只证明 descriptor / pack / authority boundary / replacement surface 可读。当前 checkout 的 `framework readiness`、`family-runtime evidence-worklist` 与 `app-operator-drilldown` 聚合命令 fail-closed，不能继承旧 worklist 或 App projection counters。因此，本文的 MAS/RCA/MAG/OMA stage sequence、inventory 和实施顺序只能作为 design/adoption 支撑，不能被当成 workflow engine landed、domain default caller complete、owner-chain closeout、artifact authority、quality verdict 或 App release-ready 证据。
 
 ## 结论
 
@@ -72,7 +72,7 @@ Date: `2026-05-26`
 
 `family-stage-control-plane` companion 是窄 schema，不是完整流程引擎。它只声明 stage descriptor、skill/prompt/evaluation refs、handoff refs 与 authority boundary，并通过 manifest discovery 暴露。`opl stages list|inspect|readiness` 只做发现、inspection、admission/parity 和 readiness drilldown；launch admission 可以阻断未声明 stage 或缺少启动安全 refs 的 attempt，但不执行 domain action，不给 domain quality verdict，也不关闭 domain ready / production ready。
 
-Fresh `opl stages list --json` at 2026-05-26 CST currently reads 3 resolved planes, 18 admitted stages and 0 blocked stages across `med-autoscience`、`med-autogrant` and `redcube-ai`. This is structural/admission evidence only; production evidence, owner receipt, artifact mutation, quality/export verdict and memory body authority remain domain-owned.
+Fresh `opl stages list --json` at 2026-05-28 CST currently reads 4 resolved planes, 19 admitted stages and 0 blocked stages across `med-autoscience`、`med-autogrant`、`redcube-ai` and `opl-meta-agent`. Fresh `opl stages readiness --family-defaults --json` reads `launch_warning`, hard blocker 0 and warning 78, with `can_claim_domain_ready=false`, `can_claim_artifact_authority=false` and `can_claim_production_ready=false`. This is structural/admission/readiness-warning evidence only; production evidence, owner receipt, artifact mutation, quality/export verdict and memory body authority remain domain-owned.
 
 ## Research Harness 学习记录
 
