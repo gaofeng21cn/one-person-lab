@@ -1,3 +1,5 @@
+import { DatabaseSync } from 'node:sqlite';
+
 import { assert, fs, os, path, runCli, runCliFailure, shellSingleQuote, test } from '../helpers.ts';
 
 function createDispatchFixture(body: string) {
@@ -583,10 +585,13 @@ JSON
     }));
     const queue = runCli(['family-runtime', 'queue', 'list'], familyRuntimeEnv(stateRoot));
     const task = queue.family_runtime_queue.tasks[0];
+    const inspected = runCli(['family-runtime', 'queue', 'inspect', task.task_id], familyRuntimeEnv(stateRoot));
+    const attempt = inspected.family_runtime_task.stage_attempts[0];
     const dispatchedTask = JSON.parse(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8'));
 
     assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
+    assert.equal(tick.family_runtime_tick.dispatches[0].stage_attempts[0].stage_id, 'paper_autonomy/repair-recheck');
     assert.equal(task.task_kind, 'paper_autonomy/repair-recheck');
     assert.equal(task.paper_autonomy.study_id, 'DM002');
     assert.equal(task.paper_autonomy.next_owner, 'quality_repair_batch');
@@ -594,8 +599,119 @@ JSON
     assert.equal(task.paper_autonomy.repair_command, 'medautosci domain-handler dispatch --task <task.json> --format json');
     assert.equal(task.paper_autonomy.authority_boundary.writes_mas_truth, false);
     assert.deepEqual(task.payload.source_refs, ['studies/DM002/artifacts/publication_eval/latest.json']);
+    assert.equal(attempt.provider_kind, 'temporal');
+    assert.equal(attempt.stage_id, 'paper_autonomy/repair-recheck');
+    assert.equal(attempt.task_id, task.task_id);
+    assert.equal(attempt.status, 'checkpointed');
     assert.equal(dispatchedTask.paper_autonomy.next_owner, 'quality_repair_batch');
     assert.equal(dispatchedTask.paper_autonomy.idempotency_key, 'reviewer_refinement_loop:unit-1:sha256:abc');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime repairs stale running MAS paper autonomy tasks that lack stage attempt identity', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-paper-stale-running-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-paper-stale-running-export-'));
+  const exportPath = path.join(fixtureRoot, 'export');
+  const dispatchPath = path.join(fixtureRoot, 'dispatch');
+  fs.writeFileSync(
+    exportPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+cat <<'JSON'
+{
+  "surface_kind": "mas_family_domain_handler_export",
+  "pending_family_tasks": [
+    {
+      "domain_id": "medautoscience",
+      "task_kind": "paper_autonomy/repair-recheck",
+      "priority": 80,
+      "source": "mas-domain-handler-export",
+      "dedupe_key": "reviewer_refinement_loop:unit-1:sha256:stale",
+      "dispatch_owner": "med-autoscience",
+      "profile_name": "dm-cvd",
+      "source_refs": ["studies/DM002/artifacts/publication_eval/latest.json"],
+      "payload": {
+        "profile": "/tmp/profile.toml",
+        "study_id": "DM002",
+        "repair_work_unit": {
+          "unit_id": "unit-1",
+          "work_unit_type": "text_repair",
+          "owner": "quality_repair_batch",
+          "callable_surface": "run_quality_repair_batch",
+          "source_fingerprint": "sha256:stale",
+          "source_refs": ["studies/DM002/paper/manuscript.md"]
+        }
+      }
+    }
+  ]
+}
+JSON
+`,
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    dispatchPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+cat <<'JSON'
+{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receipt","paper_autonomy_receipt":true}
+JSON
+`,
+    { mode: 0o755 },
+  );
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: `/bin/bash ${exportPath}`,
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: `/bin/bash ${dispatchPath}`,
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_autonomy/repair-recheck',
+      '--payload',
+      '{"profile":"/tmp/profile.toml","study_id":"DM002","repair_work_unit":{"unit_id":"unit-1","work_unit_type":"text_repair","owner":"quality_repair_batch","callable_surface":"run_quality_repair_batch","source_fingerprint":"sha256:stale","source_refs":["studies/DM002/paper/manuscript.md"]}}',
+      '--dedupe-key',
+      'reviewer_refinement_loop:unit-1:sha256:stale',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
+    const db = new DatabaseSync(queueDb);
+    db.prepare(`
+      UPDATE tasks
+      SET status = 'running',
+        attempts = 1,
+        lease_owner = 'stale-worker',
+        lease_expires_at = '2026-05-27T00:00:00.000Z'
+      WHERE task_id = ?
+    `).run(taskId);
+    db.close();
+
+    const before = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test-repair'], env);
+    const after = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const secondTick = runCli(['family-runtime', 'tick', '--source', 'test-repair'], env);
+    const finalTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+
+    assert.equal(before.family_runtime_task.task.current_control_state.reconciliation_status, 'blocked_missing_identity');
+    assert.equal(tick.family_runtime_tick.repaired_missing_identity_running_count, 1);
+    assert.equal(tick.family_runtime_tick.selected_count, 0);
+    assert.equal(after.family_runtime_task.task.status, 'retry_waiting');
+    assert.equal(after.family_runtime_task.task.lease, null);
+    assert.equal(after.family_runtime_task.task.last_error, 'missing_stage_attempt_identity');
+    assert.equal(after.family_runtime_task.task.dead_letter_reason, null);
+    assert.equal(after.family_runtime_task.stage_attempts[0].stage_id, 'paper_autonomy/repair-recheck');
+    assert.equal(after.family_runtime_task.stage_attempts[0].status, 'queued');
+    assert.equal(after.family_runtime_task.task.current_control_state.reconciliation_status, 'queued');
+    assert.equal(secondTick.family_runtime_tick.repaired_missing_identity_running_count, 0);
+    assert.equal(secondTick.family_runtime_tick.selected_count, 1);
+    assert.equal(secondTick.family_runtime_tick.dispatches[0].status, 'succeeded');
+    assert.equal(finalTask.family_runtime_task.task.status, 'succeeded');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

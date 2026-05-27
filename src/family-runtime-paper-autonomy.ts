@@ -4,7 +4,7 @@ export type PaperAutonomyProjectionTask = {
   dedupe_key: string | null;
 };
 
-const MAS_PAPER_AUTONOMY_TASK_KINDS = new Set([
+export const MAS_PAPER_AUTONOMY_TASK_KINDS = new Set([
   'paper_autonomy/repair-recheck',
   'paper_autonomy/ai-reviewer-recheck',
   'paper_autonomy/gate-replay',

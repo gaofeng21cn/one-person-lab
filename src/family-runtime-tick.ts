@@ -15,6 +15,7 @@ import {
 } from './family-runtime-stage-attempts.ts';
 import {
   findLiveMasDefaultExecutorDispatchAttempt,
+  ensureProviderHostedStageAttempt,
   isMasDefaultExecutorDispatchTask,
   masDefaultExecutorDispatchIdentity,
   masDefaultExecutorDomainSourceFingerprint,
@@ -44,6 +45,8 @@ type MasDefaultExecutorCurrentTask = {
   source_fingerprint: string | null;
   created_at: string;
 };
+
+const MISSING_STAGE_ATTEMPT_IDENTITY_REPAIR_REASON = 'missing_stage_attempt_identity';
 
 function payloadFromTask(row: FamilyRuntimeTaskRow) {
   return JSON.parse(row.payload_json) as Record<string, unknown>;
@@ -111,6 +114,91 @@ function attemptCountForTask(db: DatabaseSync, taskId: string) {
     WHERE task_id = ?
   `).get(taskId) as { count: number };
   return row.count;
+}
+
+function isExpiredOrUnleasedRunningTask(row: FamilyRuntimeTaskRow) {
+  if (row.status !== 'running') {
+    return false;
+  }
+  if (!row.lease_expires_at) {
+    return true;
+  }
+  const leaseExpiresAt = Date.parse(row.lease_expires_at);
+  return Number.isFinite(leaseExpiresAt) && leaseExpiresAt <= Date.now();
+}
+
+function repairRunningTasksWithoutStageAttemptIdentity(
+  db: DatabaseSync,
+  rows: FamilyRuntimeTaskRow[],
+  source: string,
+) {
+  let repairedCount = 0;
+  let deadLetteredCount = 0;
+  const repairedTaskIds = new Set<string>();
+  const repairedAt = new Date().toISOString();
+  for (const row of rows) {
+    if (!isExpiredOrUnleasedRunningTask(row) || listStageAttemptsForTask(db, row.task_id).length > 0) {
+      continue;
+    }
+    const payload = payloadFromTask(row);
+    const nextStatus = row.attempts >= row.max_attempts ? 'dead_letter' : 'retry_waiting';
+    db.prepare(`
+      UPDATE tasks
+      SET status = ?, lease_owner = NULL, lease_expires_at = NULL,
+        last_error = ?, dead_letter_reason = ?, updated_at = ?
+      WHERE task_id = ? AND status = 'running'
+    `).run(
+      nextStatus,
+      MISSING_STAGE_ATTEMPT_IDENTITY_REPAIR_REASON,
+      nextStatus === 'dead_letter' ? MISSING_STAGE_ATTEMPT_IDENTITY_REPAIR_REASON : null,
+      repairedAt,
+      row.task_id,
+    );
+    const stageAttempt = nextStatus === 'retry_waiting'
+      ? ensureProviderHostedStageAttempt(db, {
+        ...row,
+        status: nextStatus,
+        lease_owner: null,
+        lease_expires_at: null,
+        last_error: 'missing_stage_attempt_identity',
+        dead_letter_reason: null,
+        updated_at: repairedAt,
+      }, payload, {
+        newAttempt: true,
+        eventSource: source,
+      })
+      : null;
+    insertEvent(db, {
+      taskId: row.task_id,
+      domainId: row.domain_id,
+      eventType: nextStatus === 'dead_letter'
+        ? 'task_dead_lettered_after_missing_stage_attempt_identity'
+        : 'task_requeued_after_missing_stage_attempt_identity',
+      source,
+      payload: {
+        previous_status: row.status,
+        next_status: nextStatus,
+        previous_attempts: row.attempts,
+        max_attempts: row.max_attempts,
+        repaired_stage_attempt_id: stageAttempt?.stage_attempt_id ?? null,
+        reason: MISSING_STAGE_ATTEMPT_IDENTITY_REPAIR_REASON,
+        authority_boundary: {
+          opl: 'queue_attempt_identity_reconciliation_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          domain_truth_mutation: false,
+          publication_quality_mutation: false,
+          artifact_gate_mutation: false,
+          current_package_mutation: false,
+        },
+      },
+    });
+    repairedTaskIds.add(row.task_id);
+    repairedCount += 1;
+    if (nextStatus === 'dead_letter') {
+      deadLetteredCount += 1;
+    }
+  }
+  return { repairedCount, deadLetteredCount, repairedTaskIds };
 }
 
 function autoRedriveBlockedMasDefaultExecutorProviderTasks(
@@ -366,12 +454,26 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
   );
   const allRowsAfterTerminalSync = db.prepare('SELECT * FROM tasks').all() as FamilyRuntimeTaskRow[];
   const scopedRowsAfterTerminalSync = allRowsAfterTerminalSync.filter((row) => taskRowMatchesScope(row, input.taskScope));
+  const missingIdentityRepairSource = `${input.source}:missing-identity-repair`;
+  const {
+    repairedCount: repairedMissingIdentityRunningCount,
+    deadLetteredCount: repairedMissingIdentityDeadLetteredCount,
+    repairedTaskIds: repairedMissingIdentityTaskIdSet,
+  } = repairRunningTasksWithoutStageAttemptIdentity(
+    db,
+    scopedRowsAfterTerminalSync,
+    missingIdentityRepairSource,
+  );
+  const allRowsAfterMissingIdentityRepair = db.prepare('SELECT * FROM tasks').all() as FamilyRuntimeTaskRow[];
+  const scopedRowsAfterMissingIdentityRepair = allRowsAfterMissingIdentityRepair.filter((row) =>
+    taskRowMatchesScope(row, input.taskScope)
+  );
   const {
     autoRedrivenCount: masDefaultExecutorAutoRedrivenCount,
     autoDeadLetteredCount: masDefaultExecutorAutoDeadLetteredCount,
   } = autoRedriveBlockedMasDefaultExecutorProviderTasks(
     db,
-    scopedRowsAfterTerminalSync,
+    scopedRowsAfterMissingIdentityRepair,
     `${input.source}:auto-redrive`,
   );
   const candidateRows = db.prepare(`
@@ -380,7 +482,9 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     ORDER BY priority DESC, created_at ASC
   `).all() as FamilyRuntimeTaskRow[];
   const allRows = db.prepare('SELECT * FROM tasks').all() as FamilyRuntimeTaskRow[];
-  const scopedRowsBeforeSupersededFilter = candidateRows.filter((row) => taskRowMatchesScope(row, input.taskScope));
+  const scopedRowsBeforeSupersededFilter = candidateRows.filter((row) =>
+    taskRowMatchesScope(row, input.taskScope) && !repairedMissingIdentityTaskIdSet.has(row.task_id)
+  );
   const {
     rows: scopedRowsAfterSuperseded,
     supersededCount: masDefaultExecutorSupersededCount,
@@ -403,6 +507,8 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       mas_default_executor_superseded_count: masDefaultExecutorSupersededCount,
       mas_default_executor_live_skipped_count: masDefaultExecutorLiveSkippedCount,
       mas_default_executor_terminal_synced_count: masDefaultExecutorTerminalSyncedCount,
+      repaired_missing_identity_running_count: repairedMissingIdentityRunningCount,
+      repaired_missing_identity_dead_lettered_count: repairedMissingIdentityDeadLetteredCount,
       mas_default_executor_auto_redriven_count: masDefaultExecutorAutoRedrivenCount,
       mas_default_executor_auto_dead_lettered_count: masDefaultExecutorAutoDeadLetteredCount,
       task_scope: input.taskScope ?? null,
@@ -423,6 +529,8 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     mas_default_executor_superseded_count: masDefaultExecutorSupersededCount,
     mas_default_executor_live_skipped_count: masDefaultExecutorLiveSkippedCount,
     mas_default_executor_terminal_synced_count: masDefaultExecutorTerminalSyncedCount,
+    repaired_missing_identity_running_count: repairedMissingIdentityRunningCount,
+    repaired_missing_identity_dead_lettered_count: repairedMissingIdentityDeadLetteredCount,
     mas_default_executor_auto_redriven_count: masDefaultExecutorAutoRedrivenCount,
     mas_default_executor_auto_dead_lettered_count: masDefaultExecutorAutoDeadLetteredCount,
     dispatches,

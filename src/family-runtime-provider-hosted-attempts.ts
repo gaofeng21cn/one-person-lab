@@ -7,6 +7,7 @@ import {
   isMasOwnerRouteTask,
   masOwnerRouteActionRef,
 } from './family-runtime-mas-domain-route.ts';
+import { MAS_PAPER_AUTONOMY_TASK_KINDS } from './family-runtime-paper-autonomy.ts';
 import { resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
 import {
   createStageAttempt,
@@ -325,7 +326,7 @@ function stageIdForProviderHostedTask(row: FamilyRuntimeTaskRow, payload: Record
   if (isMasDefaultExecutorDispatchTask(row, payload)) {
     return row.task_kind;
   }
-  if (row.domain_id === 'medautoscience' && row.task_kind === 'paper_autonomy/guarded-apply') {
+  if (row.domain_id === 'medautoscience' && MAS_PAPER_AUTONOMY_TASK_KINDS.has(row.task_kind)) {
     return row.task_kind;
   }
   const transition = familyTransitionResult(payload);
@@ -375,6 +376,13 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
     if (profileWorkspaceRoot) {
       locator.workspace_root = profileWorkspaceRoot;
     }
+  }
+  if (row.domain_id === 'medautoscience' && MAS_PAPER_AUTONOMY_TASK_KINDS.has(row.task_kind)) {
+    locator.domain_truth_owner = 'med-autoscience';
+    locator.opl_writes_domain_truth = false;
+    locator.opl_writes_publication_quality = false;
+    locator.opl_writes_artifact_gate = false;
+    locator.opl_writes_current_package = false;
   }
   for (const key of [
     'profile',
