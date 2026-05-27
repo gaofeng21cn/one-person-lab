@@ -321,13 +321,16 @@ function runtimeActionExecuteCommand(input: {
   ].join(' ');
 }
 
-function hasOpenStageEvidenceObligation(stage: JsonRecord) {
+function hasRecordableStageEvidenceObligation(stage: JsonRecord) {
   return recordList(stage.evidence_obligations).some((obligation) => (
     (stringValue(obligation.obligation_id) === 'expected_receipt'
       || stringValue(obligation.obligation_id) === 'monitor_freshness'
       || stringValue(obligation.obligation_id) === 'source_scope'
       || stringValue(obligation.obligation_id) === 'runtime_event')
-    && stringValue(obligation.status) === 'open'
+    && (
+      stringValue(obligation.status) === 'open'
+      || stringValue(obligation.status) === 'blocked_by_domain_owned_typed_blocker'
+    )
   ));
 }
 
@@ -534,7 +537,7 @@ export function buildStageProductionEvidenceReceiptRoutes(stageProductionEvidenc
   return uniqueRefs(recordList(stageProductionEvidence.stages)
     .filter((stage) => (
       stringValue(stage.admission_status) === 'admitted'
-      && hasOpenStageEvidenceObligation(stage)
+      && hasRecordableStageEvidenceObligation(stage)
       && (
         stringList(stage.unobserved_expected_receipt_refs).length > 0
         || stringList(stage.unobserved_monitor_refs).length > 0

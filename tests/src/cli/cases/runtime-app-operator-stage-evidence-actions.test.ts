@@ -653,3 +653,108 @@ test('verified stage evidence receipt can reopen record route when source scope 
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('verified typed-blocker stage evidence receipt keeps record route open for later owner refs', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-evidence-typed-blocker-supersede-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  try {
+    bindReviewStageEvidenceManifest(stateRoot, fixtureContractsRoot);
+    runCli([
+      'agents',
+      'evidence',
+      'apply',
+      '--domain',
+      'medautoscience',
+      '--request-id',
+      'stage_production_evidence:medautoscience:review',
+      '--request-pack-id',
+      'medautoscience.stage_production_evidence',
+      '--source-ref',
+      '/runtime_tray_snapshot/app_operator_drilldown/stage_production_evidence/med-autoscience/review',
+      '--receipt-ref',
+      'mas-stage-review-typed-blocker-receipt',
+      '--typed-blocker-ref',
+      'mas-stage-typed-blocker:review:owner-receipt-or-monitor-freshness-pending',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    runCli([
+      'agents',
+      'evidence',
+      'apply',
+      '--domain',
+      'medautoscience',
+      '--request-id',
+      'stage_production_evidence:medautoscience:review',
+      '--mode',
+      'verify',
+      '--receipt-ref',
+      'mas-stage-review-typed-blocker-receipt',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).app_operator_drilldown;
+    const stage = drilldown.stage_production_evidence.stages.find(
+      (entry: { stage_id: string }) => entry.stage_id === 'review',
+    );
+    assert.equal(stage.stage_evidence_receipt_status, 'verified');
+    assert.deepEqual(stage.observed_expected_receipt_refs, []);
+    assert.deepEqual(stage.domain_owned_typed_blocker_refs, [
+      'mas-stage-typed-blocker:review:owner-receipt-or-monitor-freshness-pending',
+    ]);
+    assert.equal(
+      stage.evidence_obligations.some(
+        (obligation: { obligation_id: string; status: string }) =>
+          obligation.obligation_id === 'expected_receipt'
+          && obligation.status === 'blocked_by_domain_owned_typed_blocker',
+      ),
+      true,
+    );
+
+    const route = drilldown.operator_action_routing_refs.refs.find(
+      (ref: { action_id: string }) =>
+        ref.action_id === 'stage-production-evidence:medautoscience:review:record',
+    );
+    assert.equal(route.action_kind, 'stage_production_evidence_receipt_record');
+    assert.equal(route.route_requires_domain_or_app_payload, true);
+    assert.deepEqual(route.payload_ref_hints.domain_receipt_refs_should_cover, [
+      'mas:review-receipt',
+      'owner_receipt:review',
+    ]);
+    assert.deepEqual(route.payload_ref_hints.evidence_refs_should_cover_monitor_freshness, [
+      'metric:review/currentness',
+    ]);
+
+    const recordExecution = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'stage-production-evidence:medautoscience:review:record',
+      '--payload',
+      JSON.stringify({
+        evidence_refs: ['metric:review/currentness'],
+        domain_receipt_refs: ['mas:review-receipt', 'mas://receipts/review-owner-instance.json'],
+        source_scope_refs: ['source:review'],
+        runtime_event_refs: ['runtime_event:review.receipt_recorded'],
+        owner_chain_refs: ['mas://owner-chain/review/live-success'],
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).runtime_operator_action_execution;
+    assert.equal(
+      recordExecution.execution.result.stage_production_evidence_payload_preflight.status,
+      'ready_to_record',
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
