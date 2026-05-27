@@ -153,9 +153,9 @@ export function buildTemporalStageAttemptSearchAttributes(input: TemporalStageAt
     OplStageId: [input.stage_id],
     OplAttemptStatus: ['registered'],
     OplStagePhase: ['registered'],
-    OplBlockedReason: input.provider_blocker?.blocked_reason ? [input.provider_blocker.blocked_reason] : undefined,
-    OplTaskId: input.task_id ? [input.task_id] : undefined,
-    OplSourceFingerprint: input.source_fingerprint ? [input.source_fingerprint] : undefined,
+    OplBlockedReason: input.provider_blocker?.blocked_reason ? [input.provider_blocker.blocked_reason] : [],
+    OplTaskId: input.task_id ? [input.task_id] : [],
+    OplSourceFingerprint: input.source_fingerprint ? [input.source_fingerprint] : [],
     OplExecutorKind: [input.executor_kind],
   };
 }

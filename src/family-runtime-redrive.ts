@@ -6,6 +6,7 @@ import {
   ensureProviderHostedStageAttempt,
   isMasDefaultExecutorDispatchTask,
 } from './family-runtime-provider-hosted-attempts.ts';
+import { listStageAttemptsForTask } from './family-runtime-stage-attempts.ts';
 import {
   insertEvent,
   insertNotification,
@@ -37,6 +38,58 @@ function assertProviderTransportRedriveReason(value: string | null): asserts val
         blocker_id: 'family_runtime_redrive_blocked',
         dead_letter_reason: value,
         allowed_dead_letter_reasons: PROVIDER_TRANSPORT_REDRIVE_REASONS,
+      },
+    );
+  }
+}
+
+function providerRetryBudgetDeadLetterEvidenceKind(db: DatabaseSync, taskId: string) {
+  const stageAttemptEvidence = listStageAttemptsForTask(db, taskId).some((attempt) => (
+    attempt.status === 'dead_lettered'
+    && attempt.blocked_reason === 'retry_budget_exhausted'
+    && attempt.provider_kind === 'temporal'
+    && attempt.executor_kind === 'codex_cli'
+  ));
+  if (stageAttemptEvidence) {
+    return 'stage_attempt_dead_lettered';
+  }
+  const event = db.prepare(`
+    SELECT payload_json
+    FROM events
+    WHERE task_id = ? AND event_type = 'task_auto_dead_lettered_after_provider_transport_retries'
+    ORDER BY created_at DESC
+    LIMIT 1
+  `).get(taskId) as { payload_json: string } | undefined;
+  if (!event) {
+    return null;
+  }
+  const payload = JSON.parse(event.payload_json) as Record<string, unknown>;
+  const previousReason = typeof payload.previous_dead_letter_reason === 'string'
+    ? payload.previous_dead_letter_reason
+    : null;
+  if (!PROVIDER_TRANSPORT_REDRIVE_REASONS.includes(previousReason as ProviderTransportRedriveReason)) {
+    return null;
+  }
+  return 'task_auto_dead_letter_event';
+}
+
+function assertMasDefaultExecutorTask(
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+) {
+  if (
+    row.domain_id !== 'medautoscience'
+    || row.task_kind !== MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
+    || !isMasDefaultExecutorDispatchTask(row, payload)
+  ) {
+    throw new FrameworkContractError(
+      'cli_usage_error',
+      'family-runtime queue redrive does not redrive non-MAS default executor tasks.',
+      {
+        blocker_id: 'family_runtime_redrive_blocked',
+        task_id: row.task_id,
+        domain_id: row.domain_id,
+        task_kind: row.task_kind,
       },
     );
   }
@@ -89,22 +142,7 @@ export function redriveBlockedMasDefaultExecutorProviderTransportTask(
       };
     }
     const currentPayload = parsePayload(currentRow);
-    if (
-      currentRow.domain_id !== 'medautoscience'
-      || currentRow.task_kind !== MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
-      || !isMasDefaultExecutorDispatchTask(currentRow, currentPayload)
-    ) {
-      throw new FrameworkContractError(
-        'cli_usage_error',
-        'family-runtime queue redrive does not redrive non-MAS default executor tasks.',
-        {
-          blocker_id: 'family_runtime_redrive_blocked',
-          task_id: currentRow.task_id,
-          domain_id: currentRow.domain_id,
-          task_kind: currentRow.task_kind,
-        },
-      );
-    }
+    assertMasDefaultExecutorTask(currentRow, currentPayload);
     assertProviderTransportRedriveReason(currentRow.dead_letter_reason);
     const nextStatus: FamilyRuntimeTaskStatus = currentRow.requires_approval ? 'waiting_approval' : 'queued';
     const claim = db.prepare(`
@@ -182,6 +220,128 @@ export function redriveBlockedMasDefaultExecutorProviderTransportTask(
   }
 }
 
+function redriveRetryBudgetDeadLetterMasDefaultExecutorProviderTask(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  _payload: Record<string, unknown>,
+  input: {
+    source?: string;
+    operatorReason: string;
+    redrivenAt?: string;
+  },
+) {
+  const eventSource = input.source?.trim() || 'opl-family-runtime-redrive';
+  const redrivenAt = input.redrivenAt ?? nowIso();
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    const currentRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(row.task_id) as
+      | FamilyRuntimeTaskRow
+      | undefined;
+    if (!currentRow) {
+      throw new FrameworkContractError('cli_usage_error', 'Family runtime task not found.', {
+        task_id: row.task_id,
+      });
+    }
+    if (
+      currentRow.status !== 'dead_letter'
+      || currentRow.dead_letter_reason !== 'retry_budget_exhausted'
+    ) {
+      db.exec('COMMIT');
+      return {
+        redriven: false,
+        requeued_from_terminal: false,
+        idempotent_noop: true,
+        skip_reason: 'task_no_longer_retry_budget_dead_letter_for_provider_transport_redrive',
+        task: taskToPayload(currentRow),
+        redriven_stage_attempt: null,
+      };
+    }
+    const currentPayload = parsePayload(currentRow);
+    assertMasDefaultExecutorTask(currentRow, currentPayload);
+    const retryBudgetEvidenceKind = providerRetryBudgetDeadLetterEvidenceKind(db, currentRow.task_id);
+    if (!retryBudgetEvidenceKind) {
+      throw new FrameworkContractError(
+        'cli_usage_error',
+        'family-runtime queue redrive requires retry-budget provider attempt evidence.',
+        {
+          blocker_id: 'family_runtime_redrive_blocked',
+          task_id: currentRow.task_id,
+          status: currentRow.status,
+          dead_letter_reason: currentRow.dead_letter_reason,
+          required_stage_attempt_status: 'dead_lettered',
+          required_stage_attempt_blocked_reason: 'retry_budget_exhausted',
+          accepted_task_event_type: 'task_auto_dead_lettered_after_provider_transport_retries',
+        },
+      );
+    }
+    const nextStatus: FamilyRuntimeTaskStatus = currentRow.requires_approval ? 'waiting_approval' : 'queued';
+    const claim = db.prepare(`
+      UPDATE tasks
+      SET status = ?, attempts = 0, lease_owner = NULL, lease_expires_at = NULL,
+        last_error = NULL, dead_letter_reason = NULL, updated_at = ?
+      WHERE task_id = ? AND status = 'dead_letter' AND dead_letter_reason = 'retry_budget_exhausted'
+    `).run(nextStatus, redrivenAt, currentRow.task_id);
+    if (claim.changes === 0) {
+      const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(currentRow.task_id) as
+        | FamilyRuntimeTaskRow
+        | undefined;
+      db.exec('COMMIT');
+      return {
+        redriven: false,
+        requeued_from_terminal: false,
+        idempotent_noop: true,
+        skip_reason: 'task_no_longer_retry_budget_dead_letter_for_provider_transport_redrive',
+        task: refreshed ? taskToPayload(refreshed) : null,
+        redriven_stage_attempt: null,
+      };
+    }
+    const redrivenAttempt = ensureProviderHostedStageAttempt(db, currentRow, currentPayload, {
+      newAttempt: true,
+      eventSource,
+    });
+    const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(currentRow.task_id) as
+      FamilyRuntimeTaskRow;
+    insertEvent(db, {
+      taskId: currentRow.task_id,
+      domainId: currentRow.domain_id,
+      eventType: 'task_operator_redrive_from_dead_letter_provider_retry_budget',
+      source: eventSource,
+      payload: {
+        previous_status: currentRow.status,
+        next_status: nextStatus,
+        previous_dead_letter_reason: currentRow.dead_letter_reason,
+        previous_last_error: currentRow.last_error,
+        operator_reason: input.operatorReason,
+        source_fingerprint_changed: false,
+        retry_budget_evidence_kind: retryBudgetEvidenceKind,
+        redriven_stage_attempt_id: redrivenAttempt?.stage_attempt_id ?? null,
+        authority_boundary: {
+          opl: 'provider_transport_retry_budget_operator_redrive_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          domain_truth_mutation: false,
+          publication_quality_mutation: false,
+          artifact_gate_mutation: false,
+          current_package_mutation: false,
+        },
+      },
+    });
+    db.exec('COMMIT');
+    return {
+      redriven: true,
+      requeued_from_terminal: true,
+      task: taskToPayload(refreshed),
+      redriven_stage_attempt: redrivenAttempt,
+    };
+  } catch (error) {
+    try {
+      db.exec('ROLLBACK');
+    } catch {
+      // Preserve the original contract error.
+    }
+    throw error;
+  }
+}
+
 export function redriveFamilyRuntimeTask(
   db: DatabaseSync,
   input: {
@@ -199,34 +359,7 @@ export function redriveFamilyRuntimeTask(
     });
   }
   const payload = parsePayload(row);
-  if (
-    row.domain_id !== 'medautoscience'
-    || row.task_kind !== MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
-    || !isMasDefaultExecutorDispatchTask(row, payload)
-  ) {
-    throw new FrameworkContractError(
-      'cli_usage_error',
-      'family-runtime queue redrive does not redrive non-MAS default executor tasks.',
-      {
-        blocker_id: 'family_runtime_redrive_blocked',
-        task_id: row.task_id,
-        domain_id: row.domain_id,
-        task_kind: row.task_kind,
-      },
-    );
-  }
-  if (row.status !== 'blocked') {
-    throw new FrameworkContractError(
-      'cli_usage_error',
-      'family-runtime queue redrive requires a blocked task.',
-      {
-        blocker_id: 'family_runtime_redrive_blocked',
-        task_id: row.task_id,
-        status: row.status,
-      },
-    );
-  }
-  assertProviderTransportRedriveReason(row.dead_letter_reason);
+  assertMasDefaultExecutorTask(row, payload);
   const operatorReason = input.reason.trim();
   if (!operatorReason) {
     throw new FrameworkContractError('cli_usage_error', 'family-runtime queue redrive requires --reason.', {
@@ -234,11 +367,31 @@ export function redriveFamilyRuntimeTask(
     });
   }
 
-  const result = redriveBlockedMasDefaultExecutorProviderTransportTask(db, row, payload, {
-    trigger: 'operator',
-    source: input.source,
-    operatorReason,
-  });
+  let result;
+  if (row.status === 'blocked') {
+    assertProviderTransportRedriveReason(row.dead_letter_reason);
+    result = redriveBlockedMasDefaultExecutorProviderTransportTask(db, row, payload, {
+      trigger: 'operator',
+      source: input.source,
+      operatorReason,
+    });
+  } else if (row.status === 'dead_letter' && row.dead_letter_reason === 'retry_budget_exhausted') {
+    result = redriveRetryBudgetDeadLetterMasDefaultExecutorProviderTask(db, row, payload, {
+      source: input.source,
+      operatorReason,
+    });
+  } else {
+    throw new FrameworkContractError(
+      'cli_usage_error',
+      'family-runtime queue redrive requires a blocked provider transport task or retry-budget provider dead-letter.',
+      {
+        blocker_id: 'family_runtime_redrive_blocked',
+        task_id: row.task_id,
+        status: row.status,
+        dead_letter_reason: row.dead_letter_reason,
+      },
+    );
+  }
   if (result.redriven) {
     insertNotification(db, {
       taskId: row.task_id,

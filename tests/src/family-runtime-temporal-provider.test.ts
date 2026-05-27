@@ -35,6 +35,7 @@ import {
   resolveTemporalWorkerReadinessStatus,
 } from '../../src/family-runtime-temporal-provider.ts';
 import {
+  buildTemporalStageAttemptSearchAttributes,
   buildTemporalStageAttemptVisibilityReadiness,
 } from '../../src/family-runtime-temporal-visibility.ts';
 
@@ -162,6 +163,22 @@ test('Temporal visibility readiness requires OPL stage attempt Search Attributes
   assert.equal(ready.readiness_status, 'ready');
   assert.deepEqual(ready.missing_search_attributes, []);
   assert.equal(ready.repair_action, null);
+});
+
+test('Temporal workflow start Search Attributes are array-valued even when optional fields are absent', () => {
+  const attributes = buildTemporalStageAttemptSearchAttributes({
+    ...workflowInput(),
+    source_fingerprint: null,
+    task_id: null,
+    provider_blocker: null,
+  });
+
+  assert.deepEqual(attributes.OplBlockedReason, []);
+  assert.deepEqual(attributes.OplTaskId, []);
+  assert.deepEqual(attributes.OplSourceFingerprint, []);
+  for (const [name, value] of Object.entries(attributes)) {
+    assert.equal(Array.isArray(value), true, `${name} must be an array for Temporal start`);
+  }
 });
 
 test('Temporal StageAttemptWorkflow acks operator actions through Updates', async () => {
