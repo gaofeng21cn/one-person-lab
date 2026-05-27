@@ -735,7 +735,7 @@ test('family stage readiness treats lightweight authoring fields as warnings ins
 test('help recommends stage readiness before detailed stage projections', () => {
   const root = runCli(['help', '--json']);
 
-  assert.equal(root.help.examples.includes('opl stages readiness --domain mas'), true);
+  assert.equal(root.help.examples.includes('opl stages readiness --family-defaults'), true);
   assert.equal(root.help.examples.includes('opl stages assumptions --domain mas'), false);
   assert.equal(root.help.examples.includes('opl stages runtime-budget --domain mas'), false);
   assert.equal(root.help.examples.includes('opl stages registry --domain mas'), false);
@@ -800,6 +800,10 @@ test('family stage list and proof bundles preserve 18 admitted runtime-enforced 
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_STATE_DIR: stateRoot,
     }).family_stage_proof_bundle.proof_bundle;
+    const familyReadiness = runCli(['stages', 'readiness', '--family-defaults'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    }).family_stage_readiness;
     const cohortLoop = runCli(['stages', 'cohort-loop', '--domain', 'mas'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_STATE_DIR: stateRoot,
@@ -827,6 +831,15 @@ test('family stage list and proof bundles preserve 18 admitted runtime-enforced 
     assert.equal(proofBundle.admission_summary.admitted_stages_count, 6);
     assert.equal(proofBundle.authority_boundary.proof_passed, true);
     assert.equal(proofBundle.authority_boundary.can_write_domain_truth, false);
+    assert.equal(familyReadiness.detail_level, 'summary');
+    assert.equal(familyReadiness.family_defaults, true);
+    assert.equal(familyReadiness.summary.domain_count, 4);
+    assert.equal(familyReadiness.summary.stage_count, 19);
+    assert.equal(familyReadiness.summary.hard_blocker_count, 0);
+    assert.equal(familyReadiness.summary.can_claim_domain_ready, false);
+    assert.equal(familyReadiness.summary.can_claim_production_ready, false);
+    assert.equal(familyReadiness.authority_boundary.can_authorize_domain_ready, false);
+    assert.equal(familyReadiness.domains.some((domain: { project_id: string }) => domain.project_id === 'opl-meta-agent'), true);
     assert.equal(cohortLoop.surface_kind, 'opl_family_stage_cohort_loop');
     assert.equal(cohortLoop.summary.closed_loop_ready_count, 6);
     assert.equal(cohortLoop.summary.blocker_count, 0);

@@ -714,9 +714,9 @@ export function buildPublicCommandSpecs(
       handler: (args) => buildFamilyStageInspect(getContracts(), args),
     },
     'stages readiness': {
-      usage: 'opl stages readiness --domain <domain>',
+      usage: 'opl stages readiness (--family-defaults | --domain <domain>) [--detail summary|full]',
       summary: 'Summarize the default operator/App launch-readiness view from admission, proof, assumptions, cohort, replay, and advisory budget/validity refs without issuing a domain verdict.',
-      examples: ['opl stages readiness --domain mas'],
+      examples: ['opl stages readiness --family-defaults', 'opl stages readiness --domain mas'],
       group: 'domain',
       handler: (args) => buildFamilyStageReadinessInspect(getContracts(), args),
     },

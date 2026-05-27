@@ -500,6 +500,97 @@ function findStage(plane: FamilyStageControlPlane, stageId: string) {
   return stage;
 }
 
+function familyStageReadinessStatus(summaries: ReturnType<typeof buildStageReadinessSummary>[]) {
+  if (summaries.some((summary) => summary.launch_readiness_status === 'launch_blocked')) {
+    return 'launch_blocked';
+  }
+  if (summaries.some((summary) => summary.launch_readiness_status === 'launch_warning')) {
+    return 'launch_warning';
+  }
+  return 'launch_observable';
+}
+
+function buildFamilyDefaultsStageReadiness(
+  contracts: FrameworkContracts,
+  detail: string,
+  options: ManifestCatalogOptions = {},
+) {
+  const index = buildStageIndex(contracts, options);
+  const summaries = index.domain_manifests.projects.flatMap((entry) => {
+    const plane = resolvePlaneFromEntry(entry);
+    if (!plane) {
+      return [];
+    }
+    return [buildStageReadinessSummary(entry, plane, entry.project_id)];
+  });
+  const hardBlockerCount = summaries.reduce(
+    (total, summary) => total + summary.summary.hard_blocker_count,
+    0,
+  );
+  const warningCount = summaries.reduce(
+    (total, summary) => total + summary.summary.warning_count,
+    0,
+  );
+  const domains = summaries.map((summary) => ({
+    project_id: summary.project_id,
+    project: summary.project,
+    target_domain_id: summary.target_domain_id,
+    plane_id: summary.plane_id,
+    status: summary.launch_readiness_status,
+    summary: summary.summary,
+    authority_boundary: summary.authority_boundary,
+  }));
+  const fullDomains = summaries.map((summary) => ({
+    ...summary,
+    detail_level: 'full',
+  }));
+
+  return {
+    detail_level: detail,
+    family_defaults: true,
+    status: familyStageReadinessStatus(summaries),
+    summary: {
+      domain_count: summaries.length,
+      stage_count: summaries.reduce((total, summary) => total + summary.summary.stage_count, 0),
+      admitted_stage_count: summaries.reduce(
+        (total, summary) => total + summary.summary.admitted_stage_count,
+        0,
+      ),
+      needs_contracts_stage_count: summaries.reduce(
+        (total, summary) => total + summary.summary.needs_contracts_stage_count,
+        0,
+      ),
+      blocked_stage_count: summaries.reduce(
+        (total, summary) => total + summary.summary.blocked_stage_count,
+        0,
+      ),
+      hard_blocker_count: hardBlockerCount,
+      warning_count: warningCount,
+      can_claim_domain_ready: false,
+      can_claim_artifact_authority: false,
+      can_claim_production_ready: false,
+    },
+    domains: detail === 'full' ? fullDomains : domains,
+    drilldown_refs: [
+      'opl stages readiness --domain mas --json',
+      'opl stages readiness --domain mag --json',
+      'opl stages readiness --domain rca --json',
+      'opl stages readiness --domain oma --json',
+    ],
+    authority_boundary: {
+      opl_role: 'family_stage_readiness_aggregate_only',
+      can_execute_stage: false,
+      can_write_domain_truth: false,
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_mutate_artifact_body: false,
+      can_claim_domain_ready: false,
+      can_claim_artifact_authority: false,
+      can_claim_production_ready: false,
+    },
+  };
+}
+
 function findingsForStage(
   admission: FamilyStageAdmissionReview,
   stageId: string,
@@ -613,18 +704,25 @@ export function buildFamilyStageLaunchAdmissionGate(
   };
 }
 
-function parseOptionArgs(args: string[], required: string[]) {
+function parseOptionArgs(args: string[], required: string[], flags: string[] = []) {
   const parsed: Record<string, string> = {};
+  const parsedFlags = new Set<string>();
+  const flagSet = new Set(flags);
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
     if (!token.startsWith('--')) {
       throw new FrameworkContractError('cli_usage_error', `Unexpected positional argument: ${token}.`, { token });
     }
+    const key = token.slice(2);
+    if (flagSet.has(key)) {
+      parsedFlags.add(key);
+      continue;
+    }
     const value = args[index + 1];
     if (!value || value.startsWith('--')) {
       throw new FrameworkContractError('cli_usage_error', `Missing value for option: ${token}.`, { option: token });
     }
-    parsed[token.slice(2)] = value;
+    parsed[key] = value;
     index += 1;
   }
   for (const field of required) {
@@ -634,18 +732,28 @@ function parseOptionArgs(args: string[], required: string[]) {
       });
     }
   }
-  return parsed;
+  return { parsed, flags: parsedFlags };
 }
 
 function parseStageReadinessArgs(args: string[]) {
-  const parsed = parseOptionArgs(args, ['domain']);
+  const { parsed, flags } = parseOptionArgs(args, [], ['family-defaults']);
+  if (flags.has('family-defaults') && parsed.domain) {
+    throw new FrameworkContractError('cli_usage_error', 'stages readiness accepts --family-defaults or --domain, not both.', {
+      mutually_exclusive: ['--family-defaults', '--domain'],
+    });
+  }
+  if (!flags.has('family-defaults') && !parsed.domain) {
+    throw new FrameworkContractError('cli_usage_error', 'stages readiness requires --domain or --family-defaults.', {
+      required_one_of: ['--domain', '--family-defaults'],
+    });
+  }
   const detail = parsed.detail ?? 'summary';
   if (detail !== 'summary' && detail !== 'full') {
     throw new FrameworkContractError('cli_usage_error', `Unsupported stage readiness detail level: ${detail}.`, {
       allowed_detail: ['summary', 'full'],
     });
   }
-  return { domain: parsed.domain, detail };
+  return { domain: parsed.domain ?? null, detail, familyDefaults: flags.has('family-defaults') };
 }
 
 function parseRepeatedOptionArgs(args: string[], required: string[], repeated: string[] = []) {
@@ -710,7 +818,7 @@ function normalizeLibraryLifecycleStatus(value: string | undefined): FamilyStage
 }
 
 export function buildFamilyStageInspect(contracts: FrameworkContracts, args: string[]) {
-  const parsed = parseOptionArgs(args, ['domain', 'stage']);
+  const { parsed } = parseOptionArgs(args, ['domain', 'stage']);
   const { entry, plane } = findDomainEntry(contracts, parsed.domain);
   const stage = findStage(plane, parsed.stage);
   const admission: FamilyStageAdmissionReview = buildFamilyStageAdmissionReview(plane, entry.manifest);
@@ -773,7 +881,7 @@ export function buildFamilyStageInspect(contracts: FrameworkContracts, args: str
 }
 
 export function buildFamilyStageProofBundleInspect(contracts: FrameworkContracts, args: string[]) {
-  const parsed = parseOptionArgs(args, ['domain']);
+  const { parsed } = parseOptionArgs(args, ['domain']);
   const { entry, plane } = findDomainEntry(contracts, parsed.domain);
   const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
   return {
@@ -790,7 +898,7 @@ export function buildFamilyStageProofBundleInspect(contracts: FrameworkContracts
 }
 
 export function buildFamilyStageGraphInspect(contracts: FrameworkContracts, args: string[]) {
-  const parsed = parseOptionArgs(args, ['domain']);
+  const { parsed } = parseOptionArgs(args, ['domain']);
   const { entry, plane } = findDomainEntry(contracts, parsed.domain);
   return {
     version: 'g2',
@@ -800,6 +908,12 @@ export function buildFamilyStageGraphInspect(contracts: FrameworkContracts, args
 
 export function buildFamilyStageReadinessInspect(contracts: FrameworkContracts, args: string[], options: ManifestCatalogOptions = {}): { version: 'g2'; family_stage_readiness: Record<string, unknown> } {
   const parsed = parseStageReadinessArgs(args);
+  if (parsed.familyDefaults) {
+    return {
+      version: 'g2',
+      family_stage_readiness: buildFamilyDefaultsStageReadiness(contracts, parsed.detail, options),
+    };
+  }
   const { entry, plane } = findDomainEntry(contracts, parsed.domain, options);
   const summary = buildStageReadinessSummary(entry, plane, parsed.domain.trim());
   return {
@@ -820,7 +934,7 @@ export function buildFamilyStageReadinessInspect(contracts: FrameworkContracts, 
 }
 
 export function buildFamilyStageAssumptionsInspect(contracts: FrameworkContracts, args: string[]) {
-  const parsed = parseOptionArgs(args, ['domain']);
+  const { parsed } = parseOptionArgs(args, ['domain']);
   const { entry, plane } = findDomainEntry(contracts, parsed.domain);
   return {
     version: 'g2',
@@ -833,7 +947,7 @@ export function buildFamilyStageAssumptionsInspect(contracts: FrameworkContracts
 }
 
 export function buildFamilyStageCohortLoopInspect(contracts: FrameworkContracts, args: string[]) {
-  const parsed = parseOptionArgs(args, ['domain']);
+  const { parsed } = parseOptionArgs(args, ['domain']);
   const { entry, plane } = findDomainEntry(contracts, parsed.domain);
   return {
     version: 'g2',
@@ -846,7 +960,7 @@ export function buildFamilyStageCohortLoopInspect(contracts: FrameworkContracts,
 }
 
 export function buildFamilyStageRuntimeBudgetInspect(contracts: FrameworkContracts, args: string[]) {
-  const parsed = parseOptionArgs(args, ['domain']);
+  const { parsed } = parseOptionArgs(args, ['domain']);
   const { entry, plane } = findDomainEntry(contracts, parsed.domain);
   return {
     version: 'g2',

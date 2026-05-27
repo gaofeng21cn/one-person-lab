@@ -759,7 +759,7 @@ test('framework readiness summarizes default control-plane surfaces without auth
     true,
   );
   assert.equal(
-    readiness.source_commands.includes('opl stages readiness --domain mas --json'),
+    readiness.source_commands.includes('opl stages readiness --family-defaults --json'),
     true,
   );
   assert.equal(

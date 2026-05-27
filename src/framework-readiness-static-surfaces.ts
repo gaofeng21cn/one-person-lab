@@ -48,7 +48,7 @@ export function frameworkDiagnosticDrilldowns(sourceCommands: SourceCommands) {
       lens_id: 'stage_readiness',
       role: 'diagnostic_drilldown',
       default_surface: false,
-      source_command: sourceCommands.stages_readiness_mas,
+      source_command: sourceCommands.stages_readiness_family,
       embedded_payload_ref: '/framework_readiness/stages',
     },
     {

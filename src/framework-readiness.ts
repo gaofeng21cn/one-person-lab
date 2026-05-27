@@ -639,6 +639,7 @@ export async function buildFrameworkReadinessSummary(
       stages: {
         source_commands: [
           SOURCE_COMMANDS.stages_list,
+          SOURCE_COMMANDS.stages_readiness_family,
           SOURCE_COMMANDS.stages_readiness_mas,
           SOURCE_COMMANDS.stages_readiness_mag,
           SOURCE_COMMANDS.stages_readiness_rca,

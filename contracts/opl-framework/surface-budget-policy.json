@@ -29,7 +29,7 @@
     "attention_entry": {
       "role": "default_operator_app_entry",
       "payload_style": "summary_first",
-      "default_stage_command": "opl stages readiness --domain <domain>"
+      "default_stage_command": "opl stages readiness --family-defaults"
     },
     "diagnostic_lens": {
       "role": "explicit_drilldown_only",
@@ -62,7 +62,7 @@
   ],
   "default_doc_entry_budget": {
     "stage_default_commands": [
-      "opl stages readiness --domain <domain>"
+      "opl stages readiness --family-defaults"
     ],
     "stage_diagnostic_commands": [
       "opl stages graph --domain <domain>",

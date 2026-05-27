@@ -211,7 +211,7 @@ test('help supports explicit text output for human readers', () => {
   assert.match(root.stdout, /One Person Lab \(OPL\)/);
   assert.match(root.stdout, /Fast start:/);
   assert.match(root.stdout, /opl install/);
-  assert.match(root.stdout, /opl stages readiness --domain mas/);
+  assert.match(root.stdout, /opl stages readiness --family-defaults/);
   assert.doesNotMatch(root.stdout, /capacity-budget/);
   assert.doesNotMatch(root.stdout, /domain-validity/);
 
@@ -236,7 +236,7 @@ test('default help surface recommends stages readiness and hides diagnostic stag
   ];
 
   assert.equal(commands.includes('stages readiness'), true);
-  assert.match(examples, /opl stages readiness --domain mas/);
+  assert.match(examples, /opl stages readiness --family-defaults/);
   for (const forbidden of forbiddenDefaultEntrypoints) {
     assert.doesNotMatch(examples, new RegExp(forbidden));
     assert.equal(commands.includes(`stages ${forbidden}`), false);
