@@ -312,6 +312,166 @@ test('module install creates an OPL-managed root even when a sibling checkout is
   }
 });
 
+test('module install is idempotent when the managed checkout already exists', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-existing-managed-home-'));
+  const modulesRoot = path.join(homeRoot, 'managed-modules');
+  const turnkeyLogPath = path.join(homeRoot, 'turnkey.log');
+  const medAutoScienceRemote = createGitModuleRemoteFixture('med-autoscience', {
+    extraFiles: {
+      'plugins/mas/.codex-plugin/plugin.json': JSON.stringify({
+        name: 'mas',
+        skills: './skills/',
+      }, null, 2),
+      'plugins/mas/skills/mas/SKILL.md': [
+        '---',
+        'name: mas',
+        'description: Use MAS runtime through its OPL-managed product entry.',
+        '---',
+        '',
+        '# MAS App Skill',
+        '',
+      ].join('\n'),
+      'scripts/opl-module-bootstrap.sh': `#!/usr/bin/env bash
+set -euo pipefail
+printf 'bootstrap\\n' >> ${JSON.stringify(turnkeyLogPath)}
+`,
+      'scripts/install-codex-plugin.sh': `#!/usr/bin/env bash
+set -euo pipefail
+printf 'skill-sync\\n' >> ${JSON.stringify(turnkeyLogPath)}
+cat <<'EOF'
+{"repo":"med-autoscience","sync":"ok"}
+EOF
+`,
+      'scripts/opl-module-healthcheck.sh': `#!/usr/bin/env bash
+set -euo pipefail
+printf 'health\\n' >> ${JSON.stringify(turnkeyLogPath)}
+`,
+    },
+  });
+  const managedCheckout = path.join(modulesRoot, 'med-autoscience');
+
+  try {
+    fs.mkdirSync(modulesRoot, { recursive: true });
+    runGitFixtureCommand(modulesRoot, ['clone', medAutoScienceRemote.remoteRoot, managedCheckout]);
+
+    const env = {
+      HOME: homeRoot,
+      OPL_MODULES_ROOT: modulesRoot,
+      OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: medAutoScienceRemote.remoteRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+    };
+
+    const install = runCli(
+      ['module', 'install', '--module', 'medautoscience'],
+      env,
+    ) as {
+      module_action: {
+        action: string;
+        status: string;
+        module: {
+          installed: boolean;
+          install_origin: string;
+          checkout_path: string;
+        };
+      };
+    };
+
+    assert.equal(install.module_action.action, 'install');
+    assert.equal(install.module_action.status, 'completed');
+    assert.equal(install.module_action.module.installed, true);
+    assert.equal(install.module_action.module.install_origin, 'managed_root');
+    assert.equal(install.module_action.module.checkout_path, managedCheckout);
+    assert.deepEqual(
+      fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'),
+      ['bootstrap', 'skill-sync', 'health'],
+    );
+  } finally {
+    fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('module install replaces a non-empty invalid managed checkout', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-invalid-managed-home-'));
+  const modulesRoot = path.join(homeRoot, 'managed-modules');
+  const turnkeyLogPath = path.join(homeRoot, 'turnkey.log');
+  const medAutoScienceRemote = createGitModuleRemoteFixture('med-autoscience', {
+    extraFiles: {
+      'plugins/mas/.codex-plugin/plugin.json': JSON.stringify({
+        name: 'mas',
+        skills: './skills/',
+      }, null, 2),
+      'plugins/mas/skills/mas/SKILL.md': [
+        '---',
+        'name: mas',
+        'description: Use MAS runtime through its OPL-managed product entry.',
+        '---',
+        '',
+        '# MAS App Skill',
+        '',
+      ].join('\n'),
+      'scripts/opl-module-bootstrap.sh': `#!/usr/bin/env bash
+set -euo pipefail
+printf 'bootstrap\\n' >> ${JSON.stringify(turnkeyLogPath)}
+`,
+      'scripts/install-codex-plugin.sh': `#!/usr/bin/env bash
+set -euo pipefail
+printf 'skill-sync\\n' >> ${JSON.stringify(turnkeyLogPath)}
+cat <<'EOF'
+{"repo":"med-autoscience","sync":"ok"}
+EOF
+`,
+      'scripts/opl-module-healthcheck.sh': `#!/usr/bin/env bash
+set -euo pipefail
+printf 'health\\n' >> ${JSON.stringify(turnkeyLogPath)}
+`,
+    },
+  });
+  const managedCheckout = path.join(modulesRoot, 'med-autoscience');
+
+  try {
+    fs.mkdirSync(managedCheckout, { recursive: true });
+    fs.writeFileSync(path.join(managedCheckout, 'stale-partial-install.txt'), 'partial\n');
+
+    const env = {
+      HOME: homeRoot,
+      OPL_MODULES_ROOT: modulesRoot,
+      OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: medAutoScienceRemote.remoteRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+    };
+
+    const install = runCli(
+      ['module', 'install', '--module', 'medautoscience'],
+      env,
+    ) as {
+      module_action: {
+        action: string;
+        status: string;
+        module: {
+          installed: boolean;
+          install_origin: string;
+          checkout_path: string;
+        };
+      };
+    };
+
+    assert.equal(install.module_action.action, 'install');
+    assert.equal(install.module_action.status, 'completed');
+    assert.equal(install.module_action.module.installed, true);
+    assert.equal(install.module_action.module.install_origin, 'managed_root');
+    assert.equal(install.module_action.module.checkout_path, managedCheckout);
+    assert.equal(fs.existsSync(path.join(managedCheckout, '.git')), true);
+    assert.equal(fs.existsSync(path.join(managedCheckout, 'stale-partial-install.txt')), false);
+    assert.deepEqual(
+      fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'),
+      ['bootstrap', 'skill-sync', 'health'],
+    );
+  } finally {
+    fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('modules projection prefers local developer checkouts when Developer Mode is explicitly on', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-developer-mode-home-'));
   const workspaceRoot = path.join(homeRoot, 'workspace');

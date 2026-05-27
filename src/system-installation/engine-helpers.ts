@@ -403,10 +403,17 @@ function copyExecutable(source: string, destination: string) {
 
 function updateSelectedOplRuntimeCodexBinary() {
   const binary = resolveCodexBinary();
-  if (!isOplRuntimeCodexBinary(binary?.path)) {
+  if (!binary) {
     return {
       refreshed_runtime_binary: false,
-      runtime_binary_path: binary?.path ?? null,
+      runtime_binary_path: null,
+      reason: 'codex_binary_not_found',
+    };
+  }
+  if (!isOplRuntimeCodexBinary(binary.path)) {
+    return {
+      refreshed_runtime_binary: false,
+      runtime_binary_path: binary.path,
     };
   }
 

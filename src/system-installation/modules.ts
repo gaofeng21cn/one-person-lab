@@ -278,6 +278,7 @@ function inspectModule(spec: DomainModuleSpec): ModuleInspection {
   const explicitModulesRoot = normalizeOptionalString(process.env.OPL_MODULES_ROOT);
   const siblingCheckoutPath = path.join(resolveSiblingWorkspaceRoot(), spec.repo_name);
   const candidates: Array<{ path: string; origin: OplModuleInstallOrigin }> = [];
+  const preferLocalDeveloperCheckout = !explicitModulesRoot && developerModePrefersLocalCheckouts();
 
   if (envCheckoutPath) {
     candidates.push({
@@ -285,7 +286,7 @@ function inspectModule(spec: DomainModuleSpec): ModuleInspection {
       origin: 'env_override',
     });
   }
-  if (!explicitModulesRoot && !envCheckoutPath && developerModePrefersLocalCheckouts()) {
+  if (preferLocalDeveloperCheckout && !envCheckoutPath) {
     candidates.push({
       path: siblingCheckoutPath,
       origin: 'sibling_workspace',
@@ -295,7 +296,7 @@ function inspectModule(spec: DomainModuleSpec): ModuleInspection {
     path: managedCheckoutPath,
     origin: 'managed_root',
   });
-  if (!explicitModulesRoot && !envCheckoutPath) {
+  if (!explicitModulesRoot && !envCheckoutPath && !preferLocalDeveloperCheckout) {
     candidates.push({
       path: siblingCheckoutPath,
       origin: 'sibling_workspace',
@@ -461,7 +462,8 @@ export function buildOplModules() {
         'OPL-managed default installs live under modules_root by default.',
         'MDS remains available only as an explicit MAS-declared diagnostic, intake, or parity-oracle companion; it is not installed during the default OPL first-run path.',
         'OPL Meta Agent is a managed default ecosystem module so the App can install and maintain the Foundry Agent used to create new OPL-compatible agents.',
-        'External sibling checkouts are still recognized so existing developer machines remain visible to the GUI without forcing a reinstall.',
+        'When Developer Mode is explicitly on, local sibling checkouts are preferred over OPL-managed module roots so the App uses the same repositories the developer is editing.',
+        'External sibling checkouts are still recognized on developer machines without forcing a reinstall.',
       ],
     },
   };
@@ -503,7 +505,11 @@ function installManagedModule(spec: DomainModuleSpec, checkoutPath: string) {
 
 function runManagedInstallWorkflow(spec: DomainModuleRuntimeSpec) {
   const checkoutPath = resolveManagedModulePath(spec);
-  installManagedModule(spec, checkoutPath);
+  if (fs.existsSync(checkoutPath)) {
+    replaceManagedModuleWithFreshClone(spec, checkoutPath);
+  } else {
+    installManagedModule(spec, checkoutPath);
+  }
   return runManagedModuleWorkflow(spec, checkoutPath, { readPackagedModuleGitSnapshot });
 }
 
