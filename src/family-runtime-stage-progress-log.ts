@@ -278,7 +278,7 @@ export function buildStageProgressLog(input: StageProgressLogInput) {
   return {
     surface_kind: 'opl_stage_progress_log',
     projection_scope: input.projectionScope ?? 'stage_attempt',
-    projection_policy: 'temporal_backed_opl_refs_only_stage_observability_no_domain_truth',
+    projection_policy: 'refs_only_no_domain_truth',
     stage_attempt_id: input.stageAttemptId,
     domain_id: input.domainId,
     stage_id: input.stageId,

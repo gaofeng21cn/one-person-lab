@@ -198,11 +198,41 @@
     "closeout_receipt_status",
     "route_impact",
     "usage_projection",
+    "stage_progress_log",
     "rejected_writes",
     "next_owner",
     "human_gate_refs",
     "dead_letter"
   ],
+  "stage_progress_log_projection": {
+    "surface_name": "stage_progress_log",
+    "surface_kind": "opl_stage_progress_log",
+    "projection_policy": "refs_only_no_domain_truth",
+    "required_derivation_sources": [
+      "stage_attempt_ledger",
+      "provider_run_projection",
+      "activity_events",
+      "typed_closeout_packet_refs",
+      "domain_owned_receipt_refs",
+      "stage_attempt_usage_projection"
+    ],
+    "forbidden_derivation_sources": [
+      "domain_truth_body",
+      "domain_memory_body",
+      "artifact_body",
+      "quality_verdict_body"
+    ],
+    "authority_boundary": {
+      "can_execute_domain_action": false,
+      "can_write_domain_truth": false,
+      "can_write_domain_memory_body": false,
+      "can_read_memory_body": false,
+      "can_read_artifact_body": false,
+      "can_authorize_domain_ready": false,
+      "can_authorize_quality_verdict": false,
+      "provider_completion_is_domain_ready": false
+    }
+  },
   "current_control_state_projection": {
     "surface_kind": "opl_current_control_state",
     "projection_policy": "opl_reconciled_queue_attempt_provider_closeout_projection_only",
@@ -237,6 +267,7 @@
   "stability_projection_fields": [
     "control_loop_summary",
     "usage_projection",
+    "stage_progress_log",
     "resource_pressure",
     "runtime_observability_export"
   ],
