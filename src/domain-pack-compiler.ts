@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from './contracts.ts';
+import type { DomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import { buildFamilyAgentDescriptorList } from './family-domain-agent-descriptor.ts';
 import {
   normalizeFamilyActionCatalog,
@@ -25,6 +26,10 @@ import type { FrameworkContracts } from './types.ts';
 type JsonRecord = Record<string, unknown>;
 
 const PACK_COMPILER_MANIFEST_COMMAND_TIMEOUT_MS = 120_000;
+
+type DomainPackCompilerOptions = {
+  domainManifests?: DomainManifestCatalog;
+};
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -695,8 +700,9 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
   };
 }
 
-function buildCompilerDomains(contracts: FrameworkContracts) {
+function buildCompilerDomains(contracts: FrameworkContracts, options: DomainPackCompilerOptions = {}) {
   const descriptorList = buildFamilyAgentDescriptorList(contracts, {
+    domainManifests: options.domainManifests,
     manifestCommandTimeoutMs: PACK_COMPILER_MANIFEST_COMMAND_TIMEOUT_MS,
     manifestCommandTimeoutPolicy: 'fixed',
   });
@@ -706,8 +712,11 @@ function buildCompilerDomains(contracts: FrameworkContracts) {
   );
 }
 
-export function buildDomainPackCompilerList(contracts: FrameworkContracts) {
-  const domains = buildCompilerDomains(contracts);
+export function buildDomainPackCompilerList(
+  contracts: FrameworkContracts,
+  options: DomainPackCompilerOptions = {},
+) {
+  const domains = buildCompilerDomains(contracts, options);
   return {
     version: 'g2',
     domain_pack_compiler: {
@@ -751,10 +760,14 @@ export function buildDomainPackCompilerList(contracts: FrameworkContracts) {
   };
 }
 
-export function buildDomainPackCompilerInspect(contracts: FrameworkContracts, args: string[]) {
+export function buildDomainPackCompilerInspect(
+  contracts: FrameworkContracts,
+  args: string[],
+  options: DomainPackCompilerOptions = {},
+) {
   const { domain } = parseInspectArgs(args);
   const normalized = normalizeDomainSelection(domain);
-  const domains = buildCompilerDomains(contracts);
+  const domains = buildCompilerDomains(contracts, options);
   const selected = domains.find((candidate) =>
     candidate.project_id === normalized
     || candidate.project === normalized

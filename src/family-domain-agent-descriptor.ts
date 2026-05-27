@@ -1,5 +1,6 @@
 import { FrameworkContractError } from './contracts.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
+import type { DomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type { ManifestCommandTimeoutPolicy } from './domain-manifest/resolver.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from './domain-manifest/types.ts';
 import { buildFamilyActionCatalogParity } from './family-action-catalog.ts';
@@ -658,9 +659,10 @@ export function buildFamilyAgentDescriptorList(
   options: {
     manifestCommandTimeoutMs?: number;
     manifestCommandTimeoutPolicy?: ManifestCommandTimeoutPolicy;
+    domainManifests?: DomainManifestCatalog;
   } = {},
 ) {
-  const catalog = buildDomainManifestCatalog(contracts, {
+  const catalog = options.domainManifests ?? buildDomainManifestCatalog(contracts, {
     manifestCommandTimeoutMs: options.manifestCommandTimeoutMs,
     manifestCommandTimeoutPolicy: options.manifestCommandTimeoutPolicy,
   }).domain_manifests;

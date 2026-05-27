@@ -41,6 +41,8 @@ type FrameworkReadinessInput = {
   familyDefaults: boolean;
 };
 
+const FRAMEWORK_READINESS_MANIFEST_COMMAND_TIMEOUT_MS = 5_000;
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -243,13 +245,13 @@ export async function buildFrameworkReadinessSummary(
   const semanticHygiene = buildOplFrameworkSemanticHygieneAudit(contracts);
   const agentReadinessDiagnostic = buildAgentReadinessDiagnostic();
   const agentReadiness = agentReadinessDiagnostic.readiness;
-  const packCompiler = record(buildDomainPackCompilerList(contracts).domain_pack_compiler);
   const domainManifests = buildDomainManifestCatalog(contracts, {
-    manifestCommandTimeoutMs: 120_000,
+    manifestCommandTimeoutMs: FRAMEWORK_READINESS_MANIFEST_COMMAND_TIMEOUT_MS,
     manifestCommandTimeoutPolicy: 'fixed',
     materializeFamilyTransitions: false,
     useProjectionCacheOnFailure: true,
   }).domain_manifests;
+  const packCompiler = record(buildDomainPackCompilerList(contracts, { domainManifests }).domain_pack_compiler);
   const familyStages = record(buildFamilyStagesList(contracts, { domainManifests }).family_stages);
   const stageReadinessDiagnostics = {
     mas: buildStageReadinessDiagnostic(contracts, 'mas', domainManifests),
@@ -263,6 +265,7 @@ export async function buildFrameworkReadinessSummary(
   };
   const runtimeSnapshot = await buildRuntimeTraySnapshot(contracts, {
     appOperatorDrilldownDetailLevel: 'full',
+    domainManifests,
     providerKind: 'temporal',
   });
   const appOperatorDrilldown = record(runtimeSnapshot.runtime_tray_snapshot.app_operator_drilldown);
@@ -536,6 +539,16 @@ export async function buildFrameworkReadinessSummary(
         runtime_manager_mas_route_support_task_kind_count: runtimeManagerRouteSupportTaskKinds.length,
         runtime_manager_mas_aftercare_route_support_count: runtimeManagerAftercareRouteSupportCount,
         runtime_manager_mas_route_support_action_ref_count: runtimeManagerRouteSupportActionRefs.length,
+        domain_manifest_projection_cache_used_count:
+          numberValue(domainManifests.summary.projection_cache_used_count),
+        domain_manifest_live_failed_project_ids:
+          Array.isArray(domainManifests.summary.live_failed_project_ids)
+            ? domainManifests.summary.live_failed_project_ids
+            : [],
+        domain_manifest_live_failure_timeout_ms_values:
+          domainManifests.projects
+            .map((entry) => record(record(entry.manifest_cache).source_error).timeout_ms)
+            .filter((value): value is number => typeof value === 'number' && Number.isFinite(value)),
         total_operator_attention_tail_count: attentionCounts.totalAttentionCount,
         attention_tail_semantics: attentionCounts.semantics,
         attention_payload_requirement_semantics: attentionCounts.payloadRequirementSemantics,

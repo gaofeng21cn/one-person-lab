@@ -5,6 +5,7 @@ import {
   resolveFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
+import type { DomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest, NormalizedSurfaceRef } from './domain-manifest/types.ts';
 import type { FrameworkContracts } from './types.ts';
 import { actionContext, actionCountsForItems, noActionContext, runningActionContext } from './runtime-tray-action.ts';
@@ -33,8 +34,7 @@ const PROJECT_LABELS: Record<string, string> = {
   medautogrant: 'MAG',
   redcube: 'RCA',
 };
-const RUNTIME_TRAY_SUMMARY_MANIFEST_COMMAND_TIMEOUT_MS = 5_000;
-const RUNTIME_TRAY_FULL_MANIFEST_COMMAND_TIMEOUT_MS = 120_000;
+const RUNTIME_TRAY_MANIFEST_COMMAND_TIMEOUT_MS = 5_000;
 
 const RUNNING_STATUSES = new Set([
   'active',
@@ -697,6 +697,7 @@ export async function buildRuntimeTraySnapshot(
   options: {
     appOperatorDrilldownDetailLevel?: AppOperatorDrilldownDetailLevel;
     providerKind?: ReturnType<typeof resolveFamilyRuntimeProviderKind>;
+    domainManifests?: DomainManifestCatalog;
   } = {},
 ) {
   const providerKind = resolveFamilyRuntimeProviderKind(options.providerKind);
@@ -704,11 +705,8 @@ export async function buildRuntimeTraySnapshot(
   const sidecarMasManagedProviderProjection = readMasManagedProviderProjection({
     includeManifest: false,
   });
-  const summaryDetail = options.appOperatorDrilldownDetailLevel !== 'full';
-  const domainManifests = buildDomainManifestCatalog(contracts, {
-    manifestCommandTimeoutMs: summaryDetail
-      ? RUNTIME_TRAY_SUMMARY_MANIFEST_COMMAND_TIMEOUT_MS
-      : RUNTIME_TRAY_FULL_MANIFEST_COMMAND_TIMEOUT_MS,
+  const domainManifests = options.domainManifests ?? buildDomainManifestCatalog(contracts, {
+    manifestCommandTimeoutMs: RUNTIME_TRAY_MANIFEST_COMMAND_TIMEOUT_MS,
     manifestCommandTimeoutPolicy: 'fixed',
     useProjectionCacheOnFailure: true,
   }).domain_manifests;

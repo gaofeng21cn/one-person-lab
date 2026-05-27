@@ -1,11 +1,16 @@
 import {
   assert,
+  createFamilyContractsFixtureRoot,
   fs,
+  loadFrameworkContracts,
   os,
   path,
+  repoRoot,
   runCli,
   test,
 } from '../helpers.ts';
+import { buildFrameworkReadinessSummary } from '../../../../src/framework-readiness.ts';
+import { buildManyStageManifest } from './runtime-app-operator-drilldown-summary-fixtures.ts';
 import {
   assertFrameworkAppReleaseUserPathAction,
   assertFrameworkAppReleaseUserPathEvidence,
@@ -932,5 +937,77 @@ test('framework readiness summarizes default control-plane surfaces without auth
     assert.equal(readiness.authority_boundary.safe_action_route_is_receipt_closure, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('framework readiness keeps domain manifest live refresh bounded and uses projection cache on slow manifests', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-readiness-cache-state-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const manifest = buildManyStageManifest(2);
+  const manifestPath = path.join(stateRoot, 'manifest.json');
+  const invocationPath = path.join(stateRoot, 'manifest-invocations.log');
+  const slowCommandPath = path.join(stateRoot, 'slow-readiness-manifest.cjs');
+
+  try {
+    fs.mkdirSync(stateRoot, { recursive: true });
+    fs.writeFileSync(manifestPath, `${JSON.stringify(manifest)}\n`, 'utf8');
+    fs.writeFileSync(
+      slowCommandPath,
+      `const fs = require('node:fs');\n`
+        + `fs.appendFileSync(${JSON.stringify(invocationPath)}, '1\\n');\n`
+        + `setTimeout(() => process.stdout.write(fs.readFileSync(${JSON.stringify(manifestPath)}, 'utf8')), 6500);\n`,
+      'utf8',
+    );
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      `${process.execPath} ${slowCommandPath}`,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    runCli(['domain', 'manifests'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS: '9000',
+    });
+    assert.equal(fs.readFileSync(invocationPath, 'utf8').trim().split('\n').length, 1);
+
+    const previousStateDir = process.env.OPL_STATE_DIR;
+    const previousContractsDir = process.env.OPL_CONTRACTS_DIR;
+    process.env.OPL_STATE_DIR = stateRoot;
+    process.env.OPL_CONTRACTS_DIR = fixtureContractsRoot;
+    try {
+      const readiness = (await buildFrameworkReadinessSummary(loadFrameworkContracts(), {
+        familyDefaults: true,
+      })).framework_readiness;
+      assert.equal(readiness.surface_kind, 'opl_framework_readiness_summary');
+      assert.equal(readiness.summary.domain_manifest_projection_cache_used_count, 1);
+      assert.deepEqual(readiness.summary.domain_manifest_live_failed_project_ids, ['medautoscience']);
+      assert.deepEqual(readiness.summary.domain_manifest_live_failure_timeout_ms_values, [5000]);
+      assert.equal(
+        fs.readFileSync(invocationPath, 'utf8').trim().split('\n').length,
+        2,
+      );
+    } finally {
+      if (previousStateDir === undefined) {
+        delete process.env.OPL_STATE_DIR;
+      } else {
+        process.env.OPL_STATE_DIR = previousStateDir;
+      }
+      if (previousContractsDir === undefined) {
+        delete process.env.OPL_CONTRACTS_DIR;
+      } else {
+        process.env.OPL_CONTRACTS_DIR = previousContractsDir;
+      }
+    }
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
