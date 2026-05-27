@@ -512,6 +512,10 @@ export interface NormalizedDomainManifest {
   managed_temporal_state_consistency: JsonRecord | null;
   controlled_stage_attempt_projection: JsonRecord | null;
   operator_evidence_readiness_projection: JsonRecord | null;
+  owner_payload_response: JsonRecord | null;
+  opl_owner_payload_response: JsonRecord | null;
+  mag_opl_owner_payload_response: JsonRecord | null;
+  workspace_receipt_scaleout_evidence: JsonRecord | null;
   real_paper_autonomy_guarded_apply_proof: JsonRecord | null;
   controlled_soak_no_regression_attempt: JsonRecord | null;
   lifecycle_apply_requests: JsonRecord[];

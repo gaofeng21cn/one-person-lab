@@ -743,6 +743,14 @@ function normalizeProgressProjection(
 
 export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const manifest = unwrapManifestPayload(payload);
+  const manifestWrapper = isRecord(payload.product_entry_manifest) ? payload : {};
+  const recordFromManifestOrWrapper = (key: string) => (
+    isRecord(manifest[key])
+      ? manifest[key]
+      : isRecord(manifestWrapper[key])
+        ? manifestWrapper[key]
+        : null
+  );
   const formalEntry = requireRecord(manifest.formal_entry, 'formal_entry');
   const productEntryShell = normalizeRecordMap(manifest.product_entry_shell, 'product_entry_shell');
   const sharedHandoff = validateSharedHandoff(manifest.shared_handoff, 'shared_handoff');
@@ -941,6 +949,11 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
     standard_domain_agent_skeleton_source_field: standardDomainAgentSkeletonSourceField,
     generated_surface_handoff: isRecord(manifest.generated_surface_handoff) ? manifest.generated_surface_handoff : null,
     ...functionalClosureSurfaces,
+    owner_payload_response: recordFromManifestOrWrapper('owner_payload_response'),
+    opl_owner_payload_response: recordFromManifestOrWrapper('opl_owner_payload_response'),
+    mag_opl_owner_payload_response: recordFromManifestOrWrapper('mag_opl_owner_payload_response'),
+    workspace_receipt_scaleout_evidence:
+      recordFromManifestOrWrapper('workspace_receipt_scaleout_evidence'),
     runtime_inventory: runtimeInventory,
     task_lifecycle: taskLifecycle,
     runtime_control: runtimeControl,
