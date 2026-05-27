@@ -42,6 +42,7 @@ type ManagedProviderProjection = Partial<Pick<
 
 type ProviderLifecycleOptions = {
   managedProviderProjection?: ManagedProviderProjection;
+  detail?: 'fast' | 'full';
 };
 
 function providerMetadata(kind: FamilyRuntimeProviderKind) {
@@ -225,8 +226,9 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
   if (kind !== 'temporal') {
     return inspectFamilyRuntimeProvider(kind);
   }
-  const { inspectTemporalWorkerLifecycle } = await import('./family-runtime-temporal-provider.ts');
-  const workerReadiness = await inspectTemporalWorkerLifecycle(paths);
+  const detail = options.detail ?? 'full';
+  const { inspectTemporalWorkerLifecycleWithDetail } = await import('./family-runtime-temporal-provider.ts');
+  const workerReadiness = await inspectTemporalWorkerLifecycleWithDetail(paths, { detail });
   const managedProviderProjection = workerReadiness.worker_ready === true
     ? null
     : options.managedProviderProjection ?? null;
@@ -258,7 +260,15 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
       task_queue: effectiveWorkerReadiness.task_queue,
       worker_ready: workerReady,
       worker_readiness: effectiveWorkerReadiness,
-      temporal_visibility_readiness: await inspectTemporalStageAttemptVisibilityReadiness(paths),
+      inspection_detail: detail,
+      temporal_visibility_readiness: detail === 'fast'
+        ? effectiveWorkerReadiness.visibility_readiness ?? buildTemporalStageAttemptVisibilityReadiness({
+            address: effectiveWorkerReadiness.address,
+            addressSource: effectiveWorkerReadiness.address_source,
+            namespace: effectiveWorkerReadiness.namespace,
+            taskQueue: effectiveWorkerReadiness.task_queue,
+          })
+        : await inspectTemporalStageAttemptVisibilityReadiness(paths),
       managed_temporal_state_consistency: managedTemporalProjection,
       managed_domain_projection_summary: managedProviderProjection
         ? {

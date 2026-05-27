@@ -272,7 +272,9 @@ function developerModePrefersLocalCheckouts() {
   return config.enabled === 'on' && config.mode === 'developer_apply_safe';
 }
 
-function inspectModule(spec: DomainModuleSpec): ModuleInspection {
+type ModuleInspectionProfile = 'fast' | 'full';
+
+function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile = 'full'): ModuleInspection {
   const managedCheckoutPath = resolveManagedModulePath(spec);
   const envCheckoutPath = normalizeOptionalString(process.env[buildModulePathEnvKey(spec.module_id)]);
   const explicitModulesRoot = normalizeOptionalString(process.env.OPL_MODULES_ROOT);
@@ -355,7 +357,7 @@ function inspectModule(spec: DomainModuleSpec): ModuleInspection {
       };
     }
 
-    const git = inspectGitRepo(candidate.path, candidate.origin === 'managed_root');
+    const git = inspectGitRepo(candidate.path, profile === 'full' && candidate.origin === 'managed_root');
     const updateAvailable = isModuleUpdateAvailable(git);
     const availableActions: OplModuleAction[] =
       candidate.origin === 'managed_root'
@@ -438,8 +440,9 @@ function findModuleSpecOrThrow(moduleId: string): DomainModuleRuntimeSpec {
   return spec;
 }
 
-export function buildOplModules() {
-  const modules = DOMAIN_MODULE_SPECS.map((spec) => inspectModule(spec));
+export function buildOplModules(input: { profile?: ModuleInspectionProfile } = {}) {
+  const profile = input.profile ?? 'full';
+  const modules = DOMAIN_MODULE_SPECS.map((spec) => inspectModule(spec, profile));
   const defaultModules = modules.filter((entry) => entry.default_install);
   return {
     version: 'g2',

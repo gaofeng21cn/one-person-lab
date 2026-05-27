@@ -141,8 +141,8 @@ export function parseAppActionExecuteArgs(args: string[]): AppActionExecuteOptio
   return { actionId, payload, dryRun };
 }
 
-function publicModuleItems() {
-  return buildOplModules()
+function publicModuleItems(profile: AppStateProfile) {
+  return buildOplModules({ profile })
     .modules
     .modules
     .filter((module) => module.default_install)
@@ -209,12 +209,15 @@ function buildAssistants(items: ReturnType<typeof publicModuleItems>) {
   }));
 }
 
-async function buildProviderState() {
+async function buildProviderState(profile: AppStateProfile) {
   const providerKind = resolveFamilyRuntimeProviderKind();
   const provider = await inspectFamilyRuntimeProviderWithLifecycle(
     providerKind,
     familyRuntimePaths(),
-    { managedProviderProjection: readMasManagedProviderProjection() },
+    {
+      detail: profile,
+      managedProviderProjection: readMasManagedProviderProjection(),
+    },
   );
   return {
     selected_provider: providerKind,
@@ -501,10 +504,10 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const startedAt = Date.now();
   const profile = input.profile ?? 'fast';
   const statePaths = ensureOplStateDir(resolveOplStatePaths());
-  const modules = publicModuleItems();
+  const modules = publicModuleItems(profile);
   const moduleSource = resolveModuleSource(modules);
   const developerMode = buildOplDeveloperModeSurface(buildOplEndpoints());
-  const provider = await buildProviderState();
+  const provider = await buildProviderState(profile);
   const release = buildReleaseState();
   const workspaceRoot = readOplWorkspaceRoot();
   const core = buildCoreState(profile);

@@ -83,6 +83,8 @@ export {
   queryTemporalStageAttemptWorkflow,
 } from './family-runtime-temporal-provider-parts/attempt-query.ts';
 
+type TemporalLifecycleInspectionDetail = 'fast' | 'full';
+
 type StageAttemptPayload = Parameters<typeof buildTemporalStageAttemptWorkflowInput>[0] & {
   stage_attempt_id: string;
   workflow_id: string;
@@ -100,6 +102,17 @@ function workflowModulePath() {
 }
 
 export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths) {
+  return inspectTemporalWorkerLifecycleWithDetail(paths, { detail: 'full' });
+}
+
+export async function inspectTemporalWorkerLifecycleWithDetail(
+  paths: TemporalWorkerPaths,
+  input: { detail?: TemporalLifecycleInspectionDetail } = {},
+) {
+  const detail = input.detail ?? 'full';
+  if (detail === 'fast') {
+    return inspectTemporalWorkerLifecycleFast(paths);
+  }
   const service = await inspectTemporalServiceLifecycle(paths);
   const { address, addressSource } = resolveTemporalAddressForPaths(paths);
   const namespace = resolveTemporalNamespace();
@@ -150,6 +163,93 @@ export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths)
     ...readiness,
     surface_kind: 'temporal_worker_lifecycle_status',
     lifecycle_status: readiness.readiness_status,
+    inspection_detail: 'full',
+  };
+}
+
+function inspectTemporalWorkerLifecycleFast(paths: TemporalWorkerPaths) {
+  const resolved = resolveTemporalAddressForPaths(paths);
+  const { address, addressSource, serviceState } = resolved;
+  const namespace = resolveTemporalNamespace();
+  const taskQueue = resolveTemporalTaskQueue();
+  const state = readTemporalWorkerState(paths);
+  const stateMatchesConfig =
+    state?.address === address
+    && state.namespace === namespace
+    && state.task_queue === taskQueue;
+  const stateProcessAlive = state ? processIsAlive(state.pid) : false;
+  const statePidAlive = stateMatchesConfig && stateProcessAlive;
+  const envWorkerReady = process.env.OPL_TEMPORAL_WORKER_ENABLED?.trim() === '1'
+    || process.env.OPL_TEMPORAL_WORKER_STATUS?.trim() === 'ready';
+  const workerStatusReady = statePidAlive || envWorkerReady;
+  const visibilityReadiness = buildTemporalStageAttemptVisibilityReadiness({
+    address,
+    addressSource,
+    namespace,
+    taskQueue,
+  });
+  const serviceStatus = addressSource === 'managed_local_service_state'
+    ? 'running'
+    : addressSource === 'environment'
+      ? 'configured_external_unverified'
+      : serviceState
+        ? 'stale_state_unverified'
+        : 'not_configured';
+  const readiness = buildTemporalWorkerReadiness({
+    address,
+    addressSource,
+    namespace,
+    taskQueue,
+    workerEnabled: envWorkerReady ? '1' : null,
+    workerStatus: workerStatusReady ? 'ready' : null,
+    serverReachable: null,
+    managedWorkerPid: statePidAlive && state ? state.pid : null,
+    managedWorkerStatePath: temporalWorkerStatePath(paths),
+    managedWorkerSourceVersion: state?.source_version ?? null,
+    expectedWorkerSourceVersion: null,
+    managedWorkerSourceCurrent: null,
+    managedWorkerWorkflowBundlePath: state?.workflow_bundle_path ?? null,
+    managedWorkerWorkflowBundleVersion: state?.workflow_bundle_version ?? null,
+    managedWorkerWorkflowBundleSourceVersion: state?.workflow_bundle_source_version ?? null,
+    staleWorkerPid: null,
+    temporalServiceLifecycle: {
+      surface_kind: 'temporal_service_lifecycle_status',
+      provider_kind: 'temporal',
+      inspection_detail: 'fast',
+      service_status: serviceStatus,
+      address,
+      address_source: addressSource,
+      server_reachable: null,
+      managed_service_pid: addressSource === 'managed_local_service_state'
+        ? serviceState?.pid ?? null
+        : null,
+      service_kind: serviceState?.service_kind ?? null,
+      command: serviceState?.command ?? null,
+      blockers: [
+        ...(!address ? ['temporal_runtime_not_configured'] : []),
+        ...(serviceStatus === 'stale_state_unverified' ? ['temporal_local_service_stale_state_unverified'] : []),
+      ],
+      repair_action: {
+        surface_kind: 'temporal_service_repair_action',
+        provider_kind: 'temporal',
+        action_id: address ? 'none' : 'start_local_temporal_service',
+        next_command: address
+          ? 'opl family-runtime worker start --provider temporal'
+          : 'opl family-runtime service start --provider temporal',
+        required_launcher: ['temporal CLI on PATH', 'OPL_TEMPORAL_SERVICE_START_COMMAND'],
+      },
+      authority_boundary: {
+        opl: 'temporal_local_service_lifecycle_fast_projection_only',
+        domain: 'truth_quality_artifact_gate_owner',
+      },
+    },
+    visibilityReadiness,
+  });
+  return {
+    ...readiness,
+    surface_kind: 'temporal_worker_lifecycle_status',
+    lifecycle_status: readiness.readiness_status,
+    inspection_detail: 'fast',
   };
 }
 
