@@ -245,6 +245,7 @@ EOF
     OPL_MODULE_REPO_URL_MEDAUTOGRANT: medAutoGrantRemote.remoteRoot,
     OPL_MODULE_REPO_URL_OPLMETAAGENT: metaAgentRemote.remoteRoot,
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+    OPL_CODEX_CLI_LATEST_VERSION: '0.125.0',
     PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
   };
 
@@ -314,6 +315,61 @@ EOF
     fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(medAutoGrantRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(metaAgentRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('system update refreshes compatible Codex CLI when npm latest is newer', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-system-update-codex-latest-home-'));
+  const updateLogPath = path.join(homeRoot, 'codex-update.log');
+  const codexFixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli 0.130.0"
+  exit 0
+fi
+echo "Unsupported codex fixture command: $*" >&2
+exit 1
+`);
+  const updateScript = path.join(homeRoot, 'update-codex.sh');
+  fs.writeFileSync(
+    updateScript,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      `printf 'codex-update\\n' >> ${JSON.stringify(updateLogPath)}`,
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+
+  try {
+    const output = runCli(['system', 'update'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
+      OPL_CODEX_UPDATE_COMMAND: updateScript,
+      PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+    }) as {
+      system_action: {
+        details: {
+          targets: Array<{
+            target_type: string;
+            target_id: string;
+            status: string;
+            reason: string;
+          }>;
+        };
+      };
+    };
+
+    const codexTarget = output.system_action.details.targets.find((target) => (
+      target.target_type === 'engine' && target.target_id === 'codex'
+    ));
+    assert.equal(codexTarget?.status, 'completed');
+    assert.equal(codexTarget?.reason, 'codex_cli_latest_outdated');
+    assert.equal(fs.readFileSync(updateLogPath, 'utf8'), 'codex-update\n');
+  } finally {
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });

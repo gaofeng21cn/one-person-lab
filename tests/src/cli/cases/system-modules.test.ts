@@ -312,6 +312,76 @@ test('module install creates an OPL-managed root even when a sibling checkout is
   }
 });
 
+test('modules projection prefers local developer checkouts when Developer Mode is explicitly on', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-developer-mode-home-'));
+  const workspaceRoot = path.join(homeRoot, 'workspace');
+  const onePersonLabRoot = path.join(workspaceRoot, 'one-person-lab');
+  const siblingCheckout = path.join(workspaceRoot, 'med-autoscience');
+  const modulesRoot = path.join(homeRoot, 'opl-state', 'modules');
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const medAutoScienceRemote = createGitModuleRemoteFixture('med-autoscience');
+
+  try {
+    fs.mkdirSync(onePersonLabRoot, { recursive: true });
+    runGitFixtureCommand(workspaceRoot, ['clone', medAutoScienceRemote.remoteRoot, siblingCheckout]);
+    runGitFixtureCommand(workspaceRoot, ['clone', medAutoScienceRemote.remoteRoot, path.join(modulesRoot, 'med-autoscience')]);
+
+    const env = {
+      HOME: homeRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+      OPL_STATE_DIR: stateDir,
+      OPL_DEVELOPER_MODE_GH_FIXTURE: JSON.stringify({
+        user: { login: 'gaofeng21cn' },
+        permissions: {
+          'gaofeng21cn/one-person-lab': 'admin',
+          'gaofeng21cn/med-autoscience': 'write',
+          'gaofeng21cn/med-autogrant': 'maintain',
+          'gaofeng21cn/opl-meta-agent': 'write',
+          'gaofeng21cn/redcube-ai': 'admin',
+        },
+      }),
+    };
+
+    runCliInCwd(
+      [
+        'system',
+        'developer-supervisor',
+        '--enabled',
+        'on',
+        '--mode',
+        'developer_apply_safe',
+        '--github-login',
+        'gaofeng21cn',
+      ],
+      onePersonLabRoot,
+      env,
+    );
+
+    const output = runCliInCwd(['modules'], onePersonLabRoot, env) as {
+      modules: {
+        summary: {
+          managed_default_modules_count: number;
+        };
+        items: Array<{
+          module_id: string;
+          install_origin: string;
+          checkout_path: string;
+          managed_checkout_path: string;
+        }>;
+      };
+    };
+
+    const mas = output.modules.items.find((entry) => entry.module_id === 'medautoscience');
+    assert.equal(mas?.install_origin, 'sibling_workspace');
+    assert.equal(mas?.checkout_path, siblingCheckout);
+    assert.equal(mas?.managed_checkout_path, path.join(modulesRoot, 'med-autoscience'));
+    assert.equal(output.modules.summary.managed_default_modules_count, 0);
+  } finally {
+    fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('module install materializes Full runtime payloads into standard managed module roots', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-full-home-'));
   const runtimeRoot = path.join(homeRoot, 'Library', 'Application Support', 'OPL', 'runtime', 'current');

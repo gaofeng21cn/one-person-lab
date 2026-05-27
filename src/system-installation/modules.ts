@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { FrameworkContractError } from '../contracts.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../runtime-state-paths.ts';
 import { resolveDefaultFamilyWorkspaceRoot } from '../opl-skills.ts';
+import { readOplDeveloperSupervisorConfig } from '../system-preferences.ts';
 import {
   type DomainModuleSpec,
   type OplModuleAction,
@@ -266,6 +267,11 @@ function fullRuntimeModuleOverridesAreLaunchSources() {
   return Boolean(normalizeOptionalString(process.env.OPL_FULL_RUNTIME_HOME));
 }
 
+function developerModePrefersLocalCheckouts() {
+  const config = readOplDeveloperSupervisorConfig();
+  return config.enabled === 'on' && config.mode === 'developer_apply_safe';
+}
+
 function inspectModule(spec: DomainModuleSpec): ModuleInspection {
   const managedCheckoutPath = resolveManagedModulePath(spec);
   const envCheckoutPath = normalizeOptionalString(process.env[buildModulePathEnvKey(spec.module_id)]);
@@ -273,16 +279,22 @@ function inspectModule(spec: DomainModuleSpec): ModuleInspection {
   const siblingCheckoutPath = path.join(resolveSiblingWorkspaceRoot(), spec.repo_name);
   const candidates: Array<{ path: string; origin: OplModuleInstallOrigin }> = [];
 
-  candidates.push({
-    path: managedCheckoutPath,
-    origin: 'managed_root',
-  });
   if (envCheckoutPath) {
     candidates.push({
       path: path.resolve(envCheckoutPath),
       origin: 'env_override',
     });
   }
+  if (!explicitModulesRoot && !envCheckoutPath && developerModePrefersLocalCheckouts()) {
+    candidates.push({
+      path: siblingCheckoutPath,
+      origin: 'sibling_workspace',
+    });
+  }
+  candidates.push({
+    path: managedCheckoutPath,
+    origin: 'managed_root',
+  });
   if (!explicitModulesRoot && !envCheckoutPath) {
     candidates.push({
       path: siblingCheckoutPath,

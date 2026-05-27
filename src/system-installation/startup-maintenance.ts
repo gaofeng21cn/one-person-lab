@@ -3,11 +3,13 @@ import type { FrameworkContracts } from '../types.ts';
 import { recordManagedInstallUpdateReceipts } from '../managed-install-update-ledger.ts';
 
 import { buildOplEnvironment } from './environment.ts';
+import { runOplEngineAction } from './engine-actions.ts';
 import { buildOplModules, runOplModuleAction } from './modules.ts';
 
 type ModuleStatus = ReturnType<typeof buildOplModules>['modules']['modules'][number];
+type OplSystemEnvironment = Awaited<ReturnType<typeof buildOplEnvironment>>['system_environment'];
 
-type StartupMaintenanceTarget = {
+type StartupMaintenanceModuleTarget = {
   target_type: 'module';
   target_id: string;
   status: 'completed' | 'skipped' | 'manual_required';
@@ -20,16 +22,46 @@ type StartupMaintenanceTarget = {
   error: Record<string, unknown> | null;
 };
 
+type StartupMaintenanceEngineTarget = {
+  target_type: 'engine';
+  target_id: 'codex';
+  status: 'completed' | 'skipped' | 'manual_required';
+  reason: string;
+  action: 'update' | null;
+  version_status_before: string;
+  latest_version_status_before: string;
+  update_available_before: boolean;
+  result: Record<string, unknown> | null;
+  error: Record<string, unknown> | null;
+};
+
+type StartupMaintenanceTarget = StartupMaintenanceModuleTarget | StartupMaintenanceEngineTarget;
+
 function buildTarget(
   module: ModuleStatus,
-  input: Pick<StartupMaintenanceTarget, 'status' | 'reason' | 'action' | 'result' | 'error'>,
-): StartupMaintenanceTarget {
+  input: Pick<StartupMaintenanceModuleTarget, 'status' | 'reason' | 'action' | 'result' | 'error'>,
+): StartupMaintenanceModuleTarget {
   return {
     target_type: 'module',
     target_id: module.module_id,
     install_origin_before: module.install_origin,
     health_status_before: module.health_status,
     git_before: module.git,
+    ...input,
+  };
+}
+
+function buildEngineTarget(
+  environment: OplSystemEnvironment,
+  input: Pick<StartupMaintenanceEngineTarget, 'status' | 'reason' | 'action' | 'result' | 'error'>,
+): StartupMaintenanceEngineTarget {
+  const codex = environment.core_engines.codex;
+  return {
+    target_type: 'engine',
+    target_id: 'codex',
+    version_status_before: codex.version_status,
+    latest_version_status_before: codex.latest_version_status,
+    update_available_before: Boolean(codex.update_available),
     ...input,
   };
 }
@@ -98,7 +130,7 @@ function normalizeError(error: unknown) {
   };
 }
 
-function readBlockedWorkflowStep(target: StartupMaintenanceTarget) {
+function readBlockedWorkflowStep(target: StartupMaintenanceModuleTarget) {
   const turnkey = readNestedRecord(target.result, 'turnkey');
   for (const stepId of ['bootstrap', 'skill_sync', 'health_check'] as const) {
     const step = readNestedRecord(turnkey, stepId);
@@ -109,7 +141,7 @@ function readBlockedWorkflowStep(target: StartupMaintenanceTarget) {
   return null;
 }
 
-function runModuleStartupMaintenance(module: ModuleStatus): StartupMaintenanceTarget {
+function runModuleStartupMaintenance(module: ModuleStatus): StartupMaintenanceModuleTarget {
   const plan = shouldAutoMaintain(module);
   if (!plan.action) {
     return buildTarget(module, {
@@ -156,21 +188,21 @@ function readNestedRecord(value: unknown, key: string) {
     : null;
 }
 
-function readSkillSyncStatus(target: StartupMaintenanceTarget) {
+function readSkillSyncStatus(target: StartupMaintenanceModuleTarget) {
   const turnkey = readNestedRecord(target.result, 'turnkey');
   const skillSync = readNestedRecord(turnkey, 'skill_sync');
   const status = readNestedRecord(skillSync, 'status');
   return typeof status === 'string' ? status : null;
 }
 
-function readSkillSyncDomain(target: StartupMaintenanceTarget) {
+function readSkillSyncDomain(target: StartupMaintenanceModuleTarget) {
   const turnkey = readNestedRecord(target.result, 'turnkey');
   const skillSync = readNestedRecord(turnkey, 'skill_sync');
   const domainId = readNestedRecord(skillSync, 'domain_id');
   return typeof domainId === 'string' ? domainId : null;
 }
 
-function readHealthCheckStatus(target: StartupMaintenanceTarget) {
+function readHealthCheckStatus(target: StartupMaintenanceModuleTarget) {
   const turnkey = readNestedRecord(target.result, 'turnkey');
   const healthCheck = readNestedRecord(turnkey, 'health_check');
   const status = readNestedRecord(healthCheck, 'status');
@@ -197,7 +229,7 @@ function repoNameForModuleId(moduleId: string) {
   return repoNames[moduleId] ?? null;
 }
 
-function buildManagedReceiptInput(target: StartupMaintenanceTarget) {
+function buildManagedReceiptInput(target: StartupMaintenanceModuleTarget) {
   if (
     target.status !== 'completed'
     || (target.action !== 'install' && target.action !== 'update')
@@ -247,9 +279,56 @@ function summarizeTargets(targets: StartupMaintenanceTarget[]) {
   };
 }
 
+async function maybeRunEngineStartupMaintenance(
+  contracts: FrameworkContracts,
+  environment: OplSystemEnvironment,
+): Promise<StartupMaintenanceEngineTarget> {
+  const codex = environment.core_engines.codex;
+  if (!codex.installed) {
+    return buildEngineTarget(environment, {
+      status: 'skipped',
+      reason: 'codex_cli_missing',
+      action: null,
+      result: null,
+      error: null,
+    });
+  }
+  if (!codex.update_available) {
+    return buildEngineTarget(environment, {
+      status: 'skipped',
+      reason: 'selected_codex_ready',
+      action: null,
+      result: null,
+      error: null,
+    });
+  }
+
+  try {
+    const result = await runOplEngineAction(contracts, 'update', 'codex');
+    return buildEngineTarget(environment, {
+      status: result.engine_action.status === 'manual_required' ? 'manual_required' : 'completed',
+      reason: `codex_cli_latest_${codex.latest_version_status}`,
+      action: 'update',
+      result: result.engine_action as Record<string, unknown>,
+      error: null,
+    });
+  } catch (error) {
+    return buildEngineTarget(environment, {
+      status: 'manual_required',
+      reason: `codex_cli_latest_${codex.latest_version_status}_failed`,
+      action: 'update',
+      result: null,
+      error: normalizeError(error),
+    });
+  }
+}
+
 export async function runOplStartupMaintenance(contracts: FrameworkContracts) {
+  const initialEnvironment = (await buildOplEnvironment(contracts)).system_environment;
+  const engineTargets = [await maybeRunEngineStartupMaintenance(contracts, initialEnvironment)];
   const initialModules = buildOplModules().modules.modules.filter((module) => module.default_install);
   const moduleTargets = initialModules.map((module) => runModuleStartupMaintenance(module));
+  const engineSummary = summarizeTargets(engineTargets);
   const summary = summarizeTargets(moduleTargets);
   const managedReceiptRecord = recordManagedInstallUpdateReceipts(
     moduleTargets
@@ -266,13 +345,17 @@ export async function runOplStartupMaintenance(contracts: FrameworkContracts) {
     version: 'g2',
     system_action: {
       action: 'startup_maintenance' as const,
-      status: summary.manual_required_targets_count > 0 ? 'manual_required' : 'completed',
+      status: summary.manual_required_targets_count > 0 || engineSummary.manual_required_targets_count > 0
+        ? 'manual_required'
+        : 'completed',
       update_channel: readOplUpdateChannel().channel,
       workspace_root: readOplWorkspaceRoot(),
       details: {
         surface_kind: 'opl_app_startup_maintenance',
         mode: 'clean_managed_environment_startup',
+        engine_summary: engineSummary,
         summary,
+        engine_targets: engineTargets,
         module_targets: moduleTargets,
         managed_install_update_receipts: managedReceiptRecord,
         plugin_cache_freshness: {

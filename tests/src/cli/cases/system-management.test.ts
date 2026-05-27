@@ -62,6 +62,7 @@ exit 1
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,
         OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+        OPL_CODEX_CLI_LATEST_VERSION: '0.125.0',
         PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
       },
     ) as {
@@ -75,6 +76,9 @@ exit 1
             parsed_version: string | null;
             minimum_version: string;
             version_status: string;
+            latest_version: string | null;
+            latest_version_status: string;
+            update_available: boolean;
             config_path: string | null;
             default_model: string | null;
             default_reasoning_effort: string | null;
@@ -131,6 +135,9 @@ exit 1
     assert.equal(output.system.core_engines.codex.parsed_version, '0.125.0');
     assert.equal(output.system.core_engines.codex.minimum_version, '0.125.0');
     assert.equal(output.system.core_engines.codex.version_status, 'compatible');
+    assert.equal(output.system.core_engines.codex.latest_version, '0.125.0');
+    assert.equal(output.system.core_engines.codex.latest_version_status, 'current');
+    assert.equal(output.system.core_engines.codex.update_available, false);
     assert.equal(
       output.system.core_engines.codex.config_path,
       codexConfigFixture.configPath,
@@ -177,6 +184,55 @@ exit 1
     );
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('system reports compatible Codex CLI as update-available when npm latest is newer', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-latest-home-'));
+  const codexFixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli 0.130.0"
+  exit 0
+fi
+echo "Unsupported codex fixture command: $*" >&2
+exit 1
+`);
+
+  try {
+    const output = runCli(
+      ['system'],
+      {
+        HOME: homeRoot,
+        OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
+        PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+      },
+    ) as {
+      system: {
+        core_engines: {
+          codex: {
+            version_status: string;
+            health_status: string;
+            issues: string[];
+            diagnostics: string[];
+            latest_version: string | null;
+            latest_version_status: string;
+            update_available: boolean;
+          };
+        };
+      };
+    };
+
+    const codex = output.system.core_engines.codex;
+    assert.equal(codex.version_status, 'compatible');
+    assert.equal(codex.health_status, 'ready');
+    assert.deepEqual(codex.issues, []);
+    assert.equal(codex.latest_version, '0.134.0');
+    assert.equal(codex.latest_version_status, 'outdated');
+    assert.equal(codex.update_available, true);
+    assert.equal(codex.diagnostics.includes('codex_cli_latest_update_available'), true);
+  } finally {
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
@@ -898,6 +954,89 @@ exit 1
     assert.equal(fs.existsSync(markerPath), true);
   } finally {
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('builtin Codex update refreshes selected OPL runtime binary from npm latest vendor payload', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-engine-runtime-update-'));
+  const runtimeHome = path.join(fixtureRoot, 'runtime', 'current');
+  const runtimeBin = path.join(runtimeHome, 'bin');
+  const globalRoot = path.join(fixtureRoot, 'global-node-modules');
+  const fakeBin = path.join(fixtureRoot, 'fake-bin');
+  const packageVendorRoot = path.join(globalRoot, '@openai', 'codex', 'vendor', 'aarch64-apple-darwin');
+  const runtimeCodex = path.join(runtimeBin, 'codex');
+  const runtimeRg = path.join(runtimeBin, 'rg');
+  const fakeNpm = path.join(fakeBin, 'npm');
+
+  fs.mkdirSync(path.join(packageVendorRoot, 'bin'), { recursive: true });
+  fs.mkdirSync(path.join(packageVendorRoot, 'codex-path'), { recursive: true });
+  fs.mkdirSync(runtimeBin, { recursive: true });
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.writeFileSync(runtimeCodex, '#!/usr/bin/env bash\necho "codex-cli 0.130.0"\n', { mode: 0o755 });
+  fs.writeFileSync(runtimeRg, '#!/usr/bin/env bash\necho "rg old"\n', { mode: 0o755 });
+  fs.writeFileSync(
+    path.join(packageVendorRoot, 'bin', 'codex'),
+    '#!/usr/bin/env bash\necho "codex-cli 0.134.0"\n',
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    path.join(packageVendorRoot, 'codex-path', 'rg'),
+    '#!/usr/bin/env bash\necho "rg new"\n',
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    fakeNpm,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'if [[ "$1" == "root" && "$2" == "-g" ]]; then',
+      `  echo ${shellSingleQuote(globalRoot)}`,
+      '  exit 0',
+      'fi',
+      'if [[ "$1" == "install" && "$2" == "-g" && "$3" == "@openai/codex@latest" ]]; then',
+      '  echo "installed @openai/codex@latest"',
+      '  exit 0',
+      'fi',
+      'echo "Unexpected npm command: $*" >&2',
+      'exit 1',
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+
+  try {
+    const output = runCli(
+      ['engine', 'update', '--engine', 'codex'],
+      {
+        HOME: fixtureRoot,
+        OPL_CODEX_BIN: runtimeCodex,
+        OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
+        SHELL: '/bin/bash',
+        PATH: `${fakeBin}:/usr/bin:/bin`,
+      },
+    ) as {
+      engine_action: {
+        status: string;
+        system: {
+          core_engines: {
+            codex: {
+              version: string | null;
+              latest_version_status: string;
+              update_available: boolean;
+            };
+          };
+        };
+      };
+    };
+
+    assert.equal(output.engine_action.status, 'completed');
+    assert.equal(output.engine_action.system.core_engines.codex.version, 'codex-cli 0.134.0');
+    assert.equal(output.engine_action.system.core_engines.codex.latest_version_status, 'current');
+    assert.equal(output.engine_action.system.core_engines.codex.update_available, false);
+    assert.match(fs.readFileSync(runtimeCodex, 'utf8'), /0\.134\.0/);
+    assert.match(fs.readFileSync(runtimeRg, 'utf8'), /rg new/);
+  } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });

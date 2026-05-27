@@ -56,7 +56,7 @@ async function maybeUpdateCodex(
   if (!codex.installed) {
     return buildSkippedUpdate('engine', 'codex', 'codex_cli_missing');
   }
-  if (codex.version_status === 'compatible') {
+  if (codex.version_status === 'compatible' && !codex.update_available) {
     return buildSkippedUpdate('engine', 'codex', 'selected_codex_ready');
   }
 
@@ -65,7 +65,9 @@ async function maybeUpdateCodex(
     target_type: 'engine',
     target_id: 'codex',
     status: normalizeUpdateStatus(result.engine_action.status),
-    reason: `codex_cli_${codex.version_status}`,
+    reason: codex.update_available
+      ? `codex_cli_latest_${codex.latest_version_status}`
+      : `codex_cli_${codex.version_status}`,
     result: result.engine_action,
   };
 }
