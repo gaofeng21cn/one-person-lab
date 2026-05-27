@@ -1257,6 +1257,8 @@ export function buildAppOperatorDrilldown(input: {
     production_evidence_tail_ledger: productionEvidenceTailLedger,
     evidence_envelope: evidenceEnvelope,
     runtime_visualization_projection: runtimeVisualizationProjection,
+    runtime_workbench: record(runtimeVisualizationProjection.runtime_workbench),
+    visual_ref_groups: record(runtimeVisualizationProjection.visual_ref_groups),
     domain_legacy_cleanup_plan_refs: legacyCleanupPlans,
     standard_agent_template_consumption_refs: standardAgentTemplateConsumption,
     opl_meta_agent_workbench_refs: oplMetaAgentRegistry,
