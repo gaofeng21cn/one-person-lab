@@ -17,6 +17,7 @@ import {
 
 type JsonRecord = Record<string, unknown>;
 type SearchAttributeType = 'Keyword' | 'Text' | 'Int' | 'Double' | 'Bool' | 'Datetime' | 'KeywordList';
+const TEMPORAL_VISIBILITY_INSPECTION_CONNECT_TIMEOUT_MS = 1_000;
 
 const INDEXED_VALUE_TYPE: Record<SearchAttributeType, number> = {
   Text: 1,
@@ -369,7 +370,11 @@ export async function inspectTemporalStageAttemptVisibilityReadiness(paths?: Tem
         namespace,
         taskQueue: resolveTemporalTaskQueue(),
         observedCustomAttributes: await listTemporalCustomSearchAttributes(connection, namespace),
-      }), { paths, addressOverride: resolved.address });
+      }), {
+        paths,
+        addressOverride: resolved.address,
+        connectTimeoutMs: TEMPORAL_VISIBILITY_INSPECTION_CONNECT_TIMEOUT_MS,
+      });
   } catch (error) {
     return buildTemporalStageAttemptVisibilityReadiness({
       address: resolved.address,

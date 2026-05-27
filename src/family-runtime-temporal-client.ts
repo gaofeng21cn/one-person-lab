@@ -10,6 +10,7 @@ export type TemporalWorkerPaths = Pick<ReturnType<typeof familyRuntimePaths>, 'r
 export type TemporalClientOptions = {
   paths?: TemporalWorkerPaths;
   addressOverride?: string | null;
+  connectTimeoutMs?: number;
 };
 
 export function requireTemporalAddress() {
@@ -33,7 +34,10 @@ export async function withTemporalClient<T>(
 ) {
   const resolvedAddress = options.addressOverride
     ?? (options.paths ? resolveTemporalAddressForPaths(options.paths).address : null);
-  const connection = await Connection.connect({ address: resolvedAddress || requireTemporalAddress() });
+  const connection = await Connection.connect({
+    address: resolvedAddress || requireTemporalAddress(),
+    ...(options.connectTimeoutMs ? { connectTimeout: options.connectTimeoutMs } : {}),
+  });
   try {
     return await fn(new Client({ connection, namespace: resolveTemporalNamespace() }), connection);
   } finally {

@@ -204,6 +204,7 @@ export async function StageAttemptWorkflow(
           OplStageId: input.stage_id,
           OplExecutorKind: input.executor_kind,
           OplTaskId: input.task_id ?? null,
+          source_fingerprint: input.source_fingerprint ?? null,
         },
       },
     },
