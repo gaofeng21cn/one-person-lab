@@ -13,6 +13,10 @@ import {
   type FamilyRuntimeTaskRow,
   type FamilyRuntimeTaskStatus,
 } from './family-runtime-store.ts';
+import {
+  findLiveMasDefaultExecutorDispatchAttempt,
+  refreshMasDefaultExecutorLiveAttemptTaskLease,
+} from './family-runtime-provider-hosted-attempts.ts';
 
 const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
 const MAS_DEFAULT_EXECUTOR_NEXT_OWNERS = new Set(['write', 'ai_reviewer', 'write/ai_reviewer']);
@@ -49,6 +53,43 @@ function isMasDefaultExecutorDispatchInput(
   payload: Record<string, unknown>,
 ) {
   return isMasDefaultExecutorDispatch({ domain_id: domainId, task_kind: taskKind }, payload);
+}
+
+function masDefaultExecutorCandidateRow(input: {
+  domainId: FamilyRuntimeTaskRow['domain_id'];
+  taskKind: string;
+  payload: Record<string, unknown>;
+  dedupeKey: string | null;
+  priority?: number;
+  source?: string;
+  requiresApproval?: boolean;
+  createdAt: string;
+}): FamilyRuntimeTaskRow {
+  return {
+    task_id: stableId('frt_candidate', [
+      input.domainId,
+      input.taskKind,
+      input.dedupeKey,
+      input.payload,
+    ]),
+    domain_id: input.domainId,
+    task_kind: input.taskKind,
+    payload_json: JSON.stringify(input.payload),
+    dedupe_key: input.dedupeKey,
+    priority: input.priority ?? 0,
+    status: input.requiresApproval ? 'waiting_approval' : 'queued',
+    attempts: 0,
+    max_attempts: DEFAULT_MAX_ATTEMPTS,
+    source: input.source ?? 'opl-cli',
+    requires_approval: input.requiresApproval ? 1 : 0,
+    approved_at: null,
+    lease_owner: null,
+    lease_expires_at: null,
+    last_error: null,
+    dead_letter_reason: null,
+    created_at: input.createdAt,
+    updated_at: input.createdAt,
+  };
 }
 
 function recordValue(value: unknown) {
@@ -444,6 +485,60 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         accepted: false,
         idempotent_noop: true,
         task: taskToPayload(existing),
+      };
+    }
+  }
+
+  if (isMasDefaultExecutorDispatchInput(input.domainId, taskKind, payload)) {
+    const candidate = masDefaultExecutorCandidateRow({
+      domainId: input.domainId,
+      taskKind,
+      payload,
+      dedupeKey,
+      priority: input.priority,
+      source: input.source,
+      requiresApproval: input.requiresApproval,
+      createdAt,
+    });
+    const liveAttempt = findLiveMasDefaultExecutorDispatchAttempt(db, candidate, payload);
+    if (liveAttempt?.task_id) {
+      const lease = refreshMasDefaultExecutorLiveAttemptTaskLease(db, {
+        attempt: liveAttempt,
+        source: input.source ?? 'opl-cli',
+        reason: 'same_dispatch_live_stage_attempt_exists_at_enqueue',
+      });
+      insertEvent(db, {
+        taskId: liveAttempt.task_id,
+        domainId: input.domainId,
+        eventType: 'task_default_executor_live_dispatch_enqueue_noop',
+        source: input.source ?? 'opl-cli',
+        payload: {
+          dedupe_key: dedupeKey,
+          reason: 'same_dispatch_live_stage_attempt_exists_at_enqueue',
+          stage_attempt_id: liveAttempt.stage_attempt_id,
+          candidate_source_fingerprint: sourceFingerprint(payload),
+          live_source_fingerprint: liveAttempt.workspace_locator.domain_source_fingerprint ?? null,
+          dispatch_ref: payload.dispatch_ref ?? null,
+          action_type: payload.action_type ?? null,
+          study_id: payload.study_id ?? null,
+          lease,
+          authority_boundary: {
+            opl: 'queue_intake_single_flight_noop_only',
+            domain: 'truth_quality_artifact_gate_owner',
+            domain_truth_mutation: false,
+            publication_quality_mutation: false,
+            artifact_gate_mutation: false,
+            current_package_mutation: false,
+          },
+        },
+      });
+      const liveTask = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(liveAttempt.task_id) as
+        | FamilyRuntimeTaskRow
+        | undefined;
+      return {
+        accepted: false,
+        idempotent_noop: true,
+        task: liveTask ? taskToPayload(liveTask) : undefined,
       };
     }
   }

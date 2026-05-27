@@ -16,6 +16,7 @@ import {
   createStageAttemptTable,
   listStageAttemptsForTask,
 } from '../../../../../src/family-runtime-stage-attempts.ts';
+import { enqueueTask } from '../../../../../src/family-runtime-enqueue.ts';
 
 function withIsolatedFamilyRuntimeEnv<T>(fn: () => T) {
   const previous = {
@@ -362,6 +363,83 @@ test('family-runtime keeps MAS default executor admission single-flight across s
       assert.equal(secondAttempts.length, 0);
       assert.ok(skipEvent);
       assert.equal(JSON.parse(skipEvent.payload_json).stage_attempt_id, firstAttempt.stage_attempt_id);
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime enqueue keeps MAS default executor dispatch single-flight while a live attempt is running', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    withIsolatedFamilyRuntimeEnv(() => {
+      createQueueTables(db);
+      const runningPayload = defaultExecutorPayload('source-before');
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-live-running-before-enqueue',
+        payload: runningPayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:source-before',
+      });
+      db.prepare(`
+        UPDATE tasks
+        SET status = 'running', attempts = 1, lease_owner = 'opl-family-runtime:test',
+          lease_expires_at = ?
+        WHERE task_id = ?
+      `).run(
+        new Date(Date.now() + 60_000).toISOString(),
+        'task-mas-default-live-running-before-enqueue',
+      );
+      const runningRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-live-running-before-enqueue',
+      ) as Parameters<typeof ensureProviderHostedStageAttempt>[1];
+      const runningAttempt = ensureProviderHostedStageAttempt(db, runningRow, runningPayload);
+      assert.ok(runningAttempt);
+      db.prepare(`
+        UPDATE stage_attempts
+        SET status = 'running',
+          provider_run_json = json_set(provider_run_json, '$.provider_status', 'running')
+        WHERE stage_attempt_id = ?
+      `).run(runningAttempt.stage_attempt_id);
+
+      const result = enqueueTask(db, {
+        domainId: 'medautoscience',
+        taskKind: 'domain_owner/default-executor-dispatch',
+        payload: {
+          ...defaultExecutorPayload('source-after'),
+          dispatch_authority: 'consumer_default_executor_dispatch',
+        },
+        dedupeKey: 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:source-after',
+        priority: 65,
+        source: 'test-domain-export',
+      });
+      const tasks = db.prepare(`
+        SELECT task_id, status, payload_json, lease_expires_at
+        FROM tasks
+        ORDER BY created_at ASC
+      `).all() as Array<{
+        task_id: string;
+        status: string;
+        payload_json: string;
+        lease_expires_at: string | null;
+      }>;
+      const noopEvent = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_default_executor_live_dispatch_enqueue_noop'
+        LIMIT 1
+      `).get('task-mas-default-live-running-before-enqueue') as { payload_json: string } | undefined;
+
+      assert.equal(result.accepted, false);
+      assert.equal(result.idempotent_noop, true);
+      assert.equal(result.task?.task_id, 'task-mas-default-live-running-before-enqueue');
+      assert.equal(tasks.length, 1);
+      assert.equal(tasks[0].status, 'running');
+      assert.equal(JSON.parse(tasks[0].payload_json).source_fingerprint, 'source-before');
+      assert.ok(tasks[0].lease_expires_at);
+      assert.ok(Date.parse(tasks[0].lease_expires_at) > Date.now());
+      assert.ok(noopEvent);
+      assert.equal(JSON.parse(noopEvent.payload_json).candidate_source_fingerprint, 'source-after');
+      assert.equal(JSON.parse(noopEvent.payload_json).stage_attempt_id, runningAttempt.stage_attempt_id);
     });
   } finally {
     db.close();
