@@ -53,7 +53,7 @@ dated proof、receipt 事件、具体命令输出和阶段 closeout 摘要归档
    把 framework-generic 能力上收到 OPL，把 domain truth 留在 domain。满足 replacement parity、no-active-caller、domain receipt parity、provenance/history 和 no-forbidden-write 证据后，旧模块、接口、alias、facade、wrapper、旧测试入口和 compatibility tests 直接删除；测试改为锁定当前 machine-readable contract、generated surface、domain owner receipt 或 no-resurrection guard。
 
 5. `opl_app_runtime_workbench`
-   将 provider readiness、stage attempt、route graph、review/repair queue、source refs、artifact refs、memory refs、quality/readiness、SLO、workorder packet、owner-aware action routing 和 refs-only graph/timeline/research lens 做成人可用工作台。App 从 `runtime_visualization_projection` 读取 stage/route/receipt/blocker/safe-action graph、timeline event 和 MAS `paper_route_lens_refs`，只做展示与 drilldown，不读取论文正文、memory body 或 artifact body，不声明 publication ready、domain ready 或 production ready。
+   将 provider readiness、stage attempt、route graph、review/repair queue、source refs、artifact refs、memory refs、quality/readiness、SLO、workorder packet、owner-aware action routing 和 refs-only graph/timeline/research lens 做成人可用工作台。App 从 `runtime_visualization_projection` 读取 stage/route/receipt/blocker/safe-action graph、timeline event、`runtime_workbench` 纵向工作台模型和 MAS `paper_route_lens_refs`，默认展示全局摘要、行动队列、domain lane 动态地图、单任务 drilldown 与论文路线 lens refs；summary 允许 10 秒轻轮询兜底，full detail 按需加载。该面只做展示与 drilldown，不读取论文正文、memory body 或 artifact body，不声明 publication ready、domain ready 或 production ready。
 
 6. `domain_soak_and_acceptance`
    MAS 完成真实 paper-line provider apply 证据；MAG/RCA 分别完成 controlled grant / visual stage attempt、owner receipt / no-regression evidence、expected receipt instance、monitor freshness 和 long SLO。

@@ -340,6 +340,246 @@ function researchLens(input: RuntimeVisualizationInput) {
   };
 }
 
+function domainDisplayLabel(domainId: string | null) {
+  if (domainId === 'medautoscience') {
+    return 'MAS';
+  }
+  if (domainId === 'med-autogrant') {
+    return 'MAG';
+  }
+  if (domainId === 'redcube-ai') {
+    return 'RCA';
+  }
+  return domainId ?? 'General';
+}
+
+function attemptState(attempt: JsonRecord) {
+  const currentState = record(attempt.current_control_state);
+  return stringValue(attempt.status)
+    ?? stringValue(attempt.local_status)
+    ?? stringValue(currentState.current_attempt_state)
+    ?? stringValue(currentState.reconciliation_status)
+    ?? 'unknown';
+}
+
+function priorityBucketForAttempt(attempt: JsonRecord, blockerCount: number, safeActionCount: number) {
+  const state = attemptState(attempt);
+  if (blockerCount > 0 || state === 'blocked') {
+    return 'blocked';
+  }
+  if (safeActionCount > 0) {
+    return 'can_continue';
+  }
+  if (state === 'running' || state === 'active') {
+    return 'running';
+  }
+  if (state === 'completed' || state === 'done') {
+    return 'recent_done';
+  }
+  return 'running';
+}
+
+function refsForAttempt(refs: JsonRecord[], stageAttemptId: string) {
+  return refs.filter((ref) => stringValue(ref.stage_attempt_id) === stageAttemptId);
+}
+
+function taskKey(attempt: JsonRecord) {
+  return stringValue(attempt.task_id)
+    ?? stringValue(attempt.stage_attempt_id)
+    ?? 'unknown-task';
+}
+
+function activePathForAttempt(
+  attempt: JsonRecord,
+  routeRefs: JsonRecord[],
+  decisionRefs: JsonRecord[],
+  typedBlockerRefs: JsonRecord[],
+  safeActions: JsonRecord[],
+) {
+  const stageAttemptId = stringValue(attempt.stage_attempt_id) ?? '';
+  const stageNode = {
+    node_id: `stage_attempt:${stageAttemptId}`,
+    node_kind: 'stage_attempt',
+    label: stringValue(attempt.stage_id) ?? stageAttemptId,
+    state: attemptState(attempt),
+    ref: attemptRef(stageAttemptId),
+  };
+  const routeNodes = refsForAttempt(routeRefs, stageAttemptId).map((ref) => ({
+    node_id: `route_graph:${stringValue(ref.ref) ?? ''}`,
+    node_kind: 'route_graph',
+    label: stringValue(ref.role) ?? 'route',
+    state: stringValue(ref.status),
+    ref: stringValue(ref.ref),
+  }));
+  const decisionNodes = refsForAttempt(decisionRefs, stageAttemptId).map((ref) => ({
+    node_id: `decision_map:${stringValue(ref.ref) ?? ''}`,
+    node_kind: 'decision_map',
+    label: stringValue(ref.role) ?? 'decision',
+    state: stringValue(ref.status),
+    ref: stringValue(ref.ref),
+  }));
+  const blockerNodes = refsForAttempt(typedBlockerRefs, stageAttemptId).map((ref) => ({
+    node_id: `typed_blocker:${stringValue(ref.ref) ?? ''}`,
+    node_kind: 'typed_blocker',
+    label: stringValue(ref.role) ?? 'typed blocker',
+    state: 'blocked',
+    ref: stringValue(ref.ref),
+  }));
+  const actionNodes = refsForAttempt(safeActions, stageAttemptId).map((ref) => ({
+    node_id: `safe_action:${stringValue(ref.action_id) ?? stringValue(ref.ref) ?? ''}`,
+    node_kind: 'safe_action',
+    label: stringValue(ref.action_kind) ?? stringValue(ref.role) ?? 'safe action',
+    state: 'available',
+    ref: stringValue(ref.ref),
+  }));
+  return [stageNode, ...routeNodes, ...decisionNodes, ...blockerNodes, ...actionNodes];
+}
+
+function buildRuntimeWorkbench(
+  input: RuntimeVisualizationInput,
+  nodes: JsonRecord[],
+  edges: JsonRecord[],
+  timeline: JsonRecord[],
+  lens: JsonRecord,
+) {
+  const lensRefs = recordList(lens.paper_route_lens_refs);
+  const lensDomains = new Set(lensRefs.map((ref) => stringValue(ref.domain_id)).filter(Boolean));
+  const typedBlockerRefs = recordList(input.typedBlockers.refs);
+  const taskDrilldowns = input.attempts.map((attempt) => {
+    const stageAttemptId = stringValue(attempt.stage_attempt_id) ?? 'unknown-attempt';
+    const domainId = stringValue(attempt.domain_id);
+    const stageId = stringValue(attempt.stage_id);
+    const taskId = taskKey(attempt);
+    const safeActionRefs = refsForAttempt(input.safeActions, stageAttemptId);
+    const blockerRefs = refsForAttempt(typedBlockerRefs, stageAttemptId);
+    const paperRouteLensRefCount = domainId && lensDomains.has(domainId) ? lensRefs.length : 0;
+    return {
+      task_id: taskId,
+      title: `${domainDisplayLabel(domainId)} ${stageId ?? 'task'}`,
+      domain_id: domainId,
+      domain_label: domainDisplayLabel(domainId),
+      state: attemptState(attempt),
+      active_stage_id: stageId,
+      stage_attempt_ids: [stageAttemptId],
+      updated_at: stringValue(attempt.updated_at),
+      priority_bucket: priorityBucketForAttempt(attempt, blockerRefs.length, safeActionRefs.length),
+      active_path: activePathForAttempt(
+        attempt,
+        input.routeRefs,
+        input.decisionRefs,
+        typedBlockerRefs,
+        input.safeActions,
+      ),
+      key_branch_refs: [
+        ...refsForAttempt(input.routeRefs, stageAttemptId),
+        ...refsForAttempt(input.decisionRefs, stageAttemptId),
+      ],
+      owner_receipt_ref_count: refsForAttempt(input.ownerReceipts, stageAttemptId).length,
+      blocker_ref_count: blockerRefs.length,
+      safe_action_ref_count: safeActionRefs.length,
+      paper_route_lens_ref_count: paperRouteLensRefCount,
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    };
+  });
+  const actionQueueItems = taskDrilldowns
+    .map((task) => ({
+      item_id: `task:${task.task_id}`,
+      task_id: task.task_id,
+      title: task.title,
+      subtitle: task.active_stage_id,
+      domain_id: task.domain_id,
+      domain_label: task.domain_label,
+      state: task.state,
+      priority_bucket: task.priority_bucket,
+      safe_action_ref_count: task.safe_action_ref_count,
+      blocker_ref_count: task.blocker_ref_count,
+      paper_route_lens_ref_count: task.paper_route_lens_ref_count,
+      stage_attempt_ids: task.stage_attempt_ids,
+    }))
+    .sort((left, right) => {
+      const order: Record<string, number> = {
+        blocked: 0,
+        can_continue: 1,
+        running: 2,
+        recent_done: 3,
+      };
+      return (order[left.priority_bucket] ?? 9) - (order[right.priority_bucket] ?? 9)
+        || left.title.localeCompare(right.title);
+    });
+  const lanes = [...new Set(taskDrilldowns.map((task) => task.domain_id ?? 'general'))].map((domainId) => {
+    const tasks = taskDrilldowns.filter((task) => (task.domain_id ?? 'general') === domainId);
+    return {
+      domain_id: domainId,
+      lane_label: domainDisplayLabel(domainId === 'general' ? null : domainId),
+      active_task_count: tasks.filter((task) => task.priority_bucket !== 'recent_done').length,
+      blocked_task_count: tasks.filter((task) => task.priority_bucket === 'blocked').length,
+      paper_route_lens_ref_count: tasks.reduce((count, task) => count + task.paper_route_lens_ref_count, 0),
+      tasks: tasks.map((task) => ({
+        task_id: task.task_id,
+        label: task.title,
+        state: task.state,
+        priority_bucket: task.priority_bucket,
+        active_stage_id: task.active_stage_id,
+        active_path_node_ids: task.active_path.map((node) => node.node_id),
+        paper_route_lens_ref_count: task.paper_route_lens_ref_count,
+      })),
+    };
+  });
+  const activeTasks = taskDrilldowns.filter((task) => task.priority_bucket !== 'recent_done').length;
+  const blockedTasks = taskDrilldowns.filter((task) => task.priority_bucket === 'blocked').length;
+  const canContinueTasks = taskDrilldowns.filter((task) => task.priority_bucket === 'can_continue').length;
+  return {
+    surface_kind: 'opl_app_runtime_workbench_visualization_model',
+    layout_model: 'vertical_summary_action_queue_lane_map_task_drilldown.v1',
+    source_surface: 'runtime_visualization_projection',
+    refresh_policy: {
+      mode: 'event_driven_with_light_polling_fallback',
+      summary_poll_interval_seconds: 10,
+      full_detail_auto_poll: false,
+      per_token_streaming: false,
+      full_detail_load_policy: 'operator_requested_only',
+    },
+    performance_policy: {
+      global_map_renderer: 'lightweight_dom_css_lane_map',
+      detail_graph_renderer: 'on_demand_graph_renderer',
+      visible_only_rendering: true,
+      list_windowing_required: true,
+      graph_layout_recompute: 'topology_changes_only',
+      state_updates_only_refresh_badges_and_highlights: true,
+      batch_visual_updates_with_request_animation_frame: true,
+    },
+    summary_cards: [
+      { card_id: 'active_tasks', label: 'Active tasks', value: activeTasks, tone: activeTasks > 0 ? 'running' : 'idle' },
+      { card_id: 'needs_user', label: 'Needs user', value: blockedTasks, tone: blockedTasks > 0 ? 'attention' : 'ok' },
+      { card_id: 'can_continue', label: 'Can continue', value: canContinueTasks, tone: canContinueTasks > 0 ? 'ready' : 'idle' },
+      {
+        card_id: 'recent_done',
+        label: 'Recent done',
+        value: taskDrilldowns.filter((task) => task.priority_bucket === 'recent_done').length,
+        tone: 'done',
+      },
+      { card_id: 'graph_nodes', label: 'Graph nodes', value: nodes.length, tone: 'meta' },
+      { card_id: 'timeline_events', label: 'Timeline events', value: timeline.length, tone: 'meta' },
+    ],
+    action_queue: {
+      sort_order: ['needs_user', 'blocked', 'can_continue', 'running', 'recent_done'],
+      items: actionQueueItems,
+    },
+    domain_lane_map: {
+      map_model: 'vertical_domain_lanes_compact_active_path.v1',
+      lanes,
+    },
+    task_drilldowns: taskDrilldowns,
+    paper_route_lens_refs: lensRefs,
+    graph_budget: {
+      default_node_limit: 120,
+      default_edge_limit: 160,
+      full_detail_required_above_limit: true,
+    },
+    authority_boundary: refsOnlyAuthorityBoundary(),
+  };
+}
+
 export function buildRuntimeVisualizationProjection(input: RuntimeVisualizationInput) {
   const nodes = uniqueRefsByValue([
     ...attemptNodes(input.attempts),
@@ -365,6 +605,7 @@ export function buildRuntimeVisualizationProjection(input: RuntimeVisualizationI
   ]);
   const timeline = timelineEvents(input);
   const lens = researchLens(input);
+  const runtimeWorkbench = buildRuntimeWorkbench(input, nodes, edges, timeline, lens);
   const graphSummary = {
     node_count: nodes.length,
     edge_count: edges.length,
@@ -404,6 +645,7 @@ export function buildRuntimeVisualizationProjection(input: RuntimeVisualizationI
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
     research_lens: lens,
+    runtime_workbench: runtimeWorkbench,
     visual_ref_groups: {
       route_graph_refs: input.routeRefs,
       decision_map_refs: input.decisionRefs,

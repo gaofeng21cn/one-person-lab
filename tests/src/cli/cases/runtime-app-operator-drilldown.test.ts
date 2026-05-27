@@ -383,6 +383,72 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       drilldown.runtime_visualization_projection.authority_boundary.can_authorize_publication_ready,
       false,
     );
+    assert.equal(
+      drilldown.runtime_visualization_projection.runtime_workbench.surface_kind,
+      'opl_app_runtime_workbench_visualization_model',
+    );
+    assert.equal(
+      drilldown.runtime_visualization_projection.runtime_workbench.layout_model,
+      'vertical_summary_action_queue_lane_map_task_drilldown.v1',
+    );
+    assert.equal(
+      drilldown.runtime_visualization_projection.runtime_workbench.refresh_policy.summary_poll_interval_seconds,
+      10,
+    );
+    assert.equal(
+      drilldown.runtime_visualization_projection.runtime_workbench.refresh_policy.full_detail_auto_poll,
+      false,
+    );
+    assert.equal(
+      drilldown.runtime_visualization_projection.runtime_workbench.refresh_policy.per_token_streaming,
+      false,
+    );
+    assert.equal(
+      drilldown.runtime_visualization_projection.runtime_workbench.performance_policy.global_map_renderer,
+      'lightweight_dom_css_lane_map',
+    );
+    assert.equal(
+      drilldown.runtime_visualization_projection.runtime_workbench.summary_cards
+        .some((card: { card_id: string; value: number }) =>
+          card.card_id === 'active_tasks' && card.value === 1
+        ),
+      true,
+    );
+    assert.equal(
+      drilldown.runtime_visualization_projection.runtime_workbench.action_queue.items
+        .some((item: { task_id: string; priority_bucket: string; safe_action_ref_count: number }) =>
+          item.task_id === 'task-app-drilldown'
+          && item.priority_bucket === 'can_continue'
+          && item.safe_action_ref_count > 0
+        ),
+      true,
+    );
+    assert.equal(
+      drilldown.runtime_visualization_projection.runtime_workbench.domain_lane_map.lanes
+        .some((lane: { domain_id: string; lane_label: string; active_task_count: number }) =>
+          lane.domain_id === 'medautoscience'
+          && lane.lane_label === 'MAS'
+          && lane.active_task_count === 1
+        ),
+      true,
+    );
+    assert.equal(
+      drilldown.runtime_visualization_projection.runtime_workbench.task_drilldowns
+        .some((task: {
+          task_id: string;
+          domain_id: string;
+          stage_attempt_ids: string[];
+          paper_route_lens_ref_count: number;
+          active_path: Array<{ node_id: string }>;
+        }) =>
+          task.task_id === 'task-app-drilldown'
+          && task.domain_id === 'medautoscience'
+          && task.stage_attempt_ids.includes(attemptId)
+          && task.paper_route_lens_ref_count === 1
+          && task.active_path.some((node) => node.node_id === `stage_attempt:${attemptId}`)
+        ),
+      true,
+    );
     assert.equal(drilldown.review_repair_queue_refs.items[0].repair_target, `opl family-runtime attempt query ${attemptId}`);
     assert.equal(drilldown.artifact_gallery_refs.content_policy, 'locator_only_no_artifact_content');
     assert.equal(drilldown.artifact_gallery_refs.refs.length, 3);
