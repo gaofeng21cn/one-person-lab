@@ -106,6 +106,9 @@ db.close();`;
     assert.equal(projection.authority_boundary.can_change_executor, false);
     assert.equal(projection.authority_boundary.can_auto_degrade, false);
     assert.equal(visibility.usage_projection.token.total_tokens_observed, 1820);
+    assert.equal(visibility.stage_progress_log.surface_kind, 'opl_stage_progress_log');
+    assert.equal(visibility.stage_progress_log.projection_policy, 'refs_only_no_domain_truth');
+    assert.equal(['stage', 'execution', 'log'].join('_') in visibility, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

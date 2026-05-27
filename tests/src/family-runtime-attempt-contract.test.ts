@@ -15,10 +15,33 @@ function readJson(relativePath: string) {
   return JSON.parse(read(relativePath)) as Record<string, unknown>;
 }
 
+const retiredStageExecutionLogName = ['stage', 'execution', 'log'].join('_');
+
 function requirePattern(patterns: Map<string, Record<string, any>>, pattern: string) {
   const value = patterns.get(pattern);
   assert.ok(value, `missing external stability pattern: ${pattern}`);
   return value;
+}
+
+function* walkTextFiles(relativeRoot: string): Generator<string> {
+  const absoluteRoot = path.join(repoRoot, relativeRoot);
+  if (!fs.existsSync(absoluteRoot)) {
+    return;
+  }
+
+  for (const entry of fs.readdirSync(absoluteRoot, { withFileTypes: true })) {
+    const relativePath = path.join(relativeRoot, entry.name);
+    if (relativePath.startsWith('docs/history/')) {
+      continue;
+    }
+    if (entry.isDirectory()) {
+      yield* walkTextFiles(relativePath);
+      continue;
+    }
+    if (entry.isFile() && ['.json', '.md', '.mjs', '.ts'].includes(path.extname(entry.name))) {
+      yield relativePath;
+    }
+  }
 }
 
 test('family runtime attempt contract documents attempt, retry, workspace, and reconciliation fields', () => {
@@ -162,6 +185,53 @@ test('family runtime attempt contract defines current control state as OPL-only 
   assert.equal(projection.authority_boundary.can_claim_domain_ready, false);
   assert.equal(projection.authority_boundary.can_claim_publication_ready, false);
   assert.equal(projection.authority_boundary.can_claim_artifact_ready, false);
+});
+
+test('family runtime attempt contract defines stage_progress_log as the canonical refs-only progress surface', () => {
+  const contract = readJson('contracts/opl-framework/family-runtime-attempt-contract.json');
+  const projection = contract.stage_progress_log_projection as Record<string, any>;
+
+  assert.equal(projection.surface_name, 'stage_progress_log');
+  assert.equal(projection.surface_kind, 'opl_stage_progress_log');
+  assert.equal(projection.projection_policy, 'refs_only_no_domain_truth');
+  assert.deepEqual(projection.required_derivation_sources, [
+    'stage_attempt_ledger',
+    'provider_run_projection',
+    'activity_events',
+    'typed_closeout_packet_refs',
+    'domain_owned_receipt_refs',
+    'stage_attempt_usage_projection',
+  ]);
+  assert.deepEqual(projection.forbidden_derivation_sources, [
+    'domain_truth_body',
+    'domain_memory_body',
+    'artifact_body',
+    'quality_verdict_body',
+  ]);
+  assert.equal(projection.authority_boundary.can_execute_domain_action, false);
+  assert.equal(projection.authority_boundary.can_write_domain_truth, false);
+  assert.equal(projection.authority_boundary.can_read_memory_body, false);
+  assert.equal(projection.authority_boundary.can_read_artifact_body, false);
+  assert.equal(projection.authority_boundary.can_authorize_quality_verdict, false);
+  assert.equal((contract.operator_visibility_fields as string[]).includes('stage_progress_log'), true);
+  assert.equal((contract.operator_visibility_fields as string[]).includes(retiredStageExecutionLogName), false);
+  assert.equal((contract.stability_projection_fields as string[]).includes('stage_progress_log'), true);
+  assert.equal((contract.stability_projection_fields as string[]).includes(retiredStageExecutionLogName), false);
+});
+
+test('active contract, source, and test surfaces do not emit retired stage execution log naming', () => {
+  const violations: string[] = [];
+
+  for (const relativePath of ['contracts', 'src', 'tests/src'].flatMap((root) => [...walkTextFiles(root)])) {
+    const lines = read(relativePath).split(/\r?\n/);
+    lines.forEach((line, index) => {
+      if (line.includes(retiredStageExecutionLogName)) {
+        violations.push(`${relativePath}:${index + 1}`);
+      }
+    });
+  }
+
+  assert.deepEqual(violations, []);
 });
 
 test('stage route scheduler contract freezes route hydration as OPL reconciliation, not nested stages', () => {
