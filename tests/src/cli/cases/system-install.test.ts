@@ -495,12 +495,25 @@ test('recommended system companion skills keep family domain skills plugin-only 
       assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillId, 'SKILL.md')), true);
     }
 
+    const toolBin = path.join(homeRoot, '.local', 'bin');
+    fs.mkdirSync(toolBin, { recursive: true });
+    fs.writeFileSync(
+      path.join(toolBin, 'officecli'),
+      '#!/usr/bin/env bash\nif [ "${1:-}" = "--version" ]; then echo "1.0.70-test"; else echo officecli; fi\n',
+      { mode: 0o755 },
+    );
+    fs.writeFileSync(
+      path.join(toolBin, 'mineru-open-api'),
+      '#!/usr/bin/env bash\nif [ "${1:-}" = "version" ]; then echo "mineru-open-api version v0.1.3-test"; else echo mineru-open-api; fi\n',
+      { mode: 0o755 },
+    );
+
     const ready = runCli(['system', 'initialize'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_PACKAGED_SKILLS_ROOT: packagedSkillsRoot,
-      PATH: `${path.join(homeRoot, '.local', 'bin')}:/usr/bin:/bin`,
+      PATH: `${toolBin}:/usr/bin:/bin`,
     }) as {
       system_initialize: {
         recommended_skills: {
