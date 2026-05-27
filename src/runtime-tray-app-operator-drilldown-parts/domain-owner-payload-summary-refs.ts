@@ -387,6 +387,10 @@ function domainOwnerPayloadSummaryFromMasPaperLineCloseout(project: DomainManife
     return null;
   }
   const ownerSummary = masPaperLineOwnerPayloadItemSummary(closeout);
+  const stageSummarySource = record(closeout.stage_expected_receipt_payload_summary);
+  const stageSummary = Object.keys(stageSummarySource).length > 0
+    ? stageExpectedReceiptPayloadSummary(stageSummarySource)
+    : null;
   if (!ownerSummary) {
     return null;
   }
@@ -399,7 +403,7 @@ function domainOwnerPayloadSummaryFromMasPaperLineCloseout(project: DomainManife
     source_ref:
       '/real_paper_autonomy_guarded_apply_proof/paper_line_provider_canary_closeout',
     owner_payload_item_summary: ownerSummary,
-    stage_expected_receipt_payload_summary: null,
+    stage_expected_receipt_payload_summary: stageSummary,
     payload_body_allowed: false,
     projection_closes_domain_ready: false,
     projection_claims_production_ready: false,

@@ -52,6 +52,66 @@ function withMasCanaryCloseoutPayloads(manifest: Record<string, unknown>) {
           production_ready_claim_count: 0,
           artifact_mutation_authorized_count: 0,
         },
+        stage_expected_receipt_payload_summary: {
+          surface_kind: 'mas_stage_expected_receipt_payload_summary',
+          owner: 'med-autoscience',
+          consumer: 'one_person_lab',
+          status: 'per_stage_expected_receipt_payload_refs_ready_with_live_evidence_typed_blockers',
+          payload_kind: 'stage_expected_receipt_or_monitor_freshness_refs',
+          payload_path_policy: 'operator_must_choose_success_refs_path_or_domain_owned_typed_blocker_path_empty_template_blocks',
+          payload_body_allowed: false,
+          empty_payload_template_is_success_evidence: false,
+          required_operator_payload_refs: [
+            'domain_receipt_refs',
+            'monitor_freshness_refs',
+            'runtime_event_refs',
+            'typed_blocker_refs',
+          ],
+          required_return_shapes: [
+            'domain_receipt_ref',
+            'monitor_freshness_ref',
+            'runtime_event_ref',
+            'typed_blocker_ref',
+          ],
+          accepted_payload_paths_ref: (
+            '/real_paper_autonomy_guarded_apply_proof/paper_line_provider_canary_closeout/'
+            + 'stage_expected_receipt_payload_summary'
+          ),
+          stages: [
+            {
+              stage_id: 'finalize_and_publication_handoff',
+              sequence: 6,
+              payload_kind: 'stage_expected_receipt_or_monitor_freshness_refs',
+              current_payload_template: {
+                domain_receipt_refs: [],
+                monitor_freshness_refs: [],
+                runtime_event_refs: [],
+                typed_blocker_refs: [],
+              },
+              success_refs_path_payload: {
+                domain_receipt_refs: [
+                  '/studies/002/artifacts/controller/repair_execution_receipts/latest.json',
+                ],
+                monitor_freshness_refs: [
+                  '/studies/002/artifacts/controller/repair_execution_evidence/latest.json',
+                ],
+                runtime_event_refs: [],
+              },
+              typed_blocker_path_payload: {
+                typed_blocker_refs: [
+                  'mas_owner_apply_receipt_missing:003-dm-cvd-ehr-risk-calibration',
+                ],
+              },
+              monitor_status: 'success_refs_observed_with_typed_blocker_tail',
+              operator_payload_submitted: false,
+              recommended_current_payload_path: 'typed_blocker_path',
+              success_refs_visible_is_completion: false,
+              payload_body_allowed: false,
+              domain_readiness_claimed: false,
+              production_readiness_claimed: false,
+            },
+          ],
+        },
         paper_line_domain_dispatch_evidence_record_payloads: [
           {
             surface_kind: 'mas_domain_dispatch_evidence_record_payload',
@@ -379,6 +439,8 @@ test('runtime App drilldown exposes MAS paper-line owner payloads only from expl
   assert.equal(summary.summary.domain_owner_payload_summary_domain_count, 1);
   assert.equal(summary.summary.domain_owner_payload_summary_owner_payload_item_summary_count, 1);
   assert.equal(summary.summary.domain_owner_payload_summary_work_item_count, 2);
+  assert.equal(summary.summary.domain_owner_payload_summary_stage_expected_receipt_summary_count, 1);
+  assert.equal(summary.summary.domain_owner_payload_summary_stage_count, 1);
   assert.equal(summary.summary.domain_owner_payload_summary_domain_ready_claim_count, 0);
   assert.equal(summary.summary.domain_owner_payload_summary_production_ready_claim_count, 0);
 
@@ -388,7 +450,11 @@ test('runtime App drilldown exposes MAS paper-line owner payloads only from expl
   assert.equal(attention.owner_payload_domains[0].domain_id, 'medautoscience');
   assert.equal(attention.owner_payload_domains[0].owner, 'med-autoscience');
   assert.equal(attention.owner_payload_domains[0].owner_payload_work_item_count, 2);
-  assert.equal(attention.owner_payload_domains[0].stage_expected_receipt_payload_stage_count, 0);
+  assert.equal(attention.owner_payload_domains[0].stage_expected_receipt_payload_stage_count, 1);
+  assert.equal(
+    attention.owner_payload_domains[0].stage_expected_receipt_payload_status,
+    'per_stage_expected_receipt_payload_refs_ready_with_live_evidence_typed_blockers',
+  );
   assert.equal(attention.owner_payload_domains[0].source_surface, 'real_paper_autonomy_guarded_apply_proof');
   assert.equal(attention.owner_payload_domains[0].copyable_runtime_action_execute_commands, undefined);
   assert.equal(attention.authority_boundary.can_create_owner_receipt, false);
@@ -434,6 +500,56 @@ test('runtime App drilldown exposes MAS paper-line owner payloads only from expl
   assert.equal(mas.owner_payload_item_summary.work_items[0].payload_body_allowed, false);
   assert.equal(mas.owner_payload_item_summary.work_items[0].domain_readiness_claimed, false);
   assert.equal(mas.owner_payload_item_summary.work_items[0].production_readiness_claimed, false);
+  assert.equal(mas.stage_expected_receipt_payload_summary.stage_count, 1);
+  assert.equal(
+    mas.stage_expected_receipt_payload_summary.stages[0].stage_id,
+    'finalize_and_publication_handoff',
+  );
+  assert.deepEqual(
+    mas.stage_expected_receipt_payload_summary.stages[0].success_refs_path_payload
+      .domain_receipt_refs,
+    ['/studies/002/artifacts/controller/repair_execution_receipts/latest.json'],
+  );
+  assert.deepEqual(
+    mas.stage_expected_receipt_payload_summary.stages[0].typed_blocker_path_payload,
+    {
+      typed_blocker_refs: [
+        'mas_owner_apply_receipt_missing:003-dm-cvd-ehr-risk-calibration',
+      ],
+    },
+  );
+  assert.equal(
+    mas.stage_expected_receipt_payload_summary.stages[0].success_refs_visible_is_completion,
+    false,
+  );
+  assert.equal(
+    mas.stage_expected_receipt_payload_summary.stages[0].authority_boundary
+      .can_claim_domain_ready,
+    false,
+  );
+  const stageRecordRoute = full.operator_action_routing_refs.refs.find(
+    (route: {
+      action_kind: string;
+      target_identity?: { stage_id?: string; summary_kind?: string };
+      payload_workorder?: {
+        accepted_payload_paths?: {
+          success_refs_path?: { closes_expected_receipt_refs?: boolean };
+        };
+      };
+    }) =>
+      route.action_kind === 'domain_owner_payload_summary_receipt_record'
+      && route.target_identity?.summary_kind === 'stage_expected_receipt'
+      && route.target_identity?.stage_id === 'finalize_and_publication_handoff',
+  );
+  assert.ok(stageRecordRoute);
+  assert.equal(stageRecordRoute.payload_body_allowed, false);
+  assert.equal(stageRecordRoute.can_create_owner_receipt, false);
+  assert.equal(stageRecordRoute.can_close_domain_ready, false);
+  assert.equal(
+    stageRecordRoute.payload_workorder?.accepted_payload_paths?.success_refs_path
+      ?.closes_expected_receipt_refs,
+    false,
+  );
 
   const readiness = runCli(['framework', 'readiness', '--family-defaults'], env)
     .framework_readiness;
@@ -446,5 +562,10 @@ test('runtime App drilldown exposes MAS paper-line owner payloads only from expl
     readiness.attention_first_payload.domain_owner_payload_summary_attention
       .owner_payload_work_item_count,
     2,
+  );
+  assert.equal(
+    readiness.attention_first_payload.domain_owner_payload_summary_attention
+      .stage_expected_receipt_payload_stage_count,
+    1,
   );
 });
