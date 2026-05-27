@@ -25,6 +25,10 @@ MAS default-executor dispatch 的 task row 与 provider-hosted stage attempt 必
 
 当 OPL tick 观察到 MAS default-executor task 仍是 `running`、lease 已过期、linked Temporal attempt 仍停在 `registered/queued`，但 Temporal query 返回 `temporal_workflow_not_started_or_not_found` 时，该状态属于 OPL provider admission / liveness failure。OPL 必须把 linked attempt 记录为 provider transport failure、把 task 收敛到 provider-only blocked reason，并在 retry budget 内由同一个 tick 自动 redrive；普通未 claim 的 queued attempt 不能因为 workflow not found 被误判为失败。自动 redrive 产生的新 stage attempt 使用同 task/stage/provider 下的 ordinal 保证可审计唯一性，不能依赖同毫秒时间戳或人工 queue update。
 
+`stage_progress_log` 是当前 stage attempt 的 canonical 可观测读面：`attempt query|inspect`、operator visibility、`stage_attempt_workbench` 和 App full drilldown 都从同一 attempt ledger / provider run / activity events / usage projection / closeout packet 派生 planned work、actual work、timeline、usage、evidence refs、Temporal visibility refs 和 authority boundary。Temporal provider 负责 durable workflow history、activity heartbeat、workflow query 和 searchable visibility；OPL 不新建平行 log database，也不把 Temporal history 或 Web UI 当成 App 用户状态真相。
+
+Temporal visibility readiness 属于 provider lifecycle gate。`temporal` provider 启动 searchable stage attempt 前必须具备 OPL stage attempt Search Attributes；缺失时返回明确 repair action，并通过 `opl family-runtime provider repair --provider temporal` 安装。Search Attributes 只能承载可检索 refs 与摘要字段，不能放 transcript、artifact body、memory body、domain body 或 owner verdict。
+
 ## 内容
 
 | 文件 | 生命周期状态 | 当前 owner | 阅读规则 |

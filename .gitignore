@@ -1,4 +1,5 @@
 .DS_Store
+.officecli/
 # legacy OMX local state (kept ignored after offboarding)
 .omx/
 .codegraph/

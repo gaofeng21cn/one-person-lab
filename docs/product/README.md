@@ -22,6 +22,8 @@ App / operator workbench 的默认 GUI 消费面是 `opl_app_state.v1`，由 `op
 
 `runtime_visualization_projection.runtime_workbench` 是 App 运行状态页的纵向工作台模型：默认按全局 summary strip、行动队列、domain lane 动态地图、单任务 drilldown 和 MAS paper route lens refs 展示多任务基座状态；summary 允许 10 秒轻轮询兜底，full detail 只按 operator 显式加载，不做逐 token 刷新。全局动态地图使用轻量 DOM/CSS lane map，单任务详情按需展开 graph/timeline/refs；布局和性能字段只描述展示策略，不改变 OPL/App/domain authority。
 
+App 运行状态页的 stage log 来源是 OPL `stage_attempt_workbench.stage_progress_log` 和 `runtime_visualization_projection`，不是 Temporal Web UI 的页面结构。Temporal Web UI 只作为 `temporal_webui_ref` operator/debug link 展开，用于定位 workflow history、run id、namespace 和 Search Attributes；App 首屏、full drilldown、action routing 和用户语义状态继续以 OPL semantic projection 为准。
+
 ## 内容
 
 | 文件 | 生命周期状态 | 当前 owner | 阅读规则 |
