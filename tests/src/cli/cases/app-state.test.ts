@@ -1,5 +1,6 @@
 import { assert, createFakeCodexFixture, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
+import { fullRuntimeWorkbenchSummary } from '../../../../src/app-state.ts';
 
 const defaultDeveloperModePermissionsFixture = JSON.stringify({
   user: { login: 'gaofeng21cn' },
@@ -10,6 +11,72 @@ const defaultDeveloperModePermissionsFixture = JSON.stringify({
     'gaofeng21cn/opl-meta-agent': 'write',
     'gaofeng21cn/redcube-ai': 'admin',
   },
+});
+
+test('app state full runtime workbench summary uses stage progress refs only', () => {
+  const output = fullRuntimeWorkbenchSummary({
+    surface_kind: 'opl_app_operator_drilldown_read_model',
+    stage_progress_log: {
+      surface_kind: 'opl_stage_progress_log_summary',
+      attempt_count: 1,
+      temporal_attempt_count: 1,
+      temporal_webui_ref_count: 1,
+      temporal_webui_refs: [
+        'http://localhost:8233/namespaces/default/workflows/stage-attempt-1/run-1/history',
+      ],
+      attempt_refs: [
+        '/stage_attempt_workbench/attempts/stage-attempt-1/stage_progress_log',
+      ],
+      authority_boundary: {
+        can_read_memory_body: false,
+        can_read_artifact_body: false,
+        provider_completion_is_domain_ready: false,
+      },
+    },
+    runtime_visualization_projection: {
+      runtime_workbench: {
+        surface_kind: 'opl_app_runtime_workbench_visualization_model',
+        summary_cards: [{ card_id: 'active_tasks', value: 1 }],
+        action_queue: { items: [{ item_id: 'task:stage-attempt-1' }] },
+        domain_lane_map: { lanes: [{ domain_id: 'medautoscience' }] },
+      },
+      visual_ref_groups: {
+        stage_progress_log_refs: [
+          {
+            ref: '/stage_attempt_workbench/attempts/stage-attempt-1/stage_progress_log',
+            role: 'stage_attempt_progress_log',
+            temporal_webui_url:
+              'http://localhost:8233/namespaces/default/workflows/stage-attempt-1/run-1/history',
+          },
+        ],
+      },
+      summary: {
+        stage_progress_event_count: 2,
+        temporal_stage_progress_ref_count: 1,
+      },
+    },
+    memory_writeback_refs: {
+      consumed_memory_refs: ['memory:route-policy'],
+      body: 'must-not-be-projected',
+    },
+    artifact_gallery_refs: {
+      refs: [{ ref: 'artifact:table', body: 'must-not-be-projected' }],
+    },
+  });
+
+  assert.equal(output.availability, 'available');
+  assert.equal(output.runtime_workbench?.surface_kind, 'opl_app_runtime_workbench_visualization_model');
+  assert.equal(output.runtime_workbench?.action_queue_item_count, 1);
+  assert.equal(output.runtime_workbench?.domain_lane_count, 1);
+  assert.equal(output.stage_progress_log?.attempt_count, 1);
+  assert.equal(output.stage_progress_log?.visual_ref_count, 1);
+  assert.equal(output.stage_progress_log?.temporal_webui_ref_count, 1);
+  assert.equal(output.stage_progress_log?.temporal_stage_progress_ref_count, 1);
+  assert.equal(output.stage_progress_log?.stage_progress_event_count, 2);
+  assert.equal(JSON.stringify(output).includes('must-not-be-projected'), false);
+  assert.equal(output.authority_boundary.can_read_memory_body, false);
+  assert.equal(output.authority_boundary.can_read_artifact_body, false);
+  assert.equal(output.authority_boundary.provider_completion_is_domain_ready, false);
 });
 
 test('app state fast exposes the canonical GUI read model without retired MDS defaults', () => {
