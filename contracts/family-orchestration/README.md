@@ -31,7 +31,7 @@ The active stage-led contract rules are:
 5. The verified static core covers identity, owner, refs, scope, composition, and forbidden-authority constraints only.
 6. Runtime-enforced boundaries cover AI output, human decisions, external systems, artifact mutation, memory writeback, and domain verdicts.
 7. Hard blockers are limited to launch safety, authority violations, missing key runtime-event recording, unsatisfied composition, hard human gates, or missing executor binding.
-8. Capacity, monitor, assumption, cohort-loop, replay, and domain-owner review signals are folded advisory refs in `opl stages readiness --domain <domain>`, not standalone launch-authority schemas.
+8. Capacity, monitor, assumption, cohort-loop, replay, and domain-owner review signals are folded advisory refs in `opl stages readiness --family-defaults` and per-domain `opl stages readiness --domain <domain>`, not standalone launch-authority schemas.
 9. Descriptor readiness, read-model availability, generated-surface proof, provider proof, or cleanup proof never equals domain ready, artifact ready, or production evidence complete.
 10. Every blocked or incomplete boundary reports a typed blocker, human gate, receipt conflict, or route-back ref instead of a fallback verdict.
 

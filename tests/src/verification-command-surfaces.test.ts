@@ -290,7 +290,7 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
     'repeated_app_runtime_consumption',
   ]);
   assert.deepEqual(policy.default_doc_entry_budget.stage_default_commands, [
-    'opl stages readiness --domain <domain>',
+    'opl stages readiness --family-defaults',
   ]);
   assert.equal(
     policy.default_doc_entry_budget.stage_diagnostic_commands.includes('opl stages proof-bundle --domain <domain>'),

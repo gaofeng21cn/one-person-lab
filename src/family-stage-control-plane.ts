@@ -33,6 +33,10 @@ import {
   buildStageReadinessSummary,
 } from './family-stage-readiness.ts';
 import {
+  buildFamilyDefaultsStageReadiness,
+  type FamilyStageReadinessDetail,
+} from './family-stage-readiness-aggregate.ts';
+import {
   buildFamilyStagePackSourceSpecProjection,
 } from './family-stage-source-spec.ts';
 import {
@@ -500,97 +504,6 @@ function findStage(plane: FamilyStageControlPlane, stageId: string) {
   return stage;
 }
 
-function familyStageReadinessStatus(summaries: ReturnType<typeof buildStageReadinessSummary>[]) {
-  if (summaries.some((summary) => summary.launch_readiness_status === 'launch_blocked')) {
-    return 'launch_blocked';
-  }
-  if (summaries.some((summary) => summary.launch_readiness_status === 'launch_warning')) {
-    return 'launch_warning';
-  }
-  return 'launch_observable';
-}
-
-function buildFamilyDefaultsStageReadiness(
-  contracts: FrameworkContracts,
-  detail: string,
-  options: ManifestCatalogOptions = {},
-) {
-  const index = buildStageIndex(contracts, options);
-  const summaries = index.domain_manifests.projects.flatMap((entry) => {
-    const plane = resolvePlaneFromEntry(entry);
-    if (!plane) {
-      return [];
-    }
-    return [buildStageReadinessSummary(entry, plane, entry.project_id)];
-  });
-  const hardBlockerCount = summaries.reduce(
-    (total, summary) => total + summary.summary.hard_blocker_count,
-    0,
-  );
-  const warningCount = summaries.reduce(
-    (total, summary) => total + summary.summary.warning_count,
-    0,
-  );
-  const domains = summaries.map((summary) => ({
-    project_id: summary.project_id,
-    project: summary.project,
-    target_domain_id: summary.target_domain_id,
-    plane_id: summary.plane_id,
-    status: summary.launch_readiness_status,
-    summary: summary.summary,
-    authority_boundary: summary.authority_boundary,
-  }));
-  const fullDomains = summaries.map((summary) => ({
-    ...summary,
-    detail_level: 'full',
-  }));
-
-  return {
-    detail_level: detail,
-    family_defaults: true,
-    status: familyStageReadinessStatus(summaries),
-    summary: {
-      domain_count: summaries.length,
-      stage_count: summaries.reduce((total, summary) => total + summary.summary.stage_count, 0),
-      admitted_stage_count: summaries.reduce(
-        (total, summary) => total + summary.summary.admitted_stage_count,
-        0,
-      ),
-      needs_contracts_stage_count: summaries.reduce(
-        (total, summary) => total + summary.summary.needs_contracts_stage_count,
-        0,
-      ),
-      blocked_stage_count: summaries.reduce(
-        (total, summary) => total + summary.summary.blocked_stage_count,
-        0,
-      ),
-      hard_blocker_count: hardBlockerCount,
-      warning_count: warningCount,
-      can_claim_domain_ready: false,
-      can_claim_artifact_authority: false,
-      can_claim_production_ready: false,
-    },
-    domains: detail === 'full' ? fullDomains : domains,
-    drilldown_refs: [
-      'opl stages readiness --domain mas --json',
-      'opl stages readiness --domain mag --json',
-      'opl stages readiness --domain rca --json',
-      'opl stages readiness --domain oma --json',
-    ],
-    authority_boundary: {
-      opl_role: 'family_stage_readiness_aggregate_only',
-      can_execute_stage: false,
-      can_write_domain_truth: false,
-      can_authorize_domain_ready: false,
-      can_authorize_quality_verdict: false,
-      can_mutate_artifact_body: false,
-      can_claim_domain_ready: false,
-      can_claim_artifact_authority: false,
-      can_claim_production_ready: false,
-    },
-  };
-}
-
 function findingsForStage(
   admission: FamilyStageAdmissionReview,
   stageId: string,
@@ -753,7 +666,11 @@ function parseStageReadinessArgs(args: string[]) {
       allowed_detail: ['summary', 'full'],
     });
   }
-  return { domain: parsed.domain ?? null, detail, familyDefaults: flags.has('family-defaults') };
+  return {
+    domain: parsed.domain ?? null,
+    detail: detail as FamilyStageReadinessDetail,
+    familyDefaults: flags.has('family-defaults'),
+  };
 }
 
 function parseRepeatedOptionArgs(args: string[], required: string[], repeated: string[] = []) {
@@ -909,9 +826,10 @@ export function buildFamilyStageGraphInspect(contracts: FrameworkContracts, args
 export function buildFamilyStageReadinessInspect(contracts: FrameworkContracts, args: string[], options: ManifestCatalogOptions = {}): { version: 'g2'; family_stage_readiness: Record<string, unknown> } {
   const parsed = parseStageReadinessArgs(args);
   if (parsed.familyDefaults) {
+    const index = buildStageIndex(contracts, options);
     return {
       version: 'g2',
-      family_stage_readiness: buildFamilyDefaultsStageReadiness(contracts, parsed.detail, options),
+      family_stage_readiness: buildFamilyDefaultsStageReadiness(index.domain_manifests.projects, parsed.detail),
     };
   }
   const { entry, plane } = findDomainEntry(contracts, parsed.domain, options);

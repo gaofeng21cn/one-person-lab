@@ -16,6 +16,7 @@ Date: `2026-05-26`
 - `opl agents readiness --family-defaults --json`
 - `opl agents conformance --family-defaults --json`
 - `opl agents interfaces --domain <domain> --json`
+- `opl stages readiness --family-defaults --json`
 - `opl stages readiness --domain <domain> --json`
 - `opl runtime app-operator-drilldown --json`
 - `opl runtime app-operator-drilldown --detail full --json`
