@@ -59,6 +59,16 @@ function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
+function stringList(value: unknown) {
+  if (typeof value === 'string' && value.trim()) {
+    return [value.trim()];
+  }
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0);
+  }
+  return [];
+}
+
 function refsFromUnknown(value: unknown): string[] {
   if (typeof value === 'string' && value.trim()) {
     return [value.trim()];
@@ -86,6 +96,19 @@ function refsFromRecord(record: JsonRecord | null | undefined, keys: string[]) {
 
 function recordList(value: unknown) {
   return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function firstRecordFrom(record: JsonRecord | null | undefined, keys: string[]) {
+  if (!record) {
+    return null;
+  }
+  for (const key of keys) {
+    const value = record[key];
+    if (isRecord(value)) {
+      return value;
+    }
+  }
+  return null;
 }
 
 function packetLikeRef(value: string) {
@@ -127,6 +150,16 @@ function firstActivityAt(events: JsonRecord[]) {
 
 function latestActivityAt(events: JsonRecord[]) {
   return events.map(eventTime).filter((value): value is string => Boolean(value)).at(-1) ?? null;
+}
+
+function msBetween(startedAt: unknown, completedAt: unknown) {
+  const started = stringValue(startedAt);
+  const completed = stringValue(completedAt);
+  if (!started || !completed) {
+    return null;
+  }
+  const durationMs = Date.parse(completed) - Date.parse(started);
+  return Number.isFinite(durationMs) && durationMs >= 0 ? durationMs : null;
 }
 
 function eventKind(event: JsonRecord) {
@@ -190,6 +223,193 @@ function usageTelemetry(input: StageProgressLogInput) {
   };
 }
 
+function userStageLogAuthorityBoundary() {
+  return {
+    opl: 'user_stage_log_container_timing_usage_and_refs_projection_only',
+    domain: 'human_readable_stage_semantics_owner',
+    semantic_body_source: 'domain_typed_closeout_or_route_impact_only',
+    can_infer_domain_semantics: false,
+    can_write_domain_truth: false,
+    can_authorize_quality_verdict: false,
+  };
+}
+
+function statusFromObservedCount(count: number) {
+  return count > 0 ? 'observed' : 'missing';
+}
+
+function durationForUserStageLog(input: StageProgressLogInput, durationMsObserved: number | null) {
+  const providerDurationMs = msBetween(input.providerRun.started_at, input.providerRun.completed_at);
+  const attemptWallClockMs = msBetween(input.createdAt, input.updatedAt);
+  const durationMs = durationMsObserved ?? providerDurationMs ?? attemptWallClockMs;
+  const durationSource = durationMsObserved !== null
+    ? 'usage_projection'
+    : providerDurationMs !== null
+      ? 'provider_run_started_completed_at'
+      : attemptWallClockMs !== null
+        ? 'stage_attempt_created_updated_at_fallback'
+        : null;
+  return {
+    status: durationMs !== null ? 'observed' : 'missing',
+    duration_ms: durationMs,
+    duration_source: durationSource,
+    duration_telemetry_status: Number(input.usageProjection.duration.observed_count) > 0 ? 'observed' : 'missing',
+    telemetry_fallback_used: durationMsObserved === null && durationMs !== null,
+    missing_duration_reason: durationMs !== null ? null : 'no_duration_telemetry_or_attempt_timestamps_observed',
+  };
+}
+
+function tokenUsageForUserStageLog(input: StageProgressLogInput) {
+  const usage = input.usageProjection;
+  const observed = Number(usage.token.observed_count) > 0;
+  return {
+    status: statusFromObservedCount(Number(usage.token.observed_count)),
+    input_tokens: observed ? numberValue(usage.token.input_tokens_observed) : null,
+    output_tokens: observed ? numberValue(usage.token.output_tokens_observed) : null,
+    total_tokens: observed ? numberValue(usage.token.total_tokens_observed) : null,
+    observed_count: Number(usage.token.observed_count),
+    source_refs: usage.token.source_refs,
+    missing_token_usage_reason: observed ? null : 'no_stage_attempt_token_usage_telemetry_observed',
+  };
+}
+
+function costForUserStageLog(input: StageProgressLogInput) {
+  const usage = input.usageProjection;
+  const observed = Number(usage.cost.observed_count) > 0;
+  return {
+    status: statusFromObservedCount(Number(usage.cost.observed_count)),
+    estimated_cost_usd: observed ? numberValue(usage.cost.estimated_cost_usd_observed) : null,
+    observed_count: Number(usage.cost.observed_count),
+    source_refs: usage.cost.source_refs,
+    missing_cost_reason: observed ? null : 'no_stage_attempt_cost_telemetry_observed',
+  };
+}
+
+function semanticList(summary: JsonRecord | null, keys: string[]) {
+  if (!summary) {
+    return [];
+  }
+  for (const key of keys) {
+    const values = stringList(summary[key]);
+    if (values.length > 0) {
+      return values;
+    }
+  }
+  return [];
+}
+
+function semanticText(summary: JsonRecord | null, keys: string[]) {
+  if (!summary) {
+    return null;
+  }
+  for (const key of keys) {
+    const value = stringValue(summary[key]);
+    if (value) {
+      return value;
+    }
+  }
+  return null;
+}
+
+function domainStageSummary(input: StageProgressLogInput) {
+  return firstRecordFrom(input.latestCloseout, [
+    'user_stage_log',
+    'paper_stage_log',
+    'stage_log_summary',
+    'human_stage_log',
+    'human_summary',
+  ]) ?? firstRecordFrom(input.routeImpact, [
+    'user_stage_log',
+    'paper_stage_log',
+    'stage_log_summary',
+    'human_stage_log',
+    'human_summary',
+  ]);
+}
+
+function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: number | null) {
+  const semanticSummary = domainStageSummary(input);
+  const semanticSource = semanticSummary
+    ? isRecord(input.latestCloseout)
+      && [
+        'user_stage_log',
+        'paper_stage_log',
+        'stage_log_summary',
+        'human_stage_log',
+        'human_summary',
+      ].some((key) => input.latestCloseout?.[key] === semanticSummary)
+        ? 'latest_closeout'
+        : 'route_impact'
+    : null;
+  const duration = durationForUserStageLog(input, durationMsObserved);
+  const tokens = tokenUsageForUserStageLog(input);
+  const cost = costForUserStageLog(input);
+  const stageName = semanticText(semanticSummary, ['stage_name', 'stage_label', 'name'])
+    ?? `${input.domainId}/${input.stageId}`;
+  const problemSummary = semanticText(semanticSummary, ['problem_summary', 'problem', 'issue_summary']);
+  const stageGoal = semanticText(semanticSummary, ['stage_goal', 'goal', 'intended_work']);
+  const paperWorkDone = semanticList(semanticSummary, [
+    'paper_work_done',
+    'work_done_summary',
+    'work_done',
+    'actual_work',
+    'changed_content_summary',
+  ]);
+  const changedSurfaces = semanticList(semanticSummary, [
+    'changed_paper_surfaces',
+    'changed_surfaces',
+    'artifact_surfaces',
+    'paper_surfaces',
+  ]);
+  const remainingBlockers = uniqueStrings([
+    ...semanticList(semanticSummary, ['remaining_blockers', 'blockers', 'remaining_issues']),
+    ...semanticList(input.routeImpact, ['remaining_blockers', 'typed_blockers']),
+    ...refsFromRecord(input.latestCloseout, ['typed_blocker_ref', 'typed_blocker_refs']),
+    ...refsFromRecord(input.routeImpact, ['typed_blocker_ref', 'typed_blocker_refs']),
+  ]);
+  const outcome = semanticText(semanticSummary, ['outcome', 'stage_outcome'])
+    ?? input.canonicalOutcome
+    ?? input.domainReadyVerdict
+    ?? input.status;
+  const evidenceRefs = uniqueStrings([
+    ...semanticList(semanticSummary, ['evidence_refs', 'supporting_refs']),
+    ...input.closeoutRefs,
+    ...input.consumedRefs,
+    ...input.writebackReceiptRefs,
+  ]);
+  const semanticStatus = semanticSummary ? 'provided_by_domain' : 'missing_domain_semantic_summary';
+  return {
+    surface_kind: 'opl_user_stage_log',
+    projection_policy: 'opl_time_usage_refs_plus_domain_provided_human_semantics_no_domain_inference',
+    semantic_status: semanticStatus,
+    semantic_source: semanticSource,
+    stage_name: stageName,
+    problem_summary: problemSummary,
+    stage_goal: stageGoal,
+    paper_work_done: paperWorkDone,
+    changed_paper_surfaces: changedSurfaces,
+    outcome,
+    remaining_blockers: remainingBlockers,
+    duration,
+    token_usage: tokens,
+    cost,
+    evidence_refs: evidenceRefs,
+    semantic_gap: semanticSummary ? null : {
+      reason: 'domain_closeout_did_not_provide_user_stage_log',
+      required_domain_fields: [
+        'stage_name',
+        'problem_summary',
+        'stage_goal',
+        'paper_work_done',
+        'changed_paper_surfaces',
+        'outcome',
+        'remaining_blockers',
+      ],
+    },
+    authority_boundary: userStageLogAuthorityBoundary(),
+  };
+}
+
 export function buildStageProgressLog(input: StageProgressLogInput) {
   const activityEvents = input.activityEvents.filter(isRecord);
   const runnerEvents = runnerProgressEvents(activityEvents);
@@ -232,6 +452,7 @@ export function buildStageProgressLog(input: StageProgressLogInput) {
     ...refsFromUnknown(input.workspaceLocator.dispatch_refs),
   ]);
   const durationMsObserved = numberValue(input.usageProjection.duration.duration_ms_observed);
+  const userStageLog = buildUserStageLog(input, durationMsObserved);
   const temporalVisibility = buildTemporalStageAttemptVisibility({
     providerKind: input.providerKind,
     stageAttemptId: input.stageAttemptId,
@@ -311,6 +532,7 @@ export function buildStageProgressLog(input: StageProgressLogInput) {
     },
     usage: input.usageProjection,
     usage_telemetry: usageTelemetry(input),
+    user_stage_log: userStageLog,
     evidence_refs: {
       checkpoint_refs: input.checkpointRefs,
       closeout_refs: input.closeoutRefs,

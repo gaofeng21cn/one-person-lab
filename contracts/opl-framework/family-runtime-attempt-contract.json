@@ -193,6 +193,9 @@
       "consumed_memory_refs",
       "writeback_receipt_refs",
       "rejected_writes",
+      "user_stage_log",
+      "paper_stage_log",
+      "stage_log_summary",
       "route_impact",
       "next_owner",
       "domain_ready_verdict"
@@ -247,6 +250,7 @@
       "actual_work",
       "timeline",
       "usage",
+      "user_stage_log",
       "evidence_refs",
       "temporal_visibility",
       "temporal_webui_ref",
@@ -313,6 +317,42 @@
       "duration_ms_observed",
       "duration_telemetry_status"
     ],
+    "user_stage_log_contract": {
+      "surface_kind": "opl_user_stage_log",
+      "projection_policy": "opl_time_usage_refs_plus_domain_provided_human_semantics_no_domain_inference",
+      "purpose": "user-facing stage progress summary for stage, problem, paper-facing work, duration, token usage, cost, outcome, blockers, and evidence refs",
+      "domain_semantic_sources": [
+        "typed_closeout_packet.user_stage_log",
+        "typed_closeout_packet.paper_stage_log",
+        "typed_closeout_packet.stage_log_summary",
+        "route_impact.user_stage_log",
+        "route_impact.paper_stage_log",
+        "route_impact.stage_log_summary"
+      ],
+      "required_sections": [
+        "stage_name",
+        "problem_summary",
+        "stage_goal",
+        "paper_work_done",
+        "changed_paper_surfaces",
+        "duration",
+        "token_usage",
+        "cost",
+        "outcome",
+        "remaining_blockers",
+        "evidence_refs",
+        "semantic_gap",
+        "authority_boundary"
+      ],
+      "semantic_missing_policy": "emit_missing_domain_semantic_summary_without_inventing_domain_work",
+      "duration_policy": "prefer_usage_projection_duration_then_provider_started_completed_at_then_stage_attempt_created_updated_at_fallback",
+      "token_policy": "observed_or_explicit_missing_null_no_zero_fill",
+      "authority_boundary": {
+        "can_infer_domain_semantics": false,
+        "can_write_domain_truth": false,
+        "can_authorize_quality_verdict": false
+      }
+    },
     "evidence_ref_fields": [
       "checkpoint_refs",
       "closeout_refs",

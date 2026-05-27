@@ -131,6 +131,9 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'consumed_memory_refs',
     'writeback_receipt_refs',
     'rejected_writes',
+    'user_stage_log',
+    'paper_stage_log',
+    'stage_log_summary',
     'route_impact',
     'next_owner',
   ]) {
@@ -198,11 +201,32 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'actual_work',
     'timeline',
     'usage',
+    'user_stage_log',
     'evidence_refs',
     'temporal_visibility',
     'temporal_webui_ref',
     'authority_boundary',
   ]);
+  const userStageLog = stageProgressLog.user_stage_log_contract as Record<string, any>;
+  assert.equal(userStageLog.surface_kind, 'opl_user_stage_log');
+  assert.equal(
+    userStageLog.projection_policy,
+    'opl_time_usage_refs_plus_domain_provided_human_semantics_no_domain_inference',
+  );
+  assert.deepEqual(userStageLog.domain_semantic_sources, [
+    'typed_closeout_packet.user_stage_log',
+    'typed_closeout_packet.paper_stage_log',
+    'typed_closeout_packet.stage_log_summary',
+    'route_impact.user_stage_log',
+    'route_impact.paper_stage_log',
+    'route_impact.stage_log_summary',
+  ]);
+  assert.ok(userStageLog.required_sections.includes('problem_summary'));
+  assert.ok(userStageLog.required_sections.includes('paper_work_done'));
+  assert.ok(userStageLog.required_sections.includes('token_usage'));
+  assert.equal(userStageLog.semantic_missing_policy, 'emit_missing_domain_semantic_summary_without_inventing_domain_work');
+  assert.equal(userStageLog.token_policy, 'observed_or_explicit_missing_null_no_zero_fill');
+  assert.equal(userStageLog.authority_boundary.can_infer_domain_semantics, false);
   assert.equal(stageProgressLog.temporal_visibility_contract.surface_kind, 'temporal_stage_attempt_visibility');
   assert.equal(stageProgressLog.temporal_visibility_contract.required_for_provider, 'temporal');
   assert.deepEqual(stageProgressLog.temporal_visibility_contract.search_attributes, [
@@ -281,6 +305,10 @@ test('family runtime attempt contract defines stage_progress_log as the canonica
   assert.equal(projection.authority_boundary.can_read_memory_body, false);
   assert.equal(projection.authority_boundary.can_read_artifact_body, false);
   assert.equal(projection.authority_boundary.can_authorize_quality_verdict, false);
+  const userStageLog = projection.user_stage_log_contract as Record<string, any>;
+  assert.equal(userStageLog.surface_kind, 'opl_user_stage_log');
+  assert.equal(userStageLog.authority_boundary.can_infer_domain_semantics, false);
+  assert.equal(userStageLog.authority_boundary.can_write_domain_truth, false);
   assert.equal((contract.operator_visibility_fields as string[]).includes('stage_progress_log'), true);
   assert.equal((contract.operator_visibility_fields as string[]).includes(retiredStageExecutionLogName), false);
   assert.equal((contract.stability_projection_fields as string[]).includes('stage_progress_log'), true);

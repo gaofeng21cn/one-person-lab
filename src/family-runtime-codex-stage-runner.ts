@@ -36,6 +36,9 @@ export type TypedStageCloseoutPacket = {
   rejected_writes: JsonRecord[];
   next_owner: string | null;
   domain_ready_verdict: string | null;
+  user_stage_log?: JsonRecord;
+  paper_stage_log?: JsonRecord;
+  stage_log_summary?: JsonRecord;
   route_impact?: JsonRecord;
   authority_boundary: JsonRecord;
 };
@@ -904,6 +907,9 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
     rejected_writes: readRecordList(value.rejected_writes),
     next_owner: optionalString(value.next_owner),
     domain_ready_verdict: optionalString(value.domain_ready_verdict),
+    ...(isRecord(value.user_stage_log) ? { user_stage_log: value.user_stage_log } : {}),
+    ...(isRecord(value.paper_stage_log) ? { paper_stage_log: value.paper_stage_log } : {}),
+    ...(isRecord(value.stage_log_summary) ? { stage_log_summary: value.stage_log_summary } : {}),
     ...(isRecord(value.route_impact) ? { route_impact: value.route_impact } : {}),
     authority_boundary: isRecord(value.authority_boundary)
       ? value.authority_boundary

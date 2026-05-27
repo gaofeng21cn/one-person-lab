@@ -146,6 +146,41 @@ test('family-runtime attempt query marks missing resource telemetry as retry-bud
     assert.equal(projection.cost.observed_count, 0);
     assert.equal(projection.duration.observed_count, 0);
     assert.equal(projection.retry_budget.pressure_status, 'retry_budget_available');
+
+    const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
+    const updateAttemptClockSql = `
+import { DatabaseSync } from 'node:sqlite';
+const db = new DatabaseSync(${JSON.stringify(queueDb)});
+db.prepare('UPDATE stage_attempts SET created_at = ?, updated_at = ? WHERE stage_attempt_id = ?').run('2026-05-27T01:00:00.000Z', '2026-05-27T01:10:00.000Z', ${JSON.stringify(attemptId)});
+db.close();`;
+    const result = spawnSync(process.execPath, ['--experimental-strip-types', '-e', updateAttemptClockSql], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+      },
+    });
+    assert.equal(result.status, 0, result.stderr);
+
+    const stageProgressQuery = runCli(['family-runtime', 'attempt', 'query', attemptId], familyRuntimeEnv(stateRoot));
+    const userStageLog =
+      stageProgressQuery.family_runtime_stage_attempt_query.stage_attempt_query.stage_progress_log.user_stage_log;
+
+    assert.equal(userStageLog.surface_kind, 'opl_user_stage_log');
+    assert.equal(userStageLog.semantic_status, 'missing_domain_semantic_summary');
+    assert.equal(userStageLog.stage_name, 'medautoscience/paper-repair');
+    assert.equal(userStageLog.problem_summary, null);
+    assert.deepEqual(userStageLog.paper_work_done, []);
+    assert.equal(userStageLog.duration.duration_ms, 600000);
+    assert.equal(userStageLog.duration.duration_source, 'stage_attempt_created_updated_at_fallback');
+    assert.equal(userStageLog.duration.telemetry_fallback_used, true);
+    assert.equal(userStageLog.token_usage.status, 'missing');
+    assert.equal(userStageLog.token_usage.total_tokens, null);
+    assert.equal(
+      userStageLog.semantic_gap.reason,
+      'domain_closeout_did_not_provide_user_stage_log',
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -199,6 +234,29 @@ test('family-runtime attempt query exposes a unified stage progress log with int
         writeback_receipt_refs: ['memory-writeback:dm002-paper-repair'],
         next_owner: 'med-autoscience',
         domain_ready_verdict: 'domain_gate_pending',
+        paper_stage_log: {
+          stage_name: 'DM002 manuscript reporting consistency repair',
+          problem_summary: 'The manuscript had inconsistent Methods and Results reporting around model validation, display provenance, and Figure 5/Table support.',
+          stage_goal: 'Make the current manuscript explain the fixed validation cohort and align the paper-facing displays with the same evidence base.',
+          paper_work_done: [
+            'Clarified the complete-case validation sample and fixed predictor set in Methods.',
+            'Aligned Table 1, Table 2, and Figure 5 claims to the same validation evidence.',
+            'Kept absolute-risk and deployment language bounded until recalibration evidence is available.',
+          ],
+          changed_paper_surfaces: [
+            'manuscript draft',
+            'review manuscript',
+            'display provenance ledger',
+          ],
+          outcome: 'paper_repair_completed_but_reviewer_refresh_required',
+          remaining_blockers: [
+            'AI reviewer re-check must confirm publication readiness after the repair.',
+          ],
+          evidence_refs: [
+            'evidence:figure5-layout',
+            'receipt:dm002-paper-repair-closeout',
+          ],
+        },
         route_impact: {
           decision: 'bounded_repair',
           owner_receipt_refs: ['owner-receipt:mas/dm002/paper-repair'],
@@ -282,6 +340,45 @@ db.close();`;
     assert.equal(log.timeline.duration_telemetry_status, 'observed');
     assert.equal(log.usage.token.total_tokens_observed, 3040);
     assert.equal(log.usage.cost.estimated_cost_usd_observed, 0.39);
+    assert.equal(log.user_stage_log.surface_kind, 'opl_user_stage_log');
+    assert.equal(log.user_stage_log.semantic_status, 'provided_by_domain');
+    assert.equal(log.user_stage_log.semantic_source, 'latest_closeout');
+    assert.equal(log.user_stage_log.stage_name, 'DM002 manuscript reporting consistency repair');
+    assert.equal(
+      log.user_stage_log.problem_summary,
+      'The manuscript had inconsistent Methods and Results reporting around model validation, display provenance, and Figure 5/Table support.',
+    );
+    assert.equal(
+      log.user_stage_log.stage_goal,
+      'Make the current manuscript explain the fixed validation cohort and align the paper-facing displays with the same evidence base.',
+    );
+    assert.deepEqual(log.user_stage_log.paper_work_done, [
+      'Clarified the complete-case validation sample and fixed predictor set in Methods.',
+      'Aligned Table 1, Table 2, and Figure 5 claims to the same validation evidence.',
+      'Kept absolute-risk and deployment language bounded until recalibration evidence is available.',
+    ]);
+    assert.deepEqual(log.user_stage_log.changed_paper_surfaces, [
+      'manuscript draft',
+      'review manuscript',
+      'display provenance ledger',
+    ]);
+    assert.equal(log.user_stage_log.duration.duration_ms, 1800000);
+    assert.equal(log.user_stage_log.duration.duration_source, 'usage_projection');
+    assert.equal(log.user_stage_log.token_usage.total_tokens, 3040);
+    assert.equal(log.user_stage_log.cost.estimated_cost_usd, 0.39);
+    assert.equal(
+      log.user_stage_log.outcome,
+      'paper_repair_completed_but_reviewer_refresh_required',
+    );
+    assert.deepEqual(log.user_stage_log.remaining_blockers, [
+      'AI reviewer re-check must confirm publication readiness after the repair.',
+      'typed-blocker:mas/dm002/reviewer-refresh-required',
+    ]);
+    assert.deepEqual(log.user_stage_log.evidence_refs, [
+      'evidence:figure5-layout',
+      'receipt:dm002-paper-repair-closeout',
+      'memory-writeback:dm002-paper-repair',
+    ]);
     assert.equal(log.authority_boundary.can_execute_domain_action, false);
     assert.equal(log.authority_boundary.can_write_domain_truth, false);
     assert.equal(log.authority_boundary.can_authorize_quality_verdict, false);
