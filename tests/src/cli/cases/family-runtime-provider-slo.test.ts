@@ -44,7 +44,6 @@ function temporalWorkerStatus(status: 'worker_not_ready' | 'ready') {
     lifecycle_status: status,
     inspection_detail: 'full',
     readiness_status: status,
-    inspection_detail: 'full',
     worker_ready: status === 'ready',
     server_reachable: true,
     address: '127.0.0.1:7233',
