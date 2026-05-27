@@ -14,6 +14,10 @@ import {
   SHORT_STAGE_ACTIVITY_SCHEDULE_TO_CLOSE_TIMEOUT,
   SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
 } from './family-runtime-temporal-constants.ts';
+import {
+  codexActivityEventForTemporalHistory,
+  providerBlockerFromCodexResult,
+} from './family-runtime-temporal-history-summary.ts';
 
 type StageAttemptActivities = {
   codexStageActivity(input: TemporalStageAttemptWorkflowInput): Promise<Record<string, unknown>>;
@@ -105,30 +109,6 @@ function validateCloseoutPacketForWorkflow(input: {
   return { closeoutPacket, providerBlocker: null };
 }
 
-function providerBlockerFromCodexResult(value: Record<string, unknown>) {
-  const summary = asRecord(value.process_output_summary);
-  const blockedReason = typeof summary.blocked_reason === 'string' && summary.blocked_reason.trim()
-    ? summary.blocked_reason.trim()
-    : null;
-  if (!blockedReason) {
-    return null;
-  }
-  return {
-    blocked_reason: blockedReason,
-    route_impact: {
-      provider_blocker_reason: blockedReason,
-      provider_blocker_surface: 'codex_stage_activity.process_output_summary',
-      runner_timeout_reason: typeof summary.timeout_reason === 'string' ? summary.timeout_reason : null,
-      pending_function_call_count: typeof summary.pending_function_call_count === 'number'
-        ? summary.pending_function_call_count
-        : null,
-      function_call_names: Array.isArray(summary.function_call_names)
-        ? summary.function_call_names.filter((entry): entry is string => typeof entry === 'string')
-        : [],
-    },
-  };
-}
-
 export async function StageAttemptWorkflow(
   input: TemporalStageAttemptWorkflowInput,
 ): Promise<TemporalStageAttemptWorkflowState> {
@@ -205,6 +185,7 @@ export async function StageAttemptWorkflow(
     };
     const codexResult = await codexStageActivity(input);
     const codexCheckpointRefs = asStringList(codexResult.checkpoint_refs);
+    const codexActivityEvent = codexActivityEventForTemporalHistory(codexResult);
     state = {
       ...state,
       status: codexCheckpointRefs.length > 0 ? 'checkpointed' : 'running',
@@ -212,11 +193,7 @@ export async function StageAttemptWorkflow(
       checkpoint_refs: [...new Set([...state.checkpoint_refs, ...codexCheckpointRefs])],
       activity_events: [
         ...state.activity_events,
-        {
-          activity_kind: 'codex_stage_activity',
-          activity_status: 'completed',
-          ...codexResult,
-        },
+        codexActivityEvent,
       ],
     };
 

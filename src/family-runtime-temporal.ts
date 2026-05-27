@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 import { FrameworkContractError } from './contracts.ts';
 import type { FamilyRuntimeDomainId, TemporalStageAttemptSignalKind } from './family-runtime-types.ts';
 import {
@@ -18,6 +20,7 @@ export const CODEX_STAGE_ACTIVITY_NAME = 'CodexStageActivity';
 export const DOMAIN_HANDLER_DISPATCH_ACTIVITY_NAME = 'DomainHandlerDispatchActivity';
 export const SCHEDULER_TICK_ACTIVITY_NAME = 'SchedulerTickActivity';
 export const DEFAULT_TEMPORAL_TASK_QUEUE = 'opl-stage-attempts';
+export const TEMPORAL_MAX_INLINE_PAYLOAD_BYTES = 128 * 1024;
 
 export const TEMPORAL_STAGE_ATTEMPT_SIGNALS = [
   'HumanGateSignal',
@@ -56,6 +59,14 @@ export type TemporalStageAttemptWorkflowInput = {
   task_id?: string | null;
   stage_packet_ref?: string | null;
   checkpoint_refs?: string[];
+  payload_guard?: {
+    policy: ReturnType<typeof temporalPayloadHistoryPolicy>;
+    truncated_fields: Array<{
+      field: string;
+      original_bytes: number;
+      ref: string;
+    }>;
+  };
   closeout_packet?: Record<string, unknown> | null;
   provider_blocker?: {
     blocked_reason?: string | null;
@@ -157,6 +168,7 @@ export function buildTemporalStageAttemptWorkflowContract() {
         start_to_close_timeout: CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
         heartbeat_timeout: CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
         heartbeat_interval_ms: DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS,
+        cancellation_delivered_by_heartbeat: true,
         runner_timeout_ms: DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
         runner_no_output_timeout_ms: DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
       },
@@ -167,6 +179,73 @@ export function buildTemporalStageAttemptWorkflowContract() {
         stale_schedule_release_policy:
           'fail_short_activity_when_worker_does_not_pick_up_scheduled_task',
       },
+    },
+    payload_history_policy: temporalPayloadHistoryPolicy(),
+  };
+}
+
+export function temporalPayloadHistoryPolicy() {
+  return {
+    max_inline_string_bytes: TEMPORAL_MAX_INLINE_PAYLOAD_BYTES,
+    large_payload_storage: 'external_ref_required',
+    large_payload_ref_prefix: 'payload_ref:sha256:',
+  } as const;
+}
+
+function payloadRefFor(value: string) {
+  return `${temporalPayloadHistoryPolicy().large_payload_ref_prefix}${crypto.createHash('sha256').update(value).digest('hex').slice(0, 16)}`;
+}
+
+function guardInlineString(input: {
+  field: string;
+  value?: string | null;
+  truncatedFields: Array<{ field: string; original_bytes: number; ref: string }>;
+}) {
+  if (!input.value) {
+    return input.value ?? null;
+  }
+  const bytes = Buffer.byteLength(input.value, 'utf8');
+  if (bytes <= TEMPORAL_MAX_INLINE_PAYLOAD_BYTES) {
+    return input.value;
+  }
+  const ref = payloadRefFor(input.value);
+  input.truncatedFields.push({
+    field: input.field,
+    original_bytes: bytes,
+    ref,
+  });
+  return ref;
+}
+
+export function guardTemporalStageAttemptWorkflowInputPayload(
+  input: TemporalStageAttemptWorkflowInput,
+): TemporalStageAttemptWorkflowInput {
+  const truncatedFields: Array<{ field: string; original_bytes: number; ref: string }> = [];
+  const checkpointRefs = (input.checkpoint_refs ?? [])
+    .map((entry, index) => guardInlineString({
+      field: `checkpoint_refs[${index}]`,
+      value: entry,
+      truncatedFields,
+    }))
+    .filter((entry): entry is string => typeof entry === 'string');
+  const stagePacketRef = guardInlineString({
+    field: 'stage_packet_ref',
+    value: input.stage_packet_ref ?? checkpointRefs[0] ?? null,
+    truncatedFields,
+  });
+  if (truncatedFields.length === 0) {
+    return input;
+  }
+  return {
+    ...input,
+    stage_packet_ref: stagePacketRef,
+    checkpoint_refs: checkpointRefs,
+    payload_guard: {
+      policy: temporalPayloadHistoryPolicy(),
+      truncated_fields: [
+        ...(input.payload_guard?.truncated_fields ?? []),
+        ...truncatedFields,
+      ],
     },
   };
 }
@@ -189,8 +268,7 @@ export function buildTemporalStageAttemptWorkflowInput(
     ? attempt.checkpoint_refs.filter((entry: unknown): entry is string => typeof entry === 'string')
     : [];
   const executorKind = attempt.executor_kind;
-  const stagePacketRef = checkpointRefs[0] ?? null;
-  return {
+  return guardTemporalStageAttemptWorkflowInputPayload({
     stage_attempt_id: attempt.stage_attempt_id,
     workflow_id: attempt.workflow_id,
     domain_id: attempt.domain_id,
@@ -200,7 +278,7 @@ export function buildTemporalStageAttemptWorkflowInput(
     executor_kind: executorKind,
     retry_budget: attempt.retry_budget,
     task_id: typeof attempt.task_id === 'string' ? attempt.task_id : null,
-    stage_packet_ref: stagePacketRef,
+    stage_packet_ref: checkpointRefs[0] ?? null,
     checkpoint_refs: checkpointRefs,
     codex_stage_runner: executorKind === 'codex_cli'
       ? {
@@ -209,7 +287,7 @@ export function buildTemporalStageAttemptWorkflowInput(
           no_output_timeout_ms: DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
         }
       : undefined,
-  };
+  });
 }
 
 export function requireTemporalStageAttemptWorkflowInputLaunchable(input: TemporalStageAttemptWorkflowInput) {

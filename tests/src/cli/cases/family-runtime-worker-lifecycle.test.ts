@@ -12,6 +12,8 @@ import {
   test,
 } from '../helpers.ts';
 import {
+  buildTemporalStageAttemptWorkerOptionsForTest,
+  buildTemporalWorkerReadiness,
   inspectTemporalWorkerLifecycle,
   startTemporalWorkerLifecycle,
   stopTemporalWorkerLifecycle,
@@ -137,6 +139,63 @@ test('Temporal worker lifecycle re-query proves resident state and stop transiti
       process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = previousSourceVersion;
     }
     await new Promise<void>((resolve) => server.close(() => resolve()));
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('Temporal managed worker uses a prebuilt workflow bundle with source-version metadata', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-bundle-'));
+  const workerRoot = path.join(stateRoot, 'family-runtime');
+  const previousNamespace = process.env.OPL_TEMPORAL_NAMESPACE;
+  const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
+  try {
+    process.env.OPL_TEMPORAL_NAMESPACE = 'opl-worker-bundle-test';
+    process.env.OPL_TEMPORAL_TASK_QUEUE = 'opl-worker-bundle';
+
+    const built = await buildTemporalStageAttemptWorkerOptionsForTest(
+      { root: workerRoot },
+      { sourceVersion: 'worker-runtime:test-bundle-source' },
+    );
+
+    assert.equal('workflowsPath' in built.worker_options, false);
+    assert.deepEqual(built.worker_options.workflowBundle, {
+      codePath: built.workflow_bundle.code_path,
+    });
+    assert.equal(built.workflow_bundle.provider_kind, 'temporal');
+    assert.equal(built.workflow_bundle.workflow_bundle_source_version, 'worker-runtime:test-bundle-source');
+    assert.match(built.workflow_bundle.workflow_bundle_version, /^workflow-bundle:sha256:/);
+    assert.equal(built.workflow_bundle.task_queue, 'opl-worker-bundle');
+    assert.equal(fs.existsSync(built.workflow_bundle.code_path), true);
+    assert.equal(fs.existsSync(built.workflow_bundle.manifest_path), true);
+
+    const readiness = buildTemporalWorkerReadiness({
+      address: '127.0.0.1:7233',
+      workerStatus: 'ready',
+      namespace: 'opl-worker-bundle-test',
+      taskQueue: 'opl-worker-bundle',
+      managedWorkerWorkflowBundlePath: built.workflow_bundle.code_path,
+      managedWorkerWorkflowBundleVersion: built.workflow_bundle.workflow_bundle_version,
+      managedWorkerWorkflowBundleSourceVersion: built.workflow_bundle.workflow_bundle_source_version,
+      expectedWorkerSourceVersion: 'worker-runtime:test-bundle-source',
+      managedWorkerSourceCurrent: true,
+    });
+
+    assert.equal(readiness.managed_worker_workflow_bundle_path, built.workflow_bundle.code_path);
+    assert.equal(readiness.managed_worker_workflow_bundle_version, built.workflow_bundle.workflow_bundle_version);
+    assert.equal(readiness.managed_worker_workflow_bundle_source_current, true);
+    assert.equal(readiness.lifecycle.workflow_bundle_policy.production_worker_uses_prebuilt_bundle, true);
+    assert.equal(readiness.lifecycle.workflow_bundle_policy.workflows_path_allowed_for_managed_worker, false);
+  } finally {
+    if (previousNamespace === undefined) {
+      delete process.env.OPL_TEMPORAL_NAMESPACE;
+    } else {
+      process.env.OPL_TEMPORAL_NAMESPACE = previousNamespace;
+    }
+    if (previousTaskQueue === undefined) {
+      delete process.env.OPL_TEMPORAL_TASK_QUEUE;
+    } else {
+      process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
+    }
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

@@ -464,7 +464,7 @@ Codex CLI 负责：
 
 ### Master P1. Temporal Provider Core
 
-状态：已落地 `temporal` provider core。OPL 已引入 Temporal TypeScript SDK，新增 `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start/query/signal`、worker helper 和 worker lifecycle contract；缺少 Temporal 地址时 start/query/signal 明确 fail-closed，provider readiness 也要求 worker 已显式确认。
+状态：已落地 `temporal` provider core 与 managed-worker hardening。OPL 已引入 Temporal TypeScript SDK，新增 `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start/query/signal`、worker helper 和 worker lifecycle contract；缺少 Temporal 地址时 start/query/signal 明确 fail-closed，provider readiness 也要求 worker 已显式确认。OPL-managed worker 当前先物化 production workflow bundle，再通过 `workflowBundle.codePath` 启动；worker state / readiness 投影 bundle hash 与 source version；StageAttemptWorkflow 已有 production-bundle replay gate；Codex activity 已接入 cancellation signal，workflow input 已有 inline payload history guard，activity result history 已压成 refs-only small summary。
 
 目标：把已落地的 provider core 从 repo/test 可用推进到真实 Temporal server/worker deployment，并用 domain soak 证明它能稳定托管 stage attempt。
 
@@ -474,7 +474,8 @@ Codex CLI 负责：
 - 已完成：`opl family-runtime attempt start|query|signal` 可走 Temporal client；没有 `OPL_TEMPORAL_ADDRESS` / `TEMPORAL_ADDRESS` 时 fail-closed，不伪装为已执行。
 - 已完成：provider receipt 继续写入现有 stage attempt ledger；provider status 暴露 worker lifecycle contract，不把仅配置地址误报成 Full ready。
 - 已完成：`opl family-runtime residency proof --provider temporal --live` 可启动 Temporal test server 与真实 worker，证明 completed / blocked attempt、human/user/resume signals、worker restart 后 re-query、typed closeout required 和 authority boundary。
-- 待完成：外部 production Temporal service provisioning/readiness、生产 activity retry 和真实 domain soak。
+- 已完成：OPL-managed worker 使用 prebuilt workflow bundle，readiness 暴露 bundle path/hash/source version，workflow replay gate 使用同一 bundle replay completed + signal history；Codex activity cancellation、workflow input payload guard 与 activity result refs-only history summary 进入 contract/test。
+- 待完成：外部 production Temporal service provisioning/readiness、生产 retry tuning 和真实 domain soak。
 
 验收：
 

@@ -27,6 +27,9 @@ type TemporalWorkerReadinessInput = {
   managedWorkerSourceVersion?: string | null;
   expectedWorkerSourceVersion?: string | null;
   managedWorkerSourceCurrent?: boolean | null;
+  managedWorkerWorkflowBundlePath?: string | null;
+  managedWorkerWorkflowBundleVersion?: string | null;
+  managedWorkerWorkflowBundleSourceVersion?: string | null;
   staleWorkerPid?: number | null;
   temporalServiceLifecycle?: Record<string, unknown> | null;
 };
@@ -199,6 +202,11 @@ export function buildTemporalWorkerLifecycleContract() {
       'codexStageActivity',
       'domainHandlerDispatchActivity',
     ],
+    workflow_bundle_policy: {
+      production_worker_uses_prebuilt_bundle: true,
+      workflows_path_allowed_for_managed_worker: false,
+      workflow_bundle_source_version_tied_to_worker_source_version: true,
+    },
     authority_boundary: {
       opl: 'worker_lifecycle_and_activity_transport_only',
       domain: 'truth_quality_artifact_gate_owner',
@@ -236,6 +244,13 @@ export function buildTemporalWorkerReadiness(input: TemporalWorkerReadinessInput
     managed_worker_source_version: input.managedWorkerSourceVersion ?? null,
     expected_worker_source_version: input.expectedWorkerSourceVersion ?? null,
     managed_worker_source_current: input.managedWorkerSourceCurrent ?? null,
+    managed_worker_workflow_bundle_path: input.managedWorkerWorkflowBundlePath ?? null,
+    managed_worker_workflow_bundle_version: input.managedWorkerWorkflowBundleVersion ?? null,
+    managed_worker_workflow_bundle_source_version: input.managedWorkerWorkflowBundleSourceVersion ?? null,
+    managed_worker_workflow_bundle_source_current:
+      input.managedWorkerWorkflowBundleSourceVersion && input.expectedWorkerSourceVersion
+        ? input.managedWorkerWorkflowBundleSourceVersion === input.expectedWorkerSourceVersion
+        : null,
     stale_worker_pid: input.staleWorkerPid ?? null,
     temporal_service_lifecycle: input.temporalServiceLifecycle ?? null,
     blockers,

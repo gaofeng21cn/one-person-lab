@@ -14,6 +14,9 @@ export type TemporalWorkerState = {
   started_at: string;
   status: 'starting' | 'ready';
   source_version?: string;
+  workflow_bundle_path?: string;
+  workflow_bundle_version?: string;
+  workflow_bundle_source_version?: string;
 };
 
 export function temporalWorkerStatePath(paths: TemporalWorkerPaths) {
