@@ -107,6 +107,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/family-runtime-binding-deadletter.test.ts',
   'tests/src/cli/cases/family-runtime-default-executor-owner-redrive.test.ts',
   'tests/src/cli/cases/family-runtime-paper-autonomy.test.ts',
+  'tests/src/cli/cases/family-runtime-provider-repair.test.ts',
   'tests/src/cli/cases/family-runtime-provider-hosted-attempts.test.ts',
   'tests/src/cli/cases/family-runtime-provider-slo.test.ts',
   'tests/src/cli/cases/family-runtime-transition-bridge.test.ts',
