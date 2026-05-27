@@ -15,7 +15,6 @@ const BASELINE = new Map([
   ['tests/src/agent-lab.test.ts', 1135],
   ['tests/src/cli/cases/runtime-app-operator-drilldown-summary.test.ts', 1009],
   ['tests/src/cli/cases/runtime-app-operator-drilldown.test.ts', 1172],
-  ['tests/src/cli/cases/system-install.test.ts', 1001],
   ['tests/src/cli/cases/system-management.test.ts', 1127],
   ['tests/src/family-runtime-codex-stage-runner.test.ts', 1153],
 ]);
