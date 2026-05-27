@@ -128,6 +128,22 @@
           "ref": "contracts/opl-framework/public-surface-index.json#one_person_lab_app_workbench"
         },
         {
+          "ref_kind": "machine_cli",
+          "ref": "opl app state --profile fast"
+        },
+        {
+          "ref_kind": "machine_cli",
+          "ref": "opl app state --profile full"
+        },
+        {
+          "ref_kind": "machine_cli",
+          "ref": "opl app action execute"
+        },
+        {
+          "ref_kind": "machine_cli",
+          "ref": "opl runtime app-operator-drilldown --detail full"
+        },
+        {
           "ref_kind": "human_doc_surface",
           "ref": "human_doc:one_person_lab_app_product_layer"
         }
@@ -140,7 +156,10 @@
       ],
       "notes": [
         "Represents the app as the user-facing workbench for OPL Framework and installed Foundry Agents.",
-        "The app consumes framework and domain projections; it does not own domain truth, runtime provider truth, quality verdicts, or artifact authority."
+        "The app consumes framework and domain projections; it does not own domain truth, runtime provider truth, quality verdicts, or artifact authority.",
+        "Default GUI page state comes from `opl app state --profile fast`; explicit refresh or diagnostic panes may request `opl app state --profile full`.",
+        "`opl app action execute` is the App mutating boundary; GUI pages must not stitch together module, developer-supervisor, worker, system-info, release, or provider commands as independent truth sources.",
+        "`opl runtime app-operator-drilldown --detail full` remains the explicit full runtime drilldown exception for operator/status pages."
       ],
       "surface_budget": {
         "default_surface": true,

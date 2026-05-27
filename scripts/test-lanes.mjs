@@ -79,6 +79,7 @@ const lanes = {
       'tests/src/family-runtime-temporal-provider.test.ts',
       'tests/src/agent-executor.test.ts',
       'tests/src/cli/cases/system-startup-maintenance.test.ts',
+      'tests/src/cli/cases/app-state.test.ts',
       'tests/src/cli/cases/system-semantic-hygiene.test.ts',
       'tests/src/cli/cases/system-install-superpowers.test.ts',
       'tests/src/cli/cases/framework-readiness.test.ts',

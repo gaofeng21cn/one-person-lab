@@ -40,6 +40,21 @@
     ],
     "authority": "read_only_non_authoritative"
   },
+  "app_runtime_boundary": {
+    "default_state_command": "opl app state --profile fast",
+    "full_state_command": "opl app state --profile full",
+    "action_command": "opl app action execute --action <id> [--payload <json>] [--dry-run]",
+    "full_runtime_drilldown_exception": "opl runtime app-operator-drilldown --detail full",
+    "state_owner": "one-person-lab",
+    "gui_product_truth_owner": "one-person-lab-app",
+    "shell_role": "implementation_adapter_only",
+    "rules": [
+      "GUI pages read default OPL runtime state from the app state command instead of page-local command composition.",
+      "GUI mutations go through the app action command.",
+      "Full operator/status drilldown may call the explicit runtime drilldown exception on demand.",
+      "App state/action projections do not move domain truth, quality verdicts, artifact authority, or runtime provider ownership into the GUI shell."
+    ]
+  },
   "external_stability_learning_policy": {
     "allowed_learning": [
       "control_loop_classification",

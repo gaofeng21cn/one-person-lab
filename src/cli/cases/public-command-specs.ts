@@ -3,6 +3,7 @@ import { buildOplPackageManifest } from '../../package-distribution.ts';
 import { buildOplFrameworkLocator } from '../../opl-framework-locator.ts';
 import { buildFrameworkReadinessSummary } from '../../framework-readiness.ts';
 import { buildProductionFunctionalCloseout } from '../../production-functional-closeout.ts';
+import { buildOplAppState, parseAppActionExecuteArgs, parseAppStateArgs, runOplAppActionExecute } from '../../app-state.ts';
 import { runOplEngineAction } from '../../system-installation/engine-actions.ts';
 import { buildOplModules, runOplModuleAction, runOplModuleExec } from '../../system-installation/modules.ts';
 import { runOplTurnkeyInstall } from '../../system-installation/turnkey.ts';
@@ -260,6 +261,23 @@ export function buildPublicCommandSpecs(
       },
     },
     install: installSpec,
+    'app state': {
+      usage: 'opl app state [--profile fast|full]',
+      summary: 'Read the canonical OPL App state projection for GUI pages without page-local probing.',
+      examples: ['opl app state --profile fast', 'opl app state --profile full --json'],
+      group: 'app',
+      handler: (args) => buildOplAppState(parseAppStateArgs(args)),
+    },
+    'app action execute': {
+      usage: 'opl app action execute --action <action_id> [--payload <json>] [--dry-run]',
+      summary: 'Execute App mutations through the OPL-owned action boundary instead of page-local commands.',
+      examples: [
+        'opl app action execute --action developer_supervisor --payload \'{"developerSupervisorEnabled":"on"}\' --dry-run',
+        'opl app action execute --action provider_scheduler_status --dry-run',
+      ],
+      group: 'app',
+      handler: (args) => runOplAppActionExecute(getContracts(), parseAppActionExecuteArgs(args)),
+    },
     ...workOrderCommandSpecs,
     'framework locate': {
       usage: 'opl framework locate',

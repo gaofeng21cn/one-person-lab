@@ -87,7 +87,7 @@ case "$1" in
   session)
     run_opl "$@"
     ;;
-  help|doctor|install|start|web|mcp-stdio|status|workspace|domain|actions|agents|agent-lab|work-order|domain-memory|stages|packages|contract|system|modules|module|engine|service|runtime|family-runtime|executor|skill|quality|framework|substrate)
+  help|doctor|install|start|web|mcp-stdio|app|status|workspace|domain|actions|agents|agent-lab|work-order|domain-memory|stages|packages|contract|system|modules|module|engine|service|runtime|family-runtime|executor|skill|quality|framework|substrate)
     run_opl "$@"
     ;;
   *)

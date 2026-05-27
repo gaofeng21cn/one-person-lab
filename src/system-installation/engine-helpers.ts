@@ -257,7 +257,7 @@ function normalizeCodexCandidates(candidates: CodexCandidateSnapshot[]) {
   return [normalizedSelected, ...visible];
 }
 
-export function resolveCodexVersion() {
+export function resolveCodexVersion(options: { skipLatestLookup?: boolean } = {}) {
   const minimumVersion = resolveMinimumCodexCliVersion();
   const binary = resolveCodexBinary();
   if (!binary) {
@@ -281,7 +281,7 @@ export function resolveCodexVersion() {
   const versionResult = runCommand(binary.path, ['--version']);
   const version = normalizeOptionalString(normalizeOutput(versionResult.stdout, versionResult.stderr));
   const policy = resolveVersionStatus(version, minimumVersion);
-  const latestVersion = resolveLatestCodexCliVersion();
+  const latestVersion = options.skipLatestLookup ? null : resolveLatestCodexCliVersion();
   const latestPolicy = resolveLatestVersionStatus(policy.parsed_version, latestVersion);
   const rawCandidates = enumerateCodexCandidates(binary.path)
     .map((candidate) => inspectCodexCandidate(candidate, binary.path, minimumVersion));
@@ -298,6 +298,7 @@ export function resolveCodexVersion() {
   const diagnostics = [
     ...(candidateVersions.size > 1 ? ['codex_cli_path_version_conflict_nonblocking'] : []),
     ...(latestPolicy.latest_version_status === 'outdated' ? ['codex_cli_latest_update_available'] : []),
+    ...(options.skipLatestLookup ? ['codex_cli_latest_lookup_skipped_fast_profile'] : []),
   ];
 
   return {

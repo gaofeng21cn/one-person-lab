@@ -25,6 +25,7 @@ function looksLikeNaturalLanguage(command: string, args: string[]) {
 
 const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
   top_level: '直接产品入口与前台运行入口。',
+  app: '读取 One Person Lab App 页面状态并执行 App 级安全动作。',
   framework: '定位和解释 OPL Framework 自身的运行依赖环境。',
   skill: '同步 family domain plugin，并查看当前 Codex skill pack 安装状态。',
   status: '读取 family、workspace、runtime 和 dashboard 状态。',
@@ -46,6 +47,7 @@ const NON_PASSTHROUGH_COMMAND_PREFIXES = new Set([
   ['front', 'door'].join(''),
   ['front', 'desk'].join(''),
   'agent-lab',
+  'app',
   'ask',
   'chat',
   'framework',
@@ -142,6 +144,8 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl help',
         'opl',
         'opl install',
+        'opl app state --profile fast',
+        'opl app action execute --action provider_scheduler_status --dry-run',
         'opl framework locate',
         'opl framework readiness --family-defaults',
         'opl framework production-closeout',
