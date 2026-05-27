@@ -106,6 +106,15 @@ function refListFromRecord(value: Record<string, unknown>, keys: string[]) {
   }));
 }
 
+function typedBlockerRefsFromCloseoutRefs(refs: string[]) {
+  return refs.filter((ref) =>
+    ref.startsWith('typed-blocker:')
+    || ref.startsWith('typed-blocker://')
+    || ref.includes('-typed-blocker:')
+    || ref.includes('domain-dispatch-typed-blocker:')
+  );
+}
+
 function currentControlAuthorityBoundary() {
   return {
     opl: 'reconciled_stage_runtime_control_projection_only',
@@ -270,6 +279,7 @@ function deriveCurrentControlStateFromRows(
   const typedBlockerRefs = uniqueStrings([
     ...refListFromRecord(latestCloseout, ['typed_blocker_ref', 'typed_blocker_refs']),
     ...refListFromRecord(parseRecord(current?.route_impact_json), ['typed_blocker_ref', 'typed_blocker_refs']),
+    ...typedBlockerRefsFromCloseoutRefs(closeoutRefs),
   ]);
   const base = {
     surface_kind: 'opl_current_control_state',

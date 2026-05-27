@@ -362,6 +362,40 @@ test('current control state accepts only the newest typed closeout as OPL reconc
   });
 });
 
+test('current control state classifies typed blocker refs carried in closeout refs', () => {
+  withDb((db) => {
+    const task = enqueueDefaultTask(db);
+    const attempt = createTaskAttempt(db, task);
+    const typedBlockerRef = [
+      'mas-domain-dispatch-typed-blocker:medautoscience',
+      'domain_owner-default-executor-dispatch:003-dpcc-primary-care-phenotype-treatment-gap',
+      'truth-snapshot::971c2d5a5ef251bca15ae16d',
+      'owner-receipt-or-live-paper-line-closeout-pending',
+    ].join(':');
+    const ordinaryCloseoutRef = 'studies/003/artifacts/typed-blocker-review-notes.json';
+    ingestStageAttemptCloseout(db, {
+      stageAttemptId: attempt.stage_attempt_id,
+      packet: {
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: [
+          ordinaryCloseoutRef,
+          typedBlockerRef,
+        ],
+        next_owner: 'med-autoscience',
+        domain_ready_verdict: 'domain_gate_pending',
+      },
+    });
+
+    const state = deriveCurrentControlStateForTask(db, task.task_id);
+
+    assert.equal(state.reconciliation_status, 'accepted_typed_closeout');
+    assert.deepEqual(state.typed_blocker_refs, [typedBlockerRef]);
+    assert.equal(state.typed_blocker_refs.includes(ordinaryCloseoutRef), false);
+    assert.equal(state.authority_boundary.provider_completion_is_domain_ready, false);
+    assert.equal(Object.hasOwn(state, 'domain_ready'), false);
+  });
+});
+
 test('queue inspect exposes current control state without domain readiness claims', () => {
   withDb((db) => {
     const task = enqueueDefaultTask(db);
