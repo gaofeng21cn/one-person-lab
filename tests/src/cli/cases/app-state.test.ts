@@ -130,7 +130,14 @@ exit 1
         };
         assistants: { items: Array<{ assistant_id: string; label: string; launch_hint: string }> };
         provider: { temporal: { required_for: string; status: string; health_status: string } };
-        release: { channel: string; version: string; repo: string; prerelease_included: boolean };
+        release: {
+          channel: string;
+          version: string;
+          repo: string;
+          opl_framework_version: string;
+          framework_version: string;
+          prerelease_included: boolean;
+        };
         operator: {
           status: string;
           summary: { profile: string; visible_action_count: number };
@@ -167,6 +174,8 @@ exit 1
     assert.equal(output.app_state.release.channel, 'stable');
     assert.equal(output.app_state.release.prerelease_included, false);
     assert.equal(output.app_state.release.repo, 'gaofeng21cn/one-person-lab-app');
+    assert.equal(output.app_state.release.opl_framework_version, '0.1.0');
+    assert.equal(output.app_state.release.framework_version, '0.1.0');
     assert.equal(output.app_state.operator.status, 'attention_needed');
     assert.equal(output.app_state.operator.summary.profile, 'fast');
     assert.equal(output.app_state.operator.summary.visible_action_count, output.app_state.actions.length);

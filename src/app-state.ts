@@ -19,10 +19,11 @@ import path from 'node:path';
 import { resolveDefaultFamilyWorkspaceRoot } from './opl-skills.ts';
 import { runFamilyRuntime } from './family-runtime.ts';
 import { runOplEngineAction } from './system-installation/engine-actions.ts';
-import type { OplEngineAction, OplModuleAction, OplModuleId } from './system-installation/shared.ts';
+import { resolveProjectRoot, type OplEngineAction, type OplModuleAction, type OplModuleId } from './system-installation/shared.ts';
 import { buildActionCatalog } from './app-state-action-catalog.ts';
 import { buildOplAppOperatorViewModel } from './app-state-view-model.ts';
 import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
+import fs from 'node:fs';
 
 type AppStateProfile = 'fast' | 'full';
 type JsonRecord = Record<string, unknown>;
@@ -251,10 +252,13 @@ async function buildProviderState(profile: AppStateProfile) {
 
 function buildReleaseState() {
   const updateChannel = readOplUpdateChannel();
+  const oplFrameworkVersion = readOplFrameworkPackageVersion();
   return {
     version: getOplReleaseVersion(),
     tag: buildOplReleaseTag(),
     repo: getOplReleaseRepo(),
+    opl_framework_version: oplFrameworkVersion,
+    framework_version: oplFrameworkVersion,
     channel: updateChannel.channel,
     channel_source_updated_at: updateChannel.updated_at,
     prerelease_included: updateChannel.channel === 'preview',
@@ -262,6 +266,23 @@ function buildReleaseState() {
     nightly_release_api: `https://api.github.com/repos/${getOplReleaseRepo()}/releases`,
     update_action: 'update_channel',
   };
+}
+
+function readOplFrameworkPackageVersion() {
+  const override = process.env.OPL_FRAMEWORK_VERSION?.trim();
+  if (override) {
+    return override;
+  }
+
+  const packageJsonPath = path.join(resolveProjectRoot(), 'package.json');
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  const version = typeof packageJson.version === 'string' ? packageJson.version.trim() : '';
+  if (!version) {
+    throw new FrameworkContractError('contract_shape_invalid', 'OPL Framework package.json is missing version.', {
+      package_json_path: packageJsonPath,
+    });
+  }
+  return version;
 }
 
 function buildCoreState(profile: AppStateProfile) {
