@@ -156,6 +156,11 @@ exit 64
     }
     assert.equal(processOutputSummary.exit_code, 0);
     assert.equal(processOutputSummary.final_message_chars > 0, true);
+    assert.equal(receipt.cost_summary.cost_status, 'not_reported_by_codex_cli');
+    assert.equal(receipt.cost_summary.estimated_cost_usd, null);
+    assert.equal(receipt.cost_summary.token_usage.input_tokens, null);
+    assert.equal(receipt.cost_summary.token_usage.output_tokens, null);
+    assert.equal(receipt.cost_summary.token_usage.total_tokens, null);
   } finally {
     if (previousCodexBin === undefined) {
       delete process.env.OPL_CODEX_BIN;

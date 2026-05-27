@@ -14,6 +14,7 @@ import {
   listStageAttemptCloseouts,
   listStageAttemptSignals,
 } from './family-runtime-stage-attempt-ledger.ts';
+import { buildStageExecutionLog } from './family-runtime-stage-execution-log.ts';
 import { buildTemporalStageAttemptWorkflowContract, buildTemporalStageAttemptWorkflowInput } from './family-runtime-temporal.ts';
 import { buildAttemptGenericProjections } from './runtime-tray-stage-attempt-generic-projections.ts';
 import { buildAttemptHumanReviewBurdenBudget } from './family-human-review-budget.ts';
@@ -165,6 +166,38 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
     closeoutRefs,
     closeoutReceiptStatus: attempt.closeout_receipt_status,
   });
+  const stageExecutionLog = buildStageExecutionLog({
+    stageAttemptId: attempt.stage_attempt_id,
+    providerKind: attempt.provider_kind,
+    executorKind: attempt.executor_kind,
+    domainId: attempt.domain_id,
+    stageId: attempt.stage_id,
+    workflowId: attempt.workflow_id,
+    taskId: attempt.task_id,
+    workspaceLocator: attempt.workspace_locator,
+    sourceFingerprint: attempt.source_fingerprint,
+    status: attempt.status,
+    blockedReason: attempt.blocked_reason,
+    checkpointRefs: stringListFrom(attempt.checkpoint_refs),
+    closeoutRefs,
+    consumedRefs,
+    consumedMemoryRefs,
+    writebackReceiptRefs,
+    humanGateRefs: stringListFrom(attempt.human_gate_refs),
+    retryBudget: attempt.retry_budget,
+    attemptCount: attempt.attempt_count,
+    providerRun: attempt.provider_run,
+    activityEvents: attempt.activity_events,
+    routeImpact: attempt.route_impact,
+    latestCloseout: latestCloseout ?? null,
+    closeoutReceiptStatus: attempt.closeout_receipt_status,
+    nextOwner,
+    domainReadyVerdict,
+    canonicalOutcome,
+    usageProjection: attempt.usage_projection,
+    createdAt: attempt.created_at,
+    updatedAt: attempt.updated_at,
+  });
   const workflowContract = attempt.provider_kind === 'temporal'
     ? buildTemporalStageAttemptWorkflowContract()
     : null;
@@ -185,6 +218,7 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
       operator_conflicts: conflictOrBlockerEnvelopes,
       ...genericProjections,
       usage_projection: attempt.usage_projection,
+      stage_execution_log: stageExecutionLog,
       human_review_burden_budget: humanReviewBurdenBudget,
       operator_visibility: {
         provider_kind: attempt.provider_kind,
@@ -220,6 +254,7 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
         canonical_outcome: canonicalOutcome,
         operator_conflicts: conflictOrBlockerEnvelopes,
         usage_projection: attempt.usage_projection,
+        stage_execution_log: stageExecutionLog,
         authority_boundary: {
           opl: 'attempt_control_metadata_projection_only',
           domain: 'truth_quality_artifact_gate_owner',

@@ -95,6 +95,7 @@
     "owner_route_boundary",
     "control_loop_summary",
     "usage_projection",
+    "stage_execution_log",
     "resource_pressure",
     "observability_export"
   ],
@@ -198,11 +199,87 @@
     "closeout_receipt_status",
     "route_impact",
     "usage_projection",
+    "stage_execution_log",
     "rejected_writes",
     "next_owner",
     "human_gate_refs",
     "dead_letter"
   ],
+  "stage_execution_log_projection": {
+    "surface_kind": "opl_stage_execution_log",
+    "projection_policy": "opl_refs_only_observability_no_domain_truth",
+    "required_sections": [
+      "intended_work",
+      "actual_work",
+      "timeline",
+      "usage",
+      "evidence_refs",
+      "authority_boundary"
+    ],
+    "intended_work_fields": [
+      "provider_kind",
+      "executor_kind",
+      "workflow_id",
+      "domain_id",
+      "stage_id",
+      "task_id",
+      "source_fingerprint",
+      "workspace_locator",
+      "source_refs",
+      "dispatch_refs",
+      "stage_packet_refs",
+      "retry_budget"
+    ],
+    "actual_work_fields": [
+      "status",
+      "blocked_reason",
+      "provider_status",
+      "closeout_receipt_status",
+      "canonical_outcome",
+      "closeout_refs",
+      "consumed_refs",
+      "consumed_memory_refs",
+      "writeback_receipt_refs",
+      "route_impact",
+      "next_owner",
+      "domain_ready_verdict"
+    ],
+    "timeline_fields": [
+      "created_at",
+      "updated_at",
+      "provider_started_at",
+      "provider_completed_at",
+      "last_heartbeat_at",
+      "first_activity_event_at",
+      "latest_activity_event_at",
+      "activity_event_count",
+      "duration_ms_observed",
+      "duration_telemetry_status"
+    ],
+    "evidence_ref_fields": [
+      "checkpoint_refs",
+      "closeout_refs",
+      "consumed_refs",
+      "consumed_memory_refs",
+      "writeback_receipt_refs",
+      "human_gate_refs",
+      "owner_receipt_refs",
+      "typed_blocker_refs",
+      "route_refs",
+      "source_refs",
+      "dispatch_refs",
+      "stage_packet_refs",
+      "activity_event_refs"
+    ],
+    "authority_boundary": {
+      "can_execute_domain_action": false,
+      "can_write_domain_truth": false,
+      "can_write_domain_memory_body": false,
+      "can_authorize_domain_ready": false,
+      "can_authorize_quality_verdict": false,
+      "provider_completion_is_domain_ready": false
+    }
+  },
   "current_control_state_projection": {
     "surface_kind": "opl_current_control_state",
     "projection_policy": "opl_reconciled_queue_attempt_provider_closeout_projection_only",
@@ -237,6 +314,7 @@
   "stability_projection_fields": [
     "control_loop_summary",
     "usage_projection",
+    "stage_execution_log",
     "resource_pressure",
     "runtime_observability_export"
   ],

@@ -86,6 +86,7 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'owner_route_boundary',
     'control_loop_summary',
     'usage_projection',
+    'stage_execution_log',
     'resource_pressure',
     'observability_export',
   ]) {
@@ -121,17 +122,33 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'closeout_receipt_status',
     'route_impact',
     'usage_projection',
+    'stage_execution_log',
   ]) {
     assert.ok((contract.operator_visibility_fields as string[]).includes(field));
   }
   for (const field of [
     'control_loop_summary',
     'usage_projection',
+    'stage_execution_log',
     'resource_pressure',
     'runtime_observability_export',
   ]) {
     assert.ok((contract.stability_projection_fields as string[]).includes(field));
   }
+  const stageExecutionLog = contract.stage_execution_log_projection as Record<string, any>;
+  assert.equal(stageExecutionLog.surface_kind, 'opl_stage_execution_log');
+  assert.deepEqual(stageExecutionLog.required_sections, [
+    'intended_work',
+    'actual_work',
+    'timeline',
+    'usage',
+    'evidence_refs',
+    'authority_boundary',
+  ]);
+  assert.equal(stageExecutionLog.authority_boundary.can_execute_domain_action, false);
+  assert.equal(stageExecutionLog.authority_boundary.can_write_domain_truth, false);
+  assert.equal(stageExecutionLog.authority_boundary.can_authorize_quality_verdict, false);
+  assert.equal(stageExecutionLog.authority_boundary.provider_completion_is_domain_ready, false);
   const stabilityBoundary = contract.stability_projection_authority_boundary as Record<string, unknown>;
   assert.equal(stabilityBoundary.can_execute_domain_action, false);
   assert.equal(stabilityBoundary.can_change_executor, false);

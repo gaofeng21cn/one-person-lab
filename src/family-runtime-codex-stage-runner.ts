@@ -218,13 +218,16 @@ function costSummaryFrom(output: string, runnerMode: CodexStageRunnerMode) {
   const tokenUsage = usageLines
     .map((entry) => (isRecord(entry.token_usage) ? entry.token_usage : null))
     .find((entry): entry is JsonRecord => Boolean(entry));
+  const hasTokenUsage = Boolean(tokenUsage);
   return {
-    cost_status: runnerMode === 'codex_cli' ? 'observed_or_unreported' : 'not_measured_dry_run',
-    estimated_cost_usd: typeof tokenUsage?.estimated_cost_usd === 'number' ? tokenUsage.estimated_cost_usd : 0,
+    cost_status: hasTokenUsage
+      ? 'observed'
+      : (runnerMode === 'codex_cli' ? 'not_reported_by_codex_cli' : 'not_measured_dry_run'),
+    estimated_cost_usd: typeof tokenUsage?.estimated_cost_usd === 'number' ? tokenUsage.estimated_cost_usd : null,
     token_usage: {
-      input_tokens: typeof tokenUsage?.input_tokens === 'number' ? tokenUsage.input_tokens : 0,
-      output_tokens: typeof tokenUsage?.output_tokens === 'number' ? tokenUsage.output_tokens : 0,
-      total_tokens: typeof tokenUsage?.total_tokens === 'number' ? tokenUsage.total_tokens : 0,
+      input_tokens: typeof tokenUsage?.input_tokens === 'number' ? tokenUsage.input_tokens : null,
+      output_tokens: typeof tokenUsage?.output_tokens === 'number' ? tokenUsage.output_tokens : null,
+      total_tokens: typeof tokenUsage?.total_tokens === 'number' ? tokenUsage.total_tokens : null,
     },
     billing_boundary: 'codex_cli_activity_runner_reports_only_observed_or_declared_usage',
   };
@@ -413,11 +416,11 @@ function buildAgentStageRunnerReceipt(input: {
     },
     cost_summary: {
       cost_status: 'not_measured_agent_executor_receipt',
-      estimated_cost_usd: 0,
+      estimated_cost_usd: null,
       token_usage: {
-        input_tokens: 0,
-        output_tokens: 0,
-        total_tokens: 0,
+        input_tokens: null,
+        output_tokens: null,
+        total_tokens: null,
       },
       billing_boundary: 'agent_executor_adapter_reports_only_declared_or_observed_usage',
     },
