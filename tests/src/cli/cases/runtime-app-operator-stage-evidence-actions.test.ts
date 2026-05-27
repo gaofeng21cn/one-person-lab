@@ -80,6 +80,68 @@ function buildReviewStageEvidenceManifest() {
   return masManifest;
 }
 
+function buildReviewStageEvidenceManifestWithPayloadSummary() {
+  const masManifest = buildReviewStageEvidenceManifest();
+  masManifest.operator_evidence_readiness_projection = {
+    surface_kind: 'mas_operator_evidence_readiness_projection',
+    production_evidence_scaleout_refs: {},
+    opl_expected_receipt_monitor_freshness_handoff: {
+      stage_expected_receipt_payload_summary: {
+        surface_kind: 'mas_stage_expected_receipt_payload_summary',
+        owner: 'med-autoscience',
+        consumer: 'one_person_lab',
+        status: 'review_stage_refs_ready_with_source_scope_still_operator_owned',
+        payload_kind: 'stage_expected_receipt_or_monitor_freshness_refs',
+        payload_path_policy:
+          'operator_must_choose_success_refs_path_or_domain_owned_typed_blocker_path_empty_template_blocks',
+        payload_body_allowed: false,
+        empty_payload_template_is_success_evidence: false,
+        required_operator_payload_refs: [
+          'domain_receipt_refs',
+          'monitor_freshness_refs',
+          'runtime_event_refs',
+          'typed_blocker_refs',
+        ],
+        required_return_shapes: [
+          'domain_receipt_ref',
+          'monitor_freshness_ref',
+          'runtime_event_ref',
+          'typed_blocker_ref',
+        ],
+        stages: [
+          {
+            stage_id: 'review',
+            sequence: 1,
+            payload_kind: 'stage_expected_receipt_or_monitor_freshness_refs',
+            current_payload_template: {
+              domain_receipt_refs: [],
+              monitor_freshness_refs: [],
+              runtime_event_refs: [],
+              typed_blocker_refs: [],
+            },
+            success_refs_path_payload: {
+              domain_receipt_refs: [
+                'mas:review-receipt',
+                'mas://receipts/review-owner-instance.json',
+              ],
+              monitor_freshness_refs: ['metric:review/currentness'],
+              runtime_event_refs: ['runtime_event:review.receipt_recorded'],
+            },
+            typed_blocker_path_payload: {
+              typed_blocker_refs: [
+                'typed-blocker:mas/review/stage-evidence/source-scope-pending',
+              ],
+            },
+            operator_payload_submitted: false,
+            recommended_current_payload_path: 'success_refs_path',
+          },
+        ],
+      },
+    },
+  };
+  return masManifest;
+}
+
 function bindReviewStageEvidenceManifest(stateRoot: string, fixtureContractsRoot: string) {
   runCli([
     'workspace',
@@ -566,6 +628,96 @@ test('runtime action execute records and verifies stage production evidence rece
     );
     assert.equal(stage.authority_boundary.can_authorize_domain_ready, false);
     assert.equal(verifiedDrilldown.summary.stage_production_evidence_receipt_action_route_count, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('stage evidence record route projects domain stage payload candidates without closing the route', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-evidence-payload-candidates-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(buildReviewStageEvidenceManifestWithPayloadSummary()),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).app_operator_drilldown;
+    const route = drilldown.operator_action_routing_refs.refs.find(
+      (ref: { action_id: string }) =>
+        ref.action_id === 'stage-production-evidence:medautoscience:review:record',
+    );
+    assert.equal(route.action_kind, 'stage_production_evidence_receipt_record');
+    assert.equal(route.route_requires_domain_or_app_payload, true);
+    assert.equal(route.can_close_without_domain_or_app_payload, false);
+    assert.equal(route.payload_workorder.authority_boundary.opl_can_generate_domain_owner_receipt, false);
+    assert.equal(route.payload_workorder.authority_boundary.opl_can_generate_monitor_freshness, false);
+
+    const candidates = route.payload_ref_hints.domain_owner_payload_candidate_refs;
+    assert.equal(candidates.length, 1);
+    assert.equal(candidates[0].candidate_kind, 'domain_owner_payload_summary_stage_expected_receipt');
+    assert.equal(candidates[0].stage_id, 'review');
+    assert.equal(candidates[0].recommended_current_payload_path, 'success_refs_path');
+    assert.deepEqual(candidates[0].stage_evidence_record_success_payload, {
+      domain_receipt_refs: [
+        'mas:review-receipt',
+        'mas://receipts/review-owner-instance.json',
+      ],
+      evidence_refs: ['metric:review/currentness'],
+      source_scope_refs: [],
+      runtime_event_refs: ['runtime_event:review.receipt_recorded'],
+      typed_blocker_refs: [],
+    });
+    assert.deepEqual(candidates[0].stage_evidence_record_typed_blocker_payload, {
+      domain_receipt_refs: [],
+      evidence_refs: [],
+      typed_blocker_refs: [
+        'typed-blocker:mas/review/stage-evidence/source-scope-pending',
+      ],
+    });
+    assert.deepEqual(candidates[0].covered_required_refs.domain_receipt_refs, [
+      'mas:review-receipt',
+    ]);
+    assert.deepEqual(candidates[0].missing_required_refs_after_candidate.source_scope_refs, [
+      'source:review',
+    ]);
+    assert.equal(candidates[0].candidate_is_completion_evidence, false);
+    assert.equal(candidates[0].route_can_auto_close_from_candidate, false);
+    assert.deepEqual(route.payload_workorder.domain_owner_payload_candidate_refs, candidates);
+
+    const worklist = runCli([
+      'family-runtime',
+      'evidence-worklist',
+      '--family-defaults',
+      '--provider',
+      'temporal',
+      '--executor-kind',
+      'codex_cli',
+      '--detail',
+      'full',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).family_runtime_evidence_worklist;
+    const workorder = worklist.stage_evidence_workorder_packet.workorders.find(
+      (entry: { action_id: string }) =>
+        entry.action_id === 'stage-production-evidence:medautoscience:review:record',
+    );
+    assert.deepEqual(workorder.payload_workorder.domain_owner_payload_candidate_refs, candidates);
+    assert.equal(workorder.route_requires_domain_or_app_payload, true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

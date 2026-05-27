@@ -1012,7 +1012,10 @@ export function buildAppOperatorDrilldown(input: {
     ...operatorActionRoutingRefs(input.stageAttemptWorkbench),
     ...buildStageProductionAttemptRoutes(record(stageProductionEvidence)),
     ...buildStageProductionAttemptStartRoutes(record(stageProductionEvidence)),
-    ...buildStageProductionEvidenceReceiptRoutes(record(stageProductionEvidence)),
+    ...buildStageProductionEvidenceReceiptRoutes({
+      stageProductionEvidence: record(stageProductionEvidence),
+      domainOwnerPayloadSummaryRefs: record(domainOwnerPayloadSummaryRefs),
+    }),
     ...buildDomainDispatchEvidenceReceiptRoutes(record(domainDispatchEvidence)),
     ...buildExternalEvidenceActionRoutes(record(evidenceRequests)),
     ...buildFunctionalPrivatizationSemanticEquivalenceActionRoutes(record(functionalAuditRefs)),

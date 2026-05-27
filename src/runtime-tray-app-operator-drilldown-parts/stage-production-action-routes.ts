@@ -18,6 +18,10 @@ function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
+function record(value: unknown): JsonRecord {
+  return isRecord(value) ? value : {};
+}
+
 function recordList(value: unknown) {
   return Array.isArray(value) ? value.filter(isRecord) : [];
 }
@@ -42,6 +46,10 @@ function uniqueRefs<T extends { ref: string; role?: string | null }>(values: T[]
     seen.add(key);
     return true;
   });
+}
+
+function uniqueStrings(values: string[]) {
+  return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
 function routeAuthorityBoundary() {
@@ -334,7 +342,134 @@ function hasRecordableStageEvidenceObligation(stage: JsonRecord) {
   ));
 }
 
-function stageEvidenceRoute(stage: JsonRecord, mode: 'record' | 'verify') {
+function declaredObligationRef(ref: string) {
+  return ref === 'owner_receipt'
+    || ref === 'monitor_freshness'
+    || ref === 'no_regression'
+    || ref === 'typed_blocker'
+    || ref === 'domain_receipt'
+    || ref.startsWith('owner_receipt:')
+    || ref.startsWith('monitor_freshness:')
+    || ref.startsWith('no_regression:')
+    || ref.startsWith('typed_blocker:')
+    || ref.startsWith('domain_receipt:');
+}
+
+function coveredRequiredRefs(requiredRefs: string[], candidateRefs: string[]) {
+  return uniqueStrings(requiredRefs
+    .filter((ref) => !declaredObligationRef(ref))
+    .filter((ref) => candidateRefs.includes(ref)));
+}
+
+function missingRequiredRefsAfterCandidate(requiredRefs: string[], candidateRefs: string[]) {
+  const concreteRequiredRefs = requiredRefs.filter((ref) => !declaredObligationRef(ref));
+  const declaredRequiredRefs = requiredRefs.filter(declaredObligationRef);
+  const concreteCandidateRefs = candidateRefs.filter((ref) => !declaredObligationRef(ref));
+  return uniqueStrings([
+    ...concreteRequiredRefs.filter((ref) => !candidateRefs.includes(ref)),
+    ...(declaredRequiredRefs.length > 0 && concreteCandidateRefs.length === 0
+      ? declaredRequiredRefs
+      : []),
+  ]);
+}
+
+function stagePayloadCandidateRefs(input: {
+  stage: JsonRecord;
+  commandDomainId: string;
+  stageId: string;
+  domainOwnerPayloadSummaryRefs?: JsonRecord;
+}) {
+  const unobservedExpectedReceiptRefs = stringList(input.stage.unobserved_expected_receipt_refs);
+  const unobservedMonitorRefs = stringList(input.stage.unobserved_monitor_refs);
+  const unobservedSourceScopeRefs = stringList(input.stage.unobserved_source_scope_refs);
+  const unobservedRuntimeEventRefs = stringList(input.stage.unobserved_runtime_event_refs);
+  return recordList(input.domainOwnerPayloadSummaryRefs?.domains).flatMap((domain) => {
+    const domainId = stringValue(domain.domain_id);
+    const targetDomainId = stringValue(domain.target_domain_id);
+    if (domainId !== input.commandDomainId && targetDomainId !== stringValue(input.stage.target_domain_id)) {
+      return [];
+    }
+    const summary = record(domain.stage_expected_receipt_payload_summary);
+    return recordList(summary.stages)
+      .filter((stage) => stringValue(stage.stage_id) === input.stageId)
+      .map((stage) => {
+        const successPayload = record(stage.success_refs_path_payload);
+        const typedBlockerPayload = record(stage.typed_blocker_path_payload);
+        const domainReceiptRefs = stringList(successPayload.domain_receipt_refs);
+        const monitorFreshnessRefs = stringList(successPayload.monitor_freshness_refs);
+        const sourceScopeRefs = stringList(successPayload.source_scope_refs);
+        const runtimeEventRefs = stringList(successPayload.runtime_event_refs);
+        const typedBlockerRefs = stringList(typedBlockerPayload.typed_blocker_refs);
+        return {
+          candidate_kind: 'domain_owner_payload_summary_stage_expected_receipt',
+          source_surface: stringValue(domain.source_surface),
+          source_ref: stringValue(domain.source_ref),
+          domain_id: domainId,
+          target_domain_id: targetDomainId,
+          owner: stringValue(domain.owner),
+          stage_id: input.stageId,
+          payload_kind: stringValue(stage.payload_kind) ?? stringValue(summary.payload_kind),
+          recommended_current_payload_path: stringValue(stage.recommended_current_payload_path),
+          stage_evidence_record_success_payload: {
+            domain_receipt_refs: domainReceiptRefs,
+            evidence_refs: monitorFreshnessRefs,
+            source_scope_refs: sourceScopeRefs,
+            runtime_event_refs: runtimeEventRefs,
+            typed_blocker_refs: [],
+          },
+          stage_evidence_record_typed_blocker_payload: {
+            domain_receipt_refs: [],
+            evidence_refs: [],
+            typed_blocker_refs: typedBlockerRefs,
+          },
+          covered_required_refs: {
+            domain_receipt_refs: coveredRequiredRefs(
+              unobservedExpectedReceiptRefs,
+              domainReceiptRefs,
+            ),
+            evidence_refs: coveredRequiredRefs(unobservedMonitorRefs, monitorFreshnessRefs),
+            source_scope_refs: coveredRequiredRefs(unobservedSourceScopeRefs, sourceScopeRefs),
+            runtime_event_refs: coveredRequiredRefs(unobservedRuntimeEventRefs, runtimeEventRefs),
+          },
+          missing_required_refs_after_candidate: {
+            domain_receipt_refs: missingRequiredRefsAfterCandidate(
+              unobservedExpectedReceiptRefs,
+              domainReceiptRefs,
+            ),
+            evidence_refs: missingRequiredRefsAfterCandidate(
+              unobservedMonitorRefs,
+              monitorFreshnessRefs,
+            ),
+            source_scope_refs: missingRequiredRefsAfterCandidate(
+              unobservedSourceScopeRefs,
+              sourceScopeRefs,
+            ),
+            runtime_event_refs: missingRequiredRefsAfterCandidate(
+              unobservedRuntimeEventRefs,
+              runtimeEventRefs,
+            ),
+          },
+          candidate_is_completion_evidence: false,
+          route_can_auto_close_from_candidate: false,
+          payload_body_allowed: false,
+          authority_boundary: {
+            ...refsOnlyAuthorityBoundary(),
+            can_create_owner_receipt: false,
+            can_generate_typed_blocker: false,
+            can_close_stage_evidence: false,
+            can_claim_domain_ready: false,
+            can_claim_production_ready: false,
+          },
+        };
+      });
+  });
+}
+
+function stageEvidenceRoute(
+  stage: JsonRecord,
+  mode: 'record' | 'verify',
+  domainOwnerPayloadSummaryRefs?: JsonRecord,
+) {
   const commandDomainId = familyRuntimeCommandDomainId(
     stringValue(stage.target_domain_id),
     stringValue(stage.project_id),
@@ -352,6 +487,14 @@ function stageEvidenceRoute(stage: JsonRecord, mode: 'record' | 'verify') {
   const unobservedMonitorRefs = stringList(stage.unobserved_monitor_refs);
   const unobservedSourceScopeRefs = stringList(stage.unobserved_source_scope_refs);
   const unobservedRuntimeEventRefs = stringList(stage.unobserved_runtime_event_refs);
+  const domainOwnerPayloadCandidateRefs = recordMode
+    ? stagePayloadCandidateRefs({
+        stage,
+        commandDomainId,
+        stageId,
+        domainOwnerPayloadSummaryRefs,
+      })
+    : [];
   const payloadTemplate = recordMode
     ? {
         domain_receipt_refs: [],
@@ -369,6 +512,7 @@ function stageEvidenceRoute(stage: JsonRecord, mode: 'record' | 'verify') {
         evidence_refs_should_cover_monitor_freshness: unobservedMonitorRefs,
         source_scope_refs_should_cover: unobservedSourceScopeRefs,
         runtime_event_refs_should_cover: unobservedRuntimeEventRefs,
+        domain_owner_payload_candidate_refs: domainOwnerPayloadCandidateRefs,
         typed_blocker_refs_may_close_instead_of_success: true,
         required_any_payload_refs: [...STAGE_PRODUCTION_EVIDENCE_COVERAGE_PAYLOAD_REFS],
         optional_payload_refs: [...STAGE_PRODUCTION_EVIDENCE_OPTIONAL_PAYLOAD_REFS],
@@ -533,8 +677,11 @@ function stageEvidenceRoute(stage: JsonRecord, mode: 'record' | 'verify') {
     : route;
 }
 
-export function buildStageProductionEvidenceReceiptRoutes(stageProductionEvidence: JsonRecord) {
-  return uniqueRefs(recordList(stageProductionEvidence.stages)
+export function buildStageProductionEvidenceReceiptRoutes(input: {
+  stageProductionEvidence: JsonRecord;
+  domainOwnerPayloadSummaryRefs?: JsonRecord;
+}) {
+  return uniqueRefs(recordList(input.stageProductionEvidence.stages)
     .filter((stage) => (
       stringValue(stage.admission_status) === 'admitted'
       && hasRecordableStageEvidenceObligation(stage)
@@ -556,6 +703,7 @@ export function buildStageProductionEvidenceReceiptRoutes(stageProductionEvidenc
         hasRecordedButUnverifiedReceipt && (!hasVerifiedReceipt || hasOpenReceiptOrMonitorRefs)
           ? 'verify'
           : 'record',
+        input.domainOwnerPayloadSummaryRefs,
       );
     })
     .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)));

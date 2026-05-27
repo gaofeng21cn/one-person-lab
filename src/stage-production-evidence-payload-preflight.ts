@@ -154,6 +154,7 @@ function uncoveredObligationRefs(input: {
 }
 
 export function buildStageProductionEvidencePayloadWorkorder(route: JsonRecord) {
+  const hints = isRecord(route.payload_ref_hints) ? route.payload_ref_hints : {};
   const expectedReceiptRefs = requiredExpectedReceiptRefs(route);
   const monitorFreshnessRefs = requiredMonitorFreshnessRefs(route);
   const sourceScopeRefs = requiredSourceScopeRefs(route);
@@ -217,6 +218,9 @@ export function buildStageProductionEvidencePayloadWorkorder(route: JsonRecord) 
       requires_typed_blocker_refs: true,
       may_close_instead_of_success: true,
     },
+    domain_owner_payload_candidate_refs: Array.isArray(hints.domain_owner_payload_candidate_refs)
+      ? hints.domain_owner_payload_candidate_refs.filter(isRecord)
+      : [],
     copyable_runtime_action_execute_commands: {
       dry_run_success_path: runtimeActionCommand(successPayloadTemplate, true),
       record_success_path: runtimeActionCommand(successPayloadTemplate),
