@@ -33,6 +33,10 @@ export const TEMPORAL_STAGE_ATTEMPT_QUERIES = [
   'StageAttemptQuery',
 ] as const;
 
+export const TEMPORAL_STAGE_ATTEMPT_UPDATES = [
+  'StageAttemptOperatorUpdate',
+] as const;
+
 export type { TemporalStageAttemptSignalKind } from './family-runtime-types.ts';
 
 export {
@@ -46,6 +50,22 @@ export type TemporalStageAttemptSignalPayload = {
   payload: Record<string, unknown>;
   source?: string;
   received_at?: string;
+};
+
+export type TemporalStageAttemptOperatorUpdateReceipt = {
+  surface_kind: 'temporal_stage_attempt_operator_update_receipt';
+  provider_kind: 'temporal';
+  update_status: 'accepted';
+  stage_attempt_id: string;
+  workflow_id: string;
+  signal_kind: TemporalStageAttemptSignalKind;
+  signal_count: number;
+  updated_at: string;
+  authority_boundary: {
+    opl: 'temporal_update_ack_and_transport_metadata_only';
+    domain: 'truth_quality_artifact_gate_owner';
+    provider_completion_is_domain_ready: false;
+  };
 };
 
 export type TemporalStageAttemptWorkflowInput = {
@@ -146,6 +166,7 @@ export function buildTemporalStageAttemptWorkflowContract() {
     },
     signals: [...TEMPORAL_STAGE_ATTEMPT_SIGNALS],
     queries: [...TEMPORAL_STAGE_ATTEMPT_QUERIES],
+    operator_action_updates: [...TEMPORAL_STAGE_ATTEMPT_UPDATES],
     default_task_queue: DEFAULT_TEMPORAL_TASK_QUEUE,
     visibility_contract: buildTemporalStageAttemptVisibilityReadiness(),
     search_attributes: TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTES.map((attribute) => ({
@@ -175,11 +196,19 @@ export function buildTemporalStageAttemptWorkflowContract() {
         heartbeat_interval_ms: DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS,
         runner_timeout_ms: DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
         runner_no_output_timeout_ms: DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
+        retry: {
+          maximum_attempts: 1,
+          reason: 'codex_cli_subprocess_must_not_be_duplicated_by_temporal_retry',
+        },
       },
       short_stage_activities: {
         schedule_to_close_timeout: SHORT_STAGE_ACTIVITY_SCHEDULE_TO_CLOSE_TIMEOUT,
         start_to_close_timeout: SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
         heartbeat_timeout: SHORT_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
+        retry: {
+          maximum_attempts: 3,
+          reason: 'short_idempotent_opl_projection_or_dispatch_activity_retry',
+        },
         stale_schedule_release_policy:
           'fail_short_activity_when_worker_does_not_pick_up_scheduled_task',
       },
