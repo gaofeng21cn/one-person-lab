@@ -5,7 +5,12 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { enqueueTask } from '../../src/family-runtime-enqueue.ts';
 import { inspectTask } from '../../src/family-runtime-store.ts';
-import { createStageAttempt, createStageAttemptTable, ingestStageAttemptCloseout } from '../../src/family-runtime-stage-attempts.ts';
+import {
+  createStageAttempt,
+  createStageAttemptTable,
+  ingestStageAttemptCloseout,
+  recordStageAttemptActivityHeartbeat,
+} from '../../src/family-runtime-stage-attempts.ts';
 import { deriveCurrentControlStateForTask } from '../../src/family-runtime-current-control-state.ts';
 
 function withDb(fn: (db: DatabaseSync) => void) {
@@ -61,7 +66,7 @@ function withDb(fn: (db: DatabaseSync) => void) {
 }
 
 function enqueueDefaultTask(db: DatabaseSync, payload: Record<string, unknown> = {}) {
-  return enqueueTask(db, {
+  const result = enqueueTask(db, {
     domainId: 'medautoscience',
     taskKind: 'domain_owner/default-executor-dispatch',
     payload: {
@@ -79,7 +84,9 @@ function enqueueDefaultTask(db: DatabaseSync, payload: Record<string, unknown> =
     },
     dedupeKey: `dedupe:${crypto.randomUUID()}`,
     source: 'test',
-  }).task;
+  });
+  assert.ok(result.task);
+  return result.task;
 }
 
 function createTaskAttempt(
@@ -164,6 +171,81 @@ test('current control state exposes active provider attempt identity without dom
     assert.equal(Object.hasOwn(state, 'domain_ready'), false);
     assert.equal(Object.hasOwn(state, 'publication_ready'), false);
     assert.equal(Object.hasOwn(state, 'artifact_ready'), false);
+  });
+});
+
+test('current control state uses provider activity heartbeat as running liveness projection', () => {
+  withDb((db) => {
+    const task = enqueueDefaultTask(db, {
+      study_id: '002-dm-china-us-mortality-attribution',
+      quest_id: '002-dm-china-us-mortality-attribution',
+      source_fingerprint: 'mas-domain-source:fresh',
+    });
+    const attempt = createTaskAttempt(db, task, {
+      sourceFingerprint: 'opl-stage-source:derived',
+      workspaceEpochs: {
+        domain_source_fingerprint: 'mas-domain-source:fresh',
+      },
+      start: true,
+    });
+    db.prepare(`
+      UPDATE stage_attempts
+      SET provider_run_json = json_set(provider_run_json, '$.last_heartbeat_at', ?),
+        activity_events_json = json_insert(activity_events_json, '$[#]', json(?))
+      WHERE stage_attempt_id = ?
+    `).run(
+      '2026-05-27T05:01:17.035Z',
+      JSON.stringify({
+        event_time: '2026-05-27T05:04:47.035Z',
+        activity_kind: 'codex_stage_activity',
+        activity_status: 'running',
+        heartbeat_kind: 'codex_stage_activity_supervision',
+      }),
+      attempt.stage_attempt_id,
+    );
+
+    const state = deriveCurrentControlStateForTask(db, task.task_id);
+
+    assert.equal(state.reconciliation_status, 'running');
+    assert.equal(state.current_attempt_state, 'running');
+    assert.equal(state.provider_run.last_heartbeat_at, '2026-05-27T05:04:47.035Z');
+    assert.equal(state.provider_run.ledger_last_heartbeat_at, '2026-05-27T05:01:17.035Z');
+    assert.equal(state.provider_run.liveness_source, 'provider_activity_event');
+    assert.equal(state.running_provider_attempt, true);
+    assert.equal(Object.hasOwn(state, 'domain_ready'), false);
+    assert.equal(Object.hasOwn(state, 'publication_ready'), false);
+    assert.equal(Object.hasOwn(state, 'artifact_ready'), false);
+  });
+});
+
+test('stage attempt activity heartbeat writer feeds current control liveness projection', () => {
+  withDb((db) => {
+    const task = enqueueDefaultTask(db, {
+      source_fingerprint: 'mas-domain-source:fresh',
+    });
+    const attempt = createTaskAttempt(db, task, {
+      sourceFingerprint: 'opl-stage-source:derived',
+      workspaceEpochs: {
+        domain_source_fingerprint: 'mas-domain-source:fresh',
+      },
+      start: true,
+    });
+
+    recordStageAttemptActivityHeartbeat(db, {
+      stageAttemptId: attempt.stage_attempt_id,
+      heartbeatKind: 'codex_stage_activity_runner_progress',
+      runnerEventKind: 'agent_message',
+      checkpointRefs: ['dispatch/latest.json'],
+      observedAt: '2026-05-27T05:07:17.035Z',
+    });
+
+    const state = deriveCurrentControlStateForTask(db, task.task_id);
+
+    assert.equal(state.provider_run.last_heartbeat_at, '2026-05-27T05:07:17.035Z');
+    assert.equal(state.provider_run.liveness_source, 'provider_activity_event');
+    assert.equal(state.provider_run.last_runner_event_kind, 'agent_message');
+    assert.equal(state.authority_boundary.provider_completion_is_domain_ready, false);
+    assert.equal(Object.hasOwn(state, 'domain_ready'), false);
   });
 });
 
