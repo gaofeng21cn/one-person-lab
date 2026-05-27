@@ -259,6 +259,70 @@ function frameworkOmaProductionConsumptionNextSafeAction(followthrough: JsonReco
   };
 }
 
+function blockedOwnerPayloadGroupSummary(group: JsonRecord) {
+  return {
+    owner: stringValue(group.owner) ?? 'domain_repository_or_app_live_operator',
+    payload_kind: stringValue(group.payload_kind),
+    status: stringValue(group.status) ?? 'blocked_by_domain_typed_blocker_refs',
+    attention_count: numberValue(group.attention_count),
+    open_envelope_count: numberValue(group.open_envelope_count),
+    blocked_envelope_count: numberValue(group.blocked_envelope_count),
+    receipt_ref_count: numberValue(group.receipt_ref_count),
+    typed_blocker_ref_count: numberValue(group.typed_blocker_ref_count),
+  };
+}
+
+function blockedRefsOnlyAttentionReviewAction(input: {
+  domainBlockedAttentionCount?: number;
+  ownerPayloadGroups: JsonRecord[];
+  itemLimit: number;
+}) {
+  const topOwnerPayloadGroups = input.ownerPayloadGroups
+    .slice(0, Math.max(1, input.itemLimit))
+    .map(blockedOwnerPayloadGroupSummary);
+  const topOwnerPayloadGroup = topOwnerPayloadGroups[0] ?? {};
+  return {
+    action_id: 'review_blocked_refs_only_attention',
+    action_kind: 'blocked_refs_only_attention_review',
+    step_kind: 'blocked_refs_only_attention_review',
+    evidence_closure_gate: 'domain_blocked_refs_only_review_gate',
+    command: 'opl framework readiness --family-defaults --json',
+    drilldown_commands: {
+      framework_readiness_full: 'opl framework readiness --family-defaults --json',
+      app_operator_drilldown_full: 'opl runtime app-operator-drilldown --detail full --json',
+      evidence_worklist_full:
+        'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json',
+    },
+    blocked_attention_summary: {
+      domain_blocked_attention_count: numberValue(input.domainBlockedAttentionCount),
+      top_owner_payload_group_count: topOwnerPayloadGroups.length,
+      top_owner: stringValue(topOwnerPayloadGroup.owner),
+      top_payload_kind: stringValue(topOwnerPayloadGroup.payload_kind),
+      top_status: stringValue(topOwnerPayloadGroup.status),
+      top_attention_count: numberValue(topOwnerPayloadGroup.attention_count),
+      top_blocked_envelope_count: numberValue(topOwnerPayloadGroup.blocked_envelope_count),
+      top_typed_blocker_ref_count: numberValue(topOwnerPayloadGroup.typed_blocker_ref_count),
+      top_receipt_ref_count: numberValue(topOwnerPayloadGroup.receipt_ref_count),
+      full_detail_sections: [
+        'attention_first_payload.owner_payload_groups',
+        'attention_first_payload.evidence_after_contract.owner_handoff_packet',
+        'evidence_envelope',
+        'domain_dispatch_attention',
+      ],
+    },
+    top_owner_payload_groups: topOwnerPayloadGroups,
+    authority: 'refs_only_review',
+    can_submit_record_to_safe_action_shell: false,
+    can_execute_domain_action: false,
+    can_write_domain_truth: false,
+    can_create_owner_receipt: false,
+    can_create_typed_blocker: false,
+    can_close_domain_ready: false,
+    can_claim_production_ready: false,
+    can_authorize_quality_or_export: false,
+  };
+}
+
 export function frameworkAttentionNextSafeActions(input: {
   blockers: JsonRecord[];
   warnings: JsonRecord[];
@@ -292,22 +356,7 @@ export function frameworkAttentionNextSafeActions(input: {
     numberValue(input.operatorActionableAttentionCount) === 0
     && numberValue(input.domainBlockedAttentionCount) > 0
   ) {
-    return [{
-      action_id: 'review_blocked_refs_only_attention',
-      action_kind: 'blocked_refs_only_attention_review',
-      step_kind: 'blocked_refs_only_attention_review',
-      evidence_closure_gate: 'domain_blocked_refs_only_review_gate',
-      command: 'opl framework readiness --family-defaults --json',
-      authority: 'refs_only_review',
-      can_submit_record_to_safe_action_shell: false,
-      can_execute_domain_action: false,
-      can_write_domain_truth: false,
-      can_create_owner_receipt: false,
-      can_create_typed_blocker: false,
-      can_close_domain_ready: false,
-      can_claim_production_ready: false,
-      can_authorize_quality_or_export: false,
-    }];
+    return [blockedRefsOnlyAttentionReviewAction(input)];
   }
   return [
     {

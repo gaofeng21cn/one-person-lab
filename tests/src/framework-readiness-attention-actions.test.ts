@@ -144,4 +144,38 @@ test('framework readiness keeps blocked refs-only attention out of executable ne
   assert.equal(actions[0].can_create_owner_receipt, false);
   assert.equal(actions[0].can_close_domain_ready, false);
   assert.equal(actions[0].can_claim_production_ready, false);
+  assert.deepEqual(actions[0].drilldown_commands, {
+    framework_readiness_full: 'opl framework readiness --family-defaults --json',
+    app_operator_drilldown_full: 'opl runtime app-operator-drilldown --detail full --json',
+    evidence_worklist_full:
+      'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json',
+  });
+  assert.deepEqual(actions[0].blocked_attention_summary, {
+    domain_blocked_attention_count: 10,
+    top_owner_payload_group_count: 1,
+    top_owner: 'med-autoscience',
+    top_payload_kind: 'domain_owner_receipt_or_typed_blocker_refs',
+    top_status: 'blocked_by_domain_typed_blocker_refs',
+    top_attention_count: 7,
+    top_blocked_envelope_count: 7,
+    top_typed_blocker_ref_count: 0,
+    top_receipt_ref_count: 0,
+    full_detail_sections: [
+      'attention_first_payload.owner_payload_groups',
+      'attention_first_payload.evidence_after_contract.owner_handoff_packet',
+      'evidence_envelope',
+      'domain_dispatch_attention',
+    ],
+  });
+  assert.equal(actions[0].top_owner_payload_groups.length, 1);
+  assert.deepEqual(actions[0].top_owner_payload_groups[0], {
+    owner: 'med-autoscience',
+    payload_kind: 'domain_owner_receipt_or_typed_blocker_refs',
+    status: 'blocked_by_domain_typed_blocker_refs',
+    attention_count: 7,
+    open_envelope_count: 0,
+    blocked_envelope_count: 7,
+    receipt_ref_count: 0,
+    typed_blocker_ref_count: 0,
+  });
 });
