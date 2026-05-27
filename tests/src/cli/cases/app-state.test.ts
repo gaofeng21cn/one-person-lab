@@ -1,4 +1,4 @@
-import { assert, createFakeCodexFixture, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFakeCodexFixture, fs, loadFamilyManifestFixtures, os, path, runCli, runCliFailure, test } from '../helpers.ts';
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
 import { fullRuntimeWorkbenchSummary } from '../../../../src/app-state.ts';
 
@@ -12,6 +12,22 @@ const defaultDeveloperModePermissionsFixture = JSON.stringify({
     'gaofeng21cn/redcube-ai': 'admin',
   },
 });
+
+function buildMasManifestWithManagedTemporalProjection(managedTemporal: Record<string, unknown>) {
+  const fixtures = loadFamilyManifestFixtures();
+  const fixtureProgressProjection = fixtures.medautoscience.progress_projection as Record<string, unknown>;
+  return {
+    ...fixtures.medautoscience,
+    progress_projection: {
+      ...fixtureProgressProjection,
+      surface_kind: 'progress_projection',
+      domain_projection: {
+        ...((fixtureProgressProjection.domain_projection as Record<string, unknown>) ?? {}),
+        managed_temporal_state_consistency: managedTemporal,
+      },
+    },
+  };
+}
 
 test('app state full runtime workbench summary uses stage progress refs only', () => {
   const output = fullRuntimeWorkbenchSummary({
@@ -235,6 +251,100 @@ exit 1
   } finally {
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('app state fast uses lifecycle-aware Temporal readiness from the same provider source as initialize', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-provider-home-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-provider-mas-'));
+  const manifest = buildMasManifestWithManagedTemporalProjection({
+    surface_kind: 'managed_temporal_state_consistency',
+    projection_status: 'ready',
+    provider_kind: 'temporal',
+    service_status: 'ready',
+    worker_status: 'ready',
+    address: 'mas-managed-temporal.example.test:7233',
+    namespace: 'default',
+    task_queue: 'opl-stage-attempts',
+    source_refs: ['mas://runtime/managed_temporal_state_consistency/latest.json'],
+    authority_boundary: {
+      opl_role: 'projection_consumer_only',
+      paper_closure_authority: 'mas_only',
+    },
+  });
+  const now = new Date().toISOString();
+  fs.mkdirSync(stateDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(stateDir, 'workspace-registry.json'),
+    `${JSON.stringify({
+      version: 'g2',
+      bindings: [
+        {
+          binding_id: 'mas-managed-projection',
+          project_id: 'medautoscience',
+          project: 'med-autoscience',
+          workspace_path: workspacePath,
+          label: null,
+          status: 'active',
+          direct_entry: {
+            command: null,
+            manifest_command: buildManifestCommand(manifest),
+            url: null,
+            workspace_locator: null,
+          },
+          created_at: now,
+          updated_at: now,
+          archived_at: null,
+        },
+      ],
+    }, null, 2)}\n`,
+    'utf8',
+  );
+
+  try {
+    const output = runCli(['app', 'state', '--profile', 'fast'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+      OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+      OPL_TEMPORAL_WORKER_STATUS: '',
+      OPL_TEMPORAL_WORKER_ENABLED: '',
+      OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+      PATH: '/usr/bin:/bin',
+    }) as {
+      app_state: {
+        provider: {
+          temporal: {
+            health_status: string;
+            status: string;
+            ready: boolean;
+            degraded_reason: string | null;
+            details: {
+              address: string | null;
+              address_source: string | null;
+              adapter_mode: string | null;
+              worker_readiness: { readiness_status: string; worker_ready: boolean; blockers: string[] };
+            };
+          };
+        };
+      };
+    };
+
+    assert.equal(output.app_state.provider.temporal.health_status, 'ready');
+    assert.equal(output.app_state.provider.temporal.status, 'ready');
+    assert.equal(output.app_state.provider.temporal.ready, true);
+    assert.equal(output.app_state.provider.temporal.degraded_reason, null);
+    assert.equal(output.app_state.provider.temporal.details.address, 'mas-managed-temporal.example.test:7233');
+    assert.equal(output.app_state.provider.temporal.details.address_source, 'mas_managed_temporal_state_consistency_projection');
+    assert.equal(output.app_state.provider.temporal.details.adapter_mode, 'mas_managed_temporal_projection_ready');
+    assert.equal(output.app_state.provider.temporal.details.worker_readiness.readiness_status, 'ready');
+    assert.equal(output.app_state.provider.temporal.details.worker_readiness.worker_ready, true);
+    assert.deepEqual(output.app_state.provider.temporal.details.worker_readiness.blockers, []);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(workspacePath, { recursive: true, force: true });
   }
 });
 

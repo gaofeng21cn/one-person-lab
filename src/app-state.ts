@@ -2,7 +2,9 @@ import { FrameworkContractError, loadFrameworkContracts } from './contracts.ts';
 import { readBundledCodexDefaultProfile, readLocalCodexDefaultsIfAvailable } from './local-codex-defaults.ts';
 import { getOplReleaseRepo, getOplReleaseVersion, buildOplReleaseTag } from './opl-release.ts';
 import { resolveOplStatePaths, ensureOplStateDir } from './runtime-state-paths.ts';
-import { inspectFamilyRuntimeProvider, resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
+import { inspectFamilyRuntimeProviderWithLifecycle, resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
+import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
+import { familyRuntimePaths } from './family-runtime-store.ts';
 import type { FrameworkContracts } from './types.ts';
 import { runRuntimeOperatorActionExecute } from './runtime-operator-action-execution.ts';
 import { buildOplDeveloperModeSurface } from './system-installation/developer-mode.ts';
@@ -207,9 +209,13 @@ function buildAssistants(items: ReturnType<typeof publicModuleItems>) {
   }));
 }
 
-function buildProviderState() {
+async function buildProviderState() {
   const providerKind = resolveFamilyRuntimeProviderKind();
-  const provider = inspectFamilyRuntimeProvider(providerKind);
+  const provider = await inspectFamilyRuntimeProviderWithLifecycle(
+    providerKind,
+    familyRuntimePaths(),
+    { managedProviderProjection: readMasManagedProviderProjection() },
+  );
   return {
     selected_provider: providerKind,
     temporal: {
@@ -498,7 +504,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const modules = publicModuleItems();
   const moduleSource = resolveModuleSource(modules);
   const developerMode = buildOplDeveloperModeSurface(buildOplEndpoints());
-  const provider = buildProviderState();
+  const provider = await buildProviderState();
   const release = buildReleaseState();
   const workspaceRoot = readOplWorkspaceRoot();
   const core = buildCoreState(profile);
