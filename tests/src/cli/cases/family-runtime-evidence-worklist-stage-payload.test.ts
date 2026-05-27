@@ -269,3 +269,100 @@ test('family-runtime evidence-worklist keeps stage record workorder open when ve
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('family-runtime evidence-worklist closes stage workorder with verified domain typed blocker receipt', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-stage-blocker-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+
+  try {
+    bindReviewStageManifest(stateRoot, fixtureContractsRoot);
+    runCli([
+      'agents',
+      'evidence',
+      'apply',
+      '--domain',
+      'medautoscience',
+      '--request-id',
+      'stage_production_evidence:medautoscience:review',
+      '--request-pack-id',
+      'medautoscience.stage_production_evidence',
+      '--source-ref',
+      '/runtime_tray_snapshot/app_operator_drilldown/stage_production_evidence/med-autoscience/review',
+      '--receipt-ref',
+      'mas-stage-review-typed-blocker-receipt',
+      '--typed-blocker-ref',
+      'mas-stage-typed-blocker:review:owner-receipt-or-monitor-freshness-pending',
+    ], familyRuntimeEnv(stateRoot, fixtureContractsRoot));
+    runCli([
+      'agents',
+      'evidence',
+      'apply',
+      '--domain',
+      'medautoscience',
+      '--request-id',
+      'stage_production_evidence:medautoscience:review',
+      '--mode',
+      'verify',
+      '--receipt-ref',
+      'mas-stage-review-typed-blocker-receipt',
+    ], familyRuntimeEnv(stateRoot, fixtureContractsRoot));
+
+    const drilldown = runCli(
+      ['runtime', 'app-operator-drilldown', '--detail', 'full'],
+      familyRuntimeEnv(stateRoot, fixtureContractsRoot),
+    ).app_operator_drilldown;
+    const route = drilldown.operator_action_routing_refs.refs.find((ref: { action_id: string }) =>
+      ref.action_id === 'stage-production-evidence:medautoscience:review:record'
+    );
+    assert.equal(route.action_kind, 'stage_production_evidence_receipt_record');
+    assert.equal(route.route_requires_domain_or_app_payload, true);
+
+    const output = runCli([
+      'family-runtime',
+      'evidence-worklist',
+      '--family-defaults',
+      '--provider',
+      'temporal',
+      '--executor-kind',
+      'codex_cli',
+      '--detail',
+      'full',
+    ], familyRuntimeEnv(stateRoot, fixtureContractsRoot));
+    const worklist = output.family_runtime_evidence_worklist;
+    const item = worklist.worklist_items.find((entry: { action_id: string }) =>
+      entry.action_id === 'stage-production-evidence:medautoscience:review:record'
+    );
+    assert.equal(item.status, 'closed_by_domain_owned_typed_blocker');
+    assert.equal(item.worklist_status_detail, 'closed_by_domain_owned_typed_blocker_ref');
+    assert.equal(item.receipt_ref, 'mas-stage-review-typed-blocker-receipt');
+    assert.deepEqual(item.typed_blocker_refs, [
+      'mas-stage-typed-blocker:review:owner-receipt-or-monitor-freshness-pending',
+    ]);
+    assert.equal(item.route_requires_domain_or_app_payload, true);
+    assert.equal(item.can_close_without_domain_or_app_payload, false);
+    assert.equal(item.worklist_item_is_completion_claim, false);
+    assert.equal(worklist.summary.domain_ready_authorized, false);
+    assert.equal(worklist.summary.production_ready_authorized, false);
+    assert.equal(
+      worklist.stage_evidence_workorder_packet.workorders.some(
+        (entry: { action_id: string }) => entry.action_id === item.action_id,
+      ),
+      false,
+    );
+    assert.equal(
+      worklist.attention_queue.some((entry: { item_id: string }) => entry.item_id === item.item_id),
+      false,
+    );
+    assert.equal(
+      worklist.evidence_requirement_ledger.requirements.find(
+        (entry: { requirement_id: string }) => entry.requirement_id === item.item_id,
+      ).status,
+      'domain_owned_typed_blocker',
+    );
+    assert.equal(worklist.authority_boundary.can_write_domain_truth, false);
+    assert.equal(worklist.authority_boundary.can_claim_production_ready, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});

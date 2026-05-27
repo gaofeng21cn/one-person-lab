@@ -6,6 +6,7 @@ import { EVIDENCE_REQUIREMENT_MODEL_VERSION, evidenceRequirementFromTailItem } f
 import type { EvidenceRequirement } from './evidence-requirement.ts';
 import { readFamilyRuntimeLifecycleApplyReceipts } from './family-runtime-lifecycle-index.ts';
 import { listExternalEvidenceReceipts } from './external-evidence-ledger.ts';
+import { preflightStageProductionEvidencePayload } from './stage-production-evidence-payload-preflight.ts';
 import { compactEvidenceEnvelopeProjection, canonicalOwnerId } from './evidence-envelope.ts';
 import {
   buildDomainDispatchEvidenceWorkorderPacket,
@@ -171,7 +172,8 @@ function refsOnlyClosureReceipt(route: JsonRecord, drilldown: JsonRecord) {
   const waitsForDomainOrAppPayload = route.route_requires_domain_or_app_payload === true
     && route.can_close_without_domain_or_app_payload === false;
   const isDomainDispatchEvidenceRoute = actionKind.startsWith('domain_dispatch_evidence_');
-  if (waitsForDomainOrAppPayload && !isDomainDispatchEvidenceRoute) {
+  const isStageProductionEvidenceRoute = actionKind.startsWith('stage_production_evidence_');
+  if (waitsForDomainOrAppPayload && !isDomainDispatchEvidenceRoute && !isStageProductionEvidenceRoute) {
     return null;
   }
 
@@ -259,6 +261,13 @@ function refsOnlyClosureReceipt(route: JsonRecord, drilldown: JsonRecord) {
       ...verifiedReceipt.direct_hosted_parity_refs,
       ...verifiedReceipt.owner_chain_refs,
     ].filter(Boolean);
+    const stageEvidenceFreshnessRef =
+      '/runtime_tray_snapshot/app_operator_drilldown/stage_production_evidence';
+    const externalEvidenceFreshnessRef = isDomainDispatchEvidenceRoute
+      ? '/runtime_tray_snapshot/app_operator_drilldown/domain_dispatch_evidence'
+      : isStageProductionEvidenceRoute
+        ? stageEvidenceFreshnessRef
+        : '/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs';
     if (verifiedReceipt.typed_blocker_refs.length > 0 && verifiedReceipt.receipt_refs.length === 0) {
       return {
         status: 'closed_by_domain_owned_typed_blocker',
@@ -266,14 +275,28 @@ function refsOnlyClosureReceipt(route: JsonRecord, drilldown: JsonRecord) {
         receipt_refs: [verifiedReceipt.receipt_ref, ...verifiedReceipt.typed_blocker_refs],
         typed_blocker_ref: verifiedReceipt.typed_blocker_refs[0],
         typed_blocker_refs: verifiedReceipt.typed_blocker_refs,
-        freshness_ref: actionKind.startsWith('domain_dispatch_evidence_')
-          ? '/runtime_tray_snapshot/app_operator_drilldown/domain_dispatch_evidence'
-          : '/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs',
+        freshness_ref: externalEvidenceFreshnessRef,
         closure_reason:
           isDomainDispatchEvidenceRoute
             ? 'OPL refs-only evidence ledger verified a domain-owned typed blocker for this domain dispatch evidence request; this records request closure without claiming domain or production readiness.'
-            : 'OPL refs-only evidence ledger verified a domain-owned typed blocker for this external evidence request; this records request closure without claiming production success.',
+            : isStageProductionEvidenceRoute
+              ? 'OPL refs-only evidence ledger verified a domain-owned typed blocker for this stage production evidence request; this records workorder closure without claiming stage success, domain readiness, or production readiness.'
+              : 'OPL refs-only evidence ledger verified a domain-owned typed blocker for this external evidence request; this records request closure without claiming production success.',
       };
+    }
+    if (waitsForDomainOrAppPayload && isStageProductionEvidenceRoute) {
+      const preflight = preflightStageProductionEvidencePayload(route, {
+        domain_receipt_refs: verifiedReceipt.receipt_refs,
+        evidence_refs: verifiedReceipt.evidence_refs,
+        typed_blocker_refs: verifiedReceipt.typed_blocker_refs,
+        no_regression_refs: verifiedReceipt.no_regression_refs,
+        owner_chain_refs: verifiedReceipt.owner_chain_refs,
+        source_scope_refs: verifiedReceipt.source_scope_refs,
+        runtime_event_refs: verifiedReceipt.runtime_event_refs,
+      });
+      if (!preflight.success_path_ready) {
+        return null;
+      }
     }
     return {
       status: 'closed_by_receipt_ref',
@@ -281,13 +304,13 @@ function refsOnlyClosureReceipt(route: JsonRecord, drilldown: JsonRecord) {
       receipt_refs: allReceiptRefs,
       typed_blocker_ref: verifiedReceipt.typed_blocker_refs[0] ?? null,
       typed_blocker_refs: verifiedReceipt.typed_blocker_refs,
-      freshness_ref: isDomainDispatchEvidenceRoute
-        ? '/runtime_tray_snapshot/app_operator_drilldown/domain_dispatch_evidence'
-        : '/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs',
+      freshness_ref: externalEvidenceFreshnessRef,
       closure_reason:
         isDomainDispatchEvidenceRoute
           ? 'OPL refs-only evidence ledger verified domain dispatch owner-chain refs without claiming domain or production readiness.'
-          : 'OPL refs-only evidence ledger verified a domain-owned receipt for this external evidence request.',
+          : isStageProductionEvidenceRoute
+            ? 'OPL refs-only evidence ledger verified domain-owned stage evidence refs covering the stage evidence obligations without claiming domain or production readiness.'
+            : 'OPL refs-only evidence ledger verified a domain-owned receipt for this external evidence request.',
     };
   }
 
