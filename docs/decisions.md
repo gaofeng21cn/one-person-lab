@@ -18,6 +18,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `token_usage` / `cost` 缺失时只能显式保留为 observed-missing/null，不允许填 0 或事后猜测。
 - MAG、RCA、OMA 这类 Foundry Agent 需要在各自 stage plane 中声明同一合同，并由各自 owner 提供 grant-facing、visual-facing 或 agent-building-facing 的人话摘要。OPL admission / App / Agent Lab 只消费该摘要和 refs，不写 domain truth、不读 artifact body、不授权质量或 export ready。
 
+### 决策：嵌套 runtime help 是只读命令发现面
+
+原因：operator 巡检经常通过 `--help` 确认当前 OPL CLI 是否支持某个 runtime 子命令。如果 `opl family-runtime queue list --help` 执行真实 queue list，或者 `provider-slo tick --help` / `tick --help` 穿透到 runtime parser 报 unknown，就会把帮助探测变成巨量 read-model 输出或误判为功能缺失。
+
+影响：
+
+- 顶层 CLI 在 command 参数中遇到 `--help` 时，必须返回对应 command-scoped help；`--help` 位于 `--` passthrough 之后时继续由下游命令接收。
+- `family-runtime` help / usage 必须列出当前可用的 provider SLO、scheduler、queue redrive 和 attempt query/inspect surfaces。
+- help 输出只做命令发现，不启动 queue、tick、provider proof、domain dispatch 或任何 runtime mutation。
+
 ## 2026-05-21
 
 ### 决策：OPL stage / route 调度固定为 graph hydration reconciliation attempt-ledger 模型
