@@ -28,6 +28,7 @@ const verifyWorkflowBuildAndJsLanePatterns = [
   /npm run build/,
   /npm run typecheck/,
   /npm run test:fast/,
+  /npm run test:read-model-gates/,
   /npm run test:regression/,
   /npm run test:integration/,
   /npm run test:fresh-install/,
