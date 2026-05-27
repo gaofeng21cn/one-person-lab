@@ -771,13 +771,17 @@ test('family stage list and proof bundles preserve 18 admitted runtime-enforced 
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_STATE_DIR: stateRoot,
     });
-    assert.equal(list.family_stages.summary.resolved_planes_count, 3);
-    assert.equal(list.family_stages.summary.stages_count, 18);
-    assert.equal(list.family_stages.summary.admitted_stages_count, 18);
+    assert.equal(list.family_stages.summary.resolved_planes_count, 4);
+    assert.equal(list.family_stages.summary.stages_count, 19);
+    assert.equal(list.family_stages.summary.admitted_stages_count, 19);
     assert.equal(list.family_stages.summary.blocked_stages_count, 0);
     assert.equal(list.family_stages.summary.needs_contracts_stages_count, 0);
+    const domainStages = list.family_stages.stages.filter(
+      (stage: { project_id: string }) => stage.project_id !== 'opl-meta-agent',
+    );
+    assert.equal(domainStages.length, 18);
     assert.equal(
-      list.family_stages.stages.every((stage: { admission_status: string; guarantee_mode: string; mode_tags: { durable_runtime_only: boolean; runtime_boundary_required: boolean } }) =>
+      domainStages.every((stage: { admission_status: string; guarantee_mode: string; mode_tags: { durable_runtime_only: boolean; runtime_boundary_required: boolean } }) =>
         stage.admission_status === 'admitted'
         && stage.guarantee_mode === 'runtime_enforced'
         && stage.mode_tags.durable_runtime_only === true
@@ -785,6 +789,12 @@ test('family stage list and proof bundles preserve 18 admitted runtime-enforced 
       ),
       true,
     );
+    const omaStage = list.family_stages.stages.find(
+      (stage: { project_id: string; stage_id: string }) =>
+        stage.project_id === 'opl-meta-agent' && stage.stage_id === 'stage-decomposition',
+    );
+    assert.equal(omaStage?.admission_status, 'admitted');
+    assert.equal(omaStage?.guarantee_mode, 'static_admission_only');
 
     const proofBundle = runCli(['stages', 'proof-bundle', '--domain', 'mas'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,

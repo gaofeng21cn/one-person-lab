@@ -255,13 +255,17 @@ test('family stage control plane is resolved from domain manifests as read-only 
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_STATE_DIR: stateRoot,
     });
-    assert.equal(list.family_stages.summary.resolved_planes_count, 3);
-    assert.equal(list.family_stages.summary.stages_count, 3);
+    assert.equal(list.family_stages.summary.resolved_planes_count, 4);
+    assert.equal(list.family_stages.summary.stages_count, 4);
+    assert.equal(list.family_stages.summary.admitted_stages_count, 1);
     assert.equal(list.family_stages.summary.needs_contracts_stages_count, 3);
     assert.deepEqual(
       list.family_stages.stages.map((entry: { stage_id: string }) => entry.stage_id).sort(),
-      ['artifact_creation', 'manuscript_authoring', 'proposal_authoring'],
+      ['artifact_creation', 'manuscript_authoring', 'proposal_authoring', 'stage-decomposition'],
     );
+    const omaStage = list.family_stages.stages.find((entry: { stage_id: string }) => entry.stage_id === 'stage-decomposition');
+    assert.equal(omaStage?.project_id, 'opl-meta-agent');
+    assert.equal(omaStage?.admission_status, 'admitted');
     const manuscriptStage = list.family_stages.stages.find((entry: { stage_id: string }) => entry.stage_id === 'manuscript_authoring');
     assert.equal(manuscriptStage?.admission_status, 'needs_contracts');
     assert.equal(manuscriptStage?.runtime_assumption_count, 2);

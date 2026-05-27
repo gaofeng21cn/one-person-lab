@@ -84,9 +84,16 @@ test('family stage control plane resolves real MAS RCA MAG manifests when local 
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_STATE_DIR: stateRoot,
     });
-    assert.equal(list.family_stages.summary.resolved_planes_count, 3);
+    assert.equal(list.family_stages.summary.resolved_planes_count, 4);
     assert.equal(list.family_stages.domains.every((domain: { ready: boolean }) => domain.ready), true);
-    assert.equal(list.family_stages.stages.length >= 18, true);
+    assert.equal(list.family_stages.stages.length >= 19, true);
+    assert.equal(
+      list.family_stages.stages.some(
+        (stage: { project_id: string; stage_id: string }) =>
+          stage.project_id === 'opl-meta-agent' && stage.stage_id === 'stage-decomposition',
+      ),
+      true,
+    );
 
     const masInspect = runCli(['stages', 'inspect', '--domain', 'mas', '--stage', 'manuscript_authoring'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
