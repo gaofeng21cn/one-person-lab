@@ -11,6 +11,9 @@ import {
   runCliFailure,
   test,
 } from '../helpers.ts';
+import { buildStageLaunchInvocationProjection } from '../../../../src/family-runtime-launch-invocation.ts';
+import { openQueueDb, stableId } from '../../../../src/family-runtime-store.ts';
+import { createStageAttempt } from '../../../../src/family-runtime-stage-attempts.ts';
 
 function buildReviewStageEvidenceManifest() {
   const masManifest = structuredClone(loadFamilyManifestFixtures().medautoscience);
@@ -93,9 +96,45 @@ function bindReviewStageEvidenceManifest(stateRoot: string, fixtureContractsRoot
   });
 }
 
+function seedStageAttempt(input: Parameters<typeof createStageAttempt>[1]) {
+  const { db } = openQueueDb();
+  try {
+    const providerKind = input.providerKind ?? 'local_sqlite';
+    const sourceFingerprint = input.sourceFingerprint?.trim() || null;
+    const taskId = input.taskId?.trim() || null;
+    const launchInvocation = input.executorBindingRef
+      ? buildStageLaunchInvocationProjection({
+          domainId: input.domainId,
+          stageId: input.stageId,
+          providerKind,
+          workspaceLocator: input.workspaceLocator,
+          sourceFingerprint,
+          executorKind: input.executorKind,
+          executorBindingRef: input.executorBindingRef,
+          invocationMode: input.invocationMode,
+          boundedEditRef: input.boundedEditRef,
+          taskId,
+          idempotencyKey: stableId('idem', [
+            input.domainId,
+            input.stageId,
+            providerKind,
+            input.workspaceLocator,
+            sourceFingerprint,
+            taskId,
+          ]),
+          requireStageAdmission: false,
+        })
+      : undefined;
+    return createStageAttempt(db, { ...input, launchInvocation }).attempt;
+  } finally {
+    db.close();
+  }
+}
+
 test('stage production evidence consumes older ledger attempts beyond default workbench list', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-production-full-ledger-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const previousStateDir = process.env.OPL_STATE_DIR;
   const magManifest = structuredClone(loadFamilyManifestFixtures().medautogrant);
   const magManifestPayload = magManifest.product_entry_manifest as Record<string, unknown>;
   magManifestPayload.family_stage_control_plane = {
@@ -173,52 +212,30 @@ test('stage production evidence consumes older ledger attempts beyond default wo
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
 
-    runCli([
-      'family-runtime',
-      'attempt',
-      'create',
-      '--domain',
-      'medautogrant',
-      '--stage',
-      'fundability_strategy',
-      '--provider',
-      'temporal',
-      '--workspace-locator',
-      JSON.stringify({
+    process.env.OPL_STATE_DIR = stateRoot;
+    seedStageAttempt({
+      domainId: 'medautogrant',
+      stageId: 'fundability_strategy',
+      providerKind: 'temporal',
+      workspaceLocator: {
         surface_kind: 'opl_stage_production_attempt_request_workspace_locator',
         domain_id: 'med-autogrant',
         command_domain_id: 'medautogrant',
         stage_id: 'fundability_strategy',
         workspace_binding_required: true,
         source: 'test_stage_production_request',
-      }),
-      '--executor-kind',
-      'codex_cli',
-      '--executor-binding-ref',
-      'opl://executors/codex-cli/default',
-      '--require-stage-admission',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      },
+      executorKind: 'codex_cli',
+      executorBindingRef: 'opl://executors/codex-cli/default',
     });
 
     for (let index = 0; index < 26; index += 1) {
-      runCli([
-        'family-runtime',
-        'attempt',
-        'create',
-        '--domain',
-        'medautoscience',
-        '--stage',
-        `overflow_${index}`,
-        '--provider',
-        'local_sqlite',
-        '--workspace-locator',
-        JSON.stringify({ workspace_root: `/tmp/overflow-${index}` }),
-        '--new-attempt',
-      ], {
-        OPL_STATE_DIR: stateRoot,
-        OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      seedStageAttempt({
+        domainId: 'medautoscience',
+        stageId: `overflow_${index}`,
+        providerKind: 'local_sqlite',
+        workspaceLocator: { workspace_root: `/tmp/overflow-${index}` },
+        newAttempt: true,
       });
     }
 
@@ -251,6 +268,11 @@ test('stage production evidence consumes older ledger attempts beyond default wo
     assert.deepEqual(stageProductionEvidence.executor_binding_refs, ['opl://executors/codex-cli/default']);
     assert.equal(stageProductionEvidence.authority_boundary.can_write_domain_truth, false);
   } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
