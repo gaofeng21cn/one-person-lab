@@ -70,9 +70,24 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
   assert.equal(scaffold.default_runtime_policy.temporal_hosted_autonomy_default_enabled, true);
   assert.equal(scaffold.default_runtime_policy.domain_agent_internal_daemon_allowed, false);
   assert.equal(scaffold.default_runtime_policy.codex_app_drives_long_running_tasks, false);
+  assert.equal(scaffold.default_runtime_policy.provider_managed_surfaces.includes('stage_progress_log'), true);
+  assert.equal(
+    scaffold.default_runtime_policy.required_user_stage_log.missing_semantic_summary_status,
+    'missing_domain_semantic_summary',
+  );
+  assert.equal(
+    scaffold.default_runtime_policy.required_user_stage_log.canonical_domain_fields.includes('stage_work_done'),
+    true,
+  );
   assert.equal(
     scaffold.agent_pack_contract.stage_ref_requirements.includes(
       'selected_executor:codex_cli default binding or explicit non-default executor binding',
+    ),
+    true,
+  );
+  assert.equal(
+    scaffold.agent_pack_contract.stage_ref_requirements.includes(
+      'user_stage_log_requirement:domain provides human-readable stage semantics; OPL projects timing usage refs only',
     ),
     true,
   );

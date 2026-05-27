@@ -164,8 +164,41 @@
         "resume_requery",
         "retry_dead_letter",
         "attempt_ledger",
+        "stage_progress_log",
         "operator_projection"
       ],
+      "required_user_stage_log": {
+        "surface_kind": "opl_user_stage_log_requirement",
+        "stage_progress_log_owner": "one-person-lab",
+        "domain_semantics_owner": "domain_agent",
+        "canonical_domain_fields": [
+          "stage_name",
+          "problem_summary",
+          "stage_goal",
+          "stage_work_done",
+          "changed_stage_surfaces",
+          "outcome",
+          "remaining_blockers"
+        ],
+        "accepted_domain_semantic_sources": [
+          "user_stage_log",
+          "stage_log_summary",
+          "human_stage_log",
+          "human_summary",
+          "paper_stage_log"
+        ],
+        "legacy_alias_fields": [
+          "paper_work_done",
+          "changed_paper_surfaces"
+        ],
+        "missing_semantic_summary_status": "missing_domain_semantic_summary",
+        "completion_transparency_rule": "stage attempts without domain-provided user-readable semantics remain visible as a semantic gap and cannot be treated as user-transparent closeout",
+        "authority_boundary": {
+          "opl_can_infer_domain_semantics": false,
+          "opl_can_read_artifact_body": false,
+          "opl_can_claim_quality_or_export_verdict": false
+        }
+      },
       "domain_agent_internal_daemon_allowed": false,
       "domain_agent_internal_scheduler_allowed": false,
       "domain_agent_internal_attempt_loop_allowed": false,
@@ -198,10 +231,10 @@
         "knowledge_refs",
         "evaluation",
         "selected_executor",
-        "stage_contract.requires",
-        "stage_contract.ensures",
+        "user_stage_log_requirement",
+        "stage_contract.requires and stage_contract.ensures",
         "stage_contract.expected_receipt_refs",
-        "independent_gate_policy"
+        "independent_gate_policy:execution_review_separation"
       ],
       "independent_gate_policy": {
         "execution_review_separation_required": true,
@@ -401,7 +434,10 @@
         "knowledge_refs:agent/knowledge/*",
         "evaluation:agent/quality_gates/*",
         "selected_executor:codex_cli default binding or explicit non-default executor binding",
-        "runtime_policy:opl_temporal_hosted_autonomous default path"
+        "user_stage_log_requirement:domain provides human-readable stage semantics; OPL projects timing usage refs only",
+        "stage_contract.requires and stage_contract.ensures",
+        "stage_contract.expected_receipt_refs",
+        "independent_gate_policy:execution_review_separation"
       ],
       "validator": "opl agents scaffold --validate <repo-dir>",
       "empty_agent_directory_policy": "blocked"

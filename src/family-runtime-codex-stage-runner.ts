@@ -39,6 +39,8 @@ export type TypedStageCloseoutPacket = {
   user_stage_log?: JsonRecord;
   paper_stage_log?: JsonRecord;
   stage_log_summary?: JsonRecord;
+  human_stage_log?: JsonRecord;
+  human_summary?: JsonRecord;
   route_impact?: JsonRecord;
   authority_boundary: JsonRecord;
 };
@@ -910,6 +912,8 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
     ...(isRecord(value.user_stage_log) ? { user_stage_log: value.user_stage_log } : {}),
     ...(isRecord(value.paper_stage_log) ? { paper_stage_log: value.paper_stage_log } : {}),
     ...(isRecord(value.stage_log_summary) ? { stage_log_summary: value.stage_log_summary } : {}),
+    ...(isRecord(value.human_stage_log) ? { human_stage_log: value.human_stage_log } : {}),
+    ...(isRecord(value.human_summary) ? { human_summary: value.human_summary } : {}),
     ...(isRecord(value.route_impact) ? { route_impact: value.route_impact } : {}),
     authority_boundary: isRecord(value.authority_boundary)
       ? value.authority_boundary

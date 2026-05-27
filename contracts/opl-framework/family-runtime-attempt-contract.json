@@ -195,6 +195,8 @@
       "writeback_receipt_refs",
       "rejected_writes",
       "user_stage_log",
+      "human_stage_log",
+      "human_summary",
       "paper_stage_log",
       "stage_log_summary",
       "route_impact",
@@ -322,19 +324,25 @@
     "user_stage_log_contract": {
       "surface_kind": "opl_user_stage_log",
       "projection_policy": "opl_time_usage_refs_plus_domain_provided_human_semantics_no_domain_inference",
-      "purpose": "user-facing stage progress summary for stage, problem, paper-facing work, duration, token usage, cost, outcome, blockers, and evidence refs",
+      "purpose": "user-facing stage progress summary for stage, problem, domain deliverable work, duration, token usage, cost, outcome, blockers, and evidence refs",
       "domain_semantic_sources": [
         "typed_closeout_packet.user_stage_log",
-        "typed_closeout_packet.paper_stage_log",
         "typed_closeout_packet.stage_log_summary",
+        "typed_closeout_packet.human_stage_log",
+        "typed_closeout_packet.human_summary",
+        "typed_closeout_packet.paper_stage_log",
         "route_impact.user_stage_log",
-        "route_impact.paper_stage_log",
-        "route_impact.stage_log_summary"
+        "route_impact.stage_log_summary",
+        "route_impact.human_stage_log",
+        "route_impact.human_summary",
+        "route_impact.paper_stage_log"
       ],
       "required_sections": [
         "stage_name",
         "problem_summary",
         "stage_goal",
+        "stage_work_done",
+        "changed_stage_surfaces",
         "paper_work_done",
         "changed_paper_surfaces",
         "duration",
@@ -345,6 +353,47 @@
         "evidence_refs",
         "semantic_gap",
         "authority_boundary"
+      ],
+      "canonical_semantic_fields": [
+        "stage_name",
+        "problem_summary",
+        "stage_goal",
+        "stage_work_done",
+        "changed_stage_surfaces",
+        "outcome",
+        "remaining_blockers"
+      ],
+      "domain_examples": {
+        "medautoscience": {
+          "stage_work_done_alias": "paper_work_done",
+          "changed_stage_surfaces_alias": "changed_paper_surfaces"
+        },
+        "medautogrant": {
+          "stage_work_done_examples": [
+            "Revised Specific Aims significance and approach rationale.",
+            "Aligned critique response with fundability blocker refs."
+          ],
+          "changed_stage_surfaces_examples": [
+            "specific_aims",
+            "strategy_narrative",
+            "review_response"
+          ]
+        },
+        "redcube": {
+          "stage_work_done_examples": [
+            "Refreshed deck visual system, slide hierarchy, export package, and review refs.",
+            "Routed unresolved visual-review blockers back to the deliverable owner."
+          ],
+          "changed_stage_surfaces_examples": [
+            "pptx_deck",
+            "rendered_page_images",
+            "export_manifest"
+          ]
+        }
+      },
+      "legacy_alias_sections": [
+        "paper_work_done",
+        "changed_paper_surfaces"
       ],
       "semantic_missing_policy": "emit_missing_domain_semantic_summary_without_inventing_domain_work",
       "duration_policy": "prefer_usage_projection_duration_then_provider_started_completed_at_then_stage_attempt_created_updated_at_fallback",

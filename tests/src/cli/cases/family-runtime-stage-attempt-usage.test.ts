@@ -171,7 +171,17 @@ db.close();`;
     assert.equal(userStageLog.semantic_status, 'missing_domain_semantic_summary');
     assert.equal(userStageLog.stage_name, 'medautoscience/paper-repair');
     assert.equal(userStageLog.problem_summary, null);
+    assert.deepEqual(userStageLog.stage_work_done, []);
     assert.deepEqual(userStageLog.paper_work_done, []);
+    assert.deepEqual(userStageLog.semantic_gap.required_domain_fields, [
+      'stage_name',
+      'problem_summary',
+      'stage_goal',
+      'stage_work_done',
+      'changed_stage_surfaces',
+      'outcome',
+      'remaining_blockers',
+    ]);
     assert.equal(userStageLog.duration.duration_ms, 600000);
     assert.equal(userStageLog.duration.duration_source, 'stage_attempt_created_updated_at_fallback');
     assert.equal(userStageLog.duration.telemetry_fallback_used, true);
@@ -357,7 +367,17 @@ db.close();`;
       'Aligned Table 1, Table 2, and Figure 5 claims to the same validation evidence.',
       'Kept absolute-risk and deployment language bounded until recalibration evidence is available.',
     ]);
+    assert.deepEqual(log.user_stage_log.stage_work_done, [
+      'Clarified the complete-case validation sample and fixed predictor set in Methods.',
+      'Aligned Table 1, Table 2, and Figure 5 claims to the same validation evidence.',
+      'Kept absolute-risk and deployment language bounded until recalibration evidence is available.',
+    ]);
     assert.deepEqual(log.user_stage_log.changed_paper_surfaces, [
+      'manuscript draft',
+      'review manuscript',
+      'display provenance ledger',
+    ]);
+    assert.deepEqual(log.user_stage_log.changed_stage_surfaces, [
       'manuscript draft',
       'review manuscript',
       'display provenance ledger',
@@ -393,6 +413,121 @@ db.close();`;
       'temporal_backed_opl_refs_only_stage_observability_no_domain_truth',
     );
     assert.equal(['stage', 'execution', 'log'].join('_') in visibility, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime stage progress log accepts standard domain human summaries for MAG and RCA', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-cross-domain-stage-log-'));
+  try {
+    const grantAttempt = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautogrant',
+      '--stage',
+      'grant-revision',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mag","artifact_root":"/tmp/mag/artifacts"}',
+      '--retry-budget',
+      '{"max_attempts":2}',
+      '--source-fingerprint',
+      'sha256:mag-stage-log',
+    ], familyRuntimeEnv(stateRoot)).family_runtime_stage_attempt.attempt.stage_attempt_id;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      grantAttempt,
+      '--closeout-packet',
+      JSON.stringify({
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: ['receipt:mag-grant-revision-closeout'],
+        domain_ready_verdict: 'domain_gate_pending',
+        human_stage_log: {
+          stage_name: 'MAG grant revision',
+          problem_summary: 'Specific Aims and review response did not yet align with fundability blockers.',
+          stage_goal: 'Revise proposal surfaces and route unresolved fundability blockers to the grant owner.',
+          stage_work_done: [
+            'Revised Specific Aims significance and approach rationale.',
+            'Aligned critique response with fundability blocker refs.',
+          ],
+          changed_stage_surfaces: ['specific_aims', 'strategy_narrative', 'review_response'],
+          outcome: 'grant_revision_completed_with_blockers',
+          remaining_blockers: ['PI biosketch still needs owner confirmation.'],
+        },
+      }),
+    ], familyRuntimeEnv(stateRoot));
+
+    const visualAttempt = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'redcube',
+      '--stage',
+      'visual-refresh',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/rca","artifact_root":"/tmp/rca/artifacts"}',
+      '--retry-budget',
+      '{"max_attempts":2}',
+      '--source-fingerprint',
+      'sha256:rca-stage-log',
+    ], familyRuntimeEnv(stateRoot)).family_runtime_stage_attempt.attempt.stage_attempt_id;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      visualAttempt,
+      '--closeout-packet',
+      JSON.stringify({
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: ['receipt:rca-visual-refresh-closeout'],
+        domain_ready_verdict: 'domain_gate_pending',
+        stage_log_summary: {
+          stage_name: 'RCA visual refresh',
+          problem_summary: 'The deck export and review package needed clearer visual provenance.',
+          stage_goal: 'Refresh deck surfaces and route unresolved visual blockers to the RedCube owner.',
+          stage_work_done: [
+            'Refreshed deck visual system, slide hierarchy, export package, and review refs.',
+            'Routed unresolved visual-review blockers back to the deliverable owner.',
+          ],
+          changed_stage_surfaces: ['pptx_deck', 'rendered_page_images', 'export_manifest'],
+          outcome: 'visual_refresh_completed_with_review_blocker',
+          remaining_blockers: ['Operator review gate still open.'],
+        },
+      }),
+    ], familyRuntimeEnv(stateRoot));
+
+    const grantLog = runCli(['family-runtime', 'attempt', 'query', grantAttempt], familyRuntimeEnv(stateRoot))
+      .family_runtime_stage_attempt_query.stage_attempt_query.stage_progress_log.user_stage_log;
+    const visualLog = runCli(['family-runtime', 'attempt', 'query', visualAttempt], familyRuntimeEnv(stateRoot))
+      .family_runtime_stage_attempt_query.stage_attempt_query.stage_progress_log.user_stage_log;
+
+    assert.equal(grantLog.semantic_status, 'provided_by_domain');
+    assert.equal(grantLog.stage_name, 'MAG grant revision');
+    assert.deepEqual(grantLog.stage_work_done, [
+      'Revised Specific Aims significance and approach rationale.',
+      'Aligned critique response with fundability blocker refs.',
+    ]);
+    assert.deepEqual(grantLog.changed_stage_surfaces, ['specific_aims', 'strategy_narrative', 'review_response']);
+    assert.deepEqual(grantLog.paper_work_done, grantLog.stage_work_done);
+    assert.deepEqual(grantLog.changed_paper_surfaces, grantLog.changed_stage_surfaces);
+
+    assert.equal(visualLog.semantic_status, 'provided_by_domain');
+    assert.equal(visualLog.stage_name, 'RCA visual refresh');
+    assert.deepEqual(visualLog.stage_work_done, [
+      'Refreshed deck visual system, slide hierarchy, export package, and review refs.',
+      'Routed unresolved visual-review blockers back to the deliverable owner.',
+    ]);
+    assert.deepEqual(visualLog.changed_stage_surfaces, ['pptx_deck', 'rendered_page_images', 'export_manifest']);
+    assert.equal(visualLog.authority_boundary.can_infer_domain_semantics, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

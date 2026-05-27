@@ -133,6 +133,8 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'writeback_receipt_refs',
     'rejected_writes',
     'user_stage_log',
+    'human_stage_log',
+    'human_summary',
     'paper_stage_log',
     'stage_log_summary',
     'route_impact',
@@ -217,15 +219,22 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
   );
   assert.deepEqual(userStageLog.domain_semantic_sources, [
     'typed_closeout_packet.user_stage_log',
-    'typed_closeout_packet.paper_stage_log',
     'typed_closeout_packet.stage_log_summary',
+    'typed_closeout_packet.human_stage_log',
+    'typed_closeout_packet.human_summary',
+    'typed_closeout_packet.paper_stage_log',
     'route_impact.user_stage_log',
-    'route_impact.paper_stage_log',
     'route_impact.stage_log_summary',
+    'route_impact.human_stage_log',
+    'route_impact.human_summary',
+    'route_impact.paper_stage_log',
   ]);
   assert.ok(userStageLog.required_sections.includes('problem_summary'));
+  assert.ok(userStageLog.required_sections.includes('stage_work_done'));
+  assert.ok(userStageLog.required_sections.includes('changed_stage_surfaces'));
   assert.ok(userStageLog.required_sections.includes('paper_work_done'));
   assert.ok(userStageLog.required_sections.includes('token_usage'));
+  assert.deepEqual(userStageLog.legacy_alias_sections, ['paper_work_done', 'changed_paper_surfaces']);
   assert.equal(userStageLog.semantic_missing_policy, 'emit_missing_domain_semantic_summary_without_inventing_domain_work');
   assert.equal(userStageLog.token_policy, 'observed_or_explicit_missing_null_no_zero_fill');
   assert.equal(userStageLog.authority_boundary.can_infer_domain_semantics, false);
@@ -567,6 +576,18 @@ test('standard domain-agent scaffold contract forbids domain-owned generic frame
   assert.ok(scaffold.required_verification.includes('stage_prompt_skill_knowledge_quality_gate_refs_resolve'));
   assert.ok(scaffold.required_verification.includes('generated_surface_handoff_parity'));
   assert.ok(scaffold.required_verification.includes('workspace_file_lifecycle_policy_declared'));
+  assert.ok(scaffold.default_runtime_policy.provider_managed_surfaces.includes('stage_progress_log'));
+  assert.equal(
+    scaffold.default_runtime_policy.required_user_stage_log.missing_semantic_summary_status,
+    'missing_domain_semantic_summary',
+  );
+  assert.ok(scaffold.default_runtime_policy.required_user_stage_log.canonical_domain_fields.includes(
+    'stage_work_done',
+  ));
+  assert.ok(scaffold.default_runtime_policy.required_user_stage_log.accepted_domain_semantic_sources.includes(
+    'human_stage_log',
+  ));
+  assert.equal(scaffold.default_runtime_policy.required_user_stage_log.authority_boundary.opl_can_infer_domain_semantics, false);
   assert.equal(scaffold.workspace_file_lifecycle_policy.surface_kind, 'opl_domain_workspace_file_lifecycle_policy');
   assert.equal(
     scaffold.workspace_file_lifecycle_policy.repo_source_boundaries.runtime_artifacts_live_in_source_repo,
@@ -595,7 +616,10 @@ test('standard domain-agent scaffold contract forbids domain-owned generic frame
     'knowledge_refs:agent/knowledge/*',
     'evaluation:agent/quality_gates/*',
     'selected_executor:codex_cli default binding or explicit non-default executor binding',
-    'runtime_policy:opl_temporal_hosted_autonomous default path',
+    'user_stage_log_requirement:domain provides human-readable stage semantics; OPL projects timing usage refs only',
+    'stage_contract.requires and stage_contract.ensures',
+    'stage_contract.expected_receipt_refs',
+    'independent_gate_policy:execution_review_separation',
   ]);
   assert.equal(scaffold.default_runtime_policy.surface_kind, 'opl_standard_agent_default_runtime_policy');
   assert.equal(scaffold.default_runtime_policy.default_runtime_path, 'opl_temporal_hosted_autonomous');

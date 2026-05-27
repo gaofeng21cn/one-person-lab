@@ -316,16 +316,16 @@ function semanticText(summary: JsonRecord | null, keys: string[]) {
 function domainStageSummary(input: StageProgressLogInput) {
   return firstRecordFrom(input.latestCloseout, [
     'user_stage_log',
-    'paper_stage_log',
     'stage_log_summary',
     'human_stage_log',
     'human_summary',
+    'paper_stage_log',
   ]) ?? firstRecordFrom(input.routeImpact, [
     'user_stage_log',
-    'paper_stage_log',
     'stage_log_summary',
     'human_stage_log',
     'human_summary',
+    'paper_stage_log',
   ]);
 }
 
@@ -335,10 +335,10 @@ function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: num
     ? isRecord(input.latestCloseout)
       && [
         'user_stage_log',
-        'paper_stage_log',
         'stage_log_summary',
         'human_stage_log',
         'human_summary',
+        'paper_stage_log',
       ].some((key) => input.latestCloseout?.[key] === semanticSummary)
         ? 'latest_closeout'
         : 'route_impact'
@@ -350,19 +350,25 @@ function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: num
     ?? `${input.domainId}/${input.stageId}`;
   const problemSummary = semanticText(semanticSummary, ['problem_summary', 'problem', 'issue_summary']);
   const stageGoal = semanticText(semanticSummary, ['stage_goal', 'goal', 'intended_work']);
-  const paperWorkDone = semanticList(semanticSummary, [
+  const stageWorkDone = semanticList(semanticSummary, [
+    'stage_work_done',
+    'deliverable_work_done',
     'paper_work_done',
     'work_done_summary',
     'work_done',
     'actual_work',
     'changed_content_summary',
   ]);
-  const changedSurfaces = semanticList(semanticSummary, [
+  const changedStageSurfaces = semanticList(semanticSummary, [
+    'changed_stage_surfaces',
+    'changed_deliverable_surfaces',
     'changed_paper_surfaces',
     'changed_surfaces',
     'artifact_surfaces',
     'paper_surfaces',
   ]);
+  const paperWorkDone = semanticList(semanticSummary, ['paper_work_done']);
+  const changedPaperSurfaces = semanticList(semanticSummary, ['changed_paper_surfaces', 'paper_surfaces']);
   const remainingBlockers = uniqueStrings([
     ...semanticList(semanticSummary, ['remaining_blockers', 'blockers', 'remaining_issues']),
     ...semanticList(input.routeImpact, ['remaining_blockers', 'typed_blockers']),
@@ -388,8 +394,10 @@ function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: num
     stage_name: stageName,
     problem_summary: problemSummary,
     stage_goal: stageGoal,
-    paper_work_done: paperWorkDone,
-    changed_paper_surfaces: changedSurfaces,
+    stage_work_done: stageWorkDone,
+    changed_stage_surfaces: changedStageSurfaces,
+    paper_work_done: paperWorkDone.length > 0 ? paperWorkDone : stageWorkDone,
+    changed_paper_surfaces: changedPaperSurfaces.length > 0 ? changedPaperSurfaces : changedStageSurfaces,
     outcome,
     remaining_blockers: remainingBlockers,
     duration,
@@ -402,8 +410,8 @@ function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: num
         'stage_name',
         'problem_summary',
         'stage_goal',
-        'paper_work_done',
-        'changed_paper_surfaces',
+        'stage_work_done',
+        'changed_stage_surfaces',
         'outcome',
         'remaining_blockers',
       ],
