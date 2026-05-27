@@ -12,6 +12,8 @@ import {
 import { buildOplAionRuntimeConsumptionContract } from '../../../../src/aionui-acp-shell.ts';
 import { buildRuntimeTraySnapshot } from '../../../../src/runtime-tray-snapshot.ts';
 import { loadFrameworkContracts } from '../../../../src/contracts.ts';
+import { openQueueDb } from '../../../../src/family-runtime-store.ts';
+import { createStageAttempt, runStageAttemptFixtureActivity } from '../../../../src/family-runtime-stage-attempts.ts';
 import { buildManyStageManifest } from './runtime-app-operator-drilldown-summary-fixtures.ts';
 import {
   assertAppReleaseUserPathAttention,
@@ -44,59 +46,25 @@ import {
   assertMemoryArtifactLifecycleEvidence,
 } from './runtime-app-operator-drilldown-summary-memory-lifecycle.ts';
 
-test('runtime app-operator-drilldown defaults to summary-first refs and keeps full refs explicit', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-summary-state-'));
-  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+function seedSummaryStageAttempts(count: number) {
+  const { db } = openQueueDb();
   try {
-    const manyStageManifest = buildManyStageManifest(12);
-    markFunctionalPrivatizationReviewRequired(manyStageManifest);
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      buildManifestCommand(manyStageManifest),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
-
-    for (let index = 0; index < 12; index += 1) {
-      const attempt = runCli([
-        'family-runtime',
-        'attempt',
-        'create',
-        '--domain',
-        'medautoscience',
-        '--stage',
-        `write_${index}`,
-        '--provider',
-        'local_sqlite',
-        '--workspace-locator',
-        JSON.stringify({
+    for (let index = 0; index < count; index += 1) {
+      const attempt = createStageAttempt(db, {
+        domainId: 'medautoscience',
+        stageId: `write_${index}`,
+        providerKind: 'local_sqlite',
+        workspaceLocator: {
           workspace_root: `/tmp/mas-${index}`,
           artifact_root: `/tmp/mas-${index}/artifacts`,
           source_refs: [`source:dataset-${index}`],
-        }),
-        '--task',
-        `task-app-drilldown-${index}`,
-        '--checkpoint-ref',
-        `checkpoint:write-start-${index}`,
-      ], {
-        OPL_STATE_DIR: stateRoot,
-        OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      });
-      const attemptId = attempt.family_runtime_stage_attempt.attempt.stage_attempt_id;
-      runCli([
-        'family-runtime',
-        'attempt',
-        'fixture-run',
-        attemptId,
-        '--closeout-packet',
-        JSON.stringify({
+        },
+        taskId: `task-app-drilldown-${index}`,
+        checkpointRefs: [`checkpoint:write-start-${index}`],
+      }).attempt;
+      runStageAttemptFixtureActivity(db, {
+        stageAttemptId: attempt.stage_attempt_id,
+        closeoutPacket: {
           surface_kind: 'stage_attempt_closeout_packet',
           closeout_refs: [`receipt:write-closeout-${index}`],
           consumed_refs: [`artifact:table-${index}`],
@@ -114,12 +82,37 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
             package_refs: [`package:submission-${index}`],
             export_refs: [`export:current-package-${index}`],
           },
-        }),
-      ], {
-        OPL_STATE_DIR: stateRoot,
-        OPL_CONTRACTS_DIR: fixtureContractsRoot,
+        },
       });
     }
+  } finally {
+    db.close();
+  }
+}
+
+test('runtime app-operator-drilldown defaults to summary-first refs and keeps full refs explicit', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-summary-state-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  try {
+    const manyStageManifest = buildManyStageManifest(12);
+    markFunctionalPrivatizationReviewRequired(manyStageManifest);
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(manyStageManifest),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    process.env.OPL_STATE_DIR = stateRoot;
+    seedSummaryStageAttempts(12);
 
     const summaryOutput = runCli(['runtime', 'app-operator-drilldown'], {
       OPL_STATE_DIR: stateRoot,
@@ -926,6 +919,11 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(fullDrilldown.operator_action_routing_refs.omitted_ref_count, 0);
     assert.equal(fullDrilldown.production_evidence_tail_ledger.omitted_ref_count, 0);
   } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
@@ -945,7 +943,7 @@ test('runtime tray summary can use a non-authoritative manifest projection cache
       slowCommandPath,
       `const fs = require('node:fs');\n`
         + `if (process.env.OPL_TEST_FORCE_MANIFEST_FAILURE === '1') process.exit(42);\n`
-        + `setTimeout(() => process.stdout.write(fs.readFileSync(${JSON.stringify(manifestPath)}, 'utf8')), 11000);\n`,
+        + `setTimeout(() => process.stdout.write(fs.readFileSync(${JSON.stringify(manifestPath)}, 'utf8')), 200);\n`,
       'utf8',
     );
     runCli([
@@ -964,7 +962,7 @@ test('runtime tray summary can use a non-authoritative manifest projection cache
     runCli(['domain', 'manifests'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS: '15000',
+      OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS: '1000',
     });
 
     const previousStateDir = process.env.OPL_STATE_DIR;

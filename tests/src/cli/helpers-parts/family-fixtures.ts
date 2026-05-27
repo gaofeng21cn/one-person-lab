@@ -283,10 +283,7 @@ export function createGitModuleRemoteFixture(
   const remoteRoot = path.join(fixtureRoot, `${moduleName}.git`);
 
   fs.mkdirSync(sourceRoot, { recursive: true });
-  runGitFixtureCommand(sourceRoot, ['init']);
-  runGitFixtureCommand(sourceRoot, ['checkout', '-b', 'main']);
-  runGitFixtureCommand(sourceRoot, ['config', 'user.name', 'OPL Test']);
-  runGitFixtureCommand(sourceRoot, ['config', 'user.email', 'opl@example.test']);
+  runGitFixtureCommand(sourceRoot, ['init', '--initial-branch', 'main']);
 
   fs.writeFileSync(path.join(sourceRoot, 'README.md'), `# ${moduleName}\n`, 'utf8');
   for (const [relativePath, contents] of Object.entries(options.extraFiles ?? {})) {
@@ -300,16 +297,19 @@ export function createGitModuleRemoteFixture(
           : undefined,
     });
   }
-  runGitFixtureCommand(sourceRoot, ['add', 'README.md']);
-  if (options.extraFiles && Object.keys(options.extraFiles).length > 0) {
-    runGitFixtureCommand(sourceRoot, ['add', ...Object.keys(options.extraFiles)]);
-  }
-  runGitFixtureCommand(sourceRoot, ['commit', '-m', 'Initial module snapshot']);
+  runGitFixtureCommand(sourceRoot, ['add', '-A']);
+  runGitFixtureCommand(sourceRoot, [
+    '-c',
+    'user.name=OPL Test',
+    '-c',
+    'user.email=opl@example.test',
+    'commit',
+    '-m',
+    'Initial module snapshot',
+  ]);
 
-  runGitFixtureCommand(fixtureRoot, ['init', '--bare', remoteRoot]);
+  runGitFixtureCommand(fixtureRoot, ['clone', '--bare', sourceRoot, remoteRoot]);
   runGitFixtureCommand(sourceRoot, ['remote', 'add', 'origin', remoteRoot]);
-  runGitFixtureCommand(sourceRoot, ['push', '-u', 'origin', 'main']);
-  runGitFixtureCommand(remoteRoot, ['symbolic-ref', 'HEAD', 'refs/heads/main']);
 
   return {
     fixtureRoot,
@@ -321,7 +321,15 @@ export function createGitModuleRemoteFixture(
     advance(fileName: string, contents: string, message: string) {
       fs.writeFileSync(path.join(sourceRoot, fileName), contents, 'utf8');
       runGitFixtureCommand(sourceRoot, ['add', fileName]);
-      runGitFixtureCommand(sourceRoot, ['commit', '-m', message]);
+      runGitFixtureCommand(sourceRoot, [
+        '-c',
+        'user.name=OPL Test',
+        '-c',
+        'user.email=opl@example.test',
+        'commit',
+        '-m',
+        message,
+      ]);
       runGitFixtureCommand(sourceRoot, ['push', 'origin', 'main']);
       return runGitFixtureCommand(sourceRoot, ['rev-parse', 'HEAD']).stdout.trim();
     },
