@@ -205,6 +205,7 @@ export async function runFamilyRuntime(args: string[]) {
           provider_kind: providerKind,
           status: temporalVisibilityRepair?.repair_status ?? provider.status,
           actions: provider.actions,
+          temporal_worker_repair: 'temporal_worker_repair' in provider ? provider.temporal_worker_repair : null,
           temporal_visibility_repair: temporalVisibilityRepair,
         },
       });

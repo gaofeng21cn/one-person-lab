@@ -49,16 +49,21 @@ test('family-runtime provider repair uses managed Temporal service state without
         OPL_TEMPORAL_ADDRESS: '',
         TEMPORAL_ADDRESS: '',
         OPL_TEMPORAL_NAMESPACE: testEnv.namespace ?? 'default',
+        OPL_TEMPORAL_WORKER_STATUS: 'ready',
       },
     });
     assert.equal(result.status, 0, result.stderr);
     const output = JSON.parse(result.stdout);
     const provider = output.family_runtime_provider.provider;
     const repair = output.family_runtime_provider.temporal_visibility_repair;
+    const workerRepair = output.family_runtime_provider.temporal_worker_repair;
 
     assert.equal(provider.details.address, testEnv.address);
     assert.equal(provider.details.address_source, 'managed_local_service_state');
     assert.equal(output.family_runtime_provider.visibility_readiness.address_source, 'managed_local_service_state');
+    assert.equal(workerRepair.trigger, 'provider_repair');
+    assert.equal(workerRepair.repair_status, 'skipped');
+    assert.equal(workerRepair.authority_boundary.can_write_domain_truth, false);
     assert.equal(repair.repair_status, 'ready');
     assert.equal(repair.visibility_readiness.readiness_status, 'ready');
   } finally {

@@ -15,6 +15,9 @@ import {
   FAMILY_RUNTIME_PROVIDER_KINDS,
   type FamilyRuntimeProviderKind,
 } from './family-runtime-types.ts';
+import {
+  repairTemporalWorkerForProviderRepair,
+} from './family-runtime-provider-worker-repair.ts';
 
 export {
   FAMILY_RUNTIME_PROVIDER_KINDS,
@@ -417,6 +420,9 @@ export async function ensureFamilyRuntimeProviderWithLifecycle(
   if (kind !== 'temporal') {
     return ensureFamilyRuntimeProvider(kind, mode);
   }
+  const workerRepairReceipt = mode === 'repair'
+    ? await repairTemporalWorkerForProviderRepair(paths)
+    : null;
   const inspection = await inspectFamilyRuntimeProviderWithLifecycle(kind, paths);
   const visibilityReadiness = await inspectTemporalStageAttemptVisibilityReadiness(paths);
   return {
@@ -429,6 +435,7 @@ export async function ensureFamilyRuntimeProviderWithLifecycle(
       : [visibilityReadiness.repair_action],
     provider: inspection,
     visibility_readiness: visibilityReadiness,
+    temporal_worker_repair: workerRepairReceipt,
     repair_guidance: [
       ...inspection.ready
         ? []

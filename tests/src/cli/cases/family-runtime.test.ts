@@ -445,13 +445,18 @@ test('family-runtime temporal provider repair installs visibility Search Attribu
         OPL_STATE_DIR: stateRoot,
         OPL_TEMPORAL_ADDRESS: testEnv.address,
         OPL_TEMPORAL_NAMESPACE: testEnv.namespace ?? 'default',
+        OPL_TEMPORAL_WORKER_STATUS: 'ready',
       },
     });
     assert.equal(result.status, 0, result.stderr);
     const output = JSON.parse(result.stdout);
     const repair = output.family_runtime_provider.temporal_visibility_repair;
+    const workerRepair = output.family_runtime_provider.temporal_worker_repair;
     assert.equal(repair.surface_kind, 'temporal_visibility_repair_receipt');
     assert.equal(repair.repair_status, 'ready');
+    assert.equal(workerRepair.trigger, 'provider_repair');
+    assert.equal(workerRepair.repair_status, 'skipped');
+    assert.equal(workerRepair.authority_boundary.can_write_domain_truth, false);
     assert.deepEqual(repair.installed_search_attributes, [
       'OplStageAttemptId',
       'OplDomainId',

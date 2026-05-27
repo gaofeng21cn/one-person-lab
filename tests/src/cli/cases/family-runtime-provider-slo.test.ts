@@ -8,6 +8,9 @@ import {
   maybeRepairTemporalWorkerForProviderSlo,
 } from '../../../../src/family-runtime-provider-slo-executor.ts';
 import {
+  repairTemporalWorkerForProviderRepair,
+} from '../../../../src/family-runtime-provider-worker-repair.ts';
+import {
   buildTemporalWorkerLifecycleContract,
 } from '../../../../src/family-runtime-temporal-provider.ts';
 import {
@@ -21,7 +24,7 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
   };
 }
 
-function temporalWorkerStatus(status: 'worker_not_ready' | 'ready') {
+function temporalWorkerStatus(status: 'worker_not_ready' | 'worker_source_stale' | 'ready') {
   const visibilityReadiness = buildTemporalStageAttemptVisibilityReadiness({
     namespace: 'default',
     observedCustomAttributes: {
@@ -55,14 +58,14 @@ function temporalWorkerStatus(status: 'worker_not_ready' | 'ready') {
     unreachable_reason: null,
     managed_worker_pid: status === 'ready' ? 12345 : null,
     managed_worker_state_path: '/tmp/temporal-worker.json',
-    managed_worker_source_version: status === 'ready' ? 'worker-runtime:test' : null,
+    managed_worker_source_version: status === 'worker_not_ready' ? null : status === 'worker_source_stale' ? 'worker-runtime:old' : 'worker-runtime:test',
     expected_worker_source_version: 'worker-runtime:test',
-    managed_worker_source_current: status === 'ready' ? true : null,
+    managed_worker_source_current: status === 'worker_source_stale' ? false : status === 'ready' ? true : null,
     managed_worker_workflow_bundle_path: status === 'ready' ? '/tmp/temporal-workflow-bundle/stage-attempt.js' : null,
     managed_worker_workflow_bundle_version: status === 'ready' ? 'workflow-bundle:sha256:test' : null,
     managed_worker_workflow_bundle_source_version: status === 'ready' ? 'worker-runtime:test' : null,
     managed_worker_workflow_bundle_source_current: status === 'ready' ? true : null,
-    stale_worker_pid: null,
+    stale_worker_pid: status === 'worker_source_stale' ? 12344 : null,
     temporal_service_lifecycle: {
       surface_kind: 'temporal_service_lifecycle_status',
       provider_kind: 'temporal',
@@ -71,17 +74,27 @@ function temporalWorkerStatus(status: 'worker_not_ready' | 'ready') {
       server_reachable: true,
     },
     visibility_readiness: visibilityReadiness,
-    blockers: status === 'ready' ? [] : ['temporal_worker_not_ready'],
+    blockers: status === 'ready'
+      ? []
+      : status === 'worker_source_stale'
+      ? ['temporal_worker_source_stale']
+      : ['temporal_worker_not_ready'],
     repair_action: {
       surface_kind: 'temporal_worker_repair_action',
       provider_kind: 'temporal',
-      action_id: status === 'ready' ? 'none' : 'start_temporal_worker',
+      action_id: status === 'ready'
+        ? 'none'
+        : status === 'worker_source_stale'
+        ? 'restart_temporal_worker'
+        : 'start_temporal_worker',
       required_env: ['OPL_TEMPORAL_ADDRESS or managed local service state'],
       current_address: '127.0.0.1:7233',
       namespace: 'default',
       task_queue: 'opl-stage-attempts',
       next_command: status === 'ready'
         ? 'opl family-runtime residency proof --provider temporal --production'
+        : status === 'worker_source_stale'
+        ? 'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal'
         : 'opl family-runtime worker start --provider temporal',
       repair_commands: {
         start_local_temporal_service:
@@ -219,6 +232,64 @@ test('family-runtime provider-slo auto-starts OPL managed Temporal worker before
     assert.equal(receipt.before.lifecycle_status, 'worker_not_ready');
     assert.ok(receipt.after);
     assert.equal(receipt.after.lifecycle_status, 'ready');
+    assert.equal(receipt.authority_boundary.can_write_domain_truth, false);
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime provider repair restarts stale OPL managed Temporal worker', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-repair-worker-restart-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    let stopCount = 0;
+    let startCount = 0;
+    const receipt = await repairTemporalWorkerForProviderRepair(familyRuntimePaths(), {
+      inspectTemporalWorkerLifecycle: async () =>
+        startCount === 0 ? temporalWorkerStatus('worker_source_stale') : temporalWorkerStatus('ready'),
+      stopTemporalWorkerLifecycle: async () => {
+        stopCount += 1;
+        return {
+          surface_kind: 'temporal_worker_lifecycle_stop',
+          provider_kind: 'temporal',
+          stop_status: 'stopped',
+          stopped_pid: 12344,
+          stop_actions: [],
+          orphan_stopped_pids: [],
+          orphan_stop_incomplete_pids: [],
+          orphan_stop_actions: [],
+          before: temporalWorkerStatus('worker_source_stale'),
+          status: temporalWorkerStatus('worker_not_ready'),
+        };
+      },
+      startTemporalWorkerLifecycle: async () => {
+        startCount += 1;
+        return {
+          surface_kind: 'temporal_worker_lifecycle_start',
+          provider_kind: 'temporal',
+          start_status: 'started',
+          status: temporalWorkerStatus('ready'),
+        };
+      },
+    });
+
+    assert.equal(stopCount, 1);
+    assert.equal(startCount, 1);
+    assert.equal(receipt.trigger, 'provider_repair');
+    assert.equal(receipt.repair_status, 'executed');
+    assert.equal(receipt.repair_action_id, 'restart_temporal_worker');
+    assert.equal(receipt.command, 'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal');
+    assert.equal(receipt.before.lifecycle_status, 'worker_source_stale');
+    assert.ok(receipt.after);
+    assert.equal(receipt.after.lifecycle_status, 'ready');
+    assert.equal(receipt.stop?.stop_status, 'stopped');
+    assert.equal(receipt.start?.start_status, 'started');
     assert.equal(receipt.authority_boundary.can_write_domain_truth, false);
   } finally {
     if (previousStateDir === undefined) {
