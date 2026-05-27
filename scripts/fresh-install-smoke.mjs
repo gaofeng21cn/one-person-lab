@@ -127,7 +127,11 @@ function assertInitializeState(output, expected) {
   assert.equal(initialize.setup_flow.phase, expected.phase);
   assert.deepEqual(initialize.setup_flow.blocking_items.sort(), [...expected.blocking].sort());
   if (expected.maintenance) {
-    assert.deepEqual(initialize.setup_flow.maintenance_items.sort(), [...expected.maintenance].sort());
+    const expectedMaintenance = [...expected.maintenance];
+    if (initialize.gui_shell?.sibling_checkout_found === false) {
+      expectedMaintenance.push('gui_shell');
+    }
+    assert.deepEqual(initialize.setup_flow.maintenance_items.sort(), expectedMaintenance.sort());
   }
   if (expected.readyToLaunch !== undefined) {
     assert.equal(initialize.setup_flow.ready_to_launch, expected.readyToLaunch);
