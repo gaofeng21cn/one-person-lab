@@ -128,6 +128,48 @@ function ledgerPath() {
   return resolveOplStatePaths().external_evidence_ledger_file;
 }
 
+function waitForLock() {
+  const view = new Int32Array(new SharedArrayBuffer(4));
+  Atomics.wait(view, 0, 0, 25);
+}
+
+function withLedgerLock<T>(operation: () => T): T {
+  const file = ledgerPath();
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const lockFile = `${file}.lock`;
+  const startedAt = Date.now();
+  let lockFd: number | null = null;
+  while (lockFd === null) {
+    try {
+      lockFd = fs.openSync(lockFile, 'wx');
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== 'EEXIST') {
+        throw error;
+      }
+      if (Date.now() - startedAt > 10_000) {
+        throw new FrameworkContractError('runtime_state_lock_timeout', 'Timed out waiting for external evidence ledger lock.', {
+          lock_file: lockFile,
+        });
+      }
+      waitForLock();
+    }
+  }
+  try {
+    fs.writeFileSync(lockFd, `${process.pid}\n`);
+    return operation();
+  } finally {
+    fs.closeSync(lockFd);
+    try {
+      fs.unlinkSync(lockFile);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw error;
+      }
+    }
+  }
+}
+
 function readLedger(): ExternalEvidenceLedger {
   const file = ledgerPath();
   if (!fs.existsSync(file)) {
@@ -171,7 +213,9 @@ function readLedger(): ExternalEvidenceLedger {
 function writeLedger(ledger: ExternalEvidenceLedger) {
   const file = ledgerPath();
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, `${JSON.stringify(ledger, null, 2)}\n`);
+  const tempFile = `${file}.${process.pid}.${Date.now()}.tmp`;
+  fs.writeFileSync(tempFile, `${JSON.stringify(ledger, null, 2)}\n`);
+  fs.renameSync(tempFile, file);
 }
 
 function receiptRef(input: ExternalEvidenceApplyInput) {
@@ -282,72 +326,74 @@ export function listExternalEvidenceReceipts(filters: {
 }
 
 export function runExternalEvidenceApply(input: ExternalEvidenceApplyInput) {
-  const ledger = readLedger();
-  const receipt = normalizedReceipt(input);
-  const existingIndex = ledger.receipts.findIndex((entry) =>
-    entry.receipt_ref === receipt.receipt_ref
-    && entry.domain_id === receipt.domain_id
-    && entry.request_id === receipt.request_id
-  );
-  if (input.mode === 'verify') {
-    if (existingIndex < 0) {
+  return withLedgerLock(() => {
+    const ledger = readLedger();
+    const receipt = normalizedReceipt(input);
+    const existingIndex = ledger.receipts.findIndex((entry) =>
+      entry.receipt_ref === receipt.receipt_ref
+      && entry.domain_id === receipt.domain_id
+      && entry.request_id === receipt.request_id
+    );
+    if (input.mode === 'verify') {
+      if (existingIndex < 0) {
+        return {
+          version: 'g2',
+          external_evidence_apply: {
+            surface_kind: 'opl_external_evidence_apply',
+            mode: input.mode,
+            status: 'blocked',
+            writes_performed: false,
+            receipt_ref: receipt.receipt_ref,
+            verified_receipt_count: 0,
+            blocker: {
+              blocker_kind: 'external_evidence_receipt_gate',
+              blocker_id: 'external_evidence_receipt_not_found',
+              required_owner: 'opl_framework_or_operator',
+            },
+            authority_boundary: refsOnlyAuthorityBoundary(),
+          },
+        };
+      }
+      const verified = {
+        ...ledger.receipts[existingIndex],
+        receipt_status: 'verified' as const,
+      };
+      ledger.receipts[existingIndex] = verified;
+      writeLedger(ledger);
       return {
         version: 'g2',
         external_evidence_apply: {
           surface_kind: 'opl_external_evidence_apply',
           mode: input.mode,
-          status: 'blocked',
-          writes_performed: false,
-          receipt_ref: receipt.receipt_ref,
-          verified_receipt_count: 0,
-          blocker: {
-            blocker_kind: 'external_evidence_receipt_gate',
-            blocker_id: 'external_evidence_receipt_not_found',
-            required_owner: 'opl_framework_or_operator',
-          },
+          status: 'verified',
+          writes_performed: true,
+          receipt_ref: verified.receipt_ref,
+          verified_receipt_count: 1,
+          receipt: verified,
           authority_boundary: refsOnlyAuthorityBoundary(),
         },
       };
     }
-    const verified = {
-      ...ledger.receipts[existingIndex],
-      receipt_status: 'verified' as const,
-    };
-    ledger.receipts[existingIndex] = verified;
+    if (existingIndex >= 0) {
+      ledger.receipts[existingIndex] = receipt;
+    } else {
+      ledger.receipts.push(receipt);
+    }
     writeLedger(ledger);
     return {
       version: 'g2',
       external_evidence_apply: {
         surface_kind: 'opl_external_evidence_apply',
         mode: input.mode,
-        status: 'verified',
+        status: 'recorded',
         writes_performed: true,
-        receipt_ref: verified.receipt_ref,
-        verified_receipt_count: 1,
-        receipt: verified,
+        receipt_ref: receipt.receipt_ref,
+        recorded_receipt_count: 1,
+        receipt,
         authority_boundary: refsOnlyAuthorityBoundary(),
       },
     };
-  }
-  if (existingIndex >= 0) {
-    ledger.receipts[existingIndex] = receipt;
-  } else {
-    ledger.receipts.push(receipt);
-  }
-  writeLedger(ledger);
-  return {
-    version: 'g2',
-    external_evidence_apply: {
-      surface_kind: 'opl_external_evidence_apply',
-      mode: input.mode,
-      status: 'recorded',
-      writes_performed: true,
-      receipt_ref: receipt.receipt_ref,
-      recorded_receipt_count: 1,
-      receipt,
-      authority_boundary: refsOnlyAuthorityBoundary(),
-    },
-  };
+  });
 }
 
 export function parseExternalEvidenceApplyArgs(args: string[]): ExternalEvidenceApplyInput {
