@@ -20,6 +20,25 @@ import {
 } from '../../../../src/family-runtime-temporal-provider.ts';
 import { currentWorkerSourceVersion } from '../../../../src/family-runtime-temporal-provider-parts/worker-state.ts';
 
+async function createFakeTemporalServer() {
+  const sockets = new Set<net.Socket>();
+  const server = net.createServer((socket) => {
+    sockets.add(socket);
+    socket.once('close', () => sockets.delete(socket));
+    socket.end();
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  return {
+    address: `127.0.0.1:${(server.address() as net.AddressInfo).port}`,
+    async close() {
+      for (const socket of sockets) {
+        socket.destroy();
+      }
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    },
+  };
+}
+
 test('Temporal worker source version ignores documentation-only git HEAD drift', () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-worker-runtime-source-version-'));
   const srcRoot = path.join(repoRoot, 'src');
@@ -64,9 +83,8 @@ test('Temporal worker source version ignores documentation-only git HEAD drift',
 test('Temporal worker lifecycle re-query proves resident state and stop transition', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-requery-'));
   const workerRoot = path.join(stateRoot, 'family-runtime');
-  const server = net.createServer((socket) => socket.end());
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const address = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
+  const server = await createFakeTemporalServer();
+  const address = server.address;
   const child = spawn(process.execPath, [
     '-e',
     'setTimeout(() => {}, 30_000);',
@@ -138,7 +156,7 @@ test('Temporal worker lifecycle re-query proves resident state and stop transiti
     } else {
       process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = previousSourceVersion;
     }
-    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await server.close();
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
@@ -203,9 +221,8 @@ test('Temporal managed worker uses a prebuilt workflow bundle with source-versio
 test('Temporal worker lifecycle rejects stale managed worker source version', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-stale-source-'));
   const workerRoot = path.join(stateRoot, 'family-runtime');
-  const server = net.createServer((socket) => socket.end());
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const address = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
+  const server = await createFakeTemporalServer();
+  const address = server.address;
   const child = spawn(process.execPath, [
     '-e',
     'setTimeout(() => {}, 30_000);',
@@ -285,7 +302,7 @@ test('Temporal worker lifecycle rejects stale managed worker source version', as
     } catch {
       // The lifecycle under test may already have removed the fixture process.
     }
-    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await server.close();
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
@@ -293,9 +310,8 @@ test('Temporal worker lifecycle rejects stale managed worker source version', as
 test('Temporal worker stop force-cleans detached workers that ignore SIGTERM', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-force-stop-'));
   const workerRoot = path.join(stateRoot, 'family-runtime');
-  const server = net.createServer((socket) => socket.end());
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const address = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
+  const server = await createFakeTemporalServer();
+  const address = server.address;
   const child = spawn(process.execPath, [
     '-e',
     'process.on("SIGTERM", () => {}); console.log("ready"); setInterval(() => {}, 30_000);',
@@ -370,7 +386,7 @@ test('Temporal worker stop force-cleans detached workers that ignore SIGTERM', a
     } catch {
       // The lifecycle under test should have removed the fixture process.
     }
-    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await server.close();
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
