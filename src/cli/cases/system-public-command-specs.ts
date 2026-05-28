@@ -41,6 +41,7 @@ function resolvePackagedFullSkillsRoot() {
   return candidates.find((candidate) => (
     Boolean(candidate)
     && fs.existsSync(path.join(candidate!, 'officecli', 'SKILL.md'))
+    && fs.existsSync(path.join(candidate!, 'superpowers', 'skills', 'using-superpowers', 'SKILL.md'))
   )) ?? null;
 }
 
@@ -55,7 +56,7 @@ function syncPackagedFullCompanionSkillsIfAvailable() {
   try {
     return syncOplCompanionSkills(undefined, {
       mode: 'managed',
-      superpowersProfile: 'keep',
+      superpowersProfile: 'full',
     });
   } finally {
     if (previousDisableRemoteInstall === undefined) {

@@ -219,6 +219,18 @@ function resolveSuperpowersSourceCandidate(home: string): OplCompanionSkillSourc
   return { report_path: repoDir, link_path: path.join(repoDir, 'skills') };
 }
 
+function resolvePackagedSuperpowersSourceCandidate(): OplCompanionSkillSourceCandidate | null {
+  const packagedSkillsRoot = resolvePackagedSkillsRoot();
+  if (!packagedSkillsRoot) {
+    return null;
+  }
+  const packagedBundleRoot = path.join(packagedSkillsRoot, 'superpowers');
+  if (!isSuperpowersBundleReady(packagedBundleRoot)) {
+    return null;
+  }
+  return { report_path: packagedBundleRoot, link_path: path.join(packagedBundleRoot, 'skills') };
+}
+
 function ensureSuperpowersSource(home: string) {
   const repoDir = resolveSuperpowersRepoDir(home);
   const existing = resolveSuperpowersSourceCandidate(home);
@@ -474,7 +486,9 @@ function buildObservedCompanionItem(
 ): OplCompanionSkillSyncItem {
   const targetPath = resolveRecommendedSkillTarget(home, skill, superpowersProfile);
   const source = skill.source === 'superpowers'
-    ? (superpowersProfile === 'lite' ? resolveSuperpowersLiteSource(home) : resolveSuperpowersSourceCandidate(home))
+    ? (superpowersProfile === 'lite'
+      ? resolveSuperpowersLiteSource(home)
+      : (resolvePackagedSuperpowersSourceCandidate() ?? resolveSuperpowersSourceCandidate(home)))
     : pickFirstExistingSkillSource(skill.expected_paths);
 
   return {
@@ -601,7 +615,10 @@ export function syncOplCompanionSkills(
         continue;
       }
 
-      const ensured = ensureSuperpowersSource(home);
+      const packagedSource = resolvePackagedSuperpowersSourceCandidate();
+      const ensured = packagedSource
+        ? { source: packagedSource, action: 'symlink' as const, note: null }
+        : ensureSuperpowersSource(home);
       if (!ensured.source) {
         items.push({
           skill_id: skill.skill_id,
