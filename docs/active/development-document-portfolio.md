@@ -107,6 +107,65 @@ OPL 开发文档现在不能按“每份旧计划都继续完整执行”阅读�
 
 ## Coverage Ledger
 
+Date: `2026-05-28 11:13 CST`
+Tranche: `opl-developer-mode-fixture-currentness-foldback`
+State: `tranche_verified`
+
+本轮覆盖 OPL main 已落地的 Developer Mode fixture currentness 收口，并把 `dbe5cde6 fix(agent-lab): separate developer mode fixture closeout` 的 active truth / status / contract / read-model / test 变化折回本 OPL family coverage ledger。目标是确认 repo-contract fixture drill 已明确暴露为非 live GitHub repo、非 external owner acceptance、非 owner receipt closeout；本轮不改 source/contracts/tests，不新增 readiness claim，不关闭 OPL series 全局 `/goal`。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`, `TASTE.md`, this OPL family ledger, `docs/active/current-state-vs-ideal-gap.md`, `docs/status.md`, and OPL Doc Governance doctor output from this worktree.
+- Commit diff from `d8c96581..dbe5cde6`, covering `contracts/opl-framework/agent-lab-contract.json`, Developer Mode read-model source, App/operator drilldown summary source, and focused Agent Lab / framework readiness / App operator tests.
+- Live read-model probes: `./bin/opl runtime app-operator-drilldown --detail full --json` and `./bin/opl framework readiness --family-defaults --json`.
+
+Fresh semantic result:
+
+- Current active truth now reads Developer Mode live route as `direct_fix_ledger_visible_fixture_currentness_exposed`: direct-fix verified ledger refs are visible, while external non-owner fork/PR owner acceptance remains open.
+- The fork-PR sample is explicitly a repo-contract fixture, with `repo_contract_fixture_not_live_repo` exposed through Agent Lab summary, App/operator full drilldown, App/operator summary and framework readiness attention. The fixture drill cannot be counted as live GitHub fork/PR owner acceptance or external owner closeout.
+- Fresh App/operator full drilldown read `repo_contract_fixture_not_live_repo_count=1`, `fixture_drill_owner_acceptance_open_count=1`, `verified_fork_pr_ledger_receipt_ref_count=0`, and `missing_live_ledger_route_kinds=["fork-PR"]`; it also retained `forbidden_owner_receipt_write_count=0` and refs-only authority boundaries.
+- Fresh framework readiness read `framework_control_plane_available_with_operator_attention`; nested Developer Mode evidence read `repo_contract_fixture_not_live_repo_count=1`, `fixture_drill_owner_acceptance_open_count=1`, `verified_fork_pr_ledger_receipt_ref_count=0`, `missing_live_ledger_route_kinds=["fork-PR"]`, and `forbidden_owner_receipt_write_count=0`. This keeps fixture currentness visible as operator attention, not as owner acceptance closeout.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | Current active truth row and next-agent prompt field for Developer Mode live route; `docs/status.md` Developer Mode section; commit-level role read of Agent Lab contract/source/App drilldown/tests; live App/operator full drilldown summary for fixture currentness. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. This is a foldback of an already-landed currentness guard and read-model exposure.
+
+Unreviewed docs:
+
+- `one-person-lab`: no current exact uncovered README/docs path is reopened by this foldback; OPL remains covered by exact inventory unless future doc/source/read-model changes reopen a section.
+- `med-autoscience` and `med-autogrant`: previous full/exact reconcile coverage remains as recorded unless later changes reopen their docs.
+- `redcube-ai`: docs coverage is not modified here; current main remains dirty with native-PPT implementation/test/doc changes.
+- `opl-meta-agent`: previous repo-local no-drift coverage remains as recorded unless docs change.
+- `one-person-lab-app`: full App docs coverage remains open and should wait until release / GUI dirty lanes are safe or explicitly assigned.
+
+Remaining stale / retire candidates:
+
+- Any future Developer Mode wording that presents repo-contract fixture repos, fixture drill coverage, static fork-PR examples, direct-fix-only verified ledger receipts, App/operator projection, or framework readiness attention as live external GitHub fork/PR owner acceptance is stale pollution.
+- Developer Mode global closeout still requires a verified live external non-owner fork/PR owner acceptance ledger receipt. Fixture currentness exposure only prevents overclaiming; it does not close owner acceptance, App release readiness, domain ready or production ready.
+- RCA/App dirty lanes and MAS retained dirty/conflicting lanes remain outside this tranche.
+
+Worktree / branch cleanup:
+
+- No external stale worktree/branch qualified for deletion before this tranche. OPL main was clean/aligned; MAS retained one dirty/recent materializer lane and one conflicting owner-route lane; RCA/App roots remained dirty/external; MAG/OMA were clean/aligned.
+- This tranche's OPL worktree should be removed after fast-forward absorb.
+
+Verification before absorb:
+
+- `git diff --check`; strict README/docs/contracts/src/tests conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings; focused App/operator and framework readiness read-model probes for `repo_contract_fixture_not_live_repo_count=1`.
+- Focused fast test lane over Agent Lab complete, Developer Mode App/operator drilldown, and framework readiness attention semantics passed (`238` tests, `0` failures).
+
+Next tranche write scope:
+
+- Continue OPL series whole-docs governance on a clean repo or fold back already-landed currentness changes that affect the coverage ledger.
+- Keep MAS retained dirty/conflicting lanes, RCA native-PPT lane and App release/GUI lanes out of automatic docs writes until safe or explicitly assigned.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
+
 Date: `2026-05-28 10:51 CST`
 Tranche: `opl-superpowers-history-body-coverage`
 State: `tranche_verified`
