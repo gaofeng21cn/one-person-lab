@@ -21,8 +21,8 @@ Date: `2026-05-29T01:30:46+0800`
 
 | Repo | Main state after fetch / verification | Worktree / branch state | Process / PR notes |
 | --- | --- | --- | --- |
-| `one-person-lab` | `main` clean and aligned with `origin/main` at `230fe538` before this ledger write. | `codex/agent-lab-risk-tier-promotion` remains in `.worktrees/agent-lab-risk-tier-promotion`, dirty and recently written; retained. | `gh pr list` returned `[]`. Remote `fix/opl-temporal-worker-stale-repair-20260528` is merged into `origin/main` by ancestry but is non-codex/non-automation named; remote deletion deferred. |
-| `med-autoscience` | `main` clean and aligned with `origin/main` at `b6e7c18c`. | `codex/mas-doc-governance-inventory-20260529b` worktree exists at main HEAD but is dirty: `docs/docs_portfolio_consolidation.md` modified and `docs/history/docs-portfolio-coverage-ledger/2026-05-29-part-13.md` untracked; recent writes observed; retained. | `gh pr list --head codex/mas-doc-governance-inventory-20260529b` returned `[]`. Dirty/recent worktree is not safe to delete. |
+| `one-person-lab` | Final main is clean and ahead `origin/main` by 2 at `cc6f00bc`. One ahead commit is external `db60d956` (`feat: require verified Agent Lab risk-tier receipts`); the second is this ledger commit. | `codex/agent-lab-risk-tier-promotion` is now clean, recently written, `HEAD` is an ancestor of main, and 1 behind main; retained due recent external lane activity. `codex/dm003-runner-liveness` is clean, recently written, `HEAD` is an ancestor of main, and 2 behind main; retained due recent external lane activity. | `gh pr list` returned `[]`. Remote `fix/opl-temporal-worker-stale-repair-20260528` is merged into `origin/main` by ancestry but is non-codex/non-automation named; remote deletion deferred. |
+| `med-autoscience` | Final main is clean and aligned with `origin/main` at `a6b4c365` after an external coverage-ledger commit landed during this run. | Intermediate `codex/mas-doc-governance-inventory-20260529b` appeared dirty/recent and was retained while present; by final status it had disappeared externally and only the clean main worktree remained. | `gh pr list --head codex/mas-doc-governance-inventory-20260529b` returned `[]` when the worktree existed. No MAS cleanup action was taken after the external state change. |
 | `med-autogrant` | `main` clean and ahead `origin/main` by 1 after this tranche at `d0d00fe`. | Clean merged stale local `codex/mag-doc-governance-20260529` worktree/branch was removed because HEAD equaled `main`; new temporary `codex/mag-doc-governance-automation-20260529b` worktree was fast-forwarded into main and then removed. | `gh pr list` returned `[]`. Remote `feature/ai-narration-contracts` remains old, unmerged, and non-codex; retained. |
 | `redcube-ai` | `main` remains dirty and ahead `origin/main` by 1 at `fa09f1d`; retained untouched. | No extra worktree, but main checkout has active native-PPT code/docs/test changes. | `gh pr list` returned `[]`. Remote `codex/developer-mode-fork-pr-live-closeout-20260528` remains ancestry-unmerged / squash-ambiguous while RCA main is dirty; retained. |
 | `opl-meta-agent` | `main` clean and aligned with `origin/main` at `096337e`. | No extra worktree. | `gh pr list` returned `[]`; no body docs edited this tranche. |
@@ -39,8 +39,8 @@ Deleted local lanes:
 
 Retained with reasons:
 
-- `one-person-lab/.worktrees/agent-lab-risk-tier-promotion`: dirty and recently written.
-- `med-autoscience/.worktrees/doc-governance-inventory-20260529b`: dirty and recently written, with one modified docs ledger and one untracked history ledger.
+- `one-person-lab/.worktrees/agent-lab-risk-tier-promotion`: clean and already contained in main by ancestry, but recently written by an external lane during this run.
+- `one-person-lab/.worktrees/dm003-runner-liveness`: clean and already contained in main by ancestry, but recently written by an external lane during this run.
 - `one-person-lab-app/.worktrees/codex/full-first-run-stable-gate-20260525`: dirty, remote-backed and unmerged.
 - `redcube-ai` dirty main lane: active native-PPT implementation/docs/test changes.
 - `one-person-lab` remote `fix/opl-temporal-worker-stale-repair-20260528`: merged but branch name is not automation-owned.
@@ -51,8 +51,8 @@ Retained with reasons:
 
 | Repo | Reviewed docs / sections | Live truth checked |
 | --- | --- | --- |
-| `one-person-lab` | Root guidance, `TASTE.md`, OPL Doc Governance skill, previous 2026-05-29 ledger, process-plans index, final repo state. | `get_goal`, automation memory, `git fetch`, `git status`, `git worktree list`, branch ancestry, recent writes, `gh pr list`, process scan. |
-| `med-autoscience` | Branch/worktree lifecycle state only. | git status/worktree/log/ahead-behind, dirty files, recent writes, PR head scan. |
+| `one-person-lab` | Root guidance, `TASTE.md`, OPL Doc Governance skill, previous 2026-05-29 ledger, process-plans index, final repo state. | `get_goal`, automation memory, `git fetch`, `git status`, `git worktree list`, branch ancestry, recent writes, final external commit inspection, `gh pr list`, process scan. |
+| `med-autoscience` | Branch/worktree lifecycle state only, including intermediate dirty worktree and final clean main state. | git status/worktree/log/ahead-behind, dirty files while present, recent writes, PR head scan. |
 | `med-autogrant` | Full paragraph read of four 2026-04-08 P3/P4 history specs: P3.B revision/re-review, P3.C rollback/presubmission, P4.A verification gate, P4.B checkpoint surface; support read of specs lifecycle map, specs index, history specs index, core docs, active plan, ideal-state reference. | `current-program.json`, production acceptance contract, repository hygiene / standard-pack / production-acceptance tests, doctor preflight, git state, conflict-marker and diff checks. |
 | `redcube-ai` | Branch/worktree lifecycle state only; dirty native-PPT lane retained. | git status/worktree/ref checks, recent writes, PR scan. |
 | `opl-meta-agent` | Branch/worktree lifecycle state only; no body docs edited. | git status/worktree/ref checks, PR scan. |
@@ -84,7 +84,7 @@ The failed intermediate conflict-marker command was caused by using zsh's read-o
 This tranche did not complete whole-portfolio coverage.
 
 - `one-person-lab`: most `README*` and `docs/**/*.md` outside branch/governance ledgers remain unreviewed in this tranche.
-- `med-autoscience`: content-level README/docs audit remains; active dirty docs-governance worktree must be resolved or assigned before deletion or absorption.
+- `med-autoscience`: content-level README/docs audit remains; the intermediate dirty docs-governance worktree disappeared externally before final status, so next run should re-inventory MAS from current main before assuming coverage state.
 - `med-autogrant`: P3/P4 rollback/verification history body batch is covered. Remaining higher-risk history body batches include 2026-04-08 P5 / R-series activation packages, 2026-04-10 post-R5A fail-closed / hosted-bundle records, 2026-04-11 Hermes/reset/local-runtime records and 2026-04-12 hosted / OPL handoff records unless already covered by prior date/topic tranche entries.
 - `redcube-ai`: content-level README/docs audit remains and should coordinate with the active native-PPT dirty lane.
 - `opl-meta-agent`: no new OMA body-doc tranche was performed this run; prior OMA coverage stands.
@@ -92,7 +92,8 @@ This tranche did not complete whole-portfolio coverage.
 
 ## Remaining stale / retire candidates
 
-- MAS `codex/mas-doc-governance-inventory-20260529b` dirty worktree needs owner follow-up: decide whether to verify/absorb docs ledger or abandon with explicit owner action.
+- OPL clean but recently active worktrees `codex/agent-lab-risk-tier-promotion` and `codex/dm003-runner-liveness` should be rechecked next run; delete only if no recent writes/processes remain and branch heads are still ancestors of main.
+- MAS should be re-inventoried from final main `a6b4c365`; an intermediate dirty docs-governance worktree was externally resolved during this run.
 - App `codex/full-first-run-stable-gate-20260525` remains dirty, remote-backed and unmerged.
 - RCA dirty native-PPT lane remains active; remote `codex/developer-mode-fork-pr-live-closeout-20260528` should not be deleted until a clean RCA context proves supersession.
 - OPL `codex/agent-lab-risk-tier-promotion` remains dirty and recently written.
@@ -101,7 +102,8 @@ This tranche did not complete whole-portfolio coverage.
 
 ## Next write scope
 
-1. Resolve or explicitly route the MAS dirty docs-governance worktree before further MAS cleanup.
-2. Continue MAG history body coverage only if needed by global coverage, prioritizing 2026-04-10 / 2026-04-11 / 2026-04-12 hosted-provider-risk batches.
-3. Prefer OPL / MAS / RCA safe document clusters next; delay App body docs while the release lane remains dirty/unmerged.
-4. Keep each verified tranche separate from global completion; the global `/goal` remains open until all 6 repos' `README*` and `docs/**/*.md` are section-reviewed and no unreviewed docs or unresolved stale candidates remain.
+1. Recheck the two clean/recent OPL worktrees and remove them only after their recent-write/process window clears and branch ancestry still proves they are absorbed.
+2. Re-inventory MAS from final main `a6b4c365` before deciding whether the externally landed docs coverage closes any MAS section-level gap.
+3. Continue MAG history body coverage only if needed by global coverage, prioritizing 2026-04-10 / 2026-04-11 / 2026-04-12 hosted-provider-risk batches.
+4. Prefer OPL / MAS / RCA safe document clusters next; delay App body docs while the release lane remains dirty/unmerged.
+5. Keep each verified tranche separate from global completion; the global `/goal` remains open until all 6 repos' `README*` and `docs/**/*.md` are section-reviewed and no unreviewed docs or unresolved stale candidates remain.

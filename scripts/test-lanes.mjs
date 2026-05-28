@@ -44,6 +44,7 @@ const fastTestFiles = [
   'tests/src/family-runtime-lifecycle-index.test.ts',
   'tests/src/family-runtime-sqlite.test.ts',
   'tests/src/agent-lab.test.ts',
+  'tests/src/agent-lab-developer-mode-contract.test.ts',
   'tests/src/agent-lab-executor-aperture.test.ts',
   'tests/src/agent-lab-efficiency-nonregression.test.ts',
   'tests/src/agent-lab-token-cost-estimate.test.ts',
