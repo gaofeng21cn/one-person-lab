@@ -1,7 +1,5 @@
 # Family Domain Memory Governance
 
-Status: `active reference`
-Date: `2026-05-28`
 Owner: `One Person Lab`
 Purpose: 给 OPL / MAS / MAG / RCA 的领域经验记忆提供总入口，明确哪些内容应先做自然语言 memory，哪些必须保持结构化 contract。
 State: `active_support`
@@ -136,15 +134,12 @@ OPL family 需要统一的 domain memory 管理纪律，但不应该把领域经
 
 当前已落地的部分仍是 descriptor / receipt projection：`opl domain-memory list` 可在每个 resolved descriptor 上投影 writeback contract、receipt contract、writeback receipt locator 和 receipt readiness；`inspect` 与 `migration-plan` 会把 receipt projection 展开给 operator。该投影明确 `can_accept_memory_write=false`、`can_write_domain_truth=false`、`retrieval_apply_landed=false`、`writeback_apply_landed=false`、`memory_body_migration_landed=false`。这不是 retrieval landed、writeback apply landed，也不是历史 memory body 迁移 landed。
 
-2026-05-28 live read-model 校准：
+Currentness policy：本文不冻结日期、closeout counter、writeback counter、rejected-write counter、App/operator memory ref counter、worklist counter、provider proof snapshot 或旧 proof 日期。当前读数必须从 fresh `opl domain-memory list --json`、`opl runtime app-operator-drilldown --json`、`opl framework readiness --family-defaults --json` 和 `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail summary --json` 读取。
 
-- `opl domain-memory list --json` 读为 `resolved_memory_descriptor_count=3`、`missing_memory_descriptor_count=0`，runtime receipt evidence `closeout_count=730`，`consumed_memory_ref_count=1`，`writeback_receipt_ref_count=4`，`rejected_write_count=691`，且 `opl_writes_memory_body=false`。这说明 OPL 可投影 domain-owned memory descriptor、receipt 与 rejected writeback reason，但不持有 memory body。
-- `opl runtime app-operator-drilldown --json` 读到 `memory_writeback_ref_count=12`，但 `memory_ref_count=0`、`quality_ref_count=0`；这只表示 App/operator projection 能展示 writeback refs，不表示 OPL 读取 memory body、执行 retrieval/apply、接受或拒绝 writeback，或关闭质量门。
-- `opl framework readiness --family-defaults --json` 读为 `framework_control_plane_available_with_open_production_tail`，`opl family-runtime evidence-worklist ... --detail full --json` 仍有 12 条 payload-required stage-evidence workorder；zero-open domain-dispatch workorder 不能写成 domain memory lane 完成、domain ready、production ready 或 writeback apply 完成。
+稳定读法是：`opl domain-memory list --json` 只能证明 OPL 可解析 domain-owned memory descriptor、locator、proposal/receipt contract、receipt readiness、consumed memory refs、writeback receipt refs 和 rejected writeback reason；`opl runtime app-operator-drilldown --json` 只能把 memory / writeback refs 投影给 App/operator。二者都不表示 OPL 持有 memory body、可执行 retrieval/apply、可接受或拒绝 writeback、可写 domain truth、可关闭质量门，或可把 zero-open worklist 写成 domain memory lane 完成、domain ready、production ready 或 writeback apply 完成。
 
-2026-05-12 dated proof 仍可作为 provenance 读取：
+Historical provenance：
 
-- `opl domain-memory list --json` 当前仍为 `resolved_memory_descriptor_count=3`、`missing_memory_descriptor_count=0`，说明 MAS/MAG/RCA 三个 active domain 的 memory descriptor 都能被 OPL family index 解析。
 - MAS 的真实 paper-line read-only closeout projection 已出现一条 publication-route memory 消费链：DM002 consumed `publication_route_memory_seed__negative_result_stoploss`，并带回 MAS workspace/runtime 下的 writeback receipt refs。
 - 这条证据只证明 MAS-owned memory refs 能进入 stage closeout 并被 OPL/Aion 以 ref-only 方式展示；它不表示 OPL 拥有 memory body、可以 accept/reject writeback，或 MAG/RCA 的真实 runtime memory apply 已完成。
 - 本轮 OPL operator closeout 的边界是 residue scan 与 no-default-caller evidence：默认 help、当前 roadmap、active public surface 和 operator-facing 文档不得把旧 Hermes/Gateway/frontdoor/local-manager/default-compat 路径写成 memory retrieval、writeback apply 或 runtime owner。保留旧名只能用于 `hermes_legacy` diagnostic、历史 provenance、fixture/test 或明确 legacy migration 语境。
@@ -155,7 +150,7 @@ OPL family 需要统一的 domain memory 管理纪律，但不应该把领域经
 - 已完成：`opl domain-memory list|inspect|migration-plan` 增加 descriptor-level receipt projection / readiness，清楚显示 locator、proposal、router receipt、accepted/rejected authority 都由 domain 持有。
 - 已完成：MAS 已通过标准 `domain_memory_descriptor` 暴露 `mas_publication_route_memory`。
 - 已完成：MAG/RCA 已在各自 manifest / adoption contract 中暴露 OPL 标准 `family_domain_memory_ref.v1` descriptor，同时保留 domain-specific `domain_memory_descriptor_locator`、migration plan、seed fixture locator、writeback proposal generator、accept/reject command、receipt locator 和 operator receipt projection；这些 surface 不保存真实 memory body 或 receipt 实例。
-- 已完成于 family index：2026-05-12 `opl domain-memory list --json` 显示 `resolved_memory_descriptor_count=3`、`missing_memory_descriptor_count=0`，MAS/MAG/RCA 三个 active domain 的 descriptor 均可解析。
+- 已完成于 family index：`opl domain-memory list --json` 显示 MAS/MAG/RCA 三个 active domain 的 descriptor 均可解析；具体 resolved / missing counter 从 fresh read-model 读取。
 - 部分完成：MAS/MAG/RCA 的政策文档已定义哪些经验适合进入 memory，哪些必须保留为强 contract。
 - 部分完成：MAS 已有 workspace apply closure 和 publication-route memory pack/writeback owner surface；DM002 read-only closeout 已证明 stage consumed memory ref 与 MAS-owned writeback receipt refs 可以被 OPL projection 消费。MAG/RCA 有 repo-source controlled proof surface；真实 reusable lessons 从历史 workspace/runtime 迁移到 domain-owned memory store 的 accepted/rejected apply receipt 仍未形成跨三仓 soak evidence。
 - 已完成：stage attempt query/workbench 可展示 typed closeout 带回的 consumed memory refs、writeback receipt refs 与 rejected writes；Aion workbench 已把 rejected writeback 作为独立 operator 状态轴展示，但仍只显示 refs/status/reason，不读取或复制 memory 正文。
