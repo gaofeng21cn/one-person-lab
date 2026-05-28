@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `stage_graph_route_transition_runtime_support`
 State: `active_support`
 Machine boundary: 本文是人读运行规划与边界合同。机器 truth 继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests、stage attempt ledger 和 App/operator drilldown read model。
-Date: `2026-05-26`
+Currentness policy: 本文不冻结日期、attempt id、worklist counter、receipt count、provider proof snapshot 或 App/operator drilldown 数值；当前状态必须从 fresh CLI/read-model、contracts、source、tests 与 runtime ledger 读取。
 
 ## 结论
 
@@ -85,20 +85,24 @@ MAS 负责：
 - 医学 stage/route 语义、study truth、source readiness、publication quality verdict、artifact/package authority、memory accept/reject、owner receipt、typed blocker、safe action refs。
 - 指定杂志格式整理这类任务的 domain 判断：目标 journal requirements、paper/package mutation authority、reviewer/auditor verdict 和 submission handoff receipt。
 
-## 已落地能力与剩余证据门
+## 当前读法与动态证据入口
 
-本节不是新的 active plan；当前 active gap 与下一轮 prompt 回到 `docs/active/current-state-vs-ideal-gap.md`。这里仅按 runtime 支撑文档记录 stage graph / route transition 能力的当前读法：基础运行面已经由 provider-backed stage attempt、typed queue、transition runner、receipt ledger、App/operator drilldown 和 evidence worklist 承接；剩余项主要是真实 domain owner-chain、production evidence scaleout、physical thinning 与 long-soak evidence，不能因为基础运行面可读而写成 domain ready 或 production ready。
+本节不是 active plan、完成 ledger 或 readiness oracle；当前 active gap 与下一轮 prompt 回到 `docs/active/current-state-vs-ideal-gap.md`。这里仅说明 stage graph / route transition 支撑文档如何读取 live truth。
 
-| lane | 当前读法 | 剩余门槛 |
+基础运行面是否可用，应由 provider-backed stage attempt、typed queue、transition runner、receipt ledger、`stage_progress_log`、`runtime_visualization_projection`、App/operator drilldown 和 evidence worklist 的 fresh 输出共同证明。任何 open route、closed refs-only receipt、blocked envelope、running attempt、provider SLO 或 route-transition drilldown 数量都是动态读数，只能作为 operator attention / diagnostic / refs-only projection，不升级为 domain ready、production ready、artifact authority 或质量 verdict。
+
+| lane | 稳定读法 | 当前证据入口 |
 | --- | --- | --- |
-| `graph_runtime_contract` | stage、route、node、child graph、authority function 与 receipt owner 已进入 runtime docs / contracts / invariants 读法。 | 后续只在新增 graph primitive 或 machine contract 时同步本文；不作为独立 backlog 保存。 |
-| `operator_drilldown` | `runtime app-operator-drilldown` summary-first read model 已可投影 provider SLO、queue/attempt/control state、evidence envelope、owner payload groups、App release evidence、OMA consumption、route support 和 `runtime_visualization_projection` graph/timeline/research lens。 | projection 继续保持 refs-only；full detail 可以定位 owner receipt / typed blocker / no-regression refs、MAS paper route lens refs 和 safe action refs，但不生成 verdict。 |
-| `mas_route_contract_consumption` | `runtime_manager_route_support` 已把 MAS route support 作为 refs-only catalog 投到 App/operator read model。 | MAS sidecar 继续只输出 owner-route handoff；OPL hydrate/dispatch/retry/dead-letter；MAS 不写 OPL liveness/redrive/runtime_state 仲裁。 |
-| `executor_reviewer_split` | AI-first independent reviewer/auditor gate 已冻结为 invariants / Agent Lab / stage-control-plane 规则。 | 真实 quality gate 仍只能由独立 reviewer/auditor record、domain owner receipt 或 typed blocker 关闭；同一 invocation 自审不得 close gate。 |
-| `human_gate_transport` | OPL runtime 已持有 human gate transport 的边界和 provider route 语义。 | pause/resume/stop/approve/reject 由 OPL transport 承载；domain repo 只给 gate schema、authority boundary 和 receipt。 |
-| `child_graph_parallelism` | 作为 stage graph / route transition 的 runtime 支撑模型保留。 | child graph 只回写 typed parent result/ref；不共享 domain body；失败、retry、dead-letter 由 OPL attempt ledger 记录。 |
-| `production_evidence_scaleout` | 当前 read-model 已能显示 domain-dispatch / stage-production evidence 的 open、closed、blocked、superseded envelope。 | 多条真实 MAS/MAG/RCA domain line 仍需 owner receipt、typed blocker、AI reviewer/gate receipt、artifact movement、human gate、stop-loss 或 no-regression evidence。 |
-| `physical_thinning` | cleanup/read-model 能定位 replacement parity、no-active-caller、owner receipt / typed blocker 和 provenance/tombstone refs。 | MAS/MAG/RCA physical delete 仍需 domain owner receipt 或 stable typed blocker、focused tests、no-forbidden-write proof 与 provenance/tombstone refs 全部成立。 |
+| `graph_runtime_contract` | stage、route、node、child graph、authority function 与 receipt owner 是 runtime support language。新增 graph primitive 或 machine contract 时才同步本文。 | `docs/architecture.md`、`docs/invariants.md`、`contracts/`、stage pack / action catalog / transition runner 源码。 |
+| `operator_drilldown` | `runtime app-operator-drilldown` 是 summary-first refs-only read model；full detail 可定位 route graph、stage progress、domain dispatch、stage production evidence 和 safe action refs，但不生成 verdict。 | `opl runtime app-operator-drilldown --json` 与 `--detail full`。 |
+| `stage_progress_log` | `stage_progress_log` 是 OPL attempt/progress projection，不是平行 runtime log database；它从 attempt ledger、provider run、activity events、usage projection、closeout packet 和 blocker refs 派生。 | `opl family-runtime attempt query|inspect`、`stage_attempt_workbench`、App/operator drilldown、相关 tests。 |
+| `runtime_visualization_projection` | graph/timeline/research lens 只是 App/operator 可视化投影；route graph visible、paper route lens visible 或 Temporal Web UI link visible 都不等于 owner-chain closure。 | App/operator drilldown 的 `runtime_visualization_projection` 与 `visual_ref_groups`。 |
+| `mas_route_contract_consumption` | MAS route support 只作为 refs-only catalog 与 domain dispatch workorder 进入 OPL；OPL hydrate/dispatch/retry/dead-letter，不写 MAS liveness/redrive/runtime_state 仲裁。 | `runtime_manager_route_support`、domain-dispatch evidence worklist、MAS owner surface。 |
+| `executor_reviewer_split` | AI-first independent reviewer/auditor gate 是 invariant；同一 invocation 不能执行后自审并关闭 quality gate。 | `docs/invariants.md`、Agent Lab / stage-control-plane read model、domain owner receipt 或 typed blocker。 |
+| `human_gate_transport` | pause/resume/stop/approve/reject 由 OPL transport 承载；domain repo 只给 gate schema、authority boundary 和 receipt。 | provider signal/query/readiness、human gate refs、stage attempt ledger。 |
+| `child_graph_parallelism` | child graph 只回写 typed parent result/ref，不共享 domain body；失败、retry、dead-letter 由 OPL attempt ledger 记录。 | future graph primitive、provider child workflow / subgraph refs、attempt ledger。 |
+| `production_evidence_scaleout` | domain-dispatch / stage-production evidence 的 open、closed、blocked、superseded envelope 只是 refs-only operator lens。 | `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`、domain owner receipts / typed blockers。 |
+| `physical_thinning` | cleanup/read-model 只能定位 replacement parity、no-active-caller、owner receipt / typed blocker 与 provenance/tombstone refs；物理删除仍归 domain owner gate。 | conformance/default-caller deletion read model、domain contracts、focused tests、no-forbidden-write proof。 |
 
 ## Route 与 Stage 的固定解释
 
@@ -114,12 +118,13 @@ MAS 负责：
 
 可以声明：
 
-- OPL 已具备承载 MAS route-as-transition 的基础运行面：stage graph projection、family transition runner、provider-backed stage attempt、typed queue、receipt ledger、runtime manager MAS route projection 和 App/operator drilldown。
-- App/operator full detail 已具备 refs-only runtime visualization projection，可展示 stage/route/receipt/blocker timeline 与 MAS paper route lens refs。
+- OPL 的目标运行模型是 stage graph + route-as-transition：stage 是 provider-backed attempt admission 单位，route 是 domain owner-chain recommendation / typed blocker / route-back / owner action ref。
+- Fresh read-model 可以证明某一时刻的 stage graph projection、transition runner、provider-backed stage attempt、typed queue、receipt ledger、runtime manager route projection、`stage_progress_log`、`runtime_visualization_projection` 或 App/operator drilldown 可读。
 - MAS 应继续作为 declarative medical research pack + minimal authority functions，而不是私有 runtime platform。
 
 不能声明：
 
+- 本文、某次 read-model 快照或某个 route-transition counter 等于当前 active plan 完成。
 - transition runner pass 等于 MAS paper closure。
 - provider completion 等于 publication-ready、artifact-ready、quality-ready 或 submission-ready。
 - route graph visible 等于 owner receipt chain 已闭合。
