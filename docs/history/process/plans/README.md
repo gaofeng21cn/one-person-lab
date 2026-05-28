@@ -72,6 +72,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-30.md` | OPL series docs governance tranche ledger part 30。 | 当前 truth 归 Temporal provider contracts、Runtime Manager contract、family runtime attempt contract、source、tests 和 live CLI/read-model；ledger 只记录本轮 Temporal provider support reference 从 P0-P5 landing checklist 收敛为 stable support / dynamic evidence entry。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-31.md` | OPL series docs governance tranche ledger part 31。 | 当前 truth 归 generic substrate projection contract、standard domain-agent skeleton contract、family lifecycle ledger, source, tests 和 live CLI/read-model；ledger 只记录本轮 source/delivery support reference currentness policy、dynamic evidence entry 与 negative boundary 补齐。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-32.md` | OPL series docs governance tranche ledger part 32。 | 当前 truth 归 Runtime Manager contract、family conflict envelope、family runtime attempt contract、source、tests 和 live CLI/read-model；ledger 只记录本轮 runtime index currentness policy、dynamic evidence entry 与 negative boundary 补齐。 |
+| `2026-05-29-opl-series-doc-governance-tranche-ledger-part-33.md` | OPL series docs governance tranche ledger part 33。 | 当前 truth 归 Agent Lab contract、authority boundary、source、tests 和 live CLI/read-model；ledger 只记录本轮 Agent Lab support reference currentness policy、machine-entry table、Longline test ownership 和 negative boundary 补齐。 |
 
 ## Tombstone Rules
 
