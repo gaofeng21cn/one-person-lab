@@ -107,6 +107,61 @@ OPL 开发文档现在不能按“每份旧计划都继续完整执行”阅读�
 
 ## Coverage Ledger
 
+Date: `2026-05-28 09:47 CST`
+Tranche: `oma-fresh-no-drift-revalidation-foldback`
+State: `tranche_verified`
+
+本轮覆盖 `opl-meta-agent` main 已合入并推送的 `157528e docs: record OMA governance revalidation`。目标是把 OMA 本仓 `docs/docs_portfolio_consolidation.md` 的 2026-05-28 fresh no-drift revalidation 折回本 OPL family ledger：确认 OMA 当前 exact `README*` / `docs/**/*.md` / tracked `agent/*/README.md` support indexes 没有新增未治理路径，且 live contracts 仍保持 refs-only / no-authority / long-soak blocker 口径。本轮不改 OMA 正文，不新增 readiness claim，不关闭 OPL series 全局 `/goal`。
+
+Fresh live truth inputs:
+
+- OMA commit / ledger: `157528e docs: record OMA governance revalidation` and `opl-meta-agent/docs/docs_portfolio_consolidation.md`.
+- OMA docs and inventory: `AGENTS.md`, `TASTE.md`, root `README*`, `docs/README.md`, `docs/project.md`, `docs/status.md`, `docs/active/opl-meta-agent-ideal-state-gap-plan.md`, `docs/references/opl-meta-agent-ideal-state.md`, current repo-root `README*`, `docs/**/*.md`, and tracked `agent/{knowledge,prompts,quality_gates,skills,stages}/README.md`.
+- Machine refs: `contracts/functional_privatization_audit.json`, `contracts/pack_compiler_input.json`, `contracts/opl_domain_manifest_registration.json`, `contracts/app_workbench_projection.json`, `contracts/production_acceptance/oma-production-consumption-long-soak-typed-blocker.json`, `package.json`, and OPL Doc Governance doctor output.
+
+Fresh semantic result:
+
+- OMA `docs/docs_portfolio_consolidation.md` now carries a repo-local no-drift revalidation entry for the current exact README/docs/support-README inventory. The OMA repo had no file diff required after this read because main already contained that ledger commit.
+- OPL Doc Governance doctor for OMA reports `finding_count=0` and `active_truth_health.status=pass`. This remains a shape signal only; current truth stays anchored in live contracts, pack files, source, tests and OPL read-model receipts.
+- `contracts/functional_privatization_audit.json` still reads `source_shape=landed`, `functional_structure_gap_count=0`, `domain_repo_retained_generic_surface_count=0`, and remaining tails `opl_generated_default_caller_consumption_tail`, `domain_refs_only_adapter_thinning`, `script_to_pack_hygiene`, and `evidence_tail`. This remains source-shape evidence only.
+- `contracts/pack_compiler_input.json` still uses `canonical_semantic_pack_root=agent/` and `canonical_semantic_pack_role=repo_source_declarative_meta_agent_pack`; required domain pack paths remain non-README pack files.
+- `contracts/opl_domain_manifest_registration.json` still declares OPL as registry owner, refs-only authority boundary and blocked claims for App live rendering, default promotion, target domain truth writes and quality verdict authorization.
+- `contracts/app_workbench_projection.json` still declares OPL as projection owner, `refs_status_receipts_candidates_and_blockers_only`, `live_rendering_status=not_claimed_by_contract`, and refs-only / no target truth / no target artifact / no quality-export authority boundaries.
+- `contracts/production_acceptance/oma-production-consumption-long-soak-typed-blocker.json` still has active blocker `typed_blocker_ref://opl-meta-agent/production-consumption/long-soak-pending`, `production_consumption_ready=false`, `long_soak_claimed=false`, `domain_ready_claimed=false`, and `default_promotion_claimed=false`.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `opl-meta-agent` | Fresh foldback read of OMA repo-local governance ledger, current exact README/docs/support-README inventory, active truth owner, ideal-state reference and machine refs listed above. | none |
+| `one-person-lab` | OPL family coverage ledger foldback for the OMA no-drift revalidation; no OPL active truth / source / contract semantics changed. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. OMA doc-path retirement remains empty for the current exact inventory.
+
+Unreviewed docs:
+
+- `opl-meta-agent`: none newly opened for repo-root `README*`, `docs/**/*.md`, or tracked `agent/*/README.md` support indexes since the OMA repo-local no-drift revalidation.
+- OMA non-README semantic pack files remain machine truth refs, not separate docs-governance prose targets in this tranche.
+- Global OPL series coverage remains open outside already recorded tranche scopes; this foldback does not close the global `/goal`.
+
+Remaining stale / retire candidates:
+
+- OMA evidence/hygiene tails remain active: OPL registry/App live consumption receipts, repeat long-soak, more real target patch-loop owner receipt or typed blocker samples, independent Codex reviewer direct-evidence samples, standard target-agent handoff convergence, and script-to-pack / OPL primitive hygiene.
+- Any future prose that upgrades OMA generated/registration/App projection refs, suite pass, schema completeness, work-order shape, source-shape conformance, support README indexes or OPL refs-only consumption into target-domain readiness, quality/export verdict, App live rendering, owner receipt, artifact readiness, production ready or default promotion remains stale pollution.
+
+Verification before closeout:
+
+- OMA doctor output and machine refs above were re-read fresh before this ledger edit.
+- Docs-only verification for this OPL ledger edit is `git diff --check`, strict real conflict-marker scan over `README.md README.zh-CN.md docs contracts src tests`, and OPL Doc Governance doctor.
+
+Next tranche write scope:
+
+- Continue OPL series coverage only on repos or exact-inventory tails that are clean/safe for this automation.
+- Keep App/RCA body governance outside this tranche while their dirty release/native-PPT lanes are still externally active; keep MAS conflict/dirty lanes outside cleanup until safe or explicitly resolved.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are closed or carried into the next-round Agent prompt.
+
 Date: `2026-05-28 09:34 CST`
 Tranche: `opl-active-support-production-closure-reference-revalidation`
 State: `tranche_verified`
