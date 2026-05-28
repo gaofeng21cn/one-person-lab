@@ -46,6 +46,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-4.md` | OPL series branch/worktree/doc governance tranche ledger part 4。 | 当前 truth 归各 repo active truth owner、core docs 和 live code/contracts/tests/read-model；ledger 只记录本轮 stale worktree 清理、active CLI/help 示例退役、验证、保留理由和下一轮写入范围。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-5.md` | OPL series branch/worktree/doc governance tranche ledger part 5。 | 当前 truth 归各 repo active truth owner、core docs 和 live code/contracts/tests/read-model；ledger 只记录本轮 MAS domain-dispatch read-model currentness 修正、验证、保留理由和下一轮写入范围。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-6.md` | OPL series branch/worktree/doc governance tranche ledger part 6。 | 当前 truth 归 active execution map、核心五件套和 live CLI/read-model；ledger 只记录本轮 `current-development-lines.md` active-support 瘦身、fresh schema 读取、保留的外部 dirty lane 和下一轮写入范围。 |
+| `2026-05-29-opl-series-doc-governance-tranche-ledger-part-7.md` | OPL series branch/worktree/doc governance tranche ledger part 7。 | 当前 truth 归 runtime-substrate roadmap、active execution map、核心五件套和 live CLI/read-model；ledger 只记录本轮 `opl-stage-led-agent-framework-roadmap.md` dated proof 瘦身、fresh schema 读取、保留的外部 dirty lane 和下一轮写入范围。 |
 
 ## Tombstone Rules
 
