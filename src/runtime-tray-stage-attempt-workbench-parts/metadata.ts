@@ -23,6 +23,12 @@ import { optionalString } from '../runtime-tray-snapshot-utils.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 
 type StageAttemptProjection = StageAttemptGenericProjectionInput & {
+  task_id: string | null;
+  provider_kind: string;
+  executor_kind: string;
+  canonical_outcome: string | null;
+  created_at: string;
+  updated_at: string;
   local_status: string;
   filter_keys: JsonRecord;
   usage_projection: StageAttemptUsageProjection;

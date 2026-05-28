@@ -385,6 +385,26 @@ function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: num
     ...input.consumedRefs,
     ...input.writebackReceiptRefs,
   ]);
+  const usageRefs = uniqueStrings([
+    ...refsFromRecord(semanticSummary, ['usage_ref', 'usage_refs', 'token_usage_ref', 'token_usage_refs']),
+    ...refsFromRecord(input.routeImpact, ['usage_ref', 'usage_refs', 'token_usage_ref', 'token_usage_refs']),
+    ...refsFromRecord(
+      isRecord(input.routeImpact.usage_projection) ? input.routeImpact.usage_projection : null,
+      ['usage_ref', 'usage_refs'],
+    ),
+  ]);
+  const tokenUsageRefs = uniqueStrings([
+    ...refsFromRecord(semanticSummary, ['token_usage_ref', 'token_usage_refs']),
+    ...refsFromRecord(input.routeImpact, ['token_usage_ref', 'token_usage_refs']),
+  ]);
+  const costRefs = uniqueStrings([
+    ...refsFromRecord(semanticSummary, ['cost_ref', 'cost_refs']),
+    ...refsFromRecord(input.routeImpact, ['cost_ref', 'cost_refs']),
+    ...refsFromRecord(
+      isRecord(input.routeImpact.usage_projection) ? input.routeImpact.usage_projection : null,
+      ['cost_ref', 'cost_refs'],
+    ),
+  ]);
   const semanticStatus = semanticSummary ? 'provided_by_domain' : 'missing_domain_semantic_summary';
   return {
     surface_kind: 'opl_user_stage_log',
@@ -403,6 +423,9 @@ function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: num
     duration,
     token_usage: tokens,
     cost,
+    usage_refs: usageRefs,
+    token_usage_refs: tokenUsageRefs,
+    cost_refs: costRefs,
     evidence_refs: evidenceRefs,
     semantic_gap: semanticSummary ? null : {
       reason: 'domain_closeout_did_not_provide_user_stage_log',
