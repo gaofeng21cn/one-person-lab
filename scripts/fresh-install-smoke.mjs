@@ -184,7 +184,7 @@ function cleanUserMissingCodex(root) {
   assertInitializeState(output, {
     phase: 'environment',
     blocking: ['codex', 'codex_config'],
-    maintenance: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
+    maintenance: ['domain_modules', 'family_runtime_provider', 'native_helpers', 'recommended_skills'],
     readyToLaunch: false,
     onlineManagementBlocking: true,
     onlineManagementStatus: 'initializing',
@@ -200,7 +200,7 @@ function compatibleCodexMissingModules(root) {
   assertInitializeState(output, {
     phase: 'environment',
     blocking: ['codex_config'],
-    maintenance: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
+    maintenance: ['domain_modules', 'family_runtime_provider', 'native_helpers', 'recommended_skills'],
     readyToLaunch: false,
     onlineManagementBlocking: true,
     onlineManagementStatus: 'initializing',
@@ -216,7 +216,7 @@ function outdatedCodex(root) {
   assertInitializeState(output, {
     phase: 'environment',
     blocking: ['codex', 'codex_config'],
-    maintenance: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
+    maintenance: ['domain_modules', 'family_runtime_provider', 'native_helpers', 'recommended_skills'],
     readyToLaunch: false,
     onlineManagementBlocking: true,
     onlineManagementStatus: 'initializing',
@@ -235,7 +235,7 @@ function readyBaseline(root) {
   assertInitializeState(output, {
     phase: 'environment',
     blocking: [],
-    maintenance: ['family_runtime_provider', 'recommended_skills'],
+    maintenance: ['family_runtime_provider', 'native_helpers', 'recommended_skills'],
     readyToLaunch: true,
     onlineManagementBlocking: true,
     onlineManagementStatus: 'initializing',
