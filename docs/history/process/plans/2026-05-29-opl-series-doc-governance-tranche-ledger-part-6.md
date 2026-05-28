@@ -10,9 +10,9 @@ Date: `2026-05-29`
 
 本轮只处理 OPL repo 内的 active/support 文档生命周期污染：`docs/active/current-development-lines.md` 作为 current execution map，却仍保存大量 dated proof、receipt id、attempt id、单次 CLI 输出、Developer Mode receipt 流水、RCA/MAG/MAS 单次 evidence 细节和旧 closeout 摘要。
 
-MAS 与 RCA root 当前都有未提交改动，按外部 owner lane 保留，不在本轮覆盖或吸收：
+Fresh inventory 时 MAS 与 RCA root 都有未提交改动。RCA 属于 native PPT 实现/测试 lane，按外部 owner lane 保留；MAS 两份 dirty docs 是 domain-dispatch read-model currentness 修正，本轮随后在 MAS repo 内补 coverage ledger、验证并折回 main：
 
-- `med-autoscience`: `docs/active/mas-ideal-state-gap-plan.md`、`docs/status.md` dirty，内容跟随 OPL latest domain-dispatch read-model currentness。
+- `med-autoscience`: `docs/active/mas-ideal-state-gap-plan.md`、`docs/status.md` dirty，内容跟随 OPL latest domain-dispatch read-model currentness；折回时补 `docs/history/docs-portfolio-coverage-ledger/2026-05-29-part-15.md` 并更新 MAS docs governance index。
 - `redcube-ai`: native PPT runtime/test dirty，属于实现/测试 lane。
 
 ## Fresh evidence
@@ -54,5 +54,5 @@ Unreviewed docs remain outside this tranche; the global `/goal` stays active.
 ## Next write scope
 
 - Continue uncovered OPL support-doc paragraph coverage, especially active/reference docs that still carry dated proof or concrete receipt ids outside history.
-- Revisit MAS dirty docs only after owner lane is clearly assigned or clean; do not overwrite current MAS owner-surface follow-up.
+- Revisit MAS only if live source/contract/read-model changes reopen the domain-dispatch currentness paragraphs, or if MAS owner surfaces produce real refs / typed blocker for `sat_55e36b0dbf2b609fb33329db`.
 - Revisit RCA native PPT dirty lane only as RCA implementation work, not as OPL docs-governance cleanup.
