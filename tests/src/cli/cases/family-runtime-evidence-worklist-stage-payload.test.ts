@@ -341,6 +341,8 @@ test('family-runtime evidence-worklist closes stage workorder with verified doma
     assert.equal(item.route_requires_domain_or_app_payload, true);
     assert.equal(item.can_close_without_domain_or_app_payload, false);
     assert.equal(item.worklist_item_is_completion_claim, false);
+    assert.equal(worklist.summary.stage_production_evidence_receipt_requires_domain_or_app_payload_count, 0);
+    assert.equal(worklist.summary.open_safe_action_payload_required_item_count, 0);
     assert.equal(worklist.summary.domain_ready_authorized, false);
     assert.equal(worklist.summary.production_ready_authorized, false);
     assert.equal(
