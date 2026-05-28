@@ -275,6 +275,66 @@ test('runtime Developer Mode closeout CLI requires fork PR owner acceptance to b
       'github_pr_owner_acceptance_ref',
     ]);
 
+    const plainPrOwnerAcceptance = runCli([
+      'runtime',
+      'developer-mode-closeout',
+      'record',
+      '--payload',
+      JSON.stringify({
+        target_repo_id: 'redcube-ai',
+        route_decision: 'fork-PR',
+        route_eligibility: 'eligible_fork_pr',
+        patrol_observation_ref: 'patrol-observation-ref:rca/live-fork-pr-plain-pr',
+        diff_ref: 'diff-ref:rca/live-fork-pr-plain-pr',
+        verification_refs: ['test-result-ref:rca/live-fork-pr-plain-pr'],
+        no_forbidden_write_ref: 'no-forbidden-write-ref:rca/live-fork-pr-plain-pr',
+        fork_repo_ref: 'github-fork-ref:https://github.com/developer/redcube-ai',
+        pr_review_ref: 'github-pr-review-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42',
+        owner_acceptance_ref: 'github-pr-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42',
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).developer_mode_closeout_ledger_record;
+
+    assert.equal(plainPrOwnerAcceptance.status, 'no_eligible_developer_mode_closeout_receipts');
+    assert.equal(
+      plainPrOwnerAcceptance.blocked_receipts[0].blocker.blocker_id,
+      'developer_mode_fork_pr_owner_acceptance_not_pr_backed',
+    );
+    assert.deepEqual(plainPrOwnerAcceptance.blocked_receipts[0].missing_closeout_refs, [
+      'github_pr_owner_acceptance_ref',
+    ]);
+
+    const plainUrlOwnerAcceptance = runCli([
+      'runtime',
+      'developer-mode-closeout',
+      'record',
+      '--payload',
+      JSON.stringify({
+        target_repo_id: 'redcube-ai',
+        route_decision: 'fork-PR',
+        route_eligibility: 'eligible_fork_pr',
+        patrol_observation_ref: 'patrol-observation-ref:rca/live-fork-pr-plain-url',
+        diff_ref: 'diff-ref:rca/live-fork-pr-plain-url',
+        verification_refs: ['test-result-ref:rca/live-fork-pr-plain-url'],
+        no_forbidden_write_ref: 'no-forbidden-write-ref:rca/live-fork-pr-plain-url',
+        fork_repo_ref: 'github-fork-ref:https://github.com/developer/redcube-ai',
+        pr_review_ref: 'github-pr-review-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42',
+        owner_acceptance_ref: 'https://github.com/gaofeng21cn/redcube-ai/pull/42',
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).developer_mode_closeout_ledger_record;
+
+    assert.equal(plainUrlOwnerAcceptance.status, 'no_eligible_developer_mode_closeout_receipts');
+    assert.equal(
+      plainUrlOwnerAcceptance.blocked_receipts[0].blocker.blocker_id,
+      'developer_mode_fork_pr_owner_acceptance_not_pr_backed',
+    );
+    assert.deepEqual(plainUrlOwnerAcceptance.blocked_receipts[0].missing_closeout_refs, [
+      'github_pr_owner_acceptance_ref',
+    ]);
+
     const liveForkPr = runCli([
       'runtime',
       'developer-mode-closeout',

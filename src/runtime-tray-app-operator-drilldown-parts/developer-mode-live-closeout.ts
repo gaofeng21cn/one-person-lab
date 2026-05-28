@@ -94,6 +94,19 @@ function developerModeCloseoutPayloadRefHints() {
   };
 }
 
+function developerModeCloseoutRequiredReturnShapes(missingRouteKinds: string[]) {
+  const shapes = ['developer_mode_closeout_verified_receipt_ref'];
+  if (missingRouteKinds.includes('direct-fix')) {
+    shapes.push('developer_mode_direct_fix_closeout_receipt_ref');
+    shapes.push('external_owner_acceptance_ref');
+  }
+  if (missingRouteKinds.includes('fork-PR')) {
+    shapes.push('developer_mode_fork_pr_closeout_receipt_ref');
+    shapes.push('github_pr_owner_acceptance_ref');
+  }
+  return [...new Set(shapes)];
+}
+
 function developerModeCloseoutPayloadWorkorder(missingRouteKinds: string[]) {
   return {
     surface_kind: 'opl_developer_mode_live_closeout_payload_workorder',
@@ -157,11 +170,8 @@ function developerModeCloseoutPayloadWorkorder(missingRouteKinds: string[]) {
       'commit_ref_or_fork_pr_refs',
       'owner_acceptance_ref',
     ],
-    required_return_shapes: [
-      'developer_mode_direct_fix_closeout_receipt_ref',
-      'developer_mode_fork_pr_closeout_receipt_ref',
-      'developer_mode_closeout_verified_receipt_ref',
-    ],
+    required_return_shapes:
+      developerModeCloseoutRequiredReturnShapes(missingRouteKinds),
     payload_template: developerModeCloseoutPayloadTemplate(missingRouteKinds),
     payload_ref_hints: developerModeCloseoutPayloadRefHints(),
     empty_payload_template_is_success_evidence: false,
@@ -290,12 +300,8 @@ export function buildDeveloperModeLiveCloseoutEvidenceAttention(drilldown: JsonR
     forbidden_owner_receipt_write_count:
       summary.forbidden_owner_receipt_write_count,
     required_closeout_ref_groups: stringList(evidence.required_closeout_ref_groups),
-    required_return_shapes: [
-      'developer_mode_direct_fix_closeout_receipt_ref',
-      'developer_mode_fork_pr_closeout_receipt_ref',
-      'developer_mode_closeout_verified_receipt_ref',
-      'external_owner_acceptance_ref',
-    ],
+    required_return_shapes:
+      developerModeCloseoutRequiredReturnShapes(missingRouteKinds),
     receipt_verification_required: pendingVerifyReceiptRefs.length > 0,
     verification_command_ref: verifyArgs ? commandRef(verifyArgs) : null,
     record_command_ref: canRecord ? commandRef(recordArgs) : null,

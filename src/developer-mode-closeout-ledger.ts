@@ -224,11 +224,7 @@ function isLiveGithubPullRequestRef(value: string | null) {
 }
 
 function isLiveGithubPullRequestOwnerAcceptanceRef(value: string | null) {
-  return Boolean(
-    isGithubTypedPullRequestOwnerAcceptanceRef(value)
-    || isGithubTypedPullRequestRef(value)
-    || isGithubHttpPullRequestUrl(value),
-  );
+  return isGithubTypedPullRequestOwnerAcceptanceRef(value);
 }
 
 function requiredCloseoutRefs(decision: DeveloperModeCloseoutRouteDecision) {

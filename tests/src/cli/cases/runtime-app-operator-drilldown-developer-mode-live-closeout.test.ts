@@ -95,6 +95,20 @@ test('runtime app-operator-drilldown projects Developer Mode live closeout evide
       attention.payload_template.owner_acceptance_ref,
       '<github-pr-owner-acceptance-ref>',
     );
+    assert.deepEqual(attention.required_return_shapes, [
+      'developer_mode_closeout_verified_receipt_ref',
+      'developer_mode_direct_fix_closeout_receipt_ref',
+      'external_owner_acceptance_ref',
+      'developer_mode_fork_pr_closeout_receipt_ref',
+      'github_pr_owner_acceptance_ref',
+    ]);
+    assert.deepEqual(attention.payload_workorder.required_return_shapes, [
+      'developer_mode_closeout_verified_receipt_ref',
+      'developer_mode_direct_fix_closeout_receipt_ref',
+      'external_owner_acceptance_ref',
+      'developer_mode_fork_pr_closeout_receipt_ref',
+      'github_pr_owner_acceptance_ref',
+    ]);
     assert.equal(
       attention.payload_workorder.payload_template.owner_acceptance_ref,
       '<github-pr-owner-acceptance-ref>',
@@ -236,6 +250,24 @@ test('runtime app-operator-drilldown counts live Developer Mode owner acceptance
       fullDrilldown.attention_first_payload.evidence_after_contract
         .developer_mode_live_closeout_evidence.missing_live_ledger_route_kinds,
       ['fork-PR'],
+    );
+    assert.deepEqual(
+      fullDrilldown.attention_first_payload.evidence_after_contract
+        .developer_mode_live_closeout_evidence.required_return_shapes,
+      [
+        'developer_mode_closeout_verified_receipt_ref',
+        'developer_mode_fork_pr_closeout_receipt_ref',
+        'github_pr_owner_acceptance_ref',
+      ],
+    );
+    assert.deepEqual(
+      fullDrilldown.attention_first_payload.evidence_after_contract
+        .developer_mode_live_closeout_evidence.payload_workorder.required_return_shapes,
+      [
+        'developer_mode_closeout_verified_receipt_ref',
+        'developer_mode_fork_pr_closeout_receipt_ref',
+        'github_pr_owner_acceptance_ref',
+      ],
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
