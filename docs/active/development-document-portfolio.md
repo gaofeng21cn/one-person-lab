@@ -186,6 +186,9 @@ Worktree / branch cleanup:
   `/Users/gaofeng/workspace/one-person-lab/.worktrees/opl-devmode-patrol-doc-ledger-20260529`
   on branch `codex/opl-devmode-patrol-doc-ledger-20260529` for this ledger
   foldback. This worktree is the only lane owned by this tranche.
+- Committed OPL `7b514cb4 docs: record Developer Mode patrol ledger`,
+  fast-forward merged into OPL `main`, pushed `origin/main`, removed the
+  worktree and deleted the local branch after clean/equal checks.
 - No stale external worktree or remote branch qualified for deletion before
   this edit. No remote branch was deleted.
 
@@ -202,16 +205,23 @@ Retained lanes / blockers:
   origin at `e672e2ba`, with recent worktree writes inside the last hour; retain
   under the recent-lane safety rule rather than deleting a just-landed
   Developer Mode lane.
-- MAS `codex/dm003-ai-reviewer-routeback-priority`: dirty in
-  `src/med_autoscience/controllers/domain_action_request_materializer_parts/publication_owner_materialization.py`
+- MAS final recheck after OPL push: root is clean/aligned at
+  `b6e7c18c Fix AI reviewer write routeback priority`; the earlier dirty
+  `codex/dm003-ai-reviewer-routeback-priority` worktree is no longer present.
+  `b6e7c18c` touched `docs/decisions.md`,
+  `src/med_autoscience/controllers/domain_action_request_materializer_parts/publication_owner_materialization.py`,
   and
-  `tests/domain_action_request_materializer_cases/test_ai_reviewer_story_surface_bridge.py`;
-  `main...HEAD = 0 0`; retain because it has uncommitted semantic
-  source/test changes.
+  `tests/domain_action_request_materializer_cases/test_ai_reviewer_story_surface_bridge.py`.
+  This external foldback is treated as post-scan state; no MAS worktree remains
+  for this tranche to clean.
 - RCA root checkout: `main` remains ahead of `origin/main` by
   `fa09f1d Harden native PPTX layout grammar gates`, dirty across native-PPT
   docs/source/tests/prompts, and has recent native-PPT source/test/doc writes.
   Retain and do not push or clean from this OPL docs tranche.
+- OMA `codex/oma-doc-governance-20260529`: clean and equal to OMA main /
+  origin at `23e1730`, no same-name remote branch, no open PR and no related
+  process, but worktree files had writes inside the last hour; retain under the
+  recent-lane safety rule.
 - App `codex/full-first-run-stable-gate-20260525`: dirty, remote-backed and not
   equivalent to App main (`main...HEAD = 93 3`) with untracked `docs/product/`;
   retain.
