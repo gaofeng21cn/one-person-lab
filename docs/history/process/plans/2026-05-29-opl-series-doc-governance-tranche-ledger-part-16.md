@@ -20,6 +20,7 @@ Date: `2026-05-29`
 本轮 live evidence：
 
 - `contracts/opl-framework/family-executor-adapter-defaults.json`：canonical executor backends 包含 `codex_cli`、`hermes_agent`、`claude_code`、`antigravity_cli`；default executor 是 `codex_cli`；non-default equivalence 是 `connectivity_lifecycle_receipt_audit_only`；non-default executor requires explicit selection and forbids silent Codex fallback。
+- `contracts/opl-framework/runtime-manager-contract.json`：Runtime Manager 是 provider-backed control plane / typed queue / stage attempt ledger / dispatch and projection boundary，不是 Hermes provider、Gateway、domain truth owner 或 executor-equivalence proof。
 - `docs/references/runtime-substrate/family-executor-adapter-defaults.md`：当前 support reference 已把 executor machine truth 指回 contract、`src/agent-executor.ts`、stage attempt launch gate、CLI/API 与 conformance read-model。
 - `opl executor doctor --executor codex_cli --json`：当前本机 `codex_cli` ready，binary 来自 PATH，capabilities 包含 `codex_exec`、`json_output`、`session_id`，executor envelope 标记 `selected_executor_is_default_quality_path=true` 且 `fallback_allowed=false`。
 - `opl executor doctor --executor hermes_agent --json`：当前本机返回 `surface_not_found` / `hermes_agent_binary_missing`，`fallback_allowed=false`。这只证明当前环境不能执行该 adapter 且不允许 fallback，不证明 adapter 已退役或可以由 Codex 代跑。
@@ -51,7 +52,8 @@ Reviewed:
 - `docs/architecture.md`
 - `docs/invariants.md`
 - `contracts/opl-framework/family-executor-adapter-defaults.json`
-- `src/agent-executor.ts` references discovered by `rg`
+- `contracts/opl-framework/runtime-manager-contract.json`
+- `src/agent-executor.ts` and `src/agent-lab-stage-executor-policy.ts` references discovered by `rg`
 - executor doctor / conformance / framework readiness CLI outputs
 
 Edited:

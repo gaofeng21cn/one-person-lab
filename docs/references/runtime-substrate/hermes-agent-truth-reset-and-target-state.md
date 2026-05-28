@@ -4,19 +4,21 @@ Status: `history_boundary_support`
 Owner: `One Person Lab`
 Purpose: `hermes_naming_and_migration_provenance`
 State: `support_reference_for_executor_boundary_guard`
-Machine boundary: 本文是人读迁移边界和旧误读来源说明。机器可读 executor / provider 真相继续归 `contracts/opl-framework/family-executor-adapter-defaults.json`、provider contracts、源码、CLI/API 行为、runtime ledger 和 provider receipt。本文不得作为 provider、readiness、Gateway、compatibility surface 或默认执行路径的恢复依据。
+Machine boundary: 本文是人读迁移边界和旧误读来源说明。机器可读 executor / provider 真相继续归 `contracts/opl-framework/family-executor-adapter-defaults.json`、`contracts/opl-framework/runtime-manager-contract.json`、provider contracts、源码、CLI/API 行为、runtime ledger 和 provider receipt。本文不得作为 provider、readiness、Gateway、compatibility surface 或默认执行路径的恢复依据。
 
 ## 当前读法
 
 本文保留为 Hermes 相关历史和迁移边界说明，不冻结当前 executor、provider、repo 状态或 proof 结果。当前机器真相按下列入口读取：
 
 - `contracts/opl-framework/family-executor-adapter-defaults.json`
+- `contracts/opl-framework/runtime-manager-contract.json`
 - `src/agent-executor.ts`
 - stage attempt launch gate / executor binding tests
 - `opl executor doctor --executor codex_cli --json`
 - `opl executor doctor --executor hermes_agent --json`
 - `opl agents conformance --family-defaults --json`
 - `opl framework readiness --family-defaults --json`
+- `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail summary --json`
 
 当前长期口径是：OPL family runtime 的 production online 路径收敛为 provider-backed runtime，Temporal-backed provider 是必需 substrate。旧 Hermes provider / Gateway / proof-provider / readiness / compatibility surface 不再承担 provider、默认 executor、Codex CLI 备线、可选安装模块或目标 session/wakeup substrate 角色。`hermes_agent` 是 canonical 显式非默认 executor adapter/backend，只承诺接口连接、生命周期、回执、审计和 fail-closed；它不承诺行为、质量、工具语义或 resume 与 `Codex CLI` 等价。缺少 binary、binding ref、receipt 或 full-loop proof 时必须 fail-closed，不能静默回落到 Codex。旧 Hermes provider / Gateway / proof-provider / readiness / compatibility surface 只保留为历史 provenance、诊断语料或负向 guard。最新 provider 计划见 [Temporal Family Runtime Provider 落地计划](./temporal-family-runtime-provider-plan.md)。
 
