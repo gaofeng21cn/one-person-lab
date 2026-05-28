@@ -5,7 +5,7 @@ Purpose: `specs_shared_runtime_contract`
 State: `active_spec_support`
 Machine boundary: 本文是人读 spec 支撑材料。机器可读行为继续归 contracts、schema、source、CLI/API 行为、runtime ledger、生成产物和 semantic human_doc ids。
 
-> 当前状态说明（`2026-05-26`）：本文作为 stage-led、以 Agent executor 为最小执行单位的 OPL Framework 共享边界参考保留。当前公开产品分层是 `OPL Framework -> One Person Lab App -> Foundry Agents`；当前运行主线是 `Codex-default executor -> explicit OPL activation -> Temporal-backed provider stage runtime -> selected Foundry Agent entry`。当前 Foundry Agents 为 `MAS`、`MAG`、`RCA`；`MedDeepScientist` 不再是 OPL 默认安装的 MAS 运行依赖，只通过 MAS 声明的可选 backend audit / source provenance / historical fixture / explicit archive import / upstream intake / parity oracle 引用出现。下层 domain 执行词汇按 `harness / controller` 内部边界理解，不作为当前默认公开产品模型。
+> 当前状态说明：本文作为 stage-led、以 Agent executor 为最小执行单位的 OPL Framework 共享边界参考保留。公开产品分层、运行主线、admitted Foundry Agents、MDS 读法和下层 domain 执行词汇均以核心五件套、active gap plan、`docs/active/current-development-lines.md` 与 fresh CLI/read-model 为准。当前长期读法仍是 `OPL Framework -> One Person Lab App -> Foundry Agents`，默认运行主线仍是 `Codex-default executor -> explicit OPL activation -> Temporal-backed provider stage runtime -> selected Foundry Agent entry`；历史日期校准和具体 counters 归 `docs/history/**`，不得从本文冻结。
 
 ## 目的
 

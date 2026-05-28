@@ -48,6 +48,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-6.md` | OPL series branch/worktree/doc governance tranche ledger part 6。 | 当前 truth 归 active execution map、核心五件套和 live CLI/read-model；ledger 只记录本轮 `current-development-lines.md` active-support 瘦身、fresh schema 读取、保留的外部 dirty lane 和下一轮写入范围。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-7.md` | OPL series branch/worktree/doc governance tranche ledger part 7。 | 当前 truth 归 runtime-substrate roadmap、active execution map、核心五件套和 live CLI/read-model；ledger 只记录本轮 `opl-stage-led-agent-framework-roadmap.md` dated proof 瘦身、fresh schema 读取、保留的外部 dirty lane 和下一轮写入范围。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-8.md` | OPL series branch/worktree/doc governance tranche ledger part 8。 | 当前 truth 归 Agent Lab runtime support、active execution map、核心五件套和 live CLI/read-model；ledger 只记录本轮 `opl-agent-lab-control-plane.md` dated calibration 瘦身、fresh Agent Lab read-model 读取、保留的外部 dirty lane 和下一轮写入范围。 |
+| `2026-05-29-opl-series-doc-governance-tranche-ledger-part-9.md` | OPL series branch/worktree/doc governance tranche ledger part 9。 | 当前 truth 归 shared runtime active spec、active execution map、核心五件套和 live CLI/read-model；ledger 只记录本轮 `shared-runtime-contract.md` dated current-state note 瘦身、fresh framework/conformance/default-caller/App read-model 读取、保留的外部 dirty lane 和下一轮写入范围。 |
 
 ## Tombstone Rules
 
