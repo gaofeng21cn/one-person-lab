@@ -28,27 +28,27 @@ MAS domain route 的 owner split 更窄：OPL 持有 wakeup、queue、attempt、
 
 Domain task hydration 是另一个显式授权面：domain sidecar export 可以输出 `pending_family_tasks[]`，OPL 只把这些任务按 `dedupe_key` 写入 family queue，再调用对应 domain sidecar dispatch。OPL 不从 read-only status 自行生成 domain action。MAS 的当前 active route task kinds 是 `domain_route/reconcile-apply`、`publication_aftercare/analysis-queue-progress` 与 `publication_aftercare/reviewer-refresh`，OPL 队列与 dispatch 文件只保留 route ref、action ref、source refs、source fingerprint 与 idempotency key；实际 repair、AI reviewer、gate replay、route decision、truth mutation 或 owner receipt 仍由 MAS owner surface 执行和落账。App/operator drilldown 只消费同一 Runtime Manager route-support projection，展示 supported task/action refs 与 non-authority boundary，不把 support catalog 解释成 owner-chain closure、domain ready 或 publication aftercare verdict。
 
-当前落地状态覆盖 OPL family-runtime 的 repo-level transport surface：queue enqueue/list/inspect/tick、idempotency、retry/dead-letter、approval pause、local inbox、domain-forbidden-write guard、MAS domain route projection、MAG/RCA sidecar task hydration，以及 migration provider stopped -> repair -> ready 的 fixture 验收。Temporal-backed provider pilot / provider abstraction cutover 已推进到 repo-native live proof、本机 managed production proof、provider continuous proof projection、provider SLO cadence receipt 和 task-bound stage attempt bridge；MAG/RCA adapter parity 由各自 domain repo main 持有。仍未完成的是真实 provider long-run SLO、真实 MAS/MAG/RCA domain owner-chain soak、workspace/runtime memory body 或 writeback apply receipt、artifact/lifecycle apply receipt，以及真实 MAS paper controlled apply 到最终投稿级交付；这些均是测试/证据差距，必须在对应真实环境 / domain truth 中单独给出 evidence 后才能写成 live-study 或长时运行 ready。
+本文不冻结 Runtime Manager 的某次落地状态、receipt 数量、provider proof、domain worklist 或本机 readiness 计数。当前状态只能从 `contracts/opl-framework/runtime-manager-contract.json`、`contracts/opl-framework/family-runtime-online-substrate-contract.json`、`contracts/opl-framework/native-helper-contract.json`、source/tests、`opl framework readiness --family-defaults --json`、`opl runtime app-operator-drilldown --json` 和 `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json` 读取。read-model 中的 provider SLO、route support、stage attempt、worklist、blocked envelope、typed blocker、receipt 和 App/operator 计数都按动态 refs-only projection 阅读，不是本文维护的完成表。
 
-## 当前要落地的最小面
+## 当前读法与机器入口
 
-1. `opl runtime manager`
-   输出当前 owner split、provider readiness、domain registration registry、native helper lifecycle、native helper target、state index target 与 sidecar promotion gate。
-2. `contracts/opl-framework/runtime-manager-contract.json`
-   冻结 Runtime Manager 的 machine-readable 合同，以及三类 domain registration surface 的必需字段。
-3. 核心 docs 对齐
-   `project / architecture / invariants / decisions / status` 共同说明 Runtime Manager 是薄层，不是 kernel。
-4. Native helper lifecycle
-   `native:build`、`native:doctor`、`native:repair`、`native:prebuild*` 与 `native:test` 成为 OPL package surface 的一部分；npm package 必须带上 Cargo workspace、Rust helper source、doctor/repair/prebuild 脚本与可选 prebuild manifest 目录。
-5. Production verification
-   CI 与本地验证都必须覆盖 native helper doctor、prebuild manifest check、package dry-run、Rust test/build、state cache 与 family smoke。CI 用 fixture family smoke 保持可复现；本地集成机可加 `--require-real-workspaces` 对真实 MAS/MAG sibling repo 做端到端 indexing。
+Runtime Manager 的支撑内容按下列入口读取：
 
-首启 readiness 口径：
+| 面 | 当前 owner | 读取入口 | 边界 |
+| --- | --- | --- | --- |
+| Runtime Manager 合同 | OPL framework | `contracts/opl-framework/runtime-manager-contract.json` | 冻结 provider 选择、typed family queue、stage attempt ledger、domain registration hydration、projection、native helper target 与 state index target；不替代 domain truth。 |
+| Provider-backed online runtime | OPL provider layer | `contracts/opl-framework/family-runtime-online-substrate-contract.json`、`opl framework readiness --family-defaults --json`、`opl runtime app-operator-drilldown --json` | Temporal 是 production online runtime 必需 substrate；provider completion、SLO satisfied 或 attempt running 不能写成 domain ready。 |
+| Runtime route support | OPL App/operator projection | `opl runtime app-operator-drilldown --json` 的 `runtime_manager_route_support` | 只展示 supported task/action refs 和 non-authority boundary；不关闭 owner-chain、publication aftercare 或 quality/export verdict。 |
+| Evidence worklist | OPL derived attention lens | `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json` | open/closed worklist 和 zero-open 状态只解释 operator attention；不授权 domain ready、production ready、artifact authority 或 domain physical delete。 |
+| Native helper lifecycle | OPL package/runtime helper layer | `contracts/opl-framework/native-helper-contract.json`、`package.json` 的 `native:*` scripts、`scripts/verify.sh native` | Rust helper 只能做 JSON stdio/CLI 边界内的检查、索引、缓存和 repair；不成为 scheduler、session/memory store、domain truth owner 或 Python domain logic replacement。 |
+| Stage progress 与 true path proof | OPL attempt projection | `contracts/opl-framework/family-runtime-attempt-contract.json`、`opl family-runtime attempt query|inspect`、`opl runtime app-operator-drilldown --detail full --json` | 只证明 attempt/progress/Temporal visibility 可追踪；不构成 long-soak、owner receipt、artifact authority 或质量 verdict。 |
+
+首启与 readiness 口径：
 
 - `opl install` 默认安装/复用 family runtime provider；`--no-online-runtime` 只用于开发/离线 degraded diagnostics。
 - Codex CLI、已准入 domain modules 与 family runtime provider 三层都 ready 时，Full OPL readiness 才完整通过。
 - provider 未 ready 表示 Full online runtime degraded；本地 CLI/status/manifest 可继续输出诊断。
-- 迁移期 Hermes cron bridge 的 desired script 是 `opl family-runtime tick --source hermes-cron --hydrate`。没有 `--hydrate` 的 cron 只能消费已有队列，不能把 domain read-model blocker 自动转换成 executable task。当前 Temporal-backed provider 路径已经提供 workflow/activity/signal/query contract；后续不再把 Hermes cron bridge 扩展成 provider、readiness path 或长期 wakeup substrate。
+- 旧 Hermes cron bridge 只按 history/provenance/negative-guard 阅读；Temporal-backed provider 已是 required production substrate，后续不得把 Hermes cron bridge 扩展为 provider、readiness path、兼容 fallback 或长期 wakeup substrate。
 
 ## Domain Registration Registry
 
