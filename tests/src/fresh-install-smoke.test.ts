@@ -313,6 +313,75 @@ test('install bootstrap-only on macOS uses an existing git checkout while Comman
   }
 });
 
+test('install complete consumes installer-only flag before invoking opl install', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-complete-args-'));
+  const fakeBin = path.join(homeRoot, 'bin');
+  const installDir = path.join(homeRoot, '.opl', 'one-person-lab');
+  const gitLog = path.join(homeRoot, 'git.log');
+  const npmLog = path.join(homeRoot, 'npm.log');
+  const oplLog = path.join(homeRoot, 'opl.log');
+  fs.mkdirSync(path.join(installDir, '.git'), { recursive: true });
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.writeFileSync(path.join(installDir, 'package.json'), '{}\n');
+
+  fs.writeFileSync(
+    path.join(fakeBin, 'git'),
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      `printf '%s\\n' "$*" >> ${JSON.stringify(gitLog)}`,
+      'if [ "${1:-}" = "--version" ]; then',
+      '  printf "git version 2.50.0\\n"',
+      'fi',
+    ].join('\n'),
+  );
+  fs.writeFileSync(path.join(fakeBin, 'node'), '#!/usr/bin/env bash\nexit 0\n');
+  fs.writeFileSync(
+    path.join(fakeBin, 'npm'),
+    [
+      '#!/usr/bin/env bash',
+      `printf '%s\\n' "$*" >> ${JSON.stringify(npmLog)}`,
+      'exit 0',
+    ].join('\n'),
+  );
+  fs.writeFileSync(
+    path.join(fakeBin, 'opl'),
+    [
+      '#!/usr/bin/env bash',
+      `printf '%s\\n' "$*" >> ${JSON.stringify(oplLog)}`,
+      'exit 0',
+    ].join('\n'),
+  );
+  for (const command of ['git', 'node', 'npm', 'opl']) {
+    fs.chmodSync(path.join(fakeBin, command), 0o755);
+  }
+
+  try {
+    const result = spawnSync('/bin/bash', [installScript, '--complete', '--skip-modules'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        HOME: homeRoot,
+        OPL_INSTALL_DIR: installDir,
+        OPL_REPO_URL: 'https://example.invalid/one-person-lab.git',
+        PATH: `${fakeBin}:/usr/bin:/bin`,
+      },
+    });
+
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.match(result.stdout, /Running complete One Person Lab setup/);
+    assert.match(result.stdout, /One Person Lab is ready/);
+    assert.deepEqual(fs.readFileSync(npmLog, 'utf8').trim().split('\n'), ['install', 'link']);
+    assert.deepEqual(fs.readFileSync(oplLog, 'utf8').trim().split('\n'), [
+      'install --skip-modules',
+      'system initialize',
+    ]);
+    assert.equal(fs.readFileSync(oplLog, 'utf8').includes('--complete'), false);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('fresh-install smoke runner validates local clean-room scenarios', () => {
   const result = spawnSync(process.execPath, [smokeScript], {
     cwd: repoRoot,

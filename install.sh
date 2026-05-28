@@ -17,6 +17,8 @@ for arg in "$@"; do
     --bootstrap-only)
       BOOTSTRAP_ONLY=1
       ;;
+    --complete)
+      ;;
     *)
       INSTALL_ARGS+=("$arg")
       ;;
