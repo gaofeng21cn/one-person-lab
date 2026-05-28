@@ -107,6 +107,169 @@ OPL 开发文档现在不能按“每份旧计划都继续完整执行”阅读�
 
 ## Coverage Ledger
 
+Date: `2026-05-29 00:45 CST`
+Tranche: `mas-ai-reviewer-materialization-currentness-and-six-repo-hygiene`
+State: `tranche_verified`
+
+本轮延续全局 `/goal` 与 OPL Doc Governance skill，先完成 fresh 六仓
+main/worktree/branch/dirty/ahead-behind/open-PR/process/recent-write/doctor
+盘点；随后在 MAS clean worktree 中复核 `035b2e82 Fix AI reviewer currentness
+materialization routing` 之后的 AI reviewer materializer currentness 文档、源码
+和测试，补 MAS repo-local coverage ledger，验证后吸收回 MAS `main`、推送并清理
+本轮 worktree/branch。本轮不声明 MAS paper closure、publication-ready、
+artifact authority、domain-ready、production-ready、owner receipt、App/workbench
+readiness 或 global goal complete。
+
+Fresh live truth inputs:
+
+- Fresh six-repo scan at `2026-05-29 00:39-00:44 CST`: OPL `902de075`,
+  MAS `035b2e82` before this tranche and `4d5f29db` after absorb, MAG
+  `8aa7d8c`, OMA `23e1730` and App `d6f60d2` read `main...origin/main = 0 0`;
+  RCA `fa09f1d` read `main...origin/main = 1 0` and remained dirty/recent with
+  active native-PPT dashboard repair / Codex executor processes.
+- Open PR scans returned `[]` for OPL, MAS, MAG, RCA, OMA and App.
+- Six-repo OPL Doc Governance doctor sweep returned `finding_count=0` and
+  active truth `pass` for all six repos.
+- Background process scan showed Codex app servers, GitHub runner processes,
+  Temporal dev server, old MAS quality/verify commands, fresh OPL framework
+  readiness commands, and active RCA native-PPT dashboard repair / Codex
+  executor processes under
+  `runtime-state/native-ppt-live-dashboard-sample-20260529-000223`. No process
+  was stopped.
+- OPL had a clean recent worktree
+  `.worktrees/developer-mode-app-patrol-mount` on
+  `codex/developer-mode-app-patrol-mount`, equal to OPL `main` / `origin/main`;
+  it had recent writes inside the last hour, so this automation retained it
+  rather than deleting a recent lane.
+- MAS repo-native inputs: `AGENTS.md`, `TASTE.md`,
+  `docs/docs_portfolio_consolidation.md`,
+  `docs/active/mas-ideal-state-gap-plan.md`, `docs/status.md`,
+  `docs/architecture.md`, `docs/invariants.md`, `docs/decisions.md`, and
+  `docs/runtime/control/controllers.md`.
+- MAS source/test inputs:
+  `src/med_autoscience/controllers/domain_action_request_materializer_parts/publication_owner_materialization.py`
+  and
+  `tests/domain_action_request_materializer_cases/test_ai_reviewer_story_surface_bridge.py`.
+
+Fresh semantic result:
+
+- MAS `docs/decisions.md` now records the current-inputs materializer rule:
+  when request lifecycle is still blocked by
+  `ai_reviewer_record_stale_after_current_inputs`,
+  `ai_reviewer_record_stale_after_current_manuscript`, or
+  `ai_reviewer_record_stale_after_unit_harmonized_rerun`, the materializer must
+  prove the candidate AI reviewer record covers the live currentness refs before
+  consuming the record-production work unit.
+- The live materializer now checks request lifecycle currentness through
+  `project_ai_reviewer_request_lifecycle(...)`. If the currentness blocker
+  remains, the record-production work unit is not bridged to
+  `run_quality_repair_batch` or publication gate replay; the AI reviewer
+  production route remains the owner route.
+- Story-surface bridge work-unit selection is derived from the current reviewer
+  route-back `next_work_unit` and checked against the canonical story-surface
+  write-work-unit registry. The DM002 legacy bridge remains limited to
+  `002-dm-china-us-mortality-attribution` and must not become cross-study
+  currentness basis.
+- MAS runtime/status/active docs remain current at their abstraction level:
+  they describe AI reviewer currentness, owner-route fail-closed behavior,
+  OPL refs-only transport and remaining evidence tails without asserting paper
+  closure, package freshness, domain-ready or production-ready status.
+- No MAS prose body correction was needed beyond the already landed
+  `docs/decisions.md` decision entry. MAS gained
+  `docs/history/docs-portfolio-coverage-ledger/2026-05-29-part-12.md`, and
+  `docs/docs_portfolio_consolidation.md` now indexes it.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full currentness read of the new `docs/decisions.md` decision entry; support read of AI reviewer currentness passages in `docs/runtime/control/controllers.md`, `docs/status.md`, and `docs/active/mas-ideal-state-gap-plan.md`; source/test read of the materializer and focused regression test listed above. | `docs/docs_portfolio_consolidation.md`; `docs/history/docs-portfolio-coverage-ledger/2026-05-29-part-12.md` |
+| `one-person-lab` | OPL Doc Governance skill, global `/goal`, fresh six-repo branch/worktree/PR/process/recent-write/doctor classification, and this family coverage ledger. | `docs/active/development-document-portfolio.md` |
+| `med-autogrant` | Main alignment, open-PR and doctor risk context. | none |
+| `redcube-ai` | Main ahead/dirty/recent native-PPT lane classification, active dashboard repair / Codex executor process retention, open-PR and doctor risk context. | none |
+| `opl-meta-agent` | Main alignment, open-PR and doctor risk context. | none |
+| `one-person-lab-app` | Main alignment, dirty remote-backed full-first-run worktree classification, open-PR and doctor risk context. | none |
+
+Archived / tombstoned / deleted docs:
+
+- none. The reviewed MAS docs still have durable roles: `docs/decisions.md`
+  remains the decision log, runtime/status/active docs remain current support /
+  active truth surfaces, and the new MAS file is coverage provenance.
+
+Worktree / branch cleanup:
+
+- Created and absorbed MAS worktree
+  `/Users/gaofeng/workspace/med-autoscience/.worktrees/codex/mas-ai-reviewer-materialization-currentness-20260529`
+  on branch `codex/mas-ai-reviewer-materialization-currentness-20260529`.
+- Committed MAS `4d5f29db docs: record MAS materializer currentness coverage`,
+  fast-forward merged into MAS `main`, pushed `origin/main`, removed the
+  worktree and deleted the local branch after clean/equal checks.
+- No remote branch was deleted.
+
+Verification:
+
+- MAS worktree before absorb: `git diff --check`; strict line-start
+  conflict-marker scan over touched docs returned no matches; MAS doctor
+  returned `finding_count=0`, active truth `pass`;
+  `./scripts/run-pytest-clean.sh -q
+  tests/domain_action_request_materializer_cases/test_ai_reviewer_story_surface_bridge.py`
+  passed `4` tests.
+- OPL ledger foldback: `git diff --check`; strict line-start conflict-marker
+  scan over `docs/active/development-document-portfolio.md` returned no
+  matches; OPL doctor returned `finding_count=0`, active truth `pass`;
+  `./scripts/verify.sh` passed `38` tests.
+- Final six-repo doctor sweep returned `finding_count=0`, active truth `pass`
+  for OPL, MAS, MAG, RCA, OMA and App.
+
+Retained lanes / blockers:
+
+- OPL `.worktrees/developer-mode-app-patrol-mount`: clean and equal to main /
+  origin, but had recent writes inside the last hour; retained under the
+  recent-lane safety rule.
+- RCA root checkout: `main` remains ahead of origin by `fa09f1d Harden native
+  PPTX layout grammar gates`, dirty in native-PPT docs/source/tests/prompts,
+  and has active native-PPT dashboard repair / Codex executor processes.
+  Retain and do not push or clean from this MAS docs tranche.
+- App `codex/full-first-run-stable-gate-20260525`: dirty, remote-backed, equal
+  to its remote branch, and not equivalent to App main (`main...HEAD = 93 3`)
+  with untracked `docs/product/`. Retain.
+- Remote-only OPL `origin/fix/opl-temporal-worker-stale-repair-20260528`, MAG
+  `origin/feature/ai-narration-contracts`, and RCA
+  `origin/codex/developer-mode-fork-pr-live-closeout-20260528` remain retained
+  without proof they are automation-owned stale and externally unreferenced.
+
+Unreviewed docs:
+
+- `med-autoscience`: this tranche covers the materializer currentness section
+  reopened by `035b2e82` only. It introduces no new exact-path gap; future
+  source/contract/read-model changes can reopen individual sections.
+- `one-person-lab`, `med-autogrant`, `redcube-ai`, `opl-meta-agent`, and
+  `one-person-lab-app`: previous full/exact reconcile coverage remains as
+  recorded unless later changes reopen their docs. The global `/goal` stays
+  active.
+
+Remaining stale / retire candidates:
+
+- Any future MAS docs that let `ai_reviewer_record_stale_after_current_inputs`,
+  current-manuscript, or unit-harmonized currentness blockers bridge directly
+  to writer/gate owner routes without record-currentness proof are stale unless
+  the materializer contract changes again.
+- Any future MAS docs that let DM002-specific story-surface work-unit ids
+  become cross-study currentness basis are stale unless the story-surface
+  registry explicitly admits that route.
+- MAS implementation/evidence tails remain separate from docs coverage: real
+  paper-line owner receipt scaleout, memory/artifact/lifecycle receipts, human
+  gate/resume, provider SLO long soak, OPL refs-only ledger follow-through and
+  physical-delete authorization still require source/test/receipt evidence.
+- Recheck RCA native-PPT and App full-first-run dirty lanes only after they
+  become clean/inactive or are explicitly handed off.
+
+Next tranche write scope:
+
+- Start with another fresh six-repo scan. If no safe cleanup candidate appears,
+  continue OPL/RCA/App README/docs coverage or validate/commit one explicit
+  dirty owner lane without mixing unrelated state. Keep global `/goal` active.
+
 Date: `2026-05-29 00:35 CST`
 Tranche: `mag-specs-lifecycle-history-currentness-and-six-repo-hygiene`
 State: `tranche_verified`
