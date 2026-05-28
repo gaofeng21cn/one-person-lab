@@ -359,3 +359,173 @@ test('runtime App drilldown does not combine App release user-path refs across r
     assert.equal(nextStep.can_close_app_release_user_path, false);
   });
 });
+
+test('runtime App drilldown selects the latest complete App release user-path cohort', () => {
+  withTempState('opl-app-release-user-path-latest-complete-cohort-state-', (stateRoot) => {
+    const oldCohortRecord = recordAppReleaseUserPathEvidence(stateRoot, {
+      release_package_refs: ['release://opl-app/full/26.5.19/dmg'],
+      screenshot_refs: ['screenshot://opl-app/live-window/26.5.19.png'],
+      reload_prompt_user_path_refs: ['receipt://opl-app/reload-prompt/26.5.19'],
+      provider_state_linkage_refs: ['provider://temporal/cadence-window/26.5.19'],
+      long_operator_evidence_refs: [
+        'long_operator_evidence_ref://one-person-lab-app/26.5.19/operator-window/hash',
+      ],
+    });
+    const draftCohortRecord = recordAppReleaseUserPathEvidence(stateRoot, {
+      release_package_refs: [
+        'release_package_receipt_ref://one-person-lab-app/26.5.28-draft.20260527235839/remote-release-verification?run=26545950818&sha256=f342065b6c9a4841954e3d6e85e7167ecf9cfc5668bb067970a69909fc5fab04',
+      ],
+      screenshot_refs: [
+        'screenshot_evidence_ref://one-person-lab-app/26.5.28-draft.20260527235839/clean-vm-full/settings-runtime.png?artifact=7254845667&sha256=33c40c74c372b3d47b5cee969628434c05155d9632ac36c6ac13fad73b8404e3',
+      ],
+      reload_prompt_user_path_refs: [
+        'first_run_log_ref://one-person-lab-app/26.5.28-draft.20260527235839/clean-vm-full/smoke-events?artifact=7254845667&sha256=952f076465fafce0f9ade0e865b68d9c0cfdbded1b774bc5587c8dcbc9b3945a',
+      ],
+      provider_state_linkage_refs: [
+        'provider_slo_receipt_ref://one-person-lab/temporal/26.5.28-draft.20260527235839/window-cadence-satisfied?run=26545950818',
+      ],
+      long_operator_evidence_refs: [
+        'long_operator_evidence_ref://one-person-lab-app/26.5.28-draft.20260527235839/github-actions-clean-vm?run=26545950818&standard_artifact=7254791472&full_artifact=7254845667',
+      ],
+    });
+
+    for (const receiptRef of [
+      oldCohortRecord.receipt_refs[0],
+      draftCohortRecord.receipt_refs[0],
+    ]) {
+      runCli([
+        'runtime',
+        'app-release-evidence',
+        'verify',
+        '--receipt-ref',
+        receiptRef,
+      ], {
+        OPL_STATE_DIR: stateRoot,
+      });
+    }
+
+    const output = runCli(['runtime', 'app-operator-drilldown'], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
+    const evidence = output.attention_first_payload.evidence_after_contract
+      .app_release_user_path_evidence;
+
+    assert.equal(evidence.status, 'app_release_user_path_evidence_refs_observed');
+    assert.equal(evidence.refs_observed_for_all_gates, true);
+    assert.equal(evidence.production_user_path_ready, true);
+    assert.equal(evidence.open_gate_count, 0);
+    assert.deepEqual(evidence.open_gate_ids, []);
+    assert.equal(evidence.cohort_guard.status, 'cohort_selected');
+    assert.equal(
+      evidence.cohort_guard.selected_cohort_id,
+      'app-release-cohort:26.5.28-draft.20260527235839',
+    );
+    assert.deepEqual(evidence.cohort_guard.candidate_cohort_ids, [
+      'app-release-cohort:26.5.19',
+      'app-release-cohort:26.5.28-draft.20260527235839',
+    ]);
+    assert.equal(
+      output.summary.app_release_user_path_evidence_open_gate_count,
+      0,
+    );
+    assert.equal(output.summary.app_release_user_path_production_user_path_ready, true);
+    assert.equal(output.summary.app_release_user_path_release_ready_claimed, false);
+    assert.equal(output.summary.app_release_user_path_production_ready_claimed, false);
+  });
+});
+
+test('runtime App drilldown does not let an older complete cohort hide newer incomplete App release evidence', () => {
+  withTempState('opl-app-release-user-path-newer-incomplete-cohort-state-', (stateRoot) => {
+    const oldCohortRecord = recordAppReleaseUserPathEvidence(stateRoot, {
+      release_package_refs: ['release://opl-app/full/26.5.19/dmg'],
+      screenshot_refs: ['screenshot://opl-app/live-window/26.5.19.png'],
+      reload_prompt_user_path_refs: ['receipt://opl-app/reload-prompt/26.5.19'],
+      provider_state_linkage_refs: ['provider://temporal/cadence-window/26.5.19'],
+      long_operator_evidence_refs: [
+        'long_operator_evidence_ref://one-person-lab-app/26.5.19/operator-window/hash',
+      ],
+    });
+    const newerPackageOnlyRecord = recordAppReleaseUserPathEvidence(stateRoot, {
+      release_package_refs: [
+        'release_package_receipt_ref://one-person-lab-app/26.5.28-draft.20260527235839/remote-release-verification?run=26545950818',
+      ],
+    });
+
+    for (const receiptRef of [
+      oldCohortRecord.receipt_refs[0],
+      newerPackageOnlyRecord.receipt_refs[0],
+    ]) {
+      runCli([
+        'runtime',
+        'app-release-evidence',
+        'verify',
+        '--receipt-ref',
+        receiptRef,
+      ], {
+        OPL_STATE_DIR: stateRoot,
+      });
+    }
+
+    const output = runCli(['runtime', 'app-operator-drilldown'], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
+    const evidence = output.attention_first_payload.evidence_after_contract
+      .app_release_user_path_evidence;
+
+    assert.equal(evidence.status, 'app_release_user_path_evidence_open');
+    assert.equal(evidence.refs_observed_for_all_gates, false);
+    assert.equal(evidence.production_user_path_ready, false);
+    assert.equal(evidence.open_gate_count, 5);
+    assert.equal(evidence.cohort_guard.status, 'cohort_ambiguous');
+    assert.deepEqual(evidence.cohort_guard.complete_cohort_ids, [
+      'app-release-cohort:26.5.19',
+    ]);
+    assert.equal(output.summary.app_release_user_path_production_user_path_ready, false);
+  });
+});
+
+test('runtime App drilldown tolerates malformed percent escapes in App release refs', () => {
+  withTempState('opl-app-release-user-path-malformed-percent-state-', (stateRoot) => {
+    const record = recordAppReleaseUserPathEvidence(stateRoot, {
+      release_package_refs: [
+        'release_package_receipt_ref://one-person-lab-app/26.5.29-draft.1/remote-release-verification?path=bad%zz',
+      ],
+      screenshot_refs: [
+        'screenshot_evidence_ref://one-person-lab-app/26.5.29-draft.1/settings-runtime.png?path=bad%zz',
+      ],
+      reload_prompt_user_path_refs: [
+        'first_run_log_ref://one-person-lab-app/26.5.29-draft.1/first-run?path=bad%zz',
+      ],
+      provider_state_linkage_refs: [
+        'provider_slo_receipt_ref://one-person-lab/temporal/26.5.29-draft.1/window-cadence-satisfied?path=bad%zz',
+      ],
+      long_operator_evidence_refs: [
+        'long_operator_evidence_ref://one-person-lab-app/26.5.29-draft.1/github-actions-clean-vm?path=bad%zz',
+      ],
+    });
+
+    runCli([
+      'runtime',
+      'app-release-evidence',
+      'verify',
+      '--receipt-ref',
+      record.receipt_refs[0],
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const output = runCli(['runtime', 'app-operator-drilldown'], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
+    const evidence = output.attention_first_payload.evidence_after_contract
+      .app_release_user_path_evidence;
+
+    assert.equal(evidence.status, 'app_release_user_path_evidence_refs_observed');
+    assert.equal(evidence.cohort_guard.status, 'cohort_selected');
+    assert.equal(
+      evidence.cohort_guard.selected_cohort_id,
+      'app-release-cohort:26.5.29-draft.1',
+    );
+    assert.equal(output.summary.app_release_user_path_evidence_open_gate_count, 0);
+  });
+});

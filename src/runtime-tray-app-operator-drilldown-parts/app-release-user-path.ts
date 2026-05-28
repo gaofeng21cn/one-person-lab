@@ -34,8 +34,29 @@ function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
+function safeDecodeURIComponent(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 function versionCohortFromRef(value: string) {
-  const match = value.match(/(?:^|[^0-9])v?(\d+\.\d+\.\d+)(?:[^0-9]|$)/);
+  const decoded = safeDecodeURIComponent(value);
+  const segmentMatch = decoded.match(
+    /(?:^|[/:?&=])v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?)(?=$|[/?#&:])/,
+  );
+  if (segmentMatch) {
+    return `app-release-cohort:${segmentMatch[1]}`;
+  }
+  const assetMatch = decoded.match(
+    /One-Person-Lab(?:-Full)?-v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?)-mac-/,
+  );
+  if (assetMatch) {
+    return `app-release-cohort:${assetMatch[1]}`;
+  }
+  const match = decoded.match(/(?:^|[^0-9A-Za-z.])v?(\d+\.\d+\.\d+)(?:[^0-9A-Za-z.]|$)/);
   return match ? `app-release-cohort:${match[1]}` : null;
 }
 
@@ -70,7 +91,13 @@ function cohortIdsFromRecord(value: JsonRecord) {
 
 function buildCohortGuard(records: JsonRecord[]) {
   const candidateCohortIds = uniqueStrings(records.flatMap(cohortIdsFromRecord)).sort();
-  const selectedCohortId = candidateCohortIds.length === 1 ? candidateCohortIds[0] : null;
+  const completeCohortIds = completeAppReleaseCohortIds(records, candidateCohortIds);
+  const newestCandidateCohortId = newestCohortId(candidateCohortIds);
+  const selectedCohortId = candidateCohortIds.length === 1
+    ? candidateCohortIds[0]
+    : newestCandidateCohortId && completeCohortIds.includes(newestCandidateCohortId)
+      ? newestCandidateCohortId
+      : null;
   return {
     status: candidateCohortIds.length === 0
       ? 'cohort_unscoped'
@@ -79,8 +106,138 @@ function buildCohortGuard(records: JsonRecord[]) {
         : 'cohort_ambiguous',
     selected_cohort_id: selectedCohortId,
     candidate_cohort_ids: candidateCohortIds,
+    complete_cohort_ids: completeCohortIds,
+    newest_candidate_cohort_id: newestCandidateCohortId,
+    selection_policy:
+      'single_cohort_or_newest_candidate_when_complete_without_cross_cohort_gate_mixing',
     requires_single_release_user_path_cohort: true,
   };
+}
+
+function completeAppReleaseCohortIds(records: JsonRecord[], candidateCohortIds: string[]) {
+  return candidateCohortIds.filter((cohortId) => {
+    const scopedRecords = records.filter((entry) => cohortIdsFromRecord(entry).includes(cohortId));
+    return (
+      refsFromRecords(scopedRecords, [
+        'release_package_refs',
+        'release_bundle_refs',
+        'app_release_artifact_refs',
+        'dmg_refs',
+        'sidecar_refs',
+      ]).length > 0
+      && refsFromRecords(scopedRecords, [
+        'screenshot_refs',
+        'app_screenshot_refs',
+        'first_run_screenshot_refs',
+        'operator_screenshot_refs',
+      ]).length > 0
+      && refsFromRecords(scopedRecords, [
+        'reload_prompt_user_path_refs',
+        'reload_prompt_receipt_refs',
+        'first_run_log_refs',
+        'startup_maintenance_reload_prompt_refs',
+      ]).length > 0
+      && refsFromRecords(scopedRecords, [
+        'provider_state_linkage_refs',
+        'provider_state_receipt_refs',
+        'provider_cadence_receipt_refs',
+        'provider_slo_receipt_refs',
+      ]).length > 0
+      && refsFromRecords(scopedRecords, [
+        'long_operator_evidence_refs',
+        'operator_long_soak_refs',
+        'app_user_path_long_soak_refs',
+        'production_long_soak_refs',
+      ]).length > 0
+    );
+  });
+}
+
+function newestCohortId(cohortIds: string[]) {
+  if (cohortIds.length === 0) {
+    return null;
+  }
+  return [...cohortIds].sort((left, right) =>
+    compareReleaseVersions(releaseVersionFromCohortId(left), releaseVersionFromCohortId(right))
+  ).at(-1) ?? null;
+}
+
+function releaseVersionFromCohortId(cohortId: string) {
+  return cohortId.startsWith('app-release-cohort:')
+    ? cohortId.slice('app-release-cohort:'.length)
+    : cohortId;
+}
+
+function compareReleaseVersions(left: string, right: string) {
+  const leftParsed = parseReleaseVersion(left);
+  const rightParsed = parseReleaseVersion(right);
+  for (const key of ['major', 'minor', 'patch'] as const) {
+    const delta = leftParsed[key] - rightParsed[key];
+    if (delta !== 0) {
+      return delta;
+    }
+  }
+  return comparePrerelease(leftParsed.prerelease, rightParsed.prerelease);
+}
+
+function parseReleaseVersion(version: string) {
+  const match = version.match(
+    /^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)(?:-(?<prerelease>[0-9A-Za-z.-]+))?$/,
+  );
+  if (!match?.groups) {
+    return { major: 0, minor: 0, patch: 0, prerelease: version };
+  }
+  return {
+    major: Number.parseInt(match.groups.major, 10),
+    minor: Number.parseInt(match.groups.minor, 10),
+    patch: Number.parseInt(match.groups.patch, 10),
+    prerelease: match.groups.prerelease ?? '',
+  };
+}
+
+function comparePrerelease(left: string, right: string) {
+  if (left === right) {
+    return 0;
+  }
+  if (!left) {
+    return 1;
+  }
+  if (!right) {
+    return -1;
+  }
+  const leftParts = left.split('.');
+  const rightParts = right.split('.');
+  const partCount = Math.max(leftParts.length, rightParts.length);
+  for (let index = 0; index < partCount; index += 1) {
+    const leftPart = leftParts[index];
+    const rightPart = rightParts[index];
+    if (leftPart === undefined) {
+      return -1;
+    }
+    if (rightPart === undefined) {
+      return 1;
+    }
+    const leftNumber = /^\d+$/.test(leftPart) ? Number.parseInt(leftPart, 10) : null;
+    const rightNumber = /^\d+$/.test(rightPart) ? Number.parseInt(rightPart, 10) : null;
+    if (leftNumber !== null && rightNumber !== null) {
+      const delta = leftNumber - rightNumber;
+      if (delta !== 0) {
+        return delta;
+      }
+      continue;
+    }
+    if (leftNumber !== null) {
+      return -1;
+    }
+    if (rightNumber !== null) {
+      return 1;
+    }
+    const delta = leftPart.localeCompare(rightPart);
+    if (delta !== 0) {
+      return delta;
+    }
+  }
+  return 0;
 }
 
 function recordsForCohortGuard(
@@ -158,7 +315,7 @@ function typedBlockerGateIdFromRef(value: string) {
     // Fall through to the regex path for non-URL refs.
   }
   const match = value.match(/[?&]gate=([^&]+)/);
-  return match ? decodeURIComponent(match[1]).trim() : null;
+  return match ? safeDecodeURIComponent(match[1]).trim() : null;
 }
 
 function currentTypedBlockerRefs(input: {
