@@ -167,7 +167,7 @@ function waitForMacGuiImageCleanupAttempt(attemptIndex: number) {
   if (attemptIndex <= 0) {
     return;
   }
-  const waitMs = Math.min(100 * attemptIndex, 500);
+  const waitMs = Math.min(200 * attemptIndex, 1000);
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, waitMs);
 }
 
@@ -184,12 +184,42 @@ function detachMountedGuiImage(mountPoint: string) {
 }
 
 function removeGuiInstallWorkRoot(workRoot: string) {
-  fs.rmSync(workRoot, {
-    recursive: true,
-    force: true,
-    maxRetries: 8,
-    retryDelay: 150,
-  });
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    waitForMacGuiImageCleanupAttempt(attempt);
+    try {
+      fs.rmSync(workRoot, {
+        recursive: true,
+        force: true,
+      });
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
+function cleanupGuiInstallWorkRoot(workRoot: string, mountPoint: string | null) {
+  const detachResult = mountPoint ? detachMountedGuiImage(mountPoint) : null;
+  try {
+    removeGuiInstallWorkRoot(workRoot);
+  } catch (error) {
+    return {
+      status: 'failed' as const,
+      note: error instanceof Error ? error.message : String(error),
+    };
+  }
+  if (detachResult && detachResult.exitCode !== 0) {
+    return {
+      status: 'failed' as const,
+      note: detachResult.stderr || detachResult.stdout || 'GUI release asset detach failed',
+    };
+  }
+  return {
+    status: 'completed' as const,
+    note: null,
+  };
 }
 
 function installOplGuiFromRelease(base = buildGuiActionBase()) {
@@ -215,7 +245,7 @@ function installOplGuiFromRelease(base = buildGuiActionBase()) {
 
   const curlResult = runCommand(getCurlCommand(), ['-fL', '--create-dirs', '-o', dmgPath, base.releaseUrl]);
   if (curlResult.exitCode !== 0) {
-    removeGuiInstallWorkRoot(workRoot);
+    cleanupGuiInstallWorkRoot(workRoot, null);
     return {
       status: 'failed' as const,
       strategy: 'install_release_asset_then_open_app',
@@ -232,7 +262,7 @@ function installOplGuiFromRelease(base = buildGuiActionBase()) {
 
   const attachResult = runCommand(getHdiutilCommand(), ['attach', dmgPath, '-nobrowse', '-readonly', '-mountpoint', mountPoint]);
   if (attachResult.exitCode !== 0) {
-    removeGuiInstallWorkRoot(workRoot);
+    cleanupGuiInstallWorkRoot(workRoot, null);
     return {
       status: 'failed' as const,
       strategy: 'install_release_asset_then_open_app',
@@ -247,6 +277,7 @@ function installOplGuiFromRelease(base = buildGuiActionBase()) {
     };
   }
 
+  let cleanupCompleted = false;
   try {
     const copyResult = copyMountedApp(mountPoint, getApplicationsDir());
     if (copyResult.exitCode !== 0 || !copyResult.appPath) {
@@ -264,6 +295,8 @@ function installOplGuiFromRelease(base = buildGuiActionBase()) {
       };
     }
 
+    const cleanupResult = cleanupGuiInstallWorkRoot(workRoot, mountPoint);
+    cleanupCompleted = true;
     const openResult = openInstalledOplGui(copyResult.appPath, base);
     return {
       ...openResult,
@@ -275,10 +308,12 @@ function installOplGuiFromRelease(base = buildGuiActionBase()) {
         '&&', 'cp', '-R', `${mountPoint}/*.app`, getApplicationsDir(),
         '&&', getOpenCommand(), copyResult.appPath,
       ],
+      note: openResult.note ?? cleanupResult.note,
     };
   } finally {
-    detachMountedGuiImage(mountPoint);
-    removeGuiInstallWorkRoot(workRoot);
+    if (!cleanupCompleted) {
+      cleanupGuiInstallWorkRoot(workRoot, mountPoint);
+    }
   }
 }
 

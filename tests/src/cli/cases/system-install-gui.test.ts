@@ -6,6 +6,19 @@ function disableRemoteCompanionInstall() {
   };
 }
 
+function chmodTree(targetPath: string) {
+  if (!fs.existsSync(targetPath)) {
+    return;
+  }
+  fs.chmodSync(targetPath, 0o700);
+  if (!fs.lstatSync(targetPath).isDirectory()) {
+    return;
+  }
+  for (const entry of fs.readdirSync(targetPath)) {
+    chmodTree(path.join(targetPath, entry));
+  }
+}
+
 test('install command downloads installs and opens the OPL GUI when it is missing', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-gui-home-'));
   const applicationsDir = path.join(homeRoot, 'Applications');
@@ -114,5 +127,117 @@ exit 1
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(toolRoot, { recursive: true, force: true });
     fs.rmSync(openFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('install command opens the installed App even when GUI DMG temp cleanup is delayed', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-gui-home-'));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-gui-tmp-'));
+  const applicationsDir = path.join(homeRoot, 'Applications');
+  const toolRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-gui-tools-'));
+  const curlPath = path.join(toolRoot, 'curl');
+  const hdiutilPath = path.join(toolRoot, 'hdiutil');
+  const openPath = path.join(toolRoot, 'open');
+  const openCapturePath = path.join(toolRoot, 'open.log');
+  const toolLogPath = path.join(toolRoot, 'tools.log');
+
+  fs.writeFileSync(
+    curlPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf 'curl %s\n' "$*" >> ${JSON.stringify(toolLogPath)}
+out=''
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = '-o' ]; then
+    out="$2"
+    shift 2
+    continue
+  fi
+  shift
+done
+mkdir -p "$(dirname "$out")"
+printf 'fake dmg\n' > "$out"
+`,
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    hdiutilPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf 'hdiutil %s\n' "$*" >> ${JSON.stringify(toolLogPath)}
+if [ "$1" = 'attach' ]; then
+  mountpoint=''
+  while [ "$#" -gt 0 ]; do
+    if [ "$1" = '-mountpoint' ]; then
+      mountpoint="$2"
+      shift 2
+      continue
+    fi
+    shift
+  done
+  mkdir -p "$mountpoint/One Person Lab.app/Contents"
+  printf 'app\n' > "$mountpoint/One Person Lab.app/Contents/Info.plist"
+  exit 0
+fi
+if [ "$1" = 'detach' ]; then
+  mountpoint="$2"
+  chmod -R 000 "$mountpoint"
+  exit 0
+fi
+echo "unexpected hdiutil args: $*" >&2
+exit 1
+`,
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    openPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf 'open %s\n' "$*" >> ${JSON.stringify(toolLogPath)}
+printf '%s\n' "$*" > ${JSON.stringify(openCapturePath)}
+`,
+    { mode: 0o755 },
+  );
+
+  try {
+    const output = runCli([
+      'install',
+      '--skip-modules',
+      '--skip-engines',
+      '--skip-native-helper-repair',
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_GUI_INSTALL_PLATFORM: 'darwin',
+      OPL_APPLICATIONS_DIR: applicationsDir,
+      OPL_CURL_BIN: curlPath,
+      OPL_HDIUTIL_BIN: hdiutilPath,
+      OPL_OPEN_BIN: openPath,
+      OPL_RELEASE_VERSION: '26.4.25',
+      TMPDIR: tempRoot,
+      ...disableRemoteCompanionInstall(),
+    }) as {
+      install: {
+        gui_open_action: {
+          status: string;
+          installed_app_path: string;
+        } | null;
+      };
+    };
+
+    assert.equal(output.install.gui_open_action?.status, 'completed');
+    assert.equal(output.install.gui_open_action?.installed_app_path, path.join(applicationsDir, 'One Person Lab.app'));
+    assert.equal(fs.readFileSync(openCapturePath, 'utf8').trim(), path.join(applicationsDir, 'One Person Lab.app'));
+    const toolLog = fs.readFileSync(toolLogPath, 'utf8').trim().split('\n');
+    const detachIndex = toolLog.findIndex((line) => line.startsWith('hdiutil detach '));
+    const openIndex = toolLog.findIndex((line) => line.startsWith('open '));
+    assert.equal(detachIndex >= 0, true);
+    assert.equal(openIndex >= 0, true);
+    assert.equal(detachIndex < openIndex, true);
+  } finally {
+    chmodTree(tempRoot);
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+    fs.rmSync(toolRoot, { recursive: true, force: true });
   }
 });
