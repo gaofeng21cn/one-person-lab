@@ -1618,7 +1618,7 @@ Fresh live truth inputs:
 Fresh semantic result:
 
 - `opl help runtime developer-mode-closeout --json` exposes `usage=opl runtime developer-mode-closeout <record|verify|list>` and lists exactly the `record`、`verify`、`list` subcommands, each with its command-specific usage and summary.
-- `opl runtime developer-mode-closeout --json` returns `surface_kind=opl_runtime_developer_mode_closeout_command_group`, `refs_only=true`, and `owner_acceptance_policy=external_owner_ref_only_repo_contract_fixture_is_unclosed_non_owner_drill_no_opl_owner_receipt_write`.
+- `opl runtime developer-mode-closeout --json` returns `surface_kind=opl_runtime_developer_mode_closeout_command_group`, `refs_only=true`, and `owner_acceptance_policy=direct_fix_accepts_external_owner_ref_fork_pr_requires_github_pr_owner_acceptance_ref_no_opl_owner_receipt_write`.
 - Human help output now includes the same subcommand table; this is a CLI/help discoverability improvement, not a new runtime authority surface.
 - Focused tests cover the help group boundary, unknown subcommand rejection, refs-only record/verify/list behavior, and negative guards blocking owner receipt or incomplete closeout payloads.
 
