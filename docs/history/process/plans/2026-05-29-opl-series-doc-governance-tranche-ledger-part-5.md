@@ -25,7 +25,7 @@ Date: `2026-05-29T02:40:00+0800`
 | `one-person-lab` | `main` aligned with `origin/main` at `bcfd5485`, with pre-existing dirty docs in `docs/status.md` and `docs/active/current-state-vs-ideal-gap.md`. | No extra OPL worktree. | Dirty docs were currentness foldback text and were corrected against fresh read-model output. |
 | `med-autoscience` | `main` clean and aligned with `origin/main` at `cdc4006a`. | Dirty implementation worktree `codex/dm003-dispatch-currentness` retained. | Not touched; it contains source/test changes and an untracked controller file. |
 | `med-autogrant` | `main` clean and aligned with `origin/main` at `d0d00fe`. | No extra worktree. | No body docs edited this tranche. |
-| `redcube-ai` | `main` clean but ahead of `origin/main` by 2 native-PPT commits at `e4c1d49`. | No extra worktree. | Left untouched; ahead commits are native-PPT implementation work outside this OPL docs tranche. |
+| `redcube-ai` | Final correction reads `main` aligned with `origin/main` at `e4df859`, with a new unrelated dirty RCA native live-binding lane in the root checkout. | Extra worktree `codex/rca-native-live-binding` at `e4df859` is present. | The earlier native-PPT ahead commits were independently verified and pushed as `e4df859`; the current dirty RCA lane is separate and retained. |
 | `opl-meta-agent` | `main` clean and aligned with `origin/main` at `096337e`. | No extra worktree. | No body docs edited this tranche. |
 | `one-person-lab-app` | `main` clean and aligned with `origin/main` at `d6f60d2`. | Dirty remote-backed `codex/full-first-run-stable-gate-20260525` worktree retained. | App body docs remain unsafe while the release lane is dirty/unmerged. |
 
@@ -88,12 +88,12 @@ This tranche did not complete whole-portfolio coverage.
 
 - Any active doc that freezes `open_worklist_item_count=0` or `domain_dispatch_evidence_workorder_count=0` after the fresh `sat_55e36b0dbf2b609fb33329db` route is stale.
 - Any prose implying that an open MAS refs-only workorder lets OPL generate MAS owner receipt, typed blocker, owner-chain ref, no-regression ref, paper closure, domain ready or production ready is stale pollution.
-- Dirty owner lanes remain deferred: MAS `codex/dm003-dispatch-currentness`, App `codex/full-first-run-stable-gate-20260525`, and RCA native-PPT ahead commits.
+- Dirty owner lanes remain deferred: MAS `codex/dm003-dispatch-currentness`, App `codex/full-first-run-stable-gate-20260525`, and the current RCA native live-binding dirty lane. The earlier RCA native-PPT ahead commits are no longer a deferred cleanup item because they were verified and pushed as `e4df859`.
 
 ## Next write scope
 
 1. Start with another fresh six-repo scan and read-model check.
 2. If `sat_55e36b0dbf2b609fb33329db` remains open, either leave it as owner-payload-required attention or explicitly route through MAS domain/App/live owner payload; do not self-close from OPL.
 3. Continue OPL uncovered support-doc paragraph coverage or MAG hosted-provider history batches.
-4. Keep App full-first-run and RCA native-PPT body docs deferred unless explicitly assigned or clean/inactive.
+4. Keep App full-first-run and current RCA dirty body/source lanes deferred unless explicitly assigned or clean/inactive.
 5. Keep global `/goal` active until all 6 repos' `README*` and `docs/**/*.md` are section-reviewed and no unreviewed docs or unresolved stale candidates remain.
