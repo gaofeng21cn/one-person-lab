@@ -121,7 +121,7 @@ Fresh live truth inputs:
 - `one-person-lab-app` main / `origin/main` aligned at `d3aa5b4 Refresh App release evidence truth`; this refreshed App active/status docs for refs-only release/user-path evidence without promoting it to App release-ready or family production-ready authority.
 - `med-autogrant` main / `origin/main` remained aligned at `46141e2`.
 - `redcube-ai` main / `origin/main` remained aligned at `1803ff4` with dirty native-PPT route/evidence work.
-- `opl-meta-agent` main / `origin/main` remained aligned at `49f932b`.
+- `opl-meta-agent` main / `origin/main` remained aligned at `49f932b`; final worktree scan also saw clean same-head but recent-write `codex/oma-production-consumption-truth-20260528`.
 
 Verified commits / commands:
 
@@ -150,7 +150,9 @@ Worktree / branch cleanup:
 
 Retained lanes / blockers:
 
+- OPL retained newly observed `codex/gui-dmg-cleanup-hardening-20260528`: clean same-head with `main` but recent-write active; keep until the next scan can confirm it is stale and safe.
 - MAS retained `codex/dm003-record-archive-currentness`: clean but recent-write active and behind current main; keep until recent-window/process context clears. Other previously dirty MAS lanes are no longer listed in the final worktree scan.
+- OMA retained newly observed `codex/oma-production-consumption-truth-20260528`: clean same-head with `main` but recent-write active; keep until the next scan can confirm it is stale and safe.
 - RCA retained dirty native-PPT root with contracts/source/prompts/docs/tests and recent generated/native-quality outputs; no cleanup.
 - App retained dirty `codex/agui-shell-candidate-spike-20260528`, dirty/recent `codex/app-settings-partition-20260528`, dirty remote-backed `codex/full-first-run-stable-gate-20260525`, and clean but recent non-ancestor `codex/release-readiness-oneshot-failure-20260528`.
 - Remote-only OPL `origin/fix/opl-temporal-worker-stale-repair-20260528` and MAG `origin/feature/ai-narration-contracts` remain retained: no local stale-lane proof or automation ownership proof for remote deletion.
@@ -161,7 +163,7 @@ Unreviewed docs:
 
 Remaining stale / retire candidates:
 
-- Recheck MAS `codex/dm003-record-archive-currentness` after recent-write window clears; it may become safe to delete locally if main still contains its semantics and no process/PR/remote owner appears.
+- Recheck OPL `codex/gui-dmg-cleanup-hardening-20260528`, OMA `codex/oma-production-consumption-truth-20260528`, and MAS `codex/dm003-record-archive-currentness` after recent-write windows clear; each may become safe to delete locally if main still contains its semantics and no process/PR/remote owner appears.
 - Recheck App clean non-ancestor `codex/release-readiness-oneshot-failure-20260528` after recent-write/process context clears; dirty App lanes remain protected.
 - RCA native-PPT dirty lane remains outside docs-governance cleanup and needs its own owner-route/product-entry verification before absorb or cleanup.
 
