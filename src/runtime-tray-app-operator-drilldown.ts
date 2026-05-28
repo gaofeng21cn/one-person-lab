@@ -9,6 +9,9 @@ import {
 import {
   buildStandardDomainAgentTemplateConsumptionReadModel,
 } from './standard-domain-agent-scaffold.ts';
+import {
+  listStandardAgentTemplateConsumptionReceipts,
+} from './standard-agent-template-consumption-ledger.ts';
 import type {
   ProviderContinuousProof,
 } from './family-domain-agent-provider-closure.ts';
@@ -995,7 +998,43 @@ export function buildAppOperatorDrilldown(input: {
     input.providerContinuousProof,
   );
   const oplMetaAgentRegistry = buildOplMetaAgentRegistryExtension();
-  const standardAgentTemplateConsumption = buildStandardDomainAgentTemplateConsumptionReadModel();
+  const standardAgentTemplateConsumptionReceipts =
+    listStandardAgentTemplateConsumptionReceipts();
+  const standardAgentTemplateConsumption = {
+    ...buildStandardDomainAgentTemplateConsumptionReadModel(),
+    ledger_projection: {
+      surface_kind: 'opl_standard_agent_template_consumption_ledger_projection',
+      receipt_count: standardAgentTemplateConsumptionReceipts.length,
+      verified_receipt_ref_count: standardAgentTemplateConsumptionReceipts.filter((receipt) =>
+        receipt.receipt_status === 'verified'
+      ).length,
+      pending_verify_receipt_ref_count: standardAgentTemplateConsumptionReceipts.filter((
+        receipt,
+      ) => receipt.receipt_status === 'recorded').length,
+      receipt_refs: standardAgentTemplateConsumptionReceipts.map((receipt) =>
+        receipt.receipt_ref
+      ),
+      verified_receipt_refs: standardAgentTemplateConsumptionReceipts
+        .filter((receipt) => receipt.receipt_status === 'verified')
+        .map((receipt) => receipt.receipt_ref),
+      pending_verify_receipt_refs: standardAgentTemplateConsumptionReceipts
+        .filter((receipt) => receipt.receipt_status === 'recorded')
+        .map((receipt) => receipt.receipt_ref),
+      receipts: standardAgentTemplateConsumptionReceipts,
+      authority_boundary: {
+        refs_only: true,
+        can_write_domain_truth: false,
+        can_write_memory_body: false,
+        can_read_memory_body: false,
+        can_read_artifact_body: false,
+        can_mutate_artifact_body: false,
+        can_create_owner_receipt: false,
+        can_claim_domain_ready: false,
+        can_claim_artifact_authority: false,
+        can_claim_production_ready: false,
+      },
+    },
+  };
   const oplMetaAgentProjection = record(oplMetaAgentRegistry as JsonRecord);
   const oplMetaAgentProductionConsumption = record(
     oplMetaAgentProjection.production_consumption_followthrough,
@@ -1204,6 +1243,10 @@ export function buildAppOperatorDrilldown(input: {
     sourceRef(
       '/runtime_tray_snapshot/app_operator_drilldown/standard_agent_template_consumption_refs',
       'standard_agent_template_consumption_refs',
+    ),
+    sourceRef(
+      '/standard-agent-template-consumption-ledger',
+      'standard_agent_template_consumption_ledger',
     ),
   ]);
 

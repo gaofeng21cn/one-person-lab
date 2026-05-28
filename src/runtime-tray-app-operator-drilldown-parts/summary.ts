@@ -102,6 +102,9 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     record(input.oplMetaAgentRegistry.production_consumption_followthrough).summary,
   );
   const standardAgentTemplateSummary = record(input.standardAgentTemplateConsumption.summary);
+  const standardAgentTemplateLedger = record(
+    input.standardAgentTemplateConsumption.ledger_projection,
+  );
   const evidenceEnvelopeSummary = record(input.evidenceEnvelope.summary);
   const appReleaseUserPathSummary =
     appReleaseUserPathEvidenceSummary(input.appReleaseUserPathEvidence);
@@ -469,6 +472,12 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       numberValue(standardAgentTemplateSummary.production_ready_claim_count),
     standard_agent_template_consumption_artifact_authority_claim_count:
       numberValue(standardAgentTemplateSummary.artifact_authority_claim_count),
+    standard_agent_template_consumption_ledger_receipt_ref_count:
+      numberValue(standardAgentTemplateLedger.receipt_count),
+    standard_agent_template_consumption_verified_ledger_receipt_ref_count:
+      numberValue(standardAgentTemplateLedger.verified_receipt_ref_count),
+    standard_agent_template_consumption_pending_verify_receipt_ref_count:
+      numberValue(standardAgentTemplateLedger.pending_verify_receipt_ref_count),
     opl_meta_agent_registry_status: input.oplMetaAgentRegistry.status ?? null,
     opl_meta_agent_consumed_contract_count: numberValue(oplMetaAgentSummary.consumed_contract_count),
     opl_meta_agent_resolved_contract_count: numberValue(oplMetaAgentSummary.resolved_contract_count),

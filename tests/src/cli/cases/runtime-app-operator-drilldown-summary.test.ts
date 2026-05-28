@@ -170,6 +170,9 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_domain_ready_claim_count, 0);
     assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_production_ready_claim_count, 0);
     assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_artifact_authority_claim_count, 0);
+    assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_ledger_receipt_ref_count, 0);
+    assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_verified_ledger_receipt_ref_count, 0);
+    assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_pending_verify_receipt_ref_count, 0);
     assert.equal(summaryDrilldown.opl_meta_agent_workbench_refs, undefined);
     assert.equal(
       ['resolved', 'not_bound'].includes(summaryDrilldown.summary.opl_meta_agent_registry_status),
@@ -783,6 +786,25 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(
       fullDrilldown.standard_agent_template_consumption_refs.summary.production_ready_claim_count,
       0,
+    );
+    assert.equal(
+      fullDrilldown.standard_agent_template_consumption_refs.ledger_projection.receipt_count,
+      0,
+    );
+    assert.equal(
+      fullDrilldown.standard_agent_template_consumption_refs.ledger_projection
+        .verified_receipt_ref_count,
+      0,
+    );
+    assert.equal(
+      fullDrilldown.standard_agent_template_consumption_refs.ledger_projection
+        .pending_verify_receipt_ref_count,
+      0,
+    );
+    assert.equal(
+      fullDrilldown.standard_agent_template_consumption_refs.ledger_projection
+        .authority_boundary.can_claim_production_ready,
+      false,
     );
     assert.equal(
       fullDrilldown.opl_meta_agent_workbench_refs.authority_boundary.can_promote_default_agent_without_gate,

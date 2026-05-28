@@ -136,6 +136,30 @@ export function buildPublicRuntimeCommandSpecs(
         ],
         group: 'runtime',
       }),
+    'runtime standard-agent-template-consumption record':
+      cloneCommandSpec(commandSpecs['runtime standard-agent-template-consumption record'], {
+        usage:
+          'opl runtime standard-agent-template-consumption record (--payload <json>|--payload-file <path>)',
+        examples: [
+          'opl runtime standard-agent-template-consumption record --payload \'{"cohort_evidence_ref":"opl://standard-agent-template-consumption/cohort/demo","cohort_evidence_fingerprint":"sha256:demo","evidence_ref":"opl://standard-agent-template-consumption/award-foundry/demo","evidence_fingerprint":"sha256:demo"}\'',
+          'opl runtime standard-agent-template-consumption record --payload-file payload.json',
+        ],
+        group: 'runtime',
+      }),
+    'runtime standard-agent-template-consumption verify':
+      cloneCommandSpec(commandSpecs['runtime standard-agent-template-consumption verify'], {
+        usage: 'opl runtime standard-agent-template-consumption verify [--receipt-ref <ref>]',
+        examples: [
+          'opl runtime standard-agent-template-consumption verify --receipt-ref opl://standard-agent-template-consumption-ledger/demo',
+        ],
+        group: 'runtime',
+      }),
+    'runtime standard-agent-template-consumption list':
+      cloneCommandSpec(commandSpecs['runtime standard-agent-template-consumption list'], {
+        usage: 'opl runtime standard-agent-template-consumption list',
+        examples: ['opl runtime standard-agent-template-consumption list --json'],
+        group: 'runtime',
+      }),
     'runtime domain-owner-payload-summary record':
       cloneCommandSpec(commandSpecs['runtime domain-owner-payload-summary record'], {
         usage:

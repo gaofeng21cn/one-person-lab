@@ -32,6 +32,9 @@ import { buildRuntimeDomainOwnerPayloadSummaryCommandSpecs } from './runtime-dom
 import { buildRuntimeDeveloperModeCloseoutCommandSpecs } from './runtime-developer-mode-closeout-command-spec.ts';
 import { buildRuntimeOmaAppLivePathCommandSpecs } from './runtime-oma-app-live-path-command-spec.ts';
 import { buildRuntimeOmaProductionConsumptionCommandSpecs } from './runtime-oma-production-consumption-command-spec.ts';
+import {
+  buildRuntimeStandardAgentTemplateConsumptionCommandSpecs,
+} from './runtime-standard-agent-template-consumption-command-spec.ts';
 import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseDashboardArgs, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseObservabilityExportArgs, parseProductEntryArgs, parseRuntimeAppOperatorDrilldownArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
 
@@ -341,6 +344,7 @@ export function buildInternalCommandSpecs(
     },
     ...buildRuntimeAppReleaseEvidenceCommandSpecs(),
     ...buildRuntimeCodexAppRuntimeEvidenceCommandSpecs(),
+    ...buildRuntimeStandardAgentTemplateConsumptionCommandSpecs(),
     ...buildRuntimeDomainOwnerPayloadSummaryCommandSpecs(),
     ...buildRuntimeDeveloperModeCloseoutCommandSpecs(),
     ...buildRuntimeOmaAppLivePathCommandSpecs(),

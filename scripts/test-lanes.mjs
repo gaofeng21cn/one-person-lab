@@ -135,6 +135,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/agent-executor-cli.test.ts',
   'tests/src/cli/cases/agents-scaffold.test.ts',
   'tests/src/cli/cases/standard-agent-template-consumption-read-model.test.ts',
+  'tests/src/cli/cases/runtime-standard-agent-template-consumption-ledger.test.ts',
   'tests/src/cli/cases/agents-conformance.test.ts',
   'tests/src/cli/cases/agents-conformance-platform-surfaces.test.ts',
   'tests/src/cli/cases/domain-pack-compiler-drift-manifest.test.ts',
