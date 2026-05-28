@@ -79,3 +79,61 @@ test('family-runtime dispatch fails closed when a domain dispatch handler times 
     fs.rmSync(dispatchDomainHandler.fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('family-runtime dispatch surfaces structured domain-handler failure over stderr noise', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-dispatch-structured-error-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-dispatch-structured-error-'));
+  const dispatchPath = path.join(fixtureRoot, 'dispatch');
+  fs.writeFileSync(
+    dispatchPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+echo "Uninstalled 1 package in 1ms" >&2
+echo "Installed 1 package in 2ms" >&2
+cat <<'JSON'
+{
+  "surface_kind": "mas_family_domain_handler_dispatch_receipt",
+  "accepted": false,
+  "reason": "unsupported_task_kind",
+  "detail": "Unsupported MAS domain-handler task kind: domain_route/reconcile-apply"
+}
+JSON
+exit 1
+`,
+    { mode: 0o755 },
+  );
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS: '5000',
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatchPath,
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_route/reconcile-apply',
+      '--payload',
+      '{"study_id":"DM002"}',
+    ], env);
+    const tick = runCli(['family-runtime', 'tick', '--source', 'structured-error-test'], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', enqueue.family_runtime_enqueue.task.task_id], env)
+      .family_runtime_task.task;
+
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'retry_waiting');
+    assert.match(tick.family_runtime_tick.dispatches[0].error, /unsupported_task_kind/);
+    assert.match(
+      tick.family_runtime_tick.dispatches[0].error,
+      /Unsupported MAS domain-handler task kind: domain_route\/reconcile-apply/,
+    );
+    assert.doesNotMatch(tick.family_runtime_tick.dispatches[0].error, /Uninstalled 1 package/);
+    assert.equal(task.status, 'retry_waiting');
+    assert.match(task.last_error, /unsupported_task_kind/);
+    assert.match(task.last_error, /Unsupported MAS domain-handler task kind: domain_route\/reconcile-apply/);
+    assert.doesNotMatch(task.last_error, /Installed 1 package/);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});

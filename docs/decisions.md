@@ -5,6 +5,18 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-05-28
+
+### 决策：domain-handler 非零退出的错误摘要优先采用结构化 owner stdout
+
+原因：domain handler 由 domain owner 负责返回 typed receipt / blocker。`uv`、安装器或 runner 可能在 stderr 输出环境同步噪声；如果 OPL queue `last_error` 优先采用 stderr，就会掩盖 stdout 中的 `reason` / `detail` / `blocked_reason`，让 operator 和自动巡检看不到真正的 owner blocker。
+
+影响：
+
+- `family-runtime` 在 domain-handler 非零退出时，超时和 spawn error 仍优先；除此之外，若 stdout 是结构化 JSON 并携带 `reason`、`detail`、`message` 或 `blocked_reason`，task `last_error`、tick dispatch `error`、stage activity error 和 notification body 必须使用该结构化摘要。
+- stderr 和 stdout 继续保留在 runtime event payload 中，供诊断命令噪声、环境同步或底层进程行为；但无结构化 owner 错误时才回退到 stderr。
+- 该规则只改善 OPL queue / retry / dead-letter 可观察性，不把 OPL 变成 MAS/MAG/RCA truth、quality verdict、artifact authority 或 owner receipt signer。
+
 ## 2026-05-27
 
 ### 决策：用户可读 stage log 成为标准 OPL Agent admission 要求

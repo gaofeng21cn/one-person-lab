@@ -32,6 +32,32 @@ function errorCode(error: Error | undefined) {
   return error && 'code' in error ? String((error as NodeJS.ErrnoException).code) : null;
 }
 
+function parseStructuredDomainHandlerError(stdout: string | undefined, label: string) {
+  const trimmed = stdout?.trim();
+  if (!trimmed) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return null;
+    }
+    const record = parsed as Record<string, unknown>;
+    const parts = [
+      record.reason,
+      record.detail,
+      record.message,
+      record.blocked_reason,
+    ].filter((value): value is string => typeof value === 'string' && Boolean(value.trim()));
+    if (parts.length === 0) {
+      return null;
+    }
+    return `${label} failed: ${parts.join(': ')}`;
+  } catch {
+    return null;
+  }
+}
+
 export function runFamilyRuntimeDomainHandlerCommand(
   command: string[],
   options: { cwd: string; env?: NodeJS.ProcessEnv; maxBuffer?: number },
@@ -63,7 +89,9 @@ export function domainHandlerResultErrorMessage(result: DomainHandlerProcessResu
   if (result.timed_out) {
     return `${label} timed out after ${result.domain_handler_timeout_ms}ms.`;
   }
+  const structuredError = parseStructuredDomainHandlerError(result.stdout, label);
   return result.error?.message
+    || structuredError
     || result.stderr
     || result.stdout
     || `${label} exited ${result.exit_code}.`;
