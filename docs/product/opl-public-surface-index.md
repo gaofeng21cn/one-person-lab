@@ -52,7 +52,7 @@ Machine boundary: 本文是人读 public surface 索引。机器可读 surface t
 `OPL` 通过 `opl skill sync` 和各 domain 仓自己的 CLI / 程序 / 脚本 / contract surface 来发现并激活它们。
 所以当前顶层集成单元其实是 repo-owned 的 domain app skill 及其底下的 command contract，而不是 OPL 自己再造一套 gateway handoff 词汇。
 
-`One Person Lab App` 是工作台产品 surface，消费 framework/provider 状态和 domain-owned projection；它不持有 domain truth、runtime provider 或 artifact authority。`OPL Meta Agent` 是 Agent Foundry / new-agent builder-test managed module，用于创建、测试接管和机制改进；它可以被 OPL managed environment 与 generated plugin surface 消费，但不是第四个 domain truth owner，也不替 MAS/MAG/RCA 或 future domain 签发 quality/export verdict、artifact authority 或 owner receipt。
+`One Person Lab App` 是工作台产品 surface，消费 framework/provider 状态和 domain-owned projection；它不持有 domain truth、runtime provider 或 artifact authority。Framework 侧把普通用户 App path 定义为 `Codex App wrapper`：固定 `Codex CLI` executor、内置 Foundry Agent 任务入口、通过 OPL `app state/action` 读取和执行，不把 AionUI upstream 多 backend、多 Agent 选择暴露为普通用户 product surface。`OPL Meta Agent` 是 Agent Foundry / new-agent builder-test managed module，用于创建、测试接管和机制改进；它可以被 OPL managed environment 与 generated plugin surface 消费，但不是第四个 domain truth owner，也不替 MAS/MAG/RCA 或 future domain 签发 quality/export verdict、artifact authority 或 owner receipt。
 
 ### 3. 共享边界配套界面
 

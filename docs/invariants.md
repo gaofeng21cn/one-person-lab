@@ -133,6 +133,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 外部壳不得反向定义 `workspace / session / agent / progress / artifacts` 的 canonical truth。
 - One Person Lab App 持有 GUI runtime bridge 产品合同和 active shell validation；`opl-aion-shell` 只持有当前 GUI shell adapter 实现。更换 GUI shell 不得改变 OPL runtime CLI/projection protocol，不得把 runtime truth、domain truth、artifact body、memory body 或 quality/export verdict 下沉到 shell repo。
 - 外部壳不得反向改写默认 runtime 合同；GUI 定制只能建立在 Codex-default 路径之上。
+- 普通用户 App 产品面必须固定为 `Codex CLI` concrete executor 与内置 Foundry Agent task entry；不得把 AionUI upstream 的多 backend、多 Agent 选择、通用 Agent host 或非默认 executor adapter 暴露成普通用户默认选择器。非默认 executor adapter 只能通过显式 request、stage attempt、handoff 或 developer/operator diagnostic 进入，并继续接受 OPL receipt / audit / fail-closed 约束。
 - 外部产品名只能在基准、上游参考或规划中的界面目标语境出现。
 
 ## 语言规则
