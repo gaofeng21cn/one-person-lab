@@ -59,6 +59,14 @@ function isSameMasDefaultExecutorDispatch(
     && sameStringField(left, right, 'dispatch_ref');
 }
 
+function isSameMasDefaultExecutorStudyStage(
+  left: Record<string, unknown>,
+  right: Record<string, unknown>,
+) {
+  return sameStringField(left, right, 'workspace_root')
+    && sameStringField(left, right, 'study_id');
+}
+
 function sameOptionalStringField(left: Record<string, unknown>, right: Record<string, unknown>, key: string) {
   const leftValue = optionalString(left[key]);
   const rightValue = optionalString(right[key]);
@@ -262,6 +270,31 @@ export function findLiveMasDefaultExecutorDispatchAttempt(
     && attempt.stage_id === stageId
     && isCrossTaskLiveMasDefaultExecutorAttempt(db, attempt, workspaceLocator)
     && isSameMasDefaultExecutorDispatch(attempt.workspace_locator, workspaceLocator)
+  )) ?? null;
+}
+
+export function findLiveMasDefaultExecutorStudyAttempt(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+) {
+  if (!isMasDefaultExecutorDispatchTask(row, payload)) {
+    return null;
+  }
+  const providerKind = resolveFamilyRuntimeProviderKind();
+  const stageId = stageIdForProviderHostedTask(row, payload);
+  if (!stageId) {
+    return null;
+  }
+  const workspaceLocator = workspaceLocatorForProviderHostedTask(row, payload);
+  return listStageAttempts(db).find((attempt) => (
+    attempt.task_id !== row.task_id
+    && attempt.provider_kind === providerKind
+    && attempt.executor_kind === 'codex_cli'
+    && attempt.domain_id === row.domain_id
+    && attempt.stage_id === stageId
+    && isCrossTaskLiveMasDefaultExecutorAttempt(db, attempt, workspaceLocator)
+    && isSameMasDefaultExecutorStudyStage(attempt.workspace_locator, workspaceLocator)
   )) ?? null;
 }
 
@@ -523,18 +556,22 @@ export function ensureProviderHostedStageAttempt(
   }
   if (!options.newAttempt && isMasDefaultExecutorDispatchTask(row, payload) && stageId) {
     const liveDispatchAttempt = findLiveMasDefaultExecutorDispatchAttempt(db, row, payload);
-    if (liveDispatchAttempt) {
+    const liveStudyAttempt = liveDispatchAttempt ?? findLiveMasDefaultExecutorStudyAttempt(db, row, payload);
+    if (liveStudyAttempt) {
       insertEvent(db, {
         taskId: row.task_id,
         domainId: row.domain_id,
         eventType: 'stage_attempt_live_dispatch_noop',
         source: options.eventSource ?? 'opl-family-runtime',
         payload: {
-          reason: 'live_stage_attempt_exists_for_dispatch',
-          stage_attempt_id: liveDispatchAttempt.stage_attempt_id,
-          task_id: liveDispatchAttempt.task_id,
+          reason: liveDispatchAttempt
+            ? 'live_stage_attempt_exists_for_dispatch'
+            : 'live_stage_attempt_exists_for_study',
+          stage_attempt_id: liveStudyAttempt.stage_attempt_id,
+          task_id: liveStudyAttempt.task_id,
           dispatch_ref: workspaceLocator.dispatch_ref ?? null,
           action_type: workspaceLocator.action_type ?? null,
+          live_action_type: liveStudyAttempt.workspace_locator.action_type ?? null,
           study_id: workspaceLocator.study_id ?? null,
         },
       });

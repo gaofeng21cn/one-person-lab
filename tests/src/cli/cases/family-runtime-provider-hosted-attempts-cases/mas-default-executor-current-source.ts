@@ -97,6 +97,22 @@ function defaultExecutorPayload(sourceFingerprint: string) {
   };
 }
 
+function defaultExecutorPayloadForOwner(input: {
+  sourceFingerprint: string;
+  actionType: string;
+  nextOwner: 'write' | 'ai_reviewer';
+  dispatchAuthority: string;
+  dispatchRef: string;
+}) {
+  return {
+    ...defaultExecutorPayload(input.sourceFingerprint),
+    action_type: input.actionType,
+    dispatch_authority: input.dispatchAuthority,
+    next_executable_owner: input.nextOwner,
+    dispatch_ref: input.dispatchRef,
+  };
+}
+
 function insertQueuedDefaultExecutorTask(
   db: DatabaseSync,
   input: {
@@ -159,6 +175,48 @@ function insertDefaultExecutorTask(
     'domain_owner/default-executor-dispatch',
     JSON.stringify(defaultExecutorPayload(input.sourceFingerprint)),
     `mas:dm-cvd:002:default-executor:return_to_ai_reviewer_workflow:${input.sourceFingerprint}`,
+    65,
+    input.status,
+    input.attempts ?? 0,
+    3,
+    'test-domain-export',
+    0,
+    null,
+    input.leaseOwner ?? null,
+    input.leaseExpiresAt ?? null,
+    null,
+    null,
+    input.createdAt,
+    input.createdAt,
+  );
+}
+
+function insertDefaultExecutorTaskWithPayload(
+  db: DatabaseSync,
+  input: {
+    taskId: string;
+    payload: Record<string, unknown>;
+    dedupeKey: string;
+    createdAt: string;
+    status: string;
+    attempts?: number;
+    leaseOwner?: string | null;
+    leaseExpiresAt?: string | null;
+  },
+) {
+  db.prepare(`
+    INSERT INTO tasks(
+      task_id, domain_id, task_kind, payload_json, dedupe_key, priority, status,
+      attempts, max_attempts, source, requires_approval, approved_at, lease_owner,
+      lease_expires_at, last_error, dead_letter_reason, created_at, updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    input.taskId,
+    'medautoscience',
+    'domain_owner/default-executor-dispatch',
+    JSON.stringify(input.payload),
+    input.dedupeKey,
     65,
     input.status,
     input.attempts ?? 0,
@@ -290,6 +348,103 @@ test('family-runtime tick does not select newer MAS default executor row while s
       assert.ok(refreshedRunningTask.lease_owner);
       assert.ok(refreshedRunningTask.lease_expires_at);
       assert.ok(Date.parse(refreshedRunningTask.lease_expires_at) > Date.now());
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime tick does not select write owner row while same-study reviewer attempt is live', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const reviewerPayload = defaultExecutorPayloadForOwner({
+        sourceFingerprint: 'reviewer-source',
+        actionType: 'return_to_ai_reviewer_workflow',
+        nextOwner: 'ai_reviewer',
+        dispatchAuthority: 'ai_reviewer_record_production_handoff',
+        dispatchRef: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/immutable/return_to_ai_reviewer_workflow/reviewer.json',
+      });
+      const writerPayload = defaultExecutorPayloadForOwner({
+        sourceFingerprint: 'writer-source',
+        actionType: 'run_quality_repair_batch',
+        nextOwner: 'write',
+        dispatchAuthority: 'quality_repair_batch_writer_handoff',
+        dispatchRef: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/immutable/run_quality_repair_batch/writer.json',
+      });
+      insertDefaultExecutorTaskWithPayload(db, {
+        taskId: 'task-mas-default-live-reviewer-before-tick',
+        payload: reviewerPayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:return_to_ai_reviewer_workflow:reviewer-live-before-tick',
+        createdAt: '2026-05-28T19:29:00.000Z',
+        status: 'running',
+        attempts: 1,
+        leaseOwner: 'opl-family-runtime:test',
+        leaseExpiresAt: '2026-05-28T19:34:00.000Z',
+      });
+      insertDefaultExecutorTaskWithPayload(db, {
+        taskId: 'task-mas-default-queued-writer-during-reviewer',
+        payload: writerPayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:writer-during-reviewer',
+        createdAt: '2026-05-28T19:40:00.000Z',
+        status: 'queued',
+      });
+      const reviewerRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-live-reviewer-before-tick',
+      ) as FamilyRuntimeTaskRow;
+      const reviewerAttempt = ensureProviderHostedStageAttempt(db, reviewerRow, reviewerPayload);
+      assert.ok(reviewerAttempt);
+      db.prepare(`
+        UPDATE stage_attempts
+        SET status = 'running',
+          provider_run_json = json_set(provider_run_json, '$.provider_status', 'running')
+        WHERE stage_attempt_id = ?
+      `).run(reviewerAttempt.stage_attempt_id);
+
+      let dispatchCount = 0;
+      const tick = await runFamilyRuntimeQueueTick(db, familyRuntimePaths(), {
+        source: 'test-same-study-single-flight',
+        limit: 2,
+        hydrate: false,
+        taskScope: {
+          domainId: 'medautoscience',
+          taskKind: 'domain_owner/default-executor-dispatch',
+          payloadMatches: [
+            {
+              path: 'study_id',
+              value: '002-dm-china-us-mortality-attribution',
+            },
+          ],
+        },
+      }, {
+        enqueueTask: () => ({ accepted: false }),
+        dispatchTask: () => {
+          dispatchCount += 1;
+          return { unexpected_dispatch: true };
+        },
+      });
+      const writerTask = db.prepare('SELECT status, attempts FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-queued-writer-during-reviewer',
+      ) as { status: string; attempts: number };
+      const skipEvent = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_default_executor_live_dispatch_tick_skip'
+        LIMIT 1
+      `).get('task-mas-default-queued-writer-during-reviewer') as { payload_json: string } | undefined;
+
+      assert.equal(tick.selected_count, 0);
+      assert.equal(tick.mas_default_executor_live_skipped_count, 1);
+      assert.equal(dispatchCount, 0);
+      assert.equal(writerTask.status, 'queued');
+      assert.equal(writerTask.attempts, 0);
+      assert.ok(skipEvent);
+      const skipPayload = JSON.parse(skipEvent.payload_json);
+      assert.equal(skipPayload.reason, 'same_study_live_stage_attempt_exists');
+      assert.equal(skipPayload.stage_attempt_id, reviewerAttempt.stage_attempt_id);
+      assert.equal(skipPayload.live_action_type, 'return_to_ai_reviewer_workflow');
+      assert.equal(skipPayload.action_type, 'run_quality_repair_batch');
     });
   } finally {
     db.close();

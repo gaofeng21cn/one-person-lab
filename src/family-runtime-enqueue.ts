@@ -15,6 +15,7 @@ import {
 } from './family-runtime-store.ts';
 import {
   findLiveMasDefaultExecutorDispatchAttempt,
+  findLiveMasDefaultExecutorStudyAttempt,
   refreshMasDefaultExecutorLiveAttemptTaskLease,
 } from './family-runtime-provider-hosted-attempts.ts';
 
@@ -500,12 +501,15 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
       requiresApproval: input.requiresApproval,
       createdAt,
     });
-    const liveAttempt = findLiveMasDefaultExecutorDispatchAttempt(db, candidate, payload);
+    const liveDispatchAttempt = findLiveMasDefaultExecutorDispatchAttempt(db, candidate, payload);
+    const liveAttempt = liveDispatchAttempt ?? findLiveMasDefaultExecutorStudyAttempt(db, candidate, payload);
     if (liveAttempt?.task_id) {
       const lease = refreshMasDefaultExecutorLiveAttemptTaskLease(db, {
         attempt: liveAttempt,
         source: input.source ?? 'opl-cli',
-        reason: 'same_dispatch_live_stage_attempt_exists_at_enqueue',
+        reason: liveDispatchAttempt
+          ? 'same_dispatch_live_stage_attempt_exists_at_enqueue'
+          : 'same_study_live_stage_attempt_exists_at_enqueue',
       });
       insertEvent(db, {
         taskId: liveAttempt.task_id,
@@ -514,12 +518,15 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         source: input.source ?? 'opl-cli',
         payload: {
           dedupe_key: dedupeKey,
-          reason: 'same_dispatch_live_stage_attempt_exists_at_enqueue',
+          reason: liveDispatchAttempt
+            ? 'same_dispatch_live_stage_attempt_exists_at_enqueue'
+            : 'same_study_live_stage_attempt_exists_at_enqueue',
           stage_attempt_id: liveAttempt.stage_attempt_id,
           candidate_source_fingerprint: sourceFingerprint(payload),
           live_source_fingerprint: liveAttempt.workspace_locator.domain_source_fingerprint ?? null,
           dispatch_ref: payload.dispatch_ref ?? null,
           action_type: payload.action_type ?? null,
+          live_action_type: liveAttempt.workspace_locator.action_type ?? null,
           study_id: payload.study_id ?? null,
           lease,
           authority_boundary: {

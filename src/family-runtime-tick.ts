@@ -15,6 +15,7 @@ import {
 } from './family-runtime-stage-attempts.ts';
 import {
   findLiveMasDefaultExecutorDispatchAttempt,
+  findLiveMasDefaultExecutorStudyAttempt,
   ensureProviderHostedStageAttempt,
   isMasDefaultExecutorDispatchTask,
   masDefaultExecutorDispatchIdentity,
@@ -344,13 +345,14 @@ async function dropLiveMasDefaultExecutorRows(
   for (const row of candidateRows) {
     const payload = payloadFromTask(row);
     const liveAttempt = findLiveMasDefaultExecutorDispatchAttempt(db, row, payload);
-    if (!liveAttempt) {
+    const liveStudyAttempt = liveAttempt ?? findLiveMasDefaultExecutorStudyAttempt(db, row, payload);
+    if (!liveStudyAttempt) {
       rows.push(row);
       continue;
     }
     const syncedAttempt = await syncObservableMasDefaultExecutorAttempt(
       db,
-      liveAttempt,
+      liveStudyAttempt,
       options.queryTemporalStageAttempt,
     );
     if (!isLiveMasDefaultExecutorAttempt(syncedAttempt)) {
@@ -361,7 +363,7 @@ async function dropLiveMasDefaultExecutorRows(
     refreshMasDefaultExecutorLiveAttemptTaskLease(db, {
       attempt: syncedAttempt,
       source: 'opl-family-runtime-tick',
-      reason: 'same_dispatch_live_stage_attempt_exists',
+      reason: liveAttempt ? 'same_dispatch_live_stage_attempt_exists' : 'same_study_live_stage_attempt_exists',
     });
     insertEvent(db, {
       taskId: row.task_id,
@@ -369,11 +371,12 @@ async function dropLiveMasDefaultExecutorRows(
       eventType: 'task_default_executor_live_dispatch_tick_skip',
       source: 'opl-family-runtime-tick',
       payload: {
-        reason: 'same_dispatch_live_stage_attempt_exists',
-        live_task_id: liveAttempt.task_id,
-        stage_attempt_id: liveAttempt.stage_attempt_id,
+        reason: liveAttempt ? 'same_dispatch_live_stage_attempt_exists' : 'same_study_live_stage_attempt_exists',
+        live_task_id: liveStudyAttempt.task_id,
+        stage_attempt_id: liveStudyAttempt.stage_attempt_id,
         dispatch_ref: payload.dispatch_ref ?? null,
         action_type: payload.action_type ?? null,
+        live_action_type: liveStudyAttempt.workspace_locator.action_type ?? null,
         study_id: payload.study_id ?? null,
       },
     });

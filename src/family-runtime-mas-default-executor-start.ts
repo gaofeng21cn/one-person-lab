@@ -16,6 +16,7 @@ import {
 } from './family-runtime-stage-attempts.ts';
 import {
   findLiveMasDefaultExecutorDispatchAttempt,
+  findLiveMasDefaultExecutorStudyAttempt,
   refreshMasDefaultExecutorLiveAttemptTaskLease,
 } from './family-runtime-provider-hosted-attempts.ts';
 
@@ -248,6 +249,34 @@ export async function startMasDefaultExecutorDispatchAttempt(
       status: 'skipped',
       reason: 'live_stage_attempt_exists_for_dispatch',
       admitted_stage_attempt: liveDispatchAttempt,
+      stage_attempts: listStageAttemptsForTask(db, row.task_id),
+    };
+  }
+  const liveStudyAttempt = findLiveMasDefaultExecutorStudyAttempt(db, row, payload);
+  if (liveStudyAttempt) {
+    refreshMasDefaultExecutorLiveAttemptTaskLease(db, {
+      attempt: liveStudyAttempt,
+      reason: 'same_study_live_stage_attempt_exists',
+    });
+    insertEvent(db, {
+      taskId: row.task_id,
+      domainId: row.domain_id,
+      eventType: 'task_default_executor_live_attempt_skip',
+      source: 'opl-family-runtime',
+      payload: {
+        reason: 'live_stage_attempt_exists_for_study',
+        stage_attempt_id: liveStudyAttempt.stage_attempt_id,
+        task_id: liveStudyAttempt.task_id,
+        live_action_type: liveStudyAttempt.workspace_locator.action_type ?? null,
+        candidate_action_type: payload.action_type ?? null,
+        study_id: payload.study_id ?? null,
+      },
+    });
+    return {
+      task_id: row.task_id,
+      status: 'skipped',
+      reason: 'live_stage_attempt_exists_for_study',
+      admitted_stage_attempt: liveStudyAttempt,
       stage_attempts: listStageAttemptsForTask(db, row.task_id),
     };
   }
