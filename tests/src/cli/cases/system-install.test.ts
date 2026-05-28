@@ -343,6 +343,7 @@ test('recommended system companion skills keep family domain skills plugin-only 
       'mag',
       'rca',
       'opl-meta-agent',
+      'superpowers',
       'officecli',
       'officecli-docx',
       'officecli-pptx',
@@ -351,10 +352,26 @@ test('recommended system companion skills keep family domain skills plugin-only 
       'mineru-document-extractor',
     ]) {
       fs.mkdirSync(path.join(packagedSkillsRoot, skillId), { recursive: true });
-      fs.writeFileSync(
-        path.join(packagedSkillsRoot, skillId, 'SKILL.md'),
-        `---\nname: ${skillId}\ndescription: packaged ${skillId}\n---\n\n# ${skillId}\n`,
-      );
+      if (skillId === 'superpowers') {
+        fs.mkdirSync(path.join(packagedSkillsRoot, skillId, 'skills', 'using-superpowers'), { recursive: true });
+        fs.mkdirSync(
+          path.join(packagedSkillsRoot, skillId, 'skills', 'verification-before-completion'),
+          { recursive: true },
+        );
+        fs.writeFileSync(
+          path.join(packagedSkillsRoot, skillId, 'skills', 'using-superpowers', 'SKILL.md'),
+          '# using-superpowers\n',
+        );
+        fs.writeFileSync(
+          path.join(packagedSkillsRoot, skillId, 'skills', 'verification-before-completion', 'SKILL.md'),
+          '# verification-before-completion\n',
+        );
+      } else {
+        fs.writeFileSync(
+          path.join(packagedSkillsRoot, skillId, 'SKILL.md'),
+          `---\nname: ${skillId}\ndescription: packaged ${skillId}\n---\n\n# ${skillId}\n`,
+        );
+      }
     }
 
     const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
@@ -377,8 +394,10 @@ test('recommended system companion skills keep family domain skills plugin-only 
       assert.equal(syncedById.has(skillId), false);
       assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillId, 'SKILL.md')), false);
     }
+    assert.equal(syncedById.get('superpowers'), 'ready');
+    assert.equal(fs.existsSync(path.join(homeRoot, '.agents', 'skills', 'superpowers')), false);
+    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'superpowers', 'SKILL.md')), false);
     for (const skillId of [
-      'superpowers',
       'officecli',
       'officecli-docx',
       'officecli-pptx',
@@ -408,6 +427,7 @@ test('recommended system companion skills keep family domain skills plugin-only 
     const readyById = new Map(
       ready.system_initialize.recommended_skills.skills.map((skill) => [skill.skill_id, skill.status]),
     );
+    assert.equal(readyById.get('superpowers'), 'ready');
     for (const skillId of [
       'officecli',
       'officecli-docx',
@@ -736,6 +756,7 @@ test('system configure-codex syncs packaged Full companion skills after API key 
 
   try {
     for (const skillId of [
+      'superpowers',
       'officecli',
       'officecli-docx',
       'officecli-pptx',

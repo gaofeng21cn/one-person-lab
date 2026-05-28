@@ -8,6 +8,15 @@ function packagedSkillPath(packagedSkillsRoot: string | null, skillId: string): 
   return packagedSkillsRoot ? [path.join(packagedSkillsRoot, skillId, 'SKILL.md')] : [];
 }
 
+function packagedSuperpowersPaths(packagedSkillsRoot: string | null): string[] {
+  return packagedSkillsRoot
+    ? [
+      path.join(packagedSkillsRoot, 'superpowers', 'skills', 'using-superpowers', 'SKILL.md'),
+      path.join(packagedSkillsRoot, 'superpowers', 'skills', 'verification-before-completion', 'SKILL.md'),
+    ]
+    : [];
+}
+
 export function buildOplRecommendedSkillSpecs(options: {
   codexHome: string;
   superpowersRepoDir: string;
@@ -26,6 +35,7 @@ export function buildOplRecommendedSkillSpecs(options: {
         path.join(superpowersRepoDir, 'skills', 'using-superpowers', 'SKILL.md'),
         path.join(superpowersRepoDir, 'skills', 'verification-before-completion', 'SKILL.md'),
         path.join(agentsSuperpowersDir, 'using-superpowers', 'SKILL.md'),
+        ...packagedSuperpowersPaths(packagedSkillsRoot),
       ],
       install_hint: 'OPL installs the official Superpowers bundle by cloning https://github.com/obra/superpowers.git into ~/.codex/superpowers and linking ~/.agents/skills/superpowers to the full skills directory.',
       update_hint: 'Update with: cd ~/.codex/superpowers && git pull --ff-only. The ~/.agents/skills/superpowers symlink makes updates visible after Codex/App restart.',
