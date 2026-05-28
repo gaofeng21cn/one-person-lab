@@ -163,6 +163,35 @@ function copyMountedApp(mountPoint: string, applicationsDir: string) {
   }
 }
 
+function waitForMacGuiImageCleanupAttempt(attemptIndex: number) {
+  if (attemptIndex <= 0) {
+    return;
+  }
+  const waitMs = Math.min(100 * attemptIndex, 500);
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, waitMs);
+}
+
+function detachMountedGuiImage(mountPoint: string) {
+  let lastResult: ReturnType<typeof runCommand> | null = null;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    waitForMacGuiImageCleanupAttempt(attempt);
+    lastResult = runCommand(getHdiutilCommand(), ['detach', mountPoint]);
+    if (lastResult.exitCode === 0) {
+      return lastResult;
+    }
+  }
+  return lastResult;
+}
+
+function removeGuiInstallWorkRoot(workRoot: string) {
+  fs.rmSync(workRoot, {
+    recursive: true,
+    force: true,
+    maxRetries: 8,
+    retryDelay: 150,
+  });
+}
+
 function installOplGuiFromRelease(base = buildGuiActionBase()) {
   if (getGuiInstallPlatform() !== 'darwin' || !base.releaseUrl || !base.releaseAsset) {
     return {
@@ -186,7 +215,7 @@ function installOplGuiFromRelease(base = buildGuiActionBase()) {
 
   const curlResult = runCommand(getCurlCommand(), ['-fL', '--create-dirs', '-o', dmgPath, base.releaseUrl]);
   if (curlResult.exitCode !== 0) {
-    fs.rmSync(workRoot, { recursive: true, force: true });
+    removeGuiInstallWorkRoot(workRoot);
     return {
       status: 'failed' as const,
       strategy: 'install_release_asset_then_open_app',
@@ -203,7 +232,7 @@ function installOplGuiFromRelease(base = buildGuiActionBase()) {
 
   const attachResult = runCommand(getHdiutilCommand(), ['attach', dmgPath, '-nobrowse', '-readonly', '-mountpoint', mountPoint]);
   if (attachResult.exitCode !== 0) {
-    fs.rmSync(workRoot, { recursive: true, force: true });
+    removeGuiInstallWorkRoot(workRoot);
     return {
       status: 'failed' as const,
       strategy: 'install_release_asset_then_open_app',
@@ -248,8 +277,8 @@ function installOplGuiFromRelease(base = buildGuiActionBase()) {
       ],
     };
   } finally {
-    runCommand(getHdiutilCommand(), ['detach', mountPoint]);
-    fs.rmSync(workRoot, { recursive: true, force: true });
+    detachMountedGuiImage(mountPoint);
+    removeGuiInstallWorkRoot(workRoot);
   }
 }
 
