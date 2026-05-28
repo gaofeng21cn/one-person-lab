@@ -156,6 +156,102 @@ JSON
   }
 });
 
+test('family-runtime operator redrive recovers failed MAS domain route provider transport without MAS truth writes', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-domain-route-redrive-'));
+  const dispatchedTaskPath = path.join(stateRoot, 'dispatched-task.json');
+  const dispatch = createDispatchFixture(`
+cp "$TASK_PATH" ${shellSingleQuote(dispatchedTaskPath)}
+cat <<'JSON'
+{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receipt","will_start_llm_worker":true}
+JSON
+`);
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_route/reconcile-apply',
+      '--payload',
+      '{"profile":"/tmp/profile.toml","study_id":"002-dm-china-us-mortality-attribution","reason":"controller_decision_route_back","source_fingerprint":"sha256:domain-route-redrive","queue_owner":"one-person-lab","domain_truth_owner":"med-autoscience"}',
+      '--dedupe-key',
+      'mas:test:DM002:domain-route:redrive',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    runCli(['family-runtime', 'tick', '--source', 'test-domain-route-redrive'], env);
+    const queueDb = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+    try {
+      queueDb.prepare(`
+        UPDATE stage_attempts
+        SET status = 'failed',
+          blocked_reason = 'temporal_workflow_not_started_or_not_found',
+          provider_run_json = json_set(
+            provider_run_json,
+            '$.provider_status', 'failed',
+            '$.terminal_observation.reason', 'temporal_workflow_not_started_or_not_found'
+          ),
+          closeout_refs_json = '[]',
+          closeout_receipt_status = NULL
+        WHERE task_id = ?
+      `).run(taskId);
+    } finally {
+      queueDb.close();
+    }
+
+    const failedTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const redrive = runCli([
+      'family-runtime',
+      'queue',
+      'redrive',
+      taskId,
+      '--reason',
+      'dm002_runtime_recovery_after_temporal_provider_ready_no_closeout',
+      '--source',
+      'test-domain-route-redrive',
+    ], env);
+    const redrivenTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const attempts = redrivenTask.family_runtime_task.stage_attempts;
+
+    assert.equal(failedTask.family_runtime_task.task.status, 'succeeded');
+    assert.equal(failedTask.family_runtime_task.task.current_control_state.current_attempt_state, 'failed');
+    assert.equal(
+      failedTask.family_runtime_task.task.current_control_state.blocker_reason,
+      'temporal_workflow_not_started_or_not_found',
+    );
+    assert.equal(redrive.family_runtime_redrive.redriven, true);
+    assert.equal(redrive.family_runtime_redrive.task.status, 'queued');
+    assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.status, 'queued');
+    assert.equal(redrivenTask.family_runtime_task.task.status, 'queued');
+    assert.equal(redrivenTask.family_runtime_task.task.domain_route.authority_boundary.writes_mas_truth, false);
+    assert.equal(
+      redrivenTask.family_runtime_task.task.domain_route.authority_boundary.queue_owns_attempts_retry_and_dead_letter,
+      true,
+    );
+    assert.equal(attempts.length, 2);
+    assert.equal(attempts.at(-1).stage_id, 'domain_route/reconcile-apply');
+    assert.equal(attempts.at(-1).workspace_locator.opl_writes_domain_truth, false);
+    assert.equal(attempts.at(-1).workspace_locator.opl_writes_publication_quality, false);
+    assert.equal(attempts.at(-1).workspace_locator.opl_writes_current_package, false);
+    assert.equal(
+      redrivenTask.family_runtime_task.events.some((event: { event_type: string; payload: Record<string, unknown> }) => (
+        event.event_type === 'task_operator_redrive_from_terminal_provider_transport'
+        && event.payload.previous_status === 'succeeded'
+        && event.payload.previous_stage_attempt_state === 'failed'
+        && event.payload.previous_stage_attempt_blocked_reason === 'temporal_workflow_not_started_or_not_found'
+        && (event.payload.authority_boundary as Record<string, unknown>).domain_truth_mutation === false
+      )),
+      true,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime hydrates MAS runtime owner-route handoff export shape', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-owner-handoff-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-owner-handoff-export-'));
