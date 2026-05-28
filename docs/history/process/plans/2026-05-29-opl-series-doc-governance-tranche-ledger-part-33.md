@@ -44,12 +44,11 @@ Date: `2026-05-29`
   - `tests/src/cli/cases/work-order-execution.test.ts`
   - `tests/src/agent-lab-developer-mode-contract.test.ts`
   - `scripts/test-lanes.mjs`
-- Fresh CLI/read-model run from the root checkout with installed dependencies:
+- Fresh CLI/read-model run from a checkout with installed dependencies:
   - `./bin/opl agent-lab complete --json` returned `surface_kind=opl_agent_lab_complete_control_plane`, `status=ready_for_opl_native_use`, `core_requires_external_eval_runtime=false`, `core_requires_langfuse_or_phoenix=false`, `automatic_mechanism_promotion_ready=false`, `automatic_model_training_ready=false`, and `automatic_default_agent_promotion_ready=risk_tiered_after_independent_ai_review`. Authority boundary remained false for domain truth, memory body, domain ready, quality/export verdict, artifact mutation, owner receipt, managed runtime mutation, shared submission action, model training/deploy and default promotion without gate.
   - `./bin/opl agent-lab workbench --json` returned `surface_kind=opl_agent_lab_workbench_read_model`, `app_workbench_consumption_ready=true`, refs-only source results, `observability_export_readiness.upload_external_service=false`, `observability_export_readiness.reads_domain_body=false`, and `efficiency_nonregression.status=ready`. This is App/workbench read-model readiness only, not App release ready or domain ready.
-  - `./bin/opl agent-lab longline --json` returned `surface_id=opl_agent_lab_longline_suite`, `suite_kind=agent_lab_longline_suite`, `status=passed`, and recommended split between OPL-owned longline orchestration/recovery/no-forbidden-write regression and domain-owned publication/fundability/visual scorer, owner receipt fixture and artifact authority checks. This is framework-level regression guard only.
+  - `./bin/opl agent-lab longline --json` returned `surface_id=opl_agent_lab_longline_suite`, `suite_kind=agent_lab_longline_suite`, `status=passed`, `task_count=3`, `recovery_probe_count=7`, `scorecard_passed_count=3`, `promotable_candidate_count=0`, and false authority for domain truth / owner receipt. This is framework-level regression guard only.
   - `./bin/opl work-order execute --json` without `--work-order` returned a usage error requiring `--work-order <developer-patch-work-order.json>`, confirming active command surface and avoiding the retired `agent-lab execute-work-order` alias.
-- Part33 worktree-local CLI read-model attempts failed before execution because that checkout has no installed dependencies and Node could not resolve `@temporalio/client`; this was treated as environment evidence, not a semantic Agent Lab blocker. Fresh CLI evidence above was collected from root `main` at the same HEAD with dependencies installed.
 
 ## Changes
 
@@ -70,11 +69,12 @@ No contracts, source, tests, package scripts, App files, MAS/MAG/RCA/OMA repos, 
 Fresh verification:
 
 - `rtk git diff --check` in the part33 worktree exited `0`.
-- `rtk rg -n '^(<<<<<<<|>>>>>>>|=======)' README* docs` in the part33 worktree returned no matches.
-- `rtk /Users/gaofeng/workspace/opl-doc-governance/scripts/opl_doc_doctor.py doctor /Users/gaofeng/workspace/one-person-lab-opl-cleanup-part33 --format json` returned `finding_count=0` and `active_truth_health.status=pass`.
-- `rtk ./scripts/verify.sh line-budget` in the part33 worktree exited `0`.
-- `rtk node --experimental-strip-types --test tests/src/agent-lab.test.ts tests/src/cli/cases/agent-lab.test.ts tests/src/cli/cases/work-order-execution.test.ts tests/src/agent-lab-developer-mode-contract.test.ts` in the part33 worktree passed the direct Agent Lab tests but failed the two CLI case files before assertions because the isolated worktree could not resolve `@temporalio/client`.
-- The same focused Agent Lab command was rerun from root `main` at the same source HEAD with dependencies installed and passed: `tests 36`, `pass 36`, `fail 0`.
+- `rtk rg -n "^(<<<<<<<|=======|>>>>>>>)" docs README.md contracts scripts src tests .github` returned no conflict markers.
+- `rtk opl-doc-doctor doctor . --format json` returned `finding_count=0` and `active_truth_health.status=pass`.
+- Initial focused Agent Lab run in the isolated worktree passed 28 direct tests, then the two CLI case files failed before assertions because `@temporalio/client` was not installed. Root cause was missing worktree dependencies, not an Agent Lab semantic regression.
+- `rtk npm ci` exited `0` and ran `npm run build`; npm audit reported 10 high severity vulnerabilities, unchanged and not addressed in this docs-only tranche.
+- After dependency install, `rtk node --experimental-strip-types --test tests/src/agent-lab.test.ts tests/src/agent-lab-complete.test.ts tests/src/agent-lab-developer-mode-contract.test.ts tests/src/agent-lab-efficiency-nonregression.test.ts tests/src/agent-lab-token-cost-estimate.test.ts tests/src/cli/cases/agent-lab-command-surface.test.ts tests/src/cli/cases/work-order-execution.test.ts` passed: `tests 40`, `pass 40`, `fail 0`.
+- Final root verification after fast-forward / push repeated `git diff --check HEAD~1..HEAD`, conflict-marker scan, and `opl-doc-doctor`; all passed.
 
 ## Coverage
 
