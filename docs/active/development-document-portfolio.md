@@ -107,6 +107,74 @@ OPL 开发文档现在不能按“每份旧计划都继续完整执行”阅读�
 
 ## Coverage Ledger
 
+Date: `2026-05-28 22:47 CST`
+Tranche: `mag-current-entry-core-index-revalidation-and-six-repo-hygiene`
+State: `tranche_verified`
+
+本轮先做 fresh 六仓 main/worktree/branch/dirty/ahead-behind/open-PR/process/recent-write/doctor 盘点，再在 clean MAG worktree 中复核 MAG 当前入口与核心索引簇。目标是确认 MAG sustained-consumption payload follow-through 之后，MAG root `README*`、核心 docs、active truth owner、north-star reference、docs portfolio、thin support indexes、specs/history indexes 和主要 machine contracts 仍保持单一 owner / purpose / state / machine boundary。本轮不声明 MAG grant/submission ready、App sustained-consumption complete、provider long-soak complete、production ready、physical delete authorized 或 global goal complete。
+
+Fresh live truth inputs:
+
+- Six-repo root scan at `2026-05-28 22:41-22:47 CST`: OPL `72728f3c`、MAS `0281b8f9`、MAG `4cdb5df`、RCA `99a494c`、OMA `23e1730` and App `a220196` all read `main...origin/main = 0 0`; open PR scans returned `[]` for all six repos.
+- Six-repo doctor sweep returned `finding_count=0` and active truth `pass` for OPL, MAS, MAG, RCA, OMA and App.
+- Background process scan showed Codex app/node/codegraph/playwright processes only in the matched output; no repo lane process was killed.
+- MAG repo-native inputs: `AGENTS.md`, `TASTE.md`, root `README.md`, `README.zh-CN.md`, `agent/README.md`, `contracts/README.md`, `runtime/README.md`, `docs/README.md`, core five docs, `docs/active/README.md`, `docs/active/mag-ideal-state-cross-repo-gap-plan.md`, `docs/active/opl-private-implementation-migration-inventory.md`, `docs/docs_portfolio_consolidation.md`, thin support indexes, specs/history indexes and `docs/references/med-auto-grant-ideal-state.md`.
+- MAG machine/source inputs: `contracts/runtime-program/current-program.json`, `contracts/domain_descriptor.json`, `contracts/pack_compiler_input.json`, `contracts/functional_privatization_audit.json`, `contracts/production_acceptance/mag-manifest-sustained-consumption-evidence-20260528.json`, `contracts/stage_control_plane.json`, package/test entry inventory and MAG doctor risk map.
+
+Fresh semantic result:
+
+- MAG current entry/core index cluster still has one active truth owner: `docs/active/mag-ideal-state-cross-repo-gap-plan.md`. The north-star target remains `docs/references/med-auto-grant-ideal-state.md`; physical/private residue remains `docs/active/opl-private-implementation-migration-inventory.md`; durable current truth remains in root `README*`, `docs/README.md` and the core five docs.
+- `agent/README.md` is a human index for the Declarative Grant Pack. Non-README `agent/**/*.md` files are semantic pack inputs referenced by `contracts/pack_compiler_input.json`, not docs-lifecycle owner docs.
+- `contracts/README.md` and `runtime/README.md` remain human indexes; machine truth stays in JSON contracts, schemas, source, CLI/API behavior, runtime receipts and workspace artifacts.
+- Thin support indexes under `docs/product/`, `docs/runtime/`, `docs/delivery/`, `docs/source/` and `docs/policies/` still route readers to current owner docs/contracts without duplicating active truth.
+- Specs/history indexes still guard support specs and historical `Current Truth` titles. Historical Hermes/Gateway/local-runtime wording stays in provenance context.
+- Current contracts still say OPL/Temporal owns the default task runtime, `Codex CLI` is the default stage executor, MAG does not implement daemon/scheduler/attempt loop/attempt ledger, `claims_domain_repo_physical_delete_authorized=false`, and `claims_production_long_run_soak_complete=false`. Sustained-consumption payload response and OPL record/verify remain refs-only evidence.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autogrant` | Current entry/core index cluster listed above; support read of key contracts/source/test inventory, MAG docs portfolio and doctor risk map. | `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | OPL Doc Governance skill, global `/goal`, six-repo branch/worktree/PR/process/recent-write classification and this family coverage ledger. | `docs/active/development-document-portfolio.md` |
+| `med-autoscience` | Main alignment, dirty/recent same-head `codex/dm002-ai-reviewer-closeout-currentness` classification, and doctor risk map. | none |
+| `redcube-ai` | Main alignment, stale `codex/rca-remove-legacy-payload-aliases` absence check, dirty/recent `codex/rca-source-ref-hygiene` classification, remote-only branch retention and doctor risk map. | none |
+| `opl-meta-agent` | Main alignment and doctor risk map. | none |
+| `one-person-lab-app` | Main alignment, dirty/recent root checkout classification, dirty/recent `codex/user-guide-26-5-28-refresh`, dirty remote-backed `codex/full-first-run-stable-gate-20260525`, and doctor risk map. | none |
+
+Archived / tombstoned / deleted docs:
+
+- none. MAG current entry/core index cluster already has legal long-term roles.
+
+Worktree / branch cleanup:
+
+- Created MAG worktree `/Users/gaofeng/workspace/med-autogrant/.worktrees/codex/mag-docs-current-index-20260528` on branch `codex/mag-docs-current-index-20260528` for this docs tranche.
+- No stale worktree or branch was deleted in the initial hygiene phase. RCA `codex/rca-remove-legacy-payload-aliases` no longer existed as a local branch or worktree by the time it was checked, so there was nothing to remove.
+
+Retained lanes / blockers:
+
+- MAS `codex/dm002-ai-reviewer-closeout-currentness`: branch/head are main ancestors and no same-name remote/open PR, but worktree is dirty in `src/med_autoscience/controllers/domain_action_request_materializer_parts/publication_owner_materialization.py` and `tests/domain_action_request_materializer_cases/test_ai_reviewer_story_surface_bridge.py`, with writes through `2026-05-28T22:39:35+0800`; retain.
+- RCA `codex/rca-source-ref-hygiene`: branch/head are main ancestors, no same-name remote/open PR, but worktree is dirty across physical source morphology policy, status/gap docs, source-truth implementation and tests, with writes through `2026-05-28T22:41:25+0800`; retain.
+- App root checkout is dirty/recent in App contracts/docs/scripts/tests with writes through `2026-05-28T22:42:59+0800`; do not mix into docs-governance commits.
+- App `codex/user-guide-26-5-28-refresh`: same-head/main ancestor with no open PR, but dirty/recent in user-guide PDF/PPTX/verification/build scripts with writes through `2026-05-28T22:43:37+0800`; retain.
+- App `codex/full-first-run-stable-gate-20260525`: dirty, remote-backed, not main ancestor (`main...branch = 90 3`) with untracked `docs/product/`; retain.
+- Remote-only OPL `origin/fix/opl-temporal-worker-stale-repair-20260528`, MAG `origin/feature/ai-narration-contracts`, and RCA `origin/codex/developer-mode-fork-pr-live-closeout-20260528` remain retained without proof they are automation-owned stale and externally unreferenced.
+
+Unreviewed docs:
+
+- `med-autogrant`: this tranche revalidates the current entry/core index cluster. It does not claim a new full paragraph reread of every historical spec body beyond previously recorded MAG date/topic coverage and exact inventory reconcile entries.
+- `opl-meta-agent`: previously covered for repo-root `README*`, `docs/**/*.md` and tracked `agent/*/README.md` support indexes at the prior snapshot.
+- `one-person-lab-app`: remains covered for repo-root `README*` plus `docs/**/*.md` at the prior App body-coverage snapshot, but current dirty root/user-guide lanes can reopen specific sections after they land.
+- OPL/MAS/RCA broader README/docs coverage remains open except for previously recorded tranche coverage. The global `/goal` stays active.
+
+Remaining stale / retire candidates:
+
+- MAG evidence/implementation tails remain open as source/test/receipt work: physical delete authorization, production long-soak, submission-ready human gate, sustained real App/operator consumption and long-soak evidence.
+- Future MAG prose that upgrades refs-only payload/ledger verification, zero docs inventory gap, OPL projection, Temporal provider completion, support README indexes or optional Hermes proof lane into grant-domain ready, fundability ready, submission/export ready, production ready, MAG-owned generic runtime, App/workbench ownership or physical delete authority is stale pollution.
+
+Next tranche write scope:
+
+- Start with another fresh six-repo scan. If no safe cleanup candidate appears, continue full-body README/docs coverage on a clean OPL/MAS/RCA document cluster or validate/commit one explicit dirty owner lane without mixing unrelated changes. Keep global `/goal` active.
+
 Date: `2026-05-28 22:28 CST`
 Tranche: `oma-readme-docs-full-body-refresh-and-six-repo-hygiene`
 State: `tranche_verified`
