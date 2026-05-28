@@ -178,6 +178,24 @@ function isExternalOwnerAcceptanceRef(value: string | null) {
   );
 }
 
+function isLiveGithubForkRef(value: string | null) {
+  return Boolean(
+    value
+    && (value.startsWith('github-fork-ref:')
+      || value.startsWith('https://github.com/')
+      || value.startsWith('git@github.com:')),
+  );
+}
+
+function isLiveGithubPullRequestRef(value: string | null) {
+  return Boolean(
+    value
+    && (value.startsWith('github-pr-review-ref:')
+      || value.startsWith('github-pr-ref:')
+      || value.startsWith('https://github.com/')),
+  );
+}
+
 function requiredCloseoutRefs(decision: DeveloperModeCloseoutRouteDecision) {
   if (decision === 'direct-fix') {
     return [
@@ -262,6 +280,19 @@ function normalizeReceiptInput(input: DeveloperModeCloseoutReceiptInput) {
   const missingRefs = missingCloseoutRefs(input, decision);
   if (missingRefs.length > 0) {
     return blockedReceipt(input, 'developer_mode_closeout_refs_incomplete', missingRefs);
+  }
+  if (
+    decision === 'fork-PR'
+    && (
+      !isLiveGithubForkRef(optionalString(input.fork_repo_ref))
+      || !isLiveGithubPullRequestRef(optionalString(input.pr_review_ref))
+    )
+  ) {
+    const invalidLiveRefs = [
+      !isLiveGithubForkRef(optionalString(input.fork_repo_ref)) ? 'live_fork_repo_ref' : '',
+      !isLiveGithubPullRequestRef(optionalString(input.pr_review_ref)) ? 'live_pr_review_ref' : '',
+    ];
+    return blockedReceipt(input, 'developer_mode_fork_pr_refs_not_live_external_refs', invalidLiveRefs);
   }
 
   const receipt: DeveloperModeCloseoutReceipt = {

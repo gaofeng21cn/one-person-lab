@@ -179,3 +179,46 @@ test('runtime Developer Mode closeout CLI blocks owner receipt or incomplete clo
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
+
+test('runtime Developer Mode closeout CLI blocks fork PR fixture refs from live ledger intake', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-mode-closeout-fixture-state-'));
+  try {
+    const fixtureForkPr = runCli([
+      'runtime',
+      'developer-mode-closeout',
+      'record',
+      '--payload',
+      JSON.stringify({
+        target_repo_id: 'redcube-ai',
+        route_decision: 'fork-PR',
+        route_eligibility: 'eligible_fork_pr',
+        patrol_observation_ref: 'patrol-observation-ref:rca/fixture-fork-pr',
+        diff_ref: 'diff-ref:rca/fixture-fork-pr',
+        verification_refs: ['test-result-ref:rca/fixture-fork-pr'],
+        no_forbidden_write_ref: 'no-forbidden-write-ref:rca/fixture-fork-pr',
+        fork_repo_ref: 'fixture://redcube-ai/developer-mode-fork-pr-drill',
+        pr_review_ref: 'repo-contract-fixture-ref:redcube-ai/fork-pr-drill',
+        owner_acceptance_ref: 'external-owner-acceptance-ref:rca/fixture-fork-pr',
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).developer_mode_closeout_ledger_record;
+
+    assert.equal(fixtureForkPr.status, 'no_eligible_developer_mode_closeout_receipts');
+    assert.equal(
+      fixtureForkPr.blocked_receipts[0].blocker.blocker_id,
+      'developer_mode_fork_pr_refs_not_live_external_refs',
+    );
+    assert.deepEqual(fixtureForkPr.blocked_receipts[0].missing_closeout_refs, [
+      'live_fork_repo_ref',
+      'live_pr_review_ref',
+    ]);
+
+    const listed = runCli(['runtime', 'developer-mode-closeout', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    }).developer_mode_closeout_ledger;
+    assert.equal(listed.receipt_count, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
