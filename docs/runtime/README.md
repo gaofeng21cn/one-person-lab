@@ -5,6 +5,8 @@ Purpose: `runtime_support`
 State: `active_support`
 Machine boundary: 人读索引。机器真相继续归 `contracts/`、源码、CLI/API、stage attempt ledger、provider receipt 与 runtime evidence。
 
+Currentness policy: 本文只保存 runtime 支撑层的导航、稳定 owner split、动态证据入口和 negative boundary。不要从本文读取当前 attempt id、task id、worklist counter、provider proof snapshot、Search Attribute 安装状态、App/operator drilldown 数值、domain ready 或 production ready；这些必须从 fresh contracts、source、tests、CLI/read-model、runtime ledger、provider receipt 和 domain owner surface 读取。
+
 本目录承接 OPL framework runtime、provider/executor、control plane、projection/read model、resume/wakeup 和 operator repair 语义的人读支撑。
 
 当前入口先看：
@@ -17,19 +19,15 @@ Machine boundary: 人读索引。机器真相继续归 `contracts/`、源码、C
 - [OPL Stage-Led Agent Framework Roadmap](../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md)
 - [Runtime Substrate 参考索引](../references/runtime-substrate/README.md)
 
-当前 runtime conflict / blocker 机器语法统一在 `contracts/family-orchestration/family-conflict-envelope.schema.json`。`stage_attempt_query`、`stage_attempt_workbench`、`runtime_tray_snapshot.operator_conflicts[]` 与 `runtime_tray_snapshot.app_operator_drilldown` 只投影 envelope、refs、owner-aware action route 与 App drilldown targets；OPL 不把 provider/executor completion 解释成 domain ready、quality、readiness、artifact 或 export verdict。
+## 动态证据入口
 
-当前 MAS generic runtime handoff 的机器入口是 `contracts/opl-framework/runtime-manager-contract.json#/family_runtime_queue/mas_domain_route_projection` 与 `#/family_scheduler_replacement`。OPL 接收 `mas_runtime_owner_route_handoff`，并以 `opl_runtime_owner_route` 持有 generic runtime queue、stage attempt ledger、liveness projection、provider wakeup、redrive/retry/dead-letter；MAS 继续持有医学 domain truth、paper progress semantics、owner receipt、typed blocker、publication/artifact gate 与 current package authority。
-
-MAS default-executor dispatch 的 task row 与 provider-hosted stage attempt 必须作为同一 OPL typed queue / attempt lifecycle 投影同步：当 linked Temporal attempt 的 terminal observation 显示 failed 或 not-completed，OPL 可以把仍处于 `queued`、`running`、`succeeded` 或 provider-only blocked 的同一 task 收敛到 `blocked`，并设置 provider dead-letter reason 以开放 formal redrive；当 linked attempt 产出 accepted typed closeout，OPL 可以把同一 task 收敛到 `succeeded` 并清除 provider-only blocker。该同步只表达 provider transport completion / failure / non-completion，不写 MAS study truth、不改 publication verdict、不签 owner receipt，也不把 provider completion 或 redrive 解释成 paper ready。
-
-MAS paper-autonomy task 也是 OPL typed queue / stage attempt lifecycle 的一部分：`paper_autonomy/repair-recheck`、`paper_autonomy/ai-reviewer-recheck`、`paper_autonomy/gate-replay`、`paper_autonomy/guarded-apply` 和 `paper_autonomy/route-decision` 进入 `running` 前必须具备 OPL stage attempt identity。若历史任务已经停在 `running` 但没有 stage attempt，且 lease 已过期或缺失，OPL tick 只能在 OPL queue / attempt ledger 内把它收敛回可重试或 retry-budget terminal 状态，并记录 `missing_stage_attempt_identity` 审计事件；不得手写 MAS truth、publication eval、current package 或 owner receipt。
-
-当 OPL tick 观察到 MAS default-executor task 仍是 `running`、lease 已过期、linked Temporal attempt 仍停在 `registered/queued`，但 Temporal query 返回 `temporal_workflow_not_started_or_not_found` 时，该状态属于 OPL provider admission / liveness failure。OPL 必须把 linked attempt 记录为 provider transport failure、把 task 收敛到 provider-only blocked reason，并在 retry budget 内由同一个 tick 自动 redrive；普通未 claim 的 queued attempt 不能因为 workflow not found 被误判为失败。自动 redrive 产生的新 stage attempt 使用同 task/stage/provider 下的 ordinal 保证可审计唯一性，不能依赖同毫秒时间戳或人工 queue update。
-
-`stage_progress_log` 是当前 stage attempt 的 canonical 可观测读面：`attempt query|inspect`、operator visibility、`stage_attempt_workbench` 和 App full drilldown 都从同一 attempt ledger / provider run / activity events / usage projection / closeout packet 派生 planned work、actual work、timeline、usage、evidence refs、Temporal visibility refs 和 authority boundary。Temporal provider 负责 durable workflow history、activity heartbeat、workflow query 和 searchable visibility；OPL 不新建平行 log database，也不把 Temporal history 或 Web UI 当成 App 用户状态真相。
-
-Temporal visibility readiness 属于 provider lifecycle gate。`temporal` provider 启动 searchable stage attempt 前必须具备 OPL stage attempt Search Attributes；缺失时返回明确 repair action，并通过 `opl family-runtime provider repair --provider temporal` 安装。Search Attributes 只能承载可检索 refs 与摘要字段，不能放 transcript、artifact body、memory body、domain body 或 owner verdict。
+| runtime 面 | 稳定读法 | 当前机器入口 |
+| --- | --- | --- |
+| Conflict / blocker envelope | Queue、stage attempt、closeout 和 App/operator projection 共享同一 fail-closed blocker/conflict vocabulary；OPL 只投影 envelope、refs、owner-aware route 和 drilldown target。 | `contracts/family-orchestration/family-conflict-envelope.schema.json`、`contracts/family-orchestration/README.md`、相关 `family-conflict-envelope` source/tests。 |
+| Runtime manager / route handoff | OPL 接收 domain-declared route refs，持有 generic queue、stage attempt ledger、liveness projection、provider wakeup、redrive/retry/dead-letter；domain repo 继续持有 truth、owner receipt、typed blocker、quality/artifact authority。 | `contracts/opl-framework/runtime-manager-contract.json`、`src/family-runtime*.ts`、`tests/src/cli/cases/family-runtime-binding-intake.test.ts`、`opl family-runtime status|tick|queue inspect`。 |
+| Stage attempt / progress projection | `stage_progress_log` 是 OPL attempt/progress projection，不是平行 log database；它从 attempt ledger、provider run、activity events、usage projection、typed closeout packet 和 refs 派生。 | `contracts/opl-framework/family-runtime-attempt-contract.json`、`contracts/opl-framework/README.md`、`src/family-runtime-stage-progress-log.ts`、`tests/src/cli/cases/family-runtime-stage-attempts-temporal-provider.test.ts`、`opl family-runtime attempt query|inspect`。 |
+| Temporal visibility / repair | Temporal Search Attributes 和 Web UI refs 是 provider lifecycle / operator debug surface；payload 只能是 refs 与可索引摘要，不能携带 transcript、artifact body、memory body、domain body 或 owner verdict。 | `src/family-runtime-providers.ts`、`src/family-runtime-temporal-provider-parts/attempt-query.ts`、`tests/src/cli/cases/family-runtime.test.ts`、`opl family-runtime provider repair --provider temporal`。 |
+| Stage graph / transition / App drilldown | Stage graph、route transition、runtime visualization、App/operator drilldown 和 evidence worklist 只是 refs-only operator lens；可见、通过、blocked 或 closed counter 不能升级为 domain ready、artifact authority、quality/export verdict 或 production ready。 | `docs/runtime/stage-graph-route-transition-runtime.md`、`contracts/opl-framework/family-transition-runner-contract.json`、`src/runtime-tray-snapshot.ts`、`opl runtime app-operator-drilldown --json`、`opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`。 |
 
 ## 内容
 
