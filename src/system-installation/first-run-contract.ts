@@ -123,7 +123,8 @@ export function buildOplFreshInstallTestMatrix() {
         expected_phase: 'environment',
         expected_ready_to_launch: false,
         expected_core_blockers: ['codex', 'codex_config'],
-        expected_maintenance_items: ['domain_modules', 'family_runtime_provider', 'native_helpers', 'recommended_skills'],
+        expected_maintenance_items: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
+        expected_conditional_maintenance_items: ['native_helpers'],
         expected_online_management: {
           status: 'initializing',
           blocking: true,
@@ -137,7 +138,8 @@ export function buildOplFreshInstallTestMatrix() {
         expected_phase: 'environment',
         expected_ready_to_launch: false,
         expected_core_blockers: ['codex_config'],
-        expected_maintenance_items: ['domain_modules', 'family_runtime_provider', 'native_helpers', 'recommended_skills'],
+        expected_maintenance_items: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
+        expected_conditional_maintenance_items: ['native_helpers'],
         expected_online_management: {
           status: 'initializing',
           blocking: true,
@@ -151,7 +153,8 @@ export function buildOplFreshInstallTestMatrix() {
         expected_phase: 'environment',
         expected_ready_to_launch: false,
         expected_core_blockers: ['codex', 'codex_config'],
-        expected_maintenance_items: ['domain_modules', 'family_runtime_provider', 'native_helpers', 'recommended_skills'],
+        expected_maintenance_items: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
+        expected_conditional_maintenance_items: ['native_helpers'],
         expected_online_management: {
           status: 'initializing',
           blocking: true,
@@ -165,7 +168,8 @@ export function buildOplFreshInstallTestMatrix() {
         expected_phase: 'environment',
         expected_ready_to_launch: true,
         expected_core_blockers: [],
-        expected_maintenance_items: ['family_runtime_provider', 'native_helpers', 'recommended_skills'],
+        expected_maintenance_items: ['family_runtime_provider', 'recommended_skills'],
+        expected_conditional_maintenance_items: ['native_helpers'],
         expected_online_management: {
           status: 'initializing',
           blocking: true,

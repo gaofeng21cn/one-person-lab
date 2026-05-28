@@ -128,6 +128,12 @@ function assertInitializeState(output, expected) {
   assert.deepEqual(initialize.setup_flow.blocking_items.sort(), [...expected.blocking].sort());
   if (expected.maintenance) {
     const expectedMaintenance = [...expected.maintenance];
+    if (expected.conditionalMaintenance?.includes('native_helpers')) {
+      const nativeHelperItem = initialize.checklist.find((entry) => entry.item_id === 'native_helpers');
+      if (nativeHelperItem?.severity === 'maintenance') {
+        expectedMaintenance.push('native_helpers');
+      }
+    }
     if (initialize.gui_shell?.sibling_checkout_found === false) {
       expectedMaintenance.push('gui_shell');
     }
@@ -184,7 +190,8 @@ function cleanUserMissingCodex(root) {
   assertInitializeState(output, {
     phase: 'environment',
     blocking: ['codex', 'codex_config'],
-    maintenance: ['domain_modules', 'family_runtime_provider', 'native_helpers', 'recommended_skills'],
+    maintenance: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
+    conditionalMaintenance: ['native_helpers'],
     readyToLaunch: false,
     onlineManagementBlocking: true,
     onlineManagementStatus: 'initializing',
@@ -200,7 +207,8 @@ function compatibleCodexMissingModules(root) {
   assertInitializeState(output, {
     phase: 'environment',
     blocking: ['codex_config'],
-    maintenance: ['domain_modules', 'family_runtime_provider', 'native_helpers', 'recommended_skills'],
+    maintenance: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
+    conditionalMaintenance: ['native_helpers'],
     readyToLaunch: false,
     onlineManagementBlocking: true,
     onlineManagementStatus: 'initializing',
@@ -216,7 +224,8 @@ function outdatedCodex(root) {
   assertInitializeState(output, {
     phase: 'environment',
     blocking: ['codex', 'codex_config'],
-    maintenance: ['domain_modules', 'family_runtime_provider', 'native_helpers', 'recommended_skills'],
+    maintenance: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
+    conditionalMaintenance: ['native_helpers'],
     readyToLaunch: false,
     onlineManagementBlocking: true,
     onlineManagementStatus: 'initializing',
@@ -235,7 +244,8 @@ function readyBaseline(root) {
   assertInitializeState(output, {
     phase: 'environment',
     blocking: [],
-    maintenance: ['family_runtime_provider', 'native_helpers', 'recommended_skills'],
+    maintenance: ['family_runtime_provider', 'recommended_skills'],
+    conditionalMaintenance: ['native_helpers'],
     readyToLaunch: true,
     onlineManagementBlocking: true,
     onlineManagementStatus: 'initializing',
