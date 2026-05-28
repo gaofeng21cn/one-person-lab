@@ -107,6 +107,70 @@ OPL 开发文档现在不能按“每份旧计划都继续完整执行”阅读�
 
 ## Coverage Ledger
 
+Date: `2026-05-28 22:00 CST`
+Tranche: `app-packaged-assistant-route-smoke-absorb-and-hygiene`
+State: `tranche_verified`
+
+本轮延续 OPL Doc Governance `/goal`，从 fresh 六仓 main/worktree/branch/dirty/ahead-behind/open-PR/process/recent-write/doctor 盘点继续，吸收并清理 App `codex/packaged-gui-assistant-smoke-20260528` release-evidence lane。该 lane 的语义已验证为当前 App release boundary 所需的 packaged GUI assistant route smoke evidence：release bundle 必须包含 `assistant_route_smoke_summary`，验证 `opl_packaged_gui_assistant_route_smoke`，要求 MAS/MAG/RCA `@` badge、隐藏普通 selector，并记录 Codex ACP route receipt 的 `route_kind=builtin_capability`、`executor=codex_cli`、`assistant_id`、`assistant_short_name` 和 `source=opl_app_home`。本轮不声明 App release ready、domain ready、production ready 或全局 `/goal` complete。
+
+Fresh live truth inputs:
+
+- Fresh six-repo scan at `2026-05-28 21:40 CST`: OPL、MAS、MAG、RCA、OMA、App open PR scans returned `[]`; six doctors were `finding_count=0` and active truth `pass`; all six roots initially read `main...origin/main = 0 0`.
+- Background process scan still showed the expected OPL Temporal worker, old MAS verify/quality processes, live provider-backed Codex stage attempt, and Temporal dev server; none were killed.
+- App old worktree `/Users/gaofeng/workspace/one-person-lab-app/.worktrees/codex/packaged-gui-assistant-smoke-20260528` was dirty but semantically current. Its `git diff --check` and conflict-marker scan passed; `npm run test:release-boundary` passed with `76` tests / `0` failures.
+- The old App lane was committed as `fdfc255 feat(release): require packaged assistant route smoke evidence`.
+- Equivalent current-main semantics were manually absorbed into App `main` as `682f0f5 feat(release): require packaged assistant route smoke evidence`, then the old branch was preserved as an explicit absorb parent through merge marker `577cca4 merge: absorb packaged assistant route smoke lane`.
+- Post-absorb App verification passed: `git diff --check HEAD~2..HEAD`, strict conflict-marker scan, App doctor `finding_count=0` / active truth `pass`, and `npm run test:release-boundary` -> `80` tests / `0` failures.
+- App `main` was pushed and aligned with `origin/main` at `577cca4`; `main...origin/main = 0 0`.
+- During final sweep, App advanced again to `a220196 chore(release): add draft cleanup guard` and aligned with `origin/main`; this commit includes release draft cleanup workflow/script/tests. The checked-out `codex/release-draft-cleanup-20260528` worktree now points at the same clean head, but it still had recent shell/worktree writes, so it was retained for the next freshness-window cleanup gate.
+- During final sweep, MAS aligned at `732049ea fix(progress): merge live opl stage log handoff`, MAG aligned at `4cdb5df Fix manifest sustained paylo...`, OMA aligned at `c10c3c9`, and RCA was not aligned: RCA `main` was ahead of `origin/main` by one commit `c474d66 Tighten native PPT text fit checks` and still dirty/recent in the same native-PPT quality/layout test lane. RCA was retained instead of pushing a partial lane.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | `TASTE.md`, OPL Doc Governance skill, this portfolio ledger, automation memory, prior six-repo hygiene classification, and App absorb verification evidence. | `docs/active/development-document-portfolio.md`; prior in-flight OPL active truth docs for MAS typed-blocker receipt remain in this same verification batch. |
+| `one-person-lab-app` | App `AGENTS.md`; release-boundary docs/contracts/scripts/tests touched by the packaged assistant route smoke lane; App doctor risk map; App worktree list after cleanup. | App commits `682f0f5` and `577cca4` touched/absorbed `contracts/app-first-run-test-matrix.json`, `contracts/app-release-channel.json`, `docs/active/app-ideal-state-gap-plan.md`, `docs/release/README.md`, `docs/status.md`, `docs/testing/README.md`, `scripts/validate-release-evidence-bundle.ts`, `scripts/write-release-evidence-manifest.ts`, and `tests/release/app-release-boundary.test.ts`. |
+| `med-autoscience` | Main alignment, dirty/unmerged/recent `codex/dm003-writer-handoff-dispatch` classification, process context, and doctor risk map. | none |
+| `med-autogrant` | Main alignment, remote-only branch retention, and doctor risk map. | none |
+| `redcube-ai` | Main/local drift scan, dirty native-PPT lane diff, recent-write scan, remote-only branch retention, and doctor risk map. | none |
+| `opl-meta-agent` | Main alignment and doctor risk map. | none |
+
+Archived / tombstoned / deleted docs:
+
+- none.
+
+Worktree / branch cleanup:
+
+- Removed App worktree `/Users/gaofeng/workspace/one-person-lab-app/.worktrees/codex/packaged-gui-assistant-smoke-20260528` after confirming its branch was a `main` ancestor and the worktree was clean after the local commit.
+- Deleted local branch `codex/packaged-gui-assistant-smoke-20260528` after the absorb marker landed on App `main`.
+- No remote branch was deleted.
+
+Retained lanes / blockers:
+
+- OPL `codex/dm002-current-control-stage-progress-log`: clean and same-head with `main`, but file writes were inside the 1-hour freshness window during the scan; retain.
+- MAS `codex/dm003-writer-handoff-dispatch`: dirty in `src/med_autoscience/controllers/domain_health_diagnostic.py` and `src/med_autoscience/controllers/domain_health_diagnostic_parts/runtime_scan.py`, branch has one commit not in main, and writes were recent; retain.
+- MAG `codex/mag-sustained-payload-opl-record`: branch/worktree exists at the current MAG main head `4cdb5df`; retain until the recent-write and same-head cleanup gate is rechecked from a fresh scan.
+- RCA root `main`: local commit `c474d66` is ahead of `origin/main` and the checkout is dirty/recent in `python/redcube_ai/native_helpers/ppt_deck/native_layouts.py`, `python/redcube_ai/native_helpers/ppt_deck/native_quality.py`, and `tests/ppt-native-python-system-map-layouts.test.ts`; retain and do not push/clean until the native-PPT lane is cleanly verified or explicitly split.
+- App `codex/full-first-run-stable-gate-20260525`: dirty, remote-backed, and not a `main` ancestor; retain.
+- App `codex/release-draft-cleanup-20260528`: clean and same-head with current App `main` at `a220196`, no same-name remote branch, but recent worktree/shell writes were observed during the final sweep; retain until the freshness window clears.
+- Remote-only OPL `origin/fix/opl-temporal-worker-stale-repair-20260528`, MAG `origin/feature/ai-narration-contracts`, and RCA `origin/codex/developer-mode-fork-pr-live-closeout-20260528` remain retained without proof they are automation-owned stale and externally unreferenced.
+
+Unreviewed docs:
+
+- No new full-body README/docs semantic coverage is claimed for any repo in this tranche.
+- `one-person-lab-app` remains fully covered for repo-root `README*` plus `docs/**/*.md` at the prior App body-coverage snapshot; OPL/MAS/MAG/RCA/OMA broader full-body coverage remains open except for previously recorded tranche coverage.
+
+Remaining stale / retire candidates:
+
+- Recheck OPL clean same-head worktree after the recent-write window clears; if still clean, no PR, no same-name remote, no active process, and merged into main, remove its worktree/local branch.
+- Resolve or hand off dirty MAS writer lane and dirty App full-first-run / release-draft lanes before any cleanup or absorb decision.
+- Retain remote-only OPL/MAG/RCA refs until stale automation ownership and no external active references are proven.
+
+Next tranche write scope:
+
+- Start with another fresh six-repo scan. If no safe cleanup candidate appears, continue paragraph-level README/docs coverage on a clean repo/document cluster or validate/commit one explicit dirty owner lane without mixing unrelated changes. Keep global `/goal` active.
+
 Date: `2026-05-28 21:30 CST`
 Tranche: `standard-agent-template-consumption-repeat-ledger-and-six-repo-hygiene`
 State: `tranche_verified`
@@ -8723,6 +8787,64 @@ Next tranche write scope:
 - If App remains dirty, continue only with newly reopened OPL/MAS/MAG/RCA/OMA/App ledger or support README accounting items that do not touch externally dirty files.
 - When the dirty App release/testing lane is safe or explicitly assigned, perform App paragraph-level body governance as recorded in the App repo-local ledger.
 - Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
+
+Date: `2026-05-28 21:52 CST`
+Tranche: `mas-domain-dispatch-typed-blocker-receipt`
+State: `tranche_verified`
+
+本轮覆盖 OPL evidence worklist 暴露的 MAS domain-dispatch payload-required route。目标是用 MAS owner surface 生成 domain-owned typed blocker / no-regression / owner-chain refs payload，再通过 OPL safe-action shell record + verify 对应 refs-only receipt；本轮不改 MAS domain truth、不生成 MAS owner receipt、不关闭 paper line、不声明 domain ready、production ready 或 global goal complete。
+
+Fresh live truth inputs:
+
+- OPL `TASTE.md`, `AGENTS.md`, `docs/status.md`, `docs/active/current-state-vs-ideal-gap.md`, fresh `framework readiness`, App/operator drilldown and `family-runtime evidence-worklist`.
+- MAS `TASTE.md`, `AGENTS.md`, status/invariants/decisions read, and MAS app skill owner-boundary rules.
+- Workorder `/tmp/opl-mas-domain-dispatch-workorder-sat_9ca5d4963ea212c1b355939e.json` for DM-CVD `003-dpcc-primary-care-phenotype-treatment-gap`, stage `domain_owner/default-executor-dispatch`, action `return_to_ai_reviewer_workflow`.
+
+Fresh semantic result:
+
+- MAS owner surface returned `typed_blocker_payload_ready` for `stale_return_to_ai_reviewer_dispatch_superseded_by_consumed_ai_reviewer_routeback`, with `runtime_recovery_not_authorized` owner-route evidence, 1 typed blocker ref, 1 no-regression ref, 19 owner-chain refs and 19 supplemental evidence refs.
+- OPL dry-run selected `typed_blocker_path`; identity binding was `matched`, success path was not ready, and OPL authority boundary remained refs-only.
+- OPL record and verify succeeded for receipt `opl://external-evidence/medautoscience/domain_dispatch:medautoscience:sat_9ca5d4963ea212c1b355939e`.
+- A transient follow-up workorder for `sat_eb93f3ead75d5219a5ffa499` surfaced while verifying; MAS owner surface produced a typed-blocker payload, but OPL safe-action dry-run returned `route_not_found`, so no stale route receipt was recorded. The subsequent fresh worklist no longer exposed that route.
+- Fresh `family-runtime evidence-worklist` then read `open_worklist_item_count=0`, `open_safe_action_payload_required_item_count=0`, `open_safe_action_payload_free_item_count=0`, `domain_dispatch_evidence_workorder_count=0`, `stage_receipt_freshness_open_workorder_count=0`, `closed_refs_only_item_count=303`, `domain_dispatch_evidence_receipt_item_count=262`, `zero_open_worklist_blocked_refs_only_envelope_count=430`, `domain_ready_authorized=false` and `production_ready_authorized=false`.
+- Fresh `framework readiness` read `hard_blocker_count=0`, `operator_actionable_attention_tail_count=0`, `operator_payload_required_attention_tail_count=0`, `evidence_envelope_open_count=0`, `evidence_envelope_blocked_count=430`, `domain_dispatch_attention_count=11`, and `domain_blocked_attention_tail_count=441`.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | `TASTE.md`, `docs/status.md`, `docs/active/current-state-vs-ideal-gap.md`, current evidence worklist/readiness/App drilldown outputs, and this coverage ledger. | `docs/status.md`, `docs/active/current-state-vs-ideal-gap.md`, `docs/active/development-document-portfolio.md` |
+| `med-autoscience` | `TASTE.md`, `AGENTS.md`, `docs/status.md`, `docs/invariants.md`, `docs/decisions.md`, MAS app skill, and MAS `domain-handler dispatch-evidence-payload` output. | none |
+
+Archived / tombstoned / deleted docs:
+
+- none.
+
+Unreviewed docs:
+
+- MAG/RCA/OMA/App docs were not reopened in this tranche.
+
+Remaining stale / retire candidates:
+
+- MAS paper-line owner-chain live evidence, expected receipt instance, monitor freshness, memory/artifact/lifecycle receipt scaleout and long-soak remain open production-evidence tails.
+- Fresh zero open worklist only means no current OPL-executable safe-action route; 430 blocked refs-only envelopes and 11 domain-dispatch attention items remain review signals, not completion claims.
+- Future prose must not treat this OPL receipt as MAS owner receipt, paper closure, artifact authority, expected receipt instance, monitor freshness, domain ready, App release ready, production ready or global goal complete.
+
+Worktree / branch cleanup:
+
+- No new worktree or branch was created for this tranche.
+- Final OPL and MAS `git worktree list` reads showed only the main checkouts, so no current-session worktree or branch cleanup was needed.
+
+Verification before absorb:
+
+- OPL safe-action record and verify outputs for `sat_9ca5d4963ea212c1b355939e`.
+- OPL safe-action dry-run fail-closed output for stale route `sat_eb93f3ead75d5219a5ffa499`.
+- Fresh OPL `family-runtime evidence-worklist`, `framework readiness`, and App/operator drilldown summary JSON snapshots.
+- Remaining verification before final tranche closeout: `git diff --check`, conflict-marker scan, focused tests/readiness commands, `scripts/verify.sh`, `git status --short`, and `git worktree list`.
+
+Next tranche write scope:
+
+- Continue from blocked refs-only attention, with highest priority on real domain owner-chain live evidence, memory/artifact/lifecycle receipt scaleout, MAG sustained App/default caller payload, RCA visual no-regression/long-soak scaleout, and no-forbidden-write / owner acceptance repetition where fresh read-models expose executable owner payload.
 
 Date: `2026-05-27 06:04 CST`
 Tranche: `opl-contracts-readme-lifecycle`
