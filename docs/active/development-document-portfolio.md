@@ -226,6 +226,10 @@ Retained lanes / blockers:
 - OPL `.worktrees/developer-mode-app-patrol-mount`: clean and equal to main /
   origin, but had recent writes inside the last hour; retained under the
   recent-lane safety rule.
+- MAS `codex/dm003-ai-reviewer-routeback-priority`: clean, equal to MAS main /
+  origin and already a `main` ancestor, with no same-name remote branch, open
+  PR or related process, but had recent worktree writes inside the last hour;
+  retained under the recent-lane safety rule.
 - RCA root checkout: `main` remains ahead of origin by `fa09f1d Harden native
   PPTX layout grammar gates`, dirty in native-PPT docs/source/tests/prompts,
   and has active native-PPT dashboard repair / Codex executor processes.
