@@ -107,6 +107,62 @@ OPL 开发文档现在不能按“每份旧计划都继续完整执行”阅读�
 
 ## Coverage Ledger
 
+Date: `2026-05-28 11:54 CST`
+Tranche: `opl-process-ledger-exact-path-reconcile`
+State: `tranche_verified`
+
+本轮按上一轮 baton 先做 fresh inventory-vs-ledger diff，再选择最小 OPL 文档治理写入范围。当前 `README*` 与 `docs/**/*.md` exact inventory 为 165 个 tracked Markdown path；已有 coverage ledger 只缺 `docs/history/process/plans/2026-05-28-opl-series-doc-governance-tranche-ledger.md` 这个 exact path。该文件已在上一轮 `opl-process-plans-body-coverage` 的 tracked process-plan body audit 中语义覆盖，本轮只补 exact-path reconcile，避免后续把“路径未逐字命中”误读成未审文档。本轮不改 source/contracts/tests，不新增 readiness claim，不关闭 OPL series 全局 `/goal`。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`, `TASTE.md`, OPL Doc Governance skill, `docs/docs_portfolio_consolidation.md`, this OPL family ledger, `docs/active/current-state-vs-ideal-gap.md`, `docs/status.md`, and OPL Doc Governance doctor output.
+- Current inventory scan over repo-root `README*` plus `docs/**/*.md`, followed by exact-string lookup against this ledger.
+- `docs/history/process/plans/README.md` and `docs/history/process/plans/2026-05-28-opl-series-doc-governance-tranche-ledger.md`.
+- Current main source/doc state including the already-present `Harden Developer Mode fork PR closeout intake` commit, because main was ahead of `origin/main` before this ledger write.
+
+Fresh semantic result:
+
+- The only exact-path miss is `docs/history/process/plans/2026-05-28-opl-series-doc-governance-tranche-ledger.md`. Its content is a historical coverage ledger, not current truth, active implementation queue, runtime/provider contract, App release plan, domain-agent production gate or current prompt.
+- `docs/history/process/plans/README.md` already indexes this file as an OPL series docs governance / stale-lane cleanup tranche ledger and routes current truth to repo active truth owners, core docs, live code/contracts/tests/read-models.
+- The previous `opl-process-plans-body-coverage` entry already named this body in the full role/body audit. This tranche records exact-path coverage only; no prose body rewrite, archive, tombstone or deletion is needed.
+- The Developer Mode fork/PR intake hardening present on main tightens live ledger intake by rejecting fixture / repo-contract drill refs for fork-PR closeout receipts. That change supports the existing active truth that fixture drill coverage is not live external owner acceptance; it does not close Developer Mode global closeout, domain ready, App release ready or production ready.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | Exact inventory over current tracked `README*` and `docs/**/*.md`; focused role read of `docs/history/process/plans/2026-05-28-opl-series-doc-governance-tranche-ledger.md`; support read of `docs/history/process/plans/README.md`, this ledger, active gap owner and current Developer Mode intake guard wording. | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The reviewed ledger remains legitimate history/provenance.
+
+Unreviewed docs:
+
+- `one-person-lab`: exact inventory has no current uncovered tracked `README*` / `docs/**/*.md` path once this entry is counted. Section-level reopen still applies if later source/contract/read-model/doc drift changes a previously covered document's truth.
+- MAS/RCA/App body governance remains governed by their current dirty/recent/conflicting lanes and repo-local ledgers. OPL exact-path closure does not close the six-repo global `/goal`.
+
+Remaining stale / retire candidates:
+
+- Future active docs or prompts must not treat historical OPL series automation ledger text, old worktree cleanup snapshots, stale branch names, prior read-model counters or process-log verification tables as current truth without re-deriving from live repo state and read-models.
+- Developer Mode fixture / repo-contract drill refs still cannot count as live GitHub fork/PR owner acceptance. Only live fork / PR refs plus external owner acceptance refs can close the fork-PR ledger route.
+
+Worktree / branch cleanup:
+
+- Main was already one commit ahead of `origin/main` with Developer Mode fork/PR intake hardening before this ledger edit. That commit is verified with this tranche before push.
+- The previously observed `codex/developer-mode-live-ref-guard-20260528` worktree/branch disappeared before this write scope; treat it as external state change, not this tranche cleanup.
+- This tranche's dedicated worktree should be removed after fast-forward absorb.
+
+Verification before absorb:
+
+- `git diff --check`; strict README/docs/contracts/src/tests conflict-marker scan; OPL Doc Governance doctor active truth pass / no findings.
+- Focused Developer Mode closeout ledger test covering fixture fork/PR rejection.
+
+Next tranche write scope:
+
+- Continue OPL series whole-docs governance outside already exact-covered OPL paths, prioritizing MAS/RCA/App only when their active lanes are clean or explicitly assigned.
+- Re-run six-repo branch/worktree/process/PR scan before any cleanup or write scope. Keep the global `/goal` active until all six repos have no uncovered README/docs sections and remaining gaps are closed or carried into executable next-round prompts.
+
 Date: `2026-05-28 11:33 CST`
 Tranche: `opl-process-plans-body-coverage`
 State: `tranche_verified`
