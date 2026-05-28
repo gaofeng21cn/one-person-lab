@@ -226,6 +226,104 @@ function groupAttempts(attempts: StageAttemptProjection[], keyFor: (attempt: Sta
   ]));
 }
 
+function userStageLog(attempt: StageAttemptProjection): JsonRecord {
+  const progressLog = attempt.stage_progress_log;
+  return isRecord(progressLog?.user_stage_log) ? progressLog.user_stage_log : {};
+}
+
+function usageRefs(attempt: StageAttemptProjection) {
+  const userLog = userStageLog(attempt);
+  const usage = attempt.usage_projection;
+  return uniqueStrings([
+    ...stringListFrom(userLog.usage_refs),
+    ...stringListFrom(userLog.token_usage_refs),
+    ...stringListFrom(usage.token.source_refs),
+    ...stringListFrom(usage.duration.source_refs),
+    ...stringListFrom(usage.api_calls.source_refs),
+  ]);
+}
+
+function costRefs(attempt: StageAttemptProjection) {
+  const userLog = userStageLog(attempt);
+  return uniqueStrings([
+    ...stringListFrom(userLog.cost_refs),
+    ...stringListFrom(attempt.usage_projection.cost.source_refs),
+  ]);
+}
+
+function buildAttemptHistory(attempts: StageAttemptProjection[], projectionScope = 'stage_attempt_workbench') {
+  const entries = attempts.map((attempt, index) => {
+    const progressLog = attempt.stage_progress_log;
+    const userLog = userStageLog(attempt);
+    const duration = isRecord(userLog.duration) ? userLog.duration : {};
+    const tokenUsage = isRecord(userLog.token_usage) ? userLog.token_usage : {};
+    const cost = isRecord(userLog.cost) ? userLog.cost : {};
+    const stageProgressRef = `/stage_attempt_workbench/attempts/${attempt.stage_attempt_id}/stage_progress_log`;
+    return {
+      surface_kind: 'opl_stage_attempt_history_entry',
+      entry_index: index,
+      stage_attempt_id: attempt.stage_attempt_id,
+      task_id: optionalString(attempt.task_id),
+      domain_id: attempt.domain_id,
+      stage_id: attempt.stage_id,
+      provider_kind: attempt.provider_kind,
+      executor_kind: attempt.executor_kind,
+      status: attempt.local_status,
+      canonical_outcome: optionalString(attempt.canonical_outcome),
+      blocked_reason: optionalString(progressLog?.actual_work.blocked_reason),
+      stage_name: optionalString(userLog.stage_name) ?? `${attempt.domain_id}/${attempt.stage_id}`,
+      problem_summary: optionalString(userLog.problem_summary),
+      stage_goal: optionalString(userLog.stage_goal),
+      stage_work_done: stringListFrom(userLog.stage_work_done),
+      changed_stage_surfaces: stringListFrom(userLog.changed_stage_surfaces),
+      outcome: optionalString(userLog.outcome),
+      remaining_blockers: stringListFrom(userLog.remaining_blockers),
+      duration,
+      token_usage: tokenUsage,
+      cost,
+      usage_refs: usageRefs(attempt),
+      cost_refs: costRefs(attempt),
+      evidence_refs: uniqueStrings([
+        ...stringListFrom(userLog.evidence_refs),
+        ...stringListFrom(attempt.closeout_refs),
+        ...stringListFrom(attempt.consumed_refs),
+        ...stringListFrom(attempt.writeback_receipt_refs),
+      ]),
+      closeout_refs: stringListFrom(attempt.closeout_refs),
+      stage_progress_log_ref: stageProgressRef,
+      usage_projection_ref: `/stage_attempt_workbench/attempts/${attempt.stage_attempt_id}/usage_projection`,
+      created_at: optionalString(attempt.created_at),
+      updated_at: optionalString(attempt.updated_at),
+      semantic_status: optionalString(userLog.semantic_status) ?? 'missing_domain_semantic_summary',
+      authority_boundary: progressLog?.authority_boundary ?? {
+        opl: 'attempt_history_projection_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        can_write_domain_truth: false,
+        can_authorize_quality_verdict: false,
+      },
+    };
+  });
+  return {
+    surface_kind: 'opl_stage_attempt_history_projection',
+    projection_scope: projectionScope,
+    projection_policy: 'attempt_history_from_opl_ledger_and_domain_provided_user_stage_log_no_domain_inference',
+    attempt_count: entries.length,
+    entries,
+    refs: {
+      stage_progress_log_refs: entries.map((entry) => entry.stage_progress_log_ref),
+      usage_projection_refs: entries.map((entry) => entry.usage_projection_ref),
+    },
+    authority_boundary: {
+      opl: 'attempt_history_projection_only',
+      domain: 'human_readable_stage_semantics_owner',
+      can_infer_domain_semantics: false,
+      can_write_domain_truth: false,
+      can_authorize_quality_verdict: false,
+      provider_completion_is_domain_ready: false,
+    },
+  };
+}
+
 export function buildWorkbenchMetadata(attempts: StageAttemptProjection[]) {
   const operatorConflicts = attempts.flatMap((attempt) => recordListFromUnknown(attempt.operator_conflicts));
   const humanReviewBurdenBudget = buildFamilyHumanReviewBurdenBudget({
@@ -288,6 +386,7 @@ export function buildWorkbenchMetadata(attempts: StageAttemptProjection[]) {
       ...buildWorkbenchGenericProjections(attempts),
       operator_conflict_count: operatorConflicts.length,
       control_loop_summary: buildWorkbenchControlLoopSummary(attempts),
+      attempt_history: buildAttemptHistory(attempts),
       human_review_burden_budget: humanReviewBurdenBudget,
       human_gate_count: attentionCounters.human_gate_count,
       resume_count: attentionCounters.resume_count,
@@ -335,6 +434,7 @@ export const EMPTY_WORKBENCH_METADATA = {
     stage_progress_log: summarizeStageProgressLogs([], 'stage_attempt_workbench'),
     ...buildWorkbenchGenericProjections([]),
     control_loop_summary: buildWorkbenchControlLoopSummary([]),
+    attempt_history: buildAttemptHistory([]),
     human_review_burden_budget: buildFamilyHumanReviewBurdenBudget({
       projectionScope: 'stage_attempt_workbench',
       targetDomainId: null,

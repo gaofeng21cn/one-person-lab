@@ -557,7 +557,29 @@ test('runtime snapshot projects stage attempt usage pressure into workbench grou
       'fixture-run',
       completed.family_runtime_stage_attempt.attempt.stage_attempt_id,
       '--closeout-packet',
-      '{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:analysis-closeout"],"domain_ready_verdict":"domain_gate_pending","route_impact":{"usage_projection":{"usage_ref":"usage:analysis","api_call_count":1}}}',
+      JSON.stringify({
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: ['receipt:analysis-closeout'],
+        domain_ready_verdict: 'domain_gate_pending',
+        user_stage_log: {
+          stage_name: 'Analysis campaign evidence projection',
+          problem_summary: 'The analysis campaign needed a refs-only progress projection for the operator.',
+          stage_goal: 'Project the attempt history without interpreting MAS study truth.',
+          stage_work_done: ['Projected the completed analysis attempt into the workbench history.'],
+          changed_stage_surfaces: ['stage_attempt_workbench'],
+          outcome: 'completed_with_domain_gate_pending',
+          remaining_blockers: ['MAS owner receipt still owns domain-ready status.'],
+          evidence_refs: ['receipt:analysis-closeout'],
+          usage_refs: ['usage:analysis'],
+          cost_refs: ['cost:analysis'],
+        },
+        route_impact: {
+          usage_projection: {
+            usage_ref: 'usage:analysis',
+            api_call_count: 1,
+          },
+        },
+      }),
     ], familyRuntimeEnv(stateRoot));
 
     const deadLetter = runCli([
@@ -611,6 +633,34 @@ test('runtime snapshot projects stage attempt usage pressure into workbench grou
     assert.equal(workbench.summary.stage_progress_log.missing_usage_telemetry_attempt_count, 1);
     assert.equal(workbench.summary.stage_progress_log.temporal_attempt_count, 0);
     assert.equal(workbench.summary.stage_progress_log.temporal_webui_ref_count, 0);
+    assert.equal(workbench.summary.attempt_history.surface_kind, 'opl_stage_attempt_history_projection');
+    assert.equal(workbench.summary.attempt_history.attempt_count, 2);
+    assert.equal(workbench.attempt_history.attempt_count, 2);
+    const historyEntry = workbench.attempt_history.entries.find((entry: { stage_attempt_id: string }) =>
+      entry.stage_attempt_id === completed.family_runtime_stage_attempt.attempt.stage_attempt_id
+    );
+    assert.equal(historyEntry.task_id, null);
+    assert.equal(historyEntry.stage_name, 'Analysis campaign evidence projection');
+    assert.equal(
+      historyEntry.problem_summary,
+      'The analysis campaign needed a refs-only progress projection for the operator.',
+    );
+    assert.deepEqual(historyEntry.stage_work_done, [
+      'Projected the completed analysis attempt into the workbench history.',
+    ]);
+    assert.deepEqual(historyEntry.changed_stage_surfaces, ['stage_attempt_workbench']);
+    assert.equal(historyEntry.token_usage.status, 'missing');
+    assert.equal(historyEntry.cost.status, 'missing');
+    assert.equal(historyEntry.outcome, 'completed_with_domain_gate_pending');
+    assert.deepEqual(historyEntry.remaining_blockers, ['MAS owner receipt still owns domain-ready status.']);
+    assert.equal(historyEntry.usage_refs.includes('usage:analysis'), true);
+    assert.equal(historyEntry.cost_refs.includes('cost:analysis'), true);
+    assert.equal(
+      historyEntry.stage_progress_log_ref,
+      `/stage_attempt_workbench/attempts/${completed.family_runtime_stage_attempt.attempt.stage_attempt_id}/stage_progress_log`,
+    );
+    assert.equal(historyEntry.authority_boundary.can_write_domain_truth, false);
+    assert.equal(workbench.attempt_history.authority_boundary.can_infer_domain_semantics, false);
     assert.equal(workbench.groups.by_domain.medautoscience.usage_projection.observed_attempt_count, 1);
     assert.equal(workbench.groups.by_domain.medautogrant.usage_projection.retry_budget_exhausted_count, 1);
     assert.equal(deadLetterAttempt.usage_projection.retry_budget.pressure_status, 'retry_budget_exhausted');
