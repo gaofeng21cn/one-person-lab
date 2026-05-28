@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `ai_first_executor_first_long_horizon_research_prompt_and_audit_entry`
 State: `support_reference`
 Machine boundary: 本文是人读调研提示词、长期优化目标和审计入口。机器真相继续归 `contracts/`、源码、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、真实 workspace / App evidence 与各 domain owner receipt。
-Date: `2026-05-26`
+Date: `2026-05-29`
 
 ## 当前结论
 
@@ -22,7 +22,7 @@ OPL 的长期目标继续固定为 `AI-first / executor-first / Codex-first`：O
 2. 保持 framework surface 节制：新增 surface 默认先作为 reference、diagnostic lens、advisory ref 或 App detail drilldown；只有服务 launch safety、authority boundary、evidence / audit / replay / route-back，或被 App/runtime 反复消费时，才进入默认入口。
 3. 统一 stage pack conformance：每个标准 OPL Agent stage 都应同构暴露 prompt/tools/knowledge/evaluation、selected executor、executor binding ref、expected receipt refs、requires/ensures、independent gate policy 和 route-back receipt。
 4. 统一 privatization audit envelope：MAS/RCA/MAG/OMA 的私有功能审计最终应投影到同一组 bucket：`standard_pack_inventory`、`authority_function_inventory`、`private_platform_residue_inventory`、`bridge_exit_gate`、`evidence_gap`；repo 可以有扩展字段，但 OPL/App 默认读法必须稳定。
-5. 推进真实 evidence，而不是继续堆合同：2026-05-26 live read-model 读到 App user-path production user path ready，但 `app_release_user_path_release_ready_claimed=false`、`app_release_user_path_production_ready_claimed=false`；OMA production-consumption follow-through ready 只关闭 OMA production-consumption gate，不授权 MAS/MAG/RCA/domain production ready；`opl agents conformance --family-defaults --json` 读为四仓 structural conformance passed、blocked_count=0，production evidence tail 单独读取；`opl family-runtime evidence-worklist ... --detail full --json` 读为 `open_worklist_item_count=0`，但仍有 `zero_open_worklist_blocked_refs_only_envelope_count=213`，所以 zero-open worklist 不能写成 domain ready 或 production ready。MAG/RCA 的主缺口是 live owner-chain、App/default caller、workspace / artifact / memory receipt scaleout 和 controlled soak；MAS 的主缺口是 physical thinning tail、真实 paper-line receipt parity 与 no-active-caller / tombstone proof。
+5. 推进真实 evidence，而不是继续堆合同：App user-path、OMA production-consumption、standard conformance、evidence worklist、domain-dispatch 和 framework readiness 的状态必须从 fresh CLI/read-model 读取。App/OMA verified refs 只关闭对应 refs-only gate；conformance passed 只关闭结构门；zero-open worklist 只表示当前没有 OPL 可执行 safe-action route；positive open worklist 只表示等待 domain/App/live owner payload 或 typed blocker。这些状态都不能写成 App release ready、domain ready、artifact authority、quality/export verdict、family production ready 或默认 promotion。MAG/RCA 的主缺口继续按 live owner-chain、App/default caller、workspace / artifact / memory receipt scaleout 和 controlled soak 读取；MAS 的主缺口继续按 physical thinning tail、真实 paper-line receipt parity 与 no-active-caller / tombstone proof 读取。
 
 ## 调研提示词
 
@@ -58,7 +58,7 @@ OPL 的长期目标继续固定为 `AI-first / executor-first / Codex-first`：O
 - `Codex CLI` 是默认且第一公民 executor；`hermes_agent`、`claude_code`、`antigravity_cli` 等非默认 executor 只能以显式 adapter/backend 接入，并以 binding ref、receipt、audit 和 fail-closed 证明连接，不承诺行为、工具语义、质量或 resume 等价。
 - Temporal-backed provider 是 production online durable substrate；`local_sqlite` 只允许作为 dev/CI/offline diagnostic baseline。
 - 核心 docs、contracts 与 CLI/read model 都已反复防止 `provider proof / readiness / generated surface / cleanup ledger = domain ready` 的误读。
-- 2026-05-26 live `framework readiness` 读为 `framework_control_plane_available_with_blocked_refs_only_attention`：hard blocker 为 0，provider cadence/capability SLO satisfied，但 `domain_blocked_attention_tail_count=226`、`evidence_envelope_blocked_count=213`，且 authority boundary 仍禁止 OPL 声明 domain ready、production ready、quality/export verdict 或 artifact mutation authority。
+- `framework readiness` 的当前状态必须从 `opl framework readiness --family-defaults --json` 读取。该 read-model 可以证明 framework control plane、provider cadence/capability、operator attention 和 refs-only worklist 的当前形状；authority boundary 固定禁止 OPL 声明 domain ready、production ready、quality/export verdict 或 artifact mutation authority。
 
 ### 主要冗余和污染风险
 
@@ -74,11 +74,11 @@ OPL 的长期目标继续固定为 `AI-first / executor-first / Codex-first`：O
 | MAS | ownership 方向正确，但仍是最大 residual 风险源 | 继续写成 `physical thinning tail`：runtime transport、sidecar、SQLite/lifecycle 等只可作为 domain bridge、receipt/typed-blocker、refs-only adapter 或 diagnostic；验收必须是 no-active-caller、OPL parity、domain receipt parity、tests 和 tombstone refs |
 | MAG | 结构边界较干净 | 主要缺口归测试/证据差距：live OPL-hosted grant-stage receipt、App/production caller receipt、long soak、workspace receipt scaleout |
 | RCA | 旧 managed runtime 退役较彻底 | 防止 artifact-heavy helper、product sidecar、native helper、artifact lifecycle 被复制成通用 runtime scaffold；RCA 只提供 visual pack、authority function 和 refs-only adapter |
-| OMA | 语义深度已够，不再是空壳；MAS/MAG real-target scaleout refs 已能进入 OPL registry / App drilldown，默认 summary 和 full detail 都可审计 owner receipt / typed blocker、Agent Lab result、no-forbidden-write 与 cleanup counters；production-consumption follow-through 已消费 managed install/update、App live path、owner receipt / typed blocker scaleout 和 verified long-soak 四类 gate。 | 继续增加真实 target patch/rerun/owner receipt 样本；防止 scripts 增长成 meta-runtime 或默认 promotion authority；任何 OMA counter 或 OMA production-consumption ready 都不能授权目标 domain ready、family production ready 或默认 promotion。 |
+| OMA | 语义深度已够，不再是空壳；MAS/MAG real-target scaleout refs、registry/App drilldown、owner receipt / typed blocker、Agent Lab result、no-forbidden-write 与 cleanup counters 都只从 fresh OMA / OPL read-model 读取。 | 继续增加真实 target patch/rerun/owner receipt 样本；防止 scripts 增长成 meta-runtime 或默认 promotion authority；任何 OMA counter、verified refs 或 OMA production-consumption ready 都不能授权目标 domain ready、family production ready 或默认 promotion。 |
 
 ## 下一轮可执行方向
 
-当前优先级继续从 live gate 倒推，而不是继续增加相似 conformance surface：App user-path evidence 与 OMA production-consumption 这轮已经各自观察到 verified long evidence refs，下一轮应转向仍能被 fresh read-model 证明的 MAS paper-line parity / physical thinning、MAG/RCA owner-chain 与 controlled hosted stage soak、Developer Mode non-owner fork/PR owner acceptance、以及 App release-ready owner boundary；只有当新 surface 能防止 authority 污染、App/default caller 漏读或 refs-only evidence 误关 gate 时，才进入前 3 类结构优化。
+当前优先级继续从 live gate 倒推，而不是继续增加相似 conformance surface：每轮先重跑 App user-path、OMA production-consumption、framework readiness、App/operator drilldown 和 evidence worklist，再转向仍能被 fresh read-model 证明的 MAS paper-line parity / physical thinning、MAG/RCA owner-chain 与 controlled hosted stage soak、Developer Mode non-owner fork/PR owner acceptance、以及 App release-ready owner boundary；只有当新 surface 能防止 authority 污染、App/default caller 漏读或 refs-only evidence 误关 gate 时，才进入前 3 类结构优化。
 
 1. `standard_stage_pack_v2_conformance`
    统一 `stage_control_plane` 的必备字段和读法：prompt refs、tool/skill refs、knowledge refs、evaluation / quality gate refs、selected executor、executor binding ref、expected receipt refs、requires/ensures、independent gate policy、route-back receipt。
@@ -90,7 +90,7 @@ OPL 的长期目标继续固定为 `AI-first / executor-first / Codex-first`：O
    统一 MAS/RCA/MAG/OMA 的 functional privatization audit 顶层 envelope，减少 App/operator drilldown 的 repo-specific adapter。
 
 4. `evidence_after_contract`
-   在 conformance 收敛后，优先投入真实 evidence：MAS paper-line parity 和 physical thinning、MAG/RCA controlled hosted stage soak、Developer Mode non-owner fork/PR owner acceptance，以及 MAG/RCA/OMA owner receipt / typed blocker scaleout。App user-path 和 OMA production-consumption 的 verified refs 只关闭对应 refs-only gate；它们不替代 MAS/MAG/RCA 的 domain ready、artifact authority、family production ready、App release ready 或默认 promotion evidence。每次引用这些 evidence 时都必须重跑 live read-model，并把 zero-open worklist 与 blocked refs-only envelope 分开写。
+   在 conformance 收敛后，优先投入真实 evidence：MAS paper-line parity 和 physical thinning、MAG/RCA controlled hosted stage soak、Developer Mode non-owner fork/PR owner acceptance，以及 MAG/RCA/OMA owner receipt / typed blocker scaleout。App user-path 和 OMA production-consumption 的 verified refs 若在 fresh read-model 中出现，也只关闭对应 refs-only gate；它们不替代 MAS/MAG/RCA 的 domain ready、artifact authority、family production ready、App release ready 或默认 promotion evidence。每次引用这些 evidence 时都必须重跑 live read-model，并把 zero-open worklist、positive open worklist、blocked refs-only envelope 和 domain-owned typed blocker 分开写。
 
 ## 不能写成
 
