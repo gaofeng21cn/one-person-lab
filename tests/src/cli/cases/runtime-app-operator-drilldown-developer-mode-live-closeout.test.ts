@@ -86,6 +86,32 @@ test('runtime app-operator-drilldown projects Developer Mode live closeout evide
     assert.deepEqual(attention.missing_live_ledger_route_kinds, ['direct-fix', 'fork-PR']);
     assert.equal(attention.route_requires_domain_or_app_payload, true);
     assert.equal(attention.can_close_without_domain_or_app_payload, false);
+    assert.equal(
+      attention.payload_ref_hints.fork_pr_ref_policy,
+      'fork_repo_ref_must_be_live_github_fork_ref_and_pr_review_ref_must_be_live_github_pr_ref',
+    );
+    assert.deepEqual(attention.payload_ref_hints.fork_repo_ref_accepted_prefixes, [
+      'github-fork-ref:',
+      'https://github.com/',
+      'git@github.com:',
+    ]);
+    assert.deepEqual(attention.payload_ref_hints.pr_review_ref_accepted_prefixes, [
+      'github-pr-review-ref:',
+      'github-pr-ref:',
+      'https://github.com/',
+    ]);
+    assert.deepEqual(attention.payload_ref_hints.fork_pr_ref_rejected_prefixes, [
+      'fixture://',
+      'repo-contract-fixture-ref:',
+    ]);
+    assert.equal(
+      attention.payload_workorder.accepted_payload_paths.fork_pr_path.live_github_fork_ref_required,
+      true,
+    );
+    assert.equal(
+      attention.payload_workorder.accepted_payload_paths.fork_pr_path.live_github_pr_review_ref_required,
+      true,
+    );
     assert.equal(attention.payload_workorder.empty_payload_template_is_success_evidence, false);
     assert.equal(attention.authority_boundary.can_create_owner_receipt, false);
     assert.equal(attention.authority_boundary.can_write_owner_receipt, false);
@@ -101,6 +127,10 @@ test('runtime app-operator-drilldown projects Developer Mode live closeout evide
     assert.equal(nextStep.can_write_owner_receipt, false);
     assert.equal(nextStep.can_modify_managed_runtime, false);
     assert.equal(nextStep.can_close_developer_mode_live_route, false);
+    assert.equal(
+      nextStep.payload_ref_hints.fork_pr_ref_policy,
+      'fork_repo_ref_must_be_live_github_fork_ref_and_pr_review_ref_must_be_live_github_pr_ref',
+    );
 
     assert.equal(
       summaryDrilldown.attention_first_payload.lazy_load_targets.some(
@@ -209,6 +239,14 @@ test('framework readiness consumes Developer Mode live closeout evidence without
     assert.deepEqual(evidence.missing_live_ledger_route_kinds, ['direct-fix', 'fork-PR']);
     assert.equal(evidence.authority_boundary.can_create_owner_receipt, false);
     assert.equal(evidence.authority_boundary.can_claim_production_ready, false);
+    assert.equal(
+      evidence.payload_ref_hints.fork_pr_ref_policy,
+      'fork_repo_ref_must_be_live_github_fork_ref_and_pr_review_ref_must_be_live_github_pr_ref',
+    );
+    assert.equal(
+      evidence.payload_workorder.accepted_payload_paths.fork_pr_path.live_github_fork_ref_required,
+      true,
+    );
     assert.equal(readiness.developer_mode_live_closeout_evidence.source_command,
       'opl runtime app-operator-drilldown --json');
     assert.equal(readiness.developer_mode_live_closeout_evidence.attention_count, 2);
