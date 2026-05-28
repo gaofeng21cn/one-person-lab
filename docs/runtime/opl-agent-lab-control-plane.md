@@ -244,7 +244,7 @@ Agent Lab 建在现有 OPL Framework control plane 之上：
 
 `opl agent-lab longline --json` 是当前统一长线测试 read-model 入口。它可用于判断哪些“浸润/长线测试编排”已经能由 OPL 承接；它不能把 longline suite `passed` 升级成 MAS/MAG/RCA 的 publication、fundability、visual quality 或 export verdict。
 
-2026-05-17 校准：MAS/MAG/RCA 已在各自 repo-native verification lane 中加入 Agent Lab longline migration guard。三仓本地测试现在会调用 `opl agent-lab longline --json`，断言 OPL 承接 framework-level longline orchestration / recovery / no-forbidden-write regression，同时断言 domain repo 继续保留 scorer、owner receipt fixture 与 artifact authority checks。该 guard 只证明测试责任已收敛到 OPL Agent Lab；它不声明真实 domain production soak、publication/fundability/visual verdict 或 artifact/export readiness 已完成。
+MAS/MAG/RCA 的 repo-native verification lane 可以引用 `opl agent-lab longline --json` 作为 framework-level longline orchestration / recovery / no-forbidden-write regression guard，同时继续在 domain repo 内保留 scorer、owner receipt fixture 与 artifact authority checks。该 guard 只证明测试责任收敛到 OPL Agent Lab；它不声明真实 domain production soak、publication/fundability/visual verdict 或 artifact/export readiness 已完成。历史校准过程归 `docs/history/**`；当前状态以 fresh CLI/read-model 为准。
 
 `opl agent-lab complete --json` 是当前完整 Agent Lab 控制面入口。它说明核心 OPL 不强依赖 Inspect AI、Langfuse、Phoenix 或 RL 训练框架；这些外部系统通过 adapter / export / optimizer refs 接入。OPL core 持有稳定任务、轨迹、恢复、scorecard refs、candidate、promotion gate、integration contract、review trace 和 log-mined candidate 机器面；外部 eval runner、observability backend 或 optimizer 只能消费这些 refs，不能取得 domain authority。
 
