@@ -1,5 +1,10 @@
 # 过程历史归档
 
+Owner: `One Person Lab`
+Purpose: `history_process_archive_index`
+State: `history_only`
+Machine boundary: 本目录是人读过程历史索引。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests、App/operator read model 和真实验证 evidence。
+
 本目录收纳已经完成或被取代的实施计划、设计草稿和 Superpowers 生成的过程材料。
 
 这些文件只用于审计、迁移回顾和来源追溯，不是 `OPL` 当前实现合同。旧双语计划、旧路径和旧命令保留为历史证据；`docs/**` 当前只维护中文 canonical 内容。

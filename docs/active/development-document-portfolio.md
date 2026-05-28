@@ -107,6 +107,61 @@ OPL 开发文档现在不能按“每份旧计划都继续完整执行”阅读�
 
 ## Coverage Ledger
 
+Date: `2026-05-28 10:03 CST`
+Tranche: `opl-process-history-readme-lifecycle`
+State: `tranche_verified`
+
+本轮覆盖 OPL `docs/history/process/README.md` 过程历史根索引，并对相邻过程历史子目录 README 的生命周期信号做首屏核验。目标是把 process history 入口明确固定为 history-only provenance/tombstone 索引，补齐 owner / purpose / state / machine boundary，避免 `Goal`、`current`、`next`、checkbox、旧 Product API / ACP / frontdoor / Gateway / Hermes wording 被读成当前 active backlog、active spec、runtime/provider contract、App release plan 或 readiness oracle。本轮不改 source/contracts/tests，不新增 readiness claim，不关闭 OPL series 全局 `/goal`。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`, `TASTE.md`, `docs/docs_portfolio_consolidation.md`, this OPL family ledger, `docs/history/README.md`, `docs/history/process/README.md`, and process-history subdirectory README first screens.
+- Current truth refs: `docs/status.md`, `docs/active/current-state-vs-ideal-gap.md`, and `docs/references/runtime-substrate/opl-family-agent-ideal-state.md`.
+- OPL Doc Governance doctor output for this worktree.
+
+Fresh semantic result:
+
+- `docs/history/process/README.md` was already correctly routing current truth back to docs index, core five and active specs/active docs, but it lacked the required lifecycle four-signal metadata for a long-lived history index.
+- Neighbor process-history subdirectory README files already carry explicit owner / purpose / state / machine-boundary metadata and negative guards for old active/backlog/readiness wording.
+- The updated root process-history index is now clearly a human history/provenance index only. Machine truth remains in contracts, source, CLI/API behavior, runtime ledgers, provider receipts, domain-owned manifests, App/operator read model and fresh verification evidence.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | Full read of `docs/history/process/README.md`; first-screen lifecycle and stale-wording scan of `docs/history/process/{convergence-governance,domain-admission,plans,shared-boundary,specs,superpowers,superpowers/plans,superpowers/specs}/README.md`; support read of history index, current status, active truth owner and ideal-state reference. | `docs/history/process/README.md`; `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The process-history root index and subdirectory indexes remain legitimate history/provenance entrypoints.
+
+Unreviewed docs:
+
+- This tranche covers the process-history root index and subdirectory README lifecycle surfaces; it does not full-body revalidate every archived historical plan/spec/process file under `docs/history/process/**`.
+- OPL scoped exact inventory over repo-root `README*` plus `docs/**/*.md` remains under the long-running coverage ledger; this tranche only closes one history index lifecycle gap.
+- App full paragraph-level semantic governance remains open while dirty release/testing lanes are outside this goal's ownership.
+
+Remaining stale / retire candidates:
+
+- Any future process-history README or body text that asks readers to execute old `Goal`, `Task`, `current`, `next`, checkbox, Product API / ACP / frontdoor / Gateway / Hermes wording as current active work is stale pollution unless live source/contracts/read-models have re-established that owner boundary.
+- Future full-body coverage of archived process files should keep useful provenance in history and lift any still-current rules to the current owner docs, policy/specs or machine-readable contracts.
+
+Worktree / branch cleanup:
+
+- No external stale worktree/branch qualified for cleanup before this tranche. OPL main was clean/aligned; MAS/RCA/App had dirty or recent externally owned lanes; MAG and OMA were clean/aligned with no local stale worktree.
+- This tranche's OPL worktree should be removed after fast-forward absorb.
+
+Verification before absorb:
+
+- `git diff --check`; strict README/docs/contracts conflict-marker scan; lifecycle signal check for `docs/history/process/README.md`; OPL Doc Governance doctor active truth pass / no findings.
+- No source/runtime tests are required because this tranche changes only narrative docs and coverage ledger accounting.
+
+Next tranche write scope:
+
+- Continue OPL uncovered history/process body coverage or another clean repo-local ledger/support README accounting item that does not touch externally dirty lanes.
+- When the dirty App release/testing lane is safe or explicitly assigned, perform App paragraph-level body governance as recorded in the App repo-local ledger.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
+
 Date: `2026-05-28 09:47 CST`
 Tranche: `oma-fresh-no-drift-revalidation-foldback`
 State: `tranche_verified`
