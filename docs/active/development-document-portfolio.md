@@ -116,10 +116,10 @@ State: `tranche_verified`
 Fresh live truth inputs:
 
 - Open PR scan returned `[]` for all six repos.
-- `one-person-lab` main / `origin/main` aligned at `250f3b25 fix: preserve stage attempt usage refs in workbench` after final fetch; root checkout had only this ledger document dirty before commit. Earlier stage attempt metadata/progress-log source dirty state was not mixed into this ledger record or commit and had already converged into main through separate verified commits.
+- `one-person-lab` main / `origin/main` aligned at `83291262 docs: record App OMA MAS governance followup` after final push/fetch; root checkout clean/aligned. Earlier stage attempt metadata/progress-log source dirty state was not mixed into this ledger record or commit and had already converged into main through separate verified commits.
 - `one-person-lab-app` main / `origin/main` aligned at `e250697 fix(gui): enforce fixed Codex assistant path`. 该提交收紧 App-owned active shell validation，接受 singular `getOplAssistantSkillProfile` 消费路径，移除 default assistant skill profile 中 retired `morph-ppt` wiring，并补 root release-boundary guards。
 - `opl-meta-agent` main / `origin/main` aligned at `49f932b Record OMA new-agent consumption evidence`; verified and pushed during this tranche.
-- `med-autoscience` main / `origin/main` aligned at `05dfb1c0 fix(owner-route): keep one current default executor dispatch`. 该修复在已 landed 的 DM002/DM003 replay evidence 后补齐 regression：同一 study 多个 default-executor dispatch 同时 ready 时只向 OPL 暴露 current candidate，并把 AI reviewer fixture 更新到当前 reviewer OS currentness contract。
+- `med-autoscience` main / `origin/main` aligned at `b73d4b53 fix: settle terminal OPL liveness handoff`. During final closeout MAS also absorbed `b82d124c fix(ai-reviewer): bind current manuscript records`, `bfbfca19 Merge DM003 AI reviewer current manuscript record fix`, and `b73d4b53`, keeping the default-executor dispatch fix `05dfb1c0` in the same main history.
 - `med-autogrant` main / `origin/main` remained aligned at `46141e2`.
 - `redcube-ai` main / `origin/main` remained aligned at `1803ff4` but root checkout still dirty with native-PPT route/evidence work and an active route-evolution process.
 
@@ -128,6 +128,8 @@ Verified commits / commands:
 - App `e250697`: `git diff --check`; App doctor `finding_count=0`, active truth `pass`; `bun test tests/release/app-release-boundary.test.ts` -> `58 pass`, `0 fail`; `bun run validate:active-shell` -> active shell validation passed after `60` node test files and `47` DOM test files, lint `765` warnings / `0` errors.
 - OMA `49f932b`: `git diff --check origin/main..HEAD`; OMA doctor `finding_count=0`, active truth `pass`; `npm test` -> `47` tests, `0` fail; `npm run typecheck` passed; pushed to `origin/main`.
 - MAS `05dfb1c0`: original focused aggregate reproduced `3` failures in `domain-handler export` currentness/default-executor assertions. Root cause was split: default-executor dispatch selection leaked an older same-study ready dispatch when the newer candidate did not list the old action in `blocked_actions`, while the repair-recheck test fixture lacked new reviewer OS currentness fields. Fix verification passed with `git diff --check`, strict conflict marker scan, MAS doctor `finding_count=0`, targeted failed tests -> `3 passed`, fixture reviewer OS validator -> `[]`, and focused aggregate `scripts/run-pytest-clean.sh -q tests/test_ai_reviewer_publication_eval_latest_currentness.py tests/test_ai_reviewer_publication_eval_workflow.py tests/test_mcp_opl_current_control_state_handoff_projection.py tests/owner_route_reconcile_cases/test_ai_reviewer_record_os_currentness.py tests/owner_route_reconcile_cases/test_owner_route_contract.py tests/test_ai_reviewer_journal_loop.py tests/test_cli_cases/owner_route_handoff_command.py -k 'ai_reviewer or currentness or default_executor or owner_route or opl_current_control_state_handoff or journal'` -> `123 passed`; committed and pushed to `origin/main`.
+- MAS `b82d124c` / `bfbfca19`: `git diff --check origin/main..HEAD` before absorption; strict conflict marker scan; MAS doctor `finding_count=0`, active truth `pass`; `scripts/run-pytest-clean.sh -q tests/test_ai_reviewer_publication_eval_workflow.py tests/test_publication_eval_latest.py` -> `34 passed`; `scripts/run-pytest-clean.sh -q tests/test_ai_reviewer_publication_eval_workflow.py -k 'current_manuscript or request_bound'` -> `1 passed, 13 deselected`; final push/fetch aligned MAS main.
+- MAS `b73d4b53`: `git diff --check bfbfca19..b73d4b53`; strict conflict marker scan; MAS doctor `finding_count=0`, active truth `pass`; `scripts/run-pytest-clean.sh -q tests/test_study_progress.py -k 'terminal_opl_success_handoff or opl_current_control_state_handoff'` -> `2 passed, 132 deselected`.
 
 Reviewed documents / sections:
 
@@ -135,7 +137,7 @@ Reviewed documents / sections:
 | --- | --- | --- |
 | `one-person-lab-app` | App root contract/profile validation surfaces, active-shell validation script, release-boundary tests, live shell consumer paths for assistant skill profile use, and App doctor risk map. | none by this ledger commit; landed root App commit is `e250697`. |
 | `opl-meta-agent` | OMA new-agent consumption evidence commit, active truth owner/doc doctor, contracts and tests named by the landed commit. | none in OPL repo; pushed existing OMA main. |
-| `med-autoscience` | MAS default-executor dispatch task selection, reviewer OS currentness fixture, owner-route/export focused tests, current active truth doctor, and relevant landed replay-evidence commits. | `src/med_autoscience/controllers/owner_route_handoff_parts/default_executor_dispatch_tasks.py`, `tests/test_cli_cases/owner_route_handoff_command_cases/default_executor_dispatch_export_cases.py`, `tests/test_cli_cases/owner_route_handoff_command_cases/shared.py`. |
+| `med-autoscience` | MAS default-executor dispatch task selection, AI reviewer current-manuscript record binding, terminal OPL liveness handoff projection, reviewer OS currentness fixture, owner-route/export focused tests, current active truth doctor, and relevant landed replay-evidence commits. | `src/med_autoscience/controllers/owner_route_handoff_parts/default_executor_dispatch_tasks.py`, `src/med_autoscience/controllers/ai_reviewer_publication_eval_workflow.py`, `src/med_autoscience/controllers/study_runtime_decision_parts/domain_status_authority.py`, `tests/test_cli_cases/owner_route_handoff_command_cases/default_executor_dispatch_export_cases.py`, `tests/test_cli_cases/owner_route_handoff_command_cases/shared.py`, `tests/test_ai_reviewer_publication_eval_workflow_cases/current_manuscript_binding.py`, `tests/test_publication_eval_latest.py`, `tests/study_progress_cases/opl_current_control_state_handoff_projection.py`. |
 | `one-person-lab`, `med-autogrant`, `redcube-ai` | Branch/worktree/PR/process/recent-write classification and main alignment checks. | none. |
 
 Archived / tombstoned / deleted docs:
@@ -146,8 +148,8 @@ Worktree / branch cleanup:
 
 - none. No lane met the safe deletion gate.
 - OPL retained `codex/framework-gui-dmg-detach-20260528`: clean but non-ancestor and recent-write active; main root had recent writes/process context.
-- MAS retained dirty/recent `fix/dm002-runtime-liveness-readmodel`, recent same-head `codex/dm003-ai-reviewer-record-reseed`, and recent non-ancestor `codex/mas-physical-thinning-20260528`; long-running `scripts/verify.sh structure` and OPL quality processes remain active.
-- App retained dirty/recent `codex/agui-shell-candidate-spike-20260528`, dirty remote-backed `codex/full-first-run-stable-gate-20260525`, and clean but recent non-ancestor `codex/release-readiness-oneshot-failure-20260528`.
+- MAS retained dirty/recent `fix/dm002-runtime-liveness-readmodel`, dirty/recent `codex/dm003-ai-reviewer-record-reseed`, and recent same-head `codex/mas-physical-thinning-20260528`; long-running `scripts/verify.sh structure` and OPL quality processes remain active.
+- App retained dirty/recent `codex/agui-shell-candidate-spike-20260528`, dirty/recent same-head `codex/app-settings-partition-20260528`, dirty remote-backed `codex/full-first-run-stable-gate-20260525`, and clean but recent non-ancestor `codex/release-readiness-oneshot-failure-20260528`.
 - RCA retained dirty native-PPT root and active route-evolution process.
 
 Unreviewed docs:
@@ -157,7 +159,7 @@ Unreviewed docs:
 
 Remaining stale / retire candidates:
 
-- Recheck OPL/App/MAS clean same-head or ancestor lanes only after recent-write and process blockers clear.
+- Recheck OPL/App/MAS clean same-head or ancestor lanes only after recent-write and process blockers clear; dirty lanes still require owner/semantic absorption proof before cleanup.
 - RCA native-PPT dirty lane remains an active owner-route/product-entry workstream and must not be cleaned by docs governance.
 - App `codex/full-first-run-stable-gate-20260525` remains remote-backed and dirty; do not delete without owner/semantic absorption proof.
 - MAS `codex/mas-physical-thinning-20260528` remains non-ancestor and semantically unresolved.
