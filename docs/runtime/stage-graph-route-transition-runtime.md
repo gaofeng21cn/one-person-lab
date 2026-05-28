@@ -8,9 +8,9 @@ Currentness policy: 本文不冻结日期、attempt id、worklist counter、rece
 
 ## 结论
 
-复杂 domain agent 不需要在 domain repo 内维护一套小 stage runtime。OPL 应把大 stage、stage 内 route、route-back、human gate、review/audit、retry/dead-letter 和 child-run 统一承载为 `stage_control_graph`：stage 是 OPL provider-backed attempt 的可调度单位；route 是 domain-declared transition / owner-chain recommendation；child graph 只在 OPL runtime 内作为 parent stage 的可恢复子运行存在。
+复杂 domain agent 不需要在 domain repo 内维护一套小 stage runtime。OPL 的稳定目标是把大 stage、stage 内 route、route-back、human gate、review/audit、retry/dead-letter 和后续 child-run 能力统一承载为 `stage_control_graph`：stage 是 OPL provider-backed attempt 的可调度单位；route 是 domain-declared transition / owner-chain recommendation；child graph 目前只作为 OPL runtime 支撑语言 / future graph primitive 阅读，不能被写成已经落地的生产 child-workflow 能力。
 
-MAS 这类 domain agent 只声明医学研究语义、guard、owner route、expected receipt、typed blocker、quality/artifact authority 和 forbidden-write boundary。OPL 负责读取这些 refs，把它们放入 queue、stage attempt、transition runner、provider checkpoint、human gate transport、event/receipt ledger、App/operator read model 和 long-soak evidence worklist。
+MAS 这类 domain agent 只声明医学研究语义、guard、owner route、expected receipt、typed blocker、quality/artifact authority 和 forbidden-write boundary。OPL 负责读取这些 refs，把它们放入 queue、stage attempt、transition runner、provider checkpoint、human gate transport、event/receipt ledger、App/operator read model 和 long-soak evidence worklist。OPL transition runner 当前只执行 domain-declared transition table、guard id matching、matrix fixture evaluation 与 receipt/projection envelope construction；它不执行 domain action，不解释 publication/fundability/visual verdict，也不替 domain 签 owner receipt。
 
 ## 外部模式吸收
 
@@ -94,13 +94,14 @@ MAS 负责：
 | lane | 稳定读法 | 当前证据入口 |
 | --- | --- | --- |
 | `graph_runtime_contract` | stage、route、node、child graph、authority function 与 receipt owner 是 runtime support language。新增 graph primitive 或 machine contract 时才同步本文。 | `docs/architecture.md`、`docs/invariants.md`、`contracts/`、stage pack / action catalog / transition runner 源码。 |
+| `transition_runner` | `family_transition_runner` 是 domain-neutral transition spec / matrix runner；OPL 只做 guard id matching、fail-closed blocker/dead-letter intent、owner-route/receipt/projection envelope，不拥有 domain verdict。 | `contracts/opl-framework/family-transition-runner-contract.json`、`src/family-transition-runner.ts`、`tests/src/family-transition-runner.test.ts`。 |
 | `operator_drilldown` | `runtime app-operator-drilldown` 是 summary-first refs-only read model；full detail 可定位 route graph、stage progress、domain dispatch、stage production evidence 和 safe action refs，但不生成 verdict。 | `opl runtime app-operator-drilldown --json` 与 `--detail full`。 |
 | `stage_progress_log` | `stage_progress_log` 是 OPL attempt/progress projection，不是平行 runtime log database；它从 attempt ledger、provider run、activity events、usage projection、closeout packet 和 blocker refs 派生。 | `opl family-runtime attempt query|inspect`、`stage_attempt_workbench`、App/operator drilldown、相关 tests。 |
 | `runtime_visualization_projection` | graph/timeline/research lens 只是 App/operator 可视化投影；route graph visible、paper route lens visible 或 Temporal Web UI link visible 都不等于 owner-chain closure。 | App/operator drilldown 的 `runtime_visualization_projection` 与 `visual_ref_groups`。 |
 | `mas_route_contract_consumption` | MAS route support 只作为 refs-only catalog 与 domain dispatch workorder 进入 OPL；OPL hydrate/dispatch/retry/dead-letter，不写 MAS liveness/redrive/runtime_state 仲裁。 | `runtime_manager_route_support`、domain-dispatch evidence worklist、MAS owner surface。 |
 | `executor_reviewer_split` | AI-first independent reviewer/auditor gate 是 invariant；同一 invocation 不能执行后自审并关闭 quality gate。 | `docs/invariants.md`、Agent Lab / stage-control-plane read model、domain owner receipt 或 typed blocker。 |
 | `human_gate_transport` | pause/resume/stop/approve/reject 由 OPL transport 承载；domain repo 只给 gate schema、authority boundary 和 receipt。 | provider signal/query/readiness、human gate refs、stage attempt ledger。 |
-| `child_graph_parallelism` | child graph 只回写 typed parent result/ref，不共享 domain body；失败、retry、dead-letter 由 OPL attempt ledger 记录。 | future graph primitive、provider child workflow / subgraph refs、attempt ledger。 |
+| `child_graph_parallelism` | child graph 只回写 typed parent result/ref，不共享 domain body；失败、retry、dead-letter 应由 OPL attempt ledger 记录。当前按 future graph primitive / support language 阅读，不作为已闭合生产能力或 readiness proof。 | future graph primitive、provider child workflow / subgraph refs、attempt ledger。 |
 | `production_evidence_scaleout` | domain-dispatch / stage-production evidence 的 open、closed、blocked、superseded envelope 只是 refs-only operator lens。 | `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`、domain owner receipts / typed blockers。 |
 | `physical_thinning` | cleanup/read-model 只能定位 replacement parity、no-active-caller、owner receipt / typed blocker 与 provenance/tombstone refs；物理删除仍归 domain owner gate。 | conformance/default-caller deletion read model、domain contracts、focused tests、no-forbidden-write proof。 |
 
@@ -119,6 +120,7 @@ MAS 负责：
 可以声明：
 
 - OPL 的目标运行模型是 stage graph + route-as-transition：stage 是 provider-backed attempt admission 单位，route 是 domain owner-chain recommendation / typed blocker / route-back / owner action ref。
+- OPL transition runner 已有 domain-neutral contract / source / tests，可运行 domain-declared transition spec、guard matching 和 matrix fixture，并只输出 owner route、human gate、typed blocker、dead-letter intent、receipt/projection envelope。
 - Fresh read-model 可以证明某一时刻的 stage graph projection、transition runner、provider-backed stage attempt、typed queue、receipt ledger、runtime manager route projection、`stage_progress_log`、`runtime_visualization_projection` 或 App/operator drilldown 可读。
 - MAS 应继续作为 declarative medical research pack + minimal authority functions，而不是私有 runtime platform。
 
@@ -129,4 +131,5 @@ MAS 负责：
 - provider completion 等于 publication-ready、artifact-ready、quality-ready 或 submission-ready。
 - route graph visible 等于 owner receipt chain 已闭合。
 - paper route lens visible 等于论文正文已读、论文路线已成功或 publication ready。
+- transition runner pass、matrix fixture pass 或 child graph support language 等于 domain action 已执行、domain owner receipt 已签、child workflow production 能力已闭合或 production ready。
 - MAS retained adapter 已物理删除，除非 deletion gate 的所有 receipt/proof 都成立。
