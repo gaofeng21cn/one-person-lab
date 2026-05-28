@@ -6,6 +6,7 @@ import { inspectFamilyRuntimeProviderWithLifecycle, resolveFamilyRuntimeProvider
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import { familyRuntimePaths } from './family-runtime-store.ts';
 import type { FrameworkContracts } from './types.ts';
+import { buildDeveloperModeLiveCloseoutEvidenceSummary } from './app-state-developer-mode-closeout.ts';
 import { runRuntimeOperatorActionExecute } from './runtime-operator-action-execution.ts';
 import { buildOplDeveloperModeSurface } from './system-installation/developer-mode.ts';
 import { resolveCodexVersion } from './system-installation/engine-helpers.ts';
@@ -465,7 +466,10 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const statePaths = ensureOplStateDir(resolveOplStatePaths());
   const modules = publicModuleItems(profile);
   const moduleSource = resolveModuleSource(modules);
-  const developerMode = buildOplDeveloperModeSurface(buildOplEndpoints(), { detail: profile });
+  const developerMode = {
+    ...buildOplDeveloperModeSurface(buildOplEndpoints(), { detail: profile }),
+    live_closeout_evidence: buildDeveloperModeLiveCloseoutEvidenceSummary(),
+  };
   const provider = await buildProviderState(profile);
   const release = buildReleaseState();
   const workspaceRoot = readOplWorkspaceRoot();
