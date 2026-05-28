@@ -91,6 +91,14 @@ test('runtime app-operator-drilldown projects Developer Mode live closeout evide
       attention.payload_ref_hints.fork_pr_ref_policy,
       'fork_repo_ref_must_be_resolvable_github_repo_url_or_url_backed_github_fork_ref_and_pr_review_ref_and_owner_acceptance_ref_must_be_github_pull_request_url_or_url_backed_github_pr_refs',
     );
+    assert.equal(
+      attention.payload_template.owner_acceptance_ref,
+      '<github-pr-owner-acceptance-ref>',
+    );
+    assert.equal(
+      attention.payload_workorder.payload_template.owner_acceptance_ref,
+      '<github-pr-owner-acceptance-ref>',
+    );
     assert.deepEqual(attention.payload_ref_hints.fork_repo_ref_accepted_prefixes, [
       'https://github.com/',
       'git@github.com:',

@@ -33,6 +33,8 @@ function commandRef(args: string[]) {
 }
 
 function developerModeCloseoutPayloadTemplate(missingRouteKinds: string[]) {
+  const includesForkPr = missingRouteKinds.includes('fork-PR');
+  const includesDirectFix = missingRouteKinds.includes('direct-fix');
   return {
     target_repo_id: '<target-repo-id>',
     route_decision: missingRouteKinds[0] ?? '<direct-fix|fork-PR>',
@@ -41,10 +43,12 @@ function developerModeCloseoutPayloadTemplate(missingRouteKinds: string[]) {
     diff_ref: '<diff-ref>',
     verification_refs: ['<test-result-ref>'],
     no_forbidden_write_ref: '<no-forbidden-write-ref>',
-    commit_ref: missingRouteKinds.includes('direct-fix') ? '<git-commit-ref>' : null,
-    fork_repo_ref: missingRouteKinds.includes('fork-PR') ? '<github-fork-ref>' : null,
-    pr_review_ref: missingRouteKinds.includes('fork-PR') ? '<github-pr-review-ref>' : null,
-    owner_acceptance_ref: '<external-owner-ref>',
+    commit_ref: includesDirectFix ? '<git-commit-ref>' : null,
+    fork_repo_ref: includesForkPr ? '<github-fork-ref>' : null,
+    pr_review_ref: includesForkPr ? '<github-pr-review-ref>' : null,
+    owner_acceptance_ref: includesForkPr
+      ? '<github-pr-owner-acceptance-ref>'
+      : '<external-owner-ref>',
   };
 }
 
