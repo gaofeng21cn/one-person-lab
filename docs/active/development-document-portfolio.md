@@ -410,7 +410,7 @@ Unreviewed docs:
 Remaining stale / retire candidates:
 
 - Future active docs or prompts must not treat historical OPL series automation ledger text, old worktree cleanup snapshots, stale branch names, prior read-model counters or process-log verification tables as current truth without re-deriving from live repo state and read-models.
-- Developer Mode fixture / repo-contract drill refs still cannot count as live GitHub fork/PR owner acceptance. Only live fork / PR refs plus external owner acceptance refs can close the fork-PR ledger route.
+- Developer Mode fixture / repo-contract drill refs still cannot count as live GitHub fork/PR owner acceptance. Only URL-backed GitHub fork repo refs, URL-backed GitHub pull request refs and external owner acceptance refs can close the fork-PR ledger route.
 
 Worktree / branch cleanup:
 
@@ -502,7 +502,7 @@ Fresh live truth inputs:
 Fresh semantic result:
 
 - Current active truth now reads Developer Mode live route as `direct_fix_ledger_visible_fixture_currentness_exposed`: direct-fix verified ledger refs are visible, while external non-owner fork/PR owner acceptance remains open.
-- The fork-PR sample is explicitly a repo-contract fixture, with `repo_contract_fixture_not_live_repo` exposed through Agent Lab summary, App/operator full drilldown, App/operator summary and framework readiness attention. The fixture drill cannot be counted as live GitHub fork/PR owner acceptance or external owner closeout.
+- The fork-PR sample is explicitly a repo-contract fixture, with `repo_contract_fixture_not_live_repo` exposed through Agent Lab summary, App/operator full drilldown, App/operator summary and framework readiness attention. The fixture drill and weak typed refs without resolvable GitHub repo / pull request URLs cannot be counted as live GitHub fork/PR owner acceptance or external owner closeout.
 - Fresh App/operator full drilldown read `repo_contract_fixture_not_live_repo_count=1`, `fixture_drill_owner_acceptance_open_count=1`, `verified_fork_pr_ledger_receipt_ref_count=0`, and `missing_live_ledger_route_kinds=["fork-PR"]`; it also retained `forbidden_owner_receipt_write_count=0` and refs-only authority boundaries.
 - Fresh framework readiness read `framework_control_plane_available_with_operator_attention`; nested Developer Mode evidence read `repo_contract_fixture_not_live_repo_count=1`, `fixture_drill_owner_acceptance_open_count=1`, `verified_fork_pr_ledger_receipt_ref_count=0`, `missing_live_ledger_route_kinds=["fork-PR"]`, and `forbidden_owner_receipt_write_count=0`. This keeps fixture currentness visible as operator attention, not as owner acceptance closeout.
 
