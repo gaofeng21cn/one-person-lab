@@ -121,9 +121,9 @@ Fresh live truth inputs:
 
 Fresh semantic result:
 
-- OPL, MAG, OMA and App main checkouts are clean/aligned. RCA root remains dirty with native PPT implementation/contracts/prompts/docs/tests plus untracked `docs/references/native-ppt-open-source-design-discipline.md`, so it is retained.
+- OPL, MAG and OMA main checkouts are clean/aligned. RCA root remains dirty with native PPT implementation/contracts/prompts/docs/tests plus untracked `docs/references/native-ppt-open-source-design-discipline.md`, so it is retained.
 - MAS main / `origin/main` is clean/aligned at `ea9881d2`. The only remaining MAS worktree is `.worktrees/codex/opl-dispatch-evidence-currentness` on branch `codex/mas-dispatch-evidence-currentness`: head `dde24974` is an ancestor/behind main by 2, but the worktree is dirty in four domain-dispatch evidence payload files and has recent writes; it is retained.
-- App `codex/full-first-run-stable-gate-20260525` remains present on remote-aligned branch and is still classified as dirty from the previous live scan; retained.
+- App main is aligned at `622db42` but root checkout became dirty/recent during final closeout in `.github/workflows/build-and-release.yml`, `scripts/prepare-release-assets.ts`, and `tests/release/app-release-boundary.test.ts`; the existing `codex/full-first-run-stable-gate-20260525` worktree remains present on a remote-aligned branch and is still retained from previous dirty classification.
 - OMA exact README/docs/support-README inventory is unchanged relative to the repo-local 2026-05-27 / 2026-05-28 coverage ledger entries. No duplicate active truth owner, stale current-truth path, unsupported support README path, archive/tombstone need, or new unreviewed doc path was found.
 - OMA live contracts still support the current no-readiness-overclaim boundary: `functional_privatization_audit.json` reports `source_shape=landed`, `functional_structure_gap_count=0`, `domain_repo_retained_generic_surface_count=0`, and remaining tails `opl_generated_default_caller_consumption_tail`, `domain_refs_only_adapter_thinning`, `script_to_pack_hygiene`, `evidence_tail`; `pack_compiler_input.json` keeps `canonical_semantic_pack_root=agent/` and non-README required pack paths; production-consumption long-soak remains blocked by `typed_blocker_ref://opl-meta-agent/production-consumption/long-soak-pending`.
 
@@ -148,7 +148,7 @@ Unreviewed docs:
 Remaining stale / retire candidates:
 
 - MAS `codex/mas-dispatch-evidence-currentness` must be rechecked after its dirty/recent window closes; if clean and still ancestor/merged with no PR/process, remove the worktree and local branch, otherwise route to the owning dispatch-evidence lane.
-- RCA native PPT dirty lane and App full-first-run dirty lane remain outside this automatic cleanup until clean/current or explicitly assigned.
+- RCA native PPT dirty lane, App root release-asset dirty line, and App full-first-run dirty lane remain outside this automatic cleanup until clean/current or explicitly assigned.
 - OMA doc-path retirement remains empty; evidence/hygiene tails remain active: OPL registry/App live consumption receipts, repeat long-soak, more real target patch-loop owner receipt or typed blocker samples, independent Codex reviewer direct-evidence samples, standard target-agent handoff convergence, and script-to-pack / OPL primitive hygiene.
 - Remote-only non-main refs should only be deleted after confirming automation ownership, no open PR, and no external active reference.
 
