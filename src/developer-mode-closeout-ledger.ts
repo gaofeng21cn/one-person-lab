@@ -178,21 +178,43 @@ function isExternalOwnerAcceptanceRef(value: string | null) {
   );
 }
 
+function isGithubHttpRepoUrl(value: string | null) {
+  return Boolean(value && /^https:\/\/github\.com\/[^/\s]+\/[^/\s#?]+\/?$/.test(value));
+}
+
+function isGithubSshRepoUrl(value: string | null) {
+  return Boolean(value && /^git@github\.com:[^/\s]+\/[^/\s#?]+(?:\.git)?$/.test(value));
+}
+
+function isGithubTypedRepoRef(value: string | null) {
+  const typedRef = value?.match(/^github-fork-ref:(.+)$/);
+  return Boolean(typedRef && (
+    isGithubHttpRepoUrl(typedRef[1])
+    || isGithubSshRepoUrl(typedRef[1])
+  ));
+}
+
+function isGithubHttpPullRequestUrl(value: string | null) {
+  return Boolean(value && /^https:\/\/github\.com\/[^/\s]+\/[^/\s#?]+\/pull\/\d+(?:[#?].*)?$/.test(value));
+}
+
+function isGithubTypedPullRequestRef(value: string | null) {
+  const typedRef = value?.match(/^github-pr-(?:review-)?ref:(.+)$/);
+  return Boolean(typedRef && isGithubHttpPullRequestUrl(typedRef[1]));
+}
+
 function isLiveGithubForkRef(value: string | null) {
   return Boolean(
-    value
-    && (value.startsWith('github-fork-ref:')
-      || value.startsWith('https://github.com/')
-      || value.startsWith('git@github.com:')),
+    isGithubTypedRepoRef(value)
+    || isGithubHttpRepoUrl(value)
+    || isGithubSshRepoUrl(value),
   );
 }
 
 function isLiveGithubPullRequestRef(value: string | null) {
   return Boolean(
-    value
-    && (value.startsWith('github-pr-review-ref:')
-      || value.startsWith('github-pr-ref:')
-      || value.startsWith('https://github.com/')),
+    isGithubTypedPullRequestRef(value)
+    || isGithubHttpPullRequestUrl(value),
   );
 }
 

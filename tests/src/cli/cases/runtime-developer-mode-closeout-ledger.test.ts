@@ -222,3 +222,87 @@ test('runtime Developer Mode closeout CLI blocks fork PR fixture refs from live 
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
+
+test('runtime Developer Mode closeout CLI accepts URL-backed live fork PR refs', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-mode-closeout-live-fork-pr-state-'));
+  try {
+    const liveForkPr = runCli([
+      'runtime',
+      'developer-mode-closeout',
+      'record',
+      '--payload',
+      JSON.stringify({
+        target_repo_id: 'redcube-ai',
+        route_decision: 'fork-PR',
+        route_eligibility: 'eligible_fork_pr',
+        patrol_observation_ref: 'patrol-observation-ref:rca/live-fork-pr',
+        diff_ref: 'diff-ref:rca/live-fork-pr',
+        verification_refs: ['test-result-ref:rca/live-fork-pr'],
+        no_forbidden_write_ref: 'no-forbidden-write-ref:rca/live-fork-pr',
+        fork_repo_ref: 'github-fork-ref:https://github.com/developer/redcube-ai',
+        pr_review_ref: 'github-pr-review-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42',
+        owner_acceptance_ref: 'external-owner-acceptance-ref:rca/live-fork-pr',
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).developer_mode_closeout_ledger_record;
+
+    assert.equal(liveForkPr.status, 'recorded');
+    assert.equal(liveForkPr.recorded_receipt_count, 1);
+    assert.equal(liveForkPr.receipts[0].route_decision, 'fork-PR');
+    assert.equal(
+      liveForkPr.receipts[0].fork_repo_ref,
+      'github-fork-ref:https://github.com/developer/redcube-ai',
+    );
+    assert.equal(
+      liveForkPr.receipts[0].pr_review_ref,
+      'github-pr-review-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42',
+    );
+    assert.equal(liveForkPr.receipts[0].authority_boundary.can_write_owner_receipt, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime Developer Mode closeout CLI blocks non-locator fork PR refs from live ledger intake', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-mode-closeout-weak-fork-pr-state-'));
+  try {
+    const weakForkPr = runCli([
+      'runtime',
+      'developer-mode-closeout',
+      'record',
+      '--payload',
+      JSON.stringify({
+        target_repo_id: 'redcube-ai',
+        route_decision: 'fork-PR',
+        route_eligibility: 'eligible_fork_pr',
+        patrol_observation_ref: 'patrol-observation-ref:rca/weak-fork-pr',
+        diff_ref: 'diff-ref:rca/weak-fork-pr',
+        verification_refs: ['test-result-ref:rca/weak-fork-pr'],
+        no_forbidden_write_ref: 'no-forbidden-write-ref:rca/weak-fork-pr',
+        fork_repo_ref: 'github-fork-ref:developer/redcube-ai',
+        pr_review_ref: 'github-pr-review-ref:rca/developer-mode-fork-pr',
+        owner_acceptance_ref: 'external-owner-acceptance-ref:rca/weak-fork-pr',
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).developer_mode_closeout_ledger_record;
+
+    assert.equal(weakForkPr.status, 'no_eligible_developer_mode_closeout_receipts');
+    assert.equal(
+      weakForkPr.blocked_receipts[0].blocker.blocker_id,
+      'developer_mode_fork_pr_refs_not_live_external_refs',
+    );
+    assert.deepEqual(weakForkPr.blocked_receipts[0].missing_closeout_refs, [
+      'live_fork_repo_ref',
+      'live_pr_review_ref',
+    ]);
+
+    const listed = runCli(['runtime', 'developer-mode-closeout', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    }).developer_mode_closeout_ledger;
+    assert.equal(listed.receipt_count, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});

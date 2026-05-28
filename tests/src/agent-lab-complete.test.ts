@@ -568,8 +568,8 @@ test('Agent Lab Developer Mode repair route builder classifies live closeout rou
       diff_ref: 'diff-ref:rca/live-blocker',
       verification_refs: ['test-result-ref:rca/live-blocker'],
       no_forbidden_write_ref: 'no-forbidden-write-ref:rca/live-blocker',
-      fork_repo_ref: 'github-fork-ref:developer/redcube-ai',
-      pr_review_ref: 'github-pr-review-ref:rca/live-blocker',
+      fork_repo_ref: 'github-fork-ref:https://github.com/developer/redcube-ai',
+      pr_review_ref: 'github-pr-review-ref:https://github.com/redcube-ai/redcube-ai/pull/42',
       owner_acceptance_ref: 'external-owner-ref:rca/live-blocker-reviewed',
     },
   });
@@ -579,8 +579,8 @@ test('Agent Lab Developer Mode repair route builder classifies live closeout rou
   assert.equal(fork.closeout_claim_status, 'external_owner_closeout_refs_ready');
   assert.equal(fork.closeout_refs.route_eligibility, 'eligible_fork_pr');
   assert.equal(fork.closeout_refs.commit_ref, null);
-  assert.equal(fork.closeout_refs.fork_repo_ref, 'github-fork-ref:developer/redcube-ai');
-  assert.equal(fork.closeout_refs.pr_review_ref, 'github-pr-review-ref:rca/live-blocker');
+  assert.equal(fork.closeout_refs.fork_repo_ref, 'github-fork-ref:https://github.com/developer/redcube-ai');
+  assert.equal(fork.closeout_refs.pr_review_ref, 'github-pr-review-ref:https://github.com/redcube-ai/redcube-ai/pull/42');
   assert.deepEqual(fork.missing_closeout_refs, []);
 
   const observeOnly = buildDeveloperModeAgentLabRepairRoute({

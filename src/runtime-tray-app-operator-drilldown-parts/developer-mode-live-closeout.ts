@@ -69,16 +69,17 @@ function developerModeCloseoutPayloadRefHints() {
       'external_owner_acceptance_ref',
     ],
     fork_pr_ref_policy:
-      'fork_repo_ref_must_be_live_github_fork_ref_and_pr_review_ref_must_be_live_github_pr_ref',
+      'fork_repo_ref_must_be_resolvable_github_repo_url_or_url_backed_github_fork_ref_and_pr_review_ref_must_be_github_pull_request_url_or_url_backed_github_pr_ref',
     fork_repo_ref_accepted_prefixes: [
-      'github-fork-ref:',
       'https://github.com/',
       'git@github.com:',
+      'github-fork-ref:https://github.com/',
+      'github-fork-ref:git@github.com:',
     ],
     pr_review_ref_accepted_prefixes: [
-      'github-pr-review-ref:',
-      'github-pr-ref:',
       'https://github.com/',
+      'github-pr-review-ref:https://github.com/',
+      'github-pr-ref:https://github.com/',
     ],
     fork_pr_ref_rejected_prefixes: [
       'fixture://',
