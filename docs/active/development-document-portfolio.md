@@ -117,7 +117,7 @@ Fresh live truth inputs:
 
 - Open PR scans returned `[]` for all six repos during the fresh scan.
 - `one-person-lab` main / `origin/main` finished aligned at `01a1e007 fix: detach GUI DMG before first open`; OPL doctor `finding_count=0`, active truth `pass`. The remaining local branch `codex/gui-dmg-cleanup-hardening-20260528` is same-head with main and recent-write, so it is retained.
-- `med-autoscience` main / `origin/main` finished aligned at `19d4e96f Project AI reviewer currentness evidence`.
+- `med-autoscience` main / `origin/main` finished aligned at `2312b95d Cover consumed AI reviewer handoff payloads`; this final MAS head includes `19d4e96f Project AI reviewer currentness evidence` and `15745f31 fix: consume OPL provider readiness in runtime handoff`.
 - `one-person-lab-app` main / `origin/main` finished aligned at `6aeb30c merge: absorb superseded App release readiness lane`.
 - `opl-meta-agent` main / `origin/main` finished aligned at `c10c3c9 Record OMA production consumption truth`; OMA was reverified in this tranche after the parallel foldback landed.
 - `med-autogrant` main / `origin/main` remained aligned at `46141e2`.
@@ -126,6 +126,8 @@ Fresh live truth inputs:
 Verified commits / commands:
 
 - MAS `19d4e96f`: `git diff --check origin/main..HEAD`; strict conflict-marker scan over touched docs/source/tests; MAS doctor `finding_count=0`, active truth `pass`; `scripts/run-pytest-clean.sh -q tests/domain_action_request_lifecycle_cases/test_ai_reviewer_request_currentness.py` -> `7 passed`; pushed to `origin/main`.
+- MAS `15745f31`: `git diff --check 19d4e96f..15745f31`; strict conflict-marker scan over touched docs/source/tests; MAS doctor `finding_count=0`, active truth `pass`; `scripts/run-pytest-clean.sh -q tests/test_runtime_health_kernel.py tests/owner_route_reconcile_cases/test_workspace_daemon_lifecycle.py tests/test_study_progress.py -k 'provider_ready or provider_readiness or workspace_daemon or opl_current_control_state_handoff or runtime_health'` -> `26 passed, 131 deselected`.
+- MAS `2312b95d`: `git diff --check 15745f31..2312b95d`; strict conflict-marker scan over touched docs/source/tests; MAS doctor `finding_count=0`, active truth `pass`; `scripts/run-pytest-clean.sh -q tests/test_cli_cases/owner_route_handoff_command.py -k 'domain_dispatch_evidence_payload or consumed or payload or ai_reviewer'` -> `35 passed, 30 deselected`; main aligned with `origin/main`.
 - App `86ebb78`: `git diff --check origin/main..HEAD`; strict conflict-marker scan over touched docs/contracts/scripts/tests; App doctor `finding_count=0`, active truth `pass`; `bun test tests/release/app-release-boundary.test.ts tests/release/release-readiness-summary.test.ts` -> `66 pass`, `0 fail`; `bun run validate:active-shell` passed after `60` node test files and `49` DOM test files, lint `765` warnings / `0` errors, packaged runtime validation passed.
 - App superseded local lanes: `codex/full-superpowers-ci-root-20260528` range-diff matched main commit `6b3071b`; `codex/release-readiness-oneshot-failure-20260528` range-diff matched main commit `cf19499`. Created explicit absorb markers `bc14b0c merge: absorb superseded App Full Superpowers CI lane` and `6aeb30c merge: absorb superseded App release readiness lane` with `git merge -s ours --no-ff`; `git diff --stat 86ebb78..HEAD` was empty; branch containment then reported both branches as main ancestors.
 - App post-absorb verification: `git diff --check origin/main..HEAD`; strict conflict-marker scan; App doctor `finding_count=0`, active truth `pass`; `bun test tests/release/release-readiness-summary.test.ts tests/release/app-release-boundary.test.ts` -> `66 pass`, `0 fail`; pushed to `origin/main`.
@@ -135,7 +137,7 @@ Reviewed documents / sections:
 
 | Repo | Reviewed docs / sections | Edited docs/source/tests this tranche |
 | --- | --- | --- |
-| `med-autoscience` | AI reviewer currentness evidence projection, `docs/status.md`, domain action request lifecycle source, focused currentness tests, MAS active truth doctor, main alignment. | none in OPL repo; MAS landed commit is `19d4e96f`. |
+| `med-autoscience` | AI reviewer currentness evidence projection, OPL provider readiness consumption, consumed AI reviewer handoff payloads, touched status/decision docs, focused currentness/runtime-health/handoff-payload tests, MAS active truth doctor, main alignment. | none in OPL repo; MAS landed commits are `19d4e96f`, `15745f31`, and `2312b95d`. |
 | `one-person-lab-app` | GUI ordinary settings partition contracts/docs/source/tests in `86ebb78`; release-readiness and Full Superpowers superseded branch equivalence; App active truth doctor; active-shell validation surface. | none in OPL repo; App landed commits are `86ebb78`, `bc14b0c`, and `6aeb30c`. |
 | `opl-meta-agent` | OMA production-consumption currentness commit, active truth doctor, contracts/tests touched by `c10c3c9`, and final main alignment. | none in OPL repo; OMA landed commit is `c10c3c9`. |
 | `one-person-lab`, `med-autogrant`, `redcube-ai` | Branch/worktree/PR/process/recent-write classification and main alignment checks. | `docs/active/development-document-portfolio.md` only records this tranche. |
@@ -152,7 +154,7 @@ Worktree / branch cleanup:
 Retained lanes / blockers:
 
 - OPL retained local branch `codex/gui-dmg-cleanup-hardening-20260528`: same-head with main at `01a1e007`, but recent-write active during this scan.
-- MAS retained dirty worktrees `codex/dm002-runtime-handoff-provider-recovery`, `codex/dm003-record-archive-currentness`, and `codex/mas-ai-reviewer-consumed-handoff-payload-20260528`; each has concrete dirty source/test/doc files and must not be deleted.
+- MAS retained dirty worktree `codex/dm003-record-archive-currentness` and clean but non-ancestor/recent `codex/mas-ai-reviewer-consumed-handoff-payload-20260528`; neither was deleted in this tranche.
 - App retained dirty `codex/agui-shell-candidate-spike-20260528` and dirty remote-backed `codex/full-first-run-stable-gate-20260525`.
 - RCA retained dirty native-PPT root with contracts/source/prompts/docs/tests plus active route-evolution/Codex subprocesses.
 - Remote-only OPL `origin/fix/opl-temporal-worker-stale-repair-20260528`, MAG `origin/feature/ai-narration-contracts`, and App `origin/codex/full-first-run-stable-gate-20260525` remain retained without safe automation-owned remote deletion proof.
