@@ -9,6 +9,11 @@ type CommandSpec = {
   handler: CommandHandler;
   group?: string;
   help_surface?: 'default' | 'diagnostic_drilldown';
+  subcommands?: Array<{
+    command: string;
+    usage: string;
+    summary: string;
+  }>;
 };
 
 type DomainLaunchStrategy = 'auto' | 'open_url' | 'spawn_command';

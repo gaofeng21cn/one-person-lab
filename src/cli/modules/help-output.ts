@@ -207,6 +207,7 @@ function buildCommandHelp(command: string, spec: CommandSpec) {
       usage: spec.usage,
       summary: spec.summary,
       examples: spec.examples,
+      ...(spec.subcommands ? { subcommands: spec.subcommands } : {}),
     },
   };
 }
@@ -260,6 +261,14 @@ function formatHumanCommandHelp(payload: ReturnType<typeof buildCommandHelp>) {
     lines.push('', 'Examples:');
     for (const example of payload.help.examples) {
       lines.push(`  ${example}`);
+    }
+  }
+
+  if ('subcommands' in payload.help && Array.isArray(payload.help.subcommands)) {
+    lines.push('', 'Subcommands:');
+    for (const subcommand of payload.help.subcommands) {
+      lines.push(`  ${subcommand.usage}`);
+      lines.push(`    ${subcommand.summary}`);
     }
   }
 

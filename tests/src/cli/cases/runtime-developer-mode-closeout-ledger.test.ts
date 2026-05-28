@@ -4,6 +4,7 @@ import {
   os,
   path,
   runCli,
+  runCliFailure,
 } from '../helpers.ts';
 import test from 'node:test';
 
@@ -107,6 +108,30 @@ test('runtime Developer Mode closeout CLI records and verifies refs-only live cl
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
+});
+
+test('runtime Developer Mode closeout help exposes the ledger command group boundary', () => {
+  const help = runCli(['help', 'runtime', 'developer-mode-closeout']).help;
+
+  assert.equal(help.command, 'runtime developer-mode-closeout');
+  assert.match(help.summary, /Developer Mode live repair closeout/);
+  assert.deepEqual(help.subcommands.map((entry: { command: string }) => entry.command), [
+    'runtime developer-mode-closeout record',
+    'runtime developer-mode-closeout verify',
+    'runtime developer-mode-closeout list',
+  ]);
+  assert.match(help.summary, /external owner acceptance/);
+});
+
+test('runtime Developer Mode closeout command group rejects unknown subcommands', () => {
+  const { payload, status } = runCliFailure([
+    'runtime',
+    'developer-mode-closeout',
+    'unknown',
+  ]);
+
+  assert.equal(status, 2);
+  assert.equal(payload.error.code, 'cli_usage_error');
 });
 
 test('runtime Developer Mode closeout CLI blocks owner receipt or incomplete closeout payloads', () => {

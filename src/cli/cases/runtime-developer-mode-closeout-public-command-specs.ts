@@ -1,10 +1,52 @@
-import { cloneCommandSpec } from '../modules/support.ts';
+import { assertNoArgs, cloneCommandSpec } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 export function buildPublicRuntimeDeveloperModeCloseoutCommandSpecs(
   commandSpecs: Record<string, CommandSpec>,
 ): Record<string, CommandSpec> {
+  const subcommands = [
+    commandSpecs['runtime developer-mode-closeout record'],
+    commandSpecs['runtime developer-mode-closeout verify'],
+    commandSpecs['runtime developer-mode-closeout list'],
+  ].map((spec, index) => {
+    const command = [
+      'runtime developer-mode-closeout record',
+      'runtime developer-mode-closeout verify',
+      'runtime developer-mode-closeout list',
+    ][index];
+    return {
+      command,
+      usage: spec.usage,
+      summary: spec.summary,
+    };
+  });
+  const commandGroupSpec: CommandSpec = {
+    usage: 'opl runtime developer-mode-closeout <record|verify|list>',
+    summary:
+      'Inspect or update refs-only Developer Mode live repair closeout ledger entries; fork/PR closeout still requires real external owner acceptance.',
+    examples: [
+      'opl runtime developer-mode-closeout list --json',
+      'opl help runtime developer-mode-closeout record',
+    ],
+    group: 'runtime',
+    subcommands,
+    handler: (args) => {
+      assertNoArgs(args, commandGroupSpec);
+      return {
+        developer_mode_closeout_commands: {
+          surface_kind: 'opl_runtime_developer_mode_closeout_command_group',
+          usage: 'opl runtime developer-mode-closeout <record|verify|list>',
+          subcommands,
+          owner_acceptance_policy:
+            'external_owner_ref_only_repo_contract_fixture_is_unclosed_non_owner_drill_no_opl_owner_receipt_write',
+          refs_only: true,
+        },
+      };
+    },
+  };
+
   return {
+    'runtime developer-mode-closeout': commandGroupSpec,
     'runtime developer-mode-closeout record':
       cloneCommandSpec(commandSpecs['runtime developer-mode-closeout record'], {
         usage: 'opl runtime developer-mode-closeout record --payload <json>',
