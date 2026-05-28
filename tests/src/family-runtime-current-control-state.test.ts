@@ -123,6 +123,22 @@ function createTaskAttempt(
   return attempt;
 }
 
+function optionalStringField(record: unknown, key: string) {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) {
+    return null;
+  }
+  const value = (record as Record<string, unknown>)[key];
+  return typeof value === 'string' ? value : null;
+}
+
+function optionalBooleanField(record: unknown, key: string) {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) {
+    return null;
+  }
+  const value = (record as Record<string, unknown>)[key];
+  return typeof value === 'boolean' ? value : null;
+}
+
 test('current control state binds MAS default executor task freshness to domain source fingerprint', () => {
   withDb((db) => {
     const task = enqueueDefaultTask(db, {
@@ -345,6 +361,65 @@ test('current control state requires typed closeout when provider reports comple
     assert.equal(state.current_attempt_state, 'blocked');
     assert.deepEqual(state.closeout_refs, []);
     assert.equal(state.closeout_receipt_status, null);
+  });
+});
+
+test('current control state lets succeeded domain handler task supersede missing workflow observation', () => {
+  withDb((db) => {
+    const task = enqueueDefaultTask(db, {
+      source_fingerprint: 'mas-domain-source:fresh',
+    });
+    const attempt = createTaskAttempt(db, task, {
+      sourceFingerprint: 'opl-stage-source:derived',
+      workspaceEpochs: {
+        domain_source_fingerprint: 'mas-domain-source:fresh',
+      },
+    });
+    db.prepare(`
+      UPDATE tasks
+      SET status = 'succeeded', attempts = 2
+      WHERE task_id = ?
+    `).run(task.task_id);
+    db.prepare(`
+      UPDATE stage_attempts
+      SET executor_kind = 'domain_handler',
+        status = 'failed',
+        blocked_reason = 'temporal_workflow_not_started_or_not_found',
+        provider_run_json = json_set(
+          provider_run_json,
+          '$.provider_status', 'failed',
+          '$.completed_at', '2026-05-28T08:44:39.753Z',
+          '$.terminal_observation.reason', 'temporal_workflow_not_started_or_not_found'
+        ),
+        activity_events_json = json_insert(activity_events_json, '$[#]', json(?))
+      WHERE stage_attempt_id = ?
+    `).run(
+      JSON.stringify({
+        event_time: '2026-05-28T08:43:37.258Z',
+        activity_kind: 'domain_handler_dispatch_activity',
+        activity_status: 'checkpointed',
+        closeout_refs: [],
+      }),
+      attempt.stage_attempt_id,
+    );
+
+    const state = deriveCurrentControlStateForTask(db, task.task_id);
+
+    assert.equal(state.reconciliation_status, 'succeeded');
+    assert.equal(state.current_attempt_state, 'succeeded');
+    assert.equal(state.blocker_reason, null);
+    assert.equal(state.running_provider_attempt, false);
+    assert.equal(state.active_run_id, null);
+    assert.equal(state.provider_run.provider_status, 'failed');
+    assert.equal(optionalBooleanField(state, 'terminal_provider_transport_observation_superseded'), true);
+    assert.equal(
+      optionalStringField(state, 'superseded_terminal_observation_reason'),
+      'temporal_workflow_not_started_or_not_found',
+    );
+    assert.equal(optionalStringField(state, 'superseded_by_task_status'), 'succeeded');
+    assert.equal(state.stage_progress_log.blocked_attempt_count, 1);
+    assert.equal(state.authority_boundary.provider_completion_is_domain_ready, false);
+    assert.equal(Object.hasOwn(state, 'domain_ready'), false);
   });
 });
 

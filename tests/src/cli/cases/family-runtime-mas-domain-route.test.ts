@@ -217,9 +217,14 @@ JSON
     const attempts = redrivenTask.family_runtime_task.stage_attempts;
 
     assert.equal(failedTask.family_runtime_task.task.status, 'succeeded');
-    assert.equal(failedTask.family_runtime_task.task.current_control_state.current_attempt_state, 'failed');
+    assert.equal(failedTask.family_runtime_task.task.current_control_state.current_attempt_state, 'succeeded');
+    assert.equal(failedTask.family_runtime_task.task.current_control_state.blocker_reason, null);
     assert.equal(
-      failedTask.family_runtime_task.task.current_control_state.blocker_reason,
+      failedTask.family_runtime_task.task.current_control_state.terminal_provider_transport_observation_superseded,
+      true,
+    );
+    assert.equal(
+      failedTask.family_runtime_task.task.current_control_state.superseded_terminal_observation_reason,
       'temporal_workflow_not_started_or_not_found',
     );
     assert.equal(redrive.family_runtime_redrive.redriven, true);

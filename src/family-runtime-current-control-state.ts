@@ -10,8 +10,14 @@ import {
 
 type ControlAttemptRow = StageAttemptRow & { rowid: number };
 
-function parseRecord(value: string | null | undefined) {
+function parseRecord(value: unknown) {
   if (!value) {
+    return {};
+  }
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  if (typeof value !== 'string') {
     return {};
   }
   try {
@@ -285,6 +291,23 @@ function terminalWithoutAcceptedCloseout(attempt: ControlAttemptRow, providerRun
   );
 }
 
+function taskSuccessSupersedesProviderTransportObservation(
+  task: FamilyRuntimeTaskRow | undefined,
+  attempt: ControlAttemptRow | undefined,
+  providerRun: Record<string, unknown>,
+) {
+  if (task?.status !== 'succeeded' || !attempt || attempt.executor_kind !== 'domain_handler') {
+    return null;
+  }
+  const terminalObservation = parseRecord(providerRun.terminal_observation);
+  const blockerReason = attempt.blocked_reason ?? stringValue(terminalObservation.reason);
+  const providerStatus = stringValue(providerRun.provider_status);
+  const isProviderTransportOnlyFailure = attempt.status === 'failed'
+    && providerStatus === 'failed'
+    && blockerReason === 'temporal_workflow_not_started_or_not_found';
+  return isProviderTransportOnlyFailure ? blockerReason : null;
+}
+
 function terminalAttemptRefs(attempts: ControlAttemptRow[], current: ControlAttemptRow | undefined) {
   return attempts
     .filter((attempt) => attempt.stage_attempt_id !== current?.stage_attempt_id)
@@ -419,6 +442,22 @@ function deriveCurrentControlStateFromRows(
       reconciliation_status: 'blocked_provider_completed_missing_typed_closeout',
       current_attempt_state: 'blocked',
       blocker_reason: 'typed_closeout_packet_required',
+    };
+  }
+  const supersededProviderTransportReason = taskSuccessSupersedesProviderTransportObservation(
+    task,
+    current,
+    providerRun,
+  );
+  if (supersededProviderTransportReason) {
+    return {
+      ...base,
+      reconciliation_status: 'succeeded',
+      current_attempt_state: 'succeeded',
+      blocker_reason: null,
+      terminal_provider_transport_observation_superseded: true,
+      superseded_terminal_observation_reason: supersededProviderTransportReason,
+      superseded_by_task_status: task.status,
     };
   }
   const currentState = statusForCurrentAttempt(current);

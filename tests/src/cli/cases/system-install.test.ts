@@ -817,6 +817,7 @@ test('system configure-codex syncs packaged Full companion skills after API key 
       codex_config: {
         companion_skill_sync: {
           mode: string;
+          superpowers_profile: string;
           items: Array<{ skill_id: string; status: string; action: string }>;
           tools: Array<{ tool_id: string; status: string; action: string; binary_path: string | null }>;
         };
