@@ -37,6 +37,9 @@ Date: `2026-05-29`
   - Dry-run does not write cleanup ledger receipts.
   - Apply writes only safe OPL-owned cleanup receipt / ledger refs, while domain artifact mutation stays as domain owner receipt ref.
   - Active source repo file deletion and domain body mutation remain fail-closed.
+- `src/family-runtime-command-parts/registry.ts` and `src/family-runtime-command-parts/lifecycle.ts`
+  - CLI exposes `opl family-runtime lifecycle apply` and `opl family-runtime lifecycle reconcile`.
+  - There is no `opl family-runtime lifecycle list` command; list/read currentness belongs to the lifecycle index, tests and App/operator read-model surfaces.
 - `docs/policies/runtime-artifact-hygiene-policy.md`
   - Developer checkout stores repo-source, contracts, tests and docs only; workspace state body, runtime artifact body, receipt instances and deliverables belong outside the checkout.
 
@@ -49,6 +52,7 @@ Date: `2026-05-29`
 - `docs/delivery/artifact-package-lifecycle-boundary.md`
   - Added currentness policy: stable support text must not freeze artifact/package/export/lifecycle ref counts, App gallery counts, verified receipt counts or readiness state.
   - Added dynamic evidence table for generic substrate projection, package/export projection, lifecycle apply/index and repo-source artifact boundary.
+  - Corrected lifecycle CLI evidence to the real `apply` / `reconcile` surfaces and removed the nonexistent `lifecycle list` command from the machine-entry row.
   - Added explicit negative boundary for artifact/export/submission/quality/production ready, App gallery authority, lifecycle apply authority, developer checkout artifact roots and retired product-entry / gateway-era / local-manager / compat entrypoints.
 
 No contracts, source, tests, package scripts, App files, Aion shell files, MAS/MAG/RCA/OMA repos, or runtime ledgers were modified.
