@@ -122,6 +122,14 @@ exit 1
         schema_version: string;
         surface_kind: string;
         meta: { profile: string; elapsed_ms: number };
+        runtime_source: {
+          producer_role: string;
+          normal_gui_state_surface: string;
+          full_gui_state_surface: string;
+          action_boundary_surface: string;
+          full_drilldown_exception_surface: string;
+          shell_must_not_use_full_drilldown_as_normal_state: boolean;
+        };
         core: { executor: { default_executor_id: string; visible_executors: unknown[] }; codex: { parsed_version: string | null } };
         developer_mode: { enabled: string; effective_state: string };
         modules: {
@@ -154,7 +162,11 @@ exit 1
             task_drilldowns: Array<{ task_id: string; active_path: unknown[] }>;
             safe_action_routes: Array<{ action_id: string; route: string }>;
             refresh_policy: { failure_policy: string; full_detail_auto_poll: boolean };
-            performance_policy: { fast_json_max_bytes: number; shell_must_not_derive_layout_from_raw_runtime_projection: boolean };
+            performance_policy: {
+              fast_json_max_bytes: number;
+              shell_must_not_derive_layout_from_raw_runtime_projection: boolean;
+              shell_must_not_use_full_drilldown_as_normal_state: boolean;
+            };
             lazy_refs: Array<{ ref_id: string; surface: string }>;
           };
           dynamic_vertical_map: { nodes: unknown[]; edges: unknown[] };
@@ -170,6 +182,16 @@ exit 1
     assert.equal(output.app_state.surface_kind, 'opl_app_state.v1');
     assert.equal(output.app_state.meta.profile, 'fast');
     assert.equal(output.app_state.meta.elapsed_ms >= 0, true);
+    assert.equal(output.app_state.runtime_source.producer_role, 'gui_ready_state_action_producer_only');
+    assert.equal(output.app_state.runtime_source.normal_gui_state_surface, 'opl app state --profile fast --json');
+    assert.equal(output.app_state.runtime_source.full_gui_state_surface, 'opl app state --profile full --json');
+    assert.equal(output.app_state.runtime_source.action_boundary_surface, 'opl app action execute --json');
+    assert.equal(
+      output.app_state.runtime_source.full_drilldown_exception_surface,
+      'opl runtime app-operator-drilldown --detail full --json',
+    );
+    assert.equal(output.app_state.runtime_source.shell_must_not_use_full_drilldown_as_normal_state, true);
+    assert.equal('runtime_tray_snapshot' in output.app_state, false);
     assert.equal(output.app_state.core.executor.default_executor_id, 'codex_cli');
     assert.equal(output.app_state.core.executor.visible_executors.length, 1);
     assert.equal(output.app_state.core.codex.parsed_version, '0.125.0');
@@ -223,6 +245,10 @@ exit 1
     assert.equal(output.app_state.operator.workbench.performance_policy.fast_json_max_bytes, 500000);
     assert.equal(
       output.app_state.operator.workbench.performance_policy.shell_must_not_derive_layout_from_raw_runtime_projection,
+      true,
+    );
+    assert.equal(
+      output.app_state.operator.workbench.performance_policy.shell_must_not_use_full_drilldown_as_normal_state,
       true,
     );
     assert.equal(
@@ -885,20 +911,33 @@ test('public surface index declares app state as the GUI runtime boundary', () =
   assert.equal(
     appWorkbench.refs.some(
       (ref: { ref_kind: string; ref: string }) =>
-        ref.ref_kind === 'machine_cli' && ref.ref === 'opl app state --profile fast',
+        ref.ref_kind === 'machine_cli' && ref.ref === 'opl app state --profile fast --json',
     ),
     true,
   );
   assert.equal(
     appWorkbench.refs.some(
       (ref: { ref_kind: string; ref: string }) =>
-        ref.ref_kind === 'machine_cli' && ref.ref === 'opl app action execute',
+        ref.ref_kind === 'machine_cli' && ref.ref === 'opl app state --profile full --json',
+    ),
+    true,
+  );
+  assert.equal(
+    appWorkbench.refs.some(
+      (ref: { ref_kind: string; ref: string }) =>
+        ref.ref_kind === 'machine_cli' && ref.ref === 'opl app action execute --json',
     ),
     true,
   );
   assert.equal(
     appWorkbench.notes.some(
-      (note: string) => note.includes('runtime app-operator-drilldown --detail full'),
+      (note: string) => note.includes('GUI-ready state/action producer only'),
+    ),
+    true,
+  );
+  assert.equal(
+    appWorkbench.notes.some(
+      (note: string) => note.includes('must not be used as normal GUI page state'),
     ),
     true,
   );

@@ -9,7 +9,7 @@ Machine boundary: 人读索引。机器真相继续归 `contracts/`、源码、C
 
 当前 App 维护拓扑已收口为 clean `one-person-lab-app` 产品仓和独立 `opl-aion-shell` shell 仓；其中 App 顶层 `docs/` 治理用户文档、release、testing 和截图教程，AionUI upstream 依赖文档留在 `opl-aion-shell/docs/`。本目录只记录 OPL 对 App/workbench 的目标、消费合同和边界，不接管 AionUI upstream 文档生命周期。
 
-OPL CLI 现在提供 App runtime 的统一读写边界：默认页面状态读取 `opl app state --profile fast --json`，显式刷新读取 `opl app state --profile full --json`，App mutation 统一走 `opl app action execute --action <id> [--payload <json>] [--dry-run] --json`。GUI 不再把 `opl modules`、`opl system developer-supervisor`、provider worker/scheduler、release channel、Codex profile 或系统路径分别拼成页面 truth。`opl runtime app-operator-drilldown --detail full --json` 是运行状态/Operator 页按需展开 full drilldown 的明确例外。具体首页、设置、关于、主题、图标、文案、默认助手、release channel 与 shell 适配验收继续由 `one-person-lab-app` 的 App-owned contract/docs/tests 持有；`opl-aion-shell` 只实现这些合同。
+OPL CLI 现在提供 App runtime 的统一读写边界：默认页面状态读取 `opl app state --profile fast --json`，显式刷新读取 `opl app state --profile full --json`，App mutation 统一走 `opl app action execute --action <id> [--payload <json>] [--dry-run] --json`。OPL Framework 只做 GUI-ready state/action producer；GUI 产品真相、release/page-state contract、首启验收和 shell 适配合同继续归 `one-person-lab-app`。GUI 不再把 `opl modules`、`opl system developer-supervisor`、provider worker/scheduler、release channel、Codex profile 或系统路径分别拼成页面 truth。`opl runtime app-operator-drilldown --detail full --json` 是运行状态/Operator 页按需展开 full drilldown 的明确例外，不能作为正常 GUI page state 来源。具体首页、设置、关于、主题、图标、文案、默认助手、release channel 与 shell 适配验收继续由 `one-person-lab-app` 的 App-owned contract/docs/tests 持有；`opl-aion-shell` 只实现这些合同。
 
 当前入口先看：
 
