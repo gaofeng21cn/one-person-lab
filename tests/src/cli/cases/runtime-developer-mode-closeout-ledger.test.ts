@@ -106,6 +106,12 @@ test('runtime Developer Mode closeout CLI records and verifies refs-only live cl
     assert.equal(readModel.summary.live_ledger_closeout_ready_count, 1);
     assert.equal(readModel.summary.external_owner_closeout_refs_ready_count, 2);
     assert.equal(readModel.summary.scaleout_followthrough_open_gate_count, 0);
+    assert.equal(readModel.summary.route_repetition_ref_count, 0);
+    assert.deepEqual(readModel.scaleout_followthrough.derived_route_repetition_refs, []);
+    assert.equal(
+      readModel.scaleout_followthrough.route_repetition_derivation_policy,
+      'requires_verified_live_ledger_closeout_refs_across_multiple_target_repos_or_patrol_observations',
+    );
     assert.equal(
       readModel.scaleout_followthrough.status,
       'waiting_for_base_live_route_closeout_refs',
@@ -179,6 +185,95 @@ test('runtime Developer Mode closeout CLI persists scaleout follow-through refs 
     );
     assert.equal(readModel.non_authority_outputs.writes_owner_receipt, false);
     assert.equal(readModel.non_authority_outputs.modifies_managed_runtime, false);
+    assert.equal(readModel.authority_boundary.can_claim_production_ready, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime Developer Mode closeout derives route repetition from repeated verified live ledger receipts', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-mode-closeout-derived-repetition-state-'));
+  try {
+    const firstReceiptRef = runCli([
+      'runtime',
+      'developer-mode-closeout',
+      'record',
+      '--payload',
+      JSON.stringify(completePayload),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).developer_mode_closeout_ledger_record.receipt_refs[0] as string;
+    runCli([
+      'runtime',
+      'developer-mode-closeout',
+      'verify',
+      '--receipt-ref',
+      firstReceiptRef,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const secondReceiptRef = runCli([
+      'runtime',
+      'developer-mode-closeout',
+      'record',
+      '--payload',
+      JSON.stringify({
+        ...completePayload,
+        target_repo_id: 'one-person-lab',
+        patrol_observation_ref:
+          'patrol-observation-ref:opl/live-direct-fix-repeat',
+        diff_ref: 'diff-ref:opl/live-direct-fix-repeat',
+        verification_refs: ['test-result-ref:opl/live-direct-fix-repeat'],
+        no_forbidden_write_ref:
+          'no-forbidden-write-ref:opl/live-direct-fix-repeat',
+        commit_ref: 'git-commit-ref:opl/live-direct-fix-repeat',
+        owner_acceptance_ref:
+          'external-owner-ref:opl/live-direct-fix-repeat-accepted',
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).developer_mode_closeout_ledger_record.receipt_refs[0] as string;
+    runCli([
+      'runtime',
+      'developer-mode-closeout',
+      'verify',
+      '--receipt-ref',
+      secondReceiptRef,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const readModel = runCli(['agent-lab', 'complete', '--json'], {
+      OPL_STATE_DIR: stateRoot,
+    }).agent_lab_complete.developer_mode_repair_routes.live_closeout_evidence;
+    assert.equal(readModel.summary.route_repetition_ref_count, 1);
+    assert.equal(
+      readModel.scaleout_followthrough.derived_route_repetition_ref_count,
+      1,
+    );
+    assert.match(
+      readModel.scaleout_followthrough.derived_route_repetition_refs[0],
+      /^developer-mode-route-repetition-ref:dmrr_[a-f0-9]{24}$/,
+    );
+    assert.deepEqual(readModel.scaleout_followthrough.repeated_target_repo_ids.sort(), [
+      'med-autoscience',
+      'one-person-lab',
+    ]);
+    assert.deepEqual(
+      readModel.scaleout_followthrough
+        .derived_route_repetition_source_receipt_refs
+        .sort(),
+      [
+        firstReceiptRef,
+        secondReceiptRef,
+      ].sort(),
+    );
+    assert.equal(
+      readModel.scaleout_followthrough.route_repetition_derivation_policy,
+      'derived_from_verified_live_ledger_closeout_refs_across_multiple_target_repos_or_patrol_observations',
+    );
+    assert.equal(readModel.non_authority_outputs.writes_owner_receipt, false);
     assert.equal(readModel.authority_boundary.can_claim_production_ready, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

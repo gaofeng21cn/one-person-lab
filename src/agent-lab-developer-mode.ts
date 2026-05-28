@@ -457,15 +457,51 @@ function routeCloseoutRefs(receipt: DeveloperModeCloseoutReceipt) {
   ]);
 }
 
+function derivedRouteRepetitionEvidence(verifiedReceipts: DeveloperModeCloseoutReceipt[]) {
+  const receiptsWithCloseoutRefs = verifiedReceipts.filter((receipt) =>
+    routeCloseoutRefs(receipt).length > 0);
+  const repeatedTargetRepoIds = unique(
+    receiptsWithCloseoutRefs.map((receipt) => receipt.target_repo_id),
+  );
+  const repeatedPatrolObservationRefs = unique(
+    receiptsWithCloseoutRefs.map((receipt) => receipt.patrol_observation_ref),
+  );
+  if (repeatedTargetRepoIds.length < 2 && repeatedPatrolObservationRefs.length < 2) {
+    return {
+      route_repetition_refs: [],
+      repeated_target_repo_ids: repeatedTargetRepoIds,
+      repeated_patrol_observation_refs: repeatedPatrolObservationRefs,
+      source_receipt_refs: [],
+      derivation_policy:
+        'requires_verified_live_ledger_closeout_refs_across_multiple_target_repos_or_patrol_observations',
+    };
+  }
+  const sourceReceiptRefs = receiptsWithCloseoutRefs.map((receipt) => receipt.receipt_ref);
+  return {
+    route_repetition_refs: [
+      `developer-mode-route-repetition-ref:${stableId('dmrr', sourceReceiptRefs)}`,
+    ],
+    repeated_target_repo_ids: repeatedTargetRepoIds,
+    repeated_patrol_observation_refs: repeatedPatrolObservationRefs,
+    source_receipt_refs: sourceReceiptRefs,
+    derivation_policy:
+      'derived_from_verified_live_ledger_closeout_refs_across_multiple_target_repos_or_patrol_observations',
+  };
+}
+
 function developerModeScaleoutFollowthrough(verifiedReceipts: DeveloperModeCloseoutReceipt[]) {
   const baseRouteKinds = ['direct-fix', 'fork-PR'] as const;
   const baseRoutesReady = baseRouteKinds.every((route) =>
     verifiedReceipts.some((receipt) => receipt.route_decision === route)
   );
+  const derivedRouteRepetition = derivedRouteRepetitionEvidence(verifiedReceipts);
   const routeRepetitionRefs = unique(
-    verifiedReceipts.flatMap((receipt) =>
-      receiptRefListField(receipt, 'route_repetition_refs')
-    ),
+    [
+      ...verifiedReceipts.flatMap((receipt) =>
+        receiptRefListField(receipt, 'route_repetition_refs')
+      ),
+      ...derivedRouteRepetition.route_repetition_refs,
+    ],
   );
   const riskTierAutoPromotionRefs = unique(
     verifiedReceipts.flatMap((receipt) =>
@@ -478,11 +514,14 @@ function developerModeScaleoutFollowthrough(verifiedReceipts: DeveloperModeClose
     ),
   );
   const repeatedTargetRepoIds = unique(
-    verifiedReceipts.flatMap((receipt) =>
-      routeCloseoutRefs(receipt).length > 0 && receipt.route_repetition_refs.length > 0
-        ? [receipt.target_repo_id]
-        : []
-    ),
+    [
+      ...verifiedReceipts.flatMap((receipt) =>
+        routeCloseoutRefs(receipt).length > 0 && receipt.route_repetition_refs.length > 0
+          ? [receipt.target_repo_id]
+          : []
+      ),
+      ...derivedRouteRepetition.repeated_target_repo_ids,
+    ],
   );
   const openGateIds = baseRoutesReady
     ? [
@@ -506,6 +545,18 @@ function developerModeScaleoutFollowthrough(verifiedReceipts: DeveloperModeClose
     route_repetition_refs: routeRepetitionRefs,
     repeated_target_repo_count: repeatedTargetRepoIds.length,
     repeated_target_repo_ids: repeatedTargetRepoIds,
+    repeated_patrol_observation_ref_count:
+      derivedRouteRepetition.repeated_patrol_observation_refs.length,
+    repeated_patrol_observation_refs:
+      derivedRouteRepetition.repeated_patrol_observation_refs,
+    derived_route_repetition_ref_count:
+      derivedRouteRepetition.route_repetition_refs.length,
+    derived_route_repetition_refs:
+      derivedRouteRepetition.route_repetition_refs,
+    derived_route_repetition_source_receipt_refs:
+      derivedRouteRepetition.source_receipt_refs,
+    route_repetition_derivation_policy:
+      derivedRouteRepetition.derivation_policy,
     risk_tier_auto_promotion_ref_count: riskTierAutoPromotionRefs.length,
     risk_tier_auto_promotion_refs: riskTierAutoPromotionRefs,
     app_patrol_mount_ref_count: appPatrolMountRefs.length,

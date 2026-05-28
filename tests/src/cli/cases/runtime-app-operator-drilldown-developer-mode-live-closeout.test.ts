@@ -220,13 +220,38 @@ test('runtime app-operator-drilldown projects Developer Mode live closeout evide
     assert.equal(fullEvidence.summary.verified_fork_pr_ledger_receipt_ref_count, 1);
     assert.equal(fullEvidence.summary.live_external_owner_acceptance_count, 2);
     assert.equal(fullEvidence.summary.pending_verify_receipt_ref_count, 0);
-    assert.equal(fullEvidence.summary.scaleout_followthrough_open_gate_count, 3);
+    assert.equal(fullEvidence.summary.route_repetition_ref_count, 1);
+    assert.equal(fullEvidence.summary.scaleout_followthrough_open_gate_count, 2);
     assert.equal(fullEvidence.scaleout_followthrough.status, 'scaleout_refs_incomplete');
     assert.deepEqual(fullEvidence.scaleout_followthrough.open_gate_ids, [
-      'route_repetition_refs',
       'risk_tier_auto_promotion_refs',
       'app_patrol_mount_refs',
     ]);
+    assert.equal(
+      fullEvidence.scaleout_followthrough.derived_route_repetition_ref_count,
+      1,
+    );
+    assert.match(
+      fullEvidence.scaleout_followthrough.derived_route_repetition_refs[0],
+      /^developer-mode-route-repetition-ref:dmrr_[a-f0-9]{24}$/,
+    );
+    assert.deepEqual(
+      fullEvidence.scaleout_followthrough.repeated_target_repo_ids.sort(),
+      ['one-person-lab', 'redcube-ai'],
+    );
+    assert.deepEqual(
+      fullEvidence.scaleout_followthrough
+        .derived_route_repetition_source_receipt_refs
+        .sort(),
+      [
+        directReceiptRef,
+        forkPrReceiptRef,
+      ].sort(),
+    );
+    assert.equal(
+      fullEvidence.scaleout_followthrough.route_repetition_derivation_policy,
+      'derived_from_verified_live_ledger_closeout_refs_across_multiple_target_repos_or_patrol_observations',
+    );
     const scaleoutAttention =
       fullDrilldown.attention_first_payload.evidence_after_contract
         .developer_mode_live_closeout_evidence;
@@ -249,20 +274,20 @@ test('runtime app-operator-drilldown projects Developer Mode live closeout evide
     ].sort());
     assert.equal(fullDrilldown.summary.developer_mode_live_closeout_status, 'closeout_refs_ready');
     assert.equal(fullDrilldown.summary.developer_mode_live_closeout_missing_live_ledger_route_count, 0);
-    assert.equal(fullDrilldown.summary.developer_mode_live_closeout_attention_count, 3);
+    assert.equal(fullDrilldown.summary.developer_mode_live_closeout_attention_count, 2);
     assert.equal(
       fullDrilldown.summary.developer_mode_live_closeout_scaleout_followthrough_open_gate_count,
-      3,
+      2,
     );
     assert.equal(
       fullDrilldown.attention_first_payload.evidence_after_contract
         .developer_mode_live_closeout_evidence.attention_count,
-      3,
+      2,
     );
     assert.equal(
       fullDrilldown.attention_first_payload.evidence_after_contract
         .developer_mode_live_closeout_evidence.scaleout_followthrough.open_gate_count,
-      3,
+      2,
     );
     assert.equal(fullEvidence.non_authority_outputs.writes_owner_receipt, false);
     assert.equal(fullEvidence.non_authority_outputs.modifies_managed_runtime, false);
@@ -278,7 +303,11 @@ test('runtime app-operator-drilldown projects Developer Mode live closeout evide
     const scaleoutEvidence = scaleoutDrilldown.developer_mode_live_closeout_evidence;
     assert.equal(scaleoutEvidence.summary.scaleout_followthrough_open_gate_count, 0);
     assert.equal(scaleoutEvidence.scaleout_followthrough.status, 'scaleout_refs_ready');
-    assert.equal(scaleoutEvidence.scaleout_followthrough.route_repetition_ref_count, 1);
+    assert.equal(scaleoutEvidence.scaleout_followthrough.route_repetition_ref_count, 2);
+    assert.equal(
+      scaleoutEvidence.scaleout_followthrough.derived_route_repetition_ref_count,
+      1,
+    );
     assert.equal(scaleoutEvidence.scaleout_followthrough.risk_tier_auto_promotion_ref_count, 1);
     assert.equal(scaleoutEvidence.scaleout_followthrough.app_patrol_mount_ref_count, 1);
     assert.equal(scaleoutDrilldown.summary.developer_mode_live_closeout_attention_count, 0);
@@ -421,7 +450,7 @@ test('framework readiness consumes Developer Mode live closeout evidence without
     assert.equal(
       verifiedReadiness.attention_first_payload
         .developer_mode_live_closeout_evidence.attention_count,
-      3,
+      2,
     );
     assert.equal(
       verifiedReadiness.developer_mode_live_closeout_evidence.status,
@@ -430,7 +459,7 @@ test('framework readiness consumes Developer Mode live closeout evidence without
     assert.equal(
       verifiedReadiness.developer_mode_live_closeout_evidence
         .scaleout_followthrough_open_gate_count,
-      3,
+      2,
     );
     assert.equal(
       verifiedReadiness.developer_mode_live_closeout_evidence.can_claim_production_ready,

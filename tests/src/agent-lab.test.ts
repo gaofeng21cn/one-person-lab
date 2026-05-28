@@ -875,6 +875,11 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
       .scaleout_followthrough_ref_policy,
     'route_repetition_risk_tier_auto_promotion_and_app_patrol_mount_refs_are_followthrough_evidence_not_base_route_closeout_owner_receipts_or_ready_verdicts',
   );
+  assert.equal(
+    contract.developer_mode_repair_route_surface.dynamic_route_builder
+      .derived_route_repetition_ref_policy,
+    'verified_live_ledger_closeout_receipts_across_multiple_target_repos_or_patrol_observations_may_project_body_free_route_repetition_ref_without_owner_receipt_or_ready_claim',
+  );
   assert.ok(contract.developer_mode_repair_route_surface.dynamic_route_builder.closeout_status_fields.includes(
     'closeout_claim_status',
   ));
@@ -903,6 +908,11 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   );
   assert.ok(contract.developer_mode_repair_route_surface.live_closeout_evidence
     .scaleout_followthrough.required_return_shapes.includes('typed_blocker_ref'));
+  assert.match(
+    contract.developer_mode_repair_route_surface.live_closeout_evidence
+      .scaleout_followthrough.derived_route_repetition_ref_policy,
+    /closes only the route_repetition follow-through gate/,
+  );
   assert.equal(contract.developer_mode_repair_route_surface.live_closeout_evidence.owner_acceptance_policy,
     'direct_fix_accepts_external_owner_ref_fork_pr_requires_github_pr_owner_acceptance_ref_no_opl_owner_receipt_write');
   assert.ok(contract.developer_mode_repair_route_surface.output_refs.includes('candidate_fix_ref'));

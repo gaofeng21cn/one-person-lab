@@ -688,6 +688,7 @@
       ],
       "owner_acceptance_ref_policy": "direct_fix_external_owner_ref_fork_pr_github_pr_owner_acceptance_ref_fixture_refs_do_not_close_owner_acceptance",
       "scaleout_followthrough_ref_policy": "route_repetition_risk_tier_auto_promotion_and_app_patrol_mount_refs_are_followthrough_evidence_not_base_route_closeout_owner_receipts_or_ready_verdicts",
+      "derived_route_repetition_ref_policy": "verified_live_ledger_closeout_receipts_across_multiple_target_repos_or_patrol_observations_may_project_body_free_route_repetition_ref_without_owner_receipt_or_ready_claim",
       "fixture_repo_currentness_policy": "repo_contract_fixture_not_live_repo_must_not_be_presented_as_live_github_repo_or_external_owner_acceptance",
       "authority_boundary": "The dynamic route builder classifies Developer Mode projection, repo permission, and patrol observation refs into blocked, observe-only, direct-fix, fork-PR, or mixed route decisions. It emits base closeout refs and optional scaleout follow-through refs only. direct-fix owner_acceptance_ref must be an external owner ref; fork/PR owner_acceptance_ref must be a GitHub PR-backed owner acceptance ref. A repo-contract fixture ref may describe a non-owner fork/PR drill when external PR authority is unavailable, but it cannot close owner acceptance or be presented as a live GitHub repo. Route repetition, risk-tier auto-promotion, and App patrol mounting refs are follow-through evidence, not owner receipts or readiness verdicts. OPL cannot write owner receipts, domain truth, managed runtime truth, memory bodies, artifact bodies, or quality verdicts."
     },
@@ -750,6 +751,7 @@
           "developer_mode_app_patrol_mount_ref",
           "typed_blocker_ref"
         ],
+        "derived_route_repetition_ref_policy": "When verified live ledger closeout receipts already cover multiple target repos or patrol observations, Agent Lab may project a body-free developer-mode-route-repetition ref derived from receipt refs. This closes only the route_repetition follow-through gate; risk-tier auto-promotion and App patrol mounting still require their own refs or typed blocker.",
         "authority_boundary": "Scaleout follow-through is refs-only evidence for repeated Developer Mode routes, Agent Lab risk-tier promotion, and App/default caller patrol mounting. It cannot close owner authority, App release readiness, domain readiness, or production readiness."
       },
       "owner_acceptance_policy": "direct_fix_accepts_external_owner_ref_fork_pr_requires_github_pr_owner_acceptance_ref_no_opl_owner_receipt_write",

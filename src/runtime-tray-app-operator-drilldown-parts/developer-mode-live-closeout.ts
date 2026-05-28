@@ -96,7 +96,7 @@ function developerModeCloseoutPayloadRefHints() {
     owner_acceptance_ref_policy:
       'direct_fix_accepts_external_owner_ref_fork_pr_requires_github_pr_owner_acceptance_ref_no_owner_receipt_ref',
     scaleout_ref_policy:
-      'base direct-fix and fork-PR receipts close live route evidence; route repetition, risk-tier auto-promotion, and App patrol mounting remain explicit follow-through refs',
+      'base direct-fix and fork-PR receipts close live route evidence; route repetition can be explicit or derived from verified ledger receipts, while risk-tier auto-promotion and App patrol mounting remain explicit follow-through refs',
   };
 }
 
