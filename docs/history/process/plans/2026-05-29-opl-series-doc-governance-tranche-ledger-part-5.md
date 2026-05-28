@@ -45,18 +45,19 @@ Date: `2026-05-29T02:40:00+0800`
 - The open domain-dispatch workorder is MAS `sat_55e36b0dbf2b609fb33329db`, action `domain_dispatch:medautoscience:sat_55e36b0dbf2b609fb33329db:record`, stage `domain_owner/default-executor-dispatch`, study `003-dpcc-primary-care-phenotype-treatment-gap`, action type `run_quality_repair_batch`.
 - Fresh `opl framework readiness --family-defaults --json` summary returned `operator_actionable_attention_tail_count=1`, `operator_payload_required_attention_tail_count=1`, `operator_payload_free_attention_tail_count=0`, `evidence_envelope_open_count=1`, `evidence_envelope_blocked_count=513`, `domain_dispatch_attention_count=11`, and `domain_blocked_attention_tail_count=524`.
 - `opl runtime action execute --action domain_dispatch:medautoscience:sat_55e36b0dbf2b609fb33329db:record --dry-run` with an empty payload returned a blocked preflight: missing `domain_receipt_refs_or_typed_blocker_refs_or_owner_chain_refs_or_no_regression_refs`. The route is current/default-actionable but requires domain/App/live owner refs or a domain-owned typed blocker.
+- MAS owner surface `med_autoscience.cli domain-handler dispatch-evidence-payload --workorder /tmp/opl-domain-dispatch-workorder-sat_55e36b0dbf2b609fb33329db.json --format json` returned `status=blocked` and `blocked_reason=ai_reviewer_currentness_supersession_not_observed`; no OPL payload was recorded for this route.
 
 ## Fresh semantic result
 
 - The earlier MAS 2026-05-29 foldback remains valid as historical coverage: OPL verified three MAS domain-dispatch typed-blocker receipts for `sat_ad741309cc05d5a261551a4e`, `sat_ca911a95f094f8c6fa7fb4e0`, and `sat_56ccb7a51946c12b59e09ee9`, and did not write OPL payload for `sat_d4886f8a7fb00b136bfe9f47`.
 - The fresh current read-model no longer supports freezing the status/gap plan as zero-open. Current truth is a payload-required MAS open workorder for `sat_55e36b0dbf2b609fb33329db`.
-- The open route only proves that OPL refs-only accounting is waiting for MAS domain/App/live owner refs or a typed blocker. It does not grant OPL authority to generate owner receipt, typed blocker, owner-chain ref, no-regression ref, domain ready, production ready, paper closure, artifact authority, monitor freshness, App release/user path or long-soak evidence.
+- The open route only proves that OPL refs-only accounting is waiting for MAS domain/App/live owner refs or a typed blocker. The current MAS owner-surface response is itself a blocked export result, not a recordable typed-blocker ref. It does not grant OPL authority to generate owner receipt, typed blocker, owner-chain ref, no-regression ref, domain ready, production ready, paper closure, artifact authority, monitor freshness, App release/user path or long-soak evidence.
 
 ## Reviewed documents / sections
 
 | Repo | Reviewed docs / sections | Live truth checked |
 | --- | --- | --- |
-| `one-person-lab` | `docs/status.md` MAS domain-dispatch currentness paragraph; `docs/active/current-state-vs-ideal-gap.md` MAS real paper chain evidence row; process-plans history index. | `git status`, six-repo doctor, `family-runtime evidence-worklist`, `framework readiness`, `runtime action execute` dry-run for the open MAS route. |
+| `one-person-lab` | `docs/status.md` MAS domain-dispatch currentness paragraph; `docs/active/current-state-vs-ideal-gap.md` MAS real paper chain evidence row; process-plans history index. | `git status`, six-repo doctor, `family-runtime evidence-worklist`, `framework readiness`, `runtime action execute` dry-run for the open MAS route, MAS `domain-handler dispatch-evidence-payload` blocked export. |
 | Other OPL series repos | Branch/worktree lifecycle state only. | git status/worktree state and doctor shape; body docs not edited. |
 
 ## Edited documents
