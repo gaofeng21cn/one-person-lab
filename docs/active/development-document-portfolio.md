@@ -139,8 +139,8 @@ Archived / tombstoned / deleted docs:
 Unreviewed docs:
 
 - This tranche refreshes the tracked `docs/history/process/plans/**` body coverage for current role/lifecycle/stale-wording risk and includes the later docs-governance ledger bodies now present in that directory.
-- It does not cover `docs/history/process/convergence-governance/**`, `docs/history/process/domain-admission/**`, `docs/history/process/shared-boundary/**`, `docs/history/runtime-substrate/**`, `docs/history/frontdoor-legacy/**`, `docs/history/compatibility/**`, or support/reference bodies outside the plans subtree. `docs/history/process/specs/**` and `docs/history/process/superpowers/**` have separate prior tranche ledgers and should only be reopened if later changes or fresh truth drift require it.
-- OPL scoped exact inventory over repo-root `README*` plus `docs/**/*.md` remains under the long-running coverage ledger until every remaining support/reference/history body is similarly covered.
+- This tranche does not reopen already-ledgered history/support/reference chunks such as `docs/history/process/convergence-governance/**`, `docs/history/process/domain-admission/**`, `docs/history/process/shared-boundary/**`, `docs/history/process/specs/**`, `docs/history/process/superpowers/**`, `docs/history/runtime-substrate/**`, `docs/history/frontdoor-legacy/**`, `docs/history/compatibility/**`, runtime/product/specs/delivery/source/public docs, or reference bodies. Reopen them only if later edits or fresh truth drift require it.
+- OPL scoped exact inventory over repo-root `README*` plus `docs/**/*.md` remains under the long-running coverage ledger for any file not covered by prior tranche entries; choose the next OPL chunk by reading the latest ledger, not by older open-scope rows that have since been superseded.
 - MAS, RCA and App body governance remain delayed while their active dirty/recent/conflicting lanes are outside this tranche.
 
 Remaining stale / retire candidates:
@@ -161,7 +161,7 @@ Verification before absorb:
 
 Next tranche write scope:
 
-- Continue OPL uncovered history/process body coverage outside the already-ledgered `plans`, `specs` and `superpowers` subtrees, starting with `docs/history/process/convergence-governance/**`, `docs/history/process/domain-admission/**` or `docs/history/process/shared-boundary/**`.
+- Continue with a fresh inventory-vs-ledger diff before choosing the next OPL doc chunk; otherwise switch to another clean repo-local tranche. Do not reopen already-ledgered OPL chunks unless a later edit, source/contract/read-model drift or doctor finding makes a new pass necessary.
 - Re-check MAS retained lanes after freshness/external edits settle; absorb only if clean/current and verified, or retain with conflict/currentness reason.
 - Keep App/RCA body governance delayed until dirty release/native-PPT lanes are safe or explicitly assigned.
 - Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
