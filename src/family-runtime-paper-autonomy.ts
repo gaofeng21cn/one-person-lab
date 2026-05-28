@@ -12,6 +12,8 @@ export const MAS_PAPER_AUTONOMY_TASK_KINDS = new Set([
   'paper_autonomy/route-decision',
 ]);
 
+export const MAS_PAPER_AUTONOMY_DOMAIN_HANDLER_CLOSEOUT_REQUIRED_REASON = 'domain_handler_closeout_required';
+
 export function paperAutonomyProjection(
   task: PaperAutonomyProjectionTask,
   payload: Record<string, unknown>,

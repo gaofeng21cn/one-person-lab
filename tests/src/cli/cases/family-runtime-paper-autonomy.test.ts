@@ -53,7 +53,7 @@ JSON
     `#!/usr/bin/env bash
 set -euo pipefail
 printf '%s\\n' "$1" > ${shellSingleQuote(dispatchedTaskPath)}
-echo '{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receipt","dispatch":{"result":{"surface":"real_paper_autonomy_provider_hosted_guarded_apply_receipt","status":"typed_blocker"}}}'
+echo '{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receipt","receipt_ref":"studies/DM002/artifacts/paper_autonomy/guarded_apply/latest.json","dispatch":{"result":{"surface":"real_paper_autonomy_provider_hosted_guarded_apply_receipt","status":"typed_blocker"}}}'
 `,
     { mode: 0o755 },
   );
@@ -68,6 +68,9 @@ echo '{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receip
 
     assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
+    assert.deepEqual(tick.family_runtime_tick.dispatches[0].stage_attempts[0].closeout_refs, [
+      'studies/DM002/artifacts/paper_autonomy/guarded_apply/latest.json',
+    ]);
     assert.equal(task.task_kind, 'paper_autonomy/guarded-apply');
     assert.equal(task.paper_autonomy.study_id, 'DM002');
     assert.equal(task.paper_autonomy.next_owner, 'med-autoscience');

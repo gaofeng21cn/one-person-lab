@@ -26,8 +26,108 @@ import {
   taskToPayload,
   type FamilyRuntimeTaskRow,
 } from './family-runtime-store.ts';
+import {
+  MAS_PAPER_AUTONOMY_DOMAIN_HANDLER_CLOSEOUT_REQUIRED_REASON,
+  MAS_PAPER_AUTONOMY_TASK_KINDS,
+} from './family-runtime-paper-autonomy.ts';
 
 type TemporalProviderModule = Parameters<typeof startMasDefaultExecutorDispatchAttempt>[2]['temporalProviderModule'];
+
+function cleanStringList(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
+    : [];
+}
+
+function cleanOptionalString(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function closeoutRefsFromDomainHandlerOutput(output: Record<string, unknown>) {
+  return [
+    ...cleanStringList(output.closeout_refs),
+    cleanOptionalString(output.closeout_ref),
+    cleanOptionalString(output.receipt_ref),
+  ].filter((entry): entry is string => Boolean(entry));
+}
+
+function providerHostedDispatchRequiresCloseout(row: FamilyRuntimeTaskRow, activeStageAttemptIds: string[]) {
+  return row.domain_id === 'medautoscience'
+    && MAS_PAPER_AUTONOMY_TASK_KINDS.has(row.task_kind)
+    && activeStageAttemptIds.length > 0;
+}
+
+function blockTaskForMissingDomainCloseout(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  input: {
+    commandPreview: string[];
+    commandCwd: string | null;
+    output: Record<string, unknown>;
+    activeStageAttemptIds: string[];
+    closeoutRefs: string[];
+  },
+) {
+  const blockedAt = nowIso();
+  const reason = MAS_PAPER_AUTONOMY_DOMAIN_HANDLER_CLOSEOUT_REQUIRED_REASON;
+  db.prepare(`
+    UPDATE tasks
+    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
+      last_error = ?, dead_letter_reason = ?, updated_at = ?
+    WHERE task_id = ?
+  `).run(reason, reason, blockedAt, row.task_id);
+  insertEvent(db, {
+    taskId: row.task_id,
+    domainId: row.domain_id,
+    eventType: 'task_dispatch_blocked_missing_domain_closeout',
+    source: 'opl-family-runtime',
+    payload: {
+      reason,
+      command_preview: input.commandPreview,
+      command_cwd: input.commandCwd,
+      output: input.output,
+      closeout_refs: input.closeoutRefs,
+      authority_boundary: {
+        opl: 'queue_and_attempt_liveness_projection_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        provider_completion_is_domain_ready: false,
+        domain_truth_mutation: false,
+        publication_quality_mutation: false,
+        artifact_gate_mutation: false,
+        current_package_mutation: false,
+      },
+    },
+  });
+  insertNotification(db, {
+    taskId: row.task_id,
+    severity: 'warning',
+    title: 'Family runtime task blocked',
+    body: `${row.domain_id}:${row.task_kind} requires a typed closeout or domain receipt refs.`,
+    payload: { reason },
+  });
+  const stageAttempts = updateStageAttemptsForTask(db, {
+    taskId: row.task_id,
+    stageAttemptIds: input.activeStageAttemptIds,
+    status: 'blocked',
+    closeoutRefs: input.closeoutRefs,
+    blockedReason: reason,
+    activityEvent: {
+      activity_kind: 'domain_handler_dispatch_activity',
+      activity_status: 'blocked',
+      blocked_reason: reason,
+      closeout_refs: input.closeoutRefs,
+    },
+  });
+  return {
+    task_id: row.task_id,
+    status: 'blocked',
+    reason,
+    command_preview: input.commandPreview,
+    command_cwd: input.commandCwd,
+    output: input.output,
+    stage_attempts: stageAttempts,
+  };
+}
 
 export async function dispatchFamilyRuntimeTask(
   db: DatabaseSync,
@@ -134,6 +234,21 @@ export async function dispatchFamilyRuntimeTask(
   const succeeded = exitCode === 0 && output.forbidden_domain_truth_write !== true;
 
   if (succeeded) {
+    const closeoutRefs = closeoutRefsFromDomainHandlerOutput(output);
+    const typedCloseoutPacket = closeoutPacketFromDomainHandlerOutput(output);
+    if (
+      providerHostedDispatchRequiresCloseout(row, activeStageAttemptIds)
+      && !typedCloseoutPacket
+      && closeoutRefs.length === 0
+    ) {
+      return blockTaskForMissingDomainCloseout(db, row, {
+        commandPreview: command.command_preview,
+        commandCwd: command.cwd,
+        output,
+        activeStageAttemptIds,
+        closeoutRefs,
+      });
+    }
     const completedAt = nowIso();
     db.prepare(`
       UPDATE tasks
@@ -154,10 +269,6 @@ export async function dispatchFamilyRuntimeTask(
       body: `${row.domain_id}:${row.task_kind}`,
       payload: { output },
     });
-    const closeoutRefs = Array.isArray(output.closeout_refs)
-      ? output.closeout_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
-      : undefined;
-    const typedCloseoutPacket = closeoutPacketFromDomainHandlerOutput(output);
     const checkpointedStageAttempts = updateStageAttemptsForTask(db, {
       taskId: row.task_id,
       stageAttemptIds: activeStageAttemptIds,
@@ -166,7 +277,7 @@ export async function dispatchFamilyRuntimeTask(
       activityEvent: {
         activity_kind: 'domain_handler_dispatch_activity',
         activity_status: typedCloseoutPacket ? 'typed_closeout_received' : 'checkpointed',
-        closeout_refs: closeoutRefs ?? [],
+        closeout_refs: closeoutRefs,
       },
     });
     const stageAttempts = typedCloseoutPacket

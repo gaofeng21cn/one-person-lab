@@ -12,6 +12,7 @@ import { taskRowMatchesScope } from './family-runtime-task-scope.ts';
 import {
   listStageAttemptsForTask,
   syncStageAttemptFromTemporalTerminalObservation,
+  updateStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
 import {
   findLiveMasDefaultExecutorDispatchAttempt,
@@ -24,6 +25,10 @@ import {
   stageIdForProviderHostedTask,
 } from './family-runtime-provider-hosted-attempts.ts';
 import { redriveBlockedMasDefaultExecutorProviderTransportTask } from './family-runtime-redrive.ts';
+import {
+  MAS_PAPER_AUTONOMY_DOMAIN_HANDLER_CLOSEOUT_REQUIRED_REASON,
+  MAS_PAPER_AUTONOMY_TASK_KINDS,
+} from './family-runtime-paper-autonomy.ts';
 
 type EnqueueTaskResult = {
   accepted?: boolean;
@@ -208,6 +213,80 @@ function repairRunningTasksWithoutStageAttemptIdentity(
     }
   }
   return { repairedCount, deadLetteredCount, repairedTaskIds };
+}
+
+function repairSucceededMasPaperAutonomyTasksMissingCloseout(
+  db: DatabaseSync,
+  rows: FamilyRuntimeTaskRow[],
+  source: string,
+) {
+  let repairedCount = 0;
+  const repairedTaskIds = new Set<string>();
+  for (const row of rows) {
+    if (
+      row.domain_id !== 'medautoscience'
+      || row.status !== 'succeeded'
+      || !MAS_PAPER_AUTONOMY_TASK_KINDS.has(row.task_kind)
+    ) {
+      continue;
+    }
+    const attempts = listStageAttemptsForTask(db, row.task_id).filter((attempt) => (
+      attempt.executor_kind === 'domain_handler'
+      && attempt.status === 'checkpointed'
+      && attempt.closeout_refs.length === 0
+      && attempt.closeout_receipt_status === null
+    ));
+    if (attempts.length === 0) {
+      continue;
+    }
+    const repairedAt = new Date().toISOString();
+    db.prepare(`
+      UPDATE tasks
+      SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
+        last_error = ?, dead_letter_reason = ?, updated_at = ?
+      WHERE task_id = ? AND status = 'succeeded'
+    `).run(
+      MAS_PAPER_AUTONOMY_DOMAIN_HANDLER_CLOSEOUT_REQUIRED_REASON,
+      MAS_PAPER_AUTONOMY_DOMAIN_HANDLER_CLOSEOUT_REQUIRED_REASON,
+      repairedAt,
+      row.task_id,
+    );
+    const repairedAttempts = updateStageAttemptsForTask(db, {
+      taskId: row.task_id,
+      stageAttemptIds: attempts.map((attempt) => attempt.stage_attempt_id),
+      status: 'blocked',
+      blockedReason: MAS_PAPER_AUTONOMY_DOMAIN_HANDLER_CLOSEOUT_REQUIRED_REASON,
+      activityEvent: {
+        activity_kind: 'domain_handler_dispatch_activity',
+        activity_status: 'blocked',
+        blocked_reason: MAS_PAPER_AUTONOMY_DOMAIN_HANDLER_CLOSEOUT_REQUIRED_REASON,
+      },
+    });
+    insertEvent(db, {
+      taskId: row.task_id,
+      domainId: row.domain_id,
+      eventType: 'task_repaired_from_succeeded_missing_domain_closeout',
+      source,
+      payload: {
+        previous_status: row.status,
+        next_status: 'blocked',
+        reason: MAS_PAPER_AUTONOMY_DOMAIN_HANDLER_CLOSEOUT_REQUIRED_REASON,
+        repaired_stage_attempt_ids: repairedAttempts.map((attempt) => attempt.stage_attempt_id),
+        authority_boundary: {
+          opl: 'queue_and_attempt_read_model_repair_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          provider_completion_is_domain_ready: false,
+          domain_truth_mutation: false,
+          publication_quality_mutation: false,
+          artifact_gate_mutation: false,
+          current_package_mutation: false,
+        },
+      },
+    });
+    repairedCount += 1;
+    repairedTaskIds.add(row.task_id);
+  }
+  return { repairedCount, repairedTaskIds };
 }
 
 function autoRedriveBlockedMasDefaultExecutorProviderTasks(
@@ -480,11 +559,23 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     taskRowMatchesScope(row, input.taskScope)
   );
   const {
+    repairedCount: repairedPaperAutonomyMissingCloseoutCount,
+    repairedTaskIds: repairedPaperAutonomyMissingCloseoutTaskIdSet,
+  } = repairSucceededMasPaperAutonomyTasksMissingCloseout(
+    db,
+    scopedRowsAfterMissingIdentityRepair,
+    `${input.source}:paper-autonomy-closeout-repair`,
+  );
+  const allRowsAfterPaperAutonomyRepair = db.prepare('SELECT * FROM tasks').all() as FamilyRuntimeTaskRow[];
+  const scopedRowsAfterPaperAutonomyRepair = allRowsAfterPaperAutonomyRepair.filter((row) =>
+    taskRowMatchesScope(row, input.taskScope)
+  );
+  const {
     autoRedrivenCount: masDefaultExecutorAutoRedrivenCount,
     autoDeadLetteredCount: masDefaultExecutorAutoDeadLetteredCount,
   } = autoRedriveBlockedMasDefaultExecutorProviderTasks(
     db,
-    scopedRowsAfterMissingIdentityRepair,
+    scopedRowsAfterPaperAutonomyRepair,
     `${input.source}:auto-redrive`,
   );
   const candidateRows = db.prepare(`
@@ -494,7 +585,9 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
   `).all() as FamilyRuntimeTaskRow[];
   const allRows = db.prepare('SELECT * FROM tasks').all() as FamilyRuntimeTaskRow[];
   const scopedRowsBeforeSupersededFilter = candidateRows.filter((row) =>
-    taskRowMatchesScope(row, input.taskScope) && !repairedMissingIdentityTaskIdSet.has(row.task_id)
+    taskRowMatchesScope(row, input.taskScope)
+    && !repairedMissingIdentityTaskIdSet.has(row.task_id)
+    && !repairedPaperAutonomyMissingCloseoutTaskIdSet.has(row.task_id)
   );
   const {
     rows: scopedRowsAfterSuperseded,
@@ -520,6 +613,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       mas_default_executor_terminal_synced_count: masDefaultExecutorTerminalSyncedCount,
       repaired_missing_identity_running_count: repairedMissingIdentityRunningCount,
       repaired_missing_identity_dead_lettered_count: repairedMissingIdentityDeadLetteredCount,
+      repaired_paper_autonomy_missing_closeout_count: repairedPaperAutonomyMissingCloseoutCount,
       mas_default_executor_auto_redriven_count: masDefaultExecutorAutoRedrivenCount,
       mas_default_executor_auto_dead_lettered_count: masDefaultExecutorAutoDeadLetteredCount,
       task_scope: input.taskScope ?? null,
@@ -542,6 +636,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     mas_default_executor_terminal_synced_count: masDefaultExecutorTerminalSyncedCount,
     repaired_missing_identity_running_count: repairedMissingIdentityRunningCount,
     repaired_missing_identity_dead_lettered_count: repairedMissingIdentityDeadLetteredCount,
+    repaired_paper_autonomy_missing_closeout_count: repairedPaperAutonomyMissingCloseoutCount,
     mas_default_executor_auto_redriven_count: masDefaultExecutorAutoRedrivenCount,
     mas_default_executor_auto_dead_lettered_count: masDefaultExecutorAutoDeadLetteredCount,
     dispatches,

@@ -691,8 +691,10 @@ JSON
     const dispatchedTask = JSON.parse(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8'));
 
     assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
-    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'blocked');
+    assert.equal(tick.family_runtime_tick.dispatches[0].reason, 'domain_handler_closeout_required');
     assert.equal(tick.family_runtime_tick.dispatches[0].stage_attempts[0].stage_id, 'paper_autonomy/repair-recheck');
+    assert.equal(tick.family_runtime_tick.dispatches[0].stage_attempts[0].status, 'blocked');
     assert.equal(task.task_kind, 'paper_autonomy/repair-recheck');
     assert.equal(task.paper_autonomy.study_id, 'DM002');
     assert.equal(task.paper_autonomy.next_owner, 'quality_repair_batch');
@@ -703,7 +705,13 @@ JSON
     assert.equal(attempt.provider_kind, 'temporal');
     assert.equal(attempt.stage_id, 'paper_autonomy/repair-recheck');
     assert.equal(attempt.task_id, task.task_id);
-    assert.equal(attempt.status, 'checkpointed');
+    assert.equal(attempt.status, 'blocked');
+    assert.equal(attempt.blocked_reason, 'domain_handler_closeout_required');
+    assert.equal(inspected.family_runtime_task.task.status, 'blocked');
+    assert.equal(inspected.family_runtime_task.task.last_error, 'domain_handler_closeout_required');
+    assert.equal(inspected.family_runtime_task.task.dead_letter_reason, 'domain_handler_closeout_required');
+    assert.equal(inspected.family_runtime_task.task.current_control_state.reconciliation_status, 'blocked');
+    assert.equal(inspected.family_runtime_task.task.current_control_state.blocker_reason, 'domain_handler_closeout_required');
     assert.equal(dispatchedTask.paper_autonomy.next_owner, 'quality_repair_batch');
     assert.equal(dispatchedTask.paper_autonomy.idempotency_key, 'reviewer_refinement_loop:unit-1:sha256:abc');
   } finally {
@@ -811,8 +819,11 @@ JSON
     assert.equal(after.family_runtime_task.task.current_control_state.reconciliation_status, 'queued');
     assert.equal(secondTick.family_runtime_tick.repaired_missing_identity_running_count, 0);
     assert.equal(secondTick.family_runtime_tick.selected_count, 1);
-    assert.equal(secondTick.family_runtime_tick.dispatches[0].status, 'succeeded');
-    assert.equal(finalTask.family_runtime_task.task.status, 'succeeded');
+    assert.equal(secondTick.family_runtime_tick.dispatches[0].status, 'blocked');
+    assert.equal(secondTick.family_runtime_tick.dispatches[0].reason, 'domain_handler_closeout_required');
+    assert.equal(finalTask.family_runtime_task.task.status, 'blocked');
+    assert.equal(finalTask.family_runtime_task.task.last_error, 'domain_handler_closeout_required');
+    assert.equal(finalTask.family_runtime_task.stage_attempts[0].status, 'blocked');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

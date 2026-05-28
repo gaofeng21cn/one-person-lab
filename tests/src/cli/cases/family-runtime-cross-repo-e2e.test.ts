@@ -84,7 +84,9 @@ JSON
 }
 JSON
 `);
-  const masDispatch = createDispatchFixture('echo \'{"accepted":true,"surface_kind":"mas_dispatch_receipt"}\'');
+  const masDispatch = createDispatchFixture(
+    'echo \'{"accepted":true,"surface_kind":"mas_dispatch_receipt","receipt_ref":"receipt:mas/e2e/gate-replay"}\'',
+  );
   const magDispatch = createDispatchFixture('echo \'{"accepted":true,"surface_kind":"mag_dispatch_receipt"}\'');
   const rcaDispatch = createDispatchFixture('echo "rca planned failure" >&2\nexit 19');
   const env = familyRuntimeEnv(stateRoot, {
