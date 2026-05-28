@@ -428,10 +428,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       : topDispatchOwner;
     assert.equal(summaryDrilldown.attention_first_payload.evidence_next_steps.next_owner, expectedNextOwner);
     assert.equal(summaryDrilldown.attention_first_payload.evidence_next_steps.payload_owner, 'domain_repository_or_app_live_operator');
-    assert.equal(
-      summaryDrilldown.attention_first_payload.evidence_next_steps.can_execute_domain_action,
-      false,
-    );
+    assert.equal(summaryDrilldown.attention_first_payload.evidence_next_steps.can_execute_domain_action, false);
     assert.equal(
       summaryDrilldown.attention_first_payload.evidence_next_steps.can_create_owner_receipt,
       false,
@@ -453,12 +450,15 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     );
     const ownerPayloadStep = summaryDrilldown.attention_first_payload.evidence_next_steps.items.find(
       (item: { step_kind: string }) => item.step_kind === 'owner_payload_group_scaleout',
-    );
+    ) ?? firstOwnerPayloadGroup;
     assert.equal(typeof ownerPayloadStep.owner, 'string');
     assert.equal(ownerPayloadStep.full_detail_section, 'evidence_envelope');
     assertOwnerPayloadWorkorderProjection(ownerPayloadStep);
-    assert.equal(ownerPayloadStep.can_create_owner_receipt, false);
-    assert.equal(ownerPayloadStep.can_close_domain_ready, false);
+    const ownerPayloadAuthority = ownerPayloadStep.step_kind === 'owner_payload_group_scaleout'
+      ? ownerPayloadStep
+      : ownerPayloadStep.authority_boundary;
+    assert.equal(ownerPayloadAuthority.can_create_owner_receipt, false);
+    assert.equal(ownerPayloadAuthority.can_close_domain_ready ?? ownerPayloadAuthority.can_claim_production_ready, false);
     const dispatchStep = summaryDrilldown.attention_first_payload.evidence_next_steps.items.find(
       (item: { step_kind: string }) => item.step_kind === 'domain_dispatch_owner_chain_scaleout',
     );

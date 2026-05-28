@@ -305,6 +305,9 @@ export async function buildFrameworkReadinessSummary(
   const appReleaseUserPathEvidence = record(
     appEvidenceAfterContract.app_release_user_path_evidence,
   );
+  const developerModeLiveCloseoutEvidence = record(
+    appEvidenceAfterContract.developer_mode_live_closeout_evidence,
+  );
   const omaProductionConsumptionFollowthrough = record(
     appEvidenceAfterContract.oma_production_consumption_followthrough,
   );
@@ -414,6 +417,8 @@ export async function buildFrameworkReadinessSummary(
   };
   const runtimeManagerAftercareRouteSupportCount =
     runtimeManagerRouteSupportTaskKinds.filter((taskKind) => taskKind.startsWith('publication_aftercare/')).length;
+  const developerModeLiveCloseoutAttentionCount =
+    numberValue(developerModeLiveCloseoutEvidence.attention_count);
   const openTailCount =
     agentStructuralEvidenceTailCount + appLiveEvidenceTailCount + stageReceiptFreshnessTailCount;
   const evidenceEnvelopeAttentionCount = readinessEvidenceEnvelopeOpenCount + readinessEvidenceEnvelopeBlockedCount;
@@ -424,6 +429,7 @@ export async function buildFrameworkReadinessSummary(
     domainDispatchAttentionCount,
     stageSourceScopeMissingWorkorderCount,
     stageRuntimeEventMissingWorkorderCount,
+    developerModeLiveCloseoutAttentionCount,
     openSafeActionPayloadRequiredCount: openSafeActionPayload.openSafeActionPayloadRequiredCount,
     openSafeActionPayloadFreeCount: openSafeActionPayload.openSafeActionPayloadFreeCount,
   });
@@ -483,6 +489,7 @@ export async function buildFrameworkReadinessSummary(
         ownerHandoffPacket,
         memoryArtifactLifecycleEvidence,
         appReleaseUserPathEvidence,
+        developerModeLiveCloseoutEvidence,
         omaProductionConsumptionFollowthrough,
         domainDispatchEvidenceWorkorderGroupAttentionItems,
         domainDispatchEvidenceWorkorderAttentionItems,
@@ -780,6 +787,10 @@ export async function buildFrameworkReadinessSummary(
       app_release_user_path_evidence: {
         source_command: SOURCE_COMMANDS.app_operator_drilldown,
         ...appReleaseUserPathEvidence,
+      },
+      developer_mode_live_closeout_evidence: {
+        source_command: SOURCE_COMMANDS.app_operator_drilldown,
+        ...developerModeLiveCloseoutEvidence,
       },
       oma_production_consumption_followthrough: {
         source_command: SOURCE_COMMANDS.app_operator_drilldown,

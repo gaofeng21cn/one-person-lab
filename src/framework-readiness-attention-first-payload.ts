@@ -39,6 +39,7 @@ export function frameworkAttentionFirstPayload(input: {
   ownerHandoffPacket: JsonRecord;
   memoryArtifactLifecycleEvidence: JsonRecord;
   appReleaseUserPathEvidence: JsonRecord;
+  developerModeLiveCloseoutEvidence: JsonRecord;
   omaProductionConsumptionFollowthrough: JsonRecord;
   domainDispatchEvidenceWorkorderGroupAttentionItems: JsonRecord[];
   domainDispatchEvidenceWorkorderAttentionItems: JsonRecord[];
@@ -59,6 +60,8 @@ export function frameworkAttentionFirstPayload(input: {
     + input.appLiveEvidenceTailCount
     + input.stageReceiptFreshnessTailCount;
   const evidenceEnvelopeAttentionCount = input.evidenceEnvelopeOpenCount + input.evidenceEnvelopeBlockedCount;
+  const developerModeLiveCloseoutAttentionCount =
+    numberValue(input.developerModeLiveCloseoutEvidence.attention_count);
   const attentionCounts = splitOperatorAttentionCountsWithSafeActionPayload({
     openTailCount,
     evidenceEnvelopeOpenCount: input.evidenceEnvelopeOpenCount,
@@ -66,6 +69,7 @@ export function frameworkAttentionFirstPayload(input: {
     domainDispatchAttentionCount: input.domainDispatchAttentionCount,
     stageSourceScopeMissingWorkorderCount: input.stageSourceScopeMissingWorkorderCount,
     stageRuntimeEventMissingWorkorderCount: input.stageRuntimeEventMissingWorkorderCount,
+    developerModeLiveCloseoutAttentionCount,
     openSafeActionPayloadRequiredCount: input.openSafeActionPayloadRequiredCount,
     openSafeActionPayloadFreeCount: input.openSafeActionPayloadFreeCount,
   });
@@ -112,6 +116,18 @@ export function frameworkAttentionFirstPayload(input: {
         }]
       : []),
     ...(
+      developerModeLiveCloseoutAttentionCount > 0
+      ? [{
+          warning_id: 'developer_mode_live_closeout_evidence',
+          count: developerModeLiveCloseoutAttentionCount,
+          missing_live_ledger_route_count:
+            numberValue(input.developerModeLiveCloseoutEvidence.missing_live_ledger_route_count),
+          pending_verify_receipt_ref_count:
+            numberValue(input.developerModeLiveCloseoutEvidence.pending_verify_receipt_ref_count),
+          drilldown_ref: '/framework_readiness/developer_mode_live_closeout_evidence',
+        }]
+      : []),
+    ...(
       numberValue(input.appReleaseUserPathEvidence.open_gate_count) > 0
         || numberValue(input.appReleaseUserPathEvidence.pending_verify_receipt_ref_count) > 0
       ? [{
@@ -142,6 +158,7 @@ export function frameworkAttentionFirstPayload(input: {
     ownerPayloadGroups: input.ownerPayloadGroups,
     ownerHandoffPacket: input.ownerHandoffPacket,
     appReleaseUserPathEvidence: input.appReleaseUserPathEvidence,
+    developerModeLiveCloseoutEvidence: input.developerModeLiveCloseoutEvidence,
     omaProductionConsumptionFollowthrough: input.omaProductionConsumptionFollowthrough,
     domainDispatchEvidenceWorkorderGroupAttentionItems:
       input.domainDispatchEvidenceWorkorderGroupAttentionItems,
@@ -201,6 +218,8 @@ export function frameworkAttentionFirstPayload(input: {
     memory_artifact_lifecycle_evidence: input.memoryArtifactLifecycleEvidence,
     app_release_user_path_evidence:
       input.appReleaseUserPathEvidence,
+    developer_mode_live_closeout_evidence:
+      input.developerModeLiveCloseoutEvidence,
     oma_production_consumption_followthrough:
       input.omaProductionConsumptionFollowthrough,
     domain_dispatch_evidence_workorder_packet_summary:

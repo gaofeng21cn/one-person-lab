@@ -137,8 +137,9 @@ test('framework readiness summarizes default control-plane surfaces without auth
   );
   assert.equal(
     readiness.attention_first_payload.summary.total_operator_attention_tail_count,
-    readiness.summary.open_tail_count
+      readiness.summary.open_tail_count
       + readiness.summary.evidence_envelope_attention_count
+      + readiness.developer_mode_live_closeout_evidence.attention_count
       + readiness.summary.domain_dispatch_attention_count,
   );
   assert.equal(

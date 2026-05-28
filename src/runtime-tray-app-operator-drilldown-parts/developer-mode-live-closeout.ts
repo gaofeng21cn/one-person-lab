@@ -1,0 +1,373 @@
+import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
+
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function record(value: unknown): JsonRecord {
+  return isRecord(value) ? value : {};
+}
+
+function recordList(value: unknown) {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function stringValue(value: unknown) {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function stringList(value: unknown) {
+  return Array.isArray(value)
+    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
+    : [];
+}
+
+function numberValue(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function commandRef(args: string[]) {
+  return `opl ${args.map((arg) => (
+    arg.includes(' ') || arg.includes('"') ? JSON.stringify(arg) : arg
+  )).join(' ')}`;
+}
+
+function developerModeCloseoutPayloadTemplate(missingRouteKinds: string[]) {
+  return {
+    target_repo_id: '<target-repo-id>',
+    route_decision: missingRouteKinds[0] ?? '<direct-fix|fork-PR>',
+    route_eligibility: '<eligible_direct_fix|eligible_fork_pr>',
+    patrol_observation_ref: '<patrol-observation-ref>',
+    diff_ref: '<diff-ref>',
+    verification_refs: ['<test-result-ref>'],
+    no_forbidden_write_ref: '<no-forbidden-write-ref>',
+    commit_ref: missingRouteKinds.includes('direct-fix') ? '<git-commit-ref>' : null,
+    fork_repo_ref: missingRouteKinds.includes('fork-PR') ? '<github-fork-ref>' : null,
+    pr_review_ref: missingRouteKinds.includes('fork-PR') ? '<github-pr-review-ref>' : null,
+    owner_acceptance_ref: '<external-owner-ref>',
+  };
+}
+
+function developerModeCloseoutPayloadRefHints() {
+  return {
+    route_decision_should_match: ['direct-fix', 'fork-PR'],
+    direct_fix_refs_should_cover: [
+      'patrol_observation_ref',
+      'diff_ref',
+      'verification_refs',
+      'no_forbidden_write_ref',
+      'commit_ref',
+      'external_owner_acceptance_ref',
+    ],
+    fork_pr_refs_should_cover: [
+      'patrol_observation_ref',
+      'diff_ref',
+      'verification_refs',
+      'no_forbidden_write_ref',
+      'fork_repo_ref',
+      'pr_review_ref',
+      'external_owner_acceptance_ref',
+    ],
+    owner_acceptance_ref_policy:
+      'external_owner_ref_or_external_owner_acceptance_ref_only_no_owner_receipt_ref',
+  };
+}
+
+function developerModeCloseoutPayloadWorkorder(missingRouteKinds: string[]) {
+  return {
+    surface_kind: 'opl_developer_mode_live_closeout_payload_workorder',
+    workorder_policy:
+      'operator_must_record_real_direct_fix_or_fork_pr_closeout_refs_empty_template_blocks',
+    payload_owner: 'developer_mode_operator_or_external_repo_owner',
+    accepted_payload_path_policy:
+      'real_developer_mode_closeout_refs_only_no_owner_receipt_no_domain_truth',
+    accepted_payload_paths: {
+      direct_fix_path: {
+        route_decision: 'direct-fix',
+        required_operator_payload_refs: [
+          'target_repo_id',
+          'route_eligibility',
+          'patrol_observation_ref',
+          'diff_ref',
+          'verification_refs',
+          'no_forbidden_write_ref',
+          'commit_ref',
+          'owner_acceptance_ref',
+        ],
+        owner_acceptance_ref_must_be_external: true,
+        closes_domain_ready: false,
+        closes_production_ready: false,
+      },
+      fork_pr_path: {
+        route_decision: 'fork-PR',
+        required_operator_payload_refs: [
+          'target_repo_id',
+          'route_eligibility',
+          'patrol_observation_ref',
+          'diff_ref',
+          'verification_refs',
+          'no_forbidden_write_ref',
+          'fork_repo_ref',
+          'pr_review_ref',
+          'owner_acceptance_ref',
+        ],
+        owner_acceptance_ref_must_be_external: true,
+        closes_domain_ready: false,
+        closes_production_ready: false,
+      },
+    },
+    missing_live_ledger_route_kinds: missingRouteKinds,
+    required_operator_payload_refs: [
+      'target_repo_id',
+      'route_decision',
+      'route_eligibility',
+      'patrol_observation_ref',
+      'diff_ref',
+      'verification_refs',
+      'no_forbidden_write_ref',
+      'commit_ref_or_fork_pr_refs',
+      'owner_acceptance_ref',
+    ],
+    required_return_shapes: [
+      'developer_mode_direct_fix_closeout_receipt_ref',
+      'developer_mode_fork_pr_closeout_receipt_ref',
+      'developer_mode_closeout_verified_receipt_ref',
+    ],
+    payload_template: developerModeCloseoutPayloadTemplate(missingRouteKinds),
+    payload_ref_hints: developerModeCloseoutPayloadRefHints(),
+    empty_payload_template_is_success_evidence: false,
+    authority_boundary: {
+      refs_only: true,
+      can_write_domain_truth: false,
+      can_write_memory_body: false,
+      can_read_memory_body: false,
+      can_read_artifact_body: false,
+      can_mutate_artifact_body: false,
+      can_authorize_quality_or_export: false,
+      can_create_owner_receipt: false,
+      can_write_owner_receipt: false,
+      can_modify_managed_runtime: false,
+      can_close_domain_ready: false,
+      can_claim_release_ready: false,
+      can_claim_production_ready: false,
+      can_close_developer_mode_live_route: false,
+    },
+  };
+}
+
+export function developerModeLiveCloseoutEvidenceSummary(evidence: JsonRecord) {
+  const summary = record(evidence.summary);
+  const verifiedDirectFixLedgerReceiptRefCount =
+    numberValue(summary.verified_direct_fix_ledger_receipt_ref_count);
+  const verifiedForkPrLedgerReceiptRefCount =
+    numberValue(summary.verified_fork_pr_ledger_receipt_ref_count);
+  const missingLiveLedgerRouteKinds = [
+    verifiedDirectFixLedgerReceiptRefCount > 0 ? null : 'direct-fix',
+    verifiedForkPrLedgerReceiptRefCount > 0 ? null : 'fork-PR',
+  ].filter((entry): entry is string => Boolean(entry));
+  const pendingVerifyReceiptRefCount =
+    numberValue(summary.pending_verify_receipt_ref_count);
+  const attentionCount = pendingVerifyReceiptRefCount > 0
+    ? pendingVerifyReceiptRefCount
+    : missingLiveLedgerRouteKinds.length;
+  return {
+    status: stringValue(evidence.status),
+    ledger_evidence_status: stringValue(evidence.ledger_evidence_status),
+    drill_count: numberValue(summary.drill_count),
+    direct_fix_drill_count: numberValue(summary.direct_fix_drill_count),
+    fork_pr_drill_count: numberValue(summary.fork_pr_drill_count),
+    closeout_ready_count: numberValue(summary.closeout_ready_count),
+    live_external_owner_acceptance_count:
+      numberValue(summary.live_external_owner_acceptance_count),
+    live_ledger_closeout_ready_count:
+      numberValue(summary.live_ledger_closeout_ready_count),
+    ledger_receipt_ref_count: numberValue(summary.ledger_receipt_ref_count),
+    ledger_recorded_receipt_ref_count:
+      numberValue(summary.ledger_recorded_receipt_ref_count),
+    ledger_verified_receipt_ref_count:
+      numberValue(summary.ledger_verified_receipt_ref_count),
+    pending_verify_receipt_ref_count: pendingVerifyReceiptRefCount,
+    verified_direct_fix_ledger_receipt_ref_count:
+      verifiedDirectFixLedgerReceiptRefCount,
+    verified_fork_pr_ledger_receipt_ref_count:
+      verifiedForkPrLedgerReceiptRefCount,
+    repo_contract_fixture_drill_count:
+      numberValue(summary.repo_contract_fixture_drill_count),
+    external_owner_acceptance_missing_count:
+      numberValue(summary.external_owner_acceptance_missing_count),
+    fixture_drill_owner_acceptance_open_count:
+      numberValue(summary.fixture_drill_owner_acceptance_open_count),
+    external_owner_closeout_refs_ready_count:
+      numberValue(summary.external_owner_closeout_refs_ready_count),
+    forbidden_owner_receipt_write_count:
+      numberValue(summary.forbidden_owner_receipt_write_count),
+    missing_live_ledger_route_kinds: missingLiveLedgerRouteKinds,
+    missing_live_ledger_route_count: missingLiveLedgerRouteKinds.length,
+    attention_count: attentionCount,
+    live_route_closeout_refs_ready:
+      stringValue(evidence.status) === 'closeout_refs_ready',
+  };
+}
+
+export function buildDeveloperModeLiveCloseoutEvidenceAttention(drilldown: JsonRecord) {
+  const evidence = record(drilldown.developer_mode_live_closeout_evidence);
+  const summary = developerModeLiveCloseoutEvidenceSummary(evidence);
+  const pendingVerifyReceiptRefs = stringList(evidence.pending_verify_receipt_refs);
+  const missingRouteKinds = stringList(summary.missing_live_ledger_route_kinds);
+  const canRecord = missingRouteKinds.length > 0;
+  const firstPendingVerifyReceiptRef = pendingVerifyReceiptRefs[0] ?? null;
+  const verifyArgs = firstPendingVerifyReceiptRef
+    ? [
+        'runtime',
+        'developer-mode-closeout',
+        'verify',
+        '--receipt-ref',
+        firstPendingVerifyReceiptRef,
+      ]
+    : null;
+  const recordArgs = ['runtime', 'developer-mode-closeout', 'record', '--payload', '<json>'];
+  return {
+    surface_kind: 'opl_app_drilldown_developer_mode_live_closeout_evidence_attention',
+    owner: 'one-person-lab',
+    target_surface: 'opl_developer_mode_agent_lab_live_closeout',
+    status: summary.status ?? 'closeout_refs_incomplete',
+    ledger_evidence_status: summary.ledger_evidence_status,
+    developer_mode_live_route_closeout_refs_ready:
+      summary.live_route_closeout_refs_ready,
+    attention_required: summary.attention_count > 0,
+    attention_count: summary.attention_count,
+    missing_live_ledger_route_count: summary.missing_live_ledger_route_count,
+    missing_live_ledger_route_kinds: missingRouteKinds,
+    ledger_receipt_ref_count: summary.ledger_receipt_ref_count,
+    ledger_recorded_receipt_ref_count:
+      summary.ledger_recorded_receipt_ref_count,
+    ledger_verified_receipt_ref_count:
+      summary.ledger_verified_receipt_ref_count,
+    pending_verify_receipt_ref_count:
+      summary.pending_verify_receipt_ref_count,
+    pending_verify_receipt_refs: pendingVerifyReceiptRefs,
+    verified_direct_fix_ledger_receipt_ref_count:
+      summary.verified_direct_fix_ledger_receipt_ref_count,
+    verified_fork_pr_ledger_receipt_ref_count:
+      summary.verified_fork_pr_ledger_receipt_ref_count,
+    external_owner_acceptance_missing_count:
+      summary.external_owner_acceptance_missing_count,
+    fixture_drill_owner_acceptance_open_count:
+      summary.fixture_drill_owner_acceptance_open_count,
+    forbidden_owner_receipt_write_count:
+      summary.forbidden_owner_receipt_write_count,
+    required_closeout_ref_groups: stringList(evidence.required_closeout_ref_groups),
+    required_return_shapes: [
+      'developer_mode_direct_fix_closeout_receipt_ref',
+      'developer_mode_fork_pr_closeout_receipt_ref',
+      'developer_mode_closeout_verified_receipt_ref',
+      'external_owner_acceptance_ref',
+    ],
+    receipt_verification_required: pendingVerifyReceiptRefs.length > 0,
+    verification_command_ref: verifyArgs ? commandRef(verifyArgs) : null,
+    record_command_ref: canRecord ? commandRef(recordArgs) : null,
+    route_requires_domain_or_app_payload: canRecord,
+    can_close_without_domain_or_app_payload: pendingVerifyReceiptRefs.length > 0,
+    payload_owner: 'developer_mode_operator_or_external_repo_owner',
+    payload_template: canRecord
+      ? developerModeCloseoutPayloadTemplate(missingRouteKinds)
+      : null,
+    payload_ref_hints: canRecord ? developerModeCloseoutPayloadRefHints() : null,
+    payload_workorder: canRecord
+      ? developerModeCloseoutPayloadWorkorder(missingRouteKinds)
+      : null,
+    payload_template_policy: canRecord
+      ? 'template_is_empty_by_design_replace_with_real_developer_mode_closeout_refs_before_submit'
+      : null,
+    empty_payload_template_is_success_evidence: false,
+    drill_sample_count: Math.min(recordList(evidence.drills).length, 3),
+    full_detail_section: 'developer_mode_live_closeout_evidence',
+    authority_boundary: {
+      ...record(drilldown.authority_boundary),
+      refs_only: true,
+      can_write_domain_truth: false,
+      can_write_memory_body: false,
+      can_read_memory_body: false,
+      can_read_artifact_body: false,
+      can_mutate_artifact_body: false,
+      can_authorize_quality_or_export: false,
+      can_create_owner_receipt: false,
+      can_write_owner_receipt: false,
+      can_modify_managed_runtime: false,
+      can_close_domain_ready: false,
+      can_claim_release_ready: false,
+      can_claim_production_ready: false,
+      can_close_developer_mode_live_route: false,
+    },
+  };
+}
+
+export function developerModeLiveCloseoutEvidenceNextStep(evidence: JsonRecord) {
+  const missingRouteKinds = stringList(evidence.missing_live_ledger_route_kinds);
+  const pendingVerifyReceiptRefs = stringList(evidence.pending_verify_receipt_refs);
+  return {
+    step_kind: 'developer_mode_live_closeout_evidence',
+    owner: stringValue(evidence.owner) ?? 'one-person-lab',
+    target_surface:
+      stringValue(evidence.target_surface) ?? 'opl_developer_mode_agent_lab_live_closeout',
+    status: stringValue(evidence.status),
+    ledger_evidence_status: stringValue(evidence.ledger_evidence_status),
+    developer_mode_live_route_closeout_refs_ready:
+      evidence.developer_mode_live_route_closeout_refs_ready === true,
+    attention_count: numberValue(evidence.attention_count),
+    missing_live_ledger_route_count:
+      numberValue(evidence.missing_live_ledger_route_count),
+    missing_live_ledger_route_kinds: missingRouteKinds,
+    pending_verify_receipt_ref_count:
+      numberValue(evidence.pending_verify_receipt_ref_count),
+    pending_verify_receipt_refs: pendingVerifyReceiptRefs,
+    verified_direct_fix_ledger_receipt_ref_count:
+      numberValue(evidence.verified_direct_fix_ledger_receipt_ref_count),
+    verified_fork_pr_ledger_receipt_ref_count:
+      numberValue(evidence.verified_fork_pr_ledger_receipt_ref_count),
+    required_closeout_ref_groups: stringList(evidence.required_closeout_ref_groups),
+    required_return_shapes: stringList(evidence.required_return_shapes),
+    payload_owner:
+      stringValue(evidence.payload_owner) ?? 'developer_mode_operator_or_external_repo_owner',
+    receipt_verification_required: evidence.receipt_verification_required === true,
+    verification_command_ref: stringValue(evidence.verification_command_ref),
+    record_command_ref: stringValue(evidence.record_command_ref),
+    route_requires_domain_or_app_payload:
+      evidence.route_requires_domain_or_app_payload === true,
+    can_close_without_domain_or_app_payload:
+      evidence.can_close_without_domain_or_app_payload === true,
+    payload_template: record(evidence.payload_template),
+    payload_ref_hints: record(evidence.payload_ref_hints),
+    payload_workorder: record(evidence.payload_workorder),
+    payload_template_policy: stringValue(evidence.payload_template_policy),
+    empty_payload_template_is_success_evidence: false,
+    full_detail_section: 'developer_mode_live_closeout_evidence',
+    can_execute_domain_action: false,
+    can_create_owner_receipt: false,
+    can_write_owner_receipt: false,
+    can_modify_managed_runtime: false,
+    can_close_domain_ready: false,
+    can_claim_release_ready: false,
+    can_claim_production_ready: false,
+    can_close_developer_mode_live_route: false,
+  };
+}
+
+export function frameworkDeveloperModeLiveCloseoutNextSafeAction(evidence: JsonRecord) {
+  return {
+    ...developerModeLiveCloseoutEvidenceNextStep(evidence),
+    action_id: 'review_developer_mode_live_closeout_evidence',
+    action_kind: 'developer_mode_live_closeout_evidence_review',
+    evidence_closure_gate:
+      'developer_mode_direct_fix_and_fork_pr_external_owner_acceptance_gate',
+    full_detail_section:
+      'attention_first_payload.evidence_after_contract.developer_mode_live_closeout_evidence',
+    authority: 'operator_attention_only',
+    can_execute_domain_action: false,
+    can_write_domain_truth: false,
+    can_create_owner_receipt: false,
+    can_create_typed_blocker: false,
+    can_close_domain_ready: false,
+    can_claim_production_ready: false,
+  };
+}

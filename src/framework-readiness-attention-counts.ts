@@ -16,6 +16,7 @@ export function splitOperatorAttentionCounts(input: {
   stageRuntimeEventMissingWorkorderCount?: number;
   appReleaseUserPathAttentionCount?: number;
   omaProductionConsumptionAttentionCount?: number;
+  developerModeLiveCloseoutAttentionCount?: number;
   operatorPayloadRequiredAttentionCount?: number;
 }) {
   const defaultPayloadRequiredAttentionCount =
@@ -23,14 +24,16 @@ export function splitOperatorAttentionCounts(input: {
     + numberValue(input.stageSourceScopeMissingWorkorderCount)
     + numberValue(input.stageRuntimeEventMissingWorkorderCount)
     + numberValue(input.appReleaseUserPathAttentionCount)
-    + numberValue(input.omaProductionConsumptionAttentionCount);
+    + numberValue(input.omaProductionConsumptionAttentionCount)
+    + numberValue(input.developerModeLiveCloseoutAttentionCount);
   const operatorActionableAttentionCount =
     numberValue(input.openTailCount)
     + numberValue(input.evidenceEnvelopeOpenCount)
     + numberValue(input.stageSourceScopeMissingWorkorderCount)
     + numberValue(input.stageRuntimeEventMissingWorkorderCount)
     + numberValue(input.appReleaseUserPathAttentionCount)
-    + numberValue(input.omaProductionConsumptionAttentionCount);
+    + numberValue(input.omaProductionConsumptionAttentionCount)
+    + numberValue(input.developerModeLiveCloseoutAttentionCount);
   const domainBlockedAttentionCount =
     numberValue(input.evidenceEnvelopeBlockedCount)
     + numberValue(input.domainDispatchAttentionCount);
@@ -61,6 +64,7 @@ export function splitOperatorAttentionCountsWithSafeActionPayload(input: {
   domainDispatchAttentionCount?: number;
   stageSourceScopeMissingWorkorderCount?: number;
   stageRuntimeEventMissingWorkorderCount?: number;
+  developerModeLiveCloseoutAttentionCount?: number;
   openSafeActionPayloadRequiredCount?: number;
   openSafeActionPayloadFreeCount?: number;
 }) {
@@ -71,6 +75,7 @@ export function splitOperatorAttentionCountsWithSafeActionPayload(input: {
     domainDispatchAttentionCount: input.domainDispatchAttentionCount,
     stageSourceScopeMissingWorkorderCount: input.stageSourceScopeMissingWorkorderCount,
     stageRuntimeEventMissingWorkorderCount: input.stageRuntimeEventMissingWorkorderCount,
+    developerModeLiveCloseoutAttentionCount: input.developerModeLiveCloseoutAttentionCount,
   };
   const defaultAttentionCounts = splitOperatorAttentionCounts(baseInput);
   const openSafeActionPayloadSplitCount =

@@ -19,6 +19,7 @@ export function frameworkKernelFloor() {
       'evidence_envelope_attention',
       'domain_dispatch_attention',
       'oma_production_consumption_followthrough',
+      'developer_mode_live_closeout_evidence',
       'runtime_manager_route_support',
       'provider_slo_status',
     ],
@@ -85,6 +86,13 @@ export function frameworkDiagnosticDrilldowns(sourceCommands: SourceCommands) {
       default_surface: false,
       source_command: sourceCommands.app_operator_drilldown,
       embedded_payload_ref: '/framework_readiness/oma_production_consumption_followthrough',
+    },
+    {
+      lens_id: 'developer_mode_live_closeout_evidence',
+      role: 'diagnostic_drilldown',
+      default_surface: false,
+      source_command: sourceCommands.app_operator_drilldown,
+      embedded_payload_ref: '/framework_readiness/developer_mode_live_closeout_evidence',
     },
     {
       lens_id: 'runtime_manager_route_support',

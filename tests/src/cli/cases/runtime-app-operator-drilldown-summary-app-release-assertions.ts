@@ -42,6 +42,7 @@ export function assertAppReleaseUserPathAttentionCounts(summaryDrilldown: any) {
     summaryDrilldown.summary.evidence_envelope_open_count
       + evidenceAfterContract.app_release_user_path_evidence_open_gate_count
       + evidenceAfterContract.app_release_user_path_evidence_pending_verify_receipt_ref_count
+      + evidenceAfterContract.developer_mode_live_closeout_attention_count
       + evidenceAfterContract.oma_production_consumption_followthrough_open_gate_count,
   );
   assert.equal(

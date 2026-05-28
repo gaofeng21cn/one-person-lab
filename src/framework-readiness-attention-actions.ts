@@ -1,6 +1,9 @@
 import {
   frameworkAppReleaseUserPathNextSafeAction,
 } from './runtime-tray-app-operator-drilldown-parts/app-release-user-path.ts';
+import {
+  frameworkDeveloperModeLiveCloseoutNextSafeAction,
+} from './runtime-tray-app-operator-drilldown-parts/developer-mode-live-closeout.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -331,6 +334,7 @@ export function frameworkAttentionNextSafeActions(input: {
   ownerPayloadGroups: JsonRecord[];
   ownerHandoffPacket: JsonRecord;
   appReleaseUserPathEvidence: JsonRecord;
+  developerModeLiveCloseoutEvidence?: JsonRecord;
   omaProductionConsumptionFollowthrough: JsonRecord;
   domainDispatchEvidenceWorkorderGroupAttentionItems: JsonRecord[];
   itemLimit: number;
@@ -380,6 +384,15 @@ export function frameworkAttentionNextSafeActions(input: {
         || numberValue(input.appReleaseUserPathEvidence.pending_verify_receipt_ref_count) > 0
         ? [
             frameworkAppReleaseUserPathNextSafeAction(input.appReleaseUserPathEvidence),
+          ]
+        : []
+    ),
+    ...(
+      numberValue(record(input.developerModeLiveCloseoutEvidence).attention_count) > 0
+        ? [
+            frameworkDeveloperModeLiveCloseoutNextSafeAction(
+              record(input.developerModeLiveCloseoutEvidence),
+            ),
           ]
         : []
     ),

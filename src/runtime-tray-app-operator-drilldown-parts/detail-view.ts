@@ -18,6 +18,10 @@ import {
   codexAppRuntimeEvidenceNextStep,
 } from './codex-app-runtime-role.ts';
 import {
+  buildDeveloperModeLiveCloseoutEvidenceAttention,
+  developerModeLiveCloseoutEvidenceNextStep,
+} from './developer-mode-live-closeout.ts';
+import {
   buildDomainOwnerPayloadSummaryAttention,
 } from './domain-owner-payload-summary-attention.ts';
 import { buildMemoryArtifactLifecycleEvidence } from './memory-artifact-lifecycle-evidence.ts';
@@ -29,54 +33,14 @@ import {
 } from './selected-safe-action-candidates.ts';
 import { buildOwnerPayloadWorkorder } from './owner-payload-workorder.ts';
 import { splitOperatorAttentionCounts } from '../framework-readiness-attention-counts.ts';
+import {
+  LAZY_LOAD_TARGETS,
+  SUMMARY_DRILLDOWN_KEYS,
+} from './detail-sections.ts';
 
 export type AppOperatorDrilldownDetailLevel = 'summary' | 'full';
 
 const DEFAULT_ATTENTION_ITEM_LIMIT = 5;
-
-const SUMMARY_DRILLDOWN_KEYS = [
-  'route_graph_refs',
-  'decision_map_refs',
-  'review_repair_queue_refs',
-  'artifact_gallery_refs',
-  'package_export_lifecycle_refs',
-  'memory_writeback_refs',
-  'quality_readiness_refs',
-  'provider_slo_operator_action_refs',
-  'runtime_manager_route_support',
-  'route_transition_drilldown',
-  'periodic_execution_refs',
-  'operator_action_routing_refs',
-  'owner_receipt_refs',
-  'typed_blocker_refs',
-  'domain_dispatch_evidence',
-  'stage_production_evidence',
-  'freshness_refs',
-  'ref_family_refs',
-  'safe_action_refs',
-  'app_execution_bridge',
-  'lifecycle_ledger_refs',
-  'domain_projection_refs',
-  'domain_owner_payload_summary_refs',
-  'domain_evidence_request_refs',
-  'production_evidence_tail_ledger',
-  'evidence_envelope',
-  'runtime_visualization_projection',
-  'domain_legacy_cleanup_plan_refs',
-  'standard_agent_template_consumption_refs',
-  'opl_meta_agent_workbench_refs',
-  'codex_app_runtime_role',
-  'app_release_user_path_evidence',
-  'functional_privatization_audit_summary',
-  'functional_privatization_audit_refs',
-  'default_caller_deletion_evidence_refs',
-] as const;
-
-const LAZY_LOAD_TARGETS = SUMMARY_DRILLDOWN_KEYS.map((section) => ({
-  section,
-  detail_args: ['--detail', 'full'],
-  load_policy: 'explicit_drilldown_lazy_load',
-}));
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -418,6 +382,8 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
   const omaProductionConsumption =
     buildOmaProductionConsumptionFollowthroughAttention(drilldown);
   const appReleaseUserPathEvidence = buildAppReleaseUserPathEvidence(drilldown);
+  const developerModeLiveCloseoutEvidence =
+    buildDeveloperModeLiveCloseoutEvidenceAttention(drilldown);
   const evidenceEnvelopeAttentionCount = (
     numberValue(summary.evidence_envelope_open_count)
     + numberValue(summary.evidence_envelope_blocked_count)
@@ -431,6 +397,8 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
     numberValue(appReleaseUserPathEvidence.pending_verify_receipt_ref_count);
   const appReleaseUserPathAttentionCount = appReleaseUserPathOpenGateCount
     + appReleaseUserPathPendingVerifyCount;
+  const developerModeLiveCloseoutAttentionCount =
+    numberValue(developerModeLiveCloseoutEvidence.attention_count);
   const attentionCounts = splitOperatorAttentionCounts({
     evidenceEnvelopeOpenCount: numberValue(summary.evidence_envelope_open_count),
     evidenceEnvelopeBlockedCount: numberValue(summary.evidence_envelope_blocked_count),
@@ -440,7 +408,9 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
     operatorPayloadRequiredAttentionCount:
       numberValue(summary.evidence_envelope_open_count)
       + appReleaseUserPathAttentionCount
-      + omaProductionConsumptionAttentionCount,
+      + omaProductionConsumptionAttentionCount
+      + developerModeLiveCloseoutAttentionCount,
+    developerModeLiveCloseoutAttentionCount,
   });
   const routeSupportTaskKindCount =
     numberValue(summary.runtime_manager_mas_route_support_task_kind_count);
@@ -485,6 +455,9 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
     app_release_user_path_evidence_open_gate_count: appReleaseUserPathOpenGateCount,
     app_release_user_path_evidence_pending_verify_receipt_ref_count:
       appReleaseUserPathPendingVerifyCount,
+    developer_mode_live_closeout_evidence: developerModeLiveCloseoutEvidence,
+    developer_mode_live_closeout_attention_count:
+      developerModeLiveCloseoutAttentionCount,
     oma_production_consumption_followthrough: omaProductionConsumption,
     oma_production_consumption_followthrough_open_gate_count:
       omaProductionConsumptionAttentionCount,
@@ -520,6 +493,7 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
       'runtime_manager_route_support',
       'opl_meta_agent_workbench_refs',
       'app_release_user_path_evidence',
+      'developer_mode_live_closeout_evidence',
     ],
     authority_boundary: {
       ...authorityBoundary(drilldown),
@@ -676,6 +650,8 @@ function evidenceNextSteps(drilldown: JsonRecord) {
   const missingEvidence = missingEvidenceItems(drilldown);
   const advisory = advisoryItems(drilldown);
   const appReleaseUserPathEvidence = record(attention.app_release_user_path_evidence);
+  const developerModeLiveCloseoutEvidence =
+    record(attention.developer_mode_live_closeout_evidence);
   const omaProductionConsumption = record(attention.oma_production_consumption_followthrough);
   const codexAppRuntimeRole = record(drilldown.codex_app_runtime_role);
   const codexAppRuntimeFollowthrough =
@@ -700,6 +676,9 @@ function evidenceNextSteps(drilldown: JsonRecord) {
     || numberValue(omaProductionConsumption.pending_verify_long_soak_receipt_ref_count) > 0
   ) {
     steps.push(omaProductionConsumptionNextStep(omaProductionConsumption));
+  }
+  if (numberValue(developerModeLiveCloseoutEvidence.attention_count) > 0) {
+    steps.push(developerModeLiveCloseoutEvidenceNextStep(developerModeLiveCloseoutEvidence));
   }
   steps.push(...functionalPrivatizationSteps);
   if (

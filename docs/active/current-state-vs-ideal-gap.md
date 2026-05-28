@@ -99,7 +99,7 @@ Live truth inputs:
 2. 继续把 `opl agents conformance --family-defaults --json` 作为结构回归守门；若 fresh conformance hard blocker 重新出现，先处理 blocker，再推进证据尾项。
 3. 把 strict standard-agent source purity 作为防回归守门：若 MAS/MAG/RCA/OMA 重新出现 repo-local generic default caller、domain-action/status/workbench wrapper、runtime projection、queue/ledger/session/lifecycle shell、compat alias 或 compatibility-only test，先 fail closed 处理。
 4. 推进 MAS/MAG/RCA repo-owned production caller、owner receipt、typed blocker、memory/artifact/lifecycle receipt、no-regression 和 live long-soak evidence。
-5. 推进 Developer Mode non-owner fork/PR owner acceptance 与 App release-ready owner boundary；App user-path evidence ready 不等于 App release ready。
+5. 推进 Developer Mode non-owner fork/PR owner acceptance 与 App release-ready owner boundary；App/operator 与 framework readiness 已能投影 Developer Mode live closeout evidence attention，但 projection / direct-fix-only receipt / fixture drill 不等于真实 fork/PR owner acceptance；App user-path evidence ready 不等于 App release ready。
 
 Non-goals:
 

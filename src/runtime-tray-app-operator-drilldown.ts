@@ -101,6 +101,9 @@ import {
   buildRuntimeVisualizationProjection,
 } from './runtime-tray-app-operator-drilldown-parts/runtime-visualization-projection.ts';
 import {
+  buildDeveloperModeAgentLabRepairRouteReadModel,
+} from './agent-lab-developer-mode.ts';
+import {
   booleanValue,
   cleanupCommandDomainId,
   nestedRef,
@@ -959,6 +962,9 @@ export function buildAppOperatorDrilldown(input: {
   const providerCadenceWindow = providerCadenceWindowSummary(input.providerContinuousProof);
   const providerCapabilitySlo = providerCapabilitySloSummary(input.providerContinuousProof);
   const appRuntimeRole = buildCodexAppRuntimeRole();
+  const developerModeRepairRoutes = buildDeveloperModeAgentLabRepairRouteReadModel();
+  const developerModeLiveCloseoutEvidence =
+    record(developerModeRepairRoutes.live_closeout_evidence);
   const runtimeManagerRouteSupport = runtimeManagerRouteSupportRefs();
   const routeTransitionDrilldownRefs = routeTransitionDrilldown({
     attempts,
@@ -1092,6 +1098,7 @@ export function buildAppOperatorDrilldown(input: {
       evidenceEnvelope,
       codexAppRuntimeRole: appRuntimeRole,
       appReleaseUserPathEvidence,
+      developerModeLiveCloseoutEvidence,
     }),
     codex_app_runtime_role_status: appRuntimeRole.runtime_policy,
     codex_app_runtime_role_count: Array.isArray(appRuntimeRole.codex_app_roles)
@@ -1175,6 +1182,10 @@ export function buildAppOperatorDrilldown(input: {
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown', 'app_operator_drilldown'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/codex_app_runtime_role', 'codex_app_runtime_role'),
     appReleaseUserPathEvidenceSourceRef(),
+    sourceRef(
+      '/runtime_tray_snapshot/app_operator_drilldown/developer_mode_live_closeout_evidence',
+      'developer_mode_live_closeout_evidence',
+    ),
     sourceRef('/app-release-user-path-evidence-ledger', 'app_release_user_path_evidence_ledger'),
     sourceRef('/runtime_manager/family_runtime_queue/mas_domain_route_projection', 'runtime_manager_mas_route_support'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/route_transition_drilldown', 'route_transition_drilldown'),
@@ -1239,6 +1250,7 @@ export function buildAppOperatorDrilldown(input: {
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
     app_release_user_path_evidence: appReleaseUserPathEvidence,
+    developer_mode_live_closeout_evidence: developerModeLiveCloseoutEvidence,
     runtime_manager_route_support: runtimeManagerRouteSupport,
     route_transition_drilldown: routeTransitionDrilldownRefs,
     periodic_execution_refs: periodicRefs,

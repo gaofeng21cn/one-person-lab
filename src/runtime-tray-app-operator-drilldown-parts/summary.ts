@@ -6,6 +6,9 @@ import {
   codexAppRuntimeEvidenceSummary,
 } from './codex-app-runtime-role.ts';
 import {
+  developerModeLiveCloseoutEvidenceSummary,
+} from './developer-mode-live-closeout.ts';
+import {
   listDomainOwnerPayloadSummaryReceipts,
 } from '../domain-owner-payload-summary-ledger.ts';
 
@@ -44,6 +47,7 @@ type AppOperatorDrilldownSummaryInput = {
   runtimeManagerRouteSupport: JsonRecord;
   codexAppRuntimeRole: JsonRecord;
   appReleaseUserPathEvidence: JsonRecord;
+  developerModeLiveCloseoutEvidence: JsonRecord;
 };
 
 function record(value: unknown): JsonRecord {
@@ -96,6 +100,8 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
   const evidenceEnvelopeSummary = record(input.evidenceEnvelope.summary);
   const appReleaseUserPathSummary =
     appReleaseUserPathEvidenceSummary(input.appReleaseUserPathEvidence);
+  const developerModeLiveCloseoutSummary =
+    developerModeLiveCloseoutEvidenceSummary(input.developerModeLiveCloseoutEvidence);
   const codexAppRuntimeEvidence =
     codexAppRuntimeEvidenceSummary(input.codexAppRuntimeRole);
   const domainOwnerPayloadSummaryReceipts = listDomainOwnerPayloadSummaryReceipts();
@@ -495,6 +501,46 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       appReleaseUserPathSummary.release_ready_claimed,
     app_release_user_path_production_ready_claimed:
       appReleaseUserPathSummary.production_ready_claimed,
+    developer_mode_live_closeout_status:
+      developerModeLiveCloseoutSummary.status,
+    developer_mode_live_closeout_ledger_evidence_status:
+      developerModeLiveCloseoutSummary.ledger_evidence_status,
+    developer_mode_live_closeout_drill_count:
+      developerModeLiveCloseoutSummary.drill_count,
+    developer_mode_live_closeout_direct_fix_drill_count:
+      developerModeLiveCloseoutSummary.direct_fix_drill_count,
+    developer_mode_live_closeout_fork_pr_drill_count:
+      developerModeLiveCloseoutSummary.fork_pr_drill_count,
+    developer_mode_live_closeout_ready_count:
+      developerModeLiveCloseoutSummary.closeout_ready_count,
+    developer_mode_live_closeout_live_external_owner_acceptance_count:
+      developerModeLiveCloseoutSummary.live_external_owner_acceptance_count,
+    developer_mode_live_closeout_live_ledger_ready_count:
+      developerModeLiveCloseoutSummary.live_ledger_closeout_ready_count,
+    developer_mode_live_closeout_ledger_receipt_ref_count:
+      developerModeLiveCloseoutSummary.ledger_receipt_ref_count,
+    developer_mode_live_closeout_recorded_ledger_receipt_ref_count:
+      developerModeLiveCloseoutSummary.ledger_recorded_receipt_ref_count,
+    developer_mode_live_closeout_verified_ledger_receipt_ref_count:
+      developerModeLiveCloseoutSummary.ledger_verified_receipt_ref_count,
+    developer_mode_live_closeout_pending_verify_receipt_ref_count:
+      developerModeLiveCloseoutSummary.pending_verify_receipt_ref_count,
+    developer_mode_live_closeout_verified_direct_fix_ledger_receipt_ref_count:
+      developerModeLiveCloseoutSummary.verified_direct_fix_ledger_receipt_ref_count,
+    developer_mode_live_closeout_verified_fork_pr_ledger_receipt_ref_count:
+      developerModeLiveCloseoutSummary.verified_fork_pr_ledger_receipt_ref_count,
+    developer_mode_live_closeout_missing_live_ledger_route_count:
+      developerModeLiveCloseoutSummary.missing_live_ledger_route_count,
+    developer_mode_live_closeout_attention_count:
+      developerModeLiveCloseoutSummary.attention_count,
+    developer_mode_live_closeout_fixture_drill_owner_acceptance_open_count:
+      developerModeLiveCloseoutSummary.fixture_drill_owner_acceptance_open_count,
+    developer_mode_live_closeout_external_owner_acceptance_missing_count:
+      developerModeLiveCloseoutSummary.external_owner_acceptance_missing_count,
+    developer_mode_live_closeout_forbidden_owner_receipt_write_count:
+      developerModeLiveCloseoutSummary.forbidden_owner_receipt_write_count,
+    developer_mode_live_route_closeout_refs_ready:
+      developerModeLiveCloseoutSummary.live_route_closeout_refs_ready,
     codex_app_runtime_evidence_gate_count: codexAppRuntimeEvidence.gate_count,
     codex_app_runtime_evidence_open_gate_count:
       codexAppRuntimeEvidence.open_gate_count,
