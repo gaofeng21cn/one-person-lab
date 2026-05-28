@@ -547,6 +547,15 @@ test('agents scaffold consumption evidence generates and validates an ephemeral 
   assert.equal(evidence.owner, 'one-person-lab');
   assert.equal(evidence.status, 'passed');
   assert.equal(evidence.proof_kind, 'ephemeral_generate_then_validate_new_agent_skeleton');
+  assert.match(
+    evidence.evidence_ref,
+    /^opl:\/\/standard-agent-template-consumption\/award-foundry\/[a-f0-9]{16}$/,
+  );
+  assert.match(evidence.evidence_fingerprint, /^sha256:[a-f0-9]{64}$/);
+  assert.equal(
+    evidence.evidence_ref_policy,
+    'deterministic_shape_ref_for_replayable_template_consumption_evidence_not_a_ledger_receipt',
+  );
   assert.equal(evidence.generated_repo_dir_policy, 'ephemeral_removed_after_validation');
   assert.equal(fs.existsSync(evidence.generated_repo_dir_ref), false);
   assert.equal(evidence.generation_summary.generated_written_file_count > 0, true);
@@ -607,6 +616,15 @@ test('agents scaffold consumption evidence repeats generate and validate across 
   assert.equal(evidence.owner, 'one-person-lab');
   assert.equal(evidence.status, 'passed');
   assert.equal(evidence.proof_kind, 'repeat_ephemeral_generate_then_validate_new_agent_skeletons');
+  assert.match(
+    evidence.cohort_evidence_ref,
+    /^opl:\/\/standard-agent-template-consumption\/cohort\/[a-f0-9]{16}$/,
+  );
+  assert.match(evidence.cohort_evidence_fingerprint, /^sha256:[a-f0-9]{64}$/);
+  assert.equal(
+    evidence.evidence_receipt_candidate_policy,
+    'candidate_refs_are_body_free_replayable_shape_ids_not_recorded_ledger_receipts_and_do_not_claim_domain_ready_or_production_ready',
+  );
   assert.deepEqual(evidence.sample_domain_ids, [
     'award-foundry',
     'thesis-foundry',
@@ -621,6 +639,22 @@ test('agents scaffold consumption evidence repeats generate and validate across 
   assert.equal(evidence.consumption_cohort.blocked_sample_count, 0);
   assert.equal(evidence.consumption_cohort.all_samples_passed, true);
   assert.equal(evidence.consumption_cohort.explicit_sample_requested, false);
+  const sampleEvidenceRefs = evidence.consumption_cohort.samples.map((
+    sample: { evidence_ref: string },
+  ) => sample.evidence_ref);
+  assert.deepEqual(
+    sampleEvidenceRefs.map((ref: string) =>
+      /^opl:\/\/standard-agent-template-consumption\/[a-z-]+\/[a-f0-9]{16}$/.test(ref)
+    ),
+    [true, true, true],
+  );
+  assert.equal(new Set(sampleEvidenceRefs).size, 3);
+  assert.deepEqual(
+    evidence.consumption_cohort.samples.map((sample: { evidence_fingerprint: string }) =>
+      /^sha256:[a-f0-9]{64}$/.test(sample.evidence_fingerprint)
+    ),
+    [true, true, true],
+  );
   assert.deepEqual(
     evidence.consumption_cohort.samples.map((sample: { generated_repo_dir_policy: string }) =>
       sample.generated_repo_dir_policy

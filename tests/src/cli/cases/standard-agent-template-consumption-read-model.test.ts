@@ -19,6 +19,22 @@ test('standard agent template consumption read model exposes replayable evidence
     '/standard_domain_agent_template_consumption_evidence',
   );
   assert.equal(readModel.evidence_contract.expected_success_status, 'passed');
+  assert.equal(
+    readModel.evidence_contract.expected_evidence_ref_path,
+    '/standard_domain_agent_template_consumption_evidence/evidence_ref',
+  );
+  assert.equal(
+    readModel.evidence_contract.expected_cohort_evidence_ref_path,
+    '/standard_domain_agent_template_consumption_evidence/cohort_evidence_ref',
+  );
+  assert.equal(
+    readModel.evidence_contract.expected_sample_evidence_ref_path,
+    '/standard_domain_agent_template_consumption_evidence/consumption_cohort/samples/*/evidence_ref',
+  );
+  assert.equal(
+    readModel.evidence_contract.evidence_ref_semantics,
+    'deterministic_body_free_shape_refs_for_replayable_consumption_evidence_not_recorded_ledger_receipts',
+  );
   assert.deepEqual(readModel.evidence_contract.expected_consumed_surfaces, [
     'scaffold_validation',
     'standard_agent_conformance',
@@ -32,6 +48,9 @@ test('standard agent template consumption read model exposes replayable evidence
     'production_ready',
     'quality_or_export_authorized',
   ]);
+  assert.equal(readModel.expected_evidence_fields.includes('evidence_ref'), true);
+  assert.equal(readModel.expected_evidence_fields.includes('cohort_evidence_ref'), true);
+  assert.equal(readModel.expected_evidence_fields.includes('evidence_receipt_candidate_policy'), true);
   assert.equal(readModel.summary.domain_ready_claim_count, 0);
   assert.equal(readModel.summary.production_ready_claim_count, 0);
   assert.equal(readModel.summary.artifact_authority_claim_count, 0);

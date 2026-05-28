@@ -872,6 +872,19 @@ export function buildStandardDomainAgentTemplateConsumptionReadModel() {
       expected_sample_success_path:
         '/standard_domain_agent_template_consumption_evidence/consumption_cohort/samples/*/status',
       expected_sample_success_status: 'passed',
+      expected_evidence_ref_path: '/standard_domain_agent_template_consumption_evidence/evidence_ref',
+      expected_evidence_fingerprint_path:
+        '/standard_domain_agent_template_consumption_evidence/evidence_fingerprint',
+      expected_cohort_evidence_ref_path:
+        '/standard_domain_agent_template_consumption_evidence/cohort_evidence_ref',
+      expected_cohort_evidence_fingerprint_path:
+        '/standard_domain_agent_template_consumption_evidence/cohort_evidence_fingerprint',
+      expected_evidence_receipt_candidate_policy_path:
+        '/standard_domain_agent_template_consumption_evidence/evidence_receipt_candidate_policy',
+      expected_sample_evidence_ref_path:
+        '/standard_domain_agent_template_consumption_evidence/consumption_cohort/samples/*/evidence_ref',
+      evidence_ref_semantics:
+        'deterministic_body_free_shape_refs_for_replayable_consumption_evidence_not_recorded_ledger_receipts',
       expected_consumed_surfaces: [
         'scaffold_validation',
         'standard_agent_conformance',
@@ -908,6 +921,11 @@ export function buildStandardDomainAgentTemplateConsumptionReadModel() {
       'generated_surface_owner_verified',
       'private_surface_policy_guarded',
       'stage_pack_v2_status',
+      'evidence_ref',
+      'evidence_fingerprint',
+      'cohort_evidence_ref',
+      'cohort_evidence_fingerprint',
+      'evidence_receipt_candidate_policy',
     ],
     summary: {
       proof_command_count: 1,

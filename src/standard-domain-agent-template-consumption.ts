@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -29,6 +30,23 @@ function stringValue(value: unknown) {
 
 function numberValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => stableJson(entry)).join(',')}]`;
+  }
+  if (value && typeof value === 'object') {
+    const recordValue = value as Record<string, unknown>;
+    return `{${Object.keys(recordValue).sort().map((key) =>
+      `${JSON.stringify(key)}:${stableJson(recordValue[key])}`
+    ).join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
+}
+
+function sha256Stable(value: unknown) {
+  return crypto.createHash('sha256').update(stableJson(value)).digest('hex');
 }
 
 function normalizeDomainId(value: string | undefined) {
@@ -224,12 +242,46 @@ function buildSample(input: Required<ScaffoldInput>) {
     });
     const surfaceConsumptionProof = buildSurfaceConsumptionProof(targetDir, domainId);
     const validationStatus = stringValue(validation.status);
+    const evidenceFingerprint = sha256Stable({
+      domain_id: domainId,
+      generation_summary: {
+        generated_written_file_count: generatedWrittenFileCount,
+        generated_template_file_count: generatedTemplateFileCount,
+      },
+      validation_summary: {
+        validation_status: validationStatus,
+        blocker_count: Array.isArray(validation.blockers) ? validation.blockers.length : 0,
+        consumed_pack_path_count: numberValue(refs.consumed_pack_path_count),
+        consumed_stage_count: numberValue(refs.consumed_stage_count),
+        selected_executor_binding_observed_count:
+          numberValue(refs.selected_executor_binding_observed_count),
+        default_codex_executor_binding_count: numberValue(refs.default_codex_executor_binding_count),
+        quality_gate_ref_resolved_stage_count: numberValue(refs.quality_gate_ref_resolved_stage_count),
+        generated_surface_owner_verified: refs.generated_surface_owner_verified === true,
+        private_surface_policy_guarded: refs.private_surface_policy_guarded === true,
+        stage_pack_v2_status: stringValue(refs.stage_pack_v2_status),
+      },
+      surface_consumption_status: stringValue(surfaceConsumptionProof.consumed_surface_status),
+      conformance_status: stringValue(surfaceConsumptionProof.conformance_status),
+      readiness_status: stringValue(surfaceConsumptionProof.readiness_status),
+      consumed_surfaces: [
+        'scaffold_validation',
+        'standard_agent_conformance',
+        'agent_readiness',
+        'app_operator_projection',
+      ],
+    });
+    const evidenceRef = `opl://standard-agent-template-consumption/${domainId}/${evidenceFingerprint.slice(0, 16)}`;
     return {
       surface_kind: 'opl_standard_agent_template_consumption_evidence',
       owner: 'one-person-lab',
       status: validationStatus === 'passed' ? 'passed' : 'blocked',
       proof_kind: 'ephemeral_generate_then_validate_new_agent_skeleton',
       domain_id: domainId,
+      evidence_ref: evidenceRef,
+      evidence_fingerprint: `sha256:${evidenceFingerprint}`,
+      evidence_ref_policy:
+        'deterministic_shape_ref_for_replayable_template_consumption_evidence_not_a_ledger_receipt',
       scaffold_ref: 'contracts/opl-framework/standard-domain-agent-skeleton-contract.json',
       generated_repo_dir_ref: targetDir,
       generated_repo_dir_policy: 'ephemeral_removed_after_validation',
@@ -277,6 +329,18 @@ export function buildStandardDomainAgentScaffoldConsumptionEvidence(input: Scaff
   const primary = sampleEvidence[0];
   const blockedSamples = sampleEvidence.filter((sample) => sample.status !== 'passed');
   const passedSamples = sampleEvidence.filter((sample) => sample.status === 'passed');
+  const cohortFingerprint = sha256Stable({
+    sample_domain_ids: sampleEvidence.map((sample) => sample.domain_id),
+    sample_evidence_refs: sampleEvidence.map((sample) => sample.evidence_ref),
+    sample_statuses: sampleEvidence.map((sample) => sample.status),
+    consumed_surfaces: [
+      'scaffold_validation',
+      'standard_agent_conformance',
+      'agent_readiness',
+      'app_operator_projection',
+    ],
+    all_samples_passed: blockedSamples.length === 0,
+  });
 
   return {
     version: 'g2',
@@ -287,6 +351,11 @@ export function buildStandardDomainAgentScaffoldConsumptionEvidence(input: Scaff
         ? 'repeat_ephemeral_generate_then_validate_new_agent_skeletons'
         : primary.proof_kind,
       domain_id: primary.domain_id,
+      cohort_evidence_ref:
+        `opl://standard-agent-template-consumption/cohort/${cohortFingerprint.slice(0, 16)}`,
+      cohort_evidence_fingerprint: `sha256:${cohortFingerprint}`,
+      evidence_receipt_candidate_policy:
+        'candidate_refs_are_body_free_replayable_shape_ids_not_recorded_ledger_receipts_and_do_not_claim_domain_ready_or_production_ready',
       sample_domain_ids: sampleEvidence.map((sample) => sample.domain_id),
       read_model_contract_ref:
         '/runtime_tray_snapshot/app_operator_drilldown/standard_agent_template_consumption_refs/evidence_contract',
@@ -307,6 +376,8 @@ export function buildStandardDomainAgentScaffoldConsumptionEvidence(input: Scaff
         ],
         samples: sampleEvidence.map((sample) => ({
           domain_id: sample.domain_id,
+          evidence_ref: sample.evidence_ref,
+          evidence_fingerprint: sample.evidence_fingerprint,
           status: sample.status,
           proof_kind: sample.proof_kind,
           generated_repo_dir_policy: sample.generated_repo_dir_policy,
