@@ -124,7 +124,7 @@ Fresh semantic result:
 
 - OPL main 在本轮验证前 clean、无额外 worktree、无 open PR、无相关后台进程；`342b7650` 已通过 fresh verification 后推送到 `origin/main`。
 - `224a1027` 在本轮 ledger 写入前作为 clean committed main head 出现；本轮读取 diff、运行 focused verification 后也推送到 `origin/main`。最终 OPL release metadata 不再以 dirty 文件保留。
-- MAS `fix/dm002-ai-reviewer-promotion` worktree clean，但 head `033334b9` 与 main `12cd99f9` 为 `ahead/behind main = 1/1`，且最近 60 分钟有大量写入；无 open PR、无相关进程，本轮因 recent-write window 保留。
+- MAS final scan 已发生外部状态推进：main / `origin/main` 对齐到 `dde24974`。当前两个额外 worktree `fix/dm002-record-only-reviewer-os` 与 `fix/dm003-quality-repair-owner-route` 都在 head `dde24974`、`ahead/behind main = 0/0`，但各自仍 dirty 且最近 60 分钟有大量写入；无 open PR、无相关进程，本轮因 dirty/recent 保留。
 - App `codex/full-first-run-stable-gate-20260525` worktree 仍 dirty，branch 与 `origin/codex/full-first-run-stable-gate-20260525` 对齐，包含 product/profile/release docs/scripts/tests 变更和 untracked `docs/product/`；本轮保留。
 - RCA root 仍 dirty，包含 native PPT implementation/contracts/prompts/docs/tests 和 untracked `docs/references/native-ppt-open-source-design-discipline.md`；本轮保留。
 - MAG 与 OMA main clean/aligned；无额外 local worktree。MAG remote-only `origin/feature/ai-narration-contracts` 与 OPL remote-only `origin/fix/opl-temporal-worker-stale-repair-20260528` 未确认 automation-owned 且无本地 worktree，本轮不删除。
@@ -147,7 +147,7 @@ Unreviewed docs:
 
 Remaining stale / retire candidates:
 
-- MAS `fix/dm002-ai-reviewer-promotion` should be rechecked after the recent-write window closes; if clean/current, compare against main and either merge, absorb, or retain with a concrete semantic blocker.
+- MAS `fix/dm002-record-only-reviewer-os` and `fix/dm003-quality-repair-owner-route` should be rechecked after their dirty/recent window closes; if clean and still same-head with no PR/process, remove the worktrees and local branches, otherwise route to the owning repair lane.
 - RCA native PPT dirty lane and App full-first-run dirty lane remain outside this automatic cleanup until clean/current or explicitly assigned.
 - Remote-only non-main refs should only be deleted after confirming automation ownership, no open PR, and no external active reference.
 
@@ -159,7 +159,7 @@ Verification before foldback:
 
 Next tranche write scope:
 
-- Start with a fresh six-repo scan again. Re-evaluate MAS `fix/dm002-ai-reviewer-promotion` after recency expires, then continue README/docs body governance only in clean scopes or explicitly assigned lanes. Keep the global `/goal` active until six-repo README/docs coverage and remaining gaps satisfy the full completion gate.
+- Start with a fresh six-repo scan again. Re-evaluate MAS `fix/dm002-record-only-reviewer-os` and `fix/dm003-quality-repair-owner-route` after recency expires, then continue README/docs body governance only in clean scopes or explicitly assigned lanes. Keep the global `/goal` active until six-repo README/docs coverage and remaining gaps satisfy the full completion gate.
 
 Date: `2026-05-28 12:16 CST`
 Tranche: `opl-series-branch-hygiene-absorb`
