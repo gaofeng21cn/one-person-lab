@@ -43,6 +43,10 @@ import {
   buildDomainOwnerPayloadSummaryActionRoutes,
 } from './runtime-tray-app-operator-drilldown-parts/domain-owner-payload-summary-action-routes.ts';
 import {
+  buildMagManifestSustainedConsumptionFollowthroughActionRoutes,
+  buildMagManifestSustainedConsumptionFollowthroughRefs,
+} from './runtime-tray-app-operator-drilldown-parts/mag-manifest-sustained-consumption.ts';
+import {
   buildAppDrilldownRefsOnlyAuthorityBoundary as refsOnlyAuthorityBoundary,
 } from './runtime-tray-app-operator-drilldown-parts/authority-boundary.ts';
 import {
@@ -990,6 +994,10 @@ export function buildAppOperatorDrilldown(input: {
   const domainOwnerPayloadSummaryRefs = buildDomainOwnerPayloadSummaryRefs({
     domainManifestProjects: input.domainManifestProjects,
   });
+  const magManifestSustainedConsumptionFollowthroughRefs =
+    buildMagManifestSustainedConsumptionFollowthroughRefs({
+      domainManifestProjects: input.domainManifestProjects,
+    });
   const legacyCleanupPlans = legacyCleanupPlanRefs(
     input.domainManifestProjects,
     input.providerContinuousProof,
@@ -1027,6 +1035,9 @@ export function buildAppOperatorDrilldown(input: {
     ...buildExternalEvidenceActionRoutes(record(evidenceRequests)),
     ...buildFunctionalPrivatizationSemanticEquivalenceActionRoutes(record(functionalAuditRefs)),
     ...buildDomainOwnerPayloadSummaryActionRoutes(record(domainOwnerPayloadSummaryRefs)),
+    ...buildMagManifestSustainedConsumptionFollowthroughActionRoutes(
+      record(magManifestSustainedConsumptionFollowthroughRefs),
+    ),
     ...buildCodexAppRuntimeEvidenceActionRoutes(record(appRuntimeRole)),
     ...buildAppReleaseUserPathEvidenceActionRoutes(record(appReleaseUserPathEvidence)),
     ...buildOmaProductionConsumptionActionRoutes(oplMetaAgentProductionConsumption),
@@ -1092,6 +1103,7 @@ export function buildAppOperatorDrilldown(input: {
       functionalSummary,
       evidenceRequests,
       domainOwnerPayloadSummaryRefs,
+      magManifestSustainedConsumptionFollowthroughRefs,
       productionEvidenceTailLedger,
       legacyCleanupPlans,
       oplMetaAgentRegistry,
@@ -1195,6 +1207,11 @@ export function buildAppOperatorDrilldown(input: {
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/production_evidence_tail_ledger', 'production_evidence_tail_ledger'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs', 'domain_evidence_request_refs'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/domain_owner_payload_summary_refs', 'domain_owner_payload_summary_refs'),
+    sourceRef(
+      '/runtime_tray_snapshot/app_operator_drilldown/'
+      + 'mag_manifest_sustained_consumption_followthrough_refs',
+      'mag_manifest_sustained_consumption_followthrough_refs',
+    ),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/domain_legacy_cleanup_plan_refs', 'domain_legacy_cleanup_plan_refs'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/default_caller_deletion_evidence_refs', 'default_caller_deletion_evidence_refs'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/evidence_envelope', 'evidence_envelope'),
@@ -1297,6 +1314,8 @@ export function buildAppOperatorDrilldown(input: {
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
     domain_owner_payload_summary_refs: domainOwnerPayloadSummaryRefs,
+    mag_manifest_sustained_consumption_followthrough_refs:
+      magManifestSustainedConsumptionFollowthroughRefs,
     domain_evidence_request_refs: evidenceRequests,
     production_evidence_tail_ledger: productionEvidenceTailLedger,
     evidence_envelope: evidenceEnvelope,

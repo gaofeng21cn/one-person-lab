@@ -20,6 +20,7 @@ export type OplStatePaths = {
   codex_app_runtime_evidence_ledger_file: string;
   standard_agent_template_consumption_ledger_file: string;
   domain_owner_payload_summary_ledger_file: string;
+  mag_manifest_sustained_consumption_ledger_file: string;
   developer_mode_closeout_ledger_file: string;
   domain_manifest_projection_cache_file: string;
   desktop_config_file: string;
@@ -69,6 +70,10 @@ export function resolveOplStatePaths(): OplStatePaths {
     domain_owner_payload_summary_ledger_file: path.join(
       stateDir,
       'domain-owner-payload-summary-ledger.json',
+    ),
+    mag_manifest_sustained_consumption_ledger_file: path.join(
+      stateDir,
+      'mag-manifest-sustained-consumption-followthrough-ledger.json',
     ),
     developer_mode_closeout_ledger_file: path.join(stateDir, 'developer-mode-closeout-ledger.json'),
     domain_manifest_projection_cache_file: path.join(stateDir, 'domain-manifest-projection-cache.json'),

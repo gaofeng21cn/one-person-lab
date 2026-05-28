@@ -35,6 +35,9 @@ import { externalEvidenceApplyArgs } from './runtime-operator-action-execution-p
 import { domainDispatchExternalEvidenceApplyArgs } from './runtime-operator-action-execution-parts/domain-dispatch-evidence-action.ts';
 import { codexAppRuntimeEvidenceExecution } from './runtime-operator-action-execution-parts/codex-app-runtime-evidence-action.ts';
 import { domainOwnerPayloadSummaryExecution } from './runtime-operator-action-execution-parts/domain-owner-payload-summary-action.ts';
+import {
+  magManifestSustainedConsumptionExecution,
+} from './runtime-operator-action-execution-parts/mag-manifest-sustained-consumption-action.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -541,6 +544,8 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
     || actionKind === 'codex_app_runtime_evidence_receipt_verify'
     || actionKind === 'domain_owner_payload_summary_receipt_record'
     || actionKind === 'domain_owner_payload_summary_receipt_verify'
+    || actionKind === 'mag_manifest_sustained_consumption_followthrough_receipt_record'
+    || actionKind === 'mag_manifest_sustained_consumption_followthrough_receipt_verify'
     || actionKind === 'oma_production_consumption_receipt_record'
   ) {
     if (
@@ -550,11 +555,15 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
       || actionKind === 'codex_app_runtime_evidence_receipt_verify'
       || actionKind === 'domain_owner_payload_summary_receipt_record'
       || actionKind === 'domain_owner_payload_summary_receipt_verify'
+      || actionKind === 'mag_manifest_sustained_consumption_followthrough_receipt_record'
+      || actionKind === 'mag_manifest_sustained_consumption_followthrough_receipt_verify'
       || actionKind === 'oma_production_consumption_receipt_record'
     ) {
       return {
         executionKind: actionKind === 'oma_production_consumption_receipt_record'
           ? 'opl_cli_oma_production_consumption_apply'
+          : actionKind.startsWith('mag_manifest_sustained_consumption_')
+            ? 'opl_cli_mag_manifest_sustained_consumption_followthrough_apply'
           : actionKind.startsWith('domain_owner_payload_summary_')
             ? 'opl_cli_domain_owner_payload_summary_apply'
           : actionKind.startsWith('codex_app_runtime_evidence_')
@@ -617,6 +626,8 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
       'codex_app_runtime_evidence_receipt_verify',
       'domain_owner_payload_summary_receipt_record',
       'domain_owner_payload_summary_receipt_verify',
+      'mag_manifest_sustained_consumption_followthrough_receipt_record',
+      'mag_manifest_sustained_consumption_followthrough_receipt_verify',
       'oma_production_consumption_receipt_record',
       'provider_worker_start',
       'provider_worker_restart',
@@ -697,6 +708,9 @@ async function executeRoute(
     const domainOwnerPayloadSummaryAction =
       actionKind === 'domain_owner_payload_summary_receipt_record'
       || actionKind === 'domain_owner_payload_summary_receipt_verify';
+    const magManifestSustainedConsumptionAction =
+      actionKind === 'mag_manifest_sustained_consumption_followthrough_receipt_record'
+      || actionKind === 'mag_manifest_sustained_consumption_followthrough_receipt_verify';
     const omaProductionConsumptionAction =
       actionKind === 'oma_production_consumption_receipt_record';
     const legacyCleanupAction = actionKind === 'legacy_cleanup_apply'
@@ -723,6 +737,11 @@ async function executeRoute(
     const domainOwnerPayloadSummary = domainOwnerPayloadSummaryAction
       ? domainOwnerPayloadSummaryExecution(route, options.payload, { dryRun: options.dryRun })
       : null;
+    const magManifestSustainedConsumption = magManifestSustainedConsumptionAction
+      ? magManifestSustainedConsumptionExecution(route, options.payload, {
+          dryRun: options.dryRun,
+        })
+      : null;
     const omaProductionConsumption = omaProductionConsumptionAction
       ? omaProductionConsumptionExecution(options.payload, { dryRun: options.dryRun })
       : null;
@@ -744,6 +763,11 @@ async function executeRoute(
       ? {
           executionKind: domainOwnerPayloadSummary.executionKind,
           runtimeArgs: domainOwnerPayloadSummary.runtimeArgs,
+        }
+      : magManifestSustainedConsumption
+      ? {
+          executionKind: magManifestSustainedConsumption.executionKind,
+          runtimeArgs: magManifestSustainedConsumption.runtimeArgs,
         }
       : omaProductionConsumption
       ? {
@@ -773,6 +797,7 @@ async function executeRoute(
       executed_runtime_command: appReleaseUserPathEvidenceAction
         || codexAppRuntimeEvidenceAction
         || domainOwnerPayloadSummaryAction
+        || magManifestSustainedConsumptionAction
         || omaProductionConsumptionAction
         ? `opl ${runtimeArgs.join(' ')}`
         : providerWorkerRepair
@@ -788,6 +813,8 @@ async function executeRoute(
           ? codexAppRuntimeEvidence.result
         : domainOwnerPayloadSummary
           ? domainOwnerPayloadSummary.result
+        : magManifestSustainedConsumption
+          ? magManifestSustainedConsumption.result
         : omaProductionConsumption
           ? omaProductionConsumption.result
         : options.dryRun

@@ -183,6 +183,29 @@ export function buildPublicRuntimeCommandSpecs(
         examples: ['opl runtime domain-owner-payload-summary list --json'],
         group: 'runtime',
       }),
+    'runtime mag-manifest-sustained-consumption record':
+      cloneCommandSpec(commandSpecs['runtime mag-manifest-sustained-consumption record'], {
+        usage:
+          'opl runtime mag-manifest-sustained-consumption record --target-identity <json> (--payload <json>|--payload-file <path>)',
+        examples: [
+          'opl runtime mag-manifest-sustained-consumption record --target-identity \'{"domain_id":"medautogrant"}\' --payload \'{"typed_blocker_refs":["typed-blocker:app/operator/mag/open"]}\'',
+        ],
+        group: 'runtime',
+      }),
+    'runtime mag-manifest-sustained-consumption verify':
+      cloneCommandSpec(commandSpecs['runtime mag-manifest-sustained-consumption verify'], {
+        usage: 'opl runtime mag-manifest-sustained-consumption verify [--receipt-ref <ref>]',
+        examples: [
+          'opl runtime mag-manifest-sustained-consumption verify --receipt-ref opl://mag-manifest-sustained-consumption/medautogrant',
+        ],
+        group: 'runtime',
+      }),
+    'runtime mag-manifest-sustained-consumption list':
+      cloneCommandSpec(commandSpecs['runtime mag-manifest-sustained-consumption list'], {
+        usage: 'opl runtime mag-manifest-sustained-consumption list',
+        examples: ['opl runtime mag-manifest-sustained-consumption list --json'],
+        group: 'runtime',
+      }),
     ...developerModeCloseoutCommandSpecs,
     'runtime oma-app-live-path record':
       cloneCommandSpec(commandSpecs['runtime oma-app-live-path record'], {

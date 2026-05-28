@@ -13,6 +13,87 @@ import {
 } from '../helpers.ts';
 
 function withMagOwnerPayloadResponse(manifest: Record<string, unknown>) {
+  const sustainedConsumptionFollowthroughWorkorder = {
+    surface_kind: 'mag_manifest_sustained_consumption_followthrough_workorder',
+    version: 'v1',
+    status: 'requires_real_app_operator_or_default_caller_payload',
+    authority_command: 'authority manifest-consumption-payload',
+    authority_command_internal: 'manifest-sustained-consumption-payload',
+    payload_owner: 'app_operator_or_release_default_caller',
+    accepted_payload_path_policy:
+      'real_app_operator_or_default_caller_consumption_refs_or_domain_owned_typed_blocker',
+    required_operator_payload_refs: [
+      'app_operator_consumption_ref',
+      'default_caller_consumption_ref',
+      'owner_payload_response_ref',
+      'workspace_receipt_scaleout_evidence_ref',
+      'no_forbidden_write_ref',
+      'long_soak_or_typed_blocker_ref',
+    ],
+    allowed_operator_payload_fields: [
+      'app_operator_consumption_ref',
+      'default_caller_consumption_ref',
+      'owner_payload_response_ref',
+      'workspace_receipt_scaleout_evidence_ref',
+      'no_forbidden_write_ref',
+      'long_soak_or_typed_blocker_ref',
+      'typed_blocker_refs',
+    ],
+    payload_template: {
+      app_operator_consumption_ref: [],
+      default_caller_consumption_ref: [],
+      owner_payload_response_ref: [],
+      workspace_receipt_scaleout_evidence_ref: [],
+      no_forbidden_write_ref: [],
+      long_soak_or_typed_blocker_ref: [],
+    },
+    accepted_payload_paths: {
+      sustained_consumption_refs_path: {
+        required_operator_payload_refs: [
+          'app_operator_consumption_ref',
+          'default_caller_consumption_ref',
+          'owner_payload_response_ref',
+          'workspace_receipt_scaleout_evidence_ref',
+          'no_forbidden_write_ref',
+          'long_soak_or_typed_blocker_ref',
+        ],
+        requires_long_soak_or_typed_blocker_ref: true,
+        typed_blocker_refs_must_be_absent: true,
+        closes_app_sustained_consumption: false,
+        closes_grant_ready: false,
+        closes_submission_ready: false,
+        closes_provider_long_soak: false,
+      },
+      typed_blocker_path: {
+        required_operator_payload_refs: ['typed_blocker_refs'],
+        success_claimed: false,
+        closes_app_sustained_consumption: false,
+        closes_grant_ready: false,
+        closes_submission_ready: false,
+        closes_provider_long_soak: false,
+      },
+    },
+    empty_payload_template_is_success_evidence: false,
+    rejects_unknown_operator_payload_fields: true,
+    operator_payload_submitted: false,
+    claims_sustained_app_consumption_complete: false,
+    claims_grant_ready: false,
+    claims_submission_ready: false,
+    claims_provider_long_soak_complete: false,
+    authority_boundary: {
+      owner: 'med-autogrant',
+      refs_only: true,
+      payload_owner: 'app_operator_or_release_default_caller',
+      can_write_grant_truth: false,
+      can_read_memory_body: false,
+      can_read_artifact_body: false,
+      can_create_owner_receipt: false,
+      can_submit_operator_payload: false,
+      can_declare_app_sustained_consumption_complete: false,
+      can_declare_submission_ready: false,
+      can_declare_provider_long_soak_complete: false,
+    },
+  };
   return {
     ...manifest,
     owner_payload_response: {
@@ -107,6 +188,32 @@ function withMagOwnerPayloadResponse(manifest: Record<string, unknown>) {
       quality_ready_claimed: false,
       export_ready_claimed: false,
       submission_ready_claimed: false,
+      manifest_consumer_evidence: {
+        surface_kind: 'mag_manifest_owner_payload_consumer_evidence',
+        state: 'manifest_owner_payload_response_consumed_refs_only',
+        consumer: 'one_person_lab_app_operator_manifest',
+        owner: 'med-autogrant',
+        target_domain_id: 'med-autogrant',
+        consumed_surface_refs: {
+          owner_payload_response_ref: '/product_entry_manifest/owner_payload_response',
+          workspace_receipt_scaleout_evidence_ref:
+            '/product_entry_manifest/workspace_receipt_scaleout_evidence',
+        },
+        sustained_consumption_followthrough_workorder:
+          sustainedConsumptionFollowthroughWorkorder,
+        operator_payload_submitted: false,
+        claims_sustained_app_consumption_complete: false,
+        claims_grant_ready: false,
+        claims_submission_ready: false,
+        claims_provider_long_soak_complete: false,
+      },
+    },
+    workspace_receipt_scaleout_evidence: {
+      surface_kind: 'mag_workspace_receipt_scaleout_evidence.v1',
+      workspace_receipt_scaleout: {
+        workspace_count: 4,
+        total_receipt_ref_count: 36,
+      },
     },
   };
 }
@@ -301,4 +408,183 @@ test('runtime App drilldown does not expand MAG count-only scaleout snapshot int
       && route.target_identity?.stage_id === 'package_and_submit_ready',
   );
   assert.equal(stageRecordRoute, undefined);
+});
+
+test('runtime App drilldown exposes MAG sustained consumption followthrough as refs-only route', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mag-sustained-followthrough-'));
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const magManifest = withMagOwnerPayloadResponse(loadFamilyManifestFixtures().medautogrant);
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+  };
+  runCli([
+    'workspace',
+    'bind',
+    '--project',
+    'medautogrant',
+    '--path',
+    repoRoot,
+    '--manifest-command',
+    buildManifestCommand(magManifest),
+  ], env);
+
+  const full = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+    .app_operator_drilldown;
+  const followthrough = full.mag_manifest_sustained_consumption_followthrough_refs;
+  assert.equal(
+    followthrough.surface_kind,
+    'opl_app_drilldown_mag_manifest_sustained_consumption_followthrough_refs',
+  );
+  assert.equal(followthrough.summary.followthrough_domain_count, 1);
+  assert.equal(followthrough.summary.workorder_count, 1);
+  assert.equal(followthrough.summary.ledger_receipt_ref_count, 0);
+  assert.equal(followthrough.summary.can_claim_sustained_app_consumption_complete_count, 0);
+  assert.equal(followthrough.domains[0].domain_id, 'medautogrant');
+  assert.equal(
+    followthrough.domains[0].workorder.authority_command,
+    'authority manifest-consumption-payload',
+  );
+  assert.deepEqual(
+    followthrough.domains[0].workorder.required_operator_payload_refs,
+    [
+      'app_operator_consumption_ref',
+      'default_caller_consumption_ref',
+      'owner_payload_response_ref',
+      'workspace_receipt_scaleout_evidence_ref',
+      'no_forbidden_write_ref',
+      'long_soak_or_typed_blocker_ref',
+    ],
+  );
+  assert.equal(
+    followthrough.authority_boundary.can_claim_sustained_app_consumption_complete,
+    false,
+  );
+
+  const recordRoute = full.operator_action_routing_refs.refs.find(
+    (route: { action_kind: string; domain_id?: string }) =>
+      route.action_kind === 'mag_manifest_sustained_consumption_followthrough_receipt_record'
+      && route.domain_id === 'medautogrant',
+  );
+  assert.ok(recordRoute);
+  assert.equal(recordRoute.route_requires_domain_or_app_payload, true);
+  assert.equal(recordRoute.payload_owner, 'app_operator_or_release_default_caller');
+  assert.deepEqual(recordRoute.required_operator_payload_refs, [
+    'app_operator_consumption_ref',
+    'default_caller_consumption_ref',
+    'owner_payload_response_ref',
+    'workspace_receipt_scaleout_evidence_ref',
+    'no_forbidden_write_ref',
+    'long_soak_or_typed_blocker_ref',
+    'typed_blocker_refs',
+  ]);
+  assert.equal(
+    recordRoute.payload_workorder.authority_boundary
+      .can_declare_app_sustained_consumption_complete,
+    false,
+  );
+
+  const emptyPayloadExecution = runCliFailure([
+    'runtime',
+    'action',
+    'execute',
+    '--action',
+    recordRoute.action_id,
+    '--payload',
+    JSON.stringify({}),
+  ], env);
+  assert.equal(emptyPayloadExecution.payload.error.code, 'cli_usage_error');
+  assert.equal(
+    emptyPayloadExecution.payload.error.details.error_kind,
+    'mag_manifest_sustained_consumption_followthrough_payload_preflight_blocked',
+  );
+  const unknownPayloadExecution = runCliFailure([
+    'runtime',
+    'action',
+    'execute',
+    '--action',
+    recordRoute.action_id,
+    '--payload',
+    JSON.stringify({
+      typed_blocker_refs: [
+        'typed-blocker:app/operator/mag/sustained-consumption-missing/2026-05-28',
+      ],
+      narrative_summary: 'not a refs-only operator payload field',
+    }),
+  ], env);
+  assert.equal(unknownPayloadExecution.payload.error.code, 'cli_usage_error');
+  assert.equal(
+    unknownPayloadExecution.payload.error.details.error_kind,
+    'mag_manifest_sustained_consumption_followthrough_payload_unknown_fields',
+  );
+  assert.deepEqual(
+    unknownPayloadExecution.payload.error.details.preflight.unknown_payload_fields,
+    ['narrative_summary'],
+  );
+
+  const recordExecution = runCli([
+    'runtime',
+    'action',
+    'execute',
+    '--action',
+    recordRoute.action_id,
+    '--payload',
+    JSON.stringify({
+      typed_blocker_refs: [
+        'typed-blocker:app/operator/mag/sustained-consumption-missing/2026-05-28',
+      ],
+    }),
+  ], env).runtime_operator_action_execution;
+  assert.equal(
+    recordExecution.execution.result
+      .mag_manifest_sustained_consumption_followthrough_ledger_record.status,
+    'recorded',
+  );
+
+  const verifyDrilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+    .app_operator_drilldown;
+  const verifyRoute = verifyDrilldown.operator_action_routing_refs.refs.find(
+    (route: { action_kind: string; domain_id?: string }) =>
+      route.action_kind === 'mag_manifest_sustained_consumption_followthrough_receipt_verify'
+      && route.domain_id === 'medautogrant',
+  );
+  assert.ok(verifyRoute);
+  assert.equal(verifyRoute.route_requires_domain_or_app_payload, false);
+
+  const verifyExecution = runCli([
+    'runtime',
+    'action',
+    'execute',
+    '--action',
+    verifyRoute.action_id,
+  ], env).runtime_operator_action_execution;
+  assert.equal(
+    verifyExecution.execution.result
+      .mag_manifest_sustained_consumption_followthrough_ledger_verify.status,
+    'verified',
+  );
+  const ledger = runCli([
+    'runtime',
+    'mag-manifest-sustained-consumption',
+    'list',
+  ], env).mag_manifest_sustained_consumption_followthrough_ledger;
+  assert.equal(ledger.receipt_count, 1);
+  assert.equal(ledger.verified_receipt_count, 1);
+  assert.equal(ledger.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(
+    ledger.authority_boundary.can_claim_sustained_app_consumption_complete,
+    false,
+  );
+
+  const finalDrilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+    .app_operator_drilldown;
+  assert.equal(
+    finalDrilldown.summary.mag_manifest_sustained_consumption_followthrough_verified_ledger_receipt_ref_count,
+    1,
+  );
+  assert.equal(
+    finalDrilldown.mag_manifest_sustained_consumption_followthrough_refs
+      .authority_boundary.can_claim_sustained_app_consumption_complete,
+    false,
+  );
 });
