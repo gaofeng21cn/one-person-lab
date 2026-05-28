@@ -191,7 +191,8 @@ test('framework readiness separates operator-actionable and domain-blocked atten
       summary.open_tail_count
         + summary.evidence_envelope_open_count
         + summary.stage_source_scope_missing_workorder_count
-        + summary.stage_runtime_event_missing_workorder_count,
+        + summary.stage_runtime_event_missing_workorder_count
+        + readiness.developer_mode_live_closeout_evidence.attention_count,
     );
     assert.equal(
       summary.domain_blocked_attention_tail_count,

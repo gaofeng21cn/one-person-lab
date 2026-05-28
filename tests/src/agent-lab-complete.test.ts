@@ -380,8 +380,9 @@ test('Agent Lab Developer Mode repair route projects patrol fixes as refs only',
   assert.equal(result.live_closeout_evidence.refs_only, true);
   assert.equal(result.live_closeout_evidence.summary.direct_fix_drill_count, 1);
   assert.equal(result.live_closeout_evidence.summary.fork_pr_drill_count, 1);
-  assert.equal(result.live_closeout_evidence.summary.live_external_owner_acceptance_count, 1);
+  assert.equal(result.live_closeout_evidence.summary.live_external_owner_acceptance_count, 0);
   assert.equal(result.live_closeout_evidence.summary.repo_contract_fixture_drill_count, 1);
+  assert.equal(result.live_closeout_evidence.summary.repo_contract_fixture_not_live_repo_count, 1);
   assert.equal(result.live_closeout_evidence.summary.external_owner_acceptance_missing_count, 1);
   assert.equal(result.live_closeout_evidence.summary.fixture_drill_owner_acceptance_open_count, 1);
   assert.equal(result.live_closeout_evidence.summary.external_owner_closeout_refs_ready_count, 1);
@@ -460,6 +461,12 @@ test('Agent Lab Developer Mode repair route projects patrol fixes as refs only',
   assert.equal(forkPrDrill.closeout_refs.owner_acceptance_status, 'fixture_drill_not_owner_acceptance');
   assert.equal(forkPrDrill.closeout_refs.owner_acceptance_is_owner_receipt, false);
   assert.equal(forkPrDrill.closeout_refs.evidence_source, 'repo_contract_test_fixture');
+  assert.equal(forkPrDrill.fixture_repo_currentness.status, 'repo_contract_fixture_not_live_repo');
+  assert.equal(
+    forkPrDrill.fixture_repo_currentness.reason,
+    'fixture_repo_ref_requires_real_external_fork_pr_before_closeout',
+  );
+  assert.equal(forkPrDrill.repo_permission.repo, 'fixture:redcube-ai/fork-pr-drill');
   assert.equal(forkPrDrill.closeout_refs.owner_acceptance_ref_is_external_owner_ref, false);
   assert.ok(forkPrDrill.missing_closeout_refs.includes('external_owner_acceptance_ref'));
   assert.equal(result.live_closeout_evidence.non_authority_outputs.writes_owner_receipt, false);

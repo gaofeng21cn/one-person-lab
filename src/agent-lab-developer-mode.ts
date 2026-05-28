@@ -291,6 +291,21 @@ function ownerAcceptanceRef(value: string | null, decision: DeveloperModeRouteDe
   return empty;
 }
 
+function fixtureRepoCurrentness(repoPermission: RepoPermissionLike) {
+  const repo = text(repoPermission.repo);
+  const repoUrl = text(repoPermission.repo_url);
+  if (repo?.startsWith('fixture:') || repoUrl?.startsWith('fixture:')) {
+    return {
+      status: 'repo_contract_fixture_not_live_repo',
+      reason: 'fixture_repo_ref_requires_real_external_fork_pr_before_closeout',
+    };
+  }
+  return {
+    status: 'not_applicable_or_live_repo_ref',
+    reason: null,
+  };
+}
+
 function requiredCloseoutRefsFor(decision: DeveloperModeRouteDecision) {
   if (decision === 'direct-fix') {
     return ['diff_ref', 'verification_refs', 'no_forbidden_write_ref', 'commit_ref'] as const;
@@ -440,6 +455,13 @@ export function buildDeveloperModeAgentLabRepairRoute(input: DeveloperModeAgentL
       refs.blocker_ref ?? '',
     ]),
     repo_permission: isRecord(input.repo_permission) ? input.repo_permission : {},
+    fixture_repo_currentness:
+      sanitizedOwnerAcceptanceRef.kind === 'repo_contract_fixture_not_owner_receipt'
+        ? fixtureRepoCurrentness(input.repo_permission)
+        : {
+            status: 'not_applicable_or_live_repo_ref',
+            reason: null,
+          },
     issue_ref: refs.issue_ref,
     blocker_ref: refs.blocker_ref,
     closeout_refs: {
@@ -555,8 +577,8 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
       },
       repo_permission: {
         target_id: 'redcube-ai',
-        repo: 'redcube-ai/redcube-ai',
-        repo_url: 'https://github.com/redcube-ai/redcube-ai.git',
+        repo: 'fixture:redcube-ai/fork-pr-drill',
+        repo_url: 'fixture://redcube-ai/developer-mode-fork-pr-drill',
         status: 'limited',
         permission: 'read',
         direct_write_allowed: false,
@@ -634,7 +656,8 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
       closeout_ready_count: liveCloseoutEvidenceDrills.filter((drill) =>
         drill.route_status === 'closeout_refs_ready').length,
       live_external_owner_acceptance_count: liveCloseoutEvidenceDrills.filter((drill) =>
-        drill.closeout_refs.owner_acceptance_ref_kind === 'live_external_owner_ref').length,
+        drill.evidence_source === 'developer_mode_closeout_ledger'
+        && drill.closeout_refs.owner_acceptance_ref_kind === 'live_external_owner_ref').length,
       live_ledger_closeout_ready_count: liveCloseoutEvidenceDrills.filter((drill) =>
         drill.evidence_source === 'developer_mode_closeout_ledger'
         && drill.route_status === 'closeout_refs_ready').length,
@@ -646,6 +669,9 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
       verified_fork_pr_ledger_receipt_ref_count: verifiedForkPrReceiptCount,
       repo_contract_fixture_drill_count: liveCloseoutEvidenceDrills.filter((drill) =>
         drill.closeout_refs.evidence_source === 'repo_contract_test_fixture').length,
+      repo_contract_fixture_not_live_repo_count: liveCloseoutEvidenceDrills.filter((drill) =>
+        drill.closeout_refs.evidence_source === 'repo_contract_test_fixture'
+        && drill.fixture_repo_currentness?.status === 'repo_contract_fixture_not_live_repo').length,
       external_owner_acceptance_missing_count: liveCloseoutEvidenceDrills.filter((drill) =>
         drill.missing_closeout_refs.includes('external_owner_acceptance_ref')).length,
       fixture_drill_owner_acceptance_open_count: liveCloseoutEvidenceDrills.filter((drill) =>

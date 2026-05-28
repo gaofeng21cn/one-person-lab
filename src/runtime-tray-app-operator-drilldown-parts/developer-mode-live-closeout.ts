@@ -193,6 +193,8 @@ export function developerModeLiveCloseoutEvidenceSummary(evidence: JsonRecord) {
       verifiedForkPrLedgerReceiptRefCount,
     repo_contract_fixture_drill_count:
       numberValue(summary.repo_contract_fixture_drill_count),
+    repo_contract_fixture_not_live_repo_count:
+      numberValue(summary.repo_contract_fixture_not_live_repo_count),
     external_owner_acceptance_missing_count:
       numberValue(summary.external_owner_acceptance_missing_count),
     fixture_drill_owner_acceptance_open_count:
@@ -254,6 +256,8 @@ export function buildDeveloperModeLiveCloseoutEvidenceAttention(drilldown: JsonR
       summary.external_owner_acceptance_missing_count,
     fixture_drill_owner_acceptance_open_count:
       summary.fixture_drill_owner_acceptance_open_count,
+    repo_contract_fixture_not_live_repo_count:
+      summary.repo_contract_fixture_not_live_repo_count,
     forbidden_owner_receipt_write_count:
       summary.forbidden_owner_receipt_write_count,
     required_closeout_ref_groups: stringList(evidence.required_closeout_ref_groups),

@@ -682,7 +682,8 @@
         "missing_external_owner_acceptance"
       ],
       "owner_acceptance_ref_policy": "external_owner_ref_only_fixture_refs_do_not_close_owner_acceptance",
-      "authority_boundary": "The dynamic route builder classifies Developer Mode projection, repo permission, and patrol observation refs into blocked, observe-only, direct-fix, fork-PR, or mixed route decisions. It emits closeout refs only. owner_acceptance_ref must be an external owner ref. A repo-contract fixture ref may describe a non-owner fork/PR drill when external PR authority is unavailable, but it cannot close owner acceptance. OPL cannot write owner receipts, domain truth, managed runtime truth, memory bodies, artifact bodies, or quality verdicts."
+      "fixture_repo_currentness_policy": "repo_contract_fixture_not_live_repo_must_not_be_presented_as_live_github_repo_or_external_owner_acceptance",
+      "authority_boundary": "The dynamic route builder classifies Developer Mode projection, repo permission, and patrol observation refs into blocked, observe-only, direct-fix, fork-PR, or mixed route decisions. It emits closeout refs only. owner_acceptance_ref must be an external owner ref. A repo-contract fixture ref may describe a non-owner fork/PR drill when external PR authority is unavailable, but it cannot close owner acceptance or be presented as a live GitHub repo. OPL cannot write owner receipts, domain truth, managed runtime truth, memory bodies, artifact bodies, or quality verdicts."
     },
     "live_closeout_evidence": {
       "surface_kind": "opl_agent_lab_developer_mode_live_closeout_evidence_read_model",
@@ -703,6 +704,7 @@
         "recorded_receipts_require_verify_before_closeout": true,
         "verified_receipts_can_project_live_route_closeout_refs": true,
         "requires_verified_direct_fix_and_fork_pr_receipts_for_full_live_closeout": true,
+        "repo_contract_fixture_not_live_repo_count_exposes_fixture_currentness_tail": true,
         "authority_boundary": "The ledger stores body-free Developer Mode closeout refs only. It cannot write owner receipts, domain truth, managed runtime truth, memory bodies, artifact bodies, quality verdicts, release readiness, production readiness, or App release user-path closure."
       },
       "required_closeout_ref_groups": [

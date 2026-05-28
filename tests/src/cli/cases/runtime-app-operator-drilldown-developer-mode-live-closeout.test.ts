@@ -136,6 +136,7 @@ test('runtime app-operator-drilldown projects Developer Mode live closeout evide
     assert.equal(fullEvidence.summary.ledger_verified_receipt_ref_count, 2);
     assert.equal(fullEvidence.summary.verified_direct_fix_ledger_receipt_ref_count, 1);
     assert.equal(fullEvidence.summary.verified_fork_pr_ledger_receipt_ref_count, 1);
+    assert.equal(fullEvidence.summary.live_external_owner_acceptance_count, 2);
     assert.equal(fullEvidence.summary.pending_verify_receipt_ref_count, 0);
     assert.deepEqual(fullEvidence.verified_ledger_receipt_refs.sort(), [
       directReceiptRef,
@@ -152,6 +153,40 @@ test('runtime app-operator-drilldown projects Developer Mode live closeout evide
     assert.equal(fullEvidence.non_authority_outputs.writes_owner_receipt, false);
     assert.equal(fullEvidence.non_authority_outputs.modifies_managed_runtime, false);
     assert.equal(fullEvidence.authority_boundary.writes_owner_receipt, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime app-operator-drilldown counts live Developer Mode owner acceptance from verified ledger receipts only', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-devmode-live-owner-acceptance-state-'));
+  try {
+    recordAndVerifyDeveloperModeCloseout(stateRoot, directFixPayload);
+
+    const fullDrilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
+    const fullEvidence = fullDrilldown.developer_mode_live_closeout_evidence;
+
+    assert.equal(fullEvidence.status, 'closeout_refs_incomplete');
+    assert.equal(fullEvidence.summary.verified_direct_fix_ledger_receipt_ref_count, 1);
+    assert.equal(fullEvidence.summary.verified_fork_pr_ledger_receipt_ref_count, 0);
+    assert.equal(fullEvidence.summary.live_external_owner_acceptance_count, 1);
+    assert.equal(fullEvidence.summary.repo_contract_fixture_drill_count, 1);
+    assert.equal(fullEvidence.summary.repo_contract_fixture_not_live_repo_count, 1);
+    assert.equal(fullEvidence.summary.fixture_drill_owner_acceptance_open_count, 1);
+    assert.equal(fullEvidence.summary.external_owner_acceptance_missing_count, 1);
+    assert.equal(fullDrilldown.summary.developer_mode_live_closeout_live_external_owner_acceptance_count, 1);
+    assert.equal(fullDrilldown.summary.developer_mode_live_closeout_missing_live_ledger_route_count, 1);
+    assert.equal(
+      fullDrilldown.summary.developer_mode_live_closeout_repo_contract_fixture_not_live_repo_count,
+      1,
+    );
+    assert.deepEqual(
+      fullDrilldown.attention_first_payload.evidence_after_contract
+        .developer_mode_live_closeout_evidence.missing_live_ledger_route_kinds,
+      ['fork-PR'],
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
