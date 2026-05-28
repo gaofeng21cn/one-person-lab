@@ -118,7 +118,7 @@ Fresh live truth inputs:
 - Open PR scans returned `[]` for all six repos.
 - `one-person-lab` main / `origin/main` aligned at `28c531db docs: record MAS dispatch ledger closeout` before this ledger update; OPL doctor `finding_count=0`, active truth `pass`. Local branch `codex/gui-dmg-cleanup-hardening-20260528` pointed at `01a1e007`, was an ancestor of main, had no checked-out worktree, no same-name remote branch, and no open PR, so it was removed locally with `git branch -d`.
 - OPL worktree `codex/mas-dispatch-ledger-foldback-20260528` was gone by the final scan after its closeout landed in `28c531db`; no stale local branch remained for that lane.
-- OPL retained newly observed worktree `codex/developer-mode-owner-acceptance-policy-20260528`: same-head with main, but dirty in Developer Mode source/tests and recent-write active.
+- OPL Developer Mode owner-acceptance lane produced `e88551f1 Harden Developer Mode fork PR owner acceptance` during closeout; the commit was verified and pushed to `origin/main`. The associated worktree `codex/developer-mode-owner-acceptance-policy-20260528` remains retained because it still has a dirty local ledger edit and is now diverged from main, so it needs owner-lane foldback or cleanup rather than deletion.
 - `med-autoscience` main / `origin/main` aligned at `2312b95d Cover consumed AI reviewer handoff payloads` during the initial scan; a concurrent MAS docs foldback later advanced `origin/main` to `1837c0f6 docs: fold MAS dispatch ledger currentness`. Local docs commit `ad29579a docs: record AI reviewer handoff receipt` was superseded by that fuller foldback and absorbed with explicit merge marker `0b063bdb merge: absorb superseded MAS AI reviewer handoff receipt`. A subsequent MAS currentness fix `6e6422d4 fix: refresh owner handoff runtime health same tick` was verified and pushed; final MAS main / `origin/main` aligned at `6e6422d4`.
 - MAS worktrees are retained: `codex/dm002-handoff-runtime-health-refresh` is dirty/recent; `codex/dm003-record-archive-currentness` is dirty across docs/source/tests. Earlier `codex/mas-ai-reviewer-consumed-handoff-payload-20260528` and `codex/mas-dispatch-ledger-foldback-20260528` were no longer present in the final worktree scan.
 - `med-autogrant` main / `origin/main` aligned at `46141e2` during the initial scan. A recent one-line dirty test update in `tests/product_entry_cases/test_domain_handler.py` matched the current manifest implementation that already exposes `physical_skeleton_follow_through.retired_public_command_scan`; it was verified, committed as `f4ed887 test: cover retired public command scan ref`, and pushed. Final MAG main / `origin/main` aligned at `f4ed887`; MAG doctor `finding_count=0`, active truth `pass`. Remote-only `origin/feature/ai-narration-contracts` remains retained because this run has no proof it is automation-owned stale with no external reference.
@@ -132,13 +132,14 @@ Verified commands:
 - Six-repo doctor preflight via `/Users/gaofeng/workspace/opl-doc-governance/scripts/opl_doc_doctor.py doctor <repo> --format json` returned `finding_count=0`, active truth `pass` for all six repos.
 - MAS `0b063bdb` / `6e6422d4`: `git diff --check origin/main..HEAD`; strict conflict-marker scan over touched docs/source/tests; MAS doctor `finding_count=0`, active truth `pass`; `scripts/run-pytest-clean.sh -q tests/owner_route_reconcile_cases/test_workspace_daemon_lifecycle.py -k 'provider_readiness or same_tick_runtime_health'` -> `2 passed, 2 deselected`; pushed to `origin/main`.
 - MAG `f4ed887`: `git diff --check`; strict conflict-marker scan over `tests/product_entry_cases/test_domain_handler.py`; MAG doctor `finding_count=0`, active truth `pass`; `scripts/run-pytest-clean.sh -q tests/product_entry_cases/test_domain_handler.py::ProductDomainHandlerTest::test_domain_handler_export_maps_runtime_and_attention_surfaces_without_grant_truth_transfer` -> `1 passed, 13 subtests passed`; `scripts/run-pytest-clean.sh -q tests/product_entry_cases/test_domain_handler.py` -> `7 passed, 18 subtests passed`; pushed to `origin/main`.
+- OPL Developer Mode `e88551f1`: `git diff --check origin/main..HEAD`; line-start conflict-marker scan over touched files; OPL doctor `finding_count=0`, active truth `pass`; `node --experimental-strip-types --test tests/src/cli/cases/runtime-developer-mode-closeout-ledger.test.ts tests/src/cli/cases/runtime-app-operator-drilldown-developer-mode-live-closeout.test.ts tests/src/agent-lab-complete.test.ts tests/src/agent-lab.test.ts` -> `36` tests, `0` failures; pushed to `origin/main`.
 - OPL ledger-only closeout verification after this edit: `git diff --check`; strict conflict-marker scan over this ledger and automation memory; OPL doctor `finding_count=0`, active truth `pass`.
 
 Reviewed documents / sections:
 
 | Repo | Reviewed docs / sections | Edited docs/source/tests this tranche |
 | --- | --- | --- |
-| `one-person-lab` | `TASTE.md`, `AGENTS.md`, this portfolio ledger, six-repo branch/worktree/PR/process/recent-write classification, OPL doctor risk map. | `docs/active/development-document-portfolio.md`. |
+| `one-person-lab` | `TASTE.md`, `AGENTS.md`, this portfolio ledger, six-repo branch/worktree/PR/process/recent-write classification, Developer Mode owner-acceptance commit diff/tests, OPL doctor risk map. | `docs/active/development-document-portfolio.md`; Developer Mode commit `e88551f1` touched framework contracts/docs/source/tests. |
 | `med-autoscience` | Main / remote docs foldback diffs, dirty worktree diffs, ancestry/currentness of MAS stale-lane candidates, MAS doctor risk map. | none in this repo from this OPL ledger commit. |
 | `one-person-lab-app` | Dirty worktree diffs for AGUI, Full first-run, and packaged GUI assistant smoke lanes; App doctor risk map. | none in this repo. |
 | `med-autogrant` | Main alignment, recent dirty test diff, `physical_skeleton_follow_through.retired_public_command_scan` implementation/docs/test refs, doctor risk map. | `tests/product_entry_cases/test_domain_handler.py`. |
@@ -154,7 +155,7 @@ Worktree / branch cleanup:
 
 Retained lanes / blockers:
 
-- OPL `codex/developer-mode-owner-acceptance-policy-20260528`: dirty/recent same-head worktree; retain.
+- OPL `codex/developer-mode-owner-acceptance-policy-20260528`: Developer Mode commit was absorbed into main, but the worktree remains dirty in `docs/active/development-document-portfolio.md` and diverged from final main; retain for owner-lane ledger foldback/cleanup.
 - MAS `0b063bdb` was verified as docs-only absorb marker and pushed after this ledger update; no MAS dirty worktree was deleted.
 - MAS `codex/dm002-handoff-runtime-health-refresh` and `codex/dm003-record-archive-currentness`: dirty/recent worktrees remain protected until dirty files are committed, absorbed, or explicitly handed off.
 - App `codex/agui-shell-candidate-spike-20260528`, `codex/full-first-run-stable-gate-20260525`, and `codex/packaged-gui-assistant-smoke-20260528`: dirty worktrees; the Full first-run lane is remote-backed.
@@ -1686,7 +1687,7 @@ Fresh live truth inputs:
 Fresh semantic result:
 
 - `opl help runtime developer-mode-closeout --json` exposes `usage=opl runtime developer-mode-closeout <record|verify|list>` and lists exactly the `record`、`verify`、`list` subcommands, each with its command-specific usage and summary.
-- `opl runtime developer-mode-closeout --json` returns `surface_kind=opl_runtime_developer_mode_closeout_command_group`, `refs_only=true`, and `owner_acceptance_policy=external_owner_ref_only_repo_contract_fixture_is_unclosed_non_owner_drill_no_opl_owner_receipt_write`.
+- `opl runtime developer-mode-closeout --json` returns `surface_kind=opl_runtime_developer_mode_closeout_command_group`, `refs_only=true`, and `owner_acceptance_policy=direct_fix_accepts_external_owner_ref_fork_pr_requires_github_pr_owner_acceptance_ref_no_opl_owner_receipt_write`.
 - Human help output now includes the same subcommand table; this is a CLI/help discoverability improvement, not a new runtime authority surface.
 - Focused tests cover the help group boundary, unknown subcommand rejection, refs-only record/verify/list behavior, and negative guards blocking owner receipt or incomplete closeout payloads.
 
