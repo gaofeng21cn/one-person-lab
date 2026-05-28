@@ -115,10 +115,11 @@ State: `tranche_verified`
 
 Fresh live truth inputs:
 
-- Six-repo root scan at `2026-05-28 23:30 CST`: OPL `91b2268b`、MAS `b766075e`、MAG `b0e9046`、RCA `8f8dfcb`、OMA `23e1730` and App `a52cad49` all read `main...origin/main = 0 0`.
+- Final six-repo root scan at `2026-05-28 23:39 CST`: OPL `e894bfd4`、MAS `2bb847db`、MAG `b0e9046`、RCA `8f8dfcb`、OMA `23e1730` and App `a52cad49` all read `main...origin/main = 0 0`.
 - Open PR scans returned `[]` for OPL, MAS, MAG, RCA, OMA and App.
 - OPL and MAS OPL Doc Governance doctors returned `finding_count=0` and active truth `pass`; MAS tranche worktree doctor also returned `finding_count=0` before absorb.
 - Background process scan showed the expected OPL Temporal provider foreground worker, GitHub runner processes, old MAS verify/quality commands and Temporal dev server; no process was stopped.
+- During final closeout, MAS `main` advanced externally from this tranche's docs commit `b766075e` to `08add5af` and then `2bb847db`. The docs commit remains an ancestor of current MAS `main`; this run did not author, revert, or semantically review the later AI-reviewer/progress commits.
 - MAS repo-native inputs: `AGENTS.md`, `TASTE.md`, `docs/docs_portfolio_consolidation.md`, `docs/active/mas-ideal-state-gap-plan.md`, `docs/status.md`, `docs/architecture.md`, `docs/invariants.md`, `docs/decisions.md`, `docs/runtime/README.md`, and the three runtime projection docs.
 - MAS source/test inputs: `src/med_autoscience/controllers/artifact_lifecycle_inventory.py`, `src/med_autoscience/controllers/runtime_health_kernel.py`, `src/med_autoscience/controllers/study_truth_kernel.py`, `tests/test_artifact_lifecycle_inventory.py`, `tests/test_runtime_health_kernel.py`, `tests/test_study_truth_kernel.py`, `tests/test_study_progress.py`, and owner-route runtime health consumers for `canonical_runtime_action` / `external_supervisor_required`.
 
@@ -152,9 +153,8 @@ Worktree / branch cleanup:
 
 Retained lanes / blockers:
 
-- OPL `codex/developer-mode-scaleout-evidence`: dirty same-head worktree in developer-mode closeout source/tests; retain.
-- MAS `codex/dm002-progress-active-attempt-observability`: branch is now one commit behind `main` after this docs tranche and dirty in owner-route/provider-attempt source/tests/docs; retain.
-- MAS `codex/dm003-ai-reviewer-record-contract`: branch is now one commit behind `main` after this docs tranche and dirty in AI-reviewer record contract source/tests/docs; retain.
+- OPL `codex/developer-mode-scaleout-evidence`: dirty/recent worktree at `91b2268b`, now behind current `main` by the OPL ledger commit (`main...branch = 1 0`), with recent writes through `2026-05-28T23:36:09+0800` in Developer Mode docs/source/tests; retain.
+- MAS final worktree list has no extra worktree after the external `dm002-progress-active-attempt-observability` lane disappeared and `2bb847db` landed on `main`. No MAS cleanup action was taken by this tranche after removing `codex/mas-runtime-projection-docs-20260528`.
 - RCA root checkout is dirty in native PPT proof contracts/docs/source/tests plus untracked `python/redcube_ai/native_helpers/ppt_deck/native_layout_grammar.py`; retain as active/recent native-PPT lane.
 - App `codex/full-first-run-stable-gate-20260525`: dirty, remote-backed and not equivalent to main (`main...branch = 92 3`) with untracked `docs/product/`; retain.
 - Remote-only OPL `origin/fix/opl-temporal-worker-stale-repair-20260528`, MAG `origin/feature/ai-narration-contracts`, and RCA `origin/codex/developer-mode-fork-pr-live-closeout-20260528` remain retained without proof they are automation-owned stale and externally unreferenced.
