@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `docs_governance_tranche_ledger`
 State: `history_provenance`
 Machine boundary: 本文是人读 coverage ledger。当前 truth 继续归各 repo 核心五件套、single Active Truth plans、contracts、source、CLI/read-model、runtime ledger、provider receipt、domain-owned manifests、tests 和真实 App evidence。
-Date: `2026-05-29T01:30:46+0800`
+Date: `2026-05-29T01:41:00+0800`
 
 ## Tranche scope
 
@@ -21,7 +21,7 @@ Date: `2026-05-29T01:30:46+0800`
 
 | Repo | Main state after fetch / verification | Worktree / branch state | Process / PR notes |
 | --- | --- | --- | --- |
-| `one-person-lab` | Final main is clean and ahead `origin/main` by 2 at `cc6f00bc`. One ahead commit is external `db60d956` (`feat: require verified Agent Lab risk-tier receipts`); the second is this ledger commit. | `codex/agent-lab-risk-tier-promotion` is now clean, recently written, `HEAD` is an ancestor of main, and 1 behind main; retained due recent external lane activity. `codex/dm003-runner-liveness` is clean, recently written, `HEAD` is an ancestor of main, and 2 behind main; retained due recent external lane activity. | `gh pr list` returned `[]`. Remote `fix/opl-temporal-worker-stale-repair-20260528` is merged into `origin/main` by ancestry but is non-codex/non-automation named; remote deletion deferred. |
+| `one-person-lab` | Final main is clean and aligned with `origin/main` at `1e67783d` after external Agent Lab work was fast-forwarded and pushed during this run. | `codex/agent-lab-risk-tier-promotion` was externally absorbed/cleaned before final status. `codex/dm003-runner-liveness` was clean, `HEAD` was a main ancestor and 3 behind main; it was removed with its local branch. | `gh pr list` returned `[]`. Remote `fix/opl-temporal-worker-stale-repair-20260528` is merged into `origin/main` by ancestry but is non-codex/non-automation named; remote deletion deferred. |
 | `med-autoscience` | Final main is clean and aligned with `origin/main` at `a6b4c365` after an external coverage-ledger commit landed during this run. | Intermediate `codex/mas-doc-governance-inventory-20260529b` appeared dirty/recent and was retained while present; by final status it had disappeared externally and only the clean main worktree remained. | `gh pr list --head codex/mas-doc-governance-inventory-20260529b` returned `[]` when the worktree existed. No MAS cleanup action was taken after the external state change. |
 | `med-autogrant` | `main` clean and ahead `origin/main` by 1 after this tranche at `d0d00fe`. | Clean merged stale local `codex/mag-doc-governance-20260529` worktree/branch was removed because HEAD equaled `main`; new temporary `codex/mag-doc-governance-automation-20260529b` worktree was fast-forwarded into main and then removed. | `gh pr list` returned `[]`. Remote `feature/ai-narration-contracts` remains old, unmerged, and non-codex; retained. |
 | `redcube-ai` | `main` remains dirty and ahead `origin/main` by 1 at `fa09f1d`; retained untouched. | No extra worktree, but main checkout has active native-PPT code/docs/test changes. | `gh pr list` returned `[]`. Remote `codex/developer-mode-fork-pr-live-closeout-20260528` remains ancestry-unmerged / squash-ambiguous while RCA main is dirty; retained. |
@@ -36,11 +36,10 @@ Deleted local lanes:
 
 - `med-autogrant/.worktrees/doc-governance-20260529` and local branch `codex/mag-doc-governance-20260529`: clean, HEAD equaled `main`, no open PR, and already absorbed.
 - `med-autogrant/.worktrees/doc-governance-automation-20260529b` and local branch `codex/mag-doc-governance-automation-20260529b`: created for this tranche, fast-forwarded into `main`, verified, then removed.
+- `one-person-lab/.worktrees/dm003-runner-liveness` and local branch `codex/dm003-runner-liveness`: clean, no open PR, `HEAD` was a main ancestor, and final main had already absorbed it.
 
 Retained with reasons:
 
-- `one-person-lab/.worktrees/agent-lab-risk-tier-promotion`: clean and already contained in main by ancestry, but recently written by an external lane during this run.
-- `one-person-lab/.worktrees/dm003-runner-liveness`: clean and already contained in main by ancestry, but recently written by an external lane during this run.
 - `one-person-lab-app/.worktrees/codex/full-first-run-stable-gate-20260525`: dirty, remote-backed and unmerged.
 - `redcube-ai` dirty main lane: active native-PPT implementation/docs/test changes.
 - `one-person-lab` remote `fix/opl-temporal-worker-stale-repair-20260528`: merged but branch name is not automation-owned.
@@ -92,18 +91,15 @@ This tranche did not complete whole-portfolio coverage.
 
 ## Remaining stale / retire candidates
 
-- OPL clean but recently active worktrees `codex/agent-lab-risk-tier-promotion` and `codex/dm003-runner-liveness` should be rechecked next run; delete only if no recent writes/processes remain and branch heads are still ancestors of main.
 - MAS should be re-inventoried from final main `a6b4c365`; an intermediate dirty docs-governance worktree was externally resolved during this run.
 - App `codex/full-first-run-stable-gate-20260525` remains dirty, remote-backed and unmerged.
 - RCA dirty native-PPT lane remains active; remote `codex/developer-mode-fork-pr-live-closeout-20260528` should not be deleted until a clean RCA context proves supersession.
-- OPL `codex/agent-lab-risk-tier-promotion` remains dirty and recently written.
 - OPL remote `fix/opl-temporal-worker-stale-repair-20260528` and MAG remote `feature/ai-narration-contracts` remain preserved due non-automation ownership / unmerged state.
 - MAG evidence tails remain implementation/evidence work: physical delete authorization, production long-soak, submission-ready human gate, sustained real App/operator consumption and long-soak evidence.
 
 ## Next write scope
 
-1. Recheck the two clean/recent OPL worktrees and remove them only after their recent-write/process window clears and branch ancestry still proves they are absorbed.
-2. Re-inventory MAS from final main `a6b4c365` before deciding whether the externally landed docs coverage closes any MAS section-level gap.
-3. Continue MAG history body coverage only if needed by global coverage, prioritizing 2026-04-10 / 2026-04-11 / 2026-04-12 hosted-provider-risk batches.
-4. Prefer OPL / MAS / RCA safe document clusters next; delay App body docs while the release lane remains dirty/unmerged.
-5. Keep each verified tranche separate from global completion; the global `/goal` remains open until all 6 repos' `README*` and `docs/**/*.md` are section-reviewed and no unreviewed docs or unresolved stale candidates remain.
+1. Re-inventory MAS from final main `a6b4c365` before deciding whether the externally landed docs coverage closes any MAS section-level gap.
+2. Continue MAG history body coverage only if needed by global coverage, prioritizing 2026-04-10 / 2026-04-11 / 2026-04-12 hosted-provider-risk batches.
+3. Prefer OPL / MAS / RCA safe document clusters next; delay App body docs while the release lane remains dirty/unmerged.
+4. Keep each verified tranche separate from global completion; the global `/goal` remains open until all 6 repos' `README*` and `docs/**/*.md` are section-reviewed and no unreviewed docs or unresolved stale candidates remain.
