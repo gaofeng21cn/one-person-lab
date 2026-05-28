@@ -283,6 +283,103 @@ test('stage production evidence verify route reuses recorded receipt ref', () =>
   }
 });
 
+test('stage production evidence verify route prefers pending recorded receipt when verified history exists', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-evidence-closeout-pending-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  try {
+    bindStageEvidenceManifest(stateRoot, fixtureContractsRoot);
+    runCli([
+      'agents',
+      'evidence',
+      'apply',
+      '--domain',
+      'medautoscience',
+      '--request-id',
+      'stage_production_evidence:medautoscience:review',
+      '--request-pack-id',
+      'medautoscience.stage_production_evidence',
+      '--source-ref',
+      '/runtime_tray_snapshot/app_operator_drilldown/stage_production_evidence/med-autoscience/review',
+      '--receipt-ref',
+      'mas-stage-review-verified-history',
+      '--typed-blocker-ref',
+      'mas-stage-typed-blocker:review:history',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    runCli([
+      'agents',
+      'evidence',
+      'apply',
+      '--domain',
+      'medautoscience',
+      '--request-id',
+      'stage_production_evidence:medautoscience:review',
+      '--mode',
+      'verify',
+      '--receipt-ref',
+      'mas-stage-review-verified-history',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'stage-production-evidence:medautoscience:review:record',
+      '--payload',
+      JSON.stringify({
+        receipt_ref: 'mas-stage-review-current-recorded',
+        typed_blocker_refs: ['mas-stage-typed-blocker:review:current'],
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).app_operator_drilldown;
+    const stage = drilldown.stage_production_evidence.stages.find(
+      (entry: { stage_id: string }) => entry.stage_id === 'review',
+    );
+    assert.equal(stage.stage_evidence_receipt_status, 'verified');
+    assert.deepEqual(stage.recorded_stage_evidence_receipt_refs, ['mas-stage-review-current-recorded']);
+    assert.deepEqual(stage.verified_stage_evidence_receipt_refs, ['mas-stage-review-verified-history']);
+
+    const verifyRoute = drilldown.operator_action_routing_refs.refs.find(
+      (ref: { action_id: string }) =>
+        ref.action_id === 'stage-production-evidence:medautoscience:review:verify',
+    );
+    assert.ok(verifyRoute);
+    assert.deepEqual(verifyRoute.opl_cli_args.slice(-2), ['--receipt-ref', 'mas-stage-review-current-recorded']);
+    assert.deepEqual(verifyRoute.recorded_stage_evidence_receipt_refs, ['mas-stage-review-current-recorded']);
+
+    const verified = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'stage-production-evidence:medautoscience:review:verify',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).runtime_operator_action_execution;
+
+    assert.equal(verified.execution.result.external_evidence_apply.status, 'verified');
+    assert.equal(verified.execution.result.external_evidence_apply.receipt.receipt_ref, 'mas-stage-review-current-recorded');
+    assert.equal(verified.authority_boundary.can_write_domain_truth, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('stage production evidence typed blocker receipt closes App production tail without readiness claim', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-evidence-closeout-blocker-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();

@@ -521,7 +521,8 @@ function stageEvidenceRoute(
       }
     : null;
   const actionId = `stage-production-evidence:${commandDomainId}:${stageId}:${mode}`;
-  const recordedReceiptRef = stringList(stage.stage_evidence_receipt_refs)[0] ?? null;
+  const recordedReceiptRefs = stringList(stage.recorded_stage_evidence_receipt_refs);
+  const recordedReceiptRef = recordedReceiptRefs[0] ?? stringList(stage.stage_evidence_receipt_refs)[0] ?? null;
   const successPayloadExample = recordMode
     ? {
         domain_receipt_refs: unobservedExpectedReceiptRefs.filter((ref) => !ref.startsWith('owner_receipt:')),
@@ -624,6 +625,7 @@ function stageEvidenceRoute(
     evidence_source_ref: sourceRef,
     stage_evidence_receipt_status: stringValue(stage.stage_evidence_receipt_status),
     stage_evidence_receipt_refs: stringList(stage.stage_evidence_receipt_refs),
+    recorded_stage_evidence_receipt_refs: recordedReceiptRefs,
     verified_stage_evidence_receipt_refs: stringList(stage.verified_stage_evidence_receipt_refs),
     missing_production_evidence: stringList(stage.missing_production_evidence),
     evidence_obligation_summary: isRecord(stage.evidence_obligation_summary)
@@ -699,7 +701,8 @@ export function buildStageProductionEvidenceReceiptRoutes(input: {
       )
     ))
     .map((stage) => {
-      const hasRecordedButUnverifiedReceipt = stringValue(stage.stage_evidence_receipt_status) === 'recorded';
+      const hasRecordedButUnverifiedReceipt = stringValue(stage.stage_evidence_receipt_status) === 'recorded'
+        || stringList(stage.recorded_stage_evidence_receipt_refs).length > 0;
       const hasVerifiedReceipt = stringValue(stage.stage_evidence_receipt_status) === 'verified';
       const hasOpenReceiptOrMonitorRefs =
         stringList(stage.unobserved_expected_receipt_refs).length > 0

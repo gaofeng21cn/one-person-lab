@@ -267,6 +267,12 @@ function receiptRefsForStageEvidence(receipts: ReturnType<typeof stageEvidenceRe
   ]));
 }
 
+function recordedReceiptRefsForStageEvidence(receipts: ReturnType<typeof stageEvidenceReceipts>) {
+  return uniqueStrings(receipts
+    .filter((receipt) => receipt.receipt_status === 'recorded')
+    .map((receipt) => receipt.receipt_ref));
+}
+
 function domainReceiptRefsForStageEvidence(receipts: ReturnType<typeof stageEvidenceReceipts>) {
   return uniqueStrings(receipts
     .filter((receipt) => receipt.receipt_status === 'verified')
@@ -445,6 +451,7 @@ function stageProductionEvidence(
       : externalStageEvidenceReceipts.length > 0
         ? 'recorded'
         : 'missing';
+    const recordedStageEvidenceReceiptRefs = recordedReceiptRefsForStageEvidence(externalStageEvidenceReceipts);
     const externalStageEvidenceRefs = receiptRefsForStageEvidence(externalStageEvidenceReceipts);
     const externalStageTypedBlockerRefs = typedBlockerRefsForStageEvidence(externalStageEvidenceReceipts);
     const observedRefs = uniqueStrings(stageAttempts.flatMap(attemptObservedRefs));
@@ -666,6 +673,7 @@ function stageProductionEvidence(
       gate_receipt_refs: gateReceiptRefs,
       stage_evidence_receipt_status: stageEvidenceReceiptStatus,
       stage_evidence_receipt_refs: uniqueStrings(externalStageEvidenceReceipts.map((receipt) => receipt.receipt_ref)),
+      recorded_stage_evidence_receipt_refs: recordedStageEvidenceReceiptRefs,
       verified_stage_evidence_receipt_refs: uniqueStrings(externalStageEvidenceReceipts
         .filter((receipt) => receipt.receipt_status === 'verified')
         .map((receipt) => receipt.receipt_ref)),
