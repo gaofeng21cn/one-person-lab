@@ -107,6 +107,62 @@ OPL 开发文档现在不能按“每份旧计划都继续完整执行”阅读�
 
 ## Coverage Ledger
 
+Date: `2026-05-28 16:35 CST`
+Tranche: `opl-series-ledger-currentness-followup-and-rca-push`
+State: `tranche_verified`
+
+本轮是 `2026-05-28 16:22 CST` 与 `16:15 CST` 两段 ledger 的收口补正：补入 MAS `c609c174` follow-up 验证、把 OPL standard-agent template consumption verified receipt 的 live read-model evidence 回填到本 ledger，并把已经提交到 RCA `main` 的 active entry dispatch naming commit 验证后推送。没有关闭全局 `/goal`。
+
+Fresh live truth inputs:
+
+- Six-repo fetch/status/worktree/branch/open-PR/process/recent-write scan at `2026-05-28 16:35 CST`; open PR scan returned `[]` for all six repos.
+- OPL `main` / `origin/main` was aligned at `4a891846` before this docs-only follow-up; only `docs/active/development-document-portfolio.md` was dirty in the root checkout.
+- OPL read-model evidence for the standard-agent template consumption default-state receipt: `opl runtime standard-agent-template-consumption list --json` read receipt `opl://standard-agent-template-consumption-ledger/default-state-2026-05-28T08-20-35-619Z`, `receipt_count=1`, `verified_receipt_ref_count=1`, `pending_verify_receipt_ref_count=0`, and false domain/artifact/production authority flags. `opl runtime app-operator-drilldown --json` projected the same `1 / 1 / 0` receipt counts and zero domain / artifact / production ready claim counts.
+- OPL `framework readiness` fresh read kept `hard_blocker_count=0`, `evidence_envelope_open_count=0`, `evidence_envelope_blocked_count=344`, `operator_actionable_attention_tail_count=1`, `operator_payload_required_attention_tail_count=1`, `can_claim_domain_ready=false`, and `can_claim_production_ready=false`.
+- OPL `family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json` read `open_worklist_item_count=0`, `closed_refs_only_item_count=299`, `domain_dispatch_evidence_workorder_count=0`, `stage_receipt_freshness_open_workorder_count=0`, `domain_ready_authorized=false`, `production_ready_authorized=false`, and all zero-open-worklist readiness/completion flags false.
+- OPL `main` absorbed `d298ac40 fix: surface structured domain handler failures` and `fb3841f4 refactor: restore app drilldown line budget` before final push of this ledger follow-up. Fresh verification for those commits passed with `git diff --check d298ac40^..fb3841f4`, strict conflict-marker scan, OPL doctor `finding_count=0`, and `node --experimental-strip-types --test tests/src/cli/cases/family-runtime-domain-handler-timeout.test.ts tests/src/cli/cases/runtime-app-operator-drilldown-manifest-cache.test.ts` -> `6` tests, `0` failures.
+- MAS `main` / `origin/main` was aligned at `c609c174 fix(owner-route): prefer specificity followthrough receipts`; focused verification `scripts/run-pytest-clean.sh -q tests/owner_route_reconcile_cases/test_submission_refresh_followthrough.py -k specificity_followthrough` passed with `1 passed, 2 deselected`.
+- App `main` / `origin/main` was aligned at `922d30a fix(release): handle full vite cache miss`; verification for that landed commit passed with `git diff --check HEAD~1 HEAD` and `bun test tests/release/release-speed-vm-plan.test.ts` -> `9 pass`, `0 fail`.
+- RCA `main` had already committed `1803ff4 Align RCA active entry dispatch naming`; verification passed with `git diff --check HEAD~1 HEAD` and `node --experimental-strip-types --test tests/rca-retired-surface-guard.test.ts` -> `11` tests, `0` failures. The commit was pushed to `origin/main`; unrelated dirty native-PPT files remain uncommitted in RCA root.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | This portfolio ledger; OPL `docs/status.md` standard-agent consumption receipt paragraphs; OPL domain-handler failure and App/operator drilldown manifest-cache landed commits; OPL read-model outputs listed above; six-repo branch/worktree/PR/process/recent-write classification. | `docs/active/development-document-portfolio.md` |
+| `med-autoscience` | MAS latest owner-route follow-up commit, diff-check result, focused specificity followthrough pytest result, worktree retention classification. | none |
+| `redcube-ai` | RCA active entry dispatch naming commit, retired-surface guard test result, dirty native-PPT root classification. | none |
+| `one-person-lab-app` | App latest release cache-miss commit and focused release-speed VM plan test result; App worktree retention classification. | none |
+| `med-autogrant`, `opl-meta-agent` | Main status, branch/worktree/PR/process classification and doctor preflight only. | none |
+
+Archived / tombstoned / deleted docs:
+
+- none.
+
+Worktree / branch cleanup:
+
+- No worktree or branch was deleted in this continuation. Candidate lanes were retained because they were dirty, recently written, non-ancestor, externally active, or semantically unresolved.
+- OPL retained: `codex/framework-app-role-docs-20260528` is now dirty and recent; `fix/domain-handler-error-projection-2` is non-ancestor / ahead and recent; remote-only `origin/fix/opl-temporal-worker-stale-repair-20260528` remains a non-`codex/` branch with no proven automation ownership despite being an ancestor.
+- MAS retained: `fix/dm002-domain-route-dispatch` is clean but one commit ahead of current `main` and still tied to active long-running MAS quality/structure processes; `fix/dm003-gate-clearing-settle-retry` is same-head with `main` but recent-write active.
+- RCA retained: root checkout remains dirty with native PPT contracts/source/prompts/docs/tests and untracked `docs/references/native-ppt-open-source-design-discipline.md`; no cleanup was attempted. The vanished `.worktrees/codex/rca-naming-evidence-tail-20260528` path was not removed by this automation.
+- App retained: `codex/full-first-run-stable-gate-20260525` remains dirty and remote-backed; `codex/app-assistant-skill-contract-20260528` is dirty/recent; `codex/install-exposure-surface-20260528` is same-head but recent-write active.
+
+Unreviewed docs:
+
+- No new full-body README/docs semantic coverage is claimed for any repo in this continuation.
+- Six-repo whole-docs coverage remains governed by repo-local ledgers and future tranche scope; doctor pass remains a risk-map/shape signal only.
+
+Remaining stale / retire candidates:
+
+- Recheck OPL same-head or ancestor lanes only after recent-write windows clear and dirty status resolves; do not delete `fix/domain-handler-error-projection-2` while it remains non-ancestor/ahead.
+- Recheck MAS `fix/dm003-gate-clearing-settle-retry` after recent-write and process blockers clear; read `fix/dm002-domain-route-dispatch` log/diff before any absorb/cleanup because it is ahead of current `main`.
+- Recheck App same-head lanes after recent-write windows clear; do not touch `codex/full-first-run-stable-gate-20260525` while dirty/remote-backed.
+- RCA native PPT dirty lane remains outside this docs-governance commit and needs its own owner-route verification before any absorb or cleanup.
+
+Next tranche write scope:
+
+- Start with a fresh six-repo scan again. Prefer cleaning clean same-head lanes only after recent-write/process blockers expire; otherwise choose a clean README/docs cluster that advances paragraph-level body coverage without mixing in dirty runtime/source/test lanes.
+
 Date: `2026-05-28 16:22 CST`
 Tranche: `standard-agent-template-consumption-default-ledger-receipt`
 State: `tranche_verified`
@@ -172,7 +228,8 @@ Fresh live truth inputs:
   - `027bc012 Clarify OPL App role docs`: OPL active gap, framework/product/status docs and invariants clarifying the App as Codex App wrapper / fixed Codex CLI user path.
   - `7d249a73 Add standard agent consumption ledger`: runtime command, refs-only ledger, App/operator projection, test-lane registration and tests for standard agent template consumption replay evidence.
   - `4972e852 fix: redrive MAS domain route provider attempts`: `docs/decisions.md`, `src/family-runtime-redrive.ts`, `tests/src/cli/cases/family-runtime-mas-domain-route.test.ts`.
-- MAS landed heads reviewed: `67a51700 fix(publication): rehydrate ai reviewer request refs`, `27fa9e32 fix(owner-route): preserve specific dispatch payload reasons`, `bebf9ac9 docs(active): clarify dispatch blocker reason scope`, `c89a5d57 Thin MAS progress portal materializer naming`, and `dbeb3ada fix(owner-route): consume publication gate specificity followthrough`.
+- OPL status read-model currentness checked for the standard-agent template consumption ledger: `opl runtime standard-agent-template-consumption list --json` reads `receipt_count=1`, `verified_receipt_ref_count=1`, `pending_verify_receipt_ref_count=0`, receipt `opl://standard-agent-template-consumption-ledger/default-state-2026-05-28T08-20-35-619Z`, and false domain/artifact/production authority flags; `opl runtime app-operator-drilldown --json` projects the same `1 / 1 / 0` ledger counts.
+- MAS landed heads reviewed: `67a51700 fix(publication): rehydrate ai reviewer request refs`, `27fa9e32 fix(owner-route): preserve specific dispatch payload reasons`, `bebf9ac9 docs(active): clarify dispatch blocker reason scope`, `c89a5d57 Thin MAS progress portal materializer naming`, `dbeb3ada fix(owner-route): consume publication gate specificity followthrough`, and follow-up `c609c174 fix(owner-route): prefer specificity followthrough receipts`.
 - MAG landed heads reviewed: `5579364 Expose MAG sustained consumption workorder` and `e1f17cb Add MAG manifest consumption payload authority`.
 - App landed heads reviewed: `ccb4497 Add Full package warning and cache telemetry summary`, `ac8a75a Harden release actions on Node 24`, `d7daa0e Document one-shot readiness fields`, and local-to-main `3efb55a docs(app): lock Codex CLI assistant home profile`.
 - OMA landed heads reviewed: `501d80f docs: record OMA no-drift revalidation` and `0a4704f docs: fold OMA governance ledger`.
@@ -183,8 +240,10 @@ Fresh verification:
 - OPL focused scaffold / consumption verification passed: `node --experimental-strip-types --test tests/src/cli/cases/agents-scaffold.test.ts tests/src/cli/cases/standard-agent-template-consumption-read-model.test.ts` -> `10` tests, `0` failures.
 - OPL focused redrive verification passed: `node --experimental-strip-types --test tests/src/cli/cases/family-runtime-mas-domain-route.test.ts` -> `11` tests, `0` failures.
 - OPL `git diff --check 4972e852..7d249a73` passed; focused standard-agent consumption ledger verification passed: `node --experimental-strip-types --test tests/src/cli/cases/runtime-standard-agent-template-consumption-ledger.test.ts tests/src/cli/cases/runtime-app-operator-drilldown-summary.test.ts tests/src/cli/cases/agents-scaffold.test.ts tests/src/cli/cases/standard-agent-template-consumption-read-model.test.ts` -> `16` tests, `0` failures.
+- OPL status prose currentness check passed against live read-model: `opl runtime standard-agent-template-consumption list --json`, `opl runtime app-operator-drilldown --json`, and `opl framework readiness --family-defaults --json` all preserve refs-only authority boundaries and keep domain-ready / artifact-authority / production-ready claims false for this ledger.
 - MAS `git diff --check HEAD~3 HEAD` passed; focused repo-native pytest passed: `scripts/run-pytest-clean.sh -q tests/domain_action_request_lifecycle_cases/test_ai_reviewer_request_currentness.py tests/test_cli_cases/owner_route_handoff_command.py -k 'ai_reviewer_request or current_owner_route_blocker'` -> `9 passed, 61 deselected`.
 - MAS `git diff --check HEAD~2 HEAD` passed for `c89a5d57..dbeb3ada`; focused repo-native pytest passed: `scripts/run-pytest-clean.sh -q tests/domain_action_request_lifecycle_cases/test_ai_reviewer_request_currentness.py tests/owner_route_reconcile_cases/test_default_executor_receipt_consumption.py tests/test_cli_cases/owner_route_handoff_command.py -k 'ai_reviewer_request or default_executor_receipt or current_owner_route_blocker'` -> `17 passed, 61 deselected`.
+- MAS `git diff --check HEAD~1 HEAD` passed for `c609c174`; focused repo-native pytest passed: `scripts/run-pytest-clean.sh -q tests/owner_route_reconcile_cases/test_submission_refresh_followthrough.py -k specificity_followthrough` -> `1 passed, 2 deselected`.
 - MAG `git diff --check HEAD~2 HEAD` passed; focused repo-native pytest passed: `scripts/run-pytest-clean.sh -q tests/product_entry_cases/test_manifest_sustained_consumption_payload.py tests/product_entry_cases/test_manifest_sustained_consumption_workorder.py tests/product_entry_cases/test_opl_owner_payload_response_cli.py tests/test_schema_registry_owner_payload_manifest.py` -> `7 passed`.
 - App release/readiness focused tests passed before contract-lane push: `bun test tests/release/release-readiness-summary.test.ts tests/release/app-release-boundary.test.ts tests/release/release-speed-vm-plan.test.ts` -> `72 pass, 0 fail`.
 - App contract-lane validation passed before push / cleanup: doctor `0 pass`, strict conflict-marker scan clean, and `bun test tests/release/app-release-boundary.test.ts` -> `57 pass, 0 fail`.
@@ -196,15 +255,15 @@ Fresh semantic result:
 - OPL standard-agent consumption ledger now records/verifies body-free replay evidence refs for scaffold consumption and projects ledger receipt counts to App/operator drilldown, without claiming domain ready, artifact authority or production ready.
 - OPL App role docs now clarify the ordinary App user path as fixed Codex CLI with built-in MAS/MAG/RCA purpose entries; AionUI multi-backend choices remain implementation material rather than product truth.
 - OPL MAS domain route redrive now has a provider-attempt recovery path for failed MAS domain route transport while preserving MAS truth/body boundaries.
-- MAS AI reviewer request currentness, Progress Portal materializer naming, publication-gate specificity followthrough, and dispatch blocker reason scope are current on `main`; standalone current owner typed blockers remain typed-blocker refs, not MAS owner receipt or live paper-line closeout.
+- MAS AI reviewer request currentness, Progress Portal materializer naming, publication-gate specificity followthrough, specificity followthrough receipt preference, and dispatch blocker reason scope are current on `main`; standalone current owner typed blockers remain typed-blocker refs, not MAS owner receipt or live paper-line closeout.
 - MAG manifest sustained-consumption payload authority validates real App/operator or release default-caller payloads through success refs path or typed-blocker path, without creating MAG owner receipts, App sustained-consumption closeout, human approval, submission-ready, grant-ready or provider long-soak claims.
 - App one-shot readiness summary now exposes public installer entry, `opl system initialize --json` setup-flow source, small artifact, progress, blocker, retry and skip-module fields as diagnostic release evidence. App Codex home profile is now Codex CLI fixed-executor / automatic model status on the home input; it explicitly hides Aion/Claude/backend/model/permission selectors from the user-facing home path while keeping technical model detail out of the default user flow.
 - OMA docs portfolio remains a folded governance ledger; no new OMA README/docs path opened in this turn.
 
 Branch / worktree retention update:
 
-- OPL `main` clean/aligned at `e3faf799` after this ledger push. `codex/opl-codex-app-role-docs-20260528` disappeared from current worktree metadata during this run; no deletion action was taken. Clean same-head worktrees / branches `codex/standard-agent-consumption-ledger-20260528` and `fix/domain-handler-error-projection` were removed after verification. A later same-head worktree / branch `fix/domain-handler-error-projection-2` is clean and `HEAD` is a main ancestor, but recent-write scan still shows many files under that worktree in the last hour; retain until recency clears.
-- MAS `main` clean/aligned at `dbeb3ada`. `codex/mas-progress-materializer-rename` disappeared from current worktree metadata during this run; no deletion action was taken. `fix/dm002-domain-route-dispatch` and `codex/dm003-specificity-consumed-followthrough` are attached to worktrees at the same head as `main` but dirty; retain. `codex/dm003-publication-gate-specificity-consumption` disappeared from current worktree metadata during this run; no deletion action was taken.
+- OPL `main` was clean/aligned after the landed-work ledger push; current head is intentionally not duplicated in this dated row because the ledger itself may receive follow-up correction commits. `codex/opl-codex-app-role-docs-20260528` disappeared from current worktree metadata during this run; no deletion action was taken. Clean same-head worktrees / branches `codex/standard-agent-consumption-ledger-20260528` and `fix/domain-handler-error-projection` were removed after verification. A later same-head worktree / branch `fix/domain-handler-error-projection-2` is clean and `HEAD` is a main ancestor, but recent-write scan still shows many files under that worktree in the last hour; retain until recency clears.
+- MAS `main` clean/aligned at `c609c174`. `codex/mas-progress-materializer-rename` disappeared from current worktree metadata during this run; no deletion action was taken. `fix/dm002-domain-route-dispatch` remains attached to a dirty worktree at `dbeb3ada`, which is now a main ancestor; retain. `codex/dm003-specificity-consumed-followthrough` and `codex/dm003-publication-gate-specificity-consumption` disappeared from current worktree metadata during this run; no deletion action was taken.
 - MAG `main` clean/aligned at `e1f17cb`; no local extra worktree. Remote-only `origin/feature/ai-narration-contracts` remains non-automation-owned and was not touched.
 - RCA `main` aligned at `6ff72fc` but root checkout remains dirty with native PPT source/contracts/prompts/docs/tests; OPL/RCA route processes were active earlier in this turn; retain.
 - OMA `main` clean/aligned at `0a4704f`; no extra local worktree.
@@ -214,7 +273,7 @@ Reviewed documents / sections:
 
 | Repo | Reviewed docs / sections | Edited docs this tranche |
 | --- | --- | --- |
-| `one-person-lab` | This portfolio ledger; OPL active/framework/product/status docs for App role; OPL active gap/source/test diff for scaffold consumption and standard-agent consumption ledger; OPL decision/source/test diff for MAS domain route redrive; six-repo branch/worktree/PR/process/recent-write classification and doctor preflight. | `docs/active/development-document-portfolio.md` |
+| `one-person-lab` | This portfolio ledger; OPL active/framework/product/status docs for App role; OPL status sections for standard-agent template consumption durable receipt; OPL active gap/source/test diff for scaffold consumption and standard-agent consumption ledger; OPL decision/source/test diff for MAS domain route redrive; six-repo branch/worktree/PR/process/recent-write classification and doctor preflight. | `docs/active/development-document-portfolio.md`, `docs/status.md` |
 | `med-autoscience` | MAS active/status/decision/source/test diffs for AI reviewer request currentness, progress materializer rename, publication-gate specificity followthrough and dispatch blocker reason scope; focused pytest surface listed above. | none |
 | `med-autogrant` | MAG active/status/schema/source/test diffs for sustained consumption workorder and manifest-consumption payload authority; focused pytest surface listed above. | none |
 | `one-person-lab-app` | App release/testing/script docs and release readiness summary diff for one-shot fields; App contract/docs/scripts/test diff for Codex CLI fixed home profile; focused Bun test surfaces listed above. | none |
