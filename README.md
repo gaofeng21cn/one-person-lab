@@ -38,11 +38,15 @@ One Person Lab is both the technical stage-led agent framework and the product f
 
 | Layer | Audience | Role |
 | --- | --- | --- |
-| **One Person Lab** | Developers, technical operators, product integration | Shared foundation for building and running domain agents: stage control, runtime providers, contracts, module discovery, skill sync, runtime snapshots, and progress projections. |
+| **OPL Framework** | Developers, technical operators, product integration | Shared foundation for building and running domain agents: stage control, runtime providers, contracts, module discovery, skill sync, runtime snapshots, and progress projections. |
 | **Domain agents** | Specialized work | MAS, MAG, RCA, and future agents carry domain judgment, quality verdicts, stage semantics, and deliverables. |
 | **One Person Lab App** | End users | Desktop workbench that packages One Person Lab, domain agents, and companion tools with download, first-run checks, progress, files, runtime status, and updates. |
 
-The chain is straightforward: build and run domain agents with One Person Lab, then package One Person Lab and the agents into a desktop product for users.
+The chain is straightforward: build and run domain agents with OPL Framework, then package the framework and agents into a desktop product for users.
+
+The repository split is deliberate. `one-person-lab` owns the framework, runtime, CLI, contracts, generated surfaces, and App-readable state/action interfaces. `one-person-lab-app` owns GUI product truth, App release gates, updater metadata, user guides, screenshots, first-run checks, and active-shell validation. `opl-aion-shell` is the current implementation carrier for the App-owned GUI contract. MAS, MAG, RCA, and other domain repositories own their domain app/runtime authority, domain truth, quality/export verdicts, artifact authority, owner receipts, and direct skill entries.
+
+The ordinary desktop product is a Codex App wrapper: it uses `Codex CLI` as the fixed concrete executor and presents MAS, MAG, RCA, and later Foundry Agents as built-in task entries. AionUI upstream backend/agent selectors, non-default executor adapters, and shell implementation details belong in explicit developer/operator diagnostics, not in the normal user product surface.
 
 <p align="center">
   <img src="assets/branding/opl-framework-ecosystem-map.png" alt="One Person Lab builds domain agents and packages them into the desktop product" width="100%" />
