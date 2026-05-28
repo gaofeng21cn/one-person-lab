@@ -154,8 +154,11 @@ Worktree / branch cleanup:
 Retained lanes / blockers:
 
 - OPL retained local branch `codex/gui-dmg-cleanup-hardening-20260528`: same-head with main at `01a1e007`, but recent-write active during this scan.
+- OPL retained newly observed worktree/branch `codex/mas-dispatch-ledger-foldback-20260528`: clean, branch is already an ancestor of current main, but it appeared during closeout and remains recent-write active.
 - MAS retained dirty worktree `codex/dm003-record-archive-currentness` and clean but non-ancestor/recent `codex/mas-ai-reviewer-consumed-handoff-payload-20260528`; neither was deleted in this tranche.
+- MAS retained newly observed worktree/branch `codex/mas-dispatch-ledger-foldback-20260528`: clean same-head with current main, but it appeared during closeout and remains recent-write active.
 - App retained dirty `codex/agui-shell-candidate-spike-20260528` and dirty remote-backed `codex/full-first-run-stable-gate-20260525`.
+- App retained newly observed worktree/branch `codex/packaged-gui-assistant-smoke-20260528`: clean same-head with current main, but it appeared during closeout and remains recent-write active.
 - RCA retained dirty native-PPT root with contracts/source/prompts/docs/tests plus active route-evolution/Codex subprocesses.
 - Remote-only OPL `origin/fix/opl-temporal-worker-stale-repair-20260528`, MAG `origin/feature/ai-narration-contracts`, and App `origin/codex/full-first-run-stable-gate-20260525` remain retained without safe automation-owned remote deletion proof.
 
@@ -166,6 +169,7 @@ Unreviewed docs:
 Remaining stale / retire candidates:
 
 - Recheck OPL same-head `codex/gui-dmg-cleanup-hardening-20260528` after the recent-write window clears; if still clean, same-head, no PR/process/remote owner, it can be removed locally.
+- Recheck OPL `codex/mas-dispatch-ledger-foldback-20260528`, MAS `codex/mas-dispatch-ledger-foldback-20260528`, and App `codex/packaged-gui-assistant-smoke-20260528` after the recent-write window clears; each was retained because it appeared during closeout.
 - Recheck MAS dirty worktrees only after their dirty files are committed, absorbed, or explicitly handed off.
 - Recheck App dirty AGUI and Full first-run lanes only after owner/semantic absorption proof; the remote-backed Full first-run lane must not be deleted without external reference proof.
 - RCA native-PPT dirty lane remains outside docs-governance cleanup and needs its own owner-route/product-entry verification before absorb or cleanup.
