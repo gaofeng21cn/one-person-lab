@@ -17,6 +17,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - stderr 和 stdout 继续保留在 runtime event payload 中，供诊断命令噪声、环境同步或底层进程行为；但无结构化 owner 错误时才回退到 stderr。
 - 该规则只改善 OPL queue / retry / dead-letter 可观察性，不把 OPL 变成 MAS/MAG/RCA truth、quality verdict、artifact authority 或 owner receipt signer。
 
+### 决策：App drilldown 继续通过真实模块拆分恢复 line-budget gate
+
+原因：OPL `scripts/verify.sh` 的第一道结构门是 line-budget。若当前 main 的 App drilldown 聚合器或长测试超过 locked baseline，应通过职责明确的 parts 模块和独立测试文件拆分恢复，而不是调高 baseline、跳过 verify，或把结构 debt 当成下游 domain 任务失败。
+
+影响：
+
+- `runtime-tray-app-operator-drilldown` 继续保持薄聚合器；新增投影块进入 `runtime-tray-app-operator-drilldown-parts/`。
+- App drilldown 的 manifest-cache 等独立测试场景必须独立成 case 文件，删除低于默认行数后的 retired baseline。
+- 该规则只恢复 OPL repo 结构验证与可维护性，不改变 MAS/MAG/RCA truth、quality verdict、artifact authority 或 owner receipt 边界。
+
 ## 2026-05-27
 
 ### 决策：用户可读 stage log 成为标准 OPL Agent admission 要求

@@ -6,12 +6,6 @@ import {
 import {
   buildStandardDomainAgentSkeletonInspection,
 } from './family-domain-agent-skeleton.ts';
-import {
-  buildStandardDomainAgentTemplateConsumptionReadModel,
-} from './standard-domain-agent-scaffold.ts';
-import {
-  listStandardAgentTemplateConsumptionReceipts,
-} from './standard-agent-template-consumption-ledger.ts';
 import type {
   ProviderContinuousProof,
 } from './family-domain-agent-provider-closure.ts';
@@ -68,6 +62,9 @@ import {
 import {
   buildProviderWorkerActionRoutes,
 } from './runtime-tray-app-operator-drilldown-parts/provider-worker-action-routes.ts';
+import {
+  buildStandardAgentTemplateConsumptionProjection,
+} from './runtime-tray-app-operator-drilldown-parts/standard-agent-template-consumption.ts';
 import {
   periodicExecutionRefs,
   providerCapabilitySloSummary,
@@ -998,43 +995,8 @@ export function buildAppOperatorDrilldown(input: {
     input.providerContinuousProof,
   );
   const oplMetaAgentRegistry = buildOplMetaAgentRegistryExtension();
-  const standardAgentTemplateConsumptionReceipts =
-    listStandardAgentTemplateConsumptionReceipts();
-  const standardAgentTemplateConsumption = {
-    ...buildStandardDomainAgentTemplateConsumptionReadModel(),
-    ledger_projection: {
-      surface_kind: 'opl_standard_agent_template_consumption_ledger_projection',
-      receipt_count: standardAgentTemplateConsumptionReceipts.length,
-      verified_receipt_ref_count: standardAgentTemplateConsumptionReceipts.filter((receipt) =>
-        receipt.receipt_status === 'verified'
-      ).length,
-      pending_verify_receipt_ref_count: standardAgentTemplateConsumptionReceipts.filter((
-        receipt,
-      ) => receipt.receipt_status === 'recorded').length,
-      receipt_refs: standardAgentTemplateConsumptionReceipts.map((receipt) =>
-        receipt.receipt_ref
-      ),
-      verified_receipt_refs: standardAgentTemplateConsumptionReceipts
-        .filter((receipt) => receipt.receipt_status === 'verified')
-        .map((receipt) => receipt.receipt_ref),
-      pending_verify_receipt_refs: standardAgentTemplateConsumptionReceipts
-        .filter((receipt) => receipt.receipt_status === 'recorded')
-        .map((receipt) => receipt.receipt_ref),
-      receipts: standardAgentTemplateConsumptionReceipts,
-      authority_boundary: {
-        refs_only: true,
-        can_write_domain_truth: false,
-        can_write_memory_body: false,
-        can_read_memory_body: false,
-        can_read_artifact_body: false,
-        can_mutate_artifact_body: false,
-        can_create_owner_receipt: false,
-        can_claim_domain_ready: false,
-        can_claim_artifact_authority: false,
-        can_claim_production_ready: false,
-      },
-    },
-  };
+  const standardAgentTemplateConsumption =
+    buildStandardAgentTemplateConsumptionProjection();
   const oplMetaAgentProjection = record(oplMetaAgentRegistry as JsonRecord);
   const oplMetaAgentProductionConsumption = record(
     oplMetaAgentProjection.production_consumption_followthrough,

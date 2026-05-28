@@ -167,6 +167,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/runtime-app-operator-drilldown-mas-payload-summary.test.ts',
   'tests/src/cli/cases/runtime-app-operator-drilldown-mag-payload-summary.test.ts',
   'tests/src/cli/cases/runtime-app-operator-drilldown-summary.test.ts',
+  'tests/src/cli/cases/runtime-app-operator-drilldown-manifest-cache.test.ts',
   'tests/src/cli/cases/runtime-app-operator-drilldown-oma-managed-install.test.ts',
   'tests/src/cli/cases/runtime-app-operator-drilldown-oma-manual-required.test.ts',
   'tests/src/cli/cases/runtime-app-operator-drilldown-owner-handoff.test.ts',
