@@ -5,7 +5,9 @@ Purpose: `references_current_support_opl_gui_shell_adapter_boundary`
 State: `support_reference`
 Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
 
-状态锚点：`2026-05-28`
+Currentness policy：本文冻结 GUI shell / App / OPL runtime owner boundary，不冻结日期、release artifact、updater metadata、App state counters、App/operator route counts、provider proof snapshot、branch/SHA state 或本机 GUI smoke 结果。当前状态必须从 fresh `opl app state --profile fast --json`、`opl app state --profile full --json`、`opl runtime app-operator-drilldown --json`、`opl framework readiness --family-defaults --json`、`one-person-lab-app` release evidence 和 `opl-aion-shell` active-shell / packaged-runtime validation 读取。
+
+稳定读法是：普通 GUI 页面状态默认消费 `opl_app_state.v1` fast profile，显式刷新消费 full profile，用户主动展开 operator diagnostic 才消费 `opl runtime app-operator-drilldown --detail full --json`。这些读面只证明 OPL 可生产 GUI-ready state/action 与 refs-only operator detail，不把 GUI shell、AionUI、App repo 或 release artifact 写成 runtime truth、domain truth、artifact body、memory body、quality/export verdict、App release ready 或 production ready owner。
 
 ## 结论
 

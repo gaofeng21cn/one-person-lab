@@ -64,6 +64,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-22.md` | OPL series branch/worktree/doc governance tranche ledger part 22。 | 当前 truth 归 OPL operating-governance support references、核心五件套、contracts/source/tests 和 live CLI/read-model；ledger 只记录本轮 App/operator projection 与 operating-governance index fixed-counter 快照瘦身、fresh framework/App/conformance/worklist 读取和下一轮写入范围。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-23.md` | OPL series branch/worktree/doc governance tranche ledger part 23。 | 当前 truth 归 OPL domain-memory governance support reference、核心五件套、contracts/source/tests 和 live CLI/read-model；ledger 只记录本轮 domain-memory fixed-counter / dated proof 快照瘦身、fresh domain-memory/App/framework/worklist 读取和下一轮写入范围。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-24.md` | OPL series branch/worktree/doc governance tranche ledger part 24。 | 当前 truth 归 OPL runtime naming support、核心五件套、contracts/source/tests、runtime ledger 和 live CLI/read-model；ledger 只记录本轮 runtime naming fixed-date current-state anchor 瘦身、fresh framework/stages/conformance/default-caller/App/worklist 读取和下一轮写入范围。 |
+| `2026-05-29-opl-series-doc-governance-tranche-ledger-part-25.md` | OPL series branch/worktree/doc governance tranche ledger part 25。 | 当前 truth 归 OPL GUI shell adapter boundary、App/product support、App release evidence、contracts/source/tests 和 live CLI/read-model；ledger 只记录本轮 GUI shell fixed-date anchor 瘦身、fresh App state/App operator/framework 读取和下一轮写入范围。 |
 
 ## Tombstone Rules
 
