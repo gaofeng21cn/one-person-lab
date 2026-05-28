@@ -25,6 +25,7 @@ Date: `2026-05-29`
 - `opl runtime app-operator-drilldown --json`：App/operator drilldown available，projection policy 为 refs-only，不读取 domain truth、memory body、artifact body 或 verdict；safe action / stage evidence / provider SLO counters are dynamic read-model facts.
 - `opl agents conformance --family-defaults --json`：4 repos passed，0 blocked，structural conformance passed；production evidence tail reported separately.
 - `opl agents default-callers --family-defaults --json`：32 generated/default caller surfaces，0 blocked surfaces，0 missing owner/typed-blocker，0 missing no-forbidden-write，0 missing tombstone/provenance refs；physical delete remains not authorized by this OPL projection.
+- `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail summary --json`：fresh open worklist 1、closed refs-only 316、domain-dispatch payload-required 1；该动态变化只作为本轮 evidence，不进入 stable roadmap。
 - `./scripts/verify.sh`：38 tests passed，0 failed，在 part20 worktree 变更前作为 baseline。
 
 ## Changes
@@ -32,7 +33,7 @@ Date: `2026-05-29`
 - `opl-stage-led-agent-framework-roadmap.md`
   - Removed the fixed `Date` metadata and added a currentness rule pointing to the active gap plan, core docs, contracts/source/tests and live CLI/read-model.
   - Added `stages readiness` to the live read-model command set and made stage admission counters dynamic.
-  - Replaced stale `opl agents list` / `3 aligned` currentness wording with conformance/default-caller read-model semantics: 4 repos passed / 0 blocked, 32 generated/default caller surfaces / 0 blocked, no physical delete authority.
+  - Replaced stale `opl agents list` / `3 aligned` currentness wording with conformance/default-caller read-model semantics and physical-delete authority boundaries, while keeping fresh counters in live read-model / this ledger rather than the stable roadmap body.
   - Reframed MDS / DeepScientist as archive / diagnostic / upstream-intake reference outside active conformance/default-caller/production evidence scope.
   - Replaced old open structural-gap list with current roadmap-level gaps: production Temporal deployment/SLO, MAS guarded apply scaleout, MAG/RCA long soak, domain memory/artifact authority, and physical cleanup gates.
   - Marked the old master/lane plan section as implementation roadmap/provenance rather than active execution queue.
