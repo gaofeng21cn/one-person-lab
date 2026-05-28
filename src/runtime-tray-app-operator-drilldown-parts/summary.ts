@@ -575,6 +575,14 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       developerModeLiveCloseoutSummary.verified_direct_fix_ledger_receipt_ref_count,
     developer_mode_live_closeout_verified_fork_pr_ledger_receipt_ref_count:
       developerModeLiveCloseoutSummary.verified_fork_pr_ledger_receipt_ref_count,
+    developer_mode_live_closeout_route_repetition_ref_count:
+      developerModeLiveCloseoutSummary.route_repetition_ref_count,
+    developer_mode_live_closeout_risk_tier_auto_promotion_ref_count:
+      developerModeLiveCloseoutSummary.risk_tier_auto_promotion_ref_count,
+    developer_mode_live_closeout_app_patrol_mount_ref_count:
+      developerModeLiveCloseoutSummary.app_patrol_mount_ref_count,
+    developer_mode_live_closeout_scaleout_followthrough_open_gate_count:
+      developerModeLiveCloseoutSummary.scaleout_followthrough_open_gate_count,
     developer_mode_live_closeout_missing_live_ledger_route_count:
       developerModeLiveCloseoutSummary.missing_live_ledger_route_count,
     developer_mode_live_closeout_attention_count:

@@ -52,6 +52,10 @@ function parseRuntimeDeveloperModeCloseoutPayload(
     fork_repo_ref: optionalString(parsed.fork_repo_ref),
     pr_review_ref: optionalString(parsed.pr_review_ref),
     owner_acceptance_ref: optionalString(parsed.owner_acceptance_ref),
+    route_repetition_refs: stringList(parsed.route_repetition_refs ?? parsed.route_repetition_ref),
+    risk_tier_auto_promotion_refs:
+      stringList(parsed.risk_tier_auto_promotion_refs ?? parsed.risk_tier_auto_promotion_ref),
+    app_patrol_mount_refs: stringList(parsed.app_patrol_mount_refs ?? parsed.app_patrol_mount_ref),
     receipt_ref: optionalString(parsed.receipt_ref),
   };
 }

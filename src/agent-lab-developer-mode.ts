@@ -86,6 +86,9 @@ export const DEVELOPER_MODE_REPAIR_AUTHORITY_BOUNDARY = {
   writes_owner_receipt: false,
   modifies_managed_runtime: false,
   writes_follow_up_queue_body: false,
+  can_claim_release_ready: false,
+  can_claim_production_ready: false,
+  can_close_developer_mode_live_route: false,
 };
 
 export const DEVELOPER_MODE_DYNAMIC_ROUTE_BUILDER = {
@@ -107,6 +110,11 @@ export const DEVELOPER_MODE_DYNAMIC_ROUTE_BUILDER = {
     'fork_repo_ref',
     'pr_review_ref',
     'owner_acceptance_ref',
+  ],
+  scaleout_followthrough_ref_fields: [
+    'route_repetition_refs',
+    'risk_tier_auto_promotion_refs',
+    'app_patrol_mount_refs',
   ],
   owner_acceptance_ref_policy:
     'direct_fix_external_owner_ref_fork_pr_github_pr_owner_acceptance_ref_fixture_refs_do_not_close_owner_acceptance',
@@ -426,6 +434,114 @@ function routeForLedgerReceipt(receipt: DeveloperModeCloseoutReceipt): Developer
   };
 }
 
+function receiptRefListField(receipt: DeveloperModeCloseoutReceipt, field: keyof DeveloperModeCloseoutReceipt) {
+  const value = receipt[field];
+  return Array.isArray(value)
+    ? unique(value.filter((entry): entry is string => typeof entry === 'string'))
+    : [];
+}
+
+function routeCloseoutRefs(receipt: DeveloperModeCloseoutReceipt) {
+  return unique([
+    receipt.patrol_observation_ref,
+    receipt.diff_ref,
+    ...receipt.verification_refs,
+    receipt.no_forbidden_write_ref,
+    receipt.commit_ref ?? '',
+    receipt.fork_repo_ref ?? '',
+    receipt.pr_review_ref ?? '',
+    receipt.owner_acceptance_ref,
+    ...receipt.route_repetition_refs,
+    ...receipt.risk_tier_auto_promotion_refs,
+    ...receipt.app_patrol_mount_refs,
+  ]);
+}
+
+function developerModeScaleoutFollowthrough(verifiedReceipts: DeveloperModeCloseoutReceipt[]) {
+  const baseRouteKinds = ['direct-fix', 'fork-PR'] as const;
+  const baseRoutesReady = baseRouteKinds.every((route) =>
+    verifiedReceipts.some((receipt) => receipt.route_decision === route)
+  );
+  const routeRepetitionRefs = unique(
+    verifiedReceipts.flatMap((receipt) =>
+      receiptRefListField(receipt, 'route_repetition_refs')
+    ),
+  );
+  const riskTierAutoPromotionRefs = unique(
+    verifiedReceipts.flatMap((receipt) =>
+      receiptRefListField(receipt, 'risk_tier_auto_promotion_refs')
+    ),
+  );
+  const appPatrolMountRefs = unique(
+    verifiedReceipts.flatMap((receipt) =>
+      receiptRefListField(receipt, 'app_patrol_mount_refs')
+    ),
+  );
+  const repeatedTargetRepoIds = unique(
+    verifiedReceipts.flatMap((receipt) =>
+      routeCloseoutRefs(receipt).length > 0 && receipt.route_repetition_refs.length > 0
+        ? [receipt.target_repo_id]
+        : []
+    ),
+  );
+  const openGateIds = baseRoutesReady
+    ? [
+        routeRepetitionRefs.length > 0 ? null : 'route_repetition_refs',
+        riskTierAutoPromotionRefs.length > 0 ? null : 'risk_tier_auto_promotion_refs',
+        appPatrolMountRefs.length > 0 ? null : 'app_patrol_mount_refs',
+      ].filter((entry): entry is string => Boolean(entry))
+    : [];
+
+  return {
+    surface_kind: 'opl_developer_mode_live_route_scaleout_followthrough',
+    status: baseRoutesReady
+      ? openGateIds.length === 0
+        ? 'scaleout_refs_ready'
+        : 'scaleout_refs_incomplete'
+      : 'waiting_for_base_live_route_closeout_refs',
+    base_live_route_closeout_refs_ready: baseRoutesReady,
+    open_gate_count: openGateIds.length,
+    open_gate_ids: openGateIds,
+    route_repetition_ref_count: routeRepetitionRefs.length,
+    route_repetition_refs: routeRepetitionRefs,
+    repeated_target_repo_count: repeatedTargetRepoIds.length,
+    repeated_target_repo_ids: repeatedTargetRepoIds,
+    risk_tier_auto_promotion_ref_count: riskTierAutoPromotionRefs.length,
+    risk_tier_auto_promotion_refs: riskTierAutoPromotionRefs,
+    app_patrol_mount_ref_count: appPatrolMountRefs.length,
+    app_patrol_mount_refs: appPatrolMountRefs,
+    required_return_shapes: [
+      'developer_mode_route_repetition_ref',
+      'developer_mode_risk_tier_auto_promotion_ref',
+      'developer_mode_app_patrol_mount_ref',
+      'typed_blocker_ref',
+    ],
+    payload_ref_hints: {
+      route_repetition_refs_should_cover:
+        'repeat direct-fix or fork-PR closeout receipts across more than one target repo or patrol observation',
+      risk_tier_auto_promotion_refs_should_cover:
+        'Agent Lab risk-tiered promotion decision refs with independent AI review and rollback or canary refs',
+      app_patrol_mount_refs_should_cover:
+        'App/default caller patrol mounting refs showing Developer Mode patrol surfaces are visible without full drilldown',
+      typed_blocker_refs_may_explain_missing_scaleout: true,
+    },
+    authority_boundary: {
+      refs_only: true,
+      can_write_domain_truth: false,
+      can_write_memory_body: false,
+      can_mutate_artifact_body: false,
+      can_authorize_quality_or_export: false,
+      can_create_owner_receipt: false,
+      can_write_owner_receipt: false,
+      can_modify_managed_runtime: false,
+      can_close_domain_ready: false,
+      can_claim_release_ready: false,
+      can_claim_production_ready: false,
+      can_close_developer_mode_live_route: false,
+    },
+  };
+}
+
 export function buildDeveloperModeAgentLabRepairRoute(input: DeveloperModeAgentLabRepairRouteInput) {
   const refs = observationRefs(input.patrol_observation_refs);
   const initial = routeEligibility(input.developer_mode_projection, input.repo_permission);
@@ -630,6 +746,8 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
     receipt.route_decision === 'direct-fix').length;
   const verifiedForkPrReceiptCount = verifiedLedgerReceipts.filter((receipt) =>
     receipt.route_decision === 'fork-PR').length;
+  const scaleoutFollowthrough =
+    developerModeScaleoutFollowthrough(verifiedLedgerReceipts);
   const liveLedgerCloseoutReady =
     verifiedDirectFixReceiptCount > 0
     && verifiedForkPrReceiptCount > 0
@@ -654,6 +772,15 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
     ledger_receipt_refs: ledgerReceipts.map((receipt) => receipt.receipt_ref),
     verified_ledger_receipt_refs: verifiedLedgerReceipts.map((receipt) => receipt.receipt_ref),
     pending_verify_receipt_refs: recordedLedgerReceipts.map((receipt) => receipt.receipt_ref),
+    route_repetition_receipt_refs: verifiedLedgerReceipts.flatMap((receipt) =>
+      receiptRefListField(receipt, 'route_repetition_refs')
+    ),
+    risk_tier_auto_promotion_receipt_refs: verifiedLedgerReceipts.flatMap((receipt) =>
+      receiptRefListField(receipt, 'risk_tier_auto_promotion_refs')
+    ),
+    app_patrol_mount_receipt_refs: verifiedLedgerReceipts.flatMap((receipt) =>
+      receiptRefListField(receipt, 'app_patrol_mount_refs')
+    ),
     required_closeout_ref_groups: [
       'route_eligibility',
       'patrol_observation_ref',
@@ -663,6 +790,7 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
       'commit_ref_or_fork_pr_refs',
       'external_owner_acceptance_ref',
     ],
+    scaleout_followthrough: scaleoutFollowthrough,
     drills: liveCloseoutEvidenceDrills,
     summary: {
       drill_count: liveCloseoutEvidenceDrills.length,
@@ -684,6 +812,14 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
       pending_verify_receipt_ref_count: recordedLedgerReceipts.length,
       verified_direct_fix_ledger_receipt_ref_count: verifiedDirectFixReceiptCount,
       verified_fork_pr_ledger_receipt_ref_count: verifiedForkPrReceiptCount,
+      route_repetition_ref_count:
+        scaleoutFollowthrough.route_repetition_ref_count,
+      risk_tier_auto_promotion_ref_count:
+        scaleoutFollowthrough.risk_tier_auto_promotion_ref_count,
+      app_patrol_mount_ref_count:
+        scaleoutFollowthrough.app_patrol_mount_ref_count,
+      scaleout_followthrough_open_gate_count:
+        scaleoutFollowthrough.open_gate_count,
       repo_contract_fixture_drill_count: liveCloseoutEvidenceDrills.filter((drill) =>
         drill.closeout_refs.evidence_source === 'repo_contract_test_fixture').length,
       repo_contract_fixture_not_live_repo_count: liveCloseoutEvidenceDrills.filter((drill) =>

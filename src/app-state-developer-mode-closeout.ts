@@ -22,10 +22,16 @@ export function buildDeveloperModeLiveCloseoutEvidenceSummary() {
       live_ledger_closeout_ready_count: evidence.summary.live_ledger_closeout_ready_count,
       verified_direct_fix_ledger_receipt_ref_count: evidence.summary.verified_direct_fix_ledger_receipt_ref_count,
       verified_fork_pr_ledger_receipt_ref_count: evidence.summary.verified_fork_pr_ledger_receipt_ref_count,
+      route_repetition_ref_count: evidence.summary.route_repetition_ref_count,
+      risk_tier_auto_promotion_ref_count: evidence.summary.risk_tier_auto_promotion_ref_count,
+      app_patrol_mount_ref_count: evidence.summary.app_patrol_mount_ref_count,
+      scaleout_followthrough_open_gate_count:
+        evidence.summary.scaleout_followthrough_open_gate_count,
       fixture_drill_owner_acceptance_open_count: evidence.summary.fixture_drill_owner_acceptance_open_count,
       external_owner_acceptance_missing_count: evidence.summary.external_owner_acceptance_missing_count,
       forbidden_owner_receipt_write_count: evidence.summary.forbidden_owner_receipt_write_count,
     },
+    scaleout_followthrough: evidence.scaleout_followthrough,
     owner_acceptance_policy: evidence.owner_acceptance_policy,
     non_authority_outputs: evidence.non_authority_outputs,
     authority_boundary: {

@@ -66,8 +66,16 @@ exit 1
               live_ledger_closeout_ready_count: number;
               verified_direct_fix_ledger_receipt_ref_count: number;
               verified_fork_pr_ledger_receipt_ref_count: number;
+              route_repetition_ref_count: number;
+              risk_tier_auto_promotion_ref_count: number;
+              app_patrol_mount_ref_count: number;
+              scaleout_followthrough_open_gate_count: number;
               fixture_drill_owner_acceptance_open_count: number;
               forbidden_owner_receipt_write_count: number;
+            };
+            scaleout_followthrough: {
+              status: string;
+              open_gate_count: number;
             };
             authority_boundary: {
               refs_only: boolean;
@@ -99,6 +107,15 @@ exit 1
     assert.equal(evidence.summary.live_ledger_closeout_ready_count, 1);
     assert.equal(evidence.summary.verified_direct_fix_ledger_receipt_ref_count, 1);
     assert.equal(evidence.summary.verified_fork_pr_ledger_receipt_ref_count, 0);
+    assert.equal(evidence.summary.route_repetition_ref_count, 0);
+    assert.equal(evidence.summary.risk_tier_auto_promotion_ref_count, 0);
+    assert.equal(evidence.summary.app_patrol_mount_ref_count, 0);
+    assert.equal(evidence.summary.scaleout_followthrough_open_gate_count, 0);
+    assert.equal(
+      evidence.scaleout_followthrough.status,
+      'waiting_for_base_live_route_closeout_refs',
+    );
+    assert.equal(evidence.scaleout_followthrough.open_gate_count, 0);
     assert.equal(evidence.summary.fixture_drill_owner_acceptance_open_count, 1);
     assert.equal(evidence.summary.forbidden_owner_receipt_write_count, 0);
     assert.equal(evidence.authority_boundary.refs_only, true);

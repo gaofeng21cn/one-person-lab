@@ -864,6 +864,17 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.ok(contract.developer_mode_repair_route_surface.dynamic_route_builder.closeout_ref_fields.includes(
     'owner_acceptance_ref',
   ));
+  assert.ok(contract.developer_mode_repair_route_surface.dynamic_route_builder
+    .scaleout_followthrough_ref_fields.includes('route_repetition_refs'));
+  assert.ok(contract.developer_mode_repair_route_surface.dynamic_route_builder
+    .scaleout_followthrough_ref_fields.includes('risk_tier_auto_promotion_refs'));
+  assert.ok(contract.developer_mode_repair_route_surface.dynamic_route_builder
+    .scaleout_followthrough_ref_fields.includes('app_patrol_mount_refs'));
+  assert.equal(
+    contract.developer_mode_repair_route_surface.dynamic_route_builder
+      .scaleout_followthrough_ref_policy,
+    'route_repetition_risk_tier_auto_promotion_and_app_patrol_mount_refs_are_followthrough_evidence_not_base_route_closeout_owner_receipts_or_ready_verdicts',
+  );
   assert.ok(contract.developer_mode_repair_route_surface.dynamic_route_builder.closeout_status_fields.includes(
     'closeout_claim_status',
   ));
@@ -881,6 +892,17 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.ok(contract.developer_mode_repair_route_surface.live_closeout_evidence.required_closeout_ref_groups.includes(
     'external_owner_acceptance_ref',
   ));
+  assert.deepEqual(
+    contract.developer_mode_repair_route_surface.live_closeout_evidence
+      .scaleout_followthrough.open_gate_ids,
+    [
+      'route_repetition_refs',
+      'risk_tier_auto_promotion_refs',
+      'app_patrol_mount_refs',
+    ],
+  );
+  assert.ok(contract.developer_mode_repair_route_surface.live_closeout_evidence
+    .scaleout_followthrough.required_return_shapes.includes('typed_blocker_ref'));
   assert.equal(contract.developer_mode_repair_route_surface.live_closeout_evidence.owner_acceptance_policy,
     'direct_fix_accepts_external_owner_ref_fork_pr_requires_github_pr_owner_acceptance_ref_no_opl_owner_receipt_write');
   assert.ok(contract.developer_mode_repair_route_surface.output_refs.includes('candidate_fix_ref'));

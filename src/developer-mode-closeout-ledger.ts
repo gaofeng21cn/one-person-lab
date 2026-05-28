@@ -24,6 +24,9 @@ export type DeveloperModeCloseoutReceipt = {
   fork_repo_ref: string | null;
   pr_review_ref: string | null;
   owner_acceptance_ref: string;
+  route_repetition_refs: string[];
+  risk_tier_auto_promotion_refs: string[];
+  app_patrol_mount_refs: string[];
   source_surface: 'opl_developer_mode_closeout_evidence';
   authority_boundary: {
     refs_only: true;
@@ -55,6 +58,9 @@ export type DeveloperModeCloseoutReceiptInput = {
   fork_repo_ref?: string | null;
   pr_review_ref?: string | null;
   owner_acceptance_ref?: string | null;
+  route_repetition_refs?: string[];
+  risk_tier_auto_promotion_refs?: string[];
+  app_patrol_mount_refs?: string[];
   receipt_ref?: string | null;
 };
 
@@ -149,6 +155,9 @@ function allCloseoutRefs(input: DeveloperModeCloseoutReceiptInput) {
     optionalString(input.fork_repo_ref) ?? '',
     optionalString(input.pr_review_ref) ?? '',
     optionalString(input.owner_acceptance_ref) ?? '',
+    ...(input.route_repetition_refs ?? []),
+    ...(input.risk_tier_auto_promotion_refs ?? []),
+    ...(input.app_patrol_mount_refs ?? []),
   ]);
 }
 
@@ -355,6 +364,9 @@ function normalizeReceiptInput(input: DeveloperModeCloseoutReceiptInput) {
     fork_repo_ref: decision === 'fork-PR' ? optionalString(input.fork_repo_ref) : null,
     pr_review_ref: decision === 'fork-PR' ? optionalString(input.pr_review_ref) : null,
     owner_acceptance_ref: ownerAcceptanceRef ?? '',
+    route_repetition_refs: uniqueStrings(input.route_repetition_refs ?? []),
+    risk_tier_auto_promotion_refs: uniqueStrings(input.risk_tier_auto_promotion_refs ?? []),
+    app_patrol_mount_refs: uniqueStrings(input.app_patrol_mount_refs ?? []),
     source_surface: 'opl_developer_mode_closeout_evidence',
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
@@ -391,6 +403,9 @@ function normalizeReceipt(value: unknown): DeveloperModeCloseoutReceipt | null {
     fork_repo_ref: optionalString(value.fork_repo_ref),
     pr_review_ref: optionalString(value.pr_review_ref),
     owner_acceptance_ref: ownerAcceptanceRef,
+    route_repetition_refs: stringList(value.route_repetition_refs),
+    risk_tier_auto_promotion_refs: stringList(value.risk_tier_auto_promotion_refs),
+    app_patrol_mount_refs: stringList(value.app_patrol_mount_refs),
     receipt_ref: receiptRefValue,
   };
   const normalized = normalizeReceiptInput(input);

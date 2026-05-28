@@ -20,6 +20,21 @@ const completePayload = {
   owner_acceptance_ref: 'external-owner-ref:mas/live-direct-fix-accepted',
 };
 
+const completeScaleoutPayload = {
+  ...completePayload,
+  patrol_observation_ref: 'patrol-observation-ref:mas/live-direct-fix-scaleout',
+  receipt_ref: 'opl://developer-mode-closeout/med-autoscience/scaleout-followthrough',
+  route_repetition_refs: [
+    'developer-mode-route-repetition-ref:mas/direct-fix-repeat-20260528',
+  ],
+  risk_tier_auto_promotion_refs: [
+    'agent-lab-risk-tier-auto-promotion-ref:mas/medium-risk-canary-20260528',
+  ],
+  app_patrol_mount_refs: [
+    'app-patrol-mount-ref:one-person-lab-app/developer-mode-patrol-mounted-20260528',
+  ],
+};
+
 test('runtime Developer Mode closeout CLI records and verifies refs-only live closeout evidence', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-mode-closeout-state-'));
   try {
@@ -42,6 +57,9 @@ test('runtime Developer Mode closeout CLI records and verifies refs-only live cl
     assert.equal(recorded.receipts[0].authority_boundary.can_write_domain_truth, false);
     assert.equal(recorded.receipts[0].authority_boundary.can_create_owner_receipt, false);
     assert.equal(recorded.receipts[0].authority_boundary.can_modify_managed_runtime, false);
+    assert.deepEqual(recorded.receipts[0].route_repetition_refs, []);
+    assert.deepEqual(recorded.receipts[0].risk_tier_auto_promotion_refs, []);
+    assert.deepEqual(recorded.receipts[0].app_patrol_mount_refs, []);
     assert.equal(
       recorded.ledger_file,
       path.join(stateRoot, 'developer-mode-closeout-ledger.json'),
@@ -87,6 +105,11 @@ test('runtime Developer Mode closeout CLI records and verifies refs-only live cl
     assert.equal(readModel.summary.pending_verify_receipt_ref_count, 0);
     assert.equal(readModel.summary.live_ledger_closeout_ready_count, 1);
     assert.equal(readModel.summary.external_owner_closeout_refs_ready_count, 2);
+    assert.equal(readModel.summary.scaleout_followthrough_open_gate_count, 0);
+    assert.equal(
+      readModel.scaleout_followthrough.status,
+      'waiting_for_base_live_route_closeout_refs',
+    );
     assert.equal(readModel.summary.fixture_drill_owner_acceptance_open_count, 1);
     assert.equal(readModel.status, 'closeout_refs_incomplete');
     assert.equal(
@@ -105,6 +128,58 @@ test('runtime Developer Mode closeout CLI records and verifies refs-only live cl
     assert.equal(liveLedgerRoute.authority_boundary.writes_owner_receipt, false);
     assert.equal(readModel.non_authority_outputs.writes_owner_receipt, false);
     assert.equal(readModel.non_authority_outputs.modifies_managed_runtime, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime Developer Mode closeout CLI persists scaleout follow-through refs without ready claims', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-mode-closeout-scaleout-state-'));
+  try {
+    const recorded = runCli([
+      'runtime',
+      'developer-mode-closeout',
+      'record',
+      '--payload',
+      JSON.stringify(completeScaleoutPayload),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).developer_mode_closeout_ledger_record;
+
+    assert.equal(recorded.status, 'recorded');
+    assert.deepEqual(recorded.receipts[0].route_repetition_refs, [
+      'developer-mode-route-repetition-ref:mas/direct-fix-repeat-20260528',
+    ]);
+    assert.deepEqual(recorded.receipts[0].risk_tier_auto_promotion_refs, [
+      'agent-lab-risk-tier-auto-promotion-ref:mas/medium-risk-canary-20260528',
+    ]);
+    assert.deepEqual(recorded.receipts[0].app_patrol_mount_refs, [
+      'app-patrol-mount-ref:one-person-lab-app/developer-mode-patrol-mounted-20260528',
+    ]);
+
+    runCli([
+      'runtime',
+      'developer-mode-closeout',
+      'verify',
+      '--receipt-ref',
+      recorded.receipt_refs[0],
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const readModel = runCli(['agent-lab', 'complete', '--json'], {
+      OPL_STATE_DIR: stateRoot,
+    }).agent_lab_complete.developer_mode_repair_routes.live_closeout_evidence;
+    assert.equal(readModel.summary.route_repetition_ref_count, 1);
+    assert.equal(readModel.summary.risk_tier_auto_promotion_ref_count, 1);
+    assert.equal(readModel.summary.app_patrol_mount_ref_count, 1);
+    assert.equal(
+      readModel.scaleout_followthrough.status,
+      'waiting_for_base_live_route_closeout_refs',
+    );
+    assert.equal(readModel.non_authority_outputs.writes_owner_receipt, false);
+    assert.equal(readModel.non_authority_outputs.modifies_managed_runtime, false);
+    assert.equal(readModel.authority_boundary.can_claim_production_ready, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

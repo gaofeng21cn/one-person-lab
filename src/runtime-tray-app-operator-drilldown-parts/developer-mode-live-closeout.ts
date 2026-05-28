@@ -35,6 +35,7 @@ function commandRef(args: string[]) {
 function developerModeCloseoutPayloadTemplate(missingRouteKinds: string[]) {
   const includesForkPr = missingRouteKinds.includes('fork-PR');
   const includesDirectFix = missingRouteKinds.includes('direct-fix');
+  const scaleoutOnly = missingRouteKinds.length === 0;
   return {
     target_repo_id: '<target-repo-id>',
     route_decision: missingRouteKinds[0] ?? '<direct-fix|fork-PR>',
@@ -43,12 +44,15 @@ function developerModeCloseoutPayloadTemplate(missingRouteKinds: string[]) {
     diff_ref: '<diff-ref>',
     verification_refs: ['<test-result-ref>'],
     no_forbidden_write_ref: '<no-forbidden-write-ref>',
-    commit_ref: includesDirectFix ? '<git-commit-ref>' : null,
-    fork_repo_ref: includesForkPr ? '<github-fork-ref>' : null,
-    pr_review_ref: includesForkPr ? '<github-pr-review-ref>' : null,
-    owner_acceptance_ref: includesForkPr
+    commit_ref: includesDirectFix || scaleoutOnly ? '<git-commit-ref-or-null-for-fork-pr>' : null,
+    fork_repo_ref: includesForkPr || scaleoutOnly ? '<github-fork-ref-or-null-for-direct-fix>' : null,
+    pr_review_ref: includesForkPr || scaleoutOnly ? '<github-pr-review-ref-or-null-for-direct-fix>' : null,
+    owner_acceptance_ref: includesForkPr || scaleoutOnly
       ? '<github-pr-owner-acceptance-ref>'
       : '<external-owner-ref>',
+    route_repetition_refs: ['<developer-mode-route-repetition-ref>'],
+    risk_tier_auto_promotion_refs: ['<agent-lab-risk-tier-auto-promotion-ref>'],
+    app_patrol_mount_refs: ['<app-patrol-mount-ref>'],
   };
 }
 
@@ -91,6 +95,8 @@ function developerModeCloseoutPayloadRefHints() {
     ],
     owner_acceptance_ref_policy:
       'direct_fix_accepts_external_owner_ref_fork_pr_requires_github_pr_owner_acceptance_ref_no_owner_receipt_ref',
+    scaleout_ref_policy:
+      'base direct-fix and fork-PR receipts close live route evidence; route repetition, risk-tier auto-promotion, and App patrol mounting remain explicit follow-through refs',
   };
 }
 
@@ -170,6 +176,11 @@ function developerModeCloseoutPayloadWorkorder(missingRouteKinds: string[]) {
       'commit_ref_or_fork_pr_refs',
       'owner_acceptance_ref',
     ],
+    optional_scaleout_payload_refs: [
+      'route_repetition_refs',
+      'risk_tier_auto_promotion_refs',
+      'app_patrol_mount_refs',
+    ],
     required_return_shapes:
       developerModeCloseoutRequiredReturnShapes(missingRouteKinds),
     payload_template: developerModeCloseoutPayloadTemplate(missingRouteKinds),
@@ -206,9 +217,13 @@ export function developerModeLiveCloseoutEvidenceSummary(evidence: JsonRecord) {
   ].filter((entry): entry is string => Boolean(entry));
   const pendingVerifyReceiptRefCount =
     numberValue(summary.pending_verify_receipt_ref_count);
+  const scaleoutFollowthrough = record(evidence.scaleout_followthrough);
+  const scaleoutOpenGateCount =
+    numberValue(summary.scaleout_followthrough_open_gate_count)
+    || numberValue(scaleoutFollowthrough.open_gate_count);
   const attentionCount = pendingVerifyReceiptRefCount > 0
     ? pendingVerifyReceiptRefCount
-    : missingLiveLedgerRouteKinds.length;
+    : missingLiveLedgerRouteKinds.length + scaleoutOpenGateCount;
   return {
     status: stringValue(evidence.status),
     ledger_evidence_status: stringValue(evidence.ledger_evidence_status),
@@ -230,6 +245,14 @@ export function developerModeLiveCloseoutEvidenceSummary(evidence: JsonRecord) {
       verifiedDirectFixLedgerReceiptRefCount,
     verified_fork_pr_ledger_receipt_ref_count:
       verifiedForkPrLedgerReceiptRefCount,
+    route_repetition_ref_count:
+      numberValue(summary.route_repetition_ref_count),
+    risk_tier_auto_promotion_ref_count:
+      numberValue(summary.risk_tier_auto_promotion_ref_count),
+    app_patrol_mount_ref_count:
+      numberValue(summary.app_patrol_mount_ref_count),
+    scaleout_followthrough_open_gate_count: scaleoutOpenGateCount,
+    scaleout_followthrough: scaleoutFollowthrough,
     repo_contract_fixture_drill_count:
       numberValue(summary.repo_contract_fixture_drill_count),
     repo_contract_fixture_not_live_repo_count:
@@ -255,7 +278,8 @@ export function buildDeveloperModeLiveCloseoutEvidenceAttention(drilldown: JsonR
   const summary = developerModeLiveCloseoutEvidenceSummary(evidence);
   const pendingVerifyReceiptRefs = stringList(evidence.pending_verify_receipt_refs);
   const missingRouteKinds = stringList(summary.missing_live_ledger_route_kinds);
-  const canRecord = missingRouteKinds.length > 0;
+  const scaleoutOpenGateCount = numberValue(summary.scaleout_followthrough_open_gate_count);
+  const canRecord = missingRouteKinds.length > 0 || scaleoutOpenGateCount > 0;
   const firstPendingVerifyReceiptRef = pendingVerifyReceiptRefs[0] ?? null;
   const verifyArgs = firstPendingVerifyReceiptRef
     ? [
@@ -279,6 +303,7 @@ export function buildDeveloperModeLiveCloseoutEvidenceAttention(drilldown: JsonR
     attention_count: summary.attention_count,
     missing_live_ledger_route_count: summary.missing_live_ledger_route_count,
     missing_live_ledger_route_kinds: missingRouteKinds,
+    scaleout_payload_required: scaleoutOpenGateCount > 0,
     ledger_receipt_ref_count: summary.ledger_receipt_ref_count,
     ledger_recorded_receipt_ref_count:
       summary.ledger_recorded_receipt_ref_count,
@@ -291,6 +316,13 @@ export function buildDeveloperModeLiveCloseoutEvidenceAttention(drilldown: JsonR
       summary.verified_direct_fix_ledger_receipt_ref_count,
     verified_fork_pr_ledger_receipt_ref_count:
       summary.verified_fork_pr_ledger_receipt_ref_count,
+    route_repetition_ref_count: summary.route_repetition_ref_count,
+    risk_tier_auto_promotion_ref_count:
+      summary.risk_tier_auto_promotion_ref_count,
+    app_patrol_mount_ref_count: summary.app_patrol_mount_ref_count,
+    scaleout_followthrough_open_gate_count:
+      summary.scaleout_followthrough_open_gate_count,
+    scaleout_followthrough: summary.scaleout_followthrough,
     external_owner_acceptance_missing_count:
       summary.external_owner_acceptance_missing_count,
     fixture_drill_owner_acceptance_open_count:
@@ -318,6 +350,8 @@ export function buildDeveloperModeLiveCloseoutEvidenceAttention(drilldown: JsonR
     payload_template_policy: canRecord
       ? 'template_is_empty_by_design_replace_with_real_developer_mode_closeout_refs_before_submit'
       : null,
+    scaleout_payload_policy:
+      'route_repetition_risk_tier_and_app_patrol_refs_are_followthrough_evidence_not_owner_receipts_or_ready_verdicts',
     empty_payload_template_is_success_evidence: false,
     drill_sample_count: Math.min(recordList(evidence.drills).length, 3),
     full_detail_section: 'developer_mode_live_closeout_evidence',
@@ -357,6 +391,7 @@ export function developerModeLiveCloseoutEvidenceNextStep(evidence: JsonRecord) 
     missing_live_ledger_route_count:
       numberValue(evidence.missing_live_ledger_route_count),
     missing_live_ledger_route_kinds: missingRouteKinds,
+    scaleout_payload_required: evidence.scaleout_payload_required === true,
     pending_verify_receipt_ref_count:
       numberValue(evidence.pending_verify_receipt_ref_count),
     pending_verify_receipt_refs: pendingVerifyReceiptRefs,
@@ -364,6 +399,15 @@ export function developerModeLiveCloseoutEvidenceNextStep(evidence: JsonRecord) 
       numberValue(evidence.verified_direct_fix_ledger_receipt_ref_count),
     verified_fork_pr_ledger_receipt_ref_count:
       numberValue(evidence.verified_fork_pr_ledger_receipt_ref_count),
+    route_repetition_ref_count:
+      numberValue(evidence.route_repetition_ref_count),
+    risk_tier_auto_promotion_ref_count:
+      numberValue(evidence.risk_tier_auto_promotion_ref_count),
+    app_patrol_mount_ref_count:
+      numberValue(evidence.app_patrol_mount_ref_count),
+    scaleout_followthrough_open_gate_count:
+      numberValue(evidence.scaleout_followthrough_open_gate_count),
+    scaleout_followthrough: record(evidence.scaleout_followthrough),
     required_closeout_ref_groups: stringList(evidence.required_closeout_ref_groups),
     required_return_shapes: stringList(evidence.required_return_shapes),
     payload_owner:
@@ -379,6 +423,7 @@ export function developerModeLiveCloseoutEvidenceNextStep(evidence: JsonRecord) 
     payload_ref_hints: record(evidence.payload_ref_hints),
     payload_workorder: record(evidence.payload_workorder),
     payload_template_policy: stringValue(evidence.payload_template_policy),
+    scaleout_payload_policy: stringValue(evidence.scaleout_payload_policy),
     empty_payload_template_is_success_evidence: false,
     full_detail_section: 'developer_mode_live_closeout_evidence',
     can_execute_domain_action: false,
