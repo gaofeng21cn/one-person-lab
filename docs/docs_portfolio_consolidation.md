@@ -87,7 +87,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | `docs/references/runtime-substrate/opl-family-agent-ideal-state.md` | `active_support` | OPL Framework、Foundry Agents 与 App 的 north-star 目标态。 | 主参考；不能写成当前完成事实。 |
 | `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md` | `active_support` | stage-led framework roadmap、runtime substrate 与旧面退役顺序。 | 保持 roadmap；状态需服从 core five 和 fresh evidence。 |
 | `docs/references/runtime-substrate/ai-first-executor-first-long-horizon-optimization.md` | `support_reference` | AI-first / executor-first 长期调研提示词、成熟框架经验吸收规则、OPL/MAS/MAG/RCA/OMA 设计审计重点和下一轮 conformance / evidence 优化方向。 | 保持参考入口；不作为 current truth、runtime dependency 决策或 production ready 证据。 |
-| `docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md` | `active_support` | Temporal-backed provider 生产在线必需 substrate 的支撑计划和证据读法。 | 保持 provider 支撑；不能替代 domain owner soak 或 domain verdict。 |
+| `docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md` | `active_support` | Temporal-backed provider 生产在线必需 substrate 的支撑参考和动态证据读法。 | 保持 provider 支撑；不能替代 domain owner soak 或 domain verdict。 |
 | `docs/references/runtime-substrate/family-executor-adapter-defaults.md` | `active_support` | 默认 `Codex CLI` 与显式非默认 executor adapter 边界。 | 保持 executor 边界；`hermes_agent` 只能是显式非默认 backend。 |
 | `docs/references/runtime-substrate/hermes-agent-truth-reset-and-target-state.md` | `history_boundary_support` | Hermes 命名/迁移边界和旧 Hermes-first 误读 provenance。 | 因 stale-compat guard 与 executor 边界仍保留路径；不得读作 provider/readiness/Gateway/compatibility 计划。 |
 | `docs/references/runtime-substrate/hermes-agent-executor-evaluation.md` | `support_reference` | `hermes_agent` 显式非默认 executor adapter 的评估条件。 | 不影响默认 executor，不声明行为等价。 |

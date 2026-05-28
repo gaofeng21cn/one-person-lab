@@ -33,7 +33,7 @@ Currentness rule: 本文不冻结日期、receipt id、attempt id、worklist cou
 
 配套入口：
 
-- Temporal provider 细化计划：`docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md`
+- Temporal provider 支撑参考：`docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md`
 - Production closure gap matrix：`docs/active/production-framework-closure-gap-matrix.md`
 - Agent Lab 控制面边界：`docs/runtime/opl-agent-lab-control-plane.md`
 - MAS runtime 退役计划：`med-autoscience/docs/active/opl_temporal_mas_runtime_retirement_program.md`
@@ -465,7 +465,7 @@ Codex CLI 负责：
 
 - 主仓：`/Users/gaofeng/workspace/one-person-lab`
 - 主文档：本文
-- 细化文档：`docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md`
+- 支撑参考：`docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md`
 - 首个后续代码 tranche：`Master P2. Codex Stage Activity Runner`
 - 同步子计划：MAS 只跟随 `/Users/gaofeng/workspace/med-autoscience/docs/active/opl_temporal_mas_runtime_retirement_program.md` 做 provider-ready contract / sidecar / guarded soak，不抢先物理删除本地诊断面。
 

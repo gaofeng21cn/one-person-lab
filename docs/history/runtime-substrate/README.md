@@ -14,7 +14,7 @@ Machine boundary: 仅人读历史归档；机器可读行为必须使用 `contra
 | --- | --- |
 | OPL 当前状态、边界和不能声明项 | [OPL 当前状态](../../status.md)、[OPL 架构](../../architecture.md)、[OPL 硬约束](../../invariants.md) |
 | OPL family 当前差距、下一轮 baton 与 coverage ledger | [OPL Family 当前状态与理想目标差距](../../active/current-state-vs-ideal-gap.md)、[OPL 开发文档组合整理](../../active/development-document-portfolio.md) |
-| Codex-default executor、Temporal provider、explicit executor adapter 与 runtime 命名 | [OPL Runtime 命名与边界合同](../../runtime/opl-runtime-naming-and-boundary-contract.md)、[Temporal family runtime provider 落地计划](../../references/runtime-substrate/temporal-family-runtime-provider-plan.md) |
+| Codex-default executor、Temporal provider、explicit executor adapter 与 runtime 命名 | [OPL Runtime 命名与边界合同](../../runtime/opl-runtime-naming-and-boundary-contract.md)、[Temporal family runtime provider 支撑参考](../../references/runtime-substrate/temporal-family-runtime-provider-plan.md) |
 | Domain-agent admission、handoff、product/operator/agent entry taxonomy | [OPL Domain-Agent Admission Contract](../../specs/opl-domain-onboarding-contract.md) |
 | Stage-led framework roadmap 与 north-star target | [OPL Stage-Led Agent Framework Roadmap](../../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md)、[OPL 与 Foundry Agents 理想目标态](../../references/runtime-substrate/opl-family-agent-ideal-state.md) |
 | `hermes_agent` 作为显式非默认 executor adapter 的评估 | [Hermes-Agent 备选执行器评估](../../references/runtime-substrate/hermes-agent-executor-evaluation.md) |
@@ -31,7 +31,7 @@ Machine boundary: 仅人读历史归档；机器可读行为必须使用 `contra
 - [OPL Runtime 命名与边界合同](../../runtime/opl-runtime-naming-and-boundary-contract.md)
 - [OPL Domain-Agent Admission Contract](../../specs/opl-domain-onboarding-contract.md)
 - [OPL stage-led agent framework roadmap](../../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md)
-- [Temporal family runtime provider 落地计划](../../references/runtime-substrate/temporal-family-runtime-provider-plan.md)
+- [Temporal family runtime provider 支撑参考](../../references/runtime-substrate/temporal-family-runtime-provider-plan.md)
 - [Hermes-Agent 备选执行器评估](../../references/runtime-substrate/hermes-agent-executor-evaluation.md)
 
 ## 已吸收内容
@@ -42,8 +42,8 @@ Machine boundary: 仅人读历史归档；机器可读行为必须使用 `contra
 | `managed-runtime-migration-readiness-checklist.md` | host-agent -> managed runtime 迁移对象、R1-R8 readiness 维度、不得把 future managed runtime 写成现实 | Runtime 命名与边界合同 |
 | `family-product-entry-and-domain-handoff-architecture.md` | operator / agent / product entry taxonomy、handoff envelope、domain authority boundary | Domain-Agent Admission Contract、public docs、current development lines |
 | `family-lightweight-direct-entry-rollout-board.md` | `frontdoor_surface` / `operator_loop_surface` 区分、direct path 与 OPL handoff 对齐、不允许四仓入口语义漂移 | Domain-Agent Admission Contract、current development lines |
-| `opl-product-entry-and-hermes-kernel-integration.md` | 不 fork/vendor 外部 runtime、不要把用户暴露给底层 runtime 拼装、Hermes-first 误写禁止项 | Runtime 命名与边界合同、Temporal provider 计划、stage-led roadmap |
-| `hermes-agent-runtime-substrate-benchmark.md` | Hermes runtime substrate 对标中仍有价值的对比点；其中 gateway-first / Domain Harness OS 结论已被当前口径取代 | Runtime 命名与边界合同、Temporal provider 计划、Hermes executor evaluation |
+| `opl-product-entry-and-hermes-kernel-integration.md` | 不 fork/vendor 外部 runtime、不要把用户暴露给底层 runtime 拼装、Hermes-first 误写禁止项 | Runtime 命名与边界合同、Temporal provider 支撑参考、stage-led roadmap |
+| `hermes-agent-runtime-substrate-benchmark.md` | Hermes runtime substrate 对标中仍有价值的对比点；其中 gateway-first / Domain Harness OS 结论已被当前口径取代 | Runtime 命名与边界合同、Temporal provider 支撑参考、Hermes executor evaluation |
 | `opl-vertical-online-agent-platform-roadmap.md` | 垂类产品族、shared runtime/domain contract、future managed runtime 与当前 reality 的区分 | Runtime 命名与边界合同、public roadmap、stage-led roadmap |
 | `mas-top-level-cutover-board.md` | OPL -> MAS handoff 字段、MAS display/research 分线、不能把 transition seam 写成 backend 替换完成 | OPL 当前开发线路、MAS active portfolio/current development lines |
 
