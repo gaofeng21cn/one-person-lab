@@ -104,6 +104,43 @@ function insertMasDefaultExecutorTask(
   );
 }
 
+function insertDomainRouteTask(
+  db: DatabaseSync,
+  input: {
+    taskId: string;
+    status: 'queued' | 'running' | 'succeeded' | 'blocked';
+    createdAt: string;
+  },
+) {
+  db.prepare(`
+    INSERT INTO tasks(
+      task_id, domain_id, task_kind, payload_json, dedupe_key, priority, status, attempts,
+      max_attempts, source, requires_approval, approved_at, lease_owner, lease_expires_at,
+      last_error, dead_letter_reason, created_at, updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    input.taskId,
+    'medautoscience',
+    'domain_route/reconcile-apply',
+    '{}',
+    null,
+    0,
+    input.status,
+    1,
+    3,
+    'test',
+    0,
+    null,
+    null,
+    null,
+    null,
+    null,
+    input.createdAt,
+    input.createdAt,
+  );
+}
+
 function blockedTemporalObservation(input: {
   stageAttemptId: string;
   workflowId: string;
@@ -258,6 +295,67 @@ test('missing Temporal workflow does not fail an unclaimed queued attempt', () =
     assert.equal(inspected.status, 'queued');
     assert.equal(inspected.blocked_reason, null);
     assert.equal(inspected.provider_run.provider_status, 'registered');
+  });
+});
+
+test('missing Temporal workflow does not fail synchronous domain handler checkpoint', () => {
+  withStageAttemptDb((db) => {
+    const createdAt = new Date().toISOString();
+    createQueueTables(db);
+    insertDomainRouteTask(db, {
+      taskId: 'task-domain-route-sync-checkpoint',
+      status: 'succeeded',
+      createdAt,
+    });
+    const attempt = createStageAttempt(db, {
+      domainId: 'medautoscience',
+      stageId: 'domain_route/reconcile-apply',
+      providerKind: 'temporal',
+      workspaceLocator: { route_ref: 'domain_route/reconcile-apply' },
+      sourceFingerprint: 'sha256:domain-route-sync-checkpoint',
+      executorKind: 'domain_handler',
+      taskId: 'task-domain-route-sync-checkpoint',
+    }).attempt;
+    db.prepare(`
+      UPDATE stage_attempts
+      SET status = 'checkpointed',
+        provider_run_json = json_set(
+          provider_run_json,
+          '$.provider_status', 'checkpointed',
+          '$.last_heartbeat_at', ?
+        ),
+        activity_events_json = json_insert(activity_events_json, '$[#]', json(?))
+      WHERE stage_attempt_id = ?
+    `).run(
+      createdAt,
+      JSON.stringify({
+        event_time: createdAt,
+        activity_kind: 'domain_handler_dispatch_activity',
+        activity_status: 'checkpointed',
+        closeout_refs: [],
+      }),
+      attempt.stage_attempt_id,
+    );
+
+    const synced = syncStageAttemptFromTemporalTerminalObservation(
+      db,
+      missingWorkflowObservation({
+        stageAttemptId: attempt.stage_attempt_id,
+        workflowId: attempt.workflow_id,
+      }),
+    );
+    const inspected = inspectStageAttempt(db, attempt.stage_attempt_id);
+    const task = db.prepare('SELECT status, last_error, dead_letter_reason FROM tasks WHERE task_id = ?').get(
+      'task-domain-route-sync-checkpoint',
+    ) as { status: string; last_error: string | null; dead_letter_reason: string | null };
+
+    assert.equal(synced, null);
+    assert.equal(inspected.status, 'checkpointed');
+    assert.equal(inspected.blocked_reason, null);
+    assert.equal(inspected.provider_run.provider_status, 'checkpointed');
+    assert.equal(task.status, 'succeeded');
+    assert.equal(task.last_error, null);
+    assert.equal(task.dead_letter_reason, null);
   });
 });
 

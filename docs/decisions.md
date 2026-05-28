@@ -7,6 +7,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-05-28
 
+### 决策：同步 domain-handler checkpoint 不受 Temporal workflow-missing 回收覆盖
+
+原因：OPL family-runtime 中的 domain-handler dispatch 是同步 owner callable transport；它可以在 typed queue attempt 中记录 checkpointed owner receipt / admission receipt，而不是一定启动一个可查询的 Temporal `StageAttemptWorkflow`。如果 terminal observation 回收器把这类 `domain_handler` executor 的 `temporal_workflow_not_started_or_not_found` 当成 provider failure，会把已被 domain owner 接收的 route task 错投影为 runtime unhealthy。
+
+影响：
+
+- `domain_handler` executor 的 stage attempt 不再因为 Temporal workflow-missing unavailable observation 被标记为 `failed`；该 observation 只能作用于真正由 provider workflow 承载的 stage attempt。
+- MAS/MAG/RCA 等 domain-handler 仍必须返回 owner receipt、typed blocker、closeout refs 或 admission receipt；OPL 只保留 queue / attempt / liveness 投影，不据此授权 domain ready、quality verdict 或 artifact ready。
+- 缺失的 provider scheduler cadence 不能报告为 healthy：`not_installed` 必须给出 `attention_required` 和 `opl family-runtime scheduler install --provider temporal`，让持续推进依赖显式 OPL provider scheduler，而不是 Codex heartbeat 手工补 tick。
+
 ### 决策：domain-handler 非零退出的错误摘要优先采用结构化 owner stdout
 
 原因：domain handler 由 domain owner 负责返回 typed receipt / blocker。`uv`、安装器或 runner 可能在 stderr 输出环境同步噪声；如果 OPL queue `last_error` 优先采用 stderr，就会掩盖 stdout 中的 `reason` / `detail` / `blocked_reason`，让 operator 和自动巡检看不到真正的 owner blocker。

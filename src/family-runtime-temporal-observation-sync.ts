@@ -65,6 +65,9 @@ function linkedTaskForWorkflowMissingObservation(db: DatabaseSync, row: StageAtt
 }
 
 function stageAttemptHasProviderStarted(row: StageAttemptRow) {
+  if (row.executor_kind === 'domain_handler') {
+    return false;
+  }
   return ['running', 'checkpointed', 'human_gate'].includes(row.status);
 }
 

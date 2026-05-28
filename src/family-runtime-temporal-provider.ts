@@ -324,8 +324,9 @@ export function buildTemporalSchedulerHealthProjection(input: {
   const skippedOverlap = Number.isFinite(input.info?.num_actions_skipped_overlap)
     ? Number(input.info?.num_actions_skipped_overlap)
     : 0;
-  const needsAttention = input.scheduleStatus === 'active'
-    && runningActions.length > 0;
+  const needsInstall = input.scheduleStatus === 'not_installed';
+  const needsAttention = needsInstall
+    || (input.scheduleStatus === 'active' && runningActions.length > 0);
   return {
     surface_kind: 'temporal_scheduler_cadence_health',
     health_status: needsAttention ? 'attention_required' : 'healthy',
@@ -333,8 +334,14 @@ export function buildTemporalSchedulerHealthProjection(input: {
     num_actions_skipped_overlap: skippedOverlap,
     historical_overlap_skip_observed: skippedOverlap > 0,
     overlap_policy: 'SKIP',
-    repair_action: needsAttention
+    repair_action: needsInstall
       ? {
+          action_id: 'install_scheduler_cadence',
+          reason: 'scheduler_cadence_not_installed',
+          next_command: 'opl family-runtime scheduler install --provider temporal',
+        }
+      : needsAttention
+        ? {
           action_id: 'inspect_or_repair_stale_scheduler_tick',
           reason: 'running_scheduler_tick_action_observed',
           safe_first_steps: [
@@ -346,13 +353,13 @@ export function buildTemporalSchedulerHealthProjection(input: {
           terminate_stale_workflow_requires_operator: true,
           next_command: 'opl family-runtime scheduler status --provider temporal',
         }
-      : {
-          action_id: 'none',
-          reason: skippedOverlap > 0
-            ? 'scheduler_cadence_healthy_historical_overlap_skip_retained'
-            : 'scheduler_cadence_healthy',
-          next_command: null,
-        },
+        : {
+            action_id: 'none',
+            reason: skippedOverlap > 0
+              ? 'scheduler_cadence_healthy_historical_overlap_skip_retained'
+              : 'scheduler_cadence_healthy',
+            next_command: null,
+          },
     authority_boundary: {
       opl: 'scheduler_cadence_health_projection_only',
       domain: 'truth_quality_artifact_gate_owner',

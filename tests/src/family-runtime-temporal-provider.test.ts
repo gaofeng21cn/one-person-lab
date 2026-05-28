@@ -543,6 +543,21 @@ test('Temporal scheduler health projection surfaces current stale action repair 
   assert.equal(stale.authority_boundary.can_write_domain_truth, false);
 });
 
+test('Temporal scheduler health projection requires cadence install when missing', () => {
+  const missing = buildTemporalSchedulerHealthProjection({
+    scheduleStatus: 'not_installed',
+    info: null,
+  });
+
+  assert.equal(missing.health_status, 'attention_required');
+  assert.equal(missing.repair_action.action_id, 'install_scheduler_cadence');
+  assert.equal(
+    missing.repair_action.next_command,
+    'opl family-runtime scheduler install --provider temporal',
+  );
+  assert.equal(missing.authority_boundary.can_write_domain_truth, false);
+});
+
 test('Temporal scheduler health projection keeps historical overlap skips informational after recovery', () => {
   const recovered = buildTemporalSchedulerHealthProjection({
     scheduleStatus: 'active',
