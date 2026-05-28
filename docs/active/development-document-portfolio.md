@@ -107,6 +107,69 @@ OPL 开发文档现在不能按“每份旧计划都继续完整执行”阅读�
 
 ## Coverage Ledger
 
+Date: `2026-05-28 22:28 CST`
+Tranche: `oma-readme-docs-full-body-refresh-and-six-repo-hygiene`
+State: `tranche_verified`
+
+本轮先做 fresh 六仓 main/worktree/branch/dirty/ahead-behind/open-PR/process/recent-write/doctor 盘点，再完成 `opl-meta-agent` root `README*`、`docs/**/*.md` 和 tracked `agent/*/README.md` support indexes 的全量 body coverage refresh。目标是确认 OMA 当前人读文档组合仍只有一个 active truth owner、一个 target-state reference、一个 private implementation inventory、一个 docs lifecycle ledger 和五个 domain-pack support indexes；本轮不声明 OMA target domain ready、App live rendering、owner receipt、artifact readiness、production ready、quality verdict、default promotion 或 global goal complete。
+
+Fresh live truth inputs:
+
+- Six-repo root scan at `2026-05-28 22:22 CST`: OPL `fa170402`、MAS `517dda44`、MAG `4cdb5df`、RCA `74cfe62`、OMA `c10c3c9`、App `a220196` all read `main...origin/main = 0 0`; open PR scans returned `[]` for all six repos.
+- Six-repo doctor sweep returned `finding_count=0` and active truth `pass` for OPL, MAS, MAG, RCA, OMA, and App.
+- Background process scan still showed the expected OPL Temporal worker, MAS MCP servers, a live provider-backed Codex stage attempt, App/shell runner processes, and Temporal dev server; none were killed.
+- OMA repo-native inputs: `AGENTS.md`, `TASTE.md`, root `README.md`, root `README.zh-CN.md`, `docs/README.md`, core five docs, `docs/active/opl-meta-agent-ideal-state-gap-plan.md`, `docs/active/opl-private-implementation-migration-inventory.md`, `docs/references/opl-meta-agent-ideal-state.md`, `docs/docs_portfolio_consolidation.md`, tracked `agent/*/README.md`, package scripts, contracts, source/test inventory, and CodeGraph indexed TS script/test structure.
+- OPL read-model inputs: `opl agents interfaces --repo-dir /Users/gaofeng/workspace/opl-meta-agent --json` returned generated interface bundle `status=ready`; `opl runtime oma-production-consumption list --json` returned two verified refs-only receipts, one long-soak ref and one historical typed-blocker provenance ref.
+
+Fresh semantic result:
+
+- OMA human-doc inventory remains exact and current: `README.md`, `README.zh-CN.md`, `docs/README.md`, `docs/project.md`, `docs/status.md`, `docs/architecture.md`, `docs/invariants.md`, `docs/decisions.md`, `docs/active/opl-meta-agent-ideal-state-gap-plan.md`, `docs/active/opl-private-implementation-migration-inventory.md`, `docs/references/opl-meta-agent-ideal-state.md`, `docs/docs_portfolio_consolidation.md`, and five tracked `agent/*/README.md` support indexes.
+- `docs/active/opl-meta-agent-ideal-state-gap-plan.md` remains the single Active Truth owner. The north-star reference remains `docs/references/opl-meta-agent-ideal-state.md`; private implementation/script hygiene remains `docs/active/opl-private-implementation-migration-inventory.md`; durable current truth remains in the core five docs.
+- `contracts/pack_compiler_input.json` still keeps `agent/` as canonical semantic pack root and lists only non-README pack files in `required_domain_pack_paths`; support README files remain human indexes, not machine-required pack paths.
+- `contracts/functional_privatization_audit.json` still reports `source_shape=landed` and `functional_structure_gap_count=0`; this proves only no repo-owned generic runtime/shell in the current source-shape boundary. Remaining tails are still generated/default caller consumption, refs-only adapter thinning, script-to-pack hygiene, and evidence tail.
+- OPL generated interface readiness and OMA production-consumption receipts remain refs-only OPL/App consumption evidence. They cannot write target truth, cannot create owner receipts, cannot claim domain/production ready, and cannot promote defaults without a gate.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `opl-meta-agent` | Full body/currentness read of root `README*`, all `docs/**/*.md`, tracked `agent/*/README.md`, active truth plan, ideal-state reference, private inventory, package scripts, key contracts, source/test inventory, OPL generated-interface read model, OMA production-consumption ledger, and doctor risk map. | `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | OPL Doc Governance skill, global `/goal`, six-repo branch/worktree/PR/process/recent-write classification, OMA read-model evidence, and this family coverage ledger. | `docs/active/development-document-portfolio.md` |
+| `med-autoscience` | Main alignment, dirty same-head `codex/dm003-default-executor-export-currentness` classification, recent dirty files, process context, and doctor risk map. | none |
+| `med-autogrant` | Main alignment, recent MAG root production-acceptance/schema/source/test writes, remote-only branch retention, and doctor risk map. | none |
+| `redcube-ai` | Main alignment, dirty same-head `codex/rca-remove-legacy-payload-aliases` classification, recent native-PPT/root generated writes, remote-only branch retention, and doctor risk map. | none |
+| `one-person-lab-app` | Main alignment, dirty remote-backed full-first-run worktree classification, recent root release-boundary writes, and doctor risk map. | none |
+
+Archived / tombstoned / deleted docs:
+
+- none. OMA doc-path retirement remains empty for the current exact inventory.
+
+Worktree / branch cleanup:
+
+- none. No local worktree/branch met every deletion gate after dirty-state, recent-write, active-process, unmerged, or remote-backed checks.
+
+Retained lanes / blockers:
+
+- MAS `codex/dm003-default-executor-export-currentness`: branch/head are main ancestors and no same-name remote/open PR, but the worktree is dirty in `docs/decisions.md`, `src/med_autoscience/controllers/study_transition_receipt_consumption.py`, `src/med_autoscience/runtime_control/owner_route_attempt_protocol.py`, and two owner-route reconcile tests, with writes around `22:20-22:22 CST`; retain.
+- RCA `codex/rca-remove-legacy-payload-aliases`: branch/head are main ancestors and no same-name remote/open PR, but the worktree is dirty in production-acceptance, operator evidence refs, and product-entry/retired-surface tests, with writes around `22:23 CST`; retain.
+- App `codex/full-first-run-stable-gate-20260525`: dirty, remote-backed, not a main ancestor (`main...branch = 90 3`), with untracked `docs/product/gui-shell-adapter.md`; retain.
+- Root checkouts are clean/aligned, but recent generated/status-neutral writes exist in OPL `dist/`, MAG sustained-consumption evidence/schema/source/tests, RCA native-PPT generated/source/test files, and App release-boundary files; none are deleted or mixed into this docs commit.
+- Remote-only OPL `origin/fix/opl-temporal-worker-stale-repair-20260528`, MAG `origin/feature/ai-narration-contracts`, and RCA `origin/codex/developer-mode-fork-pr-live-closeout-20260528` remain retained without proof they are automation-owned stale and externally unreferenced.
+
+Unreviewed docs:
+
+- `opl-meta-agent`: none for repo-root `README*`, `docs/**/*.md`, or tracked `agent/*/README.md` support indexes at this inventory snapshot.
+- OPL, MAS, MAG, RCA broader README/docs full-body coverage remains open except for previously recorded tranche coverage. App remains covered at the prior App body-coverage snapshot.
+
+Remaining stale / retire candidates:
+
+- OMA doc-path retire candidates remain empty; evidence/hygiene tails remain active: registry/App live consumption receipts, App render/screenshot/runtime drilldown, repeat long-soak, real target patch-loop owner receipt or typed blocker samples, independent Codex reviewer direct-evidence samples, standard target-agent handoff convergence, refs-only adapter thinning, and script-to-pack / OPL primitive hygiene.
+- Future OMA prose that upgrades refs-only generated/registration/App projection, suite pass, schema completeness, work-order shape, source-shape conformance, support README indexes, or OPL refs-only consumption into target-domain readiness, App live rendering, owner receipt, artifact readiness, production ready, quality verdict, default promotion, or global OPL-series completion is stale pollution.
+
+Next tranche write scope:
+
+- Start with another fresh six-repo scan. If no safe cleanup candidate appears, continue full-body README/docs coverage on a clean repo/document cluster or validate/commit one explicit dirty owner lane without mixing unrelated staged changes. Keep global `/goal` active.
+
 Date: `2026-05-28 22:02 CST`
 Tranche: `mag-sustained-consumption-payload-record-and-ledger`
 State: `tranche_verified`
