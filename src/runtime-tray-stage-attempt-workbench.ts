@@ -717,6 +717,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,
       transition_bridge_evidence: EMPTY_WORKBENCH_METADATA.summary.transition_bridge_evidence,
       control_loop_summary: EMPTY_WORKBENCH_METADATA.summary.control_loop_summary,
+      attempt_history: EMPTY_WORKBENCH_METADATA.summary.attempt_history,
       human_review_burden_budget: EMPTY_WORKBENCH_METADATA.human_review_burden_budget,
       source_refs: sourceRefs(queueDb),
       authority_boundary: {
@@ -778,6 +779,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       action_routing: metadata.summary.action_routing,
       transition_bridge_evidence: metadata.summary.transition_bridge_evidence,
       control_loop_summary: metadata.summary.control_loop_summary,
+      attempt_history: metadata.summary.attempt_history,
       human_review_burden_budget: metadata.human_review_burden_budget,
       attempts,
       evidence_attempts: evidenceAttemptsWithControlState,
@@ -809,6 +811,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,
       transition_bridge_evidence: EMPTY_WORKBENCH_METADATA.summary.transition_bridge_evidence,
       control_loop_summary: EMPTY_WORKBENCH_METADATA.summary.control_loop_summary,
+      attempt_history: EMPTY_WORKBENCH_METADATA.summary.attempt_history,
       human_review_burden_budget: EMPTY_WORKBENCH_METADATA.human_review_burden_budget,
       source_refs: sourceRefs(queueDb),
       authority_boundary: {
