@@ -120,7 +120,7 @@ test('runtime Developer Mode closeout help exposes the ledger command group boun
     'runtime developer-mode-closeout verify',
     'runtime developer-mode-closeout list',
   ]);
-  assert.match(help.summary, /external owner acceptance/);
+  assert.match(help.summary, /GitHub PR-backed owner acceptance/);
 });
 
 test('runtime Developer Mode closeout command group rejects unknown subcommands', () => {
@@ -151,6 +151,25 @@ test('runtime Developer Mode closeout CLI blocks owner receipt or incomplete clo
     }).developer_mode_closeout_ledger_record;
     assert.equal(invalidOwner.status, 'no_eligible_developer_mode_closeout_receipts');
     assert.equal(invalidOwner.blocked_receipts[0].blocker.blocker_id, 'developer_mode_owner_acceptance_ref_not_external');
+
+    const directFixPrOwnerAcceptance = runCli([
+      'runtime',
+      'developer-mode-closeout',
+      'record',
+      '--payload',
+      JSON.stringify({
+        ...completePayload,
+        owner_acceptance_ref:
+          'github-pr-owner-acceptance-ref:https://github.com/gaofeng21cn/med-autoscience/pull/42#pullrequestreview-123',
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).developer_mode_closeout_ledger_record;
+    assert.equal(directFixPrOwnerAcceptance.status, 'no_eligible_developer_mode_closeout_receipts');
+    assert.equal(
+      directFixPrOwnerAcceptance.blocked_receipts[0].blocker.blocker_id,
+      'developer_mode_owner_acceptance_ref_not_external',
+    );
 
     const incomplete = runCli([
       'runtime',
@@ -223,10 +242,10 @@ test('runtime Developer Mode closeout CLI blocks fork PR fixture refs from live 
   }
 });
 
-test('runtime Developer Mode closeout CLI accepts URL-backed live fork PR refs', () => {
+test('runtime Developer Mode closeout CLI requires fork PR owner acceptance to be PR-backed', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-mode-closeout-live-fork-pr-state-'));
   try {
-    const liveForkPr = runCli([
+    const weakOwnerAcceptance = runCli([
       'runtime',
       'developer-mode-closeout',
       'record',
@@ -247,6 +266,36 @@ test('runtime Developer Mode closeout CLI accepts URL-backed live fork PR refs',
       OPL_STATE_DIR: stateRoot,
     }).developer_mode_closeout_ledger_record;
 
+    assert.equal(weakOwnerAcceptance.status, 'no_eligible_developer_mode_closeout_receipts');
+    assert.equal(
+      weakOwnerAcceptance.blocked_receipts[0].blocker.blocker_id,
+      'developer_mode_fork_pr_owner_acceptance_not_pr_backed',
+    );
+    assert.deepEqual(weakOwnerAcceptance.blocked_receipts[0].missing_closeout_refs, [
+      'github_pr_owner_acceptance_ref',
+    ]);
+
+    const liveForkPr = runCli([
+      'runtime',
+      'developer-mode-closeout',
+      'record',
+      '--payload',
+      JSON.stringify({
+        target_repo_id: 'redcube-ai',
+        route_decision: 'fork-PR',
+        route_eligibility: 'eligible_fork_pr',
+        patrol_observation_ref: 'patrol-observation-ref:rca/live-fork-pr',
+        diff_ref: 'diff-ref:rca/live-fork-pr',
+        verification_refs: ['test-result-ref:rca/live-fork-pr'],
+        no_forbidden_write_ref: 'no-forbidden-write-ref:rca/live-fork-pr',
+        fork_repo_ref: 'github-fork-ref:https://github.com/developer/redcube-ai',
+        pr_review_ref: 'github-pr-review-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42',
+        owner_acceptance_ref: 'github-pr-owner-acceptance-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42#pullrequestreview-123',
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).developer_mode_closeout_ledger_record;
+
     assert.equal(liveForkPr.status, 'recorded');
     assert.equal(liveForkPr.recorded_receipt_count, 1);
     assert.equal(liveForkPr.receipts[0].route_decision, 'fork-PR');
@@ -257,6 +306,10 @@ test('runtime Developer Mode closeout CLI accepts URL-backed live fork PR refs',
     assert.equal(
       liveForkPr.receipts[0].pr_review_ref,
       'github-pr-review-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42',
+    );
+    assert.equal(
+      liveForkPr.receipts[0].owner_acceptance_ref,
+      'github-pr-owner-acceptance-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42#pullrequestreview-123',
     );
     assert.equal(liveForkPr.receipts[0].authority_boundary.can_write_owner_receipt, false);
   } finally {

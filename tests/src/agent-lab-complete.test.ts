@@ -373,7 +373,7 @@ test('Agent Lab Developer Mode repair route projects patrol fixes as refs only',
   assert.equal(result.summary.live_closeout_ready_count, 1);
   assert.equal(result.summary.follow_up_queue_item_ref_count, 2);
   assert.equal(result.route_policy.owner_acceptance_ref,
-    'external_owner_ref_only_fixture_refs_do_not_close_owner_acceptance');
+    'direct_fix_external_owner_ref_fork_pr_github_pr_owner_acceptance_ref_fixture_refs_do_not_close_owner_acceptance');
   assert.equal(result.live_closeout_evidence.surface_kind,
     'opl_agent_lab_developer_mode_live_closeout_evidence_read_model');
   assert.equal(result.live_closeout_evidence.status, 'closeout_refs_incomplete');

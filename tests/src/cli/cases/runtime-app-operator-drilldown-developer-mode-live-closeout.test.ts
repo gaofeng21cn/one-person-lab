@@ -30,7 +30,8 @@ const forkPrPayload = {
   no_forbidden_write_ref: 'no-forbidden-write-ref:rca/developer-mode-fork-pr',
   fork_repo_ref: 'github-fork-ref:https://github.com/developer/redcube-ai',
   pr_review_ref: 'github-pr-review-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42',
-  owner_acceptance_ref: 'external-owner-acceptance-ref:rca/developer-mode-fork-pr-accepted',
+  owner_acceptance_ref:
+    'github-pr-owner-acceptance-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42#pullrequestreview-123',
 };
 
 function recordAndVerifyDeveloperModeCloseout(stateRoot: string, payload: Record<string, unknown>) {
@@ -88,7 +89,7 @@ test('runtime app-operator-drilldown projects Developer Mode live closeout evide
     assert.equal(attention.can_close_without_domain_or_app_payload, false);
     assert.equal(
       attention.payload_ref_hints.fork_pr_ref_policy,
-      'fork_repo_ref_must_be_resolvable_github_repo_url_or_url_backed_github_fork_ref_and_pr_review_ref_must_be_github_pull_request_url_or_url_backed_github_pr_ref',
+      'fork_repo_ref_must_be_resolvable_github_repo_url_or_url_backed_github_fork_ref_and_pr_review_ref_and_owner_acceptance_ref_must_be_github_pull_request_url_or_url_backed_github_pr_refs',
     );
     assert.deepEqual(attention.payload_ref_hints.fork_repo_ref_accepted_prefixes, [
       'https://github.com/',
@@ -113,6 +114,16 @@ test('runtime app-operator-drilldown projects Developer Mode live closeout evide
       attention.payload_workorder.accepted_payload_paths.fork_pr_path.live_github_pr_review_ref_required,
       true,
     );
+    assert.equal(
+      attention.payload_workorder.accepted_payload_paths.fork_pr_path
+        .live_github_pr_owner_acceptance_ref_required,
+      true,
+    );
+    assert.equal(
+      attention.payload_workorder.accepted_payload_paths.fork_pr_path
+        .owner_acceptance_ref_must_be_github_pr_backed,
+      true,
+    );
     assert.equal(attention.payload_workorder.empty_payload_template_is_success_evidence, false);
     assert.equal(attention.authority_boundary.can_create_owner_receipt, false);
     assert.equal(attention.authority_boundary.can_write_owner_receipt, false);
@@ -130,7 +141,7 @@ test('runtime app-operator-drilldown projects Developer Mode live closeout evide
     assert.equal(nextStep.can_close_developer_mode_live_route, false);
     assert.equal(
       nextStep.payload_ref_hints.fork_pr_ref_policy,
-      'fork_repo_ref_must_be_resolvable_github_repo_url_or_url_backed_github_fork_ref_and_pr_review_ref_must_be_github_pull_request_url_or_url_backed_github_pr_ref',
+      'fork_repo_ref_must_be_resolvable_github_repo_url_or_url_backed_github_fork_ref_and_pr_review_ref_and_owner_acceptance_ref_must_be_github_pull_request_url_or_url_backed_github_pr_refs',
     );
 
     assert.equal(
@@ -242,10 +253,15 @@ test('framework readiness consumes Developer Mode live closeout evidence without
     assert.equal(evidence.authority_boundary.can_claim_production_ready, false);
     assert.equal(
       evidence.payload_ref_hints.fork_pr_ref_policy,
-      'fork_repo_ref_must_be_resolvable_github_repo_url_or_url_backed_github_fork_ref_and_pr_review_ref_must_be_github_pull_request_url_or_url_backed_github_pr_ref',
+      'fork_repo_ref_must_be_resolvable_github_repo_url_or_url_backed_github_fork_ref_and_pr_review_ref_and_owner_acceptance_ref_must_be_github_pull_request_url_or_url_backed_github_pr_refs',
     );
     assert.equal(
       evidence.payload_workorder.accepted_payload_paths.fork_pr_path.live_github_fork_ref_required,
+      true,
+    );
+    assert.equal(
+      evidence.payload_workorder.accepted_payload_paths.fork_pr_path
+        .live_github_pr_owner_acceptance_ref_required,
       true,
     );
     assert.equal(readiness.developer_mode_live_closeout_evidence.source_command,
