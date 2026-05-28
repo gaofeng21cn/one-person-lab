@@ -23,7 +23,7 @@ export function buildPublicRuntimeDeveloperModeCloseoutCommandSpecs(
   const commandGroupSpec: CommandSpec = {
     usage: 'opl runtime developer-mode-closeout <record|verify|list>',
     summary:
-      'Inspect or update refs-only Developer Mode live repair closeout ledger entries; fork/PR closeout still requires real external owner acceptance.',
+      'Inspect or update refs-only Developer Mode live repair closeout ledger entries; fork/PR closeout requires GitHub PR-backed owner acceptance.',
     examples: [
       'opl runtime developer-mode-closeout list --json',
       'opl help runtime developer-mode-closeout record',
@@ -38,7 +38,7 @@ export function buildPublicRuntimeDeveloperModeCloseoutCommandSpecs(
           usage: 'opl runtime developer-mode-closeout <record|verify|list>',
           subcommands,
           owner_acceptance_policy:
-            'external_owner_ref_only_repo_contract_fixture_is_unclosed_non_owner_drill_no_opl_owner_receipt_write',
+            'direct_fix_accepts_external_owner_ref_fork_pr_requires_github_pr_owner_acceptance_ref_no_opl_owner_receipt_write',
           refs_only: true,
         },
       };

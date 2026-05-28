@@ -66,10 +66,10 @@ function developerModeCloseoutPayloadRefHints() {
       'no_forbidden_write_ref',
       'fork_repo_ref',
       'pr_review_ref',
-      'external_owner_acceptance_ref',
+      'github_pr_owner_acceptance_ref',
     ],
     fork_pr_ref_policy:
-      'fork_repo_ref_must_be_resolvable_github_repo_url_or_url_backed_github_fork_ref_and_pr_review_ref_must_be_github_pull_request_url_or_url_backed_github_pr_ref',
+      'fork_repo_ref_must_be_resolvable_github_repo_url_or_url_backed_github_fork_ref_and_pr_review_ref_and_owner_acceptance_ref_must_be_github_pull_request_url_or_url_backed_github_pr_refs',
     fork_repo_ref_accepted_prefixes: [
       'https://github.com/',
       'git@github.com:',
@@ -86,7 +86,7 @@ function developerModeCloseoutPayloadRefHints() {
       'repo-contract-fixture-ref:',
     ],
     owner_acceptance_ref_policy:
-      'external_owner_ref_or_external_owner_acceptance_ref_only_no_owner_receipt_ref',
+      'direct_fix_accepts_external_owner_ref_fork_pr_requires_github_pr_owner_acceptance_ref_no_owner_receipt_ref',
   };
 }
 
@@ -130,11 +130,13 @@ function developerModeCloseoutPayloadWorkorder(missingRouteKinds: string[]) {
         ],
         live_github_fork_ref_required: true,
         live_github_pr_review_ref_required: true,
+        live_github_pr_owner_acceptance_ref_required: true,
         rejected_fixture_ref_prefixes: [
           'fixture://',
           'repo-contract-fixture-ref:',
         ],
         owner_acceptance_ref_must_be_external: true,
+        owner_acceptance_ref_must_be_github_pr_backed: true,
         closes_domain_ready: false,
         closes_production_ready: false,
       },

@@ -203,6 +203,11 @@ function isGithubTypedPullRequestRef(value: string | null) {
   return Boolean(typedRef && isGithubHttpPullRequestUrl(typedRef[1]));
 }
 
+function isGithubTypedPullRequestOwnerAcceptanceRef(value: string | null) {
+  const typedRef = value?.match(/^github-pr-owner-acceptance-ref:(.+)$/);
+  return Boolean(typedRef && isGithubHttpPullRequestUrl(typedRef[1]));
+}
+
 function isLiveGithubForkRef(value: string | null) {
   return Boolean(
     isGithubTypedRepoRef(value)
@@ -214,6 +219,14 @@ function isLiveGithubForkRef(value: string | null) {
 function isLiveGithubPullRequestRef(value: string | null) {
   return Boolean(
     isGithubTypedPullRequestRef(value)
+    || isGithubHttpPullRequestUrl(value),
+  );
+}
+
+function isLiveGithubPullRequestOwnerAcceptanceRef(value: string | null) {
+  return Boolean(
+    isGithubTypedPullRequestOwnerAcceptanceRef(value)
+    || isGithubTypedPullRequestRef(value)
     || isGithubHttpPullRequestUrl(value),
   );
 }
@@ -294,7 +307,11 @@ function normalizeReceiptInput(input: DeveloperModeCloseoutReceiptInput) {
     return blockedReceipt(input, 'developer_mode_route_decision_unsupported', ['route_decision']);
   }
   const ownerAcceptanceRef = optionalString(input.owner_acceptance_ref);
-  if (ownerAcceptanceRef && !isExternalOwnerAcceptanceRef(ownerAcceptanceRef)) {
+  if (
+    ownerAcceptanceRef
+    && decision !== 'fork-PR'
+    && !isExternalOwnerAcceptanceRef(ownerAcceptanceRef)
+  ) {
     return blockedReceipt(input, 'developer_mode_owner_acceptance_ref_not_external', [
       'external_owner_acceptance_ref',
     ]);
@@ -315,6 +332,14 @@ function normalizeReceiptInput(input: DeveloperModeCloseoutReceiptInput) {
       !isLiveGithubPullRequestRef(optionalString(input.pr_review_ref)) ? 'live_pr_review_ref' : '',
     ];
     return blockedReceipt(input, 'developer_mode_fork_pr_refs_not_live_external_refs', invalidLiveRefs);
+  }
+  if (
+    decision === 'fork-PR'
+    && !isLiveGithubPullRequestOwnerAcceptanceRef(ownerAcceptanceRef)
+  ) {
+    return blockedReceipt(input, 'developer_mode_fork_pr_owner_acceptance_not_pr_backed', [
+      'github_pr_owner_acceptance_ref',
+    ]);
   }
 
   const receipt: DeveloperModeCloseoutReceipt = {
@@ -348,7 +373,14 @@ function normalizeReceipt(value: unknown): DeveloperModeCloseoutReceipt | null {
   const targetRepoId = optionalString(value.target_repo_id);
   const decision = routeDecision(value.route_decision);
   const ownerAcceptanceRef = optionalString(value.owner_acceptance_ref);
-  if (!receiptRefValue || !targetRepoId || !decision || !isExternalOwnerAcceptanceRef(ownerAcceptanceRef)) {
+  if (
+    !receiptRefValue
+    || !targetRepoId
+    || !decision
+    || (decision === 'fork-PR'
+      ? !isLiveGithubPullRequestOwnerAcceptanceRef(ownerAcceptanceRef)
+      : !isExternalOwnerAcceptanceRef(ownerAcceptanceRef))
+  ) {
     return null;
   }
   const input: DeveloperModeCloseoutReceiptInput = {

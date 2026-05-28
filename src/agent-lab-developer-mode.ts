@@ -108,7 +108,8 @@ export const DEVELOPER_MODE_DYNAMIC_ROUTE_BUILDER = {
     'pr_review_ref',
     'owner_acceptance_ref',
   ],
-  owner_acceptance_ref_policy: 'external_owner_ref_only_fixture_refs_do_not_close_owner_acceptance',
+  owner_acceptance_ref_policy:
+    'direct_fix_external_owner_ref_fork_pr_github_pr_owner_acceptance_ref_fixture_refs_do_not_close_owner_acceptance',
 };
 
 function unique(values: string[]) {
@@ -272,6 +273,22 @@ function ownerAcceptanceRef(value: string | null, decision: DeveloperModeRouteDe
     return {
       ref: value,
       kind: 'live_external_owner_ref',
+      status: 'external_owner_acceptance_observed',
+      isExternalOwnerRef: true,
+      isOwnerReceipt: false,
+      evidenceSource: 'live_external_owner_evidence',
+    };
+  }
+  if (
+    decision === 'fork-PR'
+    && (
+      /^https:\/\/github\.com\/[^/\s]+\/[^/\s#?]+\/pull\/\d+(?:[#?].*)?$/.test(value)
+      || /^github-pr-(?:review-|owner-acceptance-)?ref:https:\/\/github\.com\/[^/\s]+\/[^/\s#?]+\/pull\/\d+(?:[#?].*)?$/.test(value)
+    )
+  ) {
+    return {
+      ref: value,
+      kind: 'live_github_pr_owner_acceptance_ref',
       status: 'external_owner_acceptance_observed',
       isExternalOwnerRef: true,
       isOwnerReceipt: false,
@@ -657,7 +674,7 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
         drill.route_status === 'closeout_refs_ready').length,
       live_external_owner_acceptance_count: liveCloseoutEvidenceDrills.filter((drill) =>
         drill.evidence_source === 'developer_mode_closeout_ledger'
-        && drill.closeout_refs.owner_acceptance_ref_kind === 'live_external_owner_ref').length,
+        && drill.closeout_refs.owner_acceptance_ref_is_external_owner_ref === true).length,
       live_ledger_closeout_ready_count: liveCloseoutEvidenceDrills.filter((drill) =>
         drill.evidence_source === 'developer_mode_closeout_ledger'
         && drill.route_status === 'closeout_refs_ready').length,
@@ -682,7 +699,7 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
         drill.closeout_refs.owner_acceptance_ref?.startsWith('owner-receipt-ref:')).length,
     },
     owner_acceptance_policy:
-      'external_owner_ref_only_repo_contract_fixture_is_unclosed_non_owner_drill_no_opl_owner_receipt_write',
+      'direct_fix_accepts_external_owner_ref_fork_pr_requires_github_pr_owner_acceptance_ref_no_opl_owner_receipt_write',
     non_authority_outputs: {
       writes_domain_truth: false,
       writes_domain_artifact: false,
@@ -714,7 +731,8 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
       no_repo_developer_match: 'route_to_fork_pull_request',
       developer_mode_disabled: 'projection_visible_but_execution_not_eligible',
       acceptance_required_before_apply: true,
-      owner_acceptance_ref: 'external_owner_ref_only_fixture_refs_do_not_close_owner_acceptance',
+      owner_acceptance_ref:
+        'direct_fix_external_owner_ref_fork_pr_github_pr_owner_acceptance_ref_fixture_refs_do_not_close_owner_acceptance',
     },
     patrol_projection: {
       patrol_ref: 'agent-lab-patrol-ref:developer-mode/default',
