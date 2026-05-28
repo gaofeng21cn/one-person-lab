@@ -51,7 +51,9 @@ function developerModeCloseoutPayloadTemplate(missingRouteKinds: string[]) {
       ? '<github-pr-owner-acceptance-ref>'
       : '<external-owner-ref>',
     route_repetition_refs: ['<developer-mode-route-repetition-ref>'],
-    risk_tier_auto_promotion_refs: ['<agent-lab-risk-tier-auto-promotion-ref>'],
+    risk_tier_auto_promotion_refs: [
+      '<verified-agent-lab-risk-tier-auto-promotion-receipt-ref>',
+    ],
     app_patrol_mount_refs: ['<app-patrol-mount-ref>'],
   };
 }
@@ -96,7 +98,7 @@ function developerModeCloseoutPayloadRefHints() {
     owner_acceptance_ref_policy:
       'direct_fix_accepts_external_owner_ref_fork_pr_requires_github_pr_owner_acceptance_ref_no_owner_receipt_ref',
     scaleout_ref_policy:
-      'base direct-fix and fork-PR receipts close live route evidence; route repetition can be explicit or derived from verified ledger receipts, while risk-tier auto-promotion and App patrol mounting remain explicit follow-through refs',
+      'base direct-fix and fork-PR receipts close live route evidence; route repetition can be explicit or derived from verified ledger receipts, risk-tier auto-promotion must reference a verified Agent Lab risk-tier-promotion ledger receipt, and App patrol mounting remains an explicit follow-through ref',
   };
 }
 
@@ -178,9 +180,15 @@ function developerModeCloseoutPayloadWorkorder(missingRouteKinds: string[]) {
     ],
     optional_scaleout_payload_refs: [
       'route_repetition_refs',
-      'risk_tier_auto_promotion_refs',
+      'risk_tier_auto_promotion_refs_verified_by_agent_lab_risk_tier_promotion_ledger',
       'app_patrol_mount_refs',
     ],
+    risk_tier_auto_promotion_ref_policy:
+      'verified_agent_lab_risk_tier_promotion_ledger_receipt_required',
+    risk_tier_auto_promotion_record_command_ref:
+      'opl agent-lab risk-tier-promotion record --payload <json>',
+    risk_tier_auto_promotion_verify_command_ref:
+      'opl agent-lab risk-tier-promotion verify --receipt-ref <ref>',
     required_return_shapes:
       developerModeCloseoutRequiredReturnShapes(missingRouteKinds),
     payload_template: developerModeCloseoutPayloadTemplate(missingRouteKinds),

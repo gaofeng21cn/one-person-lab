@@ -28,11 +28,46 @@ const completeScaleoutPayload = {
     'developer-mode-route-repetition-ref:mas/direct-fix-repeat-20260528',
   ],
   risk_tier_auto_promotion_refs: [
-    'agent-lab-risk-tier-auto-promotion-ref:mas/medium-risk-canary-20260528',
+    'agent-lab-risk-tier-auto-promotion-ref:mas/medium-risk-canary-20260529',
   ],
   app_patrol_mount_refs: [
     'app-patrol-mount-ref:one-person-lab-app/developer-mode-patrol-mounted-20260528',
   ],
+};
+
+const verifiedRiskTierPromotionPayload = {
+  target_repo_id: 'med-autoscience',
+  mechanism_candidate_ref: 'mechanism-candidate:agent-lab/mas-medium-risk-canary-20260529',
+  risk_tier: 'medium_risk',
+  failure_delta_refs: ['failure-delta:mas/developer-mode-risk-tier-20260529'],
+  independent_ai_review_receipt_ref:
+    'independent-ai-review-receipt:mas/developer-mode-risk-tier-20260529',
+  independent_ai_review_receipt: {
+    receipt_ref: 'independent-ai-review-receipt:mas/developer-mode-risk-tier-20260529',
+    receipt_source: 'real_independent_ai_review',
+    assessment_mode: 'real_independent_ai_review',
+    reviewer_ref: 'reviewer:codex-independent-agent',
+    reviewer_agent_ref: 'agent-ref:opl-agent-lab/independent-ai-reviewer',
+    reviewed_mechanism_candidate_ref:
+      'mechanism-candidate:agent-lab/mas-medium-risk-canary-20260529',
+    execution_attempt_ref: 'stage-attempt-ref:developer-mode/executor-attempt-20260529',
+    review_attempt_ref: 'stage-attempt-ref:developer-mode/reviewer-attempt-20260529',
+    request_ref: 'review-request-ref:developer-mode/risk-tier-20260529',
+    response_ref: 'review-response-ref:developer-mode/risk-tier-20260529',
+    evidence_refs: ['failure-delta:mas/developer-mode-risk-tier-20260529'],
+    no_shared_context: true,
+    review_context_inherits_executor_context: false,
+    forbidden_write_scan_ref: 'no-forbidden-write-ref:developer-mode/risk-tier-20260529',
+    verdict: 'approved_for_risk_tiered_auto_promotion',
+    risk_tier: 'medium_risk',
+  },
+  promotion_receipt_refs: ['mechanism-promotion-receipt:mas/developer-mode-risk-tier-20260529'],
+  rollback_target_refs: ['rollback-target-ref:mas/developer-mode-risk-tier-20260529'],
+  canary_observation_refs: ['canary-observation-ref:mas/developer-mode-risk-tier-20260529'],
+  no_forbidden_write_refs: ['no-forbidden-write-ref:developer-mode/risk-tier-20260529'],
+  verification_refs: ['test-result-ref:mas/developer-mode-risk-tier-20260529'],
+  receipt_ref:
+    'agent-lab-risk-tier-auto-promotion-ref:mas/medium-risk-canary-20260529',
 };
 
 test('runtime Developer Mode closeout CLI records and verifies refs-only live closeout evidence', () => {
@@ -142,6 +177,26 @@ test('runtime Developer Mode closeout CLI records and verifies refs-only live cl
 test('runtime Developer Mode closeout CLI persists scaleout follow-through refs without ready claims', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-mode-closeout-scaleout-state-'));
   try {
+    const promotionRecord = runCli([
+      'agent-lab',
+      'risk-tier-promotion',
+      'record',
+      '--payload',
+      JSON.stringify(verifiedRiskTierPromotionPayload),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).agent_lab_risk_tier_promotion_ledger_record;
+    assert.equal(promotionRecord.status, 'recorded');
+    runCli([
+      'agent-lab',
+      'risk-tier-promotion',
+      'verify',
+      '--receipt-ref',
+      promotionRecord.receipt_refs[0],
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
     const recorded = runCli([
       'runtime',
       'developer-mode-closeout',
@@ -157,7 +212,7 @@ test('runtime Developer Mode closeout CLI persists scaleout follow-through refs 
       'developer-mode-route-repetition-ref:mas/direct-fix-repeat-20260528',
     ]);
     assert.deepEqual(recorded.receipts[0].risk_tier_auto_promotion_refs, [
-      'agent-lab-risk-tier-auto-promotion-ref:mas/medium-risk-canary-20260528',
+      'agent-lab-risk-tier-auto-promotion-ref:mas/medium-risk-canary-20260529',
     ]);
     assert.deepEqual(recorded.receipts[0].app_patrol_mount_refs, [
       'app-patrol-mount-ref:one-person-lab-app/developer-mode-patrol-mounted-20260528',
@@ -186,6 +241,102 @@ test('runtime Developer Mode closeout CLI persists scaleout follow-through refs 
     assert.equal(readModel.non_authority_outputs.writes_owner_receipt, false);
     assert.equal(readModel.non_authority_outputs.modifies_managed_runtime, false);
     assert.equal(readModel.authority_boundary.can_claim_production_ready, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime Developer Mode closeout CLI rejects unverified risk-tier auto-promotion refs', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-mode-closeout-risk-tier-blocked-state-'));
+  try {
+    const weakRiskTier = runCli([
+      'runtime',
+      'developer-mode-closeout',
+      'record',
+      '--payload',
+      JSON.stringify(completeScaleoutPayload),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).developer_mode_closeout_ledger_record;
+
+    assert.equal(weakRiskTier.status, 'no_eligible_developer_mode_closeout_receipts');
+    assert.equal(
+      weakRiskTier.blocked_receipts[0].blocker.blocker_id,
+      'developer_mode_risk_tier_auto_promotion_ref_not_verified_agent_lab_receipt',
+    );
+    assert.deepEqual(weakRiskTier.blocked_receipts[0].missing_closeout_refs, [
+      'verified_agent_lab_risk_tier_auto_promotion_ref',
+    ]);
+
+    const listed = runCli(['runtime', 'developer-mode-closeout', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    }).developer_mode_closeout_ledger;
+    assert.equal(listed.receipt_count, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('Agent Lab risk-tier promotion ledger blocks non-independent or high-risk promotion evidence', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-risk-tier-blocked-state-'));
+  try {
+    const fixtureReview = runCli([
+      'agent-lab',
+      'risk-tier-promotion',
+      'record',
+      '--payload',
+      JSON.stringify({
+        ...verifiedRiskTierPromotionPayload,
+        independent_ai_review_receipt_ref:
+          'independent-ai-review-receipt:mas/generated-fixture',
+        independent_ai_review_receipt: {
+          ...verifiedRiskTierPromotionPayload.independent_ai_review_receipt,
+          receipt_ref: 'independent-ai-review-receipt:mas/generated-fixture',
+          receipt_source: 'generated_fixture',
+          assessment_mode: 'generated_fixture',
+        },
+        receipt_ref:
+          'agent-lab-risk-tier-auto-promotion-ref:mas/generated-fixture',
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).agent_lab_risk_tier_promotion_ledger_record;
+    assert.equal(
+      fixtureReview.status,
+      'no_eligible_agent_lab_risk_tier_auto_promotion_receipts',
+    );
+    assert.equal(
+      fixtureReview.blocked_receipts[0].blocker.blocker_id,
+      'agent_lab_risk_tier_auto_promotion_independent_ai_review_not_verified',
+    );
+
+    const highRisk = runCli([
+      'agent-lab',
+      'risk-tier-promotion',
+      'record',
+      '--payload',
+      JSON.stringify({
+        ...verifiedRiskTierPromotionPayload,
+        risk_tier: 'high_risk',
+        receipt_ref:
+          'agent-lab-risk-tier-auto-promotion-ref:mas/high-risk-blocked',
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).agent_lab_risk_tier_promotion_ledger_record;
+    assert.equal(
+      highRisk.status,
+      'no_eligible_agent_lab_risk_tier_auto_promotion_receipts',
+    );
+    assert.equal(
+      highRisk.blocked_receipts[0].blocker.blocker_id,
+      'agent_lab_risk_tier_auto_promotion_requires_low_or_medium_risk',
+    );
+
+    const listed = runCli(['agent-lab', 'risk-tier-promotion', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    }).agent_lab_risk_tier_promotion_ledger;
+    assert.equal(listed.receipt_count, 0);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { hasVerifiedAgentLabRiskTierAutoPromotionReceiptRef } from './agent-lab-risk-tier-promotion-ledger.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 
 type DeveloperModeCloseoutRouteDecision = 'direct-fix' | 'fork-PR' | 'observe-only';
@@ -346,6 +347,17 @@ function normalizeReceiptInput(input: DeveloperModeCloseoutReceiptInput) {
       'github_pr_owner_acceptance_ref',
     ]);
   }
+  const riskTierAutoPromotionRefs = uniqueStrings(input.risk_tier_auto_promotion_refs ?? []);
+  if (
+    riskTierAutoPromotionRefs.length > 0
+    && !riskTierAutoPromotionRefs.every(hasVerifiedAgentLabRiskTierAutoPromotionReceiptRef)
+  ) {
+    return blockedReceipt(
+      input,
+      'developer_mode_risk_tier_auto_promotion_ref_not_verified_agent_lab_receipt',
+      ['verified_agent_lab_risk_tier_auto_promotion_ref'],
+    );
+  }
 
   const receipt: DeveloperModeCloseoutReceipt = {
     surface_kind: 'opl_developer_mode_closeout_receipt',
@@ -365,7 +377,7 @@ function normalizeReceiptInput(input: DeveloperModeCloseoutReceiptInput) {
     pr_review_ref: decision === 'fork-PR' ? optionalString(input.pr_review_ref) : null,
     owner_acceptance_ref: ownerAcceptanceRef ?? '',
     route_repetition_refs: uniqueStrings(input.route_repetition_refs ?? []),
-    risk_tier_auto_promotion_refs: uniqueStrings(input.risk_tier_auto_promotion_refs ?? []),
+    risk_tier_auto_promotion_refs: riskTierAutoPromotionRefs,
     app_patrol_mount_refs: uniqueStrings(input.app_patrol_mount_refs ?? []),
     source_surface: 'opl_developer_mode_closeout_evidence',
     authority_boundary: refsOnlyAuthorityBoundary(),

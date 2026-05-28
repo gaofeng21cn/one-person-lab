@@ -21,6 +21,7 @@ export type OplStatePaths = {
   standard_agent_template_consumption_ledger_file: string;
   domain_owner_payload_summary_ledger_file: string;
   mag_manifest_sustained_consumption_ledger_file: string;
+  agent_lab_risk_tier_auto_promotion_ledger_file: string;
   developer_mode_closeout_ledger_file: string;
   domain_manifest_projection_cache_file: string;
   desktop_config_file: string;
@@ -74,6 +75,10 @@ export function resolveOplStatePaths(): OplStatePaths {
     mag_manifest_sustained_consumption_ledger_file: path.join(
       stateDir,
       'mag-manifest-sustained-consumption-followthrough-ledger.json',
+    ),
+    agent_lab_risk_tier_auto_promotion_ledger_file: path.join(
+      stateDir,
+      'agent-lab-risk-tier-auto-promotion-ledger.json',
     ),
     developer_mode_closeout_ledger_file: path.join(stateDir, 'developer-mode-closeout-ledger.json'),
     domain_manifest_projection_cache_file: path.join(stateDir, 'domain-manifest-projection-cache.json'),

@@ -136,9 +136,10 @@ export function buildRuntimeDeveloperModeCloseoutCommandSpecs(): Record<string, 
     'runtime developer-mode-closeout record': {
       usage: 'opl runtime developer-mode-closeout record --payload <json>',
       summary:
-        'Record refs-only Developer Mode live repair closeout refs without writing owner receipts or domain truth.',
+        'Record refs-only Developer Mode live repair closeout refs; risk-tier auto-promotion refs must already be verified Agent Lab risk-tier-promotion receipts.',
       examples: [
         'opl runtime developer-mode-closeout record --payload \'{"target_repo_id":"med-autoscience","route_decision":"direct-fix","route_eligibility":"eligible_direct_fix","patrol_observation_ref":"patrol:ref","diff_ref":"diff:ref","verification_refs":["test:ref"],"no_forbidden_write_ref":"scan:ref","commit_ref":"git:ref","owner_acceptance_ref":"external-owner-ref:accepted"}\'',
+        'opl agent-lab risk-tier-promotion record --payload <json> && opl agent-lab risk-tier-promotion verify --receipt-ref <ref> && opl runtime developer-mode-closeout record --payload \'{"risk_tier_auto_promotion_refs":["<verified-agent-lab-risk-tier-auto-promotion-receipt-ref>"]}\'',
       ],
       handler: (args) => ({
         developer_mode_closeout_ledger_record:
