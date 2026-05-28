@@ -32,8 +32,9 @@ Date: `2026-05-29`
 
 - `docs/references/current-support/opl-release-packages-modular-distribution.md`
   - Added a currentness policy that freezes owner/distribution boundary only, not dynamic package/release/App readiness facts.
-  - Reframed module size baseline as historical provenance; current size/sha/version/source git must come from package manifest generation or release evidence.
-  - Replaced hard-coded `26.4.27` / `26.4.26` / `1.9.21` / `2026-04-27T00:00:00Z` sample values with explicit shape placeholders.
+  - Removed the fixed MB archive-size table; current archive size, sha256, version and source git must come from release-time manifest generation or release evidence.
+  - Replaced hard-coded `26.4.27` / `26.4.26` / `1.9.21` / `2026-04-27T00:00:00Z` sample values with explicit shape placeholders, and reshaped the sample around the live `packages.modules` manifest structure.
+  - Clarified that the bundled Codex default profile in the package manifest is a product-default projection, not a secret, user-local Codex config or executor policy.
   - Kept the stable boundary that Releases remain the user download surface, Packages are only the machine channel once install/update consumes them, Full DMG is an App-owned first-install asset, and MDS is not part of default manifest / Full payload.
 
 ## Coverage
