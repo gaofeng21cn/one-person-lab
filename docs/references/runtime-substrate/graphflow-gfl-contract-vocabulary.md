@@ -2,8 +2,30 @@
 
 Owner: `One Person Lab`
 Purpose: `reference`
-State: `supporting_reference`
+State: `support_reference`
 Machine boundary: 本文是人读参考，不是机器合同、runtime 依赖、planner、proof assistant、workflow compiler 或 domain verdict surface。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
+
+## 当前读法
+
+本文只保留 GraphFlow / GFL 对 OPL 有用的治理词汇，不冻结当前 stage readiness、provider proof、App/operator counter 或 production evidence。当前机器入口是：
+
+- `contracts/family-orchestration/family-stage-admission.schema.json`
+- `contracts/family-orchestration/family-stage-control-plane.schema.json`
+- `contracts/family-orchestration/family-stage-proof-bundle.schema.json`
+- `contracts/family-orchestration/family-stage-graph-projection.schema.json`
+- `contracts/family-orchestration/family-stage-assumption-lifecycle.schema.json`
+- `contracts/family-orchestration/family-stage-cohort-loop.schema.json`
+- `contracts/family-orchestration/family-stage-runtime-budget.schema.json`
+- `contracts/family-orchestration/family-stage-pack-registry.schema.json`
+- `contracts/family-orchestration/family-stage-pack-source-spec.schema.json`
+- `contracts/family-orchestration/family-stage-replay-certification.schema.json`
+- `src/family-stage-readiness.ts`
+- `src/family-runtime-stage-admission-gate.ts`
+- `opl stages readiness --family-defaults --json`
+- `opl framework readiness --family-defaults --json`
+- `opl runtime app-operator-drilldown --json`
+
+这些入口的当前读法固定为 refs-only Stage Kernel / Readiness / Derived Diagnostic Lenses。`graphflow_runtime_dependency=false`、`can_claim_domain_ready=false`、`can_claim_artifact_authority=false`、`can_claim_production_ready=false` 和 `can_authorize_quality_verdict=false` 是关键边界；具体 warning、counter、stage 数、workorder 数和 evidence 计数必须从 live CLI/read-model 读取，不能从本文冻结。
 
 ## 参考边界
 
