@@ -14,6 +14,7 @@ test('install command downloads installs and opens the OPL GUI when it is missin
   const hdiutilPath = path.join(toolRoot, 'hdiutil');
   const openFixture = createFakeOpenFixture();
   const toolLogPath = path.join(toolRoot, 'tools.log');
+  const detachStatePath = path.join(toolRoot, 'detach-count');
 
   fs.writeFileSync(
     curlPath,
@@ -54,6 +55,16 @@ if [ "$1" = 'attach' ]; then
   exit 0
 fi
 if [ "$1" = 'detach' ]; then
+  count=0
+  if [ -f ${JSON.stringify(detachStatePath)} ]; then
+    count="$(cat ${JSON.stringify(detachStatePath)})"
+  fi
+  count="$((count + 1))"
+  printf '%s' "$count" > ${JSON.stringify(detachStatePath)}
+  if [ "$count" = '1' ]; then
+    printf 'hdiutil: detach failed: Resource busy\n' >&2
+    exit 16
+  fi
   exit 0
 fi
 echo "unexpected hdiutil args: $*" >&2
@@ -98,7 +109,7 @@ exit 1
     const toolLog = fs.readFileSync(toolLogPath, 'utf8');
     assert.match(toolLog, /curl .*github\.com\/gaofeng21cn\/one-person-lab-app\/releases\/download\/v26\.4\.25/);
     assert.match(toolLog, /hdiutil attach /);
-    assert.match(toolLog, /hdiutil detach /);
+    assert.equal(toolLog.match(/hdiutil detach /g)?.length ?? 0, 2);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(toolRoot, { recursive: true, force: true });
