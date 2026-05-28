@@ -74,6 +74,11 @@ function countBy(values: JsonRecord[], predicate: (value: JsonRecord) => boolean
   return values.filter(predicate).length;
 }
 
+function stageProductionRecordRouteHasOpenObligation(ref: JsonRecord) {
+  const summary = record(ref.evidence_obligation_summary);
+  return numberValue(summary.open_count) > 0;
+}
+
 export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSummaryInput) {
   const packageRefs = list(input.packageLifecycle.package_refs);
   const exportRefs = list(input.packageLifecycle.export_refs);
@@ -250,15 +255,18 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       countBy(input.actionRefs, (ref) => (
         ref.action_kind === 'stage_production_evidence_receipt_record'
         && ref.route_requires_domain_or_app_payload === true
+        && stageProductionRecordRouteHasOpenObligation(ref)
       )),
     stage_production_evidence_receipt_record_payload_template_count:
       countBy(input.actionRefs, (ref) => (
         ref.action_kind === 'stage_production_evidence_receipt_record'
         && Object.keys(record(ref.payload_template)).length > 0
+        && stageProductionRecordRouteHasOpenObligation(ref)
       )),
     stage_production_evidence_payload_workorder_count:
       countBy(input.actionRefs, (ref) => (
         ref.action_kind === 'stage_production_evidence_receipt_record'
+        && stageProductionRecordRouteHasOpenObligation(ref)
         && record(ref.payload_workorder).surface_kind === 'opl_stage_production_evidence_payload_workorder'
       )),
     domain_dispatch_evidence_receipt_action_route_count: countBy(input.actionRefs, (ref) => (

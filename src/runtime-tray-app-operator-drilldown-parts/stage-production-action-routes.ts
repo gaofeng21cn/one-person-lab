@@ -622,7 +622,13 @@ function stageEvidenceRoute(
     request_pack_id: requestPackId,
     evidence_route_kind: 'stage_production_evidence',
     evidence_source_ref: sourceRef,
+    stage_evidence_receipt_status: stringValue(stage.stage_evidence_receipt_status),
+    stage_evidence_receipt_refs: stringList(stage.stage_evidence_receipt_refs),
+    verified_stage_evidence_receipt_refs: stringList(stage.verified_stage_evidence_receipt_refs),
     missing_production_evidence: stringList(stage.missing_production_evidence),
+    evidence_obligation_summary: isRecord(stage.evidence_obligation_summary)
+      ? stage.evidence_obligation_summary
+      : {},
     expected_receipt_refs: stringList(stage.expected_receipt_refs),
     unobserved_expected_receipt_refs: unobservedExpectedReceiptRefs,
     unobserved_source_scope_refs: unobservedSourceScopeRefs,

@@ -874,6 +874,9 @@ test('verified typed-blocker stage evidence receipt keeps record route open for 
         ref.action_id === 'stage-production-evidence:medautoscience:review:record',
     );
     assert.equal(route.action_kind, 'stage_production_evidence_receipt_record');
+    assert.equal(route.stage_evidence_receipt_status, 'verified');
+    assert.deepEqual(route.stage_evidence_receipt_refs, ['mas-stage-review-typed-blocker-receipt']);
+    assert.deepEqual(route.verified_stage_evidence_receipt_refs, ['mas-stage-review-typed-blocker-receipt']);
     assert.equal(route.route_requires_domain_or_app_payload, true);
     assert.deepEqual(route.payload_ref_hints.domain_receipt_refs_should_cover, [
       'mas:review-receipt',
@@ -882,6 +885,10 @@ test('verified typed-blocker stage evidence receipt keeps record route open for 
     assert.deepEqual(route.payload_ref_hints.evidence_refs_should_cover_monitor_freshness, [
       'metric:review/currentness',
     ]);
+    assert.equal(
+      drilldown.summary.stage_production_evidence_payload_workorder_count,
+      0,
+    );
 
     const recordExecution = runCli([
       'runtime',
