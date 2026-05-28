@@ -68,6 +68,22 @@ function developerModeCloseoutPayloadRefHints() {
       'pr_review_ref',
       'external_owner_acceptance_ref',
     ],
+    fork_pr_ref_policy:
+      'fork_repo_ref_must_be_live_github_fork_ref_and_pr_review_ref_must_be_live_github_pr_ref',
+    fork_repo_ref_accepted_prefixes: [
+      'github-fork-ref:',
+      'https://github.com/',
+      'git@github.com:',
+    ],
+    pr_review_ref_accepted_prefixes: [
+      'github-pr-review-ref:',
+      'github-pr-ref:',
+      'https://github.com/',
+    ],
+    fork_pr_ref_rejected_prefixes: [
+      'fixture://',
+      'repo-contract-fixture-ref:',
+    ],
     owner_acceptance_ref_policy:
       'external_owner_ref_or_external_owner_acceptance_ref_only_no_owner_receipt_ref',
   };
@@ -110,6 +126,12 @@ function developerModeCloseoutPayloadWorkorder(missingRouteKinds: string[]) {
           'fork_repo_ref',
           'pr_review_ref',
           'owner_acceptance_ref',
+        ],
+        live_github_fork_ref_required: true,
+        live_github_pr_review_ref_required: true,
+        rejected_fixture_ref_prefixes: [
+          'fixture://',
+          'repo-contract-fixture-ref:',
         ],
         owner_acceptance_ref_must_be_external: true,
         closes_domain_ready: false,
