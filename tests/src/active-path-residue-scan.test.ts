@@ -146,9 +146,12 @@ test('root help fast-start examples stay on the current Codex-default path', () 
 
   assert.match(helpOutput, /default Codex engine/);
   assert.match(helpOutput, /default Codex runtime/);
+  assert.match(helpOutput, /opl workspace bind --project redcube --path \/Users\/gaofeng\/workspace\/redcube-ai/);
   assert.doesNotMatch(helpOutput, new RegExp(`${legacyHermes}.*default`, 'i'));
   assert.doesNotMatch(helpOutput, new RegExp(`${legacyGateway}.*cron`, 'i'));
   assert.doesNotMatch(helpOutput, new RegExp(`${['front', 'door'].join('')}.*${legacyLocalManager}`, 'i'));
+  assert.doesNotMatch(helpOutput, /--entry-command "redcube product invoke/);
+  assert.doesNotMatch(helpOutput, /--manifest-command "redcube product manifest/);
 });
 
 test('production source does not expose Hermes as a provider/runtime surface', () => {

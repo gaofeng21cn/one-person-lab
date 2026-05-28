@@ -42,6 +42,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-29-opl-series-doc-governance-tranche-ledger.md` | OPL series branch/worktree/doc governance tranche ledger。 | 当前 truth 归各 repo active truth owner、core docs 和 live code/contracts/tests/read-model；ledger 只记录本轮六仓盘点、保留理由、OMA 覆盖复核和下一轮写入范围。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-2.md` | OPL series branch/worktree/doc governance tranche ledger part 2。 | 当前 truth 归各 repo active truth owner、core docs 和 live code/contracts/tests/read-model；ledger 只记录本轮六仓盘点、MAG P3/P4 history coverage、stale lane 清理与下一轮写入范围。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-3.md` | OPL series branch/worktree/doc governance tranche ledger part 3。 | 当前 truth 归各 repo active truth owner、core docs 和 live code/contracts/tests/read-model；ledger 只记录本轮六仓盘点、MAS stage-surface semantic refresh、验证、保留理由和下一轮写入范围。 |
+| `2026-05-29-opl-series-doc-governance-tranche-ledger-part-4.md` | OPL series branch/worktree/doc governance tranche ledger part 4。 | 当前 truth 归各 repo active truth owner、core docs 和 live code/contracts/tests/read-model；ledger 只记录本轮 stale worktree 清理、active CLI/help 示例退役、验证、保留理由和下一轮写入范围。 |
 
 ## Tombstone Rules
 

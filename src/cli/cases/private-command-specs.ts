@@ -772,7 +772,6 @@ resume: {
         'Bind and activate one workspace for an admitted project, optionally freezing or deriving its direct-entry locator.',
       examples: [
         'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai',
-        'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube product invoke --workspace-root /Users/gaofeng/workspace/redcube-ai" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai" --entry-url http://127.0.0.1:3310/redcube',
         'opl workspace bind --project medautoscience --path /Users/gaofeng/workspace/med-autoscience --profile /Users/gaofeng/workspace/med-autoscience/profiles/local.toml',
         'opl workspace bind --project medautogrant --path /Users/gaofeng/workspace/med-autogrant --input /Users/gaofeng/workspace/med-autogrant/examples/nsfc_workspace_p2c_critique.json',
       ],

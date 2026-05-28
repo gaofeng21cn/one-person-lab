@@ -182,7 +182,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl module exec --module medautoscience -- doctor entry-modes',
         'opl engine install --engine codex',
         'opl workspace projects',
-        'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube product invoke --workspace-root /Users/gaofeng/workspace/redcube-ai" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai"',
+        'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai',
         'opl domain launch --project redcube --dry-run',
         'opl contract handoff-envelope "Prepare a defense-ready slide deck." --preferred-family ppt_deck',
         'opl status workspace --path /Users/gaofeng/workspace/redcube-ai',
