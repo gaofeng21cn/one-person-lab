@@ -141,6 +141,7 @@ exit 1
         release: {
           channel: string;
           version: string;
+          tag: string;
           repo: string;
           opl_framework_version: string;
           framework_version: string;
@@ -197,6 +198,8 @@ exit 1
     assert.equal(output.app_state.core.codex.parsed_version, '0.125.0');
     assert.equal(output.app_state.provider.temporal.required_for, 'full_opl_family_runtime_readiness');
     assert.equal(output.app_state.release.channel, 'stable');
+    assert.equal(output.app_state.release.version, '26.5.28');
+    assert.equal(output.app_state.release.tag, 'v26.5.28');
     assert.equal(output.app_state.release.prerelease_included, false);
     assert.equal(output.app_state.release.repo, 'gaofeng21cn/one-person-lab-app');
     assert.equal(output.app_state.release.opl_framework_version, '0.1.0');
