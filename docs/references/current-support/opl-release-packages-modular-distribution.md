@@ -78,7 +78,7 @@ Fresh 读法按机器入口分层：
 | --- | --- | --- | --- |
 | Docker/WebUI 镜像 | `ghcr.io/gaofeng21cn/one-person-lab-webui:<opl_version>` | One Person Lab 品牌 AionUI WebUI shell、web-cli、SPA 静态文件、bundled backend 和浏览器入口；实际 runtime/env/auth/session 以 active shell Dockerfile / web-cli / web-host、App Docker smoke 和 image manifest 为准 | Docker 用户直接 `docker run` |
 | 模块源码包 | `ghcr.io/gaofeng21cn/one-person-lab-modules/<module>:<version>` | 不含 `.git`、缓存、venv、node_modules 的模块源码归档 | 后续 `opl module install/update` 接入 manifest 后消费；当前不作为正式安装更新来源 |
-| Native helper prebuild | `ghcr.io/gaofeng21cn/one-person-lab-native-helper:<target>-<version>` | Rust helper 二进制、manifest、checksum | `opl native:repair` / `opl install` |
+| Native helper prebuild | `ghcr.io/gaofeng21cn/one-person-lab-native-helper:<target>-<version>` | Rust helper 二进制、manifest、checksum | `opl system repair-native-helpers` / `opl install`；底层 lifecycle script 为 `npm run native:repair` |
 | OPL core npm 包 | `@gaofeng21cn/one-person-lab` 或 npm public package | CLI、contracts、shared helpers、安装脚本 | npm / 一键安装脚本 |
 | Release manifest | Release artifact 或 `one-person-lab-manifest:<opl_version>` | 制品版本、URL、sha256、回滚目标 | App 环境管理与 CLI；当前只有被 install/update 或 App 环境管理 live source 消费后才成为安装更新来源 |
 

@@ -42,6 +42,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-29-opl-active-development-portfolio-ledger-foldback.md` | OPL active development portfolio coverage ledger foldback。 | 当前 truth 归 docs portfolio、active gap plan、核心五件套和 live code/contracts/read-model；ledger 只作 history provenance。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger.md` | OPL series branch/worktree/doc governance tranche ledger。 | 当前 truth 归各 repo active truth owner、core docs 和 live code/contracts/tests/read-model；ledger 只记录本轮六仓盘点、保留理由、OMA 覆盖复核和下一轮写入范围。 |
 | `2026-05-29-opl-series-doc-governance-part-ledger-retirement.md` | OPL series per-part governance ledger retirement。 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-2.md` through `part-79.md` were deleted after source/contracts/tests scans showed no machine refs; current truth stays in active owner docs, core docs, live source/contracts/tests/read-model, and this compact retirement ledger. |
+| `2026-05-30-opl-series-doc-governance-current-support-ledger.md` | OPL current-support release/package wording cleanup ledger。 | 当前 truth 归 package/native-helper contracts、source、tests 和 live CLI/read-model；ledger 只记录 `opl native:repair` stale prose retirement and retained support-doc coverage. |
 
 ## Tombstone Rules
 
