@@ -61,10 +61,22 @@ test('work-order execute is the canonical OPL work-order execution primitive', (
     assert.equal(output.work_order_execution.receipt.absorption.absorbed, true);
     assert.equal(output.work_order_execution.receipt.cleanup.worktree_removed, true);
     assert.equal(fs.existsSync(path.join(targetRepo, 'docs/efficiency.md')), true);
+    assert.equal(typeof output.work_order_execution.artifacts.execution_plan_path, 'string');
+    assert.equal(typeof output.work_order_execution.artifacts.execution_report_path, 'string');
 
     const receipt = readJson(output.work_order_execution.artifacts.execution_receipt_path);
     assert.equal(receipt.surface_kind, 'opl_work_order_codex_execution_receipt');
     assert.equal(receipt.primitive_owner, 'one-person-lab/OPL');
+    assert.equal(receipt.execution_plan.surface_kind, 'opl_work_order_execution_plan');
+    assert.equal(receipt.execution_plan.primitive_owner, 'one-person-lab/OPL');
+    assert.equal(receipt.execution_plan.path, output.work_order_execution.artifacts.execution_plan_path);
+    assert.equal(receipt.execution_report.surface_kind, 'opl_work_order_execution_report');
+    assert.equal(receipt.execution_report.primitive_owner, 'one-person-lab/OPL');
+    assert.equal(receipt.execution_report.path, output.work_order_execution.artifacts.execution_report_path);
+    assert.equal(receipt.execution_refs.execution_plan_ref, receipt.execution_plan.surface_ref);
+    assert.equal(receipt.execution_refs.execution_report_ref, receipt.execution_report.surface_ref);
+    assert.equal(fs.existsSync(receipt.execution_plan.path), true);
+    assert.equal(fs.existsSync(receipt.execution_report.path), true);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
@@ -124,9 +136,32 @@ test('work-order execute runs Codex CLI in a target worktree then absorbs and cl
 
     const receipt = readJson(output.work_order_execution.artifacts.execution_receipt_path);
     assert.equal(receipt.surface_kind, 'opl_work_order_codex_execution_receipt');
+    assert.equal(receipt.execution_plan.path, path.join(outputDir, 'execution-plan.md'));
+    assert.equal(receipt.execution_report.path, path.join(outputDir, 'execution-report.md'));
     assert.ok(receipt.verification.command_results.some((entry: Record<string, any>) =>
       entry.command === 'test -f docs/efficiency.md' && entry.exit_code === 0
     ));
+    const plan = fs.readFileSync(receipt.execution_plan.path, 'utf8');
+    assert.match(plan, /^# OPL Work Order Execution Plan/m);
+    assert.match(plan, /Primitive owner: `one-person-lab\/OPL`/);
+    assert.match(plan, /Work order id: `oma_developer_patch_work_order_test`/);
+    assert.match(plan, /Verification commands/);
+    assert.match(plan, /`test -f docs\/efficiency\.md`/);
+    assert.match(plan, /`git diff --check`/);
+
+    const report = fs.readFileSync(receipt.execution_report.path, 'utf8');
+    assert.match(report, /^# OPL Work Order Execution Report/m);
+    assert.match(report, /Primitive owner: `one-person-lab\/OPL`/);
+    assert.match(report, /Changed files/);
+    assert.match(report, /`docs\/efficiency\.md`/);
+    assert.match(report, /Verification/);
+    assert.match(report, /`test -f docs\/efficiency\.md` -> exit `0`/);
+    assert.match(report, /Absorption/);
+    assert.match(report, /absorbed: `true`/);
+    assert.match(report, /Cleanup/);
+    assert.match(report, /worktree_removed: `true`/);
+    assert.match(report, /Typed blocker \/ owner hook/);
+    assert.match(report, /status: `typed_blocker_recorded`/);
 
     const worktreeList = spawnSync('git', ['worktree', 'list', '--porcelain'], {
       cwd: targetRepo,

@@ -51,6 +51,14 @@ type OwnerCloseoutResult = {
   responsePath: string | null;
 };
 
+type ExecutionSurfaceRef = {
+  surface_kind: string;
+  version: string;
+  primitive_owner: string;
+  surface_ref: string;
+  path: string;
+};
+
 const OPL_WORK_ORDER_PRIMITIVE_OWNER = 'one-person-lab/OPL';
 const WORK_ORDER_EXECUTION_PRESENTATION: WorkOrderExecutionPresentation = {
   envelopeKey: 'work_order_execution',
@@ -92,6 +100,11 @@ function readJson(filePath: string): JsonRecord {
 function writeJson(filePath: string, payload: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`);
+}
+
+function writeMarkdown(filePath: string, content: string): void {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${content.trimEnd()}\n`);
 }
 
 function runCommand(command: string, args: string[], cwd: string, options: {
@@ -196,7 +209,7 @@ function shortId(value: string): string {
 }
 
 function changedFiles(cwd: string): string[] {
-  return gitRawOutput(['status', '--porcelain'], cwd)
+  return gitRawOutput(['status', '--porcelain', '-uall'], cwd)
     .split(/\r?\n/)
     .map((entry) => entry.replace(/^[A-Z? ][A-Z? ]\s+/, ''))
     .flatMap((entry) => entry.includes(' -> ') ? entry.split(' -> ') : [entry])
@@ -239,6 +252,177 @@ function verificationCommandsFor(workOrder: JsonRecord, explicitCommands: string
     .map(commandInferredFromVerificationRef)
     .filter((entry): entry is string => Boolean(entry));
   return [...new Set([...explicitCommands, ...inferred, 'git diff --check'])];
+}
+
+function mdInline(value: unknown): string {
+  return `\`${String(value ?? 'null').replace(/`/g, '\\`')}\``;
+}
+
+function mdList(values: string[]): string {
+  return values.length > 0
+    ? values.map((value) => `- ${mdInline(value)}`).join('\n')
+    : '- None';
+}
+
+function targetAgentId(targetAgent: JsonRecord): string {
+  return optionalString(targetAgent.domain_id) ?? 'target-agent';
+}
+
+function buildExecutionSurfaces(input: {
+  outputDir: string;
+  targetAgent: JsonRecord;
+  workOrderId: string;
+}): {
+  executionPlan: ExecutionSurfaceRef;
+  executionReport: ExecutionSurfaceRef;
+  executionRefs: JsonRecord;
+} {
+  const agentId = targetAgentId(input.targetAgent);
+  const executionPlan = {
+    surface_kind: 'opl_work_order_execution_plan',
+    version: 'opl.work-order-execution-plan.v1',
+    primitive_owner: OPL_WORK_ORDER_PRIMITIVE_OWNER,
+    surface_ref: `work-order-execution-plan:${agentId}/${input.workOrderId}`,
+    path: path.join(input.outputDir, 'execution-plan.md'),
+  };
+  const executionReport = {
+    surface_kind: 'opl_work_order_execution_report',
+    version: 'opl.work-order-execution-report.v1',
+    primitive_owner: OPL_WORK_ORDER_PRIMITIVE_OWNER,
+    surface_ref: `work-order-execution-report:${agentId}/${input.workOrderId}`,
+    path: path.join(input.outputDir, 'execution-report.md'),
+  };
+  return {
+    executionPlan,
+    executionReport,
+    executionRefs: {
+      execution_plan_ref: executionPlan.surface_ref,
+      execution_report_ref: executionReport.surface_ref,
+    },
+  };
+}
+
+function buildExecutionPlanMarkdown(input: {
+  workOrderId: string;
+  workOrderPath: string;
+  targetAgentDir: string;
+  worktreePath: string;
+  branchName: string;
+  baseBranch: string;
+  baseHead: string;
+  verificationCommands: string[];
+  allowedEditableSurfaces: string[];
+  targetRepoFileHints: string[];
+  forbiddenTargetSurfaces: string[];
+  targetDirtyStatusBeforeOpen: string[];
+}): string {
+  return [
+    '# OPL Work Order Execution Plan',
+    '',
+    `Primitive owner: ${mdInline(OPL_WORK_ORDER_PRIMITIVE_OWNER)}`,
+    `Work order id: ${mdInline(input.workOrderId)}`,
+    `Work order path: ${mdInline(input.workOrderPath)}`,
+    `Target agent dir: ${mdInline(input.targetAgentDir)}`,
+    `Target worktree: ${mdInline(input.worktreePath)}`,
+    `Branch: ${mdInline(input.branchName)}`,
+    `Base branch: ${mdInline(input.baseBranch)}`,
+    `Base head: ${mdInline(input.baseHead)}`,
+    '',
+    '## Verification commands',
+    mdList(input.verificationCommands),
+    '',
+    '## Editable scope',
+    'Allowed editable surfaces:',
+    mdList(input.allowedEditableSurfaces),
+    '',
+    'Target repo file hints:',
+    mdList(input.targetRepoFileHints),
+    '',
+    'Forbidden target surfaces:',
+    mdList(input.forbiddenTargetSurfaces),
+    '',
+    '## Target checkout before open',
+    mdList(input.targetDirtyStatusBeforeOpen),
+  ].join('\n');
+}
+
+function buildExecutionReportMarkdown(input: {
+  workOrderId: string;
+  receiptPath: string;
+  changedFiles: string[];
+  verificationResults: CommandResult[];
+  absorption: JsonRecord;
+  cleanup: JsonRecord;
+  ownerCloseout: JsonRecord;
+}): string {
+  return [
+    '# OPL Work Order Execution Report',
+    '',
+    `Primitive owner: ${mdInline(OPL_WORK_ORDER_PRIMITIVE_OWNER)}`,
+    `Work order id: ${mdInline(input.workOrderId)}`,
+    `Execution receipt: ${mdInline(input.receiptPath)}`,
+    '',
+    '## Changed files',
+    mdList(input.changedFiles),
+    '',
+    '## Verification',
+    input.verificationResults.length > 0
+      ? input.verificationResults
+        .map((result) => `- ${mdInline(result.command)} -> exit ${mdInline(result.exit_code)}`)
+        .join('\n')
+      : '- None',
+    '',
+    '## Absorption',
+    `absorbed: ${mdInline(input.absorption.absorbed)}`,
+    `target_branch: ${mdInline(input.absorption.target_branch)}`,
+    `absorbed_head: ${mdInline(input.absorption.absorbed_head)}`,
+    '',
+    '## Cleanup',
+    `worktree_removed: ${mdInline(input.cleanup.worktree_removed)}`,
+    `branch_removed: ${mdInline(input.cleanup.branch_removed)}`,
+    `worktree_cleanup_ref: ${mdInline(input.cleanup.worktree_cleanup_ref)}`,
+    '',
+    '## Typed blocker / owner hook',
+    `status: ${mdInline(input.ownerCloseout.status)}`,
+    `owner: ${mdInline(input.ownerCloseout.owner)}`,
+    `hook_action_ref: ${mdInline(input.ownerCloseout.hook_action_ref)}`,
+    `response_path: ${mdInline(input.ownerCloseout.response_path)}`,
+  ].join('\n');
+}
+
+function buildFailureExecutionReportMarkdown(input: {
+  workOrderId: string;
+  error: unknown;
+  cleanupResults: CommandResult[];
+}): string {
+  const errorMessage = input.error instanceof Error ? input.error.message : String(input.error);
+  return [
+    '# OPL Work Order Execution Report',
+    '',
+    `Primitive owner: ${mdInline(OPL_WORK_ORDER_PRIMITIVE_OWNER)}`,
+    `Work order id: ${mdInline(input.workOrderId)}`,
+    'Status: `failed`',
+    `Failure: ${mdInline(errorMessage)}`,
+    '',
+    '## Changed files',
+    '- Not recorded before failure closeout.',
+    '',
+    '## Verification',
+    '- Not completed before failure closeout.',
+    '',
+    '## Absorption',
+    'absorbed: `false`',
+    '',
+    '## Cleanup',
+    input.cleanupResults.length > 0
+      ? input.cleanupResults
+        .map((result) => `- ${mdInline(result.command)} -> exit ${mdInline(result.exit_code)}`)
+        .join('\n')
+      : '- None',
+    '',
+    '## Typed blocker / owner hook',
+    'status: `not_reached`',
+  ].join('\n');
 }
 
 function buildCodexPrompt(input: {
@@ -510,6 +694,11 @@ function throwWithFailureCleanup(
   error: unknown,
   cleanupResults: CommandResult[],
   outputDir: string,
+  executionRefs?: {
+    executionPlan: ExecutionSurfaceRef;
+    executionReport: ExecutionSurfaceRef;
+    executionRefs: JsonRecord;
+  },
 ): never {
   const cleanupReceiptPath = path.join(outputDir, 'work-order-failure-cleanup.json');
   writeJson(cleanupReceiptPath, {
@@ -517,12 +706,17 @@ function throwWithFailureCleanup(
     version: 'opl.work-order-execution.failure-cleanup.v1',
     cleanup_results: cleanupResults,
     cleanup_all_passed: cleanupResults.every((result) => result.exit_code === 0),
+    execution_plan: executionRefs?.executionPlan,
+    execution_report: executionRefs?.executionReport,
+    execution_refs: executionRefs?.executionRefs,
   });
   if (error instanceof FrameworkContractError) {
     throw new FrameworkContractError(error.code, error.message, {
       ...(error.details ?? {}),
       failure_cleanup_receipt_path: cleanupReceiptPath,
       failure_cleanup_results: cleanupResults,
+      execution_plan_path: executionRefs?.executionPlan.path,
+      execution_report_path: executionRefs?.executionReport.path,
     }, error.exitCode);
   }
   throw error;
@@ -561,6 +755,29 @@ async function executeDeveloperWorkOrder(
   const baseHead = gitRawOutput(['rev-parse', 'HEAD'], targetAgentDir).trim();
   const branchName = `codex/work-order-${shortId(workOrderId)}`;
   const worktreePath = path.join(targetAgentDir, '.worktrees', `work-order-${shortId(workOrderId)}`);
+  const verificationCommands = verificationCommandsFor(workOrder, options.verificationCommands);
+  const executionSurfaces = buildExecutionSurfaces({
+    outputDir,
+    targetAgent,
+    workOrderId,
+  });
+  writeMarkdown(executionSurfaces.executionPlan.path, buildExecutionPlanMarkdown({
+    workOrderId,
+    workOrderPath,
+    targetAgentDir,
+    worktreePath,
+    branchName,
+    baseBranch,
+    baseHead,
+    verificationCommands,
+    allowedEditableSurfaces: stringList(workOrder.allowed_editable_surfaces),
+    targetRepoFileHints: stringList(workOrder.target_repo_file_hints),
+    forbiddenTargetSurfaces: stringList(isRecord(workOrder.implementation_controls)
+      ? workOrder.implementation_controls.forbidden_target_paths_or_surfaces
+      : []),
+    targetDirtyStatusBeforeOpen,
+  }));
+  let executionReportWritten = false;
   if (fs.existsSync(worktreePath)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
@@ -620,7 +837,7 @@ async function executeDeveloperWorkOrder(
         },
       );
     }
-    const verificationResults = verificationCommandsFor(workOrder, options.verificationCommands)
+    const verificationResults = verificationCommands
       .map((command) => runShellVerification(command, worktreePath));
     const failedVerification = verificationResults.filter((result) => result.exit_code !== 0);
     if (failedVerification.length > 0) {
@@ -748,6 +965,9 @@ async function executeDeveloperWorkOrder(
         can_write_owner_receipt: false,
       },
       agent_lab_re_evaluation: reEvaluation,
+      execution_plan: executionSurfaces.executionPlan,
+      execution_report: executionSurfaces.executionReport,
+      execution_refs: executionSurfaces.executionRefs,
       authority_boundary: {
         ...AGENT_LAB_AUTHORITY_BOUNDARY,
         can_apply_owner_gated_source_patch: true,
@@ -774,6 +994,16 @@ async function executeDeveloperWorkOrder(
       ...receiptDraft,
       target_owner_receipt_or_typed_blocker: ownerCloseout.closeout,
     };
+    writeMarkdown(executionSurfaces.executionReport.path, buildExecutionReportMarkdown({
+      workOrderId,
+      receiptPath,
+      changedFiles: changed,
+      verificationResults,
+      absorption: receipt.absorption as JsonRecord,
+      cleanup: receipt.cleanup as JsonRecord,
+      ownerCloseout: ownerCloseout.closeout,
+    }));
+    executionReportWritten = true;
     writeJson(receiptPath, receipt);
     const resultPayload = {
       surface_id: presentation.resultSurfaceId,
@@ -782,6 +1012,8 @@ async function executeDeveloperWorkOrder(
       status: 'executed_absorbed_and_cleaned',
       work_order_path: workOrderPath,
       artifacts: {
+        execution_plan_path: executionSurfaces.executionPlan.path,
+        execution_report_path: executionSurfaces.executionReport.path,
         execution_receipt_path: receiptPath,
       },
       receipt,
@@ -795,7 +1027,14 @@ async function executeDeveloperWorkOrder(
     const cleanupResults = targetWorktreeClosed
       ? []
       : cleanupTargetWorktree({ targetAgentDir, worktreePath, branchName });
-    throwWithFailureCleanup(error, cleanupResults, outputDir);
+    if (!executionReportWritten) {
+      writeMarkdown(executionSurfaces.executionReport.path, buildFailureExecutionReportMarkdown({
+        workOrderId,
+        error,
+        cleanupResults,
+      }));
+    }
+    throwWithFailureCleanup(error, cleanupResults, outputDir, executionSurfaces);
   } finally {
     if (previousCodexBin === undefined) {
       delete process.env.OPL_CODEX_BIN;
