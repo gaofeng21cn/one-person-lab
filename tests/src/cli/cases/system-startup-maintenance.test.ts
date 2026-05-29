@@ -148,6 +148,11 @@ test('system startup-maintenance installs clean managed modules and returns App 
             completed_targets_count: number;
             manual_required_targets_count: number;
           };
+          framework_targets: Array<{
+            target_id: string;
+            status: string;
+            reason: string;
+          }>;
           module_targets: Array<{
             target_id: string;
             status: string;
@@ -189,6 +194,13 @@ test('system startup-maintenance installs clean managed modules and returns App 
     assert.equal(output.system_action.details.authority_boundary.can_install_domain_daemon, false);
     assert.equal(output.system_action.details.summary.completed_targets_count, 4);
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
+    assert.deepEqual(output.system_action.details.framework_targets.map((target) => [
+      target.target_id,
+      target.status,
+      target.reason,
+    ]), [
+      ['opl-framework', 'skipped', 'framework_update_source_not_configured'],
+    ]);
     assert.equal(
       output.system_action.details.managed_install_update_receipts.surface_kind,
       'opl_managed_module_install_update_ledger_record',

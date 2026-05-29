@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-import { assert, createCodexConfigFixture, createFakeCodexFixture, createGitModuleRemoteFixture, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, createCodexConfigFixture, createFakeCodexFixture, createGitModuleRemoteFixture, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
 
 test('system ignores retired Hermes env outside family runtime provider selection', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-retired-hermes-update-home-'));
@@ -290,10 +290,12 @@ EOF
     );
     assert.equal(output.system_action.action, 'update');
     assert.equal(output.system_action.status, 'completed');
-    assert.equal(output.system_action.details.summary.total_targets_count, 6);
+    assert.equal(output.system_action.details.summary.total_targets_count, 7);
     assert.equal(output.system_action.details.summary.completed_targets_count, 1);
-    assert.equal(output.system_action.details.summary.skipped_targets_count, 5);
+    assert.equal(output.system_action.details.summary.skipped_targets_count, 6);
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
+    assert.equal(targets.get('framework:opl-framework')?.status, 'skipped');
+    assert.equal(targets.get('framework:opl-framework')?.reason, 'framework_update_source_not_configured');
     assert.equal(targets.get('engine:codex')?.status, 'skipped');
     assert.equal(targets.get('engine:codex')?.reason, 'selected_codex_ready');
     assert.equal(targets.has('engine:hermes'), false);
@@ -315,6 +317,61 @@ EOF
     fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(medAutoGrantRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(metaAgentRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('system update refreshes a non-git managed OPL Framework runtime from an explicit source checkout', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-system-update-framework-home-'));
+  const runtimeRoot = path.join(homeRoot, 'runtime', 'current', 'opl');
+  fs.mkdirSync(runtimeRoot, { recursive: true });
+  fs.cpSync(path.join(repoRoot, 'bin'), path.join(runtimeRoot, 'bin'), { recursive: true });
+  fs.cpSync(path.join(repoRoot, 'src'), path.join(runtimeRoot, 'src'), { recursive: true });
+  fs.copyFileSync(path.join(repoRoot, 'package.json'), path.join(runtimeRoot, 'package.json'));
+  fs.copyFileSync(path.join(repoRoot, 'package-lock.json'), path.join(runtimeRoot, 'package-lock.json'));
+  fs.writeFileSync(
+    path.join(runtimeRoot, 'src', 'family-runtime-provider-hosted-attempts.ts'),
+    '// stale managed runtime source\n',
+    'utf8',
+  );
+
+  try {
+    const output = runCli(['system', 'update'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_FRAMEWORK_UPDATE_SOURCE: repoRoot,
+      OPL_FRAMEWORK_UPDATE_TARGET_ROOT: runtimeRoot,
+      OPL_FRAMEWORK_UPDATE_ALLOW_DIRTY_SOURCE: '1',
+      OPL_FRAMEWORK_UPDATE_SKIP_DEPENDENCY_INSTALL: '1',
+      OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
+      PATH: '/usr/bin:/bin',
+    }) as {
+      system_action: {
+        status: string;
+        details: {
+          targets: Array<{
+            target_type: string;
+            target_id: string;
+            status: string;
+            reason: string;
+            result: Record<string, unknown> | null;
+          }>;
+        };
+      };
+    };
+
+    const frameworkTarget = output.system_action.details.targets.find((target) => (
+      target.target_type === 'framework' && target.target_id === 'opl-framework'
+    ));
+    assert.equal(output.system_action.status, 'completed');
+    assert.equal(frameworkTarget?.status, 'completed');
+    assert.equal(frameworkTarget?.reason, 'framework_runtime_source_refreshed');
+    assert.equal(
+      fs.readFileSync(path.join(runtimeRoot, 'src', 'family-runtime-provider-hosted-attempts.ts'), 'utf8'),
+      fs.readFileSync(path.join(repoRoot, 'src', 'family-runtime-provider-hosted-attempts.ts'), 'utf8'),
+    );
+    assert.equal(fs.existsSync(path.join(runtimeRoot, '.opl-framework-source.json')), true);
+  } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });

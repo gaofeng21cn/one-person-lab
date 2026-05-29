@@ -12,7 +12,9 @@ import type { FrameworkContracts } from '../types.ts';
 import { runOplEngineAction } from './engine-actions.ts';
 import { buildOplDeveloperModeSurface } from './developer-mode.ts';
 import { buildOplEnvironment } from './environment.ts';
+import { resolveFrameworkUpdateTargetRoot, runOplFrameworkSelfUpdate } from './framework-self-update.ts';
 import { buildOplModules, runOplModuleAction } from './modules.ts';
+import { resolveProjectRoot } from './shared.ts';
 import { runOplStartupMaintenance } from './startup-maintenance.ts';
 import type {
   OplSystemAction,
@@ -21,8 +23,8 @@ import type {
 
 type OplSystemEnvironment = Awaited<ReturnType<typeof buildOplEnvironment>>['system_environment'];
 type OplModuleStatus = ReturnType<typeof buildOplModules>['modules']['modules'][number];
-
-type SystemUpdateTargetResult = {
+type OplFrameworkStatus = ReturnType<typeof runOplFrameworkSelfUpdate>;
+type OplEngineOrModuleUpdateTargetResult = {
   target_type: 'engine' | 'module';
   target_id: string;
   status: 'completed' | 'skipped' | 'manual_required';
@@ -30,15 +32,17 @@ type SystemUpdateTargetResult = {
   result: unknown | null;
 };
 
-function normalizeUpdateStatus(status: string): SystemUpdateTargetResult['status'] {
+type SystemUpdateTargetResult = OplEngineOrModuleUpdateTargetResult | OplFrameworkStatus;
+
+function normalizeUpdateStatus(status: string): OplEngineOrModuleUpdateTargetResult['status'] {
   return status === 'manual_required' ? 'manual_required' : 'completed';
 }
 
 function buildSkippedUpdate(
-  targetType: SystemUpdateTargetResult['target_type'],
+  targetType: OplEngineOrModuleUpdateTargetResult['target_type'],
   targetId: string,
   reason: string,
-): SystemUpdateTargetResult {
+): OplEngineOrModuleUpdateTargetResult {
   return {
     target_type: targetType,
     target_id: targetId,
@@ -188,6 +192,7 @@ async function runOplSystemUpdate(contracts: FrameworkContracts) {
   const initialEnvironment = (await buildOplEnvironment(contracts)).system_environment;
   const initialModules = buildOplModules().modules.modules;
   const targets: SystemUpdateTargetResult[] = [
+    runOplFrameworkSelfUpdate({ targetRoot: resolveFrameworkUpdateTargetRoot(resolveProjectRoot()) }),
     await maybeUpdateCodex(contracts, initialEnvironment),
     ...initialModules.map((module) => maybeUpdateModule(module)),
   ];
