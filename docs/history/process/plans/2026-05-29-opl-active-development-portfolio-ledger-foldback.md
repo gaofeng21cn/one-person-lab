@@ -77,7 +77,7 @@ Reviewed documents / sections:
 
 | Repo | Reviewed docs / sections | Edited docs this tranche |
 | --- | --- | --- |
-| `one-person-lab` | `docs/status.md` Developer Mode 与 workspace binding currentness passages; `docs/active/current-state-vs-ideal-gap.md` Developer Mode live route and wrapper retirement rows; `docs/active/current-development-lines.md` Developer Mode closeout paragraph; `docs/history/process/plans/2026-05-29-opl-series-doc-governance-tranche-ledger-part-4.md`; `src/cli/modules/help-output.ts`; `src/cli/cases/private-command-specs.ts`; `tests/src/active-path-residue-scan.test.ts`; read-model commands listed above. | `docs/active/development-document-portfolio.md` |
+| `one-person-lab` | `docs/status.md` Developer Mode 与 workspace binding currentness passages; `docs/active/current-state-vs-ideal-gap.md` Developer Mode live route and wrapper retirement rows; `docs/active/current-development-lines.md` Developer Mode closeout paragraph; retired 2026-05-29 per-part governance ledger series; `src/cli/modules/help-output.ts`; `src/cli/cases/private-command-specs.ts`; `tests/src/active-path-residue-scan.test.ts`; read-model commands listed above. | `docs/active/development-document-portfolio.md` |
 | Other OPL series repos | No body-doc tranche in this ledger slice; state is carried from the current six-repo inventory and prior ledgers. | none |
 
 Archived / tombstoned / deleted docs:
