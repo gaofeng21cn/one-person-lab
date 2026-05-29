@@ -552,6 +552,100 @@ test('family-runtime keeps MAS default executor admission single-flight across s
   }
 });
 
+test('family-runtime treats claimed same-study reviewer admission window as live before provider start', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const reviewerPayload = defaultExecutorPayloadForOwner({
+        sourceFingerprint: 'reviewer-source-admission-window',
+        actionType: 'return_to_ai_reviewer_workflow',
+        nextOwner: 'ai_reviewer',
+        dispatchAuthority: 'ai_reviewer_record_production_handoff',
+        dispatchRef: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/immutable/return_to_ai_reviewer_workflow/reviewer-admission-window.json',
+      });
+      const writePayload = defaultExecutorPayloadForOwner({
+        sourceFingerprint: 'writer-source-during-reviewer-admission',
+        actionType: 'run_quality_repair_batch',
+        nextOwner: 'write',
+        dispatchAuthority: 'quality_repair_batch_writer_handoff',
+        dispatchRef: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/immutable/run_quality_repair_batch/writer-during-reviewer-admission.json',
+      });
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-same-study-reviewer-claimed-before-provider-start',
+        payload: reviewerPayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:return_to_ai_reviewer_workflow:reviewer-claimed-before-provider-start',
+      });
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-same-study-writer-during-reviewer-admission',
+        payload: writePayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:writer-during-reviewer-admission',
+      });
+      db.prepare(`
+        UPDATE tasks
+        SET status = 'running', attempts = 1, lease_owner = 'opl-family-runtime:test',
+          lease_expires_at = ?
+        WHERE task_id = ?
+      `).run(
+        new Date(Date.now() + 60_000).toISOString(),
+        'task-mas-default-same-study-reviewer-claimed-before-provider-start',
+      );
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(
+        'task-mas-default-same-study-writer-during-reviewer-admission',
+      );
+      const reviewerRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-same-study-reviewer-claimed-before-provider-start',
+      ) as Parameters<typeof ensureProviderHostedStageAttempt>[1];
+      const writerRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-same-study-writer-during-reviewer-admission',
+      ) as Parameters<typeof startMasDefaultExecutorDispatchAttempt>[2]['row'];
+      const reviewerAttempt = ensureProviderHostedStageAttempt(db, reviewerRow, reviewerPayload);
+      assert.ok(reviewerAttempt);
+      assert.equal(reviewerAttempt.status, 'queued');
+      assert.equal(reviewerAttempt.provider_run.provider_status, 'registered');
+      const writerAttempt = ensureProviderHostedStageAttempt(db, writerRow, writePayload);
+      let temporalStartCount = 0;
+
+      const result = await startMasDefaultExecutorDispatchAttempt(db, familyRuntimePaths(), {
+        row: writerRow,
+        payload: writePayload,
+        providerHostedAttempt: writerAttempt,
+        temporalProviderModule: async () => ({
+          startTemporalStageAttemptWorkflow: async () => {
+            temporalStartCount += 1;
+            return { surface_kind: 'temporal_stage_attempt_start_receipt' };
+          },
+        }),
+      });
+      const writerTask = db.prepare('SELECT status, attempts FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-same-study-writer-during-reviewer-admission',
+      ) as { status: string; attempts: number };
+      const writerAttempts = listStageAttemptsForTask(db, 'task-mas-default-same-study-writer-during-reviewer-admission');
+      const skipEvent = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_default_executor_live_attempt_skip'
+        LIMIT 1
+      `).get('task-mas-default-same-study-writer-during-reviewer-admission') as { payload_json: string } | undefined;
+
+      assert.equal(result.status, 'skipped');
+      assert.equal(result.reason, 'live_stage_attempt_exists_for_study');
+      assert.equal(temporalStartCount, 0);
+      assert.equal(writerTask.status, 'queued');
+      assert.equal(writerTask.attempts, 0);
+      assert.equal(writerAttempts.length, 0);
+      assert.ok(skipEvent);
+      const skipPayload = JSON.parse(skipEvent.payload_json);
+      assert.equal(skipPayload.reason, 'live_stage_attempt_exists_for_study');
+      assert.equal(skipPayload.stage_attempt_id, reviewerAttempt.stage_attempt_id);
+      assert.equal(skipPayload.live_action_type, 'return_to_ai_reviewer_workflow');
+      assert.equal(skipPayload.candidate_action_type, 'run_quality_repair_batch');
+    });
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime enqueue keeps MAS default executor same-study owner tasks single-flight', () => {
   const db = new DatabaseSync(':memory:');
   try {

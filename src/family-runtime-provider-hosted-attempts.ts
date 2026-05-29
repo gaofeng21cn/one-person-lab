@@ -67,6 +67,14 @@ function isSameMasDefaultExecutorStudyStage(
     && sameStringField(left, right, 'study_id');
 }
 
+function isSameMasDefaultExecutorStudyActionStage(
+  left: Record<string, unknown>,
+  right: Record<string, unknown>,
+) {
+  return isSameMasDefaultExecutorStudyStage(left, right)
+    && sameStringField(left, right, 'action_type');
+}
+
 function sameOptionalStringField(left: Record<string, unknown>, right: Record<string, unknown>, key: string) {
   const leftValue = optionalString(left[key]);
   const rightValue = optionalString(right[key]);
@@ -116,7 +124,13 @@ function isCrossTaskLiveMasDefaultExecutorAttempt(
   }
   return attempt.status === 'queued'
     && hasActiveMasDefaultExecutorTaskLease(db, attempt.task_id)
-    && sameOptionalStringField(attempt.workspace_locator, workspaceLocator, 'domain_source_fingerprint');
+    && (
+      sameOptionalStringField(attempt.workspace_locator, workspaceLocator, 'domain_source_fingerprint')
+      || (
+        isSameMasDefaultExecutorStudyStage(attempt.workspace_locator, workspaceLocator)
+        && !isSameMasDefaultExecutorStudyActionStage(attempt.workspace_locator, workspaceLocator)
+      )
+    );
 }
 
 function hasLiveMasDefaultExecutorLinkedTask(db: DatabaseSync, taskId: string | null) {
