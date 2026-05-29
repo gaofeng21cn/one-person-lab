@@ -57,8 +57,8 @@ Machine boundary: 本文是人读合同目录说明和边界索引。机器 trut
 
 围绕这些 machine-readable contract 的上位共享合同，当前统一在 `docs/` 层维护：
 
-- `docs/active/shared-runtime-contract*.md`：跨 domain 共享的长期在线运行合同人读支撑
-- `docs/active/shared-domain-contract*.md`：跨 domain 共享的正式行为合同人读支撑
+- `docs/specs/shared-runtime-contract.md`：跨 domain 共享的长期在线运行合同人读支撑
+- `docs/specs/shared-domain-contract.md`：跨 domain 共享的正式行为合同人读支撑
 
 其中：
 

@@ -5,7 +5,7 @@ Purpose: `specs_shared_domain_contract`
 State: `active_spec_support`
 Machine boundary: 本文是人读 spec 支撑材料。机器可读行为继续归 contracts、schema、source、CLI/API 行为、runtime ledger、生成产物和 semantic human_doc ids。
 
-> 当前状态说明（`2026-05-26`）：本文作为共享边界参考保留。当前公开产品分层是 `OPL Framework -> One Person Lab App -> Foundry Agents`；当前 Foundry Agents 为 `MAS`、`MAG`、`RCA`。`OPL Meta Agent` 是 Agent Foundry / new-agent builder/tester module，不持有 MAS/MAG/RCA 的 domain truth。MAS monolith closeout 后，`MDS` 只通过 MAS 显式声明的 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 与 parity oracle reference 出现。下文旧的 `Domain Gateway` / `Domain Harness OS` 词汇只按历史内部边界语境理解，不保留兼容接口；当前公开文档优先使用独立 `domain agent`、app skill 与 Foundry Agent 口径。
+> 当前状态说明：本文作为共享 domain 行为边界参考保留。公开产品分层、admitted Foundry Agents、MDS 读法、standard domain-agent skeleton 状态、family orchestration companion schemas 和 no-bypass 边界均以核心五件套、active gap plan、`docs/active/current-development-lines.md`、`contracts/opl-framework/standard-domain-agent-skeleton-contract.json`、`contracts/family-orchestration/*.schema.json`、source/tests 与 fresh CLI/read-model 为准。当前长期读法仍是 `OPL Framework -> One Person Lab App -> Foundry Agents`：`MAS`、`MAG`、`RCA` 持有各自 domain truth、quality/export verdict、artifact authority、memory body 和 owner receipt；`OPL Meta Agent` 是 Agent Foundry / new-agent builder/tester module，不持有 MAS/MAG/RCA 的 domain truth；`MDS` 只通过 MAS 显式声明的 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 与 parity oracle reference 出现。旧 `Domain Gateway` / `Domain Harness OS` 词汇只按历史内部边界、tombstone 或 provenance 语境读取，不保留兼容接口或默认路由；历史日期校准和具体 counters 归 `docs/history/**`，不得从本文冻结。
 
 ## 目的
 
