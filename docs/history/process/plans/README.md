@@ -82,6 +82,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-40.md` | OPL series docs governance tranche ledger part 40。 | 当前 truth 归 domain onboarding spec、candidate backlog、OPL framework contracts、source/tests 和 live CLI/read-model；ledger 只记录本轮 fixed-date domain-admission anchor 与 candidate lane currentness 清理。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-41.md` | OPL series docs governance tranche ledger part 41。 | 当前 truth 归 candidate backlog、domain onboarding spec、task topology/workstream contracts、source/tests 和 live CLI/read-model；ledger 只记录本轮 candidate backlog currentness policy 与 live-topology alignment 清理。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-42.md` | OPL series docs governance tranche ledger part 42。 | 当前 truth 归 public task map、domain onboarding spec、candidate backlog、task topology/workstream/domain contracts、source/tests 和 live CLI/read-model；ledger 只记录本轮 task-map currentness policy 与 live-reading boundary 清理。 |
+| `2026-05-29-opl-series-doc-governance-tranche-ledger-part-43.md` | OPL series docs governance tranche ledger part 43。 | 当前 truth 归 public UHS support、shared runtime/domain specs、核心五件套、contracts/source/tests 和 live CLI/read-model；ledger 只记录本轮 UHS currentness policy 与 shared-contract active-support wording 清理。 |
 
 ## Tombstone Rules
 
