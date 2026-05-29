@@ -4,7 +4,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { createFakeCodexFixture } from './cli/helpers.ts';
-import { runCodexStageRunner } from '../../src/family-runtime-codex-stage-runner.ts';
+import { runAgentStageRunner } from '../../src/family-runtime-codex-stage-runner.ts';
+
+async function runPublicCodexStageRunner(
+  input: Parameters<typeof runAgentStageRunner>[0],
+) {
+  const receipt = await runAgentStageRunner(input);
+  assert.equal(receipt.runner_status.runner_kind, 'codex_cli_stage_runner');
+  assert.ok('closeout_packet' in receipt, 'Codex stage runner receipt must expose closeout_packet.');
+  return receipt;
+}
 
 test('Codex stage runner recovers MAS default-executor receipt when final closeout message is missing', async () => {
   const threadId = 'thread-mas-default-executor-receipt-recovery';
@@ -116,7 +125,7 @@ exit 64
   try {
     process.env.OPL_CODEX_BIN = codexPath;
     process.env.OPL_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS = '100';
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_mas_receipt_recovery_test',
         stage_id: 'domain_owner/default-executor-dispatch',
@@ -200,7 +209,7 @@ exit 64
   try {
     process.env.OPL_CODEX_BIN = codexPath;
     process.env.OPL_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS = '100';
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_stale_mas_receipt_recovery_test',
         stage_id: 'domain_owner/default-executor-dispatch',
@@ -279,7 +288,7 @@ exit 64
   try {
     process.env.OPL_CODEX_BIN = codexPath;
     process.env.OPL_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS = '100';
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_missing_identity_mas_receipt_recovery_test',
         stage_id: 'domain_owner/default-executor-dispatch',

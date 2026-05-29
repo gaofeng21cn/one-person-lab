@@ -4,7 +4,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { createFakeCodexFixture } from './cli/helpers.ts';
-import { runCodexStageRunner } from '../../src/family-runtime-codex-stage-runner.ts';
+import { runAgentStageRunner } from '../../src/family-runtime-codex-stage-runner.ts';
+
+async function runPublicCodexStageRunner(
+  input: Parameters<typeof runAgentStageRunner>[0],
+) {
+  const receipt = await runAgentStageRunner(input);
+  assert.equal(receipt.runner_status.runner_kind, 'codex_cli_stage_runner');
+  assert.ok('closeout_packet' in receipt, 'Codex stage runner receipt must expose closeout_packet.');
+  return receipt;
+}
 
 test('Codex stage runner fails closed when live process stops producing output', async () => {
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
@@ -21,7 +30,7 @@ exit 64
   try {
     process.env.OPL_CODEX_BIN = codexPath;
     process.env.OPL_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS = '100';
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_live_runner_no_output_budget_test',
         stage_id: 'analysis-campaign',
@@ -88,7 +97,7 @@ exit 64
   try {
     process.env.OPL_CODEX_BIN = codexPath;
     const startedAt = Date.now();
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_unsupported_function_call_test',
         stage_id: 'domain_owner/default-executor-dispatch',
@@ -131,7 +140,7 @@ test('Codex stage runner diagnoses unsupported function calls from recovered ses
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$1" = "exec" ]; then
   printf '{"type":"session_meta","payload":{"id":"${threadId}"}}\\n'
-  sleep 2
+  sleep 4
   exit 0
 fi
 echo "unexpected fake codex args: $*" >&2
@@ -164,7 +173,7 @@ exit 64
   try {
     process.env.OPL_CODEX_BIN = codexPath;
     process.env.CODEX_HOME = codexHome;
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_session_unsupported_function_call_test',
         stage_id: 'domain_owner/default-executor-dispatch',
@@ -176,7 +185,7 @@ exit 64
       stagePacketRef: 'packet:session-unsupported-function-call',
       runnerMode: 'codex_cli',
       timeoutMs: 10_000,
-      noOutputTimeoutMs: 500,
+      noOutputTimeoutMs: 1_500,
     });
 
     assert.equal(receipt.process_output_summary?.timeout_reason, 'unsupported_tool_protocol');
@@ -249,7 +258,7 @@ exit 64
     process.env.OPL_CODEX_BIN = codexPath;
     process.env.CODEX_HOME = codexHome;
     process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS = '1';
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_resolved_function_call_test',
         stage_id: 'domain_owner/default-executor-dispatch',

@@ -7,9 +7,18 @@ import path from 'node:path';
 import { createFakeCodexFixture, shellSingleQuote } from './cli/helpers.ts';
 import {
   buildCodexStageActivityInput,
-  runCodexStageRunner,
+  runAgentStageRunner,
 } from '../../src/family-runtime-codex-stage-runner.ts';
 import { FrameworkContractError } from '../../src/contracts.ts';
+
+async function runPublicCodexStageRunner(
+  input: Parameters<typeof runAgentStageRunner>[0],
+) {
+  const receipt = await runAgentStageRunner(input);
+  assert.equal(receipt.runner_status.runner_kind, 'codex_cli_stage_runner');
+  assert.ok('closeout_packet' in receipt, 'Codex stage runner receipt must expose closeout_packet.');
+  return receipt;
+}
 
 test('Codex stage activity binds stage packet from checkpoint refs before provider execution', () => {
   const activity = buildCodexStageActivityInput({
@@ -80,7 +89,7 @@ test('Codex stage activity command preview carries strict terminal closeout cont
 
 test('Codex stage runner fails closed when live runner lacks packet or workspace binding', async () => {
   await assert.rejects(
-    () => runCodexStageRunner({
+    () => runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_missing_packet_binding_test',
         stage_id: 'domain_owner/default-executor-dispatch',
@@ -96,7 +105,7 @@ test('Codex stage runner fails closed when live runner lacks packet or workspace
   );
 
   await assert.rejects(
-    () => runCodexStageRunner({
+    () => runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_missing_workspace_binding_test',
         stage_id: 'domain_owner/default-executor-dispatch',
@@ -126,7 +135,7 @@ exit 64
   const previousCodexBin = process.env.OPL_CODEX_BIN;
   try {
     process.env.OPL_CODEX_BIN = codexPath;
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_live_runner_test',
         stage_id: 'analysis-campaign',
@@ -194,7 +203,7 @@ exit 64
   const previousCodexBin = process.env.OPL_CODEX_BIN;
   try {
     process.env.OPL_CODEX_BIN = codexPath;
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_prose_prefixed_closeout_test',
         stage_id: 'domain_owner/default-executor-dispatch',
@@ -247,7 +256,7 @@ exit 64
   const previousCodexBin = process.env.OPL_CODEX_BIN;
   try {
     process.env.OPL_CODEX_BIN = codexPath;
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_live_closeout_test',
         stage_id: 'domain_owner/default-executor-dispatch',
@@ -299,7 +308,7 @@ exit 64
   const previousCodexBin = process.env.OPL_CODEX_BIN;
   try {
     process.env.OPL_CODEX_BIN = codexPath;
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_current_attempt',
         stage_id: 'domain_owner/default-executor-dispatch',
@@ -357,7 +366,7 @@ exit 64
   const previousCodexBin = process.env.OPL_CODEX_BIN;
   try {
     process.env.OPL_CODEX_BIN = codexPath;
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_message_closeout_test',
         stage_id: 'domain_owner/default-executor-dispatch',
@@ -415,7 +424,7 @@ exit 64
   const previousCodexBin = process.env.OPL_CODEX_BIN;
   try {
     process.env.OPL_CODEX_BIN = codexPath;
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_event_message_closeout_test',
         stage_id: 'domain_owner/default-executor-dispatch',
@@ -500,7 +509,7 @@ exit 64
   const previousCodexBin = process.env.OPL_CODEX_BIN;
   try {
     process.env.OPL_CODEX_BIN = codexPath;
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_split_final_closeout_test',
         stage_id: 'domain_owner/default-executor-dispatch',
@@ -581,7 +590,7 @@ exit 64
   try {
     process.env.OPL_CODEX_BIN = codexPath;
     process.env.CODEX_HOME = codexHome;
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_session_recovered_closeout_test',
         stage_id: 'domain_owner/default-executor-dispatch',
@@ -692,7 +701,7 @@ exit 64
   try {
     process.env.OPL_CODEX_BIN = codexPath;
     process.env.CODEX_HOME = codexHome;
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_session_usage_delta_test',
         stage_id: 'domain_owner/default-executor-dispatch',
@@ -784,7 +793,7 @@ exit 64
         '',
       ].join('\n'));
     }, 750);
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_delayed_session_closeout_test',
         stage_id: 'domain_owner/default-executor-dispatch',
@@ -843,7 +852,7 @@ exit 64
   const previousCodexBin = process.env.OPL_CODEX_BIN;
   try {
     process.env.OPL_CODEX_BIN = codexPath;
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_nonterminal_closeout_test',
         stage_id: 'domain_owner/default-executor-dispatch',
@@ -883,7 +892,7 @@ exit 64
   try {
     process.env.OPL_CODEX_BIN = codexPath;
     process.env.OPL_CODEX_STAGE_RUNNER_TIMEOUT_MS = 'not-a-number';
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_live_runner_timeout_test',
         stage_id: 'analysis-campaign',
@@ -925,7 +934,7 @@ exit 64
   const previousCodexBin = process.env.OPL_CODEX_BIN;
   try {
     process.env.OPL_CODEX_BIN = codexPath;
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_live_runner_timeout_budget_test',
         stage_id: 'analysis-campaign',
@@ -1002,7 +1011,7 @@ exit 64
     process.env.OPL_CODEX_BIN = codexPath;
     process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS = '1';
     const cancelWhenChildStarts = waitForChildPidFile().then(() => controller.abort());
-    const receipt = await runCodexStageRunner({
+    const receipt = await runPublicCodexStageRunner({
       attempt: {
         stage_attempt_id: 'sat_activity_cancelled_test',
         stage_id: 'analysis-campaign',

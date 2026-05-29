@@ -50,7 +50,7 @@ export type TypedStageCloseoutPacket = {
   authority_boundary: JsonRecord;
 };
 
-export type CodexStageRunnerMode = 'dry_run' | 'live_dry_run' | 'codex_cli';
+type CodexStageRunnerMode = 'dry_run' | 'live_dry_run' | 'codex_cli';
 
 type RunnerEventSummary = {
   event_kind: string;
@@ -178,7 +178,7 @@ function resolvedStagePacketRef(input: { attempt: JsonRecord; stagePacketRef?: s
   return optionalString(input.stagePacketRef) ?? stagePacketRefFromAttempt(input.attempt);
 }
 
-export function normalizeCodexStageRunnerMode(value?: string | null): CodexStageRunnerMode {
+function normalizeCodexStageRunnerMode(value?: string | null): CodexStageRunnerMode {
   const normalized = value?.trim().replace(/-/g, '_');
   if (normalized === 'codex_cli') {
     return 'codex_cli';
@@ -556,7 +556,7 @@ function buildAgentStageRunnerReceipt(input: {
   };
 }
 
-export function buildCodexStageRunnerReceipt(input: {
+function buildCodexStageRunnerReceipt(input: {
   attempt: JsonRecord;
   stagePacketRef?: string | null;
   runnerMode?: string | null;
@@ -613,7 +613,7 @@ export function buildCodexStageRunnerReceipt(input: {
   };
 }
 
-export async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexStageRunnerReceipt> {
+async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexStageRunnerReceipt> {
   const runnerMode = normalizeCodexStageRunnerMode(input.runnerMode);
   const stagePacketRef = resolvedStagePacketRef(input);
   const workspaceRoot = workspaceRootFromAttempt(input.attempt);
@@ -833,16 +833,6 @@ export async function runAgentStageRunner(input: {
   });
 }
 
-export function parseJsonObject(value: string, field: string): JsonRecord {
-  const parsed = JSON.parse(value);
-  if (!isRecord(parsed)) {
-    throw new FrameworkContractError('cli_usage_error', `${field} must be a JSON object.`, {
-      field,
-    });
-  }
-  return parsed;
-}
-
 export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageCloseoutPacket {
   if (!isRecord(value)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Stage closeout packet must be a JSON object.', {
@@ -944,21 +934,6 @@ export function buildCodexStageActivityInput(input: {
       opl: 'activity_packet_and_receipt_transport_only',
       codex_cli: 'stage_execution_under_domain_prompt_and_skill',
       domain: 'truth_quality_artifact_gate_owner',
-    },
-  };
-}
-
-export function buildDomainHandlerDispatchActivityInput(input: {
-  domainId: string;
-  dispatchRef: string;
-}) {
-  return {
-    activity_kind: 'domain_handler_dispatch_activity',
-    domain_id: input.domainId,
-    dispatch_ref: input.dispatchRef,
-    authority_boundary: {
-      opl: 'domain_handler_transport_only',
-      domain: 'domain_handler_dispatch_and_receipt_owner',
     },
   };
 }
