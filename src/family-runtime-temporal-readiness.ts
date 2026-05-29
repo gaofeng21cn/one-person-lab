@@ -12,6 +12,7 @@ import type {
 export type TemporalWorkerReadinessStatus =
   | 'not_configured'
   | 'server_unreachable'
+  | 'worker_dependency_unavailable'
   | 'worker_source_stale'
   | 'worker_not_ready'
   | 'ready';
@@ -34,6 +35,7 @@ type TemporalWorkerReadinessInput = {
   managedWorkerWorkflowBundlePath?: string | null;
   managedWorkerWorkflowBundleVersion?: string | null;
   managedWorkerWorkflowBundleSourceVersion?: string | null;
+  workerDependencyHealth?: Record<string, unknown> | null;
   staleWorkerPid?: number | null;
   temporalServiceLifecycle?: Record<string, unknown> | null;
   visibilityReadiness?: TemporalStageAttemptVisibilityReadiness | null;
@@ -70,6 +72,10 @@ type ResolvedTemporalWorkerReadiness = {
   readinessStatus: TemporalWorkerReadinessStatus;
 };
 
+function dependencyRepairCommand() {
+  return 'npm install --include=optional --ignore-scripts=false';
+}
+
 function buildTemporalWorkerRepairAction(input: {
   readinessStatus: TemporalWorkerReadinessStatus;
   address?: string | null;
@@ -83,6 +89,8 @@ function buildTemporalWorkerRepairAction(input: {
       'export OPL_TEMPORAL_ADDRESS=127.0.0.1:7233',
     verify_temporal_server:
       'opl family-runtime worker status --provider temporal',
+    repair_worker_runtime_dependencies:
+      dependencyRepairCommand(),
     start_managed_worker:
       'opl family-runtime worker start --provider temporal',
     rerun_production_proof:
@@ -91,6 +99,7 @@ function buildTemporalWorkerRepairAction(input: {
   const actionByStatus: Record<TemporalWorkerReadinessStatus, string> = {
     not_configured: 'configure_temporal_service',
     server_unreachable: 'repair_temporal_service',
+    worker_dependency_unavailable: 'repair_temporal_worker_runtime_dependencies',
     worker_source_stale: 'restart_temporal_worker',
     worker_not_ready: 'start_temporal_worker',
     ready: 'none',
@@ -98,6 +107,7 @@ function buildTemporalWorkerRepairAction(input: {
   const nextCommandByStatus: Record<TemporalWorkerReadinessStatus, string | null> = {
     not_configured: repairCommands.start_local_temporal_service,
     server_unreachable: repairCommands.start_local_temporal_service,
+    worker_dependency_unavailable: repairCommands.repair_worker_runtime_dependencies,
     worker_source_stale:
       'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
     worker_not_ready: repairCommands.start_managed_worker,
@@ -125,10 +135,12 @@ function resolveTemporalWorkerReady(input: {
   serverReachable: boolean | null;
   workerEnabled: string | null;
   workerStatus: string | null;
+  workerDependencyUnavailable?: boolean | null;
   workerSourceStale?: boolean | null;
 }) {
   return Boolean(input.address)
     && input.serverReachable !== false
+    && input.workerDependencyUnavailable !== true
     && input.workerSourceStale !== true
     && (envFlagReady(input.workerEnabled) || envFlagReady(input.workerStatus));
 }
@@ -137,6 +149,7 @@ function buildTemporalWorkerBlockers(input: {
   address: string | null;
   serverReachable: boolean | null;
   workerReady: boolean;
+  workerDependencyUnavailable?: boolean | null;
   workerSourceStale?: boolean | null;
 }) {
   const blockers: string[] = [];
@@ -145,6 +158,10 @@ function buildTemporalWorkerBlockers(input: {
   }
   if (input.address && input.serverReachable === false) {
     blockers.push('temporal_server_unreachable');
+  }
+  if (input.address && input.serverReachable !== false && input.workerDependencyUnavailable === true) {
+    blockers.push('temporal_worker_dependency_unavailable');
+    return blockers;
   }
   if (input.address && input.serverReachable !== false && input.workerSourceStale === true) {
     blockers.push('temporal_worker_source_stale');
@@ -166,18 +183,22 @@ function resolveTemporalWorkerReadinessInput(
   const workerEnabled = input.workerEnabled ?? process.env.OPL_TEMPORAL_WORKER_ENABLED ?? null;
   const workerStatus = input.workerStatus ?? process.env.OPL_TEMPORAL_WORKER_STATUS ?? null;
   const serverReachable = input.serverReachable ?? null;
+  const workerDependencyUnavailable =
+    input.workerDependencyHealth?.status === 'blocked';
   const workerSourceStale = input.managedWorkerSourceCurrent === false;
   const workerReady = resolveTemporalWorkerReady({
     address,
     serverReachable,
     workerEnabled,
     workerStatus,
+    workerDependencyUnavailable,
     workerSourceStale,
   });
   const readinessStatus = resolveTemporalWorkerReadinessStatus({
     address,
     serverReachable,
     workerReady,
+    workerDependencyUnavailable,
     workerSourceStale,
   });
 
@@ -196,6 +217,7 @@ export function resolveTemporalWorkerReadinessStatus(input: {
   address?: string | null;
   serverReachable?: boolean | null;
   workerReady?: boolean | null;
+  workerDependencyUnavailable?: boolean | null;
   workerSourceStale?: boolean | null;
 }): TemporalWorkerReadinessStatus {
   if (!input.address) {
@@ -203,6 +225,9 @@ export function resolveTemporalWorkerReadinessStatus(input: {
   }
   if (input.serverReachable === false) {
     return 'server_unreachable';
+  }
+  if (input.workerDependencyUnavailable === true) {
+    return 'worker_dependency_unavailable';
   }
   if (input.workerSourceStale === true) {
     return 'worker_source_stale';
@@ -277,6 +302,7 @@ export function buildTemporalWorkerReadiness(input: TemporalWorkerReadinessInput
   const readiness = resolveTemporalWorkerReadinessInput(input);
   const blockers = buildTemporalWorkerBlockers({
     ...readiness,
+    workerDependencyUnavailable: input.workerDependencyHealth?.status === 'blocked',
     workerSourceStale: input.managedWorkerSourceCurrent === false,
   });
   const repairAction = buildTemporalWorkerRepairAction({
@@ -306,6 +332,7 @@ export function buildTemporalWorkerReadiness(input: TemporalWorkerReadinessInput
     managed_worker_workflow_bundle_path: input.managedWorkerWorkflowBundlePath ?? null,
     managed_worker_workflow_bundle_version: input.managedWorkerWorkflowBundleVersion ?? null,
     managed_worker_workflow_bundle_source_version: input.managedWorkerWorkflowBundleSourceVersion ?? null,
+    worker_dependency_health: input.workerDependencyHealth ?? null,
     managed_worker_workflow_bundle_source_current:
       input.managedWorkerWorkflowBundleSourceVersion && input.expectedWorkerSourceVersion
         ? input.managedWorkerWorkflowBundleSourceVersion === input.expectedWorkerSourceVersion

@@ -73,6 +73,9 @@ import {
   inspectTemporalWorkerLifecycleFast,
 } from './family-runtime-temporal-provider-parts/worker-lifecycle-fast.ts';
 import {
+  inspectTemporalWorkerRuntimeDependencies,
+} from './family-runtime-temporal-provider-parts/worker-dependencies.ts';
+import {
   buildTemporalStageAttemptWorkerOptions,
 } from './family-runtime-temporal-provider-parts/workflow-bundle.ts';
 import {
@@ -135,7 +138,8 @@ export async function inspectTemporalWorkerLifecycleWithDetail(
   const envWorkerReady = process.env.OPL_TEMPORAL_WORKER_ENABLED?.trim() === '1'
     || process.env.OPL_TEMPORAL_WORKER_STATUS?.trim() === 'ready';
   const serverReachable = address ? await probeTemporalServer(address) : false;
-  const workerReady = Boolean(serverReachable && (pidAlive || envWorkerReady));
+  const dependencyHealth = inspectTemporalWorkerRuntimeDependencies({ moduleUrl: import.meta.url });
+  const workerReady = Boolean(serverReachable && dependencyHealth.status === 'ready' && (pidAlive || envWorkerReady));
   const visibilityReadiness = serverReachable
     ? await inspectTemporalStageAttemptVisibilityReadiness(paths)
     : null;
@@ -155,6 +159,7 @@ export async function inspectTemporalWorkerLifecycleWithDetail(
     managedWorkerWorkflowBundlePath: state?.workflow_bundle_path ?? null,
     managedWorkerWorkflowBundleVersion: state?.workflow_bundle_version ?? null,
     managedWorkerWorkflowBundleSourceVersion: state?.workflow_bundle_source_version ?? null,
+    workerDependencyHealth: dependencyHealth,
     staleWorkerPid: statePidAlive && !stateSourceCurrent && state ? state.pid : null,
     temporalServiceLifecycle: service,
     visibilityReadiness,
@@ -538,6 +543,18 @@ export async function triggerTemporalSchedulerCadence(paths: TemporalWorkerPaths
 
 export async function runTemporalStageAttemptWorkerUntil<T>(fn: () => Promise<T>) {
   const sourceVersion = currentWorkerSourceVersion(import.meta.url);
+  const dependencyHealth = inspectTemporalWorkerRuntimeDependencies({ moduleUrl: import.meta.url });
+  if (dependencyHealth.status !== 'ready') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Temporal worker runtime dependencies are unavailable; worker start is fail-closed before workflow bundle materialization.',
+      {
+        lifecycle_status: 'worker_dependency_unavailable',
+        provider_kind: 'temporal',
+        worker_dependency_health: dependencyHealth,
+      },
+    );
+  }
   const built = await buildTemporalStageAttemptWorkerOptions({
     paths: familyRuntimePaths(),
     workflowsPath: workflowModulePath(),
@@ -950,6 +967,18 @@ export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, i
       address: status.address,
       provider_kind: 'temporal',
     });
+  }
+  if (status.lifecycle_status === 'worker_dependency_unavailable') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Temporal worker runtime dependencies are unavailable; worker start is fail-closed before workflow bundle materialization.',
+      {
+        lifecycle_status: status.lifecycle_status,
+        provider_kind: 'temporal',
+        worker_dependency_health: status.worker_dependency_health,
+        repair_action: status.repair_action,
+      },
+    );
   }
   if (status.lifecycle_status === 'ready') {
     return {
