@@ -26,6 +26,8 @@ export function frameworkAttentionFirstPayload(input: {
   stageWarningCount: number;
   agentStructuralEvidenceTailCount: number;
   appLiveEvidenceTailCount: number;
+  appLiveEvidenceTailRawCount?: number;
+  appLiveEvidenceTailGuardedByProviderWorkerMutationCount?: number;
   stageReceiptFreshnessTailCount: number;
   stageSourceScopeMissingWorkorderCount: number;
   stageRuntimeEventMissingWorkorderCount: number;
@@ -178,7 +180,11 @@ export function frameworkAttentionFirstPayload(input: {
       recommendation_count: warnings.length,
       open_tail_count: openTailCount,
       agent_structural_evidence_tail_open_count: input.agentStructuralEvidenceTailCount,
+      app_live_evidence_tail_raw_open_count:
+        numberValue(input.appLiveEvidenceTailRawCount ?? input.appLiveEvidenceTailCount),
       app_live_evidence_tail_open_count: input.appLiveEvidenceTailCount,
+      app_live_evidence_tail_guarded_by_provider_worker_mutation_count:
+        numberValue(input.appLiveEvidenceTailGuardedByProviderWorkerMutationCount),
       stage_receipt_freshness_tail_open_count: input.stageReceiptFreshnessTailCount,
       stage_source_scope_missing_workorder_count: input.stageSourceScopeMissingWorkorderCount,
       stage_runtime_event_missing_workorder_count: input.stageRuntimeEventMissingWorkorderCount,

@@ -1,4 +1,14 @@
-import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import net from 'node:net';
+
+import {
+  assert,
+  createFamilyContractsFixtureRoot,
+  fs,
+  os,
+  path,
+  runCli,
+  test,
+} from '../helpers.ts';
 import {
   frameworkStatusFromAttentionCounts,
   splitOperatorAttentionCounts,
@@ -247,5 +257,79 @@ test('framework readiness separates operator-actionable and domain-blocked atten
     }
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('framework readiness keeps mutation-guarded provider SLO tail out of operator-actionable attention', async () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-provider-slo-guard-home-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const server = net.createServer((socket) => socket.end());
+  try {
+    const stateRoot = path.join(homeRoot, 'Library', 'Application Support', 'OPL', 'state');
+    fs.mkdirSync(path.join(stateRoot, 'family-runtime'), { recursive: true });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const temporalAddress = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
+    const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: '',
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_TEMPORAL_ADDRESS: temporalAddress,
+      OPL_TEMPORAL_NAMESPACE: 'opl-framework-provider-slo-guard',
+      OPL_TEMPORAL_TASK_QUEUE: 'opl-framework-provider-slo-guard',
+    }).framework_readiness;
+
+    const summary = readiness.summary;
+    const attentionSummary = readiness.attention_first_payload.summary;
+
+    assert.equal(summary.provider_slo_guarded_open_tail_count > 0, true);
+    assert.equal(
+      summary.app_live_evidence_tail_guarded_by_provider_worker_mutation_count,
+      summary.provider_slo_guarded_open_tail_count,
+    );
+    assert.equal(
+      summary.app_live_evidence_tail_raw_open_count,
+      summary.app_live_evidence_tail_open_count
+        + summary.app_live_evidence_tail_guarded_by_provider_worker_mutation_count,
+    );
+    assert.equal(summary.app_live_evidence_tail_open_count, 0);
+    assert.equal(attentionSummary.app_live_evidence_tail_open_count, 0);
+    assert.equal(
+      attentionSummary.app_live_evidence_tail_guarded_by_provider_worker_mutation_count,
+      summary.app_live_evidence_tail_guarded_by_provider_worker_mutation_count,
+    );
+    const expectedOperatorActionableCount =
+      summary.agent_structural_evidence_tail_open_count
+      + summary.app_live_evidence_tail_open_count
+      + summary.stage_receipt_freshness_tail_open_count
+      + summary.evidence_envelope_open_count
+      + summary.stage_source_scope_missing_workorder_count
+      + summary.stage_runtime_event_missing_workorder_count
+      + readiness.developer_mode_live_closeout_evidence.attention_count;
+    assert.equal(
+      summary.operator_actionable_attention_tail_count,
+      expectedOperatorActionableCount,
+    );
+    assert.equal(
+      summary.operator_payload_free_attention_tail_count,
+      Math.max(
+        summary.operator_actionable_attention_tail_count
+          - summary.operator_payload_required_attention_tail_count,
+        0,
+      ),
+    );
+    assert.equal(
+      readiness.app_operator_production_tail
+        .app_operator_production_evidence_tail_guarded_by_provider_worker_mutation_count,
+      summary.provider_slo_guarded_open_tail_count,
+    );
+    assert.equal(
+      readiness.app_operator_production_tail
+        .app_operator_production_evidence_tail_operator_actionable_open_item_count,
+      0,
+    );
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });

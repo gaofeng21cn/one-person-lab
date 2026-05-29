@@ -7,6 +7,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-05-30
 
+### 决策：framework readiness 不把 worker-guarded provider SLO raw tail 计成 operator-actionable
+
+原因：Provider long-window SLO tail 属于 App/operator production evidence tail；当对应 `provider_slo_cadence_execution` route 已被 developer-checkout shared-state worker mutation guard 阻塞时，framework readiness 仍应保留原始 raw open tail 供 provider evidence 审计，但不能把它计入 `open_tail_count`、`operator_actionable_attention_tail_count` 或 payload-free operator action。否则 framework summary 会与 App execution bridge / evidence-worklist 的 fail-closed safe-action 语义冲突。
+
+影响：
+
+- `framework readiness` 现在同时暴露 `app_live_evidence_tail_raw_open_count`、`app_live_evidence_tail_guarded_by_provider_worker_mutation_count`、`provider_slo_guarded_open_tail_count` 和 operator-actionable `app_live_evidence_tail_open_count`。
+- 当 provider SLO production-proof route 为 `blocked_by_provider_worker_mutation_guard` 时，raw provider long-soak tail 仍留在 App full production tail ledger；framework readiness 的默认 operator attention 扣除该 guarded tail，并转为 blocked refs-only attention。
+- 该规则不降低 provider long SLO 证据要求，不绕过 worker guard，不执行 provider proof / worker start，不关闭 provider SLO，不声明 domain ready、production ready、App release ready 或 global closeout。
+
 ### 决策：provider scheduler status 是诊断查询，scheduler mutation 必须继承 worker mutation guard
 
 原因：provider scheduler 的 `status` route 是只读诊断查询，适合显式执行和 full-detail 下钻，但不应占用 App/default `next_safe_action`、`family-runtime evidence-worklist` open attention 或 next-action ledger。`install`、`trigger`、`tick` 会改动 provider scheduler / dispatch 行为；当 provider worker start/restart 被 developer-checkout shared-state mutation guard 阻塞时，这些 scheduler mutation route 也必须 fail closed，不能作为“安全下一步”推荐。

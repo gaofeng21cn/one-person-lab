@@ -83,6 +83,38 @@ function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
+function routeIsProviderWorkerMutationGuarded(route: JsonRecord) {
+  return stringValue(route.route_status) === 'blocked_by_provider_worker_mutation_guard'
+    || stringValue(route.default_actionability_status) === 'blocked_by_provider_worker_mutation_guard';
+}
+
+function providerSloProductionProofRouteIsMutationGuarded(appOperatorDrilldown: JsonRecord) {
+  const routes = [
+    ...recordList(record(appOperatorDrilldown.app_execution_bridge).safe_action_routes),
+    ...recordList(record(appOperatorDrilldown.operator_action_routing_refs).refs),
+  ];
+  return routes.some((route) => (
+    stringValue(route.action_kind) === 'provider_slo_cadence_execution'
+      || stringValue(route.action_id)?.startsWith('provider-slo:') === true
+  ) && routeIsProviderWorkerMutationGuarded(route));
+}
+
+function guardedProviderSloOpenTailCount(appOperatorDrilldown: JsonRecord) {
+  if (!providerSloProductionProofRouteIsMutationGuarded(appOperatorDrilldown)) {
+    return 0;
+  }
+  return recordList(record(appOperatorDrilldown.production_evidence_tail_ledger).tail_items)
+    .filter((item) =>
+      stringValue(item.status) === 'open'
+      && (
+        stringValue(item.tail_item) === 'provider_long_window_slo_evidence'
+        || stringValue(item.requirement_kind) === 'provider_long_window_slo_evidence'
+        || stringValue(record(item.evidence_requirement).requirement_kind)
+          === 'provider_long_window_slo_evidence'
+      )
+    ).length;
+}
+
 function diagnosticFailure(sourceId: string, sourceCommand: string, error: unknown) {
   if (error instanceof FrameworkContractError) {
     return {
@@ -345,7 +377,9 @@ export async function buildFrameworkReadinessSummary(
     packCompilerOwnerClaimCount,
     packCompilerDriftDetectedCount,
   );
-  const appOpenTailCount = numberValue(appSummary.app_operator_production_evidence_tail_open_item_count);
+  const appRawOpenTailCount = numberValue(appSummary.app_operator_production_evidence_tail_open_item_count);
+  const providerSloGuardedOpenTailCount = guardedProviderSloOpenTailCount(appOperatorDrilldown);
+  const appOpenTailCount = Math.max(appRawOpenTailCount - providerSloGuardedOpenTailCount, 0);
   const stageProductionCallerTailCount = numberValue(appSummary.stage_production_evidence_missing_caller_stage_count);
   const evidenceWorklistOpenCount = countValue(worklistSummary.open_worklist_item_count);
   const openSafeActionPayload = openSafeActionPayloadCounts({
@@ -476,6 +510,8 @@ export async function buildFrameworkReadinessSummary(
         stageWarningCount,
         agentStructuralEvidenceTailCount,
         appLiveEvidenceTailCount,
+        appLiveEvidenceTailRawCount: appRawOpenTailCount,
+        appLiveEvidenceTailGuardedByProviderWorkerMutationCount: providerSloGuardedOpenTailCount,
         stageReceiptFreshnessTailCount,
         stageSourceScopeMissingWorkorderCount,
         stageRuntimeEventMissingWorkorderCount,
@@ -525,7 +561,11 @@ export async function buildFrameworkReadinessSummary(
         framework_diagnostic_failure_count: diagnosticFailureCount,
         semantic_hygiene_attention_required_gate_count: semanticAttentionGateCount,
         agent_structural_evidence_tail_open_count: agentStructuralEvidenceTailCount,
+        provider_slo_guarded_open_tail_count: providerSloGuardedOpenTailCount,
+        app_live_evidence_tail_raw_open_count: appRawOpenTailCount,
         app_live_evidence_tail_open_count: appLiveEvidenceTailCount,
+        app_live_evidence_tail_guarded_by_provider_worker_mutation_count:
+          providerSloGuardedOpenTailCount,
         stage_receipt_freshness_tail_open_count: stageReceiptFreshnessTailCount,
         stage_source_scope_missing_workorder_count: stageSourceScopeMissingWorkorderCount,
         stage_runtime_event_missing_workorder_count: stageRuntimeEventMissingWorkorderCount,
@@ -594,7 +634,10 @@ export async function buildFrameworkReadinessSummary(
         app_live_evidence_tail: {
           source_command: SOURCE_COMMANDS.app_operator_drilldown,
           open_item_count: appLiveEvidenceTailCount,
-          blocking_policy: 'operator_attention_only_for_app_live_and_domain_owner_evidence',
+          raw_open_item_count: appRawOpenTailCount,
+          guarded_by_provider_worker_mutation_count: providerSloGuardedOpenTailCount,
+          blocking_policy:
+            'operator_actionable_tail_excludes_provider_slo_routes_blocked_by_worker_mutation_guard',
         },
         stage_receipt_freshness_tail: {
           source_command: SOURCE_COMMANDS.family_runtime_evidence_worklist,
@@ -666,6 +709,11 @@ export async function buildFrameworkReadinessSummary(
         app_operator_production_evidence_tail_item_count:
           numberValue(appSummary.app_operator_production_evidence_tail_item_count),
         app_operator_production_evidence_tail_open_item_count: appOpenTailCount,
+        app_operator_production_evidence_tail_raw_open_item_count: appRawOpenTailCount,
+        app_operator_production_evidence_tail_guarded_by_provider_worker_mutation_count:
+          providerSloGuardedOpenTailCount,
+        app_operator_production_evidence_tail_operator_actionable_open_item_count:
+          appOpenTailCount,
         app_operator_production_evidence_tail_owner_group_count:
           numberValue(appSummary.app_operator_production_evidence_tail_owner_group_count),
         app_operator_production_evidence_tail_blocking_item_count:
