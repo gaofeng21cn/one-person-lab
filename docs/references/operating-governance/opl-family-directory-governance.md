@@ -4,11 +4,7 @@ Owner: `One Person Lab`
 Purpose: `references_operating_governance_opl_family_directory_governance`
 State: `support_reference`
 Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
-
-owner: `OPL maintainers`
-purpose: 冻结 OPL family 仓库目录归属和 hygiene baseline，避免把源码、合同、叙述文档与运行态输出混放。
-state: active reference
-machine boundary: 叙述性治理参考；机读约束由 repo hygiene 测试和 `.gitignore` 承担。
+Currentness policy: 本文冻结 OPL family 仓库目录归属和 hygiene baseline，不冻结日期、conformance count、memory descriptor count、worklist counter、App/operator route count、functional privatization residue count、branch/SHA 或本机 proof snapshot。当前目录标准化状态必须从 fresh `opl agents conformance --family-defaults --json`、`opl agents default-callers --family-defaults --json`、`opl domain-memory list --json`、`opl runtime app-operator-drilldown --json`、`opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail summary --json`、repo hygiene tests 和 domain-owned manifests 读取。
 
 ## 范围
 
@@ -46,9 +42,16 @@ Hygiene audit 只检查明确的路径段和 root 文件，不做字符串子串
 
 如果未来出现 repo-specific 例外，例外必须在对应仓库的 hygiene 测试中显式列出，并写明 owner、purpose、state 和退役条件。
 
-## 2026-05-28 目录标准化状态
+## 目录标准化状态读法
 
-当前 OPL 读模型证明的是 standard domain-agent conformance、descriptor / memory discovery 和 App/operator refs-only projection 可读：`opl agents conformance --family-defaults --json` 读为 4 个 repo structural conformance passed、blocked_count=0；`opl domain-memory list --json` 读为 `resolved_memory_descriptor_count=3`、`missing_memory_descriptor_count=0`；`opl runtime app-operator-drilldown --json` 能看到 lifecycle refs、memory writeback refs 和 App release/user-path evidence refs；functional privatization active residue 仍为 0。但 `framework readiness` 仍有 open production tail，`family-runtime evidence-worklist` 仍有 12 条 payload-required stage-evidence workorder。这表示 OPL 能读取 standard pack / descriptor / authority boundary 和 MAS/MAG/RCA memory descriptor；它不表示物理目录已经全部重组、domain ready、production ready、App release ready、artifact authority 或 memory body/writeback apply 已完成。
+当前 OPL 读模型能证明的是 standard pack、descriptor、authority boundary、memory descriptor 和 App/operator refs-only projection 是否可读。即使 fresh output 显示 conformance passed、default caller readiness clean、memory descriptors resolved、worklist open count 为零或 functional privatization residue 清零，也只表示对应 read-model / evidence transport 当前可读；它不表示物理目录已经全部重组、domain ready、production ready、App release ready、artifact authority、memory body migration 或 writeback apply 已完成。
+
+目录治理判断应按以下 live surface 分层读取：
+
+- `opl agents conformance --family-defaults --json` / `opl agents default-callers --family-defaults --json`：只证明 standard descriptor、generated/default caller replacement evidence 和 deletion-evidence gate 可读；不授权 domain repo 物理删除。
+- `opl domain-memory list --json`：只证明 domain-owned memory descriptor、locator、receipt projection 和 runtime memory refs 可读；不读取 memory body，不执行 retrieval/apply。
+- `opl runtime app-operator-drilldown --json` 与 `opl family-runtime evidence-worklist ... --detail summary --json`：只证明 refs-only operator projection、worklist accounting、blocked envelope 和 safe-action route 可读；不能把 closed counter 或 zero-open worklist 写成 production closure。
+- `.gitignore`、`scripts/repo-hygiene.sh`、`scripts/verify.sh` 和 repo-native focused tests：只约束 tracked source hygiene 和 generated/local state 边界；它们不替代 domain owner receipt、quality verdict 或 release evidence。
 
 目录治理的当前目标仍是降低多重语义污染：repo-source 只保存 source、contracts、builder、policy 与 docs；真实 workspace/runtime artifact、receipt instance、memory body、中间产物和最终交付物继续留在 workspace / runtime artifact root，并通过 locator、receipt ref、restore proof 或 provenance proof 被 OPL 读取。
 

@@ -44,6 +44,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-29-opl-series-doc-governance-part-ledger-retirement.md` | OPL series per-part governance ledger retirement。 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-2.md` through `part-79.md` were deleted after source/contracts/tests scans showed no machine refs; current truth stays in active owner docs, core docs, live source/contracts/tests/read-model, and this compact retirement ledger. |
 | `2026-05-30-opl-series-doc-governance-current-support-ledger.md` | OPL current-support release/package wording cleanup ledger。 | 当前 truth 归 package/native-helper contracts、source、tests 和 live CLI/read-model；ledger 只记录 `opl native:repair` stale prose retirement and retained support-doc coverage. |
 | `2026-05-30-opl-series-doc-governance-memory-reference-ledger.md` | OPL operating-governance memory reference cleanup ledger。 | 当前 truth 归 domain-memory contracts、source、tests 和 live CLI/read-model；ledger 只记录 stale MAS-only memory proof wording retirement and retained refs-only memory evidence coverage. |
+| `2026-05-30-opl-series-doc-governance-directory-governance-ledger.md` | OPL operating-governance directory reference cleanup ledger。 | 当前 truth 归 directory governance support doc、repo hygiene tests、domain-owned manifests 和 live CLI/read-model；ledger 只记录 stale fixed directory-status counters retirement. |
 
 ## Tombstone Rules
 
