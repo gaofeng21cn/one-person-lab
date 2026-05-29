@@ -1,0 +1,405 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/family-orchestration/research-evidence-pack.schema.json",
+  "title": "OPL Research Evidence Pack",
+  "description": "Refs-only research evidence pack for OPL indexing, projection, and stage replay readiness. Domain agents retain body, receipt signing, accept/reject, ready, quality, and artifact authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "pack_id",
+    "target_domain_id",
+    "study_id",
+    "run_manifest",
+    "negative_failed_path_ledger",
+    "decision_trace",
+    "artifact_lineage_graph",
+    "reproducibility_bundle",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": { "const": "research_evidence_pack" },
+    "version": { "const": "research_evidence_pack.v1" },
+    "pack_id": { "type": "string", "minLength": 1 },
+    "target_domain_id": { "type": "string", "minLength": 1 },
+    "study_id": { "type": "string", "minLength": 1 },
+    "run_manifest": { "$ref": "#/$defs/research_run_manifest" },
+    "negative_failed_path_ledger": { "$ref": "#/$defs/negative_failed_path_ledger" },
+    "decision_trace": { "$ref": "#/$defs/decision_trace" },
+    "artifact_lineage_graph": { "$ref": "#/$defs/artifact_lineage_graph" },
+    "reproducibility_bundle": { "$ref": "#/$defs/reproducibility_bundle" },
+    "authority_boundary": { "$ref": "#/$defs/authority_boundary" }
+  },
+  "$defs": {
+    "surface_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref_id",
+        "role",
+        "ref_kind",
+        "ref",
+        "status",
+        "required",
+        "checksum_status",
+        "restore_status",
+        "body_included"
+      ],
+      "properties": {
+        "ref_id": { "type": "string", "minLength": 1 },
+        "role": { "type": "string", "minLength": 1 },
+        "ref_kind": { "type": "string", "minLength": 1 },
+        "ref": { "type": "string", "minLength": 1 },
+        "status": {
+          "type": "string",
+          "enum": ["present", "missing", "blocked", "not_required"]
+        },
+        "required": { "type": "boolean" },
+        "checksum_status": {
+          "type": "string",
+          "enum": ["verified", "missing", "mismatch", "unchecked"]
+        },
+        "restore_status": {
+          "type": "string",
+          "enum": ["restore_ready", "restore_pending", "restored", "restore_blocked", "not_required"]
+        },
+        "body_included": { "const": false }
+      }
+    },
+    "research_run_manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "version",
+        "run_id",
+        "stage_id",
+        "stage_attempt_id",
+        "replay_stages",
+        "input_refs",
+        "output_refs"
+      ],
+      "properties": {
+        "surface_kind": { "const": "research_run_manifest" },
+        "version": { "const": "research_run_manifest.v1" },
+        "run_id": { "type": "string", "minLength": 1 },
+        "stage_id": { "type": "string", "minLength": 1 },
+        "stage_attempt_id": { "type": "string", "minLength": 1 },
+        "replay_stages": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/replay_stage" }
+        },
+        "input_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/surface_ref" }
+        },
+        "output_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/surface_ref" }
+        }
+      }
+    },
+    "replay_stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_id",
+        "append_only_event_log_refs",
+        "attempt_ledger_refs",
+        "recorded_runtime_event_refs",
+        "closeout_receipt_refs"
+      ],
+      "properties": {
+        "stage_id": { "type": "string", "minLength": 1 },
+        "append_only_event_log_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "attempt_ledger_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "recorded_runtime_event_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "closeout_receipt_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "negative_failed_path_ledger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "version",
+        "failed_paths",
+        "negative_results"
+      ],
+      "properties": {
+        "surface_kind": { "const": "negative_failed_path_ledger" },
+        "version": { "const": "negative_failed_path_ledger.v1" },
+        "failed_paths": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ledger_entry" }
+        },
+        "negative_results": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ledger_entry" }
+        }
+      }
+    },
+    "ledger_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path_id",
+        "stage_id",
+        "failed_path_ref",
+        "owner_ref",
+        "status",
+        "body_included"
+      ],
+      "properties": {
+        "path_id": { "type": "string", "minLength": 1 },
+        "result_id": { "type": "string", "minLength": 1 },
+        "stage_id": { "type": "string", "minLength": 1 },
+        "failed_path_ref": { "type": "string", "minLength": 1 },
+        "result_ref": { "type": "string", "minLength": 1 },
+        "owner_ref": { "type": "string", "minLength": 1 },
+        "status": {
+          "type": "string",
+          "enum": ["failed", "negative_result", "accepted_as_negative", "blocked"]
+        },
+        "body_included": { "const": false }
+      }
+    },
+    "decision_trace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "version",
+        "decisions",
+        "next_owner_refs"
+      ],
+      "properties": {
+        "surface_kind": { "const": "decision_trace" },
+        "version": { "const": "decision_trace.v1" },
+        "decisions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/decision" }
+        },
+        "next_owner_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision_id",
+        "stage_id",
+        "decision_ref",
+        "next_owner_ref",
+        "status"
+      ],
+      "properties": {
+        "decision_id": { "type": "string", "minLength": 1 },
+        "stage_id": { "type": "string", "minLength": 1 },
+        "decision_ref": { "type": "string", "minLength": 1 },
+        "next_owner_ref": { "type": ["string", "null"] },
+        "status": {
+          "type": "string",
+          "enum": ["handoff", "closed", "blocked", "superseded"]
+        }
+      }
+    },
+    "artifact_lineage_graph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "version",
+        "artifact_refs",
+        "lineage_edges"
+      ],
+      "properties": {
+        "surface_kind": { "const": "artifact_lineage_graph" },
+        "version": { "const": "artifact_lineage_graph.v1" },
+        "artifact_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/surface_ref" }
+        },
+        "lineage_edges": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/lineage_edge" }
+        }
+      }
+    },
+    "lineage_edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from_ref",
+        "to_ref",
+        "transform_ref"
+      ],
+      "properties": {
+        "from_ref": { "type": "string", "minLength": 1 },
+        "to_ref": { "type": "string", "minLength": 1 },
+        "transform_ref": { "type": "string", "minLength": 1 }
+      }
+    },
+    "reproducibility_bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "version",
+        "environment_refs",
+        "dependency_lock_refs",
+        "replay_command_refs",
+        "restore_refs",
+        "checksum_manifest_refs"
+      ],
+      "properties": {
+        "surface_kind": { "const": "reproducibility_bundle" },
+        "version": { "const": "reproducibility_bundle.v1" },
+        "environment_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "dependency_lock_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "replay_command_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "restore_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/surface_ref" }
+        },
+        "checksum_manifest_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opl_role",
+        "evidence_scope",
+        "can_read_domain_body",
+        "can_accept_or_reject_owner_receipt",
+        "can_sign_domain_receipt",
+        "can_authorize_domain_ready",
+        "can_authorize_quality_verdict",
+        "can_mutate_artifact_body"
+      ],
+      "properties": {
+        "opl_role": { "const": "research_evidence_pack_projection_only" },
+        "evidence_scope": { "const": "refs_index_projection_replay_only" },
+        "can_read_domain_body": { "const": false },
+        "can_accept_or_reject_owner_receipt": { "const": false },
+        "can_sign_domain_receipt": { "const": false },
+        "can_authorize_domain_ready": { "const": false },
+        "can_authorize_quality_verdict": { "const": false },
+        "can_mutate_artifact_body": { "const": false }
+      }
+    }
+  },
+  "examples": [
+    {
+      "surface_kind": "research_evidence_pack",
+      "version": "research_evidence_pack.v1",
+      "pack_id": "pack:example:research-run",
+      "target_domain_id": "example-domain",
+      "study_id": "study-001",
+      "run_manifest": {
+        "surface_kind": "research_run_manifest",
+        "version": "research_run_manifest.v1",
+        "run_id": "run:study-001:stage-1",
+        "stage_id": "stage-1",
+        "stage_attempt_id": "attempt:study-001:stage-1",
+        "replay_stages": [
+          {
+            "stage_id": "stage-1",
+            "append_only_event_log_refs": ["event-log:study-001/stage-1"],
+            "attempt_ledger_refs": ["attempt-ledger:study-001/stage-1"],
+            "recorded_runtime_event_refs": ["runtime-event:study-001/stage-1-closeout"],
+            "closeout_receipt_refs": ["owner-receipt:study-001/stage-1"]
+          }
+        ],
+        "input_refs": [
+          {
+            "ref_id": "source:study-001",
+            "role": "research_source",
+            "ref_kind": "workspace_relative_path",
+            "ref": "studies/study-001/source/index.json",
+            "status": "present",
+            "required": true,
+            "checksum_status": "verified",
+            "restore_status": "not_required",
+            "body_included": false
+          }
+        ],
+        "output_refs": []
+      },
+      "negative_failed_path_ledger": {
+        "surface_kind": "negative_failed_path_ledger",
+        "version": "negative_failed_path_ledger.v1",
+        "failed_paths": [],
+        "negative_results": []
+      },
+      "decision_trace": {
+        "surface_kind": "decision_trace",
+        "version": "decision_trace.v1",
+        "decisions": [
+          {
+            "decision_id": "decision:stage-1-next-owner",
+            "stage_id": "stage-1",
+            "decision_ref": "decision:study-001/stage-1",
+            "next_owner_ref": "owner:example-domain-review",
+            "status": "handoff"
+          }
+        ],
+        "next_owner_refs": ["owner:example-domain-review"]
+      },
+      "artifact_lineage_graph": {
+        "surface_kind": "artifact_lineage_graph",
+        "version": "artifact_lineage_graph.v1",
+        "artifact_refs": [],
+        "lineage_edges": []
+      },
+      "reproducibility_bundle": {
+        "surface_kind": "reproducibility_bundle",
+        "version": "reproducibility_bundle.v1",
+        "environment_refs": ["env:study-001"],
+        "dependency_lock_refs": ["lock:study-001"],
+        "replay_command_refs": ["command:study-001/replay"],
+        "restore_refs": [],
+        "checksum_manifest_refs": ["checksum:study-001"]
+      },
+      "authority_boundary": {
+        "opl_role": "research_evidence_pack_projection_only",
+        "evidence_scope": "refs_index_projection_replay_only",
+        "can_read_domain_body": false,
+        "can_accept_or_reject_owner_receipt": false,
+        "can_sign_domain_receipt": false,
+        "can_authorize_domain_ready": false,
+        "can_authorize_quality_verdict": false,
+        "can_mutate_artifact_body": false
+      }
+    }
+  ]
+}

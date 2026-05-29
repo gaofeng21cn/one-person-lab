@@ -56,6 +56,7 @@ const fastTestFiles = [
   'tests/src/family-stage-runtime-budget.test.ts',
   'tests/src/family-stage-assumption-lifecycle.test.ts',
   'tests/src/family-stage-replay-certification.test.ts',
+  'tests/src/research-evidence-pack.test.ts',
   'tests/src/family-stage-pack-registry.test.ts',
   'tests/src/family-stage-integrity-metadata-contract.test.ts',
   'tests/src/family-stage-admission.test.ts',
