@@ -110,10 +110,10 @@ No docs, modules, interfaces, workflows, App release files, shell files or tests
 
 ## Branch / Worktree Hygiene
 
-- `one-person-lab` root `main` was clean and synced with `origin/main` at `efa06c07` before part48 edits.
+- `one-person-lab` root `main` was clean and synced with `origin/main` at `7af503cd` before part48 edits.
 - Worktree: `/Users/gaofeng/workspace/one-person-lab-opl-cleanup-part48-convergence-currentness`.
 - Branch: `codex/opl-doc-governance-20260529-part48-convergence-currentness`, based on root `main`.
-- Retained unrelated worktree: `/Users/gaofeng/workspace/one-person-lab/.worktrees/mas-default-executor-preserve-current-dispatch-20260529`.
+- Retained unrelated worktree: `/Users/gaofeng/workspace/one-person-lab/.worktrees/system-update-npm-shim-repair-20260529`.
 - App repo retained unrelated local modifications and was read-only in this tranche.
 - `opl-aion-shell` retained unrelated local modifications and was read-only in this tranche.
 
