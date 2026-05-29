@@ -5,16 +5,16 @@ export const MAS_DOMAIN_ROUTE_RECONCILE_APPLY = 'domain_route/reconcile-apply';
 export const MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION = 'domain_route_reconcile_apply';
 export const MAS_RUNTIME_OWNER_ROUTE_HANDOFF = 'mas_runtime_owner_route_handoff';
 export const OPL_RUNTIME_OWNER_ROUTE = 'opl_runtime_owner_route';
-export const MAS_PUBLICATION_AFTERCARE_ANALYSIS_QUEUE = 'publication_aftercare/analysis-queue-progress';
-export const MAS_PUBLICATION_AFTERCARE_REVIEWER_REFRESH = 'publication_aftercare/reviewer-refresh';
+const MAS_PUBLICATION_AFTERCARE_ANALYSIS_QUEUE = 'publication_aftercare/analysis-queue-progress';
+const MAS_PUBLICATION_AFTERCARE_REVIEWER_REFRESH = 'publication_aftercare/reviewer-refresh';
 
-export const MAS_DOMAIN_ROUTE_SUPPORTED_TASK_KINDS = [
+const MAS_DOMAIN_ROUTE_SUPPORTED_TASK_KINDS = [
   MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
   MAS_PUBLICATION_AFTERCARE_ANALYSIS_QUEUE,
   MAS_PUBLICATION_AFTERCARE_REVIEWER_REFRESH,
 ] as const;
 
-export const MAS_DOMAIN_ROUTE_ACTION_REFS = [
+const MAS_DOMAIN_ROUTE_ACTION_REFS = [
   MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION,
   'ai_reviewer_recheck_execute_dispatch',
 ] as const;
@@ -87,7 +87,7 @@ function retiredMasRuntimePrefix(taskKind: string) {
   return taskKind.startsWith('runtime_') || taskKind.startsWith('runtime/');
 }
 
-export function isMasDomainRouteReconcileApply(domainId: string, taskKind: string) {
+function isMasDomainRouteReconcileApply(domainId: string, taskKind: string) {
   return domainId === 'medautoscience'
     && taskKind === MAS_DOMAIN_ROUTE_RECONCILE_APPLY;
 }
