@@ -30,6 +30,7 @@ import {
   stageAttemptSummary,
   syncStageAttemptFromTemporalTerminalObservation,
 } from './family-runtime-stage-attempts.ts';
+import { markStageAttemptCancelRequested } from './family-runtime-stage-attempt-control.ts';
 import { queryStageAttemptWithCurrentProviderReadiness } from './family-runtime-stage-attempt-current-query.ts';
 import { residencyProofReceipt } from './family-runtime-residency-proof-events.ts';
 import {
@@ -646,6 +647,12 @@ export async function runFamilyRuntime(args: string[]) {
         source: parsed.source,
         paths,
       });
+      markStageAttemptCancelRequested(db, {
+        stageAttemptId: parsed.stageAttemptId,
+        reason: parsed.reason,
+        source: parsed.source,
+        temporalCancel: temporal_cancel,
+      });
       const temporal_query = await queryTemporalStageAttemptReadModel(attempt, { paths });
       syncStageAttemptFromTemporalTerminalObservation(db, temporal_query);
       const projectedAttempt = await inspectStageAttemptWithCurrentProviderReadiness(db, parsed.stageAttemptId, paths, {
@@ -722,6 +729,9 @@ export async function runFamilyRuntime(args: string[]) {
         version: 'g2',
         family_runtime_stage_attempt_query: {
           surface_id: 'opl_family_runtime_stage_attempt_query',
+          attempt: projectedQuery.stage_attempt_query.attempt,
+          attempt_ref: `opl://stage_attempts/${projectedQuery.stage_attempt_query.attempt.stage_attempt_id}`,
+          attempt_status: projectedQuery.stage_attempt_query.attempt.status,
           ...projectedQuery,
           temporal_query,
         },

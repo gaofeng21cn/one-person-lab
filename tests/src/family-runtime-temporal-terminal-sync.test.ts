@@ -9,6 +9,8 @@ import {
   listStageAttemptCloseouts,
   syncStageAttemptFromTemporalTerminalObservation,
 } from '../../src/family-runtime-stage-attempts.ts';
+import { markStageAttemptCancelRequested } from '../../src/family-runtime-stage-attempt-control.ts';
+import { createFamilyRuntimeQueueTables } from '../../src/family-runtime-store.ts';
 
 function withStageAttemptDb(fn: (db: DatabaseSync) => void) {
   const db = new DatabaseSync(':memory:');
@@ -21,55 +23,14 @@ function withStageAttemptDb(fn: (db: DatabaseSync) => void) {
 }
 
 function createQueueTables(db: DatabaseSync) {
-  db.exec(`
-    CREATE TABLE tasks (
-      task_id TEXT PRIMARY KEY,
-      domain_id TEXT NOT NULL,
-      task_kind TEXT NOT NULL,
-      payload_json TEXT NOT NULL,
-      dedupe_key TEXT UNIQUE,
-      priority INTEGER NOT NULL,
-      status TEXT NOT NULL,
-      attempts INTEGER NOT NULL,
-      max_attempts INTEGER NOT NULL,
-      source TEXT NOT NULL,
-      requires_approval INTEGER NOT NULL,
-      approved_at TEXT,
-      lease_owner TEXT,
-      lease_expires_at TEXT,
-      last_error TEXT,
-      dead_letter_reason TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-    CREATE TABLE events (
-      event_id TEXT PRIMARY KEY,
-      task_id TEXT,
-      domain_id TEXT,
-      event_type TEXT NOT NULL,
-      source TEXT NOT NULL,
-      payload_json TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE notifications (
-      notification_id TEXT PRIMARY KEY,
-      task_id TEXT,
-      severity TEXT NOT NULL,
-      title TEXT NOT NULL,
-      body TEXT NOT NULL,
-      channel TEXT NOT NULL,
-      status TEXT NOT NULL,
-      payload_json TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-  `);
+  createFamilyRuntimeQueueTables(db);
 }
 
 function insertMasDefaultExecutorTask(
   db: DatabaseSync,
   input: {
     taskId: string;
-    status: 'queued' | 'succeeded' | 'blocked';
+    status: 'queued' | 'running' | 'succeeded' | 'blocked';
     createdAt: string;
     lastError?: string | null;
     deadLetterReason?: string | null;
@@ -352,6 +313,71 @@ test('Temporal cancelled terminal observation uses SDK spelling for provider-onl
     assert.equal(task.status, 'blocked');
     assert.equal(task.last_error, 'temporal_workflow_canceled');
     assert.equal(task.dead_letter_reason, 'temporal_stage_attempt_canceled');
+  });
+});
+
+test('operator cancel request immediately blocks linked MAS task until Temporal terminal is visible', () => {
+  withStageAttemptDb((db) => {
+    const createdAt = new Date().toISOString();
+    createQueueTables(db);
+    insertMasDefaultExecutorTask(db, {
+      taskId: 'task-mas-default-cancel-requested',
+      status: 'running',
+      createdAt,
+    });
+    const attempt = createMasDefaultExecutorAttempt(db, {
+      taskId: 'task-mas-default-cancel-requested',
+      sourceFingerprint: 'sha256:mas-default-cancel-requested',
+    });
+    db.prepare(`
+      UPDATE stage_attempts
+      SET status = 'running',
+        provider_run_json = json_set(
+          provider_run_json,
+          '$.provider_status', 'running',
+          '$.last_heartbeat_at', ?
+        )
+      WHERE stage_attempt_id = ?
+    `).run(createdAt, attempt.stage_attempt_id);
+
+    const requested = markStageAttemptCancelRequested(db, {
+      stageAttemptId: attempt.stage_attempt_id,
+      reason: 'manual_pause_for_mas_upgrade',
+      source: 'test-supervisor',
+      temporalCancel: {
+        surface_kind: 'temporal_stage_attempt_cancel_receipt',
+        provider_kind: 'temporal',
+        stage_attempt_id: attempt.stage_attempt_id,
+        workflow_id: attempt.workflow_id,
+      },
+    });
+    const task = db.prepare('SELECT status, last_error, dead_letter_reason FROM tasks WHERE task_id = ?').get(
+      'task-mas-default-cancel-requested',
+    ) as { status: string; last_error: string | null; dead_letter_reason: string | null };
+
+    assert.equal(requested?.status, 'failed');
+    assert.equal(requested?.blocked_reason, 'operator_cancel_requested');
+    assert.equal(requested?.provider_run.provider_status, 'cancel_requested');
+    assert.equal(task.status, 'blocked');
+    assert.equal(task.last_error, 'operator_cancel_requested');
+    assert.equal(task.dead_letter_reason, 'temporal_stage_attempt_canceled');
+
+    const synced = syncStageAttemptFromTemporalTerminalObservation(
+      db,
+      canceledTemporalObservation({
+        stageAttemptId: attempt.stage_attempt_id,
+        workflowId: attempt.workflow_id,
+      }),
+    );
+    const terminalTask = db.prepare('SELECT status, last_error, dead_letter_reason FROM tasks WHERE task_id = ?').get(
+      'task-mas-default-cancel-requested',
+    ) as { status: string; last_error: string | null; dead_letter_reason: string | null };
+
+    assert.equal(synced?.blocked_reason, 'temporal_workflow_canceled');
+    assert.equal(inspectStageAttempt(db, attempt.stage_attempt_id).provider_run.provider_status, 'canceled');
+    assert.equal(terminalTask.status, 'blocked');
+    assert.equal(terminalTask.last_error, 'temporal_workflow_canceled');
+    assert.equal(terminalTask.dead_letter_reason, 'temporal_stage_attempt_canceled');
   });
 });
 

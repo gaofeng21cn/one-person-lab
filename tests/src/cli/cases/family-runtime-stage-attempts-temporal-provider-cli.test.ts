@@ -159,6 +159,43 @@ test('family-runtime temporal attempt cancel refuses non-temporal attempts', () 
   }
 });
 
+test('family-runtime attempt query exposes stable top-level attempt alias', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-query-alias-'));
+  try {
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'review',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas"}',
+    ], familyRuntimeEnv(stateRoot));
+    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
+    const query = runCli([
+      'family-runtime',
+      'attempt',
+      'query',
+      attemptId,
+    ], familyRuntimeEnv(stateRoot, {
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    }));
+    const result = query.family_runtime_stage_attempt_query;
+
+    assert.equal(result.attempt.stage_attempt_id, attemptId);
+    assert.equal(result.attempt.stage_attempt_id, result.stage_attempt_query.attempt.stage_attempt_id);
+    assert.equal(result.attempt_status, result.stage_attempt_query.attempt.status);
+    assert.equal(result.attempt_ref, `opl://stage_attempts/${attemptId}`);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime temporal attempt start refuses non-temporal attempts', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-start-provider-'));
   try {

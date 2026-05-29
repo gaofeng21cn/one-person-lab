@@ -93,15 +93,8 @@ export function familyRuntimePaths() {
   };
 }
 
-export function openQueueDb() {
-  const paths = familyRuntimePaths();
-  fs.mkdirSync(paths.root, { recursive: true });
-  fs.mkdirSync(paths.dispatch_dir, { recursive: true });
-  fs.mkdirSync(paths.proof_dir, { recursive: true });
-  fs.mkdirSync(paths.scheduler_dir, { recursive: true });
-  const db = openFamilyRuntimeSqlite(paths.queue_db);
+export function createFamilyRuntimeQueueTables(db: DatabaseSync) {
   db.exec(`
-    PRAGMA journal_mode = WAL;
     CREATE TABLE IF NOT EXISTS meta (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
@@ -146,11 +139,34 @@ export function openQueueDb() {
       payload_json TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS queue_holds (
+      hold_id TEXT PRIMARY KEY,
+      scope_json TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      source TEXT NOT NULL,
+      status TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
     CREATE INDEX IF NOT EXISTS idx_tasks_status_priority ON tasks(status, priority DESC, created_at ASC);
     CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);
     CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
+    CREATE INDEX IF NOT EXISTS idx_queue_holds_status ON queue_holds(status, updated_at);
   `);
   createStageAttemptTable(db);
+}
+
+export function openQueueDb() {
+  const paths = familyRuntimePaths();
+  fs.mkdirSync(paths.root, { recursive: true });
+  fs.mkdirSync(paths.dispatch_dir, { recursive: true });
+  fs.mkdirSync(paths.proof_dir, { recursive: true });
+  fs.mkdirSync(paths.scheduler_dir, { recursive: true });
+  const db = openFamilyRuntimeSqlite(paths.queue_db);
+  db.exec(`
+    PRAGMA journal_mode = WAL;
+  `);
+  createFamilyRuntimeQueueTables(db);
   db.prepare('INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)').run(
     'schema_version',
     String(QUEUE_SCHEMA_VERSION),

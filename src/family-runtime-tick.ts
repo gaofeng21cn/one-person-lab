@@ -454,7 +454,7 @@ function autoRedriveBlockedMasDefaultExecutorProviderTasks(
       maxAttempts: row.max_attempts,
       redrivenAt,
     });
-    if (redrive.redriven) {
+    if (redrive.provider_redrive_started ?? redrive.redriven) {
       autoRedrivenCount += 1;
     }
   }

@@ -38,3 +38,30 @@ export function taskRowMatchesScope(row: FamilyRuntimeTaskRow, taskScope?: Famil
   }
   return payloadMatchesTaskScope(JSON.parse(row.payload_json) as Record<string, unknown>, taskScope);
 }
+
+export function taskInputMatchesScope(input: {
+  domainId: string;
+  taskKind: string;
+  payload: Record<string, unknown>;
+}, taskScope?: FamilyRuntimeTaskScope) {
+  if (!taskScope) {
+    return true;
+  }
+  if (taskScope.domainId && input.domainId !== taskScope.domainId) {
+    return false;
+  }
+  if (taskScope.taskKind && input.taskKind !== taskScope.taskKind) {
+    return false;
+  }
+  return payloadMatchesTaskScope(input.payload, taskScope);
+}
+
+export function normalizeTaskScopeForStorage(taskScope: FamilyRuntimeTaskScope) {
+  return {
+    ...(taskScope.domainId ? { domainId: taskScope.domainId } : {}),
+    ...(taskScope.taskKind ? { taskKind: taskScope.taskKind } : {}),
+    ...((taskScope.payloadMatches?.length ?? 0) > 0
+      ? { payloadMatches: taskScope.payloadMatches }
+      : {}),
+  };
+}

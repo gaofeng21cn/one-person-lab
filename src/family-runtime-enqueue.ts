@@ -18,6 +18,7 @@ import {
   findLiveMasDefaultExecutorStudyAttempt,
   refreshMasDefaultExecutorLiveAttemptTaskLease,
 } from './family-runtime-provider-hosted-attempts.ts';
+import { activeQueueHoldForTaskInput } from './family-runtime-queue-holds.ts';
 
 const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
 const MAS_DEFAULT_EXECUTOR_NEXT_OWNERS = new Set(['write', 'ai_reviewer', 'write/ai_reviewer']);
@@ -213,6 +214,14 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         opl_stage_launch_admission_required: true,
       }
     : input.payload;
+  const activeHold = activeQueueHoldForTaskInput(db, {
+    domainId: input.domainId,
+    taskKind,
+    payload,
+  });
+  const requiresApproval = input.requiresApproval || Boolean(activeHold);
+  const initialStatus: FamilyRuntimeTaskStatus = requiresApproval ? 'waiting_approval' : 'queued';
+  const initialLastError = activeHold?.reason ?? null;
   if (dedupeKey) {
     const existing = db.prepare('SELECT * FROM tasks WHERE dedupe_key = ?').get(dedupeKey) as
       | FamilyRuntimeTaskRow
@@ -231,12 +240,12 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         ? masDefaultExecutorCloseoutRedriveDecision(existing, existingPayload, payload)
         : null;
       if (exportedTaskChanged && closeoutRedrive) {
-        const nextStatus: FamilyRuntimeTaskStatus = input.requiresApproval ? 'waiting_approval' : 'queued';
+        const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
         db.prepare(`
           UPDATE tasks
           SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
             attempts = 0, source = ?, requires_approval = ?, approved_at = NULL,
-            lease_owner = NULL, lease_expires_at = NULL, last_error = NULL,
+            lease_owner = NULL, lease_expires_at = NULL, last_error = ?,
             dead_letter_reason = NULL, updated_at = ?
           WHERE task_id = ?
         `).run(
@@ -246,7 +255,8 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           input.priority ?? 0,
           nextStatus,
           input.source ?? 'opl-cli',
-          input.requiresApproval ? 1 : 0,
+          requiresApproval ? 1 : 0,
+          initialLastError,
           createdAt,
           existing.task_id,
         );
@@ -260,6 +270,7 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
             dedupe_key: dedupeKey,
             previous_status: existing.status,
             next_status: nextStatus,
+            active_hold_id: activeHold?.hold_id ?? null,
             ...closeoutRedrive,
             authority_boundary: {
               opl: 'provider_transport_redrive_from_mas_closeout_context_only',
@@ -276,7 +287,7 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           severity: 'info',
           title: 'Family runtime task requeued from MAS closeout redrive',
           body: `${input.domainId}:${taskKind}`,
-          payload: { status: nextStatus, dedupe_key: dedupeKey },
+          payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
         });
         return {
           accepted: true,
@@ -334,12 +345,12 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         };
       }
       if (existing.status === 'succeeded' && exportedTaskChanged && !masDefaultExecutorSucceededAdmissionRefresh) {
-        const nextStatus: FamilyRuntimeTaskStatus = input.requiresApproval ? 'waiting_approval' : 'queued';
+        const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
         db.prepare(`
           UPDATE tasks
           SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
             source = ?, requires_approval = ?, approved_at = NULL, lease_owner = NULL,
-            lease_expires_at = NULL, last_error = NULL, dead_letter_reason = NULL, updated_at = ?
+            lease_expires_at = NULL, last_error = ?, dead_letter_reason = NULL, updated_at = ?
           WHERE task_id = ?
         `).run(
           input.domainId,
@@ -348,7 +359,8 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           input.priority ?? 0,
           nextStatus,
           input.source ?? 'opl-cli',
-          input.requiresApproval ? 1 : 0,
+          requiresApproval ? 1 : 0,
+          initialLastError,
           createdAt,
           existing.task_id,
         );
@@ -363,6 +375,7 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
             previous_status: existing.status,
             next_status: nextStatus,
             reason: 'domain_export_changed_after_terminal_attempt',
+            active_hold_id: activeHold?.hold_id ?? null,
           },
         });
         insertNotification(db, {
@@ -370,7 +383,7 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           severity: 'info',
           title: 'Family runtime task requeued',
           body: `${input.domainId}:${taskKind}`,
-          payload: { status: nextStatus, dedupe_key: dedupeKey },
+          payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
         });
         return {
           accepted: true,
@@ -382,12 +395,12 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
       const deadLetterRedrive = deadLetterRedriveDecision(existingPayload, payload);
       const blockedRedrive = masDefaultExecutorBlockedRedriveDecision(existing, existingPayload, payload);
       if (exportedTaskChanged && blockedRedrive) {
-        const nextStatus: FamilyRuntimeTaskStatus = input.requiresApproval ? 'waiting_approval' : 'queued';
+        const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
         db.prepare(`
           UPDATE tasks
           SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
             attempts = 0, source = ?, requires_approval = ?, approved_at = NULL,
-            lease_owner = NULL, lease_expires_at = NULL, last_error = NULL,
+            lease_owner = NULL, lease_expires_at = NULL, last_error = ?,
             dead_letter_reason = NULL, updated_at = ?
           WHERE task_id = ?
         `).run(
@@ -397,7 +410,8 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           input.priority ?? 0,
           nextStatus,
           input.source ?? 'opl-cli',
-          input.requiresApproval ? 1 : 0,
+          requiresApproval ? 1 : 0,
+          initialLastError,
           createdAt,
           existing.task_id,
         );
@@ -411,6 +425,7 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
             dedupe_key: dedupeKey,
             previous_status: existing.status,
             next_status: nextStatus,
+            active_hold_id: activeHold?.hold_id ?? null,
             ...blockedRedrive,
           },
         });
@@ -419,7 +434,7 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           severity: 'info',
           title: 'Family runtime task requeued after domain owner update',
           body: `${input.domainId}:${taskKind}`,
-          payload: { status: nextStatus, dedupe_key: dedupeKey },
+          payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
         });
         return {
           accepted: true,
@@ -429,12 +444,12 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         };
       }
       if (existing.status === 'dead_letter' && exportedTaskChanged && deadLetterRedrive) {
-        const nextStatus: FamilyRuntimeTaskStatus = input.requiresApproval ? 'waiting_approval' : 'queued';
+        const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
         db.prepare(`
           UPDATE tasks
           SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
             attempts = 0, source = ?, requires_approval = ?, approved_at = NULL,
-            lease_owner = NULL, lease_expires_at = NULL, last_error = NULL,
+            lease_owner = NULL, lease_expires_at = NULL, last_error = ?,
             dead_letter_reason = NULL, updated_at = ?
           WHERE task_id = ?
         `).run(
@@ -444,7 +459,8 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           input.priority ?? 0,
           nextStatus,
           input.source ?? 'opl-cli',
-          input.requiresApproval ? 1 : 0,
+          requiresApproval ? 1 : 0,
+          initialLastError,
           createdAt,
           existing.task_id,
         );
@@ -458,6 +474,7 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
             dedupe_key: dedupeKey,
             previous_status: existing.status,
             next_status: nextStatus,
+            active_hold_id: activeHold?.hold_id ?? null,
             ...deadLetterRedrive,
           },
         });
@@ -466,7 +483,7 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           severity: 'info',
           title: 'Family runtime task requeued after domain owner update',
           body: `${input.domainId}:${taskKind}`,
-          payload: { status: nextStatus, dedupe_key: dedupeKey },
+          payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
         });
         return {
           accepted: true,
@@ -503,7 +520,7 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
       dedupeKey,
       priority: input.priority,
       source: input.source,
-      requiresApproval: input.requiresApproval,
+      requiresApproval,
       createdAt,
     });
     const liveDispatchAttempt = findLiveMasDefaultExecutorDispatchAttempt(db, candidate, payload);
@@ -559,7 +576,6 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
     payload,
     createdAt,
   ]);
-  const status: FamilyRuntimeTaskStatus = input.requiresApproval ? 'waiting_approval' : 'queued';
   const task = {
     task_id: taskId,
     domain_id: input.domainId,
@@ -567,15 +583,15 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
     payload_json: JSON.stringify(payload),
     dedupe_key: dedupeKey,
     priority: input.priority ?? 0,
-    status,
+    status: initialStatus,
     attempts: 0,
     max_attempts: DEFAULT_MAX_ATTEMPTS,
     source: input.source ?? 'opl-cli',
-    requires_approval: input.requiresApproval ? 1 : 0,
+    requires_approval: requiresApproval ? 1 : 0,
     approved_at: null,
     lease_owner: null,
     lease_expires_at: null,
-    last_error: null,
+    last_error: initialLastError,
     dead_letter_reason: null,
     created_at: createdAt,
     updated_at: createdAt,
@@ -596,9 +612,14 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
   insertEvent(db, {
     taskId,
     domainId: input.domainId,
-    eventType: status === 'waiting_approval' ? 'task_waiting_approval' : 'task_enqueued',
+    eventType: initialStatus === 'waiting_approval' ? 'task_waiting_approval' : 'task_enqueued',
     source: input.source ?? 'opl-cli',
-    payload: { task_kind: taskKind, dedupe_key: dedupeKey },
+    payload: {
+      task_kind: taskKind,
+      dedupe_key: dedupeKey,
+      active_hold_id: activeHold?.hold_id ?? null,
+      active_hold_reason: activeHold?.reason ?? null,
+    },
   });
   if (deferredMasDefaultExecutorLiveAttempt) {
     const { liveAttempt, liveDispatchAttemptMatched, lease } = deferredMasDefaultExecutorLiveAttempt;
@@ -636,9 +657,9 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
   insertNotification(db, {
     taskId,
     severity: 'info',
-    title: status === 'waiting_approval' ? 'Family runtime task waiting for approval' : 'Family runtime task queued',
+    title: initialStatus === 'waiting_approval' ? 'Family runtime task waiting for approval' : 'Family runtime task queued',
     body: `${input.domainId}:${taskKind}`,
-    payload: { status },
+    payload: { status: initialStatus, active_hold_id: activeHold?.hold_id ?? null },
   });
   return {
     accepted: true,

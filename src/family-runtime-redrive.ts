@@ -15,6 +15,7 @@ import {
   type FamilyRuntimeTaskRow,
   type FamilyRuntimeTaskStatus,
 } from './family-runtime-store.ts';
+import { activeQueueHoldForTaskInput } from './family-runtime-queue-holds.ts';
 
 const PROVIDER_TRANSPORT_REDRIVE_REASONS = [
   'temporal_stage_attempt_start_failed',
@@ -30,9 +31,53 @@ type ProviderTransportRedriveReason = typeof PROVIDER_TRANSPORT_REDRIVE_REASONS[
 type ProviderStageAttemptRedriveReason = typeof PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS[number];
 type ProviderTransportRedriveTrigger = 'operator' | 'auto';
 type StageAttemptPayload = ReturnType<typeof listStageAttemptsForTask>[number];
+type RedriveAdmission = ReturnType<typeof redriveAdmissionForTask>;
 
 function parsePayload(row: FamilyRuntimeTaskRow) {
   return JSON.parse(row.payload_json) as Record<string, unknown>;
+}
+
+function redriveAdmissionForTask(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+) {
+  const activeHold = activeQueueHoldForTaskInput(db, {
+    domainId: row.domain_id,
+    taskKind: row.task_kind,
+    payload,
+  });
+  return {
+    activeHold,
+    nextStatus: (row.requires_approval || activeHold ? 'waiting_approval' : 'queued') as FamilyRuntimeTaskStatus,
+    requiresApproval: row.requires_approval || Boolean(activeHold),
+    lastError: activeHold?.reason ?? null,
+  };
+}
+
+function createRedrivenAttemptForAdmission(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+  admission: RedriveAdmission,
+  eventSource: string,
+) {
+  if (admission.nextStatus !== 'queued') {
+    return null;
+  }
+  return ensureProviderHostedStageAttempt(db, row, payload, {
+    newAttempt: true,
+    eventSource,
+  });
+}
+
+function redriveAdmissionEventPayload(admission: RedriveAdmission) {
+  return {
+    redrive_admission_status: admission.nextStatus,
+    provider_redrive_started: admission.nextStatus === 'queued',
+    held_by_active_hold: Boolean(admission.activeHold),
+    active_hold_id: admission.activeHold?.hold_id ?? null,
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -199,13 +244,14 @@ function redriveTerminalProviderTransportTask(
         },
       );
     }
-    const nextStatus: FamilyRuntimeTaskStatus = currentRow.requires_approval ? 'waiting_approval' : 'queued';
+    const admission = redriveAdmissionForTask(db, currentRow, currentPayload);
+    const nextStatus = admission.nextStatus;
     const claim = db.prepare(`
       UPDATE tasks
-      SET status = ?, attempts = 0, lease_owner = NULL, lease_expires_at = NULL,
-        last_error = NULL, dead_letter_reason = NULL, updated_at = ?
+      SET status = ?, attempts = 0, requires_approval = ?, lease_owner = NULL, lease_expires_at = NULL,
+        last_error = ?, dead_letter_reason = NULL, updated_at = ?
       WHERE task_id = ?
-    `).run(nextStatus, redrivenAt, currentRow.task_id);
+    `).run(nextStatus, admission.requiresApproval ? 1 : 0, admission.lastError, redrivenAt, currentRow.task_id);
     if (claim.changes === 0) {
       const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(currentRow.task_id) as
         | FamilyRuntimeTaskRow
@@ -220,10 +266,7 @@ function redriveTerminalProviderTransportTask(
         redriven_stage_attempt: null,
       };
     }
-    const redrivenAttempt = ensureProviderHostedStageAttempt(db, currentRow, currentPayload, {
-      newAttempt: true,
-      eventSource,
-    });
+    const redrivenAttempt = createRedrivenAttemptForAdmission(db, currentRow, currentPayload, admission, eventSource);
     const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(currentRow.task_id) as
       FamilyRuntimeTaskRow;
     insertEvent(db, {
@@ -234,6 +277,7 @@ function redriveTerminalProviderTransportTask(
       payload: {
         previous_status: currentRow.status,
         next_status: nextStatus,
+        ...redriveAdmissionEventPayload(admission),
         previous_dead_letter_reason: currentRow.dead_letter_reason,
         previous_last_error: currentRow.last_error,
         previous_stage_attempt_id: terminalAttempt.stage_attempt_id,
@@ -258,6 +302,8 @@ function redriveTerminalProviderTransportTask(
       requeued_from_terminal: true,
       task: taskToPayload(refreshed),
       redriven_stage_attempt: redrivenAttempt,
+      provider_redrive_started: Boolean(redrivenAttempt),
+      held_by_active_hold: Boolean(admission.activeHold),
     };
   } catch (error) {
     try {
@@ -318,13 +364,21 @@ export function redriveBlockedMasDefaultExecutorProviderTransportTask(
     const currentPayload = parsePayload(currentRow);
     assertMasDefaultExecutorTask(currentRow, currentPayload);
     assertProviderTransportRedriveReason(currentRow.dead_letter_reason);
-    const nextStatus: FamilyRuntimeTaskStatus = currentRow.requires_approval ? 'waiting_approval' : 'queued';
+    const admission = redriveAdmissionForTask(db, currentRow, currentPayload);
+    const nextStatus = admission.nextStatus;
     const claim = db.prepare(`
       UPDATE tasks
-      SET status = ?, attempts = 0, lease_owner = NULL, lease_expires_at = NULL,
-        last_error = NULL, dead_letter_reason = NULL, updated_at = ?
+      SET status = ?, attempts = 0, requires_approval = ?, lease_owner = NULL, lease_expires_at = NULL,
+        last_error = ?, dead_letter_reason = NULL, updated_at = ?
       WHERE task_id = ? AND status = 'blocked' AND dead_letter_reason = ?
-    `).run(nextStatus, redrivenAt, currentRow.task_id, currentRow.dead_letter_reason);
+    `).run(
+      nextStatus,
+      admission.requiresApproval ? 1 : 0,
+      admission.lastError,
+      redrivenAt,
+      currentRow.task_id,
+      currentRow.dead_letter_reason,
+    );
     if (claim.changes === 0) {
       const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(currentRow.task_id) as
         | FamilyRuntimeTaskRow
@@ -339,10 +393,7 @@ export function redriveBlockedMasDefaultExecutorProviderTransportTask(
         redriven_stage_attempt: null,
       };
     }
-    const redrivenAttempt = ensureProviderHostedStageAttempt(db, currentRow, currentPayload, {
-      newAttempt: true,
-      eventSource,
-    });
+    const redrivenAttempt = createRedrivenAttemptForAdmission(db, currentRow, currentPayload, admission, eventSource);
     const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(currentRow.task_id) as
       FamilyRuntimeTaskRow;
     insertEvent(db, {
@@ -353,6 +404,7 @@ export function redriveBlockedMasDefaultExecutorProviderTransportTask(
       payload: {
         previous_status: currentRow.status,
         next_status: nextStatus,
+        ...redriveAdmissionEventPayload(admission),
         previous_dead_letter_reason: currentRow.dead_letter_reason,
         previous_last_error: currentRow.last_error,
         ...(input.trigger === 'operator'
@@ -383,6 +435,8 @@ export function redriveBlockedMasDefaultExecutorProviderTransportTask(
       requeued_from_terminal: true,
       task: taskToPayload(refreshed),
       redriven_stage_attempt: redrivenAttempt,
+      provider_redrive_started: Boolean(redrivenAttempt),
+      held_by_active_hold: Boolean(admission.activeHold),
     };
   } catch (error) {
     try {
@@ -448,13 +502,14 @@ function redriveRetryBudgetDeadLetterMasDefaultExecutorProviderTask(
         },
       );
     }
-    const nextStatus: FamilyRuntimeTaskStatus = currentRow.requires_approval ? 'waiting_approval' : 'queued';
+    const admission = redriveAdmissionForTask(db, currentRow, currentPayload);
+    const nextStatus = admission.nextStatus;
     const claim = db.prepare(`
       UPDATE tasks
-      SET status = ?, attempts = 0, lease_owner = NULL, lease_expires_at = NULL,
-        last_error = NULL, dead_letter_reason = NULL, updated_at = ?
+      SET status = ?, attempts = 0, requires_approval = ?, lease_owner = NULL, lease_expires_at = NULL,
+        last_error = ?, dead_letter_reason = NULL, updated_at = ?
       WHERE task_id = ? AND status = 'dead_letter' AND dead_letter_reason = 'retry_budget_exhausted'
-    `).run(nextStatus, redrivenAt, currentRow.task_id);
+    `).run(nextStatus, admission.requiresApproval ? 1 : 0, admission.lastError, redrivenAt, currentRow.task_id);
     if (claim.changes === 0) {
       const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(currentRow.task_id) as
         | FamilyRuntimeTaskRow
@@ -469,10 +524,7 @@ function redriveRetryBudgetDeadLetterMasDefaultExecutorProviderTask(
         redriven_stage_attempt: null,
       };
     }
-    const redrivenAttempt = ensureProviderHostedStageAttempt(db, currentRow, currentPayload, {
-      newAttempt: true,
-      eventSource,
-    });
+    const redrivenAttempt = createRedrivenAttemptForAdmission(db, currentRow, currentPayload, admission, eventSource);
     const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(currentRow.task_id) as
       FamilyRuntimeTaskRow;
     insertEvent(db, {
@@ -483,6 +535,7 @@ function redriveRetryBudgetDeadLetterMasDefaultExecutorProviderTask(
       payload: {
         previous_status: currentRow.status,
         next_status: nextStatus,
+        ...redriveAdmissionEventPayload(admission),
         previous_dead_letter_reason: currentRow.dead_letter_reason,
         previous_last_error: currentRow.last_error,
         operator_reason: input.operatorReason,
@@ -505,6 +558,8 @@ function redriveRetryBudgetDeadLetterMasDefaultExecutorProviderTask(
       requeued_from_terminal: true,
       task: taskToPayload(refreshed),
       redriven_stage_attempt: redrivenAttempt,
+      provider_redrive_started: Boolean(redrivenAttempt),
+      held_by_active_hold: Boolean(admission.activeHold),
     };
   } catch (error) {
     try {
@@ -586,6 +641,8 @@ export function redriveFamilyRuntimeTask(
         status: result.task?.status ?? null,
         operator_reason: operatorReason,
         redriven_stage_attempt_id: result.redriven_stage_attempt?.stage_attempt_id ?? null,
+        provider_redrive_started: result.provider_redrive_started ?? null,
+        held_by_active_hold: result.held_by_active_hold ?? null,
       },
     });
   }

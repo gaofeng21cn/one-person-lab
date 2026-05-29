@@ -6,7 +6,7 @@ import {
   path,
 } from './helpers.ts';
 
-import { createStageAttemptTable } from '../../../../../src/family-runtime-stage-attempts.ts';
+import { createFamilyRuntimeQueueTables } from '../../../../../src/family-runtime-store.ts';
 
 export function withIsolatedFamilyRuntimeEnv<T>(fn: () => T) {
   const previous = {
@@ -39,49 +39,7 @@ export function withIsolatedFamilyRuntimeEnv<T>(fn: () => T) {
 }
 
 export function createQueueTables(db: DatabaseSync) {
-  db.exec(`
-    CREATE TABLE tasks (
-      task_id TEXT PRIMARY KEY,
-      domain_id TEXT NOT NULL,
-      task_kind TEXT NOT NULL,
-      payload_json TEXT NOT NULL,
-      dedupe_key TEXT UNIQUE,
-      priority INTEGER NOT NULL,
-      status TEXT NOT NULL,
-      attempts INTEGER NOT NULL,
-      max_attempts INTEGER NOT NULL,
-      source TEXT NOT NULL,
-      requires_approval INTEGER NOT NULL,
-      approved_at TEXT,
-      lease_owner TEXT,
-      lease_expires_at TEXT,
-      last_error TEXT,
-      dead_letter_reason TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-    CREATE TABLE events (
-      event_id TEXT PRIMARY KEY,
-      task_id TEXT,
-      domain_id TEXT,
-      event_type TEXT NOT NULL,
-      source TEXT NOT NULL,
-      payload_json TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE notifications (
-      notification_id TEXT PRIMARY KEY,
-      task_id TEXT,
-      severity TEXT NOT NULL,
-      title TEXT NOT NULL,
-      body TEXT NOT NULL,
-      channel TEXT NOT NULL,
-      status TEXT NOT NULL,
-      payload_json TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-  `);
-  createStageAttemptTable(db);
+  createFamilyRuntimeQueueTables(db);
 }
 
 export function defaultExecutorPayload(sourceFingerprint: string) {
