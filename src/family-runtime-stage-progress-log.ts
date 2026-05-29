@@ -241,6 +241,7 @@ function statusFromObservedCount(count: number) {
 }
 
 function durationForUserStageLog(input: StageProgressLogInput, durationMsObserved: number | null) {
+  const telemetryObserved = Number(input.usageProjection.duration.observed_count) > 0;
   const providerDurationMs = msBetween(input.providerRun.started_at, input.providerRun.completed_at);
   const attemptWallClockMs = msBetween(input.createdAt, input.updatedAt);
   const durationMs = durationMsObserved ?? providerDurationMs ?? attemptWallClockMs;
@@ -252,12 +253,12 @@ function durationForUserStageLog(input: StageProgressLogInput, durationMsObserve
         ? 'stage_attempt_created_updated_at_fallback'
         : null;
   return {
-    status: durationMs !== null ? 'observed' : 'missing',
+    status: telemetryObserved ? 'observed' : 'missing',
     duration_ms: durationMs,
     duration_source: durationSource,
-    duration_telemetry_status: Number(input.usageProjection.duration.observed_count) > 0 ? 'observed' : 'missing',
+    duration_telemetry_status: telemetryObserved ? 'observed' : 'missing',
     telemetry_fallback_used: durationMsObserved === null && durationMs !== null,
-    missing_duration_reason: durationMs !== null ? null : 'no_duration_telemetry_or_attempt_timestamps_observed',
+    missing_duration_reason: telemetryObserved ? null : 'no_stage_attempt_duration_telemetry_observed',
   };
 }
 
@@ -284,6 +285,22 @@ function costForUserStageLog(input: StageProgressLogInput) {
     observed_count: Number(usage.cost.observed_count),
     source_refs: usage.cost.source_refs,
     missing_cost_reason: observed ? null : 'no_stage_attempt_cost_telemetry_observed',
+  };
+}
+
+function observabilityForUserStageLog(
+  duration: ReturnType<typeof durationForUserStageLog>,
+  tokens: ReturnType<typeof tokenUsageForUserStageLog>,
+  cost: ReturnType<typeof costForUserStageLog>,
+) {
+  const missingFields = [
+    duration.duration_telemetry_status === 'missing' ? 'duration' : null,
+    tokens.status === 'missing' ? 'token_usage' : null,
+    cost.status === 'missing' ? 'cost' : null,
+  ].filter((field): field is string => Boolean(field));
+  return {
+    observability_status: missingFields.length === 0 ? 'observed' : 'missing',
+    missing_observability_fields: missingFields,
   };
 }
 
@@ -406,10 +423,13 @@ function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: num
     ),
   ]);
   const semanticStatus = semanticSummary ? 'provided_by_domain' : 'missing_domain_semantic_summary';
+  const observability = observabilityForUserStageLog(duration, tokens, cost);
   return {
     surface_kind: 'opl_user_stage_log',
     projection_policy: 'opl_time_usage_refs_plus_domain_provided_human_semantics_no_domain_inference',
     semantic_status: semanticStatus,
+    observability_status: observability.observability_status,
+    missing_observability_fields: observability.missing_observability_fields,
     semantic_source: semanticSource,
     stage_name: stageName,
     problem_summary: problemSummary,
@@ -604,7 +624,7 @@ export function summarizeStageProgressLogs(
   const userDurationObserved = projections.filter((projection) =>
     projection.user_stage_log.duration.status === 'observed'
   );
-  const userDurationFallback = userDurationObserved.filter((projection) =>
+  const userDurationFallback = projections.filter((projection) =>
     projection.user_stage_log.duration.telemetry_fallback_used === true
   );
   const activityEventRefs = uniqueStrings(projections.flatMap((projection) =>

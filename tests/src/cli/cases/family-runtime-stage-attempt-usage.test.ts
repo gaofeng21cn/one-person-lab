@@ -54,6 +54,22 @@ events.push({
   cost_summary: {
     cost_status: 'observed',
     estimated_cost_usd: 0.42,
+    usage_ref: 'codex_session_usage:session-usage-projection#sha256:abc123',
+    session_usage_refs: {
+      session_ref: 'codex_session:session-usage-projection',
+      time_window: {
+        started_at: '2026-05-16T00:00:00.000Z',
+        completed_at: '2026-05-16T00:05:00.000Z'
+      },
+      token_delta: {
+        input_tokens: 1200,
+        output_tokens: 340,
+        total_tokens: 1540
+      },
+      source_path: '/tmp/codex-home/sessions/2026/05/16/session-usage-projection.jsonl',
+      source_hash: 'sha256:abc123',
+      billing_boundary: 'refs_only_absolute_cumulative_total_delta'
+    },
     token_usage: {
       input_tokens: 1200,
       output_tokens: 340,
@@ -103,6 +119,8 @@ db.close();`;
     assert.equal(projection.retry_budget.pressure_status, 'retry_budget_available');
     assert.equal(projection.source_refs.includes(`stage_attempt:${attemptId}#retry_budget`), true);
     assert.equal(projection.source_refs.includes(`stage_attempt:${attemptId}#route_impact.usage_projection`), true);
+    assert.equal(projection.token.source_refs.includes('codex_session_usage:session-usage-projection#sha256:abc123'), true);
+    assert.equal(projection.source_refs.includes('codex_session:session-usage-projection'), true);
     assert.equal(projection.authority_boundary.can_change_executor, false);
     assert.equal(projection.authority_boundary.can_auto_degrade, false);
     assert.equal(visibility.usage_projection.token.total_tokens_observed, 1820);
@@ -185,6 +203,8 @@ db.close();`;
     assert.equal(userStageLog.duration.duration_ms, 600000);
     assert.equal(userStageLog.duration.duration_source, 'stage_attempt_created_updated_at_fallback');
     assert.equal(userStageLog.duration.telemetry_fallback_used, true);
+    assert.equal(userStageLog.observability_status, 'missing');
+    assert.deepEqual(userStageLog.missing_observability_fields, ['duration', 'token_usage', 'cost']);
     assert.equal(userStageLog.token_usage.status, 'missing');
     assert.equal(userStageLog.token_usage.total_tokens, null);
     assert.equal(
@@ -628,7 +648,7 @@ test('runtime snapshot projects stage attempt usage pressure into workbench grou
     assert.equal(workbench.summary.stage_progress_log.surface_kind, 'opl_stage_progress_log_summary');
     assert.equal(workbench.summary.stage_progress_log.attempt_count, 2);
     assert.equal(workbench.summary.stage_progress_log.duration_observed_attempt_count, 1);
-    assert.equal(workbench.summary.stage_progress_log.user_duration_observed_attempt_count, 2);
+    assert.equal(workbench.summary.stage_progress_log.user_duration_observed_attempt_count, 1);
     assert.equal(workbench.summary.stage_progress_log.user_duration_fallback_attempt_count, 1);
     assert.equal(workbench.summary.stage_progress_log.missing_usage_telemetry_attempt_count, 1);
     assert.equal(workbench.summary.stage_progress_log.temporal_attempt_count, 0);
@@ -638,6 +658,9 @@ test('runtime snapshot projects stage attempt usage pressure into workbench grou
     assert.equal(workbench.attempt_history.attempt_count, 2);
     const historyEntry = workbench.attempt_history.entries.find((entry: { stage_attempt_id: string }) =>
       entry.stage_attempt_id === completed.family_runtime_stage_attempt.attempt.stage_attempt_id
+    );
+    const deadLetterHistoryEntry = workbench.attempt_history.entries.find((entry: { stage_attempt_id: string }) =>
+      entry.stage_attempt_id === deadLetterAttemptId
     );
     assert.equal(historyEntry.task_id, null);
     assert.equal(historyEntry.stage_name, 'Analysis campaign evidence projection');
@@ -651,6 +674,10 @@ test('runtime snapshot projects stage attempt usage pressure into workbench grou
     assert.deepEqual(historyEntry.changed_stage_surfaces, ['stage_attempt_workbench']);
     assert.equal(historyEntry.token_usage.status, 'missing');
     assert.equal(historyEntry.cost.status, 'missing');
+    assert.equal(historyEntry.observability_status, 'missing');
+    assert.deepEqual(historyEntry.missing_observability_fields, ['token_usage', 'cost']);
+    assert.equal(deadLetterHistoryEntry.observability_status, 'missing');
+    assert.deepEqual(deadLetterHistoryEntry.missing_observability_fields, ['duration', 'token_usage', 'cost']);
     assert.equal(historyEntry.outcome, 'completed_with_domain_gate_pending');
     assert.deepEqual(historyEntry.remaining_blockers, ['MAS owner receipt still owns domain-ready status.']);
     assert.equal(historyEntry.usage_refs.includes('usage:analysis'), true);

@@ -31,6 +31,36 @@ function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
+function refsFromUnknown(value: unknown): string[] {
+  if (typeof value === 'string' && value.trim()) {
+    return [value.trim()];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap(refsFromUnknown);
+  }
+  if (isRecord(value)) {
+    return [
+      stringValue(value.session_ref),
+      stringValue(value.usage_ref),
+      stringValue(value.ref),
+      stringValue(value.ref_id),
+    ].filter((ref): ref is string => Boolean(ref));
+  }
+  return [];
+}
+
+function usageRefs(usage: JsonRecord) {
+  const nestedCost = usageRecord(usage.cost_summary);
+  return uniqueStrings([
+    ...refsFromUnknown(usage.usage_ref),
+    ...refsFromUnknown(usage.usage_refs),
+    ...refsFromUnknown(usage.session_usage_refs),
+    ...refsFromUnknown(nestedCost.usage_ref),
+    ...refsFromUnknown(nestedCost.usage_refs),
+    ...refsFromUnknown(nestedCost.session_usage_refs),
+  ]);
+}
+
 function add(sourceRefs: string[], ref: string, value: number | null) {
   return value === null ? 0 : (sourceRefs.push(ref), value);
 }
@@ -149,10 +179,14 @@ export function buildStageAttemptUsageProjection(input: StageAttemptUsageInput) 
     const usage = entry.usage;
     const nestedCost = usageRecord(usage.cost_summary);
     const tokens = tokenUsage(usage.token_usage) ?? tokenUsage(nestedCost.token_usage);
+    const entryUsageRefs = usageRefs(usage);
+    sourceRefs.push(...entryUsageRefs);
     if (tokens) {
-      inputTokens += add(tokenSourceRefs, entry.ref, tokens.input_tokens);
-      outputTokens += add(tokenSourceRefs, entry.ref, tokens.output_tokens);
-      totalTokens += add(tokenSourceRefs, entry.ref, tokens.total_tokens);
+      const tokenRefs = entryUsageRefs.length > 0 ? entryUsageRefs : [entry.ref];
+      inputTokens += add(tokenSourceRefs, tokenRefs[0]!, tokens.input_tokens);
+      outputTokens += add(tokenSourceRefs, tokenRefs[0]!, tokens.output_tokens);
+      totalTokens += add(tokenSourceRefs, tokenRefs[0]!, tokens.total_tokens);
+      tokenSourceRefs.push(...tokenRefs.slice(1));
       if (tokens.input_tokens !== null || tokens.output_tokens !== null || tokens.total_tokens !== null) {
         tokenObservedCount += 1;
       }

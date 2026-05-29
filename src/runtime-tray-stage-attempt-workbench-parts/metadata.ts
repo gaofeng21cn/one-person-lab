@@ -287,6 +287,8 @@ function buildAttemptHistory(attempts: StageAttemptProjection[], projectionScope
       duration,
       token_usage: tokenUsage,
       cost,
+      observability_status: optionalString(userLog.observability_status) ?? 'missing',
+      missing_observability_fields: stringListFrom(userLog.missing_observability_fields),
       usage_refs: usageRefs(attempt),
       cost_refs: costRefs(attempt),
       evidence_refs: uniqueStrings([

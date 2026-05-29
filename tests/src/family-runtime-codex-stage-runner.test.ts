@@ -615,6 +615,127 @@ exit 64
   }
 });
 
+test('Codex stage runner ingests session usage as refs-only cumulative total deltas', async () => {
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    closeout_refs: ['receipt:codex-session-usage-closeout'],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'domain_gate_pending',
+  };
+  const threadId = 'thread-session-usage-delta';
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"timestamp":"2026-05-29T01:00:00.000Z","type":"session_meta","payload":{"id":"${threadId}"}}\\n'
+  printf '{"type":"event_msg","payload":{"last_token_usage":{"input_tokens":999,"output_tokens":999,"total_tokens":1998}}}\\n'
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  const previousCodexHome = process.env.CODEX_HOME;
+  const codexHome = path.join(fixtureRoot, 'codex-home');
+  const sessionDir = path.join(codexHome, 'sessions', '2026', '05', '29');
+  fs.mkdirSync(sessionDir, { recursive: true });
+  const sessionPath = path.join(sessionDir, `rollout-2026-05-29T01-00-00-${threadId}.jsonl`);
+  fs.writeFileSync(sessionPath, [
+    JSON.stringify({
+      timestamp: '2026-05-29T01:00:00.000Z',
+      type: 'session_meta',
+      payload: { id: threadId },
+    }),
+    JSON.stringify({
+      timestamp: '2026-05-29T01:00:05.000Z',
+      type: 'event_msg',
+      payload: {
+        absolute_cumulative_token_usage: {
+          input_tokens: 100,
+          output_tokens: 50,
+          total_tokens: 150,
+        },
+      },
+    }),
+    JSON.stringify({
+      timestamp: '2026-05-29T01:06:00.000Z',
+      type: 'event_msg',
+      payload: {
+        absolute_cumulative_token_usage: {
+          input_tokens: 260,
+          output_tokens: 140,
+          total_tokens: 400,
+        },
+      },
+    }),
+    JSON.stringify({
+      timestamp: '2026-05-29T01:06:00.500Z',
+      type: 'response_item',
+      payload: {
+        type: 'message',
+        role: 'assistant',
+        content: [{ type: 'output_text', text: JSON.stringify(closeout) }],
+        phase: 'final_answer',
+      },
+    }),
+    JSON.stringify({
+      timestamp: '2026-05-29T01:06:01.000Z',
+      type: 'event_msg',
+      payload: {
+        last_token_usage: {
+          input_tokens: 999,
+          output_tokens: 999,
+          total_tokens: 1998,
+        },
+      },
+    }),
+    '',
+  ].join('\n'));
+
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    process.env.CODEX_HOME = codexHome;
+    const receipt = await runCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_session_usage_delta_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['checkpoint:session-usage-delta'],
+      },
+      stagePacketRef: 'packet:session-usage-delta',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+    });
+
+    assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
+    assert.equal(receipt.cost_summary.token_usage.total_tokens, 250);
+    assert.equal(receipt.cost_summary.token_usage.input_tokens, 160);
+    assert.equal(receipt.cost_summary.token_usage.output_tokens, 90);
+    assert.equal(receipt.cost_summary.session_usage_refs?.session_ref, `codex_session:${threadId}`);
+    assert.equal(receipt.cost_summary.session_usage_refs?.source_path, sessionPath);
+    assert.match(receipt.cost_summary.session_usage_refs?.source_hash ?? '', /^sha256:/);
+    assert.deepEqual(receipt.cost_summary.session_usage_refs?.time_window, {
+      started_at: '2026-05-29T01:00:05.000Z',
+      completed_at: '2026-05-29T01:06:00.000Z',
+    });
+    assert.equal(receipt.cost_summary.session_usage_refs?.billing_boundary, 'refs_only_absolute_cumulative_total_delta');
+    assert.equal(
+      receipt.cost_summary.session_usage_refs?.ignored_usage_fields.includes('last_token_usage'),
+      true,
+    );
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    previousCodexHome === undefined
+      ? delete process.env.CODEX_HOME
+      : process.env.CODEX_HOME = previousCodexHome;
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('Codex stage runner waits briefly for delayed session JSONL closeout flush', async () => {
   const closeout = {
     surface_kind: 'domain_stage_closeout_packet',
