@@ -38,6 +38,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - App drilldown 的 manifest-cache 等独立测试场景必须独立成 case 文件，删除低于默认行数后的 retired baseline。
 - 该规则只恢复 OPL repo 结构验证与可维护性，不改变 MAS/MAG/RCA truth、quality verdict、artifact authority 或 owner receipt 边界。
 
+### 决策：Temporal provider 与长 CLI case 的 line-budget 恢复同样走 parts/cases 拆分
+
+原因：同一 line-budget 规则适用于 provider runtime 与长 CLI test case。若 `family-runtime-temporal-provider.ts` 或 provider/system/MAS 相关测试超过 locked baseline，优先把稳定子职责迁入 `family-runtime-temporal-provider-parts/` 或独立 `tests/src/cli/cases/**` case/helper 文件；文件回到默认预算内后同步删除 retired baseline。
+
+影响：
+
+- `family-runtime-temporal-provider.ts` 保持 public export aggregator 与 worker lifecycle 入口；scheduler cadence 等独立 provider primitive 放在 provider parts 模块。
+- 长测试按行为组拆分，聚合入口负责 import coverage，不用单文件继续承载所有 system/provider case。
+- 该规则只治理 repo-source maintainability 和标准验证可执行性，不声明 provider production long-soak、domain ready、owner-chain closeout 或 global goal complete。
+
 ## 2026-05-27
 
 ### 决策：用户可读 stage log 成为标准 OPL Agent admission 要求

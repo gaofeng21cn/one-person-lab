@@ -2,7 +2,6 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { ScheduleAlreadyRunning, ScheduleNotFoundError, ScheduleOverlapPolicy } from '@temporalio/client';
 import { WorkflowIdConflictPolicy, WorkflowIdReusePolicy } from '@temporalio/common';
 import { NativeConnection, Worker } from '@temporalio/worker';
 
@@ -14,8 +13,6 @@ import {
   guardTemporalStageAttemptWorkflowInputPayload,
   resolveTemporalNamespace,
   resolveTemporalTaskQueue,
-  SCHEDULER_TICK_WORKFLOW_RUN_TIMEOUT,
-  SCHEDULER_TICK_WORKFLOW_NAME,
   type TemporalStageAttemptSignalKind,
   type TemporalStageAttemptSignalPayload,
   type TemporalStageAttemptWorkflowInput,
@@ -91,6 +88,13 @@ import {
 export {
   queryTemporalStageAttemptWorkflow,
 } from './family-runtime-temporal-provider-parts/attempt-query.ts';
+export {
+  buildTemporalSchedulerHealthProjection,
+  ensureTemporalSchedulerCadence,
+  inspectTemporalSchedulerCadence,
+  removeTemporalSchedulerCadence,
+  triggerTemporalSchedulerCadence,
+} from './family-runtime-temporal-provider-parts/scheduler-cadence.ts';
 
 type TemporalLifecycleInspectionDetail = 'fast' | 'full';
 
@@ -98,11 +102,6 @@ type StageAttemptPayload = Parameters<typeof buildTemporalStageAttemptWorkflowIn
   stage_attempt_id: string;
   workflow_id: string;
   provider_kind: string;
-};
-
-type TemporalSchedulerInfoProjection = {
-  num_actions_skipped_overlap?: number;
-  running_actions?: unknown[];
 };
 
 function workflowModulePath() {
@@ -315,233 +314,6 @@ export async function signalTemporalStageAttemptWorkflow(input: {
       },
     };
   }, { paths: input.paths });
-}
-
-function temporalAddressForScheduler(paths: TemporalWorkerPaths) {
-  const { address } = resolveTemporalAddressForPaths(paths);
-  return address;
-}
-
-export function buildTemporalSchedulerHealthProjection(input: {
-  scheduleStatus: string;
-  info: TemporalSchedulerInfoProjection | null;
-}) {
-  const runningActions = Array.isArray(input.info?.running_actions)
-    ? input.info.running_actions
-    : [];
-  const skippedOverlap = Number.isFinite(input.info?.num_actions_skipped_overlap)
-    ? Number(input.info?.num_actions_skipped_overlap)
-    : 0;
-  const needsInstall = input.scheduleStatus === 'not_installed';
-  const needsAttention = needsInstall
-    || (input.scheduleStatus === 'active' && runningActions.length > 0);
-  return {
-    surface_kind: 'temporal_scheduler_cadence_health',
-    health_status: needsAttention ? 'attention_required' : 'healthy',
-    running_action_count: runningActions.length,
-    num_actions_skipped_overlap: skippedOverlap,
-    historical_overlap_skip_observed: skippedOverlap > 0,
-    overlap_policy: 'SKIP',
-    repair_action: needsInstall
-      ? {
-          action_id: 'install_scheduler_cadence',
-          reason: 'scheduler_cadence_not_installed',
-          next_command: 'opl family-runtime scheduler install --provider temporal',
-        }
-      : needsAttention
-        ? {
-          action_id: 'inspect_or_repair_stale_scheduler_tick',
-          reason: 'running_scheduler_tick_action_observed',
-          safe_first_steps: [
-            'opl family-runtime worker status --provider temporal',
-            'opl family-runtime worker stop --provider temporal',
-            'opl family-runtime worker start --provider temporal',
-            'temporal workflow describe --workflow-id <running_tick_workflow_id>',
-          ],
-          terminate_stale_workflow_requires_operator: true,
-          next_command: 'opl family-runtime scheduler status --provider temporal',
-        }
-        : {
-            action_id: 'none',
-            reason: skippedOverlap > 0
-              ? 'scheduler_cadence_healthy_historical_overlap_skip_retained'
-              : 'scheduler_cadence_healthy',
-            next_command: null,
-          },
-    authority_boundary: {
-      opl: 'scheduler_cadence_health_projection_only',
-      domain: 'truth_quality_artifact_gate_owner',
-      can_terminate_workflow_automatically: false,
-      can_write_domain_truth: false,
-    },
-  };
-}
-
-export async function ensureTemporalSchedulerCadence(paths: TemporalWorkerPaths, input: {
-  intervalMs?: number;
-  limit?: number;
-  hydrate?: boolean;
-} = {}) {
-  const intervalMs = input.intervalMs ?? 5 * 60 * 1000;
-  const scheduleId = 'opl-family-runtime-provider-scheduler';
-  const workflowId = 'opl-family-runtime-provider-scheduler-tick';
-  return withTemporalClient(async (client) => {
-    const options = {
-      scheduleId,
-      spec: {
-        intervals: [{ every: intervalMs }],
-      },
-      action: {
-        type: 'startWorkflow' as const,
-        workflowType: SCHEDULER_TICK_WORKFLOW_NAME,
-        workflowId,
-        taskQueue: resolveTemporalTaskQueue(),
-        workflowRunTimeout: SCHEDULER_TICK_WORKFLOW_RUN_TIMEOUT,
-        workflowExecutionTimeout: SCHEDULER_TICK_WORKFLOW_RUN_TIMEOUT,
-        args: [{
-          provider_kind: 'temporal',
-          tick_source: 'temporal-schedule',
-          force: false,
-          limit: input.limit ?? 10,
-          hydrate: input.hydrate ?? true,
-        }],
-      },
-      policies: {
-        overlap: ScheduleOverlapPolicy.SKIP,
-        catchupWindow: '5 minutes',
-      },
-      memo: {
-        owner: 'one-person-lab',
-        surface_kind: 'opl_family_runtime_temporal_scheduler',
-      },
-      state: {
-        note: 'OPL-owned family runtime provider scheduler; replaces domain LaunchAgent/supervision daemons.',
-      },
-    };
-    try {
-      const handle = await client.schedule.create(options);
-      return {
-        surface_kind: 'temporal_scheduler_cadence_install_receipt',
-        provider_kind: 'temporal',
-        install_status: 'created',
-        schedule_id: handle.scheduleId,
-        interval_ms: intervalMs,
-        workflow_id: workflowId,
-        task_queue: resolveTemporalTaskQueue(),
-      };
-    } catch (error) {
-      if (error instanceof ScheduleAlreadyRunning) {
-        const handle = client.schedule.getHandle(scheduleId);
-        await handle.update(() => ({
-          spec: options.spec,
-          action: options.action,
-          policies: options.policies,
-          state: {
-            paused: false,
-            note: options.state.note,
-          },
-        }));
-        return {
-          surface_kind: 'temporal_scheduler_cadence_install_receipt',
-          provider_kind: 'temporal',
-          install_status: 'updated_existing',
-          schedule_id: scheduleId,
-          interval_ms: intervalMs,
-          workflow_id: workflowId,
-          task_queue: resolveTemporalTaskQueue(),
-        };
-      }
-      throw error;
-    }
-  }, { addressOverride: temporalAddressForScheduler(paths) });
-}
-
-export async function inspectTemporalSchedulerCadence(paths: TemporalWorkerPaths) {
-  const scheduleId = 'opl-family-runtime-provider-scheduler';
-  return withTemporalClient(async (client) => {
-    try {
-      const description = await client.schedule.getHandle(scheduleId).describe();
-      return {
-        surface_kind: 'temporal_scheduler_cadence_status',
-        provider_kind: 'temporal',
-        schedule_status: description.state.paused ? 'paused' : 'active',
-        schedule_id: scheduleId,
-        action: description.action,
-        spec: description.spec,
-        policies: description.policies,
-        info: {
-          next_action_times: description.info.nextActionTimes.map((entry) => entry.toISOString()),
-          num_actions_taken: description.info.numActionsTaken,
-          num_actions_missed_catchup_window: description.info.numActionsMissedCatchupWindow,
-          num_actions_skipped_overlap: description.info.numActionsSkippedOverlap,
-          running_actions: description.info.runningActions,
-        },
-        health: buildTemporalSchedulerHealthProjection({
-          scheduleStatus: description.state.paused ? 'paused' : 'active',
-          info: {
-            num_actions_skipped_overlap: description.info.numActionsSkippedOverlap,
-            running_actions: description.info.runningActions,
-          },
-        }),
-      };
-    } catch (error) {
-      if (error instanceof ScheduleNotFoundError) {
-        return {
-          surface_kind: 'temporal_scheduler_cadence_status',
-          provider_kind: 'temporal',
-          schedule_status: 'not_installed',
-          schedule_id: scheduleId,
-          action: null,
-          spec: null,
-          policies: null,
-          info: null,
-          health: buildTemporalSchedulerHealthProjection({
-            scheduleStatus: 'not_installed',
-            info: null,
-          }),
-        };
-      }
-      throw error;
-    }
-  }, { addressOverride: temporalAddressForScheduler(paths) });
-}
-
-export async function removeTemporalSchedulerCadence(paths: TemporalWorkerPaths) {
-  const scheduleId = 'opl-family-runtime-provider-scheduler';
-  return withTemporalClient(async (client) => {
-    try {
-      await client.schedule.getHandle(scheduleId).delete();
-      return {
-        surface_kind: 'temporal_scheduler_cadence_remove_receipt',
-        provider_kind: 'temporal',
-        remove_status: 'deleted',
-        schedule_id: scheduleId,
-      };
-    } catch (error) {
-      if (error instanceof ScheduleNotFoundError) {
-        return {
-          surface_kind: 'temporal_scheduler_cadence_remove_receipt',
-          provider_kind: 'temporal',
-          remove_status: 'already_absent',
-          schedule_id: scheduleId,
-        };
-      }
-      throw error;
-    }
-  }, { addressOverride: temporalAddressForScheduler(paths) });
-}
-
-export async function triggerTemporalSchedulerCadence(paths: TemporalWorkerPaths) {
-  const scheduleId = 'opl-family-runtime-provider-scheduler';
-  return withTemporalClient(async (client) => {
-    await client.schedule.getHandle(scheduleId).trigger(ScheduleOverlapPolicy.SKIP);
-    return {
-      surface_kind: 'temporal_scheduler_cadence_trigger_receipt',
-      provider_kind: 'temporal',
-      trigger_status: 'triggered',
-      schedule_id: scheduleId,
-    };
-  }, { addressOverride: temporalAddressForScheduler(paths) });
 }
 
 export async function runTemporalStageAttemptWorkerUntil<T>(fn: () => Promise<T>) {
