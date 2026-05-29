@@ -5,7 +5,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-export function payloadValueAtPath(value: Record<string, unknown>, path: string) {
+function payloadValueAtPath(value: Record<string, unknown>, path: string) {
   return path.split('.').reduce<unknown>((current, segment) => {
     if (!segment || !isRecord(current)) {
       return undefined;
