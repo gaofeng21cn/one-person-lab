@@ -16,7 +16,7 @@ export type ErrorCode =
   | 'unknown_command'
   | 'codex_command_failed';
 
-export function defaultExitCode(code: ErrorCode): number {
+function defaultExitCode(code: ErrorCode): number {
   switch (code) {
     case 'cli_usage_error':
     case 'unknown_command':

@@ -47,7 +47,7 @@ export type EvidenceTailItem = EvidenceRequirement & {
 
 export const EVIDENCE_REQUIREMENT_MODEL_VERSION = 'evidence_requirement.v1';
 
-export const DEFAULT_EVIDENCE_NOT_AUTHORIZED_CLAIMS = [
+const DEFAULT_EVIDENCE_NOT_AUTHORIZED_CLAIMS = [
   'domain_ready',
   'quality_verdict',
   'artifact_authority',
