@@ -11,6 +11,12 @@ import type {
   StageProgressLogProjection,
 } from '../family-runtime-stage-progress-log.ts';
 import {
+  summarizeMemoryTraceProjections,
+} from '../runtime-tray-memory-locator-index.ts';
+import type {
+  MemoryTraceProjection,
+} from '../runtime-tray-memory-locator-index.ts';
+import {
   buildFamilyHumanReviewBurdenBudget,
 } from '../family-human-review-budget.ts';
 import {
@@ -33,6 +39,7 @@ type StageAttemptProjection = StageAttemptGenericProjectionInput & {
   filter_keys: JsonRecord;
   usage_projection: StageAttemptUsageProjection;
   stage_progress_log?: StageProgressLogProjection;
+  memory_trace_projection?: MemoryTraceProjection;
   control_loop_summary?: unknown;
   transition_bridge_evidence?: unknown;
   operator_conflicts?: unknown;
@@ -228,6 +235,12 @@ function groupAttempts(attempts: StageAttemptProjection[], keyFor: (attempt: Sta
           .filter((projection): projection is StageProgressLogProjection => Boolean(projection)),
         'stage_attempt_group',
       ),
+      memory_trace_projection: summarizeMemoryTraceProjections(
+        groupAttempts
+          .map((attempt) => attempt.memory_trace_projection)
+          .filter((projection): projection is MemoryTraceProjection => Boolean(projection)),
+        'stage_attempt_group',
+      ),
     },
   ]));
 }
@@ -391,6 +404,12 @@ export function buildWorkbenchMetadata(attempts: StageAttemptProjection[]) {
           .filter((projection): projection is StageProgressLogProjection => Boolean(projection)),
         'stage_attempt_workbench',
       ),
+      memory_trace_projection: summarizeMemoryTraceProjections(
+        attempts
+          .map((attempt) => attempt.memory_trace_projection)
+          .filter((projection): projection is MemoryTraceProjection => Boolean(projection)),
+        'stage_attempt_workbench',
+      ),
       ...buildWorkbenchGenericProjections(attempts),
       operator_conflict_count: operatorConflicts.length,
       control_loop_summary: buildWorkbenchControlLoopSummary(attempts),
@@ -440,6 +459,7 @@ export const EMPTY_WORKBENCH_METADATA = {
     },
     usage_projection: summarizeStageAttemptUsageProjections([], 'stage_attempt_workbench'),
     stage_progress_log: summarizeStageProgressLogs([], 'stage_attempt_workbench'),
+    memory_trace_projection: summarizeMemoryTraceProjections([], 'stage_attempt_workbench'),
     ...buildWorkbenchGenericProjections([]),
     control_loop_summary: buildWorkbenchControlLoopSummary([]),
     attempt_history: buildAttemptHistory([]),

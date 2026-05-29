@@ -1,5 +1,8 @@
 import type { StageAttemptUsageProjection } from './family-runtime-stage-attempt-usage.ts';
 import {
+  buildMemoryTraceProjection,
+} from './runtime-tray-memory-locator-index.ts';
+import {
   buildTemporalStageAttemptVisibility,
   buildTemporalWebUiRef,
   type TemporalStageAttemptVisibilityReadiness,
@@ -506,6 +509,16 @@ export function buildStageProgressLog(input: StageProgressLogInput) {
   ]);
   const durationMsObserved = numberValue(input.usageProjection.duration.duration_ms_observed);
   const userStageLog = buildUserStageLog(input, durationMsObserved);
+  const memoryTraceProjection = buildMemoryTraceProjection({
+    stage_attempt_id: input.stageAttemptId,
+    domain_id: input.domainId,
+    stage_id: input.stageId,
+    consumed_memory_refs: input.consumedMemoryRefs,
+    writeback_receipt_refs: input.writebackReceiptRefs,
+    rejected_writes: recordList(input.latestCloseout?.rejected_writes),
+    route_impact: input.routeImpact,
+    workspace_locator: input.workspaceLocator,
+  }, input.projectionScope ?? 'stage_attempt');
   const temporalVisibility = buildTemporalStageAttemptVisibility({
     providerKind: input.providerKind,
     stageAttemptId: input.stageAttemptId,
@@ -586,6 +599,7 @@ export function buildStageProgressLog(input: StageProgressLogInput) {
     },
     usage: input.usageProjection,
     usage_telemetry: usageTelemetry(input),
+    memory_trace_projection: memoryTraceProjection,
     user_stage_log: userStageLog,
     evidence_refs: {
       checkpoint_refs: input.checkpointRefs,
@@ -598,6 +612,14 @@ export function buildStageProgressLog(input: StageProgressLogInput) {
       typed_blocker_refs: typedBlockerRefs,
       route_refs: routeRefs,
       source_refs: sourceRefs,
+      memory_trace_refs: uniqueStrings([
+        ...memoryTraceProjection.consumed_memory_refs,
+        ...memoryTraceProjection.recall_trace_refs,
+        ...memoryTraceProjection.retrieval_trace_refs,
+        ...memoryTraceProjection.writeback_receipt_refs,
+        ...memoryTraceProjection.rejected_write_refs,
+        ...memoryTraceProjection.source_refs,
+      ]),
       dispatch_refs: dispatchRefs,
       stage_packet_refs: stagePacketRefs(input),
       activity_event_refs: activityEventRefs(input),

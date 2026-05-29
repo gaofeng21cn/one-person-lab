@@ -142,6 +142,8 @@ export function buildAttemptGenericProjections(input: StageAttemptGenericProject
       consumed_memory_refs: input.consumed_memory_refs,
       writeback_receipt_refs: input.writeback_receipt_refs,
       rejected_writes: input.rejected_writes,
+      route_impact: input.route_impact,
+      workspace_locator: input.workspace_locator,
     }),
     package_export_lifecycle: buildAttemptPackageExportLifecycle({
       stage_attempt_id: input.stage_attempt_id,

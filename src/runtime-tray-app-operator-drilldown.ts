@@ -270,6 +270,29 @@ function memoryWritebackRefs(workbench: JsonRecord, evidenceRequests: JsonRecord
   };
 }
 
+function memoryTraceProjection(workbench: JsonRecord) {
+  const trace = record(workbench.memory_trace_projection);
+  return {
+    surface_kind: 'opl_memory_trace_projection',
+    projection_scope: 'stage_attempt_workbench',
+    availability: stringValue(trace.availability) ?? 'no_memory_trace_refs',
+    consumed_memory_refs: uniqueStrings(stringList(trace.consumed_memory_refs)),
+    recall_trace_refs: uniqueStrings(stringList(trace.recall_trace_refs)),
+    retrieval_trace_refs: uniqueStrings(stringList(trace.retrieval_trace_refs)),
+    writeback_receipt_refs: uniqueStrings(stringList(trace.writeback_receipt_refs)),
+    rejected_write_refs: uniqueStrings(stringList(trace.rejected_write_refs)),
+    source_refs: uniqueStrings(stringList(trace.source_refs)),
+    summary: record(trace.summary),
+    false_authority_flags: {
+      can_read_memory_body: false,
+      can_write_domain_memory_body: false,
+      can_accept_or_reject_memory_writeback: false,
+      can_authorize_quality_verdict: false,
+    },
+    authority_boundary: refsOnlyAuthorityBoundary(),
+  };
+}
+
 function qualityReadinessRefs(workbench: JsonRecord) {
   const quality = record(workbench.quality_readiness);
   return {
@@ -961,6 +984,7 @@ export function buildAppOperatorDrilldown(input: {
     replacementCoverage,
   );
   const memoryRefs = memoryWritebackRefs(input.stageAttemptWorkbench, record(evidenceRequests));
+  const memoryTrace = memoryTraceProjection(input.stageAttemptWorkbench);
   const qualityRefs = qualityReadinessRefs(input.stageAttemptWorkbench);
   const providerActionRefs = providerSloRefs(input.providerContinuousProof);
   const providerCadenceWindow = providerCadenceWindowSummary(input.providerContinuousProof);
@@ -1265,6 +1289,7 @@ export function buildAppOperatorDrilldown(input: {
     },
     package_export_lifecycle_refs: packageLifecycle,
     memory_writeback_refs: memoryRefs,
+    memory_trace_projection: memoryTrace,
     quality_readiness_refs: qualityRefs,
     provider_slo_operator_action_refs: {
       surface_kind: 'opl_app_drilldown_provider_slo_operator_action_refs',
@@ -1320,7 +1345,10 @@ export function buildAppOperatorDrilldown(input: {
     production_evidence_tail_ledger: productionEvidenceTailLedger,
     evidence_envelope: evidenceEnvelope,
     runtime_visualization_projection: runtimeVisualizationProjection,
-    runtime_workbench: record(runtimeVisualizationProjection.runtime_workbench),
+    runtime_workbench: {
+      ...record(runtimeVisualizationProjection.runtime_workbench),
+      memory_trace_projection: memoryTrace,
+    },
     visual_ref_groups: record(runtimeVisualizationProjection.visual_ref_groups),
     domain_legacy_cleanup_plan_refs: legacyCleanupPlans,
     standard_agent_template_consumption_refs: standardAgentTemplateConsumption,

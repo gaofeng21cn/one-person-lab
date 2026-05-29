@@ -510,6 +510,7 @@ function attemptProjection(
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   });
+  const memoryTraceProjection = stageProgressLog.memory_trace_projection;
   const attemptTruePathProof = buildStageAttemptTruePathProof({
     stageAttemptId: row.stage_attempt_id,
     taskId: row.task_id,
@@ -608,6 +609,7 @@ function attemptProjection(
     operator_conflicts: conflictOrBlockerEnvelopes,
     operator_label: conflictOrBlockerEnvelopes[0]?.operator_label ?? null,
     usage_projection: usageProjection,
+    memory_trace_projection: memoryTraceProjection,
     stage_progress_log: stageProgressLog,
     attempt_true_path_proof: attemptTruePathProof,
     temporal_visibility: stageProgressLog.temporal_visibility,
@@ -712,6 +714,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       workspace_source_intake: EMPTY_WORKBENCH_METADATA.summary.workspace_source_intake,
       memory_locator_index: EMPTY_WORKBENCH_METADATA.summary.memory_locator_index,
       usage_projection: EMPTY_WORKBENCH_METADATA.summary.usage_projection,
+      memory_trace_projection: EMPTY_WORKBENCH_METADATA.summary.memory_trace_projection,
       stage_progress_log: EMPTY_WORKBENCH_METADATA.summary.stage_progress_log,
       package_export_lifecycle: EMPTY_WORKBENCH_METADATA.summary.package_export_lifecycle,
       action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,
@@ -774,6 +777,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       workspace_source_intake: metadata.summary.workspace_source_intake,
       memory_locator_index: metadata.summary.memory_locator_index,
       usage_projection: metadata.summary.usage_projection,
+      memory_trace_projection: metadata.summary.memory_trace_projection,
       stage_progress_log: metadata.summary.stage_progress_log,
       package_export_lifecycle: metadata.summary.package_export_lifecycle,
       action_routing: metadata.summary.action_routing,
@@ -806,6 +810,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       workspace_source_intake: EMPTY_WORKBENCH_METADATA.summary.workspace_source_intake,
       memory_locator_index: EMPTY_WORKBENCH_METADATA.summary.memory_locator_index,
       usage_projection: EMPTY_WORKBENCH_METADATA.summary.usage_projection,
+      memory_trace_projection: EMPTY_WORKBENCH_METADATA.summary.memory_trace_projection,
       stage_progress_log: EMPTY_WORKBENCH_METADATA.summary.stage_progress_log,
       package_export_lifecycle: EMPTY_WORKBENCH_METADATA.summary.package_export_lifecycle,
       action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,

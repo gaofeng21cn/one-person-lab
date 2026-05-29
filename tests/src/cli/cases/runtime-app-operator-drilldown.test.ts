@@ -240,7 +240,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       'fixture-run',
       attemptId,
       '--closeout-packet',
-      '{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:write-closeout"],"consumed_refs":["artifact:table"],"consumed_memory_refs":["memory:route-policy"],"writeback_receipt_refs":["memory-writeback:receipt-1"],"rejected_writes":[{"reason":"domain_truth_write_forbidden"}],"next_owner":"med-autoscience","domain_ready_verdict":"domain_gate_pending","route_impact":{"decision":"bounded_repair","quality_refs":["publication_eval/latest.json"],"readiness_refs":["controller_decisions/latest.json"],"slo_ref":"slo:write-currentness","breached_slo_ids":["review_currentness"],"repair_command":"medautosci domain-handler dispatch --task <task.json> --format json","package_refs":["package:submission-minimal"],"export_refs":["export:current-package"],"gap_report_refs":["gap:package-readiness"],"handoff_refs":["handoff:manual-submission"]}}',
+      '{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:write-closeout"],"consumed_refs":["artifact:table"],"consumed_memory_refs":["memory:route-policy"],"writeback_receipt_refs":["memory-writeback:receipt-1"],"rejected_writes":[{"ref":"memory-rejected-write:write/unsafe-body","memory_body":"domain-owned rejected write body must not be projected","reason":"domain_truth_write_forbidden"}],"next_owner":"med-autoscience","domain_ready_verdict":"domain_gate_pending","route_impact":{"decision":"bounded_repair","quality_refs":["publication_eval/latest.json"],"readiness_refs":["controller_decisions/latest.json"],"slo_ref":"slo:write-currentness","breached_slo_ids":["review_currentness"],"repair_command":"medautosci domain-handler dispatch --task <task.json> --format json","package_refs":["package:submission-minimal"],"export_refs":["export:current-package"],"gap_report_refs":["gap:package-readiness"],"handoff_refs":["handoff:manual-submission"],"memory_recall_trace_refs":["memory-recall-trace:write/route-policy"],"memory_retrieval_trace_refs":["memory-retrieval-trace:write/route-policy"]}}',
     ], testEnv);
 
     const output = runCli(['runtime', 'snapshot'], testEnv);
@@ -574,6 +574,31 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.deepEqual(drilldown.package_export_lifecycle_refs.package_refs, ['package:submission-minimal']);
     assert.deepEqual(drilldown.package_export_lifecycle_refs.export_refs, ['export:current-package']);
     assert.deepEqual(drilldown.memory_writeback_refs.consumed_memory_refs, ['memory:route-policy']);
+    assert.equal(
+      drilldown.memory_trace_projection.surface_kind,
+      'opl_memory_trace_projection',
+    );
+    assert.equal(drilldown.memory_trace_projection.projection_scope, 'stage_attempt_workbench');
+    assert.deepEqual(drilldown.memory_trace_projection.consumed_memory_refs, ['memory:route-policy']);
+    assert.deepEqual(drilldown.memory_trace_projection.recall_trace_refs, ['memory-recall-trace:write/route-policy']);
+    assert.deepEqual(drilldown.memory_trace_projection.retrieval_trace_refs, ['memory-retrieval-trace:write/route-policy']);
+    assert.deepEqual(drilldown.memory_trace_projection.writeback_receipt_refs, [
+      'memory-writeback:receipt-1',
+    ]);
+    assert.deepEqual(drilldown.memory_trace_projection.rejected_write_refs, [
+      'memory-rejected-write:write/unsafe-body',
+    ]);
+    assert.deepEqual(drilldown.memory_trace_projection.source_refs, ['source:dataset']);
+    assert.equal(drilldown.memory_trace_projection.summary.rejected_write_ref_count, 1);
+    assert.equal(drilldown.memory_trace_projection.false_authority_flags.can_read_memory_body, false);
+    assert.equal(drilldown.memory_trace_projection.false_authority_flags.can_write_domain_memory_body, false);
+    assert.equal(drilldown.memory_trace_projection.false_authority_flags.can_accept_or_reject_memory_writeback, false);
+    assert.equal(drilldown.memory_trace_projection.false_authority_flags.can_authorize_quality_verdict, false);
+    assert.equal(JSON.stringify(drilldown.memory_trace_projection).includes('domain-owned rejected write body'), false);
+    assert.equal(
+      drilldown.runtime_workbench.memory_trace_projection.surface_kind,
+      'opl_memory_trace_projection',
+    );
     assert.equal(drilldown.ref_family_refs.summary.memory_ref_count, 3);
     assert.deepEqual(drilldown.quality_readiness_refs.quality_refs, ['publication_eval/latest.json']);
     assert.deepEqual(drilldown.quality_readiness_refs.readiness_refs, ['controller_decisions/latest.json']);

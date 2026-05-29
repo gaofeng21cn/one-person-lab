@@ -260,8 +260,15 @@ test('family-runtime attempt query exposes a unified stage progress log with int
         surface_kind: 'stage_attempt_closeout_packet',
         closeout_refs: ['receipt:dm002-paper-repair-closeout'],
         consumed_refs: ['evidence:figure5-layout'],
-        consumed_memory_refs: ['memory:dm002-review-feedback'],
+        consumed_memory_refs: ['memory:dm002-review-feedback', 'memory:dm002-review-feedback'],
         writeback_receipt_refs: ['memory-writeback:dm002-paper-repair'],
+        rejected_writes: [
+          {
+            ref: 'memory-rejected-write:dm002-paper-repair/unsafe-body',
+            memory_body: 'domain-owned rejected write body must not be projected',
+            reason: 'domain_truth_write_forbidden',
+          },
+        ],
         next_owner: 'med-autoscience',
         domain_ready_verdict: 'domain_gate_pending',
         paper_stage_log: {
@@ -291,6 +298,8 @@ test('family-runtime attempt query exposes a unified stage progress log with int
           decision: 'bounded_repair',
           owner_receipt_refs: ['owner-receipt:mas/dm002/paper-repair'],
           typed_blocker_refs: ['typed-blocker:mas/dm002/reviewer-refresh-required'],
+          memory_recall_trace_refs: ['memory-recall-trace:dm002/reviewer-feedback'],
+          memory_retrieval_trace_refs: ['memory-retrieval-trace:dm002/reviewer-feedback'],
           usage_projection: {
             token_usage: { input_tokens: 100, output_tokens: 40, total_tokens: 140 },
             estimated_cost_usd: 0.02,
@@ -370,6 +379,30 @@ db.close();`;
     assert.equal(log.timeline.duration_telemetry_status, 'observed');
     assert.equal(log.usage.token.total_tokens_observed, 3040);
     assert.equal(log.usage.cost.estimated_cost_usd_observed, 0.39);
+    assert.equal(log.memory_trace_projection.surface_kind, 'opl_memory_trace_projection');
+    assert.equal(log.memory_trace_projection.projection_scope, 'stage_attempt');
+    assert.deepEqual(log.memory_trace_projection.consumed_memory_refs, ['memory:dm002-review-feedback']);
+    assert.deepEqual(log.memory_trace_projection.recall_trace_refs, ['memory-recall-trace:dm002/reviewer-feedback']);
+    assert.deepEqual(log.memory_trace_projection.retrieval_trace_refs, ['memory-retrieval-trace:dm002/reviewer-feedback']);
+    assert.deepEqual(log.memory_trace_projection.writeback_receipt_refs, ['memory-writeback:dm002-paper-repair']);
+    assert.deepEqual(log.memory_trace_projection.rejected_write_refs, ['memory-rejected-write:dm002-paper-repair/unsafe-body']);
+    assert.deepEqual(log.memory_trace_projection.source_refs, ['source:dm002/manuscript']);
+    assert.equal(log.memory_trace_projection.summary.rejected_write_ref_count, 1);
+    assert.equal(log.memory_trace_projection.false_authority_flags.can_read_memory_body, false);
+    assert.equal(log.memory_trace_projection.false_authority_flags.can_write_domain_memory_body, false);
+    assert.equal(log.memory_trace_projection.false_authority_flags.can_accept_or_reject_memory_writeback, false);
+    assert.equal(log.memory_trace_projection.false_authority_flags.can_authorize_quality_verdict, false);
+    assert.equal(JSON.stringify(log.memory_trace_projection).includes('domain-owned rejected write body'), false);
+    assert.equal(
+      query.family_runtime_stage_attempt_query.stage_attempt_query.memory_locator_index.memory_trace_projection
+        .surface_kind,
+      'opl_memory_trace_projection',
+    );
+    assert.deepEqual(
+      query.family_runtime_stage_attempt_query.stage_attempt_query.memory_locator_index.memory_trace_projection
+        .retrieval_trace_refs,
+      ['memory-retrieval-trace:dm002/reviewer-feedback'],
+    );
     assert.equal(log.user_stage_log.surface_kind, 'opl_user_stage_log');
     assert.equal(log.user_stage_log.semantic_status, 'provided_by_domain');
     assert.equal(log.user_stage_log.semantic_source, 'latest_closeout');
