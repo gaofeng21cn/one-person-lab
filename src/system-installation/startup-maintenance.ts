@@ -4,7 +4,9 @@ import { recordManagedInstallUpdateReceipts } from '../managed-install-update-le
 
 import { buildOplEnvironment } from './environment.ts';
 import { runOplEngineAction } from './engine-actions.ts';
+import { resolveFrameworkUpdateTargetRoot, runOplFrameworkSelfUpdate } from './framework-self-update.ts';
 import { buildOplModules, runOplModuleAction } from './modules.ts';
+import { resolveProjectRoot } from './shared.ts';
 
 type ModuleStatus = ReturnType<typeof buildOplModules>['modules']['modules'][number];
 type OplSystemEnvironment = Awaited<ReturnType<typeof buildOplEnvironment>>['system_environment'];
@@ -36,6 +38,7 @@ type StartupMaintenanceEngineTarget = {
 };
 
 type StartupMaintenanceTarget = StartupMaintenanceModuleTarget | StartupMaintenanceEngineTarget;
+type StartupMaintenanceFrameworkTarget = ReturnType<typeof runOplFrameworkSelfUpdate>;
 
 function buildTarget(
   module: ModuleStatus,
@@ -279,6 +282,15 @@ function summarizeTargets(targets: StartupMaintenanceTarget[]) {
   };
 }
 
+function summarizeFrameworkTargets(targets: StartupMaintenanceFrameworkTarget[]) {
+  return {
+    total_targets_count: targets.length,
+    completed_targets_count: targets.filter((entry) => entry.status === 'completed').length,
+    skipped_targets_count: targets.filter((entry) => entry.status === 'skipped').length,
+    manual_required_targets_count: targets.filter((entry) => entry.status === 'manual_required').length,
+  };
+}
+
 async function maybeRunEngineStartupMaintenance(
   contracts: FrameworkContracts,
   environment: OplSystemEnvironment,
@@ -325,9 +337,13 @@ async function maybeRunEngineStartupMaintenance(
 
 export async function runOplStartupMaintenance(contracts: FrameworkContracts) {
   const initialEnvironment = (await buildOplEnvironment(contracts)).system_environment;
+  const frameworkTargets: StartupMaintenanceFrameworkTarget[] = [
+    runOplFrameworkSelfUpdate({ targetRoot: resolveFrameworkUpdateTargetRoot(resolveProjectRoot()) }),
+  ];
   const engineTargets = [await maybeRunEngineStartupMaintenance(contracts, initialEnvironment)];
   const initialModules = buildOplModules().modules.modules.filter((module) => module.default_install);
   const moduleTargets = initialModules.map((module) => runModuleStartupMaintenance(module));
+  const frameworkSummary = summarizeFrameworkTargets(frameworkTargets);
   const engineSummary = summarizeTargets(engineTargets);
   const summary = summarizeTargets(moduleTargets);
   const managedReceiptRecord = recordManagedInstallUpdateReceipts(
@@ -345,7 +361,9 @@ export async function runOplStartupMaintenance(contracts: FrameworkContracts) {
     version: 'g2',
     system_action: {
       action: 'startup_maintenance' as const,
-      status: summary.manual_required_targets_count > 0 || engineSummary.manual_required_targets_count > 0
+      status: summary.manual_required_targets_count > 0
+        || engineSummary.manual_required_targets_count > 0
+        || frameworkSummary.manual_required_targets_count > 0
         ? 'manual_required'
         : 'completed',
       update_channel: readOplUpdateChannel().channel,
@@ -353,8 +371,10 @@ export async function runOplStartupMaintenance(contracts: FrameworkContracts) {
       details: {
         surface_kind: 'opl_app_startup_maintenance',
         mode: 'clean_managed_environment_startup',
+        framework_summary: frameworkSummary,
         engine_summary: engineSummary,
         summary,
+        framework_targets: frameworkTargets,
         engine_targets: engineTargets,
         module_targets: moduleTargets,
         managed_install_update_receipts: managedReceiptRecord,
@@ -381,7 +401,8 @@ export async function runOplStartupMaintenance(contracts: FrameworkContracts) {
         },
         refreshed_system_environment: refreshedEnvironment,
         notes: [
-          'Startup maintenance only updates clean OPL-managed module checkouts and syncs generated plugin/skill surfaces.',
+          'Startup maintenance refreshes the managed OPL Framework runtime only when an explicit framework update source is configured.',
+          'Startup maintenance updates clean OPL-managed module checkouts and syncs generated plugin/skill surfaces.',
           'Dirty, ahead, diverged, no-upstream, env override, sibling workspace, and invalid checkouts are reported for manual review.',
           'This action never writes domain truth, domain memory body, artifact body, quality verdict, export verdict, or domain daemons.',
         ],

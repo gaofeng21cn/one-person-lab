@@ -12,8 +12,11 @@ import {
 } from './mas-default-executor-current-source-helpers.ts';
 
 import { runFamilyRuntimeQueueTick } from '../../../../../src/family-runtime-tick.ts';
+import type { FamilyRuntimeTaskScope } from '../../../../../src/family-runtime-command.ts';
 import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
 import { familyRuntimePaths, type FamilyRuntimeTaskRow } from '../../../../../src/family-runtime-store.ts';
+
+type TickDispatch = { task_id: string };
 
 function reviewerPayload(input: {
   sourceFingerprint: string;
@@ -28,7 +31,7 @@ function reviewerPayload(input: {
   });
 }
 
-function studyTaskScope() {
+function studyTaskScope(): FamilyRuntimeTaskScope {
   return {
     domainId: 'medautoscience',
     taskKind: 'domain_owner/default-executor-dispatch',
@@ -90,7 +93,7 @@ test('family-runtime tick does not auto-redrive stale same-action reviewer block
       `).run(failedAttempt.stage_attempt_id);
 
       let dispatchCount = 0;
-      const tick = await runFamilyRuntimeQueueTick(db, familyRuntimePaths(), {
+      const tick = await runFamilyRuntimeQueueTick<TickDispatch>(db, familyRuntimePaths(), {
         source: 'test-current-reviewer-source-blocks-stale-redrive',
         limit: 10,
         hydrate: false,
@@ -168,7 +171,7 @@ test('family-runtime tick selects only one MAS default executor candidate per st
       });
 
       let dispatchCount = 0;
-      const tick = await runFamilyRuntimeQueueTick(db, familyRuntimePaths(), {
+      const tick = await runFamilyRuntimeQueueTick<TickDispatch>(db, familyRuntimePaths(), {
         source: 'test-same-study-single-flight-after-auto-redrive',
         limit: 10,
         hydrate: false,
