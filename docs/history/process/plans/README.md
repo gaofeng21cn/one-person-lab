@@ -97,6 +97,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-55.md` | OPL series docs governance tranche ledger part 55。 | 当前 truth 归 MAS domain-route source、focused family-runtime/App-operator route-support tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 MAS publication-aftercare route constants 与 route predicate 公共导出面收回。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-56.md` | OPL series docs governance tranche ledger part 56。 | 当前 truth 归 domain-manifest family-transition normalizer source、focused domain-manifest transition tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 transition spec / matrix / projection helper 公共导出面收回。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-57.md` | OPL series docs governance tranche ledger part 57。 | 当前 truth 归 family-runtime command registry source、focused family-runtime CLI tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 command usage / registry 常量公共导出面收回。 |
+| `2026-05-29-opl-series-doc-governance-tranche-ledger-part-58.md` | OPL series docs governance tranche ledger part 58。 | 当前 truth 归 OPL runtime path source、focused endpoint/path tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 URL/base-path helper 公共导出面收回。 |
 
 ## Tombstone Rules
 
