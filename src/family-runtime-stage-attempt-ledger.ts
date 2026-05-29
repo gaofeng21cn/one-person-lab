@@ -202,7 +202,7 @@ export function stageAttemptSignalToPayload(row: StageAttemptSignalRow) {
   };
 }
 
-export function stageAttemptCloseoutToPayload(row: StageAttemptCloseoutRow) {
+function stageAttemptCloseoutToPayload(row: StageAttemptCloseoutRow) {
   return {
     closeout_id: row.closeout_id,
     stage_attempt_id: row.stage_attempt_id,

@@ -116,6 +116,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-74.md` | OPL series docs governance tranche ledger part 74。 | 当前 truth 归 Temporal provider worker-process / workflow-bundle parts、focused Temporal provider tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 provider part helper 公共导出面收回。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-75.md` | OPL series docs governance tranche ledger part 75。 | 当前 truth 归 lifecycle-aware family runtime provider status source、focused family-runtime provider tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 old provider list surface 公共导出面删除。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-76.md` | OPL series docs governance tranche ledger part 76。 | 当前 truth 归 MAG manifest sustained-consumption ledger source、runtime action execution、App/operator drilldown projection、focused MAG sustained-consumption tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 ledger reader、file-path helper 与 authority-boundary helper 公共导出面收回。 |
+| `2026-05-29-opl-series-doc-governance-tranche-ledger-part-77.md` | OPL series docs governance tranche ledger part 77。 | 当前 truth 归 stage launch admission gate source、stage attempt closeout ledger source、focused family-runtime stage tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 same-file builder / mapper 公共导出面收回。 |
 
 ## Tombstone Rules
 

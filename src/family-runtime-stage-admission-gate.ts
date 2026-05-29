@@ -203,7 +203,7 @@ function launchGateAuthorityBoundary(): StageAdmissionLaunchGateResult['authorit
   };
 }
 
-export function buildStageAdmissionLaunchGateFromReview(
+function buildStageAdmissionLaunchGateFromReview(
   input: StageAdmissionLaunchGateInput & {
     plane: FamilyStageControlPlane;
     review: FamilyStageAdmissionReview;
