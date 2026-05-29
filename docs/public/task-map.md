@@ -5,6 +5,8 @@ Purpose: `public_task_map_support`
 State: `public_support`
 Machine boundary: 本文是人读任务版图。domain admission、runtime readiness、quality/export verdict 和 artifact authority 继续归 contracts、source、CLI/API 行为、domain-owned manifests / receipts 和真实 evidence。
 
+> Currentness rule: 本文冻结顶层工作流语义、交付对象和 public task-family wording，不冻结当前 registered / candidate workstream 数量、domain-agent mapping、stage-selection readiness 或 stage-execution readiness。读取当前状态时，先看核心五件套、[OPL Domain-Agent Admission Contract](../specs/opl-domain-onboarding-contract.md)、[OPL Candidate Domain Backlog](../references/domain-admission/opl-candidate-domain-backlog.md)、`task-topology.json`、`workstreams.json`、`domains.json`、CLI/read-model 与相关测试；本文中的“当前边界状态”只能作为这些 live surfaces 的人读复述。
+
 ## 总览
 
 `OPL` 把一人课题组的正式工作拆成七类工作流：
@@ -34,14 +36,18 @@ Machine boundary: 本文是人读任务版图。domain admission、runtime readi
 
 - [`../contracts/opl-framework/task-topology.json`](../../contracts/opl-framework/task-topology.json)
 - [`../contracts/opl-framework/workstreams.json`](../../contracts/opl-framework/workstreams.json)
+- [`../contracts/opl-framework/domains.json`](../../contracts/opl-framework/domains.json)
 
 这些配套工件分别把：
 
 - 顶层 task topology materialize 成 machine-readable 的语义 surface
-- stage selection 使用的已收录与候选 workstream catalog
+- stage selection 使用的已注册 active workstream catalog
+- admitted domain-agent catalog 与 workstream ownership
 
-它们可以描述 `IP Ops`、`Award Ops`、`Thesis Ops`、`Review Ops` 这类仍在定义中的 workstream，并把它们保持在明确的 candidate / onboarding 路径上。
-`Grant Ops` 已经注册到已收录的 `MedAutoGrant` domain-agent entry，而剩余 under-definition workstream 的 formal 收录、stage-selection readiness 与 stage-execution readiness 仍然要通过单独的 admission evidence 获得。
+读取方式是：`task-topology.json` 定义顶层语义与 candidate visibility，`workstreams.json` 只列出已注册 active workstream，`domains.json` 只列出已收录 domain-agent catalog。
+本文不单独持有 admitted/candidate 状态，也不固定 workstream 数量。
+按当前 live contracts 读取，已注册 workstream 由 `workstreams.json` 给出，仍在定义中的 workstream 由 `task-topology.json` 中的 `under_definition` / `not_registered` / `candidate_domain_agent_pending`、`current_domain_id=null`、`entry_surface=null` 与 `formal_domain_required=true` 给出。
+任何 formal 收录、stage-selection readiness 或 stage-execution readiness 变化，都必须先落在这些 machine-readable contracts、onboarding evidence、CLI/read-model 和相关测试里，再同步刷新本文的人读 wording。
 
 如果要查看这份 backlog 的人类可读配套说明，见 [OPL Candidate Domain Backlog](../references/domain-admission/opl-candidate-domain-backlog.md)。
 
@@ -64,7 +70,7 @@ Machine boundary: 本文是人读任务版图。domain admission、runtime readi
 - 稿件
 - 投稿包
 
-当前承接这个工作流的 domain surface 是：
+按 live workstream/domain-agent registry，当前承接这个工作流的 domain surface 是：
 
 - [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience)
 
@@ -96,7 +102,7 @@ Machine boundary: 本文是人读任务版图。domain admission、runtime readi
 - 模拟评审包
 - 申请书修订计划
 
-当前边界状态：
+当前边界状态按 live contracts / onboarding evidence 读取：
 
 - 当前生命周期状态：已注册 workstream，并直接映射到已收录的 `MedAutoGrant` domain surface
 - formal 映射：`grant_ops -> medautogrant` 已经在活跃 workstream/domain-agent catalog 中冻结
@@ -126,7 +132,7 @@ Machine boundary: 本文是人读任务版图。domain admission、runtime readi
 - 实施例材料包
 - 审查意见答复计划
 
-当前边界状态：
+当前边界状态按 live topology / candidate backlog 读取：
 
 - 当前生命周期状态：under-definition candidate workstream
 - 规划产品表达：`IP Foundry` / 知产工坊，首个规划产品为 `Med Auto Patent`
@@ -158,7 +164,7 @@ Machine boundary: 本文是人读任务版图。domain admission、runtime readi
 - 影响力佐证材料包
 - 推荐材料
 
-当前边界状态：
+当前边界状态按 live topology / candidate backlog 读取：
 
 - 当前生命周期状态：under-definition candidate workstream
 - 规划产品表达：`Award Foundry` / 报奖工坊，首个规划产品为 `Med Auto Award`
@@ -190,7 +196,7 @@ Machine boundary: 本文是人读任务版图。domain admission、runtime readi
 - 跨章节同步包
 - 答辩准备包
 
-当前边界状态：
+当前边界状态按 live topology / candidate backlog 读取：
 
 - 当前生命周期状态：under-definition candidate workstream
 - 规划产品表达：`Thesis Foundry` / 学位论文工坊，首个规划产品为 `Med Auto Thesis`
@@ -224,7 +230,7 @@ review artifact 的 truth 继续保持为 future domain-owned，直到 dedicated
 - rebuttal 计划
 - 修订路线图
 
-当前边界状态：
+当前边界状态按 live topology / candidate backlog 读取：
 
 - 当前生命周期状态：under-definition candidate workstream
 - 规划产品表达：`Review Foundry` / 评审工坊，首个规划产品为 `Med Auto Review`
@@ -253,7 +259,7 @@ review artifact 的 truth 继续保持为 future domain-owned，直到 dedicated
 - 项目汇报 deck
 - 答辩 deck
 
-当前承接这个工作流的 domain surface 是：
+按 live workstream/domain-agent registry，当前承接这个工作流的 domain surface 是：
 
 - [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai)
 
