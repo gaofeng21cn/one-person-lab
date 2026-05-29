@@ -24,7 +24,7 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
   };
 }
 
-function temporalWorkerStatus(status: 'worker_not_ready' | 'worker_source_stale' | 'ready') {
+function temporalWorkerStatus(status: 'worker_not_ready' | 'worker_source_stale' | 'worker_dependency_unavailable' | 'ready') {
   const visibilityReadiness = buildTemporalStageAttemptVisibilityReadiness({
     namespace: 'default',
     observedCustomAttributes: {
@@ -65,6 +65,17 @@ function temporalWorkerStatus(status: 'worker_not_ready' | 'worker_source_stale'
     managed_worker_workflow_bundle_version: status === 'ready' ? 'workflow-bundle:sha256:test' : null,
     managed_worker_workflow_bundle_source_version: status === 'ready' ? 'worker-runtime:test' : null,
     managed_worker_workflow_bundle_source_current: status === 'ready' ? true : null,
+    worker_dependency_health: status === 'worker_dependency_unavailable'
+      ? {
+          surface_kind: 'temporal_worker_runtime_dependency_health',
+          provider_kind: 'temporal',
+          status: 'blocked',
+          blocker: {
+            blocker_id: 'temporal_worker_swc_native_binding_unavailable',
+            repair_command: 'npm install --include=optional --ignore-scripts=false',
+          },
+        }
+      : { surface_kind: 'temporal_worker_runtime_dependency_health', provider_kind: 'temporal', status: 'ready' },
     stale_worker_pid: status === 'worker_source_stale' ? 12344 : null,
     temporal_service_lifecycle: {
       surface_kind: 'temporal_service_lifecycle_status',
@@ -76,6 +87,8 @@ function temporalWorkerStatus(status: 'worker_not_ready' | 'worker_source_stale'
     visibility_readiness: visibilityReadiness,
     blockers: status === 'ready'
       ? []
+      : status === 'worker_dependency_unavailable'
+      ? ['temporal_worker_dependency_unavailable']
       : status === 'worker_source_stale'
       ? ['temporal_worker_source_stale']
       : ['temporal_worker_not_ready'],
@@ -84,6 +97,8 @@ function temporalWorkerStatus(status: 'worker_not_ready' | 'worker_source_stale'
       provider_kind: 'temporal',
       action_id: status === 'ready'
         ? 'none'
+        : status === 'worker_dependency_unavailable'
+        ? 'repair_temporal_worker_runtime_dependencies'
         : status === 'worker_source_stale'
         ? 'restart_temporal_worker'
         : 'start_temporal_worker',
@@ -93,6 +108,8 @@ function temporalWorkerStatus(status: 'worker_not_ready' | 'worker_source_stale'
       task_queue: 'opl-stage-attempts',
       next_command: status === 'ready'
         ? 'opl family-runtime residency proof --provider temporal --production'
+        : status === 'worker_dependency_unavailable'
+        ? 'npm install --include=optional --ignore-scripts=false'
         : status === 'worker_source_stale'
         ? 'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal'
         : 'opl family-runtime worker start --provider temporal',
@@ -103,6 +120,8 @@ function temporalWorkerStatus(status: 'worker_not_ready' | 'worker_source_stale'
           'export OPL_TEMPORAL_ADDRESS=127.0.0.1:7233',
         verify_temporal_server:
           'opl family-runtime worker status --provider temporal',
+        repair_worker_runtime_dependencies:
+          'npm install --include=optional --ignore-scripts=false',
         start_managed_worker:
           'opl family-runtime worker start --provider temporal',
         rerun_production_proof:
@@ -290,6 +309,42 @@ test('family-runtime provider repair restarts stale OPL managed Temporal worker'
     assert.equal(receipt.after.lifecycle_status, 'ready');
     assert.equal(receipt.stop?.stop_status, 'stopped');
     assert.equal(receipt.start?.start_status, 'started');
+    assert.equal(receipt.authority_boundary.can_write_domain_truth, false);
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime provider repair surfaces missing Temporal worker runtime dependencies as OPL blocker', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-repair-worker-dependency-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    let startCount = 0;
+    const receipt = await repairTemporalWorkerForProviderRepair(familyRuntimePaths(), {
+      inspectTemporalWorkerLifecycle: async () => temporalWorkerStatus('worker_dependency_unavailable'),
+      startTemporalWorkerLifecycle: async () => {
+        startCount += 1;
+        return {
+          surface_kind: 'temporal_worker_lifecycle_start',
+          provider_kind: 'temporal',
+          start_status: 'started',
+          status: temporalWorkerStatus('ready'),
+        };
+      },
+    });
+
+    assert.equal(startCount, 0);
+    assert.equal(receipt.trigger, 'provider_repair');
+    assert.equal(receipt.repair_status, 'skipped');
+    assert.equal(receipt.repair_action_id, 'repair_temporal_worker_runtime_dependencies');
+    assert.equal(receipt.before.lifecycle_status, 'worker_dependency_unavailable');
+    assert.deepEqual(receipt.before.blockers, ['temporal_worker_dependency_unavailable']);
     assert.equal(receipt.authority_boundary.can_write_domain_truth, false);
   } finally {
     if (previousStateDir === undefined) {
