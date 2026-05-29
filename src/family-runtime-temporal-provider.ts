@@ -76,6 +76,9 @@ import {
   inspectTemporalWorkerRuntimeDependencies,
 } from './family-runtime-temporal-provider-parts/worker-dependencies.ts';
 import {
+  buildTemporalWorkerMutationGuard,
+} from './family-runtime-temporal-provider-parts/worker-source-guard.ts';
+import {
   buildTemporalStageAttemptWorkerOptions,
 } from './family-runtime-temporal-provider-parts/workflow-bundle.ts';
 import {
@@ -891,6 +894,19 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
 }
 
 export async function runTemporalWorkerForeground(paths: TemporalWorkerPaths) {
+  const mutationGuard = buildTemporalWorkerMutationGuard({ moduleUrl: import.meta.url, paths });
+  if (!mutationGuard.allowed) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Temporal worker lifecycle mutation is blocked for developer checkout against the shared OPL state root.',
+      {
+        provider_kind: 'temporal',
+        mutation_guard: mutationGuard,
+        repair_action:
+          'Run the managed runtime/current OPL CLI, set OPL_STATE_DIR for an isolated developer worker, or explicitly set OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER=1.',
+      },
+    );
+  }
   const { address } = resolveTemporalAddressForPaths(paths);
   if (!address) {
     throw new FrameworkContractError(
@@ -949,6 +965,19 @@ export async function runTemporalWorkerForeground(paths: TemporalWorkerPaths) {
 }
 
 export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, input: { detach?: boolean } = {}) {
+  const mutationGuard = buildTemporalWorkerMutationGuard({ moduleUrl: import.meta.url, paths });
+  if (!mutationGuard.allowed) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Temporal worker lifecycle mutation is blocked for developer checkout against the shared OPL state root.',
+      {
+        provider_kind: 'temporal',
+        mutation_guard: mutationGuard,
+        repair_action:
+          'Run the managed runtime/current OPL CLI, set OPL_STATE_DIR for an isolated developer worker, or explicitly set OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER=1.',
+      },
+    );
+  }
   const status = await inspectTemporalWorkerLifecycle(paths);
   if (status.lifecycle_status === 'not_configured') {
     throw new FrameworkContractError(
@@ -1000,7 +1029,13 @@ export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, i
 
   const child = spawn(
     process.execPath,
-    ['--experimental-strip-types', fileURLToPath(import.meta.url), '--temporal-worker-foreground'],
+    [
+      '--experimental-strip-types',
+      fileURLToPath(import.meta.url),
+      '--temporal-worker-foreground',
+      '--family-runtime-root',
+      paths.root,
+    ],
     {
       cwd: process.cwd(),
       detached: true,
@@ -1042,6 +1077,19 @@ export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, i
 }
 
 export async function stopTemporalWorkerLifecycle(paths: TemporalWorkerPaths) {
+  const mutationGuard = buildTemporalWorkerMutationGuard({ moduleUrl: import.meta.url, paths });
+  if (!mutationGuard.allowed) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Temporal worker lifecycle mutation is blocked for developer checkout against the shared OPL state root.',
+      {
+        provider_kind: 'temporal',
+        mutation_guard: mutationGuard,
+        repair_action:
+          'Run the managed runtime/current OPL CLI, set OPL_STATE_DIR for an isolated developer worker, or explicitly set OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER=1.',
+      },
+    );
+  }
   const before = await inspectTemporalWorkerLifecycle(paths);
   const state = readTemporalWorkerState(paths);
   let stoppedPid: number | null = null;
@@ -1055,6 +1103,7 @@ export async function stopTemporalWorkerLifecycle(paths: TemporalWorkerPaths) {
   }
   const orphanStops = await stopOrphanTemporalForegroundWorkers({
     modulePath: fileURLToPath(import.meta.url),
+    familyRuntimeRoot: paths.root,
     excludePids: state?.pid ? [state.pid] : [],
   });
   if (stopStatus === 'not_running' && orphanStops.orphan_stopped_pids.length > 0) {
@@ -1104,9 +1153,16 @@ export async function buildTemporalStageAttemptReplayGateForTest(history: unknow
 }
 
 export function resolveTemporalWorkerForegroundPaths(): TemporalWorkerPaths { return familyRuntimePaths(); }
+export function resolveTemporalWorkerForegroundPathsFromArgv(argv = process.argv): TemporalWorkerPaths {
+  const rootIndex = argv.indexOf('--family-runtime-root');
+  const root = rootIndex >= 0 ? argv[rootIndex + 1] : null;
+  return root && root.trim().length > 0
+    ? { root: path.resolve(root) }
+    : familyRuntimePaths();
+}
 
 if (process.argv[2] === '--temporal-worker-foreground') {
-  void runTemporalWorkerForeground(resolveTemporalWorkerForegroundPaths()).catch((error) => {
+  void runTemporalWorkerForeground(resolveTemporalWorkerForegroundPathsFromArgv()).catch((error) => {
     process.stderr.write(error instanceof Error ? `${error.message}\n` : 'Temporal worker failed.\n');
     process.exitCode = 1;
   });

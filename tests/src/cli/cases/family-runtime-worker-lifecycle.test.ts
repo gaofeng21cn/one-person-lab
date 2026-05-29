@@ -21,6 +21,9 @@ import {
 import {
   inspectTemporalWorkerRuntimeDependencies,
 } from '../../../../src/family-runtime-temporal-provider-parts/worker-dependencies.ts';
+import {
+  buildTemporalWorkerMutationGuard,
+} from '../../../../src/family-runtime-temporal-provider-parts/worker-source-guard.ts';
 import { currentWorkerSourceVersion } from '../../../../src/family-runtime-temporal-provider-parts/worker-state.ts';
 
 async function createFakeTemporalServer() {
@@ -80,6 +83,74 @@ test('Temporal worker source version ignores documentation-only git HEAD drift',
       process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = previousSourceVersion;
     }
     fs.rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test('Temporal worker mutation guard blocks developer checkout against default shared state', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-worker-source-guard-home-'));
+  const devRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-worker-source-guard-dev-'));
+  const modulePath = path.join(devRoot, 'src', 'family-runtime-temporal-provider.ts');
+  const previousHome = process.env.HOME;
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousAllow = process.env.OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER;
+  try {
+    fs.mkdirSync(path.dirname(modulePath), { recursive: true });
+    fs.mkdirSync(path.join(devRoot, 'bin'), { recursive: true });
+    fs.mkdirSync(path.join(devRoot, '.git', 'refs', 'heads'), { recursive: true });
+    fs.writeFileSync(path.join(devRoot, 'package.json'), '{"name":"one-person-lab"}\n');
+    fs.writeFileSync(path.join(devRoot, 'bin', 'opl'), '#!/bin/sh\n');
+    fs.writeFileSync(modulePath, 'export const fixture = true;\n');
+    fs.writeFileSync(path.join(devRoot, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+    fs.writeFileSync(path.join(devRoot, '.git', 'refs', 'heads', 'main'), 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n');
+
+    process.env.HOME = homeRoot;
+    delete process.env.OPL_STATE_DIR;
+    delete process.env.OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER;
+
+    const sharedRoot = path.join(homeRoot, 'Library', 'Application Support', 'OPL', 'state', 'family-runtime');
+    const blocked = buildTemporalWorkerMutationGuard({
+      moduleUrl: pathToFileURL(modulePath).href,
+      paths: { root: sharedRoot },
+    });
+    assert.equal(blocked.allowed, false);
+    assert.equal(blocked.mutation_guard_status, 'blocked_developer_checkout_shared_state');
+    assert.equal(blocked.source_is_git_checkout, true);
+    assert.equal(blocked.state_dir_explicit, false);
+
+    process.env.OPL_STATE_DIR = path.join(homeRoot, 'explicit-dev-state');
+    const explicitState = buildTemporalWorkerMutationGuard({
+      moduleUrl: pathToFileURL(modulePath).href,
+      paths: { root: path.join(process.env.OPL_STATE_DIR, 'family-runtime') },
+    });
+    assert.equal(explicitState.allowed, true);
+    assert.equal(explicitState.mutation_guard_status, 'allowed_explicit_state_dir');
+
+    delete process.env.OPL_STATE_DIR;
+    process.env.OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER = '1';
+    const explicitOverride = buildTemporalWorkerMutationGuard({
+      moduleUrl: pathToFileURL(modulePath).href,
+      paths: { root: sharedRoot },
+    });
+    assert.equal(explicitOverride.allowed, true);
+    assert.equal(explicitOverride.mutation_guard_status, 'allowed_explicit_developer_override');
+  } finally {
+    if (previousHome === undefined) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = previousHome;
+    }
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    if (previousAllow === undefined) {
+      delete process.env.OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER;
+    } else {
+      process.env.OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER = previousAllow;
+    }
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(devRoot, { recursive: true, force: true });
   }
 });
 
@@ -571,6 +642,42 @@ test('Temporal worker stop cleans orphan foreground worker after state file is m
       // The lifecycle under test should have removed the fixture process or state file.
     }
     await testEnv.teardown();
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('Temporal worker stop cleans root-tagged orphan foreground worker from a different source path', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-cross-source-orphan-'));
+  const workerRoot = path.join(stateRoot, 'family-runtime');
+  const child = spawn(process.execPath, [
+    '-e',
+    'setTimeout(() => {}, 30_000);',
+    '--',
+    '--temporal-worker-foreground',
+    '--family-runtime-root',
+    workerRoot,
+  ], {
+    detached: true,
+    stdio: 'ignore',
+  });
+  child.unref();
+  try {
+    assert.equal(typeof child.pid, 'number');
+    fs.mkdirSync(workerRoot, { recursive: true });
+
+    const stop = await stopTemporalWorkerLifecycle({ root: workerRoot });
+
+    assert.equal(stop.stop_status, 'stopped');
+    assert.equal(stop.stopped_pid, null);
+    assert.deepEqual(stop.orphan_stopped_pids, [child.pid]);
+    assert.equal(stop.status.lifecycle_status, 'not_configured');
+    assert.throws(() => process.kill(child.pid!, 0));
+  } finally {
+    try {
+      process.kill(child.pid!, 'SIGKILL');
+    } catch {
+      // The lifecycle under test should have removed the fixture process.
+    }
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

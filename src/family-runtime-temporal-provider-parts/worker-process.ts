@@ -48,6 +48,7 @@ export function signalManagedWorker(pid: number, signal: NodeJS.Signals) {
 
 export function findTemporalForegroundWorkerPids(input: {
   modulePath: string;
+  familyRuntimeRoot?: string;
   excludePids?: number[];
 }) {
   if (process.platform === 'win32') {
@@ -75,8 +76,15 @@ export function findTemporalForegroundWorkerPids(input: {
     if (
       Number.isInteger(pid)
       && !exclude.has(pid)
-      && command.includes(input.modulePath)
       && command.includes('--temporal-worker-foreground')
+      && (
+        command.includes(input.modulePath)
+        || (
+          typeof input.familyRuntimeRoot === 'string'
+          && command.includes('--family-runtime-root')
+          && command.includes(input.familyRuntimeRoot)
+        )
+      )
       && processIsAlive(pid)
     ) {
       pids.push(pid);
@@ -98,6 +106,7 @@ export async function stopWorkerPid(pid: number) {
 
 export async function stopOrphanTemporalForegroundWorkers(input: {
   modulePath: string;
+  familyRuntimeRoot?: string;
   excludePids?: number[];
 }) {
   const orphan_stop_actions: Record<string, unknown>[] = [];
