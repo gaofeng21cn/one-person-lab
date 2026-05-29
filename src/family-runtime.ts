@@ -7,7 +7,6 @@ import {
 import {
   ensureFamilyRuntimeProvider,
   ensureFamilyRuntimeProviderWithLifecycle,
-  inspectFamilyRuntimeProviders,
   resolveFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
 import { buildStageLaunchInvocationProjection } from './family-runtime-launch-invocation.ts';

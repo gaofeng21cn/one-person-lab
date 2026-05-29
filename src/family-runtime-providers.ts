@@ -19,11 +19,6 @@ import {
   repairTemporalWorkerForProviderRepair,
 } from './family-runtime-provider-worker-repair.ts';
 
-export {
-  FAMILY_RUNTIME_PROVIDER_KINDS,
-  type FamilyRuntimeProviderKind,
-} from './family-runtime-types.ts';
-
 export type FamilyRuntimeProviderInspection = {
   provider_kind: FamilyRuntimeProviderKind;
   status: 'ready' | 'attention_needed' | 'provider_code_landed_unconfigured';
@@ -301,26 +296,6 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
       required_env: ['OPL_TEMPORAL_ADDRESS or managed local service state', 'managed Temporal worker state or OPL_TEMPORAL_WORKER_STATUS=ready'],
       runtime_dependency: 'temporal_server_and_worker_required_for_live_workflows',
     },
-  };
-}
-
-export function inspectFamilyRuntimeProviders(selected: FamilyRuntimeProviderKind) {
-  return {
-    selected_provider: selected,
-    allowed_providers: [...FAMILY_RUNTIME_PROVIDER_KINDS],
-    default_resolution: {
-      env: 'OPL_FAMILY_RUNTIME_PROVIDER',
-      fallback: 'temporal',
-      production_required_provider: 'temporal',
-      local_sqlite_role: 'dev_ci_offline_diagnostic_baseline',
-      fail_closed_when_temporal_not_ready: true,
-    },
-    providers: {
-      [selected]: inspectFamilyRuntimeProvider(selected),
-    } as Partial<Record<FamilyRuntimeProviderKind, FamilyRuntimeProviderInspection>>,
-    provider_catalog: Object.fromEntries(
-      FAMILY_RUNTIME_PROVIDER_KINDS.map((providerKind) => [providerKind, providerMetadata(providerKind)]),
-    ),
   };
 }
 
