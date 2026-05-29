@@ -490,6 +490,11 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
     }
   }
 
+  let deferredMasDefaultExecutorLiveAttempt: {
+    liveAttempt: NonNullable<ReturnType<typeof findLiveMasDefaultExecutorDispatchAttempt>>;
+    liveDispatchAttemptMatched: boolean;
+    lease: ReturnType<typeof refreshMasDefaultExecutorLiveAttemptTaskLease>;
+  } | null = null;
   if (isMasDefaultExecutorDispatchInput(input.domainId, taskKind, payload)) {
     const candidate = masDefaultExecutorCandidateRow({
       domainId: input.domainId,
@@ -539,13 +544,10 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           },
         },
       });
-      const liveTask = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(liveAttempt.task_id) as
-        | FamilyRuntimeTaskRow
-        | undefined;
-      return {
-        accepted: false,
-        idempotent_noop: true,
-        task: liveTask ? taskToPayload(liveTask) : undefined,
+      deferredMasDefaultExecutorLiveAttempt = {
+        liveAttempt,
+        liveDispatchAttemptMatched: Boolean(liveDispatchAttempt),
+        lease,
       };
     }
   }
@@ -598,6 +600,39 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
     source: input.source ?? 'opl-cli',
     payload: { task_kind: taskKind, dedupe_key: dedupeKey },
   });
+  if (deferredMasDefaultExecutorLiveAttempt) {
+    const { liveAttempt, liveDispatchAttemptMatched, lease } = deferredMasDefaultExecutorLiveAttempt;
+    insertEvent(db, {
+      taskId,
+      domainId: input.domainId,
+      eventType: 'task_default_executor_live_dispatch_enqueue_deferred',
+      source: input.source ?? 'opl-cli',
+      payload: {
+        dedupe_key: dedupeKey,
+        reason: liveDispatchAttemptMatched
+          ? 'same_dispatch_live_stage_attempt_exists_at_enqueue'
+          : 'same_study_live_stage_attempt_exists_at_enqueue',
+        live_task_id: liveAttempt.task_id,
+        stage_attempt_id: liveAttempt.stage_attempt_id,
+        candidate_source_fingerprint: sourceFingerprint(payload),
+        live_source_fingerprint: liveAttempt.workspace_locator.domain_source_fingerprint ?? null,
+        dispatch_ref: payload.dispatch_ref ?? null,
+        action_type: payload.action_type ?? null,
+        live_action_type: liveAttempt.workspace_locator.action_type ?? null,
+        study_id: payload.study_id ?? null,
+        lease,
+        authority_boundary: {
+          opl: 'queue_intake_single_flight_defer_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          domain_truth_mutation: false,
+          publication_quality_mutation: false,
+          artifact_gate_mutation: false,
+          current_package_mutation: false,
+          provider_stage_attempt_started: false,
+        },
+      },
+    });
+  }
   insertNotification(db, {
     taskId,
     severity: 'info',

@@ -385,7 +385,7 @@ test('family-runtime keeps MAS default executor admission single-flight across s
   }
 });
 
-test('family-runtime enqueue keeps MAS default executor dispatch single-flight while a live attempt is running', () => {
+test('family-runtime enqueue preserves a newer MAS default executor dispatch while a live attempt is running', () => {
   const db = new DatabaseSync(':memory:');
   try {
     withIsolatedFamilyRuntimeEnv(() => {
@@ -444,18 +444,29 @@ test('family-runtime enqueue keeps MAS default executor dispatch single-flight w
         WHERE task_id = ? AND event_type = 'task_default_executor_live_dispatch_enqueue_noop'
         LIMIT 1
       `).get('task-mas-default-live-running-before-enqueue') as { payload_json: string } | undefined;
+      const deferredEvent = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_default_executor_live_dispatch_enqueue_deferred'
+        LIMIT 1
+      `).get(result.task?.task_id) as { payload_json: string } | undefined;
 
-      assert.equal(result.accepted, false);
-      assert.equal(result.idempotent_noop, true);
-      assert.equal(result.task?.task_id, 'task-mas-default-live-running-before-enqueue');
-      assert.equal(tasks.length, 1);
+      assert.equal(result.accepted, true);
+      assert.equal(result.idempotent_noop, false);
+      assert.notEqual(result.task?.task_id, 'task-mas-default-live-running-before-enqueue');
+      assert.equal(tasks.length, 2);
       assert.equal(tasks[0].status, 'running');
       assert.equal(JSON.parse(tasks[0].payload_json).source_fingerprint, 'source-before');
+      assert.equal(tasks[1].status, 'queued');
+      assert.equal(JSON.parse(tasks[1].payload_json).source_fingerprint, 'source-after');
       assert.ok(tasks[0].lease_expires_at);
       assert.ok(Date.parse(tasks[0].lease_expires_at) > Date.now());
       assert.ok(noopEvent);
       assert.equal(JSON.parse(noopEvent.payload_json).candidate_source_fingerprint, 'source-after');
       assert.equal(JSON.parse(noopEvent.payload_json).stage_attempt_id, runningAttempt.stage_attempt_id);
+      assert.ok(deferredEvent);
+      assert.equal(JSON.parse(deferredEvent.payload_json).candidate_source_fingerprint, 'source-after');
+      assert.equal(JSON.parse(deferredEvent.payload_json).stage_attempt_id, runningAttempt.stage_attempt_id);
     });
   } finally {
     db.close();
@@ -646,7 +657,7 @@ test('family-runtime treats claimed same-study reviewer admission window as live
   }
 });
 
-test('family-runtime enqueue keeps MAS default executor same-study owner tasks single-flight', () => {
+test('family-runtime enqueue preserves MAS default executor same-study owner tasks while deferring launch', () => {
   const db = new DatabaseSync(':memory:');
   try {
     withIsolatedFamilyRuntimeEnv(() => {
@@ -709,18 +720,31 @@ test('family-runtime enqueue keeps MAS default executor same-study owner tasks s
         WHERE task_id = ? AND event_type = 'task_default_executor_live_dispatch_enqueue_noop'
         LIMIT 1
       `).get('task-mas-default-live-reviewer-before-writer-enqueue') as { payload_json: string } | undefined;
+      const deferredEvent = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_default_executor_live_dispatch_enqueue_deferred'
+        LIMIT 1
+      `).get(result.task?.task_id) as { payload_json: string } | undefined;
 
-      assert.equal(result.accepted, false);
-      assert.equal(result.idempotent_noop, true);
-      assert.equal(result.task?.task_id, 'task-mas-default-live-reviewer-before-writer-enqueue');
-      assert.equal(tasks.length, 1);
+      assert.equal(result.accepted, true);
+      assert.equal(result.idempotent_noop, false);
+      assert.notEqual(result.task?.task_id, 'task-mas-default-live-reviewer-before-writer-enqueue');
+      assert.equal(tasks.length, 2);
       assert.equal(tasks[0].status, 'running');
+      assert.equal(tasks[1].status, 'queued');
       assert.ok(noopEvent);
       const noopPayload = JSON.parse(noopEvent.payload_json);
       assert.equal(noopPayload.reason, 'same_study_live_stage_attempt_exists_at_enqueue');
       assert.equal(noopPayload.live_action_type, 'return_to_ai_reviewer_workflow');
       assert.equal(noopPayload.action_type, 'run_quality_repair_batch');
       assert.equal(noopPayload.stage_attempt_id, reviewerAttempt.stage_attempt_id);
+      assert.ok(deferredEvent);
+      const deferredPayload = JSON.parse(deferredEvent.payload_json);
+      assert.equal(deferredPayload.reason, 'same_study_live_stage_attempt_exists_at_enqueue');
+      assert.equal(deferredPayload.live_action_type, 'return_to_ai_reviewer_workflow');
+      assert.equal(deferredPayload.action_type, 'run_quality_repair_batch');
+      assert.equal(deferredPayload.stage_attempt_id, reviewerAttempt.stage_attempt_id);
     });
   } finally {
     db.close();
