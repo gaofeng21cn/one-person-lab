@@ -115,6 +115,8 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'temporal_webui_ref',
     'resource_pressure',
     'observability_export',
+    'memory_trace_projection',
+    'model_route_cost_projection',
   ]) {
     assert.ok((contract.required_projection_fields as string[]).includes(field));
   }
@@ -205,6 +207,8 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'actual_work',
     'timeline',
     'usage',
+    'memory_trace_projection',
+    'model_route_cost_projection',
     'user_stage_log',
     'evidence_refs',
     'temporal_visibility',
@@ -319,6 +323,8 @@ test('family runtime attempt contract defines stage_progress_log as the canonica
     'typed_closeout_packet_refs',
     'domain_owned_receipt_refs',
     'stage_attempt_usage_projection',
+    'memory_locator_index_projection',
+    'model_route_cost_projection',
   ]);
   assert.deepEqual(projection.forbidden_derivation_sources, [
     'domain_truth_body',
@@ -331,6 +337,18 @@ test('family runtime attempt contract defines stage_progress_log as the canonica
   assert.equal(projection.authority_boundary.can_read_memory_body, false);
   assert.equal(projection.authority_boundary.can_read_artifact_body, false);
   assert.equal(projection.authority_boundary.can_authorize_quality_verdict, false);
+  const memoryTrace = contract.memory_trace_projection_contract as Record<string, any>;
+  assert.equal(memoryTrace.surface_kind, 'opl_memory_trace_projection');
+  assert.equal(memoryTrace.authority_boundary.can_read_memory_body, false);
+  assert.equal(memoryTrace.authority_boundary.can_write_domain_memory_body, false);
+  assert.equal(memoryTrace.authority_boundary.can_accept_or_reject_memory_writeback, false);
+  assert.ok(memoryTrace.exported_surfaces.includes('stage_progress_log.memory_trace_projection'));
+  const modelRouteCost = contract.model_route_cost_projection_contract as Record<string, any>;
+  assert.equal(modelRouteCost.surface_kind, 'opl_model_route_cost_projection');
+  assert.equal(modelRouteCost.authority_boundary.can_change_executor, false);
+  assert.equal(modelRouteCost.authority_boundary.can_auto_degrade, false);
+  assert.equal(modelRouteCost.authority_boundary.can_replace_quality_gate, false);
+  assert.ok(modelRouteCost.exported_surfaces.includes('stage_progress_log.model_route_cost_projection'));
   const userStageLog = projection.user_stage_log_contract as Record<string, any>;
   assert.equal(userStageLog.surface_kind, 'opl_user_stage_log');
   assert.equal(userStageLog.authority_boundary.can_infer_domain_semantics, false);
