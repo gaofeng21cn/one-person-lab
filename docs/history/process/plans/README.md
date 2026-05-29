@@ -104,6 +104,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-62.md` | OPL series docs governance tranche ledger part 62。 | 当前 truth 归 family runtime task-scope source、focused task-scope tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 payload path helper 公共导出面收回。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-63.md` | OPL series docs governance tranche ledger part 63。 | 当前 truth 归 family runtime temporal observation sync source、focused temporal stage-attempt tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 temporal unavailable observation helper 与 internal observation type 公共导出面收回。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-64.md` | OPL series docs governance tranche ledger part 64。 | 当前 truth 归 App release/user-path evidence ledger source、focused App release evidence tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 ledger reader、file-path helper 与 internal receipt type 公共导出面收回。 |
+| `2026-05-29-opl-series-doc-governance-tranche-ledger-part-65.md` | OPL series docs governance tranche ledger part 65。 | 当前 truth 归 Codex App runtime evidence ledger source、focused Codex App runtime evidence tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 ledger reader、file-path helper 与 internal receipt type 公共导出面收回。 |
 
 ## Tombstone Rules
 

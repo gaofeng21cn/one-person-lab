@@ -1,9 +1,7 @@
 import fs from 'node:fs';
-import path from 'node:path';
-
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 
-export type CodexAppRuntimeEvidenceReceipt = {
+type CodexAppRuntimeEvidenceReceipt = {
   surface_kind: 'opl_codex_app_runtime_evidence_receipt';
   receipt_ref: string;
   receipt_status: 'recorded' | 'verified';
@@ -145,7 +143,7 @@ function normalizeReceipt(value: unknown): CodexAppRuntimeEvidenceReceipt | null
   return allEvidenceRefs(receipt).length > 0 ? receipt : null;
 }
 
-export function readCodexAppRuntimeEvidenceLedger(): CodexAppRuntimeEvidenceLedger {
+function readCodexAppRuntimeEvidenceLedger(): CodexAppRuntimeEvidenceLedger {
   const file = ledgerPath();
   if (!fs.existsSync(file)) {
     return emptyLedger();
@@ -280,8 +278,4 @@ export function verifyCodexAppRuntimeEvidenceReceipt(
 
 export function listCodexAppRuntimeEvidenceReceipts() {
   return readCodexAppRuntimeEvidenceLedger().receipts;
-}
-
-export function codexAppRuntimeEvidenceLedgerFilePath() {
-  return path.resolve(ledgerPath());
 }
