@@ -10,7 +10,7 @@ import {
 } from './family-runtime-stage-attempt-ledger.ts';
 import { nowIso } from './family-runtime-store.ts';
 
-export type TemporalStageAttemptUnavailableObservation = {
+type TemporalStageAttemptUnavailableObservation = {
   surface_kind: 'temporal_stage_attempt_query_unavailable';
   provider_kind: 'temporal';
   stage_attempt_id: string;
@@ -19,7 +19,7 @@ export type TemporalStageAttemptUnavailableObservation = {
   reason: string;
 };
 
-export function isTemporalStageAttemptUnavailableObservation(
+function isTemporalStageAttemptUnavailableObservation(
   observation: unknown,
 ): observation is TemporalStageAttemptUnavailableObservation {
   return (
@@ -35,7 +35,7 @@ export function isTemporalStageAttemptUnavailableObservation(
   );
 }
 
-export function temporalUnavailableFailureReason(
+function temporalUnavailableFailureReason(
   observation: TemporalStageAttemptUnavailableObservation,
 ) {
   if (observation.reason === 'temporal_workflow_not_started_or_not_found') {
@@ -86,7 +86,7 @@ function hasExpiredRunningMasDefaultExecutorLease(db: DatabaseSync, row: StageAt
   return Number.isFinite(leaseExpiresAt) && leaseExpiresAt <= Date.now();
 }
 
-export function canFailStageAttemptForWorkflowMissing(
+function canFailStageAttemptForWorkflowMissing(
   db: DatabaseSync,
   row: StageAttemptRow,
 ) {
