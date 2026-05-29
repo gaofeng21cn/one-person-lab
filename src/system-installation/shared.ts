@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -64,6 +65,11 @@ export type CommandResult = {
 export type RunCommandOptions = {
   maxBuffer?: number;
   timeoutMs?: number;
+};
+
+type SpawnCommand = {
+  command: string;
+  args: string[];
 };
 
 export type OplShellActionSpec = {
@@ -197,13 +203,70 @@ export function resolveSiblingWorkspaceRoot() {
   return path.dirname(resolveProjectRoot());
 }
 
+function findExecutableOnPath(command: string) {
+  if (command.includes(path.sep)) {
+    return path.resolve(command);
+  }
+  const pathEntries = (process.env.PATH ?? '').split(path.delimiter).filter(Boolean);
+  const extensions = process.platform === 'win32'
+    ? (process.env.PATHEXT ?? '.EXE;.CMD;.BAT;.COM').split(';')
+    : [''];
+  for (const entry of pathEntries) {
+    for (const extension of extensions) {
+      const candidate = path.join(entry, `${command}${extension}`);
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    }
+  }
+  return null;
+}
+
+function recoverBrokenBundledNpmShim(command: string, args: string[]): SpawnCommand | null {
+  if (command !== 'npm') {
+    return null;
+  }
+  const npmPath = findExecutableOnPath(command);
+  if (!npmPath || !fs.existsSync(npmPath)) {
+    return null;
+  }
+  let shim = '';
+  try {
+    shim = fs.readFileSync(npmPath, 'utf8');
+  } catch {
+    return null;
+  }
+  if (!shim.includes("require('../lib/cli.js')")) {
+    return null;
+  }
+  const binDir = path.dirname(npmPath);
+  const legacyCli = path.resolve(binDir, '..', 'lib', 'cli.js');
+  if (fs.existsSync(legacyCli)) {
+    return null;
+  }
+  const nodePath = path.join(binDir, process.platform === 'win32' ? 'node.exe' : 'node');
+  const npmCli = path.resolve(binDir, '..', 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js');
+  if (!fs.existsSync(nodePath) || !fs.existsSync(npmCli)) {
+    return null;
+  }
+  return {
+    command: nodePath,
+    args: [npmCli, ...args],
+  };
+}
+
+function resolveSpawnCommand(command: string, args: string[]): SpawnCommand {
+  return recoverBrokenBundledNpmShim(command, args) ?? { command, args };
+}
+
 export function runCommand(
   command: string,
   args: string[],
   cwd?: string,
   options: RunCommandOptions = {},
 ): CommandResult {
-  const result = spawnSync(command, args, {
+  const spawnCommand = resolveSpawnCommand(command, args);
+  const result = spawnSync(spawnCommand.command, spawnCommand.args, {
     cwd,
     encoding: 'utf8',
     env: process.env,
@@ -228,6 +291,8 @@ export function runCommand(
       {
         command,
         args,
+        resolved_command: spawnCommand.command,
+        resolved_args: spawnCommand.args,
         cwd: cwd ?? null,
         cause: result.error.message,
       },

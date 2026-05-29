@@ -321,6 +321,72 @@ EOF
   }
 });
 
+test('module bootstrap recovers broken bundled npm shim during system-managed installs', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-system-update-broken-npm-home-'));
+  const modulesRoot = path.join(homeRoot, 'managed-modules');
+  const bundledNodeBin = path.join(homeRoot, 'runtime', 'current', 'node', 'bin');
+  const bundledNpmCli = path.join(homeRoot, 'runtime', 'current', 'node', 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js');
+  const npmLogPath = path.join(homeRoot, 'npm.log');
+  fs.mkdirSync(path.dirname(bundledNpmCli), { recursive: true });
+  fs.mkdirSync(bundledNodeBin, { recursive: true });
+  fs.symlinkSync(process.execPath, path.join(bundledNodeBin, 'node'));
+  fs.writeFileSync(
+    path.join(bundledNodeBin, 'npm'),
+    "#!/usr/bin/env node\nrequire('../lib/cli.js')(process)\n",
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    bundledNpmCli,
+    [
+      '#!/usr/bin/env node',
+      "const fs = require('fs');",
+      "const logPath = process.env.OPL_TEST_NPM_LOG;",
+      "fs.writeFileSync(logPath, [process.cwd(), ...process.argv.slice(2)].join('\\n') + '\\n');",
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+  const metaAgentRemote = createGitModuleRemoteFixture('opl-meta-agent', {
+    extraFiles: {
+      'scripts/opl-module-healthcheck.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        'printf \'{"status":"ok"}\\n\'',
+        '',
+      ].join('\n'),
+    },
+  });
+
+  try {
+    const output = runCli(['module', 'install', '--module', 'oplmetaagent'], {
+      HOME: homeRoot,
+      OPL_MODULES_ROOT: modulesRoot,
+      OPL_MODULE_REPO_URL_OPLMETAAGENT: metaAgentRemote.remoteRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_TEST_NPM_LOG: npmLogPath,
+      PATH: `${bundledNodeBin}:/usr/bin:/bin`,
+    }) as {
+      module_action: {
+        module: { checkout_path: string };
+        turnkey: {
+          bootstrap: {
+            status: string;
+            command_preview: string[] | null;
+          };
+        };
+      };
+    };
+    const npmLog = fs.readFileSync(npmLogPath, 'utf8').trim().split('\n');
+
+    assert.equal(output.module_action.turnkey.bootstrap.status, 'completed');
+    assert.deepEqual(output.module_action.turnkey.bootstrap.command_preview, ['npm', 'install']);
+    assert.equal(fs.realpathSync(npmLog[0]), fs.realpathSync(output.module_action.module.checkout_path));
+    assert.deepEqual(npmLog.slice(1), ['install']);
+  } finally {
+    fs.rmSync(metaAgentRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('system update refreshes a non-git managed OPL Framework runtime from an explicit source checkout', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-system-update-framework-home-'));
   const runtimeRoot = path.join(homeRoot, 'runtime', 'current', 'opl');
