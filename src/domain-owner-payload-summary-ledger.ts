@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 
 import { FrameworkContractError } from './contracts.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
@@ -348,7 +347,7 @@ function dedupeCurrentReceipts(receipts: DomainOwnerPayloadSummaryReceipt[]) {
   });
 }
 
-export function readDomainOwnerPayloadSummaryLedger(): DomainOwnerPayloadSummaryLedger {
+function readDomainOwnerPayloadSummaryLedger(): DomainOwnerPayloadSummaryLedger {
   const file = ledgerPath();
   if (!fs.existsSync(file)) {
     return emptyLedger();
@@ -594,12 +593,4 @@ export function verifyDomainOwnerPayloadSummaryReceipt(
 
 export function listDomainOwnerPayloadSummaryReceipts() {
   return readDomainOwnerPayloadSummaryLedger().receipts;
-}
-
-export function domainOwnerPayloadSummaryLedgerFilePath() {
-  return path.resolve(ledgerPath());
-}
-
-export function domainOwnerPayloadSummaryLedgerAuthorityBoundary() {
-  return refsOnlyAuthorityBoundary();
 }
