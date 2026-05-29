@@ -100,6 +100,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-58.md` | OPL series docs governance tranche ledger part 58。 | 当前 truth 归 OPL runtime path source、focused endpoint/path tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 URL/base-path helper 公共导出面收回。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-59.md` | OPL series docs governance tranche ledger part 59。 | 当前 truth 归 domain manifest projection cache source、focused domain-manifest/cache tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 projection-cache reader helper 公共导出面收回。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-60.md` | OPL series docs governance tranche ledger part 60。 | 当前 truth 归 family runtime SQLite source、focused SQLite/family-runtime tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 SQLite timeout / connection config helper 公共导出面收回。 |
+| `2026-05-29-opl-series-doc-governance-tranche-ledger-part-61.md` | OPL series docs governance tranche ledger part 61。 | 当前 truth 归 family runtime dispatch command source、focused family-runtime dispatch tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 dispatch command wrapper 公共导出面删除。 |
 
 ## Tombstone Rules
 

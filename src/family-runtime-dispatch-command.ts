@@ -88,14 +88,6 @@ export function dispatchCommandForDomain(
   };
 }
 
-export function commandPreviewForDomain(domainId: FamilyRuntimeDomainId, taskPath: string, payload: Record<string, unknown> = {}) {
-  return dispatchCommandForDomain(domainId, taskPath, payload).command_preview;
-}
-
-export function commandForDomain(domainId: FamilyRuntimeDomainId, taskPath: string, payload: Record<string, unknown> = {}) {
-  return commandPreviewForDomain(domainId, taskPath, payload);
-}
-
 export function parseDispatchOutput(stdout: string) {
   const trimmed = stdout.trim();
   if (!trimmed) {
