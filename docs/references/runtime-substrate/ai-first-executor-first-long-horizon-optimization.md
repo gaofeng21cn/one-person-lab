@@ -4,7 +4,6 @@ Owner: `One Person Lab`
 Purpose: `ai_first_executor_first_long_horizon_research_prompt_and_audit_entry`
 State: `support_reference`
 Machine boundary: 本文是人读调研提示词、长期优化目标和审计入口。机器真相继续归 `contracts/`、源码、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、真实 workspace / App evidence 与各 domain owner receipt。
-Date: `2026-05-29`
 
 ## 当前结论
 
@@ -13,6 +12,12 @@ OPL 的长期目标继续固定为 `AI-first / executor-first / Codex-first`：O
 这意味着 OPL 的设计上限来自 executor aperture，而不是越来越厚的流程引擎。框架应把最先进 AI executor 放到清晰、可恢复、可审计、可回放、可人工接管的工作台上，让模型、工具、prompt、skill、knowledge 与独立 reviewer 能力进步直接变成 MAS、MAG、RCA、OMA 和未来 agent 的能力进步。
 
 合同、schema、read model、scorecard、checklist、provider proof、generated-surface proof 和 cleanup ledger 只提供下限：owner boundary、权限、安全、receipt、audit、replay、route-back、human gate、projection 与 fail-closed。它们不能替代开放式专家判断，也不能写成 publication / fundability / visual / export / artifact / production ready verdict。
+
+## Currentness policy
+
+本文不冻结任一日期、branch、SHA、readiness counter、worklist counter、App release state、OMA production-consumption state、MAS/MAG/RCA owner-chain state、provider proof state 或下一轮执行 baton。
+
+读取当前事实时必须回到 `docs/active/current-state-vs-ideal-gap.md`、核心五件套、相关合同/源码/测试、fresh CLI/read-model、runtime ledger、App evidence 与 domain-owned owner receipt。本文只能提供稳定的调研过滤器、surface budget 读法和审计问题，不能替代 active truth plan、release gate、production readiness、domain quality verdict 或 artifact authority。
 
 ## 长期优化目标
 
@@ -50,17 +55,17 @@ OPL 的长期目标继续固定为 `AI-first / executor-first / Codex-first`：O
 | OpenHands | coding-agent platform 的 secure execution、UI/workbench、agent SDK 与 task environment 经验 | OpenHands agent hub / task model / SDK 成为 MAS/MAG/RCA truth owner |
 | Aider | lint/test loop、repo-native verification aperture | 把 lint/test exit code 升级为 publication / fundability / visual / export verdict |
 
-## 当前系统评估
+## 稳定审计读法
 
-### 已成立
+### 稳定判据
 
-- OPL 当前三层读法已经成立：`OPL Framework` 持有 framework/runtime/activation/projection；`One Person Lab App` 是用户工作台；`Foundry Agents` 持有 domain truth、quality verdict、artifact authority、memory body 与 owner receipt。
+- OPL 三层读法固定为：`OPL Framework` 持有 framework/runtime/activation/projection；`One Person Lab App` 是用户工作台；`Foundry Agents` 持有 domain truth、quality verdict、artifact authority、memory body 与 owner receipt。
 - `Codex CLI` 是默认且第一公民 executor；`hermes_agent`、`claude_code`、`antigravity_cli` 等非默认 executor 只能以显式 adapter/backend 接入，并以 binding ref、receipt、audit 和 fail-closed 证明连接，不承诺行为、工具语义、质量或 resume 等价。
 - Temporal-backed provider 是 production online durable substrate；`local_sqlite` 只允许作为 dev/CI/offline diagnostic baseline。
-- 核心 docs、contracts 与 CLI/read model 都已反复防止 `provider proof / readiness / generated surface / cleanup ledger = domain ready` 的误读。
-- `framework readiness` 的当前状态必须从 `opl framework readiness --family-defaults --json` 读取。该 read-model 可以证明 framework control plane、provider cadence/capability、operator attention 和 refs-only worklist 的当前形状；authority boundary 固定禁止 OPL 声明 domain ready、production ready、quality/export verdict 或 artifact mutation authority。
+- 核心 docs、contracts 与 CLI/read model 必须持续防止 `provider proof / readiness / generated surface / cleanup ledger = domain ready` 的误读。
+- `framework readiness` 的状态必须从 fresh `opl framework readiness --family-defaults --json` 读取。该 read-model 只能证明 framework control plane、provider cadence/capability、operator attention 和 refs-only worklist 的当前形状；authority boundary 固定禁止 OPL 声明 domain ready、production ready、quality/export verdict 或 artifact mutation authority。
 
-### 主要冗余和污染风险
+### 审计风险
 
 - AI-first / executor-first 叙述在 README、核心五件套、active gap 和 contracts 中重复较多；重复可接受，但后续维护必须让 `docs/invariants.md` 持有规范定义，`docs/project.md` 持有项目读法，`docs/architecture.md` 持有运行结构，`status/gap` 只保当前状态和差距。
 - closeout、readiness、proof、tail、workorder、evidence ledger 术语密度高。默认入口应优先写清 `framework_control_plane_available` 或 `open accounting = 0` 只表示 OPL 控制面当前无待执行框架动作，不表示 App release、domain owner-chain、expected receipt instance、monitor freshness、artifact authority 或 long-soak evidence 完成。
@@ -76,9 +81,9 @@ OPL 的长期目标继续固定为 `AI-first / executor-first / Codex-first`：O
 | RCA | 旧 managed runtime 退役较彻底 | 防止 artifact-heavy helper、product sidecar、native helper、artifact lifecycle 被复制成通用 runtime scaffold；RCA 只提供 visual pack、authority function 和 refs-only adapter |
 | OMA | 语义深度已够，不再是空壳；MAS/MAG real-target scaleout refs、registry/App drilldown、owner receipt / typed blocker、Agent Lab result、no-forbidden-write 与 cleanup counters 都只从 fresh OMA / OPL read-model 读取。 | 继续增加真实 target patch/rerun/owner receipt 样本；防止 scripts 增长成 meta-runtime 或默认 promotion authority；任何 OMA counter、verified refs 或 OMA production-consumption ready 都不能授权目标 domain ready、family production ready 或默认 promotion。 |
 
-## 下一轮可执行方向
+## 长期优化候选与 intake 判据
 
-当前优先级继续从 live gate 倒推，而不是继续增加相似 conformance surface：每轮先重跑 App user-path、OMA production-consumption、framework readiness、App/operator drilldown 和 evidence worklist，再转向仍能被 fresh read-model 证明的 MAS paper-line parity / physical thinning、MAG/RCA owner-chain 与 controlled hosted stage soak、Developer Mode non-owner fork/PR owner acceptance、以及 App release-ready owner boundary；只有当新 surface 能防止 authority 污染、App/default caller 漏读或 refs-only evidence 误关 gate 时，才进入前 3 类结构优化。
+优化候选必须从 fresh live gate 倒推，而不是继续增加相似 conformance surface。任何一次执行前都要重跑 App user-path、OMA production-consumption、framework readiness、App/operator drilldown 和 evidence worklist，再转向仍能被 fresh read-model 证明的 MAS paper-line parity / physical thinning、MAG/RCA owner-chain 与 controlled hosted stage soak、Developer Mode non-owner fork/PR owner acceptance、以及 App release-ready owner boundary。只有当新 surface 能防止 authority 污染、App/default caller 漏读或 refs-only evidence 误关 gate 时，才进入前 3 类结构优化。
 
 1. `standard_stage_pack_v2_conformance`
    统一 `stage_control_plane` 的必备字段和读法：prompt refs、tool/skill refs、knowledge refs、evaluation / quality gate refs、selected executor、executor binding ref、expected receipt refs、requires/ensures、independent gate policy、route-back receipt。
