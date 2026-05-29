@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 
 import { assessIndependentAiReviewReceipt } from './agent-lab.ts';
 import { AGENT_LAB_PROMOTION_AUTHORITY_BOUNDARY } from './agent-lab-promotion.ts';
@@ -9,7 +8,7 @@ type JsonRecord = Record<string, unknown>;
 
 type AgentLabRiskTier = 'low_risk' | 'medium_risk';
 
-export type AgentLabRiskTierAutoPromotionReceipt = {
+type AgentLabRiskTierAutoPromotionReceipt = {
   surface_kind: 'opl_agent_lab_risk_tier_auto_promotion_receipt';
   receipt_ref: string;
   receipt_status: 'recorded' | 'verified';
@@ -283,7 +282,7 @@ function normalizeReceipt(value: unknown): AgentLabRiskTierAutoPromotionReceipt 
   };
 }
 
-export function readAgentLabRiskTierAutoPromotionLedger():
+function readAgentLabRiskTierAutoPromotionLedger():
   AgentLabRiskTierAutoPromotionLedger {
   const file = ledgerPath();
   if (!fs.existsSync(file)) {
@@ -418,7 +417,7 @@ export function listAgentLabRiskTierAutoPromotionReceipts() {
   return readAgentLabRiskTierAutoPromotionLedger().receipts;
 }
 
-export function verifiedAgentLabRiskTierAutoPromotionReceiptRefs() {
+function verifiedAgentLabRiskTierAutoPromotionReceiptRefs() {
   return listAgentLabRiskTierAutoPromotionReceipts()
     .filter((receipt) => receipt.receipt_status === 'verified')
     .map((receipt) => receipt.receipt_ref);
@@ -428,8 +427,4 @@ export function hasVerifiedAgentLabRiskTierAutoPromotionReceiptRef(
   receiptRef: string,
 ) {
   return verifiedAgentLabRiskTierAutoPromotionReceiptRefs().includes(receiptRef);
-}
-
-export function agentLabRiskTierAutoPromotionLedgerFilePath() {
-  return path.resolve(ledgerPath());
 }
