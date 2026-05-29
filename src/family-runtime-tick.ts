@@ -21,6 +21,8 @@ import {
   isMasDefaultExecutorDispatchTask,
   masDefaultExecutorDispatchIdentity,
   masDefaultExecutorDomainSourceFingerprint,
+  masDefaultExecutorStudyActionIdentity,
+  masDefaultExecutorStudyIdentity,
   refreshMasDefaultExecutorLiveAttemptTaskLease,
   stageIdForProviderHostedTask,
 } from './family-runtime-provider-hosted-attempts.ts';
@@ -86,25 +88,57 @@ function currentMasDefaultExecutorTasksByDispatch(rows: FamilyRuntimeTaskRow[]) 
   return currentByIdentity;
 }
 
+function currentMasDefaultExecutorTasksByStudyAction(rows: FamilyRuntimeTaskRow[]) {
+  const currentByIdentity = new Map<string, MasDefaultExecutorCurrentTask>();
+  for (const row of rows) {
+    const payload = payloadFromTask(row);
+    const identity = masDefaultExecutorStudyActionIdentity(row, payload);
+    if (!identity) {
+      continue;
+    }
+    const current = currentByIdentity.get(identity);
+    if (!current || isNewerTask(row, current)) {
+      currentByIdentity.set(identity, {
+        task_id: row.task_id,
+        source_fingerprint: masDefaultExecutorDomainSourceFingerprint(payload),
+        created_at: row.created_at,
+      });
+    }
+  }
+  return currentByIdentity;
+}
+
 function dropSupersededMasDefaultExecutorRows(
   candidateRows: FamilyRuntimeTaskRow[],
   allRows: FamilyRuntimeTaskRow[],
 ) {
   const currentByIdentity = currentMasDefaultExecutorTasksByDispatch(allRows);
+  const currentByStudyAction = currentMasDefaultExecutorTasksByStudyAction(allRows);
   let supersededCount = 0;
   const rows = candidateRows.filter((row) => {
     const payload = payloadFromTask(row);
     const identity = masDefaultExecutorDispatchIdentity(row, payload);
-    if (!identity) {
+    const actionIdentity = masDefaultExecutorStudyActionIdentity(row, payload);
+    if (!identity || !actionIdentity) {
       return true;
     }
     const current = currentByIdentity.get(identity);
+    const currentAction = currentByStudyAction.get(actionIdentity);
     const sourceFingerprint = masDefaultExecutorDomainSourceFingerprint(payload);
     if (
       current
       && current.source_fingerprint
       && sourceFingerprint
       && current.source_fingerprint !== sourceFingerprint
+    ) {
+      supersededCount += 1;
+      return false;
+    }
+    if (
+      currentAction
+      && currentAction.source_fingerprint
+      && sourceFingerprint
+      && currentAction.source_fingerprint !== sourceFingerprint
     ) {
       supersededCount += 1;
       return false;
@@ -296,8 +330,10 @@ function autoRedriveBlockedMasDefaultExecutorProviderTasks(
 ) {
   let autoRedrivenCount = 0;
   let autoDeadLetteredCount = 0;
+  let staleSkippedCount = 0;
   const redrivenAt = new Date().toISOString();
   const currentByIdentity = currentMasDefaultExecutorTasksByDispatch(rows);
+  const currentByStudyAction = currentMasDefaultExecutorTasksByStudyAction(rows);
   for (const row of rows) {
     if (
       row.status !== 'blocked'
@@ -310,7 +346,9 @@ function autoRedriveBlockedMasDefaultExecutorProviderTasks(
       continue;
     }
     const identity = masDefaultExecutorDispatchIdentity(row, payload);
+    const actionIdentity = masDefaultExecutorStudyActionIdentity(row, payload);
     const current = identity ? currentByIdentity.get(identity) : null;
+    const currentAction = actionIdentity ? currentByStudyAction.get(actionIdentity) : null;
     const sourceFingerprint = masDefaultExecutorDomainSourceFingerprint(payload);
     if (
       current
@@ -319,6 +357,63 @@ function autoRedriveBlockedMasDefaultExecutorProviderTasks(
       && sourceFingerprint
       && current.source_fingerprint !== sourceFingerprint
     ) {
+      staleSkippedCount += 1;
+      insertEvent(db, {
+        taskId: row.task_id,
+        domainId: row.domain_id,
+        eventType: 'task_default_executor_stale_auto_redrive_skip',
+        source,
+        payload: {
+          reason: 'same_dispatch_newer_source_exists',
+          current_task_id: current.task_id,
+          current_source_fingerprint: current.source_fingerprint,
+          stale_source_fingerprint: sourceFingerprint,
+          dispatch_ref: payload.dispatch_ref ?? null,
+          action_type: payload.action_type ?? null,
+          study_id: payload.study_id ?? null,
+          authority_boundary: {
+            opl: 'queue_auto_redrive_currentness_filter_only',
+            domain: 'truth_quality_artifact_gate_owner',
+            domain_truth_mutation: false,
+            publication_quality_mutation: false,
+            artifact_gate_mutation: false,
+            current_package_mutation: false,
+          },
+        },
+      });
+      continue;
+    }
+    if (
+      currentAction
+      && currentAction.task_id !== row.task_id
+      && currentAction.source_fingerprint
+      && sourceFingerprint
+      && currentAction.source_fingerprint !== sourceFingerprint
+    ) {
+      staleSkippedCount += 1;
+      insertEvent(db, {
+        taskId: row.task_id,
+        domainId: row.domain_id,
+        eventType: 'task_default_executor_stale_auto_redrive_skip',
+        source,
+        payload: {
+          reason: 'same_study_action_newer_source_exists',
+          current_task_id: currentAction.task_id,
+          current_source_fingerprint: currentAction.source_fingerprint,
+          stale_source_fingerprint: sourceFingerprint,
+          dispatch_ref: payload.dispatch_ref ?? null,
+          action_type: payload.action_type ?? null,
+          study_id: payload.study_id ?? null,
+          authority_boundary: {
+            opl: 'queue_auto_redrive_currentness_filter_only',
+            domain: 'truth_quality_artifact_gate_owner',
+            domain_truth_mutation: false,
+            publication_quality_mutation: false,
+            artifact_gate_mutation: false,
+            current_package_mutation: false,
+          },
+        },
+      });
       continue;
     }
     const usedAttempts = attemptCountForTask(db, row.task_id);
@@ -363,7 +458,7 @@ function autoRedriveBlockedMasDefaultExecutorProviderTasks(
       autoRedrivenCount += 1;
     }
   }
-  return { autoRedrivenCount, autoDeadLetteredCount };
+  return { autoRedrivenCount, autoDeadLetteredCount, staleSkippedCount };
 }
 
 function isLiveMasDefaultExecutorAttempt(attempt: StageAttemptPayload | null) {
@@ -461,6 +556,82 @@ async function dropLiveMasDefaultExecutorRows(
     });
   }
   return { rows, liveSkippedCount };
+}
+
+function dropSameStudyMasDefaultExecutorRows(
+  db: DatabaseSync,
+  candidateRows: FamilyRuntimeTaskRow[],
+  source: string,
+) {
+  const selectedByStudy = new Map<string, FamilyRuntimeTaskRow>();
+  const selectedIds = new Set<string>();
+  let studySingleFlightSkippedCount = 0;
+  for (const row of candidateRows) {
+    const payload = payloadFromTask(row);
+    const studyIdentity = masDefaultExecutorStudyIdentity(row, payload);
+    if (!studyIdentity) {
+      selectedIds.add(row.task_id);
+      continue;
+    }
+    const selected = selectedByStudy.get(studyIdentity);
+    if (!selected) {
+      selectedByStudy.set(studyIdentity, row);
+      selectedIds.add(row.task_id);
+      continue;
+    }
+    if (isNewerTask(row, {
+      task_id: selected.task_id,
+      source_fingerprint: masDefaultExecutorDomainSourceFingerprint(payloadFromTask(selected)),
+      created_at: selected.created_at,
+    })) {
+      selectedIds.delete(selected.task_id);
+      selectedIds.add(row.task_id);
+      selectedByStudy.set(studyIdentity, row);
+    }
+  }
+  const rows = candidateRows.filter((row) => {
+    if (selectedIds.has(row.task_id)) {
+      return true;
+    }
+    const payload = payloadFromTask(row);
+    if (masDefaultExecutorStudyIdentity(row, payload)) {
+      studySingleFlightSkippedCount += 1;
+      const selected = [...selectedByStudy.values()].find((candidate) => {
+        const candidatePayload = payloadFromTask(candidate);
+        return masDefaultExecutorStudyIdentity(candidate, candidatePayload)
+          === masDefaultExecutorStudyIdentity(row, payload);
+      });
+      insertEvent(db, {
+        taskId: row.task_id,
+        domainId: row.domain_id,
+        eventType: 'task_default_executor_same_study_tick_skip',
+        source,
+        payload: {
+          reason: 'same_study_candidate_selected_in_tick',
+          selected_task_id: selected?.task_id ?? null,
+          selected_created_at: selected?.created_at ?? null,
+          selected_source_fingerprint: selected
+            ? masDefaultExecutorDomainSourceFingerprint(payloadFromTask(selected))
+            : null,
+          candidate_created_at: row.created_at,
+          candidate_source_fingerprint: masDefaultExecutorDomainSourceFingerprint(payload),
+          dispatch_ref: payload.dispatch_ref ?? null,
+          action_type: payload.action_type ?? null,
+          study_id: payload.study_id ?? null,
+          authority_boundary: {
+            opl: 'queue_tick_same_study_default_executor_single_flight_only',
+            domain: 'truth_quality_artifact_gate_owner',
+            domain_truth_mutation: false,
+            publication_quality_mutation: false,
+            artifact_gate_mutation: false,
+            current_package_mutation: false,
+          },
+        },
+      });
+    }
+    return false;
+  });
+  return { rows, studySingleFlightSkippedCount };
 }
 
 async function syncRunningMasDefaultExecutorTaskAttempts(
@@ -573,6 +744,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
   const {
     autoRedrivenCount: masDefaultExecutorAutoRedrivenCount,
     autoDeadLetteredCount: masDefaultExecutorAutoDeadLetteredCount,
+    staleSkippedCount: masDefaultExecutorAutoRedriveStaleSkippedCount,
   } = autoRedriveBlockedMasDefaultExecutorProviderTasks(
     db,
     scopedRowsAfterPaperAutonomyRepair,
@@ -594,9 +766,13 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     supersededCount: masDefaultExecutorSupersededCount,
   } = dropSupersededMasDefaultExecutorRows(scopedRowsBeforeSupersededFilter, allRows);
   const {
+    rows: scopedRowsAfterStudySingleFlight,
+    studySingleFlightSkippedCount: masDefaultExecutorStudySingleFlightSkippedCount,
+  } = dropSameStudyMasDefaultExecutorRows(db, scopedRowsAfterSuperseded, 'opl-family-runtime-tick');
+  const {
     rows: scopedRows,
     liveSkippedCount: masDefaultExecutorLiveSkippedCount,
-  } = await dropLiveMasDefaultExecutorRows(db, scopedRowsAfterSuperseded, {
+  } = await dropLiveMasDefaultExecutorRows(db, scopedRowsAfterStudySingleFlight, {
     queryTemporalStageAttempt: handlers.queryTemporalStageAttempt,
   });
   const rows = scopedRows.slice(0, input.limit);
@@ -609,6 +785,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       selected_count: rows.length,
       filtered_count: filteredCount,
       mas_default_executor_superseded_count: masDefaultExecutorSupersededCount,
+      mas_default_executor_study_single_flight_skipped_count: masDefaultExecutorStudySingleFlightSkippedCount,
       mas_default_executor_live_skipped_count: masDefaultExecutorLiveSkippedCount,
       mas_default_executor_terminal_synced_count: masDefaultExecutorTerminalSyncedCount,
       repaired_missing_identity_running_count: repairedMissingIdentityRunningCount,
@@ -616,6 +793,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       repaired_paper_autonomy_missing_closeout_count: repairedPaperAutonomyMissingCloseoutCount,
       mas_default_executor_auto_redriven_count: masDefaultExecutorAutoRedrivenCount,
       mas_default_executor_auto_dead_lettered_count: masDefaultExecutorAutoDeadLetteredCount,
+      mas_default_executor_auto_redrive_stale_skipped_count: masDefaultExecutorAutoRedriveStaleSkippedCount,
       task_scope: input.taskScope ?? null,
     },
   });
@@ -632,6 +810,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     selected_count: rows.length,
     filtered_count: filteredCount,
     mas_default_executor_superseded_count: masDefaultExecutorSupersededCount,
+    mas_default_executor_study_single_flight_skipped_count: masDefaultExecutorStudySingleFlightSkippedCount,
     mas_default_executor_live_skipped_count: masDefaultExecutorLiveSkippedCount,
     mas_default_executor_terminal_synced_count: masDefaultExecutorTerminalSyncedCount,
     repaired_missing_identity_running_count: repairedMissingIdentityRunningCount,
@@ -639,6 +818,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     repaired_paper_autonomy_missing_closeout_count: repairedPaperAutonomyMissingCloseoutCount,
     mas_default_executor_auto_redriven_count: masDefaultExecutorAutoRedrivenCount,
     mas_default_executor_auto_dead_lettered_count: masDefaultExecutorAutoDeadLetteredCount,
+    mas_default_executor_auto_redrive_stale_skipped_count: masDefaultExecutorAutoRedriveStaleSkippedCount,
     dispatches,
   };
 }

@@ -244,6 +244,39 @@ export function masDefaultExecutorDispatchIdentity(
   ]);
 }
 
+export function masDefaultExecutorStudyActionIdentity(
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+) {
+  if (!isMasDefaultExecutorDispatchTask(row, payload)) {
+    return null;
+  }
+  const locator = workspaceLocatorForProviderHostedTask(row, payload);
+  return stableId('mas_default_executor_study_action_identity', [
+    row.domain_id,
+    row.task_kind,
+    optionalString(locator.workspace_root),
+    optionalString(locator.study_id),
+    optionalString(locator.action_type),
+  ]);
+}
+
+export function masDefaultExecutorStudyIdentity(
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+) {
+  if (!isMasDefaultExecutorDispatchTask(row, payload)) {
+    return null;
+  }
+  const locator = workspaceLocatorForProviderHostedTask(row, payload);
+  return stableId('mas_default_executor_study_identity', [
+    row.domain_id,
+    row.task_kind,
+    optionalString(locator.workspace_root),
+    optionalString(locator.study_id),
+  ]);
+}
+
 export function masDefaultExecutorDomainSourceFingerprint(payload: Record<string, unknown>) {
   return optionalString(payload.source_fingerprint);
 }
