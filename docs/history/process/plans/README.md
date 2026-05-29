@@ -55,6 +55,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-30-opl-series-doc-governance-fresh-install-ledger.md` | OPL current-support fresh-install / GUI first-launch cleanup ledger。 | 当前 truth 归 OPL fresh-install contract/source/tests/CLI 与 App-owned first-run/release contracts/workflows/evidence；ledger 只记录 stale release evidence and `online_management_*` wording retirement. |
 | `2026-05-30-opl-series-doc-governance-ai-first-optimization-ledger.md` | OPL runtime-substrate AI-first optimization support-reference cleanup ledger。 | 当前 truth 归 invariants、decisions、active gap plan、live CLI/read-model、App evidence 与 domain owner receipts；ledger 只记录 dated current-assessment / next-action wording retirement. |
 | `2026-05-30-opl-series-doc-governance-domain-memory-support-ledger.md` | OPL operating-governance domain-memory support-reference cleanup ledger。 | 当前 truth 归 family-domain-memory contracts/source/CLI read-model、App/operator projection 与 domain owner receipts；ledger 只记录 execution-ledger wording retirement. |
+| `2026-05-30-opl-series-doc-governance-stage-led-roadmap-ledger.md` | OPL runtime-substrate stage-led roadmap support-reference cleanup ledger。 | 当前 truth 归 active gap plan、core docs、live CLI/read-model、runtime ledger 与 domain owner receipts；ledger 只记录 fixed completion snapshot / shared SHA / App-Aion proof wording retirement. |
 
 ## Tombstone Rules
 
