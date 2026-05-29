@@ -379,7 +379,7 @@ function buildUiDefaults() {
   };
 }
 
-export function fullRuntimeWorkbenchSummary(fullDrilldown: JsonRecord | null) {
+function fullRuntimeWorkbenchSummary(fullDrilldown: JsonRecord | null) {
   if (!fullDrilldown) {
     return {
       surface_kind: 'opl_app_state_runtime_workbench_summary',
