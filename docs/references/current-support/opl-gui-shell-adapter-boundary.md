@@ -59,9 +59,11 @@ App 仓库拆分 closeout 已归档到 [One Person Lab App 仓库拆分 Closeout
 
 GUI fork 更新不是机械 rebase。标准 intake 目标是“吸收 upstream + 收缩本地 delta + 保留 OPL runtime 边界”：先比较 upstream delta、OPL overlay delta 和当前本地 dirty delta，再把 OPL 补丁分类为保留、upstream 已覆盖可退役、适配到新 upstream 结构或继续观察。
 
-当前 GUI shell 的裁剪规则集中在 `opl-aion-shell/electron-builder.yml`，校验规则集中在 `opl-aion-shell/scripts/validate-packaged-runtime.js`。GUI 打包脚本应在生成 fresh `app.asar` 后自动执行 `--scan-all` 级别的 packaged runtime validation；发布前仍需真实启动一次 One Person Lab App。
+当前 GUI shell 的 packaging contract 由 App 仓 `contracts/app-shell-adapter.json` 固化：active shell 根是 `shells/aionui`，Electron builder config 是 `packages/desktop/electron-builder.yml`，packaged runtime validator 是 `scripts/validate-packaged-runtime.js`。这些路径按 active shell 根解释；OPL 主仓文档只记录 owner boundary，不把 shell 内部目录形态写成 framework contract。
 
-迁移后，这些规则应由 App 顶层脚本调用 active shell 的等价命令，而不是把 active shell 的内部路径写成永久 App contract。
+当前验证入口由 App 顶层 wrapper 与 release gate 持有：`validate:gui-shell` 先校验 active shell、准备标准 release payload，再通过 active shell 运行 GUI package；`validate:opl-package` / `test:packaged:bun` 通过 App wrapper 调用 active shell 的 `validate:opl-package`，当前 active shell 将其实现为 `node scripts/validate-packaged-runtime.js --scan-all`。发布前仍需真实启动一次 One Person Lab App；自动执行时机、内部 build script 名称和具体 package manager 继续以 App repo scripts、release workflow 和 active shell package scripts 的 fresh evidence 为准。
+
+未来迁移到其他 GUI 时，应更新 App active shell contract 与 wrapper target，而不是在 OPL 主仓新增 shell-specific path、alias 或兼容 facade。
 
 真正会增加长期分叉成本的是源代码层的深改，例如：
 

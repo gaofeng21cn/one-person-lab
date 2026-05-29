@@ -77,6 +77,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-35.md` | OPL series docs governance tranche ledger part 35。 | 当前 truth 归 companion catalog/source、skill sync/plugin registry、tool readiness、system initialize、tests 和 fresh CLI/read-model；ledger 只记录本轮 default skill ecosystem support reference 的 currentness policy、machine-entry table、MinerU companion 和 plugin-only boundary 补齐。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-36.md` | OPL series docs governance tranche ledger part 36。 | 当前 truth 归 fresh-install contract、system initialize / install source、fresh-install smoke、App release evidence owner 和 live CLI/read-model；ledger 只记录本轮 `online_management` first-run public surface 退役为 `family_runtime_provider`。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-37.md` | OPL series docs governance tranche ledger part 37。 | 当前 truth 归 Docker/WebUI support docs、OPL package workflow、package-distribution source、App active-shell release gate、active shell Dockerfile/web-cli/web-host 和 image manifest；ledger 只记录本轮 WebUI GHCR publisher / App release truth owner 边界与镜像 payload 过度承诺清理。 |
+| `2026-05-29-opl-series-doc-governance-tranche-ledger-part-38.md` | OPL series docs governance tranche ledger part 38。 | 当前 truth 归 GUI shell/App boundary support、App active-shell contract、App wrapper scripts、release boundary tests 和 active shell package scripts；ledger 只记录本轮 stale builder path 与 validation timing overclaim 清理。 |
 
 ## Tombstone Rules
 
