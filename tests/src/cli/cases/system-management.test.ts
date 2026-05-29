@@ -630,7 +630,6 @@ exit 1
         readiness: {
           core_ready: boolean;
           domain_ready: boolean;
-          online_management_ready: boolean;
           launch_ready: boolean;
           family_runtime_provider_ready: boolean;
           full_ready: boolean;
@@ -640,12 +639,12 @@ exit 1
           ready_to_launch: boolean;
           blocking_items: string[];
         };
-        online_management: {
+        family_runtime_provider: {
           surface_id: string;
           status: string;
           provider_kind: string;
           blocking: boolean;
-          full_online_blocking: boolean;
+          full_readiness_blocking: boolean;
           ready: boolean;
           capability_summary: string;
           repair_action: {
@@ -683,7 +682,6 @@ exit 1
     assert.deepEqual(output.system_initialize.readiness, {
       core_ready: true,
       domain_ready: true,
-      online_management_ready: false,
       launch_ready: true,
       family_runtime_provider_ready: false,
       full_ready: false,
@@ -691,36 +689,37 @@ exit 1
     assert.equal(output.system_initialize.setup_flow.phase, 'environment');
     assert.equal(output.system_initialize.setup_flow.ready_to_launch, true);
     assert.deepEqual(output.system_initialize.setup_flow.blocking_items, []);
-    assert.equal(output.system_initialize.online_management.surface_id, 'opl_online_management');
-    assert.equal(output.system_initialize.online_management.status, 'initializing');
-    assert.equal(output.system_initialize.online_management.provider_kind, 'temporal');
-    assert.equal(output.system_initialize.online_management.blocking, true);
-    assert.equal(output.system_initialize.online_management.full_online_blocking, true);
-    assert.equal(output.system_initialize.online_management.ready, false);
+    assert.equal(Object.hasOwn(output.system_initialize, 'online_management'), false);
+    assert.equal(output.system_initialize.family_runtime_provider.surface_id, 'opl_family_runtime_provider_readiness');
+    assert.equal(output.system_initialize.family_runtime_provider.status, 'initializing');
+    assert.equal(output.system_initialize.family_runtime_provider.provider_kind, 'temporal');
+    assert.equal(output.system_initialize.family_runtime_provider.blocking, true);
+    assert.equal(output.system_initialize.family_runtime_provider.full_readiness_blocking, true);
+    assert.equal(output.system_initialize.family_runtime_provider.ready, false);
     assert.match(
-      output.system_initialize.online_management.capability_summary,
+      output.system_initialize.family_runtime_provider.capability_summary,
       /temporal/i,
     );
-    assert.equal(output.system_initialize.online_management.repair_action.action_id, 'review_family_runtime_provider');
-    assert.equal(output.system_initialize.online_management.service_status.engine_id, 'temporal');
-    assert.equal(output.system_initialize.online_management.service_status.installed, false);
-    assert.equal(Object.hasOwn(output.system_initialize.online_management.service_status, 'gateway_loaded'), false);
-    assert.equal(output.system_initialize.online_management.service_status.health_status, 'attention_needed');
-    assert.equal(output.system_initialize.online_management.last_repair_result, null);
+    assert.equal(output.system_initialize.family_runtime_provider.repair_action.action_id, 'review_family_runtime_provider');
+    assert.equal(output.system_initialize.family_runtime_provider.service_status.engine_id, 'temporal');
+    assert.equal(output.system_initialize.family_runtime_provider.service_status.installed, false);
+    assert.equal(Object.hasOwn(output.system_initialize.family_runtime_provider.service_status, 'gateway_loaded'), false);
+    assert.equal(output.system_initialize.family_runtime_provider.service_status.health_status, 'attention_needed');
+    assert.equal(output.system_initialize.family_runtime_provider.last_repair_result, null);
 
-    const onlineManagementItem = output.system_initialize.checklist.find((entry) => entry.item_id === 'family_runtime_provider');
-    assert.ok(onlineManagementItem);
-    assert.equal(onlineManagementItem.label, 'Family Runtime Provider');
-    assert.equal(onlineManagementItem.required, true);
-    assert.equal(onlineManagementItem.blocking, false);
-    assert.equal(onlineManagementItem.readiness_layer, 'full_readiness');
-    assert.equal(onlineManagementItem.severity, 'maintenance');
-    assert.equal(onlineManagementItem.user_action_required, true);
-    assert.equal(onlineManagementItem.auto_action_available, false);
-    assert.equal(onlineManagementItem.action_command_ref, 'opl family-runtime worker status --provider temporal');
-    assert.equal(typeof onlineManagementItem.last_attempt?.observed_at, 'string');
-    assert.match(onlineManagementItem.next_visible_step, /Core readiness/);
-    assert.match(onlineManagementItem.detail_summary, /temporal/i);
+    const familyRuntimeProviderItem = output.system_initialize.checklist.find((entry) => entry.item_id === 'family_runtime_provider');
+    assert.ok(familyRuntimeProviderItem);
+    assert.equal(familyRuntimeProviderItem.label, 'Family Runtime Provider');
+    assert.equal(familyRuntimeProviderItem.required, true);
+    assert.equal(familyRuntimeProviderItem.blocking, false);
+    assert.equal(familyRuntimeProviderItem.readiness_layer, 'full_readiness');
+    assert.equal(familyRuntimeProviderItem.severity, 'maintenance');
+    assert.equal(familyRuntimeProviderItem.user_action_required, true);
+    assert.equal(familyRuntimeProviderItem.auto_action_available, false);
+    assert.equal(familyRuntimeProviderItem.action_command_ref, 'opl family-runtime worker status --provider temporal');
+    assert.equal(typeof familyRuntimeProviderItem.last_attempt?.observed_at, 'string');
+    assert.match(familyRuntimeProviderItem.next_visible_step, /Core readiness/);
+    assert.match(familyRuntimeProviderItem.detail_summary, /temporal/i);
     assert.equal(output.system_initialize.recommended_next_action.action_id, 'review_family_runtime_provider');
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
@@ -780,10 +779,10 @@ exit 1
           };
         };
         system_initialize: {
-          online_management: {
+          family_runtime_provider: {
             status: string;
             blocking: boolean;
-            full_online_blocking: boolean;
+            full_readiness_blocking: boolean;
             ready: boolean;
           };
           core_engines: {
@@ -818,10 +817,11 @@ exit 1
     );
     assert.equal(Object.hasOwn(output.install.runtime_manager_action.after.reconcile.checked_surfaces, 'hermes_diagnostics'), false);
     assert.equal(Object.hasOwn(output.install.system_initialize.core_engines, 'hermes'), false);
-    assert.equal(output.install.system_initialize.online_management.status, 'initializing');
-    assert.equal(output.install.system_initialize.online_management.blocking, true);
-    assert.equal(output.install.system_initialize.online_management.full_online_blocking, true);
-    assert.equal(output.install.system_initialize.online_management.ready, false);
+    assert.equal(Object.hasOwn(output.install.system_initialize, 'online_management'), false);
+    assert.equal(output.install.system_initialize.family_runtime_provider.status, 'initializing');
+    assert.equal(output.install.system_initialize.family_runtime_provider.blocking, true);
+    assert.equal(output.install.system_initialize.family_runtime_provider.full_readiness_blocking, true);
+    assert.equal(output.install.system_initialize.family_runtime_provider.ready, false);
     assert.equal(
       output.install.first_run_log_events.some((entry) =>
         entry.event_type === 'online_management_repair_started'
@@ -831,6 +831,18 @@ exit 1
     assert.equal(
       output.install.first_run_log_events.some((entry) =>
         entry.event_type === 'online_management_repair_completed'
+      ),
+      false,
+    );
+    assert.equal(
+      output.install.first_run_log_events.some((entry) =>
+        entry.event_type === 'family_runtime_provider_repair_started'
+      ),
+      false,
+    );
+    assert.equal(
+      output.install.first_run_log_events.some((entry) =>
+        entry.event_type === 'family_runtime_provider_repair_completed'
       ),
       false,
     );

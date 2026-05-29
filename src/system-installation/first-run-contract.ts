@@ -29,9 +29,9 @@ type FirstRunLogEventType =
   | 'runtime_manager_repair_started'
   | 'runtime_manager_repair_completed'
   | 'runtime_manager_repair_failed'
-  | 'online_management_repair_started'
-  | 'online_management_repair_completed'
-  | 'online_management_repair_failed';
+  | 'family_runtime_provider_repair_started'
+  | 'family_runtime_provider_repair_completed'
+  | 'family_runtime_provider_repair_failed';
 
 function resolveHomeDir() {
   return process.env.HOME?.trim() || os.homedir();
@@ -54,10 +54,10 @@ export function buildOplFirstRunLogSurface() {
     log_path: resolveOplFirstRunLogPath(),
     override_env: 'OPL_FIRST_RUN_LOG_PATH',
     required_event_fields: ['timestamp', 'event_type', 'schema_version', 'surface_id', 'payload'],
-    online_management_event_types: [
-      'online_management_repair_started',
-      'online_management_repair_completed',
-      'online_management_repair_failed',
+    family_runtime_provider_event_types: [
+      'family_runtime_provider_repair_started',
+      'family_runtime_provider_repair_completed',
+      'family_runtime_provider_repair_failed',
     ],
     writer_owner: 'OPL CLI',
     consumer_owner: 'One Person Lab GUI',
@@ -125,10 +125,10 @@ export function buildOplFreshInstallTestMatrix() {
         expected_core_blockers: ['codex', 'codex_config'],
         expected_maintenance_items: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
         expected_conditional_maintenance_items: ['native_helpers'],
-        expected_online_management: {
+        expected_family_runtime_provider: {
           status: 'initializing',
           blocking: true,
-          full_online_blocking: true,
+          full_readiness_blocking: true,
         },
       },
       {
@@ -140,10 +140,10 @@ export function buildOplFreshInstallTestMatrix() {
         expected_core_blockers: ['codex_config'],
         expected_maintenance_items: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
         expected_conditional_maintenance_items: ['native_helpers'],
-        expected_online_management: {
+        expected_family_runtime_provider: {
           status: 'initializing',
           blocking: true,
-          full_online_blocking: true,
+          full_readiness_blocking: true,
         },
       },
       {
@@ -155,10 +155,10 @@ export function buildOplFreshInstallTestMatrix() {
         expected_core_blockers: ['codex', 'codex_config'],
         expected_maintenance_items: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
         expected_conditional_maintenance_items: ['native_helpers'],
-        expected_online_management: {
+        expected_family_runtime_provider: {
           status: 'initializing',
           blocking: true,
-          full_online_blocking: true,
+          full_readiness_blocking: true,
         },
       },
       {
@@ -170,10 +170,10 @@ export function buildOplFreshInstallTestMatrix() {
         expected_core_blockers: [],
         expected_maintenance_items: ['family_runtime_provider', 'recommended_skills'],
         expected_conditional_maintenance_items: ['native_helpers'],
-        expected_online_management: {
+        expected_family_runtime_provider: {
           status: 'initializing',
           blocking: true,
-          full_online_blocking: true,
+          full_readiness_blocking: true,
         },
       },
       {

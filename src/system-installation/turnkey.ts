@@ -392,16 +392,16 @@ export async function runOplTurnkeyInstall(
         skip_native_helper_repair: Boolean(input.skipNativeHelperRepair),
       }),
     );
-    const skipOnlineManagement = Boolean(input.noOnlineRuntime);
+    const skipFamilyRuntimeProvider = Boolean(input.noOnlineRuntime);
     const runtimeManagerAction = await runRuntimeManagerAction({
       mode: 'apply',
       skipNativeHelpers: Boolean(input.skipNativeHelperRepair),
-      skipOnlineManagement,
+      skipFamilyRuntimeProvider,
     });
-    const familyRuntimeBridge = skipOnlineManagement
+    const familyRuntimeBridge = skipFamilyRuntimeProvider
       ? await runFamilyRuntime(['status'])
       : await runFamilyRuntime(['install']);
-    const onlineManagementActions = runtimeManagerAction.runtime_manager_action.executed_actions.filter(
+    const familyRuntimeProviderActions = runtimeManagerAction.runtime_manager_action.executed_actions.filter(
       (action) => action.action_lane === 'online_runtime' && action.status !== 'blocked_manual_configuration_required',
     );
     firstRunLogEvents.push(
@@ -413,17 +413,17 @@ export async function runOplTurnkeyInstall(
         })),
       }),
     );
-    if (onlineManagementActions.length > 0) {
-      const onlineManagementFailed = onlineManagementActions.some((action) => action.status === 'failed');
-      const onlineManagementRepairEventType =
-        onlineManagementFailed
-          ? 'online_management_repair_failed'
-          : 'online_management_repair_completed';
+    if (familyRuntimeProviderActions.length > 0) {
+      const familyRuntimeProviderFailed = familyRuntimeProviderActions.some((action) => action.status === 'failed');
+      const familyRuntimeProviderRepairEventType =
+        familyRuntimeProviderFailed
+          ? 'family_runtime_provider_repair_failed'
+          : 'family_runtime_provider_repair_completed';
       firstRunLogEvents.push(
-        appendOplFirstRunLogEvent(onlineManagementRepairEventType, {
-          status: onlineManagementFailed ? 'failed' : 'completed',
+        appendOplFirstRunLogEvent(familyRuntimeProviderRepairEventType, {
+          status: familyRuntimeProviderFailed ? 'failed' : 'completed',
           blocking: false,
-          executed_actions: onlineManagementActions.map((action) => ({
+          executed_actions: familyRuntimeProviderActions.map((action) => ({
             action_id: action.action_id,
             status: action.status,
             blocking: action.blocking ?? true,

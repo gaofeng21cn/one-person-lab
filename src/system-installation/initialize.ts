@@ -100,7 +100,7 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
     && codexCliReady
     && codexConfigReady;
   const domainReady = defaultModuleReady === defaultModuleTotal;
-  const onlineManagementStatus = providerReady
+  const familyRuntimeProviderStatus = providerReady
     ? 'ready'
     : familyRuntimeProvider.provider_kind === 'temporal'
       && familyRuntimeProvider.status === 'provider_code_landed_unconfigured'
@@ -272,7 +272,7 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
     buildInitializeChecklistItem({
       item_id: 'family_runtime_provider',
       label: 'Family Runtime Provider',
-      status: onlineManagementStatus,
+      status: familyRuntimeProviderStatus,
       required: true,
       blocking: false,
       readiness_layer: 'full_readiness',
@@ -280,7 +280,7 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
       user_action_required: !providerReady,
       auto_action_available: false,
       action_command_ref: actionCommandRef(providerReady ? openEnvironmentAction : reviewFamilyRuntimeProviderAction),
-      last_attempt: lastAttempt(onlineManagementStatus, {
+      last_attempt: lastAttempt(familyRuntimeProviderStatus, {
         provider_kind: familyRuntimeProvider.provider_kind,
         degraded_reason: familyRuntimeProvider.degraded_reason ?? null,
       }),
@@ -494,17 +494,16 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
       readiness: {
         core_ready: coreReady,
         domain_ready: domainReady,
-        online_management_ready: providerReady,
         launch_ready: launchReady,
         family_runtime_provider_ready: providerReady,
         full_ready: fullReady,
       },
-      online_management: {
-        surface_id: 'opl_online_management',
-        status: onlineManagementStatus,
+      family_runtime_provider: {
+        surface_id: 'opl_family_runtime_provider_readiness',
+        status: familyRuntimeProviderStatus,
         provider_kind: familyRuntimeProvider.provider_kind,
         blocking: !providerReady,
-        full_online_blocking: !providerReady,
+        full_readiness_blocking: !providerReady,
         ready: providerReady,
         capability_summary: providerReady
           ? `Family runtime provider ${familyRuntimeProvider.provider_kind} is ready for provider-backed stage attempts.`

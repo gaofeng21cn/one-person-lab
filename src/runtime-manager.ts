@@ -306,7 +306,7 @@ type RuntimeManagerActionMode = 'dry_run' | 'apply';
 type RuntimeManagerActionInput = {
   mode: RuntimeManagerActionMode;
   skipNativeHelpers?: boolean;
-  skipOnlineManagement?: boolean;
+  skipFamilyRuntimeProvider?: boolean;
 };
 
 function isNativeHelperAction(actionId: string) {
@@ -325,7 +325,7 @@ function filterActionableRuntimeManagerActions(
     if (input.skipNativeHelpers && isNativeHelperAction(action.action_id)) {
       return false;
     }
-    if (input.skipOnlineManagement && isOnlineRuntimeAction(action.action_id)) {
+    if (input.skipFamilyRuntimeProvider && isOnlineRuntimeAction(action.action_id)) {
       return false;
     }
     return true;
@@ -474,7 +474,7 @@ export async function runRuntimeManagerAction(input: RuntimeManagerActionInput) 
     ...action,
     execution_status: 'not_executed',
     dry_run_note:
-      input.skipNativeHelpers || input.skipOnlineManagement
+      input.skipNativeHelpers || input.skipFamilyRuntimeProvider
         ? 'Dry run did not run native helper repair, did not write refreshed native indexes, and did not repair or configure the selected family runtime provider. Requested recommendation classes were omitted.'
         : 'Dry run did not run native helper repair, did not write refreshed native indexes, and did not repair or configure the selected family runtime provider.',
   }));

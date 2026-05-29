@@ -44,10 +44,10 @@
       "surface_id",
       "payload"
     ],
-    "online_management_event_types": [
-      "online_management_repair_started",
-      "online_management_repair_completed",
-      "online_management_repair_failed"
+    "family_runtime_provider_event_types": [
+      "family_runtime_provider_repair_started",
+      "family_runtime_provider_repair_completed",
+      "family_runtime_provider_repair_failed"
     ]
   },
   "gui_accessibility_labels": {
@@ -83,10 +83,10 @@
       "expected_conditional_maintenance_items": [
         "native_helpers"
       ],
-      "expected_online_management": {
+      "expected_family_runtime_provider": {
         "status": "initializing",
         "blocking": true,
-        "full_online_blocking": true
+        "full_readiness_blocking": true
       }
     },
     {
@@ -106,10 +106,10 @@
       "expected_conditional_maintenance_items": [
         "native_helpers"
       ],
-      "expected_online_management": {
+      "expected_family_runtime_provider": {
         "status": "initializing",
         "blocking": true,
-        "full_online_blocking": true
+        "full_readiness_blocking": true
       }
     },
     {
@@ -130,10 +130,10 @@
       "expected_conditional_maintenance_items": [
         "native_helpers"
       ],
-      "expected_online_management": {
+      "expected_family_runtime_provider": {
         "status": "initializing",
         "blocking": true,
-        "full_online_blocking": true
+        "full_readiness_blocking": true
       }
     },
     {
@@ -150,10 +150,10 @@
       "expected_conditional_maintenance_items": [
         "native_helpers"
       ],
-      "expected_online_management": {
+      "expected_family_runtime_provider": {
         "status": "initializing",
         "blocking": true,
-        "full_online_blocking": true
+        "full_readiness_blocking": true
       }
     },
     {

@@ -143,12 +143,13 @@ function assertInitializeState(output, expected) {
     assert.equal(initialize.setup_flow.ready_to_launch, expected.readyToLaunch);
   }
   assert.equal(initialize.first_run_log.surface_id, 'opl_first_run_log');
-  assert.equal(initialize.online_management.blocking, expected.onlineManagementBlocking ?? false);
-  if (expected.fullOnlineBlocking !== undefined) {
-    assert.equal(initialize.online_management.full_online_blocking, expected.fullOnlineBlocking);
+  assert.equal(Object.hasOwn(initialize, 'online_management'), false);
+  assert.equal(initialize.family_runtime_provider.blocking, expected.familyRuntimeProviderBlocking ?? false);
+  if (expected.fullReadinessBlocking !== undefined) {
+    assert.equal(initialize.family_runtime_provider.full_readiness_blocking, expected.fullReadinessBlocking);
   }
-  if (expected.onlineManagementStatus) {
-    assert.equal(initialize.online_management.status, expected.onlineManagementStatus);
+  if (expected.familyRuntimeProviderStatus) {
+    assert.equal(initialize.family_runtime_provider.status, expected.familyRuntimeProviderStatus);
   }
   assert.equal(
     initialize.gui_first_run_automation.accessibility_labels.window,
@@ -193,9 +194,9 @@ function cleanUserMissingCodex(root) {
     maintenance: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
     conditionalMaintenance: ['native_helpers'],
     readyToLaunch: false,
-    onlineManagementBlocking: true,
-    onlineManagementStatus: 'initializing',
-    fullOnlineBlocking: true,
+    familyRuntimeProviderBlocking: true,
+    familyRuntimeProviderStatus: 'initializing',
+    fullReadinessBlocking: true,
   });
   return { observations: { overall_state: output.system_initialize.overall_state } };
 }
@@ -210,9 +211,9 @@ function compatibleCodexMissingModules(root) {
     maintenance: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
     conditionalMaintenance: ['native_helpers'],
     readyToLaunch: false,
-    onlineManagementBlocking: true,
-    onlineManagementStatus: 'initializing',
-    fullOnlineBlocking: true,
+    familyRuntimeProviderBlocking: true,
+    familyRuntimeProviderStatus: 'initializing',
+    fullReadinessBlocking: true,
   });
   return { observations: { codex_version: output.system_initialize.core_engines.codex.parsed_version } };
 }
@@ -227,9 +228,9 @@ function outdatedCodex(root) {
     maintenance: ['domain_modules', 'family_runtime_provider', 'recommended_skills'],
     conditionalMaintenance: ['native_helpers'],
     readyToLaunch: false,
-    onlineManagementBlocking: true,
-    onlineManagementStatus: 'initializing',
-    fullOnlineBlocking: true,
+    familyRuntimeProviderBlocking: true,
+    familyRuntimeProviderStatus: 'initializing',
+    fullReadinessBlocking: true,
   });
   assert.equal(output.system_initialize.core_engines.codex.version_status, 'outdated');
   return { observations: { codex_issue: output.system_initialize.core_engines.codex.issues[0] } };
@@ -247,9 +248,9 @@ function readyBaseline(root) {
     maintenance: ['family_runtime_provider', 'recommended_skills'],
     conditionalMaintenance: ['native_helpers'],
     readyToLaunch: true,
-    onlineManagementBlocking: true,
-    onlineManagementStatus: 'initializing',
-    fullOnlineBlocking: true,
+    familyRuntimeProviderBlocking: true,
+    familyRuntimeProviderStatus: 'initializing',
+    fullReadinessBlocking: true,
   });
   return { observations: { installed_modules_count: output.system_initialize.module_summary.installed_modules_count } };
 }

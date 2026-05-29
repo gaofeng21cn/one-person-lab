@@ -426,6 +426,8 @@ test('fresh-install matrix freezes GUI labels and first-run log contract', () =>
     first_run_log: {
       default_path: string;
       event_schema_version: string;
+      family_runtime_provider_event_types: string[];
+      online_management_event_types?: string[];
     };
     gui_accessibility_labels: Record<string, string>;
     gui_vm_implementation: {
@@ -447,6 +449,12 @@ test('fresh-install matrix freezes GUI labels and first-run log contract', () =>
   assert.equal(matrix.local_smoke_command, 'npm run test:fresh-install');
   assert.equal(matrix.first_run_log.default_path, '~/Library/Logs/One Person Lab/first-run.jsonl');
   assert.equal(matrix.first_run_log.event_schema_version, 'opl_first_run_event.v1');
+  assert.deepEqual(matrix.first_run_log.family_runtime_provider_event_types, [
+    'family_runtime_provider_repair_started',
+    'family_runtime_provider_repair_completed',
+    'family_runtime_provider_repair_failed',
+  ]);
+  assert.equal(Object.hasOwn(matrix.first_run_log, 'online_management_event_types'), false);
   assert.equal(matrix.gui_accessibility_labels.window, 'opl-first-run-window');
   assert.equal(matrix.gui_accessibility_labels.install_button, 'opl-first-run-install-button');
   assert.equal(matrix.gui_accessibility_labels.codex_api_key_input, 'opl-first-run-codex-api-key-input');

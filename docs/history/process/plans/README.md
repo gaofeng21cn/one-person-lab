@@ -75,6 +75,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-33.md` | OPL series docs governance tranche ledger part 33。 | 当前 truth 归 Agent Lab contract、authority boundary、source、tests 和 live CLI/read-model；ledger 只记录本轮 Agent Lab support reference currentness policy、machine-entry table、Longline test ownership 和 negative boundary 补齐。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-34.md` | OPL series docs governance tranche ledger part 34。 | 当前 truth 归 package-distribution source、package archive / release discipline scripts、package workflow、tests、fresh CLI manifest 和 App release evidence owner；ledger 只记录本轮 release/package support reference 的长 JSON 示例与 future landing queue 瘦身。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-35.md` | OPL series docs governance tranche ledger part 35。 | 当前 truth 归 companion catalog/source、skill sync/plugin registry、tool readiness、system initialize、tests 和 fresh CLI/read-model；ledger 只记录本轮 default skill ecosystem support reference 的 currentness policy、machine-entry table、MinerU companion 和 plugin-only boundary 补齐。 |
+| `2026-05-29-opl-series-doc-governance-tranche-ledger-part-36.md` | OPL series docs governance tranche ledger part 36。 | 当前 truth 归 fresh-install contract、system initialize / install source、fresh-install smoke、App release evidence owner 和 live CLI/read-model；ledger 只记录本轮 `online_management` first-run public surface 退役为 `family_runtime_provider`。 |
 
 ## Tombstone Rules
 

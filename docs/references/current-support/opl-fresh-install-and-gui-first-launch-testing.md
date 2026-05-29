@@ -88,6 +88,13 @@ App Standard / Full release gate 还把 `artifacts/assistant-route-smoke-summary
 
 - `first_run_log`
 - `gui_first_run_automation`
+- `family_runtime_provider`
+
+已退役字段：
+
+- `online_management`
+- `online_management_ready`
+- `online_management_repair_*`
 
 GUI 自动化应优先依赖这些字段，而不是解析人类可读文案。当前稳定 accessibility labels 包括：
 
