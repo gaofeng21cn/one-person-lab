@@ -47,7 +47,10 @@ export function dispatchCommandForDomain(
   taskPath: string,
   payload: Record<string, unknown> = {},
 ): DomainDispatchCommand {
-  const override = process.env[`OPL_FAMILY_RUNTIME_${domainId.toUpperCase()}_DISPATCH`]?.trim();
+  const overrideKeys = domainId === 'medautoscience'
+    ? ['OPL_FAMILY_RUNTIME_MAS_DISPATCH', 'OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH']
+    : [`OPL_FAMILY_RUNTIME_${domainId.toUpperCase()}_DISPATCH`];
+  const override = overrideKeys.map((key) => process.env[key]?.trim()).find(Boolean);
   if (override) {
     const tokens = override.split(/\s+/);
     const commandPreview = tokens.some((token) => token.includes('{task}'))

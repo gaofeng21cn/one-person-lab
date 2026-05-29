@@ -198,6 +198,7 @@ export function buildStageAttemptTrayItems(input: {
         workspace_source_intake: record(attempt.workspace_source_intake),
         memory_locator_index: record(attempt.memory_locator_index),
         usage_projection: record(attempt.usage_projection),
+        model_route_cost_projection: record(attempt.model_route_cost_projection),
         stage_progress_log: record(attempt.stage_progress_log),
         temporal_visibility: record(attempt.temporal_visibility),
         temporal_webui_ref: record(attempt.temporal_webui_ref),
