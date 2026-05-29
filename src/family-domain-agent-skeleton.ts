@@ -408,7 +408,7 @@ function buildPhysicalSkeletonEvidence(physicalSkeletonLayoutAudit: ReturnType<t
   };
 }
 
-export function normalizeStandardDomainAgentSkeleton(value: unknown) {
+function normalizeStandardDomainAgentSkeleton(value: unknown) {
   if (!isRecord(value)) {
     return null;
   }

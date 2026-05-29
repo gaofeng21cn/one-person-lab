@@ -110,6 +110,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-68.md` | OPL series docs governance tranche ledger part 68。 | 当前 truth 归 Agent Lab risk-tier promotion ledger source、Developer Mode closeout verifier predicate、focused Agent Lab / Developer Mode tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 ledger reader、verified refs helper、file-path helper 与 internal receipt type 公共导出面收回。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-69.md` | OPL series docs governance tranche ledger part 69。 | 当前 truth 归 Agent Lab longline suite source、complete/workbench read model、focused Agent Lab tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 internal suite builder 公共导出面收回。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-70.md` | OPL series docs governance tranche ledger part 70。 | 当前 truth 归 App state source、public App state CLI surface、focused App state tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 runtime workbench summary helper 公共导出面收回。 |
+| `2026-05-29-opl-series-doc-governance-tranche-ledger-part-71.md` | OPL series docs governance tranche ledger part 71。 | 当前 truth 归 standard domain-agent skeleton source、agents descriptor/list/legacy cleanup public surfaces、focused agents tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 skeleton normalizer 公共导出面收回。 |
 
 ## Tombstone Rules
 
