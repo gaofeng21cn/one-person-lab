@@ -1,9 +1,7 @@
 import fs from 'node:fs';
-import path from 'node:path';
-
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 
-export type AppReleaseUserPathEvidenceReceipt = {
+type AppReleaseUserPathEvidenceReceipt = {
   surface_kind: 'opl_app_release_user_path_evidence_receipt';
   receipt_ref: string;
   receipt_status: 'recorded' | 'verified';
@@ -151,7 +149,7 @@ function normalizeReceipt(value: unknown): AppReleaseUserPathEvidenceReceipt | n
   return allEvidenceRefs(receipt).length > 0 ? receipt : null;
 }
 
-export function readAppReleaseUserPathEvidenceLedger(): AppReleaseUserPathEvidenceLedger {
+function readAppReleaseUserPathEvidenceLedger(): AppReleaseUserPathEvidenceLedger {
   const file = ledgerPath();
   if (!fs.existsSync(file)) {
     return emptyLedger();
@@ -292,8 +290,4 @@ export function verifyAppReleaseUserPathEvidenceReceipt(
 
 export function listAppReleaseUserPathEvidenceReceipts() {
   return readAppReleaseUserPathEvidenceLedger().receipts;
-}
-
-export function appReleaseUserPathEvidenceLedgerFilePath() {
-  return path.resolve(ledgerPath());
 }
