@@ -55,7 +55,7 @@ function booleanRecord(value: Record<string, unknown> | null) {
   ]));
 }
 
-export function temporalProductionCapabilityReceipt(proof: TemporalResidencyProof) {
+function temporalProductionCapabilityReceipt(proof: TemporalResidencyProof) {
   const productionProof = recordOrNull(proof.production_residency_proof);
   const checks = booleanRecord(recordOrNull(productionProof?.checks));
   const failedCheckIds = TEMPORAL_PRODUCTION_CAPABILITY_CHECK_IDS.filter((checkId) => checks[checkId] !== true);
@@ -106,7 +106,7 @@ function productionProofRepairAction(proof: TemporalResidencyProof) {
   };
 }
 
-export function temporalProviderSloRepairReceipt(input: {
+function temporalProviderSloRepairReceipt(input: {
   proof: TemporalResidencyProof;
   trigger: string;
   force?: boolean;
