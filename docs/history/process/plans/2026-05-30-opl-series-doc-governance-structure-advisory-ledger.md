@@ -61,6 +61,23 @@ The OPL `public_surface_risk` list remains advisory only:
 
 These are retained because they are active machine-readable public surfaces. Future edits should prefer schema modularity or generated/source separation over growth, but this tranche did not split them.
 
+## Verification
+
+- `node --experimental-strip-types --test tests/src/family-structure-advisory.test.ts`: 4 passed / 0 failed.
+- `npm run --silent family:structure-advisory -- --format=json`: default scope resolved 6 repos in the current order.
+- `rtk git diff --check`: passed.
+- `rtk rg -n "^(<<<<<<<|>>>>>>>|=======)" README.md README.zh-CN.md docs scripts tests package.json`: no matches.
+- `rtk ./scripts/verify.sh line-budget`: passed.
+- `python3 /Users/gaofeng/workspace/opl-doc-governance/scripts/opl_doc_doctor.py doctor /Users/gaofeng/workspace/one-person-lab --format json`: `finding_count=0`, `active_truth_health=pass`.
+- `rtk ./scripts/repo-hygiene.sh`: passed.
+- `node --experimental-strip-types --test tests/src/verification-command-surfaces.test.ts tests/src/family-structure-advisory.test.ts`: 24 passed / 0 failed.
+- `rtk ./scripts/verify.sh smoke`: 38 passed / 0 failed.
+
+## Post Snapshot Activity
+
+- This tranche wrote and pushed `one-person-lab` only; it did not clean, absorb, scan-commit, or delete any retained MAS/MAG/RCA/OMA/App lane.
+- Non-OPL default advisory exact counts observed during verification were treated as read-only preflight because several sibling repos were snapshot-retained for dirty/ahead/recent-write/process activity.
+
 ## Carry Forward
 
 - Re-run structure advisory for MAS/MAG/RCA/OMA/App only from clean or explicitly owner-approved snapshot-safe roots before committing exact findings.
