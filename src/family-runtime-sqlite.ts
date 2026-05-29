@@ -1,10 +1,10 @@
 import { DatabaseSync } from 'node:sqlite';
 
-export const FAMILY_RUNTIME_SQLITE_BUSY_TIMEOUT_MS = 5_000;
+const FAMILY_RUNTIME_SQLITE_BUSY_TIMEOUT_MS = 5_000;
 
 export type FamilyRuntimeSqliteOpenOptions = ConstructorParameters<typeof DatabaseSync>[1];
 
-export function configureFamilyRuntimeSqliteConnection(db: DatabaseSync) {
+function configureFamilyRuntimeSqliteConnection(db: DatabaseSync) {
   db.exec(`PRAGMA busy_timeout = ${FAMILY_RUNTIME_SQLITE_BUSY_TIMEOUT_MS};`);
   return db;
 }
