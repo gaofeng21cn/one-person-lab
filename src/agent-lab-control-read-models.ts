@@ -1,7 +1,7 @@
 import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
 import { stableId } from './family-runtime-ids.ts';
 
-export const AGENT_LAB_CONTROL_AUTHORITY_BOUNDARY = {
+const AGENT_LAB_CONTROL_AUTHORITY_BOUNDARY = {
   ...AGENT_LAB_AUTHORITY_BOUNDARY,
   can_train_or_deploy_model_weights: false,
 };

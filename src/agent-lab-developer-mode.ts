@@ -70,7 +70,7 @@ const AUTHORITY_BOUNDARY = {
   can_train_or_deploy_model_weights: false,
 };
 
-export const DEVELOPER_MODE_REPAIR_AUTHORITY_BOUNDARY = {
+const DEVELOPER_MODE_REPAIR_AUTHORITY_BOUNDARY = {
   ...AUTHORITY_BOUNDARY,
   opl: 'agent_lab_developer_mode_patrol_repair_route_projection_refs_only',
   can_emit_issue_or_blocker_refs: true,
@@ -91,7 +91,7 @@ export const DEVELOPER_MODE_REPAIR_AUTHORITY_BOUNDARY = {
   can_close_developer_mode_live_route: false,
 };
 
-export const DEVELOPER_MODE_DYNAMIC_ROUTE_BUILDER = {
+const DEVELOPER_MODE_DYNAMIC_ROUTE_BUILDER = {
   surface_kind: 'opl_agent_lab_developer_mode_dynamic_repair_route',
   input_refs: [
     'developer_mode_projection_ref',

@@ -18,7 +18,7 @@ export const ROLLBACK_TARGET_REF = `mechanism-version-ref:${MECHANISM_VERSION}`;
 
 export type AgentLabPromotionRiskTier = 'low_risk' | 'medium_risk' | 'high_risk';
 
-export const MECHANISM_RISK_TIERS = {
+const MECHANISM_RISK_TIERS = {
   low_risk: {
     examples: ['prompt wording', 'rubric clarification', 'workbench display metadata', 'suite metadata'],
     auto_promotion: 'auto_promote_to_stable',
