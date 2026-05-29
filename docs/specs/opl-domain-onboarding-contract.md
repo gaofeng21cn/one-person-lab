@@ -5,7 +5,7 @@ Purpose: `specs_opl_domain_onboarding_contract`
 State: `active_spec_support`
 Machine boundary: 本文是人读 spec 支撑材料。机器可读行为继续归 contracts、schema、source、CLI/API 行为、runtime ledger、生成产物和 semantic human_doc ids。
 
-> 当前状态说明（`2026-05-11`）：本文是候选 domain-agent admission review 的活跃人读支撑。当前已收录 domain 同时保留 direct Codex/domain-skill activation 与 durable OPL stage-attempt hosting：`Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> selected domain-agent entry`，`MAS`、`MAG`、`RCA` 对外仍是独立 domain agent。
+> Currentness rule: 本文只定义候选 domain-agent admission 的审查合同，不冻结当前已收录 domain、workstream 数量或候选清单。使用本文前，先读取核心五件套、`docs/active/current-development-lines.md`、candidate backlog、`domains.json`、`workstreams.json`、`task-topology.json`、`public-surface-index.json`、CLI/read-model 与相关测试；只有这些 live surfaces 能证明某个 domain-agent entry、workstream 或 candidate lane 的当前状态。已收录 domain 仍必须保留 direct Codex/domain-skill activation 与 durable OPL stage-attempt hosting：`Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> selected domain-agent entry`，并保持 domain-owned truth 与 authority。
 
 ## 目的
 
@@ -40,7 +40,7 @@ Domain-agent admission 以当前活跃 framework 合同集为审查依据：
 它们不会授予 OPL domain truth，也不会自动收录候选 workstream。
 `opl agents descriptors` 是这些工件之上的统一检查入口：正式收录的 domain 应能在该 read model 中暴露 entry、standard skeleton、action catalog、stage control plane、domain memory descriptor、skill catalog、runtime/session/progress/artifact refs 和 authority boundary。它仍然是 descriptor/projection surface，不读取或嵌入 domain memory 正文、prompt 长正文、route 判断或 quality verdict。
 公开 scaffold 或 domain-direction hint 可以帮助说明 candidate path，但在真实 domain-agent boundary package 落地前，它们仍然只算 top-level signal。
-这条规则现在只作用于剩余候选 workstream：`Grant Ops` 已经进入已收录的 `MedAutoGrant` domain-agent entry，而 `IP Ops`、`Award Ops`、`Thesis Ops` 与 `Review Ops` 仍然需要完整 admission package 才能完成正式收录。
+这条规则的适用对象必须从 live machine surfaces 读取：`workstreams.json` 只列出已注册 active workstream，`domains.json` 只列出已收录 domain-agent catalog，`task-topology.json` 的 `under_definition` / `not_registered` / `candidate_domain_agent_pending` entry 与 candidate backlog 共同说明仍在 formal inclusion 之下的 candidate lane。当前机器面把 `Grant Ops` 归入已收录 `MedAutoGrant` domain-agent entry；候选 lane 仍需要完整 admission package 才能进入正式收录。
 
 ## 执行模型审查配套文档
 
@@ -251,11 +251,11 @@ Onboarding package 必须说明：
 
 如果这组 wording 不能被显式审查，这个 domain 就仍然位于 formal inclusion 之下。
 
-就当前 candidate path 而言，`IP Ops`、`Award Ops`、`Review Ops` 与 `Thesis Ops` 都仍然位于 formal inclusion 之下。
-`IP Ops` 会把 patent truth 与人工/法律审阅 gate 留在未来 domain 一侧，并在 future domain boundary package 存在前保持在 `OPL` 与 `MedAutoGrant` 之外。
-`Award Ops` 会把 award truth 与人工专家审阅 gate 留在未来 domain 一侧，并在 future domain boundary package 存在前保持在 `OPL` 与 `MedAutoGrant` 之外。
-`Review Ops` 会把 `execution_model`、`stage_selection_readiness`、`stage_execution_readiness` 与 `cross_domain_wording` 四类 package 持续保持为显式 blocker，同时把 review truth 留在未来 domain 一侧，并继续不具备 handoff-ready domain-agent entry。
-`Thesis Ops` 也会把 `execution_model`、`stage_selection_readiness`、`stage_execution_readiness` 与 `cross_domain_wording` 四类 package 持续保持为显式 blocker；它继续区别于 `Research Ops` 的 manuscript/submission flow 与 `Presentation Ops` / `RedCube AI` 的 deck production，并继续不具备 handoff-ready domain-agent entry。
+当前 candidate path 以 `task-topology.json` 和 [OPL Candidate Domain Backlog](../references/domain-admission/opl-candidate-domain-backlog.md) 为准；本文只复述其审查姿态。当前机器面中的 `IP Ops`、`Award Ops`、`Review Ops` 与 `Thesis Ops` 都仍然位于 formal inclusion 之下，没有 `current_domain_id`，没有 `entry_surface`，且 `formal_domain_required=true`。
+`IP Ops` 的 patent truth 与人工/法律审阅 gate 必须留在未来 domain 一侧，并在 future domain boundary package 存在前保持在 `OPL` 与 `MedAutoGrant` 之外。
+`Award Ops` 的 award truth 与人工专家审阅 gate 必须留在未来 domain 一侧，并在 future domain boundary package 存在前保持在 `OPL` 与 `MedAutoGrant` 之外。
+`Review Ops` 必须把 `execution_model`、`stage_selection_readiness`、`stage_execution_readiness` 与 `cross_domain_wording` 四类 package 持续保持为显式 blocker，同时把 review truth 留在未来 domain 一侧，并继续不具备 handoff-ready domain-agent entry。
+`Thesis Ops` 也必须把 `execution_model`、`stage_selection_readiness`、`stage_execution_readiness` 与 `cross_domain_wording` 四类 package 持续保持为显式 blocker；它继续区别于 `Research Ops` 的 manuscript/submission flow 与 `Presentation Ops` / `RedCube AI` 的 deck production，并继续不具备 handoff-ready domain-agent entry。
 
 ## 正式收录门槛
 
