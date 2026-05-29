@@ -224,7 +224,7 @@
         },
         {
           "ref_kind": "machine_cli",
-          "ref": "opl agents interfaces --domain <domain>"
+          "ref": "opl agents interfaces --family-defaults"
         },
         {
           "ref_kind": "machine_contract",

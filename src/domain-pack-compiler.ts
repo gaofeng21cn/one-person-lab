@@ -15,6 +15,10 @@ import {
   buildFunctionalPrivatizationAudit,
 } from './functional-privatization-audit.ts';
 import {
+  defaultFamilyRepoInputs,
+  DEFAULT_FAMILY_REPOS,
+} from './standard-domain-agent-family-repos.ts';
+import {
   buildGeneratedInterfaceBundle,
   GENERATED_INTERFACE_SOURCE_REFS,
   GENERATED_SURFACES,
@@ -93,6 +97,7 @@ function parseInspectArgs(args: string[]) {
 function parseInterfaceArgs(args: string[]) {
   let domain = '';
   let repoDir = '';
+  let familyDefaults = false;
   let format: GeneratedInterfaceFormat | 'all' = 'all';
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
@@ -106,6 +111,10 @@ function parseInterfaceArgs(args: string[]) {
       index += 1;
       continue;
     }
+    if (token === '--family-defaults') {
+      familyDefaults = true;
+      continue;
+    }
     if (token === '--format' && args[index + 1]) {
       format = normalizeInterfaceFormat(args[index + 1]);
       index += 1;
@@ -113,20 +122,21 @@ function parseInterfaceArgs(args: string[]) {
     }
     throw new FrameworkContractError('cli_usage_error', `Unknown generated interface option: ${token}.`, {
       usage:
-        'opl agents interfaces (--domain <domain> | --repo-dir <path>) [--format <cli|mcp|skill|product-entry|openai|ai-sdk>]',
+        'opl agents interfaces (--family-defaults | --domain <domain> | --repo-dir <path>) [--format <cli|mcp|skill|product-entry|openai|ai-sdk>]',
     });
   }
-  if (!domain && !repoDir) {
-    throw new FrameworkContractError('cli_usage_error', 'generated interfaces require --domain or --repo-dir.', {
-      required_one_of: ['--domain', '--repo-dir'],
+  const selectorCount = [domain, repoDir, familyDefaults ? 'family-defaults' : ''].filter(Boolean).length;
+  if (selectorCount === 0) {
+    throw new FrameworkContractError('cli_usage_error', 'generated interfaces require --family-defaults, --domain, or --repo-dir.', {
+      required_one_of: ['--family-defaults', '--domain', '--repo-dir'],
     });
   }
-  if (domain && repoDir) {
-    throw new FrameworkContractError('cli_usage_error', 'generated interfaces accept either --domain or --repo-dir, not both.', {
-      mutually_exclusive: ['--domain', '--repo-dir'],
+  if (selectorCount > 1) {
+    throw new FrameworkContractError('cli_usage_error', 'generated interfaces accept exactly one selector.', {
+      mutually_exclusive: ['--family-defaults', '--domain', '--repo-dir'],
     });
   }
-  return { domain, repoDir, format };
+  return { domain, repoDir, familyDefaults, format };
 }
 
 function normalizeInterfaceFormat(value: string): GeneratedInterfaceFormat | 'all' {
@@ -792,7 +802,7 @@ export function buildDomainPackCompilerInspect(
 }
 
 export function buildGeneratedAgentInterfaces(contracts: FrameworkContracts, args: string[]) {
-  const { domain, repoDir, format } = parseInterfaceArgs(args);
+  const { domain, repoDir, familyDefaults, format } = parseInterfaceArgs(args);
   if (repoDir) {
     const repoProjection = buildRepoContractDescriptor(repoDir);
     const bundle = {
@@ -807,8 +817,64 @@ export function buildGeneratedAgentInterfaces(contracts: FrameworkContracts, arg
     };
   }
 
-  const normalized = normalizeDomainSelection(domain);
+  if (familyDefaults) {
+    const repos = defaultFamilyRepoInputs();
+    if (repos.length === 0) {
+      throw new FrameworkContractError('cli_usage_error', 'generated interfaces could not discover family agent repos.', {
+        usage: 'opl agents interfaces --family-defaults [--format <cli|mcp|skill|product-entry|openai|ai-sdk>]',
+        default_repo_directories: DEFAULT_FAMILY_REPOS.map((repo) => repo.directory),
+        env_override: 'OPL_FAMILY_WORKSPACE_ROOT',
+      });
+    }
+    const reports = repos.map((repo) => {
+      const repoProjection = buildRepoContractDescriptor(repo.repo_dir);
+      const bundle = {
+        ...buildGeneratedInterfaceBundle(repoProjection.descriptor, repoProjection.status, format),
+        source_kind: 'standard_agent_repo_contracts',
+        repo_dir: repoProjection.repoDir,
+        blocker_reasons: repoProjection.blockerReasons,
+      };
+      const selected = selectGeneratedInterfaceBundleFormat(bundle as JsonRecord, format);
+      return {
+        requested_agent_id: repo.requested_agent_id,
+        repo_dir: repoProjection.repoDir,
+        project_id: selected.project_id,
+        target_domain_id: selected.target_domain_id,
+        agent_id: selected.agent_id,
+        compiler_status: repoProjection.status,
+        blocker_reasons: repoProjection.blockerReasons,
+        generated_agent_interfaces: selected,
+      };
+    });
+    const blockedCount = reports.filter((report) => report.generated_agent_interfaces.status !== 'ready').length;
+    return {
+      version: 'g2',
+      generated_agent_interfaces: {
+        surface_kind: 'opl_generated_agent_interfaces_family_report',
+        owner: 'one-person-lab',
+        status: blockedCount === 0 ? 'ready' : 'blocked',
+        selected_format: format,
+        summary: {
+          total_domain_count: reports.length,
+          ready_domain_count: reports.length - blockedCount,
+          blocked_domain_count: blockedCount,
+        },
+        reports,
+        authority_boundary: {
+          report_can_claim_domain_ready: false,
+          report_can_claim_quality_verdict: false,
+          report_can_claim_artifact_authority: false,
+          report_can_claim_production_ready: false,
+          opl_can_write_domain_truth: false,
+          opl_can_write_memory_body: false,
+          opl_can_authorize_quality_or_export: false,
+        },
+      },
+    };
+  }
+
   const domains = buildCompilerDomains(contracts);
+  const normalized = normalizeDomainSelection(domain);
   const selected = domains.find((candidate) =>
     candidate.project_id === normalized
     || candidate.project === normalized

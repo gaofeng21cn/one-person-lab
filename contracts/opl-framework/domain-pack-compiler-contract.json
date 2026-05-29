@@ -7,7 +7,7 @@
   "cli_surfaces": [
     "opl agents pack-compiler",
     "opl agents pack-compiler inspect --domain <domain>",
-    "opl agents interfaces (--domain <domain> | --repo-dir <path>) [--format <cli|mcp|skill|product-entry|openai|ai-sdk>]",
+    "opl agents interfaces (--family-defaults | --domain <domain> | --repo-dir <path>) [--format <cli|mcp|skill|product-entry|openai|ai-sdk>]",
     "opl agents conformance [--repo-dir <path> ...] [--agent <id>=<path> ...]"
   ],
   "input_surfaces": [
@@ -123,6 +123,36 @@
         "domain_handler_target_allowed": true,
         "refs_only_domain_adapter_target_allowed": true
       }
+    }
+  },
+  "generated_interface_family_report": {
+    "surface_kind": "opl_generated_agent_interfaces_family_report",
+    "owner": "one-person-lab",
+    "command": "opl agents interfaces --family-defaults",
+    "status_values": [
+      "ready",
+      "blocked"
+    ],
+    "mode": "family-wide drilldown over default standard-agent repo generated interface bundles, matching agents conformance/readiness family-defaults discovery",
+    "accepted_selectors": [
+      "--family-defaults",
+      "--domain <domain>",
+      "--repo-dir <path>"
+    ],
+    "selector_policy": "exactly one selector is required; --family-defaults returns a refs-only family report, while --domain and --repo-dir keep the single generated interface bundle shape",
+    "summary_fields": [
+      "total_domain_count",
+      "ready_domain_count",
+      "blocked_domain_count"
+    ],
+    "authority_boundary": {
+      "report_can_claim_domain_ready": false,
+      "report_can_claim_quality_verdict": false,
+      "report_can_claim_artifact_authority": false,
+      "report_can_claim_production_ready": false,
+      "opl_can_write_domain_truth": false,
+      "opl_can_write_memory_body": false,
+      "opl_can_authorize_quality_or_export": false
     }
   },
   "generated_artifact_drift_manifest": {

@@ -15,7 +15,7 @@ Date: `2026-05-26`
 - `opl framework readiness --family-defaults --json`
 - `opl agents readiness --family-defaults --json`
 - `opl agents conformance --family-defaults --json`
-- `opl agents interfaces --domain <domain> --json`
+- `opl agents interfaces --family-defaults --json`
 - `opl stages readiness --family-defaults --json`
 - `opl stages readiness --domain <domain> --json`
 - `opl runtime app-operator-drilldown --json`
@@ -83,6 +83,7 @@ Docs-only 治理只需 `git diff --check`、冲突标记扫描和 stale wording 
 - `rtk npm run test:fast`
 - `rtk npm run test:meta`
 - `rtk npm run test:artifact`
+- `rtk opl agents interfaces --family-defaults --json`
 - `rtk opl agents interfaces --domain mas --json`
 - `rtk opl agents interfaces --domain mag --json`
 - `rtk opl agents interfaces --domain rca --json`

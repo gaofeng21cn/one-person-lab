@@ -236,7 +236,7 @@ export function buildAgentReadinessSummary(args: string[]) {
         ),
         generated_interfaces: gate(
           'generated_interfaces',
-          'opl agents interfaces --domain <domain> --json',
+          'opl agents interfaces --family-defaults --json',
           reports.length - generatedInterfaceBlockedCount,
           generatedInterfaceBlockedCount,
           'generated_descriptors_route_to_domain_handler_targets_without_claiming_domain_truth',

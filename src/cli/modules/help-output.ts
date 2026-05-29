@@ -170,7 +170,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl agents readiness --family-defaults',
         'opl agents pack-compiler',
         'opl agents pack-compiler inspect --domain mas',
-        'opl agents interfaces --domain mas',
+        'opl agents interfaces --family-defaults',
         'opl agents platform-surfaces --family-defaults',
         'opl agents default-callers --family-defaults',
         'opl domain-memory list',

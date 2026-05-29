@@ -1,6 +1,36 @@
 import { assert, fs, path, runCli, test } from '../helpers.ts';
 import { buildReadyAgentRepo, writeJson } from './agents-conformance-fixtures.ts';
 
+test('generated interfaces expose a family-defaults source for readiness drilldown', () => {
+  const report = runCli([
+    'agents',
+    'interfaces',
+    '--family-defaults',
+  ]).generated_agent_interfaces;
+
+  assert.equal(report.surface_kind, 'opl_generated_agent_interfaces_family_report');
+  assert.equal(report.owner, 'one-person-lab');
+  assert.equal(report.status, 'ready');
+  assert.equal(report.summary.total_domain_count, 4);
+  assert.equal(report.summary.ready_domain_count, report.summary.total_domain_count);
+  assert.equal(report.summary.blocked_domain_count, 0);
+  assert.equal(
+    report.reports.some((entry: { agent_id: string; repo_dir: string }) => (
+      entry.agent_id === 'opl-meta-agent'
+      && entry.repo_dir.endsWith('/opl-meta-agent')
+    )),
+    true,
+  );
+  assert.equal(report.authority_boundary.report_can_claim_domain_ready, false);
+  assert.equal(report.authority_boundary.report_can_claim_production_ready, false);
+  assert.equal(
+    report.reports.every((entry: { generated_agent_interfaces: { owner: string } }) => (
+      entry.generated_agent_interfaces.owner === 'one-person-lab'
+    )),
+    true,
+  );
+});
+
 test('generated interfaces and default callers accept domain action adapter export dispatch as domain handler target', () => {
   const repoDir = buildReadyAgentRepo();
   const handoffPath = path.join(repoDir, 'contracts', 'generated_surface_handoff.json');

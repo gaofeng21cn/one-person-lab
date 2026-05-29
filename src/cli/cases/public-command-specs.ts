@@ -590,9 +590,10 @@ export function buildPublicCommandSpecs(
       handler: (args) => buildDomainPackCompilerInspect(getContracts(), args),
     },
     'agents interfaces': {
-      usage: 'opl agents interfaces (--domain <domain> | --repo-dir <path>) [--format <cli|mcp|skill|product-entry|openai|ai-sdk>]',
+      usage: 'opl agents interfaces (--family-defaults | --domain <domain> | --repo-dir <path>) [--format <cli|mcp|skill|product-entry|openai|ai-sdk>]',
       summary: 'Generate the unified OPL-owned CLI, MCP, Skill, product-entry, and tool interface bundle from a domain pack or standard agent repo.',
       examples: [
+        'opl agents interfaces --family-defaults',
         'opl agents interfaces --domain mas',
         'opl agents interfaces --repo-dir /path/to/opl-compatible-agent',
         'opl agents interfaces --domain redcube --format mcp',
