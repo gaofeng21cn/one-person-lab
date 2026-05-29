@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { buildFamilyStageAdmissionReview } from '../../src/family-stage-admission.ts';
 import { buildFamilyStageProofBundle } from '../../src/family-stage-proof-bundle.ts';
 import type { FamilyActionCatalog } from '../../src/family-action-catalog-contract.ts';
-import type { FamilyStageControlPlane } from '../../src/family-stage-control-plane-contract.ts';
+import type { FamilyStageContract, FamilyStageControlPlane } from '../../src/family-stage-control-plane-contract.ts';
 import {
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
@@ -91,7 +91,7 @@ function buildActionCatalog(): FamilyActionCatalog {
 }
 
 function progressFirstPolicies(): Pick<
-  FamilyStageControlPlane['stages'][number]['stage_contract'],
+  FamilyStageContract,
   'progress_delta_policy' | 'typed_blocker_lineage_policy'
 > {
   return {

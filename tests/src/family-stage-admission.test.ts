@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import { buildFamilyStageAdmissionReview } from '../../src/family-stage-admission.ts';
 import type { FamilyActionCatalog } from '../../src/family-action-catalog-contract.ts';
-import type { FamilyStageControlPlane } from '../../src/family-stage-control-plane-contract.ts';
+import type { FamilyStageContract, FamilyStageControlPlane } from '../../src/family-stage-control-plane-contract.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -93,7 +93,9 @@ function buildStagePlane(overrides: {
   omitProgressFirstPolicies?: boolean;
   cycle?: boolean;
 } = {}): FamilyStageControlPlane {
-  const progressFirstPolicies = overrides.omitProgressFirstPolicies ? {} : {
+  const progressFirstPolicies: Partial<
+    Pick<FamilyStageContract, 'progress_delta_policy' | 'typed_blocker_lineage_policy'>
+  > = overrides.omitProgressFirstPolicies ? {} : {
     progress_delta_policy: {
       surface_kind: 'opl_stage_progress_delta_policy',
       version: 'progress-delta-policy.v1',
@@ -299,10 +301,11 @@ test('family stage admission blocks stages missing Progress-First delta and bloc
       ['domain', 'missing_typed_blocker_lineage_policy', 'publication_review'],
     ],
   );
-  assert.ok(review.findings.every((finding) =>
-    finding.code !== 'missing_progress_delta_policy'
-    || finding.minimal_counterexample?.required_fields?.includes('deliverable_progress_delta')
-  ));
+  assert.ok(review.findings.every((finding) => {
+    const requiredFields = finding.minimal_counterexample?.required_fields;
+    return finding.code !== 'missing_progress_delta_policy'
+      || (Array.isArray(requiredFields) && requiredFields.includes('deliverable_progress_delta'));
+  }));
 });
 
 test('family stage admission blocks unsatisfied composition obligations', () => {
