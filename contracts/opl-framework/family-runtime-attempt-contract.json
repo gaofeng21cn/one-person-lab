@@ -100,7 +100,9 @@
     "temporal_visibility",
     "temporal_webui_ref",
     "resource_pressure",
-    "observability_export"
+    "observability_export",
+    "memory_trace_projection",
+    "model_route_cost_projection"
   ],
   "route_hydration_contract": {
     "input_refs": [
@@ -222,6 +224,8 @@
     "closeout_receipt_status",
     "route_impact",
     "usage_projection",
+    "memory_trace_projection",
+    "model_route_cost_projection",
     "stage_progress_log",
     "attempt_true_path_proof",
     "temporal_visibility",
@@ -241,7 +245,9 @@
       "activity_events",
       "typed_closeout_packet_refs",
       "domain_owned_receipt_refs",
-      "stage_attempt_usage_projection"
+      "stage_attempt_usage_projection",
+      "memory_locator_index_projection",
+      "model_route_cost_projection"
     ],
     "forbidden_derivation_sources": [
       "domain_truth_body",
@@ -254,6 +260,8 @@
       "actual_work",
       "timeline",
       "usage",
+      "memory_trace_projection",
+      "model_route_cost_projection",
       "user_stage_log",
       "evidence_refs",
       "temporal_visibility",
@@ -417,7 +425,8 @@
       "source_refs",
       "dispatch_refs",
       "stage_packet_refs",
-      "activity_event_refs"
+      "activity_event_refs",
+      "memory_trace_refs"
     ],
     "authority_boundary": {
       "can_execute_domain_action": false,
@@ -509,6 +518,8 @@
   "stability_projection_fields": [
     "control_loop_summary",
     "usage_projection",
+    "memory_trace_projection",
+    "model_route_cost_projection",
     "stage_progress_log",
     "resource_pressure",
     "runtime_observability_export"
@@ -619,5 +630,90 @@
     "med-autoscience",
     "med-autogrant",
     "redcube-ai"
-  ]
+  ],
+  "memory_trace_projection_contract": {
+    "surface_name": "memory_trace_projection",
+    "surface_kind": "opl_memory_trace_projection",
+    "projection_policy": "body_free_memory_trace_refs_only_no_memory_body_or_writeback_authority",
+    "clean_room_pattern_source": "PilotDeck-style white-box memory trace pattern, absorbed as OPL-owned refs-only projection without copying AGPL code",
+    "required_derivation_sources": [
+      "typed_closeout_packet.consumed_memory_refs",
+      "typed_closeout_packet.writeback_receipt_refs",
+      "typed_closeout_packet.rejected_writes.ref",
+      "route_impact.memory_recall_trace_refs",
+      "route_impact.memory_retrieval_trace_refs",
+      "workspace_locator.source_refs"
+    ],
+    "forbidden_derivation_sources": [
+      "memory_body",
+      "rejected_write_body",
+      "domain_truth_body",
+      "artifact_body",
+      "quality_verdict_body"
+    ],
+    "projected_fields": [
+      "consumed_memory_refs",
+      "recall_trace_refs",
+      "retrieval_trace_refs",
+      "writeback_receipt_refs",
+      "rejected_write_refs",
+      "source_refs",
+      "summary",
+      "false_authority_flags"
+    ],
+    "exported_surfaces": [
+      "attempt_query.memory_trace_projection",
+      "attempt_query.memory_locator_index.memory_trace_projection",
+      "stage_progress_log.memory_trace_projection",
+      "stage_attempt_workbench.memory_trace_projection",
+      "app_operator_drilldown.memory_trace_projection",
+      "app_operator_drilldown.runtime_workbench.memory_trace_projection"
+    ],
+    "authority_boundary": {
+      "can_read_memory_body": false,
+      "can_write_domain_memory_body": false,
+      "can_accept_or_reject_memory_writeback": false,
+      "can_authorize_quality_verdict": false
+    }
+  },
+  "model_route_cost_projection_contract": {
+    "surface_name": "model_route_cost_projection",
+    "surface_kind": "opl_model_route_cost_projection",
+    "projection_policy": "selected_model_route_and_observed_usage_cost_linkage_only_no_executor_mutation",
+    "clean_room_pattern_source": "PilotDeck-style model routing/cost receipt pattern, absorbed as OPL-owned observability projection without copying AGPL code",
+    "required_derivation_sources": [
+      "route_impact.model_route",
+      "provider_run.model_route",
+      "stage_attempt_usage_projection.token",
+      "stage_attempt_usage_projection.cost"
+    ],
+    "projected_fields": [
+      "selected_model",
+      "selected_executor",
+      "route",
+      "observed_usage_linkage",
+      "source_refs",
+      "authority_boundary"
+    ],
+    "availability_states": [
+      "model_route_cost_observed",
+      "model_route_observed_usage_unlinked",
+      "model_route_unavailable"
+    ],
+    "exported_surfaces": [
+      "attempt_query.model_route_cost_projection",
+      "attempt_query.operator_visibility.model_route_cost_projection",
+      "stage_progress_log.model_route_cost_projection",
+      "stage_attempt_workbench.model_route_cost_projection",
+      "stage_attempt_workbench.groups.*.model_route_cost_projection"
+    ],
+    "authority_boundary": {
+      "can_change_executor": false,
+      "can_auto_degrade": false,
+      "can_replace_quality_gate": false,
+      "can_execute_domain_action": false,
+      "can_write_domain_truth": false,
+      "provider_completion_is_domain_ready": false
+    }
+  }
 }
