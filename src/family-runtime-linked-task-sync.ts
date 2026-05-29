@@ -20,6 +20,7 @@ const PROVIDER_ONLY_TASK_DEAD_LETTER_REASONS = new Set([
   'temporal_stage_attempt_start_failed',
   'temporal_stage_attempt_not_completed',
   'temporal_stage_attempt_failed',
+  'temporal_stage_attempt_canceled',
 ]);
 
 function linkedMasDefaultExecutorTask(
@@ -179,7 +180,8 @@ export function blockLinkedMasDefaultExecutorTask(
     taskDeadLetterReason:
       | 'temporal_stage_attempt_failed'
       | 'temporal_stage_attempt_not_completed'
-      | 'temporal_stage_attempt_start_failed';
+      | 'temporal_stage_attempt_start_failed'
+      | 'temporal_stage_attempt_canceled';
     eventType: string;
   },
 ) {

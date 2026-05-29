@@ -663,6 +663,79 @@ JSON
   }
 });
 
+test('family-runtime queue hold moves scoped queued tasks behind approval', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-queue-hold-'));
+  const dispatch = createDispatchFixture(`
+cat <<'JSON'
+{"accepted":true,"surface_kind":"test_dispatch"}
+JSON
+`);
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MAS_DISPATCH: dispatch.dispatchPath,
+    });
+    const heldTarget = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      '{"study_id":"003-dpcc-primary-care-phenotype-treatment-gap","action_type":"return_to_ai_reviewer_workflow"}',
+      '--dedupe-key',
+      'mas:dm003:hold-target',
+    ], env);
+    const otherStudy = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      '{"study_id":"002-dm-china-us-mortality-attribution","action_type":"return_to_ai_reviewer_workflow"}',
+      '--dedupe-key',
+      'mas:dm002:not-held',
+    ], env);
+    const hold = runCli([
+      'family-runtime',
+      'queue',
+      'hold',
+      '--study',
+      '003-dpcc-primary-care-phenotype-treatment-gap',
+      '--reason',
+      'manual_pause_for_mas_upgrade',
+      '--source',
+      'test-supervisor',
+    ], env);
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test', '--limit', '10'], env);
+    const heldInspection = runCli([
+      'family-runtime',
+      'queue',
+      'inspect',
+      heldTarget.family_runtime_enqueue.task.task_id,
+    ], env);
+    const otherInspection = runCli([
+      'family-runtime',
+      'queue',
+      'inspect',
+      otherStudy.family_runtime_enqueue.task.task_id,
+    ], env);
+
+    assert.equal(hold.family_runtime_queue_hold.held_count, 1);
+    assert.equal(hold.family_runtime_queue_hold.held_tasks[0].status, 'waiting_approval');
+    assert.equal(hold.family_runtime_queue_hold.held_tasks[0].requires_approval, true);
+    assert.equal(tick.family_runtime_tick.selected_count, 1);
+    assert.equal(heldInspection.family_runtime_task.task.status, 'waiting_approval');
+    assert.equal(heldInspection.family_runtime_task.task.last_error, 'manual_pause_for_mas_upgrade');
+    assert.equal(otherInspection.family_runtime_task.task.status, 'succeeded');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime stage attempt ledger keeps provider dispatch separate until typed closeout', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();

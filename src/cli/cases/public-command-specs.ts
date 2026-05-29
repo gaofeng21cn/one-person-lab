@@ -391,7 +391,7 @@ export function buildPublicCommandSpecs(
     }),
     'family-runtime': cloneCommandSpec(commandSpecs['family-runtime'], {
       usage:
-        'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|intake|tick|enqueue|scheduler status|scheduler install|scheduler trigger|scheduler remove|scheduler tick|evidence-worklist|queue list|queue inspect|queue redrive|attempt list|attempt inspect|attempt query|approve|notify list|events export [options]',
+        'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|intake|tick|enqueue|scheduler status|scheduler install|scheduler trigger|scheduler remove|scheduler tick|evidence-worklist|queue list|queue inspect|queue redrive|queue hold|attempt list|attempt inspect|attempt query|attempt cancel|approve|notify list|events export [options]',
       examples: [
         'opl family-runtime status',
         'opl family-runtime repair',
@@ -406,6 +406,7 @@ export function buildPublicCommandSpecs(
         'opl family-runtime scheduler tick --provider temporal',
         'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --json',
         'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json',
+        'opl family-runtime queue hold --study 003-dpcc-primary-care-phenotype-treatment-gap --reason manual_pause_for_mas_upgrade',
       ],
       group: 'runtime',
     }),

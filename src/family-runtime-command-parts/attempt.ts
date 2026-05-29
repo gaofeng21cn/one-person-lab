@@ -43,6 +43,9 @@ export function parseAttemptArgs(rest: string[]): FamilyRuntimeCommandInput | un
     }
     return { mode: 'attempt_query', stageAttemptId };
   }
+  if (rest[0] === 'cancel') {
+    return parseAttemptCancelArgs(rest);
+  }
   if (rest[0] === 'signal') {
     return parseAttemptSignalArgs(rest);
   }
@@ -53,6 +56,43 @@ export function parseAttemptArgs(rest: string[]): FamilyRuntimeCommandInput | un
     return parseAttemptCreateArgs(rest);
   }
   return undefined;
+}
+
+function parseAttemptCancelArgs(rest: string[]): FamilyRuntimeCommandInput {
+  const stageAttemptId = rest[1];
+  if (!stageAttemptId) {
+    throw new FrameworkContractError('cli_usage_error', 'family-runtime attempt cancel requires one attempt id.', {
+      usage: 'opl family-runtime attempt cancel <stage_attempt_id> --reason <operator_reason> [--source <source>]',
+    });
+  }
+  let reason = '';
+  let source: string | undefined;
+  for (let index = 2; index < rest.length; index += 1) {
+    const token = rest[index];
+    const value = rest[index + 1];
+    if (token === '--reason' && value) {
+      reason = value;
+      index += 1;
+    } else if (token === '--source' && value) {
+      source = value;
+      index += 1;
+    } else {
+      throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime attempt cancel option: ${token}.`, {
+        option: token,
+      });
+    }
+  }
+  if (!reason.trim()) {
+    throw new FrameworkContractError('cli_usage_error', 'family-runtime attempt cancel requires --reason.', {
+      usage: 'opl family-runtime attempt cancel <stage_attempt_id> --reason <operator_reason> [--source <source>]',
+    });
+  }
+  return {
+    mode: 'attempt_cancel',
+    stageAttemptId,
+    reason,
+    source,
+  };
 }
 
 function parseAttemptSignalArgs(rest: string[]): FamilyRuntimeCommandInput {

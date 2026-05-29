@@ -58,6 +58,7 @@ import { enqueueTask } from './family-runtime-enqueue.ts';
 import { runSchedulerQueueTick } from './family-runtime-scheduler-tick-runner.ts';
 import { hydrateDomainTasks, readMasManagedProviderProjection } from './family-runtime-task-dispatch.ts';
 import { redriveFamilyRuntimeTask } from './family-runtime-redrive.ts';
+import { holdFamilyRuntimeQueueTasks } from './family-runtime-queue-hold.ts';
 import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-query.ts';
 import { reconcileFamilyRuntimeLifecycleRefs, runFamilyRuntimeLifecycleApply } from './family-runtime-lifecycle-index.ts';
 import { buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
@@ -485,6 +486,20 @@ export async function runFamilyRuntime(args: string[]) {
         },
       };
     }
+    if (parsed.mode === 'queue_hold') {
+      return {
+        version: 'g2',
+        family_runtime_queue_hold: {
+          surface_id: 'opl_family_runtime_queue_hold',
+          ...holdFamilyRuntimeQueueTasks(db, {
+            taskScope: parsed.taskScope,
+            reason: parsed.reason,
+            source: parsed.source,
+          }),
+          queue: queueSummary(db),
+        },
+      };
+    }
     if (parsed.mode === 'attempt_create') {
       const providerKind = resolveFamilyRuntimeProviderKind(parsed.input.providerKind);
       const sourceFingerprint = parsed.input.sourceFingerprint?.trim() || null;
@@ -619,6 +634,48 @@ export async function runFamilyRuntime(args: string[]) {
           surface_id: 'opl_family_runtime_stage_attempt_start',
           attempt: projectedAttempt,
           temporal_start,
+        },
+      };
+    }
+    if (parsed.mode === 'attempt_cancel') {
+      const attempt = inspectStageAttempt(db, parsed.stageAttemptId);
+      const { cancelTemporalStageAttemptWorkflow } = await temporalProviderModule();
+      const temporal_cancel = await cancelTemporalStageAttemptWorkflow({
+        attempt,
+        reason: parsed.reason,
+        source: parsed.source,
+        paths,
+      });
+      const temporal_query = await queryTemporalStageAttemptReadModel(attempt, { paths });
+      syncStageAttemptFromTemporalTerminalObservation(db, temporal_query);
+      const projectedAttempt = await inspectStageAttemptWithCurrentProviderReadiness(db, parsed.stageAttemptId, paths, {
+        managedProviderProjection: readMasManagedProviderProjection(),
+      });
+      insertEvent(db, {
+        taskId: projectedAttempt.task_id,
+        domainId: projectedAttempt.domain_id,
+        eventType: 'stage_attempt_operator_cancel_requested',
+        source: parsed.source ?? 'opl-cli',
+        payload: {
+          stage_attempt_id: attempt.stage_attempt_id,
+          provider_kind: attempt.provider_kind,
+          reason: parsed.reason,
+          temporal_cancel,
+          temporal_query,
+          authority_boundary: {
+            opl: 'provider_attempt_cancellation_transport_only',
+            domain: 'truth_quality_artifact_gate_owner',
+            provider_completion_is_domain_ready: false,
+          },
+        },
+      });
+      return {
+        version: 'g2',
+        family_runtime_stage_attempt_cancel: {
+          surface_id: 'opl_family_runtime_stage_attempt_cancel',
+          attempt: projectedAttempt,
+          temporal_cancel,
+          temporal_query,
         },
       };
     }

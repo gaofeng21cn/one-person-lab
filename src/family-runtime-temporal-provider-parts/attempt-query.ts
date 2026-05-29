@@ -16,7 +16,7 @@ type TemporalAttemptQueryPayload = {
 };
 
 function terminalFailureWorkflowStatus(status: string) {
-  return status === 'FAILED' || status === 'TIMED_OUT';
+  return status === 'FAILED' || status === 'TIMED_OUT' || status === 'CANCELED' || status === 'CANCELLED';
 }
 
 function terminalCompletedWorkflowStatus(status: string) {

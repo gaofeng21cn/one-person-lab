@@ -316,6 +316,44 @@ export async function signalTemporalStageAttemptWorkflow(input: {
   }, { paths: input.paths });
 }
 
+export async function cancelTemporalStageAttemptWorkflow(input: {
+  attempt: StageAttemptPayload;
+  reason: string;
+  source?: string;
+  paths?: TemporalWorkerPaths;
+}) {
+  if (input.attempt.provider_kind !== 'temporal') {
+    throw new FrameworkContractError('cli_usage_error', 'Temporal cancel requires a temporal stage attempt.', {
+      stage_attempt_id: input.attempt.stage_attempt_id,
+      provider_kind: input.attempt.provider_kind,
+    });
+  }
+  const reason = input.reason.trim();
+  if (!reason) {
+    throw new FrameworkContractError('cli_usage_error', 'Temporal cancel requires a non-empty reason.', {
+      stage_attempt_id: input.attempt.stage_attempt_id,
+    });
+  }
+  return withTemporalClient(async (client) => {
+    const handle = client.workflow.getHandle(input.attempt.workflow_id);
+    await handle.cancel();
+    return {
+      surface_kind: 'temporal_stage_attempt_cancel_receipt',
+      provider_kind: 'temporal',
+      stage_attempt_id: input.attempt.stage_attempt_id,
+      workflow_id: input.attempt.workflow_id,
+      cancel_requested_at: new Date().toISOString(),
+      reason,
+      source: input.source ?? 'opl-cli',
+      authority_boundary: {
+        opl: 'temporal_workflow_cancellation_transport_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        provider_completion_is_domain_ready: false,
+      },
+    };
+  }, { paths: input.paths });
+}
+
 export async function runTemporalStageAttemptWorkerUntil<T>(fn: () => Promise<T>) {
   const sourceVersion = currentWorkerSourceVersion(import.meta.url);
   const dependencyHealth = inspectTemporalWorkerRuntimeDependencies({ moduleUrl: import.meta.url });

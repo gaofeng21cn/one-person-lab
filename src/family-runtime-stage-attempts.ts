@@ -214,6 +214,9 @@ function temporalTerminalFailureReason(observation: TemporalStageAttemptTerminal
   if (observation.workflow_status === 'TIMED_OUT') {
     return 'temporal_workflow_timed_out';
   }
+  if (observation.workflow_status === 'CANCELED' || observation.workflow_status === 'CANCELLED') {
+    return 'temporal_workflow_canceled';
+  }
   if (observation.query?.status === 'failed') {
     return 'temporal_stage_attempt_query_failed';
   }
@@ -596,11 +599,19 @@ export function syncStageAttemptFromTemporalTerminalObservation(
   if (!failureReason) {
     return null;
   }
+  const failureProviderStatus = failureReason === 'temporal_workflow_canceled' ? 'canceled' : 'failed';
+  const failureEventStatus = failureReason === 'temporal_workflow_canceled' ? 'canceled' : 'failed';
+  const taskDeadLetterReason = failureReason === 'temporal_workflow_canceled'
+    ? 'temporal_stage_attempt_canceled'
+    : 'temporal_stage_attempt_failed';
+  const taskEventType = failureReason === 'temporal_workflow_canceled'
+    ? 'stage_attempt_terminal_canceled_task'
+    : 'stage_attempt_terminal_failed_task';
   const providerRun = {
     ...parseStageAttemptJsonObject(row.provider_run_json),
     provider_kind: 'temporal',
     workflow_id: observation.workflow_id,
-    provider_status: 'failed',
+    provider_status: failureProviderStatus,
     completed_at: observedAt,
     last_heartbeat_at: observedAt,
     terminal_observation: {
@@ -612,7 +623,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
   };
   const activityEvents = appendActivityEventToRow(row, {
     activity_kind: 'temporal_stage_attempt_terminal_observation',
-    activity_status: 'failed',
+    activity_status: failureEventStatus,
     workflow_status: observation.workflow_status ?? null,
     query_status: observation.query?.status ?? null,
     reason: failureReason,
@@ -638,8 +649,8 @@ export function syncStageAttemptFromTemporalTerminalObservation(
     row,
     reason: failureReason,
     observedAt,
-    taskDeadLetterReason: 'temporal_stage_attempt_failed',
-    eventType: 'stage_attempt_terminal_failed_task',
+    taskDeadLetterReason,
+    eventType: taskEventType,
   });
   return inspectStageAttempt(db, observation.stage_attempt_id);
 }

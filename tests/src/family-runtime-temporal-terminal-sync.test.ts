@@ -233,6 +233,29 @@ function failedTemporalObservation(input: {
   } as const;
 }
 
+function canceledTemporalObservation(input: {
+  stageAttemptId: string;
+  workflowId: string;
+  workflowStatus?: 'CANCELED' | 'CANCELLED';
+}) {
+  const workflowStatus = input.workflowStatus ?? 'CANCELED';
+  return {
+    surface_kind: 'temporal_stage_attempt_query_receipt',
+    provider_kind: 'temporal',
+    stage_attempt_id: input.stageAttemptId,
+    workflow_id: input.workflowId,
+    workflow_status: workflowStatus,
+    query_error: {
+      code: 'temporal_stage_attempt_query_unavailable_after_terminal',
+      message: `Temporal workflow is already ${workflowStatus}; terminal cancellation is sufficient for provider sync.`,
+    },
+    authority_boundary: {
+      opl: 'temporal_workflow_transport_and_control_metadata_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
+  } as const;
+}
+
 function missingWorkflowObservation(input: {
   stageAttemptId: string;
   workflowId: string;
@@ -295,6 +318,40 @@ test('missing Temporal workflow does not fail an unclaimed queued attempt', () =
     assert.equal(inspected.status, 'queued');
     assert.equal(inspected.blocked_reason, null);
     assert.equal(inspected.provider_run.provider_status, 'registered');
+  });
+});
+
+test('Temporal cancelled terminal observation uses SDK spelling for provider-only cancellation', () => {
+  withStageAttemptDb((db) => {
+    const createdAt = new Date().toISOString();
+    createQueueTables(db);
+    insertMasDefaultExecutorTask(db, {
+      taskId: 'task-mas-default-cancelled-releases',
+      status: 'queued',
+      createdAt,
+    });
+    const attempt = createMasDefaultExecutorAttempt(db, {
+      taskId: 'task-mas-default-cancelled-releases',
+      sourceFingerprint: 'sha256:mas-default-cancelled-releases',
+    });
+
+    const synced = syncStageAttemptFromTemporalTerminalObservation(
+      db,
+      canceledTemporalObservation({
+        stageAttemptId: attempt.stage_attempt_id,
+        workflowId: attempt.workflow_id,
+        workflowStatus: 'CANCELLED',
+      }),
+    );
+    const task = db.prepare('SELECT status, last_error, dead_letter_reason FROM tasks WHERE task_id = ?').get(
+      'task-mas-default-cancelled-releases',
+    ) as { status: string; last_error: string | null; dead_letter_reason: string | null };
+
+    assert.equal(synced?.blocked_reason, 'temporal_workflow_canceled');
+    assert.equal(inspectStageAttempt(db, attempt.stage_attempt_id).provider_run.provider_status, 'canceled');
+    assert.equal(task.status, 'blocked');
+    assert.equal(task.last_error, 'temporal_workflow_canceled');
+    assert.equal(task.dead_letter_reason, 'temporal_stage_attempt_canceled');
   });
 });
 
@@ -507,6 +564,45 @@ test('Temporal completed terminal observation clears provider-only MAS default e
     assert.equal(task.dead_letter_reason, null);
     assert.equal(event.event_type, 'stage_attempt_terminal_completed_task');
     assert.equal(JSON.parse(event.payload_json).cleared_dead_letter_reason, 'temporal_stage_attempt_failed');
+  });
+});
+
+test('Temporal canceled terminal observation releases MAS default executor task as provider-only cancellation', () => {
+  withStageAttemptDb((db) => {
+    const createdAt = new Date().toISOString();
+    createQueueTables(db);
+    insertMasDefaultExecutorTask(db, {
+      taskId: 'task-mas-default-canceled-releases',
+      status: 'succeeded',
+      createdAt,
+    });
+    const attempt = createMasDefaultExecutorAttempt(db, {
+      taskId: 'task-mas-default-canceled-releases',
+      sourceFingerprint: 'sha256:mas-default-canceled-releases',
+    });
+
+    const synced = syncStageAttemptFromTemporalTerminalObservation(
+      db,
+      canceledTemporalObservation({
+        stageAttemptId: attempt.stage_attempt_id,
+        workflowId: attempt.workflow_id,
+      }),
+    );
+    const task = db.prepare('SELECT status, last_error, dead_letter_reason FROM tasks WHERE task_id = ?').get(
+      'task-mas-default-canceled-releases',
+    ) as { status: string; last_error: string | null; dead_letter_reason: string | null };
+    const event = db.prepare('SELECT event_type, payload_json FROM events WHERE task_id = ?').get(
+      'task-mas-default-canceled-releases',
+    ) as { event_type: string; payload_json: string };
+
+    assert.equal(synced?.status, 'failed');
+    assert.equal(synced?.blocked_reason, 'temporal_workflow_canceled');
+    assert.equal(inspectStageAttempt(db, attempt.stage_attempt_id).provider_run.provider_status, 'canceled');
+    assert.equal(task.status, 'blocked');
+    assert.equal(task.last_error, 'temporal_workflow_canceled');
+    assert.equal(task.dead_letter_reason, 'temporal_stage_attempt_canceled');
+    assert.equal(event.event_type, 'stage_attempt_terminal_canceled_task');
+    assert.equal(JSON.parse(event.payload_json).authority_boundary.provider_completion_is_domain_ready, false);
   });
 });
 
