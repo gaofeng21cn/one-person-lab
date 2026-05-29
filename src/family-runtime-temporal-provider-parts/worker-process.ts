@@ -8,7 +8,7 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function waitForProcessExit(pid: number, timeoutMs = WORKER_STOP_GRACE_MS) {
+async function waitForProcessExit(pid: number, timeoutMs = WORKER_STOP_GRACE_MS) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (!processIsAlive(pid)) {
@@ -19,7 +19,7 @@ export async function waitForProcessExit(pid: number, timeoutMs = WORKER_STOP_GR
   return !processIsAlive(pid);
 }
 
-export function signalManagedWorker(pid: number, signal: NodeJS.Signals) {
+function signalManagedWorker(pid: number, signal: NodeJS.Signals) {
   const result: Record<string, unknown> = {
     pid,
     signal,
@@ -46,7 +46,7 @@ export function signalManagedWorker(pid: number, signal: NodeJS.Signals) {
   return result;
 }
 
-export function findTemporalForegroundWorkerPids(input: {
+function findTemporalForegroundWorkerPids(input: {
   modulePath: string;
   familyRuntimeRoot?: string;
   excludePids?: number[];

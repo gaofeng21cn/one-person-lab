@@ -113,6 +113,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-71.md` | OPL series docs governance tranche ledger part 71。 | 当前 truth 归 standard domain-agent skeleton source、agents descriptor/list/legacy cleanup public surfaces、focused agents tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 skeleton normalizer 公共导出面收回。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-72.md` | OPL series docs governance tranche ledger part 72。 | 当前 truth 归 Codex stage-runner source、public Agent/Codex stage runner tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 Codex runner implementation detail exports 和 type export 收回。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-73.md` | OPL series docs governance tranche ledger part 73。 | 当前 truth 归 Temporal provider proof receipt source、provider SLO tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 provider proof receipt helper 公共导出面收回。 |
+| `2026-05-29-opl-series-doc-governance-tranche-ledger-part-74.md` | OPL series docs governance tranche ledger part 74。 | 当前 truth 归 Temporal provider worker-process / workflow-bundle parts、focused Temporal provider tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 provider part helper 公共导出面收回。 |
 
 ## Tombstone Rules
 

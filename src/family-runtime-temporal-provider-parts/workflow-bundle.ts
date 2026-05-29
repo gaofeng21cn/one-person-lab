@@ -28,11 +28,11 @@ export type TemporalStageAttemptWorkerOptionsBuild = {
   workflow_bundle: TemporalWorkflowBundleManifest;
 };
 
-export function temporalWorkflowBundleDir(paths: TemporalWorkerPaths) {
+function temporalWorkflowBundleDir(paths: TemporalWorkerPaths) {
   return path.join(paths.root, 'temporal-workflow-bundle');
 }
 
-export function temporalWorkflowBundleManifestPath(paths: TemporalWorkerPaths) {
+function temporalWorkflowBundleManifestPath(paths: TemporalWorkerPaths) {
   return path.join(temporalWorkflowBundleDir(paths), 'manifest.json');
 }
 
@@ -45,7 +45,7 @@ function workflowBundleVersion(code: string) {
   return `workflow-bundle:sha256:${crypto.createHash('sha256').update(code).digest('hex')}`;
 }
 
-export async function materializeTemporalWorkflowBundle(input: {
+async function materializeTemporalWorkflowBundle(input: {
   paths: TemporalWorkerPaths;
   workflowsPath: string;
   sourceVersion: string;
