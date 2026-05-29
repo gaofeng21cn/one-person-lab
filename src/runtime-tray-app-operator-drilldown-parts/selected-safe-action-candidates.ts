@@ -141,7 +141,6 @@ function routeEligibleForDefaultSelectedAction(action: JsonRecord) {
     || actionKind === 'evidence_gate_receipt_record'
     || actionKind === 'evidence_gate_receipt_verify'
     || actionKind === 'provider_scheduler_install'
-    || actionKind === 'provider_scheduler_status'
     || actionKind === 'provider_scheduler_tick'
     || actionKind === 'provider_scheduler_trigger'
     || actionKind === 'legacy_cleanup_apply'
@@ -202,9 +201,6 @@ function actionPriority(action: JsonRecord) {
   }
   if (actionKind === 'provider_scheduler_install') {
     return 12;
-  }
-  if (actionKind === 'provider_scheduler_status') {
-    return 13;
   }
   if (actionKind === 'provider_scheduler_tick'
     || actionKind === 'provider_scheduler_trigger') {

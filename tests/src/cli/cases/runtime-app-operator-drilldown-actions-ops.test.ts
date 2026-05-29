@@ -123,6 +123,60 @@ test('runtime App drilldown selects provider scheduler install before manual tri
   ]);
 });
 
+test('runtime App drilldown does not select scheduler mutation routes blocked by worker guard', () => {
+  const workerGuard = {
+    surface_kind: 'temporal_worker_mutation_guard',
+    mutation_guard_status: 'blocked_developer_checkout_shared_state',
+    allowed: false,
+    state_dir_explicit: false,
+    explicit_developer_override: false,
+  };
+  const route = (action: string, actionKind: string) => ({
+    action_id: `provider-scheduler:temporal:${action}`,
+    action_kind: actionKind,
+    owner: 'opl',
+    route_target_kind: 'opl_cli',
+    execution_surface: 'opl runtime action execute',
+    submit_via: 'opl runtime action execute',
+    route_status: action === 'status'
+      ? 'request_route_available'
+      : 'blocked_by_provider_worker_mutation_guard',
+    route_status_detail: action === 'status'
+      ? null
+      : 'Run the managed runtime/current OPL CLI, set OPL_STATE_DIR for an isolated developer worker, or explicitly set OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER=1.',
+    default_actionable: action === 'status',
+    default_actionability_status: action === 'status'
+      ? 'actionable'
+      : 'blocked_by_provider_worker_mutation_guard',
+    can_submit_to_safe_action_shell: action === 'status',
+    provider_worker_mutation_guard: action === 'status' ? null : workerGuard,
+    provider_worker_blocked_action_id: action === 'status'
+      ? null
+      : 'provider-worker:temporal:start',
+    opl_cli_args: ['scheduler', action, '--provider', 'temporal'],
+  });
+  const drilldown = applyAppOperatorDrilldownDetail({
+    operator_action_routing_refs: {
+      refs: [
+        route('trigger', 'provider_scheduler_trigger'),
+        route('tick', 'provider_scheduler_tick'),
+        route('status', 'provider_scheduler_status'),
+        route('install', 'provider_scheduler_install'),
+      ],
+    },
+    app_execution_bridge: {
+      safe_action_routes: [],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  }, 'summary');
+
+  assert.equal(drilldown.attention_first_payload.next_safe_action, null);
+  assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 0);
+});
+
 test('runtime App drilldown selects provider SLO proof action before scheduler install when proof repair is due', () => {
   const route = (action: string, actionKind: string) => ({
     action_id: `provider-scheduler:temporal:${action}`,

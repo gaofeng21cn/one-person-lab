@@ -13,7 +13,10 @@ type LifecycleRefs = {
 function projectSafeActionRoute(ref: ActionRef) {
   const canSubmitToSafeActionShell =
     ref.can_submit_to_safe_action_shell === false
-      || ref.default_actionable === false
+      || (
+        ref.can_submit_to_safe_action_shell !== true
+        && ref.default_actionable === false
+      )
       || (
         typeof ref.route_status === 'string'
         && ref.route_status.startsWith('blocked_by_')

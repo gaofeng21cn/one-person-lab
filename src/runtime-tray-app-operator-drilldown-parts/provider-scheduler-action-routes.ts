@@ -33,16 +33,16 @@ function uniqueRefs<T extends { ref: string; role?: string | null }>(values: T[]
 
 function schedulerAction(role: string | null) {
   if (role === 'scheduler_cadence_status') {
-    return { action: 'status', actionKind: 'provider_scheduler_status' };
+    return { action: 'status', actionKind: 'provider_scheduler_status', mutation: false, diagnostic: true };
   }
   if (role === 'scheduler_cadence_install_or_update') {
-    return { action: 'install', actionKind: 'provider_scheduler_install' };
+    return { action: 'install', actionKind: 'provider_scheduler_install', mutation: true, diagnostic: false };
   }
   if (role === 'scheduler_cadence_manual_trigger') {
-    return { action: 'trigger', actionKind: 'provider_scheduler_trigger' };
+    return { action: 'trigger', actionKind: 'provider_scheduler_trigger', mutation: true, diagnostic: false };
   }
   if (role === 'scheduler_tick_provider_slo_and_queue_dispatch') {
-    return { action: 'tick', actionKind: 'provider_scheduler_tick' };
+    return { action: 'tick', actionKind: 'provider_scheduler_tick', mutation: true, diagnostic: false };
   }
   return null;
 }
@@ -161,6 +161,17 @@ export function buildProviderSchedulerActionRoutes(
         schedule_id: stringValue(ref.schedule_id),
         expected_surface_kind: stringValue(ref.expected_surface_kind),
         can_execute: false as const,
+        ...(action.diagnostic
+          ? {
+              route_status: 'diagnostic_only',
+              route_status_detail:
+                'Provider scheduler status is a read-only diagnostic query; it remains visible in full detail but is not an operator safe-action tail.',
+              default_actionable: false,
+              default_actionability_status: 'diagnostic_only_not_operator_actionable',
+              can_submit_to_safe_action_shell: true,
+            }
+          : {}),
+        ...(action.mutation ? workerMutationGuardBlock : {}),
         authority_boundary: refsOnlyAuthorityBoundary(),
       };
     })

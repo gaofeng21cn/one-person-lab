@@ -62,6 +62,9 @@ const CLOSEOUT_ACTION_KINDS = new Set([
   'legacy_cleanup_verify',
 ]);
 
+const BLOCKED_ROUTE_STATUS_PREFIX = 'blocked_by_';
+const OPEN_WORKLIST_STATUS = 'open_safe_action_request_route_available';
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -333,7 +336,23 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
     ...stringList(route.monitor_refs),
   ];
   const closure = refsOnlyClosureReceipt(route, drilldown);
-  const itemStatus = stringValue(closure?.status) ?? 'open_safe_action_request_route_available';
+  const routeStatus = stringValue(route.route_status) ?? 'request_route_available';
+  const actionabilityStatus = stringValue(route.default_actionability_status);
+  const routeBlocked = routeStatus.startsWith(BLOCKED_ROUTE_STATUS_PREFIX)
+    || actionabilityStatus?.startsWith(BLOCKED_ROUTE_STATUS_PREFIX);
+  const routeNotActionable = route.can_submit_to_safe_action_shell === false
+    || route.default_actionable === false;
+  const itemStatus = stringValue(closure?.status)
+    ?? (actionabilityStatus === 'diagnostic_only_not_operator_actionable'
+      ? 'diagnostic_only'
+      : null)
+    ?? (
+      routeBlocked
+        ? routeStatus
+        : routeNotActionable
+          ? actionabilityStatus ?? routeStatus
+          : OPEN_WORKLIST_STATUS
+    );
   const closureReceiptRef = stringValue(closure?.receipt_ref);
   const closureReceiptRefs = stringList(closure?.receipt_refs);
   const closureFreshnessRef = stringValue(closure?.freshness_ref);
@@ -360,7 +379,7 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
       : 'request_or_apply_via_safe_action',
     status: itemStatus,
     worklist_item_is_completion_claim: false,
-    route_status: stringValue(route.route_status) ?? 'request_route_available',
+    route_status: routeStatus,
     route_status_detail: stringValue(route.route_status_detail),
     route_semantics: 'open_safe_action_request_apply_verify_route',
     receipt_ref: closureReceiptRef,
@@ -369,6 +388,10 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
     typed_blocker_refs: allTypedBlockerRefs,
     worklist_status_detail: itemStatus === 'closed_by_domain_owned_typed_blocker'
       ? 'closed_by_domain_owned_typed_blocker_ref'
+      : itemStatus.startsWith('blocked_by_')
+        ? itemStatus
+      : itemStatus === 'diagnostic_only'
+        ? 'diagnostic_only_not_operator_actionable'
       : itemStatus === 'closed_by_receipt_ref'
         ? readOnlyClaimScope(route) === 'provider_scheduler_cadence'
           ? 'closed_by_opl_provider_slo_receipt'
@@ -393,10 +416,21 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
     blocked_reason: stringValue(route.blocked_reason),
     not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
   };
+  const evidenceRequirementStatus = itemStatus.startsWith(BLOCKED_ROUTE_STATUS_PREFIX)
+    ? 'blocked'
+    : itemStatus === 'diagnostic_only'
+      ? 'closed'
+      : itemStatus;
   return {
     ...item,
     evidence_requirement_model: EVIDENCE_REQUIREMENT_MODEL_VERSION,
-    evidence_requirement: evidenceRequirementFromTailItem(item),
+    evidence_requirement: evidenceRequirementFromTailItem({
+      ...item,
+      status: evidenceRequirementStatus,
+      next_safe_action_route: evidenceRequirementStatus === OPEN_WORKLIST_STATUS
+        ? item.replay_ref
+        : null,
+    }),
   };
 }
 
@@ -698,6 +732,15 @@ function buildEvidenceRequirementLedger(worklistItems: JsonRecord[]) {
   };
 }
 
+function itemEligibleForNextActionLedger(item: JsonRecord) {
+  const claimScope = stringValue(item.claim_scope);
+  const status = stringValue(item.status);
+  if (claimScope === 'provider_scheduler_cadence' && status !== OPEN_WORKLIST_STATUS) {
+    return false;
+  }
+  return true;
+}
+
 export async function runFamilyRuntimeEvidenceWorklist(
   contracts: FrameworkContracts,
   input: EvidenceWorklistInput,
@@ -739,10 +782,10 @@ export async function runFamilyRuntimeEvidenceWorklist(
       .map((route, index) => readOnlyWorklistItem(route, routes.length + index, drilldown)),
   ];
   const openItems = worklistItems.filter((item) =>
-    item.status === 'open_safe_action_request_route_available'
+    item.status === OPEN_WORKLIST_STATUS
   );
   const closedItems = worklistItems.filter((item) =>
-    item.status !== 'open_safe_action_request_route_available'
+    item.status !== OPEN_WORKLIST_STATUS
   );
   const openActionIds = new Set(openItems
     .map((item) => stringValue(item.action_id))
@@ -761,7 +804,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
       blocking_tail_item_count: 0,
       closed_tail_item_count: closedItems.length,
     },
-    tailItems: worklistItems,
+    tailItems: worklistItems.filter(itemEligibleForNextActionLedger),
     sourceRef: '/family_runtime_evidence_worklist/worklist_items',
   });
   const evidenceRequirementLedger = buildEvidenceRequirementLedger(worklistItems);

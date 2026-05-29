@@ -5,6 +5,19 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-05-30
+
+### 决策：provider scheduler status 是诊断查询，scheduler mutation 必须继承 worker mutation guard
+
+原因：provider scheduler 的 `status` route 是只读诊断查询，适合显式执行和 full-detail 下钻，但不应占用 App/default `next_safe_action`、`family-runtime evidence-worklist` open attention 或 next-action ledger。`install`、`trigger`、`tick` 会改动 provider scheduler / dispatch 行为；当 provider worker start/restart 被 developer-checkout shared-state mutation guard 阻塞时，这些 scheduler mutation route 也必须 fail closed，不能作为“安全下一步”推荐。
+
+影响：
+
+- `provider-scheduler:temporal:status` 保持可通过 `opl runtime action execute` 显式查询；App/operator 和 evidence-worklist 将其投影为 `diagnostic_only_not_operator_actionable`，不计入 open safe-action worklist 或默认下一步。
+- `provider-scheduler:temporal:install|trigger|tick` 在 worker mutation guard 为 `blocked_developer_checkout_shared_state` 时继承 `blocked_by_provider_worker_mutation_guard`、`default_actionable=false` 和 `can_submit_to_safe_action_shell=false`。
+- `family-runtime evidence-worklist` 会把 route-level blocked 状态归一化为 blocked evidence requirement，并从 provider scheduler next-action ledger 中排除这些 provider mutation route；domain-owned typed blocker attention 继续保留原有分组与 refs-only 口径。
+- 该规则只修正 App/default action 与 worklist attention 口径，不绕过 worker guard，不安装 provider scheduler，不声明 provider SLO satisfied、production ready、domain ready、App release ready 或 global closeout。
+
 ## 2026-05-28
 
 ### 决策：同步 domain-handler checkpoint 不受 Temporal workflow-missing 回收覆盖
