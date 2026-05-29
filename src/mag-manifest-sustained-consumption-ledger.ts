@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 
 import { FrameworkContractError } from './contracts.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
@@ -339,7 +338,7 @@ function dedupeCurrentReceipts(receipts: MagManifestSustainedConsumptionReceipt[
   });
 }
 
-export function readMagManifestSustainedConsumptionLedger(): MagManifestSustainedConsumptionLedger {
+function readMagManifestSustainedConsumptionLedger(): MagManifestSustainedConsumptionLedger {
   const file = ledgerPath();
   if (!fs.existsSync(file)) {
     return emptyLedger();
@@ -612,12 +611,4 @@ export function verifyMagManifestSustainedConsumptionReceipt(
 
 export function listMagManifestSustainedConsumptionReceipts() {
   return readMagManifestSustainedConsumptionLedger().receipts;
-}
-
-export function magManifestSustainedConsumptionLedgerFilePath() {
-  return path.resolve(ledgerPath());
-}
-
-export function magManifestSustainedConsumptionLedgerAuthorityBoundary() {
-  return refsOnlyAuthorityBoundary();
 }
