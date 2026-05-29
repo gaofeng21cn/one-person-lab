@@ -246,6 +246,20 @@ db.close();`;
     assert.equal(userStageLog.semantic_status, 'missing_domain_semantic_summary');
     assert.equal(userStageLog.stage_name, 'medautoscience/paper-repair');
     assert.equal(userStageLog.problem_summary, null);
+    assert.equal(userStageLog.progress_delta_classification, 'typed_blocker');
+    assert.deepEqual(userStageLog.deliverable_progress_delta, {
+      delta_count: 0,
+      delta_refs: [],
+      delta_summary: null,
+      has_deliverable_delta: false,
+    });
+    assert.deepEqual(userStageLog.platform_repair_delta, {
+      delta_count: 0,
+      delta_refs: [],
+      delta_summary: null,
+      has_platform_repair_delta: false,
+    });
+    assert.equal(userStageLog.next_forced_delta, 'domain_user_stage_log_or_typed_blocker_with_lineage_required');
     assert.deepEqual(userStageLog.stage_work_done, []);
     assert.deepEqual(userStageLog.paper_work_done, []);
     assert.deepEqual(userStageLog.semantic_gap.required_domain_fields, [
@@ -332,6 +346,22 @@ test('family-runtime attempt query exposes a unified stage progress log with int
           stage_name: 'DM002 manuscript reporting consistency repair',
           problem_summary: 'The manuscript had inconsistent Methods and Results reporting around model validation, display provenance, and Figure 5/Table support.',
           stage_goal: 'Make the current manuscript explain the fixed validation cohort and align the paper-facing displays with the same evidence base.',
+          progress_delta_classification: 'deliverable_progress',
+          deliverable_progress_delta: {
+            delta_count: 3,
+            delta_refs: [
+              'manuscript:methods-validation-cohort',
+              'manuscript:results-table-figure-alignment',
+              'manuscript:deployment-language-boundary',
+            ],
+            delta_summary: 'Canonical manuscript and display-provenance surfaces changed.',
+          },
+          platform_repair_delta: {
+            delta_count: 0,
+            delta_refs: [],
+            delta_summary: null,
+          },
+          next_forced_delta: 'ai_reviewer_current_record_or_stable_typed_blocker',
           paper_work_done: [
             'Clarified the complete-case validation sample and fixed predictor set in Methods.',
             'Aligned Table 1, Table 2, and Figure 5 claims to the same validation evidence.',
@@ -464,6 +494,24 @@ db.close();`;
     assert.equal(log.user_stage_log.semantic_status, 'provided_by_domain');
     assert.equal(log.user_stage_log.semantic_source, 'latest_closeout');
     assert.equal(log.user_stage_log.stage_name, 'DM002 manuscript reporting consistency repair');
+    assert.equal(log.user_stage_log.progress_delta_classification, 'deliverable_progress');
+    assert.deepEqual(log.user_stage_log.deliverable_progress_delta, {
+      delta_count: 3,
+      delta_refs: [
+        'manuscript:methods-validation-cohort',
+        'manuscript:results-table-figure-alignment',
+        'manuscript:deployment-language-boundary',
+      ],
+      delta_summary: 'Canonical manuscript and display-provenance surfaces changed.',
+      has_deliverable_delta: true,
+    });
+    assert.deepEqual(log.user_stage_log.platform_repair_delta, {
+      delta_count: 0,
+      delta_refs: [],
+      delta_summary: null,
+      has_platform_repair_delta: false,
+    });
+    assert.equal(log.user_stage_log.next_forced_delta, 'ai_reviewer_current_record_or_stable_typed_blocker');
     assert.equal(
       log.user_stage_log.problem_summary,
       'The manuscript had inconsistent Methods and Results reporting around model validation, display provenance, and Figure 5/Table support.',
@@ -562,6 +610,18 @@ test('family-runtime stage progress log accepts standard domain human summaries 
           stage_name: 'MAG grant revision',
           problem_summary: 'Specific Aims and review response did not yet align with fundability blockers.',
           stage_goal: 'Revise proposal surfaces and route unresolved fundability blockers to the grant owner.',
+          progress_delta_classification: 'mixed',
+          grant_work_progress: {
+            delta_count: 2,
+            delta_refs: ['grant:specific-aims', 'grant:review-response'],
+            delta_summary: 'Grant narrative and response surfaces changed.',
+          },
+          platform_evidence_progress: {
+            delta_count: 1,
+            delta_refs: ['platform:fundability-blocker-routing'],
+            delta_summary: 'Evidence routing metadata updated.',
+          },
+          next_forced_delta: 'grant_owner_receipt_or_fundability_blocker',
           stage_work_done: [
             'Revised Specific Aims significance and approach rationale.',
             'Aligned critique response with fundability blocker refs.',
@@ -604,6 +664,18 @@ test('family-runtime stage progress log accepts standard domain human summaries 
           stage_name: 'RCA visual refresh',
           problem_summary: 'The deck export and review package needed clearer visual provenance.',
           stage_goal: 'Refresh deck surfaces and route unresolved visual blockers to the RedCube owner.',
+          progress_delta_classification: 'platform_repair',
+          deliverable_progress_delta: {
+            delta_count: 0,
+            delta_refs: [],
+            delta_summary: null,
+          },
+          platform_repair_delta: {
+            delta_count: 2,
+            delta_refs: ['platform:export-manifest', 'platform:review-provenance'],
+            delta_summary: 'Visual provenance and export metadata changed without new deck body.',
+          },
+          next_forced_delta: 'visual_deliverable_delta_or_operator_typed_blocker',
           stage_work_done: [
             'Refreshed deck visual system, slide hierarchy, export package, and review refs.',
             'Routed unresolved visual-review blockers back to the deliverable owner.',
@@ -622,6 +694,20 @@ test('family-runtime stage progress log accepts standard domain human summaries 
 
     assert.equal(grantLog.semantic_status, 'provided_by_domain');
     assert.equal(grantLog.stage_name, 'MAG grant revision');
+    assert.equal(grantLog.progress_delta_classification, 'mixed');
+    assert.deepEqual(grantLog.deliverable_progress_delta, {
+      delta_count: 2,
+      delta_refs: ['grant:specific-aims', 'grant:review-response'],
+      delta_summary: 'Grant narrative and response surfaces changed.',
+      has_deliverable_delta: true,
+    });
+    assert.deepEqual(grantLog.platform_repair_delta, {
+      delta_count: 1,
+      delta_refs: ['platform:fundability-blocker-routing'],
+      delta_summary: 'Evidence routing metadata updated.',
+      has_platform_repair_delta: true,
+    });
+    assert.equal(grantLog.next_forced_delta, 'grant_owner_receipt_or_fundability_blocker');
     assert.deepEqual(grantLog.stage_work_done, [
       'Revised Specific Aims significance and approach rationale.',
       'Aligned critique response with fundability blocker refs.',
@@ -632,6 +718,20 @@ test('family-runtime stage progress log accepts standard domain human summaries 
 
     assert.equal(visualLog.semantic_status, 'provided_by_domain');
     assert.equal(visualLog.stage_name, 'RCA visual refresh');
+    assert.equal(visualLog.progress_delta_classification, 'platform_repair');
+    assert.deepEqual(visualLog.deliverable_progress_delta, {
+      delta_count: 0,
+      delta_refs: [],
+      delta_summary: null,
+      has_deliverable_delta: false,
+    });
+    assert.deepEqual(visualLog.platform_repair_delta, {
+      delta_count: 2,
+      delta_refs: ['platform:export-manifest', 'platform:review-provenance'],
+      delta_summary: 'Visual provenance and export metadata changed without new deck body.',
+      has_platform_repair_delta: true,
+    });
+    assert.equal(visualLog.next_forced_delta, 'visual_deliverable_delta_or_operator_typed_blocker');
     assert.deepEqual(visualLog.stage_work_done, [
       'Refreshed deck visual system, slide hierarchy, export package, and review refs.',
       'Routed unresolved visual-review blockers back to the deliverable owner.',

@@ -15,6 +15,10 @@ import { buildFamilyStageAssumptionLifecycleProjection } from '../../src/family-
 import { buildFamilyStageCohortLoopProjection } from '../../src/family-stage-cohort-loop.ts';
 import { buildFamilyStageReplayCertification } from '../../src/family-stage-replay-certification.ts';
 import { buildFamilyStagePackSourceSpecProjection } from '../../src/family-stage-source-spec.ts';
+import {
+  STANDARD_PROGRESS_DELTA_POLICY,
+  STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
+} from '../../src/standard-domain-agent-scaffold-constants.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -35,6 +39,16 @@ function actionCatalog(): FamilyActionCatalog {
     authority_boundary: { opl_role: 'projection_consumer_only' },
     actions: [],
     notes: [],
+  };
+}
+
+function progressFirstPolicies(): Pick<
+  FamilyStageControlPlane['stages'][number]['stage_contract'],
+  'progress_delta_policy' | 'typed_blocker_lineage_policy'
+> {
+  return {
+    progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+    typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
   };
 }
 
@@ -76,6 +90,7 @@ function plane(ensures: string[] = ['draft_ready']): FamilyStageControlPlane {
           source_scope_refs: [],
           artifact_scope_refs: [],
           workspace_scope_refs: [],
+          ...progressFirstPolicies(),
         },
         trust_boundary: {
           lane: 'domain_agent',

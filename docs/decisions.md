@@ -7,6 +7,18 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-05-30
 
+### 决策：Progress-First 成为 OPL family shared stage contract
+
+原因：MAS late-stage paper lane 暴露的问题不是单一研究个案，而是所有 Foundry Agent 都需要统一回答四件事：当前有没有交付物实质进展、是否只是 platform repair、下一次必须产出什么 delta 或 typed blocker、重复 blocker 何时升级。若这些字段留在各 domain 的局部 read model 中，App/operator、Agent Lab、evidence-worklist 和 readiness 会继续把 refs-only/currentness 修复误读成交付推进。
+
+影响：
+
+- 标准 `user_stage_log_contract` / `stage_progress_log` 扩展 `progress_delta_classification`、`deliverable_progress_delta`、`platform_repair_delta`，分类固定为 `deliverable_progress`、`platform_repair`、`mixed`、`typed_blocker`、`human_gate`、`stop_loss`。
+- `effective_current_context.v1` 成为 owner route、source fingerprint、stage packet、workspace/session identity、latest closeout、running attempt 和 superseded lineage 的唯一 shared currentness packet。
+- `family-stall-lineage.v1` 成为 repeated blocker 的 shared lineage/budget surface，并要求暴露 `next_forced_delta`、escalation owner 与 terminal flag。
+- MAS/MAG/RCA/OMA 可以保留 paper/grant/visual/target-agent domain alias，但 alias 只映射到 OPL generic deliverable/platform delta；App 只消费 shared projection，不读取 domain artifact/body，也不新增 truth authority。
+- platform repair、projection hygiene、currentness 修复、refs-only ledger 与 typed-blocker accounting 必须单独列账，不能显示成交付物实质进展。
+
 ### 决策：framework readiness 不把 worker-guarded provider SLO raw tail 计成 operator-actionable
 
 原因：Provider long-window SLO tail 属于 App/operator production evidence tail；当对应 `provider_slo_cadence_execution` route 已被 developer-checkout shared-state worker mutation guard 阻塞时，framework readiness 仍应保留原始 raw open tail 供 provider evidence 审计，但不能把它计入 `open_tail_count`、`operator_actionable_attention_tail_count` 或 payload-free operator action。否则 framework summary 会与 App execution bridge / evidence-worklist 的 fail-closed safe-action 语义冲突。

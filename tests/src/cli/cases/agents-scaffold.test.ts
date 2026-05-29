@@ -80,7 +80,25 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     true,
   );
   assert.equal(
+    scaffold.default_runtime_policy.required_user_stage_log.canonical_domain_fields.includes(
+      'deliverable_progress_delta',
+    ),
+    true,
+  );
+  assert.equal(
+    scaffold.default_runtime_policy.required_user_stage_log.platform_only_is_not_deliverable_progress,
+    true,
+  );
+  assert.equal(
     scaffold.required_contract_surfaces.includes('user_stage_log_contract'),
+    true,
+  );
+  assert.equal(
+    scaffold.required_contract_surfaces.includes('progress_delta_policy'),
+    true,
+  );
+  assert.equal(
+    scaffold.required_contract_surfaces.includes('typed_blocker_lineage_policy'),
     true,
   );
   assert.equal(
@@ -101,6 +119,18 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     'cost',
   ]);
   assert.equal(scaffold.user_stage_log_contract.authority_boundary.opl_can_infer_domain_semantics, false);
+  assert.deepEqual(scaffold.progress_delta_policy.required_fields, [
+    'progress_delta_classification',
+    'deliverable_progress_delta',
+    'platform_repair_delta',
+    'next_forced_delta',
+  ]);
+  assert.equal(scaffold.progress_delta_policy.platform_only_is_not_deliverable_progress, true);
+  assert.equal(scaffold.typed_blocker_lineage_policy.surface_kind, 'family-stall-lineage.v1');
+  assert.deepEqual(scaffold.typed_blocker_lineage_policy.repeat_budget, {
+    mechanism_repair_after_repeat_count: 2,
+    human_gate_or_stop_loss_after_repeat_count: 3,
+  });
   assert.equal(
     scaffold.agent_pack_contract.stage_ref_requirements.includes(
       'selected_executor:codex_cli default binding or explicit non-default executor binding',
@@ -446,6 +476,23 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       stageControlPlane.stages[0].stage_contract.user_stage_log_contract
         .required_domain_semantic_fields.includes('changed_stage_surfaces'),
       true,
+    );
+    assert.equal(
+      stageControlPlane.stages[0].stage_contract.progress_delta_policy.platform_only_is_not_deliverable_progress,
+      true,
+    );
+    assert.deepEqual(
+      stageControlPlane.stages[0].stage_contract.progress_delta_policy.required_fields,
+      [
+        'progress_delta_classification',
+        'deliverable_progress_delta',
+        'platform_repair_delta',
+        'next_forced_delta',
+      ],
+    );
+    assert.equal(
+      stageControlPlane.stages[0].stage_contract.typed_blocker_lineage_policy.surface_kind,
+      'family-stall-lineage.v1',
     );
     const generatedSurfaceHandoff = JSON.parse(
       fs.readFileSync(path.join(targetDir, 'contracts/generated_surface_handoff.json'), 'utf8'),
@@ -810,6 +857,8 @@ test('agents scaffold validation blocks generated skeletons missing stage pack v
     delete stageControlPlane.stages[0].selected_executor;
     delete stageControlPlane.stages[0].stage_contract.expected_receipt_refs;
     delete stageControlPlane.stages[0].stage_contract.user_stage_log_contract;
+    delete stageControlPlane.stages[0].stage_contract.progress_delta_policy;
+    delete stageControlPlane.stages[0].stage_contract.typed_blocker_lineage_policy;
     stageControlPlane.stages[0].independent_gate_policy.execution_review_separation_required = false;
     fs.writeFileSync(stageControlPlanePath, `${JSON.stringify(stageControlPlane, null, 2)}\n`);
 
@@ -847,6 +896,14 @@ test('agents scaffold validation blocks generated skeletons missing stage pack v
     );
     assert.equal(
       validated.validation.blockers.includes('stage_user_stage_log_contract_missing:domain_intake'),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes('stage_progress_delta_policy_missing:domain_intake'),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes('stage_typed_blocker_lineage_policy_missing:domain_intake'),
       true,
     );
   } finally {

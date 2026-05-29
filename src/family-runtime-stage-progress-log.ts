@@ -337,6 +337,106 @@ function semanticText(summary: JsonRecord | null, keys: string[]) {
   return null;
 }
 
+function semanticRecord(summary: JsonRecord | null, keys: string[]) {
+  if (!summary) {
+    return null;
+  }
+  for (const key of keys) {
+    const value = summary[key];
+    if (isRecord(value)) {
+      return value;
+    }
+  }
+  return null;
+}
+
+function progressDeltaFromRecord(record: JsonRecord | null, keys: string[], defaultSummary: string | null) {
+  const delta = semanticRecord(record, keys);
+  const deltaRefs = delta
+    ? uniqueStrings(refsFromRecord(delta, ['delta_ref', 'delta_refs', 'refs', 'evidence_refs']))
+    : [];
+  const deltaCount = delta
+    ? numberValue(delta.delta_count) ?? deltaRefs.length
+    : 0;
+  return {
+    delta_count: deltaCount,
+    delta_refs: deltaRefs,
+    delta_summary: delta
+      ? semanticText(delta, ['delta_summary', 'summary', 'work_summary'])
+      : defaultSummary,
+  };
+}
+
+function userStageLogProgressDeltas(
+  semanticSummary: JsonRecord | null,
+  routeImpact: JsonRecord,
+  semanticStatus: string,
+) {
+  const deliverableDelta = progressDeltaFromRecord(semanticSummary, [
+    'deliverable_progress_delta',
+    'paper_progress_delta',
+    'paper_work_progress',
+    'grant_work_progress',
+    'visual_deliverable_progress',
+    'target_agent_substantive_delta',
+  ], null);
+  const platformDelta = progressDeltaFromRecord(semanticSummary, [
+    'platform_repair_delta',
+    'platform_evidence_progress',
+    'platform_interface_repair_delta',
+  ], null);
+  const routeDeliverableDelta = progressDeltaFromRecord(routeImpact, [
+    'deliverable_progress_delta',
+    'paper_progress_delta',
+    'paper_work_progress',
+    'grant_work_progress',
+    'visual_deliverable_progress',
+    'target_agent_substantive_delta',
+  ], null);
+  const routePlatformDelta = progressDeltaFromRecord(routeImpact, [
+    'platform_repair_delta',
+    'platform_evidence_progress',
+    'platform_interface_repair_delta',
+  ], null);
+  const mergedDeliverableDelta = {
+    delta_count: deliverableDelta.delta_count || routeDeliverableDelta.delta_count,
+    delta_refs: uniqueStrings([...deliverableDelta.delta_refs, ...routeDeliverableDelta.delta_refs]),
+    delta_summary: deliverableDelta.delta_summary ?? routeDeliverableDelta.delta_summary,
+  };
+  const mergedPlatformDelta = {
+    delta_count: platformDelta.delta_count || routePlatformDelta.delta_count,
+    delta_refs: uniqueStrings([...platformDelta.delta_refs, ...routePlatformDelta.delta_refs]),
+    delta_summary: platformDelta.delta_summary ?? routePlatformDelta.delta_summary,
+  };
+  const classification = semanticText(semanticSummary, ['progress_delta_classification'])
+    ?? semanticText(routeImpact, ['progress_delta_classification'])
+    ?? (semanticStatus === 'missing_domain_semantic_summary'
+      ? 'typed_blocker'
+      : mergedDeliverableDelta.delta_count > 0 && mergedPlatformDelta.delta_count > 0
+        ? 'mixed'
+        : mergedDeliverableDelta.delta_count > 0
+          ? 'deliverable_progress'
+          : mergedPlatformDelta.delta_count > 0
+            ? 'platform_repair'
+            : 'typed_blocker');
+  return {
+    progress_delta_classification: classification,
+    deliverable_progress_delta: {
+      ...mergedDeliverableDelta,
+      has_deliverable_delta: mergedDeliverableDelta.delta_count > 0 || mergedDeliverableDelta.delta_refs.length > 0,
+    },
+    platform_repair_delta: {
+      ...mergedPlatformDelta,
+      has_platform_repair_delta: mergedPlatformDelta.delta_count > 0 || mergedPlatformDelta.delta_refs.length > 0,
+    },
+    next_forced_delta: semanticText(semanticSummary, ['next_forced_delta'])
+      ?? semanticText(routeImpact, ['next_forced_delta'])
+      ?? (semanticStatus === 'missing_domain_semantic_summary'
+        ? 'domain_user_stage_log_or_typed_blocker_with_lineage_required'
+        : 'deliverable_progress_delta_or_typed_blocker_with_lineage_required'),
+  };
+}
+
 function domainStageSummary(input: StageProgressLogInput) {
   return firstRecordFrom(input.latestCloseout, [
     'user_stage_log',
@@ -430,6 +530,7 @@ function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: num
     ),
   ]);
   const semanticStatus = semanticSummary ? 'provided_by_domain' : 'missing_domain_semantic_summary';
+  const progressDeltas = userStageLogProgressDeltas(semanticSummary, input.routeImpact, semanticStatus);
   const observability = observabilityForUserStageLog(duration, tokens, cost);
   return {
     surface_kind: 'opl_user_stage_log',
@@ -441,6 +542,10 @@ function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: num
     stage_name: stageName,
     problem_summary: problemSummary,
     stage_goal: stageGoal,
+    progress_delta_classification: progressDeltas.progress_delta_classification,
+    deliverable_progress_delta: progressDeltas.deliverable_progress_delta,
+    platform_repair_delta: progressDeltas.platform_repair_delta,
+    next_forced_delta: progressDeltas.next_forced_delta,
     stage_work_done: stageWorkDone,
     changed_stage_surfaces: changedStageSurfaces,
     paper_work_done: paperWorkDone.length > 0 ? paperWorkDone : stageWorkDone,

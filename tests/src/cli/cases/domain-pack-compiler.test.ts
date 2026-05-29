@@ -705,6 +705,41 @@ test('generated interfaces can compile a standard agent repo contract pack witho
           outputs: [],
           evaluation: [],
           handoff: null,
+          stage_contract: {
+            requires: ['source_brief_ref'],
+            ensures: ['draft_brief_ref_or_typed_blocker_ref'],
+            boundary_assumptions: [],
+            properties: [],
+            progress_delta_policy: {
+              surface_kind: 'opl_stage_progress_delta_policy',
+              required_fields: [
+                'progress_delta_classification',
+                'deliverable_progress_delta',
+                'platform_repair_delta',
+                'next_forced_delta',
+              ],
+              platform_only_is_not_deliverable_progress: true,
+            },
+            typed_blocker_lineage_policy: {
+              surface_kind: 'family-stall-lineage.v1',
+              required_fields: [
+                'blocker_family',
+                'source_fingerprint',
+                'repeat_count',
+                'next_forced_delta',
+                'escalation_owner',
+              ],
+              repeat_budget: {
+                mechanism_repair_after_repeat_count: 2,
+                human_gate_or_stop_loss_after_repeat_count: 3,
+              },
+            },
+            runtime_assumptions: [],
+            monitor_refs: [],
+            source_scope_refs: [],
+            artifact_scope_refs: [],
+            workspace_scope_refs: [],
+          },
           source_refs: [],
           authority_boundary: {
             domain_truth_owner: 'SampleBriefAgent',
@@ -892,7 +927,26 @@ test('generated interfaces can compile a standard agent repo contract pack witho
     stage_id: 'brief-draft',
     allowed_action_refs: ['draft_brief'],
     authority_owner: 'SampleBriefAgent',
+    progress_delta_policy: {
+      surface_kind: 'opl_stage_progress_delta_policy',
+      required_fields: [
+        'progress_delta_classification',
+        'deliverable_progress_delta',
+        'platform_repair_delta',
+        'next_forced_delta',
+      ],
+      platform_only_is_not_deliverable_progress: true,
+    },
+    typed_blocker_lineage_policy: {
+      surface_kind: 'family-stall-lineage.v1',
+      repeat_budget: {
+        mechanism_repair_after_repeat_count: 2,
+        human_gate_or_stop_loss_after_repeat_count: 3,
+      },
+    },
   });
+  assert.deepEqual(bundle.product_session.session_routes[0].progress_delta_policy, bundle.stage_routes[0].progress_delta_policy);
+  assert.deepEqual(bundle.workbench.stage_routes[0].typed_blocker_lineage_policy, bundle.stage_routes[0].typed_blocker_lineage_policy);
   assert.equal(bundle.source_contract_consumption.status, 'ready');
   assert.equal(
     bundle.source_contract_consumption.consumed_contracts.find(
