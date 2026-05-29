@@ -782,6 +782,46 @@ function runtimeManagerRouteSupportRefs() {
   };
 }
 
+function effectiveCurrentContextPacket(workbench: JsonRecord) {
+  const packet = record(workbench.effective_current_context);
+  if (Object.keys(packet).length > 0) {
+    return packet;
+  }
+  return {
+    surface_kind: 'opl_effective_current_context_packet',
+    packet_version: 'effective_current_context.v1',
+    projection_policy: 'refs_only_current_context_packet_no_domain_truth_or_ready_verdict',
+    contexts: [],
+    summary: {
+      context_count: 0,
+      running_attempt_count: 0,
+      latest_closeout_count: 0,
+      superseded_context_count: 0,
+    },
+    authority_boundary: refsOnlyAuthorityBoundary(),
+  };
+}
+
+function familyStallLineagePacket(workbench: JsonRecord) {
+  const packet = record(workbench.family_stall_lineage);
+  if (Object.keys(packet).length > 0) {
+    return packet;
+  }
+  return {
+    surface_kind: 'opl_family_stall_lineage',
+    packet_version: 'family-stall-lineage.v1',
+    projection_policy:
+      'repeated_blocker_lineage_requires_next_forced_delta_without_claiming_domain_or_production_ready',
+    lineages: [],
+    summary: {
+      lineage_count: 0,
+      repeated_lineage_count: 0,
+      terminal_lineage_count: 0,
+    },
+    authority_boundary: refsOnlyAuthorityBoundary(),
+  };
+}
+
 function refEntries(refs: string[], role: string, attempt: JsonRecord | null = null) {
   return refs.map((ref) => ({
     ref,
@@ -962,6 +1002,8 @@ export function buildAppOperatorDrilldown(input: {
   );
   const memoryRefs = memoryWritebackRefs(input.stageAttemptWorkbench, record(evidenceRequests));
   const memoryTrace = buildMemoryTraceProjection(input.stageAttemptWorkbench);
+  const effectiveCurrentContext = effectiveCurrentContextPacket(input.stageAttemptWorkbench);
+  const familyStallLineage = familyStallLineagePacket(input.stageAttemptWorkbench);
   const qualityRefs = qualityReadinessRefs(input.stageAttemptWorkbench);
   const providerActionRefs = providerSloRefs(input.providerContinuousProof);
   const providerCadenceWindow = providerCadenceWindowSummary(input.providerContinuousProof);
@@ -1175,6 +1217,18 @@ export function buildAppOperatorDrilldown(input: {
       record(currentControlState.summary).latest_running_provider_heartbeat_at,
     current_control_state_running_provider_attempt_summary_policy:
       record(currentControlState.summary).running_provider_attempt_summary_policy,
+    effective_current_context_count:
+      numberValue(record(effectiveCurrentContext.summary).context_count),
+    effective_current_context_running_attempt_count:
+      numberValue(record(effectiveCurrentContext.summary).running_attempt_count),
+    effective_current_context_latest_closeout_count:
+      numberValue(record(effectiveCurrentContext.summary).latest_closeout_count),
+    family_stall_lineage_count:
+      numberValue(record(familyStallLineage.summary).lineage_count),
+    family_stall_lineage_repeated_count:
+      numberValue(record(familyStallLineage.summary).repeated_lineage_count),
+    family_stall_lineage_terminal_count:
+      numberValue(record(familyStallLineage.summary).terminal_lineage_count),
     runtime_visualization_node_count:
       record(runtimeVisualizationProjection.summary).node_count,
     runtime_visualization_edge_count:
@@ -1270,6 +1324,8 @@ export function buildAppOperatorDrilldown(input: {
     package_export_lifecycle_refs: packageLifecycle,
     memory_writeback_refs: memoryRefs,
     memory_trace_projection: memoryTrace,
+    effective_current_context: effectiveCurrentContext,
+    family_stall_lineage: familyStallLineage,
     quality_readiness_refs: qualityRefs,
     provider_slo_operator_action_refs: {
       surface_kind: 'opl_app_drilldown_provider_slo_operator_action_refs',

@@ -43,6 +43,7 @@ export function frameworkAttentionFirstPayload(input: {
   appReleaseUserPathEvidence: JsonRecord;
   developerModeLiveCloseoutEvidence: JsonRecord;
   omaProductionConsumptionFollowthrough: JsonRecord;
+  familyStallLineage: JsonRecord;
   domainDispatchEvidenceWorkorderGroupAttentionItems: JsonRecord[];
   domainDispatchEvidenceWorkorderAttentionItems: JsonRecord[];
   domainDispatchEvidenceWorkorderSummary: JsonRecord;
@@ -162,6 +163,7 @@ export function frameworkAttentionFirstPayload(input: {
     appReleaseUserPathEvidence: input.appReleaseUserPathEvidence,
     developerModeLiveCloseoutEvidence: input.developerModeLiveCloseoutEvidence,
     omaProductionConsumptionFollowthrough: input.omaProductionConsumptionFollowthrough,
+    familyStallLineage: input.familyStallLineage,
     domainDispatchEvidenceWorkorderGroupAttentionItems:
       input.domainDispatchEvidenceWorkorderGroupAttentionItems,
     itemLimit: 5,
@@ -228,6 +230,7 @@ export function frameworkAttentionFirstPayload(input: {
       input.developerModeLiveCloseoutEvidence,
     oma_production_consumption_followthrough:
       input.omaProductionConsumptionFollowthrough,
+    family_stall_lineage: input.familyStallLineage,
     domain_dispatch_evidence_workorder_packet_summary:
       input.domainDispatchEvidenceWorkorderSummary,
     domain_dispatch_evidence_workorder_group_attention_policy:

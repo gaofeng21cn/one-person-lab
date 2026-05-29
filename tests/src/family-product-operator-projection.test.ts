@@ -46,6 +46,8 @@ test('family product operator projection answers operator status questions with 
     'freshness',
     'owner_split',
     'control_loop_summary',
+    'effective_current_context',
+    'family_stall_lineage',
     'usage_projection',
     'resource_pressure',
     'observability_export',

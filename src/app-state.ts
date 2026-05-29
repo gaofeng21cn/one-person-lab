@@ -414,6 +414,18 @@ function fullRuntimeWorkbenchSummary(fullDrilldown: JsonRecord | null) {
   const stageProgressSummary = isRecord(fullDrilldown.stage_progress_log)
     ? fullDrilldown.stage_progress_log
     : null;
+  const effectiveCurrentContext = isRecord(fullDrilldown.effective_current_context)
+    ? fullDrilldown.effective_current_context
+    : {};
+  const effectiveCurrentContextSummary = isRecord(effectiveCurrentContext.summary)
+    ? effectiveCurrentContext.summary
+    : {};
+  const familyStallLineage = isRecord(fullDrilldown.family_stall_lineage)
+    ? fullDrilldown.family_stall_lineage
+    : {};
+  const familyStallLineageSummary = isRecord(familyStallLineage.summary)
+    ? familyStallLineage.summary
+    : {};
   return {
     surface_kind: 'opl_app_state_runtime_workbench_summary',
     availability: effectiveRuntimeWorkbench ? 'available' : 'unavailable',
@@ -448,6 +460,20 @@ function fullRuntimeWorkbenchSummary(fullDrilldown: JsonRecord | null) {
       visual_ref_count: stageProgressRefs.length,
       temporal_stage_progress_ref_count: Number(visualizationSummary.temporal_stage_progress_ref_count ?? 0),
       stage_progress_event_count: Number(visualizationSummary.stage_progress_event_count ?? 0),
+    },
+    effective_current_context: {
+      surface_kind: effectiveCurrentContext.surface_kind ?? 'opl_effective_current_context_packet',
+      packet_version: effectiveCurrentContext.packet_version ?? 'effective_current_context.v1',
+      context_count: Number(effectiveCurrentContextSummary.context_count ?? 0),
+      running_attempt_count: Number(effectiveCurrentContextSummary.running_attempt_count ?? 0),
+      latest_closeout_count: Number(effectiveCurrentContextSummary.latest_closeout_count ?? 0),
+    },
+    family_stall_lineage: {
+      surface_kind: familyStallLineage.surface_kind ?? 'opl_family_stall_lineage',
+      packet_version: familyStallLineage.packet_version ?? 'family-stall-lineage.v1',
+      lineage_count: Number(familyStallLineageSummary.lineage_count ?? 0),
+      repeated_lineage_count: Number(familyStallLineageSummary.repeated_lineage_count ?? 0),
+      terminal_lineage_count: Number(familyStallLineageSummary.terminal_lineage_count ?? 0),
     },
     authority_boundary: {
       opl: 'app_state_summary_projection_only',

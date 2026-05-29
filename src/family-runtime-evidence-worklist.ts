@@ -362,6 +362,11 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
     ...typedBlockerRefs,
     ...closureTypedBlockerRefs,
   ];
+  const familyStallLineage = record(drilldown.family_stall_lineage);
+  const lineage = recordList(familyStallLineage.lineages).find((entry) => {
+    const refs = stringList(entry.typed_blocker_refs);
+    return refs.some((ref) => allTypedBlockerRefs.includes(ref));
+  });
   const item = {
     item_id: `evidence-worklist:${actionId}`,
     tail_id: `evidence-worklist:${actionId}`,
@@ -406,6 +411,12 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
     freshness_refs: freshnessRefs,
     expected_refs: readOnlyExpectedRefs(route),
     closure_reason: stringValue(closure?.closure_reason),
+    stall_lineage_ref: lineage
+      ? `/runtime_tray_snapshot/app_operator_drilldown/family_stall_lineage/${stringValue(lineage.blocker_family) ?? 'blocker'}`
+      : null,
+    next_forced_delta: stringValue(lineage?.next_forced_delta),
+    escalation_owner: stringValue(lineage?.escalation_owner),
+    terminal: lineage?.terminal === true,
     open_reason: stringValue(route.open_reason),
     payload_requirement: stringValue(route.payload_requirement),
     payload_owner: stringValue(route.payload_owner),
@@ -900,6 +911,8 @@ export async function runFamilyRuntimeEvidenceWorklist(
     },
     terminal_observation_sync: terminalObservationSync,
     evidence_envelope: compactEvidenceEnvelope,
+    effective_current_context: record(drilldown.effective_current_context),
+    family_stall_lineage: record(drilldown.family_stall_lineage),
     zero_open_worklist_guard: zeroOpenWorklistGuard,
     authority_boundary: authorityBoundary(),
     not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],

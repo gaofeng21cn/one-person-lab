@@ -18,6 +18,10 @@ import {
 import {
   buildStageAttemptTruePathProof,
 } from './family-runtime-stage-attempt-true-path-proof.ts';
+import {
+  buildEffectiveCurrentContextPacket,
+  buildFamilyStallLineage,
+} from './family-runtime-effective-current-context.ts';
 import type {
   TemporalStageAttemptVisibilityReadiness,
 } from './family-runtime-temporal-visibility.ts';
@@ -63,6 +67,9 @@ type StageAttemptWorkbenchRow = ReturnType<typeof listStageAttemptRows>[number] 
 };
 
 type StageAttemptProjection = ReturnType<typeof attemptProjection>;
+
+const EMPTY_EFFECTIVE_CURRENT_CONTEXT = buildEffectiveCurrentContextPacket([]);
+const EMPTY_FAMILY_STALL_LINEAGE = buildFamilyStallLineage([]);
 
 function parseRecord(value: string): JsonRecord {
   try {
@@ -739,6 +746,8 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       control_loop_summary: EMPTY_WORKBENCH_METADATA.summary.control_loop_summary,
       attempt_history: EMPTY_WORKBENCH_METADATA.summary.attempt_history,
       human_review_burden_budget: EMPTY_WORKBENCH_METADATA.human_review_burden_budget,
+      effective_current_context: EMPTY_EFFECTIVE_CURRENT_CONTEXT,
+      family_stall_lineage: EMPTY_FAMILY_STALL_LINEAGE,
       source_refs: sourceRefs(queueDb),
       authority_boundary: {
         opl: 'attempt_control_metadata_projection_only',
@@ -781,6 +790,8 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
     }));
     const attempts = evidenceAttemptsWithControlState.slice(0, 25);
     const metadata = buildWorkbenchMetadata(attempts);
+    const effectiveCurrentContext = buildEffectiveCurrentContextPacket(evidenceAttemptsWithControlState);
+    const familyStallLineage = buildFamilyStallLineage(evidenceAttemptsWithControlState);
     return {
       surface_kind: 'opl_stage_attempt_workbench',
       availability: 'available',
@@ -803,6 +814,8 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       control_loop_summary: metadata.summary.control_loop_summary,
       attempt_history: metadata.summary.attempt_history,
       human_review_burden_budget: metadata.human_review_burden_budget,
+      effective_current_context: effectiveCurrentContext,
+      family_stall_lineage: familyStallLineage,
       attempts,
       evidence_attempts: evidenceAttemptsWithControlState,
       evidence_attempt_count: evidenceAttemptsWithControlState.length,
@@ -837,6 +850,8 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       control_loop_summary: EMPTY_WORKBENCH_METADATA.summary.control_loop_summary,
       attempt_history: EMPTY_WORKBENCH_METADATA.summary.attempt_history,
       human_review_burden_budget: EMPTY_WORKBENCH_METADATA.human_review_burden_budget,
+      effective_current_context: EMPTY_EFFECTIVE_CURRENT_CONTEXT,
+      family_stall_lineage: EMPTY_FAMILY_STALL_LINEAGE,
       source_refs: sourceRefs(queueDb),
       authority_boundary: {
         opl: 'attempt_control_metadata_projection_only',

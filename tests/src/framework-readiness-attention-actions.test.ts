@@ -126,6 +126,23 @@ test('framework readiness keeps blocked refs-only attention out of executable ne
       open_gate_count: 0,
       pending_verify_long_soak_receipt_ref_count: 0,
     },
+    familyStallLineage: {
+      surface_kind: 'opl_family_stall_lineage',
+      lineages: [{
+        blocker_family: 'reviewer_refresh_currentness',
+        attempt_refs: [
+          '/stage_attempt_workbench/attempts/sat-blocked-1',
+          '/stage_attempt_workbench/attempts/sat-blocked-2',
+        ],
+        repeat_count: 2,
+        first_seen: '2026-05-30T00:00:00.000Z',
+        last_seen: '2026-05-30T01:00:00.000Z',
+        last_deliverable_delta: 'none',
+        next_forced_delta: 'domain_deliverable_or_owner_receipt_delta_required',
+        escalation_owner: 'med-autoscience',
+        terminal: false,
+      }],
+    },
     domainDispatchEvidenceWorkorderGroupAttentionItems: [{
       owner: 'med-autoscience',
       canonical_domain_id: 'med-autoscience',
@@ -165,11 +182,15 @@ test('framework readiness keeps blocked refs-only attention out of executable ne
     top_blocked_envelope_count: 7,
     top_typed_blocker_ref_count: 0,
     top_receipt_ref_count: 0,
+    top_next_forced_delta: 'domain_deliverable_or_owner_receipt_delta_required',
+    top_escalation_owner: 'med-autoscience',
+    top_terminal: false,
     full_detail_sections: [
       'attention_first_payload.owner_payload_groups',
       'attention_first_payload.evidence_after_contract.owner_handoff_packet',
       'evidence_envelope',
       'domain_dispatch_attention',
+      'app_operator_drilldown.family_stall_lineage',
     ],
   });
   const topOwnerPayloadGroups = actions[0].top_owner_payload_groups as unknown[];

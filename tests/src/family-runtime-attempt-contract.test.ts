@@ -117,6 +117,8 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'observability_export',
     'memory_trace_projection',
     'model_route_cost_projection',
+    'effective_current_context',
+    'family_stall_lineage',
   ]) {
     assert.ok((contract.required_projection_fields as string[]).includes(field));
   }

@@ -347,6 +347,7 @@ export async function buildFrameworkReadinessSummary(
     numberValue(appEvidenceAfterContract.owner_payload_group_attention_count);
   const ownerPayloadGroupAttentionOmittedCount =
     numberValue(appEvidenceAfterContract.owner_payload_group_attention_omitted_count);
+  const familyStallLineage = record(appOperatorDrilldown.family_stall_lineage);
   const stageSummaries = Object.fromEntries(
     Object.entries(stageReadiness).map(([domain, readiness]) => [domain, stageReadinessSummary(readiness)]),
   );
@@ -527,6 +528,7 @@ export async function buildFrameworkReadinessSummary(
         appReleaseUserPathEvidence,
         developerModeLiveCloseoutEvidence,
         omaProductionConsumptionFollowthrough,
+        familyStallLineage,
         domainDispatchEvidenceWorkorderGroupAttentionItems,
         domainDispatchEvidenceWorkorderAttentionItems,
         domainDispatchEvidenceWorkorderSummary,
@@ -768,6 +770,8 @@ export async function buildFrameworkReadinessSummary(
           domainDispatchEvidenceWorkorderGroupAttentionItems,
         domain_dispatch_evidence_workorder_attention_items:
           domainDispatchEvidenceWorkorderAttentionItems,
+        effective_current_context: familyRuntimeEvidenceWorklist.effective_current_context ?? null,
+        family_stall_lineage: familyRuntimeEvidenceWorklist.family_stall_lineage ?? null,
         next_action_item_count: numberValue(worklistSummary.next_action_item_count),
         next_action_typed_blocker_ref_count: typedBlockerAttention.nextActionTypedBlockerRefCount,
         next_action_unique_typed_blocker_ref_count:
