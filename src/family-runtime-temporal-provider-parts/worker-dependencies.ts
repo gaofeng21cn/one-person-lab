@@ -67,7 +67,7 @@ function dependencyHealth(input: {
   };
 }
 
-export function temporalWorkerRuntimeModuleRoot(moduleUrl: string) {
+function temporalWorkerRuntimeModuleRoot(moduleUrl: string) {
   return path.resolve(path.dirname(fileURLToPath(moduleUrl)), '..');
 }
 
