@@ -48,6 +48,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-30-opl-series-doc-governance-structure-advisory-ledger.md` | OPL operating-governance structure advisory workflow cleanup ledger。 | 当前 truth 归 `family:structure-advisory` source/tests、support report 和 fresh generated output；ledger 只记录 stale `med-deepscientist` default scope retirement and OPL-only readout refresh. |
 | `2026-05-30-opl-series-doc-governance-operating-index-ledger.md` | OPL operating-governance index foldback ledger。 | 当前 truth 归 operating-governance index and referenced support docs；ledger 只记录 stale structure-advisory lifecycle state foldback. |
 | `2026-05-30-opl-series-doc-governance-package-mds-ledger.md` | OPL current-support package/MDS wording cleanup ledger。 | 当前 truth 归 package manifest source/tests/CLI、core MDS boundary docs 和 App-owned release evidence；ledger 只记录 stale MDS provider-adapter wording retirement. |
+| `2026-05-30-opl-series-doc-governance-current-support-index-ledger.md` | OPL current-support index and default-skill boundary cleanup ledger。 | 当前 truth 归 current-support index、default-skill ecosystem support doc、companion skill source/CLI 和 family plugin registry source/CLI；ledger 只记录 stale MDS / system-skill index wording retirement. |
 
 ## Tombstone Rules
 

@@ -1,15 +1,15 @@
 # 当前支撑参考索引
 
-Purpose: `references_current_support_index`
-State: `support_reference`
-
-Status: `support_reference_index`
 Owner: `One Person Lab`
+Purpose: `references_current_support_index`
+State: `support_reference_index`
 Machine boundary: 仅人读索引；操作真相必须使用 CLI/API 行为、contracts、source、release artifact、runtime state 或语义化 `human_doc:*` id。
 
 本目录收纳安装、GUI/WebUI、发布打包、skills、质量细节和测试 lane 治理的当前操作支撑参考。
 
 这些文件对操作者有用，但不拥有 OPL runtime topology。当前 topology 仍以核心五件套和 runtime-substrate owner surfaces 为准。
+
+Currentness policy：本文只索引当前支撑参考，不冻结 skill 安装状态、tool readiness、plugin registry、Docker/WebUI image manifest、App release evidence、package manifest、test lane membership 或 CI 运行结果。当前事实必须回到对应 support reference、source/contracts/tests、CLI/read-model、App release evidence 或 domain-owned manifests。
 
 ## 内容
 
@@ -19,7 +19,7 @@ Machine boundary: 仅人读索引；操作真相必须使用 CLI/API 行为、co
 | `../../history/process/plans/2026-05-15-one-person-lab-app-repo-split-closeout.md` | App repo 拆分和 AionUI shell 独立化 closeout | 历史 closeout；当前边界由 App 仓合同、真实 release artifact 与 GUI shell adapter boundary 承接。 |
 | `opl-docker-webui-deployment*` | Docker 与浏览器部署参考 | WebUI 是 OPL-branded AionUI shell；已退役 headless Product API 端口不是用户入口。 |
 | `opl-fresh-install-and-gui-first-launch-testing.md` | Fresh install 与 GUI 首启证据计划 | OPL 主仓持有 CLI clean-room truth；release App VM proof 由 `one-person-lab-app` 调用 `opl-aion-shell` 执行。 |
-| `opl-default-skill-ecosystem*` | 默认 skill 与 companion tool 支撑 | Domain skills 仍由 domain 持有；OPL 只同步和检测。MDS internals 留在 MAS 控制下。 |
+| `opl-default-skill-ecosystem*` | 默认 skill 与 companion tool 支撑 | Domain skills 仍由 domain 持有；OPL 只同步和检测。MDS / MAS-internal skills 只作为 MAS-declared optional companion / provenance / audit / oracle 语境读取，不升级为 OPL 默认 system skill。 |
 | `opl-release-packages-modular-distribution.md` | Release/package 分发支撑 | 发布打包必须保持 framework/domain split。 |
 | `opl-quality-details.md` | 质量命令参考 | 只作支撑参考；验证真相是命令行为。 |
 | `opl-test-lane-governance.md` | 测试 lane 治理参考 | 测试 lane 由 package scripts 和 lane manifests 机器治理，不由 prose wording 决定。 |
