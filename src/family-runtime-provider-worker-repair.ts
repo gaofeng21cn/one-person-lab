@@ -154,7 +154,7 @@ export async function maybeRepairTemporalWorkerForProviderSlo(
   return await repairTemporalWorkerLifecycleForProvider(paths, {
     trigger: 'provider_slo_tick',
     allowStart: true,
-    allowRestart: false,
+    allowRestart: true,
     deps,
   });
 }
