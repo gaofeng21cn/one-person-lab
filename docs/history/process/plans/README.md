@@ -90,6 +90,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-48.md` | OPL series docs governance tranche ledger part 48。 | 当前 truth 归 convergence-governance support references、核心五件套、contracts/source/tests、CLI/read-model、runtime ledger、provider receipt、domain-owned manifests 和 App/operator projection；ledger 只记录本轮 fixed counter 与旧 parse-error currentness 污染清理。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-49.md` | OPL series docs governance tranche ledger part 49。 | 当前 truth 归 convergence-governance support references、shared release contract/source/tests、fresh shared-release check、CLI/read-model、runtime ledger、provider receipt 和 domain-owned manifests；ledger 只记录本轮 fixed-date playbook/template 与 shared-release pin snapshot 清理。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-50.md` | OPL series docs governance tranche ledger part 50。 | 当前 truth 归 agent-executor source、CLI command specs、tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 executor resolver / doctor helper 公共导出面收回。 |
+| `2026-05-29-opl-series-doc-governance-tranche-ledger-part-51.md` | OPL series docs governance tranche ledger part 51。 | 当前 truth 归 Codex command source、stage runner protocol tests、fallow summary 和 live CLI/read-model；ledger 只记录本轮 Codex output / unsupported function-call helper 公共导出面收回。 |
 
 ## Tombstone Rules
 

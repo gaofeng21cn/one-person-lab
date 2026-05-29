@@ -872,11 +872,11 @@ function summarizeCodexEvent(event: Record<string, unknown>) {
   return null;
 }
 
-export function summarizeCodexOutputLine(line: string) {
+function summarizeCodexOutputLine(line: string) {
   return summarizeCodexEvent(parseCodexJsonLine(line) ?? {});
 }
 
-export function extractCodexRecentOutput(output: string, lines = 6) {
+function extractCodexRecentOutput(output: string, lines = 6) {
   const humanLines = output
     .split(/\r?\n/)
     .map((line) => summarizeCodexOutputLine(line))
@@ -914,7 +914,7 @@ export function parseCodexExecOutput(output: string): ParsedCodexExecOutput {
   };
 }
 
-export function findPendingUnsupportedFunctionCalls(output: string) {
+function findPendingUnsupportedFunctionCalls(output: string) {
   const parserState = createCodexExecEventParserState();
   const pending = new Map<string, { name: string; callId: string | null }>();
   const resolved = new Set<string>();

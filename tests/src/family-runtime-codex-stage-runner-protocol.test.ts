@@ -4,7 +4,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { createFakeCodexFixture } from './cli/helpers.ts';
-import { findPendingUnsupportedFunctionCalls } from '../../src/codex.ts';
 import { runCodexStageRunner } from '../../src/family-runtime-codex-stage-runner.ts';
 
 test('Codex stage runner fails closed when live process stops producing output', async () => {
@@ -204,11 +203,27 @@ exit 64
   }
 });
 
-test('Codex session recovery ignores function calls already resolved by Codex CLI outputs', () => {
-  const output = [
+test('Codex stage runner ignores resolved function calls from recovered session output', async () => {
+  const threadId = 'thread-resolved-function-call';
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"type":"session_meta","payload":{"id":"${threadId}"}}\\n'
+  sleep 2
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  const previousCodexHome = process.env.CODEX_HOME;
+  const previousRecoveryTimeout = process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS;
+  const codexHome = path.join(fixtureRoot, 'codex-home');
+  const sessionDir = path.join(codexHome, 'sessions', '2026', '05', '26');
+  fs.mkdirSync(sessionDir, { recursive: true });
+  fs.writeFileSync(path.join(sessionDir, `rollout-2026-05-26T22-30-22-${threadId}.jsonl`), [
     JSON.stringify({
       type: 'session_meta',
-      payload: { id: 'thread-resolved-function-call' },
+      payload: { id: threadId },
     }),
     JSON.stringify({
       type: 'response_item',
@@ -228,7 +243,42 @@ test('Codex session recovery ignores function calls already resolved by Codex CL
       },
     }),
     '',
-  ].join('\n');
+  ].join('\n'));
 
-  assert.deepEqual(findPendingUnsupportedFunctionCalls(output), []);
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    process.env.CODEX_HOME = codexHome;
+    process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS = '1';
+    const receipt = await runCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_resolved_function_call_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['checkpoint:resolved-function-call'],
+      },
+      stagePacketRef: 'packet:resolved-function-call',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+      noOutputTimeoutMs: 100,
+    });
+
+    assert.equal(receipt.closeout_packet, null);
+    assert.equal(receipt.process_output_summary?.timeout_reason, 'no_output_timeout');
+    assert.equal(receipt.process_output_summary?.blocked_reason, undefined);
+    assert.equal(receipt.process_output_summary?.pending_function_call_count, undefined);
+    assert.equal(receipt.process_output_summary?.function_call_names, undefined);
+  } finally {
+    previousCodexBin === undefined
+      ? delete process.env.OPL_CODEX_BIN
+      : process.env.OPL_CODEX_BIN = previousCodexBin;
+    previousCodexHome === undefined
+      ? delete process.env.CODEX_HOME
+      : process.env.CODEX_HOME = previousCodexHome;
+    previousRecoveryTimeout === undefined
+      ? delete process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS
+      : process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS = previousRecoveryTimeout;
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 });
