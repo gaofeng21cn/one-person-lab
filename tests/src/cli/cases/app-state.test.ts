@@ -71,6 +71,20 @@ exit 1
             temporal_stage_progress_ref_count: number;
             stage_progress_event_count: number;
           };
+          effective_current_context: {
+            surface_kind: string;
+            packet_version: string;
+            context_count: number;
+            running_attempt_count: number;
+            latest_closeout_count: number;
+          };
+          family_stall_lineage: {
+            surface_kind: string;
+            packet_version: string;
+            lineage_count: number;
+            repeated_lineage_count: number;
+            terminal_lineage_count: number;
+          };
           authority_boundary: {
             can_read_memory_body: boolean;
             can_read_artifact_body: boolean;
@@ -96,6 +110,16 @@ exit 1
     assert.equal(Array.isArray(summary.stage_progress_log?.temporal_webui_refs), true);
     assert.equal(summary.stage_progress_log?.temporal_stage_progress_ref_count >= 0, true);
     assert.equal(summary.stage_progress_log?.stage_progress_event_count >= 0, true);
+    assert.equal(summary.effective_current_context.surface_kind, 'opl_effective_current_context_packet');
+    assert.equal(summary.effective_current_context.packet_version, 'effective_current_context.v1');
+    assert.equal(summary.effective_current_context.context_count >= 0, true);
+    assert.equal(summary.effective_current_context.running_attempt_count >= 0, true);
+    assert.equal(summary.effective_current_context.latest_closeout_count >= 0, true);
+    assert.equal(summary.family_stall_lineage.surface_kind, 'opl_family_stall_lineage');
+    assert.equal(summary.family_stall_lineage.packet_version, 'family-stall-lineage.v1');
+    assert.equal(summary.family_stall_lineage.lineage_count >= 0, true);
+    assert.equal(summary.family_stall_lineage.repeated_lineage_count >= 0, true);
+    assert.equal(summary.family_stall_lineage.terminal_lineage_count >= 0, true);
     assert.equal(JSON.stringify(summary).includes('memory_writeback_refs'), false);
     assert.equal(JSON.stringify(summary).includes('artifact_gallery_refs'), false);
     assert.equal(summary.authority_boundary.can_read_memory_body, false);

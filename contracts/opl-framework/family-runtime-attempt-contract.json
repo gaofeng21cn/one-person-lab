@@ -102,7 +102,9 @@
     "resource_pressure",
     "observability_export",
     "memory_trace_projection",
-    "model_route_cost_projection"
+    "model_route_cost_projection",
+    "effective_current_context",
+    "family_stall_lineage"
   ],
   "route_hydration_contract": {
     "input_refs": [

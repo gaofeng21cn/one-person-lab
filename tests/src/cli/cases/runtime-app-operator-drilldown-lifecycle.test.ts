@@ -427,6 +427,23 @@ test('runtime app-operator-drilldown summary exposes running provider attempts a
     const full = fullOutput.app_operator_drilldown;
 
     assert.equal(full.current_control_state.summary.running_provider_attempt_count, 1);
+    assert.equal(full.effective_current_context.surface_kind, 'opl_effective_current_context_packet');
+    assert.equal(full.effective_current_context.packet_version, 'effective_current_context.v1');
+    assert.equal(full.effective_current_context.summary.running_attempt_count, 1);
+    assert.equal(full.effective_current_context.summary.latest_closeout_count, 0);
+    assert.equal(full.effective_current_context.contexts[0].owner_route.next_owner, 'medautoscience');
+    assert.equal(
+      full.effective_current_context.contexts[0].source_fingerprint.stage_attempt_source_fingerprint,
+      'sha256:mas-live-control',
+    );
+    assert.deepEqual(full.effective_current_context.contexts[0].stage_packet.stage_packet_refs, [
+      'packet:mas-live-control',
+    ]);
+    assert.equal(full.effective_current_context.contexts[0].workspace_session.stage_attempt_id, attemptId);
+    assert.equal(full.effective_current_context.contexts[0].running_attempt.running_provider_attempt, true);
+    assert.equal(full.family_stall_lineage.surface_kind, 'opl_family_stall_lineage');
+    assert.equal(full.family_stall_lineage.packet_version, 'family-stall-lineage.v1');
+    assert.equal(full.family_stall_lineage.lineages.length, 0);
     assert.deepEqual(
       full.current_control_state.summary.running_provider_attempt_stage_attempt_ids,
       [attemptId],
@@ -437,6 +454,93 @@ test('runtime app-operator-drilldown summary exposes running provider attempts a
     assert.equal(Object.hasOwn(full.current_control_state.states[0], 'domain_ready'), false);
     assert.equal(Object.hasOwn(full.current_control_state.states[0], 'publication_ready'), false);
     assert.equal(Object.hasOwn(full.current_control_state.states[0], 'artifact_ready'), false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime app-operator-drilldown exposes stall lineage for repeated typed blockers', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-stall-lineage-'));
+  try {
+    const attemptIds: string[] = [];
+    for (const index of [0, 1]) {
+      const created = runCli([
+        'family-runtime',
+        'attempt',
+        'create',
+        '--domain',
+        'medautoscience',
+        '--stage',
+        'write',
+        '--provider',
+        'local_sqlite',
+        '--workspace-locator',
+        JSON.stringify({
+          workspace_root: '/tmp/mas-stall-lineage',
+          runtime_root: '/tmp/mas-stall-lineage/runtime',
+          artifact_root: '/tmp/mas-stall-lineage/artifacts',
+          study_id: 'DM002',
+          action_type: 'reviewer_refresh',
+          dispatch_ref: 'studies/DM002/reviewer-refresh.json',
+          stage_packet_ref: `packet:mas-stall-${index}`,
+        }),
+        '--source-fingerprint',
+        `sha256:mas-stall-${index}`,
+      ], {
+        OPL_STATE_DIR: stateRoot,
+      });
+      const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
+      attemptIds.push(attemptId);
+      runCli([
+        'family-runtime',
+        'attempt',
+        'fixture-run',
+        attemptId,
+        '--closeout-packet',
+        JSON.stringify({
+          surface_kind: 'stage_attempt_closeout_packet',
+          closeout_refs: [`receipt:stall-${index}`],
+          consumed_refs: [`source:stall-${index}`],
+          consumed_memory_refs: [],
+          writeback_receipt_refs: [],
+          rejected_writes: [],
+          next_owner: 'med-autoscience',
+          domain_ready_verdict: 'domain_gate_pending',
+          route_impact: {
+            typed_blocker_refs: ['mas-blocker:reviewer-refresh-repeat'],
+            typed_blockers: [{
+              blocker_id: 'reviewer_refresh_currentness_blocked',
+              blocker_family: 'reviewer_refresh_currentness',
+              required_owner: 'med-autoscience',
+            }],
+            deliverable_progress_delta: index === 0 ? 'refs_only' : 'none',
+            platform_repair_delta: index === 0 ? 'owner_route_recorded' : 'none',
+            progress_delta_classification: index === 0 ? 'platform_repair' : 'typed_blocker',
+          },
+        }),
+      ], {
+        OPL_STATE_DIR: stateRoot,
+      });
+    }
+
+    const full = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
+
+    const lineage = full.family_stall_lineage.lineages.find(
+      (entry: Record<string, unknown>) =>
+        entry.blocker_family === 'reviewer_refresh_currentness',
+    );
+    assert.ok(lineage);
+    assert.equal(lineage.repeat_count, 2);
+    assert.deepEqual(lineage.attempt_refs, attemptIds.map((id) => `/stage_attempt_workbench/attempts/${id}`));
+    assert.equal(lineage.last_deliverable_delta, 'none');
+    assert.equal(lineage.next_forced_delta, 'domain_deliverable_or_owner_receipt_delta_required');
+    assert.equal(lineage.escalation_owner, 'med-autoscience');
+    assert.equal(lineage.terminal, false);
+    assert.equal(full.summary.family_stall_lineage_count, 1);
+    assert.equal(full.summary.family_stall_lineage_repeated_count, 1);
+    assert.equal(full.summary.family_stall_lineage_terminal_count, 0);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

@@ -21,6 +21,8 @@
     "freshness",
     "owner_split",
     "control_loop_summary",
+    "effective_current_context",
+    "family_stall_lineage",
     "usage_projection",
     "resource_pressure",
     "observability_export"

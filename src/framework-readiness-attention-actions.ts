@@ -278,12 +278,14 @@ function blockedOwnerPayloadGroupSummary(group: JsonRecord) {
 function blockedRefsOnlyAttentionReviewAction(input: {
   domainBlockedAttentionCount?: number;
   ownerPayloadGroups: JsonRecord[];
+  familyStallLineage?: JsonRecord;
   itemLimit: number;
 }) {
   const topOwnerPayloadGroups = input.ownerPayloadGroups
     .slice(0, Math.max(1, input.itemLimit))
     .map(blockedOwnerPayloadGroupSummary);
   const topOwnerPayloadGroup = topOwnerPayloadGroups[0] ?? {};
+  const topLineage = recordList(record(input.familyStallLineage).lineages)[0] ?? {};
   return {
     action_id: 'review_blocked_refs_only_attention',
     action_kind: 'blocked_refs_only_attention_review',
@@ -306,11 +308,15 @@ function blockedRefsOnlyAttentionReviewAction(input: {
       top_blocked_envelope_count: numberValue(topOwnerPayloadGroup.blocked_envelope_count),
       top_typed_blocker_ref_count: numberValue(topOwnerPayloadGroup.typed_blocker_ref_count),
       top_receipt_ref_count: numberValue(topOwnerPayloadGroup.receipt_ref_count),
+      top_next_forced_delta: stringValue(topLineage.next_forced_delta),
+      top_escalation_owner: stringValue(topLineage.escalation_owner),
+      top_terminal: topLineage.terminal === true,
       full_detail_sections: [
         'attention_first_payload.owner_payload_groups',
         'attention_first_payload.evidence_after_contract.owner_handoff_packet',
         'evidence_envelope',
         'domain_dispatch_attention',
+        'app_operator_drilldown.family_stall_lineage',
       ],
     },
     top_owner_payload_groups: topOwnerPayloadGroups,
@@ -336,6 +342,7 @@ export function frameworkAttentionNextSafeActions(input: {
   appReleaseUserPathEvidence: JsonRecord;
   developerModeLiveCloseoutEvidence?: JsonRecord;
   omaProductionConsumptionFollowthrough: JsonRecord;
+  familyStallLineage?: JsonRecord;
   domainDispatchEvidenceWorkorderGroupAttentionItems: JsonRecord[];
   itemLimit: number;
 }) {
