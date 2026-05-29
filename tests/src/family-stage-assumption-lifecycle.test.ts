@@ -8,6 +8,10 @@ import { buildFamilyStageAdmissionReview } from '../../src/family-stage-admissio
 import { buildFamilyStageAssumptionLifecycleProjection } from '../../src/family-stage-assumption-lifecycle.ts';
 import { normalizeFamilyStageControlPlane } from '../../src/family-stage-control-plane-contract.ts';
 import type { FamilyStageControlPlane } from '../../src/family-stage-control-plane-contract.ts';
+import {
+  STANDARD_PROGRESS_DELTA_POLICY,
+  STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
+} from '../../src/standard-domain-agent-scaffold-constants.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -23,6 +27,16 @@ function record(value: unknown): JsonRecord {
   assert.notEqual(value, null);
   assert.equal(Array.isArray(value), false);
   return value as JsonRecord;
+}
+
+function progressFirstPolicies(): Pick<
+  FamilyStageControlPlane['stages'][number]['stage_contract'],
+  'progress_delta_policy' | 'typed_blocker_lineage_policy'
+> {
+  return {
+    progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+    typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
+  };
 }
 
 function buildPlane(runtimeAssumptions: unknown[], monitorRefs: JsonRecord[] = []): FamilyStageControlPlane {
@@ -63,6 +77,7 @@ function buildPlane(runtimeAssumptions: unknown[], monitorRefs: JsonRecord[] = [
           source_scope_refs: [],
           artifact_scope_refs: [],
           workspace_scope_refs: [],
+          ...progressFirstPolicies(),
         },
         trust_boundary: {
           lane: 'domain_agent',

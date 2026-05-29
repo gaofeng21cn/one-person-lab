@@ -9,7 +9,9 @@ import {
   PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY,
   SCAFFOLD_MARKER,
   STARTER_STAGE_ID,
+  STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_STAGE_PACK_CONFORMANCE_VERSION,
+  STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
   STANDARD_USER_STAGE_LOG_CONTRACT,
   WORKSPACE_FILE_LIFECYCLE_POLICY,
 } from './standard-domain-agent-scaffold-constants.ts';
@@ -497,6 +499,8 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
                 },
               ],
               user_stage_log_contract: STANDARD_USER_STAGE_LOG_CONTRACT,
+              progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+              typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
             },
             handoff: {
               next_owner: domainId,

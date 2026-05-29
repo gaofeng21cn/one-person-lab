@@ -90,8 +90,46 @@ function buildStagePlane(overrides: {
   reviewRequires?: string[];
   reviewRecordsRuntimeEvents?: boolean;
   reviewRuntimeEventRefs?: string[];
+  omitProgressFirstPolicies?: boolean;
   cycle?: boolean;
 } = {}): FamilyStageControlPlane {
+  const progressFirstPolicies = overrides.omitProgressFirstPolicies ? {} : {
+    progress_delta_policy: {
+      surface_kind: 'opl_stage_progress_delta_policy',
+      version: 'progress-delta-policy.v1',
+      required_fields: [
+        'progress_delta_classification',
+        'deliverable_progress_delta',
+        'platform_repair_delta',
+        'next_forced_delta',
+      ],
+      classification_values: [
+        'deliverable_progress',
+        'platform_repair',
+        'mixed',
+        'typed_blocker',
+        'human_gate',
+        'stop_loss',
+      ],
+      platform_only_is_not_deliverable_progress: true,
+    },
+    typed_blocker_lineage_policy: {
+      surface_kind: 'family-stall-lineage.v1',
+      repeat_budget: {
+        mechanism_repair_after_repeat_count: 2,
+        human_gate_or_stop_loss_after_repeat_count: 3,
+      },
+      required_fields: [
+        'blocker_family',
+        'study_id_or_domain_identity',
+        'work_unit_id',
+        'source_fingerprint',
+        'repeat_count',
+        'next_forced_delta',
+        'escalation_owner',
+      ],
+    },
+  };
   return {
     surface_kind: 'family_stage_control_plane',
     version: 'family-stage-control-plane.v1',
@@ -129,6 +167,7 @@ function buildStagePlane(overrides: {
           ensures: overrides.authorEnsures ?? ['draft_ready'],
           boundary_assumptions: [],
           properties: ['deterministic_handoff_refs'],
+          ...progressFirstPolicies,
           runtime_assumptions: [],
           monitor_refs: [],
           source_scope_refs: [],
@@ -171,6 +210,7 @@ function buildStagePlane(overrides: {
           ensures: ['review_receipt_ready'],
           boundary_assumptions: ['reviewer_judgment_recorded_as_receipt'],
           properties: [],
+          ...progressFirstPolicies,
           runtime_event_refs: overrides.reviewRuntimeEventRefs ?? ['runtime_event:publication_review.gate_recorded'],
           runtime_assumptions: [],
           monitor_refs: [],
@@ -236,6 +276,33 @@ test('family stage admission admits contracted static core and recorded boundary
   assert.deepEqual(review.failure_localization, []);
   assert.equal(review.authority_boundary.can_write_domain_truth, false);
   assert.equal(review.authority_boundary.can_authorize_quality_verdict, false);
+});
+
+test('family stage admission blocks stages missing Progress-First delta and blocker lineage policies', () => {
+  const review = buildFamilyStageAdmissionReview(
+    buildStagePlane({
+      omitProgressFirstPolicies: true,
+    }),
+    {
+      family_action_catalog: buildActionCatalog(),
+    },
+  );
+
+  assert.equal(review.status, 'blocked');
+  assert.equal(review.summary.blockers_count, 4);
+  assert.deepEqual(
+    review.failure_localization.map((item) => [item.lane, item.code, item.stage_id]),
+    [
+      ['domain', 'missing_progress_delta_policy', 'manuscript_authoring'],
+      ['domain', 'missing_typed_blocker_lineage_policy', 'manuscript_authoring'],
+      ['domain', 'missing_progress_delta_policy', 'publication_review'],
+      ['domain', 'missing_typed_blocker_lineage_policy', 'publication_review'],
+    ],
+  );
+  assert.ok(review.findings.every((finding) =>
+    finding.code !== 'missing_progress_delta_policy'
+    || finding.minimal_counterexample?.required_fields?.includes('deliverable_progress_delta')
+  ));
 });
 
 test('family stage admission blocks unsatisfied composition obligations', () => {

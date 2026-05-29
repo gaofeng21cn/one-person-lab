@@ -19,6 +19,8 @@ import {
   REQUIRED_REPO_SOURCE_DIRS,
   REQUIRED_VERIFICATION,
   STANDARD_AGENT_DEFAULT_RUNTIME_POLICY,
+  STANDARD_PROGRESS_DELTA_POLICY,
+  STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
   STANDARD_USER_STAGE_LOG_CONTRACT,
   WORKSPACE_FILE_LIFECYCLE_POLICY,
 } from './standard-domain-agent-scaffold-constants.ts';
@@ -402,8 +404,16 @@ function validateUserStageLogContracts(stageControlPlane: unknown) {
     const userStageLogContract = isPlainRecord(stageContract?.user_stage_log_contract)
       ? stageContract.user_stage_log_contract
       : null;
+    const progressDeltaPolicy = isPlainRecord(stageContract?.progress_delta_policy)
+      ? stageContract.progress_delta_policy
+      : null;
+    const typedBlockerLineagePolicy = isPlainRecord(stageContract?.typed_blocker_lineage_policy)
+      ? stageContract.typed_blocker_lineage_policy
+      : null;
     const fields = readStringArray(userStageLogContract?.required_domain_semantic_fields);
     const observabilityFields = readStringArray(userStageLogContract?.required_observability_fields);
+    const progressFields = readStringArray(progressDeltaPolicy?.required_fields);
+    const blockerFields = readStringArray(typedBlockerLineagePolicy?.required_fields);
     const findings = [
       userStageLogContract ? null : `stage_user_stage_log_contract_missing:${stageId}`,
       readOptionalString(userStageLogContract?.surface_kind) === STANDARD_USER_STAGE_LOG_CONTRACT.surface_kind
@@ -419,12 +429,46 @@ function validateUserStageLogContracts(stageControlPlane: unknown) {
       fields.includes('remaining_blockers') ? null : `stage_user_stage_log_missing_remaining_blockers:${stageId}`,
       observabilityFields.includes('duration') ? null : `stage_user_stage_log_missing_duration:${stageId}`,
       observabilityFields.includes('token_usage') ? null : `stage_user_stage_log_missing_token_usage:${stageId}`,
+      progressDeltaPolicy ? null : `stage_progress_delta_policy_missing:${stageId}`,
+      readOptionalString(progressDeltaPolicy?.surface_kind) === STANDARD_PROGRESS_DELTA_POLICY.surface_kind
+        ? null
+        : `stage_progress_delta_policy_surface_kind_invalid:${stageId}`,
+      progressFields.includes('progress_delta_classification')
+        ? null
+        : `stage_progress_delta_policy_missing_classification:${stageId}`,
+      progressFields.includes('deliverable_progress_delta')
+        ? null
+        : `stage_progress_delta_policy_missing_deliverable_delta:${stageId}`,
+      progressFields.includes('platform_repair_delta')
+        ? null
+        : `stage_progress_delta_policy_missing_platform_delta:${stageId}`,
+      progressFields.includes('next_forced_delta')
+        ? null
+        : `stage_progress_delta_policy_missing_next_forced_delta:${stageId}`,
+      typedBlockerLineagePolicy ? null : `stage_typed_blocker_lineage_policy_missing:${stageId}`,
+      readOptionalString(typedBlockerLineagePolicy?.surface_kind) === STANDARD_TYPED_BLOCKER_LINEAGE_POLICY.surface_kind
+        ? null
+        : `stage_typed_blocker_lineage_policy_surface_kind_invalid:${stageId}`,
+      blockerFields.includes('blocker_family')
+        ? null
+        : `stage_typed_blocker_lineage_policy_missing_blocker_family:${stageId}`,
+      blockerFields.includes('repeat_count')
+        ? null
+        : `stage_typed_blocker_lineage_policy_missing_repeat_count:${stageId}`,
+      blockerFields.includes('next_forced_delta')
+        ? null
+        : `stage_typed_blocker_lineage_policy_missing_next_forced_delta:${stageId}`,
+      blockerFields.includes('escalation_owner')
+        ? null
+        : `stage_typed_blocker_lineage_policy_missing_escalation_owner:${stageId}`,
     ].filter((entry): entry is string => Boolean(entry));
     return {
       stage_id: stageId,
       status: findings.length === 0 ? 'passed' : 'blocked',
       required_domain_semantic_fields: fields,
       required_observability_fields: observabilityFields,
+      progress_delta_policy_fields: progressFields,
+      typed_blocker_lineage_policy_fields: blockerFields,
       blockers: findings,
     };
   });
@@ -740,6 +784,8 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
       agent_pack_contract: AGENT_PACK_CONTRACT,
       default_runtime_policy: STANDARD_AGENT_DEFAULT_RUNTIME_POLICY,
       user_stage_log_contract: STANDARD_USER_STAGE_LOG_CONTRACT,
+      progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+      typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
       opl_generated_surfaces: OPL_GENERATED_SURFACES,
       domain_retained_thin_surfaces: DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED,
       domain_retained_thin_surfaces_deprecated: DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED,

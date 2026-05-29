@@ -236,9 +236,21 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
   assert.ok(userStageLog.required_sections.includes('problem_summary'));
   assert.ok(userStageLog.required_sections.includes('stage_work_done'));
   assert.ok(userStageLog.required_sections.includes('changed_stage_surfaces'));
+  assert.ok(userStageLog.required_sections.includes('progress_delta_classification'));
+  assert.ok(userStageLog.required_sections.includes('deliverable_progress_delta'));
+  assert.ok(userStageLog.required_sections.includes('platform_repair_delta'));
+  assert.ok(userStageLog.required_sections.includes('next_forced_delta'));
   assert.ok(userStageLog.required_sections.includes('paper_work_done'));
   assert.ok(userStageLog.required_sections.includes('token_usage'));
   assert.deepEqual(userStageLog.legacy_alias_sections, ['paper_work_done', 'changed_paper_surfaces']);
+  assert.equal(userStageLog.progress_delta_policy.surface_kind, 'opl_stage_progress_delta_policy');
+  assert.deepEqual(userStageLog.progress_delta_policy.required_fields, [
+    'progress_delta_classification',
+    'deliverable_progress_delta',
+    'platform_repair_delta',
+    'next_forced_delta',
+  ]);
+  assert.equal(userStageLog.progress_delta_policy.platform_only_is_not_deliverable_progress, true);
   assert.equal(userStageLog.semantic_missing_policy, 'emit_missing_domain_semantic_summary_without_inventing_domain_work');
   assert.equal(userStageLog.token_policy, 'observed_or_explicit_missing_null_no_zero_fill');
   assert.equal(userStageLog.authority_boundary.can_infer_domain_semantics, false);
@@ -353,6 +365,7 @@ test('family runtime attempt contract defines stage_progress_log as the canonica
   assert.equal(userStageLog.surface_kind, 'opl_user_stage_log');
   assert.equal(userStageLog.authority_boundary.can_infer_domain_semantics, false);
   assert.equal(userStageLog.authority_boundary.can_write_domain_truth, false);
+  assert.equal(userStageLog.progress_delta_policy.platform_only_is_not_deliverable_progress, true);
   assert.equal((contract.operator_visibility_fields as string[]).includes('stage_progress_log'), true);
   assert.equal((contract.operator_visibility_fields as string[]).includes('attempt_true_path_proof'), true);
   assert.equal((contract.operator_visibility_fields as string[]).includes(retiredStageExecutionLogName), false);

@@ -143,8 +143,100 @@ function readStringList(value: unknown) {
   return value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0);
 }
 
+function readStringListFromRecord(record: unknown, key: string) {
+  return isRecord(record) ? readStringList(record[key]) : [];
+}
+
 function readBoolean(value: unknown) {
   return typeof value === 'boolean' ? value : false;
+}
+
+function inspectProgressFirstPolicies(stage: FamilyStageDescriptor, findings: FamilyStageAdmissionFinding[]) {
+  const contract = stage.stage_contract;
+  if (!contract) {
+    return;
+  }
+  const progressDeltaPolicy = isRecord(contract.progress_delta_policy)
+    ? contract.progress_delta_policy
+    : null;
+  const blockerLineagePolicy = isRecord(contract.typed_blocker_lineage_policy)
+    ? contract.typed_blocker_lineage_policy
+    : null;
+  const progressFields = readStringListFromRecord(progressDeltaPolicy, 'required_fields');
+  const blockerFields = readStringListFromRecord(blockerLineagePolicy, 'required_fields');
+  const requiredProgressFields = [
+    'progress_delta_classification',
+    'deliverable_progress_delta',
+    'platform_repair_delta',
+    'next_forced_delta',
+  ];
+  const requiredBlockerFields = [
+    'blocker_family',
+    'source_fingerprint',
+    'repeat_count',
+    'next_forced_delta',
+    'escalation_owner',
+  ];
+
+  if (!progressDeltaPolicy) {
+    pushFinding(findings, {
+      severity: 'blocker',
+      code: 'missing_progress_delta_policy',
+      message: 'Stage contract must declare how domain closeout classifies deliverable progress versus platform repair.',
+      stage_id: stage.stage_id,
+      failure_lane: 'domain',
+      minimal_counterexample: {
+        required_surface_kind: 'opl_stage_progress_delta_policy',
+        required_fields: requiredProgressFields,
+      },
+    });
+  } else {
+    const missing = requiredProgressFields.filter((field) => !progressFields.includes(field));
+    if (optionalString(progressDeltaPolicy.surface_kind) !== 'opl_stage_progress_delta_policy' || missing.length > 0) {
+      pushFinding(findings, {
+        severity: 'blocker',
+        code: 'invalid_progress_delta_policy',
+        message: 'Stage progress_delta_policy must expose standard Progress-First delta fields.',
+        stage_id: stage.stage_id,
+        failure_lane: 'domain',
+        minimal_counterexample: {
+          required_surface_kind: 'opl_stage_progress_delta_policy',
+          missing_fields: missing,
+          required_fields: requiredProgressFields,
+        },
+      });
+    }
+  }
+
+  if (!blockerLineagePolicy) {
+    pushFinding(findings, {
+      severity: 'blocker',
+      code: 'missing_typed_blocker_lineage_policy',
+      message: 'Stage contract must declare typed blocker lineage and repeat-budget escalation semantics.',
+      stage_id: stage.stage_id,
+      failure_lane: 'domain',
+      minimal_counterexample: {
+        required_surface_kind: 'family-stall-lineage.v1',
+        required_fields: requiredBlockerFields,
+      },
+    });
+  } else {
+    const missing = requiredBlockerFields.filter((field) => !blockerFields.includes(field));
+    if (optionalString(blockerLineagePolicy.surface_kind) !== 'family-stall-lineage.v1' || missing.length > 0) {
+      pushFinding(findings, {
+        severity: 'blocker',
+        code: 'invalid_typed_blocker_lineage_policy',
+        message: 'Stage typed_blocker_lineage_policy must expose standard stall lineage fields.',
+        stage_id: stage.stage_id,
+        failure_lane: 'domain',
+        minimal_counterexample: {
+          required_surface_kind: 'family-stall-lineage.v1',
+          missing_fields: missing,
+          required_fields: requiredBlockerFields,
+        },
+      });
+    }
+  }
 }
 
 function optionalString(value: unknown) {
@@ -479,6 +571,7 @@ function inspectStageContract(stage: FamilyStageDescriptor, findings: FamilyStag
       stage_id: stage.stage_id,
     });
   }
+  inspectProgressFirstPolicies(stage, findings);
 }
 
 function inspectRuntimeAssumptions(
