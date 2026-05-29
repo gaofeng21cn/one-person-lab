@@ -148,6 +148,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/workspace-domain.external-evidence.test.ts',
   'tests/src/cli/cases/runtime-tray-domain-projection-ingestion.test.ts',
   'tests/src/cli/cases/runtime-app-operator-drilldown.test.ts',
+  'tests/src/cli/cases/runtime-app-operator-drilldown-visualization-projection.test.ts',
   'tests/src/cli/cases/runtime-app-operator-drilldown-route-support.test.ts',
   'tests/src/cli/cases/runtime-app-operator-drilldown-app-release-user-path-ledger.test.ts',
   'tests/src/cli/cases/runtime-app-release-user-path-evidence-ledger.test.ts',
