@@ -52,6 +52,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-30-opl-series-doc-governance-test-lane-ledger.md` | OPL current-support test lane governance cleanup ledger。 | 当前 truth 归 package scripts、test lane registry、verify scripts 和 GitHub workflows；ledger 只记录 stale lane-table completeness and frozen-state wording retirement. |
 | `2026-05-30-opl-series-doc-governance-quality-details-ledger.md` | OPL current-support quality-details cleanup ledger。 | 当前 truth 归 `opl quality details` source/tests, structural gate scripts and GitHub quality-details action/workflows；ledger 只记录 stale fixed finding/action-readiness wording retirement. |
 | `2026-05-30-opl-series-doc-governance-docker-webui-ledger.md` | OPL current-support Docker/WebUI cleanup ledger。 | 当前 truth 归 package manifest source/tests/CLI、OPL packages workflow、App release Docker smoke 和 shell Dockerfile/web-cli/web-host；ledger 只记录 stale Docker/WebUI readiness and entrypoint wording retirement. |
+| `2026-05-30-opl-series-doc-governance-fresh-install-ledger.md` | OPL current-support fresh-install / GUI first-launch cleanup ledger。 | 当前 truth 归 OPL fresh-install contract/source/tests/CLI 与 App-owned first-run/release contracts/workflows/evidence；ledger 只记录 stale release evidence and `online_management_*` wording retirement. |
 
 ## Tombstone Rules
 
