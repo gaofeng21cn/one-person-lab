@@ -30,8 +30,10 @@ const PUBLIC_SURFACE_LINE_LIMIT = 1000;
 
 const DEFAULT_REPOS = [
   ['one-person-lab', repoRoot],
+  ['med-autoscience', path.join(workspaceRoot, 'med-autoscience')],
   ['med-autogrant', path.join(workspaceRoot, 'med-autogrant')],
-  ['med-deepscientist', path.join(workspaceRoot, 'med-deepscientist')],
+  ['redcube-ai', path.join(workspaceRoot, 'redcube-ai')],
+  ['opl-meta-agent', path.join(workspaceRoot, 'opl-meta-agent')],
   ['one-person-lab-app', path.join(workspaceRoot, 'one-person-lab-app')],
 ];
 

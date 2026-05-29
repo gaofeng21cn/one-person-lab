@@ -67,13 +67,33 @@ test('package exposes the family structure advisory command and tracked report',
   assert.equal(fs.existsSync(trackedReportPath), true);
 });
 
+test('default family structure advisory scope follows the current OPL series', () => {
+  const generated = spawnSync(process.execPath, [scriptPath, '--format=json'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(generated.status, 0, generated.stderr);
+  const generatedReport = JSON.parse(generated.stdout);
+  assert.deepEqual(
+    generatedReport.repositories.map((repo: { repo: string }) => repo.repo),
+    [
+      'one-person-lab',
+      'med-autoscience',
+      'med-autogrant',
+      'redcube-ai',
+      'opl-meta-agent',
+      'one-person-lab-app',
+    ],
+  );
+});
+
 test('tracked family structure report stays aligned to generated public-surface risks', () => {
   const trackedReportPath = path.join(repoRoot, 'docs/references/operating-governance/family-structure-advisory-report.md');
   const report = fs.readFileSync(trackedReportPath, 'utf8');
 
   assert.equal(report.includes('contracts/opl-framework/candidate-domain-backlog.json'), false);
 
-  const onePersonLabSection = readSection(report, '### one-person-lab', '### med-autogrant');
+  const onePersonLabSection = readSection(report, '### one-person-lab', '## Non-OPL Refresh Status');
   const publicSurfaceRiskStart = onePersonLabSection.indexOf('public_surface_risk:');
   assert.notEqual(publicSurfaceRiskStart, -1, 'missing one-person-lab public_surface_risk section');
   const publicSurfaceRisk = onePersonLabSection.slice(publicSurfaceRiskStart);
