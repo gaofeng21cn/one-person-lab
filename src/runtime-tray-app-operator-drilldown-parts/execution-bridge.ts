@@ -11,6 +11,15 @@ type LifecycleRefs = {
 };
 
 function projectSafeActionRoute(ref: ActionRef) {
+  const canSubmitToSafeActionShell =
+    ref.can_submit_to_safe_action_shell === false
+      || ref.default_actionable === false
+      || (
+        typeof ref.route_status === 'string'
+        && ref.route_status.startsWith('blocked_by_')
+      )
+      ? false
+      : true;
   return {
     action_id: ref.action_id,
     action_kind: ref.action_kind,
@@ -130,7 +139,7 @@ function projectSafeActionRoute(ref: ActionRef) {
     submit_via: 'opl runtime action execute',
     dry_run_supported: true,
     approve_domain_action_supported: ref.owner === 'domain',
-    can_submit_to_safe_action_shell: true,
+    can_submit_to_safe_action_shell: canSubmitToSafeActionShell,
     can_execute_domain_action_directly: false,
     can_write_domain_truth: false,
     can_create_owner_receipt: false,

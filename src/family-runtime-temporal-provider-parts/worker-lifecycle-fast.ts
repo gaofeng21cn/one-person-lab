@@ -19,6 +19,9 @@ import {
   readTemporalWorkerState,
   temporalWorkerStatePath,
 } from './worker-state.ts';
+import {
+  buildTemporalWorkerMutationGuard,
+} from './worker-source-guard.ts';
 
 export function inspectTemporalWorkerLifecycleFast(paths: TemporalWorkerPaths) {
   const resolved = resolveTemporalAddressForPaths(paths);
@@ -36,6 +39,10 @@ export function inspectTemporalWorkerLifecycleFast(paths: TemporalWorkerPaths) {
   const envWorkerReady = process.env.OPL_TEMPORAL_WORKER_ENABLED?.trim() === '1'
     || process.env.OPL_TEMPORAL_WORKER_STATUS?.trim() === 'ready';
   const workerStatusReady = statePidAlive || envWorkerReady;
+  const workerMutationGuard = buildTemporalWorkerMutationGuard({
+    moduleUrl: new URL('../family-runtime-temporal-provider.ts', import.meta.url).href,
+    paths,
+  });
   const visibilityReadiness = buildTemporalStageAttemptVisibilityReadiness({
     address,
     addressSource,
@@ -98,6 +105,7 @@ export function inspectTemporalWorkerLifecycleFast(paths: TemporalWorkerPaths) {
       },
     },
     visibilityReadiness,
+    workerMutationGuard,
   });
   return {
     ...readiness,

@@ -35,9 +35,8 @@ import { externalEvidenceApplyArgs } from './runtime-operator-action-execution-p
 import { domainDispatchExternalEvidenceApplyArgs } from './runtime-operator-action-execution-parts/domain-dispatch-evidence-action.ts';
 import { codexAppRuntimeEvidenceExecution } from './runtime-operator-action-execution-parts/codex-app-runtime-evidence-action.ts';
 import { domainOwnerPayloadSummaryExecution } from './runtime-operator-action-execution-parts/domain-owner-payload-summary-action.ts';
-import {
-  magManifestSustainedConsumptionExecution,
-} from './runtime-operator-action-execution-parts/mag-manifest-sustained-consumption-action.ts';
+import { magManifestSustainedConsumptionExecution } from './runtime-operator-action-execution-parts/mag-manifest-sustained-consumption-action.ts';
+import { blockedActionRouteExecution } from './runtime-operator-action-execution-parts/blocked-action-route.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -958,6 +957,26 @@ export async function runRuntimeOperatorActionExecute(
     throw new FrameworkContractError('cli_usage_error', 'Operator action route not found in current runtime snapshot.', {
       action_id: options.actionId,
     });
+  }
+
+  const blockedExecution = blockedActionRouteExecution(route, executionBoundary());
+  if (blockedExecution) {
+    return {
+      runtime_operator_action_execution: {
+        surface_kind: 'opl_runtime_operator_action_execution',
+        action_id: options.actionId,
+        dry_run: options.dryRun,
+        route,
+        execution: blockedExecution,
+        authority_boundary: executionBoundary(),
+        non_goals: [
+          'does_not_write_domain_truth',
+          'does_not_read_or_store_memory_body',
+          'does_not_read_or_mutate_artifact_body',
+          'does_not_authorize_quality_readiness_or_export_verdict',
+        ],
+      },
+    };
   }
 
   const execution = await executeRoute(contracts, route, options);

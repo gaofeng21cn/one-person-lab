@@ -50,6 +50,22 @@ function actionableRepair(readiness: JsonRecord) {
   );
 }
 
+function mutationGuardRouteBlock(readiness: JsonRecord) {
+  const mutationGuard = record(readiness.worker_mutation_guard);
+  if (stringValue(mutationGuard.mutation_guard_status) !== 'blocked_developer_checkout_shared_state') {
+    return {};
+  }
+  return {
+    route_status: 'blocked_by_provider_worker_mutation_guard',
+    route_status_detail:
+      'Run the managed runtime/current OPL CLI, set OPL_STATE_DIR for an isolated developer worker, or explicitly set OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER=1.',
+    default_actionable: false,
+    default_actionability_status: 'blocked_by_provider_worker_mutation_guard',
+    provider_worker_mutation_guard: mutationGuard,
+    can_submit_to_safe_action_shell: false,
+  };
+}
+
 export function buildProviderWorkerActionRoutes(input: {
   stageAttemptWorkbench: JsonRecord;
   providerInspection?: JsonRecord;
@@ -63,6 +79,7 @@ export function buildProviderWorkerActionRoutes(input: {
     ?? stringValue(readiness.readiness_status);
   const repairAction = record(readiness.repair_action);
   const repairActionId = stringValue(repairAction.action_id);
+  const routeBlock = mutationGuardRouteBlock(readiness);
   if (lifecycleStatus === 'worker_not_ready' && repairActionId === 'start_temporal_worker') {
     return uniqueRefs([{
       ref: 'opl family-runtime worker start --provider temporal',
@@ -85,6 +102,7 @@ export function buildProviderWorkerActionRoutes(input: {
         'Start Temporal worker before rerunning provider proof or provider-backed Codex stages.',
       expected_surface_kind: 'temporal_worker_lifecycle_start',
       can_execute: false as const,
+      ...routeBlock,
       authority_boundary: refsOnlyAuthorityBoundary(),
     }]);
   }
@@ -112,6 +130,7 @@ export function buildProviderWorkerActionRoutes(input: {
       'Restart stale Temporal worker before rerunning provider proof or provider-backed Codex stages.',
     expected_surface_kind: 'temporal_worker_lifecycle_start',
     can_execute: false as const,
+    ...routeBlock,
     authority_boundary: refsOnlyAuthorityBoundary(),
   }]);
 }

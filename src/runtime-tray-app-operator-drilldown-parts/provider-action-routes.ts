@@ -1,0 +1,20 @@
+import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
+import { buildProviderSchedulerActionRoutes } from './provider-scheduler-action-routes.ts';
+import { buildProviderWorkerActionRoutes } from './provider-worker-action-routes.ts';
+
+export function buildProviderActionRoutes(input: {
+  periodicRefs: JsonRecord;
+  stageAttemptWorkbench: JsonRecord;
+  providerInspection?: JsonRecord;
+}) {
+  const providerWorkerActionRoutes = buildProviderWorkerActionRoutes({
+    stageAttemptWorkbench: input.stageAttemptWorkbench,
+    providerInspection: input.providerInspection,
+  });
+  return [
+    ...providerWorkerActionRoutes,
+    ...buildProviderSchedulerActionRoutes(input.periodicRefs, {
+      providerWorkerActionRoutes,
+    }),
+  ];
+}

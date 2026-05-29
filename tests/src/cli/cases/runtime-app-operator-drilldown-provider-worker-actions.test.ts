@@ -15,6 +15,9 @@ import {
 import {
   buildProviderWorkerActionRoutes,
 } from '../../../../src/runtime-tray-app-operator-drilldown-parts/provider-worker-action-routes.ts';
+import {
+  buildProviderSchedulerActionRoutes,
+} from '../../../../src/runtime-tray-app-operator-drilldown-parts/provider-scheduler-action-routes.ts';
 
 test('runtime App drilldown exposes provider worker start route when Temporal service is reachable but worker is not ready', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-worker-start-route-'));
@@ -132,6 +135,169 @@ test('runtime App drilldown selects provider worker start when worker is not rea
     '--action',
     'provider-worker:temporal:start',
   ]);
+});
+
+test('runtime App drilldown does not select developer-checkout shared-state worker start as executable', () => {
+  const workerRoutes = buildProviderWorkerActionRoutes({
+    stageAttemptWorkbench: {},
+    providerInspection: {
+      details: {
+        worker_readiness: {
+          lifecycle_status: 'worker_not_ready',
+          repair_action: {
+            action_id: 'start_temporal_worker',
+            next_command: 'opl family-runtime worker start --provider temporal',
+          },
+          worker_mutation_guard: {
+            surface_kind: 'temporal_worker_mutation_guard',
+            mutation_guard_status: 'blocked_developer_checkout_shared_state',
+            allowed: false,
+            state_dir_explicit: false,
+            explicit_developer_override: false,
+          },
+        },
+      },
+    },
+  });
+  const drilldown = applyAppOperatorDrilldownDetail({
+    operator_action_routing_refs: {
+      refs: workerRoutes,
+    },
+    app_execution_bridge: {
+      safe_action_routes: [],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  }, 'summary');
+
+  const route = drilldown.operator_action_routing_refs.refs[0];
+  assert.equal(route.action_id, 'provider-worker:temporal:start');
+  assert.equal(route.route_status, 'blocked_by_provider_worker_mutation_guard');
+  assert.equal(route.default_actionable, false);
+  assert.equal(route.can_submit_to_safe_action_shell, false);
+  assert.equal(route.provider_worker_mutation_guard.allowed, false);
+  assert.equal(drilldown.attention_first_payload.next_safe_action, null);
+  assert.equal(
+    drilldown.app_execution_bridge.safe_action_routes.some(
+      (ref: { action_id: string; can_submit_to_safe_action_shell: boolean }) =>
+        ref.action_id === 'provider-worker:temporal:start'
+        && ref.can_submit_to_safe_action_shell,
+    ),
+    false,
+  );
+});
+
+test('runtime App drilldown blocks provider SLO proof when worker repair is mutation-guarded', () => {
+  const workerRoutes = buildProviderWorkerActionRoutes({
+    stageAttemptWorkbench: {},
+    providerInspection: {
+      details: {
+        worker_readiness: {
+          lifecycle_status: 'worker_not_ready',
+          repair_action: {
+            action_id: 'start_temporal_worker',
+            next_command: 'opl family-runtime worker start --provider temporal',
+          },
+          worker_mutation_guard: {
+            surface_kind: 'temporal_worker_mutation_guard',
+            mutation_guard_status: 'blocked_developer_checkout_shared_state',
+            allowed: false,
+            state_dir_explicit: false,
+            explicit_developer_override: false,
+          },
+        },
+      },
+    },
+  });
+  const providerSloRoutes = buildProviderSchedulerActionRoutes({
+    refs: [{
+      ref: 'opl family-runtime residency proof --provider temporal --production',
+      role: 'provider_slo:provider_slo_cadence_execution',
+      provider_kind: 'temporal',
+      schedule_id: 'opl-family-runtime-provider-scheduler',
+      dispatch_status: 'execution_due_or_repair_required',
+      repair_command: 'opl family-runtime residency proof --provider temporal --production',
+      required_next_action:
+        'Repair Temporal service/worker readiness, rerun production proof, and keep failed receipts visible.',
+      can_execute: false,
+    }],
+  }, { providerWorkerActionRoutes: workerRoutes });
+  const drilldown = applyAppOperatorDrilldownDetail({
+    operator_action_routing_refs: {
+      refs: [
+        ...workerRoutes,
+        ...providerSloRoutes,
+      ],
+    },
+    app_execution_bridge: {
+      safe_action_routes: [],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  }, 'summary');
+
+  const providerSloRoute = drilldown.operator_action_routing_refs.refs.find(
+    (ref: { action_id: string }) => ref.action_id === 'provider-slo:temporal:production-proof',
+  );
+  assert.equal(providerSloRoute.route_status, 'blocked_by_provider_worker_mutation_guard');
+  assert.equal(providerSloRoute.default_actionable, false);
+  assert.equal(providerSloRoute.can_submit_to_safe_action_shell, false);
+  assert.equal(providerSloRoute.provider_worker_blocked_action_id, 'provider-worker:temporal:start');
+  assert.equal(drilldown.attention_first_payload.next_safe_action, null);
+  assert.equal(
+    drilldown.app_execution_bridge.safe_action_routes.some(
+      (ref: { action_id: string; can_submit_to_safe_action_shell: boolean }) =>
+        ref.action_id === 'provider-slo:temporal:production-proof'
+        && ref.can_submit_to_safe_action_shell,
+    ),
+    false,
+  );
+});
+
+test('runtime action execute dry-run blocks mutation-guarded provider SLO proof route', async () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-provider-slo-worker-guard-home-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const server = net.createServer((socket) => socket.end());
+  try {
+    const stateRoot = path.join(homeRoot, 'Library', 'Application Support', 'OPL', 'state');
+    fs.mkdirSync(path.join(stateRoot, 'family-runtime'), { recursive: true });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const temporalAddress = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
+    const execution = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'provider-slo:temporal:production-proof',
+      '--dry-run',
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: '',
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_TEMPORAL_ADDRESS: temporalAddress,
+      OPL_TEMPORAL_NAMESPACE: 'opl-provider-slo-worker-guard',
+      OPL_TEMPORAL_TASK_QUEUE: 'opl-provider-slo-worker-guard',
+    }).runtime_operator_action_execution;
+
+    assert.equal(execution.route.route_status, 'blocked_by_provider_worker_mutation_guard');
+    assert.equal(execution.route.default_actionable, false);
+    assert.equal(execution.route.can_submit_to_safe_action_shell, false);
+    assert.equal(execution.execution.execution_status, 'blocked');
+    assert.equal(execution.execution.execution_kind, 'blocked_safe_action_route');
+    assert.equal(execution.execution.executed_runtime_command, null);
+    assert.equal(
+      execution.execution.result.provider_worker_mutation_guard.mutation_guard_status,
+      'blocked_developer_checkout_shared_state',
+    );
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 });
 
 test('runtime App drilldown selects provider worker repair before provider proof when worker source is stale', () => {

@@ -90,7 +90,10 @@ function routeIsClosedForDefaultCaller(action: JsonRecord, drilldown: JsonRecord
   const routeStatus = stringValue(action.route_status);
   const actionabilityStatus = stringValue(action.default_actionability_status);
   if (
-    routeStatus?.startsWith('closed_by_')
+    routeStatus?.startsWith('blocked_by_')
+    || actionabilityStatus?.startsWith('blocked_by_')
+    || action.can_submit_to_safe_action_shell === false
+    || routeStatus?.startsWith('closed_by_')
     || actionabilityStatus?.startsWith('closed_by_')
     || action.default_actionable === false
   ) {

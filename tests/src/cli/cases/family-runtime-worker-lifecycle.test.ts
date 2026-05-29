@@ -112,10 +112,18 @@ test('Temporal worker mutation guard blocks developer checkout against default s
       moduleUrl: pathToFileURL(modulePath).href,
       paths: { root: sharedRoot },
     });
+    const readiness = buildTemporalWorkerReadiness({
+      address: '127.0.0.1:7233',
+      serverReachable: true,
+      workerStatus: null,
+      workerMutationGuard: blocked,
+    });
     assert.equal(blocked.allowed, false);
     assert.equal(blocked.mutation_guard_status, 'blocked_developer_checkout_shared_state');
     assert.equal(blocked.source_is_git_checkout, true);
     assert.equal(blocked.state_dir_explicit, false);
+    assert.equal(readiness.worker_mutation_guard?.mutation_guard_status, 'blocked_developer_checkout_shared_state');
+    assert.equal(readiness.repair_action.action_id, 'start_temporal_worker');
 
     process.env.OPL_STATE_DIR = path.join(homeRoot, 'explicit-dev-state');
     const explicitState = buildTemporalWorkerMutationGuard({

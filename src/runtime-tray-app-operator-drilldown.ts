@@ -61,11 +61,8 @@ import {
   buildLegacyCleanupActionRoutes,
 } from './runtime-tray-app-operator-drilldown-parts/legacy-cleanup-action-routes.ts';
 import {
-  buildProviderSchedulerActionRoutes,
-} from './runtime-tray-app-operator-drilldown-parts/provider-scheduler-action-routes.ts';
-import {
-  buildProviderWorkerActionRoutes,
-} from './runtime-tray-app-operator-drilldown-parts/provider-worker-action-routes.ts';
+  buildProviderActionRoutes,
+} from './runtime-tray-app-operator-drilldown-parts/provider-action-routes.ts';
 import {
   buildStandardAgentTemplateConsumptionProjection,
 } from './runtime-tray-app-operator-drilldown-parts/standard-agent-template-consumption.ts';
@@ -1045,8 +1042,11 @@ export function buildAppOperatorDrilldown(input: {
     ...buildCodexAppRuntimeEvidenceActionRoutes(record(appRuntimeRole)),
     ...buildAppReleaseUserPathEvidenceActionRoutes(record(appReleaseUserPathEvidence)),
     ...buildOmaProductionConsumptionActionRoutes(oplMetaAgentProductionConsumption),
-    ...buildProviderWorkerActionRoutes({ stageAttemptWorkbench: input.stageAttemptWorkbench, providerInspection: input.providerInspection }),
-    ...buildProviderSchedulerActionRoutes(record(periodicRefs)),
+    ...buildProviderActionRoutes({
+      periodicRefs: record(periodicRefs),
+      stageAttemptWorkbench: input.stageAttemptWorkbench,
+      providerInspection: input.providerInspection,
+    }),
     ...buildLegacyCleanupActionRoutes(record(legacyCleanupPlans)),
   ]);
   const evidenceEnvelope = buildEvidenceEnvelopeProjection({

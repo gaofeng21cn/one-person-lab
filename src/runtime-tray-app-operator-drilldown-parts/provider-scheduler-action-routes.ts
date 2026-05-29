@@ -15,6 +15,10 @@ function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
+function record(value: unknown): JsonRecord {
+  return isRecord(value) ? value : {};
+}
+
 function uniqueRefs<T extends { ref: string; role?: string | null }>(values: T[]) {
   const seen = new Set<string>();
   return values.filter((value) => {
@@ -63,7 +67,35 @@ function refsOnlyAuthorityBoundary() {
   };
 }
 
-export function buildProviderSchedulerActionRoutes(periodicExecutionRefs: JsonRecord) {
+function providerWorkerMutationGuardRouteBlock(providerWorkerActionRoutes: JsonRecord[]) {
+  const blockedRoute = providerWorkerActionRoutes.find((route) =>
+    stringValue(route.route_status) === 'blocked_by_provider_worker_mutation_guard'
+    || stringValue(route.default_actionability_status) === 'blocked_by_provider_worker_mutation_guard'
+  );
+  if (!blockedRoute) {
+    return {};
+  }
+  return {
+    route_status: 'blocked_by_provider_worker_mutation_guard',
+    route_status_detail:
+      stringValue(blockedRoute.route_status_detail)
+      ?? 'Run the managed runtime/current OPL CLI, set OPL_STATE_DIR for an isolated developer worker, or explicitly set OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER=1.',
+    default_actionable: false,
+    default_actionability_status: 'blocked_by_provider_worker_mutation_guard',
+    provider_worker_mutation_guard: record(blockedRoute.provider_worker_mutation_guard),
+    provider_worker_blocked_action_id: stringValue(blockedRoute.action_id),
+    provider_worker_repair_action_id: stringValue(blockedRoute.provider_worker_repair_action_id),
+    can_submit_to_safe_action_shell: false,
+  };
+}
+
+export function buildProviderSchedulerActionRoutes(
+  periodicExecutionRefs: JsonRecord,
+  input: { providerWorkerActionRoutes?: JsonRecord[] } = {},
+) {
+  const workerMutationGuardBlock = providerWorkerMutationGuardRouteBlock(
+    input.providerWorkerActionRoutes ?? [],
+  );
   const routes = recordList(periodicExecutionRefs.refs).flatMap((ref) => {
     const role = stringValue(ref.role);
     const providerKind = stringValue(ref.provider_kind) ?? 'temporal';
@@ -93,6 +125,9 @@ export function buildProviderSchedulerActionRoutes(periodicExecutionRefs: JsonRe
         provider_required_next_action: stringValue(ref.required_next_action),
         expected_surface_kind: 'opl_temporal_provider_slo_execution_receipt',
         can_execute: false as const,
+        ...(stringValue(ref.dispatch_status) === 'execution_due_or_repair_required'
+          ? workerMutationGuardBlock
+          : {}),
         authority_boundary: refsOnlyAuthorityBoundary(),
       }];
     }

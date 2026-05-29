@@ -39,6 +39,7 @@ type TemporalWorkerReadinessInput = {
   staleWorkerPid?: number | null;
   temporalServiceLifecycle?: Record<string, unknown> | null;
   visibilityReadiness?: TemporalStageAttemptVisibilityReadiness | null;
+  workerMutationGuard?: Record<string, unknown> | null;
 };
 
 export type TemporalVisibilityReadiness = {
@@ -340,6 +341,7 @@ export function buildTemporalWorkerReadiness(input: TemporalWorkerReadinessInput
     stale_worker_pid: input.staleWorkerPid ?? null,
     temporal_service_lifecycle: input.temporalServiceLifecycle ?? null,
     visibility_readiness: input.visibilityReadiness ?? null,
+    worker_mutation_guard: input.workerMutationGuard ?? null,
     blockers,
     repair_action: repairAction,
     lifecycle: buildTemporalWorkerLifecycleContract(),

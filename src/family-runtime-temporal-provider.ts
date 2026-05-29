@@ -141,6 +141,7 @@ export async function inspectTemporalWorkerLifecycleWithDetail(
     || process.env.OPL_TEMPORAL_WORKER_STATUS?.trim() === 'ready';
   const serverReachable = address ? await probeTemporalServer(address) : false;
   const dependencyHealth = inspectTemporalWorkerRuntimeDependencies({ moduleUrl: import.meta.url });
+  const workerMutationGuard = buildTemporalWorkerMutationGuard({ moduleUrl: import.meta.url, paths });
   const workerReady = Boolean(serverReachable && dependencyHealth.status === 'ready' && (pidAlive || envWorkerReady));
   const visibilityReadiness = serverReachable
     ? await inspectTemporalStageAttemptVisibilityReadiness(paths)
@@ -165,6 +166,7 @@ export async function inspectTemporalWorkerLifecycleWithDetail(
     staleWorkerPid: statePidAlive && !stateSourceCurrent && state ? state.pid : null,
     temporalServiceLifecycle: service,
     visibilityReadiness,
+    workerMutationGuard,
   });
   if (state && !stateProcessAlive && state.status === 'ready') {
     removeTemporalWorkerState(paths);
