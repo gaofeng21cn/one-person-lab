@@ -15,19 +15,19 @@ function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function recordList(value: unknown) {
+function recordList(value: unknown): JsonRecord[] {
   return Array.isArray(value) ? value.filter(isRecord) : [];
 }
 
-function uniqueStrings(values: string[]) {
+function uniqueStrings(values: string[]): string[] {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
-function stringValue(value: unknown) {
+function stringValue(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
-function stringList(value: unknown) {
+function stringList(value: unknown): string[] {
   if (typeof value === 'string' && value.trim()) {
     return [value.trim()];
   }
@@ -45,14 +45,14 @@ function stringList(value: unknown) {
   return [];
 }
 
-function refsFromRecord(record: JsonRecord | null | undefined, keys: string[]) {
+function refsFromRecord(record: JsonRecord | null | undefined, keys: string[]): string[] {
   if (!record) {
     return [];
   }
   return keys.flatMap((key) => stringList(record[key]));
 }
 
-function rejectedWriteRefs(rejectedWrites: JsonRecord[]) {
+function rejectedWriteRefs(rejectedWrites: JsonRecord[]): string[] {
   return uniqueStrings(rejectedWrites.flatMap((rejection) => stringList(rejection)));
 }
 

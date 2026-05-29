@@ -18,84 +18,7 @@ import {
   createOmaContractFixture,
   insertProviderProof,
 } from './runtime-app-operator-drilldown-helpers.ts';
-import { buildRuntimeVisualizationProjection } from '../../../../src/runtime-tray-app-operator-drilldown-parts/runtime-visualization-projection.ts';
-
-test('runtime visualization projection exposes canonical stage progress and Temporal refs only', () => {
-  const projection = buildRuntimeVisualizationProjection({
-    attempts: [
-      {
-        domain_id: 'medautoscience',
-        stage_id: 'write',
-        stage_attempt_id: 'attempt-stage-progress',
-        task_id: 'task-stage-progress',
-        status: 'running',
-        stage_progress_log: {
-          actual_work: { status: 'running' },
-          timeline: {
-            duration_telemetry_status: 'observed',
-            events: [
-              {
-                activity_kind: 'codex_stage_activity',
-                activity_status: 'running',
-                runner_event_kind: 'codex_delta',
-                observed_at: '2026-05-27T00:00:00.000Z',
-                ref: 'stage_attempt:attempt-stage-progress#activity_events[0]',
-              },
-            ],
-          },
-          temporal_webui_ref: {
-            url: 'http://localhost:8233/namespaces/default/workflows/attempt-stage-progress/run-1/history',
-          },
-          memory_body: 'must-not-be-projected',
-          artifact_body: 'must-not-be-projected',
-        },
-      },
-    ],
-    routeRefs: [],
-    decisionRefs: [],
-    artifactRefs: [],
-    packageLifecycle: {},
-    memoryRefs: {},
-    qualityRefs: {},
-    actionRefs: [],
-    ownerReceipts: [],
-    typedBlockers: {},
-    domainProjectionIngestion: {},
-    routeTransitionDrilldown: {},
-    stageProductionEvidence: {},
-    domainDispatchEvidence: {},
-    safeActions: [],
-  });
-
-  assert.equal(projection.visual_ref_groups.stage_progress_log_refs.length, 1);
-  assert.equal(
-    projection.visual_ref_groups.stage_progress_log_refs[0].ref,
-    '/stage_attempt_workbench/attempts/attempt-stage-progress/stage_progress_log',
-  );
-  assert.equal(
-    projection.visual_ref_groups.stage_progress_log_refs[0].temporal_webui_url,
-    'http://localhost:8233/namespaces/default/workflows/attempt-stage-progress/run-1/history',
-  );
-  assert.equal(projection.summary.stage_progress_event_count, 1);
-  assert.equal(projection.summary.temporal_stage_progress_ref_count, 1);
-  assert.equal(
-    projection.graph.nodes.some((node: any) =>
-      node.node_kind === 'stage_progress_log' && node.stage_attempt_id === 'attempt-stage-progress'
-    ),
-    true,
-  );
-  assert.equal(
-    projection.graph.edges.some((edge: any) =>
-      edge.edge_kind === 'attempt_has_stage_progress_log'
-      && edge.stage_attempt_id === 'attempt-stage-progress'
-    ),
-    true,
-  );
-  assert.equal(JSON.stringify(projection).includes('must-not-be-projected'), false);
-  assert.equal(projection.authority_boundary.can_read_memory_body, false);
-  assert.equal(projection.authority_boundary.can_read_artifact_body, false);
-  assert.equal(projection.authority_boundary.can_claim_domain_ready, false);
-});
+import { assertMemoryTraceProjection } from './runtime-app-operator-drilldown-memory-trace-assertions.ts';
 
 test('runtime snapshot exposes App operator drilldown as refs-only owner-aware read model', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-state-'));
@@ -464,7 +387,10 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     );
     assert.deepEqual(
       drilldown.runtime_workbench,
-      drilldown.runtime_visualization_projection.runtime_workbench,
+      {
+        ...drilldown.runtime_visualization_projection.runtime_workbench,
+        memory_trace_projection: drilldown.memory_trace_projection,
+      },
     );
     assert.deepEqual(
       drilldown.visual_ref_groups,
@@ -574,31 +500,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.deepEqual(drilldown.package_export_lifecycle_refs.package_refs, ['package:submission-minimal']);
     assert.deepEqual(drilldown.package_export_lifecycle_refs.export_refs, ['export:current-package']);
     assert.deepEqual(drilldown.memory_writeback_refs.consumed_memory_refs, ['memory:route-policy']);
-    assert.equal(
-      drilldown.memory_trace_projection.surface_kind,
-      'opl_memory_trace_projection',
-    );
-    assert.equal(drilldown.memory_trace_projection.projection_scope, 'stage_attempt_workbench');
-    assert.deepEqual(drilldown.memory_trace_projection.consumed_memory_refs, ['memory:route-policy']);
-    assert.deepEqual(drilldown.memory_trace_projection.recall_trace_refs, ['memory-recall-trace:write/route-policy']);
-    assert.deepEqual(drilldown.memory_trace_projection.retrieval_trace_refs, ['memory-retrieval-trace:write/route-policy']);
-    assert.deepEqual(drilldown.memory_trace_projection.writeback_receipt_refs, [
-      'memory-writeback:receipt-1',
-    ]);
-    assert.deepEqual(drilldown.memory_trace_projection.rejected_write_refs, [
-      'memory-rejected-write:write/unsafe-body',
-    ]);
-    assert.deepEqual(drilldown.memory_trace_projection.source_refs, ['source:dataset']);
-    assert.equal(drilldown.memory_trace_projection.summary.rejected_write_ref_count, 1);
-    assert.equal(drilldown.memory_trace_projection.false_authority_flags.can_read_memory_body, false);
-    assert.equal(drilldown.memory_trace_projection.false_authority_flags.can_write_domain_memory_body, false);
-    assert.equal(drilldown.memory_trace_projection.false_authority_flags.can_accept_or_reject_memory_writeback, false);
-    assert.equal(drilldown.memory_trace_projection.false_authority_flags.can_authorize_quality_verdict, false);
-    assert.equal(JSON.stringify(drilldown.memory_trace_projection).includes('domain-owned rejected write body'), false);
-    assert.equal(
-      drilldown.runtime_workbench.memory_trace_projection.surface_kind,
-      'opl_memory_trace_projection',
-    );
+    assertMemoryTraceProjection(drilldown);
     assert.equal(drilldown.ref_family_refs.summary.memory_ref_count, 3);
     assert.deepEqual(drilldown.quality_readiness_refs.quality_refs, ['publication_eval/latest.json']);
     assert.deepEqual(drilldown.quality_readiness_refs.readiness_refs, ['controller_decisions/latest.json']);
