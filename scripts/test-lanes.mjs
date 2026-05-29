@@ -97,6 +97,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/family-runtime-queue-guards.test.ts',
   'tests/src/cli/cases/family-runtime-task-scope.test.ts',
   'tests/src/cli/cases/family-runtime-evidence-worklist.test.ts',
+  'tests/src/cli/cases/family-runtime-evidence-worklist-provider-scheduler.test.ts',
   'tests/src/cli/cases/family-runtime-evidence-worklist-default-caller.test.ts',
   'tests/src/cli/cases/family-runtime-evidence-worklist-zero-open-guard.test.ts',
   'tests/src/cli/cases/family-runtime-evidence-worklist-payload-handoff.test.ts',
