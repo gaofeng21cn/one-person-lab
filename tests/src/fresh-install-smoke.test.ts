@@ -440,6 +440,7 @@ test('fresh-install matrix freezes GUI labels and first-run log contract', () =>
     };
     scenarios: Array<{ scenario_id: string }>;
     ci_policy: {
+      github_actions: string;
       self_hosted_macos: string;
       docker: string;
     };
@@ -472,6 +473,10 @@ test('fresh-install matrix freezes GUI labels and first-run log contract', () =>
     'opl-gui-vm',
   ]);
   assert.equal(matrix.scenarios.some((entry) => entry.scenario_id === 'clean_vm_release_first_launch'), true);
+  const [oplGithubActionsPolicy] = matrix.ci_policy.github_actions.split('. ');
+  assert.match(oplGithubActionsPolicy, /local CLI fresh-install smoke/);
+  assert.doesNotMatch(oplGithubActionsPolicy, /codesign\/notarization/);
+  assert.match(matrix.ci_policy.github_actions, /App release workflows own codesign\/notarization/);
   assert.match(matrix.ci_policy.self_hosted_macos, /opl-first-run-vm\.yml/);
   assert.match(matrix.ci_policy.docker, /Do not use Docker/);
 });

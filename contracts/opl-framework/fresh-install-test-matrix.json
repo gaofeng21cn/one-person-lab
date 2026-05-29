@@ -177,7 +177,7 @@
     }
   ],
   "ci_policy": {
-    "github_actions": "Run local CLI fresh-install smoke, package checks, codesign/notarization, and non-GUI assertions only.",
+    "github_actions": "OPL Verify runs build/typecheck, local CLI fresh-install smoke, package/verification lanes, and non-GUI assertions. App release workflows own codesign/notarization, standard/Full DMG release gates, VM release profiles, and release evidence.",
     "self_hosted_macos": "Run gaofeng21cn/one-person-lab-app shells/aionui .github/workflows/opl-first-run-vm.yml on a reset Tart clean macOS snapshot.",
     "docker": "Do not use Docker as proof for macOS desktop first-launch behavior."
   }

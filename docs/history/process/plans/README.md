@@ -85,6 +85,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-43.md` | OPL series docs governance tranche ledger part 43。 | 当前 truth 归 public UHS support、shared runtime/domain specs、核心五件套、contracts/source/tests 和 live CLI/read-model；ledger 只记录本轮 UHS currentness policy 与 shared-contract active-support wording 清理。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-44.md` | OPL series docs governance tranche ledger part 44。 | 当前 truth 归 public operating model、shared runtime/domain specs、核心五件套、contracts/source/tests 和 live CLI/read-model；ledger 只记录本轮 operating-model currentness policy 与 shared-contract active-support wording 清理。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-45.md` | OPL series docs governance tranche ledger part 45。 | 当前 truth 归 release/package support、package-distribution source/tests、App release contracts/workflows/evidence 和真实 GitHub Release assets；ledger 只记录本轮 Full first-install App-owned currentness 收窄。 |
+| `2026-05-29-opl-series-doc-governance-tranche-ledger-part-46.md` | OPL series docs governance tranche ledger part 46。 | 当前 truth 归 fresh-install support、fresh-install contract/tests、OPL Verify/package workflows、App release/first-run contracts/workflows/evidence；ledger 只记录本轮 codesign/notarization 与 VM release gates 的 App-owned currentness 收窄。 |
 
 ## Tombstone Rules
 
