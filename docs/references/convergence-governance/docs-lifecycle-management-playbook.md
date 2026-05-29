@@ -5,14 +5,13 @@ State: `support_reference`
 Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
 
 Status: `support_reference`
-Date: `2026-05-28`
 Owner: `One Person Lab`
 
 ## 用途
 
 这份 playbook 是后续开发新增、更新、归档文档时的判断清单。它服务整个 OPL family，但不接管各 domain 仓自己的 truth。OPL 只提供文档治理经验、生命周期语言和反历史污染规则。
 
-2026-05-28 读法：本文是文档生命周期 reference，不是 active truth owner。新增、更新或归档材料时仍必须先读核心五件套、`docs/active/current-state-vs-ideal-gap.md`、相关 contracts/source 和 fresh CLI/read-model；当 fresh CLI/read-model fail-closed 时，文档只能记录 blocker 或 evidence gap，不能沿用旧 counters。本文的目录例子不能声明 domain ready、production ready、App release ready、artifact authority、quality/export verdict 或物理删除授权。
+Currentness policy：本文是文档生命周期 reference，不是 active truth owner，也不冻结任何一次 CLI/read-model 计数、目录示例或 fail-closed 状态。新增、更新或归档材料时仍必须先读核心五件套、`docs/active/current-state-vs-ideal-gap.md`、相关 contracts/source 和 fresh CLI/read-model；当 fresh CLI/read-model fail-closed 时，文档只能记录 blocker 或 evidence gap，不能沿用旧 counters。本文的目录例子不能声明 domain ready、production ready、App release ready、artifact authority、quality/export verdict 或物理删除授权。
 
 ## 四个准入问题
 
