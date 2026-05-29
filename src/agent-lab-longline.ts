@@ -30,7 +30,7 @@ function task(input: Omit<AgentLabTaskManifest, 'authority_boundary'>): AgentLab
   };
 }
 
-export function buildLonglineAgentLabSuite(): AgentLabSuite {
+function buildLonglineAgentLabSuite(): AgentLabSuite {
   return {
     suite_id: 'opl-agent-lab-longline-suite',
     suite_kind: 'agent_lab_longline_suite',

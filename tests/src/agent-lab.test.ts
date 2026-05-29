@@ -8,7 +8,7 @@ import {
   buildSampleAgentLabSuite,
   runAgentLabSuite,
 } from '../../src/agent-lab.ts';
-import { buildLonglineAgentLabSuite } from '../../src/agent-lab-longline.ts';
+import { buildLonglineAgentLabResult } from '../../src/agent-lab-longline.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -1067,7 +1067,7 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
 });
 
 test('Agent Lab longline suite centralizes planned MAS, MAG, and RCA soak tests into OPL-owned read-model gates', () => {
-  const result = runAgentLabSuite(buildLonglineAgentLabSuite());
+  const result = buildLonglineAgentLabResult();
 
   assert.equal(result.status, 'passed');
   assert.equal(result.suite_kind, 'agent_lab_longline_suite');
