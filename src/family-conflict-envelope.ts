@@ -1,6 +1,6 @@
-export const FAMILY_CONFLICT_OR_BLOCKER_KIND = 'opl_conflict_or_blocker.v1' as const;
+const FAMILY_CONFLICT_OR_BLOCKER_KIND = 'opl_conflict_or_blocker.v1' as const;
 
-export const FAMILY_CONFLICT_CLASSIFICATIONS = [
+const FAMILY_CONFLICT_CLASSIFICATIONS = [
   'duplicate_task',
   'authority_conflict',
   'evidence_blocker',
@@ -11,14 +11,14 @@ export const FAMILY_CONFLICT_CLASSIFICATIONS = [
   'receipt_conflict',
 ] as const;
 
-export const FAMILY_CONFLICT_OWNERS = [
+const FAMILY_CONFLICT_OWNERS = [
   'opl_runtime',
   'domain_agent',
   'human',
   'infrastructure',
 ] as const;
 
-export const FAMILY_CONFLICT_STATUSES = [
+const FAMILY_CONFLICT_STATUSES = [
   'blocked',
   'waiting_for_human',
   'retry_scheduled',
@@ -27,7 +27,7 @@ export const FAMILY_CONFLICT_STATUSES = [
   'deduplicated',
 ] as const;
 
-export const FAMILY_ATTEMPT_CANONICAL_OUTCOMES = [
+const FAMILY_ATTEMPT_CANONICAL_OUTCOMES = [
   'completed_with_receipt',
   'blocked',
   'waiting_for_human',
@@ -293,7 +293,7 @@ export function buildFamilyConflictSubject(input: {
   };
 }
 
-export function identityIncompleteFields(subject: FamilyConflictSubject) {
+function identityIncompleteFields(subject: FamilyConflictSubject) {
   return (['domain', 'stage_id', 'task_kind', 'source_fingerprint', 'idempotency_key'] as const).filter((field) => {
     const value = subject[field];
     return !value || value.startsWith('missing:');
