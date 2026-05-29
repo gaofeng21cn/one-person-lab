@@ -93,7 +93,7 @@ export function writeResolvedDomainManifestProjectionCache(entries: DomainManife
   }
 }
 
-export function readDomainManifestProjectionCache(entry: DomainManifestCatalogEntry) {
+function readDomainManifestProjectionCache(entry: DomainManifestCatalogEntry) {
   return readCacheFile().projections.find((projection) => cacheKey(projection) === cacheKey(entry)) ?? null;
 }
 
