@@ -16,6 +16,7 @@ Currentness policy：本目录仍是 support reference，不是 active truth own
 - [Family shared release 维护参考](./family-shared-release-maintenance.md)：OPL shared modules owner commit、contract、consumer pin 与 drift attention 的维护流程。
 - [OPL 定位演化与收敛经验参考](./opl-positioning-convergence-lessons.md)：旧入口、旧术语、旧 runtime 假设和旧 UI/API 形态的反污染方法。
 - [OPL Family stage control plane adoption plan](./family-stage-control-plane-adoption-plan.md)：已落地 stage descriptor、prompt / skill / evaluation refs、handoff、只读 discovery 与 authority boundary 的支撑说明。
+- [OPL Series README 叙事刷新对照记录，2026-05-30](./readme-narrative-refresh-2026-05-30.md)：六仓根层中英文 README 的新旧表达对照、英文润色口径和 overview 视觉资产状态。
 
 ## 已归档记录
 

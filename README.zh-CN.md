@@ -8,41 +8,91 @@
 
 <h1 align="center">One Person Lab</h1>
 
-<p align="center"><strong>面向高价值知识交付的阶段式智能体框架</strong></p>
-<p align="center">把研究、基金、汇报、专利等复杂工作组织成可判断、可恢复、可审计的专家阶段，并交付可追踪成果</p>
+<p align="center"><strong>面向高价值知识工作的 AI Agent 工作台与运行框架</strong></p>
+<p align="center">以「任务阶段」为单位，让论文、基金、汇报、专利等复杂成果持续推进、可追踪、可交付</p>
 
 <p align="center">
-  <img src="assets/branding/opl-stage-led-delivery-overview.png" alt="One Person Lab 阶段式交付模型" width="100%" />
+  <img src="assets/branding/opl-stage-led-delivery-overview-v2.png" alt="One Person Lab 阶段式交付模型" width="100%" />
 </p>
 
 ## 为什么是 One Person Lab
 
-论文、基金、专利、审稿、报奖和高端汇报这类工作，需要持续回答几个关键问题：目标是否清楚，证据是否充分，推理是否可靠，质量是否达标，成果是否可以进入下一阶段。
+AI 已经很擅长回答一个问题、生成一段代码或润色一份材料。但当任务变成一篇论文、一个基金本子、一套答辩材料或一个长期研究项目时，真正困难的是把工作持续推进到能交付。
 
-One Person Lab 把这些判断整理成可运行的专家阶段。每个阶段都有目标、材料、质量标准、交接信息、回执和权威边界；阶段内部由领域智能体完成阅读、推理、写作、计算、审核和修订，再返回该领域持有的判断和交付物。One Person Lab 负责把这些阶段组织成可见、可恢复、可审计、可持续推进的工作链路。
+这些长周期任务通常会遇到几个问题：
 
-这套架构把专业知识服务的交付逻辑产品化，让智能体围绕“阶段、证据、质量和交付物”工作，从一次性任务执行提升为可持续的专业交付过程。
+- 做了很多轮之后，当前到底推进到了哪一步？
+- 中间用了哪些材料、改了哪些文件、留下了哪些证据？
+- 准备、执行、审核、修订和交付能不能分清楚，而不是混在一场长对话里？
+- 人离开电脑后，任务能不能继续跑，回来时直接看到进展、阻塞和下一步？
+- 多个专业 Agent 能不能共用一套运行、文件、进度和交付体系，而不是各自重造一遍？
 
-## 架构优势
+**One Person Lab 正是围绕这些问题设计的。**
 
-- **以阶段作为交付单元**：系统关注“当前专家阶段应该产出什么”，让复杂知识工作按定义、准备、执行、审核、修订和交付推进。
-- **把证据和质量门槛内置到流程**：阶段带有材料、标准和回执，进度判断、返工位置和交付依据都能被追踪。
-- **AI-first、contract-light 的阶段面**：OPL 的 active surface 收敛为 `Minimal Trust Kernel + Readiness + Derived Diagnostic Lenses + Surface Budget + AI Capability Aperture`；开放式专家判断继续由 Codex 和领域智能体承担，合同只保安全、审计、replay、route-back 与模型升级收益通道下限，新增默认面也必须服务启动安全、权威边界、证据/replay/audit/route-back 或 App/runtime 反复消费。
-- **让领域智能体承担专业判断**：医学研究、基金写作、视觉交付等专业能力由对应领域智能体持有，One Person Lab 提供统一的运行、发现、恢复和呈现能力。
-- **支持长任务持续推进**：阶段尝试、交接、回执、进度和产物都被组织成可追踪信息，任务可以跨会话继续，也可以由技术操作者审查。
-- **形成可扩展的产品家族**：研究工坊、基金工坊、汇报工坊使用同一套阶段式基础，专利、报奖、论文、审稿等产品线可以沿用相同交付结构。
+它把复杂知识工作拆成一个个清晰的「任务阶段」：准备材料、执行创作、质量审核、修订完善、交付收口。每个阶段都有目标、材料、产物、进展、证据和下一步，让 AI 不只是“聊天”，而是真正围绕成果持续工作。
 
-## 三层产品关系
+## 核心亮点
 
-One Person Lab 在技术上指这个阶段式智能体框架，在产品上指围绕它形成的一组应用和领域智能体：
+<table width="100%">
+<tr>
+<td width="50%" valign="top">
+
+**阶段化推进复杂工作**
+
+论文、基金、汇报、专利不是一次问答能完成的。OPL 把它们组织成可持续推进的任务阶段，让每一步做什么、完成了什么、还卡在哪里都清楚可见。
+
+</td>
+<td width="50%" valign="top">
+
+**专业 Agent 各司其职**
+
+医学研究、基金写作、视觉汇报和 Agent 构建分别由不同 Foundry Agent 承担。用户看到的是统一工作台，背后每个专业 Agent 保留自己的判断标准和交付权威。
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**进度、证据、文件全程可追踪**
+
+每次运行用了哪些资料、生成了哪些结果、修改了哪些文件、留下了什么报告，都能回看。任务失败时，也能知道是缺材料、缺人工确认、质量未过，还是运行环境问题。
+
+</td>
+<td width="50%" valign="top">
+
+**长任务可托管运行**
+
+OPL 不只服务一次性对话。它适合需要多轮推进、后台执行、定期检查、失败恢复和人工介入的长周期任务。
+
+</td>
+</tr>
+</table>
+
+## 一句话理解
+
+**One Person Lab 让 AI Agent 像一个可托管的专业团队一样工作：按阶段推进复杂任务，持续产出文件，留下证据，遇到阻塞能汇报，完成后能交付。**
+
+如果说普通 AI 工具解决的是“这一问怎么答”，One Person Lab 解决的是“这项复杂工作怎么一步步做到能交付”。
+
+## 和 workflow-style agents 的区别
+
+Workflow-style agents 很适合程序自动化：工具调用、函数输入输出、节点编排和确定性路由。复杂知识交付需要换一个工作单元。论文、基金、汇报或专利不是因为某个节点跑完了就真正推进，而是因为一个专家阶段完成了定义、资料扎根、执行、审阅、修订和交付，并留下可见证据。
+
+<p align="center">
+  <img src="assets/branding/opl-stage-led-delivery-overview.png" alt="One Person Lab 与 workflow-style agents 的对比" width="100%" />
+</p>
+
+## 产品关系
+
+One Person Lab 同时包含框架、桌面工作台和专业 Agent 三层：
 
 | 层级 | 面向对象 | 作用 |
 | --- | --- | --- |
-| **OPL Framework** | 开发者、技术操作者、产品集成 | 提供构建和运行领域智能体的共同基础，包括阶段控制、运行时、合同、模块发现、技能同步、运行快照和进度投影。 |
-| **领域智能体** | 专业工作场景 | MAS、MAG、RCA 等智能体承载各自领域的专业判断、质量裁决、阶段语义和交付物。 |
-| **One Person Lab App** | 终端用户 | 把 One Person Lab、领域智能体和配套工具打包成桌面工作台，提供下载、首次启动检查、进度、文件、运行状态和更新体验。 |
+| **OPL Framework** | 开发者、技术操作者、产品集成 | 负责把长任务跑起来、接上专业 Agent、记录进展和证据，并支持恢复、重试和人工介入。 |
+| **One Person Lab App** | 终端用户 | 桌面工作台。用户从这里选择任务、查看进度、打开文件、处理阻塞和获取更新。 |
+| **Foundry Agents** | 专业工作场景 | MAS、MAG、RCA 等专业 Agent 分别负责医学研究、基金写作、视觉交付和后续更多高价值知识工作。 |
 
-这三层形成一条清晰链路：用 OPL Framework 开发和运行领域智能体，再把 framework 与领域智能体打包成面向用户的桌面产品。
+这三层形成一条清晰链路：用 OPL Framework 托管专业 Agent，再把框架和 Agent 打包成普通用户可直接使用的桌面产品。
 
 当前仓库分工是刻意拆开的：`one-person-lab` 持有 framework、runtime、CLI、contracts、generated surfaces 和 App 可消费的 state/action 接口；`one-person-lab-app` 持有 GUI product truth、App release gate、updater metadata、用户教程、截图、首启检查和 active-shell validation；`opl-aion-shell` 是当前 App-owned GUI contract 的实现载体；MAS、MAG、RCA 等 domain repos 持有各自 domain app/runtime authority、domain truth、quality/export verdict、artifact authority、owner receipt 和 direct skill 入口。
 

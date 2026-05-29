@@ -8,41 +8,91 @@
 
 <h1 align="center">One Person Lab</h1>
 
-<p align="center"><strong>A stage-led agent framework for high-value knowledge delivery</strong></p>
-<p align="center">Organize research, grants, presentations, patents, and other complex work into expert stages that are traceable, recoverable, and auditable.</p>
+<p align="center"><strong>An AI agent framework and workbench for complex knowledge work</strong></p>
+<p align="center">Move papers, grants, presentations, patents, and other demanding projects through clear stages toward real delivery.</p>
 
 <p align="center">
-  <img src="assets/branding/opl-stage-led-delivery-overview.png" alt="One Person Lab stage-led delivery model" width="100%" />
+  <img src="assets/branding/opl-stage-led-delivery-overview-v2.png" alt="One Person Lab stage-led delivery model" width="100%" />
 </p>
 
 ## Why One Person Lab
 
-Papers, grants, patents, reviews, awards, and high-end presentations all require the same high-stakes judgments: whether the goal is clear, whether the evidence is sufficient, whether the reasoning is sound, whether the quality bar is met, and whether the result can move forward.
+AI can already answer a question, generate code, or polish a document. The harder problem is finishing work that spans many sessions: a paper, a grant proposal, a defense deck, a patent package, or a research line that needs to keep moving for weeks.
 
-One Person Lab turns those judgments into runnable expert stages. Each stage carries a goal, source material, quality criteria, handoff, receipt, and authority boundary. Inside a stage, a domain agent can read, reason, write, compute, review, and revise before returning a domain-owned verdict and deliverable. One Person Lab keeps those stages visible, recoverable, auditable, and ready for continuation.
+These tasks raise the same practical questions:
 
-That is the architectural advantage: One Person Lab productizes the delivery logic of professional knowledge work and makes agents operate around stages, evidence, quality, and deliverables.
+- After many rounds of work, where exactly are we?
+- Which sources were used, which files changed, and what evidence was left behind?
+- Can preparation, execution, review, revision, and delivery stay separate instead of being buried in one long chat?
+- Can work continue while the user is away, then report progress, blockers, and next steps?
+- Can specialized agents share one runtime, file, progress, and delivery system instead of each rebuilding its own?
 
-## Architectural Advantages
+**One Person Lab is built around those questions.**
 
-- **Stages are the delivery unit**: the system tracks what each expert stage should produce across definition, preparation, execution, review, revision, and delivery.
-- **Evidence and quality gates are built in**: source material, criteria, and receipts make progress, rework points, and delivery rationale explicit.
-- **AI-first, contract-light stage surfaces**: OPL keeps the active surface slim as `Minimal Trust Kernel + Readiness + Derived Diagnostic Lenses + Surface Budget + AI Capability Aperture`; Codex and domain agents retain open-ended expert judgment while contracts preserve the safety, audit, replay, route-back, and model-upgrade aperture floor.
-- **Domain agents carry domain judgment**: medical research, grant writing, and visual delivery are owned by specialized agents, while One Person Lab provides shared runtime, discovery, recovery, and presentation.
-- **Long tasks can continue**: attempts, handoffs, receipts, progress, and artifacts are organized as traceable state across sessions.
-- **The product family can expand**: Research, Grant, and Presentation Foundry share the same stage-led foundation, with Patent, Award, Thesis, and Review lines planned.
+It breaks complex knowledge work into clear stages: prepare the material, do the work, review quality, revise, and close out delivery. Each stage carries a goal, inputs, outputs, progress, evidence, and next step, so AI agents work toward deliverables instead of disappearing into long conversations.
+
+## Core Highlights
+
+<table width="100%">
+<tr>
+<td width="50%" valign="top">
+
+**Stage-led progress for complex work**
+
+Papers, grants, presentations, and patents rarely finish in one prompt. OPL organizes them into task stages so it is clear what each step is meant to do, what finished, and what is still blocked.
+
+</td>
+<td width="50%" valign="top">
+
+**Specialized agents for specialized work**
+
+Medical research, grant writing, visual delivery, and agent building are handled by different Foundry Agents. Users see one workbench, while each agent keeps its own standards and delivery authority.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Progress, evidence, and files stay traceable**
+
+You can see which sources were used, what results were produced, which files changed, and what report was left behind. When a task fails, the reason is visible: missing material, human approval, quality issue, or runtime problem.
+
+</td>
+<td width="50%" valign="top">
+
+**Hosted long-running work**
+
+OPL is not limited to one-shot chats. It is designed for multi-round work, background execution, periodic checks, failure recovery, and human review.
+
+</td>
+</tr>
+</table>
+
+## One-Sentence View
+
+**One Person Lab makes AI agents behave like a hosted professional team: they move complex tasks forward by stage, produce files, leave evidence, report blockers, and close out deliverables.**
+
+If ordinary AI tools answer "what should I say now?", One Person Lab answers "how does this complex work reach delivery?"
+
+## Why It Is Different From Workflow-Style Agents
+
+Workflow-style agents are useful for program automation: tool calls, function I/O, graph nodes, and deterministic routing. Complex knowledge delivery needs a different unit of work. A paper, grant, presentation, or patent does not move forward just because one node ran; it moves forward when an expert stage is scoped, grounded, executed, reviewed, revised, and shipped with visible evidence.
+
+<p align="center">
+  <img src="assets/branding/opl-stage-led-delivery-overview.png" alt="One Person Lab compared with workflow-style agents" width="100%" />
+</p>
 
 ## Product Layers
 
-One Person Lab is both the technical stage-led agent framework and the product family built around it:
+One Person Lab has three user-visible layers:
 
 | Layer | Audience | Role |
 | --- | --- | --- |
-| **OPL Framework** | Developers, technical operators, product integration | Shared foundation for building and running domain agents: stage control, runtime providers, contracts, module discovery, skill sync, runtime snapshots, and progress projections. |
-| **Domain agents** | Specialized work | MAS, MAG, RCA, and future agents carry domain judgment, quality verdicts, stage semantics, and deliverables. |
-| **One Person Lab App** | End users | Desktop workbench that packages One Person Lab, domain agents, and companion tools with download, first-run checks, progress, files, runtime status, and updates. |
+| **OPL Framework** | Developers, technical operators, product integration | Runs long tasks, connects specialized agents, records progress and evidence, and supports recovery, retry, and human intervention. |
+| **One Person Lab App** | End users | Desktop workbench for choosing tasks, watching progress, opening files, handling blockers, and receiving updates. |
+| **Foundry Agents** | Specialized work | MAS, MAG, RCA, and later agents handle medical research, grant writing, visual delivery, and other high-value knowledge work. |
 
-The chain is straightforward: build and run domain agents with OPL Framework, then package the framework and agents into a desktop product for users.
+The chain is straightforward: host specialized agents with OPL Framework, then package the framework and agents into a desktop product users can run directly.
 
 The repository split is deliberate. `one-person-lab` owns the framework, runtime, CLI, contracts, generated surfaces, and App-readable state/action interfaces. `one-person-lab-app` owns GUI product truth, App release gates, updater metadata, user guides, screenshots, first-run checks, and active-shell validation. `opl-aion-shell` is the current implementation carrier for the App-owned GUI contract. MAS, MAG, RCA, and other domain repositories own their domain app/runtime authority, domain truth, quality/export verdicts, artifact authority, owner receipts, and direct skill entries.
 
