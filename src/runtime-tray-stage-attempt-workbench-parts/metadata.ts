@@ -1,7 +1,9 @@
 import {
+  summarizeModelRouteCostProjections,
   summarizeStageAttemptUsageProjections,
 } from '../family-runtime-stage-attempt-usage.ts';
 import type {
+  ModelRouteCostProjection,
   StageAttemptUsageProjection,
 } from '../family-runtime-stage-attempt-usage.ts';
 import {
@@ -38,6 +40,7 @@ type StageAttemptProjection = StageAttemptGenericProjectionInput & {
   local_status: string;
   filter_keys: JsonRecord;
   usage_projection: StageAttemptUsageProjection;
+  model_route_cost_projection: ModelRouteCostProjection;
   stage_progress_log?: StageProgressLogProjection;
   memory_trace_projection?: MemoryTraceProjection;
   control_loop_summary?: unknown;
@@ -229,6 +232,10 @@ function groupAttempts(attempts: StageAttemptProjection[], keyFor: (attempt: Sta
         groupAttempts.map((attempt) => attempt.usage_projection),
         'stage_attempt_group',
       ),
+      model_route_cost_projection: summarizeModelRouteCostProjections(
+        groupAttempts.map((attempt) => attempt.model_route_cost_projection),
+        'stage_attempt_group',
+      ),
       stage_progress_log: summarizeStageProgressLogs(
         groupAttempts
           .map((attempt) => attempt.stage_progress_log)
@@ -398,6 +405,10 @@ export function buildWorkbenchMetadata(attempts: StageAttemptProjection[]) {
         attempts.map((attempt) => attempt.usage_projection),
         'stage_attempt_workbench',
       ),
+      model_route_cost_projection: summarizeModelRouteCostProjections(
+        attempts.map((attempt) => attempt.model_route_cost_projection),
+        'stage_attempt_workbench',
+      ),
       stage_progress_log: summarizeStageProgressLogs(
         attempts
           .map((attempt) => attempt.stage_progress_log)
@@ -458,6 +469,7 @@ export const EMPTY_WORKBENCH_METADATA = {
       attempts_with_writeback_receipt_refs: 0,
     },
     usage_projection: summarizeStageAttemptUsageProjections([], 'stage_attempt_workbench'),
+    model_route_cost_projection: summarizeModelRouteCostProjections([], 'stage_attempt_workbench'),
     stage_progress_log: summarizeStageProgressLogs([], 'stage_attempt_workbench'),
     memory_trace_projection: summarizeMemoryTraceProjections([], 'stage_attempt_workbench'),
     ...buildWorkbenchGenericProjections([]),

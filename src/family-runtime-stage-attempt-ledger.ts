@@ -5,7 +5,10 @@ import {
   type FamilyRuntimeProviderKind,
   type TemporalStageAttemptSignalKind,
 } from './family-runtime-types.ts';
-import { buildStageAttemptUsageProjection } from './family-runtime-stage-attempt-usage.ts';
+import {
+  buildModelRouteCostProjection,
+  buildStageAttemptUsageProjection,
+} from './family-runtime-stage-attempt-usage.ts';
 
 export type StageAttemptStatus =
   | 'queued'
@@ -148,6 +151,29 @@ export function stageAttemptToPayload(row: StageAttemptRow) {
   const providerRun = parseJsonObject(row.provider_run_json);
   const activityEvents = parseJsonList(row.activity_events_json);
   const routeImpact = parseJsonObject(row.route_impact_json);
+  const usageProjection = buildStageAttemptUsageProjection({
+    stageAttemptId: row.stage_attempt_id,
+    status: row.status,
+    blockedReason: row.blocked_reason,
+    executorKind: row.executor_kind,
+    retryBudget,
+    attemptCount: row.attempt_count,
+    providerRun,
+    activityEvents,
+    routeImpact,
+  });
+  const modelRouteCostProjection = buildModelRouteCostProjection({
+    stageAttemptId: row.stage_attempt_id,
+    status: row.status,
+    blockedReason: row.blocked_reason,
+    executorKind: row.executor_kind,
+    retryBudget,
+    attemptCount: row.attempt_count,
+    providerRun,
+    activityEvents,
+    routeImpact,
+    usageProjection,
+  });
   return {
     stage_attempt_id: row.stage_attempt_id,
     idempotency_key: row.idempotency_key,
@@ -170,16 +196,8 @@ export function stageAttemptToPayload(row: StageAttemptRow) {
     provider_run: providerRun,
     activity_events: activityEvents,
     route_impact: routeImpact,
-    usage_projection: buildStageAttemptUsageProjection({
-      stageAttemptId: row.stage_attempt_id,
-      status: row.status,
-      blockedReason: row.blocked_reason,
-      retryBudget,
-      attemptCount: row.attempt_count,
-      providerRun,
-      activityEvents,
-      routeImpact,
-    }),
+    usage_projection: usageProjection,
+    model_route_cost_projection: modelRouteCostProjection,
     closeout_receipt_status: row.closeout_receipt_status,
     authority_boundary: {
       opl: 'attempt_control_metadata_and_projection_only',

@@ -19,6 +19,7 @@ import { buildAttemptGenericProjections } from './runtime-tray-stage-attempt-gen
 import { buildAttemptHumanReviewBurdenBudget } from './family-human-review-budget.ts';
 import { buildStageProgressLog } from './family-runtime-stage-progress-log.ts';
 import { buildStageAttemptTruePathProof } from './family-runtime-stage-attempt-true-path-proof.ts';
+import { buildModelRouteCostProjection } from './family-runtime-stage-attempt-usage.ts';
 import type { TemporalStageAttemptVisibilityReadiness } from './family-runtime-temporal-visibility.ts';
 
 type QueryStageAttemptOptions = {
@@ -180,6 +181,18 @@ export function queryStageAttempt(
   const workflowContract = attempt.provider_kind === 'temporal'
     ? buildTemporalStageAttemptWorkflowContract()
     : null;
+  const modelRouteCostProjection = buildModelRouteCostProjection({
+    stageAttemptId: attempt.stage_attempt_id,
+    status: attempt.status,
+    blockedReason: attempt.blocked_reason,
+    executorKind: attempt.executor_kind,
+    retryBudget: attempt.retry_budget,
+    attemptCount: attempt.attempt_count,
+    providerRun: attempt.provider_run,
+    activityEvents: attempt.activity_events,
+    routeImpact: attempt.route_impact,
+    usageProjection: attempt.usage_projection,
+  });
   const stageProgressLog = buildStageProgressLog({
     stageAttemptId: attempt.stage_attempt_id,
     providerKind: attempt.provider_kind,
@@ -210,6 +223,7 @@ export function queryStageAttempt(
     domainReadyVerdict,
     canonicalOutcome,
     usageProjection: attempt.usage_projection,
+    modelRouteCostProjection,
     createdAt: attempt.created_at,
     updatedAt: attempt.updated_at,
   });
@@ -242,6 +256,7 @@ export function queryStageAttempt(
       ...genericProjections,
       usage_projection: attempt.usage_projection,
       memory_trace_projection: stageProgressLog.memory_trace_projection,
+      model_route_cost_projection: modelRouteCostProjection,
       stage_progress_log: stageProgressLog,
       attempt_true_path_proof: attemptTruePathProof,
       temporal_visibility: stageProgressLog.temporal_visibility,
@@ -282,6 +297,7 @@ export function queryStageAttempt(
         operator_conflicts: conflictOrBlockerEnvelopes,
         usage_projection: attempt.usage_projection,
         memory_trace_projection: stageProgressLog.memory_trace_projection,
+        model_route_cost_projection: modelRouteCostProjection,
         stage_progress_log: stageProgressLog,
         attempt_true_path_proof: attemptTruePathProof,
         temporal_visibility: stageProgressLog.temporal_visibility,

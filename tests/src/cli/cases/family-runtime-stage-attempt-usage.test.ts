@@ -97,11 +97,39 @@ db.close();`;
       '--checkpoint-ref',
       'checkpoint:usage-midpoint',
       '--closeout-packet',
-      '{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:usage-closeout"],"domain_ready_verdict":"domain_gate_pending","route_impact":{"decision":"continue","usage_projection":{"usage_ref":"usage:closeout","token_usage":{"input_tokens":200,"output_tokens":80,"total_tokens":280},"estimated_cost_usd":0.09,"api_call_count":1,"duration_ms":30000,"cadence_ref":"cadence:closeout-retro"}}}',
+      JSON.stringify({
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: ['receipt:usage-closeout'],
+        domain_ready_verdict: 'domain_gate_pending',
+        route_impact: {
+          decision: 'continue',
+          model_route: {
+            selected_model_ref: 'model-profile:codex/gpt-5.3-codex-high',
+            selected_model: 'gpt-5.3-codex',
+            executor_route_ref: 'executor-route:codex-cli/default',
+            route_ref: 'model-route:pilotdeck/clean-room-intake',
+            route_reason: 'pilotdeck_clean_room_intake_requires_high_context',
+            route_reason_ref: 'route-reason:pilotdeck/clean-room-intake',
+            route_tier: 'premium_reasoning',
+            route_tier_ref: 'route-tier:premium-reasoning',
+            fallback_refs: ['fallback-route:disabled/no-auto-degrade'],
+          },
+          usage_projection: {
+            usage_ref: 'usage:closeout',
+            token_usage: { input_tokens: 200, output_tokens: 80, total_tokens: 280 },
+            estimated_cost_usd: 0.09,
+            api_call_count: 1,
+            duration_ms: 30000,
+            cadence_ref: 'cadence:closeout-retro',
+          },
+        },
+      }),
     ], familyRuntimeEnv(stateRoot));
 
     const query = runCli(['family-runtime', 'attempt', 'query', attemptId], familyRuntimeEnv(stateRoot));
     const projection = query.family_runtime_stage_attempt_query.stage_attempt_query.usage_projection;
+    const modelRouteCost =
+      query.family_runtime_stage_attempt_query.stage_attempt_query.model_route_cost_projection;
     const visibility = query.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility;
 
     assert.equal(projection.surface_kind, 'opl_stage_attempt_usage_projection');
@@ -123,7 +151,36 @@ db.close();`;
     assert.equal(projection.source_refs.includes('codex_session:session-usage-projection'), true);
     assert.equal(projection.authority_boundary.can_change_executor, false);
     assert.equal(projection.authority_boundary.can_auto_degrade, false);
+    assert.equal(modelRouteCost.surface_kind, 'opl_model_route_cost_projection');
+    assert.equal(modelRouteCost.projection_scope, 'stage_attempt');
+    assert.equal(modelRouteCost.availability, 'model_route_cost_observed');
+    assert.equal(modelRouteCost.selected_model.model_ref, 'model-profile:codex/gpt-5.3-codex-high');
+    assert.equal(modelRouteCost.selected_model.model, 'gpt-5.3-codex');
+    assert.equal(modelRouteCost.selected_executor.executor_kind, 'codex_cli');
+    assert.deepEqual(modelRouteCost.selected_executor.route_refs, ['executor-route:codex-cli/default']);
+    assert.deepEqual(modelRouteCost.route.route_refs, ['model-route:pilotdeck/clean-room-intake']);
+    assert.equal(modelRouteCost.route.reason, 'pilotdeck_clean_room_intake_requires_high_context');
+    assert.deepEqual(modelRouteCost.route.reason_refs, ['route-reason:pilotdeck/clean-room-intake']);
+    assert.equal(modelRouteCost.route.tier, 'premium_reasoning');
+    assert.deepEqual(modelRouteCost.route.tier_refs, ['route-tier:premium-reasoning']);
+    assert.deepEqual(modelRouteCost.route.fallback_refs, ['fallback-route:disabled/no-auto-degrade']);
+    assert.equal(modelRouteCost.observed_usage_linkage.token.total_tokens_observed, 1820);
+    assert.equal(modelRouteCost.observed_usage_linkage.cost.estimated_cost_usd_observed, 0.51);
+    assert.deepEqual(modelRouteCost.observed_usage_linkage.token.source_refs, projection.token.source_refs);
+    assert.deepEqual(modelRouteCost.observed_usage_linkage.cost.source_refs, projection.cost.source_refs);
+    assert.equal(modelRouteCost.authority_boundary.can_change_executor, false);
+    assert.equal(modelRouteCost.authority_boundary.can_auto_degrade, false);
+    assert.equal(modelRouteCost.authority_boundary.can_replace_quality_gate, false);
     assert.equal(visibility.usage_projection.token.total_tokens_observed, 1820);
+    assert.equal(
+      visibility.model_route_cost_projection.selected_model.model_ref,
+      'model-profile:codex/gpt-5.3-codex-high',
+    );
+    assert.equal(
+      query.family_runtime_stage_attempt_query.stage_attempt_query.stage_progress_log
+        .model_route_cost_projection.observed_usage_linkage.cost.estimated_cost_usd_observed,
+      0.51,
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -631,6 +688,15 @@ test('runtime snapshot projects stage attempt usage pressure into workbench grou
             usage_ref: 'usage:analysis',
             api_call_count: 1,
           },
+          model_route: {
+            selected_model_ref: 'model-profile:codex/gpt-5.3-codex-high',
+            selected_model: 'gpt-5.3-codex',
+            executor_route_ref: 'executor-route:codex-cli/default',
+            route_ref: 'model-route:pilotdeck/clean-room-intake',
+            route_reason_ref: 'route-reason:pilotdeck/clean-room-intake',
+            route_tier_ref: 'route-tier:premium-reasoning',
+            fallback_refs: ['fallback-route:disabled/no-auto-degrade'],
+          },
         },
       }),
     ], familyRuntimeEnv(stateRoot));
@@ -678,6 +744,13 @@ test('runtime snapshot projects stage attempt usage pressure into workbench grou
     assert.equal(workbench.summary.usage_projection.observed_attempt_count, 2);
     assert.equal(workbench.summary.usage_projection.retry_pressure_attempt_count, 1);
     assert.equal(workbench.summary.usage_projection.retry_budget_exhausted_count, 1);
+    assert.equal(workbench.summary.model_route_cost_projection.surface_kind, 'opl_model_route_cost_projection_summary');
+    assert.equal(workbench.summary.model_route_cost_projection.route_observed_attempt_count, 1);
+    assert.equal(workbench.summary.model_route_cost_projection.token_linked_attempt_count, 0);
+    assert.equal(workbench.summary.model_route_cost_projection.cost_linked_attempt_count, 0);
+    assert.deepEqual(workbench.summary.model_route_cost_projection.selected_model_refs, [
+      'model-profile:codex/gpt-5.3-codex-high',
+    ]);
     assert.equal(workbench.summary.stage_progress_log.surface_kind, 'opl_stage_progress_log_summary');
     assert.equal(workbench.summary.stage_progress_log.attempt_count, 2);
     assert.equal(workbench.summary.stage_progress_log.duration_observed_attempt_count, 1);
@@ -722,8 +795,12 @@ test('runtime snapshot projects stage attempt usage pressure into workbench grou
     assert.equal(historyEntry.authority_boundary.can_write_domain_truth, false);
     assert.equal(workbench.attempt_history.authority_boundary.can_infer_domain_semantics, false);
     assert.equal(workbench.groups.by_domain.medautoscience.usage_projection.observed_attempt_count, 1);
+    assert.deepEqual(workbench.groups.by_domain.medautoscience.model_route_cost_projection.route_refs, [
+      'model-route:pilotdeck/clean-room-intake',
+    ]);
     assert.equal(workbench.groups.by_domain.medautogrant.usage_projection.retry_budget_exhausted_count, 1);
     assert.equal(deadLetterAttempt.usage_projection.retry_budget.pressure_status, 'retry_budget_exhausted');
+    assert.equal(deadLetterAttempt.model_route_cost_projection.availability, 'model_route_unavailable');
     assert.equal(deadLetterAttempt.filter_keys.retry_budget_pressure, true);
     assert.equal(workbench.filter_metadata.usage_projection_flags.includes('retry_budget_pressure'), true);
     const deadLetterItem = [...output.runtime_tray_snapshot.attention_items, ...output.runtime_tray_snapshot.recent_items]
@@ -735,6 +812,10 @@ test('runtime snapshot projects stage attempt usage pressure into workbench grou
     assert.equal(
       deadLetterItem.stage_attempt_workbench.stage_progress_log.stage_attempt_id,
       deadLetterAttemptId,
+    );
+    assert.equal(
+      deadLetterItem.stage_attempt_workbench.model_route_cost_projection.availability,
+      'model_route_unavailable',
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

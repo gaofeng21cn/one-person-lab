@@ -2,17 +2,24 @@ type JsonRecord = Record<string, unknown>;
 
 export type StageAttemptUsageProjection = ReturnType<typeof buildStageAttemptUsageProjection>;
 export type StageAttemptUsageSummary = ReturnType<typeof summarizeStageAttemptUsageProjections>;
+export type ModelRouteCostProjection = ReturnType<typeof buildModelRouteCostProjection>;
+export type ModelRouteCostProjectionSummary = ReturnType<typeof summarizeModelRouteCostProjections>;
 
 type StageAttemptUsageInput = {
   stageAttemptId: string;
   projectionScope?: string;
   status: string;
   blockedReason?: string | null;
+  executorKind?: string | null;
   retryBudget: JsonRecord;
   attemptCount: number;
   providerRun: JsonRecord;
   activityEvents: unknown[];
   routeImpact: JsonRecord;
+};
+
+type ModelRouteCostProjectionInput = StageAttemptUsageInput & {
+  usageProjection: StageAttemptUsageProjection;
 };
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -117,6 +124,57 @@ function usageAuthorityBoundary() {
   };
 }
 
+function modelRouteCostAuthorityBoundary() {
+  return {
+    opl: 'model_route_cost_observability_projection_only',
+    domain: 'truth_quality_artifact_gate_owner',
+    executor: 'executor_selection_owner_external_to_route_cost_projection',
+    can_change_executor: false,
+    can_auto_degrade: false,
+    can_replace_quality_gate: false,
+    can_execute_domain_action: false,
+    can_write_domain_truth: false,
+    provider_completion_is_domain_ready: false,
+  };
+}
+
+function firstString(...values: unknown[]) {
+  return values.map(stringValue).find((value): value is string => Boolean(value)) ?? null;
+}
+
+function firstRecord(...values: unknown[]) {
+  return values.find(isRecord) ?? {};
+}
+
+function refsFromRouteUnknown(value: unknown): string[] {
+  if (typeof value === 'string' && value.trim()) {
+    return [value.trim()];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap(refsFromRouteUnknown);
+  }
+  if (isRecord(value)) {
+    return [
+      stringValue(value.ref),
+      stringValue(value.ref_id),
+      stringValue(value.path),
+      stringValue(value.uri),
+      stringValue(value.route_ref),
+      stringValue(value.model_ref),
+      stringValue(value.executor_route_ref),
+    ].filter((ref): ref is string => Boolean(ref));
+  }
+  return [];
+}
+
+function refsFromKeys(record: JsonRecord, keys: string[]) {
+  return uniqueStrings(keys.flatMap((key) => refsFromRouteUnknown(record[key])));
+}
+
+function modelRouteRecord(input: StageAttemptUsageInput) {
+  return firstRecord(input.routeImpact.model_route, input.providerRun.model_route);
+}
+
 function retryPressureStatus(input: StageAttemptUsageInput, maxAttempts: number | null) {
   if (input.status === 'dead_lettered' && input.blockedReason === 'retry_budget_exhausted') {
     return 'retry_budget_exhausted';
@@ -131,6 +189,118 @@ function retryPressureStatus(input: StageAttemptUsageInput, maxAttempts: number 
     return 'retry_budget_pressure';
   }
   return 'retry_budget_available';
+}
+
+export function buildModelRouteCostProjection(input: ModelRouteCostProjectionInput) {
+  const route = modelRouteRecord(input);
+  const selectedModelRef = firstString(
+    route.selected_model_ref,
+    route.model_ref,
+    input.routeImpact.selected_model_ref,
+    input.providerRun.selected_model_ref,
+  );
+  const selectedModel = firstString(
+    route.selected_model,
+    route.model,
+    route.model_name,
+    input.routeImpact.selected_model,
+    input.providerRun.selected_model,
+  );
+  const executorRouteRefs = refsFromKeys(route, [
+    'executor_route_ref',
+    'executor_route_refs',
+  ]);
+  const routeRefs = refsFromKeys(route, [
+    'route_ref',
+    'route_refs',
+    'model_route_ref',
+    'model_route_refs',
+  ]);
+  const reasonRefs = refsFromKeys(route, [
+    'route_reason_ref',
+    'route_reason_refs',
+    'reason_ref',
+    'reason_refs',
+  ]);
+  const tierRefs = refsFromKeys(route, [
+    'route_tier_ref',
+    'route_tier_refs',
+    'tier_ref',
+    'tier_refs',
+  ]);
+  const fallbackRefs = refsFromKeys(route, [
+    'fallback_ref',
+    'fallback_refs',
+    'fallback_route_ref',
+    'fallback_route_refs',
+  ]);
+  const routeObserved = Boolean(
+    selectedModelRef
+    || selectedModel
+    || executorRouteRefs.length > 0
+    || routeRefs.length > 0
+    || reasonRefs.length > 0
+    || tierRefs.length > 0
+    || fallbackRefs.length > 0,
+  );
+  const tokenObserved = Number(input.usageProjection.token.observed_count) > 0;
+  const costObserved = Number(input.usageProjection.cost.observed_count) > 0;
+  const routeSourceRef = `stage_attempt:${input.stageAttemptId}#route_impact.model_route`;
+  const sourceRefs = uniqueStrings([
+    ...(routeObserved ? [routeSourceRef] : []),
+    ...(isRecord(input.providerRun.model_route) ? [`stage_attempt:${input.stageAttemptId}#provider_run.model_route`] : []),
+    ...routeRefs,
+    ...executorRouteRefs,
+    ...reasonRefs,
+    ...tierRefs,
+    ...fallbackRefs,
+    ...input.usageProjection.token.source_refs,
+    ...input.usageProjection.cost.source_refs,
+  ]);
+
+  return {
+    surface_kind: 'opl_model_route_cost_projection',
+    projection_scope: input.projectionScope ?? 'stage_attempt',
+    availability: routeObserved
+      ? tokenObserved || costObserved
+        ? 'model_route_cost_observed'
+        : 'model_route_observed_usage_unlinked'
+      : 'model_route_unavailable',
+    selected_model: {
+      model_ref: selectedModelRef,
+      model: selectedModel,
+    },
+    selected_executor: {
+      executor_kind: input.executorKind ?? firstString(route.executor_kind, input.providerRun.executor_kind),
+      route_refs: executorRouteRefs,
+    },
+    route: {
+      route_refs: routeRefs,
+      reason: firstString(route.route_reason, route.reason),
+      reason_refs: reasonRefs,
+      tier: firstString(route.route_tier, route.tier),
+      tier_refs: tierRefs,
+      fallback_refs: fallbackRefs,
+    },
+    observed_usage_linkage: {
+      telemetry_status: tokenObserved || costObserved ? 'observed' : 'missing',
+      usage_projection_ref: `/stage_attempt_workbench/attempts/${input.stageAttemptId}/usage_projection`,
+      token: {
+        observed_count: input.usageProjection.token.observed_count,
+        input_tokens_observed: input.usageProjection.token.input_tokens_observed,
+        output_tokens_observed: input.usageProjection.token.output_tokens_observed,
+        total_tokens_observed: input.usageProjection.token.total_tokens_observed,
+        source_refs: input.usageProjection.token.source_refs,
+      },
+      cost: {
+        observed_count: input.usageProjection.cost.observed_count,
+        estimated_cost_usd_observed: input.usageProjection.cost.estimated_cost_usd_observed,
+        source_refs: input.usageProjection.cost.source_refs,
+      },
+    },
+    source_refs: sourceRefs,
+    authority_boundary: modelRouteCostAuthorityBoundary(),
+  };
 }
 
 function usageInputs(input: StageAttemptUsageInput) {
@@ -331,5 +501,43 @@ export function summarizeStageAttemptUsageProjections(
     },
     source_refs: sourceRefs,
     authority_boundary: usageAuthorityBoundary(),
+  };
+}
+
+export function summarizeModelRouteCostProjections(
+  projections: ModelRouteCostProjection[],
+  projectionScope = 'stage_attempt_workbench',
+) {
+  const sourceRefs = uniqueStrings(projections.flatMap((projection) => projection.source_refs));
+  const routeObserved = projections.filter((projection) =>
+    projection.availability !== 'model_route_unavailable'
+  );
+  return {
+    surface_kind: 'opl_model_route_cost_projection_summary',
+    projection_scope: projectionScope,
+    attempt_count: projections.length,
+    route_observed_attempt_count: routeObserved.length,
+    token_linked_attempt_count: projections.filter((projection) =>
+      Number(projection.observed_usage_linkage.token.observed_count) > 0
+    ).length,
+    cost_linked_attempt_count: projections.filter((projection) =>
+      Number(projection.observed_usage_linkage.cost.observed_count) > 0
+    ).length,
+    selected_model_refs: uniqueStrings(projections
+      .map((projection) => projection.selected_model.model_ref)
+      .filter((ref): ref is string => Boolean(ref))),
+    selected_models: uniqueStrings(projections
+      .map((projection) => projection.selected_model.model)
+      .filter((model): model is string => Boolean(model))),
+    executor_route_refs: uniqueStrings(projections.flatMap((projection) =>
+      projection.selected_executor.route_refs
+    )),
+    route_refs: uniqueStrings(projections.flatMap((projection) => projection.route.route_refs)),
+    reason_refs: uniqueStrings(projections.flatMap((projection) => projection.route.reason_refs)),
+    tier_refs: uniqueStrings(projections.flatMap((projection) => projection.route.tier_refs)),
+    fallback_refs: uniqueStrings(projections.flatMap((projection) => projection.route.fallback_refs)),
+    source_ref_count: sourceRefs.length,
+    source_refs: sourceRefs,
+    authority_boundary: modelRouteCostAuthorityBoundary(),
   };
 }

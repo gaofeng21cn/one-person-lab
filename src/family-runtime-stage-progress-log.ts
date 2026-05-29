@@ -1,4 +1,7 @@
-import type { StageAttemptUsageProjection } from './family-runtime-stage-attempt-usage.ts';
+import type {
+  ModelRouteCostProjection,
+  StageAttemptUsageProjection,
+} from './family-runtime-stage-attempt-usage.ts';
 import {
   buildMemoryTraceProjection,
 } from './runtime-tray-memory-locator-index.ts';
@@ -41,6 +44,7 @@ export type StageProgressLogInput = {
   domainReadyVerdict?: string | null;
   canonicalOutcome?: string | null;
   usageProjection: StageAttemptUsageProjection;
+  modelRouteCostProjection: ModelRouteCostProjection;
   createdAt?: string | null;
   updatedAt?: string | null;
 };
@@ -598,6 +602,7 @@ export function buildStageProgressLog(input: StageProgressLogInput) {
       events: activityTimeline(input),
     },
     usage: input.usageProjection,
+    model_route_cost_projection: input.modelRouteCostProjection,
     usage_telemetry: usageTelemetry(input),
     memory_trace_projection: memoryTraceProjection,
     user_stage_log: userStageLog,

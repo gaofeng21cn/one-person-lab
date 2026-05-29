@@ -2,7 +2,10 @@ import type { DatabaseSync } from 'node:sqlite';
 
 import type { FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import type { StageAttemptRow } from './family-runtime-stage-attempt-ledger.ts';
-import { buildStageAttemptUsageProjection } from './family-runtime-stage-attempt-usage.ts';
+import {
+  buildModelRouteCostProjection,
+  buildStageAttemptUsageProjection,
+} from './family-runtime-stage-attempt-usage.ts';
 import {
   buildStageProgressLog,
   summarizeStageProgressLogs,
@@ -194,11 +197,24 @@ function currentStageProgressLog(
     stageAttemptId: current.stage_attempt_id,
     status: current.status,
     blockedReason: current.blocked_reason,
+    executorKind: current.executor_kind,
     retryBudget,
     attemptCount: current.attempt_count,
     providerRun,
     activityEvents,
     routeImpact,
+  });
+  const modelRouteCostProjection = buildModelRouteCostProjection({
+    stageAttemptId: current.stage_attempt_id,
+    status: current.status,
+    blockedReason: current.blocked_reason,
+    executorKind: current.executor_kind,
+    retryBudget,
+    attemptCount: current.attempt_count,
+    providerRun,
+    activityEvents,
+    routeImpact,
+    usageProjection,
   });
   return buildStageProgressLog({
     stageAttemptId: current.stage_attempt_id,
@@ -230,6 +246,7 @@ function currentStageProgressLog(
     domainReadyVerdict: stringValue(latestCloseout.domain_ready_verdict) ?? stringValue(routeImpact.domain_ready_verdict),
     canonicalOutcome: statusForCurrentAttempt(current),
     usageProjection,
+    modelRouteCostProjection,
     createdAt: current.created_at,
     updatedAt: current.updated_at,
   });

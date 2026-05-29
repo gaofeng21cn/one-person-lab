@@ -9,6 +9,7 @@ import {
   canonicalOutcomeForStageAttempt,
 } from './family-conflict-envelope.ts';
 import {
+  buildModelRouteCostProjection,
   buildStageAttemptUsageProjection,
 } from './family-runtime-stage-attempt-usage.ts';
 import {
@@ -471,11 +472,24 @@ function attemptProjection(
     stageAttemptId: row.stage_attempt_id,
     status: row.status,
     blockedReason: row.blocked_reason,
+    executorKind: row.executor_kind,
     retryBudget: parseRecord(row.retry_budget_json),
     attemptCount: row.attempt_count,
     providerRun,
     activityEvents,
     routeImpact,
+  });
+  const modelRouteCostProjection = buildModelRouteCostProjection({
+    stageAttemptId: row.stage_attempt_id,
+    status: row.status,
+    blockedReason: row.blocked_reason,
+    executorKind: row.executor_kind,
+    retryBudget: parseRecord(row.retry_budget_json),
+    attemptCount: row.attempt_count,
+    providerRun,
+    activityEvents,
+    routeImpact,
+    usageProjection,
   });
   const stageProgressLog = buildStageProgressLog({
     stageAttemptId: row.stage_attempt_id,
@@ -507,6 +521,7 @@ function attemptProjection(
     domainReadyVerdict,
     canonicalOutcome,
     usageProjection,
+    modelRouteCostProjection,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   });
@@ -610,6 +625,7 @@ function attemptProjection(
     operator_label: conflictOrBlockerEnvelopes[0]?.operator_label ?? null,
     usage_projection: usageProjection,
     memory_trace_projection: memoryTraceProjection,
+    model_route_cost_projection: modelRouteCostProjection,
     stage_progress_log: stageProgressLog,
     attempt_true_path_proof: attemptTruePathProof,
     temporal_visibility: stageProgressLog.temporal_visibility,
@@ -715,6 +731,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       memory_locator_index: EMPTY_WORKBENCH_METADATA.summary.memory_locator_index,
       usage_projection: EMPTY_WORKBENCH_METADATA.summary.usage_projection,
       memory_trace_projection: EMPTY_WORKBENCH_METADATA.summary.memory_trace_projection,
+      model_route_cost_projection: EMPTY_WORKBENCH_METADATA.summary.model_route_cost_projection,
       stage_progress_log: EMPTY_WORKBENCH_METADATA.summary.stage_progress_log,
       package_export_lifecycle: EMPTY_WORKBENCH_METADATA.summary.package_export_lifecycle,
       action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,
@@ -778,6 +795,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       memory_locator_index: metadata.summary.memory_locator_index,
       usage_projection: metadata.summary.usage_projection,
       memory_trace_projection: metadata.summary.memory_trace_projection,
+      model_route_cost_projection: metadata.summary.model_route_cost_projection,
       stage_progress_log: metadata.summary.stage_progress_log,
       package_export_lifecycle: metadata.summary.package_export_lifecycle,
       action_routing: metadata.summary.action_routing,
@@ -811,6 +829,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       memory_locator_index: EMPTY_WORKBENCH_METADATA.summary.memory_locator_index,
       usage_projection: EMPTY_WORKBENCH_METADATA.summary.usage_projection,
       memory_trace_projection: EMPTY_WORKBENCH_METADATA.summary.memory_trace_projection,
+      model_route_cost_projection: EMPTY_WORKBENCH_METADATA.summary.model_route_cost_projection,
       stage_progress_log: EMPTY_WORKBENCH_METADATA.summary.stage_progress_log,
       package_export_lifecycle: EMPTY_WORKBENCH_METADATA.summary.package_export_lifecycle,
       action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,
