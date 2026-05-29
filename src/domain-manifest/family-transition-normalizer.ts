@@ -116,15 +116,15 @@ function canonicalDomainId(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
 
-export function normalizeFamilyTransitionSpec(value: unknown): FamilyTransitionSpec | null {
+function normalizeFamilyTransitionSpec(value: unknown): FamilyTransitionSpec | null {
   return normalizeTransitionSpec(value);
 }
 
-export function normalizeFamilyTransitionMatrixCases(value: unknown): FamilyTransitionMatrixCase[] {
+function normalizeFamilyTransitionMatrixCases(value: unknown): FamilyTransitionMatrixCase[] {
   return normalizeMatrixCases(value);
 }
 
-export function normalizeFamilyTransitionProjection(input: {
+function normalizeFamilyTransitionProjection(input: {
   manifestTargetDomainId: string;
   spec: FamilyTransitionSpec | null;
   cases: FamilyTransitionMatrixCase[];
