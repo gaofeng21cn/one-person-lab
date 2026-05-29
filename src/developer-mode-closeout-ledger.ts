@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 
 import { hasVerifiedAgentLabRiskTierAutoPromotionReceiptRef } from './agent-lab-risk-tier-promotion-ledger.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
@@ -431,7 +430,7 @@ function normalizeReceipt(value: unknown): DeveloperModeCloseoutReceipt | null {
   };
 }
 
-export function readDeveloperModeCloseoutLedger(): DeveloperModeCloseoutLedger {
+function readDeveloperModeCloseoutLedger(): DeveloperModeCloseoutLedger {
   const file = ledgerPath();
   if (!fs.existsSync(file)) {
     return emptyLedger();
@@ -559,8 +558,4 @@ export function verifyDeveloperModeCloseoutReceipt(
 
 export function listDeveloperModeCloseoutReceipts() {
   return readDeveloperModeCloseoutLedger().receipts;
-}
-
-export function developerModeCloseoutLedgerFilePath() {
-  return path.resolve(ledgerPath());
 }
