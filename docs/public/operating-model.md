@@ -5,6 +5,8 @@ Purpose: `public_operating_model_support`
 State: `public_support`
 Machine boundary: 本文是人读公开运行模型。机器 truth 继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+> Currentness rule: 本文只保存公开运行模型和用户视角的 owner / activation / shared-boundary 读法，不冻结 shared runtime / shared domain contract 状态、provider readiness、App release/user-path evidence、worklist counter、domain-ready 或 production-ready 结论。当前产品分层、运行主线、shared runtime/domain contract 状态、Foundry Agent 覆盖、App evidence 与剩余证据缺口必须从核心五件套、active gap plan、[Shared Runtime Contract](../specs/shared-runtime-contract.md)、[Shared Domain Contract](../specs/shared-domain-contract.md)、contracts、source、tests、CLI/read-model、runtime ledger 和 domain-owned receipts 读取。
+
 ## 核心判断
 
 `OPL` 的核心判断，不是“怎么让一个 Agent 一次性做完一个任务”，而是“怎么让一个研究型个人或极小团队，通过稳定表面持续承担正式实验室工作”。
@@ -125,9 +127,11 @@ OPL 负责给 selected executor 提供 stage、上下文、工具、权限、质
 
 - 顶层 `OPL` 继续定义产品体系、显式 activation 语义与 shared indexes
 - `UHS` 继续作为共享 Harness Engineering 上位语言
-- `Shared Runtime Contract` 逐步承接长期在线运行所需的共享合同
-- `Shared Domain Contract` 逐步承接 formal entry、运行身份、报告面、审计面与 gate 语义这类跨 domain 正式行为合同
+- `Shared Runtime Contract` 作为 active support contract 承接长期在线运行所需的共享合同读法
+- `Shared Domain Contract` 作为 active support contract 承接 formal entry、运行身份、报告面、审计面与 gate 语义这类跨 domain 正式行为合同读法
 - 各个独立 `domain agent` 仓继续承接自己的产品入口、domain workflow truth、quality gate、memory/artifact authority 与交付授权
+
+这两个 shared contract 是当前支撑面，不是本文派生出的未来计划；它们的机器真相仍回到 contracts、source、tests、CLI/read-model、runtime ledger 与 domain-owned evidence。
 
 因此，未来更像是“多个垂类在线 agent 产品复用同一 substrate”，而不是“一个顶层巨型 runtime 吞掉所有 domain”。
 当前已经落地的是这条结构的 framework/control-plane、executor adapter、provider code path、receipt/projection 和 domain descriptor 层；尚未闭合的是外部 production provider 长时运行和真实 domain soak。
