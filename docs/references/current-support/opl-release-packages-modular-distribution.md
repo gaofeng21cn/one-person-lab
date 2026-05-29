@@ -68,7 +68,7 @@ Fresh 读法按机器入口分层：
 | `src/package-distribution.ts` / `opl packages manifest` | 定义 package manifest shape、module ids、GHCR 坐标、Codex default profile 投影、`module_install_update_source` 和 `package_consumption_status`。 | 当前版本号、生成时间、owner、release channel、Codex profile 字段值和 module 坐标的实际输出。 |
 | `scripts/package-module-archives.mjs` | 用 module checkout 的 `git archive --format=tar.gz HEAD` 生成 source tarball，写出 `opl-release-manifest.json`、`opl-channel-manifest.json` 和 `SHA256SUMS`。 | archive size、sha256、module branch、module head SHA 和本机输出路径。 |
 | `scripts/package-release-discipline.mjs` | 校验 manifest 仍声明 git-checkout current source、channel manifest output、checksum、rollback 和 retention policy。 | 某次 release 的 previous manifest、retain count、失败列表和实际 gate 输出。 |
-| `.github/workflows/packages.yml` | 构建 module source archive、上传 release manifest artifact、推送 module archive / release manifest 到 GHCR，并构建 WebUI image。 | workflow run 状态、GHCR digest、artifact URL 和远端 package 可见性。 |
+| `.github/workflows/packages.yml` | 构建 module source archive、上传 release manifest artifact、推送 module archive / release manifest 到 GHCR，并从 `one-person-lab-app#main:shells/aionui` 构建/推送 WebUI image。 | workflow run 状态、GHCR digest、artifact URL、远端 package 可见性和 `VITE_OPL_DEFAULT_LANGUAGE` 等瞬时 build arg。 |
 | `.github/workflows/native-helper-prebuilds.yml` / `scripts/native-helper-prebuild.mjs` | 维护 native helper prebuild artifact / GHCR package 的构建入口。 | 具体 target、native helper version、checksum、CI artifact 和 GHCR tag。 |
 | `one-person-lab-app` release contracts / workflows / evidence | 拥有标准 App 安装包、Full DMG、updater metadata、签名/公证和用户下载面。 | App release ready、Full package asset、download URL、latest yml、签名/公证结果和 release evidence。 |
 
@@ -76,7 +76,7 @@ Fresh 读法按机器入口分层：
 
 | 发布物 | 推荐 Packages 名称 | 内容 | 触发方 |
 | --- | --- | --- | --- |
-| Docker/WebUI 镜像 | `ghcr.io/gaofeng21cn/one-person-lab-webui:<opl_version>` | OPL WebUI runtime、Codex 配置初始化、Temporal-backed provider / explicit executor adapter refs、浏览器入口 | Docker 用户直接 `docker run` |
+| Docker/WebUI 镜像 | `ghcr.io/gaofeng21cn/one-person-lab-webui:<opl_version>` | One Person Lab 品牌 AionUI WebUI shell、web-cli、SPA 静态文件、bundled backend 和浏览器入口；实际 runtime/env/auth/session 以 active shell Dockerfile / web-cli / web-host、App Docker smoke 和 image manifest 为准 | Docker 用户直接 `docker run` |
 | 模块源码包 | `ghcr.io/gaofeng21cn/one-person-lab-modules/<module>:<version>` | 不含 `.git`、缓存、venv、node_modules 的模块源码归档 | 后续 `opl module install/update` 接入 manifest 后消费；当前不作为正式安装更新来源 |
 | Native helper prebuild | `ghcr.io/gaofeng21cn/one-person-lab-native-helper:<target>-<version>` | Rust helper 二进制、manifest、checksum | `opl native:repair` / `opl install` |
 | OPL core npm 包 | `@gaofeng21cn/one-person-lab` 或 npm public package | CLI、contracts、shared helpers、安装脚本 | npm / 一键安装脚本 |
@@ -85,7 +85,7 @@ Fresh 读法按机器入口分层：
 维护规则：
 
 - Release 继续放 DMG/ZIP/DEB 等用户安装包。
-- Packages 放 OPL CLI/core、WebUI Docker 镜像和 domain module 的机器消费制品；只有 install/update 真正消费它们之后，才把它们写成当前机制。
+- Packages 放 OPL CLI/core、WebUI Docker 镜像和 domain module 的机器消费制品；WebUI 镜像由 OPL 中央 package workflow 从 App repo 的 active shell checkout 构建发布，App release / user-path truth 仍归 `one-person-lab-app`；只有 install/update 真正消费 Packages channel manifest 之后，才把模块 Packages 写成当前安装更新机制。
 - 当前环境管理通过 git upstream 判断“当前版本 / 是否可更新”；切到 Packages 后再改为通过 manifest 判断目标版本。
 - 每个制品必须有版本、来源、校验和、回滚目标和安装策略。
 - 旧版本清理不靠手工记忆：package workflow 的 manifest 必须声明 `retain_latest_n_versions_and_declared_rollbacks`，后续 GHCR retention/cleanup job 只消费这个策略，不重新解释模块状态。
