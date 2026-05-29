@@ -108,7 +108,7 @@ function normalizeExecutorKind(value: string | null): AgentExecutorKind | null {
   });
 }
 
-export function resolveAgentExecutorKind(input: ResolveInput): AgentExecutorKind {
+function resolveAgentExecutorKind(input: ResolveInput): AgentExecutorKind {
   const env = envOf(input.env);
   return normalizeExecutorKind(text(input.explicitExecutor))
     ?? normalizeExecutorKind(text(input.stageAttemptExecutor))
@@ -259,7 +259,7 @@ function executorEnvelopeFor(executorKind: AgentExecutorKind) {
   };
 }
 
-export function inspectAgentExecutor(
+function inspectAgentExecutor(
   kind: AgentExecutorKind | string,
   options: { env?: Record<string, string | undefined> } = {},
 ): AgentExecutorDoctor {

@@ -7,9 +7,8 @@ import { fileURLToPath } from 'node:url';
 
 import { createFakeCodexFixture } from './cli/helpers.ts';
 import {
-  inspectAgentExecutor,
-  resolveAgentExecutorKind,
   runAgentExecutor,
+  runAgentExecutorDoctor,
 } from '../../src/agent-executor.ts';
 import { FrameworkContractError } from '../../src/contracts.ts';
 
@@ -23,40 +22,121 @@ function makeExecutable(name: string, body: string) {
   return { fixtureRoot, file };
 }
 
-test('agent executor registry resolves explicit, stage-attempt, env, and default order', () => {
-  assert.equal(resolveAgentExecutorKind({ explicitExecutor: 'hermes-agent' }), 'hermes_agent');
-  assert.equal(resolveAgentExecutorKind({ explicitExecutor: 'antigravity-cli' }), 'antigravity_cli');
-  assert.equal(resolveAgentExecutorKind({ stageAttemptExecutor: 'claude_code' }), 'claude_code');
-  assert.equal(resolveAgentExecutorKind({ env: { OPL_EXECUTOR_KIND: 'claude_code' } }), 'claude_code');
-  assert.equal(resolveAgentExecutorKind({}), 'codex_cli');
+test('agent executor registry resolves explicit, stage-attempt, env, and default order through public runners', () => {
+  const hermes = makeExecutable('hermes-agent', '#!/bin/sh\nprintf "hermes fake\\n"\n');
+  const antigravity = makeExecutable('antigravity', '#!/bin/sh\nprintf "antigravity fake\\n"\n');
+  const claude = makeExecutable(
+    'claude',
+    '#!/bin/sh\nprintf \'{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:claude-resolve"]}\\n\'\n',
+  );
+  const { fixtureRoot: codexFixtureRoot, codexPath } = createFakeCodexFixture(`
+  if [ "$1" = "exec" ]; then
+    printf '{"type":"thread.started","thread_id":"thread-agent-executor-default"}\\n'
+    printf '{"item":{"type":"agent_message","text":"Default executor done"}}\\n'
+    exit 0
+  fi
+  exit 64
+  `);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    assert.equal(
+      runAgentExecutorDoctor({
+        executorKind: 'hermes-agent',
+        env: { OPL_HERMES_AGENT_EXECUTOR_BIN: hermes.file, PATH: '' },
+      }).executor_doctor.executor_kind,
+      'hermes_agent',
+    );
+    assert.equal(
+      runAgentExecutorDoctor({
+        executorKind: 'antigravity-cli',
+        env: { OPL_ANTIGRAVITY_CLI_BIN: antigravity.file, PATH: '' },
+      }).executor_doctor.executor_kind,
+      'antigravity_cli',
+    );
+    assert.equal(
+      runAgentExecutor({
+        stage_attempt_executor_kind: 'claude_code',
+        prompt: 'Resolve from stage attempt executor.',
+        cwd: repoRoot,
+        env: { OPL_CLAUDE_CODE_BIN: claude.file, PATH: '' },
+      }).executor_kind,
+      'claude_code',
+    );
+    assert.equal(
+      runAgentExecutor({
+        prompt: 'Resolve from env executor.',
+        cwd: repoRoot,
+        env: { OPL_EXECUTOR_KIND: 'claude_code', OPL_CLAUDE_CODE_BIN: claude.file, PATH: '' },
+      }).executor_kind,
+      'claude_code',
+    );
+    assert.equal(
+      runAgentExecutor({
+        prompt: 'Resolve default executor.',
+        cwd: repoRoot,
+      }).executor_kind,
+      'codex_cli',
+    );
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    fs.rmSync(hermes.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(antigravity.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(claude.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
+  }
+
   assert.throws(
-    () => resolveAgentExecutorKind({ explicitExecutor: 'external_llm' }),
+    () => runAgentExecutor({
+      executor_kind: 'external_llm',
+      prompt: 'Unsupported executor.',
+      cwd: repoRoot,
+    }),
     /Unsupported OPL executor kind/,
   );
 });
 
-test('agent executor registry resolves request policy before stage policy', () => {
-  assert.equal(
-    resolveAgentExecutorKind({
-      explicitExecutor: null,
-      stageAttemptExecutor: null,
-      requestExecutorPolicy: {
-        executor_kind: 'antigravity_cli',
-      },
-      stageAttemptExecutorPolicy: {
-        executor_kind: 'claude_code',
-      },
-    }),
-    'antigravity_cli',
+test('agent executor registry resolves request policy before stage policy through public runner', () => {
+  const antigravity = makeExecutable(
+    'antigravity',
+    '#!/bin/sh\nprintf \'{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:antigravity-policy"]}\\n\'\n',
   );
-  assert.equal(
-    resolveAgentExecutorKind({
-      stageAttemptExecutorPolicy: {
-        executor_kind: 'antigravity_cli',
-      },
-    }),
-    'antigravity_cli',
-  );
+  try {
+    assert.equal(
+      runAgentExecutor({
+        prompt: 'Resolve request policy before stage policy.',
+        cwd: repoRoot,
+        request_executor_policy: {
+          executor_kind: 'antigravity_cli',
+          executor_binding_ref: 'executor-binding:antigravity/request-policy',
+        },
+        stage_attempt_executor_policy: {
+          executor_kind: 'claude_code',
+          executor_binding_ref: 'executor-binding:claude/stage-policy',
+        },
+        env: { OPL_ANTIGRAVITY_CLI_BIN: antigravity.file, PATH: '' },
+      }).executor_kind,
+      'antigravity_cli',
+    );
+    assert.equal(
+      runAgentExecutor({
+        prompt: 'Resolve stage policy.',
+        cwd: repoRoot,
+        stage_attempt_executor_policy: {
+          executor_kind: 'antigravity_cli',
+          executor_binding_ref: 'executor-binding:antigravity/stage-policy',
+        },
+        env: { OPL_ANTIGRAVITY_CLI_BIN: antigravity.file, PATH: '' },
+      }).executor_kind,
+      'antigravity_cli',
+    );
+  } finally {
+    fs.rmSync(antigravity.fixtureRoot, { recursive: true, force: true });
+  }
 });
 
 test('codex_cli executor returns the shared AgentExecutionReceipt shape', () => {
@@ -302,13 +382,17 @@ process.stdin.on('end', () => {
 });
 
 test('hermes_agent doctor reports missing binary without Codex fallback', () => {
-  const doctor = inspectAgentExecutor('hermes_agent', {
-    env: { OPL_HERMES_AGENT_EXECUTOR_BIN: '', PATH: '' },
-  });
-  assert.equal(doctor.executor_kind, 'hermes_agent');
-  assert.equal(doctor.ready, false);
-  assert.equal(doctor.issues[0], 'hermes_agent_binary_missing');
-  assert.equal(doctor.fallback_allowed, false);
+  assert.throws(
+    () => runAgentExecutorDoctor({
+      executorKind: 'hermes_agent',
+      env: { OPL_HERMES_AGENT_EXECUTOR_BIN: '', PATH: '' },
+    }),
+    (error) => error instanceof FrameworkContractError
+      && error.code === 'surface_not_found'
+      && error.details?.fallback_allowed === false
+      && Array.isArray(error.details?.issues)
+      && error.details.issues[0] === 'hermes_agent_binary_missing',
+  );
 
   assert.throws(
     () => runAgentExecutor({
@@ -444,12 +528,13 @@ test('explicit antigravity_cli execution produces a receipt without Codex equiva
 test('executor doctor reports Antigravity CLI binary readiness from explicit env path', () => {
   const fake = makeExecutable('antigravity', '#!/usr/bin/env bash\nprintf "antigravity fake\\n"\n');
   try {
-    const doctor = inspectAgentExecutor('antigravity_cli', {
+    const doctor = runAgentExecutorDoctor({
+      executorKind: 'antigravity_cli',
       env: {
         OPL_ANTIGRAVITY_CLI_BIN: fake.file,
         PATH: '',
       },
-    });
+    }).executor_doctor;
 
     assert.equal(doctor.executor_kind, 'antigravity_cli');
     assert.equal(doctor.ready, true);
@@ -491,12 +576,13 @@ setTimeout(() => process.stdout.write("late\\n"), 2000);
 test('executor doctor reports Claude Code binary readiness from explicit env path', () => {
   const fake = makeExecutable('claude', '#!/usr/bin/env bash\nprintf "claude fake\\n"\n');
   try {
-    const doctor = inspectAgentExecutor('claude_code', {
+    const doctor = runAgentExecutorDoctor({
+      executorKind: 'claude_code',
       env: {
         OPL_CLAUDE_CODE_BIN: fake.file,
         PATH: '',
       },
-    });
+    }).executor_doctor;
 
     assert.equal(doctor.executor_kind, 'claude_code');
     assert.equal(doctor.ready, true);
