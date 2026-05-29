@@ -72,6 +72,7 @@ const readModelGateTestFiles = [
   'tests/src/generic-substrate-projection.test.ts',
   'tests/src/family-runtime-codex-stage-runner-mas-recovery.test.ts',
   'tests/src/family-runtime-codex-stage-runner.test.ts',
+  'tests/src/family-runtime-codex-stage-runner-protocol.test.ts',
   'tests/src/family-runtime-stage-attempt-closeout-ledger.test.ts',
   'tests/src/family-runtime-temporal-terminal-sync.test.ts',
   'tests/src/family-runtime-agent-stage-runner.test.ts',

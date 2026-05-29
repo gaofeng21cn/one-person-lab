@@ -13,7 +13,7 @@ Master entry: OPL family agent framework 的总开发入口是 `docs/references/
 
 OPL family runtime 的生产在线架构已经把已退役 Hermes-first online substrate 校准为 Temporal-backed production runtime。`temporal` 是 production online OPL 的必需 substrate，不是可选候选；它应像 `Codex CLI` 一样被安装、检测、修复、监控和持续维护。
 
-Temporal 负责 durable execution：workflow history、activity retry/timeout、signal/query、heartbeat、workflow replay 和长期 attempt recovery。OPL 负责 provider abstraction、stage attempt ledger、typed family queue、human gate transport、dead-letter、observability 与 domain handoff。`Codex CLI` 仍是 stage 内默认 concrete executor。MAS/MAG/RCA 继续持有 domain truth、quality gate、artifact/package/submission/publication/deliverable authority。
+Temporal 负责 durable execution：workflow history、activity retry/timeout、signal/query、heartbeat、workflow replay 和长期 attempt recovery。OPL 负责 provider abstraction、stage attempt ledger、typed family queue、human gate transport、dead-letter、observability 与 domain handoff。`Codex CLI` 仍是 Codex-default stage executor 和默认 concrete executor。MAS/MAG/RCA 继续持有 domain truth、quality gate、artifact/package/submission/publication/deliverable authority。
 
 `hermes_agent`、`claude_code` 与 `antigravity_cli` 的定位是显式非默认 executor adapter/backend；旧 Hermes runtime / Gateway / provider 只归历史 provenance、诊断语料、负向 guard 或历史参考材料。Temporal provider 是生产在线路径的必需底座；Hermes 不再作为目标 session/wakeup substrate、active provider interface、Gateway bridge、provider proof surface、install/update target 或 readiness surface；local provider 只作为 dev/CI/offline diagnostic baseline。
 
