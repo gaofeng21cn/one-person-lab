@@ -50,6 +50,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-30-opl-series-doc-governance-package-mds-ledger.md` | OPL current-support package/MDS wording cleanup ledger。 | 当前 truth 归 package manifest source/tests/CLI、core MDS boundary docs 和 App-owned release evidence；ledger 只记录 stale MDS provider-adapter wording retirement. |
 | `2026-05-30-opl-series-doc-governance-current-support-index-ledger.md` | OPL current-support index and default-skill boundary cleanup ledger。 | 当前 truth 归 current-support index、default-skill ecosystem support doc、companion skill source/CLI 和 family plugin registry source/CLI；ledger 只记录 stale MDS / system-skill index wording retirement. |
 | `2026-05-30-opl-series-doc-governance-test-lane-ledger.md` | OPL current-support test lane governance cleanup ledger。 | 当前 truth 归 package scripts、test lane registry、verify scripts 和 GitHub workflows；ledger 只记录 stale lane-table completeness and frozen-state wording retirement. |
+| `2026-05-30-opl-series-doc-governance-quality-details-ledger.md` | OPL current-support quality-details cleanup ledger。 | 当前 truth 归 `opl quality details` source/tests, structural gate scripts and GitHub quality-details action/workflows；ledger 只记录 stale fixed finding/action-readiness wording retirement. |
 
 ## Tombstone Rules
 
