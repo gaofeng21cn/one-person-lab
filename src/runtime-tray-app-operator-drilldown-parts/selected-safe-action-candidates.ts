@@ -13,6 +13,13 @@ function recordList(value: unknown) {
   return Array.isArray(value) ? value.filter(isRecord) : [];
 }
 
+function stringList(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.map(stringValue).filter((entry): entry is string => Boolean(entry));
+}
+
 function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
@@ -86,6 +93,17 @@ function legacyCleanupRouteClosedByCurrentLedger(action: JsonRecord, drilldown: 
   ));
 }
 
+function stageEvidenceRouteClosedByDomainTypedBlocker(action: JsonRecord) {
+  if (stringValue(action.action_kind) !== 'stage_production_evidence_receipt_record') {
+    return false;
+  }
+  const obligationSummary = record(action.evidence_obligation_summary);
+  return stringValue(action.stage_evidence_receipt_status) === 'verified'
+    && numberValue(obligationSummary.open_count) === 0
+    && numberValue(obligationSummary.blocked_by_domain_typed_blocker_count) > 0
+    && stringList(action.verified_stage_evidence_receipt_refs).length > 0;
+}
+
 function routeIsClosedForDefaultCaller(action: JsonRecord, drilldown: JsonRecord) {
   const routeStatus = stringValue(action.route_status);
   const actionabilityStatus = stringValue(action.default_actionability_status);
@@ -100,6 +118,7 @@ function routeIsClosedForDefaultCaller(action: JsonRecord, drilldown: JsonRecord
     return true;
   }
   return providerRouteClosedByCurrentSlo(action, drilldown)
+    || stageEvidenceRouteClosedByDomainTypedBlocker(action)
     || legacyCleanupRouteClosedByCurrentLedger(action, drilldown);
 }
 

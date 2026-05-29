@@ -14,6 +14,9 @@ import {
 import { buildStageLaunchInvocationProjection } from '../../../../src/family-runtime-launch-invocation.ts';
 import { openQueueDb, stableId } from '../../../../src/family-runtime-store.ts';
 import { createStageAttempt } from '../../../../src/family-runtime-stage-attempts.ts';
+import {
+  applyAppOperatorDrilldownDetail,
+} from '../../../../src/runtime-tray-app-operator-drilldown-parts/detail-view.ts';
 
 function buildReviewStageEvidenceManifest() {
   const masManifest = structuredClone(loadFamilyManifestFixtures().medautoscience);
@@ -889,6 +892,10 @@ test('verified typed-blocker stage evidence receipt keeps record route open for 
       drilldown.summary.stage_production_evidence_payload_workorder_count,
       0,
     );
+    assert.notEqual(
+      drilldown.attention_first_payload.next_safe_action?.action_id,
+      'stage-production-evidence:medautoscience:review:record',
+    );
 
     const recordExecution = runCli([
       'runtime',
@@ -916,4 +923,60 @@ test('verified typed-blocker stage evidence receipt keeps record route open for 
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
+});
+
+test('App drilldown does not select typed-blocker-closed stage evidence record route as default next action', () => {
+  const actionId = 'stage-production-evidence:medautogrant:package_and_submit_ready:record';
+  const route = {
+    ref: 'opl agents evidence apply --domain medautogrant --request-id stage_production_evidence:medautogrant:package_and_submit_ready',
+    action_id: actionId,
+    action_kind: 'stage_production_evidence_receipt_record',
+    owner: 'opl',
+    route_target_kind: 'opl_cli',
+    execution_surface: 'opl runtime action execute',
+    route_status: 'record_route_available',
+    route_status_detail: 'record_route_available_waiting_for_domain_app_or_live_refs_payload',
+    stage_evidence_receipt_status: 'verified',
+    verified_stage_evidence_receipt_refs: [
+      'opl://external-evidence/medautogrant/stage_production_evidence:medautogrant:package_and_submit_ready',
+    ],
+    evidence_obligation_summary: {
+      obligation_count: 6,
+      closed_count: 4,
+      open_count: 0,
+      blocked_by_domain_typed_blocker_count: 2,
+    },
+    route_requires_domain_or_app_payload: true,
+    payload_requirement:
+      'domain_app_or_live_refs_payload_required_to_record_stage_expected_receipt_source_scope_runtime_event_or_monitor_freshness',
+    payload_owner: 'domain_repository_or_app_live_operator',
+    domain_id: 'medautogrant',
+    target_domain_id: 'med-autogrant',
+    project_id: 'medautogrant',
+    stage_id: 'package_and_submit_ready',
+    missing_production_evidence: [
+      'expected_receipt_ref_not_observed',
+      'monitor_freshness_ref_not_observed',
+    ],
+  };
+  const drilldown = applyAppOperatorDrilldownDetail({
+    operator_action_routing_refs: {
+      refs: [route],
+    },
+    app_execution_bridge: {
+      safe_action_routes: [{
+        ...route,
+        action_ref: route.ref,
+        submit_via: 'opl runtime action execute',
+        can_submit_to_safe_action_shell: true,
+        dry_run_supported: true,
+      }],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  }, 'summary');
+
+  assert.equal(drilldown.attention_first_payload.next_safe_action, null);
 });

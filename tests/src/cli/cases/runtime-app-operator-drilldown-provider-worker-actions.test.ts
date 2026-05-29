@@ -9,6 +9,7 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
+import type { JsonRecord } from '../../../../src/runtime-tray-snapshot-types.ts';
 import {
   applyAppOperatorDrilldownDetail,
 } from '../../../../src/runtime-tray-app-operator-drilldown-parts/detail-view.ts';
@@ -117,7 +118,7 @@ test('runtime App drilldown selects provider worker start when worker is not rea
       can_write_domain_truth: false,
       can_claim_production_ready: false,
     },
-  }, 'summary');
+  }, 'full');
   const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
   assert.ok(nextSafeAction);
 
@@ -170,7 +171,7 @@ test('runtime App drilldown does not select developer-checkout shared-state work
       can_write_domain_truth: false,
       can_claim_production_ready: false,
     },
-  }, 'summary');
+  }, 'full');
 
   const route = drilldown.operator_action_routing_refs.refs[0];
   assert.equal(route.action_id, 'provider-worker:temporal:start');
@@ -238,11 +239,12 @@ test('runtime App drilldown blocks provider SLO proof when worker repair is muta
       can_write_domain_truth: false,
       can_claim_production_ready: false,
     },
-  }, 'summary');
+  }, 'full');
 
   const providerSloRoute = drilldown.operator_action_routing_refs.refs.find(
     (ref: { action_id: string }) => ref.action_id === 'provider-slo:temporal:production-proof',
-  );
+  ) as JsonRecord | undefined;
+  assert.ok(providerSloRoute);
   assert.equal(providerSloRoute.route_status, 'blocked_by_provider_worker_mutation_guard');
   assert.equal(providerSloRoute.default_actionable, false);
   assert.equal(providerSloRoute.can_submit_to_safe_action_shell, false);

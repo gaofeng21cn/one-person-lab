@@ -85,6 +85,13 @@ function temporalWorkerStatus(status: 'worker_not_ready' | 'worker_source_stale'
       server_reachable: true,
     },
     visibility_readiness: visibilityReadiness,
+    worker_mutation_guard: {
+      surface_kind: 'temporal_worker_mutation_guard',
+      mutation_guard_status: 'allowed',
+      allowed: true,
+      state_dir_explicit: true,
+      explicit_developer_override: false,
+    },
     blockers: status === 'ready'
       ? []
       : status === 'worker_dependency_unavailable'
