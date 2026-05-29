@@ -80,6 +80,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-38.md` | OPL series docs governance tranche ledger part 38。 | 当前 truth 归 GUI shell/App boundary support、App active-shell contract、App wrapper scripts、release boundary tests 和 active shell package scripts；ledger 只记录本轮 stale builder path 与 validation timing overclaim 清理。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-39.md` | OPL series docs governance tranche ledger part 39。 | 当前 truth 归 shared domain spec、standard domain-agent skeleton contract、family orchestration schemas、contracts index、source/tests 和 live CLI/read-model；ledger 只记录本轮 fixed-date shared-domain anchor 与 stale shared-contract doc path 清理。 |
 | `2026-05-29-opl-series-doc-governance-tranche-ledger-part-40.md` | OPL series docs governance tranche ledger part 40。 | 当前 truth 归 domain onboarding spec、candidate backlog、OPL framework contracts、source/tests 和 live CLI/read-model；ledger 只记录本轮 fixed-date domain-admission anchor 与 candidate lane currentness 清理。 |
+| `2026-05-29-opl-series-doc-governance-tranche-ledger-part-41.md` | OPL series docs governance tranche ledger part 41。 | 当前 truth 归 candidate backlog、domain onboarding spec、task topology/workstream contracts、source/tests 和 live CLI/read-model；ledger 只记录本轮 candidate backlog currentness policy 与 live-topology alignment 清理。 |
 
 ## Tombstone Rules
 

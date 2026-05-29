@@ -5,11 +5,13 @@ Purpose: `references_domain_admission_opl_candidate_domain_backlog`
 State: `support_reference`
 Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
 
+> Currentness rule: 本文只保存 candidate workstream blocker 的人读索引，不冻结当前候选数量、active workstream 数量或 readiness 状态。使用本文前，先读取核心五件套、[OPL 任务版图](../../public/task-map.md)、[OPL Domain Onboarding Contract](../../specs/opl-domain-onboarding-contract.md)、`task-topology.json`、`workstreams.json`、`domains.json`、CLI/read-model 与相关测试；只有这些 live surfaces 能证明某个 workstream 是 registered、under-definition candidate、unknown domain、selected domain-agent entry 或仍位于 formal inclusion 之下。
+
 ## 目的
 
-这份文档索引当前仍在定义中的 `OPL` workstream 的 admission-blocker backlog。
+这份文档索引 live task topology 中仍在定义中的 `OPL` workstream 的 admission-blocker backlog。
 
-它的作用是明确说明：`IP Ops`、`Award Ops`、`Thesis Ops`、`Review Ops` 在被正式收录为独立 domain-agent/capability boundary 之前，还缺哪些边界材料。
+它的作用是明确说明：凡 live topology 仍标记为 `under_definition` / `not_registered` / `candidate_domain_agent_pending` 的 workstream，在被正式收录为独立 domain-agent/capability boundary 之前，还缺哪些边界材料。当前机器面中的 `IP Ops`、`Award Ops`、`Thesis Ops`、`Review Ops` 是这类 blocker entry 的当前覆盖对象。
 
 它不是预收录 registry。
 它不是执行 surface。
@@ -26,7 +28,7 @@ Task map / task-topology 层负责把顶层语义写清楚。
 Onboarding contract 负责定义正式收录门槛。
 这份 backlog 负责记录这两层之间还缺什么边界材料。
 
-在当前基线上，这三层已经足以表达 candidate-domain path：
+在当前 live topology / onboarding 读法下，这三层已经足以表达 candidate-domain path：
 
 - task topology 定义 workstream boundary
 - backlog 记录仍缺哪些 boundary package
@@ -38,7 +40,7 @@ Onboarding contract 负责定义正式收录门槛。
 
 ## Machine Boundary
 
-当前仓库没有发布 `candidate-domain-backlog.json` 机器可读合同。当前候选可见性来自 [`task-topology.json`](../../../contracts/opl-framework/task-topology.json)：`IP Ops`、`Award Ops`、`Thesis Ops` 和 `Review Ops` 仍是 `under_definition` / `not_registered` / `candidate_domain_agent_pending`，没有 `current_domain_id`、没有 `entry_surface`，且 `formal_domain_required=true`。[`workstreams.json`](../../../contracts/opl-framework/workstreams.json) 只列出已注册的 active workstream：`research_ops`、`grant_ops` 和 `presentation_ops`；它不收录这些候选项。本文只是 derived human-readable blocker reference。
+当前仓库没有发布 `candidate-domain-backlog.json` 机器可读合同。候选可见性来自 [`task-topology.json`](../../../contracts/opl-framework/task-topology.json)：凡 entry 仍读为 `under_definition` / `not_registered` / `candidate_domain_agent_pending`、没有 `current_domain_id`、没有 `entry_surface`，且 `formal_domain_required=true`，就仍处在 candidate / onboarding path。已注册 active workstream 只从 [`workstreams.json`](../../../contracts/opl-framework/workstreams.json) 读取；该文件不收录这些候选项。本文只是 derived human-readable blocker reference。
 
 当前 active machine-readable topology 让候选 workstream 保持可见，但不会假装它们的 domain boundary 已经存在。
 `opl stages list --json` 可以证明已收录 stage plane 可读，但不能把这些候选项提升为 admitted stage、discovery target、routing target、domain handoff 或 readiness 结论。
@@ -74,6 +76,8 @@ Onboarding contract 负责定义正式收录门槛。
 - `notes`
 
 ## 当前候选覆盖
+
+本节的具体 entry 必须与 live `task-topology.json` 中仍处于 candidate / onboarding path 的 workstream 对齐。新增或移除 candidate workstream 时，应在同一治理 tranche 中同时更新 topology / onboarding 证据、本文 entry 和相关 CLI/read-model 测试或 negative guard。
 
 ### IP Ops
 
