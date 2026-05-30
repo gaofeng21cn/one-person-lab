@@ -421,8 +421,18 @@ test('runtime app-operator-drilldown counts live Developer Mode owner acceptance
     );
     assert.equal(fullEvidence.summary.repo_contract_fixture_not_live_repo_count, 1);
     assert.equal(fullEvidence.summary.fixture_drill_owner_acceptance_open_count, 1);
-    assert.equal(fullEvidence.summary.external_owner_acceptance_missing_count, 1);
+    assert.equal(fullEvidence.summary.fixture_drill_external_owner_acceptance_missing_count, 1);
+    assert.equal(fullEvidence.summary.external_owner_acceptance_missing_count, 0);
     assert.equal(fullDrilldown.summary.developer_mode_live_closeout_live_external_owner_acceptance_count, 1);
+    assert.equal(
+      fullDrilldown.summary
+        .developer_mode_live_closeout_fixture_drill_external_owner_acceptance_missing_count,
+      1,
+    );
+    assert.equal(
+      fullDrilldown.summary.developer_mode_live_closeout_external_owner_acceptance_missing_count,
+      0,
+    );
     assert.equal(fullDrilldown.summary.developer_mode_live_closeout_missing_live_ledger_route_count, 1);
     assert.equal(
       fullDrilldown.summary.developer_mode_live_closeout_repo_contract_fixture_not_live_repo_count,

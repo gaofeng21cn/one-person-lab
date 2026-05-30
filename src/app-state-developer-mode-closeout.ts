@@ -28,6 +28,8 @@ export function buildDeveloperModeLiveCloseoutEvidenceSummary() {
       scaleout_followthrough_open_gate_count:
         evidence.summary.scaleout_followthrough_open_gate_count,
       fixture_drill_owner_acceptance_open_count: evidence.summary.fixture_drill_owner_acceptance_open_count,
+      fixture_drill_external_owner_acceptance_missing_count:
+        evidence.summary.fixture_drill_external_owner_acceptance_missing_count,
       external_owner_acceptance_missing_count: evidence.summary.external_owner_acceptance_missing_count,
       forbidden_owner_receipt_write_count: evidence.summary.forbidden_owner_receipt_write_count,
     },

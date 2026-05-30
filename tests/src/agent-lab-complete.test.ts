@@ -383,7 +383,11 @@ test('Agent Lab Developer Mode repair route projects patrol fixes as refs only',
   assert.equal(result.live_closeout_evidence.summary.live_external_owner_acceptance_count, 0);
   assert.equal(result.live_closeout_evidence.summary.repo_contract_fixture_drill_count, 1);
   assert.equal(result.live_closeout_evidence.summary.repo_contract_fixture_not_live_repo_count, 1);
-  assert.equal(result.live_closeout_evidence.summary.external_owner_acceptance_missing_count, 1);
+  assert.equal(result.live_closeout_evidence.summary.external_owner_acceptance_missing_count, 0);
+  assert.equal(
+    result.live_closeout_evidence.summary.fixture_drill_external_owner_acceptance_missing_count,
+    1,
+  );
   assert.equal(result.live_closeout_evidence.summary.fixture_drill_owner_acceptance_open_count, 1);
   assert.equal(result.live_closeout_evidence.summary.external_owner_closeout_refs_ready_count, 1);
   assert.equal(result.live_closeout_evidence.summary.forbidden_owner_receipt_write_count, 0);

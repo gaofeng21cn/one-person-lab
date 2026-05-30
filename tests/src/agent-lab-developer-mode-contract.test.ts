@@ -50,4 +50,14 @@ test('Agent Lab Developer Mode contract requires verified risk-tier promotion re
       .risk_tier_auto_promotion_verify_cli,
     'opl agent-lab risk-tier-promotion verify [--receipt-ref <ref>]',
   );
+  assert.equal(
+    routeSurface.live_closeout_evidence.ledger_intake
+      .external_owner_acceptance_missing_count_excludes_repo_contract_fixture_drills,
+    true,
+  );
+  assert.equal(
+    routeSurface.live_closeout_evidence.ledger_intake
+      .fixture_drill_external_owner_acceptance_missing_count_exposes_fixture_negative_guard,
+    true,
+  );
 });

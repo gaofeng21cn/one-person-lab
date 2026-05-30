@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `current_execution_map`
 State: `active_support`
 Machine boundary: 本文是人读执行地图。机器真相继续归 `contracts/`、source code、CLI/API behavior、runtime ledgers、provider receipts、domain-owned manifests 和真实 workspace / App evidence。
-Date: `2026-05-29`
+Date: `2026-05-30`
 
 ## 当前结论
 
@@ -28,13 +28,14 @@ rtk opl agents default-callers --family-defaults --json
 
 当前 read-model schema 使用嵌套 payload：`framework_readiness.summary`、`runtime app-operator-drilldown` 的 summary、`family_runtime_evidence_worklist.summary`、`standard_domain_agent_conformance.summary` 和 `agent_default_caller_readiness.summary` 是默认摘要入口。新增文档或工具不得假设这些摘要字段永远在顶层。
 
-本轮 fresh 读取的 durable 结论：
+本轮 fresh 读取的 durable 结论（2026-05-30）：
 
 - `standard_domain_agent_conformance.summary` 读为 4 个 repo passed、0 blocked，`structural_conformance_status=passed`，`production_evidence_tail_count=4` 仍单独报告。
 - `agent_default_caller_readiness.summary` 读为 32 个 generated/default caller surfaces、0 blocked、32 个 deletion-evidence worklist，并且 owner/typed-blocker、no-forbidden-write、tombstone/provenance 缺口均为 0。
-- `framework_readiness.summary` 读为 control plane available，framework/stage/pack/compiler hard blocker 为 0，operator actionable attention tail 为 1，且该项是 payload-required；domain blocked refs-only attention 仍按 attention 分组读取。
-- `family_runtime_evidence_worklist.summary` 读为 1 个 open worklist item、1 个 payload-required safe action、0 个 payload-free safe action、1 个 domain-dispatch evidence workorder、0 个 stage receipt freshness workorder，并保持 `domain_ready_authorized=false`、`production_ready_authorized=false`。
-- App/operator drilldown 显示 provider cadence/capability satisfied、domain dispatch 当前 default actionable attempt 为 1、domain physical delete requires owner receipt 且 cannot execute、App release/user-path evidence gate open count 为 0、Codex App runtime evidence gate open count 为 0、OMA production-consumption ready 为 true；这些都只是 refs-only / owner-boundary 读面，不是 production ready verdict。
+- `stages readiness` 读为 13 个 stage admitted、0 blocked、0 hard blocker、23 个 launch warning；warning 只作为 runtime-budget / replay / cohort advisory 读取，不是 domain ready 或 production ready。
+- `framework_readiness.summary` 读为 `framework_control_plane_available_with_operator_attention`，framework/stage/pack/compiler hard blocker 为 0，operator actionable attention tail 为 2，且 2 个均为 payload-required；domain blocked refs-only attention 仍为主要读面，fresh 计数为 evidence envelope open 2、blocked 1132、domain dispatch attention 11、domain blocked attention 1143，provider cadence / capability SLO 均 satisfied。
+- `family_runtime_evidence_worklist.summary` 读为 2 个 open worklist item、2 个 payload-required safe action、0 个 payload-free safe action、0 个 stage receipt freshness workorder、415 个 closed refs-only item；这表示当前又出现可提交 route，payload 仍必须来自 domain/App/live owner 的真实 refs 或 typed blocker，不授权 OPL 自造 owner receipt、typed blocker、owner-chain、no-regression、completion、domain ready 或 production ready。
+- App/operator drilldown 显示 provider cadence/capability satisfied、App release/user-path evidence gate open count 为 0、Codex App runtime evidence gate open count 为 0、Developer Mode live route closeout refs ready 且 scaleout follow-through open gate 为 0、OMA production-consumption ready 为 true；这些都只是 refs-only / owner-boundary 读面，不是 release ready、domain ready 或 production ready verdict。
 
 ## 当前顺序
 

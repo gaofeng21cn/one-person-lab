@@ -713,6 +713,8 @@
         "verified_receipts_can_project_live_route_closeout_refs": true,
         "requires_verified_direct_fix_and_fork_pr_receipts_for_full_live_closeout": true,
         "repo_contract_fixture_not_live_repo_count_exposes_fixture_currentness_tail": true,
+        "external_owner_acceptance_missing_count_excludes_repo_contract_fixture_drills": true,
+        "fixture_drill_external_owner_acceptance_missing_count_exposes_fixture_negative_guard": true,
         "optional_scaleout_payload_refs": [
           "route_repetition_refs",
           "risk_tier_auto_promotion_refs_verified_by_agent_lab_risk_tier_promotion_ledger",

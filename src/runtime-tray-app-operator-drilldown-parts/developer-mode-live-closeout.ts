@@ -267,6 +267,8 @@ export function developerModeLiveCloseoutEvidenceSummary(evidence: JsonRecord) {
       numberValue(summary.repo_contract_fixture_not_live_repo_count),
     external_owner_acceptance_missing_count:
       numberValue(summary.external_owner_acceptance_missing_count),
+    fixture_drill_external_owner_acceptance_missing_count:
+      numberValue(summary.fixture_drill_external_owner_acceptance_missing_count),
     fixture_drill_owner_acceptance_open_count:
       numberValue(summary.fixture_drill_owner_acceptance_open_count),
     external_owner_closeout_refs_ready_count:
@@ -333,6 +335,8 @@ export function buildDeveloperModeLiveCloseoutEvidenceAttention(drilldown: JsonR
     scaleout_followthrough: summary.scaleout_followthrough,
     external_owner_acceptance_missing_count:
       summary.external_owner_acceptance_missing_count,
+    fixture_drill_external_owner_acceptance_missing_count:
+      summary.fixture_drill_external_owner_acceptance_missing_count,
     fixture_drill_owner_acceptance_open_count:
       summary.fixture_drill_owner_acceptance_open_count,
     repo_contract_fixture_not_live_repo_count:

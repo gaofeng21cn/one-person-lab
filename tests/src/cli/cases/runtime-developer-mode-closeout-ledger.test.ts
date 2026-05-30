@@ -152,6 +152,8 @@ test('runtime Developer Mode closeout CLI records and verifies refs-only live cl
       'waiting_for_base_live_route_closeout_refs',
     );
     assert.equal(readModel.summary.fixture_drill_owner_acceptance_open_count, 1);
+    assert.equal(readModel.summary.fixture_drill_external_owner_acceptance_missing_count, 1);
+    assert.equal(readModel.summary.external_owner_acceptance_missing_count, 0);
     assert.equal(readModel.status, 'closeout_refs_incomplete');
     assert.equal(
       readModel.evidence_scope,

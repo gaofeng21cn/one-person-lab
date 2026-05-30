@@ -793,6 +793,11 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
     ...staticCloseoutDrills,
     ...verifiedLedgerReceipts.map(routeForLedgerReceipt),
   ];
+  const liveExternalOwnerAcceptanceMissingDrills = liveCloseoutEvidenceDrills.filter((drill) =>
+    drill.missing_closeout_refs.includes('external_owner_acceptance_ref')
+    && drill.closeout_claim_status !== 'fixture_drill_owner_acceptance_open');
+  const fixtureDrillOwnerAcceptanceOpenDrills = liveCloseoutEvidenceDrills.filter((drill) =>
+    drill.closeout_claim_status === 'fixture_drill_owner_acceptance_open');
   const verifiedDirectFixReceiptCount = verifiedLedgerReceipts.filter((receipt) =>
     receipt.route_decision === 'direct-fix').length;
   const verifiedForkPrReceiptCount = verifiedLedgerReceipts.filter((receipt) =>
@@ -876,10 +881,12 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
       repo_contract_fixture_not_live_repo_count: liveCloseoutEvidenceDrills.filter((drill) =>
         drill.closeout_refs.evidence_source === 'repo_contract_test_fixture'
         && drill.fixture_repo_currentness?.status === 'repo_contract_fixture_not_live_repo').length,
-      external_owner_acceptance_missing_count: liveCloseoutEvidenceDrills.filter((drill) =>
-        drill.missing_closeout_refs.includes('external_owner_acceptance_ref')).length,
-      fixture_drill_owner_acceptance_open_count: liveCloseoutEvidenceDrills.filter((drill) =>
-        drill.closeout_claim_status === 'fixture_drill_owner_acceptance_open').length,
+      external_owner_acceptance_missing_count:
+        liveExternalOwnerAcceptanceMissingDrills.length,
+      fixture_drill_external_owner_acceptance_missing_count:
+        fixtureDrillOwnerAcceptanceOpenDrills.length,
+      fixture_drill_owner_acceptance_open_count:
+        fixtureDrillOwnerAcceptanceOpenDrills.length,
       external_owner_closeout_refs_ready_count: liveCloseoutEvidenceDrills.filter((drill) =>
         drill.closeout_claim_status === 'external_owner_closeout_refs_ready').length,
       forbidden_owner_receipt_write_count: liveCloseoutEvidenceDrills.filter((drill) =>

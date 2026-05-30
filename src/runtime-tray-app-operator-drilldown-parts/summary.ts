@@ -593,6 +593,8 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       developerModeLiveCloseoutSummary.repo_contract_fixture_not_live_repo_count,
     developer_mode_live_closeout_external_owner_acceptance_missing_count:
       developerModeLiveCloseoutSummary.external_owner_acceptance_missing_count,
+    developer_mode_live_closeout_fixture_drill_external_owner_acceptance_missing_count:
+      developerModeLiveCloseoutSummary.fixture_drill_external_owner_acceptance_missing_count,
     developer_mode_live_closeout_forbidden_owner_receipt_write_count:
       developerModeLiveCloseoutSummary.forbidden_owner_receipt_write_count,
     developer_mode_live_route_closeout_refs_ready:
