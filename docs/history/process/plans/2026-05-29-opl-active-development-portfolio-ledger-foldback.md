@@ -9790,6 +9790,144 @@ Next tranche write scope:
 - When the dirty App release/testing lane is safe or explicitly assigned, perform App paragraph-level body governance as recorded in the App repo-local ledger.
 - Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
 
+Date: `2026-05-30 17:32 CST`
+Tranche: `opl-history-runtime-reference-exact-reconcile`
+State: `tranche_verified`
+
+本轮覆盖 `one-person-lab` 当前 exact inventory 中尚未逐字入账的 34 个
+history / support-reference / process-ledger path。目标是关闭 OPL 主仓当前
+README/docs/contracts/support README 口径下的 exact accounting tail，同时确认这些
+文件仍是 history provenance、support reference 或 process ledger，而不是 active
+runtime truth、provider truth、domain truth、current execution queue、readiness oracle
+或 production-ready 证据。本轮不改 active truth、contracts、source 或 tests，不关闭
+OPL series 全局 `/goal`。
+
+Fresh live truth inputs:
+
+- Frozen automation snapshot: `RUN_SNAPSHOT_TS=2026-05-30T09:11:16Z` with OPL
+  main clean/synced and App/MAS dirty lanes preserved outside this tranche.
+- OPL `AGENTS.md`, `TASTE.md`, `docs/status.md`,
+  `docs/active/current-state-vs-ideal-gap.md`,
+  `docs/docs_portfolio_consolidation.md`, process-plan history index and this
+  family coverage ledger.
+- Fresh read models captured under
+  `/tmp/automation-2-run-snapshot-20260530T091116Z/`: `opl framework readiness
+  --family-defaults --json`, `opl agents conformance --family-defaults --json`,
+  `opl agents default-callers --family-defaults --json`, `opl stages readiness
+  --family-defaults --json`, and `opl runtime app-operator-drilldown --detail
+  full --json`.
+- Machine/support refs: `contracts/opl-framework/family-executor-adapter-defaults.json`,
+  `contracts/opl-framework/managed-runtime-three-layer-contract.json`,
+  `contracts/opl-framework/runtime-manager-contract.json`,
+  `contracts/opl-framework/family-runtime-attempt-contract.json`,
+  `contracts/family-orchestration/*.schema.json`, and the current
+  `contracts/family-orchestration/README*.md` support indexes.
+- OPL exact inventory self-check over repo-root `README*`, `docs/**/*.md`,
+  `contracts/README*.md`, `contracts/*/README*.md`, and
+  `python/*/README*.md` returned 198 paths and 34 paths missing from this
+  family ledger before this entry.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | Exact-path role and first-screen lifecycle review of `docs/history/process/plans/2026-05-29-opl-active-development-portfolio-ledger-foldback.md`, `docs/history/process/plans/2026-05-29-opl-series-doc-governance-part-ledger-retirement.md`, `docs/history/process/plans/2026-05-29-opl-series-doc-governance-tranche-ledger.md`, `docs/history/process/plans/2026-05-30-opl-series-doc-governance-ai-first-optimization-ledger.md`, `docs/history/process/plans/2026-05-30-opl-series-doc-governance-current-support-index-ledger.md`, `docs/history/process/plans/2026-05-30-opl-series-doc-governance-current-support-ledger.md`, `docs/history/process/plans/2026-05-30-opl-series-doc-governance-directory-governance-ledger.md`, `docs/history/process/plans/2026-05-30-opl-series-doc-governance-docker-webui-ledger.md`, `docs/history/process/plans/2026-05-30-opl-series-doc-governance-domain-memory-support-ledger.md`, `docs/history/process/plans/2026-05-30-opl-series-doc-governance-fresh-install-ledger.md`, `docs/history/process/plans/2026-05-30-opl-series-doc-governance-memory-reference-ledger.md`, `docs/history/process/plans/2026-05-30-opl-series-doc-governance-operating-index-ledger.md`, `docs/history/process/plans/2026-05-30-opl-series-doc-governance-package-mds-ledger.md`, `docs/history/process/plans/2026-05-30-opl-series-doc-governance-provider-route-guard-ledger.md`, `docs/history/process/plans/2026-05-30-opl-series-doc-governance-quality-details-ledger.md`, `docs/history/process/plans/2026-05-30-opl-series-doc-governance-queuehold-dispatch-tray-ledger.md`, `docs/history/process/plans/2026-05-30-opl-series-doc-governance-stage-led-roadmap-ledger.md`, `docs/history/process/plans/2026-05-30-opl-series-doc-governance-structure-advisory-ledger.md`, `docs/history/process/plans/2026-05-30-opl-series-doc-governance-test-lane-ledger.md`, `docs/history/runtime-substrate/family-lightweight-direct-entry-rollout-board.md`, `docs/history/runtime-substrate/family-product-entry-and-domain-handoff-architecture.md`, `docs/history/runtime-substrate/hermes-agent-runtime-substrate-benchmark.md`, `docs/history/runtime-substrate/host-agent-runtime-contract.md`, `docs/history/runtime-substrate/managed-runtime-migration-readiness-checklist.md`, `docs/history/runtime-substrate/mas-top-level-cutover-board.md`, `docs/history/runtime-substrate/opl-product-entry-and-hermes-kernel-integration.md`, `docs/history/runtime-substrate/opl-vertical-online-agent-platform-roadmap.md`, `docs/references/convergence-governance/readme-narrative-refresh-2026-05-30.md`, `docs/references/runtime-substrate/family-executor-adapter-defaults.md`, `docs/references/runtime-substrate/family-orchestration-contract-absorb-crewai.md`, `docs/references/runtime-substrate/family-runtime-attempt-contract.md`, `docs/references/runtime-substrate/hermes-agent-truth-reset-and-target-state.md`, `docs/references/runtime-substrate/opl-managed-runtime-three-layer-contract.md`, and `docs/references/runtime-substrate/opl-runtime-manager-target.md`; support read of live framework readiness, agents conformance/default-callers, stage readiness, App/operator drilldown and related machine contracts listed above. | `docs/history/process/plans/2026-05-29-opl-active-development-portfolio-ledger-foldback.md` |
+
+Fresh semantic result:
+
+- All 34 reviewed paths carry owner, purpose, state and machine-boundary signals.
+- The 19 process-ledger paths are history/process provenance only. They do not
+  define active truth, current work queues, branch/worktree cleanup authority or
+  readiness claims.
+- The seven `docs/history/runtime-substrate/*.md` bodies are correctly
+  tombstoned as early Hermes/Gateway/frontdoor/product-entry/managed-runtime
+  migration provenance. Their current owner points back to the stage-led OPL
+  framework, Temporal provider support, runtime naming/boundary contract, core
+  five and live read-models.
+- The seven runtime/convergence support references remain valid support
+  references: executor adapter defaults, family orchestration contract
+  absorption, family runtime attempt semantics, Hermes naming reset, managed
+  runtime three-layer owner split, Runtime Manager target, and README narrative
+  refresh comparison. Each delegates machine truth to JSON/schema/source/tests
+  and fresh CLI/read-model output.
+- Fresh `opl agents conformance --family-defaults --json` read `status=passed`,
+  `passed_count=4`, `blocked_count=0`; fresh default-callers read
+  `generated_default_caller_surface_count=32`, `blocked_surface_count=0` and
+  zero missing domain-owner / no-forbidden-write / tombstone refs. This remains
+  structural/default-caller evidence only, not domain ready or production ready.
+- Fresh `opl stages readiness --family-defaults --json` read
+  `hard_blocker_count=0`, `blocked_stage_count=0`, `can_claim_domain_ready=false`
+  and `can_claim_production_ready=false`; it remains aggregate readiness
+  projection, not a stage execution or domain authority surface.
+- Fresh framework readiness and App/operator drilldown preserve the same
+  authority boundary: OPL can project refs and operator attention, but cannot
+  write domain truth, read memory/artifact body, authorize artifact mutation,
+  quality/export verdict, domain ready or production ready.
+
+Archived / tombstoned / deleted docs:
+
+- none. The reviewed files already have legitimate roles as process history,
+  runtime-substrate tombstone/provenance, or support reference.
+
+Unreviewed docs:
+
+- `one-person-lab`: the scoped exact inventory should read
+  `missing_by_exact_string=0` after this entry is counted. Future README/docs,
+  contract README, nested package/support README additions, or substantive
+  source/contract changes that reopen a doc section require a new coverage
+  entry.
+- `med-autoscience`: frozen snapshot has dirty source/docs/test state and a
+  dirty worktree; do not absorb or rewrite until the owner lane is safe or
+  explicitly assigned.
+- `one-person-lab-app`: frozen snapshot has dirty untracked `.playwright-mcp/`
+  and a dirty active worktree; full paragraph-level App docs governance remains
+  open until release / GUI lanes are safe or explicitly assigned.
+- `med-autogrant`, `redcube-ai`, and `opl-meta-agent`: previous exact/full
+  reconcile coverage remains as recorded unless later edits reopen a section.
+
+Remaining stale / retire candidates:
+
+- Any future process ledger or support reference prose that becomes an active
+  execution queue, current runtime truth, default provider/executor truth,
+  branch/worktree deletion authority, App release-ready claim, domain ready,
+  production ready, quality/export verdict, artifact authority, memory body
+  authority or domain owner receipt is stale pollution.
+- Any future Hermes/Gateway/frontdoor/direct-entry wording outside history,
+  diagnostic, fixture, explicit non-default executor adapter, or negative-guard
+  context must be retired or rewritten to the current Temporal/provider-backed,
+  Codex-default stage-led framework boundary.
+- Any future CrewAI wording that promotes CrewAI to OPL runtime dependency,
+  executor owner, memory owner, planner, domain authority or default handoff
+  route is stale pollution; only contract pattern absorption remains active.
+
+Worktree / branch cleanup:
+
+- No OPL worktree or branch was created for this tranche. OPL main remained
+  clean before edit. Snapshot external MAS/App dirty lanes and non-codex
+  remote/external branches were preserved.
+
+Verification before absorb:
+
+- Re-run OPL scoped exact inventory and require `missing_by_exact_string=0`.
+- `git diff --check`.
+- Strict conflict-marker scan over README/docs/contracts Markdown.
+- OPL Doc Governance doctor active truth pass / no findings.
+- No source/runtime tests are required because this tranche changes only a
+  narrative history coverage ledger.
+
+Next tranche write scope:
+
+- Close this OPL history/runtime-reference exact reconcile by verification,
+  commit and automation-memory foldback.
+- Next run should start from a fresh six-repo snapshot. If App/MAS remain dirty,
+  continue only newly reopened OPL/MAG/RCA/OMA exact inventory or support README
+  accounting items that do not touch external owner lanes.
+- When App release / GUI dirty lanes are safe or explicitly assigned, perform
+  App paragraph-level body governance as recorded in the App repo-local ledger.
+- Keep the global `/goal` active until all six repos' `README*` and
+  `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either
+  closed or carried into executable next-round Agent prompts.
+
 Date: `2026-05-28 21:52 CST`
 Tranche: `mas-domain-dispatch-typed-blocker-receipt`
 State: `tranche_verified`
