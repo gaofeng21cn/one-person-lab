@@ -31,17 +31,31 @@ export interface ResearchEvidencePackMissingRef {
   status: string | null;
 }
 
+export interface ResearchEvidencePackRef {
+  ref: string;
+  source_surface: string;
+  ref_id: string | null;
+  role: string | null;
+  ref_kind: string | null;
+  status: string | null;
+  required: boolean | null;
+  checksum_status: string | null;
+  restore_status: string | null;
+}
+
 export interface ResearchEvidencePackSummary {
   surface_kind: 'research_evidence_pack_summary';
   version: 'research_evidence_pack_summary.v1';
   pack_id: string | null;
   target_domain_id: string | null;
   study_id: string | null;
+  pack_refs: ResearchEvidencePackRef[];
   missing_refs: ResearchEvidencePackMissingRef[];
   checksum_status: Record<`${ChecksumStatus}_count`, number>;
   restore_status: Record<`${RestoreStatus}_count`, number>;
   failed_path_count: number;
   negative_result_count: number;
+  decision_trace_refs: string[];
   next_owner_refs: string[];
   stage_replay_readiness: {
     stage_count: number;
@@ -94,6 +108,9 @@ function recordList(value: unknown) {
 }
 
 function stringList(value: unknown) {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return [value];
+  }
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
     : [];
@@ -215,6 +232,126 @@ function unique(values: Array<string | null>) {
   return [...new Set(values.filter((value): value is string => Boolean(value)))];
 }
 
+function uniqueRefs(refs: ResearchEvidencePackRef[]) {
+  const seen = new Set<string>();
+  return refs.filter((entry) => {
+    const key = `${entry.source_surface}\0${entry.ref}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function refSummary(sourceSurface: string, ref: JsonRecord): ResearchEvidencePackRef | null {
+  const refValue = optionalString(ref.ref);
+  if (!refValue) {
+    return null;
+  }
+  return {
+    ref: refValue,
+    source_surface: sourceSurface,
+    ref_id: optionalString(ref.ref_id),
+    role: optionalString(ref.role),
+    ref_kind: optionalString(ref.ref_kind),
+    status: optionalString(ref.status),
+    required: typeof ref.required === 'boolean' ? ref.required : null,
+    checksum_status: optionalString(ref.checksum_status),
+    restore_status: optionalString(ref.restore_status),
+  };
+}
+
+function scalarRefSummaries(sourceSurface: string, values: unknown, role: string) {
+  return stringList(values).map((ref) => ({
+    ref,
+    source_surface: sourceSurface,
+    ref_id: null,
+    role,
+    ref_kind: 'logical_ref',
+    status: null,
+    required: null,
+    checksum_status: null,
+    restore_status: null,
+  }));
+}
+
+function packRefs(pack: JsonRecord, refs: Array<{ source_surface: string; ref: JsonRecord }>) {
+  const runManifest = record(pack.run_manifest);
+  const ledger = record(pack.negative_failed_path_ledger);
+  const decisions = record(pack.decision_trace);
+  const artifactLineageGraph = record(pack.artifact_lineage_graph);
+  const reproducibilityBundle = record(pack.reproducibility_bundle);
+  const replayStageRefs = recordList(runManifest.replay_stages).flatMap((entry) => [
+    ...scalarRefSummaries(
+      'research_run_manifest.replay_stages.append_only_event_log_refs',
+      entry.append_only_event_log_refs,
+      'append_only_event_log',
+    ),
+    ...scalarRefSummaries(
+      'research_run_manifest.replay_stages.attempt_ledger_refs',
+      entry.attempt_ledger_refs,
+      'attempt_ledger',
+    ),
+    ...scalarRefSummaries(
+      'research_run_manifest.replay_stages.recorded_runtime_event_refs',
+      entry.recorded_runtime_event_refs,
+      'recorded_runtime_event',
+    ),
+    ...scalarRefSummaries(
+      'research_run_manifest.replay_stages.closeout_receipt_refs',
+      entry.closeout_receipt_refs,
+      'closeout_receipt',
+    ),
+  ]);
+  const ledgerRefs = recordList(ledger.failed_paths).flatMap((entry) => [
+    ...scalarRefSummaries(
+      'negative_failed_path_ledger.failed_paths.failed_path_ref',
+      optionalString(entry.failed_path_ref),
+      'failed_path',
+    ),
+    ...scalarRefSummaries(
+      'negative_failed_path_ledger.failed_paths.owner_ref',
+      optionalString(entry.owner_ref),
+      'owner',
+    ),
+  ]);
+  const negativeResultRefs = recordList(ledger.negative_results).flatMap((entry) => [
+    ...scalarRefSummaries(
+      'negative_failed_path_ledger.negative_results.result_ref',
+      optionalString(entry.result_ref),
+      'negative_result',
+    ),
+    ...scalarRefSummaries(
+      'negative_failed_path_ledger.negative_results.owner_ref',
+      optionalString(entry.owner_ref),
+      'owner',
+    ),
+  ]);
+  const decisionRefs = recordList(decisions.decisions).flatMap((entry) => [
+    ...scalarRefSummaries('decision_trace.decisions.decision_ref', optionalString(entry.decision_ref), 'decision'),
+    ...scalarRefSummaries('decision_trace.decisions.next_owner_ref', optionalString(entry.next_owner_ref), 'next_owner'),
+  ]);
+  const lineageRefs = recordList(artifactLineageGraph.lineage_edges).flatMap((entry) => [
+    ...scalarRefSummaries('artifact_lineage_graph.lineage_edges.from_ref', optionalString(entry.from_ref), 'lineage_from'),
+    ...scalarRefSummaries('artifact_lineage_graph.lineage_edges.to_ref', optionalString(entry.to_ref), 'lineage_to'),
+    ...scalarRefSummaries('artifact_lineage_graph.lineage_edges.transform_ref', optionalString(entry.transform_ref), 'lineage_transform'),
+  ]);
+  return uniqueRefs([
+    ...refs.map(({ source_surface, ref }) => refSummary(source_surface, ref)).filter((entry): entry is ResearchEvidencePackRef => Boolean(entry)),
+    ...replayStageRefs,
+    ...ledgerRefs,
+    ...negativeResultRefs,
+    ...decisionRefs,
+    ...lineageRefs,
+    ...scalarRefSummaries('decision_trace.next_owner_refs', decisions.next_owner_refs, 'next_owner'),
+    ...scalarRefSummaries('reproducibility_bundle.environment_refs', reproducibilityBundle.environment_refs, 'environment'),
+    ...scalarRefSummaries('reproducibility_bundle.dependency_lock_refs', reproducibilityBundle.dependency_lock_refs, 'dependency_lock'),
+    ...scalarRefSummaries('reproducibility_bundle.replay_command_refs', reproducibilityBundle.replay_command_refs, 'replay_command'),
+    ...scalarRefSummaries('reproducibility_bundle.checksum_manifest_refs', reproducibilityBundle.checksum_manifest_refs, 'checksum_manifest'),
+  ]);
+}
+
 function checksumCounters(refs: Array<{ ref: JsonRecord }>): Record<`${ChecksumStatus}_count`, number> {
   const counts = {
     verified_count: 0,
@@ -313,6 +450,7 @@ export function summarizeResearchEvidencePack(value: unknown): ResearchEvidenceP
   const ledger = record(pack.negative_failed_path_ledger);
   const decisions = record(pack.decision_trace);
   const decisionOwnerRefs = recordList(decisions.decisions).map((decision) => optionalString(decision.next_owner_ref));
+  const decisionTraceRefs = recordList(decisions.decisions).map((decision) => optionalString(decision.decision_ref));
 
   return {
     surface_kind: 'research_evidence_pack_summary',
@@ -320,11 +458,13 @@ export function summarizeResearchEvidencePack(value: unknown): ResearchEvidenceP
     pack_id: optionalString(pack.pack_id),
     target_domain_id: optionalString(pack.target_domain_id),
     study_id: optionalString(pack.study_id),
+    pack_refs: packRefs(pack, refs),
     missing_refs: missingRefs(refs),
     checksum_status: checksumCounters(refs),
     restore_status: restoreCounters(refs),
     failed_path_count: recordList(ledger.failed_paths).length,
     negative_result_count: recordList(ledger.negative_results).length,
+    decision_trace_refs: unique(decisionTraceRefs),
     next_owner_refs: unique([...stringList(decisions.next_owner_refs), ...decisionOwnerRefs]),
     stage_replay_readiness: stageReplayReadiness(pack),
     authority_boundary: { ...AUTHORITY_BOUNDARY },

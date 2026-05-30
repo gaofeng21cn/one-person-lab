@@ -222,6 +222,14 @@ test('research evidence pack summary reports refs, checksums, restore, negative 
 
   assert.equal(summary.surface_kind, 'research_evidence_pack_summary');
   assert.equal(summary.pack_id, 'pack:dm002:stage-write');
+  assert.equal(summary.pack_refs.some((entry: { ref: string }) =>
+    entry.ref === 'studies/DM002/data/cohort.parquet'), true);
+  assert.equal(summary.pack_refs.some((entry: { ref: string }) =>
+    entry.ref === 'decision:dm002/write-closeout'), true);
+  assert.equal(summary.pack_refs.some((entry: { ref: string }) =>
+    entry.ref === 'event-log:dm002/write'), true);
+  assert.equal(summary.pack_refs.some((entry: { ref: string }) =>
+    entry.ref === 'analysis-script:table1'), true);
   assert.deepEqual(summary.missing_refs.map((entry) => entry.ref_id), [
     'artifact:table1',
   ]);
@@ -240,6 +248,7 @@ test('research evidence pack summary reports refs, checksums, restore, negative 
   });
   assert.equal(summary.failed_path_count, 1);
   assert.equal(summary.negative_result_count, 1);
+  assert.deepEqual(summary.decision_trace_refs, ['decision:dm002/write-closeout']);
   assert.deepEqual(summary.next_owner_refs, ['owner:mas-review']);
   assert.deepEqual(summary.stage_replay_readiness, {
     stage_count: 2,

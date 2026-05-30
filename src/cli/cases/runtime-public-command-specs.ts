@@ -309,5 +309,14 @@ export function buildPublicRuntimeCommandSpecs(
       examples: ['opl runtime index'],
       group: 'runtime',
     }),
+    'runtime research-evidence-pack summary':
+      cloneCommandSpec(commandSpecs['runtime research-evidence-pack summary'], {
+        usage:
+          'opl runtime research-evidence-pack summary (--payload <json>|--payload-file <path>)',
+        examples: [
+          'opl runtime research-evidence-pack summary --payload-file research-evidence-pack.json',
+        ],
+        group: 'runtime',
+      }),
   };
 }
