@@ -566,6 +566,9 @@ test('standard domain-agent scaffold contract forbids domain-owned generic frame
     'references',
     'history',
   ]);
+  const primitiveIds = scaffold.opl_owned_generic_primitives.map(
+    (primitive: { primitive_id: string }) => primitive.primitive_id,
+  );
   for (const primitive of [
     'scheduler_supervision_cadence',
     'provider_slo_and_wakeup_transport',
@@ -578,7 +581,7 @@ test('standard domain-agent scaffold contract forbids domain-owned generic frame
     'observability_repair_projection',
     'pack_compiler_generated_surface',
   ]) {
-    assert.ok(scaffold.opl_owned_generic_primitives.includes(primitive));
+    assert.ok(primitiveIds.includes(primitive));
   }
   for (const forbiddenRole of [
     'generic_scheduler_owner',
@@ -597,13 +600,16 @@ test('standard domain-agent scaffold contract forbids domain-owned generic frame
   assert.ok(scaffold.generated_surface_contract.surfaces.includes('skill'));
   assert.ok(scaffold.required_contract_surfaces.includes('pack_compiler_input'));
   assert.ok(scaffold.required_contract_surfaces.includes('generated_surface_handoff'));
+  assert.ok(scaffold.required_contract_surfaces.includes('foundry_agent_series_contract'));
+  assert.ok(scaffold.required_contract_surfaces.includes('progress_delta_policy'));
+  assert.ok(scaffold.required_contract_surfaces.includes('typed_blocker_lineage_policy'));
   assert.ok(scaffold.required_contract_surfaces.includes('workspace_lifecycle_policy'));
   assert.ok(scaffold.domain_retained_thin_surfaces_deprecated.includes('domain_truth'));
   assert.ok(scaffold.domain_retained_thin_surfaces_deprecated.includes(
     'domain_handler_target_or_opaque_ref_projection_output',
   ));
   assert.equal(scaffold.domain_retained_thin_surfaces_deprecated.includes('sidecar_or_projection_adapter'), false);
-  assert.ok(scaffold.retirement_gate_required_evidence.includes('no_active_default_caller'));
+  assert.ok(scaffold.retirement_gate.required_evidence.includes('no_active_default_caller'));
   assert.ok(scaffold.required_verification.includes('git_diff_check'));
   assert.ok(scaffold.required_verification.includes('agent_pack_required_paths_resolve'));
   assert.ok(scaffold.required_verification.includes('stage_prompt_skill_knowledge_quality_gate_refs_resolve'));
@@ -652,7 +658,17 @@ test('standard domain-agent scaffold contract forbids domain-owned generic frame
     'user_stage_log_requirement:domain provides human-readable stage semantics; OPL projects timing usage refs only',
     'stage_contract.requires and stage_contract.ensures',
     'stage_contract.expected_receipt_refs',
+    'stage_contract.user_stage_log_contract',
+    'stage_contract.progress_delta_policy',
+    'stage_contract.typed_blocker_lineage_policy',
     'independent_gate_policy:execution_review_separation',
+  ]);
+  assert.equal(scaffold.foundry_agent_series_contract.surface_kind, 'opl_foundry_agent_series_contract');
+  assert.deepEqual(scaffold.foundry_agent_series_contract.shared_progress_projection_fields, [
+    'progress_delta_classification',
+    'deliverable_progress_delta',
+    'platform_repair_delta',
+    'next_forced_delta',
   ]);
   assert.equal(scaffold.default_runtime_policy.surface_kind, 'opl_standard_agent_default_runtime_policy');
   assert.equal(scaffold.default_runtime_policy.default_runtime_path, 'opl_temporal_hosted_autonomous');

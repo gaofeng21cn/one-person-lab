@@ -16,6 +16,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 标准 `user_stage_log_contract` / `stage_progress_log` 扩展 `progress_delta_classification`、`deliverable_progress_delta`、`platform_repair_delta`，分类固定为 `deliverable_progress`、`platform_repair`、`mixed`、`typed_blocker`、`human_gate`、`stop_loss`。
 - `effective_current_context.v1` 成为 owner route、source fingerprint、stage packet、workspace/session identity、latest closeout、running attempt 和 superseded lineage 的唯一 shared currentness packet。
 - `family-stall-lineage.v1` 成为 repeated blocker 的 shared lineage/budget surface，并要求暴露 `next_forced_delta`、escalation owner 与 terminal flag。
+- `contracts/opl-framework/foundry-agent-series-contract.json` 成为 Foundry Agent 系列化顶层合同；标准 scaffold 和 `opl agents conformance` 要求 domain repo 暴露 `contracts/foundry_agent_series.json`，把 identity、stage authority、progress/currentness/closeout packet、typed blocker lineage 和 App projection 边界统一到同一机器面。
 - MAS/MAG/RCA/OMA 可以保留 paper/grant/visual/target-agent domain alias，但 alias 只映射到 OPL generic deliverable/platform delta；App 只消费 shared projection，不读取 domain artifact/body，也不新增 truth authority。
 - platform repair、projection hygiene、currentness 修复、refs-only ledger 与 typed-blocker accounting 必须单独列账，不能显示成交付物实质进展。
 

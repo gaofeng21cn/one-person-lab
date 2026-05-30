@@ -39,15 +39,15 @@ Fresh explicit command:
 npm run --silent family:structure-advisory -- --repo one-person-lab=/Users/gaofeng/workspace/one-person-lab --format=json
 ```
 
-Fresh readout at `2026-05-29T17:53:42Z`:
+Fresh readout at `2026-05-30T01:20:00Z`:
 
 - `advisory_only`: `true`
-- `tracked_files`: `1019`
-- `code_files_scanned`: `755`
+- `tracked_files`: `1043`
+- `code_files_scanned`: `763`
 - `missing_verify_entry`: `false`
-- `needs_design_pass`: `9`
+- `needs_design_pass`: `13`
 - `mechanical_residue`: `0`
-- `public_surface_risk`: `3`
+- `public_surface_risk`: `4`
 
 ### one-person-lab
 
@@ -61,11 +61,15 @@ needs_design_pass:
 
 - `src/runtime-tray-app-operator-drilldown.ts`
 - `tests/src/agent-lab.test.ts`
+- `src/standard-domain-agent-scaffold.ts`
 - `tests/src/cli/cases/runtime-app-operator-drilldown.test.ts`
 - `tests/src/cli/cases/family-runtime.test.ts`
 - `src/family-runtime-stage-attempts.ts`
 - `tests/src/family-runtime-codex-stage-runner.test.ts`
+- `tests/src/cli/cases/domain-pack-compiler.test.ts`
+- `src/app-state.ts`
 - `src/agent-lab-complete.ts`
+- `tests/src/cli/cases/workspace-domain.stages.test.ts`
 - `src/runtime-tray-app-operator-drilldown-parts/app-release-user-path.ts`
 - `src/runtime-tray-app-operator-drilldown-parts/detail-view.ts`
 
@@ -83,6 +87,7 @@ mechanical_residue:
 public_surface_risk:
 
 - `contracts/family-orchestration/family-product-entry-manifest-v2.schema.json`
+- `contracts/opl-framework/standard-domain-agent-skeleton-contract.json`
 - `contracts/family-orchestration/family-stage-proof-bundle.schema.json`
 - `contracts/opl-framework/agent-lab-contract.json`
 

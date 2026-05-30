@@ -275,6 +275,56 @@ export const STANDARD_TYPED_BLOCKER_LINEAGE_POLICY = {
   },
 } as const;
 
+export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
+  surface_kind: 'opl_foundry_agent_series_contract',
+  version: 'foundry-agent-series.v1',
+  owner: 'one-person-lab',
+  product_layer: 'foundry_agent',
+  product_model: 'OPL Framework -> One Person Lab App -> Foundry Agents',
+  standard_agent_requirement:
+    'foundry_agents_share_identity_stage_authority_progress_currentness_closeout_and_app_projection_packets',
+  required_identity_fields: [
+    'domain_id',
+    'foundry_agent_id',
+    'product_layer',
+    'domain_label',
+    'authority_owner',
+    'stage_control_plane_ref',
+  ],
+  required_stage_packets: [
+    'user_stage_log_contract',
+    'progress_delta_policy',
+    'typed_blocker_lineage_policy',
+    'effective_current_context',
+    'owner_receipt_or_typed_blocker_closeout',
+  ],
+  shared_progress_projection_fields: [
+    'progress_delta_classification',
+    'deliverable_progress_delta',
+    'platform_repair_delta',
+    'next_forced_delta',
+  ],
+  domain_adapter_policy: {
+    domain_specific_aliases_only: true,
+    no_parallel_progress_schema: true,
+    no_parallel_blocker_lineage_schema: true,
+    no_domain_runtime_fork: true,
+  },
+  app_projection_policy: {
+    app_consumes_shared_progress_projection_only: true,
+    app_can_read_domain_body: false,
+    app_can_write_domain_truth: false,
+    app_can_claim_quality_or_export: false,
+    display_policy: 'classification_only_no_domain_artifact_body',
+  },
+  authority_boundary: {
+    opl_owns_series_contract: true,
+    domain_owns_truth_quality_artifact_memory_and_receipts: true,
+    app_owns_display_and_user_action_shell: true,
+    generated_surface_can_claim_domain_ready: false,
+  },
+} as const;
+
 export const STANDARD_USER_STAGE_LOG_CONTRACT = {
   surface_kind: 'opl_standard_agent_user_stage_log_contract',
   version: 'standard-user-stage-log.v1',
@@ -350,6 +400,7 @@ export const REQUIRED_CONTRACT_SURFACES = [
   'domain_memory_descriptor_locator',
   'artifact_locator_contract',
   'owner_receipt_contract',
+  'foundry_agent_series_contract',
   'user_stage_log_contract',
   'progress_delta_policy',
   'typed_blocker_lineage_policy',
@@ -512,6 +563,7 @@ export const AGENT_PACK_CONTRACT = {
   user_stage_log_contract: STANDARD_USER_STAGE_LOG_CONTRACT,
   progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
   typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
+  foundry_agent_series_contract: STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT,
   conformance_version: STANDARD_STAGE_PACK_CONFORMANCE_VERSION,
   validator: 'opl agents scaffold --validate <repo-dir>',
   empty_agent_directory_policy: 'blocked',

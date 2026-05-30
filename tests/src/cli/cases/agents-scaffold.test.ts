@@ -102,6 +102,10 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     true,
   );
   assert.equal(
+    scaffold.required_contract_surfaces.includes('foundry_agent_series_contract'),
+    true,
+  );
+  assert.equal(
     scaffold.required_verification.includes('user_stage_log_semantics_or_typed_blocker'),
     true,
   );
@@ -132,6 +136,24 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     human_gate_or_stop_loss_after_repeat_count: 3,
   });
   assert.equal(
+    scaffold.foundry_agent_series_contract.surface_kind,
+    'opl_foundry_agent_series_contract',
+  );
+  assert.deepEqual(scaffold.foundry_agent_series_contract.shared_progress_projection_fields, [
+    'progress_delta_classification',
+    'deliverable_progress_delta',
+    'platform_repair_delta',
+    'next_forced_delta',
+  ]);
+  assert.equal(
+    scaffold.foundry_agent_series_contract.domain_adapter_policy.no_parallel_progress_schema,
+    true,
+  );
+  assert.equal(
+    scaffold.foundry_agent_series_contract.app_projection_policy.app_consumes_shared_progress_projection_only,
+    true,
+  );
+  assert.equal(
     scaffold.agent_pack_contract.stage_ref_requirements.includes(
       'selected_executor:codex_cli default binding or explicit non-default executor binding',
     ),
@@ -142,6 +164,10 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
       'user_stage_log_requirement:domain provides human-readable stage semantics; OPL projects timing usage refs only',
     ),
     true,
+  );
+  assert.equal(
+    scaffold.agent_pack_contract.foundry_agent_series_contract.version,
+    'foundry-agent-series.v1',
   );
   assert.deepEqual(scaffold.pack_compiler_contract.required_source_refs, [
     'stage_graph_source_ref',
@@ -331,6 +357,7 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       false,
     );
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/domain_descriptor.json')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'contracts/foundry_agent_series.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/pack_compiler_input.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/generated_surface_handoff.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/functional_privatization_audit.json')), true);
@@ -352,7 +379,26 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       fs.readFileSync(path.join(targetDir, 'contracts/domain_descriptor.json'), 'utf8'),
     );
     assert.equal(descriptor.domain_id, 'award-foundry');
+    assert.equal(
+      descriptor.standard_contract_refs.foundry_agent_series,
+      'contracts/foundry_agent_series.json',
+    );
     assert.equal(descriptor.authority_boundary.opl_can_write_domain_truth, false);
+    const foundryAgentSeries = JSON.parse(
+      fs.readFileSync(path.join(targetDir, 'contracts/foundry_agent_series.json'), 'utf8'),
+    );
+    assert.equal(foundryAgentSeries.surface_kind, 'opl_foundry_agent_series_contract');
+    assert.equal(foundryAgentSeries.version, 'foundry-agent-series.v1');
+    assert.equal(foundryAgentSeries.domain_id, 'award-foundry');
+    assert.equal(foundryAgentSeries.foundry_agent_id, 'award-foundry');
+    assert.equal(foundryAgentSeries.authority_owner, 'award-foundry');
+    assert.equal(foundryAgentSeries.stage_control_plane_ref, 'contracts/stage_control_plane.json');
+    assert.equal(foundryAgentSeries.domain_adapter_policy.no_parallel_progress_schema, true);
+    assert.equal(foundryAgentSeries.domain_adapter_policy.no_parallel_blocker_lineage_schema, true);
+    assert.equal(
+      foundryAgentSeries.app_projection_policy.app_consumes_shared_progress_projection_only,
+      true,
+    );
     const packCompilerInput = JSON.parse(
       fs.readFileSync(path.join(targetDir, 'contracts/pack_compiler_input.json'), 'utf8'),
     );
@@ -564,6 +610,9 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(validated.validation.user_stage_log_validation.status, 'passed');
     assert.equal(validated.validation.user_stage_log_validation.required_for_standard_agent, true);
     assert.deepEqual(validated.validation.user_stage_log_validation.blockers, []);
+    assert.equal(validated.validation.foundry_agent_series_validation.status, 'passed');
+    assert.equal(validated.validation.foundry_agent_series_validation.required_for_standard_agent, true);
+    assert.deepEqual(validated.validation.foundry_agent_series_validation.blockers, []);
     assert.equal(validated.validation.stage_pack_v2_validation.status, 'passed');
     assert.equal(validated.validation.stage_pack_v2_validation.required_for_repo, true);
     assert.equal(
@@ -866,6 +915,7 @@ test('agents scaffold validation blocks generated skeletons missing stage pack v
     const packCompilerInput = JSON.parse(fs.readFileSync(packCompilerPath, 'utf8'));
     delete packCompilerInput.source_refs.executor_policy_source_ref;
     fs.writeFileSync(packCompilerPath, `${JSON.stringify(packCompilerInput, null, 2)}\n`);
+    fs.rmSync(path.join(targetDir, 'contracts/foundry_agent_series.json'));
 
     const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
     assert.equal(validated.mode, 'validate');
@@ -873,6 +923,7 @@ test('agents scaffold validation blocks generated skeletons missing stage pack v
     assert.equal(validated.validation.status, 'blocked');
     assert.equal(validated.validation.stage_pack_v2_validation.status, 'blocked');
     assert.equal(validated.validation.user_stage_log_validation.status, 'blocked');
+    assert.equal(validated.validation.foundry_agent_series_validation.status, 'blocked');
     assert.equal(validated.validation.stage_pack_v2_validation.required_for_repo, true);
     assert.equal(
       validated.validation.blockers.includes('stage_pack_v2_plane_version_missing'),
@@ -904,6 +955,14 @@ test('agents scaffold validation blocks generated skeletons missing stage pack v
     );
     assert.equal(
       validated.validation.blockers.includes('stage_typed_blocker_lineage_policy_missing:domain_intake'),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes('missing_contract:contracts/foundry_agent_series.json'),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes('foundry_agent_series_contract_missing_or_invalid'),
       true,
     );
   } finally {

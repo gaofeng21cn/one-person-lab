@@ -9,6 +9,7 @@ import {
   PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY,
   SCAFFOLD_MARKER,
   STARTER_STAGE_ID,
+  STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT,
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_STAGE_PACK_CONFORMANCE_VERSION,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
@@ -87,6 +88,24 @@ function generatedSurfaceHandoffSurfaces() {
       target_role: 'opl_generated_functional_harness_cases',
     },
   ];
+}
+
+function foundryAgentSeriesContract(domainId: string, domainLabel: string) {
+  return {
+    ...STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT,
+    domain_id: domainId,
+    foundry_agent_id: domainId,
+    domain_label: domainLabel,
+    domain_aliases: [domainId],
+    authority_owner: domainId,
+    stage_control_plane_ref: 'contracts/stage_control_plane.json',
+    stage_control_plane_target_domain_id: domainId,
+    app_projection_ref: 'contracts/generated_surface_handoff.json#/product_entry',
+    domain_progress_aliases: {
+      deliverable: ['deliverable_progress_delta'],
+      platform: ['platform_repair_delta'],
+    },
+  };
 }
 
 function starterAction(domainId: string) {
@@ -320,6 +339,12 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
         domain_id: domainId,
         domain_label: domainLabel,
         marker: SCAFFOLD_MARKER,
+        standard_contract_refs: {
+          foundry_agent_series: 'contracts/foundry_agent_series.json',
+          stage_control_plane: 'contracts/stage_control_plane.json',
+          pack_compiler_input: 'contracts/pack_compiler_input.json',
+          generated_surface_handoff: 'contracts/generated_surface_handoff.json',
+        },
         authority_boundary: {
           opl_can_write_domain_truth: false,
           opl_can_write_memory_body: false,
@@ -327,6 +352,10 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
           domain_owns_truth_quality_artifact_memory_and_receipts: true,
         },
       }),
+    },
+    {
+      path: 'contracts/foundry_agent_series.json',
+      content: json(foundryAgentSeriesContract(domainId, domainLabel)),
     },
     {
       path: 'contracts/pack_compiler_input.json',
