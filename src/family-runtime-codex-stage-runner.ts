@@ -18,6 +18,7 @@ import {
   type StageAttemptExecutorPolicy,
 } from './agent-executor.ts';
 import {
+  DEFAULT_CODEX_STAGE_RUNNER_COMMAND_NO_PROGRESS_TIMEOUT_MS,
   DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
   DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
 } from './family-runtime-temporal-constants.ts';
@@ -96,8 +97,22 @@ type CodexStageRunnerProcessOutputSummary = {
   exit_code: number;
   final_message_chars: number;
   stderr_tail: string[];
-  timeout_reason?: 'total_timeout' | 'no_output_timeout' | 'unsupported_tool_protocol' | 'activity_cancelled';
+  timeout_reason?:
+    | 'total_timeout'
+    | 'no_output_timeout'
+    | 'command_no_progress_timeout'
+    | 'unsupported_tool_protocol'
+    | 'activity_cancelled';
   no_output_timeout_ms?: number | null;
+  command_no_progress_timeout_ms?: number | null;
+  active_command?: {
+    tool_call_id: string;
+    title: string;
+    status: 'pending' | 'in_progress';
+    started_at: string;
+    last_output_at: string | null;
+    output_chars: number;
+  };
   blocked_reason?: string;
   pending_function_call_count?: number;
   function_call_names?: string[];
@@ -661,9 +676,14 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     input.noOutputTimeoutMs ?? process.env.OPL_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
     DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
   );
+  const commandNoProgressTimeoutMs = normalizeTimeoutMs(
+    process.env.OPL_CODEX_STAGE_RUNNER_COMMAND_NO_PROGRESS_TIMEOUT_MS,
+    DEFAULT_CODEX_STAGE_RUNNER_COMMAND_NO_PROGRESS_TIMEOUT_MS,
+  );
   const result = await runCodexCommandStreaming(args, {
     timeoutMs,
     noOutputTimeoutMs,
+    commandNoProgressTimeoutMs,
     signal: input.signal,
     onProcessStarted(pid) {
       processId = pid;
@@ -744,6 +764,22 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       stderr_tail: result.stderr.split(/\r?\n/).filter(Boolean).slice(-5),
       ...(result.timeoutReason ? { timeout_reason: result.timeoutReason } : {}),
       no_output_timeout_ms: result.noOutputTimeoutMs ?? noOutputTimeoutMs,
+      command_no_progress_timeout_ms: result.commandNoProgressTimeoutMs ?? commandNoProgressTimeoutMs,
+      ...(result.activeCommand
+        ? {
+            active_command: {
+              tool_call_id: result.activeCommand.toolCallId,
+              title: result.activeCommand.title,
+              status: result.activeCommand.status,
+              started_at: result.activeCommand.startedAt,
+              last_output_at: result.activeCommand.lastOutputAt,
+              output_chars: result.activeCommand.outputChars,
+            },
+          }
+        : {}),
+      ...(result.timeoutReason === 'command_no_progress_timeout'
+        ? { blocked_reason: 'codex_cli_command_execution_no_progress' }
+        : {}),
       ...(result.timeoutReason === 'unsupported_tool_protocol'
         ? {
             blocked_reason: 'codex_cli_unsupported_function_call',

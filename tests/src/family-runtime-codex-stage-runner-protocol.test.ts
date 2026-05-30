@@ -73,6 +73,86 @@ exit 64
   }
 });
 
+test('Codex stage runner fails closed when an active command execution stops making progress', async () => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"type":"session_meta","payload":{"id":"thread-command-no-progress"}}\\n'
+  printf '%s\\n' '${JSON.stringify({
+    type: 'item.updated',
+    item: {
+      type: 'command_execution',
+      id: 'call_runaway_grep',
+      command: 'grep -R "sat_77" -n artifacts studies runtime 2>/dev/null | head -50',
+      status: 'in_progress',
+      aggregated_output: '',
+    },
+  })}'
+  sleep 0.25
+  printf '%s\\n' '${JSON.stringify({
+    type: 'item.updated',
+    item: {
+      type: 'command_execution',
+      id: 'call_runaway_grep',
+      command: 'grep -R "sat_77" -n artifacts studies runtime 2>/dev/null | head -50',
+      status: 'in_progress',
+      aggregated_output: '',
+    },
+  })}'
+  sleep 2
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  const previousCommandTimeout = process.env.OPL_CODEX_STAGE_RUNNER_COMMAND_NO_PROGRESS_TIMEOUT_MS;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    process.env.OPL_CODEX_STAGE_RUNNER_COMMAND_NO_PROGRESS_TIMEOUT_MS = '100';
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_live_runner_command_no_progress_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['checkpoint:command-no-progress'],
+      },
+      stagePacketRef: 'packet:command-no-progress',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+      noOutputTimeoutMs: 10_000,
+    });
+
+    assert.equal(receipt.closeout_packet, null);
+    assert.equal(receipt.runner_status.exit_code, 124);
+    assert.equal(receipt.process_output_summary?.timeout_reason, 'command_no_progress_timeout');
+    assert.equal(receipt.process_output_summary?.blocked_reason, 'codex_cli_command_execution_no_progress');
+    assert.equal(receipt.process_output_summary?.command_no_progress_timeout_ms, 100);
+    assert.equal(receipt.process_output_summary?.active_command?.tool_call_id, 'call_runaway_grep');
+    assert.equal(receipt.process_output_summary?.active_command?.status, 'in_progress');
+    assert.equal(
+      receipt.progress_summary.runner_events.some((event) =>
+        event.event_kind === 'command_execution'
+          && event.value?.includes('grep -R "sat_77"')
+      ),
+      true,
+    );
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    if (previousCommandTimeout === undefined) {
+      delete process.env.OPL_CODEX_STAGE_RUNNER_COMMAND_NO_PROGRESS_TIMEOUT_MS;
+    } else {
+      process.env.OPL_CODEX_STAGE_RUNNER_COMMAND_NO_PROGRESS_TIMEOUT_MS = previousCommandTimeout;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('Codex stage runner fails fast on unsupported native function calls', async () => {
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$1" = "exec" ]; then

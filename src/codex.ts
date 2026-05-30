@@ -24,8 +24,15 @@ export interface CodexCommandResult {
   exitCode: number;
   stdout: string;
   stderr: string;
-  timeoutReason?: 'total_timeout' | 'no_output_timeout' | 'unsupported_tool_protocol' | 'activity_cancelled';
+  timeoutReason?:
+    | 'total_timeout'
+    | 'no_output_timeout'
+    | 'command_no_progress_timeout'
+    | 'unsupported_tool_protocol'
+    | 'activity_cancelled';
   noOutputTimeoutMs?: number | null;
+  commandNoProgressTimeoutMs?: number | null;
+  activeCommand?: CodexCommandActivity | null;
   unsupportedFunctionCalls?: Array<{
     name: string;
     callId: string | null;
@@ -49,6 +56,16 @@ export interface CodexStreamingCommandOptions {
   signal?: AbortSignal;
   timeoutMs?: number;
   noOutputTimeoutMs?: number;
+  commandNoProgressTimeoutMs?: number;
+}
+
+export interface CodexCommandActivity {
+  toolCallId: string;
+  title: string;
+  status: 'pending' | 'in_progress';
+  startedAt: string;
+  lastOutputAt: string | null;
+  outputChars: number;
 }
 
 export interface CodexExecOptions {
@@ -258,6 +275,9 @@ export async function runCodexCommandStreaming(
     let completed = false;
     let timeout: NodeJS.Timeout | null = null;
     let noOutputTimeout: NodeJS.Timeout | null = null;
+    let commandNoProgressTimeout: NodeJS.Timeout | null = null;
+    const activeCommands = new Map<string, CodexCommandActivity>();
+    let timedOutActiveCommand: CodexCommandActivity | null = null;
     const unsupportedFunctionCalls: NonNullable<CodexCommandResult['unsupportedFunctionCalls']> = [];
     let threadId: string | null = null;
     let unsupportedFunctionCallSessionPath: string | null = null;
@@ -273,13 +293,22 @@ export async function runCodexCommandStreaming(
         noOutputTimeout = null;
       }
     };
-    const timeoutMessageFor = (reason: CodexCommandResult['timeoutReason']) => reason === 'no_output_timeout'
-      ? 'Codex command produced no output before the progress watchdog expired.'
-      : reason === 'unsupported_tool_protocol'
-        ? 'Codex command emitted an unsupported native function_call without an OPL tool host.'
-        : reason === 'activity_cancelled'
-          ? 'Codex command cancelled by Temporal activity cancellation.'
-        : 'Codex command timed out.';
+    const clearCommandNoProgressTimeout = () => {
+      if (commandNoProgressTimeout) {
+        clearTimeout(commandNoProgressTimeout);
+        commandNoProgressTimeout = null;
+      }
+    };
+    const timeoutMessageFor = (reason: CodexCommandResult['timeoutReason']) =>
+      reason === 'no_output_timeout'
+        ? 'Codex command produced no output before the progress watchdog expired.'
+        : reason === 'command_no_progress_timeout'
+          ? 'Codex command execution produced no progress before the command watchdog expired.'
+          : reason === 'unsupported_tool_protocol'
+            ? 'Codex command emitted an unsupported native function_call without an OPL tool host.'
+            : reason === 'activity_cancelled'
+              ? 'Codex command cancelled by Temporal activity cancellation.'
+              : 'Codex command timed out.';
     const finishTimedOut = (reason: NonNullable<CodexCommandResult['timeoutReason']>) => {
       if (completed) {
         return;
@@ -290,6 +319,7 @@ export async function runCodexCommandStreaming(
       options.signal?.removeEventListener('abort', abortCommand);
       clearProcessTimeout();
       clearNoOutputTimeout();
+      clearCommandNoProgressTimeout();
       terminateChildProcessGroup(child.pid);
       const timeoutMessage = timeoutMessageFor(reason);
       resolve({
@@ -298,6 +328,8 @@ export async function runCodexCommandStreaming(
         stderr: `${stderr}${stderr.endsWith('\n') || stderr.length === 0 ? '' : '\n'}${timeoutMessage}\n`,
         timeoutReason: reason,
         noOutputTimeoutMs: options.noOutputTimeoutMs ?? null,
+        commandNoProgressTimeoutMs: options.commandNoProgressTimeoutMs ?? null,
+        ...(timedOutActiveCommand ? { activeCommand: timedOutActiveCommand } : {}),
         ...(unsupportedFunctionCalls.length > 0 ? { unsupportedFunctionCalls } : {}),
         ...(unsupportedFunctionCallSessionPath ? { unsupportedFunctionCallSessionPath } : {}),
       });
@@ -307,6 +339,51 @@ export async function runCodexCommandStreaming(
     };
     const expireCommand = () => {
       finishTimedOut('total_timeout');
+    };
+
+    const refreshCommandNoProgressTimeout = () => {
+      clearCommandNoProgressTimeout();
+      if (
+        completed
+        || activeCommands.size === 0
+        || !options.commandNoProgressTimeoutMs
+        || options.commandNoProgressTimeoutMs <= 0
+      ) {
+        return;
+      }
+      commandNoProgressTimeout = setTimeout(() => {
+        const oldestActiveCommand = [...activeCommands.values()]
+          .sort((left, right) => left.startedAt.localeCompare(right.startedAt))[0] ?? null;
+        timedOutActiveCommand = oldestActiveCommand ? { ...oldestActiveCommand } : null;
+        finishTimedOut('command_no_progress_timeout');
+      }, options.commandNoProgressTimeoutMs);
+    };
+
+    const recordCommandExecution = (event: Extract<CodexExecEvent, { type: 'command_execution' }>) => {
+      if (event.status === 'completed' || event.status === 'failed') {
+        activeCommands.delete(event.toolCallId);
+        refreshCommandNoProgressTimeout();
+        return;
+      }
+      const now = new Date().toISOString();
+      const outputChars = event.output?.length ?? 0;
+      const existing = activeCommands.get(event.toolCallId);
+      const hasProgress = !existing
+        || existing.status !== event.status
+        || outputChars > existing.outputChars;
+      activeCommands.set(event.toolCallId, {
+        toolCallId: event.toolCallId,
+        title: event.title,
+        status: event.status,
+        startedAt: existing?.startedAt ?? now,
+        lastOutputAt: outputChars > (existing?.outputChars ?? 0)
+          ? now
+          : existing?.lastOutputAt ?? null,
+        outputChars: Math.max(outputChars, existing?.outputChars ?? 0),
+      });
+      if (hasProgress) {
+        refreshCommandNoProgressTimeout();
+      }
     };
 
     const recordUnsupportedFunctionCalls = (
@@ -372,6 +449,9 @@ export async function runCodexCommandStreaming(
         if (event.type === 'thread.started') {
           threadId = event.threadId;
         }
+        if (event.type === 'command_execution') {
+          recordCommandExecution(event);
+        }
         if (event.type === 'unsupported_function_call') {
           recordUnsupportedFunctionCalls([{
             name: event.name,
@@ -395,6 +475,7 @@ export async function runCodexCommandStreaming(
       options.signal?.removeEventListener('abort', abortCommand);
       clearProcessTimeout();
       clearNoOutputTimeout();
+      clearCommandNoProgressTimeout();
       reject(
         new FrameworkContractError(
           'codex_command_failed',
@@ -416,6 +497,7 @@ export async function runCodexCommandStreaming(
       options.signal?.removeEventListener('abort', abortCommand);
       clearProcessTimeout();
       clearNoOutputTimeout();
+      clearCommandNoProgressTimeout();
       flushStdout();
       flushStderr();
       if (
@@ -435,6 +517,8 @@ export async function runCodexCommandStreaming(
           : stderr,
         ...(timeoutReason ? { timeoutReason } : {}),
         noOutputTimeoutMs: options.noOutputTimeoutMs ?? null,
+        commandNoProgressTimeoutMs: options.commandNoProgressTimeoutMs ?? null,
+        ...(timedOutActiveCommand ? { activeCommand: timedOutActiveCommand } : {}),
         ...(unsupportedFunctionCalls.length > 0 ? { unsupportedFunctionCalls } : {}),
         ...(unsupportedFunctionCallSessionPath ? { unsupportedFunctionCallSessionPath } : {}),
       });
