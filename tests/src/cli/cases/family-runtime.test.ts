@@ -16,10 +16,7 @@ import {
   shellSingleQuote,
   test,
 } from '../helpers.ts';
-import {
-  STANDARD_PROGRESS_DELTA_POLICY,
-  STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
-} from '../../../../src/standard-domain-agent-scaffold-constants.ts';
+import { STANDARD_PROGRESS_DELTA_POLICY, STANDARD_TYPED_BLOCKER_LINEAGE_POLICY } from '../../../../src/standard-domain-agent-scaffold-constants.ts';
 
 function createDispatchFixture(body: string) {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-dispatch-'));
@@ -782,11 +779,7 @@ test('family-runtime stage attempt ledger keeps provider dispatch separate until
           typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
           runtime_assumptions: [],
           monitor_refs: [],
-          source_scope_refs: [{
-            ref_kind: 'json_pointer',
-            ref: '/source_scope/direction_and_route_selection',
-            role: 'launch_source_scope',
-          }],
+          source_scope_refs: [{ ref_kind: 'json_pointer', ref: '/source_scope/direction_and_route_selection', role: 'launch_source_scope' }],
           artifact_scope_refs: [],
           workspace_scope_refs: [],
         },
