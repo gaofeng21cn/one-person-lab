@@ -1,4 +1,8 @@
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import {
+  STANDARD_PROGRESS_DELTA_POLICY,
+  STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
+} from '../../../../src/standard-domain-agent-scaffold-constants.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -63,6 +67,8 @@ test('family-runtime attempt create projects launch invocation and gates non-def
           stage_contract: {
             requires: ['sources_ready'],
             ensures: ['plan_ready'],
+            progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+            typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
             boundary_assumptions: ['domain_truth_remains_domain_owned'],
             properties: [],
             runtime_assumptions: [],
@@ -242,6 +248,8 @@ test('family-runtime attempt create blocks undeclared stage launches without leg
           stage_contract: {
             requires: ['sources_ready'],
             ensures: ['plan_ready'],
+            progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+            typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
             boundary_assumptions: ['domain_truth_remains_domain_owned'],
             properties: [],
             runtime_assumptions: [],
@@ -333,6 +341,8 @@ test('family-runtime required admission warns without blocking when cohort loop 
           stage_contract: {
             requires: ['sources_ready'],
             ensures: ['plan_ready'],
+            progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+            typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
             boundary_assumptions: ['domain_truth_remains_domain_owned'],
             properties: [],
             runtime_assumptions: [],
@@ -431,6 +441,8 @@ test('family-runtime required admission only blocks Stage Kernel launch evidence
     stage_contract: {
       requires: ['sources_ready'],
       ensures: ['plan_ready'],
+      progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+      typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
       boundary_assumptions: ['domain_truth_remains_domain_owned'],
       properties: [],
       runtime_assumptions: [],
@@ -616,6 +628,8 @@ test('family-runtime required admission keeps assumption cohort and runtime-budg
           stage_contract: {
             requires: ['sources_ready'],
             ensures: ['plan_ready'],
+            progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+            typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
             boundary_assumptions: ['domain_truth_remains_domain_owned'],
             properties: [],
             runtime_event_refs: ['runtime_event:scout.launch_recorded'],

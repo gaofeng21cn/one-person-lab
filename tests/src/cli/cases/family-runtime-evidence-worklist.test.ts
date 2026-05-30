@@ -106,7 +106,7 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(worklist.summary.production_ready_authorized, false);
     assert.equal(worklist.summary.worklist_item_count, 49);
     assert.equal(worklist.summary.open_worklist_item_count, 48);
-    assert.equal(worklist.summary.closed_refs_only_item_count, 1);
+    assert.equal(worklist.summary.closed_refs_only_item_count, 0);
     assert.equal(worklist.summary.stage_receipt_freshness_open_workorder_count > 0, true);
     assert.equal(worklist.summary.open_safe_action_item_count, 48);
     assert.equal(
@@ -123,7 +123,7 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(Object.hasOwn(output, 'family_runtime_production_closeout'), false);
     assert.equal(Object.hasOwn(worklist, 'production_closeout_open_safe_action_item_count'), false);
     assert.equal(worklist.open_worklist_item_count, 48);
-    assert.equal(worklist.closed_refs_only_item_count, 1);
+    assert.equal(worklist.closed_refs_only_item_count, 0);
     assert.equal(
       worklist.open_safe_action_payload_required_item_count,
       worklist.summary.open_safe_action_payload_required_item_count,

@@ -1,6 +1,10 @@
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, shellSingleQuote, test } from '../helpers.ts';
 import { buildFamilyStagesList } from '../../../../src/family-stage-control-plane.ts';
 import { loadFrameworkContracts } from '../../../../src/contracts.ts';
+import {
+  STANDARD_PROGRESS_DELTA_POLICY,
+  STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
+} from '../../../../src/standard-domain-agent-scaffold-constants.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -100,6 +104,8 @@ function buildStagePlane() {
         stage_contract: {
           requires: ['sources_ready'],
           ensures: ['draft_ready'],
+          progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+          typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
           boundary_assumptions: ['source_refs_are_domain_owned'],
           properties: ['deterministic_handoff_refs'],
           runtime_assumptions: ['source_freshness_within_domain_policy'],
@@ -133,6 +139,8 @@ function buildStagePlane() {
         stage_contract: {
           requires: ['draft_ready'],
           ensures: ['review_receipt_ready'],
+          progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+          typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
           boundary_assumptions: ['reviewer_judgment_recorded_as_receipt'],
           runtime_event_refs: ['runtime_event:publication_review.gate_recorded'],
           properties: [],
@@ -238,6 +246,8 @@ function buildAdmittedStagePlane(
         stage_contract: {
           requires: [`stage_${stageNumber}_input_ready`],
           ensures: [`stage_${stageNumber}_receipt_ready`],
+          progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+          typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
           boundary_assumptions: ['domain_truth_remains_domain_owned'],
           runtime_event_refs: [`runtime_event:${targetDomainId}.stage_${stageNumber}`],
           replay_evidence_refs: options.replayEvidenceRefs
@@ -329,6 +339,8 @@ function buildContractLightStagePlane(options: {
         stage_contract: {
           requires: ['source_scope_declared'],
           ensures: ['plan_receipt_declared'],
+          progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+          typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
           boundary_assumptions: ['domain_truth_remains_domain_owned'],
           properties: options.properties ?? [],
           runtime_assumptions: options.runtimeAssumptions ?? [],

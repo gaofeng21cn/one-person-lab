@@ -17,6 +17,10 @@ import { createStageAttempt } from '../../../../src/family-runtime-stage-attempt
 import {
   applyAppOperatorDrilldownDetail,
 } from '../../../../src/runtime-tray-app-operator-drilldown-parts/detail-view.ts';
+import {
+  STANDARD_PROGRESS_DELTA_POLICY,
+  STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
+} from '../../../../src/standard-domain-agent-scaffold-constants.ts';
 
 function buildReviewStageEvidenceManifest() {
   const masManifest = structuredClone(loadFamilyManifestFixtures().medautoscience);
@@ -50,6 +54,8 @@ function buildReviewStageEvidenceManifest() {
         stage_contract: {
           requires: ['draft_ready'],
           ensures: ['review_ready'],
+          progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+          typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
           boundary_assumptions: ['reviewer_judgment_is_domain_owned'],
           properties: [],
           runtime_event_refs: ['runtime_event:review.receipt_recorded'],
@@ -232,6 +238,8 @@ test('stage production evidence consumes older ledger attempts beyond default wo
         stage_contract: {
           requires: ['grant_profile_ready'],
           ensures: ['fundability_strategy_ready'],
+          progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+          typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
           boundary_assumptions: ['fundability_judgment_is_domain_owned'],
           properties: [],
           runtime_event_refs: ['runtime_event:fundability_strategy.ai_decision_gate_recorded'],

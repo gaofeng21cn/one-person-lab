@@ -2,6 +2,10 @@ import {
   createFakeCodexFixture,
   loadFamilyManifestFixtures,
 } from '../helpers.ts';
+import {
+  STANDARD_PROGRESS_DELTA_POLICY,
+  STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
+} from '../../../../src/standard-domain-agent-scaffold-constants.ts';
 
 export function createTemporalCloseoutCodexFixture(closeoutRefs: string[]) {
   const closeout = {
@@ -60,6 +64,8 @@ export function buildTemporalStartManifest(stageId: string) {
         stage_contract: {
           requires: ['study_task_ready'],
           ensures: ['route_selected'],
+          progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+          typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
           boundary_assumptions: ['domain_truth_remains_domain_owned'],
           properties: [],
           runtime_assumptions: [],

@@ -1,4 +1,8 @@
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, repoRoot, runCli, test } from '../helpers.ts';
+import {
+  STANDARD_PROGRESS_DELTA_POLICY,
+  STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
+} from '../../../../src/standard-domain-agent-scaffold-constants.ts';
 
 test('family-runtime required admission warns but does not block launch without advisory lens refs', () => {
   const stateRoot = fs.mkdtempSync(`${os.tmpdir()}/opl-family-runtime-cohort-loop-warning-`);
@@ -35,6 +39,8 @@ test('family-runtime required admission warns but does not block launch without 
         stage_contract: {
           requires: ['sources_ready'],
           ensures: ['plan_ready'],
+          progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+          typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
           boundary_assumptions: ['domain_truth_remains_domain_owned'],
           properties: [],
           runtime_assumptions: [],

@@ -752,6 +752,12 @@ function itemEligibleForNextActionLedger(item: JsonRecord) {
   return true;
 }
 
+function itemClosedByRefsOnlyReceipt(item: JsonRecord) {
+  const status = stringValue(item.status);
+  return status === 'closed_by_receipt_ref'
+    || status === 'closed_by_domain_owned_typed_blocker';
+}
+
 export async function runFamilyRuntimeEvidenceWorklist(
   contracts: FrameworkContracts,
   input: EvidenceWorklistInput,
@@ -798,6 +804,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
   const closedItems = worklistItems.filter((item) =>
     item.status !== OPEN_WORKLIST_STATUS
   );
+  const closedRefsOnlyItems = closedItems.filter(itemClosedByRefsOnlyReceipt);
   const openActionIds = new Set(openItems
     .map((item) => stringValue(item.action_id))
     .filter((actionId): actionId is string => Boolean(actionId)));
@@ -839,6 +846,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
   });
   const counts = {
     ...worklistCounts(worklistItems, openItems, closedItems, nextActionLedger),
+    closed_refs_only_item_count: closedRefsOnlyItems.length,
     ...zeroOpenCompletionGuardSummaryFields(zeroOpenWorklistGuard),
     stage_source_scope_missing_workorder_count:
       countValue(stageEvidenceWorkorderSummary.source_scope_missing_workorder_count),
@@ -885,7 +893,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
       'batch_apply_is_not_supported_here; execute individual refs-only safe action routes through opl runtime action execute',
     summary: counts,
     open_worklist_item_count: openItems.length,
-    closed_refs_only_item_count: closedItems.length,
+    closed_refs_only_item_count: closedRefsOnlyItems.length,
     open_safe_action_payload_required_item_count:
       counts.open_safe_action_payload_required_item_count,
     open_safe_action_payload_free_item_count:

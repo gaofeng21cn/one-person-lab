@@ -11,6 +11,10 @@ import {
   runCliFailure,
   test,
 } from '../helpers.ts';
+import {
+  STANDARD_PROGRESS_DELTA_POLICY,
+  STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
+} from '../../../../src/standard-domain-agent-scaffold-constants.ts';
 
 test('runtime action execute routes domain actions through the OPL typed queue instead of direct domain execution', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-domain-'));
@@ -822,6 +826,8 @@ test('runtime action execute can create OPL-owned stage production attempt reque
         stage_contract: {
           requires: ['draft_ready'],
           ensures: ['review_ready'],
+          progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+          typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
           boundary_assumptions: ['reviewer_judgment_is_domain_owned'],
           properties: [],
           runtime_event_refs: ['runtime_event:review.receipt_recorded'],

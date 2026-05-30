@@ -10,6 +10,10 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
+import {
+  STANDARD_PROGRESS_DELTA_POLICY,
+  STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
+} from '../../../../src/standard-domain-agent-scaffold-constants.ts';
 
 function familyRuntimeEnv(
   stateRoot: string,
@@ -57,6 +61,8 @@ function reviewStageManifest() {
           ensures: ['review_ready'],
           boundary_assumptions: ['reviewer_judgment_is_domain_owned'],
           properties: [],
+          progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+          typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
           runtime_event_refs: ['runtime_event:review.receipt_recorded'],
           runtime_assumptions: [],
           monitor_refs: [
