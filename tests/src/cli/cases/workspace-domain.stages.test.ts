@@ -1,6 +1,10 @@
 import { spawnSync } from 'node:child_process';
 
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import {
+  STANDARD_PROGRESS_DELTA_POLICY,
+  STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
+} from '../../../../src/standard-domain-agent-scaffold-constants.ts';
 
 type JsonRecord = Record<string, unknown>;
 function buildStageControlPlane(targetDomainId: string, stageId: string, options: {
@@ -76,6 +80,30 @@ function buildStageControlPlane(targetDomainId: string, stageId: string, options
           resume_surface_ref: '/product_entry_manifest/session_continuity',
         },
         stage_contract: {
+          requires: [
+            `${stageId}:input-ready`,
+          ],
+          ensures: [
+            `${stageId}:owner-receipt-or-typed-blocker`,
+          ],
+          boundary_assumptions: ['domain judgment remains domain-owned'],
+          properties: ['free-text-closeout-not-accepted'],
+          runtime_event_refs: [],
+          progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+          typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
+          expected_receipt_refs: [
+            {
+              ref_kind: 'stage_attempt_receipt_ref',
+              ref: `stage-attempt-receipt-ref:${stageId}`,
+            },
+          ],
+          monitor_freshness_refs: [],
+          replay_evidence_refs: [
+            {
+              ref_kind: 'replay_evidence_ref',
+              ref: `replay-evidence-ref:${stageId}`,
+            },
+          ],
           runtime_assumptions: ['source_freshness_within_domain_policy', 'provider_slo_current_before_launch'],
           monitor_refs: [{ ref_kind: 'json_pointer', ref: '/product_entry_manifest/runtime_inventory', role: 'runtime_assumption_monitor' }],
           source_scope_refs: [{ ref_kind: 'json_pointer', ref: '/product_entry_manifest/source_provenance', role: 'launch_source_scope' }],
@@ -266,6 +294,14 @@ test('family stage control plane is resolved from domain manifests as read-only 
     const omaStage = list.family_stages.stages.find((entry: { stage_id: string }) => entry.stage_id === 'stage-decomposition');
     assert.equal(omaStage?.project_id, 'opl-meta-agent');
     assert.equal(omaStage?.admission_status, 'admitted');
+    const omaReadiness = runCli(['stages', 'readiness', '--domain', 'oma'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    }).family_stage_readiness;
+    const omaBlockerCodes = omaReadiness.blockers.map((finding: { code: string }) => finding.code);
+    assert.equal(omaReadiness.summary.hard_blocker_count, 0);
+    assert.equal(omaBlockerCodes.includes('missing_progress_delta_policy'), false);
+    assert.equal(omaBlockerCodes.includes('missing_typed_blocker_lineage_policy'), false);
     const manuscriptStage = list.family_stages.stages.find((entry: { stage_id: string }) => entry.stage_id === 'manuscript_authoring');
     assert.equal(manuscriptStage?.admission_status, 'needs_contracts');
     assert.equal(manuscriptStage?.runtime_assumption_count, 2);

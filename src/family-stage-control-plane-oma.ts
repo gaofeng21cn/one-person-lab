@@ -6,6 +6,10 @@ import type {
   FamilyStageControlPlane,
   FamilyStageSurfaceRef,
 } from './family-stage-control-plane-contract.ts';
+import {
+  STANDARD_PROGRESS_DELTA_POLICY,
+  STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
+} from './standard-domain-agent-scaffold-constants.ts';
 
 type DomainManifestCatalog = {
   summary: {
@@ -103,6 +107,8 @@ function buildOplMetaAgentStageControlPlane(): FamilyStageControlPlane {
           boundary_assumptions: ['target truth and quality verdict remain target-owner authority'],
           properties: ['free-text-closeout-not-accepted'],
           runtime_event_refs: [],
+          progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+          typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
           expected_receipt_refs: [
             ref('stage_attempt_receipt_ref', 'stage-attempt-receipt-ref:stage-decomposition'),
             ref('executor_receipt_ref', 'executor-receipt-ref:stage-decomposition/codex-cli'),
