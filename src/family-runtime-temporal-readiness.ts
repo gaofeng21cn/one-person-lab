@@ -5,6 +5,7 @@ import {
   resolveTemporalTaskQueue,
   TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTE_NAMES,
 } from './family-runtime-temporal.ts';
+import { workerSourceVersionsEquivalent } from './family-runtime-temporal-provider-parts/worker-state.ts';
 import type {
   TemporalStageAttemptVisibilityReadiness,
 } from './family-runtime-temporal-visibility.ts';
@@ -336,7 +337,7 @@ export function buildTemporalWorkerReadiness(input: TemporalWorkerReadinessInput
     worker_dependency_health: input.workerDependencyHealth ?? null,
     managed_worker_workflow_bundle_source_current:
       input.managedWorkerWorkflowBundleSourceVersion && input.expectedWorkerSourceVersion
-        ? input.managedWorkerWorkflowBundleSourceVersion === input.expectedWorkerSourceVersion
+        ? workerSourceVersionsEquivalent(input.managedWorkerWorkflowBundleSourceVersion, input.expectedWorkerSourceVersion)
         : null,
     stale_worker_pid: input.staleWorkerPid ?? null,
     temporal_service_lifecycle: input.temporalServiceLifecycle ?? null,

@@ -24,7 +24,10 @@ import {
 import {
   buildTemporalWorkerMutationGuard,
 } from '../../../../src/family-runtime-temporal-provider-parts/worker-source-guard.ts';
-import { currentWorkerSourceVersion } from '../../../../src/family-runtime-temporal-provider-parts/worker-state.ts';
+import {
+  currentWorkerSourceVersion,
+  workerSourceVersionsEquivalent,
+} from '../../../../src/family-runtime-temporal-provider-parts/worker-state.ts';
 
 async function createFakeTemporalServer() {
   const sockets = new Set<net.Socket>();
@@ -84,6 +87,26 @@ test('Temporal worker source version ignores documentation-only git HEAD drift',
     }
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
+});
+
+test('Temporal worker source version currentness follows runtime content hash across source roots', () => {
+  const hash = 'a'.repeat(64);
+  const otherHash = 'b'.repeat(64);
+  assert.equal(
+    workerSourceVersionsEquivalent(
+      `worker-runtime:/managed/runtime/current/opl/src:${hash}`,
+      `worker-runtime:/Users/gaofeng/workspace/one-person-lab/src:${hash}`,
+    ),
+    true,
+  );
+  assert.equal(
+    workerSourceVersionsEquivalent(
+      `worker-runtime:/managed/runtime/current/opl/src:${hash}`,
+      `worker-runtime:/Users/gaofeng/workspace/one-person-lab/src:${otherHash}`,
+    ),
+    false,
+  );
+  assert.equal(workerSourceVersionsEquivalent('git:old-worker-source', 'git:new-worker-source'), false);
 });
 
 test('Temporal worker mutation guard blocks developer checkout against default shared state', () => {
@@ -383,6 +406,92 @@ test('Temporal worker lifecycle rejects stale managed worker source version', as
     const stop = await stopTemporalWorkerLifecycle({ root: workerRoot });
     assert.equal(stop.stop_status, 'stopped');
     assert.equal(stop.stopped_pid, child.pid);
+  } finally {
+    if (previousAddress === undefined) {
+      delete process.env.OPL_TEMPORAL_ADDRESS;
+    } else {
+      process.env.OPL_TEMPORAL_ADDRESS = previousAddress;
+    }
+    if (previousNamespace === undefined) {
+      delete process.env.OPL_TEMPORAL_NAMESPACE;
+    } else {
+      process.env.OPL_TEMPORAL_NAMESPACE = previousNamespace;
+    }
+    if (previousTaskQueue === undefined) {
+      delete process.env.OPL_TEMPORAL_TASK_QUEUE;
+    } else {
+      process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
+    }
+    if (previousWorkerStatus === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_STATUS;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_STATUS = previousWorkerStatus;
+    }
+    if (previousSourceVersion === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = previousSourceVersion;
+    }
+    try {
+      process.kill(child.pid!, 'SIGTERM');
+    } catch {
+      // The lifecycle under test may already have removed the fixture process.
+    }
+    await server.close();
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('Temporal worker lifecycle accepts same runtime content hash from managed source root', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-managed-root-current-'));
+  const workerRoot = path.join(stateRoot, 'family-runtime');
+  const server = await createFakeTemporalServer();
+  const address = server.address;
+  const child = spawn(process.execPath, [
+    '-e',
+    'setTimeout(() => {}, 30_000);',
+  ], {
+    detached: true,
+    stdio: 'ignore',
+  });
+  child.unref();
+  const previousAddress = process.env.OPL_TEMPORAL_ADDRESS;
+  const previousNamespace = process.env.OPL_TEMPORAL_NAMESPACE;
+  const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
+  const previousWorkerStatus = process.env.OPL_TEMPORAL_WORKER_STATUS;
+  const previousSourceVersion = process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+  const contentHash = 'c'.repeat(64);
+  try {
+    assert.equal(typeof child.pid, 'number');
+    fs.mkdirSync(workerRoot, { recursive: true });
+    fs.writeFileSync(path.join(workerRoot, 'temporal-worker.json'), `${JSON.stringify({
+      provider_kind: 'temporal',
+      pid: child.pid,
+      address,
+      namespace: 'opl-worker-managed-root-current-test',
+      task_queue: 'opl-worker-managed-root-current',
+      started_at: new Date().toISOString(),
+      status: 'ready',
+      source_version: `worker-runtime:/Users/gaofeng/Library/Application Support/OPL/runtime/current/opl/src:${contentHash}`,
+      workflow_bundle_source_version: `worker-runtime:/Users/gaofeng/Library/Application Support/OPL/runtime/current/opl/src:${contentHash}`,
+    }, null, 2)}\n`);
+
+    process.env.OPL_TEMPORAL_ADDRESS = address;
+    process.env.OPL_TEMPORAL_NAMESPACE = 'opl-worker-managed-root-current-test';
+    process.env.OPL_TEMPORAL_TASK_QUEUE = 'opl-worker-managed-root-current';
+    process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = `worker-runtime:/Users/gaofeng/workspace/one-person-lab/src:${contentHash}`;
+    delete process.env.OPL_TEMPORAL_WORKER_STATUS;
+
+    const requery = await inspectTemporalWorkerLifecycle({ root: workerRoot });
+
+    assert.equal(requery.lifecycle_status, 'ready');
+    assert.equal(requery.worker_ready, true);
+    assert.equal(requery.managed_worker_pid, child.pid);
+    assert.equal(requery.stale_worker_pid, null);
+    assert.equal(requery.managed_worker_source_current, true);
+    assert.equal(requery.managed_worker_workflow_bundle_source_current, true);
+    assert.deepEqual(requery.blockers, []);
+    assert.equal(requery.worker_mutation_guard?.allowed, true);
   } finally {
     if (previousAddress === undefined) {
       delete process.env.OPL_TEMPORAL_ADDRESS;

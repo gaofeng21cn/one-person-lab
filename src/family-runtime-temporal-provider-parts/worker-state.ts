@@ -19,6 +19,11 @@ export type TemporalWorkerState = {
   workflow_bundle_source_version?: string;
 };
 
+type WorkerRuntimeSourceVersion = {
+  sourceRoot: string;
+  contentHash: string;
+};
+
 export function temporalWorkerStatePath(paths: TemporalWorkerPaths) {
   return path.join(paths.root, 'temporal-worker.json');
 }
@@ -124,6 +129,45 @@ export function currentWorkerSourceVersion(moduleUrl: string) {
   } catch {
     return `worker-module:${fileURLToPath(moduleUrl)}`;
   }
+}
+
+function parseWorkerRuntimeSourceVersion(sourceVersion: string | null | undefined): WorkerRuntimeSourceVersion | null {
+  const normalized = sourceVersion?.trim();
+  if (!normalized?.startsWith('worker-runtime:')) {
+    return null;
+  }
+  const rest = normalized.slice('worker-runtime:'.length);
+  const separatorIndex = rest.lastIndexOf(':');
+  if (separatorIndex <= 0 || separatorIndex === rest.length - 1) {
+    return null;
+  }
+  const sourceRoot = rest.slice(0, separatorIndex);
+  const contentHash = rest.slice(separatorIndex + 1);
+  if (!sourceRoot || !/^[a-f0-9]{64}$/i.test(contentHash)) {
+    return null;
+  }
+  return { sourceRoot, contentHash: contentHash.toLowerCase() };
+}
+
+export function workerSourceVersionsEquivalent(
+  left: string | null | undefined,
+  right: string | null | undefined,
+) {
+  const normalizedLeft = left?.trim() || null;
+  const normalizedRight = right?.trim() || null;
+  if (!normalizedLeft || !normalizedRight) {
+    return false;
+  }
+  if (normalizedLeft === normalizedRight) {
+    return true;
+  }
+  const leftRuntime = parseWorkerRuntimeSourceVersion(normalizedLeft);
+  const rightRuntime = parseWorkerRuntimeSourceVersion(normalizedRight);
+  return Boolean(
+    leftRuntime
+      && rightRuntime
+      && leftRuntime.contentHash === rightRuntime.contentHash,
+  );
 }
 
 export function readTemporalWorkerState(paths: TemporalWorkerPaths) {

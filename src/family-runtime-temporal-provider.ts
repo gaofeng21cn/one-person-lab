@@ -60,6 +60,7 @@ import {
   readTemporalWorkerState,
   removeTemporalWorkerState,
   temporalWorkerStatePath,
+  workerSourceVersionsEquivalent,
   writeTemporalWorkerState,
 } from './family-runtime-temporal-provider-parts/worker-state.ts';
 import {
@@ -132,7 +133,7 @@ export async function inspectTemporalWorkerLifecycleWithDetail(
     && state.task_queue === taskQueue;
   const expectedWorkerSourceVersion = currentWorkerSourceVersion(import.meta.url);
   const stateSourceCurrent = stateMatchesConfig && state
-    ? state.source_version === expectedWorkerSourceVersion
+    ? workerSourceVersionsEquivalent(state.source_version, expectedWorkerSourceVersion)
     : false;
   const stateProcessAlive = state ? processIsAlive(state.pid) : false;
   const statePidAlive = stateMatchesConfig && stateProcessAlive;
