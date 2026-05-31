@@ -1,4 +1,7 @@
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 import type { WorkspaceBinding } from '../workspace-registry.ts';
 import {
@@ -37,6 +40,25 @@ function commandTimedOut(result: ReturnType<typeof spawnSync>) {
   return errorCode === 'ETIMEDOUT' || result.signal === 'SIGTERM';
 }
 
+function resultText(result: ReturnType<typeof spawnSync>) {
+  return [
+    result.error?.message,
+    result.stderr,
+    result.stdout,
+  ].filter(Boolean).join('\n');
+}
+
+function shouldRetryWithFreshUvCache(result: ReturnType<typeof spawnSync>) {
+  if (commandTimedOut(result) || (result.status ?? 1) === 0) {
+    return false;
+  }
+  const text = resultText(result);
+  return /Failed to install:/i.test(text)
+    && /archive-v0/i.test(text)
+    && /METADATA/i.test(text)
+    && /No such file or directory/i.test(text);
+}
+
 function commandStatus(code: DomainManifestErrorCode) {
   if (code === 'invalid_json' || code === 'invalid_manifest' || code === 'command_timeout') {
     return code;
@@ -72,13 +94,18 @@ function buildCommandFailureEntry(
   };
 }
 
-function executeManifestCommand(binding: WorkspaceBinding, manifestCommand: string, timeoutMs: number) {
-  const commandCwd = prepareManagedShellCommandCwd(binding.workspace_path, manifestCommand);
+function executeManifestCommand(
+  binding: WorkspaceBinding,
+  manifestCommand: string,
+  timeoutMs: number,
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  const commandCwd = prepareManagedShellCommandCwd(binding.workspace_path, manifestCommand, env);
   try {
     return spawnSync('/bin/bash', ['-c', manifestCommand], {
       cwd: commandCwd.cwd,
       encoding: 'utf8',
-      env: buildManagedShellCommandEnv(binding.workspace_path),
+      env: buildManagedShellCommandEnv(binding.workspace_path, env),
       maxBuffer: 10 * 1024 * 1024,
       timeout: timeoutMs,
     });
@@ -155,7 +182,14 @@ export function resolveBindingManifest(
   const timeoutPolicy = options.timeoutPolicy
     ?? (options.timeoutMs === undefined ? 'env_or_default' : 'fixed');
   const timeoutMs = resolveManifestCommandTimeoutMs(options.timeoutMs, timeoutPolicy);
-  const result = executeManifestCommand(binding, manifestCommand, timeoutMs);
+  let result = executeManifestCommand(binding, manifestCommand, timeoutMs);
+  if (shouldRetryWithFreshUvCache(result)) {
+    const retryTmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-command-recovery-'));
+    result = executeManifestCommand(binding, manifestCommand, timeoutMs, {
+      ...process.env,
+      OPL_DOMAIN_COMMAND_TMP_ROOT: retryTmpRoot,
+    });
+  }
 
   const parseResolvedStdout = () => {
     const parsed = parseManifestPayload(result.stdout ?? '');

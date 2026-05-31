@@ -135,6 +135,12 @@ function isReadOnlyProductEntryCommand(command: string) {
     return true;
   }
 
+  if (normalized.match(
+    /(?:^|(?:&&|\|\||[;&|])\s*)uv\s+run\s+(?:python|python3)\s+-m\s+med_autoscience\.cli\s+study-state-matrix\b/,
+  )) {
+    return true;
+  }
+
   return Boolean(normalized.match(
     /(?:^|(?:&&|\|\||[;&|])\s*)uv\s+run\s+--directory\s+\S+\s+(?:python|python3)\s+-c\s+.*(?:med_autoscience\.controllers\.product_entry|med_autogrant\.product_entry)/,
   ));

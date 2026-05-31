@@ -145,6 +145,70 @@ test('domain manifests executes managed shell commands with checkout-clean pytho
   }
 });
 
+test('domain manifests retries manifest command once with a fresh managed root after uv archive cache corruption', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-cache-retry-state-'));
+  const workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-cache-retry-workspace-'));
+  const commandPath = path.join(stateRoot, 'manifest-cache-retry.sh');
+  const markerPath = path.join(stateRoot, 'first-run.marker');
+  const firstTmpRootPath = path.join(stateRoot, 'first-tmp-root.txt');
+  const retryTmpRootPath = path.join(stateRoot, 'retry-tmp-root.txt');
+  const manifest = loadFamilyManifestFixtures().medautoscience;
+
+  try {
+    fs.writeFileSync(
+      commandPath,
+      `#!/usr/bin/env bash
+set -euo pipefail
+if [ ! -f ${JSON.stringify(markerPath)} ]; then
+  printf '%s\\n' "$OPL_DOMAIN_COMMAND_TMP_ROOT" > ${JSON.stringify(firstTmpRootPath)}
+  : > ${JSON.stringify(markerPath)}
+  echo 'error: Failed to install: opl_harness_shared-0.1.0-py3-none-any.whl' >&2
+  echo "  Caused by: failed to open file \\\`$UV_CACHE_DIR/archive-v0/broken/opl_harness_shared-0.1.0.dist-info/METADATA\\\`: No such file or directory (os error 2)" >&2
+  exit 1
+fi
+printf '%s\\n' "$OPL_DOMAIN_COMMAND_TMP_ROOT" > ${JSON.stringify(retryTmpRootPath)}
+cat <<'JSON'
+${JSON.stringify(manifest)}
+JSON
+`,
+      { mode: 0o755 },
+    );
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      workspacePath,
+      '--manifest-command',
+      commandPath,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const manifestOutput = runCli(['domain', 'manifests'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_DOMAIN_COMMAND_TMP_ROOT: path.join(os.tmpdir(), 'opl-domain-manifest-cache-retry-root'),
+    });
+    const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) =>
+      entry.project_id === 'medautoscience'
+    );
+
+    assert.equal(manifestOutput.domain_manifests.summary.resolved_count, 1);
+    assert.equal(manifestOutput.domain_manifests.summary.failed_count, 0);
+    assert.equal(medautoscience.status, 'resolved');
+    assert.equal(medautoscience.manifest.target_domain_id, 'med-autoscience');
+    assert.notEqual(
+      fs.readFileSync(firstTmpRootPath, 'utf8').trim(),
+      fs.readFileSync(retryTmpRootPath, 'utf8').trim(),
+    );
+    assert.match(fs.readFileSync(retryTmpRootPath, 'utf8').trim(), /opl-domain-command-recovery/);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+  }
+});
+
 test('start returns the selected domain-agent start surface for a bound project', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-start-state-'));
   const fixtures = loadFamilyManifestFixtures();
