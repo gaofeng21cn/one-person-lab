@@ -75,12 +75,13 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ### 决策：active attempt 缺进度信号时必须暴露监督路由
 
-原因：Progress-First 不能把 active / queued / running / checkpointed attempt 读成“没有动作”。当 attempt 缺 worker liveness、latest progress delta、stage log 或 owner closeout refs 时，App/operator 和 evidence-worklist 必须给出可监督下一步，让 operator 先检查 attempt、worker readiness、stage log 和 closeout refs，再决定 worker repair、继续监督或要求 domain typed closeout。
+原因：Progress-First 不能把 active / queued / running / checkpointed attempt 读成“没有动作”。当 attempt 缺 worker liveness、latest progress delta、stage log、owner closeout refs、next action，或 progress freshness 已 stale 时，App/operator 和 evidence-worklist 必须给出可监督下一步，让 operator 先检查 attempt、worker readiness、stage log、closeout refs、next forced delta 和 freshness refs，再决定 worker repair、继续监督或要求 domain typed closeout。
 
 影响：
 
 - App/operator drilldown、safe action bridge 与 `family-runtime evidence-worklist` 暴露 `progress_first_attempt_supervision` refs-only route，执行参数为 `opl family-runtime attempt query <stage_attempt_id>`。
-- 该 route 的 authority boundary 固定为 `can_write_domain_truth=false`、`can_execute_domain_action=false`、`can_create_owner_receipt=false`、`can_claim_domain_ready=false`、`can_claim_production_ready=false`。
+- 该 route 的 authority boundary 固定为 `can_write_domain_truth=false`、`can_execute_domain_action=false`、`can_create_typed_blocker=false`、`can_create_owner_receipt=false`、`can_claim_domain_ready=false`、`can_claim_production_ready=false`。
+- 该 route 必须携带 `missing_progress_signals`、`supervisor_safe_action_kind` 与 `typed_blocker_requirement`，把 stale / next-action 缺口明确投影为 supervisor-safe action 或 domain typed blocker requirement。
 - provider worker repair 仍优先于 progress-first supervision；worker liveness 缺失时先修 worker，再判断 attempt 是否仍缺 stage/progress/closeout 信号。
 
 ## 2026-05-28
