@@ -7,6 +7,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-05-30
 
+### 决策：superseded MAS default-executor task 必须同步关闭其 stage attempts
+
+原因：Progress-First 监控以 task、stage attempt、provider liveness 和 closeout refs 共同证明论文是否在推进。若 OPL 已把过期 MAS default-executor task 标记为 `mas_default_executor_superseded_by_current_source`，但该 task 名下仍残留 `queued` / `registered` stage attempt，operator 会继续看到假 queued work，把已经被更新 source 替代的 reviewer / writer handoff 误判为可执行进度。
+
+影响：
+
+- `family-runtime tick` 在把 MAS default-executor queued / retry_waiting task 标记为 superseded 时，同步把该 task 关联的 stage attempts 标记为 `blocked`，`blocked_reason=mas_default_executor_superseded_by_current_source`。
+- supersession event 记录 `blocked_stage_attempt_ids`，便于 operator 区分真实 queued work 与已收敛的 historical residue。
+- 该行为只治理 OPL queue / attempt ledger currentness，不写 MAS truth，不修改 `publication_eval/latest.json`、controller decisions、artifact gate、paper package 或 `current_package`，也不替 MAS 作质量或投稿判断。
+
 ### 决策：attempt list 需要 Progress-First compact monitoring lens
 
 原因：operator 排查单个 study/domain/status 时，不应先读取全量 stage attempt 大 JSON。`attempt query` 仍是单 attempt 深下钻入口，但队列较多时需要一个只读、可过滤、轻量的 timeline 先回答哪些 attempt 仍是交付进展、platform repair、typed blocker 或 human gate。

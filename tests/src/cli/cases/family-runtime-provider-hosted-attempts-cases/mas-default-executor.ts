@@ -14,6 +14,7 @@ import { enqueueTask } from '../../../../../src/family-runtime-enqueue.ts';
 import { startMasDefaultExecutorDispatchAttempt } from '../../../../../src/family-runtime-mas-default-executor-start.ts';
 import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
 import { createFamilyRuntimeQueueTables, familyRuntimePaths } from '../../../../../src/family-runtime-store.ts';
+import { runFamilyRuntimeQueueTick } from '../../../../../src/family-runtime-tick.ts';
 import {
   listStageAttemptsForTask,
   syncStageAttemptFromTemporalTerminalObservation,
@@ -424,6 +425,78 @@ test('family-runtime keeps MAS default executor dispatch single-flight even when
       assert.equal(secondAttempts.length, 0);
       assert.ok(skipEvent);
       assert.equal(JSON.parse(skipEvent.payload_json).stage_attempt_id, firstAttempt.stage_attempt_id);
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime blocks stale MAS default executor attempts when a newer source supersedes the task', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const stalePayload = defaultExecutorPayload('source-before');
+      const currentPayload = defaultExecutorPayload('source-after');
+      const staleTaskId = 'task-mas-default-superseded-stale';
+      const currentTaskId = 'task-mas-default-superseded-current';
+      insertSucceededTask(db, {
+        taskId: staleTaskId,
+        domainId: 'medautoscience',
+        taskKind: 'domain_owner/default-executor-dispatch',
+        payload: stalePayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:stale',
+      });
+      insertSucceededTask(db, {
+        taskId: currentTaskId,
+        domainId: 'medautoscience',
+        taskKind: 'domain_owner/default-executor-dispatch',
+        payload: currentPayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:current',
+      });
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id IN (?, ?)").run(staleTaskId, currentTaskId);
+      const staleRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(staleTaskId) as Parameters<
+        typeof ensureProviderHostedStageAttempt
+      >[1];
+      const staleAttempt = ensureProviderHostedStageAttempt(db, staleRow, stalePayload);
+      assert.ok(staleAttempt);
+
+      const tick = await runFamilyRuntimeQueueTick(db, familyRuntimePaths(), {
+        source: 'test-superseded-default-executor',
+        limit: 10,
+        hydrate: false,
+      }, {
+        enqueueTask,
+        dispatchTask: async (_db, _paths, row) => ({
+          status: 'selected',
+          task_id: row.task_id,
+        }),
+      });
+      const staleTask = db.prepare(`
+        SELECT status, last_error, dead_letter_reason
+        FROM tasks
+        WHERE task_id = ?
+      `).get(staleTaskId) as { status: string; last_error: string | null; dead_letter_reason: string | null };
+      const [blockedAttempt] = listStageAttemptsForTask(db, staleTaskId);
+      const event = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_default_executor_superseded_by_current_source'
+        LIMIT 1
+      `).get(staleTaskId) as { payload_json: string } | undefined;
+      const eventPayload = event ? JSON.parse(event.payload_json) : null;
+
+      assert.equal(tick.mas_default_executor_superseded_count, 1);
+      assert.deepEqual(tick.dispatches, [{ status: 'selected', task_id: currentTaskId }]);
+      assert.equal(staleTask.status, 'blocked');
+      assert.equal(staleTask.last_error, 'mas_default_executor_superseded_by_current_source');
+      assert.equal(staleTask.dead_letter_reason, 'mas_default_executor_superseded_by_current_source');
+      assert.equal(blockedAttempt.status, 'blocked');
+      assert.equal(blockedAttempt.blocked_reason, 'mas_default_executor_superseded_by_current_source');
+      assert.equal(blockedAttempt.provider_run.provider_status, 'blocked');
+      assert.ok(eventPayload);
+      assert.deepEqual(eventPayload.blocked_stage_attempt_ids, [staleAttempt.stage_attempt_id]);
+      assert.equal(eventPayload.authority_boundary.domain_truth_mutation, false);
     });
   } finally {
     db.close();

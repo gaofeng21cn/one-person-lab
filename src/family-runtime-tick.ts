@@ -130,6 +130,24 @@ function markSupersededMasDefaultExecutorRow(
     supersededAt,
     row.task_id,
   );
+  const blockedAttempts = updateStageAttemptsForTask(db, {
+    taskId: row.task_id,
+    status: 'blocked',
+    blockedReason: MAS_DEFAULT_EXECUTOR_SUPERSEDED_REASON,
+    activityEvent: {
+      activity_kind: 'mas_default_executor_currentness',
+      activity_status: 'blocked',
+      blocked_reason: MAS_DEFAULT_EXECUTOR_SUPERSEDED_REASON,
+      reason,
+      current_task_id: current.task_id,
+      current_source_fingerprint: current.source_fingerprint,
+      authority_boundary: {
+        opl: 'queue_currentness_supersession_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        provider_completion_is_domain_ready: false,
+      },
+    },
+  });
   insertEvent(db, {
     taskId: row.task_id,
     domainId: row.domain_id,
@@ -143,6 +161,7 @@ function markSupersededMasDefaultExecutorRow(
       dispatch_ref: payload.dispatch_ref ?? null,
       action_type: payload.action_type ?? null,
       study_id: payload.study_id ?? null,
+      blocked_stage_attempt_ids: blockedAttempts.map((attempt) => attempt.stage_attempt_id),
       authority_boundary: {
         opl: 'queue_currentness_supersession_only',
         domain: 'truth_quality_artifact_gate_owner',
