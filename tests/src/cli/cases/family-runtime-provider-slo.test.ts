@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import net from 'node:net';
 
 import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
 import {
@@ -633,6 +634,43 @@ test('family-runtime scheduler tick owns provider cadence and queue dispatch wit
   }
 });
 
+test('family-runtime scheduler tick fails closed on worker liveness before queue dispatch', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-scheduler-worker-liveness-'));
+  const server = net.createServer((socket) => socket.end());
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const temporalAddress = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
+  try {
+    insertProvenTemporalProofEvent(stateRoot);
+    const tick = runCli([
+      'family-runtime',
+      'scheduler',
+      'tick',
+      '--provider',
+      'temporal',
+      '--limit',
+      '1',
+    ], familyRuntimeEnv(stateRoot, {
+      OPL_TEMPORAL_ADDRESS: temporalAddress,
+      OPL_TEMPORAL_NAMESPACE: 'opl-scheduler-worker-liveness',
+      OPL_TEMPORAL_TASK_QUEUE: 'opl-scheduler-worker-liveness',
+      OPL_TEMPORAL_WORKER_STATUS: '',
+      OPL_TEMPORAL_WORKER_ENABLED: '',
+    })).family_runtime_scheduler_tick;
+
+    assert.equal(tick.status, 'blocked_provider_not_ready');
+    assert.equal(tick.provider_kind, 'temporal');
+    assert.equal(tick.provider_liveness_blocker.blocker_id, 'temporal_worker_not_ready');
+    assert.equal(tick.provider_liveness_blocker.worker_lifecycle_status, 'worker_not_ready');
+    assert.equal(tick.provider_liveness_blocker.temporal_service_status, 'external_running');
+    assert.equal(tick.provider_liveness_blocker.next_repair_command, 'opl family-runtime worker start --provider temporal');
+    assert.equal(tick.provider_liveness_blocker.next_repair_action.action_id, 'start_temporal_worker');
+    assert.equal(tick.queue_tick, null);
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime scheduler cadence is OPL-owned and fail-closed when Temporal is not ready', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-scheduler-cadence-'));
   try {
@@ -654,6 +692,40 @@ test('family-runtime scheduler cadence is OPL-owned and fail-closed when Tempora
     assert.equal(cadence.authority_boundary.can_install_domain_daemon, false);
     assert.equal(cadence.blocker.next_repair_command.includes('opl family-runtime service start --provider temporal'), true);
   } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime scheduler cadence surfaces worker liveness repair when Temporal service is running', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-scheduler-cadence-worker-'));
+  const server = net.createServer((socket) => socket.end());
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const temporalAddress = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
+  try {
+    const cadence = runCli([
+      'family-runtime',
+      'scheduler',
+      'status',
+      '--provider',
+      'temporal',
+    ], familyRuntimeEnv(stateRoot, {
+      OPL_TEMPORAL_ADDRESS: temporalAddress,
+      OPL_TEMPORAL_NAMESPACE: 'opl-scheduler-cadence-worker',
+      OPL_TEMPORAL_TASK_QUEUE: 'opl-scheduler-cadence-worker',
+      OPL_TEMPORAL_WORKER_STATUS: '',
+      OPL_TEMPORAL_WORKER_ENABLED: '',
+    })).family_runtime_scheduler_cadence;
+
+    assert.equal(cadence.status, 'blocked_provider_not_ready');
+    assert.equal(cadence.blocker.blocker_id, 'temporal_worker_not_ready');
+    assert.equal(cadence.blocker.worker_lifecycle_status, 'worker_not_ready');
+    assert.equal(cadence.blocker.temporal_service_status, 'external_running');
+    assert.equal(cadence.blocker.next_repair_command, 'opl family-runtime worker start --provider temporal');
+    assert.equal(cadence.blocker.next_repair_action.action_id, 'start_temporal_worker');
+    assert.equal(cadence.blocker.liveness_blocker_first, true);
+    assert.equal(cadence.blocker.next_repair_command.includes('service start'), false);
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

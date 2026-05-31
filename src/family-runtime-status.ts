@@ -6,6 +6,7 @@ import {
   resolveFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
 import { buildTemporalWorkerLifecycleContract } from './family-runtime-temporal-readiness.ts';
+import { buildTemporalProviderLivenessBlocker } from './family-runtime-provider-liveness-blocker.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import {
   QUEUE_SCHEMA_VERSION,
@@ -33,6 +34,9 @@ export async function buildFamilyRuntimeStatusPayload(
       ? 'provider_ready_scheduler_surface_available'
       : 'blocked_provider_not_ready'
     : 'dev_offline_provider_cannot_replace_domain_daemons';
+  const providerLivenessBlocker = temporalSelected && !provider.ready
+    ? buildTemporalProviderLivenessBlocker(provider)
+    : null;
 
   return {
     version: 'g2',
@@ -98,12 +102,8 @@ export async function buildFamilyRuntimeStatusPayload(
           medautogrant: 'MAG repo-local runtime journal cadence is not a production scheduler.',
           redcube: 'RCA repo-local session supervision is handler diagnostic only.',
         },
-        blocker: temporalSelected && !provider.ready
-          ? {
-              blocker_kind: 'platform_dependency',
-              blocker_id: provider.degraded_reason ?? 'temporal_provider_not_ready',
-              next_repair_command: 'opl family-runtime service start --provider temporal && opl family-runtime worker start --provider temporal',
-            }
+        blocker: providerLivenessBlocker
+          ? providerLivenessBlocker
           : selectedProvider === 'local_sqlite'
             ? {
                 blocker_kind: 'provider_role',
