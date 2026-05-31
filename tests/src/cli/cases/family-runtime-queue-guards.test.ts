@@ -407,6 +407,8 @@ test('family-runtime queue hold drains scoped running task and active attempt in
       'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mas","study_id":"DM003"}',
+      '--source-fingerprint',
+      'dm003-running-hold-source',
       '--task',
       taskId,
     ], env).family_runtime_stage_attempt.attempt;
@@ -453,6 +455,87 @@ test('family-runtime queue hold drains scoped running task and active attempt in
     assert.equal(tick.family_runtime_tick.selected_count, 0);
     assert.equal(task.task.status, 'waiting_approval');
     assert.equal(task.task.lease, null);
+    assert.equal(task.task.last_error, 'manual_pause_for_mas_upgrade');
+    assert.equal(heldAttempt.status, 'human_gate');
+    assert.equal(heldAttempt.blocked_reason, 'manual_pause_for_mas_upgrade');
+    assert.equal(heldAttempt.provider_run.provider_status, 'operator_hold_requested');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime tick reconciles waiting-approval tasks whose attempts stayed queued', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-waiting-approval-attempt-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot);
+    const enqueued = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      JSON.stringify({
+        workspace_root: '/tmp/mas',
+        study_id: 'DM003',
+        action_type: 'return_to_ai_reviewer_workflow',
+        dispatch_ref: 'dispatch:dm003',
+        next_executable_owner: 'ai_reviewer',
+        executor_kind: 'codex_cli_default',
+      }),
+      '--dedupe-key',
+      'mas:test:DM003:waiting-approval-attempt',
+    ], env);
+    const taskId = enqueued.family_runtime_enqueue.task.task_id;
+    const attempt = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'domain_owner/default-executor-dispatch',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas","study_id":"DM003"}',
+      '--source-fingerprint',
+      'dm003-waiting-approval-source',
+      '--task',
+      taskId,
+    ], env).family_runtime_stage_attempt.attempt;
+
+    const db = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+    try {
+      const now = new Date().toISOString();
+      db.prepare(`
+        UPDATE tasks
+        SET status = 'waiting_approval', requires_approval = 1, approved_at = NULL,
+          lease_owner = NULL, lease_expires_at = NULL, last_error = ?, dead_letter_reason = NULL,
+          updated_at = ?
+        WHERE task_id = ?
+      `).run('manual_pause_for_mas_upgrade', now, taskId);
+      db.prepare(`
+        UPDATE stage_attempts
+        SET status = 'queued', blocked_reason = NULL,
+          provider_run_json = json_set(provider_run_json, '$.provider_status', 'registered'),
+          updated_at = ?
+        WHERE stage_attempt_id = ?
+      `).run(now, attempt.stage_attempt_id);
+    } finally {
+      db.close();
+    }
+
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test-waiting-approval-reconcile'], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env).family_runtime_task;
+    const heldAttempt = task.stage_attempts.find((entry: { stage_attempt_id: string }) =>
+      entry.stage_attempt_id === attempt.stage_attempt_id
+    );
+
+    assert.equal(tick.family_runtime_tick.waiting_approval_attempt_reconciled_count, 1);
+    assert.equal(tick.family_runtime_tick.selected_count, 0);
+    assert.equal(task.task.status, 'waiting_approval');
     assert.equal(task.task.last_error, 'manual_pause_for_mas_upgrade');
     assert.equal(heldAttempt.status, 'human_gate');
     assert.equal(heldAttempt.blocked_reason, 'manual_pause_for_mas_upgrade');

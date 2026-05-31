@@ -7,6 +7,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-05-30
 
+### 决策：waiting-approval task 必须同步投影其 stage attempts 为 operator hold
+
+原因：人工暂停、MAS upgrade pause 或 approval gate 会把 task 正确标记为 `waiting_approval`，但历史 ledger 里可能还残留该 task 名下的 `queued` / `registered` stage attempt。Progress-First 监控不能把这种已暂停任务误读成 runnable queued work，否则 operator 会反复 tick 同一个已被人工 gate 挡住的论文任务。
+
+影响：
+
+- `family-runtime tick` 会把 `waiting_approval` task 名下仍处在 queued/running/checkpointed 且未投影为 hold 的 stage attempt 收敛为 `human_gate`，provider run 投影为 `operator_hold_requested`。
+- tick 返回与事件记录 `waiting_approval_attempt_reconciled_count`，便于 operator 区分真实 runnable work 与历史 pause residue。
+- 该行为只治理 OPL queue / attempt ledger currentness，不释放 queue hold、不 approve task、不启动 provider attempt、不写 MAS truth，不修改 publication eval、controller decisions、artifact gate、paper package 或 `current_package`。
+
 ### 决策：superseded MAS default-executor task 必须同步关闭其 stage attempts
 
 原因：Progress-First 监控以 task、stage attempt、provider liveness 和 closeout refs 共同证明论文是否在推进。若 OPL 已把过期 MAS default-executor task 标记为 `mas_default_executor_superseded_by_current_source`，但该 task 名下仍残留 `queued` / `registered` stage attempt，operator 会继续看到假 queued work，把已经被更新 source 替代的 reviewer / writer handoff 误判为可执行进度。

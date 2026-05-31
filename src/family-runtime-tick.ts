@@ -8,7 +8,8 @@ import type {
 import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
 import type { familyRuntimePaths, taskToPayload } from './family-runtime-store.ts';
 import { insertEvent, type FamilyRuntimeTaskRow } from './family-runtime-store.ts';
-import { taskRowMatchesScope } from './family-runtime-task-scope.ts';
+import { normalizeTaskScopeForStorage, taskRowMatchesScope } from './family-runtime-task-scope.ts';
+import { markStageAttemptOperatorHoldRequested } from './family-runtime-stage-attempt-control.ts';
 import {
   listStageAttemptsForTask,
   syncStageAttemptFromTemporalTerminalObservation,
@@ -57,6 +58,7 @@ type MasDefaultExecutorCurrentTask = {
 
 const MISSING_STAGE_ATTEMPT_IDENTITY_REPAIR_REASON = 'missing_stage_attempt_identity';
 const MAS_DEFAULT_EXECUTOR_SUPERSEDED_REASON = 'mas_default_executor_superseded_by_current_source';
+const WAITING_APPROVAL_ATTEMPT_RECONCILIATION_STATUSES = new Set(['queued', 'running', 'checkpointed']);
 
 function payloadFromTask(row: FamilyRuntimeTaskRow) {
   return JSON.parse(row.payload_json) as Record<string, unknown>;
@@ -280,6 +282,65 @@ function reconcileHistoricalSupersededMasDefaultExecutorAttempts(
       source,
       payload: {
         reason: 'historical_superseded_task_attempt_reconciliation',
+        dispatch_ref: payload.dispatch_ref ?? null,
+        action_type: payload.action_type ?? null,
+        study_id: payload.study_id ?? null,
+        reconciled_stage_attempt_ids: reconciledAttempts.map((attempt) => attempt.stage_attempt_id),
+        authority_boundary: {
+          opl: 'queue_attempt_ledger_currentness_reconciliation_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          domain_truth_mutation: false,
+          publication_quality_mutation: false,
+          artifact_gate_mutation: false,
+          current_package_mutation: false,
+          provider_stage_attempt_started: false,
+        },
+      },
+    });
+    reconciledAttemptCount += reconciledAttempts.length;
+  }
+  return reconciledAttemptCount;
+}
+
+function reconcileWaitingApprovalTaskAttempts(
+  db: DatabaseSync,
+  rows: FamilyRuntimeTaskRow[],
+  input: {
+    source: string;
+    taskScope?: FamilyRuntimeTaskScope;
+  },
+) {
+  let reconciledAttemptCount = 0;
+  for (const row of rows) {
+    if (row.status !== 'waiting_approval' || !row.last_error) {
+      continue;
+    }
+    const attempts = listStageAttemptsForTask(db, row.task_id).filter((attempt) => (
+      WAITING_APPROVAL_ATTEMPT_RECONCILIATION_STATUSES.has(attempt.status)
+      && attempt.provider_run.provider_status !== 'operator_hold_requested'
+    ));
+    if (attempts.length === 0) {
+      continue;
+    }
+    const reconciledAttempts = attempts
+      .map((attempt) => markStageAttemptOperatorHoldRequested(db, {
+        stageAttemptId: attempt.stage_attempt_id,
+        reason: row.last_error ?? 'waiting_approval',
+        source: input.source,
+        taskScope: input.taskScope ? normalizeTaskScopeForStorage(input.taskScope) : undefined,
+      }))
+      .filter((attempt): attempt is NonNullable<typeof attempt> => Boolean(attempt));
+    if (reconciledAttempts.length === 0) {
+      continue;
+    }
+    const payload = payloadFromTask(row);
+    insertEvent(db, {
+      taskId: row.task_id,
+      domainId: row.domain_id,
+      eventType: 'task_waiting_approval_attempts_reconciled',
+      source: input.source,
+      payload: {
+        reason: row.last_error,
         dispatch_ref: payload.dispatch_ref ?? null,
         action_type: payload.action_type ?? null,
         study_id: payload.study_id ?? null,
@@ -902,13 +963,25 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
   const scopedRowsAfterSupersededAttemptReconcile = allRowsAfterSupersededAttemptReconcile.filter((row) =>
     taskRowMatchesScope(row, input.taskScope)
   );
+  const waitingApprovalAttemptReconciledCount = reconcileWaitingApprovalTaskAttempts(
+    db,
+    scopedRowsAfterSupersededAttemptReconcile,
+    {
+      source: `${input.source}:waiting-approval-attempt-reconcile`,
+      taskScope: input.taskScope,
+    },
+  );
+  const allRowsAfterWaitingApprovalAttemptReconcile = db.prepare('SELECT * FROM tasks').all() as FamilyRuntimeTaskRow[];
+  const scopedRowsAfterWaitingApprovalAttemptReconcile = allRowsAfterWaitingApprovalAttemptReconcile.filter((row) =>
+    taskRowMatchesScope(row, input.taskScope)
+  );
   const {
     autoRedrivenCount: masDefaultExecutorAutoRedrivenCount,
     autoDeadLetteredCount: masDefaultExecutorAutoDeadLetteredCount,
     staleSkippedCount: masDefaultExecutorAutoRedriveStaleSkippedCount,
   } = autoRedriveBlockedMasDefaultExecutorProviderTasks(
     db,
-    scopedRowsAfterSupersededAttemptReconcile,
+    scopedRowsAfterWaitingApprovalAttemptReconcile,
     `${input.source}:auto-redrive`,
   );
   const candidateRows = db.prepare(`
@@ -955,6 +1028,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       mas_default_executor_live_skipped_count: masDefaultExecutorLiveSkippedCount,
       mas_default_executor_terminal_synced_count: masDefaultExecutorTerminalSyncedCount,
       mas_default_executor_superseded_attempt_reconciled_count: masDefaultExecutorSupersededAttemptReconciledCount,
+      waiting_approval_attempt_reconciled_count: waitingApprovalAttemptReconciledCount,
       repaired_missing_identity_running_count: repairedMissingIdentityRunningCount,
       repaired_missing_identity_dead_lettered_count: repairedMissingIdentityDeadLetteredCount,
       repaired_paper_autonomy_missing_closeout_count: repairedPaperAutonomyMissingCloseoutCount,
@@ -981,6 +1055,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     mas_default_executor_live_skipped_count: masDefaultExecutorLiveSkippedCount,
     mas_default_executor_terminal_synced_count: masDefaultExecutorTerminalSyncedCount,
     mas_default_executor_superseded_attempt_reconciled_count: masDefaultExecutorSupersededAttemptReconciledCount,
+    waiting_approval_attempt_reconciled_count: waitingApprovalAttemptReconciledCount,
     repaired_missing_identity_running_count: repairedMissingIdentityRunningCount,
     repaired_missing_identity_dead_lettered_count: repairedMissingIdentityDeadLetteredCount,
     repaired_paper_autonomy_missing_closeout_count: repairedPaperAutonomyMissingCloseoutCount,
