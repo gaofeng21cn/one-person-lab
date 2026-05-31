@@ -62,6 +62,8 @@ function compactDomain(domain: JsonRecord) {
     owner: stringValue(domain.owner),
     source_surface: stringValue(domain.source_surface),
     source_ref: stringValue(domain.source_ref),
+    status: stringValue(domain.status),
+    blocked_alias_fields: stringList(record(domain.naming_hygiene_blocker).blocked_alias_fields),
     owner_payload_work_item_count: numberValue(ownerPayloadSummary.work_item_count),
     stage_expected_receipt_payload_stage_count:
       numberValue(stagePayloadSummary.stage_count),
@@ -113,6 +115,7 @@ export function buildDomainOwnerPayloadSummaryAttention(drilldown: JsonRecord) {
     payload_body_allowed_count: numberValue(summary.payload_body_allowed_count),
     domain_ready_claim_count: numberValue(summary.domain_ready_claim_count),
     production_ready_claim_count: numberValue(summary.production_ready_claim_count),
+    naming_hygiene_blocker_count: numberValue(summary.naming_hygiene_blocker_count),
     owner_payload_domains: limitedDomains.items,
     full_detail_section: 'domain_owner_payload_summary_refs',
     authority_boundary: authorityBoundary(record(projection.authority_boundary)),

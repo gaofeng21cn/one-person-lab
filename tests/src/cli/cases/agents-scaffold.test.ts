@@ -149,6 +149,22 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     scaffold.foundry_agent_series_contract.domain_adapter_policy.no_parallel_progress_schema,
     true,
   );
+  assert.deepEqual(scaffold.foundry_agent_series_contract.contract_version_policy, {
+    current_version: 'foundry-agent-series.v1',
+    domain_contract_ref: 'contracts/foundry_agent_series.json',
+    exact_version_pin_required: true,
+    compatible_version_range: ['foundry-agent-series.v1'],
+    breaking_change_requires_new_version: true,
+    domain_descriptor_must_reference_domain_contract: true,
+  });
+  assert.equal(
+    scaffold.foundry_agent_series_contract.shared_release_pin_strategy.owner_release_contract_ref,
+    'contracts/family-release/shared-owner-release.json',
+  );
+  assert.equal(
+    scaffold.foundry_agent_series_contract.shared_release_pin_strategy.consumer_alignment_check,
+    'family:shared-release',
+  );
   assert.equal(
     scaffold.foundry_agent_series_contract.app_projection_policy.app_consumes_shared_progress_projection_only,
     true,
@@ -389,6 +405,22 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     );
     assert.equal(foundryAgentSeries.surface_kind, 'opl_foundry_agent_series_contract');
     assert.equal(foundryAgentSeries.version, 'foundry-agent-series.v1');
+    assert.equal(
+      foundryAgentSeries.contract_version_policy.current_version,
+      'foundry-agent-series.v1',
+    );
+    assert.equal(
+      foundryAgentSeries.contract_version_policy.exact_version_pin_required,
+      true,
+    );
+    assert.equal(
+      foundryAgentSeries.shared_release_pin_strategy.owner_release_contract_ref,
+      'contracts/family-release/shared-owner-release.json',
+    );
+    assert.equal(
+      foundryAgentSeries.shared_release_pin_strategy.domain_contract_version_pin_does_not_authorize_domain_truth,
+      true,
+    );
     assert.equal(foundryAgentSeries.domain_id, 'award-foundry');
     assert.equal(foundryAgentSeries.foundry_agent_id, 'award-foundry');
     assert.equal(foundryAgentSeries.authority_owner, 'award-foundry');
@@ -612,6 +644,14 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.deepEqual(validated.validation.user_stage_log_validation.blockers, []);
     assert.equal(validated.validation.foundry_agent_series_validation.status, 'passed');
     assert.equal(validated.validation.foundry_agent_series_validation.required_for_standard_agent, true);
+    assert.equal(
+      validated.validation.foundry_agent_series_validation.contract_version_policy.current_version,
+      'foundry-agent-series.v1',
+    );
+    assert.equal(
+      validated.validation.foundry_agent_series_validation.shared_release_pin_strategy.consumer_alignment_check,
+      'family:shared-release',
+    );
     assert.deepEqual(validated.validation.foundry_agent_series_validation.blockers, []);
     assert.equal(validated.validation.stage_pack_v2_validation.status, 'passed');
     assert.equal(validated.validation.stage_pack_v2_validation.required_for_repo, true);

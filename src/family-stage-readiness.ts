@@ -23,6 +23,7 @@ import {
 import {
   buildFamilyStageReplayCertification,
   buildFamilyStageReplayEvidenceFromControlPlane,
+  type FamilyStageReplayMissingReceiptWorkorder,
 } from './family-stage-replay-certification.ts';
 import {
   FAMILY_STAGE_AI_STRATEGY_ADVISORY_REFS,
@@ -59,6 +60,7 @@ export interface FamilyStageReadinessIssue {
   stage_id: string | null;
   source_ref: string;
   minimal_counterexample?: JsonRecord;
+  payload_workorder?: FamilyStageReplayMissingReceiptWorkorder;
 }
 
 export interface FamilyStageReadinessSummary {
@@ -169,6 +171,7 @@ function readinessIssue(
   stageId: string | null,
   sourceRef: string,
   minimalCounterexample?: JsonRecord,
+  payloadWorkorder?: FamilyStageReplayMissingReceiptWorkorder,
 ): FamilyStageReadinessIssue {
   return {
     severity,
@@ -177,6 +180,7 @@ function readinessIssue(
     stage_id: stageId,
     source_ref: sourceRef,
     ...(minimalCounterexample ? { minimal_counterexample: minimalCounterexample } : {}),
+    ...(payloadWorkorder ? { payload_workorder: payloadWorkorder } : {}),
   };
 }
 
@@ -272,6 +276,7 @@ export function buildStageReadinessSummary(
     blocker.stage_id,
     'family_stage_replay_certification',
     blocker.minimal_counterexample,
+    blocker.payload_workorder,
   ));
   const warnings = [
     ...admissionWarnings,

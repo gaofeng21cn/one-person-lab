@@ -74,6 +74,7 @@
         "missing_receipt_ref_count",
         "append_only_event_log_ref_count",
         "attempt_ledger_ref_count",
+        "codex_attempt_trace_ref_count",
         "blocker_count"
       ],
       "properties": {
@@ -84,6 +85,7 @@
         "missing_receipt_ref_count": { "type": "integer", "minimum": 0 },
         "append_only_event_log_ref_count": { "type": "integer", "minimum": 0 },
         "attempt_ledger_ref_count": { "type": "integer", "minimum": 0 },
+        "codex_attempt_trace_ref_count": { "type": "integer", "minimum": 0 },
         "blocker_count": { "type": "integer", "minimum": 0 }
       }
     },
@@ -98,7 +100,8 @@
         "missing_runtime_event_refs",
         "expected_receipt_refs",
         "recorded_receipt_refs",
-        "missing_receipt_refs"
+        "missing_receipt_refs",
+        "missing_receipt_workorders"
       ],
       "properties": {
         "stage_id": { "type": "string", "minLength": 1 },
@@ -129,6 +132,132 @@
         "missing_receipt_refs": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
+        },
+        "missing_receipt_workorders": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/missing_receipt_workorder" }
+        }
+      }
+    },
+    "missing_receipt_workorder": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "stage_id",
+        "missing_ref",
+        "missing_ref_kind",
+        "payload_owner",
+        "payload_path_policy",
+        "required_success_ref",
+        "required_return_shapes",
+        "payload_template",
+        "accepted_payload_paths",
+        "authority_boundary"
+      ],
+      "properties": {
+        "surface_kind": { "const": "opl_stage_replay_missing_receipt_workorder" },
+        "stage_id": { "type": "string", "minLength": 1 },
+        "missing_ref": { "type": "string", "minLength": 1 },
+        "missing_ref_kind": {
+          "type": "string",
+          "enum": ["human_gate_ref", "owner_receipt_ref", "domain_receipt_ref"]
+        },
+        "payload_owner": { "const": "domain_or_human_gate_owner" },
+        "payload_path_policy": { "const": "success_receipt_ref_or_domain_owned_typed_blocker_ref" },
+        "required_success_ref": { "type": "string", "minLength": 1 },
+        "required_return_shapes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "payload_template": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["receipt_refs", "typed_blocker_refs"],
+          "properties": {
+            "receipt_refs": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "typed_blocker_refs": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "accepted_payload_paths": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["success_refs_path", "typed_blocker_path"],
+          "properties": {
+            "success_refs_path": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "required_receipt_ref",
+                "typed_blocker_refs_must_be_absent",
+                "closes_replay_receipt_ref",
+                "closes_domain_ready",
+                "closes_production_ready"
+              ],
+              "properties": {
+                "required_receipt_ref": { "type": "string", "minLength": 1 },
+                "typed_blocker_refs_must_be_absent": { "const": true },
+                "closes_replay_receipt_ref": { "const": true },
+                "closes_domain_ready": { "const": false },
+                "closes_production_ready": { "const": false }
+              }
+            },
+            "typed_blocker_path": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "required_typed_blocker_refs",
+                "success_claimed",
+                "closes_replay_receipt_ref",
+                "closes_domain_ready",
+                "closes_production_ready"
+              ],
+              "properties": {
+                "required_typed_blocker_refs": {
+                  "type": "array",
+                  "items": { "type": "string", "minLength": 1 },
+                  "minItems": 1
+                },
+                "success_claimed": { "const": false },
+                "closes_replay_receipt_ref": { "const": false },
+                "closes_domain_ready": { "const": false },
+                "closes_production_ready": { "const": false }
+              }
+            }
+          }
+        },
+        "authority_boundary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "refs_only",
+            "can_execute_domain_action",
+            "can_requery_human",
+            "can_write_domain_truth",
+            "can_create_owner_receipt",
+            "can_write_owner_receipt",
+            "can_authorize_quality_or_export",
+            "can_close_domain_ready",
+            "can_claim_production_ready"
+          ],
+          "properties": {
+            "refs_only": { "const": true },
+            "can_execute_domain_action": { "const": false },
+            "can_requery_human": { "const": false },
+            "can_write_domain_truth": { "const": false },
+            "can_create_owner_receipt": { "const": false },
+            "can_write_owner_receipt": { "const": false },
+            "can_authorize_quality_or_export": { "const": false },
+            "can_close_domain_ready": { "const": false },
+            "can_claim_production_ready": { "const": false }
+          }
         }
       }
     },
@@ -179,6 +308,9 @@
             "record_runtime_event_ref",
             "record_expected_receipt_ref"
           ]
+        },
+        "payload_workorder": {
+          "$ref": "#/$defs/missing_receipt_workorder"
         }
       }
     },
@@ -227,6 +359,7 @@
         "missing_receipt_ref_count": 0,
         "append_only_event_log_ref_count": 1,
         "attempt_ledger_ref_count": 1,
+        "codex_attempt_trace_ref_count": 0,
         "blocker_count": 0
       },
       "stage_results": [
@@ -238,7 +371,8 @@
           "missing_runtime_event_refs": [],
           "expected_receipt_refs": ["human_gate:publication_quality_gate"],
           "recorded_receipt_refs": ["human_gate:publication_quality_gate"],
-          "missing_receipt_refs": []
+          "missing_receipt_refs": [],
+          "missing_receipt_workorders": []
         }
       ],
       "blockers": [],

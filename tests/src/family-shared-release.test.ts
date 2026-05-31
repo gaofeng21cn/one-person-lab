@@ -22,6 +22,12 @@ function createFamilyFixtureRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-shared-release-'));
 }
 
+function recordValue(value: unknown): Record<string, unknown> & { git_locator?: unknown } {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown> & { git_locator?: unknown }
+    : {};
+}
+
 test('loadSharedOwnerReleaseContract reads the owner release contract from an explicit owner repo root', () => {
   const familyRoot = createFamilyFixtureRoot();
   const ownerRepoRoot = path.join(familyRoot, 'one-person-lab');
@@ -31,6 +37,13 @@ test('loadSharedOwnerReleaseContract reads the owner release contract from an ex
       contract_kind: 'family_shared_owner_release.v1',
       owner_repo: 'one-person-lab',
       owner_commit: RELEASED_OWNER_COMMIT,
+      packages: {
+        python: {
+          package_name: 'opl-harness-shared',
+          git_locator:
+            `git+https://github.com/gaofeng21cn/one-person-lab.git@${RELEASED_OWNER_COMMIT}#subdirectory=python/opl-harness-shared`,
+        },
+      },
       consumers: [
         {
           repo_id: 'medautoscience',
@@ -48,6 +61,11 @@ test('loadSharedOwnerReleaseContract reads the owner release contract from an ex
   const contract = loadSharedOwnerReleaseContract({ ownerRepoRoot });
 
   assert.equal(contract.owner_commit, RELEASED_OWNER_COMMIT);
+  const pythonPackage = recordValue(contract.packages?.python);
+  assert.equal(
+    pythonPackage.git_locator,
+    `git+https://github.com/gaofeng21cn/one-person-lab.git@${RELEASED_OWNER_COMMIT}#subdirectory=python/opl-harness-shared`,
+  );
   assert.equal(contract.consumers[0]?.repo_id, 'medautoscience');
   assert.equal(contract.consumers[0]?.verify_command, 'scripts/verify.sh family');
 });

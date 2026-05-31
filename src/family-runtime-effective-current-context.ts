@@ -225,13 +225,15 @@ function deliverableDelta(attempt: JsonRecord) {
   const routeImpact = record(attempt.route_impact);
   const progressLog = record(attempt.stage_progress_log);
   const userStageLog = record(progressLog.user_stage_log);
+  const routeImpactDelta = routeImpact.deliverable_progress_delta;
+  const userStageLogDelta = userStageLog.deliverable_progress_delta;
   const explicitDeltaSummary =
-    stringValue(routeImpact.deliverable_progress_delta)
-    ?? stringValue(userStageLog.deliverable_progress_delta);
+    stringValue(routeImpactDelta)
+    ?? stringValue(userStageLogDelta);
   if (explicitDeltaSummary) {
     return explicitDeltaSummary;
   }
-  for (const delta of [routeImpact.deliverable_progress_delta, userStageLog.deliverable_progress_delta]) {
+  for (const delta of [routeImpactDelta, userStageLogDelta]) {
     if (deltaCount(delta) > 0) {
       return deltaSummary(delta) ?? 'deliverable_delta_observed';
     }
@@ -241,6 +243,12 @@ function deliverableDelta(attempt: JsonRecord) {
     ?? stringValue(userStageLog.progress_delta_classification);
   if (classification === 'deliverable_progress' || classification === 'mixed') {
     return `${classification}_classified`;
+  }
+  if (classification === 'typed_blocker'
+    || classification === 'platform_repair'
+    || classification === 'human_gate'
+    || classification === 'stop_loss') {
+    return deltaSummary(routeImpactDelta) ?? deltaSummary(userStageLogDelta) ?? 'none';
   }
   return (stringList(attempt.artifact_refs).length > 0 ? 'artifact_refs_observed' : null)
     ?? 'none';

@@ -285,6 +285,11 @@ export async function buildFrameworkReadinessSummary(
   }).domain_manifests;
   const packCompiler = record(buildDomainPackCompilerList(contracts, { domainManifests }).domain_pack_compiler);
   const familyStages = record(buildFamilyStagesList(contracts, { domainManifests }).family_stages);
+  const familyStageReadiness = record(buildFamilyStageReadinessInspect(
+    contracts,
+    ['--family-defaults', '--detail', 'full'],
+    { domainManifests },
+  ).family_stage_readiness);
   const stageReadinessDiagnostics = {
     mas: buildStageReadinessDiagnostic(contracts, 'mas', domainManifests),
     mag: buildStageReadinessDiagnostic(contracts, 'mag', domainManifests),
@@ -307,6 +312,7 @@ export async function buildFrameworkReadinessSummary(
       providerKind: 'temporal',
       executorKind: 'codex_cli',
       runtimeSnapshot,
+      stageReadiness: familyStageReadiness,
     })).family_runtime_evidence_worklist,
   );
 
@@ -347,6 +353,8 @@ export async function buildFrameworkReadinessSummary(
     numberValue(appEvidenceAfterContract.owner_payload_group_attention_count);
   const ownerPayloadGroupAttentionOmittedCount =
     numberValue(appEvidenceAfterContract.owner_payload_group_attention_omitted_count);
+  const domainOwnerPayloadSummaryNamingHygieneBlockerCount =
+    numberValue(domainOwnerPayloadSummaryAttention.naming_hygiene_blocker_count);
   const familyStallLineage = record(appOperatorDrilldown.family_stall_lineage);
   const stageSummaries = Object.fromEntries(
     Object.entries(stageReadiness).map(([domain, readiness]) => [domain, stageReadinessSummary(readiness)]),
@@ -404,6 +412,16 @@ export async function buildFrameworkReadinessSummary(
     countValue(worklistSummary.stage_runtime_event_missing_ref_count);
   const stageEvidenceWorkorderAttentionItems =
     recordList(familyRuntimeEvidenceWorklist.stage_evidence_workorder_attention_items);
+  const stageReplayMissingReceiptWorkorderCount =
+    countValue(worklistSummary.stage_replay_missing_receipt_workorder_count);
+  const stageReplayMissingReceiptRefCount =
+    countValue(worklistSummary.stage_replay_missing_receipt_ref_count);
+  const stageReplayMissingHumanGateRefCount =
+    countValue(worklistSummary.stage_replay_missing_human_gate_ref_count);
+  const stageReplayMissingReceiptWorkorderAttentionItems =
+    recordList(familyRuntimeEvidenceWorklist.stage_replay_missing_receipt_workorder_attention_items);
+  const stageReplayMissingReceiptWorkorderAttentionSummary =
+    record(familyRuntimeEvidenceWorklist.stage_replay_missing_receipt_workorder_attention_summary);
   const domainDispatchEvidenceWorkorderAttentionItems =
     recordList(familyRuntimeEvidenceWorklist.domain_dispatch_evidence_workorder_attention_items);
   const domainDispatchEvidenceWorkorderGroupAttentionItems =
@@ -519,6 +537,11 @@ export async function buildFrameworkReadinessSummary(
         stageSourceScopeMissingRefCount,
         stageRuntimeEventMissingRefCount,
         stageEvidenceWorkorderAttentionItems,
+        stageReplayMissingReceiptWorkorderCount,
+        stageReplayMissingReceiptRefCount,
+        stageReplayMissingHumanGateRefCount,
+        stageReplayMissingReceiptWorkorderAttentionSummary,
+        stageReplayMissingReceiptWorkorderAttentionItems,
         ownerPayloadGroupAttentionCount,
         ownerPayloadGroupAttentionOmittedCount,
         ownerPayloadGroups,
@@ -573,10 +596,18 @@ export async function buildFrameworkReadinessSummary(
         stage_runtime_event_missing_workorder_count: stageRuntimeEventMissingWorkorderCount,
         stage_source_scope_missing_ref_count: stageSourceScopeMissingRefCount,
         stage_runtime_event_missing_ref_count: stageRuntimeEventMissingRefCount,
+        stage_replay_missing_receipt_workorder_count:
+          stageReplayMissingReceiptWorkorderCount,
+        stage_replay_missing_receipt_ref_count:
+          stageReplayMissingReceiptRefCount,
+        stage_replay_missing_human_gate_ref_count:
+          stageReplayMissingHumanGateRefCount,
         evidence_envelope_open_count: readinessEvidenceEnvelopeOpenCount,
         evidence_envelope_blocked_count: readinessEvidenceEnvelopeBlockedCount,
         evidence_envelope_attention_count: evidenceEnvelopeAttentionCount,
         domain_dispatch_attention_count: domainDispatchAttentionCount,
+        domain_owner_payload_summary_naming_hygiene_blocker_count:
+          domainOwnerPayloadSummaryNamingHygieneBlockerCount,
         operator_actionable_attention_tail_count: attentionCounts.operatorActionableAttentionCount,
         operator_payload_required_attention_tail_count: attentionCounts.operatorPayloadRequiredAttentionCount,
         operator_payload_free_attention_tail_count: attentionCounts.operatorPayloadFreeAttentionCount,
@@ -651,6 +682,16 @@ export async function buildFrameworkReadinessSummary(
           source_scope_missing_ref_count: stageSourceScopeMissingRefCount,
           runtime_event_missing_ref_count: stageRuntimeEventMissingRefCount,
           stage_evidence_workorder_attention_items: stageEvidenceWorkorderAttentionItems,
+          stage_replay_missing_receipt_workorder_count:
+            stageReplayMissingReceiptWorkorderCount,
+          stage_replay_missing_receipt_ref_count:
+            stageReplayMissingReceiptRefCount,
+          stage_replay_missing_human_gate_ref_count:
+            stageReplayMissingHumanGateRefCount,
+          stage_replay_missing_receipt_workorder_attention_summary:
+            stageReplayMissingReceiptWorkorderAttentionSummary,
+          stage_replay_missing_receipt_workorder_attention_items:
+            stageReplayMissingReceiptWorkorderAttentionItems,
           domain_dispatch_evidence_workorder_packet_summary:
             domainDispatchEvidenceWorkorderSummary,
           domain_dispatch_evidence_workorder_group_attention_policy:
@@ -762,6 +803,16 @@ export async function buildFrameworkReadinessSummary(
         stage_source_scope_missing_ref_count: stageSourceScopeMissingRefCount,
         stage_runtime_event_missing_ref_count: stageRuntimeEventMissingRefCount,
         stage_evidence_workorder_attention_items: stageEvidenceWorkorderAttentionItems,
+        stage_replay_missing_receipt_workorder_count:
+          stageReplayMissingReceiptWorkorderCount,
+        stage_replay_missing_receipt_ref_count:
+          stageReplayMissingReceiptRefCount,
+        stage_replay_missing_human_gate_ref_count:
+          stageReplayMissingHumanGateRefCount,
+        stage_replay_missing_receipt_workorder_attention_summary:
+          stageReplayMissingReceiptWorkorderAttentionSummary,
+        stage_replay_missing_receipt_workorder_attention_items:
+          stageReplayMissingReceiptWorkorderAttentionItems,
         domain_dispatch_evidence_workorder_packet_summary:
           domainDispatchEvidenceWorkorderSummary,
         domain_dispatch_evidence_workorder_group_attention_policy:

@@ -407,6 +407,8 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       domainOwnerPayloadSummary.domain_ready_claim_count,
     domain_owner_payload_summary_production_ready_claim_count:
       domainOwnerPayloadSummary.production_ready_claim_count,
+    domain_owner_payload_summary_naming_hygiene_blocker_count:
+      domainOwnerPayloadSummary.naming_hygiene_blocker_count,
     domain_owner_payload_summary_ledger_receipt_ref_count:
       domainOwnerPayloadSummaryReceipts.length,
     domain_owner_payload_summary_recorded_ledger_receipt_ref_count:

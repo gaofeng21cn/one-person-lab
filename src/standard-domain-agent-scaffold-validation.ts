@@ -398,6 +398,14 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown) {
   const requiredIdentityFields = readStringArray(contract?.required_identity_fields);
   const requiredStagePackets = readStringArray(contract?.required_stage_packets);
   const sharedProgressProjectionFields = readStringArray(contract?.shared_progress_projection_fields);
+  const contractVersionPolicy = isPlainRecord(contract?.contract_version_policy)
+    ? contract.contract_version_policy
+    : null;
+  const compatibleVersionRange = readStringArray(contractVersionPolicy?.compatible_version_range);
+  const sharedReleasePinStrategy = isPlainRecord(contract?.shared_release_pin_strategy)
+    ? contract.shared_release_pin_strategy
+    : null;
+  const supportedPinSources = readStringArray(sharedReleasePinStrategy?.supported_pin_sources);
   const domainAdapterPolicy = isPlainRecord(contract?.domain_adapter_policy)
     ? contract.domain_adapter_policy
     : null;
@@ -415,6 +423,37 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown) {
     readOptionalString(contract?.version) === STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT.version
       ? null
       : 'foundry_agent_series_version_invalid',
+    readOptionalString(contractVersionPolicy?.current_version) === STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT.version
+      ? null
+      : 'foundry_agent_series_current_version_pin_invalid',
+    contractVersionPolicy?.exact_version_pin_required === true
+      ? null
+      : 'foundry_agent_series_exact_version_pin_required',
+    compatibleVersionRange.includes(STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT.version)
+      ? null
+      : 'foundry_agent_series_compatible_version_range_missing_current',
+    readOptionalString(contractVersionPolicy?.domain_contract_ref) === 'contracts/foundry_agent_series.json'
+      ? null
+      : 'foundry_agent_series_domain_contract_ref_invalid',
+    readOptionalString(sharedReleasePinStrategy?.owner_release_contract_ref)
+      === 'contracts/family-release/shared-owner-release.json'
+      ? null
+      : 'foundry_agent_series_owner_release_contract_ref_invalid',
+    sharedReleasePinStrategy?.owner_commit_pin_required === true
+      ? null
+      : 'foundry_agent_series_owner_commit_pin_required',
+    sharedReleasePinStrategy?.domain_dependency_pin_required === true
+      ? null
+      : 'foundry_agent_series_domain_dependency_pin_required',
+    readOptionalString(sharedReleasePinStrategy?.consumer_alignment_check) === 'family:shared-release'
+      ? null
+      : 'foundry_agent_series_consumer_alignment_check_invalid',
+    supportedPinSources.includes('pyproject.toml')
+      ? null
+      : 'foundry_agent_series_missing_python_pin_source',
+    supportedPinSources.includes('uv.lock')
+      ? null
+      : 'foundry_agent_series_missing_python_lock_pin_source',
     readOptionalString(contract?.owner) === STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT.owner
       ? null
       : 'foundry_agent_series_owner_must_be_opl',
@@ -487,6 +526,8 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown) {
     required_identity_fields: requiredIdentityFields,
     required_stage_packets: requiredStagePackets,
     shared_progress_projection_fields: sharedProgressProjectionFields,
+    contract_version_policy: contractVersionPolicy,
+    shared_release_pin_strategy: sharedReleasePinStrategy,
     blockers,
   };
 }

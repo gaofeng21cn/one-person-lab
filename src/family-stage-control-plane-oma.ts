@@ -22,6 +22,10 @@ type DomainManifestCatalog = {
   [key: string]: unknown;
 };
 
+const OMA_STAGE_DECOMPOSITION_STAGE_ATTEMPT_RECEIPT_REF = 'stage-attempt-receipt-ref:stage-decomposition';
+const OMA_STAGE_DECOMPOSITION_EXECUTOR_RECEIPT_REF = 'executor-receipt-ref:stage-decomposition/codex-cli';
+const OMA_STAGE_DECOMPOSITION_INDEPENDENT_GATE_RECEIPT_REF = 'independent-gate-receipt-ref:stage-decomposition';
+
 function ref(refKind: string, refValue: string, role?: string): FamilyStageSurfaceRef {
   return {
     ref_kind: refKind,
@@ -48,6 +52,10 @@ function buildOplMetaAgentStageControlPlane(): FamilyStageControlPlane {
       can_authorize_quality_verdict: false,
       can_mutate_artifact_body: false,
     },
+    replay_evidence_refs: [
+      ref('append_only_event_log_ref', 'event-log:opl-meta-agent/stage-decomposition', 'append_only_event_log_ref'),
+      ref('attempt_ledger_ref', 'attempt-ledger:opl/opl-meta-agent/stage-decomposition', 'attempt_ledger_ref'),
+    ],
     stages: [
       {
         stage_id: 'stage-decomposition',
@@ -110,12 +118,16 @@ function buildOplMetaAgentStageControlPlane(): FamilyStageControlPlane {
           progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
           typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
           expected_receipt_refs: [
-            ref('stage_attempt_receipt_ref', 'stage-attempt-receipt-ref:stage-decomposition'),
-            ref('executor_receipt_ref', 'executor-receipt-ref:stage-decomposition/codex-cli'),
-            ref('independent_gate_receipt_ref', 'independent-gate-receipt-ref:stage-decomposition'),
+            ref('stage_attempt_receipt_ref', OMA_STAGE_DECOMPOSITION_STAGE_ATTEMPT_RECEIPT_REF),
+            ref('executor_receipt_ref', OMA_STAGE_DECOMPOSITION_EXECUTOR_RECEIPT_REF),
+            ref('independent_gate_receipt_ref', OMA_STAGE_DECOMPOSITION_INDEPENDENT_GATE_RECEIPT_REF),
           ],
           monitor_freshness_refs: [],
-          replay_evidence_refs: [],
+          replay_evidence_refs: [
+            ref('closeout_receipt_ref', OMA_STAGE_DECOMPOSITION_STAGE_ATTEMPT_RECEIPT_REF, 'stage_closeout_receipt_ref'),
+            ref('closeout_receipt_ref', OMA_STAGE_DECOMPOSITION_EXECUTOR_RECEIPT_REF, 'stage_closeout_receipt_ref'),
+            ref('closeout_receipt_ref', OMA_STAGE_DECOMPOSITION_INDEPENDENT_GATE_RECEIPT_REF, 'stage_closeout_receipt_ref'),
+          ],
           runtime_assumptions: [],
           monitor_refs: [],
           source_scope_refs: [

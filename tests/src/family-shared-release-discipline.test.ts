@@ -83,12 +83,28 @@ function loadFamilyManifestFixture(fileName: string) {
   return payload.product_entry_manifest ?? payload;
 }
 
+function recordValue(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
 test('shared owner release contract freezes a full owner commit and three consumer repos', () => {
   const contract = loadSharedOwnerReleaseContract({ repoRoot });
+  const pythonPackage = recordValue(contract.packages.python);
+  const jsPackage = recordValue(contract.packages.js);
 
   assert.equal(contract.contract_kind, 'family_shared_owner_release.v1');
   assert.match(contract.owner_commit, /^[0-9a-f]{40}$/);
   assert.equal(contract.owner_commit, RELEASED_OWNER_COMMIT);
+  assert.equal(
+    pythonPackage.git_locator,
+    `git+https://github.com/gaofeng21cn/one-person-lab.git@${RELEASED_OWNER_COMMIT}#subdirectory=python/opl-harness-shared`,
+  );
+  assert.equal(
+    jsPackage.git_locator,
+    `git+https://github.com/gaofeng21cn/one-person-lab.git#${RELEASED_OWNER_COMMIT}`,
+  );
   assert.equal(contract.consumers.length, 3);
   assert.equal(contract.consumers[0].verify_command, 'scripts/verify.sh family');
   assert.equal(contract.consumers[1].verify_command, 'scripts/verify.sh family');

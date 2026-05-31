@@ -290,16 +290,43 @@ test('stage replay certification blocks missing expected receipt refs with minim
     append_only_event_log_refs: ['event-log:mas/stages'],
     attempt_ledger_refs: ['attempt-ledger:opl/mas'],
     recorded_runtime_event_refs: ['runtime_event:publication_review.gate_recorded'],
-    closeout_receipt_refs: ['human_gate:publication_quality_gate'],
+    closeout_receipt_refs: ['mas:publication_review_receipt'],
   });
 
   assert.equal(certification.replay_status, 'blocked');
   assert.equal(certification.summary.missing_receipt_ref_count, 2);
+  const reviewStage = certification.stage_results.find((entry) => entry.stage_id === 'publication_review');
+  assert.equal(reviewStage?.missing_receipt_workorders.length, 2);
+  const humanGateWorkorder = reviewStage?.missing_receipt_workorders.find(
+    (entry) => entry.missing_ref === 'human_gate:publication_quality_gate',
+  );
+  assert.deepEqual(humanGateWorkorder?.payload_template, {
+    receipt_refs: [],
+    typed_blocker_refs: [],
+  });
+  assert.equal(humanGateWorkorder?.missing_ref_kind, 'human_gate_ref');
+  assert.deepEqual(humanGateWorkorder?.required_return_shapes, [
+    'human_gate_receipt_ref',
+    'typed_blocker_ref',
+  ]);
+  assert.equal(humanGateWorkorder?.accepted_payload_paths.success_refs_path.required_receipt_ref, 'human_gate:publication_quality_gate');
+  assert.equal(humanGateWorkorder?.accepted_payload_paths.success_refs_path.closes_domain_ready, false);
+  assert.equal(humanGateWorkorder?.accepted_payload_paths.typed_blocker_path.success_claimed, false);
+  assert.equal(humanGateWorkorder?.authority_boundary.can_requery_human, false);
+  assert.equal(humanGateWorkorder?.authority_boundary.can_create_owner_receipt, false);
   assert.ok(certification.blockers.some((entry) => (
     entry.blocker_id === 'expected_receipt_ref_missing'
     && entry.stage_id === 'publication_review'
-    && entry.minimal_counterexample.missing_ref === 'mas:publication_review_receipt'
+    && entry.minimal_counterexample.missing_ref === 'owner_receipt:publication_review'
   )));
+  const gateBlocker = certification.blockers.find((entry) => (
+    entry.blocker_id === 'expected_receipt_ref_missing'
+    && entry.stage_id === 'publication_review'
+    && entry.minimal_counterexample.missing_ref === 'human_gate:publication_quality_gate'
+  ));
+  assert.equal(gateBlocker?.payload_workorder?.surface_kind, 'opl_stage_replay_missing_receipt_workorder');
+  assert.equal(gateBlocker?.payload_workorder?.payload_owner, 'domain_or_human_gate_owner');
+  assert.equal(gateBlocker?.payload_workorder?.authority_boundary.can_write_domain_truth, false);
 });
 
 test('stage replay certification refuses non-admitted stage packs and missing replay ledgers', () => {
@@ -334,6 +361,10 @@ test('stage replay certification schema freezes replay-only non-authority bounda
   assert.equal(properties.surface_kind.const, 'opl_family_stage_replay_certification');
   assert.equal(properties.version.const, 'family-stage-replay-certification.v1');
   assert.equal(properties.stage_pack_hash.pattern, '^[0-9a-f]{64}$');
+  const summary = defs.summary as JsonRecord;
+  const stageResult = defs.stage_result as JsonRecord;
+  const missingReceiptWorkorder = defs.missing_receipt_workorder as JsonRecord;
+  const missingReceiptWorkorderProperties = missingReceiptWorkorder.properties as Record<string, JsonRecord>;
   assert.equal(authorityProperties.opl_role.const, 'replay_certification_projection_only');
   assert.equal(authorityProperties.replay_reads_append_only_log_refs_only.const, true);
   assert.equal(authorityProperties.can_requery_ai.const, false);
@@ -341,5 +372,19 @@ test('stage replay certification schema freezes replay-only non-authority bounda
   assert.equal(authorityProperties.can_requery_external_system.const, false);
   assert.equal(authorityProperties.can_write_domain_truth.const, false);
   assert.equal(authorityProperties.can_authorize_quality_verdict.const, false);
+  assert.equal((summary.required as string[]).includes('codex_attempt_trace_ref_count'), true);
+  assert.equal((stageResult.required as string[]).includes('missing_receipt_workorders'), true);
+  assert.equal(missingReceiptWorkorderProperties.surface_kind.const, 'opl_stage_replay_missing_receipt_workorder');
+  assert.deepEqual(missingReceiptWorkorderProperties.missing_ref_kind.enum, [
+    'human_gate_ref',
+    'owner_receipt_ref',
+    'domain_receipt_ref',
+  ]);
+  const workorderAuthority = (
+    (missingReceiptWorkorderProperties.authority_boundary as JsonRecord).properties as Record<string, JsonRecord>
+  );
+  assert.equal(workorderAuthority.can_requery_human.const, false);
+  assert.equal(workorderAuthority.can_create_owner_receipt.const, false);
+  assert.equal(workorderAuthority.can_authorize_quality_or_export.const, false);
   assert.equal(exampleAuthority.can_requery_external_system, false);
 });

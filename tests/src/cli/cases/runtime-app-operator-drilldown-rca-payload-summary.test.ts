@@ -311,3 +311,134 @@ test('runtime App drilldown exposes RCA owner payload summaries as refs-only gui
     readinessAttention.owner_payload_work_item_count,
   );
 });
+
+test('runtime App drilldown blocks RCA legacy payload field alias resurrection', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-rca-payload-alias-'));
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const rcaManifest = withRcaPayloadSummaries(loadFamilyManifestFixtures().redcube);
+  const productionRefs = (
+    rcaManifest.operator_evidence_readiness_projection as Record<string, Record<string, unknown>>
+  ).production_evidence_scaleout_refs;
+  productionRefs.legacy_payload_field_aliases = {
+    domain_receipt_refs: ['domain_owner_receipt_refs'],
+    no_regression_refs: ['no_regression_evidence_refs'],
+  };
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+  };
+  runCli([
+    'workspace',
+    'bind',
+    '--project',
+    'redcube',
+    '--path',
+    repoRoot,
+    '--manifest-command',
+    buildManifestCommand(rcaManifest),
+  ], env);
+
+  const summary = runCli(['runtime', 'app-operator-drilldown'], env)
+    .app_operator_drilldown;
+  assert.equal(
+    summary.summary.domain_owner_payload_summary_naming_hygiene_blocker_count,
+    1,
+  );
+  const summaryAttention = summary.attention_first_payload.evidence_after_contract
+    .domain_owner_payload_summary_attention;
+  assert.equal(summaryAttention.naming_hygiene_blocker_count, 1);
+  assert.equal(
+    summaryAttention.owner_payload_domains[0].status,
+    'blocked_legacy_payload_field_aliases_resurrected',
+  );
+  assert.deepEqual(summaryAttention.owner_payload_domains[0].blocked_alias_fields, [
+    'domain_receipt_refs',
+    'no_regression_refs',
+  ]);
+
+  const readiness = runCli(['framework', 'readiness', '--family-defaults'], env)
+    .framework_readiness;
+  assert.equal(
+    readiness.summary.domain_owner_payload_summary_naming_hygiene_blocker_count,
+    1,
+  );
+  assert.equal(
+    readiness.attention_first_payload.summary
+      .domain_owner_payload_summary_naming_hygiene_blocker_count,
+    1,
+  );
+  assert.equal(
+    readiness.attention_first_payload.domain_owner_payload_summary_attention
+      .naming_hygiene_blocker_count,
+    1,
+  );
+
+  const worklist = runCli([
+    'family-runtime',
+    'evidence-worklist',
+    '--family-defaults',
+    '--provider',
+    'temporal',
+    '--executor-kind',
+    'codex_cli',
+    '--detail',
+    'full',
+  ], env).family_runtime_evidence_worklist;
+  assert.equal(
+    worklist.summary.domain_owner_payload_summary_naming_hygiene_blocker_count,
+    1,
+  );
+  assert.equal(
+    worklist.domain_owner_payload_summary_attention.surface_kind,
+    'opl_domain_owner_payload_summary_attention',
+  );
+  assert.equal(
+    worklist.domain_owner_payload_summary_attention.source_command,
+    'opl runtime app-operator-drilldown --json',
+  );
+  assert.equal(worklist.domain_owner_payload_summary_attention.naming_hygiene_blocker_count, 1);
+  assert.equal(
+    worklist.domain_owner_payload_summary_attention.owner_payload_domains[0].status,
+    'blocked_legacy_payload_field_aliases_resurrected',
+  );
+  assert.equal(
+    worklist.worklist_items.some(
+      (item: { action_kind: string }) =>
+        item.action_kind === 'domain_owner_payload_summary_receipt_record',
+    ),
+    false,
+  );
+
+  const full = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+    .app_operator_drilldown;
+  const projection = full.domain_owner_payload_summary_refs;
+  const rca = projection.domains[0];
+  assert.equal(rca.status, 'blocked_legacy_payload_field_aliases_resurrected');
+  assert.equal(rca.owner_payload_item_summary, null);
+  assert.equal(rca.stage_expected_receipt_payload_summary, null);
+  assert.deepEqual(rca.naming_hygiene_blocker.blocked_alias_fields, [
+    'domain_receipt_refs',
+    'no_regression_refs',
+  ]);
+  assert.equal(projection.summary.domain_count, 1);
+  assert.equal(projection.summary.owner_payload_work_item_count, 0);
+  assert.equal(projection.summary.stage_expected_receipt_payload_stage_count, 0);
+  assert.equal(projection.summary.naming_hygiene_blocker_count, 1);
+  const recordRoutes = full.operator_action_routing_refs.refs.filter(
+    (route: { action_kind: string }) =>
+      route.action_kind === 'domain_owner_payload_summary_receipt_record',
+  );
+  assert.equal(recordRoutes.length, 0);
+
+  const attention = full.attention_first_payload.evidence_after_contract
+    .domain_owner_payload_summary_attention;
+  assert.equal(attention.naming_hygiene_blocker_count, 1);
+  assert.equal(
+    attention.owner_payload_domains[0].status,
+    'blocked_legacy_payload_field_aliases_resurrected',
+  );
+  assert.deepEqual(attention.owner_payload_domains[0].blocked_alias_fields, [
+    'domain_receipt_refs',
+    'no_regression_refs',
+  ]);
+});

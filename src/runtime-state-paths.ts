@@ -21,6 +21,7 @@ export type OplStatePaths = {
   standard_agent_template_consumption_ledger_file: string;
   domain_owner_payload_summary_ledger_file: string;
   mag_manifest_sustained_consumption_ledger_file: string;
+  stage_replay_missing_receipt_ledger_file: string;
   agent_lab_risk_tier_auto_promotion_ledger_file: string;
   developer_mode_closeout_ledger_file: string;
   domain_manifest_projection_cache_file: string;
@@ -75,6 +76,10 @@ export function resolveOplStatePaths(): OplStatePaths {
     mag_manifest_sustained_consumption_ledger_file: path.join(
       stateDir,
       'mag-manifest-sustained-consumption-followthrough-ledger.json',
+    ),
+    stage_replay_missing_receipt_ledger_file: path.join(
+      stateDir,
+      'stage-replay-missing-receipt-ledger.json',
     ),
     agent_lab_risk_tier_auto_promotion_ledger_file: path.join(
       stateDir,

@@ -12,10 +12,10 @@ const BASELINE = new Map([
   ['src/family-runtime-stage-attempts.ts', 1054],
   ['src/runtime-tray-app-operator-drilldown.ts', 1408],
   ['tests/src/agent-lab.test.ts', 1135],
+  ['tests/src/cli/cases/agents-scaffold.test.ts', 1011],
   ['tests/src/cli/cases/domain-pack-compiler.test.ts', 1036],
   ['tests/src/cli/cases/runtime-app-operator-drilldown.test.ts', 1172],
   ['tests/src/cli/cases/family-runtime.test.ts', 1072],
-  ['tests/src/cli/cases/workspace-domain.stages.test.ts', 1006],
   ['tests/src/family-runtime-codex-stage-runner.test.ts', 1153],
 ]);
 const CODE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.mts', '.cts', '.py', '.sh', '.bash', '.zsh', '.rs', '.go']);

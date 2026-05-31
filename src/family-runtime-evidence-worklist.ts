@@ -19,6 +19,17 @@ import { buildZeroOpenCompletionGuard, zeroOpenCompletionGuardSummaryFields } fr
 import { operatorRoutesByActionId, payloadHandoffProjection, routeWithOperatorHandoff } from './family-runtime-evidence-worklist-parts/operator-route-handoff.ts';
 import { readOnlyRouteMatchesDefaults } from './family-runtime-evidence-worklist-parts/route-defaults.ts';
 import { buildStageEvidenceWorkorderPacket, compactStageEvidenceWorkorderAttentionItems } from './family-runtime-evidence-worklist-parts/stage-evidence-workorders.ts';
+import {
+  domainManifestsForWorklist,
+  stageReadinessForWorklist,
+  type DomainManifestCatalog,
+} from './family-runtime-evidence-worklist-parts/stage-readiness-input.ts';
+import {
+  buildStageReplayMissingReceiptWorkorderPacket,
+  compactStageReplayMissingReceiptWorkorderAttentionSummary,
+  compactStageReplayMissingReceiptWorkorderAttentionItems,
+} from './family-runtime-evidence-worklist-parts/stage-replay-missing-receipt-workorders.ts';
+import { familyRuntimeEvidenceWorklistAuthorityBoundary } from './family-runtime-evidence-worklist-parts/authority-boundary.ts';
 import { domainDispatchRecordRouteAttemptIds, syncTerminalTemporalAttemptsForEvidenceWorklist, type EvidenceWorklistTemporalQuery } from './family-runtime-evidence-worklist-parts/terminal-observation-sync.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -29,6 +40,8 @@ type EvidenceWorklistInput = {
   executorKind: 'codex_cli';
   detailLevel?: 'summary' | 'full';
   runtimeSnapshot?: Awaited<ReturnType<typeof buildRuntimeTraySnapshot>>;
+  stageReadiness?: JsonRecord;
+  domainManifests?: DomainManifestCatalog;
   queryTemporalStageAttemptReadModel?: EvidenceWorklistTemporalQuery;
 };
 
@@ -600,23 +613,6 @@ function domainDispatchReceiptWorklistItems(drilldown: JsonRecord) {
   });
 }
 
-function authorityBoundary() {
-  return {
-    opl: 'evidence_worklist_derived_attention_lens_for_refs_only_safe_action_routes',
-    provider: 'temporal_scheduler_and_provider_slo_receipt_owner',
-    domain: 'truth_quality_artifact_domain_ready_owner',
-    can_write_domain_truth: false,
-    can_read_memory_body: false,
-    can_read_artifact_body: false,
-    can_mutate_artifact: false,
-    can_authorize_domain_ready: false,
-    can_authorize_quality_verdict: false,
-    can_authorize_artifact_or_export_verdict: false,
-    can_claim_production_ready: false,
-    provider_completion_is_domain_ready: false,
-  };
-}
-
 function worklistCounts(
   worklistItems: JsonRecord[],
   openItems: JsonRecord[],
@@ -762,10 +758,13 @@ export async function runFamilyRuntimeEvidenceWorklist(
   contracts: FrameworkContracts,
   input: EvidenceWorklistInput,
 ) {
+  const domainManifests = domainManifestsForWorklist(contracts, input);
+  const stageReadiness = stageReadinessForWorklist(contracts, input, domainManifests);
   const preliminarySnapshot = input.runtimeSnapshot
     ?? await buildRuntimeTraySnapshot(contracts, {
       appOperatorDrilldownDetailLevel: 'full',
       providerKind: input.providerKind,
+      ...(domainManifests ? { domainManifests } : {}),
     });
   const terminalObservationSync = await syncTerminalTemporalAttemptsForEvidenceWorklist({
     ...input,
@@ -779,9 +778,16 @@ export async function runFamilyRuntimeEvidenceWorklist(
       ? await buildRuntimeTraySnapshot(contracts, {
           appOperatorDrilldownDetailLevel: 'full',
           providerKind: input.providerKind,
+          ...(domainManifests ? { domainManifests } : {}),
         })
       : preliminarySnapshot;
   const drilldown = record(snapshot.runtime_tray_snapshot.app_operator_drilldown);
+  const appEvidenceAfterContract =
+    record(record(drilldown.attention_first_payload).evidence_after_contract);
+  const domainOwnerPayloadSummaryAttention =
+    record(appEvidenceAfterContract.domain_owner_payload_summary_attention);
+  const domainOwnerPayloadSummaryNamingHygieneBlockerCount =
+    countValue(domainOwnerPayloadSummaryAttention.naming_hygiene_blocker_count);
   const bridge = record(drilldown.app_execution_bridge);
   const operatorActionRouting = record(drilldown.operator_action_routing_refs);
   const operatorRoutes = recordList(operatorActionRouting.refs);
@@ -830,6 +836,14 @@ export async function runFamilyRuntimeEvidenceWorklist(
   const stageEvidenceWorkorderSummary = record(stageEvidenceWorkorderPacket.summary);
   const stageEvidenceWorkorderAttentionItems =
     compactStageEvidenceWorkorderAttentionItems(stageEvidenceWorkorderPacket);
+  const stageReplayMissingReceiptWorkorderPacket =
+    buildStageReplayMissingReceiptWorkorderPacket(stageReadiness);
+  const stageReplayMissingReceiptWorkorderSummary =
+    record(stageReplayMissingReceiptWorkorderPacket.summary);
+  const stageReplayMissingReceiptWorkorderAttentionItems =
+    compactStageReplayMissingReceiptWorkorderAttentionItems(stageReplayMissingReceiptWorkorderPacket);
+  const stageReplayMissingReceiptWorkorderAttentionSummary =
+    compactStageReplayMissingReceiptWorkorderAttentionSummary(stageReplayMissingReceiptWorkorderPacket);
   const domainDispatchEvidenceWorkorderPacket =
     buildDomainDispatchEvidenceWorkorderPacket(openOperatorRoutes);
   const domainDispatchEvidenceWorkorderSummary =
@@ -856,6 +870,12 @@ export async function runFamilyRuntimeEvidenceWorklist(
       countValue(stageEvidenceWorkorderSummary.source_scope_missing_ref_count),
     stage_runtime_event_missing_ref_count:
       countValue(stageEvidenceWorkorderSummary.runtime_event_missing_ref_count),
+    stage_replay_missing_receipt_workorder_count:
+      countValue(stageReplayMissingReceiptWorkorderSummary.workorder_count),
+    stage_replay_missing_receipt_ref_count:
+      countValue(stageReplayMissingReceiptWorkorderSummary.missing_ref_count),
+    stage_replay_missing_human_gate_ref_count:
+      countValue(stageReplayMissingReceiptWorkorderSummary.human_gate_missing_ref_count),
     domain_dispatch_evidence_workorder_count:
       countValue(domainDispatchEvidenceWorkorderSummary.workorder_count),
     domain_dispatch_evidence_workorder_domain_count:
@@ -866,6 +886,8 @@ export async function runFamilyRuntimeEvidenceWorklist(
       countValue(domainDispatchEvidenceWorkorderSummary.required_operator_payload_ref_count),
     domain_dispatch_evidence_workorder_required_evidence_ref_count:
       countValue(domainDispatchEvidenceWorkorderSummary.required_evidence_ref_count),
+    domain_owner_payload_summary_naming_hygiene_blocker_count:
+      domainOwnerPayloadSummaryNamingHygieneBlockerCount,
   };
   const detailLevel = input.detailLevel ?? 'summary';
   const stageReceiptFreshnessOpenWorkorderCount = openItems.filter((item) =>
@@ -903,6 +925,12 @@ export async function runFamilyRuntimeEvidenceWorklist(
     stage_receipt_freshness_open_workorder_count: stageReceiptFreshnessOpenWorkorderCount,
     stage_evidence_workorder_packet_summary: stageEvidenceWorkorderPacket.summary,
     stage_evidence_workorder_attention_items: stageEvidenceWorkorderAttentionItems,
+    stage_replay_missing_receipt_workorder_packet_summary:
+      stageReplayMissingReceiptWorkorderPacket.summary,
+    stage_replay_missing_receipt_workorder_attention_summary:
+      stageReplayMissingReceiptWorkorderAttentionSummary,
+    stage_replay_missing_receipt_workorder_attention_items:
+      stageReplayMissingReceiptWorkorderAttentionItems,
     domain_dispatch_evidence_workorder_packet_summary:
       domainDispatchEvidenceWorkorderPacket.summary,
     domain_dispatch_evidence_workorder_group_attention_policy:
@@ -911,18 +939,26 @@ export async function runFamilyRuntimeEvidenceWorklist(
       domainDispatchEvidenceWorkorderGroupAttentionItems,
     domain_dispatch_evidence_workorder_attention_items:
       domainDispatchEvidenceWorkorderAttentionItems,
+    domain_owner_payload_summary_attention: {
+      ...domainOwnerPayloadSummaryAttention,
+      source_command: 'opl runtime app-operator-drilldown --json',
+    },
     source_refs: {
       app_operator_drilldown_ref: '/runtime_tray_snapshot/app_operator_drilldown',
       app_execution_bridge_ref: '/runtime_tray_snapshot/app_operator_drilldown/app_execution_bridge',
       evidence_envelope_ref: '/runtime_tray_snapshot/app_operator_drilldown/evidence_envelope',
+      domain_owner_payload_summary_attention_ref:
+        '/runtime_tray_snapshot/app_operator_drilldown/attention_first_payload/evidence_after_contract/domain_owner_payload_summary_attention',
       terminal_observation_sync_ref: '/family_runtime_evidence_worklist/terminal_observation_sync',
+      stage_replay_missing_receipt_workorder_ref:
+        '/family_stage_readiness/domains/warnings/payload_workorder',
     },
     terminal_observation_sync: terminalObservationSync,
     evidence_envelope: compactEvidenceEnvelope,
     effective_current_context: record(drilldown.effective_current_context),
     family_stall_lineage: record(drilldown.family_stall_lineage),
     zero_open_worklist_guard: zeroOpenWorklistGuard,
-    authority_boundary: authorityBoundary(),
+    authority_boundary: familyRuntimeEvidenceWorklistAuthorityBoundary(),
     not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
   };
   if (detailLevel === 'full') {
@@ -937,6 +973,8 @@ export async function runFamilyRuntimeEvidenceWorklist(
         next_action_ledger: nextActionLedger,
         evidence_requirement_ledger: evidenceRequirementLedger,
         stage_evidence_workorder_packet: stageEvidenceWorkorderPacket,
+        stage_replay_missing_receipt_workorder_packet:
+          stageReplayMissingReceiptWorkorderPacket,
         domain_dispatch_evidence_workorder_packet: domainDispatchEvidenceWorkorderPacket,
         evidence_envelope_full_ref:
           '/runtime_tray_snapshot/app_operator_drilldown/evidence_envelope',

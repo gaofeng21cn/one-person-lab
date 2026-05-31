@@ -933,7 +933,7 @@ async function executeRoute(
 export async function runRuntimeOperatorActionExecute(
   contracts: FrameworkContracts,
   args: string[],
-) {
+): Promise<JsonRecord> {
   const options = parseRuntimeActionExecuteArgs(args);
   const snapshotEnvelope = await buildRuntimeTraySnapshot(contracts, {
     appOperatorDrilldownDetailLevel: 'full',

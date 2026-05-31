@@ -37,6 +37,9 @@ import { buildRuntimeOmaAppLivePathCommandSpecs } from './runtime-oma-app-live-p
 import { buildRuntimeOmaProductionConsumptionCommandSpecs } from './runtime-oma-production-consumption-command-spec.ts';
 import { buildRuntimeResearchEvidencePackCommandSpecs } from './runtime-research-evidence-pack-command-spec.ts';
 import {
+  buildRuntimeStageReplayMissingReceiptCommandSpecs,
+} from './runtime-stage-replay-missing-receipt-command-spec.ts';
+import {
   buildRuntimeStandardAgentTemplateConsumptionCommandSpecs,
 } from './runtime-standard-agent-template-consumption-command-spec.ts';
 import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseDashboardArgs, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseObservabilityExportArgs, parseProductEntryArgs, parseRuntimeAppOperatorDrilldownArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
@@ -351,6 +354,7 @@ export function buildInternalCommandSpecs(
     ...buildRuntimeStandardAgentTemplateConsumptionCommandSpecs(),
     ...buildRuntimeDomainOwnerPayloadSummaryCommandSpecs(),
     ...buildRuntimeMagManifestSustainedConsumptionCommandSpecs(),
+    ...buildRuntimeStageReplayMissingReceiptCommandSpecs(),
     ...buildRuntimeDeveloperModeCloseoutCommandSpecs(),
     ...buildRuntimeOmaAppLivePathCommandSpecs(),
     ...buildRuntimeOmaProductionConsumptionCommandSpecs(),

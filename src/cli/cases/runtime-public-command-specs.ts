@@ -206,6 +206,29 @@ export function buildPublicRuntimeCommandSpecs(
         examples: ['opl runtime mag-manifest-sustained-consumption list --json'],
         group: 'runtime',
       }),
+    'runtime stage-replay-missing-receipt record':
+      cloneCommandSpec(commandSpecs['runtime stage-replay-missing-receipt record'], {
+        usage:
+          'opl runtime stage-replay-missing-receipt record --target-identity <json> (--payload <json>|--payload-file <path>)',
+        examples: [
+          'opl runtime stage-replay-missing-receipt record --target-identity \'{"domain_id":"redcube_ai","stage_id":"visual_direction","missing_ref":"human_gate:redcube_operator_review_gate"}\' --payload \'{"typed_blocker_refs":["typed-blocker:rca/operator-review-pending"]}\'',
+        ],
+        group: 'runtime',
+      }),
+    'runtime stage-replay-missing-receipt verify':
+      cloneCommandSpec(commandSpecs['runtime stage-replay-missing-receipt verify'], {
+        usage: 'opl runtime stage-replay-missing-receipt verify [--receipt-ref <ref>]',
+        examples: [
+          'opl runtime stage-replay-missing-receipt verify --receipt-ref opl://stage-replay-missing-receipt/redcube_ai%2Fvisual_direction%2Fhuman_gate%3Aredcube_operator_review_gate',
+        ],
+        group: 'runtime',
+      }),
+    'runtime stage-replay-missing-receipt list':
+      cloneCommandSpec(commandSpecs['runtime stage-replay-missing-receipt list'], {
+        usage: 'opl runtime stage-replay-missing-receipt list',
+        examples: ['opl runtime stage-replay-missing-receipt list --json'],
+        group: 'runtime',
+      }),
     ...developerModeCloseoutCommandSpecs,
     'runtime oma-app-live-path record':
       cloneCommandSpec(commandSpecs['runtime oma-app-live-path record'], {

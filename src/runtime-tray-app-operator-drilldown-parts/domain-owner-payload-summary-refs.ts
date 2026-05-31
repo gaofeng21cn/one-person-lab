@@ -60,6 +60,27 @@ function authorityBoundary() {
   };
 }
 
+function legacyPayloadFieldAliasBlocker(value: JsonRecord) {
+  const aliases = record(value.legacy_payload_field_aliases);
+  const blockedAliasFields = Object.keys(aliases).filter((key) => key.trim().length > 0);
+  if (blockedAliasFields.length === 0) {
+    return null;
+  }
+  return {
+    surface_kind: 'opl_domain_owner_payload_summary_naming_hygiene_blocker',
+    status: 'blocked_legacy_payload_field_aliases_resurrected',
+    source_ref:
+      '/operator_evidence_readiness_projection/production_evidence_scaleout_refs'
+      + '/legacy_payload_field_aliases',
+    blocked_alias_fields: blockedAliasFields.sort(),
+    blocker_kind: 'rca_payload_field_alias_no_resurrection',
+    payload_policy:
+      'current_refs_payload_paths_only_legacy_alias_map_must_not_be_consumed_as_active_surface',
+    route_status: 'blocked_no_record_route_generated',
+    authority_boundary: authorityBoundary(),
+  };
+}
+
 function ownerPayloadWorkItem(value: JsonRecord) {
   return {
     item_id: stringValue(value.item_id),
@@ -348,6 +369,26 @@ function domainOwnerPayloadSummaryFromOperatorEvidence(project: DomainManifestCa
     return null;
   }
   const productionScaleoutRefs = record(projection.production_evidence_scaleout_refs);
+  const namingHygieneBlocker = legacyPayloadFieldAliasBlocker(productionScaleoutRefs);
+  if (namingHygieneBlocker) {
+    return {
+      domain_id: project.project_id,
+      project: project.project,
+      target_domain_id: manifest?.target_domain_id ?? null,
+      owner: stringValue(record(productionScaleoutRefs.owner_payload_item_summary).owner)
+        ?? stringValue(record(manifest).target_domain_id),
+      status: namingHygieneBlocker.status,
+      source_surface: 'operator_evidence_readiness_projection',
+      source_ref: '/operator_evidence_readiness_projection',
+      owner_payload_item_summary: null,
+      stage_expected_receipt_payload_summary: null,
+      naming_hygiene_blocker: namingHygieneBlocker,
+      payload_body_allowed: false,
+      projection_closes_domain_ready: false,
+      projection_claims_production_ready: false,
+      authority_boundary: authorityBoundary(),
+    };
+  }
   const expectedReceiptHandoff =
     record(projection.opl_expected_receipt_monitor_freshness_handoff);
   const ownerSummarySource = record(productionScaleoutRefs.owner_payload_item_summary);
@@ -463,6 +504,8 @@ export function buildDomainOwnerPayloadSummaryRefs(input: {
     domains.filter((domain) => domain.owner_payload_item_summary !== null).length;
   const stageExpectedReceiptPayloadSummaryCount =
     domains.filter((domain) => domain.stage_expected_receipt_payload_summary !== null).length;
+  const namingHygieneBlockerCount =
+    domains.filter((domain) => 'naming_hygiene_blocker' in domain).length;
   return {
     surface_kind: 'opl_app_drilldown_domain_owner_payload_summary_refs',
     projection_policy:
@@ -480,6 +523,7 @@ export function buildDomainOwnerPayloadSummaryRefs(input: {
       payload_body_allowed_count: 0,
       domain_ready_claim_count: 0,
       production_ready_claim_count: 0,
+      naming_hygiene_blocker_count: namingHygieneBlockerCount,
     },
     domains,
     authority_boundary: authorityBoundary(),

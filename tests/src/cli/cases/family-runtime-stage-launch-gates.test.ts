@@ -11,6 +11,13 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
   };
 }
 
+function standardProgressFirstPolicies() {
+  return {
+    progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+    typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
+  };
+}
+
 function bindMedAutoScienceManifest(
   stateRoot: string,
   fixtureContractsRoot: string,
@@ -67,10 +74,9 @@ test('family-runtime attempt create projects launch invocation and gates non-def
           stage_contract: {
             requires: ['sources_ready'],
             ensures: ['plan_ready'],
-            progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
-            typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
             boundary_assumptions: ['domain_truth_remains_domain_owned'],
             properties: [],
+            ...standardProgressFirstPolicies(),
             runtime_assumptions: [],
             monitor_refs: [],
             source_scope_refs: [{ ref_kind: 'json_pointer', ref: '/source_scope/scout', role: 'launch_source_scope' }],
@@ -248,10 +254,9 @@ test('family-runtime attempt create blocks undeclared stage launches without leg
           stage_contract: {
             requires: ['sources_ready'],
             ensures: ['plan_ready'],
-            progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
-            typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
             boundary_assumptions: ['domain_truth_remains_domain_owned'],
             properties: [],
+            ...standardProgressFirstPolicies(),
             runtime_assumptions: [],
             monitor_refs: [],
             source_scope_refs: [{ ref_kind: 'json_pointer', ref: '/source_scope/scout', role: 'launch_source_scope' }],
@@ -341,10 +346,9 @@ test('family-runtime required admission warns without blocking when cohort loop 
           stage_contract: {
             requires: ['sources_ready'],
             ensures: ['plan_ready'],
-            progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
-            typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
             boundary_assumptions: ['domain_truth_remains_domain_owned'],
             properties: [],
+            ...standardProgressFirstPolicies(),
             runtime_assumptions: [],
             monitor_refs: [],
             source_scope_refs: [{ ref_kind: 'json_pointer', ref: '/source_scope/scout', role: 'launch_source_scope' }],
@@ -441,10 +445,9 @@ test('family-runtime required admission only blocks Stage Kernel launch evidence
     stage_contract: {
       requires: ['sources_ready'],
       ensures: ['plan_ready'],
-      progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
-      typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
       boundary_assumptions: ['domain_truth_remains_domain_owned'],
       properties: [],
+      ...standardProgressFirstPolicies(),
       runtime_assumptions: [],
       monitor_refs: [],
       source_scope_refs: [{ ref_kind: 'json_pointer', ref: '/source_scope/scout', role: 'launch_source_scope' }],
@@ -628,11 +631,10 @@ test('family-runtime required admission keeps assumption cohort and runtime-budg
           stage_contract: {
             requires: ['sources_ready'],
             ensures: ['plan_ready'],
-            progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
-            typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
             boundary_assumptions: ['domain_truth_remains_domain_owned'],
             properties: [],
             runtime_event_refs: ['runtime_event:scout.launch_recorded'],
+            ...standardProgressFirstPolicies(),
             runtime_assumptions: [
               {
                 assumption_id: 'fresh_source_locator',

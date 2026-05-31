@@ -101,6 +101,14 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.summary.stage_runtime_event_missing_ref_count,
   );
   assert.equal(
+    readiness.attention_first_payload.summary.stage_replay_missing_receipt_workorder_count,
+    readiness.summary.stage_replay_missing_receipt_workorder_count,
+  );
+  assert.equal(
+    readiness.attention_first_payload.summary.stage_replay_missing_human_gate_ref_count,
+    readiness.summary.stage_replay_missing_human_gate_ref_count,
+  );
+  assert.equal(
     readiness.attention_first_payload.stage_evidence_workorder_attention_items.length > 0,
     readiness.summary.stage_receipt_freshness_tail_open_count > 0,
   );
@@ -520,6 +528,40 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(
     readiness.evidence_worklist.stage_evidence_workorder_attention_items.length,
     readiness.evidence_tails.stage_receipt_freshness_tail.stage_evidence_workorder_attention_items.length,
+  );
+  assert.equal(
+    readiness.evidence_worklist.stage_replay_missing_receipt_workorder_count,
+    readiness.evidence_tails.stage_receipt_freshness_tail.stage_replay_missing_receipt_workorder_count,
+  );
+  assert.deepEqual(
+    readiness.evidence_worklist.stage_replay_missing_receipt_workorder_attention_items.map(
+      (item: { item_id: string }) => item.item_id,
+    ),
+    readiness.attention_first_payload.stage_replay_missing_receipt_workorder_attention_items.map(
+      (item: { item_id: string }) => item.item_id,
+    ),
+  );
+  assert.equal(
+    readiness.evidence_worklist.stage_replay_missing_receipt_workorder_attention_summary
+      .total_workorder_count,
+    readiness.evidence_worklist.stage_replay_missing_receipt_workorder_count,
+  );
+  assert.equal(
+    readiness.attention_first_payload.stage_replay_missing_receipt_workorder_attention_summary
+      .omitted_workorder_count,
+    readiness.evidence_worklist.stage_replay_missing_receipt_workorder_attention_summary
+      .omitted_workorder_count,
+  );
+  assert.equal(
+    readiness.evidence_tails.stage_receipt_freshness_tail
+      .stage_replay_missing_receipt_workorder_attention_summary.omitted_workorder_count,
+    readiness.evidence_worklist.stage_replay_missing_receipt_workorder_attention_summary
+      .omitted_workorder_count,
+  );
+  assert.equal(
+    readiness.attention_first_payload.stage_replay_missing_receipt_workorder_attention_summary
+      .authority_boundary.can_create_owner_receipt,
+    false,
   );
   assert.deepEqual(
     readiness.evidence_worklist.stage_evidence_workorder_attention_items.map(

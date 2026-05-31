@@ -40,6 +40,49 @@ export interface FamilyStageReplayBlocker {
     | 'record_attempt_ledger_ref'
     | 'record_runtime_event_ref'
     | 'record_expected_receipt_ref';
+  payload_workorder?: FamilyStageReplayMissingReceiptWorkorder;
+}
+
+export interface FamilyStageReplayMissingReceiptWorkorder {
+  surface_kind: 'opl_stage_replay_missing_receipt_workorder';
+  stage_id: string;
+  missing_ref: string;
+  missing_ref_kind: 'human_gate_ref' | 'owner_receipt_ref' | 'domain_receipt_ref';
+  payload_owner: 'domain_or_human_gate_owner';
+  payload_path_policy: 'success_receipt_ref_or_domain_owned_typed_blocker_ref';
+  required_success_ref: string;
+  required_return_shapes: string[];
+  payload_template: {
+    receipt_refs: string[];
+    typed_blocker_refs: string[];
+  };
+  accepted_payload_paths: {
+    success_refs_path: {
+      required_receipt_ref: string;
+      typed_blocker_refs_must_be_absent: true;
+      closes_replay_receipt_ref: true;
+      closes_domain_ready: false;
+      closes_production_ready: false;
+    };
+    typed_blocker_path: {
+      required_typed_blocker_refs: string[];
+      success_claimed: false;
+      closes_replay_receipt_ref: false;
+      closes_domain_ready: false;
+      closes_production_ready: false;
+    };
+  };
+  authority_boundary: {
+    refs_only: true;
+    can_execute_domain_action: false;
+    can_requery_human: false;
+    can_write_domain_truth: false;
+    can_create_owner_receipt: false;
+    can_write_owner_receipt: false;
+    can_authorize_quality_or_export: false;
+    can_close_domain_ready: false;
+    can_claim_production_ready: false;
+  };
 }
 
 export interface FamilyStageReplayCertificationStage {
@@ -51,6 +94,7 @@ export interface FamilyStageReplayCertificationStage {
   expected_receipt_refs: string[];
   recorded_receipt_refs: string[];
   missing_receipt_refs: string[];
+  missing_receipt_workorders: FamilyStageReplayMissingReceiptWorkorder[];
 }
 
 export interface FamilyStageReplayCertification {
@@ -224,6 +268,68 @@ function receiptsByStage(expectedRefs: FamilyStageProofBundleExpectedReceiptRef[
   return refs;
 }
 
+function missingReceiptRefKind(ref: string): FamilyStageReplayMissingReceiptWorkorder['missing_ref_kind'] {
+  if (ref.startsWith('human_gate:')) {
+    return 'human_gate_ref';
+  }
+  if (ref.startsWith('owner_receipt:')) {
+    return 'owner_receipt_ref';
+  }
+  return 'domain_receipt_ref';
+}
+
+function missingReceiptReturnShapes(ref: string) {
+  const refKind = missingReceiptRefKind(ref);
+  const successShape = refKind === 'human_gate_ref'
+    ? 'human_gate_receipt_ref'
+    : (refKind === 'owner_receipt_ref' ? 'domain_owner_receipt_ref' : 'domain_receipt_ref');
+  return [successShape, 'typed_blocker_ref'];
+}
+
+function missingReceiptWorkorder(stageId: string, ref: string): FamilyStageReplayMissingReceiptWorkorder {
+  return {
+    surface_kind: 'opl_stage_replay_missing_receipt_workorder',
+    stage_id: stageId,
+    missing_ref: ref,
+    missing_ref_kind: missingReceiptRefKind(ref),
+    payload_owner: 'domain_or_human_gate_owner',
+    payload_path_policy: 'success_receipt_ref_or_domain_owned_typed_blocker_ref',
+    required_success_ref: ref,
+    required_return_shapes: missingReceiptReturnShapes(ref),
+    payload_template: {
+      receipt_refs: [],
+      typed_blocker_refs: [],
+    },
+    accepted_payload_paths: {
+      success_refs_path: {
+        required_receipt_ref: ref,
+        typed_blocker_refs_must_be_absent: true,
+        closes_replay_receipt_ref: true,
+        closes_domain_ready: false,
+        closes_production_ready: false,
+      },
+      typed_blocker_path: {
+        required_typed_blocker_refs: ['typed_blocker_ref'],
+        success_claimed: false,
+        closes_replay_receipt_ref: false,
+        closes_domain_ready: false,
+        closes_production_ready: false,
+      },
+    },
+    authority_boundary: {
+      refs_only: true,
+      can_execute_domain_action: false,
+      can_requery_human: false,
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_write_owner_receipt: false,
+      can_authorize_quality_or_export: false,
+      can_close_domain_ready: false,
+      can_claim_production_ready: false,
+    },
+  };
+}
+
 function eventsByStage(requirements: FamilyStageProofBundleRuntimeEventRequirement[]) {
   const refs = new Map<string, string[]>();
   for (const requirement of requirements) {
@@ -241,6 +347,7 @@ function blocker(
   reason: string,
   stageId: string | null = null,
   missingRef?: string,
+  payloadWorkorder?: FamilyStageReplayMissingReceiptWorkorder,
 ): FamilyStageReplayBlocker {
   return {
     blocker_kind: 'replay_certification_blocker',
@@ -252,6 +359,7 @@ function blocker(
       reason,
     },
     repair_action,
+    ...(payloadWorkorder ? { payload_workorder: payloadWorkorder } : {}),
   };
 }
 
@@ -281,6 +389,7 @@ export function buildFamilyStageReplayCertification(
     const expectedReceiptRefs = uniq(expectedReceipts.get(stageId) ?? []);
     const missingRuntimeEventRefs = requiredRuntimeEventRefs.filter((ref) => !recordedRuntimeEventRefSet.has(ref));
     const missingReceiptRefs = expectedReceiptRefs.filter((ref) => !closeoutReceiptRefSet.has(ref));
+    const missingReceiptWorkorders = missingReceiptRefs.map((ref) => missingReceiptWorkorder(stageId, ref));
     return {
       stage_id: stageId,
       replay_status: missingRuntimeEventRefs.length === 0 && missingReceiptRefs.length === 0
@@ -292,6 +401,7 @@ export function buildFamilyStageReplayCertification(
       expected_receipt_refs: expectedReceiptRefs,
       recorded_receipt_refs: expectedReceiptRefs.filter((ref) => closeoutReceiptRefSet.has(ref)),
       missing_receipt_refs: missingReceiptRefs,
+      missing_receipt_workorders: missingReceiptWorkorders,
     };
   });
 
@@ -339,6 +449,7 @@ export function buildFamilyStageReplayCertification(
         'expected receipt ref is not present in closeout replay evidence',
         stage.stage_id,
         ref,
+        missingReceiptWorkorder(stage.stage_id, ref),
       ));
     }
   }

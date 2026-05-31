@@ -283,6 +283,27 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
   product_model: 'OPL Framework -> One Person Lab App -> Foundry Agents',
   standard_agent_requirement:
     'foundry_agents_share_identity_stage_authority_progress_currentness_closeout_and_app_projection_packets',
+  contract_version_policy: {
+    current_version: 'foundry-agent-series.v1',
+    domain_contract_ref: 'contracts/foundry_agent_series.json',
+    exact_version_pin_required: true,
+    compatible_version_range: ['foundry-agent-series.v1'],
+    breaking_change_requires_new_version: true,
+    domain_descriptor_must_reference_domain_contract: true,
+  },
+  shared_release_pin_strategy: {
+    owner_release_contract_ref: 'contracts/family-release/shared-owner-release.json',
+    owner_commit_pin_required: true,
+    domain_dependency_pin_required: true,
+    supported_pin_sources: [
+      'pyproject.toml',
+      'uv.lock',
+      'package.json',
+      'package-lock.json',
+    ],
+    consumer_alignment_check: 'family:shared-release',
+    domain_contract_version_pin_does_not_authorize_domain_truth: true,
+  },
   required_identity_fields: [
     'domain_id',
     'foundry_agent_id',

@@ -34,6 +34,11 @@ export function frameworkAttentionFirstPayload(input: {
   stageSourceScopeMissingRefCount: number;
   stageRuntimeEventMissingRefCount: number;
   stageEvidenceWorkorderAttentionItems: JsonRecord[];
+  stageReplayMissingReceiptWorkorderCount: number;
+  stageReplayMissingReceiptRefCount: number;
+  stageReplayMissingHumanGateRefCount: number;
+  stageReplayMissingReceiptWorkorderAttentionSummary: JsonRecord;
+  stageReplayMissingReceiptWorkorderAttentionItems: JsonRecord[];
   ownerPayloadGroupAttentionCount: number;
   ownerPayloadGroupAttentionOmittedCount: number;
   ownerPayloadGroups: JsonRecord[];
@@ -79,6 +84,8 @@ export function frameworkAttentionFirstPayload(input: {
   const omaOpenGateCount = numberValue(input.omaProductionConsumptionFollowthrough.open_gate_count);
   const omaPendingVerifyLongSoakCount =
     numberValue(input.omaProductionConsumptionFollowthrough.pending_verify_long_soak_receipt_ref_count);
+  const domainOwnerPayloadSummaryNamingHygieneBlockerCount =
+    numberValue(input.domainOwnerPayloadSummaryAttention.naming_hygiene_blocker_count);
   const blockers = frameworkReadinessBlockers(input);
   const warnings = [
     ...(input.semanticAttentionGateCount > 0
@@ -192,10 +199,18 @@ export function frameworkAttentionFirstPayload(input: {
       stage_runtime_event_missing_workorder_count: input.stageRuntimeEventMissingWorkorderCount,
       stage_source_scope_missing_ref_count: input.stageSourceScopeMissingRefCount,
       stage_runtime_event_missing_ref_count: input.stageRuntimeEventMissingRefCount,
+      stage_replay_missing_receipt_workorder_count:
+        input.stageReplayMissingReceiptWorkorderCount,
+      stage_replay_missing_receipt_ref_count:
+        input.stageReplayMissingReceiptRefCount,
+      stage_replay_missing_human_gate_ref_count:
+        input.stageReplayMissingHumanGateRefCount,
       evidence_envelope_open_count: input.evidenceEnvelopeOpenCount,
       evidence_envelope_blocked_count: input.evidenceEnvelopeBlockedCount,
       evidence_envelope_attention_count: evidenceEnvelopeAttentionCount,
       domain_dispatch_attention_count: input.domainDispatchAttentionCount,
+      domain_owner_payload_summary_naming_hygiene_blocker_count:
+        domainOwnerPayloadSummaryNamingHygieneBlockerCount,
       operator_actionable_attention_tail_count: attentionCounts.operatorActionableAttentionCount,
       operator_payload_required_attention_tail_count: attentionCounts.operatorPayloadRequiredAttentionCount,
       operator_payload_free_attention_tail_count: attentionCounts.operatorPayloadFreeAttentionCount,
@@ -213,6 +228,10 @@ export function frameworkAttentionFirstPayload(input: {
     },
     semantic_hygiene_contract_floor: input.semanticHygieneContractFloor,
     stage_evidence_workorder_attention_items: input.stageEvidenceWorkorderAttentionItems,
+    stage_replay_missing_receipt_workorder_attention_summary:
+      input.stageReplayMissingReceiptWorkorderAttentionSummary,
+    stage_replay_missing_receipt_workorder_attention_items:
+      input.stageReplayMissingReceiptWorkorderAttentionItems,
     owner_payload_group_attention_policy:
       'top_owner_payload_groups_by_open_then_blocked_counts_refs_only',
     owner_payload_group_attention_count: input.ownerPayloadGroupAttentionCount,

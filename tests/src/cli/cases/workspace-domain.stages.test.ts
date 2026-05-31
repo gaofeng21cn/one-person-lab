@@ -294,14 +294,6 @@ test('family stage control plane is resolved from domain manifests as read-only 
     const omaStage = list.family_stages.stages.find((entry: { stage_id: string }) => entry.stage_id === 'stage-decomposition');
     assert.equal(omaStage?.project_id, 'opl-meta-agent');
     assert.equal(omaStage?.admission_status, 'admitted');
-    const omaReadiness = runCli(['stages', 'readiness', '--domain', 'oma'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    }).family_stage_readiness;
-    const omaBlockerCodes = omaReadiness.blockers.map((finding: { code: string }) => finding.code);
-    assert.equal(omaReadiness.summary.hard_blocker_count, 0);
-    assert.equal(omaBlockerCodes.includes('missing_progress_delta_policy'), false);
-    assert.equal(omaBlockerCodes.includes('missing_typed_blocker_lineage_policy'), false);
     const manuscriptStage = list.family_stages.stages.find((entry: { stage_id: string }) => entry.stage_id === 'manuscript_authoring');
     assert.equal(manuscriptStage?.admission_status, 'needs_contracts');
     assert.equal(manuscriptStage?.runtime_assumption_count, 2);

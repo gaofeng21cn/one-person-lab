@@ -29,6 +29,8 @@ import {
 } from './family-stage-cli-args.ts';
 import {
   buildFamilyStageReplayCertification,
+  buildFamilyStageReplayEvidenceFromControlPlane,
+  type FamilyStageReplayEvidence,
 } from './family-stage-replay-certification.ts';
 import {
   buildStageOperatorReadiness,
@@ -69,6 +71,36 @@ export type {
 } from './family-stage-control-plane-contract.ts';
 
 type JsonRecord = Record<string, unknown>;
+
+function uniqueStringValues(values: string[]) {
+  return [...new Set(values.filter((value) => value.trim().length > 0))];
+}
+
+function replayEvidenceWithCliRefs(
+  declaredEvidence: FamilyStageReplayEvidence,
+  repeated: Record<string, string[]>,
+): FamilyStageReplayEvidence {
+  return {
+    append_only_event_log_refs: uniqueStringValues([
+      ...(declaredEvidence.append_only_event_log_refs ?? []),
+      ...(repeated['append-only-event-log-ref'] ?? []),
+    ]),
+    attempt_ledger_refs: uniqueStringValues([
+      ...(declaredEvidence.attempt_ledger_refs ?? []),
+      ...(repeated['attempt-ledger-ref'] ?? []),
+    ]),
+    codex_attempt_trace_refs: declaredEvidence.codex_attempt_trace_refs,
+    recorded_runtime_event_refs: uniqueStringValues([
+      ...(declaredEvidence.recorded_runtime_event_refs ?? []),
+      ...(repeated['recorded-runtime-event-ref'] ?? []),
+    ]),
+    closeout_receipt_refs: uniqueStringValues([
+      ...(declaredEvidence.closeout_receipt_refs ?? []),
+      ...(repeated['closeout-receipt-ref'] ?? []),
+    ]),
+    closeout_packet: declaredEvidence.closeout_packet ?? null,
+  };
+}
 
 export interface FamilyStageListEntry {
   project_id: string;
@@ -390,12 +422,14 @@ type ManifestCatalogOptions = {
   manifestCommandTimeoutMs?: number;
   manifestCommandTimeoutPolicy?: ManifestCommandTimeoutPolicy;
   domainManifests?: DomainManifestCatalog;
+  useProjectionCacheOnFailure?: boolean;
 };
 
 function buildStageIndex(contracts: FrameworkContracts, options: ManifestCatalogOptions = {}) {
   const baseCatalog = options.domainManifests ?? buildDomainManifestCatalog(contracts, {
     manifestCommandTimeoutMs: options.manifestCommandTimeoutMs ?? STAGE_MANIFEST_COMMAND_TIMEOUT_MS,
     manifestCommandTimeoutPolicy: options.manifestCommandTimeoutPolicy ?? 'fixed',
+    useProjectionCacheOnFailure: options.useProjectionCacheOnFailure,
   }).domain_manifests;
   const catalog = withOplMetaAgentStageAttemptEntry(baseCatalog);
   const domains = catalog.projects.map((entry) => {
@@ -886,12 +920,10 @@ export function buildFamilyStagePackSourceSpecInspect(contracts: FrameworkContra
     reusedByRefs: repeated['reused-by-ref'],
   });
   const registryProjection = buildFamilyStagePackRegistryProjection([registryEntry]);
-  const replayCertification = buildFamilyStageReplayCertification(proofBundle, {
-    append_only_event_log_refs: repeated['append-only-event-log-ref'],
-    attempt_ledger_refs: repeated['attempt-ledger-ref'],
-    recorded_runtime_event_refs: repeated['recorded-runtime-event-ref'],
-    closeout_receipt_refs: repeated['closeout-receipt-ref'],
-  });
+  const replayCertification = buildFamilyStageReplayCertification(
+    proofBundle,
+    replayEvidenceWithCliRefs(buildFamilyStageReplayEvidenceFromControlPlane(plane), repeated),
+  );
   return {
     version: 'g2',
     family_stage_pack_source_spec: {
@@ -923,17 +955,16 @@ export function buildFamilyStageReplayCertificationInspect(contracts: FrameworkC
     actionCatalog: entry.manifest?.family_action_catalog ?? null,
     admissionReview: admission,
   });
+  const replayEvidence = replayEvidenceWithCliRefs(
+    buildFamilyStageReplayEvidenceFromControlPlane(plane),
+    repeated,
+  );
   return {
     version: 'g2',
     family_stage_replay_certification: {
       project_id: entry.project_id,
       project: entry.project,
-      certification: buildFamilyStageReplayCertification(proofBundle, {
-        append_only_event_log_refs: repeated['append-only-event-log-ref'],
-        attempt_ledger_refs: repeated['attempt-ledger-ref'],
-        recorded_runtime_event_refs: repeated['recorded-runtime-event-ref'],
-        closeout_receipt_refs: repeated['closeout-receipt-ref'],
-      }),
+      certification: buildFamilyStageReplayCertification(proofBundle, replayEvidence),
     },
   };
 }

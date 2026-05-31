@@ -8,6 +8,13 @@ import {
 
 type JsonRecord = Record<string, unknown>;
 
+function standardProgressFirstPolicies() {
+  return {
+    progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+    typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
+  };
+}
+
 function attachManifestSurface(payload: JsonRecord, field: string, value: JsonRecord) {
   if (payload.product_entry_manifest && typeof payload.product_entry_manifest === 'object') {
     return {
@@ -104,10 +111,9 @@ function buildStagePlane() {
         stage_contract: {
           requires: ['sources_ready'],
           ensures: ['draft_ready'],
-          progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
-          typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
           boundary_assumptions: ['source_refs_are_domain_owned'],
           properties: ['deterministic_handoff_refs'],
+          ...standardProgressFirstPolicies(),
           runtime_assumptions: ['source_freshness_within_domain_policy'],
           monitor_refs: [{ ref_kind: 'json_pointer', ref: '/runtime_inventory', role: 'runtime_assumption_monitor' }],
           source_scope_refs: [],
@@ -139,11 +145,10 @@ function buildStagePlane() {
         stage_contract: {
           requires: ['draft_ready'],
           ensures: ['review_receipt_ready'],
-          progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
-          typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
           boundary_assumptions: ['reviewer_judgment_recorded_as_receipt'],
           runtime_event_refs: ['runtime_event:publication_review.gate_recorded'],
           properties: [],
+          ...standardProgressFirstPolicies(),
           runtime_assumptions: [],
           monitor_refs: [],
           source_scope_refs: [],
@@ -246,15 +251,26 @@ function buildAdmittedStagePlane(
         stage_contract: {
           requires: [`stage_${stageNumber}_input_ready`],
           ensures: [`stage_${stageNumber}_receipt_ready`],
-          progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
-          typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
           boundary_assumptions: ['domain_truth_remains_domain_owned'],
           runtime_event_refs: [`runtime_event:${targetDomainId}.stage_${stageNumber}`],
+          ...standardProgressFirstPolicies(),
+          expected_receipt_refs: [
+            {
+              ref_kind: 'receipt_ref',
+              ref: `owner_receipt:stage_${stageNumber}`,
+              role: 'domain_owner_receipt_ref',
+            },
+          ],
           replay_evidence_refs: options.replayEvidenceRefs
             ? [
                 {
                   role: 'recorded_runtime_event_ref',
                   ref: `runtime_event:${targetDomainId}.stage_${stageNumber}`,
+                },
+                {
+                  ref_kind: 'receipt_ref',
+                  role: 'domain_owner_receipt_ref',
+                  ref: `owner_receipt:stage_${stageNumber}`,
                 },
               ]
             : [],
@@ -339,10 +355,9 @@ function buildContractLightStagePlane(options: {
         stage_contract: {
           requires: ['source_scope_declared'],
           ensures: ['plan_receipt_declared'],
-          progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
-          typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
           boundary_assumptions: ['domain_truth_remains_domain_owned'],
           properties: options.properties ?? [],
+          ...standardProgressFirstPolicies(),
           runtime_assumptions: options.runtimeAssumptions ?? [],
           monitor_refs: options.monitorRefs ?? [],
           source_scope_refs: options.sourceScopeRefs ?? [],
