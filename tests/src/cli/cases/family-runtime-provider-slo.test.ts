@@ -10,7 +10,11 @@ import {
 import { runSchedulerTick } from '../../../../src/family-runtime-scheduler.ts';
 import {
   maybeRepairTemporalWorkerForProviderSlo,
+  runTemporalProviderSloTick,
 } from '../../../../src/family-runtime-provider-slo-executor.ts';
+import {
+  inspectFamilyRuntimeProvidersWithLifecycle,
+} from '../../../../src/family-runtime-providers.ts';
 import {
   repairTemporalWorkerForProviderRepair,
 } from '../../../../src/family-runtime-provider-worker-repair.ts';
@@ -20,6 +24,18 @@ import {
 import {
   buildTemporalStageAttemptVisibilityReadiness,
 } from '../../../../src/family-runtime-temporal-visibility.ts';
+import {
+  buildProviderContinuousProof,
+} from '../../../../src/family-runtime-provider-continuous-proof.ts';
+import {
+  FAMILY_RUNTIME_PROVIDER_KINDS,
+} from '../../../../src/family-runtime-types.ts';
+
+type ProviderLifecycleProjection = Awaited<ReturnType<typeof inspectFamilyRuntimeProvidersWithLifecycle>>;
+type ProviderSloTick = Awaited<ReturnType<typeof runTemporalProviderSloTick>>;
+type TemporalWorkerRepairReceipt = ProviderSloTick['provider_worker_repair_receipt'];
+type TemporalWorkerStatus = Parameters<typeof temporalWorkerStatus>[0];
+type TemporalWorkerLivenessBlocker = ReturnType<typeof temporalWorkerLivenessBlocker>;
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -61,6 +77,7 @@ function temporalWorkerStatus(status: 'worker_not_ready' | 'worker_source_stale'
     live_probe_started_worker: false,
     unreachable_reason: null,
     managed_worker_pid: status === 'ready' ? 12345 : null,
+    managed_worker_process_alive: status === 'ready',
     managed_worker_state_path: '/tmp/temporal-worker.json',
     managed_worker_source_version: status === 'worker_not_ready' ? null : status === 'worker_source_stale' ? 'worker-runtime:old' : 'worker-runtime:test',
     expected_worker_source_version: 'worker-runtime:test',
@@ -155,6 +172,166 @@ function temporalWorkerStatus(status: 'worker_not_ready' | 'worker_source_stale'
       domain: 'truth_quality_artifact_gate_owner',
     },
   };
+}
+
+function temporalProviderLifecycle(workerStatus: TemporalWorkerStatus): ProviderLifecycleProjection {
+  const workerReadiness = temporalWorkerStatus(workerStatus);
+  const ready = workerStatus === 'ready';
+  return {
+    selected_provider: 'temporal',
+    allowed_providers: [...FAMILY_RUNTIME_PROVIDER_KINDS],
+    default_resolution: {
+      env: 'OPL_FAMILY_RUNTIME_PROVIDER',
+      fallback: 'temporal',
+      production_required_provider: 'temporal',
+      local_sqlite_role: 'dev_ci_offline_diagnostic_baseline',
+      fail_closed_when_temporal_not_ready: true,
+    },
+    providers: {
+      temporal: {
+        provider_kind: 'temporal',
+        status: ready ? 'ready' : 'provider_code_landed_unconfigured',
+        ready,
+        degraded_reason: ready ? null : workerReadiness.blockers[0] ?? null,
+        capabilities: [],
+        details: {
+          address: workerReadiness.address,
+          address_source: workerReadiness.address_source,
+          namespace: workerReadiness.namespace,
+          task_queue: workerReadiness.task_queue,
+          worker_ready: ready,
+          worker_readiness: workerReadiness,
+        },
+      },
+    },
+    provider_catalog: {},
+  };
+}
+
+function temporalProviderWorkerRepairReceipt(
+  status: TemporalWorkerRepairReceipt['repair_status'],
+  repairActionId: string,
+): TemporalWorkerRepairReceipt {
+  return {
+    surface_kind: 'opl_temporal_provider_worker_repair_receipt',
+    provider_kind: 'temporal',
+    trigger: 'provider_slo_tick',
+    repair_status: status,
+    repair_action_id: repairActionId,
+    command: repairActionId === 'restart_temporal_worker'
+      ? 'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal'
+      : 'opl family-runtime worker start --provider temporal',
+    before: temporalWorkerStatus(repairActionId === 'restart_temporal_worker' ? 'worker_source_stale' : 'worker_not_ready'),
+    after: status === 'executed' ? temporalWorkerStatus('ready') : null,
+    stop: null,
+    start: null,
+    error: null,
+    can_execute_domain_repair: false,
+    authority_boundary: {
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_artifact_export: false,
+      can_write_domain_truth: false,
+      can_execute_domain_repair: false,
+    },
+  };
+}
+
+function temporalWorkerLivenessBlocker() {
+  return {
+    blocker_kind: 'platform_dependency',
+    blocker_id: 'temporal_worker_not_ready',
+    next_repair_command: 'opl family-runtime worker start --provider temporal',
+    next_repair_action: temporalWorkerStatus('worker_not_ready').repair_action,
+    worker_lifecycle_status: 'worker_not_ready',
+    temporal_service_status: 'running',
+    temporal_server_reachable: true,
+    liveness_blocker_first: true,
+  };
+}
+
+function providerSloTick(
+  workerRepairReceipt: TemporalWorkerRepairReceipt,
+): ProviderSloTick {
+  const proof = buildProviderContinuousProof([]);
+  const receipt: ProviderSloTick['provider_slo_execution_receipt'] = {
+    surface_kind: 'opl_temporal_provider_slo_execution_receipt',
+    provider_kind: 'temporal',
+    command: 'opl family-runtime residency proof --provider temporal --production',
+    execution_owner: 'operator_or_infrastructure',
+    execution_policy: 'supervised_command_receipt_only',
+    supervised_cadence_receipt: true,
+    execution_status: 'skipped',
+    receipt_status: 'skipped',
+    receipt_kind: 'opl_temporal_provider_slo_execution_receipt',
+    skip_reason: 'cadence_current',
+    repair_receipt: {
+      surface_kind: 'opl_temporal_provider_slo_repair_receipt',
+      provider_kind: 'temporal',
+      trigger: 'cadence_current',
+      repair_status: 'skipped',
+      cadence_owner: 'provider_backed_family_runtime',
+      execution_owner: 'operator_or_infrastructure',
+      execution_policy: 'supervised_command_receipt_only',
+      command: 'opl family-runtime residency proof --provider temporal --production',
+      blocker_ids: [],
+      next_repair_command: null,
+      can_execute_domain_repair: false,
+      authority_boundary: {
+        can_authorize_domain_ready: false,
+        can_authorize_quality_verdict: false,
+        can_authorize_artifact_export: false,
+        can_write_domain_truth: false,
+        can_execute_domain_repair: false,
+      },
+    },
+    proof_slo_status: proof.proof_slo_status,
+    proof_freshness_status: proof.proof_freshness_status,
+    continuous_proof_status: proof.continuous_proof_status,
+    latest_proof_event_id: proof.latest_event_id,
+    latest_proof_event_created_at: proof.latest_event_created_at,
+    cadence_action: proof.operator_slo_repair_loop.operator_cadence_action,
+    proves_only: 'temporal_service_worker_residency_cadence_execution',
+    authority_boundary: {
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_artifact_export: false,
+      can_write_domain_truth: false,
+    },
+  };
+  return {
+    surface_id: 'opl_family_runtime_provider_slo_tick',
+    provider_kind: 'temporal',
+    execution_status: 'skipped',
+    skipped: true,
+    force: false,
+    provider_worker_repair_receipt: workerRepairReceipt,
+    before: proof,
+    after: proof,
+    provider_slo_execution_receipt: receipt,
+    event_id: 'evt_provider_slo_test',
+    authority_boundary: {
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_artifact_export: false,
+      can_write_domain_truth: false,
+    },
+  };
+}
+
+function assertTemporalWorkerLivenessBlocker(
+  blocker: unknown,
+): asserts blocker is TemporalWorkerLivenessBlocker {
+  assert.equal((blocker as { liveness_blocker_first?: unknown }).liveness_blocker_first, true);
+}
+
+function assertBlockedSchedulerTick(tick: unknown): asserts tick is {
+  provider_kind: 'temporal';
+  provider_slo: ProviderSloTick;
+  provider_liveness_blocker: TemporalWorkerLivenessBlocker;
+  queue_tick: null;
+} {
+  assert.equal((tick as { status?: unknown }).status, 'blocked_provider_not_ready');
 }
 
 function insertProvenTemporalProofEvent(stateRoot: string) {
@@ -669,44 +846,18 @@ test('family-runtime scheduler tick fails closed when worker liveness remains bl
         };
       },
       {
-        inspectProvidersWithLifecycle: async () => ({
-          selected_provider: 'temporal',
-          allowed_providers: ['temporal'],
-          default_resolution: {},
-          providers: {
-            temporal: {
-              provider_kind: 'temporal',
-              status: 'provider_code_landed_unconfigured',
-              ready: false,
-              degraded_reason: 'temporal_worker_not_ready',
-              capabilities: [],
-              details: {
-                worker_readiness: temporalWorkerStatus('worker_not_ready'),
-              },
-            },
-          },
-          provider_catalog: {},
-        }),
-        runProviderSloTick: async () => ({
-          surface_id: 'opl_family_runtime_provider_slo_tick',
-          provider_kind: 'temporal',
-          execution_status: 'executed',
-          skipped: false,
-          provider_worker_repair_receipt: {
-            repair_status: 'blocked',
-            repair_action_id: 'start_temporal_worker',
-          },
-          provider_slo_execution_receipt: {
-            receipt_status: 'blocked',
-          },
-        }),
+        inspectProvidersWithLifecycle: async () => temporalProviderLifecycle('worker_not_ready'),
+        runProviderSloTick: async () => providerSloTick(
+          temporalProviderWorkerRepairReceipt('blocked', 'start_temporal_worker'),
+        ),
       },
     );
 
-    assert.equal(tick.status, 'blocked_provider_not_ready');
+    assertBlockedSchedulerTick(tick);
     assert.equal(tick.provider_kind, 'temporal');
     assert.equal(tick.provider_slo.provider_worker_repair_receipt.repair_status, 'blocked');
     assert.equal(tick.provider_slo.provider_worker_repair_receipt.repair_action_id, 'start_temporal_worker');
+    assertTemporalWorkerLivenessBlocker(tick.provider_liveness_blocker);
     assert.equal(tick.provider_liveness_blocker.blocker_id, 'temporal_worker_not_ready');
     assert.equal(tick.provider_liveness_blocker.worker_lifecycle_status, 'worker_not_ready');
     assert.equal(tick.provider_liveness_blocker.temporal_service_status, 'running');
@@ -754,38 +905,11 @@ test('family-runtime scheduler tick repairs worker liveness before queue admissi
         inspectProvidersWithLifecycle: async () => {
           inspectionCount += 1;
           const workerStatus = inspectionCount === 1 ? 'worker_source_stale' : 'ready';
-          return {
-            selected_provider: 'temporal',
-            allowed_providers: ['temporal'],
-            default_resolution: {},
-            providers: {
-              temporal: {
-                provider_kind: 'temporal',
-                status: workerStatus === 'ready' ? 'ready' : 'provider_code_landed_unconfigured',
-                ready: workerStatus === 'ready',
-                degraded_reason: workerStatus === 'ready' ? null : 'temporal_worker_source_stale',
-                capabilities: [],
-                details: {
-                  worker_readiness: temporalWorkerStatus(workerStatus),
-                },
-              },
-            },
-            provider_catalog: {},
-          };
+          return temporalProviderLifecycle(workerStatus);
         },
-        runProviderSloTick: async () => ({
-          surface_id: 'opl_family_runtime_provider_slo_tick',
-          provider_kind: 'temporal',
-          execution_status: 'executed',
-          skipped: false,
-          provider_worker_repair_receipt: {
-            repair_status: 'executed',
-            repair_action_id: 'restart_temporal_worker',
-          },
-          provider_slo_execution_receipt: {
-            receipt_status: 'blocked',
-          },
-        }),
+        runProviderSloTick: async () => providerSloTick(
+          temporalProviderWorkerRepairReceipt('executed', 'restart_temporal_worker'),
+        ),
       },
     );
 
