@@ -93,6 +93,9 @@ test('family-runtime evidence-worklist states zero open worklist items do not cl
         },
       },
     } as never,
+    stageReadiness: {
+      domains: [],
+    },
   });
 
   const worklist = output.family_runtime_evidence_worklist;
@@ -103,6 +106,34 @@ test('family-runtime evidence-worklist states zero open worklist items do not cl
   assert.equal(worklist.summary.zero_open_worklist_is_production_ready, false);
   assert.equal(worklist.summary.zero_open_worklist_blocked_refs_only_envelope_count, 2);
   assert.equal(worklist.summary.zero_open_worklist_blocked_refs_only_attention_remains, true);
+  assert.equal(
+    worklist.progress_first_operator_summary.surface_kind,
+    'opl_progress_first_operator_summary',
+  );
+  assert.equal(
+    worklist.progress_first_operator_summary.status,
+    'domain_or_human_owner_blocked_refs_only',
+  );
+  assert.equal(
+    worklist.progress_first_operator_summary.progress_delta_classification,
+    'blocked_refs_only_attention',
+  );
+  assert.equal(worklist.progress_first_operator_summary.deliverable_progress_delta, null);
+  assert.equal(worklist.progress_first_operator_summary.platform_repair_delta, null);
+  assert.equal(
+    worklist.progress_first_operator_summary.next_forced_delta,
+    'domain_or_app_owner_payload_ref_or_typed_blocker_required',
+  );
+  assert.equal(worklist.progress_first_operator_summary.open_safe_action_count, 0);
+  assert.equal(worklist.progress_first_operator_summary.blocked_refs_only_envelope_count, 2);
+  assert.equal(worklist.progress_first_operator_summary.domain_or_human_owner_blocked_count, 2);
+  assert.equal(worklist.progress_first_operator_summary.zero_open_worklist_is_completion_claim, false);
+  assert.equal(worklist.progress_first_operator_summary.zero_open_worklist_is_domain_ready, false);
+  assert.equal(worklist.progress_first_operator_summary.zero_open_worklist_is_production_ready, false);
+  assert.equal(
+    worklist.progress_first_operator_summary.authority_boundary.deliverable_progress_delta_owner,
+    'domain_agent',
+  );
   assert.equal(worklist.zero_open_worklist_guard.status, 'blocked_refs_only_attention_remains');
   assert.equal(worklist.zero_open_worklist_guard.worklist_item_is_completion_claim, false);
   assert.equal(worklist.zero_open_worklist_guard.can_authorize_domain_ready, false);

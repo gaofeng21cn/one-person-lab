@@ -30,6 +30,7 @@ import {
   compactStageReplayMissingReceiptWorkorderAttentionItems,
 } from './family-runtime-evidence-worklist-parts/stage-replay-missing-receipt-workorders.ts';
 import { familyRuntimeEvidenceWorklistAuthorityBoundary } from './family-runtime-evidence-worklist-parts/authority-boundary.ts';
+import { buildProgressFirstOperatorSummary } from './family-runtime-evidence-worklist-parts/progress-first-operator-summary.ts';
 import { domainDispatchRecordRouteAttemptIds, syncTerminalTemporalAttemptsForEvidenceWorklist, type EvidenceWorklistTemporalQuery } from './family-runtime-evidence-worklist-parts/terminal-observation-sync.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -433,6 +434,11 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
     next_forced_delta: stringValue(lineage?.next_forced_delta),
     escalation_owner: stringValue(lineage?.escalation_owner),
     terminal: lineage?.terminal === true,
+    progress_first_required_next_action:
+      stringValue(route.progress_first_required_next_action),
+    provider_required_next_action: stringValue(route.provider_required_next_action),
+    provider_worker_required_next_action:
+      stringValue(route.provider_worker_required_next_action),
     open_reason: stringValue(route.open_reason),
     payload_requirement: stringValue(route.payload_requirement),
     payload_owner: stringValue(route.payload_owner),
@@ -861,6 +867,16 @@ export async function runFamilyRuntimeEvidenceWorklist(
     openWorklistItemCount: openItems.length,
     evidenceEnvelopeSummary: record(compactEvidenceEnvelope.summary),
   });
+  const familyStallLineage = record(drilldown.family_stall_lineage);
+  const progressFirstOperatorSummary = buildProgressFirstOperatorSummary({
+    worklistItems,
+    openItems,
+    closedRefsOnlyItems,
+    stageReplayMissingReceiptWorkorderSummary,
+    zeroOpenWorklistGuard,
+    familyStallLineage,
+    evidenceEnvelopeSummary: record(compactEvidenceEnvelope.summary),
+  });
   const counts = {
     ...worklistCounts(worklistItems, openItems, closedItems, nextActionLedger),
     closed_refs_only_item_count: closedRefsOnlyItems.length,
@@ -958,9 +974,10 @@ export async function runFamilyRuntimeEvidenceWorklist(
     },
     terminal_observation_sync: terminalObservationSync,
     evidence_envelope: compactEvidenceEnvelope,
+    progress_first_operator_summary: progressFirstOperatorSummary,
     next_safe_actions: nextSafeActions(openItems),
     effective_current_context: record(drilldown.effective_current_context),
-    family_stall_lineage: record(drilldown.family_stall_lineage),
+    family_stall_lineage: familyStallLineage,
     zero_open_worklist_guard: zeroOpenWorklistGuard,
     authority_boundary: familyRuntimeEvidenceWorklistAuthorityBoundary(),
     not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
