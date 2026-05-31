@@ -226,6 +226,70 @@ test('runtime Codex App runtime evidence records and verifies Temporal-hosted lo
   }
 });
 
+test('runtime Codex App runtime evidence CLI accepts singular ref fields for Temporal-hosted long-soak payloads', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-app-runtime-singular-state-'));
+  try {
+    const recordOutput = runCli([
+      'runtime',
+      'codex-app-runtime-evidence',
+      'record',
+      '--payload',
+      JSON.stringify({
+        temporal_hosted_long_soak_ref: 'temporal-long-soak:codex-app/runtime-singular',
+        provider_state_linkage_ref: 'provider-state:temporal/cadence-current',
+        operator_evidence_ref: 'operator-window:codex-app/runtime-followthrough',
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).codex_app_runtime_evidence_ledger_record;
+    assert.equal(recordOutput.status, 'recorded');
+    assert.deepEqual(recordOutput.receipts[0].temporal_hosted_long_soak_refs, [
+      'temporal-long-soak:codex-app/runtime-singular',
+    ]);
+    assert.deepEqual(recordOutput.receipts[0].provider_state_linkage_refs, [
+      'provider-state:temporal/cadence-current',
+    ]);
+    assert.deepEqual(recordOutput.receipts[0].operator_evidence_refs, [
+      'operator-window:codex-app/runtime-followthrough',
+    ]);
+
+    const verifyOutput = runCli([
+      'runtime',
+      'codex-app-runtime-evidence',
+      'verify',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).codex_app_runtime_evidence_ledger_verify;
+    assert.equal(verifyOutput.status, 'verified');
+    assert.equal(verifyOutput.receipt.receipt_status, 'verified');
+
+    const verified = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
+    const followthrough =
+      verified.attention_first_payload.codex_app_runtime_role.production_evidence_followthrough;
+    assert.equal(verified.summary.codex_app_runtime_evidence_open_gate_count, 0);
+    assert.equal(verified.summary.codex_app_production_long_soak_claimed, false);
+    assert.equal(verified.summary.codex_app_production_evidence_gate_remains_open, false);
+    assert.equal(followthrough.status, 'long_soak_refs_observed');
+    assert.equal(followthrough.refs_observed_for_all_gates, true);
+    assert.equal(followthrough.production_long_soak_claimed, false);
+    assert.equal(followthrough.authority_boundary.can_claim_production_ready, false);
+    assert.equal(followthrough.authority_boundary.can_close_long_soak, false);
+    assert.deepEqual(followthrough.temporal_hosted_long_soak_refs, [
+      'temporal-long-soak:codex-app/runtime-singular',
+    ]);
+    assert.deepEqual(followthrough.provider_state_linkage_refs, [
+      'provider-state:temporal/cadence-current',
+    ]);
+    assert.deepEqual(followthrough.operator_evidence_refs, [
+      'operator-window:codex-app/runtime-followthrough',
+    ]);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime Codex App runtime evidence typed blocker refs keep the long-soak gate open', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-app-runtime-blocker-state-'));
   try {
