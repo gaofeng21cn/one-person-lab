@@ -117,6 +117,25 @@ function directLedgerHandoff(
   };
 }
 
+function defaultNextActionGuidance(directHandoff: ReturnType<typeof directLedgerHandoff>) {
+  return {
+    action_kind: 'record_payload',
+    step_kind: 'record_stage_replay_missing_receipt_payload',
+    owner: 'domain_or_human_gate_owner',
+    payload_path: 'success_refs_path',
+    record_command: directHandoff.record_success_command,
+    verify_command: directHandoff.verify_command,
+    alternative_action_kinds: [
+      'record_typed_blocker_payload',
+      'ask_human',
+    ],
+    can_submit_to_safe_action_shell: false,
+    can_execute_domain_action: false,
+    can_create_owner_receipt: false,
+    can_claim_production_ready: false,
+  };
+}
+
 function verifiedStageReplaySuccessReceiptForTarget(
   receipts: StageReplayMissingReceiptReceipt[],
   targetKey: string,
@@ -198,6 +217,12 @@ function replayMissingReceiptWorkorderItems(stageReadiness: JsonRecord) {
         return [];
       }
       seen.add(dedupeKey);
+      const directHandoff = directLedgerHandoff(
+        target,
+        missingRef,
+        typedBlockerRefs,
+        typedBlockerReceiptRefs,
+      );
       return [{
         item_id:
           `stage-replay-missing-receipt-workorder:${itemIdPart(domainId)}:${itemIdPart(stageId)}:${itemIdPart(missingRef)}`,
@@ -229,8 +254,8 @@ function replayMissingReceiptWorkorderItems(stageReadiness: JsonRecord) {
           ? 'blocked_by_domain_owned_typed_blocker_ref'
           : 'blocked_by_missing_replay_receipt_ref',
         route_semantics: 'refs_only_stage_replay_missing_receipt_attention_not_safe_action',
-        direct_ledger_handoff:
-          directLedgerHandoff(target, missingRef, typedBlockerRefs, typedBlockerReceiptRefs),
+        direct_ledger_handoff: directHandoff,
+        default_next_action_guidance: defaultNextActionGuidance(directHandoff),
         worklist_item_is_completion_claim: false,
         action_execution_surface: null,
         next_safe_action_ref: null,
@@ -327,6 +352,7 @@ export function compactStageReplayMissingReceiptWorkorderAttentionItems(
     typed_blocker_refs: item.typed_blocker_refs,
     typed_blocker_receipt_refs: item.typed_blocker_receipt_refs,
     direct_ledger_handoff: item.direct_ledger_handoff,
+    default_next_action_guidance: item.default_next_action_guidance,
     payload_owner: item.payload_owner,
     payload_path_policy: item.payload_path_policy,
     status: item.status,

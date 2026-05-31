@@ -173,6 +173,8 @@ export function frameworkAttentionFirstPayload(input: {
     familyStallLineage: input.familyStallLineage,
     domainDispatchEvidenceWorkorderGroupAttentionItems:
       input.domainDispatchEvidenceWorkorderGroupAttentionItems,
+    stageReplayMissingReceiptWorkorderAttentionItems:
+      input.stageReplayMissingReceiptWorkorderAttentionItems,
     itemLimit: 5,
   });
 

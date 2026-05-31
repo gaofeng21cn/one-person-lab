@@ -262,6 +262,40 @@ function frameworkOmaProductionConsumptionNextSafeAction(followthrough: JsonReco
   };
 }
 
+function frameworkStageReplayMissingReceiptNextSafeAction(item: JsonRecord) {
+  const guidance = record(item.default_next_action_guidance);
+  return {
+    action_id: 'review_stage_replay_missing_receipt_workorder',
+    action_kind: 'stage_replay_missing_receipt_guidance',
+    step_kind: stringValue(guidance.step_kind) ?? 'record_stage_replay_missing_receipt_payload',
+    evidence_closure_gate: 'stage_replay_missing_receipt_refs_gate',
+    item_id: stringValue(item.item_id),
+    domain_id: stringValue(item.domain_id),
+    stage_id: stringValue(item.stage_id),
+    missing_ref: stringValue(item.missing_ref),
+    missing_ref_kind: stringValue(item.missing_ref_kind),
+    default_guidance_kind: stringValue(guidance.action_kind) ?? 'record_payload',
+    owner: stringValue(guidance.owner) ?? 'domain_or_human_gate_owner',
+    payload_path: stringValue(guidance.payload_path),
+    record_command: stringValue(guidance.record_command),
+    verify_command: stringValue(guidance.verify_command),
+    alternative_action_kinds: stringList(guidance.alternative_action_kinds),
+    target_identity: record(item.target_identity),
+    direct_ledger_handoff: record(item.direct_ledger_handoff),
+    full_detail_section:
+      'attention_first_payload.stage_replay_missing_receipt_workorder_attention_items',
+    authority: 'operator_attention_only',
+    can_submit_record_to_safe_action_shell: false,
+    can_execute_domain_action: false,
+    can_write_domain_truth: false,
+    can_create_owner_receipt: false,
+    can_create_typed_blocker: false,
+    can_close_domain_ready: false,
+    can_claim_production_ready: false,
+    can_authorize_quality_or_export: false,
+  };
+}
+
 function blockedOwnerPayloadGroupSummary(group: JsonRecord) {
   return {
     owner: stringValue(group.owner) ?? 'domain_repository_or_app_live_operator',
@@ -344,6 +378,7 @@ export function frameworkAttentionNextSafeActions(input: {
   omaProductionConsumptionFollowthrough: JsonRecord;
   familyStallLineage?: JsonRecord;
   domainDispatchEvidenceWorkorderGroupAttentionItems: JsonRecord[];
+  stageReplayMissingReceiptWorkorderAttentionItems?: JsonRecord[];
   itemLimit: number;
 }) {
   if (input.blockers.length > 0) {
@@ -380,6 +415,9 @@ export function frameworkAttentionNextSafeActions(input: {
     ...input.domainDispatchEvidenceWorkorderGroupAttentionItems
       .slice(0, 1)
       .map(frameworkDomainDispatchGroupNextSafeAction),
+    ...recordList(input.stageReplayMissingReceiptWorkorderAttentionItems)
+      .slice(0, 1)
+      .map(frameworkStageReplayMissingReceiptNextSafeAction),
     ...input.ownerPayloadGroups.slice(0, 1).map(frameworkOwnerPayloadGroupNextSafeAction),
     ...(
       recordList(input.ownerHandoffPacket.owners).length > 0
