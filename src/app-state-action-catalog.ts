@@ -1,5 +1,28 @@
+type AppActionCatalogEntry = {
+  action_id: string;
+  label: string;
+  surface: 'opl app action execute';
+  delegated_surface: string;
+  payload_fields: string[];
+  mutates: string;
+};
+
+function annotateAppActionRoute(action: AppActionCatalogEntry) {
+  const payloadRequired = action.payload_fields.length > 0;
+  return {
+    ...action,
+    owner: 'opl_framework',
+    submit_via: 'opl app action execute',
+    execution_policy: 'opl_safe_action_shell',
+    route_requires_domain_or_app_payload: payloadRequired,
+    can_submit_to_safe_action_shell: !payloadRequired,
+    dry_run_supported: !payloadRequired,
+    route: `opl app action execute --action ${action.action_id}`,
+  };
+}
+
 export function buildActionCatalog() {
-  const codexActions = (['install', 'update', 'reinstall', 'remove'] as const).map((action) => ({
+  const codexActions: AppActionCatalogEntry[] = (['install', 'update', 'reinstall', 'remove'] as const).map((action) => ({
     action_id: `codex_${action}`,
     label: `${action[0].toUpperCase()}${action.slice(1)} Codex CLI`,
     surface: 'opl app action execute',
@@ -7,7 +30,7 @@ export function buildActionCatalog() {
     payload_fields: [],
     mutates: 'opl_codex_cli_runtime',
   }));
-  const moduleActions = (['install', 'update', 'reinstall', 'remove'] as const).map((action) => ({
+  const moduleActions: AppActionCatalogEntry[] = (['install', 'update', 'reinstall', 'remove'] as const).map((action) => ({
     action_id: `module_${action}`,
     label: `${action[0].toUpperCase()}${action.slice(1)} OPL module`,
     surface: 'opl app action execute',
@@ -15,7 +38,7 @@ export function buildActionCatalog() {
     payload_fields: ['module_id'],
     mutates: 'opl_module_checkout',
   }));
-  return [
+  const actions: AppActionCatalogEntry[] = [
     {
       action_id: 'developer_supervisor',
       label: 'Configure Developer Mode',
@@ -119,4 +142,5 @@ export function buildActionCatalog() {
       mutates: 'opl_temporal_worker',
     },
   ];
+  return actions.map(annotateAppActionRoute);
 }

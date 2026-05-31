@@ -675,7 +675,11 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       PATH: '/usr/bin:/bin',
     }) as {
       app_state: {
-        actions: Array<{ action_id: string; delegated_surface: string; payload_fields: string[] }>;
+        actions: Array<{
+          action_id: string;
+          delegated_surface: string;
+          payload_fields: string[];
+        } & Record<string, unknown>>;
       };
     };
     const actions = new Map(output.app_state.actions.map((entry) => [entry.action_id, entry]));
@@ -700,7 +704,17 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       assert.equal(actions.get(actionId)?.delegated_surface.startsWith('opl '), true);
     }
     assert.deepEqual(actions.get('module_update')?.payload_fields, ['module_id']);
+    assert.equal(actions.get('module_update')?.route_requires_domain_or_app_payload, true);
+    assert.equal(actions.get('module_update')?.can_submit_to_safe_action_shell, false);
+    assert.equal(actions.get('provider_scheduler_status')?.submit_via, 'opl app action execute');
+    assert.equal(actions.get('provider_scheduler_status')?.execution_policy, 'opl_safe_action_shell');
+    assert.equal(actions.get('provider_scheduler_status')?.route_requires_domain_or_app_payload, false);
+    assert.equal(actions.get('provider_scheduler_status')?.can_submit_to_safe_action_shell, true);
+    assert.equal(actions.get('provider_scheduler_status')?.dry_run_supported, true);
+    assert.equal(actions.get('provider_scheduler_status')?.route, 'opl app action execute --action provider_scheduler_status');
     assert.deepEqual(actions.get('provider_scheduler_tick')?.payload_fields, ['force', 'limit', 'hydrate']);
+    assert.equal(actions.get('provider_scheduler_tick')?.route_requires_domain_or_app_payload, true);
+    assert.equal(actions.get('provider_scheduler_tick')?.can_submit_to_safe_action_shell, false);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }

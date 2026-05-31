@@ -5,6 +5,7 @@ REPO_URL=${OPL_REPO_URL:-https://github.com/gaofeng21cn/one-person-lab.git}
 INSTALL_DIR=${OPL_INSTALL_DIR:-$HOME/.opl/one-person-lab}
 BRANCH=${OPL_INSTALL_BRANCH:-main}
 BOOTSTRAP_ONLY=${OPL_BOOTSTRAP_ONLY:-0}
+INSTALL_SOURCE_MODE=${OPL_INSTALL_SOURCE_MODE:-auto}
 MANAGED_TOOLCHAIN_ROOT=${OPL_MANAGED_TOOLCHAIN_ROOT:-$HOME/.opl/toolchain}
 MANAGED_NODE_VERSION=${OPL_MANAGED_NODE_VERSION:-v22.21.1}
 INSTALL_SOURCE_MARKER=.opl-install-source
@@ -29,6 +30,16 @@ if [ "${#INSTALL_ARGS[@]}" -gt 0 ]; then
 else
   set --
 fi
+
+case "$INSTALL_SOURCE_MODE" in
+  auto|archive)
+    ;;
+  *)
+    printf 'Unsupported OPL_INSTALL_SOURCE_MODE: %s\n' "$INSTALL_SOURCE_MODE" >&2
+    printf 'Expected one of: auto, archive\n' >&2
+    exit 1
+    ;;
+esac
 
 log() {
   printf '==> %s\n' "$1"
@@ -194,7 +205,14 @@ ensure_node_runtime
 
 mkdir -p "$(dirname "$INSTALL_DIR")"
 
-if [ -d "$INSTALL_DIR/.git" ]; then
+if [ "$INSTALL_SOURCE_MODE" = "archive" ]; then
+  if [ -e "$INSTALL_DIR" ] && [ ! -f "$INSTALL_DIR/$INSTALL_SOURCE_MARKER" ]; then
+    printf 'Install directory exists and cannot be replaced by explicit archive mode: %s\n' "$INSTALL_DIR" >&2
+    printf 'Move it away or set OPL_INSTALL_DIR to another path.\n' >&2
+    exit 1
+  fi
+  install_from_archive
+elif [ -d "$INSTALL_DIR/.git" ]; then
   if ! git_is_usable; then
     if is_darwin; then
       request_command_line_tools

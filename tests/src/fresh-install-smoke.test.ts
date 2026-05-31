@@ -111,6 +111,106 @@ test('install bootstrap-only removes partial clone directories after clone failu
   }
 });
 
+test('install bootstrap-only can use an explicit source archive even when git is usable', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-explicit-archive-'));
+  const fakeBin = path.join(homeRoot, 'bin');
+  const installDir = path.join(homeRoot, '.opl', 'one-person-lab');
+  const gitLog = path.join(homeRoot, 'git.log');
+  const npmLog = path.join(homeRoot, 'npm.log');
+  const curlLog = path.join(homeRoot, 'curl.log');
+  fs.mkdirSync(fakeBin, { recursive: true });
+
+  fs.writeFileSync(
+    path.join(fakeBin, 'git'),
+    [
+      '#!/usr/bin/env bash',
+      `printf '%s\\n' "$*" >> ${JSON.stringify(gitLog)}`,
+      'if [ "${1:-}" = "--version" ]; then',
+      '  printf "git version 2.50.0\\n"',
+      '  exit 0',
+      'fi',
+      'if [ "${1:-}" = "clone" ]; then',
+      '  echo "git clone should not run in explicit archive mode" >&2',
+      '  exit 99',
+      'fi',
+      'exit 0',
+    ].join('\n'),
+  );
+  fs.writeFileSync(path.join(fakeBin, 'node'), '#!/usr/bin/env bash\nexit 0\n');
+  fs.writeFileSync(
+    path.join(fakeBin, 'npm'),
+    [
+      '#!/usr/bin/env bash',
+      `printf '%s\\n' "$*" >> ${JSON.stringify(npmLog)}`,
+      'exit 0',
+    ].join('\n'),
+  );
+  fs.writeFileSync(
+    path.join(fakeBin, 'curl'),
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'out=""',
+      'url=""',
+      'while [ "$#" -gt 0 ]; do',
+      '  if [ "$1" = "-o" ]; then out="$2"; shift 2; continue; fi',
+      '  url="$1"',
+      '  shift',
+      'done',
+      `printf '%s\\n' "$url" >> ${JSON.stringify(curlLog)}`,
+      'mkdir -p "$(dirname "$out")"',
+      'printf "fixture archive\\n" > "$out"',
+    ].join('\n'),
+  );
+  fs.writeFileSync(
+    path.join(fakeBin, 'tar'),
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'dest=""',
+      'while [ "$#" -gt 0 ]; do',
+      '  case "$1" in',
+      '    -C) dest="$2"; shift 2 ;;',
+      '    *) shift ;;',
+      '  esac',
+      'done',
+      'mkdir -p "$dest/current-source-framework"',
+      'printf "{}\\n" > "$dest/current-source-framework/package.json"',
+    ].join('\n'),
+  );
+  for (const command of ['git', 'node', 'npm', 'curl', 'tar']) {
+    fs.chmodSync(path.join(fakeBin, command), 0o755);
+  }
+
+  try {
+    const result = spawnSync('/bin/bash', [installScript, '--bootstrap-only'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        HOME: homeRoot,
+        OPL_INSTALL_DIR: installDir,
+        OPL_INSTALL_SOURCE_MODE: 'archive',
+        OPL_SOURCE_ARCHIVE_URL: 'file:///tmp/current-source-framework.tar.gz',
+        PATH: `${fakeBin}:/usr/bin:/bin`,
+      },
+    });
+
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.match(result.stdout, /Downloading One Person Lab source archive/);
+    assert.equal(fs.readFileSync(path.join(installDir, '.opl-install-source'), 'utf8').trim(), 'archive');
+    assert.deepEqual(fs.readFileSync(curlLog, 'utf8').trim().split('\n'), [
+      'file:///tmp/current-source-framework.tar.gz',
+    ]);
+    assert.equal(fs.existsSync(gitLog) ? fs.readFileSync(gitLog, 'utf8').includes('clone') : false, false);
+    assert.deepEqual(fs.readFileSync(npmLog, 'utf8').trim().split('\n'), [
+      'install --ignore-scripts',
+      'link --ignore-scripts',
+    ]);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('install bootstrap-only on macOS prepares managed Node and uses a source archive when git is unavailable', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-managed-node-'));
   const fakeBin = path.join(homeRoot, 'bin');
