@@ -266,10 +266,15 @@ db.close();`;
       'stage_name',
       'problem_summary',
       'stage_goal',
+      'progress_delta_classification',
+      'deliverable_progress_delta',
+      'platform_repair_delta',
+      'next_forced_delta',
       'stage_work_done',
       'changed_stage_surfaces',
       'outcome',
       'remaining_blockers',
+      'evidence_refs',
     ]);
     assert.equal(userStageLog.duration.duration_ms, 600000);
     assert.equal(userStageLog.duration.duration_source, 'stage_attempt_created_updated_at_fallback');
@@ -282,6 +287,82 @@ db.close();`;
       userStageLog.semantic_gap.reason,
       'domain_closeout_did_not_provide_user_stage_log',
     );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime stage progress log fails closed on invalid progress delta classification', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-log-invalid-classification-'));
+  try {
+    const attemptId = runCli([
+      'family-runtime',
+      'attempt',
+      'start',
+      '--domain',
+      'mag',
+      '--stage-id',
+      'grant-revision',
+      '--stage-name',
+      'MAG grant revision',
+      '--task-id',
+      'task-invalid-classification',
+      '--workflow-id',
+      'workflow-invalid-classification',
+      '--source-fingerprint',
+      'sha256:invalid-classification',
+    ], familyRuntimeEnv(stateRoot)).family_runtime_stage_attempt.attempt.stage_attempt_id;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      attemptId,
+      '--closeout-packet',
+      JSON.stringify({
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: ['receipt:mag-invalid-classification'],
+        stage_log_summary: {
+          stage_name: 'MAG grant revision',
+          problem_summary: 'The grant revision returned a non-standard progress classification.',
+          stage_goal: 'Produce grant deliverable progress or a typed blocker.',
+          progress_delta_classification: 'grant_polish',
+          deliverable_progress_delta: {
+            delta_count: 1,
+            delta_refs: ['grant:specific-aims'],
+            delta_summary: 'Specific aims changed.',
+          },
+          platform_repair_delta: {
+            delta_count: 0,
+            delta_refs: [],
+            delta_summary: null,
+          },
+          next_forced_delta: 'grant_owner_receipt_or_fundability_blocker',
+          stage_work_done: ['Revised Specific Aims.'],
+          changed_stage_surfaces: ['specific_aims'],
+          outcome: 'invalid_progress_classification',
+          remaining_blockers: [],
+          evidence_refs: ['receipt:mag-invalid-classification'],
+        },
+      }),
+    ], familyRuntimeEnv(stateRoot));
+
+    const userStageLog = runCli(['family-runtime', 'attempt', 'query', attemptId], familyRuntimeEnv(stateRoot))
+      .family_runtime_stage_attempt_query.stage_attempt_query.stage_progress_log.user_stage_log;
+
+    assert.equal(userStageLog.semantic_status, 'provided_by_domain');
+    assert.equal(userStageLog.progress_delta_classification, 'typed_blocker');
+    assert.equal(
+      userStageLog.semantic_gap.reason,
+      'domain_closeout_provided_invalid_progress_delta_classification',
+    );
+    assert.equal(userStageLog.semantic_gap.raw_progress_delta_classification, 'grant_polish');
+    assert.deepEqual(userStageLog.semantic_gap.required_domain_fields, [
+      'progress_delta_classification',
+      'deliverable_progress_delta',
+      'platform_repair_delta',
+      'next_forced_delta',
+      'evidence_refs',
+    ]);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

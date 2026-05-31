@@ -58,6 +58,7 @@ export interface FamilyStageContract extends JsonRecord {
   boundary_assumptions: string[];
   properties: string[];
   runtime_event_refs?: string[];
+  user_stage_log_contract?: JsonRecord;
   progress_delta_policy?: JsonRecord;
   typed_blocker_lineage_policy?: JsonRecord;
   expected_receipt_refs?: FamilyStageSurfaceRef[];
@@ -241,6 +242,7 @@ function normalizeStageContract(value: unknown): FamilyStageContract | null {
     boundary_assumptions: readStringList(value.boundary_assumptions),
     properties: readStringList(value.properties),
     runtime_event_refs: readStringList(value.runtime_event_refs),
+    user_stage_log_contract: isRecord(value.user_stage_log_contract) ? value.user_stage_log_contract : undefined,
     progress_delta_policy: isRecord(value.progress_delta_policy) ? value.progress_delta_policy : undefined,
     typed_blocker_lineage_policy: isRecord(value.typed_blocker_lineage_policy)
       ? value.typed_blocker_lineage_policy

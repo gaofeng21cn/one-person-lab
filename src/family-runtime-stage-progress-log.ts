@@ -367,6 +367,26 @@ function progressDeltaFromRecord(record: JsonRecord | null, keys: string[], defa
   };
 }
 
+const PROGRESS_DELTA_CLASSIFICATIONS = new Set([
+  'deliverable_progress',
+  'platform_repair',
+  'mixed',
+  'typed_blocker',
+  'human_gate',
+  'stop_loss',
+]);
+
+function normalizedProgressDeltaClassification(value: string | null) {
+  if (!value) {
+    return null;
+  }
+  return PROGRESS_DELTA_CLASSIFICATIONS.has(value) ? value : 'typed_blocker';
+}
+
+function invalidProgressDeltaClassification(value: string | null) {
+  return Boolean(value && !PROGRESS_DELTA_CLASSIFICATIONS.has(value));
+}
+
 function userStageLogProgressDeltas(
   semanticSummary: JsonRecord | null,
   routeImpact: JsonRecord,
@@ -408,19 +428,22 @@ function userStageLogProgressDeltas(
     delta_refs: uniqueStrings([...platformDelta.delta_refs, ...routePlatformDelta.delta_refs]),
     delta_summary: platformDelta.delta_summary ?? routePlatformDelta.delta_summary,
   };
-  const classification = semanticText(semanticSummary, ['progress_delta_classification'])
-    ?? semanticText(routeImpact, ['progress_delta_classification'])
-    ?? (semanticStatus === 'missing_domain_semantic_summary'
-      ? 'typed_blocker'
-      : mergedDeliverableDelta.delta_count > 0 && mergedPlatformDelta.delta_count > 0
-        ? 'mixed'
-        : mergedDeliverableDelta.delta_count > 0
-          ? 'deliverable_progress'
-          : mergedPlatformDelta.delta_count > 0
-            ? 'platform_repair'
-            : 'typed_blocker');
+  const rawClassification = semanticText(semanticSummary, ['progress_delta_classification'])
+    ?? semanticText(routeImpact, ['progress_delta_classification']);
+  const inferredClassification = semanticStatus === 'missing_domain_semantic_summary'
+    ? 'typed_blocker'
+    : mergedDeliverableDelta.delta_count > 0 && mergedPlatformDelta.delta_count > 0
+      ? 'mixed'
+      : mergedDeliverableDelta.delta_count > 0
+        ? 'deliverable_progress'
+        : mergedPlatformDelta.delta_count > 0
+          ? 'platform_repair'
+          : 'typed_blocker';
+  const classification = normalizedProgressDeltaClassification(rawClassification) ?? inferredClassification;
   return {
     progress_delta_classification: classification,
+    invalid_progress_delta_classification: invalidProgressDeltaClassification(rawClassification),
+    raw_progress_delta_classification: rawClassification,
     deliverable_progress_delta: {
       ...mergedDeliverableDelta,
       has_deliverable_delta: mergedDeliverableDelta.delta_count > 0 || mergedDeliverableDelta.delta_refs.length > 0,
@@ -559,16 +582,35 @@ function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: num
     token_usage_refs: tokenUsageRefs,
     cost_refs: costRefs,
     evidence_refs: evidenceRefs,
-    semantic_gap: semanticSummary ? null : {
+    semantic_gap: semanticSummary ? (
+      progressDeltas.invalid_progress_delta_classification
+        ? {
+          reason: 'domain_closeout_provided_invalid_progress_delta_classification',
+          raw_progress_delta_classification: progressDeltas.raw_progress_delta_classification,
+          required_domain_fields: [
+            'progress_delta_classification',
+            'deliverable_progress_delta',
+            'platform_repair_delta',
+            'next_forced_delta',
+            'evidence_refs',
+          ],
+        }
+        : null
+    ) : {
       reason: 'domain_closeout_did_not_provide_user_stage_log',
       required_domain_fields: [
         'stage_name',
         'problem_summary',
         'stage_goal',
+        'progress_delta_classification',
+        'deliverable_progress_delta',
+        'platform_repair_delta',
+        'next_forced_delta',
         'stage_work_done',
         'changed_stage_surfaces',
         'outcome',
         'remaining_blockers',
+        'evidence_refs',
       ],
     },
     authority_boundary: userStageLogAuthorityBoundary(),

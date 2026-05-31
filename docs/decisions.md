@@ -41,6 +41,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `contracts/opl-framework/foundry-agent-series-contract.json` 成为 Foundry Agent 系列化顶层合同；标准 scaffold 和 `opl agents conformance` 要求 domain repo 暴露 `contracts/foundry_agent_series.json`，把 identity、stage authority、progress/currentness/closeout packet、typed blocker lineage 和 App projection 边界统一到同一机器面。
 - MAS/MAG/RCA/OMA 可以保留 paper/grant/visual/target-agent domain alias，但 alias 只映射到 OPL generic deliverable/platform delta；App 只消费 shared projection，不读取 domain artifact/body，也不新增 truth authority。
 - platform repair、projection hygiene、currentness 修复、refs-only ledger 与 typed-blocker accounting 必须单独列账，不能显示成交付物实质进展。
+- `family-stage-control-plane` 必须显式保存 `user_stage_log_contract`、`progress_delta_policy` 与 `typed_blocker_lineage_policy`；runtime stage log 必须对 `progress_delta_classification` 做枚举校验，未知分类 fail closed 为 typed blocker，并暴露缺失 Progress-First 字段与 evidence refs。
 
 ### 决策：framework readiness 不把 worker-guarded provider SLO raw tail 计成 operator-actionable
 
