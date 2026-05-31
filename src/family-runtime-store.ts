@@ -12,6 +12,8 @@ import { createStageAttemptTable, listStageAttemptsForTask } from './family-runt
 import { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 import { resolveOplStatePaths } from './runtime-state-paths.ts';
+import type { FamilyRuntimeTaskScope } from './family-runtime-command.ts';
+import { taskRowMatchesScope } from './family-runtime-task-scope.ts';
 
 export { stableId } from './family-runtime-ids.ts';
 
@@ -286,19 +288,43 @@ export function insertNotification(
   return notificationToPayload(notification as FamilyRuntimeNotificationRow);
 }
 
-export function queueSummary(db: DatabaseSync) {
-  const rows = db.prepare(`
-    SELECT status, COUNT(*) AS count FROM tasks GROUP BY status ORDER BY status
-  `).all() as Array<{ status: FamilyRuntimeTaskStatus; count: number }>;
-  const byStatus = Object.fromEntries(rows.map((row) => [row.status, row.count]));
-  const total = rows.reduce((sum, row) => sum + row.count, 0);
-  return { total, by_status: byStatus };
+export type FamilyRuntimeTaskListFilter = {
+  status?: string;
+  taskScope?: FamilyRuntimeTaskScope;
+};
+
+function listTaskRows(db: DatabaseSync) {
+  return db.prepare(`
+    SELECT * FROM tasks ORDER BY priority DESC, created_at ASC
+  `).all() as FamilyRuntimeTaskRow[];
 }
 
-export function listTasks(db: DatabaseSync) {
-  return (db.prepare(`
-    SELECT * FROM tasks ORDER BY priority DESC, created_at ASC
-  `).all() as FamilyRuntimeTaskRow[]).map(taskToPayload);
+function taskRowMatchesFilter(row: FamilyRuntimeTaskRow, filter?: FamilyRuntimeTaskListFilter) {
+  if (filter?.status && row.status !== filter.status) {
+    return false;
+  }
+  return taskRowMatchesScope(row, filter?.taskScope);
+}
+
+function filteredTaskRows(db: DatabaseSync, filter?: FamilyRuntimeTaskListFilter) {
+  const rows = listTaskRows(db);
+  if (!filter?.status && !filter?.taskScope) {
+    return rows;
+  }
+  return rows.filter((row) => taskRowMatchesFilter(row, filter));
+}
+
+export function queueSummary(db: DatabaseSync, filter?: FamilyRuntimeTaskListFilter) {
+  const rows = filteredTaskRows(db, filter);
+  const byStatus = rows.reduce<Record<string, number>>((counts, row) => {
+    counts[row.status] = (counts[row.status] ?? 0) + 1;
+    return counts;
+  }, {});
+  return { total: rows.length, by_status: byStatus };
+}
+
+export function listTasks(db: DatabaseSync, filter?: FamilyRuntimeTaskListFilter) {
+  return filteredTaskRows(db, filter).map(taskToPayload);
 }
 
 export function inspectTask(db: DatabaseSync, taskId: string) {

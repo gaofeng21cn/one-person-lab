@@ -66,7 +66,28 @@ function setDomainProfile(
 
 export function parseQueueArgs(rest: string[]): FamilyRuntimeCommandInput | undefined {
   if (rest[0] === 'list') {
-    return { mode: 'queue_list' };
+    const taskScope: FamilyRuntimeTaskScope = {};
+    let status: string | undefined;
+    for (let index = 1; index < rest.length; index += 1) {
+      const token = rest[index];
+      const value = rest[index + 1];
+      if (parseTaskScopeOption(taskScope, token, value)) {
+        index += 1;
+      } else if (token === '--status' && value) {
+        status = value.trim();
+        index += 1;
+      } else {
+        throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime queue list option: ${token}.`, {
+          option: token,
+          usage: 'opl family-runtime queue list [--domain <domain>] [--study <study_id>] [--status <status>] [--task-kind <kind>] [--payload-match <path=value>]',
+        });
+      }
+    }
+    return {
+      mode: 'queue_list',
+      status,
+      taskScope: normalizedTaskScope(taskScope),
+    };
   }
   if (rest[0] === 'inspect') {
     const taskId = rest[1];

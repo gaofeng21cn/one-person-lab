@@ -278,6 +278,99 @@ JSON
   }
 });
 
+test('family-runtime queue list filters by domain, study, and status for Progress-First monitoring', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-queue-list-filter-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot);
+    const dm002Running = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      '{"profile":"/tmp/profile.toml","study_id":"DM002","work_unit":"running-target"}',
+      '--dedupe-key',
+      'mas:test:DM002:running-target',
+    ], env).family_runtime_enqueue.task.task_id;
+    runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      '{"profile":"/tmp/profile.toml","study_id":"DM002","work_unit":"queued-control"}',
+      '--dedupe-key',
+      'mas:test:DM002:queued-control',
+    ], env);
+    const dm003Running = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      '{"profile":"/tmp/profile.toml","study_id":"DM003","work_unit":"running-control"}',
+      '--dedupe-key',
+      'mas:test:DM003:running-control',
+    ], env).family_runtime_enqueue.task.task_id;
+    const magRunning = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautogrant',
+      '--task-kind',
+      'grant_owner/default-executor-dispatch',
+      '--payload',
+      '{"profile":"/tmp/profile.toml","study_id":"DM002","work_unit":"domain-control"}',
+      '--dedupe-key',
+      'mag:test:DM002:running-control',
+    ], env).family_runtime_enqueue.task.task_id;
+
+    const db = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+    try {
+      const now = new Date().toISOString();
+      db.prepare("UPDATE tasks SET status = 'running', updated_at = ? WHERE task_id IN (?, ?, ?)")
+        .run(now, dm002Running, dm003Running, magRunning);
+    } finally {
+      db.close();
+    }
+
+    const queue = runCli([
+      'family-runtime',
+      'queue',
+      'list',
+      '--domain',
+      'medautoscience',
+      '--study',
+      'DM002',
+      '--status',
+      'running',
+    ], env);
+
+    assert.equal(queue.family_runtime_queue.queue.total, 1);
+    assert.equal(queue.family_runtime_queue.queue.by_status.running, 1);
+    assert.equal(queue.family_runtime_queue.unfiltered_queue.total, 4);
+    assert.deepEqual(queue.family_runtime_queue.filters, {
+      status: 'running',
+      taskScope: {
+        domainId: 'medautoscience',
+        payloadMatches: [{ path: 'study_id', value: 'DM002' }],
+      },
+    });
+    assert.equal(queue.family_runtime_queue.tasks.length, 1);
+    assert.equal(queue.family_runtime_queue.tasks[0].task_id, dm002Running);
+    assert.equal(queue.family_runtime_queue.tasks[0].payload.study_id, 'DM002');
+    assert.equal(queue.family_runtime_queue.tasks[0].status, 'running');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime queue hold drains scoped running task and active attempt into operator gate', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-running-hold-'));
   try {

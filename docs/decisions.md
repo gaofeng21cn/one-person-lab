@@ -17,6 +17,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 默认 `attempt list` 仍返回 attempts 结构，降低对既有 consumer 的破坏面；compact timeline 必须显式请求。
 - 该 lens 只读 OPL queue / attempt ledger 和 domain closeout refs，不写 MAS/MAG/RCA/OMA truth，不读取 artifact body，不生成 owner receipt、typed blocker、quality verdict、domain ready 或 production ready。
 
+### 决策：queue list 的 scoped 过滤是 Progress-First 监控合同
+
+原因：operator 用 `family-runtime queue list --domain ... --study ... --status ...` 判断单篇论文是否仍有 running/queued work 时，输出必须只包含目标 scope。若 CLI 接受过滤参数但仍返回全量 queue，前台监督会把其他 study/domain 的任务误判成目标论文进度，破坏 Progress-First 的 currentness 判断。
+
+影响：
+
+- `family-runtime queue list` 支持 `--domain`、`--study` / `--study-id`、`--status`、`--task-kind`、`--payload-match`，并把这些过滤同时应用到 `queue` summary 和 `tasks` 列表。
+- 返回面保留 `unfiltered_queue` 作为全局背景计数；默认 `queue` 始终表示当前过滤 scope，避免 operator 读错。
+- 该入口只读 OPL queue ledger，不写 domain truth、不执行 domain action、不刷新 MAS publication verdict、paper package、owner receipt 或 typed blocker。
+
 ### 决策：worker source-root 等价需要 operator diagnostic
 
 原因：managed worker 可能来自 App-managed runtime root，而当前 operator 在 developer checkout 里运行 CLI。两者 `worker-runtime` content hash 相同但 source root 不同是正常可解释状态，不能被 operator 误读为 stale worker 或 provider readiness 漂移。

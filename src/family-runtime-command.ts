@@ -89,7 +89,12 @@ export type FamilyRuntimeCommandInput =
       max_age_ms?: number | null;
     };
   }
-  | { mode: 'notify_list' | 'events_export' | 'queue_list' }
+  | { mode: 'notify_list' | 'events_export' }
+  | {
+    mode: 'queue_list';
+    status?: string;
+    taskScope?: FamilyRuntimeTaskScope;
+  }
   | {
     mode: 'attempt_list';
     filters?: {

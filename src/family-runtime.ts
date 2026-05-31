@@ -444,12 +444,21 @@ export async function runFamilyRuntime(args: string[]) {
       };
     }
     if (parsed.mode === 'queue_list') {
+      const filter = {
+        status: parsed.status,
+        taskScope: parsed.taskScope,
+      };
       return {
         version: 'g2',
         family_runtime_queue: {
           surface_id: 'opl_family_runtime_queue',
-          queue: queueSummary(db),
-          tasks: listTasks(db),
+          filters: {
+            ...(filter.status ? { status: filter.status } : {}),
+            ...(filter.taskScope ? { taskScope: filter.taskScope } : {}),
+          },
+          queue: queueSummary(db, filter),
+          unfiltered_queue: queueSummary(db),
+          tasks: listTasks(db, filter),
         },
       };
     }
