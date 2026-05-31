@@ -110,6 +110,81 @@ test('runtime oma-production-consumption verifies long-soak refs before framewor
   }
 });
 
+test('runtime oma-production-consumption CLI accepts singular ref fields for long-soak payloads', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-singular-state-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    recordManagedInstallUpdateReceipts([{
+      module_id: 'oplmetaagent',
+      repo_name: 'opl-meta-agent',
+      action: 'update',
+      reason: 'startup_health_and_skill_refresh',
+      install_origin_before: 'managed_root',
+      install_origin_after: 'managed_root',
+      checkout_path: '/tmp/opl-managed-modules/opl-meta-agent',
+      managed_checkout_path: '/tmp/opl-managed-modules/opl-meta-agent',
+      git_head_sha: 'oma-framework-production-singular-ledger-sha',
+      git_sync_status: 'synced',
+      git_dirty: false,
+      skill_sync_domain: 'oplmetaagent',
+    }]);
+    recordOmaAppLivePathReceipts([{
+      app_live_path_refs: ['app://one-person-lab/opl-meta-agent/production-singular-live-path'],
+      app_surface_ref: 'app://one-person-lab/oma/production-consumption',
+      operator_evidence_refs: ['screenshot://opl-app/oma-production-singular-live-path.png'],
+    }]);
+
+    const recordOutput = runCli([
+      'runtime',
+      'oma-production-consumption',
+      'record',
+      '--payload',
+      JSON.stringify({
+        long_soak_ref: 'long_soak_ref://opl-meta-agent/production-consumption/singular',
+        operator_evidence_ref: 'operator_evidence_ref://opl-meta-agent/production-consumption/singular',
+      }),
+    ], { OPL_STATE_DIR: stateRoot }).oma_production_consumption_ledger_record;
+    assert.equal(recordOutput.status, 'recorded');
+    assert.deepEqual(recordOutput.receipts[0].long_soak_refs, [
+      'long_soak_ref://opl-meta-agent/production-consumption/singular',
+    ]);
+    assert.deepEqual(recordOutput.receipts[0].operator_evidence_refs, [
+      'operator_evidence_ref://opl-meta-agent/production-consumption/singular',
+    ]);
+
+    const verifyOutput = runCli([
+      'runtime',
+      'oma-production-consumption',
+      'verify',
+      '--receipt-ref',
+      recordOutput.receipt_refs[0],
+    ], { OPL_STATE_DIR: stateRoot }).oma_production_consumption_ledger_verify;
+    assert.equal(verifyOutput.status, 'verified');
+    assert.equal(verifyOutput.receipt.receipt_status, 'verified');
+
+    const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
+      OPL_STATE_DIR: stateRoot,
+    }).framework_readiness;
+    const omaFollowthrough = readiness.oma_production_consumption_followthrough;
+    if (omaFollowthrough.structural_consumption_ready !== true) {
+      return;
+    }
+    assert.equal(omaFollowthrough.open_gate_count, 0);
+    assert.deepEqual(omaFollowthrough.open_gate_ids, []);
+    assert.equal(omaFollowthrough.production_consumption_ready, true);
+    assert.equal(omaFollowthrough.authority_boundary.can_claim_production_ready, false);
+    assert.equal(omaFollowthrough.authority_boundary.can_create_owner_receipt, false);
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime oma-production-consumption typed blocker refs do not close long-soak gate', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-blocker-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
