@@ -52,6 +52,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `family-runtime evidence-worklist` 会把 route-level blocked 状态归一化为 blocked evidence requirement，并从 provider scheduler next-action ledger 中排除这些 provider mutation route；domain-owned typed blocker attention 继续保留原有分组与 refs-only 口径。
 - 该规则只修正 App/default action 与 worklist attention 口径，不绕过 worker guard，不安装 provider scheduler，不声明 provider SLO satisfied、production ready、domain ready、App release ready 或 global closeout。
 
+### 决策：Temporal worker liveness 是 Progress-First 的首要 runtime blocker
+
+原因：当 Temporal service 已经可达但 OPL worker 处于 `worker_not_ready`、`worker_source_stale` 或 worker dependency blocked 时，真实阻断不是 domain queue、dedupe、stale projection 或 scheduler cadence 本身，而是 provider worker liveness。若 `family-runtime status` 或 scheduler 继续给出泛化的 service+worker repair、继续跑 queue dispatch，operator 会把平台 liveness blocker 误读成 domain stage blocker 或队列噪音。
+
+影响：
+
+- `family-runtime status` 与 `family-runtime scheduler status` 在 provider 未 ready 时优先投影同一 `temporal_worker_repair_action`，包括 `worker_lifecycle_status`、`next_repair_action`、`next_repair_command`、Temporal service 状态和 `liveness_blocker_first=true`。
+- `family-runtime scheduler tick` 在 worker liveness blocker 存在时先 fail closed 为 `blocked_provider_not_ready`，返回 `provider_liveness_blocker`，并保持 `queue_tick=null`；只有 worker liveness 不再是首要 blocker 时才进入 provider SLO tick 和 queue dispatch。
+- 该规则只修复 OPL provider/runtime-manager liveness 暴露与 scheduler preflight，不启动 worker、不绕过 worker mutation guard、不执行 domain action、不写 domain truth、不生成 owner receipt，也不声明 provider SLO、domain ready、production ready 或 App release ready。
+
 ## 2026-05-28
 
 ### 决策：同步 domain-handler checkpoint 不受 Temporal workflow-missing 回收覆盖
