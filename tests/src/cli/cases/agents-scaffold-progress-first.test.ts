@@ -36,6 +36,84 @@ test('agents scaffold validation blocks stale Foundry policy release pins', () =
   }
 });
 
+test('agents scaffold validation blocks Foundry contracts missing the shared series design profile', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-series-profile-missing-'));
+
+  try {
+    runCli([
+      'agents',
+      'scaffold',
+      '--target-dir',
+      targetDir,
+      '--domain-id',
+      'foundry-series-profile-missing',
+    ]);
+    const foundryContractPath = path.join(targetDir, 'contracts/foundry_agent_series.json');
+    const foundryContract = JSON.parse(fs.readFileSync(foundryContractPath, 'utf8'));
+    delete foundryContract.series_design_profile;
+    fs.writeFileSync(foundryContractPath, `${JSON.stringify(foundryContract, null, 2)}\n`);
+
+    const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
+    assert.equal(validated.mode, 'validate');
+    assert.equal(validated.state, 'validation_blocked');
+    assert.equal(validated.validation.status, 'blocked');
+    assert.equal(validated.validation.foundry_agent_series_validation.status, 'blocked');
+    assert.equal(
+      validated.validation.blockers.includes('foundry_agent_series_design_profile_missing_or_invalid'),
+      true,
+    );
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
+test('agents scaffold emits canonical Foundry series design profile', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-series-profile-'));
+
+  try {
+    runCli([
+      'agents',
+      'scaffold',
+      '--target-dir',
+      targetDir,
+      '--domain-id',
+      'foundry-series-profile',
+    ]);
+    const foundryContract = JSON.parse(
+      fs.readFileSync(path.join(targetDir, 'contracts/foundry_agent_series.json'), 'utf8'),
+    );
+    const profile = foundryContract.series_design_profile;
+
+    assert.equal(profile.surface_kind, 'opl_foundry_agent_series_design_profile');
+    assert.equal(profile.profile_id, 'opl_foundry_agent_series_design_profile.v1');
+    assert.deepEqual(profile.shared_lifecycle_pipeline, [
+      'domain_material_intake',
+      'domain_pack_interpretation',
+      'stage_led_agent_execution',
+      'independent_quality_gate_or_owner_review',
+      'owner_receipt_or_typed_blocker_closeout',
+      'artifact_or_deliverable_handoff',
+      'opl_refs_only_projection_and_recovery',
+    ]);
+    assert.equal(profile.domain_io_profile.input_slot, 'domain_materials_or_task_request');
+    assert.equal(profile.domain_io_profile.output_slot, 'domain_deliverable_or_owner_handoff');
+    assert.deepEqual(profile.stage_pack_sections, [
+      'prompts',
+      'stages',
+      'skills',
+      'knowledge',
+      'quality_gates',
+    ]);
+    assert.equal(profile.shared_closeout_contract.success_shape, 'domain_owner_receipt_ref');
+    assert.equal(profile.shared_closeout_contract.blocked_shape, 'domain_owned_typed_blocker_ref');
+    assert.equal(profile.shared_closeout_contract.provider_completion_is_closeout, false);
+    assert.equal(profile.authority_invariants.opl_can_infer_domain_output, false);
+    assert.equal(profile.authority_invariants.domain_owns_input_truth_and_output_authority, true);
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
 test('agents scaffold validation blocks generated skeletons missing stage pack v2 fields', () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-pack-v2-missing-'));
 

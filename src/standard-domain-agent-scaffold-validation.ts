@@ -411,6 +411,20 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown) {
   const sharedPolicyRelease = isPlainRecord(contract?.shared_policy_release)
     ? contract.shared_policy_release
     : null;
+  const seriesDesignProfile = isPlainRecord(contract?.series_design_profile)
+    ? contract.series_design_profile
+    : null;
+  const sharedLifecyclePipeline = readStringArray(seriesDesignProfile?.shared_lifecycle_pipeline);
+  const stagePackSections = readStringArray(seriesDesignProfile?.stage_pack_sections);
+  const domainIoProfile = isPlainRecord(seriesDesignProfile?.domain_io_profile)
+    ? seriesDesignProfile.domain_io_profile
+    : null;
+  const sharedCloseoutContract = isPlainRecord(seriesDesignProfile?.shared_closeout_contract)
+    ? seriesDesignProfile.shared_closeout_contract
+    : null;
+  const profileAuthorityInvariants = isPlainRecord(seriesDesignProfile?.authority_invariants)
+    ? seriesDesignProfile.authority_invariants
+    : null;
   const domainAdapterPolicy = isPlainRecord(contract?.domain_adapter_policy)
     ? contract.domain_adapter_policy
     : null;
@@ -471,6 +485,61 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown) {
     readOptionalString(sharedPolicyRelease?.consumer_alignment_check) === 'foundry:policy-release'
       ? null
       : 'foundry_agent_series_policy_consumer_alignment_check_invalid',
+    seriesDesignProfile ? null : 'foundry_agent_series_design_profile_missing_or_invalid',
+    readOptionalString(seriesDesignProfile?.surface_kind) === 'opl_foundry_agent_series_design_profile'
+      ? null
+      : 'foundry_agent_series_design_profile_surface_kind_invalid',
+    readOptionalString(seriesDesignProfile?.profile_id) === 'opl_foundry_agent_series_design_profile.v1'
+      ? null
+      : 'foundry_agent_series_design_profile_id_invalid',
+    sharedLifecyclePipeline.includes('domain_material_intake')
+      ? null
+      : 'foundry_agent_series_design_profile_missing_intake_step',
+    sharedLifecyclePipeline.includes('stage_led_agent_execution')
+      ? null
+      : 'foundry_agent_series_design_profile_missing_stage_execution_step',
+    sharedLifecyclePipeline.includes('owner_receipt_or_typed_blocker_closeout')
+      ? null
+      : 'foundry_agent_series_design_profile_missing_closeout_step',
+    sharedLifecyclePipeline.includes('opl_refs_only_projection_and_recovery')
+      ? null
+      : 'foundry_agent_series_design_profile_missing_projection_step',
+    readOptionalString(domainIoProfile?.input_slot) === 'domain_materials_or_task_request'
+      ? null
+      : 'foundry_agent_series_design_profile_input_slot_invalid',
+    readOptionalString(domainIoProfile?.output_slot) === 'domain_deliverable_or_owner_handoff'
+      ? null
+      : 'foundry_agent_series_design_profile_output_slot_invalid',
+    stagePackSections.includes('prompts')
+      ? null
+      : 'foundry_agent_series_design_profile_missing_prompts_section',
+    stagePackSections.includes('stages')
+      ? null
+      : 'foundry_agent_series_design_profile_missing_stages_section',
+    stagePackSections.includes('skills')
+      ? null
+      : 'foundry_agent_series_design_profile_missing_skills_section',
+    stagePackSections.includes('knowledge')
+      ? null
+      : 'foundry_agent_series_design_profile_missing_knowledge_section',
+    stagePackSections.includes('quality_gates')
+      ? null
+      : 'foundry_agent_series_design_profile_missing_quality_gates_section',
+    readOptionalString(sharedCloseoutContract?.success_shape) === 'domain_owner_receipt_ref'
+      ? null
+      : 'foundry_agent_series_design_profile_success_shape_invalid',
+    readOptionalString(sharedCloseoutContract?.blocked_shape) === 'domain_owned_typed_blocker_ref'
+      ? null
+      : 'foundry_agent_series_design_profile_blocked_shape_invalid',
+    sharedCloseoutContract?.provider_completion_is_closeout === false
+      ? null
+      : 'foundry_agent_series_design_profile_provider_completion_must_not_closeout',
+    profileAuthorityInvariants?.opl_can_infer_domain_output === false
+      ? null
+      : 'foundry_agent_series_design_profile_opl_output_inference_forbidden',
+    profileAuthorityInvariants?.domain_owns_input_truth_and_output_authority === true
+      ? null
+      : 'foundry_agent_series_design_profile_domain_authority_required',
     supportedPinSources.includes('pyproject.toml')
       ? null
       : 'foundry_agent_series_missing_python_pin_source',
@@ -549,6 +618,7 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown) {
     required_identity_fields: requiredIdentityFields,
     required_stage_packets: requiredStagePackets,
     shared_progress_projection_fields: sharedProgressProjectionFields,
+    series_design_profile: seriesDesignProfile,
     contract_version_policy: contractVersionPolicy,
     shared_release_pin_strategy: sharedReleasePinStrategy,
     shared_policy_release: sharedPolicyRelease,

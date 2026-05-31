@@ -752,7 +752,7 @@ test('runtime App drilldown scopes progress-first supervision to current workben
     route.action_kind === 'progress_first_attempt_supervision'
   );
 
-  assert.deepEqual(progressActions.map((action) => action.stage_attempt_id), [
+  assert.deepEqual(progressActions.map((action: { stage_attempt_id: string | null }) => action.stage_attempt_id), [
     'attempt-progress-first-current-1',
   ]);
 });

@@ -28,6 +28,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - supersession event 记录 `blocked_stage_attempt_ids`，便于 operator 区分真实 queued work 与已收敛的 historical residue。
 - 该行为只治理 OPL queue / attempt ledger currentness，不写 MAS truth，不修改 `publication_eval/latest.json`、controller decisions、artifact gate、paper package 或 `current_package`，也不替 MAS 作质量或投稿判断。
 
+### 决策：Foundry Agent series 需要统一 canonical design profile
+
+原因：MAS、MAG、RCA 和 OPL Meta Agent 都已经按标准 OPL Agent 接入，但如果每个 domain 把 `series_design_profile` 写成自己的 input/output taxonomy，机器验证只能看到“各自都像 OPL”，看不出它们是一套同源设计。series-level profile 应该表达所有 Foundry Agent 共同的不可变设计逻辑，领域差异应留在 domain-owned profile、stage/action contract 和 authority refs 中。
+
+影响：
+
+- `contracts/opl-framework/foundry-agent-series-contract.json` 固定 canonical `series_design_profile.profile_id=opl_foundry_agent_series_design_profile.v1`，并要求相同 shared lifecycle、generic input/output slots、stage pack sections、closeout shape 与 authority invariants。
+- MAS/MAG/RCA/OMA 的 `contracts/foundry_agent_series.json` 必须使用同一个 canonical `series_design_profile`；domain-specific input/output、alias、authority function 和包装差异放入 `domain_specific_profile` 或既有 domain-owned contract 字段。
+- `opl agents conformance` 把缺失或漂移的 canonical profile 作为 structural blocker。conformance 通过只证明 shared design signature 和 scaffold contract 对齐，不声明 domain ready、quality/export ready、artifact ready、App release ready 或 production ready。
+
 ### 决策：attempt list 需要 Progress-First compact monitoring lens
 
 原因：operator 排查单个 study/domain/status 时，不应先读取全量 stage attempt 大 JSON。`attempt query` 仍是单 attempt 深下钻入口，但队列较多时需要一个只读、可过滤、轻量的 timeline 先回答哪些 attempt 仍是交付进展、platform repair、typed blocker 或 human gate。

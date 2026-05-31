@@ -682,6 +682,10 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(validated.validation.foundry_agent_series_validation.status, 'passed');
     assert.equal(validated.validation.foundry_agent_series_validation.required_for_standard_agent, true);
     assert.equal(
+      validated.validation.foundry_agent_series_validation.series_design_profile.profile_id,
+      'opl_foundry_agent_series_design_profile.v1',
+    );
+    assert.equal(
       validated.validation.foundry_agent_series_validation.contract_version_policy.current_version,
       'foundry-agent-series.v1',
     );
