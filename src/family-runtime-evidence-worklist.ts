@@ -437,10 +437,13 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
     payload_requirement: stringValue(route.payload_requirement),
     payload_owner: stringValue(route.payload_owner),
     ...payloadHandoffProjection(route, actionKind),
+    missing_progress_signals: stringList(route.missing_progress_signals),
     route_requires_domain_or_app_payload: route.route_requires_domain_or_app_payload === true,
     can_close_without_domain_or_app_payload: route.can_close_without_domain_or_app_payload !== false,
     opl_generated_receipt_policy: stringValue(route.opl_generated_receipt_policy),
     blocked_reason: stringValue(route.blocked_reason),
+    supervisor_safe_action_kind: stringValue(route.supervisor_safe_action_kind),
+    typed_blocker_requirement: record(route.typed_blocker_requirement),
     not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
   };
   const evidenceRequirementStatus = itemStatus.startsWith(BLOCKED_ROUTE_STATUS_PREFIX)

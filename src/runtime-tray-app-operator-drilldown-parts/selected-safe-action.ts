@@ -85,6 +85,8 @@ export function summarizeSelectedSafeAction(action: JsonRecord | null) {
     provider_worker_required_next_action: stringValue(action.provider_worker_required_next_action),
     progress_first_required_next_action: stringValue(action.progress_first_required_next_action),
     missing_progress_signals: stringList(action.missing_progress_signals),
+    supervisor_safe_action_kind: stringValue(action.supervisor_safe_action_kind),
+    typed_blocker_requirement: record(action.typed_blocker_requirement),
     attempt_status: stringValue(action.attempt_status),
     blocked_transport_dead_letter_reason: stringValue(action.blocked_transport_dead_letter_reason),
     provider_transport_redrive_command: stringValue(action.provider_transport_redrive_command),

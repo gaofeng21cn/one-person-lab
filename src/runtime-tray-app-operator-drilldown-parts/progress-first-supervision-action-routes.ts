@@ -20,6 +20,7 @@ function refsOnlyAuthorityBoundary() {
     domain: 'truth_quality_artifact_gate_owner',
     can_execute_domain_action: false,
     can_write_domain_truth: false,
+    can_create_typed_blocker: false,
     can_create_owner_receipt: false,
     can_authorize_quality_verdict: false,
     can_claim_domain_ready: false,
@@ -63,6 +64,68 @@ function workerReadiness(attempt: JsonRecord) {
   return record(record(currentProviderReadiness(attempt).details).worker_readiness);
 }
 
+function firstString(...values: unknown[]) {
+  for (const value of values) {
+    const text = stringValue(value);
+    if (text) {
+      return text;
+    }
+  }
+  return null;
+}
+
+function staleStatus(value: unknown) {
+  const status = stringValue(value);
+  return status === 'stale'
+    || status === 'expired'
+    || status === 'progress_stale'
+    || status === 'stale_progress'
+    || status === 'freshness_stale';
+}
+
+function progressIsStale(attempt: JsonRecord) {
+  const log = stageProgressLog(attempt);
+  const userLog = userStageLog(attempt);
+  const attemptTimeline = timeline(attempt);
+  const run = providerRun(attempt);
+  const currentControlState = record(attempt.current_control_state);
+  return [
+    attempt.progress_freshness_status,
+    attempt.stage_progress_freshness_status,
+    currentControlState.progress_freshness_status,
+    run.progress_freshness_status,
+    run.stage_progress_freshness_status,
+    log.freshness_status,
+    log.progress_freshness_status,
+    log.stage_progress_freshness_status,
+    userLog.freshness_status,
+    userLog.progress_freshness_status,
+    attemptTimeline.freshness_status,
+    attemptTimeline.progress_freshness_status,
+  ].some(staleStatus);
+}
+
+function declaredNextAction(attempt: JsonRecord) {
+  const log = stageProgressLog(attempt);
+  const userLog = userStageLog(attempt);
+  const actualWork = record(log.actual_work);
+  const currentControlState = record(attempt.current_control_state);
+  const routeImpact = record(actualWork.route_impact);
+  return firstString(
+    attempt.next_action,
+    attempt.next_safe_action,
+    attempt.operator_next_action,
+    attempt.required_next_action,
+    currentControlState.next_action,
+    currentControlState.next_safe_action,
+    currentControlState.operator_next_action,
+    routeImpact.next_action,
+    routeImpact.next_safe_action,
+    routeImpact.required_next_action,
+    userLog.next_forced_delta,
+  );
+}
+
 function missingProgressSignals(attempt: JsonRecord) {
   const log = stageProgressLog(attempt);
   const userLog = userStageLog(attempt);
@@ -82,8 +145,38 @@ function missingProgressSignals(attempt: JsonRecord) {
     stringList(attempt.closeout_refs).length === 0
       && !stringValue(attempt.closeout_receipt_status)
       ? 'owner_closeout' : null,
+    !declaredNextAction(attempt) ? 'next_action' : null,
+    progressIsStale(attempt) ? 'stale_progress' : null,
   ].filter((entry): entry is string => Boolean(entry));
   return [...new Set(missing)];
+}
+
+function supervisorSafeActionKind(missingSignals: string[]) {
+  if (missingSignals.includes('worker_liveness')) {
+    return 'repair_worker_liveness_before_attempt_continuity_judgment';
+  }
+  if (missingSignals.includes('owner_closeout')) {
+    return 'require_owner_closeout_or_domain_typed_blocker';
+  }
+  return 'require_domain_typed_blocker_or_fresh_progress_delta';
+}
+
+function typedBlockerRequirement(missingSignals: string[]) {
+  const status = missingSignals.includes('worker_liveness')
+    ? 'deferred_until_worker_liveness_ready'
+    : missingSignals.includes('owner_closeout')
+      ? 'required_when_owner_closeout_missing'
+      : 'required_when_no_fresh_progress_delta';
+  return {
+    surface_kind: 'opl_progress_first_attempt_continuity_typed_blocker_requirement',
+    status,
+    owner: 'domain_owner',
+    required_when_any_signal_missing: missingSignals,
+    accepted_refs: ['typed_blocker_refs', 'owner_closeout_refs', 'fresh_progress_delta_refs'],
+    opl_can_create_typed_blocker: false,
+    can_claim_domain_ready: false,
+    can_claim_production_ready: false,
+  };
 }
 
 function attemptCommand(stageAttemptId: string) {
@@ -128,7 +221,7 @@ export function buildProgressFirstSupervisionActionRoutes(input: {
         default_actionable: true,
         route_status: 'progress_first_supervision_required',
         route_status_detail:
-          'Active provider attempt is missing worker liveness, progress delta, stage log, or owner closeout signals; inspect the attempt before treating the lane as no-action.',
+          'Active provider attempt is missing worker liveness, progress delta, stage log, owner closeout, next action, or fresh progress signals; inspect the attempt before treating the lane as no-action.',
         stage_attempt_id: stageAttemptId,
         domain_id: stringValue(attempt.domain_id),
         stage_id: stringValue(attempt.stage_id),
@@ -137,6 +230,8 @@ export function buildProgressFirstSupervisionActionRoutes(input: {
         task_kind: stringValue(record(attempt.current_control_state).task_kind),
         attempt_status: attemptStatus(attempt),
         missing_progress_signals: missingSignals,
+        supervisor_safe_action_kind: supervisorSafeActionKind(missingSignals),
+        typed_blocker_requirement: typedBlockerRequirement(missingSignals),
         progress_first_required_next_action:
           'Inspect the active attempt, worker readiness, stage_progress_log, and closeout refs; start or repair the worker first when liveness is missing, otherwise supervise progress or require domain typed closeout.',
         expected_refs: [

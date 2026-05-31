@@ -658,9 +658,84 @@ test('runtime App drilldown keeps active attempts with missing progress signals 
     'latest_progress_delta',
     'stage_log',
     'owner_closeout',
+    'next_action',
   ]);
   assert.equal(progressAction.can_submit_to_safe_action_shell, true);
   assert.equal(progressAction.authority_boundary.can_write_domain_truth, false);
+});
+
+test('runtime App drilldown classifies stale active attempts that lack next action', () => {
+  const progressFirstRoutes = buildProviderActionRoutes({
+    periodicRefs: { refs: [] },
+    providerInspection: {
+      details: {
+        worker_readiness: {
+          lifecycle_status: 'ready',
+          readiness_status: 'ready',
+          repair_action: { action_id: 'none' },
+        },
+      },
+    },
+    stageAttemptWorkbench: {
+      evidence_attempts: [
+        {
+          stage_attempt_id: 'attempt-progress-first-stale',
+          task_id: 'task-progress-first-stale',
+          domain_id: 'medautoscience',
+          stage_id: 'domain_owner/default-executor-dispatch',
+          provider_kind: 'temporal',
+          local_status: 'running',
+          provider_run: {
+            provider_status: 'running',
+            last_heartbeat_at: '2026-05-31T00:00:00.000Z',
+            progress_freshness_status: 'stale',
+          },
+          current_provider_readiness: {
+            details: {
+              worker_readiness: {
+                lifecycle_status: 'ready',
+                readiness_status: 'ready',
+                repair_action: {
+                  action_id: 'none',
+                },
+              },
+            },
+          },
+          current_control_state: {
+            task_kind: 'domain_owner/default-executor-dispatch',
+          },
+          closeout_refs: ['owner-closeout:attempt-progress-first-stale'],
+          stage_progress_log: {
+            freshness_status: 'stale',
+            user_stage_log: {
+              semantic_status: 'provided_by_domain',
+              progress_delta_classification: 'platform_repair',
+              next_forced_delta: '',
+            },
+            timeline: {
+              last_heartbeat_at: '2026-05-31T00:00:00.000Z',
+              progress_freshness_status: 'stale',
+            },
+          },
+        },
+      ],
+      attempts: [],
+    },
+  });
+
+  const progressAction = progressFirstRoutes.find((route: { action_kind: string }) =>
+    route.action_kind === 'progress_first_attempt_supervision'
+  ) as Record<string, any> | undefined;
+
+  assert.ok(progressAction);
+  assert.deepEqual(progressAction.missing_progress_signals, [
+    'next_action',
+    'stale_progress',
+  ]);
+  assert.equal(progressAction.supervisor_safe_action_kind, 'require_domain_typed_blocker_or_fresh_progress_delta');
+  assert.equal(progressAction.typed_blocker_requirement.status, 'required_when_no_fresh_progress_delta');
+  assert.equal(progressAction.typed_blocker_requirement.owner, 'domain_owner');
+  assert.equal(progressAction.authority_boundary.can_create_typed_blocker, false);
 });
 
 test('provider worker routes prefer stage workbench repair when provider inspection has no actionable worker repair', () => {

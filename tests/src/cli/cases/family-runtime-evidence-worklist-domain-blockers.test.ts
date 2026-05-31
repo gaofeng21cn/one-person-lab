@@ -336,6 +336,21 @@ test('family-runtime evidence-worklist exposes active attempt progress-first sup
     assert.equal(progressItem.evidence_requirement.status, 'open');
     assert.equal(progressItem.evidence_requirement.can_claim_domain_ready, false);
     assert.equal(progressItem.evidence_requirement.can_claim_production_ready, false);
+    assert.deepEqual(progressItem.missing_progress_signals, [
+      'worker_liveness',
+      'latest_progress_delta',
+      'stage_log',
+      'owner_closeout',
+    ]);
+    assert.equal(
+      progressItem.supervisor_safe_action_kind,
+      'repair_worker_liveness_before_attempt_continuity_judgment',
+    );
+    assert.equal(
+      progressItem.typed_blocker_requirement.status,
+      'deferred_until_worker_liveness_ready',
+    );
+    assert.equal(progressItem.typed_blocker_requirement.opl_can_create_typed_blocker, false);
     assert.equal(
       worklist.next_safe_actions.some((action) =>
         action.action_id === `progress-first-supervision:${stageAttemptId}`
