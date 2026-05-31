@@ -308,6 +308,30 @@ test('framework readiness summarizes default control-plane surfaces without auth
     assertFrameworkOwnerPayloadAction(nextSafeActions, firstOwnerPayloadGroup);
     assertFrameworkOwnerHandoffAction(nextSafeActions, ownerHandoffPacket, firstOwnerHandoff);
     assertFrameworkAppReleaseUserPathAction(nextSafeActions, appUserPathEvidence);
+    const firstReplayMissingReceiptAttention =
+      readiness.attention_first_payload.stage_replay_missing_receipt_workorder_attention_items[0];
+    const stageReplayAction = nextSafeActions.find(
+      (action: { action_kind?: string }) =>
+        action.action_kind === 'stage_replay_missing_receipt_guidance',
+    );
+    assert.equal(Boolean(stageReplayAction), Boolean(firstReplayMissingReceiptAttention));
+    if (firstReplayMissingReceiptAttention && stageReplayAction) {
+      assert.equal(stageReplayAction.action_id, 'review_stage_replay_missing_receipt_workorder');
+      assert.equal(
+        stageReplayAction.step_kind,
+        'record_stage_replay_missing_receipt_payload',
+      );
+      assert.equal(stageReplayAction.evidence_closure_gate, 'stage_replay_missing_receipt_refs_gate');
+      assert.equal(stageReplayAction.item_id, firstReplayMissingReceiptAttention.item_id);
+      assert.equal(stageReplayAction.domain_id, firstReplayMissingReceiptAttention.domain_id);
+      assert.equal(stageReplayAction.stage_id, firstReplayMissingReceiptAttention.stage_id);
+      assert.equal(stageReplayAction.default_guidance_kind, 'record_payload');
+      assert.equal(stageReplayAction.can_submit_record_to_safe_action_shell, false);
+      assert.equal(stageReplayAction.can_execute_domain_action, false);
+      assert.equal(stageReplayAction.can_create_owner_receipt, false);
+      assert.equal(stageReplayAction.can_close_domain_ready, false);
+      assert.equal(stageReplayAction.can_claim_production_ready, false);
+    }
     const omaProductionConsumptionAction = nextSafeActions.find(
       (action: { action_kind?: string }) =>
         action.action_kind === 'oma_production_consumption_followthrough_review',
@@ -563,6 +587,26 @@ test('framework readiness summarizes default control-plane surfaces without auth
       .authority_boundary.can_create_owner_receipt,
     false,
   );
+  const firstReplayMissingReceiptAttention =
+    readiness.attention_first_payload.stage_replay_missing_receipt_workorder_attention_items[0];
+  if (firstReplayMissingReceiptAttention) {
+    assert.equal(
+      firstReplayMissingReceiptAttention.default_next_action_guidance.action_kind,
+      'record_payload',
+    );
+    assert.equal(
+      firstReplayMissingReceiptAttention.default_next_action_guidance.step_kind,
+      'record_stage_replay_missing_receipt_payload',
+    );
+    assert.equal(
+      firstReplayMissingReceiptAttention.default_next_action_guidance.can_create_owner_receipt,
+      false,
+    );
+    assert.equal(
+      firstReplayMissingReceiptAttention.default_next_action_guidance.can_claim_production_ready,
+      false,
+    );
+  }
   assert.deepEqual(
     readiness.evidence_worklist.stage_evidence_workorder_attention_items.map(
       (item: { action_id: string }) => item.action_id,

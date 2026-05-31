@@ -280,12 +280,33 @@ test('family-runtime evidence-worklist projects stage replay missing receipt wor
     assert.equal(item.direct_ledger_handoff.can_requery_human, false);
     assert.equal(item.direct_ledger_handoff.can_create_owner_receipt, false);
     assert.equal(item.direct_ledger_handoff.can_claim_production_ready, false);
+    assert.equal(item.default_next_action_guidance.action_kind, 'record_payload');
+    assert.equal(item.default_next_action_guidance.step_kind, 'record_stage_replay_missing_receipt_payload');
+    assert.equal(item.default_next_action_guidance.owner, 'domain_or_human_gate_owner');
+    assert.equal(item.default_next_action_guidance.payload_path, 'success_refs_path');
+    assert.equal(
+      item.default_next_action_guidance.record_command,
+      item.direct_ledger_handoff.record_success_command,
+    );
+    assert.equal(
+      item.default_next_action_guidance.verify_command,
+      item.direct_ledger_handoff.verify_command,
+    );
+    assert.deepEqual(item.default_next_action_guidance.alternative_action_kinds, [
+      'record_typed_blocker_payload',
+      'ask_human',
+    ]);
+    assert.equal(item.default_next_action_guidance.can_submit_to_safe_action_shell, false);
+    assert.equal(item.default_next_action_guidance.can_execute_domain_action, false);
+    assert.equal(item.default_next_action_guidance.can_create_owner_receipt, false);
+    assert.equal(item.default_next_action_guidance.can_claim_production_ready, false);
     const compactItem = worklist.stage_replay_missing_receipt_workorder_attention_items.find(
       (entry: { item_id: string }) => entry.item_id === item.item_id,
     );
     assert.ok(compactItem);
     assert.deepEqual(compactItem.target_identity, item.target_identity);
     assert.equal(compactItem.direct_ledger_handoff.record_success_command, item.direct_ledger_handoff.record_success_command);
+    assert.deepEqual(compactItem.default_next_action_guidance, item.default_next_action_guidance);
     assert.equal(compactItem.next_safe_action_ref, null);
     assert.equal(item.worklist_item_is_completion_claim, false);
     assert.equal(item.payload_workorder.authority_boundary.can_requery_human, false);
