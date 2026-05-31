@@ -37,6 +37,7 @@ import { codexAppRuntimeEvidenceExecution } from './runtime-operator-action-exec
 import { domainOwnerPayloadSummaryExecution } from './runtime-operator-action-execution-parts/domain-owner-payload-summary-action.ts';
 import { magManifestSustainedConsumptionExecution } from './runtime-operator-action-execution-parts/mag-manifest-sustained-consumption-action.ts';
 import { blockedActionRouteExecution } from './runtime-operator-action-execution-parts/blocked-action-route.ts';
+import { SUPPORTED_OPL_ACTION_ROUTE_KINDS } from './runtime-operator-action-execution-parts/supported-action-kinds.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -509,10 +510,12 @@ function legacyCleanupApplyArgs(route: JsonRecord, commandOrSurfaceRef: string) 
 
 function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
   const actionKind = stringValue(route.action_kind);
-  if (actionKind === 'stage_attempt_query') {
+  if (actionKind === 'stage_attempt_query' || actionKind === 'progress_first_attempt_supervision') {
     return {
       executionKind: 'opl_cli_internal',
-      runtimeArgs: stageAttemptQueryArgs(commandOrSurfaceRef),
+      runtimeArgs: stringList(route.opl_cli_args).length > 0
+        ? stringList(route.opl_cli_args)
+        : stageAttemptQueryArgs(commandOrSurfaceRef),
     };
   }
   if (actionKind === 'stage_production_attempt_request') {
@@ -606,38 +609,7 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
   throw new FrameworkContractError('contract_shape_invalid', 'Unsupported OPL action command route.', {
     command_or_surface_ref: commandOrSurfaceRef,
     action_kind: actionKind,
-    supported_action_kinds: [
-      'stage_attempt_query',
-      'stage_production_attempt_request',
-      'stage_production_attempt_start',
-      'external_evidence_receipt_record',
-      'external_evidence_receipt_verify',
-      'evidence_gate_receipt_record',
-      'evidence_gate_receipt_verify',
-      'functional_privatization_semantic_equivalence_receipt_record',
-      'stage_production_evidence_receipt_record',
-      'stage_production_evidence_receipt_verify',
-      'domain_dispatch_evidence_receipt_record',
-      'domain_dispatch_evidence_receipt_verify',
-      'app_release_user_path_evidence_receipt_record',
-      'app_release_user_path_evidence_receipt_verify',
-      'codex_app_runtime_evidence_receipt_record',
-      'codex_app_runtime_evidence_receipt_verify',
-      'domain_owner_payload_summary_receipt_record',
-      'domain_owner_payload_summary_receipt_verify',
-      'mag_manifest_sustained_consumption_followthrough_receipt_record',
-      'mag_manifest_sustained_consumption_followthrough_receipt_verify',
-      'oma_production_consumption_receipt_record',
-      'provider_worker_start',
-      'provider_worker_restart',
-      'provider_slo_cadence_execution',
-      'provider_scheduler_status',
-      'provider_scheduler_install',
-      'provider_scheduler_trigger',
-      'provider_scheduler_tick',
-      'legacy_cleanup_apply',
-      'legacy_cleanup_verify',
-    ],
+    supported_action_kinds: SUPPORTED_OPL_ACTION_ROUTE_KINDS,
   });
 }
 

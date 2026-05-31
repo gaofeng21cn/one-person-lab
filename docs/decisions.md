@@ -62,6 +62,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `family-runtime scheduler tick` 在 worker liveness blocker 存在时先 fail closed 为 `blocked_provider_not_ready`，返回 `provider_liveness_blocker`，并保持 `queue_tick=null`；只有 worker liveness 不再是首要 blocker 时才进入 provider SLO tick 和 queue dispatch。
 - 该规则只修复 OPL provider/runtime-manager liveness 暴露与 scheduler preflight，不启动 worker、不绕过 worker mutation guard、不执行 domain action、不写 domain truth、不生成 owner receipt，也不声明 provider SLO、domain ready、production ready 或 App release ready。
 
+### 决策：active attempt 缺进度信号时必须暴露监督路由
+
+原因：Progress-First 不能把 active / queued / running / checkpointed attempt 读成“没有动作”。当 attempt 缺 worker liveness、latest progress delta、stage log 或 owner closeout refs 时，App/operator 和 evidence-worklist 必须给出可监督下一步，让 operator 先检查 attempt、worker readiness、stage log 和 closeout refs，再决定 worker repair、继续监督或要求 domain typed closeout。
+
+影响：
+
+- App/operator drilldown、safe action bridge 与 `family-runtime evidence-worklist` 暴露 `progress_first_attempt_supervision` refs-only route，执行参数为 `opl family-runtime attempt query <stage_attempt_id>`。
+- 该 route 的 authority boundary 固定为 `can_write_domain_truth=false`、`can_execute_domain_action=false`、`can_create_owner_receipt=false`、`can_claim_domain_ready=false`、`can_claim_production_ready=false`。
+- provider worker repair 仍优先于 progress-first supervision；worker liveness 缺失时先修 worker，再判断 attempt 是否仍缺 stage/progress/closeout 信号。
+
 ## 2026-05-28
 
 ### 决策：同步 domain-handler checkpoint 不受 Temporal workflow-missing 回收覆盖

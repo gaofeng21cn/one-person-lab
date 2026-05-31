@@ -171,6 +171,9 @@ function readOnlyClaimScope(route: JsonRecord) {
   if (actionKind.startsWith('provider_scheduler')) {
     return 'provider_scheduler_cadence';
   }
+  if (actionKind === 'progress_first_attempt_supervision') {
+    return 'progress_first_attempt_supervision';
+  }
   return actionKind;
 }
 
@@ -955,6 +958,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
     },
     terminal_observation_sync: terminalObservationSync,
     evidence_envelope: compactEvidenceEnvelope,
+    next_safe_actions: nextSafeActions(openItems),
     effective_current_context: record(drilldown.effective_current_context),
     family_stall_lineage: record(drilldown.family_stall_lineage),
     zero_open_worklist_guard: zeroOpenWorklistGuard,
@@ -988,7 +992,6 @@ export async function runFamilyRuntimeEvidenceWorklist(
       detail_level: 'summary',
       projection_detail_policy: 'attention_first_default_full_refs_via_explicit_drilldown',
       counts,
-      next_safe_actions: nextSafeActions(openItems),
       full_detail_args: ['--detail', 'full'],
       full_detail_command:
         'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json',

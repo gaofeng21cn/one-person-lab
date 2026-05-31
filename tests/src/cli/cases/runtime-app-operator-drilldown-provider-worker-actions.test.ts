@@ -14,6 +14,9 @@ import {
   applyAppOperatorDrilldownDetail,
 } from '../../../../src/runtime-tray-app-operator-drilldown-parts/detail-view.ts';
 import {
+  buildProviderActionRoutes,
+} from '../../../../src/runtime-tray-app-operator-drilldown-parts/provider-action-routes.ts';
+import {
   buildProviderWorkerActionRoutes,
 } from '../../../../src/runtime-tray-app-operator-drilldown-parts/provider-worker-action-routes.ts';
 import {
@@ -573,6 +576,91 @@ test('runtime App drilldown prioritizes provider worker repair before transport 
   assert.equal(nextSafeAction.can_execute_domain_action_directly, false);
   assert.equal(nextSafeAction.can_submit_to_safe_action_shell, true);
   assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 2);
+});
+
+test('runtime App drilldown keeps active attempts with missing progress signals actionable', () => {
+  const progressFirstRoutes = buildProviderActionRoutes({
+    periodicRefs: { refs: [] },
+    providerInspection: {
+      details: {
+        worker_readiness: {
+          lifecycle_status: 'ready',
+          readiness_status: 'ready',
+          repair_action: { action_id: 'none' },
+        },
+      },
+    },
+    stageAttemptWorkbench: {
+      evidence_attempts: [
+        {
+          stage_attempt_id: 'attempt-progress-first-1',
+          task_id: 'task-progress-first-1',
+          domain_id: 'medautoscience',
+          stage_id: 'domain_owner/default-executor-dispatch',
+          provider_kind: 'temporal',
+          local_status: 'running',
+          provider_run: {
+            provider_status: 'running',
+          },
+          current_provider_readiness: {
+            details: {
+              worker_readiness: {
+                lifecycle_status: 'worker_not_ready',
+                readiness_status: 'worker_not_ready',
+                repair_action: {
+                  action_id: 'start_temporal_worker',
+                  next_command: 'opl family-runtime worker start --provider temporal',
+                },
+              },
+            },
+          },
+          current_control_state: {
+            task_kind: 'domain_owner/default-executor-dispatch',
+          },
+          closeout_refs: [],
+          stage_progress_log: {
+            user_stage_log: {
+              semantic_status: 'missing_domain_semantic_summary',
+            },
+            timeline: {},
+          },
+        },
+      ],
+      attempts: [],
+    },
+  });
+  const drilldown = applyAppOperatorDrilldownDetail({
+    operator_action_routing_refs: {
+      refs: progressFirstRoutes,
+    },
+    app_execution_bridge: {
+      safe_action_routes: progressFirstRoutes,
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  }, 'summary');
+  const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
+  assert.ok(nextSafeAction);
+
+  assert.equal(nextSafeAction.action_id, 'provider-worker:temporal:start');
+  assert.equal(nextSafeAction.action_kind, 'provider_worker_start');
+  assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 1);
+
+  const progressAction = progressFirstRoutes.find((route: { action_kind: string }) =>
+    route.action_kind === 'progress_first_attempt_supervision'
+  );
+  assert.ok(progressAction);
+  assert.equal(progressAction.stage_attempt_id, 'attempt-progress-first-1');
+  assert.deepEqual(progressAction.missing_progress_signals, [
+    'worker_liveness',
+    'latest_progress_delta',
+    'stage_log',
+    'owner_closeout',
+  ]);
+  assert.equal(progressAction.can_submit_to_safe_action_shell, true);
+  assert.equal(progressAction.authority_boundary.can_write_domain_truth, false);
 });
 
 test('provider worker routes prefer stage workbench repair when provider inspection has no actionable worker repair', () => {

@@ -5,6 +5,22 @@ import {
   frameworkAttentionNextSafeActions,
 } from '../../../../src/framework-readiness-attention-actions.ts';
 
+type StageReplayGuidanceAction = Record<string, unknown> & {
+  action_kind?: string;
+  action_id?: string;
+  step_kind?: string;
+  evidence_closure_gate?: string;
+  item_id?: string;
+  domain_id?: string;
+  stage_id?: string;
+  default_guidance_kind?: string;
+  can_submit_record_to_safe_action_shell?: boolean;
+  can_execute_domain_action?: boolean;
+  can_create_owner_receipt?: boolean;
+  can_close_domain_ready?: boolean;
+  can_claim_production_ready?: boolean;
+};
+
 test('framework readiness exposes stage replay missing receipt guidance without authority', () => {
   const replayAttention = {
     item_id: 'stage-replay-missing-receipt-workorder:med-autoscience:publication:owner-receipt',
@@ -53,7 +69,7 @@ test('framework readiness exposes stage replay missing receipt guidance without 
     domainDispatchEvidenceWorkorderGroupAttentionItems: [],
     stageReplayMissingReceiptWorkorderAttentionItems: [replayAttention],
     itemLimit: 5,
-  });
+  }) as StageReplayGuidanceAction[];
 
   assert.equal(replayAttention.default_next_action_guidance.action_kind, 'record_payload');
   assert.equal(
@@ -65,9 +81,8 @@ test('framework readiness exposes stage replay missing receipt guidance without 
   assert.equal(replayAttention.default_next_action_guidance.can_create_owner_receipt, false);
   assert.equal(replayAttention.default_next_action_guidance.can_claim_production_ready, false);
 
-  const stageReplayAction = actions.find(
-    (action: { action_kind?: string }) =>
-      action.action_kind === 'stage_replay_missing_receipt_guidance',
+  const stageReplayAction = actions.find((action) =>
+    action.action_kind === 'stage_replay_missing_receipt_guidance'
   );
   assert.equal(Boolean(stageReplayAction), true);
   assert.equal(stageReplayAction?.action_id, 'review_stage_replay_missing_receipt_workorder');

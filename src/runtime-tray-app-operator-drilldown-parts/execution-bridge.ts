@@ -71,6 +71,11 @@ function projectSafeActionRoute(ref: ActionRef) {
       'provider_worker_repair_command' in ref ? ref.provider_worker_repair_command : null,
     provider_worker_required_next_action:
       'provider_worker_required_next_action' in ref ? ref.provider_worker_required_next_action : null,
+    progress_first_required_next_action:
+      'progress_first_required_next_action' in ref ? ref.progress_first_required_next_action : null,
+    missing_progress_signals:
+      'missing_progress_signals' in ref ? ref.missing_progress_signals : [],
+    attempt_status: 'attempt_status' in ref ? ref.attempt_status : null,
     payload_requirement: 'payload_requirement' in ref ? ref.payload_requirement : null,
     payload_owner: 'payload_owner' in ref ? ref.payload_owner : null,
     payload_template: 'payload_template' in ref ? ref.payload_template : null,

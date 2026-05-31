@@ -22,6 +22,7 @@ export function readOnlyRouteMatchesDefaults(
   const actionKind = stringValue(route.action_kind) ?? '';
   const args = stringList(route.opl_cli_args);
   const worklistKind = actionKind.startsWith('provider_scheduler_')
+    || actionKind === 'progress_first_attempt_supervision'
     || actionKind === 'stage_production_attempt_request'
     || actionKind.startsWith('stage_production_evidence_')
     || actionKind.startsWith('domain_dispatch_evidence_')

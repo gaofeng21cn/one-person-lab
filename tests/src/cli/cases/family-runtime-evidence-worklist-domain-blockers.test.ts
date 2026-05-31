@@ -277,6 +277,83 @@ test('family-runtime evidence-worklist syncs terminal Temporal closeout before e
   }
 });
 
+test('family-runtime evidence-worklist exposes active attempt progress-first supervision instead of no-action', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-progress-first-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const previousStateDir = process.env.OPL_STATE_DIR;
+
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    const { db } = openQueueDb();
+    let stageAttemptId = '';
+    try {
+      const attempt = createStageAttempt(db, {
+        domainId: 'medautoscience',
+        stageId: 'domain_owner/default-executor-dispatch',
+        providerKind: 'temporal',
+        workspaceLocator: {
+          workspace_root: '/tmp/mas-progress-first',
+          study_id: 'DM002',
+          dispatch_ref: 'dispatch:progress-first',
+        },
+        sourceFingerprint: 'sha256:progress-first',
+        executorKind: 'codex_cli',
+        checkpointRefs: ['dispatch:progress-first-start'],
+      }).attempt;
+      stageAttemptId = attempt.stage_attempt_id;
+      db.prepare(`
+        UPDATE stage_attempts
+        SET status = 'running',
+            provider_run_json = json_set(provider_run_json, '$.provider_status', 'running')
+        WHERE stage_attempt_id = ?
+      `).run(stageAttemptId);
+    } finally {
+      db.close();
+    }
+
+    const worklist = (await runFamilyRuntimeEvidenceWorklist(
+      loadFrameworkContracts(fixtureContractsRoot),
+      {
+        familyDefaults: true,
+        providerKind: 'temporal',
+        executorKind: 'codex_cli',
+        detailLevel: 'full',
+        queryTemporalStageAttemptReadModel: async () => null,
+      },
+    )).family_runtime_evidence_worklist;
+    assert.equal(worklist.detail_level, 'full');
+    if (!('worklist_items' in worklist)) {
+      throw new Error('expected full evidence worklist payload');
+    }
+    const progressItem = worklist.worklist_items.find((item: { action_id: string }) =>
+      item.action_id === `progress-first-supervision:${stageAttemptId}`
+    ) as { stage_attempt_id: string; [key: string]: any } | undefined;
+
+    assert.ok(progressItem);
+    assert.equal(progressItem.status, 'open_safe_action_request_route_available');
+    assert.equal(progressItem.claim_scope, 'progress_first_attempt_supervision');
+    assert.equal(progressItem.stage_attempt_id, stageAttemptId);
+    assert.equal(progressItem.evidence_requirement.status, 'open');
+    assert.equal(progressItem.evidence_requirement.can_claim_domain_ready, false);
+    assert.equal(progressItem.evidence_requirement.can_claim_production_ready, false);
+    assert.equal(
+      worklist.next_safe_actions.some((action) =>
+        action.action_id === `progress-first-supervision:${stageAttemptId}`
+      ),
+      true,
+    );
+    assert.equal(worklist.zero_open_worklist_guard.zero_open_worklist_item_count, false);
+  } finally {
+    if (typeof previousStateDir === 'string') {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    } else {
+      delete process.env.OPL_STATE_DIR;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime evidence-worklist classifies verified external blockers without production authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-external-blocker-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();

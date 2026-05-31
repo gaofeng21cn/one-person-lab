@@ -129,6 +129,7 @@ function routeEligibleForDefaultSelectedAction(action: JsonRecord) {
     || actionKind === 'oma_production_consumption_receipt_record'
     || actionKind === 'provider_worker_start'
     || actionKind === 'provider_worker_restart'
+    || actionKind === 'progress_first_attempt_supervision'
     || actionKind === 'blocked_transport_redrive'
     || actionKind === 'provider_slo_cadence_execution'
     || actionKind === 'stage_production_attempt_request'
@@ -170,37 +171,40 @@ function actionPriority(action: JsonRecord) {
     || actionKind === 'provider_worker_restart') {
     return 2;
   }
-  if (actionKind === 'blocked_transport_redrive') {
+  if (actionKind === 'progress_first_attempt_supervision') {
     return 3;
   }
-  if (actionKind === 'provider_slo_cadence_execution') {
+  if (actionKind === 'blocked_transport_redrive') {
     return 4;
   }
-  if (actionKind === 'stage_production_attempt_request') {
+  if (actionKind === 'provider_slo_cadence_execution') {
     return 5;
   }
-  if (actionKind === 'stage_production_evidence_receipt_record') {
+  if (actionKind === 'stage_production_attempt_request') {
     return 6;
   }
-  if (actionKind === 'stage_production_evidence_receipt_verify') {
+  if (actionKind === 'stage_production_evidence_receipt_record') {
     return 7;
   }
-  if (actionKind === 'domain_dispatch_evidence_receipt_verify') {
+  if (actionKind === 'stage_production_evidence_receipt_verify') {
     return 8;
   }
-  if (actionKind === 'domain_dispatch_evidence_receipt_record') {
+  if (actionKind === 'domain_dispatch_evidence_receipt_verify') {
     return 9;
+  }
+  if (actionKind === 'domain_dispatch_evidence_receipt_record') {
+    return 10;
   }
   if (actionKind === 'external_evidence_receipt_record'
     || actionKind === 'evidence_gate_receipt_record') {
-    return 10;
+    return 11;
   }
   if (actionKind === 'external_evidence_receipt_verify'
     || actionKind === 'evidence_gate_receipt_verify') {
-    return 11;
+    return 12;
   }
   if (actionKind === 'provider_scheduler_install') {
-    return 12;
+    return 13;
   }
   if (actionKind === 'provider_scheduler_tick'
     || actionKind === 'provider_scheduler_trigger') {
