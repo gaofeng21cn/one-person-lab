@@ -260,7 +260,12 @@ export async function dispatchFamilyRuntimeTask(
       domainId: row.domain_id,
       eventType: 'task_dispatch_succeeded',
       source: 'opl-family-runtime',
-      payload: { command_preview: command.command_preview, command_cwd: command.cwd, output },
+      payload: {
+        command_preview: command.command_preview,
+        command_cwd: command.cwd,
+        output,
+        ...(result.recovery ? { domain_handler_recovery: result.recovery } : {}),
+      },
     });
     insertNotification(db, {
       taskId: row.task_id,
@@ -294,6 +299,7 @@ export async function dispatchFamilyRuntimeTask(
       command_preview: command.command_preview,
       command_cwd: command.cwd,
       output,
+      ...(result.recovery ? { domain_handler_recovery: result.recovery } : {}),
       stage_attempts: stageAttempts,
     };
   }
@@ -325,6 +331,7 @@ export async function dispatchFamilyRuntimeTask(
       command_preview: command.command_preview,
       command_cwd: command.cwd,
       output,
+      ...(result.recovery ? { domain_handler_recovery: result.recovery } : {}),
     },
   });
   insertNotification(db, {
@@ -352,6 +359,7 @@ export async function dispatchFamilyRuntimeTask(
     command_cwd: command.cwd,
     exit_code: exitCode,
     error: errorMessage,
+    ...(result.recovery ? { domain_handler_recovery: result.recovery } : {}),
     stage_attempts: stageAttempts.length > 0 ? stageAttempts : runningStageAttempts,
   };
 }

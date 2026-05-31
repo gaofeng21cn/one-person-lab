@@ -470,6 +470,7 @@ export function hydrateDomainTasks(
         command_cwd: command.cwd,
         command_source: command.source,
         error: domainHandlerResultErrorMessage(result, 'Domain export'),
+        ...(result.recovery ? { domain_handler_recovery: result.recovery } : {}),
       });
       continue;
     }
@@ -496,6 +497,7 @@ export function hydrateDomainTasks(
       command_preview: command.argv,
       command_cwd: command.cwd,
       command_source: command.source,
+      ...(result.recovery ? { domain_handler_recovery: result.recovery } : {}),
       exported_count: inputs.length + blocked.length,
       filtered_count,
       enqueued_count: acceptedTasks.filter((task) => task.accepted).length,

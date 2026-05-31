@@ -1,4 +1,7 @@
 import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 import { FrameworkContractError } from './contracts.ts';
 import { buildManagedShellCommandEnv } from './managed-shell-command-env.ts';
@@ -10,6 +13,13 @@ type DomainHandlerProcessResult = SpawnSyncReturns<string> & {
   exit_code: number;
   timed_out: boolean;
   domain_handler_timeout_ms: number;
+  recovery?: {
+    trigger_kind: 'uv_cache_archive_missing';
+    first_exit_code: number;
+    retry_exit_code: number;
+    retry_tmp_root: string;
+    first_error_excerpt: string;
+  };
 };
 
 function configuredTimeoutMs() {
@@ -58,6 +68,64 @@ function parseStructuredDomainHandlerError(stdout: string | undefined, label: st
   }
 }
 
+function resultExitCode(result: SpawnSyncReturns<string>, timedOut: boolean) {
+  return timedOut ? 124 : result.status ?? (result.error ? 127 : 1);
+}
+
+function resultText(result: SpawnSyncReturns<string>) {
+  return [
+    result.error?.message,
+    result.stderr,
+    result.stdout,
+  ].filter(Boolean).join('\n');
+}
+
+function shortExcerpt(value: string, maxLength = 500) {
+  const normalized = value.replace(/\s+/g, ' ').trim();
+  return normalized.length <= maxLength ? normalized : `${normalized.slice(0, maxLength)}...`;
+}
+
+function shouldRetryWithFreshUvCache(result: SpawnSyncReturns<string>, exitCode: number) {
+  if (exitCode === 0 || errorCode(result.error) === 'ETIMEDOUT') {
+    return false;
+  }
+  const text = resultText(result);
+  return /Failed to install:/i.test(text)
+    && /archive-v0/i.test(text)
+    && /METADATA/i.test(text)
+    && /No such file or directory/i.test(text);
+}
+
+function normalizeDomainHandlerResult(
+  result: SpawnSyncReturns<string>,
+  timeoutMs: number,
+  recovery?: DomainHandlerProcessResult['recovery'],
+): DomainHandlerProcessResult {
+  const timedOut = errorCode(result.error) === 'ETIMEDOUT';
+  return {
+    ...result,
+    exit_code: resultExitCode(result, timedOut),
+    timed_out: timedOut,
+    domain_handler_timeout_ms: timeoutMs,
+    ...(recovery ? { recovery } : {}),
+  };
+}
+
+function spawnDomainHandlerCommand(
+  command: string[],
+  options: { cwd: string; env?: NodeJS.ProcessEnv; maxBuffer?: number },
+  timeoutMs: number,
+) {
+  return spawnSync(command[0], command.slice(1), {
+    cwd: options.cwd,
+    encoding: 'utf8',
+    env: buildManagedShellCommandEnv(options.cwd, options.env ?? process.env),
+    maxBuffer: options.maxBuffer ?? DEFAULT_DOMAIN_HANDLER_MAX_BUFFER,
+    timeout: timeoutMs,
+    killSignal: 'SIGTERM',
+  });
+}
+
 export function runFamilyRuntimeDomainHandlerCommand(
   command: string[],
   options: { cwd: string; env?: NodeJS.ProcessEnv; maxBuffer?: number },
@@ -68,21 +136,28 @@ export function runFamilyRuntimeDomainHandlerCommand(
     });
   }
   const timeoutMs = configuredTimeoutMs();
-  const result = spawnSync(command[0], command.slice(1), {
-    cwd: options.cwd,
-    encoding: 'utf8',
-    env: buildManagedShellCommandEnv(options.cwd, options.env ?? process.env),
-    maxBuffer: options.maxBuffer ?? DEFAULT_DOMAIN_HANDLER_MAX_BUFFER,
-    timeout: timeoutMs,
-    killSignal: 'SIGTERM',
-  });
+  const result = spawnDomainHandlerCommand(command, options, timeoutMs);
   const timedOut = errorCode(result.error) === 'ETIMEDOUT';
-  return {
-    ...result,
-    exit_code: timedOut ? 124 : result.status ?? (result.error ? 127 : 1),
-    timed_out: timedOut,
-    domain_handler_timeout_ms: timeoutMs,
-  };
+  const exitCode = resultExitCode(result, timedOut);
+  if (!shouldRetryWithFreshUvCache(result, exitCode)) {
+    return normalizeDomainHandlerResult(result, timeoutMs);
+  }
+
+  const retryTmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-command-recovery-'));
+  const retry = spawnDomainHandlerCommand(command, {
+    ...options,
+    env: {
+      ...(options.env ?? process.env),
+      OPL_DOMAIN_COMMAND_TMP_ROOT: retryTmpRoot,
+    },
+  }, timeoutMs);
+  return normalizeDomainHandlerResult(retry, timeoutMs, {
+    trigger_kind: 'uv_cache_archive_missing',
+    first_exit_code: exitCode,
+    retry_exit_code: resultExitCode(retry, errorCode(retry.error) === 'ETIMEDOUT'),
+    retry_tmp_root: retryTmpRoot,
+    first_error_excerpt: shortExcerpt(resultText(result)),
+  });
 }
 
 export function domainHandlerResultErrorMessage(result: DomainHandlerProcessResult, label: string) {
