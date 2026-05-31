@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import {
   FORBIDDEN_AGENT_PACK_TEXT,
+  FOUNDRY_AGENT_SERIES_POLICY_BUNDLE_FINGERPRINT,
+  FOUNDRY_AGENT_SERIES_POLICY_RELEASE_REF,
   FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
   REQUIRED_AGENT_PACK_SECTIONS,
   REQUIRED_REPO_SOURCE_DIRS,
@@ -406,6 +408,9 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown) {
     ? contract.shared_release_pin_strategy
     : null;
   const supportedPinSources = readStringArray(sharedReleasePinStrategy?.supported_pin_sources);
+  const sharedPolicyRelease = isPlainRecord(contract?.shared_policy_release)
+    ? contract.shared_policy_release
+    : null;
   const domainAdapterPolicy = isPlainRecord(contract?.domain_adapter_policy)
     ? contract.domain_adapter_policy
     : null;
@@ -448,6 +453,24 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown) {
     readOptionalString(sharedReleasePinStrategy?.consumer_alignment_check) === 'family:shared-release'
       ? null
       : 'foundry_agent_series_consumer_alignment_check_invalid',
+    readOptionalString(sharedPolicyRelease?.policy_release_contract_ref) === FOUNDRY_AGENT_SERIES_POLICY_RELEASE_REF
+      ? null
+      : 'foundry_agent_series_policy_release_contract_ref_invalid',
+    readOptionalString(sharedPolicyRelease?.policy_bundle_fingerprint) === FOUNDRY_AGENT_SERIES_POLICY_BUNDLE_FINGERPRINT
+      ? null
+      : 'foundry_agent_series_policy_bundle_fingerprint_invalid',
+    readOptionalString(sharedPolicyRelease?.fingerprint_algorithm) === 'sha256:stable-json'
+      ? null
+      : 'foundry_agent_series_policy_fingerprint_algorithm_invalid',
+    sharedPolicyRelease?.domain_contract_policy_release_pin_required === true
+      ? null
+      : 'foundry_agent_series_policy_release_pin_required',
+    sharedPolicyRelease?.domain_adapter_must_not_copy_policy_body_as_authority === true
+      ? null
+      : 'foundry_agent_series_policy_body_copy_authority_forbidden',
+    readOptionalString(sharedPolicyRelease?.consumer_alignment_check) === 'foundry:policy-release'
+      ? null
+      : 'foundry_agent_series_policy_consumer_alignment_check_invalid',
     supportedPinSources.includes('pyproject.toml')
       ? null
       : 'foundry_agent_series_missing_python_pin_source',
@@ -528,6 +551,7 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown) {
     shared_progress_projection_fields: sharedProgressProjectionFields,
     contract_version_policy: contractVersionPolicy,
     shared_release_pin_strategy: sharedReleasePinStrategy,
+    shared_policy_release: sharedPolicyRelease,
     blockers,
   };
 }

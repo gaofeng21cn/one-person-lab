@@ -7,6 +7,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-05-30
 
+### 决策：Foundry-series Progress-First policy bundle 必须有 OPL-owned release pin
+
+原因：Progress-First 合同已经覆盖 stage progress、currentness、typed blocker lineage 和 App projection。如果 domain repo 只 pin OPL owner commit，而没有单独 pin policy bundle release，就容易出现两类漂移：domain adapter 复制一份旧 policy body 当成本地 authority，或 App/operator 看到共享 helper 已对齐却不知道 Progress-First policy surface 是否同版。共享 release pin 要把“依赖版本对齐”和“政策合同对齐”拆开，让 MAS/MAG/RCA/OMA 和后续 Foundry Agent 都能用同一套可验证 release ref/fingerprint 说明自己遵循的是同一个系列设计。
+
+影响：
+
+- `contracts/opl-framework/foundry-agent-series-policy-release.json` 成为 OPL-owned policy release surface，记录 Progress-First policy bundle、`sha256:stable-json` fingerprint、domain pin contract ref 和 authority boundary。
+- `contracts/opl-framework/foundry-agent-series-contract.json`、standard scaffold 和 generated `contracts/foundry_agent_series.json` 都必须带 `shared_policy_release`，并要求 exact release ref、exact policy bundle fingerprint、`foundry:policy-release` alignment check。
+- Domain repo 只能 pin release ref/fingerprint 和映射 domain alias；不能把 OPL policy body 复制成 domain truth、quality/export verdict、artifact authority、memory authority 或 owner receipt authority。
+- `family:shared-release` 继续负责 package/owner commit pin；`foundry:policy-release` 负责 Progress-First policy bundle pin。任一对齐都不授权 domain ready、production ready、App release ready 或 quality/export verdict。
+
 ### 决策：Progress-First 成为 OPL family shared stage contract
 
 原因：MAS late-stage paper lane 暴露的问题不是单一研究个案，而是所有 Foundry Agent 都需要统一回答四件事：当前有没有交付物实质进展、是否只是 platform repair、下一次必须产出什么 delta 或 typed blocker、重复 blocker 何时升级。若这些字段留在各 domain 的局部 read model 中，App/operator、Agent Lab、evidence-worklist 和 readiness 会继续把 refs-only/currentness 修复误读成交付推进。

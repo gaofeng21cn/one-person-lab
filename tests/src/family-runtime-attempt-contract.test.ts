@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,6 +17,25 @@ function readJson(relativePath: string) {
 }
 
 const retiredStageExecutionLogName = ['stage', 'execution', 'log'].join('_');
+
+function stableJson(value: unknown): string {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value) ?? 'null';
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => stableJson(entry)).join(',')}]`;
+  }
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record)
+    .filter((key) => record[key] !== undefined)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`)
+    .join(',')}}`;
+}
+
+function sha256Stable(value: unknown) {
+  return `sha256:${crypto.createHash('sha256').update(stableJson(value)).digest('hex')}`;
+}
 
 function requirePattern(patterns: Map<string, Record<string, any>>, pattern: string) {
   const value = patterns.get(pattern);
@@ -545,6 +565,34 @@ test('standard domain-agent skeleton contract keeps repo source separate from re
   assert.ok(((contract.artifact_boundary as Record<string, string[]>).opl_forbidden_content).includes('quality_verdict'));
 });
 
+test('foundry agent series policy release records a verifiable Progress-First policy bundle fingerprint', () => {
+  const release = readJson('contracts/opl-framework/foundry-agent-series-policy-release.json');
+  const foundryContract = readJson('contracts/opl-framework/foundry-agent-series-contract.json');
+  const skeleton = readJson('contracts/opl-framework/standard-domain-agent-skeleton-contract.json');
+  const scaffold = skeleton.new_agent_scaffold as Record<string, any>;
+  const agentPackContract = scaffold.agent_pack_contract as Record<string, any>;
+
+  assert.equal(release.surface_kind, 'opl_foundry_agent_series_policy_release');
+  assert.equal(release.release_contract_ref, 'contracts/opl-framework/foundry-agent-series-policy-release.json');
+  assert.equal(release.series_contract_ref, 'contracts/opl-framework/foundry-agent-series-contract.json');
+  assert.equal(release.fingerprint_algorithm, 'sha256:stable-json');
+  assert.equal(release.policy_bundle_fingerprint, sha256Stable(release.policy_bundle));
+  assert.deepEqual(foundryContract.shared_policy_release, {
+    policy_release_contract_ref: 'contracts/opl-framework/foundry-agent-series-policy-release.json',
+    policy_bundle_fingerprint: release.policy_bundle_fingerprint,
+    fingerprint_algorithm: 'sha256:stable-json',
+    domain_contract_policy_release_pin_required: true,
+    domain_adapter_must_not_copy_policy_body_as_authority: true,
+    consumer_alignment_check: 'foundry:policy-release',
+  });
+  assert.deepEqual(scaffold.foundry_agent_series_policy_release, release);
+  assert.deepEqual(agentPackContract.foundry_agent_series_policy_release, release);
+  assert.equal(
+    (release.policy_bundle as Record<string, any>).authority_boundary.policy_release_can_claim_domain_ready,
+    false,
+  );
+});
+
 test('standard domain-agent scaffold contract forbids domain-owned generic framework primitives', () => {
   const contract = readJson('contracts/opl-framework/standard-domain-agent-skeleton-contract.json');
   const scaffold = contract.new_agent_scaffold as Record<string, any>;
@@ -664,6 +712,14 @@ test('standard domain-agent scaffold contract forbids domain-owned generic frame
     'independent_gate_policy:execution_review_separation',
   ]);
   assert.equal(scaffold.foundry_agent_series_contract.surface_kind, 'opl_foundry_agent_series_contract');
+  assert.equal(
+    scaffold.foundry_agent_series_contract.shared_policy_release.policy_release_contract_ref,
+    'contracts/opl-framework/foundry-agent-series-policy-release.json',
+  );
+  assert.equal(
+    scaffold.foundry_agent_series_contract.shared_policy_release.consumer_alignment_check,
+    'foundry:policy-release',
+  );
   assert.deepEqual(scaffold.foundry_agent_series_contract.shared_progress_projection_fields, [
     'progress_delta_classification',
     'deliverable_progress_delta',

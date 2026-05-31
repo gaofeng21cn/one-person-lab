@@ -2,6 +2,7 @@ import {
   DECLARATIVE_DOMAIN_PACK,
   DEFAULT_STAGE_EXECUTOR_BINDING_REF,
   DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED,
+  FOUNDRY_AGENT_SERIES_POLICY_RELEASE,
   FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
   MINIMAL_AUTHORITY_FUNCTIONS,
   OPL_GENERATED_SURFACES,
@@ -105,6 +106,7 @@ function foundryAgentSeriesContract(domainId: string, domainLabel: string) {
       deliverable: ['deliverable_progress_delta'],
       platform: ['platform_repair_delta'],
     },
+    shared_policy_release: STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT.shared_policy_release,
   };
 }
 
@@ -341,6 +343,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
         marker: SCAFFOLD_MARKER,
         standard_contract_refs: {
           foundry_agent_series: 'contracts/foundry_agent_series.json',
+          foundry_agent_series_policy_release: FOUNDRY_AGENT_SERIES_POLICY_RELEASE.release_contract_ref,
           stage_control_plane: 'contracts/stage_control_plane.json',
           pack_compiler_input: 'contracts/pack_compiler_input.json',
           generated_surface_handoff: 'contracts/generated_surface_handoff.json',

@@ -166,6 +166,27 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     'family:shared-release',
   );
   assert.equal(
+    scaffold.foundry_agent_series_contract.shared_policy_release.policy_release_contract_ref,
+    'contracts/opl-framework/foundry-agent-series-policy-release.json',
+  );
+  assert.equal(
+    scaffold.foundry_agent_series_contract.shared_policy_release.consumer_alignment_check,
+    'foundry:policy-release',
+  );
+  assert.match(
+    scaffold.foundry_agent_series_contract.shared_policy_release.policy_bundle_fingerprint,
+    /^sha256:[0-9a-f]{64}$/,
+  );
+  assert.equal(
+    scaffold.foundry_agent_series_policy_release.policy_bundle_fingerprint,
+    scaffold.foundry_agent_series_contract.shared_policy_release.policy_bundle_fingerprint,
+  );
+  assert.equal(
+    scaffold.foundry_agent_series_policy_release.domain_pin_requirements
+      .domain_adapter_must_not_copy_policy_body_as_authority,
+    true,
+  );
+  assert.equal(
     scaffold.foundry_agent_series_contract.app_projection_policy.app_consumes_shared_progress_projection_only,
     true,
   );
@@ -399,6 +420,10 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       descriptor.standard_contract_refs.foundry_agent_series,
       'contracts/foundry_agent_series.json',
     );
+    assert.equal(
+      descriptor.standard_contract_refs.foundry_agent_series_policy_release,
+      'contracts/opl-framework/foundry-agent-series-policy-release.json',
+    );
     assert.equal(descriptor.authority_boundary.opl_can_write_domain_truth, false);
     const foundryAgentSeries = JSON.parse(
       fs.readFileSync(path.join(targetDir, 'contracts/foundry_agent_series.json'), 'utf8'),
@@ -419,6 +444,18 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     );
     assert.equal(
       foundryAgentSeries.shared_release_pin_strategy.domain_contract_version_pin_does_not_authorize_domain_truth,
+      true,
+    );
+    assert.equal(
+      foundryAgentSeries.shared_policy_release.policy_release_contract_ref,
+      'contracts/opl-framework/foundry-agent-series-policy-release.json',
+    );
+    assert.match(
+      foundryAgentSeries.shared_policy_release.policy_bundle_fingerprint,
+      /^sha256:[0-9a-f]{64}$/,
+    );
+    assert.equal(
+      foundryAgentSeries.shared_policy_release.domain_adapter_must_not_copy_policy_body_as_authority,
       true,
     );
     assert.equal(foundryAgentSeries.domain_id, 'award-foundry');
@@ -651,6 +688,10 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(
       validated.validation.foundry_agent_series_validation.shared_release_pin_strategy.consumer_alignment_check,
       'family:shared-release',
+    );
+    assert.equal(
+      validated.validation.foundry_agent_series_validation.shared_policy_release.consumer_alignment_check,
+      'foundry:policy-release',
     );
     assert.deepEqual(validated.validation.foundry_agent_series_validation.blockers, []);
     assert.equal(validated.validation.stage_pack_v2_validation.status, 'passed');
@@ -921,6 +962,42 @@ test('agents scaffold validation blocks legacy pack roots and README-only requir
     );
     assert.equal(
       validated.validation.blockers.includes('required_domain_pack_path_must_not_be_readme:agent/README.md'),
+      true,
+    );
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
+test('agents scaffold validation blocks stale Foundry policy release pins', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-policy-pin-missing-'));
+
+  try {
+    runCli([
+      'agents',
+      'scaffold',
+      '--target-dir',
+      targetDir,
+      '--domain-id',
+      'foundry-policy-pin-missing',
+    ]);
+    const foundryContractPath = path.join(targetDir, 'contracts/foundry_agent_series.json');
+    const foundryContract = JSON.parse(fs.readFileSync(foundryContractPath, 'utf8'));
+    delete foundryContract.shared_policy_release.policy_bundle_fingerprint;
+    foundryContract.shared_policy_release.consumer_alignment_check = 'family:shared-release';
+    fs.writeFileSync(foundryContractPath, `${JSON.stringify(foundryContract, null, 2)}\n`);
+
+    const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
+    assert.equal(validated.mode, 'validate');
+    assert.equal(validated.state, 'validation_blocked');
+    assert.equal(validated.validation.status, 'blocked');
+    assert.equal(validated.validation.foundry_agent_series_validation.status, 'blocked');
+    assert.equal(
+      validated.validation.blockers.includes('foundry_agent_series_policy_bundle_fingerprint_invalid'),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes('foundry_agent_series_policy_consumer_alignment_check_invalid'),
       true,
     );
   } finally {
