@@ -6,7 +6,11 @@ import { fileURLToPath } from 'node:url';
 
 import { buildFamilyStageAdmissionReview } from '../../src/family-stage-admission.ts';
 import type { FamilyActionCatalog } from '../../src/family-action-catalog-contract.ts';
-import type { FamilyStageContract, FamilyStageControlPlane } from '../../src/family-stage-control-plane-contract.ts';
+import {
+  normalizeFamilyStageControlPlane,
+  type FamilyStageContract,
+  type FamilyStageControlPlane,
+} from '../../src/family-stage-control-plane-contract.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -94,8 +98,25 @@ function buildStagePlane(overrides: {
   cycle?: boolean;
 } = {}): FamilyStageControlPlane {
   const progressFirstPolicies: Partial<
-    Pick<FamilyStageContract, 'progress_delta_policy' | 'typed_blocker_lineage_policy'>
+    Pick<FamilyStageContract, 'user_stage_log_contract' | 'progress_delta_policy' | 'typed_blocker_lineage_policy'>
   > = overrides.omitProgressFirstPolicies ? {} : {
+    user_stage_log_contract: {
+      required_fields: [
+        'stage_name',
+        'problem_summary',
+        'stage_goal',
+        'progress_delta_classification',
+        'deliverable_progress_delta',
+        'platform_repair_delta',
+        'next_forced_delta',
+        'stage_work_done',
+        'changed_stage_surfaces',
+        'outcome',
+        'remaining_blockers',
+        'evidence_refs',
+      ],
+      no_domain_body_authority: true,
+    },
     progress_delta_policy: {
       surface_kind: 'opl_stage_progress_delta_policy',
       version: 'progress-delta-policy.v1',
@@ -278,6 +299,29 @@ test('family stage admission admits contracted static core and recorded boundary
   assert.deepEqual(review.failure_localization, []);
   assert.equal(review.authority_boundary.can_write_domain_truth, false);
   assert.equal(review.authority_boundary.can_authorize_quality_verdict, false);
+});
+
+test('family stage control plane normalization preserves user stage log progress contract', () => {
+  const plane = normalizeFamilyStageControlPlane(buildStagePlane());
+
+  assert.ok(plane);
+  const stageContract = plane.stages[0]?.stage_contract;
+  assert.ok(stageContract?.user_stage_log_contract);
+  assert.deepEqual(stageContract.user_stage_log_contract.required_fields, [
+    'stage_name',
+    'problem_summary',
+    'stage_goal',
+    'progress_delta_classification',
+    'deliverable_progress_delta',
+    'platform_repair_delta',
+    'next_forced_delta',
+    'stage_work_done',
+    'changed_stage_surfaces',
+    'outcome',
+    'remaining_blockers',
+    'evidence_refs',
+  ]);
+  assert.equal(stageContract.user_stage_log_contract.no_domain_body_authority, true);
 });
 
 test('family stage admission blocks stages missing Progress-First delta and blocker lineage policies', () => {

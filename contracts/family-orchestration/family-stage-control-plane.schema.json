@@ -287,6 +287,15 @@
       "type": "object",
       "additionalProperties": true,
       "properties": {
+        "user_stage_log_contract": {
+          "$ref": "#/$defs/user_stage_log_contract"
+        },
+        "progress_delta_policy": {
+          "$ref": "#/$defs/progress_delta_policy"
+        },
+        "typed_blocker_lineage_policy": {
+          "$ref": "#/$defs/typed_blocker_lineage_policy"
+        },
         "requires": {
           "type": "array",
           "items": {
@@ -414,6 +423,123 @@
             "$ref": "#/$defs/surface_ref"
           },
           "description": "Refs that freeze the workspace or runtime scope for this stage. OPL projects these refs but does not own workspace truth."
+        }
+      }
+    },
+    "user_stage_log_contract": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "required_fields"
+      ],
+      "properties": {
+        "required_fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "contains": {
+            "const": "progress_delta_classification"
+          }
+        },
+        "no_domain_body_authority": {
+          "type": "boolean"
+        }
+      }
+    },
+    "progress_delta_policy": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "required_fields"
+      ],
+      "properties": {
+        "required_fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "allOf": [
+            {
+              "contains": {
+                "const": "progress_delta_classification"
+              }
+            },
+            {
+              "contains": {
+                "const": "deliverable_progress_delta"
+              }
+            },
+            {
+              "contains": {
+                "const": "platform_repair_delta"
+              }
+            },
+            {
+              "contains": {
+                "const": "next_forced_delta"
+              }
+            }
+          ]
+        },
+        "classification_values": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "deliverable_progress",
+              "platform_repair",
+              "mixed",
+              "typed_blocker",
+              "human_gate",
+              "stop_loss"
+            ]
+          }
+        },
+        "platform_only_is_not_deliverable_progress": {
+          "const": true
+        }
+      }
+    },
+    "typed_blocker_lineage_policy": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind",
+        "required_fields"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "family-stall-lineage.v1"
+        },
+        "version": {
+          "const": "family-stall-lineage.v1"
+        },
+        "required_fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "allOf": [
+            {
+              "contains": {
+                "const": "repeat_count"
+              }
+            },
+            {
+              "contains": {
+                "const": "next_forced_delta"
+              }
+            },
+            {
+              "contains": {
+                "const": "escalation_owner"
+              }
+            }
+          ]
         }
       }
     },
