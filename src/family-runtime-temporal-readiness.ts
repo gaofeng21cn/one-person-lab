@@ -5,7 +5,10 @@ import {
   resolveTemporalTaskQueue,
   TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTE_NAMES,
 } from './family-runtime-temporal.ts';
-import { workerSourceVersionsEquivalent } from './family-runtime-temporal-provider-parts/worker-state.ts';
+import {
+  workerSourceVersionDiagnostic,
+  workerSourceVersionsEquivalent,
+} from './family-runtime-temporal-provider-parts/worker-state.ts';
 import type {
   TemporalStageAttemptVisibilityReadiness,
 } from './family-runtime-temporal-visibility.ts';
@@ -302,6 +305,10 @@ export function buildTemporalVisibilityReadiness(input: {
 
 export function buildTemporalWorkerReadiness(input: TemporalWorkerReadinessInput = {}) {
   const readiness = resolveTemporalWorkerReadinessInput(input);
+  const sourceVersionDiagnostic = workerSourceVersionDiagnostic(
+    input.managedWorkerSourceVersion,
+    input.expectedWorkerSourceVersion,
+  );
   const blockers = buildTemporalWorkerBlockers({
     ...readiness,
     workerDependencyUnavailable: input.workerDependencyHealth?.status === 'blocked',
@@ -331,6 +338,12 @@ export function buildTemporalWorkerReadiness(input: TemporalWorkerReadinessInput
     managed_worker_source_version: input.managedWorkerSourceVersion ?? null,
     expected_worker_source_version: input.expectedWorkerSourceVersion ?? null,
     managed_worker_source_current: input.managedWorkerSourceCurrent ?? null,
+    operator_diagnostic: {
+      surface_kind: 'temporal_worker_operator_diagnostic',
+      source_version: sourceVersionDiagnostic,
+      provider_ready_unchanged_by_source_root_equivalence:
+        sourceVersionDiagnostic.diagnostic_id === 'same_content_hash_different_source_root',
+    },
     managed_worker_workflow_bundle_path: input.managedWorkerWorkflowBundlePath ?? null,
     managed_worker_workflow_bundle_version: input.managedWorkerWorkflowBundleVersion ?? null,
     managed_worker_workflow_bundle_source_version: input.managedWorkerWorkflowBundleSourceVersion ?? null,

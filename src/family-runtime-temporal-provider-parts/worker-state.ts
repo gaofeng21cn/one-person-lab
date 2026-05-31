@@ -170,6 +170,36 @@ export function workerSourceVersionsEquivalent(
   );
 }
 
+export function workerSourceVersionDiagnostic(
+  managedSourceVersion: string | null | undefined,
+  expectedSourceVersion: string | null | undefined,
+) {
+  const managed = parseWorkerRuntimeSourceVersion(managedSourceVersion);
+  const expected = parseWorkerRuntimeSourceVersion(expectedSourceVersion);
+  if (!managed || !expected) {
+    return {
+      diagnostic_id: 'worker_source_version_unparsed',
+      same_content_hash: null,
+      different_source_root: null,
+      provider_ready_effect: 'none',
+    };
+  }
+  const sameContentHash = managed.contentHash === expected.contentHash;
+  const differentSourceRoot = managed.sourceRoot !== expected.sourceRoot;
+  return {
+    diagnostic_id: sameContentHash && differentSourceRoot
+      ? 'same_content_hash_different_source_root'
+      : sameContentHash
+        ? 'same_content_hash_same_source_root'
+        : 'different_content_hash',
+    managed_source_root: managed.sourceRoot,
+    expected_source_root: expected.sourceRoot,
+    same_content_hash: sameContentHash,
+    different_source_root: differentSourceRoot,
+    provider_ready_effect: sameContentHash ? 'none' : 'worker_source_stale',
+  };
+}
+
 export function readTemporalWorkerState(paths: TemporalWorkerPaths) {
   try {
     const parsed = JSON.parse(fs.readFileSync(temporalWorkerStatePath(paths), 'utf8'));

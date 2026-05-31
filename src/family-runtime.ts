@@ -22,14 +22,13 @@ import {
   inspectStageAttempt,
   inspectStageAttemptWithCurrentProviderReadiness,
   listStageAttemptsForTask,
-  listStageAttempts,
-  listStageAttemptsWithCurrentProviderReadiness,
   queryStageAttempt,
   runStageAttemptFixtureActivity,
   signalStageAttempt,
   stageAttemptSummary,
   syncStageAttemptFromTemporalTerminalObservation,
 } from './family-runtime-stage-attempts.ts';
+import { listStageAttemptsWithMonitoringProjection } from './family-runtime-stage-attempt-monitoring.ts';
 import { markStageAttemptCancelRequested } from './family-runtime-stage-attempt-control.ts';
 import { queryStageAttemptWithCurrentProviderReadiness } from './family-runtime-stage-attempt-current-query.ts';
 import { residencyProofReceipt } from './family-runtime-residency-proof-events.ts';
@@ -687,14 +686,18 @@ export async function runFamilyRuntime(args: string[]) {
       };
     }
     if (parsed.mode === 'attempt_list') {
+      const projection = await listStageAttemptsWithMonitoringProjection(db, paths, {
+        managedProviderProjection: readMasManagedProviderProjection(),
+      }, parsed.filters);
       return {
         version: 'g2',
         family_runtime_stage_attempts: {
           surface_id: 'opl_family_runtime_stage_attempts',
-          summary: stageAttemptSummary(db),
-          attempts: await listStageAttemptsWithCurrentProviderReadiness(db, paths, {
-            managedProviderProjection: readMasManagedProviderProjection(),
-          }),
+          summary: projection.summary,
+          filters: projection.filters,
+          ...(projection.compact_timeline
+            ? { compact_timeline: projection.compact_timeline }
+            : { attempts: projection.attempts }),
         },
       };
     }

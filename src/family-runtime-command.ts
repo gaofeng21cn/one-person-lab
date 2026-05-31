@@ -89,7 +89,17 @@ export type FamilyRuntimeCommandInput =
       max_age_ms?: number | null;
     };
   }
-  | { mode: 'notify_list' | 'events_export' | 'queue_list' | 'attempt_list' }
+  | { mode: 'notify_list' | 'events_export' | 'queue_list' }
+  | {
+    mode: 'attempt_list';
+    filters?: {
+      domainId?: FamilyRuntimeDomainId;
+      status?: string;
+      studyId?: string;
+      sinceHours?: number;
+      compactTimeline?: boolean;
+    };
+  }
   | {
     mode: 'tick';
     source?: string;

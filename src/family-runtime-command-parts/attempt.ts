@@ -9,12 +9,7 @@ import { assertDomainId, assertProviderKind, assertSignalKind, parsePayloadArg }
 
 export function parseAttemptArgs(rest: string[]): FamilyRuntimeCommandInput | undefined {
   if (rest[0] === 'list') {
-    if (rest.length > 1) {
-      throw new FrameworkContractError('cli_usage_error', 'family-runtime attempt list accepts no extra arguments.', {
-        extra_args: rest.slice(1),
-      });
-    }
-    return { mode: 'attempt_list' };
+    return parseAttemptListArgs(rest);
   }
   if (rest[0] === 'inspect') {
     const stageAttemptId = rest[1];
@@ -56,6 +51,55 @@ export function parseAttemptArgs(rest: string[]): FamilyRuntimeCommandInput | un
     return parseAttemptCreateArgs(rest);
   }
   return undefined;
+}
+
+function parseAttemptListArgs(rest: string[]): FamilyRuntimeCommandInput {
+  let domainId: FamilyRuntimeDomainId | undefined;
+  let status: string | undefined;
+  let studyId: string | undefined;
+  let sinceHours: number | undefined;
+  let compactTimeline = false;
+  for (let index = 1; index < rest.length; index += 1) {
+    const token = rest[index];
+    const value = rest[index + 1];
+    if (token === '--domain' && value) {
+      domainId = assertDomainId(value);
+      index += 1;
+    } else if (token === '--status' && value) {
+      status = value.trim();
+      index += 1;
+    } else if (token === '--study' && value) {
+      studyId = value.trim();
+      index += 1;
+    } else if (token === '--since-hours' && value) {
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        throw new FrameworkContractError('cli_usage_error', 'family-runtime attempt list --since-hours must be a positive number.', {
+          option: '--since-hours',
+          value,
+        });
+      }
+      sinceHours = parsed;
+      index += 1;
+    } else if (token === '--compact-timeline') {
+      compactTimeline = true;
+    } else {
+      throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime attempt list option: ${token}.`, {
+        option: token,
+        usage: 'opl family-runtime attempt list [--domain <domain>] [--status <status>] [--study <study_id>] [--since-hours <hours>] [--compact-timeline]',
+      });
+    }
+  }
+  return {
+    mode: 'attempt_list',
+    filters: {
+      domainId,
+      status,
+      studyId,
+      sinceHours,
+      compactTimeline,
+    },
+  };
 }
 
 function parseAttemptCancelArgs(rest: string[]): FamilyRuntimeCommandInput {

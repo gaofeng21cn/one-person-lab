@@ -62,6 +62,16 @@ function temporalWorkerStatus(status: 'worker_not_ready' | 'worker_source_stale'
     managed_worker_source_version: status === 'worker_not_ready' ? null : status === 'worker_source_stale' ? 'worker-runtime:old' : 'worker-runtime:test',
     expected_worker_source_version: 'worker-runtime:test',
     managed_worker_source_current: status === 'worker_source_stale' ? false : status === 'ready' ? true : null,
+    operator_diagnostic: {
+      surface_kind: 'temporal_worker_operator_diagnostic',
+      source_version: {
+        diagnostic_id: 'worker_source_version_unparsed',
+        same_content_hash: null,
+        different_source_root: null,
+        provider_ready_effect: 'none',
+      },
+      provider_ready_unchanged_by_source_root_equivalence: false,
+    },
     managed_worker_workflow_bundle_path: status === 'ready' ? '/tmp/temporal-workflow-bundle/stage-attempt.js' : null,
     managed_worker_workflow_bundle_version: status === 'ready' ? 'workflow-bundle:sha256:test' : null,
     managed_worker_workflow_bundle_source_version: status === 'ready' ? 'worker-runtime:test' : null,

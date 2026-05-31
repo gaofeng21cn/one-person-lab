@@ -18,6 +18,17 @@ import { attentionQueueItem, nextSafeActions } from './family-runtime-evidence-w
 import { buildZeroOpenCompletionGuard, zeroOpenCompletionGuardSummaryFields } from './family-runtime-evidence-worklist-parts/zero-open-completion-guard.ts';
 import { operatorRoutesByActionId, payloadHandoffProjection, routeWithOperatorHandoff } from './family-runtime-evidence-worklist-parts/operator-route-handoff.ts';
 import { readOnlyRouteMatchesDefaults } from './family-runtime-evidence-worklist-parts/route-defaults.ts';
+import {
+  commandRef,
+  countValue,
+  firstRef,
+  record,
+  recordList,
+  stringList,
+  stringValue,
+  uniqueStringList,
+  type JsonRecord,
+} from './family-runtime-evidence-worklist-parts/json-utils.ts';
 import { buildStageEvidenceWorkorderPacket, compactStageEvidenceWorkorderAttentionItems } from './family-runtime-evidence-worklist-parts/stage-evidence-workorders.ts';
 import {
   domainManifestsForWorklist,
@@ -32,8 +43,6 @@ import {
 import { familyRuntimeEvidenceWorklistAuthorityBoundary } from './family-runtime-evidence-worklist-parts/authority-boundary.ts';
 import { buildProgressFirstOperatorSummary } from './family-runtime-evidence-worklist-parts/progress-first-operator-summary.ts';
 import { domainDispatchRecordRouteAttemptIds, syncTerminalTemporalAttemptsForEvidenceWorklist, type EvidenceWorklistTemporalQuery } from './family-runtime-evidence-worklist-parts/terminal-observation-sync.ts';
-
-type JsonRecord = Record<string, unknown>;
 
 type EvidenceWorklistInput = {
   familyDefaults: boolean;
@@ -78,63 +87,6 @@ const CLOSEOUT_ACTION_KINDS = new Set([
 
 const BLOCKED_ROUTE_STATUS_PREFIX = 'blocked_by_';
 const OPEN_WORKLIST_STATUS = 'open_safe_action_request_route_available';
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
-function countValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-}
-
-function uniqueStringList(values: Array<string | null | undefined>) {
-  return [...new Set(values.filter((entry): entry is string => Boolean(entry)))];
-}
-
-function commandRef(args: string[]) {
-  if (args[0] === 'agents') {
-    return `opl ${args.join(' ')}`;
-  }
-  return `opl family-runtime ${args.join(' ')}`;
-}
-
-function firstRef(value: unknown) {
-  if (typeof value === 'string' && value.trim()) {
-    return value.trim();
-  }
-  if (Array.isArray(value)) {
-    for (const entry of value) {
-      if (typeof entry === 'string' && entry.trim()) {
-        return entry.trim();
-      }
-      if (isRecord(entry)) {
-        const ref = stringValue(entry.ref) ?? stringValue(entry.source_ref);
-        if (ref) {
-          return ref;
-        }
-      }
-    }
-  }
-  return null;
-}
 
 function freshnessRef(route: JsonRecord) {
   return stringValue(route.evidence_source_ref)

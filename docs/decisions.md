@@ -7,6 +7,26 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-05-30
 
+### 决策：attempt list 需要 Progress-First compact monitoring lens
+
+原因：operator 排查单个 study/domain/status 时，不应先读取全量 stage attempt 大 JSON。`attempt query` 仍是单 attempt 深下钻入口，但队列较多时需要一个只读、可过滤、轻量的 timeline 先回答哪些 attempt 仍是交付进展、platform repair、typed blocker 或 human gate。
+
+影响：
+
+- `family-runtime attempt list` 支持 `--domain`、`--study`、`--status`、`--since-hours` 过滤；`--compact-timeline` 返回从 OPL attempt metadata、queue task payload study id、`stage_progress_log` / `user_stage_log` 和 latest closeout refs 派生的 compact timeline。
+- 默认 `attempt list` 仍返回 attempts 结构，降低对既有 consumer 的破坏面；compact timeline 必须显式请求。
+- 该 lens 只读 OPL queue / attempt ledger 和 domain closeout refs，不写 MAS/MAG/RCA/OMA truth，不读取 artifact body，不生成 owner receipt、typed blocker、quality verdict、domain ready 或 production ready。
+
+### 决策：worker source-root 等价需要 operator diagnostic
+
+原因：managed worker 可能来自 App-managed runtime root，而当前 operator 在 developer checkout 里运行 CLI。两者 `worker-runtime` content hash 相同但 source root 不同是正常可解释状态，不能被 operator 误读为 stale worker 或 provider readiness 漂移。
+
+影响：
+
+- Temporal worker readiness/status 投影 `operator_diagnostic.source_version.diagnostic_id=same_content_hash_different_source_root`，同时保留 managed / expected source root 和 content-hash comparison。
+- `provider_ready`、`worker_ready` 与 `managed_worker_source_current` 继续由原有 source-version equivalence 决定；同 hash 不因 source root 不同而降级，不同 hash 仍投影 `worker_source_stale`。
+- 该 diagnostic 只解释 provider worker liveness，不绕过 worker mutation guard，不启动/停止 worker，不授权 domain action 或 production-ready claim。
+
 ### 决策：evidence-worklist 默认暴露 Progress-First operator summary
 
 原因：`family-runtime evidence-worklist` 的 open/closed counter、stage replay workorder、typed blocker group 和 zero-open guard 都是正确的机器面，但 operator 仍需要一个稳定默认 lens 直接回答“现在是可执行 OPL safe action、domain/human blocker、还是没有 OPL 可动作；下一次必须产出什么 delta”。如果这个读法只靠文档解释，App/operator 和后续 Foundry Agent 仍可能把大量 refs-only attention 当成交付进展，或把 zero-open worklist 当成完成。

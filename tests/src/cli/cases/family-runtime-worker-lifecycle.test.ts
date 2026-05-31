@@ -26,6 +26,7 @@ import {
 } from '../../../../src/family-runtime-temporal-provider-parts/worker-source-guard.ts';
 import {
   currentWorkerSourceVersion,
+  workerSourceVersionDiagnostic,
   workerSourceVersionsEquivalent,
 } from '../../../../src/family-runtime-temporal-provider-parts/worker-state.ts';
 
@@ -107,6 +108,13 @@ test('Temporal worker source version currentness follows runtime content hash ac
     false,
   );
   assert.equal(workerSourceVersionsEquivalent('git:old-worker-source', 'git:new-worker-source'), false);
+  assert.equal(
+    workerSourceVersionDiagnostic(
+      `worker-runtime:/managed/runtime/current/opl/src:${hash}`,
+      `worker-runtime:/Users/gaofeng/workspace/one-person-lab/src:${hash}`,
+    ).diagnostic_id,
+    'same_content_hash_different_source_root',
+  );
 });
 
 test('Temporal worker mutation guard blocks developer checkout against default shared state', () => {
@@ -489,6 +497,14 @@ test('Temporal worker lifecycle accepts same runtime content hash from managed s
     assert.equal(requery.managed_worker_pid, child.pid);
     assert.equal(requery.stale_worker_pid, null);
     assert.equal(requery.managed_worker_source_current, true);
+    assert.equal(
+      requery.operator_diagnostic.source_version.diagnostic_id,
+      'same_content_hash_different_source_root',
+    );
+    assert.equal(
+      requery.operator_diagnostic.provider_ready_unchanged_by_source_root_equivalence,
+      true,
+    );
     assert.equal(requery.managed_worker_workflow_bundle_source_current, true);
     assert.deepEqual(requery.blockers, []);
     assert.equal(requery.worker_mutation_guard?.allowed, true);
