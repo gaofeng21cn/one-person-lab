@@ -337,6 +337,28 @@ test('family-runtime evidence-worklist exposes active attempt progress-first sup
     assert.equal(progressItem.evidence_requirement.can_claim_domain_ready, false);
     assert.equal(progressItem.evidence_requirement.can_claim_production_ready, false);
     assert.equal(
+      worklist.progress_first_operator_summary.status,
+      'operator_safe_action_available',
+    );
+    assert.equal(
+      worklist.progress_first_operator_summary.progress_delta_classification,
+      'operator_action_pending',
+    );
+    assert.equal(worklist.progress_first_operator_summary.deliverable_progress_delta, null);
+    assert.equal(
+      worklist.progress_first_operator_summary.platform_repair_delta,
+      'opl_operator_or_provider_supervision_delta_available',
+    );
+    assert.equal(
+      worklist.progress_first_operator_summary.next_forced_delta,
+      'Inspect the active attempt, worker readiness, stage_progress_log, and closeout refs; start or repair the worker first when liveness is missing, otherwise supervise progress or require domain typed closeout.',
+    );
+    assert.equal(worklist.progress_first_operator_summary.progress_first_supervision_open_count, 1);
+    assert.equal(
+      worklist.progress_first_operator_summary.authority_boundary.can_claim_domain_ready,
+      false,
+    );
+    assert.equal(
       worklist.next_safe_actions.some((action) =>
         action.action_id === `progress-first-supervision:${stageAttemptId}`
       ),

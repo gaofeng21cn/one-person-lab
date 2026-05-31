@@ -7,6 +7,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-05-30
 
+### 决策：evidence-worklist 默认暴露 Progress-First operator summary
+
+原因：`family-runtime evidence-worklist` 的 open/closed counter、stage replay workorder、typed blocker group 和 zero-open guard 都是正确的机器面，但 operator 仍需要一个稳定默认 lens 直接回答“现在是可执行 OPL safe action、domain/human blocker、还是没有 OPL 可动作；下一次必须产出什么 delta”。如果这个读法只靠文档解释，App/operator 和后续 Foundry Agent 仍可能把大量 refs-only attention 当成交付进展，或把 zero-open worklist 当成完成。
+
+影响：
+
+- `family-runtime evidence-worklist` 新增 `progress_first_operator_summary`，默认投影 `progress_delta_classification`、`deliverable_progress_delta`、`platform_repair_delta`、`next_forced_delta`、open safe-action 计数、stage replay missing receipt 计数、typed blocker refs 与 zero-open completion guard。
+- 该 summary 的 `deliverable_progress_delta` 只能由 domain agent 填充；OPL evidence-worklist 默认不会把 platform repair、provider supervision、refs-only ledger 或 typed blocker accounting 写成交付物实质进展。
+- 当 open worklist 为 0 但仍有 human gate、owner receipt replay 或 blocked refs-only envelope 时，`next_forced_delta` 优先指向 human/domain owner receipt 或 domain-owned typed blocker，而不是声明完成。
+- authority boundary 固定为 `refs_only=true`、`can_write_domain_truth=false`、`can_create_owner_receipt=false`、`can_create_typed_blocker=false`、`can_claim_domain_ready=false`、`can_claim_production_ready=false`。
+
 ### 决策：Foundry-series Progress-First policy bundle 必须有 OPL-owned release pin
 
 原因：Progress-First 合同已经覆盖 stage progress、currentness、typed blocker lineage 和 App projection。如果 domain repo 只 pin OPL owner commit，而没有单独 pin policy bundle release，就容易出现两类漂移：domain adapter 复制一份旧 policy body 当成本地 authority，或 App/operator 看到共享 helper 已对齐却不知道 Progress-First policy surface 是否同版。共享 release pin 要把“依赖版本对齐”和“政策合同对齐”拆开，让 MAS/MAG/RCA/OMA 和后续 Foundry Agent 都能用同一套可验证 release ref/fingerprint 说明自己遵循的是同一个系列设计。
