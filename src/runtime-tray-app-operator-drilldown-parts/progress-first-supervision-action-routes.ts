@@ -190,10 +190,9 @@ function progressFirstRouteRef(stageAttemptId: string) {
 export function buildProgressFirstSupervisionActionRoutes(input: {
   stageAttemptWorkbench: JsonRecord;
 }) {
-  const attempts = [
-    ...recordList(input.stageAttemptWorkbench.evidence_attempts),
-    ...recordList(input.stageAttemptWorkbench.attempts),
-  ];
+  // Keep default operator actions bounded to the current workbench window;
+  // evidence_attempts is the full audit/history surface.
+  const attempts = recordList(input.stageAttemptWorkbench.attempts);
   return uniqueRefs(attempts
     .filter(isActiveAttempt)
     .flatMap((attempt) => {

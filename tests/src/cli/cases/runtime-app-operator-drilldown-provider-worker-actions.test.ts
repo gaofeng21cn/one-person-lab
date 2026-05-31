@@ -591,7 +591,8 @@ test('runtime App drilldown keeps active attempts with missing progress signals 
       },
     },
     stageAttemptWorkbench: {
-      evidence_attempts: [
+      evidence_attempts: [],
+      attempts: [
         {
           stage_attempt_id: 'attempt-progress-first-1',
           task_id: 'task-progress-first-1',
@@ -626,7 +627,6 @@ test('runtime App drilldown keeps active attempts with missing progress signals 
           },
         },
       ],
-      attempts: [],
     },
   });
   const drilldown = applyAppOperatorDrilldownDetail({
@@ -664,7 +664,7 @@ test('runtime App drilldown keeps active attempts with missing progress signals 
   assert.equal(progressAction.authority_boundary.can_write_domain_truth, false);
 });
 
-test('runtime App drilldown classifies stale active attempts that lack next action', () => {
+test('runtime App drilldown scopes progress-first supervision to current workbench attempts', () => {
   const progressFirstRoutes = buildProviderActionRoutes({
     periodicRefs: { refs: [] },
     providerInspection: {
@@ -678,6 +678,100 @@ test('runtime App drilldown classifies stale active attempts that lack next acti
     },
     stageAttemptWorkbench: {
       evidence_attempts: [
+        {
+          stage_attempt_id: 'attempt-progress-first-history-1',
+          task_id: 'task-progress-first-history-1',
+          domain_id: 'medautoscience',
+          stage_id: 'domain_owner/default-executor-dispatch',
+          provider_kind: 'temporal',
+          local_status: 'running',
+          provider_run: {
+            provider_status: 'running',
+          },
+          current_provider_readiness: {
+            details: {
+              worker_readiness: {
+                lifecycle_status: 'ready',
+                readiness_status: 'ready',
+                repair_action: {
+                  action_id: 'none',
+                },
+              },
+            },
+          },
+          current_control_state: {
+            task_kind: 'domain_owner/default-executor-dispatch',
+          },
+          closeout_refs: [],
+          stage_progress_log: {
+            user_stage_log: {
+              semantic_status: 'missing_domain_semantic_summary',
+            },
+            timeline: {},
+          },
+        },
+      ],
+      attempts: [
+        {
+          stage_attempt_id: 'attempt-progress-first-current-1',
+          task_id: 'task-progress-first-current-1',
+          domain_id: 'medautoscience',
+          stage_id: 'domain_owner/default-executor-dispatch',
+          provider_kind: 'temporal',
+          local_status: 'running',
+          provider_run: {
+            provider_status: 'running',
+          },
+          current_provider_readiness: {
+            details: {
+              worker_readiness: {
+                lifecycle_status: 'ready',
+                readiness_status: 'ready',
+                repair_action: {
+                  action_id: 'none',
+                },
+              },
+            },
+          },
+          current_control_state: {
+            task_kind: 'domain_owner/default-executor-dispatch',
+          },
+          closeout_refs: [],
+          stage_progress_log: {
+            user_stage_log: {
+              semantic_status: 'missing_domain_semantic_summary',
+            },
+            timeline: {},
+          },
+        },
+      ],
+    },
+  });
+
+  const progressActions = progressFirstRoutes.filter((route: { action_kind: string }) =>
+    route.action_kind === 'progress_first_attempt_supervision'
+  );
+
+  assert.deepEqual(progressActions.map((action: { stage_attempt_id: string }) => action.stage_attempt_id), [
+    'attempt-progress-first-current-1',
+  ]);
+});
+
+test('runtime App drilldown classifies stale active attempts that lack next action', () => {
+  const progressFirstRoutes = buildProviderActionRoutes({
+    periodicRefs: { refs: [] },
+    providerInspection: {
+      details: {
+        worker_readiness: {
+          lifecycle_status: 'ready',
+          readiness_status: 'ready',
+          repair_action: { action_id: 'none' },
+        },
+      },
+    },
+    stageAttemptWorkbench: {
+      evidence_attempts: [],
+      attempts: [
         {
           stage_attempt_id: 'attempt-progress-first-stale',
           task_id: 'task-progress-first-stale',
@@ -719,7 +813,6 @@ test('runtime App drilldown classifies stale active attempts that lack next acti
           },
         },
       ],
-      attempts: [],
     },
   });
 

@@ -111,6 +111,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - App/operator drilldown、safe action bridge 与 `family-runtime evidence-worklist` 暴露 `progress_first_attempt_supervision` refs-only route，执行参数为 `opl family-runtime attempt query <stage_attempt_id>`。
+- 默认 `progress_first_attempt_supervision` route 只从 `stage_attempt_workbench.attempts` 当前 workbench window 派生；`stage_attempt_workbench.evidence_attempts` 是 full audit / history 面，保留给 evidence、effective current context、stall lineage 和 drilldown，不能直接形成默认 open safe-action 队列。
 - 该 route 的 authority boundary 固定为 `can_write_domain_truth=false`、`can_execute_domain_action=false`、`can_create_typed_blocker=false`、`can_create_owner_receipt=false`、`can_claim_domain_ready=false`、`can_claim_production_ready=false`。
 - 该 route 必须携带 `missing_progress_signals`、`supervisor_safe_action_kind` 与 `typed_blocker_requirement`，把 stale / next-action 缺口明确投影为 supervisor-safe action 或 domain typed blocker requirement。
 - provider worker repair 仍优先于 progress-first supervision；worker liveness 缺失时先修 worker，再判断 attempt 是否仍缺 stage/progress/closeout 信号。
