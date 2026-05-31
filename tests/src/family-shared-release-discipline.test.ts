@@ -89,7 +89,7 @@ function recordValue(value: unknown): Record<string, unknown> {
     : {};
 }
 
-test('shared owner release contract freezes a full owner commit and three consumer repos', () => {
+test('shared owner release contract freezes a full owner commit and four consumer repos', () => {
   const contract = loadSharedOwnerReleaseContract({ repoRoot });
   const pythonPackage = recordValue(contract.packages.python);
   const jsPackage = recordValue(contract.packages.js);
@@ -105,12 +105,16 @@ test('shared owner release contract freezes a full owner commit and three consum
     jsPackage.git_locator,
     `git+https://github.com/gaofeng21cn/one-person-lab.git#${RELEASED_OWNER_COMMIT}`,
   );
-  assert.equal(contract.consumers.length, 3);
+  assert.equal(contract.consumers.length, 4);
   assert.equal(contract.consumers[0].verify_command, 'scripts/verify.sh family');
   assert.equal(contract.consumers[1].verify_command, 'scripts/verify.sh family');
   assert.equal(contract.consumers[2].verify_command, 'scripts/verify.sh family');
+  assert.equal(contract.consumers[3].verify_command, 'scripts/verify.sh smoke');
   assert.equal(contract.consumers[0].targets[0].kind, 'python_dependency');
   assert.equal(contract.consumers[2].targets[1].kind, 'js_lock');
+  assert.equal(contract.consumers[3].repo_id, 'opl-meta-agent');
+  assert.equal(contract.consumers[3].targets[0].file, 'package.json');
+  assert.equal(contract.consumers[3].targets[1].kind, 'js_lock');
 });
 
 test('default family root resolves from the canonical repo root in both main checkout and worktree checkouts', () => {
@@ -186,6 +190,7 @@ test('family shared release CLI can sync explicit repo overrides and report alig
   const scienceRepo = path.join(familyRoot, 'science-worktree');
   const grantRepo = path.join(familyRoot, 'grant-worktree');
   const redcubeRepo = path.join(familyRoot, 'redcube-worktree');
+  const omaRepo = path.join(familyRoot, 'oma-worktree');
 
   write(
     path.join(scienceRepo, 'pyproject.toml'),
@@ -211,6 +216,14 @@ test('family shared release CLI can sync explicit repo overrides and report alig
     path.join(redcubeRepo, 'package-lock.json'),
     `{"packages":{"packages/redcube-domain-entry":{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}"}}}}\n`,
   );
+  write(
+    path.join(omaRepo, 'package.json'),
+    `{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}"}}\n`,
+  );
+  write(
+    path.join(omaRepo, 'package-lock.json'),
+    `{"packages":{"":{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}"}}}}\n`,
+  );
 
   const result = runFamilySharedReleaseCli([
     'sync',
@@ -218,13 +231,16 @@ test('family shared release CLI can sync explicit repo overrides and report alig
     '--repo', `medautoscience=${scienceRepo}`,
     '--repo', `medautogrant=${grantRepo}`,
     '--repo', `redcube=${redcubeRepo}`,
+    '--repo', `opl-meta-agent=${omaRepo}`,
   ]);
 
   assert.equal(result.exit_code, 0);
   assert.match(result.stdout, /\[medautoscience\] synced/);
   assert.match(result.stdout, /\[medautogrant\] synced/);
   assert.match(result.stdout, /\[redcube\] synced/);
+  assert.match(result.stdout, /\[opl-meta-agent\] synced/);
   assert.match(result.stdout, /verify: scripts\/verify\.sh family/);
+  assert.match(result.stdout, /verify: scripts\/verify\.sh smoke/);
   assert.match(result.stdout, new RegExp(RELEASED_OWNER_COMMIT));
 });
 

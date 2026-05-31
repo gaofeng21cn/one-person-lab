@@ -57,6 +57,21 @@
           "kind": "js_lock"
         }
       ]
+    },
+    {
+      "repo_id": "opl-meta-agent",
+      "repo_dir": "opl-meta-agent",
+      "verify_command": "scripts/verify.sh smoke",
+      "targets": [
+        {
+          "file": "package.json",
+          "kind": "js_dependency"
+        },
+        {
+          "file": "package-lock.json",
+          "kind": "js_lock"
+        }
+      ]
     }
   ]
 }
