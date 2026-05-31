@@ -4,7 +4,10 @@ import {
   inspectFamilyRuntimeProviderWithLifecycle,
 } from './family-runtime-providers.ts';
 import { queryStageAttempt } from './family-runtime-stage-attempt-query.ts';
-import { inspectStageAttempt } from './family-runtime-stage-attempts.ts';
+import {
+  buildStageAttemptCurrentProviderReadinessPayload,
+  inspectStageAttempt,
+} from './family-runtime-stage-attempts.ts';
 import type { TemporalStageAttemptVisibilityReadiness } from './family-runtime-temporal-visibility.ts';
 
 type ProviderReadinessPaths = {
@@ -40,5 +43,6 @@ export async function queryStageAttemptWithCurrentProviderReadiness(
   return queryStageAttempt(db, stageAttemptId, {
     temporalVisibilityReadiness: temporalVisibilityReadinessFromProviderInspection(provider),
     temporalQuery: queryOptions.temporalQuery ?? null,
+    currentProviderReadiness: buildStageAttemptCurrentProviderReadinessPayload(provider, attempt.provider_kind),
   });
 }

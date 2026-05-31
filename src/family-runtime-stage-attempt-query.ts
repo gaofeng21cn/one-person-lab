@@ -25,6 +25,7 @@ import type { TemporalStageAttemptVisibilityReadiness } from './family-runtime-t
 type QueryStageAttemptOptions = {
   temporalVisibilityReadiness?: TemporalStageAttemptVisibilityReadiness | null;
   temporalQuery?: Record<string, unknown> | null;
+  currentProviderReadiness?: Record<string, unknown> | null;
 };
 
 function stringListFrom(value: unknown) {
@@ -151,7 +152,7 @@ export function queryStageAttempt(
     domain_ready_verdict: domainReadyVerdict,
     controlled_apply_contract: controlledApplyContract,
     lifecycle_primitives: lifecyclePrimitives,
-    current_provider_readiness: null,
+    current_provider_readiness: options.currentProviderReadiness ?? null,
   });
   const humanReviewBurdenBudget = buildAttemptHumanReviewBurdenBudget({
     targetDomainId: attempt.domain_id,
@@ -267,6 +268,7 @@ export function queryStageAttempt(
         attempt_id: attempt.stage_attempt_id,
         stage_id: attempt.stage_id,
         status: attempt.status,
+        current_provider_readiness: options.currentProviderReadiness ?? null,
         codex_stage_activity_timeout_policy: workflowContract?.activity_timeout_policy.codex_stage_activity ?? null,
         provider_run: attempt.provider_run,
         activity_events: attempt.activity_events,

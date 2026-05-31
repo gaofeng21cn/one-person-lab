@@ -54,12 +54,16 @@ type TemporalStageAttemptQueryOutput = {
       };
       operator_visibility: {
         status: string;
+        current_provider_readiness: Record<string, unknown> | null;
         codex_stage_activity_timeout_policy: Record<string, unknown> | null;
         provider_run: Record<string, unknown>;
         stage_progress_log: Record<string, any>;
       };
       stage_progress_log: Record<string, any>;
       attempt_true_path_proof: Record<string, any>;
+      observability_slo: {
+        provider_readiness: Record<string, unknown> | null;
+      };
       completion_boundary: {
         provider_completion_is_domain_ready: boolean;
       };
@@ -496,7 +500,7 @@ test('family-runtime queue inspect syncs a completed MAS default executor Tempor
     });
     const { tick, task } = result;
     const attempt = task.family_runtime_task.stage_attempts[0];
-    const query = await runFamilyRuntime(['attempt', 'query', attempt.stage_attempt_id]) as TemporalStageAttemptQueryOutput;
+      const query = await runFamilyRuntime(['attempt', 'query', attempt.stage_attempt_id]) as unknown as TemporalStageAttemptQueryOutput;
     const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
     }).app_operator_drilldown;
@@ -517,6 +521,18 @@ test('family-runtime queue inspect syncs a completed MAS default executor Tempor
       'ready',
     );
     assert.equal(queryProjection.stage_progress_log.temporal_visibility.visibility_readiness.readiness_status, 'ready');
+    assert.equal(
+      queryProjection.operator_visibility.current_provider_readiness?.surface_kind,
+      'stage_attempt_current_provider_readiness',
+    );
+    assert.equal(
+      queryProjection.operator_visibility.current_provider_readiness?.provider_receipt_is_creation_time_snapshot,
+      true,
+    );
+    assert.equal(
+      queryProjection.observability_slo.provider_readiness?.surface_kind,
+      'stage_attempt_current_provider_readiness',
+    );
     assert.equal(queryProjection.attempt_true_path_proof.surface_kind, 'opl_stage_attempt_true_path_proof');
     assert.equal(queryProjection.attempt_true_path_proof.proof_status, 'observed');
     assert.equal(queryProjection.attempt_true_path_proof.same_attempt_refs.stage_attempt_id, attempt.stage_attempt_id);
@@ -769,6 +785,7 @@ test('family-runtime attempt inspect projects current provider readiness separat
       'managed_local_service_state',
     );
     assert.equal(listed.family_runtime_stage_attempts.attempts[0].current_provider_readiness.provider_ready, true);
+
   } finally {
     process.kill(service.pid!, 'SIGTERM');
     process.kill(worker.pid!, 'SIGTERM');
@@ -921,7 +938,7 @@ test('family-runtime temporal attempt query reads managed local service state wh
         workflowId: attempt.workflow_id,
       });
       const query: TemporalStageAttemptQueryOutput =
-        await runFamilyRuntime(['attempt', 'query', attempt.stage_attempt_id]) as TemporalStageAttemptQueryOutput;
+        await runFamilyRuntime(['attempt', 'query', attempt.stage_attempt_id]) as unknown as TemporalStageAttemptQueryOutput;
       await handle.result();
       return query;
     });

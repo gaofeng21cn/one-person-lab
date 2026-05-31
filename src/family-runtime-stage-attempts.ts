@@ -416,7 +416,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
   };
 }
 
-function currentProviderReadinessPayload(
+export function buildStageAttemptCurrentProviderReadinessPayload(
   provider: Awaited<ReturnType<typeof inspectFamilyRuntimeProviderWithLifecycle>>,
   providerKind: FamilyRuntimeProviderKind,
 ) {
@@ -444,14 +444,14 @@ async function providerReadinessByKind(
   const providerKinds = [...new Set(attempts.map((attempt) => attempt.provider_kind))];
   const entries = await Promise.all(providerKinds.map(async (providerKind) => {
     const provider = await inspectFamilyRuntimeProviderWithLifecycle(providerKind, paths, options);
-    return [providerKind, currentProviderReadinessPayload(provider, providerKind)] as const;
+    return [providerKind, buildStageAttemptCurrentProviderReadinessPayload(provider, providerKind)] as const;
   }));
   return new Map(entries);
 }
 
 function attachCurrentProviderReadiness(
   attempt: ReturnType<typeof stageAttemptToPayload>,
-  readinessByKind: Map<FamilyRuntimeProviderKind, ReturnType<typeof currentProviderReadinessPayload>>,
+  readinessByKind: Map<FamilyRuntimeProviderKind, ReturnType<typeof buildStageAttemptCurrentProviderReadinessPayload>>,
 ) {
   return {
     ...attempt,
@@ -665,7 +665,7 @@ export async function inspectStageAttemptWithCurrentProviderReadiness(
   const provider = await inspectFamilyRuntimeProviderWithLifecycle(attempt.provider_kind, paths, options);
   return {
     ...attempt,
-    current_provider_readiness: currentProviderReadinessPayload(provider, attempt.provider_kind),
+    current_provider_readiness: buildStageAttemptCurrentProviderReadinessPayload(provider, attempt.provider_kind),
   };
 }
 
