@@ -5,6 +5,10 @@ import {
   inspectFamilyRuntimeProvidersWithLifecycle,
   resolveFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
+import {
+  buildTemporalProviderLivenessBlocker,
+  isTemporalWorkerLivenessBlocker,
+} from './family-runtime-provider-liveness-blocker.ts';
 import { runTemporalProviderSloTick } from './family-runtime-provider-slo-executor.ts';
 import type { FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 import type { FamilyRuntimeTaskScope } from './family-runtime-command.ts';
@@ -46,6 +50,15 @@ export async function runTemporalSchedulerCadenceCommand(
   });
   const selected = provider.providers.temporal;
   if (!selected?.ready) {
+    const blocker = selected
+      ? buildTemporalProviderLivenessBlocker(selected)
+      : {
+          blocker_kind: 'platform_dependency',
+          blocker_id: 'temporal_provider_not_ready',
+          next_repair_command:
+            'opl family-runtime service start --provider temporal && opl family-runtime worker start --provider temporal',
+          liveness_blocker_first: false,
+        };
     return {
       surface_kind: 'opl_family_runtime_scheduler_cadence',
       provider_kind: providerKind,
@@ -54,11 +67,7 @@ export async function runTemporalSchedulerCadenceCommand(
       command: input.mode,
       status: 'blocked_provider_not_ready',
       provider_runtime: provider,
-      blocker: {
-        blocker_kind: 'platform_dependency',
-        blocker_id: selected?.degraded_reason ?? 'temporal_provider_not_ready',
-        next_repair_command: 'opl family-runtime service start --provider temporal && opl family-runtime worker start --provider temporal',
-      },
+      blocker,
       authority_boundary: {
         can_install_domain_daemon: false,
         can_write_domain_truth: false,
@@ -139,9 +148,70 @@ export async function runSchedulerTick(
     });
   }
   const source = 'opl-provider-scheduler';
+  const providerBeforeSlo = await inspectFamilyRuntimeProvidersWithLifecycle(providerKind, paths, {
+    managedProviderProjection: readMasManagedProviderProjection(),
+  });
+  const selectedBeforeSlo = providerBeforeSlo.providers.temporal;
+  const blockerBeforeSlo = selectedBeforeSlo ? buildTemporalProviderLivenessBlocker(selectedBeforeSlo) : null;
+  if (!selectedBeforeSlo?.ready && blockerBeforeSlo && isTemporalWorkerLivenessBlocker(blockerBeforeSlo)) {
+    return {
+      surface_kind: 'opl_family_runtime_scheduler_tick',
+      scheduler_owner: 'opl_provider_runtime_manager',
+      cadence_owner: 'provider_backed_family_runtime',
+      provider_kind: providerKind,
+      tick_source: source,
+      status: 'blocked_provider_not_ready',
+      provider_liveness_blocker: blockerBeforeSlo,
+      provider_runtime: providerBeforeSlo,
+      provider_slo: null,
+      task_scope: input.taskScope ?? null,
+      queue_tick: null,
+      authority_boundary: {
+        opl: 'scheduler_cadence_queue_and_provider_slo_owner',
+        domain: 'truth_quality_artifact_gate_owner',
+        can_install_domain_daemon: false,
+        can_write_domain_truth: false,
+        can_write_domain_memory_body: false,
+        can_authorize_quality_verdict: false,
+        can_authorize_export_verdict: false,
+        provider_completion_is_domain_ready: false,
+      },
+    };
+  }
   const providerSlo = await runTemporalProviderSloTick(db, paths, {
     force: input.force ?? false,
   });
+  const provider = await inspectFamilyRuntimeProvidersWithLifecycle(providerKind, paths, {
+    managedProviderProjection: readMasManagedProviderProjection(),
+    detail: 'fast',
+  });
+  const selected = provider.providers.temporal;
+  const blocker = selected ? buildTemporalProviderLivenessBlocker(selected) : null;
+  if (!selected?.ready && blocker && isTemporalWorkerLivenessBlocker(blocker)) {
+    return {
+      surface_kind: 'opl_family_runtime_scheduler_tick',
+      scheduler_owner: 'opl_provider_runtime_manager',
+      cadence_owner: 'provider_backed_family_runtime',
+      provider_kind: providerKind,
+      tick_source: source,
+      status: 'blocked_provider_not_ready',
+      provider_liveness_blocker: blocker,
+      provider_runtime: provider,
+      provider_slo: providerSlo,
+      task_scope: input.taskScope ?? null,
+      queue_tick: null,
+      authority_boundary: {
+        opl: 'scheduler_cadence_queue_and_provider_slo_owner',
+        domain: 'truth_quality_artifact_gate_owner',
+        can_install_domain_daemon: false,
+        can_write_domain_truth: false,
+        can_write_domain_memory_body: false,
+        can_authorize_quality_verdict: false,
+        can_authorize_export_verdict: false,
+        provider_completion_is_domain_ready: false,
+      },
+    };
+  }
   const queueTick = await runQueueTick(source, input.limit ?? 10, input.hydrate ?? true, input.taskScope);
   insertEvent(db, {
     eventType: 'opl_scheduler_tick_completed',
