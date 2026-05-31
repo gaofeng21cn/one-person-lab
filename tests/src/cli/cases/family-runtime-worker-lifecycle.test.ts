@@ -403,7 +403,8 @@ test('Temporal worker lifecycle rejects stale managed worker source version', as
 
     assert.equal(requery.lifecycle_status, 'worker_source_stale');
     assert.equal(requery.worker_ready, false);
-    assert.equal(requery.managed_worker_pid, null);
+    assert.equal(requery.managed_worker_pid, child.pid);
+    assert.equal(requery.managed_worker_process_alive, true);
     assert.equal(requery.stale_worker_pid, child.pid);
     assert.equal(requery.managed_worker_source_version, 'git:old-worker-source');
     assert.equal(requery.expected_worker_source_version, 'git:new-worker-source');

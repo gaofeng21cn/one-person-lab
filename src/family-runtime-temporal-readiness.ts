@@ -32,6 +32,7 @@ type TemporalWorkerReadinessInput = {
   liveProbeStartedWorker?: boolean | null;
   unreachableReason?: string | null;
   managedWorkerPid?: number | null;
+  managedWorkerProcessAlive?: boolean | null;
   managedWorkerStatePath?: string | null;
   managedWorkerSourceVersion?: string | null;
   expectedWorkerSourceVersion?: string | null;
@@ -334,6 +335,7 @@ export function buildTemporalWorkerReadiness(input: TemporalWorkerReadinessInput
     live_probe_started_worker: input.liveProbeStartedWorker ?? false,
     unreachable_reason: input.unreachableReason ?? null,
     managed_worker_pid: input.managedWorkerPid ?? null,
+    managed_worker_process_alive: input.managedWorkerProcessAlive ?? (input.managedWorkerPid !== null && input.managedWorkerPid !== undefined),
     managed_worker_state_path: input.managedWorkerStatePath ?? null,
     managed_worker_source_version: input.managedWorkerSourceVersion ?? null,
     expected_worker_source_version: input.expectedWorkerSourceVersion ?? null,

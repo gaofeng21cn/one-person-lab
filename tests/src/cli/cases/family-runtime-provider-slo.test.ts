@@ -1,10 +1,13 @@
 import { spawnSync } from 'node:child_process';
 import net from 'node:net';
+import { DatabaseSync } from 'node:sqlite';
 
 import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
 import {
+  createFamilyRuntimeQueueTables,
   familyRuntimePaths,
 } from '../../../../src/family-runtime-store.ts';
+import { runSchedulerTick } from '../../../../src/family-runtime-scheduler.ts';
 import {
   maybeRepairTemporalWorkerForProviderSlo,
 } from '../../../../src/family-runtime-provider-slo-executor.ts';
@@ -644,39 +647,161 @@ test('family-runtime scheduler tick owns provider cadence and queue dispatch wit
   }
 });
 
-test('family-runtime scheduler tick fails closed on worker liveness before queue dispatch', async () => {
+test('family-runtime scheduler tick fails closed when worker liveness remains blocked after SLO repair', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-scheduler-worker-liveness-'));
-  const server = net.createServer((socket) => socket.end());
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const temporalAddress = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  let queueTickCalls = 0;
   try {
-    insertProvenTemporalProofEvent(stateRoot);
-    const tick = runCli([
-      'family-runtime',
-      'scheduler',
-      'tick',
-      '--provider',
-      'temporal',
-      '--limit',
-      '1',
-    ], familyRuntimeEnv(stateRoot, {
-      OPL_TEMPORAL_ADDRESS: temporalAddress,
-      OPL_TEMPORAL_NAMESPACE: 'opl-scheduler-worker-liveness',
-      OPL_TEMPORAL_TASK_QUEUE: 'opl-scheduler-worker-liveness',
-      OPL_TEMPORAL_WORKER_STATUS: '',
-      OPL_TEMPORAL_WORKER_ENABLED: '',
-    })).family_runtime_scheduler_tick;
+    process.env.OPL_STATE_DIR = stateRoot;
+    const paths = familyRuntimePaths();
+    fs.mkdirSync(paths.root, { recursive: true });
+    const db = new DatabaseSync(paths.queue_db);
+    createFamilyRuntimeQueueTables(db);
+    const tick = await runSchedulerTick(
+      db,
+      paths,
+      { providerKind: 'temporal', limit: 1 },
+      () => {
+        queueTickCalls += 1;
+        return {
+          selected_count: 1,
+          dispatches: [],
+        };
+      },
+      {
+        inspectProvidersWithLifecycle: async () => ({
+          selected_provider: 'temporal',
+          allowed_providers: ['temporal'],
+          default_resolution: {},
+          providers: {
+            temporal: {
+              provider_kind: 'temporal',
+              status: 'provider_code_landed_unconfigured',
+              ready: false,
+              degraded_reason: 'temporal_worker_not_ready',
+              capabilities: [],
+              details: {
+                worker_readiness: temporalWorkerStatus('worker_not_ready'),
+              },
+            },
+          },
+          provider_catalog: {},
+        }),
+        runProviderSloTick: async () => ({
+          surface_id: 'opl_family_runtime_provider_slo_tick',
+          provider_kind: 'temporal',
+          execution_status: 'executed',
+          skipped: false,
+          provider_worker_repair_receipt: {
+            repair_status: 'blocked',
+            repair_action_id: 'start_temporal_worker',
+          },
+          provider_slo_execution_receipt: {
+            receipt_status: 'blocked',
+          },
+        }),
+      },
+    );
 
     assert.equal(tick.status, 'blocked_provider_not_ready');
     assert.equal(tick.provider_kind, 'temporal');
+    assert.equal(tick.provider_slo.provider_worker_repair_receipt.repair_status, 'blocked');
+    assert.equal(tick.provider_slo.provider_worker_repair_receipt.repair_action_id, 'start_temporal_worker');
     assert.equal(tick.provider_liveness_blocker.blocker_id, 'temporal_worker_not_ready');
     assert.equal(tick.provider_liveness_blocker.worker_lifecycle_status, 'worker_not_ready');
-    assert.equal(tick.provider_liveness_blocker.temporal_service_status, 'external_running');
+    assert.equal(tick.provider_liveness_blocker.temporal_service_status, 'running');
     assert.equal(tick.provider_liveness_blocker.next_repair_command, 'opl family-runtime worker start --provider temporal');
     assert.equal(tick.provider_liveness_blocker.next_repair_action.action_id, 'start_temporal_worker');
     assert.equal(tick.queue_tick, null);
+    assert.equal(queueTickCalls, 0);
   } finally {
-    await new Promise<void>((resolve) => server.close(() => resolve()));
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime scheduler tick repairs worker liveness before queue admission', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-scheduler-repair-before-queue-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  let queueTickCalls = 0;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    const paths = familyRuntimePaths();
+    fs.mkdirSync(paths.root, { recursive: true });
+    const db = new DatabaseSync(paths.queue_db);
+    createFamilyRuntimeQueueTables(db);
+    let inspectionCount = 0;
+
+    const tick = await runSchedulerTick(
+      db,
+      paths,
+      { providerKind: 'temporal', limit: 1 },
+      (source, limit, hydrate) => {
+        queueTickCalls += 1;
+        return {
+          source,
+          limit,
+          hydrate,
+          selected_count: 1,
+          dispatches: [{ task_id: 'task-1', dispatch_status: 'admitted' }],
+        };
+      },
+      {
+        inspectProvidersWithLifecycle: async () => {
+          inspectionCount += 1;
+          const workerStatus = inspectionCount === 1 ? 'worker_source_stale' : 'ready';
+          return {
+            selected_provider: 'temporal',
+            allowed_providers: ['temporal'],
+            default_resolution: {},
+            providers: {
+              temporal: {
+                provider_kind: 'temporal',
+                status: workerStatus === 'ready' ? 'ready' : 'provider_code_landed_unconfigured',
+                ready: workerStatus === 'ready',
+                degraded_reason: workerStatus === 'ready' ? null : 'temporal_worker_source_stale',
+                capabilities: [],
+                details: {
+                  worker_readiness: temporalWorkerStatus(workerStatus),
+                },
+              },
+            },
+            provider_catalog: {},
+          };
+        },
+        runProviderSloTick: async () => ({
+          surface_id: 'opl_family_runtime_provider_slo_tick',
+          provider_kind: 'temporal',
+          execution_status: 'executed',
+          skipped: false,
+          provider_worker_repair_receipt: {
+            repair_status: 'executed',
+            repair_action_id: 'restart_temporal_worker',
+          },
+          provider_slo_execution_receipt: {
+            receipt_status: 'blocked',
+          },
+        }),
+      },
+    );
+
+    assert.equal(tick.status, undefined);
+    assert.equal(tick.provider_slo.provider_worker_repair_receipt.repair_status, 'executed');
+    assert.equal(tick.provider_slo.provider_worker_repair_receipt.repair_action_id, 'restart_temporal_worker');
+    assert.equal(tick.queue_tick.selected_count, 1);
+    assert.equal(tick.queue_tick.dispatches.length, 1);
+    assert.equal(queueTickCalls, 1);
+    assert.equal(inspectionCount, 2);
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

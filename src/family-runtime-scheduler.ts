@@ -26,6 +26,13 @@ type SchedulerQueueTickResult = {
   [key: string]: unknown;
 };
 
+type ProviderInspection = Awaited<ReturnType<typeof inspectFamilyRuntimeProvidersWithLifecycle>>;
+type ProviderSloTick = Awaited<ReturnType<typeof runTemporalProviderSloTick>>;
+type SchedulerTickDeps = {
+  inspectProvidersWithLifecycle?: typeof inspectFamilyRuntimeProvidersWithLifecycle;
+  runProviderSloTick?: typeof runTemporalProviderSloTick;
+};
+
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
 }
@@ -139,6 +146,7 @@ export async function runSchedulerTick(
     hydrate: boolean,
     taskScope?: FamilyRuntimeTaskScope,
   ) => SchedulerQueueTickResult | Promise<SchedulerQueueTickResult>,
+  deps: SchedulerTickDeps = {},
 ) {
   const providerKind = resolveFamilyRuntimeProviderKind(input.providerKind);
   if (providerKind !== 'temporal') {
@@ -148,45 +156,26 @@ export async function runSchedulerTick(
     });
   }
   const source = 'opl-provider-scheduler';
-  const providerBeforeSlo = await inspectFamilyRuntimeProvidersWithLifecycle(providerKind, paths, {
+  const inspectProvidersWithLifecycle = deps.inspectProvidersWithLifecycle ?? inspectFamilyRuntimeProvidersWithLifecycle;
+  const runProviderSloTick = deps.runProviderSloTick ?? runTemporalProviderSloTick;
+  const providerBeforeSlo = await inspectProvidersWithLifecycle(providerKind, paths, {
     managedProviderProjection: readMasManagedProviderProjection(),
   });
   const selectedBeforeSlo = providerBeforeSlo.providers.temporal;
   const blockerBeforeSlo = selectedBeforeSlo ? buildTemporalProviderLivenessBlocker(selectedBeforeSlo) : null;
-  if (!selectedBeforeSlo?.ready && blockerBeforeSlo && isTemporalWorkerLivenessBlocker(blockerBeforeSlo)) {
-    return {
-      surface_kind: 'opl_family_runtime_scheduler_tick',
-      scheduler_owner: 'opl_provider_runtime_manager',
-      cadence_owner: 'provider_backed_family_runtime',
-      provider_kind: providerKind,
-      tick_source: source,
-      status: 'blocked_provider_not_ready',
-      provider_liveness_blocker: blockerBeforeSlo,
-      provider_runtime: providerBeforeSlo,
-      provider_slo: null,
-      task_scope: input.taskScope ?? null,
-      queue_tick: null,
-      authority_boundary: {
-        opl: 'scheduler_cadence_queue_and_provider_slo_owner',
-        domain: 'truth_quality_artifact_gate_owner',
-        can_install_domain_daemon: false,
-        can_write_domain_truth: false,
-        can_write_domain_memory_body: false,
-        can_authorize_quality_verdict: false,
-        can_authorize_export_verdict: false,
-        provider_completion_is_domain_ready: false,
-      },
-    };
-  }
-  const providerSlo = await runTemporalProviderSloTick(db, paths, {
+  let providerSlo: ProviderSloTick | null = null;
+  let provider: ProviderInspection = providerBeforeSlo;
+  let selected = selectedBeforeSlo;
+  let blocker = blockerBeforeSlo;
+  providerSlo = await runProviderSloTick(db, paths, {
     force: input.force ?? false,
   });
-  const provider = await inspectFamilyRuntimeProvidersWithLifecycle(providerKind, paths, {
+  provider = await inspectProvidersWithLifecycle(providerKind, paths, {
     managedProviderProjection: readMasManagedProviderProjection(),
     detail: 'fast',
   });
-  const selected = provider.providers.temporal;
-  const blocker = selected ? buildTemporalProviderLivenessBlocker(selected) : null;
+  selected = provider.providers.temporal;
+  blocker = selected ? buildTemporalProviderLivenessBlocker(selected) : null;
   if (!selected?.ready && blocker && isTemporalWorkerLivenessBlocker(blocker)) {
     return {
       surface_kind: 'opl_family_runtime_scheduler_tick',
