@@ -60,6 +60,31 @@ test('family-runtime tick selects the current MAS default executor source and sk
       assert.equal(tick.dispatches[0].task_id, 'task-mas-default-source-current');
       assert.equal(tick.dispatches[0].source_fingerprint, 'source-after');
       assert.equal(tick.mas_default_executor_superseded_count, 1);
+      const staleTask = db.prepare(`
+        SELECT status, last_error, dead_letter_reason
+        FROM tasks
+        WHERE task_id = ?
+      `).get('task-mas-default-source-old') as {
+        status: string;
+        last_error: string | null;
+        dead_letter_reason: string | null;
+      };
+      const staleEvent = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_default_executor_superseded_by_current_source'
+        LIMIT 1
+      `).get('task-mas-default-source-old') as { payload_json: string } | undefined;
+
+      assert.equal(staleTask.status, 'blocked');
+      assert.equal(staleTask.last_error, 'mas_default_executor_superseded_by_current_source');
+      assert.equal(staleTask.dead_letter_reason, 'mas_default_executor_superseded_by_current_source');
+      assert.ok(staleEvent);
+      const stalePayload = JSON.parse(staleEvent.payload_json);
+      assert.equal(stalePayload.reason, 'same_dispatch_newer_source_exists');
+      assert.equal(stalePayload.current_task_id, 'task-mas-default-source-current');
+      assert.equal(stalePayload.current_source_fingerprint, 'source-after');
+      assert.equal(stalePayload.stale_source_fingerprint, 'source-before');
     });
   } finally {
     db.close();

@@ -56,6 +56,7 @@ type MasDefaultExecutorCurrentTask = {
 };
 
 const MISSING_STAGE_ATTEMPT_IDENTITY_REPAIR_REASON = 'missing_stage_attempt_identity';
+const MAS_DEFAULT_EXECUTOR_SUPERSEDED_REASON = 'mas_default_executor_superseded_by_current_source';
 
 function payloadFromTask(row: FamilyRuntimeTaskRow) {
   return JSON.parse(row.payload_json) as Record<string, unknown>;
@@ -108,9 +109,58 @@ function currentMasDefaultExecutorTasksByStudyAction(rows: FamilyRuntimeTaskRow[
   return currentByIdentity;
 }
 
+function markSupersededMasDefaultExecutorRow(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+  current: MasDefaultExecutorCurrentTask,
+  reason: string,
+  source: string,
+) {
+  const sourceFingerprint = masDefaultExecutorDomainSourceFingerprint(payload);
+  const supersededAt = new Date().toISOString();
+  db.prepare(`
+    UPDATE tasks
+    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
+      last_error = ?, dead_letter_reason = ?, updated_at = ?
+    WHERE task_id = ? AND status IN ('queued', 'retry_waiting')
+  `).run(
+    MAS_DEFAULT_EXECUTOR_SUPERSEDED_REASON,
+    MAS_DEFAULT_EXECUTOR_SUPERSEDED_REASON,
+    supersededAt,
+    row.task_id,
+  );
+  insertEvent(db, {
+    taskId: row.task_id,
+    domainId: row.domain_id,
+    eventType: 'task_default_executor_superseded_by_current_source',
+    source,
+    payload: {
+      reason,
+      current_task_id: current.task_id,
+      current_source_fingerprint: current.source_fingerprint,
+      stale_source_fingerprint: sourceFingerprint,
+      dispatch_ref: payload.dispatch_ref ?? null,
+      action_type: payload.action_type ?? null,
+      study_id: payload.study_id ?? null,
+      authority_boundary: {
+        opl: 'queue_currentness_supersession_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        domain_truth_mutation: false,
+        publication_quality_mutation: false,
+        artifact_gate_mutation: false,
+        current_package_mutation: false,
+        provider_stage_attempt_started: false,
+      },
+    },
+  });
+}
+
 function dropSupersededMasDefaultExecutorRows(
+  db: DatabaseSync,
   candidateRows: FamilyRuntimeTaskRow[],
   allRows: FamilyRuntimeTaskRow[],
+  source: string,
 ) {
   const currentByIdentity = currentMasDefaultExecutorTasksByDispatch(allRows);
   const currentByStudyAction = currentMasDefaultExecutorTasksByStudyAction(allRows);
@@ -127,20 +177,38 @@ function dropSupersededMasDefaultExecutorRows(
     const sourceFingerprint = masDefaultExecutorDomainSourceFingerprint(payload);
     if (
       current
+      && current.task_id !== row.task_id
       && current.source_fingerprint
       && sourceFingerprint
       && current.source_fingerprint !== sourceFingerprint
     ) {
       supersededCount += 1;
+      markSupersededMasDefaultExecutorRow(
+        db,
+        row,
+        payload,
+        current,
+        'same_dispatch_newer_source_exists',
+        source,
+      );
       return false;
     }
     if (
       currentAction
+      && currentAction.task_id !== row.task_id
       && currentAction.source_fingerprint
       && sourceFingerprint
       && currentAction.source_fingerprint !== sourceFingerprint
     ) {
       supersededCount += 1;
+      markSupersededMasDefaultExecutorRow(
+        db,
+        row,
+        payload,
+        currentAction,
+        'same_study_action_newer_source_exists',
+        source,
+      );
       return false;
     }
     return true;
@@ -764,7 +832,12 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
   const {
     rows: scopedRowsAfterSuperseded,
     supersededCount: masDefaultExecutorSupersededCount,
-  } = dropSupersededMasDefaultExecutorRows(scopedRowsBeforeSupersededFilter, allRows);
+  } = dropSupersededMasDefaultExecutorRows(
+    db,
+    scopedRowsBeforeSupersededFilter,
+    allRows,
+    'opl-family-runtime-tick',
+  );
   const {
     rows: scopedRowsAfterStudySingleFlight,
     studySingleFlightSkippedCount: masDefaultExecutorStudySingleFlightSkippedCount,
