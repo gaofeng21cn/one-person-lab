@@ -191,6 +191,14 @@ test('family-runtime attempt query exposes stable top-level attempt alias', () =
     assert.equal(result.attempt.stage_attempt_id, result.stage_attempt_query.attempt.stage_attempt_id);
     assert.equal(result.attempt_status, result.stage_attempt_query.attempt.status);
     assert.equal(result.attempt_ref, `opl://stage_attempts/${attemptId}`);
+    assert.equal(
+      result.current_provider_readiness?.surface_kind,
+      'stage_attempt_current_provider_readiness',
+    );
+    assert.deepEqual(
+      result.current_provider_readiness,
+      result.stage_attempt_query.current_provider_readiness,
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

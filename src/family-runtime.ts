@@ -732,6 +732,7 @@ export async function runFamilyRuntime(args: string[]) {
           attempt: projectedQuery.stage_attempt_query.attempt,
           attempt_ref: `opl://stage_attempts/${projectedQuery.stage_attempt_query.attempt.stage_attempt_id}`,
           attempt_status: projectedQuery.stage_attempt_query.attempt.status,
+          current_provider_readiness: projectedQuery.stage_attempt_query.current_provider_readiness,
           ...projectedQuery,
           temporal_query,
         },

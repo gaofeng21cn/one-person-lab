@@ -74,6 +74,7 @@ export function buildAttemptGenericProjections(input: StageAttemptGenericProject
     workspace_locator: input.workspace_locator,
   });
   return {
+    current_provider_readiness: input.current_provider_readiness,
     artifact_gallery: buildAttemptArtifactGallery({
       stage_attempt_id: input.stage_attempt_id,
       domain_id: input.domain_id,
