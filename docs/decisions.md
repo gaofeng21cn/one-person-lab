@@ -14,6 +14,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - `family-runtime tick` 在把 MAS default-executor queued / retry_waiting task 标记为 superseded 时，同步把该 task 关联的 stage attempts 标记为 `blocked`，`blocked_reason=mas_default_executor_superseded_by_current_source`。
+- 对已经存在的 historical superseded task，后续 tick 也会把仍停在 `queued` / `registered` 的 stage attempt 收敛为 `blocked`，避免旧 bug 残留继续污染 Progress-First 队列读数。
 - supersession event 记录 `blocked_stage_attempt_ids`，便于 operator 区分真实 queued work 与已收敛的 historical residue。
 - 该行为只治理 OPL queue / attempt ledger currentness，不写 MAS truth，不修改 `publication_eval/latest.json`、controller decisions、artifact gate、paper package 或 `current_package`，也不替 MAS 作质量或投稿判断。
 

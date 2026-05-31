@@ -235,6 +235,71 @@ function dropSupersededMasDefaultExecutorRows(
   return { rows, supersededCount };
 }
 
+function reconcileHistoricalSupersededMasDefaultExecutorAttempts(
+  db: DatabaseSync,
+  rows: FamilyRuntimeTaskRow[],
+  source: string,
+) {
+  let reconciledAttemptCount = 0;
+  for (const row of rows) {
+    if (row.status !== 'blocked' || row.dead_letter_reason !== MAS_DEFAULT_EXECUTOR_SUPERSEDED_REASON) {
+      continue;
+    }
+    const payload = payloadFromTask(row);
+    if (!isMasDefaultExecutorDispatchTask(row, payload)) {
+      continue;
+    }
+    const attempts = listStageAttemptsForTask(db, row.task_id).filter((attempt) => (
+      attempt.status === 'queued'
+      && attempt.provider_run.provider_status === 'registered'
+    ));
+    if (attempts.length === 0) {
+      continue;
+    }
+    const reconciledAttempts = updateStageAttemptsForTask(db, {
+      taskId: row.task_id,
+      stageAttemptIds: attempts.map((attempt) => attempt.stage_attempt_id),
+      status: 'blocked',
+      blockedReason: MAS_DEFAULT_EXECUTOR_SUPERSEDED_REASON,
+      activityEvent: {
+        activity_kind: 'mas_default_executor_currentness',
+        activity_status: 'blocked',
+        blocked_reason: MAS_DEFAULT_EXECUTOR_SUPERSEDED_REASON,
+        reason: 'historical_superseded_task_attempt_reconciliation',
+        authority_boundary: {
+          opl: 'queue_attempt_ledger_currentness_reconciliation_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          provider_completion_is_domain_ready: false,
+        },
+      },
+    });
+    insertEvent(db, {
+      taskId: row.task_id,
+      domainId: row.domain_id,
+      eventType: 'task_default_executor_superseded_attempts_reconciled',
+      source,
+      payload: {
+        reason: 'historical_superseded_task_attempt_reconciliation',
+        dispatch_ref: payload.dispatch_ref ?? null,
+        action_type: payload.action_type ?? null,
+        study_id: payload.study_id ?? null,
+        reconciled_stage_attempt_ids: reconciledAttempts.map((attempt) => attempt.stage_attempt_id),
+        authority_boundary: {
+          opl: 'queue_attempt_ledger_currentness_reconciliation_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          domain_truth_mutation: false,
+          publication_quality_mutation: false,
+          artifact_gate_mutation: false,
+          current_package_mutation: false,
+          provider_stage_attempt_started: false,
+        },
+      },
+    });
+    reconciledAttemptCount += reconciledAttempts.length;
+  }
+  return reconciledAttemptCount;
+}
+
 function attemptCountForTask(db: DatabaseSync, taskId: string) {
   const row = db.prepare(`
     SELECT COUNT(*) AS count
@@ -828,13 +893,22 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
   const scopedRowsAfterPaperAutonomyRepair = allRowsAfterPaperAutonomyRepair.filter((row) =>
     taskRowMatchesScope(row, input.taskScope)
   );
+  const masDefaultExecutorSupersededAttemptReconciledCount = reconcileHistoricalSupersededMasDefaultExecutorAttempts(
+    db,
+    scopedRowsAfterPaperAutonomyRepair,
+    `${input.source}:superseded-attempt-reconcile`,
+  );
+  const allRowsAfterSupersededAttemptReconcile = db.prepare('SELECT * FROM tasks').all() as FamilyRuntimeTaskRow[];
+  const scopedRowsAfterSupersededAttemptReconcile = allRowsAfterSupersededAttemptReconcile.filter((row) =>
+    taskRowMatchesScope(row, input.taskScope)
+  );
   const {
     autoRedrivenCount: masDefaultExecutorAutoRedrivenCount,
     autoDeadLetteredCount: masDefaultExecutorAutoDeadLetteredCount,
     staleSkippedCount: masDefaultExecutorAutoRedriveStaleSkippedCount,
   } = autoRedriveBlockedMasDefaultExecutorProviderTasks(
     db,
-    scopedRowsAfterPaperAutonomyRepair,
+    scopedRowsAfterSupersededAttemptReconcile,
     `${input.source}:auto-redrive`,
   );
   const candidateRows = db.prepare(`
@@ -880,6 +954,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       mas_default_executor_study_single_flight_skipped_count: masDefaultExecutorStudySingleFlightSkippedCount,
       mas_default_executor_live_skipped_count: masDefaultExecutorLiveSkippedCount,
       mas_default_executor_terminal_synced_count: masDefaultExecutorTerminalSyncedCount,
+      mas_default_executor_superseded_attempt_reconciled_count: masDefaultExecutorSupersededAttemptReconciledCount,
       repaired_missing_identity_running_count: repairedMissingIdentityRunningCount,
       repaired_missing_identity_dead_lettered_count: repairedMissingIdentityDeadLetteredCount,
       repaired_paper_autonomy_missing_closeout_count: repairedPaperAutonomyMissingCloseoutCount,
@@ -905,6 +980,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     mas_default_executor_study_single_flight_skipped_count: masDefaultExecutorStudySingleFlightSkippedCount,
     mas_default_executor_live_skipped_count: masDefaultExecutorLiveSkippedCount,
     mas_default_executor_terminal_synced_count: masDefaultExecutorTerminalSyncedCount,
+    mas_default_executor_superseded_attempt_reconciled_count: masDefaultExecutorSupersededAttemptReconciledCount,
     repaired_missing_identity_running_count: repairedMissingIdentityRunningCount,
     repaired_missing_identity_dead_lettered_count: repairedMissingIdentityDeadLetteredCount,
     repaired_paper_autonomy_missing_closeout_count: repairedPaperAutonomyMissingCloseoutCount,
