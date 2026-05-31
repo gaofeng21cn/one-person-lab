@@ -108,7 +108,40 @@ function latestCloseoutPacket(db: DatabaseSync, stageAttemptId: string) {
   return row ? parseStageAttemptJsonObject(row.packet_json) : null;
 }
 
+function compactTimelineOperatorSummary(
+  attempt: StageAttemptPayload,
+  studyId: string | null,
+  stageProgressLog: ReturnType<typeof buildStageProgressLog>,
+) {
+  const userStageLog = stageProgressLog.user_stage_log;
+  return {
+    attempt: attempt.stage_attempt_id,
+    status: attempt.status,
+    stage: attempt.stage_id,
+    study: studyId,
+    domain: attempt.domain_id,
+    action: 'opl_family_runtime_attempt_query',
+    owner: stageProgressLog.actual_work.next_owner,
+    started_at: stageProgressLog.timeline.provider_started_at,
+    completed_at: stageProgressLog.timeline.provider_completed_at,
+    last_heartbeat_at: stageProgressLog.timeline.last_heartbeat_at,
+    progress_delta_classification: userStageLog.progress_delta_classification,
+    evidence_refs: stageProgressLog.evidence_refs,
+    closeout_refs: stageProgressLog.evidence_refs.closeout_refs,
+    semantic_gap: userStageLog.semantic_gap,
+    next_inspection_hint: {
+      command: `opl family-runtime attempt query ${attempt.stage_attempt_id}`,
+      reason: userStageLog.semantic_gap
+        ? 'domain_semantic_summary_missing_or_invalid_inspect_attempt_query_and_domain_closeout_refs'
+        : 'inspect_attempt_query_for_full_stage_progress_log',
+      expected_next_delta: userStageLog.next_forced_delta,
+      authority_boundary: userStageLog.authority_boundary,
+    },
+  };
+}
+
 function compactTimelineForAttempt(db: DatabaseSync, attempt: StageAttemptPayload) {
+  const studyId = attemptStudyId(db, attempt);
   const stageProgressLog = buildStageProgressLog({
     stageAttemptId: attempt.stage_attempt_id,
     projectionScope: 'attempt_list_compact_timeline',
@@ -146,11 +179,12 @@ function compactTimelineForAttempt(db: DatabaseSync, attempt: StageAttemptPayloa
     createdAt: attempt.created_at,
     updatedAt: attempt.updated_at,
   });
+  const operatorSummary = compactTimelineOperatorSummary(attempt, studyId, stageProgressLog);
   return {
     stage_attempt_id: attempt.stage_attempt_id,
     task_id: attempt.task_id,
     domain_id: attempt.domain_id,
-    study_id: attemptStudyId(db, attempt),
+    study_id: studyId,
     stage_id: attempt.stage_id,
     status: attempt.status,
     blocked_reason: attempt.blocked_reason,
@@ -168,9 +202,13 @@ function compactTimelineForAttempt(db: DatabaseSync, attempt: StageAttemptPayloa
       updated_at: stageProgressLog.timeline.updated_at,
       provider_started_at: stageProgressLog.timeline.provider_started_at,
       provider_completed_at: stageProgressLog.timeline.provider_completed_at,
+      last_heartbeat_at: stageProgressLog.timeline.last_heartbeat_at,
       latest_activity_event_at: stageProgressLog.timeline.latest_activity_event_at,
       activity_event_count: stageProgressLog.timeline.activity_event_count,
     },
+    semantic_gap: stageProgressLog.user_stage_log.semantic_gap,
+    next_inspection_hint: operatorSummary.next_inspection_hint,
+    operator_summary: operatorSummary,
     authority_boundary: stageProgressLog.authority_boundary,
   };
 }

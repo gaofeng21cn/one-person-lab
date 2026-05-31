@@ -13,7 +13,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 影响：
 
-- `family-runtime attempt list` 支持 `--domain`、`--study`、`--status`、`--since-hours` 过滤；`--compact-timeline` 返回从 OPL attempt metadata、queue task payload study id、`stage_progress_log` / `user_stage_log` 和 latest closeout refs 派生的 compact timeline。
+- `family-runtime attempt list` 支持 `--domain`、`--study`、`--status`、`--since-hours` 过滤；`--compact-timeline` 返回从 OPL attempt metadata、queue task payload study id、`stage_progress_log` / `user_stage_log` 和 latest closeout refs 派生的 compact timeline，并携带 machine-readable `operator_summary`、`semantic_gap` 与 `next_inspection_hint`。
 - 默认 `attempt list` 仍返回 attempts 结构，降低对既有 consumer 的破坏面；compact timeline 必须显式请求。
 - 该 lens 只读 OPL queue / attempt ledger 和 domain closeout refs，不写 MAS/MAG/RCA/OMA truth，不读取 artifact body，不生成 owner receipt、typed blocker、quality verdict、domain ready 或 production ready。
 

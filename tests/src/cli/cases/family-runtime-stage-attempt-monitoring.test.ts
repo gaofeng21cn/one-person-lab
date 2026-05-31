@@ -95,6 +95,36 @@ test('family-runtime attempt list filters attempts and emits compact Progress-Fi
     assert.equal(output.compact_timeline[0].study_id, 'DM002');
     assert.equal(output.compact_timeline[0].semantic_status, 'missing_domain_semantic_summary');
     assert.equal(output.compact_timeline[0].progress_delta_classification, 'typed_blocker');
+    assert.equal(output.compact_timeline[0].timeline.last_heartbeat_at, null);
+    assert.equal(output.compact_timeline[0].semantic_gap.reason, 'domain_closeout_did_not_provide_user_stage_log');
+    assert.equal(
+      output.compact_timeline[0].next_inspection_hint.command,
+      `opl family-runtime attempt query ${medAttempt.stage_attempt_id}`,
+    );
+    assert.equal(output.compact_timeline[0].operator_summary.attempt, medAttempt.stage_attempt_id);
+    assert.equal(output.compact_timeline[0].operator_summary.status, 'blocked');
+    assert.equal(output.compact_timeline[0].operator_summary.stage, 'scout');
+    assert.equal(output.compact_timeline[0].operator_summary.study, 'DM002');
+    assert.equal(output.compact_timeline[0].operator_summary.domain, 'medautoscience');
+    assert.equal(output.compact_timeline[0].operator_summary.action, 'opl_family_runtime_attempt_query');
+    assert.equal(output.compact_timeline[0].operator_summary.owner, 'domain_owner');
+    assert.equal(output.compact_timeline[0].operator_summary.started_at, null);
+    assert.equal(output.compact_timeline[0].operator_summary.completed_at, null);
+    assert.equal(output.compact_timeline[0].operator_summary.last_heartbeat_at, null);
+    assert.equal(output.compact_timeline[0].operator_summary.progress_delta_classification, 'typed_blocker');
+    assert.deepEqual(output.compact_timeline[0].operator_summary.closeout_refs, []);
+    assert.equal(
+      output.compact_timeline[0].operator_summary.semantic_gap.reason,
+      'domain_closeout_did_not_provide_user_stage_log',
+    );
+    assert.equal(
+      output.compact_timeline[0].operator_summary.next_inspection_hint.expected_next_delta,
+      'domain_user_stage_log_or_typed_blocker_with_lineage_required',
+    );
+    assert.equal(
+      output.compact_timeline[0].operator_summary.next_inspection_hint.authority_boundary.can_infer_domain_semantics,
+      false,
+    );
     assert.equal(typeof output.compact_timeline[0].timeline.activity_event_count, 'number');
     assert.equal(output.compact_timeline[0].authority_boundary.domain, 'truth_quality_artifact_gate_owner');
   } finally {
