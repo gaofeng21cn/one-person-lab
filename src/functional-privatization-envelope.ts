@@ -11,6 +11,24 @@ export type FunctionalPrivatizationAuditEnvelopeSummaryInput = {
   blocker_count: number;
 };
 
+export type FunctionalSourcePurityTailReadModel = {
+  default_action_required_count: number;
+  action_required_blocker_count: number;
+  hidden_cleared_audit_ledger_count: number;
+  hidden_cleared_entries_remain_traceable: true;
+  private_platform_residue_inventory_audit_only_count: number;
+  private_platform_residue_inventory_counts_as_action_required: false;
+  private_platform_residue_inventory_counts_as_blocker: false;
+  physical_delete_authorized: false;
+  physical_delete_authority: 'not_authorized_by_descriptor_or_app_read_model';
+  source_purity_tail_status:
+    | 'no_source_purity_tail'
+    | 'audit_only_tail_traceable_no_action_required_blocker'
+    | 'action_required_tail_open';
+  source_purity_tail_policy:
+    'physical_delete_requires_separate_domain_owner_receipt_or_typed_blocker_no_active_caller_no_forbidden_write_and_replacement_parity';
+};
+
 export type FunctionalPrivatizationAuditEnvelopeEvidenceInput = {
   status: 'empty' | 'evidence_gates_open';
 };
@@ -83,6 +101,7 @@ export type FunctionalPrivatizationAuditEnvelope = {
     evidence_gate_status: string;
     blockers: string[];
   };
+  source_purity_tail_read_model: FunctionalSourcePurityTailReadModel;
   semantic_equivalence_evidence_gate: {
     status: 'not_required' | 'evidence_required';
     review_required_count: number;
@@ -119,6 +138,42 @@ function compactSummary(summary: FunctionalPrivatizationAuditEnvelopeSummaryInpu
     semantic_equivalence_review_count: summary.semantic_equivalence_review_count,
     active_private_generic_residue_count: summary.active_private_generic_residue_count,
     blocker_count: summary.blocker_count,
+  };
+}
+
+export function buildFunctionalSourcePurityTailReadModel(
+  summary: FunctionalPrivatizationAuditEnvelopeSummaryInput & {
+    default_hidden_cleared_count?: number;
+  },
+): FunctionalSourcePurityTailReadModel {
+  const defaultActionRequiredCount = Math.max(
+    summary.default_watchlist_count,
+    summary.semantic_equivalence_review_count,
+    summary.active_private_generic_residue_count,
+    summary.blocker_count,
+  );
+  const hasAuditOnlyTail =
+    (summary.default_hidden_cleared_count ?? 0) > 0
+    || summary.private_platform_residue_inventory_count > 0;
+  return {
+    default_action_required_count: defaultActionRequiredCount,
+    action_required_blocker_count: summary.blocker_count,
+    hidden_cleared_audit_ledger_count: summary.default_hidden_cleared_count ?? 0,
+    hidden_cleared_entries_remain_traceable: true,
+    private_platform_residue_inventory_audit_only_count:
+      summary.private_platform_residue_inventory_count,
+    private_platform_residue_inventory_counts_as_action_required: false,
+    private_platform_residue_inventory_counts_as_blocker: false,
+    physical_delete_authorized: false,
+    physical_delete_authority: 'not_authorized_by_descriptor_or_app_read_model',
+    source_purity_tail_status:
+      defaultActionRequiredCount > 0
+        ? 'action_required_tail_open'
+        : hasAuditOnlyTail
+          ? 'audit_only_tail_traceable_no_action_required_blocker'
+          : 'no_source_purity_tail',
+    source_purity_tail_policy:
+      'physical_delete_requires_separate_domain_owner_receipt_or_typed_blocker_no_active_caller_no_forbidden_write_and_replacement_parity',
   };
 }
 
@@ -203,6 +258,28 @@ export const FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT = {
     can_close_without_evidence: false,
     mechanical_completion_can_close: false,
   },
+  source_purity_tail_read_model: {
+    status_values: [
+      'no_source_purity_tail',
+      'audit_only_tail_traceable_no_action_required_blocker',
+      'action_required_tail_open',
+    ],
+    action_required_fields: [
+      'default_watchlist_count',
+      'semantic_equivalence_review_count',
+      'active_private_generic_residue_count',
+      'blocker_count',
+    ],
+    audit_only_inventory_fields: [
+      'default_hidden_cleared_count',
+      'private_platform_residue_inventory_count',
+    ],
+    private_platform_residue_inventory_counts_as_action_required: false,
+    private_platform_residue_inventory_counts_as_blocker: false,
+    physical_delete_authorized: false,
+    physical_delete_policy:
+      'physical delete requires separate domain owner receipt or typed blocker, no-active-caller proof, no-forbidden-write evidence, and replacement parity',
+  },
   authority_boundary: {
     opl_can_write_domain_truth: false,
     opl_can_write_memory_body: false,
@@ -245,6 +322,7 @@ export function buildFunctionalPrivatizationAuditEnvelope(
       evidence_gate_status: input.evidenceGateProjection.status,
       blockers: [...input.blockers],
     },
+    source_purity_tail_read_model: buildFunctionalSourcePurityTailReadModel(input.summary),
     semantic_equivalence_evidence_gate: semanticEquivalenceEvidenceGate(input),
     authority_boundary: {
       ...FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT.authority_boundary,

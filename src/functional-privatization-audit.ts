@@ -1,6 +1,7 @@
 import {
   buildEmptyFunctionalEvidenceGateProjection,
   buildFunctionalPrivatizationAuditEnvelopeFromAudit,
+  buildFunctionalSourcePurityTailReadModel,
   FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT,
 } from './functional-privatization-envelope.ts';
 import type {
@@ -774,6 +775,7 @@ export function buildFunctionalPrivatizationAudit(
       source_field: null,
       target_domain_id: null,
       summary: EMPTY_SUMMARY,
+      source_purity_tail_read_model: buildFunctionalSourcePurityTailReadModel(EMPTY_SUMMARY),
       modules: [],
       standard_domain_pack_inventory: [],
       authority_function_inventory: [],
@@ -813,6 +815,7 @@ export function buildFunctionalPrivatizationAudit(
       source_field: null,
       target_domain_id: targetDomainId,
       summary: EMPTY_SUMMARY,
+      source_purity_tail_read_model: buildFunctionalSourcePurityTailReadModel(EMPTY_SUMMARY),
       modules: [],
       standard_domain_pack_inventory: [],
       authority_function_inventory: [],
@@ -867,6 +870,7 @@ export function buildFunctionalPrivatizationAudit(
     source_field: sourceField,
     target_domain_id: targetDomainId,
     summary,
+    source_purity_tail_read_model: buildFunctionalSourcePurityTailReadModel(summary),
     modules,
     standard_domain_pack_inventory: standardDomainPackItems,
     authority_function_inventory: authorityFunctionItems,

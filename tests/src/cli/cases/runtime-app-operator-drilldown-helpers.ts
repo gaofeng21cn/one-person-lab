@@ -11,6 +11,7 @@ import {
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
 } from '../../../../src/standard-domain-agent-scaffold-constants.ts';
+import { writeFakeOmaGeneratedSurfacePack } from '../../cli-codex-default-shell-helpers.ts';
 
 export function insertProviderProof(stateRoot: string) {
   const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
@@ -56,9 +57,20 @@ export function createOmaContractFixture(fixtureRoot: string) {
   const repoDir = path.join(fixtureRoot, 'opl-meta-agent');
   const contractsDir = path.join(repoDir, 'contracts');
   fs.mkdirSync(contractsDir, { recursive: true });
+  writeFakeOmaGeneratedSurfacePack(repoDir);
   writeJson(path.join(contractsDir, 'opl_domain_manifest_registration.json'), {
     surface_kind: 'opl_domain_manifest_registration',
+    owner: 'opl-meta-agent',
+    registry_owner: 'one-person-lab',
     domain_id: 'opl-meta-agent',
+    domain_manifest: {
+      domain_label: 'OPL Meta Agent',
+      domain_descriptor_ref: 'contracts/domain_descriptor.json',
+      stage_control_plane_ref: 'contracts/stage_control_plane.json',
+      action_catalog_ref: 'contracts/action_catalog.json',
+      pack_compiler_input_ref: 'contracts/pack_compiler_input.json',
+      generated_surface_handoff_ref: 'contracts/generated_surface_handoff.json',
+    },
     discovery_receipt: {
       status: 'ready_for_opl_registry_consumption',
       receipt_ref: 'discovery-receipt:opl-meta-agent/test-fixture',
@@ -67,7 +79,13 @@ export function createOmaContractFixture(fixtureRoot: string) {
   writeJson(path.join(contractsDir, 'app_workbench_projection.json'), {
     surface_kind: 'opl_app_workbench_projection_contract',
     domain_id: 'opl-meta-agent',
-    workbench_sections: [],
+    workbench_sections: [
+      {
+        section_id: 'candidate_package',
+        projection_fields: ['candidate_agent_package_ref'],
+        write_boundary: 'display_refs_only',
+      },
+    ],
     drilldown_readiness_receipt: {
       status: 'ready_for_app_consumption_refs_only',
       live_rendering_status: 'not_claimed_by_contract',

@@ -52,6 +52,27 @@
     "can_close_without_evidence": false,
     "mechanical_completion_can_close": false
   },
+  "source_purity_tail_read_model": {
+    "status_values": [
+      "no_source_purity_tail",
+      "audit_only_tail_traceable_no_action_required_blocker",
+      "action_required_tail_open"
+    ],
+    "action_required_fields": [
+      "default_watchlist_count",
+      "semantic_equivalence_review_count",
+      "active_private_generic_residue_count",
+      "blocker_count"
+    ],
+    "audit_only_inventory_fields": [
+      "default_hidden_cleared_count",
+      "private_platform_residue_inventory_count"
+    ],
+    "private_platform_residue_inventory_counts_as_action_required": false,
+    "private_platform_residue_inventory_counts_as_blocker": false,
+    "physical_delete_authorized": false,
+    "physical_delete_policy": "physical delete requires separate domain owner receipt or typed blocker, no-active-caller proof, no-forbidden-write evidence, and replacement parity"
+  },
   "authority_boundary": {
     "opl_can_write_domain_truth": false,
     "opl_can_write_memory_body": false,

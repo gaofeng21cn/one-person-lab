@@ -2,7 +2,7 @@
 
 Owner: `One Person Lab`
 Purpose: `foundry_agent_design_consistency_audit`
-State: `active_audit`
+State: `active_closeout`
 Machine boundary: 本文是人读审计记录。机器真相继续归 `contracts/`、domain-owned contracts、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 Date: `2026-06-01`
 
@@ -21,9 +21,9 @@ Date: `2026-06-01`
 
 四个 agent 都已对齐同一个 OPL Foundry Agent series 设计签名：canonical `opl_foundry_agent_series_design_profile.v1`、同一 lifecycle pipeline、同一 stage pack sections、同一 success / typed-blocker / route-back closeout shape、同一 authority invariants 和同一 Progress-First policy release fingerprint。领域差异现在落在 `domain_specific_profile`、stage/action contracts、authority refs 和各自 agent pack 中。
 
-历史残留结论：默认 active blocker 为 `0`，但 full-detail deletion / purity tail 仍存在。
+历史残留结论：默认 active blocker 为 `0`，full-detail deletion / purity tail 已收成 audit-only read model。
 
-`opl agents conformance --family-defaults --json` 显示 4/4 passed、0 blocked，并且 MAS/MAG/RCA/OMA 的 physical morphology、workspace lifecycle 和 active forbidden name residue 都通过。这个结论说明默认入口不再把旧平台面当作当前设计，但不能声明“物理删除全部完成”。Full-detail `opl agents descriptors --json` 仍只覆盖 MAS/MAG/RCA 三个 descriptor；OMA 单仓 conformance 通过，但未进入当前 unified descriptor index，属于统一外观风险。MAS/MAG/RCA/OMA 的 active docs/contracts 也仍明确保留 refs-only adapter、domain handler target、materializer/helper 或 bridge-exit tail；这些尾项应继续按 no-resurrection / physical-delete / evidence tail 管理，不能包装成长期合理组成。
+`opl agents conformance --family-defaults --json` 显示 4/4 passed、0 blocked，并且 MAS/MAG/RCA/OMA 的 physical morphology、workspace lifecycle 和 active forbidden name residue 都通过。`opl agents descriptors --json` 现在也覆盖 MAS/MAG/RCA/OMA 四个 descriptor；OMA 由 OPL-hosted refs-only standard contract descriptor adapter 从 OMA 标准 contracts 生成 descriptor entry，不要求 OMA 新增 repo-local manifest、wrapper、workbench、status shell 或 generic CLI。这个结论说明默认入口不再把旧平台面当作当前设计，但不能声明“物理删除全部完成”。MAS/MAG/RCA/OMA 的 active docs/contracts 仍保留 refs-only adapter、domain handler target、materializer/helper 或 bridge-exit tail；这些尾项继续按 no-resurrection / physical-delete / evidence tail 管理，不能包装成长期合理组成。
 
 ## 设计同源证据
 
@@ -71,22 +71,29 @@ Full-detail descriptor snapshot：
 
 ```text
 cmd: ./bin/opl agents descriptors --json
-summary: total_projects_count=3, descriptor_surfaces_resolved_count=3, blocked_count=0
-descriptors: med-autogrant/mag, med-autoscience/mas, redcube_ai/rca
+summary: total_projects_count=4, descriptor_surfaces_resolved_count=4, blocked_count=0
+descriptors: medautogrant/mag, medautoscience/mas, redcube/rca, opl-meta-agent/opl-meta-agent
 functional_privatization_active_private_generic_residue_count=0
 functional_privatization_blocker_count=0
 functional_privatization_default_watchlist_count=0
-functional_privatization_default_hidden_cleared_count=47
-functional_privatization_private_platform_residue_inventory_count=25
+functional_privatization_default_hidden_cleared_count=64
+functional_privatization_private_platform_residue_inventory_count=38
+functional_privatization_source_purity_tail_read_model.default_action_required_count=0
+functional_privatization_source_purity_tail_read_model.action_required_blocker_count=0
+functional_privatization_source_purity_tail_read_model.private_platform_residue_inventory_audit_only_count=38
+functional_privatization_source_purity_tail_read_model.private_platform_residue_inventory_counts_as_action_required=false
+functional_privatization_source_purity_tail_read_model.private_platform_residue_inventory_counts_as_blocker=false
+functional_privatization_source_purity_tail_read_model.physical_delete_authorized=false
+functional_privatization_source_purity_tail_read_model.source_purity_tail_status=audit_only_tail_traceable_no_action_required_blocker
 ```
 
-该 snapshot 的读法是：默认 descriptor 面对 MAS/MAG/RCA 无 blocker；private platform residue inventory 已被清空为 action-required=0 / hidden-cleared，但 full-detail 仍保留 25 个历史/bridge/residue 分类项用于审计。OMA 没有进入 `opl agents descriptors` 默认 index，虽然 `opl agents conformance --family-defaults` 已覆盖并通过 OMA。
+该 snapshot 的读法是：默认 descriptor 面对 MAS/MAG/RCA/OMA 无 blocker；private platform residue inventory 只作为 full-detail 审计账本和 source-purity tail trace，不计入 action-required 或 blocker，也不授权 OPL / App 执行 domain repo physical delete。OMA 已进入 `opl agents descriptors` 默认 index，且 `opl agents descriptor --domain oma --json` / `--domain opl-meta-agent --json` 都返回 `descriptor_surfaces_resolved`，binding 为 `opl_hosted_standard_contract_descriptor_adapter`。
 
 ## 风险与下一步
 
-1. OMA 统一发现面风险：`opl agents descriptors --json` 当前只列 MAS/MAG/RCA，`opl agents descriptor --domain opl-meta-agent|oma --json` 返回 unknown domain。OMA 的 conformance 和 production-consumption 可读，但 descriptor index 外观还不像“一开始就是同一套 OPL Foundry Agent”。应把 OMA 纳入统一 descriptor index，或在 OPL docs/CLI 中明确 descriptor index 只覆盖 domain delivery agents，OMA 走 agent-foundry consumption read model。
+1. OMA 统一发现面风险已关闭：`opl agents descriptors --json` 当前列 MAS/MAG/RCA/OMA，`opl agents descriptor --domain opl-meta-agent|oma --json` 都可读。OMA descriptor 由 OPL-hosted adapter 从 OMA 标准 contracts 派生，只投影 refs、readiness、locator、authority boundary 和 audit summary，不把 OMA 改造成 repo-owned generic platform shell。
 
-2. Full-detail residue 命名风险：MAS/MAG/RCA 的 private platform residue inventory、RCA executor adapter bridge-exit、MAG product-entry/domain_handler wrapper、MAS domain-handler/product-entry projection 等仍会在 full detail 中出现。当前分类是 refs-only adapter / migration input / diagnostic / provenance，没有 active blocker；后续 strict source-purity lane 仍要继续按 no-active-caller、owner receipt、no-forbidden-write、replacement parity 后 rename/delete/tombstone，避免读者误认为这些是长期标准组成。
+2. Full-detail residue 命名风险已收敛为 read-model guard：MAS/MAG/RCA/OMA 的 private platform residue inventory、RCA executor adapter bridge-exit、MAG product-entry/domain_handler wrapper、MAS domain-handler/product-entry projection、OMA materializer/helper 等仍会在 full detail 中出现，但 `source_purity_tail_read_model` 明确它们是 audit-only、action-required=0、blocker=0、physical_delete_authorized=false。后续 strict source-purity lane 只在具备 no-active-caller、owner receipt 或 typed blocker、no-forbidden-write、replacement parity 后 rename/delete/tombstone。
 
 3. 历史叙事复活风险：MAS 的 MDS/DeepScientist/Hermes、MAG 的 old Gateway/local manager、RCA 的 managed/runtime/gateway/session terminology、OMA 的 scripts/materializer 都已有 active docs 约束，但任何新文档、contract、CLI help 或 test fixture 如果把它们写成默认 owner、default runtime、generic scheduler、generated shell 或 product wrapper，都应 fail closed。
 
@@ -96,4 +103,4 @@ functional_privatization_private_platform_residue_inventory_count=25
 
 如果问题是“设计逻辑是否已经统一成 OPL 原生 Foundry Agent”，答案是：是，结构层已经统一。
 
-如果问题是“是否已经没有任何历史残留”，答案是：默认 active surface 没有 structural blocker；full-detail/source-purity 仍有删除尾项和 OMA descriptor-index 外观风险。下一步不应再补抽象原则，而应补 OMA descriptor index 一致性，并继续按各仓 active gap plan 清 refs-only adapter / wrapper / bridge-exit 的 physical deletion tail。
+如果问题是“是否已经没有任何历史残留”，答案是：默认 active surface 没有 structural blocker；full-detail/source-purity 仍保留可追踪审计尾项，但这些尾项不再算 action-required / blocker，也不授权 physical delete。下一步不应再补抽象原则，而应守住 OMA descriptor index 一致性，并继续按各仓 active gap plan 清 refs-only adapter / wrapper / bridge-exit 的 physical deletion tail。

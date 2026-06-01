@@ -1,6 +1,7 @@
 import type { DomainManifestCatalogEntry } from '../domain-manifest/types.ts';
 import {
   compactFunctionalPrivatizationAuditEnvelope,
+  buildFunctionalSourcePurityTailReadModel,
 } from '../functional-privatization-envelope.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import {
@@ -119,6 +120,17 @@ export function functionalPrivatizationSummary(projects: DomainManifestCatalogEn
       stringList(summary.private_platform_residue_module_ids)
     )),
     blocker_count: sum('blocker_count'),
+    source_purity_tail_read_model: buildFunctionalSourcePurityTailReadModel({
+      total_module_count: sum('total_module_count'),
+      standard_domain_pack_inventory_count: sum('standard_domain_pack_inventory_count'),
+      authority_function_inventory_count: sum('authority_function_inventory_count'),
+      private_platform_residue_inventory_count: sum('private_platform_residue_inventory_count'),
+      default_watchlist_count: sum('default_watchlist_count'),
+      default_hidden_cleared_count: sum('default_hidden_cleared_count'),
+      semantic_equivalence_review_count: sum('semantic_equivalence_review_count'),
+      active_private_generic_residue_count: sum('active_private_generic_residue_count'),
+      blocker_count: sum('blocker_count'),
+    }),
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
 }
@@ -246,6 +258,7 @@ export function functionalPrivatizationAuditRefs(projects: DomainManifestCatalog
       semantic_equivalence_review_count: summary.semantic_equivalence_review_count,
       default_watchlist_count: summary.default_watchlist_count,
       blocker_count: summary.blocker_count,
+      source_purity_tail_read_model: summary.source_purity_tail_read_model,
     },
     authority_boundary: refsOnlyAuthorityBoundary(),
   };

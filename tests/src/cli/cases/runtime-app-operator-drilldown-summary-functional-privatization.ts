@@ -136,22 +136,53 @@ export function assertFunctionalPrivatizationFullDetail(summaryDrilldown: any, f
     fullDrilldown.functional_privatization_audit_refs.surface_kind,
     'opl_app_drilldown_functional_privatization_audit_refs',
   );
-  assert.equal(fullDrilldown.functional_privatization_audit_refs.domains.length, 1);
-  assert.equal(fullDrilldown.functional_privatization_audit_refs.domains[0].domain_id, 'medautoscience');
+  assert.equal(fullDrilldown.functional_privatization_audit_refs.domains.length, 2);
+  const medautoscienceAudit = fullDrilldown.functional_privatization_audit_refs.domains.find(
+    (domain: { domain_id: string }) => domain.domain_id === 'medautoscience',
+  );
+  assert.equal(Boolean(medautoscienceAudit), true);
   assert.equal(
-    fullDrilldown.functional_privatization_audit_refs.domains[0]
-      .private_platform_residue_inventory.length,
-    fullDrilldown.functional_privatization_audit_refs.domains[0].summary
+    fullDrilldown.functional_privatization_audit_refs.domains.some(
+      (domain: { domain_id: string }) => domain.domain_id === 'opl-meta-agent',
+    ),
+    true,
+  );
+  assert.equal(
+    medautoscienceAudit.private_platform_residue_inventory.length,
+    medautoscienceAudit.summary
       .private_platform_residue_inventory_count,
   );
   assert.equal(
-    fullDrilldown.functional_privatization_audit_refs.domains[0].authority_boundary
+    medautoscienceAudit.authority_boundary
       .can_write_domain_truth,
     false,
   );
   assert.equal(
     fullDrilldown.functional_privatization_audit_refs.summary.private_platform_residue_inventory_count,
     summaryDrilldown.summary.functional_privatization_private_platform_residue_inventory_count,
+  );
+  assert.deepEqual(
+    summaryDrilldown.summary.functional_privatization_source_purity_tail_read_model,
+    fullDrilldown.functional_privatization_audit_summary.source_purity_tail_read_model,
+  );
+  assert.deepEqual(
+    fullDrilldown.functional_privatization_audit_refs.summary.source_purity_tail_read_model,
+    fullDrilldown.functional_privatization_audit_summary.source_purity_tail_read_model,
+  );
+  assert.equal(
+    fullDrilldown.functional_privatization_audit_refs.summary.source_purity_tail_read_model
+      .private_platform_residue_inventory_audit_only_count,
+    fullDrilldown.functional_privatization_audit_refs.summary.private_platform_residue_inventory_count,
+  );
+  assert.equal(
+    fullDrilldown.functional_privatization_audit_refs.summary.source_purity_tail_read_model
+      .private_platform_residue_inventory_counts_as_action_required,
+    false,
+  );
+  assert.equal(
+    fullDrilldown.functional_privatization_audit_refs.summary.source_purity_tail_read_model
+      .physical_delete_authorized,
+    false,
   );
   assert.equal(
     summaryDrilldown.summary.functional_privatization_hidden_cleared_count,

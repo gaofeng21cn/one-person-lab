@@ -1,4 +1,9 @@
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
+import {
+  assertAuditOnlySourcePurityTail,
+  assertOmaDescriptorProjection,
+} from './workspace-domain-descriptor-assertions.ts';
 import { insertFreshProviderProof } from './workspace-domain-descriptor-provider-proof.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -536,7 +541,13 @@ function withRcaFunctionalAudit(payload: JsonRecord) {
 
 test('unified domain-agent descriptors aggregate entry, stage, action, memory, skill, and runtime refs', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-agent-descriptor-state-'));
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const omaRepoDir = createOmaContractFixture(fixtureRoot);
+  const env = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+    OPL_META_AGENT_REPO_DIR: omaRepoDir,
+  };
   const fixtures = loadFamilyManifestFixtures();
   const manifests = {
     medautoscience: withFunctionalConsumerBoundary(withDescriptorSurfaces(fixtures.medautoscience, {
@@ -589,25 +600,22 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
       ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
     }
 
-    const list = runCli(['agents', 'descriptors'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
-    assert.equal(list.family_agent_descriptors.summary.total_projects_count, 3);
-    assert.equal(list.family_agent_descriptors.summary.descriptor_surfaces_resolved_count, 3);
-    assert.equal(list.family_agent_descriptors.summary.memory_descriptor_resolved_count, 3);
-    assert.equal(list.family_agent_descriptors.summary.stage_control_plane_resolved_count, 3);
-    assert.equal(list.family_agent_descriptors.summary.action_catalog_resolved_count, 3);
-    assert.equal(list.family_agent_descriptors.summary.physical_skeleton_evidence_observed_count, 3);
+    const list = runCli(['agents', 'descriptors'], env);
+    assert.equal(list.family_agent_descriptors.summary.total_projects_count, 4);
+    assert.equal(list.family_agent_descriptors.summary.descriptor_surfaces_resolved_count, 4);
+    assert.equal(list.family_agent_descriptors.summary.memory_descriptor_resolved_count, 4);
+    assert.equal(list.family_agent_descriptors.summary.stage_control_plane_resolved_count, 4);
+    assert.equal(list.family_agent_descriptors.summary.action_catalog_resolved_count, 4);
+    assert.equal(list.family_agent_descriptors.summary.physical_skeleton_evidence_observed_count, 4);
     assert.equal(list.family_agent_descriptors.summary.physical_skeleton_audit_pending_count, 0);
     assert.equal(list.family_agent_descriptors.summary.provider_temporal_residency_gap_status, 'closed_by_fresh_proven_proof');
-    assert.equal(list.family_agent_descriptors.summary.production_closure_gap_count, 12);
-    assert.equal(list.family_agent_descriptors.summary.functional_privatization_audit_resolved_count, 3);
-    assert.equal(list.family_agent_descriptors.summary.functional_privatization_module_count, 15);
+    assert.equal(list.family_agent_descriptors.summary.production_closure_gap_count, 16);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_audit_resolved_count, 4);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_module_count, 17);
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_opl_owned_replacement_count, 0);
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_opl_hosted_surface_count, 1);
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_opl_generated_surface_count, 0);
-    assert.equal(list.family_agent_descriptors.summary.functional_privatization_declarative_pack_count, 4);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_declarative_pack_count, 6);
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_minimal_authority_function_count, 4);
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_refs_only_domain_adapter_count, 3);
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_diagnostic_cleanup_path_count, 1);
@@ -616,15 +624,21 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_retire_tombstone_count, 0);
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_active_private_generic_residue_count, 0);
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_default_watchlist_count, 0);
-    assert.equal(list.family_agent_descriptors.summary.functional_privatization_default_hidden_cleared_count, 15);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_default_hidden_cleared_count, 17);
+    assertAuditOnlySourcePurityTail(
+      list.family_agent_descriptors.summary.functional_privatization_source_purity_tail_read_model,
+      { hiddenClearedCount: 17, privateResidueCount: 7 },
+    );
     assert.deepEqual(list.family_agent_descriptors.summary.functional_privatization_default_watchlist_module_ids, []);
-    assert.equal(list.family_agent_descriptors.summary.functional_privatization_standard_domain_pack_inventory_count, 4);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_standard_domain_pack_inventory_count, 6);
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_authority_function_inventory_count, 4);
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_private_platform_residue_inventory_count, 7);
     assert.deepEqual(
       [...list.family_agent_descriptors.summary.functional_privatization_standard_domain_pack_module_ids].sort(),
       [
         'grant_stage_policy_pack',
+        'opl_meta_agent_domain_pack',
+        'opl_meta_agent_generated_skill',
         'runtime_storage_maintenance',
         'study_stage_policy_pack',
         'visual_stage_policy_pack',
@@ -652,16 +666,13 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
       ],
     );
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_semantic_equivalence_review_count, 0);
-    assert.equal(list.family_agent_descriptors.summary.functional_privatization_semantic_equivalence_cleared_count, 15);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_semantic_equivalence_cleared_count, 17);
     assert.deepEqual(
       list.family_agent_descriptors.summary.functional_privatization_semantic_equivalence_review_module_ids,
       [],
     );
 
-    const mas = runCli(['agents', 'descriptor', '--domain', 'mas'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
+    const mas = runCli(['agents', 'descriptor', '--domain', 'mas'], env);
     assert.equal(mas.family_agent_descriptor.surface_kind, 'opl_domain_agent_descriptor_inspection');
     assert.equal(mas.family_agent_descriptor.descriptor_surface_kind, 'opl_domain_agent_descriptor');
     assert.equal(mas.family_agent_descriptor.descriptor_status, 'descriptor_surfaces_resolved');
@@ -731,6 +742,10 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
     assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.standard_domain_pack_inventory_count, 2);
     assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.authority_function_inventory_count, 2);
     assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.private_platform_residue_inventory_count, 2);
+    assertAuditOnlySourcePurityTail(
+      mas.family_agent_descriptor.functional_privatization_audit.source_purity_tail_read_model,
+      { hiddenClearedCount: 6, privateResidueCount: 2 },
+    );
     assert.deepEqual(
       mas.family_agent_descriptor.functional_privatization_audit.standard_domain_pack_inventory.map(
         (module: { module_id: string }) => module.module_id,
@@ -846,10 +861,7 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
     );
     assert.equal(mas.family_agent_descriptor.non_authority_flags.descriptor_embeds_longform_agent_context, false);
 
-    const mag = runCli(['agents', 'descriptor', '--domain', 'mag'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
+    const mag = runCli(['agents', 'descriptor', '--domain', 'mag'], env);
     assert.equal(mag.family_agent_descriptor.grant_transition_oracle.status, 'resolved');
     assert.equal(mag.family_agent_descriptor.grant_transition_oracle.oracle_id, 'mag.grant_transition.oracle.v1');
     assert.equal(mag.family_agent_descriptor.grant_transition_oracle.runner_owner, 'one-person-lab');
@@ -902,10 +914,7 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
       ['src/med_autogrant/product_entry_parts/consumer_thinning.py'],
     );
 
-    const rca = runCli(['agents', 'descriptor', '--domain', 'rca'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
+    const rca = runCli(['agents', 'descriptor', '--domain', 'rca'], env);
     assert.equal(rca.family_agent_descriptor.functional_privatization_audit.status, 'resolved');
     assert.equal(
       rca.family_agent_descriptor.functional_privatization_audit.modules
@@ -941,6 +950,12 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
       rca.family_agent_descriptor.functional_privatization_audit.authority_boundary.opl_can_write_domain_truth,
       false,
     );
+
+    const oma = runCli(['agents', 'descriptor', '--domain', 'oma'], env);
+    assertOmaDescriptorProjection(oma);
+
+    const omaByCanonicalId = runCli(['agents', 'descriptor', '--domain', 'opl-meta-agent'], env);
+    assert.equal(omaByCanonicalId.family_agent_descriptor.project_id, 'opl-meta-agent');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

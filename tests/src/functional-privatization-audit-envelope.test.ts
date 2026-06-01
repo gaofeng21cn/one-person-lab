@@ -50,6 +50,20 @@ test('functional privatization audit envelope normalizes MAS functional consumer
   assert.equal(audit.envelope.summary.standard_domain_pack_inventory_count, 1);
   assert.equal(audit.envelope.summary.authority_function_inventory_count, 1);
   assert.equal(audit.envelope.summary.private_platform_residue_inventory_count, 1);
+  assert.deepEqual(audit.envelope.source_purity_tail_read_model, {
+    default_action_required_count: 0,
+    action_required_blocker_count: 0,
+    hidden_cleared_audit_ledger_count: 3,
+    hidden_cleared_entries_remain_traceable: true,
+    private_platform_residue_inventory_audit_only_count: 1,
+    private_platform_residue_inventory_counts_as_action_required: false,
+    private_platform_residue_inventory_counts_as_blocker: false,
+    physical_delete_authorized: false,
+    physical_delete_authority: 'not_authorized_by_descriptor_or_app_read_model',
+    source_purity_tail_status: 'audit_only_tail_traceable_no_action_required_blocker',
+    source_purity_tail_policy:
+      'physical_delete_requires_separate_domain_owner_receipt_or_typed_blocker_no_active_caller_no_forbidden_write_and_replacement_parity',
+  });
   assert.equal(audit.envelope.summary.default_watchlist_count, 0);
   assert.equal(audit.envelope.semantic_equivalence_evidence_gate.status, 'not_required');
   assert.equal(audit.envelope.semantic_equivalence_evidence_gate.review_required_count, 0);

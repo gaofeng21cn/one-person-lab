@@ -351,6 +351,8 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       numberValue(input.functionalSummary.blocker_count),
     ),
     functional_privatization_hidden_cleared_count: input.functionalSummary.default_hidden_cleared_count,
+    functional_privatization_source_purity_tail_read_model:
+      input.functionalSummary.source_purity_tail_read_model ?? null,
     functional_privatization_audit_default_policy:
       'audit_action_required_first_full_inventory_via_explicit_drilldown',
     functional_privatization_private_platform_residue_inventory_detail_policy:

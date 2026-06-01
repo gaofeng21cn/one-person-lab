@@ -8,12 +8,16 @@ import { buildStandardDomainAgentSkeletonInspection } from './family-domain-agen
 import { pickSkillActivationProjection } from './family-domain-catalog.ts';
 import { buildFamilyStageControlPlaneParity } from './family-stage-control-plane.ts';
 import {
+  buildFunctionalSourcePurityTailReadModel,
+} from './functional-privatization-envelope.ts';
+import {
   adaptGrantTransitionOracleToFamilyTransitionSpec,
   buildGrantTransitionOracleMatrixCases,
 } from './family-transition-oracle-ingestion.ts';
 import {
   runFamilyTransitionMatrix,
 } from './family-transition-runner.ts';
+import { withOplMetaAgentDescriptorEntry } from './opl-meta-agent-descriptor-adapter.ts';
 import type { FrameworkContracts } from './types.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -39,6 +43,9 @@ function normalizeDomainSelection(value: string) {
     redcube: 'redcube',
     'redcube-ai': 'redcube',
     redcube_ai: 'redcube',
+    oma: 'opl-meta-agent',
+    oplmetaagent: 'opl-meta-agent',
+    'opl-meta-agent': 'opl-meta-agent',
   };
   return aliases[key] ?? key;
 }
@@ -461,39 +468,42 @@ function buildArtifactInventoryProjection(manifest: NormalizedDomainManifest | n
 
 function buildFunctionalPrivatizationProjection(manifest: NormalizedDomainManifest | null, entry: DomainManifestCatalogEntry) {
   const audit = manifest?.functional_privatization_audit ?? null;
+  const emptySummary = {
+    total_module_count: 0,
+    opl_owned_replacement_count: 0,
+    opl_hosted_surface_count: 0,
+    opl_generated_surface_count: 0,
+    declarative_pack_count: 0,
+    minimal_authority_function_count: 0,
+    refs_only_domain_adapter_count: 0,
+    temporary_migration_bridge_count: 0,
+    diagnostic_cleanup_path_count: 0,
+    provenance_or_fixture_count: 0,
+    domain_authority_count: 0,
+    retire_tombstone_count: 0,
+    active_private_generic_residue_count: 0,
+    blocker_count: 0,
+    default_watchlist_count: 0,
+    default_hidden_cleared_count: 0,
+    default_watchlist_module_ids: [],
+    standard_domain_pack_inventory_count: 0,
+    authority_function_inventory_count: 0,
+    private_platform_residue_inventory_count: 0,
+    standard_domain_pack_module_ids: [],
+    authority_function_module_ids: [],
+    private_platform_residue_module_ids: [],
+    semantic_equivalence_review_count: 0,
+    semantic_equivalence_cleared_count: 0,
+    semantic_equivalence_review_module_ids: [],
+  };
   return {
     status: componentStatus(entry, audit?.status === 'resolved'),
     envelope: audit?.envelope ?? null,
     source_field: audit?.source_field ?? null,
     target_domain_id: audit?.target_domain_id ?? manifest?.target_domain_id ?? null,
-    summary: audit?.summary ?? {
-      total_module_count: 0,
-      opl_owned_replacement_count: 0,
-      opl_hosted_surface_count: 0,
-      opl_generated_surface_count: 0,
-      declarative_pack_count: 0,
-      minimal_authority_function_count: 0,
-      refs_only_domain_adapter_count: 0,
-      temporary_migration_bridge_count: 0,
-      diagnostic_cleanup_path_count: 0,
-      provenance_or_fixture_count: 0,
-      domain_authority_count: 0,
-      retire_tombstone_count: 0,
-      active_private_generic_residue_count: 0,
-      blocker_count: 0,
-      default_watchlist_count: 0,
-      default_hidden_cleared_count: 0,
-      default_watchlist_module_ids: [],
-      standard_domain_pack_inventory_count: 0,
-      authority_function_inventory_count: 0,
-      private_platform_residue_inventory_count: 0,
-      standard_domain_pack_module_ids: [],
-      authority_function_module_ids: [],
-      private_platform_residue_module_ids: [],
-      semantic_equivalence_review_count: 0,
-      semantic_equivalence_cleared_count: 0,
-      semantic_equivalence_review_module_ids: [],
-    },
+    summary: audit?.summary ?? emptySummary,
+    source_purity_tail_read_model:
+      audit?.source_purity_tail_read_model ?? buildFunctionalSourcePurityTailReadModel(emptySummary),
     required_opl_replacement_primitives: audit?.required_opl_replacement_primitives ?? [],
     blockers: audit?.blockers ?? ['functional_privatization_audit_missing'],
     modules: audit?.modules ?? [],
@@ -618,7 +628,7 @@ function buildDescriptor(entry: DomainManifestCatalogEntry) {
 }
 
 function findDescriptorEntry(contracts: FrameworkContracts, domain: string) {
-  const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
+  const catalog = withOplMetaAgentDescriptorEntry(buildDomainManifestCatalog(contracts).domain_manifests);
   const normalized = normalizeDomainSelection(domain);
   const entry = catalog.projects.find((candidate) => {
     const manifest = candidate.manifest;
@@ -654,6 +664,25 @@ function descriptorProviderResidencyGapStatus(descriptors: ReturnType<typeof bui
   return firstStatus ?? null;
 }
 
+function descriptorFunctionalSourcePurityTailReadModel(descriptors: ReturnType<typeof buildDescriptor>[]) {
+  const sum = (field: keyof ReturnType<typeof buildDescriptor>['functional_privatization_audit']['summary']) =>
+    descriptors.reduce((total, descriptor) => {
+      const value = descriptor.functional_privatization_audit.summary[field];
+      return typeof value === 'number' ? total + value : total;
+    }, 0);
+  return buildFunctionalSourcePurityTailReadModel({
+    total_module_count: sum('total_module_count'),
+    standard_domain_pack_inventory_count: sum('standard_domain_pack_inventory_count'),
+    authority_function_inventory_count: sum('authority_function_inventory_count'),
+    private_platform_residue_inventory_count: sum('private_platform_residue_inventory_count'),
+    default_watchlist_count: sum('default_watchlist_count'),
+    default_hidden_cleared_count: sum('default_hidden_cleared_count'),
+    semantic_equivalence_review_count: sum('semantic_equivalence_review_count'),
+    active_private_generic_residue_count: sum('active_private_generic_residue_count'),
+    blocker_count: sum('blocker_count'),
+  });
+}
+
 export function buildFamilyAgentDescriptorList(
   contracts: FrameworkContracts,
   options: {
@@ -666,7 +695,8 @@ export function buildFamilyAgentDescriptorList(
     manifestCommandTimeoutMs: options.manifestCommandTimeoutMs,
     manifestCommandTimeoutPolicy: options.manifestCommandTimeoutPolicy,
   }).domain_manifests;
-  const descriptors = catalog.projects.map(buildDescriptor);
+  const expandedCatalog = withOplMetaAgentDescriptorEntry(catalog);
+  const descriptors = expandedCatalog.projects.map(buildDescriptor);
   return {
     version: 'g2',
     family_agent_descriptors: {
@@ -786,6 +816,8 @@ export function buildFamilyAgentDescriptorList(
           (total, descriptor) => total + descriptor.functional_privatization_audit.summary.default_hidden_cleared_count,
           0,
         ),
+        functional_privatization_source_purity_tail_read_model:
+          descriptorFunctionalSourcePurityTailReadModel(descriptors),
         functional_privatization_default_watchlist_module_ids: descriptors.flatMap((descriptor) =>
           descriptor.functional_privatization_audit.summary.default_watchlist_module_ids
         ),

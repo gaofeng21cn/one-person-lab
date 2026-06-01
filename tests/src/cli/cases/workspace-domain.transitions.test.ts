@@ -11,6 +11,7 @@ import {
   shellSingleQuote,
   test,
 } from '../helpers.ts';
+import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -431,10 +432,12 @@ test('domain manifests blocks MAS family transition execution on domain mismatch
 test('agents descriptor projects MAS family transition matrix readiness without taking quality authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-descriptor-transition-state-'));
   const fixtures = loadFamilyManifestFixtures();
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const omaRepoDir = createOmaContractFixture(fixtureRoot);
   const env = {
     OPL_STATE_DIR: stateRoot,
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_META_AGENT_REPO_DIR: omaRepoDir,
   };
 
   try {
@@ -451,7 +454,7 @@ test('agents descriptor projects MAS family transition matrix readiness without 
 
     const list = runCli(['agents', 'descriptors'], env);
     assert.equal(list.family_agent_descriptors.summary.transition_matrix_evaluated_count, 1);
-    assert.equal(list.family_agent_descriptors.summary.transition_descriptor_only_count, 0);
+    assert.equal(list.family_agent_descriptors.summary.transition_descriptor_only_count, 1);
     assert.equal(list.family_agent_descriptors.summary.transition_blocked_count, 0);
 
     const inspect = runCli(['agents', 'descriptor', '--domain', 'mas'], env);
@@ -883,10 +886,12 @@ test('domain manifests adapts RCA visual transition specs into the family transi
 test('agents descriptor projects RCA visual transition spec ingestion without taking visual authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-descriptor-rca-visual-transition-'));
   const fixtures = loadFamilyManifestFixtures();
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const omaRepoDir = createOmaContractFixture(fixtureRoot);
   const env = {
     OPL_STATE_DIR: stateRoot,
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_META_AGENT_REPO_DIR: omaRepoDir,
   };
 
   try {
@@ -903,6 +908,8 @@ test('agents descriptor projects RCA visual transition spec ingestion without ta
 
     const list = runCli(['agents', 'descriptors'], env);
     assert.equal(list.family_agent_descriptors.summary.transition_matrix_evaluated_count, 1);
+    assert.equal(list.family_agent_descriptors.summary.transition_descriptor_only_count, 1);
+    assert.equal(list.family_agent_descriptors.summary.transition_blocked_count, 0);
 
     const inspect = runCli(['agents', 'descriptor', '--domain', 'rca'], env);
     const transition = inspect.family_agent_descriptor.family_transition;

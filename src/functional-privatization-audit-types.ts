@@ -1,5 +1,6 @@
 import type {
   FunctionalPrivatizationAuditEnvelope,
+  FunctionalSourcePurityTailReadModel,
 } from './functional-privatization-envelope.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -138,6 +139,7 @@ export type FunctionalPrivatizationAudit = {
     semantic_equivalence_cleared_count: number;
     semantic_equivalence_review_module_ids: string[];
   };
+  source_purity_tail_read_model: FunctionalSourcePurityTailReadModel;
   modules: FunctionalPrivatizationAuditItem[];
   standard_domain_pack_inventory: FunctionalPrivatizationAuditItem[];
   authority_function_inventory: FunctionalPrivatizationAuditItem[];

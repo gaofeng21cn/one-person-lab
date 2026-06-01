@@ -43,6 +43,10 @@ import {
 import { familyRuntimeEvidenceWorklistAuthorityBoundary } from './family-runtime-evidence-worklist-parts/authority-boundary.ts';
 import { buildProgressFirstOperatorSummary } from './family-runtime-evidence-worklist-parts/progress-first-operator-summary.ts';
 import { domainDispatchRecordRouteAttemptIds, syncTerminalTemporalAttemptsForEvidenceWorklist, type EvidenceWorklistTemporalQuery } from './family-runtime-evidence-worklist-parts/terminal-observation-sync.ts';
+import {
+  NOT_AUTHORIZED_CLAIMS,
+  OPEN_SAFE_ACTION_PAYLOAD_REQUIREMENT_SEMANTICS,
+} from './family-runtime-evidence-worklist-parts/constants.ts';
 
 type EvidenceWorklistInput = {
   familyDefaults: boolean;
@@ -54,36 +58,6 @@ type EvidenceWorklistInput = {
   domainManifests?: DomainManifestCatalog;
   queryTemporalStageAttemptReadModel?: EvidenceWorklistTemporalQuery;
 };
-
-const NOT_AUTHORIZED_CLAIMS = [
-  'domain_truth_write',
-  'domain_ready',
-  'domain_ready_verdict',
-  'quality_verdict',
-  'artifact_authority',
-  'artifact_authority_verdict',
-  'memory_body_access',
-  'production_ready',
-  'submission_or_export_readiness_verdict',
-  'domain_repo_physical_delete_authorization',
-  'default_caller_delete_ready',
-];
-
-const OPEN_SAFE_ACTION_PAYLOAD_REQUIREMENT_SEMANTICS =
-  'open_safe_action_payload_required_is_domain_or_app_live_refs_payload_subset_not_opl_self_closure';
-
-const CLOSEOUT_ACTION_KINDS = new Set([
-  'provider_scheduler_status',
-  'provider_scheduler_install',
-  'provider_scheduler_trigger',
-  'provider_scheduler_tick',
-  'stage_production_attempt_request',
-  'stage_production_evidence_receipt_verify',
-  'domain_dispatch_evidence_receipt_verify',
-  'external_evidence_receipt_verify',
-  'evidence_gate_receipt_verify',
-  'legacy_cleanup_verify',
-]);
 
 const BLOCKED_ROUTE_STATUS_PREFIX = 'blocked_by_';
 const OPEN_WORKLIST_STATUS = 'open_safe_action_request_route_available';

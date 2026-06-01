@@ -1,6 +1,11 @@
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, loadFrameworkContracts, os, path, repoRoot, runCli, shellSingleQuote, test } from '../helpers.ts';
 import { buildFamilyAgentDescriptorList } from '../../../../src/family-domain-agent-descriptor.ts';
 import {
+  assertReadyPackCompilerSummary,
+  PACK_COMPILER_GENERATED_SURFACE_COUNT_PER_DOMAIN,
+  PACK_COMPILER_READY_DOMAIN_ALIASES,
+} from './domain-pack-compiler-assertions.ts';
+import {
   attachManifestSurface,
   bindFamilyManifests,
   type JsonRecord,
@@ -23,12 +28,7 @@ test('domain pack compiler projects OPL-owned generated surfaces for admitted do
   const list = runCli(['agents', 'pack-compiler'], env);
   assert.equal(list.domain_pack_compiler.surface_kind, 'opl_domain_pack_compiler_index');
   assert.equal(list.domain_pack_compiler.owner, 'one-person-lab');
-  assert.equal(list.domain_pack_compiler.summary.total_domain_count, 3);
-  assert.equal(list.domain_pack_compiler.summary.ready_domain_count, 3);
-  assert.equal(list.domain_pack_compiler.summary.blocked_domain_count, 0);
-  assert.equal(list.domain_pack_compiler.summary.generated_surface_count, 24);
-  assert.equal(list.domain_pack_compiler.summary.generated_surface_ready_count, 24);
-  assert.equal(list.domain_pack_compiler.summary.domain_generated_surface_owner_claim_count, 0);
+  assertReadyPackCompilerSummary(list.domain_pack_compiler.summary);
   assert.equal(list.domain_pack_compiler.authority_boundary.opl_owns_generated_surfaces, true);
   assert.equal(list.domain_pack_compiler.authority_boundary.domain_repo_can_own_generated_surface, false);
   assert.equal(list.domain_pack_compiler.authority_boundary.opl_can_write_domain_truth, false);
@@ -105,22 +105,21 @@ test('domain pack compiler index keeps generated surfaces ready, aligned, and OP
     bindFamilyManifests(env);
 
     const list = runCli(['agents', 'pack-compiler'], env);
-    const summary = list.domain_pack_compiler.summary;
-    assert.equal(summary.generated_surface_count, 24);
-    assert.equal(summary.generated_surface_ready_count, 24);
-    assert.equal(summary.generated_surface_blocked_count, 0);
-    assert.equal(summary.generated_artifact_drift_detected_count, 0);
-    assert.equal(summary.domain_generated_surface_owner_claim_count, 0);
+    assertReadyPackCompilerSummary(list.domain_pack_compiler.summary);
     assert.equal(list.domain_pack_compiler.authority_boundary.opl_owns_generated_surfaces, true);
     assert.equal(list.domain_pack_compiler.authority_boundary.domain_repo_can_own_generated_surface, false);
 
-    for (const domain of ['mas', 'mag', 'rca']) {
+    for (const domain of PACK_COMPILER_READY_DOMAIN_ALIASES) {
       const inspection = runCli(['agents', 'pack-compiler', 'inspect', '--domain', domain], env)
         .domain_pack_compiler;
       assert.equal(inspection.compiler_status, 'ready');
       assert.equal(inspection.generated_interface_bundle.owner, 'one-person-lab');
       assert.equal(inspection.generated_interface_bundle.status, 'ready');
       assert.equal(inspection.generated_interface_bundle.domain_repo_can_own_generated_surface, false);
+      assert.equal(
+        inspection.generated_surface_handoff.generated_surfaces.length,
+        PACK_COMPILER_GENERATED_SURFACE_COUNT_PER_DOMAIN,
+      );
       assert.equal(inspection.generated_artifact_drift_manifest.status, 'aligned');
       assert.deepEqual(inspection.generated_artifact_drift_manifest.drift_findings, []);
     }

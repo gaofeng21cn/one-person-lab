@@ -984,7 +984,7 @@ export function buildAppOperatorDrilldown(input: {
   providerInspection?: JsonRecord;
   providerContinuousProof: JsonRecord;
   domainProjectionIngestion: JsonRecord;
-  domainManifestProjects: DomainManifestCatalogEntry[];
+  domainManifestProjects: DomainManifestCatalogEntry[]; functionalPrivatizationProjects?: DomainManifestCatalogEntry[];
   detailLevel?: AppOperatorDrilldownDetailLevel;
 }) {
   const attempts = recordList(input.stageAttemptWorkbench.attempts);
@@ -1030,8 +1030,8 @@ export function buildAppOperatorDrilldown(input: {
   const freshness = freshnessRefs(attempts, input.domainProjectionIngestion);
   const refFamilies = refFamilyRefs(input.stageAttemptWorkbench, record(memoryRefs));
   const currentControlState = currentControlStateProjection(operatorEvidenceAttempts);
-  const functionalSummary = functionalPrivatizationSummary(input.domainManifestProjects);
-  const functionalAuditRefs = functionalPrivatizationAuditRefs(input.domainManifestProjects);
+  const functionalSummary = functionalPrivatizationSummary(input.functionalPrivatizationProjects ?? input.domainManifestProjects);
+  const functionalAuditRefs = functionalPrivatizationAuditRefs(input.functionalPrivatizationProjects ?? input.domainManifestProjects);
   const defaultCallerDeletionEvidenceRefs =
     buildDefaultCallerDeletionEvidenceRefs(input.domainManifestProjects);
   const domainOwnerPayloadSummaryRefs = buildDomainOwnerPayloadSummaryRefs({

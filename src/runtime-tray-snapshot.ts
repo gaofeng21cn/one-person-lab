@@ -28,6 +28,7 @@ import {
   buildAppOperatorDrilldown,
   type AppOperatorDrilldownDetailLevel,
 } from './runtime-tray-app-operator-drilldown.ts';
+import { withOplMetaAgentDescriptorEntry } from './opl-meta-agent-descriptor-adapter.ts';
 
 const PROJECT_LABELS: Record<string, string> = {
   medautoscience: 'MAS',
@@ -710,6 +711,8 @@ export async function buildRuntimeTraySnapshot(
     manifestCommandTimeoutPolicy: 'fixed',
     useProjectionCacheOnFailure: true,
   }).domain_manifests;
+  const functionalPrivatizationDomainManifests =
+    withOplMetaAgentDescriptorEntry(domainManifests);
   const masManagedProviderProjection =
     projectionFromMasManifestEntry(domainManifests.projects.find((entry) => (
       entry.project_id === 'medautoscience'
@@ -731,6 +734,7 @@ export async function buildRuntimeTraySnapshot(
     providerContinuousProof,
     domainProjectionIngestion,
     domainManifestProjects: domainManifests.projects,
+    functionalPrivatizationProjects: functionalPrivatizationDomainManifests.projects,
     detailLevel: options.appOperatorDrilldownDetailLevel,
   });
   const domainItems = domainManifests.projects
