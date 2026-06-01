@@ -6,6 +6,8 @@ State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 更新时间：`2026-06-01`
 
+Plugin native profile pointer: `contracts/opl-native-profile.json` 只声明 OPL Flow / OPL Doc 插件同步与 drift 检查所需的 repo-native profile；它不是 framework truth、runtime truth、domain truth、artifact authority、owner receipt 或 production-ready 证据。
+
 ## 当前公开角色
 
 `OPL` 当前公开认知固定为三层：`OPL Framework -> One Person Lab App -> Foundry Agents`。

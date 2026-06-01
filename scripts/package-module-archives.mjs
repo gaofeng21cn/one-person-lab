@@ -17,7 +17,7 @@ function parseArgs(argv) {
   const parsed = {
     version: process.env.OPL_RELEASE_VERSION || undefined,
     outDir: path.join(repoRoot, 'dist', 'packages'),
-    cloneRoot: path.join(repoRoot, 'dist', 'package-sources'),
+    cloneRoot: null,
     owner: process.env.OPL_PACKAGES_OWNER || undefined,
     previousManifest: process.env.OPL_PREVIOUS_PACKAGE_MANIFEST || undefined,
     retainVersions: process.env.OPL_PACKAGE_RETAIN_VERSIONS || undefined,
@@ -60,6 +60,10 @@ function parseArgs(argv) {
       continue;
     }
     throw new Error(`Unknown argument: ${token}`);
+  }
+
+  if (!parsed.cloneRoot) {
+    parsed.cloneRoot = path.join(path.dirname(parsed.outDir), `${path.basename(parsed.outDir)}-package-sources`);
   }
 
   return parsed;
@@ -122,6 +126,10 @@ function resolveModuleRepo(spec, cloneRoot) {
     fs.rmSync(checkoutPath, { recursive: true, force: true });
     fs.mkdirSync(path.dirname(checkoutPath), { recursive: true });
     run('git', ['clone', '--depth', '1', spec.repo_url, checkoutPath]);
+  } else {
+    run('git', ['remote', 'set-url', 'origin', spec.repo_url], { cwd: checkoutPath });
+    run('git', ['fetch', '--depth', '1', 'origin', 'main'], { cwd: checkoutPath });
+    run('git', ['checkout', '--detach', 'FETCH_HEAD'], { cwd: checkoutPath });
   }
   return checkoutPath;
 }
@@ -202,6 +210,7 @@ function main() {
     channel_manifest: channelManifestPath,
     checksums: checksumPath,
     modules_dir: modulesOutDir,
+    clone_root: options.cloneRoot,
     modules: Object.values(manifest.packages.modules).map((entry) => ({
       module_id: entry.module_id,
       artifact: entry.artifact,
