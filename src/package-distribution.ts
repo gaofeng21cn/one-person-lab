@@ -82,7 +82,10 @@ function normalizeRetainVersions(value?: number) {
 
 function buildReleaseAutomation(retainVersions: number, rollbackVersion: string | null) {
   return {
-    status: 'prepared_not_consumed_by_module_install_update',
+    status: 'manual_prepared_only_not_consumed_by_module_install_update',
+    workflow_trigger_policy: 'workflow_dispatch_only',
+    remote_publish_status: 'not_auto_published_by_tag_push',
+    release_manifest_publication_status: 'artifact_only_not_ghcr_active_channel',
     channel_manifest: {
       manifest_kind: 'opl_release_channel_manifest.v1',
       generated_by: 'scripts/package-module-archives.mjs',
@@ -97,11 +100,13 @@ function buildReleaseAutomation(retainVersions: number, rollbackVersion: string 
       workflow: '.github/workflows/packages.yml',
       command: 'npm run packages:manifest -- --version <opl_version>',
       artifact_kind: 'git_archive_source_tarball',
+      publication_mode: 'prepared_artifact_only',
     },
     checksum: {
       algorithm: 'sha256',
       recorded_in: ['source_archive.sha256', 'SHA256SUMS'],
-      required_before_publish: true,
+      required_before_publish: false,
+      required_before_prepared_artifact: true,
     },
     rollback: {
       strategy: 'previous_channel_manifest_target',
@@ -120,7 +125,12 @@ function buildReleaseAutomation(retainVersions: number, rollbackVersion: string 
 function buildModuleReleaseDiscipline(spec: PackageModuleSpec, rollbackVersion: string | null) {
   return {
     module_truth_owner: spec.repo_name,
-    package_publish_owner: 'one-person-lab_central_packages_workflow',
+    package_publish_owner: 'manual_prepared_framework_package_workflow',
+    package_channel_status: 'experimental_manual_prepared_only',
+    workflow_trigger_policy: 'workflow_dispatch_only',
+    remote_publish_status: spec.module_id === 'oplmetaagent'
+      ? 'source_listed_remote_package_unpublished'
+      : 'not_auto_published_by_tag_push',
     current_latest_source: 'git_checkout_upstream_default_branch',
     future_package_latest_source: 'opl_release_channel_manifest',
     required_gates: [
@@ -161,9 +171,14 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
       webui_docker_image: {
         image: `ghcr.io/${owner}/one-person-lab-webui:${version}`,
         aliases: [`ghcr.io/${owner}/one-person-lab-webui:latest`],
+        package_publish_owner: 'one-person-lab-app',
+        framework_role: 'external_app_owned_package_reference',
+        framework_workflow_publish_status: 'not_published_by_framework_packages_workflow',
       },
       native_helper: {
         image: `ghcr.io/${owner}/one-person-lab-native-helper`,
+        channel_status: 'active_ghcr_oci_prebuild',
+        package_publish_owner: 'one-person-lab_framework_native_helper_prebuilds',
         version_source: 'native/opl-native-helper/Cargo.toml',
         target_tag_template: `ghcr.io/${owner}/one-person-lab-native-helper:<target>-<native_helper_version>`,
       },
@@ -179,6 +194,10 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
             version,
             artifact_kind: 'source_archive',
             artifact: buildPackageRef(owner, spec.package_name, version),
+            package_channel_status: 'experimental_manual_prepared_only',
+            remote_publish_status: spec.module_id === 'oplmetaagent'
+              ? 'source_listed_remote_package_unpublished'
+              : 'not_auto_published_by_tag_push',
             package_consumption_status: 'defined_not_consumed_by_install_update',
             current_install_update_source: 'git_checkout',
             fallback_git: {

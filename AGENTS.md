@@ -92,3 +92,12 @@
 
 - 项目级 `.codex/` 与 `.omx/` 已退役，不再作为仓库本地状态入口。
 - 如需保留历史 session、prompt、log 或 hook 状态，应迁入用户级 `~/.codex/` 归档，而不是继续留在仓库根目录。
+
+<!-- OPL_FLOW_MANAGED_START -->
+OPL Flow managed surface: repo_agent_instructions
+Plugin: opl-flow
+Plugin version: 0.1.0
+Profile pointer: contracts/opl-native-profile.json
+本块只声明 OPL Flow 工作流 profile 指针；repo-specific 规则、项目事实、contracts、source、tests 和 runtime 输出继续归本仓既有 owner。
+请只通过 OPL Flow repo_profile sync 更新本块；本块外内容由目标 repo 自己维护。
+<!-- OPL_FLOW_MANAGED_END -->

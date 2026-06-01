@@ -628,7 +628,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `MAS` 对 `Codex` / `OPL` 暴露一个 MAS domain app skill；OPL 负责发现、同步和消费该 skill，不新增 OPL-only MAS skill family。
 - `OPL` 持有 unified definitions、shared module/contract/index registration、module discovery 与 projection consumption surface；医学科研 runtime、controller truth、quality authority、publication gates 与 deliverable truth 继续由 `MAS` 持有。
 - `MDS` 不再作为 OPL 默认安装的 MAS 运行依赖；MAS 只可把它显式声明为 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 或 parity oracle companion。
-- 公开文档与技术入口不得恢复 MAS 用户安装型 standalone GitHub Release / standalone product release 叙事；MAS 仍按 OPL Packages/GHCR-backed module 坐标与 git checkout / sibling repo 更新路径表达，MDS 只保留 MAS-declared optional companion 引用。
+- 公开文档与技术入口不得恢复 MAS 用户安装型 standalone GitHub Release / standalone product release 叙事；MAS 仍按 OPL package 坐标 / prepared module archive 坐标与 git checkout / sibling repo 更新路径表达，Packages/GHCR 被 install/update live 消费前不得写成 active module channel，MDS 只保留 MAS-declared optional companion 引用。
 - OPL 对 MAS progress、publication、quality、runtime control、`mas_opl_runtime_workbench_projection` 等 projection 只做证据、provenance、状态、App drilldown 和路由/transport metadata 展示；不得把 projection 文案写成 OPL 持有的 ready verdict、submission-ready verdict、publication verdict、质量裁决、runtime authority 或 artifact authority。
 - 本决策不修改 `contracts/` 与 projection contract；它只同步公开文档和核心 docs 的 MAS v2 wording。
 
@@ -669,7 +669,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `opl packages manifest` 成为 Packages 坐标的机器可读入口和后续分发目标
 - 当前 `opl install`、App 首启协调和环境管理仍以 git checkout 更新到远端最新为正式路径；Packages/GHCR 接入模块安装更新前不得写成当前机制
 - 中央 release manifest / Packages workflow 可以继续维护为机器分发雏形，但各 domain repo 不需要单独恢复用户安装型 GitHub Release
-- WebUI Docker 镜像通过 GHCR 发布，服务 Docker/浏览器-only 场景
+- WebUI Docker 镜像的发布与用户路径 evidence 归 `one-person-lab-app`；OPL Framework 只保留 App-owned GHCR 坐标 / external reference，不在 framework packages workflow 中构建或发布 WebUI image
 - Native helper 预构建 archive 同步发布到 GHCR，后续 `native:repair` 可优先消费
 - 标准桌面 App 与自动更新包仍不打入 `OPL Meta Agent/MAS/MAG/RCA` runtime payload；macOS arm64 可额外发布 Full 首次安装资产，随包带 Agent Foundry 用的 `OPL Meta Agent`、`MAS/MAG/RCA`、`officecli` CLI binary 与推荐 companion skill payload，但不得写入 `latest*.yml` 或改变 App 自动更新通道
 
