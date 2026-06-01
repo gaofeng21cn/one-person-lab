@@ -64,6 +64,7 @@ export type StageAttemptGenericProjectionInput = {
   controlled_apply_contract: JsonRecord;
   lifecycle_primitives: JsonRecord;
   current_provider_readiness: JsonRecord | null;
+  provider_readiness_currentness?: JsonRecord;
 };
 
 export function buildAttemptGenericProjections(input: StageAttemptGenericProjectionInput) {
@@ -75,6 +76,9 @@ export function buildAttemptGenericProjections(input: StageAttemptGenericProject
   });
   return {
     current_provider_readiness: input.current_provider_readiness,
+    ...(input.provider_readiness_currentness
+      ? { provider_readiness_currentness: input.provider_readiness_currentness }
+      : {}),
     artifact_gallery: buildAttemptArtifactGallery({
       stage_attempt_id: input.stage_attempt_id,
       domain_id: input.domain_id,

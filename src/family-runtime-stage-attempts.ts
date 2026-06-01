@@ -436,6 +436,34 @@ export function buildStageAttemptCurrentProviderReadinessPayload(
   };
 }
 
+function attachProviderCurrentness(
+  attempt: ReturnType<typeof stageAttemptToPayload>,
+  currentProviderReadiness:
+    | ReturnType<typeof buildStageAttemptCurrentProviderReadinessPayload>
+    | null,
+) {
+  return {
+    ...attempt,
+    current_provider_readiness: currentProviderReadiness,
+    provider_readiness_currentness: {
+      surface_kind: 'stage_attempt_provider_readiness_currentness',
+      effective_provider_readiness_source: 'current_provider_readiness',
+      creation_receipt_currentness: 'creation_time_snapshot',
+      provider_receipt_is_current_readiness: false,
+      current_provider_readiness_ref: currentProviderReadiness
+        ? 'attempt.current_provider_readiness'
+        : null,
+      creation_receipt_ref: 'attempt.provider_receipt',
+      progress_first_effect:
+        'operator_status_must_use_current_provider_readiness_for_live_provider_liveness',
+      authority_boundary: {
+        opl: 'provider_readiness_currentness_projection_only',
+        domain: 'truth_quality_artifact_gate_owner',
+      },
+    },
+  };
+}
+
 async function providerReadinessByKind(
   attempts: ReturnType<typeof stageAttemptToPayload>[],
   paths: ProviderReadinessPaths,
@@ -453,10 +481,7 @@ function attachCurrentProviderReadiness(
   attempt: ReturnType<typeof stageAttemptToPayload>,
   readinessByKind: Map<FamilyRuntimeProviderKind, ReturnType<typeof buildStageAttemptCurrentProviderReadinessPayload>>,
 ) {
-  return {
-    ...attempt,
-    current_provider_readiness: readinessByKind.get(attempt.provider_kind) ?? null,
-  };
+  return attachProviderCurrentness(attempt, readinessByKind.get(attempt.provider_kind) ?? null);
 }
 
 export async function listStageAttemptsWithCurrentProviderReadiness(
@@ -663,10 +688,10 @@ export async function inspectStageAttemptWithCurrentProviderReadiness(
 ) {
   const attempt = inspectStageAttempt(db, stageAttemptId);
   const provider = await inspectFamilyRuntimeProviderWithLifecycle(attempt.provider_kind, paths, options);
-  return {
-    ...attempt,
-    current_provider_readiness: buildStageAttemptCurrentProviderReadinessPayload(provider, attempt.provider_kind),
-  };
+  return attachProviderCurrentness(
+    attempt,
+    buildStageAttemptCurrentProviderReadinessPayload(provider, attempt.provider_kind),
+  );
 }
 
 export function signalStageAttempt(

@@ -54,9 +54,51 @@ function attachCurrentProviderReadiness(
   attempt: StageAttemptPayload,
   readinessByKind: Map<FamilyRuntimeProviderKind, ReturnType<typeof buildStageAttemptCurrentProviderReadinessPayload>>,
 ) {
+  const currentProviderReadiness = readinessByKind.get(attempt.provider_kind) ?? null;
   return {
     ...attempt,
-    current_provider_readiness: readinessByKind.get(attempt.provider_kind) ?? null,
+    current_provider_readiness: currentProviderReadiness,
+    provider_readiness_currentness: {
+      surface_kind: 'stage_attempt_provider_readiness_currentness',
+      effective_provider_readiness_source: 'current_provider_readiness',
+      creation_receipt_currentness: 'creation_time_snapshot',
+      provider_receipt_is_current_readiness: false,
+      current_provider_readiness_ref: currentProviderReadiness
+        ? 'attempt.current_provider_readiness'
+        : null,
+      creation_receipt_ref: 'attempt.provider_receipt',
+      progress_first_effect:
+        'operator_status_must_use_current_provider_readiness_for_live_provider_liveness',
+      authority_boundary: {
+        opl: 'provider_readiness_currentness_projection_only',
+        domain: 'truth_quality_artifact_gate_owner',
+      },
+    },
+  };
+}
+
+function providerReadinessCurrentness(
+  currentProviderReadiness: ReturnType<typeof buildStageAttemptCurrentProviderReadinessPayload> | null,
+  refs: {
+    currentProviderReadinessRef: string;
+    creationReceiptRef: string;
+  },
+) {
+  return {
+    surface_kind: 'stage_attempt_provider_readiness_currentness',
+    effective_provider_readiness_source: 'current_provider_readiness',
+    creation_receipt_currentness: 'creation_time_snapshot',
+    provider_receipt_is_current_readiness: false,
+    current_provider_readiness_ref: currentProviderReadiness
+      ? refs.currentProviderReadinessRef
+      : null,
+    creation_receipt_ref: refs.creationReceiptRef,
+    progress_first_effect:
+      'operator_status_must_use_current_provider_readiness_for_live_provider_liveness',
+    authority_boundary: {
+      opl: 'provider_readiness_currentness_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
   };
 }
 
@@ -158,8 +200,13 @@ function compactTimelineOperatorSummary(
   attempt: StageAttemptPayload,
   studyId: string | null,
   stageProgressLog: ReturnType<typeof buildStageProgressLog>,
+  currentProviderReadiness: ReturnType<typeof buildStageAttemptCurrentProviderReadinessPayload> | null,
 ) {
   const userStageLog = stageProgressLog.user_stage_log;
+  const readinessCurrentness = providerReadinessCurrentness(currentProviderReadiness, {
+    currentProviderReadinessRef: 'compact_timeline.current_provider_readiness',
+    creationReceiptRef: 'compact_timeline.provider_receipt',
+  });
   return {
     attempt: attempt.stage_attempt_id,
     status: attempt.status,
@@ -171,6 +218,8 @@ function compactTimelineOperatorSummary(
     started_at: stageProgressLog.timeline.provider_started_at,
     completed_at: stageProgressLog.timeline.provider_completed_at,
     last_heartbeat_at: stageProgressLog.timeline.last_heartbeat_at,
+    current_provider_readiness: currentProviderReadiness,
+    provider_readiness_currentness: readinessCurrentness,
     progress_delta_classification: userStageLog.progress_delta_classification,
     evidence_refs: stageProgressLog.evidence_refs,
     closeout_refs: stageProgressLog.evidence_refs.closeout_refs,
@@ -186,7 +235,11 @@ function compactTimelineOperatorSummary(
   };
 }
 
-function compactTimelineForAttempt(db: DatabaseSync, attempt: StageAttemptPayload) {
+function compactTimelineForAttempt(
+  db: DatabaseSync,
+  attempt: StageAttemptPayload,
+  currentProviderReadiness: ReturnType<typeof buildStageAttemptCurrentProviderReadinessPayload> | null,
+) {
   const studyId = attemptStudyId(db, attempt);
   const stageProgressLog = buildStageProgressLog({
     stageAttemptId: attempt.stage_attempt_id,
@@ -225,7 +278,16 @@ function compactTimelineForAttempt(db: DatabaseSync, attempt: StageAttemptPayloa
     createdAt: attempt.created_at,
     updatedAt: attempt.updated_at,
   });
-  const operatorSummary = compactTimelineOperatorSummary(attempt, studyId, stageProgressLog);
+  const readinessCurrentness = providerReadinessCurrentness(currentProviderReadiness, {
+    currentProviderReadinessRef: 'compact_timeline.current_provider_readiness',
+    creationReceiptRef: 'compact_timeline.provider_receipt',
+  });
+  const operatorSummary = compactTimelineOperatorSummary(
+    attempt,
+    studyId,
+    stageProgressLog,
+    currentProviderReadiness,
+  );
   return {
     stage_attempt_id: attempt.stage_attempt_id,
     task_id: attempt.task_id,
@@ -234,6 +296,8 @@ function compactTimelineForAttempt(db: DatabaseSync, attempt: StageAttemptPayloa
     stage_id: attempt.stage_id,
     status: attempt.status,
     blocked_reason: attempt.blocked_reason,
+    current_provider_readiness: currentProviderReadiness,
+    provider_readiness_currentness: readinessCurrentness,
     updated_at: attempt.updated_at,
     progress_delta_classification: stageProgressLog.user_stage_log.progress_delta_classification,
     deliverable_progress_delta: stageProgressLog.user_stage_log.deliverable_progress_delta,
@@ -272,9 +336,7 @@ export async function listStageAttemptsWithMonitoringProjection(
   const filteredAttempts = baseAttempts.filter((attempt) =>
     attemptMatchesMonitoringFilters(db, attempt, filters, sinceIso)
   );
-  const readinessByKind = filters.compactTimeline
-    ? null
-    : await providerReadinessByKind(filteredAttempts, paths, options);
+  const readinessByKind = await providerReadinessByKind(filteredAttempts, paths, options);
   return {
     filters: {
       domain_id: filters.domainId ?? null,
@@ -298,7 +360,9 @@ export async function listStageAttemptsWithMonitoringProjection(
       ? filteredAttempts.map((attempt) => attachCurrentProviderReadiness(attempt, readinessByKind))
       : filteredAttempts,
     compact_timeline: filters.compactTimeline
-      ? filteredAttempts.map((attempt) => compactTimelineForAttempt(db, attempt))
+      ? filteredAttempts.map((attempt) =>
+          compactTimelineForAttempt(db, attempt, readinessByKind.get(attempt.provider_kind) ?? null)
+        )
       : null,
   };
 }

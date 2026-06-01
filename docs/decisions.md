@@ -135,6 +135,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `family-runtime scheduler tick` 在 worker liveness blocker 存在时先执行 OPL-owned provider SLO / worker repair tick，再重新读取 provider readiness；若 worker 已恢复则继续 queue hydration / dispatch，若仍存在 liveness blocker 才 fail closed 为 `blocked_provider_not_ready`、返回 `provider_liveness_blocker`，并保持 `queue_tick=null`。成功与 blocked tick 都必须暴露 SLO 后重新读取的 `provider_runtime_after_slo` 与稳定消费用 `provider_readiness_after_slo`，避免 App/MAS/operator 继续消费 repair 前的 stale worker projection。
 - 该规则只修复 OPL provider/runtime-manager liveness 暴露与 scheduler preflight，不启动 worker、不绕过 worker mutation guard、不执行 domain action、不写 domain truth、不生成 owner receipt，也不声明 provider SLO、domain ready、production ready 或 App release ready。
 
+### 决策：attempt 创建 receipt 不能作为当前 provider readiness
+
+原因：`stage_attempt.provider_receipt` 是 attempt 创建时的 admission 快照。长跑 attempt 可能在创建时记录 `provider_code_landed_unconfigured` / `provider_ready=false`，随后由 provider SLO 或 worker repair 恢复为 live running。如果 operator、MAS read-model 或 App 默认面继续消费创建时 receipt，就会把正在 heartbeat 的 attempt 误判为 provider 未配置，导致 Progress-First 监督耗在重复 receipt / read-model reconcile 上。
+
+影响：
+
+- `family-runtime attempt inspect|list|query` 的 operator-facing projection 必须投影 `provider_readiness_currentness`，并把 `effective_provider_readiness_source` 固定为 `current_provider_readiness`。
+- 同一投影必须明确 `creation_receipt_currentness=creation_time_snapshot` 与 `provider_receipt_is_current_readiness=false`，保留历史 receipt 作为 provenance，但不能让 consumer 把它当作当前 provider liveness。
+- 该规则只修正 OPL provider readiness read-model currentness，不改写历史 receipt、不写 domain truth、不执行 domain action、不生成 owner receipt，也不声明 provider SLO、domain ready、production ready 或 App release ready。
+
 ### 决策：active attempt 缺进度信号时必须暴露监督路由
 
 原因：Progress-First 不能把 active / queued / running / checkpointed attempt 读成“没有动作”。当 attempt 缺 worker liveness、latest progress delta、stage log、owner closeout refs、next action，或 progress freshness 已 stale 时，App/operator 和 evidence-worklist 必须给出可监督下一步，让 operator 先检查 attempt、worker readiness、stage log、closeout refs、next forced delta 和 freshness refs，再决定 worker repair、继续监督或要求 domain typed closeout。

@@ -96,6 +96,20 @@ test('family-runtime attempt list filters attempts and emits compact Progress-Fi
     assert.equal(output.compact_timeline[0].semantic_status, 'missing_domain_semantic_summary');
     assert.equal(output.compact_timeline[0].progress_delta_classification, 'typed_blocker');
     assert.equal(output.compact_timeline[0].timeline.last_heartbeat_at, null);
+    assert.equal(output.compact_timeline[0].current_provider_readiness.provider_kind, 'local_sqlite');
+    assert.equal(output.compact_timeline[0].current_provider_readiness.provider_ready, true);
+    assert.equal(
+      output.compact_timeline[0].provider_readiness_currentness.effective_provider_readiness_source,
+      'current_provider_readiness',
+    );
+    assert.equal(
+      output.compact_timeline[0].provider_readiness_currentness.creation_receipt_currentness,
+      'creation_time_snapshot',
+    );
+    assert.equal(
+      output.compact_timeline[0].provider_readiness_currentness.provider_receipt_is_current_readiness,
+      false,
+    );
     assert.equal(output.compact_timeline[0].semantic_gap.reason, 'domain_closeout_did_not_provide_user_stage_log');
     assert.equal(
       output.compact_timeline[0].next_inspection_hint.command,
@@ -111,6 +125,12 @@ test('family-runtime attempt list filters attempts and emits compact Progress-Fi
     assert.equal(output.compact_timeline[0].operator_summary.started_at, null);
     assert.equal(output.compact_timeline[0].operator_summary.completed_at, null);
     assert.equal(output.compact_timeline[0].operator_summary.last_heartbeat_at, null);
+    assert.equal(output.compact_timeline[0].operator_summary.current_provider_readiness.provider_ready, true);
+    assert.equal(
+      output.compact_timeline[0].operator_summary
+        .provider_readiness_currentness.provider_receipt_is_current_readiness,
+      false,
+    );
     assert.equal(output.compact_timeline[0].operator_summary.progress_delta_classification, 'typed_blocker');
     assert.deepEqual(output.compact_timeline[0].operator_summary.closeout_refs, []);
     assert.equal(

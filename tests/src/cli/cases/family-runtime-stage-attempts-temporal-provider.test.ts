@@ -55,6 +55,7 @@ type TemporalStageAttemptQueryOutput = {
       operator_visibility: {
         status: string;
         current_provider_readiness: Record<string, unknown> | null;
+        provider_readiness_currentness: Record<string, any>;
         codex_stage_activity_timeout_policy: Record<string, unknown> | null;
         provider_run: Record<string, unknown>;
         stage_progress_log: Record<string, any>;
@@ -530,6 +531,18 @@ test('family-runtime queue inspect syncs a completed MAS default executor Tempor
       true,
     );
     assert.equal(
+      queryProjection.operator_visibility.provider_readiness_currentness.effective_provider_readiness_source,
+      'current_provider_readiness',
+    );
+    assert.equal(
+      queryProjection.operator_visibility.provider_readiness_currentness.creation_receipt_currentness,
+      'creation_time_snapshot',
+    );
+    assert.equal(
+      queryProjection.operator_visibility.provider_readiness_currentness.provider_receipt_is_current_readiness,
+      false,
+    );
+    assert.equal(
       queryProjection.observability_slo.provider_readiness?.surface_kind,
       'stage_attempt_current_provider_readiness',
     );
@@ -768,6 +781,22 @@ test('family-runtime attempt inspect projects current provider readiness separat
     const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
     const inspected = runCli(['family-runtime', 'attempt', 'inspect', attemptId], env);
     const listed = runCli(['family-runtime', 'attempt', 'list'], env);
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      attemptId,
+      '--checkpoint-ref',
+      'runtime/checkpoints/attempt-current-provider.json',
+    ], env);
+    const runningCompact = runCli([
+      'family-runtime',
+      'attempt',
+      'list',
+      '--status',
+      'checkpointed',
+      '--compact-timeline',
+    ], env);
 
     assert.equal(
       created.family_runtime_stage_attempt.attempt.provider_receipt.receipt_status,
@@ -781,10 +810,53 @@ test('family-runtime attempt inspect projects current provider readiness separat
       true,
     );
     assert.equal(
+      inspected.family_runtime_stage_attempt.attempt.provider_readiness_currentness.effective_provider_readiness_source,
+      'current_provider_readiness',
+    );
+    assert.equal(
+      inspected.family_runtime_stage_attempt.attempt.provider_readiness_currentness.creation_receipt_currentness,
+      'creation_time_snapshot',
+    );
+    assert.equal(
+      inspected.family_runtime_stage_attempt.attempt.provider_readiness_currentness.provider_receipt_is_current_readiness,
+      false,
+    );
+    assert.equal(
       inspected.family_runtime_stage_attempt.attempt.current_provider_readiness.details.address_source,
       'managed_local_service_state',
     );
     assert.equal(listed.family_runtime_stage_attempts.attempts[0].current_provider_readiness.provider_ready, true);
+    assert.equal(
+      listed.family_runtime_stage_attempts.attempts[0]
+        .provider_readiness_currentness.provider_receipt_is_current_readiness,
+      false,
+    );
+    assert.equal(runningCompact.family_runtime_stage_attempts.compact_timeline.length, 1);
+    assert.equal(
+      runningCompact.family_runtime_stage_attempts.compact_timeline[0]
+        .current_provider_readiness.provider_ready,
+      true,
+    );
+    assert.equal(
+      runningCompact.family_runtime_stage_attempts.compact_timeline[0]
+        .current_provider_readiness.status,
+      'ready',
+    );
+    assert.equal(
+      runningCompact.family_runtime_stage_attempts.compact_timeline[0]
+        .provider_readiness_currentness.effective_provider_readiness_source,
+      'current_provider_readiness',
+    );
+    assert.equal(
+      runningCompact.family_runtime_stage_attempts.compact_timeline[0]
+        .provider_readiness_currentness.provider_receipt_is_current_readiness,
+      false,
+    );
+    assert.equal(
+      runningCompact.family_runtime_stage_attempts.compact_timeline[0]
+        .operator_summary.provider_readiness_currentness.provider_receipt_is_current_readiness,
+      false,
+    );
 
   } finally {
     process.kill(service.pid!, 'SIGTERM');

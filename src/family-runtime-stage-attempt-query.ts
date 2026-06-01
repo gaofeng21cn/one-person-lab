@@ -28,6 +28,25 @@ type QueryStageAttemptOptions = {
   currentProviderReadiness?: Record<string, unknown> | null;
 };
 
+function providerReadinessCurrentness(currentProviderReadiness: Record<string, unknown> | null) {
+  return {
+    surface_kind: 'stage_attempt_provider_readiness_currentness',
+    effective_provider_readiness_source: 'current_provider_readiness',
+    creation_receipt_currentness: 'creation_time_snapshot',
+    provider_receipt_is_current_readiness: false,
+    current_provider_readiness_ref: currentProviderReadiness
+      ? 'stage_attempt_query.current_provider_readiness'
+      : null,
+    creation_receipt_ref: 'stage_attempt_query.attempt.provider_receipt',
+    progress_first_effect:
+      'operator_status_must_use_current_provider_readiness_for_live_provider_liveness',
+    authority_boundary: {
+      opl: 'provider_readiness_currentness_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
+  };
+}
+
 function stringListFrom(value: unknown) {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
@@ -80,6 +99,8 @@ export function queryStageAttempt(
   const userInstructionLedger = signalPayloadsByKind(db, stageAttemptId, 'user_instruction');
   const resumeLedger = signalPayloadsByKind(db, stageAttemptId, 'resume');
   const latestCloseout = closeouts.at(-1)?.packet as Record<string, unknown> | undefined;
+  const currentProviderReadiness = options.currentProviderReadiness ?? null;
+  const readinessCurrentness = providerReadinessCurrentness(currentProviderReadiness);
   const closeoutRefs = stringListFrom(attempt.closeout_refs);
   const consumedRefs = stringListFrom(latestCloseout?.consumed_refs);
   const consumedMemoryRefs = stringListFrom(latestCloseout?.consumed_memory_refs);
@@ -153,6 +174,7 @@ export function queryStageAttempt(
     controlled_apply_contract: controlledApplyContract,
     lifecycle_primitives: lifecyclePrimitives,
     current_provider_readiness: options.currentProviderReadiness ?? null,
+    provider_readiness_currentness: readinessCurrentness,
   });
   const humanReviewBurdenBudget = buildAttemptHumanReviewBurdenBudget({
     targetDomainId: attempt.domain_id,
@@ -255,6 +277,7 @@ export function queryStageAttempt(
       conflict_or_blocker_envelopes: conflictOrBlockerEnvelopes,
       operator_conflicts: conflictOrBlockerEnvelopes,
       ...genericProjections,
+      provider_readiness_currentness: readinessCurrentness,
       usage_projection: attempt.usage_projection,
       memory_trace_projection: stageProgressLog.memory_trace_projection,
       model_route_cost_projection: modelRouteCostProjection,
@@ -268,7 +291,8 @@ export function queryStageAttempt(
         attempt_id: attempt.stage_attempt_id,
         stage_id: attempt.stage_id,
         status: attempt.status,
-        current_provider_readiness: options.currentProviderReadiness ?? null,
+        current_provider_readiness: currentProviderReadiness,
+        provider_readiness_currentness: readinessCurrentness,
         codex_stage_activity_timeout_policy: workflowContract?.activity_timeout_policy.codex_stage_activity ?? null,
         provider_run: attempt.provider_run,
         activity_events: attempt.activity_events,
