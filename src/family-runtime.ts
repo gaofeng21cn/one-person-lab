@@ -165,7 +165,7 @@ function approveTask(
   );
 }
 
-export async function runFamilyRuntime(args: string[]) {
+export async function runFamilyRuntime(args: string[]): Promise<Record<string, unknown>> {
   const parsed = parseFamilyRuntimeCommand(args);
   const { db, paths } = openQueueDb();
   try {
@@ -403,6 +403,56 @@ export async function runFamilyRuntime(args: string[]) {
       };
     }
     if (parsed.mode === 'tick') {
+      const providerKind = resolveFamilyRuntimeProviderKind();
+      if (providerKind === 'temporal' && parsed.hydrate === true) {
+        const schedulerTick = await runSchedulerTick(
+          db,
+          paths,
+          {
+            providerKind,
+            limit: parsed.limit,
+            hydrate: parsed.hydrate,
+            taskScope: parsed.taskScope,
+            domainProfiles: parsed.domainProfiles,
+          },
+          (source, limit, hydrate, taskScope, domainProfiles) => runSchedulerQueueTick(
+            db,
+            paths,
+            parsed.source ?? source,
+            limit,
+            hydrate,
+            taskScope,
+            domainProfiles,
+            {
+              temporalProviderModule,
+            },
+          ),
+        );
+        return {
+          version: 'g2',
+          family_runtime_tick: {
+            surface_id: 'opl_family_runtime_tick',
+            ...(schedulerTick.queue_tick ?? {
+              source: parsed.source ?? 'manual',
+              task_scope: parsed.taskScope ?? null,
+              hydration: null,
+              selected_count: 0,
+              filtered_count: 0,
+              dispatches: [],
+            }),
+            provider_preflight: schedulerTick,
+            provider_runtime_after_slo: schedulerTick.provider_runtime_after_slo,
+            provider_readiness_after_slo: schedulerTick.provider_readiness_after_slo,
+            provider_liveness_blocker: 'provider_liveness_blocker' in schedulerTick
+              ? schedulerTick.provider_liveness_blocker
+              : null,
+            provider_blocker: 'provider_blocker' in schedulerTick
+              ? schedulerTick.provider_blocker
+              : null,
+            queue: queueSummary(db),
+          },
+        };
+      }
       return {
         version: 'g2',
         family_runtime_tick: {

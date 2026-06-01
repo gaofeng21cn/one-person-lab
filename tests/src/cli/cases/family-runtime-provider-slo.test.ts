@@ -798,8 +798,9 @@ test('family-runtime scheduler tick owns provider cadence and queue dispatch wit
       '--limit',
       '1',
     ], familyRuntimeEnv(stateRoot, {
-      OPL_TEMPORAL_ADDRESS: '',
+      OPL_TEMPORAL_ADDRESS: '127.0.0.1:7233',
       TEMPORAL_ADDRESS: '',
+      OPL_TEMPORAL_WORKER_STATUS: 'ready',
     })).family_runtime_scheduler_tick;
 
     assert.equal(tick.surface_kind, 'opl_family_runtime_scheduler_tick');

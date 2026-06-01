@@ -56,6 +56,7 @@ export type FamilyRuntimeCommandInput =
     limit?: number;
     hydrate?: boolean;
     taskScope?: FamilyRuntimeTaskScope;
+    domainProfiles?: FamilyRuntimeDomainProfiles;
   }
   | { mode: 'scheduler_status' | 'scheduler_install' | 'scheduler_remove' | 'scheduler_trigger'; providerKind?: FamilyRuntimeProviderKind }
   | {

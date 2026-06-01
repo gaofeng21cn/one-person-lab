@@ -38,6 +38,13 @@ type SchedulerTickDeps = {
   inspectProvidersWithLifecycle?: typeof inspectFamilyRuntimeProvidersWithLifecycle;
   runProviderSloTick?: typeof runTemporalProviderSloTick;
 };
+type RunQueueTick = (
+  source: string,
+  limit: number,
+  hydrate: boolean,
+  taskScope?: FamilyRuntimeTaskScope,
+  domainProfiles?: import('./family-runtime-command.ts').FamilyRuntimeDomainProfiles,
+) => SchedulerQueueTickResult | Promise<SchedulerQueueTickResult>;
 
 function buildProviderReadinessAfterSlo(providerKind: FamilyRuntimeProviderKind, selected: ProviderInspection['providers']['temporal']) {
   const workerReadiness = selected?.details && 'worker_readiness' in selected.details
@@ -208,13 +215,9 @@ export async function runSchedulerTick(
     limit?: number;
     hydrate?: boolean;
     taskScope?: FamilyRuntimeTaskScope;
+    domainProfiles?: import('./family-runtime-command.ts').FamilyRuntimeDomainProfiles;
   },
-  runQueueTick: (
-    source: string,
-    limit: number,
-    hydrate: boolean,
-    taskScope?: FamilyRuntimeTaskScope,
-  ) => SchedulerQueueTickResult | Promise<SchedulerQueueTickResult>,
+  runQueueTick: RunQueueTick,
   deps: SchedulerTickDeps = {},
 ) {
   const providerKind = resolveFamilyRuntimeProviderKind(input.providerKind);
@@ -245,7 +248,7 @@ export async function runSchedulerTick(
   });
   selected = provider.providers.temporal;
   blocker = selected ? buildTemporalProviderLivenessBlocker(selected) : null;
-  if (!selected?.ready && blocker && isTemporalWorkerLivenessBlocker(blocker)) {
+  if (!selected?.ready && blocker) {
     return {
       surface_kind: 'opl_family_runtime_scheduler_tick',
       scheduler_owner: 'opl_provider_runtime_manager',
@@ -253,7 +256,8 @@ export async function runSchedulerTick(
       provider_kind: providerKind,
       tick_source: source,
       status: 'blocked_provider_not_ready',
-      provider_liveness_blocker: blocker,
+      provider_liveness_blocker: isTemporalWorkerLivenessBlocker(blocker) ? blocker : null,
+      provider_blocker: blocker,
       provider_runtime: provider,
       provider_runtime_after_slo: provider,
       provider_readiness_after_slo: buildProviderReadinessAfterSlo(providerKind, selected),
@@ -272,7 +276,13 @@ export async function runSchedulerTick(
       },
     };
   }
-  const queueTick = await runQueueTick(source, input.limit ?? 10, input.hydrate ?? true, input.taskScope);
+  const queueTick = await runQueueTick(
+    source,
+    input.limit ?? 10,
+    input.hydrate ?? true,
+    input.taskScope,
+    input.domainProfiles,
+  );
   const readyOwnerActionPickupSlo = buildProgressFirstReadyOwnerActionPickupSlo({
     hydrate: input.hydrate ?? true,
     limit: input.limit ?? 10,

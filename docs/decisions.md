@@ -143,6 +143,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 - `family-runtime status` 与 `family-runtime scheduler status` 在 provider 未 ready 时优先投影同一 `temporal_worker_repair_action`，包括 `worker_lifecycle_status`、`next_repair_action`、`next_repair_command`、Temporal service 状态和 `liveness_blocker_first=true`。
 - `family-runtime scheduler tick` 在 worker liveness blocker 存在时先执行 OPL-owned provider SLO / worker repair tick，再重新读取 provider readiness；若 worker 已恢复则继续 queue hydration / dispatch，若仍存在 liveness blocker 才 fail closed 为 `blocked_provider_not_ready`、返回 `provider_liveness_blocker`，并保持 `queue_tick=null`。成功与 blocked tick 都必须暴露 SLO 后重新读取的 `provider_runtime_after_slo` 与稳定消费用 `provider_readiness_after_slo`，避免 App/MAS/operator 继续消费 repair 前的 stale worker projection。
+- `family-runtime tick --hydrate` 在 Temporal provider 下必须复用同一 scheduler/provider preflight；provider 未 ready 时不进入 queue dispatch 或 domain owner action，返回 `provider_preflight`、`provider_readiness_after_slo` 与 `provider_blocker` / `provider_liveness_blocker`。Temporal service running 但 worker_not_ready 且 mutation guard 允许时，provider SLO tick 必须先自动执行 worker start；仍未 ready 才 fail-fast 暴露下一条 repair command。低层 queue-only `family-runtime tick` 继续保留给显式测试、redrive 与 provider transport 失败夹具，不作为 Progress-First 默认推进入口。
 - 该规则只修复 OPL provider/runtime-manager liveness 暴露与 scheduler preflight，不启动 worker、不绕过 worker mutation guard、不执行 domain action、不写 domain truth、不生成 owner receipt，也不声明 provider SLO、domain ready、production ready 或 App release ready。
 
 ### 决策：attempt 创建 receipt 不能作为当前 provider readiness
