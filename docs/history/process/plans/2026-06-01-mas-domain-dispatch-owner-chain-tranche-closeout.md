@@ -239,6 +239,54 @@ Both owner calls exited non-zero with the same body-free blocker:
 
 No OPL `record` or `verify` action was run for these two workorders in this continuation because there was no domain-owned success refs path or typed-blocker payload to submit. This continuation is classified as `real_external_blocker`: the remaining work requires MAS/App/live owner to observe or produce a valid owner receipt / typed blocker payload for the two route-back workorders. OPL must keep these open workorders visible, not close them with empty templates, supplemental evidence only, synthetic typed blocker refs, synthetic owner-chain refs, or any readiness claim.
 
+## Same-session Continuation 5
+
+A later fresh read in the same long-running goal showed the same two `medautoscience` `domain_owner/default-executor-dispatch` workorders still open before owner handling:
+
+- `open_worklist_item_count=2`
+- `closed_refs_only_item_count=512`
+- `open_safe_action_payload_required_item_count=2`
+- `open_safe_action_payload_free_item_count=0`
+- `domain_dispatch_evidence_workorder_count=2`
+- `framework readiness operator_actionable_attention_tail_count=2`
+- `framework readiness operator_payload_required_attention_tail_count=2`
+- `framework readiness evidence_envelope_open_count=2`
+- App/operator `domain_dispatch_evidence_current_default_actionable_attempt_count=2`
+
+The workorders were unchanged in identity:
+
+- `sat_2d9e1cf3cb506b2cc0b5f50c`, study `003-dpcc-primary-care-phenotype-treatment-gap`, action `return_to_ai_reviewer_workflow`, dispatch authority `consumer_default_executor_dispatch`, source fingerprint `mas_default_executor_source_9954a2545dd77d06ee464961`, domain source fingerprint `a6ef8f88482d229f`.
+- `sat_cc2c6c6cf90bbe4444a4d388`, study `003-dpcc-primary-care-phenotype-treatment-gap`, action `return_to_ai_reviewer_workflow`, dispatch authority `ai_reviewer_record_production_handoff`, source fingerprint `mas_default_executor_source_d80393eb64f3ed2b04998151`, domain source fingerprint `ceff908e2a533628`.
+
+Unlike Continuation 4, the fresh MAS owner surface returned `status=typed_blocker_payload_ready` for both workorders and emitted valid `domain_dispatch_evidence_record_payload` / `opl_runtime_action_execute_payload` bodies. OPL dry-run preflight accepted both payloads:
+
+- `status=ready_to_record`
+- `selected_payload_path=typed_blocker_path`
+- `identity_binding.status=matched`
+- no missing required evidence refs
+- no placeholder refs observed
+- `domain_ready_authorized=false`
+- `production_ready_authorized=false`
+
+OPL then recorded and verified the two body-free refs-only receipts:
+
+- `opl://external-evidence/medautoscience/domain_dispatch:medautoscience:sat_2d9e1cf3cb506b2cc0b5f50c`, typed blocker ref `mas-domain-dispatch-typed-blocker:medautoscience:domain_owner-default-executor-dispatch:003-dpcc-primary-care-phenot:mas_default_executor_source_9954a2545dd77d06ee464961:owner-receipt-or-live-paper-line-closeout-pending`, no-forbidden-write proof `mas-no-forbidden-write-proof:medautoscience:domain_owner-default-executor-dispatch:003-dpcc-primary-care-phenot:mas_default_executor_source_9954a2545dd77d06ee464961:refs-only-dispatch-payload`.
+- `opl://external-evidence/medautoscience/domain_dispatch:medautoscience:sat_cc2c6c6cf90bbe4444a4d388`, typed blocker ref `mas-domain-dispatch-typed-blocker:medautoscience:domain_owner-default-executor-dispatch:003-dpcc-primary-care-phenot:mas_default_executor_source_d80393eb64f3ed2b04998151:owner-receipt-or-live-paper-line-closeout-pending`, no-forbidden-write proof `mas-no-forbidden-write-proof:medautoscience:domain_owner-default-executor-dispatch:003-dpcc-primary-care-phenot:mas_default_executor_source_d80393eb64f3ed2b04998151:refs-only-dispatch-payload`.
+
+Post-record/verify fresh readout:
+
+- `open_worklist_item_count=0`
+- `open_safe_action_payload_required_item_count=0`
+- `open_safe_action_payload_free_item_count=0`
+- `closed_refs_only_item_count=514`
+- `domain_dispatch_evidence_workorder_count=0`
+- `framework readiness operator_actionable_attention_tail_count=0`
+- `framework readiness operator_payload_required_attention_tail_count=0`
+- `framework readiness evidence_envelope_open_count=0`
+- App/operator `domain_dispatch_evidence_current_default_actionable_attempt_count=0`
+
+This continuation is classified as `live_evidence_closed` for the current OPL refs-only `domain_dispatch_evidence` workorders. It closes only OPL workorder accounting for these two attempts. It does not create a MAS owner receipt, does not approve human gates, does not close the DPCC paper line, does not refresh the manuscript/package, and does not authorize MAS domain ready, App release ready, production ready or global completion.
+
 ## Verification
 
 Commands run:
@@ -257,9 +305,6 @@ Repo-tracked source/docs/tests were not intentionally modified by this tranche e
 
 ## Remaining
 
-The next production-evidence lane should start from fresh readout and either:
+The next production-evidence lane should start from fresh readout. As of Continuation 5, the current `domain_dispatch_evidence` workorder packet is closed for the two DPCC route-back attempts, but stage replay missing receipt attention, domain-owned typed blocker attention, real paper-line progress, MAG/RCA owner evidence, and repeated long-soak/no-regression evidence remain active tail work.
 
-- ask MAS owner surface for a new owner receipt / typed blocker payload for the two remaining `consumed_ai_reviewer_routeback_not_observed` workorders, or
-- treat them as `real_external_blocker` if MAS/App/live owner cannot produce a valid payload.
-
-Do not treat this tranche as MAS paper closure, domain ready, production ready, App release ready or global goal completion.
+Do not treat this tranche as MAS paper closure, human-gate approval, domain ready, production ready, App release ready or global goal completion.
