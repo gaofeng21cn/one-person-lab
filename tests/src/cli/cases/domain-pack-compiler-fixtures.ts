@@ -1,9 +1,13 @@
 import {
   buildManifestCommand,
+  fs,
   loadFamilyManifestFixtures,
+  os,
+  path,
   repoRoot,
   runCli,
 } from '../helpers.ts';
+import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 export type JsonRecord = Record<string, unknown>;
 
@@ -370,6 +374,9 @@ export function withPackCompilerReadySurfaces(payload: JsonRecord, options: {
 
 export function bindFamilyManifests(env: Record<string, string>) {
   const fixtures = loadFamilyManifestFixtures();
+  env.OPL_META_AGENT_REPO_DIR ??= createOmaContractFixture(
+    env.OPL_STATE_DIR ?? fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-oma-state-')),
+  );
   const manifests = {
     medautoscience: withPackCompilerReadySurfaces(fixtures.medautoscience, {
       agentId: 'mas',
