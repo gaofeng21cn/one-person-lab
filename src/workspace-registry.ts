@@ -162,7 +162,7 @@ function normalizeWorkspaceBinding(binding: Partial<WorkspaceBinding>): Workspac
     archived_at: binding.archived_at ? String(binding.archived_at) : null,
   };
 
-  return rehydrateGeneratedDirectEntryLocator(normalized);
+  return normalized;
 }
 
 function writeWorkspaceRegistryFile(payload: WorkspaceRegistryFile) {
@@ -477,45 +477,6 @@ function buildDerivedDirectEntryLocator(workspaceLocator: BoundWorkspaceLocator 
   return {
     command: null,
     manifest_command: null,
-  };
-}
-
-function isGeneratedMasProductEntryCommand(command: string | null | undefined) {
-  return Boolean(command?.match(
-    /(?:^|(?:&&|\|\||[;&])\s*)uv\s+run\s+--directory\s+\S+\s+(?:python|python3)\s+-c\s+.*med_autoscience\.controllers\.product_entry/,
-  ));
-}
-
-function shouldRehydrateGeneratedLocator(binding: WorkspaceBinding) {
-  if (binding.direct_entry.url || !binding.direct_entry.workspace_locator) {
-    return false;
-  }
-
-  if (binding.project_id === 'medautoscience') {
-    return isGeneratedMasProductEntryCommand(binding.direct_entry.command)
-      || isGeneratedMasProductEntryCommand(binding.direct_entry.manifest_command);
-  }
-
-  return false;
-}
-
-function rehydrateGeneratedDirectEntryLocator(binding: WorkspaceBinding) {
-  if (!shouldRehydrateGeneratedLocator(binding)) {
-    return binding;
-  }
-
-  const derivedDirectEntry = buildDerivedDirectEntryLocator(binding.direct_entry.workspace_locator);
-  const commandIsGenerated = isGeneratedMasProductEntryCommand(binding.direct_entry.command);
-  const manifestCommandIsGenerated = isGeneratedMasProductEntryCommand(binding.direct_entry.manifest_command);
-  return {
-    ...binding,
-    direct_entry: {
-      ...binding.direct_entry,
-      command: commandIsGenerated ? derivedDirectEntry.command : binding.direct_entry.command,
-      manifest_command: manifestCommandIsGenerated
-        ? derivedDirectEntry.manifest_command
-        : binding.direct_entry.manifest_command,
-    },
   };
 }
 
