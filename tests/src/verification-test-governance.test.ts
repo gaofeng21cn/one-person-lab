@@ -56,12 +56,12 @@ const sentruxAdvisoryWorkflowPatterns = [
   /compare-ref: origin\/main/,
   /json-limit: '50'/,
   /path: artifacts\/opl-quality-details\/quality-details\.json/,
-  /actions\/upload-artifact@v4/,
+  /actions\/upload-artifact@v7/,
   /name: opl-quality-details/,
 ];
 
 const qualityDetailsActionPatterns = [
-  /actions\/setup-node@v4/,
+  /actions\/setup-node@v6/,
   /node-version: '24'/,
   /npm ci --prefix "\$GITHUB_ACTION_PATH\/\.\.\/\.\.\/\.\."/,
   /OPL_QUALITY_DETAILS_COMPARE_REF/,
@@ -89,7 +89,7 @@ const nativeHelperPrebuildWorkflowPatterns = [
   /npm run native:prebuild-check -- --prebuild-root dist\/native-helper-prebuilds/,
   /npm run native:prebuild-archive -- --prebuild-root dist\/native-helper-prebuilds/,
   /dist\/native-helper-prebuilds\/archives\/\*\.tar\.gz/,
-  /actions\/upload-artifact@v4/,
+  /actions\/upload-artifact@v7/,
   /FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'/,
 ];
 
