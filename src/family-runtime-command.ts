@@ -76,6 +76,7 @@ export type FamilyRuntimeCommandInput =
       manifest_ref?: string;
       receipt_ref?: string;
       actions?: Record<string, unknown>[];
+      handoffs?: Record<string, unknown>[];
     };
   }
   | {

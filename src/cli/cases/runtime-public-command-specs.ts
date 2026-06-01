@@ -304,9 +304,10 @@ export function buildPublicRuntimeCommandSpecs(
       group: 'runtime',
     }),
     'runtime lifecycle apply': cloneCommandSpec(commandSpecs['runtime lifecycle apply'], {
-      usage: 'opl runtime lifecycle apply --mode dry-run|apply|verify --domain <domain_id> [--action <json>] [--receipt-ref <ref>]',
+      usage: 'opl runtime lifecycle apply --mode dry-run|apply|verify --domain <domain_id> [--action <json>|--handoff <json>] [--receipt-ref <ref>]',
       examples: [
         'opl runtime lifecycle apply --mode dry-run --domain medautogrant --action \'{"action_id":"mark-tombstone","owner_scope":"opl_owned_tombstone_ref","target_ref":"opl://history/tombstone"}\'',
+        'opl runtime lifecycle apply --mode dry-run --domain medautoscience --handoff-file mas-physical-thinning-handoff.json',
         'opl runtime lifecycle apply --mode verify --domain medautogrant',
       ],
       group: 'runtime',

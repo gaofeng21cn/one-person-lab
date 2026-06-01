@@ -10,6 +10,7 @@ export function parseLifecycleApplyArgs(rest: string[]): FamilyRuntimeCommandInp
   let manifestRef: string | undefined;
   let receiptRef: string | undefined;
   const actions: Record<string, unknown>[] = [];
+  const handoffs: Record<string, unknown>[] = [];
   for (let index = 1; index < rest.length; index += 1) {
     const token = rest[index];
     const value = rest[index + 1];
@@ -34,10 +35,16 @@ export function parseLifecycleApplyArgs(rest: string[]): FamilyRuntimeCommandInp
     } else if (token === '--action-file' && value) {
       actions.push(parsePayloadFile(value));
       index += 1;
+    } else if (token === '--handoff' && value) {
+      handoffs.push(parsePayload(value));
+      index += 1;
+    } else if (token === '--handoff-file' && value) {
+      handoffs.push(parsePayloadFile(value));
+      index += 1;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime lifecycle apply option: ${token}.`, {
         option: token,
-        usage: 'opl family-runtime lifecycle apply --mode dry-run|apply|verify --domain <domain_id> [--action <json>] [--receipt-ref <ref>]',
+        usage: 'opl family-runtime lifecycle apply --mode dry-run|apply|verify --domain <domain_id> [--action <json>|--handoff <json>] [--receipt-ref <ref>]',
       });
     }
   }
@@ -46,14 +53,14 @@ export function parseLifecycleApplyArgs(rest: string[]): FamilyRuntimeCommandInp
       required: ['--domain'],
     });
   }
-  if (applyMode !== 'verify' && actions.length === 0) {
-    throw new FrameworkContractError('cli_usage_error', 'family-runtime lifecycle apply requires at least one --action outside verify mode.', {
-      required: ['--action'],
+  if (applyMode !== 'verify' && actions.length === 0 && handoffs.length === 0) {
+    throw new FrameworkContractError('cli_usage_error', 'family-runtime lifecycle apply requires at least one --action or --handoff outside verify mode.', {
+      required: ['--action', '--handoff'],
     });
   }
-  if (applyMode === 'verify' && actions.length > 0) {
-    throw new FrameworkContractError('cli_usage_error', 'family-runtime lifecycle apply --mode verify reads receipts and cannot include --action.', {
-      mutually_exclusive: ['--mode verify', '--action'],
+  if (applyMode === 'verify' && (actions.length > 0 || handoffs.length > 0)) {
+    throw new FrameworkContractError('cli_usage_error', 'family-runtime lifecycle apply --mode verify reads receipts and cannot include --action or --handoff.', {
+      mutually_exclusive: ['--mode verify', '--action', '--handoff'],
     });
   }
   return {
@@ -65,6 +72,7 @@ export function parseLifecycleApplyArgs(rest: string[]): FamilyRuntimeCommandInp
       manifest_ref: manifestRef,
       receipt_ref: receiptRef,
       actions,
+      handoffs,
     },
   };
 }

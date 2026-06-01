@@ -30,6 +30,8 @@ export type LifecycleApplyActionInput = {
   domain_owner_handoff_receipt_refs?: string[];
   no_active_caller_refs?: string[];
   replacement_parity_refs?: string[];
+  handoff_refs?: string[];
+  typed_blocker_refs?: string[];
   manifest_ref?: string;
   checksum?: string;
 };
@@ -41,6 +43,7 @@ export type LifecycleApplyInput = {
   manifest_ref?: string;
   receipt_ref?: string | null;
   actions?: unknown[];
+  handoffs?: unknown[];
 };
 
 type NormalizedLifecycleApplyAction = {
@@ -53,6 +56,8 @@ type NormalizedLifecycleApplyAction = {
   domain_owner_handoff_receipt_refs: string[];
   no_active_caller_refs: string[];
   replacement_parity_refs: string[];
+  handoff_refs: string[];
+  typed_blocker_refs: string[];
   manifest_ref: string | null;
   checksum: string | null;
 };
@@ -111,6 +116,8 @@ function normalizeLifecycleActions(actions: unknown[] | undefined): NormalizedLi
     replacement_parity_refs: normalizeStringList(
       isRecord(action) ? action.replacement_parity_refs : undefined,
     ),
+    handoff_refs: normalizeStringList(isRecord(action) ? action.handoff_refs : undefined),
+    typed_blocker_refs: normalizeStringList(isRecord(action) ? action.typed_blocker_refs : undefined),
     manifest_ref: normalizeOptionalText(isRecord(action) && typeof action.manifest_ref === 'string'
       ? action.manifest_ref
       : null),
@@ -118,6 +125,110 @@ function normalizeLifecycleActions(actions: unknown[] | undefined): NormalizedLi
       ? action.checksum
       : null),
   }));
+}
+
+function handoffCandidateRefs(handoff: JsonRecord) {
+  return uniqueStrings([
+    ...normalizeStringList(handoff.candidate_refs),
+    ...((Array.isArray(handoff.candidate_sample) ? handoff.candidate_sample : [])
+      .filter(isRecord)
+      .flatMap((sample) => normalizeStringList([sample.candidate_ref]))),
+  ]);
+}
+
+function actionsFromPhysicalThinningHandoff(handoff: unknown): NormalizedLifecycleApplyAction[] {
+  if (!isRecord(handoff)) {
+    return [];
+  }
+  const handoffRef = normalizeOptionalText(typeof handoff.handoff_ref === 'string' ? handoff.handoff_ref : null);
+  const candidateRefs = handoffCandidateRefs(handoff);
+  const selectedPayloadPath = normalizeOptionalText(
+    typeof handoff.selected_payload_path === 'string' ? handoff.selected_payload_path : null,
+  );
+  const typedBlockerRefs = normalizeStringList(handoff.typed_blocker_refs);
+  const receiptRefs = normalizeStringList(handoff.receipt_refs);
+  return candidateRefs.map((candidateRef, index) => {
+    const successPath = selectedPayloadPath === 'success_refs_path' && receiptRefs.length > 0;
+    return {
+      action_id: `physical-thinning-handoff-${index + 1}`,
+      action_kind: 'generic_lifecycle_apply',
+      owner_scope: 'domain_artifact_mutation_receipt_ref',
+      target_ref: candidateRef,
+      restore_proof_refs: [],
+      domain_artifact_mutation_receipt_refs: successPath ? receiptRefs : [],
+      domain_owner_handoff_receipt_refs: [],
+      no_active_caller_refs: [],
+      replacement_parity_refs: [],
+      handoff_refs: handoffRef ? [handoffRef] : [],
+      typed_blocker_refs: typedBlockerRefs,
+      manifest_ref: handoffRef,
+      checksum: null,
+    };
+  });
+}
+
+function normalizeLifecycleApplyActions(input: LifecycleApplyInput): NormalizedLifecycleApplyAction[] {
+  return [
+    ...normalizeLifecycleActions(input.actions),
+    ...(input.handoffs ?? []).flatMap(actionsFromPhysicalThinningHandoff),
+  ];
+}
+
+function summarizeLifecycleHandoffs(handoffs: unknown[] | undefined) {
+  const records = (handoffs ?? []).filter(isRecord);
+  const handoffRefs = uniqueStrings(records.flatMap((handoff) =>
+    normalizeStringList([handoff.handoff_ref])
+  ));
+  const candidateRefs = uniqueStrings(records.flatMap(handoffCandidateRefs));
+  const declaredCandidateRefCount = records.reduce((sum, handoff) => {
+    const value = typeof handoff.candidate_ref_count === 'number'
+      ? handoff.candidate_ref_count
+      : typeof handoff.candidate_count === 'number'
+        ? handoff.candidate_count
+        : 0;
+    return sum + Math.max(0, value);
+  }, 0);
+  const typedBlockerRefs = uniqueStrings(records.flatMap((handoff) =>
+    normalizeStringList(handoff.typed_blocker_refs)
+  ));
+  const receiptRefs = uniqueStrings(records.flatMap((handoff) => normalizeStringList(handoff.receipt_refs)));
+  return {
+    surface_kind: 'opl_lifecycle_apply_handoff_summary',
+    handoff_count: records.length,
+    handoff_ref: handoffRefs[0] ?? null,
+    handoff_refs: handoffRefs,
+    candidate_ref_count: Math.max(declaredCandidateRefCount, candidateRefs.length),
+    candidate_refs: candidateRefs.slice(0, 25),
+    candidate_refs_truncated: candidateRefs.length > 25,
+    typed_blocker_ref_count: typedBlockerRefs.length,
+    typed_blocker_refs: typedBlockerRefs.slice(0, 25),
+    typed_blocker_refs_truncated: typedBlockerRefs.length > 25,
+    receipt_ref_count: receiptRefs.length,
+    selected_payload_path: normalizeOptionalText(
+      typeof records[0]?.selected_payload_path === 'string' ? records[0].selected_payload_path : null,
+    ),
+    body_free: records.every((handoff) => handoff.body_free === true),
+    next_owner_action: records.map((handoff) => isRecord(handoff.next_owner_action)
+      ? handoff.next_owner_action
+      : null).find(Boolean) ?? null,
+    authority_boundary: {
+      refs_only: true,
+      opl_can_write_domain_truth: false,
+      opl_can_write_memory_body: false,
+      opl_can_write_artifact_body: false,
+      opl_can_execute_domain_physical_cleanup: false,
+      domain_artifact_authority_preserved: true,
+    },
+  };
+}
+
+function defaultSourceRefForLifecycleApply(input: LifecycleApplyInput) {
+  const explicitSourceRef = normalizeOptionalText(input.source_ref);
+  if (explicitSourceRef) {
+    return explicitSourceRef;
+  }
+  const handoffSummary = summarizeLifecycleHandoffs(input.handoffs);
+  return handoffSummary.handoff_ref ?? 'manual:lifecycle-apply';
 }
 
 function lifecycleApplyReceiptRef(input: {
@@ -133,6 +244,8 @@ function lifecycleApplyReceiptRef(input: {
   domainOwnerHandoffReceiptRefs: string[];
   noActiveCallerRefs: string[];
   replacementParityRefs: string[];
+  handoffRefs: string[];
+  typedBlockerRefs: string[];
 }) {
   const digest = sha256(input).slice(0, 24);
   return `opl://family-runtime/lifecycle-apply/${input.targetDomainId}/${input.actionId}/${digest}`;
@@ -170,6 +283,8 @@ function decideLifecycleAction(
     domainOwnerHandoffReceiptRefs: action.domain_owner_handoff_receipt_refs,
     noActiveCallerRefs: action.no_active_caller_refs,
     replacementParityRefs: action.replacement_parity_refs,
+    handoffRefs: action.handoff_refs,
+    typedBlockerRefs: action.typed_blocker_refs,
   });
 
   if (forbiddenScope || (!safeOplScope && !domainReceiptScope)) {
@@ -217,6 +332,7 @@ function decideLifecycleAction(
   }
 
   if (domainReceiptScope && domainReceiptRefs.length === 0) {
+    const typedBlockerRefObserved = action.typed_blocker_refs.length > 0;
     return {
       ...action,
       receipt_ref: receiptRef,
@@ -226,8 +342,10 @@ function decideLifecycleAction(
       writes_artifact_body: false,
       writes_source_repo_active_file: false,
       blocker: {
-        blocker_kind: 'domain_owner_receipt',
-        blocker_id: 'domain_artifact_mutation_receipt_ref_required',
+        blocker_kind: typedBlockerRefObserved ? 'domain_owned_typed_blocker_ref' : 'domain_owner_receipt',
+        blocker_id: typedBlockerRefObserved
+          ? 'domain_owned_lifecycle_typed_blocker_ref_observed'
+          : 'domain_artifact_mutation_receipt_ref_required',
         owner_scope: action.owner_scope,
         required_owner: 'domain_agent',
       },
@@ -261,6 +379,8 @@ function decideLifecycleAction(
       domain_owner_handoff_receipt_refs: action.domain_owner_handoff_receipt_refs,
       no_active_caller_refs: action.no_active_caller_refs,
       replacement_parity_refs: action.replacement_parity_refs,
+      handoff_refs: action.handoff_refs,
+      typed_blocker_refs: action.typed_blocker_refs,
       authority_boundary: {
         opl_can_write_domain_truth: false,
         opl_can_write_memory_body: false,
@@ -354,6 +474,8 @@ function lifecycleReceiptSemanticKey(receipt: {
     domain_owner_handoff_receipt_refs: normalizeStringList(payload.domain_owner_handoff_receipt_refs),
     no_active_caller_refs: normalizeStringList(payload.no_active_caller_refs),
     replacement_parity_refs: normalizeStringList(payload.replacement_parity_refs),
+    handoff_refs: normalizeStringList(payload.handoff_refs),
+    typed_blocker_refs: normalizeStringList(payload.typed_blocker_refs),
   });
 }
 
@@ -460,9 +582,9 @@ export function runFamilyRuntimeLifecycleApply(input: LifecycleApplyInput) {
   }
 
   const targetDomainId = normalizeText(input.target_domain_id, 'target_domain_id');
-  const sourceRef = normalizeOptionalText(input.source_ref) ?? 'manual:lifecycle-apply';
+  const sourceRef = defaultSourceRefForLifecycleApply(input);
   const manifestRef = normalizeOptionalText(input.manifest_ref);
-  const actions = normalizeLifecycleActions(input.actions);
+  const actions = normalizeLifecycleApplyActions(input);
   const decisions = actions.map((action) =>
     decideLifecycleAction(action, {
       targetDomainId,
@@ -484,6 +606,7 @@ export function runFamilyRuntimeLifecycleApply(input: LifecycleApplyInput) {
     sourceRef,
     manifestRef,
     actions,
+    handoffs: input.handoffs ?? [],
   }).slice(0, 24)}`;
 
   if (input.mode === 'apply' && !blocked) {
@@ -569,6 +692,12 @@ export function runFamilyRuntimeLifecycleApply(input: LifecycleApplyInput) {
           replacement_parity_refs: cleanupReceipts.flatMap((receipt) =>
             normalizeStringList(receipt.replacement_parity_refs)
           ),
+          handoff_refs: cleanupReceipts.flatMap((receipt) =>
+            normalizeStringList(receipt.handoff_refs)
+          ),
+          typed_blocker_refs: cleanupReceipts.flatMap((receipt) =>
+            normalizeStringList(receipt.typed_blocker_refs)
+          ),
         },
         createdAt,
       });
@@ -589,6 +718,7 @@ export function runFamilyRuntimeLifecycleApply(input: LifecycleApplyInput) {
     actions: decisions,
     cleanup_receipts: cleanupReceipts,
     verified_receipts: [],
+    handoff_summary: summarizeLifecycleHandoffs(input.handoffs),
     summary: summarizeLifecycleApply(decisions, input.mode === 'apply' && !blocked),
     authority_boundary: lifecycleApplyAuthorityBoundary(),
   };

@@ -120,6 +120,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/family-runtime-provider-repair.test.ts',
   'tests/src/cli/cases/family-runtime-provider-hosted-attempts.test.ts',
   'tests/src/cli/cases/family-runtime-provider-slo.test.ts',
+  'tests/src/cli/cases/family-runtime-lifecycle-handoff.test.ts',
   'tests/src/cli/cases/family-runtime-transition-bridge.test.ts',
   'tests/src/cli/cases/workspace-domain.production-closeout.test.ts',
   'tests/src/cli/cases/workspace-domain.production-closeout-timeout.test.ts',

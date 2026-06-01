@@ -370,11 +370,12 @@ export function buildInternalCommandSpecs(
       handler: (args) => runRuntimeOperatorActionExecute(getContracts(), args),
     },
     'runtime lifecycle apply': {
-      usage: 'opl runtime lifecycle apply --mode dry-run|apply|verify --domain <domain_id> [--action <json>] [--receipt-ref <ref>]',
+      usage: 'opl runtime lifecycle apply --mode dry-run|apply|verify --domain <domain_id> [--action <json>|--handoff <json>] [--receipt-ref <ref>]',
       summary:
         'Expose the App/operator lifecycle apply surface while reusing the OPL family-runtime lifecycle ledger.',
       examples: [
         'opl runtime lifecycle apply --mode dry-run --domain medautogrant --action \'{"action_id":"mark-tombstone","owner_scope":"opl_owned_tombstone_ref","target_ref":"opl://history/tombstone"}\'',
+        'opl runtime lifecycle apply --mode dry-run --domain medautoscience --handoff-file mas-physical-thinning-handoff.json',
         'opl runtime lifecycle apply --mode verify --domain medautogrant',
       ],
       handler: async (args) => {
