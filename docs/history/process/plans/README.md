@@ -58,6 +58,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-30-opl-series-doc-governance-stage-led-roadmap-ledger.md` | OPL runtime-substrate stage-led roadmap support-reference cleanup ledger。 | 当前 truth 归 active gap plan、core docs、live CLI/read-model、runtime ledger 与 domain owner receipts；ledger 只记录 fixed completion snapshot / shared SHA / App-Aion proof wording retirement. |
 | `2026-05-30-opl-series-doc-governance-provider-route-guard-ledger.md` | OPL provider worker / SLO safe-action route guard absorb ledger。 | 当前 truth 归 runtime action route source/tests、App/operator drilldown read-model、core status/gap/decisions docs and live CLI behavior；ledger 只记录 developer-checkout worker mutation guard and typed-blocker-closed default-action filtering foldback. |
 | `2026-05-30-opl-series-doc-governance-queuehold-dispatch-tray-ledger.md` | OPL queuehold dispatch override / tray route-cost projection absorb ledger。 | 当前 truth 归 family-runtime dispatch source/tests、stage attempt tray/workbench source/tests、core decisions doc and live CLI behavior；ledger 只记录 MAS shorthand dispatch override and per-attempt model-route-cost projection foldback. |
+| `2026-06-01-opl-series-doc-governance-tranche-ledger.md` | OPL series branch/worktree/doc governance tranche ledger。 | 当前 truth 归各 repo active truth owner、core docs 和 live code/contracts/tests/read-model；ledger 只记录本轮六仓 fast-forward、stale worktree cleanup、remote branch保留理由、skill/doctor 缺口和下一轮写入范围。 |
 
 ## Tombstone Rules
 
