@@ -916,6 +916,11 @@ test('family-runtime scheduler tick repairs worker liveness before queue admissi
     assert.equal(tick.status, undefined);
     assert.equal(tick.provider_slo.provider_worker_repair_receipt.repair_status, 'executed');
     assert.equal(tick.provider_slo.provider_worker_repair_receipt.repair_action_id, 'restart_temporal_worker');
+    assert.equal(tick.provider_readiness_after_slo.provider_kind, 'temporal');
+    assert.equal(tick.provider_readiness_after_slo.ready, true);
+    assert.equal(tick.provider_readiness_after_slo.degraded_reason, null);
+    assert.equal(tick.provider_readiness_after_slo.worker_lifecycle_status, 'ready');
+    assert.equal(tick.provider_runtime_after_slo.providers.temporal?.ready, true);
     assert.equal(tick.queue_tick.selected_count, 1);
     assert.equal(tick.queue_tick.dispatches.length, 1);
     assert.equal(queueTickCalls, 1);

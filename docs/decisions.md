@@ -132,7 +132,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - `family-runtime status` 与 `family-runtime scheduler status` 在 provider 未 ready 时优先投影同一 `temporal_worker_repair_action`，包括 `worker_lifecycle_status`、`next_repair_action`、`next_repair_command`、Temporal service 状态和 `liveness_blocker_first=true`。
-- `family-runtime scheduler tick` 在 worker liveness blocker 存在时先执行 OPL-owned provider SLO / worker repair tick，再重新读取 provider readiness；若 worker 已恢复则继续 queue hydration / dispatch，若仍存在 liveness blocker 才 fail closed 为 `blocked_provider_not_ready`、返回 `provider_liveness_blocker`，并保持 `queue_tick=null`。
+- `family-runtime scheduler tick` 在 worker liveness blocker 存在时先执行 OPL-owned provider SLO / worker repair tick，再重新读取 provider readiness；若 worker 已恢复则继续 queue hydration / dispatch，若仍存在 liveness blocker 才 fail closed 为 `blocked_provider_not_ready`、返回 `provider_liveness_blocker`，并保持 `queue_tick=null`。成功与 blocked tick 都必须暴露 SLO 后重新读取的 `provider_runtime_after_slo` 与稳定消费用 `provider_readiness_after_slo`，避免 App/MAS/operator 继续消费 repair 前的 stale worker projection。
 - 该规则只修复 OPL provider/runtime-manager liveness 暴露与 scheduler preflight，不启动 worker、不绕过 worker mutation guard、不执行 domain action、不写 domain truth、不生成 owner receipt，也不声明 provider SLO、domain ready、production ready 或 App release ready。
 
 ### 决策：active attempt 缺进度信号时必须暴露监督路由

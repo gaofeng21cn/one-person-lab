@@ -33,6 +33,32 @@ type SchedulerTickDeps = {
   runProviderSloTick?: typeof runTemporalProviderSloTick;
 };
 
+function buildProviderReadinessAfterSlo(providerKind: FamilyRuntimeProviderKind, selected: ProviderInspection['providers']['temporal']) {
+  const workerReadiness = selected?.details && 'worker_readiness' in selected.details
+    ? selected.details.worker_readiness as Record<string, unknown>
+    : null;
+  return {
+    surface_kind: 'opl_provider_readiness_after_slo',
+    provider_kind: providerKind,
+    ready: selected?.ready ?? false,
+    status: selected?.status ?? null,
+    degraded_reason: selected?.degraded_reason ?? null,
+    worker_lifecycle_status: workerReadiness?.lifecycle_status ?? null,
+    worker_readiness_status: workerReadiness?.readiness_status ?? null,
+    worker_ready: workerReadiness?.worker_ready ?? null,
+    blockers: workerReadiness?.blockers ?? [],
+    repair_action: workerReadiness?.repair_action ?? null,
+    authority_boundary: {
+      opl: 'provider_readiness_projection_after_slo_repair',
+      domain: 'truth_quality_artifact_gate_owner',
+      can_write_domain_truth: false,
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_export_verdict: false,
+    },
+  };
+}
+
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
 }
@@ -186,6 +212,8 @@ export async function runSchedulerTick(
       status: 'blocked_provider_not_ready',
       provider_liveness_blocker: blocker,
       provider_runtime: provider,
+      provider_runtime_after_slo: provider,
+      provider_readiness_after_slo: buildProviderReadinessAfterSlo(providerKind, selected),
       provider_slo: providerSlo,
       task_scope: input.taskScope ?? null,
       queue_tick: null,
@@ -222,6 +250,8 @@ export async function runSchedulerTick(
     cadence_owner: 'provider_backed_family_runtime',
     provider_kind: providerKind,
     tick_source: source,
+    provider_runtime_after_slo: provider,
+    provider_readiness_after_slo: buildProviderReadinessAfterSlo(providerKind, selected),
     provider_slo: providerSlo,
     task_scope: input.taskScope ?? null,
     queue_tick: queueTick,
