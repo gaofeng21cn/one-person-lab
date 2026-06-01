@@ -72,10 +72,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
           cache: npm
@@ -105,14 +105,14 @@ jobs:
           npm run native:prebuild-archive -- --prebuild-root dist/native-helper-prebuilds --target "$target_triple"
 
       - name: Upload native helper prebuild
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: opl-native-helper-prebuild-${{ runner.os }}-${{ runner.arch }}
           path: dist/native-helper-prebuilds
           if-no-files-found: error
 
       - name: Upload native helper release archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: opl-native-helper-release-archive-${{ runner.os }}-${{ runner.arch }}
           path: dist/native-helper-prebuilds/archives/*.tar.gz

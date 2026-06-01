@@ -25,7 +25,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout OPL
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Resolve OPL version
         shell: bash
@@ -40,7 +40,7 @@ jobs:
           echo "OPL_PACKAGES_OWNER=${{ github.repository_owner }}" >> "$GITHUB_ENV"
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
           cache: npm
@@ -55,7 +55,7 @@ jobs:
         run: npm run packages:release-discipline -- --manifest dist/opl-packages/opl-release-manifest.json
 
       - name: Upload package manifest artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: opl-release-manifest-${{ env.OPL_RELEASE_VERSION }}
           path: dist/opl-packages
