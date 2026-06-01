@@ -143,6 +143,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 - `family-runtime attempt inspect|list|query` 的 operator-facing projection 必须投影 `provider_readiness_currentness`，并把 `effective_provider_readiness_source` 固定为 `current_provider_readiness`。
 - 同一投影必须明确 `creation_receipt_currentness=creation_time_snapshot` 与 `provider_receipt_is_current_readiness=false`，保留历史 receipt 作为 provenance，但不能让 consumer 把它当作当前 provider liveness。
+- `family-runtime attempt list --compact-timeline` 必须在 timeline item 和 `operator_summary` 顶层投影 `provider_liveness_attention`。当当前 provider 未 ready 时，该 attention 必须优先显示 `blocked_provider_not_ready`、blocking severity、worker lifecycle、repair action 和下一条 OPL provider 修复命令，避免 operator 先被 typed closeout、semantic gap 或 read-model reconcile 噪音带偏。
 - 该规则只修正 OPL provider readiness read-model currentness，不改写历史 receipt、不写 domain truth、不执行 domain action、不生成 owner receipt，也不声明 provider SLO、domain ready、production ready 或 App release ready。
 
 ### 决策：active attempt 缺进度信号时必须暴露监督路由

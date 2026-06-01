@@ -29,6 +29,7 @@ type ProviderReadinessOptions = {
 };
 
 type StageAttemptPayload = ReturnType<typeof stageAttemptToPayload>;
+type CurrentProviderReadiness = ReturnType<typeof buildStageAttemptCurrentProviderReadinessPayload>;
 
 export type StageAttemptMonitoringFilters = {
   domainId?: FamilyRuntimeDomainId;
@@ -53,7 +54,7 @@ async function providerReadinessByKind(
 
 function attachCurrentProviderReadiness(
   attempt: StageAttemptPayload,
-  readinessByKind: Map<FamilyRuntimeProviderKind, ReturnType<typeof buildStageAttemptCurrentProviderReadinessPayload>>,
+  readinessByKind: Map<FamilyRuntimeProviderKind, CurrentProviderReadiness>,
 ) {
   const currentProviderReadiness = readinessByKind.get(attempt.provider_kind) ?? null;
   return {
@@ -63,6 +64,104 @@ function attachCurrentProviderReadiness(
       currentProviderReadinessRef: 'attempt.current_provider_readiness',
       creationReceiptRef: 'attempt.provider_receipt',
     }),
+  };
+}
+
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function stringValue(value: unknown) {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function providerLivenessAttention(
+  currentProviderReadiness: CurrentProviderReadiness | null,
+  refs: {
+    currentProviderReadinessRef: string;
+    attemptRef: string;
+  },
+) {
+  if (!currentProviderReadiness) {
+    return {
+      surface_kind: 'stage_attempt_provider_liveness_attention',
+      attention_status: 'unknown',
+      severity: 'diagnostic',
+      reason: 'current_provider_readiness_missing',
+      provider_kind: null,
+      provider_ready: null,
+      worker_lifecycle_status: null,
+      repair_action_id: null,
+      next_command: null,
+      progress_first_effect: 'inspect_current_provider_readiness_before_interpreting_attempt_progress',
+      current_provider_readiness_ref: null,
+      attempt_ref: refs.attemptRef,
+      authority_boundary: {
+        opl: 'provider_liveness_operator_attention_projection_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        can_write_domain_truth: false,
+        can_authorize_quality_verdict: false,
+      },
+    };
+  }
+  if (currentProviderReadiness.provider_ready === true) {
+    return {
+      surface_kind: 'stage_attempt_provider_liveness_attention',
+      attention_status: 'none',
+      severity: 'none',
+      reason: null,
+      provider_kind: currentProviderReadiness.provider_kind,
+      provider_ready: true,
+      worker_lifecycle_status: null,
+      repair_action_id: null,
+      next_command: null,
+      progress_first_effect: 'provider_live_continue_with_stage_progress_evidence',
+      current_provider_readiness_ref: refs.currentProviderReadinessRef,
+      attempt_ref: refs.attemptRef,
+      authority_boundary: {
+        opl: 'provider_liveness_operator_attention_projection_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        can_write_domain_truth: false,
+        can_authorize_quality_verdict: false,
+      },
+    };
+  }
+
+  const details = record(currentProviderReadiness.details);
+  const workerReadiness = record(details.worker_readiness);
+  const repairAction = record(workerReadiness.repair_action);
+  const workerLifecycleStatus = stringValue(workerReadiness.lifecycle_status)
+    ?? stringValue(workerReadiness.readiness_status);
+  const repairActionId = stringValue(repairAction.action_id);
+  const nextCommand = stringValue(repairAction.next_command)
+    ?? (currentProviderReadiness.provider_kind === 'temporal'
+      ? 'opl family-runtime worker status --provider temporal'
+      : null);
+  const providerReason = currentProviderReadiness.degraded_reason
+    ?? stringValue(currentProviderReadiness.status)
+    ?? 'provider_not_ready';
+
+  return {
+    surface_kind: 'stage_attempt_provider_liveness_attention',
+    attention_status: 'blocked_provider_not_ready',
+    severity: 'blocking',
+    reason: providerReason,
+    provider_kind: currentProviderReadiness.provider_kind,
+    provider_ready: false,
+    worker_lifecycle_status: workerLifecycleStatus,
+    repair_action_id: repairActionId,
+    next_command: nextCommand,
+    progress_first_effect: 'attempt_exists_but_provider_not_live_repair_provider_before_read_model_reconcile',
+    current_provider_readiness_ref: refs.currentProviderReadinessRef,
+    attempt_ref: refs.attemptRef,
+    authority_boundary: {
+      opl: 'provider_liveness_operator_attention_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+      can_write_domain_truth: false,
+      can_authorize_quality_verdict: false,
+    },
   };
 }
 
@@ -164,12 +263,16 @@ function compactTimelineOperatorSummary(
   attempt: StageAttemptPayload,
   studyId: string | null,
   stageProgressLog: ReturnType<typeof buildStageProgressLog>,
-  currentProviderReadiness: ReturnType<typeof buildStageAttemptCurrentProviderReadinessPayload> | null,
+  currentProviderReadiness: CurrentProviderReadiness | null,
 ) {
   const userStageLog = stageProgressLog.user_stage_log;
   const readinessCurrentness = providerReadinessCurrentness(currentProviderReadiness, {
     currentProviderReadinessRef: 'compact_timeline.current_provider_readiness',
     creationReceiptRef: 'compact_timeline.provider_receipt',
+  });
+  const livenessAttention = providerLivenessAttention(currentProviderReadiness, {
+    currentProviderReadinessRef: 'compact_timeline.current_provider_readiness',
+    attemptRef: `opl://stage_attempts/${attempt.stage_attempt_id}`,
   });
   return {
     attempt: attempt.stage_attempt_id,
@@ -184,6 +287,7 @@ function compactTimelineOperatorSummary(
     last_heartbeat_at: stageProgressLog.timeline.last_heartbeat_at,
     current_provider_readiness: currentProviderReadiness,
     provider_readiness_currentness: readinessCurrentness,
+    provider_liveness_attention: livenessAttention,
     progress_delta_classification: userStageLog.progress_delta_classification,
     evidence_refs: stageProgressLog.evidence_refs,
     closeout_refs: stageProgressLog.evidence_refs.closeout_refs,
@@ -202,7 +306,7 @@ function compactTimelineOperatorSummary(
 function compactTimelineForAttempt(
   db: DatabaseSync,
   attempt: StageAttemptPayload,
-  currentProviderReadiness: ReturnType<typeof buildStageAttemptCurrentProviderReadinessPayload> | null,
+  currentProviderReadiness: CurrentProviderReadiness | null,
 ) {
   const studyId = attemptStudyId(db, attempt);
   const stageProgressLog = buildStageProgressLog({
@@ -246,6 +350,10 @@ function compactTimelineForAttempt(
     currentProviderReadinessRef: 'compact_timeline.current_provider_readiness',
     creationReceiptRef: 'compact_timeline.provider_receipt',
   });
+  const livenessAttention = providerLivenessAttention(currentProviderReadiness, {
+    currentProviderReadinessRef: 'compact_timeline.current_provider_readiness',
+    attemptRef: `opl://stage_attempts/${attempt.stage_attempt_id}`,
+  });
   const operatorSummary = compactTimelineOperatorSummary(
     attempt,
     studyId,
@@ -262,6 +370,7 @@ function compactTimelineForAttempt(
     blocked_reason: attempt.blocked_reason,
     current_provider_readiness: currentProviderReadiness,
     provider_readiness_currentness: readinessCurrentness,
+    provider_liveness_attention: livenessAttention,
     updated_at: attempt.updated_at,
     progress_delta_classification: stageProgressLog.user_stage_log.progress_delta_classification,
     deliverable_progress_delta: stageProgressLog.user_stage_log.deliverable_progress_delta,

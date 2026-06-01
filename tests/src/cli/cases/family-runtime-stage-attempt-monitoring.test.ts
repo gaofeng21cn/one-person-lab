@@ -98,6 +98,12 @@ test('family-runtime attempt list filters attempts and emits compact Progress-Fi
     assert.equal(output.compact_timeline[0].timeline.last_heartbeat_at, null);
     assert.equal(output.compact_timeline[0].current_provider_readiness.provider_kind, 'local_sqlite');
     assert.equal(output.compact_timeline[0].current_provider_readiness.provider_ready, true);
+    assert.equal(output.compact_timeline[0].provider_liveness_attention.attention_status, 'none');
+    assert.equal(output.compact_timeline[0].provider_liveness_attention.severity, 'none');
+    assert.equal(
+      output.compact_timeline[0].provider_liveness_attention.progress_first_effect,
+      'provider_live_continue_with_stage_progress_evidence',
+    );
     assert.equal(
       output.compact_timeline[0].provider_readiness_currentness.effective_provider_readiness_source,
       'current_provider_readiness',
@@ -126,6 +132,7 @@ test('family-runtime attempt list filters attempts and emits compact Progress-Fi
     assert.equal(output.compact_timeline[0].operator_summary.completed_at, null);
     assert.equal(output.compact_timeline[0].operator_summary.last_heartbeat_at, null);
     assert.equal(output.compact_timeline[0].operator_summary.current_provider_readiness.provider_ready, true);
+    assert.equal(output.compact_timeline[0].operator_summary.provider_liveness_attention.attention_status, 'none');
     assert.equal(
       output.compact_timeline[0].operator_summary
         .provider_readiness_currentness.provider_receipt_is_current_readiness,
@@ -147,6 +154,73 @@ test('family-runtime attempt list filters attempts and emits compact Progress-Fi
     );
     assert.equal(typeof output.compact_timeline[0].timeline.activity_event_count, 'number');
     assert.equal(output.compact_timeline[0].authority_boundary.domain, 'truth_quality_artifact_gate_owner');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime attempt list exposes provider liveness attention before read-model reconcile', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-list-provider-attention-'));
+  try {
+    runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'review',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas","study_id":"DM003"}',
+      '--blocked-reason',
+      'typed_closeout_packet_required',
+    ], familyRuntimeEnv(stateRoot, {
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    }));
+
+    const output = runCli([
+      'family-runtime',
+      'attempt',
+      'list',
+      '--domain',
+      'medautoscience',
+      '--study',
+      'DM003',
+      '--compact-timeline',
+    ], familyRuntimeEnv(stateRoot, {
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    })).family_runtime_stage_attempts;
+    const item = output.compact_timeline[0];
+
+    assert.equal(output.summary.filtered_total, 1);
+    assert.equal(item.current_provider_readiness.provider_kind, 'temporal');
+    assert.equal(item.current_provider_readiness.provider_ready, false);
+    assert.equal(item.provider_liveness_attention.attention_status, 'blocked_provider_not_ready');
+    assert.equal(item.provider_liveness_attention.severity, 'blocking');
+    assert.equal(item.provider_liveness_attention.reason, 'temporal_runtime_not_configured');
+    assert.equal(item.provider_liveness_attention.worker_lifecycle_status, 'not_configured');
+    assert.equal(item.provider_liveness_attention.repair_action_id, 'configure_temporal_service');
+    assert.equal(item.provider_liveness_attention.next_command, 'opl family-runtime service start --provider temporal');
+    assert.equal(
+      item.provider_liveness_attention.progress_first_effect,
+      'attempt_exists_but_provider_not_live_repair_provider_before_read_model_reconcile',
+    );
+    assert.equal(
+      item.operator_summary.provider_liveness_attention.attention_status,
+      'blocked_provider_not_ready',
+    );
+    assert.equal(
+      item.operator_summary.provider_liveness_attention.next_command,
+      'opl family-runtime service start --provider temporal',
+    );
+    assert.equal(
+      item.provider_readiness_currentness.effective_provider_readiness_source,
+      'current_provider_readiness',
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
