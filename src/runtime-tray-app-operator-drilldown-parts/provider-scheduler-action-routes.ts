@@ -79,7 +79,7 @@ function providerWorkerMutationGuardRouteBlock(providerWorkerActionRoutes: JsonR
     route_status: 'blocked_by_provider_worker_mutation_guard',
     route_status_detail:
       stringValue(blockedRoute.route_status_detail)
-      ?? 'Run the managed runtime/current OPL CLI, set OPL_STATE_DIR for an isolated developer worker, or explicitly set OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER=1.',
+      ?? 'Run the managed runtime/current OPL CLI, set OPL_STATE_DIR for an isolated developer worker, explicitly enable OPL Developer Mode developer_apply_safe, or set OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER=1.',
     default_actionable: false,
     default_actionability_status: 'blocked_by_provider_worker_mutation_guard',
     provider_worker_mutation_guard: record(blockedRoute.provider_worker_mutation_guard),

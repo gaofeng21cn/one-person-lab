@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { TemporalWorkerPaths } from '../family-runtime-temporal-client.ts';
+import { readOplDeveloperSupervisorConfig } from '../system-preferences.ts';
 
 function normalize(value: string) {
   try {
@@ -35,6 +36,31 @@ function explicitDeveloperOverrideEnabled() {
   return process.env.OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER?.trim() === '1';
 }
 
+function explicitDeveloperSupervisorWorkerMutationAllowed() {
+  try {
+    const config = readOplDeveloperSupervisorConfig();
+    return {
+      allowed:
+        config.source === 'user_config'
+        && config.enabled === 'on'
+        && config.mode === 'developer_apply_safe',
+      config: {
+        version: config.version,
+        enabled: config.enabled,
+        mode: config.mode,
+        source: config.source,
+        auto_enable_github_login: config.auto_enable_github_login,
+      },
+    };
+  } catch (error) {
+    return {
+      allowed: false,
+      config: null,
+      error: error instanceof Error ? error.message : 'Unknown developer supervisor config error.',
+    };
+  }
+}
+
 export function buildTemporalWorkerMutationGuard(input: {
   moduleUrl: string;
   paths: TemporalWorkerPaths;
@@ -48,10 +74,12 @@ export function buildTemporalWorkerMutationGuard(input: {
     ? normalize(stateRoot) === normalize(path.join(defaultSharedState, 'family-runtime'))
     : false;
   const developerOverride = explicitDeveloperOverrideEnabled();
+  const developerSupervisor = explicitDeveloperSupervisorWorkerMutationAllowed();
   const blocked = sourceIsGitCheckout
     && usesDefaultSharedState
     && !explicitStateDir
-    && !developerOverride;
+    && !developerOverride
+    && !developerSupervisor.allowed;
 
   return {
     surface_kind: 'temporal_worker_mutation_guard',
@@ -61,6 +89,8 @@ export function buildTemporalWorkerMutationGuard(input: {
         ? 'allowed_explicit_state_dir'
         : developerOverride
           ? 'allowed_explicit_developer_override'
+          : developerSupervisor.allowed
+            ? 'allowed_explicit_developer_supervisor'
           : 'allowed_managed_runtime',
     allowed: !blocked,
     source_root: sourceRoot,
@@ -70,6 +100,9 @@ export function buildTemporalWorkerMutationGuard(input: {
     uses_default_shared_state: usesDefaultSharedState,
     state_dir_explicit: explicitStateDir,
     explicit_developer_override: developerOverride,
+    developer_supervisor_override: developerSupervisor.allowed,
+    developer_supervisor_config: developerSupervisor.config,
+    developer_supervisor_config_error: developerSupervisor.error ?? null,
     authority_boundary: {
       opl: 'provider_worker_lifecycle_mutation_guard',
       domain: 'truth_quality_artifact_gate_owner',

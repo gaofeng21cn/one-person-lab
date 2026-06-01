@@ -139,6 +139,8 @@ test('Temporal worker mutation guard blocks developer checkout against default s
     delete process.env.OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER;
 
     const sharedRoot = path.join(homeRoot, 'Library', 'Application Support', 'OPL', 'state', 'family-runtime');
+    const configDir = path.dirname(sharedRoot);
+    const configPath = path.join(configDir, 'developer-supervisor.json');
     const blocked = buildTemporalWorkerMutationGuard({
       moduleUrl: pathToFileURL(modulePath).href,
       paths: { root: sharedRoot },
@@ -163,6 +165,55 @@ test('Temporal worker mutation guard blocks developer checkout against default s
     });
     assert.equal(explicitState.allowed, true);
     assert.equal(explicitState.mutation_guard_status, 'allowed_explicit_state_dir');
+
+    delete process.env.OPL_STATE_DIR;
+    fs.mkdirSync(configDir, { recursive: true });
+    fs.writeFileSync(configPath, `${JSON.stringify({
+      version: 'g1',
+      enabled: 'auto',
+      mode: 'developer_apply_safe',
+      auto_enable_github_login: 'gaofeng21cn',
+      updated_at: '2026-06-01T00:00:00.000Z',
+    })}\n`);
+    const autoDeveloperMode = buildTemporalWorkerMutationGuard({
+      moduleUrl: pathToFileURL(modulePath).href,
+      paths: { root: sharedRoot },
+    });
+    assert.equal(autoDeveloperMode.allowed, false);
+    assert.equal(autoDeveloperMode.mutation_guard_status, 'blocked_developer_checkout_shared_state');
+    assert.equal(autoDeveloperMode.developer_supervisor_override, false);
+
+    fs.writeFileSync(configPath, `${JSON.stringify({
+      version: 'g1',
+      enabled: 'on',
+      mode: 'external_observe',
+      auto_enable_github_login: 'gaofeng21cn',
+      updated_at: '2026-06-01T00:00:00.000Z',
+    })}\n`);
+    const observeDeveloperMode = buildTemporalWorkerMutationGuard({
+      moduleUrl: pathToFileURL(modulePath).href,
+      paths: { root: sharedRoot },
+    });
+    assert.equal(observeDeveloperMode.allowed, false);
+    assert.equal(observeDeveloperMode.mutation_guard_status, 'blocked_developer_checkout_shared_state');
+    assert.equal(observeDeveloperMode.developer_supervisor_override, false);
+
+    fs.writeFileSync(configPath, `${JSON.stringify({
+      version: 'g1',
+      enabled: 'on',
+      mode: 'developer_apply_safe',
+      auto_enable_github_login: 'gaofeng21cn',
+      updated_at: '2026-06-01T00:00:00.000Z',
+    })}\n`);
+    const developerApplySafe = buildTemporalWorkerMutationGuard({
+      moduleUrl: pathToFileURL(modulePath).href,
+      paths: { root: sharedRoot },
+    });
+    assert.equal(developerApplySafe.allowed, true);
+    assert.equal(developerApplySafe.mutation_guard_status, 'allowed_explicit_developer_supervisor');
+    assert.equal(developerApplySafe.developer_supervisor_override, true);
+    assert.equal(developerApplySafe.developer_supervisor_config?.enabled, 'on');
+    assert.equal(developerApplySafe.developer_supervisor_config?.mode, 'developer_apply_safe');
 
     delete process.env.OPL_STATE_DIR;
     process.env.OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER = '1';

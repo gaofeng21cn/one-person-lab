@@ -717,7 +717,7 @@ export async function runTemporalWorkerForeground(paths: TemporalWorkerPaths) {
         provider_kind: 'temporal',
         mutation_guard: mutationGuard,
         repair_action:
-          'Run the managed runtime/current OPL CLI, set OPL_STATE_DIR for an isolated developer worker, or explicitly set OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER=1.',
+          'Run the managed runtime/current OPL CLI, set OPL_STATE_DIR for an isolated developer worker, explicitly enable OPL Developer Mode developer_apply_safe, or set OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER=1.',
       },
     );
   }
@@ -788,7 +788,7 @@ export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, i
         provider_kind: 'temporal',
         mutation_guard: mutationGuard,
         repair_action:
-          'Run the managed runtime/current OPL CLI, set OPL_STATE_DIR for an isolated developer worker, or explicitly set OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER=1.',
+          'Run the managed runtime/current OPL CLI, set OPL_STATE_DIR for an isolated developer worker, explicitly enable OPL Developer Mode developer_apply_safe, or set OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER=1.',
       },
     );
   }
@@ -900,7 +900,7 @@ export async function stopTemporalWorkerLifecycle(paths: TemporalWorkerPaths) {
         provider_kind: 'temporal',
         mutation_guard: mutationGuard,
         repair_action:
-          'Run the managed runtime/current OPL CLI, set OPL_STATE_DIR for an isolated developer worker, or explicitly set OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER=1.',
+          'Run the managed runtime/current OPL CLI, set OPL_STATE_DIR for an isolated developer worker, explicitly enable OPL Developer Mode developer_apply_safe, or set OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER=1.',
       },
     );
   }
