@@ -193,3 +193,157 @@ export function assertFrameworkOwnerHandoffAction(
   assert.equal(ownerHandoffAction.can_claim_production_ready, false);
   assert.equal(ownerHandoffAction.can_authorize_quality_or_export, false);
 }
+
+export function assertOwnerDeltaFirstReadinessProjection(readiness: JsonRecord) {
+  const summary = readiness.summary;
+  const attention = readiness.attention_first_payload;
+  const ownerDeltaFirst = attention.owner_delta_first;
+  const nextSafeActions = attention.next_safe_actions;
+
+  assert.equal(readiness.owner_delta_first.surface_kind, 'opl_owner_delta_first_projection');
+  assert.equal(ownerDeltaFirst.surface_kind, 'opl_owner_delta_first_projection');
+  assert.equal(readiness.owner_delta_first.next_owner, ownerDeltaFirst.next_owner);
+  assert.equal(readiness.owner_delta_first.next_required_delta, ownerDeltaFirst.next_required_delta);
+  assert.equal(
+    ownerDeltaFirst.projection_policy,
+    'default_operator_surface_prioritizes_next_owner_delta_raw_refs_only_counters_are_drilldown',
+  );
+  assert.equal(
+    ownerDeltaFirst.raw_attention_default_policy,
+    'blocked_refs_only_envelopes_stage_replay_packets_and_ledger_counters_are_full_detail_drilldown_not_primary_operator_next_step',
+  );
+  assert.equal(typeof ownerDeltaFirst.next_owner, 'string');
+  assert.equal(typeof ownerDeltaFirst.next_required_delta, 'string');
+  assert.equal(Array.isArray(ownerDeltaFirst.full_detail_sections), true);
+  assert.equal(
+    ownerDeltaFirst.full_detail_sections.includes('attention_first_payload.workstream_operating_loop'),
+    true,
+  );
+  assert.equal(ownerDeltaFirst.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(ownerDeltaFirst.authority_boundary.can_create_typed_blocker, false);
+  assert.equal(ownerDeltaFirst.authority_boundary.can_close_domain_ready, false);
+  assert.equal(ownerDeltaFirst.authority_boundary.can_claim_production_ready, false);
+
+  assert.equal(Array.isArray(nextSafeActions), true);
+  assert.equal(nextSafeActions.length > 0, true);
+  assert.equal(nextSafeActions.length <= 5, true);
+  assert.equal(
+    summary.operator_actionable_attention_tail_count,
+    summary.operator_payload_required_attention_tail_count
+      + summary.operator_payload_free_attention_tail_count,
+  );
+  assert.equal(
+    summary.total_operator_attention_tail_count,
+    summary.operator_actionable_attention_tail_count
+      + summary.domain_blocked_attention_tail_count,
+  );
+  assert.equal(
+    summary.domain_blocked_attention_grouping_semantics,
+    'domain_blocked_attention_refs_grouped_for_attention_only_raw_tail_counts_preserved',
+  );
+  assert.equal(
+    attention.summary.operator_actionable_attention_tail_count,
+    summary.operator_actionable_attention_tail_count,
+  );
+  assert.equal(
+    attention.summary.domain_blocked_attention_tail_count,
+    summary.domain_blocked_attention_tail_count,
+  );
+  assert.equal(readiness.evidence_worklist.worklist_item_is_completion_claim, false);
+  assert.equal(readiness.authority_boundary.safe_action_route_is_receipt_closure, false);
+  assert.equal(
+    readiness.evidence_envelope.claim_policy,
+    'owner_receipt_and_typed_blocker_refs_only_no_domain_or_production_ready_verdict',
+  );
+
+  if (
+    summary.operator_actionable_attention_tail_count === 0
+    && summary.domain_blocked_attention_tail_count > 0
+  ) {
+    const blockedRefsOnlyAction = nextSafeActions[0];
+    assert.equal(blockedRefsOnlyAction.action_kind, 'blocked_refs_only_attention_review');
+    assert.equal(blockedRefsOnlyAction.authority, 'refs_only_review');
+    assert.equal(blockedRefsOnlyAction.can_submit_record_to_safe_action_shell, false);
+    assert.equal(blockedRefsOnlyAction.can_create_owner_receipt, false);
+    assert.equal(blockedRefsOnlyAction.can_create_typed_blocker, false);
+    assert.equal(blockedRefsOnlyAction.can_close_domain_ready, false);
+    assert.equal(blockedRefsOnlyAction.can_claim_production_ready, false);
+  }
+}
+
+export function assertOwnerDeltaFirstAppOperatorProjection(drilldown: JsonRecord) {
+  const attention = drilldown.attention_first_payload;
+  const ownerDeltaFirst = attention.owner_delta_first;
+
+  assert.equal(attention.surface_kind, 'opl_app_drilldown_attention_first_payload');
+  assert.equal(
+    attention.payload_policy,
+    drilldown.detail_level === 'full'
+      ? 'full_detail_attention_overlay_with_complete_refs_no_domain_ready_claim'
+      : 'owner_delta_first_default_app_payload_full_refs_routes_and_attempt_graph_require_detail_full',
+  );
+  assert.equal(ownerDeltaFirst.surface_kind, 'opl_owner_delta_first_projection');
+  assert.equal(
+    ownerDeltaFirst.projection_policy,
+    'default_operator_surface_prioritizes_next_owner_delta_raw_refs_only_counters_are_drilldown',
+  );
+  assert.equal(typeof ownerDeltaFirst.next_owner, 'string');
+  assert.equal(typeof ownerDeltaFirst.next_required_delta, 'string');
+  assert.equal(Array.isArray(ownerDeltaFirst.full_detail_sections), true);
+  assert.equal(ownerDeltaFirst.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(ownerDeltaFirst.authority_boundary.can_create_typed_blocker, false);
+  assert.equal(ownerDeltaFirst.authority_boundary.can_close_domain_ready, false);
+  assert.equal(ownerDeltaFirst.authority_boundary.can_claim_production_ready, false);
+  assert.equal(
+    ownerDeltaFirst.raw_attention_default_policy,
+    'blocked_refs_only_envelopes_stage_replay_packets_and_ledger_counters_are_full_detail_drilldown_not_primary_operator_next_step',
+  );
+
+  assert.equal(attention.evidence_next_steps.items.length <= 5, true);
+  assert.equal(
+    attention.evidence_next_steps.projection_policy,
+    'operator_guidance_only_no_safe_action_creation_no_domain_ready_claim',
+  );
+  assert.equal(attention.evidence_next_steps.can_execute_domain_action, false);
+  assert.equal(attention.evidence_next_steps.can_create_owner_receipt, false);
+  assert.equal(attention.evidence_next_steps.can_close_domain_ready, false);
+  assert.equal(
+    attention.evidence_after_contract.attention_count_semantics,
+    'operator_actionable_plus_domain_blocked_refs_only_no_ready_claim',
+  );
+  assert.equal(
+    attention.evidence_after_contract.authority_boundary.attention_count_is_hard_blocker,
+    false,
+  );
+  assert.equal(
+    attention.evidence_after_contract.authority_boundary.route_support_closes_domain_ready,
+    false,
+  );
+  assert.equal(Object.hasOwn(drilldown, 'evidence_envelope'), drilldown.detail_level === 'full');
+  assert.equal(Object.hasOwn(drilldown, 'operator_action_routing_refs'), drilldown.detail_level === 'full');
+
+  const nextSafeAction = attention.next_safe_action;
+  if (nextSafeAction) {
+    assert.equal(nextSafeAction.execution_surface, 'opl runtime action execute');
+    assert.equal(nextSafeAction.can_execute_domain_action_directly, false);
+    assert.equal(nextSafeAction.can_create_owner_receipt, false);
+    if (nextSafeAction.route_requires_domain_or_app_payload) {
+      assert.equal(nextSafeAction.can_close_without_domain_or_app_payload, false);
+      assert.equal(
+        nextSafeAction.payload_workorder.empty_payload_template_is_success_evidence,
+        false,
+      );
+    }
+  }
+
+  const nextStep = attention.evidence_next_steps.items[0];
+  if (nextStep) {
+    assert.equal(typeof nextStep.owner, 'string');
+    assert.equal(typeof nextStep.step_kind, 'string');
+    assert.equal(typeof nextStep.status, 'string');
+    assert.equal(nextStep.can_execute_domain_action, false);
+    assert.equal(nextStep.can_create_owner_receipt, false);
+    assert.equal(nextStep.can_close_domain_ready, false);
+    assert.notEqual(nextStep.full_detail_section, undefined);
+  }
+}

@@ -32,6 +32,7 @@ import {
   defaultSelectedSafeActionCandidates,
 } from './selected-safe-action-candidates.ts';
 import { buildOwnerPayloadWorkorder } from './owner-payload-workorder.ts';
+import { buildOwnerDeltaFirstProjection } from './owner-delta-first.ts';
 import { splitOperatorAttentionCounts } from '../framework-readiness-attention-counts.ts';
 import {
   LAZY_LOAD_TARGETS,
@@ -882,10 +883,20 @@ function buildAttentionFirstPayload(drilldown: JsonRecord) {
     drilldown,
   ).sort(compareDefaultSelectedSafeActions);
   const nextAction = actions[0] ?? null;
+  const selectedSafeAction = summarizeSelectedSafeAction(nextAction);
+  const evidenceAfterContract = evidenceAfterContractAttention(drilldown);
+  const evidenceNextStepsProjection = evidenceNextSteps(drilldown);
+  const workstreamOperatingLoop = record(drilldown.workstream_operating_loop);
+  const ownerDeltaFirst = buildOwnerDeltaFirstProjection({
+    nextSafeAction: selectedSafeAction,
+    evidenceAfterContract,
+    evidenceNextSteps: evidenceNextStepsProjection,
+    workstreamOperatingLoop,
+  });
   return {
     surface_kind: 'opl_app_drilldown_attention_first_payload',
     payload_policy:
-      'default_app_payload_owner_attention_only_full_refs_routes_and_attempt_graph_require_detail_full',
+      'owner_delta_first_default_app_payload_full_refs_routes_and_attempt_graph_require_detail_full',
     owner: {
       projection_owner: 'one-person-lab',
       app_consumer: 'one_person_lab_app_operator_workbench',
@@ -896,11 +907,12 @@ function buildAttentionFirstPayload(drilldown: JsonRecord) {
     blocking: blockingItems(drilldown),
     advisory: advisoryItems(drilldown),
     missing_evidence: missingEvidenceItems(drilldown),
-    evidence_after_contract: evidenceAfterContractAttention(drilldown),
-    evidence_next_steps: evidenceNextSteps(drilldown),
-    workstream_operating_loop: record(drilldown.workstream_operating_loop),
+    owner_delta_first: ownerDeltaFirst,
+    evidence_after_contract: evidenceAfterContract,
+    evidence_next_steps: evidenceNextStepsProjection,
+    workstream_operating_loop: workstreamOperatingLoop,
     codex_app_runtime_role: record(drilldown.codex_app_runtime_role),
-    next_safe_action: summarizeSelectedSafeAction(nextAction),
+    next_safe_action: selectedSafeAction,
     additional_safe_action_count: Math.max(actions.length - (nextAction ? 1 : 0), 0),
     provider_health: providerHealth(drilldown),
     authority_boundary: authorityBoundary(drilldown),

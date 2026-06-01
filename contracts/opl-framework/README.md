@@ -20,6 +20,7 @@ It is repo-tracked because the current framework needs stable machine-readable i
 - domain pack compiler and generated interface read model that compiles admitted domain packs or standard agent repo contracts into OPL-owned CLI / MCP / Skill / product-entry / OpenAI / AI SDK / sidecar / status / workbench / harness generated-surface handoff projections
 - surface-budget governance that keeps new default surfaces limited to launch safety, authority boundary, evidence/replay/audit/route-back, or repeated App/runtime consumption
 - operating-loop adoption governance that maps external Codex work-loop patterns into OPL workstream/thread continuity, goal oracle, heartbeat/steering, artifact-first review, memory refs, receipt, and read-model boundaries without importing an external runtime or authority
+- owner-delta-first readiness projection that lets default App/operator surfaces answer current safe action, waiting owner, required delta / receipt / typed blocker, and readiness blocker before exposing raw refs-only audit counters
 - generic workspace/source/artifact/memory substrate projection and App/operator workbench grouping without moving domain truth/body/verdict/authority into OPL
 - framework runtime dependency location for OPL-compatible agents
 - Runtime Manager readiness and state projection
@@ -92,3 +93,4 @@ Read the linked domain repositories when you need the current repo-owned capabil
 - keep domain truth owned by the linked domain repositories, not by this directory
 - Foundry Agents should declare and adapt to these framework contracts instead of vendoring or forking their own OPL runtime truth
 - treat One Person Lab App as a projection consumer and workbench surface, not as a runtime provider or domain authority
+- treat `open_worklist=0`, selected cohorts, verified typed blockers, provider SLO, conformance, descriptor readiness, and refs-only ledger receipts as bounded operator evidence, not as domain ready, App release ready, artifact authority, physical delete authorization, or production ready

@@ -27,6 +27,7 @@ import {
   assertFrameworkOwnerHandoffPacket,
   assertFrameworkOwnerPayloadAction,
   assertFrameworkOwnerPayloadAttention,
+  assertOwnerDeltaFirstReadinessProjection,
 } from './owner-payload-workorder-assertions.ts';
 
 test('framework readiness summarizes default control-plane surfaces without authority claims', () => {
@@ -188,6 +189,7 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.summary.attention_payload_requirement_semantics,
     'operator_actionable_payload_required_is_domain_or_app_live_refs_payload_subset_not_opl_self_closure',
   );
+  assertOwnerDeltaFirstReadinessProjection(readiness);
   if (
     readiness.summary.framework_kernel_hard_blocker_count === 0
     && readiness.summary.open_tail_count === 0

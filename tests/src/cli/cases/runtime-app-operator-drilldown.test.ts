@@ -19,6 +19,9 @@ import {
   insertProviderProof,
 } from './runtime-app-operator-drilldown-helpers.ts';
 import { assertMemoryTraceProjection } from './runtime-app-operator-drilldown-memory-trace-assertions.ts';
+import {
+  assertOwnerDeltaFirstAppOperatorProjection,
+} from './owner-payload-workorder-assertions.ts';
 
 test('runtime snapshot exposes App operator drilldown as refs-only owner-aware read model', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-state-'));
@@ -184,6 +187,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       snapshotDrilldown.attention_first_payload.provider_health.authority_boundary.can_write_domain_truth,
       false,
     );
+    assertOwnerDeltaFirstAppOperatorProjection(snapshotDrilldown);
 
     const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], testEnv);
     const drilldown = fullOutput.app_operator_drilldown;
@@ -206,6 +210,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       'does_not_authorize_quality_readiness_or_export_verdict',
       'does_not_directly_execute_domain_actions',
     ]);
+    assertOwnerDeltaFirstAppOperatorProjection(drilldown);
 
     assert.equal(drilldown.summary.stage_attempt_count, 1);
     assert.equal(drilldown.summary.domain_projection_ref_count >= 3, true);

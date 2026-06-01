@@ -258,7 +258,7 @@ OPL Agent Lab 已把 ARIS 风格的日志驱动机制优化、独立 AI reviewer
 - 默认前门是 `opl`；`opl --help` / `opl help` 展示 OPL Framework 自有命令树，`opl exec` 负责一次性请求，`opl exec --help` 保留 Codex-compatible 执行器帮助边界，`opl resume` 负责续接会话。
 - `opl install` 是当前一键安装入口，负责安装或复用 Codex CLI、Temporal-backed family runtime provider、MAS、MAG、RCA、OPL Meta Agent、推荐 skills 和 App 入口。
 - `opl system` / `opl system initialize` / `opl system startup-maintenance` 管理 Codex CLI、provider profile/readiness、module install/update、skill sync、managed environment freshness、plugin cache freshness、reload prompt 和 local runtime state。
-- `opl framework readiness --family-defaults --json` 是 family readiness 动态真相入口；它只输出 framework/operator 读面，不授权 domain ready、artifact authority 或 production ready。
+- `opl framework readiness --family-defaults --json` 是 family readiness 动态真相入口；它只输出 framework/operator 读面，不授权 domain ready、artifact authority 或 production ready。默认阅读顺序是 owner-delta-first：先看当前是否有 OPL safe action、等待哪个 owner、需要什么 deliverable delta / receipt / typed blocker，以及该等待是否阻断 readiness；raw refs-only counters 只作 drilldown。
 - `opl stages readiness --family-defaults --json` 是 stage readiness family drilldown 入口；单仓诊断继续使用 `opl stages readiness --domain <domain> --json`。
 - `opl runtime app-operator-drilldown --json` 与 `opl runtime app-operator-drilldown --detail full --json` 是 App/operator drilldown 入口。
 - `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json` 是 runtime safe-action evidence worklist、stage evidence workorder packet、stage replay missing receipt attention packet 与 domain-dispatch evidence workorder packet 入口；其 direct stage readiness 聚合使用 bounded live refresh 与 projection cache fallback 维持 operator visibility，一切 cache-derived attention 仍不授权 domain truth、owner receipt、artifact authority 或 production ready。`family-runtime production-closeout` 已退役，不再是 active interface 或兼容 alias。
@@ -270,6 +270,7 @@ OPL Agent Lab 已把 ARIS 风格的日志驱动机制优化、独立 AI reviewer
 - 不能声明 Temporal provider proof 等于 MAS paper closure、MAG grant readiness 或 RCA visual ready。
 - 不能把 `stage_evidence_workorder_packet`、`domain_dispatch_evidence_workorder_packet`、refs-only receipt verified、provider/SLO satisfied 或 tail item closed 写成 domain owner-chain、App 用户路径、release/dist、artifact authority、expected receipt instance、monitor freshness 或 long-soak evidence 已全部闭合。
 - 不能声明 private functional audit 分类完成就等于物理代码路径清零。
+- 不能把 owner-delta summary、`next_forced_delta`、`goal_oracle_missing`、`open_worklist=0`、selected cohort 或 typed blocker verified 写成完成、domain ready、App release ready 或 production ready。
 - 不能把 `agents legacy-cleanup apply` 的 dry-run / apply / verify ready 状态写成 OPL 已删除 domain repo 文件或 production evidence 已闭合。
 - 不能为了兼容保留旧模块、旧接口、旧测试、旧 CLI alias、facade 或 wrapper；active caller 迁走后直接删除或进入 history/tombstone。
 

@@ -123,6 +123,35 @@ test('runtime App drilldown projects a refs-only workstream operating loop for a
     1,
   );
   assert.equal(
+    drilldown.attention_first_payload.owner_delta_first.surface_kind,
+    'opl_owner_delta_first_projection',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.owner_delta_first.projection_policy,
+    'default_operator_surface_prioritizes_next_owner_delta_raw_refs_only_counters_are_drilldown',
+  );
+  assert.equal(drilldown.attention_first_payload.owner_delta_first.next_owner, 'medautoscience');
+  assert.equal(
+    drilldown.attention_first_payload.owner_delta_first.next_required_delta,
+    'artifact_review_or_domain_owner_receipt_required',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.owner_delta_first.primary_item.source,
+    'workstream_operating_loop',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.owner_delta_first.raw_attention_default_policy,
+    'blocked_refs_only_envelopes_stage_replay_packets_and_ledger_counters_are_full_detail_drilldown_not_primary_operator_next_step',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.owner_delta_first.authority_boundary.can_create_owner_receipt,
+    false,
+  );
+  assert.equal(
+    drilldown.attention_first_payload.owner_delta_first.authority_boundary.can_claim_production_ready,
+    false,
+  );
+  assert.equal(
     drilldown.summary.workstream_operating_loop_artifact_first_review_available_count,
     1,
   );
@@ -166,6 +195,18 @@ test('workstream operating loop separates platform repair from deliverable progr
   assert.equal(item.progress_classification, 'platform_repair');
   assert.deepEqual(item.artifact_review_refs, []);
   assert.equal(item.next_steering_action.action_id, 'provide_goal_oracle_or_owner_receipt');
+  assert.equal(
+    drilldown.attention_first_payload.owner_delta_first.status,
+    'owner_delta_required',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.owner_delta_first.next_required_delta,
+    'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.owner_delta_first.summary.workstream_goal_oracle_missing_count,
+    1,
+  );
   assert.equal(
     drilldown.workstream_operating_loop.summary.platform_repair_only_workstream_count,
     1,

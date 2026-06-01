@@ -50,6 +50,7 @@ export function frameworkAttentionFirstPayload(input: {
   ownerPayloadGroupAttentionCount: number;
   ownerPayloadGroupAttentionOmittedCount: number;
   ownerPayloadGroups: JsonRecord[];
+  ownerDeltaFirst: JsonRecord;
   domainOwnerPayloadSummaryAttention: JsonRecord;
   ownerHandoffPacket: JsonRecord;
   memoryArtifactLifecycleEvidence: JsonRecord;
@@ -249,6 +250,7 @@ export function frameworkAttentionFirstPayload(input: {
       input.stageReplayMissingReceiptWorkorderAttentionSummary,
     stage_replay_missing_receipt_workorder_attention_items:
       input.stageReplayMissingReceiptWorkorderAttentionItems,
+    owner_delta_first: input.ownerDeltaFirst,
     owner_payload_group_attention_policy:
       'top_owner_payload_groups_by_open_then_blocked_counts_refs_only',
     owner_payload_group_attention_count: input.ownerPayloadGroupAttentionCount,

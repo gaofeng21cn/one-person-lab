@@ -40,11 +40,19 @@ OPL readiness、provider proof、generated surface proof、legacy cleanup ledger
 
 当前直接清理原则是：production closure 只接受目标态 owner surface 上的真实证据。旧模块、旧接口、旧测试、旧 CLI alias、compat wrapper、facade、历史 gateway/frontdoor/Hermes-first 文案和已替代文档入口，不作为“兼容性资产”保留；如果后续重新出现 active repo-local generic caller / wrapper / shell，必须 fail closed 到 cleanup，而不是写成标准智能体组成。
 
+Purpose-first 审计后的默认 runbook 是 owner-delta-first：
+
+- 默认 summary 先显示 OPL 是否有可执行 safe action、等待哪个 owner、owner 需要交付什么 delta / receipt / typed blocker，以及该等待是否阻断 readiness。
+- `blocked_refs_only_attention`、stage replay packet、evidence envelope、private residue inventory 与 lifecycle detail 默认折叠为 owner/stage/action group；raw item 留给 full-detail audit。
+- `open_worklist=0`、selected release cohort、provider SLO satisfied、verified typed blocker、legacy cleanup verified 或 conformance passed 都不能作为 production closure。
+- Domain 收薄 gate 只接受目标态保留物：domain pack、contracts、authority function / native helper、domain handler target / direct skill path / refs-only return shape。其余 product/status/workbench/session/queue/lifecycle/projection shell 必须通过 replacement parity、no-active-caller、owner receipt / typed blocker、no-forbidden-write 与 tombstone/provenance 后才进入 deletion / tombstone；OPL descriptor ready 或 private audit 分类清零不能授权 physical delete。
+
 ## Closure Gap Matrix
 
 | gap | 当前已落地 | 未闭合内容 | 完成口径 |
 | --- | --- | --- | --- |
 | `framework_control_plane` | Provider-backed stage runtime、typed queue、attempt ledger、safe action shell、App/operator drilldown 与 evidence worklist read model 已形成统一控制面。 | 需要持续保持同源读面，避免新增命令、App 卡片或文档自行推断 readiness / owner / production status。 | 默认 summary 和 drilldown 均消费同一机器 payload；新增 surface 只作派生投影，不制造第二真相。 |
+| `owner_delta_first_default_readiness` | Purpose-first 审计已明确默认 operator 面应从 refs inventory 转为 owner / required delta / readiness blocker 读法；现有 App/operator、framework readiness 和 evidence-worklist 已有 owner、safe-action、workorder、typed blocker 和 full-detail drilldown 字段。 | 需要 runtime/readiness 代码继续把 `goal_oracle_missing`、`next_forced_delta`、等待 owner、required receipt / typed blocker 和 readiness 阻断放到默认首屏；raw refs-only envelope、stage replay packet 和 private residue inventory 只保留 audit drilldown。 | 默认读面能直接回答当前是否有 OPL safe action、等待哪个 owner、下一步需要 deliverable delta / quality gate receipt / human gate receipt / owner receipt / no-regression ref / typed blocker，以及是否阻断 domain/App/production readiness；计数清零或 typed blocker verified 不被写成完成。 |
 | `codex_operating_loop_projection` | Jason Liu `Codex-maxxing` 的 durable thread、steering、memory、heartbeat、artifact review 经验已吸收为 OPL-owned refs-only `workstream_operating_loop` projection，并进入 `runtime app-operator-drilldown` 与 `framework readiness` summary。该面按 workstream 暴露 heartbeat status、deliverable/platform delta、artifact review refs、memory/writeback refs、package/export refs、owner receipt / typed blocker / quality gate refs 和下一步 steering action，同时固定 `pattern_source_refs` 只是 pattern reference。 | 该 projection 不替代真实 domain owner-chain、artifact review receipt、quality gate receipt、memory writeback acceptance 或 provider long-soak evidence；后续若 App 需要更强交互，也必须继续消费同一 refs-only projection，而不是新建 GUI-local truth。 | Operator 能从 App/framework 默认读面看到每条 workstream 的下一步 owner steering 入口；OPL 不读取 artifact/memory body、不执行 domain action、不创建 owner receipt、不声明 domain ready / quality ready / production ready。 |
 | `strict_standard_agent_source_purity` | 已闭合。Conformance 当前读为通过，domain contracts 已能声明 standard pack / authority / residue 分类；default-callers 当前读为 32 surfaces、0 blocked、0 missing deletion-evidence requirements。 | 没有 structural source-purity blocker。剩余是 production evidence、domain physical-delete authority 与 no-resurrection 防回归。 | 标准智能体 active source 只保留 domain pack、machine-readable contract、standard authority function、domain handler target、domain-specific implementation 和必要 native helper；generic control plane、default caller、workbench、sidecar、session、queue、lifecycle、wrapper 均由 OPL 生成/托管，域仓副本删除。 |
 | `semantic_hygiene_guard_surface` | Provider readiness single truth、generated surface gate、summary-first App drilldown、family-runtime parser split、stage launch guarantee clarity、legacy vocabulary hygiene、expert-judgment floor 和 functional privatization explicit semantic-equivalence refs 已有守门面。 | 后续 surface 容易重新把 descriptor/readiness/proof 写成 domain ready，或把 domain 未给出 explicit semantic-equivalence refs 的 adapter 直接按文字启发式放行。 | Focused tests、contracts 和文档同时阻断 `proof/readiness = domain verdict` 的误读；semantic-equivalence closeout 只能来自 domain-owned explicit status / evidence / typed-blocker / no-regression refs，OPL fallback heuristic 只用于发现 review-required。 |
@@ -71,6 +79,7 @@ OPL 已具备 production framework control plane 的基础面，并能 refs-only
 - OPL 已全量生产可用。
 - MAS paper closure、MAG grant-stage soak、RCA visual-stage soak 已完成。
 - Provider/SLO、generated surface、conformance、legacy cleanup 或 refs-only ledger verified 等于 App release/user path、domain owner-chain receipts、artifact/memory authority 或 long-soak 完成。
+- `open_worklist=0`、payload-free safe action 为 0、blocked attention 被 typed blocker 标注、selected release cohort 或 owner-payload summary 可见等于完成、domain ready、App release ready 或 production ready。
 - Private functional audit / default-caller deletion evidence 清零等于 domain repo physical delete authorized。
 - Refs-only adapter、diagnostic shell、tombstone/provenance code path 或 compatibility wrapper 是 generic control plane / default caller / product shell 的长期组成。
 - Developer Mode repair route read model 等于真实 repo direct-fix / fork-PR owner acceptance closeout。
@@ -78,7 +87,12 @@ OPL 已具备 production framework control plane 的基础面，并能 refs-only
 
 ## 验证入口
 
-Docs-only 治理只需 `git diff --check`、冲突标记扫描和 stale wording spot-check。涉及 contracts/source/runtime/App 的变更，按触及面补跑：
+Docs-only 治理最小验证：
+
+- `rtk git diff --check`
+- `rtk rg -n "^(<<<<<<<|=======|>>>>>>>)" docs contracts/opl-framework/README.md`
+
+涉及 contracts/source/runtime/App 的变更，按触及面补跑：
 
 - `rtk ./scripts/verify.sh`
 - `rtk npm run test:fast`

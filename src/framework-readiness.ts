@@ -333,6 +333,7 @@ export async function buildFrameworkReadinessSummary(
     evidenceEnvelopeProjection: appOperatorDrilldown.evidence_envelope,
   });
   const appEvidenceAfterContract = record(record(appOperatorDrilldown.attention_first_payload).evidence_after_contract);
+  const ownerDeltaFirst = record(record(appOperatorDrilldown.attention_first_payload).owner_delta_first);
   const ownerPayloadGroups = recordList(appEvidenceAfterContract.owner_payload_groups);
   const domainOwnerPayloadSummaryAttention =
     record(appEvidenceAfterContract.domain_owner_payload_summary_attention);
@@ -548,6 +549,7 @@ export async function buildFrameworkReadinessSummary(
         ownerPayloadGroupAttentionCount,
         ownerPayloadGroupAttentionOmittedCount,
         ownerPayloadGroups,
+        ownerDeltaFirst,
         domainOwnerPayloadSummaryAttention,
         ownerHandoffPacket,
         memoryArtifactLifecycleEvidence,
@@ -712,6 +714,10 @@ export async function buildFrameworkReadinessSummary(
             domainDispatchEvidenceWorkorderAttentionItems,
           blocking_policy: 'operator_worklist_only_without_owner_receipt_or_monitor_freshness_authority',
         },
+      },
+      owner_delta_first: {
+        source_command: SOURCE_COMMANDS.app_operator_drilldown,
+        ...ownerDeltaFirst,
       },
       semantic_hygiene: {
         source_command: SOURCE_COMMANDS.semantic_hygiene,

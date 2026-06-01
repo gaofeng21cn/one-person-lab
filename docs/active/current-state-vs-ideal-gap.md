@@ -13,6 +13,7 @@ Date: `2026-06-01`
 - 过程 proof、dated closeout、worktree/branch、receipt 流水和历史长清单进入 [OPL family 文档过程归档 2026-05](../history/process/plans/2026-05-18-opl-family-doc-process-history.md) 或其他 `docs/history/**`。
 - 本文不冻结瞬时 counters。当前读数从 `opl framework readiness --family-defaults --json`、`opl agents conformance --family-defaults --json`、`opl runtime app-operator-drilldown --json` 和 evidence ledger 命令读取。
 - 功能/结构差距按目标态判断；测试/证据差距只记录目标结构已正确但仍缺真实运行、owner receipt、long-soak、no-regression 或用户路径证据的事项。
+- Purpose-first 审计已经折回本文、闭环矩阵和核心五件套：默认完成口径先问 owner-delta，而不是先解释所有 refs-only audit counter。
 
 ## 当前唯一真相
 
@@ -32,6 +33,19 @@ Declarative Domain Pack
 ```
 
 `Codex CLI` 是当前第一公民 executor。Temporal-backed provider 是 production online runtime 的必需 substrate；`local_sqlite` 只允许作为 dev/CI/offline diagnostic baseline。`hermes_agent`、`claude_code`、`antigravity_cli` 等只能作为显式非默认 executor adapter/backend。
+
+## Purpose-first 默认完成口径
+
+普通 operator / App 默认读面必须先回答四个问题：
+
+1. 当前有没有 OPL 可执行 safe action。
+2. 当前等待哪个 domain / human / App / provider owner。
+3. owner 下一步需要产出什么：deliverable delta、quality gate receipt、human gate receipt、owner receipt、no-regression ref 或 typed blocker。
+4. 这个等待是否阻断 domain ready、App release ready 或 production ready。
+
+`blocked_refs_only_attention`、stage replay packet、evidence envelope、private platform residue inventory、lifecycle detail 和历史 receipt 计数只作为 full-detail audit / drilldown。`open_worklist=0`、payload-free safe action 为 0、verified typed blocker 增长、selected App cohort、provider SLO satisfied 或 structural conformance passed 都不能升级成完成、domain ready、App release ready 或 production ready。
+
+Domain 收薄只按目标态 owner surface 验收：保留 declarative domain pack、machine-readable contracts、standard/minimal authority functions / native helper implementation、domain handler target / direct skill path / refs-only return shape。product/status/workbench/session/queue/lifecycle/projection shell、compat alias、facade 或 wrapper 只有在 replacement parity、no-active-caller、owner receipt 或 typed blocker、no-forbidden-write、tombstone/provenance 成立后才能删除或降级；如果不能证明为何必须留在 domain repo，就进入 deletion/tombstone lane，而不是写成标准 agent 组成。
 
 ## 当前完成进度
 
@@ -102,10 +116,11 @@ Live truth inputs:
 
 1. 读取 `opl framework readiness --family-defaults --json`、`opl runtime app-operator-drilldown --json`、`opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`，确认当前 open gate。
 2. 继续把 `opl agents conformance --family-defaults --json` 作为结构回归守门；若 fresh conformance hard blocker 重新出现，先处理 blocker，再推进证据尾项。
-3. 把 strict standard-agent source purity 作为防回归守门：若 MAS/MAG/RCA/OMA 重新出现 repo-local generic default caller、domain-action/status/workbench wrapper、runtime projection、queue/ledger/session/lifecycle shell、compat alias 或 compatibility-only test，先 fail closed 处理。
-4. 推进 MAS/MAG/RCA repo-owned production caller、owner receipt、typed blocker、memory/artifact/lifecycle receipt、no-regression 和 live long-soak evidence。
-5. 当 `family-runtime evidence-worklist` 为 0 open 时，下一轮转向真实 domain evidence tail：MAS paper-line progress / reviewer / human-gate 或 stable typed blocker，MAG grant-stage owner receipt / sustained App consumption / long-soak typed blocker，RCA artifact-producing owner receipt、visual memory reuse、workspace receipt scaleout、naming hygiene no-resurrection 和 repeated no-regression。OPL 只记录/验证/投影这些 owner refs。
-6. 守住 Developer Mode direct-fix 与 cross-repo fork-PR live closeout refs-only gate：保持 `github-pr-owner-acceptance-ref:` strict intake、route-aware return-shape guidance、fixture/currentness negative guard 和 no-forbidden-write boundary；继续用显式或派生 `route_repetition_refs`、`risk_tier_auto_promotion_refs` 与 `app_patrol_mount_refs` 关闭 machine-visible `scaleout_followthrough` gate；派生 route repetition 只能来自 verified live ledger receipts 覆盖多个 target repo 或 patrol observation。Developer Mode base closeout refs ready 和 scaleout refs ready 都只关闭该 evidence / follow-through gate，不能写成 App release ready、domain ready、production ready 或 global complete。
+3. 按 owner-delta-first 读默认面：先找 OPL safe action、等待 owner、下一 required delta / receipt / typed blocker 和 readiness 阻断边界；raw refs-only envelope、stage replay packet 和 private residue inventory 留在 full-detail audit。
+4. 把 strict standard-agent source purity 作为防回归守门：若 MAS/MAG/RCA/OMA 重新出现 repo-local generic default caller、domain-action/status/workbench wrapper、runtime projection、queue/ledger/session/lifecycle shell、compat alias 或 compatibility-only test，先 fail closed 处理。
+5. 推进 MAS/MAG/RCA repo-owned production caller、owner receipt、typed blocker、memory/artifact/lifecycle receipt、no-regression 和 live long-soak evidence。
+6. 当 `family-runtime evidence-worklist` 为 0 open 时，下一轮转向真实 domain evidence tail：MAS paper-line progress / reviewer / human-gate 或 stable typed blocker，MAG grant-stage owner receipt / sustained App consumption / long-soak typed blocker，RCA artifact-producing owner receipt、visual memory reuse、workspace receipt scaleout、naming hygiene no-resurrection 和 repeated no-regression。OPL 只记录/验证/投影这些 owner refs。
+7. 守住 Developer Mode direct-fix 与 cross-repo fork-PR live closeout refs-only gate：保持 `github-pr-owner-acceptance-ref:` strict intake、route-aware return-shape guidance、fixture/currentness negative guard 和 no-forbidden-write boundary；继续用显式或派生 `route_repetition_refs`、`risk_tier_auto_promotion_refs` 与 `app_patrol_mount_refs` 关闭 machine-visible `scaleout_followthrough` gate；派生 route repetition 只能来自 verified live ledger receipts 覆盖多个 target repo 或 patrol observation。Developer Mode base closeout refs ready 和 scaleout refs ready 都只关闭该 evidence / follow-through gate，不能写成 App release ready、domain ready、production ready 或 global complete。
 
 Non-goals:
 
@@ -134,7 +149,7 @@ Docs-only 治理最小验证：
 
 ```bash
 rtk git diff --check
-rtk rg -n "^(<<<<<<<|>>>>>>>|=======)" docs
+rtk rg -n "^(<<<<<<<|=======|>>>>>>>)" docs contracts/opl-framework/README.md
 ```
 
 涉及 contracts/source/runtime/App 的变更按触及面补跑：
