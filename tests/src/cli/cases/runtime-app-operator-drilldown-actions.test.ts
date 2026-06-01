@@ -187,6 +187,20 @@ test('runtime action execute records and verifies domain dispatch evidence recei
     assert.equal(recordRoute.payload_workorder.accepted_payload_paths.typed_blocker_path.success_claimed, false);
     assert.equal(recordRoute.payload_workorder.authority_boundary.can_generate_domain_owner_receipt, false);
     assert.equal(recordRoute.payload_workorder.empty_payload_template_is_success_evidence, false);
+    assert.deepEqual(recordRoute.payload_workorder.success_refs_path_payload, {
+      domain_receipt_refs: ['<medautoscience-owner-receipt-ref>'],
+      typed_blocker_refs: [],
+      no_regression_refs: ['<medautoscience-no-regression-ref>'],
+      owner_chain_refs: ['<medautoscience-owner-chain-ref>'],
+      evidence_refs: [],
+    });
+    assert.deepEqual(recordRoute.payload_workorder.typed_blocker_path_payload, {
+      domain_receipt_refs: [],
+      typed_blocker_refs: ['<medautoscience-typed-blocker-ref>'],
+      no_regression_refs: [],
+      owner_chain_refs: [],
+      evidence_refs: [],
+    });
     assert.deepEqual(recordRoute.payload_template, {
       domain_receipt_refs: [],
       typed_blocker_refs: [],
@@ -212,6 +226,10 @@ test('runtime action execute records and verifies domain dispatch evidence recei
     assert.deepEqual(
       bridgeRecordRoute.payload_workorder.accepted_payload_paths.typed_blocker_path.required_operator_payload_refs,
       ['typed_blocker_refs'],
+    );
+    assert.deepEqual(
+      bridgeRecordRoute.payload_workorder.typed_blocker_path_payload,
+      recordRoute.payload_workorder.typed_blocker_path_payload,
     );
     assert.equal(bridgeRecordRoute.accepted_payload_paths.typed_blocker_path.success_claimed, false);
     assert.equal(
@@ -274,6 +292,14 @@ test('runtime action execute records and verifies domain dispatch evidence recei
     assert.deepEqual(openDispatchWorkorder.supplemental_operator_payload_refs, ['evidence_refs']);
     assert.equal(openDispatchWorkorder.payload_ref_hints.required_any_payload_refs.includes('evidence_refs'), false);
     assert.deepEqual(openDispatchWorkorder.payload_ref_hints.supplemental_payload_refs, ['evidence_refs']);
+    assert.deepEqual(
+      openDispatchWorkorder.payload_workorder.success_refs_path_payload,
+      recordRoute.payload_workorder.success_refs_path_payload,
+    );
+    assert.deepEqual(
+      openDispatchWorkorder.payload_workorder.typed_blocker_path_payload,
+      recordRoute.payload_workorder.typed_blocker_path_payload,
+    );
     assert.equal(openDispatchWorkorder.typed_blocker_payload_path_available, true);
     assert.equal(openDispatchWorkorder.owner_receipt_payload_path_available, true);
     assert.equal(openDispatchWorkorder.owner_chain_payload_path_available, true);

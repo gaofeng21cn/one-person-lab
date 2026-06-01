@@ -1,4 +1,5 @@
 import {
+  assert,
   createFakeCodexFixture,
   loadFamilyManifestFixtures,
 } from '../helpers.ts';
@@ -6,6 +7,55 @@ import {
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
 } from '../../../../src/standard-domain-agent-scaffold-constants.ts';
+import type {
+  TemporalStageAttemptWorkflowInput,
+  TemporalStageAttemptWorkflowState,
+} from '../../../../src/family-runtime-temporal.ts';
+
+export type TemporalStageAttemptCreateOutput = {
+  family_runtime_stage_attempt: {
+    attempt: TemporalStageAttemptWorkflowInput;
+  };
+};
+
+export type TemporalStageAttemptQueryOutput = {
+  family_runtime_stage_attempt_query: {
+    stage_attempt_query: {
+      attempt: {
+        status: string;
+        blocked_reason: string | null;
+        provider_run: Record<string, unknown>;
+      };
+      operator_visibility: {
+        status: string;
+        current_provider_readiness: Record<string, unknown> | null;
+        provider_readiness_currentness: Record<string, any>;
+        codex_stage_activity_timeout_policy: Record<string, unknown> | null;
+        provider_run: Record<string, unknown>;
+        stage_progress_log: Record<string, any>;
+      };
+      stage_progress_log: Record<string, any>;
+      attempt_true_path_proof: Record<string, any>;
+      observability_slo: {
+        provider_readiness: Record<string, unknown> | null;
+      };
+      completion_boundary: {
+        provider_completion_is_domain_ready: boolean;
+      };
+    };
+    temporal_query: {
+      surface_kind: 'temporal_stage_attempt_query_receipt';
+      stage_attempt_id: string;
+      workflow_id: string;
+      workflow_status?: string;
+      query?: TemporalStageAttemptWorkflowState;
+      query_error?: {
+        code?: string;
+        message?: string;
+      };
+    };
+  };
+};
 
 export function createTemporalCloseoutCodexFixture(closeoutRefs: string[]) {
   const closeout = {
@@ -92,4 +142,20 @@ export function buildTemporalStartManifest(stageId: string) {
       notes: [],
     },
   };
+}
+
+export function assertProviderReadinessCurrentness(
+  currentness: Record<string, any>,
+) {
+  assert.equal(currentness.effective_provider_readiness_source, 'current_provider_readiness');
+  assert.equal(currentness.creation_receipt_currentness, 'creation_time_snapshot');
+  assert.equal(currentness.provider_receipt_is_current_readiness, false);
+}
+
+export function assertCurrentProviderReadiness(
+  readiness: Record<string, any> | null | undefined,
+  expectedStatus = 'ready',
+) {
+  assert.equal(readiness?.provider_ready, true);
+  assert.equal(readiness?.status, expectedStatus);
 }

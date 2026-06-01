@@ -5,9 +5,11 @@ import {
 } from './family-runtime-providers.ts';
 import { queryStageAttempt } from './family-runtime-stage-attempt-query.ts';
 import {
-  buildStageAttemptCurrentProviderReadinessPayload,
   inspectStageAttempt,
 } from './family-runtime-stage-attempts.ts';
+import {
+  buildStageAttemptCurrentProviderReadinessPayload,
+} from './family-runtime-stage-attempt-provider-readiness-currentness.ts';
 import type { TemporalStageAttemptVisibilityReadiness } from './family-runtime-temporal-visibility.ts';
 
 type ProviderReadinessPaths = {

@@ -46,6 +46,10 @@ import {
 import {
   syncStageAttemptFromTemporalUnavailableObservation,
 } from './family-runtime-temporal-observation-sync.ts';
+import {
+  attachProviderCurrentness,
+  buildStageAttemptCurrentProviderReadinessPayload,
+} from './family-runtime-stage-attempt-provider-readiness-currentness.ts';
 
 export {
   createStageAttemptTable,
@@ -57,6 +61,7 @@ export {
   type StageAttemptStatus,
 } from './family-runtime-stage-attempt-ledger.ts';
 export { queryStageAttempt } from './family-runtime-stage-attempt-query.ts';
+export { buildStageAttemptCurrentProviderReadinessPayload } from './family-runtime-stage-attempt-provider-readiness-currentness.ts';
 
 export type StageAttemptCreateInput = {
   domainId: FamilyRuntimeDomainId;
@@ -413,54 +418,6 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     created: true,
     idempotent_noop: false,
     attempt: stageAttemptToPayload(row as StageAttemptRow),
-  };
-}
-
-export function buildStageAttemptCurrentProviderReadinessPayload(
-  provider: Awaited<ReturnType<typeof inspectFamilyRuntimeProviderWithLifecycle>>,
-  providerKind: FamilyRuntimeProviderKind,
-) {
-  return {
-    surface_kind: 'stage_attempt_current_provider_readiness',
-    provider_kind: providerKind,
-    provider_ready: provider.ready,
-    status: provider.status,
-    degraded_reason: provider.degraded_reason,
-    capabilities: provider.capabilities,
-    details: provider.details,
-    provider_receipt_is_creation_time_snapshot: true,
-    authority_boundary: {
-      opl: 'current_provider_lifecycle_projection_only',
-      domain: 'truth_quality_artifact_gate_owner',
-    },
-  };
-}
-
-function attachProviderCurrentness(
-  attempt: ReturnType<typeof stageAttemptToPayload>,
-  currentProviderReadiness:
-    | ReturnType<typeof buildStageAttemptCurrentProviderReadinessPayload>
-    | null,
-) {
-  return {
-    ...attempt,
-    current_provider_readiness: currentProviderReadiness,
-    provider_readiness_currentness: {
-      surface_kind: 'stage_attempt_provider_readiness_currentness',
-      effective_provider_readiness_source: 'current_provider_readiness',
-      creation_receipt_currentness: 'creation_time_snapshot',
-      provider_receipt_is_current_readiness: false,
-      current_provider_readiness_ref: currentProviderReadiness
-        ? 'attempt.current_provider_readiness'
-        : null,
-      creation_receipt_ref: 'attempt.provider_receipt',
-      progress_first_effect:
-        'operator_status_must_use_current_provider_readiness_for_live_provider_liveness',
-      authority_boundary: {
-        opl: 'provider_readiness_currentness_projection_only',
-        domain: 'truth_quality_artifact_gate_owner',
-      },
-    },
   };
 }
 

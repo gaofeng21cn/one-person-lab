@@ -165,6 +165,8 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
         required_evidence_refs: [
           `domain_dispatch:${domainId}:${stageAttemptId}:owner_receipt_or_typed_blocker`,
         ],
+        success_refs_path_payload: successPayloadExample,
+        typed_blocker_path_payload: typedBlockerPayloadExample,
         empty_payload_template_is_success_evidence: false,
         preflight_error_code: 'cli_usage_error',
         preflight_blocked_error_kind: 'domain_dispatch_evidence_payload_preflight_blocked',

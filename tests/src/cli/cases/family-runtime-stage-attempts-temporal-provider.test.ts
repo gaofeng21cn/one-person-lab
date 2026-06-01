@@ -16,10 +16,6 @@ import {
   DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
   DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
 } from '../../../../src/family-runtime-temporal-constants.ts';
-import type {
-  TemporalStageAttemptWorkflowInput,
-  TemporalStageAttemptWorkflowState,
-} from '../../../../src/family-runtime-temporal.ts';
 import { buildTemporalStageAttemptWorkflowInput } from '../../../../src/family-runtime-temporal.ts';
 import { runFamilyRuntime } from '../../../../src/family-runtime.ts';
 import {
@@ -34,54 +30,13 @@ import {
   test,
 } from '../helpers.ts';
 import {
+  assertCurrentProviderReadiness,
+  assertProviderReadinessCurrentness,
   buildTemporalStartManifest,
   createTemporalCloseoutCodexFixture,
+  type TemporalStageAttemptCreateOutput,
+  type TemporalStageAttemptQueryOutput,
 } from './family-runtime-stage-attempts-temporal-provider-fixtures.ts';
-
-type TemporalStageAttemptCreateOutput = {
-  family_runtime_stage_attempt: {
-    attempt: TemporalStageAttemptWorkflowInput;
-  };
-};
-
-type TemporalStageAttemptQueryOutput = {
-  family_runtime_stage_attempt_query: {
-    stage_attempt_query: {
-      attempt: {
-        status: string;
-        blocked_reason: string | null;
-        provider_run: Record<string, unknown>;
-      };
-      operator_visibility: {
-        status: string;
-        current_provider_readiness: Record<string, unknown> | null;
-        provider_readiness_currentness: Record<string, any>;
-        codex_stage_activity_timeout_policy: Record<string, unknown> | null;
-        provider_run: Record<string, unknown>;
-        stage_progress_log: Record<string, any>;
-      };
-      stage_progress_log: Record<string, any>;
-      attempt_true_path_proof: Record<string, any>;
-      observability_slo: {
-        provider_readiness: Record<string, unknown> | null;
-      };
-      completion_boundary: {
-        provider_completion_is_domain_ready: boolean;
-      };
-    };
-    temporal_query: {
-      surface_kind: 'temporal_stage_attempt_query_receipt';
-      stage_attempt_id: string;
-      workflow_id: string;
-      workflow_status?: string;
-      query?: TemporalStageAttemptWorkflowState;
-      query_error?: {
-        code?: string;
-        message?: string;
-      };
-    };
-  };
-};
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -530,18 +485,7 @@ test('family-runtime queue inspect syncs a completed MAS default executor Tempor
       queryProjection.operator_visibility.current_provider_readiness?.provider_receipt_is_creation_time_snapshot,
       true,
     );
-    assert.equal(
-      queryProjection.operator_visibility.provider_readiness_currentness.effective_provider_readiness_source,
-      'current_provider_readiness',
-    );
-    assert.equal(
-      queryProjection.operator_visibility.provider_readiness_currentness.creation_receipt_currentness,
-      'creation_time_snapshot',
-    );
-    assert.equal(
-      queryProjection.operator_visibility.provider_readiness_currentness.provider_receipt_is_current_readiness,
-      false,
-    );
+    assertProviderReadinessCurrentness(queryProjection.operator_visibility.provider_readiness_currentness);
     assert.equal(
       queryProjection.observability_slo.provider_readiness?.surface_kind,
       'stage_attempt_current_provider_readiness',
@@ -803,59 +747,30 @@ test('family-runtime attempt inspect projects current provider readiness separat
       'provider_code_landed_unconfigured',
     );
     assert.equal(created.family_runtime_stage_attempt.attempt.provider_receipt.provider_ready, false);
-    assert.equal(inspected.family_runtime_stage_attempt.attempt.current_provider_readiness.provider_ready, true);
-    assert.equal(inspected.family_runtime_stage_attempt.attempt.current_provider_readiness.status, 'ready');
+    assertCurrentProviderReadiness(inspected.family_runtime_stage_attempt.attempt.current_provider_readiness);
     assert.equal(
       inspected.family_runtime_stage_attempt.attempt.current_provider_readiness.provider_receipt_is_creation_time_snapshot,
       true,
     );
-    assert.equal(
-      inspected.family_runtime_stage_attempt.attempt.provider_readiness_currentness.effective_provider_readiness_source,
-      'current_provider_readiness',
-    );
-    assert.equal(
-      inspected.family_runtime_stage_attempt.attempt.provider_readiness_currentness.creation_receipt_currentness,
-      'creation_time_snapshot',
-    );
-    assert.equal(
-      inspected.family_runtime_stage_attempt.attempt.provider_readiness_currentness.provider_receipt_is_current_readiness,
-      false,
-    );
+    assertProviderReadinessCurrentness(inspected.family_runtime_stage_attempt.attempt.provider_readiness_currentness);
     assert.equal(
       inspected.family_runtime_stage_attempt.attempt.current_provider_readiness.details.address_source,
       'managed_local_service_state',
     );
-    assert.equal(listed.family_runtime_stage_attempts.attempts[0].current_provider_readiness.provider_ready, true);
-    assert.equal(
-      listed.family_runtime_stage_attempts.attempts[0]
-        .provider_readiness_currentness.provider_receipt_is_current_readiness,
-      false,
+    assertCurrentProviderReadiness(listed.family_runtime_stage_attempts.attempts[0].current_provider_readiness);
+    assertProviderReadinessCurrentness(
+      listed.family_runtime_stage_attempts.attempts[0].provider_readiness_currentness,
     );
     assert.equal(runningCompact.family_runtime_stage_attempts.compact_timeline.length, 1);
-    assert.equal(
-      runningCompact.family_runtime_stage_attempts.compact_timeline[0]
-        .current_provider_readiness.provider_ready,
-      true,
+    assertCurrentProviderReadiness(
+      runningCompact.family_runtime_stage_attempts.compact_timeline[0].current_provider_readiness,
     );
-    assert.equal(
-      runningCompact.family_runtime_stage_attempts.compact_timeline[0]
-        .current_provider_readiness.status,
-      'ready',
+    assertProviderReadinessCurrentness(
+      runningCompact.family_runtime_stage_attempts.compact_timeline[0].provider_readiness_currentness,
     );
-    assert.equal(
+    assertProviderReadinessCurrentness(
       runningCompact.family_runtime_stage_attempts.compact_timeline[0]
-        .provider_readiness_currentness.effective_provider_readiness_source,
-      'current_provider_readiness',
-    );
-    assert.equal(
-      runningCompact.family_runtime_stage_attempts.compact_timeline[0]
-        .provider_readiness_currentness.provider_receipt_is_current_readiness,
-      false,
-    );
-    assert.equal(
-      runningCompact.family_runtime_stage_attempts.compact_timeline[0]
-        .operator_summary.provider_readiness_currentness.provider_receipt_is_current_readiness,
-      false,
+        .operator_summary.provider_readiness_currentness,
     );
 
   } finally {

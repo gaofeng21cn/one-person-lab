@@ -5,7 +5,8 @@ import {
 } from './family-runtime-providers.ts';
 import {
   buildStageAttemptCurrentProviderReadinessPayload,
-} from './family-runtime-stage-attempts.ts';
+  providerReadinessCurrentness,
+} from './family-runtime-stage-attempt-provider-readiness-currentness.ts';
 import {
   listStageAttemptRows,
   parseStageAttemptJsonObject,
@@ -58,47 +59,10 @@ function attachCurrentProviderReadiness(
   return {
     ...attempt,
     current_provider_readiness: currentProviderReadiness,
-    provider_readiness_currentness: {
-      surface_kind: 'stage_attempt_provider_readiness_currentness',
-      effective_provider_readiness_source: 'current_provider_readiness',
-      creation_receipt_currentness: 'creation_time_snapshot',
-      provider_receipt_is_current_readiness: false,
-      current_provider_readiness_ref: currentProviderReadiness
-        ? 'attempt.current_provider_readiness'
-        : null,
-      creation_receipt_ref: 'attempt.provider_receipt',
-      progress_first_effect:
-        'operator_status_must_use_current_provider_readiness_for_live_provider_liveness',
-      authority_boundary: {
-        opl: 'provider_readiness_currentness_projection_only',
-        domain: 'truth_quality_artifact_gate_owner',
-      },
-    },
-  };
-}
-
-function providerReadinessCurrentness(
-  currentProviderReadiness: ReturnType<typeof buildStageAttemptCurrentProviderReadinessPayload> | null,
-  refs: {
-    currentProviderReadinessRef: string;
-    creationReceiptRef: string;
-  },
-) {
-  return {
-    surface_kind: 'stage_attempt_provider_readiness_currentness',
-    effective_provider_readiness_source: 'current_provider_readiness',
-    creation_receipt_currentness: 'creation_time_snapshot',
-    provider_receipt_is_current_readiness: false,
-    current_provider_readiness_ref: currentProviderReadiness
-      ? refs.currentProviderReadinessRef
-      : null,
-    creation_receipt_ref: refs.creationReceiptRef,
-    progress_first_effect:
-      'operator_status_must_use_current_provider_readiness_for_live_provider_liveness',
-    authority_boundary: {
-      opl: 'provider_readiness_currentness_projection_only',
-      domain: 'truth_quality_artifact_gate_owner',
-    },
+    provider_readiness_currentness: providerReadinessCurrentness(currentProviderReadiness, {
+      currentProviderReadinessRef: 'attempt.current_provider_readiness',
+      creationReceiptRef: 'attempt.provider_receipt',
+    }),
   };
 }
 

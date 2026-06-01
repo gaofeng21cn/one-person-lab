@@ -21,31 +21,13 @@ import { buildStageProgressLog } from './family-runtime-stage-progress-log.ts';
 import { buildStageAttemptTruePathProof } from './family-runtime-stage-attempt-true-path-proof.ts';
 import { buildModelRouteCostProjection } from './family-runtime-stage-attempt-usage.ts';
 import type { TemporalStageAttemptVisibilityReadiness } from './family-runtime-temporal-visibility.ts';
+import { providerReadinessCurrentness } from './family-runtime-stage-attempt-provider-readiness-currentness.ts';
 
 type QueryStageAttemptOptions = {
   temporalVisibilityReadiness?: TemporalStageAttemptVisibilityReadiness | null;
   temporalQuery?: Record<string, unknown> | null;
   currentProviderReadiness?: Record<string, unknown> | null;
 };
-
-function providerReadinessCurrentness(currentProviderReadiness: Record<string, unknown> | null) {
-  return {
-    surface_kind: 'stage_attempt_provider_readiness_currentness',
-    effective_provider_readiness_source: 'current_provider_readiness',
-    creation_receipt_currentness: 'creation_time_snapshot',
-    provider_receipt_is_current_readiness: false,
-    current_provider_readiness_ref: currentProviderReadiness
-      ? 'stage_attempt_query.current_provider_readiness'
-      : null,
-    creation_receipt_ref: 'stage_attempt_query.attempt.provider_receipt',
-    progress_first_effect:
-      'operator_status_must_use_current_provider_readiness_for_live_provider_liveness',
-    authority_boundary: {
-      opl: 'provider_readiness_currentness_projection_only',
-      domain: 'truth_quality_artifact_gate_owner',
-    },
-  };
-}
 
 function stringListFrom(value: unknown) {
   return Array.isArray(value)
@@ -100,7 +82,10 @@ export function queryStageAttempt(
   const resumeLedger = signalPayloadsByKind(db, stageAttemptId, 'resume');
   const latestCloseout = closeouts.at(-1)?.packet as Record<string, unknown> | undefined;
   const currentProviderReadiness = options.currentProviderReadiness ?? null;
-  const readinessCurrentness = providerReadinessCurrentness(currentProviderReadiness);
+  const readinessCurrentness = providerReadinessCurrentness(currentProviderReadiness, {
+    currentProviderReadinessRef: 'stage_attempt_query.current_provider_readiness',
+    creationReceiptRef: 'stage_attempt_query.attempt.provider_receipt',
+  });
   const closeoutRefs = stringListFrom(attempt.closeout_refs);
   const consumedRefs = stringListFrom(latestCloseout?.consumed_refs);
   const consumedMemoryRefs = stringListFrom(latestCloseout?.consumed_memory_refs);
