@@ -10,6 +10,14 @@ import {
 
 type JsonRecord = Record<string, unknown>;
 
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function record(value: unknown): JsonRecord {
+  return isRecord(value) ? value : {};
+}
+
 function numberValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
@@ -48,6 +56,7 @@ export function frameworkAttentionFirstPayload(input: {
   appReleaseUserPathEvidence: JsonRecord;
   developerModeLiveCloseoutEvidence: JsonRecord;
   omaProductionConsumptionFollowthrough: JsonRecord;
+  workstreamOperatingLoop: JsonRecord;
   familyStallLineage: JsonRecord;
   domainDispatchEvidenceWorkorderGroupAttentionItems: JsonRecord[];
   domainDispatchEvidenceWorkorderAttentionItems: JsonRecord[];
@@ -227,6 +236,12 @@ export function frameworkAttentionFirstPayload(input: {
       attention_payload_requirement_semantics: attentionCounts.payloadRequirementSemantics,
       provider_slo_cadence_window_status: input.providerSloCadenceWindowStatus ?? null,
       provider_slo_capability_status: input.providerSloCapabilityStatus ?? null,
+      workstream_operating_loop_workstream_count:
+        numberValue(record(input.workstreamOperatingLoop.summary).workstream_count),
+      workstream_operating_loop_artifact_first_review_available_count:
+        numberValue(record(input.workstreamOperatingLoop.summary).artifact_first_review_available_count),
+      workstream_operating_loop_goal_oracle_missing_count:
+        numberValue(record(input.workstreamOperatingLoop.summary).goal_oracle_missing_count),
     },
     semantic_hygiene_contract_floor: input.semanticHygieneContractFloor,
     stage_evidence_workorder_attention_items: input.stageEvidenceWorkorderAttentionItems,
@@ -251,6 +266,8 @@ export function frameworkAttentionFirstPayload(input: {
       input.developerModeLiveCloseoutEvidence,
     oma_production_consumption_followthrough:
       input.omaProductionConsumptionFollowthrough,
+    workstream_operating_loop:
+      input.workstreamOperatingLoop,
     family_stall_lineage: input.familyStallLineage,
     domain_dispatch_evidence_workorder_packet_summary:
       input.domainDispatchEvidenceWorkorderSummary,

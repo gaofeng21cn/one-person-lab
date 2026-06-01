@@ -20,6 +20,7 @@ Machine boundary: 仅人读索引；机器可读行为必须使用 contracts、s
 - [OPL 当前开发线路](../active/current-development-lines.md)
 - [OPL 开发文档组合整理](../active/development-document-portfolio.md)
 - [OPL stage-led agent framework roadmap](../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md)
+- [Codex-maxxing Operating Loop Adoption](../runtime/codex-maxxing-operating-loop-adoption.md)
 
 ## 内容
 

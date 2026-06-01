@@ -349,6 +349,9 @@ export async function buildFrameworkReadinessSummary(
   const omaProductionConsumptionFollowthrough = record(
     appEvidenceAfterContract.oma_production_consumption_followthrough,
   );
+  const workstreamOperatingLoop = record(
+    record(appOperatorDrilldown.attention_first_payload).workstream_operating_loop,
+  );
   const ownerPayloadGroupAttentionCount =
     numberValue(appEvidenceAfterContract.owner_payload_group_attention_count);
   const ownerPayloadGroupAttentionOmittedCount =
@@ -551,6 +554,7 @@ export async function buildFrameworkReadinessSummary(
         appReleaseUserPathEvidence,
         developerModeLiveCloseoutEvidence,
         omaProductionConsumptionFollowthrough,
+        workstreamOperatingLoop,
         familyStallLineage,
         domainDispatchEvidenceWorkorderGroupAttentionItems,
         domainDispatchEvidenceWorkorderAttentionItems,
@@ -635,6 +639,12 @@ export async function buildFrameworkReadinessSummary(
         open_tail_count: openTailCount,
         provider_slo_cadence_window_status: appSummary.provider_slo_cadence_window_status ?? null,
         provider_slo_capability_status: appSummary.provider_slo_capability_status ?? null,
+        workstream_operating_loop_workstream_count:
+          numberValue(record(workstreamOperatingLoop.summary).workstream_count),
+        workstream_operating_loop_artifact_first_review_available_count:
+          numberValue(record(workstreamOperatingLoop.summary).artifact_first_review_available_count),
+        workstream_operating_loop_goal_oracle_missing_count:
+          numberValue(record(workstreamOperatingLoop.summary).goal_oracle_missing_count),
       },
       source_commands: Object.values(SOURCE_COMMANDS),
       evidence_counter_taxonomy: {
@@ -898,6 +908,10 @@ export async function buildFrameworkReadinessSummary(
       oma_production_consumption_followthrough: {
         source_command: SOURCE_COMMANDS.app_operator_drilldown,
         ...omaProductionConsumptionFollowthrough,
+      },
+      workstream_operating_loop: {
+        source_command: SOURCE_COMMANDS.app_operator_drilldown,
+        ...workstreamOperatingLoop,
       },
       runtime_manager_route_support: {
         source_command: SOURCE_COMMANDS.app_operator_drilldown,

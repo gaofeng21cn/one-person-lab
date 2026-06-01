@@ -101,6 +101,9 @@ import {
   buildRuntimeVisualizationProjection,
 } from './runtime-tray-app-operator-drilldown-parts/runtime-visualization-projection.ts';
 import {
+  buildWorkstreamOperatingLoop,
+} from './runtime-tray-app-operator-drilldown-parts/workstream-operating-loop.ts';
+import {
   buildMemoryTraceProjection,
 } from './runtime-tray-app-operator-drilldown-parts/memory-trace-projection.ts';
 import {
@@ -1074,6 +1077,12 @@ export function buildAppOperatorDrilldown(input: {
     domainDispatchEvidence,
     safeActions,
   });
+  const workstreamOperatingLoop = buildWorkstreamOperatingLoop({
+    attempts,
+    artifactRefs,
+    packageLifecycle,
+    memoryRefs,
+  });
   const summary = {
     ...buildAppOperatorDrilldownSummary({
       attempts,
@@ -1199,6 +1208,16 @@ export function buildAppOperatorDrilldown(input: {
     attempt_true_path_observed_count: truePathProofs.filter((proof) =>
       stringValue(proof.proof_status) === 'observed'
     ).length,
+    workstream_operating_loop_workstream_count:
+      record(workstreamOperatingLoop.summary).workstream_count,
+    workstream_operating_loop_artifact_first_review_available_count:
+      record(workstreamOperatingLoop.summary).artifact_first_review_available_count,
+    workstream_operating_loop_deliverable_progress_workstream_count:
+      record(workstreamOperatingLoop.summary).deliverable_progress_workstream_count,
+    workstream_operating_loop_platform_repair_only_workstream_count:
+      record(workstreamOperatingLoop.summary).platform_repair_only_workstream_count,
+    workstream_operating_loop_goal_oracle_missing_count:
+      record(workstreamOperatingLoop.summary).goal_oracle_missing_count,
   };
   const sourceRefs: RuntimeTraySourceRef[] = uniqueByRef([
     sourceRef('/runtime_tray_snapshot/stage_attempt_workbench', 'stage_attempt_workbench'),
@@ -1234,6 +1253,10 @@ export function buildAppOperatorDrilldown(input: {
     sourceRef(
       '/runtime_tray_snapshot/app_operator_drilldown/standard_agent_template_consumption_refs',
       'standard_agent_template_consumption_refs',
+    ),
+    sourceRef(
+      '/runtime_tray_snapshot/app_operator_drilldown/workstream_operating_loop',
+      'workstream_operating_loop_projection',
     ),
     sourceRef(
       '/standard-agent-template-consumption-ledger',
@@ -1335,9 +1358,11 @@ export function buildAppOperatorDrilldown(input: {
     production_evidence_tail_ledger: productionEvidenceTailLedger,
     evidence_envelope: evidenceEnvelope,
     runtime_visualization_projection: runtimeVisualizationProjection,
+    workstream_operating_loop: workstreamOperatingLoop,
     runtime_workbench: {
       ...record(runtimeVisualizationProjection.runtime_workbench),
       memory_trace_projection: memoryTrace,
+      workstream_operating_loop: workstreamOperatingLoop,
     },
     visual_ref_groups: record(runtimeVisualizationProjection.visual_ref_groups),
     domain_legacy_cleanup_plan_refs: legacyCleanupPlans,

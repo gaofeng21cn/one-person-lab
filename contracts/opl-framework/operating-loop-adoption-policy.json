@@ -1,0 +1,214 @@
+{
+  "contract_kind": "opl_operating_loop_adoption_policy.v1",
+  "owner": "one-person-lab",
+  "state": "active_policy",
+  "purpose": "Absorb durable AI work-loop patterns into OPL-native workstream, stage attempt, goal oracle, heartbeat, artifact review, memory ref, receipt, and read-model boundaries without importing an external runtime or treating reference prose as truth.",
+  "source_intake": {
+    "reference": {
+      "label": "Jason Liu Codex-maxxing",
+      "url": "https://jxnl.co/writing/2026/05/10/codex-maxxing/",
+      "status": "reference_only"
+    },
+    "absorbed_patterns": [
+      "durable_work_threads",
+      "pinned_workstreams",
+      "goal_with_real_oracle",
+      "thread_local_heartbeat",
+      "steering_at_decision_points",
+      "artifact_first_side_panel_review",
+      "explicit_disk_backed_memory"
+    ],
+    "not_authority": [
+      "runtime_truth",
+      "domain_truth",
+      "executor_selection_truth",
+      "quality_verdict",
+      "artifact_authority",
+      "memory_body_authority",
+      "production_ready_verdict"
+    ]
+  },
+  "opl_native_mapping": {
+    "workstream_thread": {
+      "owner_surface": [
+        "contracts/opl-framework/workstreams.json",
+        "contracts/opl-framework/family-runtime-attempt-contract.json",
+        "contracts/opl-framework/family-product-operator-projection.json"
+      ],
+      "canonical_fields": [
+        "workstream_id",
+        "domain_id",
+        "stage_attempt_id",
+        "task_id",
+        "source_fingerprint",
+        "workspace_locator",
+        "stage_packet_refs",
+        "owner_route_refs",
+        "checkpoint_refs",
+        "closeout_refs"
+      ],
+      "rules": [
+        "A thread is an operator continuity and steering view over admitted workstream and stage attempt refs.",
+        "A thread is not a domain runtime, scheduler, truth store, memory store, or artifact authority.",
+        "Thread pinning may influence App/operator attention ordering but cannot change owner route, stage admission, provider state, or domain verdict."
+      ]
+    },
+    "goal_oracle": {
+      "owner_surface": [
+        "stage pack",
+        "family runtime attempt",
+        "domain-owned quality gate or owner receipt",
+        "OPL evidence/read-model projection"
+      ],
+      "canonical_fields": [
+        "goal_ref",
+        "oracle_refs",
+        "verification_command_refs",
+        "expected_receipt_refs",
+        "human_gate_refs",
+        "typed_blocker_refs",
+        "stop_decision_refs"
+      ],
+      "rules": [
+        "A goal must expose a real oracle, such as tests, receipt refs, human gate decision, independent reviewer gate, owner receipt, typed blocker, or stop decision.",
+        "Goal completion cannot be inferred from a plan being implemented, a provider run ending, a thread becoming quiet, a worklist being zero, or a read model being visible.",
+        "Weak or missing oracle becomes advisory warning, typed blocker, human gate, or route-back depending on launch safety and authority impact."
+      ]
+    },
+    "heartbeat_steering": {
+      "owner_surface": [
+        "family runtime provider",
+        "attempt ledger",
+        "monitor refs",
+        "operator attention projection",
+        "safe action shell"
+      ],
+      "canonical_fields": [
+        "heartbeat_ref",
+        "cadence_ref",
+        "monitor_refs",
+        "last_heartbeat_at",
+        "steering_instruction_refs",
+        "resume_refs",
+        "operator_attention_refs",
+        "safe_action_refs"
+      ],
+      "rules": [
+        "Heartbeat is a liveness, monitor, and steering surface over a stage attempt or operator workstream.",
+        "Heartbeat can schedule checks, surface decision points, request payloads, or route to safe actions.",
+        "Heartbeat cannot write domain truth, send irreversible external communication, mutate artifacts, accept memory writeback, or sign owner receipt unless routed through the owning authority surface."
+      ]
+    },
+    "artifact_first_review": {
+      "owner_surface": [
+        "One Person Lab App state/action",
+        "App/operator drilldown",
+        "domain artifact authority",
+        "OPL artifact refs-only projection"
+      ],
+      "canonical_fields": [
+        "artifact_refs",
+        "artifact_scope_refs",
+        "review_comment_refs",
+        "render_or_preview_refs",
+        "artifact_mutation_receipt_refs",
+        "owner_receipt_refs",
+        "typed_blocker_refs"
+      ],
+      "rules": [
+        "Artifacts should be reviewable as first-class App/operator objects with refs, previews, comments, and route-back targets.",
+        "OPL may display and route artifact refs but must not read artifact body to infer domain quality, mutate body without domain authority, or claim artifact ready.",
+        "Review comments and side-panel annotations are steering inputs until converted into admitted stage work, owner receipt, typed blocker, human gate, or artifact mutation receipt."
+      ]
+    },
+    "memory_receipt_read_model": {
+      "owner_surface": [
+        "domain memory descriptor",
+        "memory locator/index projection",
+        "writeback proposal refs",
+        "writeback receipt refs",
+        "operator read model"
+      ],
+      "canonical_fields": [
+        "memory_pack_ref",
+        "consumed_memory_refs",
+        "memory_trace_refs",
+        "writeback_proposal_refs",
+        "writeback_receipt_refs",
+        "rejected_write_refs",
+        "freshness",
+        "owner_boundary"
+      ],
+      "rules": [
+        "Memory adoption is refs-first: OPL can index, route, project, and verify receipt refs.",
+        "Domain owners keep memory body, memory semantics, accept/reject decision, and evidence authority.",
+        "Memory ref visibility cannot be promoted into evidence truth, quality verdict, artifact readiness, or production readiness."
+      ]
+    }
+  },
+  "app_operator_projection": {
+    "default_role": "continuity_and_attention_read_model",
+    "allowed_default_entries": [
+      "active_workstream_summary",
+      "pinned_thread_or_workstream_refs",
+      "goal_oracle_status",
+      "heartbeat_attention",
+      "artifact_review_refs",
+      "memory_trace_projection",
+      "next_safe_action_or_owner_route"
+    ],
+    "must_preserve": [
+      "summary_first",
+      "refs_only_by_default",
+      "owner_aware_action",
+      "explicit_full_drilldown",
+      "no_domain_body_in_default_projection"
+    ],
+    "forbidden_default_entries": [
+      "raw_transcript_as_truth",
+      "artifact_body_as_readiness_source",
+      "memory_body_as_readiness_source",
+      "provider_completion_as_goal_completion",
+      "worklist_zero_as_done",
+      "thread_idle_as_done"
+    ]
+  },
+  "surface_budget_classification": {
+    "default_state": "folded_into_existing_runtime_and_product_projection",
+    "new_default_surface_allowed": false,
+    "new_default_surface_reason": "patterns map to existing launch safety, authority boundary, evidence/replay/audit/route-back, and App/operator consumption surfaces",
+    "hard_gate_allowed": false,
+    "hard_gate_upgrade_requires": [
+      "wrong_launch_prevention",
+      "authority_boundary_violation_prevention",
+      "critical_runtime_event_replay_or_audit_requirement"
+    ]
+  },
+  "authority_boundary": {
+    "can_import_external_runtime": false,
+    "can_replace_codex_default_executor": false,
+    "can_select_non_default_executor_without_binding_ref": false,
+    "can_write_domain_truth": false,
+    "can_read_or_write_domain_memory_body": false,
+    "can_read_or_mutate_artifact_body_without_domain_authority": false,
+    "can_claim_goal_complete_without_oracle": false,
+    "can_claim_domain_ready": false,
+    "can_claim_quality_verdict": false,
+    "can_claim_artifact_authority": false,
+    "can_claim_production_ready": false
+  },
+  "validation": {
+    "docs_only": [
+      "rtk git diff --check",
+      "rtk rg -n \"^(<<<<<<<|>>>>>>>|=======)\" docs contracts/opl-framework"
+    ],
+    "contract_or_source_followup": [
+      "rtk ./scripts/verify.sh",
+      "rtk npm run test:fast",
+      "rtk npm run test:meta",
+      "rtk npm run test:artifact",
+      "rtk opl framework readiness --family-defaults --json",
+      "rtk opl runtime app-operator-drilldown --json"
+    ]
+  }
+}

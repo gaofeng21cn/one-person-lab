@@ -16,6 +16,9 @@ import {
   assertFrameworkReadinessBlockerAttribution,
 } from './framework-readiness-blocker-attribution-assertions.ts';
 import {
+  assertFrameworkWorkstreamOperatingLoop,
+} from './framework-readiness-workstream-operating-loop-assertions.ts';
+import {
   assertDomainDispatchGroupExecutorHints,
   assertSameDomainDispatchGroupExecutorHints,
 } from './domain-dispatch-group-executor-hints-assertions.ts';
@@ -252,6 +255,7 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(memoryArtifactLifecycleEvidence.authority_boundary.can_mutate_artifact_body, false);
   const omaProductionConsumption =
     readiness.attention_first_payload.oma_production_consumption_followthrough;
+  assertFrameworkWorkstreamOperatingLoop(readiness);
   const appUserPathEvidence = assertFrameworkAppReleaseUserPathEvidence(readiness);
   assert.equal(
     readiness.oma_production_consumption_followthrough.surface_kind,

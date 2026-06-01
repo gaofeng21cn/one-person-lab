@@ -170,6 +170,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/runtime-app-operator-drilldown-runtime-role.test.ts',
   'tests/src/cli/cases/runtime-app-operator-drilldown-direct.test.ts',
   'tests/src/cli/cases/runtime-app-operator-drilldown-lifecycle.test.ts',
+  'tests/src/cli/cases/runtime-app-operator-drilldown-workstream-operating-loop.test.ts',
   'tests/src/cli/cases/runtime-app-operator-drilldown-actions.test.ts',
   'tests/src/cli/cases/runtime-app-operator-drilldown-actions-ops.test.ts',
   'tests/src/cli/cases/runtime-app-operator-drilldown-actions-execute.test.ts',

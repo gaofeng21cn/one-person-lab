@@ -390,6 +390,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       {
         ...drilldown.runtime_visualization_projection.runtime_workbench,
         memory_trace_projection: drilldown.memory_trace_projection,
+        workstream_operating_loop: drilldown.workstream_operating_loop,
       },
     );
     assert.deepEqual(

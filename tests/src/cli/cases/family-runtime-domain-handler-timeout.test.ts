@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
 import { runFamilyRuntimeDomainHandlerCommand } from '../../../../src/family-runtime-domain-handler-process.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
@@ -7,6 +7,10 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
     OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS: '100',
     ...extra,
   };
+}
+
+function stableWorkspaceId(cwd: string) {
+  return path.basename(path.resolve(cwd)).replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'workspace';
 }
 
 function hangingDomainHandlerFixture(name: string) {
@@ -248,7 +252,13 @@ JSON
     assert.equal(exportResult.domain_handler_recovery.retry_exit_code, 0);
     assert.equal(
       exportResult.domain_handler_recovery.retry_tmp_root,
-      path.join(os.tmpdir(), 'opl-domain-command', 'one-person-lab', 'recovery', 'one-person-lab'),
+      path.join(
+        os.tmpdir(),
+        'opl-domain-command',
+        stableWorkspaceId(repoRoot),
+        'recovery',
+        stableWorkspaceId(repoRoot),
+      ),
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

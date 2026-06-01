@@ -898,6 +898,7 @@ function buildAttentionFirstPayload(drilldown: JsonRecord) {
     missing_evidence: missingEvidenceItems(drilldown),
     evidence_after_contract: evidenceAfterContractAttention(drilldown),
     evidence_next_steps: evidenceNextSteps(drilldown),
+    workstream_operating_loop: record(drilldown.workstream_operating_loop),
     codex_app_runtime_role: record(drilldown.codex_app_runtime_role),
     next_safe_action: summarizeSelectedSafeAction(nextAction),
     additional_safe_action_count: Math.max(actions.length - (nextAction ? 1 : 0), 0),
