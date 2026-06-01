@@ -14,7 +14,7 @@ test('domain pack compiler fixture binding does not depend on sibling domain rep
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-isolated-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-isolated-workspace-'));
-  const env = {
+  const env: Record<string, string> = {
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
     OPL_STATE_DIR: stateRoot,
     OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
