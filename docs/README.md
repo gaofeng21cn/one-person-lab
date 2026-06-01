@@ -37,6 +37,7 @@ Repo 角色按当前 App 边界固定读取：`one-person-lab` 是 framework/run
 | 读者 | 建议起点 | 目的 |
 | --- | --- | --- |
 | 用户 | [仓库首页](../README.md) | 安装 OPL、启动 GUI 或网页入口，并按任务选择 Codex 或 domain agent |
+| 新机器 Codex bootstrap | [新机器 Codex 全家桶安装入口](./references/current-support/opl-new-machine-codex-bootstrap.md) | 一句话让 Codex 安装配置 OPL runtime、MAS/MAG/RCA/OMA、OPL Flow、OPL Doc 和 companion tools |
 | 技术规划者、架构读者、方向同步读者 | [项目概览](./project.md)、[当前状态](./status.md)、[架构](./architecture.md)、[硬约束](./invariants.md)、[关键决策](./decisions.md)、[合同目录说明](../contracts/README.md) | 恢复当前边界、运行时模型和 admitted-domain split |
 | 开发者与维护者 | [文档组合治理](./docs_portfolio_consolidation.md)、[活跃支撑文档](./active/README.md)、[公开支撑文档](./public/README.md)、[规格索引](./specs/README.md)、[参考级索引](./references/README.md)、[历史归档索引](./history/README.md) | 查看生命周期角色、活跃支撑、公开支撑、当前规格入口、参考材料和退役路线 |
 
@@ -134,6 +135,7 @@ OPL 系列项目开发的主参考是 [OPL 系列项目开发主参考](./active
 - [Docker WebUI 部署参考](./references/current-support/opl-docker-webui-deployment.md)
 - [OPL GUI Shell Adapter 边界说明](./references/current-support/opl-gui-shell-adapter-boundary.md)
 - [OPL Fresh Install 与 GUI 首启测试参考](./references/current-support/opl-fresh-install-and-gui-first-launch-testing.md)
+- [OPL 新机器 Codex 全家桶安装入口](./references/current-support/opl-new-machine-codex-bootstrap.md)
 - [OPL 默认 Skill 生态参考](./references/current-support/opl-default-skill-ecosystem.md)
 - [OPL Release 与 Packages 模块化分发参考](./references/current-support/opl-release-packages-modular-distribution.md)
 - [OPL 测试 Lane 治理参考](./references/current-support/opl-test-lane-governance.md)
