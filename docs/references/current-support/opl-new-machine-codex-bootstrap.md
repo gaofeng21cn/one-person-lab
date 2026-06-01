@@ -151,6 +151,30 @@ python3 <opl-doc-checkout>/scripts/install_local_plugin.py --verify-only
 
 App 路径的完成证据可以是 App 首启达到 Core readiness，也可以是首启页面或 installer 输出中的明确 blocker。Codex 不应把 Full readiness、domain ready、production ready、artifact authority、publication/fundability/visual quality verdict 或 owner receipt 混同为安装完成。
 
+## Headless Docker smoke
+
+如果当前机器可以运行 Docker，可以先用干净 Linux 容器验证命令行 bootstrap 链路：
+
+```bash
+git clone https://github.com/gaofeng21cn/one-person-lab.git
+cd one-person-lab
+npm run new-machine:codex-bootstrap:docker-smoke
+```
+
+该 smoke 会从 GitHub 重新拉取安装入口，验证：
+
+- OPL CLI 可安装并响应 `opl help --text` / `opl system initialize --json`。
+- MAS 和 RCA 可以作为 managed domain modules 安装，并通过 `opl skill sync --domain mas --domain rca` 注册为 Codex plugin。
+- `~/.codex/config.toml` 出现 `mas@mas-local` 与 `rca@rca-local` plugin 配置。
+- 不生成重复的 `~/.codex/skills/{mas,rca}` 裸 skill mirror。
+- `opl-flow` 可在干净 HOME 中安装插件、`AGENTS.md`、`TASTE.md` 和 planner/executor/debugger/verifier 角色库。
+
+这个 smoke 不覆盖 macOS Full DMG、桌面 App 首启、Codex API key 配置、在线 runtime provider、GitHub 权限、推荐 companion skills 全量安装或 OPL Doc 的最终使用质量。需要连带验证 OPL Doc 安装时，可以运行：
+
+```bash
+npm run new-machine:codex-bootstrap:docker-smoke -- --include-opl-doc
+```
+
 ## 常见阻塞
 
 - GitHub 无法访问：先处理网络、DNS、代理或 GitHub auth，再继续 clone/install。
