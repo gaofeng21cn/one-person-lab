@@ -168,6 +168,18 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 该 route 必须携带 `missing_progress_signals`、`supervisor_safe_action_kind` 与 `typed_blocker_requirement`，把 stale / next-action 缺口明确投影为 supervisor-safe action 或 domain typed blocker requirement。
 - provider worker repair 仍优先于 progress-first supervision；worker liveness 缺失时先修 worker，再判断 attempt 是否仍缺 stage/progress/closeout 信号。
 
+### 决策：Progress-First anti-spin queue admission 必须阻断同源无交付物重复重驱
+
+原因：DM002 / DM003 暴露出同一 study / domain / owner action lineage、同一 source fingerprint 在连续 closeout 中只产生 receipt-only、read-model reconcile、platform repair 或 refs-only accounting，而没有 `deliverable_progress_delta`、domain owner receipt 或 domain typed blocker 时，queue tick 仍可能继续启动新的 provider attempt。这样 operator 会看到“又跑了一轮”，但实际时间消耗在重复 receipt 和 read-model currentness 上，违背 Progress-First 的最快实质 delta 原则。
+
+影响：
+
+- `family-runtime queue tick` 在 stale-source、same-study single-flight 和 live-attempt 过滤之后，必须执行 Progress-First anti-spin admission gate。
+- 同一 domain-owner lineage 若已有达到阈值的历史 terminal attempt，且这些 attempt 只有 platform repair / receipt reconcile、无 `deliverable_progress_delta`、无 domain owner receipt，则新的 same-source queued / retry-waiting task 必须被阻断为 `progress_first_owner_delta_required`；首个强制消费面是 MAS `domain_owner/default-executor-dispatch`。
+- 被阻断 task 写入 OPL queue event `task_progress_first_anti_spin_blocked`，并携带 repeat count、lineage key、typed blocker refs、last delta classification、`next_forced_delta=domain_deliverable_or_owner_receipt_delta_required` 与 authority boundary。
+- 允许继续 dispatch 的路径只有 fresh source、domain typed blocker、真实 deliverable delta、domain owner receipt、human override / stop ref 或新的 owner payload ref。
+- 该 gate 是 OPL queue admission / refs-only lineage projection；它不写 domain truth、不生成 owner receipt、不创建 typed blocker、不声明 domain ready / production ready、不修改 artifact gate 或 current package。
+
 ## 2026-05-28
 
 ### 决策：同步 domain-handler checkpoint 不受 Temporal workflow-missing 回收覆盖

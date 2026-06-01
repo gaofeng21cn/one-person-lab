@@ -5,6 +5,7 @@ import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-cur
 import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-ready-pickup-slo.ts';
 import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-stale-admission.ts';
 import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-workspace.ts';
+import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-anti-spin.ts';
 
 import {
   assert,

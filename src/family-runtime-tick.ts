@@ -32,6 +32,9 @@ import {
   MAS_PAPER_AUTONOMY_TASK_KINDS,
 } from './family-runtime-paper-autonomy.ts';
 import {
+  applyProgressFirstAntiSpinGate,
+} from './family-runtime-progress-first-anti-spin-gate.ts';
+import {
   currentMasDefaultExecutorTasksByDispatch,
   currentMasDefaultExecutorTasksByStudyAction,
   dropSameStudyMasDefaultExecutorRows,
@@ -761,8 +764,14 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
   } = await dropLiveMasDefaultExecutorRows(db, scopedRowsAfterStudySingleFlight, {
     queryTemporalStageAttempt: handlers.queryTemporalStageAttempt,
   });
-  const rows = scopedRows.slice(0, input.limit);
-  const filteredCount = candidateRows.length - scopedRows.length;
+  const {
+    rows: scopedRowsAfterProgressFirstAntiSpin,
+    blocked_count: progressFirstAntiSpinBlockedCount,
+  } = applyProgressFirstAntiSpinGate(db, scopedRows, {
+    source: `${input.source}:progress-first-anti-spin`,
+  });
+  const rows = scopedRowsAfterProgressFirstAntiSpin.slice(0, input.limit);
+  const filteredCount = candidateRows.length - scopedRowsAfterProgressFirstAntiSpin.length;
   insertEvent(db, {
     eventType: 'tick_started',
     source: input.source,
@@ -782,6 +791,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       mas_default_executor_auto_redriven_count: masDefaultExecutorAutoRedrivenCount,
       mas_default_executor_auto_dead_lettered_count: masDefaultExecutorAutoDeadLetteredCount,
       mas_default_executor_auto_redrive_stale_skipped_count: masDefaultExecutorAutoRedriveStaleSkippedCount,
+      progress_first_anti_spin_blocked_count: progressFirstAntiSpinBlockedCount,
       task_scope: input.taskScope ?? null,
     },
   });
@@ -809,6 +819,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     mas_default_executor_auto_redriven_count: masDefaultExecutorAutoRedrivenCount,
     mas_default_executor_auto_dead_lettered_count: masDefaultExecutorAutoDeadLetteredCount,
     mas_default_executor_auto_redrive_stale_skipped_count: masDefaultExecutorAutoRedriveStaleSkippedCount,
+    progress_first_anti_spin_blocked_count: progressFirstAntiSpinBlockedCount,
     dispatches,
   };
 }
