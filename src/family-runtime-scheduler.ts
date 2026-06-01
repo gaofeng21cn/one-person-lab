@@ -23,6 +23,12 @@ type FamilyRuntimePaths = ReturnType<typeof familyRuntimePaths>;
 type SchedulerQueueTickResult = {
   selected_count: number;
   dispatches: unknown[];
+  hydration?: {
+    enqueued_count?: number;
+    requeued_count?: number;
+    idempotent_noop_count?: number;
+    filtered_count?: number;
+  };
   [key: string]: unknown;
 };
 
@@ -52,6 +58,43 @@ function buildProviderReadinessAfterSlo(providerKind: FamilyRuntimeProviderKind,
       opl: 'provider_readiness_projection_after_slo_repair',
       domain: 'truth_quality_artifact_gate_owner',
       can_write_domain_truth: false,
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_export_verdict: false,
+    },
+  };
+}
+
+function buildProgressFirstReadyOwnerActionPickupSlo(input: {
+  hydrate: boolean;
+  limit: number;
+  providerReady: boolean;
+  queueTick: SchedulerQueueTickResult;
+}) {
+  const hydration = input.queueTick.hydration;
+  const hydratedPendingFamilyTaskCount = (hydration?.enqueued_count ?? 0) + (hydration?.requeued_count ?? 0);
+  const selectedCount = input.queueTick.selected_count;
+  const dispatchCount = input.queueTick.dispatches.length;
+  const applicable = input.hydrate && input.providerReady && hydratedPendingFamilyTaskCount > 0;
+  const satisfied = applicable && selectedCount > 0 && dispatchCount > 0;
+  return {
+    surface_kind: 'opl_progress_first_ready_owner_action_pickup_slo',
+    slo_id: 'progress_first_ready_owner_action_pickup.v1',
+    provider_ready_after_slo: input.providerReady,
+    trigger: 'same_scheduler_tick_after_provider_ready',
+    slo_status: applicable ? (satisfied ? 'satisfied' : 'violated') : 'not_applicable',
+    hydrated_pending_family_task_count: hydratedPendingFamilyTaskCount,
+    hydration_idempotent_noop_count: hydration?.idempotent_noop_count ?? 0,
+    hydration_filtered_count: hydration?.filtered_count ?? 0,
+    same_tick_selected_count: selectedCount,
+    same_tick_dispatch_count: dispatchCount,
+    scheduler_limit: input.limit,
+    cadence_wait_required: applicable && !satisfied,
+    authority_boundary: {
+      opl: 'scheduler_queue_pickup_slo_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+      can_write_domain_truth: false,
+      can_execute_domain_action_without_queue_claim: false,
       can_authorize_domain_ready: false,
       can_authorize_quality_verdict: false,
       can_authorize_export_verdict: false,
@@ -230,6 +273,12 @@ export async function runSchedulerTick(
     };
   }
   const queueTick = await runQueueTick(source, input.limit ?? 10, input.hydrate ?? true, input.taskScope);
+  const readyOwnerActionPickupSlo = buildProgressFirstReadyOwnerActionPickupSlo({
+    hydrate: input.hydrate ?? true,
+    limit: input.limit ?? 10,
+    providerReady: selected?.ready ?? false,
+    queueTick,
+  });
   insertEvent(db, {
     eventType: 'opl_scheduler_tick_completed',
     source,
@@ -242,6 +291,7 @@ export async function runSchedulerTick(
       provider_slo_receipt_status: providerSlo.provider_slo_execution_receipt.receipt_status,
       queue_selected_count: queueTick.selected_count,
       queue_dispatches_count: queueTick.dispatches.length,
+      progress_first_ready_owner_action_pickup_slo: readyOwnerActionPickupSlo,
     },
   });
   return {
@@ -253,6 +303,7 @@ export async function runSchedulerTick(
     provider_runtime_after_slo: provider,
     provider_readiness_after_slo: buildProviderReadinessAfterSlo(providerKind, selected),
     provider_slo: providerSlo,
+    progress_first_ready_owner_action_pickup_slo: readyOwnerActionPickupSlo,
     task_scope: input.taskScope ?? null,
     queue_tick: queueTick,
     authority_boundary: {

@@ -7,6 +7,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-05-30
 
+### 决策：Progress-First ready owner action pickup 必须有同 tick SLO 投影
+
+原因：MAS export 暴露 `domain_owner/default-executor-dispatch` pending family task 且 Temporal provider 已 ready 时，operator 需要看到 OPL 在同一轮 scheduler tick 内 hydrate 并触发 queue dispatch。否则 App/operator 只能从 5 分钟 cadence 或后续队列状态间接推断 pickup，无法机器验证 ready owner action 是否被立即接走。
+
+影响：
+
+- `family-runtime scheduler tick` 在 provider SLO 后重新读取 provider readiness；若 provider ready 且 hydrate 从 domain export 接收 pending family task，必须在同一 scheduler tick 中运行 queue dispatch，而不是等待下一次 cadence。
+- tick 返回 `progress_first_ready_owner_action_pickup_slo`，记录 hydrated pending family task 数、同 tick selected/dispatch 数、`slo_status` 与 `cadence_wait_required`。
+- 该 SLO 只证明 OPL queue pickup / dispatch trigger currentness，不证明 Codex owner attempt 已完成、MAS owner receipt 已产生、domain ready、publication quality ready、artifact gate ready 或 package/current manuscript 已刷新。
+
 ### 决策：waiting-approval task 必须同步投影其 stage attempts 为 operator hold
 
 原因：人工暂停、MAS upgrade pause 或 approval gate 会把 task 正确标记为 `waiting_approval`，但历史 ledger 里可能还残留该 task 名下的 `queued` / `registered` stage attempt。Progress-First 监控不能把这种已暂停任务误读成 runnable queued work，否则 operator 会反复 tick 同一个已被人工 gate 挡住的论文任务。
