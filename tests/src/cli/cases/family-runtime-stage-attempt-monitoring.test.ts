@@ -131,3 +131,111 @@ test('family-runtime attempt list filters attempts and emits compact Progress-Fi
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
+
+test('family-runtime attempt list matches study identity aliases from task payload and workspace locator', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-list-study-alias-'));
+  try {
+    const medTask = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'stage/review',
+      '--payload',
+      JSON.stringify({
+        target_studies: ['study-canonical-002'],
+        study_aliases: ['mortality-risk-review'],
+        quest_id: 'quest-study-002',
+      }),
+      '--dedupe-key',
+      'mas:study-canonical-002:stage:review',
+    ], familyRuntimeEnv(stateRoot)).family_runtime_enqueue.task;
+    const medAttempt = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'review',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      JSON.stringify({
+        workspace_root: '/tmp/mas-study-alias',
+        study_short_id: 'short-study-002',
+        study_aliases: ['workspace-alias-002'],
+      }),
+      '--task',
+      medTask.task_id,
+      '--blocked-reason',
+      'typed_closeout_packet_required',
+    ], familyRuntimeEnv(stateRoot)).family_runtime_stage_attempt.attempt;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautogrant',
+      '--stage',
+      'review',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mag","target_studies":["grant-canonical-001"]}',
+    ], familyRuntimeEnv(stateRoot));
+
+    const canonicalOutput = runCli([
+      'family-runtime',
+      'attempt',
+      'list',
+      '--domain',
+      'medautoscience',
+      '--study',
+      'study-canonical-002',
+      '--compact-timeline',
+    ], familyRuntimeEnv(stateRoot)).family_runtime_stage_attempts;
+    const aliasOutput = runCli([
+      'family-runtime',
+      'attempt',
+      'list',
+      '--domain',
+      'medautoscience',
+      '--study',
+      'workspace-alias-002',
+      '--compact-timeline',
+    ], familyRuntimeEnv(stateRoot)).family_runtime_stage_attempts;
+    const questOutput = runCli([
+      'family-runtime',
+      'attempt',
+      'list',
+      '--domain',
+      'medautoscience',
+      '--study',
+      'quest-study-002',
+      '--compact-timeline',
+    ], familyRuntimeEnv(stateRoot)).family_runtime_stage_attempts;
+    const missingOutput = runCli([
+      'family-runtime',
+      'attempt',
+      'list',
+      '--domain',
+      'medautoscience',
+      '--study',
+      'missing-study',
+      '--compact-timeline',
+    ], familyRuntimeEnv(stateRoot)).family_runtime_stage_attempts;
+
+    assert.equal(canonicalOutput.summary.filtered_total, 1);
+    assert.equal(aliasOutput.summary.filtered_total, 1);
+    assert.equal(questOutput.summary.filtered_total, 1);
+    assert.equal(missingOutput.summary.filtered_total, 0);
+    assert.equal(canonicalOutput.compact_timeline[0].stage_attempt_id, medAttempt.stage_attempt_id);
+    assert.equal(aliasOutput.compact_timeline[0].stage_attempt_id, medAttempt.stage_attempt_id);
+    assert.equal(questOutput.compact_timeline[0].stage_attempt_id, medAttempt.stage_attempt_id);
+    assert.equal(canonicalOutput.compact_timeline[0].study_id, 'study-canonical-002');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});

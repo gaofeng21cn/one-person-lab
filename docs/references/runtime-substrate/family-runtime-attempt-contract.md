@@ -30,6 +30,8 @@ domain repo 可以暴露自己的 route、receipt、typed blocker 或 runtime pr
 - projection 必须暴露 attempt count、retry policy、workspace boundary、failure reason、route hydration status、current control state、operator visibility、completion boundary、owner route boundary、usage projection、`stage_progress_log`、`attempt_true_path_proof`、Temporal visibility 与 debug refs。
 - 这些字段都只表达 control metadata / refs-only progress，不表达 domain quality、artifact authority、publication/fundability/visual verdict 或 production readiness。
 
+Progress-First supervision 与 `family-runtime attempt list --study` lookup 的 study identity 匹配不能只读取 attempt metadata 的 `study_id`。OPL attempt projection 必须把 `workspace_locator` 与 linked task payload 中的 `study_id`、`studyId`、`study_short_id`、`studyShortId`、`target_studies`、`targetStudies`、`quest_id`、`questId`、`study_aliases` 和 `studyAliases` 作为同一 alias set 消费，避免 domain study alias、short id 或 quest id 对应的真实 attempt 被误判为没有 attempt 或停滞。
+
 ## Stage Progress Log
 
 `stage_progress_log` 是 OPL 对 stage attempt 的统一语义 log。它从 attempt ledger、provider run、activity events、usage projection、typed closeout packet、blocker refs 和 domain receipt refs 派生，表达 planned stage / actual work / timeline / token-cost-duration / evidence refs / authority boundary。它不新增平行状态库，不读取 transcript、artifact body、memory body 或 domain body，也不替 domain owner 发布 quality、artifact、package、publication 或 domain-ready verdict。

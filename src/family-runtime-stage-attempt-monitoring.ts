@@ -67,7 +67,7 @@ function studyIdFromAttempt(attempt: StageAttemptPayload) {
     : null;
 }
 
-function studyIdFromTaskPayload(db: DatabaseSync, taskId: string | null) {
+function taskPayloadForAttempt(db: DatabaseSync, taskId: string | null) {
   if (!taskId) {
     return null;
   }
@@ -77,13 +77,59 @@ function studyIdFromTaskPayload(db: DatabaseSync, taskId: string | null) {
   if (!row) {
     return null;
   }
-  const payload = parseStageAttemptJsonObject(row.payload_json);
-  const studyId = payload.study_id ?? payload.studyId;
-  return typeof studyId === 'string' && studyId.trim() ? studyId.trim() : null;
+  return parseStageAttemptJsonObject(row.payload_json);
+}
+
+function addStudyIdentity(values: string[], value: unknown) {
+  if (typeof value === 'string' && value.trim()) {
+    values.push(value.trim());
+  }
+}
+
+function addStudyIdentityList(values: string[], value: unknown) {
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      addStudyIdentity(values, entry);
+    }
+    return;
+  }
+  addStudyIdentity(values, value);
+}
+
+function studyIdentitiesFromRecord(record: Record<string, unknown> | null) {
+  const values: string[] = [];
+  if (!record) {
+    return values;
+  }
+  addStudyIdentity(values, record.study_id);
+  addStudyIdentity(values, record.studyId);
+  addStudyIdentity(values, record.study_short_id);
+  addStudyIdentity(values, record.studyShortId);
+  addStudyIdentityList(values, record.target_studies);
+  addStudyIdentityList(values, record.targetStudies);
+  addStudyIdentity(values, record.quest_id);
+  addStudyIdentity(values, record.questId);
+  addStudyIdentityList(values, record.study_aliases);
+  addStudyIdentityList(values, record.studyAliases);
+  return values;
+}
+
+function firstStudyIdentityFromRecord(record: Record<string, unknown> | null) {
+  return studyIdentitiesFromRecord(record)[0] ?? null;
+}
+
+function attemptStudyIdentities(db: DatabaseSync, attempt: StageAttemptPayload) {
+  const values = [
+    ...studyIdentitiesFromRecord(attempt.workspace_locator),
+    ...studyIdentitiesFromRecord(taskPayloadForAttempt(db, attempt.task_id)),
+  ];
+  return [...new Set(values)];
 }
 
 function attemptStudyId(db: DatabaseSync, attempt: StageAttemptPayload) {
-  return studyIdFromAttempt(attempt) ?? studyIdFromTaskPayload(db, attempt.task_id);
+  return studyIdFromAttempt(attempt)
+    ?? firstStudyIdentityFromRecord(taskPayloadForAttempt(db, attempt.task_id))
+    ?? firstStudyIdentityFromRecord(attempt.workspace_locator);
 }
 
 function attemptMatchesMonitoringFilters(
@@ -95,7 +141,7 @@ function attemptMatchesMonitoringFilters(
   return (!filters.domainId || attempt.domain_id === filters.domainId)
     && (!filters.status || attempt.status === filters.status)
     && (!sinceIso || attempt.updated_at >= sinceIso || attempt.created_at >= sinceIso)
-    && (!filters.studyId || attemptStudyId(db, attempt) === filters.studyId);
+    && (!filters.studyId || attemptStudyIdentities(db, attempt).includes(filters.studyId));
 }
 
 function latestCloseoutPacket(db: DatabaseSync, stageAttemptId: string) {
