@@ -4,6 +4,7 @@ import {
   os,
   path,
   runCli,
+  runCliFailure,
   test,
 } from '../helpers.ts';
 
@@ -60,6 +61,21 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
         .typed_blocker_path.success_claimed,
       false,
     );
+    assert.deepEqual(initialRecordRoute.payload_workorder.typed_blocker_path_payload, {
+      typed_blocker_refs: [],
+      applies_to_open_gate_ids: [
+        'release_package_refs',
+        'screenshot_refs',
+        'reload_prompt_user_path_refs',
+        'provider_state_linkage_refs',
+        'long_operator_evidence_refs',
+      ],
+      payload_owner: 'app_live_operator_or_release_owner',
+      success_claimed: false,
+      closes_app_release_user_path: false,
+      closes_release_ready: false,
+      closes_production_ready: false,
+    });
     assert.equal(initialRecordRoute.payload_workorder.authority_boundary.refs_only, true);
     assert.equal(
       initialRecordRoute.payload_workorder.authority_boundary.can_create_owner_receipt,
@@ -124,6 +140,35 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
         .empty_payload_template_is_success_evidence,
       false,
     );
+
+    const mixedPayloadExecution = runCliFailure([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'app_release_user_path_evidence:one_person_lab_app_release_user_path:record',
+      '--payload',
+      JSON.stringify({
+        release_package_refs: ['release:package/app-v0.1.0.dmg'],
+        typed_blocker_refs: ['typed-blocker:app-release/screenshot-missing'],
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(mixedPayloadExecution.payload.error.code, 'cli_usage_error');
+    assert.equal(
+      mixedPayloadExecution.payload.error.details.error_kind,
+      'app_release_user_path_evidence_payload_preflight_blocked',
+    );
+    assert.equal(
+      mixedPayloadExecution.payload.error.details.preflight.selected_payload_path,
+      'blocked',
+    );
+    assert.deepEqual(
+      mixedPayloadExecution.payload.error.details.preflight.conflicting_payload_fields,
+      ['typed_blocker_refs'],
+    );
+    assert.equal(mixedPayloadExecution.payload.error.details.receipt_recorded, false);
 
     const payload = {
       release_package_refs: ['release:package/app-v0.1.0.dmg'],

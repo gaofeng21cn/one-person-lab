@@ -20,11 +20,6 @@ import {
   preflightDomainDispatchEvidencePayload,
 } from './domain-dispatch-evidence-payload-preflight.ts';
 import {
-  recordAppReleaseUserPathEvidenceReceipts,
-  verifyAppReleaseUserPathEvidenceReceipt,
-  type AppReleaseUserPathEvidenceReceiptInput,
-} from './app-release-user-path-evidence-ledger.ts';
-import {
   recordOmaProductionConsumptionReceipts,
   type OmaProductionConsumptionReceiptInput,
 } from './oma-production-consumption-ledger.ts';
@@ -33,6 +28,7 @@ import { providerWorkerArgs, providerWorkerCommand, runProviderWorkerRepair } fr
 import { providerSchedulerArgs } from './runtime-operator-action-execution-parts/provider-scheduler-action.ts';
 import { externalEvidenceApplyArgs } from './runtime-operator-action-execution-parts/external-evidence-action.ts';
 import { domainDispatchExternalEvidenceApplyArgs } from './runtime-operator-action-execution-parts/domain-dispatch-evidence-action.ts';
+import { appReleaseUserPathEvidenceExecution } from './runtime-operator-action-execution-parts/app-release-user-path-evidence-action.ts';
 import { codexAppRuntimeEvidenceExecution } from './runtime-operator-action-execution-parts/codex-app-runtime-evidence-action.ts';
 import { domainOwnerPayloadSummaryExecution } from './runtime-operator-action-execution-parts/domain-owner-payload-summary-action.ts';
 import { magManifestSustainedConsumptionExecution } from './runtime-operator-action-execution-parts/mag-manifest-sustained-consumption-action.ts';
@@ -214,65 +210,6 @@ function refsFromPayload(payload: JsonRecord, keys: string[]) {
   });
 }
 
-function appReleaseUserPathEvidencePayload(payload: JsonRecord): AppReleaseUserPathEvidenceReceiptInput {
-  return {
-    release_package_refs: refsFromPayload(payload, ['release_package_refs', 'release_package_ref']),
-    screenshot_refs: refsFromPayload(payload, ['screenshot_refs', 'screenshot_ref']),
-    reload_prompt_user_path_refs: refsFromPayload(payload, [
-      'reload_prompt_user_path_refs',
-      'reload_prompt_user_path_ref',
-    ]),
-    provider_state_linkage_refs: refsFromPayload(payload, [
-      'provider_state_linkage_refs',
-      'provider_state_linkage_ref',
-    ]),
-    long_operator_evidence_refs: refsFromPayload(payload, [
-      'long_operator_evidence_refs',
-      'long_operator_evidence_ref',
-    ]),
-    typed_blocker_refs: refsFromPayload(payload, ['typed_blocker_refs', 'typed_blocker_ref']),
-    receipt_ref: stringValue(payload.receipt_ref),
-  };
-}
-
-function appReleaseUserPathEvidenceRefCount(input: AppReleaseUserPathEvidenceReceiptInput) {
-  return [
-    ...(input.release_package_refs ?? []),
-    ...(input.screenshot_refs ?? []),
-    ...(input.reload_prompt_user_path_refs ?? []),
-    ...(input.provider_state_linkage_refs ?? []),
-    ...(input.long_operator_evidence_refs ?? []),
-    ...(input.typed_blocker_refs ?? []),
-  ].length;
-}
-
-function appReleaseUserPathEvidenceDryRunPreflight(input: AppReleaseUserPathEvidenceReceiptInput) {
-  return {
-    surface_kind: 'opl_app_release_user_path_evidence_payload_preflight',
-    status: appReleaseUserPathEvidenceRefCount(input) > 0
-      ? 'payload_refs_observed'
-      : 'payload_required',
-    required_any: [
-      'release_package_refs',
-      'screenshot_refs',
-      'reload_prompt_user_path_refs',
-      'provider_state_linkage_refs',
-      'long_operator_evidence_refs',
-      'typed_blocker_refs',
-    ],
-    empty_payload_template_is_success_evidence: false,
-    payload_owner: 'app_live_operator_or_release_owner',
-    authority_boundary: {
-      refs_only: true,
-      can_write_domain_truth: false,
-      can_create_owner_receipt: false,
-      can_claim_release_ready: false,
-      can_claim_production_ready: false,
-      can_close_app_release_user_path: false,
-    },
-  };
-}
-
 function omaProductionConsumptionPayload(payload: JsonRecord): OmaProductionConsumptionReceiptInput {
   return {
     long_soak_refs: [
@@ -346,57 +283,6 @@ function omaProductionConsumptionExecution(payload: JsonRecord, options: { dryRu
       : {
           oma_production_consumption_ledger_record:
             recordOmaProductionConsumptionReceipts([input]),
-        },
-  };
-}
-
-function appReleaseUserPathEvidenceExecution(
-  route: JsonRecord,
-  payload: JsonRecord,
-  options: { dryRun: boolean },
-) {
-  const actionKind = stringValue(route.action_kind);
-  if (actionKind === 'app_release_user_path_evidence_receipt_verify') {
-    const receiptRef = stringValue(route.receipt_ref) ?? stringValue(payload.receipt_ref);
-    return {
-      executionKind: 'opl_cli_app_release_user_path_evidence_apply',
-      runtimeArgs: [
-        'runtime',
-        'app-release-evidence',
-        'verify',
-        ...(receiptRef ? ['--receipt-ref', receiptRef] : []),
-      ],
-      result: options.dryRun
-        ? null
-        : {
-            app_release_user_path_evidence_ledger_verify:
-              verifyAppReleaseUserPathEvidenceReceipt({ receipt_ref: receiptRef }),
-          },
-    };
-  }
-
-  const input = appReleaseUserPathEvidencePayload(payload);
-  if (!options.dryRun && appReleaseUserPathEvidenceRefCount(input) === 0) {
-    throw new FrameworkContractError(
-      'cli_usage_error',
-      'App release/user-path evidence record action requires refs-only payload evidence.',
-      {
-        action_id: stringValue(route.action_id),
-        required_any: appReleaseUserPathEvidenceDryRunPreflight(input).required_any,
-      },
-    );
-  }
-  return {
-    executionKind: 'opl_cli_app_release_user_path_evidence_apply',
-    runtimeArgs: ['runtime', 'app-release-evidence', 'record'],
-    result: options.dryRun
-      ? {
-          app_release_user_path_evidence_payload_preflight:
-            appReleaseUserPathEvidenceDryRunPreflight(input),
-        }
-      : {
-          app_release_user_path_evidence_ledger_record:
-            recordAppReleaseUserPathEvidenceReceipts([input]),
         },
   };
 }

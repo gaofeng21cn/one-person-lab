@@ -647,7 +647,10 @@ export function appReleaseUserPathEvidenceNextStep(evidence: JsonRecord) {
       ? appReleaseUserPathPayloadRefHints()
       : null,
     payload_workorder: canRecord
-      ? appReleaseUserPathPayloadWorkorder(stringList(evidence.required_return_shapes))
+      ? appReleaseUserPathPayloadWorkorder(
+          stringList(evidence.required_return_shapes),
+          stringList(evidence.open_gate_ids),
+        )
       : null,
     payload_template_policy: canRecord
       ? 'template_is_empty_by_design_replace_with_real_app_live_release_or_typed_blocker_refs_before_submit'
@@ -706,7 +709,10 @@ function appReleaseUserPathPayloadTemplate() {
   };
 }
 
-function appReleaseUserPathPayloadWorkorder(requiredReturnShapes?: string[]) {
+function appReleaseUserPathPayloadWorkorder(
+  requiredReturnShapes?: string[],
+  openGateIds: string[] = [],
+) {
   const requiredOperatorPayloadRefs = [
     'release_package_refs',
     'screenshot_refs',
@@ -739,6 +745,15 @@ function appReleaseUserPathPayloadWorkorder(requiredReturnShapes?: string[]) {
         closes_release_ready: false,
         closes_production_ready: false,
       },
+    },
+    typed_blocker_path_payload: {
+      typed_blocker_refs: [],
+      applies_to_open_gate_ids: openGateIds,
+      payload_owner: 'app_live_operator_or_release_owner',
+      success_claimed: false,
+      closes_app_release_user_path: false,
+      closes_release_ready: false,
+      closes_production_ready: false,
     },
     required_operator_payload_refs: requiredOperatorPayloadRefs,
     required_return_shapes: requiredReturnShapes && requiredReturnShapes.length > 0
@@ -921,6 +936,7 @@ export function buildAppReleaseUserPathEvidenceActionRoutes(evidence: JsonRecord
     payload_ref_hints: appReleaseUserPathPayloadRefHints(),
     payload_workorder: appReleaseUserPathPayloadWorkorder(
       stringList(evidence.required_return_shapes),
+      stringList(evidence.open_gate_ids),
     ),
     payload_template_policy:
       'template_is_empty_by_design_replace_with_real_app_live_release_or_typed_blocker_refs_before_submit',

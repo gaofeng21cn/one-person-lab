@@ -250,6 +250,21 @@ export function assertAppReleaseUserPathNextStep(summaryDrilldown: any) {
       .typed_blocker_path.closes_release_ready,
     false,
   );
+  assert.deepEqual(appUserPathStep.payload_workorder.typed_blocker_path_payload, {
+    typed_blocker_refs: [],
+    applies_to_open_gate_ids: [
+      'release_package_refs',
+      'screenshot_refs',
+      'reload_prompt_user_path_refs',
+      'provider_state_linkage_refs',
+      'long_operator_evidence_refs',
+    ],
+    payload_owner: 'app_live_operator_or_release_owner',
+    success_claimed: false,
+    closes_app_release_user_path: false,
+    closes_release_ready: false,
+    closes_production_ready: false,
+  });
   assert.equal(
     appUserPathStep.payload_workorder.authority_boundary.can_claim_production_ready,
     false,
