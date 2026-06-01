@@ -131,7 +131,7 @@ One Person Lab 同时包含框架、桌面工作台和专业 Agent 三层：
 
 ```text
 请按 One Person Lab 官方新机器指南，帮我完成这台机器的 OPL 智能体运行环境和 Codex 工作流全家桶安装配置。
-Source of truth: https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/references/current-support/opl-new-machine-codex-bootstrap.md
+真相来源：https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/references/current-support/opl-new-machine-codex-bootstrap.md
 ```
 
 ## 后续开发计划
