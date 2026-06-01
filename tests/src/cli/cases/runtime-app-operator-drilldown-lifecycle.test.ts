@@ -327,6 +327,69 @@ test('runtime app-operator-drilldown reconciles MAS refs-only payload with OPL l
   }
 });
 
+test('runtime app-operator-drilldown projects lifecycle handoff apply attempts for default callers', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-lifecycle-handoff-'));
+  try {
+    const result = runCli([
+      'family-runtime',
+      'lifecycle',
+      'apply',
+      '--mode',
+      'dry-run',
+      '--domain',
+      'medautoscience',
+      '--handoff',
+      JSON.stringify({
+        surface_kind: 'artifact_lifecycle_physical_thinning_handoff',
+        handoff_ref: 'mas-artifact-lifecycle-handoff:medautoscience:physical-thinning:app',
+        body_free: true,
+        candidate_count: 493,
+        candidate_refs: [
+          'mas-artifact-lifecycle-candidate:medautoscience:regenerate-projection:app-one',
+          'mas-artifact-lifecycle-candidate:medautoscience:regenerate-projection:app-two',
+        ],
+        selected_payload_path: 'typed_blocker_path',
+        typed_blocker_refs: [
+          'mas-artifact-lifecycle-typed-blocker:medautoscience:canonical-regeneration-required:app',
+        ],
+        next_owner_action: {
+          owner: 'one-person-lab',
+          action: 'generic_lifecycle_apply',
+        },
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).family_runtime_lifecycle_apply;
+
+    assert.equal(result.status, 'blocked');
+    assert.equal(result.summary.unsafe_action_count, 2);
+
+    const drilldown = runCli(['runtime', 'app-operator-drilldown'], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
+    const evidence =
+      drilldown.attention_first_payload.evidence_after_contract.memory_artifact_lifecycle_evidence;
+
+    assert.equal(evidence.lifecycle_apply_handoff_attempt_count, 1);
+    assert.equal(evidence.lifecycle_apply_handoff_blocked_decision_count, 2);
+    assert.equal(evidence.lifecycle_apply_handoff_safe_decision_count, 0);
+    assert.equal(
+      evidence.latest_lifecycle_apply_handoff.handoff_ref,
+      'mas-artifact-lifecycle-handoff:medautoscience:physical-thinning:app',
+    );
+    assert.equal(evidence.latest_lifecycle_apply_handoff.candidate_ref_count, 493);
+    assert.equal(evidence.latest_lifecycle_apply_handoff.selected_payload_path, 'typed_blocker_path');
+    assert.equal(evidence.latest_lifecycle_apply_handoff.writes_performed, false);
+    assert.equal(evidence.latest_lifecycle_apply_handoff.receipt_ref, null);
+    assert.equal(
+      evidence.latest_lifecycle_apply_handoff.authority_boundary.can_execute_domain_physical_cleanup,
+      false,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime app-operator-drilldown summary exposes running provider attempts as liveness refs only', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-live-control-'));
   try {

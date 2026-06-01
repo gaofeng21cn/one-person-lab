@@ -236,7 +236,12 @@ test('framework readiness summarizes default control-plane surfaces without auth
       + memoryArtifactLifecycleEvidence.artifact_ref_count
       + memoryArtifactLifecycleEvidence.lifecycle_index_ref_count
       + memoryArtifactLifecycleEvidence.restore_proof_ref_count
-      + memoryArtifactLifecycleEvidence.domain_artifact_mutation_receipt_ref_count,
+      + memoryArtifactLifecycleEvidence.domain_artifact_mutation_receipt_ref_count
+      + memoryArtifactLifecycleEvidence.external_verified_memory_writeback_receipt_ref_count
+      + memoryArtifactLifecycleEvidence.external_verified_artifact_mutation_receipt_ref_count
+      + memoryArtifactLifecycleEvidence.external_verified_package_lifecycle_receipt_ref_count
+      + memoryArtifactLifecycleEvidence.external_verified_lifecycle_receipt_ref_count
+      + memoryArtifactLifecycleEvidence.external_verified_restore_proof_ref_count,
   );
   assert.equal(memoryArtifactLifecycleEvidence.observed_ref_count >= 0, true);
   assert.equal(memoryArtifactLifecycleEvidence.authority_boundary.can_read_memory_body, false);

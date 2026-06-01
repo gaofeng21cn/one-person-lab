@@ -31,6 +31,12 @@ export function buildMemoryArtifactLifecycleEvidence(drilldown: JsonRecord) {
   const restoreProofRefCount = numberValue(summary.lifecycle_restore_proof_ref_count);
   const artifactMutationReceiptRefCount =
     numberValue(summary.lifecycle_domain_artifact_mutation_receipt_ref_count);
+  const lifecycleApplyHandoffAttemptCount =
+    numberValue(summary.lifecycle_apply_handoff_attempt_count);
+  const lifecycleApplyHandoffBlockedDecisionCount =
+    numberValue(summary.lifecycle_apply_handoff_blocked_decision_count);
+  const lifecycleApplyHandoffSafeDecisionCount =
+    numberValue(summary.lifecycle_apply_handoff_safe_decision_count);
   const externalMemoryWritebackReceiptRefCount =
     numberValue(summary.domain_external_verified_memory_writeback_receipt_ref_count);
   const externalArtifactMutationReceiptRefCount =
@@ -80,6 +86,11 @@ export function buildMemoryArtifactLifecycleEvidence(drilldown: JsonRecord) {
     lifecycle_index_ref_count: lifecycleIndexRefCount,
     restore_proof_ref_count: restoreProofRefCount,
     domain_artifact_mutation_receipt_ref_count: artifactMutationReceiptRefCount,
+    lifecycle_apply_handoff_attempt_count: lifecycleApplyHandoffAttemptCount,
+    lifecycle_apply_handoff_blocked_decision_count: lifecycleApplyHandoffBlockedDecisionCount,
+    lifecycle_apply_handoff_safe_decision_count: lifecycleApplyHandoffSafeDecisionCount,
+    latest_lifecycle_apply_handoff:
+      record(drilldown.lifecycle_ledger_refs).latest_lifecycle_apply_handoff ?? null,
     external_verified_memory_writeback_receipt_ref_count: externalMemoryWritebackReceiptRefCount,
     external_verified_artifact_mutation_receipt_ref_count: externalArtifactMutationReceiptRefCount,
     external_verified_package_lifecycle_receipt_ref_count: externalPackageLifecycleReceiptRefCount,
@@ -102,6 +113,7 @@ export function buildMemoryArtifactLifecycleEvidence(drilldown: JsonRecord) {
       'domain_dispatch_evidence',
       'domain_evidence_request_refs',
       'lifecycle_ledger_refs',
+      'lifecycle_ledger_refs.lifecycle_apply_handoff_attempts',
     ],
     authority_boundary: {
       ...buildAppDrilldownRefsOnlyAuthorityBoundary(),
