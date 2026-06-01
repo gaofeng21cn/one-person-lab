@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import type { EnqueueInput } from './family-runtime-command.ts';
 import { deadLetterRedriveDecision } from './family-runtime-dead-letter-redrive.ts';
 import { canonicalFamilyRuntimeTaskKind } from './family-runtime-mas-domain-route.ts';
+import { MAS_PAPER_AUTONOMY_TASK_KINDS } from './family-runtime-paper-autonomy.ts';
 import {
   DEFAULT_MAX_ATTEMPTS,
   insertEvent,
@@ -22,6 +23,10 @@ import { activeQueueHoldForTaskInput } from './family-runtime-queue-holds.ts';
 
 const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
 const MAS_DEFAULT_EXECUTOR_NEXT_OWNERS = new Set(['write', 'ai_reviewer', 'write/ai_reviewer']);
+const MAS_PAPER_AUTONOMY_STALE_DEAD_LETTER_MARKERS = [
+  'owner_route_stale',
+  'controller_route_work_unit_unsupported',
+] as const;
 
 function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
@@ -201,6 +206,26 @@ function masDefaultExecutorCloseoutRedriveDecision(
     closeout_reason: optionalString(redriveContext.reason),
     previous_source_fingerprint: sourceFingerprint(existingPayload),
     next_source_fingerprint: sourceFingerprint(nextPayload),
+  };
+}
+
+function masPaperAutonomyDeadLetterCurrentnessBlock(existing: FamilyRuntimeTaskRow) {
+  if (
+    existing.domain_id !== 'medautoscience'
+    || existing.status !== 'dead_letter'
+    || !MAS_PAPER_AUTONOMY_TASK_KINDS.has(existing.task_kind)
+  ) {
+    return null;
+  }
+  const marker = MAS_PAPER_AUTONOMY_STALE_DEAD_LETTER_MARKERS.find((candidate) =>
+    existing.last_error?.includes(candidate)
+  );
+  if (!marker) {
+    return null;
+  }
+  return {
+    reason: 'mas_paper_autonomy_stale_or_unsupported_owner_route',
+    domain_blocker_marker: marker,
   };
 }
 
@@ -394,6 +419,9 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
       }
       const deadLetterRedrive = deadLetterRedriveDecision(existingPayload, payload);
       const blockedRedrive = masDefaultExecutorBlockedRedriveDecision(existing, existingPayload, payload);
+      const paperAutonomyDeadLetterBlock = deadLetterRedrive
+        ? masPaperAutonomyDeadLetterCurrentnessBlock(existing)
+        : null;
       if (exportedTaskChanged && blockedRedrive) {
         const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
         db.prepare(`
@@ -441,6 +469,35 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           requeued_from_terminal: true,
           idempotent_noop: false,
           task: taskToPayload(refreshed),
+        };
+      }
+      if (exportedTaskChanged && paperAutonomyDeadLetterBlock) {
+        insertEvent(db, {
+          taskId: existing.task_id,
+          domainId: existing.domain_id,
+          eventType: 'task_dead_letter_redrive_blocked_by_domain_currentness',
+          source: input.source ?? 'opl-cli',
+          payload: {
+            dedupe_key: dedupeKey,
+            previous_status: existing.status,
+            retained_status: existing.status,
+            ...paperAutonomyDeadLetterBlock,
+            attempted_redrive_reason: deadLetterRedrive?.reason ?? null,
+            authority_boundary: {
+              opl: 'queue_redrive_currentness_guard_only',
+              domain: 'truth_quality_artifact_gate_owner',
+              domain_truth_mutation: false,
+              publication_quality_mutation: false,
+              artifact_gate_mutation: false,
+              current_package_mutation: false,
+              provider_stage_attempt_started: false,
+            },
+          },
+        });
+        return {
+          accepted: false,
+          idempotent_noop: true,
+          task: taskToPayload(existing),
         };
       }
       if (existing.status === 'dead_letter' && exportedTaskChanged && deadLetterRedrive) {

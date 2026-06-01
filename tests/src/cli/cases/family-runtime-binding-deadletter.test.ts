@@ -1,3 +1,5 @@
+import { DatabaseSync } from 'node:sqlite';
+
 import { assert, fs, os, path, runCli, shellSingleQuote, test } from '../helpers.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
@@ -127,5 +129,182 @@ JSON
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime retains stale MAS paper autonomy dead letters when export fingerprints change', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-deadletter-stale-paper-autonomy-state-'));
+  const env = familyRuntimeEnv(stateRoot);
+  const stalePayloadV1 = {
+    profile: 'dm-cvd.workspace.toml',
+    study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+    repair_work_unit: {
+      work_unit_id: 'unit_superseded_quality_repair_batch',
+      source_fingerprint: 'stale-repair-work-unit-fingerprint-v1',
+      owner: 'quality_repair_batch',
+      callable_surface: 'quality_repair_batch.run_quality_repair_batch',
+    },
+    opl_domain_export_context: {
+      owner_fingerprint: 'mas-export-owner-v1',
+    },
+  };
+  const stalePayloadV2 = {
+    ...stalePayloadV1,
+    repair_work_unit: {
+      ...stalePayloadV1.repair_work_unit,
+      source_fingerprint: 'stale-repair-work-unit-fingerprint-v2',
+    },
+  };
+  try {
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_autonomy/repair-recheck',
+      '--payload',
+      JSON.stringify(stalePayloadV1),
+      '--dedupe-key',
+      'mas:dm003:repair-recheck:stale-owner-route',
+    ], env);
+    const deadLetterTask = enqueue.family_runtime_enqueue.task;
+    const queueDb = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+    try {
+      queueDb.prepare(`
+        UPDATE tasks
+        SET status = 'dead_letter',
+          attempts = 3,
+          last_error = ?,
+          dead_letter_reason = 'retry_budget_exhausted'
+        WHERE task_id = ?
+      `).run('Domain dispatch failed: controller_route_work_unit_unsupported', deadLetterTask.task_id);
+    } finally {
+      queueDb.close();
+    }
+
+    const reenqueued = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_autonomy/repair-recheck',
+      '--payload',
+      JSON.stringify(stalePayloadV2),
+      '--dedupe-key',
+      'mas:dm003:repair-recheck:stale-owner-route',
+      '--source',
+      'dm003-stale-repair-v2',
+    ], env);
+    const retained = runCli(['family-runtime', 'queue', 'inspect', deadLetterTask.task_id], env);
+    const retainedTask = retained.family_runtime_task.task;
+
+    assert.equal(reenqueued.family_runtime_enqueue.accepted, false);
+    assert.equal(reenqueued.family_runtime_enqueue.idempotent_noop, true);
+    assert.equal(reenqueued.family_runtime_enqueue.requeued_from_terminal, undefined);
+    assert.equal(retainedTask.status, 'dead_letter');
+    assert.equal(retainedTask.attempts, 3);
+    assert.equal(
+      retainedTask.payload.repair_work_unit.source_fingerprint,
+      'stale-repair-work-unit-fingerprint-v1',
+    );
+    assert.equal(
+      retained.family_runtime_task.events.some((event: { event_type: string; payload: { reason?: string } }) =>
+        event.event_type === 'task_dead_letter_redrive_blocked_by_domain_currentness'
+        && event.payload.reason === 'mas_paper_autonomy_stale_or_unsupported_owner_route'
+      ),
+      true,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime still requeues current MAS paper autonomy dead letters when source fingerprints change', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-deadletter-current-paper-autonomy-state-'));
+  const env = familyRuntimeEnv(stateRoot);
+  const payloadV1 = {
+    profile: 'dm-cvd.workspace.toml',
+    study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+    repair_work_unit: {
+      work_unit_id: 'unit_current_quality_repair_batch',
+      source_fingerprint: 'current-repair-work-unit-fingerprint-v1',
+      owner: 'quality_repair_batch',
+      callable_surface: 'quality_repair_batch.run_quality_repair_batch',
+    },
+    opl_domain_export_context: {
+      owner_fingerprint: 'mas-export-owner-v1',
+    },
+  };
+  const payloadV2 = {
+    ...payloadV1,
+    repair_work_unit: {
+      ...payloadV1.repair_work_unit,
+      source_fingerprint: 'current-repair-work-unit-fingerprint-v2',
+    },
+  };
+  try {
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_autonomy/repair-recheck',
+      '--payload',
+      JSON.stringify(payloadV1),
+      '--dedupe-key',
+      'mas:dm003:repair-recheck:current-owner-route',
+    ], env);
+    const deadLetterTask = enqueue.family_runtime_enqueue.task;
+    const queueDb = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+    try {
+      queueDb.prepare(`
+        UPDATE tasks
+        SET status = 'dead_letter',
+          attempts = 3,
+          last_error = ?,
+          dead_letter_reason = 'retry_budget_exhausted'
+        WHERE task_id = ?
+      `).run('Domain dispatch failed: repair work-unit owner receipt missing', deadLetterTask.task_id);
+    } finally {
+      queueDb.close();
+    }
+
+    const reenqueued = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_autonomy/repair-recheck',
+      '--payload',
+      JSON.stringify(payloadV2),
+      '--dedupe-key',
+      'mas:dm003:repair-recheck:current-owner-route',
+      '--source',
+      'dm003-current-repair-v2',
+    ], env);
+    const retained = runCli(['family-runtime', 'queue', 'inspect', deadLetterTask.task_id], env);
+    const task = retained.family_runtime_task.task;
+
+    assert.equal(reenqueued.family_runtime_enqueue.accepted, true);
+    assert.equal(reenqueued.family_runtime_enqueue.requeued_from_terminal, true);
+    assert.equal(task.status, 'queued');
+    assert.equal(task.attempts, 0);
+    assert.equal(
+      task.payload.repair_work_unit.source_fingerprint,
+      'current-repair-work-unit-fingerprint-v2',
+    );
+    assert.equal(
+      retained.family_runtime_task.events.some((event: { event_type: string; payload: { reason?: string } }) =>
+        event.event_type === 'task_requeued_from_dead_letter_after_domain_owner_update'
+        && event.payload.reason === 'domain_export_source_fingerprint_changed_after_dead_letter'
+      ),
+      true,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
