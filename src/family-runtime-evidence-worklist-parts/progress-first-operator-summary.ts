@@ -95,6 +95,16 @@ export function buildProgressFirstOperatorSummary(input: {
   const openProgressFirstSupervisionCount = input.openItems.filter((item) =>
     stringValue(item.claim_scope) === 'progress_first_attempt_supervision'
   ).length;
+  const progressFirstDiagnosticItems = input.worklistItems.filter((item) =>
+    stringValue(item.claim_scope) === 'progress_first_attempt_supervision'
+    && stringValue(item.status) === 'diagnostic_only'
+  );
+  const operatorAttentionItems = [
+    ...input.openItems,
+    ...progressFirstDiagnosticItems,
+  ];
+  const progressFirstSupervisionItemCount =
+    openProgressFirstSupervisionCount + progressFirstDiagnosticItems.length;
   const typedBlockerRefs = typedBlockerRefsFromItems([
     ...input.worklistItems,
     ...recordList(input.familyStallLineage.lineages),
@@ -110,6 +120,8 @@ export function buildProgressFirstOperatorSummary(input: {
   const hasBlockedRefsOnlyAttention = domainOrHumanBlockedCount > 0 || typedBlockerRefs.length > 0;
   const status = hasOpenSafeActions
     ? 'operator_safe_action_available'
+    : progressFirstDiagnosticItems.length > 0
+      ? 'progress_first_diagnostic_attention'
     : hasBlockedRefsOnlyAttention
       ? 'domain_or_human_owner_blocked_refs_only'
       : 'no_open_operator_action';
@@ -122,15 +134,17 @@ export function buildProgressFirstOperatorSummary(input: {
     status,
     progress_delta_classification: hasOpenSafeActions
       ? 'operator_action_pending'
+      : progressFirstDiagnosticItems.length > 0
+        ? 'diagnostic_attention_only'
       : hasBlockedRefsOnlyAttention
         ? 'blocked_refs_only_attention'
         : 'no_open_operator_delta',
     deliverable_progress_delta: null,
-    platform_repair_delta: hasOpenSafeActions || openProgressFirstSupervisionCount > 0
+    platform_repair_delta: hasOpenSafeActions || progressFirstSupervisionItemCount > 0
       ? 'opl_operator_or_provider_supervision_delta_available'
       : null,
     next_forced_delta: nextForcedDelta({
-      openItems: input.openItems,
+      openItems: operatorAttentionItems,
       stageReplayMissingReceiptWorkorderCount,
       stageReplayMissingHumanGateRefCount,
       blockedRefsOnlyEnvelopeCount,
@@ -140,6 +154,10 @@ export function buildProgressFirstOperatorSummary(input: {
     open_safe_action_payload_required_count: openPayloadRequiredCount,
     open_safe_action_payload_free_count: input.openItems.length - openPayloadRequiredCount,
     progress_first_supervision_open_count: openProgressFirstSupervisionCount,
+    progress_first_supervision_diagnostic_count: progressFirstDiagnosticItems.length,
+    progress_first_supervision_item_count: progressFirstSupervisionItemCount,
+    progress_first_supervision_diagnostic_semantics:
+      'attempt_query_is_read_only_operator_diagnostic_not_closeable_evidence_workorder',
     stage_replay_missing_receipt_workorder_count: stageReplayMissingReceiptWorkorderCount,
     stage_replay_missing_human_gate_ref_count: stageReplayMissingHumanGateRefCount,
     blocked_refs_only_envelope_count: blockedRefsOnlyEnvelopeCount,

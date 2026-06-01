@@ -277,7 +277,7 @@ test('family-runtime evidence-worklist syncs terminal Temporal closeout before e
   }
 });
 
-test('family-runtime evidence-worklist exposes active attempt progress-first supervision instead of no-action', async () => {
+test('family-runtime evidence-worklist exposes active attempt progress-first supervision as diagnostic attention', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-progress-first-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const previousStateDir = process.env.OPL_STATE_DIR;
@@ -330,10 +330,17 @@ test('family-runtime evidence-worklist exposes active attempt progress-first sup
     ) as { stage_attempt_id: string; [key: string]: any } | undefined;
 
     assert.ok(progressItem);
-    assert.equal(progressItem.status, 'open_safe_action_request_route_available');
+    assert.equal(progressItem.status, 'diagnostic_only');
+    assert.equal(progressItem.worklist_status_detail, 'diagnostic_only_not_operator_actionable');
+    assert.equal(progressItem.mode, 'diagnostic_query_only');
+    assert.equal(
+      progressItem.route_semantics,
+      'read_only_operator_diagnostic_not_safe_action_or_closeable_workorder',
+    );
     assert.equal(progressItem.claim_scope, 'progress_first_attempt_supervision');
     assert.equal(progressItem.stage_attempt_id, stageAttemptId);
-    assert.equal(progressItem.evidence_requirement.status, 'open');
+    assert.equal(progressItem.evidence_requirement.status, 'closed');
+    assert.equal(progressItem.evidence_requirement.next_safe_action_route, null);
     assert.equal(progressItem.evidence_requirement.can_claim_domain_ready, false);
     assert.equal(progressItem.evidence_requirement.can_claim_production_ready, false);
     assert.deepEqual(progressItem.missing_progress_signals, [
@@ -351,14 +358,11 @@ test('family-runtime evidence-worklist exposes active attempt progress-first sup
       'deferred_until_worker_liveness_ready',
     );
     assert.equal(progressItem.typed_blocker_requirement.opl_can_create_typed_blocker, false);
-    assert.equal(
-      worklist.progress_first_operator_summary.status,
-      'operator_safe_action_available',
+    const openProgressItems = worklist.worklist_items.filter((item: { claim_scope: string; status: string }) =>
+      item.claim_scope === 'progress_first_attempt_supervision'
+      && item.status === 'open_safe_action_request_route_available'
     );
-    assert.equal(
-      worklist.progress_first_operator_summary.progress_delta_classification,
-      'operator_action_pending',
-    );
+    assert.deepEqual(openProgressItems, []);
     assert.equal(worklist.progress_first_operator_summary.deliverable_progress_delta, null);
     assert.equal(
       worklist.progress_first_operator_summary.platform_repair_delta,
@@ -368,7 +372,15 @@ test('family-runtime evidence-worklist exposes active attempt progress-first sup
       worklist.progress_first_operator_summary.next_forced_delta,
       'Inspect the active attempt, worker readiness, stage_progress_log, and closeout refs; start or repair the worker first when liveness is missing, otherwise supervise progress or require domain typed closeout.',
     );
-    assert.equal(worklist.progress_first_operator_summary.progress_first_supervision_open_count, 1);
+    assert.equal(worklist.progress_first_operator_summary.progress_first_supervision_open_count, 0);
+    assert.equal(worklist.progress_first_operator_summary.progress_first_supervision_diagnostic_count, 1);
+    assert.equal(worklist.progress_first_operator_summary.progress_first_supervision_item_count, 1);
+    assert.equal(worklist.summary.progress_first_supervision_open_item_count, 0);
+    assert.equal(worklist.summary.progress_first_supervision_diagnostic_item_count, 1);
+    assert.equal(
+      worklist.summary.progress_first_supervision_diagnostic_semantics,
+      'attempt_query_is_read_only_operator_diagnostic_not_closeable_evidence_workorder',
+    );
     assert.equal(
       worklist.progress_first_operator_summary.authority_boundary.can_claim_domain_ready,
       false,
@@ -377,9 +389,23 @@ test('family-runtime evidence-worklist exposes active attempt progress-first sup
       worklist.next_safe_actions.some((action) =>
         action.action_id === `progress-first-supervision:${stageAttemptId}`
       ),
+      false,
+    );
+    assert.equal(
+      worklist.next_safe_actions.every((action) =>
+        action.claim_scope !== 'progress_first_attempt_supervision'
+      ),
       true,
     );
-    assert.equal(worklist.zero_open_worklist_guard.zero_open_worklist_item_count, false);
+    assert.equal(
+      worklist.next_action_ledger.next_action_items.every((item: {
+        evidence_requirement: { claim_scope: string };
+      }) =>
+        item.evidence_requirement.claim_scope !== 'progress_first_attempt_supervision'
+      ),
+      true,
+    );
+    assert.equal(worklist.zero_open_worklist_guard.zero_open_worklist_is_completion_claim, false);
   } finally {
     if (typeof previousStateDir === 'string') {
       process.env.OPL_STATE_DIR = previousStateDir;

@@ -87,6 +87,9 @@ const CLOSEOUT_ACTION_KINDS = new Set([
 
 const BLOCKED_ROUTE_STATUS_PREFIX = 'blocked_by_';
 const OPEN_WORKLIST_STATUS = 'open_safe_action_request_route_available';
+const DIAGNOSTIC_ONLY_STATUS = 'diagnostic_only';
+const DIAGNOSTIC_ONLY_ROUTE_SEMANTICS =
+  'read_only_operator_diagnostic_not_safe_action_or_closeable_workorder';
 
 function freshnessRef(route: JsonRecord) {
   return stringValue(route.evidence_source_ref)
@@ -311,9 +314,11 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
     || actionabilityStatus?.startsWith(BLOCKED_ROUTE_STATUS_PREFIX);
   const routeNotActionable = route.can_submit_to_safe_action_shell === false
     || route.default_actionable === false;
+  const diagnosticOnlyRoute = actionabilityStatus === 'diagnostic_only_not_operator_actionable'
+    || actionKind === 'progress_first_attempt_supervision';
   const itemStatus = stringValue(closure?.status)
-    ?? (actionabilityStatus === 'diagnostic_only_not_operator_actionable'
-      ? 'diagnostic_only'
+    ?? (diagnosticOnlyRoute
+      ? DIAGNOSTIC_ONLY_STATUS
       : null)
     ?? (
       routeBlocked
@@ -348,14 +353,18 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
     safe_action_owner: routeOwner,
     domain_id: routeDomainId,
     stage_id: stringValue(route.stage_id),
-    mode: actionKind.endsWith('_verify') || actionKind === 'provider_scheduler_status'
-      ? 'verify'
-      : 'request_or_apply_via_safe_action',
+    mode: itemStatus === DIAGNOSTIC_ONLY_STATUS
+      ? 'diagnostic_query_only'
+      : actionKind.endsWith('_verify') || actionKind === 'provider_scheduler_status'
+        ? 'verify'
+        : 'request_or_apply_via_safe_action',
     status: itemStatus,
     worklist_item_is_completion_claim: false,
     route_status: routeStatus,
     route_status_detail: stringValue(route.route_status_detail),
-    route_semantics: 'open_safe_action_request_apply_verify_route',
+    route_semantics: itemStatus === DIAGNOSTIC_ONLY_STATUS
+      ? DIAGNOSTIC_ONLY_ROUTE_SEMANTICS
+      : 'open_safe_action_request_apply_verify_route',
     receipt_ref: closureReceiptRef,
     receipt_refs: closureReceiptRefs,
     typed_blocker_ref: typedBlockerRefs[0] ?? closureTypedBlockerRef ?? null,
@@ -364,7 +373,7 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
       ? 'closed_by_domain_owned_typed_blocker_ref'
       : itemStatus.startsWith('blocked_by_')
         ? itemStatus
-      : itemStatus === 'diagnostic_only'
+      : itemStatus === DIAGNOSTIC_ONLY_STATUS
         ? 'diagnostic_only_not_operator_actionable'
       : itemStatus === 'closed_by_receipt_ref'
         ? readOnlyClaimScope(route) === 'provider_scheduler_cadence'
@@ -406,7 +415,7 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
   };
   const evidenceRequirementStatus = itemStatus.startsWith(BLOCKED_ROUTE_STATUS_PREFIX)
     ? 'blocked'
-    : itemStatus === 'diagnostic_only'
+    : itemStatus === DIAGNOSTIC_ONLY_STATUS
       ? 'closed'
       : itemStatus;
   return {
@@ -589,6 +598,12 @@ function worklistCounts(
   const openSafeActionPayloadRequiredItemCount = openItems.filter((item) =>
     item.route_requires_domain_or_app_payload === true
   ).length;
+  const progressFirstSupervisionItems = worklistItems.filter((item) =>
+    item.claim_scope === 'progress_first_attempt_supervision'
+  );
+  const progressFirstSupervisionDiagnosticItemCount = progressFirstSupervisionItems.filter((item) =>
+    item.status === DIAGNOSTIC_ONLY_STATUS
+  ).length;
   return {
     open_worklist_item_count: openItems.length,
     closed_refs_only_item_count: closedItems.length,
@@ -624,6 +639,13 @@ function worklistCounts(
         item.claim_scope === 'stage_production_evidence_receipt'
         && item.route_requires_domain_or_app_payload === true
       ).length,
+    progress_first_supervision_item_count: progressFirstSupervisionItems.length,
+    progress_first_supervision_open_item_count:
+      openItems.filter((item) => item.claim_scope === 'progress_first_attempt_supervision').length,
+    progress_first_supervision_diagnostic_item_count:
+      progressFirstSupervisionDiagnosticItemCount,
+    progress_first_supervision_diagnostic_semantics:
+      'attempt_query_is_read_only_operator_diagnostic_not_closeable_evidence_workorder',
     domain_dispatch_evidence_receipt_item_count: worklistItems.filter((item) =>
       item.claim_scope === 'domain_dispatch_evidence_receipt'
     ).length,
@@ -706,6 +728,9 @@ function buildEvidenceRequirementLedger(worklistItems: JsonRecord[]) {
 function itemEligibleForNextActionLedger(item: JsonRecord) {
   const claimScope = stringValue(item.claim_scope);
   const status = stringValue(item.status);
+  if (status === DIAGNOSTIC_ONLY_STATUS) {
+    return false;
+  }
   if (claimScope === 'provider_scheduler_cadence' && status !== OPEN_WORKLIST_STATUS) {
     return false;
   }
@@ -716,6 +741,23 @@ function itemClosedByRefsOnlyReceipt(item: JsonRecord) {
   const status = stringValue(item.status);
   return status === 'closed_by_receipt_ref'
     || status === 'closed_by_domain_owned_typed_blocker';
+}
+
+function diagnosticOperatorRoutesForWorklist(
+  operatorRoutes: JsonRecord[],
+  safeActionRoutes: JsonRecord[],
+  input: EvidenceWorklistInput,
+) {
+  const safeActionIds = new Set(safeActionRoutes
+    .map((route) => stringValue(route.action_id))
+    .filter((actionId): actionId is string => Boolean(actionId)));
+  return operatorRoutes.filter((route) => {
+    const actionId = stringValue(route.action_id);
+    return stringValue(route.action_kind) === 'progress_first_attempt_supervision'
+      && actionId !== null
+      && !safeActionIds.has(actionId)
+      && readOnlyRouteMatchesDefaults(route, input);
+  });
 }
 
 export async function runFamilyRuntimeEvidenceWorklist(
@@ -759,14 +801,20 @@ export async function runFamilyRuntimeEvidenceWorklist(
   const routes = recordList(bridge.safe_action_routes).filter((route) =>
     readOnlyRouteMatchesDefaults(route, input)
   );
+  const diagnosticRoutes = diagnosticOperatorRoutesForWorklist(operatorRoutes, routes, input);
   const worklistItems = [
     ...routes.map((route, index) =>
       readOnlyWorklistItem(routeWithOperatorHandoff(route, operatorRouteByActionId), index, drilldown)
     ),
+    ...diagnosticRoutes.map((route, index) =>
+      readOnlyWorklistItem(route, routes.length + index, drilldown)
+    ),
     ...externalEvidenceReceiptWorklistItems(drilldown),
     ...domainDispatchReceiptWorklistItems(drilldown),
     ...defaultCallerDeletionEvidenceRoutes(drilldown, NOT_AUTHORIZED_CLAIMS)
-      .map((route, index) => readOnlyWorklistItem(route, routes.length + index, drilldown)),
+      .map((route, index) =>
+        readOnlyWorklistItem(route, routes.length + diagnosticRoutes.length + index, drilldown)
+      ),
   ];
   const openItems = worklistItems.filter((item) =>
     item.status === OPEN_WORKLIST_STATUS

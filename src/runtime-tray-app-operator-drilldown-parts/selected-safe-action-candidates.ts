@@ -129,7 +129,6 @@ function routeEligibleForDefaultSelectedAction(action: JsonRecord) {
     || actionKind === 'oma_production_consumption_receipt_record'
     || actionKind === 'provider_worker_start'
     || actionKind === 'provider_worker_restart'
-    || actionKind === 'progress_first_attempt_supervision'
     || actionKind === 'blocked_transport_redrive'
     || actionKind === 'provider_slo_cadence_execution'
     || actionKind === 'stage_production_attempt_request'
@@ -170,9 +169,6 @@ function actionPriority(action: JsonRecord) {
   if (actionKind === 'provider_worker_start'
     || actionKind === 'provider_worker_restart') {
     return 2;
-  }
-  if (actionKind === 'progress_first_attempt_supervision') {
-    return 3;
   }
   if (actionKind === 'blocked_transport_redrive') {
     return 4;

@@ -643,10 +643,9 @@ test('runtime App drilldown keeps active attempts with missing progress signals 
   }, 'summary');
   const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
   assert.ok(nextSafeAction);
-
   assert.equal(nextSafeAction.action_id, 'provider-worker:temporal:start');
   assert.equal(nextSafeAction.action_kind, 'provider_worker_start');
-  assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 1);
+  assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 0);
 
   const progressAction = progressFirstRoutes.find((route: { action_kind: string }) =>
     route.action_kind === 'progress_first_attempt_supervision'
@@ -660,7 +659,15 @@ test('runtime App drilldown keeps active attempts with missing progress signals 
     'owner_closeout',
     'next_action',
   ]);
-  assert.equal(progressAction.can_submit_to_safe_action_shell, true);
+  assert.equal(progressAction.can_submit_to_safe_action_shell, false);
+  assert.equal(progressAction.default_actionable, false);
+  assert.equal(progressAction.default_actionability_status, 'diagnostic_only_not_operator_actionable');
+  assert.equal(progressAction.execution_policy, 'diagnostic_query_only');
+  assert.equal(progressAction.route_status, 'diagnostic_only');
+  assert.equal(
+    progressAction.route_status_detail_semantics,
+    'read_only_operator_diagnostic_not_safe_action_or_closeable_workorder',
+  );
   assert.equal(progressAction.authority_boundary.can_write_domain_truth, false);
 });
 
