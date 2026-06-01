@@ -180,7 +180,16 @@ JSON
       fs.readFileSync(firstTmpRootPath, 'utf8').trim(),
       fs.readFileSync(retryTmpRootPath, 'utf8').trim(),
     );
-    assert.match(fs.readFileSync(retryTmpRootPath, 'utf8').trim(), /opl-domain-command-recovery/);
+    assert.equal(
+      fs.readFileSync(retryTmpRootPath, 'utf8').trim(),
+      path.join(
+        os.tmpdir(),
+        'opl-family-runtime-domain-cache-root',
+        path.basename(fixtureRoot),
+        'recovery',
+        path.basename(fixtureRoot),
+      ),
+    );
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
@@ -237,7 +246,10 @@ JSON
     assert.equal(exportResult.domain_handler_recovery.trigger_kind, 'uv_cache_archive_missing');
     assert.equal(exportResult.domain_handler_recovery.first_exit_code, 1);
     assert.equal(exportResult.domain_handler_recovery.retry_exit_code, 0);
-    assert.match(exportResult.domain_handler_recovery.retry_tmp_root, /opl-domain-command-recovery/);
+    assert.equal(
+      exportResult.domain_handler_recovery.retry_tmp_root,
+      path.join(os.tmpdir(), 'opl-domain-command', 'one-person-lab', 'recovery', 'one-person-lab'),
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

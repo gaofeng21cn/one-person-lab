@@ -202,7 +202,16 @@ JSON
       fs.readFileSync(firstTmpRootPath, 'utf8').trim(),
       fs.readFileSync(retryTmpRootPath, 'utf8').trim(),
     );
-    assert.match(fs.readFileSync(retryTmpRootPath, 'utf8').trim(), /opl-domain-command-recovery/);
+    assert.equal(
+      fs.readFileSync(retryTmpRootPath, 'utf8').trim(),
+      path.join(
+        os.tmpdir(),
+        'opl-domain-manifest-cache-retry-root',
+        path.basename(workspacePath),
+        'recovery',
+        path.basename(workspacePath),
+      ),
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspacePath, { recursive: true, force: true });

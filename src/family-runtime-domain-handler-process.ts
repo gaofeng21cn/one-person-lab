@@ -1,10 +1,11 @@
 import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 
 import { FrameworkContractError } from './contracts.ts';
-import { buildManagedShellCommandEnv } from './managed-shell-command-env.ts';
+import {
+  buildManagedShellCommandEnv,
+  buildManagedShellRecoveryTmpRoot,
+} from './managed-shell-command-env.ts';
 
 const DEFAULT_DOMAIN_HANDLER_TIMEOUT_MS = 30_000;
 const DEFAULT_DOMAIN_HANDLER_MAX_BUFFER = 10 * 1024 * 1024;
@@ -143,7 +144,8 @@ export function runFamilyRuntimeDomainHandlerCommand(
     return normalizeDomainHandlerResult(result, timeoutMs);
   }
 
-  const retryTmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-command-recovery-'));
+  const retryTmpRoot = buildManagedShellRecoveryTmpRoot(options.cwd, options.env ?? process.env);
+  fs.mkdirSync(retryTmpRoot, { recursive: true });
   const retry = spawnDomainHandlerCommand(command, {
     ...options,
     env: {

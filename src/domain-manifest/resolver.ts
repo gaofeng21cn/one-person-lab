@@ -1,10 +1,9 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 
 import type { WorkspaceBinding } from '../workspace-registry.ts';
 import {
+  buildManagedShellRecoveryTmpRoot,
   buildManagedShellCommandEnv,
   prepareManagedShellCommandCwd,
 } from '../managed-shell-command-env.ts';
@@ -184,7 +183,8 @@ export function resolveBindingManifest(
   const timeoutMs = resolveManifestCommandTimeoutMs(options.timeoutMs, timeoutPolicy);
   let result = executeManifestCommand(binding, manifestCommand, timeoutMs);
   if (shouldRetryWithFreshUvCache(result)) {
-    const retryTmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-command-recovery-'));
+    const retryTmpRoot = buildManagedShellRecoveryTmpRoot(binding.workspace_path, process.env);
+    fs.mkdirSync(retryTmpRoot, { recursive: true });
     result = executeManifestCommand(binding, manifestCommand, timeoutMs, {
       ...process.env,
       OPL_DOMAIN_COMMAND_TMP_ROOT: retryTmpRoot,

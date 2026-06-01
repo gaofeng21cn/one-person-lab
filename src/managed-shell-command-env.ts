@@ -114,6 +114,15 @@ export function buildManagedShellCommandEnv(cwd: string, env: NodeJS.ProcessEnv 
   };
 }
 
+export function buildManagedShellRecoveryTmpRoot(
+  cwd: string,
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  const workspaceId = stableWorkspaceId(cwd);
+  const baseEnv = buildManagedShellCommandEnv(cwd, env);
+  return path.join(baseEnv.OPL_DOMAIN_COMMAND_TMP_ROOT, 'recovery', workspaceId);
+}
+
 export function shouldUseManagedShellScratchCwd(command: string | null | undefined) {
   const value = command?.trim();
   if (!value) {
