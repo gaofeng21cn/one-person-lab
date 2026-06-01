@@ -501,12 +501,12 @@ function verifyLifecycleApply(input: LifecycleApplyInput) {
     const rows = input.receipt_ref?.trim()
       ? db.prepare(`
         SELECT * FROM lifecycle_apply_receipts
-        WHERE target_domain_id = ? AND receipt_ref = ?
+        WHERE target_domain_id = ? AND receipt_ref = ? AND status = 'applied'
         ORDER BY created_at DESC
       `).all(targetDomainId, input.receipt_ref.trim())
       : db.prepare(`
         SELECT * FROM lifecycle_apply_receipts
-        WHERE target_domain_id = ?
+        WHERE target_domain_id = ? AND status = 'applied'
         ORDER BY created_at DESC
       `).all(targetDomainId);
     const rawVerifiedReceipts = (rows as Array<{
@@ -608,6 +608,7 @@ export function runFamilyRuntimeLifecycleApply(input: LifecycleApplyInput) {
     actions,
     handoffs: input.handoffs ?? [],
   }).slice(0, 24)}`;
+  const handoffSummary = summarizeLifecycleHandoffs(input.handoffs);
 
   if (input.mode === 'apply' && !blocked) {
     const createdAt = nowIso();
@@ -706,6 +707,46 @@ export function runFamilyRuntimeLifecycleApply(input: LifecycleApplyInput) {
     }
   }
 
+  if (handoffSummary.handoff_count > 0) {
+    const createdAt = nowIso();
+    const { db } = openFamilyRuntimeLifecycleIndexDb();
+    try {
+      insertLifecycleApplyReceipt(db, {
+        receiptRef,
+        targetDomainId,
+        sourceRef,
+        mode: input.mode,
+        status,
+        receipt: {
+          receipt_ref: receiptRef,
+          receipt_kind: 'opl_lifecycle_apply_handoff_attempt_projection',
+          target_domain_id: targetDomainId,
+          source_ref: sourceRef,
+          manifest_ref: manifestRef,
+          status,
+          action_kind: 'generic_lifecycle_apply',
+          action_count: decisions.length,
+          safe_action_count: decisions.filter((decision) => decision.decision === 'safe_to_apply').length,
+          blocked_action_count: decisions.filter((decision) => decision.decision === 'blocked').length,
+          handoff_refs: handoffSummary.handoff_refs,
+          typed_blocker_refs: handoffSummary.typed_blocker_refs,
+          selected_payload_path: handoffSummary.selected_payload_path,
+          candidate_ref_count: handoffSummary.candidate_ref_count,
+          candidate_refs: handoffSummary.candidate_refs,
+          receipt_refs: cleanupReceipts.flatMap((receipt) =>
+            normalizeStringList(receipt.domain_artifact_mutation_receipt_refs)
+          ),
+          writes_performed: input.mode === 'apply' && !blocked,
+          handoff_summary: handoffSummary,
+          authority_boundary: lifecycleApplyAuthorityBoundary(),
+        },
+        createdAt,
+      });
+    } finally {
+      db.close();
+    }
+  }
+
   return {
     surface_kind: 'family_runtime_lifecycle_apply_receipt',
     owner: 'one-person-lab',
@@ -718,7 +759,7 @@ export function runFamilyRuntimeLifecycleApply(input: LifecycleApplyInput) {
     actions: decisions,
     cleanup_receipts: cleanupReceipts,
     verified_receipts: [],
-    handoff_summary: summarizeLifecycleHandoffs(input.handoffs),
+    handoff_summary: handoffSummary,
     summary: summarizeLifecycleApply(decisions, input.mode === 'apply' && !blocked),
     authority_boundary: lifecycleApplyAuthorityBoundary(),
   };

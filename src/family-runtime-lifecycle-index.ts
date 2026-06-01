@@ -180,6 +180,8 @@ function lifecycleApplyReceiptPayload(input: {
       domain_owner_handoff_receipt_refs: normalizeStringList(
         receipt.domain_owner_handoff_receipt_refs,
       ),
+      handoff_refs: normalizeStringList(receipt.handoff_refs),
+      typed_blocker_refs: normalizeStringList(receipt.typed_blocker_refs),
       no_active_caller_refs: normalizeStringList(receipt.no_active_caller_refs),
       replacement_parity_refs: normalizeStringList(receipt.replacement_parity_refs),
       receipt,
@@ -198,6 +200,14 @@ function lifecycleApplyReceiptPayload(input: {
       applied_receipt_count: receipts.filter((receipt) => receipt.status === 'applied').length,
       verified_receipt_count: receipts.filter((receipt) => receipt.status === 'verified').length,
       blocked_receipt_count: receipts.filter((receipt) => receipt.status === 'blocked').length,
+      dry_run_ready_receipt_count: receipts.filter((receipt) => receipt.status === 'dry_run_ready').length,
+      handoff_attempt_count: receipts.filter((receipt) => receipt.handoff_refs.length > 0).length,
+      handoff_blocked_attempt_count: receipts.filter((receipt) =>
+        receipt.handoff_refs.length > 0 && receipt.status === 'blocked'
+      ).length,
+      handoff_dry_run_ready_attempt_count: receipts.filter((receipt) =>
+        receipt.handoff_refs.length > 0 && receipt.status === 'dry_run_ready'
+      ).length,
     },
     receipts,
     authority_boundary: lifecycleApplyAuthorityBoundary(),

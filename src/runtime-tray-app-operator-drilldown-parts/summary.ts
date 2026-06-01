@@ -335,6 +335,13 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     lifecycle_index_ref_count: lifecycleSummary.lifecycle_index_ref_count,
     lifecycle_restore_proof_ref_count: lifecycleSummary.restore_proof_ref_count,
     lifecycle_domain_artifact_mutation_receipt_ref_count: lifecycleSummary.domain_artifact_mutation_receipt_ref_count,
+    lifecycle_apply_receipt_count: lifecycleSummary.lifecycle_apply_receipt_count,
+    lifecycle_apply_blocked_receipt_count: lifecycleSummary.lifecycle_apply_blocked_receipt_count,
+    lifecycle_apply_handoff_attempt_count: lifecycleSummary.lifecycle_apply_handoff_attempt_count,
+    lifecycle_apply_handoff_blocked_decision_count:
+      lifecycleSummary.lifecycle_apply_handoff_blocked_decision_count,
+    lifecycle_apply_handoff_safe_decision_count:
+      lifecycleSummary.lifecycle_apply_handoff_safe_decision_count,
     lifecycle_reconcile_missing_ref_count: lifecycleSummary.lifecycle_reconcile_missing_ref_count,
     lifecycle_reconcile_extra_ref_count: lifecycleSummary.lifecycle_reconcile_extra_ref_count,
     lifecycle_reconcile_stale_ref_count: lifecycleSummary.lifecycle_reconcile_stale_ref_count,

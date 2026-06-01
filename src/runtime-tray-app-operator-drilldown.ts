@@ -1,9 +1,5 @@
 import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
 import {
-  readFamilyRuntimeLifecycleRefs,
-  reconcileFamilyRuntimeLifecycleRefs,
-} from './family-runtime-lifecycle-index.ts';
-import {
   buildStandardDomainAgentSkeletonInspection,
 } from './family-domain-agent-skeleton.ts';
 import type {
@@ -98,6 +94,9 @@ import {
 import {
   buildAppExecutionBridge,
 } from './runtime-tray-app-operator-drilldown-parts/execution-bridge.ts';
+import {
+  buildLifecycleLedgerRefs,
+} from './runtime-tray-app-operator-drilldown-parts/lifecycle-ledger-refs.ts';
 import {
   buildRuntimeVisualizationProjection,
 } from './runtime-tray-app-operator-drilldown-parts/runtime-visualization-projection.ts';
@@ -594,52 +593,7 @@ function currentControlStateProjection(attempts: JsonRecord[]) {
   };
 }
 
-function lifecycleLedgerRefs() {
-  const index = readFamilyRuntimeLifecycleRefs();
-  const reconcile = reconcileFamilyRuntimeLifecycleRefs();
-  const refs = recordList(index.refs);
-  const restoreProofRefs = uniqueStrings(refs.flatMap((entry) =>
-    stringList(record(entry.payload).restore_proof_refs)
-  )).sort();
-  const domainArtifactMutationReceiptRefs = uniqueStrings(refs.flatMap((entry) =>
-    stringList(record(entry.payload).domain_artifact_mutation_receipt_refs)
-  )).sort();
-  return {
-    surface_kind: 'opl_app_drilldown_lifecycle_ledger_refs',
-    projection_policy: 'opl_owned_lifecycle_index_refs_only',
-    lifecycle_index_db: stringValue(index.lifecycle_index_db),
-    refs: refs.map((entry) => ({
-      ref: stringValue(entry.ref_id),
-      role: stringValue(entry.surface_role) ?? 'lifecycle_index_ref',
-      domain_id: stringValue(entry.domain_id),
-      surface_id: stringValue(entry.surface_id),
-      source_ref: stringValue(entry.source_ref),
-      receipt_ref: stringValue(entry.receipt_ref),
-      checksum: stringValue(entry.checksum),
-      updated_at: stringValue(entry.updated_at),
-    })).filter((entry) => entry.ref),
-    restore_proof_refs: restoreProofRefs,
-    domain_artifact_mutation_receipt_refs: domainArtifactMutationReceiptRefs,
-    summary: {
-      lifecycle_index_ref_count: refs.length,
-      restore_proof_ref_count: restoreProofRefs.length,
-      domain_artifact_mutation_receipt_ref_count: domainArtifactMutationReceiptRefs.length,
-      lifecycle_reconcile_status: stringValue(reconcile.status),
-      lifecycle_reconcile_missing_ref_count: numberValue(record(reconcile.summary).missing_ref_count),
-      lifecycle_reconcile_extra_ref_count: numberValue(record(reconcile.summary).extra_ref_count),
-      lifecycle_reconcile_stale_ref_count: numberValue(record(reconcile.summary).stale_ref_count),
-      lifecycle_delete_ready_proof_status: stringValue(record(reconcile.delete_ready_proof).proof_status),
-      lifecycle_domain_physical_delete_requires_owner_receipt: true,
-      lifecycle_domain_physical_delete_can_execute:
-        record(reconcile.summary).can_execute_domain_physical_delete === true,
-      lifecycle_opl_cleanup_apply_can_execute: record(reconcile.summary).opl_cleanup_apply_can_execute === true,
-    },
-    reconcile_projection: reconcile,
-    authority_boundary: refsOnlyAuthorityBoundary(),
-  };
-}
-
-function safeActionRefs(actionRefs: ReturnType<typeof operatorActionRoutingRefs>, lifecycleRefs: ReturnType<typeof lifecycleLedgerRefs>) {
+function safeActionRefs(actionRefs: ReturnType<typeof operatorActionRoutingRefs>, lifecycleRefs: ReturnType<typeof buildLifecycleLedgerRefs>) {
   return uniqueRefs([
     ...actionRefs.map((ref) => ({
       ...ref,
@@ -1100,7 +1054,7 @@ export function buildAppOperatorDrilldown(input: {
     },
     operatorRoutes: actionRefs,
   });
-  const lifecycleRefs = lifecycleLedgerRefs();
+  const lifecycleRefs = buildLifecycleLedgerRefs();
   const safeActions = safeActionRefs(actionRefs, lifecycleRefs);
   const executionBridge = buildAppExecutionBridge(actionRefs, periodicRefs, lifecycleRefs);
   const runtimeVisualizationProjection = buildRuntimeVisualizationProjection({
