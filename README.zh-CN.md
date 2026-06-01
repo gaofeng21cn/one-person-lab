@@ -123,14 +123,16 @@ One Person Lab 同时包含框架、桌面工作台和专业 Agent 三层：
 
 桌面产品的一键安装、完整首次安装包、Docker/WebUI 入口、GitHub Release 和用户教程由 App 仓维护。本仓维护这些入口背后的命令行、初始化流程、运行时、合同、模块管理和 App 可消费机器接口。
 
-如果要在新机器的 Codex 中一句话安装配置 OPL runtime、MAS/MAG/RCA/OMA 智能体可见面、OPL Flow、OPL Doc 和推荐 companion tools，请使用 [新机器 Codex 全家桶安装入口](docs/references/current-support/opl-new-machine-codex-bootstrap.md)：
+开发新的领域智能体、调试命令行或接入运行时，请展开下方技术入口。
+
+## 给 Codex / Agent
+
+在新机器上，让 Codex 按 [新机器 Codex 全家桶安装入口](docs/references/current-support/opl-new-machine-codex-bootstrap.md) 自动安装配置 OPL runtime、MAS/MAG/RCA/OMA 智能体可见面、OPL Flow、OPL Doc 和推荐 companion tools：
 
 ```text
 请按 One Person Lab 官方新机器指南，帮我完成这台机器的 OPL 智能体运行环境和 Codex 工作流全家桶安装配置。
 Source of truth: https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/references/current-support/opl-new-machine-codex-bootstrap.md
 ```
-
-开发新的领域智能体、调试命令行或接入运行时，请展开下方技术入口。
 
 ## 后续开发计划
 

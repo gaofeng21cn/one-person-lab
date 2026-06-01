@@ -123,14 +123,16 @@ To use the desktop product, download One Person Lab App from the App repository:
 
 The desktop product one-shot installer, complete first-install package, Docker/WebUI entry point, GitHub Releases, and user tutorials are maintained by the App repository. This repository maintains the CLI, initialization flow, runtime, contracts, module management, and machine-readable App interfaces behind those entries.
 
-To ask Codex on a new machine to install the OPL runtime, MAS/MAG/RCA/OMA agent surfaces, OPL Flow, OPL Doc, and companion tools, use the [new-machine Codex bootstrap guide](docs/references/current-support/opl-new-machine-codex-bootstrap.md):
+To develop a new domain agent, debug the CLI, or integrate runtime surfaces, open the technical entry below.
+
+## For Codex / Agents
+
+On a new machine, ask Codex to install the OPL runtime, MAS/MAG/RCA/OMA agent surfaces, OPL Flow, OPL Doc, and companion tools from the [new-machine Codex bootstrap guide](docs/references/current-support/opl-new-machine-codex-bootstrap.md):
 
 ```text
 请按 One Person Lab 官方新机器指南，帮我完成这台机器的 OPL 智能体运行环境和 Codex 工作流全家桶安装配置。
 Source of truth: https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/references/current-support/opl-new-machine-codex-bootstrap.md
 ```
-
-To develop a new domain agent, debug the CLI, or integrate runtime surfaces, open the technical entry below.
 
 ## Product Roadmap
 
