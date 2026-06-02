@@ -481,10 +481,15 @@ test('package archive builder refreshes reused managed clones before archiving s
 
 test('framework packages workflow is release-gated and manually repairable without WebUI publishing', () => {
   const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/packages.yml'), 'utf8');
+  const releaseCallerWorkflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/release-package-channel.yml'), 'utf8');
 
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /workflow_call:/);
   assert.match(workflow, /release_gate:\s*\n\s*description: Release gate or workflow that authorized package publication/);
+  assert.match(workflow, /version="\$\{version#v\}"/);
+  assert.match(releaseCallerWorkflow, /release:\s*\n\s*types:\s*\n\s*-\s*published/);
+  assert.match(releaseCallerWorkflow, /uses:\s+\.\/\.github\/workflows\/packages\.yml/);
+  assert.match(releaseCallerWorkflow, /release_gate:\s*github_release_published/);
   assert.doesNotMatch(workflow, /\n  push:\n/);
   assert.doesNotMatch(workflow, /webui-image:/);
   assert.match(workflow, /oras push/);

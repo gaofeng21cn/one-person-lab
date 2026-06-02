@@ -1,0 +1,38 @@
+name: Release OPL Package Channel
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      opl_version:
+        description: OPL version to publish, for example 26.4.27
+        required: true
+        type: string
+      release_gate:
+        description: Manual release gate reason that authorized package publication
+        required: false
+        type: string
+        default: manual_release_gate
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish-from-github-release:
+    name: Publish package channel from GitHub Release
+    if: github.event_name == 'release'
+    uses: ./.github/workflows/packages.yml
+    with:
+      opl_version: ${{ github.event.release.tag_name }}
+      release_gate: github_release_published
+
+  publish-from-manual-release-gate:
+    name: Publish package channel from manual release gate
+    if: github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/packages.yml
+    with:
+      opl_version: ${{ inputs.opl_version }}
+      release_gate: ${{ inputs.release_gate }}

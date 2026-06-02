@@ -44,6 +44,8 @@ function assertCondition(condition, message, failures) {
 
 const PACKAGE_WORKFLOW_TRIGGER_POLICY = 'release_gate_workflow_call_or_manual_dispatch';
 const PACKAGE_REMOTE_PUBLISH_STATUS = 'release_gate_or_manual_dispatch_publishes_ghcr_packages';
+const PACKAGE_WORKFLOW_PATH = '.github/workflows/packages.yml';
+const PACKAGE_RELEASE_CALLER_WORKFLOW_PATH = '.github/workflows/release-package-channel.yml';
 
 function validateModule(moduleId, entry, failures) {
   assertCondition(entry.current_install_update_source === 'package_channel', `${moduleId}: current source must be package_channel for stable package-channel installs`, failures);
@@ -105,7 +107,7 @@ function validateManifest(manifest) {
   assertCondition(automation?.channel_manifest?.moving_tags?.includes('stable'), 'channel manifest must declare stable moving tag', failures);
   assertCondition(automation?.channel_manifest?.outputs?.channel_manifest === 'opl-channel-manifest.json', 'missing channel manifest output', failures);
   assertCondition(automation?.channel_manifest?.outputs?.checksums === 'SHA256SUMS', 'missing checksum output', failures);
-  assertCondition(automation?.artifact_build?.workflow === '.github/workflows/packages.yml', 'missing artifact build workflow contract', failures);
+  assertCondition(automation?.artifact_build?.workflow === PACKAGE_WORKFLOW_PATH, 'missing artifact build workflow contract', failures);
   assertCondition(automation?.artifact_build?.publication_mode === 'ghcr_package_channel_and_workflow_artifact', 'artifact build must publish GHCR package channel and workflow artifact', failures);
   assertCondition(automation?.checksum?.required_before_publish === true, 'checksum must be required before publish', failures);
   assertCondition(automation?.checksum?.required_before_prepared_artifact === true, 'checksum must be required before prepared artifact', failures);
@@ -156,9 +158,17 @@ function validateWorkflow(manifest, failures) {
   }
 
   const source = fs.readFileSync(workflowPath, 'utf8');
+  const releaseCallerWorkflowPath = path.resolve(process.cwd(), PACKAGE_RELEASE_CALLER_WORKFLOW_PATH);
+  const releaseCallerSource = fs.existsSync(releaseCallerWorkflowPath)
+    ? fs.readFileSync(releaseCallerWorkflowPath, 'utf8')
+    : '';
   assertCondition(/workflow_dispatch:/.test(source), 'package workflow must keep manual workflow_dispatch trigger', failures);
   assertCondition(/workflow_call:/.test(source), 'package workflow must expose release-gated workflow_call trigger', failures);
   assertCondition(/release_gate:\s*\n\s*description: Release gate or workflow that authorized package publication/.test(source), 'package workflow_call must require a release_gate input', failures);
+  assertCondition(releaseCallerSource.length > 0, 'package release caller workflow must exist', failures);
+  assertCondition(/release:\s*\n\s*types:\s*\n\s*-\s*published/.test(releaseCallerSource), 'package release caller must publish from GitHub Release published events', failures);
+  assertCondition(/uses:\s+\.\/\.github\/workflows\/packages\.yml/.test(releaseCallerSource), 'package release caller must invoke the reusable packages workflow', failures);
+  assertCondition(/release_gate:\s*github_release_published/.test(releaseCallerSource), 'package release caller must record the GitHub Release gate', failures);
   assertCondition(!/\n\s*push:\n/.test(source), 'package workflow must not restore tag-push publishing', failures);
   assertCondition(/oras\s+push/.test(source), 'package workflow must push module archives and release manifest to GHCR', failures);
   assertCondition(/one-person-lab-modules/.test(source), 'package workflow must publish module packages', failures);

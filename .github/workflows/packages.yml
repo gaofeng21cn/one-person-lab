@@ -48,6 +48,7 @@ jobs:
           else
             version="${GITHUB_REF_NAME#v}"
           fi
+          version="${version#v}"
           echo "OPL_RELEASE_VERSION=$version" >> "$GITHUB_ENV"
           echo "OPL_PACKAGES_OWNER=${{ github.repository_owner }}" >> "$GITHUB_ENV"
           echo "OPL_PACKAGE_RELEASE_GATE=${{ inputs.release_gate }}" >> "$GITHUB_ENV"
