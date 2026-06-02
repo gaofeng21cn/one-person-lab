@@ -197,6 +197,63 @@ test('family-runtime operator redrive can recover MAS default executor retry-bud
   }
 });
 
+test('family-runtime operator redrive can recover MAS default executor cancellation lifecycle blockers', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-default-executor-cancelled-operator-redrive-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      JSON.stringify(defaultExecutorPayload('source-stable-cancelled-redrive')),
+      '--dedupe-key',
+      'mas:dm-cvd:002:default-executor:run_quality_repair_batch:operator-cancelled-redrive',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    forceTaskIntoProviderTransportBlockedState(stateRoot, taskId, 'temporal_stage_attempt_canceled');
+
+    const cancelledTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const redrive = runCli([
+      'family-runtime',
+      'queue',
+      'redrive',
+      taskId,
+      '--reason',
+      'provider_lifecycle_recovered_after_codex_activity_cancelled',
+      '--source',
+      'test-cancelled-redrive',
+    ], env);
+    const redrivenTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const attempts = redrivenTask.family_runtime_task.stage_attempts;
+
+    assert.equal(cancelledTask.family_runtime_task.task.status, 'blocked');
+    assert.equal(cancelledTask.family_runtime_task.task.dead_letter_reason, 'temporal_stage_attempt_canceled');
+    assert.equal(redrive.family_runtime_redrive.redriven, true);
+    assert.equal(redrive.family_runtime_redrive.task.status, 'queued');
+    assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.status, 'queued');
+    assert.equal(redrivenTask.family_runtime_task.task.status, 'queued');
+    assert.equal(redrivenTask.family_runtime_task.task.dead_letter_reason, null);
+    assert.equal(attempts.length, 2);
+    assert.equal(
+      redrivenTask.family_runtime_task.events.some((event: { event_type: string; payload: Record<string, unknown> }) => (
+        event.event_type === 'task_operator_redrive_from_blocked_provider_transport'
+        && event.payload.previous_dead_letter_reason === 'temporal_stage_attempt_canceled'
+        && event.payload.operator_reason === 'provider_lifecycle_recovered_after_codex_activity_cancelled'
+        && (event.payload.authority_boundary as Record<string, unknown>).domain_truth_mutation === false
+      )),
+      true,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime operator redrive accepts retry-budget dead letters proven by task event ledger', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-default-executor-retry-event-redrive-'));
   const dispatch = createDispatchFixture(`

@@ -245,6 +245,12 @@ function temporalNonCompletionBlocker(observation: TemporalStageAttemptTerminalO
   return 'temporal_stage_attempt_not_completed';
 }
 
+function taskDeadLetterReasonForTemporalNonCompletionBlocker(blocker: string) {
+  return blocker === 'codex_cli_activity_cancelled'
+    ? 'temporal_stage_attempt_canceled'
+    : 'temporal_stage_attempt_not_completed';
+}
+
 function closeoutPacketFromTemporalCompletedObservation(
   observation: TemporalStageAttemptTerminalObservation,
 ) {
@@ -573,7 +579,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
       row,
       reason: nonCompletionBlocker,
       observedAt,
-      taskDeadLetterReason: 'temporal_stage_attempt_not_completed',
+      taskDeadLetterReason: taskDeadLetterReasonForTemporalNonCompletionBlocker(nonCompletionBlocker),
       eventType: 'stage_attempt_terminal_blocked_task',
     });
     return inspectStageAttempt(db, observation.stage_attempt_id);

@@ -700,6 +700,96 @@ test('family-runtime tick auto-redrives retryable MAS default executor provider 
   }
 });
 
+test('family-runtime tick does not auto-redrive MAS default executor cancellation lifecycle blockers', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      insertDefaultExecutorTask(db, {
+        taskId: 'task-mas-default-auto-redrive-cancelled-blocker',
+        sourceFingerprint: 'source-stable-cancelled-blocker',
+        createdAt: '2026-05-25T16:30:00.000Z',
+        status: 'blocked',
+        attempts: 1,
+      });
+      db.prepare(`
+        UPDATE tasks
+        SET last_error = 'codex_cli_activity_cancelled',
+          dead_letter_reason = 'temporal_stage_attempt_canceled'
+        WHERE task_id = ?
+      `).run('task-mas-default-auto-redrive-cancelled-blocker');
+      const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-auto-redrive-cancelled-blocker',
+      ) as FamilyRuntimeTaskRow;
+      const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
+      const canceledAttempt = ensureProviderHostedStageAttempt(db, row, payload);
+      assert.ok(canceledAttempt);
+      db.prepare(`
+        UPDATE stage_attempts
+        SET status = 'blocked',
+          blocked_reason = 'codex_cli_activity_cancelled',
+          attempt_count = 1,
+          provider_run_json = json_set(provider_run_json, '$.provider_status', 'canceled')
+        WHERE stage_attempt_id = ?
+      `).run(canceledAttempt.stage_attempt_id);
+
+      let dispatchCount = 0;
+      const tick = await runFamilyRuntimeQueueTick(db, familyRuntimePaths(), {
+        source: 'test-no-auto-redrive-cancelled-blocker',
+        limit: 2,
+        hydrate: false,
+        taskScope: {
+          domainId: 'medautoscience',
+          taskKind: 'domain_owner/default-executor-dispatch',
+          payloadMatches: [
+            {
+              path: 'study_id',
+              value: '002-dm-china-us-mortality-attribution',
+            },
+          ],
+        },
+      }, {
+        enqueueTask: () => ({ accepted: false }),
+        dispatchTask: () => {
+          dispatchCount += 1;
+          return { task_id: 'unexpected-dispatch' };
+        },
+      });
+      const blockedTask = db.prepare(`
+        SELECT status, last_error, dead_letter_reason
+        FROM tasks
+        WHERE task_id = ?
+      `).get('task-mas-default-auto-redrive-cancelled-blocker') as {
+        status: string;
+        last_error: string | null;
+        dead_letter_reason: string | null;
+      };
+      const attempts = db.prepare(`
+        SELECT status, blocked_reason
+        FROM stage_attempts
+        WHERE task_id = ?
+        ORDER BY created_at ASC
+      `).all('task-mas-default-auto-redrive-cancelled-blocker') as Array<{
+        status: string;
+        blocked_reason: string | null;
+      }>;
+
+      assert.equal(tick.mas_default_executor_auto_redriven_count, 0);
+      assert.equal(tick.mas_default_executor_auto_dead_lettered_count, 0);
+      assert.equal(tick.selected_count, 0);
+      assert.equal(dispatchCount, 0);
+      assert.equal(blockedTask.status, 'blocked');
+      assert.equal(blockedTask.last_error, 'codex_cli_activity_cancelled');
+      assert.equal(blockedTask.dead_letter_reason, 'temporal_stage_attempt_canceled');
+      assert.equal(attempts.length, 1);
+      assert.equal(attempts[0].status, 'blocked');
+      assert.equal(attempts[0].blocked_reason, 'codex_cli_activity_cancelled');
+    });
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime tick does not auto-redrive superseded MAS default executor provider blocker', async () => {
   const db = new DatabaseSync(':memory:');
   try {

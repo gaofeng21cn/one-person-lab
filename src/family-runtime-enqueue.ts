@@ -161,7 +161,11 @@ function masDefaultExecutorBlockedRedriveDecision(
     existing.domain_id !== 'medautoscience'
     || existing.task_kind !== MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
     || existing.status !== 'blocked'
-    || !['temporal_stage_attempt_start_failed', 'temporal_stage_attempt_not_completed'].includes(
+    || ![
+      'temporal_stage_attempt_start_failed',
+      'temporal_stage_attempt_not_completed',
+      'temporal_stage_attempt_canceled',
+    ].includes(
       existing.dead_letter_reason ?? '',
     )
   ) {

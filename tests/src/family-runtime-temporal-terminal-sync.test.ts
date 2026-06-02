@@ -106,7 +106,9 @@ function blockedTemporalObservation(input: {
   stageAttemptId: string;
   workflowId: string;
   createdAt: string;
+  blockedReason?: string;
 }) {
+  const blockedReason = input.blockedReason ?? 'typed_closeout_packet_required';
   return {
     surface_kind: 'temporal_stage_attempt_query_receipt',
     provider_kind: 'temporal',
@@ -134,7 +136,7 @@ function blockedTemporalObservation(input: {
       route_impact: {},
       human_gate_refs: [],
       signals: [],
-      closeout_packet: { blocked_reason: 'typed_closeout_packet_required' },
+      closeout_packet: { blocked_reason: blockedReason },
       completion_boundary: {
         provider_completion: 'not_completed',
         domain_ready_verdict: null,
@@ -477,6 +479,44 @@ test('Temporal blocked terminal observation blocks MAS default executor task wit
     assert.equal(task.dead_letter_reason, 'temporal_stage_attempt_not_completed');
     assert.equal(event.event_type, 'stage_attempt_terminal_blocked_task');
     assert.equal(JSON.parse(event.payload_json).authority_boundary.provider_completion_is_domain_ready, false);
+  });
+});
+
+test('Temporal blocked terminal observation classifies Codex activity cancellation as lifecycle blocker', () => {
+  withStageAttemptDb((db) => {
+    const createdAt = new Date().toISOString();
+    createQueueTables(db);
+    insertMasDefaultExecutorTask(db, {
+      taskId: 'task-mas-default-codex-activity-cancelled',
+      status: 'succeeded',
+      createdAt,
+    });
+    const attempt = createMasDefaultExecutorAttempt(db, {
+      taskId: 'task-mas-default-codex-activity-cancelled',
+    });
+    const synced = syncStageAttemptFromTemporalTerminalObservation(
+      db,
+      blockedTemporalObservation({
+        stageAttemptId: attempt.stage_attempt_id,
+        workflowId: attempt.workflow_id,
+        createdAt,
+        blockedReason: 'codex_cli_activity_cancelled',
+      }),
+    );
+    const task = db.prepare('SELECT status, last_error, dead_letter_reason FROM tasks WHERE task_id = ?').get(
+      'task-mas-default-codex-activity-cancelled',
+    ) as { status: string; last_error: string | null; dead_letter_reason: string | null };
+    const event = db.prepare('SELECT event_type, payload_json FROM events WHERE task_id = ?').get(
+      'task-mas-default-codex-activity-cancelled',
+    ) as { event_type: string; payload_json: string };
+
+    assert.equal(synced?.status, 'blocked');
+    assert.equal(synced?.blocked_reason, 'codex_cli_activity_cancelled');
+    assert.equal(task.status, 'blocked');
+    assert.equal(task.last_error, 'codex_cli_activity_cancelled');
+    assert.equal(task.dead_letter_reason, 'temporal_stage_attempt_canceled');
+    assert.equal(event.event_type, 'stage_attempt_terminal_blocked_task');
+    assert.equal(JSON.parse(event.payload_json).task_dead_letter_reason, 'temporal_stage_attempt_canceled');
   });
 });
 

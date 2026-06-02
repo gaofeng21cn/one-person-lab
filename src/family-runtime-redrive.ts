@@ -22,12 +22,17 @@ const PROVIDER_TRANSPORT_REDRIVE_REASONS = [
   'temporal_stage_attempt_not_completed',
   'temporal_stage_attempt_failed',
 ] as const;
-const PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS = [
+const PROVIDER_TRANSPORT_OPERATOR_REDRIVE_REASONS = [
   ...PROVIDER_TRANSPORT_REDRIVE_REASONS,
+  'temporal_stage_attempt_canceled',
+] as const;
+const PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS = [
+  ...PROVIDER_TRANSPORT_OPERATOR_REDRIVE_REASONS,
   'temporal_workflow_not_started_or_not_found',
 ] as const;
 
 type ProviderTransportRedriveReason = typeof PROVIDER_TRANSPORT_REDRIVE_REASONS[number];
+type ProviderTransportOperatorRedriveReason = typeof PROVIDER_TRANSPORT_OPERATOR_REDRIVE_REASONS[number];
 type ProviderStageAttemptRedriveReason = typeof PROVIDER_STAGE_ATTEMPT_REDRIVE_REASONS[number];
 type ProviderTransportRedriveTrigger = 'operator' | 'auto';
 type StageAttemptPayload = ReturnType<typeof listStageAttemptsForTask>[number];
@@ -90,15 +95,25 @@ function stringList(value: unknown) {
     : [];
 }
 
-function assertProviderTransportRedriveReason(value: string | null): asserts value is ProviderTransportRedriveReason {
-  if (!PROVIDER_TRANSPORT_REDRIVE_REASONS.includes(value as ProviderTransportRedriveReason)) {
+function providerTransportRedriveReasonsForTrigger(trigger: ProviderTransportRedriveTrigger) {
+  return trigger === 'auto'
+    ? PROVIDER_TRANSPORT_REDRIVE_REASONS
+    : PROVIDER_TRANSPORT_OPERATOR_REDRIVE_REASONS;
+}
+
+function assertProviderTransportRedriveReason(
+  value: string | null,
+  trigger: ProviderTransportRedriveTrigger,
+): asserts value is ProviderTransportRedriveReason | ProviderTransportOperatorRedriveReason {
+  const allowedReasons: readonly string[] = providerTransportRedriveReasonsForTrigger(trigger);
+  if (!allowedReasons.includes(value ?? '')) {
     throw new FrameworkContractError(
       'cli_usage_error',
       'family-runtime queue redrive only supports blocked provider-transport MAS default executor tasks.',
       {
         blocker_id: 'family_runtime_redrive_blocked',
         dead_letter_reason: value,
-        allowed_dead_letter_reasons: PROVIDER_TRANSPORT_REDRIVE_REASONS,
+        allowed_dead_letter_reasons: allowedReasons,
       },
     );
   }
@@ -363,7 +378,7 @@ export function redriveBlockedMasDefaultExecutorProviderTransportTask(
     }
     const currentPayload = parsePayload(currentRow);
     assertMasDefaultExecutorTask(currentRow, currentPayload);
-    assertProviderTransportRedriveReason(currentRow.dead_letter_reason);
+    assertProviderTransportRedriveReason(currentRow.dead_letter_reason, input.trigger);
     const admission = redriveAdmissionForTask(db, currentRow, currentPayload);
     const nextStatus = admission.nextStatus;
     const claim = db.prepare(`
@@ -598,7 +613,7 @@ export function redriveFamilyRuntimeTask(
   let result;
   if (isMasDefaultExecutorDispatchTask(row, payload) && row.status === 'blocked') {
     assertMasDefaultExecutorTask(row, payload);
-    assertProviderTransportRedriveReason(row.dead_letter_reason);
+    assertProviderTransportRedriveReason(row.dead_letter_reason, 'operator');
     result = redriveBlockedMasDefaultExecutorProviderTransportTask(db, row, payload, {
       trigger: 'operator',
       source: input.source,
