@@ -17,6 +17,24 @@ function record(value: unknown): Record<string, unknown> {
     : {};
 }
 
+function appReleaseEvidenceSatisfied() {
+  return {
+    app_release_cohort_id: 'app-release-cohort:99.99.99-test',
+    release_package_refs: ['release_package_receipt_ref://app-release/99.99.99-test/package'],
+    screenshot_refs: ['screenshot_evidence_ref://app-release/99.99.99-test/window'],
+    reload_prompt_user_path_refs: ['reload_prompt_user_path_receipt_ref://app-release/99.99.99-test/reload'],
+    provider_state_linkage_refs: ['provider_state_linkage_ref://app-release/99.99.99-test/provider'],
+    long_operator_evidence_refs: ['long_operator_evidence_ref://app-release/99.99.99-test/operator'],
+  };
+}
+
+function selectionDrilldownFixture(input: Record<string, unknown>) {
+  return {
+    package_export_lifecycle_refs: appReleaseEvidenceSatisfied(),
+    ...input,
+  };
+}
+
 test('runtime action execute can run provider scheduler routes from App drilldown', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-scheduler-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
@@ -86,7 +104,7 @@ test('runtime App drilldown selects provider scheduler install before manual tri
     can_submit_to_safe_action_shell: true,
     opl_cli_args: ['scheduler', action, '--provider', 'temporal'],
   });
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const drilldown = applyAppOperatorDrilldownDetail(selectionDrilldownFixture({
     operator_action_routing_refs: {
       refs: [
         route('trigger', 'provider_scheduler_trigger'),
@@ -102,7 +120,7 @@ test('runtime App drilldown selects provider scheduler install before manual tri
       can_write_domain_truth: false,
       can_claim_production_ready: false,
     },
-  }, 'summary');
+  }), 'summary');
   const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
   assert.ok(nextSafeAction);
 
@@ -155,7 +173,7 @@ test('runtime App drilldown does not select scheduler mutation routes blocked by
       : 'provider-worker:temporal:start',
     opl_cli_args: ['scheduler', action, '--provider', 'temporal'],
   });
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const drilldown = applyAppOperatorDrilldownDetail(selectionDrilldownFixture({
     operator_action_routing_refs: {
       refs: [
         route('trigger', 'provider_scheduler_trigger'),
@@ -171,7 +189,7 @@ test('runtime App drilldown does not select scheduler mutation routes blocked by
       can_write_domain_truth: false,
       can_claim_production_ready: false,
     },
-  }, 'summary');
+  }), 'summary');
 
   assert.equal(drilldown.attention_first_payload.next_safe_action, null);
   assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 0);
@@ -188,7 +206,7 @@ test('runtime App drilldown selects provider SLO proof action before scheduler i
     can_submit_to_safe_action_shell: true,
     opl_cli_args: ['scheduler', action, '--provider', 'temporal'],
   });
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const drilldown = applyAppOperatorDrilldownDetail(selectionDrilldownFixture({
     operator_action_routing_refs: {
       refs: [
         route('install', 'provider_scheduler_install'),
@@ -223,7 +241,7 @@ test('runtime App drilldown selects provider SLO proof action before scheduler i
       can_write_domain_truth: false,
       can_claim_production_ready: false,
     },
-  }, 'summary');
+  }), 'summary');
   const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
   assert.ok(nextSafeAction);
 
@@ -301,7 +319,7 @@ test('runtime App drilldown skips current provider SLO proof and surfaces domain
       can_claim_production_ready: false,
     },
   };
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const drilldown = applyAppOperatorDrilldownDetail(selectionDrilldownFixture({
     operator_action_routing_refs: {
       refs: [
         providerSloCurrentRoute,
@@ -318,7 +336,7 @@ test('runtime App drilldown skips current provider SLO proof and surfaces domain
       can_write_domain_truth: false,
       can_claim_production_ready: false,
     },
-  }, 'summary');
+  }), 'summary');
   const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
   assert.ok(nextSafeAction);
 
@@ -407,7 +425,7 @@ test('runtime App drilldown keeps owner delta ahead of due provider maintenance 
       can_claim_production_ready: false,
     },
   };
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const drilldown = applyAppOperatorDrilldownDetail(selectionDrilldownFixture({
     operator_action_routing_refs: {
       refs: [
         providerSloDueRoute,
@@ -426,7 +444,7 @@ test('runtime App drilldown keeps owner delta ahead of due provider maintenance 
       can_write_domain_truth: false,
       can_claim_production_ready: false,
     },
-  }, 'full');
+  }), 'full');
   const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
   assert.ok(nextSafeAction);
 
@@ -461,7 +479,7 @@ test('runtime App drilldown does not select closed provider SLO routes as next a
     can_submit_to_safe_action_shell: true,
     opl_cli_args: ['scheduler', action, '--provider', 'temporal'],
   });
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const drilldown = applyAppOperatorDrilldownDetail(selectionDrilldownFixture({
     summary: {
       provider_slo_cadence_window_status: 'window_cadence_satisfied',
       provider_slo_capability_status: 'capability_slo_satisfied',
@@ -484,14 +502,14 @@ test('runtime App drilldown does not select closed provider SLO routes as next a
       can_write_domain_truth: false,
       can_claim_production_ready: false,
     },
-  }, 'summary');
+  }), 'summary');
 
   assert.equal(drilldown.attention_first_payload.next_safe_action, null);
   assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 0);
 });
 
 test('runtime App drilldown MAS owner handoff record exposes owner split without authority claims', () => {
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const drilldown = applyAppOperatorDrilldownDetail(selectionDrilldownFixture({
     operator_action_routing_refs: {
       refs: [
         {
@@ -546,7 +564,7 @@ test('runtime App drilldown MAS owner handoff record exposes owner split without
       can_write_domain_truth: false,
       can_claim_production_ready: false,
     },
-  }, 'summary');
+  }), 'summary');
   const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
   assert.ok(nextSafeAction);
 
@@ -575,7 +593,7 @@ test('runtime App drilldown keeps historical provider repair receipts from reope
     can_submit_to_safe_action_shell: true,
     opl_cli_args: ['scheduler', action, '--provider', 'temporal'],
   });
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const drilldown = applyAppOperatorDrilldownDetail(selectionDrilldownFixture({
     summary: {
       provider_slo_cadence_window_status: 'window_cadence_satisfied',
       provider_slo_capability_status: 'capability_slo_satisfied',
@@ -595,14 +613,14 @@ test('runtime App drilldown keeps historical provider repair receipts from reope
       can_write_domain_truth: false,
       can_claim_production_ready: false,
     },
-  }, 'summary');
+  }), 'summary');
 
   assert.equal(drilldown.attention_first_payload.next_safe_action, null);
   assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 0);
 });
 
 test('runtime App drilldown does not select legacy cleanup routes already closed by lifecycle receipt aliases', () => {
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const drilldown = applyAppOperatorDrilldownDetail(selectionDrilldownFixture({
     operator_action_routing_refs: {
       refs: [
         {
@@ -636,14 +654,14 @@ test('runtime App drilldown does not select legacy cleanup routes already closed
       can_write_domain_truth: false,
       can_claim_production_ready: false,
     },
-  }, 'summary');
+  }), 'summary');
 
   assert.equal(drilldown.attention_first_payload.next_safe_action, null);
   assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 0);
 });
 
 test('runtime App drilldown does not select no-op legacy cleanup routes as next action', () => {
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const drilldown = applyAppOperatorDrilldownDetail(selectionDrilldownFixture({
     operator_action_routing_refs: {
       refs: [
         {
@@ -668,14 +686,14 @@ test('runtime App drilldown does not select no-op legacy cleanup routes as next 
       can_write_domain_truth: false,
       can_claim_production_ready: false,
     },
-  }, 'summary');
+  }), 'summary');
 
   assert.equal(drilldown.attention_first_payload.next_safe_action, null);
   assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 0);
 });
 
 test('runtime App drilldown keeps diagnostic query routes out of selected next action', () => {
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const drilldown = applyAppOperatorDrilldownDetail(selectionDrilldownFixture({
     operator_action_routing_refs: {
       refs: [
         {
@@ -699,7 +717,7 @@ test('runtime App drilldown keeps diagnostic query routes out of selected next a
       can_write_domain_truth: false,
       can_claim_production_ready: false,
     },
-  }, 'summary');
+  }), 'summary');
 
   assert.equal(drilldown.attention_first_payload.next_safe_action, null);
   assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 0);
@@ -739,7 +757,7 @@ test('runtime App drilldown prefers safe-action bridge routes for duplicate acti
       },
     },
   };
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const drilldown = applyAppOperatorDrilldownDetail(selectionDrilldownFixture({
     operator_action_routing_refs: {
       refs: [
         {
@@ -769,7 +787,7 @@ test('runtime App drilldown prefers safe-action bridge routes for duplicate acti
       can_write_domain_truth: false,
       can_claim_production_ready: false,
     },
-  }, 'summary');
+  }), 'summary');
   const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
   assert.ok(nextSafeAction);
 

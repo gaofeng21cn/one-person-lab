@@ -522,6 +522,7 @@ function compactOperatorSummary(input: {
   studyId: string | null;
   stageProgressLog: StageProgressLog;
   currentProviderReadiness: CurrentProviderReadiness | null;
+  providerReadinessCurrentness: ReturnType<typeof providerReadinessCurrentness>;
   livenessAttention: ReturnType<typeof providerLivenessAttention>;
   evidenceRefs: ReturnType<typeof compactEvidenceRefs>;
   semanticGap: ReturnType<typeof compactSemanticGap>;
@@ -543,6 +544,7 @@ function compactOperatorSummary(input: {
       activity_event_count: input.stageProgressLog.timeline.activity_event_count,
     },
     provider_readiness: providerReadinessSummary(input.currentProviderReadiness),
+    provider_readiness_currentness: input.providerReadinessCurrentness,
     provider_liveness_attention: livenessSummary(input.livenessAttention),
     progress_delta_classification:
       input.stageProgressLog.user_stage_log.progress_delta_classification,
@@ -564,6 +566,7 @@ function compactTimelineOperatorSummary(
   studyId: string | null,
   stageProgressLog: StageProgressLog,
   currentProviderReadiness: CurrentProviderReadiness | null,
+  providerReadinessCurrentness: ReturnType<typeof providerReadinessCurrentness>,
 ) {
   const evidenceRefs = compactEvidenceRefs(stageProgressLog.evidence_refs);
   const livenessAttention = providerLivenessAttention(currentProviderReadiness, {
@@ -580,6 +583,7 @@ function compactTimelineOperatorSummary(
     studyId,
     stageProgressLog,
     currentProviderReadiness,
+    providerReadinessCurrentness,
     livenessAttention,
     evidenceRefs,
     semanticGap,
@@ -649,6 +653,7 @@ function compactTimelineForAttempt(
     studyId,
     stageProgressLog,
     currentProviderReadiness,
+    readinessCurrentness,
   );
   return {
     stage_attempt_id: attempt.stage_attempt_id,
