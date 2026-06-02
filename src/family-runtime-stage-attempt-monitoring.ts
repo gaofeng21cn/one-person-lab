@@ -25,11 +25,29 @@ type ProviderReadinessPaths = {
 type ProviderReadinessOptions = {
   managedProviderProjection?: {
     managed_temporal_state_consistency?: Record<string, unknown> | null;
+    managed_temporal_state_consistency_declared?: boolean;
+    family_stage_control_plane_declared?: boolean;
+    domain_memory_descriptor_declared?: boolean;
+    owner_receipt_contract_declared?: boolean;
+    legacy_retirement_tombstone_declared?: boolean;
   } | null;
 };
 
 type StageAttemptPayload = ReturnType<typeof stageAttemptToPayload>;
 type CurrentProviderReadiness = ReturnType<typeof buildStageAttemptCurrentProviderReadinessPayload>;
+type StageProgressLog = ReturnType<typeof buildStageProgressLog>;
+
+const COMPACT_TIMELINE_REF_LIMIT = 5;
+const COMPACT_TIMELINE_ATTEMPT_LIMIT = 25;
+const COMPACT_TIMELINE_EVIDENCE_REF_FAMILIES = [
+  'checkpoint_refs',
+  'closeout_refs',
+  'owner_receipt_refs',
+  'typed_blocker_refs',
+  'human_gate_refs',
+  'dispatch_refs',
+  'stage_packet_refs',
+] as const;
 
 export type StageAttemptMonitoringFilters = {
   domainId?: FamilyRuntimeDomainId;
@@ -165,6 +183,81 @@ function providerLivenessAttention(
   };
 }
 
+function compactProviderReadiness(
+  currentProviderReadiness: CurrentProviderReadiness | null,
+) {
+  if (!currentProviderReadiness) {
+    return null;
+  }
+  const details = record(currentProviderReadiness.details);
+  const workerReadiness = record(details.worker_readiness);
+  const repairAction = record(workerReadiness.repair_action);
+  const managedDomainProjectionSummary = record(details.managed_domain_projection_summary);
+  const temporalVisibilityReadiness = record(details.temporal_visibility_readiness);
+  const managedTemporalProjectionReadiness = record(details.managed_temporal_projection_readiness);
+  return {
+    surface_kind: 'stage_attempt_current_provider_readiness_compact_ref',
+    provider_kind: currentProviderReadiness.provider_kind,
+    provider_ready: currentProviderReadiness.provider_ready,
+    status: currentProviderReadiness.status,
+    degraded_reason: currentProviderReadiness.degraded_reason,
+    capability_count: currentProviderReadiness.capabilities.length,
+    capability_refs_omitted_count: currentProviderReadiness.capabilities.length,
+    worker_readiness_summary: Object.keys(workerReadiness).length > 0
+      ? {
+          readiness_status: stringValue(workerReadiness.readiness_status),
+          lifecycle_status: stringValue(workerReadiness.lifecycle_status),
+          worker_ready: typeof workerReadiness.worker_ready === 'boolean'
+            ? workerReadiness.worker_ready
+            : null,
+          blocker_count: Array.isArray(workerReadiness.blockers) ? workerReadiness.blockers.length : 0,
+          first_blocker: Array.isArray(workerReadiness.blockers)
+            ? stringValue(workerReadiness.blockers[0])
+            : null,
+          repair_action_id: stringValue(repairAction.action_id),
+          repair_next_command: stringValue(repairAction.next_command),
+        }
+      : null,
+    temporal_visibility_summary: Object.keys(temporalVisibilityReadiness).length > 0
+      ? {
+          readiness_status: stringValue(temporalVisibilityReadiness.readiness_status),
+          ready: typeof temporalVisibilityReadiness.ready === 'boolean'
+            ? temporalVisibilityReadiness.ready
+            : null,
+        }
+      : null,
+    managed_domain_projection_summary: Object.keys(managedDomainProjectionSummary).length > 0
+      ? managedDomainProjectionSummary
+      : null,
+    managed_temporal_projection_readiness_summary: Object.keys(managedTemporalProjectionReadiness).length > 0
+      ? {
+          readiness_status: stringValue(managedTemporalProjectionReadiness.readiness_status),
+          lifecycle_status: stringValue(managedTemporalProjectionReadiness.lifecycle_status),
+          projection_status: stringValue(managedTemporalProjectionReadiness.projection_status),
+          projection_declares_service_ready:
+            typeof managedTemporalProjectionReadiness.projection_declares_service_ready === 'boolean'
+              ? managedTemporalProjectionReadiness.projection_declares_service_ready
+              : null,
+          projection_declares_worker_ready:
+            typeof managedTemporalProjectionReadiness.projection_declares_worker_ready === 'boolean'
+              ? managedTemporalProjectionReadiness.projection_declares_worker_ready
+              : null,
+          provider_ready_effect: stringValue(managedTemporalProjectionReadiness.provider_ready_effect),
+        }
+      : null,
+    omitted_payloads: [
+      'details',
+      'managed_temporal_state_consistency',
+      'mas_managed_provider_projection',
+      'domain_manifest',
+      'payload_body',
+    ],
+    provider_receipt_is_creation_time_snapshot:
+      currentProviderReadiness.provider_receipt_is_creation_time_snapshot,
+    authority_boundary: currentProviderReadiness.authority_boundary,
+  };
+}
+
 function studyIdFromAttempt(attempt: StageAttemptPayload) {
   const workspaceStudyId = attempt.workspace_locator.study_id;
   return typeof workspaceStudyId === 'string' && workspaceStudyId.trim()
@@ -259,48 +352,239 @@ function latestCloseoutPacket(db: DatabaseSync, stageAttemptId: string) {
   return row ? parseStageAttemptJsonObject(row.packet_json) : null;
 }
 
+function compactRefList(value: unknown) {
+  const refs = Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string')
+    : [];
+  return {
+    refs: refs.slice(0, COMPACT_TIMELINE_REF_LIMIT),
+    omitted_count: Math.max(0, refs.length - COMPACT_TIMELINE_REF_LIMIT),
+    total_count: refs.length,
+  };
+}
+
+function compactEvidenceRefs(evidenceRefs: StageProgressLog['evidence_refs']) {
+  const entries = COMPACT_TIMELINE_EVIDENCE_REF_FAMILIES.map((key) => [
+    key,
+    compactRefList(evidenceRefs[key]),
+  ]);
+  const included = new Set(COMPACT_TIMELINE_EVIDENCE_REF_FAMILIES);
+  const omittedFamilies = Object.keys(evidenceRefs).filter((key) => !included.has(key as never));
+  return Object.assign(Object.fromEntries(entries), {
+    omitted_ref_families: omittedFamilies,
+  });
+}
+
+function compactProgressDelta(value: unknown) {
+  const delta = record(value);
+  const refs = compactRefList(delta.delta_refs);
+  return {
+    delta_count: typeof delta.delta_count === 'number' ? delta.delta_count : refs.total_count,
+    has_delta: typeof delta.has_deliverable_delta === 'boolean'
+      ? delta.has_deliverable_delta
+      : typeof delta.has_platform_repair_delta === 'boolean'
+        ? delta.has_platform_repair_delta
+        : refs.total_count > 0,
+    delta_refs: refs.refs,
+    omitted_ref_count: refs.omitted_count,
+    delta_summary: stringValue(delta.delta_summary),
+  };
+}
+
+function compactSemanticGap(value: unknown) {
+  const gap = record(value);
+  if (Object.keys(gap).length === 0) {
+    return null;
+  }
+  const requiredFields = Array.isArray(gap.required_domain_fields)
+    ? gap.required_domain_fields.filter((entry): entry is string => typeof entry === 'string')
+    : [];
+  return {
+    reason: stringValue(gap.reason),
+    required_domain_fields: requiredFields.slice(0, COMPACT_TIMELINE_REF_LIMIT),
+    required_domain_field_count: requiredFields.length,
+    omitted_required_domain_field_count: Math.max(
+      0,
+      requiredFields.length - COMPACT_TIMELINE_REF_LIMIT,
+    ),
+  };
+}
+
+function compactNextInspectionHint(userStageLog: StageProgressLog['user_stage_log'], stageAttemptId: string) {
+  return {
+    command: `opl family-runtime attempt query ${stageAttemptId}`,
+    reason: userStageLog.semantic_gap
+      ? 'domain_semantic_summary_missing_or_invalid_inspect_attempt_query_and_domain_closeout_refs'
+      : 'inspect_attempt_query_for_full_stage_progress_log',
+    expected_next_delta: userStageLog.next_forced_delta,
+    authority_boundary: userStageLog.authority_boundary,
+  };
+}
+
+function providerReadinessSummary(currentProviderReadiness: CurrentProviderReadiness | null) {
+  const compactReadiness = compactProviderReadiness(currentProviderReadiness);
+  if (!compactReadiness) {
+    return {
+      provider_kind: null,
+      provider_ready: null,
+      provider_status: null,
+      provider_degraded_reason: null,
+      worker_readiness_status: null,
+      worker_lifecycle_status: null,
+      repair_action_id: null,
+      repair_next_command: null,
+    };
+  }
+  const workerSummary = record(compactReadiness.worker_readiness_summary);
+  return {
+    provider_kind: compactReadiness.provider_kind,
+    provider_ready: compactReadiness.provider_ready,
+    provider_status: compactReadiness.status,
+    provider_degraded_reason: compactReadiness.degraded_reason,
+    worker_readiness_status: stringValue(workerSummary.readiness_status),
+    worker_lifecycle_status: stringValue(workerSummary.lifecycle_status),
+    repair_action_id: stringValue(workerSummary.repair_action_id),
+    repair_next_command: stringValue(workerSummary.repair_next_command),
+  };
+}
+
+function refCount(value: unknown) {
+  const summary = record(value);
+  return typeof summary.total_count === 'number' ? summary.total_count : 0;
+}
+
+function livenessSummary(value: unknown) {
+  const attention = record(value);
+  return {
+    attention_status: stringValue(attention.attention_status),
+    severity: stringValue(attention.severity),
+    reason: stringValue(attention.reason),
+    next_command: stringValue(attention.next_command),
+    progress_first_effect: stringValue(attention.progress_first_effect),
+  };
+}
+
+function compactAuthorityBoundary(value: unknown) {
+  const boundary = record(value);
+  return {
+    opl: stringValue(boundary.opl),
+    domain: stringValue(boundary.domain),
+    can_write_domain_truth: typeof boundary.can_write_domain_truth === 'boolean'
+      ? boundary.can_write_domain_truth
+      : null,
+    can_authorize_quality_verdict: typeof boundary.can_authorize_quality_verdict === 'boolean'
+      ? boundary.can_authorize_quality_verdict
+      : null,
+    provider_completion_is_domain_ready:
+      typeof boundary.provider_completion_is_domain_ready === 'boolean'
+        ? boundary.provider_completion_is_domain_ready
+        : null,
+  };
+}
+
+function compactTiming(stageProgressLog: StageProgressLog) {
+  return {
+    created_at: stageProgressLog.timeline.created_at,
+    updated_at: stageProgressLog.timeline.updated_at,
+    provider_started_at: stageProgressLog.timeline.provider_started_at,
+    provider_completed_at: stageProgressLog.timeline.provider_completed_at,
+    last_heartbeat_at: stageProgressLog.timeline.last_heartbeat_at,
+    latest_activity_event_at: stageProgressLog.timeline.latest_activity_event_at,
+    activity_event_count: stageProgressLog.timeline.activity_event_count,
+  };
+}
+
+function compactDuration(value: unknown) {
+  const duration = record(value);
+  return {
+    status: stringValue(duration.status),
+    duration_ms: typeof duration.duration_ms === 'number' ? duration.duration_ms : null,
+    duration_source: stringValue(duration.duration_source),
+    telemetry_fallback_used: typeof duration.telemetry_fallback_used === 'boolean'
+      ? duration.telemetry_fallback_used
+      : null,
+  };
+}
+
+function compactTokenUsage(value: unknown) {
+  const usage = record(value);
+  return {
+    status: stringValue(usage.status),
+    input_tokens: typeof usage.input_tokens === 'number' ? usage.input_tokens : null,
+    output_tokens: typeof usage.output_tokens === 'number' ? usage.output_tokens : null,
+    total_tokens: typeof usage.total_tokens === 'number' ? usage.total_tokens : null,
+    observed_count: typeof usage.observed_count === 'number' ? usage.observed_count : null,
+  };
+}
+
+function compactOperatorSummary(input: {
+  attempt: StageAttemptPayload;
+  studyId: string | null;
+  stageProgressLog: StageProgressLog;
+  currentProviderReadiness: CurrentProviderReadiness | null;
+  livenessAttention: ReturnType<typeof providerLivenessAttention>;
+  evidenceRefs: ReturnType<typeof compactEvidenceRefs>;
+  semanticGap: ReturnType<typeof compactSemanticGap>;
+  nextInspectionHint: ReturnType<typeof compactNextInspectionHint>;
+}) {
+  return {
+    attempt: input.attempt.stage_attempt_id,
+    task: input.attempt.task_id,
+    status: input.attempt.status,
+    stage: input.attempt.stage_id,
+    study: input.studyId,
+    domain: input.attempt.domain_id,
+    action: 'opl_family_runtime_attempt_query',
+    owner: input.stageProgressLog.actual_work.next_owner,
+    timing: {
+      started_at: input.stageProgressLog.timeline.provider_started_at,
+      completed_at: input.stageProgressLog.timeline.provider_completed_at,
+      last_heartbeat_at: input.stageProgressLog.timeline.last_heartbeat_at,
+      activity_event_count: input.stageProgressLog.timeline.activity_event_count,
+    },
+    provider_readiness: providerReadinessSummary(input.currentProviderReadiness),
+    provider_liveness_attention: livenessSummary(input.livenessAttention),
+    progress_delta_classification:
+      input.stageProgressLog.user_stage_log.progress_delta_classification,
+    closeout_refs: input.evidenceRefs.closeout_refs.refs,
+    closeout_ref_count: refCount(input.evidenceRefs.closeout_refs),
+    owner_receipt_ref_count: refCount(input.evidenceRefs.owner_receipt_refs),
+    typed_blocker_ref_count: refCount(input.evidenceRefs.typed_blocker_refs),
+    semantic_gap_reason: input.semanticGap?.reason ?? null,
+    next_inspection: {
+      command: input.nextInspectionHint.command,
+      reason: input.nextInspectionHint.reason,
+      expected_next_delta: input.nextInspectionHint.expected_next_delta,
+    },
+  };
+}
+
 function compactTimelineOperatorSummary(
   attempt: StageAttemptPayload,
   studyId: string | null,
-  stageProgressLog: ReturnType<typeof buildStageProgressLog>,
+  stageProgressLog: StageProgressLog,
   currentProviderReadiness: CurrentProviderReadiness | null,
 ) {
-  const userStageLog = stageProgressLog.user_stage_log;
-  const readinessCurrentness = providerReadinessCurrentness(currentProviderReadiness, {
-    currentProviderReadinessRef: 'compact_timeline.current_provider_readiness',
-    creationReceiptRef: 'compact_timeline.provider_receipt',
-  });
+  const evidenceRefs = compactEvidenceRefs(stageProgressLog.evidence_refs);
   const livenessAttention = providerLivenessAttention(currentProviderReadiness, {
     currentProviderReadinessRef: 'compact_timeline.current_provider_readiness',
     attemptRef: `opl://stage_attempts/${attempt.stage_attempt_id}`,
   });
-  return {
-    attempt: attempt.stage_attempt_id,
-    status: attempt.status,
-    stage: attempt.stage_id,
-    study: studyId,
-    domain: attempt.domain_id,
-    action: 'opl_family_runtime_attempt_query',
-    owner: stageProgressLog.actual_work.next_owner,
-    started_at: stageProgressLog.timeline.provider_started_at,
-    completed_at: stageProgressLog.timeline.provider_completed_at,
-    last_heartbeat_at: stageProgressLog.timeline.last_heartbeat_at,
-    current_provider_readiness: currentProviderReadiness,
-    provider_readiness_currentness: readinessCurrentness,
-    provider_liveness_attention: livenessAttention,
-    progress_delta_classification: userStageLog.progress_delta_classification,
-    evidence_refs: stageProgressLog.evidence_refs,
-    closeout_refs: stageProgressLog.evidence_refs.closeout_refs,
-    semantic_gap: userStageLog.semantic_gap,
-    next_inspection_hint: {
-      command: `opl family-runtime attempt query ${attempt.stage_attempt_id}`,
-      reason: userStageLog.semantic_gap
-        ? 'domain_semantic_summary_missing_or_invalid_inspect_attempt_query_and_domain_closeout_refs'
-        : 'inspect_attempt_query_for_full_stage_progress_log',
-      expected_next_delta: userStageLog.next_forced_delta,
-      authority_boundary: userStageLog.authority_boundary,
-    },
-  };
+  const semanticGap = compactSemanticGap(stageProgressLog.user_stage_log.semantic_gap);
+  const nextInspectionHint = compactNextInspectionHint(
+    stageProgressLog.user_stage_log,
+    attempt.stage_attempt_id,
+  );
+  return compactOperatorSummary({
+    attempt,
+    studyId,
+    stageProgressLog,
+    currentProviderReadiness,
+    livenessAttention,
+    evidenceRefs,
+    semanticGap,
+    nextInspectionHint,
+  });
 }
 
 function compactTimelineForAttempt(
@@ -354,6 +638,12 @@ function compactTimelineForAttempt(
     currentProviderReadinessRef: 'compact_timeline.current_provider_readiness',
     attemptRef: `opl://stage_attempts/${attempt.stage_attempt_id}`,
   });
+  const evidenceRefs = compactEvidenceRefs(stageProgressLog.evidence_refs);
+  const semanticGap = compactSemanticGap(stageProgressLog.user_stage_log.semantic_gap);
+  const nextInspectionHint = compactNextInspectionHint(
+    stageProgressLog.user_stage_log,
+    attempt.stage_attempt_id,
+  );
   const operatorSummary = compactTimelineOperatorSummary(
     attempt,
     studyId,
@@ -368,31 +658,28 @@ function compactTimelineForAttempt(
     stage_id: attempt.stage_id,
     status: attempt.status,
     blocked_reason: attempt.blocked_reason,
-    current_provider_readiness: currentProviderReadiness,
+    current_provider_readiness: compactProviderReadiness(currentProviderReadiness),
     provider_readiness_currentness: readinessCurrentness,
     provider_liveness_attention: livenessAttention,
     updated_at: attempt.updated_at,
     progress_delta_classification: stageProgressLog.user_stage_log.progress_delta_classification,
-    deliverable_progress_delta: stageProgressLog.user_stage_log.deliverable_progress_delta,
-    platform_repair_delta: stageProgressLog.user_stage_log.platform_repair_delta,
+    deliverable_progress_delta: compactProgressDelta(
+      stageProgressLog.user_stage_log.deliverable_progress_delta,
+    ),
+    platform_repair_delta: compactProgressDelta(
+      stageProgressLog.user_stage_log.platform_repair_delta,
+    ),
     next_forced_delta: stageProgressLog.user_stage_log.next_forced_delta,
     semantic_status: stageProgressLog.user_stage_log.semantic_status,
-    duration: stageProgressLog.user_stage_log.duration,
-    token_usage: stageProgressLog.user_stage_log.token_usage,
-    evidence_refs: stageProgressLog.user_stage_log.evidence_refs,
-    timeline: {
-      created_at: stageProgressLog.timeline.created_at,
-      updated_at: stageProgressLog.timeline.updated_at,
-      provider_started_at: stageProgressLog.timeline.provider_started_at,
-      provider_completed_at: stageProgressLog.timeline.provider_completed_at,
-      last_heartbeat_at: stageProgressLog.timeline.last_heartbeat_at,
-      latest_activity_event_at: stageProgressLog.timeline.latest_activity_event_at,
-      activity_event_count: stageProgressLog.timeline.activity_event_count,
-    },
-    semantic_gap: stageProgressLog.user_stage_log.semantic_gap,
-    next_inspection_hint: operatorSummary.next_inspection_hint,
+    duration: compactDuration(stageProgressLog.user_stage_log.duration),
+    token_usage: compactTokenUsage(stageProgressLog.user_stage_log.token_usage),
+    evidence_refs: evidenceRefs,
+    closeout_refs: evidenceRefs.closeout_refs.refs,
+    timeline: compactTiming(stageProgressLog),
+    semantic_gap: semanticGap,
+    next_inspection_hint: nextInspectionHint,
     operator_summary: operatorSummary,
-    authority_boundary: stageProgressLog.authority_boundary,
+    authority_boundary: compactAuthorityBoundary(stageProgressLog.authority_boundary),
   };
 }
 
@@ -409,6 +696,11 @@ export async function listStageAttemptsWithMonitoringProjection(
   const filteredAttempts = baseAttempts.filter((attempt) =>
     attemptMatchesMonitoringFilters(db, attempt, filters, sinceIso)
   );
+  const compactTimelineAttempts = filters.compactTimeline
+    ? [...filteredAttempts]
+        .sort((left, right) => right.updated_at.localeCompare(left.updated_at))
+        .slice(0, COMPACT_TIMELINE_ATTEMPT_LIMIT)
+    : filteredAttempts;
   const readinessByKind = await providerReadinessByKind(filteredAttempts, paths, options);
   return {
     filters: {
@@ -422,6 +714,15 @@ export async function listStageAttemptsWithMonitoringProjection(
     summary: {
       total: baseAttempts.length,
       filtered_total: filteredAttempts.length,
+      compact_timeline_returned_total: filters.compactTimeline
+        ? compactTimelineAttempts.length
+        : null,
+      compact_timeline_omitted_total: filters.compactTimeline
+        ? Math.max(0, filteredAttempts.length - compactTimelineAttempts.length)
+        : null,
+      compact_timeline_limit: filters.compactTimeline
+        ? COMPACT_TIMELINE_ATTEMPT_LIMIT
+        : null,
       by_status: Object.fromEntries(
         [...new Set(filteredAttempts.map((attempt) => attempt.status))].sort().map((status) => [
           status,
@@ -433,7 +734,7 @@ export async function listStageAttemptsWithMonitoringProjection(
       ? filteredAttempts.map((attempt) => attachCurrentProviderReadiness(attempt, readinessByKind))
       : filteredAttempts,
     compact_timeline: filters.compactTimeline
-      ? filteredAttempts.map((attempt) =>
+      ? compactTimelineAttempts.map((attempt) =>
           compactTimelineForAttempt(db, attempt, readinessByKind.get(attempt.provider_kind) ?? null)
         )
       : null,

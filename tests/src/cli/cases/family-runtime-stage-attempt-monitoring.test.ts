@@ -1,4 +1,9 @@
+import { DatabaseSync } from 'node:sqlite';
+
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { createFamilyRuntimeQueueTables } from '../../../../src/family-runtime-store.ts';
+import { listStageAttemptsWithMonitoringProjection } from '../../../../src/family-runtime-stage-attempt-monitoring.ts';
+import { createStageAttempt } from '../../../../src/family-runtime-stage-attempts.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -84,6 +89,9 @@ test('family-runtime attempt list filters attempts and emits compact Progress-Fi
 
     assert.equal(output.summary.total, 2);
     assert.equal(output.summary.filtered_total, 1);
+    assert.equal(output.summary.compact_timeline_returned_total, 1);
+    assert.equal(output.summary.compact_timeline_omitted_total, 0);
+    assert.equal(output.summary.compact_timeline_limit, 25);
     assert.equal(output.summary.by_status.blocked, 1);
     assert.equal(output.filters.domain_id, 'medautoscience');
     assert.equal(output.filters.study_id, 'DM002');
@@ -128,29 +136,19 @@ test('family-runtime attempt list filters attempts and emits compact Progress-Fi
     assert.equal(output.compact_timeline[0].operator_summary.domain, 'medautoscience');
     assert.equal(output.compact_timeline[0].operator_summary.action, 'opl_family_runtime_attempt_query');
     assert.equal(output.compact_timeline[0].operator_summary.owner, 'domain_owner');
-    assert.equal(output.compact_timeline[0].operator_summary.started_at, null);
-    assert.equal(output.compact_timeline[0].operator_summary.completed_at, null);
-    assert.equal(output.compact_timeline[0].operator_summary.last_heartbeat_at, null);
-    assert.equal(output.compact_timeline[0].operator_summary.current_provider_readiness.provider_ready, true);
+    assert.equal(output.compact_timeline[0].operator_summary.timing.started_at, null);
+    assert.equal(output.compact_timeline[0].operator_summary.timing.completed_at, null);
+    assert.equal(output.compact_timeline[0].operator_summary.timing.last_heartbeat_at, null);
+    assert.equal(output.compact_timeline[0].operator_summary.provider_readiness.provider_ready, true);
     assert.equal(output.compact_timeline[0].operator_summary.provider_liveness_attention.attention_status, 'none');
-    assert.equal(
-      output.compact_timeline[0].operator_summary
-        .provider_readiness_currentness.provider_receipt_is_current_readiness,
-      false,
-    );
     assert.equal(output.compact_timeline[0].operator_summary.progress_delta_classification, 'typed_blocker');
     assert.deepEqual(output.compact_timeline[0].operator_summary.closeout_refs, []);
+    assert.equal(output.compact_timeline[0].operator_summary.closeout_ref_count, 0);
+    assert.equal(output.compact_timeline[0].operator_summary.semantic_gap_reason,
+      'domain_closeout_did_not_provide_user_stage_log');
     assert.equal(
-      output.compact_timeline[0].operator_summary.semantic_gap.reason,
-      'domain_closeout_did_not_provide_user_stage_log',
-    );
-    assert.equal(
-      output.compact_timeline[0].operator_summary.next_inspection_hint.expected_next_delta,
+      output.compact_timeline[0].operator_summary.next_inspection.expected_next_delta,
       'domain_user_stage_log_or_typed_blocker_with_lineage_required',
-    );
-    assert.equal(
-      output.compact_timeline[0].operator_summary.next_inspection_hint.authority_boundary.can_infer_domain_semantics,
-      false,
     );
     assert.equal(typeof output.compact_timeline[0].timeline.activity_event_count, 'number');
     assert.equal(output.compact_timeline[0].authority_boundary.domain, 'truth_quality_artifact_gate_owner');
@@ -222,6 +220,139 @@ test('family-runtime attempt list exposes provider liveness attention before rea
       'current_provider_readiness',
     );
   } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime attempt list compact timeline bounds provider readiness payload bodies', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-list-bounded-readiness-'));
+  const dbPath = path.join(stateRoot, 'queue.sqlite');
+  const db = new DatabaseSync(dbPath);
+  try {
+    createFamilyRuntimeQueueTables(db);
+    createStageAttempt(db, {
+      domainId: 'medautoscience',
+      stageId: 'review',
+      providerKind: 'temporal',
+      workspaceLocator: {
+        workspace_root: '/tmp/mas',
+        study_id: 'DM003',
+      },
+      blockedReason: 'typed_closeout_packet_required',
+    });
+    const heavyBody = 'x'.repeat(256_000);
+    const projection = await listStageAttemptsWithMonitoringProjection(db, { root: stateRoot }, {
+      managedProviderProjection: {
+        managed_temporal_state_consistency_declared: true,
+        family_stage_control_plane_declared: true,
+        domain_memory_descriptor_declared: true,
+        owner_receipt_contract_declared: true,
+        legacy_retirement_tombstone_declared: true,
+        managed_temporal_state_consistency: {
+          surface_kind: 'managed_temporal_state_consistency',
+          projection_status: 'ready',
+          service_ready: true,
+          worker_ready: true,
+          provider_readiness_heavy_body: heavyBody,
+          nested_payload: {
+            transcript_body: heavyBody,
+            domain_manifest: {
+              payload_body: heavyBody,
+            },
+          },
+        },
+      },
+    }, {
+      domainId: 'medautoscience',
+      studyId: 'DM003',
+      compactTimeline: true,
+    });
+    const item = projection.compact_timeline?.[0] as Record<string, any>;
+    const compactReadiness = item.current_provider_readiness;
+    const operatorReadiness = item.operator_summary.provider_readiness;
+    const compactJson = JSON.stringify(projection.compact_timeline);
+
+    assert.equal(projection.summary.filtered_total, 1);
+    assert.equal(compactReadiness.surface_kind, 'stage_attempt_current_provider_readiness_compact_ref');
+    assert.equal(compactReadiness.provider_kind, 'temporal');
+    assert.equal(compactReadiness.details, undefined);
+    assert.equal(compactReadiness.managed_temporal_state_consistency, undefined);
+    assert.equal(compactReadiness.mas_managed_provider_projection, undefined);
+    assert.equal(operatorReadiness.provider_kind, 'temporal');
+    assert.equal(operatorReadiness.provider_ready, false);
+    assert.equal(operatorReadiness.details, undefined);
+    assert.equal(compactJson.includes(heavyBody), false);
+    assert.equal(compactJson.includes('provider_readiness_heavy_body'), false);
+    assert.equal(compactJson.includes('transcript_body'), false);
+    assert.equal(compactJson.length < 30_000, true);
+  } finally {
+    db.close();
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime attempt list compact timeline caps progress evidence refs', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-list-bounded-refs-'));
+  const db = new DatabaseSync(path.join(stateRoot, 'queue.sqlite'));
+  try {
+    createFamilyRuntimeQueueTables(db);
+    createStageAttempt(db, {
+      domainId: 'medautoscience',
+      stageId: 'review',
+      providerKind: 'local_sqlite',
+      workspaceLocator: {
+        workspace_root: '/tmp/mas',
+        study_id: 'DM003',
+      },
+      closeoutRefs: Array.from({ length: 12 }, (_, index) => `closeout:${index}`),
+    });
+    const output = await listStageAttemptsWithMonitoringProjection(db, { root: stateRoot }, {}, {
+      domainId: 'medautoscience',
+      studyId: 'DM003',
+      compactTimeline: true,
+    });
+    const item = output.compact_timeline?.[0] as Record<string, any>;
+
+    assert.equal(item.evidence_refs.closeout_refs.refs.length, 5);
+    assert.equal(item.evidence_refs.closeout_refs.total_count, 12);
+    assert.equal(item.evidence_refs.closeout_refs.omitted_count, 7);
+    assert.deepEqual(item.operator_summary.closeout_refs, item.evidence_refs.closeout_refs.refs);
+    assert.equal(item.operator_summary.closeout_ref_count, 12);
+  } finally {
+    db.close();
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime attempt list compact timeline returns latest bounded page', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-list-bounded-page-'));
+  const db = new DatabaseSync(path.join(stateRoot, 'queue.sqlite'));
+  try {
+    createFamilyRuntimeQueueTables(db);
+    for (let index = 0; index < 55; index += 1) {
+      createStageAttempt(db, {
+        domainId: 'medautoscience',
+        stageId: `review-${String(index).padStart(2, '0')}`,
+        providerKind: 'local_sqlite',
+        workspaceLocator: {
+          workspace_root: '/tmp/mas',
+          study_id: 'DM003',
+        },
+      });
+    }
+    const output = await listStageAttemptsWithMonitoringProjection(db, { root: stateRoot }, {}, {
+      domainId: 'medautoscience',
+      studyId: 'DM003',
+      compactTimeline: true,
+    });
+
+    assert.equal(output.summary.filtered_total, 55);
+    assert.equal(output.summary.compact_timeline_returned_total, 25);
+    assert.equal(output.summary.compact_timeline_omitted_total, 30);
+    assert.equal(output.summary.compact_timeline_limit, 25);
+    assert.equal(output.compact_timeline?.length, 25);
+  } finally {
+    db.close();
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
