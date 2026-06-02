@@ -7,7 +7,10 @@ import { FrameworkContractError } from './contracts.ts';
 import { stableId } from './family-runtime-ids.ts';
 import { masDomainRouteProjection } from './family-runtime-mas-domain-route.ts';
 import { paperAutonomyProjection } from './family-runtime-paper-autonomy.ts';
-import { deriveCurrentControlStateForTask } from './family-runtime-current-control-state.ts';
+import {
+  deriveCurrentControlStateForTask,
+  latestProviderActivityHeartbeat,
+} from './family-runtime-current-control-state.ts';
 import { createStageAttemptTable, listStageAttemptsForTask } from './family-runtime-stage-attempt-ledger.ts';
 import { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
@@ -206,6 +209,104 @@ export function taskToPayload(row: FamilyRuntimeTaskRow) {
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function stringValue(value: unknown) {
+  return typeof value === 'string' && value.trim().length > 0 ? value : null;
+}
+
+function parseTimestamp(value: string | null) {
+  if (!value) {
+    return null;
+  }
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function liveStageAttemptStatus(status: string | null) {
+  return status === 'running' || status === 'checkpointed' || status === 'human_gate';
+}
+
+function taskLeaseCurrentness(
+  row: FamilyRuntimeTaskRow,
+  linkedHeartbeatAt: string | null,
+) {
+  const leaseExpiresAt = row.lease_expires_at;
+  if (!leaseExpiresAt) {
+    return 'missing';
+  }
+  const leaseExpires = parseTimestamp(leaseExpiresAt);
+  if (leaseExpires === null) {
+    return 'invalid';
+  }
+  if (leaseExpires > Date.now()) {
+    return 'fresh';
+  }
+  const heartbeat = parseTimestamp(linkedHeartbeatAt);
+  if (heartbeat !== null && heartbeat > leaseExpires) {
+    return 'expired_but_provider_heartbeat_fresh';
+  }
+  return 'expired';
+}
+
+function queueTaskLinkedStageAttemptLiveness(db: DatabaseSync, row: FamilyRuntimeTaskRow) {
+  if (row.status !== 'running') {
+    return null;
+  }
+  const attempts = (listStageAttemptsForTask(db, row.task_id) as unknown[])
+    .filter(isRecord);
+  const currentAttempt = attempts.find((attempt) =>
+    liveStageAttemptStatus(stringValue(attempt.status))
+  ) ?? attempts[0];
+  if (!currentAttempt) {
+    return null;
+  }
+  const providerRun = isRecord(currentAttempt.provider_run)
+    ? currentAttempt.provider_run
+    : {};
+  const activityEvents = Array.isArray(currentAttempt.activity_events)
+    ? currentAttempt.activity_events
+    : [];
+  const providerRunWithHeartbeat = latestProviderActivityHeartbeat(activityEvents, providerRun);
+  const lastHeartbeatAt = stringValue(providerRunWithHeartbeat.last_heartbeat_at);
+  const stageAttemptStatus = stringValue(currentAttempt.status);
+  const providerStatus = stringValue(providerRun.provider_status);
+  const livenessStatus = liveStageAttemptStatus(stageAttemptStatus)
+    ? (lastHeartbeatAt ? 'live' : 'live_missing_heartbeat')
+    : 'not_live';
+  return {
+    surface_kind: 'opl_queue_task_linked_stage_attempt_liveness',
+    projection_scope: 'queue_list',
+    status: livenessStatus,
+    stage_attempt_id: stringValue(currentAttempt.stage_attempt_id),
+    workflow_id: stringValue(currentAttempt.workflow_id),
+    stage_id: stringValue(currentAttempt.stage_id),
+    provider_kind: stringValue(currentAttempt.provider_kind),
+    executor_kind: stringValue(currentAttempt.executor_kind),
+    stage_attempt_status: stageAttemptStatus,
+    provider_status: providerStatus,
+    last_heartbeat_at: lastHeartbeatAt,
+    ledger_last_heartbeat_at: stringValue(providerRunWithHeartbeat.ledger_last_heartbeat_at),
+    liveness_source: stringValue(providerRunWithHeartbeat.liveness_source),
+    last_activity_heartbeat_kind: stringValue(providerRunWithHeartbeat.last_activity_heartbeat_kind),
+    last_runner_event_kind: stringValue(providerRunWithHeartbeat.last_runner_event_kind),
+    task_lease_expires_at: row.lease_expires_at,
+    task_lease_currentness: taskLeaseCurrentness(row, lastHeartbeatAt),
+    authority_boundary: {
+      opl: 'queue_task_liveness_projection_only',
+      queue_lease_role: 'worker_pickup_lease_not_live_attempt_truth',
+      temporal_heartbeat_role: 'provider_attempt_liveness_observability',
+      domain: 'truth_quality_artifact_gate_owner',
+      can_write_domain_truth: false,
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      provider_completion_is_domain_ready: false,
+    },
+  };
+}
+
 function eventToPayload(row: FamilyRuntimeEventRow) {
   return {
     event_id: row.event_id,
@@ -324,7 +425,16 @@ export function queueSummary(db: DatabaseSync, filter?: FamilyRuntimeTaskListFil
 }
 
 export function listTasks(db: DatabaseSync, filter?: FamilyRuntimeTaskListFilter) {
-  return filteredTaskRows(db, filter).map(taskToPayload);
+  return filteredTaskRows(db, filter).map((row) => {
+    const payload = taskToPayload(row);
+    const linkedStageAttemptLiveness = queueTaskLinkedStageAttemptLiveness(db, row);
+    return linkedStageAttemptLiveness
+      ? {
+          ...payload,
+          linked_stage_attempt_liveness: linkedStageAttemptLiveness,
+        }
+      : payload;
+  });
 }
 
 export function inspectTask(db: DatabaseSync, taskId: string) {

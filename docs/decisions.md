@@ -91,6 +91,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 - `family-runtime queue list` 支持 `--domain`、`--study` / `--study-id`、`--status`、`--task-kind`、`--payload-match`，并把这些过滤同时应用到 `queue` summary 和 `tasks` 列表。
 - 返回面保留 `unfiltered_queue` 作为全局背景计数；默认 `queue` 始终表示当前过滤 scope，避免 operator 读错。
+- 2026-06-02 追加：`queue list` 对 `running` task 投影 `linked_stage_attempt_liveness`。queue task 的 `lease_expires_at` 只表示 worker pickup lease；真实 live attempt 判断优先看 linked stage attempt 的 provider activity heartbeat，再回落到 `provider_run.last_heartbeat_at` / Temporal heartbeat。若 pickup lease 已过期但 linked attempt 仍有新 heartbeat，读面必须显式标为 `task_lease_currentness=expired_but_provider_heartbeat_fresh`，避免 Progress-First 巡检把健康 provider attempt 误判为卡死或把时间耗在重复 queue/read-model reconcile。
 - 该入口只读 OPL queue ledger，不写 domain truth、不执行 domain action、不刷新 MAS publication verdict、paper package、owner receipt 或 typed blocker。
 
 ### 决策：worker source-root 等价需要 operator diagnostic

@@ -371,6 +371,124 @@ test('family-runtime queue list filters by domain, study, and status for Progres
   }
 });
 
+test('family-runtime queue list exposes linked live stage-attempt heartbeat for running tasks', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-queue-running-liveness-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot);
+    const runningTask = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      '{"profile":"/tmp/profile.toml","study_id":"DM002","work_unit":"ai-reviewer"}',
+      '--dedupe-key',
+      'mas:test:DM002:running-liveness',
+    ], env).family_runtime_enqueue.task.task_id;
+
+    const ledgerHeartbeatAt = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+    const activityHeartbeatAt = new Date().toISOString();
+    const db = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+    try {
+      const leaseExpiresAt = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      db.prepare(`
+        UPDATE tasks
+        SET status = 'running',
+          lease_owner = 'opl-family-runtime:test-worker',
+          lease_expires_at = ?,
+          updated_at = ?
+        WHERE task_id = ?
+      `).run(leaseExpiresAt, leaseExpiresAt, runningTask);
+      db.prepare(`
+        INSERT INTO stage_attempts(
+          stage_attempt_id, idempotency_key, provider_kind, workflow_id, domain_id, stage_id,
+          workspace_locator_json, source_fingerprint, executor_kind, status,
+          checkpoint_refs_json, closeout_refs_json, human_gate_refs_json, retry_budget_json,
+          attempt_count, task_id, blocked_reason, provider_receipt_json, provider_run_json,
+          activity_events_json, route_impact_json, closeout_receipt_status, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        'sat_queue_running_liveness',
+        'idem_queue_running_liveness',
+        'temporal',
+        'wf_queue_running_liveness',
+        'medautoscience',
+        'domain_owner/default-executor-dispatch',
+        JSON.stringify({ workspace_root: '/tmp/dm-cvd' }),
+        'source:running-liveness',
+        'codex_cli',
+        'running',
+        JSON.stringify([]),
+        JSON.stringify([]),
+        JSON.stringify([]),
+        JSON.stringify({ max_attempts: 3 }),
+        1,
+        runningTask,
+        null,
+        JSON.stringify({ provider_kind: 'temporal', provider_status: 'running' }),
+        JSON.stringify({
+          provider_kind: 'temporal',
+          workflow_id: 'wf_queue_running_liveness',
+          provider_status: 'running',
+          last_heartbeat_at: ledgerHeartbeatAt,
+        }),
+        JSON.stringify([
+          {
+            event_time: activityHeartbeatAt,
+            activity_kind: 'codex_stage_activity',
+            activity_status: 'running',
+            heartbeat_kind: 'codex_stage_activity_runner_progress',
+            runner_event_kind: 'agent_message',
+          },
+        ]),
+        JSON.stringify({}),
+        null,
+        leaseExpiresAt,
+        activityHeartbeatAt,
+      );
+    } finally {
+      db.close();
+    }
+
+    const queue = runCli([
+      'family-runtime',
+      'queue',
+      'list',
+      '--domain',
+      'medautoscience',
+      '--study',
+      'DM002',
+      '--status',
+      'running',
+    ], env);
+    const task = queue.family_runtime_queue.tasks[0];
+
+    assert.equal(queue.family_runtime_queue.queue.total, 1);
+    assert.equal(task.task_id, runningTask);
+    assert.equal(task.status, 'running');
+    assert.equal(task.linked_stage_attempt_liveness.status, 'live');
+    assert.equal(task.linked_stage_attempt_liveness.stage_attempt_id, 'sat_queue_running_liveness');
+    assert.equal(task.linked_stage_attempt_liveness.workflow_id, 'wf_queue_running_liveness');
+    assert.equal(task.linked_stage_attempt_liveness.last_heartbeat_at, activityHeartbeatAt);
+    assert.equal(task.linked_stage_attempt_liveness.ledger_last_heartbeat_at, ledgerHeartbeatAt);
+    assert.equal(task.linked_stage_attempt_liveness.liveness_source, 'provider_activity_event');
+    assert.equal(task.linked_stage_attempt_liveness.last_runner_event_kind, 'agent_message');
+    assert.equal(
+      task.linked_stage_attempt_liveness.task_lease_currentness,
+      'expired_but_provider_heartbeat_fresh',
+    );
+    assert.equal(
+      task.linked_stage_attempt_liveness.authority_boundary.queue_lease_role,
+      'worker_pickup_lease_not_live_attempt_truth',
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime queue hold drains scoped running task and active attempt into operator gate', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-running-hold-'));
   try {

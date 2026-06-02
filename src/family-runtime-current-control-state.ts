@@ -79,7 +79,7 @@ function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
-function latestProviderActivityHeartbeat(
+export function latestProviderActivityHeartbeat(
   activityEvents: unknown[],
   providerRun: Record<string, unknown>,
 ) {
