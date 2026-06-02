@@ -5,6 +5,19 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-06-02
+
+### 决策：stale owner-route domain-handler failure 必须成为非重试 currentness blocker
+
+原因：MAS paper autonomy / publication aftercare 这类 domain-handler task 可能携带已被最新 controller decision 或 owner route supersede 的 work unit。domain owner 在 dispatch 内返回 `owner_route_stale` 时，OPL 若把它当作普通非零退出进入 `retry_waiting`，会持续消耗 retry、receipt reconcile 和 read-model currentness 时间，却不会产生新的论文交付物 delta。这违背 Progress-First 的最快实质推进原则。
+
+影响：
+
+- `family-runtime task dispatch` 在 structured domain-handler output 或错误摘要中识别 `owner_route_stale` 时，必须把 task 与关联 stage attempt 标记为 `blocked`，`reason=progress_first_owner_delta_required`。
+- 该 blocker 不进入 retry loop，不等待 retry budget 耗尽，也不把 stale route 写成 provider transport failure。
+- event 必须保留原始 `domain_handler_blocked_reason=owner_route_stale`、stdout/stderr、command preview 和 authority boundary，便于 domain owner 继续修 export/currentness，而 operator 能立刻看到下一步需要 fresh owner delta。
+- 该规则只治理 OPL queue / attempt currentness admission，不写 MAS truth、不生成 owner receipt、不创建 typed blocker、不修改 publication eval、artifact gate、paper package 或 current package。
+
 ## 2026-05-30
 
 ### 决策：Progress-First ready owner action pickup 必须有同 tick SLO 投影

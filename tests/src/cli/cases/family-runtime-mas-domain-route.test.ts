@@ -739,6 +739,54 @@ JSON
   }
 });
 
+test('family-runtime blocks stale MAS owner-route failures instead of retrying them', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-owner-route-stale-'));
+  const dispatch = createDispatchFixture(`
+cat <<'JSON'
+{"reason":"owner_route_stale","detail":"current owner route already moved to a newer work unit"}
+JSON
+exit 1
+`);
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_autonomy/repair-recheck',
+      '--payload',
+      '{"profile":"/tmp/profile.toml","study_id":"DM003","repair_work_unit":{"unit_id":"unit-stale","work_unit_type":"text_repair","owner":"quality_repair_batch","callable_surface":"run_quality_repair_batch","source_fingerprint":"sha256:stale-route","source_refs":["studies/DM003/paper/manuscript.md"]}}',
+      '--dedupe-key',
+      'reviewer_refinement_loop:unit-stale:sha256:stale-route',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    const firstTick = runCli(['family-runtime', 'tick', '--source', 'test-owner-route-stale'], env);
+    const afterFirstTick = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const secondTick = runCli(['family-runtime', 'tick', '--source', 'test-owner-route-stale'], env);
+    const afterSecondTick = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+
+    assert.equal(firstTick.family_runtime_tick.selected_count, 1);
+    assert.equal(firstTick.family_runtime_tick.dispatches[0].status, 'blocked');
+    assert.equal(firstTick.family_runtime_tick.dispatches[0].reason, 'progress_first_owner_delta_required');
+    assert.equal(firstTick.family_runtime_tick.dispatches[0].domain_handler_blocked_reason, 'owner_route_stale');
+    assert.equal(afterFirstTick.family_runtime_task.task.status, 'blocked');
+    assert.equal(afterFirstTick.family_runtime_task.task.last_error, 'progress_first_owner_delta_required');
+    assert.equal(afterFirstTick.family_runtime_task.task.dead_letter_reason, 'progress_first_owner_delta_required');
+    assert.equal(afterFirstTick.family_runtime_task.stage_attempts[0].status, 'blocked');
+    assert.equal(afterFirstTick.family_runtime_task.stage_attempts[0].blocked_reason, 'progress_first_owner_delta_required');
+    assert.equal(secondTick.family_runtime_tick.selected_count, 0);
+    assert.equal(afterSecondTick.family_runtime_task.task.attempts, 1);
+    assert.equal(afterSecondTick.family_runtime_task.task.status, 'blocked');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime repairs stale running MAS paper autonomy tasks that lack stage attempt identity', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-paper-stale-running-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-paper-stale-running-export-'));

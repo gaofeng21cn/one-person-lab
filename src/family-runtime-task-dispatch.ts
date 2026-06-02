@@ -30,6 +30,7 @@ import {
   MAS_PAPER_AUTONOMY_DOMAIN_HANDLER_CLOSEOUT_REQUIRED_REASON,
   MAS_PAPER_AUTONOMY_TASK_KINDS,
 } from './family-runtime-paper-autonomy.ts';
+import { PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON } from './family-runtime-progress-first-anti-spin-gate.ts';
 
 type TemporalProviderModule = Parameters<typeof startMasDefaultExecutorDispatchAttempt>[2]['temporalProviderModule'];
 
@@ -51,10 +52,110 @@ function closeoutRefsFromDomainHandlerOutput(output: Record<string, unknown>) {
   ].filter((entry): entry is string => Boolean(entry));
 }
 
+function domainHandlerOwnerRouteStaleReason(output: Record<string, unknown>, errorMessage: string) {
+  const fields = [
+    output.reason,
+    output.blocked_reason,
+    output.blocker_reason,
+    output.message,
+    output.detail,
+    errorMessage,
+  ].map(cleanOptionalString).filter((entry): entry is string => Boolean(entry));
+  return fields.some((entry) => entry === 'owner_route_stale' || /\bowner_route_stale\b/.test(entry))
+    ? 'owner_route_stale'
+    : null;
+}
+
 function providerHostedDispatchRequiresCloseout(row: FamilyRuntimeTaskRow, activeStageAttemptIds: string[]) {
   return row.domain_id === 'medautoscience'
     && MAS_PAPER_AUTONOMY_TASK_KINDS.has(row.task_kind)
     && activeStageAttemptIds.length > 0;
+}
+
+function blockTaskForStaleOwnerRoute(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  input: {
+    attempt: number;
+    exitCode: number;
+    stdout: string;
+    stderr: string;
+    commandPreview: string[];
+    commandCwd: string | null;
+    output: Record<string, unknown>;
+    domainHandlerBlockedReason: string;
+    activeStageAttemptIds: string[];
+    runningStageAttempts: ReturnType<typeof updateStageAttemptsForTask>;
+  },
+) {
+  const blockedAt = nowIso();
+  const reason = PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON;
+  db.prepare(`
+    UPDATE tasks
+    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
+      last_error = ?, dead_letter_reason = ?, updated_at = ?
+    WHERE task_id = ?
+  `).run(reason, reason, blockedAt, row.task_id);
+  insertEvent(db, {
+    taskId: row.task_id,
+    domainId: row.domain_id,
+    eventType: 'task_dispatch_blocked_stale_owner_route',
+    source: 'opl-family-runtime',
+    payload: {
+      reason,
+      domain_handler_blocked_reason: input.domainHandlerBlockedReason,
+      attempt: input.attempt,
+      exit_code: input.exitCode,
+      stdout: input.stdout,
+      stderr: input.stderr,
+      command_preview: input.commandPreview,
+      command_cwd: input.commandCwd,
+      output: input.output,
+      authority_boundary: {
+        opl: 'queue_currentness_admission_and_attempt_liveness_projection_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        provider_completion_is_domain_ready: false,
+        domain_truth_mutation: false,
+        publication_quality_mutation: false,
+        artifact_gate_mutation: false,
+        current_package_mutation: false,
+        retry_loop_started: false,
+      },
+    },
+  });
+  insertNotification(db, {
+    taskId: row.task_id,
+    severity: 'warning',
+    title: 'Family runtime task blocked',
+    body: `${row.domain_id}:${row.task_kind} returned stale owner route; a fresh owner delta is required before retry.`,
+    payload: {
+      reason,
+      domain_handler_blocked_reason: input.domainHandlerBlockedReason,
+    },
+  });
+  const stageAttempts = updateStageAttemptsForTask(db, {
+    taskId: row.task_id,
+    stageAttemptIds: input.activeStageAttemptIds,
+    status: 'blocked',
+    blockedReason: reason,
+    activityEvent: {
+      activity_kind: 'domain_handler_dispatch_activity',
+      activity_status: 'blocked',
+      blocked_reason: reason,
+      domain_handler_blocked_reason: input.domainHandlerBlockedReason,
+    },
+  });
+  return {
+    task_id: row.task_id,
+    status: 'blocked',
+    reason,
+    domain_handler_blocked_reason: input.domainHandlerBlockedReason,
+    command_preview: input.commandPreview,
+    command_cwd: input.commandCwd,
+    exit_code: input.exitCode,
+    output: input.output,
+    stage_attempts: stageAttempts.length > 0 ? stageAttempts : input.runningStageAttempts,
+  };
 }
 
 function blockTaskForMissingDomainCloseout(
@@ -305,6 +406,21 @@ export async function dispatchFamilyRuntimeTask(
   }
 
   const errorMessage = domainHandlerResultErrorMessage(result, 'Domain dispatch');
+  const staleOwnerRouteReason = domainHandlerOwnerRouteStaleReason(output, errorMessage);
+  if (staleOwnerRouteReason) {
+    return blockTaskForStaleOwnerRoute(db, row, {
+      attempt,
+      exitCode,
+      stdout,
+      stderr,
+      commandPreview: command.command_preview,
+      commandCwd: command.cwd,
+      output,
+      domainHandlerBlockedReason: staleOwnerRouteReason,
+      activeStageAttemptIds,
+      runningStageAttempts,
+    });
+  }
   const nextStatus = attempt >= row.max_attempts ? 'dead_letter' : 'retry_waiting';
   const failedAt = nowIso();
   db.prepare(`
