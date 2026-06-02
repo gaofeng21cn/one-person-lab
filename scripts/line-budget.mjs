@@ -8,7 +8,6 @@ process.chdir(repoRoot);
 const DEFAULT_LIMIT = 1000;
 const BASELINE = new Map([
   ['src/agent-lab-complete.ts', 1013],
-  ['src/app-state.ts', 1023],
   ['src/family-runtime-stage-attempts.ts', 1054],
   ['src/runtime-tray-app-operator-drilldown.ts', 1408],
   ['tests/src/agent-lab.test.ts', 1135],

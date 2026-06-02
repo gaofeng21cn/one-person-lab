@@ -63,6 +63,11 @@ test('runtime snapshot prefers MAS Progress Portal handoff for study projection 
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_FAMILY_RUNTIME_PROVIDER: '',
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+      OPL_TEMPORAL_WORKER_STATUS: '',
+      OPL_TEMPORAL_WORKER_ENABLED: '',
     });
     const snapshot = output.runtime_tray_snapshot;
 
