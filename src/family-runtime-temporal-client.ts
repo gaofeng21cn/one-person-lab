@@ -11,7 +11,38 @@ export type TemporalClientOptions = {
   paths?: TemporalWorkerPaths;
   addressOverride?: string | null;
   connectTimeoutMs?: number;
+  rpcTimeoutMs?: number;
 };
+
+export const DEFAULT_TEMPORAL_CLIENT_CONNECT_TIMEOUT_MS = 3_000;
+export const DEFAULT_TEMPORAL_CLIENT_RPC_TIMEOUT_MS = 3_000;
+
+export function resolveTemporalClientConnectTimeoutMs() {
+  const raw = process.env.OPL_TEMPORAL_CLIENT_CONNECT_TIMEOUT_MS?.trim();
+  if (!raw) {
+    return DEFAULT_TEMPORAL_CLIENT_CONNECT_TIMEOUT_MS;
+  }
+  const value = Number.parseInt(raw, 10);
+  return Number.isFinite(value) && value > 0 ? value : DEFAULT_TEMPORAL_CLIENT_CONNECT_TIMEOUT_MS;
+}
+
+export function resolveTemporalClientRpcTimeoutMs() {
+  const raw = process.env.OPL_TEMPORAL_CLIENT_RPC_TIMEOUT_MS?.trim();
+  if (!raw) {
+    return DEFAULT_TEMPORAL_CLIENT_RPC_TIMEOUT_MS;
+  }
+  const value = Number.parseInt(raw, 10);
+  return Number.isFinite(value) && value > 0 ? value : DEFAULT_TEMPORAL_CLIENT_RPC_TIMEOUT_MS;
+}
+
+export async function withTemporalRpcDeadline<T>(
+  client: Client,
+  fn: () => Promise<T>,
+  options: TemporalClientOptions = {},
+) {
+  const timeoutMs = options.rpcTimeoutMs ?? resolveTemporalClientRpcTimeoutMs();
+  return await client.withDeadline(Date.now() + timeoutMs, fn);
+}
 
 export function requireTemporalAddress() {
   const address = process.env.OPL_TEMPORAL_ADDRESS?.trim() || process.env.TEMPORAL_ADDRESS?.trim() || null;
@@ -36,7 +67,7 @@ export async function withTemporalClient<T>(
     ?? (options.paths ? resolveTemporalAddressForPaths(options.paths).address : null);
   const connection = await Connection.connect({
     address: resolvedAddress || requireTemporalAddress(),
-    ...(options.connectTimeoutMs ? { connectTimeout: options.connectTimeoutMs } : {}),
+    connectTimeout: options.connectTimeoutMs ?? resolveTemporalClientConnectTimeoutMs(),
   });
   try {
     return await fn(new Client({ connection, namespace: resolveTemporalNamespace() }), connection);

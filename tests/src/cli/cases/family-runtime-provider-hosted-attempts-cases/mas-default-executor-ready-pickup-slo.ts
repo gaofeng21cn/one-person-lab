@@ -67,33 +67,29 @@ test('family-runtime scheduler tick immediately picks up MAS default-executor pe
   try {
     await withIsolatedFamilyRuntimeEnv(async () => {
       const exportFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-ready-pickup-export-'));
-      const exportPath = path.join(exportFixtureRoot, 'export');
+      const exportPath = path.join(exportFixtureRoot, 'export.mjs');
       const payload = defaultExecutorPayload('source-ready-owner-action-pickup');
       try {
         createQueueTables(db);
+        const exportPayload = {
+          surface_kind: 'mas_family_domain_handler_export',
+          pending_family_tasks: [
+            {
+              domain_id: 'medautoscience',
+              task_kind: 'domain_owner/default-executor-dispatch',
+              priority: 80,
+              source: 'mas-domain-handler-export',
+              dedupe_key: 'mas:dm-cvd:002:default-executor:ready-owner-action-pickup',
+              payload,
+            },
+          ],
+        };
         fs.writeFileSync(
           exportPath,
-          `#!/usr/bin/env bash
-set -euo pipefail
-cat <<'JSON'
-{
-  "surface_kind": "mas_family_domain_handler_export",
-  "pending_family_tasks": [
-    {
-      "domain_id": "medautoscience",
-      "task_kind": "domain_owner/default-executor-dispatch",
-      "priority": 80,
-      "source": "mas-domain-handler-export",
-      "dedupe_key": "mas:dm-cvd:002:default-executor:ready-owner-action-pickup",
-      "payload": ${JSON.stringify(payload)}
-    }
-  ]
-}
-JSON
-`,
+          `process.stdout.write(${JSON.stringify(`${JSON.stringify(exportPayload)}\n`)});\n`,
           { mode: 0o755 },
         );
-        process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT = exportPath;
+        process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT = `${process.execPath} ${exportPath}`;
 
         let queueTickCalls = 0;
         const tick = await runSchedulerTick(

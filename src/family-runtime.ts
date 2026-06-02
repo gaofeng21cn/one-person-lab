@@ -361,8 +361,10 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
           db,
           paths,
           parsed,
-          (source, limit, hydrate, taskScope) => runSchedulerQueueTick(db, paths, source, limit, hydrate, taskScope, undefined, {
+          (source, limit, hydrate, taskScope, domainProfiles, queueTickOptions) => runSchedulerQueueTick(db, paths, source, limit, hydrate, taskScope, domainProfiles, {
             temporalProviderModule,
+            dispatchEnabled: queueTickOptions?.dispatchEnabled,
+            blockedReason: queueTickOptions?.blockedReason,
           }),
         ),
       };
@@ -404,18 +406,18 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
     }
     if (parsed.mode === 'tick') {
       const providerKind = resolveFamilyRuntimeProviderKind();
-      if (providerKind === 'temporal' && parsed.hydrate === true) {
+      if (providerKind === 'temporal') {
         const schedulerTick = await runSchedulerTick(
           db,
           paths,
           {
             providerKind,
             limit: parsed.limit,
-            hydrate: parsed.hydrate,
+            hydrate: parsed.hydrate ?? false,
             taskScope: parsed.taskScope,
             domainProfiles: parsed.domainProfiles,
           },
-          (source, limit, hydrate, taskScope, domainProfiles) => runSchedulerQueueTick(
+          (source, limit, hydrate, taskScope, domainProfiles, queueTickOptions) => runSchedulerQueueTick(
             db,
             paths,
             parsed.source ?? source,
@@ -425,6 +427,8 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
             domainProfiles,
             {
               temporalProviderModule,
+              dispatchEnabled: queueTickOptions?.dispatchEnabled,
+              blockedReason: queueTickOptions?.blockedReason,
             },
           ),
         );

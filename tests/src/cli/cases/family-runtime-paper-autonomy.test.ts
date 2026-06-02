@@ -7,56 +7,73 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
   };
 }
 
+function jsString(value: string) {
+  return JSON.stringify(value);
+}
+
+function writeNodeScript(scriptPath: string, source: string) {
+  fs.writeFileSync(
+    scriptPath,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      `exec ${shellSingleQuote(process.execPath)} -e ${shellSingleQuote(source)} "$@"`,
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+}
+
 test('family-runtime hydrates MAS provider-hosted guarded apply tasks without truth authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-guarded-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-guarded-export-'));
   const exportPath = path.join(fixtureRoot, 'export');
   const dispatchPath = path.join(fixtureRoot, 'dispatch');
   const dispatchedTaskPath = path.join(fixtureRoot, 'dispatched-task-path');
-  fs.writeFileSync(
-    exportPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-cat <<'JSON'
-{
-  "surface_kind": "mas_family_domain_handler_export",
-  "pending_family_tasks": [
+  writeNodeScript(exportPath, `
+process.stdout.write(JSON.stringify({
+  surface_kind: 'mas_family_domain_handler_export',
+  pending_family_tasks: [
     {
-      "domain_id": "medautoscience",
-      "task_kind": "paper_autonomy/guarded-apply",
-      "priority": 30,
-      "source": "mas-domain-handler-export",
-      "dedupe_key": "mas:dm-cvd:DM002:provider-hosted-guarded-apply:opl-temporal",
-      "dispatch_owner": "med-autoscience",
-      "profile_name": "dm-cvd",
-      "source_refs": [
-        {"role": "opl_production_proof", "ref": "/tmp/opl-proof.json", "exists": true}
+      domain_id: 'medautoscience',
+      task_kind: 'paper_autonomy/guarded-apply',
+      priority: 30,
+      source: 'mas-domain-handler-export',
+      dedupe_key: 'mas:dm-cvd:DM002:provider-hosted-guarded-apply:opl-temporal',
+      dispatch_owner: 'med-autoscience',
+      profile_name: 'dm-cvd',
+      source_refs: [
+        { role: 'opl_production_proof', ref: '/tmp/opl-proof.json', exists: true },
       ],
-      "payload": {
-        "profile": "/tmp/profile.toml",
-        "study_id": "DM002",
-        "target_studies": ["DM002"],
-        "provider_attempt_id": "opl-temporal:dm-cvd:DM002:provider-hosted-guarded-apply",
-        "idempotency_key": "mas:dm-cvd:DM002:provider-hosted-guarded-apply:opl-temporal",
-        "paper_autonomy_reason": "provider_hosted_guarded_apply_soak",
-        "authority_boundary": "mas_owner_guarded_apply_only"
-      }
-    }
-  ]
-}
-JSON
-`,
-    { mode: 0o755 },
-  );
-  fs.writeFileSync(
-    dispatchPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-printf '%s\\n' "$1" > ${shellSingleQuote(dispatchedTaskPath)}
-echo '{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receipt","receipt_ref":"studies/DM002/artifacts/paper_autonomy/guarded_apply/latest.json","dispatch":{"result":{"surface":"real_paper_autonomy_provider_hosted_guarded_apply_receipt","status":"typed_blocker"}}}'
-`,
-    { mode: 0o755 },
-  );
+      payload: {
+        profile: '/tmp/profile.toml',
+        study_id: 'DM002',
+        target_studies: ['DM002'],
+        provider_attempt_id: 'opl-temporal:dm-cvd:DM002:provider-hosted-guarded-apply',
+        idempotency_key: 'mas:dm-cvd:DM002:provider-hosted-guarded-apply:opl-temporal',
+        paper_autonomy_reason: 'provider_hosted_guarded_apply_soak',
+        authority_boundary: 'mas_owner_guarded_apply_only',
+      },
+    },
+  ],
+}) + '\\n');
+`);
+  writeNodeScript(dispatchPath, `
+const fs = require('node:fs');
+const taskPath = process.argv[1];
+fs.writeFileSync(${jsString(dispatchedTaskPath)}, taskPath + '\\n');
+process.stdout.write(JSON.stringify({
+  accepted: true,
+  surface_kind: 'mas_family_domain_handler_dispatch_receipt',
+  receipt_ref: 'studies/DM002/artifacts/paper_autonomy/guarded_apply/latest.json',
+  dispatch: {
+    result: {
+      surface: 'real_paper_autonomy_provider_hosted_guarded_apply_receipt',
+      status: 'typed_blocker',
+    },
+  },
+}) + '\\n');
+`);
   try {
     const tick = runCli(['family-runtime', 'tick', '--source', 'temporal', '--hydrate'], familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,

@@ -92,16 +92,26 @@ function buildManagedTemporalWorkerReadiness(projection: Record<string, unknown>
       addressSource: 'mas_managed_temporal_state_consistency_projection',
       namespace,
       taskQueue,
-      workerEnabled: '1',
-      workerStatus: 'ready',
-      serverReachable: true,
+      workerEnabled: null,
+      workerStatus: null,
+      serverReachable: null,
     }),
     surface_kind: 'temporal_worker_lifecycle_status',
-    lifecycle_status: 'ready',
+    lifecycle_status: 'domain_projection_only',
+    projection_status: optionalString(projection.projection_status) ?? optionalString(projection.status) ?? 'ready',
+    projection_declares_service_ready: projection.service_ready === true
+      || optionalString(projection.service_status) === 'ready'
+      || optionalString(projection.service_readiness) === 'ready',
+    projection_declares_worker_ready: projection.worker_ready === true
+      || projection.managed_worker_ready === true
+      || optionalString(projection.worker_status) === 'ready'
+      || optionalString(projection.worker_readiness) === 'ready',
+    provider_ready_effect: 'none_projection_only_requires_opl_local_lifecycle_proof',
     authority_boundary: {
       opl: 'managed_temporal_state_projection_consumer_only',
       domain: 'truth_quality_artifact_gate_owner',
       paper_closure_authority: 'mas_only',
+      can_authorize_opl_provider_ready: false,
     },
   };
 }
@@ -231,10 +241,10 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
     ? null
     : options.managedProviderProjection ?? null;
   const managedTemporalProjection = managedProviderProjection?.managed_temporal_state_consistency ?? null;
-  const effectiveWorkerReadiness = managedTemporalProjection
+  const managedProjectionReadiness = managedTemporalProjection
     ? buildManagedTemporalWorkerReadiness(managedTemporalProjection)
-    : workerReadiness;
-  const workerReady = effectiveWorkerReadiness.worker_ready === true;
+    : null;
+  const workerReady = workerReadiness.worker_ready === true;
   const degradedReason = workerReadiness.blockers[0] ?? null;
   return {
     provider_kind: kind,
@@ -252,22 +262,23 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
       ...(managedTemporalProjection ? ['mas_managed_temporal_state_consistency_projection'] : []),
     ],
     details: {
-      address: effectiveWorkerReadiness.address,
-      address_source: effectiveWorkerReadiness.address_source,
-      namespace: effectiveWorkerReadiness.namespace,
-      task_queue: effectiveWorkerReadiness.task_queue,
+      address: workerReadiness.address,
+      address_source: workerReadiness.address_source,
+      namespace: workerReadiness.namespace,
+      task_queue: workerReadiness.task_queue,
       worker_ready: workerReady,
-      worker_readiness: effectiveWorkerReadiness,
+      worker_readiness: workerReadiness,
       inspection_detail: detail,
       temporal_visibility_readiness: detail === 'fast'
-        ? effectiveWorkerReadiness.visibility_readiness ?? buildTemporalStageAttemptVisibilityReadiness({
-            address: effectiveWorkerReadiness.address,
-            addressSource: effectiveWorkerReadiness.address_source,
-            namespace: effectiveWorkerReadiness.namespace,
-            taskQueue: effectiveWorkerReadiness.task_queue,
+        ? workerReadiness.visibility_readiness ?? buildTemporalStageAttemptVisibilityReadiness({
+            address: workerReadiness.address,
+            addressSource: workerReadiness.address_source,
+            namespace: workerReadiness.namespace,
+            taskQueue: workerReadiness.task_queue,
           })
         : await inspectTemporalStageAttemptVisibilityReadiness(paths),
       managed_temporal_state_consistency: managedTemporalProjection,
+      managed_temporal_projection_readiness: managedProjectionReadiness,
       managed_domain_projection_summary: managedProviderProjection
         ? {
             managed_temporal_state_consistency_declared: Boolean(managedProviderProjection.managed_temporal_state_consistency_declared),
@@ -275,25 +286,25 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
             domain_memory_descriptor_declared: Boolean(managedProviderProjection.domain_memory_descriptor_declared),
             owner_receipt_contract_declared: Boolean(managedProviderProjection.owner_receipt_contract_declared),
             legacy_retirement_tombstone_declared: Boolean(managedProviderProjection.legacy_retirement_tombstone_declared),
+            managed_temporal_projection_authorizes_opl_provider_ready: false,
           }
         : null,
       mas_managed_provider_projection: managedProviderProjection,
       worker_lifecycle: {
         worker_required: true,
-        task_queue: effectiveWorkerReadiness.task_queue,
+        task_queue: workerReadiness.task_queue,
         default_task_queue: DEFAULT_TEMPORAL_TASK_QUEUE,
         lifecycle: buildTemporalWorkerLifecycleContract(),
-        lifecycle_owner: managedTemporalProjection
-          ? 'domain_owned_managed_temporal_projection'
-          : 'configured_family_runtime_provider',
+        lifecycle_owner: 'configured_family_runtime_provider',
+        domain_projection_role: managedTemporalProjection
+          ? 'read_only_status_projection_not_provider_liveness_proof'
+          : null,
         opl_helper: 'runTemporalStageAttemptWorkerUntil',
       },
       adapter_mode: workerReady
-        ? managedTemporalProjection
-          ? 'mas_managed_temporal_projection_ready'
-          : 'managed_temporal_provider_ready'
+        ? 'managed_temporal_provider_ready'
         : 'provider_code_landed_unconfigured',
-      required_env: ['OPL_TEMPORAL_ADDRESS or managed local service state', 'managed Temporal worker state or OPL_TEMPORAL_WORKER_STATUS=ready'],
+      required_env: ['OPL_TEMPORAL_ADDRESS or OPL-managed local service state', 'OPL-managed Temporal worker state or OPL_TEMPORAL_WORKER_STATUS=ready'],
       runtime_dependency: 'temporal_server_and_worker_required_for_live_workflows',
     },
   };

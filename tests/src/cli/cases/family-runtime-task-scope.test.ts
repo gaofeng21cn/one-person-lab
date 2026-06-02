@@ -36,6 +36,17 @@ ${body}
   return { fixtureRoot, exportPath };
 }
 
+function createJsonExportFixture(payload: Record<string, unknown>) {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-export-'));
+  const exportPath = path.join(fixtureRoot, 'export.mjs');
+  fs.writeFileSync(
+    exportPath,
+    `process.stdout.write(${JSON.stringify(`${JSON.stringify(payload)}\n`)});\n`,
+    { mode: 0o755 },
+  );
+  return { fixtureRoot, exportPath: `${process.execPath} ${exportPath}` };
+}
+
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
     OPL_STATE_DIR: stateRoot,
@@ -45,38 +56,14 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
 
 test('family-runtime tick can scope hydration and dispatch to selected MAS studies', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-study-scope-'));
-  const exportFixture = createExportFixture(`
-cat <<'JSON'
-{
-  "pending_family_tasks": [
-    {
-      "domain_id": "medautoscience",
-      "task_kind": "domain_route/reconcile-apply",
-      "dedupe_key": "mas:test:DM001:resume",
-      "payload": {"profile": "/tmp/profile.toml", "study_id": "DM001"}
-    },
-    {
-      "domain_id": "medautoscience",
-      "task_kind": "domain_route/reconcile-apply",
-      "dedupe_key": "mas:test:DM002:resume",
-      "payload": {"profile": "/tmp/profile.toml", "study_id": "DM002"}
-    },
-    {
-      "domain_id": "medautoscience",
-      "task_kind": "domain_route/reconcile-apply",
-      "dedupe_key": "mas:test:DM003:resume",
-      "payload": {"profile": "/tmp/profile.toml", "study_id": "DM003"}
-    },
-    {
-      "domain_id": "medautoscience",
-      "task_kind": "domain_route/reconcile-apply",
-      "dedupe_key": "mas:test:DM004:resume",
-      "payload": {"profile": "/tmp/profile.toml", "study_id": "DM004"}
-    }
-  ]
-}
-JSON
-`);
+  const exportFixture = createJsonExportFixture({
+    pending_family_tasks: ['DM001', 'DM002', 'DM003', 'DM004'].map((studyId) => ({
+      domain_id: 'medautoscience',
+      task_kind: 'domain_route/reconcile-apply',
+      dedupe_key: `mas:test:${studyId}:resume`,
+      payload: { profile: '/tmp/profile.toml', study_id: studyId },
+    })),
+  });
   const dispatch = createDispatchFixture(`
 python3 - "$TASK_PATH" <<'PY'
 import json
@@ -150,32 +137,28 @@ PY
 
 test('family-runtime intake can scope hydration by top-level task kind', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-task-kind-scope-'));
-  const exportFixture = createExportFixture(`
-cat <<'JSON'
-{
-  "pending_family_tasks": [
-    {
-      "domain_id": "medautoscience",
-      "task_kind": "domain_route/reconcile-apply",
-      "dedupe_key": "mas:test:DM002:route",
-      "payload": {"profile": "/tmp/profile.toml", "study_id": "DM002"}
-    },
-    {
-      "domain_id": "medautoscience",
-      "task_kind": "publication_aftercare/reviewer-refresh",
-      "dedupe_key": "mas:test:DM002:reviewer-refresh",
-      "payload": {"profile": "/tmp/profile.toml", "study_id": "DM002"}
-    },
-    {
-      "domain_id": "medautoscience",
-      "task_kind": "publication_aftercare/reviewer-refresh",
-      "dedupe_key": "mas:test:DM003:reviewer-refresh",
-      "payload": {"profile": "/tmp/profile.toml", "study_id": "DM003"}
-    }
-  ]
-}
-JSON
-`);
+  const exportFixture = createJsonExportFixture({
+    pending_family_tasks: [
+      {
+        domain_id: 'medautoscience',
+        task_kind: 'domain_route/reconcile-apply',
+        dedupe_key: 'mas:test:DM002:route',
+        payload: { profile: '/tmp/profile.toml', study_id: 'DM002' },
+      },
+      {
+        domain_id: 'medautoscience',
+        task_kind: 'publication_aftercare/reviewer-refresh',
+        dedupe_key: 'mas:test:DM002:reviewer-refresh',
+        payload: { profile: '/tmp/profile.toml', study_id: 'DM002' },
+      },
+      {
+        domain_id: 'medautoscience',
+        task_kind: 'publication_aftercare/reviewer-refresh',
+        dedupe_key: 'mas:test:DM003:reviewer-refresh',
+        payload: { profile: '/tmp/profile.toml', study_id: 'DM003' },
+      },
+    ],
+  });
   try {
     const env = familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportFixture.exportPath,

@@ -44,6 +44,10 @@ type RunQueueTick = (
   hydrate: boolean,
   taskScope?: FamilyRuntimeTaskScope,
   domainProfiles?: import('./family-runtime-command.ts').FamilyRuntimeDomainProfiles,
+  options?: {
+    dispatchEnabled?: boolean;
+    blockedReason?: string;
+  },
 ) => SchedulerQueueTickResult | Promise<SchedulerQueueTickResult>;
 
 function buildProviderReadinessAfterSlo(providerKind: FamilyRuntimeProviderKind, selected: ProviderInspection['providers']['temporal']) {
@@ -111,6 +115,88 @@ function buildProgressFirstReadyOwnerActionPickupSlo(input: {
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
+}
+
+function deferredProviderSloTick(input: {
+  reason: string;
+  force: boolean;
+}) {
+  const repairReceipt = {
+    surface_kind: 'opl_temporal_provider_slo_repair_receipt',
+    provider_kind: 'temporal',
+    trigger: input.force ? 'forced' : input.reason,
+    repair_status: 'skipped',
+    cadence_owner: 'provider_backed_family_runtime',
+    execution_owner: 'operator_or_infrastructure',
+    execution_policy: 'supervised_command_receipt_only',
+    command: 'opl family-runtime residency proof --provider temporal --production',
+    blocker_ids: [],
+    next_repair_command: null,
+    can_execute_domain_repair: false,
+    authority_boundary: {
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_artifact_export: false,
+      can_write_domain_truth: false,
+      can_execute_domain_repair: false,
+    },
+  };
+  const receipt = {
+    surface_kind: 'opl_temporal_provider_slo_execution_receipt',
+    provider_kind: 'temporal',
+    command: 'opl family-runtime residency proof --provider temporal --production',
+    execution_owner: 'operator_or_infrastructure',
+    execution_policy: 'supervised_command_receipt_only',
+    supervised_cadence_receipt: true,
+    execution_status: 'skipped',
+    receipt_status: 'skipped',
+    receipt_kind: 'opl_temporal_provider_slo_execution_receipt',
+    skip_reason: input.reason,
+    repair_receipt: repairReceipt,
+    proves_only: 'temporal_service_worker_residency_cadence_execution',
+    authority_boundary: {
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_artifact_export: false,
+      can_write_domain_truth: false,
+    },
+  };
+  return {
+    surface_id: 'opl_family_runtime_provider_slo_tick',
+    provider_kind: 'temporal',
+    execution_status: 'skipped',
+    skipped: true,
+    force: input.force,
+    provider_worker_repair_receipt: {
+      repair_status: 'skipped',
+      repair_action_id: 'none',
+    },
+    before: null,
+    after: null,
+    provider_slo_execution_receipt: receipt,
+    event_id: null,
+    authority_boundary: {
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_artifact_export: false,
+      can_write_domain_truth: false,
+    },
+  } as unknown as ProviderSloTick;
+}
+
+function providerSloSkipReason(providerSlo: ProviderSloTick) {
+  const receipt = providerSlo.provider_slo_execution_receipt as Record<string, unknown>;
+  return typeof receipt.skip_reason === 'string' ? receipt.skip_reason : null;
+}
+
+function blockQueueTickDispatch(queueTick: SchedulerQueueTickResult, reason: string): SchedulerQueueTickResult {
+  return {
+    ...queueTick,
+    status: 'blocked_provider_not_ready',
+    dispatch_blocked_reason: reason,
+    selected_count: 0,
+    dispatches: [],
+  };
 }
 
 export async function runTemporalSchedulerCadenceCommand(
@@ -239,16 +325,34 @@ export async function runSchedulerTick(
   let provider: ProviderInspection = providerBeforeSlo;
   let selected = selectedBeforeSlo;
   let blocker = blockerBeforeSlo;
-  providerSlo = await runProviderSloTick(db, paths, {
-    force: input.force ?? false,
-  });
-  provider = await inspectProvidersWithLifecycle(providerKind, paths, {
-    managedProviderProjection: readMasManagedProviderProjection(),
-    detail: 'fast',
-  });
-  selected = provider.providers.temporal;
-  blocker = selected ? buildTemporalProviderLivenessBlocker(selected) : null;
+  if (selectedBeforeSlo?.ready) {
+    providerSlo = deferredProviderSloTick({
+      reason: 'deferred_owner_delta_first',
+      force: input.force ?? false,
+    });
+  } else {
+    providerSlo = await runProviderSloTick(db, paths, {
+      force: input.force ?? false,
+    });
+    provider = await inspectProvidersWithLifecycle(providerKind, paths, {
+      managedProviderProjection: readMasManagedProviderProjection(),
+      detail: 'fast',
+    });
+    selected = provider.providers.temporal;
+    blocker = selected ? buildTemporalProviderLivenessBlocker(selected) : null;
+  }
   if (!selected?.ready && blocker) {
+    const queueTick = await runQueueTick(
+      source,
+      input.limit ?? 10,
+      input.hydrate ?? true,
+      input.taskScope,
+      input.domainProfiles,
+      {
+        dispatchEnabled: false,
+        blockedReason: blocker.blocker_id,
+      },
+    );
     return {
       surface_kind: 'opl_family_runtime_scheduler_tick',
       scheduler_owner: 'opl_provider_runtime_manager',
@@ -263,7 +367,7 @@ export async function runSchedulerTick(
       provider_readiness_after_slo: buildProviderReadinessAfterSlo(providerKind, selected),
       provider_slo: providerSlo,
       task_scope: input.taskScope ?? null,
-      queue_tick: null,
+      queue_tick: blockQueueTickDispatch(queueTick, blocker.blocker_id),
       authority_boundary: {
         opl: 'scheduler_cadence_queue_and_provider_slo_owner',
         domain: 'truth_quality_artifact_gate_owner',
@@ -299,6 +403,7 @@ export async function runSchedulerTick(
       limit: input.limit ?? 10,
       task_scope: input.taskScope ?? null,
       provider_slo_receipt_status: providerSlo.provider_slo_execution_receipt.receipt_status,
+      provider_slo_skip_reason: providerSloSkipReason(providerSlo),
       queue_selected_count: queueTick.selected_count,
       queue_dispatches_count: queueTick.dispatches.length,
       progress_first_ready_owner_action_pickup_slo: readyOwnerActionPickupSlo,

@@ -183,6 +183,26 @@ JSON
     ], env);
     const taskId = enqueue.family_runtime_enqueue.task.task_id;
     runCli(['family-runtime', 'tick', '--source', 'test-domain-route-redrive'], env);
+    const providerAttempt = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'domain_route/reconcile-apply',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      '{"route_ref":"domain_route/reconcile-apply","action_ref":"domain_route_reconcile_apply","study_id":"002-dm-china-us-mortality-attribution","opl_writes_domain_truth":false}',
+      '--source-fingerprint',
+      'sha256:domain-route-redrive',
+      '--executor-kind',
+      'domain_handler',
+      '--task',
+      taskId,
+      '--new-attempt',
+    ], env).family_runtime_stage_attempt.attempt;
     const queueDb = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
     try {
       queueDb.prepare(`
@@ -196,8 +216,8 @@ JSON
           ),
           closeout_refs_json = '[]',
           closeout_receipt_status = NULL
-        WHERE task_id = ?
-      `).run(taskId);
+        WHERE stage_attempt_id = ?
+      `).run(providerAttempt.stage_attempt_id);
     } finally {
       queueDb.close();
     }
@@ -236,8 +256,9 @@ JSON
       redrivenTask.family_runtime_task.task.domain_route.authority_boundary.queue_owns_attempts_retry_and_dead_letter,
       true,
     );
-    assert.equal(attempts.length, 2);
+    assert.equal(attempts.length, 3);
     assert.equal(attempts.at(-1).stage_id, 'domain_route/reconcile-apply');
+    assert.equal(attempts.at(-1).provider_kind, 'local_sqlite');
     assert.equal(attempts.at(-1).workspace_locator.opl_writes_domain_truth, false);
     assert.equal(attempts.at(-1).workspace_locator.opl_writes_publication_quality, false);
     assert.equal(attempts.at(-1).workspace_locator.opl_writes_current_package, false);
@@ -468,7 +489,6 @@ JSON
     const tick = runCli(['family-runtime', 'tick', '--source', 'test-hydrate', '--hydrate'], familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: `/bin/bash ${exportPath}`,
       OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: `/bin/bash ${dispatchPath}`,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     }));
     const queue = runCli(['family-runtime', 'queue', 'list'], familyRuntimeEnv(stateRoot));
     const task = queue.family_runtime_queue.tasks[0];
@@ -498,7 +518,7 @@ JSON
     ]);
     assert.equal(dispatchedTask.authority_boundary.opl, 'typed_queue_and_dispatch_only');
     assert.equal(dispatchedTask.authority_boundary.domain, 'truth_quality_artifact_gate_owner');
-    assert.equal(attempt.provider_kind, 'temporal');
+    assert.equal(attempt.provider_kind, 'local_sqlite');
     assert.equal(attempt.stage_id, 'publication_aftercare/analysis-queue-progress');
     assert.equal(attempt.task_id, task.task_id);
     assert.equal(attempt.status, 'completed');
@@ -583,7 +603,6 @@ JSON
     const tick = runCli(['family-runtime', 'tick', '--source', 'test-hydrate', '--hydrate'], familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: `/bin/bash ${exportPath}`,
       OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: `/bin/bash ${dispatchPath}`,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     }));
     const queue = runCli(['family-runtime', 'queue', 'list'], familyRuntimeEnv(stateRoot));
     const task = queue.family_runtime_queue.tasks[0];
@@ -610,7 +629,7 @@ JSON
     assert.deepEqual(dispatchedTask.domain_route.owner_route_refs, ['owner-route:mas/DM002/ai-reviewer-refresh']);
     assert.equal(dispatchedTask.authority_boundary.opl, 'typed_queue_and_dispatch_only');
     assert.equal(dispatchedTask.authority_boundary.domain, 'truth_quality_artifact_gate_owner');
-    assert.equal(attempt.provider_kind, 'temporal');
+    assert.equal(attempt.provider_kind, 'local_sqlite');
     assert.equal(attempt.stage_id, 'publication_aftercare/reviewer-refresh');
     assert.equal(attempt.task_id, task.task_id);
     assert.equal(attempt.status, 'completed');
@@ -702,7 +721,7 @@ JSON
     assert.equal(task.paper_autonomy.repair_command, 'medautosci domain-handler dispatch --task <task.json> --format json');
     assert.equal(task.paper_autonomy.authority_boundary.writes_mas_truth, false);
     assert.deepEqual(task.payload.source_refs, ['studies/DM002/artifacts/publication_eval/latest.json']);
-    assert.equal(attempt.provider_kind, 'temporal');
+    assert.equal(attempt.provider_kind, 'local_sqlite');
     assert.equal(attempt.stage_id, 'paper_autonomy/repair-recheck');
     assert.equal(attempt.task_id, task.task_id);
     assert.equal(attempt.status, 'blocked');

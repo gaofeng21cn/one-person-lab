@@ -7,18 +7,15 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
   };
 }
 
-function createExportFixture(body: string) {
+function createJsonExportFixture(payload: Record<string, unknown>) {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-export-'));
-  const exportPath = path.join(fixtureRoot, 'export');
+  const exportPath = path.join(fixtureRoot, 'export.mjs');
   fs.writeFileSync(
     exportPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-${body}
-`,
+    `process.stdout.write(${JSON.stringify(`${JSON.stringify(payload)}\n`)});\n`,
     { mode: 0o755 },
   );
-  return { fixtureRoot, exportPath };
+  return { fixtureRoot, exportPath: `${process.execPath} ${exportPath}` };
 }
 
 test('family-runtime status consumes MAS manifest managed Temporal projection without claiming paper closure', () => {
@@ -95,19 +92,34 @@ test('family-runtime status consumes MAS manifest managed Temporal projection wi
     const provider = output.family_runtime.provider_runtime.providers.temporal;
     const managedProjection = provider.details.managed_temporal_state_consistency;
 
-    assert.equal(output.family_runtime.readiness.provider_ready, true);
-    assert.equal(output.family_runtime.readiness.full_online_ready, true);
-    assert.equal(provider.status, 'ready');
-    assert.equal(provider.ready, true);
-    assert.equal(provider.degraded_reason, null);
-    assert.equal(provider.details.adapter_mode, 'mas_managed_temporal_projection_ready');
-    assert.equal(provider.details.address, 'mas-managed-temporal.example.test:7233');
-    assert.equal(provider.details.address_source, 'mas_managed_temporal_state_consistency_projection');
-    assert.equal(provider.details.worker_readiness.readiness_status, 'ready');
-    assert.equal(provider.details.worker_readiness.worker_ready, true);
-    assert.deepEqual(provider.details.worker_readiness.blockers, []);
+    assert.equal(output.family_runtime.readiness.provider_ready, false);
+    assert.equal(output.family_runtime.readiness.full_online_ready, false);
+    assert.equal(provider.status, 'provider_code_landed_unconfigured');
+    assert.equal(provider.ready, false);
+    assert.equal(provider.degraded_reason, 'temporal_runtime_not_configured');
+    assert.equal(provider.details.adapter_mode, 'provider_code_landed_unconfigured');
+    assert.equal(provider.details.address, null);
+    assert.equal(provider.details.address_source, 'not_configured');
+    assert.equal(provider.details.worker_readiness.readiness_status, 'not_configured');
+    assert.equal(provider.details.worker_readiness.worker_ready, false);
+    assert.deepEqual(provider.details.worker_readiness.blockers, ['temporal_runtime_not_configured']);
     assert.equal(managedProjection.projection_status, 'ready');
+    assert.equal(provider.details.managed_temporal_projection_readiness.address, 'mas-managed-temporal.example.test:7233');
+    assert.equal(provider.details.managed_temporal_projection_readiness.address_source, 'mas_managed_temporal_state_consistency_projection');
+    assert.equal(provider.details.managed_temporal_projection_readiness.worker_ready, false);
+    assert.equal(
+      provider.details.managed_temporal_projection_readiness.provider_ready_effect,
+      'none_projection_only_requires_opl_local_lifecycle_proof',
+    );
+    assert.equal(
+      provider.details.managed_temporal_projection_readiness.authority_boundary.can_authorize_opl_provider_ready,
+      false,
+    );
     assert.equal(provider.details.managed_domain_projection_summary.managed_temporal_state_consistency_declared, true);
+    assert.equal(
+      provider.details.managed_domain_projection_summary.managed_temporal_projection_authorizes_opl_provider_ready,
+      false,
+    );
     assert.equal(provider.details.managed_domain_projection_summary.family_stage_control_plane_declared, false);
     assert.equal(provider.details.managed_domain_projection_summary.domain_memory_descriptor_declared, false);
     assert.equal(provider.details.managed_domain_projection_summary.owner_receipt_contract_declared, false);
@@ -124,28 +136,24 @@ test('family-runtime status consumes MAS manifest managed Temporal projection wi
 
 test('family-runtime status consumes MAS domain-handler managed Temporal projection', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-domain-handler-managed-state-'));
-  const exportFixture = createExportFixture(`
-cat <<'JSON'
-{
-  "surface_kind": "mas_family_domain_handler_export",
-  "managed_temporal_state_consistency": {
-    "surface_kind": "managed_temporal_state_consistency",
-    "projection_status": "ready",
-    "provider_kind": "temporal",
-    "service_ready": true,
-    "managed_worker_ready": true,
-    "address": "domain-handler-managed-temporal.example.test:7233",
-    "namespace": "default",
-    "task_queue": "opl-stage-attempts",
-    "source_refs": ["mas://domain-handler/managed_temporal_state_consistency/latest.json"],
-    "authority_boundary": {
-      "opl_role": "projection_consumer_only",
-      "paper_closure_authority": "mas_only"
-    }
-  }
-}
-JSON
-`);
+  const exportFixture = createJsonExportFixture({
+    surface_kind: 'mas_family_domain_handler_export',
+    managed_temporal_state_consistency: {
+      surface_kind: 'managed_temporal_state_consistency',
+      projection_status: 'ready',
+      provider_kind: 'temporal',
+      service_ready: true,
+      managed_worker_ready: true,
+      address: 'domain-handler-managed-temporal.example.test:7233',
+      namespace: 'default',
+      task_queue: 'opl-stage-attempts',
+      source_refs: ['mas://domain-handler/managed_temporal_state_consistency/latest.json'],
+      authority_boundary: {
+        opl_role: 'projection_consumer_only',
+        paper_closure_authority: 'mas_only',
+      },
+    },
+  });
   try {
     const output = runCli(
       ['family-runtime', 'status', '--provider', 'temporal'],
@@ -160,11 +168,22 @@ JSON
     const provider = output.family_runtime.provider_runtime.providers.temporal;
     const managedProjection = provider.details.managed_temporal_state_consistency;
 
-    assert.equal(output.family_runtime.readiness.provider_ready, true);
-    assert.equal(provider.details.address, 'domain-handler-managed-temporal.example.test:7233');
-    assert.equal(provider.details.address_source, 'mas_managed_temporal_state_consistency_projection');
+    assert.equal(output.family_runtime.readiness.provider_ready, false);
+    assert.equal(provider.ready, false);
+    assert.equal(provider.degraded_reason, 'temporal_runtime_not_configured');
+    assert.equal(provider.details.address, null);
+    assert.equal(provider.details.address_source, 'not_configured');
+    assert.equal(provider.details.managed_temporal_projection_readiness.address, 'domain-handler-managed-temporal.example.test:7233');
+    assert.equal(
+      provider.details.managed_temporal_projection_readiness.provider_ready_effect,
+      'none_projection_only_requires_opl_local_lifecycle_proof',
+    );
     assert.equal(managedProjection.source_manifest.surface_kind, 'mas_family_domain_handler_export_projection_ref');
     assert.equal(provider.details.managed_domain_projection_summary.managed_temporal_state_consistency_declared, true);
+    assert.equal(
+      provider.details.managed_domain_projection_summary.managed_temporal_projection_authorizes_opl_provider_ready,
+      false,
+    );
     assert.equal(provider.details.managed_domain_projection_summary.family_stage_control_plane_declared, false);
     assert.equal(provider.details.managed_domain_projection_summary.domain_memory_descriptor_declared, false);
     assert.equal(provider.details.managed_domain_projection_summary.owner_receipt_contract_declared, false);

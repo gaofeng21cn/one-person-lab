@@ -104,6 +104,15 @@ function stageEvidenceRouteClosedByDomainTypedBlocker(action: JsonRecord) {
     && stringList(action.verified_stage_evidence_receipt_refs).length > 0;
 }
 
+function providerMaintenanceRoute(action: JsonRecord) {
+  const actionKind = stringValue(action.action_kind) ?? '';
+  return actionKind === 'provider_slo_cadence_execution'
+    || actionKind === 'provider_scheduler_install'
+    || actionKind === 'provider_scheduler_tick'
+    || actionKind === 'provider_scheduler_trigger'
+    || actionKind === 'provider_scheduler_status';
+}
+
 function routeIsClosedForDefaultCaller(action: JsonRecord, drilldown: JsonRecord) {
   const routeStatus = stringValue(action.route_status);
   const actionabilityStatus = stringValue(action.default_actionability_status);
@@ -150,10 +159,12 @@ function routeEligibleForDefaultSelectedAction(action: JsonRecord) {
 export function defaultSelectedSafeActionCandidates(
   actions: JsonRecord[],
   drilldown: JsonRecord,
+  input: { ownerDeltaAvailable?: boolean } = {},
 ) {
   return actions.filter((action) =>
     routeEligibleForDefaultSelectedAction(action)
     && !routeIsClosedForDefaultCaller(action, drilldown)
+    && !(input.ownerDeltaAvailable === true && providerMaintenanceRoute(action))
   );
 }
 

@@ -9,6 +9,23 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
   };
 }
 
+function jsString(value: string) {
+  return JSON.stringify(value);
+}
+
+function writeNodeScript(scriptPath: string, source: string) {
+  fs.writeFileSync(
+    scriptPath,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      `exec ${shellSingleQuote(process.execPath)} -e ${shellSingleQuote(source)} "$@"`,
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+}
+
 test('family-runtime hydrate keeps succeeded MAS default executor dispatch terminal after module owner update', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-profile-succeeded-owner-redrive-home-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-profile-succeeded-owner-redrive-'));
@@ -18,60 +35,55 @@ test('family-runtime hydrate keeps succeeded MAS default executor dispatch termi
   const uvCwdPath = path.join(fixtureRoot, 'uv.cwd');
   const masFixture = createGitModuleRemoteFixture('med-autoscience');
   fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
-  fs.writeFileSync(
-    uvPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-printf '%s\\n' "$PWD" > ${shellSingleQuote(uvCwdPath)}
-: > ${shellSingleQuote(uvArgvPath)}
-for arg in "$@"; do
-  printf '%s\\n' "$arg" >> ${shellSingleQuote(uvArgvPath)}
-done
-if [[ " $* " == *" domain-handler export "* ]]; then
-  cat <<'JSON'
-{
-  "surface_kind": "mas_family_domain_handler_export",
-  "pending_family_tasks": [
-    {
-      "domain_id": "medautoscience",
-      "task_kind": "domain_owner/default-executor-dispatch",
-      "priority": 70,
-      "source": "mas-domain-handler-export",
-      "dedupe_key": "mas:dm-cvd:002:default-executor:return_to_ai_reviewer_workflow:owner-update",
-      "dispatch_owner": "one-person-lab",
-      "profile_name": "dm-cvd",
-      "domain_truth_owner": "med-autoscience",
-      "queue_owner": "one-person-lab",
-      "payload": {
-        "profile": "dm-cvd.workspace.toml",
-        "study_id": "002-dm-china-us-mortality-attribution",
-        "quest_id": "002-dm-china-us-mortality-attribution",
-        "action_type": "return_to_ai_reviewer_workflow",
-        "work_unit_id": "ai_reviewer_medical_prose_quality_review",
-        "dispatch_authority": "consumer_default_executor_dispatch",
-        "next_executable_owner": "ai_reviewer",
-        "executor_kind": "codex_cli_default",
-        "dispatch_ref": "studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json",
-        "authority_boundary": "mas_default_executor_dispatch_request_only",
-        "source_fingerprint": "truth-snapshot::1076da525000e7809211865d"
-      }
-    }
-  ]
+  writeNodeScript(uvPath, `
+const fs = require('node:fs');
+const args = process.argv.slice(1);
+fs.writeFileSync(${jsString(uvCwdPath)}, process.cwd() + '\\n');
+fs.writeFileSync(${jsString(uvArgvPath)}, args.map(String).join('\\n') + '\\n');
+const joined = \` \${args.join(' ')} \`;
+if (joined.includes(' domain-handler export ')) {
+  process.stdout.write(JSON.stringify({
+    surface_kind: 'mas_family_domain_handler_export',
+    pending_family_tasks: [
+      {
+        domain_id: 'medautoscience',
+        task_kind: 'domain_owner/default-executor-dispatch',
+        priority: 70,
+        source: 'mas-domain-handler-export',
+        dedupe_key: 'mas:dm-cvd:002:default-executor:return_to_ai_reviewer_workflow:owner-update',
+        dispatch_owner: 'one-person-lab',
+        profile_name: 'dm-cvd',
+        domain_truth_owner: 'med-autoscience',
+        queue_owner: 'one-person-lab',
+        payload: {
+          profile: 'dm-cvd.workspace.toml',
+          study_id: '002-dm-china-us-mortality-attribution',
+          quest_id: '002-dm-china-us-mortality-attribution',
+          action_type: 'return_to_ai_reviewer_workflow',
+          work_unit_id: 'ai_reviewer_medical_prose_quality_review',
+          dispatch_authority: 'consumer_default_executor_dispatch',
+          next_executable_owner: 'ai_reviewer',
+          executor_kind: 'codex_cli_default',
+          dispatch_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
+          authority_boundary: 'mas_default_executor_dispatch_request_only',
+          source_fingerprint: 'truth-snapshot::1076da525000e7809211865d',
+        },
+      },
+    ],
+  }) + '\\n');
+  process.exit(0);
 }
-JSON
-  exit 0
-fi
-if [[ " $* " == *" domain-handler dispatch "* ]]; then
-  cat <<'JSON'
-{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receipt","receipt_ref":"receipt:dm002/ai-reviewer-owner"}
-JSON
-  exit 0
-fi
-echo "unexpected uv command: $*" >&2
-exit 64
-`,
-    { mode: 0o755 },
-  );
+if (joined.includes(' domain-handler dispatch ')) {
+  process.stdout.write(JSON.stringify({
+    accepted: true,
+    surface_kind: 'mas_family_domain_handler_dispatch_receipt',
+    receipt_ref: 'receipt:dm002/ai-reviewer-owner',
+  }) + '\\n');
+  process.exit(0);
+}
+process.stderr.write(\`unexpected uv command: \${args.join(' ')}\\n\`);
+process.exit(64);
+`);
   const env = familyRuntimeEnv(path.join(homeRoot, 'opl-state'), {
     HOME: homeRoot,
     PATH: `${fixtureRoot}:${process.env.PATH ?? ''}`,

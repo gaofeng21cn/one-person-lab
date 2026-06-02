@@ -11,6 +11,9 @@ test('system ignores retired Hermes env outside family runtime provider selectio
       {
         HOME: homeRoot,
         OPL_HERMES_BIN: path.join(homeRoot, 'retired-hermes-bin'),
+        OPL_FAMILY_RUNTIME_PROVIDER: '',
+        OPL_TEMPORAL_ADDRESS: '',
+        TEMPORAL_ADDRESS: '',
       },
     );
 
@@ -57,6 +60,9 @@ exit 1
       {
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,
+        OPL_FAMILY_RUNTIME_PROVIDER: '',
+        OPL_TEMPORAL_ADDRESS: '',
+        TEMPORAL_ADDRESS: '',
         PATH: `${compatibleCodexFixture.fixtureRoot}:${outdatedCodexFixture.fixtureRoot}:/usr/bin:/bin`,
       },
     ) as {

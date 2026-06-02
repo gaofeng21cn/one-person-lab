@@ -7,6 +7,23 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
   };
 }
 
+function jsString(value: string) {
+  return JSON.stringify(value);
+}
+
+function writeNodeScript(scriptPath: string, source: string) {
+  fs.writeFileSync(
+    scriptPath,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      `exec ${shellSingleQuote(process.execPath)} -e ${shellSingleQuote(source)} "$@"`,
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+}
+
 test('family-runtime requeues dead-lettered MAS repair exports when nested work-unit fingerprint changes under same owner', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-deadletter-nested-source-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-deadletter-nested-source-'));
@@ -14,62 +31,54 @@ test('family-runtime requeues dead-lettered MAS repair exports when nested work-
   const dispatchPath = path.join(fixtureRoot, 'dispatch');
   const dispatchCountPath = path.join(fixtureRoot, 'dispatch.count');
   const dispatchedTaskPath = path.join(fixtureRoot, 'dispatched-task.json');
-  fs.writeFileSync(
-    exportPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-fingerprint="$(cat ${shellSingleQuote(path.join(fixtureRoot, 'fingerprint'))})"
-context_version="$(cat ${shellSingleQuote(path.join(fixtureRoot, 'context-version'))})"
-cat <<JSON
-{
-  "surface_kind": "mas_family_domain_handler_export",
-  "pending_family_tasks": [
+  writeNodeScript(exportPath, `
+const fs = require('node:fs');
+const fingerprint = fs.readFileSync(${jsString(path.join(fixtureRoot, 'fingerprint'))}, 'utf8').trim();
+const contextVersion = fs.readFileSync(${jsString(path.join(fixtureRoot, 'context-version'))}, 'utf8').trim();
+process.stdout.write(JSON.stringify({
+  surface_kind: 'mas_family_domain_handler_export',
+  pending_family_tasks: [
     {
-      "domain_id": "medautoscience",
-      "task_kind": "paper_autonomy/repair-recheck",
-      "priority": 60,
-      "source": "mas-runtime-owner-route",
-      "dedupe_key": "mas:dm002:repair-recheck:nested-source-fingerprint",
-      "dispatch_owner": "med-autoscience",
-      "owner_route_ref": "owner-route:mas/DM002/nested-source-fingerprint",
-      "payload": {
-        "profile": "dm-cvd.workspace.toml",
-        "study_id": "002-dm-china-us-mortality-attribution",
-        "repair_work_unit": {
-          "work_unit_id": "unit_harmonized_validation_uncertainty_and_grouped_calibration",
-          "source_fingerprint": "$fingerprint",
-          "context_refs": ["context:$context_version"]
-        }
-      }
-    }
-  ]
+      domain_id: 'medautoscience',
+      task_kind: 'paper_autonomy/repair-recheck',
+      priority: 60,
+      source: 'mas-runtime-owner-route',
+      dedupe_key: 'mas:dm002:repair-recheck:nested-source-fingerprint',
+      dispatch_owner: 'med-autoscience',
+      owner_route_ref: 'owner-route:mas/DM002/nested-source-fingerprint',
+      payload: {
+        profile: 'dm-cvd.workspace.toml',
+        study_id: '002-dm-china-us-mortality-attribution',
+        repair_work_unit: {
+          work_unit_id: 'unit_harmonized_validation_uncertainty_and_grouped_calibration',
+          source_fingerprint: fingerprint,
+          context_refs: [\`context:\${contextVersion}\`],
+        },
+      },
+    },
+  ],
+}, null, 2) + '\\n');
+`);
+  writeNodeScript(dispatchPath, `
+const fs = require('node:fs');
+const taskPath = process.argv[1];
+fs.copyFileSync(taskPath, ${jsString(dispatchedTaskPath)});
+let count = 0;
+if (fs.existsSync(${jsString(dispatchCountPath)})) {
+  count = Number(fs.readFileSync(${jsString(dispatchCountPath)}, 'utf8').trim() || '0');
 }
-JSON
-`,
-    { mode: 0o755 },
-  );
-  fs.writeFileSync(
-    dispatchPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-task_path="$1"
-cp "$task_path" ${shellSingleQuote(dispatchedTaskPath)}
-count=0
-if [ -f ${shellSingleQuote(dispatchCountPath)} ]; then
-  count="$(cat ${shellSingleQuote(dispatchCountPath)})"
-fi
-count=$((count + 1))
-printf '%s\\n' "$count" > ${shellSingleQuote(dispatchCountPath)}
-if [ "$count" -le 3 ]; then
-  echo "repair work-unit owner receipt missing" >&2
-  exit 42
-fi
-cat <<'JSON'
-{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receipt","receipt_ref":"receipt:dm002/nested-repair-redrive"}
-JSON
-`,
-    { mode: 0o755 },
-  );
+count += 1;
+fs.writeFileSync(${jsString(dispatchCountPath)}, String(count) + '\\n');
+if (count <= 3) {
+  process.stderr.write('repair work-unit owner receipt missing\\n');
+  process.exit(42);
+}
+process.stdout.write(JSON.stringify({
+  accepted: true,
+  surface_kind: 'mas_family_domain_handler_dispatch_receipt',
+  receipt_ref: 'receipt:dm002/nested-repair-redrive',
+}) + '\\n');
+`);
   const env = familyRuntimeEnv(stateRoot, {
     OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
     OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatchPath,

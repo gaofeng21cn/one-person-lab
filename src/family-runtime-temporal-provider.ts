@@ -53,6 +53,7 @@ import {
   type TemporalClientOptions,
   type TemporalWorkerPaths,
   withTemporalClient,
+  withTemporalRpcDeadline,
 } from './family-runtime-temporal-client.ts';
 import {
   currentWorkerSourceVersion,
@@ -96,6 +97,8 @@ export {
   removeTemporalSchedulerCadence,
   triggerTemporalSchedulerCadence,
 } from './family-runtime-temporal-provider-parts/scheduler-cadence.ts';
+export { resolveTemporalWorkerForegroundPaths, resolveTemporalWorkerForegroundPathsFromArgv } from './family-runtime-temporal-provider-parts/foreground-paths.ts';
+import { resolveTemporalWorkerForegroundPathsFromArgv } from './family-runtime-temporal-provider-parts/foreground-paths.ts';
 
 type TemporalLifecycleInspectionDetail = 'fast' | 'full';
 
@@ -247,7 +250,7 @@ export async function startTemporalStageAttemptWorkflow(
       ...workflowInput,
       visibility_search_attributes_upsert_enabled: visibilityReadiness.readiness_status === 'ready',
     };
-    const handle = await client.workflow.start('StageAttemptWorkflow', {
+    const handle = await withTemporalRpcDeadline(client, () => client.workflow.start('StageAttemptWorkflow', {
       args: [launchInput],
       taskQueue: resolveTemporalTaskQueue(),
       workflowId: attempt.workflow_id,
@@ -264,7 +267,7 @@ export async function startTemporalStageAttemptWorkflow(
       ...temporalTestServerAllowsUnindexedVisibility()
         ? {}
         : { searchAttributes: buildTemporalStageAttemptSearchAttributes(launchInput) },
-    });
+    }), options);
     return {
       surface_kind: 'temporal_stage_attempt_start_receipt',
       provider_kind: 'temporal',
@@ -301,9 +304,9 @@ export async function signalTemporalStageAttemptWorkflow(input: {
       source: input.source ?? 'opl-cli',
       received_at: new Date().toISOString(),
     };
-    const updateReceipt = await handle.executeUpdate(stageAttemptOperatorUpdate, {
+    const updateReceipt = await withTemporalRpcDeadline(client, () => handle.executeUpdate(stageAttemptOperatorUpdate, {
       args: [signal],
-    });
+    }), { paths: input.paths });
     return {
       surface_kind: 'temporal_stage_attempt_operator_update_receipt',
       provider_kind: 'temporal',
@@ -340,7 +343,7 @@ export async function cancelTemporalStageAttemptWorkflow(input: {
   }
   return withTemporalClient(async (client) => {
     const handle = client.workflow.getHandle(input.attempt.workflow_id);
-    await handle.cancel();
+    await withTemporalRpcDeadline(client, () => handle.cancel(), { paths: input.paths });
     return {
       surface_kind: 'temporal_stage_attempt_cancel_receipt',
       provider_kind: 'temporal',
@@ -468,9 +471,10 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
   const suffix = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
   const completedWorkflowId = `wf-temporal-production-complete-${suffix}`;
   const blockedWorkflowId = `wf-temporal-production-blocked-${suffix}`;
+  const temporalClientOptions = { addressOverride: address };
   try {
     return await withTemporalClient(async (client) => {
-    const completedHandle = await client.workflow.start('StageAttemptWorkflow', {
+    const completedHandle = await withTemporalRpcDeadline(client, () => client.workflow.start('StageAttemptWorkflow', {
       args: [
         {
           ...temporalProductionProbeInput('complete', temporalProductionTypedCloseoutPacket()),
@@ -481,32 +485,40 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
       workflowId: completedWorkflowId,
       workflowIdConflictPolicy: WorkflowIdConflictPolicy.FAIL,
       workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
-    });
-    await completedHandle.executeUpdate(stageAttemptOperatorUpdate, { args: [{
+    }), temporalClientOptions);
+    await withTemporalRpcDeadline(client, () => completedHandle.executeUpdate(stageAttemptOperatorUpdate, { args: [{
       signal_kind: 'human_gate',
       payload: {
         human_gate_ref: 'gate:temporal-production-residency-proof',
         reason: 'operator_review',
       },
       source: 'temporal-production-residency-proof',
-    }] });
-    await completedHandle.executeUpdate(stageAttemptOperatorUpdate, { args: [{
+    }] }), temporalClientOptions);
+    await withTemporalRpcDeadline(client, () => completedHandle.executeUpdate(stageAttemptOperatorUpdate, { args: [{
       signal_kind: 'user_instruction',
       payload: {
         instruction_ref: 'user:production-residency-revision-request',
       },
       source: 'temporal-production-residency-proof',
-    }] });
-    await completedHandle.executeUpdate(stageAttemptOperatorUpdate, { args: [{
+    }] }), temporalClientOptions);
+    await withTemporalRpcDeadline(client, () => completedHandle.executeUpdate(stageAttemptOperatorUpdate, { args: [{
       signal_kind: 'resume',
       payload: {
         resume_ref: 'resume:temporal-production-residency-proof',
         reason: 'proof_resume',
       },
       source: 'temporal-production-residency-proof',
-    }] });
-    const queriedWhileResident = await completedHandle.query<TemporalStageAttemptWorkflowState>(stageAttemptQuery);
-    const completedState = await completedHandle.result();
+    }] }), temporalClientOptions);
+    const queriedWhileResident = await withTemporalRpcDeadline(
+      client,
+      () => completedHandle.query<TemporalStageAttemptWorkflowState>(stageAttemptQuery),
+      temporalClientOptions,
+    );
+    const completedState = await withTemporalRpcDeadline(
+      client,
+      () => completedHandle.result(),
+      temporalClientOptions,
+    );
 
     const restartedHandle = client.workflow.getHandle(
       completedWorkflowId,
@@ -525,10 +537,18 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
       requery = {
         requery_status: 'stage_attempt_query_available_after_worker_restart',
         query_available: true,
-        query: await restartedHandle.query<TemporalStageAttemptWorkflowState>(stageAttemptQuery),
+        query: await withTemporalRpcDeadline(
+          client,
+          () => restartedHandle.query<TemporalStageAttemptWorkflowState>(stageAttemptQuery),
+          temporalClientOptions,
+        ),
       };
     } catch (error) {
-      const description = await restartedHandle.describe();
+      const description = await withTemporalRpcDeadline(
+        client,
+        () => restartedHandle.describe(),
+        temporalClientOptions,
+      );
       requery = {
         requery_status: 'stage_attempt_query_unavailable_after_worker_restart',
         query_available: false,
@@ -538,7 +558,7 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
       };
     }
 
-    const blockedHandle = await client.workflow.start('StageAttemptWorkflow', {
+    const blockedHandle = await withTemporalRpcDeadline(client, () => client.workflow.start('StageAttemptWorkflow', {
       args: [
         {
           ...temporalProductionProbeInput('blocked', null),
@@ -549,8 +569,12 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
       workflowId: blockedWorkflowId,
       workflowIdConflictPolicy: WorkflowIdConflictPolicy.FAIL,
       workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
-    });
-    const blockedState = await blockedHandle.result();
+    }), temporalClientOptions);
+    const blockedState = await withTemporalRpcDeadline(
+      client,
+      () => blockedHandle.result(),
+      temporalClientOptions,
+    );
     const requeryState = requery.query_available && requery.query ? requery.query : null;
     const checks = {
       external_temporal_server_reachable: true,
@@ -645,7 +669,7 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
         provider_completion_is_domain_ready: false,
       },
     };
-    }, { addressOverride: address });
+    }, temporalClientOptions);
   } catch (error) {
     const blockerIds = ['temporal_worker_transport_probe_failed'];
     return {
@@ -964,15 +988,6 @@ export async function buildTemporalStageAttemptReplayGateForTest(history: unknow
     workflowsPath: workflowModulePath(),
     sourceModuleUrl: import.meta.url,
   });
-}
-
-export function resolveTemporalWorkerForegroundPaths(): TemporalWorkerPaths { return familyRuntimePaths(); }
-export function resolveTemporalWorkerForegroundPathsFromArgv(argv = process.argv): TemporalWorkerPaths {
-  const rootIndex = argv.indexOf('--family-runtime-root');
-  const root = rootIndex >= 0 ? argv[rootIndex + 1] : null;
-  return root && root.trim().length > 0
-    ? { root: path.resolve(root) }
-    : familyRuntimePaths();
 }
 
 if (process.argv[2] === '--temporal-worker-foreground') {

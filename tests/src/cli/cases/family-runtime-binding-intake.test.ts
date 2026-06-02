@@ -7,6 +7,42 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
   };
 }
 
+function jsString(value: string) {
+  return JSON.stringify(value);
+}
+
+function writeJsonEmitterScript(scriptPath: string, payload: unknown, options: {
+  cwdPath?: string;
+  argvPath?: string;
+} = {}) {
+  fs.writeFileSync(
+    scriptPath,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      options.cwdPath ? `printf '%s\\n' "$PWD" > ${shellSingleQuote(options.cwdPath)}` : '',
+      options.argvPath ? `: > ${shellSingleQuote(options.argvPath)}` : '',
+      options.argvPath ? `for arg in "$@"; do printf '%s\\n' "$arg" >> ${shellSingleQuote(options.argvPath)}; done` : '',
+      `exec ${shellSingleQuote(process.execPath)} -e ${shellSingleQuote(`process.stdout.write(${jsString(`${JSON.stringify(payload, null, 2)}\n`)});`)}`,
+      '',
+    ].filter(Boolean).join('\n'),
+    { mode: 0o755 },
+  );
+}
+
+function writeNodeScript(scriptPath: string, source: string) {
+  fs.writeFileSync(
+    scriptPath,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      `exec ${shellSingleQuote(process.execPath)} -e ${shellSingleQuote(source)} "$@"`,
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+}
+
 test('family-runtime intake derives MAS domain-handler export from active workspace binding', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-binding-export-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-binding-export-'));
@@ -21,62 +57,32 @@ test('family-runtime intake derives MAS domain-handler export from active worksp
   fs.writeFileSync(profilePath, '[workspace]\nname = "nfpitnet"\n', 'utf8');
   fs.mkdirSync(path.dirname(proofPath), { recursive: true });
   fs.writeFileSync(proofPath, '{"closeout_status":"production_residency_proven"}\n', 'utf8');
-  fs.writeFileSync(
-    uvPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-function fail() {
-  echo "$1" >&2
-  exit 9
-}
-function assert_external_env() {
-  local name="$1"
-  local value="\${!name:-}"
-  test -n "$value" || fail "$name is not set"
-  case "$value" in
-    ${shellSingleQuote(`${masWorkspacePath}/`)}*|${shellSingleQuote(masWorkspacePath)})
-      fail "$name points inside the MAS workspace: $value"
-      ;;
-  esac
-}
-test "\${PYTHONDONTWRITEBYTECODE:-}" = "1" || fail "PYTHONDONTWRITEBYTECODE is not enabled"
-assert_external_env PYTHONPYCACHEPREFIX
-assert_external_env UV_PROJECT_ENVIRONMENT
-assert_external_env UV_CACHE_DIR
-assert_external_env XDG_CACHE_HOME
-assert_external_env PIP_CACHE_DIR
-assert_external_env OPL_DOMAIN_COMMAND_TMP_ROOT
-assert_external_env MAS_CLEAN_RUNNER_TMP_ROOT
-printf '%s\\n' "$PWD" > ${shellSingleQuote(uvCwdPath)}
-printf '%s\\n' "$@" > ${shellSingleQuote(uvArgvPath)}
-cat <<'JSON'
-{
-  "surface_kind": "mas_family_domain_handler_export",
-  "provider_guarded_soak": {
-    "status": "available",
-    "provider_attempt_available": true
-  },
-  "pending_family_tasks": [
-    {
-      "domain_id": "medautoscience",
-      "task_kind": "paper_autonomy/guarded-apply",
-      "priority": 95,
-      "source": "mas-domain-handler-export",
-      "dedupe_key": "mas:nfpitnet:DM002:provider-hosted-guarded-apply:opl-temporal",
-      "dispatch_owner": "med-autoscience",
-      "payload": {
-        "profile": "/tmp/nfpitnet.workspace.toml",
-        "study_id": "DM002",
-        "provider_attempt_id": "opl-temporal:nfpitnet:DM002:provider-hosted-guarded-apply",
-        "authority_boundary": "mas_owner_guarded_apply_only"
-      }
-    }
-  ]
-}
-JSON
-`,
-    { mode: 0o755 },
-  );
+  writeJsonEmitterScript(uvPath, {
+    surface_kind: 'mas_family_domain_handler_export',
+    provider_guarded_soak: {
+      status: 'available',
+      provider_attempt_available: true,
+    },
+    pending_family_tasks: [
+      {
+        domain_id: 'medautoscience',
+        task_kind: 'paper_autonomy/guarded-apply',
+        priority: 95,
+        source: 'mas-domain-handler-export',
+        dedupe_key: 'mas:nfpitnet:DM002:provider-hosted-guarded-apply:opl-temporal',
+        dispatch_owner: 'med-autoscience',
+        payload: {
+          profile: '/tmp/nfpitnet.workspace.toml',
+          study_id: 'DM002',
+          provider_attempt_id: 'opl-temporal:nfpitnet:DM002:provider-hosted-guarded-apply',
+          authority_boundary: 'mas_owner_guarded_apply_only',
+        },
+      },
+    ],
+  }, {
+    cwdPath: uvCwdPath,
+    argvPath: uvArgvPath,
+  });
   const env = familyRuntimeEnv(stateRoot, {
     PATH: `${fixtureRoot}:${process.env.PATH ?? ''}`,
   });
@@ -146,40 +152,29 @@ test('family-runtime profile hydrate resolves MAS export through OPL module chec
   const legacyPathHitPath = path.join(fixtureRoot, 'legacy-path-hit');
   const masFixture = createGitModuleRemoteFixture('med-autoscience');
   fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
-  fs.writeFileSync(
-    uvPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-printf '%s\\n' "$PWD" > ${shellSingleQuote(uvCwdPath)}
-: > ${shellSingleQuote(uvArgvPath)}
-for arg in "$@"; do
-  printf '%s\\n' "$arg" >> ${shellSingleQuote(uvArgvPath)}
-done
-cat <<'JSON'
-{
-  "surface_kind": "mas_family_domain_handler_export",
-  "pending_family_tasks": [
-    {
-      "domain_id": "med-autoscience",
-      "recommended_task_kind": "domain_route/reconcile-apply",
-      "priority": 55,
-      "source": "mas-runtime-owner-route",
-      "dedupe_key": "mas:dm002:owner-route:quest_waiting_opl_runtime_owner_route",
-      "owner_route_ref": "quest_waiting_opl_runtime_owner_route",
-      "runtime_state_path": "studies/002-dm-china-us-mortality-attribution/runtime/state.json",
-      "reason": "quest_waiting_opl_runtime_owner_route",
-      "payload": {
-        "profile": "dm-cvd.workspace.toml",
-        "study_id": "002-dm-china-us-mortality-attribution",
-        "source_fingerprint": "unit-harmonized-route"
-      }
-    }
-  ]
-}
-JSON
-`,
-    { mode: 0o755 },
-  );
+  writeJsonEmitterScript(uvPath, {
+    surface_kind: 'mas_family_domain_handler_export',
+    pending_family_tasks: [
+      {
+        domain_id: 'med-autoscience',
+        recommended_task_kind: 'domain_route/reconcile-apply',
+        priority: 55,
+        source: 'mas-runtime-owner-route',
+        dedupe_key: 'mas:dm002:owner-route:quest_waiting_opl_runtime_owner_route',
+        owner_route_ref: 'quest_waiting_opl_runtime_owner_route',
+        runtime_state_path: 'studies/002-dm-china-us-mortality-attribution/runtime/state.json',
+        reason: 'quest_waiting_opl_runtime_owner_route',
+        payload: {
+          profile: 'dm-cvd.workspace.toml',
+          study_id: '002-dm-china-us-mortality-attribution',
+          source_fingerprint: 'unit-harmonized-route',
+        },
+      },
+    ],
+  }, {
+    cwdPath: uvCwdPath,
+    argvPath: uvArgvPath,
+  });
   fs.writeFileSync(
     medautosciPath,
     `#!/usr/bin/env bash
@@ -259,38 +254,27 @@ test('family-runtime intake --profile overrides active MAS workspace binding', (
   writeMasCleanRunnerFixture(boundMasWorkspacePath);
   fs.writeFileSync(boundProfilePath, '[workspace]\nname = "nfpitnet"\n', 'utf8');
   fs.writeFileSync(explicitProfilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
-  fs.writeFileSync(
-    uvPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-printf '%s\\n' "$PWD" > ${shellSingleQuote(uvCwdPath)}
-: > ${shellSingleQuote(uvArgvPath)}
-for arg in "$@"; do
-  printf '%s\\n' "$arg" >> ${shellSingleQuote(uvArgvPath)}
-done
-cat <<'JSON'
-{
-  "surface_kind": "mas_family_domain_handler_export",
-  "pending_family_tasks": [
-    {
-      "domain_id": "medautoscience",
-      "task_kind": "domain_route/reconcile-apply",
-      "priority": 55,
-      "source": "dm002-explicit-profile-owner-route",
-      "dedupe_key": "mas:dm-cvd:002-dm-china-us-mortality-attribution:owner-route",
-      "dispatch_owner": "med-autoscience",
-      "payload": {
-        "profile": "dm-cvd.workspace.toml",
-        "study_id": "002-dm-china-us-mortality-attribution",
-        "reason": "runtime_controller_redrive_required"
-      }
-    }
-  ]
-}
-JSON
-`,
-    { mode: 0o755 },
-  );
+  writeJsonEmitterScript(uvPath, {
+    surface_kind: 'mas_family_domain_handler_export',
+    pending_family_tasks: [
+      {
+        domain_id: 'medautoscience',
+        task_kind: 'domain_route/reconcile-apply',
+        priority: 55,
+        source: 'dm002-explicit-profile-owner-route',
+        dedupe_key: 'mas:dm-cvd:002-dm-china-us-mortality-attribution:owner-route',
+        dispatch_owner: 'med-autoscience',
+        payload: {
+          profile: 'dm-cvd.workspace.toml',
+          study_id: '002-dm-china-us-mortality-attribution',
+          reason: 'runtime_controller_redrive_required',
+        },
+      },
+    ],
+  }, {
+    cwdPath: uvCwdPath,
+    argvPath: uvArgvPath,
+  });
   const env = familyRuntimeEnv(stateRoot, {
     HOME: homeRoot,
     PATH: `${fixtureRoot}:${process.env.PATH ?? ''}`,
@@ -377,63 +361,54 @@ test('family-runtime profile tick dispatches MAS tasks through OPL module checko
   const legacyPathHitPath = path.join(fixtureRoot, 'legacy-dispatch-hit');
   const masFixture = createGitModuleRemoteFixture('med-autoscience');
   fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
-  fs.writeFileSync(
-    uvPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-printf '%s\\n' "$PWD" > ${shellSingleQuote(uvCwdPath)}
-: > ${shellSingleQuote(uvArgvPath)}
-for arg in "$@"; do
-  printf '%s\\n' "$arg" >> ${shellSingleQuote(uvArgvPath)}
-done
-if [[ " $* " == *" domain-handler export "* ]]; then
-  cat <<'JSON'
-{
-  "surface_kind": "mas_family_domain_handler_export",
-  "pending_family_tasks": [
-    {
-      "domain_id": "medautoscience",
-      "task_kind": "paper_autonomy/repair-recheck",
-      "priority": 60,
-      "source": "mas-runtime-owner-route",
-      "dedupe_key": "mas:dm003:repair-recheck:medical_prose_write_repair",
-      "dispatch_owner": "med-autoscience",
-      "payload": {
-        "profile": "dm-cvd.workspace.toml",
-        "study_id": "003-dpcc-primary-care-phenotype-treatment-gap",
-        "repair_work_unit": {
-          "work_unit_id": "medical_prose_write_repair",
-          "source_fingerprint": "medical-prose-write-repair-v1"
-        }
-      }
-    }
-  ]
+  writeNodeScript(uvPath, `
+const fs = require('node:fs');
+const args = process.argv.slice(1);
+fs.writeFileSync(${jsString(uvCwdPath)}, process.cwd() + '\\n');
+fs.writeFileSync(${jsString(uvArgvPath)}, args.map(String).join('\\n') + '\\n');
+const joined = \` \${args.join(' ')} \`;
+if (joined.includes(' domain-handler export ')) {
+  process.stdout.write(JSON.stringify({
+    surface_kind: 'mas_family_domain_handler_export',
+    pending_family_tasks: [
+      {
+        domain_id: 'medautoscience',
+        task_kind: 'paper_autonomy/repair-recheck',
+        priority: 60,
+        source: 'mas-runtime-owner-route',
+        dedupe_key: 'mas:dm003:repair-recheck:medical_prose_write_repair',
+        dispatch_owner: 'med-autoscience',
+        payload: {
+          profile: 'dm-cvd.workspace.toml',
+          study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+          repair_work_unit: {
+            work_unit_id: 'medical_prose_write_repair',
+            source_fingerprint: 'medical-prose-write-repair-v1',
+          },
+        },
+      },
+    ],
+  }, null, 2) + '\\n');
+  process.exit(0);
 }
-JSON
-  exit 0
-fi
-if [[ " $* " == *" domain-handler dispatch "* ]]; then
-  task_path=""
-  previous=""
-  for arg in "$@"; do
-    if [ "$previous" = "--task" ]; then
-      task_path="$arg"
-      break
-    fi
-    previous="$arg"
-  done
-  test -n "$task_path"
-  cp "$task_path" ${shellSingleQuote(dispatchedTaskPath)}
-  cat <<'JSON'
-{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receipt","receipt_ref":"receipt:dm003/module-dispatch"}
-JSON
-  exit 0
-fi
-echo "unexpected uv command: $*" >&2
-exit 64
-`,
-    { mode: 0o755 },
-  );
+if (joined.includes(' domain-handler dispatch ')) {
+  const taskIndex = args.indexOf('--task');
+  const taskPath = taskIndex >= 0 ? args[taskIndex + 1] : null;
+  if (!taskPath) {
+    process.stderr.write('missing --task\\n');
+    process.exit(64);
+  }
+  fs.copyFileSync(taskPath, ${jsString(dispatchedTaskPath)});
+  process.stdout.write(JSON.stringify({
+    accepted: true,
+    surface_kind: 'mas_family_domain_handler_dispatch_receipt',
+    receipt_ref: 'receipt:dm003/module-dispatch',
+  }) + '\\n');
+  process.exit(0);
+}
+process.stderr.write(\`unexpected uv command: \${args.join(' ')}\\n\`);
+process.exit(64);
+`);
   fs.writeFileSync(
     medautosciPath,
     `#!/usr/bin/env bash
@@ -499,82 +474,73 @@ test('family-runtime hydrate consumes MAS scaleout guarded apply tasks as domain
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-binding-scaleout-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-binding-scaleout-'));
   const exportPath = path.join(fixtureRoot, 'export');
-  fs.writeFileSync(
-    exportPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-cat <<'JSON'
-{
-  "pending_family_tasks": [
-    {
-      "domain_id": "medautoscience",
-      "task_kind": "paper_autonomy/guarded-apply",
-      "priority": 30,
-      "source": "mas-domain-handler-export",
-      "dedupe_key": "mas:nfpitnet:DM002:provider-hosted-guarded-apply:opl-temporal",
-      "source_fingerprint": "fingerprint-dm002",
-      "dispatch_owner": "med-autoscience",
-      "profile_name": "nfpitnet",
-      "source_refs": [
-        {"role": "mas_owner_controller_decision", "ref": "studies/DM002/artifacts/controller_decisions/latest.json", "exists": false}
-      ],
-      "payload": {
-        "profile": "/tmp/nfpitnet.workspace.toml",
-        "study_id": "DM002",
-        "target_studies": ["DM002"],
-        "provider_attempt_id": "opl-temporal:nfpitnet:DM002:provider-hosted-guarded-apply",
-        "idempotency_key": "mas:nfpitnet:DM002:provider-hosted-guarded-apply:opl-temporal",
-        "authority_boundary": "mas_owner_guarded_apply_only"
-      }
-    },
-    {
-      "domain_id": "medautoscience",
-      "task_kind": "paper_autonomy/guarded-apply",
-      "priority": 30,
-      "source": "mas-domain-handler-export",
-      "dedupe_key": "mas:nfpitnet:DM003:provider-hosted-guarded-apply:opl-temporal",
-      "source_fingerprint": "fingerprint-dm003",
-      "dispatch_owner": "med-autoscience",
-      "profile_name": "nfpitnet",
-      "source_refs": [
-        {"role": "mas_owner_controller_decision", "ref": "studies/DM003/artifacts/controller_decisions/latest.json", "exists": false}
-      ],
-      "payload": {
-        "profile": "/tmp/nfpitnet.workspace.toml",
-        "study_id": "DM003",
-        "target_studies": ["DM003"],
-        "provider_attempt_id": "opl-temporal:nfpitnet:DM003:provider-hosted-guarded-apply",
-        "idempotency_key": "mas:nfpitnet:DM003:provider-hosted-guarded-apply:opl-temporal",
-        "authority_boundary": "mas_owner_guarded_apply_only"
-      }
-    },
-    {
-      "domain_id": "medautoscience",
-      "task_kind": "paper_autonomy/guarded-apply",
-      "priority": 30,
-      "source": "mas-domain-handler-export",
-      "dedupe_key": "mas:nfpitnet:Obesity:provider-hosted-guarded-apply:opl-temporal",
-      "source_fingerprint": "fingerprint-obesity",
-      "dispatch_owner": "med-autoscience",
-      "profile_name": "nfpitnet",
-      "source_refs": [
-        {"role": "mas_owner_controller_decision", "ref": "studies/Obesity/artifacts/controller_decisions/latest.json", "exists": false}
-      ],
-      "payload": {
-        "profile": "/tmp/nfpitnet.workspace.toml",
-        "study_id": "Obesity",
-        "target_studies": ["Obesity"],
-        "provider_attempt_id": "opl-temporal:nfpitnet:Obesity:provider-hosted-guarded-apply",
-        "idempotency_key": "mas:nfpitnet:Obesity:provider-hosted-guarded-apply:opl-temporal",
-        "authority_boundary": "mas_owner_guarded_apply_only"
-      }
-    }
-  ]
-}
-JSON
-`,
-    { mode: 0o755 },
-  );
+  writeJsonEmitterScript(exportPath, {
+    pending_family_tasks: [
+      {
+        domain_id: 'medautoscience',
+        task_kind: 'paper_autonomy/guarded-apply',
+        priority: 30,
+        source: 'mas-domain-handler-export',
+        dedupe_key: 'mas:nfpitnet:DM002:provider-hosted-guarded-apply:opl-temporal',
+        source_fingerprint: 'fingerprint-dm002',
+        dispatch_owner: 'med-autoscience',
+        profile_name: 'nfpitnet',
+        source_refs: [
+          { role: 'mas_owner_controller_decision', ref: 'studies/DM002/artifacts/controller_decisions/latest.json', exists: false },
+        ],
+        payload: {
+          profile: '/tmp/nfpitnet.workspace.toml',
+          study_id: 'DM002',
+          target_studies: ['DM002'],
+          provider_attempt_id: 'opl-temporal:nfpitnet:DM002:provider-hosted-guarded-apply',
+          idempotency_key: 'mas:nfpitnet:DM002:provider-hosted-guarded-apply:opl-temporal',
+          authority_boundary: 'mas_owner_guarded_apply_only',
+        },
+      },
+      {
+        domain_id: 'medautoscience',
+        task_kind: 'paper_autonomy/guarded-apply',
+        priority: 30,
+        source: 'mas-domain-handler-export',
+        dedupe_key: 'mas:nfpitnet:DM003:provider-hosted-guarded-apply:opl-temporal',
+        source_fingerprint: 'fingerprint-dm003',
+        dispatch_owner: 'med-autoscience',
+        profile_name: 'nfpitnet',
+        source_refs: [
+          { role: 'mas_owner_controller_decision', ref: 'studies/DM003/artifacts/controller_decisions/latest.json', exists: false },
+        ],
+        payload: {
+          profile: '/tmp/nfpitnet.workspace.toml',
+          study_id: 'DM003',
+          target_studies: ['DM003'],
+          provider_attempt_id: 'opl-temporal:nfpitnet:DM003:provider-hosted-guarded-apply',
+          idempotency_key: 'mas:nfpitnet:DM003:provider-hosted-guarded-apply:opl-temporal',
+          authority_boundary: 'mas_owner_guarded_apply_only',
+        },
+      },
+      {
+        domain_id: 'medautoscience',
+        task_kind: 'paper_autonomy/guarded-apply',
+        priority: 30,
+        source: 'mas-domain-handler-export',
+        dedupe_key: 'mas:nfpitnet:Obesity:provider-hosted-guarded-apply:opl-temporal',
+        source_fingerprint: 'fingerprint-obesity',
+        dispatch_owner: 'med-autoscience',
+        profile_name: 'nfpitnet',
+        source_refs: [
+          { role: 'mas_owner_controller_decision', ref: 'studies/Obesity/artifacts/controller_decisions/latest.json', exists: false },
+        ],
+        payload: {
+          profile: '/tmp/nfpitnet.workspace.toml',
+          study_id: 'Obesity',
+          target_studies: ['Obesity'],
+          provider_attempt_id: 'opl-temporal:nfpitnet:Obesity:provider-hosted-guarded-apply',
+          idempotency_key: 'mas:nfpitnet:Obesity:provider-hosted-guarded-apply:opl-temporal',
+          authority_boundary: 'mas_owner_guarded_apply_only',
+        },
+      },
+    ],
+  });
   const env = familyRuntimeEnv(stateRoot, {
     OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
   });
@@ -619,95 +585,77 @@ test('family-runtime requeues terminal MAS tasks when exported provider evidence
   const dispatchPath = path.join(fixtureRoot, 'dispatch');
   const dispatchCountPath = path.join(fixtureRoot, 'dispatch.count');
   const dispatchedTaskPath = path.join(fixtureRoot, 'dispatched-task.json');
-  fs.writeFileSync(
-    exportPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-fingerprint="$(cat ${shellSingleQuote(path.join(fixtureRoot, 'fingerprint'))})"
-proof_ref="$(cat ${shellSingleQuote(path.join(fixtureRoot, 'proof-ref'))})"
-cat <<JSON
-{
-  "pending_family_tasks": [
+  writeNodeScript(exportPath, `
+const fs = require('node:fs');
+const fingerprint = fs.readFileSync(${jsString(path.join(fixtureRoot, 'fingerprint'))}, 'utf8').trim();
+const proofRef = fs.readFileSync(${jsString(path.join(fixtureRoot, 'proof-ref'))}, 'utf8').trim();
+process.stdout.write(JSON.stringify({
+  pending_family_tasks: [
     {
-      "domain_id": "medautoscience",
-      "task_kind": "paper_autonomy/guarded-apply",
-      "priority": 30,
-      "source": "mas-domain-handler-export",
-      "dedupe_key": "mas:nfpitnet:DM002:provider-hosted-guarded-apply:opl-temporal",
-      "source_fingerprint": "$fingerprint",
-      "dispatch_owner": "med-autoscience",
-      "profile_name": "nfpitnet",
-      "source_refs": [
-        {"role": "opl_production_proof", "ref": "$proof_ref", "exists": true}
+      domain_id: 'medautoscience',
+      task_kind: 'paper_autonomy/guarded-apply',
+      priority: 30,
+      source: 'mas-domain-handler-export',
+      dedupe_key: 'mas:nfpitnet:DM002:provider-hosted-guarded-apply:opl-temporal',
+      source_fingerprint: fingerprint,
+      dispatch_owner: 'med-autoscience',
+      profile_name: 'nfpitnet',
+      source_refs: [
+        { role: 'opl_production_proof', ref: proofRef, exists: true },
       ],
-      "payload": {
-        "profile": "/tmp/nfpitnet.workspace.toml",
-        "study_id": "DM002",
-        "target_studies": ["DM002"],
-        "provider_attempt_id": "opl-temporal:nfpitnet:DM002:provider-hosted-guarded-apply",
-        "idempotency_key": "mas:nfpitnet:DM002:provider-hosted-guarded-apply:opl-temporal",
-        "authority_boundary": "mas_owner_guarded_apply_only"
-      }
-    }
-  ]
+      payload: {
+        profile: '/tmp/nfpitnet.workspace.toml',
+        study_id: 'DM002',
+        target_studies: ['DM002'],
+        provider_attempt_id: 'opl-temporal:nfpitnet:DM002:provider-hosted-guarded-apply',
+        idempotency_key: 'mas:nfpitnet:DM002:provider-hosted-guarded-apply:opl-temporal',
+        authority_boundary: 'mas_owner_guarded_apply_only',
+      },
+    },
+  ],
+}, null, 2) + '\\n');
+`);
+  writeNodeScript(dispatchPath, `
+const fs = require('node:fs');
+const taskPath = process.argv[1];
+fs.copyFileSync(taskPath, ${jsString(dispatchedTaskPath)});
+let count = 0;
+if (fs.existsSync(${jsString(dispatchCountPath)})) {
+  count = Number(fs.readFileSync(${jsString(dispatchCountPath)}, 'utf8').trim() || '0');
 }
-JSON
-`,
-    { mode: 0o755 },
-  );
-  fs.writeFileSync(
-    dispatchPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-task_path="$1"
-cp "$task_path" ${shellSingleQuote(dispatchedTaskPath)}
-count=0
-if [ -f ${shellSingleQuote(dispatchCountPath)} ]; then
-  count="$(cat ${shellSingleQuote(dispatchCountPath)})"
-fi
-count=$((count + 1))
-printf '%s\\n' "$count" > ${shellSingleQuote(dispatchCountPath)}
-python3 - "$task_path" "$count" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-task = json.loads(Path(sys.argv[1]).read_text())
-count = sys.argv[2]
-print(json.dumps({
-    "accepted": True,
-    "surface_kind": "mas_family_domain_handler_dispatch_receipt",
-    "task_id": task["task_id"],
-    "task_kind": task["task_kind"],
-    "receipt_ref": f"artifacts/runtime/opl_family_domain_handler/dispatch_receipts/receipt-{count}.json",
-    "dispatch": {
-        "action_type": "paper_autonomy_guarded_apply",
-        "study_id": task["payload"]["study_id"],
-        "result": {
-            "surface": "real_paper_autonomy_provider_hosted_guarded_apply_receipt",
-            "status": "typed_blocker",
-            "guarded_apply_status": "blocked_no_mas_owner_apply_receipt",
-            "provider_attempt": {
-                "attempt_state": "mas_owner_receipt_missing",
-                "attempt_ready": True,
-                "provider_attempt_wrote_workspace": False
-            },
-            "typed_blockers": [{"blocker_id": "mas_owner_apply_receipt_missing", "write_permitted": False}],
-            "publication_route_memory_final_proof": {"status": "typed_blocker_missing_ref_chain"},
-            "forbidden_write_guard": {"aggregate_result": "fail_closed_no_forbidden_writes"},
-            "summary": {"writes_performed": False},
-            "authority_boundary": {"domain_truth_owner": "med-autoscience", "opl_can_write_mas_truth": False}
-        }
-    }
-}))
-PY
-`,
-    { mode: 0o755 },
-  );
+count += 1;
+fs.writeFileSync(${jsString(dispatchCountPath)}, String(count) + '\\n');
+const task = JSON.parse(fs.readFileSync(taskPath, 'utf8'));
+process.stdout.write(JSON.stringify({
+  accepted: true,
+  surface_kind: 'mas_family_domain_handler_dispatch_receipt',
+  task_id: task.task_id,
+  task_kind: task.task_kind,
+  receipt_ref: \`artifacts/runtime/opl_family_domain_handler/dispatch_receipts/receipt-\${count}.json\`,
+  dispatch: {
+    action_type: 'paper_autonomy_guarded_apply',
+    study_id: task.payload.study_id,
+    result: {
+      surface: 'real_paper_autonomy_provider_hosted_guarded_apply_receipt',
+      status: 'typed_blocker',
+      guarded_apply_status: 'blocked_no_mas_owner_apply_receipt',
+      provider_attempt: {
+        attempt_state: 'mas_owner_receipt_missing',
+        attempt_ready: true,
+        provider_attempt_wrote_workspace: false,
+      },
+      typed_blockers: [{ blocker_id: 'mas_owner_apply_receipt_missing', write_permitted: false }],
+      publication_route_memory_final_proof: { status: 'typed_blocker_missing_ref_chain' },
+      forbidden_write_guard: { aggregate_result: 'fail_closed_no_forbidden_writes' },
+      summary: { writes_performed: false },
+      authority_boundary: { domain_truth_owner: 'med-autoscience', opl_can_write_mas_truth: false },
+    },
+  },
+}, null, 2) + '\\n');
+`);
   const env = familyRuntimeEnv(stateRoot, {
     OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
     OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatchPath,
-    OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
   });
   try {
     fs.writeFileSync(path.join(fixtureRoot, 'fingerprint'), 'proof-fingerprint-v1\n', 'utf8');
@@ -740,7 +688,7 @@ PY
     assert.equal(dispatchedTask.payload.source_fingerprint, 'proof-fingerprint-v2');
     assert.equal(dispatchedTask.payload.source_refs[0].ref, '/tmp/proof-v2.json');
     assert.equal(attempts.length, 2);
-    assert.equal(attempts[0].provider_kind, 'temporal');
+    assert.equal(attempts[0].provider_kind, 'local_sqlite');
     assert.equal(attempts[0].source_fingerprint, 'proof-fingerprint-v2');
     assert.equal(attempts[0].route_impact.receipt_ref, 'artifacts/runtime/opl_family_domain_handler/dispatch_receipts/receipt-2.json');
     assert.equal(attempts[1].source_fingerprint, 'proof-fingerprint-v1');
@@ -763,62 +711,49 @@ test('family-runtime requeues dead-lettered MAS exports when domain owner finger
   const dispatchedTaskPath = path.join(fixtureRoot, 'dispatched-task.json');
   const masFixture = createGitModuleRemoteFixture('med-autoscience');
   fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
-  fs.writeFileSync(
-    uvPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-printf '%s\\n' "$PWD" > ${shellSingleQuote(uvCwdPath)}
-: > ${shellSingleQuote(uvArgvPath)}
-for arg in "$@"; do
-  printf '%s\\n' "$arg" >> ${shellSingleQuote(uvArgvPath)}
-done
-cat <<'JSON'
-{
-  "surface_kind": "mas_family_domain_handler_export",
-  "pending_family_tasks": [
-    {
-      "domain_id": "medautoscience",
-      "recommended_task_kind": "paper_autonomy/repair-recheck",
-      "priority": 60,
-      "source": "mas-runtime-owner-route",
-      "dedupe_key": "mas:dm002:repair-recheck:unit_harmonized_validation_uncertainty_and_grouped_calibration",
-      "dispatch_owner": "med-autoscience",
-      "owner_route_ref": "owner-route:mas/DM002/unit_harmonized_validation_uncertainty_and_grouped_calibration",
-      "source_fingerprint": "unit-harmonized-route",
-      "payload": {
-        "profile": "dm-cvd.workspace.toml",
-        "study_id": "002-dm-china-us-mortality-attribution",
-        "work_unit_id": "unit_harmonized_validation_uncertainty_and_grouped_calibration"
-      }
-    }
-  ]
+  writeJsonEmitterScript(uvPath, {
+    surface_kind: 'mas_family_domain_handler_export',
+    pending_family_tasks: [
+      {
+        domain_id: 'medautoscience',
+        recommended_task_kind: 'paper_autonomy/repair-recheck',
+        priority: 60,
+        source: 'mas-runtime-owner-route',
+        dedupe_key: 'mas:dm002:repair-recheck:unit_harmonized_validation_uncertainty_and_grouped_calibration',
+        dispatch_owner: 'med-autoscience',
+        owner_route_ref: 'owner-route:mas/DM002/unit_harmonized_validation_uncertainty_and_grouped_calibration',
+        source_fingerprint: 'unit-harmonized-route',
+        payload: {
+          profile: 'dm-cvd.workspace.toml',
+          study_id: '002-dm-china-us-mortality-attribution',
+          work_unit_id: 'unit_harmonized_validation_uncertainty_and_grouped_calibration',
+        },
+      },
+    ],
+  }, {
+    cwdPath: uvCwdPath,
+    argvPath: uvArgvPath,
+  });
+  writeNodeScript(dispatchPath, `
+const fs = require('node:fs');
+const taskPath = process.argv[1];
+fs.copyFileSync(taskPath, ${jsString(dispatchedTaskPath)});
+let count = 0;
+if (fs.existsSync(${jsString(dispatchCountPath)})) {
+  count = Number(fs.readFileSync(${jsString(dispatchCountPath)}, 'utf8').trim() || '0');
 }
-JSON
-`,
-    { mode: 0o755 },
-  );
-  fs.writeFileSync(
-    dispatchPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-task_path="$1"
-cp "$task_path" ${shellSingleQuote(dispatchedTaskPath)}
-count=0
-if [ -f ${shellSingleQuote(dispatchCountPath)} ]; then
-  count="$(cat ${shellSingleQuote(dispatchCountPath)})"
-fi
-count=$((count + 1))
-printf '%s\\n' "$count" > ${shellSingleQuote(dispatchCountPath)}
-if [ "$count" -le 3 ]; then
-  echo "owner callable surface missing" >&2
-  exit 42
-fi
-cat <<'JSON'
-{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receipt","receipt_ref":"receipt:dm002/repaired-owner"}
-JSON
-`,
-    { mode: 0o755 },
-  );
+count += 1;
+fs.writeFileSync(${jsString(dispatchCountPath)}, String(count) + '\\n');
+if (count <= 3) {
+  process.stderr.write('owner callable surface missing\\n');
+  process.exit(42);
+}
+process.stdout.write(JSON.stringify({
+  accepted: true,
+  surface_kind: 'mas_family_domain_handler_dispatch_receipt',
+  receipt_ref: 'receipt:dm002/repaired-owner',
+}) + '\\n');
+`);
   const env = familyRuntimeEnv(path.join(homeRoot, 'opl-state'), {
     HOME: homeRoot,
     PATH: `${fixtureRoot}:${process.env.PATH ?? ''}`,

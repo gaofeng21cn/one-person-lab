@@ -347,6 +347,109 @@ test('runtime App drilldown skips current provider SLO proof and surfaces domain
   assert.equal(authorityBoundary.can_claim_production_ready, false);
 });
 
+test('runtime App drilldown keeps owner delta ahead of due provider maintenance routes', () => {
+  const providerSloDueRoute = {
+    ref: 'opl family-runtime residency proof --provider temporal --production',
+    action_id: 'provider-slo:temporal:production-proof',
+    action_kind: 'provider_slo_cadence_execution',
+    owner: 'opl',
+    route_target_kind: 'opl_cli',
+    execution_policy: 'opl_safe_action_shell',
+    execution_surface: 'opl runtime action execute',
+    submit_via: 'opl runtime action execute',
+    can_submit_to_safe_action_shell: true,
+    provider_kind: 'temporal',
+    provider_slo_dispatch_status: 'execution_due_or_repair_required',
+    opl_cli_args: ['residency', 'proof', '--provider', 'temporal', '--production'],
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  };
+  const schedulerInstallRoute = {
+    action_id: 'provider-scheduler:temporal:install',
+    action_kind: 'provider_scheduler_install',
+    owner: 'opl',
+    route_target_kind: 'opl_cli',
+    execution_surface: 'opl runtime action execute',
+    submit_via: 'opl runtime action execute',
+    can_submit_to_safe_action_shell: true,
+  };
+  const domainDispatchRecordRoute = {
+    action_id: 'domain_dispatch:medautoscience:attempt-2:record',
+    action_kind: 'domain_dispatch_evidence_receipt_record',
+    owner: 'opl',
+    route_target_kind: 'opl_cli',
+    execution_surface: 'opl runtime action execute',
+    submit_via: 'opl runtime action execute',
+    route_requires_domain_or_app_payload: true,
+    can_submit_to_safe_action_shell: true,
+    domain_id: 'medautoscience',
+    stage_id: 'domain_owner/default-executor-dispatch',
+    stage_attempt_id: 'attempt-2',
+    payload_owner: 'domain_repository_or_app_live_operator',
+    payload_template: {
+      domain_receipt_refs: [],
+      typed_blocker_refs: [],
+      owner_chain_refs: [],
+      no_regression_refs: [],
+      evidence_refs: [],
+    },
+    required_operator_payload_refs: [
+      'domain_receipt_refs',
+      'typed_blocker_refs',
+      'owner_chain_refs',
+      'no_regression_refs',
+      'evidence_refs',
+    ],
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  };
+  const drilldown = applyAppOperatorDrilldownDetail({
+    operator_action_routing_refs: {
+      refs: [
+        providerSloDueRoute,
+        schedulerInstallRoute,
+        domainDispatchRecordRoute,
+      ],
+    },
+    app_execution_bridge: {
+      safe_action_routes: [
+        providerSloDueRoute,
+        schedulerInstallRoute,
+        domainDispatchRecordRoute,
+      ],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  }, 'full');
+  const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
+  assert.ok(nextSafeAction);
+
+  assert.equal(nextSafeAction.action_id, 'domain_dispatch:medautoscience:attempt-2:record');
+  assert.equal(nextSafeAction.action_kind, 'domain_dispatch_evidence_receipt_record');
+  assert.equal(
+    drilldown.attention_first_payload.owner_delta_first.next_required_delta,
+    'domain_dispatch_owner_receipt_or_typed_blocker_payload_required',
+  );
+  assert.equal(
+    drilldown.operator_action_routing_refs.refs.some(
+      (ref: { action_id: string }) => ref.action_id === 'provider-slo:temporal:production-proof',
+    ),
+    true,
+  );
+  assert.equal(
+    drilldown.app_execution_bridge.safe_action_routes.some(
+      (ref: { action_id: string }) => ref.action_id === 'provider-scheduler:temporal:install',
+    ),
+    true,
+  );
+});
+
 test('runtime App drilldown does not select closed provider SLO routes as next action', () => {
   const route = (action: string, actionKind: string) => ({
     action_id: `provider-scheduler:temporal:${action}`,

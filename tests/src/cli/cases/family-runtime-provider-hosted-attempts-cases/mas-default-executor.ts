@@ -178,27 +178,15 @@ PY
     const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
     const attempt = task.family_runtime_task.stage_attempts[0];
 
-    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'blocked');
-    assert.equal(tick.family_runtime_tick.dispatches[0].reason, 'temporal_stage_attempt_start_failed');
-    assert.equal(task.family_runtime_task.task.status, 'blocked');
-    assert.equal(task.family_runtime_task.task.dead_letter_reason, 'temporal_stage_attempt_start_failed');
-    assert.equal(task.family_runtime_task.stage_attempts.length, 1);
-    assert.equal(attempt.provider_kind, 'temporal');
-    assert.equal(attempt.domain_id, 'medautoscience');
-    assert.equal(attempt.stage_id, 'domain_owner/default-executor-dispatch');
-    assert.equal(attempt.executor_kind, 'codex_cli');
-    assert.equal(attempt.workspace_locator.workspace_root, '/tmp/explicit-workspace-root');
-    assert.equal(attempt.workspace_locator.action_type, 'return_to_ai_reviewer_workflow');
-    assert.equal(attempt.workspace_locator.dispatch_authority, 'ai_reviewer_record_production_handoff');
-    assert.equal(attempt.workspace_locator.dispatch_ref, dispatchRef);
-    assert.equal(attempt.workspace_locator.next_executable_owner, 'ai_reviewer');
-    assert.equal(attempt.workspace_locator.domain_truth_owner, 'med-autoscience');
-    assert.equal(attempt.workspace_locator.opl_writes_domain_truth, false);
-    assert.equal(attempt.workspace_locator.opl_writes_publication_quality, false);
-    assert.equal(attempt.workspace_locator.opl_writes_artifact_gate, false);
-    assert.equal(attempt.workspace_locator.opl_writes_current_package, false);
-    assert.equal(attempt.workspace_locator.domain_source_fingerprint, 'truth-snapshot::085b4164f248a2f4c92bf66b');
-    assert.deepEqual(attempt.checkpoint_refs, [dispatchRef]);
+    assert.equal(tick.family_runtime_tick.provider_preflight.status, 'blocked_provider_not_ready');
+    assert.equal(tick.family_runtime_tick.selected_count, 0);
+    assert.equal(tick.family_runtime_tick.dispatches.length, 0);
+    assert.equal(tick.family_runtime_tick.provider_blocker.blocker_id, 'temporal_runtime_not_configured');
+    assert.equal(tick.family_runtime_tick.provider_runtime_after_slo.providers.temporal.ready, false);
+    assert.equal(task.family_runtime_task.task.status, 'queued');
+    assert.equal(task.family_runtime_task.task.dead_letter_reason, null);
+    assert.equal(task.family_runtime_task.stage_attempts.length, 0);
+    assert.equal(attempt, undefined);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });

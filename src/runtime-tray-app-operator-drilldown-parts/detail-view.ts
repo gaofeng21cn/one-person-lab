@@ -33,6 +33,7 @@ import {
 } from './selected-safe-action-candidates.ts';
 import { buildOwnerPayloadWorkorder } from './owner-payload-workorder.ts';
 import { buildOwnerDeltaFirstProjection } from './owner-delta-first.ts';
+import { ownerDeltaAvailable } from './owner-delta-availability.ts';
 import { splitOperatorAttentionCounts } from '../framework-readiness-attention-counts.ts';
 import {
   LAZY_LOAD_TARGETS,
@@ -878,15 +879,21 @@ function evidenceNextSteps(drilldown: JsonRecord) {
 }
 
 function buildAttentionFirstPayload(drilldown: JsonRecord) {
-  const actions = defaultSelectedSafeActionCandidates(
-    safeActionRoutes(drilldown),
-    drilldown,
-  ).sort(compareDefaultSelectedSafeActions);
-  const nextAction = actions[0] ?? null;
-  const selectedSafeAction = summarizeSelectedSafeAction(nextAction);
   const evidenceAfterContract = evidenceAfterContractAttention(drilldown);
   const evidenceNextStepsProjection = evidenceNextSteps(drilldown);
   const workstreamOperatingLoop = record(drilldown.workstream_operating_loop);
+  const actions = defaultSelectedSafeActionCandidates(
+    safeActionRoutes(drilldown),
+    drilldown,
+    {
+      ownerDeltaAvailable: ownerDeltaAvailable({
+        evidenceNextStepsProjection,
+        workstreamOperatingLoop,
+      }),
+    },
+  ).sort(compareDefaultSelectedSafeActions);
+  const nextAction = actions[0] ?? null;
+  const selectedSafeAction = summarizeSelectedSafeAction(nextAction);
   const ownerDeltaFirst = buildOwnerDeltaFirstProjection({
     nextSafeAction: selectedSafeAction,
     evidenceAfterContract,

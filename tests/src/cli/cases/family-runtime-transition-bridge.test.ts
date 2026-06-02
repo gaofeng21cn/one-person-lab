@@ -7,35 +7,47 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
   };
 }
 
+function jsString(value: string) {
+  return JSON.stringify(value);
+}
+
+function writeNodeScript(scriptPath: string, source: string) {
+  fs.writeFileSync(
+    scriptPath,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      `exec ${shellSingleQuote(process.execPath)} -e ${shellSingleQuote(source)} "$@"`,
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+}
+
 test('family-runtime bridges family transition results into provider-hosted stage attempts', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-transition-bridge-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-transition-dispatch-'));
   const dispatchPath = path.join(fixtureRoot, 'dispatch');
   const dispatchedTaskPath = path.join(fixtureRoot, 'dispatched-task.json');
-  fs.writeFileSync(
-    dispatchPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-cp "$1" ${shellSingleQuote(dispatchedTaskPath)}
-cat <<'JSON'
-{
-  "accepted": true,
-  "closeout_packet": {
-    "surface_kind": "stage_attempt_closeout_packet",
-    "closeout_refs": ["mag-transition-receipt:intake-handoff"],
-    "consumed_refs": ["mag-oracle-fixture:call_intake_ready_to_fundability_strategy"],
-    "next_owner": "med-autogrant",
-    "domain_ready_verdict": "domain_gate_pending",
-    "route_impact": {
-      "decision": "domain_transition_owner_receipt_required",
-      "transition_id": "call_intake_complete_to_fundability_strategy"
-    }
-  }
-}
-JSON
-`,
-    { mode: 0o755 },
-  );
+  writeNodeScript(dispatchPath, `
+const fs = require('node:fs');
+const taskPath = process.argv[1];
+fs.copyFileSync(taskPath, ${jsString(dispatchedTaskPath)});
+process.stdout.write(JSON.stringify({
+  accepted: true,
+  closeout_packet: {
+    surface_kind: 'stage_attempt_closeout_packet',
+    closeout_refs: ['mag-transition-receipt:intake-handoff'],
+    consumed_refs: ['mag-oracle-fixture:call_intake_ready_to_fundability_strategy'],
+    next_owner: 'med-autogrant',
+    domain_ready_verdict: 'domain_gate_pending',
+    route_impact: {
+      decision: 'domain_transition_owner_receipt_required',
+      transition_id: 'call_intake_complete_to_fundability_strategy',
+    },
+  },
+}) + '\\n');
+`);
 
   try {
     const enqueue = runCli([
@@ -86,12 +98,10 @@ JSON
       'mag-transition:call_intake_complete_to_fundability_strategy:ftr-intake-handoff',
     ], familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_MEDAUTOGRANT_DISPATCH: dispatchPath,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     }));
 
     const tick = runCli(['family-runtime', 'tick', '--source', 'transition-bridge'], familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_MEDAUTOGRANT_DISPATCH: dispatchPath,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     }));
     const task = runCli([
       'family-runtime',
@@ -99,14 +109,13 @@ JSON
       'inspect',
       enqueue.family_runtime_enqueue.task.task_id,
     ], familyRuntimeEnv(stateRoot, {
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     }));
     const dispatchedTask = JSON.parse(fs.readFileSync(dispatchedTaskPath, 'utf8'));
     const attempt = task.family_runtime_task.stage_attempts[0];
 
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
     assert.equal(attempt.stage_id, 'family_transition:call_intake_complete_to_fundability_strategy');
-    assert.equal(attempt.provider_kind, 'temporal');
+    assert.equal(attempt.provider_kind, 'local_sqlite');
     assert.equal(attempt.workspace_locator.family_transition.transition_id, 'call_intake_complete_to_fundability_strategy');
     assert.equal(attempt.workspace_locator.family_transition.receipt.spec_id, 'mag.grant_transition.oracle.v1');
     assert.equal(attempt.workspace_locator.transition_bridge.opl_executes_domain_action, false);
@@ -141,73 +150,66 @@ test('family-runtime hydrate derives transition bridge tasks from domain transit
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-transition-hydrate-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-transition-export-'));
   const exportPath = path.join(fixtureRoot, 'export');
-  fs.writeFileSync(
-    exportPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-cat <<'JSON'
-{
-  "surface_kind": "mag_family_domain_handler_export",
-  "family_transition_matrix_result": {
-    "surface_kind": "family_transition_matrix_result",
-    "status": "matrix_evaluated",
-    "spec_id": "mag.grant_transition.oracle.v1",
-    "summary": {
-      "total": 1,
-      "transition_applied": 1,
-      "blocked": 0,
-      "dead_letter_intended": 0
+  writeNodeScript(exportPath, `
+process.stdout.write(JSON.stringify({
+  surface_kind: 'mag_family_domain_handler_export',
+  family_transition_matrix_result: {
+    surface_kind: 'family_transition_matrix_result',
+    status: 'matrix_evaluated',
+    spec_id: 'mag.grant_transition.oracle.v1',
+    summary: {
+      total: 1,
+      transition_applied: 1,
+      blocked: 0,
+      dead_letter_intended: 0,
     },
-    "results": [
+    results: [
       {
-        "case_id": "oracle-fixture:intake-handoff",
-        "result": {
-          "surface_kind": "family_transition_result",
-          "status": "transition_applied",
-          "domain_id": "med-autogrant",
-          "current_state": "call_and_candidate_intake",
-          "event": "domain_tick",
-          "next_state": "fundability_strategy",
-          "transition_id": "call_intake_complete_to_fundability_strategy",
-          "next_work_unit": null,
-          "owner_route": {
-            "owner": "med-autogrant",
-            "route_ref": "mag-transition:call_intake_complete_to_fundability_strategy",
-            "action_refs": ["open_grant_user_loop"]
+        case_id: 'oracle-fixture:intake-handoff',
+        result: {
+          surface_kind: 'family_transition_result',
+          status: 'transition_applied',
+          domain_id: 'med-autogrant',
+          current_state: 'call_and_candidate_intake',
+          event: 'domain_tick',
+          next_state: 'fundability_strategy',
+          transition_id: 'call_intake_complete_to_fundability_strategy',
+          next_work_unit: null,
+          owner_route: {
+            owner: 'med-autogrant',
+            route_ref: 'mag-transition:call_intake_complete_to_fundability_strategy',
+            action_refs: ['open_grant_user_loop'],
           },
-          "human_gate": null,
-          "typed_blocker": null,
-          "dead_letter_intent": null,
-          "receipt": {
-            "surface_kind": "family_transition_receipt",
-            "receipt_id": "ftr-intake-handoff",
-            "spec_id": "mag.grant_transition.oracle.v1",
-            "receipt_refs": ["mag-transition-receipt:intake_handoff_receipt"],
-            "owner_receipt_refs": ["mag-owner-receipt:intake_handoff_receipt"]
+          human_gate: null,
+          typed_blocker: null,
+          dead_letter_intent: null,
+          receipt: {
+            surface_kind: 'family_transition_receipt',
+            receipt_id: 'ftr-intake-handoff',
+            spec_id: 'mag.grant_transition.oracle.v1',
+            receipt_refs: ['mag-transition-receipt:intake_handoff_receipt'],
+            owner_receipt_refs: ['mag-owner-receipt:intake_handoff_receipt'],
           },
-          "projection": {
-            "spec_id": "mag.grant_transition.oracle.v1",
-            "route_node_refs": ["mag-stage:call_and_candidate_intake", "mag-stage:fundability_strategy"],
-            "action_refs": ["open_grant_user_loop"],
-            "no_regression_evidence_ref": "mag-no-regression:intake_handoff"
+          projection: {
+            spec_id: 'mag.grant_transition.oracle.v1',
+            route_node_refs: ['mag-stage:call_and_candidate_intake', 'mag-stage:fundability_strategy'],
+            action_refs: ['open_grant_user_loop'],
+            no_regression_evidence_ref: 'mag-no-regression:intake_handoff',
           },
-          "authority_boundary": {
-            "opl_can_write_grant_truth": false,
-            "fundability_verdict_owner": "med-autogrant"
-          }
-        }
-      }
+          authority_boundary: {
+            opl_can_write_grant_truth: false,
+            fundability_verdict_owner: 'med-autogrant',
+          },
+        },
+      },
     ],
-    "authority_boundary": {
-      "opl": "transition_runner_transport_projection_only",
-      "domain": "truth_quality_artifact_gate_owner"
-    }
-  }
-}
-JSON
-`,
-    { mode: 0o755 },
-  );
+    authority_boundary: {
+      opl: 'transition_runner_transport_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
+  },
+}) + '\\n');
+`);
   try {
     const intake = runCli(['family-runtime', 'intake', '--domain', 'medautogrant'], familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_MEDAUTOGRANT_EXPORT: exportPath,
@@ -238,10 +240,8 @@ JSON
 
     const tick = runCli(['family-runtime', 'tick', '--source', 'transition-bridge'], familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_MEDAUTOGRANT_EXPORT: exportPath,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     }));
     const inspected = runCli(['family-runtime', 'queue', 'inspect', task.task_id], familyRuntimeEnv(stateRoot, {
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     }));
     const attempt = inspected.family_runtime_task.stage_attempts[0];
 
@@ -268,47 +268,40 @@ test('family-runtime hydrate blocks transition matrix results with unknown domai
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-transition-domain-block-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-transition-domain-export-'));
   const exportPath = path.join(fixtureRoot, 'export');
-  fs.writeFileSync(
-    exportPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-cat <<'JSON'
-{
-  "family_transition_matrix_result": {
-    "surface_kind": "family_transition_matrix_result",
-    "status": "matrix_evaluated",
-    "spec_id": "external.transition.v1",
-    "summary": {
-      "total": 1,
-      "transition_applied": 1,
-      "blocked": 0,
-      "dead_letter_intended": 0
+  writeNodeScript(exportPath, `
+process.stdout.write(JSON.stringify({
+  family_transition_matrix_result: {
+    surface_kind: 'family_transition_matrix_result',
+    status: 'matrix_evaluated',
+    spec_id: 'external.transition.v1',
+    summary: {
+      total: 1,
+      transition_applied: 1,
+      blocked: 0,
+      dead_letter_intended: 0,
     },
-    "results": [
+    results: [
       {
-        "case_id": "external-case",
-        "result": {
-          "surface_kind": "family_transition_result",
-          "status": "transition_applied",
-          "domain_id": "unknown-domain",
-          "current_state": "draft",
-          "event": "domain_tick",
-          "next_state": "ready",
-          "transition_id": "external_transition",
-          "owner_route": {"owner": "unknown-domain"},
-          "receipt": {"surface_kind": "family_transition_receipt"},
-          "projection": {},
-          "authority_boundary": {}
-        }
-      }
+        case_id: 'external-case',
+        result: {
+          surface_kind: 'family_transition_result',
+          status: 'transition_applied',
+          domain_id: 'unknown-domain',
+          current_state: 'draft',
+          event: 'domain_tick',
+          next_state: 'ready',
+          transition_id: 'external_transition',
+          owner_route: { owner: 'unknown-domain' },
+          receipt: { surface_kind: 'family_transition_receipt' },
+          projection: {},
+          authority_boundary: {},
+        },
+      },
     ],
-    "authority_boundary": {}
-  }
-}
-JSON
-`,
-    { mode: 0o755 },
-  );
+    authority_boundary: {},
+  },
+}) + '\\n');
+`);
   try {
     const intake = runCli(['family-runtime', 'intake', '--domain', 'medautogrant'], familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_MEDAUTOGRANT_EXPORT: exportPath,

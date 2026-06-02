@@ -17,6 +17,17 @@ ${body}
   return { fixtureRoot, dispatchPath };
 }
 
+function createJsonExportFixture(payload: Record<string, unknown>) {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-export-'));
+  const exportPath = path.join(fixtureRoot, 'export.mjs');
+  fs.writeFileSync(
+    exportPath,
+    `process.stdout.write(${JSON.stringify(`${JSON.stringify(payload)}\n`)});\n`,
+    { mode: 0o755 },
+  );
+  return { fixtureRoot, exportPath: `${process.execPath} ${exportPath}` };
+}
+
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
     OPL_STATE_DIR: stateRoot,
@@ -110,50 +121,39 @@ JSON
 
 test('family-runtime hydration preserves domain dispatch evidence record payloads', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-hydrate-evidence-payload-'));
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-export-evidence-payload-'));
-  const exportPath = path.join(fixtureRoot, 'export');
-  fs.writeFileSync(
-    exportPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-cat <<'JSON'
-{
-  "pending_family_tasks": [
-    {
-      "domain_id": "medautoscience",
-      "task_kind": "domain_owner/default-executor-dispatch",
-      "dedupe_key": "mas:test:DM002:default-executor:source-1",
-      "source_fingerprint": "source-1",
-      "domain_dispatch_evidence_record_payload": {
-        "surface_kind": "mas_domain_dispatch_evidence_record_payload",
-        "record_payload": {
-          "domain_id": "medautoscience",
-          "task_kind": "domain_owner/default-executor-dispatch",
-          "study_id": "DM002",
-          "domain_source_fingerprint": "source-1",
-          "typed_blocker_refs": ["mas-typed-blocker:DM002"],
-          "no_regression_refs": ["mas-no-forbidden-write:DM002"],
-          "evidence_refs": ["dispatch.json"]
-        }
+  const exportFixture = createJsonExportFixture({
+    pending_family_tasks: [
+      {
+        domain_id: 'medautoscience',
+        task_kind: 'domain_owner/default-executor-dispatch',
+        dedupe_key: 'mas:test:DM002:default-executor:source-1',
+        source_fingerprint: 'source-1',
+        domain_dispatch_evidence_record_payload: {
+          surface_kind: 'mas_domain_dispatch_evidence_record_payload',
+          record_payload: {
+            domain_id: 'medautoscience',
+            task_kind: 'domain_owner/default-executor-dispatch',
+            study_id: 'DM002',
+            domain_source_fingerprint: 'source-1',
+            typed_blocker_refs: ['mas-typed-blocker:DM002'],
+            no_regression_refs: ['mas-no-forbidden-write:DM002'],
+            evidence_refs: ['dispatch.json'],
+          },
+        },
+        payload: {
+          profile: '/tmp/profile.toml',
+          study_id: 'DM002',
+          dispatch_ref: 'dispatch.json',
+          next_executable_owner: 'write',
+          executor_kind: 'codex_cli_default',
+          source_fingerprint: 'truth-snapshot:DM002',
+        },
       },
-      "payload": {
-        "profile": "/tmp/profile.toml",
-        "study_id": "DM002",
-        "dispatch_ref": "dispatch.json",
-        "next_executable_owner": "write",
-        "executor_kind": "codex_cli_default",
-        "source_fingerprint": "truth-snapshot:DM002"
-      }
-    }
-  ]
-}
-JSON
-`,
-    { mode: 0o755 },
-  );
+    ],
+  });
   try {
     const intake = runCli(['family-runtime', 'intake', '--domain', 'medautoscience'], familyRuntimeEnv(stateRoot, {
-      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportFixture.exportPath,
     }));
     const queue = runCli(['family-runtime', 'queue', 'list'], familyRuntimeEnv(stateRoot));
     const task = queue.family_runtime_queue.tasks[0];
@@ -166,7 +166,7 @@ JSON
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(exportFixture.fixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -585,10 +585,50 @@ PY
       'mas:test:DM003:held-redrive',
     ], env);
     const taskId = enqueued.family_runtime_enqueue.task.task_id;
-    runCli(['family-runtime', 'tick', '--source', 'test-start-failure'], env);
-    const blockedTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const attempt = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'domain_owner/default-executor-dispatch',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas","study_id":"DM003","action_type":"run_quality_repair_batch","dispatch_ref":"dispatch:dm003"}',
+      '--source-fingerprint',
+      'dm003-held-redrive-source',
+      '--executor-kind',
+      'codex_cli',
+      '--task',
+      taskId,
+    ], env).family_runtime_stage_attempt.attempt;
+    const queueDb = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+    try {
+      const now = new Date().toISOString();
+      queueDb.prepare(`
+        UPDATE tasks
+        SET status = 'blocked',
+          last_error = 'temporal_stage_attempt_start_failed',
+          dead_letter_reason = 'temporal_stage_attempt_start_failed',
+          updated_at = ?
+        WHERE task_id = ?
+      `).run(now, taskId);
+      queueDb.prepare(`
+        UPDATE stage_attempts
+        SET status = 'blocked',
+          blocked_reason = 'temporal_stage_attempt_start_failed',
+          provider_run_json = json_set(provider_run_json, '$.provider_status', 'blocked'),
+          updated_at = ?
+        WHERE stage_attempt_id = ?
+      `).run(now, attempt.stage_attempt_id);
+    } finally {
+      queueDb.close();
+    }
 
-    runCli([
+    const blockedTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const hold = runCli([
       'family-runtime',
       'queue',
       'hold',
@@ -614,6 +654,8 @@ PY
 
     assert.equal(blockedTask.family_runtime_task.task.status, 'blocked');
     assert.equal(blockedTask.family_runtime_task.stage_attempts.length, 1);
+    assert.equal(hold.family_runtime_queue_hold.active_hold.status, 'active');
+    assert.equal(hold.family_runtime_queue_hold.held_count, 0);
     assert.equal(redrive.family_runtime_redrive.redriven, true);
     assert.equal(redrive.family_runtime_redrive.provider_redrive_started, false);
     assert.equal(redrive.family_runtime_redrive.held_by_active_hold, true);
