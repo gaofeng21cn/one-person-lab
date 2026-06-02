@@ -135,6 +135,139 @@ PY
   }
 });
 
+test('family-runtime queue list treats repeated study selectors as same-path OR with other selectors as AND', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-study-scope-or-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot);
+    for (const task of [
+      { studyId: 'DM001', workUnit: 'primary' },
+      { studyId: 'DM002', workUnit: 'primary' },
+      { studyId: 'DM003', workUnit: 'primary' },
+      { studyId: 'DM003', workUnit: 'secondary' },
+    ]) {
+      runCli([
+        'family-runtime',
+        'enqueue',
+        '--domain',
+        'medautoscience',
+        '--task-kind',
+        'domain_route/reconcile-apply',
+        '--dedupe-key',
+        `mas:test:${task.studyId}:${task.workUnit}:resume`,
+        '--payload',
+        JSON.stringify({
+          profile: '/tmp/profile.toml',
+          study_id: task.studyId,
+          work_unit: task.workUnit,
+        }),
+      ], env);
+    }
+
+    const studyOrQueue = runCli([
+      'family-runtime',
+      'queue',
+      'list',
+      '--domain',
+      'medautoscience',
+      '--study',
+      'DM002',
+      '--study',
+      'DM003',
+    ], env);
+    const studyOrWithAndQueue = runCli([
+      'family-runtime',
+      'queue',
+      'list',
+      '--domain',
+      'medautoscience',
+      '--study',
+      'DM002',
+      '--study',
+      'DM003',
+      '--payload-match',
+      'work_unit=secondary',
+    ], env);
+
+    assert.deepEqual(
+      studyOrQueue.family_runtime_queue.tasks
+        .map((task: { payload: { study_id: string; work_unit: string } }) =>
+          `${task.payload.study_id}:${task.payload.work_unit}`
+        )
+        .sort(),
+      ['DM002:primary', 'DM003:primary', 'DM003:secondary'],
+    );
+    assert.equal(studyOrQueue.family_runtime_queue.queue.total, 3);
+    assert.deepEqual(
+      studyOrWithAndQueue.family_runtime_queue.tasks.map((task: { payload: { study_id: string; work_unit: string } }) =>
+        `${task.payload.study_id}:${task.payload.work_unit}`
+      ),
+      ['DM003:secondary'],
+    );
+    assert.equal(studyOrWithAndQueue.family_runtime_queue.queue.total, 1);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime tick hydrates and dispatches repeated study selectors as same-path OR', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-study-scope-or-tick-'));
+  const exportFixture = createJsonExportFixture({
+    pending_family_tasks: ['DM001', 'DM002', 'DM003', 'DM004'].map((studyId) => ({
+      domain_id: 'medautoscience',
+      task_kind: 'domain_route/reconcile-apply',
+      dedupe_key: `mas:test:${studyId}:resume`,
+      payload: { profile: '/tmp/profile.toml', study_id: studyId },
+    })),
+  });
+  const dispatch = createDispatchFixture(`
+python3 - "$TASK_PATH" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+task = json.loads(Path(sys.argv[1]).read_text())
+print(json.dumps({
+    "accepted": True,
+    "surface_kind": "test_dispatch",
+    "study_id": task["payload"].get("study_id")
+}))
+PY
+`);
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportFixture.exportPath,
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
+    });
+    const tick = runCli([
+      'family-runtime',
+      'tick',
+      '--hydrate',
+      '--domain',
+      'medautoscience',
+      '--study',
+      'DM002',
+      '--study',
+      'DM003',
+      '--source',
+      'test',
+    ], env);
+
+    assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 2);
+    assert.equal(tick.family_runtime_tick.hydration.filtered_count, 2);
+    assert.equal(tick.family_runtime_tick.selected_count, 2);
+    assert.deepEqual(
+      tick.family_runtime_tick.dispatches
+        .map((dispatchResult: { output: { study_id: string } }) => dispatchResult.output.study_id)
+        .sort(),
+      ['DM002', 'DM003'],
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(exportFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime intake can scope hydration by top-level task kind', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-task-kind-scope-'));
   const exportFixture = createJsonExportFixture({

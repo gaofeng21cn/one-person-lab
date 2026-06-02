@@ -14,12 +14,22 @@ function payloadValueAtPath(value: Record<string, unknown>, path: string) {
   }, value);
 }
 
+function payloadMatchValuesByPath(taskScope?: FamilyRuntimeTaskScope) {
+  const valuesByPath = new Map<string, Set<string>>();
+  for (const match of taskScope?.payloadMatches ?? []) {
+    const values = valuesByPath.get(match.path) ?? new Set<string>();
+    values.add(match.value);
+    valuesByPath.set(match.path, values);
+  }
+  return valuesByPath;
+}
+
 export function payloadMatchesTaskScope(
   payload: Record<string, unknown>,
   taskScope?: FamilyRuntimeTaskScope,
 ) {
-  return (taskScope?.payloadMatches ?? []).every((match) =>
-    String(payloadValueAtPath(payload, match.path) ?? '') === match.value
+  return [...payloadMatchValuesByPath(taskScope)].every(([path, values]) =>
+    values.has(String(payloadValueAtPath(payload, path) ?? ''))
   );
 }
 
