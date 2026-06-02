@@ -14,9 +14,14 @@ import { runFamilyRuntimeQueueTick } from '../../../../../src/family-runtime-tic
 import {
   createFamilyRuntimeQueueTables,
   familyRuntimePaths,
+  listEvents,
   type FamilyRuntimeTaskRow,
 } from '../../../../../src/family-runtime-store.ts';
 import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
+import {
+  ingestStageAttemptCloseout,
+  listStageAttemptsForTask,
+} from '../../../../../src/family-runtime-stage-attempts.ts';
 
 type TickDispatch = { task_id: string; status?: string };
 type QueueTickWithMasDefaultExecutorRedrive = Awaited<
@@ -314,6 +319,109 @@ test('scheduler tick syncs missing Temporal workflows through the safe read mode
       assert.equal(attempts[1].status, 'running');
       assert.equal(attempts[1].blocked_reason, null);
       assert.equal(JSON.parse(attempts[1].provider_run_json).provider_status, 'running');
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime tick does not re-admit a MAS default executor task after accepted completed closeout', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      insertDefaultExecutorTask(db);
+      const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-expired-admission-missing-workflow',
+      ) as FamilyRuntimeTaskRow;
+      const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
+      const completedAttempt = ensureProviderHostedStageAttempt(db, row, payload);
+      assert.ok(completedAttempt);
+      ingestStageAttemptCloseout(db, {
+        stageAttemptId: completedAttempt.stage_attempt_id,
+        packet: {
+          surface_kind: 'stage_attempt_closeout_packet',
+          closeout_refs: ['closeout:completed-default-executor'],
+          consumed_refs: ['dispatch:completed-default-executor'],
+          consumed_memory_refs: [],
+          writeback_receipt_refs: ['receipt:completed-default-executor'],
+          rejected_writes: [],
+          next_owner: 'publication_gate',
+          domain_ready_verdict: 'read_from_mas_publication_or_gate_surface',
+          route_impact: {
+            decision: 'domain_owner_refs_ready',
+          },
+        },
+      });
+      db.prepare(`
+        UPDATE tasks
+        SET status = 'queued', attempts = 0, lease_owner = NULL, lease_expires_at = NULL,
+          last_error = NULL, dead_letter_reason = NULL
+        WHERE task_id = ?
+      `).run('task-mas-default-expired-admission-missing-workflow');
+
+      let dispatchCount = 0;
+      const tick = await runFamilyRuntimeQueueTick<TickDispatch>(db, familyRuntimePaths(), {
+        source: 'test-completed-closeout-requeue',
+        limit: 2,
+        hydrate: false,
+        taskScope: {
+          domainId: 'medautoscience',
+          taskKind: 'domain_owner/default-executor-dispatch',
+          payloadMatches: [{
+            path: 'study_id',
+            value: '002-dm-china-us-mortality-attribution',
+          }],
+        },
+      }, {
+        enqueueTask: () => ({ accepted: false }),
+        queryTemporalStageAttempt: async () => {
+          throw new Error('completed accepted closeout should be reconciled before Temporal query');
+        },
+        dispatchTask: (_db, _paths, selectedRow: FamilyRuntimeTaskRow) => {
+          dispatchCount += 1;
+          return { task_id: selectedRow.task_id };
+        },
+      });
+      const task = db.prepare(`
+        SELECT status, attempts, last_error, dead_letter_reason, lease_owner, lease_expires_at
+        FROM tasks
+        WHERE task_id = ?
+      `).get('task-mas-default-expired-admission-missing-workflow') as {
+        status: string;
+        attempts: number;
+        last_error: string | null;
+        dead_letter_reason: string | null;
+        lease_owner: string | null;
+        lease_expires_at: string | null;
+      };
+      const attempts = listStageAttemptsForTask(db, 'task-mas-default-expired-admission-missing-workflow');
+      const reconcileEvents = listEvents(db).filter((event) =>
+        event.event_type === 'task_default_executor_completed_closeout_reconciled'
+      );
+
+      assert.equal(tick.selected_count, 0);
+      assert.equal(tick.mas_default_executor_completed_closeout_reconciled_count, 1);
+      assert.equal(dispatchCount, 0);
+      assert.equal(task.status, 'succeeded');
+      assert.equal(task.attempts, 0);
+      assert.equal(task.last_error, null);
+      assert.equal(task.dead_letter_reason, null);
+      assert.equal(task.lease_owner, null);
+      assert.equal(task.lease_expires_at, null);
+      assert.equal(attempts.length, 1);
+      assert.equal(attempts[0].status, 'completed');
+      assert.equal(attempts[0].closeout_receipt_status, 'accepted_typed_closeout');
+      assert.deepEqual(attempts[0].closeout_refs, ['closeout:completed-default-executor']);
+      assert.equal(reconcileEvents.length, 1);
+      assert.equal(
+        reconcileEvents[0].payload.reason,
+        'same_task_completed_typed_closeout_exists',
+      );
+      assert.equal(
+        reconcileEvents[0].payload.authority_boundary.provider_stage_attempt_started,
+        false,
+      );
     });
   } finally {
     db.close();

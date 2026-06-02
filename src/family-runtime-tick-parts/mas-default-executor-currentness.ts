@@ -5,6 +5,7 @@ import {
   type FamilyRuntimeTaskRow,
 } from '../family-runtime-store.ts';
 import {
+  listStageAttemptsForTask,
   updateStageAttemptsForTask,
 } from '../family-runtime-stage-attempts.ts';
 import {
@@ -201,6 +202,81 @@ export function dropSupersededMasDefaultExecutorRows(
     return true;
   });
   return { rows, supersededCount };
+}
+
+function completedAcceptedAttemptForTask(db: DatabaseSync, row: FamilyRuntimeTaskRow) {
+  return listStageAttemptsForTask(db, row.task_id).find((attempt) => (
+    attempt.executor_kind === 'codex_cli'
+    && attempt.status === 'completed'
+    && attempt.closeout_receipt_status === 'accepted_typed_closeout'
+  )) ?? null;
+}
+
+function reconcileCompletedCloseoutMasDefaultExecutorRow(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+  source: string,
+) {
+  const attempt = completedAcceptedAttemptForTask(db, row);
+  if (!attempt) {
+    return false;
+  }
+  const reconciledAt = new Date().toISOString();
+  const result = db.prepare(`
+    UPDATE tasks
+    SET status = 'succeeded', lease_owner = NULL, lease_expires_at = NULL,
+      last_error = NULL, dead_letter_reason = NULL, updated_at = ?
+    WHERE task_id = ? AND status IN ('queued', 'retry_waiting')
+  `).run(reconciledAt, row.task_id);
+  if (result.changes === 0) {
+    return false;
+  }
+  insertEvent(db, {
+    taskId: row.task_id,
+    domainId: row.domain_id,
+    eventType: 'task_default_executor_completed_closeout_reconciled',
+    source,
+    payload: {
+      reason: 'same_task_completed_typed_closeout_exists',
+      stage_attempt_id: attempt.stage_attempt_id,
+      closeout_refs: attempt.closeout_refs,
+      dispatch_ref: payload.dispatch_ref ?? null,
+      action_type: payload.action_type ?? null,
+      study_id: payload.study_id ?? null,
+      source_fingerprint: masDefaultExecutorDomainSourceFingerprint(payload),
+      authority_boundary: {
+        opl: 'queue_attempt_ledger_currentness_reconciliation_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        domain_truth_mutation: false,
+        publication_quality_mutation: false,
+        artifact_gate_mutation: false,
+        current_package_mutation: false,
+        provider_stage_attempt_started: false,
+      },
+    },
+  });
+  return true;
+}
+
+export function dropCompletedMasDefaultExecutorRows(
+  db: DatabaseSync,
+  candidateRows: FamilyRuntimeTaskRow[],
+  source: string,
+) {
+  let completedCloseoutReconciledCount = 0;
+  const rows = candidateRows.filter((row) => {
+    const payload = payloadFromTask(row);
+    if (!isMasDefaultExecutorDispatchTask(row, payload)) {
+      return true;
+    }
+    if (!reconcileCompletedCloseoutMasDefaultExecutorRow(db, row, payload, source)) {
+      return true;
+    }
+    completedCloseoutReconciledCount += 1;
+    return false;
+  });
+  return { rows, completedCloseoutReconciledCount };
 }
 
 export function dropSameStudyMasDefaultExecutorRows(

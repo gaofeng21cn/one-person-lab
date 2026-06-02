@@ -106,6 +106,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/family-runtime.test.ts',
   'tests/src/cli/cases/family-runtime-provider-liveness.test.ts',
   'tests/src/cli/cases/family-runtime-queue-guards.test.ts',
+  'tests/src/cli/cases/family-runtime-queue-stranded-release.test.ts',
   'tests/src/cli/cases/family-runtime-task-scope.test.ts',
   'tests/src/cli/cases/family-runtime-evidence-worklist.test.ts',
   'tests/src/cli/cases/family-runtime-evidence-worklist-provider-scheduler.test.ts',

@@ -7,6 +7,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-06-02
 
+### 决策：completed typed closeout 是 default-executor admission 的终端屏障
+
+原因：MAS closeout redrive 可能把同一 `domain_owner/default-executor-dispatch` task 重新置回 queued / retry-waiting。若该 task 名下已经存在 `completed + accepted_typed_closeout` 的 stage attempt，OPL 再启动同一 dispatch 会把 Progress-First 时间消耗在重复 receipt、read-model reconcile 或重复 provider attempt 上，而不是推进新的 owner delta。
+
+影响：
+
+- `family-runtime queue tick` 在 stale-source、same-study single-flight、live-attempt 和 anti-spin 判断前，必须先把同一 task 下已有 accepted typed closeout 的 MAS default-executor row 收敛为 `succeeded`。
+- 收敛事件为 `task_default_executor_completed_closeout_reconciled`，并记录 `stage_attempt_id`、`closeout_refs`、`dispatch_ref`、`action_type`、`study_id` 与 `provider_stage_attempt_started=false`。
+- tick 返回 `mas_default_executor_completed_closeout_reconciled_count`，让 operator 区分“终端 closeout 已吸收重复 queued residue”和“仍有真实 ready owner action”。
+- 该行为只治理 OPL queue / attempt ledger currentness，不写 MAS truth、不生成 owner receipt、不创建 typed blocker、不声明 domain ready、publication ready、artifact ready 或 package/current manuscript 已刷新。
+
 ### 决策：App state 的 MAS activity 不能把 active_run_id 单独算作实际运行
 
 原因：DM002/DM003 Progress-first 监督暴露出 `active_run_id`、queued/escalated 状态或质量修复队列本身不足以证明论文线正在产生实质进展。Operator 读面如果把这些信号直接归入 active projects，会再次掩盖 provider/worker liveness、owner delta admission 或 typed blocker 的真实状态。

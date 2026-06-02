@@ -37,6 +37,7 @@ import {
 import {
   currentMasDefaultExecutorTasksByDispatch,
   currentMasDefaultExecutorTasksByStudyAction,
+  dropCompletedMasDefaultExecutorRows,
   dropSameStudyMasDefaultExecutorRows,
   dropSupersededMasDefaultExecutorRows,
   MAS_DEFAULT_EXECUTOR_SUPERSEDED_REASON,
@@ -775,11 +776,19 @@ async function selectDispatchCandidates(
     && !excludeTaskIds.has(row.task_id)
   );
   const {
+    rows: scopedRowsAfterCompletedCloseout,
+    completedCloseoutReconciledCount: masDefaultExecutorCompletedCloseoutReconciledCount,
+  } = dropCompletedMasDefaultExecutorRows(
+    db,
+    scopedRowsBeforeSupersededFilter,
+    'opl-family-runtime-tick',
+  );
+  const {
     rows: scopedRowsAfterSuperseded,
     supersededCount: masDefaultExecutorSupersededCount,
   } = dropSupersededMasDefaultExecutorRows(
     db,
-    scopedRowsBeforeSupersededFilter,
+    scopedRowsAfterCompletedCloseout,
     allRows,
     'opl-family-runtime-tick',
   );
@@ -809,6 +818,7 @@ async function selectDispatchCandidates(
     masDefaultExecutorStudySingleFlightSkippedCount,
     masDefaultExecutorLiveSkippedCount,
     masDefaultExecutorLiveTerminalSyncedCount,
+    masDefaultExecutorCompletedCloseoutReconciledCount,
     progressFirstAntiSpinBlockedCount,
   };
 }
@@ -844,6 +854,8 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     masDefaultExecutorStudySingleFlightSkippedCount: selection.masDefaultExecutorStudySingleFlightSkippedCount,
     masDefaultExecutorLiveSkippedCount: selection.masDefaultExecutorLiveSkippedCount,
     masDefaultExecutorLiveTerminalSyncedCount: selection.masDefaultExecutorLiveTerminalSyncedCount,
+    masDefaultExecutorCompletedCloseoutReconciledCount:
+      selection.masDefaultExecutorCompletedCloseoutReconciledCount,
     progressFirstAntiSpinBlockedCount: selection.progressFirstAntiSpinBlockedCount,
   };
   const selectedBeforeMaintenanceCount = selection.rows.length;
@@ -860,6 +872,8 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       selectionTotals.masDefaultExecutorStudySingleFlightSkippedCount += selection.masDefaultExecutorStudySingleFlightSkippedCount;
       selectionTotals.masDefaultExecutorLiveSkippedCount += selection.masDefaultExecutorLiveSkippedCount;
       selectionTotals.masDefaultExecutorLiveTerminalSyncedCount += selection.masDefaultExecutorLiveTerminalSyncedCount;
+      selectionTotals.masDefaultExecutorCompletedCloseoutReconciledCount +=
+        selection.masDefaultExecutorCompletedCloseoutReconciledCount;
       selectionTotals.progressFirstAntiSpinBlockedCount += selection.progressFirstAntiSpinBlockedCount;
     }
   }
@@ -907,6 +921,8 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       mas_default_executor_auto_redriven_count: maintenanceReconcile.masDefaultExecutorAutoRedrivenCount,
       mas_default_executor_auto_dead_lettered_count: maintenanceReconcile.masDefaultExecutorAutoDeadLetteredCount,
       mas_default_executor_auto_redrive_stale_skipped_count: maintenanceReconcile.masDefaultExecutorAutoRedriveStaleSkippedCount,
+      mas_default_executor_completed_closeout_reconciled_count:
+        selectionTotals.masDefaultExecutorCompletedCloseoutReconciledCount,
       progress_first_anti_spin_blocked_count: selectionTotals.progressFirstAntiSpinBlockedCount,
       progress_first_owner_delta_admission: progressFirstOwnerDeltaAdmission,
       task_scope: input.taskScope ?? null,
@@ -938,6 +954,8 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     mas_default_executor_auto_redriven_count: maintenanceReconcile.masDefaultExecutorAutoRedrivenCount,
     mas_default_executor_auto_dead_lettered_count: maintenanceReconcile.masDefaultExecutorAutoDeadLetteredCount,
     mas_default_executor_auto_redrive_stale_skipped_count: maintenanceReconcile.masDefaultExecutorAutoRedriveStaleSkippedCount,
+    mas_default_executor_completed_closeout_reconciled_count:
+      selectionTotals.masDefaultExecutorCompletedCloseoutReconciledCount,
     progress_first_anti_spin_blocked_count: selectionTotals.progressFirstAntiSpinBlockedCount,
     progress_first_owner_delta_admission: progressFirstOwnerDeltaAdmission,
     dispatches,
