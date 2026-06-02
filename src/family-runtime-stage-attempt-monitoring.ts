@@ -35,6 +35,7 @@ type ProviderReadinessOptions = {
 
 type StageAttemptPayload = ReturnType<typeof stageAttemptToPayload>;
 type CurrentProviderReadiness = ReturnType<typeof buildStageAttemptCurrentProviderReadinessPayload>;
+type ProviderReadinessCurrentness = ReturnType<typeof providerReadinessCurrentness>;
 type StageProgressLog = ReturnType<typeof buildStageProgressLog>;
 
 const COMPACT_TIMELINE_REF_LIMIT = 5;
@@ -522,7 +523,7 @@ function compactOperatorSummary(input: {
   studyId: string | null;
   stageProgressLog: StageProgressLog;
   currentProviderReadiness: CurrentProviderReadiness | null;
-  providerReadinessCurrentness: ReturnType<typeof providerReadinessCurrentness>;
+  providerReadinessCurrentness: ProviderReadinessCurrentness;
   livenessAttention: ReturnType<typeof providerLivenessAttention>;
   evidenceRefs: ReturnType<typeof compactEvidenceRefs>;
   semanticGap: ReturnType<typeof compactSemanticGap>;
@@ -566,7 +567,7 @@ function compactTimelineOperatorSummary(
   studyId: string | null,
   stageProgressLog: StageProgressLog,
   currentProviderReadiness: CurrentProviderReadiness | null,
-  providerReadinessCurrentness: ReturnType<typeof providerReadinessCurrentness>,
+  providerReadinessCurrentness: ProviderReadinessCurrentness,
 ) {
   const evidenceRefs = compactEvidenceRefs(stageProgressLog.evidence_refs);
   const livenessAttention = providerLivenessAttention(currentProviderReadiness, {
