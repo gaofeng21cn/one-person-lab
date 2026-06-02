@@ -172,6 +172,7 @@ export function parseQueueArgs(rest: string[]): FamilyRuntimeCommandInput | unde
   if (rest[0] === 'release') {
     let reason = '';
     let source: string | undefined;
+    let repairStrandedHold = false;
     const taskScope: FamilyRuntimeTaskScope = {};
     for (let index = 1; index < rest.length; index += 1) {
       const token = rest[index];
@@ -182,12 +183,14 @@ export function parseQueueArgs(rest: string[]): FamilyRuntimeCommandInput | unde
       } else if (token === '--source' && value) {
         source = value;
         index += 1;
+      } else if (token === '--repair-stranded-hold') {
+        repairStrandedHold = true;
       } else if (parseTaskScopeOption(taskScope, token, value)) {
         index += 1;
       } else {
         throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime queue release option: ${token}.`, {
           option: token,
-          usage: 'opl family-runtime queue release --study <study_id> --reason <operator_reason> [--domain <domain>] [--task-kind <kind>] [--payload-match <path=value>] [--source <source>]',
+          usage: 'opl family-runtime queue release --study <study_id> --reason <operator_reason> [--domain <domain>] [--task-kind <kind>] [--payload-match <path=value>] [--source <source>] [--repair-stranded-hold]',
         });
       }
     }
@@ -207,6 +210,7 @@ export function parseQueueArgs(rest: string[]): FamilyRuntimeCommandInput | unde
       taskScope: normalizedScope,
       reason,
       source,
+      repairStrandedHold,
     };
   }
   return undefined;

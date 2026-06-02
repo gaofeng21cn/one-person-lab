@@ -573,6 +573,7 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
             taskScope: parsed.taskScope,
             reason: parsed.reason,
             source: parsed.source,
+            repairStrandedHold: parsed.repairStrandedHold,
           }),
           queue: queueSummary(db),
         },

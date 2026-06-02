@@ -126,7 +126,7 @@ export type FamilyRuntimeCommandInput =
   | { mode: 'queue_inspect'; taskId: string }
   | { mode: 'queue_redrive'; taskId: string; reason: string; source?: string }
   | { mode: 'queue_hold'; taskScope: FamilyRuntimeTaskScope; reason: string; source?: string }
-  | { mode: 'queue_release'; taskScope: FamilyRuntimeTaskScope; reason: string; source?: string }
+  | { mode: 'queue_release'; taskScope: FamilyRuntimeTaskScope; reason: string; source?: string; repairStrandedHold?: boolean }
   | { mode: 'attempt_inspect'; stageAttemptId: string }
   | { mode: 'attempt_start'; stageAttemptId: string }
   | { mode: 'attempt_query'; stageAttemptId: string }

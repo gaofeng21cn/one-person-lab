@@ -36,6 +36,7 @@ export function releaseFamilyRuntimeQueueHold(
     taskScope: FamilyRuntimeTaskScope;
     reason: string;
     source?: string;
+    repairStrandedHold?: boolean;
   },
 ) {
   if (!scopeHasSelector(input.taskScope)) {
@@ -61,6 +62,7 @@ export function releaseFamilyRuntimeQueueHold(
     ORDER BY priority DESC, created_at ASC
   `).all(reason) as FamilyRuntimeTaskRow[]).filter((row) => taskRowMatchesScope(row, taskScope));
   const releasedAt = nowIso();
+  const repairStrandedHold = input.repairStrandedHold === true;
 
   db.exec('BEGIN IMMEDIATE');
   try {
@@ -71,7 +73,8 @@ export function releaseFamilyRuntimeQueueHold(
     });
     const releasedTaskIds: string[] = [];
     const releasedStageAttemptIds: string[] = [];
-    for (const row of releasedHolds.length > 0 ? heldCandidates : []) {
+    const releaseTaskAdmission = releasedHolds.length > 0 || repairStrandedHold;
+    for (const row of releaseTaskAdmission ? heldCandidates : []) {
       const result = db.prepare(`
         UPDATE tasks
         SET status = 'queued', requires_approval = 0, approved_at = ?, lease_owner = NULL,
@@ -95,6 +98,7 @@ export function releaseFamilyRuntimeQueueHold(
             activity_status: 'queued',
             reason,
             source,
+            repair_stranded_hold: repairStrandedHold && releasedHolds.length === 0,
             released_hold_ids: releasedHolds.map((hold) => hold.hold_id),
             authority_boundary: {
               opl: 'queue_and_attempt_admission_release_projection_only',
@@ -115,6 +119,7 @@ export function releaseFamilyRuntimeQueueHold(
           next_status: 'queued',
           reason,
           task_scope: taskScope,
+          repair_stranded_hold: repairStrandedHold && releasedHolds.length === 0,
           released_hold_ids: releasedHolds.map((hold) => hold.hold_id),
           released_stage_attempt_ids: releasedAttemptIds,
           authority_boundary: {
@@ -134,6 +139,7 @@ export function releaseFamilyRuntimeQueueHold(
         payload: {
           reason,
           source,
+          repair_stranded_hold: repairStrandedHold && releasedHolds.length === 0,
           released_hold_ids: releasedHolds.map((hold) => hold.hold_id),
         },
       });
@@ -147,6 +153,8 @@ export function releaseFamilyRuntimeQueueHold(
       idempotent_noop: releasedHolds.length === 0 && releasedTasks.length === 0,
       released_holds: releasedHolds,
       active_hold_count_before_release: activeHolds.length,
+      repair_stranded_hold_requested: repairStrandedHold,
+      stranded_hold_repair_applied: repairStrandedHold && releasedHolds.length === 0 && releasedTasks.length > 0,
       released_count: releasedTasks.length,
       released_attempt_count: releasedStageAttemptIds.length,
       task_scope: taskScope,
