@@ -1,10 +1,19 @@
 import assert from 'node:assert/strict';
-import { spawn, spawnSync, type SpawnSyncReturns } from 'node:child_process';
+import {
+  spawn,
+  spawnSync,
+  type SpawnSyncOptionsWithStringEncoding,
+  type SpawnSyncReturns,
+} from 'node:child_process';
 
 import { cliPath, repoRoot } from './constants.ts';
 
 const CLI_TEST_MAX_BUFFER = 16 * 1024 * 1024;
 const DEFAULT_CLI_TEST_TIMEOUT_MS = 30_000;
+
+type DetachedSpawnSyncOptions = SpawnSyncOptionsWithStringEncoding & {
+  detached: true;
+};
 
 function cliTestEnv(envOverrides: Record<string, string> = {}) {
   return {
@@ -55,18 +64,19 @@ function cliFailureMessage(args: string[], result: SpawnSyncReturns<string>) {
 }
 
 function runCliProcess(args: string[], cwd: string, envOverrides: Record<string, string> = {}) {
+  const options: DetachedSpawnSyncOptions = {
+    cwd,
+    encoding: 'utf8',
+    maxBuffer: CLI_TEST_MAX_BUFFER,
+    env: cliTestEnv(envOverrides),
+    timeout: cliTestTimeoutMs(),
+    detached: true,
+    killSignal: 'SIGTERM',
+  };
   const result = spawnSync(
     process.execPath,
     ['--experimental-strip-types', cliPath, ...args],
-    {
-      cwd,
-      encoding: 'utf8',
-      maxBuffer: CLI_TEST_MAX_BUFFER,
-      env: cliTestEnv(envOverrides),
-      timeout: cliTestTimeoutMs(),
-      detached: true,
-      killSignal: 'SIGTERM',
-    },
+    options,
   );
   cleanupTimedOutCli(result);
   return result;
@@ -108,18 +118,19 @@ export function runCliViaEntryPathInCwd(
   cwd: string,
   envOverrides: Record<string, string> = {},
 ) {
+  const options: DetachedSpawnSyncOptions = {
+    cwd,
+    encoding: 'utf8',
+    maxBuffer: CLI_TEST_MAX_BUFFER,
+    env: cliTestEnv(envOverrides),
+    timeout: cliTestTimeoutMs(),
+    detached: true,
+    killSignal: 'SIGTERM',
+  };
   const result = spawnSync(
     process.execPath,
     ['--experimental-strip-types', entryPath, ...args],
-    {
-      cwd,
-      encoding: 'utf8',
-      maxBuffer: CLI_TEST_MAX_BUFFER,
-      env: cliTestEnv(envOverrides),
-      timeout: cliTestTimeoutMs(),
-      detached: true,
-      killSignal: 'SIGTERM',
-    },
+    options,
   );
   cleanupTimedOutCli(result);
 

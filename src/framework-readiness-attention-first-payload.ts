@@ -51,6 +51,7 @@ export function frameworkAttentionFirstPayload(input: {
   ownerPayloadGroupAttentionOmittedCount: number;
   ownerPayloadGroups: JsonRecord[];
   ownerDeltaFirst: JsonRecord;
+  ownerDeltaHandoffSummary: JsonRecord;
   domainOwnerPayloadSummaryAttention: JsonRecord;
   ownerHandoffPacket: JsonRecord;
   memoryArtifactLifecycleEvidence: JsonRecord;
@@ -243,6 +244,12 @@ export function frameworkAttentionFirstPayload(input: {
         numberValue(record(input.workstreamOperatingLoop.summary).artifact_first_review_available_count),
       workstream_operating_loop_goal_oracle_missing_count:
         numberValue(record(input.workstreamOperatingLoop.summary).goal_oracle_missing_count),
+      owner_delta_handoff_status:
+        input.ownerDeltaHandoffSummary.status ?? null,
+      owner_delta_handoff_current_operator_action_state:
+        input.ownerDeltaHandoffSummary.current_operator_action_state ?? null,
+      owner_delta_handoff_next_owner:
+        input.ownerDeltaHandoffSummary.next_owner ?? null,
     },
     semantic_hygiene_contract_floor: input.semanticHygieneContractFloor,
     stage_evidence_workorder_attention_items: input.stageEvidenceWorkorderAttentionItems,
@@ -251,6 +258,7 @@ export function frameworkAttentionFirstPayload(input: {
     stage_replay_missing_receipt_workorder_attention_items:
       input.stageReplayMissingReceiptWorkorderAttentionItems,
     owner_delta_first: input.ownerDeltaFirst,
+    owner_delta_handoff_summary: input.ownerDeltaHandoffSummary,
     owner_payload_group_attention_policy:
       'top_owner_payload_groups_by_open_then_blocked_counts_refs_only',
     owner_payload_group_attention_count: input.ownerPayloadGroupAttentionCount,

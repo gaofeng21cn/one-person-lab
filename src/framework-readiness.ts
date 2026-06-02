@@ -31,9 +31,8 @@ import {
   semanticHygieneContractFloor,
 } from './framework-readiness-semantic-hygiene.ts';
 import { FRAMEWORK_READINESS_SOURCE_COMMANDS as SOURCE_COMMANDS } from './framework-readiness-source-commands.ts';
-import {
-  domainBlockedTypedBlockerAttention,
-} from './framework-readiness-typed-blocker-attention.ts';
+import { domainBlockedTypedBlockerAttention } from './framework-readiness-typed-blocker-attention.ts';
+import { buildOwnerDeltaHandoffSummaryFromFrameworkReadiness, OWNER_DELTA_HANDOFF_TAXONOMY, ownerDeltaHandoffFrameworkReadinessSection } from './framework-readiness-owner-delta-handoff-summary.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -500,6 +499,16 @@ export async function buildFrameworkReadinessSummary(
     semanticAttentionGateCount,
     hardBlockerCount,
   });
+  const ownerDeltaHandoffSummary = buildOwnerDeltaHandoffSummaryFromFrameworkReadiness({
+    ownerDeltaFirst,
+    ownerHandoffPacket,
+    domainDispatchEvidenceWorkorderSummary,
+    openSafeActionPayload,
+    attentionCounts,
+    readinessEvidenceEnvelopeOpenCount,
+    readinessEvidenceEnvelopeBlockedCount,
+    stageReplayMissingReceiptWorkorderCount,
+  });
 
   return {
     version: 'g1',
@@ -550,6 +559,7 @@ export async function buildFrameworkReadinessSummary(
         ownerPayloadGroupAttentionOmittedCount,
         ownerPayloadGroups,
         ownerDeltaFirst,
+        ownerDeltaHandoffSummary,
         domainOwnerPayloadSummaryAttention,
         ownerHandoffPacket,
         memoryArtifactLifecycleEvidence,
@@ -647,6 +657,12 @@ export async function buildFrameworkReadinessSummary(
           numberValue(record(workstreamOperatingLoop.summary).artifact_first_review_available_count),
         workstream_operating_loop_goal_oracle_missing_count:
           numberValue(record(workstreamOperatingLoop.summary).goal_oracle_missing_count),
+        owner_delta_handoff_status:
+          ownerDeltaHandoffSummary.status ?? null,
+        owner_delta_handoff_current_operator_action_state:
+          ownerDeltaHandoffSummary.current_operator_action_state ?? null,
+        owner_delta_handoff_next_owner:
+          ownerDeltaHandoffSummary.next_owner ?? null,
       },
       source_commands: Object.values(SOURCE_COMMANDS),
       evidence_counter_taxonomy: {
@@ -664,6 +680,7 @@ export async function buildFrameworkReadinessSummary(
           'Runtime Manager supported MAS route catalog projection only; support does not close owner-chain receipts or authorize domain ready',
         provider_slo_fields:
           'provider_slo_* fields describe Temporal provider cadence/capability SLO only',
+        owner_delta_handoff: OWNER_DELTA_HANDOFF_TAXONOMY,
         retired_alias_policy:
           'family-runtime evidence-worklist is the only active worklist command; legacy production_closeout aliases are removed from active machine outputs',
       },
@@ -719,6 +736,13 @@ export async function buildFrameworkReadinessSummary(
         source_command: SOURCE_COMMANDS.app_operator_drilldown,
         ...ownerDeltaFirst,
       },
+      owner_delta_handoff_summary: ownerDeltaHandoffFrameworkReadinessSection({
+        ownerDeltaHandoffSummary,
+        sourceCommands: [
+          SOURCE_COMMANDS.app_operator_drilldown,
+          SOURCE_COMMANDS.family_runtime_evidence_worklist,
+        ],
+      }),
       semantic_hygiene: {
         source_command: SOURCE_COMMANDS.semantic_hygiene,
         summary: semanticSummary,

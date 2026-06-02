@@ -28,12 +28,15 @@ import {
 import {
   FAMILY_RUNTIME_PROVIDER_KINDS,
 } from '../../../../src/family-runtime-types.ts';
+import {
+  assertBlockedSchedulerTick,
+  assertTemporalWorkerLivenessBlocker,
+} from './family-runtime-provider-slo-assertions.ts';
 
 type ProviderLifecycleProjection = Awaited<ReturnType<typeof inspectFamilyRuntimeProvidersWithLifecycle>>;
 type ProviderSloTick = Awaited<ReturnType<typeof runTemporalProviderSloTick>>;
 type TemporalWorkerRepairReceipt = ProviderSloTick['provider_worker_repair_receipt'];
 type TemporalWorkerStatus = Parameters<typeof temporalWorkerStatus>[0];
-type TemporalWorkerLivenessBlocker = ReturnType<typeof temporalWorkerLivenessBlocker>;
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -315,21 +318,6 @@ function providerSloTick(
       can_write_domain_truth: false,
     },
   };
-}
-
-function assertTemporalWorkerLivenessBlocker(
-  blocker: unknown,
-): asserts blocker is TemporalWorkerLivenessBlocker {
-  assert.equal((blocker as { liveness_blocker_first?: unknown }).liveness_blocker_first, true);
-}
-
-function assertBlockedSchedulerTick(tick: unknown): asserts tick is {
-  provider_kind: 'temporal';
-  provider_slo: ProviderSloTick;
-  provider_liveness_blocker: TemporalWorkerLivenessBlocker;
-  queue_tick: null;
-} {
-  assert.equal((tick as { status?: unknown }).status, 'blocked_provider_not_ready');
 }
 
 function insertProvenTemporalProofEvent(stateRoot: string) {

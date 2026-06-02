@@ -198,12 +198,107 @@ export function assertOwnerDeltaFirstReadinessProjection(readiness: JsonRecord) 
   const summary = readiness.summary;
   const attention = readiness.attention_first_payload;
   const ownerDeltaFirst = attention.owner_delta_first;
+  const ownerDeltaHandoffSummary = attention.owner_delta_handoff_summary;
   const nextSafeActions = attention.next_safe_actions;
 
   assert.equal(readiness.owner_delta_first.surface_kind, 'opl_owner_delta_first_projection');
   assert.equal(ownerDeltaFirst.surface_kind, 'opl_owner_delta_first_projection');
   assert.equal(readiness.owner_delta_first.next_owner, ownerDeltaFirst.next_owner);
   assert.equal(readiness.owner_delta_first.next_required_delta, ownerDeltaFirst.next_required_delta);
+  assert.equal(
+    readiness.owner_delta_handoff_summary.surface_kind,
+    'opl_framework_owner_delta_handoff_summary',
+  );
+  assert.equal(
+    ownerDeltaHandoffSummary.surface_kind,
+    'opl_framework_owner_delta_handoff_summary',
+  );
+  assert.equal(
+    readiness.owner_delta_handoff_summary.status,
+    ownerDeltaHandoffSummary.status,
+  );
+  assert.equal(
+    readiness.owner_delta_handoff_summary.current_operator_action_state,
+    ownerDeltaHandoffSummary.current_operator_action_state,
+  );
+  assert.equal(
+    readiness.owner_delta_handoff_summary.next_owner,
+    ownerDeltaHandoffSummary.next_owner,
+  );
+  assert.equal(summary.owner_delta_handoff_status, ownerDeltaHandoffSummary.status);
+  assert.equal(
+    summary.owner_delta_handoff_current_operator_action_state,
+    ownerDeltaHandoffSummary.current_operator_action_state,
+  );
+  assert.equal(summary.owner_delta_handoff_next_owner, ownerDeltaHandoffSummary.next_owner);
+  assert.equal(
+    attention.summary.owner_delta_handoff_current_operator_action_state,
+    ownerDeltaHandoffSummary.current_operator_action_state,
+  );
+  assert.equal(
+    ownerDeltaHandoffSummary.projection_policy,
+    'first_class_owner_delta_handoff_default_read_model_over_owner_delta_first_owner_handoff_and_evidence_worklist',
+  );
+  assert.equal(
+    ownerDeltaHandoffSummary.source_refs.owner_delta_first_ref,
+    '/framework_readiness/owner_delta_first',
+  );
+  assert.equal(
+    ownerDeltaHandoffSummary.source_refs.owner_handoff_packet_ref,
+    '/framework_readiness/owner_handoff_packet',
+  );
+  assert.equal(typeof ownerDeltaHandoffSummary.current_operator_action_state, 'string');
+  assert.equal(typeof ownerDeltaHandoffSummary.next_required_delta, 'string');
+  assert.equal(Array.isArray(ownerDeltaHandoffSummary.required_refs_any_of), true);
+  assert.equal(Array.isArray(ownerDeltaHandoffSummary.required_return_shapes), true);
+  assert.equal(ownerDeltaHandoffSummary.required_refs_any_of.length > 0, true);
+  assert.equal(ownerDeltaHandoffSummary.required_return_shapes.length > 0, true);
+  assert.equal(
+    ownerDeltaHandoffSummary.required_return_shapes.includes('typed_blocker_ref'),
+    true,
+  );
+  assert.equal(
+    ownerDeltaHandoffSummary.top_payload_kind,
+    'domain_owner_receipt_or_typed_blocker_refs',
+  );
+  assert.equal(
+    ownerDeltaHandoffSummary.payload_path_policy,
+    'operator_must_choose_success_refs_path_or_domain_owned_typed_blocker_path_empty_template_blocks',
+  );
+  assert.equal(
+    ownerDeltaHandoffSummary.accepted_payload_paths.success_refs_path.closes_domain_ready,
+    false,
+  );
+  assert.equal(
+    ownerDeltaHandoffSummary.accepted_payload_paths.typed_blocker_path.success_claimed,
+    false,
+  );
+  assertOwnerPayloadWorkorderProjection(ownerDeltaHandoffSummary);
+  assert.equal(ownerDeltaHandoffSummary.empty_payload_template_is_success_evidence, false);
+  assert.equal(
+    ownerDeltaHandoffSummary.summary.open_safe_action_payload_required_item_count,
+    readiness.evidence_worklist.open_safe_action_payload_required_item_count,
+  );
+  assert.equal(
+    ownerDeltaHandoffSummary.summary.open_safe_action_payload_free_item_count,
+    readiness.evidence_worklist.open_safe_action_payload_free_item_count,
+  );
+  assert.equal(
+    ownerDeltaHandoffSummary.summary.owner_handoff_owner_count,
+    readiness.owner_handoff_packet.owner_count,
+  );
+  assert.equal(
+    ownerDeltaHandoffSummary.summary.domain_dispatch_workorder_count,
+    readiness.evidence_worklist.domain_dispatch_evidence_workorder_packet_summary.workorder_count,
+  );
+  assert.equal(ownerDeltaHandoffSummary.authority_boundary.can_execute_domain_action, false);
+  assert.equal(ownerDeltaHandoffSummary.authority_boundary.can_write_domain_truth, false);
+  assert.equal(ownerDeltaHandoffSummary.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(ownerDeltaHandoffSummary.authority_boundary.can_create_typed_blocker, false);
+  assert.equal(ownerDeltaHandoffSummary.authority_boundary.can_close_owner_chain, false);
+  assert.equal(ownerDeltaHandoffSummary.authority_boundary.can_close_domain_ready, false);
+  assert.equal(ownerDeltaHandoffSummary.authority_boundary.can_claim_production_ready, false);
+  assert.equal(ownerDeltaHandoffSummary.authority_boundary.owner_delta_handoff_is_projection_only, true);
   assert.equal(
     ownerDeltaFirst.projection_policy,
     'default_operator_surface_prioritizes_next_owner_delta_raw_refs_only_counters_are_drilldown',
@@ -238,8 +333,11 @@ export function assertOwnerDeltaFirstReadinessProjection(readiness: JsonRecord) 
       + summary.domain_blocked_attention_tail_count,
   );
   assert.equal(
-    summary.domain_blocked_attention_grouping_semantics,
-    'domain_blocked_attention_refs_grouped_for_attention_only_raw_tail_counts_preserved',
+    [
+      'domain_owned_typed_blocker_refs_union_grouped_for_attention_only_raw_tail_counts_preserved',
+      'domain_blocked_attention_refs_grouped_for_attention_only_raw_tail_counts_preserved',
+    ].includes(summary.domain_blocked_attention_grouping_semantics),
+    true,
   );
   assert.equal(
     attention.summary.operator_actionable_attention_tail_count,

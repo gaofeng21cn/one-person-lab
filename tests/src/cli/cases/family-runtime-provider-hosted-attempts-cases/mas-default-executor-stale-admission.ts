@@ -18,6 +18,11 @@ import {
 } from '../../../../../src/family-runtime-store.ts';
 import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
 
+type TickDispatch = { task_id: string; status?: string };
+type QueueTickWithMasDefaultExecutorRedrive = Awaited<
+  ReturnType<typeof runFamilyRuntimeQueueTick<TickDispatch>>
+>;
+
 async function withIsolatedFamilyRuntimeEnv<T>(fn: () => T | Promise<T>) {
   const previous = {
     OPL_STATE_DIR: process.env.OPL_STATE_DIR,
@@ -110,7 +115,7 @@ test('family-runtime tick recovers expired MAS default executor admission whose 
 
       let queryCount = 0;
       let dispatchCount = 0;
-      const tick = await runFamilyRuntimeQueueTick(db, familyRuntimePaths(), {
+      const tick = await runFamilyRuntimeQueueTick<TickDispatch>(db, familyRuntimePaths(), {
         source: 'test-expired-admission-missing-workflow',
         limit: 2,
         hydrate: false,
@@ -266,7 +271,7 @@ test('scheduler tick syncs missing Temporal workflows through the safe read mode
             };
           },
         },
-      );
+      ) as QueueTickWithMasDefaultExecutorRedrive;
       const task = db.prepare(`
         SELECT status, attempts, last_error, dead_letter_reason, lease_owner, lease_expires_at
         FROM tasks
