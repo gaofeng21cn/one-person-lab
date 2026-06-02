@@ -26,6 +26,9 @@ type BuildPackageManifestInput = Partial<{
 
 export type OplPackageManifest = ReturnType<typeof buildOplPackageManifest>;
 
+const PACKAGE_WORKFLOW_TRIGGER_POLICY = 'release_gate_workflow_call_or_manual_dispatch';
+const PACKAGE_REMOTE_PUBLISH_STATUS = 'release_gate_or_manual_dispatch_publishes_ghcr_packages';
+
 const MODULE_SPECS: PackageModuleSpec[] = [
   {
     module_id: 'medautoscience',
@@ -84,8 +87,8 @@ function buildReleaseAutomation(retainVersions: number, rollbackVersion: string 
   return {
     status: 'active_stable_package_channel',
     package_lifecycle_status: 'active_release_channel',
-    workflow_trigger_policy: 'workflow_dispatch_only',
-    remote_publish_status: 'workflow_dispatch_publishes_ghcr_packages',
+    workflow_trigger_policy: PACKAGE_WORKFLOW_TRIGGER_POLICY,
+    remote_publish_status: PACKAGE_REMOTE_PUBLISH_STATUS,
     release_manifest_publication_status: 'active_ghcr_channel_manifest',
     release_manifest_package: {
       package_name: 'one-person-lab-manifest',
@@ -111,6 +114,9 @@ function buildReleaseAutomation(retainVersions: number, rollbackVersion: string 
       command: 'npm run packages:manifest -- --version <opl_version>',
       artifact_kind: 'git_archive_source_tarball',
       publication_mode: 'ghcr_package_channel_and_workflow_artifact',
+      automatic_trigger: 'workflow_call_from_release_gate',
+      manual_repair_trigger: 'workflow_dispatch',
+      required_input: 'opl_version',
     },
     checksum: {
       algorithm: 'sha256',
@@ -141,7 +147,7 @@ function buildModuleReleaseDiscipline(spec: PackageModuleSpec, rollbackVersion: 
     package_publish_owner: 'framework_packages_workflow',
     package_channel_status: 'active_release_channel',
     package_lifecycle_status: 'active_release_channel',
-    workflow_trigger_policy: 'workflow_dispatch_only',
+    workflow_trigger_policy: PACKAGE_WORKFLOW_TRIGGER_POLICY,
     remote_publish_status: 'published_to_ghcr_by_packages_workflow',
     current_latest_source: 'opl_release_channel_manifest',
     developer_override_source: 'git_checkout',
@@ -182,8 +188,10 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
     package_consumption_status: 'stable_app_release_consumes_package_channel',
     developer_module_source_override: {
       env: 'OPL_MODULE_SOURCE_MODE=git_checkout',
-      scope: 'dev_operator_checkout',
-      rule: 'Developer/operator workflows may explicitly use Git checkout mode; stable App release and package-channel installs consume the GHCR channel manifest.',
+      scope: 'developer_mode_checkout',
+      app_setting_surface: 'Developer Mode',
+      rule: 'Developer Mode is the App/system settings surface for repo checkout module sources; stable App release and package-channel installs consume the GHCR channel manifest.',
+      low_level_env_role: 'diagnostic_ci_override',
     },
     release_automation: buildReleaseAutomation(retainVersions, rollbackVersion),
     packages: {
@@ -246,7 +254,9 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
             developer_git_checkout_override: {
               repo_url: spec.repo_url,
               ref: 'main',
+              app_setting_surface: 'Developer Mode',
               env: `OPL_MODULE_SOURCE_MODE=git_checkout or OPL_MODULE_PATH_${spec.module_id.toUpperCase()}`,
+              env_role: 'low_level_diagnostic_ci_override',
             },
             release_discipline: buildModuleReleaseDiscipline(spec, rollbackVersion),
             install_strategy: 'extract_to_managed_modules_root',

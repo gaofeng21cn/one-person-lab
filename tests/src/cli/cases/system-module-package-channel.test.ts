@@ -295,3 +295,80 @@ test('module-specific git checkout override bypasses the package channel', () =>
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
+
+test('Developer Mode git checkout source bypasses the package channel without raw env source mode', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-developer-source-home-'));
+  const modulesRoot = path.join(homeRoot, 'managed-modules');
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const fakeChannel = writePackageChannelFixture({
+    root: path.join(homeRoot, 'unused-channel'),
+    moduleId: 'medautoscience',
+    repoName: 'med-autoscience',
+    version: '26.6.4',
+    sourceHeadSha: 'unused-package-sha',
+  });
+  const gitConfigPath = path.join(homeRoot, 'gitconfig');
+  const medAutoScienceRemote = createGitModuleRemoteFixture('med-autoscience', {
+    extraFiles: {
+      'scripts/opl-module-bootstrap.sh': '#!/usr/bin/env bash\nset -euo pipefail\n',
+      'scripts/opl-module-healthcheck.sh': '#!/usr/bin/env bash\nset -euo pipefail\n',
+    },
+  });
+  fs.mkdirSync(stateDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(stateDir, 'developer-supervisor.json'),
+    JSON.stringify({
+      version: 'g1',
+      enabled: 'on',
+      mode: 'developer_apply_safe',
+      auto_enable_github_login: 'gaofeng21cn',
+      updated_at: '2026-06-02T00:00:00.000Z',
+    }),
+    'utf8',
+  );
+  fs.writeFileSync(
+    gitConfigPath,
+    [
+      `[url "${medAutoScienceRemote.remoteRoot}"]`,
+      '\tinsteadOf = https://github.com/gaofeng21cn/med-autoscience.git',
+      '',
+    ].join('\n'),
+    'utf8',
+  );
+
+  try {
+    const install = runCli(['module', 'install', '--module', 'medautoscience'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      GIT_CONFIG_GLOBAL: gitConfigPath,
+      OPL_MODULES_ROOT: modulesRoot,
+      OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.6.4',
+      OPL_STATE_DIR: stateDir,
+      PATH: `${fakeChannel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+    }) as {
+      module_action: {
+        module: {
+          install_origin: string;
+          checkout_path: string;
+          git: { head_sha: string | null } | null;
+          source_policy: {
+            effective_install_update_source: string;
+            configured_by: string;
+            package_channel_auto_update: boolean;
+          };
+        };
+      };
+    };
+
+    assert.equal(install.module_action.module.install_origin, 'managed_root');
+    assert.equal(install.module_action.module.git?.head_sha, medAutoScienceRemote.getHeadSha());
+    assert.equal(install.module_action.module.source_policy.effective_install_update_source, 'git_checkout');
+    assert.equal(install.module_action.module.source_policy.configured_by, 'developer_mode');
+    assert.equal(install.module_action.module.source_policy.package_channel_auto_update, false);
+    assert.equal(fs.existsSync(path.join(install.module_action.module.checkout_path, '.git')), true);
+    assert.equal(fs.existsSync(fakeChannel.curlLogPath), false);
+  } finally {
+    fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});

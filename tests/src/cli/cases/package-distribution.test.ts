@@ -16,10 +16,12 @@ test('packages manifest exposes active package-channel coordinates for module in
       developer_module_source_override: {
         env: string;
         scope: string;
+        app_setting_surface: string;
       };
       release_automation: {
         status: string;
         package_lifecycle_status: string;
+        workflow_trigger_policy: string;
         remote_publish_status: string;
         release_manifest_publication_status: string;
         release_manifest_package: {
@@ -82,6 +84,7 @@ test('packages manifest exposes active package-channel coordinates for module in
           developer_git_checkout_override: { repo_url: string; ref: string };
           release_discipline: {
             package_lifecycle_status: string;
+            workflow_trigger_policy: string;
             current_latest_source: string;
             developer_override_source: string;
             required_gates: string[];
@@ -101,7 +104,8 @@ test('packages manifest exposes active package-channel coordinates for module in
     'stable_app_release_consumes_package_channel',
   );
   assert.equal(output.packages_manifest.developer_module_source_override.env, 'OPL_MODULE_SOURCE_MODE=git_checkout');
-  assert.equal(output.packages_manifest.developer_module_source_override.scope, 'dev_operator_checkout');
+  assert.equal(output.packages_manifest.developer_module_source_override.scope, 'developer_mode_checkout');
+  assert.equal(output.packages_manifest.developer_module_source_override.app_setting_surface, 'Developer Mode');
   assert.equal(output.packages_manifest.release_automation.channel_manifest.outputs.channel_manifest, 'opl-channel-manifest.json');
   assert.equal(output.packages_manifest.release_automation.channel_manifest.outputs.checksums, 'SHA256SUMS');
   assert.equal(output.packages_manifest.release_automation.rollback.strategy, 'previous_channel_manifest_target');
@@ -112,7 +116,8 @@ test('packages manifest exposes active package-channel coordinates for module in
   assert.equal(output.packages_manifest.release_automation.cleanup.retain_versions, 3);
   assert.equal(output.packages_manifest.release_automation.status, 'active_stable_package_channel');
   assert.equal(output.packages_manifest.release_automation.package_lifecycle_status, 'active_release_channel');
-  assert.equal(output.packages_manifest.release_automation.remote_publish_status, 'workflow_dispatch_publishes_ghcr_packages');
+  assert.equal(output.packages_manifest.release_automation.workflow_trigger_policy, 'release_gate_workflow_call_or_manual_dispatch');
+  assert.equal(output.packages_manifest.release_automation.remote_publish_status, 'release_gate_or_manual_dispatch_publishes_ghcr_packages');
   assert.equal(output.packages_manifest.release_automation.release_manifest_publication_status, 'active_ghcr_channel_manifest');
   assert.equal(
     output.packages_manifest.release_automation.release_manifest_package.package_channel_status,
@@ -240,6 +245,10 @@ test('packages manifest exposes active package-channel coordinates for module in
     'git_checkout',
   );
   assert.equal(
+    output.packages_manifest.packages.modules.medautoscience.release_discipline.workflow_trigger_policy,
+    'release_gate_workflow_call_or_manual_dispatch',
+  );
+  assert.equal(
     output.packages_manifest.packages.modules.medautoscience.release_discipline.package_lifecycle_status,
     'active_release_channel',
   );
@@ -349,8 +358,8 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.ok(manifest.release_automation.cleanup.protected_tags.includes('latest'));
   assert.equal(manifest.release_automation.status, 'active_stable_package_channel');
   assert.equal(manifest.release_automation.package_lifecycle_status, 'active_release_channel');
-  assert.equal(manifest.release_automation.workflow_trigger_policy, 'workflow_dispatch_only');
-  assert.equal(manifest.release_automation.remote_publish_status, 'workflow_dispatch_publishes_ghcr_packages');
+  assert.equal(manifest.release_automation.workflow_trigger_policy, 'release_gate_workflow_call_or_manual_dispatch');
+  assert.equal(manifest.release_automation.remote_publish_status, 'release_gate_or_manual_dispatch_publishes_ghcr_packages');
   assert.equal(manifest.release_automation.release_manifest_publication_status, 'active_ghcr_channel_manifest');
   assert.equal(manifest.release_automation.release_manifest_package.package_channel_status, 'active_release_channel');
   assert.equal(manifest.packages.webui_docker_image.framework_workflow_publish_status, 'not_published_by_framework_packages_workflow');
@@ -372,7 +381,7 @@ test('package archive builder writes channel manifest checksums git source and r
   );
   assert.equal(
     manifest.packages.modules.medautoscience.release_discipline.workflow_trigger_policy,
-    'workflow_dispatch_only',
+    'release_gate_workflow_call_or_manual_dispatch',
   );
   assert.equal(
     manifest.packages.modules.medautoscience.source_git.head_sha,
@@ -470,10 +479,12 @@ test('package archive builder refreshes reused managed clones before archiving s
   assert.equal(manifest.packages.modules.medautoscience.source_git.head_sha, advancedHead);
 });
 
-test('framework packages workflow manually publishes active package channel artifacts without WebUI publishing', () => {
+test('framework packages workflow is release-gated and manually repairable without WebUI publishing', () => {
   const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/packages.yml'), 'utf8');
 
   assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /workflow_call:/);
+  assert.match(workflow, /release_gate:\s*\n\s*description: Release gate or workflow that authorized package publication/);
   assert.doesNotMatch(workflow, /\n  push:\n/);
   assert.doesNotMatch(workflow, /webui-image:/);
   assert.match(workflow, /oras push/);
@@ -612,6 +623,14 @@ test('release discipline fails closed when workflow restores tag-push or WebUI p
       'name: Publish OPL Packages',
       'on:',
       '  workflow_dispatch:',
+      '  workflow_call:',
+      '    inputs:',
+      '      opl_version:',
+      '        required: true',
+      '        type: string',
+      '      release_gate:',
+      '        required: true',
+      '        type: string',
       '  push:',
       '    tags:',
       "      - 'v*'",

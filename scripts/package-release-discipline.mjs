@@ -42,6 +42,9 @@ function assertCondition(condition, message, failures) {
   }
 }
 
+const PACKAGE_WORKFLOW_TRIGGER_POLICY = 'release_gate_workflow_call_or_manual_dispatch';
+const PACKAGE_REMOTE_PUBLISH_STATUS = 'release_gate_or_manual_dispatch_publishes_ghcr_packages';
+
 function validateModule(moduleId, entry, failures) {
   assertCondition(entry.current_install_update_source === 'package_channel', `${moduleId}: current source must be package_channel for stable package-channel installs`, failures);
   assertCondition(entry.package_consumption_status === 'consumed_by_package_channel_installs', `${moduleId}: package consumption status drifted`, failures);
@@ -52,7 +55,7 @@ function validateModule(moduleId, entry, failures) {
   assertCondition(entry.developer_git_checkout_override?.repo_url, `${moduleId}: missing developer git checkout override`, failures);
   assertCondition(entry.release_discipline?.package_channel_status === 'active_release_channel', `${moduleId}: release discipline must mark package channel active`, failures);
   assertCondition(entry.release_discipline?.package_lifecycle_status === 'active_release_channel', `${moduleId}: release discipline must mark package lifecycle active`, failures);
-  assertCondition(entry.release_discipline?.workflow_trigger_policy === 'workflow_dispatch_only', `${moduleId}: release discipline must require manual workflow dispatch`, failures);
+  assertCondition(entry.release_discipline?.workflow_trigger_policy === PACKAGE_WORKFLOW_TRIGGER_POLICY, `${moduleId}: release discipline must require release-gated workflow_call or manual dispatch`, failures);
   assertCondition(entry.release_discipline?.current_latest_source === 'opl_release_channel_manifest', `${moduleId}: missing current package-channel source discipline`, failures);
   assertCondition(entry.release_discipline?.developer_override_source === 'git_checkout', `${moduleId}: missing developer override source discipline`, failures);
   assertCondition(Array.isArray(entry.release_discipline?.required_gates), `${moduleId}: missing required release gates`, failures);
@@ -87,10 +90,12 @@ function validateManifest(manifest) {
   assertCondition(manifest.module_install_update_source === 'package_channel', 'module install/update source must be package_channel', failures);
   assertCondition(manifest.package_consumption_status === 'stable_app_release_consumes_package_channel', 'package consumption status drifted', failures);
   assertCondition(manifest.developer_module_source_override?.env === 'OPL_MODULE_SOURCE_MODE=git_checkout', 'developer git checkout override must be explicit', failures);
+  assertCondition(manifest.developer_module_source_override?.scope === 'developer_mode_checkout', 'developer git checkout override must be represented as Developer Mode checkout scope', failures);
+  assertCondition(manifest.developer_module_source_override?.app_setting_surface === 'Developer Mode', 'developer checkout override must point to Developer Mode App settings surface', failures);
   assertCondition(automation?.status === 'active_stable_package_channel', 'release automation must be active stable package channel', failures);
   assertCondition(automation?.package_lifecycle_status === 'active_release_channel', 'release automation must record active release channel lifecycle', failures);
-  assertCondition(automation?.workflow_trigger_policy === 'workflow_dispatch_only', 'package workflow must remain manual dispatch only', failures);
-  assertCondition(automation?.remote_publish_status === 'workflow_dispatch_publishes_ghcr_packages', 'package workflow must publish GHCR packages from manual dispatch', failures);
+  assertCondition(automation?.workflow_trigger_policy === PACKAGE_WORKFLOW_TRIGGER_POLICY, 'package workflow must be release-gated via workflow_call while keeping manual dispatch repair', failures);
+  assertCondition(automation?.remote_publish_status === PACKAGE_REMOTE_PUBLISH_STATUS, 'package workflow must publish GHCR packages from release gate or manual dispatch', failures);
   assertCondition(automation?.release_manifest_publication_status === 'active_ghcr_channel_manifest', 'release manifest must be an active GHCR channel', failures);
   assertCondition(automation?.release_manifest_package?.package_channel_status === 'active_release_channel', 'release manifest package must be active', failures);
   assertCondition(automation?.release_manifest_package?.publication_status === 'published_to_ghcr_by_packages_workflow', 'release manifest package must claim GHCR publication', failures);
@@ -152,6 +157,8 @@ function validateWorkflow(manifest, failures) {
 
   const source = fs.readFileSync(workflowPath, 'utf8');
   assertCondition(/workflow_dispatch:/.test(source), 'package workflow must keep manual workflow_dispatch trigger', failures);
+  assertCondition(/workflow_call:/.test(source), 'package workflow must expose release-gated workflow_call trigger', failures);
+  assertCondition(/release_gate:\s*\n\s*description: Release gate or workflow that authorized package publication/.test(source), 'package workflow_call must require a release_gate input', failures);
   assertCondition(!/\n\s*push:\n/.test(source), 'package workflow must not restore tag-push publishing', failures);
   assertCondition(/oras\s+push/.test(source), 'package workflow must push module archives and release manifest to GHCR', failures);
   assertCondition(/one-person-lab-modules/.test(source), 'package workflow must publish module packages', failures);

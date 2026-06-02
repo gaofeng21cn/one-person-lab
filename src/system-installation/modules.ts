@@ -8,6 +8,7 @@ import { resolveDefaultFamilyWorkspaceRoot } from '../opl-skills.ts';
 import { readOplDeveloperSupervisorConfig } from '../system-preferences.ts';
 import {
   type DomainModuleSpec,
+  type ModuleSourcePolicy,
   type OplModuleAction,
   type OplModuleId,
   type OplModuleInstallOrigin,
@@ -277,8 +278,26 @@ function moduleHasGitCheckoutOverride(spec: DomainModuleSpec) {
   );
 }
 
+function moduleHasRepoUrlOverride(spec: DomainModuleSpec) {
+  return Boolean(normalizeOptionalString(process.env[buildModuleRepoUrlEnvKey(spec.module_id)]));
+}
+
+function moduleHasPathOverride(spec: DomainModuleSpec) {
+  return Boolean(normalizeOptionalString(process.env[buildModulePathEnvKey(spec.module_id)]));
+}
+
+function explicitGitCheckoutSourceMode() {
+  return moduleSourceMode() === 'git_checkout';
+}
+
+function developerModeUsesGitCheckouts() {
+  return developerModePrefersLocalCheckouts();
+}
+
 function shouldUsePackageChannel(spec: DomainModuleSpec) {
-  return moduleSourceMode() === 'package_channel' && !moduleHasGitCheckoutOverride(spec);
+  return !explicitGitCheckoutSourceMode()
+    && !moduleHasGitCheckoutOverride(spec)
+    && !developerModeUsesGitCheckouts();
 }
 
 function resolveManagedModulePath(spec: DomainModuleSpec) {
@@ -304,6 +323,63 @@ function developerModePrefersLocalCheckouts() {
   return config.enabled === 'on' && config.mode === 'developer_apply_safe';
 }
 
+function buildModuleSourcePolicy(spec: DomainModuleSpec): ModuleSourcePolicy {
+  const pathOverride = moduleHasPathOverride(spec);
+  const repoUrlOverride = moduleHasRepoUrlOverride(spec);
+  if (pathOverride && fullRuntimeModuleOverridesAreLaunchSources()) {
+    return {
+      effective_install_update_source: 'full_runtime',
+      configured_by: 'full_runtime_override',
+      package_channel_auto_update: false,
+      app_setting_surface: null,
+      low_level_override_env: buildModulePathEnvKey(spec.module_id),
+    };
+  }
+  if (pathOverride) {
+    return {
+      effective_install_update_source: 'git_checkout',
+      configured_by: 'module_path_override',
+      package_channel_auto_update: false,
+      app_setting_surface: null,
+      low_level_override_env: buildModulePathEnvKey(spec.module_id),
+    };
+  }
+  if (repoUrlOverride) {
+    return {
+      effective_install_update_source: 'git_checkout',
+      configured_by: 'module_repo_url_override',
+      package_channel_auto_update: false,
+      app_setting_surface: null,
+      low_level_override_env: buildModuleRepoUrlEnvKey(spec.module_id),
+    };
+  }
+  if (explicitGitCheckoutSourceMode()) {
+    return {
+      effective_install_update_source: 'git_checkout',
+      configured_by: 'env_source_mode',
+      package_channel_auto_update: false,
+      app_setting_surface: null,
+      low_level_override_env: 'OPL_MODULE_SOURCE_MODE',
+    };
+  }
+  if (developerModeUsesGitCheckouts()) {
+    return {
+      effective_install_update_source: 'git_checkout',
+      configured_by: 'developer_mode',
+      package_channel_auto_update: false,
+      app_setting_surface: 'Developer Mode',
+      low_level_override_env: null,
+    };
+  }
+  return {
+    effective_install_update_source: 'package_channel',
+    configured_by: 'stable_default',
+    package_channel_auto_update: true,
+    app_setting_surface: null,
+    low_level_override_env: null,
+  };
+}
+
 type ModuleInspectionProfile = 'fast' | 'full';
 
 function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile = 'full'): ModuleInspection {
@@ -312,6 +388,7 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
   const explicitModulesRoot = normalizeOptionalString(process.env.OPL_MODULES_ROOT);
   const siblingCheckoutPath = path.join(resolveSiblingWorkspaceRoot(), spec.repo_name);
   const candidates: Array<{ path: string; origin: OplModuleInstallOrigin }> = [];
+  const sourcePolicy = buildModuleSourcePolicy(spec);
   const preferLocalDeveloperCheckout = !explicitModulesRoot && developerModePrefersLocalCheckouts();
 
   if (envCheckoutPath) {
@@ -365,6 +442,7 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
         managed_checkout_path: managedCheckoutPath,
         health_status: 'ready',
         git: packagedGit,
+        source_policy: sourcePolicy,
         available_actions: candidate.origin === 'managed_root' ? ['update', 'reinstall', 'remove'] : [],
         recommended_action: candidate.origin === 'managed_root' ? 'update' : null,
       };
@@ -384,6 +462,7 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
         managed_checkout_path: managedCheckoutPath,
         health_status: 'invalid_checkout',
         git: null,
+        source_policy: sourcePolicy,
         available_actions: candidate.origin === 'managed_root' ? ['reinstall', 'remove'] : [],
         recommended_action: candidate.origin === 'managed_root' ? 'reinstall' : null,
       };
@@ -410,6 +489,7 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
       managed_checkout_path: managedCheckoutPath,
       health_status: git.dirty ? 'dirty' : 'ready',
       git,
+      source_policy: sourcePolicy,
       available_actions: availableActions,
       recommended_action: updateAvailable ? 'update' : null,
     };
@@ -428,6 +508,7 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
     managed_checkout_path: managedCheckoutPath,
     health_status: 'missing',
     git: null,
+    source_policy: sourcePolicy,
     available_actions: ['install'],
     recommended_action: 'install',
   };
@@ -497,8 +578,9 @@ export function buildOplModules(input: { profile?: ModuleInspectionProfile } = {
         'OPL-managed default installs live under modules_root by default.',
         'MDS remains available only as an explicit MAS-declared diagnostic, intake, or parity-oracle companion; it is not installed during the default OPL first-run path.',
         'OPL Meta Agent is a managed default ecosystem module so the App can install and maintain the Foundry Agent used to create new OPL-compatible agents.',
-        'Stable managed module installs and updates use the OPL GHCR package channel unless OPL_MODULE_SOURCE_MODE=git_checkout or a module-specific override is explicitly set.',
-        'When Developer Mode is explicitly on, local sibling checkouts are preferred over OPL-managed module roots so the App uses the same repositories the developer is editing.',
+        'Stable managed module installs and updates use the OPL GHCR package channel by default.',
+        'When Developer Mode is explicitly on in developer_apply_safe mode, module install/update source switches to Git checkout and local sibling checkouts are preferred over OPL-managed module roots so the App uses the same repositories the developer is editing.',
+        'OPL_MODULE_SOURCE_MODE and module-specific path/repo environment overrides remain low-level developer and CI controls, not the ordinary user update path.',
         'External sibling checkouts are still recognized on developer machines without forcing a reinstall.',
       ],
     },

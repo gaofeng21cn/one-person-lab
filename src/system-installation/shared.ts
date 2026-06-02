@@ -132,6 +132,20 @@ export type GitRepoSnapshot = {
   dirty: boolean;
 };
 
+export type ModuleSourcePolicy = {
+  effective_install_update_source: 'package_channel' | 'git_checkout' | 'full_runtime';
+  configured_by:
+    | 'stable_default'
+    | 'developer_mode'
+    | 'env_source_mode'
+    | 'module_path_override'
+    | 'module_repo_url_override'
+    | 'full_runtime_override';
+  package_channel_auto_update: boolean;
+  app_setting_surface: 'Developer Mode' | null;
+  low_level_override_env: string | null;
+};
+
 export type ModuleInspection = {
   module_id: OplModuleId;
   label: string;
@@ -145,6 +159,7 @@ export type ModuleInspection = {
   managed_checkout_path: string;
   health_status: 'ready' | 'missing' | 'invalid_checkout' | 'dirty';
   git: GitRepoSnapshot | null;
+  source_policy: ModuleSourcePolicy;
   available_actions: OplModuleAction[];
   recommended_action: OplModuleAction | null;
 };

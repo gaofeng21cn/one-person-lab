@@ -7,6 +7,21 @@ on:
         description: OPL version to prepare, for example 26.4.27
         required: true
         type: string
+      release_gate:
+        description: Manual repair reason or release gate that authorized package publication
+        required: false
+        type: string
+        default: manual_dispatch
+  workflow_call:
+    inputs:
+      opl_version:
+        description: OPL version to prepare, for example 26.4.27
+        required: true
+        type: string
+      release_gate:
+        description: Release gate or workflow that authorized package publication
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -35,6 +50,14 @@ jobs:
           fi
           echo "OPL_RELEASE_VERSION=$version" >> "$GITHUB_ENV"
           echo "OPL_PACKAGES_OWNER=${{ github.repository_owner }}" >> "$GITHUB_ENV"
+          echo "OPL_PACKAGE_RELEASE_GATE=${{ inputs.release_gate }}" >> "$GITHUB_ENV"
+
+      - name: Record package publication gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$OPL_PACKAGE_RELEASE_GATE"
+          printf 'release_gate=%s\n' "$OPL_PACKAGE_RELEASE_GATE"
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
