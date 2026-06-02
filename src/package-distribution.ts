@@ -83,9 +83,17 @@ function normalizeRetainVersions(value?: number) {
 function buildReleaseAutomation(retainVersions: number, rollbackVersion: string | null) {
   return {
     status: 'manual_prepared_only_not_consumed_by_module_install_update',
+    package_lifecycle_status: 'prepared_only_deprecated_remote_packages',
     workflow_trigger_policy: 'workflow_dispatch_only',
     remote_publish_status: 'not_auto_published_by_tag_push',
     release_manifest_publication_status: 'artifact_only_not_ghcr_active_channel',
+    release_manifest_package: {
+      package_name: 'one-person-lab-manifest',
+      package_channel_status: 'prepared_only_deprecated',
+      publication_status: 'artifact_only_not_ghcr_active_channel',
+      current_install_update_source: 'git_checkout',
+      future_package_latest_source: 'opl_release_channel_manifest',
+    },
     channel_manifest: {
       manifest_kind: 'opl_release_channel_manifest.v1',
       generated_by: 'scripts/package-module-archives.mjs',
@@ -118,6 +126,8 @@ function buildReleaseAutomation(retainVersions: number, rollbackVersion: string 
       strategy: 'retain_latest_n_versions_and_declared_rollbacks',
       retain_versions: retainVersions,
       applies_to: ['one-person-lab-modules/*', 'one-person-lab-manifest'],
+      execution_mode: 'dry_run_first_explicit_execute_required',
+      destructive_action_requires: 'package_admin_with_delete_packages_scope',
     },
   };
 }
@@ -127,6 +137,7 @@ function buildModuleReleaseDiscipline(spec: PackageModuleSpec, rollbackVersion: 
     module_truth_owner: spec.repo_name,
     package_publish_owner: 'manual_prepared_framework_package_workflow',
     package_channel_status: 'experimental_manual_prepared_only',
+    package_lifecycle_status: 'prepared_only_deprecated',
     workflow_trigger_policy: 'workflow_dispatch_only',
     remote_publish_status: spec.module_id === 'oplmetaagent'
       ? 'source_listed_remote_package_unpublished'
@@ -139,6 +150,7 @@ function buildModuleReleaseDiscipline(spec: PackageModuleSpec, rollbackVersion: 
       'source_archive_built_from_head',
       'sha256_recorded',
       'channel_manifest_written',
+      'prepared_only_deprecated_status_recorded',
       'rollback_target_declared_when_previous_manifest_exists',
     ],
     rollback: rollbackVersion
@@ -181,6 +193,28 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
         package_publish_owner: 'one-person-lab_framework_native_helper_prebuilds',
         version_source: 'native/opl-native-helper/Cargo.toml',
         target_tag_template: `ghcr.io/${owner}/one-person-lab-native-helper:<target>-<native_helper_version>`,
+        publish_status_policy: {
+          workflow: '.github/workflows/native-helper-prebuilds.yml',
+          trigger_policy: 'push_main_or_manual_dispatch',
+          publication_mode: 'active_ghcr_oci_prebuild',
+          pull_restore_consumers: ['opl system repair-native-helpers', 'opl install', 'npm run native:repair'],
+        },
+        retention_policy: {
+          strategy: 'retain_latest_n_versions_and_declared_rollbacks',
+          retain_versions: retainVersions,
+          applies_to: ['one-person-lab-native-helper'],
+          protected_tag_pattern: '<target>-<native_helper_version>',
+          execution_mode: 'dry_run_first_explicit_execute_required',
+          destructive_action_requires: 'package_admin_with_delete_packages_scope',
+        },
+        required_gates: [
+          'native_helper_prebuild_pack',
+          'native_helper_prebuild_check',
+          'native_helper_archive_written',
+          'binary_sha256_recorded',
+          'ghcr_oci_archive_pushed',
+          'retention_policy_recorded',
+        ],
       },
       modules: Object.fromEntries(
         MODULE_SPECS.map((spec) => [
@@ -195,6 +229,8 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
             artifact_kind: 'source_archive',
             artifact: buildPackageRef(owner, spec.package_name, version),
             package_channel_status: 'experimental_manual_prepared_only',
+            package_lifecycle_status: 'prepared_only_deprecated',
+            package_lifecycle_reason: 'current module install/update source remains git checkout until opl module install/update consumes the channel manifest',
             remote_publish_status: spec.module_id === 'oplmetaagent'
               ? 'source_listed_remote_package_unpublished'
               : 'not_auto_published_by_tag_push',

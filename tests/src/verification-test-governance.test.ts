@@ -89,6 +89,9 @@ const nativeHelperPrebuildWorkflowPatterns = [
   /npm run native:prebuild-check -- --prebuild-root dist\/native-helper-prebuilds/,
   /npm run native:prebuild-archive -- --prebuild-root dist\/native-helper-prebuilds/,
   /dist\/native-helper-prebuilds\/archives\/\*\.tar\.gz/,
+  /Validate native helper package retention policy/,
+  /retention_policy_recorded/,
+  /dry_run_first_explicit_execute_required/,
   /actions\/upload-artifact@v7/,
   /FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'/,
 ];

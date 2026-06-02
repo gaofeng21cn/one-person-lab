@@ -46,13 +46,17 @@ function validateModule(moduleId, entry, failures) {
   assertCondition(entry.current_install_update_source === 'git_checkout', `${moduleId}: current source must remain git_checkout until install/update consumes packages`, failures);
   assertCondition(entry.package_consumption_status === 'defined_not_consumed_by_install_update', `${moduleId}: package consumption status drifted`, failures);
   assertCondition(entry.package_channel_status === 'experimental_manual_prepared_only', `${moduleId}: module package channel must remain experimental/manual prepared-only`, failures);
+  assertCondition(entry.package_lifecycle_status === 'prepared_only_deprecated', `${moduleId}: module package lifecycle must remain prepared-only deprecated`, failures);
+  assertCondition(typeof entry.package_lifecycle_reason === 'string' && entry.package_lifecycle_reason.includes('git checkout'), `${moduleId}: module package lifecycle reason must point to git checkout current source`, failures);
   assertCondition(entry.remote_publish_status === 'not_auto_published_by_tag_push' || entry.remote_publish_status === 'source_listed_remote_package_unpublished', `${moduleId}: remote publish status must not claim an active remote package`, failures);
   assertCondition(entry.release_discipline?.package_channel_status === 'experimental_manual_prepared_only', `${moduleId}: release discipline must mark package channel prepared-only`, failures);
+  assertCondition(entry.release_discipline?.package_lifecycle_status === 'prepared_only_deprecated', `${moduleId}: release discipline must mark package lifecycle deprecated/prepared-only`, failures);
   assertCondition(entry.release_discipline?.workflow_trigger_policy === 'workflow_dispatch_only', `${moduleId}: release discipline must require manual workflow dispatch`, failures);
   assertCondition(entry.release_discipline?.current_latest_source === 'git_checkout_upstream_default_branch', `${moduleId}: missing current latest source discipline`, failures);
   assertCondition(Array.isArray(entry.release_discipline?.required_gates), `${moduleId}: missing required release gates`, failures);
   assertCondition(entry.release_discipline?.required_gates?.includes('sha256_recorded'), `${moduleId}: release gates must require sha256`, failures);
   assertCondition(entry.release_discipline?.required_gates?.includes('channel_manifest_written'), `${moduleId}: release gates must require channel manifest`, failures);
+  assertCondition(entry.release_discipline?.required_gates?.includes('prepared_only_deprecated_status_recorded'), `${moduleId}: release gates must record prepared-only deprecated status`, failures);
 
   if (entry.source_archive) {
     assertCondition(typeof entry.source_archive.file_name === 'string', `${moduleId}: source archive missing file name`, failures);
@@ -79,9 +83,13 @@ function validateManifest(manifest) {
   assertCondition(manifest.module_install_update_source === 'git_checkout', 'module install/update source must remain git_checkout', failures);
   assertCondition(manifest.package_consumption_status === 'packages_defined_not_consumed_by_install_update', 'package consumption status drifted', failures);
   assertCondition(automation?.status === 'manual_prepared_only_not_consumed_by_module_install_update', 'release automation must remain manual prepared-only', failures);
+  assertCondition(automation?.package_lifecycle_status === 'prepared_only_deprecated_remote_packages', 'release automation must record prepared-only deprecated remote package lifecycle', failures);
   assertCondition(automation?.workflow_trigger_policy === 'workflow_dispatch_only', 'package workflow must remain manual dispatch only', failures);
   assertCondition(automation?.remote_publish_status === 'not_auto_published_by_tag_push', 'package workflow must not claim tag-push remote publishing', failures);
   assertCondition(automation?.release_manifest_publication_status === 'artifact_only_not_ghcr_active_channel', 'release manifest must remain artifact-only, not active GHCR channel', failures);
+  assertCondition(automation?.release_manifest_package?.package_channel_status === 'prepared_only_deprecated', 'release manifest package must remain prepared-only deprecated', failures);
+  assertCondition(automation?.release_manifest_package?.publication_status === 'artifact_only_not_ghcr_active_channel', 'release manifest package must not claim active GHCR publication', failures);
+  assertCondition(automation?.release_manifest_package?.current_install_update_source === 'git_checkout', 'release manifest current source must remain git_checkout', failures);
   assertCondition(automation?.channel_manifest?.manifest_kind === 'opl_release_channel_manifest.v1', 'missing channel manifest automation contract', failures);
   assertCondition(automation?.channel_manifest?.outputs?.channel_manifest === 'opl-channel-manifest.json', 'missing channel manifest output', failures);
   assertCondition(automation?.channel_manifest?.outputs?.checksums === 'SHA256SUMS', 'missing checksum output', failures);
@@ -92,6 +100,8 @@ function validateManifest(manifest) {
   assertCondition(automation?.rollback?.strategy === 'previous_channel_manifest_target', 'rollback strategy must use previous channel manifest target', failures);
   assertCondition(automation?.cleanup?.strategy === 'retain_latest_n_versions_and_declared_rollbacks', 'cleanup strategy must retain latest versions and rollbacks', failures);
   assertCondition(Number.isFinite(automation?.cleanup?.retain_versions) && automation.cleanup.retain_versions >= 2, 'cleanup retain_versions must be >= 2', failures);
+  assertCondition(automation?.cleanup?.execution_mode === 'dry_run_first_explicit_execute_required', 'cleanup must be dry-run first with explicit execute', failures);
+  assertCondition(automation?.cleanup?.destructive_action_requires === 'package_admin_with_delete_packages_scope', 'cleanup destructive action requirements drifted', failures);
 
   const modules = manifest.packages?.modules ?? {};
   for (const [moduleId, entry] of Object.entries(modules)) {
@@ -106,6 +116,14 @@ function validateManifest(manifest) {
   const nativeHelper = manifest.packages?.native_helper;
   assertCondition(nativeHelper?.channel_status === 'active_ghcr_oci_prebuild', 'native helper must remain active GHCR OCI prebuild', failures);
   assertCondition(nativeHelper?.package_publish_owner === 'one-person-lab_framework_native_helper_prebuilds', 'native helper publish owner drifted', failures);
+  assertCondition(nativeHelper?.publish_status_policy?.publication_mode === 'active_ghcr_oci_prebuild', 'native helper publish status policy drifted', failures);
+  assertCondition(nativeHelper?.publish_status_policy?.workflow === '.github/workflows/native-helper-prebuilds.yml', 'native helper workflow policy drifted', failures);
+  assertCondition(nativeHelper?.retention_policy?.strategy === 'retain_latest_n_versions_and_declared_rollbacks', 'native helper retention strategy drifted', failures);
+  assertCondition(Number.isFinite(nativeHelper?.retention_policy?.retain_versions) && nativeHelper.retention_policy.retain_versions >= 2, 'native helper retain_versions must be >= 2', failures);
+  assertCondition(nativeHelper?.retention_policy?.execution_mode === 'dry_run_first_explicit_execute_required', 'native helper cleanup must be dry-run first', failures);
+  assertCondition(Array.isArray(nativeHelper?.required_gates), 'native helper required gates missing', failures);
+  assertCondition(nativeHelper?.required_gates?.includes('retention_policy_recorded'), 'native helper required gates must record retention policy', failures);
+  assertCondition(nativeHelper?.required_gates?.includes('ghcr_oci_archive_pushed'), 'native helper required gates must include GHCR OCI push', failures);
 
   return failures;
 }

@@ -104,6 +104,28 @@ jobs:
           npm run native:prebuild-check -- --prebuild-root dist/native-helper-prebuilds --target "$target_triple"
           npm run native:prebuild-archive -- --prebuild-root dist/native-helper-prebuilds --target "$target_triple"
 
+      - name: Validate native helper package retention policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --experimental-strip-types --input-type=module <<'NODE'
+          import { buildOplPackageManifest } from './src/package-distribution.ts';
+
+          const nativeHelper = buildOplPackageManifest().packages.native_helper;
+          if (nativeHelper.channel_status !== 'active_ghcr_oci_prebuild') {
+            throw new Error('native helper package must remain active_ghcr_oci_prebuild');
+          }
+          if (nativeHelper.retention_policy?.execution_mode !== 'dry_run_first_explicit_execute_required') {
+            throw new Error('native helper retention cleanup must remain dry-run first');
+          }
+          if (!nativeHelper.required_gates?.includes('retention_policy_recorded')) {
+            throw new Error('native helper required gates must include retention_policy_recorded');
+          }
+          if (!nativeHelper.required_gates?.includes('ghcr_oci_archive_pushed')) {
+            throw new Error('native helper required gates must include ghcr_oci_archive_pushed');
+          }
+          NODE
+
       - name: Upload native helper prebuild
         uses: actions/upload-artifact@v7
         with:
