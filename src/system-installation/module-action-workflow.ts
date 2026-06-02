@@ -6,6 +6,7 @@ import {
   type GitRepoSnapshot,
   runCommand,
 } from './shared.ts';
+import type { PackagedModuleMarker } from './module-packaged.ts';
 
 export type DomainModuleRuntimeSpec = DomainModuleSpec & {
   default_install: boolean;
@@ -33,6 +34,7 @@ export type ModuleActionWorkflow = {
 
 type ModuleWorkflowDeps = {
   readPackagedModuleGitSnapshot: (repoPath: string, spec: DomainModuleSpec) => GitRepoSnapshot | null;
+  readPackagedModuleMarker?: (repoPath: string, spec: DomainModuleSpec) => PackagedModuleMarker | null;
 };
 
 const DEFAULT_MODULE_ACTION_STEP_TIMEOUT_MS = 10 * 60 * 1000;
@@ -206,15 +208,20 @@ function runPackagedModuleHealthCheck(
   checkoutPath: string,
   deps: ModuleWorkflowDeps,
 ) {
-  const packagedGit = deps.readPackagedModuleGitSnapshot(checkoutPath, spec);
+  const marker = deps.readPackagedModuleMarker?.(checkoutPath, spec);
+  const packagedGit = marker?.source_git ?? deps.readPackagedModuleGitSnapshot(checkoutPath, spec);
+  const sourceKind = marker?.source_kind ?? 'full_runtime';
   return {
     status: 'completed',
-    summary: 'Packaged Full runtime marker is present and matches this module.',
+    summary: sourceKind === 'package_channel'
+      ? 'Package-channel module marker is present and matches this module.'
+      : 'Packaged Full runtime marker is present and matches this module.',
     command_preview: null,
     stdout: '',
     stderr: '',
     result: {
-      packaged_runtime: true,
+      packaged_runtime: sourceKind === 'full_runtime',
+      package_channel: sourceKind === 'package_channel',
       module_id: spec.module_id,
       repo_name: spec.repo_name,
       source_git: packagedGit,
@@ -227,11 +234,14 @@ export function runManagedModuleWorkflow(
   checkoutPath: string,
   deps: ModuleWorkflowDeps,
 ) {
-  const packagedModule = Boolean(deps.readPackagedModuleGitSnapshot(checkoutPath, spec));
+  const packagedModule = Boolean(
+    deps.readPackagedModuleMarker?.(checkoutPath, spec)
+    ?? deps.readPackagedModuleGitSnapshot(checkoutPath, spec),
+  );
   const bootstrap = packagedModule
     ? {
       status: 'skipped',
-      summary: 'Packaged Full runtime modules are already staged; bootstrap is not required.',
+      summary: 'Packaged module sources are already staged; bootstrap is not required.',
       command_preview: null,
       stdout: '',
       stderr: '',

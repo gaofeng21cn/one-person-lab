@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 
 import { assert, createGitModuleRemoteFixture, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
 
-test('packages manifest exposes package coordinates while marking module install updates as git-checkout based', () => {
+test('packages manifest exposes active package-channel coordinates for module install updates', () => {
   const output = runCli(['packages', 'manifest'], {
     OPL_RELEASE_VERSION: '26.4.27',
     OPL_PACKAGES_OWNER: 'gaofeng21cn',
@@ -13,11 +13,20 @@ test('packages manifest exposes package coordinates while marking module install
       release_channel: string;
       module_install_update_source: string;
       package_consumption_status: string;
+      developer_module_source_override: {
+        env: string;
+        scope: string;
+      };
       release_automation: {
+        status: string;
         package_lifecycle_status: string;
+        remote_publish_status: string;
+        release_manifest_publication_status: string;
         release_manifest_package: {
           package_channel_status: string;
           publication_status: string;
+          current_install_update_source: string;
+          developer_override_source: string;
         };
         channel_manifest: {
           outputs: {
@@ -70,11 +79,11 @@ test('packages manifest exposes package coordinates while marking module install
           remote_publish_status: string;
           package_consumption_status: string;
           current_install_update_source: string;
-          fallback_git: { repo_url: string; ref: string };
+          developer_git_checkout_override: { repo_url: string; ref: string };
           release_discipline: {
             package_lifecycle_status: string;
             current_latest_source: string;
-            future_package_latest_source: string;
+            developer_override_source: string;
             required_gates: string[];
           };
           install_strategy: string;
@@ -86,11 +95,13 @@ test('packages manifest exposes package coordinates while marking module install
 
   assert.equal(output.packages_manifest.opl_version, '26.4.27');
   assert.equal(output.packages_manifest.release_channel, 'stable');
-  assert.equal(output.packages_manifest.module_install_update_source, 'git_checkout');
+  assert.equal(output.packages_manifest.module_install_update_source, 'package_channel');
   assert.equal(
     output.packages_manifest.package_consumption_status,
-    'packages_defined_not_consumed_by_install_update',
+    'stable_app_release_consumes_package_channel',
   );
+  assert.equal(output.packages_manifest.developer_module_source_override.env, 'OPL_MODULE_SOURCE_MODE=git_checkout');
+  assert.equal(output.packages_manifest.developer_module_source_override.scope, 'dev_operator_checkout');
   assert.equal(output.packages_manifest.release_automation.channel_manifest.outputs.channel_manifest, 'opl-channel-manifest.json');
   assert.equal(output.packages_manifest.release_automation.channel_manifest.outputs.checksums, 'SHA256SUMS');
   assert.equal(output.packages_manifest.release_automation.rollback.strategy, 'previous_channel_manifest_target');
@@ -99,14 +110,25 @@ test('packages manifest exposes package coordinates while marking module install
     'retain_latest_n_versions_and_declared_rollbacks',
   );
   assert.equal(output.packages_manifest.release_automation.cleanup.retain_versions, 3);
-  assert.equal(output.packages_manifest.release_automation.package_lifecycle_status, 'prepared_only_deprecated_remote_packages');
+  assert.equal(output.packages_manifest.release_automation.status, 'active_stable_package_channel');
+  assert.equal(output.packages_manifest.release_automation.package_lifecycle_status, 'active_release_channel');
+  assert.equal(output.packages_manifest.release_automation.remote_publish_status, 'workflow_dispatch_publishes_ghcr_packages');
+  assert.equal(output.packages_manifest.release_automation.release_manifest_publication_status, 'active_ghcr_channel_manifest');
   assert.equal(
     output.packages_manifest.release_automation.release_manifest_package.package_channel_status,
-    'prepared_only_deprecated',
+    'active_release_channel',
   );
   assert.equal(
     output.packages_manifest.release_automation.release_manifest_package.publication_status,
-    'artifact_only_not_ghcr_active_channel',
+    'published_to_ghcr_by_packages_workflow',
+  );
+  assert.equal(
+    output.packages_manifest.release_automation.release_manifest_package.current_install_update_source,
+    'opl_release_channel_manifest',
+  );
+  assert.equal(
+    output.packages_manifest.release_automation.release_manifest_package.developer_override_source,
+    'git_checkout',
   );
   assert.equal(
     output.packages_manifest.release_automation.cleanup.execution_mode,
@@ -187,39 +209,39 @@ test('packages manifest exposes package coordinates while marking module install
   );
   assert.equal(
     output.packages_manifest.packages.modules.medautoscience.package_channel_status,
-    'experimental_manual_prepared_only',
+    'active_release_channel',
   );
   assert.equal(
     output.packages_manifest.packages.modules.medautoscience.package_lifecycle_status,
-    'prepared_only_deprecated',
+    'active_release_channel',
   );
   assert.match(
     output.packages_manifest.packages.modules.medautoscience.package_lifecycle_reason,
-    /git checkout/,
+    /package-channel/,
   );
   assert.equal(
     output.packages_manifest.packages.modules.medautoscience.remote_publish_status,
-    'not_auto_published_by_tag_push',
+    'published_to_ghcr_by_packages_workflow',
   );
   assert.equal(
     output.packages_manifest.packages.modules.medautoscience.package_consumption_status,
-    'defined_not_consumed_by_install_update',
+    'consumed_by_package_channel_installs',
   );
   assert.equal(
     output.packages_manifest.packages.modules.medautoscience.current_install_update_source,
-    'git_checkout',
+    'package_channel',
   );
   assert.equal(
     output.packages_manifest.packages.modules.medautoscience.release_discipline.current_latest_source,
-    'git_checkout_upstream_default_branch',
-  );
-  assert.equal(
-    output.packages_manifest.packages.modules.medautoscience.release_discipline.future_package_latest_source,
     'opl_release_channel_manifest',
   );
   assert.equal(
+    output.packages_manifest.packages.modules.medautoscience.release_discipline.developer_override_source,
+    'git_checkout',
+  );
+  assert.equal(
     output.packages_manifest.packages.modules.medautoscience.release_discipline.package_lifecycle_status,
-    'prepared_only_deprecated',
+    'active_release_channel',
   );
   assert.equal(
     output.packages_manifest.packages.modules.medautoscience.release_discipline.required_gates.includes(
@@ -228,7 +250,19 @@ test('packages manifest exposes package coordinates while marking module install
     true,
   );
   assert.equal(
-    output.packages_manifest.packages.modules.medautoscience.fallback_git.repo_url,
+    output.packages_manifest.packages.modules.medautoscience.release_discipline.required_gates.includes(
+      'ghcr_module_artifact_published',
+    ),
+    true,
+  );
+  assert.equal(
+    output.packages_manifest.packages.modules.medautoscience.release_discipline.required_gates.includes(
+      'developer_git_checkout_override_declared',
+    ),
+    true,
+  );
+  assert.equal(
+    output.packages_manifest.packages.modules.medautoscience.developer_git_checkout_override.repo_url,
     'https://github.com/gaofeng21cn/med-autoscience.git',
   );
   assert.equal(Object.hasOwn(output.packages_manifest.packages.modules, 'meddeepscientist'), false);
@@ -242,10 +276,10 @@ test('packages manifest exposes package coordinates while marking module install
   );
   assert.equal(
     output.packages_manifest.packages.modules.oplmetaagent.remote_publish_status,
-    'source_listed_remote_package_unpublished',
+    'published_to_ghcr_by_packages_workflow',
   );
   assert.equal(
-    output.packages_manifest.packages.modules.oplmetaagent.fallback_git.repo_url,
+    output.packages_manifest.packages.modules.oplmetaagent.developer_git_checkout_override.repo_url,
     'https://github.com/gaofeng21cn/opl-meta-agent.git',
   );
 });
@@ -313,12 +347,12 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.release_automation.rollback.previous_version, '26.4.30');
   assert.equal(manifest.release_automation.cleanup.retain_versions, 4);
   assert.ok(manifest.release_automation.cleanup.protected_tags.includes('latest'));
-  assert.equal(manifest.release_automation.status, 'manual_prepared_only_not_consumed_by_module_install_update');
-  assert.equal(manifest.release_automation.package_lifecycle_status, 'prepared_only_deprecated_remote_packages');
+  assert.equal(manifest.release_automation.status, 'active_stable_package_channel');
+  assert.equal(manifest.release_automation.package_lifecycle_status, 'active_release_channel');
   assert.equal(manifest.release_automation.workflow_trigger_policy, 'workflow_dispatch_only');
-  assert.equal(manifest.release_automation.remote_publish_status, 'not_auto_published_by_tag_push');
-  assert.equal(manifest.release_automation.release_manifest_publication_status, 'artifact_only_not_ghcr_active_channel');
-  assert.equal(manifest.release_automation.release_manifest_package.package_channel_status, 'prepared_only_deprecated');
+  assert.equal(manifest.release_automation.remote_publish_status, 'workflow_dispatch_publishes_ghcr_packages');
+  assert.equal(manifest.release_automation.release_manifest_publication_status, 'active_ghcr_channel_manifest');
+  assert.equal(manifest.release_automation.release_manifest_package.package_channel_status, 'active_release_channel');
   assert.equal(manifest.packages.webui_docker_image.framework_workflow_publish_status, 'not_published_by_framework_packages_workflow');
   assert.equal(manifest.packages.native_helper.channel_status, 'active_ghcr_oci_prebuild');
   assert.equal(manifest.packages.native_helper.retention_policy.retain_versions, 4);
@@ -330,11 +364,11 @@ test('package archive builder writes channel manifest checksums git source and r
   );
   assert.equal(
     manifest.packages.modules.medautoscience.release_discipline.package_channel_status,
-    'experimental_manual_prepared_only',
+    'active_release_channel',
   );
   assert.equal(
     manifest.packages.modules.medautoscience.release_discipline.package_lifecycle_status,
-    'prepared_only_deprecated',
+    'active_release_channel',
   );
   assert.equal(
     manifest.packages.modules.medautoscience.release_discipline.workflow_trigger_policy,
@@ -351,7 +385,7 @@ test('package archive builder writes channel manifest checksums git source and r
   );
   assert.equal(
     manifest.packages.modules.oplmetaagent.remote_publish_status,
-    'source_listed_remote_package_unpublished',
+    'published_to_ghcr_by_packages_workflow',
   );
   assert.match(manifest.packages.modules.oplmetaagent.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.match(checksums, /med-autoscience-26\.4\.31\.tar\.gz/);
@@ -436,16 +470,18 @@ test('package archive builder refreshes reused managed clones before archiving s
   assert.equal(manifest.packages.modules.medautoscience.source_git.head_sha, advancedHead);
 });
 
-test('framework packages workflow only prepares manual package artifacts', () => {
+test('framework packages workflow manually publishes active package channel artifacts without WebUI publishing', () => {
   const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/packages.yml'), 'utf8');
 
   assert.match(workflow, /workflow_dispatch:/);
   assert.doesNotMatch(workflow, /\n  push:\n/);
   assert.doesNotMatch(workflow, /webui-image:/);
-  assert.doesNotMatch(workflow, /oras push/);
+  assert.match(workflow, /oras push/);
+  assert.match(workflow, /one-person-lab-modules/);
+  assert.match(workflow, /one-person-lab-manifest:\$\{OPL_RELEASE_VERSION\}/);
+  assert.match(workflow, /oras tag "ghcr\.io\/\$\{OPL_PACKAGES_OWNER\}\/one-person-lab-manifest:\$\{OPL_RELEASE_VERSION\}" stable/);
   assert.doesNotMatch(workflow, /docker\/build-push-action/);
   assert.doesNotMatch(workflow, /one-person-lab-webui/);
-  assert.doesNotMatch(workflow, /one-person-lab-manifest:\$\{OPL_RELEASE_VERSION\}/);
   assert.match(workflow, /Upload prepared package artifacts/);
 });
 
@@ -492,7 +528,7 @@ process.exit(2);
   };
 }
 
-test('GHCR package cleanup dry-runs active native helper and prepared-only packages', () => {
+test('GHCR package cleanup dry-runs active native helper and active package-channel packages', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-ghcr-cleanup-'));
   const packageVersions = {
     'one-person-lab-native-helper': [
@@ -548,14 +584,18 @@ test('GHCR package cleanup dry-runs active native helper and prepared-only packa
   assert.deepEqual(nativeHelper.protected_version_ids, [1, 2, 3, 5]);
   assert.deepEqual(nativeHelper.candidates.map((candidate: { id: number }) => candidate.id), [4]);
   const mas = summary.packages.find((entry: { package_name: string }) => entry.package_name === 'one-person-lab-modules/med-autoscience');
-  assert.equal(mas.lifecycle_status, 'prepared_only_deprecated');
+  assert.equal(mas.package_kind, 'active_module_package');
+  assert.equal(mas.lifecycle_status, 'active_release_channel');
   assert.deepEqual(mas.protected_version_ids, [11, 12, 13, 15]);
   assert.deepEqual(mas.candidates.map((candidate: { id: number }) => candidate.id), [14]);
+  const manifest = summary.packages.find((entry: { package_name: string }) => entry.package_name === 'one-person-lab-manifest');
+  assert.equal(manifest.package_kind, 'active_channel_manifest');
+  assert.equal(manifest.lifecycle_status, 'active_release_channel');
   const missing = summary.packages.find((entry: { package_name: string }) => entry.package_name === 'one-person-lab-modules/opl-meta-agent');
   assert.equal(missing.status, 'not_found_or_unreadable');
 });
 
-test('release discipline fails closed when workflow restores package or WebUI publishing', () => {
+test('release discipline fails closed when workflow restores tag-push or WebUI publishing', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-discipline-root-'));
   const workflowPath = path.join(tempRoot, '.github', 'workflows', 'packages.yml');
   const manifestPath = path.join(tempRoot, 'opl-release-manifest.json');

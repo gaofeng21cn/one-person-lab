@@ -140,7 +140,7 @@ function packageTargets(manifest) {
     },
     ...Object.values(manifest.packages.modules).map((entry) => ({
       package_name: `one-person-lab-modules/${entry.repo_name}`,
-      package_kind: 'prepared_only_module',
+      package_kind: 'active_module_package',
       lifecycle_status: entry.package_lifecycle_status,
       retain_versions: cleanupPolicy.retain_versions,
       execution_mode: cleanupPolicy.execution_mode,
@@ -148,8 +148,8 @@ function packageTargets(manifest) {
     })),
     {
       package_name: 'one-person-lab-manifest',
-      package_kind: 'prepared_only_manifest',
-      lifecycle_status: manifest.release_automation.release_manifest_package.package_channel_status,
+      package_kind: 'active_channel_manifest',
+      lifecycle_status: manifest.release_automation.package_lifecycle_status,
       retain_versions: cleanupPolicy.retain_versions,
       execution_mode: cleanupPolicy.execution_mode,
       protected_tags: cleanupPolicy.protected_tags ?? [],

@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -49,6 +50,29 @@ jobs:
 
       - name: Check package release discipline
         run: npm run packages:release-discipline -- --manifest dist/opl-packages/opl-release-manifest.json
+
+      - name: Setup ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Publish module package channel to GHCR
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "${{ github.token }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+          for archive in dist/opl-packages/modules/*.tar.gz; do
+            module_name="$(basename "$archive" "-${OPL_RELEASE_VERSION}.tar.gz")"
+            image="ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-modules/${module_name}"
+            oras push "${image}:${OPL_RELEASE_VERSION}" \
+              --artifact-type application/vnd.onepersonlab.module.source.v1 \
+              "${archive}:application/vnd.onepersonlab.module.source.v1+gzip"
+          done
+          oras push "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-manifest:${OPL_RELEASE_VERSION}" \
+            --artifact-type application/vnd.onepersonlab.release.manifest.v1 \
+            "dist/opl-packages/opl-release-manifest.json:application/vnd.onepersonlab.release.manifest.v1+json" \
+            "dist/opl-packages/opl-channel-manifest.json:application/vnd.onepersonlab.release.channel-manifest.v1+json" \
+            "dist/opl-packages/SHA256SUMS:text/plain"
+          oras tag "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-manifest:${OPL_RELEASE_VERSION}" stable
+          oras tag "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-manifest:${OPL_RELEASE_VERSION}" latest
 
       - name: Upload prepared package artifacts
         uses: actions/upload-artifact@v7

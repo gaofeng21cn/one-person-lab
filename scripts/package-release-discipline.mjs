@@ -43,20 +43,24 @@ function assertCondition(condition, message, failures) {
 }
 
 function validateModule(moduleId, entry, failures) {
-  assertCondition(entry.current_install_update_source === 'git_checkout', `${moduleId}: current source must remain git_checkout until install/update consumes packages`, failures);
-  assertCondition(entry.package_consumption_status === 'defined_not_consumed_by_install_update', `${moduleId}: package consumption status drifted`, failures);
-  assertCondition(entry.package_channel_status === 'experimental_manual_prepared_only', `${moduleId}: module package channel must remain experimental/manual prepared-only`, failures);
-  assertCondition(entry.package_lifecycle_status === 'prepared_only_deprecated', `${moduleId}: module package lifecycle must remain prepared-only deprecated`, failures);
-  assertCondition(typeof entry.package_lifecycle_reason === 'string' && entry.package_lifecycle_reason.includes('git checkout'), `${moduleId}: module package lifecycle reason must point to git checkout current source`, failures);
-  assertCondition(entry.remote_publish_status === 'not_auto_published_by_tag_push' || entry.remote_publish_status === 'source_listed_remote_package_unpublished', `${moduleId}: remote publish status must not claim an active remote package`, failures);
-  assertCondition(entry.release_discipline?.package_channel_status === 'experimental_manual_prepared_only', `${moduleId}: release discipline must mark package channel prepared-only`, failures);
-  assertCondition(entry.release_discipline?.package_lifecycle_status === 'prepared_only_deprecated', `${moduleId}: release discipline must mark package lifecycle deprecated/prepared-only`, failures);
+  assertCondition(entry.current_install_update_source === 'package_channel', `${moduleId}: current source must be package_channel for stable package-channel installs`, failures);
+  assertCondition(entry.package_consumption_status === 'consumed_by_package_channel_installs', `${moduleId}: package consumption status drifted`, failures);
+  assertCondition(entry.package_channel_status === 'active_release_channel', `${moduleId}: module package channel must be active`, failures);
+  assertCondition(entry.package_lifecycle_status === 'active_release_channel', `${moduleId}: module package lifecycle must be active`, failures);
+  assertCondition(typeof entry.package_lifecycle_reason === 'string' && entry.package_lifecycle_reason.includes('GHCR channel manifest'), `${moduleId}: module package lifecycle reason must point to GHCR channel manifest`, failures);
+  assertCondition(entry.remote_publish_status === 'published_to_ghcr_by_packages_workflow', `${moduleId}: remote publish status must claim workflow GHCR publication`, failures);
+  assertCondition(entry.developer_git_checkout_override?.repo_url, `${moduleId}: missing developer git checkout override`, failures);
+  assertCondition(entry.release_discipline?.package_channel_status === 'active_release_channel', `${moduleId}: release discipline must mark package channel active`, failures);
+  assertCondition(entry.release_discipline?.package_lifecycle_status === 'active_release_channel', `${moduleId}: release discipline must mark package lifecycle active`, failures);
   assertCondition(entry.release_discipline?.workflow_trigger_policy === 'workflow_dispatch_only', `${moduleId}: release discipline must require manual workflow dispatch`, failures);
-  assertCondition(entry.release_discipline?.current_latest_source === 'git_checkout_upstream_default_branch', `${moduleId}: missing current latest source discipline`, failures);
+  assertCondition(entry.release_discipline?.current_latest_source === 'opl_release_channel_manifest', `${moduleId}: missing current package-channel source discipline`, failures);
+  assertCondition(entry.release_discipline?.developer_override_source === 'git_checkout', `${moduleId}: missing developer override source discipline`, failures);
   assertCondition(Array.isArray(entry.release_discipline?.required_gates), `${moduleId}: missing required release gates`, failures);
   assertCondition(entry.release_discipline?.required_gates?.includes('sha256_recorded'), `${moduleId}: release gates must require sha256`, failures);
   assertCondition(entry.release_discipline?.required_gates?.includes('channel_manifest_written'), `${moduleId}: release gates must require channel manifest`, failures);
-  assertCondition(entry.release_discipline?.required_gates?.includes('prepared_only_deprecated_status_recorded'), `${moduleId}: release gates must record prepared-only deprecated status`, failures);
+  assertCondition(entry.release_discipline?.required_gates?.includes('ghcr_module_artifact_published'), `${moduleId}: release gates must publish module artifact to GHCR`, failures);
+  assertCondition(entry.release_discipline?.required_gates?.includes('release_manifest_published'), `${moduleId}: release gates must publish release manifest`, failures);
+  assertCondition(entry.release_discipline?.required_gates?.includes('developer_git_checkout_override_declared'), `${moduleId}: release gates must declare developer git checkout override`, failures);
 
   if (entry.source_archive) {
     assertCondition(typeof entry.source_archive.file_name === 'string', `${moduleId}: source archive missing file name`, failures);
@@ -80,22 +84,25 @@ function validateManifest(manifest) {
   const failures = [];
   const automation = manifest.release_automation;
 
-  assertCondition(manifest.module_install_update_source === 'git_checkout', 'module install/update source must remain git_checkout', failures);
-  assertCondition(manifest.package_consumption_status === 'packages_defined_not_consumed_by_install_update', 'package consumption status drifted', failures);
-  assertCondition(automation?.status === 'manual_prepared_only_not_consumed_by_module_install_update', 'release automation must remain manual prepared-only', failures);
-  assertCondition(automation?.package_lifecycle_status === 'prepared_only_deprecated_remote_packages', 'release automation must record prepared-only deprecated remote package lifecycle', failures);
+  assertCondition(manifest.module_install_update_source === 'package_channel', 'module install/update source must be package_channel', failures);
+  assertCondition(manifest.package_consumption_status === 'stable_app_release_consumes_package_channel', 'package consumption status drifted', failures);
+  assertCondition(manifest.developer_module_source_override?.env === 'OPL_MODULE_SOURCE_MODE=git_checkout', 'developer git checkout override must be explicit', failures);
+  assertCondition(automation?.status === 'active_stable_package_channel', 'release automation must be active stable package channel', failures);
+  assertCondition(automation?.package_lifecycle_status === 'active_release_channel', 'release automation must record active release channel lifecycle', failures);
   assertCondition(automation?.workflow_trigger_policy === 'workflow_dispatch_only', 'package workflow must remain manual dispatch only', failures);
-  assertCondition(automation?.remote_publish_status === 'not_auto_published_by_tag_push', 'package workflow must not claim tag-push remote publishing', failures);
-  assertCondition(automation?.release_manifest_publication_status === 'artifact_only_not_ghcr_active_channel', 'release manifest must remain artifact-only, not active GHCR channel', failures);
-  assertCondition(automation?.release_manifest_package?.package_channel_status === 'prepared_only_deprecated', 'release manifest package must remain prepared-only deprecated', failures);
-  assertCondition(automation?.release_manifest_package?.publication_status === 'artifact_only_not_ghcr_active_channel', 'release manifest package must not claim active GHCR publication', failures);
-  assertCondition(automation?.release_manifest_package?.current_install_update_source === 'git_checkout', 'release manifest current source must remain git_checkout', failures);
+  assertCondition(automation?.remote_publish_status === 'workflow_dispatch_publishes_ghcr_packages', 'package workflow must publish GHCR packages from manual dispatch', failures);
+  assertCondition(automation?.release_manifest_publication_status === 'active_ghcr_channel_manifest', 'release manifest must be an active GHCR channel', failures);
+  assertCondition(automation?.release_manifest_package?.package_channel_status === 'active_release_channel', 'release manifest package must be active', failures);
+  assertCondition(automation?.release_manifest_package?.publication_status === 'published_to_ghcr_by_packages_workflow', 'release manifest package must claim GHCR publication', failures);
+  assertCondition(automation?.release_manifest_package?.current_install_update_source === 'opl_release_channel_manifest', 'release manifest current source must be package channel', failures);
   assertCondition(automation?.channel_manifest?.manifest_kind === 'opl_release_channel_manifest.v1', 'missing channel manifest automation contract', failures);
+  assertCondition(typeof automation?.channel_manifest?.ghcr_ref === 'string' && automation.channel_manifest.ghcr_ref.includes('one-person-lab-manifest'), 'missing channel manifest GHCR ref', failures);
+  assertCondition(automation?.channel_manifest?.moving_tags?.includes('stable'), 'channel manifest must declare stable moving tag', failures);
   assertCondition(automation?.channel_manifest?.outputs?.channel_manifest === 'opl-channel-manifest.json', 'missing channel manifest output', failures);
   assertCondition(automation?.channel_manifest?.outputs?.checksums === 'SHA256SUMS', 'missing checksum output', failures);
   assertCondition(automation?.artifact_build?.workflow === '.github/workflows/packages.yml', 'missing artifact build workflow contract', failures);
-  assertCondition(automation?.artifact_build?.publication_mode === 'prepared_artifact_only', 'artifact build must remain prepared-artifact only', failures);
-  assertCondition(automation?.checksum?.required_before_publish === false, 'checksum must not imply an active publish channel', failures);
+  assertCondition(automation?.artifact_build?.publication_mode === 'ghcr_package_channel_and_workflow_artifact', 'artifact build must publish GHCR package channel and workflow artifact', failures);
+  assertCondition(automation?.checksum?.required_before_publish === true, 'checksum must be required before publish', failures);
   assertCondition(automation?.checksum?.required_before_prepared_artifact === true, 'checksum must be required before prepared artifact', failures);
   assertCondition(automation?.rollback?.strategy === 'previous_channel_manifest_target', 'rollback strategy must use previous channel manifest target', failures);
   assertCondition(automation?.cleanup?.strategy === 'retain_latest_n_versions_and_declared_rollbacks', 'cleanup strategy must retain latest versions and rollbacks', failures);
@@ -146,11 +153,13 @@ function validateWorkflow(manifest, failures) {
   const source = fs.readFileSync(workflowPath, 'utf8');
   assertCondition(/workflow_dispatch:/.test(source), 'package workflow must keep manual workflow_dispatch trigger', failures);
   assertCondition(!/\n\s*push:\n/.test(source), 'package workflow must not restore tag-push publishing', failures);
-  assertCondition(!/oras\s+push/.test(source), 'package workflow must not push module archives or release manifest to GHCR', failures);
+  assertCondition(/oras\s+push/.test(source), 'package workflow must push module archives and release manifest to GHCR', failures);
+  assertCondition(/one-person-lab-modules/.test(source), 'package workflow must publish module packages', failures);
+  assertCondition(/one-person-lab-manifest/.test(source), 'package workflow must publish release manifest package', failures);
   assertCondition(!/docker\/build-push-action/.test(source), 'package workflow must not publish WebUI image from Framework repo', failures);
   assertCondition(!/webui-image:/.test(source), 'package workflow must not restore Framework-owned WebUI image job', failures);
   assertCondition(!/one-person-lab-webui/.test(source), 'package workflow must not publish one-person-lab-webui', failures);
-  assertCondition(!/one-person-lab-manifest:\$\{OPL_RELEASE_VERSION\}/.test(source), 'package workflow must not publish active release manifest GHCR channel', failures);
+  assertCondition(/one-person-lab-manifest:\$\{OPL_RELEASE_VERSION\}/.test(source), 'package workflow must publish versioned release manifest GHCR channel', failures);
 }
 
 function main() {

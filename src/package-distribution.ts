@@ -82,38 +82,40 @@ function normalizeRetainVersions(value?: number) {
 
 function buildReleaseAutomation(retainVersions: number, rollbackVersion: string | null) {
   return {
-    status: 'manual_prepared_only_not_consumed_by_module_install_update',
-    package_lifecycle_status: 'prepared_only_deprecated_remote_packages',
+    status: 'active_stable_package_channel',
+    package_lifecycle_status: 'active_release_channel',
     workflow_trigger_policy: 'workflow_dispatch_only',
-    remote_publish_status: 'not_auto_published_by_tag_push',
-    release_manifest_publication_status: 'artifact_only_not_ghcr_active_channel',
+    remote_publish_status: 'workflow_dispatch_publishes_ghcr_packages',
+    release_manifest_publication_status: 'active_ghcr_channel_manifest',
     release_manifest_package: {
       package_name: 'one-person-lab-manifest',
-      package_channel_status: 'prepared_only_deprecated',
-      publication_status: 'artifact_only_not_ghcr_active_channel',
-      current_install_update_source: 'git_checkout',
-      future_package_latest_source: 'opl_release_channel_manifest',
+      package_channel_status: 'active_release_channel',
+      publication_status: 'published_to_ghcr_by_packages_workflow',
+      current_install_update_source: 'opl_release_channel_manifest',
+      developer_override_source: 'git_checkout',
     },
     channel_manifest: {
       manifest_kind: 'opl_release_channel_manifest.v1',
       generated_by: 'scripts/package-module-archives.mjs',
+      ghcr_ref: 'ghcr.io/<owner>/one-person-lab-manifest:<opl_version>',
+      moving_tags: ['stable', 'latest'],
       outputs: {
         release_manifest: 'opl-release-manifest.json',
         channel_manifest: 'opl-channel-manifest.json',
         checksums: 'SHA256SUMS',
       },
-      latest_source_until_packages_consumed: 'git_checkout_upstream_default_branch',
+      current_latest_source: 'ghcr_channel_manifest',
     },
     artifact_build: {
       workflow: '.github/workflows/packages.yml',
       command: 'npm run packages:manifest -- --version <opl_version>',
       artifact_kind: 'git_archive_source_tarball',
-      publication_mode: 'prepared_artifact_only',
+      publication_mode: 'ghcr_package_channel_and_workflow_artifact',
     },
     checksum: {
       algorithm: 'sha256',
       recorded_in: ['source_archive.sha256', 'SHA256SUMS'],
-      required_before_publish: false,
+      required_before_publish: true,
       required_before_prepared_artifact: true,
     },
     rollback: {
@@ -136,22 +138,22 @@ function buildReleaseAutomation(retainVersions: number, rollbackVersion: string 
 function buildModuleReleaseDiscipline(spec: PackageModuleSpec, rollbackVersion: string | null) {
   return {
     module_truth_owner: spec.repo_name,
-    package_publish_owner: 'manual_prepared_framework_package_workflow',
-    package_channel_status: 'experimental_manual_prepared_only',
-    package_lifecycle_status: 'prepared_only_deprecated',
+    package_publish_owner: 'framework_packages_workflow',
+    package_channel_status: 'active_release_channel',
+    package_lifecycle_status: 'active_release_channel',
     workflow_trigger_policy: 'workflow_dispatch_only',
-    remote_publish_status: spec.module_id === 'oplmetaagent'
-      ? 'source_listed_remote_package_unpublished'
-      : 'not_auto_published_by_tag_push',
-    current_latest_source: 'git_checkout_upstream_default_branch',
-    future_package_latest_source: 'opl_release_channel_manifest',
+    remote_publish_status: 'published_to_ghcr_by_packages_workflow',
+    current_latest_source: 'opl_release_channel_manifest',
+    developer_override_source: 'git_checkout',
     required_gates: [
       'upstream_default_branch_reachable',
       'clean_checkout_or_fresh_clone',
       'source_archive_built_from_head',
       'sha256_recorded',
       'channel_manifest_written',
-      'prepared_only_deprecated_status_recorded',
+      'ghcr_module_artifact_published',
+      'release_manifest_published',
+      'developer_git_checkout_override_declared',
       'rollback_target_declared_when_previous_manifest_exists',
     ],
     rollback: rollbackVersion
@@ -176,8 +178,13 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
     gui_version: process.env.OPL_GUI_VERSION?.trim() || null,
     release_channel: process.env.OPL_RELEASE_CHANNEL?.trim() || 'stable',
     generated_at: generatedAt,
-    module_install_update_source: 'git_checkout',
-    package_consumption_status: 'packages_defined_not_consumed_by_install_update',
+    module_install_update_source: 'package_channel',
+    package_consumption_status: 'stable_app_release_consumes_package_channel',
+    developer_module_source_override: {
+      env: 'OPL_MODULE_SOURCE_MODE=git_checkout',
+      scope: 'dev_operator_checkout',
+      rule: 'Developer/operator workflows may explicitly use Git checkout mode; stable App release and package-channel installs consume the GHCR channel manifest.',
+    },
     release_automation: buildReleaseAutomation(retainVersions, rollbackVersion),
     packages: {
       codex_default_profile: readBundledCodexDefaultProfile(),
@@ -230,17 +237,16 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
             version,
             artifact_kind: 'source_archive',
             artifact: buildPackageRef(owner, spec.package_name, version),
-            package_channel_status: 'experimental_manual_prepared_only',
-            package_lifecycle_status: 'prepared_only_deprecated',
-            package_lifecycle_reason: 'current module install/update source remains git checkout until opl module install/update consumes the channel manifest',
-            remote_publish_status: spec.module_id === 'oplmetaagent'
-              ? 'source_listed_remote_package_unpublished'
-              : 'not_auto_published_by_tag_push',
-            package_consumption_status: 'defined_not_consumed_by_install_update',
-            current_install_update_source: 'git_checkout',
-            fallback_git: {
+            package_channel_status: 'active_release_channel',
+            package_lifecycle_status: 'active_release_channel',
+            package_lifecycle_reason: 'stable App release and package-channel installs consume the GHCR channel manifest; domain truth remains repo-owned',
+            remote_publish_status: 'published_to_ghcr_by_packages_workflow',
+            package_consumption_status: 'consumed_by_package_channel_installs',
+            current_install_update_source: 'package_channel',
+            developer_git_checkout_override: {
               repo_url: spec.repo_url,
               ref: 'main',
+              env: `OPL_MODULE_SOURCE_MODE=git_checkout or OPL_MODULE_PATH_${spec.module_id.toUpperCase()}`,
             },
             release_discipline: buildModuleReleaseDiscipline(spec, rollbackVersion),
             install_strategy: 'extract_to_managed_modules_root',

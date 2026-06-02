@@ -9,7 +9,12 @@ import type {
 } from './shared.ts';
 import { normalizeOptionalString } from './shared.ts';
 
-export function readPackagedModuleGitSnapshot(repoPath: string, spec: DomainModuleSpec): GitRepoSnapshot | null {
+export type PackagedModuleMarker = {
+  source_kind: 'full_runtime' | 'package_channel';
+  source_git: GitRepoSnapshot;
+};
+
+export function readPackagedModuleMarker(repoPath: string, spec: DomainModuleSpec): PackagedModuleMarker | null {
   const markerPath = path.join(repoPath, PACKAGED_MODULE_MARKER_FILE);
   if (!fs.existsSync(markerPath) || !fs.statSync(markerPath).isFile()) {
     return null;
@@ -22,7 +27,16 @@ export function readPackagedModuleGitSnapshot(repoPath: string, spec: DomainModu
     return null;
   }
 
-  if (parsed.packaged_runtime !== true || parsed.module_id !== spec.module_id || parsed.repo_name !== spec.repo_name) {
+  if (parsed.module_id !== spec.module_id || parsed.repo_name !== spec.repo_name) {
+    return null;
+  }
+
+  const sourceKind = parsed.packaged_runtime === true
+    ? 'full_runtime'
+    : parsed.package_channel === true
+      ? 'package_channel'
+      : null;
+  if (!sourceKind) {
     return null;
   }
 
@@ -33,21 +47,28 @@ export function readPackagedModuleGitSnapshot(repoPath: string, spec: DomainModu
   const headSha = normalizeOptionalString(typeof sourceGit.head_sha === 'string' ? sourceGit.head_sha : null);
 
   return {
-    branch: null,
-    head_sha: headSha,
-    short_sha: headSha ? headSha.slice(0, 12) : null,
-    origin_url: spec.repo_url,
-    upstream_ref: null,
-    upstream_head_sha: null,
-    ahead_count: null,
-    behind_count: null,
-    sync_status: 'no_upstream',
-    dirty: false,
+    source_kind: sourceKind,
+    source_git: {
+      branch: null,
+      head_sha: headSha,
+      short_sha: headSha ? headSha.slice(0, 12) : null,
+      origin_url: spec.repo_url,
+      upstream_ref: null,
+      upstream_head_sha: null,
+      ahead_count: null,
+      behind_count: null,
+      sync_status: 'no_upstream',
+      dirty: false,
+    },
   };
 }
 
+export function readPackagedModuleGitSnapshot(repoPath: string, spec: DomainModuleSpec): GitRepoSnapshot | null {
+  return readPackagedModuleMarker(repoPath, spec)?.source_git ?? null;
+}
+
 export function isPackagedModuleCheckout(repoPath: string, spec: DomainModuleSpec) {
-  return Boolean(readPackagedModuleGitSnapshot(repoPath, spec));
+  return Boolean(readPackagedModuleMarker(repoPath, spec));
 }
 
 export function copyManagedModuleFromPackagedRuntime(
@@ -55,8 +76,8 @@ export function copyManagedModuleFromPackagedRuntime(
   sourcePath: string,
   checkoutPath: string,
 ) {
-  const packagedGit = readPackagedModuleGitSnapshot(sourcePath, spec);
-  if (!packagedGit) {
+  const marker = readPackagedModuleMarker(sourcePath, spec);
+  if (!marker || marker.source_kind !== 'full_runtime') {
     throw new FrameworkContractError(
       'cli_usage_error',
       'Packaged module source is not a valid OPL Full runtime module.',
