@@ -1,5 +1,10 @@
 # 历史归档索引
 
+Owner: `One Person Lab`
+Purpose: `history_archive_index`
+State: `history_index`
+Machine boundary: 本文是人读历史归档索引。历史文档只保存 provenance、tombstone 和完成过程；机器真相继续归 contracts、source、CLI/API、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 这里是 `One Person Lab` 已退役文档路线的统一归档入口。
 
 仓库跟踪的历史材料只从这里进入。`docs/**` 只维护中文 canonical 内容；历史层中的旧双语方案、旧路径和旧命令只按 provenance 阅读，不再维护 docs 层双语镜像。

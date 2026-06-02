@@ -48,3 +48,17 @@ Active 文档不能继续充当过程账本。以下内容只能进入 `docs/his
 - 已闭合 tranche 的完整时间线、命令流水、commit 过程和 conflict 处理记录。
 
 Active 文档只保留当前 owner、当前状态、当前 gap、下一跳 gate、完成口径和验证入口。若过程证据形成长期规则，先抽象成 policy/spec/contract 或核心五件套条款，再把原始流水归档。
+
+## 单文档唯一职责
+
+每份长期文档只能承担一个主要职责。允许在开头给出必要导航，但不能同时承担 target state、current truth、active plan、proof ledger、runbook 和 history narrative。
+
+职责冲突时按下面顺序拆分：
+
+- 当前事实进入核心五件套、当前 owner doc、contracts/source/runtime surface。
+- 目标态进入 `docs/references/` 或明确的 ideal-state owner。
+- 当前差距、执行顺序、baton 和完成门槛进入 `docs/active/` 的唯一 owner。
+- 稳定命令和长期治理规则进入 `docs/policies/`、`docs/specs/` 或对应工具文档。
+- dated proof、coverage tranche、branch/worktree closeout、frozen inventory、receipt 流水和历史长清单进入 `docs/history/**`。
+
+文档中如果存在按历史增量堆叠的长表，active 层只保留 `owner / current state / evidence gate / next action` 这类当前决策所需粒度。原始逐项记录必须折叠为 history/provenance，不继续追加在 active governance、status 或 gap plan 文档里。
