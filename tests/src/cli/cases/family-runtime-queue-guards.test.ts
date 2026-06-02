@@ -278,6 +278,176 @@ JSON
   }
 });
 
+test('family-runtime queue release clears durable scoped hold for future hydration', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-durable-release-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-durable-release-export-'));
+  const exportPath = path.join(fixtureRoot, 'export');
+  fs.writeFileSync(
+    exportPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+cat <<'JSON'
+{
+  "pending_family_tasks": [
+    {
+      "domain_id": "medautoscience",
+      "task_kind": "domain_route/reconcile-apply",
+      "dedupe_key": "mas:test:DM002:release-resume",
+      "payload": {"profile": "/tmp/profile.toml", "study_id": "DM002"}
+    },
+    {
+      "domain_id": "medautoscience",
+      "task_kind": "domain_route/reconcile-apply",
+      "dedupe_key": "mas:test:DM003:release-resume",
+      "payload": {"profile": "/tmp/profile.toml", "study_id": "DM003"}
+    }
+  ]
+}
+JSON
+`,
+    { mode: 0o755 },
+  );
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+    });
+    runCli([
+      'family-runtime',
+      'queue',
+      'hold',
+      '--study',
+      'DM003',
+      '--reason',
+      'manual_pause_for_mas_upgrade',
+      '--source',
+      'test-supervisor',
+    ], env);
+    const release = runCli([
+      'family-runtime',
+      'queue',
+      'release',
+      '--study',
+      'DM003',
+      '--reason',
+      'manual_pause_for_mas_upgrade',
+      '--source',
+      'test-supervisor',
+    ], env);
+    const intake = runCli(['family-runtime', 'intake', '--domain', 'medautoscience'], env);
+    const queue = runCli(['family-runtime', 'queue', 'list'], familyRuntimeEnv(stateRoot));
+    const dm003 = queue.family_runtime_queue.tasks.find((task: { payload: { study_id?: string } }) =>
+      task.payload.study_id === 'DM003'
+    );
+    const dm002 = queue.family_runtime_queue.tasks.find((task: { payload: { study_id?: string } }) =>
+      task.payload.study_id === 'DM002'
+    );
+
+    assert.equal(release.family_runtime_queue_release.released_hold_count, 1);
+    assert.equal(release.family_runtime_queue_release.released_count, 0);
+    assert.equal(intake.family_runtime_intake.enqueued_count, 2);
+    assert.equal(dm002.status, 'queued');
+    assert.equal(dm003.status, 'queued');
+    assert.equal(dm003.requires_approval, false);
+    assert.equal(dm003.last_error, null);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime queue release clears a scoped hold and dispatches only matching held tasks', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-queue-release-'));
+  const dispatch = createDispatchFixture(`
+python3 - "$TASK_PATH" <<'PY'
+import json, sys
+task = json.load(open(sys.argv[1]))
+print(json.dumps({"accepted": True, "surface_kind": "test_dispatch", "study_id": task["payload"].get("study_id")}))
+PY
+`);
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MAS_DISPATCH: dispatch.dispatchPath,
+    });
+    const heldTarget = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      '{"study_id":"003-dpcc-primary-care-phenotype-treatment-gap","action_type":"return_to_ai_reviewer_workflow"}',
+      '--dedupe-key',
+      'mas:dm003:release-target',
+    ], env);
+    const otherStudy = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      '{"study_id":"002-dm-china-us-mortality-attribution","action_type":"return_to_ai_reviewer_workflow"}',
+      '--dedupe-key',
+      'mas:dm002:release-not-held',
+    ], env);
+    runCli([
+      'family-runtime',
+      'queue',
+      'hold',
+      '--study',
+      '003-dpcc-primary-care-phenotype-treatment-gap',
+      '--reason',
+      'manual_pause_for_mas_upgrade',
+      '--source',
+      'test-supervisor',
+    ], env);
+    const release = runCli([
+      'family-runtime',
+      'queue',
+      'release',
+      '--study',
+      '003-dpcc-primary-care-phenotype-treatment-gap',
+      '--reason',
+      'manual_pause_for_mas_upgrade',
+      '--source',
+      'test-supervisor',
+    ], env);
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test-release', '--limit', '10'], env);
+    const heldInspection = runCli([
+      'family-runtime',
+      'queue',
+      'inspect',
+      heldTarget.family_runtime_enqueue.task.task_id,
+    ], env);
+    const otherInspection = runCli([
+      'family-runtime',
+      'queue',
+      'inspect',
+      otherStudy.family_runtime_enqueue.task.task_id,
+    ], env);
+
+    assert.equal(release.family_runtime_queue_release.released_hold_count, 1);
+    assert.equal(release.family_runtime_queue_release.released_count, 1);
+    assert.equal(release.family_runtime_queue_release.released_tasks[0].status, 'queued');
+    assert.equal(tick.family_runtime_tick.selected_count, 2);
+    assert.deepEqual(
+      tick.family_runtime_tick.dispatches.map((entry: { output: { study_id?: string } }) => entry.output.study_id).sort(),
+      [
+        '002-dm-china-us-mortality-attribution',
+        '003-dpcc-primary-care-phenotype-treatment-gap',
+      ],
+    );
+    assert.equal(heldInspection.family_runtime_task.task.status, 'succeeded');
+    assert.equal(heldInspection.family_runtime_task.task.last_error, null);
+    assert.equal(otherInspection.family_runtime_task.task.status, 'succeeded');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime queue list filters by domain, study, and status for Progress-First monitoring', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-queue-list-filter-'));
   try {

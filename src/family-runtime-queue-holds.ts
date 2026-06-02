@@ -71,6 +71,28 @@ export function activeFamilyRuntimeQueueHolds(db: DatabaseSync) {
   `).all() as QueueHoldRow[]).map(rowToHold);
 }
 
+export function releaseFamilyRuntimeQueueHoldRows(
+  db: DatabaseSync,
+  input: {
+    taskScope: FamilyRuntimeTaskScope;
+    reason: string;
+    releasedAt: string;
+  },
+) {
+  const scope = normalizeTaskScopeForStorage(input.taskScope);
+  const scopeJson = JSON.stringify(scope);
+  db.prepare(`
+    UPDATE queue_holds
+    SET status = 'released', updated_at = ?
+    WHERE scope_json = ? AND reason = ? AND status = 'active'
+  `).run(input.releasedAt, scopeJson, input.reason);
+  return (db.prepare(`
+    SELECT * FROM queue_holds
+    WHERE scope_json = ? AND reason = ? AND status = 'released' AND updated_at = ?
+    ORDER BY updated_at DESC, created_at DESC
+  `).all(scopeJson, input.reason, input.releasedAt) as QueueHoldRow[]).map(rowToHold);
+}
+
 export function activeQueueHoldForTaskInput(
   db: DatabaseSync,
   input: {

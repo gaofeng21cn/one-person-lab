@@ -471,7 +471,7 @@ export function buildInternalCommandSpecs(
     },
     'family-runtime': {
       usage:
-        'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|intake|tick|enqueue|service start|service status|service stop|worker start|worker status|worker stop|scheduler install|scheduler status|scheduler trigger|scheduler remove|scheduler tick|evidence-worklist|residency proof|attempt create|attempt list|attempt inspect|attempt start|attempt cancel|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|queue redrive|queue hold|approve|notify list|events export [options]',
+        'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|intake|tick|enqueue|service start|service status|service stop|worker start|worker status|worker stop|scheduler install|scheduler status|scheduler trigger|scheduler remove|scheduler tick|evidence-worklist|residency proof|attempt create|attempt list|attempt inspect|attempt start|attempt cancel|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|queue redrive|queue hold|queue release|approve|notify list|events export [options]',
       summary:
         'Manage the provider-backed OPL family runtime queue, stage attempts, evidence worklist, notifications, approvals, and events.',
       examples: [
@@ -503,6 +503,7 @@ export function buildInternalCommandSpecs(
         'opl family-runtime tick --source temporal-worker --hydrate',
         'opl family-runtime queue list',
         'opl family-runtime queue hold --study 003-dpcc-primary-care-phenotype-treatment-gap --reason manual_pause_for_mas_upgrade',
+        'opl family-runtime queue release --study 003-dpcc-primary-care-phenotype-treatment-gap --reason manual_pause_for_mas_upgrade',
       ],
       handler: (args) => runFamilyRuntime(args),
     },

@@ -59,6 +59,7 @@ import { runSchedulerQueueTick } from './family-runtime-scheduler-tick-runner.ts
 import { hydrateDomainTasks, readMasManagedProviderProjection } from './family-runtime-task-dispatch.ts';
 import { redriveFamilyRuntimeTask } from './family-runtime-redrive.ts';
 import { holdFamilyRuntimeQueueTasks } from './family-runtime-queue-hold.ts';
+import { releaseFamilyRuntimeQueueHold } from './family-runtime-queue-release.ts';
 import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-query.ts';
 import { reconcileFamilyRuntimeLifecycleRefs, runFamilyRuntimeLifecycleApply } from './family-runtime-lifecycle-index.ts';
 import { buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
@@ -555,6 +556,20 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
         family_runtime_queue_hold: {
           surface_id: 'opl_family_runtime_queue_hold',
           ...holdFamilyRuntimeQueueTasks(db, {
+            taskScope: parsed.taskScope,
+            reason: parsed.reason,
+            source: parsed.source,
+          }),
+          queue: queueSummary(db),
+        },
+      };
+    }
+    if (parsed.mode === 'queue_release') {
+      return {
+        version: 'g2',
+        family_runtime_queue_release: {
+          surface_id: 'opl_family_runtime_queue_release',
+          ...releaseFamilyRuntimeQueueHold(db, {
             taskScope: parsed.taskScope,
             reason: parsed.reason,
             source: parsed.source,
