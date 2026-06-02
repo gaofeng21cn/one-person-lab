@@ -33,7 +33,7 @@ Date: `2026-06-01`
 
 ## 总体判断
 
-如果从目的反推，当前 OPL 系列最需要优化的不是新增 runtime、gateway、workflow compiler、proof engine、App workbench 或 domain-local helper，而是减法：
+如果从目的反推，当前 OPL 系列最需要优化的不是新增 runtime、中转入口层、workflow compiler、proof engine、App workbench 或 domain-local helper，而是减法：
 
 1. 把默认读面从“所有 refs 都可见”收敛到“下一步必须由哪个 owner 产出什么 delta / receipt / typed blocker”。
 2. 把 domain repo 内仍暂留的 product/status/workbench/domain-handler/lifecycle projection shell 继续压成 domain pack、authority function、handler target 和 refs-only return shape。
@@ -117,7 +117,7 @@ RCA 的复杂性主要来自视觉交付天然需要多 route：image-first、HT
 - 继续保留 Kami 吸收后的 visual pack discipline，因为它服务 RCA 领域质量，不是平台噪音。
 - 将 `runtimeWatch`、session continuity、operator evidence/stability projection 等保持 refs-only adapter，等 OPL App/workbench parity 后继续收薄。
 - Production evidence tail 的下一步应是 repeated artifact-producing owner receipt、visual memory reuse、workspace receipt scaleout、human review receipt 或 Temporal visual-stage long soak，不是再增加 naming/compat guard。
-- 已退役 `managed` / gateway / session / domain_action_adapter alias 只能留 tombstone/provenance，不恢复为 active payload alias。
+- 已退役 `managed` / session / domain_action_adapter 旧 alias 只能留 tombstone/provenance，不恢复为 active payload alias。
 
 ### opl-meta-agent
 
@@ -167,7 +167,7 @@ App repo 的目标已经从“通用 AionUI 多 backend 工作台”收敛为 Co
 
 ### P0：不再扩大抽象层
 
-不要新增 gateway、frontdoor、workflow compiler、proof assistant、second read-model authority、domain-local scheduler 或 App-owned runtime truth。现有 OPL/Temporal + stage pack + domain authority receipt 已足够表达目标态。
+不要新增中转入口层、workflow compiler、proof assistant、second read-model authority、domain-local scheduler 或 App-owned runtime truth。现有 OPL/Temporal + stage pack + domain authority receipt 已足够表达目标态。
 
 ### P1：默认读面改成 owner-delta-first
 

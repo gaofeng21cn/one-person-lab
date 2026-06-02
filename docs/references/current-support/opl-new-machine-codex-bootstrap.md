@@ -41,7 +41,7 @@ Source of truth:
 | Product / first install | `one-person-lab-app` | Desktop App、Full first-install DMG、one-shot App installer、release gates、首启用户路径 |
 | Domain agents | MAS/MAG/RCA/OMA repos + OPL generated surface | domain truth、action/stage semantics、quality/export/artifact authority、domain skill metadata |
 | Codex workflow | `opl-flow` | 用户级 `AGENTS.md`、`TASTE.md`、角色库、subagent contract、Direct/Inline/Durable 工作流 |
-| Docs governance | `opl-doc` | OPL-native 文档生命周期治理 skill、`opl-doc-doctor`、`opl-doc-governance` 兼容入口 |
+| Docs governance | `opl-doc` | OPL-native 文档生命周期治理 skill、`opl-doc-doctor`、`opl-doc-governance` 历史转发入口 |
 | Companion skills/tools | OPL CLI/App managed profile | OfficeCLI、MinerU、Superpowers、UI/UX、PDF/Office 等辅助能力的检测、同步和受管路径 |
 
 ## 推荐执行顺序
