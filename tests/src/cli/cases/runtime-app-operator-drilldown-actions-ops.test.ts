@@ -28,7 +28,7 @@ function appReleaseEvidenceSatisfied() {
   };
 }
 
-function selectionDrilldownFixture(input: Record<string, unknown>) {
+function selectionDrilldownFixture<T extends Record<string, unknown>>(input: T) {
   return {
     package_export_lifecycle_refs: appReleaseEvidenceSatisfied(),
     ...input,
