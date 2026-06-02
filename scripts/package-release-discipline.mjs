@@ -100,6 +100,7 @@ function validateManifest(manifest) {
   assertCondition(automation?.rollback?.strategy === 'previous_channel_manifest_target', 'rollback strategy must use previous channel manifest target', failures);
   assertCondition(automation?.cleanup?.strategy === 'retain_latest_n_versions_and_declared_rollbacks', 'cleanup strategy must retain latest versions and rollbacks', failures);
   assertCondition(Number.isFinite(automation?.cleanup?.retain_versions) && automation.cleanup.retain_versions >= 2, 'cleanup retain_versions must be >= 2', failures);
+  assertCondition(automation?.cleanup?.protected_tags?.includes('latest'), 'cleanup must protect moving latest tag', failures);
   assertCondition(automation?.cleanup?.execution_mode === 'dry_run_first_explicit_execute_required', 'cleanup must be dry-run first with explicit execute', failures);
   assertCondition(automation?.cleanup?.destructive_action_requires === 'package_admin_with_delete_packages_scope', 'cleanup destructive action requirements drifted', failures);
 
@@ -120,6 +121,7 @@ function validateManifest(manifest) {
   assertCondition(nativeHelper?.publish_status_policy?.workflow === '.github/workflows/native-helper-prebuilds.yml', 'native helper workflow policy drifted', failures);
   assertCondition(nativeHelper?.retention_policy?.strategy === 'retain_latest_n_versions_and_declared_rollbacks', 'native helper retention strategy drifted', failures);
   assertCondition(Number.isFinite(nativeHelper?.retention_policy?.retain_versions) && nativeHelper.retention_policy.retain_versions >= 2, 'native helper retain_versions must be >= 2', failures);
+  assertCondition(nativeHelper?.retention_policy?.protected_tags?.includes('latest'), 'native helper retention must protect moving latest tag', failures);
   assertCondition(nativeHelper?.retention_policy?.execution_mode === 'dry_run_first_explicit_execute_required', 'native helper cleanup must be dry-run first', failures);
   assertCondition(Array.isArray(nativeHelper?.required_gates), 'native helper required gates missing', failures);
   assertCondition(nativeHelper?.required_gates?.includes('retention_policy_recorded'), 'native helper required gates must record retention policy', failures);

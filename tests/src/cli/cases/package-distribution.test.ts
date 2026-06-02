@@ -26,7 +26,7 @@ test('packages manifest exposes package coordinates while marking module install
           };
         };
         rollback: { strategy: string };
-        cleanup: { strategy: string; retain_versions: number; execution_mode: string };
+        cleanup: { strategy: string; retain_versions: number; protected_tags: string[]; execution_mode: string };
       };
       packages: {
         codex_default_profile: {
@@ -57,6 +57,7 @@ test('packages manifest exposes package coordinates while marking module install
           retention_policy: {
             strategy: string;
             retain_versions: number;
+            protected_tags: string[];
             execution_mode: string;
           };
           required_gates: string[];
@@ -111,6 +112,7 @@ test('packages manifest exposes package coordinates while marking module install
     output.packages_manifest.release_automation.cleanup.execution_mode,
     'dry_run_first_explicit_execute_required',
   );
+  assert.ok(output.packages_manifest.release_automation.cleanup.protected_tags.includes('latest'));
   assert.equal(
     output.packages_manifest.packages.webui_docker_image.image,
     'ghcr.io/gaofeng21cn/one-person-lab-webui:26.4.27',
@@ -158,6 +160,7 @@ test('packages manifest exposes package coordinates while marking module install
     'retain_latest_n_versions_and_declared_rollbacks',
   );
   assert.equal(output.packages_manifest.packages.native_helper.retention_policy.retain_versions, 3);
+  assert.ok(output.packages_manifest.packages.native_helper.retention_policy.protected_tags.includes('latest'));
   assert.equal(
     output.packages_manifest.packages.native_helper.retention_policy.execution_mode,
     'dry_run_first_explicit_execute_required',
@@ -309,6 +312,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(JSON.stringify(channelManifest.packages.codex_default_profile).includes('experimental_bearer_token'), false);
   assert.equal(manifest.release_automation.rollback.previous_version, '26.4.30');
   assert.equal(manifest.release_automation.cleanup.retain_versions, 4);
+  assert.ok(manifest.release_automation.cleanup.protected_tags.includes('latest'));
   assert.equal(manifest.release_automation.status, 'manual_prepared_only_not_consumed_by_module_install_update');
   assert.equal(manifest.release_automation.package_lifecycle_status, 'prepared_only_deprecated_remote_packages');
   assert.equal(manifest.release_automation.workflow_trigger_policy, 'workflow_dispatch_only');
@@ -318,6 +322,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.packages.webui_docker_image.framework_workflow_publish_status, 'not_published_by_framework_packages_workflow');
   assert.equal(manifest.packages.native_helper.channel_status, 'active_ghcr_oci_prebuild');
   assert.equal(manifest.packages.native_helper.retention_policy.retain_versions, 4);
+  assert.ok(manifest.packages.native_helper.retention_policy.protected_tags.includes('latest'));
   assert.equal(manifest.packages.native_helper.required_gates.includes('ghcr_oci_archive_pushed'), true);
   assert.equal(
     manifest.packages.modules.medautoscience.release_discipline.rollback.version,
@@ -495,12 +500,14 @@ test('GHCR package cleanup dry-runs active native helper and prepared-only packa
       { id: 2, updated_at: '2026-05-31T00:00:00Z', metadata: { container: { tags: ['linux-x64-0.1.0'] } } },
       { id: 3, updated_at: '2026-05-30T00:00:00Z', metadata: { container: { tags: ['windows-x64-0.1.0'] } } },
       { id: 4, updated_at: '2026-05-20T00:00:00Z', metadata: { container: { tags: ['old-0.0.9'] } } },
+      { id: 5, updated_at: '2026-05-19T00:00:00Z', metadata: { container: { tags: ['latest'] } } },
     ],
     'one-person-lab-modules/med-autoscience': [
       { id: 11, updated_at: '2026-05-06T00:00:00Z', metadata: { container: { tags: ['26.5.6'] } } },
       { id: 12, updated_at: '2026-05-02T00:00:00Z', metadata: { container: { tags: ['26.5.2-a'] } } },
       { id: 13, updated_at: '2026-05-01T00:00:00Z', metadata: { container: { tags: ['26.5.1'] } } },
       { id: 14, updated_at: '2026-04-30T00:00:00Z', metadata: { container: { tags: ['26.4.30'] } } },
+      { id: 15, updated_at: '2026-04-29T00:00:00Z', metadata: { container: { tags: ['stable'] } } },
     ],
     'one-person-lab-modules/med-autogrant': [],
     'one-person-lab-modules/redcube-ai': [],
@@ -538,10 +545,11 @@ test('GHCR package cleanup dry-runs active native helper and prepared-only packa
   assert.equal(summary.status, 'dry_run');
   assert.equal(fs.existsSync(logPath), false);
   const nativeHelper = summary.packages.find((entry: { package_name: string }) => entry.package_name === 'one-person-lab-native-helper');
-  assert.deepEqual(nativeHelper.protected_version_ids, [1, 2, 3]);
+  assert.deepEqual(nativeHelper.protected_version_ids, [1, 2, 3, 5]);
   assert.deepEqual(nativeHelper.candidates.map((candidate: { id: number }) => candidate.id), [4]);
   const mas = summary.packages.find((entry: { package_name: string }) => entry.package_name === 'one-person-lab-modules/med-autoscience');
   assert.equal(mas.lifecycle_status, 'prepared_only_deprecated');
+  assert.deepEqual(mas.protected_version_ids, [11, 12, 13, 15]);
   assert.deepEqual(mas.candidates.map((candidate: { id: number }) => candidate.id), [14]);
   const missing = summary.packages.find((entry: { package_name: string }) => entry.package_name === 'one-person-lab-modules/opl-meta-agent');
   assert.equal(missing.status, 'not_found_or_unreadable');

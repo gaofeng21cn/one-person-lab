@@ -88,14 +88,14 @@ function nativeHelperTag(tags) {
   return tags.find((tag) => /^[a-z0-9_.-]+-[a-z0-9_.-]+-[0-9]+\.[0-9]+\.[0-9]+/.test(tag));
 }
 
-function protectedIdsForPackage(versions, packageKind, retainVersions, rollbackTags) {
+function protectedIdsForPackage(versions, packageKind, retainVersions, rollbackTags, protectedTags) {
   const protectedIds = new Set();
-  const rollbackTagSet = new Set(rollbackTags);
+  const explicitlyProtectedTags = new Set([...rollbackTags, ...protectedTags]);
 
   for (const version of versions) {
     if (!Number.isFinite(version.id)) continue;
     const tags = versionTags(version);
-    if (tags.some((tag) => rollbackTagSet.has(tag))) {
+    if (tags.some((tag) => explicitlyProtectedTags.has(tag))) {
       protectedIds.add(version.id);
     }
   }
@@ -136,6 +136,7 @@ function packageTargets(manifest) {
       lifecycle_status: manifest.packages.native_helper.channel_status,
       retain_versions: nativePolicy.retain_versions,
       execution_mode: nativePolicy.execution_mode,
+      protected_tags: nativePolicy.protected_tags ?? [],
     },
     ...Object.values(manifest.packages.modules).map((entry) => ({
       package_name: `one-person-lab-modules/${entry.repo_name}`,
@@ -143,6 +144,7 @@ function packageTargets(manifest) {
       lifecycle_status: entry.package_lifecycle_status,
       retain_versions: cleanupPolicy.retain_versions,
       execution_mode: cleanupPolicy.execution_mode,
+      protected_tags: cleanupPolicy.protected_tags ?? [],
     })),
     {
       package_name: 'one-person-lab-manifest',
@@ -150,6 +152,7 @@ function packageTargets(manifest) {
       lifecycle_status: manifest.release_automation.release_manifest_package.package_channel_status,
       retain_versions: cleanupPolicy.retain_versions,
       execution_mode: cleanupPolicy.execution_mode,
+      protected_tags: cleanupPolicy.protected_tags ?? [],
     },
   ];
 }
@@ -185,6 +188,7 @@ function cleanup(options) {
       target.package_kind,
       target.retain_versions,
       options.rollbackTags,
+      target.protected_tags,
     );
     const candidates = versions
       .filter((version) => Number.isFinite(version.id))

@@ -91,7 +91,7 @@ Fresh 读法按机器入口分层：
 - Packages 放 OPL CLI/core、App-owned WebUI Docker 镜像 reference、active native helper OCI prebuild，以及 domain module source archive 的 `prepared_only_deprecated` 历史/预备通道；WebUI 镜像发布归 `one-person-lab-app`，Framework 只维护坐标/reference 和 native helper；只有 install/update 真正消费 Packages channel manifest 之后，才把模块 Packages 写成当前安装更新机制。
 - 当前环境管理通过 git upstream 判断“当前版本 / 是否可更新”；切到 Packages 后再改为通过 manifest 判断目标版本。
 - 每个制品必须有版本、来源、校验和、回滚目标和安装策略。
-- 旧版本清理不靠手工记忆：package workflow 的 manifest 必须声明 `retain_latest_n_versions_and_declared_rollbacks`，并且 cleanup 只能是 `dry_run_first_explicit_execute_required`。后续 GHCR retention/cleanup job 只消费这个策略，不重新解释模块状态；真正删除 package version 需要显式执行与 package admin / `delete:packages` 权限，不在普通 release workflow 中隐式发生。
+- 旧版本清理不靠手工记忆：package workflow 的 manifest 必须声明 `retain_latest_n_versions_and_declared_rollbacks`，并且 cleanup 只能是 `dry_run_first_explicit_execute_required`。`latest`、`stable`、`nightly` 这类 moving tags 和显式 rollback tag 始终受保护；后续 GHCR retention/cleanup job 只消费这个策略，不重新解释模块状态；真正删除 package version 需要显式执行与 package admin / `delete:packages` 权限，不在普通 release workflow 中隐式发生。
 - `MDS` 不进入默认 manifest / Full payload；如 MAS 需要 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 或 parity oracle，只能通过 MAS 明确声明的可选 companion 路径读取。
 - `OPL Meta Agent` 当前源码已纳入 Framework package manifest 的 module source archive 预备集合，但远端 package 未发布；manifest 和文档只能表达 `source_listed_remote_package_unpublished`，不能写成已可拉取的 active module package。
 - Packages/GHCR 接入 `opl module install/update` 或 App 环境管理时，先改 live source、tests、CLI/read-model 和 release evidence，再更新本文；本文不得先替未来实现写当前事实。
