@@ -133,12 +133,12 @@ contracts、tests、CLI/read-model、runtime ledgers、GitHub remote/PR state �
 
 ## Blockers And Next Owners
 
-- `one-person-lab`: root `main` clean and aligned, but
-  `.worktrees/queue-stranded-release` appeared after the frozen inventory. It is
-  dirty and had active test/CLI processes (`family-runtime queue` tests and
-  runtime CLI commands) during closeout. Next owner: next heartbeat / active
-  branch owner decides whether to commit, absorb, or clean it after processes
-  finish.
+- `one-person-lab`: root `main` clean and aligned. During the run,
+  `.worktrees/queue-stranded-release` appeared after the frozen inventory and
+  was dirty with active test/CLI processes, so this heartbeat did not touch it.
+  Before final closeout, an external owner landed `df15469d
+  fix(family-runtime): repair stranded queue holds`; after this run's ledger
+  commit was pushed, `git worktree prune` left only the root worktree.
 - `med-autoscience`: root `main` clean and aligned, but snapshot had recent
   writes and related Python/runtime processes. No cleanup or absorb attempted.
 - `redcube-ai`: root clean but divergent from origin (`ahead 10`, `behind 3`).
@@ -164,6 +164,9 @@ contracts、tests、CLI/read-model、runtime ledgers、GitHub remote/PR state �
   `family-runtime queue inspect`, `family-runtime tick`, and
   `family-runtime evidence-worklist`.
 - No open PR was returned for `queue-stranded-release`.
+- Final closeout correction: the post-snapshot queue work was externally
+  absorbed as `df15469d fix(family-runtime): repair stranded queue holds`; the
+  dirty worktree was no longer present after `git worktree prune`.
 
 ## No-Safe-Mutation Matrix
 
@@ -172,7 +175,7 @@ pushed:
 
 | Repo | Commit / cleanup candidates | Docs governance candidates | Retirement candidates | Outcome |
 | --- | --- | --- | --- | --- |
-| `one-person-lab` | Root clean/aligned; post-snapshot dirty worktree blocked by active processes | Ledger-only write done from fresh worktree in this repo | Not selected; active implementation lane blocked | Ledger commit created separately; active lane carried forward |
+| `one-person-lab` | Root clean/aligned; post-snapshot dirty worktree was blocked while active, then externally absorbed before final closeout | Ledger-only write done in this repo | Not selected; active implementation lane belonged to external owner | Ledger commit recorded and final correction added |
 | `med-autoscience` | Root clean/aligned; recent writes/processes at snapshot | Doctor pass; no mutation selected | Not selected due active owner activity | Carry forward |
 | `med-autogrant` | One ahead docs commit | Existing MAG ledger archive commit | Not selected | Verified and pushed |
 | `redcube-ai` | Divergent main ahead 10/behind 3 | Doctor pass | Potential stale surfaces require divergence reconciliation first | Blocked for next owner |
@@ -183,17 +186,17 @@ pushed:
 
 - `redcube-ai` branch divergence reconciliation before any safe RCA retire/doc
   mutation.
-- `one-person-lab/.worktrees/queue-stranded-release` dirty active lane after
-  tests finish.
+- `one-person-lab` queue-stranded-release lane is no longer a local worktree
+  after external absorb/prune; next round should inspect only if a fresh branch,
+  worktree, dirty state, or failing queue-release evidence reappears.
 - App legacy Settings redirects and candidate shell references remain retained
   public surfaces, not retired, because contracts/tests still require redirect
   compatibility and explicit candidate selection.
 
 ## Next-Round Write Scope
 
-- First inspect `one-person-lab/.worktrees/queue-stranded-release` after its
-  processes finish; decide whether it is a coherent queue-release bugfix commit
-  or a blocker for the branch owner.
+- Re-check `one-person-lab` queue-release state only from fresh main/runtime
+  evidence; do not assume `.worktrees/queue-stranded-release` still exists.
 - Reconcile `redcube-ai` local/remote divergence before any cleanup, push, or
   retire action.
 - Continue App docs lifecycle only from fresh `origin/main`; current App doctor
