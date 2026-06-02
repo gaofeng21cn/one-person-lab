@@ -1,6 +1,10 @@
 import type { DatabaseSync } from 'node:sqlite';
 
 import type { FamilyRuntimeTaskRow } from './family-runtime-store.ts';
+import {
+  isMasDefaultExecutorDispatchTask,
+  masDefaultExecutorStudyIdentity,
+} from './family-runtime-provider-hosted-attempts.ts';
 import type { StageAttemptRow } from './family-runtime-stage-attempt-ledger.ts';
 import {
   buildModelRouteCostProjection,
@@ -12,6 +16,22 @@ import {
 } from './family-runtime-stage-progress-log.ts';
 
 type ControlAttemptRow = StageAttemptRow & { rowid: number };
+type WorkUnitIdentity = {
+  action_type: string | null;
+  work_unit_id: string | null;
+  dispatch_ref: string | null;
+  next_executable_owner: string | null;
+  source_fingerprint: string | null;
+};
+
+const CURRENT_MAS_DEFAULT_EXECUTOR_TASK_STATUSES = new Set([
+  'queued',
+  'retry_waiting',
+  'running',
+  'waiting_approval',
+  'succeeded',
+]);
+const STALE_WORK_UNIT_DIAGNOSTIC = 'stale/superseded_by_current_work_unit';
 
 function parseRecord(value: unknown) {
   if (!value) {
@@ -341,6 +361,122 @@ function isLiveProviderAttempt(attempt: ControlAttemptRow | undefined, providerR
     || ['running', 'checkpointed', 'human_gate'].includes(providerStatus ?? '');
 }
 
+function isNewerTask(
+  left: Pick<FamilyRuntimeTaskRow, 'created_at' | 'task_id'>,
+  right: Pick<FamilyRuntimeTaskRow, 'created_at' | 'task_id'>,
+) {
+  if (left.created_at !== right.created_at) {
+    return left.created_at > right.created_at;
+  }
+  return left.task_id > right.task_id;
+}
+
+function workUnitIdentity(
+  payload: Record<string, unknown>,
+  attempt: ControlAttemptRow | undefined = undefined,
+): WorkUnitIdentity {
+  const workspaceLocator = attempt ? parseRecord(attempt.workspace_locator_json) : {};
+  return {
+    action_type: stringValue(payload.action_type) ?? stringValue(workspaceLocator.action_type),
+    work_unit_id: stringValue(payload.work_unit_id) ?? stringValue(workspaceLocator.work_unit_id),
+    dispatch_ref: stringValue(payload.dispatch_ref) ?? stringValue(workspaceLocator.dispatch_ref),
+    next_executable_owner:
+      stringValue(payload.next_executable_owner) ?? stringValue(workspaceLocator.next_executable_owner),
+    source_fingerprint:
+      stringValue(payload.source_fingerprint) ?? stringValue(workspaceLocator.domain_source_fingerprint),
+  };
+}
+
+function mismatchedWorkUnitIdentityFields(stale: WorkUnitIdentity, current: WorkUnitIdentity) {
+  return (['action_type', 'work_unit_id', 'dispatch_ref'] as const)
+    .filter((field) => stale[field] && current[field] && stale[field] !== current[field]);
+}
+
+function currentMasDefaultExecutorSameStudyTask(
+  db: DatabaseSync,
+  task: FamilyRuntimeTaskRow,
+  taskPayload: Record<string, unknown>,
+  current: ControlAttemptRow,
+) {
+  if (!isMasDefaultExecutorDispatchTask(task, taskPayload)) {
+    return null;
+  }
+  const studyIdentity = masDefaultExecutorStudyIdentity(task, taskPayload);
+  if (!studyIdentity) {
+    return null;
+  }
+  const staleWorkUnit = workUnitIdentity(taskPayload, current);
+  const rows = db.prepare(`
+    SELECT *
+    FROM tasks
+    ORDER BY created_at DESC, task_id DESC
+  `).all() as FamilyRuntimeTaskRow[];
+  for (const row of rows) {
+    if (
+      row.task_id === task.task_id
+      || !CURRENT_MAS_DEFAULT_EXECUTOR_TASK_STATUSES.has(row.status)
+      || !isNewerTask(row, task)
+    ) {
+      continue;
+    }
+    const payload = parseRecord(row.payload_json);
+    if (
+      !isMasDefaultExecutorDispatchTask(row, payload)
+      || masDefaultExecutorStudyIdentity(row, payload) !== studyIdentity
+    ) {
+      continue;
+    }
+    const currentWorkUnit = workUnitIdentity(payload);
+    const mismatchedIdentityFields = mismatchedWorkUnitIdentityFields(staleWorkUnit, currentWorkUnit);
+    if (mismatchedIdentityFields.length === 0) {
+      continue;
+    }
+    return {
+      task: row,
+      payload,
+      staleWorkUnit,
+      currentWorkUnit,
+      mismatchedIdentityFields,
+    };
+  }
+  return null;
+}
+
+function staleWorkUnitDiagnostic(
+  db: DatabaseSync,
+  task: FamilyRuntimeTaskRow | undefined,
+  taskPayload: Record<string, unknown>,
+  current: ControlAttemptRow | undefined,
+  liveProviderAttempt: boolean,
+) {
+  if (!task || !current || !liveProviderAttempt) {
+    return null;
+  }
+  const currentTask = currentMasDefaultExecutorSameStudyTask(db, task, taskPayload, current);
+  if (!currentTask) {
+    return null;
+  }
+  return {
+    diagnostic: STALE_WORK_UNIT_DIAGNOSTIC,
+    status: 'stale',
+    stale_task_id: task.task_id,
+    stale_stage_attempt_id: current.stage_attempt_id,
+    superseded_by_task_id: currentTask.task.task_id,
+    stale_task_status: task.status,
+    current_task_status: currentTask.task.status,
+    stale_work_unit: currentTask.staleWorkUnit,
+    current_work_unit: currentTask.currentWorkUnit,
+    mismatched_identity_fields: currentTask.mismatchedIdentityFields,
+    authority_boundary: {
+      opl: 'current_control_projection_diagnostic_only',
+      domain: 'truth_quality_artifact_gate_owner',
+      provider_attempt_cancelled: false,
+      provider_completion_is_domain_ready: false,
+      starts_concurrent_attempt: false,
+    },
+  };
+}
+
 export function deriveCurrentControlStateForTask(db: DatabaseSync, taskId: string) {
   const task = readTask(db, taskId);
   const attempts = readAttempts(db, taskId);
@@ -368,6 +504,8 @@ function deriveCurrentControlStateFromRows(
   const activityEvents = current ? parseList(current.activity_events_json) : [];
   const livenessProviderRun = latestProviderActivityHeartbeat(activityEvents, providerRun);
   const liveProviderAttempt = isLiveProviderAttempt(current, providerRun);
+  const staleWorkUnit = staleWorkUnitDiagnostic(db, task, taskPayload, current, liveProviderAttempt);
+  const projectedLiveProviderAttempt = liveProviderAttempt && !staleWorkUnit;
   const closeoutRefs = current ? stringList(parseList(current.closeout_refs_json)) : [];
   const stageProgressLog = currentStageProgressLog(current, livenessProviderRun, activityEvents, latestCloseout);
   const missingIdentity = requiredIdentityMissing(task, current);
@@ -392,10 +530,10 @@ function deriveCurrentControlStateFromRows(
     task_id: taskId,
     domain_id: task?.domain_id ?? current?.domain_id ?? null,
     task_kind: task?.task_kind ?? null,
-    active_run_id: liveProviderAttempt && current ? `opl-stage-attempt://${current.stage_attempt_id}` : null,
-    active_stage_attempt_id: liveProviderAttempt ? current?.stage_attempt_id ?? null : null,
-    active_workflow_id: liveProviderAttempt ? current?.workflow_id ?? null : null,
-    running_provider_attempt: liveProviderAttempt,
+    active_run_id: projectedLiveProviderAttempt && current ? `opl-stage-attempt://${current.stage_attempt_id}` : null,
+    active_stage_attempt_id: projectedLiveProviderAttempt ? current?.stage_attempt_id ?? null : null,
+    active_workflow_id: projectedLiveProviderAttempt ? current?.workflow_id ?? null : null,
+    running_provider_attempt: projectedLiveProviderAttempt,
     current_stage_attempt_id: current?.stage_attempt_id ?? null,
     workflow_id: current?.workflow_id ?? null,
     provider_kind: current?.provider_kind ?? null,
@@ -405,6 +543,7 @@ function deriveCurrentControlStateFromRows(
     owner_receipt_refs: ownerReceiptRefs,
     typed_blocker_refs: typedBlockerRefs,
     stale_epoch_kinds: staleEpochs,
+    stale_work_unit_diagnostic: staleWorkUnit,
     missing_identity_fields: missingIdentity,
     provider_run: {
       provider_status: stringValue(providerRun.provider_status),
@@ -451,6 +590,14 @@ function deriveCurrentControlStateFromRows(
       reconciliation_status: 'blocked_stale_epoch',
       current_attempt_state: 'blocked',
       blocker_reason: 'stale_route_source_or_truth_epoch',
+    };
+  }
+  if (staleWorkUnit) {
+    return {
+      ...base,
+      reconciliation_status: 'blocked_stale_work_unit',
+      current_attempt_state: 'blocked',
+      blocker_reason: STALE_WORK_UNIT_DIAGNOSTIC,
     };
   }
   if (terminalWithoutAcceptedCloseout(current, providerRun)) {

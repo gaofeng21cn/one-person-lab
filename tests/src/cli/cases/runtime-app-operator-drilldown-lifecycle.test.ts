@@ -10,6 +10,7 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
+import { DatabaseSync } from 'node:sqlite';
 
 test('runtime app-operator-drilldown reconciles MAS refs-only payload with OPL lifecycle ledger refs', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-mas-lifecycle-'));
@@ -517,6 +518,132 @@ test('runtime app-operator-drilldown summary exposes running provider attempts a
     assert.equal(Object.hasOwn(full.current_control_state.states[0], 'domain_ready'), false);
     assert.equal(Object.hasOwn(full.current_control_state.states[0], 'publication_ready'), false);
     assert.equal(Object.hasOwn(full.current_control_state.states[0], 'artifact_ready'), false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime app-operator-drilldown does not count stale MAS work-unit live attempt as current running', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-stale-workunit-'));
+  try {
+    const staleTaskId = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      JSON.stringify({
+        study_id: 'DM002',
+        action_type: 'return_to_ai_reviewer_workflow',
+        work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_old_inputs',
+        dispatch_ref: 'studies/DM002/default-executor-dispatch/old-ai-reviewer.json',
+        next_executable_owner: 'ai_reviewer',
+        executor_kind: 'codex_cli_default',
+        workspace_root: '/tmp/mas-stale-workunit',
+        source_fingerprint: 'mas-domain-source:old-work-unit',
+      }),
+      '--dedupe-key',
+      'mas:DM002:default-executor:old-ai-reviewer-work-unit',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).family_runtime_enqueue.task.task_id;
+    const staleAttempt = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'domain_owner/default-executor-dispatch',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      JSON.stringify({
+        workspace_root: '/tmp/mas-stale-workunit',
+        study_id: 'DM002',
+        action_type: 'return_to_ai_reviewer_workflow',
+        work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_old_inputs',
+        dispatch_ref: 'studies/DM002/default-executor-dispatch/old-ai-reviewer.json',
+        domain_source_fingerprint: 'mas-domain-source:old-work-unit',
+      }),
+      '--source-fingerprint',
+      'opl-stage-source:old-work-unit',
+      '--executor-kind',
+      'codex_cli',
+      '--task',
+      staleTaskId,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).family_runtime_stage_attempt.attempt;
+    runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      JSON.stringify({
+        study_id: 'DM002',
+        action_type: 'run_quality_repair_batch',
+        work_unit_id: 'run_current_quality_repair_batch',
+        dispatch_ref: 'studies/DM002/default-executor-dispatch/current-writer.json',
+        next_executable_owner: 'write',
+        executor_kind: 'codex_cli_default',
+        workspace_root: '/tmp/mas-stale-workunit',
+        source_fingerprint: 'mas-domain-source:current-work-unit',
+      }),
+      '--dedupe-key',
+      'mas:DM002:default-executor:current-writer-work-unit',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const db = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+    try {
+      db.prepare(`
+        UPDATE tasks
+        SET status = 'running', lease_owner = 'test-live-worker',
+          lease_expires_at = '2999-01-01T00:00:00.000Z',
+          created_at = '2026-06-02T00:00:00.000Z'
+        WHERE task_id = ?
+      `).run(staleTaskId);
+      db.prepare(`
+        UPDATE tasks
+        SET created_at = '2026-06-02T00:00:01.000Z'
+        WHERE dedupe_key = ?
+      `).run('mas:DM002:default-executor:current-writer-work-unit');
+      db.prepare(`
+        UPDATE stage_attempts
+        SET status = 'running',
+          provider_run_json = json_set(provider_run_json, '$.provider_status', 'running'),
+          updated_at = '2026-06-02T00:00:00.000Z'
+        WHERE stage_attempt_id = ?
+      `).run(staleAttempt.stage_attempt_id);
+    } finally {
+      db.close();
+    }
+
+    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
+    const staleState = drilldown.current_control_state.states.find((state: Record<string, unknown>) =>
+      state.current_stage_attempt_id === staleAttempt.stage_attempt_id
+    );
+
+    assert.equal(drilldown.summary.current_control_state_running_provider_attempt_count, 0);
+    assert.equal(drilldown.current_control_state.summary.running_provider_attempt_count, 0);
+    assert.ok(staleState);
+    assert.equal(staleState.reconciliation_status, 'blocked_stale_work_unit');
+    assert.equal(staleState.running_provider_attempt, false);
+    assert.equal(staleState.active_stage_attempt_id, null);
+    const diagnostic = staleState.stale_work_unit_diagnostic as Record<string, unknown>;
+    assert.equal(
+      diagnostic.diagnostic,
+      'stale/superseded_by_current_work_unit',
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

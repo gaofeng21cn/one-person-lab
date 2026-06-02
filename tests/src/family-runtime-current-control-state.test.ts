@@ -147,6 +147,78 @@ test('current control state exposes active provider attempt identity without dom
   });
 });
 
+test('current control state marks live MAS attempt stale when a newer same-study work unit is current', () => {
+  withDb((db) => {
+    const staleTask = enqueueDefaultTask(db, {
+      study_id: 'DM002',
+      quest_id: 'DM002',
+      action_type: 'return_to_ai_reviewer_workflow',
+      work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_old_inputs',
+      dispatch_ref: 'studies/DM002/default-executor-dispatch/old-ai-reviewer.json',
+      next_executable_owner: 'ai_reviewer',
+      source_fingerprint: 'mas-domain-source:old-work-unit',
+    });
+    const staleAttempt = createTaskAttempt(db, staleTask, {
+      sourceFingerprint: 'opl-stage-source:old-work-unit',
+      workspaceEpochs: {
+        action_type: 'return_to_ai_reviewer_workflow',
+        work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_old_inputs',
+        dispatch_ref: 'studies/DM002/default-executor-dispatch/old-ai-reviewer.json',
+        domain_source_fingerprint: 'mas-domain-source:old-work-unit',
+      },
+      start: true,
+    });
+    const currentTask = enqueueDefaultTask(db, {
+      study_id: 'DM002',
+      quest_id: 'DM002',
+      action_type: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+      work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+      dispatch_ref: 'studies/DM002/default-executor-dispatch/current-finalize.json',
+      next_executable_owner: 'write',
+      source_fingerprint: 'mas-domain-source:current-work-unit',
+    });
+    db.prepare(`
+      UPDATE tasks
+      SET status = 'running', lease_owner = 'test-live-worker',
+        lease_expires_at = '2999-01-01T00:00:00.000Z',
+        created_at = '2026-06-02T00:00:00.000Z'
+      WHERE task_id = ?
+    `).run(staleTask.task_id);
+    db.prepare(`
+      UPDATE tasks
+      SET created_at = '2026-06-02T00:00:01.000Z'
+      WHERE task_id = ?
+    `).run(currentTask.task_id);
+
+    const state = deriveCurrentControlStateForTask(db, staleTask.task_id);
+
+    assert.equal(state.reconciliation_status, 'blocked_stale_work_unit');
+    assert.equal(state.current_attempt_state, 'blocked');
+    assert.equal(state.blocker_reason, 'stale/superseded_by_current_work_unit');
+    assert.equal(state.running_provider_attempt, false);
+    assert.equal(state.active_run_id, null);
+    assert.equal(state.active_stage_attempt_id, null);
+    assert.equal(state.current_stage_attempt_id, staleAttempt.stage_attempt_id);
+    const diagnostic = state.stale_work_unit_diagnostic;
+    assert.ok(diagnostic);
+    assert.equal(diagnostic.diagnostic, 'stale/superseded_by_current_work_unit');
+    assert.equal(diagnostic.superseded_by_task_id, currentTask.task_id);
+    assert.deepEqual(diagnostic.mismatched_identity_fields, [
+      'action_type',
+      'work_unit_id',
+      'dispatch_ref',
+    ]);
+    assert.equal(
+      diagnostic.current_work_unit.work_unit_id,
+      'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+    );
+    assert.equal(
+      diagnostic.stale_work_unit.work_unit_id,
+      'produce_ai_reviewer_publication_eval_record_against_old_inputs',
+    );
+  });
+});
+
 test('current control state carries stage progress log observability for the active attempt', () => {
   withDb((db) => {
     const task = enqueueDefaultTask(db, {
