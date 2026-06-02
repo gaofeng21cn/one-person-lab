@@ -37,6 +37,7 @@ import {
   assertFunctionalPrivatizationReviewRequiredSummary,
   markFunctionalPrivatizationReviewRequired,
 } from './runtime-app-operator-drilldown-summary-functional-privatization.ts';
+import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
 import {
   assertOwnerPayloadWorkorderProjection,
 } from './owner-payload-workorder-assertions.ts';
@@ -92,7 +93,9 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-summary-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
   try {
+    process.env.OPL_META_AGENT_REPO_DIR = createOmaContractFixture(fixtureRoot);
     const manyStageManifest = buildManyStageManifest(12);
     markFunctionalPrivatizationReviewRequired(manyStageManifest);
     runCli([
@@ -943,6 +946,11 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       delete process.env.OPL_STATE_DIR;
     } else {
       process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    if (previousOmaRepoDir === undefined) {
+      delete process.env.OPL_META_AGENT_REPO_DIR;
+    } else {
+      process.env.OPL_META_AGENT_REPO_DIR = previousOmaRepoDir;
     }
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

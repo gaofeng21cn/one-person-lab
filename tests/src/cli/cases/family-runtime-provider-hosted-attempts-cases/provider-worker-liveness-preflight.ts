@@ -194,7 +194,7 @@ test('family-runtime scheduler tick blocks queue admission while provider remain
   }
 });
 
-test('family-runtime tick fails fast on provider preflight before domain dispatch', () => {
+test('family-runtime scheduler tick fails fast on provider preflight before domain dispatch', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-tick-provider-preflight-'));
   const dispatchPath = path.join(stateRoot, 'dispatch');
   const dispatchMarker = path.join(stateRoot, 'dispatch-ran');
@@ -231,14 +231,19 @@ echo '{"accepted":true,"surface_kind":"should_not_run"}'
       'mas:dm002:provider-preflight',
     ], env);
 
-    const tick = runCli(['family-runtime', 'tick', '--source', 'test', '--hydrate'], env).family_runtime_tick;
+    const tick = runCli([
+      'family-runtime',
+      'scheduler',
+      'tick',
+      '--provider',
+      'temporal',
+    ], env).family_runtime_scheduler_tick;
 
-    assert.equal(tick.provider_preflight.status, 'blocked_provider_not_ready');
+    assert.equal(tick.status, 'blocked_provider_not_ready');
     assert.equal(tick.provider_blocker.blocker_id, 'temporal_runtime_not_configured');
     assert.equal(tick.provider_blocker.next_repair_command, 'opl family-runtime service start --provider temporal');
     assert.equal(tick.provider_readiness_after_slo.ready, false);
-    assert.equal(tick.selected_count, 0);
-    assert.equal(tick.dispatches.length, 0);
+    assert.equal(tick.queue_tick, null);
     assert.equal(fs.existsSync(dispatchMarker), false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
