@@ -98,3 +98,116 @@ test('owner delta handoff summary falls back to owner payload workorder fields',
   assert.equal(summary.authority_boundary.can_create_typed_blocker, false);
   assert.equal(summary.authority_boundary.can_claim_production_ready, false);
 });
+
+test('owner delta handoff summary uses selected safe action payload workorder without owner handoff', () => {
+  const summary = buildOwnerDeltaHandoffSummary({
+    ownerDeltaFirst: {
+      status: 'operator_safe_action_available',
+      next_owner: 'one-person-lab',
+      next_required_delta: 'app_release_user_path_evidence_open',
+      required_return_shapes: [
+        'release_package_receipt_ref',
+        'typed_blocker_ref',
+      ],
+      primary_item: {
+        step_kind: 'app_release_user_path_evidence',
+        payload_owner: 'app_live_operator_or_release_owner',
+      },
+      selected_safe_action: {
+        action_kind: 'app_release_user_path_evidence_receipt_record',
+        required_operator_payload_refs: [
+          'release_package_refs',
+          'typed_blocker_refs',
+        ],
+        required_return_shapes: [
+          'release_package_receipt_ref',
+          'typed_blocker_ref',
+        ],
+        payload_workorder: {
+          surface_kind: 'opl_app_release_user_path_evidence_payload_workorder',
+          accepted_payload_path_policy:
+            'real_app_release_user_path_refs_or_typed_blocker_path_empty_template_blocks',
+          required_operator_payload_refs: [
+            'release_package_refs',
+            'typed_blocker_refs',
+          ],
+          required_return_shapes: [
+            'release_package_receipt_ref',
+            'typed_blocker_ref',
+          ],
+          accepted_payload_paths: {
+            app_release_user_path_refs_path: {
+              required_any_operator_payload_refs: ['release_package_refs'],
+              typed_blocker_refs_must_be_absent: true,
+              closes_app_release_user_path: false,
+              closes_release_ready: false,
+              closes_production_ready: false,
+            },
+            typed_blocker_path: {
+              required_operator_payload_refs: ['typed_blocker_refs'],
+              success_claimed: false,
+              closes_app_release_user_path: false,
+              closes_release_ready: false,
+              closes_production_ready: false,
+            },
+          },
+          empty_payload_template_is_success_evidence: false,
+          authority_boundary: {
+            can_create_owner_receipt: false,
+            can_generate_typed_blocker: false,
+            can_claim_release_ready: false,
+            can_claim_production_ready: false,
+            refs_only: true,
+          },
+        },
+      },
+    },
+    ownerHandoffPacket: {
+      status: 'clear',
+      owner_count: 0,
+      owners: [],
+    },
+    domainDispatchEvidenceWorkorderSummary: {
+      workorder_count: 0,
+      domain_count: 0,
+      stage_attempt_count: 0,
+    },
+    openSafeActionItemCount: 1,
+    openSafeActionPayloadRequiredCount: 0,
+    openSafeActionPayloadFreeCount: 1,
+    operatorActionableAttentionCount: 1,
+    operatorPayloadRequiredAttentionCount: 0,
+    operatorPayloadFreeAttentionCount: 1,
+    domainBlockedAttentionCount: 0,
+    evidenceEnvelopeOpenCount: 0,
+    evidenceEnvelopeBlockedCount: 0,
+    stageReplayMissingReceiptWorkorderCount: 0,
+  });
+
+  assert.equal(summary.current_operator_action_state, 'opl_safe_action_available');
+  assert.equal(summary.payload_contract_source, 'owner_delta_first_selected_safe_action');
+  assert.equal(
+    summary.payload_contract_surface_kind,
+    'opl_app_release_user_path_evidence_payload_workorder',
+  );
+  assert.deepEqual(summary.required_refs_any_of, [
+    'release_package_refs',
+    'typed_blocker_refs',
+  ]);
+  assert.deepEqual(summary.required_return_shapes, [
+    'release_package_receipt_ref',
+    'typed_blocker_ref',
+  ]);
+  assert.equal(
+    summary.payload_path_policy,
+    'real_app_release_user_path_refs_or_typed_blocker_path_empty_template_blocks',
+  );
+  assert.equal(
+    record(summary.accepted_payload_paths).typed_blocker_path
+      && record(record(summary.accepted_payload_paths).typed_blocker_path).success_claimed,
+    false,
+  );
+  assert.equal(summary.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(summary.authority_boundary.can_create_typed_blocker, false);
+  assert.equal(summary.authority_boundary.can_claim_production_ready, false);
+});

@@ -178,14 +178,22 @@ export function buildOwnerDeltaHandoffSummary(input: {
       firstOwner.top_payload_kind,
       ownerDeltaPrimaryItem.payload_kind,
       stringList(topPayloadWorkorder.payload_kinds)[0],
+      selectedSafeAction.action_kind,
+      ownerDeltaPrimaryItem.step_kind,
+      topPayloadWorkorder.surface_kind,
     ),
     top_stage_id: firstString(firstOwner.top_stage_id, ownerDeltaPrimaryItem.stage_id),
     payload_path_policy:
-      firstString(firstOwner.payload_path_policy, topPayloadWorkorder.payload_path_policy),
+      firstString(
+        firstOwner.payload_path_policy,
+        topPayloadWorkorder.payload_path_policy,
+        topPayloadWorkorder.accepted_payload_path_policy,
+      ),
     accepted_payload_paths: hasKeys(record(firstOwner.accepted_payload_paths))
       ? record(firstOwner.accepted_payload_paths)
       : workorderAcceptedPayloadPaths,
     payload_contract_source: payloadContractSource,
+    payload_contract_surface_kind: stringValue(topPayloadWorkorder.surface_kind),
     owner_payload_workorder:
       hasKeys(topPayloadWorkorder) ? topPayloadWorkorder : null,
     empty_payload_template_is_success_evidence:

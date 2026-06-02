@@ -29,6 +29,38 @@ export function assertOwnerPayloadWorkorderProjection(projection: JsonRecord) {
   assert.equal(projection.empty_payload_template_is_success_evidence, false);
 }
 
+function assertAppReleaseUserPathPayloadWorkorder(workorder: JsonRecord) {
+  assert.equal(
+    workorder.surface_kind,
+    'opl_app_release_user_path_evidence_payload_workorder',
+  );
+  assert.equal(
+    workorder.accepted_payload_path_policy,
+    'real_app_release_user_path_refs_or_typed_blocker_path_empty_template_blocks',
+  );
+  assert.equal(
+    workorder.accepted_payload_paths.app_release_user_path_refs_path
+      .typed_blocker_refs_must_be_absent,
+    true,
+  );
+  assert.equal(
+    workorder.accepted_payload_paths.app_release_user_path_refs_path
+      .closes_app_release_user_path,
+    false,
+  );
+  assert.equal(workorder.accepted_payload_paths.typed_blocker_path.success_claimed, false);
+  assert.equal(workorder.accepted_payload_paths.typed_blocker_path.closes_release_ready, false);
+  assert.equal(workorder.accepted_payload_paths.typed_blocker_path.closes_production_ready, false);
+  assert.equal(workorder.empty_payload_template_is_success_evidence, false);
+  assert.equal(workorder.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(workorder.authority_boundary.can_generate_typed_blocker, false);
+  assert.equal(workorder.authority_boundary.can_claim_release_ready, false);
+  assert.equal(workorder.authority_boundary.can_claim_production_ready, false);
+  assert.equal(workorder.authority_boundary.can_close_app_release_user_path, false);
+  assert.equal(workorder.required_operator_payload_refs.includes('typed_blocker_refs'), true);
+  assert.equal(workorder.required_return_shapes.includes('typed_blocker_ref'), true);
+}
+
 export function assertFrameworkOwnerPayloadAttention(readiness: JsonRecord) {
   assert.equal(
     readiness.attention_first_payload.owner_payload_group_attention_policy,
@@ -199,6 +231,7 @@ export function assertOwnerDeltaFirstReadinessProjection(readiness: JsonRecord) 
   const attention = readiness.attention_first_payload;
   const ownerDeltaFirst = attention.owner_delta_first;
   const ownerDeltaHandoffSummary = attention.owner_delta_handoff_summary;
+  const ownerDeltaHandoffWorkorder = ownerDeltaHandoffSummary.owner_payload_workorder;
   const nextSafeActions = attention.next_safe_actions;
 
   assert.equal(readiness.owner_delta_first.surface_kind, 'opl_owner_delta_first_projection');
@@ -257,23 +290,36 @@ export function assertOwnerDeltaFirstReadinessProjection(readiness: JsonRecord) 
     ownerDeltaHandoffSummary.required_return_shapes.includes('typed_blocker_ref'),
     true,
   );
-  assert.equal(
-    ownerDeltaHandoffSummary.top_payload_kind,
-    'domain_owner_receipt_or_typed_blocker_refs',
-  );
-  assert.equal(
-    ownerDeltaHandoffSummary.payload_path_policy,
-    'operator_must_choose_success_refs_path_or_domain_owned_typed_blocker_path_empty_template_blocks',
-  );
-  assert.equal(
-    ownerDeltaHandoffSummary.accepted_payload_paths.success_refs_path.closes_domain_ready,
-    false,
-  );
-  assert.equal(
-    ownerDeltaHandoffSummary.accepted_payload_paths.typed_blocker_path.success_claimed,
-    false,
-  );
-  assertOwnerPayloadWorkorderProjection(ownerDeltaHandoffSummary);
+  if (ownerDeltaHandoffWorkorder.surface_kind === 'opl_owner_handoff_payload_workorder') {
+    assert.equal(ownerDeltaHandoffSummary.payload_contract_source, 'owner_handoff_packet');
+    assert.equal(
+      ownerDeltaHandoffSummary.top_payload_kind,
+      'domain_owner_receipt_or_typed_blocker_refs',
+    );
+    assert.equal(
+      ownerDeltaHandoffSummary.payload_path_policy,
+      'operator_must_choose_success_refs_path_or_domain_owned_typed_blocker_path_empty_template_blocks',
+    );
+    assert.equal(
+      ownerDeltaHandoffSummary.accepted_payload_paths.success_refs_path.closes_domain_ready,
+      false,
+    );
+    assert.equal(
+      ownerDeltaHandoffSummary.accepted_payload_paths.typed_blocker_path.success_claimed,
+      false,
+    );
+    assertOwnerPayloadWorkorderProjection(ownerDeltaHandoffSummary);
+  } else {
+    assert.equal(
+      ownerDeltaHandoffSummary.payload_contract_source,
+      'owner_delta_first_selected_safe_action',
+    );
+    assertAppReleaseUserPathPayloadWorkorder(ownerDeltaHandoffWorkorder);
+    assert.deepEqual(
+      ownerDeltaHandoffSummary.accepted_payload_paths,
+      ownerDeltaHandoffWorkorder.accepted_payload_paths,
+    );
+  }
   assert.equal(ownerDeltaHandoffSummary.empty_payload_template_is_success_evidence, false);
   assert.equal(
     ownerDeltaHandoffSummary.summary.open_safe_action_payload_required_item_count,
