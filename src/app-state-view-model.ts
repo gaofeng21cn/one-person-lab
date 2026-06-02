@@ -10,6 +10,7 @@ type OplAppOperatorViewModelInput = {
   paths: JsonRecord;
   actions: ReadonlyArray<JsonRecord>;
   uiDefaults: JsonRecord;
+  runtimeActivityItems: ReadonlyArray<JsonRecord>;
 };
 
 function asRecord(value: unknown): JsonRecord {
@@ -62,6 +63,13 @@ function buildSummaryCards(input: OplAppOperatorViewModelInput) {
     : `${healthyModuleCount}/${defaultModuleCount}`;
 
   return [
+    {
+      card_id: 'active_projects',
+      label: 'Active projects',
+      value: input.runtimeActivityItems.filter((item) => asString(item.lane) === 'running').length,
+      tone: input.runtimeActivityItems.some((item) => asString(item.lane) === 'running') ? 'running' : 'idle',
+      source_ref: 'app_state.operator.workbench.activity_center.active_projects',
+    },
     {
       card_id: 'runtime_status',
       label: 'Runtime status',
@@ -180,35 +188,90 @@ function buildActionQueue(input: OplAppOperatorViewModelInput) {
   };
 }
 
-function buildDomainLaneMap(input: OplAppOperatorViewModelInput) {
+function sourceRefCount(item: JsonRecord) {
+  return asRecordArray(item.source_refs).length;
+}
+
+function commandRoute(item: JsonRecord) {
+  const command = asString(item.command);
+  if (command) {
+    return command;
+  }
+  const commands = asRecordArray(item.recommended_commands);
+  return asString(commands[0]?.command);
+}
+
+function activityState(item: JsonRecord) {
+  const lane = asString(item.lane);
+  if (lane === 'running') {
+    return 'running';
+  }
+  if (lane === 'attention') {
+    return 'attention_needed';
+  }
+  return asString(item.status) ?? 'recent';
+}
+
+function activityPriorityBucket(item: JsonRecord) {
+  const lane = asString(item.lane);
+  if (lane === 'running') {
+    return 'running';
+  }
+  if (lane === 'attention') {
+    return 'needs_attention';
+  }
+  return 'recent';
+}
+
+function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
+  const studyId = asString(item.study_id);
+  const taskId = asString(item.item_id)
+    ?? (studyId ? `medautoscience:study:${studyId}` : `runtime-activity-${index + 1}`);
+  const title = asString(item.title) ?? studyId ?? taskId;
+  const activeRunId = asString(item.active_run_id);
+  const nextVisibleStep = asString(item.next_action_summary)
+    ?? asString(item.action_summary)
+    ?? asString(item.summary);
+  const route = commandRoute(item);
+
   return {
-    lanes: asRecordArray(asRecord(input.modules).items).map((module, index) => {
-      const moduleId = asString(module.module_id) ?? `module-${index + 1}`;
-      const label = asString(module.label) ?? moduleId;
-      const healthStatus = asString(module.health_status) ?? asString(module.status) ?? 'unknown';
-      return {
-        domain_id: moduleId,
-        lane_label: label,
-        active_task_count: 1,
-        blocked_task_count: statusTone(healthStatus) === 'ready' ? 0 : 1,
-        paper_route_lens_ref_count: 0,
-        tasks: [
-          {
-            task_id: moduleId,
-            label,
-            state: healthStatus,
-            active_stage_id: 'module_runtime',
-            active_path_node_ids: [`module:${moduleId}`],
-            paper_route_lens_ref_count: 0,
-          },
-        ],
-      };
-    }),
-    source_ref: 'app_state.modules.items',
+    task_id: taskId,
+    domain_id: asString(item.project_id) ?? 'opl',
+    domain_label: asString(item.project_label) ?? asString(item.domain_owner) ?? 'OPL',
+    title,
+    state: activityState(item),
+    status: asString(item.status),
+    status_label: asString(item.status_label),
+    priority_bucket: activityPriorityBucket(item),
+    active_stage_id: asString(item.status) ?? asString(item.health_status) ?? asString(item.lane),
+    active_stage_label: asString(item.status_label),
+    active_run_id: activeRunId,
+    next_visible_step: nextVisibleStep,
+    last_progress_at: asString(item.updated_at),
+    workspace_path: asString(item.workspace_path),
+    study_id: studyId,
+    source_ref_count: sourceRefCount(item),
+    blocker_ref_count: asRecordArray(item.blockers).length,
+    safe_action_ref_count: route ? 1 : 0,
+    paper_route_lens_ref_count: 0,
+    active_path: [
+      {
+        node_id: taskId,
+        node_kind: studyId ? 'mas_study_runtime_projection' : 'runtime_activity_projection',
+        label: title,
+        state: activityState(item),
+        owner: 'opl_framework',
+        ref: route,
+      },
+    ],
   };
 }
 
-function buildTaskDrilldowns(input: OplAppOperatorViewModelInput) {
+function runtimeActivityDrilldowns(input: OplAppOperatorViewModelInput) {
+  return input.runtimeActivityItems.map(normalizeRuntimeActivityItem);
+}
+
+function moduleTaskDrilldowns(input: OplAppOperatorViewModelInput) {
   return asRecordArray(asRecord(input.modules).items).map((module, index) => {
     const moduleId = asString(module.module_id) ?? `module-${index + 1}`;
     const label = asString(module.label) ?? moduleId;
@@ -235,6 +298,71 @@ function buildTaskDrilldowns(input: OplAppOperatorViewModelInput) {
       ],
     };
   });
+}
+
+function buildActivityCenter(input: OplAppOperatorViewModelInput) {
+  const activityDrilldowns = runtimeActivityDrilldowns(input);
+  return {
+    source_ref: 'runtime_tray_snapshot.running_items + attention_items + recent_items refs-only projection',
+    needs_attention: activityDrilldowns.filter((item) => item.priority_bucket === 'needs_attention'),
+    active_projects: activityDrilldowns.filter((item) => item.priority_bucket === 'running'),
+    recent_projects: activityDrilldowns.filter((item) => item.priority_bucket === 'recent'),
+  };
+}
+
+function buildDomainLaneMap(input: OplAppOperatorViewModelInput) {
+  const runtimeTasksByDomain = new Map<string, ReturnType<typeof normalizeRuntimeActivityItem>[]>();
+  for (const task of runtimeActivityDrilldowns(input)) {
+    const domainId = asString(task.domain_id) ?? 'opl';
+    runtimeTasksByDomain.set(domainId, [...(runtimeTasksByDomain.get(domainId) ?? []), task]);
+  }
+
+  return {
+    lanes: asRecordArray(asRecord(input.modules).items).map((module, index) => {
+      const moduleId = asString(module.module_id) ?? `module-${index + 1}`;
+      const label = asString(module.label) ?? moduleId;
+      const healthStatus = asString(module.health_status) ?? asString(module.status) ?? 'unknown';
+      const runtimeTasks = runtimeTasksByDomain.get(moduleId) ?? [];
+      const moduleTask = {
+        task_id: moduleId,
+        label,
+        state: healthStatus,
+        active_stage_id: 'module_runtime',
+        active_path_node_ids: [`module:${moduleId}`],
+        paper_route_lens_ref_count: 0,
+      };
+      const tasks = runtimeTasks.length > 0
+        ? runtimeTasks.map((task) => ({
+            task_id: task.task_id,
+            label: task.title,
+            state: task.state,
+            active_stage_id: task.active_stage_id,
+            active_path_node_ids: [task.task_id],
+            study_id: task.study_id,
+            active_run_id: task.active_run_id,
+            paper_route_lens_ref_count: task.paper_route_lens_ref_count,
+          }))
+        : [moduleTask];
+      return {
+        domain_id: moduleId,
+        lane_label: label,
+        active_task_count: tasks.filter((task) => task.state === 'running').length,
+        blocked_task_count: statusTone(healthStatus) === 'ready'
+          ? tasks.filter((task) => task.state === 'attention_needed').length
+          : 1,
+        paper_route_lens_ref_count: 0,
+        tasks,
+      };
+    }),
+    source_ref: 'app_state.modules.items + app_state.operator.workbench.activity_center',
+  };
+}
+
+function buildTaskDrilldowns(input: OplAppOperatorViewModelInput) {
+  return [
+    ...runtimeActivityDrilldowns(input),
+    ...moduleTaskDrilldowns(input),
+  ];
 }
 
 function buildSafeActionRoutes(input: OplAppOperatorViewModelInput) {
@@ -317,6 +445,7 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
       sections: buildSections(input),
       navigation: buildNavigation(),
       action_queue: buildActionQueue(input),
+      activity_center: buildActivityCenter(input),
       domain_lane_map: buildDomainLaneMap(input),
       task_drilldowns: buildTaskDrilldowns(input),
       safe_action_routes: safeActionRoutes,
@@ -339,6 +468,9 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
     },
     dynamic_vertical_map: buildDynamicVerticalMap(input),
     visual_ref_groups: {
+      needs_attention_refs: buildActivityCenter(input).needs_attention,
+      active_project_refs: buildActivityCenter(input).active_projects,
+      recent_project_refs: buildActivityCenter(input).recent_projects,
       safe_action_refs: safeActionRoutes.map((action) => ({
         ref: action.route,
         label: action.label,

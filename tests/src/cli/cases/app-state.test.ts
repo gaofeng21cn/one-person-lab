@@ -30,6 +30,114 @@ function buildMasManifestWithManagedTemporalProjection(managedTemporal: Record<s
   };
 }
 
+function bindMasWorkspaceForAppState(input: {
+  stateDir: string;
+  workspaceRoot: string;
+  profilePath: string;
+}) {
+  const manifest = structuredClone(loadFamilyManifestFixtures().medautoscience);
+  manifest.workspace_locator = {
+    ...((manifest.workspace_locator as Record<string, unknown>) ?? {}),
+    workspace_root: input.workspaceRoot,
+    profile_ref: input.profilePath,
+    profile_name: 'dm-cvd-mortality-risk',
+  };
+  const now = new Date().toISOString();
+  fs.mkdirSync(input.stateDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(input.stateDir, 'workspace-registry.json'),
+    `${JSON.stringify({
+      version: 'g2',
+      bindings: [
+        {
+          binding_id: 'mas-app-state-activity',
+          project_id: 'medautoscience',
+          project: 'med-autoscience',
+          workspace_path: input.workspaceRoot,
+          label: null,
+          status: 'active',
+          direct_entry: {
+            command: null,
+            manifest_command: buildManifestCommand(manifest),
+            url: null,
+            workspace_locator: {
+              surface_kind: 'med_autoscience_workspace_profile',
+              workspace_root: input.workspaceRoot,
+              profile_ref: input.profilePath,
+              input_path: null,
+            },
+          },
+          created_at: now,
+          updated_at: now,
+          archived_at: null,
+        },
+      ],
+    }, null, 2)}\n`,
+    'utf8',
+  );
+}
+
+function writeMasProgressPortalFixture(workspaceRoot: string, profilePath: string) {
+  const portalPayloadPath = path.join(workspaceRoot, 'artifacts', 'runtime', 'progress_portal', 'latest.json');
+  fs.mkdirSync(path.dirname(portalPayloadPath), { recursive: true });
+  fs.mkdirSync(path.dirname(profilePath), { recursive: true });
+  fs.writeFileSync(profilePath, 'workspace_name = "dm-cvd-mortality-risk"\n', 'utf8');
+  fs.writeFileSync(portalPayloadPath, `${JSON.stringify({
+    schema_version: 1,
+    surface_kind: 'mas_progress_portal',
+    workspace: {
+      profile_name: 'dm-cvd-mortality-risk',
+      workspace_root: workspaceRoot,
+      studies: [
+        {
+          study_id: '002-dm-china-us-mortality-attribution',
+          state_label: '自动运行中',
+          state_summary: '自动运行中；系统有实际 writer/run 正在推进。',
+          current_stage: 'live',
+          active_run_id: 'mas-run-002',
+          runtime_health_status: 'recovering',
+          progress_freshness_summary: '最近 12 小时内仍有明确研究推进记录。',
+          operator_focus: '优先完成有限补充分析',
+          next_system_action: '观察自动运行推进。',
+          worker_running: true,
+          actual_write_active: true,
+        },
+        {
+          study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+          state_label: '质量修复/复审中',
+          state_summary: '质量修复/复审中；质量、artifact 或 runtime 有明确修复 owner。',
+          current_stage: 'queued',
+          active_run_id: null,
+          runtime_health_status: 'escalated',
+          progress_freshness_summary: '最近 12 小时内仍有明确研究推进记录。',
+          operator_focus: '优先收口同线质量硬阻塞',
+          next_system_action: '观察自动运行推进。',
+          worker_running: null,
+        },
+        {
+          study_id: '004-dpcc-longitudinal-care-inertia-intensification-gap',
+          state_label: '用户暂停/手动停驻',
+          state_summary: '用户暂停/手动停驻；当前没有实际写入，需显式恢复或给出新方案。',
+          current_stage: 'parked',
+          active_run_id: null,
+          runtime_health_status: 'parked',
+          progress_freshness_summary: '当前阶段以人工判断或收尾为主。',
+          operator_focus: '先让发表门控具体化 blocker',
+          next_system_action: '等待用户显式恢复或给出新方案。',
+          worker_running: null,
+        },
+      ],
+    },
+    opl_handoff: {
+      handoff_kind: 'mas_progress_portal_opl_family_projection',
+      owner: 'mas',
+      role: 'family_level_projection',
+      authority: 'display_artifact_only',
+      opl_role: 'family_level_projection_consumer_only',
+    },
+  }, null, 2)}\n`, 'utf8');
+}
+
 test('app state full runtime workbench summary uses stage progress refs only', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-full-workbench-home-'));
   const codexFixture = createFakeCodexFixture(`
@@ -189,12 +297,17 @@ exit 1
           summary: { profile: string; visible_action_count: number };
           workbench: {
             view_model_schema: string;
-            summary_cards: Array<{ card_id: string; source_ref: string }>;
+            summary_cards: Array<{ card_id: string; source_ref: string; value: string | number }>;
             sections: Array<{ section_id: string; source_ref: string; lazy: boolean }>;
             navigation: { replacement_policy: string };
             action_queue: { items: Array<{ item_id: string; priority_bucket: string }>; item_limit: number };
-            domain_lane_map: { lanes: Array<{ domain_id: string; tasks: unknown[] }> };
-            task_drilldowns: Array<{ task_id: string; active_path: unknown[] }>;
+            activity_center: {
+              active_projects: Array<{ study_id?: string; state: string; title: string }>;
+              needs_attention: Array<{ study_id?: string }>;
+              recent_projects: Array<{ study_id?: string }>;
+            };
+            domain_lane_map: { lanes: Array<{ domain_id: string; active_task_count: number; tasks: Array<{ study_id?: string; state: string }> }> };
+            task_drilldowns: Array<{ task_id: string; study_id?: string; state: string; active_path: unknown[] }>;
             safe_action_routes: Array<{ action_id: string; route: string }>;
             refresh_policy: { failure_policy: string; full_detail_auto_poll: boolean };
             performance_policy: {
@@ -205,6 +318,11 @@ exit 1
             lazy_refs: Array<{ ref_id: string; surface: string }>;
           };
           dynamic_vertical_map: { nodes: unknown[]; edges: unknown[] };
+          visual_ref_groups: {
+            active_project_refs: Array<{ study_id?: string; state: string }>;
+            needs_attention_refs: Array<{ study_id?: string }>;
+            recent_project_refs: Array<{ study_id?: string }>;
+          };
           owner_boundary: { shell: string; can_write_domain_truth: boolean };
         };
         paths: { state_dir: string; modules_root: string; workspace_root_path: string | null; logs_dir: string };
@@ -250,7 +368,11 @@ exit 1
     assert.equal(output.app_state.operator.workbench.view_model_schema, 'opl_app_operator_workbench.v1');
     assert.deepEqual(
       output.app_state.operator.workbench.summary_cards.map((entry) => entry.card_id),
-      ['runtime_status', 'codex_cli', 'temporal_provider', 'runtime_modules', 'release_channel'],
+      ['active_projects', 'runtime_status', 'codex_cli', 'temporal_provider', 'runtime_modules', 'release_channel'],
+    );
+    assert.equal(
+      output.app_state.operator.workbench.summary_cards.find((entry) => entry.card_id === 'active_projects')?.value,
+      0,
     );
     assert.equal(
       output.app_state.operator.workbench.sections.some(
@@ -334,6 +456,82 @@ exit 1
   } finally {
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('app state fast exposes MAS study-level running activity refs for the GUI', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-activity-home-'));
+  const masRepoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-repo-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-activity-workspace-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const profilePath = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles', 'dm.workspace.toml');
+
+  try {
+    bindMasWorkspaceForAppState({ stateDir, workspaceRoot: masRepoRoot, profilePath });
+    writeMasProgressPortalFixture(workspaceRoot, profilePath);
+    const output = runCli(['app', 'state', '--profile', 'fast'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+      OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+      OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+      PATH: '/usr/bin:/bin',
+    }) as {
+      app_state: {
+        operator: {
+          workbench: {
+            summary_cards: Array<{ card_id: string; value: number | string }>;
+            activity_center: {
+              active_projects: Array<{ study_id?: string; state: string; active_run_id?: string | null }>;
+              needs_attention: Array<{ study_id?: string; state: string }>;
+              recent_projects: Array<{ study_id?: string; state: string }>;
+            };
+            domain_lane_map: { lanes: Array<{ domain_id: string; active_task_count: number; tasks: Array<{ study_id?: string; state: string }> }> };
+            task_drilldowns: Array<{ study_id?: string; state: string; source_ref_count: number }>;
+          };
+          visual_ref_groups: {
+            active_project_refs: Array<{ study_id?: string; state: string }>;
+            recent_project_refs: Array<{ study_id?: string; state: string }>;
+          };
+        };
+      };
+    };
+
+    const activeStudyIds = output.app_state.operator.workbench.activity_center.active_projects.map((entry) => entry.study_id);
+    assert.deepEqual(activeStudyIds, [
+      '002-dm-china-us-mortality-attribution',
+    ]);
+    assert.deepEqual(
+      output.app_state.operator.workbench.activity_center.needs_attention.map((entry) => entry.study_id),
+      ['003-dpcc-primary-care-phenotype-treatment-gap'],
+    );
+    assert.equal(
+      output.app_state.operator.workbench.summary_cards.find((entry) => entry.card_id === 'active_projects')?.value,
+      1,
+    );
+    assert.deepEqual(
+      output.app_state.operator.visual_ref_groups.active_project_refs.map((entry) => entry.study_id),
+      activeStudyIds,
+    );
+    assert.equal(
+      output.app_state.operator.workbench.activity_center.recent_projects.length,
+      1,
+    );
+    assert.equal(
+      output.app_state.operator.workbench.domain_lane_map.lanes.find((entry) => entry.domain_id === 'medautoscience')?.active_task_count,
+      1,
+    );
+    assert.equal(
+      output.app_state.operator.workbench.task_drilldowns.filter((entry) => entry.study_id).length,
+      3,
+    );
+    assert.equal(
+      output.app_state.operator.workbench.task_drilldowns.every((entry) => !entry.study_id || entry.source_ref_count > 0),
+      true,
+    );
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(masRepoRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });
 

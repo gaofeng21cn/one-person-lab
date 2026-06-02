@@ -23,6 +23,7 @@ import { runOplEngineAction } from './system-installation/engine-actions.ts';
 import { resolveProjectRoot, type OplEngineAction, type OplModuleAction, type OplModuleId } from './system-installation/shared.ts';
 import { buildActionCatalog } from './app-state-action-catalog.ts';
 import { parseAppStateProfile, type AppStateProfile } from './app-state-profile.ts';
+import { buildAppStateRuntimeActivityItems } from './app-state-runtime-activity.ts';
 import { buildOplAppOperatorViewModel } from './app-state-view-model.ts';
 import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 import { spawnSync } from 'node:child_process';
@@ -502,6 +503,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const core = buildCoreState(profile);
   const actions = buildActionCatalog();
   const uiDefaults = buildUiDefaults();
+  const runtimeActivityItems = buildAppStateRuntimeActivityItems();
   const fullRuntimeDrilldown = profile === 'full'
     ? (await buildRuntimeTraySnapshot(loadFrameworkContracts() as FrameworkContracts, {
         appOperatorDrilldownDetailLevel: 'full',
@@ -545,6 +547,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
     paths,
     actions,
     uiDefaults,
+    runtimeActivityItems,
   });
 
   return {

@@ -7,6 +7,18 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-06-02
 
+### 决策：App state 的 MAS activity 不能把 active_run_id 单独算作实际运行
+
+原因：DM002/DM003 Progress-first 监督暴露出 `active_run_id`、queued/escalated 状态或质量修复队列本身不足以证明论文线正在产生实质进展。Operator 读面如果把这些信号直接归入 active projects，会再次掩盖 provider/worker liveness、owner delta admission 或 typed blocker 的真实状态。
+
+影响：
+
+- `app state` 的 MAS study activity 只在 worker/provider liveness、`actual_write_active`、writer/worker running，或 live stage 携带 active run 时显示为 running
+- queued/escalated 且缺少 liveness 证据的 study 显示为 needs-attention，提醒 operator 走 scheduler tick、owner action pickup 或 typed blocker 路径
+- App/workbench 继续只消费 refs-only projection，不取得 MAS study truth、publication quality 或 package authority
+
+## 2026-06-02
+
 ### 决策：stale owner-route domain-handler failure 必须成为非重试 currentness blocker
 
 原因：MAS paper autonomy / publication aftercare 这类 domain-handler task 可能携带已被最新 controller decision 或 owner route supersede 的 work unit。domain owner 在 dispatch 内返回 `owner_route_stale` 时，OPL 若把它当作普通非零退出进入 `retry_waiting`，会持续消耗 retry、receipt reconcile 和 read-model currentness 时间，却不会产生新的论文交付物 delta。这违背 Progress-First 的最快实质推进原则。
