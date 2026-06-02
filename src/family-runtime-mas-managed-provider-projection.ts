@@ -1,11 +1,13 @@
-import { spawnSync } from 'node:child_process';
+import { spawnSync, type SpawnSyncOptionsWithStringEncoding } from 'node:child_process';
 
+import { FrameworkContractError } from './contracts.ts';
 import { resolveBindingManifest } from './domain-manifest/resolver.ts';
 import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
 import { resolveTemporalNamespace, resolveTemporalTaskQueue } from './family-runtime-temporal.ts';
 import { getActiveWorkspaceBinding } from './workspace-registry.ts';
 
 type JsonRecord = Record<string, unknown>;
+const DEFAULT_MANAGED_PROVIDER_PROJECTION_TIMEOUT_MS = 2_000;
 
 export type MasManagedProviderProjection = {
   surface_kind: 'opl_mas_managed_provider_projection';
@@ -56,6 +58,41 @@ function statusIsReady(value: unknown) {
 function commandFromEnv(name: string) {
   const override = process.env[name]?.trim();
   return override ? override.split(/\s+/) : null;
+}
+
+function errorCode(error: Error | undefined) {
+  return error && 'code' in error ? String((error as NodeJS.ErrnoException).code) : null;
+}
+
+function cleanupTimedOutProcessGroup(result: ReturnType<typeof spawnSync>) {
+  if (errorCode(result.error) !== 'ETIMEDOUT' || !result.pid) {
+    return;
+  }
+  try {
+    process.kill(-result.pid, 'SIGKILL');
+  } catch {
+    try {
+      process.kill(result.pid, 'SIGKILL');
+    } catch {
+      // Projection is read-only and already fail-closed; cleanup is best-effort.
+    }
+  }
+}
+
+function resolveManagedProviderProjectionTimeoutMs() {
+  const raw = process.env.OPL_FAMILY_RUNTIME_MANAGED_PROVIDER_PROJECTION_TIMEOUT_MS?.trim();
+  if (!raw) {
+    return DEFAULT_MANAGED_PROVIDER_PROJECTION_TIMEOUT_MS;
+  }
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed) || parsed < 1) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'OPL_FAMILY_RUNTIME_MANAGED_PROVIDER_PROJECTION_TIMEOUT_MS must be a positive integer.',
+      { env: 'OPL_FAMILY_RUNTIME_MANAGED_PROVIDER_PROJECTION_TIMEOUT_MS', value: raw },
+    );
+  }
+  return parsed;
 }
 
 function nestedRecord(value: unknown, path: string[]) {
@@ -312,17 +349,24 @@ function projectionFromManifest(options: { manifestTimeoutMs?: number } = {}) {
   }));
 }
 
-function projectionFromDomainHandler() {
+function projectionFromDomainHandler(options: { domainHandlerTimeoutMs?: number } = {}) {
   const command = commandFromEnv('OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT');
   if (!command) {
     return null;
   }
-  const result = spawnSync(command[0], command.slice(1), {
+  const timeout = options.domainHandlerTimeoutMs
+    ?? resolveManagedProviderProjectionTimeoutMs();
+  const spawnOptions: SpawnSyncOptionsWithStringEncoding & { detached: boolean } = {
     cwd: process.cwd(),
     encoding: 'utf8',
     env: process.env,
     maxBuffer: 10 * 1024 * 1024,
-  });
+    timeout,
+    detached: true,
+    killSignal: 'SIGTERM',
+  };
+  const result = spawnSync(command[0], command.slice(1), spawnOptions);
+  cleanupTimedOutProcessGroup(result);
   if (result.error || (result.status ?? 1) !== 0) {
     return null;
   }
@@ -339,7 +383,15 @@ function projectionFromDomainHandler() {
 }
 
 export function readMasManagedProviderProjection(
-  options: { includeManifest?: boolean; manifestTimeoutMs?: number } = {},
+  options: { includeManifest?: boolean; manifestTimeoutMs?: number; domainHandlerTimeoutMs?: number } = {},
 ): MasManagedProviderProjection | null {
-  return (options.includeManifest === false ? null : projectionFromManifest(options)) ?? projectionFromDomainHandler();
+  const domainHandlerProjection = projectionFromDomainHandler(options);
+  if (domainHandlerProjection) {
+    return domainHandlerProjection;
+  }
+  return options.includeManifest === false
+    ? null
+    : projectionFromManifest({
+        manifestTimeoutMs: options.manifestTimeoutMs ?? resolveManagedProviderProjectionTimeoutMs(),
+      });
 }

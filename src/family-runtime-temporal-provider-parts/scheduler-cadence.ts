@@ -8,6 +8,7 @@ import {
 import {
   type TemporalWorkerPaths,
   withTemporalClient,
+  withTemporalRpcDeadline,
 } from '../family-runtime-temporal-client.ts';
 import {
   resolveTemporalAddressForPaths,
@@ -21,6 +22,10 @@ type TemporalSchedulerInfoProjection = {
 function temporalAddressForScheduler(paths: TemporalWorkerPaths) {
   const { address } = resolveTemporalAddressForPaths(paths);
   return address;
+}
+
+function temporalSchedulerClientOptions(paths: TemporalWorkerPaths) {
+  return { addressOverride: temporalAddressForScheduler(paths) };
 }
 
 export function buildTemporalSchedulerHealthProjection(input: {
@@ -120,7 +125,11 @@ export async function ensureTemporalSchedulerCadence(paths: TemporalWorkerPaths,
       },
     };
     try {
-      const handle = await client.schedule.create(options);
+      const handle = await withTemporalRpcDeadline(
+        client,
+        () => client.schedule.create(options),
+        temporalSchedulerClientOptions(paths),
+      );
       return {
         surface_kind: 'temporal_scheduler_cadence_install_receipt',
         provider_kind: 'temporal',
@@ -133,7 +142,7 @@ export async function ensureTemporalSchedulerCadence(paths: TemporalWorkerPaths,
     } catch (error) {
       if (error instanceof ScheduleAlreadyRunning) {
         const handle = client.schedule.getHandle(scheduleId);
-        await handle.update(() => ({
+        await withTemporalRpcDeadline(client, () => handle.update(() => ({
           spec: options.spec,
           action: options.action,
           policies: options.policies,
@@ -141,7 +150,7 @@ export async function ensureTemporalSchedulerCadence(paths: TemporalWorkerPaths,
             paused: false,
             note: options.state.note,
           },
-        }));
+        })), temporalSchedulerClientOptions(paths));
         return {
           surface_kind: 'temporal_scheduler_cadence_install_receipt',
           provider_kind: 'temporal',
@@ -154,14 +163,19 @@ export async function ensureTemporalSchedulerCadence(paths: TemporalWorkerPaths,
       }
       throw error;
     }
-  }, { addressOverride: temporalAddressForScheduler(paths) });
+  }, temporalSchedulerClientOptions(paths));
 }
 
 export async function inspectTemporalSchedulerCadence(paths: TemporalWorkerPaths) {
   const scheduleId = 'opl-family-runtime-provider-scheduler';
   return withTemporalClient(async (client) => {
     try {
-      const description = await client.schedule.getHandle(scheduleId).describe();
+      const handle = client.schedule.getHandle(scheduleId);
+      const description = await withTemporalRpcDeadline(
+        client,
+        () => handle.describe(),
+        temporalSchedulerClientOptions(paths),
+      );
       return {
         surface_kind: 'temporal_scheduler_cadence_status',
         provider_kind: 'temporal',
@@ -204,14 +218,19 @@ export async function inspectTemporalSchedulerCadence(paths: TemporalWorkerPaths
       }
       throw error;
     }
-  }, { addressOverride: temporalAddressForScheduler(paths) });
+  }, temporalSchedulerClientOptions(paths));
 }
 
 export async function removeTemporalSchedulerCadence(paths: TemporalWorkerPaths) {
   const scheduleId = 'opl-family-runtime-provider-scheduler';
   return withTemporalClient(async (client) => {
     try {
-      await client.schedule.getHandle(scheduleId).delete();
+      const handle = client.schedule.getHandle(scheduleId);
+      await withTemporalRpcDeadline(
+        client,
+        () => handle.delete(),
+        temporalSchedulerClientOptions(paths),
+      );
       return {
         surface_kind: 'temporal_scheduler_cadence_remove_receipt',
         provider_kind: 'temporal',
@@ -229,18 +248,23 @@ export async function removeTemporalSchedulerCadence(paths: TemporalWorkerPaths)
       }
       throw error;
     }
-  }, { addressOverride: temporalAddressForScheduler(paths) });
+  }, temporalSchedulerClientOptions(paths));
 }
 
 export async function triggerTemporalSchedulerCadence(paths: TemporalWorkerPaths) {
   const scheduleId = 'opl-family-runtime-provider-scheduler';
   return withTemporalClient(async (client) => {
-    await client.schedule.getHandle(scheduleId).trigger(ScheduleOverlapPolicy.SKIP);
+    const handle = client.schedule.getHandle(scheduleId);
+    await withTemporalRpcDeadline(
+      client,
+      () => handle.trigger(ScheduleOverlapPolicy.SKIP),
+      temporalSchedulerClientOptions(paths),
+    );
     return {
       surface_kind: 'temporal_scheduler_cadence_trigger_receipt',
       provider_kind: 'temporal',
       trigger_status: 'triggered',
       schedule_id: scheduleId,
     };
-  }, { addressOverride: temporalAddressForScheduler(paths) });
+  }, temporalSchedulerClientOptions(paths));
 }

@@ -2,6 +2,7 @@ import './family-runtime-provider-hosted-attempts-cases/mas-default-executor.ts'
 import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-redrive.ts';
 import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-single-flight.ts';
 import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-current-source.ts';
+import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-progress-first-currentness.ts';
 import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-ready-pickup-slo.ts';
 import './family-runtime-provider-hosted-attempts-cases/provider-worker-liveness-preflight.ts';
 import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-stale-admission.ts';
@@ -11,6 +12,7 @@ import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-ant
 import {
   assert,
   createDispatchFixture,
+  createJsonDispatchFixture,
   familyRuntimeEnv,
   fs,
   os,
@@ -52,7 +54,7 @@ PY
   try {
     const env = familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
     });
     const enqueue = runCli([
       'family-runtime',
@@ -74,7 +76,7 @@ PY
 
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
     assert.equal(task.family_runtime_task.stage_attempts.length, 1);
-    assert.equal(attempt.provider_kind, 'temporal');
+    assert.equal(attempt.provider_kind, 'local_sqlite');
     assert.equal(attempt.stage_id, 'paper_autonomy/guarded-apply');
     assert.equal(attempt.task_id, taskId);
     assert.equal(attempt.status, 'completed');
@@ -85,6 +87,75 @@ PY
     assert.equal(attempt.route_impact.next_owner, 'med-autoscience');
     assert.equal(attempt.route_impact.domain_ready_verdict, 'domain_gate_pending');
     assert.equal(attempt.activity_events.at(-1).activity_status, 'completed');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime dispatch ingests typed closeout packet before marking attempt completed', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-typed-dispatch-'));
+  const dispatch = createJsonDispatchFixture({
+    accepted: true,
+    closeout_packet: {
+      surface_kind: 'stage_attempt_closeout_packet',
+      closeout_refs: ['receipt:typed-dispatch-closeout'],
+      consumed_refs: ['evidence:dispatch'],
+      consumed_memory_refs: ['memory:route-policy'],
+      writeback_receipt_refs: ['memory-writeback:receipt-typed'],
+      rejected_writes: [{ reason: 'domain_truth_write_forbidden' }],
+      next_owner: 'med-autoscience',
+      domain_ready_verdict: 'domain_gate_pending',
+      route_impact: { decision: 'continue_review' },
+    },
+  });
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'stage/write',
+      '--payload',
+      '{"study_id":"DM002"}',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'write',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas"}',
+      '--task',
+      taskId,
+    ], env);
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test'], env);
+    const query = runCli([
+      'family-runtime',
+      'attempt',
+      'query',
+      created.family_runtime_stage_attempt.attempt.stage_attempt_id,
+    ], env);
+    const visibility = query.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility;
+
+    assert.equal(tick.family_runtime_tick.dispatches[0].stage_attempts[0].status, 'completed');
+    assert.equal(visibility.closeout_receipt_status, 'accepted_typed_closeout');
+    assert.equal(visibility.provider_run.provider_status, 'completed');
+    assert.deepEqual(visibility.consumed_memory_refs, ['memory:route-policy']);
+    assert.deepEqual(visibility.writeback_receipt_refs, ['memory-writeback:receipt-typed']);
+    assert.equal(visibility.route_impact.decision, 'continue_review');
+    assert.equal(query.family_runtime_stage_attempt_query.stage_attempt_query.completion_boundary.provider_completion, 'completed');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
@@ -160,7 +231,7 @@ PY
   try {
     const env = familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
     });
     const enqueue = runCli([
       'family-runtime',
@@ -249,7 +320,7 @@ PY
   try {
     const env = familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_REDCUBE_DISPATCH: dispatch.dispatchPath,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
     });
     const enqueue = runCli([
       'family-runtime',
@@ -270,7 +341,7 @@ PY
 
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
     assert.equal(task.family_runtime_task.stage_attempts.length, 1);
-    assert.equal(attempt.provider_kind, 'temporal');
+    assert.equal(attempt.provider_kind, 'local_sqlite');
     assert.equal(attempt.domain_id, 'redcube');
     assert.equal(attempt.stage_id, 'controlled_visual_stage_attempt');
     assert.equal(attempt.status, 'completed');
@@ -328,7 +399,7 @@ PY
   try {
     const env = familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_MEDAUTOGRANT_DISPATCH: dispatch.dispatchPath,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
     });
     const enqueue = runCli([
       'family-runtime',
@@ -348,7 +419,7 @@ PY
     const attempt = task.family_runtime_task.stage_attempts[0];
 
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
-    assert.equal(attempt.provider_kind, 'temporal');
+    assert.equal(attempt.provider_kind, 'local_sqlite');
     assert.equal(attempt.domain_id, 'medautogrant');
     assert.equal(attempt.stage_id, 'review_and_rebuttal');
     assert.equal(attempt.status, 'completed');
@@ -510,7 +581,7 @@ PY
   try {
     const env = familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_MEDAUTOGRANT_DISPATCH: dispatch.dispatchPath,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
     });
     const enqueue = runCli([
       'family-runtime',

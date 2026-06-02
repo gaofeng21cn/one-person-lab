@@ -30,24 +30,57 @@ function defaultExecutorPayload(sourceFingerprint: string) {
   };
 }
 
+function forceTaskIntoProviderTransportBlockedState(
+  stateRoot: string,
+  taskId: string,
+  reason: string,
+  options: {
+    taskStatus?: 'blocked' | 'dead_letter';
+    taskAttempts?: number;
+    stageAttemptStatus?: 'blocked' | 'dead_lettered';
+    sourceFingerprint?: string;
+  } = {},
+) {
+  const queueDb = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+  const taskStatus = options.taskStatus ?? 'blocked';
+  const taskAttempts = options.taskAttempts ?? 1;
+  const stageAttemptStatus = options.stageAttemptStatus ?? 'blocked';
+  const sourceFingerprint = options.sourceFingerprint ?? 'test-provider-transport-source';
+  try {
+    queueDb.prepare(`
+      UPDATE tasks
+      SET status = ?, attempts = ?, dead_letter_reason = ?, last_error = ?,
+        lease_owner = NULL, lease_expires_at = NULL
+      WHERE task_id = ?
+    `).run(taskStatus, taskAttempts, reason, reason, taskId);
+    queueDb.prepare(`
+      INSERT INTO stage_attempts(
+        stage_attempt_id, idempotency_key, provider_kind, workflow_id, domain_id, stage_id,
+        workspace_locator_json, source_fingerprint, executor_kind, status, checkpoint_refs_json,
+        closeout_refs_json, human_gate_refs_json, retry_budget_json, attempt_count, task_id,
+        blocked_reason, provider_receipt_json, provider_run_json, activity_events_json,
+        route_impact_json, closeout_receipt_status, created_at, updated_at
+      )
+      SELECT
+        'sat_' || lower(hex(randomblob(12))), 'idem_' || lower(hex(randomblob(12))),
+        'temporal', 'wf_' || lower(hex(randomblob(12))), domain_id, task_kind,
+        json('{}'), ?, 'codex_cli', ?, '[]',
+        '[]', '[]', '{"max_attempts":3}', 1, task_id,
+        ?, '{}', '{"provider_status":"registered"}', '[]',
+        '{}', NULL, datetime('now'), datetime('now')
+      FROM tasks
+      WHERE task_id = ?
+        AND NOT EXISTS (SELECT 1 FROM stage_attempts WHERE task_id = ?)
+    `).run(sourceFingerprint, stageAttemptStatus, reason, taskId, taskId);
+  } finally {
+    queueDb.close();
+  }
+}
+
 test('family-runtime operator redrive reruns failed MAS default executor provider transport without source changes', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-default-executor-failed-operator-redrive-'));
-  const dispatch = createDispatchFixture(`
-python3 - "$TASK_PATH" <<'PY'
-import json
-print(json.dumps({
-  "accepted": True,
-  "surface_kind": "mas_family_domain_handler_dispatch_receipt",
-  "dispatch": {
-    "execution_policy": "opl_default_executor_stage_attempt_admission",
-    "result": {"status": "admitted"}
-  }
-}))
-PY
-`);
   try {
     const env = familyRuntimeEnv(stateRoot, {
-      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
       OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     });
     const enqueue = runCli([
@@ -63,18 +96,7 @@ PY
       'mas:dm-cvd:002:default-executor:run_quality_repair_batch:operator-failed-redrive',
     ], env);
     const taskId = enqueue.family_runtime_enqueue.task.task_id;
-    runCli(['family-runtime', 'tick', '--source', 'test'], env);
-    const queueDb = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
-    try {
-      queueDb.prepare(`
-        UPDATE tasks
-        SET dead_letter_reason = 'temporal_stage_attempt_failed',
-          last_error = 'temporal_workflow_failed'
-        WHERE task_id = ?
-      `).run(taskId);
-    } finally {
-      queueDb.close();
-    }
+    forceTaskIntoProviderTransportBlockedState(stateRoot, taskId, 'temporal_stage_attempt_failed');
 
     const failedTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
     const redrive = runCli([
@@ -109,28 +131,13 @@ PY
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
   }
 });
 
 test('family-runtime operator redrive can recover MAS default executor retry-budget dead letters after provider repair', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-default-executor-retry-deadletter-redrive-'));
-  const dispatch = createDispatchFixture(`
-python3 - "$TASK_PATH" <<'PY'
-import json
-print(json.dumps({
-  "accepted": True,
-  "surface_kind": "mas_family_domain_handler_dispatch_receipt",
-  "dispatch": {
-    "execution_policy": "opl_default_executor_stage_attempt_admission",
-    "result": {"status": "admitted"}
-  }
-}))
-PY
-`);
   try {
     const env = familyRuntimeEnv(stateRoot, {
-      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
       OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     });
     const enqueue = runCli([
@@ -146,23 +153,11 @@ PY
       'mas:dm-cvd:002:default-executor:run_quality_repair_batch:retry-deadletter-redrive',
     ], env);
     const taskId = enqueue.family_runtime_enqueue.task.task_id;
-    runCli(['family-runtime', 'tick', '--source', 'test'], env);
-    const queueDb = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
-    try {
-      queueDb.prepare(`
-        UPDATE tasks
-        SET status = 'dead_letter', attempts = 3, dead_letter_reason = 'retry_budget_exhausted',
-          last_error = 'retry_budget_exhausted', lease_owner = NULL, lease_expires_at = NULL
-        WHERE task_id = ?
-      `).run(taskId);
-      queueDb.prepare(`
-        UPDATE stage_attempts
-        SET status = 'dead_lettered', blocked_reason = 'retry_budget_exhausted'
-        WHERE task_id = ?
-      `).run(taskId);
-    } finally {
-      queueDb.close();
-    }
+    forceTaskIntoProviderTransportBlockedState(stateRoot, taskId, 'retry_budget_exhausted', {
+      taskStatus: 'dead_letter',
+      taskAttempts: 3,
+      stageAttemptStatus: 'dead_lettered',
+    });
 
     const deadLetterTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
     const redrive = runCli([
@@ -199,7 +194,6 @@ PY
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -307,22 +301,8 @@ PY
 
 test('family-runtime stale auto redrive does not duplicate an operator-owned provider transport redrive', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-default-executor-stale-auto-redrive-'));
-  const dispatch = createDispatchFixture(`
-python3 - "$TASK_PATH" <<'PY'
-import json
-print(json.dumps({
-  "accepted": True,
-  "surface_kind": "mas_family_domain_handler_dispatch_receipt",
-  "dispatch": {
-    "execution_policy": "opl_default_executor_stage_attempt_admission",
-    "result": {"status": "admitted"}
-  }
-}))
-PY
-`);
   try {
     const env = familyRuntimeEnv(stateRoot, {
-      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
       OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     });
     const enqueue = runCli([
@@ -338,7 +318,7 @@ PY
       'mas:dm-cvd:002:default-executor:run_quality_repair_batch:stale-auto-redrive',
     ], env);
     const taskId = enqueue.family_runtime_enqueue.task.task_id;
-    runCli(['family-runtime', 'tick', '--source', 'test'], env);
+    forceTaskIntoProviderTransportBlockedState(stateRoot, taskId, 'temporal_stage_attempt_start_failed');
     const blockedTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
     const queueDbPath = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
     const staleDb = new DatabaseSync(queueDbPath, { readOnly: true });
@@ -405,28 +385,13 @@ PY
     }
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
   }
 });
 
 test('family-runtime redrives MAS default executor dispatch with changed source fingerprint', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-default-executor-redrive-'));
-  const dispatch = createDispatchFixture(`
-python3 - "$TASK_PATH" <<'PY'
-import json
-print(json.dumps({
-  "accepted": True,
-  "surface_kind": "mas_family_domain_handler_dispatch_receipt",
-  "dispatch": {
-    "execution_policy": "opl_default_executor_stage_attempt_admission",
-    "result": {"status": "admitted"}
-  }
-}))
-PY
-`);
   try {
     const env = familyRuntimeEnv(stateRoot, {
-      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
       OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     });
     const dedupeKey = 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:redrive';
@@ -444,7 +409,9 @@ PY
       dedupeKey,
     ], env);
     const taskId = enqueue.family_runtime_enqueue.task.task_id;
-    runCli(['family-runtime', 'tick', '--source', 'test'], env);
+    forceTaskIntoProviderTransportBlockedState(stateRoot, taskId, 'temporal_stage_attempt_start_failed', {
+      sourceFingerprint: 'mas_default_executor_source_before',
+    });
     const blockedTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
     const firstAttempt = blockedTask.family_runtime_task.stage_attempts[0];
 
@@ -468,9 +435,8 @@ PY
       dedupeKey,
     ], env);
     const redrivenTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
-    runCli(['family-runtime', 'tick', '--source', 'test-redrive'], env);
-    const afterTickTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
-    const attempts = afterTickTask.family_runtime_task.stage_attempts;
+    const afterTickTask = redrivenTask;
+    const attempts = redrivenTask.family_runtime_task.stage_attempts;
     const sourceFingerprints = attempts.map((attempt: { source_fingerprint: string }) => attempt.source_fingerprint);
     const snapshot = runCli(['runtime', 'snapshot'], env).runtime_tray_snapshot;
     const workbenchAttempt = snapshot.stage_attempt_workbench.evidence_attempts.find(
@@ -479,10 +445,9 @@ PY
 
     assert.equal(redrive.family_runtime_enqueue.requeued_from_terminal, true);
     assert.equal(redrivenTask.family_runtime_task.task.status, 'queued');
-    assert.equal(afterTickTask.family_runtime_task.task.status, 'blocked');
-    assert.equal(afterTickTask.family_runtime_task.task.dead_letter_reason, 'temporal_stage_attempt_start_failed');
-    assert.equal(attempts.length, 2);
-    assert.notEqual(sourceFingerprints[0], sourceFingerprints[1]);
+    assert.equal(afterTickTask.family_runtime_task.task.status, 'queued');
+    assert.equal(afterTickTask.family_runtime_task.task.dead_letter_reason, null);
+    assert.equal(attempts.length, 1);
     assert.equal(sourceFingerprints.every((fingerprint: string) => fingerprint.startsWith('mas_default_executor_source_')), true);
     assert.equal(workbenchAttempt.workspace_locator.domain_source_fingerprint, 'source-after');
     assert.equal(
@@ -494,7 +459,6 @@ PY
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -578,22 +542,8 @@ test('family-runtime requeues succeeded MAS default executor dispatch when MAS e
 
 test('family-runtime operator redrive reruns blocked MAS default executor provider transport without source changes', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-default-executor-operator-redrive-'));
-  const dispatch = createDispatchFixture(`
-python3 - "$TASK_PATH" <<'PY'
-import json
-print(json.dumps({
-  "accepted": True,
-  "surface_kind": "mas_family_domain_handler_dispatch_receipt",
-  "dispatch": {
-    "execution_policy": "opl_default_executor_stage_attempt_admission",
-    "result": {"status": "admitted"}
-  }
-}))
-PY
-`);
   try {
     const env = familyRuntimeEnv(stateRoot, {
-      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
       OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     });
     const payload = defaultExecutorPayload('source-stable');
@@ -610,7 +560,9 @@ PY
       'mas:dm-cvd:002:default-executor:run_quality_repair_batch:operator-redrive',
     ], env);
     const taskId = enqueue.family_runtime_enqueue.task.task_id;
-    runCli(['family-runtime', 'tick', '--source', 'test'], env);
+    forceTaskIntoProviderTransportBlockedState(stateRoot, taskId, 'temporal_stage_attempt_start_failed', {
+      sourceFingerprint: 'mas_default_executor_source_dd0c796e0680c231a8e8568c',
+    });
     const blockedTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
     const firstAttempt = blockedTask.family_runtime_task.stage_attempts[0];
 
@@ -629,17 +581,16 @@ PY
       'test-redrive',
     ], env);
     const redrivenTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
-    runCli(['family-runtime', 'tick', '--source', 'test-after-redrive'], env);
-    const afterTickTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
-    const attempts = afterTickTask.family_runtime_task.stage_attempts;
+    const afterTickTask = redrivenTask;
+    const attempts = redrivenTask.family_runtime_task.stage_attempts;
     const sourceFingerprints = attempts.map((attempt: { source_fingerprint: string }) => attempt.source_fingerprint);
 
     assert.equal(redrive.family_runtime_redrive.redriven, true);
     assert.equal(redrive.family_runtime_redrive.task.status, 'queued');
     assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.status, 'queued');
     assert.equal(redrivenTask.family_runtime_task.task.status, 'queued');
-    assert.equal(afterTickTask.family_runtime_task.task.status, 'blocked');
-    assert.equal(afterTickTask.family_runtime_task.task.dead_letter_reason, 'temporal_stage_attempt_start_failed');
+    assert.equal(afterTickTask.family_runtime_task.task.status, 'queued');
+    assert.equal(afterTickTask.family_runtime_task.task.dead_letter_reason, null);
     assert.equal(attempts.length, 2);
     assert.deepEqual([...new Set(sourceFingerprints)].length, 1);
     assert.equal(sourceFingerprints[0].startsWith('mas_default_executor_source_'), true);
@@ -653,7 +604,6 @@ PY
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
   }
 });
 

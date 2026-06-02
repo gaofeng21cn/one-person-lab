@@ -1,7 +1,10 @@
 import type {
   TemporalClientOptions,
 } from '../family-runtime-temporal-client.ts';
-import { withTemporalClient } from '../family-runtime-temporal-client.ts';
+import {
+  withTemporalClient,
+  withTemporalRpcDeadline,
+} from '../family-runtime-temporal-client.ts';
 import type {
   TemporalStageAttemptWorkflowState,
 } from '../family-runtime-temporal.ts';
@@ -32,10 +35,14 @@ export async function queryTemporalStageAttemptWorkflow(
   }
   return withTemporalClient(async (client) => {
     const handle = client.workflow.getHandle(attempt.workflow_id);
-    const description = await handle.describe();
+    const description = await withTemporalRpcDeadline(client, () => handle.describe(), options);
     const workflowStatus = description.status.name;
     if (terminalCompletedWorkflowStatus(workflowStatus)) {
-      const query = await handle.result() as TemporalStageAttemptWorkflowState;
+      const query = await withTemporalRpcDeadline(
+        client,
+        () => handle.result() as Promise<TemporalStageAttemptWorkflowState>,
+        options,
+      );
       return {
         surface_kind: 'temporal_stage_attempt_query_receipt',
         provider_kind: 'temporal',
@@ -71,7 +78,11 @@ export async function queryTemporalStageAttemptWorkflow(
     }
     let query: TemporalStageAttemptWorkflowState;
     try {
-      query = await handle.query<TemporalStageAttemptWorkflowState>(stageAttemptQuery);
+      query = await withTemporalRpcDeadline(
+        client,
+        () => handle.query<TemporalStageAttemptWorkflowState>(stageAttemptQuery),
+        options,
+      );
     } catch (error) {
       if (error && typeof error === 'object') {
         Object.assign(error, {

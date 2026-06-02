@@ -42,6 +42,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     OPL_STATE_DIR: stateRoot,
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
     OPL_META_AGENT_REPO_DIR: omaRepoDir,
+    OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     OPL_TEMPORAL_ADDRESS: temporalAddress,
     OPL_TEMPORAL_NAMESPACE: 'opl-app-drilldown-worker-stale',
     OPL_TEMPORAL_TASK_QUEUE: 'opl-app-drilldown-worker-stale',
@@ -60,6 +61,9 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       started_at: new Date().toISOString(),
       status: 'ready',
       source_version: 'git:app-drilldown-old-worker',
+      workflow_bundle_path: path.join(stateRoot, 'family-runtime', 'test-workflow-bundle.js'),
+      workflow_bundle_version: 'test-bundle:git:app-drilldown-old-worker',
+      workflow_bundle_source_version: 'git:app-drilldown-old-worker',
     }, null, 2)}\n`);
     runCli([
       'workspace',

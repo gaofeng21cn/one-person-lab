@@ -5,6 +5,9 @@ import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const defaultStepTimeoutMs = 20 * 60 * 1000;
+const maxStepTimeoutMs = 60 * 60 * 1000;
+const stepTimeoutMs = parseStepTimeoutMs(process.env.OPL_TEST_LANE_STEP_TIMEOUT_MS);
 const ownsPythonCacheRoot = !process.env.OPL_REPO_TEMP_ROOT;
 const pythonCacheRoot = process.env.OPL_REPO_TEMP_ROOT
   ? path.join(process.env.OPL_REPO_TEMP_ROOT, 'node-test-python-cache')
@@ -196,6 +199,21 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/runtime-lifecycle-operator.test.ts',
 ];
 
+const readModelGateTemporalHeavyTestFiles = [
+  'tests/src/family-runtime-temporal-provider.test.ts',
+  'tests/src/cli/cases/family-runtime.test.ts',
+  'tests/src/cli/cases/family-runtime-provider-repair.test.ts',
+  'tests/src/cli/cases/family-runtime-worker.test.ts',
+  'tests/src/cli/cases/family-runtime-worker-lifecycle.test.ts',
+  'tests/src/cli/cases/family-runtime-stage-attempts-temporal-provider.test.ts',
+  'tests/src/cli/cases/family-runtime-stage-attempts-temporal-terminal.test.ts',
+  'tests/src/cli/cases/family-runtime-stage-attempts-temporal-terminal-query.test.ts',
+];
+
+const readModelGateNonTemporalHeavyTestFiles = readModelGateTestFiles.filter(
+  (file) => !readModelGateTemporalHeavyTestFiles.includes(file),
+);
+
 const lanes = {
   smoke: [
     nodeTest([
@@ -215,7 +233,8 @@ const lanes = {
     nodeTest(fastTestFiles, { batchSize: 20 }),
   ],
   'read-model-gates': [
-    nodeTest(readModelGateTestFiles, { batchSize: 20 }),
+    nodeTest(readModelGateNonTemporalHeavyTestFiles, { batchSize: 20 }),
+    nodeTest(readModelGateTemporalHeavyTestFiles, { batchSize: 1 }),
   ],
   meta: [
     nodeTest([
@@ -291,7 +310,7 @@ const commandHandlers = {
 };
 
 function runLane(laneName) {
-  requireLane(laneName).forEach(runLaneStep);
+  requireLane(laneName).forEach((step, index) => runLaneStep(laneName, step, index));
 }
 
 function requireLane(laneName) {
@@ -302,31 +321,48 @@ function requireLane(laneName) {
   return steps;
 }
 
-function runLaneStep(step) {
-  const result = runStep(step);
+function runLaneStep(laneName, step, stepIndex) {
+  const result = runStep(step, { laneName, stepIndex });
   exitOnFailure(result);
 }
 
-function runStep(step) {
+function runStep(step, context) {
   const stepRunner = stepRunners[step.kind];
   if (!stepRunner) {
     fail(`Unsupported test lane step kind: ${step.kind}`);
   }
-  return stepRunner(step);
+  return stepRunner(step, context);
 }
 
 const stepRunners = {
-  command: (step) => spawnStep(step.command, step.args),
-  npm: (step) => spawnStep(npmCommand(), step.args),
+  command: (step, context) => spawnStep(step.command, step.args, {
+    ...context,
+    stepKind: step.kind,
+  }),
+  npm: (step, context) => spawnStep(npmCommand(), step.args, {
+    ...context,
+    stepKind: step.kind,
+  }),
   'node-test': runNodeTestStep,
 };
 
-function runNodeTestStep(step) {
+function runNodeTestStep(step, context) {
   if (!Number.isInteger(step.batchSize) || step.batchSize <= 0 || step.files.length <= step.batchSize) {
-    return spawnStep(process.execPath, nodeTestArgs(step));
+    return spawnStep(process.execPath, nodeTestArgs(step), {
+      ...context,
+      stepKind: step.kind,
+      batchFiles: step.files,
+    });
   }
-  for (const files of chunkFiles(step.files, step.batchSize)) {
-    const result = spawnStep(process.execPath, nodeTestArgs({ ...step, files }));
+  const chunks = chunkFiles(step.files, step.batchSize);
+  for (const [batchIndex, files] of chunks.entries()) {
+    const result = spawnStep(process.execPath, nodeTestArgs({ ...step, files }), {
+      ...context,
+      stepKind: step.kind,
+      batchIndex,
+      batchCount: chunks.length,
+      batchFiles: files,
+    });
     if (result.status !== 0) {
       return result;
     }
@@ -342,10 +378,13 @@ function chunkFiles(files, size) {
   return chunks;
 }
 
-function spawnStep(commandName, args) {
-  return spawnSync(commandName, args, {
+function spawnStep(commandName, args, context) {
+  const result = spawnSync(commandName, args, {
     cwd: repoRoot,
     stdio: 'inherit',
+    timeout: stepTimeoutMs,
+    detached: true,
+    killSignal: 'SIGTERM',
     env: {
       ...process.env,
       NODE_NO_WARNINGS: '1',
@@ -367,6 +406,12 @@ function spawnStep(commandName, args) {
       ].filter(Boolean).join(' '),
     },
   });
+  if (isTimeoutResult(result)) {
+    cleanupTimedOutProcessGroup(result);
+    reportStepTimeout(commandName, args, context);
+    return { ...result, status: 1 };
+  }
+  return result;
 }
 
 function nodeTestArgs(step) {
@@ -538,6 +583,64 @@ function normalizeRelativePath(filePath) {
 
 function npmCommand() {
   return process.platform === 'win32' ? 'npm.cmd' : 'npm';
+}
+
+function parseStepTimeoutMs(rawValue) {
+  if (!rawValue) {
+    return defaultStepTimeoutMs;
+  }
+  if (!/^\d+$/.test(rawValue)) {
+    fail(`OPL_TEST_LANE_STEP_TIMEOUT_MS must be a positive integer <= ${maxStepTimeoutMs}; got ${rawValue}`);
+  }
+  const parsed = Number(rawValue);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0 || parsed > maxStepTimeoutMs) {
+    fail(`OPL_TEST_LANE_STEP_TIMEOUT_MS must be a positive integer <= ${maxStepTimeoutMs}; got ${rawValue}`);
+  }
+  return parsed;
+}
+
+function isTimeoutResult(result) {
+  return result.error?.code === 'ETIMEDOUT';
+}
+
+function cleanupTimedOutProcessGroup(result) {
+  if (!result.pid) {
+    return;
+  }
+  try {
+    process.kill(-result.pid, 'SIGKILL');
+  } catch {
+    try {
+      process.kill(result.pid, 'SIGKILL');
+    } catch {
+      // The timeout report below is authoritative; cleanup is best-effort for child process groups.
+    }
+  }
+}
+
+function reportStepTimeout(commandName, args, context) {
+  process.stderr.write([
+    'Test lane step timed out.',
+    `lane=${context.laneName}`,
+    `step=${formatStepContext(context)}`,
+    `command=${formatSpawnCommand(commandName, args)}`,
+    `timeout_ms=${stepTimeoutMs}`,
+  ].join(' ') + '\n');
+}
+
+function formatStepContext(context) {
+  const parts = [`${context.stepIndex + 1}:${context.stepKind}`];
+  if (Number.isInteger(context.batchIndex)) {
+    parts.push(`batch=${context.batchIndex + 1}/${context.batchCount}`);
+  }
+  if (context.batchFiles?.length) {
+    parts.push(`files=${context.batchFiles.join(',')}`);
+  }
+  return parts.join(' ');
+}
+
+function formatSpawnCommand(commandName, args) {
+  return [commandName, ...args].join(' ');
 }
 
 function exitOnFailure(result) {

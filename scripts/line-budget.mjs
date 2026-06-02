@@ -14,7 +14,6 @@ const BASELINE = new Map([
   ['tests/src/agent-lab.test.ts', 1135],
   ['tests/src/cli/cases/domain-pack-compiler.test.ts', 1036],
   ['tests/src/cli/cases/runtime-app-operator-drilldown.test.ts', 1172],
-  ['tests/src/cli/cases/family-runtime.test.ts', 1072],
   ['tests/src/family-runtime-codex-stage-runner.test.ts', 1153],
 ]);
 const CODE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.mts', '.cts', '.py', '.sh', '.bash', '.zsh', '.rs', '.go']);

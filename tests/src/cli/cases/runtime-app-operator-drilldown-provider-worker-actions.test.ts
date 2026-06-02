@@ -33,6 +33,7 @@ test('runtime App drilldown exposes provider worker start route when Temporal se
     const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
       OPL_TEMPORAL_ADDRESS: temporalAddress,
       OPL_TEMPORAL_NAMESPACE: 'opl-worker-start-route',
       OPL_TEMPORAL_TASK_QUEUE: 'opl-worker-start-route',
@@ -67,6 +68,7 @@ test('runtime App drilldown exposes provider worker start route when Temporal se
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
       OPL_TEMPORAL_ADDRESS: temporalAddress,
       OPL_TEMPORAL_NAMESPACE: 'opl-worker-start-route',
       OPL_TEMPORAL_TASK_QUEUE: 'opl-worker-start-route',
@@ -283,6 +285,7 @@ test('runtime action execute dry-run blocks mutation-guarded provider SLO proof 
       HOME: homeRoot,
       OPL_STATE_DIR: '',
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
       OPL_TEMPORAL_ADDRESS: temporalAddress,
       OPL_TEMPORAL_NAMESPACE: 'opl-provider-slo-worker-guard',
       OPL_TEMPORAL_TASK_QUEUE: 'opl-provider-slo-worker-guard',

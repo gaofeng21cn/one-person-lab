@@ -777,7 +777,15 @@ test('family-runtime tick does not auto-redrive superseded MAS default executor 
 
       assert.equal(tick.mas_default_executor_auto_redriven_count, 0);
       assert.equal(tick.mas_default_executor_auto_dead_lettered_count, 0);
-      assert.equal(tick.mas_default_executor_auto_redrive_stale_skipped_count, 1);
+      assert.equal(tick.mas_default_executor_auto_redrive_stale_skipped_count, 0);
+      assert.equal(
+        tick.progress_first_owner_delta_admission.admission_status,
+        'selected_before_maintenance_reconcile',
+      );
+      assert.equal(
+        tick.progress_first_owner_delta_admission.maintenance_reconcile_deferred_by_owner_delta,
+        true,
+      );
       assert.equal(tick.selected_count, 1);
       assert.equal(dispatchCount, 1);
       assert.equal(tick.dispatches[0].task_id, 'task-mas-default-current-after-provider-blocker');

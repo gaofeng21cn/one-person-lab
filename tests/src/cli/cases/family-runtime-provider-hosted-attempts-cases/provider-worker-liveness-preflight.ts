@@ -164,8 +164,10 @@ test('family-runtime scheduler tick blocks queue admission while provider remain
       db,
       paths,
       { providerKind: 'temporal', limit: 1 },
-      () => {
+      (_source, _limit, _hydrate, _taskScope, _domainProfiles, queueTickOptions) => {
         queueTickCalls += 1;
+        assert.equal(queueTickOptions?.dispatchEnabled, false);
+        assert.equal(queueTickOptions?.blockedReason, 'temporal_worker_not_ready');
         return {
           selected_count: 1,
           dispatches: [{ task_id: 'task-1', dispatch_status: 'admitted' }],
@@ -181,8 +183,11 @@ test('family-runtime scheduler tick blocks queue admission while provider remain
     assert.ok(tick.provider_liveness_blocker);
     assert.equal(tick.provider_liveness_blocker.blocker_id, 'temporal_worker_not_ready');
     assert.equal(tick.provider_liveness_blocker.next_repair_command, 'opl family-runtime worker start --provider temporal');
-    assert.equal(tick.queue_tick, null);
-    assert.equal(queueTickCalls, 0);
+    assert.equal(tick.queue_tick.status, 'blocked_provider_not_ready');
+    assert.equal(tick.queue_tick.dispatch_blocked_reason, 'temporal_worker_not_ready');
+    assert.equal(tick.queue_tick.selected_count, 0);
+    assert.equal(tick.queue_tick.dispatches.length, 0);
+    assert.equal(queueTickCalls, 1);
     db.close();
   } finally {
     if (previousStateDir === undefined) {
@@ -196,6 +201,69 @@ test('family-runtime scheduler tick blocks queue admission while provider remain
 
 test('family-runtime scheduler tick fails fast on provider preflight before domain dispatch', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-tick-provider-preflight-'));
+  const dispatchPath = path.join(stateRoot, 'dispatch');
+  const dispatchMarker = path.join(stateRoot, 'dispatch-ran');
+  const exportPath = path.join(stateRoot, 'export.mjs');
+  try {
+    fs.mkdirSync(stateRoot, { recursive: true });
+    fs.writeFileSync(
+      dispatchPath,
+      `#!/usr/bin/env bash
+set -euo pipefail
+touch ${JSON.stringify(dispatchMarker)}
+echo '{"accepted":true,"surface_kind":"should_not_run"}'
+`,
+      { mode: 0o755 },
+    );
+    fs.writeFileSync(
+      exportPath,
+      `process.stdout.write(${JSON.stringify(`${JSON.stringify({
+        pending_family_tasks: [
+          {
+            domain_id: 'medautoscience',
+            task_kind: 'domain_route/reconcile-apply',
+            dedupe_key: 'mas:dm002:provider-preflight',
+            payload: {
+              study_id: 'DM002',
+              provider_hosted_stage_attempt: true,
+              workspace_root: '/tmp/mas',
+            },
+          },
+        ],
+      })}\n`)});\n`,
+      { mode: 0o755 },
+    );
+    const env = {
+      OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatchPath,
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: `${process.execPath} ${exportPath}`,
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+      OPL_TEMPORAL_WORKER_ENABLED: '',
+      OPL_TEMPORAL_WORKER_STATUS: '',
+    };
+
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test', '--hydrate'], env).family_runtime_tick;
+
+    assert.equal(tick.provider_preflight.status, 'blocked_provider_not_ready');
+    assert.equal(tick.provider_blocker.blocker_id, 'temporal_runtime_not_configured');
+    assert.equal(tick.provider_blocker.next_repair_command, 'opl family-runtime service start --provider temporal');
+    assert.equal(tick.provider_readiness_after_slo.ready, false);
+    assert.equal(tick.hydration.enqueued_count, 1);
+    assert.equal(tick.selected_count, 0);
+    assert.equal(tick.dispatches.length, 0);
+    assert.equal(fs.existsSync(dispatchMarker), false);
+    const queue = runCli(['family-runtime', 'queue', 'list'], env).family_runtime_queue;
+    assert.equal(queue.queue.total, 1);
+    assert.equal(queue.tasks[0].status, 'queued');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime tick without hydrate still fails fast on provider preflight before domain dispatch', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-tick-provider-preflight-no-hydrate-'));
   const dispatchPath = path.join(stateRoot, 'dispatch');
   const dispatchMarker = path.join(stateRoot, 'dispatch-ran');
   try {
@@ -228,22 +296,69 @@ echo '{"accepted":true,"surface_kind":"should_not_run"}'
       '--payload',
       '{"study_id":"DM002","provider_hosted_stage_attempt":true,"workspace_root":"/tmp/mas"}',
       '--dedupe-key',
-      'mas:dm002:provider-preflight',
+      'mas:dm002:provider-preflight-no-hydrate',
     ], env);
 
-    const tick = runCli([
-      'family-runtime',
-      'scheduler',
-      'tick',
-      '--provider',
-      'temporal',
-    ], env).family_runtime_scheduler_tick;
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test'], env).family_runtime_tick;
 
     assert.equal(tick.status, 'blocked_provider_not_ready');
     assert.equal(tick.provider_blocker.blocker_id, 'temporal_runtime_not_configured');
     assert.equal(tick.provider_blocker.next_repair_command, 'opl family-runtime service start --provider temporal');
     assert.equal(tick.provider_readiness_after_slo.ready, false);
-    assert.equal(tick.queue_tick, null);
+    assert.equal(tick.hydration.enqueued_count, 0);
+    assert.equal(tick.selected_count, 0);
+    assert.equal(tick.dispatches.length, 0);
+    assert.equal(fs.existsSync(dispatchMarker), false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime tick defaults to Temporal provider preflight when provider env is unset', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-default-temporal-tick-'));
+  const dispatchPath = path.join(stateRoot, 'dispatch');
+  const dispatchMarker = path.join(stateRoot, 'dispatch-ran');
+  try {
+    fs.mkdirSync(stateRoot, { recursive: true });
+    fs.writeFileSync(
+      dispatchPath,
+      `#!/usr/bin/env bash
+set -euo pipefail
+touch ${JSON.stringify(dispatchMarker)}
+echo '{"accepted":true,"surface_kind":"should_not_run"}'
+`,
+      { mode: 0o755 },
+    );
+    const env = {
+      OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_RUNTIME_PROVIDER: '',
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatchPath,
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+      OPL_TEMPORAL_WORKER_ENABLED: '',
+      OPL_TEMPORAL_WORKER_STATUS: '',
+    };
+    runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_route/reconcile-apply',
+      '--payload',
+      '{"study_id":"DM002","provider_hosted_stage_attempt":true,"workspace_root":"/tmp/mas"}',
+      '--dedupe-key',
+      'mas:dm002:default-temporal-preflight',
+    ], env);
+
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test-default-temporal'], env).family_runtime_tick;
+
+    assert.equal(tick.provider_preflight.provider_kind, 'temporal');
+    assert.equal(tick.provider_preflight.status, 'blocked_provider_not_ready');
+    assert.equal(tick.provider_blocker.blocker_id, 'temporal_runtime_not_configured');
+    assert.equal(tick.hydration.enqueued_count, 0);
+    assert.equal(tick.selected_count, 0);
+    assert.equal(tick.dispatches.length, 0);
     assert.equal(fs.existsSync(dispatchMarker), false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

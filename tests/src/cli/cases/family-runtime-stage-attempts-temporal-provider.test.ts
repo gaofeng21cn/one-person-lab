@@ -63,6 +63,28 @@ function createSearchableTemporalTestEnvironment() {
   });
 }
 
+function writeReadyTemporalWorkerFixture(input: {
+  runtimeRoot: string;
+  address: string;
+  namespace: string;
+  taskQueue: string;
+  sourceVersion: string;
+}) {
+  fs.writeFileSync(path.join(input.runtimeRoot, 'temporal-worker.json'), `${JSON.stringify({
+    provider_kind: 'temporal',
+    pid: process.pid,
+    address: input.address,
+    namespace: input.namespace,
+    task_queue: input.taskQueue,
+    started_at: new Date().toISOString(),
+    status: 'ready',
+    source_version: input.sourceVersion,
+    workflow_bundle_path: path.join(input.runtimeRoot, 'test-workflow-bundle.js'),
+    workflow_bundle_version: `test-bundle:${input.sourceVersion}`,
+    workflow_bundle_source_version: input.sourceVersion,
+  }, null, 2)}\n`);
+}
+
 test('family-runtime temporal attempt start fails closed when Temporal address is not configured', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-start-missing-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
@@ -190,16 +212,13 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
       status: 'running',
       command: 'temporal test server',
     }, null, 2)}\n`);
-    fs.writeFileSync(path.join(runtimeRoot, 'temporal-worker.json'), `${JSON.stringify({
-      provider_kind: 'temporal',
-      pid: process.pid,
+    writeReadyTemporalWorkerFixture({
+      runtimeRoot,
       address: testEnv.address,
-      namespace: testEnv.namespace,
-      task_queue: taskQueue,
-      started_at: new Date().toISOString(),
-      status: 'ready',
-      source_version: 'git:mas-default-start-current',
-    }, null, 2)}\n`);
+      namespace: testEnv.namespace ?? 'default',
+      taskQueue,
+      sourceVersion: 'git:mas-default-start-current',
+    });
     const worker = await Worker.create({
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
@@ -351,16 +370,13 @@ test('family-runtime queue inspect syncs a completed MAS default executor Tempor
       status: 'running',
       command: 'temporal test server',
     }, null, 2)}\n`);
-    fs.writeFileSync(path.join(runtimeRoot, 'temporal-worker.json'), `${JSON.stringify({
-      provider_kind: 'temporal',
-      pid: process.pid,
+    writeReadyTemporalWorkerFixture({
+      runtimeRoot,
       address: testEnv.address,
-      namespace: testEnv.namespace,
-      task_queue: taskQueue,
-      started_at: new Date().toISOString(),
-      status: 'ready',
-      source_version: 'git:mas-default-completed-current',
-    }, null, 2)}\n`);
+      namespace: testEnv.namespace ?? 'default',
+      taskQueue,
+      sourceVersion: 'git:mas-default-completed-current',
+    });
     const closeoutRefs = [
       'artifacts/supervision/reconcile/latest.json',
       'studies/002-dm/artifacts/controller/repair_execution_evidence/latest.json',

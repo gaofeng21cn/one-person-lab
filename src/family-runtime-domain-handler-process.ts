@@ -1,4 +1,4 @@
-import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
+import { spawnSync, type SpawnSyncOptionsWithStringEncoding, type SpawnSyncReturns } from 'node:child_process';
 import fs from 'node:fs';
 
 import { FrameworkContractError } from './contracts.ts';
@@ -23,7 +23,7 @@ type DomainHandlerProcessResult = SpawnSyncReturns<string> & {
   };
 };
 
-function configuredTimeoutMs() {
+export function resolveFamilyRuntimeDomainHandlerTimeoutMs() {
   const raw = process.env.OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS?.trim();
   if (!raw) {
     return DEFAULT_DOMAIN_HANDLER_TIMEOUT_MS;
@@ -103,6 +103,7 @@ function normalizeDomainHandlerResult(
   recovery?: DomainHandlerProcessResult['recovery'],
 ): DomainHandlerProcessResult {
   const timedOut = errorCode(result.error) === 'ETIMEDOUT';
+  cleanupTimedOutProcessGroup(result, timedOut);
   return {
     ...result,
     exit_code: resultExitCode(result, timedOut),
@@ -112,19 +113,36 @@ function normalizeDomainHandlerResult(
   };
 }
 
+function cleanupTimedOutProcessGroup(result: SpawnSyncReturns<string>, timedOut: boolean) {
+  if (!timedOut || !result.pid) {
+    return;
+  }
+  try {
+    process.kill(-result.pid, 'SIGKILL');
+  } catch {
+    try {
+      process.kill(result.pid, 'SIGKILL');
+    } catch {
+      // The timeout path is already fail-closed; cleanup is best-effort for child process groups.
+    }
+  }
+}
+
 function spawnDomainHandlerCommand(
   command: string[],
   options: { cwd: string; env?: NodeJS.ProcessEnv; maxBuffer?: number },
   timeoutMs: number,
 ) {
-  return spawnSync(command[0], command.slice(1), {
+  const spawnOptions: SpawnSyncOptionsWithStringEncoding & { detached: boolean } = {
     cwd: options.cwd,
     encoding: 'utf8',
     env: buildManagedShellCommandEnv(options.cwd, options.env ?? process.env),
     maxBuffer: options.maxBuffer ?? DEFAULT_DOMAIN_HANDLER_MAX_BUFFER,
     timeout: timeoutMs,
+    detached: true,
     killSignal: 'SIGTERM',
-  });
+  };
+  return spawnSync(command[0], command.slice(1), spawnOptions);
 }
 
 export function runFamilyRuntimeDomainHandlerCommand(
@@ -136,7 +154,7 @@ export function runFamilyRuntimeDomainHandlerCommand(
       command,
     });
   }
-  const timeoutMs = configuredTimeoutMs();
+  const timeoutMs = resolveFamilyRuntimeDomainHandlerTimeoutMs();
   const result = spawnDomainHandlerCommand(command, options, timeoutMs);
   const timedOut = errorCode(result.error) === 'ETIMEDOUT';
   const exitCode = resultExitCode(result, timedOut);

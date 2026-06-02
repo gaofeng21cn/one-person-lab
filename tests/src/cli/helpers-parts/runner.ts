@@ -1,9 +1,76 @@
 import assert from 'node:assert/strict';
-import { spawn, spawnSync } from 'node:child_process';
+import { spawn, spawnSync, type SpawnSyncReturns } from 'node:child_process';
 
 import { cliPath, repoRoot } from './constants.ts';
 
 const CLI_TEST_MAX_BUFFER = 16 * 1024 * 1024;
+const DEFAULT_CLI_TEST_TIMEOUT_MS = 30_000;
+
+function cliTestEnv(envOverrides: Record<string, string> = {}) {
+  return {
+    ...process.env,
+    NODE_NO_WARNINGS: '1',
+    OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+    ...envOverrides,
+  };
+}
+
+function cliTestTimeoutMs() {
+  const raw = process.env.OPL_CLI_TEST_TIMEOUT_MS?.trim();
+  if (!raw) {
+    return DEFAULT_CLI_TEST_TIMEOUT_MS;
+  }
+  const parsed = Number(raw);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : DEFAULT_CLI_TEST_TIMEOUT_MS;
+}
+
+function spawnErrorCode(error: Error | undefined) {
+  return error && 'code' in error ? String((error as NodeJS.ErrnoException).code) : null;
+}
+
+function cleanupTimedOutCli(result: SpawnSyncReturns<string>) {
+  if (spawnErrorCode(result.error) !== 'ETIMEDOUT' || !result.pid) {
+    return;
+  }
+  try {
+    process.kill(-result.pid, 'SIGKILL');
+  } catch {
+    try {
+      process.kill(result.pid, 'SIGKILL');
+    } catch {
+      // The assertion below reports the timed-out command; cleanup is best-effort.
+    }
+  }
+}
+
+function cliFailureMessage(args: string[], result: SpawnSyncReturns<string>) {
+  return [
+    `CLI command failed: opl ${args.join(' ')}`,
+    result.error ? `error=${result.error.message}` : null,
+    `status=${result.status ?? 'null'}`,
+    result.signal ? `signal=${result.signal}` : null,
+    result.stdout ? `stdout=${result.stdout}` : null,
+    result.stderr ? `stderr=${result.stderr}` : null,
+  ].filter(Boolean).join('\n');
+}
+
+function runCliProcess(args: string[], cwd: string, envOverrides: Record<string, string> = {}) {
+  const result = spawnSync(
+    process.execPath,
+    ['--experimental-strip-types', cliPath, ...args],
+    {
+      cwd,
+      encoding: 'utf8',
+      maxBuffer: CLI_TEST_MAX_BUFFER,
+      env: cliTestEnv(envOverrides),
+      timeout: cliTestTimeoutMs(),
+      detached: true,
+      killSignal: 'SIGTERM',
+    },
+  );
+  cleanupTimedOutCli(result);
+  return result;
+}
 
 export function runCli(args: string[], envOverrides: Record<string, string> = {}) {
   return runCliInCwd(args, repoRoot, envOverrides);
@@ -18,22 +85,9 @@ export function runCliInCwd(
   cwd: string,
   envOverrides: Record<string, string> = {},
 ) {
-  const result = spawnSync(
-    process.execPath,
-    ['--experimental-strip-types', cliPath, ...args],
-    {
-      cwd,
-      encoding: 'utf8',
-      maxBuffer: CLI_TEST_MAX_BUFFER,
-      env: {
-        ...process.env,
-        NODE_NO_WARNINGS: '1',
-        ...envOverrides,
-      },
-    },
-  );
+  const result = runCliProcess(args, cwd, envOverrides);
 
-  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.status, 0, cliFailureMessage(args, result));
   return JSON.parse(result.stdout);
 }
 
@@ -42,22 +96,9 @@ export function runCliRawInCwd(
   cwd: string,
   envOverrides: Record<string, string> = {},
 ) {
-  const result = spawnSync(
-    process.execPath,
-    ['--experimental-strip-types', cliPath, ...args],
-    {
-      cwd,
-      encoding: 'utf8',
-      maxBuffer: CLI_TEST_MAX_BUFFER,
-      env: {
-        ...process.env,
-        NODE_NO_WARNINGS: '1',
-        ...envOverrides,
-      },
-    },
-  );
+  const result = runCliProcess(args, cwd, envOverrides);
 
-  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.status, 0, cliFailureMessage(args, result));
   return result;
 }
 
@@ -74,15 +115,15 @@ export function runCliViaEntryPathInCwd(
       cwd,
       encoding: 'utf8',
       maxBuffer: CLI_TEST_MAX_BUFFER,
-      env: {
-        ...process.env,
-        NODE_NO_WARNINGS: '1',
-        ...envOverrides,
-      },
+      env: cliTestEnv(envOverrides),
+      timeout: cliTestTimeoutMs(),
+      detached: true,
+      killSignal: 'SIGTERM',
     },
   );
+  cleanupTimedOutCli(result);
 
-  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.status, 0, cliFailureMessage(args, result));
   return JSON.parse(result.stdout);
 }
 
@@ -95,19 +136,7 @@ export function runCliFailureInCwd(
   cwd: string,
   envOverrides: Record<string, string> = {},
 ) {
-  const result = spawnSync(
-    process.execPath,
-    ['--experimental-strip-types', cliPath, ...args],
-    {
-      cwd,
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        NODE_NO_WARNINGS: '1',
-        ...envOverrides,
-      },
-    },
-  );
+  const result = runCliProcess(args, cwd, envOverrides);
 
   assert.notEqual(result.status, 0);
   return {
@@ -123,14 +152,19 @@ export async function runCliAsync(args: string[], envOverrides: Record<string, s
       ['--experimental-strip-types', cliPath, ...args],
       {
         cwd: repoRoot,
-        env: {
-          ...process.env,
-          NODE_NO_WARNINGS: '1',
-          ...envOverrides,
-        },
+        env: cliTestEnv(envOverrides),
         stdio: ['ignore', 'pipe', 'pipe'],
+        detached: true,
       },
     );
+    const timeout = setTimeout(() => {
+      try {
+        process.kill(-child.pid!, 'SIGKILL');
+      } catch {
+        child.kill('SIGKILL');
+      }
+      reject(new Error(`CLI timed out after ${cliTestTimeoutMs()}ms: opl ${args.join(' ')}`));
+    }, cliTestTimeoutMs());
 
     let stdout = '';
     let stderr = '';
@@ -142,6 +176,7 @@ export async function runCliAsync(args: string[], envOverrides: Record<string, s
     });
     child.once('error', reject);
     child.once('exit', (code) => {
+      clearTimeout(timeout);
       if (code !== 0) {
         reject(new Error(`CLI exited with code ${code}\nstdout=${stdout}\nstderr=${stderr}`));
         return;

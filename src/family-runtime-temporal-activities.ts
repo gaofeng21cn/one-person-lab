@@ -206,15 +206,19 @@ export async function schedulerTickActivity(input: {
         limit: input.limit,
         hydrate: input.hydrate,
       },
-      (source, limit, hydrate, taskScope) => runSchedulerQueueTick(
+      (source, limit, hydrate, taskScope, domainProfiles, queueTickOptions) => runSchedulerQueueTick(
         db,
         paths,
         source,
         limit,
         hydrate,
         taskScope,
-        undefined,
-        { temporalProviderModule },
+        domainProfiles,
+        {
+          temporalProviderModule,
+          dispatchEnabled: queueTickOptions?.dispatchEnabled,
+          blockedReason: queueTickOptions?.blockedReason,
+        },
       ),
     ),
   };

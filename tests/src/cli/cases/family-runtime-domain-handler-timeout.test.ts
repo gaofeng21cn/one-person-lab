@@ -1,10 +1,12 @@
-import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, createGitModuleRemoteFixture, fs, os, path, repoRoot, runCli, shellSingleQuote, test } from '../helpers.ts';
 import { runFamilyRuntimeDomainHandlerCommand } from '../../../../src/family-runtime-domain-handler-process.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
     OPL_STATE_DIR: stateRoot,
+    OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
     OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS: '100',
+    OPL_FAMILY_RUNTIME_MANAGED_PROVIDER_PROJECTION_TIMEOUT_MS: '100',
     ...extra,
   };
 }
@@ -53,6 +55,49 @@ test('family-runtime intake fails closed when a domain export handler times out'
   }
 });
 
+test('family-runtime profile module export fails closed when module exec hangs', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-profile-module-timeout-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-profile-module-timeout-'));
+  const profilePath = path.join(fixtureRoot, 'dm-cvd.workspace.toml');
+  const uvPath = path.join(fixtureRoot, 'uv');
+  const masFixture = createGitModuleRemoteFixture('med-autoscience');
+  fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
+  fs.writeFileSync(
+    uvPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+sleep 30
+`,
+    { mode: 0o755 },
+  );
+  try {
+    const intake = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+      '--source',
+      'module-timeout-test',
+    ], familyRuntimeEnv(stateRoot, {
+      PATH: `${fixtureRoot}:${process.env.PATH ?? ''}`,
+      OPL_MODULE_PATH_MEDAUTOSCIENCE: masFixture.sourceRoot,
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE: profilePath,
+    }));
+    const exportResult = intake.family_runtime_intake.exports[0];
+
+    assert.equal(intake.family_runtime_intake.enqueued_count, 0);
+    assert.equal(intake.family_runtime_intake.blocked_count, 1);
+    assert.equal(exportResult.status, 'timeout');
+    assert.equal(exportResult.command_source, 'module_exec_profile');
+    assert.equal(exportResult.command_cwd, masFixture.sourceRoot);
+    assert.match(exportResult.error, /Domain export timed out after 100ms/);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(masFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime dispatch fails closed when a domain dispatch handler times out', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-dispatch-timeout-state-'));
   const dispatchDomainHandler = hangingDomainHandlerFixture('dispatch');
@@ -82,6 +127,32 @@ test('family-runtime dispatch fails closed when a domain dispatch handler times 
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(dispatchDomainHandler.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime status does not hang on a timed-out MAS managed provider projection export', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-managed-projection-timeout-state-'));
+  const exportDomainHandler = hangingDomainHandlerFixture('managed-projection-export');
+  try {
+    const output = runCli(
+      ['family-runtime', 'status', '--provider', 'temporal'],
+      familyRuntimeEnv(stateRoot, {
+        OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportDomainHandler.domainHandlerPath,
+        OPL_TEMPORAL_ADDRESS: '',
+        TEMPORAL_ADDRESS: '',
+        OPL_TEMPORAL_WORKER_STATUS: '',
+        OPL_TEMPORAL_WORKER_ENABLED: '',
+      }),
+    );
+    const provider = output.family_runtime.provider_runtime.providers.temporal;
+
+    assert.equal(output.family_runtime.readiness.provider_ready, false);
+    assert.equal(provider.ready, false);
+    assert.notEqual(provider.details.adapter_mode, 'mas_managed_temporal_projection_ready');
+    assert.equal(provider.details.managed_domain_projection_summary, null);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(exportDomainHandler.fixtureRoot, { recursive: true, force: true });
   }
 });
 

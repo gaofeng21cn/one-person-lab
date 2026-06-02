@@ -366,19 +366,29 @@ export function writeMasCleanRunnerFixture(
   const runnerPath = path.join(workspaceRoot, 'scripts', 'run-python-clean.sh');
   fs.mkdirSync(path.dirname(runnerPath), { recursive: true });
   if (options.profilePath && options.manifest) {
+    const runnerModulePath = path.join(path.dirname(runnerPath), 'run-python-clean-fixture.mjs');
+    fs.writeFileSync(
+      runnerModulePath,
+      [
+        `const expectedProfile = ${JSON.stringify(path.resolve(options.profilePath))};`,
+        `const manifest = ${JSON.stringify(options.manifest)};`,
+        'const args = process.argv.slice(2).join(" ");',
+        'if (args.includes(expectedProfile) && args.includes("med_autoscience.controllers.product_entry")) {',
+        '  process.stdout.write(`${JSON.stringify(manifest, null, 2)}\\n`);',
+        '  process.exit(0);',
+        '}',
+        'process.stderr.write(`unexpected MAS clean runner args: ${args}\\n`);',
+        'process.exit(1);',
+        '',
+      ].join('\n'),
+      { encoding: 'utf8', mode: 0o755 },
+    );
     fs.writeFileSync(
       runnerPath,
       [
         '#!/usr/bin/env bash',
         'set -euo pipefail',
-        `if [[ "$*" == *${shellSingleQuote(path.resolve(options.profilePath))}* && "$*" == *med_autoscience.controllers.product_entry* ]]; then`,
-        '  cat <<\'JSON\'',
-        JSON.stringify(options.manifest, null, 2),
-        'JSON',
-        '  exit 0',
-        'fi',
-        'echo "unexpected MAS clean runner args: $*" >&2',
-        'exit 1',
+        `exec ${shellSingleQuote(process.execPath)} ${shellSingleQuote(runnerModulePath)} "$@"`,
         '',
       ].join('\n'),
       { encoding: 'utf8', mode: 0o755 },

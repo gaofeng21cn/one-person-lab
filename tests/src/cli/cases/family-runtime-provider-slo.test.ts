@@ -12,9 +12,7 @@ import {
   maybeRepairTemporalWorkerForProviderSlo,
   runTemporalProviderSloTick,
 } from '../../../../src/family-runtime-provider-slo-executor.ts';
-import {
-  inspectFamilyRuntimeProvidersWithLifecycle,
-} from '../../../../src/family-runtime-providers.ts';
+import { inspectFamilyRuntimeProvidersWithLifecycle } from '../../../../src/family-runtime-providers.ts';
 import {
   repairTemporalWorkerForProviderRepair,
 } from '../../../../src/family-runtime-provider-worker-repair.ts';
@@ -839,8 +837,10 @@ test('family-runtime scheduler tick fails closed when worker liveness remains bl
       db,
       paths,
       { providerKind: 'temporal', limit: 1 },
-      () => {
+      (_source, _limit, _hydrate, _taskScope, _domainProfiles, queueTickOptions) => {
         queueTickCalls += 1;
+        assert.equal(queueTickOptions?.dispatchEnabled, false);
+        assert.equal(queueTickOptions?.blockedReason, 'temporal_worker_not_ready');
         return {
           selected_count: 1,
           dispatches: [],
@@ -864,8 +864,11 @@ test('family-runtime scheduler tick fails closed when worker liveness remains bl
     assert.equal(tick.provider_liveness_blocker.temporal_service_status, 'running');
     assert.equal(tick.provider_liveness_blocker.next_repair_command, 'opl family-runtime worker start --provider temporal');
     assert.equal(tick.provider_liveness_blocker.next_repair_action.action_id, 'start_temporal_worker');
-    assert.equal(tick.queue_tick, null);
-    assert.equal(queueTickCalls, 0);
+    assert.equal(tick.queue_tick.status, 'blocked_provider_not_ready');
+    assert.equal(tick.queue_tick.dispatch_blocked_reason, 'temporal_worker_not_ready');
+    assert.equal(tick.queue_tick.selected_count, 0);
+    assert.equal(tick.queue_tick.dispatches.length, 0);
+    assert.equal(queueTickCalls, 1);
   } finally {
     if (previousStateDir === undefined) {
       delete process.env.OPL_STATE_DIR;

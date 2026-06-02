@@ -370,6 +370,7 @@ test('app state fast uses local Temporal lifecycle state without live manifest r
 
     const output = runCli(['app', 'state', '--profile', 'fast'], {
       OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_RUNTIME_PROVIDER: '',
       OPL_TEMPORAL_ADDRESS: '',
       TEMPORAL_ADDRESS: '',
       OPL_TEMPORAL_WORKER_STATUS: '',
@@ -468,6 +469,7 @@ test('app state full uses lifecycle-aware Temporal readiness from the same provi
       HOME: homeRoot,
       OPL_STATE_DIR: stateDir,
       OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+      OPL_FAMILY_RUNTIME_PROVIDER: '',
       OPL_TEMPORAL_ADDRESS: '',
       TEMPORAL_ADDRESS: '',
       OPL_TEMPORAL_WORKER_STATUS: '',
@@ -493,16 +495,16 @@ test('app state full uses lifecycle-aware Temporal readiness from the same provi
       };
     };
 
-    assert.equal(output.app_state.provider.temporal.health_status, 'ready');
-    assert.equal(output.app_state.provider.temporal.status, 'ready');
-    assert.equal(output.app_state.provider.temporal.ready, true);
-    assert.equal(output.app_state.provider.temporal.degraded_reason, null);
-    assert.equal(output.app_state.provider.temporal.details.address, 'mas-managed-temporal.example.test:7233');
-    assert.equal(output.app_state.provider.temporal.details.address_source, 'mas_managed_temporal_state_consistency_projection');
-    assert.equal(output.app_state.provider.temporal.details.adapter_mode, 'mas_managed_temporal_projection_ready');
-    assert.equal(output.app_state.provider.temporal.details.worker_readiness.readiness_status, 'ready');
-    assert.equal(output.app_state.provider.temporal.details.worker_readiness.worker_ready, true);
-    assert.deepEqual(output.app_state.provider.temporal.details.worker_readiness.blockers, []);
+    assert.equal(output.app_state.provider.temporal.health_status, 'attention_needed');
+    assert.equal(output.app_state.provider.temporal.status, 'provider_code_landed_unconfigured');
+    assert.equal(output.app_state.provider.temporal.ready, false);
+    assert.equal(output.app_state.provider.temporal.degraded_reason, 'temporal_runtime_not_configured');
+    assert.equal(output.app_state.provider.temporal.details.address, null);
+    assert.equal(output.app_state.provider.temporal.details.address_source, 'not_configured');
+    assert.equal(output.app_state.provider.temporal.details.adapter_mode, 'provider_code_landed_unconfigured');
+    assert.equal(output.app_state.provider.temporal.details.worker_readiness.readiness_status, 'not_configured');
+    assert.equal(output.app_state.provider.temporal.details.worker_readiness.worker_ready, false);
+    assert.deepEqual(output.app_state.provider.temporal.details.worker_readiness.blockers, ['temporal_runtime_not_configured']);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(workspacePath, { recursive: true, force: true });
