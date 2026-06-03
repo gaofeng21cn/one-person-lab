@@ -395,6 +395,19 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
     ...buildOplDeveloperModeSurface(buildOplEndpoints(), { detail: profile }),
     live_closeout_evidence: buildDeveloperModeLiveCloseoutEvidenceSummary(),
   };
+  const developerProfile = {
+    ...developerMode.developer_profile,
+    capabilities: developerMode.capabilities,
+    legacy_developer_mode: {
+      surface_id: developerMode.surface_id,
+      status: developerMode.status,
+      enabled: developerMode.enabled,
+      effective_state: developerMode.effective_state,
+      mode: developerMode.mode,
+      config_source: developerMode.config_source,
+      allowed_route: developerMode.allowed_route,
+    },
+  };
   const provider = await buildProviderState(profile);
   const release = buildReleaseState();
   const workspaceRoot = readOplWorkspaceRoot();
@@ -474,6 +487,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
         shell_must_not_use_full_drilldown_as_normal_state: true,
       },
       core,
+      developer_profile: developerProfile,
       developer_mode: developerMode,
       modules: modulesState,
       provider,

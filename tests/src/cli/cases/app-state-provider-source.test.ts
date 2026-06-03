@@ -230,6 +230,20 @@ test('app state fast shows developer checkout source when Developer Mode prefers
       PATH: '/usr/bin:/bin',
     }) as {
       app_state: {
+        developer_profile: {
+          profile_id: string;
+          capabilities: {
+            source_channel: {
+              status: string;
+              level: string;
+              source: string;
+              impact: string;
+            };
+          };
+          legacy_developer_mode: {
+            effective_state: string;
+          };
+        };
         developer_mode: {
           enabled: string;
           effective_state: string;
@@ -263,6 +277,14 @@ test('app state fast shows developer checkout source when Developer Mode prefers
 
     const mas = output.app_state.modules.items.find((entry) => entry.module_id === 'medautoscience');
     assert.ok(mas);
+    assert.equal(output.app_state.developer_profile.profile_id, 'runtime_maintainer');
+    assert.equal(output.app_state.developer_profile.legacy_developer_mode.effective_state, 'active_direct');
+    assert.deepEqual(output.app_state.developer_profile.capabilities.source_channel, {
+      status: 'ready',
+      level: 'local_checkout',
+      source: 'developer_mode_git_checkout_source',
+      impact: 'Module source may use local developer checkouts for App and CLI read-models.',
+    });
     assert.equal(output.app_state.developer_mode.enabled, 'on');
     assert.equal(output.app_state.developer_mode.effective_state, 'active_direct');
     assert.deepEqual(output.app_state.developer_mode.capabilities.source_channel, {
