@@ -685,7 +685,7 @@ test('agents conformance allows opl-meta-agent contract guard tests to name forb
   assert.equal(
     morphologyChecks.residue_classification_summary.allowed_name_residue_by_classification
       .contract_or_legacy_guard_test,
-    6,
+    7,
   );
   assert.equal(
     morphologyChecks.residue_classification_summary.allowed_name_residue_by_classification
