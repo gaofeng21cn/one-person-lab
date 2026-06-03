@@ -582,7 +582,7 @@ test('framework release discovery consumes App repo assets without publishing th
     false,
   );
   assert.equal(
-    gui.prebuilt_artifacts[0].distributable_patterns.includes('One-Person-Lab-26.5.28-mac-arm64.dmg'),
+    gui.prebuilt_artifacts[0].distributable_patterns.includes('One-Person-Lab-26.6.3-mac-arm64.dmg'),
     true,
   );
   assert.equal(
