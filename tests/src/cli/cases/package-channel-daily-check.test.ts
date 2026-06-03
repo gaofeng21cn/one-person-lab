@@ -46,13 +46,13 @@ test('daily package channel check skips when module source fingerprints are unch
   const current = path.join(tempRoot, 'current.json');
 
   writeManifest(candidate, {
-    version: '26.5.28-nightly',
+    version: '26.6.3-nightly',
     generatedAt: '2026-06-03T00:00:00.000Z',
     moduleHead: 'a'.repeat(40),
     moduleSha: 'b'.repeat(64),
   });
   writeManifest(current, {
-    version: '26.5.28-nightly',
+    version: '26.6.3-nightly',
     generatedAt: '2026-06-02T00:00:00.000Z',
     moduleHead: 'a'.repeat(40),
     moduleSha: 'b'.repeat(64),
@@ -64,13 +64,13 @@ test('daily package channel check skips when module source fingerprints are unch
     '--current-manifest',
     current,
     '--version',
-    '26.5.28-nightly',
+    '26.6.3-nightly',
   ]);
 
   assert.equal(summary.status, 'skipped');
   assert.equal(summary.reason, 'package_channel_unchanged');
   assert.equal(summary.publish_required, false);
-  assert.equal(summary.version, '26.5.28-nightly');
+  assert.equal(summary.version, '26.6.3-nightly');
   assert.deepEqual(summary.changed_modules, []);
 });
 
@@ -80,13 +80,13 @@ test('daily package channel check publishes when a module source fingerprint cha
   const current = path.join(tempRoot, 'current.json');
 
   writeManifest(candidate, {
-    version: '26.5.28-nightly',
+    version: '26.6.3-nightly',
     generatedAt: '2026-06-03T00:00:00.000Z',
     moduleHead: 'c'.repeat(40),
     moduleSha: 'd'.repeat(64),
   });
   writeManifest(current, {
-    version: '26.5.28-nightly',
+    version: '26.6.3-nightly',
     generatedAt: '2026-06-02T00:00:00.000Z',
     moduleHead: 'a'.repeat(40),
     moduleSha: 'b'.repeat(64),
@@ -98,7 +98,7 @@ test('daily package channel check publishes when a module source fingerprint cha
     '--current-manifest',
     current,
     '--version',
-    '26.5.28-nightly',
+    '26.6.3-nightly',
   ]);
 
   assert.equal(summary.status, 'publish_required');
@@ -113,7 +113,7 @@ test('daily package channel check fails closed when no current channel manifest 
   const missingCurrent = path.join(tempRoot, 'missing-current.json');
 
   writeManifest(candidate, {
-    version: '26.5.28-nightly',
+    version: '26.6.3-nightly',
     generatedAt: '2026-06-03T00:00:00.000Z',
     moduleHead: 'a'.repeat(40),
     moduleSha: 'b'.repeat(64),
@@ -129,7 +129,7 @@ test('daily package channel check fails closed when no current channel manifest 
         '--current-manifest',
         missingCurrent,
         '--version',
-        '26.5.28-nightly',
+        '26.6.3-nightly',
       ], {
         cwd: repoRoot,
         encoding: 'utf8',

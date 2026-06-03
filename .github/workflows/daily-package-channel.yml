@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       opl_version:
-        description: Base OPL version for nightly package tag, for example 26.5.28
+        description: Optional nightly package version override. Empty uses current UTC YY.M.D-nightly; bare versions get -nightly appended.
         required: false
         type: string
       force_publish:
@@ -47,10 +47,18 @@ jobs:
           set -euo pipefail
           base="${{ github.event.inputs.opl_version || '' }}"
           if [ -z "$base" ]; then
-            base="$(node --experimental-strip-types --input-type=module -e "import { getOplReleaseVersion } from './src/opl-release.ts'; console.log(getOplReleaseVersion())")"
+            base="$(date -u +'%y.%-m.%-d')"
           fi
           base="${base#v}"
-          version="${base}-nightly"
+          if [[ "$base" == *-nightly ]]; then
+            version="$base"
+          else
+            version="${base}-nightly"
+          fi
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-nightly$ ]]; then
+            echo "::error::Invalid daily package version: $version"
+            exit 1
+          fi
           echo "opl_version=$version" >> "$GITHUB_OUTPUT"
           echo "OPL_RELEASE_VERSION=$version" >> "$GITHUB_ENV"
           echo "OPL_PACKAGES_OWNER=${{ github.repository_owner }}" >> "$GITHUB_ENV"

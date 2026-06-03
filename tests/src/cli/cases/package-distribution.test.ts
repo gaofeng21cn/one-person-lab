@@ -160,7 +160,7 @@ test('packages manifest exposes active package-channel coordinates for module in
   );
   assert.equal(
     output.packages_manifest.release_automation.daily_package_channel.version_template,
-    '<opl_version>-nightly',
+    '<utc_yy.m.d>-nightly',
   );
   assert.equal(
     output.packages_manifest.release_automation.daily_package_channel.change_detector,
@@ -411,7 +411,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.release_automation.release_manifest_package.package_channel_status, 'active_release_channel');
   assert.equal(manifest.release_automation.daily_package_channel.status, 'active_change_detected_daily_publish');
   assert.equal(manifest.release_automation.daily_package_channel.no_change_behavior, 'skip_without_publish');
-  assert.equal(manifest.release_automation.daily_package_channel.version_template, '<opl_version>-nightly');
+  assert.equal(manifest.release_automation.daily_package_channel.version_template, '<utc_yy.m.d>-nightly');
   assert.equal(manifest.release_automation.daily_package_channel.force_publish_input, 'force_publish');
   assert.equal(manifest.packages.webui_docker_image.framework_workflow_publish_status, 'not_published_by_framework_packages_workflow');
   assert.equal(manifest.packages.native_helper.channel_status, 'active_ghcr_oci_prebuild');
@@ -553,6 +553,8 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(workflow, /Upload prepared package artifacts/);
   assert.match(dailyPackageWorkflow, /schedule:/);
   assert.match(dailyPackageWorkflow, /cron:/);
+  assert.match(dailyPackageWorkflow, /base="\$\(date -u \+'%y\.%-m\.%-d'\)"/);
+  assert.match(dailyPackageWorkflow, /\[\[ "\$base" == \*-nightly \]\]/);
   assert.match(dailyPackageWorkflow, /version="\$\{base\}-nightly"/);
   assert.match(dailyPackageWorkflow, /workflow_dispatch:/);
   assert.match(dailyPackageWorkflow, /force_publish:/);

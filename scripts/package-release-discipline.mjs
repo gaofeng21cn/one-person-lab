@@ -120,7 +120,7 @@ function validateManifest(manifest) {
   assertCondition(automation?.cleanup?.destructive_action_requires === 'package_admin_with_delete_packages_scope', 'cleanup destructive action requirements drifted', failures);
   assertCondition(automation?.daily_package_channel?.status === 'active_change_detected_daily_publish', 'daily package channel must be active and change-detected', failures);
   assertCondition(automation?.daily_package_channel?.workflow === PACKAGE_DAILY_WORKFLOW_PATH, 'daily package channel workflow path drifted', failures);
-  assertCondition(automation?.daily_package_channel?.version_template === '<opl_version>-nightly', 'daily package channel version template drifted', failures);
+  assertCondition(automation?.daily_package_channel?.version_template === '<utc_yy.m.d>-nightly', 'daily package channel version template drifted', failures);
   assertCondition(automation?.daily_package_channel?.change_detector === 'scripts/package-channel-daily-check.mjs', 'daily package channel detector drifted', failures);
   assertCondition(automation?.daily_package_channel?.comparison === 'module_source_fingerprint', 'daily package channel comparison must use module source fingerprints', failures);
   assertCondition(automation?.daily_package_channel?.no_change_behavior === 'skip_without_publish', 'daily package channel must skip without publish when unchanged', failures);
@@ -193,7 +193,9 @@ function validateWorkflow(manifest, failures) {
   assertCondition(/one-person-lab-manifest:\$\{OPL_RELEASE_VERSION\}/.test(source), 'package workflow must publish versioned release manifest GHCR channel', failures);
   assertCondition(dailyWorkflowSource.length > 0, 'daily package channel workflow must exist', failures);
   assertCondition(/schedule:\s*\n\s*-\s*cron:/.test(dailyWorkflowSource), 'daily package channel workflow must run on schedule', failures);
-  assertCondition(/version="\$\{base\}-nightly"/.test(dailyWorkflowSource), 'daily package channel workflow must derive a stable nightly package tag', failures);
+  assertCondition(/base="\$\(date -u \+'%y\.%-m\.%-d'\)"/.test(dailyWorkflowSource), 'daily package channel workflow must default to current UTC date package tag', failures);
+  assertCondition(/\[\[ "\$base" == \*-nightly \]\]/.test(dailyWorkflowSource), 'daily package channel workflow must not double-append nightly for explicit repair versions', failures);
+  assertCondition(/version="\$\{base\}-nightly"/.test(dailyWorkflowSource), 'daily package channel workflow must append nightly to bare repair versions', failures);
   assertCondition(/workflow_dispatch:/.test(dailyWorkflowSource), 'daily package channel workflow must keep manual repair dispatch', failures);
   assertCondition(/force_publish:/.test(dailyWorkflowSource), 'daily package channel workflow must keep force_publish repair input', failures);
   assertCondition(/npm run packages:manifest/.test(dailyWorkflowSource), 'daily package channel workflow must build a candidate package manifest', failures);
