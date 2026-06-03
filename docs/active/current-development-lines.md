@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `current_execution_map`
 State: `active_support`
 Machine boundary: 本文是人读执行地图。机器真相继续归 `contracts/`、source code、CLI/API behavior、runtime ledgers、provider receipts、domain-owned manifests 和真实 workspace / App evidence。
-Date: `2026-05-30`
+Date: `2026-06-03`
 
 ## 当前结论
 
@@ -49,10 +49,10 @@ rtk opl agents default-callers --family-defaults --json
    让 OPL generated/hosted CLI、MCP、Skill/product-entry、status、session、workbench、domain-handler 和 harness 成为 MAS/MAG/RCA/OMA 的生产默认 caller。Domain repo 最终只留 domain pack、machine-readable contract、authority function、domain handler target、domain-specific implementation 与必要 native helper。repo-local default caller、wrapper、runtime projection、diagnostic cleanup shell、compat facade、re-export wrapper 和 compatibility-only tests 在 replacement/no-active-caller/provenance 证据成立后直接删除或进入 history/tombstone。
 
 4. `domain_private_residue_retirement`
-   把 framework-generic 能力上收到 OPL，把 domain truth 留在 domain。满足 replacement parity、no-active-caller、domain receipt parity、provenance/history 和 no-forbidden-write 证据后，旧模块、接口、alias、facade、wrapper、旧测试入口和 compatibility tests 直接退役。测试改为锁定当前 machine-readable contract、generated surface、domain owner receipt、fail-closed 行为或 no-resurrection guard。
+   把 framework-generic 能力上收到 OPL，把 domain truth 留在 domain。满足 replacement parity、no-active-caller、domain receipt parity、provenance/history 和 no-forbidden-write 证据后，旧模块、接口、alias、facade、wrapper、旧测试入口和 compatibility tests 直接退役。测试改为锁定当前 machine-readable contract、generated surface、domain owner receipt、fail-closed 行为或 no-resurrection guard。2026-06-03 起，非默认 executor adapter 的长期 owner 固定为 OPL Framework：MAG/RCA 中的 Hermes-named proof、mock、bridge 或 helper 只能作为显式 proof/receipt lane、migration input、negative guard 或 provenance 读取；删除前必须先完成 OPL adapter parity、active caller 迁移、owner receipt / typed blocker 和 repo-native verification。
 
 5. `opl_app_runtime_workbench`
-   App/workbench 消费 provider readiness、stage attempt、route graph、review/repair queue、source refs、artifact refs、memory refs、SLO、workorder packet、owner-aware action routing 和 refs-only graph/timeline/research lens。该面只做展示与 drilldown，不读取论文正文、memory body 或 artifact body，不声明 publication ready、domain ready 或 production ready。
+   App/workbench 消费 provider readiness、stage attempt、route graph、review/repair queue、source refs、artifact refs、memory refs、SLO、workorder packet、owner-aware action routing 和 refs-only graph/timeline/research lens。该面只做展示与 drilldown，不读取论文正文、memory body 或 artifact body，不声明 publication ready、domain ready 或 production ready。`one-person-lab-app` 持有 active-shell candidate contract 与 validator；`opl-agui-codex-shell` / `agui-codex` 当前是 active shell candidate 和测试对象，不属于 cleanup 删除队列。Aion shell cleanup 只处理已由当前 App contract、单测或 bridge path 覆盖的 Team/E2E helper tail，不能删除 active migration window、legacy migration 或 bridge fallback。
 
 6. `domain_soak_and_acceptance`
    MAS/MAG/RCA 在迁移后目标形态下持续产出真实 progress delta、quality gate movement、human gate、stop-loss、domain owner receipt、typed blocker、no-regression evidence、expected receipt、monitor freshness、memory/artifact/lifecycle receipt 或 long-soak refs。
@@ -70,7 +70,7 @@ rtk opl agents default-callers --family-defaults --json
 | `conformance_physical_morphology` | OPL agents conformance | 保持 conformance 主入口为薄聚合器；physical morphology policy、active residue scan 和 provenance/tombstone allowance 只能在 scoped module 中演进，并由 line-budget / modularization tests 防回堆。 |
 | `domain_private_residue` | OPL functional audit + domain repos | 按 OPL replacement、generated surface、refs-only adapter、minimal authority function、tombstone 分类收薄或删除；剩余风险按 no-resurrection、physical-delete authority 和 production evidence tail 读取。 |
 | `lifecycle_memory_artifact` | OPL primitive + domain owner receipt | OPL 只持 locator/index/ledger/ref transport；domain 持 body、mutation authority、accept/reject 和 final verdict。Observed refs 不授权 package/export/visual readiness、physical delete、domain ready、Temporal visual-stage long soak 或 production ready。 |
-| `app_workbench` | One Person Lab App / OPL product surface | 消费 App/operator drilldown、runtime visualization graph/timeline/lens、safe action routes、cleanup plan、stage evidence accounting、OMA production-consumption gates、App release/user-path gates 和 Codex App runtime evidence gates；不生成 release-ready 或 production-ready verdict。 |
+| `app_workbench` | One Person Lab App / OPL product surface | 消费 App/operator drilldown、runtime visualization graph/timeline/lens、safe action routes、cleanup plan、stage evidence accounting、OMA production-consumption gates、App release/user-path gates 和 Codex App runtime evidence gates；active shell candidate truth 留在 App contract/validator，`agui-codex` active candidate 不进入 physical-delete lane；不生成 release-ready 或 production-ready verdict。 |
 | `legacy_cleanup` | OPL gate + domain repo owner | replacement proof 和 no-active-caller proof 后直接删除或 tombstone；OPL 可写 cleanup ledger / tombstone refs，domain repo 文件物理删除需要 domain owner receipt 或明确 owner-side proof。 |
 
 ## 当前直接退役优先级
@@ -81,6 +81,8 @@ rtk opl agents default-callers --family-defaults --json
 | `family-runtime production-closeout` 等旧 CLI alias | 已被当前 readiness / evidence-worklist / App drilldown route 替代；`opl framework production-closeout` 只作为 framework-level 汇总命令保留。 | 不保留 compatibility alias；仍被测试或文档引用时迁到当前命令或 negative guard。 |
 | domain repo 手写 product/status/workbench/sidecar wrappers | MAS/MAG/RCA 仍有 retained adapter / domain handler / refs-only projection tail。 | 只按 domain handler、refs-only adapter、diagnostic 或 migration input 读取；OPL generated/default caller parity 和 owner proof 成立后删除旧 wrapper 和兼容测试。 |
 | stale compatibility tests | OPL 当前只需要 no-resurrection guard、contract behavior test 或 migration proof。 | 删除只保护旧路径的测试；保留的测试必须断言当前 contract、no-active-caller、fail-closed、retired alias rejection 或 tombstone semantics。 |
+| OMA / Aion shell helper tail | OMA active materializer 与 Aion active migration/bridge path 仍可有 caller；无 caller 的 implicit fixture graph、fixture alias、Team E2E helper tail 可退役。 | 先迁出 active caller、补替代 contract/unit proof，再删除脚本或测试 fixture；保留 active migration window、legacy database migration、explicit bridge fallback 和 App-owned active shell candidate。 |
+| MAG/RCA Hermes proof/helper tail | Hermes-Agent 不是 production substrate；`hermes_agent` 是 OPL-owned explicit executor adapter/backend。MAG/RCA 可保留 domain-local proof lane 或 route bridge residue。 | 把 active owner wording 改成 OPL executor adapter receipt/proof owner；只有 OPL parity、caller migration、typed blocker/owner receipt 和 repo-native verification 全部成立后，才删除 helper、bridge、mock tests。 |
 
 ## 合并与退役规则
 

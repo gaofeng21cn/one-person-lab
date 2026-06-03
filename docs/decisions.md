@@ -5,6 +5,20 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-06-03
+
+### 决策：active shell candidate 与非默认 executor adapter 不能被 cleanup 误删
+
+原因：跨仓 cleanup 审计曾把两类仍有 owner 的面放进“后续可删”语境：其一是 `one-person-lab-app` 中仍在测试的 `opl-agui-codex-shell` / `agui-codex` active shell candidate；其二是 MAG/RCA 中 Hermes-named proof/helper/mock tail。前者的 candidate contract、validator、release/user-path evidence owner 是 App 仓，OPL Framework 只能记录边界和消费规则，不能替 App 退役 active candidate。后者的长期 owner 是 OPL Framework 的显式非默认 executor adapter/backend；MAG/RCA 只保留 domain-local receipt/proof lane、route bridge、negative guard 或迁移残留，不应被写成 domain 自己拥有 Hermes executor substrate。
+
+影响：
+
+- `agui-codex` 继续按 App-owned active shell candidate 读取；只有 App owner 明确改 candidate contract、validator 和 docs，并完成替代/退役 receipt 后，才能删除对应 shell bridge 或 proof 文件。
+- `hermes_agent`、`claude_code`、`antigravity_cli` 等非默认 executor adapter/backend 统一归 OPL Framework owner；它们只能通过显式 stage binding、executor receipt、audit 和 fail-closed gate 进入，不承诺行为、质量、工具语义或 resume 与 `Codex CLI` 等价。
+- MAG/RCA 文档、schema 和测试里的 active owner label 必须写成 `OPL executor adapter ... receipt/proof owner` 或 selected backend，不写成 MAG/RCA 自有 executor owner；domain repo 只持有 grant/visual truth、quality/export verdict、artifact authority、owner receipt 或 typed blocker。
+- OMA materializer/helper 与 Aion Team/E2E bridge tail 只删除无 active caller、已有 replacement proof 和 repo-native verification 的 fixture/alias/helper；active materializer、target-agent handoff、legacy migration window、explicit bridge fallback 和 App-owned shell candidate 不进入物理删除。
+- 物理删除门固定为 replacement parity、no-active-caller、owner receipt 或 typed blocker、provenance/tombstone、no-forbidden-write 和 repo-native verification。任何 active caller、migration window、negative guard、proof lane 或 dirty root 都必须先收敛为明确 owner answer，再执行删除。
+
 ## 2026-06-02
 
 ### 决策：completed typed closeout 是 default-executor admission 的终端屏障
