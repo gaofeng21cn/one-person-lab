@@ -46,6 +46,7 @@ const PACKAGE_WORKFLOW_TRIGGER_POLICY = 'release_gate_workflow_call_or_manual_di
 const PACKAGE_REMOTE_PUBLISH_STATUS = 'release_gate_or_manual_dispatch_publishes_ghcr_packages';
 const PACKAGE_WORKFLOW_PATH = '.github/workflows/packages.yml';
 const PACKAGE_RELEASE_CALLER_WORKFLOW_PATH = '.github/workflows/release-package-channel.yml';
+const PACKAGE_DAILY_WORKFLOW_PATH = '.github/workflows/daily-package-channel.yml';
 
 function validateModule(moduleId, entry, failures) {
   assertCondition(entry.current_install_update_source === 'package_channel', `${moduleId}: current source must be package_channel for stable package-channel installs`, failures);
@@ -117,6 +118,15 @@ function validateManifest(manifest) {
   assertCondition(automation?.cleanup?.protected_tags?.includes('latest'), 'cleanup must protect moving latest tag', failures);
   assertCondition(automation?.cleanup?.execution_mode === 'dry_run_first_explicit_execute_required', 'cleanup must be dry-run first with explicit execute', failures);
   assertCondition(automation?.cleanup?.destructive_action_requires === 'package_admin_with_delete_packages_scope', 'cleanup destructive action requirements drifted', failures);
+  assertCondition(automation?.daily_package_channel?.status === 'active_change_detected_daily_publish', 'daily package channel must be active and change-detected', failures);
+  assertCondition(automation?.daily_package_channel?.workflow === PACKAGE_DAILY_WORKFLOW_PATH, 'daily package channel workflow path drifted', failures);
+  assertCondition(automation?.daily_package_channel?.version_template === '<opl_version>-daily.YYYYMMDD', 'daily package channel version template drifted', failures);
+  assertCondition(automation?.daily_package_channel?.date_timezone === 'Asia/Shanghai', 'daily package channel date timezone drifted', failures);
+  assertCondition(automation?.daily_package_channel?.change_detector === 'scripts/package-channel-daily-check.mjs', 'daily package channel detector drifted', failures);
+  assertCondition(automation?.daily_package_channel?.comparison === 'module_source_fingerprint', 'daily package channel comparison must use module source fingerprints', failures);
+  assertCondition(automation?.daily_package_channel?.no_change_behavior === 'skip_without_publish', 'daily package channel must skip without publish when unchanged', failures);
+  assertCondition(automation?.daily_package_channel?.publish_gate === 'daily_package_channel_changed', 'daily package channel publish gate drifted', failures);
+  assertCondition(automation?.daily_package_channel?.manual_repair_trigger === 'workflow_dispatch', 'daily package channel manual repair trigger drifted', failures);
 
   const modules = manifest.packages?.modules ?? {};
   for (const [moduleId, entry] of Object.entries(modules)) {
@@ -159,8 +169,12 @@ function validateWorkflow(manifest, failures) {
 
   const source = fs.readFileSync(workflowPath, 'utf8');
   const releaseCallerWorkflowPath = path.resolve(process.cwd(), PACKAGE_RELEASE_CALLER_WORKFLOW_PATH);
+  const dailyWorkflowPath = path.resolve(process.cwd(), PACKAGE_DAILY_WORKFLOW_PATH);
   const releaseCallerSource = fs.existsSync(releaseCallerWorkflowPath)
     ? fs.readFileSync(releaseCallerWorkflowPath, 'utf8')
+    : '';
+  const dailyWorkflowSource = fs.existsSync(dailyWorkflowPath)
+    ? fs.readFileSync(dailyWorkflowPath, 'utf8')
     : '';
   assertCondition(/workflow_dispatch:/.test(source), 'package workflow must keep manual workflow_dispatch trigger', failures);
   assertCondition(/workflow_call:/.test(source), 'package workflow must expose release-gated workflow_call trigger', failures);
@@ -177,6 +191,20 @@ function validateWorkflow(manifest, failures) {
   assertCondition(!/webui-image:/.test(source), 'package workflow must not restore Framework-owned WebUI image job', failures);
   assertCondition(!/one-person-lab-webui/.test(source), 'package workflow must not publish one-person-lab-webui', failures);
   assertCondition(/one-person-lab-manifest:\$\{OPL_RELEASE_VERSION\}/.test(source), 'package workflow must publish versioned release manifest GHCR channel', failures);
+  assertCondition(dailyWorkflowSource.length > 0, 'daily package channel workflow must exist', failures);
+  assertCondition(/schedule:\s*\n\s*-\s*cron:/.test(dailyWorkflowSource), 'daily package channel workflow must run on schedule', failures);
+  assertCondition(/TZ=Asia\/Shanghai date \+%Y%m%d/.test(dailyWorkflowSource), 'daily package channel workflow must derive daily tags in Asia/Shanghai time', failures);
+  assertCondition(/workflow_dispatch:/.test(dailyWorkflowSource), 'daily package channel workflow must keep manual repair dispatch', failures);
+  assertCondition(/npm run packages:manifest/.test(dailyWorkflowSource), 'daily package channel workflow must build a candidate package manifest', failures);
+  assertCondition(/npm run packages:daily-check/.test(dailyWorkflowSource), 'daily package channel workflow must run package daily change detection', failures);
+  assertCondition(/one-person-lab-manifest:stable/.test(dailyWorkflowSource), 'daily package channel workflow must compare against stable channel manifest', failures);
+  assertCondition(/test -n "\$current"/.test(dailyWorkflowSource), 'daily package channel workflow must fail closed when stable channel manifest is missing', failures);
+  assertCondition(/args\+=\(--current-manifest "\$\{\{ steps\.current\.outputs\.current_manifest \}\}"\)/.test(dailyWorkflowSource), 'daily package channel workflow must pass the current stable manifest into change detection', failures);
+  assertCondition(/uses:\s+\.\/\.github\/workflows\/packages\.yml/.test(dailyWorkflowSource), 'daily package channel workflow must invoke reusable packages workflow', failures);
+  assertCondition(/release_gate:\s*daily_package_channel_changed/.test(dailyWorkflowSource), 'daily package channel workflow must record daily package publish gate', failures);
+  assertCondition(/publish_required == 'true'/.test(dailyWorkflowSource), 'daily package channel workflow must skip publish when unchanged', failures);
+  assertCondition(!/\n\s*push:\n/.test(dailyWorkflowSource), 'daily package channel workflow must not restore push-trigger publishing', failures);
+  assertCondition(!/one-person-lab-webui/.test(dailyWorkflowSource), 'daily package channel workflow must not publish WebUI', failures);
 }
 
 function main() {

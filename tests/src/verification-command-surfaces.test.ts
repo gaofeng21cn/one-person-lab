@@ -510,6 +510,13 @@ test('package.json exposes native helper gate scripts and package dry-run check'
   assert.equal(fs.existsSync(path.join(repoRoot, 'scripts/native-helper-pack-check.mjs')), true);
 });
 
+test('package.json exposes package channel maintenance scripts', () => {
+  assert.equal(packageJson.scripts?.['packages:manifest'], 'node --experimental-strip-types ./scripts/package-module-archives.mjs');
+  assert.equal(packageJson.scripts?.['packages:release-discipline'], 'node ./scripts/package-release-discipline.mjs');
+  assert.equal(packageJson.scripts?.['packages:daily-check'], 'node ./scripts/package-channel-daily-check.mjs');
+  assert.equal(packageJson.scripts?.['packages:cleanup-ghcr'], 'node --experimental-strip-types ./scripts/cleanup-ghcr-package-versions.mjs');
+});
+
 test('package.json exposes the fresh-install smoke lane', () => {
   assert.equal(
     packageJson.scripts?.['fresh-install:smoke'],

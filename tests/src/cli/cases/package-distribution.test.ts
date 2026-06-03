@@ -38,6 +38,17 @@ test('packages manifest exposes active package-channel coordinates for module in
         };
         rollback: { strategy: string };
         cleanup: { strategy: string; retain_versions: number; protected_tags: string[]; execution_mode: string };
+        daily_package_channel: {
+          status: string;
+          workflow: string;
+          version_template: string;
+          date_timezone: string;
+          change_detector: string;
+          comparison: string;
+          no_change_behavior: string;
+          publish_gate: string;
+          manual_repair_trigger: string;
+        };
       };
       packages: {
         codex_default_profile: {
@@ -138,6 +149,42 @@ test('packages manifest exposes active package-channel coordinates for module in
   assert.equal(
     output.packages_manifest.release_automation.cleanup.execution_mode,
     'dry_run_first_explicit_execute_required',
+  );
+  assert.equal(
+    output.packages_manifest.release_automation.daily_package_channel.status,
+    'active_change_detected_daily_publish',
+  );
+  assert.equal(
+    output.packages_manifest.release_automation.daily_package_channel.workflow,
+    '.github/workflows/daily-package-channel.yml',
+  );
+  assert.equal(
+    output.packages_manifest.release_automation.daily_package_channel.version_template,
+    '<opl_version>-daily.YYYYMMDD',
+  );
+  assert.equal(
+    output.packages_manifest.release_automation.daily_package_channel.date_timezone,
+    'Asia/Shanghai',
+  );
+  assert.equal(
+    output.packages_manifest.release_automation.daily_package_channel.change_detector,
+    'scripts/package-channel-daily-check.mjs',
+  );
+  assert.equal(
+    output.packages_manifest.release_automation.daily_package_channel.comparison,
+    'module_source_fingerprint',
+  );
+  assert.equal(
+    output.packages_manifest.release_automation.daily_package_channel.no_change_behavior,
+    'skip_without_publish',
+  );
+  assert.equal(
+    output.packages_manifest.release_automation.daily_package_channel.publish_gate,
+    'daily_package_channel_changed',
+  );
+  assert.equal(
+    output.packages_manifest.release_automation.daily_package_channel.manual_repair_trigger,
+    'workflow_dispatch',
   );
   assert.ok(output.packages_manifest.release_automation.cleanup.protected_tags.includes('latest'));
   assert.equal(
@@ -362,6 +409,9 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.release_automation.remote_publish_status, 'release_gate_or_manual_dispatch_publishes_ghcr_packages');
   assert.equal(manifest.release_automation.release_manifest_publication_status, 'active_ghcr_channel_manifest');
   assert.equal(manifest.release_automation.release_manifest_package.package_channel_status, 'active_release_channel');
+  assert.equal(manifest.release_automation.daily_package_channel.status, 'active_change_detected_daily_publish');
+  assert.equal(manifest.release_automation.daily_package_channel.no_change_behavior, 'skip_without_publish');
+  assert.equal(manifest.release_automation.daily_package_channel.date_timezone, 'Asia/Shanghai');
   assert.equal(manifest.packages.webui_docker_image.framework_workflow_publish_status, 'not_published_by_framework_packages_workflow');
   assert.equal(manifest.packages.native_helper.channel_status, 'active_ghcr_oci_prebuild');
   assert.equal(manifest.packages.native_helper.retention_policy.retain_versions, 4);
@@ -482,6 +532,7 @@ test('package archive builder refreshes reused managed clones before archiving s
 test('framework packages workflow is release-gated and manually repairable without WebUI publishing', () => {
   const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/packages.yml'), 'utf8');
   const releaseCallerWorkflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/release-package-channel.yml'), 'utf8');
+  const dailyPackageWorkflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/daily-package-channel.yml'), 'utf8');
 
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /workflow_call:/);
@@ -499,6 +550,20 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.doesNotMatch(workflow, /docker\/build-push-action/);
   assert.doesNotMatch(workflow, /one-person-lab-webui/);
   assert.match(workflow, /Upload prepared package artifacts/);
+  assert.match(dailyPackageWorkflow, /schedule:/);
+  assert.match(dailyPackageWorkflow, /cron:/);
+  assert.match(dailyPackageWorkflow, /TZ=Asia\/Shanghai date \+%Y%m%d/);
+  assert.match(dailyPackageWorkflow, /workflow_dispatch:/);
+  assert.match(dailyPackageWorkflow, /npm run packages:manifest/);
+  assert.match(dailyPackageWorkflow, /npm run packages:daily-check/);
+  assert.match(dailyPackageWorkflow, /one-person-lab-manifest:stable/);
+  assert.match(dailyPackageWorkflow, /test -n "\$current"/);
+  assert.match(dailyPackageWorkflow, /args\+=\(--current-manifest "\$\{\{ steps\.current\.outputs\.current_manifest \}\}"\)/);
+  assert.match(dailyPackageWorkflow, /uses:\s+\.\/\.github\/workflows\/packages\.yml/);
+  assert.match(dailyPackageWorkflow, /release_gate:\s*daily_package_channel_changed/);
+  assert.match(dailyPackageWorkflow, /publish_required == 'true'/);
+  assert.doesNotMatch(dailyPackageWorkflow, /\n\s*push:\n/);
+  assert.doesNotMatch(dailyPackageWorkflow, /one-person-lab-webui/);
 });
 
 function writeFakeGh(tempRoot: string, packageVersions: Record<string, unknown[]>, missingPackages = new Set<string>()) {

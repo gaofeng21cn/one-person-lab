@@ -62,6 +62,7 @@
     "family:shared-release": "node ./scripts/family-shared-release.mjs",
     "packages:manifest": "node --experimental-strip-types ./scripts/package-module-archives.mjs",
     "packages:release-discipline": "node ./scripts/package-release-discipline.mjs",
+    "packages:daily-check": "node ./scripts/package-channel-daily-check.mjs",
     "packages:cleanup-ghcr": "node --experimental-strip-types ./scripts/cleanup-ghcr-package-versions.mjs",
     "codex:export-default-profile": "node --experimental-strip-types ./scripts/export-codex-default-profile.mjs",
     "repo:hygiene": "scripts/repo-hygiene.sh",

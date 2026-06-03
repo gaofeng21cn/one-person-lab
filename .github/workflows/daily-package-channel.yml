@@ -1,0 +1,116 @@
+name: Daily OPL Package Channel
+
+on:
+  schedule:
+    - cron: '23 18 * * *'
+  workflow_dispatch:
+    inputs:
+      opl_version:
+        description: Base OPL version for daily package tag, for example 26.5.28
+        required: false
+        type: string
+      force_publish:
+        description: Publish even when the module source fingerprint is unchanged
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  detect-package-channel-change:
+    name: Detect module package-channel changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      publish_required: ${{ steps.decide.outputs.publish_required }}
+      opl_version: ${{ steps.version.outputs.opl_version }}
+    steps:
+      - name: Checkout OPL
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Resolve daily package version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="${{ github.event.inputs.opl_version || '' }}"
+          if [ -z "$base" ]; then
+            base="$(node --experimental-strip-types --input-type=module -e "import { getOplReleaseVersion } from './src/opl-release.ts'; console.log(getOplReleaseVersion())")"
+          fi
+          base="${base#v}"
+          day="$(TZ=Asia/Shanghai date +%Y%m%d)"
+          version="${base}-daily.${day}"
+          echo "opl_version=$version" >> "$GITHUB_OUTPUT"
+          echo "OPL_RELEASE_VERSION=$version" >> "$GITHUB_ENV"
+          echo "OPL_PACKAGES_OWNER=${{ github.repository_owner }}" >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build candidate module archives and manifest
+        run: npm run packages:manifest -- --version "$OPL_RELEASE_VERSION" --owner "$OPL_PACKAGES_OWNER" --out-dir dist/opl-daily-packages
+
+      - name: Setup ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Fetch current stable package channel manifest
+        id: current
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/opl-current-channel
+          echo "${{ github.token }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+          oras pull "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-manifest:stable" \
+            --output dist/opl-current-channel
+          current="$(find dist/opl-current-channel -name opl-channel-manifest.json -print -quit)"
+          test -n "$current"
+          if [ "$current" != "dist/opl-current-channel/opl-channel-manifest.json" ]; then
+            cp "$current" dist/opl-current-channel/opl-channel-manifest.json
+          fi
+          echo "current_manifest=dist/opl-current-channel/opl-channel-manifest.json" >> "$GITHUB_OUTPUT"
+
+      - name: Compare package channel fingerprints
+        id: decide
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(
+            --candidate-manifest dist/opl-daily-packages/opl-channel-manifest.json
+            --version "$OPL_RELEASE_VERSION"
+            --summary-path dist/opl-daily-packages/daily-package-channel-summary.json
+          )
+          args+=(--current-manifest "${{ steps.current.outputs.current_manifest }}")
+          npm run packages:daily-check -- "${args[@]}"
+          publish_required="$(node -e "console.log(JSON.parse(require('fs').readFileSync('dist/opl-daily-packages/daily-package-channel-summary.json', 'utf8')).publish_required ? 'true' : 'false')")"
+          if [ "${{ github.event.inputs.force_publish || 'false' }}" = "true" ]; then
+            publish_required="true"
+          fi
+          echo "publish_required=$publish_required" >> "$GITHUB_OUTPUT"
+
+      - name: Upload daily package-channel candidate evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: opl-daily-package-channel-candidate-${{ steps.version.outputs.opl_version }}
+          path: dist/opl-daily-packages
+          if-no-files-found: error
+
+  publish-daily-package-channel:
+    name: Publish changed daily package channel
+    needs: detect-package-channel-change
+    if: needs.detect-package-channel-change.outputs.publish_required == 'true'
+    uses: ./.github/workflows/packages.yml
+    with:
+      opl_version: ${{ needs.detect-package-channel-change.outputs.opl_version }}
+      release_gate: daily_package_channel_changed

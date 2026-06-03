@@ -138,6 +138,19 @@ function buildReleaseAutomation(retainVersions: number, rollbackVersion: string 
       execution_mode: 'dry_run_first_explicit_execute_required',
       destructive_action_requires: 'package_admin_with_delete_packages_scope',
     },
+    daily_package_channel: {
+      status: 'active_change_detected_daily_publish',
+      workflow: '.github/workflows/daily-package-channel.yml',
+      schedule: 'daily',
+      version_template: '<opl_version>-daily.YYYYMMDD',
+      date_timezone: 'Asia/Shanghai',
+      change_detector: 'scripts/package-channel-daily-check.mjs',
+      comparison: 'module_source_fingerprint',
+      ignored_fields: ['opl_version', 'generated_at', 'artifact tag'],
+      no_change_behavior: 'skip_without_publish',
+      publish_gate: 'daily_package_channel_changed',
+      manual_repair_trigger: 'workflow_dispatch',
+    },
   };
 }
 
