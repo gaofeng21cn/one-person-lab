@@ -1,0 +1,172 @@
+{
+  "contract_kind": "opl_state_index_kernel_contract.v1",
+  "surface_kind": "opl_state_index_kernel_contract",
+  "owner": "one-person-lab",
+  "purpose": "Freeze OPL-owned SQLite sidecar index boundaries for queue, attempt ledger, lifecycle refs, artifact locators, lineage, outbox, retention, restore, and operator read-model projections.",
+  "state": "active_contract",
+  "truth_split": {
+    "file_truth": {
+      "role": "portable_truth",
+      "surfaces": [
+        "Stage Folder",
+        "manifest.json",
+        "receipt body",
+        "typed blocker body",
+        "artifact body",
+        "human-readable evidence",
+        "canonical/export bundle body"
+      ],
+      "source_of_truth": true
+    },
+    "sqlite_sidecar_index": {
+      "role": "rebuildable_operational_index",
+      "source_of_truth": false,
+      "rebuild_from": [
+        "physical Stage Folder",
+        "manifest refs",
+        "receipt refs",
+        "content hashes",
+        "domain-owned projection refs",
+        "provider receipts",
+        "Temporal/provider visibility refs"
+      ]
+    },
+    "temporal_provider": {
+      "role": "production_durable_execution",
+      "production_required": true,
+      "local_sqlite_provider_role": "dev_ci_offline_diagnostic_baseline"
+    }
+  },
+  "sqlite_database_layout": {
+    "state_root": "${OPL_STATE_DIR}/family-runtime",
+    "databases": [
+      {
+        "database_id": "queue",
+        "path": "${OPL_STATE_DIR}/family-runtime/queue.sqlite",
+        "owned_tables": [
+          "tasks",
+          "events",
+          "notifications",
+          "queue_holds",
+          "stage_attempts"
+        ],
+        "storage_role": "sqlite_sidecar_index"
+      },
+      {
+        "database_id": "lifecycle_index",
+        "path": "${OPL_STATE_DIR}/family-runtime/lifecycle-index.sqlite",
+        "owned_tables": [
+          "lifecycle_refs",
+          "lifecycle_apply_receipts"
+        ],
+        "storage_role": "sqlite_sidecar_index"
+      },
+      {
+        "database_id": "artifact_index",
+        "path": "${OPL_STATE_DIR}/family-runtime/artifact-index.sqlite",
+        "owned_tables": [
+          "stage_current_pointers",
+          "manifest_index",
+          "artifact_refs",
+          "receipt_refs",
+          "blocker_refs",
+          "lineage_events",
+          "lineage_edges",
+          "retention_ledger",
+          "restore_proofs"
+        ],
+        "storage_role": "sqlite_sidecar_index",
+        "implementation_status": "contract_frozen_rebuildable_projection"
+      },
+      {
+        "database_id": "operator_read_model",
+        "path": "${OPL_STATE_DIR}/family-runtime/read-model.sqlite",
+        "owned_tables": [
+          "operator_tasks",
+          "artifact_drilldown",
+          "owner_route_index",
+          "source_fingerprints",
+          "work_unit_outbox",
+          "maintenance_runs"
+        ],
+        "storage_role": "projection_cache",
+        "implementation_status": "contract_frozen_projection_cache"
+      }
+    ]
+  },
+  "required_index_fields": [
+    "domain_id",
+    "program_id",
+    "stage_id",
+    "attempt_id",
+    "surface_id",
+    "source_ref",
+    "receipt_ref",
+    "content_hash",
+    "observed_at",
+    "indexed_at",
+    "index_version",
+    "rebuild_epoch"
+  ],
+  "write_order": [
+    "materialize_physical_stage_folder",
+    "write_manifest_receipt_or_typed_blocker_body",
+    "compute_content_hashes",
+    "atomically_update_current_or_latest_pointer",
+    "transactionally_update_sqlite_sidecar_index"
+  ],
+  "status_rule": "Stage progress = physical outputs + manifest validity + receipt authority + current pointer; SQLite can accelerate discovery but cannot promote stale or missing file truth into progress.",
+  "maintenance_policy": {
+    "journal_mode": "WAL",
+    "busy_timeout_ms": 5000,
+    "single_writer_assumption": true,
+    "network_filesystem_multi_writer_supported": false,
+    "checkpoint_required": true,
+    "backup_required": true,
+    "integrity_check_required": true,
+    "optimize_required": true,
+    "vacuum_after_large_delete_only": true,
+    "bounded_payload_envelope_required": true,
+    "large_payload_strategy": "store preview length hash and refs, never body"
+  },
+  "forbidden_payloads": [
+    "domain truth body",
+    "memory body",
+    "artifact body",
+    "PNG/PPTX/PDF/blob body",
+    "manuscript body",
+    "grant package body",
+    "quality verdict body",
+    "review/export verdict authority",
+    "owner receipt authority",
+    "production readiness authority"
+  ],
+  "cli_surfaces": {
+    "doctor": "opl index doctor --json",
+    "rebuild": "opl index rebuild --domain <domain> --json",
+    "backup": "opl index backup --json",
+    "checkpoint": "opl index checkpoint --json",
+    "integrity": "opl index integrity-check --json",
+    "explain": "opl stage explain --json reads Stage Folder truth and sidecar index freshness"
+  },
+  "authority_boundary": {
+    "opl_can_index_refs": true,
+    "opl_can_cache_projection": true,
+    "opl_can_rebuild_from_file_truth": true,
+    "opl_can_compact_observability_payloads": true,
+    "opl_can_write_domain_truth": false,
+    "opl_can_write_memory_body": false,
+    "opl_can_write_artifact_body": false,
+    "opl_can_store_large_artifact_blob_in_sqlite": false,
+    "opl_can_create_domain_owner_receipt": false,
+    "opl_can_authorize_quality_or_export": false,
+    "sqlite_record_counts_as_stage_complete": false,
+    "provider_completion_counts_as_domain_ready": false
+  },
+  "domain_adoption_policy": {
+    "med-autoscience": "primary small-file compaction candidate; MAS keeps study truth publication quality artifact/package authority owner receipts and typed blockers",
+    "med-autogrant": "consume OPL sidecar indexes as opaque refs; no private generic SQLite migration required",
+    "redcube-ai": "deferred or trigger-based SQLite locator index only; no PNG/PPTX/PDF blob or visual verdict storage",
+    "opl-meta-agent": "refs-only Agent Lab/work-order/proposal indexes; no target truth runtime worktree lifecycle or promotion verdict ownership"
+  }
+}
