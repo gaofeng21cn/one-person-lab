@@ -3,9 +3,11 @@ import fs from 'node:fs';
 
 import type { WorkspaceBinding } from '../workspace-registry.ts';
 import {
+  buildManagedShellEnvWithUvCacheRecovery,
   buildManagedShellRecoveryTmpRoot,
   buildManagedShellCommandEnv,
   prepareManagedShellCommandCwd,
+  recordManagedShellUvCacheRecovery,
 } from '../managed-shell-command-env.ts';
 import { materializeFamilyTransitionSurfaces } from './family-transition-materializer.ts';
 import { normalizeManifest } from './normalizers.ts';
@@ -181,14 +183,31 @@ export function resolveBindingManifest(
   const timeoutPolicy = options.timeoutPolicy
     ?? (options.timeoutMs === undefined ? 'env_or_default' : 'fixed');
   const timeoutMs = resolveManifestCommandTimeoutMs(options.timeoutMs, timeoutPolicy);
-  let result = executeManifestCommand(binding, manifestCommand, timeoutMs);
+  const baseEnv = process.env;
+  let result = executeManifestCommand(
+    binding,
+    manifestCommand,
+    timeoutMs,
+    buildManagedShellEnvWithUvCacheRecovery(binding.workspace_path, baseEnv),
+  );
   if (shouldRetryWithFreshUvCache(result)) {
-    const retryTmpRoot = buildManagedShellRecoveryTmpRoot(binding.workspace_path, process.env);
+    const firstStatus = result.status ?? 1;
+    const firstErrorExcerpt = resultText(result).replace(/\s+/g, ' ').trim().slice(0, 500);
+    const retryTmpRoot = buildManagedShellRecoveryTmpRoot(binding.workspace_path, baseEnv);
     fs.mkdirSync(retryTmpRoot, { recursive: true });
     result = executeManifestCommand(binding, manifestCommand, timeoutMs, {
-      ...process.env,
+      ...baseEnv,
       OPL_DOMAIN_COMMAND_TMP_ROOT: retryTmpRoot,
     });
+    const retryStatus = result.status ?? (result.error ? 127 : 1);
+    if (!commandTimedOut(result) && retryStatus === 0) {
+      recordManagedShellUvCacheRecovery(binding.workspace_path, baseEnv, {
+        recoveryTmpRoot: retryTmpRoot,
+        firstExitCode: firstStatus,
+        retryExitCode: retryStatus,
+        firstErrorExcerpt,
+      });
+    }
   }
 
   const parseResolvedStdout = () => {

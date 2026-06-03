@@ -270,6 +270,48 @@ JSON
   }
 });
 
+test('domain handler command stops reusing a corrupt uv cache root after recovery succeeds', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-domain-cache-persist-'));
+  const commandPath = path.join(fixtureRoot, 'domain-handler');
+  const attemptsPath = path.join(fixtureRoot, 'attempts.txt');
+  fs.writeFileSync(
+    commandPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\\n' "$OPL_DOMAIN_COMMAND_TMP_ROOT" >> ${JSON.stringify(attemptsPath)}
+case "$OPL_DOMAIN_COMMAND_TMP_ROOT" in
+  */recovery/*)
+    cat <<'JSON'
+{"surface_kind":"mas_family_domain_handler_export","pending_family_tasks":[]}
+JSON
+    ;;
+  *)
+    echo 'error: Failed to install: opl_harness_shared-0.1.0-py3-none-any.whl' >&2
+    echo "  Caused by: failed to open file $UV_CACHE_DIR/archive-v0/broken/opl_harness_shared-0.1.0.dist-info/METADATA: No such file or directory (os error 2)" >&2
+    exit 1
+    ;;
+esac
+`,
+    { mode: 0o755 },
+  );
+  try {
+    const env = {
+      OPL_DOMAIN_COMMAND_TMP_ROOT: path.join(os.tmpdir(), 'opl-family-runtime-domain-cache-persist-root'),
+    };
+    const first = runFamilyRuntimeDomainHandlerCommand([commandPath], { cwd: fixtureRoot, env });
+    const second = runFamilyRuntimeDomainHandlerCommand([commandPath], { cwd: fixtureRoot, env });
+    const attempts = fs.readFileSync(attemptsPath, 'utf8').trim().split('\n');
+
+    assert.equal(first.exit_code, 0);
+    assert.equal(first.recovery?.trigger_kind, 'uv_cache_archive_missing');
+    assert.equal(second.exit_code, 0);
+    assert.equal(second.recovery, undefined);
+    assert.deepEqual(attempts.map((entry) => entry.includes('/recovery/')), [false, true, true]);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime intake exposes domain handler recovery receipts after uv cache retry', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-export-cache-retry-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-export-cache-retry-'));

@@ -250,6 +250,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 缺失的 provider scheduler cadence 不能报告为 healthy：`not_installed` 必须给出 `attention_required` 和 `opl family-runtime scheduler install --provider temporal`，让持续推进依赖显式 OPL provider scheduler，而不是 Codex heartbeat 手工补 tick。
 - 若历史 residue 已经把 `domain_handler` attempt 写成 `failed` / `temporal_workflow_not_started_or_not_found`，但同一 queue task 已由 domain-handler transport 标记为 `succeeded`，`current_control_state` 必须以 queue terminal success 作为 OPL transport 收敛事实，并把该 terminal observation 标成 superseded observability evidence。这个状态仍然不等于 MAS owner receipt、domain ready、publication ready、artifact ready 或 paper package refreshed。
 
+### 决策：uv archive cache recovery 成功后必须吸收到 managed-shell 首跑环境
+
+原因：domain manifest 与 domain-handler command 的 `uv archive-v0` 缓存缺 `METADATA` 失败属于 OPL managed environment 损坏。若 OPL 只在当次失败后切 stable recovery tmp root，但后续 tick 继续从同一个损坏 primary `UV_CACHE_DIR` 首跑，就会让 Progress-first/read-model/reconcile 反复消耗一次无效失败和 retry。
+
+影响：
+
+- 当 `uv_cache_archive_missing` recovery retry 成功时，OPL 必须在 workspace-scoped managed root 写入 recovery marker；后续同一 workspace 的 domain manifest 与 domain-handler export / dispatch 首跑应直接使用该 stable recovery root。
+- marker 只改变 OPL managed shell 的 `OPL_DOMAIN_COMMAND_TMP_ROOT`、`UV_CACHE_DIR`、`UV_PROJECT_ENVIRONMENT` 等外部环境路由，不写 domain truth、不生成 owner receipt、不授权 domain ready、quality verdict、artifact authority、App release ready 或 production ready。
+- 若 recovery root 自身失败，仍按原 domain manifest / domain-handler fail-closed 路径暴露错误、typed blocker、retry 或 dead-letter；不得用静默 fallback、随机 tmp root 或清空 checkout 缓存掩盖问题。
+
 ### 决策：domain-handler 非零退出的错误摘要优先采用结构化 owner stdout
 
 原因：domain handler 由 domain owner 负责返回 typed receipt / blocker。`uv`、安装器或 runner 可能在 stderr 输出环境同步噪声；如果 OPL queue `last_error` 优先采用 stderr，就会掩盖 stdout 中的 `reason` / `detail` / `blocked_reason`，让 operator 和自动巡检看不到真正的 owner blocker。

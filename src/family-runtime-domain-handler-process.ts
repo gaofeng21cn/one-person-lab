@@ -4,7 +4,9 @@ import fs from 'node:fs';
 import { FrameworkContractError } from './contracts.ts';
 import {
   buildManagedShellCommandEnv,
+  buildManagedShellEnvWithUvCacheRecovery,
   buildManagedShellRecoveryTmpRoot,
+  recordManagedShellUvCacheRecovery,
 } from './managed-shell-command-env.ts';
 
 const DEFAULT_DOMAIN_HANDLER_TIMEOUT_MS = 30_000;
@@ -155,28 +157,42 @@ export function runFamilyRuntimeDomainHandlerCommand(
     });
   }
   const timeoutMs = resolveFamilyRuntimeDomainHandlerTimeoutMs();
-  const result = spawnDomainHandlerCommand(command, options, timeoutMs);
+  const baseEnv = options.env ?? process.env;
+  const result = spawnDomainHandlerCommand(command, {
+    ...options,
+    env: buildManagedShellEnvWithUvCacheRecovery(options.cwd, baseEnv),
+  }, timeoutMs);
   const timedOut = errorCode(result.error) === 'ETIMEDOUT';
   const exitCode = resultExitCode(result, timedOut);
   if (!shouldRetryWithFreshUvCache(result, exitCode)) {
     return normalizeDomainHandlerResult(result, timeoutMs);
   }
 
-  const retryTmpRoot = buildManagedShellRecoveryTmpRoot(options.cwd, options.env ?? process.env);
+  const retryTmpRoot = buildManagedShellRecoveryTmpRoot(options.cwd, baseEnv);
   fs.mkdirSync(retryTmpRoot, { recursive: true });
   const retry = spawnDomainHandlerCommand(command, {
     ...options,
     env: {
-      ...(options.env ?? process.env),
+      ...baseEnv,
       OPL_DOMAIN_COMMAND_TMP_ROOT: retryTmpRoot,
     },
   }, timeoutMs);
+  const retryExitCode = resultExitCode(retry, errorCode(retry.error) === 'ETIMEDOUT');
+  const firstErrorExcerpt = shortExcerpt(resultText(result));
+  if (retryExitCode === 0) {
+    recordManagedShellUvCacheRecovery(options.cwd, baseEnv, {
+      recoveryTmpRoot: retryTmpRoot,
+      firstExitCode: exitCode,
+      retryExitCode,
+      firstErrorExcerpt,
+    });
+  }
   return normalizeDomainHandlerResult(retry, timeoutMs, {
     trigger_kind: 'uv_cache_archive_missing',
     first_exit_code: exitCode,
-    retry_exit_code: resultExitCode(retry, errorCode(retry.error) === 'ETIMEDOUT'),
+    retry_exit_code: retryExitCode,
     retry_tmp_root: retryTmpRoot,
-    first_error_excerpt: shortExcerpt(resultText(result)),
+    first_error_excerpt: firstErrorExcerpt,
   });
 }
 

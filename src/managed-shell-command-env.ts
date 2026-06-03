@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
+const UV_CACHE_RECOVERY_MARKER = 'uv-cache-archive-missing.recovery.json';
+
 function normalizePath(value: string) {
   return path.resolve(value);
 }
@@ -121,6 +123,65 @@ export function buildManagedShellRecoveryTmpRoot(
   const workspaceId = stableWorkspaceId(cwd);
   const baseEnv = buildManagedShellCommandEnv(cwd, env);
   return path.join(baseEnv.OPL_DOMAIN_COMMAND_TMP_ROOT, 'recovery', workspaceId);
+}
+
+function managedShellUvCacheRecoveryMarkerPath(cwd: string, env: NodeJS.ProcessEnv = process.env) {
+  return path.join(buildManagedShellCommandEnv(cwd, env).OPL_DOMAIN_COMMAND_TMP_ROOT, UV_CACHE_RECOVERY_MARKER);
+}
+
+function parseManagedShellUvCacheRecoveryMarker(cwd: string, markerPath: string) {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(markerPath, 'utf8')) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return null;
+    }
+    const record = parsed as Record<string, unknown>;
+    if (
+      record.surface_kind !== 'opl_managed_shell_uv_cache_recovery_marker'
+      || record.trigger_kind !== 'uv_cache_archive_missing'
+      || typeof record.recovery_tmp_root !== 'string'
+      || isInsidePath(cwd, record.recovery_tmp_root)
+    ) {
+      return null;
+    }
+    return normalizePath(record.recovery_tmp_root);
+  } catch {
+    return null;
+  }
+}
+
+export function buildManagedShellEnvWithUvCacheRecovery(
+  cwd: string,
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  const markerPath = managedShellUvCacheRecoveryMarkerPath(cwd, env);
+  const recoveryTmpRoot = parseManagedShellUvCacheRecoveryMarker(cwd, markerPath);
+  return recoveryTmpRoot
+    ? { ...env, OPL_DOMAIN_COMMAND_TMP_ROOT: recoveryTmpRoot }
+    : env;
+}
+
+export function recordManagedShellUvCacheRecovery(
+  cwd: string,
+  env: NodeJS.ProcessEnv = process.env,
+  recovery: {
+    recoveryTmpRoot: string;
+    firstExitCode: number;
+    retryExitCode: number;
+    firstErrorExcerpt: string;
+  },
+) {
+  const markerPath = managedShellUvCacheRecoveryMarkerPath(cwd, env);
+  fs.mkdirSync(path.dirname(markerPath), { recursive: true });
+  fs.writeFileSync(markerPath, `${JSON.stringify({
+    surface_kind: 'opl_managed_shell_uv_cache_recovery_marker',
+    trigger_kind: 'uv_cache_archive_missing',
+    recovery_tmp_root: normalizePath(recovery.recoveryTmpRoot),
+    first_exit_code: recovery.firstExitCode,
+    retry_exit_code: recovery.retryExitCode,
+    first_error_excerpt: recovery.firstErrorExcerpt,
+    recorded_at: new Date().toISOString(),
+  }, null, 2)}\n`, 'utf8');
 }
 
 export function shouldUseManagedShellScratchCwd(command: string | null | undefined) {

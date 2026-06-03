@@ -6,7 +6,9 @@ import path from 'node:path';
 
 import {
   buildManagedShellCommandEnv,
+  buildManagedShellEnvWithUvCacheRecovery,
   prepareManagedShellCommandCwd,
+  recordManagedShellUvCacheRecovery,
   shouldUseManagedShellScratchCwd,
 } from '../../src/managed-shell-command-env.ts';
 
@@ -81,6 +83,35 @@ test('managed shell command env isolates project venvs per bound workspace', () 
     assert.notEqual(masEnv.PYTHONPYCACHEPREFIX, magEnv.PYTHONPYCACHEPREFIX);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('managed shell command env reuses stable recovery root after uv cache recovery', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-shell-domain-root-'));
+  const checkoutRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-shell-recovery-checkout-'));
+  try {
+    const baseEnv = {
+      OPL_DOMAIN_COMMAND_TMP_ROOT: root,
+    };
+    const recoveryTmpRoot = path.join(root, path.basename(checkoutRoot), 'recovery', path.basename(checkoutRoot));
+    recordManagedShellUvCacheRecovery(checkoutRoot, baseEnv, {
+      recoveryTmpRoot,
+      firstExitCode: 2,
+      retryExitCode: 0,
+      firstErrorExcerpt: 'archive-v0 METADATA missing',
+    });
+
+    const recoveredEnv = buildManagedShellCommandEnv(
+      checkoutRoot,
+      buildManagedShellEnvWithUvCacheRecovery(checkoutRoot, baseEnv),
+    );
+
+    assert.equal(recoveredEnv.OPL_DOMAIN_COMMAND_TMP_ROOT, recoveryTmpRoot);
+    assert.equal(recoveredEnv.UV_CACHE_DIR, path.join(recoveryTmpRoot, 'uv-cache'));
+    assert.equal(recoveredEnv.UV_PROJECT_ENVIRONMENT, path.join(recoveryTmpRoot, 'uv-project'));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
   }
 });
 
