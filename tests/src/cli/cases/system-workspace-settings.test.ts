@@ -11,6 +11,21 @@ const defaultDeveloperModePermissionsFixture = JSON.stringify({
   },
 });
 
+type DeveloperModeCapabilityAssertion = {
+  status: string;
+  level: string;
+  source: string;
+  impact: string;
+};
+
+function assertCapability(
+  capabilities: Record<string, DeveloperModeCapabilityAssertion>,
+  capabilityId: string,
+  expected: DeveloperModeCapabilityAssertion,
+) {
+  assert.deepEqual(capabilities[capabilityId], expected);
+}
+
 test('workspace root set persists the selected root and workspace root reads it back', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-root-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');
@@ -127,6 +142,14 @@ test('system developer-supervisor reports and persists the family developer mode
           config_source: string;
           auto_enable_github_login: string;
           allowed_route: string;
+          developer_profile: {
+            profile_id: string;
+            status: string;
+            level: string;
+            source: string;
+            impact: string;
+          };
+          capabilities: Record<string, DeveloperModeCapabilityAssertion>;
           github_identity: {
             status: string;
             login: string | null;
@@ -155,6 +178,21 @@ test('system developer-supervisor reports and persists the family developer mode
     assert.equal(initial.system_action.developer_mode.mode, 'developer_apply_safe');
     assert.equal(initial.system_action.developer_mode.config_source, 'default');
     assert.equal(initial.system_action.developer_mode.auto_enable_github_login, 'gaofeng21cn');
+    assert.equal(initial.system_action.developer_mode.status, 'ready');
+    assert.equal(initial.system_action.developer_mode.effective_state, 'active_direct');
+    assert.deepEqual(initial.system_action.developer_mode.developer_profile, {
+      profile_id: 'maintainer',
+      status: 'ready',
+      level: 'maintainer',
+      source: 'repo_authority_direct_write',
+      impact: 'May use direct repository repair routes for required OPL repos.',
+    });
+    assertCapability(initial.system_action.developer_mode.capabilities, 'runtime_mutation_scope', {
+      status: 'blocked',
+      level: 'blocked_developer_checkout_shared_state',
+      source: 'explicit_user_config_required',
+      impact: 'Shared runtime mutation requires enabled=on, developer_apply_safe mode, and user_config source.',
+    });
 
     const updated = runCli(
       [
@@ -186,6 +224,14 @@ test('system developer-supervisor reports and persists the family developer mode
           status: string;
           effective_state: string;
           allowed_route: string;
+          developer_profile: {
+            profile_id: string;
+            status: string;
+            level: string;
+            source: string;
+            impact: string;
+          };
+          capabilities: Record<string, DeveloperModeCapabilityAssertion>;
           github_identity: {
             status: string;
             login: string | null;
@@ -210,6 +256,43 @@ test('system developer-supervisor reports and persists the family developer mode
     assert.equal(updated.system_action.developer_mode.status, 'ready');
     assert.equal(updated.system_action.developer_mode.effective_state, 'active_direct');
     assert.equal(updated.system_action.developer_mode.allowed_route, 'direct_repo_fix');
+    assert.deepEqual(updated.system_action.developer_mode.developer_profile, {
+      profile_id: 'runtime_maintainer',
+      status: 'ready',
+      level: 'runtime_maintainer',
+      source: 'repo_authority_all_direct_write',
+      impact: 'may use direct repository repair routes and supervised shared runtime maintenance.',
+    });
+    assertCapability(updated.system_action.developer_mode.capabilities, 'source_channel', {
+      status: 'ready',
+      level: 'local_checkout',
+      source: 'developer_mode_git_checkout_source',
+      impact: 'Module source may use local developer checkouts for App and CLI read-models.',
+    });
+    assertCapability(updated.system_action.developer_mode.capabilities, 'workspace_trust', {
+      status: 'ready',
+      level: 'trusted_developer_workspace',
+      source: 'user_config_developer_supervisor',
+      impact: 'Developer workspace can be used for supervised Agent Lab and module checkout discovery.',
+    });
+    assertCapability(updated.system_action.developer_mode.capabilities, 'github_authority', {
+      status: 'ready',
+      level: 'direct_write',
+      source: 'github_repo_permissions',
+      impact: 'All required OPL repos allow direct repair branches from this identity.',
+    });
+    assertCapability(updated.system_action.developer_mode.capabilities, 'agent_automation', {
+      status: 'ready',
+      level: 'repo_repair_automation',
+      source: 'developer_supervisor_mode',
+      impact: 'Agent Lab can expose supervised repository repair routes.',
+    });
+    assertCapability(updated.system_action.developer_mode.capabilities, 'runtime_mutation_scope', {
+      status: 'ready',
+      level: 'shared_runtime_maintenance',
+      source: 'explicit_developer_supervisor_user_config',
+      impact: 'Shared runtime provider maintenance actions may be offered from developer checkout surfaces.',
+    });
     assert.equal(updated.system_action.developer_mode.github_identity.status, 'ready');
     assert.equal(updated.system_action.developer_mode.github_identity.login, 'gaofeng21cn');
     assert.equal(updated.system_action.developer_mode.repo_authority.status, 'ready');
@@ -278,6 +361,14 @@ test('system developer-supervisor reports PR route when Developer Mode lacks dir
           status: string;
           effective_state: string;
           allowed_route: string;
+          developer_profile: {
+            profile_id: string;
+            status: string;
+            level: string;
+            source: string;
+            impact: string;
+          };
+          capabilities: Record<string, DeveloperModeCapabilityAssertion>;
           github_identity: {
             status: string;
             login: string | null;
@@ -297,6 +388,19 @@ test('system developer-supervisor reports PR route when Developer Mode lacks dir
     assert.equal(output.system_action.developer_mode.status, 'limited');
     assert.equal(output.system_action.developer_mode.effective_state, 'active_pr_only');
     assert.equal(output.system_action.developer_mode.allowed_route, 'fork_pull_request');
+    assert.deepEqual(output.system_action.developer_mode.developer_profile, {
+      profile_id: 'contributor',
+      status: 'limited',
+      level: 'contributor',
+      source: 'repo_authority_pull_request_route',
+      impact: 'May prepare fork or pull request route evidence without direct repo mutation.',
+    });
+    assertCapability(output.system_action.developer_mode.capabilities, 'github_authority', {
+      status: 'limited',
+      level: 'pull_request',
+      source: 'github_repo_permissions',
+      impact: 'Direct writes are unavailable; repairs must route through fork or pull request evidence.',
+    });
     assert.equal(output.system_action.developer_mode.github_identity.status, 'ready');
     assert.equal(output.system_action.developer_mode.github_identity.login, 'outside-contributor');
     assert.equal(output.system_action.developer_mode.repo_authority.status, 'limited');
@@ -340,6 +444,14 @@ test('system developer-supervisor fail-closes Developer Mode when gh identity is
           status: string;
           effective_state: string;
           allowed_route: string;
+          developer_profile: {
+            profile_id: string;
+            status: string;
+            level: string;
+            source: string;
+            impact: string;
+          };
+          capabilities: Record<string, DeveloperModeCapabilityAssertion>;
           github_identity: {
             status: string;
             login: string | null;
@@ -354,6 +466,19 @@ test('system developer-supervisor fail-closes Developer Mode when gh identity is
     assert.equal(output.system_action.developer_mode.status, 'blocked');
     assert.equal(output.system_action.developer_mode.effective_state, 'blocked');
     assert.equal(output.system_action.developer_mode.allowed_route, 'blocked');
+    assert.deepEqual(output.system_action.developer_mode.developer_profile, {
+      profile_id: 'contributor',
+      status: 'blocked',
+      level: 'contributor',
+      source: 'github_identity_unavailable',
+      impact: 'Developer Mode repair and runtime mutation routes are blocked until GitHub identity is available.',
+    });
+    assertCapability(output.system_action.developer_mode.capabilities, 'github_authority', {
+      status: 'blocked',
+      level: 'blocked',
+      source: 'github_identity_unavailable',
+      impact: 'Cannot determine direct write or pull request authority.',
+    });
     assert.equal(output.system_action.developer_mode.github_identity.status, 'unavailable');
     assert.equal(output.system_action.developer_mode.github_identity.login, null);
     assert.equal(output.system_action.developer_mode.repo_authority.status, 'blocked');

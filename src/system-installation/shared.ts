@@ -160,6 +160,14 @@ export type ModuleInspection = {
   health_status: 'ready' | 'missing' | 'invalid_checkout' | 'dirty';
   git: GitRepoSnapshot | null;
   source_policy: ModuleSourcePolicy;
+  capabilities: {
+    source_channel: {
+      status: 'ready' | 'limited' | 'blocked';
+      level: 'managed_package_channel' | 'local_checkout' | 'full_runtime' | 'missing' | 'invalid_checkout';
+      source: ModuleSourcePolicy['configured_by'];
+      impact: string;
+    };
+  };
   available_actions: OplModuleAction[];
   recommended_action: OplModuleAction | null;
 };

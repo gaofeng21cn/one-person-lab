@@ -24,6 +24,14 @@ type GithubIdentityStatus = 'ready' | 'unavailable' | 'skipped';
 type GithubIdentitySource = 'gh_cli' | 'env_fixture' | 'not_checked';
 type RepoAuthorityStatus = 'ready' | 'limited' | 'blocked' | 'disabled' | 'not_checked';
 type RepoTargetSource = 'opl_framework_constant' | 'domain_module_spec';
+type DeveloperProfileId = 'contributor' | 'maintainer' | 'runtime_maintainer';
+type DeveloperCapabilityStatus = 'ready' | 'limited' | 'blocked' | 'disabled' | 'not_checked';
+type DeveloperCapabilityId =
+  | 'source_channel'
+  | 'workspace_trust'
+  | 'github_authority'
+  | 'agent_automation'
+  | 'runtime_mutation_scope';
 
 type GithubIdentityProjection = {
   status: GithubIdentityStatus;
@@ -57,6 +65,23 @@ type RepoAuthoritySummary = {
   repos: RepoAuthorityProjection[];
 };
 
+type DeveloperProfileProjection = {
+  profile_id: DeveloperProfileId;
+  status: DeveloperCapabilityStatus;
+  level: DeveloperProfileId;
+  source: string;
+  impact: string;
+};
+
+type DeveloperCapabilityProjection = {
+  status: DeveloperCapabilityStatus;
+  level: string;
+  source: string;
+  impact: string;
+};
+
+type DeveloperCapabilitiesProjection = Record<DeveloperCapabilityId, DeveloperCapabilityProjection>;
+
 export type OplDeveloperModeProjection = {
   surface_id: 'opl_developer_mode';
   status: DeveloperModeStatus;
@@ -66,6 +91,8 @@ export type OplDeveloperModeProjection = {
   config_source: OplDeveloperSupervisorConfigFile['source'];
   auto_enable_github_login: string;
   allowed_route: DeveloperModeAllowedRoute;
+  developer_profile: DeveloperProfileProjection;
+  capabilities: DeveloperCapabilitiesProjection;
   github_identity: GithubIdentityProjection;
   repo_authority: RepoAuthoritySummary;
   inspection_detail?: 'fast' | 'full';
@@ -450,108 +477,384 @@ function buildSkippedIdentity(status: GithubIdentityStatus, reason: string | nul
   };
 }
 
+function developerCapability(
+  status: DeveloperCapabilityStatus,
+  level: string,
+  source: string,
+  impact: string,
+): DeveloperCapabilityProjection {
+  return {
+    status,
+    level,
+    source,
+    impact,
+  };
+}
+
+function resolveDeveloperProfile(input: {
+  status: DeveloperModeStatus;
+  enabled: OplDeveloperSupervisorConfigFile['enabled'];
+  mode: OplDeveloperSupervisorConfigFile['mode'];
+  configSource: OplDeveloperSupervisorConfigFile['source'];
+  allowedRoute: DeveloperModeAllowedRoute;
+  githubIdentity: GithubIdentityProjection;
+  repoAuthority: RepoAuthoritySummary;
+}): DeveloperProfileProjection {
+  if (input.status === 'disabled') {
+    return {
+      profile_id: 'contributor',
+      status: 'disabled',
+      level: 'contributor',
+      source: 'developer_mode_disabled',
+      impact: 'Developer Mode is disabled; repair and runtime mutation routes are not offered.',
+    };
+  }
+
+  if (input.status === 'blocked') {
+    return {
+      profile_id: 'contributor',
+      status: 'blocked',
+      level: 'contributor',
+      source: input.githubIdentity.status !== 'ready'
+        ? 'github_identity_unavailable'
+        : 'repo_authority_blocked',
+      impact: 'Developer Mode repair and runtime mutation routes are blocked until GitHub identity is available.',
+    };
+  }
+
+  if (input.status === 'inactive') {
+    return {
+      profile_id: 'contributor',
+      status: 'blocked',
+      level: 'contributor',
+      source: 'auto_identity_mismatch',
+      impact: 'Auto Developer Mode remains inactive for this GitHub identity.',
+    };
+  }
+
+  if (input.allowedRoute === 'direct_repo_fix' && input.configSource === 'user_config' && input.enabled === 'on') {
+    return {
+      profile_id: 'runtime_maintainer',
+      status: 'ready',
+      level: 'runtime_maintainer',
+      source: 'repo_authority_all_direct_write',
+      impact: 'may use direct repository repair routes and supervised shared runtime maintenance.',
+    };
+  }
+
+  if (input.allowedRoute === 'direct_repo_fix' || input.allowedRoute === 'mixed_direct_and_pr') {
+    return {
+      profile_id: 'maintainer',
+      status: input.allowedRoute === 'mixed_direct_and_pr' ? 'limited' : 'ready',
+      level: 'maintainer',
+      source: input.allowedRoute === 'mixed_direct_and_pr'
+        ? 'repo_authority_mixed_routes'
+        : 'repo_authority_direct_write',
+      impact: input.allowedRoute === 'mixed_direct_and_pr'
+        ? 'May use direct repair only for repos with write authority and pull request routes elsewhere.'
+        : 'May use direct repository repair routes for required OPL repos.',
+    };
+  }
+
+  if (input.allowedRoute === 'observe_only') {
+    return {
+      profile_id: 'contributor',
+      status: 'limited',
+      level: 'contributor',
+      source: 'developer_mode_observe_only',
+      impact: 'May inspect Developer Mode state without repository or shared runtime mutation.',
+    };
+  }
+
+  return {
+    profile_id: 'contributor',
+    status: input.status === 'limited' ? 'limited' : 'ready',
+    level: 'contributor',
+    source: 'repo_authority_pull_request_route',
+    impact: 'May prepare fork or pull request route evidence without direct repo mutation.',
+  };
+}
+
+function resolveDeveloperCapabilities(input: {
+  status: DeveloperModeStatus;
+  enabled: OplDeveloperSupervisorConfigFile['enabled'];
+  mode: OplDeveloperSupervisorConfigFile['mode'];
+  configSource: OplDeveloperSupervisorConfigFile['source'];
+  allowedRoute: DeveloperModeAllowedRoute;
+  githubIdentity: GithubIdentityProjection;
+  repoAuthority: RepoAuthoritySummary;
+}): DeveloperCapabilitiesProjection {
+  const developerApplySafe = input.enabled === 'on' && input.mode === 'developer_apply_safe';
+  const explicitlyTrusted = developerApplySafe && input.configSource === 'user_config';
+  const disabled = input.status === 'disabled';
+  const blocked = input.status === 'blocked' || input.status === 'inactive';
+
+  const githubAuthority = (() => {
+    if (disabled) {
+      return developerCapability(
+        'disabled',
+        'disabled',
+        'developer_mode_disabled',
+        'Repository repair routes are not offered while Developer Mode is disabled.',
+      );
+    }
+    if (input.githubIdentity.status !== 'ready') {
+      return developerCapability(
+        'blocked',
+        'blocked',
+        'github_identity_unavailable',
+        'Cannot determine direct write or pull request authority.',
+      );
+    }
+    if (input.repoAuthority.status === 'not_checked') {
+      return developerCapability(
+        'not_checked',
+        'permission_check_deferred',
+        'fast_profile',
+        'Repository authority is deferred in fast profile reads.',
+      );
+    }
+    if (input.allowedRoute === 'direct_repo_fix') {
+      return developerCapability(
+        'ready',
+        'direct_write',
+        'github_repo_permissions',
+        'All required OPL repos allow direct repair branches from this identity.',
+      );
+    }
+    if (input.allowedRoute === 'mixed_direct_and_pr') {
+      return developerCapability(
+        'limited',
+        'mixed_direct_and_pull_request',
+        'github_repo_permissions',
+        'Some required OPL repos allow direct repair branches; others require fork or pull request evidence.',
+      );
+    }
+    if (input.allowedRoute === 'fork_pull_request') {
+      return developerCapability(
+        'limited',
+        'pull_request',
+        'github_repo_permissions',
+        'Direct writes are unavailable; repairs must route through fork or pull request evidence.',
+      );
+    }
+    return developerCapability(
+      blocked ? 'blocked' : 'limited',
+      input.allowedRoute,
+      input.allowedRoute === 'observe_only' ? 'developer_supervisor_mode' : 'repo_authority',
+      input.allowedRoute === 'observe_only'
+        ? 'Repository mutation is not offered in observe-only mode.'
+        : 'Repository repair route is not available.',
+    );
+  })();
+
+  const sourceChannel = developerApplySafe
+    ? developerCapability(
+      'ready',
+      'local_checkout',
+      'developer_mode_git_checkout_source',
+      'Module source may use local developer checkouts for App and CLI read-models.',
+    )
+    : developerCapability(
+      disabled ? 'disabled' : 'limited',
+      'managed_package_channel',
+      disabled ? 'developer_mode_disabled' : 'stable_default',
+      'Module source remains on the managed package channel unless Developer Mode explicitly selects developer_apply_safe.',
+    );
+
+  const workspaceTrust = explicitlyTrusted
+    ? developerCapability(
+      'ready',
+      'trusted_developer_workspace',
+      'user_config_developer_supervisor',
+      'Developer workspace can be used for supervised Agent Lab and module checkout discovery.',
+    )
+    : developerCapability(
+      disabled ? 'disabled' : 'limited',
+      developerApplySafe ? 'developer_workspace_unconfirmed' : 'managed_workspace',
+      disabled ? 'developer_mode_disabled' : 'developer_supervisor_config',
+      developerApplySafe
+        ? 'Developer workspace may be used for local checkout discovery, but shared runtime mutation remains gated by explicit user config.'
+        : 'Developer workspace trust is not elevated.',
+    );
+
+  const agentAutomation = input.mode === 'external_observe'
+    ? developerCapability(
+      disabled ? 'disabled' : 'limited',
+      'observe_only',
+      disabled ? 'developer_mode_disabled' : 'developer_supervisor_mode',
+      'Agent Lab can inspect state without repository repair automation.',
+    )
+    : developerCapability(
+      blocked ? 'blocked' : disabled ? 'disabled' : 'ready',
+      blocked ? 'blocked' : disabled ? 'disabled' : 'repo_repair_automation',
+      blocked ? 'developer_mode_not_active' : disabled ? 'developer_mode_disabled' : 'developer_supervisor_mode',
+      blocked
+        ? 'Agent Lab repair automation is not offered until Developer Mode is active.'
+        : disabled
+          ? 'Agent Lab repair automation is disabled.'
+          : 'Agent Lab can expose supervised repository repair routes.',
+    );
+
+  const runtimeMutationScope = explicitlyTrusted
+    ? developerCapability(
+      'ready',
+      'shared_runtime_maintenance',
+      'explicit_developer_supervisor_user_config',
+      'Shared runtime provider maintenance actions may be offered from developer checkout surfaces.',
+    )
+    : developerCapability(
+      disabled ? 'disabled' : 'blocked',
+      disabled ? 'disabled' : 'blocked_developer_checkout_shared_state',
+      disabled ? 'developer_mode_disabled' : 'explicit_user_config_required',
+      disabled
+        ? 'Shared runtime mutation is disabled.'
+        : 'Shared runtime mutation requires enabled=on, developer_apply_safe mode, and user_config source.',
+    );
+
+  return {
+    source_channel: sourceChannel,
+    workspace_trust: workspaceTrust,
+    github_authority: githubAuthority,
+    agent_automation: agentAutomation,
+    runtime_mutation_scope: runtimeMutationScope,
+  };
+}
+
+function buildDeveloperModeProjection(input: {
+  status: DeveloperModeStatus;
+  enabled: OplDeveloperSupervisorConfigFile['enabled'];
+  effectiveState: DeveloperModeEffectiveState;
+  mode: OplDeveloperSupervisorConfigFile['mode'];
+  configSource: OplDeveloperSupervisorConfigFile['source'];
+  autoEnableGithubLogin: string;
+  allowedRoute: DeveloperModeAllowedRoute;
+  githubIdentity: GithubIdentityProjection;
+  repoAuthority: RepoAuthoritySummary;
+  inspectionDetail: 'fast' | 'full';
+}): OplDeveloperModeProjection {
+  const common = {
+    status: input.status,
+    enabled: input.enabled,
+    mode: input.mode,
+    configSource: input.configSource,
+    allowedRoute: input.allowedRoute,
+    githubIdentity: input.githubIdentity,
+    repoAuthority: input.repoAuthority,
+  };
+  return {
+    surface_id: 'opl_developer_mode',
+    status: input.status,
+    enabled: input.enabled,
+    effective_state: input.effectiveState,
+    mode: input.mode,
+    config_source: input.configSource,
+    auto_enable_github_login: input.autoEnableGithubLogin,
+    allowed_route: input.allowedRoute,
+    developer_profile: resolveDeveloperProfile(common),
+    capabilities: resolveDeveloperCapabilities(common),
+    github_identity: input.githubIdentity,
+    repo_authority: input.repoAuthority,
+    inspection_detail: input.inspectionDetail,
+  };
+}
+
 export function buildOplDeveloperModeProjection(
   config: OplDeveloperSupervisorConfigFile = readOplDeveloperSupervisorConfig(),
   options: { detail?: 'fast' | 'full' } = {},
 ): OplDeveloperModeProjection {
   if (config.enabled === 'off') {
-    return {
-      surface_id: 'opl_developer_mode',
+    return buildDeveloperModeProjection({
       status: 'disabled',
       enabled: config.enabled,
-      effective_state: 'disabled',
+      effectiveState: 'disabled',
       mode: config.mode,
-      config_source: config.source,
-      auto_enable_github_login: config.auto_enable_github_login,
-      allowed_route: 'disabled',
-      github_identity: buildSkippedIdentity('skipped', 'developer_mode_disabled'),
-      repo_authority: buildDisabledRepoAuthority('disabled', 'developer_mode_disabled'),
-      inspection_detail: options.detail ?? 'full',
-    };
+      configSource: config.source,
+      autoEnableGithubLogin: config.auto_enable_github_login,
+      allowedRoute: 'disabled',
+      githubIdentity: buildSkippedIdentity('skipped', 'developer_mode_disabled'),
+      repoAuthority: buildDisabledRepoAuthority('disabled', 'developer_mode_disabled'),
+      inspectionDetail: options.detail ?? 'full',
+    });
   }
 
   if (options.detail === 'fast') {
     const repoAuthority = buildNotCheckedRepoAuthority('fast_profile_defers_github_permission_check');
     const githubIdentity = buildSkippedIdentity('skipped', 'fast_profile_defers_github_identity_check');
     if (config.enabled === 'auto') {
-      return {
-        surface_id: 'opl_developer_mode',
+      return buildDeveloperModeProjection({
         status: 'inactive',
         enabled: config.enabled,
-        effective_state: 'inactive_auto_identity_mismatch',
+        effectiveState: 'inactive_auto_identity_mismatch',
         mode: config.mode,
-        config_source: config.source,
-        auto_enable_github_login: config.auto_enable_github_login,
-        allowed_route: 'blocked',
-        github_identity: githubIdentity,
-        repo_authority: repoAuthority,
-        inspection_detail: 'fast',
-      };
+        configSource: config.source,
+        autoEnableGithubLogin: config.auto_enable_github_login,
+        allowedRoute: 'blocked',
+        githubIdentity: githubIdentity,
+        repoAuthority: repoAuthority,
+        inspectionDetail: 'fast',
+      });
     }
-    return {
-      surface_id: 'opl_developer_mode',
+    return buildDeveloperModeProjection({
       status: 'ready',
       enabled: config.enabled,
-      effective_state: config.mode === 'external_observe' ? 'observe_only' : 'active_direct',
+      effectiveState: config.mode === 'external_observe' ? 'observe_only' : 'active_direct',
       mode: config.mode,
-      config_source: config.source,
-      auto_enable_github_login: config.auto_enable_github_login,
-      allowed_route: config.mode === 'external_observe' ? 'observe_only' : 'direct_repo_fix',
-      github_identity: githubIdentity,
-      repo_authority: repoAuthority,
-      inspection_detail: 'fast',
-    };
+      configSource: config.source,
+      autoEnableGithubLogin: config.auto_enable_github_login,
+      allowedRoute: config.mode === 'external_observe' ? 'observe_only' : 'direct_repo_fix',
+      githubIdentity: githubIdentity,
+      repoAuthority: repoAuthority,
+      inspectionDetail: 'fast',
+    });
   }
 
   const fixture = readGhFixture();
   const identity = detectGithubIdentity(fixture);
   if (identity.status !== 'ready' || !identity.login) {
-    return {
-      surface_id: 'opl_developer_mode',
+    return buildDeveloperModeProjection({
       status: 'blocked',
       enabled: config.enabled,
-      effective_state: 'blocked',
+      effectiveState: 'blocked',
       mode: config.mode,
-      config_source: config.source,
-      auto_enable_github_login: config.auto_enable_github_login,
-      allowed_route: 'blocked',
-      github_identity: identity,
-      repo_authority: buildDisabledRepoAuthority('blocked', 'github_identity_unavailable'),
-      inspection_detail: 'full',
-    };
+      configSource: config.source,
+      autoEnableGithubLogin: config.auto_enable_github_login,
+      allowedRoute: 'blocked',
+      githubIdentity: identity,
+      repoAuthority: buildDisabledRepoAuthority('blocked', 'github_identity_unavailable'),
+      inspectionDetail: 'full',
+    });
   }
 
   if (config.enabled === 'auto' && identity.login !== config.auto_enable_github_login) {
-    return {
-      surface_id: 'opl_developer_mode',
+    return buildDeveloperModeProjection({
       status: 'inactive',
       enabled: config.enabled,
-      effective_state: 'inactive_auto_identity_mismatch',
+      effectiveState: 'inactive_auto_identity_mismatch',
       mode: config.mode,
-      config_source: config.source,
-      auto_enable_github_login: config.auto_enable_github_login,
-      allowed_route: 'blocked',
-      github_identity: identity,
-      repo_authority: buildDisabledRepoAuthority('not_checked', 'auto_identity_mismatch'),
-      inspection_detail: 'full',
-    };
+      configSource: config.source,
+      autoEnableGithubLogin: config.auto_enable_github_login,
+      allowedRoute: 'blocked',
+      githubIdentity: identity,
+      repoAuthority: buildDisabledRepoAuthority('not_checked', 'auto_identity_mismatch'),
+      inspectionDetail: 'full',
+    });
   }
 
   const repoAuthority = buildRepoAuthority(identity.login, fixture);
   if (config.mode === 'external_observe') {
-    return {
-      surface_id: 'opl_developer_mode',
+    return buildDeveloperModeProjection({
       status: repoAuthority.status === 'blocked' ? 'blocked' : 'ready',
       enabled: config.enabled,
-      effective_state: repoAuthority.status === 'blocked' ? 'blocked' : 'observe_only',
+      effectiveState: repoAuthority.status === 'blocked' ? 'blocked' : 'observe_only',
       mode: config.mode,
-      config_source: config.source,
-      auto_enable_github_login: config.auto_enable_github_login,
-      allowed_route: repoAuthority.status === 'blocked' ? 'blocked' : 'observe_only',
-      github_identity: identity,
-      repo_authority: repoAuthority,
-      inspection_detail: 'full',
-    };
+      configSource: config.source,
+      autoEnableGithubLogin: config.auto_enable_github_login,
+      allowedRoute: repoAuthority.status === 'blocked' ? 'blocked' : 'observe_only',
+      githubIdentity: identity,
+      repoAuthority: repoAuthority,
+      inspectionDetail: 'full',
+    });
   }
 
   const allowedRoute = resolveAllowedRoute(repoAuthority);
@@ -562,17 +865,16 @@ export function buildOplDeveloperModeProjection(
         ? 'limited'
         : 'blocked';
 
-  return {
-    surface_id: 'opl_developer_mode',
+  return buildDeveloperModeProjection({
     status,
     enabled: config.enabled,
-    effective_state: resolveEffectiveState(status, allowedRoute),
+    effectiveState: resolveEffectiveState(status, allowedRoute),
     mode: config.mode,
-    config_source: config.source,
-    auto_enable_github_login: config.auto_enable_github_login,
-    allowed_route: allowedRoute,
-    github_identity: identity,
-    repo_authority: repoAuthority,
-    inspection_detail: 'full',
-  };
+    configSource: config.source,
+    autoEnableGithubLogin: config.auto_enable_github_login,
+    allowedRoute: allowedRoute,
+    githubIdentity: identity,
+    repoAuthority: repoAuthority,
+    inspectionDetail: 'full',
+  });
 }

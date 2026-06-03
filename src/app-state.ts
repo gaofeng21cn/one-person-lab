@@ -144,6 +144,8 @@ function publicModuleItems(profile: AppStateProfile) {
       repo_url: module.repo_url,
       health_status: module.health_status,
       git: module.git,
+      source_policy: module.source_policy,
+      capabilities: module.capabilities,
       available_actions: module.available_actions,
       recommended_action: module.recommended_action,
     }));

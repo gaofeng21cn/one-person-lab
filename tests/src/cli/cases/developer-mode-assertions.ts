@@ -27,6 +27,25 @@ export function assertBlockedDeveloperModeSurface(developerMode: any) {
   assert.equal(developerMode.auto_enable_github_login, 'gaofeng21cn');
   assert.equal(developerMode.config_source, 'default');
   assert.equal(developerMode.allowed_route, 'blocked');
+  assert.deepEqual(developerMode.developer_profile, {
+    profile_id: 'contributor',
+    status: 'blocked',
+    level: 'contributor',
+    source: 'github_identity_unavailable',
+    impact: 'Developer Mode repair and runtime mutation routes are blocked until GitHub identity is available.',
+  });
+  assert.deepEqual(developerMode.capabilities.github_authority, {
+    status: 'blocked',
+    level: 'blocked',
+    source: 'github_identity_unavailable',
+    impact: 'Cannot determine direct write or pull request authority.',
+  });
+  assert.deepEqual(developerMode.capabilities.runtime_mutation_scope, {
+    status: 'blocked',
+    level: 'blocked_developer_checkout_shared_state',
+    source: 'explicit_user_config_required',
+    impact: 'Shared runtime mutation requires enabled=on, developer_apply_safe mode, and user_config source.',
+  });
   assert.equal(developerMode.github_identity.status, 'unavailable');
   assert.equal(developerMode.github_identity.login, null);
   assert.equal(developerMode.github_identity.source, 'gh_cli');

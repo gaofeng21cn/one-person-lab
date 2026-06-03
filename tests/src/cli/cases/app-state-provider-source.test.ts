@@ -230,10 +230,33 @@ test('app state fast shows developer checkout source when Developer Mode prefers
       PATH: '/usr/bin:/bin',
     }) as {
       app_state: {
-        developer_mode: { enabled: string; effective_state: string };
+        developer_mode: {
+          enabled: string;
+          effective_state: string;
+          capabilities: {
+            source_channel: {
+              status: string;
+              level: string;
+              source: string;
+              impact: string;
+            };
+          };
+        };
         modules: {
           source: { mode: string; reason: string };
-          items: Array<{ module_id: string; checkout_path: string; install_origin: string }>;
+          items: Array<{
+            module_id: string;
+            checkout_path: string;
+            install_origin: string;
+            capabilities: {
+              source_channel: {
+                status: string;
+                level: string;
+                source: string;
+                impact: string;
+              };
+            };
+          }>;
         };
       };
     };
@@ -242,10 +265,22 @@ test('app state fast shows developer checkout source when Developer Mode prefers
     assert.ok(mas);
     assert.equal(output.app_state.developer_mode.enabled, 'on');
     assert.equal(output.app_state.developer_mode.effective_state, 'active_direct');
+    assert.deepEqual(output.app_state.developer_mode.capabilities.source_channel, {
+      status: 'ready',
+      level: 'local_checkout',
+      source: 'developer_mode_git_checkout_source',
+      impact: 'Module source may use local developer checkouts for App and CLI read-models.',
+    });
     assert.equal(output.app_state.modules.source.mode, 'developer_workspace');
     assert.equal(output.app_state.modules.source.reason, 'developer_mode_prefers_local_sibling_checkouts');
     assert.equal(mas.checkout_path, medAutoSciencePath);
     assert.equal(mas.install_origin, 'sibling_workspace');
+    assert.deepEqual(mas.capabilities.source_channel, {
+      status: 'ready',
+      level: 'local_checkout',
+      source: 'developer_mode',
+      impact: 'This module is read from a local developer checkout.',
+    });
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }

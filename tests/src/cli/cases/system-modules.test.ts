@@ -522,12 +522,7 @@ test('modules projection prefers local developer checkouts when Developer Mode i
         summary: {
           managed_default_modules_count: number;
         };
-        items: Array<{
-          module_id: string;
-          install_origin: string;
-          checkout_path: string;
-          managed_checkout_path: string;
-        }>;
+        items: Array<any>;
       };
     };
 
@@ -535,6 +530,12 @@ test('modules projection prefers local developer checkouts when Developer Mode i
     assert.equal(mas?.install_origin, 'sibling_workspace');
     assert.equal(mas?.checkout_path, siblingCheckout);
     assert.equal(mas?.managed_checkout_path, path.join(modulesRoot, 'med-autoscience'));
+    assert.deepEqual(mas?.capabilities.source_channel, {
+      status: 'ready',
+      level: 'local_checkout',
+      source: 'developer_mode',
+      impact: 'This module is read from a local developer checkout.',
+    });
     assert.equal(output.modules.summary.managed_default_modules_count, 0);
   } finally {
     fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });

@@ -45,6 +45,8 @@ Developer Mode 是 OPL App / system settings 的产品开关，不是 Agent Lab 
 
 这个 surface 说明“用户是否允许 OPL 暴露受监督的开发者检查与修复路由”，并以 fail-closed 方式投影当前 GitHub 身份、repo 权限和 direct-fix / fork-PR / mixed / observe-only 路由。它不代表真实 owner repo 直接修复提交、non-owner fork PR 或 Agent Lab 外围 AI 巡检 closeout 已经完成；这些仍必须由对应 repo worktree、branch、PR、verification 和 evidence refs 证明后再写入 Agent Lab / App read model。
 
+2026-06-03 起，`developer_mode` 机器投影还必须暴露 `developer_profile` 与 `capabilities`。旧字段 `enabled`、`mode`、`effective_state`、`allowed_route` 继续作为兼容摘要；结构化消费方读取 `developer_profile.profile_id` 判断 Contributor / Maintainer / Runtime Maintainer 层级，并读取 `capabilities.source_channel`、`workspace_trust`、`github_authority`、`agent_automation`、`runtime_mutation_scope` 的 `status`、`level`、`source`、`impact`。其中 `source_channel` 只说明 App/CLI read model 是否可使用 local developer checkout；`github_authority` 只说明 direct write / fork PR repo route；`runtime_mutation_scope` 只说明 shared runtime provider maintenance 是否允许。三者是独立能力，不得由单一 Developer Mode 开关互相替代。
+
 ## 权限边界
 
 Agent Lab 明确不持有：

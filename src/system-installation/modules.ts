@@ -380,6 +380,67 @@ function buildModuleSourcePolicy(spec: DomainModuleSpec): ModuleSourcePolicy {
   };
 }
 
+function buildModuleCapabilities(
+  sourcePolicy: ModuleSourcePolicy,
+  installOrigin: OplModuleInstallOrigin,
+  installed: boolean,
+) {
+  if (!installed) {
+    return {
+      source_channel: {
+        status: installOrigin === 'invalid_checkout' ? 'blocked' as const : 'limited' as const,
+        level: installOrigin === 'invalid_checkout' ? 'invalid_checkout' as const : 'missing' as const,
+        source: sourcePolicy.configured_by,
+        impact: installOrigin === 'invalid_checkout'
+          ? 'This module checkout is invalid and cannot be used as a launch source.'
+          : 'This module is not installed yet.',
+      },
+    };
+  }
+
+  if (sourcePolicy.effective_install_update_source === 'full_runtime') {
+    return {
+      source_channel: {
+        status: 'ready' as const,
+        level: 'full_runtime' as const,
+        source: sourcePolicy.configured_by,
+        impact: 'This module is read from the packaged Full runtime launch source.',
+      },
+    };
+  }
+
+  if (installOrigin === 'sibling_workspace' || installOrigin === 'env_override') {
+    return {
+      source_channel: {
+        status: 'ready' as const,
+        level: 'local_checkout' as const,
+        source: sourcePolicy.configured_by,
+        impact: 'This module is read from a local developer checkout.',
+      },
+    };
+  }
+
+  if (sourcePolicy.effective_install_update_source === 'git_checkout') {
+    return {
+      source_channel: {
+        status: 'ready' as const,
+        level: 'local_checkout' as const,
+        source: sourcePolicy.configured_by,
+        impact: 'This module install and update source uses Git checkout semantics.',
+      },
+    };
+  }
+
+  return {
+    source_channel: {
+      status: 'ready' as const,
+      level: 'managed_package_channel' as const,
+      source: sourcePolicy.configured_by,
+      impact: 'This module uses the stable managed package channel.',
+    },
+  };
+}
+
 type ModuleInspectionProfile = 'fast' | 'full';
 
 function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile = 'full'): ModuleInspection {
@@ -443,6 +504,7 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
         health_status: 'ready',
         git: packagedGit,
         source_policy: sourcePolicy,
+        capabilities: buildModuleCapabilities(sourcePolicy, candidate.origin, true),
         available_actions: candidate.origin === 'managed_root' ? ['update', 'reinstall', 'remove'] : [],
         recommended_action: candidate.origin === 'managed_root' ? 'update' : null,
       };
@@ -463,6 +525,7 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
         health_status: 'invalid_checkout',
         git: null,
         source_policy: sourcePolicy,
+        capabilities: buildModuleCapabilities(sourcePolicy, 'invalid_checkout', false),
         available_actions: candidate.origin === 'managed_root' ? ['reinstall', 'remove'] : [],
         recommended_action: candidate.origin === 'managed_root' ? 'reinstall' : null,
       };
@@ -490,6 +553,7 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
       health_status: git.dirty ? 'dirty' : 'ready',
       git,
       source_policy: sourcePolicy,
+      capabilities: buildModuleCapabilities(sourcePolicy, candidate.origin, true),
       available_actions: availableActions,
       recommended_action: updateAvailable ? 'update' : null,
     };
@@ -509,6 +573,7 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
     health_status: 'missing',
     git: null,
     source_policy: sourcePolicy,
+    capabilities: buildModuleCapabilities(sourcePolicy, 'missing', false),
     available_actions: ['install'],
     recommended_action: 'install',
   };
