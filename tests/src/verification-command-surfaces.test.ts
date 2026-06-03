@@ -261,6 +261,18 @@ test('public surface index binds every surface to the surface budget policy', ()
 test('surface budget policy keeps diagnostic lenses out of default stage entrypoints', () => {
   const policy = readJson<{
     contract_kind: string;
+    surface_model: {
+      attention_entry: {
+        default_operator_payload: string;
+        default_read_contract: {
+          normal_app_state_command: string;
+          default_projection: string;
+          full_detail_policy: string;
+          raw_refs_policy: string;
+          forbidden_fast_profile_fields: string[];
+        };
+      };
+    };
     default_surface_allowed_reasons: string[];
     default_doc_entry_budget: {
       stage_default_commands: string[];
@@ -292,6 +304,35 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
   assert.deepEqual(policy.default_doc_entry_budget.stage_default_commands, [
     'opl stages readiness --family-defaults',
   ]);
+  assert.equal(policy.surface_model.attention_entry.default_operator_payload, 'compact_owner_delta_projection');
+  assert.equal(
+    policy.surface_model.attention_entry.default_read_contract.normal_app_state_command,
+    'opl app state --profile fast --json',
+  );
+  assert.equal(
+    policy.surface_model.attention_entry.default_read_contract.default_projection,
+    'opl_compact_owner_delta_projection',
+  );
+  assert.equal(
+    policy.surface_model.attention_entry.default_read_contract.full_detail_policy,
+    'explicit_full_detail_or_lazy_diagnostic_only',
+  );
+  assert.equal(
+    policy.surface_model.attention_entry.default_read_contract.raw_refs_policy,
+    'raw_refs_require_explicit_full_detail',
+  );
+  assert.equal(
+    policy.surface_model.attention_entry.default_read_contract.forbidden_fast_profile_fields.includes(
+      'runtime_tray_snapshot',
+    ),
+    true,
+  );
+  assert.equal(
+    policy.surface_model.attention_entry.default_read_contract.forbidden_fast_profile_fields.includes(
+      'raw_evidence_envelope',
+    ),
+    true,
+  );
   assert.equal(
     policy.default_doc_entry_budget.stage_diagnostic_commands.includes('opl stages proof-bundle --domain <domain>'),
     true,

@@ -414,11 +414,55 @@ function buildDynamicVerticalMap(input: OplAppOperatorViewModelInput) {
   };
 }
 
+function buildDefaultReadSurfacePolicy(input: OplAppOperatorViewModelInput) {
+  return {
+    surface_kind: 'opl_app_default_read_surface_policy',
+    schema_version: 'default-read-surface-policy.v1',
+    profile: input.profile,
+    default_operator_payload: 'compact_owner_delta_projection',
+    normal_state_surface: 'opl app state --profile fast --json',
+    full_state_surface: 'opl app state --profile full --json',
+    full_runtime_drilldown_surface: 'opl runtime app-operator-drilldown --detail full --json',
+    raw_runtime_projection_policy: 'explicit_full_detail_or_lazy_diagnostic_only',
+    first_screen_answers: [
+      'next_safe_action_or_none',
+      'current_owner',
+      'required_delta',
+      'accepted_return_shapes',
+      'readiness_false_flags',
+      'count_summary',
+    ],
+    fast_profile_excludes: [
+      'runtime_tray_snapshot',
+      'raw_evidence_envelope',
+      'stage_replay_packet_body',
+      'private_residue_inventory_body',
+      'provider_internal_ledger_body',
+    ],
+    shell_contract: {
+      shell_must_not_use_full_drilldown_as_normal_state: true,
+      shell_must_not_derive_layout_from_raw_runtime_projection: true,
+      full_detail_auto_poll: false,
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_read_memory_body: false,
+      can_read_artifact_body: false,
+      can_create_owner_receipt: false,
+      can_close_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_claim_app_release_ready: false,
+      can_claim_production_ready: false,
+    },
+  };
+}
+
 export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput) {
   const temporal = asRecord(asRecord(input.provider).temporal);
   const status = temporal.ready === true ? 'ready' : 'attention_needed';
   const safeActionRoutes = buildSafeActionRoutes(input);
   const compactOwnerDeltaProjection = asRecord(input.compactOwnerDeltaProjection);
+  const defaultReadSurfacePolicy = buildDefaultReadSurfacePolicy(input);
   const lazyRefs = [
     {
       ref_id: 'full_app_state_refresh',
@@ -441,9 +485,11 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
       profile: input.profile,
     },
     full_detail_surface: 'opl runtime app-operator-drilldown --detail full --json',
+    default_read_surface_policy: defaultReadSurfacePolicy,
     compact_owner_delta_projection: compactOwnerDeltaProjection,
     workbench: {
       view_model_schema: 'opl_app_operator_workbench.v1',
+      default_read_surface_policy: defaultReadSurfacePolicy,
       compact_owner_delta_projection: compactOwnerDeltaProjection,
       summary_cards: buildSummaryCards(input),
       sections: buildSections(input),

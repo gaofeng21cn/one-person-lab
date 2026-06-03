@@ -94,6 +94,7 @@ test('family product operator projection pins OPL as App state/action producer o
 
   assert.equal(boundary.framework_role, 'gui_ready_state_action_producer_only');
   assert.equal(boundary.default_state_command, 'opl app state --profile fast --json');
+  assert.equal(boundary.default_operator_payload, 'compact_owner_delta_projection');
   assert.equal(boundary.full_state_command, 'opl app state --profile full --json');
   assert.equal(
     boundary.action_command,
@@ -106,6 +107,23 @@ test('family product operator projection pins OPL as App state/action producer o
   assert.equal(boundary.state_owner, 'one-person-lab');
   assert.equal(boundary.gui_product_truth_owner, 'one-person-lab-app');
   assert.equal(boundary.shell_role, 'implementation_adapter_only');
+  assert.equal(boundary.default_read_surface_policy.default_projection, 'opl_compact_owner_delta_projection');
+  assert.deepEqual(boundary.default_read_surface_policy.first_screen_answers, [
+    'next_safe_action_or_none',
+    'current_owner',
+    'required_delta',
+    'accepted_return_shapes',
+    'readiness_false_flags',
+    'count_summary',
+  ]);
+  assert.equal(
+    boundary.default_read_surface_policy.full_detail_policy,
+    'explicit_full_detail_or_lazy_diagnostic_only',
+  );
+  assert.equal(boundary.default_read_surface_policy.raw_refs_policy, 'raw_refs_require_explicit_full_detail');
+  assert.equal(boundary.default_read_surface_policy.full_detail_auto_poll, false);
+  assert.equal(boundary.default_read_surface_policy.shell_must_not_derive_layout_from_raw_runtime_projection, true);
+  assert.equal(boundary.default_read_surface_policy.shell_must_not_use_full_drilldown_as_normal_state, true);
   assert.equal(
     boundary.rules.some((rule: string) =>
       rule.includes('must not use it as normal GUI page state')

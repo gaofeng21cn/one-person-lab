@@ -279,9 +279,31 @@ exit 1
         operator: {
           status: string;
           summary: { profile: string; visible_action_count: number };
+          default_read_surface_policy: {
+            surface_kind: string;
+            profile: string;
+            default_operator_payload: string;
+            normal_state_surface: string;
+            full_runtime_drilldown_surface: string;
+            raw_runtime_projection_policy: string;
+            first_screen_answers: string[];
+            fast_profile_excludes: string[];
+            shell_contract: {
+              shell_must_not_use_full_drilldown_as_normal_state: boolean;
+              shell_must_not_derive_layout_from_raw_runtime_projection: boolean;
+              full_detail_auto_poll: boolean;
+            };
+            authority_boundary: {
+              can_write_domain_truth: boolean;
+              can_create_owner_receipt: boolean;
+              can_claim_app_release_ready: boolean;
+              can_claim_production_ready: boolean;
+            };
+          };
           compact_owner_delta_projection: Record<string, any>;
           workbench: {
             view_model_schema: string;
+            default_read_surface_policy: Record<string, any>;
             compact_owner_delta_projection: Record<string, any>;
             summary_cards: Array<{ card_id: string; source_ref: string; value: string | number }>;
             sections: Array<{ section_id: string; source_ref: string; lazy: boolean }>;
@@ -351,7 +373,66 @@ exit 1
     assert.equal(output.app_state.operator.status, 'attention_needed');
     assert.equal(output.app_state.operator.summary.profile, 'fast');
     assert.equal(output.app_state.operator.summary.visible_action_count, output.app_state.actions.length);
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.surface_kind,
+      'opl_app_default_read_surface_policy',
+    );
+    assert.equal(output.app_state.operator.default_read_surface_policy.profile, 'fast');
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.default_operator_payload,
+      'compact_owner_delta_projection',
+    );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.normal_state_surface,
+      'opl app state --profile fast --json',
+    );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.full_runtime_drilldown_surface,
+      'opl runtime app-operator-drilldown --detail full --json',
+    );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.raw_runtime_projection_policy,
+      'explicit_full_detail_or_lazy_diagnostic_only',
+    );
+    assert.deepEqual(
+      output.app_state.operator.default_read_surface_policy.first_screen_answers,
+      [
+        'next_safe_action_or_none',
+        'current_owner',
+        'required_delta',
+        'accepted_return_shapes',
+        'readiness_false_flags',
+        'count_summary',
+      ],
+    );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.fast_profile_excludes.includes('runtime_tray_snapshot'),
+      true,
+    );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.fast_profile_excludes.includes('raw_evidence_envelope'),
+      true,
+    );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.shell_contract
+        .shell_must_not_use_full_drilldown_as_normal_state,
+      true,
+    );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.shell_contract
+        .shell_must_not_derive_layout_from_raw_runtime_projection,
+      true,
+    );
+    assert.equal(output.app_state.operator.default_read_surface_policy.shell_contract.full_detail_auto_poll, false);
+    assert.equal(output.app_state.operator.default_read_surface_policy.authority_boundary.can_write_domain_truth, false);
+    assert.equal(output.app_state.operator.default_read_surface_policy.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(output.app_state.operator.default_read_surface_policy.authority_boundary.can_claim_app_release_ready, false);
+    assert.equal(output.app_state.operator.default_read_surface_policy.authority_boundary.can_claim_production_ready, false);
     assert.equal(output.app_state.operator.workbench.view_model_schema, 'opl_app_operator_workbench.v1');
+    assert.deepEqual(
+      output.app_state.operator.default_read_surface_policy,
+      output.app_state.operator.workbench.default_read_surface_policy,
+    );
     assert.deepEqual(
       output.app_state.operator.compact_owner_delta_projection,
       output.app_state.operator.workbench.compact_owner_delta_projection,

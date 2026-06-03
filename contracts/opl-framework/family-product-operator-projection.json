@@ -45,9 +45,26 @@
   "app_runtime_boundary": {
     "framework_role": "gui_ready_state_action_producer_only",
     "default_state_command": "opl app state --profile fast --json",
+    "default_operator_payload": "compact_owner_delta_projection",
     "full_state_command": "opl app state --profile full --json",
     "action_command": "opl app action execute --action <id> [--payload <json>] [--dry-run] --json",
     "full_runtime_drilldown_exception": "opl runtime app-operator-drilldown --detail full --json",
+    "default_read_surface_policy": {
+      "default_projection": "opl_compact_owner_delta_projection",
+      "first_screen_answers": [
+        "next_safe_action_or_none",
+        "current_owner",
+        "required_delta",
+        "accepted_return_shapes",
+        "readiness_false_flags",
+        "count_summary"
+      ],
+      "full_detail_policy": "explicit_full_detail_or_lazy_diagnostic_only",
+      "raw_refs_policy": "raw_refs_require_explicit_full_detail",
+      "full_detail_auto_poll": false,
+      "shell_must_not_derive_layout_from_raw_runtime_projection": true,
+      "shell_must_not_use_full_drilldown_as_normal_state": true
+    },
     "state_owner": "one-person-lab",
     "gui_product_truth_owner": "one-person-lab-app",
     "gui_product_contract_owner": "one-person-lab-app",

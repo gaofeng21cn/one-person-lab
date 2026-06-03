@@ -44,11 +44,13 @@ Declarative Domain Pack
 
 `open_worklist=0`、payload-free safe action 为 0、verified typed blocker 增长、selected App cohort、provider SLO satisfied、conformance passed、default-caller evidence clean、cleanup ledger verified 或 generated surface ready，都不能升级成 completion、domain ready、App release ready 或 production ready。
 
+本轮 purpose-first 落地后，这个读法已经有机器守门：`surface-budget-policy.json` 的 `attention_entry.default_operator_payload` 固定为 `compact_owner_delta_projection`，`opl app state --profile fast --json` 的 `operator.default_read_surface_policy` 固定首屏只消费 `opl_compact_owner_delta_projection`。`runtime_tray_snapshot`、raw evidence envelope、stage replay body、private residue inventory 和 provider internal ledger 只允许作为 `--profile full` / lazy diagnostic detail，不进入普通 App/shell 默认状态。
+
 ## 功能 / 结构差距
 
 | area | 当前状态 | 当前 owner | 下一步 |
 | --- | --- | --- | --- |
-| `framework_control_plane` | `landed_with_evidence_tail`。Temporal provider、typed queue、stage attempt ledger、safe action shell、refs-only evidence ledger、App/operator drilldown、Agent Lab、pack compiler、owner-delta handoff / compact projection 和 conformance/readiness 读面已经是 framework 主干。 | OPL Framework | 保持同源 read model；新增 CLI/App/docs surface 必须从同一机器 payload 派生，不制造第二 truth。 |
+| `framework_control_plane` | `landed_with_evidence_tail`。Temporal provider、typed queue、stage attempt ledger、safe action shell、refs-only evidence ledger、App/operator drilldown、Agent Lab、pack compiler、owner-delta handoff / compact projection、default read surface policy 和 conformance/readiness 读面已经是 framework 主干。 | OPL Framework | 保持同源 read model；新增 CLI/App/docs surface 必须从同一机器 payload 派生，不制造第二 truth。 |
 | `standard_agent_source_shape` | `structural_clean_with_no_resurrection_guard`。MAS/MAG/RCA/OMA 按标准 Foundry Agent 读为 source-purity / default-caller deletion-evidence clean；这不是 physical delete 授权。 | OPL + domain owner | 后续只按 domain owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 和 no-active-caller 证据执行物理删除；不保留兼容 facade、alias、wrapper 或 compatibility-only test。 |
 | `generated_surface_consumption` | `ready_for_production_consumption_scaleout`。Generated/hosted surfaces、domain handler target、pack compiler 与 conformance surface 已能承接标准 agent。 | OPL generated surface owner | 用真实 MAS/MAG/RCA/OMA default caller、direct skill path、App path 和 owner refs 反复验证；不把 descriptor ready 写成 domain ready。 |
 | `app_workbench_runtime` | `app_operator_projection_available`。App/workbench 能消费 provider readiness、stage attempt、route graph、workorder、SLO、repair、source/artifact/memory refs 和 owner-aware action。 | OPL App + OPL product surface | App 只展示和介入，不持有 runtime truth、domain truth、release verdict 或 artifact authority；App release truth 回 App 仓合同、release artifact 和实机 evidence。 |
