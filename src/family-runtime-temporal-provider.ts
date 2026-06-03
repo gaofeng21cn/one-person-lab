@@ -50,6 +50,7 @@ import {
 } from './family-runtime-temporal-service.ts';
 import {
   requireTemporalAddress,
+  resolveTemporalClientRpcTimeoutMs,
   type TemporalClientOptions,
   type TemporalWorkerPaths,
   withTemporalClient,
@@ -101,6 +102,8 @@ export { resolveTemporalWorkerForegroundPaths, resolveTemporalWorkerForegroundPa
 import { resolveTemporalWorkerForegroundPathsFromArgv } from './family-runtime-temporal-provider-parts/foreground-paths.ts';
 
 type TemporalLifecycleInspectionDetail = 'fast' | 'full';
+
+const TEMPORAL_PRODUCTION_PROOF_RESULT_RPC_TIMEOUT_MS = 60_000;
 
 type StageAttemptPayload = Parameters<typeof buildTemporalStageAttemptWorkflowInput>[0] & {
   stage_attempt_id: string;
@@ -472,6 +475,13 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
   const completedWorkflowId = `wf-temporal-production-complete-${suffix}`;
   const blockedWorkflowId = `wf-temporal-production-blocked-${suffix}`;
   const temporalClientOptions = { addressOverride: address };
+  const temporalProofResultClientOptions: TemporalClientOptions = {
+    ...temporalClientOptions,
+    rpcTimeoutMs: Math.max(
+      resolveTemporalClientRpcTimeoutMs(),
+      TEMPORAL_PRODUCTION_PROOF_RESULT_RPC_TIMEOUT_MS,
+    ),
+  };
   try {
     return await withTemporalClient(async (client) => {
     const completedHandle = await withTemporalRpcDeadline(client, () => client.workflow.start('StageAttemptWorkflow', {
@@ -517,7 +527,7 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
     const completedState = await withTemporalRpcDeadline(
       client,
       () => completedHandle.result(),
-      temporalClientOptions,
+      temporalProofResultClientOptions,
     );
 
     const restartedHandle = client.workflow.getHandle(
@@ -573,7 +583,7 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
     const blockedState = await withTemporalRpcDeadline(
       client,
       () => blockedHandle.result(),
-      temporalClientOptions,
+      temporalProofResultClientOptions,
     );
     const requeryState = requery.query_available && requery.query ? requery.query : null;
     const checks = {
