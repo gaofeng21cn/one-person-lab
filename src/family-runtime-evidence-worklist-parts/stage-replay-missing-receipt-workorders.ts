@@ -3,6 +3,11 @@ import {
   stageReplayMissingReceiptTargetKey,
   type StageReplayMissingReceiptReceipt,
 } from '../stage-replay-missing-receipt-ledger.ts';
+import { defaultOmaRepoDir } from '../opl-meta-agent-consumption.ts';
+import {
+  omaProductionAcceptanceStageReplayReceipts,
+  readOmaProductionAcceptance,
+} from '../opl-meta-agent-production-acceptance.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -179,9 +184,28 @@ function readinessDomains(stageReadiness: JsonRecord) {
   return [stageReadiness];
 }
 
+function repoTrackedStageReplayMissingReceiptReceipts() {
+  const omaRepoDir = defaultOmaRepoDir();
+  if (!omaRepoDir) {
+    return [];
+  }
+  const productionAcceptance = readOmaProductionAcceptance(omaRepoDir);
+  if (productionAcceptance.status !== 'resolved') {
+    return [];
+  }
+  return omaProductionAcceptanceStageReplayReceipts(productionAcceptance.payload);
+}
+
+function stageReplayMissingReceiptReceipts() {
+  return [
+    ...listStageReplayMissingReceiptReceipts(),
+    ...repoTrackedStageReplayMissingReceiptReceipts(),
+  ];
+}
+
 function replayMissingReceiptWorkorderItems(stageReadiness: JsonRecord) {
   const seen = new Set<string>();
-  const receipts = listStageReplayMissingReceiptReceipts();
+  const receipts = stageReplayMissingReceiptReceipts();
   return readinessDomains(stageReadiness).flatMap((domain) => {
     const warnings = [
       ...recordList(domain.hard_blockers),
@@ -276,7 +300,7 @@ function replayMissingReceiptWorkorderItems(stageReadiness: JsonRecord) {
 }
 
 export function buildStageReplayMissingReceiptWorkorderPacket(stageReadiness: JsonRecord) {
-  const receipts = listStageReplayMissingReceiptReceipts();
+  const receipts = stageReplayMissingReceiptReceipts();
   const verifiedSuccessReceiptCount = receipts.filter((receipt) =>
     receipt.receipt_status === 'verified' && receipt.payload_path === 'success_refs_path'
   ).length;

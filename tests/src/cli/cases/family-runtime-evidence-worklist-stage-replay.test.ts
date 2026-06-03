@@ -12,6 +12,7 @@ import {
   test,
 } from '../helpers.ts';
 import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/family-runtime-evidence-worklist.ts';
+import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -329,6 +330,57 @@ test('family-runtime evidence-worklist projects stage replay missing receipt wor
   }
 });
 
+test('family-runtime evidence-worklist consumes OMA repo-tracked stage replay typed blocker refs', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-oma-stage-replay-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const omaRepoDir = createOmaContractFixture(fixtureRoot, { productionAcceptance: true });
+
+  try {
+    const output = runCli([
+      'family-runtime',
+      'evidence-worklist',
+      '--family-defaults',
+      '--provider',
+      'temporal',
+      '--executor-kind',
+      'codex_cli',
+      '--detail',
+      'full',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_META_AGENT_REPO_DIR: omaRepoDir,
+    });
+    const worklist = output.family_runtime_evidence_worklist;
+    const packet = worklist.stage_replay_missing_receipt_workorder_packet;
+    const item = packet.workorders.find((entry: { domain_id: string; stage_id: string }) =>
+      entry.domain_id === 'opl-meta-agent' && entry.stage_id === 'stage-decomposition'
+    );
+
+    assert.ok(item);
+    assert.equal(item.missing_ref, 'human_gate:oma_baseline_owner_review');
+    assert.equal(item.status, 'blocked_by_domain_owned_typed_blocker_ref');
+    assert.equal(
+      item.stage_replay_missing_receipt_ledger_status,
+      'verified_typed_blocker_recorded_still_blocked',
+    );
+    assert.deepEqual(item.typed_blocker_refs, [
+      'oma-typed-blocker:stage-replay-human-gate:stage-decomposition:oma_baseline_owner_review/baseline-owner-review-receipt-pending',
+    ]);
+    assert.deepEqual(item.typed_blocker_receipt_refs, [
+      'opl://stage-replay-missing-receipt/contracts%2Fproduction_acceptance%2Fmeta-agent-production-acceptance.json%23%2Fstage_replay_human_gate_blocker_summary',
+    ]);
+    assert.equal(packet.summary.typed_blocker_recorded_count >= 1, true);
+    assert.equal(packet.summary.success_receipt_verified_count, 0);
+    assert.equal(item.worklist_item_is_completion_claim, false);
+    assert.equal(item.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(item.authority_boundary.can_claim_production_ready, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime evidence-worklist uses manifest projection cache for replay missing receipt attention', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-stage-replay-cache-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
@@ -495,12 +547,14 @@ test('direct family-runtime evidence-worklist matches framework readiness replay
 test('runtime stage-replay-missing-receipt ledger records owner payload without creating owner receipts', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-replay-missing-receipt-ledger-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
   const manifest = withReplayMissingHumanGateManifest(
     loadFamilyManifestFixtures().medautoscience as JsonRecord,
     'med-autoscience',
   );
 
   try {
+    process.env.OPL_META_AGENT_REPO_DIR = createOmaContractFixture(fixtureRoot);
     runCli([
       'workspace',
       'bind',
@@ -704,6 +758,11 @@ test('runtime stage-replay-missing-receipt ledger records owner payload without 
     assert.equal(listOutput.authority_boundary.can_create_owner_receipt, false);
     assert.equal(listOutput.authority_boundary.can_claim_production_ready, false);
   } finally {
+    if (previousOmaRepoDir === undefined) {
+      delete process.env.OPL_META_AGENT_REPO_DIR;
+    } else {
+      process.env.OPL_META_AGENT_REPO_DIR = previousOmaRepoDir;
+    }
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }

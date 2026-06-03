@@ -13,6 +13,8 @@ const pythonCacheRoot = process.env.OPL_REPO_TEMP_ROOT
   ? path.join(process.env.OPL_REPO_TEMP_ROOT, 'node-test-python-cache')
   : fs.mkdtempSync(path.join(os.tmpdir(), 'opl-node-test-python-cache-'));
 fs.mkdirSync(pythonCacheRoot, { recursive: true });
+const toolTempDir = path.join(pythonCacheRoot, 'tmp');
+fs.mkdirSync(toolTempDir, { recursive: true });
 if (ownsPythonCacheRoot) {
   process.on('exit', () => {
     fs.rmSync(pythonCacheRoot, { recursive: true, force: true });
@@ -393,7 +395,7 @@ function spawnStep(commandName, args, context) {
     env: {
       ...process.env,
       NODE_NO_WARNINGS: '1',
-      TMPDIR: process.env.TMPDIR || path.join(pythonCacheRoot, 'tmp') + path.sep,
+      TMPDIR: process.env.TMPDIR || toolTempDir + path.sep,
       NODE_COMPILE_CACHE: process.env.NODE_COMPILE_CACHE || path.join(pythonCacheRoot, 'node-compile-cache'),
       NPM_CONFIG_CACHE: process.env.NPM_CONFIG_CACHE || path.join(pythonCacheRoot, 'npm-cache'),
       npm_config_cache: process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE || path.join(pythonCacheRoot, 'npm-cache'),

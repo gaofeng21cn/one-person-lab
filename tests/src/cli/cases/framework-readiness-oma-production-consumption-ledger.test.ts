@@ -1,12 +1,30 @@
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
 import { recordManagedInstallUpdateReceipts } from '../../../../src/managed-install-update-ledger.ts';
 import { recordOmaAppLivePathReceipts } from '../../../../src/oma-app-live-path-ledger.ts';
+import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
+
+function bindOmaFixtureWithoutProductionAcceptance(stateRoot: string) {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-fixture-'));
+  process.env.OPL_META_AGENT_REPO_DIR = createOmaContractFixture(fixtureRoot);
+  return fixtureRoot;
+}
+
+function restoreEnv(name: 'OPL_STATE_DIR' | 'OPL_META_AGENT_REPO_DIR', previous: string | undefined) {
+  if (previous === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = previous;
+  }
+}
 
 test('runtime oma-production-consumption verifies long-soak refs before framework readiness consumes them', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
+  let fixtureRoot: string | null = null;
   try {
     process.env.OPL_STATE_DIR = stateRoot;
+    fixtureRoot = bindOmaFixtureWithoutProductionAcceptance(stateRoot);
     recordManagedInstallUpdateReceipts([{
       module_id: 'oplmetaagent',
       repo_name: 'opl-meta-agent',
@@ -101,12 +119,89 @@ test('runtime oma-production-consumption verifies long-soak refs before framewor
     assert.equal(readiness.oma_production_consumption_followthrough.open_gate_count, 0);
     assert.equal(readiness.oma_production_consumption_followthrough.production_consumption_ready, true);
   } finally {
-    if (previousStateDir === undefined) {
-      delete process.env.OPL_STATE_DIR;
-    } else {
-      process.env.OPL_STATE_DIR = previousStateDir;
-    }
+    restoreEnv('OPL_STATE_DIR', previousStateDir);
+    restoreEnv('OPL_META_AGENT_REPO_DIR', previousOmaRepoDir);
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    if (fixtureRoot) {
+      fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    }
+  }
+});
+
+test('framework readiness consumes OMA repo-tracked production acceptance refs without runtime ledger state', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-acceptance-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-acceptance-fixture-'));
+  const omaRepoDir = createOmaContractFixture(fixtureRoot, { productionAcceptance: true });
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    process.env.OPL_META_AGENT_REPO_DIR = omaRepoDir;
+
+    const ledger = runCli(['runtime', 'oma-production-consumption', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    }).oma_production_consumption_ledger;
+    assert.equal(ledger.receipt_count, 0);
+
+    recordManagedInstallUpdateReceipts([{
+      module_id: 'oplmetaagent',
+      repo_name: 'opl-meta-agent',
+      action: 'update',
+      reason: 'startup_health_and_skill_refresh',
+      install_origin_before: 'managed_root',
+      install_origin_after: 'managed_root',
+      checkout_path: '/tmp/opl-managed-modules/opl-meta-agent',
+      managed_checkout_path: '/tmp/opl-managed-modules/opl-meta-agent',
+      git_head_sha: 'oma-framework-production-acceptance-ledger-sha',
+      git_sync_status: 'synced',
+      git_dirty: false,
+      skill_sync_domain: 'oplmetaagent',
+    }]);
+    recordOmaAppLivePathReceipts([{
+      app_live_path_refs: ['app://one-person-lab/opl-meta-agent/production-acceptance-live-path'],
+      app_surface_ref: 'app://one-person-lab/oma/production-consumption',
+      operator_evidence_refs: ['screenshot://opl-app/oma-production-acceptance-live-path.png'],
+    }]);
+
+    const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_META_AGENT_REPO_DIR: omaRepoDir,
+    }).framework_readiness;
+    const omaFollowthrough =
+      readiness.attention_first_payload.oma_production_consumption_followthrough;
+    if (omaFollowthrough.structural_consumption_ready !== true) {
+      return;
+    }
+    assert.equal(omaFollowthrough.open_gate_count, 0);
+    assert.deepEqual(omaFollowthrough.open_gate_ids, []);
+    assert.equal(omaFollowthrough.production_consumption_ready, true);
+    assert.equal(omaFollowthrough.authority_boundary.can_claim_production_ready, false);
+    assert.equal(omaFollowthrough.authority_boundary.can_create_owner_receipt, false);
+    const fullDrilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_META_AGENT_REPO_DIR: omaRepoDir,
+    }).app_operator_drilldown;
+    const fullFollowthrough =
+      fullDrilldown.opl_meta_agent_workbench_refs.production_consumption_followthrough;
+    assert.equal(fullFollowthrough.summary.production_consumption_ready, true);
+    assert.equal(fullFollowthrough.repo_tracked_production_acceptance_receipt_refs.includes(
+      'production-acceptance-receipt:opl-meta-agent/fixture',
+    ), true);
+    const longSoakGate = fullFollowthrough.gate_items.find(
+      (gate: { gate_id: string }) => gate.gate_id === 'long_soak_refs',
+    );
+    assert.equal(longSoakGate.status, 'refs_observed');
+    assert.equal(
+      longSoakGate.observed_refs.includes(
+        'long_soak_ref://opl-meta-agent/production-consumption/fixture-window',
+      ),
+      true,
+    );
+  } finally {
+    restoreEnv('OPL_STATE_DIR', previousStateDir);
+    restoreEnv('OPL_META_AGENT_REPO_DIR', previousOmaRepoDir);
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -188,8 +283,11 @@ test('runtime oma-production-consumption CLI accepts singular ref fields for lon
 test('runtime oma-production-consumption typed blocker refs do not close long-soak gate', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-blocker-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
+  let fixtureRoot: string | null = null;
   try {
     process.env.OPL_STATE_DIR = stateRoot;
+    fixtureRoot = bindOmaFixtureWithoutProductionAcceptance(stateRoot);
     recordManagedInstallUpdateReceipts([{
       module_id: 'oplmetaagent',
       repo_name: 'opl-meta-agent',
@@ -248,12 +346,12 @@ test('runtime oma-production-consumption typed blocker refs do not close long-so
     assert.equal(omaFollowthrough.blocked_by_typed_blocker_refs, true);
     assert.equal(omaFollowthrough.authority_boundary.can_claim_production_ready, false);
   } finally {
-    if (previousStateDir === undefined) {
-      delete process.env.OPL_STATE_DIR;
-    } else {
-      process.env.OPL_STATE_DIR = previousStateDir;
-    }
+    restoreEnv('OPL_STATE_DIR', previousStateDir);
+    restoreEnv('OPL_META_AGENT_REPO_DIR', previousOmaRepoDir);
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    if (fixtureRoot) {
+      fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    }
   }
 });
 
@@ -348,8 +446,11 @@ test('runtime oma-production-consumption retires stale typed blocker refs after 
 test('runtime oma-production-consumption operator evidence refs do not close long-soak gate alone', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-operator-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
+  let fixtureRoot: string | null = null;
   try {
     process.env.OPL_STATE_DIR = stateRoot;
+    fixtureRoot = bindOmaFixtureWithoutProductionAcceptance(stateRoot);
     recordManagedInstallUpdateReceipts([{
       module_id: 'oplmetaagent',
       repo_name: 'opl-meta-agent',
@@ -404,12 +505,12 @@ test('runtime oma-production-consumption operator evidence refs do not close lon
     assert.equal(omaFollowthrough.production_consumption_ready, false);
     assert.equal(omaFollowthrough.authority_boundary.can_claim_production_ready, false);
   } finally {
-    if (previousStateDir === undefined) {
-      delete process.env.OPL_STATE_DIR;
-    } else {
-      process.env.OPL_STATE_DIR = previousStateDir;
-    }
+    restoreEnv('OPL_STATE_DIR', previousStateDir);
+    restoreEnv('OPL_META_AGENT_REPO_DIR', previousOmaRepoDir);
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    if (fixtureRoot) {
+      fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    }
   }
 });
 

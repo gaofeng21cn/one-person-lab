@@ -7,7 +7,15 @@ import { sourceRef, uniqueByRef } from './runtime-tray-snapshot-utils.ts';
 import { listManagedInstallUpdateReceipts } from './managed-install-update-ledger.ts';
 import { omaProductionConsumptionRecordAction } from './oma-production-consumption-action.ts';
 import { listOmaAppLivePathReceipts } from './oma-app-live-path-ledger.ts';
-import { listOmaProductionConsumptionReceipts } from './oma-production-consumption-ledger.ts';
+import {
+  listOmaProductionConsumptionReceipts,
+  type OmaProductionConsumptionReceipt,
+} from './oma-production-consumption-ledger.ts';
+import {
+  omaProductionAcceptanceConsumptionReceipts,
+  OMA_PRODUCTION_ACCEPTANCE_RELATIVE_REF,
+  readOmaProductionAcceptance,
+} from './opl-meta-agent-production-acceptance.ts';
 import { buildOplModules } from './system-installation/modules.ts';
 
 const OMA_DOMAIN_ID = 'opl-meta-agent';
@@ -17,6 +25,7 @@ const OMA_RELATIVE_CONTRACT_REFS = {
   registration: 'contracts/opl_domain_manifest_registration.json',
   appWorkbenchProjection: 'contracts/app_workbench_projection.json',
   scaleoutEvidence: 'contracts/real_target_agent_scaleout_evidence.json',
+  productionAcceptance: OMA_PRODUCTION_ACCEPTANCE_RELATIVE_REF,
 } as const;
 
 const PATCH_LOOP_REF_FIELDS = [
@@ -153,7 +162,7 @@ function managedInstallUpdateFollowthrough(observedRefs: string[]) {
   };
 }
 
-function defaultOmaRepoDir() {
+export function defaultOmaRepoDir() {
   const sourceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   const roots = [
     process.env[OMA_WORKSPACE_ENV],
@@ -274,8 +283,11 @@ function omaAppLivePathLedgerRefs() {
   ]));
 }
 
-function omaProductionConsumptionLedgerRefs() {
-  const receipts = listOmaProductionConsumptionReceipts();
+function omaProductionConsumptionLedgerRefs(seedReceipts: OmaProductionConsumptionReceipt[] = []) {
+  const receipts = [
+    ...listOmaProductionConsumptionReceipts(),
+    ...seedReceipts,
+  ];
   const verifiedReceipts = receipts.filter((receipt) => receipt.receipt_status === 'verified');
   const verifiedLongSoakReceipts = verifiedReceipts.filter((receipt) =>
     receipt.long_soak_refs.length > 0
@@ -336,6 +348,7 @@ function buildProductionConsumptionFollowthrough(payloads: {
   registration: JsonRecord;
   appProjection: JsonRecord;
   scaleoutEvidence: JsonRecord;
+  productionAcceptance?: JsonRecord;
 }) {
   if (payloads.status !== 'resolved') {
     return {
@@ -361,9 +374,12 @@ function buildProductionConsumptionFollowthrough(payloads: {
   const registration = payloads.registration;
   const appProjection = payloads.appProjection;
   const scaleoutEvidence = payloads.scaleoutEvidence;
+  const productionAcceptance = payloads.productionAcceptance ?? {};
   const drilldownReceipt = record(appProjection.drilldown_readiness_receipt);
   const scaleoutCloseout = record(scaleoutEvidence.multi_target_scaleout_closeout);
   const scaleoutTargets = recordList(scaleoutCloseout.target_agents);
+  const productionAcceptanceConsumptionReceipts =
+    omaProductionAcceptanceConsumptionReceipts(productionAcceptance);
   const managedInstallUpdateRefs = refsFromRecords([
     registration,
     record(registration.discovery_receipt),
@@ -413,7 +429,8 @@ function buildProductionConsumptionFollowthrough(payloads: {
     'app_live_soak_refs',
     'agent_lab_rerun_long_soak_refs',
   ]);
-  const productionConsumptionLedgerRefs = omaProductionConsumptionLedgerRefs();
+  const productionConsumptionLedgerRefs =
+    omaProductionConsumptionLedgerRefs(productionAcceptanceConsumptionReceipts);
   const longSoakObservedRefs = uniqueStringList([
     ...longSoakRefs,
     ...productionConsumptionLedgerRefs.longSoakRefs,
@@ -517,6 +534,8 @@ function buildProductionConsumptionFollowthrough(payloads: {
       historical_typed_blocker_ref_count: typedBlockerRefs.length,
       pending_verify_long_soak_receipt_ref_count: pendingVerifyLongSoakReceiptRefs.length,
       pending_verify_long_soak_receipt_refs: pendingVerifyLongSoakReceiptRefs,
+      repo_tracked_production_acceptance_receipt_ref_count:
+        productionAcceptanceConsumptionReceipts.length,
       production_consumption_ready: openGates.length === 0,
       domain_ready_claim_count: 0,
       quality_verdict_claim_count: 0,
@@ -525,6 +544,8 @@ function buildProductionConsumptionFollowthrough(payloads: {
     typed_blocker_refs: activeTypedBlockerRefs,
     historical_typed_blocker_refs: typedBlockerRefs,
     historical_typed_blocker_ref_count: typedBlockerRefs.length,
+    repo_tracked_production_acceptance_receipt_refs:
+      productionAcceptanceConsumptionReceipts.map((receipt) => receipt.receipt_ref),
     blocked_by_typed_blocker_refs: activeTypedBlockerRefs.length > 0,
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
@@ -884,6 +905,7 @@ export function buildOplMetaAgentRegistryExtension(options: { repoDir?: string |
         registration: {},
         appProjection: {},
         scaleoutEvidence: {},
+        productionAcceptance: {},
       }),
       authority_boundary: refsOnlyAuthorityBoundary(),
       source_refs: [],
@@ -893,10 +915,12 @@ export function buildOplMetaAgentRegistryExtension(options: { repoDir?: string |
   const registrationFile = readJson(repoDir, OMA_RELATIVE_CONTRACT_REFS.registration);
   const appProjectionFile = readJson(repoDir, OMA_RELATIVE_CONTRACT_REFS.appWorkbenchProjection);
   const scaleoutEvidenceFile = readJson(repoDir, OMA_RELATIVE_CONTRACT_REFS.scaleoutEvidence);
+  const productionAcceptanceFile = readOmaProductionAcceptance(repoDir);
   const files = [registrationFile, appProjectionFile, scaleoutEvidenceFile];
   const registration = record(registrationFile.payload);
   const appProjection = record(appProjectionFile.payload);
   const scaleoutEvidence = record(scaleoutEvidenceFile.payload);
+  const productionAcceptance = record(productionAcceptanceFile.payload);
   const resolvedCount = files.filter((file) => file.status === 'resolved').length;
   const status = resolvedCount === files.length ? 'resolved' : 'blocked';
   const omaSections = buildOmaSections({ registration, appProjection, scaleoutEvidence });
@@ -911,6 +935,7 @@ export function buildOplMetaAgentRegistryExtension(options: { repoDir?: string |
     registration,
     appProjection,
     scaleoutEvidence,
+    productionAcceptance,
   });
   const productionConsumptionSummary = record(productionConsumptionFollowthrough.summary);
 
@@ -924,6 +949,8 @@ export function buildOplMetaAgentRegistryExtension(options: { repoDir?: string |
     registration: status === 'resolved' ? registration : null,
     app_workbench_projection: status === 'resolved' ? appProjection : null,
     real_target_agent_scaleout_evidence: status === 'resolved' ? scaleoutEvidence : null,
+    production_acceptance:
+      productionAcceptanceFile.status === 'resolved' ? productionAcceptance : null,
     oma_sections: omaSections,
     production_consumption_followthrough: productionConsumptionFollowthrough,
     summary: {
@@ -973,12 +1000,14 @@ export function buildOplMetaAgentRegistryExtension(options: { repoDir?: string |
       claims_default_promotion: false,
     },
     files: files.map(({ payload: _payload, ...file }) => file),
+    optional_files: [productionAcceptanceFile].map(({ payload: _payload, ...file }) => file),
     authority_boundary: refsOnlyAuthorityBoundary(),
     source_refs: uniqueByRef([
       sourceRef('/opl_meta_agent_registry', 'opl_meta_agent_registry_extension'),
       sourceRef(`${repoDir}/${OMA_RELATIVE_CONTRACT_REFS.registration}`, 'oma_domain_manifest_registration'),
       sourceRef(`${repoDir}/${OMA_RELATIVE_CONTRACT_REFS.appWorkbenchProjection}`, 'oma_app_workbench_projection'),
       sourceRef(`${repoDir}/${OMA_RELATIVE_CONTRACT_REFS.scaleoutEvidence}`, 'oma_real_target_agent_scaleout_evidence'),
+      sourceRef(`${repoDir}/${OMA_RELATIVE_CONTRACT_REFS.productionAcceptance}`, 'oma_production_acceptance'),
     ]),
   };
 }
