@@ -107,9 +107,11 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 当前审计规则固定为：
 
 - 主文档只记录最新情况、当前差距、当前 owner boundary 和当前完善顺序。
+- Active gap / status / inventory 文档只允许保留当前 owner、当前状态、evidence gate、next action 和 forbidden claim；不得继续逐轮追加 receipt ref、cohort ref、attempt id、branch/worktree、line-count closeout、safe-action record/verify 流水或历史 counter。
 - dated follow-through、closeout 流水、receipt/proof 命令摘要和阶段性校准过程进入 [OPL family 文档过程归档 2026-05](./history/process/plans/2026-05-18-opl-family-doc-process-history.md) 或其他 `docs/history/**`。
 - `docs/decisions.md` 可以保留决策日期日志，但被 supersede 的段落必须显式标注当前读法。
 - path-stable reference/spec 如果仍因 contract、human_doc 或 audit context 保留原路径，必须在索引或文件开头说明生命周期；不得恢复旧 provider、Gateway、frontdoor、compatibility、direct-entry 或 host-agent-only 叙述为 active plan。
+- 2026-06-03 起，`docs/active/current-state-vs-ideal-gap.md` 是 compact active gap plan；它不再承载 dated App/runtime/domain evidence ledger。相关归档见 [OPL Active Gap Plan Lifecycle Cleanup](./history/process/plans/2026-06-03-opl-active-gap-plan-lifecycle-cleanup.md)。
 
 ## 四仓目录状态
 
