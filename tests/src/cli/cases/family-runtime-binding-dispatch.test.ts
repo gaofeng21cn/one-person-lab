@@ -26,6 +26,22 @@ function writeNodeScript(scriptPath: string, source: string) {
 
 const largeDomainBody = 'x'.repeat(80_000);
 
+function hasTruncatedStringEnvelope(value: unknown): boolean {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+  if (Array.isArray(value)) {
+    return value.some(hasTruncatedStringEnvelope);
+  }
+  const record = value as Record<string, unknown>;
+  return (
+    record.surface_kind === 'opl_runtime_ledger_truncated_string'
+    && record.truncated === true
+    && typeof record.original_length === 'number'
+    && record.original_length > 4_096
+  ) || Object.values(record).some(hasTruncatedStringEnvelope);
+}
+
 test('family-runtime binding tick dispatches MAS tasks through the active workspace checkout', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-binding-dispatch-home-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-binding-dispatch-'));
@@ -166,13 +182,14 @@ process.exit(64);
     );
     const dbRows = runCli(['family-runtime', 'events', 'export'], env)
       .family_runtime_events.events as Array<Record<string, unknown>>;
-    const dispatchEvent = dbRows.find((event) => event.event_type === 'task_dispatch_succeeded');
+    const dispatchEvent = dbRows.find((event) =>
+      event.event_type === 'task_dispatch_succeeded'
+      && hasTruncatedStringEnvelope(event.payload)
+    );
     assert.ok(dispatchEvent);
     const dispatchPayloadText = JSON.stringify(dispatchEvent.payload);
     assert.ok(dispatchPayloadText.length < 20_000, dispatchPayloadText.length.toString());
     assert.equal(dispatchPayloadText.includes(largeDomainBody), false);
-    assert.equal(dispatchPayloadText.includes('opl_runtime_ledger_truncated_string'), true);
-    assert.equal(dispatchPayloadText.includes('"original_length":80000'), true);
 
     const notifications = runCli(['family-runtime', 'notify', 'list'], env)
       .family_runtime_notifications.notifications as Array<Record<string, unknown>>;

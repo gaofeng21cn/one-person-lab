@@ -19,6 +19,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - OMA materializer/helper 与 Aion Team/E2E bridge tail 只删除无 active caller、已有 replacement proof 和 repo-native verification 的 fixture/alias/helper；active materializer、target-agent handoff、legacy migration window、explicit bridge fallback 和 App-owned shell candidate 不进入物理删除。
 - 物理删除门固定为 replacement parity、no-active-caller、owner receipt 或 typed blocker、provenance/tombstone、no-forbidden-write 和 repo-native verification。任何 active caller、migration window、negative guard、proof lane 或 dirty root 都必须先收敛为明确 owner answer，再执行删除。
 
+### 决策：退役 frontdesk / web surface 不得继续由 LaunchAgent 或 runtime ledger 反复放大
+
+原因：`frontdesk`、`opl web` 和 8787 本地服务已进入 history / retired 语境。若用户级 LaunchAgent 仍以 `KeepAlive` 调用退役命令，CLI unknown-command JSON、help catalogue 和 Node warnings 会被反复追加到前台 stderr；同时 family-runtime dispatch 若把 domain handler 完整 stdout JSON 同时写入 events 与 notifications，会让 `queue.sqlite` 被少数大 payload 快速放大。
+
+影响：
+
+- 旧 `ai.opl.frontdesk` / `opl web` 只能作为历史兼容对象处理；默认运行、安装、App state、operator drilldown 和 product entry 不得重新依赖该 service。发现该 LaunchAgent 仍在运行时，source of truth 是 `launchctl print gui/$(id -u)/ai.opl.frontdesk` 与 `~/Library/LaunchAgents/ai.opl.frontdesk.plist`，应先停用服务，再检查 stderr 是否继续增长。
+- 顶层 unknown-command 错误详情必须保持有界，只返回 command、command_count 和 `opl help` 指针；完整 command catalogue 只属于显式 `opl help` / command-scoped help，不属于 daemon stderr 或退役命令错误面。
+- `family-runtime` events / notifications 是 queue observability ledger，不是 domain artifact store。入库 payload 必须做有界 envelope：长字符串、超长数组、超深对象只保留 preview、长度、hash 和截断标记；domain truth、owner receipt、artifact body 和质量 verdict 仍归 MAS/MAG/RCA owner。
+- 历史 queue 清理只能做 observability compaction、完整性检查和可回滚备份，不删除 task / event 行、不写 domain truth、不生成 owner receipt、不改变 publication eval、artifact gate、paper package 或 current package。
+
 ## 2026-06-02
 
 ### 决策：completed typed closeout 是 default-executor admission 的终端屏障
