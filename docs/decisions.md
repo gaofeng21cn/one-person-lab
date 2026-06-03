@@ -470,6 +470,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - MAS/MAG/RCA 只发布 domain projection / thin adapter；底层 evidence ledger、audit body、owner receipt、quality verdict、publication / fundability / visual authority、artifact authority 与 direct skill path 继续归 domain。
 - 该吸收不引入 `academic-research-skills` runtime dependency，不重写 domain stage，不授权 OPL 生成 domain-ready、publication-ready、fundability-ready、visual-ready 或 artifact-ready verdict。
 
+### 决策：吸收 Co-Scientist 风格 hypothesis portfolio 为 refs-only research hypothesis contract
+
+原因：Co-Scientist 式 hypothesis candidate portfolio、assumption decomposition、novelty / provenance check、negative path 记录、ranking / proximity metric 和 human review loop 对 OPL family 的研究型 stage 很有价值。但这些能力只能上升为 OPL-owned refs-only projection contract，不能把 OPL 变成领域 hypothesis truth owner、scientific quality judge、artifact authority 或 owner receipt signer。
+
+影响：
+
+- `contracts/family-orchestration/research-hypothesis-portfolio.schema.json` 成为 active family orchestration companion contract。
+- OPL 只持有 schema、discovery、index、projection、advisory metric refs 和 review route refs。
+- ranking / proximity / advisory metrics 只能作为 operator / reviewer 路由输入，不能声明 hypothesis acceptance、domain ready、quality verdict、artifact authority 或 stage completion。
+- MAS/MAG/RCA 和未来 domain agent 继续持有 hypothesis body、evidence body、accept/reject decision、domain truth、quality verdict、artifact body authority、owner receipt 与直接 domain skill path。
+
 ## 2026-05-16
 
 ### 决策：generic workspace / source / artifact / memory substrate 由 OPL 持有 locator / index / lifecycle / projection，domain agent 持有 truth / body / verdict / authority
