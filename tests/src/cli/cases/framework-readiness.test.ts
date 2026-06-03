@@ -29,10 +29,13 @@ import {
   assertFrameworkOwnerPayloadAttention,
   assertOwnerDeltaFirstReadinessProjection,
 } from './owner-payload-workorder-assertions.ts';
+import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 test('framework readiness summarizes default control-plane surfaces without authority claims', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-readiness-state-'));
+  const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
   try {
+    process.env.OPL_META_AGENT_REPO_DIR = createOmaContractFixture(stateRoot);
     const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,
     }).framework_readiness;
@@ -987,6 +990,11 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(readiness.authority_boundary.can_read_artifact_body, false);
     assert.equal(readiness.authority_boundary.safe_action_route_is_receipt_closure, false);
   } finally {
+    if (previousOmaRepoDir === undefined) {
+      delete process.env.OPL_META_AGENT_REPO_DIR;
+    } else {
+      process.env.OPL_META_AGENT_REPO_DIR = previousOmaRepoDir;
+    }
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
