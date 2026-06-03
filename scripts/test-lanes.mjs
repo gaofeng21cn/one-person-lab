@@ -40,6 +40,7 @@ const fastTestFiles = [
   'tests/src/native-helper-family-smoke.test.ts',
   'tests/src/native-helper-prebuild.test.ts',
   'tests/src/stage-artifact-runtime.test.ts',
+  'tests/src/state-index-kernel-contract.test.ts',
   'tests/src/family-runtime-attempt-contract.test.ts',
   'tests/src/family-runtime-current-control-state.test.ts',
   'tests/src/family-runtime-effective-current-context.test.ts',

@@ -131,9 +131,11 @@ test('stage artifact open and commit materialize latest and current from verifie
     assert.equal(committed.manifest.output_hashes[0].path, 'deck.png');
     assert.match(committed.manifest.output_hashes[0].sha256, /^[a-f0-9]{64}$/);
     assert.equal(committed.opl_created_owner_receipt, false);
+    assert.ok('event_kind' in committed.lineage_event);
     assert.equal(committed.lineage_event.event_kind, 'attempt_committed');
     assert.equal(fs.readFileSync(committed.latest_pointer, 'utf-8'), 'attempt-commit\n');
     assert.equal(committed.status.summary.success_stage_count, 1);
+    assert.ok(committed.current_pointer.current.current_stage);
     assert.equal(committed.current_pointer.current.current_stage.status, 'success');
   });
 });

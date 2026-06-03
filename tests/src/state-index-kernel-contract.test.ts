@@ -11,6 +11,12 @@ function readJson(relativePath: string) {
   return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Record<string, any>;
 }
 
+type SqliteDatabaseContract = {
+  database_id: string;
+  path: string;
+  owned_tables: string[];
+};
+
 test('OPL State Index Kernel freezes File Truth plus SQLite sidecar plus Temporal runtime split', () => {
   const contract = readJson('contracts/opl-framework/state-index-kernel-contract.json');
 
@@ -29,8 +35,8 @@ test('OPL State Index Kernel freezes File Truth plus SQLite sidecar plus Tempora
 
 test('OPL State Index Kernel declares bounded refs-only SQLite databases and required fields', () => {
   const contract = readJson('contracts/opl-framework/state-index-kernel-contract.json');
-  const databases = new Map(
-    contract.sqlite_database_layout.databases.map((database: Record<string, any>) => [
+  const databases = new Map<string, SqliteDatabaseContract>(
+    (contract.sqlite_database_layout.databases as SqliteDatabaseContract[]).map((database) => [
       database.database_id,
       database,
     ]),

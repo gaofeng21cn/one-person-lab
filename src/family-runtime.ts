@@ -65,18 +65,7 @@ import { reconcileFamilyRuntimeLifecycleRefs, runFamilyRuntimeLifecycleApply } f
 import { buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
 import { buildFamilyStageLaunchAdmissionGate } from './family-stage-control-plane.ts';
 import { runFamilyRuntimeEvidenceWorklistCommand } from './family-runtime-evidence-worklist-command.ts';
-import {
-  commitStageArtifactAttemptRuntime,
-  explainStageArtifactRuntime,
-  gcStageArtifactRuntime,
-  openStageArtifactAttemptRuntime,
-  promoteStageArtifactRuntime,
-  rebuildStageArtifactRuntime,
-  conformanceStageArtifactRuntime,
-  restoreStageArtifactRuntime,
-  statusStageArtifactRuntime,
-  workbenchStageArtifactRuntime,
-} from './stage-artifact-runtime.ts';
+import { runFamilyRuntimeStageArtifactCommand } from './family-runtime-stage-artifact-command.ts';
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
@@ -409,92 +398,7 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
       return runFamilyRuntimeEvidenceWorklistCommand(parsed.input);
     }
     if (parsed.mode === 'stage_artifact') {
-      const input = parsed.input;
-      if (input.action === 'open') {
-        return {
-          version: 'g2',
-          stage_artifact_runtime: openStageArtifactAttemptRuntime({
-            ...input,
-            stage_id: input.stage_id ?? '',
-            stage_order: input.stage_order,
-            attempt_id: input.attempt_id ?? '',
-          }),
-        };
-      }
-      if (input.action === 'commit') {
-        return {
-          version: 'g2',
-          stage_artifact_runtime: commitStageArtifactAttemptRuntime({
-            ...input,
-            stage_id: input.stage_id ?? '',
-            stage_order: input.stage_order,
-            attempt_id: input.attempt_id ?? '',
-            terminal_status: input.terminal_status ?? 'success',
-            required_outputs: input.required_outputs ?? [],
-            owner_receipt_refs: input.owner_receipt_refs ?? [],
-            typed_blocker_refs: input.typed_blocker_refs ?? [],
-            decision_receipt_refs: input.decision_receipt_refs ?? [],
-          }),
-        };
-      }
-      if (input.action === 'status') {
-        return {
-          version: 'g2',
-          stage_artifact_runtime: statusStageArtifactRuntime(input),
-        };
-      }
-      if (input.action === 'explain') {
-        return {
-          version: 'g2',
-          stage_artifact_runtime: explainStageArtifactRuntime(input),
-        };
-      }
-      if (input.action === 'rebuild') {
-        return {
-          version: 'g2',
-          stage_artifact_runtime: rebuildStageArtifactRuntime(input),
-        };
-      }
-      if (input.action === 'promote') {
-        return {
-          version: 'g2',
-          stage_artifact_runtime: promoteStageArtifactRuntime({
-            ...input,
-            stage_id: input.stage_id ?? '',
-            attempt_id: input.attempt_id ?? '',
-            artifact_ref: input.artifact_ref ?? '',
-          }),
-        };
-      }
-      if (input.action === 'gc') {
-        return {
-          version: 'g2',
-          stage_artifact_runtime: gcStageArtifactRuntime(input),
-        };
-      }
-      if (input.action === 'restore') {
-        return {
-          version: 'g2',
-          stage_artifact_runtime: restoreStageArtifactRuntime({
-            ...input,
-            stage_id: input.stage_id ?? '',
-            attempt_id: input.attempt_id ?? '',
-            restore_ref: input.restore_ref ?? '',
-          }),
-        };
-      }
-      if (input.action === 'conformance') {
-        return {
-          version: 'g2',
-          stage_artifact_runtime: conformanceStageArtifactRuntime(input),
-        };
-      }
-      if (input.action === 'workbench') {
-        return {
-          version: 'g2',
-          stage_artifact_runtime: workbenchStageArtifactRuntime(input),
-        };
-      }
+      return runFamilyRuntimeStageArtifactCommand(parsed.input);
     }
     if (parsed.mode === 'enqueue') {
       return {
