@@ -76,7 +76,7 @@
           "restore_proofs"
         ],
         "storage_role": "sqlite_sidecar_index",
-        "implementation_status": "contract_frozen_rebuildable_projection"
+        "implementation_status": "landed_rebuildable_stage_folder_projection"
       },
       {
         "database_id": "operator_read_model",
@@ -90,9 +90,31 @@
           "maintenance_runs"
         ],
         "storage_role": "projection_cache",
-        "implementation_status": "contract_frozen_projection_cache"
+        "implementation_status": "landed_rebuildable_stage_folder_read_model"
       }
     ]
+  },
+  "stage_folder_rebuild_projection": {
+    "command": "opl index rebuild --domain <domain> --json",
+    "source_root": "${OPL_STATE_DIR}/runtime-state/domains",
+    "projects_to": [
+      "artifact-index.sqlite/stage_current_pointers",
+      "artifact-index.sqlite/manifest_index",
+      "artifact-index.sqlite/artifact_refs",
+      "artifact-index.sqlite/receipt_refs",
+      "artifact-index.sqlite/blocker_refs",
+      "artifact-index.sqlite/lineage_events",
+      "artifact-index.sqlite/lineage_edges",
+      "artifact-index.sqlite/retention_ledger",
+      "artifact-index.sqlite/restore_proofs",
+      "read-model.sqlite/artifact_drilldown",
+      "read-model.sqlite/owner_route_index",
+      "read-model.sqlite/source_fingerprints",
+      "read-model.sqlite/operator_tasks"
+    ],
+    "payload_policy": "refs_hashes_and_bounded_locator_json_only",
+    "body_access": false,
+    "domain_authority_created": false
   },
   "required_index_fields": [
     "domain_id",
@@ -113,7 +135,7 @@
     "write_manifest_receipt_or_typed_blocker_body",
     "compute_content_hashes",
     "atomically_update_current_or_latest_pointer",
-    "transactionally_update_sqlite_sidecar_index"
+    "rebuild_or_refresh_sqlite_sidecar_projection"
   ],
   "status_rule": "Stage progress = physical outputs + manifest validity + receipt authority + current pointer; SQLite can accelerate discovery but cannot promote stale or missing file truth into progress.",
   "maintenance_policy": {
@@ -143,7 +165,7 @@
   ],
   "cli_surfaces": {
     "doctor": "opl index doctor --json",
-    "rebuild": "opl index rebuild --domain <domain> --json",
+    "rebuild": "opl index rebuild --domain <domain> --json materializes schemas and projects Stage Folder refs into artifact/read-model sidecars",
     "backup": "opl index backup --json",
     "checkpoint": "opl index checkpoint --json",
     "integrity": "opl index integrity-check --json",

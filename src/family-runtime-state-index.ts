@@ -5,6 +5,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { openFamilyRuntimeLifecycleIndexDb } from './family-runtime-lifecycle-store.ts';
 import { familyRuntimeSqliteSidecarPolicy, openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
 import { createFamilyRuntimeQueueTables, familyRuntimePaths } from './family-runtime-store.ts';
+import { rebuildStageArtifactSidecarProjection } from './family-runtime-state-index-parts/stage-artifact-projection.ts';
 
 export type FamilyRuntimeStateIndexAction =
   | 'doctor'
@@ -29,10 +30,6 @@ type DatabaseDefinition = {
 
 function nowIso() {
   return new Date().toISOString();
-}
-
-function quoteSqlLiteral(value: string) {
-  return `'${value.replaceAll("'", "''")}'`;
 }
 
 function createRefsOnlyArtifactIndexTables(db: DatabaseSync) {
@@ -500,10 +497,16 @@ function writeMaintenanceRun(action: FamilyRuntimeStateIndexAction, status: stri
 
 export function runFamilyRuntimeStateIndex(input: FamilyRuntimeStateIndexInput) {
   const definitions = stateIndexDatabaseDefinitions();
+  let stageArtifactProjection = null;
   if (input.action === 'rebuild') {
     for (const definition of definitions) {
       definition.ensure();
     }
+    stageArtifactProjection = rebuildStageArtifactSidecarProjection({
+      domainId: input.domain_id,
+      definitions,
+      indexVersion: STATE_INDEX_VERSION,
+    });
   }
   const checkpoint_results = input.action === 'checkpoint'
     ? definitions.map(checkpointDatabase)
@@ -540,6 +543,7 @@ export function runFamilyRuntimeStateIndex(input: FamilyRuntimeStateIndexInput) 
         maintenance_run_ref: maintenanceRunRef,
       },
       databases: inspected,
+      stage_artifact_projection: stageArtifactProjection,
       checkpoint_results,
       backup,
       maintenance_policy: {
