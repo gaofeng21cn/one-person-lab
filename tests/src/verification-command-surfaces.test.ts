@@ -440,6 +440,40 @@ test('stage artifact runtime contract freezes folder truth and CLI boundaries', 
       rebuild: string;
       promote: string;
       gc: string;
+      restore: string;
+      conformance: string;
+      workbench: string;
+    };
+    content_hash_semantics: {
+      algorithm: string;
+      manifest_hash_fields: string[];
+      success_with_hash_mismatch_is_broken: boolean;
+      conformance_requires_hash_entries_for_physical_files: boolean;
+    };
+    conformance_gate: {
+      surface_kind: string;
+      fails_on: string[];
+      domain_readiness_claim: boolean;
+    };
+    workbench_projection: {
+      surface_kind: string;
+      projects: string[];
+      artifact_body_access: boolean;
+      domain_verdict_authority: boolean;
+    };
+    retention_restore_policy: {
+      policy_id: string;
+      gc_dry_run_default: boolean;
+      gc_apply_archives_instead_of_physical_delete: boolean;
+      restore_requires_restore_proof_ref: boolean;
+      restore_does_not_create_owner_receipt: boolean;
+      restore_does_not_declare_domain_truth_or_quality: boolean;
+    };
+    lineage_semantics: {
+      event_log: string;
+      derived_graph: string;
+      event_kinds: string[];
+      events_are_refs_only: boolean;
     };
     authority_boundary: Record<string, boolean>;
   }>('contracts/opl-framework/stage-artifact-runtime-contract.json');
@@ -474,7 +508,40 @@ test('stage artifact runtime contract freezes folder truth and CLI boundaries', 
   assert.equal(contract.read_model_semantics.orphan_artifact_is_completion, false);
   assert.equal(contract.read_model_semantics.explain_must_report_missing_or_blocking_deltas, true);
 
-  for (const command of ['open', 'commit', 'status', 'explain', 'rebuild', 'promote', 'gc']) {
+  assert.equal(contract.content_hash_semantics.algorithm, 'sha256');
+  assert.deepEqual(contract.content_hash_semantics.manifest_hash_fields, [
+    'output_hashes',
+    'evidence_hashes',
+    'receipt_hashes',
+  ]);
+  assert.equal(contract.content_hash_semantics.success_with_hash_mismatch_is_broken, true);
+  assert.equal(contract.content_hash_semantics.conformance_requires_hash_entries_for_physical_files, true);
+
+  assert.equal(contract.conformance_gate.surface_kind, 'opl_stage_artifact_runtime_conformance');
+  assert.equal(contract.conformance_gate.domain_readiness_claim, false);
+  for (const code of ['missing_manifest_hash_entry', 'manifest_content_hash_mismatch', 'attempt_orphan']) {
+    assert.equal(contract.conformance_gate.fails_on.includes(code), true);
+  }
+
+  assert.equal(contract.workbench_projection.surface_kind, 'opl_stage_artifact_runtime_workbench');
+  assert.equal(contract.workbench_projection.projects.includes('lineage_refs'), true);
+  assert.equal(contract.workbench_projection.projects.includes('retention_policy'), true);
+  assert.equal(contract.workbench_projection.artifact_body_access, false);
+  assert.equal(contract.workbench_projection.domain_verdict_authority, false);
+
+  assert.equal(contract.retention_restore_policy.policy_id, 'opl_stage_artifact_retention.v1');
+  assert.equal(contract.retention_restore_policy.gc_dry_run_default, true);
+  assert.equal(contract.retention_restore_policy.gc_apply_archives_instead_of_physical_delete, true);
+  assert.equal(contract.retention_restore_policy.restore_requires_restore_proof_ref, true);
+  assert.equal(contract.retention_restore_policy.restore_does_not_create_owner_receipt, true);
+  assert.equal(contract.retention_restore_policy.restore_does_not_declare_domain_truth_or_quality, true);
+
+  assert.equal(contract.lineage_semantics.event_log, 'lineage/events.jsonl');
+  assert.equal(contract.lineage_semantics.derived_graph, 'lineage/graph.json');
+  assert.equal(contract.lineage_semantics.event_kinds.includes('conformance_checked'), true);
+  assert.equal(contract.lineage_semantics.events_are_refs_only, true);
+
+  for (const command of ['open', 'commit', 'status', 'explain', 'rebuild', 'promote', 'gc', 'restore', 'conformance', 'workbench']) {
     assert.match(contract.cli_surfaces.top_level, new RegExp(`opl stage .*${command}`));
     assert.match(contract.cli_surfaces.legacy_alias, new RegExp(`opl stage-artifact .*${command}`));
     assert.match(contract.cli_surfaces.family_runtime, new RegExp(`opl family-runtime stage-artifact .*${command}`));
@@ -486,14 +553,21 @@ test('stage artifact runtime contract freezes folder truth and CLI boundaries', 
   assert.match(contract.cli_surfaces.rebuild, /derived index/);
   assert.match(contract.cli_surfaces.promote, /manifest-declared refs/);
   assert.match(contract.cli_surfaces.gc, /dry-run by default/);
+  assert.match(contract.cli_surfaces.restore, /restore proof ref/);
+  assert.match(contract.cli_surfaces.conformance, /strict Stage Folder/);
+  assert.match(contract.cli_surfaces.workbench, /App\/operator/);
 
   assert.equal(contract.authority_boundary.opl_can_index_refs, true);
   assert.equal(contract.authority_boundary.opl_can_rebuild_projection, true);
   assert.equal(contract.authority_boundary.opl_can_promote_canonical_pointer, true);
   for (const claim of [
     'opl_can_create_domain_owner_receipt',
+    'opl_can_create_rca_owner_receipt',
     'opl_can_write_domain_truth',
+    'opl_can_write_rca_visual_truth',
+    'opl_can_write_rca_review_export_verdict',
     'opl_can_mutate_artifact_body',
+    'opl_can_mutate_rca_artifact_body',
     'opl_can_declare_visual_or_quality_verdict',
   ]) {
     assert.equal(contract.authority_boundary[claim], false, `${claim} must remain outside OPL authority`);

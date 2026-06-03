@@ -12,7 +12,7 @@ function requireValue(token: string, value: string | undefined) {
 
 export function parseStageArtifactArgs(rest: string[]): FamilyRuntimeCommandInput | undefined {
   const action = rest[0];
-  if (!action || !['open', 'commit', 'status', 'explain', 'rebuild', 'promote', 'gc'].includes(action)) {
+  if (!action || !['open', 'commit', 'status', 'explain', 'rebuild', 'promote', 'gc', 'restore', 'conformance', 'workbench'].includes(action)) {
     return undefined;
   }
   const input: Record<string, unknown> = {
@@ -64,6 +64,9 @@ export function parseStageArtifactArgs(rest: string[]): FamilyRuntimeCommandInpu
     } else if (token === '--artifact-ref') {
       input.artifact_ref = requireValue(token, value);
       index += 1;
+    } else if (token === '--restore-ref') {
+      input.restore_ref = requireValue(token, value);
+      index += 1;
     } else if (token === '--apply') {
       input.dry_run = false;
     } else if (token === '--dry-run') {
@@ -71,7 +74,7 @@ export function parseStageArtifactArgs(rest: string[]): FamilyRuntimeCommandInpu
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown stage-artifact option: ${token}.`, {
         option: token,
-        usage: 'opl stage-artifact status|explain|rebuild|promote|gc --domain <domain> --program <id> --topic <id> --deliverable <id>',
+        usage: 'opl stage-artifact status|explain|rebuild|promote|gc|restore|conformance|workbench --domain <domain> --program <id> --topic <id> --deliverable <id>',
       });
     }
   }
@@ -87,6 +90,15 @@ export function parseStageArtifactArgs(rest: string[]): FamilyRuntimeCommandInpu
       if (!input[field]) {
         throw new FrameworkContractError('cli_usage_error', `stage-artifact promote requires ${field}.`, {
           required: ['--stage', '--attempt', '--artifact-ref'],
+        });
+      }
+    }
+  }
+  if (action === 'restore') {
+    for (const field of ['stage_id', 'attempt_id', 'restore_ref']) {
+      if (!input[field]) {
+        throw new FrameworkContractError('cli_usage_error', `stage-artifact restore requires ${field}.`, {
+          required: ['--stage', '--attempt', '--restore-ref'],
         });
       }
     }
@@ -125,6 +137,16 @@ export function parseStageArtifactArgs(rest: string[]): FamilyRuntimeCommandInpu
         ],
       });
     }
+  }
+  if (action !== 'promote' && input.artifact_ref) {
+    throw new FrameworkContractError('cli_usage_error', 'Artifact refs are only accepted by stage-artifact promote.', {
+      action,
+    });
+  }
+  if (action !== 'restore' && input.restore_ref) {
+    throw new FrameworkContractError('cli_usage_error', 'Restore refs are only accepted by stage-artifact restore.', {
+      action,
+    });
   }
   return {
     mode: 'stage_artifact',

@@ -94,7 +94,7 @@ export type FamilyRuntimeCommandInput =
   | {
     mode: 'stage_artifact';
     input: {
-      action: 'open' | 'commit' | 'status' | 'explain' | 'rebuild' | 'promote' | 'gc';
+      action: 'open' | 'commit' | 'status' | 'explain' | 'rebuild' | 'promote' | 'gc' | 'restore' | 'conformance' | 'workbench';
       domain_id: string;
       program_id: string;
       topic_id: string;
@@ -108,6 +108,7 @@ export type FamilyRuntimeCommandInput =
       typed_blocker_refs?: string[];
       decision_receipt_refs?: string[];
       artifact_ref?: string;
+      restore_ref?: string;
       dry_run?: boolean;
     };
   }

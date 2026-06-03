@@ -72,7 +72,10 @@ import {
   openStageArtifactAttemptRuntime,
   promoteStageArtifactRuntime,
   rebuildStageArtifactRuntime,
+  conformanceStageArtifactRuntime,
+  restoreStageArtifactRuntime,
   statusStageArtifactRuntime,
+  workbenchStageArtifactRuntime,
 } from './stage-artifact-runtime.ts';
 
 async function temporalProviderModule() {
@@ -467,6 +470,29 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
         return {
           version: 'g2',
           stage_artifact_runtime: gcStageArtifactRuntime(input),
+        };
+      }
+      if (input.action === 'restore') {
+        return {
+          version: 'g2',
+          stage_artifact_runtime: restoreStageArtifactRuntime({
+            ...input,
+            stage_id: input.stage_id ?? '',
+            attempt_id: input.attempt_id ?? '',
+            restore_ref: input.restore_ref ?? '',
+          }),
+        };
+      }
+      if (input.action === 'conformance') {
+        return {
+          version: 'g2',
+          stage_artifact_runtime: conformanceStageArtifactRuntime(input),
+        };
+      }
+      if (input.action === 'workbench') {
+        return {
+          version: 'g2',
+          stage_artifact_runtime: workbenchStageArtifactRuntime(input),
         };
       }
     }

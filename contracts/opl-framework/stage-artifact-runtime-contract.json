@@ -2,7 +2,7 @@
   "contract_kind": "opl_stage_artifact_runtime_contract.v1",
   "surface_kind": "opl_stage_artifact_runtime_contract",
   "owner": "one-person-lab",
-  "scope": "OPL-owned stage artifact folder contract, read model, derived index, canonical pointer, and conservative GC boundary",
+  "scope": "OPL-owned stage artifact folder contract, read model, conformance gate, content hash index, lineage events, workbench projection, canonical pointer, and retention/restore boundary",
   "state_root_layout": {
     "attempt_root_pattern": "runtime-state/domains/<domain>/deliverables/<program>/<topic>/<deliverable>/stages/<nn-stage>/attempts/<attempt_id>",
     "required_attempt_entries": [
@@ -14,7 +14,9 @@
       "receipts/"
     ],
     "current_pointer_role": "refs_only_current_or_canonical_artifact_pointer",
-    "derived_index_role": "rebuildable_projection_not_primary_truth"
+    "derived_index_role": "rebuildable_projection_not_primary_truth",
+    "lineage_root": "lineage/events.jsonl and lineage/graph.json",
+    "retention_root": "retention/attempts/<stage_id>/<attempt_id>"
   },
   "read_model_semantics": {
     "status_source_of_truth": "physical_stage_folder",
@@ -31,25 +33,111 @@
     "orphan_artifact_is_completion": false,
     "explain_must_report_missing_or_blocking_deltas": true
   },
+  "content_hash_semantics": {
+    "algorithm": "sha256",
+    "manifest_hash_fields": [
+      "output_hashes",
+      "evidence_hashes",
+      "receipt_hashes"
+    ],
+    "success_with_hash_mismatch_is_broken": true,
+    "conformance_requires_hash_entries_for_physical_files": true
+  },
+  "conformance_gate": {
+    "surface_kind": "opl_stage_artifact_runtime_conformance",
+    "strict_units": [
+      "Stage Folder",
+      "Manifest",
+      "Receipt",
+      "content_hashes",
+      "latest_pointer",
+      "current_pointer",
+      "lineage_events"
+    ],
+    "fails_on": [
+      "missing_deliverable_json",
+      "missing_stage_json",
+      "missing_required_attempt_entry",
+      "missing_latest_pointer",
+      "latest_pointer_missing_attempt",
+      "missing_current_pointer",
+      "missing_manifest_hash_entry",
+      "manifest_content_hash_mismatch",
+      "attempt_broken",
+      "attempt_orphan"
+    ],
+    "domain_readiness_claim": false
+  },
+  "workbench_projection": {
+    "surface_kind": "opl_stage_artifact_runtime_workbench",
+    "projects": [
+      "current_pointer",
+      "stage_status",
+      "attempt_manifest_refs",
+      "owner_receipt_refs",
+      "typed_blocker_refs",
+      "decision_receipt_refs",
+      "content_hashes",
+      "canonical_artifacts",
+      "export_artifacts",
+      "lineage_refs",
+      "retention_policy",
+      "conformance_summary"
+    ],
+    "artifact_body_access": false,
+    "domain_verdict_authority": false
+  },
+  "retention_restore_policy": {
+    "policy_id": "opl_stage_artifact_retention.v1",
+    "gc_dry_run_default": true,
+    "gc_apply_archives_instead_of_physical_delete": true,
+    "preserve_latest_attempt": true,
+    "preserve_canonical_attempts": true,
+    "restore_requires_restore_proof_ref": true,
+    "restore_does_not_create_owner_receipt": true,
+    "restore_does_not_declare_domain_truth_or_quality": true
+  },
+  "lineage_semantics": {
+    "event_log": "lineage/events.jsonl",
+    "derived_graph": "lineage/graph.json",
+    "event_kinds": [
+      "attempt_opened",
+      "attempt_committed",
+      "index_rebuilt",
+      "canonical_pointer_promoted",
+      "gc_dry_run",
+      "gc_archived_attempts",
+      "attempt_restored",
+      "conformance_checked"
+    ],
+    "events_are_refs_only": true
+  },
   "cli_surfaces": {
-    "top_level": "opl stage open|commit|status|explain|rebuild|promote|gc",
-    "legacy_alias": "opl stage-artifact open|commit|status|explain|rebuild|promote|gc",
-    "family_runtime": "opl family-runtime stage-artifact open|commit|status|explain|rebuild|promote|gc",
+    "top_level": "opl stage open|commit|status|explain|rebuild|promote|gc|restore|conformance|workbench",
+    "legacy_alias": "opl stage-artifact open|commit|status|explain|rebuild|promote|gc|restore|conformance|workbench",
+    "family_runtime": "opl family-runtime stage-artifact open|commit|status|explain|rebuild|promote|gc|restore|conformance|workbench",
     "open": "create a stage attempt workspace with inputs outputs evidence receipts and stage/deliverable descriptors",
-    "commit": "validate manifest terminal status against required outputs and receipt or blocker evidence, write manifest, then atomically advance latest/current pointers",
+    "commit": "validate manifest terminal status against required outputs and receipt or blocker evidence, write manifest with sha256 content hashes, then atomically advance latest/current pointers",
     "status": "derive stage and attempt state from physical folders",
     "explain": "explain current incomplete stage, blocker, orphan, or missing receipt/output state",
-    "rebuild": "refresh derived index from physical folders",
+    "rebuild": "refresh derived index and lineage graph from physical folders",
     "promote": "write refs-only canonical artifact pointer from manifest-declared refs",
-    "gc": "dry-run by default and only consider non-latest non-canonical attempts"
+    "gc": "dry-run by default and only archive non-latest non-canonical attempts with restore proof refs when applied",
+    "restore": "restore an archived attempt only when a matching restore proof ref is provided",
+    "conformance": "run strict Stage Folder + Manifest + Receipt + hash + pointer + lineage checks",
+    "workbench": "project artifact-native current/canonical/export/lineage/retention/conformance refs for App/operator consumers"
   },
   "authority_boundary": {
     "opl_can_index_refs": true,
     "opl_can_rebuild_projection": true,
     "opl_can_promote_canonical_pointer": true,
     "opl_can_create_domain_owner_receipt": false,
+    "opl_can_create_rca_owner_receipt": false,
     "opl_can_write_domain_truth": false,
+    "opl_can_write_rca_visual_truth": false,
+    "opl_can_write_rca_review_export_verdict": false,
     "opl_can_mutate_artifact_body": false,
+    "opl_can_mutate_rca_artifact_body": false,
     "opl_can_declare_visual_or_quality_verdict": false
   },
   "forbidden_semantics": [

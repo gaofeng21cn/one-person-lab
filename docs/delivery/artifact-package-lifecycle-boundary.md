@@ -23,6 +23,10 @@ OPL 不拥有 manuscript、grant package、deck、visual artifact、review/expor
 
 通用 artifact/package/export lifecycle 的默认物理读法是 stage-native：stage attempt 在外部 runtime artifact root 内以 `Stage Folder + Manifest + Receipt` 形成最小可物化单元。OPL 只索引 stage folder、manifest、receipt ref、content hash、lineage event、current/latest pointer、canonical/export promotion ref 和 retention / restore policy；domain repo 持有 artifact body、quality/export verdict、owner receipt 和最终交付 authority。
 
+`opl stage open` / `opl stage-artifact open` 必须物化 `attempt.json`、`manifest.json`、`inputs/`、`outputs/`、`evidence/` 和 `receipts/`；`commit` 写入 required outputs、receipt refs 和 sha256 content hash；`promote` 只能从物理目录推导为 receipt-backed `success` 的 attempt 写 refs-only canonical pointer。对 RCA 这类 visual domain，OPL 的 RCA owner receipt、visual truth、review/export verdict 和 artifact body 写入权限保持显式 `false`。
+
+`opl stage conformance` 是严格 gate：检查 deliverable/stage/attempt 必备条目、manifest/receipt/hash、latest/current pointer、orphan/broken attempt 和 lineage refs；通过只说明 Stage Folder Contract 自洽，不说明 domain ready、quality ready 或 export ready。`opl stage workbench` 是 App/operator 的 artifact-native projection，集中显示 current/canonical/export refs、receipt refs、typed blocker refs、hash、lineage、retention/restore policy 和 conformance summary。`opl stage gc --apply` 只把非 latest、非 canonical attempt 移入 retention archive 并写 restore proof；`restore` 必须带 matching restore proof ref，且不会生成 owner receipt 或 domain verdict。
+
 artifact 状态分类固定为：
 
 | 状态 | 判定 | 处理 |
@@ -41,6 +45,7 @@ artifact 状态分类固定为：
 | delivery/lifecycle 面 | 稳定读法 | 当前机器入口 |
 | --- | --- | --- |
 | Generic substrate projection | OPL 只拥有 artifact ref index、memory/source/workspace ref index、lifecycle projection、manifest ref transport 和 App/operator grouping。 | `contracts/opl-framework/generic-substrate-projection-contract.json`、`src/generic-substrate-projection.ts`、`tests/src/generic-substrate-projection.test.ts`。 |
+| Stage Artifact runtime | OPL 从物理 stage folders 重建 status/explain/index/workbench，执行 conformance、content hash、lineage graph、retention archive 和 restore proof ref 维护；不持有 artifact body 或 owner verdict。 | `contracts/opl-framework/stage-artifact-runtime-contract.json`、`src/stage-artifact-runtime.ts`、`tests/src/stage-artifact-runtime.test.ts`、`opl stage conformance --json`、`opl stage workbench --json`。 |
 | Package/export projection | Stage attempt 和 workbench 只投影 package refs、export refs、gap report refs、handoff refs、artifact refs 和 external submission status ref。 | `src/runtime-tray-package-export-lifecycle.ts`、`tests/src/cli/cases/runtime-app-operator-drilldown-lifecycle.test.ts`、`opl runtime app-operator-drilldown --json`。 |
 | Lifecycle apply/index | OPL-owned runtime/index/provenance/tombstone refs 可以走 dry-run/apply/verify ledger；domain artifact mutation 只能以 domain owner receipt ref 进入索引；refs-only drift/readiness inspection 通过 lifecycle index、tests 和 App/operator read-model 读取。 | `contracts/family-orchestration/family-lifecycle-ledger.schema.json`、`src/family-runtime-lifecycle-index.ts`、`tests/src/family-runtime-lifecycle-index.test.ts`、`src/family-runtime-command-parts/lifecycle.ts`、`opl family-runtime lifecycle apply`、`opl family-runtime lifecycle reconcile`。 |
 | Repo-source artifact boundary | Standard Foundry Agent repo-source 不保存真实 artifact body；只保存 locator refs、freshness、receipt refs、restore proof refs 和 migration state。 | `contracts/opl-framework/standard-domain-agent-skeleton-contract.json`、`docs/policies/runtime-artifact-hygiene-policy.md`、`opl agents conformance --family-defaults --json`。 |
