@@ -2,8 +2,8 @@ import type { DatabaseSync } from 'node:sqlite';
 
 import type { FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import {
-  isMasDefaultExecutorDispatchTask,
-  masDefaultExecutorStudyIdentity,
+  isDefaultExecutorDispatchTask,
+  defaultExecutorStudyIdentity,
 } from './family-runtime-provider-hosted-attempts.ts';
 import type { StageAttemptRow } from './family-runtime-stage-attempt-ledger.ts';
 import {
@@ -24,7 +24,7 @@ type WorkUnitIdentity = {
   source_fingerprint: string | null;
 };
 
-const CURRENT_MAS_DEFAULT_EXECUTOR_TASK_STATUSES = new Set([
+const CURRENT_DEFAULT_EXECUTOR_TASK_STATUSES = new Set([
   'queued',
   'retry_waiting',
   'running',
@@ -392,16 +392,16 @@ function mismatchedWorkUnitIdentityFields(stale: WorkUnitIdentity, current: Work
     .filter((field) => stale[field] && current[field] && stale[field] !== current[field]);
 }
 
-function currentMasDefaultExecutorSameStudyTask(
+function currentDefaultExecutorSameStudyTask(
   db: DatabaseSync,
   task: FamilyRuntimeTaskRow,
   taskPayload: Record<string, unknown>,
   current: ControlAttemptRow,
 ) {
-  if (!isMasDefaultExecutorDispatchTask(task, taskPayload)) {
+  if (!isDefaultExecutorDispatchTask(task, taskPayload)) {
     return null;
   }
-  const studyIdentity = masDefaultExecutorStudyIdentity(task, taskPayload);
+  const studyIdentity = defaultExecutorStudyIdentity(task, taskPayload);
   if (!studyIdentity) {
     return null;
   }
@@ -414,15 +414,15 @@ function currentMasDefaultExecutorSameStudyTask(
   for (const row of rows) {
     if (
       row.task_id === task.task_id
-      || !CURRENT_MAS_DEFAULT_EXECUTOR_TASK_STATUSES.has(row.status)
+      || !CURRENT_DEFAULT_EXECUTOR_TASK_STATUSES.has(row.status)
       || !isNewerTask(row, task)
     ) {
       continue;
     }
     const payload = parseRecord(row.payload_json);
     if (
-      !isMasDefaultExecutorDispatchTask(row, payload)
-      || masDefaultExecutorStudyIdentity(row, payload) !== studyIdentity
+      !isDefaultExecutorDispatchTask(row, payload)
+      || defaultExecutorStudyIdentity(row, payload) !== studyIdentity
     ) {
       continue;
     }
@@ -452,7 +452,7 @@ function staleWorkUnitDiagnostic(
   if (!task || !current || !liveProviderAttempt) {
     return null;
   }
-  const currentTask = currentMasDefaultExecutorSameStudyTask(db, task, taskPayload, current);
+  const currentTask = currentDefaultExecutorSameStudyTask(db, task, taskPayload, current);
   if (!currentTask) {
     return null;
   }

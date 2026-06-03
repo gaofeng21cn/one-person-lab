@@ -427,7 +427,7 @@ function closeoutPacketFromDefaultExecutorExecution(input: {
   });
 }
 
-function recoverMasDefaultExecutorReceiptCloseout(input: {
+function recoverDefaultExecutorDomainReceiptCloseout(input: {
   workspaceRoot: string;
   stagePacketRef: string;
 }) {
@@ -727,7 +727,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     sessionUsageRef = extractCodexSessionUsageRef(recoverCodexExecOutputFromSession(parsed.threadId));
   }
   if (!closeoutPacket && result.timeoutReason !== 'unsupported_tool_protocol') {
-    const domainReceiptRecovery = recoverMasDefaultExecutorReceiptCloseout({
+    const domainReceiptRecovery = recoverDefaultExecutorDomainReceiptCloseout({
       workspaceRoot,
       stagePacketRef,
     });

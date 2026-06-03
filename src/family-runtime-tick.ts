@@ -16,17 +16,17 @@ import {
   updateStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
 import {
-  findLiveMasDefaultExecutorDispatchAttempt,
-  findLiveMasDefaultExecutorStudyAttempt,
+  findLiveDefaultExecutorDispatchAttempt,
+  findLiveDefaultExecutorStudyAttempt,
   ensureProviderHostedStageAttempt,
-  isMasDefaultExecutorDispatchTask,
-  masDefaultExecutorDispatchIdentity,
-  masDefaultExecutorDomainSourceFingerprint,
-  masDefaultExecutorStudyActionIdentity,
-  refreshMasDefaultExecutorLiveAttemptTaskLease,
+  isDefaultExecutorDispatchTask,
+  defaultExecutorDispatchIdentity,
+  defaultExecutorDomainSourceFingerprint,
+  defaultExecutorStudyActionIdentity,
+  refreshDefaultExecutorLiveAttemptTaskLease,
   stageIdForProviderHostedTask,
 } from './family-runtime-provider-hosted-attempts.ts';
-import { redriveBlockedMasDefaultExecutorProviderTransportTask } from './family-runtime-redrive.ts';
+import { redriveBlockedDefaultExecutorProviderTransportTask } from './family-runtime-redrive.ts';
 import {
   MAS_PAPER_AUTONOMY_DOMAIN_HANDLER_CLOSEOUT_REQUIRED_REASON,
   MAS_PAPER_AUTONOMY_TASK_KINDS,
@@ -35,14 +35,14 @@ import {
   applyProgressFirstAntiSpinGate,
 } from './family-runtime-progress-first-anti-spin-gate.ts';
 import {
-  currentMasDefaultExecutorTasksByDispatch,
-  currentMasDefaultExecutorTasksByStudyAction,
-  dropCompletedMasDefaultExecutorRows,
-  dropSameStudyMasDefaultExecutorRows,
-  dropSupersededMasDefaultExecutorRows,
-  MAS_DEFAULT_EXECUTOR_SUPERSEDED_REASON,
+  currentDefaultExecutorTasksByDispatch,
+  currentDefaultExecutorTasksByStudyAction,
+  dropCompletedDefaultExecutorRows,
+  dropSameStudyDefaultExecutorRows,
+  dropSupersededDefaultExecutorRows,
+  DEFAULT_EXECUTOR_SUPERSEDED_REASON,
   payloadFromTask,
-} from './family-runtime-tick-parts/mas-default-executor-currentness.ts';
+} from './family-runtime-tick-parts/default-executor-currentness.ts';
 
 type EnqueueTaskResult = {
   accepted?: boolean;
@@ -52,7 +52,7 @@ type EnqueueTaskResult = {
 };
 
 type EnqueueTask = (db: DatabaseSync, input: EnqueueInput) => EnqueueTaskResult;
-type StageAttemptPayload = NonNullable<ReturnType<typeof findLiveMasDefaultExecutorDispatchAttempt>>;
+type StageAttemptPayload = NonNullable<ReturnType<typeof findLiveDefaultExecutorDispatchAttempt>>;
 type QueryTemporalStageAttempt = (attempt: StageAttemptPayload) => unknown | Promise<unknown>;
 type RunFamilyRuntimeQueueTickInput = {
   source: string;
@@ -71,17 +71,17 @@ type RunFamilyRuntimeQueueTickHandlers<TDispatch> = {
   queryTemporalStageAttempt?: QueryTemporalStageAttempt;
 };
 type MaintenanceReconcileResult = {
-  masDefaultExecutorTerminalSyncedCount: number;
+  defaultExecutorTerminalSyncedCount: number;
   repairedMissingIdentityRunningCount: number;
   repairedMissingIdentityDeadLetteredCount: number;
   repairedMissingIdentityTaskIds: Set<string>;
   repairedPaperAutonomyMissingCloseoutCount: number;
   repairedPaperAutonomyMissingCloseoutTaskIds: Set<string>;
-  masDefaultExecutorSupersededAttemptReconciledCount: number;
+  defaultExecutorSupersededAttemptReconciledCount: number;
   waitingApprovalAttemptReconciledCount: number;
-  masDefaultExecutorAutoRedrivenCount: number;
-  masDefaultExecutorAutoDeadLetteredCount: number;
-  masDefaultExecutorAutoRedriveStaleSkippedCount: number;
+  defaultExecutorAutoRedrivenCount: number;
+  defaultExecutorAutoDeadLetteredCount: number;
+  defaultExecutorAutoRedriveStaleSkippedCount: number;
 };
 
 const PROVIDER_TRANSPORT_REDRIVE_REASONS = new Set([
@@ -93,18 +93,18 @@ const PROVIDER_TRANSPORT_REDRIVE_REASONS = new Set([
 const MISSING_STAGE_ATTEMPT_IDENTITY_REPAIR_REASON = 'missing_stage_attempt_identity';
 const WAITING_APPROVAL_ATTEMPT_RECONCILIATION_STATUSES = new Set(['queued', 'running', 'checkpointed']);
 
-function reconcileHistoricalSupersededMasDefaultExecutorAttempts(
+function reconcileHistoricalSupersededDefaultExecutorAttempts(
   db: DatabaseSync,
   rows: FamilyRuntimeTaskRow[],
   source: string,
 ) {
   let reconciledAttemptCount = 0;
   for (const row of rows) {
-    if (row.status !== 'blocked' || row.dead_letter_reason !== MAS_DEFAULT_EXECUTOR_SUPERSEDED_REASON) {
+    if (row.status !== 'blocked' || row.dead_letter_reason !== DEFAULT_EXECUTOR_SUPERSEDED_REASON) {
       continue;
     }
     const payload = payloadFromTask(row);
-    if (!isMasDefaultExecutorDispatchTask(row, payload)) {
+    if (!isDefaultExecutorDispatchTask(row, payload)) {
       continue;
     }
     const attempts = listStageAttemptsForTask(db, row.task_id).filter((attempt) => (
@@ -118,11 +118,11 @@ function reconcileHistoricalSupersededMasDefaultExecutorAttempts(
       taskId: row.task_id,
       stageAttemptIds: attempts.map((attempt) => attempt.stage_attempt_id),
       status: 'blocked',
-      blockedReason: MAS_DEFAULT_EXECUTOR_SUPERSEDED_REASON,
+      blockedReason: DEFAULT_EXECUTOR_SUPERSEDED_REASON,
       activityEvent: {
         activity_kind: 'mas_default_executor_currentness',
         activity_status: 'blocked',
-        blocked_reason: MAS_DEFAULT_EXECUTOR_SUPERSEDED_REASON,
+        blocked_reason: DEFAULT_EXECUTOR_SUPERSEDED_REASON,
         reason: 'historical_superseded_task_attempt_reconciliation',
         authority_boundary: {
           opl: 'queue_attempt_ledger_currentness_reconciliation_only',
@@ -392,7 +392,7 @@ function repairSucceededMasPaperAutonomyTasksMissingCloseout(
   return { repairedCount, repairedTaskIds };
 }
 
-function autoRedriveBlockedMasDefaultExecutorProviderTasks(
+function autoRedriveBlockedDefaultExecutorProviderTasks(
   db: DatabaseSync,
   rows: FamilyRuntimeTaskRow[],
   source: string,
@@ -401,8 +401,8 @@ function autoRedriveBlockedMasDefaultExecutorProviderTasks(
   let autoDeadLetteredCount = 0;
   let staleSkippedCount = 0;
   const redrivenAt = new Date().toISOString();
-  const currentByIdentity = currentMasDefaultExecutorTasksByDispatch(rows);
-  const currentByStudyAction = currentMasDefaultExecutorTasksByStudyAction(rows);
+  const currentByIdentity = currentDefaultExecutorTasksByDispatch(rows);
+  const currentByStudyAction = currentDefaultExecutorTasksByStudyAction(rows);
   for (const row of rows) {
     if (
       row.status !== 'blocked'
@@ -411,14 +411,14 @@ function autoRedriveBlockedMasDefaultExecutorProviderTasks(
       continue;
     }
     const payload = payloadFromTask(row);
-    if (!isMasDefaultExecutorDispatchTask(row, payload)) {
+    if (!isDefaultExecutorDispatchTask(row, payload)) {
       continue;
     }
-    const identity = masDefaultExecutorDispatchIdentity(row, payload);
-    const actionIdentity = masDefaultExecutorStudyActionIdentity(row, payload);
+    const identity = defaultExecutorDispatchIdentity(row, payload);
+    const actionIdentity = defaultExecutorStudyActionIdentity(row, payload);
     const current = identity ? currentByIdentity.get(identity) : null;
     const currentAction = actionIdentity ? currentByStudyAction.get(actionIdentity) : null;
-    const sourceFingerprint = masDefaultExecutorDomainSourceFingerprint(payload);
+    const sourceFingerprint = defaultExecutorDomainSourceFingerprint(payload);
     if (
       current
       && current.task_id !== row.task_id
@@ -516,7 +516,7 @@ function autoRedriveBlockedMasDefaultExecutorProviderTasks(
       autoDeadLetteredCount += 1;
       continue;
     }
-    const redrive = redriveBlockedMasDefaultExecutorProviderTransportTask(db, row, payload, {
+    const redrive = redriveBlockedDefaultExecutorProviderTransportTask(db, row, payload, {
       trigger: 'auto',
       source,
       usedAttempts,
@@ -530,11 +530,11 @@ function autoRedriveBlockedMasDefaultExecutorProviderTasks(
   return { autoRedrivenCount, autoDeadLetteredCount, staleSkippedCount };
 }
 
-function isLiveMasDefaultExecutorAttempt(attempt: StageAttemptPayload | null) {
+function isLiveDefaultExecutorAttempt(attempt: StageAttemptPayload | null) {
   return Boolean(attempt && ['queued', 'running', 'checkpointed', 'human_gate'].includes(attempt.status));
 }
 
-function isExpiredMasDefaultExecutorTaskLease(row: FamilyRuntimeTaskRow) {
+function isExpiredDefaultExecutorTaskLease(row: FamilyRuntimeTaskRow) {
   if (row.status !== 'running' || !row.lease_expires_at) {
     return false;
   }
@@ -542,7 +542,7 @@ function isExpiredMasDefaultExecutorTaskLease(row: FamilyRuntimeTaskRow) {
   return Number.isFinite(leaseExpiresAt) && leaseExpiresAt <= Date.now();
 }
 
-function isObservableRunningMasDefaultExecutorAttempt(row: FamilyRuntimeTaskRow) {
+function isObservableRunningDefaultExecutorAttempt(row: FamilyRuntimeTaskRow) {
   return (attempt: StageAttemptPayload) => {
     const observableStarted = attempt.provider_kind === 'temporal'
       && attempt.executor_kind === 'codex_cli'
@@ -550,7 +550,7 @@ function isObservableRunningMasDefaultExecutorAttempt(row: FamilyRuntimeTaskRow)
     if (observableStarted) {
       return true;
     }
-    return isExpiredMasDefaultExecutorTaskLease(row)
+    return isExpiredDefaultExecutorTaskLease(row)
       && attempt.provider_kind === 'temporal'
       && attempt.executor_kind === 'codex_cli'
       && attempt.status === 'queued'
@@ -558,13 +558,13 @@ function isObservableRunningMasDefaultExecutorAttempt(row: FamilyRuntimeTaskRow)
   };
 }
 
-function isProviderStartedMasDefaultExecutorAttempt(attempt: StageAttemptPayload) {
+function isProviderStartedDefaultExecutorAttempt(attempt: StageAttemptPayload) {
   return attempt.provider_kind === 'temporal'
     && attempt.executor_kind === 'codex_cli'
     && ['running', 'checkpointed', 'human_gate'].includes(attempt.status);
 }
 
-async function syncObservableMasDefaultExecutorAttempt(
+async function syncObservableDefaultExecutorAttempt(
   db: DatabaseSync,
   attempt: StageAttemptPayload,
   queryTemporalStageAttempt?: QueryTemporalStageAttempt,
@@ -576,7 +576,7 @@ async function syncObservableMasDefaultExecutorAttempt(
   return syncStageAttemptFromTemporalTerminalObservation(db, observation) ?? attempt;
 }
 
-async function dropLiveMasDefaultExecutorRows(
+async function dropLiveDefaultExecutorRows(
   db: DatabaseSync,
   candidateRows: FamilyRuntimeTaskRow[],
   options: {
@@ -588,24 +588,24 @@ async function dropLiveMasDefaultExecutorRows(
   const rows: FamilyRuntimeTaskRow[] = [];
   for (const row of candidateRows) {
     const payload = payloadFromTask(row);
-    const liveAttempt = findLiveMasDefaultExecutorDispatchAttempt(db, row, payload);
-    const liveStudyAttempt = liveAttempt ?? findLiveMasDefaultExecutorStudyAttempt(db, row, payload);
+    const liveAttempt = findLiveDefaultExecutorDispatchAttempt(db, row, payload);
+    const liveStudyAttempt = liveAttempt ?? findLiveDefaultExecutorStudyAttempt(db, row, payload);
     if (!liveStudyAttempt) {
       rows.push(row);
       continue;
     }
-    const syncedAttempt = await syncObservableMasDefaultExecutorAttempt(
+    const syncedAttempt = await syncObservableDefaultExecutorAttempt(
       db,
       liveStudyAttempt,
       options.queryTemporalStageAttempt,
     );
-    if (!isLiveMasDefaultExecutorAttempt(syncedAttempt)) {
+    if (!isLiveDefaultExecutorAttempt(syncedAttempt)) {
       terminalSyncedCount += 1;
       rows.push(row);
       continue;
     }
     liveSkippedCount += 1;
-    refreshMasDefaultExecutorLiveAttemptTaskLease(db, {
+    refreshDefaultExecutorLiveAttemptTaskLease(db, {
       attempt: syncedAttempt,
       source: 'opl-family-runtime-tick',
       reason: liveAttempt ? 'same_dispatch_live_stage_attempt_exists' : 'same_study_live_stage_attempt_exists',
@@ -629,7 +629,7 @@ async function dropLiveMasDefaultExecutorRows(
   return { rows, liveSkippedCount, terminalSyncedCount };
 }
 
-async function syncRunningMasDefaultExecutorTaskAttempts(
+async function syncRunningDefaultExecutorTaskAttempts(
   db: DatabaseSync,
   rows: FamilyRuntimeTaskRow[],
   options: {
@@ -645,19 +645,19 @@ async function syncRunningMasDefaultExecutorTaskAttempts(
       continue;
     }
     const payload = payloadFromTask(row);
-    if (!isMasDefaultExecutorDispatchTask(row, payload)) {
+    if (!isDefaultExecutorDispatchTask(row, payload)) {
       continue;
     }
     const attempts = listStageAttemptsForTask(db, row.task_id).filter(
-      isObservableRunningMasDefaultExecutorAttempt(row),
+      isObservableRunningDefaultExecutorAttempt(row),
     );
     for (const attempt of attempts) {
-      const syncedAttempt = await syncObservableMasDefaultExecutorAttempt(
+      const syncedAttempt = await syncObservableDefaultExecutorAttempt(
         db,
         attempt,
         options.queryTemporalStageAttempt,
       );
-      if (!isProviderStartedMasDefaultExecutorAttempt(syncedAttempt)) {
+      if (!isProviderStartedDefaultExecutorAttempt(syncedAttempt)) {
         terminalSyncedCount += 1;
       }
     }
@@ -667,17 +667,17 @@ async function syncRunningMasDefaultExecutorTaskAttempts(
 
 function zeroMaintenanceReconcileResult(): MaintenanceReconcileResult {
   return {
-    masDefaultExecutorTerminalSyncedCount: 0,
+    defaultExecutorTerminalSyncedCount: 0,
     repairedMissingIdentityRunningCount: 0,
     repairedMissingIdentityDeadLetteredCount: 0,
     repairedMissingIdentityTaskIds: new Set<string>(),
     repairedPaperAutonomyMissingCloseoutCount: 0,
     repairedPaperAutonomyMissingCloseoutTaskIds: new Set<string>(),
-    masDefaultExecutorSupersededAttemptReconciledCount: 0,
+    defaultExecutorSupersededAttemptReconciledCount: 0,
     waitingApprovalAttemptReconciledCount: 0,
-    masDefaultExecutorAutoRedrivenCount: 0,
-    masDefaultExecutorAutoDeadLetteredCount: 0,
-    masDefaultExecutorAutoRedriveStaleSkippedCount: 0,
+    defaultExecutorAutoRedrivenCount: 0,
+    defaultExecutorAutoDeadLetteredCount: 0,
+    defaultExecutorAutoRedriveStaleSkippedCount: 0,
   };
 }
 
@@ -694,7 +694,7 @@ async function runMaintenanceReconcile(
   const rowsForMaintenance = () => (db.prepare('SELECT * FROM tasks').all() as FamilyRuntimeTaskRow[])
     .filter((row) => taskRowMatchesScope(row, input.taskScope) && !excludeTaskIds.has(row.task_id));
   const scopedRowsBeforeAutoRedrive = rowsForMaintenance();
-  const masDefaultExecutorTerminalSyncedCount = await syncRunningMasDefaultExecutorTaskAttempts(
+  const defaultExecutorTerminalSyncedCount = await syncRunningDefaultExecutorTaskAttempts(
     db,
     scopedRowsBeforeAutoRedrive,
     { queryTemporalStageAttempt: handlers.queryTemporalStageAttempt },
@@ -720,7 +720,7 @@ async function runMaintenanceReconcile(
     `${input.source}:paper-autonomy-closeout-repair`,
   );
   const scopedRowsAfterPaperAutonomyRepair = rowsForMaintenance();
-  const masDefaultExecutorSupersededAttemptReconciledCount = reconcileHistoricalSupersededMasDefaultExecutorAttempts(
+  const defaultExecutorSupersededAttemptReconciledCount = reconcileHistoricalSupersededDefaultExecutorAttempts(
     db,
     scopedRowsAfterPaperAutonomyRepair,
     `${input.source}:superseded-attempt-reconcile`,
@@ -736,26 +736,26 @@ async function runMaintenanceReconcile(
   );
   const scopedRowsAfterWaitingApprovalAttemptReconcile = rowsForMaintenance();
   const {
-    autoRedrivenCount: masDefaultExecutorAutoRedrivenCount,
-    autoDeadLetteredCount: masDefaultExecutorAutoDeadLetteredCount,
-    staleSkippedCount: masDefaultExecutorAutoRedriveStaleSkippedCount,
-  } = autoRedriveBlockedMasDefaultExecutorProviderTasks(
+    autoRedrivenCount: defaultExecutorAutoRedrivenCount,
+    autoDeadLetteredCount: defaultExecutorAutoDeadLetteredCount,
+    staleSkippedCount: defaultExecutorAutoRedriveStaleSkippedCount,
+  } = autoRedriveBlockedDefaultExecutorProviderTasks(
     db,
     scopedRowsAfterWaitingApprovalAttemptReconcile,
     `${input.source}:auto-redrive`,
   );
   return {
-    masDefaultExecutorTerminalSyncedCount,
+    defaultExecutorTerminalSyncedCount,
     repairedMissingIdentityRunningCount,
     repairedMissingIdentityDeadLetteredCount,
     repairedMissingIdentityTaskIds,
     repairedPaperAutonomyMissingCloseoutCount,
     repairedPaperAutonomyMissingCloseoutTaskIds,
-    masDefaultExecutorSupersededAttemptReconciledCount,
+    defaultExecutorSupersededAttemptReconciledCount,
     waitingApprovalAttemptReconciledCount,
-    masDefaultExecutorAutoRedrivenCount,
-    masDefaultExecutorAutoDeadLetteredCount,
-    masDefaultExecutorAutoRedriveStaleSkippedCount,
+    defaultExecutorAutoRedrivenCount,
+    defaultExecutorAutoDeadLetteredCount,
+    defaultExecutorAutoRedriveStaleSkippedCount,
   };
 }
 
@@ -777,16 +777,16 @@ async function selectDispatchCandidates(
   );
   const {
     rows: scopedRowsAfterCompletedCloseout,
-    completedCloseoutReconciledCount: masDefaultExecutorCompletedCloseoutReconciledCount,
-  } = dropCompletedMasDefaultExecutorRows(
+    completedCloseoutReconciledCount: defaultExecutorCompletedCloseoutReconciledCount,
+  } = dropCompletedDefaultExecutorRows(
     db,
     scopedRowsBeforeSupersededFilter,
     'opl-family-runtime-tick',
   );
   const {
     rows: scopedRowsAfterSuperseded,
-    supersededCount: masDefaultExecutorSupersededCount,
-  } = dropSupersededMasDefaultExecutorRows(
+    supersededCount: defaultExecutorSupersededCount,
+  } = dropSupersededDefaultExecutorRows(
     db,
     scopedRowsAfterCompletedCloseout,
     allRows,
@@ -794,13 +794,13 @@ async function selectDispatchCandidates(
   );
   const {
     rows: scopedRowsAfterStudySingleFlight,
-    studySingleFlightSkippedCount: masDefaultExecutorStudySingleFlightSkippedCount,
-  } = dropSameStudyMasDefaultExecutorRows(db, scopedRowsAfterSuperseded, 'opl-family-runtime-tick');
+    studySingleFlightSkippedCount: defaultExecutorStudySingleFlightSkippedCount,
+  } = dropSameStudyDefaultExecutorRows(db, scopedRowsAfterSuperseded, 'opl-family-runtime-tick');
   const {
     rows: scopedRows,
-    liveSkippedCount: masDefaultExecutorLiveSkippedCount,
-    terminalSyncedCount: masDefaultExecutorLiveTerminalSyncedCount,
-  } = await dropLiveMasDefaultExecutorRows(db, scopedRowsAfterStudySingleFlight, {
+    liveSkippedCount: defaultExecutorLiveSkippedCount,
+    terminalSyncedCount: defaultExecutorLiveTerminalSyncedCount,
+  } = await dropLiveDefaultExecutorRows(db, scopedRowsAfterStudySingleFlight, {
     queryTemporalStageAttempt: handlers.queryTemporalStageAttempt,
   });
   const {
@@ -814,11 +814,11 @@ async function selectDispatchCandidates(
   return {
     rows,
     filteredCount,
-    masDefaultExecutorSupersededCount,
-    masDefaultExecutorStudySingleFlightSkippedCount,
-    masDefaultExecutorLiveSkippedCount,
-    masDefaultExecutorLiveTerminalSyncedCount,
-    masDefaultExecutorCompletedCloseoutReconciledCount,
+    defaultExecutorSupersededCount,
+    defaultExecutorStudySingleFlightSkippedCount,
+    defaultExecutorLiveSkippedCount,
+    defaultExecutorLiveTerminalSyncedCount,
+    defaultExecutorCompletedCloseoutReconciledCount,
     progressFirstAntiSpinBlockedCount,
   };
 }
@@ -850,30 +850,30 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
   const noExcludedTaskIds = new Set<string>();
   let selection = await selectDispatchCandidates(db, input, handlers, noExcludedTaskIds);
   const selectionTotals = {
-    masDefaultExecutorSupersededCount: selection.masDefaultExecutorSupersededCount,
-    masDefaultExecutorStudySingleFlightSkippedCount: selection.masDefaultExecutorStudySingleFlightSkippedCount,
-    masDefaultExecutorLiveSkippedCount: selection.masDefaultExecutorLiveSkippedCount,
-    masDefaultExecutorLiveTerminalSyncedCount: selection.masDefaultExecutorLiveTerminalSyncedCount,
-    masDefaultExecutorCompletedCloseoutReconciledCount:
-      selection.masDefaultExecutorCompletedCloseoutReconciledCount,
+    defaultExecutorSupersededCount: selection.defaultExecutorSupersededCount,
+    defaultExecutorStudySingleFlightSkippedCount: selection.defaultExecutorStudySingleFlightSkippedCount,
+    defaultExecutorLiveSkippedCount: selection.defaultExecutorLiveSkippedCount,
+    defaultExecutorLiveTerminalSyncedCount: selection.defaultExecutorLiveTerminalSyncedCount,
+    defaultExecutorCompletedCloseoutReconciledCount:
+      selection.defaultExecutorCompletedCloseoutReconciledCount,
     progressFirstAntiSpinBlockedCount: selection.progressFirstAntiSpinBlockedCount,
   };
   const selectedBeforeMaintenanceCount = selection.rows.length;
   if (selection.rows.length === 0) {
     maintenanceReconcileRanBeforeDispatch = true;
     maintenanceReconcile = await runMaintenanceReconcile(db, input, handlers, noExcludedTaskIds);
-    if (maintenanceReconcile.masDefaultExecutorAutoRedrivenCount > 0) {
+    if (maintenanceReconcile.defaultExecutorAutoRedrivenCount > 0) {
       const repairedTaskIds = mergeTaskIdSets(
         maintenanceReconcile.repairedMissingIdentityTaskIds,
         maintenanceReconcile.repairedPaperAutonomyMissingCloseoutTaskIds,
       );
       selection = await selectDispatchCandidates(db, input, handlers, repairedTaskIds);
-      selectionTotals.masDefaultExecutorSupersededCount += selection.masDefaultExecutorSupersededCount;
-      selectionTotals.masDefaultExecutorStudySingleFlightSkippedCount += selection.masDefaultExecutorStudySingleFlightSkippedCount;
-      selectionTotals.masDefaultExecutorLiveSkippedCount += selection.masDefaultExecutorLiveSkippedCount;
-      selectionTotals.masDefaultExecutorLiveTerminalSyncedCount += selection.masDefaultExecutorLiveTerminalSyncedCount;
-      selectionTotals.masDefaultExecutorCompletedCloseoutReconciledCount +=
-        selection.masDefaultExecutorCompletedCloseoutReconciledCount;
+      selectionTotals.defaultExecutorSupersededCount += selection.defaultExecutorSupersededCount;
+      selectionTotals.defaultExecutorStudySingleFlightSkippedCount += selection.defaultExecutorStudySingleFlightSkippedCount;
+      selectionTotals.defaultExecutorLiveSkippedCount += selection.defaultExecutorLiveSkippedCount;
+      selectionTotals.defaultExecutorLiveTerminalSyncedCount += selection.defaultExecutorLiveTerminalSyncedCount;
+      selectionTotals.defaultExecutorCompletedCloseoutReconciledCount +=
+        selection.defaultExecutorCompletedCloseoutReconciledCount;
       selectionTotals.progressFirstAntiSpinBlockedCount += selection.progressFirstAntiSpinBlockedCount;
     }
   }
@@ -907,22 +907,34 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       limit: input.limit,
       selected_count: rows.length,
       filtered_count: filteredCount,
-      mas_default_executor_superseded_count: selectionTotals.masDefaultExecutorSupersededCount,
-      mas_default_executor_study_single_flight_skipped_count: selectionTotals.masDefaultExecutorStudySingleFlightSkippedCount,
-      mas_default_executor_live_skipped_count: selectionTotals.masDefaultExecutorLiveSkippedCount,
-      mas_default_executor_terminal_synced_count: maintenanceReconcile.masDefaultExecutorTerminalSyncedCount
-        + selectionTotals.masDefaultExecutorLiveTerminalSyncedCount,
+      mas_default_executor_superseded_count: selectionTotals.defaultExecutorSupersededCount,
+      mas_default_executor_study_single_flight_skipped_count: selectionTotals.defaultExecutorStudySingleFlightSkippedCount,
+      mas_default_executor_live_skipped_count: selectionTotals.defaultExecutorLiveSkippedCount,
+      mas_default_executor_terminal_synced_count: maintenanceReconcile.defaultExecutorTerminalSyncedCount
+        + selectionTotals.defaultExecutorLiveTerminalSyncedCount,
       mas_default_executor_superseded_attempt_reconciled_count:
-        maintenanceReconcile.masDefaultExecutorSupersededAttemptReconciledCount,
+        maintenanceReconcile.defaultExecutorSupersededAttemptReconciledCount,
       waiting_approval_attempt_reconciled_count: maintenanceReconcile.waitingApprovalAttemptReconciledCount,
       repaired_missing_identity_running_count: maintenanceReconcile.repairedMissingIdentityRunningCount,
       repaired_missing_identity_dead_lettered_count: maintenanceReconcile.repairedMissingIdentityDeadLetteredCount,
       repaired_paper_autonomy_missing_closeout_count: maintenanceReconcile.repairedPaperAutonomyMissingCloseoutCount,
-      mas_default_executor_auto_redriven_count: maintenanceReconcile.masDefaultExecutorAutoRedrivenCount,
-      mas_default_executor_auto_dead_lettered_count: maintenanceReconcile.masDefaultExecutorAutoDeadLetteredCount,
-      mas_default_executor_auto_redrive_stale_skipped_count: maintenanceReconcile.masDefaultExecutorAutoRedriveStaleSkippedCount,
+      mas_default_executor_auto_redriven_count: maintenanceReconcile.defaultExecutorAutoRedrivenCount,
+      mas_default_executor_auto_dead_lettered_count: maintenanceReconcile.defaultExecutorAutoDeadLetteredCount,
+      mas_default_executor_auto_redrive_stale_skipped_count: maintenanceReconcile.defaultExecutorAutoRedriveStaleSkippedCount,
       mas_default_executor_completed_closeout_reconciled_count:
-        selectionTotals.masDefaultExecutorCompletedCloseoutReconciledCount,
+        selectionTotals.defaultExecutorCompletedCloseoutReconciledCount,
+      default_executor_superseded_count: selectionTotals.defaultExecutorSupersededCount,
+      default_executor_study_single_flight_skipped_count: selectionTotals.defaultExecutorStudySingleFlightSkippedCount,
+      default_executor_live_skipped_count: selectionTotals.defaultExecutorLiveSkippedCount,
+      default_executor_terminal_synced_count: maintenanceReconcile.defaultExecutorTerminalSyncedCount
+        + selectionTotals.defaultExecutorLiveTerminalSyncedCount,
+      default_executor_superseded_attempt_reconciled_count:
+        maintenanceReconcile.defaultExecutorSupersededAttemptReconciledCount,
+      default_executor_auto_redriven_count: maintenanceReconcile.defaultExecutorAutoRedrivenCount,
+      default_executor_auto_dead_lettered_count: maintenanceReconcile.defaultExecutorAutoDeadLetteredCount,
+      default_executor_auto_redrive_stale_skipped_count: maintenanceReconcile.defaultExecutorAutoRedriveStaleSkippedCount,
+      default_executor_completed_closeout_reconciled_count:
+        selectionTotals.defaultExecutorCompletedCloseoutReconciledCount,
       progress_first_anti_spin_blocked_count: selectionTotals.progressFirstAntiSpinBlockedCount,
       progress_first_owner_delta_admission: progressFirstOwnerDeltaAdmission,
       task_scope: input.taskScope ?? null,
@@ -940,22 +952,34 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     hydration,
     selected_count: rows.length,
     filtered_count: filteredCount,
-    mas_default_executor_superseded_count: selectionTotals.masDefaultExecutorSupersededCount,
-    mas_default_executor_study_single_flight_skipped_count: selectionTotals.masDefaultExecutorStudySingleFlightSkippedCount,
-    mas_default_executor_live_skipped_count: selectionTotals.masDefaultExecutorLiveSkippedCount,
-    mas_default_executor_terminal_synced_count: maintenanceReconcile.masDefaultExecutorTerminalSyncedCount
-      + selectionTotals.masDefaultExecutorLiveTerminalSyncedCount,
+    mas_default_executor_superseded_count: selectionTotals.defaultExecutorSupersededCount,
+    mas_default_executor_study_single_flight_skipped_count: selectionTotals.defaultExecutorStudySingleFlightSkippedCount,
+    mas_default_executor_live_skipped_count: selectionTotals.defaultExecutorLiveSkippedCount,
+    mas_default_executor_terminal_synced_count: maintenanceReconcile.defaultExecutorTerminalSyncedCount
+      + selectionTotals.defaultExecutorLiveTerminalSyncedCount,
     mas_default_executor_superseded_attempt_reconciled_count:
-      maintenanceReconcile.masDefaultExecutorSupersededAttemptReconciledCount,
+      maintenanceReconcile.defaultExecutorSupersededAttemptReconciledCount,
     waiting_approval_attempt_reconciled_count: maintenanceReconcile.waitingApprovalAttemptReconciledCount,
     repaired_missing_identity_running_count: maintenanceReconcile.repairedMissingIdentityRunningCount,
     repaired_missing_identity_dead_lettered_count: maintenanceReconcile.repairedMissingIdentityDeadLetteredCount,
     repaired_paper_autonomy_missing_closeout_count: maintenanceReconcile.repairedPaperAutonomyMissingCloseoutCount,
-    mas_default_executor_auto_redriven_count: maintenanceReconcile.masDefaultExecutorAutoRedrivenCount,
-    mas_default_executor_auto_dead_lettered_count: maintenanceReconcile.masDefaultExecutorAutoDeadLetteredCount,
-    mas_default_executor_auto_redrive_stale_skipped_count: maintenanceReconcile.masDefaultExecutorAutoRedriveStaleSkippedCount,
+    mas_default_executor_auto_redriven_count: maintenanceReconcile.defaultExecutorAutoRedrivenCount,
+    mas_default_executor_auto_dead_lettered_count: maintenanceReconcile.defaultExecutorAutoDeadLetteredCount,
+    mas_default_executor_auto_redrive_stale_skipped_count: maintenanceReconcile.defaultExecutorAutoRedriveStaleSkippedCount,
     mas_default_executor_completed_closeout_reconciled_count:
-      selectionTotals.masDefaultExecutorCompletedCloseoutReconciledCount,
+      selectionTotals.defaultExecutorCompletedCloseoutReconciledCount,
+    default_executor_superseded_count: selectionTotals.defaultExecutorSupersededCount,
+    default_executor_study_single_flight_skipped_count: selectionTotals.defaultExecutorStudySingleFlightSkippedCount,
+    default_executor_live_skipped_count: selectionTotals.defaultExecutorLiveSkippedCount,
+    default_executor_terminal_synced_count: maintenanceReconcile.defaultExecutorTerminalSyncedCount
+      + selectionTotals.defaultExecutorLiveTerminalSyncedCount,
+    default_executor_superseded_attempt_reconciled_count:
+      maintenanceReconcile.defaultExecutorSupersededAttemptReconciledCount,
+    default_executor_auto_redriven_count: maintenanceReconcile.defaultExecutorAutoRedrivenCount,
+    default_executor_auto_dead_lettered_count: maintenanceReconcile.defaultExecutorAutoDeadLetteredCount,
+    default_executor_auto_redrive_stale_skipped_count: maintenanceReconcile.defaultExecutorAutoRedriveStaleSkippedCount,
+    default_executor_completed_closeout_reconciled_count:
+      selectionTotals.defaultExecutorCompletedCloseoutReconciledCount,
     progress_first_anti_spin_blocked_count: selectionTotals.progressFirstAntiSpinBlockedCount,
     progress_first_owner_delta_admission: progressFirstOwnerDeltaAdmission,
     dispatches,

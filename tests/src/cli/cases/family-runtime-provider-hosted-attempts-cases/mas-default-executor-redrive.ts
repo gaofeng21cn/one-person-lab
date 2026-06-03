@@ -11,7 +11,7 @@ import {
   runCliFailure,
   test,
 } from './helpers.ts';
-import { redriveBlockedMasDefaultExecutorProviderTransportTask } from '../../../../../src/family-runtime-redrive.ts';
+import { redriveBlockedDefaultExecutorProviderTransportTask } from '../../../../../src/family-runtime-redrive.ts';
 import type { FamilyRuntimeTaskRow } from '../../../../../src/family-runtime-store.ts';
 
 function defaultExecutorPayload(sourceFingerprint: string) {
@@ -400,7 +400,7 @@ test('family-runtime stale auto redrive does not duplicate an operator-owned pro
 
     const queueDb = new DatabaseSync(queueDbPath);
     try {
-      const staleAutoRedrive = redriveBlockedMasDefaultExecutorProviderTransportTask(
+      const staleAutoRedrive = redriveBlockedDefaultExecutorProviderTransportTask(
         queueDb,
         staleRow,
         stalePayload,

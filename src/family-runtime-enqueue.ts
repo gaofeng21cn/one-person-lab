@@ -15,14 +15,14 @@ import {
   type FamilyRuntimeTaskStatus,
 } from './family-runtime-store.ts';
 import {
-  findLiveMasDefaultExecutorDispatchAttempt,
-  findLiveMasDefaultExecutorStudyAttempt,
-  isAdmittedMasDefaultExecutorNextOwner,
-  refreshMasDefaultExecutorLiveAttemptTaskLease,
+  findLiveDefaultExecutorDispatchAttempt,
+  findLiveDefaultExecutorStudyAttempt,
+  isAdmittedDefaultExecutorNextOwner,
+  refreshDefaultExecutorLiveAttemptTaskLease,
 } from './family-runtime-provider-hosted-attempts.ts';
 import { activeQueueHoldForTaskInput } from './family-runtime-queue-holds.ts';
 
-const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
+const DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
 const MAS_PAPER_AUTONOMY_STALE_DEAD_LETTER_MARKERS = [
   'owner_route_stale',
   'controller_route_work_unit_unsupported',
@@ -41,27 +41,27 @@ function exportOwnerFingerprint(payload: Record<string, unknown>) {
   return optionalString(context?.owner_fingerprint);
 }
 
-function isMasDefaultExecutorDispatch(
+function isDefaultExecutorDispatch(
   row: Pick<FamilyRuntimeTaskRow, 'domain_id' | 'task_kind'>,
   payload: Record<string, unknown>,
 ) {
   const nextOwner = optionalString(payload.next_executable_owner);
   return row.domain_id === 'medautoscience'
-    && row.task_kind === MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
+    && row.task_kind === DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
     && optionalString(payload.dispatch_ref) !== null
-    && isAdmittedMasDefaultExecutorNextOwner(nextOwner)
+    && isAdmittedDefaultExecutorNextOwner(nextOwner)
     && ['codex_cli_default', 'codex_cli'].includes(optionalString(payload.executor_kind) ?? '');
 }
 
-function isMasDefaultExecutorDispatchInput(
+function isDefaultExecutorDispatchInput(
   domainId: FamilyRuntimeTaskRow['domain_id'],
   taskKind: string,
   payload: Record<string, unknown>,
 ) {
-  return isMasDefaultExecutorDispatch({ domain_id: domainId, task_kind: taskKind }, payload);
+  return isDefaultExecutorDispatch({ domain_id: domainId, task_kind: taskKind }, payload);
 }
 
-function masDefaultExecutorCandidateRow(input: {
+function defaultExecutorCandidateRow(input: {
   domainId: FamilyRuntimeTaskRow['domain_id'];
   taskKind: string;
   payload: Record<string, unknown>;
@@ -104,7 +104,7 @@ function recordValue(value: unknown) {
     : null;
 }
 
-function masDefaultExecutorMetadataRefresh(
+function defaultExecutorMetadataRefresh(
   existingPayload: Record<string, unknown>,
   nextPayload: Record<string, unknown>,
 ) {
@@ -151,14 +151,14 @@ function masDefaultExecutorMetadataRefresh(
   };
 }
 
-function masDefaultExecutorBlockedRedriveDecision(
+function defaultExecutorBlockedRedriveDecision(
   existing: FamilyRuntimeTaskRow,
   existingPayload: Record<string, unknown>,
   nextPayload: Record<string, unknown>,
 ) {
   if (
     existing.domain_id !== 'medautoscience'
-    || existing.task_kind !== MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
+    || existing.task_kind !== DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
     || existing.status !== 'blocked'
     || ![
       'temporal_stage_attempt_start_failed',
@@ -182,15 +182,15 @@ function masDefaultExecutorBlockedRedriveDecision(
   };
 }
 
-function masDefaultExecutorCloseoutRedriveDecision(
+function defaultExecutorCloseoutRedriveDecision(
   existing: FamilyRuntimeTaskRow,
   existingPayload: Record<string, unknown>,
   nextPayload: Record<string, unknown>,
 ) {
   if (
     existing.status !== 'succeeded'
-    || !isMasDefaultExecutorDispatch(existing, existingPayload)
-    || !isMasDefaultExecutorDispatch(existing, nextPayload)
+    || !isDefaultExecutorDispatch(existing, existingPayload)
+    || !isDefaultExecutorDispatch(existing, nextPayload)
   ) {
     return null;
   }
@@ -260,12 +260,12 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         || existing.task_kind !== taskKind
         || existing.domain_id !== input.domainId;
       const existingPayload = JSON.parse(existing.payload_json) as Record<string, unknown>;
-      const masDefaultExecutorSucceededAdmissionRefresh = existing.status === 'succeeded'
+      const defaultExecutorSucceededAdmissionRefresh = existing.status === 'succeeded'
         && exportedTaskChanged
-        && isMasDefaultExecutorDispatch(existing, existingPayload)
-        && isMasDefaultExecutorDispatchInput(input.domainId, taskKind, payload);
-      const closeoutRedrive = masDefaultExecutorSucceededAdmissionRefresh
-        ? masDefaultExecutorCloseoutRedriveDecision(existing, existingPayload, payload)
+        && isDefaultExecutorDispatch(existing, existingPayload)
+        && isDefaultExecutorDispatchInput(input.domainId, taskKind, payload);
+      const closeoutRedrive = defaultExecutorSucceededAdmissionRefresh
+        ? defaultExecutorCloseoutRedriveDecision(existing, existingPayload, payload)
         : null;
       if (exportedTaskChanged && closeoutRedrive) {
         const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
@@ -324,8 +324,8 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           task: taskToPayload(refreshed),
         };
       }
-      const metadataRefresh = masDefaultExecutorSucceededAdmissionRefresh
-        ? masDefaultExecutorMetadataRefresh(existingPayload, payload)
+      const metadataRefresh = defaultExecutorSucceededAdmissionRefresh
+        ? defaultExecutorMetadataRefresh(existingPayload, payload)
         : null;
       if (metadataRefresh) {
         db.prepare(`
@@ -372,7 +372,7 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           task: taskToPayload(refreshed),
         };
       }
-      if (existing.status === 'succeeded' && exportedTaskChanged && !masDefaultExecutorSucceededAdmissionRefresh) {
+      if (existing.status === 'succeeded' && exportedTaskChanged && !defaultExecutorSucceededAdmissionRefresh) {
         const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
         db.prepare(`
           UPDATE tasks
@@ -421,7 +421,7 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         };
       }
       const deadLetterRedrive = deadLetterRedriveDecision(existingPayload, payload);
-      const blockedRedrive = masDefaultExecutorBlockedRedriveDecision(existing, existingPayload, payload);
+      const blockedRedrive = defaultExecutorBlockedRedriveDecision(existing, existingPayload, payload);
       const paperAutonomyDeadLetterBlock = deadLetterRedrive
         ? masPaperAutonomyDeadLetterCurrentnessBlock(existing)
         : null;
@@ -567,13 +567,13 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
     }
   }
 
-  let deferredMasDefaultExecutorLiveAttempt: {
-    liveAttempt: NonNullable<ReturnType<typeof findLiveMasDefaultExecutorDispatchAttempt>>;
+  let deferredDefaultExecutorLiveAttempt: {
+    liveAttempt: NonNullable<ReturnType<typeof findLiveDefaultExecutorDispatchAttempt>>;
     liveDispatchAttemptMatched: boolean;
-    lease: ReturnType<typeof refreshMasDefaultExecutorLiveAttemptTaskLease>;
+    lease: ReturnType<typeof refreshDefaultExecutorLiveAttemptTaskLease>;
   } | null = null;
-  if (isMasDefaultExecutorDispatchInput(input.domainId, taskKind, payload)) {
-    const candidate = masDefaultExecutorCandidateRow({
+  if (isDefaultExecutorDispatchInput(input.domainId, taskKind, payload)) {
+    const candidate = defaultExecutorCandidateRow({
       domainId: input.domainId,
       taskKind,
       payload,
@@ -583,10 +583,10 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
       requiresApproval,
       createdAt,
     });
-    const liveDispatchAttempt = findLiveMasDefaultExecutorDispatchAttempt(db, candidate, payload);
-    const liveAttempt = liveDispatchAttempt ?? findLiveMasDefaultExecutorStudyAttempt(db, candidate, payload);
+    const liveDispatchAttempt = findLiveDefaultExecutorDispatchAttempt(db, candidate, payload);
+    const liveAttempt = liveDispatchAttempt ?? findLiveDefaultExecutorStudyAttempt(db, candidate, payload);
     if (liveAttempt?.task_id) {
-      const lease = refreshMasDefaultExecutorLiveAttemptTaskLease(db, {
+      const lease = refreshDefaultExecutorLiveAttemptTaskLease(db, {
         attempt: liveAttempt,
         source: input.source ?? 'opl-cli',
         reason: liveDispatchAttempt
@@ -621,7 +621,7 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           },
         },
       });
-      deferredMasDefaultExecutorLiveAttempt = {
+      deferredDefaultExecutorLiveAttempt = {
         liveAttempt,
         liveDispatchAttemptMatched: Boolean(liveDispatchAttempt),
         lease,
@@ -681,8 +681,8 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
       active_hold_reason: activeHold?.reason ?? null,
     },
   });
-  if (deferredMasDefaultExecutorLiveAttempt) {
-    const { liveAttempt, liveDispatchAttemptMatched, lease } = deferredMasDefaultExecutorLiveAttempt;
+  if (deferredDefaultExecutorLiveAttempt) {
+    const { liveAttempt, liveDispatchAttemptMatched, lease } = deferredDefaultExecutorLiveAttempt;
     insertEvent(db, {
       taskId,
       domainId: input.domainId,

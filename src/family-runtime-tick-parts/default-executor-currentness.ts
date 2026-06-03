@@ -9,16 +9,16 @@ import {
   updateStageAttemptsForTask,
 } from '../family-runtime-stage-attempts.ts';
 import {
-  isMasDefaultExecutorDispatchTask,
-  masDefaultExecutorDispatchIdentity,
-  masDefaultExecutorDomainSourceFingerprint,
-  masDefaultExecutorStudyActionIdentity,
-  masDefaultExecutorStudyIdentity,
+  isDefaultExecutorDispatchTask,
+  defaultExecutorDispatchIdentity,
+  defaultExecutorDomainSourceFingerprint,
+  defaultExecutorStudyActionIdentity,
+  defaultExecutorStudyIdentity,
 } from '../family-runtime-provider-hosted-attempts.ts';
 
-export const MAS_DEFAULT_EXECUTOR_SUPERSEDED_REASON = 'mas_default_executor_superseded_by_current_source';
+export const DEFAULT_EXECUTOR_SUPERSEDED_REASON = 'mas_default_executor_superseded_by_current_source';
 
-type MasDefaultExecutorCurrentTask = {
+type DefaultExecutorCurrentTask = {
   task_id: string;
   source_fingerprint: string | null;
   created_at: string;
@@ -30,7 +30,7 @@ export function payloadFromTask(row: FamilyRuntimeTaskRow) {
 
 export function isNewerTask(
   left: Pick<FamilyRuntimeTaskRow, 'created_at' | 'task_id'>,
-  right: MasDefaultExecutorCurrentTask,
+  right: DefaultExecutorCurrentTask,
 ) {
   if (left.created_at !== right.created_at) {
     return left.created_at > right.created_at;
@@ -38,11 +38,11 @@ export function isNewerTask(
   return left.task_id > right.task_id;
 }
 
-export function currentMasDefaultExecutorTasksByDispatch(rows: FamilyRuntimeTaskRow[]) {
-  const currentByIdentity = new Map<string, MasDefaultExecutorCurrentTask>();
+export function currentDefaultExecutorTasksByDispatch(rows: FamilyRuntimeTaskRow[]) {
+  const currentByIdentity = new Map<string, DefaultExecutorCurrentTask>();
   for (const row of rows) {
     const payload = payloadFromTask(row);
-    const identity = masDefaultExecutorDispatchIdentity(row, payload);
+    const identity = defaultExecutorDispatchIdentity(row, payload);
     if (!identity) {
       continue;
     }
@@ -50,7 +50,7 @@ export function currentMasDefaultExecutorTasksByDispatch(rows: FamilyRuntimeTask
     if (!current || isNewerTask(row, current)) {
       currentByIdentity.set(identity, {
         task_id: row.task_id,
-        source_fingerprint: masDefaultExecutorDomainSourceFingerprint(payload),
+        source_fingerprint: defaultExecutorDomainSourceFingerprint(payload),
         created_at: row.created_at,
       });
     }
@@ -58,11 +58,11 @@ export function currentMasDefaultExecutorTasksByDispatch(rows: FamilyRuntimeTask
   return currentByIdentity;
 }
 
-export function currentMasDefaultExecutorTasksByStudyAction(rows: FamilyRuntimeTaskRow[]) {
-  const currentByIdentity = new Map<string, MasDefaultExecutorCurrentTask>();
+export function currentDefaultExecutorTasksByStudyAction(rows: FamilyRuntimeTaskRow[]) {
+  const currentByIdentity = new Map<string, DefaultExecutorCurrentTask>();
   for (const row of rows) {
     const payload = payloadFromTask(row);
-    const identity = masDefaultExecutorStudyActionIdentity(row, payload);
+    const identity = defaultExecutorStudyActionIdentity(row, payload);
     if (!identity) {
       continue;
     }
@@ -70,7 +70,7 @@ export function currentMasDefaultExecutorTasksByStudyAction(rows: FamilyRuntimeT
     if (!current || isNewerTask(row, current)) {
       currentByIdentity.set(identity, {
         task_id: row.task_id,
-        source_fingerprint: masDefaultExecutorDomainSourceFingerprint(payload),
+        source_fingerprint: defaultExecutorDomainSourceFingerprint(payload),
         created_at: row.created_at,
       });
     }
@@ -78,15 +78,15 @@ export function currentMasDefaultExecutorTasksByStudyAction(rows: FamilyRuntimeT
   return currentByIdentity;
 }
 
-function markSupersededMasDefaultExecutorRow(
+function markSupersededDefaultExecutorRow(
   db: DatabaseSync,
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
-  current: MasDefaultExecutorCurrentTask,
+  current: DefaultExecutorCurrentTask,
   reason: string,
   source: string,
 ) {
-  const sourceFingerprint = masDefaultExecutorDomainSourceFingerprint(payload);
+  const sourceFingerprint = defaultExecutorDomainSourceFingerprint(payload);
   const supersededAt = new Date().toISOString();
   db.prepare(`
     UPDATE tasks
@@ -94,19 +94,19 @@ function markSupersededMasDefaultExecutorRow(
       last_error = ?, dead_letter_reason = ?, updated_at = ?
     WHERE task_id = ? AND status IN ('queued', 'retry_waiting')
   `).run(
-    MAS_DEFAULT_EXECUTOR_SUPERSEDED_REASON,
-    MAS_DEFAULT_EXECUTOR_SUPERSEDED_REASON,
+    DEFAULT_EXECUTOR_SUPERSEDED_REASON,
+    DEFAULT_EXECUTOR_SUPERSEDED_REASON,
     supersededAt,
     row.task_id,
   );
   const blockedAttempts = updateStageAttemptsForTask(db, {
     taskId: row.task_id,
     status: 'blocked',
-    blockedReason: MAS_DEFAULT_EXECUTOR_SUPERSEDED_REASON,
+    blockedReason: DEFAULT_EXECUTOR_SUPERSEDED_REASON,
     activityEvent: {
       activity_kind: 'mas_default_executor_currentness',
       activity_status: 'blocked',
-      blocked_reason: MAS_DEFAULT_EXECUTOR_SUPERSEDED_REASON,
+      blocked_reason: DEFAULT_EXECUTOR_SUPERSEDED_REASON,
       reason,
       current_task_id: current.task_id,
       current_source_fingerprint: current.source_fingerprint,
@@ -144,25 +144,25 @@ function markSupersededMasDefaultExecutorRow(
   });
 }
 
-export function dropSupersededMasDefaultExecutorRows(
+export function dropSupersededDefaultExecutorRows(
   db: DatabaseSync,
   candidateRows: FamilyRuntimeTaskRow[],
   allRows: FamilyRuntimeTaskRow[],
   source: string,
 ) {
-  const currentByIdentity = currentMasDefaultExecutorTasksByDispatch(allRows);
-  const currentByStudyAction = currentMasDefaultExecutorTasksByStudyAction(allRows);
+  const currentByIdentity = currentDefaultExecutorTasksByDispatch(allRows);
+  const currentByStudyAction = currentDefaultExecutorTasksByStudyAction(allRows);
   let supersededCount = 0;
   const rows = candidateRows.filter((row) => {
     const payload = payloadFromTask(row);
-    const identity = masDefaultExecutorDispatchIdentity(row, payload);
-    const actionIdentity = masDefaultExecutorStudyActionIdentity(row, payload);
+    const identity = defaultExecutorDispatchIdentity(row, payload);
+    const actionIdentity = defaultExecutorStudyActionIdentity(row, payload);
     if (!identity || !actionIdentity) {
       return true;
     }
     const current = currentByIdentity.get(identity);
     const currentAction = currentByStudyAction.get(actionIdentity);
-    const sourceFingerprint = masDefaultExecutorDomainSourceFingerprint(payload);
+    const sourceFingerprint = defaultExecutorDomainSourceFingerprint(payload);
     if (
       current
       && current.task_id !== row.task_id
@@ -171,7 +171,7 @@ export function dropSupersededMasDefaultExecutorRows(
       && current.source_fingerprint !== sourceFingerprint
     ) {
       supersededCount += 1;
-      markSupersededMasDefaultExecutorRow(
+      markSupersededDefaultExecutorRow(
         db,
         row,
         payload,
@@ -189,7 +189,7 @@ export function dropSupersededMasDefaultExecutorRows(
       && currentAction.source_fingerprint !== sourceFingerprint
     ) {
       supersededCount += 1;
-      markSupersededMasDefaultExecutorRow(
+      markSupersededDefaultExecutorRow(
         db,
         row,
         payload,
@@ -212,7 +212,7 @@ function completedAcceptedAttemptForTask(db: DatabaseSync, row: FamilyRuntimeTas
   )) ?? null;
 }
 
-function reconcileCompletedCloseoutMasDefaultExecutorRow(
+function reconcileCompletedCloseoutDefaultExecutorRow(
   db: DatabaseSync,
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
@@ -244,7 +244,7 @@ function reconcileCompletedCloseoutMasDefaultExecutorRow(
       dispatch_ref: payload.dispatch_ref ?? null,
       action_type: payload.action_type ?? null,
       study_id: payload.study_id ?? null,
-      source_fingerprint: masDefaultExecutorDomainSourceFingerprint(payload),
+      source_fingerprint: defaultExecutorDomainSourceFingerprint(payload),
       authority_boundary: {
         opl: 'queue_attempt_ledger_currentness_reconciliation_only',
         domain: 'truth_quality_artifact_gate_owner',
@@ -259,7 +259,7 @@ function reconcileCompletedCloseoutMasDefaultExecutorRow(
   return true;
 }
 
-export function dropCompletedMasDefaultExecutorRows(
+export function dropCompletedDefaultExecutorRows(
   db: DatabaseSync,
   candidateRows: FamilyRuntimeTaskRow[],
   source: string,
@@ -267,10 +267,10 @@ export function dropCompletedMasDefaultExecutorRows(
   let completedCloseoutReconciledCount = 0;
   const rows = candidateRows.filter((row) => {
     const payload = payloadFromTask(row);
-    if (!isMasDefaultExecutorDispatchTask(row, payload)) {
+    if (!isDefaultExecutorDispatchTask(row, payload)) {
       return true;
     }
-    if (!reconcileCompletedCloseoutMasDefaultExecutorRow(db, row, payload, source)) {
+    if (!reconcileCompletedCloseoutDefaultExecutorRow(db, row, payload, source)) {
       return true;
     }
     completedCloseoutReconciledCount += 1;
@@ -279,7 +279,7 @@ export function dropCompletedMasDefaultExecutorRows(
   return { rows, completedCloseoutReconciledCount };
 }
 
-export function dropSameStudyMasDefaultExecutorRows(
+export function dropSameStudyDefaultExecutorRows(
   db: DatabaseSync,
   candidateRows: FamilyRuntimeTaskRow[],
   source: string,
@@ -289,7 +289,7 @@ export function dropSameStudyMasDefaultExecutorRows(
   let studySingleFlightSkippedCount = 0;
   for (const row of candidateRows) {
     const payload = payloadFromTask(row);
-    const studyIdentity = masDefaultExecutorStudyIdentity(row, payload);
+    const studyIdentity = defaultExecutorStudyIdentity(row, payload);
     if (!studyIdentity) {
       selectedIds.add(row.task_id);
       continue;
@@ -302,7 +302,7 @@ export function dropSameStudyMasDefaultExecutorRows(
     }
     if (isNewerTask(row, {
       task_id: selected.task_id,
-      source_fingerprint: masDefaultExecutorDomainSourceFingerprint(payloadFromTask(selected)),
+      source_fingerprint: defaultExecutorDomainSourceFingerprint(payloadFromTask(selected)),
       created_at: selected.created_at,
     })) {
       selectedIds.delete(selected.task_id);
@@ -315,12 +315,12 @@ export function dropSameStudyMasDefaultExecutorRows(
       return true;
     }
     const payload = payloadFromTask(row);
-    if (masDefaultExecutorStudyIdentity(row, payload)) {
+    if (defaultExecutorStudyIdentity(row, payload)) {
       studySingleFlightSkippedCount += 1;
       const selected = [...selectedByStudy.values()].find((candidate) => {
         const candidatePayload = payloadFromTask(candidate);
-        return masDefaultExecutorStudyIdentity(candidate, candidatePayload)
-          === masDefaultExecutorStudyIdentity(row, payload);
+        return defaultExecutorStudyIdentity(candidate, candidatePayload)
+          === defaultExecutorStudyIdentity(row, payload);
       });
       insertEvent(db, {
         taskId: row.task_id,
@@ -332,10 +332,10 @@ export function dropSameStudyMasDefaultExecutorRows(
           selected_task_id: selected?.task_id ?? null,
           selected_created_at: selected?.created_at ?? null,
           selected_source_fingerprint: selected
-            ? masDefaultExecutorDomainSourceFingerprint(payloadFromTask(selected))
+            ? defaultExecutorDomainSourceFingerprint(payloadFromTask(selected))
             : null,
           candidate_created_at: row.created_at,
-          candidate_source_fingerprint: masDefaultExecutorDomainSourceFingerprint(payload),
+          candidate_source_fingerprint: defaultExecutorDomainSourceFingerprint(payload),
           dispatch_ref: payload.dispatch_ref ?? null,
           action_type: payload.action_type ?? null,
           study_id: payload.study_id ?? null,

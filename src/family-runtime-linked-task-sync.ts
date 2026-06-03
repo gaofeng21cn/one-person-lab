@@ -15,7 +15,7 @@ type LinkedTask = {
   dead_letter_reason: string | null;
 };
 
-const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
+const DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
 const PROVIDER_ONLY_TASK_DEAD_LETTER_REASONS = new Set([
   'temporal_stage_attempt_start_failed',
   'temporal_stage_attempt_not_completed',
@@ -23,7 +23,7 @@ const PROVIDER_ONLY_TASK_DEAD_LETTER_REASONS = new Set([
   'temporal_stage_attempt_canceled',
 ]);
 
-function linkedMasDefaultExecutorTask(
+function linkedDefaultExecutorTask(
   db: DatabaseSync,
   row: StageAttemptRow,
 ) {
@@ -38,7 +38,7 @@ function linkedMasDefaultExecutorTask(
   if (
     !task
     || task.domain_id !== 'medautoscience'
-    || task.task_kind !== MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
+    || task.task_kind !== DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
   ) {
     return null;
   }
@@ -119,14 +119,14 @@ function canSucceedFromTypedCloseout(task: LinkedTask) {
     && PROVIDER_ONLY_TASK_DEAD_LETTER_REASONS.has(task.dead_letter_reason);
 }
 
-export function markLinkedMasDefaultExecutorTaskCompleted(
+export function markLinkedDefaultExecutorTaskCompleted(
   db: DatabaseSync,
   input: {
     row: StageAttemptRow;
     observedAt: string;
   },
 ) {
-  const task = linkedMasDefaultExecutorTask(db, input.row);
+  const task = linkedDefaultExecutorTask(db, input.row);
   if (!task || hasLaterLinkedAttempt(db, input.row)) {
     return;
   }
@@ -171,7 +171,7 @@ export function markLinkedMasDefaultExecutorTaskCompleted(
   });
 }
 
-export function blockLinkedMasDefaultExecutorTask(
+export function blockLinkedDefaultExecutorTask(
   db: DatabaseSync,
   input: {
     row: StageAttemptRow;
@@ -185,7 +185,7 @@ export function blockLinkedMasDefaultExecutorTask(
     eventType: string;
   },
 ) {
-  const task = linkedMasDefaultExecutorTask(db, input.row);
+  const task = linkedDefaultExecutorTask(db, input.row);
   if (
     !task
     || hasLaterLinkedAttempt(db, input.row)

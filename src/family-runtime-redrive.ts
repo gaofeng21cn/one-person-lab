@@ -2,9 +2,9 @@ import type { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError } from './contracts.ts';
 import {
-  MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND,
+  DEFAULT_EXECUTOR_DISPATCH_TASK_KIND,
   ensureProviderHostedStageAttempt,
-  isMasDefaultExecutorDispatchTask,
+  isDefaultExecutorDispatchTask,
 } from './family-runtime-provider-hosted-attempts.ts';
 import { listStageAttemptsForTask } from './family-runtime-stage-attempts.ts';
 import {
@@ -109,7 +109,7 @@ function assertProviderTransportRedriveReason(
   if (!allowedReasons.includes(value ?? '')) {
     throw new FrameworkContractError(
       'cli_usage_error',
-      'family-runtime queue redrive only supports blocked provider-transport MAS default executor tasks.',
+      'family-runtime queue redrive only supports blocked provider-transport default executor tasks.',
       {
         blocker_id: 'family_runtime_redrive_blocked',
         dead_letter_reason: value,
@@ -198,18 +198,18 @@ function assertDomainRouteProviderTransportTask(
   }
 }
 
-function assertMasDefaultExecutorTask(
+function assertDefaultExecutorTask(
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
 ) {
   if (
     row.domain_id !== 'medautoscience'
-    || row.task_kind !== MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
-    || !isMasDefaultExecutorDispatchTask(row, payload)
+    || row.task_kind !== DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
+    || !isDefaultExecutorDispatchTask(row, payload)
   ) {
     throw new FrameworkContractError(
       'cli_usage_error',
-      'family-runtime queue redrive does not redrive non-MAS default executor tasks.',
+      'family-runtime queue redrive does not redrive non-default executor tasks.',
       {
         blocker_id: 'family_runtime_redrive_blocked',
         task_id: row.task_id,
@@ -330,7 +330,7 @@ function redriveTerminalProviderTransportTask(
   }
 }
 
-export function redriveBlockedMasDefaultExecutorProviderTransportTask(
+export function redriveBlockedDefaultExecutorProviderTransportTask(
   db: DatabaseSync,
   row: FamilyRuntimeTaskRow,
   _payload: Record<string, unknown>,
@@ -377,7 +377,7 @@ export function redriveBlockedMasDefaultExecutorProviderTransportTask(
       };
     }
     const currentPayload = parsePayload(currentRow);
-    assertMasDefaultExecutorTask(currentRow, currentPayload);
+    assertDefaultExecutorTask(currentRow, currentPayload);
     assertProviderTransportRedriveReason(currentRow.dead_letter_reason, input.trigger);
     const admission = redriveAdmissionForTask(db, currentRow, currentPayload);
     const nextStatus = admission.nextStatus;
@@ -463,7 +463,7 @@ export function redriveBlockedMasDefaultExecutorProviderTransportTask(
   }
 }
 
-function redriveRetryBudgetDeadLetterMasDefaultExecutorProviderTask(
+function redriveRetryBudgetDeadLetterDefaultExecutorProviderTask(
   db: DatabaseSync,
   row: FamilyRuntimeTaskRow,
   _payload: Record<string, unknown>,
@@ -500,7 +500,7 @@ function redriveRetryBudgetDeadLetterMasDefaultExecutorProviderTask(
       };
     }
     const currentPayload = parsePayload(currentRow);
-    assertMasDefaultExecutorTask(currentRow, currentPayload);
+    assertDefaultExecutorTask(currentRow, currentPayload);
     const retryBudgetEvidenceKind = providerRetryBudgetDeadLetterEvidenceKind(db, currentRow.task_id);
     if (!retryBudgetEvidenceKind) {
       throw new FrameworkContractError(
@@ -611,21 +611,21 @@ export function redriveFamilyRuntimeTask(
   }
 
   let result;
-  if (isMasDefaultExecutorDispatchTask(row, payload) && row.status === 'blocked') {
-    assertMasDefaultExecutorTask(row, payload);
+  if (isDefaultExecutorDispatchTask(row, payload) && row.status === 'blocked') {
+    assertDefaultExecutorTask(row, payload);
     assertProviderTransportRedriveReason(row.dead_letter_reason, 'operator');
-    result = redriveBlockedMasDefaultExecutorProviderTransportTask(db, row, payload, {
+    result = redriveBlockedDefaultExecutorProviderTransportTask(db, row, payload, {
       trigger: 'operator',
       source: input.source,
       operatorReason,
     });
   } else if (
-    isMasDefaultExecutorDispatchTask(row, payload)
+    isDefaultExecutorDispatchTask(row, payload)
     && row.status === 'dead_letter'
     && row.dead_letter_reason === 'retry_budget_exhausted'
   ) {
-    assertMasDefaultExecutorTask(row, payload);
-    result = redriveRetryBudgetDeadLetterMasDefaultExecutorProviderTask(db, row, payload, {
+    assertDefaultExecutorTask(row, payload);
+    result = redriveRetryBudgetDeadLetterDefaultExecutorProviderTask(db, row, payload, {
       source: input.source,
       operatorReason,
     });

@@ -15,9 +15,9 @@ import {
   updateStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
 import {
-  findLiveMasDefaultExecutorDispatchAttempt,
-  findLiveMasDefaultExecutorStudyAttempt,
-  refreshMasDefaultExecutorLiveAttemptTaskLease,
+  findLiveDefaultExecutorDispatchAttempt,
+  findLiveDefaultExecutorStudyAttempt,
+  refreshDefaultExecutorLiveAttemptTaskLease,
 } from './family-runtime-provider-hosted-attempts.ts';
 
 type FamilyRuntimePaths = ReturnType<typeof familyRuntimePaths>;
@@ -140,7 +140,7 @@ function blockTaskForTemporalStartFailure(
   });
 }
 
-function claimMasDefaultExecutorTask(
+function claimDefaultExecutorTask(
   db: DatabaseSync,
   row: FamilyRuntimeTaskRow,
 ) {
@@ -174,7 +174,7 @@ function claimMasDefaultExecutorTask(
   };
 }
 
-export async function startMasDefaultExecutorDispatchAttempt(
+export async function startDefaultExecutorStageAttempt(
   db: DatabaseSync,
   paths: FamilyRuntimePaths,
   input: {
@@ -202,7 +202,7 @@ export async function startMasDefaultExecutorDispatchAttempt(
         return terminalResult;
       }
     }
-    refreshMasDefaultExecutorLiveAttemptTaskLease(db, {
+    refreshDefaultExecutorLiveAttemptTaskLease(db, {
       attempt: liveAttempt,
       reason: 'same_task_live_stage_attempt_exists',
     });
@@ -224,9 +224,9 @@ export async function startMasDefaultExecutorDispatchAttempt(
       stage_attempts: listStageAttemptsForTask(db, row.task_id),
     };
   }
-  const liveDispatchAttempt = findLiveMasDefaultExecutorDispatchAttempt(db, row, payload);
+  const liveDispatchAttempt = findLiveDefaultExecutorDispatchAttempt(db, row, payload);
   if (liveDispatchAttempt) {
-    refreshMasDefaultExecutorLiveAttemptTaskLease(db, {
+    refreshDefaultExecutorLiveAttemptTaskLease(db, {
       attempt: liveDispatchAttempt,
       reason: 'same_dispatch_live_stage_attempt_exists',
     });
@@ -252,9 +252,9 @@ export async function startMasDefaultExecutorDispatchAttempt(
       stage_attempts: listStageAttemptsForTask(db, row.task_id),
     };
   }
-  const liveStudyAttempt = findLiveMasDefaultExecutorStudyAttempt(db, row, payload);
+  const liveStudyAttempt = findLiveDefaultExecutorStudyAttempt(db, row, payload);
   if (liveStudyAttempt) {
-    refreshMasDefaultExecutorLiveAttemptTaskLease(db, {
+    refreshDefaultExecutorLiveAttemptTaskLease(db, {
       attempt: liveStudyAttempt,
       reason: 'same_study_live_stage_attempt_exists',
     });
@@ -280,7 +280,7 @@ export async function startMasDefaultExecutorDispatchAttempt(
       stage_attempts: listStageAttemptsForTask(db, row.task_id),
     };
   }
-  const taskClaim = claimMasDefaultExecutorTask(db, row);
+  const taskClaim = claimDefaultExecutorTask(db, row);
   if (!taskClaim) {
     insertEvent(db, {
       taskId: row.task_id,
@@ -305,7 +305,7 @@ export async function startMasDefaultExecutorDispatchAttempt(
     && attempt.status === 'queued'
   )) ?? null;
   if (!launchableAttempt || launchableAttempt.status === 'blocked') {
-    const errorMessage = launchableAttempt?.blocked_reason ?? 'MAS default executor dispatch has no launchable Temporal Codex stage attempt.';
+    const errorMessage = launchableAttempt?.blocked_reason ?? 'default executor dispatch has no launchable Temporal Codex stage attempt.';
     blockTaskForTemporalStartFailure(db, { row, errorMessage, launchableAttempt });
     return {
       task_id: row.task_id,

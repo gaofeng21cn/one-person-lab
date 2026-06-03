@@ -1,7 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 
 import {
-  blockLinkedMasDefaultExecutorTask,
+  blockLinkedDefaultExecutorTask,
 } from './family-runtime-linked-task-sync.ts';
 import {
   getStageAttemptRow,
@@ -135,7 +135,7 @@ export function markStageAttemptCancelRequested(
       updated_at = ?
     WHERE stage_attempt_id = ?
   `).run(JSON.stringify(providerRun), JSON.stringify(activityEvents), updatedAt, input.stageAttemptId);
-  blockLinkedMasDefaultExecutorTask(db, {
+  blockLinkedDefaultExecutorTask(db, {
     row,
     reason: 'operator_cancel_requested',
     observedAt: updatedAt,

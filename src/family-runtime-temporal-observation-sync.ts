@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 
-import { blockLinkedMasDefaultExecutorTask } from './family-runtime-linked-task-sync.ts';
+import { blockLinkedDefaultExecutorTask } from './family-runtime-linked-task-sync.ts';
 import {
   getStageAttemptRow,
   parseStageAttemptJsonObject,
@@ -71,7 +71,7 @@ function stageAttemptHasProviderStarted(row: StageAttemptRow) {
   return ['running', 'checkpointed', 'human_gate'].includes(row.status);
 }
 
-function hasExpiredRunningMasDefaultExecutorLease(db: DatabaseSync, row: StageAttemptRow) {
+function hasExpiredRunningDefaultExecutorLease(db: DatabaseSync, row: StageAttemptRow) {
   const task = linkedTaskForWorkflowMissingObservation(db, row);
   if (
     !task
@@ -93,7 +93,7 @@ function canFailStageAttemptForWorkflowMissing(
   if (stageAttemptHasProviderStarted(row)) {
     return true;
   }
-  return row.status === 'queued' && hasExpiredRunningMasDefaultExecutorLease(db, row);
+  return row.status === 'queued' && hasExpiredRunningDefaultExecutorLease(db, row);
 }
 
 function appendActivityEventToRow(row: StageAttemptRow, event: Record<string, unknown>) {
@@ -167,7 +167,7 @@ export function syncStageAttemptFromTemporalUnavailableObservation(
     observedAt,
     observation.stage_attempt_id,
   );
-  blockLinkedMasDefaultExecutorTask(db, {
+  blockLinkedDefaultExecutorTask(db, {
     row,
     reason: failureReason,
     observedAt,

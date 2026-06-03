@@ -9,8 +9,8 @@ import {
 } from './family-runtime-domain-handler-process.ts';
 import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
-import { startMasDefaultExecutorDispatchAttempt } from './family-runtime-mas-default-executor-start.ts';
-import { isMasDefaultExecutorDispatchTask } from './family-runtime-provider-hosted-attempts.ts';
+import { startDefaultExecutorStageAttempt } from './family-runtime-default-executor-start.ts';
+import { isDefaultExecutorDispatchTask } from './family-runtime-provider-hosted-attempts.ts';
 import { ensureProviderHostedStageAttempt } from './family-runtime-provider-hosted-attempts.ts';
 import { blockTaskForStageAdmissionGate } from './family-runtime-stage-admission-gate.ts';
 import {
@@ -32,7 +32,7 @@ import {
 } from './family-runtime-paper-autonomy.ts';
 import { PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON } from './family-runtime-progress-first-anti-spin-gate.ts';
 
-type TemporalProviderModule = Parameters<typeof startMasDefaultExecutorDispatchAttempt>[2]['temporalProviderModule'];
+type TemporalProviderModule = Parameters<typeof startDefaultExecutorStageAttempt>[2]['temporalProviderModule'];
 
 function cleanStringList(value: unknown) {
   return Array.isArray(value)
@@ -276,8 +276,8 @@ export async function dispatchFamilyRuntimeTask(
   if (providerHostedAttempt?.status === 'blocked' && providerHostedAttempt.blocked_reason?.startsWith('stage_admission_')) {
     return blockTaskForStageAdmissionGate(db, row, providerHostedAttempt);
   }
-  if (isMasDefaultExecutorDispatchTask(row, payload)) {
-    return startMasDefaultExecutorDispatchAttempt(db, paths, {
+  if (isDefaultExecutorDispatchTask(row, payload)) {
+    return startDefaultExecutorStageAttempt(db, paths, {
       row,
       payload,
       providerHostedAttempt,

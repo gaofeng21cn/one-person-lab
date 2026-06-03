@@ -37,8 +37,8 @@ import {
 } from './family-runtime-stage-attempt-ledger.ts';
 import { stableId } from './family-runtime-ids.ts';
 import {
-  blockLinkedMasDefaultExecutorTask,
-  markLinkedMasDefaultExecutorTaskCompleted,
+  blockLinkedDefaultExecutorTask,
+  markLinkedDefaultExecutorTaskCompleted,
 } from './family-runtime-linked-task-sync.ts';
 import {
   type TemporalStageAttemptWorkflowState,
@@ -497,7 +497,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
       }).attempt;
       const syncedRow = getStageAttemptRow(db, observation.stage_attempt_id);
       if (syncedRow) {
-        markLinkedMasDefaultExecutorTaskCompleted(db, {
+        markLinkedDefaultExecutorTaskCompleted(db, {
           row: syncedRow,
           observedAt: nowIso(),
         });
@@ -505,7 +505,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
       return synced;
     }
     if (rowHasCompletedTerminalObservation(row)) {
-      markLinkedMasDefaultExecutorTaskCompleted(db, { row, observedAt: nowIso() });
+      markLinkedDefaultExecutorTaskCompleted(db, { row, observedAt: nowIso() });
       return null;
     }
     const observedAt = nowIso();
@@ -515,7 +515,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
       SET provider_run_json = ?, updated_at = ?
       WHERE stage_attempt_id = ?
     `).run(JSON.stringify(providerRun), observedAt, observation.stage_attempt_id);
-    markLinkedMasDefaultExecutorTaskCompleted(db, { row, observedAt });
+    markLinkedDefaultExecutorTaskCompleted(db, { row, observedAt });
     return inspectStageAttempt(db, observation.stage_attempt_id);
   }
   if (!failureReason && !nonCompletionBlocker && !completedCloseoutPacket) {
@@ -528,7 +528,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
     }).attempt;
     const syncedRow = getStageAttemptRow(db, observation.stage_attempt_id);
     if (syncedRow) {
-      markLinkedMasDefaultExecutorTaskCompleted(db, {
+      markLinkedDefaultExecutorTaskCompleted(db, {
         row: syncedRow,
         observedAt: nowIso(),
       });
@@ -575,7 +575,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
       observedAt,
       observation.stage_attempt_id,
     );
-    blockLinkedMasDefaultExecutorTask(db, {
+    blockLinkedDefaultExecutorTask(db, {
       row,
       reason: nonCompletionBlocker,
       observedAt,
@@ -633,7 +633,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
     observedAt,
     observation.stage_attempt_id,
   );
-  blockLinkedMasDefaultExecutorTask(db, {
+  blockLinkedDefaultExecutorTask(db, {
     row,
     reason: failureReason,
     observedAt,

@@ -13,7 +13,7 @@ import {
   withIsolatedFamilyRuntimeEnv,
 } from './mas-default-executor-single-flight-helpers.ts';
 
-import { startMasDefaultExecutorDispatchAttempt } from '../../../../../src/family-runtime-mas-default-executor-start.ts';
+import { startDefaultExecutorStageAttempt } from '../../../../../src/family-runtime-default-executor-start.ts';
 import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
 import { familyRuntimePaths } from '../../../../../src/family-runtime-store.ts';
 import {
@@ -49,7 +49,7 @@ test('family-runtime does not treat unstarted registered MAS default executor at
       ) as Parameters<typeof ensureProviderHostedStageAttempt>[1];
       const secondRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-cross-task-registered-second',
-      ) as Parameters<typeof startMasDefaultExecutorDispatchAttempt>[2]['row'];
+      ) as Parameters<typeof startDefaultExecutorStageAttempt>[2]['row'];
       const firstAttempt = ensureProviderHostedStageAttempt(db, firstRow, firstPayload);
       assert.ok(firstAttempt);
       assert.equal(firstAttempt.status, 'queued');
@@ -57,7 +57,7 @@ test('family-runtime does not treat unstarted registered MAS default executor at
 
       const secondAttempt = ensureProviderHostedStageAttempt(db, secondRow, secondPayload);
       let temporalStartCount = 0;
-      const result = await startMasDefaultExecutorDispatchAttempt(db, familyRuntimePaths(), {
+      const result = await startDefaultExecutorStageAttempt(db, familyRuntimePaths(), {
         row: secondRow,
         payload: secondPayload,
         providerHostedAttempt: secondAttempt,
@@ -127,7 +127,7 @@ test('family-runtime does not treat a stale-source claimed queued MAS default ex
       ) as Parameters<typeof ensureProviderHostedStageAttempt>[1];
       const secondRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-cross-task-claimed-queued-second',
-      ) as Parameters<typeof startMasDefaultExecutorDispatchAttempt>[2]['row'];
+      ) as Parameters<typeof startDefaultExecutorStageAttempt>[2]['row'];
       const firstAttempt = ensureProviderHostedStageAttempt(db, firstRow, firstPayload);
       assert.ok(firstAttempt);
       assert.equal(firstAttempt.status, 'queued');
@@ -135,7 +135,7 @@ test('family-runtime does not treat a stale-source claimed queued MAS default ex
 
       const secondAttempt = ensureProviderHostedStageAttempt(db, secondRow, secondPayload);
       let temporalStartCount = 0;
-      const result = await startMasDefaultExecutorDispatchAttempt(db, familyRuntimePaths(), {
+      const result = await startDefaultExecutorStageAttempt(db, familyRuntimePaths(), {
         row: secondRow,
         payload: secondPayload,
         providerHostedAttempt: secondAttempt,
@@ -197,7 +197,7 @@ test('family-runtime keeps MAS default executor admission single-flight across s
       ) as Parameters<typeof ensureProviderHostedStageAttempt>[1];
       const secondRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-cross-task-same-source-second',
-      ) as Parameters<typeof startMasDefaultExecutorDispatchAttempt>[2]['row'];
+      ) as Parameters<typeof startDefaultExecutorStageAttempt>[2]['row'];
       const firstAttempt = ensureProviderHostedStageAttempt(db, firstRow, firstPayload);
       assert.ok(firstAttempt);
       db.prepare("UPDATE stage_attempts SET status = 'running' WHERE stage_attempt_id = ?").run(
@@ -206,7 +206,7 @@ test('family-runtime keeps MAS default executor admission single-flight across s
       const secondAttempt = ensureProviderHostedStageAttempt(db, secondRow, secondPayload);
       let temporalStartCount = 0;
 
-      const result = await startMasDefaultExecutorDispatchAttempt(db, familyRuntimePaths(), {
+      const result = await startDefaultExecutorStageAttempt(db, familyRuntimePaths(), {
         row: secondRow,
         payload: secondPayload,
         providerHostedAttempt: secondAttempt,
@@ -368,7 +368,7 @@ test('family-runtime keeps MAS default executor admission single-flight across s
       ) as Parameters<typeof ensureProviderHostedStageAttempt>[1];
       const writerRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-same-study-writer-candidate',
-      ) as Parameters<typeof startMasDefaultExecutorDispatchAttempt>[2]['row'];
+      ) as Parameters<typeof startDefaultExecutorStageAttempt>[2]['row'];
       const reviewerAttempt = ensureProviderHostedStageAttempt(db, reviewerRow, reviewerPayload);
       assert.ok(reviewerAttempt);
       db.prepare(`
@@ -380,7 +380,7 @@ test('family-runtime keeps MAS default executor admission single-flight across s
       const writerAttempt = ensureProviderHostedStageAttempt(db, writerRow, writePayload);
       let temporalStartCount = 0;
 
-      const result = await startMasDefaultExecutorDispatchAttempt(db, familyRuntimePaths(), {
+      const result = await startDefaultExecutorStageAttempt(db, familyRuntimePaths(), {
         row: writerRow,
         payload: writePayload,
         providerHostedAttempt: writerAttempt,
@@ -466,7 +466,7 @@ test('family-runtime treats claimed same-study reviewer admission window as live
       ) as Parameters<typeof ensureProviderHostedStageAttempt>[1];
       const writerRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-same-study-writer-during-reviewer-admission',
-      ) as Parameters<typeof startMasDefaultExecutorDispatchAttempt>[2]['row'];
+      ) as Parameters<typeof startDefaultExecutorStageAttempt>[2]['row'];
       const reviewerAttempt = ensureProviderHostedStageAttempt(db, reviewerRow, reviewerPayload);
       assert.ok(reviewerAttempt);
       assert.equal(reviewerAttempt.status, 'queued');
@@ -474,7 +474,7 @@ test('family-runtime treats claimed same-study reviewer admission window as live
       const writerAttempt = ensureProviderHostedStageAttempt(db, writerRow, writePayload);
       let temporalStartCount = 0;
 
-      const result = await startMasDefaultExecutorDispatchAttempt(db, familyRuntimePaths(), {
+      const result = await startDefaultExecutorStageAttempt(db, familyRuntimePaths(), {
         row: writerRow,
         payload: writePayload,
         providerHostedAttempt: writerAttempt,
@@ -627,7 +627,7 @@ test('family-runtime syncs terminal same-task MAS default executor attempt befor
         WHERE task_id = ?
       `).run(new Date(Date.now() + 60_000).toISOString(), taskId);
       const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as Parameters<
-        typeof startMasDefaultExecutorDispatchAttempt
+        typeof startDefaultExecutorStageAttempt
       >[2]['row'];
       const attempt = ensureProviderHostedStageAttempt(db, row, payload);
       assert.ok(attempt);
@@ -636,7 +636,7 @@ test('family-runtime syncs terminal same-task MAS default executor attempt befor
       );
 
       let temporalStartCount = 0;
-      const result = await startMasDefaultExecutorDispatchAttempt(db, familyRuntimePaths(), {
+      const result = await startDefaultExecutorStageAttempt(db, familyRuntimePaths(), {
         row,
         payload,
         providerHostedAttempt: null,
@@ -717,7 +717,7 @@ test('family-runtime syncs missing same-task MAS default executor workflow befor
         WHERE task_id = ?
       `).run(taskId);
       const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as Parameters<
-        typeof startMasDefaultExecutorDispatchAttempt
+        typeof startDefaultExecutorStageAttempt
       >[2]['row'];
       const attempt = ensureProviderHostedStageAttempt(db, row, payload);
       assert.ok(attempt);
@@ -728,7 +728,7 @@ test('family-runtime syncs missing same-task MAS default executor workflow befor
       let rawQueryCount = 0;
       let safeQueryCount = 0;
       let temporalStartCount = 0;
-      const result = await startMasDefaultExecutorDispatchAttempt(db, familyRuntimePaths(), {
+      const result = await startDefaultExecutorStageAttempt(db, familyRuntimePaths(), {
         row,
         payload,
         providerHostedAttempt: null,
@@ -819,12 +819,12 @@ test('family-runtime treats MAS default executor Temporal admission as running u
       });
       db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(taskId);
       const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as Parameters<
-        typeof startMasDefaultExecutorDispatchAttempt
+        typeof startDefaultExecutorStageAttempt
       >[2]['row'];
       const providerHostedAttempt = ensureProviderHostedStageAttempt(db, row, basePayload);
       assert.ok(providerHostedAttempt);
 
-      const result = await startMasDefaultExecutorDispatchAttempt(db, familyRuntimePaths(), {
+      const result = await startDefaultExecutorStageAttempt(db, familyRuntimePaths(), {
         row,
         payload: basePayload,
         providerHostedAttempt,

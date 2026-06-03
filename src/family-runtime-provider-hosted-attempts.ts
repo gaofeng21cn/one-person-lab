@@ -49,7 +49,7 @@ function sameStringField(left: Record<string, unknown>, right: Record<string, un
   return Boolean(leftValue && rightValue && leftValue === rightValue);
 }
 
-function isSameMasDefaultExecutorDispatch(
+function isSameDefaultExecutorDispatch(
   left: Record<string, unknown>,
   right: Record<string, unknown>,
 ) {
@@ -59,7 +59,7 @@ function isSameMasDefaultExecutorDispatch(
     && sameStringField(left, right, 'dispatch_ref');
 }
 
-function isSameMasDefaultExecutorStudyStage(
+function isSameDefaultExecutorStudyStage(
   left: Record<string, unknown>,
   right: Record<string, unknown>,
 ) {
@@ -67,11 +67,11 @@ function isSameMasDefaultExecutorStudyStage(
     && sameStringField(left, right, 'study_id');
 }
 
-function isSameMasDefaultExecutorStudyActionStage(
+function isSameDefaultExecutorStudyActionStage(
   left: Record<string, unknown>,
   right: Record<string, unknown>,
 ) {
-  return isSameMasDefaultExecutorStudyStage(left, right)
+  return isSameDefaultExecutorStudyStage(left, right)
     && sameStringField(left, right, 'action_type');
 }
 
@@ -84,20 +84,20 @@ function sameOptionalStringField(left: Record<string, unknown>, right: Record<st
   return leftValue === rightValue;
 }
 
-export const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
-const MAS_DEFAULT_EXECUTOR_NEXT_OWNERS = new Set([
+export const DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
+const DEFAULT_EXECUTOR_NEXT_OWNERS = new Set([
   'write',
   'ai_reviewer',
   'write/ai_reviewer',
   'gate_clearing_batch',
 ]);
-const MAS_DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
-const MAS_DEFAULT_EXECUTOR_CROSS_TASK_STARTED_ATTEMPT_STATUSES = new Set(['running', 'checkpointed', 'human_gate']);
-const MAS_DEFAULT_EXECUTOR_CROSS_TASK_LIVE_TASK_STATUSES = new Set(['queued', 'running', 'retry_waiting', 'succeeded']);
-const MAS_DEFAULT_EXECUTOR_TERMINAL_PROVIDER_STATUSES = new Set(['completed', 'failed', 'blocked', 'timed_out']);
-const MAS_DEFAULT_EXECUTOR_TASK_LEASE_MS = 5 * 60 * 1000;
+const DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
+const DEFAULT_EXECUTOR_CROSS_TASK_STARTED_ATTEMPT_STATUSES = new Set(['running', 'checkpointed', 'human_gate']);
+const DEFAULT_EXECUTOR_CROSS_TASK_LIVE_TASK_STATUSES = new Set(['queued', 'running', 'retry_waiting', 'succeeded']);
+const DEFAULT_EXECUTOR_TERMINAL_PROVIDER_STATUSES = new Set(['completed', 'failed', 'blocked', 'timed_out']);
+const DEFAULT_EXECUTOR_TASK_LEASE_MS = 5 * 60 * 1000;
 
-function hasActiveMasDefaultExecutorTaskLease(db: DatabaseSync, taskId: string | null) {
+function hasActiveDefaultExecutorTaskLease(db: DatabaseSync, taskId: string | null) {
   if (!taskId) {
     return false;
   }
@@ -113,32 +113,32 @@ function hasActiveMasDefaultExecutorTaskLease(db: DatabaseSync, taskId: string |
   return Number.isFinite(leaseExpiresAt) && leaseExpiresAt > Date.now();
 }
 
-function isCrossTaskLiveMasDefaultExecutorAttempt(
+function isCrossTaskLiveDefaultExecutorAttempt(
   db: DatabaseSync,
   attempt: ReturnType<typeof listStageAttempts>[number],
   workspaceLocator: Record<string, unknown>,
 ) {
-  if (MAS_DEFAULT_EXECUTOR_TERMINAL_PROVIDER_STATUSES.has(optionalString(attempt.provider_run.provider_status) ?? '')) {
+  if (DEFAULT_EXECUTOR_TERMINAL_PROVIDER_STATUSES.has(optionalString(attempt.provider_run.provider_status) ?? '')) {
     return false;
   }
-  if (!hasLiveMasDefaultExecutorLinkedTask(db, attempt.task_id)) {
+  if (!hasLiveDefaultExecutorLinkedTask(db, attempt.task_id)) {
     return false;
   }
-  if (MAS_DEFAULT_EXECUTOR_CROSS_TASK_STARTED_ATTEMPT_STATUSES.has(attempt.status)) {
+  if (DEFAULT_EXECUTOR_CROSS_TASK_STARTED_ATTEMPT_STATUSES.has(attempt.status)) {
     return true;
   }
   return attempt.status === 'queued'
-    && hasActiveMasDefaultExecutorTaskLease(db, attempt.task_id)
+    && hasActiveDefaultExecutorTaskLease(db, attempt.task_id)
     && (
       sameOptionalStringField(attempt.workspace_locator, workspaceLocator, 'domain_source_fingerprint')
       || (
-        isSameMasDefaultExecutorStudyStage(attempt.workspace_locator, workspaceLocator)
-        && !isSameMasDefaultExecutorStudyActionStage(attempt.workspace_locator, workspaceLocator)
+        isSameDefaultExecutorStudyStage(attempt.workspace_locator, workspaceLocator)
+        && !isSameDefaultExecutorStudyActionStage(attempt.workspace_locator, workspaceLocator)
       )
     );
 }
 
-function hasLiveMasDefaultExecutorLinkedTask(db: DatabaseSync, taskId: string | null) {
+function hasLiveDefaultExecutorLinkedTask(db: DatabaseSync, taskId: string | null) {
   if (!taskId) {
     return false;
   }
@@ -147,7 +147,7 @@ function hasLiveMasDefaultExecutorLinkedTask(db: DatabaseSync, taskId: string | 
     FROM tasks
     WHERE task_id = ?
   `).get(taskId) as Pick<FamilyRuntimeTaskRow, 'status'> | undefined;
-  return Boolean(row && MAS_DEFAULT_EXECUTOR_CROSS_TASK_LIVE_TASK_STATUSES.has(row.status));
+  return Boolean(row && DEFAULT_EXECUTOR_CROSS_TASK_LIVE_TASK_STATUSES.has(row.status));
 }
 
 function workspaceRootFromProfile(profile: string | null) {
@@ -232,27 +232,27 @@ function familyTransitionResult(payload: Record<string, unknown>) {
   return optionalString(transition.transition_id) ? transition : null;
 }
 
-export function isAdmittedMasDefaultExecutorNextOwner(nextOwner: string | null) {
-  return nextOwner !== null && MAS_DEFAULT_EXECUTOR_NEXT_OWNERS.has(nextOwner);
+export function isAdmittedDefaultExecutorNextOwner(nextOwner: string | null) {
+  return nextOwner !== null && DEFAULT_EXECUTOR_NEXT_OWNERS.has(nextOwner);
 }
 
-export function isMasDefaultExecutorDispatchTask(
+export function isDefaultExecutorDispatchTask(
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
 ) {
   const nextOwner = optionalString(payload.next_executable_owner);
   return row.domain_id === 'medautoscience'
-    && row.task_kind === MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
+    && row.task_kind === DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
     && optionalString(payload.dispatch_ref) !== null
-    && isAdmittedMasDefaultExecutorNextOwner(nextOwner)
+    && isAdmittedDefaultExecutorNextOwner(nextOwner)
     && ['codex_cli_default', 'codex_cli'].includes(optionalString(payload.executor_kind) ?? '');
 }
 
-export function masDefaultExecutorDispatchIdentity(
+export function defaultExecutorDispatchIdentity(
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
 ) {
-  if (!isMasDefaultExecutorDispatchTask(row, payload)) {
+  if (!isDefaultExecutorDispatchTask(row, payload)) {
     return null;
   }
   const locator = workspaceLocatorForProviderHostedTask(row, payload);
@@ -266,11 +266,11 @@ export function masDefaultExecutorDispatchIdentity(
   ]);
 }
 
-export function masDefaultExecutorStudyActionIdentity(
+export function defaultExecutorStudyActionIdentity(
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
 ) {
-  if (!isMasDefaultExecutorDispatchTask(row, payload)) {
+  if (!isDefaultExecutorDispatchTask(row, payload)) {
     return null;
   }
   const locator = workspaceLocatorForProviderHostedTask(row, payload);
@@ -283,11 +283,11 @@ export function masDefaultExecutorStudyActionIdentity(
   ]);
 }
 
-export function masDefaultExecutorStudyIdentity(
+export function defaultExecutorStudyIdentity(
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
 ) {
-  if (!isMasDefaultExecutorDispatchTask(row, payload)) {
+  if (!isDefaultExecutorDispatchTask(row, payload)) {
     return null;
   }
   const locator = workspaceLocatorForProviderHostedTask(row, payload);
@@ -299,16 +299,16 @@ export function masDefaultExecutorStudyIdentity(
   ]);
 }
 
-export function masDefaultExecutorDomainSourceFingerprint(payload: Record<string, unknown>) {
+export function defaultExecutorDomainSourceFingerprint(payload: Record<string, unknown>) {
   return optionalString(payload.source_fingerprint);
 }
 
-export function findLiveMasDefaultExecutorDispatchAttempt(
+export function findLiveDefaultExecutorDispatchAttempt(
   db: DatabaseSync,
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
 ) {
-  if (!isMasDefaultExecutorDispatchTask(row, payload)) {
+  if (!isDefaultExecutorDispatchTask(row, payload)) {
     return null;
   }
   const providerKind = resolveFamilyRuntimeProviderKind();
@@ -323,17 +323,17 @@ export function findLiveMasDefaultExecutorDispatchAttempt(
     && attempt.executor_kind === 'codex_cli'
     && attempt.domain_id === row.domain_id
     && attempt.stage_id === stageId
-    && isCrossTaskLiveMasDefaultExecutorAttempt(db, attempt, workspaceLocator)
-    && isSameMasDefaultExecutorDispatch(attempt.workspace_locator, workspaceLocator)
+    && isCrossTaskLiveDefaultExecutorAttempt(db, attempt, workspaceLocator)
+    && isSameDefaultExecutorDispatch(attempt.workspace_locator, workspaceLocator)
   )) ?? null;
 }
 
-export function findLiveMasDefaultExecutorStudyAttempt(
+export function findLiveDefaultExecutorStudyAttempt(
   db: DatabaseSync,
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
 ) {
-  if (!isMasDefaultExecutorDispatchTask(row, payload)) {
+  if (!isDefaultExecutorDispatchTask(row, payload)) {
     return null;
   }
   const providerKind = resolveFamilyRuntimeProviderKind();
@@ -348,12 +348,12 @@ export function findLiveMasDefaultExecutorStudyAttempt(
     && attempt.executor_kind === 'codex_cli'
     && attempt.domain_id === row.domain_id
     && attempt.stage_id === stageId
-    && isCrossTaskLiveMasDefaultExecutorAttempt(db, attempt, workspaceLocator)
-    && isSameMasDefaultExecutorStudyStage(attempt.workspace_locator, workspaceLocator)
+    && isCrossTaskLiveDefaultExecutorAttempt(db, attempt, workspaceLocator)
+    && isSameDefaultExecutorStudyStage(attempt.workspace_locator, workspaceLocator)
   )) ?? null;
 }
 
-export function refreshMasDefaultExecutorLiveAttemptTaskLease(
+export function refreshDefaultExecutorLiveAttemptTaskLease(
   db: DatabaseSync,
   input: {
     attempt: ReturnType<typeof listStageAttempts>[number] | null;
@@ -374,7 +374,7 @@ export function refreshMasDefaultExecutorLiveAttemptTaskLease(
     return null;
   }
   const leaseOwner = row.lease_owner || `opl-family-runtime:${process.pid}`;
-  const leaseExpiresAt = new Date(Date.now() + MAS_DEFAULT_EXECUTOR_TASK_LEASE_MS).toISOString();
+  const leaseExpiresAt = new Date(Date.now() + DEFAULT_EXECUTOR_TASK_LEASE_MS).toISOString();
   const refreshedAt = nowIso();
   db.prepare(`
     UPDATE tasks
@@ -411,7 +411,7 @@ export function stageIdForProviderHostedTask(row: FamilyRuntimeTaskRow, payload:
   if (isMasOwnerRouteTask(row.domain_id, row.task_kind)) {
     return row.task_kind;
   }
-  if (isMasDefaultExecutorDispatchTask(row, payload)) {
+  if (isDefaultExecutorDispatchTask(row, payload)) {
     return row.task_kind;
   }
   if (row.domain_id === 'medautoscience' && MAS_PAPER_AUTONOMY_TASK_KINDS.has(row.task_kind)) {
@@ -454,7 +454,7 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
     locator.opl_writes_artifact_gate = false;
     locator.opl_writes_current_package = false;
   }
-  if (isMasDefaultExecutorDispatchTask(row, payload)) {
+  if (isDefaultExecutorDispatchTask(row, payload)) {
     locator.domain_truth_owner = 'med-autoscience';
     locator.opl_writes_domain_truth = false;
     locator.opl_writes_publication_quality = false;
@@ -544,7 +544,7 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
   if (Array.isArray(payload.source_refs)) {
     locator.source_refs = payload.source_refs.filter(isRecord);
   }
-  if (isMasDefaultExecutorDispatchTask(row, payload)) {
+  if (isDefaultExecutorDispatchTask(row, payload)) {
     locator.domain_truth_owner = 'med-autoscience';
     locator.opl_writes_domain_truth = false;
     locator.opl_writes_publication_quality = false;
@@ -567,7 +567,7 @@ function sourceFingerprintForProviderHostedTask(row: FamilyRuntimeTaskRow, paylo
       isRecord(transition.receipt) ? transition.receipt : null,
     ]);
   }
-  if (isMasDefaultExecutorDispatchTask(row, payload)) {
+  if (isDefaultExecutorDispatchTask(row, payload)) {
     return stableId('mas_default_executor_source', [
       row.domain_id,
       row.task_kind,
@@ -604,14 +604,14 @@ export function ensureProviderHostedStageAttempt(
   const expectedSourceFingerprint = sourceFingerprintForProviderHostedTask(row, payload);
   const stageId = stageIdForProviderHostedTask(row, payload);
   const workspaceLocator = workspaceLocatorForProviderHostedTask(row, payload);
-  if (!options.newAttempt && isMasDefaultExecutorDispatchTask(row, payload) && existingAttempts.some((attempt) => (
-    attempt.provider_kind === providerKind && MAS_DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES.has(attempt.status)
+  if (!options.newAttempt && isDefaultExecutorDispatchTask(row, payload) && existingAttempts.some((attempt) => (
+    attempt.provider_kind === providerKind && DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES.has(attempt.status)
   ))) {
     return null;
   }
-  if (!options.newAttempt && isMasDefaultExecutorDispatchTask(row, payload) && stageId) {
-    const liveDispatchAttempt = findLiveMasDefaultExecutorDispatchAttempt(db, row, payload);
-    const liveStudyAttempt = liveDispatchAttempt ?? findLiveMasDefaultExecutorStudyAttempt(db, row, payload);
+  if (!options.newAttempt && isDefaultExecutorDispatchTask(row, payload) && stageId) {
+    const liveDispatchAttempt = findLiveDefaultExecutorDispatchAttempt(db, row, payload);
+    const liveStudyAttempt = liveDispatchAttempt ?? findLiveDefaultExecutorStudyAttempt(db, row, payload);
     if (liveStudyAttempt) {
       insertEvent(db, {
         taskId: row.task_id,
@@ -656,10 +656,10 @@ export function ensureProviderHostedStageAttempt(
     providerKind,
     workspaceLocator,
     sourceFingerprint: expectedSourceFingerprint,
-    executorKind: isMasDefaultExecutorDispatchTask(row, payload) ? 'codex_cli' : 'domain_handler',
+    executorKind: isDefaultExecutorDispatchTask(row, payload) ? 'codex_cli' : 'domain_handler',
     taskId: row.task_id,
     newAttempt: options.newAttempt,
-    checkpointRefs: isMasDefaultExecutorDispatchTask(row, payload)
+    checkpointRefs: isDefaultExecutorDispatchTask(row, payload)
       ? uniqueStrings([optionalString(payload.dispatch_ref)])
       : undefined,
     blockedReason: admissionGate.blocked_reason ?? undefined,
