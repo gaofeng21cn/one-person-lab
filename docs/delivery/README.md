@@ -5,7 +5,7 @@ Purpose: `generic_delivery_lifecycle_support`
 State: `active_support`
 Machine boundary: 人读索引。机器真相继续归合同、源码、artifact locator、package/export ledger 与 domain owner receipts。
 
-本目录只承接通用 artifact/package/export lifecycle shell、locator、refs、retention、restore 与 projection 支撑。One Person Lab App 可以消费这些 framework/provider 与 domain-owned projection 来展示 artifact gallery、package/export refs、lifecycle refs 和 owner-aware action，但不持有 artifact body、quality/export verdict、domain owner receipt 或 release/production readiness。MAS/MAG/RCA 的 manuscript、grant package、deck、visual artifact、review/export verdict 和最终交付 authority 仍由各 domain repo 持有。runtime artifact root 外置与 developer checkout 禁入规则归 [Workspace / File Lifecycle 政策](../policies/runtime-artifact-hygiene-policy.md)。
+本目录只承接通用 artifact/package/export lifecycle shell、locator、refs、retention、restore 与 projection 支撑。默认物理读法是 stage-native：stage attempt 以 `Stage Folder + Manifest + Receipt` 形成可物化、可校验、可恢复单元，OPL 从 manifest、receipt、content hash、lineage refs 和 current/latest pointer 重建 read model。One Person Lab App 可以消费这些 framework/provider 与 domain-owned projection 来展示 artifact gallery、package/export refs、lifecycle refs 和 owner-aware action，但不持有 artifact body、quality/export verdict、domain owner receipt 或 release/production readiness。MAS/MAG/RCA 的 manuscript、grant package、deck、visual artifact、review/export verdict 和最终交付 authority 仍由各 domain repo 持有。runtime artifact root 外置与 developer checkout 禁入规则归 [Workspace / File Lifecycle 政策](../policies/runtime-artifact-hygiene-policy.md)。
 
 当前入口先看：
 
@@ -17,4 +17,4 @@ Machine boundary: 人读索引。机器真相继续归合同、源码、artifact
 
 | 文件 | 生命周期状态 | 当前 owner | 阅读规则 |
 | --- | --- | --- | --- |
-| `artifact-package-lifecycle-boundary.md` | `active_support` | OPL delivery lifecycle shell owner | 只解释通用 artifact/package/export locator、refs、restore/retention 和 projection 边界；domain artifact 内容、ready/export verdict 和 mutation authority 回 MAS/MAG/RCA。 |
+| `artifact-package-lifecycle-boundary.md` | `active_support` | OPL delivery lifecycle shell owner | 只解释通用 artifact/package/export locator、Stage Folder + Manifest + Receipt、refs、restore/retention 和 projection 边界；domain artifact 内容、ready/export verdict 和 mutation authority 回 MAS/MAG/RCA。 |

@@ -24,6 +24,7 @@ MAS 这类 domain agent 只声明医学研究语义、guard、owner route、expe
 | Prefect | flow/task/subflow、rich states、pause/resume、type-checked human input、state history。 | OPL stage attempt 暴露 rich state 与 typed human input request；domain repo 只声明审批字段与质量门含义。 |
 | AutoGen Core | actor-style agent runtime、async routed messages、topic/subscription、runtime-managed agent lifecycle。 | executor、reviewer、auditor 必须是 OPL 调度的独立 invocation 与 receipt 流；同一 invocation 不能执行后自审并关闭 quality gate。 |
 | CrewAI Flows | event-driven flow、start/listen/router、state management、flow visualization。 | OPL 可在 App/operator read model 中投影 route graph，但图展示不等于 domain verdict 或 production ready。 |
+| Nextflow / DVC / Kubeflow / MLflow / Dagster / PROV-O / OpenLineage | 声明输出、stage/dep/out lock、artifact path/URI、run metadata 与 artifact store 分离、asset key/materialization metadata、entity/activity/agent 或 job/run/dataset 分层。 | OPL 吸收 `Stage Folder + Manifest + Receipt`、content hash、lineage event、current pointer 和 metadata/artifact body 分离；外部系统不成为 dependency，下游仍依赖 declared refs、manifest 和 owner receipt，不依赖 publish/display 目录。 |
 
 ## 目标模型
 
@@ -49,6 +50,42 @@ OPL stage_control_graph
 | `child_graph` | OPL runtime | parent stage 内部的可恢复子运行；完成后只回写 typed parent result/ref。 |
 | `authority_function` | Domain repo | 写 domain truth、artifact body、quality verdict、owner receipt 或 typed blocker 的最小程序面。 |
 | `receipt/event ledger` | OPL for refs, domain for authority | OPL 保存 refs-only attempt/event/transport receipt；domain 签 owner receipt 和 verdict/blocker。 |
+
+## Stage Folder Contract
+
+每个可持久化 stage attempt 应物化为外部 runtime artifact root 中的 stage folder。目标目录语义如下：
+
+```text
+runtime-state/domains/<domain_id>/deliverables/<program>/<topic>/<deliverable>/
+  deliverable.json
+  stages/<stage_order>-<stage_id>/
+    stage.json
+    latest -> attempts/<attempt_id>/
+    attempts/<attempt_id>/
+      attempt.json
+      inputs/
+      outputs/
+      evidence/
+      receipts/
+      manifest.json
+  artifacts/canonical/
+  artifacts/exports/
+  lineage/events.jsonl
+  current.json
+```
+
+`stage.json` 描述 stage role、required outputs、allowed receipt kinds、authority boundary 和 retention policy。`attempt.json` 描述 attempt identity、executor/provider binding、source/artifact/workspace refs、consumed refs 与 idempotency key。`manifest.json` 记录 required outputs、checksums、content type、producer、lineage refs、receipt refs、broken/orphan classification 和 promotion eligibility。`current.json` / `latest` 只声明当前 attempt pointer；它不替代 manifest、receipt 或 domain verdict。
+
+RCA 的 stage output role 应固定在 contract 语义上：`source_intake` 输出 source truth pack、material inventory 或 missing material blocker；`communication_strategy` 输出 strategy brief 与 audience/claim/voice constraints；`visual_direction` 输出 storyboard、page plan 和 visual direction；`artifact_creation` 输出 render artifacts、render manifest 与 asset checksums；`review_and_revision` 输出 review verdict、screenshots、repair plan 和 before/after refs；`package_and_handoff` 输出 export bundle、handoff manifest、publish copy 与 checksum/provenance。实际文件名可以随 domain 工具变化，但 manifest 中的 role 必须稳定。
+
+Stage status / explain 的推导顺序固定为：
+
+1. 读取 `current.json` / `latest`，定位当前 attempt。
+2. 校验 `manifest.json` 的 schema、required output roles、hash、path、lineage refs 与 receipt refs。
+3. 校验 owner receipt、typed blocker 或 decision receipt 的 authority。
+4. 输出 `success`、`blocked`、`skipped/deferred`、`running`、`stale`、`orphan artifact` 或 `broken artifact` 解释。
+
+OPL 可以为这组语义提供 `stage open|commit|status|explain|promote|gc` 这类目标 API，但现有 CLI/read-model 是否已落地必须回到 fresh contracts/source/tests 判断。无论当前实现形态如何，DB、UI、App/operator projection、`stage_progress_log` 和 artifact gallery 都只能是从 stage folder contract 派生的索引。
 
 ## 调度规则
 

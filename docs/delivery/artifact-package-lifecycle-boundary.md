@@ -19,6 +19,23 @@ OPL 只负责通用 artifact/package/export lifecycle shell：
 
 OPL 不拥有 manuscript、grant package、deck、visual artifact、review/export verdict、submission ready verdict 或 artifact mutation permission。真实 artifact body、receipt 实例和最终交付物应位于外部 runtime artifact root；developer checkout 只保存 locator、schema、receipt ref、restore / retention policy 和可审查 fixture。`family-runtime lifecycle apply` 遇到 domain truth、memory body、artifact body 或 source repo active file mutation 会 fail-closed；domain artifact mutation 只能作为 domain owner receipt ref 被记录。
 
+## Stage Artifact 单元
+
+通用 artifact/package/export lifecycle 的默认物理读法是 stage-native：stage attempt 在外部 runtime artifact root 内以 `Stage Folder + Manifest + Receipt` 形成最小可物化单元。OPL 只索引 stage folder、manifest、receipt ref、content hash、lineage event、current/latest pointer、canonical/export promotion ref 和 retention / restore policy；domain repo 持有 artifact body、quality/export verdict、owner receipt 和最终交付 authority。
+
+artifact 状态分类固定为：
+
+| 状态 | 判定 | 处理 |
+| --- | --- | --- |
+| `current artifact` | 当前 stage pointer 指向的 attempt 中，manifest、required outputs、hash 与 owner receipt 均成立。 | 可进入 App/operator projection 或被 domain owner promote。 |
+| `canonical artifact` | domain owner receipt 或 promotion receipt 已把某个 stage output 提升到 `artifacts/canonical/`。 | 可作为交付 authority ref 被引用；OPL 仍不拥有 quality/export verdict。 |
+| `export artifact` | package/handoff/export receipt 指向的外发 bundle 或渲染结果。 | 进入 package/export lifecycle projection；ready/export 判断回 domain owner。 |
+| `orphan artifact` | 文件存在，但缺少 manifest 或 owner receipt 绑定。 | 只作为 repair / audit attention；不能计入 stage 完成。 |
+| `broken artifact` | receipt 或 manifest 指向 required output，但文件缺失、hash 不匹配或不可读。 | 必须进入 repair / route-back；不能作为 current progress。 |
+| `historical artifact` | 旧 attempt 产物存在，但不被 current/latest pointer 指向。 | 只作 provenance / rollback / audit evidence。 |
+
+因此 artifact gallery、package/export projection、lifecycle index 和 restore proof 都必须解释这些状态，而不是把目录存在、文件数量、export bundle 存在或 receipt counter 写成 artifact ready。
+
 ## 动态证据入口
 
 | delivery/lifecycle 面 | 稳定读法 | 当前机器入口 |
@@ -43,6 +60,8 @@ OPL 不拥有 manuscript、grant package、deck、visual artifact、review/expor
 ## 不能写成
 
 - artifact/package/export refs observed 等于 artifact ready、export ready、submission ready、quality verdict 或 production ready。
+- stage folder、artifact directory、render file、export bundle 或 latest pointer 存在本身等于 stage complete、artifact ready 或 handoff complete。
+- orphan artifact、broken artifact 或 historical artifact 被计入 current progress。
 - App gallery、package/export projection、lifecycle index 或 restore proof ref 等于 domain owner receipt、artifact mutation authority 或 final deliverable authority。
 - OPL 可读取、改写、清理或接受真实 artifact body、memory body、domain truth body 或 source repo active file。
 - `family-runtime lifecycle apply` 可以替代 MAS/MAG/RCA 的 cleanup、restore、retention、artifact mutation 或 owner-chain receipt。

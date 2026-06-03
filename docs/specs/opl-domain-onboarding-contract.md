@@ -235,9 +235,25 @@ Onboarding package 必须说明：
 - 哪个 domain-agent entry 是唯一允许的 successful stage target
 - 哪些 workstream ID 会进入 stage-eligible 集合
 - 哪些显式 stage / handoff evidence 能把 no-bypass-to-internal-harness 规则继续保持为硬边界
+- 每个可持久化 stage attempt 如何按 `Stage Folder + Manifest + Receipt` 物化到外部 runtime artifact root
+- 每个 stage 的 required output roles、manifest schema refs、owner receipt kinds、typed blocker kinds、decision receipt kinds、current/latest pointer 规则和 retention / restore policy
+- 如何从 stage folder 重建 stage status / explain，而不依赖 domain 私有状态表、UI projection 或目录存在启发式
 
 如果这份 package 不能把唯一成功目标保持在 public domain-agent entry，它就还不是 stage-execution-ready。
 公开 scaffold 或方向提示本身，也不足以满足这一 package。
+
+## 7.5 Stage Artifact Contract Readiness
+
+标准 OPL Agent 的 admission package 必须声明 stage-native artifact contract。OPL 接受的是可物化、可校验、可恢复的 stage 单元，而不是任意输出目录。
+
+最小要求如下：
+
+- `success`、`blocked`、`skipped/deferred` 三类终态必须都能落成 receipt：`success` 需要 required outputs、valid manifest 和 owner receipt；`blocked` 需要 typed blocker 和 missing/failed evidence；`skipped/deferred` 需要 explicit decision receipt。
+- manifest 必须把 physical output path、role、content hash、producer、input refs、lineage refs、receipt refs、current/canonical/export eligibility 和 repair classification 写清楚。
+- OPL projection、DB、UI、artifact gallery 和 status read model 必须能从 stage folders 重建；domain repo 可以保留 domain-owned truth table 或 review ledger，但不能要求 OPL 读取它们来解释基本 stage progress。
+- 文件存在、目录存在、render/export bundle 存在或 provider completion 都不能被声明为 stage complete。缺 owner receipt 的文件必须投影为 orphan artifact；receipt/manifest 指向但文件缺失或 hash 不匹配必须投影为 broken artifact；未被 current/latest pointer 指向的旧 attempt 只能投影为 historical evidence。
+
+对 RCA 这类 visual deliverable domain，stage output role 应按 domain contract 固定，例如 source truth pack、material inventory、strategy brief、storyboard/page plan、render manifest、review verdict、repair plan、handoff manifest、canonical artifact refs 和 export bundle refs。OPL 只审查这些 role 是否可被 manifest / receipt / pointer 稳定定位，不审查视觉质量或 export verdict。
 
 ## 8. Cross-Domain Wording Alignment
 
@@ -276,13 +292,16 @@ Onboarding package 必须说明：
 5. **Stage execution ready**
    Stage execution 能带着显式 evidence 进入 public domain-agent entry，且不会绕过 domain-owned harness/controller boundary。
 
-6. **Review ready**  
+6. **Stage artifact ready**
+   Stage attempt 能以 `Stage Folder + Manifest + Receipt` 物化，且 OPL 可以从 physical outputs、manifest validity、receipt authority 与 current pointer 重建 progress / blocker / repair 状态。
+
+7. **Review ready**
    这个 domain 暴露了显式 review semantics，而不只是执行入口。
 
-7. **Execution model aligned**
+8. **Execution model aligned**
    这个 domain 明确保持 `Agent-first`，诚实描述当前 `Auto-only` 主线，并给出未来 `Human-in-the-loop` 产品如何以 substrate-compatible 的 sibling 或 upper-layer 形式复用同一基座，而不是把当前仓强行做成同仓双模或漂移成 `fixed-code-first` 主流程。
 
-8. **Cross-domain wording aligned**
+9. **Cross-domain wording aligned**
    `OPL`、该 domain README 以及相关公开表面，在顶层角色语言上保持一致。
 
 只要其中任意一条不成立，这个 domain 仍可以处于讨论或设计中，但还不能算正式收录。
@@ -308,6 +327,7 @@ Onboarding package 必须说明：
 - 哪些 truth 在这个 domain 内部保持 canonical？
 - 哪些 family 位于这个 domain 内，但不自动等于某个 OPL workstream？
 - `OPL` 如何在 stage 边界选择并进入它？
+- stage attempt 如何物化为 stage folder，manifest / receipt / current pointer 如何证明 progress？
 - 它依赖什么 stable agent runtime surface？
 - 当前 `Auto-only` 仓如何与未来 `Human-in-the-loop` sibling 或 upper-layer product 保持兼容，而不是变成两套互不相干的系统？
 - 为什么这应被视作一个新 domain，而不是现有 domain 里的一个 family？
