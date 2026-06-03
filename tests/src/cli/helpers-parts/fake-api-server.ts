@@ -141,7 +141,6 @@ export async function startFakeOplApiServer() {
               },
               narration_policy: {
                 mode: 'ai_first',
-                legacy_summary_role: 'fallback_only',
                 style: 'plain_language',
                 answer_checklist: ['current_stage', 'current_blockers', 'next_step'],
               },
@@ -409,4 +408,3 @@ export async function startFakeOplApiServer() {
     apiBaseUrl: `http://127.0.0.1:${address.port}/api`,
   };
 }
-

@@ -42,7 +42,10 @@ class StatusNarrationContractTest(unittest.TestCase):
             list(PAPER_MILESTONE_ANSWER_CHECKLIST),
         )
         self.assertEqual(payload["narration_policy"]["mode"], "ai_first")
-        self.assertEqual(payload["narration_policy"]["legacy_summary_role"], "fallback_only")
+        self.assertEqual(
+            sorted(payload["narration_policy"]),
+            ["answer_checklist", "mode", "style"],
+        )
 
     def test_status_narration_contract_uses_progress_defaults_when_no_checklist_is_given(self) -> None:
         payload = build_status_narration_contract(
@@ -89,7 +92,7 @@ class StatusNarrationContractTest(unittest.TestCase):
             ["当前论文交付目录与注册/合同约定不一致，需要先修正交付面。"],
         )
 
-    def test_build_status_narration_human_view_falls_back_to_legacy_fields(self) -> None:
+    def test_build_status_narration_human_view_uses_explicit_callsite_fallbacks(self) -> None:
         view = build_status_narration_human_view(
             None,
             fallback_current_stage="manual_finishing",

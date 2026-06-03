@@ -271,7 +271,6 @@ def build_status_narration_contract(
         "facts": _normalize_mapping(facts),
         "narration_policy": {
             "mode": "ai_first",
-            "legacy_summary_role": "fallback_only",
             "style": "plain_language",
             "answer_checklist": normalized_answer_checklist,
         },
