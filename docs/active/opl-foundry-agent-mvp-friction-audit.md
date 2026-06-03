@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `mvp_friction_audit`
 State: `active_support`
 Machine boundary: 本文是人读设计审计。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、owner receipt、typed blocker 和真实 workspace / App evidence。
-Date: `2026-06-04`
+Date: `2026-06-03`
 
 ## 审计问题
 
@@ -157,7 +157,198 @@ record receipt refs
 
 除此之外的 ledger、replay、diagnostic、cleanup、long-soak 和 conformance 都应默认后置。
 
-## Recommended Changes
+## External Practice Calibration
+
+本轮按当前日期做了外部工程经验 refresh。可吸收的是工程原则，不是外部 runtime 或外部术语本身：
+
+| 成熟经验 | 对 OPL 的约束 |
+| --- | --- |
+| [Anthropic Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) 强调简单、可组合的 agent / workflow patterns，复杂 agent 只在简单模式不够时引入。 | Foundry Agent 默认路径必须短；不要把多 agent、replay、diagnostic、worklist 或 proof lane 先做成普通入口。 |
+| [OpenAI A Practical Guide to Building Agents](https://cdn.openai.com/business-guides-and-resources/a-practical-guide-to-building-agents.pdf) 把模型、工具、指令、orchestration、guardrails、人类介入和评估拆成可组合层。 | OPL 应保留 stage executor 的开放式能力，把 guardrail 分级为 launch-hard、runtime-enforced、human/domain gate、audit-only；不要把所有 guardrail 都提升成 launch blocker。 |
+| [Kubernetes controller pattern](https://kubernetes.io/docs/concepts/architecture/controller/) 用 desired state / current state reconciliation 推进系统。 | OPL control plane 应围绕 desired owner delta 与 actual attempt / receipt / blocker 对账；audit tail 不能反向生成新的 desired work。 |
+| [Kubernetes object spec/status](https://kubernetes.io/docs/concepts/overview/working-with-objects/kubernetes-objects/) 区分用户声明的 desired state 与系统观测的 status。 | Foundry Agent 的 `stage pack / owner delta` 是 spec；attempt ledger、provider status、receipt refs、worklist counters 是 status。status 不得自称新的 domain goal。 |
+| [Temporal docs](https://docs.temporal.io/) 把长跑任务的 crash-proof / resume 交给 durable execution substrate。 | OPL 基座要把 wakeup、retry、dead-letter、history、query、heartbeat 交给 Temporal-backed provider；domain repo 不再复制 scheduler / daemon / attempt loop。 |
+| [Google SRE Eliminating Toil](https://sre.google/sre-book/eliminating-toil/) 把手工、重复、可自动化、战术性且缺少持久价值的工作识别为 toil。 | receipt record、read-model reconcile、stale route redrive、重复 typed-blocker accounting 若不产生 deliverable delta，就是平台 toil；默认面应 stop-loss 或下沉到 audit。 |
+| [Team Topologies TVP examples](https://github.com/TeamTopologies/Thinnest-Viable-Platform-examples) 把平台控制在能加速团队交付的最小 API / docs / tools 集合。 | OPL Framework 的理想基座是 thinnest viable agent platform：stage runtime、receipt boundary、owner projection、artifact kernel、generated surface；其余默认诊断后置。 |
+| [OpenTelemetry signals](https://opentelemetry.io/docs/concepts/signals/) 与 [observability primer](https://opentelemetry.io/docs/concepts/observability-primer/) 区分 traces、metrics、logs，并强调从外部理解系统。 | OPL 默认状态应是 broad signal：owner、delta、hard gate、current attempt；full traces/logs/receipt groups 只用于 drilldown，不作为普通 action queue。 |
+
+这些经验共同指向一个设计结论：理想 OPL 不应该更厚，而应该更窄、更强、更可恢复。厚度放在 full audit、production evidence 和 diagnostic；普通推进路径只保留能让 selected executor 产出下一份 domain delta 的最小平台。
+
+## Ideal MVP Redesign
+
+### Target loop
+
+理想默认循环应收敛为：
+
+```text
+user goal / domain material / admitted stage pack
+  -> compact current owner delta
+  -> selected Codex executor attempt
+  -> stage-native physical output + manifest
+  -> independent gate / domain owner answer
+  -> owner receipt or stable typed blocker
+  -> compact projection / next owner delta
+```
+
+默认面只回答一句话：
+
+```text
+谁现在欠什么可验证 delta；OPL 能否安全启动；如果不能，硬阻塞 owner 是谁。
+```
+
+所有不能填入这句话的 surface，都不得出现在普通 App / CLI / operator 首屏。
+
+### Three-plane architecture
+
+| Plane | 默认职责 | 禁止职责 |
+| --- | --- | --- |
+| `Delivery Plane` | 当前 owner delta、stage attempt、domain deliverable delta、independent gate、owner receipt、typed blocker、handoff。 | 展示 raw envelope、历史 receipt group、full replay packet、private residue list。 |
+| `Control Plane` | Temporal-backed provider、typed queue、attempt ledger、single-flight、retry/dead-letter、human gate transport、stage artifact kernel、currentness reconcile。 | 持有 domain truth、质量 verdict、artifact body、memory body、owner receipt signer。 |
+| `Audit Plane` | raw evidence envelope、receipt ledger、stage replay、diagnostic traces、long-soak refs、cleanup provenance、full worklist。 | 自动抢占 next action；把 ledger 增长写成 progress；把 audit count 当成 completion。 |
+
+MVP 优化的核心是把默认 action selector 固定在 `Delivery Plane`，只在以下情况穿透到 `Control Plane`：
+
+- provider / worker liveness 阻断 executor attempt；
+- queue / lease / dead-letter 阻断当前 owner delta 启动；
+- human gate 是当前 stage 的真实 entry condition；
+- no-forbidden-write / authority boundary 缺失会导致越权或不可恢复。
+
+`Audit Plane` 不主动生成 work；它只解释为什么当前 owner delta 不能推进，或为 release / production / incident review 提供证据。
+
+### Canonical MVP object: `current_owner_delta`
+
+OPL 基座应把所有默认读面压到同一个 compact object，而不是让 App、CLI、worklist 和 readiness 各自解释：
+
+```text
+current_owner_delta
+  identity: domain + study/task + stage + source/work-unit fingerprint + lineage
+  desired_delta: deliverable delta / quality gate / human answer / owner receipt / typed blocker
+  current_owner: provider / domain / human / app / framework
+  accepted_answer_shape: receipt refs / typed blocker refs / artifact refs / human decision refs
+  launch_gate: hard blocker / warning / audit-only
+  live_attempt: none / queued / running / human_gate / dead_letter / terminal
+  stop_loss: false / fresh_owner_delta_required / stable_typed_blocker_required
+```
+
+这应成为 App fast profile、`framework readiness` 默认 summary、`evidence-worklist.progress_first_operator_summary`、runtime tray 和 Agent Lab 的 shared source。raw counters 可以存在，但只能挂在 `audit_refs` 下。
+
+### Reconciliation rule
+
+OPL 的 reconcile loop 应只比较两件事：
+
+```text
+desired current_owner_delta
+  vs
+actual attempt / provider / receipt / human-gate / typed-blocker state
+```
+
+如果 actual 已经有 terminal owner receipt、terminal typed blocker、superseded source 或 accepted closeout，reconcile 的结果应是 compact / close / stop-loss，而不是再暴露一条 per-attempt record route。若 desired delta 本身不新鲜，OPL 只能要求 domain owner 刷新 route，不能用 audit tail 合成新 work。
+
+### Surface budget gate
+
+新增模块、命令、read-model、worklist item 或 App card 想进入默认面，必须同时满足三条：
+
+1. 它能改变当前 owner delta 的可启动性或下一 owner。
+2. 它能阻止错误启动、越权、不可恢复、不可审计或 provider 不可达。
+3. 它能减少 operator 决策成本，而不是只增加解释细节。
+
+不满足三条的设计面，默认分类为 `audit_only`、`diagnostic_only`、`production_hardening`、`cleanup_lane` 或 `reference`。
+
+## OPL Base Optimizations
+
+### 1. Owner-delta store before worklist store
+
+OPL 当前已有 owner-delta-first 叙事；理想实现应把它变成更强的基座 primitive：先派生 `current_owner_delta`，再从它派生 worklist、attention、App state 和 CLI summary。worklist 不应直接从 raw receipt envelope 生成默认 action。
+
+完成口径：
+
+- 同一 `domain + stage + lineage + source fingerprint` 默认只暴露 1 条 current delta。
+- historical / superseded / typed-blocked / terminal attempts 进入 lineage audit。
+- worklist count 不能影响 next action 排序；next action 由 current owner delta 决定。
+
+### 2. Stop-loss as a control-plane primitive
+
+重复 receipt-only、platform-repair-only、read-model reconcile-only、stale route redrive-only 的 lineage 应自动进入 stop-loss。stop-loss 后默认只接受两种输入：
+
+- fresh domain owner delta；
+- domain-owned stable typed blocker。
+
+这不是降级处理，而是防止平台 toil 消耗 executor 预算。对 MAS，这条规则应优先覆盖 `domain_owner/default-executor-dispatch`、paper autonomy stale route、AI reviewer currentness 和 stage evidence refs-only tail。
+
+### 3. Stage-native artifact progress
+
+默认进度应由 `physical outputs + manifest validity + receipt authority + current pointer` 推导。receipt ledger verified、stage replay observed、provider completed 或 open worklist closed，只能证明 audit/control 状态，不能替代 artifact / deliverable progress。
+
+对四类 agent 的默认进度读法应固定为：
+
+| Agent | 默认 progress unit |
+| --- | --- |
+| MAS | paper / evidence / reviewer / publication handoff delta + MAS owner receipt or typed blocker。 |
+| MAG | grant proposal / fundability / export / submission gate delta + MAG owner receipt or typed blocker。 |
+| RCA | visual artifact / review / export delta + RCA owner receipt or typed blocker。 |
+| OMA | target-agent work order / candidate / mechanism proposal / target owner answer。 |
+
+### 4. Golden path over route menu
+
+每个 Foundry Agent 只能有一个 ordinary golden path。其他 route variant、proof lane、diagnostic lane、long-soak lane 和 cleanup lane 必须显式选择。
+
+| Agent | Ordinary golden path | Explicit / non-default |
+| --- | --- | --- |
+| MAS | current study -> next paper/reviewer/human gate delta。 | historical dispatch refs、MDS / provenance、platform repair、full typed blocker groups。 |
+| MAG | selected grant -> authoring / fundability / export gate delta。 | funding rediscovery、Hermes proof lane、grouped CLI internals、manifest consumer long-soak。 |
+| RCA | source -> image-first visual artifact -> review/export gate。 | HTML/native PPTX variants、route aliases、visual long-soak, native helper diagnostics。 |
+| OMA | target agent -> work order / candidate / typed blocker。 | script materializer internals、second-lab promotion, reviewer pool management。 |
+
+### 5. Evidence as observability, not planning
+
+OPL 应按 OpenTelemetry 的 broad/deep 读法维护证据：
+
+- broad signal：owner、delta、stage、attempt state、hard blocker、next owner；
+- trace signal：attempt lineage、provider events、receipt refs、human-gate refs；
+- log signal：raw CLI/provider/domain outputs with bounded envelope；
+- metric signal：SLO、cadence、queue length、retry/dead-letter、latency、lineage repeat count。
+
+broad signal 进默认面；trace/log/metric 默认只进 drilldown。任何 trace/log/metric 想升级为默认 action，都必须先折叠成 owner delta 或 hard blocker。
+
+### 6. Domain pack compiler absorbs wrappers
+
+理想 OPL 基座要让 MAS/MAG/RCA/OMA 不再手写 generic product-entry、status、session、workbench、sidecar、default caller wrapper。Domain repo 只提供：
+
+- `agent/` semantic pack；
+- contracts / descriptors / stage definitions；
+- minimal authority functions；
+- direct domain skill path；
+- owner receipt / typed blocker schema。
+
+OPL 生成或托管 CLI/MCP/App/product-entry/status/workbench/default-caller shell。保留 private helper 必须证明它是 domain authority function、native helper、refs-only adapter、fixture 或 temporary bridge。
+
+### 7. App as cockpit, not ledger browser
+
+One Person Lab App 的 ordinary path 应只消费 compact owner delta。App 可以提供 full drilldown，但默认页不应显示 raw evidence counts、blocked envelope groups、replay packets、private residue inventory、provider internal ledger 或 route variant menu。用户看到的是：
+
+- 当前任务在做什么；
+- 卡在哪个 owner；
+- 缺什么 answer；
+- 有什么产物可看；
+- 哪个动作需要用户介入。
+
+这也意味着 App 不需要把 AionUI / AG-UI / backend / executor selector 暴露给普通用户。普通产品面固定 `Codex CLI + Foundry Agent purpose entries`。
+
+## Module Disposition Rules
+
+从 MVP 原则判断一个模块是否应该保留在默认设计面，用下面的处置表：
+
+| 问题 | 是 | 否 |
+| --- | --- | --- |
+| 失败会导致错误启动、越权、不可恢复、不可审计或 provider 不可达吗？ | `launch_hard_gate` / `control_plane`。 | 继续下一问。 |
+| 它直接产生 domain deliverable delta、quality gate receipt、owner receipt、human decision 或 stable typed blocker 吗？ | `delivery_plane_default`。 | 继续下一问。 |
+| 它只是解释历史、receipt、replay、SLO、long-soak、cleanup 或 residue 吗？ | `audit_or_production_lane`。 | 继续下一问。 |
+| 它是 domain-specific authority function 或 native helper，且不能声明化 / 不能上收？ | `domain_authority_function`，必须有 no-forbidden-write 和 receipt boundary。 | 迁移到 OPL generated/hosted surface，或 tombstone/delete。 |
+| 它让 operator 更快判断 current owner delta 吗？ | 可进入 compact default projection。 | `diagnostic_only` 或删除。 |
+
+这个表比“当前有没有 active caller”优先。active caller 只决定迁移顺序，不决定长期设计正当性。
+
+## Target Redesign / Recommended Changes
 
 ### P0 next design moves
 
@@ -182,12 +373,34 @@ record receipt refs
    - runtime-budget、cohort、assumption、replay warnings 默认进入 production-hardening backlog；只有安全、越权、不可恢复、不可审计和 provider liveness 才 hard-block launch。
    - 验收：stage launch readout 明确区分 `hard_blocker=0` 与 `warning_count>0`。
 
+6. `owner_delta_store_before_worklist`
+   - 先派生 current owner delta，再派生 worklist / App / runtime tray / Agent Lab read-model。
+   - 验收：raw evidence envelope 不能直接生成默认 next action；默认 next action 必须可追溯到 current owner delta 或 provider/human hard gate。
+
+7. `golden_path_single_default`
+   - 每个 domain 只有一个 ordinary route；route variants、proof lane、long-soak、cleanup 和 diagnostics 必须显式选择。
+   - 验收：App / CLI 默认不会同时展示 MAS historical dispatch、MAG Hermes proof、RCA HTML/native variants、OMA materializer internals作为可并列推进路径。
+
+8. `audit_tail_cannot_plan`
+   - audit / replay / receipt ledger 只能解释、验证、定位，不允许直接成为 planner input 或 work generator。
+   - 验收：stage replay packet、typed blocker group、blocked envelope count、private residue inventory 不再自动进入 action selector。
+
 ### P1 follow-through
 
 - MAG：把 `submission_ready_export_gate` 作为 human/domain owner gate；不要让 grouped CLI、manifest、Hermes proof lane 或 product-entry shell 成为 authoring 默认 blocker。
 - RCA：默认 image-first artifact route；HTML/native PPTX/long-soak/replay refs 是 explicit route 或 production lane。
 - OMA：把 script-to-pack hygiene 继续做薄，但真实优先级放在 target patch-loop、independent reviewer evidence、target owner closeout。
 - OPL：private residue inventory、default-caller deletion evidence 和 long evidence ledger 只保留 owner-bound cleanup / production lane，不作为 Foundry Agent progress。
+
+### Implementation lanes
+
+| Lane | 目标 | 主要 owner | 完成口径 |
+| --- | --- | --- | --- |
+| `default_owner_delta_lane` | 把 `current_owner_delta` 做成默认读面 primitive。 | OPL Framework + App | App fast state、framework readiness、evidence-worklist summary、runtime tray 使用同源 payload。 |
+| `mas_tail_compaction_lane` | 收敛 MAS domain-dispatch / owner-payload tail。 | OPL + MAS | DM002/DM003 类 study 默认只暴露 current paper/reviewer/human gate delta 或 MAS typed blocker。 |
+| `stop_loss_lane` | receipt-only / platform-repair-only / stale-route lineage 自动 stop-loss。 | OPL control plane | 重复 tick/redrive 不再启动同源无交付物 attempt，只要求 fresh owner delta 或 typed blocker。 |
+| `generated_surface_lane` | domain generic wrappers 迁到 OPL generated/hosted surfaces。 | OPL + domain owner | active caller 迁移后，domain repo 只保留 domain pack、authority functions、native helper 和 refs-only adapters。 |
+| `audit_plane_lane` | raw envelope、replay、long-soak、cleanup、diagnostic 统一后置。 | OPL | default help/docs/App 不把 audit lane 展示成普通推进路径；full detail 保留完整证据。 |
 
 ## Non-Goals
 
@@ -222,4 +435,5 @@ rtk opl family-runtime attempt list --domain medautoscience --study <study-id> -
 
 - `rtk git diff --check`
 - `rtk rg -n '^(<<<<<<<|=======|>>>>>>>)' docs/active/opl-foundry-agent-mvp-friction-audit.md docs/active/README.md`
-- fresh CLI readouts listed above were run on `2026-06-04 CST`.
+- fresh CLI readouts listed above were run on `2026-06-03 CST`.
+- external web refresh used Anthropic, OpenAI, Kubernetes, Temporal, Google SRE, Team Topologies TVP examples and OpenTelemetry docs on `2026-06-03 CST`.
