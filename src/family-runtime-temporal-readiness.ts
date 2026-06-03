@@ -41,6 +41,8 @@ type TemporalWorkerReadinessInput = {
   managedWorkerWorkflowBundleVersion?: string | null;
   managedWorkerWorkflowBundleSourceVersion?: string | null;
   workerDependencyHealth?: Record<string, unknown> | null;
+  managedWorkerProcessExited?: boolean | null;
+  crashDiagnostic?: Record<string, unknown> | null;
   staleWorkerPid?: number | null;
   temporalServiceLifecycle?: Record<string, unknown> | null;
   visibilityReadiness?: TemporalStageAttemptVisibilityReadiness | null;
@@ -156,6 +158,7 @@ function buildTemporalWorkerBlockers(input: {
   serverReachable: boolean | null;
   workerReady: boolean;
   workerDependencyUnavailable?: boolean | null;
+  workerProcessExited?: boolean | null;
   workerSourceStale?: boolean | null;
 }) {
   const blockers: string[] = [];
@@ -167,6 +170,10 @@ function buildTemporalWorkerBlockers(input: {
   }
   if (input.address && input.serverReachable !== false && input.workerDependencyUnavailable === true) {
     blockers.push('temporal_worker_dependency_unavailable');
+    return blockers;
+  }
+  if (input.address && input.serverReachable !== false && input.workerProcessExited === true) {
+    blockers.push('temporal_worker_process_exited');
     return blockers;
   }
   if (input.address && input.serverReachable !== false && input.workerSourceStale === true) {
@@ -313,6 +320,7 @@ export function buildTemporalWorkerReadiness(input: TemporalWorkerReadinessInput
   const blockers = buildTemporalWorkerBlockers({
     ...readiness,
     workerDependencyUnavailable: input.workerDependencyHealth?.status === 'blocked',
+    workerProcessExited: input.managedWorkerProcessExited === true,
     workerSourceStale: input.managedWorkerSourceCurrent === false,
   });
   const repairAction = buildTemporalWorkerRepairAction({
@@ -350,6 +358,7 @@ export function buildTemporalWorkerReadiness(input: TemporalWorkerReadinessInput
     managed_worker_workflow_bundle_version: input.managedWorkerWorkflowBundleVersion ?? null,
     managed_worker_workflow_bundle_source_version: input.managedWorkerWorkflowBundleSourceVersion ?? null,
     worker_dependency_health: input.workerDependencyHealth ?? null,
+    crash_diagnostic: input.crashDiagnostic ?? null,
     managed_worker_workflow_bundle_source_current:
       input.managedWorkerWorkflowBundleSourceVersion && input.expectedWorkerSourceVersion
         ? workerSourceVersionsEquivalent(input.managedWorkerWorkflowBundleSourceVersion, input.expectedWorkerSourceVersion)

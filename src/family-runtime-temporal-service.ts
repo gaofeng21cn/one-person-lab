@@ -17,6 +17,10 @@ type TemporalServiceState = {
   started_at: string;
   status: 'starting' | 'running';
   command: string;
+  log_refs?: {
+    stdout_path: string;
+    stderr_path: string;
+  };
 };
 
 function temporalServiceStatePath(paths: TemporalServicePaths) {
@@ -62,6 +66,51 @@ function writeTemporalServiceState(paths: TemporalServicePaths, state: TemporalS
 
 function removeTemporalServiceState(paths: TemporalServicePaths) {
   fs.rmSync(temporalServiceStatePath(paths), { force: true });
+}
+
+function temporalServiceLogRefs(paths: TemporalServicePaths) {
+  const logRoot = path.join(paths.root, 'logs');
+  return {
+    stdout_path: path.join(logRoot, 'temporal-service.stdout.log'),
+    stderr_path: path.join(logRoot, 'temporal-service.stderr.log'),
+  };
+}
+
+function openAppendLogFds(logRefs: { stdout_path: string; stderr_path: string }) {
+  fs.mkdirSync(path.dirname(logRefs.stdout_path), { recursive: true });
+  return {
+    stdout: fs.openSync(logRefs.stdout_path, 'a'),
+    stderr: fs.openSync(logRefs.stderr_path, 'a'),
+  };
+}
+
+function closeLogFds(fds: { stdout: number; stderr: number }) {
+  fs.closeSync(fds.stdout);
+  fs.closeSync(fds.stderr);
+}
+
+function buildTemporalServiceCrashDiagnostic(
+  paths: TemporalServicePaths,
+  state: TemporalServiceState | null,
+  pidAlive: boolean,
+) {
+  if (!state || pidAlive) {
+    return null;
+  }
+  const logRefs = state.log_refs ?? temporalServiceLogRefs(paths);
+  return {
+    surface_kind: 'temporal_service_crash_diagnostic',
+    provider_kind: 'temporal',
+    pid: state.pid,
+    exit_status: 'process_not_alive',
+    started_at: state.started_at,
+    command: state.command,
+    log_refs: logRefs,
+    authority_boundary: {
+      opl: 'temporal_service_lifecycle_diagnostic_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
+  };
 }
 
 function parseTemporalAddress(address: string) {
@@ -151,9 +200,6 @@ export async function inspectTemporalServiceLifecycle(paths: TemporalServicePath
   const pidAlive = state ? processIsAlive(state.pid) : false;
   const address = configuredAddress || (pidAlive ? state?.address ?? null : null);
   const serverReachable = address ? await probeTemporalServer(address) : false;
-  if (state && !pidAlive) {
-    removeTemporalServiceState(paths);
-  }
   const serviceStatus = pidAlive && serverReachable
     ? 'running'
     : configuredAddress && serverReachable
@@ -164,7 +210,7 @@ export async function inspectTemporalServiceLifecycle(paths: TemporalServicePath
           ? 'configured_external_unreachable'
           : 'not_configured';
   const blockers = [
-    ...(!configuredAddress && !pidAlive ? ['temporal_local_service_not_managed'] : []),
+    ...(!configuredAddress && !state ? ['temporal_local_service_not_managed'] : []),
     ...(configuredAddress && !serverReachable ? ['temporal_server_unreachable'] : []),
     ...(state && !pidAlive ? ['temporal_local_service_stale_state'] : []),
   ];
@@ -175,10 +221,11 @@ export async function inspectTemporalServiceLifecycle(paths: TemporalServicePath
     address,
     address_source: configuredAddress ? 'environment' : pidAlive ? 'managed_local_service_state' : 'not_configured',
     server_reachable: serverReachable,
-    managed_service_pid: pidAlive && state ? state.pid : null,
+    managed_service_pid: state?.pid ?? null,
     managed_service_state_path: temporalServiceStatePath(paths),
     service_kind: state?.service_kind ?? null,
     command: state?.command ?? null,
+    crash_diagnostic: buildTemporalServiceCrashDiagnostic(paths, state, pidAlive),
     blockers,
     repair_action: {
       surface_kind: 'temporal_service_repair_action',
@@ -246,12 +293,15 @@ export async function startTemporalServiceLifecycle(
       status: await inspectTemporalServiceLifecycle(paths),
     };
   }
+  const logRefs = temporalServiceLogRefs(paths);
+  const logFds = openAppendLogFds(logRefs);
   const child = spawn(launcher.executable, launcher.args, {
     cwd: process.cwd(),
     detached: true,
-    stdio: 'ignore',
+    stdio: ['ignore', logFds.stdout, logFds.stderr],
   });
   child.unref();
+  closeLogFds(logFds);
   writeTemporalServiceState(paths, {
     provider_kind: 'temporal',
     service_kind: launcher.serviceKind,
@@ -260,6 +310,7 @@ export async function startTemporalServiceLifecycle(
     started_at: new Date().toISOString(),
     status: 'running',
     command: launcher.command,
+    log_refs: logRefs,
   });
   return {
     surface_kind: 'temporal_service_lifecycle_start',

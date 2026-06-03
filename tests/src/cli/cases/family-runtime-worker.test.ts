@@ -132,6 +132,47 @@ test('family-runtime service start fails closed when no local Temporal launcher 
   }
 });
 
+test('family-runtime service status preserves managed process crash diagnostics', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-service-crash-'));
+  const runtimeRoot = path.join(stateRoot, 'family-runtime');
+  const statePath = path.join(runtimeRoot, 'temporal-service.json');
+  try {
+    fs.mkdirSync(runtimeRoot, { recursive: true });
+    fs.writeFileSync(statePath, `${JSON.stringify({
+      provider_kind: 'temporal',
+      service_kind: 'custom_command',
+      pid: 987654321,
+      address: '127.0.0.1:7233',
+      started_at: new Date().toISOString(),
+      status: 'running',
+      command: 'test temporal service crash',
+      log_refs: {
+        stdout_path: path.join(runtimeRoot, 'logs', 'temporal-service.stdout.log'),
+        stderr_path: path.join(runtimeRoot, 'logs', 'temporal-service.stderr.log'),
+      },
+    }, null, 2)}\n`);
+
+    const output = runCli(
+      ['family-runtime', 'service', 'status', '--provider', 'temporal'],
+      familyRuntimeEnv(stateRoot, {
+        OPL_TEMPORAL_ADDRESS: '',
+        TEMPORAL_ADDRESS: '',
+      }),
+    );
+    const service = output.family_runtime_service;
+
+    assert.equal(service.service_status, 'stale_state');
+    assert.deepEqual(service.blockers, ['temporal_local_service_stale_state']);
+    assert.equal(service.managed_service_pid, 987654321);
+    assert.equal(service.crash_diagnostic.pid, 987654321);
+    assert.equal(service.crash_diagnostic.exit_status, 'process_not_alive');
+    assert.equal(service.crash_diagnostic.log_refs.stderr_path.endsWith('temporal-service.stderr.log'), true);
+    assert.equal(fs.existsSync(statePath), true);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime worker status distinguishes unreachable server from worker_not_ready', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-readiness-'));
   const server = net.createServer((socket) => socket.end());
@@ -176,6 +217,53 @@ test('family-runtime worker status distinguishes unreachable server from worker_
     assert.deepEqual(unreachable.family_runtime_worker.blockers, ['temporal_server_unreachable']);
   } finally {
     fs.rmSync(unreachableStateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime worker status preserves managed worker crash diagnostics', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-crash-'));
+  const runtimeRoot = path.join(stateRoot, 'family-runtime');
+  const server = net.createServer((socket) => socket.end());
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
+  const statePath = path.join(runtimeRoot, 'temporal-worker.json');
+  try {
+    fs.mkdirSync(runtimeRoot, { recursive: true });
+    fs.writeFileSync(statePath, `${JSON.stringify({
+      provider_kind: 'temporal',
+      pid: 987654322,
+      address,
+      namespace: 'default',
+      task_queue: 'opl-stage-attempts',
+      started_at: new Date().toISOString(),
+      status: 'ready',
+      source_version: 'test-worker-source',
+      log_refs: {
+        stdout_path: path.join(runtimeRoot, 'logs', 'temporal-worker.stdout.log'),
+        stderr_path: path.join(runtimeRoot, 'logs', 'temporal-worker.stderr.log'),
+      },
+    }, null, 2)}\n`);
+
+    const output = runCli(
+      ['family-runtime', 'worker', 'status', '--provider', 'temporal'],
+      familyRuntimeEnv(stateRoot, {
+        OPL_TEMPORAL_ADDRESS: address,
+        OPL_TEMPORAL_WORKER_STATUS: '',
+      }),
+    );
+    const worker = output.family_runtime_worker;
+
+    assert.equal(worker.lifecycle_status, 'worker_not_ready');
+    assert.deepEqual(worker.blockers, ['temporal_worker_process_exited']);
+    assert.equal(worker.managed_worker_pid, 987654322);
+    assert.equal(worker.managed_worker_process_alive, false);
+    assert.equal(worker.crash_diagnostic.pid, 987654322);
+    assert.equal(worker.crash_diagnostic.exit_status, 'process_not_alive');
+    assert.equal(worker.crash_diagnostic.log_refs.stderr_path.endsWith('temporal-worker.stderr.log'), true);
+    assert.equal(fs.existsSync(statePath), true);
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 

@@ -1,5 +1,4 @@
 import { spawn } from 'node:child_process';
-import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { WorkflowIdConflictPolicy, WorkflowIdReusePolicy } from '@temporalio/common';
@@ -58,11 +57,16 @@ import {
 } from './family-runtime-temporal-client.ts';
 import {
   currentWorkerSourceVersion,
+  buildTemporalWorkerCrashDiagnostic,
+  closeTemporalWorkerLogFds,
+  openTemporalWorkerAppendLogFds,
   processIsAlive,
   readTemporalWorkerState,
   removeTemporalWorkerState,
+  temporalWorkerLogRefs,
   temporalWorkerStatePath,
   workerSourceVersionsEquivalent,
+  writeTemporalWorkerExitState,
   writeTemporalWorkerState,
 } from './family-runtime-temporal-provider-parts/worker-state.ts';
 import {
@@ -81,6 +85,7 @@ import {
 } from './family-runtime-temporal-provider-parts/worker-source-guard.ts';
 import {
   buildTemporalStageAttemptWorkerOptions,
+  resolveTemporalWorkflowModulePath,
 } from './family-runtime-temporal-provider-parts/workflow-bundle.ts';
 import {
   runTemporalStageAttemptReplayGate,
@@ -112,11 +117,6 @@ type StageAttemptPayload = Parameters<typeof buildTemporalStageAttemptWorkflowIn
   provider_kind: string;
 };
 
-function workflowModulePath() {
-  const extension = path.extname(fileURLToPath(import.meta.url)) === '.ts' ? '.ts' : '.js';
-  return fileURLToPath(new URL(`./family-runtime-temporal-workflows${extension}`, import.meta.url));
-}
-
 export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths) {
   return inspectTemporalWorkerLifecycleWithDetail(paths, { detail: 'full' });
 }
@@ -144,6 +144,7 @@ export async function inspectTemporalWorkerLifecycleWithDetail(
     : false;
   const stateProcessAlive = state ? processIsAlive(state.pid) : false;
   const statePidAlive = stateMatchesConfig && stateProcessAlive;
+  const stateProcessExited = Boolean(state && !stateProcessAlive && (state.status === 'ready' || state.status === 'exited'));
   const pidAlive = statePidAlive && stateSourceCurrent;
   const envWorkerReady = process.env.OPL_TEMPORAL_WORKER_ENABLED?.trim() === '1'
     || process.env.OPL_TEMPORAL_WORKER_STATUS?.trim() === 'ready';
@@ -162,12 +163,12 @@ export async function inspectTemporalWorkerLifecycleWithDetail(
     workerEnabled: envWorkerReady ? '1' : null,
     workerStatus: pidAlive ? 'ready' : null,
     serverReachable,
-    managedWorkerPid: statePidAlive && state ? state.pid : null,
-    managedWorkerProcessAlive: statePidAlive,
+    managedWorkerPid: state?.pid ?? null,
+    managedWorkerProcessAlive: state ? stateProcessAlive : null,
     managedWorkerStatePath: temporalWorkerStatePath(paths),
     managedWorkerSourceVersion: state?.source_version ?? null,
     expectedWorkerSourceVersion,
-    managedWorkerSourceCurrent: stateMatchesConfig && state ? stateSourceCurrent : null,
+    managedWorkerSourceCurrent: stateMatchesConfig && state && stateProcessAlive ? stateSourceCurrent : null,
     managedWorkerWorkflowBundlePath: state?.workflow_bundle_path ?? null,
     managedWorkerWorkflowBundleVersion: state?.workflow_bundle_version ?? null,
     managedWorkerWorkflowBundleSourceVersion: state?.workflow_bundle_source_version ?? null,
@@ -176,10 +177,9 @@ export async function inspectTemporalWorkerLifecycleWithDetail(
     temporalServiceLifecycle: service,
     visibilityReadiness,
     workerMutationGuard,
+    managedWorkerProcessExited: stateProcessExited,
+    crashDiagnostic: buildTemporalWorkerCrashDiagnostic(paths, state, stateProcessAlive),
   });
-  if (state && !stateProcessAlive && state.status === 'ready') {
-    removeTemporalWorkerState(paths);
-  }
   return {
     ...readiness,
     surface_kind: 'temporal_worker_lifecycle_status',
@@ -381,7 +381,7 @@ export async function runTemporalStageAttemptWorkerUntil<T>(fn: () => Promise<T>
   }
   const built = await buildTemporalStageAttemptWorkerOptions({
     paths: familyRuntimePaths(),
-    workflowsPath: workflowModulePath(),
+    workflowsPath: resolveTemporalWorkflowModulePath(import.meta.url),
     activities,
     sourceVersion,
   });
@@ -758,7 +758,7 @@ export async function runTemporalWorkerForeground(paths: TemporalWorkerPaths) {
   const sourceVersion = currentWorkerSourceVersion(import.meta.url);
   const built = await buildTemporalStageAttemptWorkerOptions({
     paths,
-    workflowsPath: workflowModulePath(),
+    workflowsPath: resolveTemporalWorkflowModulePath(import.meta.url),
     activities,
     sourceVersion,
   });
@@ -774,30 +774,52 @@ export async function runTemporalWorkerForeground(paths: TemporalWorkerPaths) {
     workflow_bundle_path: built.workflow_bundle.code_path,
     workflow_bundle_version: built.workflow_bundle.workflow_bundle_version,
     workflow_bundle_source_version: built.workflow_bundle.workflow_bundle_source_version,
+    log_refs: temporalWorkerLogRefs(paths),
   });
-  const nativeConnection = await NativeConnection.connect({ address });
+  const baseState = {
+    provider_kind: 'temporal' as const,
+    pid: process.pid,
+    address,
+    namespace: resolveTemporalNamespace(),
+    task_queue: resolveTemporalTaskQueue(),
+    started_at: new Date().toISOString(),
+    source_version: sourceVersion,
+    workflow_bundle_path: built.workflow_bundle.code_path,
+    workflow_bundle_version: built.workflow_bundle.workflow_bundle_version,
+    workflow_bundle_source_version: built.workflow_bundle.workflow_bundle_source_version,
+    log_refs: temporalWorkerLogRefs(paths),
+  };
+  let nativeConnection: NativeConnection | null = null;
   try {
+    nativeConnection = await NativeConnection.connect({ address });
     const worker = await Worker.create({
       connection: nativeConnection,
       ...built.worker_options,
     });
     writeTemporalWorkerState(paths, {
-      provider_kind: 'temporal',
-      pid: process.pid,
-      address,
-      namespace: resolveTemporalNamespace(),
-      task_queue: resolveTemporalTaskQueue(),
-      started_at: new Date().toISOString(),
+      ...baseState,
       status: 'ready',
-      source_version: sourceVersion,
-      workflow_bundle_path: built.workflow_bundle.code_path,
-      workflow_bundle_version: built.workflow_bundle.workflow_bundle_version,
-      workflow_bundle_source_version: built.workflow_bundle.workflow_bundle_source_version,
     });
     await worker.run();
+    writeTemporalWorkerExitState(paths, {
+      ...baseState,
+      status: 'ready',
+    }, {
+      exit_status: 'worker_run_returned',
+      exited_at: new Date().toISOString(),
+    });
+  } catch (error) {
+    writeTemporalWorkerExitState(paths, {
+      ...baseState,
+      status: 'ready',
+    }, {
+      exit_status: 'worker_run_failed',
+      exited_at: new Date().toISOString(),
+      message: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
   } finally {
-    removeTemporalWorkerState(paths);
-    await nativeConnection.close();
+    await nativeConnection?.close();
   }
 }
 
@@ -852,6 +874,7 @@ export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, i
     };
   }
 
+  const { logRefs, fds: logFds } = openTemporalWorkerAppendLogFds(paths);
   const child = spawn(
     process.execPath,
     [
@@ -864,7 +887,7 @@ export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, i
     {
       cwd: process.cwd(),
       detached: true,
-      stdio: 'ignore',
+      stdio: ['ignore', logFds.stdout, logFds.stderr],
       env: {
         ...process.env,
         OPL_TEMPORAL_ADDRESS: status.address ?? process.env.OPL_TEMPORAL_ADDRESS,
@@ -873,10 +896,11 @@ export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, i
     },
   );
   child.unref();
+  closeTemporalWorkerLogFds(logFds);
   const sourceVersion = currentWorkerSourceVersion(import.meta.url);
   const workflowBundle = await buildTemporalStageAttemptWorkerOptions({
     paths,
-    workflowsPath: workflowModulePath(),
+    workflowsPath: resolveTemporalWorkflowModulePath(import.meta.url),
     activities,
     sourceVersion,
   });
@@ -892,6 +916,7 @@ export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, i
     workflow_bundle_path: workflowBundle.workflow_bundle.code_path,
     workflow_bundle_version: workflowBundle.workflow_bundle.workflow_bundle_version,
     workflow_bundle_source_version: workflowBundle.workflow_bundle.workflow_bundle_source_version,
+    log_refs: logRefs,
   });
   return {
     surface_kind: 'temporal_worker_lifecycle_start',
@@ -950,7 +975,7 @@ export async function buildTemporalStageAttemptWorkerOptionsForTest(
 ) {
   return buildTemporalStageAttemptWorkerOptions({
     paths,
-    workflowsPath: workflowModulePath(),
+    workflowsPath: resolveTemporalWorkflowModulePath(import.meta.url),
     activities,
     sourceVersion: input.sourceVersion ?? currentWorkerSourceVersion(import.meta.url),
   });
@@ -960,7 +985,7 @@ export async function buildTemporalStageAttemptReplayGateForTest(history: unknow
   return runTemporalStageAttemptReplayGate({
     history,
     workflowId,
-    workflowsPath: workflowModulePath(),
+    workflowsPath: resolveTemporalWorkflowModulePath(import.meta.url),
     sourceModuleUrl: import.meta.url,
   });
 }

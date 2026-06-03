@@ -200,6 +200,18 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 该规则只修复 OPL provider/runtime-manager liveness 暴露与 scheduler preflight，不启动 worker、不绕过 worker mutation guard、不执行 domain action、不写 domain truth、不生成 owner receipt，也不声明 provider SLO、domain ready、production ready 或 App release ready。
 - Provider transport 不得把 Progress-First tick 变成分钟级不可观测等待；Temporal client start/query/signal/cadence 连接必须有 bounded connect timeout，provider projection 声称 ready 但地址不可达时要快速转成 provider blocker / start failure，而不是占住 owner dispatch。
 
+### 决策：Temporal managed process 退出必须保留 crash diagnostic
+
+原因：DM002/DM003 的 Progress-First 推进暴露出一种 provider lifecycle 漂移：OPL 启动 Temporal service / worker 后，managed process 已退出，但 status 读取把 state 清掉并折叠成 `not_configured`。这会让 operator 只能看到 MAS owner action 仍未消费，却无法判断是 provider 进程退出、worker liveness 缺失、还是工作目录未配置，进而把时间耗在重复 receipt、read-model reconcile 或无效 tick 上。
+
+影响：
+
+- `family-runtime service status --provider temporal` 在存在 managed service state 但 pid 不存活时必须返回 `service_status=stale_state`、`blockers=[temporal_local_service_stale_state]`、原始 managed pid、log refs 和 `crash_diagnostic`；不得删除 state，也不得报告为 `temporal_local_service_not_managed`。
+- `family-runtime worker status --provider temporal` 在 Temporal service 可达但 managed worker state 对应 pid 不存活时必须返回 `blockers=[temporal_worker_process_exited]`、原始 managed pid、`managed_worker_process_alive=false`、log refs 和 `crash_diagnostic`；不得把该状态折叠为 `temporal_runtime_not_configured`、`worker_not_ready` 的无来源泛化诊断或 source-stale 噪音。
+- detached service / worker 的 stdout 与 stderr 必须写入 OPL runtime-state logs 并随 lifecycle state 暴露为 refs，方便 operator 判断具体 crash 原因；foreground worker 退出也必须写入 `exited` state 和 last exit reason。
+- scheduler / tick 可以基于该诊断继续执行 provider repair 或 fail-closed typed provider blocker，但不得手写 MAS truth、queue DB、publication eval、artifact gate、paper package、owner receipt 或 typed blocker。
+- 该规则只治理 OPL provider lifecycle 可诊断性和 Progress-First liveness currentness；它不声明 provider SLO satisfied、domain ready、production ready、paper repaired、publication ready 或 App release ready。
+
 ### 决策：attempt 创建 receipt 不能作为当前 provider readiness
 
 原因：`stage_attempt.provider_receipt` 是 attempt 创建时的 admission 快照。长跑 attempt 可能在创建时记录 `provider_code_landed_unconfigured` / `provider_ready=false`，随后由 provider SLO 或 worker repair 恢复为 live running。如果 operator、MAS read-model 或 App 默认面继续消费创建时 receipt，就会把正在 heartbeat 的 attempt 误判为 provider 未配置，导致 Progress-First 监督耗在重复 receipt / read-model reconcile 上。

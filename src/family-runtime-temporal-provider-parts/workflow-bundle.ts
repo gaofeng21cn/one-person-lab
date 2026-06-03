@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { bundleWorkflowCode, type WorkerOptions } from '@temporalio/worker';
 
@@ -43,6 +44,11 @@ function bundleFileName(sourceVersion: string) {
 
 function workflowBundleVersion(code: string) {
   return `workflow-bundle:sha256:${crypto.createHash('sha256').update(code).digest('hex')}`;
+}
+
+export function resolveTemporalWorkflowModulePath(moduleUrl: string) {
+  const extension = path.extname(fileURLToPath(moduleUrl)) === '.ts' ? '.ts' : '.js';
+  return fileURLToPath(new URL(`./family-runtime-temporal-workflows${extension}`, moduleUrl));
 }
 
 async function materializeTemporalWorkflowBundle(input: {

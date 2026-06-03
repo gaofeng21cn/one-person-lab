@@ -12,11 +12,20 @@ export type TemporalWorkerState = {
   namespace: string;
   task_queue: string;
   started_at: string;
-  status: 'starting' | 'ready';
+  status: 'starting' | 'ready' | 'exited';
   source_version?: string;
   workflow_bundle_path?: string;
   workflow_bundle_version?: string;
   workflow_bundle_source_version?: string;
+  log_refs?: {
+    stdout_path: string;
+    stderr_path: string;
+  };
+  last_exit?: {
+    exit_status: 'process_not_alive' | 'worker_run_returned' | 'worker_run_failed';
+    exited_at: string;
+    message?: string;
+  };
 };
 
 type WorkerRuntimeSourceVersion = {
@@ -26,6 +35,31 @@ type WorkerRuntimeSourceVersion = {
 
 export function temporalWorkerStatePath(paths: TemporalWorkerPaths) {
   return path.join(paths.root, 'temporal-worker.json');
+}
+
+export function temporalWorkerLogRefs(paths: TemporalWorkerPaths) {
+  const logRoot = path.join(paths.root, 'logs');
+  return {
+    stdout_path: path.join(logRoot, 'temporal-worker.stdout.log'),
+    stderr_path: path.join(logRoot, 'temporal-worker.stderr.log'),
+  };
+}
+
+export function openTemporalWorkerAppendLogFds(paths: TemporalWorkerPaths) {
+  const logRefs = temporalWorkerLogRefs(paths);
+  fs.mkdirSync(path.dirname(logRefs.stdout_path), { recursive: true });
+  return {
+    logRefs,
+    fds: {
+      stdout: fs.openSync(logRefs.stdout_path, 'a'),
+      stderr: fs.openSync(logRefs.stderr_path, 'a'),
+    },
+  };
+}
+
+export function closeTemporalWorkerLogFds(fds: { stdout: number; stderr: number }) {
+  fs.closeSync(fds.stdout);
+  fs.closeSync(fds.stderr);
 }
 
 function repoRootFromModulePath(moduleUrl: string) {
@@ -213,7 +247,7 @@ export function readTemporalWorkerState(paths: TemporalWorkerPaths) {
       || typeof state.address !== 'string'
       || typeof state.namespace !== 'string'
       || typeof state.task_queue !== 'string'
-      || (state.status !== 'starting' && state.status !== 'ready')
+      || (state.status !== 'starting' && state.status !== 'ready' && state.status !== 'exited')
     ) {
       return null;
     }
@@ -230,6 +264,42 @@ export function writeTemporalWorkerState(paths: TemporalWorkerPaths, state: Temp
 
 export function removeTemporalWorkerState(paths: TemporalWorkerPaths) {
   fs.rmSync(temporalWorkerStatePath(paths), { force: true });
+}
+
+export function writeTemporalWorkerExitState(
+  paths: TemporalWorkerPaths,
+  state: TemporalWorkerState,
+  exit: TemporalWorkerState['last_exit'],
+) {
+  writeTemporalWorkerState(paths, {
+    ...state,
+    status: 'exited',
+    last_exit: exit,
+  });
+}
+
+export function buildTemporalWorkerCrashDiagnostic(
+  paths: TemporalWorkerPaths,
+  state: TemporalWorkerState | null,
+  pidAlive: boolean,
+) {
+  if (!state || pidAlive) {
+    return null;
+  }
+  return {
+    surface_kind: 'temporal_worker_crash_diagnostic',
+    provider_kind: 'temporal',
+    pid: state.pid,
+    exit_status: state.last_exit?.exit_status ?? 'process_not_alive',
+    exited_at: state.last_exit?.exited_at ?? null,
+    message: state.last_exit?.message ?? null,
+    started_at: state.started_at,
+    log_refs: state.log_refs ?? temporalWorkerLogRefs(paths),
+    authority_boundary: {
+      opl: 'temporal_worker_lifecycle_diagnostic_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
+  };
 }
 
 export function processIsAlive(pid: number) {
