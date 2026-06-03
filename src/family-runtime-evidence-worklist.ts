@@ -19,15 +19,7 @@ import { buildZeroOpenCompletionGuard, zeroOpenCompletionGuardSummaryFields } fr
 import { operatorRoutesByActionId, payloadHandoffProjection, routeWithOperatorHandoff } from './family-runtime-evidence-worklist-parts/operator-route-handoff.ts';
 import { readOnlyRouteMatchesDefaults } from './family-runtime-evidence-worklist-parts/route-defaults.ts';
 import {
-  commandRef,
-  countValue,
-  firstRef,
-  record,
-  recordList,
-  stringList,
-  stringValue,
-  uniqueStringList,
-  type JsonRecord,
+  commandRef, countValue, firstRef, record, recordList, stringList, stringValue, uniqueStringList, type JsonRecord,
 } from './family-runtime-evidence-worklist-parts/json-utils.ts';
 import { buildStageEvidenceWorkorderPacket, compactStageEvidenceWorkorderAttentionItems } from './family-runtime-evidence-worklist-parts/stage-evidence-workorders.ts';
 import {
@@ -41,6 +33,7 @@ import {
   compactStageReplayMissingReceiptWorkorderAttentionItems,
 } from './family-runtime-evidence-worklist-parts/stage-replay-missing-receipt-workorders.ts';
 import { familyRuntimeEvidenceWorklistAuthorityBoundary } from './family-runtime-evidence-worklist-parts/authority-boundary.ts';
+import { buildWorklistCompactOwnerDeltaProjection } from './family-runtime-evidence-worklist-parts/compact-owner-delta-projection.ts';
 import { buildProgressFirstOperatorSummary } from './family-runtime-evidence-worklist-parts/progress-first-operator-summary.ts';
 import { domainDispatchRecordRouteAttemptIds, syncTerminalTemporalAttemptsForEvidenceWorklist, type EvidenceWorklistTemporalQuery } from './family-runtime-evidence-worklist-parts/terminal-observation-sync.ts';
 import {
@@ -889,6 +882,16 @@ export async function runFamilyRuntimeEvidenceWorklist(
   const stageReceiptFreshnessOpenWorkorderCount = openItems.filter((item) =>
     item.claim_scope === 'stage_production_evidence_receipt'
   ).length;
+  const worklistNextSafeActions = nextSafeActions(openItems);
+  const compactOwnerDeltaProjection = buildWorklistCompactOwnerDeltaProjection({
+    drilldown,
+    openItems,
+    nextSafeActions: worklistNextSafeActions,
+    counts,
+    compactEvidenceEnvelope,
+    domainDispatchEvidenceWorkorderSummary,
+    stageReplayMissingReceiptWorkorderSummary,
+  });
   const commonPayload = {
     surface_kind: 'opl_family_runtime_evidence_worklist',
     surface_role: 'derived_operator_attention_lens',
@@ -952,7 +955,8 @@ export async function runFamilyRuntimeEvidenceWorklist(
     terminal_observation_sync: terminalObservationSync,
     evidence_envelope: compactEvidenceEnvelope,
     progress_first_operator_summary: progressFirstOperatorSummary,
-    next_safe_actions: nextSafeActions(openItems),
+    compact_owner_delta_projection: compactOwnerDeltaProjection,
+    next_safe_actions: worklistNextSafeActions,
     effective_current_context: record(drilldown.effective_current_context),
     family_stall_lineage: familyStallLineage,
     zero_open_worklist_guard: zeroOpenWorklistGuard,
@@ -971,11 +975,9 @@ export async function runFamilyRuntimeEvidenceWorklist(
         next_action_ledger: nextActionLedger,
         evidence_requirement_ledger: evidenceRequirementLedger,
         stage_evidence_workorder_packet: stageEvidenceWorkorderPacket,
-        stage_replay_missing_receipt_workorder_packet:
-          stageReplayMissingReceiptWorkorderPacket,
+        stage_replay_missing_receipt_workorder_packet: stageReplayMissingReceiptWorkorderPacket,
         domain_dispatch_evidence_workorder_packet: domainDispatchEvidenceWorkorderPacket,
-        evidence_envelope_full_ref:
-          '/runtime_tray_snapshot/app_operator_drilldown/evidence_envelope',
+        evidence_envelope_full_ref: '/runtime_tray_snapshot/app_operator_drilldown/evidence_envelope',
       },
     };
   }
@@ -987,8 +989,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
       projection_detail_policy: 'attention_first_default_full_refs_via_explicit_drilldown',
       counts,
       full_detail_args: ['--detail', 'full'],
-      full_detail_command:
-        'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json',
+      full_detail_command: 'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json',
     },
   };
 }

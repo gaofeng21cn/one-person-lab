@@ -8,6 +8,11 @@ import {
 import { runExternalEvidenceApply } from '../../../../src/external-evidence-ledger.ts';
 import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/family-runtime-evidence-worklist.ts';
 import type { FrameworkContracts } from '../../../../src/types.ts';
+import {
+  assertCompactOwnerDeltaProjection,
+} from './owner-payload-workorder-assertions.ts';
+
+type JsonRecord = Record<string, unknown>;
 
 const contracts = {
   contractsDir: '/tmp/opl-payload-handoff-contracts',
@@ -52,6 +57,7 @@ type PayloadHandoffWorklist = {
     open_worklist_item_count: number;
     open_safe_action_payload_required_item_count: number;
   };
+  compact_owner_delta_projection?: JsonRecord;
   next_safe_actions?: PayloadHandoffAction[];
   worklist_items: Array<{
     action_id: string;
@@ -484,6 +490,23 @@ test('family-runtime evidence-worklist summary next actions carry domain-dispatc
   const action = worklist.next_safe_actions?.find((entry) => entry.action_id === actionId);
 
   assert.equal(worklist.summary.open_worklist_item_count, 1);
+  assertCompactOwnerDeltaProjection(worklist.compact_owner_delta_projection as JsonRecord, {
+    currentOwner: 'med-autoscience',
+    openSafeActionCount: 1,
+    payloadRequiredCount: 1,
+    domainDispatchWorkorderCount: 1,
+    fullDetailRefKeys: [
+      'evidence_worklist_ref',
+      'app_operator_drilldown_ref',
+    ],
+  });
+  const acceptedReturnShapes =
+    (worklist.compact_owner_delta_projection as JsonRecord)
+      .accepted_return_shapes as unknown[];
+  assert.equal(
+    acceptedReturnShapes.includes('domain_owner_receipt_ref'),
+    true,
+  );
   assert.ok(action);
   assert.equal(action.payload_workorder.surface_kind, 'opl_domain_dispatch_evidence_payload_workorder');
   assert.equal(action.payload_workorder.authority_boundary.can_generate_domain_owner_receipt, false);

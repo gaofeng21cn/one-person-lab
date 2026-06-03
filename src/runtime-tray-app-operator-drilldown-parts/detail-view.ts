@@ -31,6 +31,7 @@ import {
   compareDefaultSelectedSafeActions,
   defaultSelectedSafeActionCandidates,
 } from './selected-safe-action-candidates.ts';
+import { buildAppDrilldownCompactOwnerDeltaProjection } from './compact-owner-delta-projection.ts';
 import { buildOwnerPayloadWorkorder } from './owner-payload-workorder.ts';
 import { buildOwnerDeltaFirstProjection } from './owner-delta-first.ts';
 import { ownerDeltaAvailable } from './owner-delta-availability.ts';
@@ -900,6 +901,12 @@ function buildAttentionFirstPayload(drilldown: JsonRecord) {
     evidenceNextSteps: evidenceNextStepsProjection,
     workstreamOperatingLoop,
   });
+  const compactOwnerDeltaProjection = buildAppDrilldownCompactOwnerDeltaProjection({
+    ownerDeltaFirst,
+    selectedSafeAction,
+    evidenceAfterContract,
+    actionCount: actions.length,
+  });
   return {
     surface_kind: 'opl_app_drilldown_attention_first_payload',
     payload_policy:
@@ -914,6 +921,7 @@ function buildAttentionFirstPayload(drilldown: JsonRecord) {
     blocking: blockingItems(drilldown),
     advisory: advisoryItems(drilldown),
     missing_evidence: missingEvidenceItems(drilldown),
+    compact_owner_delta_projection: compactOwnerDeltaProjection,
     owner_delta_first: ownerDeltaFirst,
     evidence_after_contract: evidenceAfterContract,
     evidence_next_steps: evidenceNextStepsProjection,

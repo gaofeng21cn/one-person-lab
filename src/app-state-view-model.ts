@@ -11,6 +11,7 @@ type OplAppOperatorViewModelInput = {
   actions: ReadonlyArray<JsonRecord>;
   uiDefaults: JsonRecord;
   runtimeActivityItems: ReadonlyArray<JsonRecord>;
+  compactOwnerDeltaProjection?: JsonRecord;
 };
 
 function asRecord(value: unknown): JsonRecord {
@@ -417,6 +418,7 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
   const temporal = asRecord(asRecord(input.provider).temporal);
   const status = temporal.ready === true ? 'ready' : 'attention_needed';
   const safeActionRoutes = buildSafeActionRoutes(input);
+  const compactOwnerDeltaProjection = asRecord(input.compactOwnerDeltaProjection);
   const lazyRefs = [
     {
       ref_id: 'full_app_state_refresh',
@@ -439,8 +441,10 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
       profile: input.profile,
     },
     full_detail_surface: 'opl runtime app-operator-drilldown --detail full --json',
+    compact_owner_delta_projection: compactOwnerDeltaProjection,
     workbench: {
       view_model_schema: 'opl_app_operator_workbench.v1',
+      compact_owner_delta_projection: compactOwnerDeltaProjection,
       summary_cards: buildSummaryCards(input),
       sections: buildSections(input),
       navigation: buildNavigation(),

@@ -98,7 +98,7 @@ Date: `2026-06-03`
 
 当前结构是正确的：Temporal-backed provider、typed queue、stage attempt ledger、evidence ledger、descriptor、conformance、default-caller readiness、App/operator drilldown 和 Agent Lab 都已形成 framework control plane。fresh machine readout 证明 4 个标准 agent structural conformance clean，default-caller deletion-evidence clean，platform surface ownership clean。
 
-当前不优雅的地方是默认读面还没有完全匹配目的。框架已经能回答 owner-delta，但 full readiness / app drilldown / evidence worklist 仍把大量审计细节、payload template、typed blocker refs 和 route count 放在 agent 默认路径附近。更好的设计是稳定一个 compact projection：
+当前不优雅的地方是默认读面还没有完全匹配目的。框架已经能回答 owner-delta，但 full readiness / app drilldown / evidence worklist 仍把大量审计细节、payload template、typed blocker refs 和 route count 放在 agent 默认路径附近。2026-06-03 已落地稳定 `compact_owner_delta_projection` / `opl_compact_owner_delta_projection` 作为默认 compact alias：
 
 - `current_owner`
 - `required_delta`
@@ -108,11 +108,16 @@ Date: `2026-06-03`
 - `count_summary`
 - `full_detail_refs`
 
-优化建议：
+已落地：
 
-- 给 `framework readiness`、`evidence-worklist`、`app-operator-drilldown` 提供 shape-stable compact alias，避免后续 agent 因 top-level key 漂移写错 jq path。
-- 默认 projection 用 owner-delta-first，full drilldown 保留 raw refs。
-- 将 `goal_oracle_missing` / `next_forced_delta` / `domain_dispatch_workorder_count` 归入同一 owner handoff block，而不是散在不同 summary。
+- `framework readiness` 顶层和 `attention_first_payload` 同源暴露 `compact_owner_delta_projection`。
+- `family-runtime evidence-worklist` summary/full 同源暴露 `compact_owner_delta_projection`，默认 `next_safe_action_or_none` 不内嵌 raw `payload_template`。
+- `runtime app-operator-drilldown` summary/full 的 attention payload 暴露同 schema compact alias，full refs 仍只在 explicit `--detail full` 展开。
+- `opl app state --profile fast --json` 在 `operator.compact_owner_delta_projection` 和 `operator.workbench.compact_owner_delta_projection` 暴露同 schema idle/normal GUI block，保持 fast 面不拉 full runtime snapshot、不暴露 raw provider attempts。
+
+剩余优化建议：
+
+- 将 `goal_oracle_missing` / `next_forced_delta` 等更细 owner steering reason 继续折进 compact block 的 display/source hint，而不改变 authority false flags。
 - 保持 App fast state 与 raw provider attempts 的层级分离：provider attempt count 是诊断，不是用户 running task。
 
 ### med-autoscience
@@ -122,6 +127,24 @@ Date: `2026-06-03`
 MAS 当前是 live next owner。OPL fresh readiness 指向 `medautoscience`，required delta 是 domain owner receipt / quality gate / typed blocker。MAS 文档和状态说明显示，最近实际问题集中在 owner-route currentness、receipt consumption、gate-clearing、AI reviewer record、writer handoff 和 stale provider liveness，而不是缺少 MAS-local scheduler 或更多 status wrapper。
 
 从目标态看，MAS 不应继续深磨通用 dispatcher/currentness/lifecycle 平台。MAS 只需要产生医学实质 delta 或稳定 blocker：paper / artifact / AI reviewer / auditor / human gate / no-regression / owner-chain refs。
+
+已确认可用命令路径：
+
+```bash
+cd /Users/gaofeng/workspace/med-autoscience
+
+scripts/run-python-clean.sh -m med_autoscience.cli domain-handler dispatch-evidence-payload \
+  --profile <profile.toml> \
+  --workorder <opl-domain-dispatch-workorder.json> \
+  --format json
+
+scripts/run-python-clean.sh -m med_autoscience.cli domain-handler stage-evidence-payload \
+  --profile <profile.toml> \
+  --workorder <opl-stage-evidence-workorder.json> \
+  --format json
+```
+
+这些命令返回 refs-only `owner_receipt_payload_ready` / `typed_blocker_payload_ready` 或 stage-evidence success / typed-blocker payload，交给 OPL `runtime action execute` record/verify。它们不创建 MAS owner receipt、不授权 domain ready / production ready / publication ready / artifact mutation。
 
 优化建议：
 

@@ -26,6 +26,10 @@ import { parseAppStateProfile, type AppStateProfile } from './app-state-profile.
 import { buildAppStateRuntimeActivityItems } from './app-state-runtime-activity.ts';
 import { buildOplAppOperatorViewModel } from './app-state-view-model.ts';
 import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
+import {
+  buildCompactOwnerDeltaProjection,
+  buildIdleCompactOwnerDeltaProjection,
+} from './owner-delta-compact-projection.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -41,6 +45,54 @@ function nowIso() {
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function stringValue(value: unknown) {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function ownerDeltaFromRuntimeActivity(items: JsonRecord[]) {
+  const selected = items.find((item) => stringValue(item.lane) === 'attention')
+    ?? items.find((item) => stringValue(item.lane) === 'running');
+  if (!selected) {
+    return buildIdleCompactOwnerDeltaProjection();
+  }
+  const domainOwner = stringValue(selected.domain_owner)
+    ?? stringValue(selected.project_id)
+    ?? 'one-person-lab';
+  const actionSummary = stringValue(selected.next_action_summary)
+    ?? stringValue(selected.action_summary)
+    ?? stringValue(selected.summary)
+    ?? 'inspect_runtime_activity_projection';
+  return buildCompactOwnerDeltaProjection({
+    ownerDeltaFirst: {
+      next_owner: domainOwner,
+      next_required_delta: actionSummary,
+      required_return_shapes: [
+        'domain_owner_receipt_ref',
+        'domain_typed_blocker_ref',
+        'typed_blocker_ref',
+      ],
+    },
+    countSummary: {
+      openSafeActionCount: items.filter((item) => stringValue(item.lane) === 'attention').length,
+      payloadRequiredCount: 0,
+      payloadFreeCount: 0,
+      blockedRefsOnlyCount: 0,
+      evidenceEnvelopeOpenCount: 0,
+      evidenceEnvelopeBlockedCount: 0,
+      domainDispatchWorkorderCount: 0,
+      stageReplayMissingReceiptWorkorderCount: 0,
+    },
+    fullDetailRefs: {
+      framework_readiness_ref: 'opl framework readiness --family-defaults --json',
+      evidence_worklist_ref:
+        'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --json',
+      app_operator_drilldown_ref:
+        'opl runtime app-operator-drilldown --detail full --json',
+      runtime_activity_ref: '/app_state/operator/workbench/activity_center',
+    },
+  });
 }
 
 function parseJsonObject(value: string, context: string): JsonRecord {
@@ -415,6 +467,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const actions = buildActionCatalog();
   const uiDefaults = buildUiDefaults();
   const runtimeActivityItems = buildAppStateRuntimeActivityItems();
+  const compactOwnerDeltaProjection = ownerDeltaFromRuntimeActivity(runtimeActivityItems);
   const fullRuntimeDrilldown = profile === 'full'
     ? (await buildRuntimeTraySnapshot(loadFrameworkContracts() as FrameworkContracts, {
         appOperatorDrilldownDetailLevel: 'full',
@@ -459,6 +512,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
     actions,
     uiDefaults,
     runtimeActivityItems,
+    compactOwnerDeltaProjection,
   });
 
   return {

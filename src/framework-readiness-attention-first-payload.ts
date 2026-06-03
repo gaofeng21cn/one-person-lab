@@ -7,6 +7,7 @@ import { FRAMEWORK_READINESS_SOURCE_COMMANDS as SOURCE_COMMANDS } from './framew
 import {
   frameworkDiagnosticDrilldowns,
 } from './framework-readiness-static-surfaces.ts';
+import { buildCompactOwnerDeltaProjection } from './owner-delta-compact-projection.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -188,6 +189,30 @@ export function frameworkAttentionFirstPayload(input: {
       input.stageReplayMissingReceiptWorkorderAttentionItems,
     itemLimit: 5,
   });
+  const compactOwnerDeltaProjection = buildCompactOwnerDeltaProjection({
+    ownerDeltaFirst: input.ownerDeltaFirst,
+    ownerDeltaHandoffSummary: input.ownerDeltaHandoffSummary,
+    nextSafeAction: nextSafeActions[0],
+    countSummary: {
+      openSafeActionCount: numberValue(record(input.ownerDeltaHandoffSummary.summary).open_safe_action_item_count),
+      payloadRequiredCount: numberValue(record(input.ownerDeltaHandoffSummary.summary).open_safe_action_payload_required_item_count),
+      payloadFreeCount: numberValue(record(input.ownerDeltaHandoffSummary.summary).open_safe_action_payload_free_item_count),
+      blockedRefsOnlyCount: attentionCounts.domainBlockedAttentionCount,
+      evidenceEnvelopeOpenCount: input.evidenceEnvelopeOpenCount,
+      evidenceEnvelopeBlockedCount: input.evidenceEnvelopeBlockedCount,
+      domainDispatchWorkorderCount:
+        numberValue(input.domainDispatchEvidenceWorkorderSummary.workorder_count),
+      stageReplayMissingReceiptWorkorderCount:
+        input.stageReplayMissingReceiptWorkorderCount,
+    },
+    fullDetailRefs: {
+      owner_delta_first_ref: '/framework_readiness/owner_delta_first',
+      owner_handoff_packet_ref: '/framework_readiness/owner_handoff_packet',
+      evidence_worklist_ref: '/framework_readiness/evidence_worklist',
+      app_operator_drilldown_ref:
+        'opl runtime app-operator-drilldown --detail full --json',
+    },
+  });
 
   return {
     surface_kind: 'opl_framework_readiness_attention_first_payload',
@@ -257,6 +282,7 @@ export function frameworkAttentionFirstPayload(input: {
       input.stageReplayMissingReceiptWorkorderAttentionSummary,
     stage_replay_missing_receipt_workorder_attention_items:
       input.stageReplayMissingReceiptWorkorderAttentionItems,
+    compact_owner_delta_projection: compactOwnerDeltaProjection,
     owner_delta_first: input.ownerDeltaFirst,
     owner_delta_handoff_summary: input.ownerDeltaHandoffSummary,
     owner_payload_group_attention_policy:

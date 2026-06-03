@@ -5,12 +5,24 @@ import {
   recordOmaProductionConsumptionReceipts,
   verifyOmaProductionConsumptionReceipt,
 } from '../../../../src/oma-production-consumption-ledger.ts';
+import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
+
+function restoreEnv(name: 'OPL_STATE_DIR' | 'OPL_META_AGENT_REPO_DIR', previous: string | undefined) {
+  if (previous === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = previous;
+  }
+}
 
 test('framework readiness consumes OMA App live path receipts without reopening closed gates', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-live-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-live-fixture-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
   try {
     process.env.OPL_STATE_DIR = stateRoot;
+    process.env.OPL_META_AGENT_REPO_DIR = createOmaContractFixture(fixtureRoot);
     recordManagedInstallUpdateReceipts([{
       module_id: 'oplmetaagent',
       repo_name: 'opl-meta-agent',
@@ -33,6 +45,7 @@ test('framework readiness consumes OMA App live path receipts without reopening 
 
     const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,
+      OPL_META_AGENT_REPO_DIR: process.env.OPL_META_AGENT_REPO_DIR,
     }).framework_readiness;
     const omaFollowthrough = readiness.attention_first_payload.oma_production_consumption_followthrough;
     if (omaFollowthrough.structural_consumption_ready !== true) {
@@ -91,20 +104,21 @@ test('framework readiness consumes OMA App live path receipts without reopening 
       assert.equal(requiredGate.next_safe_action.can_claim_production_ready, false);
     }
   } finally {
-    if (previousStateDir === undefined) {
-      delete process.env.OPL_STATE_DIR;
-    } else {
-      process.env.OPL_STATE_DIR = previousStateDir;
-    }
+    restoreEnv('OPL_STATE_DIR', previousStateDir);
+    restoreEnv('OPL_META_AGENT_REPO_DIR', previousOmaRepoDir);
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
 
 test('framework readiness consumes verified OMA production-consumption long-soak refs without domain authority claims', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-consumption-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-consumption-fixture-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
   try {
     process.env.OPL_STATE_DIR = stateRoot;
+    process.env.OPL_META_AGENT_REPO_DIR = createOmaContractFixture(fixtureRoot);
     recordManagedInstallUpdateReceipts([{
       module_id: 'oplmetaagent',
       repo_name: 'opl-meta-agent',
@@ -131,6 +145,7 @@ test('framework readiness consumes verified OMA production-consumption long-soak
     assert.equal(longSoakRecord.status, 'recorded');
     const recordedReadiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,
+      OPL_META_AGENT_REPO_DIR: process.env.OPL_META_AGENT_REPO_DIR,
     }).framework_readiness;
     const recordedFollowthrough = recordedReadiness.oma_production_consumption_followthrough;
     if (recordedFollowthrough.structural_consumption_ready !== true) {
@@ -155,6 +170,7 @@ test('framework readiness consumes verified OMA production-consumption long-soak
 
     const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,
+      OPL_META_AGENT_REPO_DIR: process.env.OPL_META_AGENT_REPO_DIR,
     }).framework_readiness;
     const omaFollowthrough = readiness.oma_production_consumption_followthrough;
     if (omaFollowthrough.structural_consumption_ready !== true) {
@@ -171,11 +187,9 @@ test('framework readiness consumes verified OMA production-consumption long-soak
     assert.equal(omaFollowthrough.authority_boundary.can_create_owner_receipt, false);
     assert.equal(omaFollowthrough.authority_boundary.can_claim_production_ready, false);
   } finally {
-    if (previousStateDir === undefined) {
-      delete process.env.OPL_STATE_DIR;
-    } else {
-      process.env.OPL_STATE_DIR = previousStateDir;
-    }
+    restoreEnv('OPL_STATE_DIR', previousStateDir);
+    restoreEnv('OPL_META_AGENT_REPO_DIR', previousOmaRepoDir);
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });

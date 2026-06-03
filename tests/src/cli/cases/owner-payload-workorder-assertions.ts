@@ -29,6 +29,102 @@ export function assertOwnerPayloadWorkorderProjection(projection: JsonRecord) {
   assert.equal(projection.empty_payload_template_is_success_evidence, false);
 }
 
+export function assertCompactOwnerDeltaProjection(
+  compact: JsonRecord,
+  expected: {
+    currentOwner?: unknown;
+    requiredDelta?: unknown;
+    acceptedReturnShapes?: unknown;
+    openSafeActionCount?: unknown;
+    payloadRequiredCount?: unknown;
+    domainDispatchWorkorderCount?: unknown;
+    fullDetailRefKeys?: string[];
+  } = {},
+) {
+  assert.equal(compact.surface_kind, 'opl_compact_owner_delta_projection');
+  assert.equal(compact.schema_version, 'compact-owner-delta-projection.v1');
+  assert.equal(typeof compact.current_owner, 'string');
+  assert.equal(typeof compact.required_delta, 'string');
+  assert.equal(Array.isArray(compact.accepted_return_shapes), true);
+  assert.equal(compact.accepted_return_shapes.length > 0, true);
+  assert.equal(compact.accepted_return_shapes.includes('typed_blocker_ref'), true);
+  if (typeof expected.currentOwner === 'string') {
+    assert.equal(compact.current_owner, expected.currentOwner);
+  }
+  if (typeof expected.requiredDelta === 'string') {
+    assert.equal(compact.required_delta, expected.requiredDelta);
+  }
+  if (Array.isArray(expected.acceptedReturnShapes)) {
+    assert.deepEqual(compact.accepted_return_shapes, expected.acceptedReturnShapes);
+  }
+
+  const readinessFalseFlags = compact.readiness_false_flags;
+  assert.equal(typeof readinessFalseFlags, 'object');
+  assert.equal(readinessFalseFlags.can_execute_domain_action, false);
+  assert.equal(readinessFalseFlags.can_write_domain_truth, false);
+  assert.equal(readinessFalseFlags.can_create_owner_receipt, false);
+  assert.equal(readinessFalseFlags.can_create_typed_blocker, false);
+  assert.equal(readinessFalseFlags.can_close_owner_chain, false);
+  assert.equal(readinessFalseFlags.can_close_domain_ready, false);
+  assert.equal(readinessFalseFlags.can_claim_production_ready, false);
+
+  const countSummary = compact.count_summary;
+  assert.equal(typeof countSummary, 'object');
+  assert.equal(typeof countSummary.open_safe_action_count, 'number');
+  assert.equal(typeof countSummary.payload_required_count, 'number');
+  assert.equal(typeof countSummary.blocked_refs_only_count, 'number');
+  assert.equal(typeof countSummary.domain_dispatch_workorder_count, 'number');
+  if (typeof expected.openSafeActionCount === 'number') {
+    assert.equal(countSummary.open_safe_action_count, expected.openSafeActionCount);
+  }
+  if (typeof expected.payloadRequiredCount === 'number') {
+    assert.equal(countSummary.payload_required_count, expected.payloadRequiredCount);
+  }
+  if (typeof expected.domainDispatchWorkorderCount === 'number') {
+    assert.equal(
+      countSummary.domain_dispatch_workorder_count,
+      expected.domainDispatchWorkorderCount,
+    );
+  }
+
+  const nextSafeAction = compact.next_safe_action_or_none;
+  if (nextSafeAction !== null) {
+    assert.equal(typeof nextSafeAction, 'object');
+    assert.equal(hasOwnNestedKey(nextSafeAction, 'payload_template'), false);
+    if ('payload_workorder' in nextSafeAction && nextSafeAction.payload_workorder) {
+      assert.equal(
+        nextSafeAction.payload_workorder.empty_payload_template_is_success_evidence,
+        false,
+      );
+    }
+  }
+
+  const fullDetailRefs = compact.full_detail_refs;
+  assert.equal(typeof fullDetailRefs, 'object');
+  for (const key of expected.fullDetailRefKeys ?? ['owner_delta_first_ref']) {
+    assert.equal(typeof fullDetailRefs[key], 'string');
+  }
+  for (const value of Object.values(fullDetailRefs)) {
+    assert.equal(typeof value, 'string');
+  }
+  assert.equal(JSON.stringify(fullDetailRefs).includes('payload_template'), false);
+  assert.equal('domain_ready_verdict' in compact, false);
+  assert.equal('production_ready_verdict' in compact, false);
+  assert.equal('quality_verdict' in compact, false);
+}
+
+function hasOwnNestedKey(value: unknown, key: string): boolean {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+  if (Array.isArray(value)) {
+    return value.some((entry) => hasOwnNestedKey(entry, key));
+  }
+  return Object.entries(value as JsonRecord).some(([entryKey, entryValue]) =>
+    entryKey === key || hasOwnNestedKey(entryValue, key)
+  );
+}
+
 function assertAppReleaseUserPathPayloadWorkorder(workorder: JsonRecord) {
   assert.equal(
     workorder.surface_kind,
@@ -233,6 +329,27 @@ export function assertOwnerDeltaFirstReadinessProjection(readiness: JsonRecord) 
   const ownerDeltaHandoffSummary = attention.owner_delta_handoff_summary;
   const ownerDeltaHandoffWorkorder = ownerDeltaHandoffSummary.owner_payload_workorder;
   const nextSafeActions = attention.next_safe_actions;
+  assert.deepEqual(
+    readiness.compact_owner_delta_projection,
+    attention.compact_owner_delta_projection,
+  );
+  assertCompactOwnerDeltaProjection(readiness.compact_owner_delta_projection, {
+    currentOwner: ownerDeltaHandoffSummary.next_owner,
+    requiredDelta: ownerDeltaHandoffSummary.next_required_delta,
+    acceptedReturnShapes: ownerDeltaHandoffSummary.required_return_shapes,
+    openSafeActionCount: readiness.evidence_worklist.open_safe_action_item_count,
+    payloadRequiredCount:
+      readiness.evidence_worklist.open_safe_action_payload_required_item_count,
+    domainDispatchWorkorderCount:
+      readiness.evidence_worklist.domain_dispatch_evidence_workorder_packet_summary
+        .workorder_count,
+    fullDetailRefKeys: [
+      'owner_delta_first_ref',
+      'owner_handoff_packet_ref',
+      'evidence_worklist_ref',
+      'app_operator_drilldown_ref',
+    ],
+  });
 
   assert.equal(readiness.owner_delta_first.surface_kind, 'opl_owner_delta_first_projection');
   assert.equal(ownerDeltaFirst.surface_kind, 'opl_owner_delta_first_projection');
@@ -427,6 +544,17 @@ export function assertOwnerDeltaFirstAppOperatorProjection(drilldown: JsonRecord
       : 'owner_delta_first_default_app_payload_full_refs_routes_and_attempt_graph_require_detail_full',
   );
   assert.equal(ownerDeltaFirst.surface_kind, 'opl_owner_delta_first_projection');
+  assertCompactOwnerDeltaProjection(attention.compact_owner_delta_projection, {
+    currentOwner: ownerDeltaFirst.next_owner,
+    requiredDelta: ownerDeltaFirst.next_required_delta,
+    ...(ownerDeltaFirst.required_return_shapes.length > 0
+      ? { acceptedReturnShapes: ownerDeltaFirst.required_return_shapes }
+      : {}),
+    fullDetailRefKeys: [
+      'owner_delta_first_ref',
+      'app_operator_drilldown_ref',
+    ],
+  });
   assert.equal(
     ownerDeltaFirst.projection_policy,
     'default_operator_surface_prioritizes_next_owner_delta_raw_refs_only_counters_are_drilldown',

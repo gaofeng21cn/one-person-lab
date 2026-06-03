@@ -1,4 +1,7 @@
 import { assert, buildManifestCommand, createFakeCodexFixture, fs, loadFamilyManifestFixtures, os, path, runCli, runCliFailure, test } from '../helpers.ts';
+import {
+  assertCompactOwnerDeltaProjection,
+} from './owner-payload-workorder-assertions.ts';
 
 const defaultDeveloperModePermissionsFixture = JSON.stringify({
   user: { login: 'gaofeng21cn' },
@@ -92,7 +95,7 @@ function writeMasProgressPortalFixture(workspaceRoot: string, profilePath: strin
           runtime_health_status: 'escalated',
           progress_freshness_summary: '最近 12 小时内仍有明确研究推进记录。',
           operator_focus: '优先收口同线质量硬阻塞',
-          next_system_action: '观察自动运行推进。',
+          next_system_action: '提交 MAS owner receipt 或 typed blocker。',
           worker_running: null,
         },
         {
@@ -276,8 +279,10 @@ exit 1
         operator: {
           status: string;
           summary: { profile: string; visible_action_count: number };
+          compact_owner_delta_projection: Record<string, any>;
           workbench: {
             view_model_schema: string;
+            compact_owner_delta_projection: Record<string, any>;
             summary_cards: Array<{ card_id: string; source_ref: string; value: string | number }>;
             sections: Array<{ section_id: string; source_ref: string; lazy: boolean }>;
             navigation: { replacement_policy: string };
@@ -348,6 +353,22 @@ exit 1
     assert.equal(output.app_state.operator.summary.visible_action_count, output.app_state.actions.length);
     assert.equal(output.app_state.operator.workbench.view_model_schema, 'opl_app_operator_workbench.v1');
     assert.deepEqual(
+      output.app_state.operator.compact_owner_delta_projection,
+      output.app_state.operator.workbench.compact_owner_delta_projection,
+    );
+    assertCompactOwnerDeltaProjection(output.app_state.operator.workbench.compact_owner_delta_projection, {
+      fullDetailRefKeys: [
+        'framework_readiness_ref',
+        'evidence_worklist_ref',
+        'app_operator_drilldown_ref',
+      ],
+    });
+    assert.equal(
+      output.app_state.operator.workbench.compact_owner_delta_projection.full_detail_refs
+        .app_operator_drilldown_ref,
+      'opl runtime app-operator-drilldown --detail full --json',
+    );
+    assert.deepEqual(
       output.app_state.operator.workbench.summary_cards.map((entry) => entry.card_id),
       ['active_projects', 'runtime_status', 'codex_cli', 'temporal_provider', 'runtime_modules', 'release_channel'],
     );
@@ -398,6 +419,8 @@ exit 1
       ),
       true,
     );
+    assert.equal('app_operator_drilldown' in output.app_state, false);
+    assert.equal('evidence_envelope' in output.app_state, false);
     assert.equal(output.app_state.operator.dynamic_vertical_map.nodes.length > 0, true);
     assert.equal(output.app_state.operator.owner_boundary.shell, 'thin_renderer_and_ipc_adapter');
     assert.equal(output.app_state.operator.owner_boundary.can_write_domain_truth, false);
@@ -459,7 +482,9 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     }) as {
       app_state: {
         operator: {
+          compact_owner_delta_projection: Record<string, any>;
           workbench: {
+            compact_owner_delta_projection: Record<string, any>;
             summary_cards: Array<{ card_id: string; value: number | string }>;
             activity_center: {
               active_projects: Array<{ study_id?: string; state: string; active_run_id?: string | null }>;
@@ -482,9 +507,30 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
       '002-dm-china-us-mortality-attribution',
     ]);
     assert.deepEqual(
-      output.app_state.operator.workbench.activity_center.needs_attention.map((entry) => entry.study_id),
+        output.app_state.operator.workbench.activity_center.needs_attention.map((entry) => entry.study_id),
       ['003-dpcc-primary-care-phenotype-treatment-gap'],
     );
+    assert.deepEqual(
+      output.app_state.operator.compact_owner_delta_projection,
+      output.app_state.operator.workbench.compact_owner_delta_projection,
+    );
+    assertCompactOwnerDeltaProjection(output.app_state.operator.compact_owner_delta_projection, {
+      currentOwner: 'med-autoscience',
+      requiredDelta: '提交 MAS owner receipt 或 typed blocker。',
+      acceptedReturnShapes: [
+        'domain_owner_receipt_ref',
+        'domain_typed_blocker_ref',
+        'typed_blocker_ref',
+      ],
+      openSafeActionCount: 1,
+      payloadRequiredCount: 0,
+      fullDetailRefKeys: [
+        'framework_readiness_ref',
+        'evidence_worklist_ref',
+        'app_operator_drilldown_ref',
+        'runtime_activity_ref',
+      ],
+    });
     assert.equal(
       output.app_state.operator.workbench.summary_cards.find((entry) => entry.card_id === 'active_projects')?.value,
       1,
