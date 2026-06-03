@@ -17,12 +17,12 @@ import {
 import {
   findLiveMasDefaultExecutorDispatchAttempt,
   findLiveMasDefaultExecutorStudyAttempt,
+  isAdmittedMasDefaultExecutorNextOwner,
   refreshMasDefaultExecutorLiveAttemptTaskLease,
 } from './family-runtime-provider-hosted-attempts.ts';
 import { activeQueueHoldForTaskInput } from './family-runtime-queue-holds.ts';
 
 const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
-const MAS_DEFAULT_EXECUTOR_NEXT_OWNERS = new Set(['write', 'ai_reviewer', 'write/ai_reviewer']);
 const MAS_PAPER_AUTONOMY_STALE_DEAD_LETTER_MARKERS = [
   'owner_route_stale',
   'controller_route_work_unit_unsupported',
@@ -49,8 +49,7 @@ function isMasDefaultExecutorDispatch(
   return row.domain_id === 'medautoscience'
     && row.task_kind === MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
     && optionalString(payload.dispatch_ref) !== null
-    && nextOwner !== null
-    && MAS_DEFAULT_EXECUTOR_NEXT_OWNERS.has(nextOwner)
+    && isAdmittedMasDefaultExecutorNextOwner(nextOwner)
     && ['codex_cli_default', 'codex_cli'].includes(optionalString(payload.executor_kind) ?? '');
 }
 

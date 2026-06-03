@@ -85,7 +85,12 @@ function sameOptionalStringField(left: Record<string, unknown>, right: Record<st
 }
 
 export const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
-const MAS_DEFAULT_EXECUTOR_NEXT_OWNERS = new Set(['write', 'ai_reviewer', 'write/ai_reviewer']);
+const MAS_DEFAULT_EXECUTOR_NEXT_OWNERS = new Set([
+  'write',
+  'ai_reviewer',
+  'write/ai_reviewer',
+  'gate_clearing_batch',
+]);
 const MAS_DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
 const MAS_DEFAULT_EXECUTOR_CROSS_TASK_STARTED_ATTEMPT_STATUSES = new Set(['running', 'checkpointed', 'human_gate']);
 const MAS_DEFAULT_EXECUTOR_CROSS_TASK_LIVE_TASK_STATUSES = new Set(['queued', 'running', 'retry_waiting', 'succeeded']);
@@ -227,6 +232,10 @@ function familyTransitionResult(payload: Record<string, unknown>) {
   return optionalString(transition.transition_id) ? transition : null;
 }
 
+export function isAdmittedMasDefaultExecutorNextOwner(nextOwner: string | null) {
+  return nextOwner !== null && MAS_DEFAULT_EXECUTOR_NEXT_OWNERS.has(nextOwner);
+}
+
 export function isMasDefaultExecutorDispatchTask(
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
@@ -235,8 +244,7 @@ export function isMasDefaultExecutorDispatchTask(
   return row.domain_id === 'medautoscience'
     && row.task_kind === MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
     && optionalString(payload.dispatch_ref) !== null
-    && nextOwner !== null
-    && MAS_DEFAULT_EXECUTOR_NEXT_OWNERS.has(nextOwner)
+    && isAdmittedMasDefaultExecutorNextOwner(nextOwner)
     && ['codex_cli_default', 'codex_cli'].includes(optionalString(payload.executor_kind) ?? '');
 }
 
