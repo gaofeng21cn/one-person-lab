@@ -33,9 +33,13 @@ Declarative Domain Pack
 
 `Codex CLI` 是当前第一公民 executor。Temporal-backed provider 是 production online runtime 的必需 substrate；`local_sqlite` 只允许作为 dev/CI/offline diagnostic baseline。`hermes_agent`、`claude_code`、`antigravity_cli` 等只能作为显式非默认 executor adapter/backend。
 
-## 当前完成口径
+## 当前完成进度
 
-普通 operator / App 默认读面先回答四个问题：
+当前完成进度按 `OPL Framework -> One Person Lab App -> Foundry Agents`
+目标态读取：framework control plane、generated surface consumption、App/operator
+projection 和 standard-agent source shape 已进入当前主干；domain owner-chain、
+memory/artifact lifecycle、long-soak、App release cohort 和 no-resurrection 仍按下方
+测试/证据差距推进。普通 operator / App 默认读面先回答四个问题：
 
 1. 当前有没有 OPL 可执行 safe action。
 2. 当前等待哪个 domain / human / App / provider owner。
@@ -65,11 +69,20 @@ Declarative Domain Pack
 | `memory_artifact_lifecycle_apply` | 真实 memory retrieval/writeback、accepted/rejected receipt、artifact mutation receipt、package/export lifecycle receipt、cleanup/restore/retention 对账。 | Domain-owned surface 产生真实 memory/artifact/lifecycle receipts；OPL 不保存 body、不判定 verdict。 |
 | `provider_long_soak` | Temporal service/worker、provider cadence/capability、domain owner-chain dispatch 和 retry/dead-letter 在更长窗口内持续满足，并能暴露 blocker。 | Long-soak refs、provider state linkage、operator evidence refs 或 typed blocker refs 可重复 record/verify；不外推为 production ready。 |
 | `app_release_user_path` | 每个新的 App release cohort 重复提供 release package、screenshot、reload / first-run prompt、provider linkage、operator evidence 和 release-owner typed blocker path。 | App release/user-path refs 只关闭 cohort evidence gate；release-ready verdict 回 App release 流程。 |
-| `no_resurrection` | 后续代码和文档不重新引入 Hermes/Gateway/frontdoor/local-manager/MDS-default、compat alias、facade、wrapper、old CLI alias 或 compatibility-only tests 作为 active surface。 | Focused guard、docs scan、contract/source tests 和 review 一起阻断旧路径复活；保留的旧词必须处在 history/provenance/negative-guard 语境。 |
+| `no_resurrection` | 后续代码和文档不重新引入 retired executor / entry / local-manager vocabulary、compat alias、facade、wrapper、old CLI alias 或 compatibility-only tests 作为 active surface。 | Focused guard、docs scan、contract/source tests 和 review 一起阻断旧路径复活；保留的旧词必须处在 history/provenance/negative-guard 语境。 |
 
-## 当前 Baton
+## 下一轮 Agent prompt
 
-1. 先重读 live truth，不从本文继承旧 counters：
+- Write scope: OPL family active truth owner、core docs、runtime/App read-model
+  边界、stale wrapper/facade/alias direct-retirement 证据，以及本轮 coverage
+  ledger 的未覆盖与保留项。
+- Non-goals: 不声明 domain ready、App release ready、production ready；不把
+  OPL refs-only evidence、provider completion、descriptor ready、suite pass 或 docs
+  doctor pass 写成 domain verdict；不新增 compatibility alias、facade、wrapper 或
+  Markdown wording tests。
+- Live truth inputs: 先重读 live source、contracts、tests、CLI/read-model、
+  runtime ledger、provider receipt、domain-owned manifest、App evidence、git
+  worktree/branch/PR state 和下列 OPL readouts，不从本文继承旧 counters：
 
    ```bash
    rtk opl framework readiness --family-defaults --json
@@ -79,10 +92,27 @@ Declarative Domain Pack
    rtk opl agents default-callers --family-defaults --json
    ```
 
-2. 若有 OPL 可执行 safe action，优先推进 owner-delta：domain / human / App / provider owner 必须给出 deliverable delta、owner receipt、typed blocker、quality gate receipt、no-regression ref 或 long-soak ref。
-3. 若没有 OPL safe action，只能把 blocked refs-only attention 写成等待 owner 或 typed blocker，不写成完成。
-4. 若发现 active source 或 active docs 重新保留旧 wrapper、facade、alias、compat path、Gateway/frontdoor/Hermes-default/local-manager wording，按 direct retirement 处理：迁移 caller，删除旧面，必要 provenance 归 history/tombstone。
-5. 若本轮只做 docs 治理，最小验证为 `git diff --check`、冲突标记扫描、stale wording 扫描和 docs inventory sanity；不要新增 Markdown 措辞测试。
+- Required actions:
+  1. 若有 OPL 可执行 safe action，优先推进 owner-delta：domain / human / App /
+     provider owner 必须给出 deliverable delta、owner receipt、typed blocker、
+     quality gate receipt、no-regression ref 或 long-soak ref。
+  2. 若没有 OPL safe action，只能把 blocked refs-only attention 写成等待 owner
+     或 typed blocker，不写成完成。
+  3. 若发现 active source 或 active docs 重新保留旧 wrapper、facade、alias、
+     compat path 或 retired entry/runtime vocabulary，按 direct
+     retirement 处理：迁移 caller，删除旧面，必要 provenance 归 history/tombstone。
+  4. 若本轮只做 docs 治理，更新 active truth、coverage ledger、未覆盖清单、
+     保留理由和下一轮写入范围；不要新增 Markdown 措辞测试。
+- Verification commands: docs-only 最小验证为 `rtk git diff --check`、
+  `rtk rg -n '^(<<<<<<<|=======|>>>>>>>)' docs`、targeted stale wording scan 和 docs
+  inventory sanity；触及 source/contract/runtime/App 行为时按下方 owner repo 验证入口追加。
+- Completion gate: 本轮 tranche 只能在已审范围、已改文档、归档/tombstone/删除文档、
+  未覆盖文档、剩余 stale/retire 候选和下一轮写入范围都写入 ledger，且 main checkout
+  完成最小充分验证后关闭；不得关闭全局 `/goal`，除非 6 仓 README* 与
+  `docs/**/*.md` 已逐段覆盖且剩余 gap 全部关闭或进入下一轮 prompt。
+- Foldback target: 当前结论折回本文、核心五件套和对应 support docs；dated proof、
+  coverage tranche、worktree/branch closeout、receipt 流水和 superseded 计划进入
+  `docs/history/**`、runtime ledger、提交历史或 domain-owned receipt/provenance。
 
 ## Forbidden Claims
 
@@ -98,7 +128,7 @@ Docs-only inventory updates:
 
 - `rtk git diff --check`
 - `rtk rg -n '^(<<<<<<<|=======|>>>>>>>)' docs`
-- targeted stale wording scan for old Gateway/frontdoor/Hermes-default/local-manager/MDS-default wording outside `docs/history/**`
+- targeted stale wording scan for retired entry/runtime vocabulary outside `docs/history/**`
 
 触及 source / contract / runtime / App 行为时，按 owner repo 验证：
 
