@@ -7,13 +7,13 @@ Machine boundary: 本文只记录 2026-06-03 automation-2 单轮分支/worktree 
 
 ## Snapshot
 
-- `RUN_SNAPSHOT_TS`: `2026-06-04T02:20:17+0800`.
+- `RUN_SNAPSHOT_TS`: `2026-06-04T04:38:02+0800`.
 - Governed scope: `one-person-lab`、`med-autoscience`、`med-autogrant`、`redcube-ai`、`opl-meta-agent`、`one-person-lab-app`.
 - Final root `main` state after fetch/fast-forward/rebase:
-  - `one-person-lab`: `main@26f11f6d`, ahead of `origin/main` by the verified docs-only active-baton commit plus this ledger/index diff before commit.
+  - `one-person-lab`: `main@d4403336`, aligned with `origin/main` before this ledger correction.
   - `med-autoscience`: `main@3b45de31`, clean and aligned with `origin/main`; MAS docs-only active-baton commit was pushed before final closeout.
-  - `med-autogrant`: `main@487a1ec`, ahead of `origin/main` by the verified docs-only active-baton commit at snapshot time.
-  - `redcube-ai`: `main@376a2bfc`, ahead of `origin/main` by the verified docs-only active-baton commit at snapshot time.
+  - `med-autogrant`: `main@487a1ec`, clean and aligned with `origin/main`; MAG docs-only active-baton commit was pushed before final closeout.
+  - `redcube-ai`: `main@376a2bfc`, clean and aligned with `origin/main`; RCA docs-only active-baton commit was pushed before final closeout.
   - `opl-meta-agent`: `main@bfa1f3c`, clean and aligned with `origin/main`.
   - `one-person-lab-app`: `main@940a182`, clean and aligned with `origin/main`.
 - Open PR check returned no open PRs for the inspected stale/active lane heads.
@@ -38,14 +38,20 @@ Retained remote branch candidates:
 | `med-autogrant` | `origin/feature/ai-narration-contracts` | `right_only_cherry_pick_count=1` | Still has branch-only semantic content; must not delete or absorb without semantic review. |
 | `one-person-lab-app` | `origin/codex/full-first-run-stable-gate-20260525` | `right_only_cherry_pick_count=3` | Codex-named but still has branch-only content; not proven superseded. |
 
+Deleted safe local worktrees/branches:
+
+| Repo | Worktree / branch | Evidence | Action |
+| --- | --- | --- | --- |
+| `one-person-lab` | `.worktrees/opl-stale-cleanup-20260603` / `opl-stale-cleanup-20260603` | Clean, no right-only commit after refreshed `main`, branch was contained by `main`, and no open PR was found. | Removed worktree and deleted local branch; no remote branch was deleted. |
+| `one-person-lab-app` | `.worktrees/github-ci-20260603-app-nightly-evidence` / `fix/github-ci-20260603-app-nightly-evidence` | Clean, `HEAD@940a182` matched root `main` / `origin/main`, branch was contained by `main`, and no open PR was found. | Removed worktree and deleted local branch; no remote branch was deleted. |
+
 Retained local worktrees/branches:
 
 | Repo | Worktree / branch | Current evidence | Reason retained |
 | --- | --- | --- | --- |
-| `one-person-lab` | `.worktrees/opl-stale-cleanup-20260603` / `opl-stale-cleanup-20260603` | `HEAD@0783b743`; `main...HEAD` read as `3	0`, so it had no right-only commit against refreshed root `main` at snapshot time. | Worktree still present and branch checked out; defer cleanup until the next run confirms no active process or owner reference remains. |
-| `med-autoscience` | `.worktrees/github-ci-20260603-mas-ci-preflight` / `fix/github-ci-20260603-mas-ci-preflight` | `HEAD@75876185`, same commit as `origin/main` at snapshot time. | Worktree still present and branch checked out; defer cleanup until the next run confirms the CI-preflight lane has finished. |
-| `med-autogrant` | `.worktrees/mag-stale-cleanup-20260603` / `mag-stale-cleanup-20260603` | dirty files: `docs/status.md`, `pyproject.toml`, `schemas/v1/grant-progress.schema.json`, `tests/product_entry_cases/test_direct_entry.py`, `tests/product_entry_cases/test_progress_cockpit.py`, `uv.lock`; `main...HEAD` read as `8	0`. | Dirty worktree; deletion prohibited. |
-| `one-person-lab-app` | `.worktrees/github-ci-20260603-app-nightly-evidence` / `fix/github-ci-20260603-app-nightly-evidence` | `HEAD@940a182`, same commit as `origin/main` and root `main` at snapshot time. | Worktree still present and branch checked out; eligible for next-run cleanup only after confirming no active process or owner reference remains. |
+| `med-autoscience` | `.worktrees/github-ci-20260603-mas-ci-preflight` / `fix/github-ci-20260603-mas-ci-preflight` | Clean `HEAD@5ab10ea6`, one right-only commit over `origin/main`: `fix: classify stage pack contracts in CI preflight`; related `scripts/verify.sh ci-preflight` / pytest processes were still running. | Active CI-preflight lane with live processes; deletion prohibited. |
+| `med-autogrant` | `.worktrees/mag-stale-cleanup-20260603` / `mag-stale-cleanup-20260603` | Clean `HEAD@b5619bd`, one right-only commit over `origin/main`; semantic content still unreviewed after prior dirty state. | Clean but unmerged and not semantically classified; retain for next-run absorb/supersede review. |
+| `redcube-ai` | `.worktrees/github-ci-20260603-rca-ci` / `fix/github-ci-20260603-rca-ci` | Clean `HEAD@34f89066`, one right-only commit over `origin/main`: `fix: align RCA locator model tests`; recent process scan referenced this worktree. | Active CI lane; retain for next-run verification and absorb/supersede review. |
 
 ## OPL Doc Governance
 
@@ -104,7 +110,7 @@ Remaining stale / retire candidates:
 
 - `med-autogrant` `origin/feature/ai-narration-contracts`: one branch-only semantic commit remains; requires MAG contract/product-entry/test review before absorb or supersede.
 - `one-person-lab-app` `origin/codex/full-first-run-stable-gate-20260525`: three branch-only semantic commits remain; requires App release/guide evidence review before absorb or supersede.
-- Local active worktrees listed above must be rechecked next run; none are eligible for deletion in this snapshot.
+- Local active worktrees listed above must be rechecked next run; OPL and App merged clean lanes were already removed in this tranche.
 
 ## Verification
 
@@ -135,7 +141,7 @@ No source, contract, runtime, release artifact, or domain behavior changed in th
 ## Next-Round Write Scope
 
 1. Re-run six-repo inventory first; these repos were actively moving during this tranche.
-2. Reclassify and either absorb or retain the four local worktrees using fresh status, recent-write, process, PR and semantic diff evidence.
+2. Reclassify and either absorb or retain the three local worktrees using fresh status, recent-write, process, PR and semantic diff evidence: MAS CI preflight, MAG cleanup, and RCA CI.
 3. Review branch-only semantic content in MAG `origin/feature/ai-narration-contracts` and App `origin/codex/full-first-run-stable-gate-20260525`; decide absorb, supersede marker, or explicit retained owner.
 4. Continue full README/docs section coverage from active truth owner docs and docs portfolio entries; keep coverage ledger current and avoid treating doctor pass as semantic completion.
 5. Keep the global docs-governance `/goal` active until all six repo README/docs portfolios are section-covered and all remaining gaps are closed or carried into the next executable Agent prompt.
