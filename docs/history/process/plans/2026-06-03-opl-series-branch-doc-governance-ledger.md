@@ -7,13 +7,13 @@ Machine boundary: 本文只记录 2026-06-03 automation-2 单轮分支/worktree 
 
 ## Snapshot
 
-- `RUN_SNAPSHOT_TS`: `2026-06-04T00:30:20+0800`.
+- `RUN_SNAPSHOT_TS`: `2026-06-04T02:20:17+0800`.
 - Governed scope: `one-person-lab`、`med-autoscience`、`med-autogrant`、`redcube-ai`、`opl-meta-agent`、`one-person-lab-app`.
 - Final root `main` state after fetch/fast-forward/rebase:
-  - `one-person-lab`: `main@61732199`, ahead of `origin/main` by the verified docs-only active-baton commit plus this ledger/index diff before commit.
-  - `med-autoscience`: `main@3b45de31`, ahead of `origin/main` by the verified docs-only active-baton commit at snapshot time.
-  - `med-autogrant`: `main@58e2bd9`, clean and aligned with `origin/main`.
-  - `redcube-ai`: `main@300f8374`, clean and aligned with `origin/main`.
+  - `one-person-lab`: `main@26f11f6d`, ahead of `origin/main` by the verified docs-only active-baton commit plus this ledger/index diff before commit.
+  - `med-autoscience`: `main@3b45de31`, clean and aligned with `origin/main`; MAS docs-only active-baton commit was pushed before final closeout.
+  - `med-autogrant`: `main@487a1ec`, ahead of `origin/main` by the verified docs-only active-baton commit at snapshot time.
+  - `redcube-ai`: `main@376a2bfc`, ahead of `origin/main` by the verified docs-only active-baton commit at snapshot time.
   - `opl-meta-agent`: `main@bfa1f3c`, clean and aligned with `origin/main`.
   - `one-person-lab-app`: `main@940a182`, clean and aligned with `origin/main`.
 - Open PR check returned no open PRs for the inspected stale/active lane heads.
@@ -55,10 +55,12 @@ Skill path used:
 - Canonical skill routed to `/Users/gaofeng/workspace/opl-doc-governance/skills/opl-doc/SKILL.md`
 - Doctor fallback: `/Users/gaofeng/workspace/opl-doc-governance/scripts/opl_doc_doctor.py`
 
-Doctor preflight after root fast-forward showed OPL and MAS active-truth shape drift:
+Doctor preflight after root fast-forward showed active-truth shape drift in OPL, MAS, MAG and RCA:
 
 - OPL `docs/active/current-state-vs-ideal-gap.md` lacked doctor-recognized `当前完成进度` and executable `下一轮 Agent prompt` markers.
 - MAS `docs/active/mas-ideal-state-gap-plan.md` lacked doctor-recognized executable `下一轮 Agent prompt` markers.
+- MAG `docs/active/mag-ideal-state-cross-repo-gap-plan.md` lacked doctor-recognized `当前完成进度` and executable `下一轮 Agent prompt` markers.
+- RCA `docs/active/rca-ideal-state-gap-plan.md` lacked doctor-recognized `当前完成进度` and executable `下一轮 Agent prompt` markers, and had active-path `Hermes-first` vocabulary risk.
 
 Fixes applied:
 
@@ -70,6 +72,11 @@ Fixes applied:
 - `med-autoscience/docs/active/mas-ideal-state-gap-plan.md`
   - rewrote `近期完善计划` as `下一轮 Agent prompt`;
   - preserved the same MAS owner-delta action sequence while adding the executable prompt fields required by OPL Doc.
+- `med-autogrant/docs/active/mag-ideal-state-cross-repo-gap-plan.md`
+  - added doctor-recognized current completion progress and executable next-round Agent prompt fields.
+- `redcube-ai/docs/active/rca-ideal-state-gap-plan.md`
+  - added doctor-recognized current completion progress and executable next-round Agent prompt fields;
+  - rewrote active-path `Hermes-first` vocabulary into retained provenance / explicit executor-adapter language.
 
 ## Coverage Ledger
 
@@ -79,8 +86,8 @@ This tranche was not a full portfolio coverage closeout. It covered the branch/w
 | --- | ---: | --- | --- | --- |
 | `one-person-lab` | `202` | `docs/active/current-state-vs-ideal-gap.md` | pass, missing `0`, next_not_ready `0`, findings `0` | `docs/active/current-state-vs-ideal-gap.md`, this ledger, plans index |
 | `med-autoscience` | `262` | `docs/active/mas-ideal-state-gap-plan.md` | pass, missing `0`, next_not_ready `0`, findings `0` | `docs/active/mas-ideal-state-gap-plan.md` |
-| `med-autogrant` | `118` | `docs/active/mag-ideal-state-cross-repo-gap-plan.md` | attention_required, missing `3`, next_not_ready `1`, findings `1` | none |
-| `redcube-ai` | `94` | `docs/active/rca-ideal-state-gap-plan.md` | attention_required, missing `3`, next_not_ready `1`, findings `2` | none |
+| `med-autogrant` | `118` | `docs/active/mag-ideal-state-cross-repo-gap-plan.md` | pass, missing `0`, next_not_ready `0`, findings `0` | `docs/active/mag-ideal-state-cross-repo-gap-plan.md` |
+| `redcube-ai` | `94` | `docs/active/rca-ideal-state-gap-plan.md` | pass, missing `0`, next_not_ready `0`, findings `0` | `docs/active/rca-ideal-state-gap-plan.md` |
 | `opl-meta-agent` | `15` | `docs/active/opl-meta-agent-ideal-state-gap-plan.md` | pass, missing `0`, next_not_ready `0`, findings `0` | none |
 | `one-person-lab-app` | `25` | `docs/active/app-ideal-state-gap-plan.md` | pass, missing `0`, next_not_ready `0`, findings `0` | none |
 
@@ -97,8 +104,6 @@ Remaining stale / retire candidates:
 
 - `med-autogrant` `origin/feature/ai-narration-contracts`: one branch-only semantic commit remains; requires MAG contract/product-entry/test review before absorb or supersede.
 - `one-person-lab-app` `origin/codex/full-first-run-stable-gate-20260525`: three branch-only semantic commits remain; requires App release/guide evidence review before absorb or supersede.
-- MAG `docs/active/mag-ideal-state-cross-repo-gap-plan.md`: doctor reports missing `current_completion_progress`, executable `next_round_agent_prompt`, and required prompt fields.
-- RCA `docs/active/rca-ideal-state-gap-plan.md`: doctor reports missing `current_completion_progress`, executable `next_round_agent_prompt`, required prompt fields, and active-path `Hermes-first` vocabulary risk.
 - Local active worktrees listed above must be rechecked next run; none are eligible for deletion in this snapshot.
 
 ## Verification
@@ -108,8 +113,8 @@ Fresh verification run in this tranche:
 - OPL Doc doctor on all six repos:
   - OPL: pass, `missing=0`, `next_not_ready=0`, `findings=0`.
   - MAS: pass, `missing=0`, `next_not_ready=0`, `findings=0`.
-  - MAG: attention required, `missing=3`, `next_not_ready=1`, `findings=1`.
-  - RCA: attention required, `missing=3`, `next_not_ready=1`, `findings=2`.
+  - MAG: pass, `missing=0`, `next_not_ready=0`, `findings=0`.
+  - RCA: pass, `missing=0`, `next_not_ready=0`, `findings=0`.
   - OMA: pass, `missing=0`, `next_not_ready=0`, `findings=0`.
   - App: pass, `missing=0`, `next_not_ready=0`, `findings=0`.
 - OPL docs-only checks:
@@ -118,6 +123,12 @@ Fresh verification run in this tranche:
 - MAS docs-only checks:
   - `rtk git diff --check`
   - `rtk rg -n "^(<<<<<<<|=======|>>>>>>>)" docs README.md README.zh-CN.md`
+- MAG docs-only checks:
+  - `rtk git diff --check`
+  - `rtk rg -n "^(<<<<<<<|=======|>>>>>>>)" docs README.md README.zh-CN.md`
+- RCA docs-only checks:
+  - `rtk git diff --check`
+  - `rtk rg -n "^(<<<<<<<|=======|>>>>>>>)" docs README.md`
 
 No source, contract, runtime, release artifact, or domain behavior changed in this tranche, so no repo-native full runtime/test suite was required for the docs-only edits.
 
