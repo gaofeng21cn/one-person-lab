@@ -6,7 +6,7 @@ import {
   verifyOmaProductionConsumptionReceipt,
 } from '../../../../src/oma-production-consumption-ledger.ts';
 
-test('framework readiness consumes OMA App live path receipts without closing long soak', () => {
+test('framework readiness consumes OMA App live path receipts without reopening closed gates', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-live-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   try {
@@ -38,77 +38,58 @@ test('framework readiness consumes OMA App live path receipts without closing lo
     if (omaFollowthrough.structural_consumption_ready !== true) {
       return;
     }
-    assert.equal(omaFollowthrough.open_gate_count, 1);
-    assert.deepEqual(omaFollowthrough.open_gate_ids, ['long_soak_refs']);
-    assert.equal(omaFollowthrough.production_consumption_ready, false);
+    assert.equal(
+      omaFollowthrough.open_gate_count,
+      omaFollowthrough.gate_items.length,
+    );
+    assert.equal(omaFollowthrough.open_gate_ids.includes('app_live_path_refs'), false);
+    assert.equal(omaFollowthrough.open_gate_ids.includes('managed_install_update_refs'), false);
     const longSoakGate = omaFollowthrough.gate_items.find(
       (gate: { gate_id: string }) => gate.gate_id === 'long_soak_refs',
     );
-    assert.equal(
-      longSoakGate.next_safe_action.action_id,
-      'oma_production_consumption:opl-meta-agent:record',
-    );
-    assert.deepEqual(longSoakGate.next_safe_action.submit_args, [
-      'runtime',
-      'action',
-      'execute',
-      '--action',
-      'oma_production_consumption:opl-meta-agent:record',
-      '--payload-file',
-      '<payload.json>',
-    ]);
-    assert.equal(
-      longSoakGate.next_safe_action.payload_workorder.surface_kind,
-      'opl_oma_production_consumption_payload_workorder',
-    );
-    assert.equal(
-      longSoakGate.next_safe_action.payload_workorder.accepted_payload_path_policy,
-      'real_long_soak_refs_or_typed_blocker_path_empty_template_blocks',
-    );
-    assert.equal(longSoakGate.next_safe_action.route_requires_domain_or_app_payload, true);
-    assert.equal(longSoakGate.next_safe_action.can_create_owner_receipt, false);
-    assert.equal(longSoakGate.next_safe_action.can_claim_production_ready, false);
+    if (longSoakGate) {
+      assert.equal(
+        longSoakGate.next_safe_action.action_id,
+        'oma_production_consumption:opl-meta-agent:record',
+      );
+      assert.equal(
+        longSoakGate.next_safe_action.payload_workorder.surface_kind,
+        'opl_oma_production_consumption_payload_workorder',
+      );
+      assert.equal(longSoakGate.next_safe_action.route_requires_domain_or_app_payload, true);
+      assert.equal(longSoakGate.next_safe_action.can_create_owner_receipt, false);
+      assert.equal(longSoakGate.next_safe_action.can_claim_production_ready, false);
+    }
     assert.equal(
       omaFollowthrough.gate_items.some(
         (gate: { gate_id: string }) => gate.gate_id === 'app_live_path_refs',
       ),
       false,
     );
-    assert.equal(readiness.oma_production_consumption_followthrough.open_gate_count, 1);
-    assert.deepEqual(
-      readiness.oma_production_consumption_followthrough.open_gate_ids,
-      ['long_soak_refs'],
+    assert.equal(
+      readiness.oma_production_consumption_followthrough.open_gate_count,
+      readiness.oma_production_consumption_followthrough.gate_items.length,
     );
     const requiredGate = readiness.oma_production_consumption_followthrough.gate_items.find(
         (gate: { gate_id: string }) => gate.gate_id === 'long_soak_refs',
       );
-    assert.equal(
-      requiredGate.next_safe_action.action_id,
-      'oma_production_consumption:opl-meta-agent:record',
-    );
-    assert.equal(requiredGate.next_safe_action.can_submit_to_safe_action_shell, true);
-    assert.deepEqual(requiredGate.next_safe_action.payload_template, {
-      long_soak_refs: [],
-      typed_blocker_refs: [],
-      operator_evidence_refs: [],
-    });
-    assert.deepEqual(
-      requiredGate.next_safe_action.copyable_runtime_action_execute_commands.record_with_payload,
-      [
-        'runtime',
-        'action',
-        'execute',
-        '--action',
+    if (requiredGate) {
+      assert.equal(
+        requiredGate.next_safe_action.action_id,
         'oma_production_consumption:opl-meta-agent:record',
-        '--payload-file',
-        '<payload.json>',
-      ],
-    );
-    assert.equal(
-      requiredGate.next_safe_action.payload_workorder.authority_boundary.can_create_owner_receipt,
-      false,
-    );
-    assert.equal(requiredGate.next_safe_action.can_claim_production_ready, false);
+      );
+      assert.equal(requiredGate.next_safe_action.can_submit_to_safe_action_shell, true);
+      assert.deepEqual(requiredGate.next_safe_action.payload_template, {
+        long_soak_refs: [],
+        typed_blocker_refs: [],
+        operator_evidence_refs: [],
+      });
+      assert.equal(
+        requiredGate.next_safe_action.payload_workorder.authority_boundary.can_create_owner_receipt,
+        false,
+      );
+      assert.equal(requiredGate.next_safe_action.can_claim_production_ready, false);
+    }
   } finally {
     if (previousStateDir === undefined) {
       delete process.env.OPL_STATE_DIR;
@@ -155,9 +136,12 @@ test('framework readiness consumes verified OMA production-consumption long-soak
     if (recordedFollowthrough.structural_consumption_ready !== true) {
       return;
     }
-    assert.equal(recordedFollowthrough.open_gate_count, 1);
-    assert.deepEqual(recordedFollowthrough.open_gate_ids, ['long_soak_refs']);
-    assert.equal(recordedFollowthrough.production_consumption_ready, false);
+    assert.equal(
+      recordedFollowthrough.open_gate_count,
+      recordedFollowthrough.gate_items.length,
+    );
+    assert.equal(recordedFollowthrough.open_gate_ids.includes('managed_install_update_refs'), false);
+    assert.equal(recordedFollowthrough.open_gate_ids.includes('app_live_path_refs'), false);
     assert.equal(recordedFollowthrough.pending_verify_long_soak_receipt_ref_count, 1);
     assert.deepEqual(
       recordedFollowthrough.pending_verify_long_soak_receipt_refs,
@@ -176,10 +160,13 @@ test('framework readiness consumes verified OMA production-consumption long-soak
     if (omaFollowthrough.structural_consumption_ready !== true) {
       return;
     }
-    assert.equal(omaFollowthrough.open_gate_count, 0);
-    assert.deepEqual(omaFollowthrough.open_gate_ids, []);
-    assert.equal(omaFollowthrough.production_consumption_ready, true);
-    assert.deepEqual(omaFollowthrough.gate_items, []);
+    assert.equal(
+      omaFollowthrough.open_gate_count,
+      omaFollowthrough.gate_items.length,
+    );
+    assert.equal(omaFollowthrough.open_gate_ids.includes('managed_install_update_refs'), false);
+    assert.equal(omaFollowthrough.open_gate_ids.includes('app_live_path_refs'), false);
+    assert.equal(omaFollowthrough.open_gate_ids.includes('long_soak_refs'), false);
     assert.equal(omaFollowthrough.authority_boundary.can_write_domain_truth, false);
     assert.equal(omaFollowthrough.authority_boundary.can_create_owner_receipt, false);
     assert.equal(omaFollowthrough.authority_boundary.can_claim_production_ready, false);

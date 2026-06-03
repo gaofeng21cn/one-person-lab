@@ -60,6 +60,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-05-30-opl-series-doc-governance-queuehold-dispatch-tray-ledger.md` | OPL queuehold dispatch override / tray route-cost projection absorb ledger。 | 当前 truth 归 family-runtime dispatch source/tests、stage attempt tray/workbench source/tests、core decisions doc and live CLI behavior；ledger 只记录 MAS shorthand dispatch override and per-attempt model-route-cost projection foldback. |
 | `2026-06-01-opl-series-doc-governance-tranche-ledger.md` | OPL series branch/worktree/doc governance tranche ledger。 | 当前 truth 归各 repo active truth owner、core docs 和 live code/contracts/tests/read-model；ledger 只记录本轮六仓 fast-forward、stale worktree cleanup、remote branch保留理由、skill/doctor 缺口和下一轮写入范围。 |
 | `2026-06-02-opl-series-doc-lifecycle-cleanup-ledger.md` | OPL series docs lifecycle cleanup closeout ledger。 | 当前 truth 归各 repo active truth owner、core docs 和 live code/contracts/tests/read-model；ledger 只记录本轮 active ledger/history foldback、MAS closed record 归档和 App 延后原因。 |
+| `2026-06-03-opl-family-retirement-cleanup-ledger.md` | OPL family legacy / compat / retired surface cleanup snapshot。 | 当前 truth 归各 repo source、contracts、tests、git worktree 和 live read-model；ledger 只记录本轮可落地 OPL structure thinning、跨仓 no-safe-delete 结论和后续 deletion gate。 |
 
 ## Tombstone Rules
 

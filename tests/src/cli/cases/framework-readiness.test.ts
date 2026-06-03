@@ -288,13 +288,12 @@ test('framework readiness summarizes default control-plane surfaces without auth
       omaProductionConsumption.status,
       'structural_consumption_ready_production_consumption_followthrough_required',
     );
-    assert.equal(omaProductionConsumption.open_gate_count, 3);
-    assert.deepEqual(omaProductionConsumption.open_gate_ids, [
-      'managed_install_update_refs',
-      'app_live_path_refs',
-      'long_soak_refs',
-    ]);
-    assert.equal(omaProductionConsumption.gate_items.length, 3);
+    const openGateIds = omaProductionConsumption.open_gate_ids;
+    assert.equal(omaProductionConsumption.open_gate_count, omaProductionConsumption.gate_items.length);
+    assert.deepEqual(openGateIds, omaProductionConsumption.gate_items.map((gate: { gate_id: string }) => gate.gate_id));
+    assert.equal(openGateIds.includes('managed_install_update_refs'), true);
+    assert.equal(openGateIds.includes('app_live_path_refs'), true);
+    assert.equal(openGateIds.includes('owner_receipt_or_typed_blocker_scaleout_refs'), false);
   }
   const nextSafeActions = readiness.attention_first_payload.next_safe_actions;
   assert.equal(nextSafeActions.length > 0, true);

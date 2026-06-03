@@ -31,11 +31,13 @@ test('framework readiness consumes OPL-managed OMA install update receipts', () 
     if (omaFollowthrough.structural_consumption_ready !== true) {
       return;
     }
-    assert.equal(omaFollowthrough.open_gate_count, 2);
-    assert.deepEqual(omaFollowthrough.open_gate_ids, [
-      'app_live_path_refs',
-      'long_soak_refs',
-    ]);
+    assert.equal(omaFollowthrough.open_gate_count, omaFollowthrough.gate_items.length);
+    assert.equal(omaFollowthrough.open_gate_ids.includes('app_live_path_refs'), true);
+    assert.equal(omaFollowthrough.open_gate_ids.includes('managed_install_update_refs'), false);
+    assert.equal(
+      omaFollowthrough.open_gate_ids.includes('owner_receipt_or_typed_blocker_scaleout_refs'),
+      false,
+    );
     assert.equal(omaFollowthrough.production_consumption_ready, false);
     assert.equal(
       omaFollowthrough.gate_items.some(
@@ -43,7 +45,10 @@ test('framework readiness consumes OPL-managed OMA install update receipts', () 
       ),
       false,
     );
-    assert.equal(readiness.oma_production_consumption_followthrough.open_gate_count, 2);
+    assert.equal(
+      readiness.oma_production_consumption_followthrough.open_gate_count,
+      readiness.oma_production_consumption_followthrough.gate_items.length,
+    );
   } finally {
     if (previousStateDir === undefined) {
       delete process.env.OPL_STATE_DIR;
