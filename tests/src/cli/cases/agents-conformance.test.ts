@@ -165,6 +165,26 @@ test('agents conformance reports structural readiness separately from production
   assert.equal(repo.physical_morphology_checks.policy_status, 'declared');
   assert.equal(repo.workspace_file_lifecycle_checks.status, 'passed');
   assert.equal(repo.workspace_file_lifecycle_checks.policy_status, 'declared');
+  assert.equal(repo.stage_artifact_kernel_adoption_checks.status, 'passed');
+  assert.equal(repo.stage_artifact_kernel_adoption_checks.policy_status, 'declared');
+  assert.deepEqual(repo.stage_artifact_kernel_adoption_checks.stage_folder_unit, [
+    'Stage Folder',
+    'Manifest',
+    'Receipt',
+    'current pointer',
+  ]);
+  assert.equal(
+    repo.stage_artifact_kernel_adoption_checks.projection_boundary.file_presence_only_counts_as,
+    'orphan_or_historical',
+  );
+  assert.equal(
+    repo.stage_artifact_kernel_adoption_checks.projection_boundary.provider_completion_counts_as_progress,
+    false,
+  );
+  assert.equal(
+    repo.stage_artifact_kernel_adoption_checks.authority_boundary.opl_can_create_domain_owner_receipt,
+    false,
+  );
   assert.deepEqual(repo.workspace_file_lifecycle_checks.repo_source_boundaries.required_roots, [
     'agent/',
     'contracts/',
@@ -724,6 +744,25 @@ test('agents conformance blocks missing workspace file lifecycle policy', () => 
   assert.equal(report.reports[0].workspace_file_lifecycle_checks.status, 'blocked');
   assert.equal(
     report.reports[0].blockers.includes('workspace_file_lifecycle_policy_not_declared'),
+    true,
+  );
+});
+
+test('agents conformance blocks missing stage artifact kernel adoption policy', () => {
+  const repoDir = buildReadyAgentRepo();
+  fs.rmSync(path.join(repoDir, 'contracts', 'stage_artifact_kernel_adoption.json'));
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(report.reports[0].stage_artifact_kernel_adoption_checks.status, 'blocked');
+  assert.equal(
+    report.reports[0].blockers.includes('stage_artifact_kernel_adoption_not_declared'),
     true,
   );
 });

@@ -364,6 +364,66 @@ export function buildReadyAgentRepo() {
     },
   });
 
+  writeJson(path.join(targetDir, 'contracts', 'stage_artifact_kernel_adoption.json'), {
+    surface_kind: 'opl_stage_artifact_kernel_adoption',
+    version: 'opl-stage-artifact-kernel-adoption.v1',
+    owner: 'SampleBriefAgent',
+    kernel_contract_ref: 'contracts/opl-framework/stage-artifact-runtime-contract.json',
+    stage_folder_unit: [
+      'Stage Folder',
+      'Manifest',
+      'Receipt',
+      'current pointer',
+    ],
+    terminal_states: [
+      'success',
+      'blocked',
+      'skipped',
+      'deferred',
+    ],
+    required_ref_fields: [
+      'stage_folder_contract_ref',
+      'stage_json_ref',
+      'attempt_json_ref',
+      'manifest_ref',
+      'receipt_ref',
+      'current_pointer_ref',
+      'canonical_artifact_ref',
+      'export_ref',
+      'lineage_ref',
+      'retention_ref',
+    ],
+    kernel_refs: {
+      physical_stage_folder_source_of_truth: true,
+      derived_index_rebuildable: true,
+      manifest_receipt_hash_required: true,
+    },
+    domain_pack_binding: {
+      accepted_source_refs: [
+        'contracts/stage_control_plane.json',
+        'contracts/foundry_agent_series.json',
+      ],
+      domain_output_roles_are_interface: true,
+      file_name_is_not_interface: true,
+    },
+    projection_boundary: {
+      derived_projection_refs: [
+        'stage_artifact_index',
+        'stage_operating_layer',
+        'app_workbench_artifact_drilldown',
+      ],
+      file_presence_only_counts_as: 'orphan_or_historical',
+      provider_completion_counts_as_progress: false,
+    },
+    authority_boundary: {
+      opl_can_create_domain_owner_receipt: false,
+      opl_can_write_domain_truth: false,
+      opl_can_write_memory_body: false,
+      opl_can_mutate_domain_artifact_body: false,
+      opl_can_authorize_quality_or_export: false,
+    },
+  });
+
   return targetDir;
 }
 
