@@ -76,6 +76,7 @@ import {
   inspectTemporalWorkerRuntimeDependencies,
 } from './family-runtime-temporal-provider-parts/worker-dependencies.ts';
 import {
+  assertTemporalWorkerMutationAllowed,
   buildTemporalWorkerMutationGuard,
 } from './family-runtime-temporal-provider-parts/worker-source-guard.ts';
 import {
@@ -742,19 +743,7 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
 }
 
 export async function runTemporalWorkerForeground(paths: TemporalWorkerPaths) {
-  const mutationGuard = buildTemporalWorkerMutationGuard({ moduleUrl: import.meta.url, paths });
-  if (!mutationGuard.allowed) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Temporal worker lifecycle mutation is blocked for developer checkout against the shared OPL state root.',
-      {
-        provider_kind: 'temporal',
-        mutation_guard: mutationGuard,
-        repair_action:
-          'Run the managed runtime/current OPL CLI, set OPL_STATE_DIR for an isolated developer worker, explicitly enable OPL Developer Mode developer_apply_safe, or set OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER=1.',
-      },
-    );
-  }
+  assertTemporalWorkerMutationAllowed({ moduleUrl: import.meta.url, paths });
   const { address } = resolveTemporalAddressForPaths(paths);
   if (!address) {
     throw new FrameworkContractError(
@@ -813,19 +802,7 @@ export async function runTemporalWorkerForeground(paths: TemporalWorkerPaths) {
 }
 
 export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, input: { detach?: boolean } = {}) {
-  const mutationGuard = buildTemporalWorkerMutationGuard({ moduleUrl: import.meta.url, paths });
-  if (!mutationGuard.allowed) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Temporal worker lifecycle mutation is blocked for developer checkout against the shared OPL state root.',
-      {
-        provider_kind: 'temporal',
-        mutation_guard: mutationGuard,
-        repair_action:
-          'Run the managed runtime/current OPL CLI, set OPL_STATE_DIR for an isolated developer worker, explicitly enable OPL Developer Mode developer_apply_safe, or set OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER=1.',
-      },
-    );
-  }
+  assertTemporalWorkerMutationAllowed({ moduleUrl: import.meta.url, paths });
   const status = await inspectTemporalWorkerLifecycle(paths);
   if (status.lifecycle_status === 'not_configured') {
     throw new FrameworkContractError(
@@ -925,19 +902,7 @@ export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, i
 }
 
 export async function stopTemporalWorkerLifecycle(paths: TemporalWorkerPaths) {
-  const mutationGuard = buildTemporalWorkerMutationGuard({ moduleUrl: import.meta.url, paths });
-  if (!mutationGuard.allowed) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Temporal worker lifecycle mutation is blocked for developer checkout against the shared OPL state root.',
-      {
-        provider_kind: 'temporal',
-        mutation_guard: mutationGuard,
-        repair_action:
-          'Run the managed runtime/current OPL CLI, set OPL_STATE_DIR for an isolated developer worker, explicitly enable OPL Developer Mode developer_apply_safe, or set OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER=1.',
-      },
-    );
-  }
+  assertTemporalWorkerMutationAllowed({ moduleUrl: import.meta.url, paths });
   const before = await inspectTemporalWorkerLifecycle(paths);
   const state = readTemporalWorkerState(paths);
   let stoppedPid: number | null = null;

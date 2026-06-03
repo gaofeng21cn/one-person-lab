@@ -291,10 +291,7 @@ test('framework readiness summarizes default control-plane surfaces without auth
     const openGateIds = omaProductionConsumption.open_gate_ids;
     assert.equal(omaProductionConsumption.open_gate_count, openGateIds.length);
     assert.equal(omaProductionConsumption.gate_items.length, omaProductionConsumption.open_gate_count);
-    assert.deepEqual(
-      openGateIds,
-      omaProductionConsumption.gate_items.map((gate: { gate_id: string }) => gate.gate_id),
-    );
+    assert.deepEqual(openGateIds, omaProductionConsumption.gate_items.map((gate: { gate_id: string }) => gate.gate_id));
     assert.equal(openGateIds.includes('managed_install_update_refs'), true);
     assert.equal(openGateIds.includes('app_live_path_refs'), true);
     assert.equal(openGateIds.includes('owner_receipt_or_typed_blocker_scaleout_refs'), false);
@@ -977,13 +974,9 @@ test('framework readiness summarizes default control-plane surfaces without auth
   );
   assert.equal(readiness.evidence_envelope.authority_boundary.can_write_domain_truth, false);
   assert.equal(readiness.evidence_envelope.authority_boundary.can_claim_production_ready, false);
-  assert.match(
-    readiness.stage_production_caller_tail.route_policy,
-    /creates_opl_stage_attempt_request_only/,
-  );
+  assert.match(readiness.stage_production_caller_tail.route_policy, /creates_opl_stage_attempt_request_only/);
   assert.equal(readiness.provider_slo_status.provider_slo_can_claim_domain_ready, false);
   assert.equal(readiness.provider_slo_status.provider_slo_can_claim_production_ready, false);
-
   assert.equal(readiness.authority_boundary.can_claim_domain_ready, false);
   assert.equal(readiness.authority_boundary.can_claim_production_ready, false);
   assert.equal(readiness.authority_boundary.can_claim_artifact_authority, false);
@@ -991,7 +984,7 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(readiness.authority_boundary.can_write_domain_truth, false);
   assert.equal(readiness.authority_boundary.can_read_memory_body, false);
   assert.equal(readiness.authority_boundary.can_read_artifact_body, false);
-    assert.equal(readiness.authority_boundary.safe_action_route_is_receipt_closure, false);
+  assert.equal(readiness.authority_boundary.safe_action_route_is_receipt_closure, false);
   } finally {
     if (previousOmaRepoDir === undefined) {
       delete process.env.OPL_META_AGENT_REPO_DIR;

@@ -212,7 +212,7 @@ test('research hypothesis portfolio helper projects refs-only summary and fails 
   assert.equal(summary.pending_human_review_count, 2);
   assert.equal(summary.portfolio_refs.some((entry: { ref: string }) =>
     entry.ref === 'domain://example-study/hypotheses/h1'), true);
-  assert.deepEqual(summary.missing_refs.map((entry: { ref_id: string }) => entry.ref_id), [
+  assert.deepEqual(summary.missing_refs.map((entry) => entry.ref_id), [
     'context:stale-source',
   ]);
   assert.deepEqual(summary.advisory_refs, [

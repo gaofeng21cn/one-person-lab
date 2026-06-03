@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { FrameworkContractError } from '../contract-validation.ts';
 import type { TemporalWorkerPaths } from '../family-runtime-temporal-client.ts';
 import { readOplDeveloperSupervisorConfig } from '../system-preferences.ts';
 
@@ -109,4 +110,24 @@ export function buildTemporalWorkerMutationGuard(input: {
       can_write_domain_truth: false,
     },
   };
+}
+
+export function assertTemporalWorkerMutationAllowed(input: {
+  moduleUrl: string;
+  paths: TemporalWorkerPaths;
+}) {
+  const mutationGuard = buildTemporalWorkerMutationGuard(input);
+  if (mutationGuard.allowed) {
+    return mutationGuard;
+  }
+  throw new FrameworkContractError(
+    'contract_shape_invalid',
+    'Temporal worker lifecycle mutation is blocked for developer checkout against the shared OPL state root.',
+    {
+      provider_kind: 'temporal',
+      mutation_guard: mutationGuard,
+      repair_action:
+        'Run the managed runtime/current OPL CLI, set OPL_STATE_DIR for an isolated developer worker, explicitly enable OPL Developer Mode developer_apply_safe, or set OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER=1.',
+    },
+  );
 }
