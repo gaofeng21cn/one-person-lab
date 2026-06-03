@@ -19,6 +19,9 @@ import {
   stopTemporalWorkerLifecycle,
 } from '../../../../src/family-runtime-temporal-provider.ts';
 import {
+  runTemporalWorkerResidentLoop,
+} from '../../../../src/family-runtime-temporal-provider-parts/worker-residency.ts';
+import {
   inspectTemporalWorkerRuntimeDependencies,
 } from '../../../../src/family-runtime-temporal-provider-parts/worker-dependencies.ts';
 import {
@@ -321,6 +324,40 @@ test('Temporal worker lifecycle re-query proves resident state and stop transiti
       process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = previousSourceVersion;
     }
     await server.close();
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('Temporal resident worker restarts when worker.run returns without shutdown', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-resident-restart-'));
+  const workerRoot = path.join(stateRoot, 'family-runtime');
+  const baseState = {
+    provider_kind: 'temporal' as const,
+    pid: process.pid,
+    address: '127.0.0.1:7233',
+    namespace: 'opl-worker-resident-restart-test',
+    task_queue: 'opl-worker-resident-restart',
+    started_at: new Date().toISOString(),
+    source_version: 'git:resident-worker-current',
+  };
+  let runCount = 0;
+  try {
+    await runTemporalWorkerResidentLoop({
+      paths: { root: workerRoot },
+      baseState,
+      restartDelayMs: 0,
+      isShutdownRequested: () => runCount >= 2,
+      runWorkerOnce: async () => {
+        runCount += 1;
+      },
+    });
+
+    const state = JSON.parse(fs.readFileSync(path.join(workerRoot, 'temporal-worker.json'), 'utf8'));
+    assert.equal(runCount, 2);
+    assert.equal(state.status, 'exited');
+    assert.equal(state.last_exit.exit_status, 'worker_shutdown_requested');
+    assert.equal(state.resident_restart_count, 1);
+  } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

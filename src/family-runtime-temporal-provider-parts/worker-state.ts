@@ -17,12 +17,13 @@ export type TemporalWorkerState = {
   workflow_bundle_path?: string;
   workflow_bundle_version?: string;
   workflow_bundle_source_version?: string;
+  resident_restart_count?: number;
   log_refs?: {
     stdout_path: string;
     stderr_path: string;
   };
   last_exit?: {
-    exit_status: 'process_not_alive' | 'worker_run_returned' | 'worker_run_failed';
+    exit_status: 'process_not_alive' | 'worker_run_returned' | 'worker_run_failed' | 'worker_shutdown_requested';
     exited_at: string;
     message?: string;
   };

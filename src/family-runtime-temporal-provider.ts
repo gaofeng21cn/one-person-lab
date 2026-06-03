@@ -63,12 +63,16 @@ import {
   processIsAlive,
   readTemporalWorkerState,
   removeTemporalWorkerState,
-  temporalWorkerLogRefs,
   temporalWorkerStatePath,
   workerSourceVersionsEquivalent,
-  writeTemporalWorkerExitState,
   writeTemporalWorkerState,
 } from './family-runtime-temporal-provider-parts/worker-state.ts';
+import {
+  buildTemporalWorkerBaseState,
+  runTemporalWorkerResidentLoop,
+  writeTemporalWorkerFailedExit,
+  writeTemporalWorkerStartingState,
+} from './family-runtime-temporal-provider-parts/worker-residency.ts';
 import {
   stopOrphanTemporalForegroundWorkers,
   stopWorkerPid,
@@ -762,63 +766,54 @@ export async function runTemporalWorkerForeground(paths: TemporalWorkerPaths) {
     activities,
     sourceVersion,
   });
-  writeTemporalWorkerState(paths, {
-    provider_kind: 'temporal',
+  const baseState = buildTemporalWorkerBaseState({
+    paths,
     pid: process.pid,
     address,
     namespace: resolveTemporalNamespace(),
-    task_queue: resolveTemporalTaskQueue(),
-    started_at: new Date().toISOString(),
-    status: 'starting',
-    source_version: sourceVersion,
-    workflow_bundle_path: built.workflow_bundle.code_path,
-    workflow_bundle_version: built.workflow_bundle.workflow_bundle_version,
-    workflow_bundle_source_version: built.workflow_bundle.workflow_bundle_source_version,
-    log_refs: temporalWorkerLogRefs(paths),
+    taskQueue: resolveTemporalTaskQueue(),
+    sourceVersion,
+    workflowBundlePath: built.workflow_bundle.code_path,
+    workflowBundleVersion: built.workflow_bundle.workflow_bundle_version,
+    workflowBundleSourceVersion: built.workflow_bundle.workflow_bundle_source_version,
   });
-  const baseState = {
-    provider_kind: 'temporal' as const,
-    pid: process.pid,
-    address,
-    namespace: resolveTemporalNamespace(),
-    task_queue: resolveTemporalTaskQueue(),
-    started_at: new Date().toISOString(),
-    source_version: sourceVersion,
-    workflow_bundle_path: built.workflow_bundle.code_path,
-    workflow_bundle_version: built.workflow_bundle.workflow_bundle_version,
-    workflow_bundle_source_version: built.workflow_bundle.workflow_bundle_source_version,
-    log_refs: temporalWorkerLogRefs(paths),
-  };
+  writeTemporalWorkerStartingState(paths, baseState);
   let nativeConnection: NativeConnection | null = null;
+  let activeWorker: Worker | null = null;
+  let shutdownRequested = false;
+  const requestShutdown = () => {
+    shutdownRequested = true;
+    activeWorker?.shutdown();
+  };
+  process.once('SIGTERM', requestShutdown);
+  process.once('SIGINT', requestShutdown);
   try {
     nativeConnection = await NativeConnection.connect({ address });
-    const worker = await Worker.create({
-      connection: nativeConnection,
-      ...built.worker_options,
-    });
-    writeTemporalWorkerState(paths, {
-      ...baseState,
-      status: 'ready',
-    });
-    await worker.run();
-    writeTemporalWorkerExitState(paths, {
-      ...baseState,
-      status: 'ready',
-    }, {
-      exit_status: 'worker_run_returned',
-      exited_at: new Date().toISOString(),
+    await runTemporalWorkerResidentLoop({
+      paths,
+      baseState,
+      isShutdownRequested: () => shutdownRequested,
+      runWorkerOnce: async () => {
+        const worker = await Worker.create({
+          connection: nativeConnection!,
+          ...built.worker_options,
+        });
+        activeWorker = worker;
+        try {
+          await worker.run();
+        } finally {
+          if (activeWorker === worker) {
+            activeWorker = null;
+          }
+        }
+      },
     });
   } catch (error) {
-    writeTemporalWorkerExitState(paths, {
-      ...baseState,
-      status: 'ready',
-    }, {
-      exit_status: 'worker_run_failed',
-      exited_at: new Date().toISOString(),
-      message: error instanceof Error ? error.message : String(error),
-    });
+    writeTemporalWorkerFailedExit(paths, baseState, error);
     throw error;
   } finally {
+    process.off('SIGTERM', requestShutdown);
+    process.off('SIGINT', requestShutdown);
     await nativeConnection?.close();
   }
 }
