@@ -120,13 +120,13 @@ function validateManifest(manifest) {
   assertCondition(automation?.cleanup?.destructive_action_requires === 'package_admin_with_delete_packages_scope', 'cleanup destructive action requirements drifted', failures);
   assertCondition(automation?.daily_package_channel?.status === 'active_change_detected_daily_publish', 'daily package channel must be active and change-detected', failures);
   assertCondition(automation?.daily_package_channel?.workflow === PACKAGE_DAILY_WORKFLOW_PATH, 'daily package channel workflow path drifted', failures);
-  assertCondition(automation?.daily_package_channel?.version_template === '<opl_version>-daily.YYYYMMDD', 'daily package channel version template drifted', failures);
-  assertCondition(automation?.daily_package_channel?.date_timezone === 'Asia/Shanghai', 'daily package channel date timezone drifted', failures);
+  assertCondition(automation?.daily_package_channel?.version_template === '<opl_version>-nightly', 'daily package channel version template drifted', failures);
   assertCondition(automation?.daily_package_channel?.change_detector === 'scripts/package-channel-daily-check.mjs', 'daily package channel detector drifted', failures);
   assertCondition(automation?.daily_package_channel?.comparison === 'module_source_fingerprint', 'daily package channel comparison must use module source fingerprints', failures);
   assertCondition(automation?.daily_package_channel?.no_change_behavior === 'skip_without_publish', 'daily package channel must skip without publish when unchanged', failures);
   assertCondition(automation?.daily_package_channel?.publish_gate === 'daily_package_channel_changed', 'daily package channel publish gate drifted', failures);
   assertCondition(automation?.daily_package_channel?.manual_repair_trigger === 'workflow_dispatch', 'daily package channel manual repair trigger drifted', failures);
+  assertCondition(automation?.daily_package_channel?.force_publish_input === 'force_publish', 'daily package channel force publish input drifted', failures);
 
   const modules = manifest.packages?.modules ?? {};
   for (const [moduleId, entry] of Object.entries(modules)) {
@@ -193,8 +193,9 @@ function validateWorkflow(manifest, failures) {
   assertCondition(/one-person-lab-manifest:\$\{OPL_RELEASE_VERSION\}/.test(source), 'package workflow must publish versioned release manifest GHCR channel', failures);
   assertCondition(dailyWorkflowSource.length > 0, 'daily package channel workflow must exist', failures);
   assertCondition(/schedule:\s*\n\s*-\s*cron:/.test(dailyWorkflowSource), 'daily package channel workflow must run on schedule', failures);
-  assertCondition(/TZ=Asia\/Shanghai date \+%Y%m%d/.test(dailyWorkflowSource), 'daily package channel workflow must derive daily tags in Asia/Shanghai time', failures);
+  assertCondition(/version="\$\{base\}-nightly"/.test(dailyWorkflowSource), 'daily package channel workflow must derive a stable nightly package tag', failures);
   assertCondition(/workflow_dispatch:/.test(dailyWorkflowSource), 'daily package channel workflow must keep manual repair dispatch', failures);
+  assertCondition(/force_publish:/.test(dailyWorkflowSource), 'daily package channel workflow must keep force_publish repair input', failures);
   assertCondition(/npm run packages:manifest/.test(dailyWorkflowSource), 'daily package channel workflow must build a candidate package manifest', failures);
   assertCondition(/npm run packages:daily-check/.test(dailyWorkflowSource), 'daily package channel workflow must run package daily change detection', failures);
   assertCondition(/one-person-lab-manifest:stable/.test(dailyWorkflowSource), 'daily package channel workflow must compare against stable channel manifest', failures);
@@ -203,6 +204,7 @@ function validateWorkflow(manifest, failures) {
   assertCondition(/uses:\s+\.\/\.github\/workflows\/packages\.yml/.test(dailyWorkflowSource), 'daily package channel workflow must invoke reusable packages workflow', failures);
   assertCondition(/release_gate:\s*daily_package_channel_changed/.test(dailyWorkflowSource), 'daily package channel workflow must record daily package publish gate', failures);
   assertCondition(/publish_required == 'true'/.test(dailyWorkflowSource), 'daily package channel workflow must skip publish when unchanged', failures);
+  assertCondition(/publish_required="true"/.test(dailyWorkflowSource), 'daily package channel workflow must allow explicit force_publish repair', failures);
   assertCondition(!/\n\s*push:\n/.test(dailyWorkflowSource), 'daily package channel workflow must not restore push-trigger publishing', failures);
   assertCondition(!/one-person-lab-webui/.test(dailyWorkflowSource), 'daily package channel workflow must not publish WebUI', failures);
 }

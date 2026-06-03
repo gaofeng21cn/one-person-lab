@@ -42,12 +42,12 @@ test('packages manifest exposes active package-channel coordinates for module in
           status: string;
           workflow: string;
           version_template: string;
-          date_timezone: string;
           change_detector: string;
           comparison: string;
           no_change_behavior: string;
           publish_gate: string;
           manual_repair_trigger: string;
+          force_publish_input: string;
         };
       };
       packages: {
@@ -160,11 +160,7 @@ test('packages manifest exposes active package-channel coordinates for module in
   );
   assert.equal(
     output.packages_manifest.release_automation.daily_package_channel.version_template,
-    '<opl_version>-daily.YYYYMMDD',
-  );
-  assert.equal(
-    output.packages_manifest.release_automation.daily_package_channel.date_timezone,
-    'Asia/Shanghai',
+    '<opl_version>-nightly',
   );
   assert.equal(
     output.packages_manifest.release_automation.daily_package_channel.change_detector,
@@ -185,6 +181,10 @@ test('packages manifest exposes active package-channel coordinates for module in
   assert.equal(
     output.packages_manifest.release_automation.daily_package_channel.manual_repair_trigger,
     'workflow_dispatch',
+  );
+  assert.equal(
+    output.packages_manifest.release_automation.daily_package_channel.force_publish_input,
+    'force_publish',
   );
   assert.ok(output.packages_manifest.release_automation.cleanup.protected_tags.includes('latest'));
   assert.equal(
@@ -411,7 +411,8 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.release_automation.release_manifest_package.package_channel_status, 'active_release_channel');
   assert.equal(manifest.release_automation.daily_package_channel.status, 'active_change_detected_daily_publish');
   assert.equal(manifest.release_automation.daily_package_channel.no_change_behavior, 'skip_without_publish');
-  assert.equal(manifest.release_automation.daily_package_channel.date_timezone, 'Asia/Shanghai');
+  assert.equal(manifest.release_automation.daily_package_channel.version_template, '<opl_version>-nightly');
+  assert.equal(manifest.release_automation.daily_package_channel.force_publish_input, 'force_publish');
   assert.equal(manifest.packages.webui_docker_image.framework_workflow_publish_status, 'not_published_by_framework_packages_workflow');
   assert.equal(manifest.packages.native_helper.channel_status, 'active_ghcr_oci_prebuild');
   assert.equal(manifest.packages.native_helper.retention_policy.retain_versions, 4);
@@ -552,8 +553,9 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(workflow, /Upload prepared package artifacts/);
   assert.match(dailyPackageWorkflow, /schedule:/);
   assert.match(dailyPackageWorkflow, /cron:/);
-  assert.match(dailyPackageWorkflow, /TZ=Asia\/Shanghai date \+%Y%m%d/);
+  assert.match(dailyPackageWorkflow, /version="\$\{base\}-nightly"/);
   assert.match(dailyPackageWorkflow, /workflow_dispatch:/);
+  assert.match(dailyPackageWorkflow, /force_publish:/);
   assert.match(dailyPackageWorkflow, /npm run packages:manifest/);
   assert.match(dailyPackageWorkflow, /npm run packages:daily-check/);
   assert.match(dailyPackageWorkflow, /one-person-lab-manifest:stable/);
@@ -562,6 +564,7 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(dailyPackageWorkflow, /uses:\s+\.\/\.github\/workflows\/packages\.yml/);
   assert.match(dailyPackageWorkflow, /release_gate:\s*daily_package_channel_changed/);
   assert.match(dailyPackageWorkflow, /publish_required == 'true'/);
+  assert.match(dailyPackageWorkflow, /publish_required="true"/);
   assert.doesNotMatch(dailyPackageWorkflow, /\n\s*push:\n/);
   assert.doesNotMatch(dailyPackageWorkflow, /one-person-lab-webui/);
 });

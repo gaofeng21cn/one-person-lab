@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       opl_version:
-        description: Base OPL version for daily package tag, for example 26.5.28
+        description: Base OPL version for nightly package tag, for example 26.5.28
         required: false
         type: string
       force_publish:
@@ -40,7 +40,7 @@ jobs:
           node-version: '24'
           cache: npm
 
-      - name: Resolve daily package version
+      - name: Resolve nightly package version
         id: version
         shell: bash
         run: |
@@ -50,8 +50,7 @@ jobs:
             base="$(node --experimental-strip-types --input-type=module -e "import { getOplReleaseVersion } from './src/opl-release.ts'; console.log(getOplReleaseVersion())")"
           fi
           base="${base#v}"
-          day="$(TZ=Asia/Shanghai date +%Y%m%d)"
-          version="${base}-daily.${day}"
+          version="${base}-nightly"
           echo "opl_version=$version" >> "$GITHUB_OUTPUT"
           echo "OPL_RELEASE_VERSION=$version" >> "$GITHUB_ENV"
           echo "OPL_PACKAGES_OWNER=${{ github.repository_owner }}" >> "$GITHUB_ENV"
