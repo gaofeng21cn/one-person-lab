@@ -513,65 +513,16 @@ function buildStateIndexKernelAdoptionChecks(repoDir: string) {
   const requiredDatabases = stringList(adoption?.required_index_databases);
   const requiredFields = stringList(adoption?.required_ref_fields);
   const domainRefSources = stringList(adoption?.domain_ref_sources);
-  const blockers = [
-    adoptionFile.status === 'resolved' ? null : `state_index_kernel_adoption_${adoptionFile.status}`,
-    adoption ? null : 'state_index_kernel_adoption_not_declared',
-    optionalString(adoption?.surface_kind) === 'opl_state_index_kernel_adoption'
-      ? null
-      : 'state_index_kernel_adoption_surface_kind_invalid',
-    optionalString(adoption?.kernel_contract_ref) === 'contracts/opl-framework/state-index-kernel-contract.json'
-      ? null
-      : 'state_index_kernel_contract_ref_invalid',
-    optionalString(adoption?.sqlite_role) === 'rebuildable_refs_only_sidecar_index'
-      ? null
-      : 'state_index_kernel_sqlite_role_invalid',
-    optionalString(adoption?.physical_truth_role) === 'stage_folder_manifest_receipt_artifact_body_file_truth'
-      ? null
-      : 'state_index_kernel_physical_truth_role_invalid',
-    ...REQUIRED_STATE_INDEX_DATABASES
-      .filter((database) => !requiredDatabases.includes(database))
-      .map((database) => `state_index_kernel_database_missing:${database}`),
-    ...REQUIRED_STATE_INDEX_REF_FIELDS
-      .filter((field) => !requiredFields.includes(field))
-      .map((field) => `state_index_kernel_required_ref_field_missing:${field}`),
-    domainRefSources.length > 0 ? null : 'state_index_kernel_domain_ref_sources_missing',
-    compactionPolicy.small_file_runtime_refs_may_be_indexed === true
-      ? null
-      : 'state_index_kernel_small_file_compaction_policy_missing',
-    compactionPolicy.large_payload_strategy === 'store_preview_hash_and_refs_never_body'
-      ? null
-      : 'state_index_kernel_large_payload_strategy_invalid',
-    compactionPolicy.index_rebuild_source === 'physical_stage_folder_manifest_receipt_refs'
-      ? null
-      : 'state_index_kernel_rebuild_source_invalid',
-    compactionPolicy.app_reads_projection_not_sqlite_directly === true
-      ? null
-      : 'state_index_kernel_app_projection_boundary_missing',
-    maintenancePolicy.journal_mode === 'WAL'
-      ? null
-      : 'state_index_kernel_journal_mode_must_be_wal',
-    maintenancePolicy.busy_timeout_ms === 5000
-      ? null
-      : 'state_index_kernel_busy_timeout_invalid',
-    maintenancePolicy.checkpoint_required === true
-      ? null
-      : 'state_index_kernel_checkpoint_policy_missing',
-    maintenancePolicy.backup_required === true
-      ? null
-      : 'state_index_kernel_backup_policy_missing',
-    maintenancePolicy.integrity_check_required === true
-      ? null
-      : 'state_index_kernel_integrity_policy_missing',
-    maintenancePolicy.optimize_required === true
-      ? null
-      : 'state_index_kernel_optimize_policy_missing',
-    maintenancePolicy.network_filesystem_multi_writer_supported === false
-      ? null
-      : 'state_index_kernel_network_multi_writer_must_be_false',
-    ...REQUIRED_STATE_INDEX_AUTHORITY_FLAGS
-      .filter((flag) => authority[flag] !== false)
-      .map((flag) => `state_index_kernel_authority_flag_must_be_false:${flag}`),
-  ].filter((entry): entry is string => Boolean(entry));
+  const blockers = stateIndexKernelAdoptionBlockers({
+    adoption,
+    adoptionFileStatus: adoptionFile.status,
+    authority,
+    compactionPolicy,
+    domainRefSources,
+    maintenancePolicy,
+    requiredDatabases,
+    requiredFields,
+  });
   return {
     status: blockers.length === 0 ? 'passed' : 'blocked',
     policy_status: blockers.length === 0 ? 'declared' : 'blocked',
@@ -605,6 +556,107 @@ function buildStateIndexKernelAdoptionChecks(repoDir: string) {
     ),
     blockers,
   };
+}
+
+function stateIndexKernelAdoptionBlockers(input: {
+  adoption: JsonRecord | null;
+  adoptionFileStatus: string;
+  authority: JsonRecord;
+  compactionPolicy: JsonRecord;
+  domainRefSources: string[];
+  maintenancePolicy: JsonRecord;
+  requiredDatabases: string[];
+  requiredFields: string[];
+}) {
+  return [
+    ...stateIndexIdentityBlockers(input.adoption, input.adoptionFileStatus),
+    ...missingStateIndexDatabaseBlockers(input.requiredDatabases),
+    ...missingStateIndexFieldBlockers(input.requiredFields),
+    input.domainRefSources.length > 0 ? null : 'state_index_kernel_domain_ref_sources_missing',
+    ...stateIndexCompactionPolicyBlockers(input.compactionPolicy),
+    ...stateIndexMaintenancePolicyBlockers(input.maintenancePolicy),
+    ...stateIndexAuthorityBoundaryBlockers(input.authority),
+  ].filter((entry): entry is string => Boolean(entry));
+}
+
+function stateIndexIdentityBlockers(adoption: JsonRecord | null, adoptionFileStatus: string) {
+  return [
+    adoptionFileStatus === 'resolved' ? null : `state_index_kernel_adoption_${adoptionFileStatus}`,
+    adoption ? null : 'state_index_kernel_adoption_not_declared',
+    optionalString(adoption?.surface_kind) === 'opl_state_index_kernel_adoption'
+      ? null
+      : 'state_index_kernel_adoption_surface_kind_invalid',
+    optionalString(adoption?.kernel_contract_ref) === 'contracts/opl-framework/state-index-kernel-contract.json'
+      ? null
+      : 'state_index_kernel_contract_ref_invalid',
+    optionalString(adoption?.sqlite_role) === 'rebuildable_refs_only_sidecar_index'
+      ? null
+      : 'state_index_kernel_sqlite_role_invalid',
+    optionalString(adoption?.physical_truth_role) === 'stage_folder_manifest_receipt_artifact_body_file_truth'
+      ? null
+      : 'state_index_kernel_physical_truth_role_invalid',
+  ];
+}
+
+function missingStateIndexDatabaseBlockers(requiredDatabases: string[]) {
+  return REQUIRED_STATE_INDEX_DATABASES
+    .filter((database) => !requiredDatabases.includes(database))
+    .map((database) => `state_index_kernel_database_missing:${database}`);
+}
+
+function missingStateIndexFieldBlockers(requiredFields: string[]) {
+  return REQUIRED_STATE_INDEX_REF_FIELDS
+    .filter((field) => !requiredFields.includes(field))
+    .map((field) => `state_index_kernel_required_ref_field_missing:${field}`);
+}
+
+function stateIndexCompactionPolicyBlockers(compactionPolicy: JsonRecord) {
+  return [
+    compactionPolicy.small_file_runtime_refs_may_be_indexed === true
+      ? null
+      : 'state_index_kernel_small_file_compaction_policy_missing',
+    compactionPolicy.large_payload_strategy === 'store_preview_hash_and_refs_never_body'
+      ? null
+      : 'state_index_kernel_large_payload_strategy_invalid',
+    compactionPolicy.index_rebuild_source === 'physical_stage_folder_manifest_receipt_refs'
+      ? null
+      : 'state_index_kernel_rebuild_source_invalid',
+    compactionPolicy.app_reads_projection_not_sqlite_directly === true
+      ? null
+      : 'state_index_kernel_app_projection_boundary_missing',
+  ];
+}
+
+function stateIndexMaintenancePolicyBlockers(maintenancePolicy: JsonRecord) {
+  return [
+    maintenancePolicy.journal_mode === 'WAL'
+      ? null
+      : 'state_index_kernel_journal_mode_must_be_wal',
+    maintenancePolicy.busy_timeout_ms === 5000
+      ? null
+      : 'state_index_kernel_busy_timeout_invalid',
+    maintenancePolicy.checkpoint_required === true
+      ? null
+      : 'state_index_kernel_checkpoint_policy_missing',
+    maintenancePolicy.backup_required === true
+      ? null
+      : 'state_index_kernel_backup_policy_missing',
+    maintenancePolicy.integrity_check_required === true
+      ? null
+      : 'state_index_kernel_integrity_policy_missing',
+    maintenancePolicy.optimize_required === true
+      ? null
+      : 'state_index_kernel_optimize_policy_missing',
+    maintenancePolicy.network_filesystem_multi_writer_supported === false
+      ? null
+      : 'state_index_kernel_network_multi_writer_must_be_false',
+  ];
+}
+
+function stateIndexAuthorityBoundaryBlockers(authority: JsonRecord) {
+  return REQUIRED_STATE_INDEX_AUTHORITY_FLAGS
+    .filter((flag) => authority[flag] !== false)
+    .map((flag) => `state_index_kernel_authority_flag_must_be_false:${flag}`);
 }
 
 function buildRepoConformance(input: RepoInput) {
