@@ -2,8 +2,8 @@
 
 Owner: `One Person Lab`
 Purpose: `purpose_first_design_audit`
-State: `active_audit`
-Machine boundary: 本文是人读顶层设计审计和优化矩阵。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、App/release evidence、真实 workspace evidence 和 repo-native verification。
+State: `history_provenance`
+Machine boundary: 本文是人读历史顶层设计审计和优化矩阵。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、App/release evidence、真实 workspace evidence 和 repo-native verification。当前 owner、gap、完成口径和下一步必须回到核心五件套、`docs/active/` owner docs 和 live read model。
 Date: `2026-06-03`
 
 ## 审计问题

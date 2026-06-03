@@ -37,3 +37,5 @@ Machine boundary: 本目录是人读过程历史索引。机器真相继续归 `
 
 - [2026-05-15 One Person Lab App 仓库拆分 Closeout](./plans/2026-05-15-one-person-lab-app-repo-split-closeout.md)：记录 Framework repo、clean App repo 与 upstream-backed GUI shell repo 的拆分 closeout；当前 App/workbench 边界回到 `docs/product/`、App 仓合同和真实 release artifact。
 - [2026-05-22 OPL Active Ledger Consolidation](./plans/2026-05-22-opl-doc-lifecycle-active-ledger-consolidation.md)：记录 active proof ledger 与 private-platform line-count ledger 收敛；当前 gap matrix 和 inventory 只保留 owner、gap、分类和完成口径。
+- [2026-06-01 Standard Agent Design Consistency Audit](./plans/2026-06-01-standard-agent-design-consistency-audit.md)：记录 MAS/MAG/RCA/OMA 同源设计和历史残留审计快照；当前结构同源与 production tail 由 live OPL read models 和 active owner docs 接管。
+- [2026-06-03 OPL Family Purpose-First Design Audit](./plans/2026-06-03-opl-family-purpose-first-design-audit.md)：记录 OPL family 目的优先顶层设计审计；当前 gap、owner 和下一步回到 `docs/active/` owner docs。

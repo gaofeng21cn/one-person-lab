@@ -2,8 +2,8 @@
 
 Owner: `One Person Lab`
 Purpose: `foundry_agent_design_consistency_audit`
-State: `active_closeout`
-Machine boundary: 本文是人读审计记录。机器真相继续归 `contracts/`、domain-owned contracts、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
+State: `history_provenance`
+Machine boundary: 本文是人读历史审计记录。机器真相继续归 `contracts/`、domain-owned contracts、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。当前结构同源、production evidence tail 和退役门槛必须回到 live OPL read model、active owner docs、contracts 和 repo-native verification。
 Date: `2026-06-01`
 
 ## 审计问题
