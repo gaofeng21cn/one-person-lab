@@ -395,6 +395,15 @@ test('installed opl launcher routes family discovery commands to OPL instead of 
         );
       },
     },
+    {
+      args: ['stage-artifact', 'status', '--domain', 'redcube_ai', '--program', 'p1', '--topic', 't1', '--deliverable', 'd1'],
+      assertPayload: (payload: Record<string, unknown>) => {
+        assert.equal(
+          (payload.stage_artifact_runtime as { surface_kind: string }).surface_kind,
+          'opl_stage_artifact_runtime_status',
+        );
+      },
+    },
   ];
   const capturePath = path.join(os.tmpdir(), `opl-launcher-family-discovery-capture-${process.pid}.txt`);
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-launcher-family-discovery-state-'));

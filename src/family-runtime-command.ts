@@ -91,6 +91,26 @@ export type FamilyRuntimeCommandInput =
       max_age_ms?: number | null;
     };
   }
+  | {
+    mode: 'stage_artifact';
+    input: {
+      action: 'open' | 'commit' | 'status' | 'explain' | 'rebuild' | 'promote' | 'gc';
+      domain_id: string;
+      program_id: string;
+      topic_id: string;
+      deliverable_id: string;
+      stage_id?: string;
+      stage_order?: number;
+      attempt_id?: string;
+      terminal_status?: 'success' | 'blocked' | 'skipped' | 'deferred';
+      required_outputs?: string[];
+      owner_receipt_refs?: string[];
+      typed_blocker_refs?: string[];
+      decision_receipt_refs?: string[];
+      artifact_ref?: string;
+      dry_run?: boolean;
+    };
+  }
   | { mode: 'notify_list' | 'events_export' }
   | {
     mode: 'queue_list';

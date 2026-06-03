@@ -511,6 +511,46 @@ export function buildInternalCommandSpecs(
       ],
       handler: (args) => runFamilyRuntime(args),
     },
+    'stage-artifact': {
+      usage: 'opl stage-artifact open|commit|status|explain|rebuild|promote|gc --domain <domain> --program <id> --topic <id> --deliverable <id>',
+      summary:
+        'Read or maintain the OPL-owned Stage Folder Contract index without taking domain artifact or receipt authority.',
+      examples: [
+        'opl stage-artifact open --domain redcube_ai --program p1 --topic t1 --deliverable d1 --stage artifact_creation --stage-order 4 --attempt attempt-1',
+        'opl stage-artifact commit --domain redcube_ai --program p1 --topic t1 --deliverable d1 --stage artifact_creation --attempt attempt-1 --terminal-status success --required-output deck.png --owner-receipt-ref rca-owner-receipt:deck',
+        'opl stage-artifact status --domain redcube_ai --program p1 --topic t1 --deliverable d1',
+        'opl stage-artifact explain --domain redcube_ai --program p1 --topic t1 --deliverable d1',
+        'opl stage-artifact rebuild --domain redcube_ai --program p1 --topic t1 --deliverable d1',
+      ],
+      handler: async (args) => {
+        const output = await runFamilyRuntime(['stage-artifact', ...args]);
+        if (!('stage_artifact_runtime' in output)) {
+          throw new FrameworkContractError(
+            'contract_shape_invalid',
+            'family-runtime stage-artifact did not return stage artifact output.',
+            {
+              command: 'stage-artifact',
+              output_keys: Object.keys(output),
+            },
+          );
+        }
+        return {
+          stage_artifact_runtime: output.stage_artifact_runtime,
+        };
+      },
+    },
+    stage: {
+      usage: 'opl stage open|commit|status|explain|rebuild|promote|gc --domain <domain> --program <id> --topic <id> --deliverable <id>',
+      summary:
+        'Operate the Stage Folder + Manifest + Receipt contract through the OPL-owned artifact runtime.',
+      examples: [
+        'opl stage open --domain redcube_ai --program p1 --topic t1 --deliverable d1 --stage artifact_creation --stage-order 4 --attempt attempt-1',
+        'opl stage commit --domain redcube_ai --program p1 --topic t1 --deliverable d1 --stage artifact_creation --attempt attempt-1 --terminal-status success --required-output deck.png --owner-receipt-ref rca-owner-receipt:deck',
+        'opl stage status --domain redcube_ai --program p1 --topic t1 --deliverable d1',
+        'opl stage explain --domain redcube_ai --program p1 --topic t1 --deliverable d1',
+      ],
+      handler: async (args) => commandSpecs['stage-artifact'].handler(args),
+    },
     dashboard: {
       usage: 'opl status dashboard [--path <workspace_path>] [--sessions-limit <n>]',
       summary: 'Aggregate the current OPL product-runtime view across projects, workspace, and runtime.',

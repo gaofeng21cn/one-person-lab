@@ -410,6 +410,25 @@ export function buildPublicCommandSpecs(
       ],
       group: 'runtime',
     }),
+    'stage-artifact': cloneCommandSpec(commandSpecs['stage-artifact'], {
+      usage: 'opl stage-artifact open|commit|status|explain|rebuild|promote|gc --domain <domain> --program <id> --topic <id> --deliverable <id>',
+      examples: [
+        'opl stage-artifact open --domain redcube_ai --program p1 --topic t1 --deliverable d1 --stage artifact_creation --stage-order 4 --attempt attempt-1',
+        'opl stage-artifact commit --domain redcube_ai --program p1 --topic t1 --deliverable d1 --stage artifact_creation --attempt attempt-1 --terminal-status success --required-output deck.png --owner-receipt-ref rca-owner-receipt:deck',
+        'opl stage-artifact status --domain redcube_ai --program p1 --topic t1 --deliverable d1',
+        'opl stage-artifact explain --domain redcube_ai --program p1 --topic t1 --deliverable d1',
+      ],
+      group: 'runtime',
+    }),
+    stage: cloneCommandSpec(commandSpecs.stage, {
+      usage: 'opl stage open|commit|status|explain|rebuild|promote|gc --domain <domain> --program <id> --topic <id> --deliverable <id>',
+      examples: [
+        'opl stage open --domain redcube_ai --program p1 --topic t1 --deliverable d1 --stage artifact_creation --stage-order 4 --attempt attempt-1',
+        'opl stage commit --domain redcube_ai --program p1 --topic t1 --deliverable d1 --stage artifact_creation --attempt attempt-1 --terminal-status success --required-output deck.png --owner-receipt-ref rca-owner-receipt:deck',
+        'opl stage status --domain redcube_ai --program p1 --topic t1 --deliverable d1',
+      ],
+      group: 'runtime',
+    }),
     'status dashboard': cloneCommandSpec(commandSpecs.dashboard, {
       usage: 'opl status dashboard [--path <workspace_path>] [--sessions-limit <n>]',
       examples: [

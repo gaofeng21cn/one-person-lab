@@ -412,6 +412,94 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
   }
 });
 
+test('stage artifact runtime contract freezes folder truth and CLI boundaries', () => {
+  const contract = readJson<{
+    contract_kind: string;
+    state_root_layout: {
+      attempt_root_pattern: string;
+      required_attempt_entries: string[];
+      current_pointer_role: string;
+      derived_index_role: string;
+    };
+    read_model_semantics: {
+      status_source_of_truth: string;
+      status_must_not_depend_on_stale_index: boolean;
+      success_requires: string[];
+      blocked_requires: string[];
+      orphan_artifact_is_completion: boolean;
+      explain_must_report_missing_or_blocking_deltas: boolean;
+    };
+    cli_surfaces: {
+      top_level: string;
+      legacy_alias: string;
+      family_runtime: string;
+      open: string;
+      commit: string;
+      status: string;
+      explain: string;
+      rebuild: string;
+      promote: string;
+      gc: string;
+    };
+    authority_boundary: Record<string, boolean>;
+  }>('contracts/opl-framework/stage-artifact-runtime-contract.json');
+
+  assert.equal(contract.contract_kind, 'opl_stage_artifact_runtime_contract.v1');
+  assert.equal(
+    contract.state_root_layout.attempt_root_pattern,
+    'runtime-state/domains/<domain>/deliverables/<program>/<topic>/<deliverable>/stages/<nn-stage>/attempts/<attempt_id>',
+  );
+  assert.deepEqual(contract.state_root_layout.required_attempt_entries, [
+    'attempt.json',
+    'manifest.json',
+    'inputs/',
+    'outputs/',
+    'evidence/',
+    'receipts/',
+  ]);
+  assert.equal(contract.state_root_layout.current_pointer_role, 'refs_only_current_or_canonical_artifact_pointer');
+  assert.equal(contract.state_root_layout.derived_index_role, 'rebuildable_projection_not_primary_truth');
+
+  assert.equal(contract.read_model_semantics.status_source_of_truth, 'physical_stage_folder');
+  assert.equal(contract.read_model_semantics.status_must_not_depend_on_stale_index, true);
+  assert.deepEqual(contract.read_model_semantics.success_requires, [
+    'valid_manifest',
+    'required_outputs_present',
+    'owner_receipt_ref_and_receipt_file',
+  ]);
+  assert.deepEqual(contract.read_model_semantics.blocked_requires, [
+    'typed_blocker_ref',
+    'blocker_evidence_file',
+  ]);
+  assert.equal(contract.read_model_semantics.orphan_artifact_is_completion, false);
+  assert.equal(contract.read_model_semantics.explain_must_report_missing_or_blocking_deltas, true);
+
+  for (const command of ['open', 'commit', 'status', 'explain', 'rebuild', 'promote', 'gc']) {
+    assert.match(contract.cli_surfaces.top_level, new RegExp(`opl stage .*${command}`));
+    assert.match(contract.cli_surfaces.legacy_alias, new RegExp(`opl stage-artifact .*${command}`));
+    assert.match(contract.cli_surfaces.family_runtime, new RegExp(`opl family-runtime stage-artifact .*${command}`));
+  }
+  assert.match(contract.cli_surfaces.open, /attempt workspace/);
+  assert.match(contract.cli_surfaces.commit, /latest\/current pointers/);
+  assert.match(contract.cli_surfaces.status, /physical folders/);
+  assert.match(contract.cli_surfaces.explain, /missing receipt/);
+  assert.match(contract.cli_surfaces.rebuild, /derived index/);
+  assert.match(contract.cli_surfaces.promote, /manifest-declared refs/);
+  assert.match(contract.cli_surfaces.gc, /dry-run by default/);
+
+  assert.equal(contract.authority_boundary.opl_can_index_refs, true);
+  assert.equal(contract.authority_boundary.opl_can_rebuild_projection, true);
+  assert.equal(contract.authority_boundary.opl_can_promote_canonical_pointer, true);
+  for (const claim of [
+    'opl_can_create_domain_owner_receipt',
+    'opl_can_write_domain_truth',
+    'opl_can_mutate_artifact_body',
+    'opl_can_declare_visual_or_quality_verdict',
+  ]) {
+    assert.equal(contract.authority_boundary[claim], false, `${claim} must remain outside OPL authority`);
+  }
+});
+
 test('machine-readable framework contracts do not pin human docs paths', () => {
   const pinnedHumanDocPathPattern =
     /\b(?:README(?:\.zh-CN)?\.md|AGENTS\.md|docs\/[A-Za-z0-9_./-]+\.md(?:#[A-Za-z0-9_-]+)?|contracts\/[A-Za-z0-9_./-]+\.md)\b/g;
