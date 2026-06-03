@@ -262,6 +262,66 @@ export const STAGE_ARTIFACT_KERNEL_ADOPTION_POLICY = {
   },
 } as const;
 
+export const STATE_INDEX_KERNEL_ADOPTION_POLICY = {
+  surface_kind: 'opl_state_index_kernel_adoption',
+  version: 'opl-state-index-kernel-adoption.v1',
+  kernel_contract_ref: 'contracts/opl-framework/state-index-kernel-contract.json',
+  sqlite_role: 'rebuildable_refs_only_sidecar_index',
+  physical_truth_role: 'stage_folder_manifest_receipt_artifact_body_file_truth',
+  required_index_databases: [
+    'queue',
+    'lifecycle_index',
+    'artifact_index',
+    'operator_read_model',
+  ],
+  required_ref_fields: [
+    'domain_id',
+    'program_id',
+    'stage_id',
+    'attempt_id',
+    'surface_id',
+    'source_ref',
+    'receipt_ref',
+    'content_hash',
+    'observed_at',
+    'indexed_at',
+    'index_version',
+    'rebuild_epoch',
+  ],
+  domain_ref_sources: [
+    'contracts/stage_artifact_kernel_adoption.json',
+    'contracts/workspace_lifecycle_policy.json',
+    'contracts/generated_surface_handoff.json',
+    'contracts/action_catalog.json',
+  ],
+  compaction_policy: {
+    small_file_runtime_refs_may_be_indexed: true,
+    large_payload_strategy: 'store_preview_hash_and_refs_never_body',
+    index_rebuild_source: 'physical_stage_folder_manifest_receipt_refs',
+    app_reads_projection_not_sqlite_directly: true,
+  },
+  maintenance_policy: {
+    journal_mode: 'WAL',
+    busy_timeout_ms: 5000,
+    checkpoint_required: true,
+    backup_required: true,
+    integrity_check_required: true,
+    optimize_required: true,
+    network_filesystem_multi_writer_supported: false,
+  },
+  authority_boundary: {
+    sqlite_sidecar_source_of_truth: false,
+    sqlite_record_counts_as_stage_complete: false,
+    opl_can_write_domain_truth: false,
+    opl_can_write_memory_body: false,
+    opl_can_write_artifact_body: false,
+    opl_can_store_large_artifact_blob_in_sqlite: false,
+    opl_can_create_domain_owner_receipt: false,
+    opl_can_authorize_quality_or_export: false,
+    domain_repo_can_own_generic_sqlite_persistence_engine: false,
+  },
+} as const;
+
 export const STANDARD_PROGRESS_DELTA_POLICY = {
   surface_kind: 'opl_stage_progress_delta_policy',
   version: 'progress-delta-policy.v1',
@@ -636,6 +696,8 @@ export const REQUIRED_CONTRACT_SURFACES = [
   'private_functional_surface_policy',
   'functional_privatization_audit',
   'workspace_lifecycle_policy',
+  'stage_artifact_kernel_adoption',
+  'state_index_kernel_adoption',
 ] as const;
 
 export const REQUIRED_VERIFICATION = [
@@ -654,6 +716,8 @@ export const REQUIRED_VERIFICATION = [
   'generated_surface_no_domain_owner',
   'functional_privatization_audit_no_generic_owner',
   'workspace_file_lifecycle_policy_declared',
+  'stage_artifact_kernel_adoption_declared',
+  'state_index_kernel_adoption_declared',
 ] as const;
 
 export const SCAFFOLD_MARKER = 'generated_by_opl_standard_domain_agent_scaffold_v1';

@@ -35,6 +35,7 @@ import {
 import { buildRuntimeDeveloperModeCloseoutCommandSpecs } from './runtime-developer-mode-closeout-command-spec.ts';
 import { buildRuntimeOmaAppLivePathCommandSpecs } from './runtime-oma-app-live-path-command-spec.ts';
 import { buildRuntimeOmaProductionConsumptionCommandSpecs } from './runtime-oma-production-consumption-command-spec.ts';
+import { buildIndexCommandSpec } from './index-command-spec.ts';
 import { buildRuntimeResearchEvidencePackCommandSpecs } from './runtime-research-evidence-pack-command-spec.ts';
 import {
   buildRuntimeResearchHypothesisPortfolioCommandSpecs,
@@ -452,6 +453,7 @@ export function buildInternalCommandSpecs(
         return buildNativeIndexSummary();
       },
     },
+    index: buildIndexCommandSpec(),
     'agents scaffold': {
       usage: 'opl agents scaffold [--target-dir <path>] [--domain-id <id>] [--domain-label <label>] [--force] | [--validate <repo-dir>] | [--consumption-evidence]',
       summary:

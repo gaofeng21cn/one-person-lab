@@ -41,6 +41,7 @@ const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
   session: '查看、恢复和审计会话。',
   runtime: '修复或检查底层 runtime 相关入口。',
   'family-runtime': '管理 provider-backed family runtime queue、stage attempt、dispatch、approval、notification 与事件。',
+  index: '维护 OPL-owned SQLite sidecar indexes，不替代文件真相或 domain authority。',
 };
 
 const NON_PASSTHROUGH_COMMAND_PREFIXES = new Set([
@@ -51,6 +52,7 @@ const NON_PASSTHROUGH_COMMAND_PREFIXES = new Set([
   'ask',
   'chat',
   'framework',
+  'index',
   'runtime',
   'service',
   'session',

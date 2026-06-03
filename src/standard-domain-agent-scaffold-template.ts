@@ -12,6 +12,7 @@ import {
   STARTER_STAGE_ID,
   STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT,
   STANDARD_PROGRESS_DELTA_POLICY,
+  STATE_INDEX_KERNEL_ADOPTION_POLICY,
   STANDARD_STAGE_PACK_CONFORMANCE_VERSION,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
   STANDARD_USER_STAGE_LOG_CONTRACT,
@@ -681,6 +682,15 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
       path: 'contracts/stage_artifact_kernel_adoption.json',
       content: json({
         ...STAGE_ARTIFACT_KERNEL_ADOPTION_POLICY,
+        owner: domainId,
+        domain_id: domainId,
+        marker: SCAFFOLD_MARKER,
+      }),
+    },
+    {
+      path: 'contracts/state_index_kernel_adoption.json',
+      content: json({
+        ...STATE_INDEX_KERNEL_ADOPTION_POLICY,
         owner: domainId,
         domain_id: domainId,
         marker: SCAFFOLD_MARKER,

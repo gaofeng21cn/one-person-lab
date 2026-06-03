@@ -289,6 +289,40 @@ const REQUIRED_STAGE_ARTIFACT_ADOPTION_AUTHORITY_FLAGS = [
   'opl_can_authorize_quality_or_export',
 ];
 
+const REQUIRED_STATE_INDEX_DATABASES = [
+  'queue',
+  'lifecycle_index',
+  'artifact_index',
+  'operator_read_model',
+];
+
+const REQUIRED_STATE_INDEX_REF_FIELDS = [
+  'domain_id',
+  'program_id',
+  'stage_id',
+  'attempt_id',
+  'surface_id',
+  'source_ref',
+  'receipt_ref',
+  'content_hash',
+  'observed_at',
+  'indexed_at',
+  'index_version',
+  'rebuild_epoch',
+];
+
+const REQUIRED_STATE_INDEX_AUTHORITY_FLAGS = [
+  'sqlite_sidecar_source_of_truth',
+  'sqlite_record_counts_as_stage_complete',
+  'opl_can_write_domain_truth',
+  'opl_can_write_memory_body',
+  'opl_can_write_artifact_body',
+  'opl_can_store_large_artifact_blob_in_sqlite',
+  'opl_can_create_domain_owner_receipt',
+  'opl_can_authorize_quality_or_export',
+  'domain_repo_can_own_generic_sqlite_persistence_engine',
+];
+
 function buildWorkspaceFileLifecycleChecks(repoDir: string) {
   const policyFile = readJsonFile(repoDir, 'contracts/workspace_lifecycle_policy.json');
   const policy = isRecord(policyFile.payload) ? policyFile.payload : null;
@@ -470,6 +504,109 @@ function buildStageArtifactKernelAdoptionChecks(repoDir: string) {
   };
 }
 
+function buildStateIndexKernelAdoptionChecks(repoDir: string) {
+  const adoptionFile = readJsonFile(repoDir, 'contracts/state_index_kernel_adoption.json');
+  const adoption = isRecord(adoptionFile.payload) ? adoptionFile.payload : null;
+  const authority = isRecord(adoption?.authority_boundary) ? adoption.authority_boundary : {};
+  const compactionPolicy = isRecord(adoption?.compaction_policy) ? adoption.compaction_policy : {};
+  const maintenancePolicy = isRecord(adoption?.maintenance_policy) ? adoption.maintenance_policy : {};
+  const requiredDatabases = stringList(adoption?.required_index_databases);
+  const requiredFields = stringList(adoption?.required_ref_fields);
+  const domainRefSources = stringList(adoption?.domain_ref_sources);
+  const blockers = [
+    adoptionFile.status === 'resolved' ? null : `state_index_kernel_adoption_${adoptionFile.status}`,
+    adoption ? null : 'state_index_kernel_adoption_not_declared',
+    optionalString(adoption?.surface_kind) === 'opl_state_index_kernel_adoption'
+      ? null
+      : 'state_index_kernel_adoption_surface_kind_invalid',
+    optionalString(adoption?.kernel_contract_ref) === 'contracts/opl-framework/state-index-kernel-contract.json'
+      ? null
+      : 'state_index_kernel_contract_ref_invalid',
+    optionalString(adoption?.sqlite_role) === 'rebuildable_refs_only_sidecar_index'
+      ? null
+      : 'state_index_kernel_sqlite_role_invalid',
+    optionalString(adoption?.physical_truth_role) === 'stage_folder_manifest_receipt_artifact_body_file_truth'
+      ? null
+      : 'state_index_kernel_physical_truth_role_invalid',
+    ...REQUIRED_STATE_INDEX_DATABASES
+      .filter((database) => !requiredDatabases.includes(database))
+      .map((database) => `state_index_kernel_database_missing:${database}`),
+    ...REQUIRED_STATE_INDEX_REF_FIELDS
+      .filter((field) => !requiredFields.includes(field))
+      .map((field) => `state_index_kernel_required_ref_field_missing:${field}`),
+    domainRefSources.length > 0 ? null : 'state_index_kernel_domain_ref_sources_missing',
+    compactionPolicy.small_file_runtime_refs_may_be_indexed === true
+      ? null
+      : 'state_index_kernel_small_file_compaction_policy_missing',
+    compactionPolicy.large_payload_strategy === 'store_preview_hash_and_refs_never_body'
+      ? null
+      : 'state_index_kernel_large_payload_strategy_invalid',
+    compactionPolicy.index_rebuild_source === 'physical_stage_folder_manifest_receipt_refs'
+      ? null
+      : 'state_index_kernel_rebuild_source_invalid',
+    compactionPolicy.app_reads_projection_not_sqlite_directly === true
+      ? null
+      : 'state_index_kernel_app_projection_boundary_missing',
+    maintenancePolicy.journal_mode === 'WAL'
+      ? null
+      : 'state_index_kernel_journal_mode_must_be_wal',
+    maintenancePolicy.busy_timeout_ms === 5000
+      ? null
+      : 'state_index_kernel_busy_timeout_invalid',
+    maintenancePolicy.checkpoint_required === true
+      ? null
+      : 'state_index_kernel_checkpoint_policy_missing',
+    maintenancePolicy.backup_required === true
+      ? null
+      : 'state_index_kernel_backup_policy_missing',
+    maintenancePolicy.integrity_check_required === true
+      ? null
+      : 'state_index_kernel_integrity_policy_missing',
+    maintenancePolicy.optimize_required === true
+      ? null
+      : 'state_index_kernel_optimize_policy_missing',
+    maintenancePolicy.network_filesystem_multi_writer_supported === false
+      ? null
+      : 'state_index_kernel_network_multi_writer_must_be_false',
+    ...REQUIRED_STATE_INDEX_AUTHORITY_FLAGS
+      .filter((flag) => authority[flag] !== false)
+      .map((flag) => `state_index_kernel_authority_flag_must_be_false:${flag}`),
+  ].filter((entry): entry is string => Boolean(entry));
+  return {
+    status: blockers.length === 0 ? 'passed' : 'blocked',
+    policy_status: blockers.length === 0 ? 'declared' : 'blocked',
+    policy_source: 'contracts/state_index_kernel_adoption.json',
+    kernel_contract_ref: optionalString(adoption?.kernel_contract_ref),
+    sqlite_role: optionalString(adoption?.sqlite_role),
+    physical_truth_role: optionalString(adoption?.physical_truth_role),
+    required_index_databases: requiredDatabases,
+    required_ref_fields: requiredFields,
+    domain_ref_sources: domainRefSources,
+    compaction_policy: {
+      small_file_runtime_refs_may_be_indexed:
+        compactionPolicy.small_file_runtime_refs_may_be_indexed ?? null,
+      large_payload_strategy: optionalString(compactionPolicy.large_payload_strategy),
+      index_rebuild_source: optionalString(compactionPolicy.index_rebuild_source),
+      app_reads_projection_not_sqlite_directly:
+        compactionPolicy.app_reads_projection_not_sqlite_directly ?? null,
+    },
+    maintenance_policy: {
+      journal_mode: optionalString(maintenancePolicy.journal_mode),
+      busy_timeout_ms: maintenancePolicy.busy_timeout_ms ?? null,
+      checkpoint_required: maintenancePolicy.checkpoint_required ?? null,
+      backup_required: maintenancePolicy.backup_required ?? null,
+      integrity_check_required: maintenancePolicy.integrity_check_required ?? null,
+      optimize_required: maintenancePolicy.optimize_required ?? null,
+      network_filesystem_multi_writer_supported:
+        maintenancePolicy.network_filesystem_multi_writer_supported ?? null,
+    },
+    authority_boundary: Object.fromEntries(
+      REQUIRED_STATE_INDEX_AUTHORITY_FLAGS.map((flag) => [flag, authority[flag] ?? null]),
+    ),
+    blockers,
+  };
+}
+
 function buildRepoConformance(input: RepoInput) {
   const repoDir = path.resolve(input.repo_dir);
   const domainId = readDomainId(repoDir, input.requested_agent_id);
@@ -482,6 +619,7 @@ function buildRepoConformance(input: RepoInput) {
   const physicalMorphologyChecks = buildPhysicalMorphologyChecks(repoDir, domainId);
   const workspaceFileLifecycleChecks = buildWorkspaceFileLifecycleChecks(repoDir);
   const stageArtifactKernelAdoptionChecks = buildStageArtifactKernelAdoptionChecks(repoDir);
+  const stateIndexKernelAdoptionChecks = buildStateIndexKernelAdoptionChecks(repoDir);
   const evidenceTailClassification = buildEvidenceTailClassification(repoDir, domainId, generatedInterfaceChecks);
   const blockers = unique([
     ...scaffoldValidation.blockers,
@@ -493,6 +631,7 @@ function buildRepoConformance(input: RepoInput) {
     ...physicalMorphologyChecks.blockers,
     ...workspaceFileLifecycleChecks.blockers,
     ...stageArtifactKernelAdoptionChecks.blockers,
+    ...stateIndexKernelAdoptionChecks.blockers,
   ]);
 
   return {
@@ -515,6 +654,7 @@ function buildRepoConformance(input: RepoInput) {
     physical_morphology_checks: physicalMorphologyChecks,
     workspace_file_lifecycle_checks: workspaceFileLifecycleChecks,
     stage_artifact_kernel_adoption_checks: stageArtifactKernelAdoptionChecks,
+    state_index_kernel_adoption_checks: stateIndexKernelAdoptionChecks,
     evidence_tail_classification: evidenceTailClassification,
   };
 }

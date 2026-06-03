@@ -299,8 +299,10 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
   assert.equal(scaffold.required_contract_surfaces.includes('generated_surface_handoff'), true);
   assert.equal(scaffold.required_contract_surfaces.includes('functional_privatization_audit'), true);
   assert.equal(scaffold.required_contract_surfaces.includes('workspace_lifecycle_policy'), true);
+  assert.equal(scaffold.required_contract_surfaces.includes('state_index_kernel_adoption'), true);
   assert.equal(scaffold.required_verification.includes('functional_privatization_audit_no_generic_owner'), true);
   assert.equal(scaffold.required_verification.includes('workspace_file_lifecycle_policy_declared'), true);
+  assert.equal(scaffold.required_verification.includes('state_index_kernel_adoption_declared'), true);
   assert.equal(scaffold.required_verification.includes('generated_surface_handoff_parity'), true);
   assert.equal(
     scaffold.workspace_file_lifecycle_policy.surface_kind,
@@ -313,6 +315,14 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
   assert.equal(
     scaffold.workspace_file_lifecycle_policy.workspace_runtime_artifact_roots.repo_source_policy,
     'locator_index_schema_receipt_refs_only',
+  );
+  assert.equal(
+    scaffold.state_index_kernel_adoption_policy.surface_kind,
+    'opl_state_index_kernel_adoption',
+  );
+  assert.equal(
+    scaffold.state_index_kernel_adoption_policy.authority_boundary.sqlite_sidecar_source_of_truth,
+    false,
   );
   assert.equal(
     scaffold.functional_privatization_audit_contract.surface_kind,
@@ -400,6 +410,7 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/functional_privatization_audit.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/private_functional_surface_policy.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/workspace_lifecycle_policy.json')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'contracts/state_index_kernel_adoption.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'agent/stages/README.md')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'agent/stages/domain_intake.md')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'agent/prompts/domain_intake.md')), true);

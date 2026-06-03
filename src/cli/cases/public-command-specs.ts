@@ -410,6 +410,17 @@ export function buildPublicCommandSpecs(
       ],
       group: 'runtime',
     }),
+    index: cloneCommandSpec(commandSpecs.index, {
+      usage: 'opl index doctor|rebuild|checkpoint|integrity-check|backup [--domain <domain_id>]',
+      examples: [
+        'opl index doctor --json',
+        'opl index rebuild --domain medautoscience --json',
+        'opl index integrity-check --json',
+        'opl index checkpoint --json',
+        'opl index backup --json',
+      ],
+      group: 'runtime',
+    }),
     'stage-artifact': cloneCommandSpec(commandSpecs['stage-artifact'], {
       usage: 'opl stage-artifact open|commit|status|explain|rebuild|promote|gc|restore|conformance|workbench --domain <domain> --program <id> --topic <id> --deliverable <id>',
       examples: [
