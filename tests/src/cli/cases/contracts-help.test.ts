@@ -812,7 +812,7 @@ test('CLI returns stable JSON errors for unknown surface ids', () => {
   assert.deepEqual(payload.error.details, { surface_id: 'unknown_surface' });
 });
 
-test('CLI returns machine-readable JSON errors for unknown commands with available command discovery', () => {
+test('CLI returns bounded machine-readable JSON errors for unknown commands', () => {
   const { status, payload } = runCliFailure(['unknown-command']);
 
   assertNoContractsProvenance(payload);
@@ -820,8 +820,10 @@ test('CLI returns machine-readable JSON errors for unknown commands with availab
   assert.equal(payload.error.code, 'unknown_command');
   assert.equal(payload.error.exit_code, 2);
   assert.equal(status, 2);
-  assert.ok(Array.isArray(payload.error.details.commands));
-  assert.ok(payload.error.details.commands.includes('contract validate'));
   assert.equal(payload.error.details.command, 'unknown-command');
+  assert.equal(typeof payload.error.details.command_count, 'number');
+  assert.ok(payload.error.details.command_count > 0);
   assert.equal(payload.error.details.usage, 'opl help');
+  assert.equal(payload.error.details.help_command, 'opl help');
+  assert.equal('commands' in payload.error.details, false);
 });

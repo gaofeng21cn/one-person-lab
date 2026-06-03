@@ -28,5 +28,6 @@ for (const { args, command, errorCode, retired } of removedProductApiCommands) {
     assert.equal(payload.error.code, errorCode);
     assert.equal(payload.error.details.command, command);
     assert.equal(Boolean(payload.error.details.retired), retired);
+    assert.equal('commands' in payload.error.details, false);
   });
 }

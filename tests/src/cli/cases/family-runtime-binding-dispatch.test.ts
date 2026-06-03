@@ -24,6 +24,8 @@ function writeNodeScript(scriptPath: string, source: string) {
   );
 }
 
+const largeDomainBody = 'x'.repeat(80_000);
+
 test('family-runtime binding tick dispatches MAS tasks through the active workspace checkout', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-binding-dispatch-home-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-binding-dispatch-'));
@@ -54,6 +56,7 @@ const cwd = fs.realpathSync(process.cwd());
 fs.writeFileSync(${jsString(uvCwdPath)}, process.cwd() + '\\n');
 fs.writeFileSync(${jsString(uvArgvPath)}, args.map(String).join('\\n') + '\\n');
 const joined = \` \${args.join(' ')} \`;
+const largeDomainBody = ${jsString(largeDomainBody)};
 if (cwd === boundWorkspacePath && joined.includes(' domain-handler export ')) {
   process.stdout.write(JSON.stringify({
     surface_kind: 'mas_family_domain_handler_export',
@@ -87,6 +90,7 @@ if (cwd === boundWorkspacePath && joined.includes(' domain-handler dispatch ')) 
     accepted: true,
     surface_kind: 'mas_family_domain_handler_dispatch_receipt',
     closeout_refs: ['mas:dm002:binding-dispatch'],
+    large_domain_body: largeDomainBody,
   }) + '\\n');
   process.exit(0);
 }
@@ -160,6 +164,25 @@ process.exit(64);
       dispatchedTask.payload.opl_domain_export_context.command_source,
       'workspace_binding',
     );
+    const dbRows = runCli(['family-runtime', 'events', 'export'], env)
+      .family_runtime_events.events as Array<Record<string, unknown>>;
+    const dispatchEvent = dbRows.find((event) => event.event_type === 'task_dispatch_succeeded');
+    assert.ok(dispatchEvent);
+    const dispatchPayloadText = JSON.stringify(dispatchEvent.payload);
+    assert.ok(dispatchPayloadText.length < 20_000, dispatchPayloadText.length.toString());
+    assert.equal(dispatchPayloadText.includes(largeDomainBody), false);
+    assert.equal(dispatchPayloadText.includes('opl_runtime_ledger_truncated_string'), true);
+    assert.equal(dispatchPayloadText.includes('"original_length":80000'), true);
+
+    const notifications = runCli(['family-runtime', 'notify', 'list'], env)
+      .family_runtime_notifications.notifications as Array<Record<string, unknown>>;
+    const dispatchNotification = notifications.find((item) =>
+      item.title === 'Family runtime task dispatched'
+    );
+    assert.ok(dispatchNotification);
+    const notificationPayloadText = JSON.stringify(dispatchNotification.payload);
+    assert.ok(notificationPayloadText.length < 20_000, notificationPayloadText.length.toString());
+    assert.equal(notificationPayloadText.includes(largeDomainBody), false);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

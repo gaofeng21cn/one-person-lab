@@ -22,6 +22,10 @@ export { stableId } from './family-runtime-ids.ts';
 
 export const QUEUE_SCHEMA_VERSION = 2;
 export const DEFAULT_MAX_ATTEMPTS = 3;
+const RUNTIME_LEDGER_MAX_STRING_LENGTH = 4_096;
+const RUNTIME_LEDGER_MAX_ARRAY_ITEMS = 20;
+const RUNTIME_LEDGER_MAX_OBJECT_KEYS = 40;
+const RUNTIME_LEDGER_MAX_DEPTH = 6;
 
 export type FamilyRuntimeTaskStatus =
   | 'queued'
@@ -82,6 +86,70 @@ export function nowIso() {
 
 function randomId(prefix: string) {
   return `${prefix}_${crypto.randomUUID()}`;
+}
+
+function sha256Text(value: string) {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+function boundedLedgerValue(value: unknown, depth = 0): unknown {
+  if (typeof value === 'string') {
+    if (value.length <= RUNTIME_LEDGER_MAX_STRING_LENGTH) {
+      return value;
+    }
+    return {
+      surface_kind: 'opl_runtime_ledger_truncated_string',
+      truncated: true,
+      original_length: value.length,
+      sha256: sha256Text(value),
+      preview: value.slice(0, RUNTIME_LEDGER_MAX_STRING_LENGTH),
+    };
+  }
+  if (typeof value !== 'object' || value === null) {
+    return value;
+  }
+  if (depth >= RUNTIME_LEDGER_MAX_DEPTH) {
+    const encoded = JSON.stringify(value);
+    return {
+      surface_kind: 'opl_runtime_ledger_truncated_value',
+      truncated: true,
+      reason: 'max_depth',
+      original_json_length: encoded.length,
+      sha256: sha256Text(encoded),
+    };
+  }
+  if (Array.isArray(value)) {
+    const items = value
+      .slice(0, RUNTIME_LEDGER_MAX_ARRAY_ITEMS)
+      .map((entry) => boundedLedgerValue(entry, depth + 1));
+    return value.length <= RUNTIME_LEDGER_MAX_ARRAY_ITEMS
+      ? items
+      : {
+          items,
+          truncated: true,
+          original_length: value.length,
+          omitted_count: value.length - RUNTIME_LEDGER_MAX_ARRAY_ITEMS,
+        };
+  }
+
+  const entries = Object.entries(value);
+  const boundedEntries = entries
+    .slice(0, RUNTIME_LEDGER_MAX_OBJECT_KEYS)
+    .map(([key, entry]) => [key, boundedLedgerValue(entry, depth + 1)] as const);
+  return {
+    ...Object.fromEntries(boundedEntries),
+    ...(entries.length > RUNTIME_LEDGER_MAX_OBJECT_KEYS
+      ? {
+          _truncated: true,
+          _original_key_count: entries.length,
+          _omitted_key_count: entries.length - RUNTIME_LEDGER_MAX_OBJECT_KEYS,
+        }
+      : {}),
+  };
+}
+
+function boundedLedgerPayload(payload: Record<string, unknown> | undefined) {
+  return boundedLedgerValue(payload ?? {}) as Record<string, unknown>;
 }
 
 export function familyRuntimePaths() {
@@ -350,7 +418,7 @@ export function insertEvent(
     domain_id: input.domainId ?? null,
     event_type: input.eventType,
     source: input.source,
-    payload_json: JSON.stringify(input.payload ?? {}),
+    payload_json: JSON.stringify(boundedLedgerPayload(input.payload)),
     created_at: createdAt,
   };
   db.prepare(`
@@ -379,7 +447,7 @@ export function insertNotification(
     body: input.body,
     channel: 'local_inbox',
     status: 'written',
-    payload_json: JSON.stringify(input.payload ?? {}),
+    payload_json: JSON.stringify(boundedLedgerPayload(input.payload)),
     created_at: createdAt,
   };
   db.prepare(`

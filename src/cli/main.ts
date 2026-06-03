@@ -3,6 +3,15 @@ import { buildCommandHelp, buildRootHelp, buildUsageError, formatHumanCommandHel
 import { buildInternalCommandSpecs } from './cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from './cases/public-command-specs.ts';
 
+function unknownCommandDetails(command: string | undefined, commandSpecs: Record<string, unknown>) {
+  return {
+    command,
+    command_count: Object.keys(commandSpecs).length,
+    usage: 'opl help',
+    help_command: 'opl help',
+  };
+}
+
 export async function main() {
   const parsedInput = parseCliInput(process.argv.slice(2));
   const shouldPrintHumanHelp = parsedInput.textOutput || (process.stdout.isTTY && !parsedInput.jsonOutput);
@@ -36,9 +45,7 @@ export async function main() {
     const [command, ...args] = inputTokens;
     if (command?.startsWith('@')) {
       throw new FrameworkContractError('unknown_command', `Unknown command: ${command}.`, {
-        command,
-        commands: Object.keys(publicCommandSpecs),
-        usage: 'opl help',
+        ...unknownCommandDetails(command, publicCommandSpecs),
       });
     }
 
@@ -53,9 +60,7 @@ export async function main() {
     }
 
     throw new FrameworkContractError('unknown_command', `Unknown command: ${command}.`, {
-      command,
-      commands: Object.keys(publicCommandSpecs),
-      usage: 'opl help',
+      ...unknownCommandDetails(command, publicCommandSpecs),
     });
   }
 
