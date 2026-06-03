@@ -91,6 +91,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/system-startup-maintenance.test.ts',
   'tests/src/cli/cases/system-module-package-channel.test.ts',
   'tests/src/cli/cases/app-state.test.ts',
+  'tests/src/cli/cases/app-state-runtime-workbench.test.ts',
   'tests/src/cli/cases/app-state-provider-source.test.ts',
   'tests/src/cli/cases/app-state-developer-mode-closeout.test.ts',
   'tests/src/cli/cases/system-install-superpowers.test.ts',
