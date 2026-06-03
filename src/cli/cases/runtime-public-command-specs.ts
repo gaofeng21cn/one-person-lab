@@ -342,5 +342,14 @@ export function buildPublicRuntimeCommandSpecs(
         ],
         group: 'runtime',
       }),
+    'runtime research-hypothesis-portfolio summary':
+      cloneCommandSpec(commandSpecs['runtime research-hypothesis-portfolio summary'], {
+        usage:
+          'opl runtime research-hypothesis-portfolio summary (--payload <json>|--payload-file <path>)',
+        examples: [
+          'opl runtime research-hypothesis-portfolio summary --payload-file research-hypothesis-portfolio.json',
+        ],
+        group: 'runtime',
+      }),
   };
 }
