@@ -108,6 +108,7 @@ function temporalWorkerStatus(status: 'worker_not_ready' | 'worker_source_stale'
           },
         }
       : { surface_kind: 'temporal_worker_runtime_dependency_health', provider_kind: 'temporal', status: 'ready' },
+    crash_diagnostic: null,
     stale_worker_pid: status === 'worker_source_stale' ? 12344 : null,
     temporal_service_lifecycle: {
       surface_kind: 'temporal_service_lifecycle_status',
