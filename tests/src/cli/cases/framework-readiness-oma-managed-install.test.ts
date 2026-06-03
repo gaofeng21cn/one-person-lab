@@ -1,10 +1,13 @@
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
 import { recordManagedInstallUpdateReceipts } from '../../../../src/managed-install-update-ledger.ts';
+import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 test('framework readiness consumes OPL-managed OMA install update receipts', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-managed-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
   try {
+    process.env.OPL_META_AGENT_REPO_DIR = createOmaContractFixture(stateRoot);
     process.env.OPL_STATE_DIR = stateRoot;
     recordManagedInstallUpdateReceipts([{
       module_id: 'oplmetaagent',
@@ -46,6 +49,11 @@ test('framework readiness consumes OPL-managed OMA install update receipts', () 
       delete process.env.OPL_STATE_DIR;
     } else {
       process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    if (previousOmaRepoDir === undefined) {
+      delete process.env.OPL_META_AGENT_REPO_DIR;
+    } else {
+      process.env.OPL_META_AGENT_REPO_DIR = previousOmaRepoDir;
     }
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

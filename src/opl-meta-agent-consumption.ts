@@ -16,7 +16,10 @@ import {
   OMA_PRODUCTION_ACCEPTANCE_RELATIVE_REF,
   readOmaProductionAcceptance,
 } from './opl-meta-agent-production-acceptance.ts';
+import { refsOnlyAuthorityBoundary, uniqueStringList } from './opl-meta-agent-consumption-boundary.ts';
 import { buildOplModules } from './system-installation/modules.ts';
+
+export { refsOnlyAuthorityBoundary } from './opl-meta-agent-consumption-boundary.ts';
 
 const OMA_DOMAIN_ID = 'opl-meta-agent';
 const OMA_PROJECT = 'opl-meta-agent';
@@ -252,10 +255,6 @@ function countTargetsWithOwnerReceiptOrBlocker(targets: JsonRecord[]) {
 
 function countBooleanClaims(targets: JsonRecord[], field: string) {
   return targets.filter((target) => target[field] === true).length;
-}
-
-function uniqueStringList(values: string[]) {
-  return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
 function refsFromRecords(records: JsonRecord[], keys: string[]) {
@@ -845,20 +844,6 @@ function buildOmaSections(payloads: {
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
     self_evolution_cockpit: selfEvolutionCockpit,
-  };
-}
-
-export function refsOnlyAuthorityBoundary() {
-  return {
-    refs_only: true,
-    can_write_domain_truth: false,
-    can_write_target_domain_truth: false,
-    can_write_target_domain_memory_body: false,
-    can_mutate_target_domain_artifact_body: false,
-    can_authorize_target_domain_quality_or_export: false,
-    can_authorize_domain_ready: false,
-    can_claim_quality_verdict: false,
-    can_promote_default_agent_without_gate: false,
   };
 }
 
