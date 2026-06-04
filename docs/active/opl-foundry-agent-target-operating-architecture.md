@@ -406,6 +406,7 @@ domain-agent-repo/
 - `guardrail_tier_policy` 已落成 `guardrail-tier-policy.json`：launch-hard、runtime-enforced、domain/human gate、audit-only 分级稳定；audit-only 和 advisory warning 不能绕过 folded owner delta 变成普通 launch blocker。
 - Phase 5 wrapper retirement 已落成 `wrapper-retirement-gate-policy.json`：replacement parity、no-active-caller、domain owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 是物理删除前置门；OPL lifecycle apply 只能记录 refs，不能替 domain repo 执行未授权删除。
 - `contracts/opl-framework/README*` 已同步目标架构合同组，把上述 schema/policy 纳入 active contract index。
+- 2026-06-04 fresh family conformance 已闭合到 `4/4 passed`、`blocked_count=0`；MAS/MAG/RCA/OMA 均声明唯一 ordinary default route。MAS 的 ordinary default route 固定为 `direction_and_route_selection`，由 MAS canonical generator `build_family_stage_control_plane()` 物化到 `contracts/stage_control_plane.json`，不是手写 JSON 漂移。
 
 ### Phase 0: Freeze design target
 
