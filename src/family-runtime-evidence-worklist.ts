@@ -62,7 +62,7 @@ function worklistOwnerId(value: string | null) {
   return value && canonicalOwnerId(value) === 'one-person-lab' ? 'opl' : value;
 }
 
-function normalizeWorklistOwnerFields(item: JsonRecord) {
+function normalizeWorklistOwnerFields<T extends JsonRecord>(item: T): T {
   const owner = worklistOwnerId(stringValue(item.owner));
   const routeOwner = worklistOwnerId(stringValue(item.route_owner));
   const safeActionOwner = worklistOwnerId(stringValue(item.safe_action_owner));
@@ -76,7 +76,7 @@ function normalizeWorklistOwnerFields(item: JsonRecord) {
       ...evidenceRequirement,
       ...(owner ? { owner } : {}),
     },
-  };
+  } as T;
 }
 
 function freshnessRef(route: JsonRecord) {

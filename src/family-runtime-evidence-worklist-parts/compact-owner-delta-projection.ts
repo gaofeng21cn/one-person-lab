@@ -9,7 +9,7 @@ function worklistOwnerId(value: unknown) {
   return typeof value === 'string' && canonicalOwnerId(value) === 'one-person-lab' ? 'opl' : value;
 }
 
-function normalizeWorklistDefaultNextActionOwner(action: JsonRecord) {
+function normalizeWorklistDefaultNextActionOwner(action: JsonRecord): JsonRecord {
   return {
     ...action,
     owner: worklistOwnerId(action.owner),
