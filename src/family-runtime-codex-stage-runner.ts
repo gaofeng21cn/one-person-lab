@@ -27,6 +27,7 @@ import {
   extractCodexSessionUsageRef,
   type CodexSessionUsageRef,
 } from './family-runtime-codex-session-usage.ts';
+import { codexStageAttemptEnv } from './family-runtime-codex-stage-runner-parts/provider-env.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -205,47 +206,6 @@ function normalizeCodexStageRunnerMode(value?: string | null): CodexStageRunnerM
 function workspaceRootFromAttempt(attempt: JsonRecord) {
   const workspaceLocator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
   return optionalString(workspaceLocator.workspace_root) ?? optionalString(workspaceLocator.repo_root);
-}
-
-function sourceRefValueForRole(sourceRefs: unknown, role: string) {
-  const refs = readRecordList(sourceRefs);
-  for (const ref of refs) {
-    if (optionalString(ref.role) === role) {
-      return optionalString(ref.ref);
-    }
-  }
-  return null;
-}
-
-function workUnitIdFromAttempt(attempt: JsonRecord) {
-  const workspaceLocator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
-  const direct = optionalString(attempt.work_unit_id)
-    ?? optionalString(workspaceLocator.work_unit_id);
-  if (direct) {
-    return direct;
-  }
-  const workUnitFingerprint = sourceRefValueForRole(workspaceLocator.source_refs, 'owner_route_work_unit_fingerprint');
-  return workUnitFingerprint?.startsWith('truth-snapshot::') ? workUnitFingerprint : null;
-}
-
-function codexStageAttemptEnv(input: {
-  attempt: JsonRecord;
-  stagePacketRef: string;
-  workspaceRoot: string;
-}): Record<string, string | undefined> {
-  const workspaceLocator = isRecord(input.attempt.workspace_locator) ? input.attempt.workspace_locator : {};
-  return {
-    OPL_STAGE_ATTEMPT_ID: optionalString(input.attempt.stage_attempt_id) ?? undefined,
-    OPL_STAGE_ID: stageIdFromAttempt(input.attempt),
-    OPL_STAGE_PACKET_REF: input.stagePacketRef,
-    OPL_WORKSPACE_ROOT: input.workspaceRoot,
-    OPL_TASK_ID: optionalString(input.attempt.task_id) ?? undefined,
-    OPL_WORKFLOW_ID: optionalString(input.attempt.workflow_id) ?? undefined,
-    OPL_STUDY_ID: optionalString(workspaceLocator.study_id) ?? undefined,
-    OPL_QUEST_ID: optionalString(workspaceLocator.quest_id) ?? undefined,
-    OPL_ACTION_TYPE: optionalString(workspaceLocator.action_type) ?? undefined,
-    OPL_WORK_UNIT_ID: workUnitIdFromAttempt(input.attempt) ?? undefined,
-  };
 }
 
 function runnerPromptFor(input: { attempt: JsonRecord; stagePacketRef?: string | null }) {
