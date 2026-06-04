@@ -1,3 +1,5 @@
+import { cognitiveKernelBoundary } from './cognitive-kernel-boundary.ts';
+
 type JsonRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -305,6 +307,7 @@ function buildCurrentOwnerDeltaProjection(input: {
       stringValue(input.handoff.latest_owner_answer_ref),
       stringValue(record(input.ownerDeltaFirst.primary_item).latest_owner_answer_ref),
     ),
+    cognitive_kernel_boundary: cognitiveKernelBoundary(),
     stop_loss_state: compactStopLossState(
       input.handoff.stop_loss_state,
       input.ownerDeltaFirst.stop_loss_state,
@@ -312,6 +315,12 @@ function buildCurrentOwnerDeltaProjection(input: {
     ),
     audit_refs: auditRefs,
     authority_boundary: {
+      route_not_stage_strategy: true,
+      route_reconciler_role: 'hydrate_reconcile_owner_routes_only',
+      route_reconciler_can_generate_candidates: false,
+      route_reconciler_can_evaluate_or_rank_candidates: false,
+      route_reconciler_can_complete_stage: false,
+      route_reconciler_can_sign_receipts: false,
       can_execute_domain_action: false,
       can_write_domain_truth: false,
       can_create_owner_receipt: false,
@@ -321,6 +330,9 @@ function buildCurrentOwnerDeltaProjection(input: {
       can_authorize_quality_or_export: false,
       can_claim_domain_ready: false,
       can_claim_production_ready: false,
+      raw_evidence_can_drive_default_planning: false,
+      replay_packet_can_drive_default_planning: false,
+      typed_blocker_group_can_drive_default_planning: false,
       audit_tail_can_drive_default_planning: false,
       evidence_vault_event_is_progress_claim: false,
     },

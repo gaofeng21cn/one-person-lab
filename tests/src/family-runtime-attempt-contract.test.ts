@@ -414,6 +414,17 @@ test('stage route scheduler contract freezes route hydration as OPL reconciliati
   const contract = readJson('contracts/opl-framework/stage-route-scheduler-contract.json');
 
   assert.equal(contract.model, 'stage_graph_reconciliation_with_owner_route_hydration');
+  const contractLaws = contract.contract_laws as Record<string, any>;
+  assert.equal(contractLaws.route_not_stage_strategy, true);
+  assert.equal(contractLaws.audit_tail_cannot_plan, true);
+  assert.equal(contractLaws.route_reconciler_role, 'hydrate_reconcile_owner_routes_only');
+  assert.equal(
+    contractLaws.default_planning_root,
+    'current_owner_delta_or_provider_human_hard_gate',
+  );
+  assert.ok((contractLaws.audit_tail_inputs as string[]).includes('raw_evidence_envelope'));
+  assert.ok((contractLaws.audit_tail_inputs as string[]).includes('replay_packet'));
+  assert.ok((contractLaws.audit_tail_inputs as string[]).includes('typed_blocker_group'));
   const definitions = contract.canonical_definitions as Record<string, any>;
   assert.equal(definitions.stage.owner, 'one-person-lab');
   assert.equal(definitions.stage.meaning.includes('attempt unit'), true);
@@ -422,6 +433,22 @@ test('stage route scheduler contract freezes route hydration as OPL reconciliati
   assert.equal(definitions.route.is_small_stage, false);
   assert.equal(definitions.route.can_complete_stage_attempt, false);
   assert.equal(definitions.route_hydration.owner, 'one-person-lab');
+  assert.deepEqual(definitions.route_hydration.must_only, [
+    'hydrate_domain_owner_route_refs',
+    'reconcile_queue_provider_attempt_ledger_and_projection_state',
+    'emit_conflict_or_operator_projection_refs',
+  ]);
+  for (const forbiddenHydrationRole of [
+    'generate_stage_candidates',
+    'evaluate_or_rank_stage_candidates',
+    'complete_stage_attempts',
+    'sign_owner_receipts',
+    'create_typed_blockers',
+    'write_domain_truth',
+    'derive_default_plan_from_audit_tail',
+  ]) {
+    assert.ok(definitions.route_hydration.must_not.includes(forbiddenHydrationRole));
+  }
   assert.ok(definitions.route_hydration.machine_surfaces.includes('opl family-runtime tick --hydrate'));
   assert.ok(definitions.attempt_ledger.machine_surfaces.includes('family-runtime-attempt-contract.json'));
 
@@ -456,9 +483,18 @@ test('stage route scheduler contract freezes route hydration as OPL reconciliati
 
   for (const forbidden of [
     'route_is_small_stage',
+    'route_is_stage_internal_strategy',
+    'route_generates_candidates',
+    'route_evaluates_or_ranks_candidates',
+    'route_reconciler_completes_stage_attempt',
     'queue_task_admitted_equals_domain_work_done',
     'provider_completed_equals_owner_receipt',
+    'raw_evidence_envelope_generates_default_plan',
+    'replay_packet_generates_default_plan',
+    'typed_blocker_group_generates_default_plan',
     'OPL_hydration_writes_domain_truth',
+    'OPL_hydration_signs_owner_receipt',
+    'OPL_hydration_creates_typed_blocker',
   ]) {
     assert.ok((contract.forbidden_semantics as string[]).includes(forbidden));
   }
@@ -478,9 +514,15 @@ test('family runtime attempt contract binds attempt ledger fields to the stage r
     stage_is_opl_attempt_unit: true,
     route_is_domain_owner_semantic: true,
     route_is_small_stage: false,
+    route_is_stage_internal_strategy: false,
     route_hydrated_into_stage_or_queue_by_opl: true,
     route_completion_is_stage_completion: false,
     provider_completion_is_owner_receipt: false,
+    route_reconciler_role: 'hydrate_reconcile_owner_routes_only',
+    route_reconciler_can_generate_candidates: false,
+    route_reconciler_can_evaluate_or_rank_candidates: false,
+    route_reconciler_can_complete_stage: false,
+    route_reconciler_can_sign_receipts: false,
   });
 
   const hydration = contract.route_hydration_contract as Record<string, any>;
@@ -492,6 +534,12 @@ test('family runtime attempt contract binds attempt ledger fields to the stage r
   assert.ok(hydration.reconciliation_statuses.includes('hydrated_to_stage_attempt'));
   assert.ok(hydration.reconciliation_statuses.includes('route_back_projected'));
   assert.ok(hydration.forbidden_semantics.includes('route_is_small_stage'));
+  assert.ok(hydration.forbidden_semantics.includes('route_is_stage_internal_strategy'));
+  assert.ok(hydration.forbidden_semantics.includes('route_generates_candidates'));
+  assert.ok(hydration.forbidden_semantics.includes('route_evaluates_or_ranks_candidates'));
+  assert.ok(hydration.forbidden_semantics.includes('route_reconciler_completes_stage_attempt'));
+  assert.ok(hydration.forbidden_semantics.includes('route_hydration_signs_owner_receipt'));
+  assert.ok(hydration.forbidden_semantics.includes('route_hydration_creates_typed_blocker'));
   assert.ok(hydration.forbidden_semantics.includes('provider_completion_equals_owner_receipt'));
 });
 

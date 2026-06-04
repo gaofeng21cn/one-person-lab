@@ -172,9 +172,36 @@
         "can_create_typed_blocker",
         "can_close_domain_ready",
         "can_claim_production_ready",
+        "route_not_stage_strategy",
+        "route_reconciler_role",
+        "route_reconciler_can_generate_candidates",
+        "route_reconciler_can_evaluate_or_rank_candidates",
+        "route_reconciler_can_complete_stage",
+        "route_reconciler_can_sign_receipts",
+        "raw_evidence_can_drive_default_planning",
+        "replay_packet_can_drive_default_planning",
+        "typed_blocker_group_can_drive_default_planning",
         "audit_tail_can_drive_default_planning"
       ],
       "properties": {
+        "route_not_stage_strategy": {
+          "const": true
+        },
+        "route_reconciler_role": {
+          "const": "hydrate_reconcile_owner_routes_only"
+        },
+        "route_reconciler_can_generate_candidates": {
+          "const": false
+        },
+        "route_reconciler_can_evaluate_or_rank_candidates": {
+          "const": false
+        },
+        "route_reconciler_can_complete_stage": {
+          "const": false
+        },
+        "route_reconciler_can_sign_receipts": {
+          "const": false
+        },
         "can_write_domain_truth": {
           "const": false
         },
@@ -188,6 +215,15 @@
           "const": false
         },
         "can_claim_production_ready": {
+          "const": false
+        },
+        "raw_evidence_can_drive_default_planning": {
+          "const": false
+        },
+        "replay_packet_can_drive_default_planning": {
+          "const": false
+        },
+        "typed_blocker_group_can_drive_default_planning": {
           "const": false
         },
         "audit_tail_can_drive_default_planning": {

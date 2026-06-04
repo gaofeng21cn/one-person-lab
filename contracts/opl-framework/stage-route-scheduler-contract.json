@@ -3,6 +3,21 @@
   "owner": "one-person-lab",
   "scope": "framework-level stage graph scheduling, route hydration, reconciliation, and attempt ledger boundaries for complex domain agents",
   "model": "stage_graph_reconciliation_with_owner_route_hydration",
+  "contract_laws": {
+    "route_not_stage_strategy": true,
+    "audit_tail_cannot_plan": true,
+    "route_reconciler_role": "hydrate_reconcile_owner_routes_only",
+    "default_planning_root": "current_owner_delta_or_provider_human_hard_gate",
+    "audit_tail_inputs": [
+      "raw_evidence_envelope",
+      "replay_packet",
+      "receipt_ledger",
+      "typed_blocker_group",
+      "private_residue_inventory",
+      "diagnostic_trace_or_metric"
+    ],
+    "audit_tail_default_planning_role": "passive_until_folded_to_current_owner_delta_owner_answer_typed_blocker_or_hard_gate"
+  },
   "canonical_definitions": {
     "stage": {
       "owner": "one-person-lab",
@@ -38,6 +53,20 @@
     "route_hydration": {
       "owner": "one-person-lab",
       "meaning": "OPL resolves domain owner route refs into typed queue tasks, stage attempt requests, conflict envelopes, or operator projections without executing the route itself",
+      "must_only": [
+        "hydrate_domain_owner_route_refs",
+        "reconcile_queue_provider_attempt_ledger_and_projection_state",
+        "emit_conflict_or_operator_projection_refs"
+      ],
+      "must_not": [
+        "generate_stage_candidates",
+        "evaluate_or_rank_stage_candidates",
+        "complete_stage_attempts",
+        "sign_owner_receipts",
+        "create_typed_blockers",
+        "write_domain_truth",
+        "derive_default_plan_from_audit_tail"
+      ],
       "machine_surfaces": [
         "opl family-runtime intake --hydrate",
         "opl family-runtime tick --hydrate",
@@ -191,11 +220,20 @@
   ],
   "forbidden_semantics": [
     "route_is_small_stage",
+    "route_is_stage_internal_strategy",
+    "route_generates_candidates",
+    "route_evaluates_or_ranks_candidates",
     "route_executes_without_stage_attempt",
+    "route_reconciler_completes_stage_attempt",
     "queue_task_admitted_equals_domain_work_done",
     "provider_completed_equals_owner_receipt",
     "attempt_ledger_entry_equals_quality_verdict",
+    "replay_packet_generates_default_plan",
+    "raw_evidence_envelope_generates_default_plan",
+    "typed_blocker_group_generates_default_plan",
     "OPL_hydration_writes_domain_truth",
+    "OPL_hydration_signs_owner_receipt",
+    "OPL_hydration_creates_typed_blocker",
     "domain_repo_owns_generic_scheduler_or_attempt_loop",
     "App_read_model_infers_domain_ready_from_route_refs"
   ],

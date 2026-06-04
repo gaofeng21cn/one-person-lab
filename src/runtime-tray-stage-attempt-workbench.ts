@@ -47,6 +47,10 @@ import {
 import {
   buildAttemptHumanReviewBurdenBudget,
 } from './family-human-review-budget.ts';
+import {
+  buildStageAttemptCloseoutRefsOnlyContract,
+  buildStageAttemptLaunchEnvelope,
+} from './cognitive-kernel-boundary.ts';
 import { fileSourceRef, optionalString } from './runtime-tray-snapshot-utils.ts';
 import type { JsonRecord, RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
 import {
@@ -575,6 +579,22 @@ function attemptProjection(
     humanGateLedger,
     routeImpact,
   });
+  const attemptLaunchEnvelope = buildStageAttemptLaunchEnvelope({
+    stageAttemptId: row.stage_attempt_id,
+    domainId: row.domain_id,
+    stageId: row.stage_id,
+    workspaceLocator,
+    sourceFingerprint: row.source_fingerprint,
+  });
+  const closeoutRefsOnlyContract = buildStageAttemptCloseoutRefsOnlyContract({
+    stageAttemptId: row.stage_attempt_id,
+    domainId: row.domain_id,
+    stageId: row.stage_id,
+    closeoutRefs,
+    consumedRefs,
+    writebackReceiptRefs,
+    routeImpact,
+  });
   const controlLoopSummary = buildAttemptControlLoopSummary({
     row,
     routeImpact,
@@ -610,6 +630,8 @@ function attemptProjection(
     activity_status: optionalString(activity?.activity_status),
     activity_kind: optionalString(activity?.activity_kind),
     launch_invocation: launchInvocation,
+    attempt_launch_envelope: attemptLaunchEnvelope,
+    closeout_refs_only_contract: closeoutRefsOnlyContract,
     local_status: row.status,
     heartbeat: {
       last_updated_at: row.updated_at,

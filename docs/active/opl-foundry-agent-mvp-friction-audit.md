@@ -447,9 +447,15 @@ OPL 基座应支持工具 affordance catalog，但它的默认语义是安全边
 
 8. `audit_tail_cannot_plan`
    - audit / replay / receipt ledger 只能解释、验证、定位，不允许直接成为 planner input 或 work generator。
+   - 当前落地：`current_owner_delta.authority_boundary`、`evidence-vault-event.schema.json` 和 `stage-route-scheduler-contract.json` 均固定 raw evidence、stage replay packet、receipt ledger、typed blocker group 和 private residue inventory 只能 audit-only，不能在未 fold 成 owner delta / owner answer / typed blocker / hard gate 前驱动默认计划。
    - 验收：stage replay packet、typed blocker group、blocked envelope count、private residue inventory 不再自动进入 action selector。
 
-9. `tool_affordance_adoption_not_hard_gate`
+9. `route_not_stage_strategy`
+   - route reconciler 只消费 domain owner route refs，并 hydrate / reconcile queue、stage-attempt、conflict envelope 或 operator projection。
+   - 当前落地：`stage-route-scheduler-contract.json`、`family-runtime-attempt-contract.json`、`cognitive-computation-kernel.json` 和 compact owner-delta 输出均禁止 route 生成候选、评估/排序候选、完成 stage、签 owner receipt、创建 typed blocker 或写 domain truth。
+   - 验收：route hydration 的输出只能是 typed queue / stage attempt request / ledger or conflict ref / operator projection；candidate generation、grounded reflection、comparative selection 和 independent gate 仍归 stage attempt / executor / domain owner 边界。
+
+10. `tool_affordance_adoption_not_hard_gate`
    - `tool_affordance_boundary` 作为 authority catalog 保留；existing family repos 缺 `tools` / `tool_refs` 时只产生 adoption warning。
    - 验收：`opl agents conformance --family-defaults --json` 不因尚未采用工具 catalog 而 4/4 blocked；若某 stage 真实存在 forbidden-write、credential、side-effect 或 provider-liveness 风险，则用具体 hard blocker 表达，而不是用 generic missing-tools blocker。
 

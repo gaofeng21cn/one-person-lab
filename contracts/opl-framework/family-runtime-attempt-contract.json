@@ -8,9 +8,15 @@
     "stage_is_opl_attempt_unit": true,
     "route_is_domain_owner_semantic": true,
     "route_is_small_stage": false,
+    "route_is_stage_internal_strategy": false,
     "route_hydrated_into_stage_or_queue_by_opl": true,
     "route_completion_is_stage_completion": false,
-    "provider_completion_is_owner_receipt": false
+    "provider_completion_is_owner_receipt": false,
+    "route_reconciler_role": "hydrate_reconcile_owner_routes_only",
+    "route_reconciler_can_generate_candidates": false,
+    "route_reconciler_can_evaluate_or_rank_candidates": false,
+    "route_reconciler_can_complete_stage": false,
+    "route_reconciler_can_sign_receipts": false
   },
   "allowed_providers": [
     "local_sqlite",
@@ -136,9 +142,15 @@
     ],
     "forbidden_semantics": [
       "route_is_small_stage",
+      "route_is_stage_internal_strategy",
+      "route_generates_candidates",
+      "route_evaluates_or_ranks_candidates",
       "route_executes_without_stage_attempt",
+      "route_reconciler_completes_stage_attempt",
       "queue_admission_equals_domain_work_done",
       "provider_completion_equals_owner_receipt",
+      "route_hydration_signs_owner_receipt",
+      "route_hydration_creates_typed_blocker",
       "route_hydration_writes_domain_truth"
     ]
   },

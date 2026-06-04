@@ -146,11 +146,54 @@ export function assertCurrentOwnerDeltaProjection(
   assert.equal(typeof currentOwnerDelta.stop_loss_state, 'object');
   assert.equal(typeof currentOwnerDelta.audit_refs, 'object');
   assert.equal(typeof currentOwnerDelta.authority_boundary, 'object');
+  assert.equal(currentOwnerDelta.authority_boundary.route_not_stage_strategy, true);
+  assert.equal(
+    currentOwnerDelta.authority_boundary.route_reconciler_role,
+    'hydrate_reconcile_owner_routes_only',
+  );
+  assert.equal(
+    currentOwnerDelta.authority_boundary.route_reconciler_can_generate_candidates,
+    false,
+  );
+  assert.equal(
+    currentOwnerDelta.authority_boundary.route_reconciler_can_evaluate_or_rank_candidates,
+    false,
+  );
+  assert.equal(currentOwnerDelta.authority_boundary.route_reconciler_can_complete_stage, false);
+  assert.equal(currentOwnerDelta.authority_boundary.route_reconciler_can_sign_receipts, false);
   assert.equal(currentOwnerDelta.authority_boundary.can_write_domain_truth, false);
   assert.equal(currentOwnerDelta.authority_boundary.can_create_owner_receipt, false);
   assert.equal(currentOwnerDelta.authority_boundary.can_create_typed_blocker, false);
   assert.equal(currentOwnerDelta.authority_boundary.can_close_domain_ready, false);
+  assert.equal(
+    currentOwnerDelta.authority_boundary.raw_evidence_can_drive_default_planning,
+    false,
+  );
+  assert.equal(
+    currentOwnerDelta.authority_boundary.replay_packet_can_drive_default_planning,
+    false,
+  );
+  assert.equal(
+    currentOwnerDelta.authority_boundary.typed_blocker_group_can_drive_default_planning,
+    false,
+  );
   assert.equal(currentOwnerDelta.authority_boundary.audit_tail_can_drive_default_planning, false);
+  assert.equal(typeof currentOwnerDelta.cognitive_kernel_boundary, 'object');
+  assert.equal(
+    currentOwnerDelta.cognitive_kernel_boundary.envelope_semantics,
+    'stage_goal_context_authority_boundary_available_affordances_quality_gate',
+  );
+  assert.equal(
+    currentOwnerDelta.cognitive_kernel_boundary.tool_affordance_policy,
+    'available_affordances_not_workflow_script',
+  );
+  assert.equal(
+    currentOwnerDelta.cognitive_kernel_boundary.closeout_policy,
+    'actual_tool_evidence_artifact_owner_answer_or_typed_blocker_refs_only',
+  );
+  assert.equal(currentOwnerDelta.cognitive_kernel_boundary.authority_boundary.can_write_domain_truth, false);
+  assert.equal(currentOwnerDelta.cognitive_kernel_boundary.authority_boundary.can_authorize_quality_verdict, false);
+  assert.equal(currentOwnerDelta.cognitive_kernel_boundary.authority_boundary.tool_affordance_can_override_stage_goal, false);
 }
 
 function hasOwnNestedKey(value: unknown, key: string): boolean {

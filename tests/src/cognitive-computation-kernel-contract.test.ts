@@ -84,8 +84,14 @@ test('cognitive computation kernel keeps stage cognition executor-first and tool
   assert.equal(cognitiveKernel.tool_affordance_boundary.executor_autonomy.tool_catalog_can_define_cognitive_strategy, false);
   assert.equal(cognitiveKernel.tool_affordance_boundary.executor_autonomy.tool_catalog_can_authorize_forbidden_write, false);
 
+  assert.equal(cognitiveKernel.route_boundary.route_not_stage_strategy, true);
+  assert.equal(cognitiveKernel.route_boundary.route_is_stage_internal_strategy, false);
   assert.equal(cognitiveKernel.route_boundary.route_is_small_stage, false);
   assert.equal(cognitiveKernel.route_boundary.route_can_complete_stage, false);
+  assert.equal(cognitiveKernel.route_boundary.route_can_generate_candidates, false);
+  assert.equal(cognitiveKernel.route_boundary.route_can_evaluate_or_rank_candidates, false);
+  assert.equal(cognitiveKernel.route_boundary.route_can_sign_receipts, false);
+  assert.equal(cognitiveKernel.route_boundary.route_can_create_typed_blockers, false);
   assert.equal(cognitiveKernel.authority_boundary.opl_can_write_domain_truth, false);
   assert.equal(cognitiveKernel.authority_boundary.same_attempt_self_review_can_close_quality_gate, false);
   assert.equal(cognitiveKernel.authority_boundary.independent_gate_receipt_required_for_quality_progression, true);

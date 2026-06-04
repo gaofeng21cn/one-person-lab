@@ -514,6 +514,76 @@ export function retargetReadyRepo(repoDir: string, domainId: string, domainLabel
   writeJson(actionCatalogPath, actionCatalog);
 }
 
+function setStagePlaneTarget(repoDir: string, domainId: string, owner: string) {
+  const stageControlPlanePath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
+  const stageControlPlane = JSON.parse(fs.readFileSync(stageControlPlanePath, 'utf8'));
+  stageControlPlane.target_domain_id = domainId;
+  stageControlPlane.owner = owner;
+  stageControlPlane.domain_id = domainId;
+  stageControlPlane.plane_id = `${domainId.replace(/[^a-z0-9]+/gi, '_')}.stage-control-plane.v1`;
+  stageControlPlane.authority_boundary = {
+    ...stageControlPlane.authority_boundary,
+    domain_truth_owner: owner,
+    opl_role: 'projection_consumer_only',
+    opl_can_write_domain_truth: false,
+    opl_can_authorize_quality_or_export: false,
+  };
+  return { stageControlPlanePath, stageControlPlane };
+}
+
+function stageFromBase(baseStage: Record<string, any>, input: {
+  stageId: string;
+  stageKind: string;
+  title: string;
+  summary: string;
+  goal: string;
+  owner: string;
+  defaultExecutor?: boolean;
+  laneKind?: string;
+  executorKind?: string;
+  executorBindingRef?: string;
+}) {
+  const defaultExecutor = input.defaultExecutor === true;
+  return {
+    ...baseStage,
+    stage_id: input.stageId,
+    stage_kind: input.stageKind,
+    ...(input.laneKind ? { lane_kind: input.laneKind } : {}),
+    title: input.title,
+    summary: input.summary,
+    goal: input.goal,
+    owner: input.owner,
+    domain_stage_refs: [input.stageId],
+    selected_executor: {
+      executor_kind: input.executorKind ?? (defaultExecutor ? 'codex_cli' : 'domain_stage_handoff'),
+      default_executor: defaultExecutor,
+      executor_binding_ref: input.executorBindingRef ?? (defaultExecutor ? 'default_codex_cli' : `${input.stageId}_owner_handoff`),
+      binding_policy: defaultExecutor
+        ? 'default_first_class_executor_for_ai_first_stage_execution'
+        : 'explicit_non_default_stage_or_affordance_lane',
+    },
+    independent_gate_policy: {
+      ...baseStage.independent_gate_policy,
+      gate_owner: input.owner,
+    },
+    stage_contract: {
+      ...baseStage.stage_contract,
+      requires: [
+        `${input.stageId}_input_refs`,
+        'authority_boundary_ref',
+      ],
+      ensures: [
+        `${input.stageId}_artifact_or_owner_handoff_ref`,
+        'owner_receipt_or_typed_blocker_ref',
+      ],
+    },
+    handoff: {
+      next_owner: input.owner,
+      next_stage_refs: [],
+    },
+  };
+}
+
 export function configureReadyMagMorphology(repoDir: string) {
   const privateSurfacePolicyPath = path.join(repoDir, 'contracts', 'private_functional_surface_policy.json');
   const privateSurfacePolicy = JSON.parse(fs.readFileSync(privateSurfacePolicyPath, 'utf8'));
@@ -554,6 +624,94 @@ export function configureReadyMagMorphology(repoDir: string) {
 }
 
 export function configureReadyRcaMorphology(repoDir: string) {
+  const { stageControlPlanePath, stageControlPlane } = setStagePlaneTarget(repoDir, 'redcube-ai', 'redcube-ai');
+  const baseStage = stageControlPlane.stages[0];
+  stageControlPlane.stages = [
+    stageFromBase(baseStage, {
+      stageId: 'source_intake',
+      stageKind: 'intake',
+      title: 'Source Intake',
+      summary: 'Ingest visual brief, source refs, and artifact authority boundaries.',
+      goal: 'Produce RCA source-intake refs for the visual golden path without authorizing artifact success.',
+      owner: 'redcube-ai',
+      defaultExecutor: true,
+    }),
+    stageFromBase(baseStage, {
+      stageId: 'communication_strategy',
+      stageKind: 'planning',
+      title: 'Communication Strategy',
+      summary: 'Turn the brief into a communication strategy for the visual artifact.',
+      goal: 'Produce strategy refs and route the next visual stage to RCA owner review.',
+      owner: 'redcube-ai',
+    }),
+    stageFromBase(baseStage, {
+      stageId: 'visual_direction',
+      stageKind: 'planning',
+      title: 'Visual Direction',
+      summary: 'Select the visual direction and acceptance criteria.',
+      goal: 'Produce visual direction refs and independent gate inputs.',
+      owner: 'redcube-ai',
+    }),
+    stageFromBase(baseStage, {
+      stageId: 'artifact_creation',
+      stageKind: 'creation',
+      title: 'Artifact Creation',
+      summary: 'Create the visual artifact stage unit.',
+      goal: 'Produce artifact refs, manifest refs, and owner closeout refs.',
+      owner: 'redcube-ai',
+    }),
+    stageFromBase(baseStage, {
+      stageId: 'review_and_revision',
+      stageKind: 'review',
+      title: 'Review And Revision',
+      summary: 'Run RCA-owned visual review and revision.',
+      goal: 'Produce review/export verdict refs or typed blocker refs.',
+      owner: 'redcube-ai',
+    }),
+    stageFromBase(baseStage, {
+      stageId: 'package_and_handoff',
+      stageKind: 'packaging',
+      title: 'Package And Handoff',
+      summary: 'Package the final visual artifact for handoff.',
+      goal: 'Produce package refs, export refs, and owner receipt refs.',
+      owner: 'redcube-ai',
+    }),
+    stageFromBase(baseStage, {
+      stageId: 'render_preview_lane',
+      stageKind: 'domain_specific',
+      laneKind: 'variant',
+      title: 'Render Preview Lane',
+      summary: 'Explicit non-default render preview helper lane.',
+      goal: 'Produce render preview refs as affordance evidence only.',
+      owner: 'redcube-ai',
+      executorKind: 'rca_helper_affordance',
+      executorBindingRef: 'rca_render_preview_affordance',
+    }),
+    stageFromBase(baseStage, {
+      stageId: 'screenshot_review_lane',
+      stageKind: 'domain_specific',
+      laneKind: 'variant',
+      title: 'Screenshot Review Lane',
+      summary: 'Explicit non-default screenshot inspection helper lane.',
+      goal: 'Produce screenshot refs for review without becoming the default route.',
+      owner: 'redcube-ai',
+      executorKind: 'rca_helper_affordance',
+      executorBindingRef: 'rca_screenshot_review_affordance',
+    }),
+    stageFromBase(baseStage, {
+      stageId: 'native_pptx_export_lane',
+      stageKind: 'domain_specific',
+      laneKind: 'variant',
+      title: 'Native PPTX Export Lane',
+      summary: 'Explicit non-default native PPTX export helper lane.',
+      goal: 'Produce native PPTX/export refs as route variant evidence only.',
+      owner: 'redcube-ai',
+      executorKind: 'rca_helper_affordance',
+      executorBindingRef: 'rca_native_pptx_export_affordance',
+    }),
+  ];
+  writeJson(stageControlPlanePath, stageControlPlane);
+
   writeJson(path.join(repoDir, 'contracts', 'physical_source_morphology_policy.json'), {
     canonical_pack_root: 'agent/',
     status: 'active_source_classification_policy_landed',
@@ -585,6 +743,29 @@ export function configureReadyRcaMorphology(repoDir: string) {
 }
 
 export function configureReadyMetaMorphology(repoDir: string) {
+  const { stageControlPlanePath, stageControlPlane } = setStagePlaneTarget(repoDir, 'opl-meta-agent', 'opl-meta-agent');
+  const baseStage = stageControlPlane.stages[0];
+  stageControlPlane.stages = [
+    stageFromBase(baseStage, {
+      stageId: 'intent-intake',
+      stageKind: 'intake',
+      title: 'Intent Intake',
+      summary: 'Normalize a target-agent request into a bounded OMA work order.',
+      goal: 'Produce work-order refs and route target authority to the target owner.',
+      owner: 'opl-meta-agent',
+      defaultExecutor: true,
+    }),
+    stageFromBase(baseStage, {
+      stageId: 'stage-decomposition',
+      stageKind: 'planning',
+      title: 'Stage Decomposition',
+      summary: 'Materialize a target stage-pack proposal without becoming a second OPL framework.',
+      goal: 'Produce proposal/materializer refs plus target-owner handoff refs.',
+      owner: 'opl-meta-agent',
+    }),
+  ];
+  writeJson(stageControlPlanePath, stageControlPlane);
+
   fs.mkdirSync(path.join(repoDir, 'runtime', 'authority_functions'), { recursive: true });
   const privateSurfacePolicyPath = path.join(repoDir, 'contracts', 'private_functional_surface_policy.json');
   const privateSurfacePolicy = JSON.parse(fs.readFileSync(privateSurfacePolicyPath, 'utf8'));

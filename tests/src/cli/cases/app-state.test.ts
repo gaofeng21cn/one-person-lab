@@ -176,6 +176,8 @@ exit 1
             normal_state_surface: string;
             full_runtime_drilldown_surface: string;
             raw_runtime_projection_policy: string;
+            runtime_tray_projection_policy: string;
+            worklist_projection_policy: string;
             first_screen_answers: string[];
             fast_profile_excludes: string[];
             shell_contract: {
@@ -289,6 +291,14 @@ exit 1
     assert.equal(
       output.app_state.operator.default_read_surface_policy.raw_runtime_projection_policy,
       'explicit_full_detail_or_lazy_diagnostic_only',
+    );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.runtime_tray_projection_policy,
+      'current_owner_delta_first_runtime_tray_worklist_audit_tail_drilldown',
+    );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.worklist_projection_policy,
+      'secondary_drilldown_never_default_planning_root',
     );
     assert.deepEqual(
       output.app_state.operator.default_read_surface_policy.first_screen_answers,

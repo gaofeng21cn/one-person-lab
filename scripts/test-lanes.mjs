@@ -30,6 +30,7 @@ const nodeTest = (files, options = {}) => ({
 
 const fastTestFiles = [
   'tests/src/verification-command-surfaces.test.ts',
+  'tests/src/target-architecture-schema-contracts.test.ts',
   'tests/src/cognitive-computation-kernel-contract.test.ts',
   'tests/src/verification-test-governance.test.ts',
   'tests/src/active-path-residue-scan.test.ts',
@@ -40,6 +41,7 @@ const fastTestFiles = [
   'tests/src/family-shared-release.test.ts',
   'tests/src/native-helper-family-smoke.test.ts',
   'tests/src/native-helper-prebuild.test.ts',
+  'tests/src/mas-mag-cognitive-kernel-stage-pack-fixtures.test.ts',
   'tests/src/stage-artifact-runtime.test.ts',
   'tests/src/state-index-kernel-contract.test.ts',
   'tests/src/family-runtime-state-index.test.ts',
@@ -169,6 +171,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/standard-agent-template-consumption-read-model.test.ts',
   'tests/src/cli/cases/runtime-standard-agent-template-consumption-ledger.test.ts',
   'tests/src/cli/cases/agents-conformance.test.ts',
+  'tests/src/cli/cases/agents-conformance-rca-oma-mvp.test.ts',
   'tests/src/cli/cases/agents-conformance-state-index-adoption.test.ts',
   'tests/src/cli/cases/agents-conformance-platform-surfaces.test.ts',
   'tests/src/cli/cases/golden-path-single-default.test.ts',
@@ -210,6 +213,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/runtime-app-operator-drilldown-oma-manual-required.test.ts',
   'tests/src/cli/cases/runtime-app-operator-drilldown-owner-handoff.test.ts',
   'tests/src/cli/cases/runtime-tray-stage-attempt-workbench.test.ts',
+  'tests/src/cli/cases/runtime-tray-stage-attempt-workbench-cognitive-kernel.test.ts',
   'tests/src/cli/cases/runtime-tray-stage-attempt-workbench-default-codex.test.ts',
   'tests/src/cli/cases/runtime-tray-provider-continuous-proof.test.ts',
   'tests/src/cli/cases/runtime-observability-export.test.ts',
@@ -236,6 +240,7 @@ const lanes = {
   smoke: [
     nodeTest([
       'tests/src/verification-command-surfaces.test.ts',
+      'tests/src/target-architecture-schema-contracts.test.ts',
       'tests/src/cognitive-computation-kernel-contract.test.ts',
       'tests/src/verification-test-governance.test.ts',
       'tests/src/cli-modularization.test.ts',
@@ -258,6 +263,7 @@ const lanes = {
   meta: [
     nodeTest([
       'tests/src/verification-command-surfaces.test.ts',
+      'tests/src/target-architecture-schema-contracts.test.ts',
       'tests/src/cognitive-computation-kernel-contract.test.ts',
       'tests/src/verification-test-governance.test.ts',
       'tests/src/cli-modularization.test.ts',

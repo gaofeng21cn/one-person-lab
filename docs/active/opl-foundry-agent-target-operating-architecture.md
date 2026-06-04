@@ -440,6 +440,7 @@ domain-agent-repo/
 - `lineage_stop_loss` 已接入 Progress-First anti-spin gate：重复 same-source / no-deliverable lineage 会冻结默认 launch，并输出 `stop_loss_state` 与 `stop_loss_policy`；`current_owner_delta` 可消费已折叠的 stop-loss 状态。
 - `stage_artifact_progress_truth` 已落成 `stage-artifact-progress-truth-policy.json`：deliverable progress 必须同时具备 physical output、valid manifest、owner answer 和 current pointer；provider completion、receipt count、file presence 单独不计进度。
 - `guardrail_tier_policy` 已落成 `guardrail-tier-policy.json`：launch-hard、runtime-enforced、domain/human gate、audit-only 分级稳定；audit-only 和 advisory warning 不能绕过 folded owner delta 变成普通 launch blocker。
+- `route_not_stage_strategy` / `audit_tail_cannot_plan` 已固化到 `stage-route-scheduler-contract.json`、`family-runtime-attempt-contract.json`、`current-owner-delta.schema.json`、`evidence-vault-event.schema.json` 和 compact owner-delta 输出：route reconciler 只能 hydrate/reconcile owner route，不能生成候选、评估排序、完成 stage、签 receipt 或从 raw evidence / replay packet / typed blocker group 生成默认计划。
 - Phase 5 wrapper retirement 已落成 `wrapper-retirement-gate-policy.json`：replacement parity、no-active-caller、domain owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 是物理删除前置门；OPL lifecycle apply 只能记录 refs，不能替 domain repo 执行未授权删除。
 - `cognitive-computation-kernel.json` 已落成认知计算内核机器合同：固定 generation、reflection、comparative selection、evolution、meta-review、tool affordance boundary、knowledge 和 independent gate 的 refs-only 组织边界；明确工具目录不是 workflow script，Route 不是小 Stage，OPL 不持有 domain truth 或 quality verdict。
 - standard stage pack v2 的 `tool_affordance_boundary` 已进入 `family-stage-control-plane` schema、`family-stage-admission` hard blocker、standard agent scaffold / conformance 和 generated interface route projection。新 Foundry Agent skeleton 默认生成 `agent/tools/README.md` 与 `agent/tools/domain_affordances.md`，并在 stage 顶层声明 `tool_refs`、capability / permission / credential / write-scope / side-effect / forbidden-authority refs 与 executor autonomy flags。
@@ -513,6 +514,8 @@ domain-agent-repo/
 | `stage_artifact_progress_truth` | progress 必须同时具备 output、manifest、owner answer、current pointer。 |
 | `golden_path_single_default` | 每个 agent ordinary route 只有一个；variants 显式选择。 |
 | `audit_plane_passive` | Evidence Vault 写入不改变 delivery state，除非 fold 成 owner answer / hard gate / owner delta。 |
+| `route_not_stage_strategy` | Route reconciler 只 hydrate/reconcile owner route；候选生成、评估排序、stage completion、receipt signing 和 typed blocker creation 只能发生在 stage attempt / independent gate / domain owner 边界内。 |
+| `audit_tail_cannot_plan` | raw evidence、replay packet、receipt ledger、typed blocker group 和 private residue inventory 只能作为 audit/detail refs；未折叠为 current owner delta / owner answer / typed blocker / hard gate 前不能生成默认计划。 |
 | `guardrail_tier_policy` | launch-hard、runtime-enforced、domain/human gate、audit-only 分级稳定。 |
 | `domain_no_generic_runtime` | domain repo 没有长期 generic scheduler/queue/session/workbench/status owner。 |
 | `app_cockpit_boundary` | App 默认页不消费 raw envelope、full replay、private residue、provider internal trace。 |

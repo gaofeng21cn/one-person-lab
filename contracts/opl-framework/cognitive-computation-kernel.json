@@ -166,10 +166,15 @@
     "oma": "Agent-building stages should express target-agent candidate, mechanism proposal, independent reviewer, and owner closeout strategies without becoming a second OPL Framework."
   },
   "route_boundary": {
+    "route_not_stage_strategy": true,
     "route_is_stage_internal_strategy": false,
     "route_is_small_stage": false,
     "route_can_execute_without_stage_attempt": false,
     "route_can_complete_stage": false,
+    "route_can_generate_candidates": false,
+    "route_can_evaluate_or_rank_candidates": false,
+    "route_can_sign_receipts": false,
+    "route_can_create_typed_blockers": false,
     "route_owner": "domain_agent",
     "opl_route_role": "hydrate_owner_route_refs_into_queue_attempt_conflict_or_projection_and_reconcile_actual_status"
   },

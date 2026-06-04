@@ -99,6 +99,10 @@
       "required": [
         "event_can_change_delivery_state_without_fold",
         "event_can_create_default_action_without_delta",
+        "audit_tail_can_drive_default_planning",
+        "raw_evidence_can_drive_default_planning",
+        "replay_packet_can_drive_default_planning",
+        "typed_blocker_group_can_drive_default_planning",
         "opl_can_write_domain_truth",
         "opl_can_authorize_domain_ready",
         "opl_can_authorize_quality_verdict",
@@ -109,6 +113,18 @@
           "const": false
         },
         "event_can_create_default_action_without_delta": {
+          "const": false
+        },
+        "audit_tail_can_drive_default_planning": {
+          "const": false
+        },
+        "raw_evidence_can_drive_default_planning": {
+          "const": false
+        },
+        "replay_packet_can_drive_default_planning": {
+          "const": false
+        },
+        "typed_blocker_group_can_drive_default_planning": {
           "const": false
         },
         "opl_can_write_domain_truth": {

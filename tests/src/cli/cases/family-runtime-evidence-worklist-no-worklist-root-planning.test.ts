@@ -103,6 +103,38 @@ test('family-runtime evidence-worklist keeps raw worklist roots out of compact o
     projection.current_owner_delta.authority_boundary.audit_tail_can_drive_default_planning,
     false,
   );
+  assert.equal(
+    projection.current_owner_delta.authority_boundary.route_reconciler_role,
+    'hydrate_reconcile_owner_routes_only',
+  );
+  assert.equal(
+    projection.current_owner_delta.authority_boundary.route_reconciler_can_generate_candidates,
+    false,
+  );
+  assert.equal(
+    projection.current_owner_delta.authority_boundary.route_reconciler_can_evaluate_or_rank_candidates,
+    false,
+  );
+  assert.equal(
+    projection.current_owner_delta.authority_boundary.route_reconciler_can_complete_stage,
+    false,
+  );
+  assert.equal(
+    projection.current_owner_delta.authority_boundary.route_reconciler_can_sign_receipts,
+    false,
+  );
+  assert.equal(
+    projection.current_owner_delta.authority_boundary.raw_evidence_can_drive_default_planning,
+    false,
+  );
+  assert.equal(
+    projection.current_owner_delta.authority_boundary.replay_packet_can_drive_default_planning,
+    false,
+  );
+  assert.equal(
+    projection.current_owner_delta.authority_boundary.typed_blocker_group_can_drive_default_planning,
+    false,
+  );
   assert.equal(projection.current_owner_delta.stop_loss_state.status, 'frozen');
   assert.equal(projection.current_owner_delta.stop_loss_state.lineage_repeat_count, 2);
   assert.equal(

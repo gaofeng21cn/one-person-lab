@@ -784,6 +784,228 @@
         }
       ]
     },
+    "family_stage_control_plane": {
+      "surface_kind": "family_stage_control_plane",
+      "version": "family-stage-control-plane.v1",
+      "plane_id": "med_autogrant_cognitive_kernel_stage_plane",
+      "target_domain_id": "med-autogrant",
+      "owner": "med-autogrant",
+      "authority_boundary": {
+        "domain_truth_owner": "med-autogrant",
+        "opl_role": "stage_pack_projection_and_attempt_transport_only",
+        "opl_can_write_domain_truth": false,
+        "opl_can_interpret_grant_semantics": false,
+        "opl_can_sign_owner_receipt": false,
+        "opl_can_authorize_fundability_or_export": false
+      },
+      "stages": [
+        {
+          "stage_id": "grant_authoring_fundability_export_submission_delta",
+          "stage_kind": "creation",
+          "title": "Grant authoring fundability export submission delta",
+          "summary": "Default MAG cognitive-kernel stage for ordinary grant authoring, fundability, export, or submission-gate movement.",
+          "goal": "Produce the next grant proposal, fundability review, export package, or submission-gate artifact delta, then return a MAG owner receipt or stable typed blocker.",
+          "owner": "med-autogrant",
+          "selected_executor": {
+            "executor_kind": "codex_cli",
+            "default_executor": true,
+            "executor_binding_ref": "contracts/opl-framework/family-executor-adapter-defaults.json#codex_cli"
+          },
+          "domain_stage_refs": [
+            "authoring_delta",
+            "fundability_review",
+            "export_gate",
+            "submission_gate"
+          ],
+          "inputs": [
+            {
+              "ref_kind": "workspace_locator",
+              "ref": "/fixtures/med-autogrant/nsfc_workspace_p2c_critique.json",
+              "role": "grant_workspace_truth"
+            }
+          ],
+          "knowledge_refs": [
+            {
+              "ref_kind": "human_doc_surface",
+              "ref": "human_doc:mag/nsfc-authoring-context",
+              "role": "grant_call_and_authoring_context"
+            },
+            {
+              "ref_kind": "domain_memory_ref",
+              "ref": "mag_grant_strategy_memory",
+              "role": "grant_strategy_memory_locator"
+            }
+          ],
+          "skills": [
+            {
+              "ref_kind": "codex_skill_ref",
+              "ref": "mag",
+              "role": "grant_authoring_domain_skill"
+            },
+            {
+              "ref_kind": "codex_skill_ref",
+              "ref": "officecli-docx",
+              "role": "grant_package_document_affordance"
+            }
+          ],
+          "prompt_refs": [
+            {
+              "ref_kind": "prompt_ref",
+              "ref": "agent/prompts/mag-authoring-fundability-export-delta.md",
+              "role": "stage_goal_prompt"
+            }
+          ],
+          "tool_refs": [
+            {
+              "ref_kind": "tool_affordance_ref",
+              "ref": "agent/tools/mag-authoring-export-affordances.md",
+              "role": "authoring_review_export_submission_affordance_catalog"
+            }
+          ],
+          "tool_affordance_boundary": {
+            "catalog_role": "available_affordance_catalog_not_workflow_script",
+            "capability_refs": [
+              {
+                "ref_kind": "tool_capability_ref",
+                "ref": "agent/tools/mag-authoring-export-affordances.md#capabilities",
+                "role": "author_proposal_review_fundability_prepare_export"
+              }
+            ],
+            "permission_scope_refs": [
+              {
+                "ref_kind": "permission_scope_ref",
+                "ref": "agent/tools/mag-authoring-export-affordances.md#permissions",
+                "role": "workspace_read_stage_artifact_write_domain_authority_function_only"
+              }
+            ],
+            "credential_boundary_refs": [
+              {
+                "ref_kind": "credential_boundary_ref",
+                "ref": "agent/tools/mag-authoring-export-affordances.md#credentials",
+                "role": "no_submission_system_credentials_by_default"
+              }
+            ],
+            "write_scope_refs": [
+              {
+                "ref_kind": "write_scope_ref",
+                "ref": "agent/tools/mag-authoring-export-affordances.md#write-scope",
+                "role": "proposal_package_or_domain_owned_authority_function"
+              }
+            ],
+            "side_effect_risk_refs": [
+              {
+                "ref_kind": "side_effect_risk_ref",
+                "ref": "agent/tools/mag-authoring-export-affordances.md#side-effects",
+                "role": "submission_or_fundability_verdict_requires_domain_or_human_owner"
+              }
+            ],
+            "forbidden_authority_refs": [
+              {
+                "ref_kind": "forbidden_authority_ref",
+                "ref": "/product_entry_manifest/owner_receipt_contract",
+                "role": "opl_cannot_sign_mag_owner_receipt_or_fundability_export_verdict"
+              }
+            ],
+            "executor_autonomy": {
+              "executor_can_choose_tools": true,
+              "executor_can_skip_tools": true,
+              "executor_can_substitute_tools_within_boundary": true,
+              "executor_can_choose_order_and_parallelism": true,
+              "executor_can_request_missing_context_or_human_gate": true,
+              "tool_catalog_can_prescribe_tool_sequence": false,
+              "tool_catalog_can_define_cognitive_strategy": false,
+              "tool_catalog_can_override_stage_goal": false,
+              "tool_catalog_can_authorize_forbidden_write": false
+            }
+          },
+          "allowed_action_refs": [
+            "grant-user-loop",
+            "grant-progress",
+            "grant-direct-entry"
+          ],
+          "outputs": [
+            {
+              "ref_kind": "stage_artifact_unit_ref",
+              "ref": "stage-artifact-unit:mag/grant-authoring-fundability-export-submission-delta",
+              "role": "proposal_fundability_export_or_submission_gate_delta"
+            }
+          ],
+          "evaluation": [
+            {
+              "ref_kind": "quality_gate_ref",
+              "ref": "agent/quality_gates/mag-fundability-export-submission-gate.md",
+              "role": "independent_domain_quality_gate"
+            }
+          ],
+          "independent_gate_policy": {
+            "gate_ref": "agent/quality_gates/mag-fundability-export-submission-gate.md",
+            "execution_review_separation_required": true,
+            "gate_owner": "med-autogrant",
+            "accepted_return_shapes": [
+              "domain_owner_receipt_ref",
+              "typed_blocker_ref",
+              "human_decision_ref"
+            ]
+          },
+          "handoff": {
+            "next_owner": "med-autogrant",
+            "accepted_answer_shape": [
+              "mag_owner_receipt_ref",
+              "mag_stable_typed_blocker_ref",
+              "mag_human_gate_decision_ref"
+            ]
+          },
+          "source_refs": [
+            {
+              "ref_kind": "workspace_locator",
+              "ref": "/fixtures/med-autogrant/nsfc_workspace_p2c_critique.json",
+              "role": "grant_workspace_truth_locator"
+            }
+          ],
+          "stage_contract": {
+            "requires": [
+              "selected_grant_target",
+              "grant_workspace_truth",
+              "current_owner_delta"
+            ],
+            "ensures": [
+              "authoring_or_fundability_or_export_or_submission_gate_delta",
+              "mag_owner_receipt_or_stable_typed_blocker"
+            ],
+            "expected_receipt_refs": [
+              {
+                "ref_kind": "owner_receipt_ref",
+                "ref": "receipt:mag/authoring-fundability-export-submission/domain-owner-or-typed-blocker",
+                "role": "domain_owner_closeout"
+              },
+              {
+                "ref_kind": "human_gate_ref",
+                "ref": "human_gate:mag_route_gate_revision",
+                "role": "domain_or_human_gate_closeout"
+              }
+            ],
+            "progress_delta_policy": {
+              "progress_unit": "grant_authoring_fundability_export_submission_delta",
+              "submission_ready_export_gate_owner": "domain_or_human_owner",
+              "shell_or_manifest_diagnostic_counts_as_progress": false,
+              "hermes_proof_lane_counts_as_default_progress": false
+            }
+          },
+          "authority_boundary": {
+            "domain_truth_owner": "med-autogrant",
+            "opl_role": "attempt_transport_projection_and_audit_refs_only",
+            "opl_can_write_domain_truth": false,
+            "opl_can_interpret_grant_semantics": false,
+            "opl_can_sign_owner_receipt": false,
+            "opl_can_authorize_fundability_or_export": false
+          }
+        }
+      ],
+      "notes": [
+        "MAG keeps one ordinary golden path for authoring, fundability, export, and submission-gate deltas.",
+        "Submission-ready export is a domain or human owner gate, not an OPL semantic verdict or default proof lane."
+      ]
+    },
     "automation": {
       "surface_kind": "automation",
       "summary": "MAG 当前把 checkpoint 路由推进与 submission-ready export 提示暴露成 family 自动化面。",

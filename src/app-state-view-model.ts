@@ -425,6 +425,8 @@ function buildDefaultReadSurfacePolicy(input: OplAppOperatorViewModelInput) {
     full_state_surface: 'opl app state --profile full --json',
     full_runtime_drilldown_surface: 'opl runtime app-operator-drilldown --detail full --json',
     raw_runtime_projection_policy: 'explicit_full_detail_or_lazy_diagnostic_only',
+    runtime_tray_projection_policy: 'current_owner_delta_first_runtime_tray_worklist_audit_tail_drilldown',
+    worklist_projection_policy: 'secondary_drilldown_never_default_planning_root',
     first_screen_answers: [
       'current_owner_delta',
       'next_safe_action_or_none',

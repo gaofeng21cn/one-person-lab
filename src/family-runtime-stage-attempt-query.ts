@@ -22,6 +22,10 @@ import { buildStageAttemptTruePathProof } from './family-runtime-stage-attempt-t
 import { buildModelRouteCostProjection } from './family-runtime-stage-attempt-usage.ts';
 import type { TemporalStageAttemptVisibilityReadiness } from './family-runtime-temporal-visibility.ts';
 import { providerReadinessCurrentness } from './family-runtime-stage-attempt-provider-readiness-currentness.ts';
+import {
+  buildStageAttemptCloseoutRefsOnlyContract,
+  buildStageAttemptLaunchEnvelope,
+} from './cognitive-kernel-boundary.ts';
 
 type QueryStageAttemptOptions = {
   temporalVisibilityReadiness?: TemporalStageAttemptVisibilityReadiness | null;
@@ -246,6 +250,22 @@ export function queryStageAttempt(
     stageProgressLog,
     temporalQuery: options.temporalQuery,
   });
+  const attemptLaunchEnvelope = buildStageAttemptLaunchEnvelope({
+    stageAttemptId: attempt.stage_attempt_id,
+    domainId: attempt.domain_id,
+    stageId: attempt.stage_id,
+    workspaceLocator: attempt.workspace_locator,
+    sourceFingerprint: attempt.source_fingerprint,
+  });
+  const closeoutRefsOnlyContract = buildStageAttemptCloseoutRefsOnlyContract({
+    stageAttemptId: attempt.stage_attempt_id,
+    domainId: attempt.domain_id,
+    stageId: attempt.stage_id,
+    closeoutRefs,
+    consumedRefs,
+    writebackReceiptRefs,
+    routeImpact: attempt.route_impact,
+  });
   return {
     stage_attempt_query: {
       surface_kind: 'stage_attempt_query',
@@ -256,6 +276,8 @@ export function queryStageAttempt(
           ? buildTemporalStageAttemptWorkflowInput(attempt)
           : null,
       codex_stage_activity: buildCodexStageActivityInput({ attempt }),
+      attempt_launch_envelope: attemptLaunchEnvelope,
+      closeout_refs_only_contract: closeoutRefsOnlyContract,
       lifecycle_primitives: lifecyclePrimitives,
       controlled_apply_contract: controlledApplyContract,
       canonical_outcome: canonicalOutcome,
@@ -313,6 +335,8 @@ export function queryStageAttempt(
         attempt_true_path_proof: attemptTruePathProof,
         temporal_visibility: stageProgressLog.temporal_visibility,
         temporal_webui_ref: stageProgressLog.temporal_webui_ref,
+        attempt_launch_envelope: attemptLaunchEnvelope,
+        closeout_refs_only_contract: closeoutRefsOnlyContract,
         authority_boundary: {
           opl: 'attempt_control_metadata_projection_only',
           domain: 'truth_quality_artifact_gate_owner',

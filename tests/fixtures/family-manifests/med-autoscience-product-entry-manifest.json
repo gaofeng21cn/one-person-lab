@@ -1234,6 +1234,221 @@
       "label": "controller checkpoint lineage companion"
     }
   },
+  "family_stage_control_plane": {
+    "surface_kind": "family_stage_control_plane",
+    "version": "family-stage-control-plane.v1",
+    "plane_id": "med_autoscience_cognitive_kernel_stage_plane",
+    "target_domain_id": "med-autoscience",
+    "owner": "med-autoscience",
+    "authority_boundary": {
+      "domain_truth_owner": "med-autoscience",
+      "opl_role": "stage_pack_projection_and_attempt_transport_only",
+      "opl_can_write_domain_truth": false,
+      "opl_can_interpret_medical_semantics": false,
+      "opl_can_sign_owner_receipt": false,
+      "domain_dispatch_evidence_can_be_default_worklist_root": false
+    },
+    "stages": [
+      {
+        "stage_id": "paper_evidence_reviewer_human_gate_delta",
+        "stage_kind": "creation",
+        "title": "Paper evidence reviewer human-gate delta",
+        "summary": "Default MAS cognitive-kernel stage for the current paper, evidence, reviewer, or human-gate delta.",
+        "goal": "Produce the next paper, evidence, reviewer, or human-gate artifact delta, then return a MAS owner receipt or stable typed blocker.",
+        "owner": "med-autoscience",
+        "selected_executor": {
+          "executor_kind": "codex_cli",
+          "default_executor": true,
+          "executor_binding_ref": "contracts/opl-framework/family-executor-adapter-defaults.json#codex_cli"
+        },
+        "domain_stage_refs": [
+          "paper_delta",
+          "evidence_delta",
+          "reviewer_delta",
+          "human_gate_delta"
+        ],
+        "inputs": [
+          {
+            "ref_kind": "workspace_locator",
+            "ref": "/fixtures/med-autoscience/workspace",
+            "role": "study_workspace_root"
+          }
+        ],
+        "knowledge_refs": [
+          {
+            "ref_kind": "human_doc_surface",
+            "ref": "human_doc:mas/study-protocol-and-source-pack",
+            "role": "medical_source_context"
+          },
+          {
+            "ref_kind": "domain_memory_ref",
+            "ref": "mas_publication_route_memory",
+            "role": "publication_route_memory_locator"
+          }
+        ],
+        "skills": [
+          {
+            "ref_kind": "codex_skill_ref",
+            "ref": "mas-runtime-truth-audit",
+            "role": "study_runtime_truth_audit"
+          },
+          {
+            "ref_kind": "codex_skill_ref",
+            "ref": "academic-defense-prep",
+            "role": "paper_reviewer_preparation"
+          }
+        ],
+        "prompt_refs": [
+          {
+            "ref_kind": "prompt_ref",
+            "ref": "agent/prompts/mas-paper-evidence-reviewer-delta.md",
+            "role": "stage_goal_prompt"
+          }
+        ],
+        "tool_refs": [
+          {
+            "ref_kind": "tool_affordance_ref",
+            "ref": "agent/tools/mas-source-evidence-affordances.md",
+            "role": "source_evidence_stats_and_reviewer_affordance_catalog"
+          }
+        ],
+        "tool_affordance_boundary": {
+          "catalog_role": "available_affordance_catalog_not_workflow_script",
+          "capability_refs": [
+            {
+              "ref_kind": "tool_capability_ref",
+              "ref": "agent/tools/mas-source-evidence-affordances.md#capabilities",
+              "role": "read_source_analyze_evidence_prepare_reviewer_delta"
+            }
+          ],
+          "permission_scope_refs": [
+            {
+              "ref_kind": "permission_scope_ref",
+              "ref": "agent/tools/mas-source-evidence-affordances.md#permissions",
+              "role": "workspace_read_and_domain_authority_function_only"
+            }
+          ],
+          "credential_boundary_refs": [
+            {
+              "ref_kind": "credential_boundary_ref",
+              "ref": "agent/tools/mas-source-evidence-affordances.md#credentials",
+              "role": "no_new_medical_or_publication_credentials"
+            }
+          ],
+          "write_scope_refs": [
+            {
+              "ref_kind": "write_scope_ref",
+              "ref": "agent/tools/mas-source-evidence-affordances.md#write-scope",
+              "role": "stage_artifact_unit_or_domain_owned_authority_function"
+            }
+          ],
+          "side_effect_risk_refs": [
+            {
+              "ref_kind": "side_effect_risk_ref",
+              "ref": "agent/tools/mas-source-evidence-affordances.md#side-effects",
+              "role": "publication_or_study_truth_mutation_requires_domain_owner"
+            }
+          ],
+          "forbidden_authority_refs": [
+            {
+              "ref_kind": "forbidden_authority_ref",
+              "ref": "contracts/owner_receipt_contract.json#mas-owner-receipt",
+              "role": "opl_cannot_sign_mas_owner_receipt_or_publishability_verdict"
+            }
+          ],
+          "executor_autonomy": {
+            "executor_can_choose_tools": true,
+            "executor_can_skip_tools": true,
+            "executor_can_substitute_tools_within_boundary": true,
+            "executor_can_choose_order_and_parallelism": true,
+            "executor_can_request_missing_context_or_human_gate": true,
+            "tool_catalog_can_prescribe_tool_sequence": false,
+            "tool_catalog_can_define_cognitive_strategy": false,
+            "tool_catalog_can_override_stage_goal": false,
+            "tool_catalog_can_authorize_forbidden_write": false
+          }
+        },
+        "allowed_action_refs": [
+          "workspace-cockpit",
+          "launch-study"
+        ],
+        "outputs": [
+          {
+            "ref_kind": "stage_artifact_unit_ref",
+            "ref": "stage-artifact-unit:mas/paper-evidence-reviewer-human-gate-delta",
+            "role": "paper_evidence_reviewer_or_human_gate_delta"
+          }
+        ],
+        "evaluation": [
+          {
+            "ref_kind": "quality_gate_ref",
+            "ref": "agent/quality_gates/mas-paper-evidence-reviewer-gate.md",
+            "role": "independent_domain_quality_gate"
+          }
+        ],
+        "independent_gate_policy": {
+          "gate_ref": "agent/quality_gates/mas-paper-evidence-reviewer-gate.md",
+          "execution_review_separation_required": true,
+          "gate_owner": "med-autoscience",
+          "accepted_return_shapes": [
+            "domain_owner_receipt_ref",
+            "typed_blocker_ref",
+            "human_decision_ref"
+          ]
+        },
+        "handoff": {
+          "next_owner": "med-autoscience",
+          "accepted_answer_shape": [
+            "mas_owner_receipt_ref",
+            "mas_stable_typed_blocker_ref",
+            "mas_human_gate_decision_ref"
+          ]
+        },
+        "source_refs": [
+          {
+            "ref_kind": "workspace_locator",
+            "ref": "studies/<study_id>/artifacts",
+            "role": "study_artifact_truth_locator"
+          }
+        ],
+        "stage_contract": {
+          "requires": [
+            "current_owner_delta",
+            "study_workspace_locator",
+            "domain_owned_source_refs"
+          ],
+          "ensures": [
+            "paper_or_evidence_or_reviewer_or_human_gate_delta",
+            "mas_owner_receipt_or_stable_typed_blocker"
+          ],
+          "expected_receipt_refs": [
+            {
+              "ref_kind": "owner_receipt_ref",
+              "ref": "receipt:mas/paper-evidence-reviewer-human-gate/domain-owner-or-typed-blocker",
+              "role": "domain_owner_closeout"
+            }
+          ],
+          "progress_delta_policy": {
+            "progress_unit": "paper_evidence_reviewer_human_gate_delta",
+            "domain_dispatch_evidence_counts_as_progress": false,
+            "open_worklist_count_counts_as_progress": false
+          }
+        },
+        "authority_boundary": {
+          "domain_truth_owner": "med-autoscience",
+          "opl_role": "attempt_transport_projection_and_audit_refs_only",
+          "opl_can_write_domain_truth": false,
+          "opl_can_interpret_medical_semantics": false,
+          "opl_can_sign_owner_receipt": false,
+          "domain_dispatch_evidence_can_be_default_worklist_root": false
+        }
+      }
+    ],
+    "notes": [
+      "domain_dispatch_evidence remains an audit ref and must not become the MAS default worklist root.",
+      "The default MAS stage pack exposes cognitive-kernel refs without prescribing tool order or medical judgment."
+    ]
+  },
   "automation": {
     "surface_kind": "automation",
     "summary": "MAS 当前把 runtime supervision 维护和 study continuation 暴露成 family 可见的自动化面。",
