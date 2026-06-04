@@ -414,7 +414,7 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
     );
     assert.equal(
       snapshot.managed_domain_provider_states.managed_domain_projection_summary.family_stage_control_plane_declared,
-      false,
+      true,
     );
     assert.equal(
       snapshot.managed_domain_provider_states.managed_domain_projection_summary.domain_memory_descriptor_declared,

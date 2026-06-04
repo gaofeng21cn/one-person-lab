@@ -120,7 +120,7 @@ test('family-runtime status consumes MAS manifest managed Temporal projection wi
       provider.details.managed_domain_projection_summary.managed_temporal_projection_authorizes_opl_provider_ready,
       false,
     );
-    assert.equal(provider.details.managed_domain_projection_summary.family_stage_control_plane_declared, false);
+    assert.equal(provider.details.managed_domain_projection_summary.family_stage_control_plane_declared, true);
     assert.equal(provider.details.managed_domain_projection_summary.domain_memory_descriptor_declared, false);
     assert.equal(provider.details.managed_domain_projection_summary.owner_receipt_contract_declared, false);
     assert.equal(provider.details.managed_domain_projection_summary.legacy_retirement_tombstone_declared, false);

@@ -987,7 +987,7 @@ test('unified domain-agent descriptor reports missing optional descriptor surfac
     });
     assert.equal(inspect.family_agent_descriptor.descriptor_status, 'descriptor_surfaces_partial');
     assert.equal(inspect.family_agent_descriptor.domain_memory_descriptor.status, 'missing');
-    assert.equal(inspect.family_agent_descriptor.family_stage_control_plane.status, 'missing');
+    assert.equal(inspect.family_agent_descriptor.family_stage_control_plane.status, 'resolved');
     assert.equal(inspect.family_agent_descriptor.family_action_catalog.status, 'missing');
     assert.equal(inspect.family_agent_descriptor.runtime_surfaces.runtime_inventory.status, 'resolved');
     assert.equal(inspect.family_agent_descriptor.non_authority_flags.opl_owns_domain_truth, false);
