@@ -101,6 +101,7 @@ test('agents scaffold emits canonical Foundry series design profile', () => {
       'prompts',
       'stages',
       'skills',
+      'tools',
       'knowledge',
       'quality_gates',
     ]);

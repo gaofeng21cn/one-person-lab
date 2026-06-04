@@ -316,6 +316,14 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
       content: `# ${domainLabel} Domain Execution Skill Policy\n\nThe direct domain skill is the owner path for domain execution. OPL-generated CLI, MCP, product-entry, sidecar, status, and workbench surfaces route to declared domain handlers or refs-only adapters and require owner receipts for mutating or verdict-bearing outcomes.\n`,
     },
     {
+      path: 'agent/tools/README.md',
+      content: `# ${domainLabel} Tools\n\nDeclare available tool affordances and safety boundaries here. This catalog describes capability, permission, credential, write-scope, side-effect, and forbidden-authority limits without prescribing executor strategy or tool order.\n`,
+    },
+    {
+      path: 'agent/tools/domain_affordances.md',
+      content: `# ${domainLabel} Domain Tool Affordances\n\nThis catalog lists domain-available tools as affordances. It defines only capability, permission scope, credential boundary, write scope, side-effect risk, and forbidden authority refs. The executor chooses, skips, substitutes, combines, parallelizes, or asks for missing context within those boundaries during the attempt.\n`,
+    },
+    {
       path: 'agent/knowledge/README.md',
       content: `# ${domainLabel} Knowledge\n\nStore knowledge locators and policies here. Runtime memory bodies belong in the workspace/runtime memory root, not in OPL state.\n`,
     },
@@ -375,6 +383,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
           `agent/prompts/${STARTER_STAGE_ID}.md`,
           `agent/stages/${STARTER_STAGE_ID}.md`,
           'agent/skills/domain_execution.md',
+          'agent/tools/domain_affordances.md',
           'agent/knowledge/domain_boundary.md',
           'agent/quality_gates/domain_acceptance.md',
         ],
@@ -484,6 +493,69 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
                 role: 'stage_prompt',
               },
             ],
+            tool_refs: [
+              {
+                ref_kind: 'repo_path',
+                ref: 'agent/tools/domain_affordances.md',
+                role: 'tool_affordance_catalog',
+              },
+            ],
+            tool_affordance_boundary: {
+              catalog_role: 'available_affordance_catalog_not_workflow_script',
+              capability_refs: [
+                {
+                  ref_kind: 'repo_path',
+                  ref: 'agent/tools/domain_affordances.md',
+                  role: 'tool_capability_boundary',
+                },
+              ],
+              permission_scope_refs: [
+                {
+                  ref_kind: 'repo_path',
+                  ref: 'agent/tools/domain_affordances.md',
+                  role: 'tool_permission_scope_boundary',
+                },
+              ],
+              credential_boundary_refs: [
+                {
+                  ref_kind: 'repo_path',
+                  ref: 'agent/tools/domain_affordances.md',
+                  role: 'tool_credential_boundary',
+                },
+              ],
+              write_scope_refs: [
+                {
+                  ref_kind: 'repo_path',
+                  ref: 'agent/tools/domain_affordances.md',
+                  role: 'tool_write_scope_boundary',
+                },
+              ],
+              side_effect_risk_refs: [
+                {
+                  ref_kind: 'repo_path',
+                  ref: 'agent/tools/domain_affordances.md',
+                  role: 'tool_side_effect_risk_boundary',
+                },
+              ],
+              forbidden_authority_refs: [
+                {
+                  ref_kind: 'repo_path',
+                  ref: 'agent/tools/domain_affordances.md',
+                  role: 'tool_forbidden_authority_boundary',
+                },
+              ],
+              executor_autonomy: {
+                executor_can_choose_tools: true,
+                executor_can_skip_tools: true,
+                executor_can_substitute_tools_within_boundary: true,
+                executor_can_choose_order_and_parallelism: true,
+                executor_can_request_missing_context_or_human_gate: true,
+                tool_catalog_can_prescribe_tool_sequence: false,
+                tool_catalog_can_define_cognitive_strategy: false,
+                tool_catalog_can_override_stage_goal: false,
+                tool_catalog_can_authorize_forbidden_write: false,
+              },
+            },
             allowed_action_refs: [STARTER_ACTION_ID],
             outputs: [
               {

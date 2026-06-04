@@ -30,6 +30,7 @@
       "prompts",
       "stages",
       "skills",
+      "tools",
       "knowledge",
       "quality_gates"
     ],

@@ -432,6 +432,7 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
       'prompts',
       'stages',
       'skills',
+      'tools',
       'knowledge',
       'quality_gates',
     ],
@@ -755,6 +756,7 @@ export const REQUIRED_AGENT_PACK_SECTIONS = [
   { section: 'prompts', prefix: 'agent/prompts/' },
   { section: 'stages', prefix: 'agent/stages/' },
   { section: 'skills', prefix: 'agent/skills/' },
+  { section: 'tools', prefix: 'agent/tools/' },
   { section: 'quality_gates', prefix: 'agent/quality_gates/' },
   { section: 'knowledge', prefix: 'agent/knowledge/' },
 ] as const;
@@ -859,6 +861,7 @@ export const AGENT_PACK_CONTRACT = {
     'agent/prompts',
     'agent/stages',
     'agent/skills',
+    'agent/tools',
     'agent/knowledge',
     'agent/quality_gates',
   ],
@@ -866,6 +869,8 @@ export const AGENT_PACK_CONTRACT = {
   stage_ref_requirements: [
     'prompt_refs:agent/prompts/*',
     'skills:agent/skills/* or skill_id',
+    'tool_refs:agent/tools/* affordance catalog refs',
+    'tool_affordance_boundary:capability permission credential write side-effect forbidden-authority refs',
     'knowledge_refs:agent/knowledge/*',
     'evaluation:agent/quality_gates/*',
     'selected_executor:codex_cli default binding or explicit non-default executor binding',

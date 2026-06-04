@@ -145,7 +145,7 @@ Source of truth: https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/re
 ## Product Roadmap
 
 - Improve the desktop App first-install package, update channel, and cross-platform release workflow.
-- Expand the stage-led runtime into a clearer cognitive computation kernel with stronger route recovery, retry, human approval, stage quality gates, and progress projection.
+- Continue strengthening the cognitive computation kernel with route recovery, retry, human approval, stage quality gates, and progress projection.
 - Use OPL Meta Agent as the Agent Foundry entry for building new domain agents, taking over testing for existing agents, and organizing Agent Lab mechanism evolution.
 - Stabilize the Research, Grant, and Presentation Foundry user experience.
 - Bring Patent, Award, Thesis, and Review work into the same product family.

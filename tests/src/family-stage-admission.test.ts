@@ -89,6 +89,50 @@ function buildActionCatalog(): FamilyActionCatalog {
   };
 }
 
+function buildToolAffordanceBoundary() {
+  const ref = {
+    ref_kind: 'repo_path',
+    ref: 'agent/tools/domain_affordances.md',
+    role: 'tool_affordance_boundary_ref',
+  };
+  return {
+    catalog_role: 'available_affordance_catalog_not_workflow_script',
+    capability_refs: [ref],
+    permission_scope_refs: [ref],
+    credential_boundary_refs: [ref],
+    write_scope_refs: [ref],
+    side_effect_risk_refs: [ref],
+    forbidden_authority_refs: [ref],
+    executor_autonomy: {
+      executor_can_choose_tools: true,
+      executor_can_skip_tools: true,
+      executor_can_substitute_tools_within_boundary: true,
+      executor_can_choose_order_and_parallelism: true,
+      executor_can_request_missing_context_or_human_gate: true,
+      tool_catalog_can_prescribe_tool_sequence: false,
+      tool_catalog_can_define_cognitive_strategy: false,
+      tool_catalog_can_override_stage_goal: false,
+      tool_catalog_can_authorize_forbidden_write: false,
+    },
+  };
+}
+
+function withStagePackV2ToolBoundary(plane: FamilyStageControlPlane) {
+  plane.stage_pack_conformance_version = 'standard-stage-pack.v2';
+  for (const stage of plane.stages) {
+    stage.stage_pack_conformance_version = 'standard-stage-pack.v2';
+    stage.tool_refs = [
+      {
+        ref_kind: 'repo_path',
+        ref: 'agent/tools/domain_affordances.md',
+        role: 'tool_affordance_catalog',
+      },
+    ];
+    stage.tool_affordance_boundary = buildToolAffordanceBoundary();
+  }
+  return plane;
+}
+
 function buildStagePlane(overrides: {
   authorEnsures?: string[];
   reviewRequires?: string[];
@@ -302,7 +346,7 @@ test('family stage admission admits contracted static core and recorded boundary
 });
 
 test('family stage control plane normalization preserves user stage log progress contract', () => {
-  const plane = normalizeFamilyStageControlPlane(buildStagePlane());
+  const plane = normalizeFamilyStageControlPlane(withStagePackV2ToolBoundary(buildStagePlane()));
 
   assert.ok(plane);
   const stageContract = plane.stages[0]?.stage_contract;
@@ -322,6 +366,61 @@ test('family stage control plane normalization preserves user stage log progress
     'evidence_refs',
   ]);
   assert.equal(stageContract.user_stage_log_contract.no_domain_body_authority, true);
+  assert.equal(plane.stages[0]?.tool_refs?.[0]?.ref, 'agent/tools/domain_affordances.md');
+  assert.equal(
+    plane.stages[0]?.tool_affordance_boundary?.executor_autonomy?.executor_can_choose_tools,
+    true,
+  );
+});
+
+test('family stage admission admits standard stage pack v2 tool affordance boundaries', () => {
+  const review = buildFamilyStageAdmissionReview(withStagePackV2ToolBoundary(buildStagePlane()), {
+    family_action_catalog: buildActionCatalog(),
+  });
+
+  assert.equal(review.status, 'admitted');
+  assert.equal(review.summary.blockers_count, 0);
+  assert.equal(review.stage_results[0]?.tool_affordance_boundary.status, 'declared');
+  assert.equal(review.stage_results[0]?.tool_affordance_boundary.tool_ref_count, 1);
+  assert.equal(
+    review.stage_results[0]?.tool_affordance_boundary.executor_autonomy
+      .executor_can_choose_order_and_parallelism,
+    true,
+  );
+});
+
+test('family stage admission blocks v2 stages missing tool affordance boundary', () => {
+  const plane = buildStagePlane();
+  plane.stage_pack_conformance_version = 'standard-stage-pack.v2';
+
+  const review = buildFamilyStageAdmissionReview(plane, {
+    family_action_catalog: buildActionCatalog(),
+  });
+
+  assert.equal(review.status, 'blocked');
+  assert.equal(review.stage_results[0]?.tool_affordance_boundary.status, 'missing');
+  assert.ok(review.findings.some((finding) =>
+    finding.code === 'missing_tool_affordance_boundary'
+    && finding.stage_id === 'manuscript_authoring',
+  ));
+});
+
+test('family stage admission blocks tool catalogs that prescribe workflow authority', () => {
+  const plane = withStagePackV2ToolBoundary(buildStagePlane());
+  const boundary = plane.stages[0]?.tool_affordance_boundary;
+  assert.ok(boundary?.executor_autonomy);
+  boundary.executor_autonomy.tool_catalog_can_prescribe_tool_sequence = true;
+
+  const review = buildFamilyStageAdmissionReview(plane, {
+    family_action_catalog: buildActionCatalog(),
+  });
+
+  assert.equal(review.status, 'blocked');
+  assert.equal(review.stage_results[0]?.tool_affordance_boundary.status, 'invalid');
+  assert.ok(review.findings.some((finding) =>
+    finding.code === 'invalid_tool_affordance_boundary'
+    && finding.stage_id === 'manuscript_authoring',
+  ));
 });
 
 test('family stage admission blocks stages missing Progress-First delta and blocker lineage policies', () => {
@@ -529,9 +628,32 @@ test('family stage admission schema freezes OPL non-authority read model', () =>
   assert.equal(authority.can_authorize_quality_verdict, false);
   assert.equal(authority.can_mutate_artifact_body, false);
   const stageResultRequired = (((schema.$defs as JsonRecord).stage_result as JsonRecord).required as string[]);
+  const toolAffordanceProjection =
+    ((schema.$defs as JsonRecord).tool_affordance_boundary_projection as JsonRecord);
+  const toolAffordanceProjectionRequired = toolAffordanceProjection.required as string[];
+  const toolExecutorAutonomy =
+    (((toolAffordanceProjection.properties as JsonRecord).executor_autonomy as JsonRecord) as JsonRecord);
+  const toolExecutorAutonomyRequired = toolExecutorAutonomy.required as string[];
+  const firstStageResult = (examples[0]?.stage_results as JsonRecord[])[0] as JsonRecord;
+  const exampleToolBoundary = firstStageResult.tool_affordance_boundary as JsonRecord;
   const findingProperties = (((schema.$defs as JsonRecord).finding as JsonRecord).properties as JsonRecord);
   assert.ok(stageResultRequired.includes('runtime_event_refs'));
   assert.ok(stageResultRequired.includes('mode_tags'));
+  assert.ok(stageResultRequired.includes('tool_affordance_boundary'));
+  assert.ok(toolAffordanceProjectionRequired.includes('executor_autonomy'));
+  assert.deepEqual(toolExecutorAutonomyRequired, [
+    'executor_can_choose_tools',
+    'executor_can_skip_tools',
+    'executor_can_substitute_tools_within_boundary',
+    'executor_can_choose_order_and_parallelism',
+    'executor_can_request_missing_context_or_human_gate',
+    'tool_catalog_can_prescribe_tool_sequence',
+    'tool_catalog_can_define_cognitive_strategy',
+    'tool_catalog_can_override_stage_goal',
+    'tool_catalog_can_authorize_forbidden_write',
+  ]);
+  assert.equal(exampleToolBoundary.status, 'missing');
+  assert.equal((exampleToolBoundary.executor_autonomy as JsonRecord).executor_can_choose_tools, null);
   assert.ok((schema.required as string[]).includes('failure_localization'));
   assert.ok((schema.required as string[]).includes('human_review_burden_budget'));
   assert.ok((((schema.$defs as JsonRecord).mode_tags as JsonRecord).required as string[]).includes('verified_core_eligible'));

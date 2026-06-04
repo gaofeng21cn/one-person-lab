@@ -502,6 +502,7 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       'agent/prompts/domain_intake.md',
       'agent/stages/domain_intake.md',
       'agent/skills/domain_execution.md',
+      'agent/tools/domain_affordances.md',
       'agent/knowledge/domain_boundary.md',
       'agent/quality_gates/domain_acceptance.md',
     ]);
@@ -673,7 +674,7 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(validated.state, 'validated');
     assert.equal(validated.validation.status, 'passed');
     assert.equal(validated.validation.functional_privatization_audit_required, true);
-    assert.equal(validated.validation.agent_pack_validation.semantic_listed_path_count, 5);
+    assert.equal(validated.validation.agent_pack_validation.semantic_listed_path_count, 6);
     assert.deepEqual(
       validated.validation.agent_pack_validation.section_status.map((
         item: { section: string; status: string },
@@ -682,6 +683,7 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
         ['prompts', 'ok'],
         ['stages', 'ok'],
         ['skills', 'ok'],
+        ['tools', 'ok'],
         ['quality_gates', 'ok'],
         ['knowledge', 'ok'],
       ],
@@ -757,7 +759,7 @@ test('agents scaffold consumption evidence generates and validates an ephemeral 
   );
   assert.equal(evidence.validation_summary.validation_status, 'passed');
   assert.equal(evidence.validation_summary.blocker_count, 0);
-  assert.equal(evidence.validation_summary.consumed_pack_path_count, 5);
+  assert.equal(evidence.validation_summary.consumed_pack_path_count, 6);
   assert.equal(evidence.validation_summary.consumed_stage_count, 1);
   assert.equal(evidence.validation_summary.selected_executor_binding_observed_count, 1);
   assert.equal(evidence.validation_summary.default_codex_executor_binding_count, 1);

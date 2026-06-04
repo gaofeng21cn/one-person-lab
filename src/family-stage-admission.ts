@@ -12,6 +12,12 @@ import {
   buildStagePackHumanReviewBurdenBudget,
 } from './family-human-review-budget.ts';
 import type { FamilyHumanReviewBurdenBudget } from './family-human-review-budget.ts';
+import {
+  buildToolAffordanceBoundaryProjection,
+  inspectToolAffordanceBoundary,
+  stageUsesStandardStagePackV2,
+  type FamilyStageToolAffordanceBoundaryProjection,
+} from './family-stage-tool-affordance-boundary.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -70,6 +76,7 @@ export interface FamilyStageAdmissionStageResult {
   effect_boundary: boolean;
   mode_tags: FamilyStageModeTags;
   runtime_event_refs: string[];
+  tool_affordance_boundary: FamilyStageToolAffordanceBoundaryProjection;
   finding_count: number;
   blocker_count: number;
   warning_count: number;
@@ -790,6 +797,7 @@ function stageResult(stage: FamilyStageDescriptor, findings: FamilyStageAdmissio
     effect_boundary: effectBoundary,
     mode_tags: buildFamilyStageModeTags(stage),
     runtime_event_refs: readRuntimeEventRefs(stage),
+    tool_affordance_boundary: buildToolAffordanceBoundaryProjection(stage),
     finding_count: stageFindings.length,
     blocker_count: blockerCount,
     warning_count: warningCount,
@@ -811,6 +819,7 @@ export function buildFamilyStageAdmissionReview(
     inspectAuthorityBoundary(stage, findings);
     inspectTrustBoundary(stage, findings);
     inspectStageContract(stage, findings);
+    inspectToolAffordanceBoundary(stage, findings, stageUsesStandardStagePackV2(plane, stage));
     inspectActions(stage, findings, actionsById);
     inspectReviewGate(stage, findings);
   }

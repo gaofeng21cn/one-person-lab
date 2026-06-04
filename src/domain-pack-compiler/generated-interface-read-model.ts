@@ -7,6 +7,7 @@ import type {
   FamilyActionExportFormat,
 } from '../family-action-catalog-contract.ts';
 import type { FamilyStageControlPlane } from '../family-stage-control-plane-contract.ts';
+import { buildToolAffordanceBoundaryRoute } from './stage-route-tool-affordance.ts';
 
 type JsonRecord = Record<string, unknown>;
 export type GeneratedInterfaceFormat = FamilyActionExportFormat | 'product-entry';
@@ -155,35 +156,47 @@ function descriptorRecord(descriptor: JsonRecord, key: string) {
 }
 
 function buildStageRoutes(stageControlPlane: FamilyStageControlPlane | null) {
-  return stageControlPlane?.stages.map((stage) => ({
-    stage_id: stage.stage_id,
-    allowed_action_refs: stage.allowed_action_refs,
-    authority_owner: stage.owner,
-    ...(stage.stage_contract?.progress_delta_policy ? {
-      progress_delta_policy: {
-        surface_kind: typeof stage.stage_contract.progress_delta_policy.surface_kind === 'string'
-          ? stage.stage_contract.progress_delta_policy.surface_kind
-          : 'opl_stage_progress_delta_policy',
-        required_fields: Array.isArray(stage.stage_contract.progress_delta_policy.required_fields)
-          ? stage.stage_contract.progress_delta_policy.required_fields.filter((field): field is string =>
-            typeof field === 'string'
-          )
-          : [],
-        platform_only_is_not_deliverable_progress:
-          stage.stage_contract.progress_delta_policy.platform_only_is_not_deliverable_progress === true,
-      },
-    } : {}),
-    ...(stage.stage_contract?.typed_blocker_lineage_policy ? {
-      typed_blocker_lineage_policy: {
-        surface_kind: typeof stage.stage_contract.typed_blocker_lineage_policy.surface_kind === 'string'
-          ? stage.stage_contract.typed_blocker_lineage_policy.surface_kind
-          : 'family-stall-lineage.v1',
-        repeat_budget: isRecord(stage.stage_contract.typed_blocker_lineage_policy.repeat_budget)
-          ? stage.stage_contract.typed_blocker_lineage_policy.repeat_budget
-          : null,
-      },
-    } : {}),
-  })) ?? [];
+  return stageControlPlane?.stages.map((stage) => {
+    const toolAffordanceBoundary = buildToolAffordanceBoundaryRoute(stage);
+    const includeStagePackRefs =
+      stage.stage_pack_conformance_version === 'standard-stage-pack.v2'
+      || Boolean(toolAffordanceBoundary);
+    return {
+      stage_id: stage.stage_id,
+      allowed_action_refs: stage.allowed_action_refs,
+      authority_owner: stage.owner,
+      ...(includeStagePackRefs && stage.prompt_refs.length > 0 ? { prompt_refs: stage.prompt_refs } : {}),
+      ...(includeStagePackRefs && stage.skills.length > 0 ? { skills: stage.skills } : {}),
+      ...(includeStagePackRefs && stage.tool_refs && stage.tool_refs.length > 0 ? { tool_refs: stage.tool_refs } : {}),
+      ...(includeStagePackRefs && stage.knowledge_refs.length > 0 ? { knowledge_refs: stage.knowledge_refs } : {}),
+      ...(includeStagePackRefs && stage.evaluation.length > 0 ? { evaluation: stage.evaluation } : {}),
+      ...(toolAffordanceBoundary ? { tool_affordance_boundary: toolAffordanceBoundary } : {}),
+      ...(stage.stage_contract?.progress_delta_policy ? {
+        progress_delta_policy: {
+          surface_kind: typeof stage.stage_contract.progress_delta_policy.surface_kind === 'string'
+            ? stage.stage_contract.progress_delta_policy.surface_kind
+            : 'opl_stage_progress_delta_policy',
+          required_fields: Array.isArray(stage.stage_contract.progress_delta_policy.required_fields)
+            ? stage.stage_contract.progress_delta_policy.required_fields.filter((field): field is string =>
+              typeof field === 'string'
+            )
+            : [],
+          platform_only_is_not_deliverable_progress:
+            stage.stage_contract.progress_delta_policy.platform_only_is_not_deliverable_progress === true,
+        },
+      } : {}),
+      ...(stage.stage_contract?.typed_blocker_lineage_policy ? {
+        typed_blocker_lineage_policy: {
+          surface_kind: typeof stage.stage_contract.typed_blocker_lineage_policy.surface_kind === 'string'
+            ? stage.stage_contract.typed_blocker_lineage_policy.surface_kind
+            : 'family-stall-lineage.v1',
+          repeat_budget: isRecord(stage.stage_contract.typed_blocker_lineage_policy.repeat_budget)
+            ? stage.stage_contract.typed_blocker_lineage_policy.repeat_budget
+            : null,
+        },
+      } : {}),
+    };
+  }) ?? [];
 }
 
 function buildProductEntryDescriptors(catalog: FamilyActionCatalog) {

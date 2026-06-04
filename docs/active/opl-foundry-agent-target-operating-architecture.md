@@ -442,8 +442,11 @@ domain-agent-repo/
 - `guardrail_tier_policy` 已落成 `guardrail-tier-policy.json`：launch-hard、runtime-enforced、domain/human gate、audit-only 分级稳定；audit-only 和 advisory warning 不能绕过 folded owner delta 变成普通 launch blocker。
 - Phase 5 wrapper retirement 已落成 `wrapper-retirement-gate-policy.json`：replacement parity、no-active-caller、domain owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 是物理删除前置门；OPL lifecycle apply 只能记录 refs，不能替 domain repo 执行未授权删除。
 - `cognitive-computation-kernel.json` 已落成认知计算内核机器合同：固定 generation、reflection、comparative selection、evolution、meta-review、tool affordance boundary、knowledge 和 independent gate 的 refs-only 组织边界；明确工具目录不是 workflow script，Route 不是小 Stage，OPL 不持有 domain truth 或 quality verdict。
+- standard stage pack v2 的 `tool_affordance_boundary` 已进入 `family-stage-control-plane` schema、`family-stage-admission` hard blocker、standard agent scaffold / conformance 和 generated interface route projection。新 Foundry Agent skeleton 默认生成 `agent/tools/README.md` 与 `agent/tools/domain_affordances.md`，并在 stage 顶层声明 `tool_refs`、capability / permission / credential / write-scope / side-effect / forbidden-authority refs 与 executor autonomy flags。
+- `missing_tool_affordance_boundary` / `invalid_tool_affordance_boundary` 已进入 stage launch blocker 集合：工具目录只能声明 affordance catalog 与安全/责任边界，不能规定工具顺序、定义认知策略、覆盖 stage goal 或授权 forbidden write。
 - `contracts/opl-framework/README*` 已同步目标架构合同组，把上述 schema/policy 纳入 active contract index。
 - 2026-06-04 fresh family conformance 已闭合到 `4/4 passed`、`blocked_count=0`；MAS/MAG/RCA/OMA 均声明唯一 ordinary default route。MAS 的 ordinary default route 固定为 `direction_and_route_selection`，由 MAS canonical generator `build_family_stage_control_plane()` 物化到 `contracts/stage_control_plane.json`，不是手写 JSON 漂移。
+- 本轮关闭的是 stage pack 工具边界机器化落地，不声明 domain ready、artifact ready、quality ready、production ready 或真实 MAS/MAG/RCA/OMA 生产证据尾项已关闭。
 
 ### Phase 0: Freeze design target
 
@@ -468,7 +471,8 @@ domain-agent-repo/
 
 - 每个标准 stage pack 声明 prompt / skill / tool affordance / knowledge / rubric / quality gate refs。
 - `tool_refs` 只做 affordance catalog 和安全边界，不定义工具编排。
-- 验证：合同和 conformance 不允许 tool catalog 规定工具使用顺序、替代 executor 规划、授权 forbidden write 或关闭 quality gate。
+- 当前落地：standard-stage-pack.v2 已要求 stage 顶层 `tool_refs` 与 `tool_affordance_boundary`；scaffold / conformance / admission / generated interface 已同步消费同一边界。
+- 验证：schema、admission gate 和 conformance 不允许 tool catalog 规定工具使用顺序、替代 executor 规划、授权 forbidden write 或关闭 quality gate。
 
 ### Phase 4: Stage artifact unit becomes progress root
 

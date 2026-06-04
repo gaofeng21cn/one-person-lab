@@ -35,6 +35,11 @@ test('agents conformance reports generated stage pack v2 obligations', () => {
     repo.scaffold_validation.stage_pack_v2_validation.stage_statuses[0].selected_executor_kind,
     'codex_cli',
   );
+  assert.equal(repo.scaffold_validation.stage_pack_v2_validation.stage_statuses[0].tool_ref_count, 1);
+  assert.equal(
+    repo.scaffold_validation.stage_pack_v2_validation.stage_statuses[0].tool_affordance_boundary_status,
+    'declared',
+  );
   assert.deepEqual(repo.scaffold_validation.stage_pack_v2_validation.advisory_findings, []);
 });
 
@@ -43,6 +48,8 @@ test('agents conformance blocks generated scaffold repos missing stage pack v2 o
   const stageControlPlanePath = path.join(repoDir, 'contracts/stage_control_plane.json');
   const stageControlPlane = JSON.parse(fs.readFileSync(stageControlPlanePath, 'utf8'));
   delete stageControlPlane.stages[0].selected_executor.executor_binding_ref;
+  delete stageControlPlane.stages[0].tool_refs;
+  delete stageControlPlane.stages[0].tool_affordance_boundary;
   delete stageControlPlane.stages[0].stage_contract.requires;
   writeJson(stageControlPlanePath, stageControlPlane);
 
@@ -65,4 +72,6 @@ test('agents conformance blocks generated scaffold repos missing stage pack v2 o
     repo.blockers.includes('stage_pack_v2_missing_stage_contract_requires:domain_intake'),
     true,
   );
+  assert.equal(repo.blockers.includes('stage_pack_v2_missing_tool_refs:domain_intake'), true);
+  assert.equal(repo.blockers.includes('stage_pack_v2_missing_tool_affordance_boundary:domain_intake'), true);
 });

@@ -694,12 +694,15 @@ test('standard domain-agent scaffold contract forbids domain-owned generic frame
     'agent/prompts',
     'agent/stages',
     'agent/skills',
+    'agent/tools',
     'agent/knowledge',
     'agent/quality_gates',
   ]);
   assert.deepEqual(scaffold.agent_pack_contract.stage_ref_requirements, [
     'prompt_refs:agent/prompts/*',
     'skills:agent/skills/* or skill_id',
+    'tool_refs:agent/tools/* affordance catalog refs',
+    'tool_affordance_boundary:capability permission credential write side-effect forbidden-authority refs',
     'knowledge_refs:agent/knowledge/*',
     'evaluation:agent/quality_gates/*',
     'selected_executor:codex_cli default binding or explicit non-default executor binding',

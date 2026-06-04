@@ -909,4 +909,40 @@ test('family domain memory contracts freeze locator and writeback receipt author
   const stageDefs = stagePlaneSchema.$defs as Json;
   const stageProps = ((stageDefs.stage as Json).properties as Json);
   assert.deepEqual((stageProps.knowledge_refs as Json).items, { $ref: '#/$defs/surface_ref' });
+  assert.deepEqual((stageProps.tool_refs as Json).items, { $ref: '#/$defs/surface_ref' });
+  assert.equal(
+    (stageProps.tool_affordance_boundary as Json).$ref,
+    '#/$defs/tool_affordance_boundary',
+  );
+  const toolBoundary = stageDefs.tool_affordance_boundary as Json;
+  const toolBoundaryProperties = toolBoundary.properties as Json;
+  assert.equal(
+    (toolBoundaryProperties.catalog_role as Json).const,
+    'available_affordance_catalog_not_workflow_script',
+  );
+  assert.ok((toolBoundary.required as string[]).includes('capability_refs'));
+  assert.ok((toolBoundary.required as string[]).includes('permission_scope_refs'));
+  assert.ok((toolBoundary.required as string[]).includes('credential_boundary_refs'));
+  assert.ok((toolBoundary.required as string[]).includes('write_scope_refs'));
+  assert.ok((toolBoundary.required as string[]).includes('side_effect_risk_refs'));
+  assert.ok((toolBoundary.required as string[]).includes('forbidden_authority_refs'));
+  assert.equal(
+    (toolBoundaryProperties.executor_autonomy as Json).$ref,
+    '#/$defs/tool_executor_autonomy',
+  );
+  const toolExecutorAutonomy = stageDefs.tool_executor_autonomy as Json;
+  assert.deepEqual(toolExecutorAutonomy.required, [
+    'executor_can_choose_tools',
+    'executor_can_skip_tools',
+    'executor_can_substitute_tools_within_boundary',
+    'executor_can_choose_order_and_parallelism',
+    'executor_can_request_missing_context_or_human_gate',
+    'tool_catalog_can_prescribe_tool_sequence',
+    'tool_catalog_can_define_cognitive_strategy',
+    'tool_catalog_can_override_stage_goal',
+    'tool_catalog_can_authorize_forbidden_write',
+  ]);
+  const autonomyProperties = toolExecutorAutonomy.properties as Json;
+  assert.deepEqual((autonomyProperties.executor_can_choose_tools as Json), { const: true });
+  assert.deepEqual((autonomyProperties.tool_catalog_can_prescribe_tool_sequence as Json), { const: false });
 });

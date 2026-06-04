@@ -30,6 +30,8 @@ const STAGE_KERNEL_LAUNCH_BLOCKER_CODES = new Set([
   'missing_authority_boundary_role',
   'invalid_opl_authority_role',
   'forbidden_opl_authority',
+  'missing_tool_affordance_boundary',
+  'invalid_tool_affordance_boundary',
   'effect_boundary_without_event_recording',
   'runtime_guard_without_event_recording',
   'effect_boundary_missing_runtime_event_refs',

@@ -203,7 +203,7 @@ function discoverPackFiles(repoDir: string, packRoot: string) {
   return files.sort();
 }
 
-function validateAgentPackFiles(repoDir: string, packCompilerInput: unknown) {
+function validateAgentPackFiles(repoDir: string, packCompilerInput: unknown, enforceToolAffordanceBoundary: boolean) {
   const canonicalPackRoot = readCanonicalPackRoot(packCompilerInput);
   const packRoot = resolvePackRoot(canonicalPackRoot);
   const listedPaths = listedPackPaths(packCompilerInput);
@@ -220,6 +220,11 @@ function validateAgentPackFiles(repoDir: string, packCompilerInput: unknown) {
       status: semanticFiles.length > 0 ? 'ok' : 'missing_semantic_file',
     };
   });
+  const sectionFindings = sectionStatus
+    .filter((item) => item.status !== 'ok')
+    .map((item) => `missing_agent_pack_section:${item.section}`);
+  const toolSectionFindings = sectionFindings.filter((item) => item === 'missing_agent_pack_section:tools');
+  const nonToolSectionFindings = sectionFindings.filter((item) => item !== 'missing_agent_pack_section:tools');
   return {
     pack_root: packRoot,
     listed_paths: listedPaths,
@@ -237,10 +242,10 @@ function validateAgentPackFiles(repoDir: string, packCompilerInput: unknown) {
       ...packFileStatus
         .filter((item) => item.status !== 'ok')
         .map((item) => `invalid_domain_pack_path:${item.path}:${item.status}`),
-      ...sectionStatus
-        .filter((item) => item.status !== 'ok')
-        .map((item) => `missing_agent_pack_section:${item.section}`),
+      ...nonToolSectionFindings,
+      ...(enforceToolAffordanceBoundary ? toolSectionFindings : []),
     ].filter((entry): entry is string => Boolean(entry)),
+    advisory_findings: enforceToolAffordanceBoundary ? [] : toolSectionFindings,
   };
 }
 
@@ -248,7 +253,7 @@ function refIncludesRepoPack(refs: unknown, prefix: string) {
   return refValues(refs).some((value) => value.startsWith(prefix));
 }
 
-function validateStageRefs(repoDir: string, stageControlPlane: unknown) {
+function validateStageRefs(repoDir: string, stageControlPlane: unknown, enforceToolAffordanceBoundary: boolean) {
   const stages = isPlainRecord(stageControlPlane) ? readRecordArray(stageControlPlane.stages) : [];
   const stageStatuses = stages.map((stage) => {
     const stageId = readOptionalString(stage.stage_id) ?? 'unknown_stage';
@@ -262,6 +267,10 @@ function validateStageRefs(repoDir: string, stageControlPlane: unknown) {
         status: refValues(stage.skills).length > 0 ? 'ok' : 'missing_skill_ref',
       },
       {
+        field: 'tool_refs',
+        status: refIncludesRepoPack(stage.tool_refs, 'agent/tools/') ? 'ok' : 'missing_agent_tool_ref',
+      },
+      {
         field: 'knowledge_refs',
         status: refIncludesRepoPack(stage.knowledge_refs, 'agent/knowledge/') ? 'ok' : 'missing_agent_knowledge_ref',
       },
@@ -273,25 +282,36 @@ function validateStageRefs(repoDir: string, stageControlPlane: unknown) {
     const referencedAgentFiles = [
       ...refValues(stage.prompt_refs),
       ...refValues(stage.skills),
+      ...refValues(stage.tool_refs),
       ...refValues(stage.knowledge_refs),
       ...refValues(stage.evaluation),
       ...refValues(stage.source_refs),
     ].filter((value) => value.startsWith('agent/'));
     const fileStatuses = [...new Set(referencedAgentFiles)]
       .map((item) => readStageAgentRefStatus(repoDir, item));
+    const checkFindings = checks
+      .filter((check) => check.status !== 'ok')
+      .map((check) => `stage_missing_${check.field}:${stageId}:${check.status}`);
+    const toolCheckFindings = checkFindings.filter((item) =>
+      item.startsWith(`stage_missing_tool_refs:${stageId}:`)
+    );
+    const nonToolCheckFindings = checkFindings.filter((item) =>
+      !item.startsWith(`stage_missing_tool_refs:${stageId}:`)
+    );
+    const fileFindings = fileStatuses
+      .filter((item) => item.status !== 'ok')
+      .map((item) => `stage_invalid_agent_ref:${stageId}:${item.path}:${item.status}`);
     return {
       stage_id: stageId,
       checks,
       referenced_agent_files: referencedAgentFiles,
       file_status: fileStatuses,
       blockers: [
-        ...checks
-          .filter((check) => check.status !== 'ok')
-          .map((check) => `stage_missing_${check.field}:${stageId}:${check.status}`),
-        ...fileStatuses
-          .filter((item) => item.status !== 'ok')
-          .map((item) => `stage_invalid_agent_ref:${stageId}:${item.path}:${item.status}`),
+        ...nonToolCheckFindings,
+        ...(enforceToolAffordanceBoundary ? toolCheckFindings : []),
+        ...fileFindings,
       ],
+      advisory_findings: enforceToolAffordanceBoundary ? [] : toolCheckFindings,
     };
   });
   return {
@@ -301,6 +321,7 @@ function validateStageRefs(repoDir: string, stageControlPlane: unknown) {
       stages.length > 0 ? null : 'missing_stage_control_plane_stages',
       ...stageStatuses.flatMap((stage) => stage.blockers),
     ].filter((entry): entry is string => Boolean(entry)),
+    advisory_findings: stageStatuses.flatMap((stage) => stage.advisory_findings),
   };
 }
 
@@ -395,7 +416,7 @@ function validateUserStageLogContracts(stageControlPlane: unknown) {
   };
 }
 
-function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown) {
+function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, enforceToolAffordanceBoundary: boolean) {
   const contract = isPlainRecord(foundryAgentSeries) ? foundryAgentSeries : null;
   const requiredIdentityFields = readStringArray(contract?.required_identity_fields);
   const requiredStagePackets = readStringArray(contract?.required_stage_packets);
@@ -434,6 +455,9 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown) {
   const authorityBoundary = isPlainRecord(contract?.authority_boundary)
     ? contract.authority_boundary
     : null;
+  const toolSectionFinding = stagePackSections.includes('tools')
+    ? null
+    : 'foundry_agent_series_design_profile_missing_tools_section';
   const blockers = [
     contract ? null : 'foundry_agent_series_contract_missing_or_invalid',
     readOptionalString(contract?.surface_kind) === STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT.surface_kind
@@ -519,6 +543,7 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown) {
     stagePackSections.includes('skills')
       ? null
       : 'foundry_agent_series_design_profile_missing_skills_section',
+    enforceToolAffordanceBoundary ? toolSectionFinding : null,
     stagePackSections.includes('knowledge')
       ? null
       : 'foundry_agent_series_design_profile_missing_knowledge_section',
@@ -623,6 +648,7 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown) {
     shared_release_pin_strategy: sharedReleasePinStrategy,
     shared_policy_release: sharedPolicyRelease,
     blockers,
+    advisory_findings: enforceToolAffordanceBoundary || !toolSectionFinding ? [] : [toolSectionFinding],
   };
 }
 
@@ -657,10 +683,10 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
   const foundryAgentSeries = readJsonFile(path.join(repoDir, 'contracts/foundry_agent_series.json'));
   const stageControlPlane = readJsonFile(path.join(repoDir, 'contracts/stage_control_plane.json'));
   const stagePackV2Required = requiresStagePackV2(packCompilerInput, stageControlPlane);
-  const agentPackValidation = validateAgentPackFiles(repoDir, packCompilerInput);
-  const stageRefValidation = validateStageRefs(repoDir, stageControlPlane);
+  const agentPackValidation = validateAgentPackFiles(repoDir, packCompilerInput, stagePackV2Required);
+  const stageRefValidation = validateStageRefs(repoDir, stageControlPlane, stagePackV2Required);
   const userStageLogValidation = validateUserStageLogContracts(stageControlPlane);
-  const foundryAgentSeriesValidation = validateFoundryAgentSeriesContract(foundryAgentSeries);
+  const foundryAgentSeriesValidation = validateFoundryAgentSeriesContract(foundryAgentSeries, stagePackV2Required);
   const stagePackV2Validation = validateStagePackV2(stageControlPlane, packCompilerInput, stagePackV2Required);
   const authorityViolations = [
     authority.opl_can_write_domain_truth === false ? null : 'opl_can_write_domain_truth_must_be_false',
@@ -691,6 +717,12 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     ...foundryAgentSeriesValidation.blockers,
     ...stagePackV2Validation.blockers,
   ];
+  const advisoryFindings = [
+    ...agentPackValidation.advisory_findings,
+    ...stageRefValidation.advisory_findings,
+    ...foundryAgentSeriesValidation.advisory_findings,
+    ...stagePackV2Validation.advisory_findings,
+  ];
   return {
     version: 'g2',
     standard_domain_agent_scaffold_validation: {
@@ -712,6 +744,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
       stage_pack_v2_validation: stagePackV2Validation,
       functional_privatization_audit_required: true,
       blockers,
+      advisory_findings: advisoryFindings,
       authority_boundary: {
         opl_can_write_domain_truth: false,
         opl_can_write_memory_body: false,

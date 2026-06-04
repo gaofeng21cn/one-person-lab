@@ -186,6 +186,7 @@
         "effect_boundary",
         "mode_tags",
         "runtime_event_refs",
+        "tool_affordance_boundary",
         "finding_count",
         "blocker_count",
         "warning_count"
@@ -225,6 +226,9 @@
           },
           "description": "Runtime event declaration refs surfaced for effect-boundary and runtime-guard audit/replay checks; OPL does not emit these events."
         },
+        "tool_affordance_boundary": {
+          "$ref": "#/$defs/tool_affordance_boundary_projection"
+        },
         "finding_count": {
           "type": "integer",
           "minimum": 0
@@ -236,6 +240,145 @@
         "warning_count": {
           "type": "integer",
           "minimum": 0
+        }
+      }
+    },
+    "tool_affordance_boundary_projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "catalog_role",
+        "tool_ref_count",
+        "capability_ref_count",
+        "permission_scope_ref_count",
+        "credential_boundary_ref_count",
+        "write_scope_ref_count",
+        "side_effect_risk_ref_count",
+        "forbidden_authority_ref_count",
+        "missing_boundary_fields",
+        "executor_autonomy"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "declared",
+            "missing",
+            "invalid"
+          ]
+        },
+        "catalog_role": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tool_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "capability_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "permission_scope_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "credential_boundary_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "write_scope_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "side_effect_risk_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "forbidden_authority_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing_boundary_fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "executor_autonomy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "executor_can_choose_tools",
+            "executor_can_skip_tools",
+            "executor_can_substitute_tools_within_boundary",
+            "executor_can_choose_order_and_parallelism",
+            "executor_can_request_missing_context_or_human_gate",
+            "tool_catalog_can_prescribe_tool_sequence",
+            "tool_catalog_can_define_cognitive_strategy",
+            "tool_catalog_can_override_stage_goal",
+            "tool_catalog_can_authorize_forbidden_write"
+          ],
+          "properties": {
+            "executor_can_choose_tools": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "executor_can_skip_tools": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "executor_can_substitute_tools_within_boundary": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "executor_can_choose_order_and_parallelism": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "executor_can_request_missing_context_or_human_gate": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "tool_catalog_can_prescribe_tool_sequence": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "tool_catalog_can_define_cognitive_strategy": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "tool_catalog_can_override_stage_goal": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "tool_catalog_can_authorize_forbidden_write": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          }
         }
       }
     },
@@ -545,6 +688,36 @@
             "runtime_boundary_required": false
           },
           "runtime_event_refs": [],
+          "tool_affordance_boundary": {
+            "status": "missing",
+            "catalog_role": null,
+            "tool_ref_count": 0,
+            "capability_ref_count": 0,
+            "permission_scope_ref_count": 0,
+            "credential_boundary_ref_count": 0,
+            "write_scope_ref_count": 0,
+            "side_effect_risk_ref_count": 0,
+            "forbidden_authority_ref_count": 0,
+            "missing_boundary_fields": [
+              "capability_refs",
+              "permission_scope_refs",
+              "credential_boundary_refs",
+              "write_scope_refs",
+              "side_effect_risk_refs",
+              "forbidden_authority_refs"
+            ],
+            "executor_autonomy": {
+              "executor_can_choose_tools": null,
+              "executor_can_skip_tools": null,
+              "executor_can_substitute_tools_within_boundary": null,
+              "executor_can_choose_order_and_parallelism": null,
+              "executor_can_request_missing_context_or_human_gate": null,
+              "tool_catalog_can_prescribe_tool_sequence": null,
+              "tool_catalog_can_define_cognitive_strategy": null,
+              "tool_catalog_can_override_stage_goal": null,
+              "tool_catalog_can_authorize_forbidden_write": null
+            }
+          },
           "finding_count": 0,
           "blocker_count": 0,
           "warning_count": 0

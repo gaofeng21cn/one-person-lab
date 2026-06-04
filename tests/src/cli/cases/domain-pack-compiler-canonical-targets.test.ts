@@ -106,3 +106,37 @@ test('generated interfaces and default callers accept domain action adapter expo
     true,
   );
 });
+
+test('generated interfaces project stage pack v2 tool affordance boundaries into all stage routes', () => {
+  const repoDir = buildReadyAgentRepo();
+  const bundle = runCli(['agents', 'interfaces', '--repo-dir', repoDir]).generated_agent_interfaces;
+  const stageRoute = bundle.stage_routes[0];
+
+  assert.equal(stageRoute.tool_refs[0].ref, 'agent/tools/domain_affordances.md');
+  assert.equal(stageRoute.tool_refs[0].role, 'tool_affordance_catalog');
+  assert.equal(
+    stageRoute.tool_affordance_boundary.catalog_role,
+    'available_affordance_catalog_not_workflow_script',
+  );
+  assert.equal(stageRoute.tool_affordance_boundary.tool_ref_count, 1);
+  assert.equal(stageRoute.tool_affordance_boundary.capability_refs[0].ref, 'agent/tools/domain_affordances.md');
+  assert.equal(stageRoute.tool_affordance_boundary.executor_autonomy.executor_can_choose_tools, true);
+  assert.equal(stageRoute.tool_affordance_boundary.executor_autonomy.executor_can_skip_tools, true);
+  assert.equal(
+    stageRoute.tool_affordance_boundary.executor_autonomy.executor_can_choose_order_and_parallelism,
+    true,
+  );
+  assert.equal(
+    stageRoute.tool_affordance_boundary.executor_autonomy.tool_catalog_can_prescribe_tool_sequence,
+    false,
+  );
+  assert.equal(
+    stageRoute.tool_affordance_boundary.executor_autonomy.tool_catalog_can_define_cognitive_strategy,
+    false,
+  );
+  assert.deepEqual(
+    bundle.product_session.session_routes[0].tool_affordance_boundary,
+    stageRoute.tool_affordance_boundary,
+  );
+  assert.deepEqual(bundle.workbench.stage_routes[0].tool_refs, stageRoute.tool_refs);
+});
