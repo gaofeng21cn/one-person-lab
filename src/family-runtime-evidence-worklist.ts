@@ -57,6 +57,28 @@ const OPEN_WORKLIST_STATUS = 'open_safe_action_request_route_available';
 const DIAGNOSTIC_ONLY_STATUS = 'diagnostic_only';
 const DIAGNOSTIC_ONLY_ROUTE_SEMANTICS =
   'read_only_operator_diagnostic_not_safe_action_or_closeable_workorder';
+
+function worklistOwnerId(value: string | null) {
+  return value && canonicalOwnerId(value) === 'one-person-lab' ? 'opl' : value;
+}
+
+function normalizeWorklistOwnerFields(item: JsonRecord) {
+  const owner = worklistOwnerId(stringValue(item.owner));
+  const routeOwner = worklistOwnerId(stringValue(item.route_owner));
+  const safeActionOwner = worklistOwnerId(stringValue(item.safe_action_owner));
+  const evidenceRequirement = record(item.evidence_requirement);
+  return {
+    ...item,
+    ...(owner ? { owner } : {}),
+    ...(routeOwner ? { route_owner: routeOwner } : {}),
+    ...(safeActionOwner ? { safe_action_owner: safeActionOwner } : {}),
+    evidence_requirement: {
+      ...evidenceRequirement,
+      ...(owner ? { owner } : {}),
+    },
+  };
+}
+
 function freshnessRef(route: JsonRecord) {
   return stringValue(route.evidence_source_ref)
     ?? stringValue(route.source_ref)
@@ -263,7 +285,9 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
   const actionId = stringValue(route.action_id) ?? `route:${index + 1}`;
   const actionKind = stringValue(route.action_kind) ?? 'operator_action';
   const claimScope = readOnlyClaimScope(route);
-  const routeOwner = stringValue(route.owner) ?? stringValue(route.action_owner) ?? 'opl';
+  const routeOwner = worklistOwnerId(
+    stringValue(route.owner) ?? stringValue(route.action_owner),
+  ) ?? 'opl';
   const routeDomainId = stringValue(route.domain_id) ?? stringValue(route.target_domain_id);
   const evidenceOwner = claimScope === 'domain_dispatch_evidence_receipt' && routeDomainId
     ? canonicalOwnerId(routeDomainId)
@@ -781,7 +805,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
       .map((route, index) =>
         readOnlyWorklistItem(route, routes.length + diagnosticRoutes.length + index, drilldown)
       ),
-  ];
+  ].map(normalizeWorklistOwnerFields);
   const openItems = worklistItems.filter((item) =>
     item.status === OPEN_WORKLIST_STATUS
   );

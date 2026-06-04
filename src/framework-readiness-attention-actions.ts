@@ -33,6 +33,10 @@ function stringList(value: unknown) {
     : [];
 }
 
+function hasWarning(input: { warnings: JsonRecord[] }, warningId: string) {
+  return input.warnings.some((warning) => stringValue(warning.warning_id) === warningId);
+}
+
 function ownerPayloadEvidenceClosureGate(payloadKind: string | null) {
   if (payloadKind === 'domain_owner_receipt_or_typed_blocker_refs') {
     return 'domain_owner_chain_receipt_or_typed_blocker_gate';
@@ -404,6 +408,11 @@ export function frameworkAttentionNextSafeActions(input: {
   ) {
     return [blockedRefsOnlyAttentionReviewAction(input)];
   }
+  const shouldExposeStageReplayMissingReceiptGuidance =
+    hasWarning(input, 'stage_replay_missing_receipt_attention');
+  const hasHigherPriorityOwnerAttention = input.ownerPayloadGroups.length > 0
+    || recordList(input.ownerHandoffPacket.owners).length > 0
+    || input.domainDispatchEvidenceWorkorderGroupAttentionItems.length > 0;
   return [
     {
       action_id: 'review_framework_attention_items',
@@ -417,6 +426,11 @@ export function frameworkAttentionNextSafeActions(input: {
       recordList(input.ownerHandoffPacket.owners).length > 0
         ? [frameworkOwnerHandoffNextSafeAction(input.ownerHandoffPacket)]
         : []
+    ),
+    ...(!shouldExposeStageReplayMissingReceiptGuidance || hasHigherPriorityOwnerAttention
+      ? []
+      : (input.stageReplayMissingReceiptWorkorderAttentionItems ?? [])
+        .map(frameworkStageReplayMissingReceiptNextSafeAction)
     ),
     ...(
       numberValue(input.appReleaseUserPathEvidence.open_gate_count) > 0

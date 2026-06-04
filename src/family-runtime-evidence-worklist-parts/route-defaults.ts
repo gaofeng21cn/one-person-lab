@@ -1,4 +1,5 @@
 import type { FamilyRuntimeProviderKind } from '../family-runtime-types.ts';
+import { canonicalOwnerId } from '../evidence-envelope.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -29,7 +30,8 @@ export function readOnlyRouteMatchesDefaults(
     || actionKind.startsWith('external_evidence_')
     || actionKind.startsWith('evidence_gate_')
     || actionKind.startsWith('legacy_cleanup_');
-  if (!worklistKind || stringValue(route.owner) !== 'opl') {
+  const owner = stringValue(route.owner);
+  if (!worklistKind || (owner !== 'opl' && (!owner || canonicalOwnerId(owner) !== 'one-person-lab'))) {
     return false;
   }
   if (actionKind.startsWith('provider_scheduler_')) {

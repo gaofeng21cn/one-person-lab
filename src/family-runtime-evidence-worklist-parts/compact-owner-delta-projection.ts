@@ -2,7 +2,20 @@ import {
   buildCompactOwnerDeltaProjection,
   buildDefaultNextActionFromCurrentOwnerDelta,
 } from '../owner-delta-compact-projection.ts';
+import { canonicalOwnerId } from '../evidence-envelope.ts';
 import { countValue, record, type JsonRecord } from './json-utils.ts';
+
+function worklistOwnerId(value: unknown) {
+  return typeof value === 'string' && canonicalOwnerId(value) === 'one-person-lab' ? 'opl' : value;
+}
+
+function normalizeWorklistDefaultNextActionOwner(action: JsonRecord) {
+  return {
+    ...action,
+    owner: worklistOwnerId(action.owner),
+    current_owner: worklistOwnerId(action.current_owner),
+  };
+}
 
 export function buildWorklistCompactOwnerDeltaProjection(input: {
   drilldown: JsonRecord;
@@ -49,7 +62,9 @@ export function buildWorklistOwnerDeltaActionProjection(input: Parameters<typeof
   );
   return {
     compactOwnerDeltaProjection,
-    defaultNextSafeActions: ownerDeltaDefaultNextAction ? [ownerDeltaDefaultNextAction] : [],
+    defaultNextSafeActions: ownerDeltaDefaultNextAction
+      ? [normalizeWorklistDefaultNextActionOwner(ownerDeltaDefaultNextAction)]
+      : [],
     auditWorklistNextSafeActions: input.nextSafeActions,
   };
 }
