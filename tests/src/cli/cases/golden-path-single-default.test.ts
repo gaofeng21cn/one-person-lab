@@ -69,3 +69,111 @@ test('agents conformance reports the single ordinary route budget for ready Foun
     false,
   );
 });
+
+test('agents conformance requires proof diagnostic cleanup and long-soak route variants to be explicit', () => {
+  const repoDir = buildReadyAgentRepo();
+  const stageControlPlanePath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
+  const stageControlPlane = JSON.parse(fs.readFileSync(stageControlPlanePath, 'utf8'));
+  stageControlPlane.stages.push(
+    {
+      ...stageControlPlane.stages[0],
+      stage_id: 'provider_proof_observation',
+      title: 'Provider proof observation',
+      selected_executor: {
+        ...stageControlPlane.stages[0].selected_executor,
+        default_executor: false,
+      },
+    },
+    {
+      ...stageControlPlane.stages[0],
+      stage_id: 'legacy_cleanup_sweep',
+      title: 'Legacy cleanup sweep',
+      selected_executor: {
+        ...stageControlPlane.stages[0].selected_executor,
+        default_executor: false,
+      },
+    },
+    {
+      ...stageControlPlane.stages[0],
+      stage_id: 'runtime_long_soak_window',
+      title: 'Runtime long soak window',
+      selected_executor: {
+        ...stageControlPlane.stages[0].selected_executor,
+        default_executor: false,
+      },
+    },
+  );
+  writeJson(stageControlPlanePath, stageControlPlane);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+  const repo = report.reports[0];
+  const checks = repo.golden_path_default_surface_budget_checks;
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(checks.status, 'blocked');
+  assert.deepEqual(checks.default_route_stage_ids, ['domain_intake']);
+  assert.equal(
+    checks.blockers.includes('golden_path_variant_lane_not_explicit:provider_proof_observation:proof'),
+    true,
+  );
+  assert.equal(
+    checks.blockers.includes('golden_path_variant_lane_not_explicit:legacy_cleanup_sweep:cleanup'),
+    true,
+  );
+  assert.equal(
+    checks.blockers.includes('golden_path_variant_lane_not_explicit:runtime_long_soak_window:long_soak'),
+    true,
+  );
+});
+
+test('agents conformance consumes golden path profile as the ordinary default route contract', () => {
+  const repoDir = buildReadyAgentRepo();
+  writeJson(path.join(repoDir, 'contracts', 'golden_path_profile.json'), {
+    surface_kind: 'opl_golden_path_profile',
+    schema_version: 'golden-path-profile.v1',
+    profile_id: 'sample-brief-agent.golden-path',
+    domain: 'sample-brief-agent',
+    ordinary_path: {
+      path_id: 'sample_secondary_default',
+      path_role: 'ordinary_default',
+      stage_refs: ['secondary_default_stage'],
+    },
+    explicit_variants: [],
+    default_surface_policy: {
+      ordinary_route_count: 1,
+      variants_hidden_by_default: true,
+      raw_evidence_hidden_by_default: true,
+    },
+    authority_boundary: {
+      ordinary_path_count_must_be_one: true,
+      variant_can_be_default_without_explicit_selection: false,
+      opl_can_write_domain_truth: false,
+      opl_can_authorize_domain_ready: false,
+      opl_can_authorize_quality_verdict: false,
+      opl_can_mutate_artifact_body: false,
+    },
+  });
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+  const checks = report.reports[0].golden_path_default_surface_budget_checks;
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(checks.golden_path_profile.status, 'blocked');
+  assert.deepEqual(checks.golden_path_profile.ordinary_stage_refs, ['secondary_default_stage']);
+  assert.equal(
+    checks.blockers.includes(
+      'golden_path_profile_ordinary_path_mismatch:profile=secondary_default_stage:stage_control_plane=domain_intake',
+    ),
+    true,
+  );
+});

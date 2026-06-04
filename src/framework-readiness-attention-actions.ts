@@ -412,12 +412,6 @@ export function frameworkAttentionNextSafeActions(input: {
       command: 'opl framework readiness --family-defaults --json',
       authority: 'operator_attention_only',
     },
-    ...input.domainDispatchEvidenceWorkorderGroupAttentionItems
-      .slice(0, 1)
-      .map(frameworkDomainDispatchGroupNextSafeAction),
-    ...recordList(input.stageReplayMissingReceiptWorkorderAttentionItems)
-      .slice(0, 1)
-      .map(frameworkStageReplayMissingReceiptNextSafeAction),
     ...input.ownerPayloadGroups.slice(0, 1).map(frameworkOwnerPayloadGroupNextSafeAction),
     ...(
       recordList(input.ownerHandoffPacket.owners).length > 0

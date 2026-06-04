@@ -14,6 +14,19 @@ type OplAppOperatorViewModelInput = {
   compactOwnerDeltaProjection?: JsonRecord;
 };
 
+const FORBIDDEN_FAST_PROFILE_FIELDS = [
+  'runtime_tray_snapshot',
+  'raw_evidence_envelope',
+  'raw_evidence_browser',
+  'raw_ledger_browser',
+  'ledger_browser',
+  'stage_replay_packet_body',
+  'private_residue_inventory_body',
+  'provider_internal_ledger_body',
+  'provider_internal_trace',
+  'route_variant_menu',
+] as const;
+
 function asRecord(value: unknown): JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value) ? value as JsonRecord : {};
 }
@@ -437,12 +450,9 @@ function buildDefaultReadSurfacePolicy(input: OplAppOperatorViewModelInput) {
       'count_summary',
     ],
     fast_profile_excludes: [
-      'runtime_tray_snapshot',
-      'raw_evidence_envelope',
-      'stage_replay_packet_body',
-      'private_residue_inventory_body',
-      'provider_internal_ledger_body',
+      ...FORBIDDEN_FAST_PROFILE_FIELDS,
     ],
+    forbidden_fast_profile_fields: [...FORBIDDEN_FAST_PROFILE_FIELDS],
     shell_contract: {
       shell_must_not_use_full_drilldown_as_normal_state: true,
       shell_must_not_derive_layout_from_raw_runtime_projection: true,

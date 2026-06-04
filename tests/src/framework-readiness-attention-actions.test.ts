@@ -16,7 +16,7 @@ function record(value: unknown): JsonRecord {
   return value as JsonRecord;
 }
 
-test('framework readiness prioritizes concrete domain dispatch workorders before broad owner reviews', () => {
+test('framework readiness keeps raw domain dispatch workorders out of default next actions', () => {
   const actions = frameworkAttentionNextSafeActions({
     blockers: [],
     warnings: [{ warning_id: 'domain_dispatch_attention' }],
@@ -67,19 +67,67 @@ test('framework readiness prioritizes concrete domain dispatch workorders before
     actions.map(actionKind),
     [
       'framework_attention_review',
-      'domain_dispatch_evidence_group_workorder',
       'owner_payload_group_scaleout',
       'owner_handoff_packet_review',
     ],
   );
 
-  const dispatchAction = actions[1];
-  assert.equal(dispatchAction.authority, 'operator_attention_only');
-  assert.equal(dispatchAction.can_execute_domain_action, false);
-  assert.equal(dispatchAction.can_write_domain_truth, false);
-  assert.equal(dispatchAction.can_create_owner_receipt, false);
-  assert.equal(dispatchAction.can_close_domain_ready, false);
-  assert.equal(dispatchAction.can_claim_production_ready, false);
+  assert.equal(
+    actions.some((action) => actionKind(action) === 'domain_dispatch_evidence_group_workorder'),
+    false,
+  );
+  const ownerAction = actions.find((action) => actionKind(action) === 'owner_payload_group_scaleout');
+  assert.ok(ownerAction);
+  assert.equal(ownerAction.authority, 'operator_attention_only');
+  assert.equal(ownerAction.can_execute_domain_action, false);
+  assert.equal(ownerAction.can_write_domain_truth, false);
+  assert.equal(ownerAction.can_create_owner_receipt, false);
+  assert.equal(ownerAction.can_close_domain_ready, false);
+  assert.equal(ownerAction.can_claim_production_ready, false);
+});
+
+test('framework readiness keeps raw stage replay receipt workorders out of default next actions', () => {
+  const actions = frameworkAttentionNextSafeActions({
+    blockers: [],
+    warnings: [{ warning_id: 'stage_replay_missing_receipts_are_audit_tail' }],
+    operatorActionableAttentionCount: 1,
+    domainBlockedAttentionCount: 0,
+    ownerPayloadGroups: [],
+    ownerHandoffPacket: {
+      owner_count: 0,
+      owners: [],
+    },
+    appReleaseUserPathEvidence: {
+      open_gate_count: 0,
+      pending_verify_receipt_ref_count: 0,
+    },
+    omaProductionConsumptionFollowthrough: {
+      open_gate_count: 0,
+      pending_verify_long_soak_receipt_ref_count: 0,
+    },
+    domainDispatchEvidenceWorkorderGroupAttentionItems: [],
+    stageReplayMissingReceiptWorkorderAttentionItems: [{
+      item_id: 'stage-replay:missing-receipt',
+      domain_id: 'med-autoscience',
+      stage_id: 'review_and_quality_gate',
+      missing_ref: 'receipt://missing',
+      default_next_action_guidance: {
+        action_kind: 'record_payload',
+        step_kind: 'record_stage_replay_missing_receipt_payload',
+      },
+    }],
+    itemLimit: 5,
+  }) as JsonRecord[];
+
+  assert.deepEqual(
+    actions.map(actionKind),
+    ['framework_attention_review'],
+  );
+  assert.equal(
+    actions.some((action) => actionKind(action) === 'stage_replay_missing_receipt_guidance'),
+    false,
+  );
+  assert.equal(actions[0].authority, 'operator_attention_only');
 });
 
 test('framework readiness keeps blocked refs-only attention out of executable next actions', () => {

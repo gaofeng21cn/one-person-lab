@@ -100,6 +100,18 @@ test('family-runtime evidence-worklist keeps raw worklist roots out of compact o
     'domain_deliverable_delta_or_domain_owned_typed_blocker_required',
   );
   assert.equal(
+    projection.current_owner_delta.default_planning_root,
+    'current_owner_delta_or_provider_human_hard_gate',
+  );
+  assert.equal(
+    projection.current_owner_delta.audit_tail_policy,
+    'raw_worklist_raw_evidence_replay_typed_blocker_group_private_residue_are_passive_until_folded',
+  );
+  assert.equal(
+    projection.current_owner_delta.evidence_vault_policy,
+    'record_everything_plan_from_nothing',
+  );
+  assert.equal(
     projection.current_owner_delta.authority_boundary.audit_tail_can_drive_default_planning,
     false,
   );
@@ -128,11 +140,19 @@ test('family-runtime evidence-worklist keeps raw worklist roots out of compact o
     false,
   );
   assert.equal(
+    projection.current_owner_delta.authority_boundary.raw_worklist_can_drive_default_planning,
+    false,
+  );
+  assert.equal(
     projection.current_owner_delta.authority_boundary.replay_packet_can_drive_default_planning,
     false,
   );
   assert.equal(
     projection.current_owner_delta.authority_boundary.typed_blocker_group_can_drive_default_planning,
+    false,
+  );
+  assert.equal(
+    projection.current_owner_delta.authority_boundary.private_residue_inventory_can_drive_default_planning,
     false,
   );
   assert.equal(projection.current_owner_delta.stop_loss_state.status, 'frozen');
@@ -143,9 +163,30 @@ test('family-runtime evidence-worklist keeps raw worklist roots out of compact o
   );
   const stopLossState = projection.current_owner_delta.stop_loss_state as Record<string, unknown>;
   assert.deepEqual(stopLossState.release_conditions, ['fresh_owner_delta', 'stable_typed_blocker']);
-  assert.equal(projection.next_safe_action_or_none?.owner, 'redcube-ai');
+  assert.equal(
+    projection.next_safe_action_or_none?.derivation_source,
+    'current_owner_delta',
+  );
+  assert.equal(projection.next_safe_action_or_none?.owner, 'med-autoscience');
+  assert.equal(
+    projection.next_safe_action_or_none?.default_planning_root,
+    'current_owner_delta_or_provider_human_hard_gate',
+  );
   assert.equal(
     projection.next_safe_action_or_none?.payload_requirement,
+    'domain_deliverable_delta_or_domain_owned_typed_blocker_required',
+  );
+  assert.equal(
+    projection.next_safe_action_or_none?.raw_worklist_can_drive_default_planning,
+    false,
+  );
+  assert.equal(
+    projection.next_safe_action_or_none?.private_residue_inventory_can_drive_default_planning,
+    false,
+  );
+  assert.equal(projection.audit_next_safe_action_or_none?.owner, 'redcube-ai');
+  assert.equal(
+    projection.audit_next_safe_action_or_none?.payload_requirement,
     'domain_app_or_live_refs_payload_required_to_record_domain_dispatch_owner_receipt_or_typed_blocker',
   );
   assert.equal(

@@ -59,6 +59,7 @@ type PayloadHandoffWorklist = {
   };
   compact_owner_delta_projection?: JsonRecord;
   next_safe_actions?: PayloadHandoffAction[];
+  audit_worklist_next_safe_actions?: PayloadHandoffAction[];
   worklist_items: Array<{
     action_id: string;
     status: string;
@@ -96,6 +97,7 @@ type PayloadHandoffWorklist = {
 
 type PayloadHandoffAction = {
   action_id: string;
+  action_kind: string;
   payload_workorder: {
     surface_kind: string;
     authority_boundary: Record<string, boolean>;
@@ -246,6 +248,30 @@ test('family-runtime evidence-worklist joins domain-dispatch payload handoff fro
           provider_kind: 'temporal',
         },
         app_operator_drilldown: {
+          attention_first_payload: {
+            owner_delta_first: {
+              surface_kind: 'opl_owner_delta_first_projection',
+              status: 'owner_delta_required',
+              domain_id: 'medautoscience',
+              next_owner: 'med-autoscience',
+              next_required_delta:
+                'domain_app_or_live_refs_payload_required_to_record_domain_dispatch_owner_receipt_or_typed_blocker',
+              required_return_shapes: [
+                'domain_owner_receipt_ref',
+                'typed_blocker_ref',
+                'domain_typed_blocker_ref',
+                'owner_chain_ref',
+                'no_regression_ref',
+              ],
+              primary_item: {
+                stage_id: 'domain_owner/default-executor-dispatch',
+                stage_attempt_id: 'sat_payload_handoff',
+                owner: 'med-autoscience',
+                status:
+                  'domain_app_or_live_refs_payload_required_to_record_domain_dispatch_owner_receipt_or_typed_blocker',
+              },
+            },
+          },
           app_execution_bridge: {
             safe_action_routes: [domainDispatchBridgeRoute(actionId)],
           },
@@ -445,6 +471,30 @@ test('family-runtime evidence-worklist summary next actions carry domain-dispatc
           provider_kind: 'temporal',
         },
         app_operator_drilldown: {
+          attention_first_payload: {
+            owner_delta_first: {
+              surface_kind: 'opl_owner_delta_first_projection',
+              status: 'owner_delta_required',
+              domain_id: 'medautoscience',
+              next_owner: 'med-autoscience',
+              next_required_delta:
+                'domain_app_or_live_refs_payload_required_to_record_domain_dispatch_owner_receipt_or_typed_blocker',
+              required_return_shapes: [
+                'domain_owner_receipt_ref',
+                'typed_blocker_ref',
+                'domain_typed_blocker_ref',
+                'owner_chain_ref',
+                'no_regression_ref',
+              ],
+              primary_item: {
+                stage_id: 'domain_owner/default-executor-dispatch',
+                stage_attempt_id: 'sat_payload_handoff',
+                owner: 'med-autoscience',
+                status:
+                  'domain_app_or_live_refs_payload_required_to_record_domain_dispatch_owner_receipt_or_typed_blocker',
+              },
+            },
+          },
           app_execution_bridge: {
             safe_action_routes: [domainDispatchBridgeRoute(actionId)],
           },
@@ -487,9 +537,15 @@ test('family-runtime evidence-worklist summary next actions carry domain-dispatc
   });
 
   const worklist = output.family_runtime_evidence_worklist as unknown as PayloadHandoffWorklist;
-  const action = worklist.next_safe_actions?.find((entry) => entry.action_id === actionId);
+  const action = worklist.audit_worklist_next_safe_actions?.find((entry) =>
+    entry.action_id === actionId
+  );
 
   assert.equal(worklist.summary.open_worklist_item_count, 1);
+  assert.equal(
+    worklist.next_safe_actions?.[0]?.action_kind,
+    'current_owner_delta_owner_answer_or_typed_blocker_required',
+  );
   assertCompactOwnerDeltaProjection(worklist.compact_owner_delta_projection as JsonRecord, {
     currentOwner: 'med-autoscience',
     openSafeActionCount: 1,

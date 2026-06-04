@@ -79,6 +79,57 @@ function stageText(stage: JsonRecord) {
   return textFrom(stage).toLowerCase();
 }
 
+function normalizeLaneKind(value: string | null) {
+  if (!value) {
+    return null;
+  }
+  const normalized = value.toLowerCase().replace(/-/g, '_');
+  if (normalized === 'long_soak') {
+    return 'long_soak';
+  }
+  if (
+    normalized === 'proof'
+    || normalized === 'diagnostic'
+    || normalized === 'cleanup'
+    || normalized === 'variant'
+    || normalized === 'variants'
+  ) {
+    return normalized === 'variants' ? 'variant' : normalized;
+  }
+  return null;
+}
+
+function inferredVariantLaneKind(stage: JsonRecord) {
+  const selectedExecutor = isRecord(stage.selected_executor) ? stage.selected_executor : {};
+  const explicitFields = [
+    optionalString(stage.stage_kind),
+    optionalString(stage.lane_kind),
+    optionalString(selectedExecutor.lane_kind),
+    optionalString(stage.route_classification),
+  ];
+  const explicitKind = explicitFields
+    .map(normalizeLaneKind)
+    .find((kind) => kind);
+  if (explicitKind) {
+    return explicitKind;
+  }
+  const searchable = [
+    optionalString(stage.stage_id),
+    optionalString(stage.title),
+    optionalString(stage.summary),
+  ].filter((entry): entry is string => Boolean(entry)).join(' ').toLowerCase();
+  const tokenized = searchable.replace(/-/g, '_');
+  if (/(^|[^a-z0-9])long_soak([^a-z0-9]|$)/.test(tokenized)) {
+    return 'long_soak';
+  }
+  for (const kind of ['proof', 'diagnostic', 'cleanup', 'variant'] as const) {
+    if (new RegExp(`(^|[^a-z0-9])${kind}([^a-z0-9]|$)`).test(tokenized)) {
+      return kind;
+    }
+  }
+  return null;
+}
+
 function rcaAlignment(routeStages: Array<{
   stage_id: string;
   stage_kind: string | null;
@@ -183,6 +234,100 @@ function buildMvpCognitiveKernelAlignment(domainId: string | null, routeStages: 
   };
 }
 
+function buildGoldenPathProfileChecks(repoDir: string, defaultRouteStageIds: string[]) {
+  const profileFile = readJsonFile(repoDir, 'contracts/golden_path_profile.json');
+  if (profileFile.status === 'missing') {
+    return {
+      status: 'not_declared',
+      profile_source: 'contracts/golden_path_profile.json',
+      ordinary_stage_refs: [],
+      explicit_variant_count: 0,
+      blockers: [],
+    };
+  }
+  const profile = isRecord(profileFile.payload) ? profileFile.payload : null;
+  const ordinaryPath = isRecord(profile?.ordinary_path) ? profile.ordinary_path : {};
+  const defaultSurfacePolicy = isRecord(profile?.default_surface_policy)
+    ? profile.default_surface_policy
+    : {};
+  const authority = isRecord(profile?.authority_boundary) ? profile.authority_boundary : {};
+  const ordinaryStageRefs = Array.isArray(ordinaryPath.stage_refs)
+    ? ordinaryPath.stage_refs.filter((entry): entry is string => typeof entry === 'string')
+    : [];
+  const explicitVariants = Array.isArray(profile?.explicit_variants)
+    ? profile.explicit_variants.filter(isRecord)
+    : [];
+  const variantDefaultBlockers = explicitVariants.flatMap((variant, index) => {
+    const variantId = optionalString(variant.variant_id) ?? optionalString(variant.path_id) ?? `variant_${index}`;
+    return variant.default === true || variant.default_route === true || variant.path_role === 'ordinary_default'
+      ? [`golden_path_profile_variant_declares_default:${variantId}`]
+      : [];
+  });
+  const blockers = [
+    profileFile.status === 'resolved' ? null : `golden_path_profile_${profileFile.status}`,
+    profile ? null : 'golden_path_profile_not_declared',
+    optionalString(profile?.surface_kind) === 'opl_golden_path_profile'
+      ? null
+      : 'golden_path_profile_surface_kind_invalid',
+    optionalString(profile?.schema_version) === 'golden-path-profile.v1'
+      ? null
+      : 'golden_path_profile_schema_version_invalid',
+    optionalString(ordinaryPath.path_role) === 'ordinary_default'
+      ? null
+      : 'golden_path_profile_ordinary_path_role_invalid',
+    ordinaryStageRefs.length > 0 ? null : 'golden_path_profile_ordinary_path_stage_refs_missing',
+    ordinaryStageRefs.join(',') === defaultRouteStageIds.join(',')
+      ? null
+      : `golden_path_profile_ordinary_path_mismatch:profile=${ordinaryStageRefs.join(',') || 'none'}:stage_control_plane=${defaultRouteStageIds.join(',') || 'none'}`,
+    defaultSurfacePolicy.ordinary_route_count === 1
+      ? null
+      : 'golden_path_profile_ordinary_route_count_must_be_one',
+    defaultSurfacePolicy.variants_hidden_by_default === true
+      ? null
+      : 'golden_path_profile_variants_hidden_by_default_missing',
+    defaultSurfacePolicy.raw_evidence_hidden_by_default === true
+      ? null
+      : 'golden_path_profile_raw_evidence_hidden_by_default_missing',
+    authority.ordinary_path_count_must_be_one === true
+      ? null
+      : 'golden_path_profile_single_default_authority_missing',
+    authority.variant_can_be_default_without_explicit_selection === false
+      ? null
+      : 'golden_path_profile_variant_default_authority_must_be_false',
+    authority.opl_can_write_domain_truth === false
+      ? null
+      : 'golden_path_profile_opl_can_write_domain_truth_must_be_false',
+    authority.opl_can_authorize_domain_ready === false
+      ? null
+      : 'golden_path_profile_opl_can_authorize_domain_ready_must_be_false',
+    authority.opl_can_authorize_quality_verdict === false
+      ? null
+      : 'golden_path_profile_opl_can_authorize_quality_verdict_must_be_false',
+    authority.opl_can_mutate_artifact_body === false
+      ? null
+      : 'golden_path_profile_opl_can_mutate_artifact_body_must_be_false',
+    ...variantDefaultBlockers,
+  ].filter((entry): entry is string => Boolean(entry));
+  return {
+    status: blockers.length === 0 ? 'passed' : 'blocked',
+    profile_source: 'contracts/golden_path_profile.json',
+    profile_id: optionalString(profile?.profile_id),
+    ordinary_path_id: optionalString(ordinaryPath.path_id),
+    ordinary_stage_refs: ordinaryStageRefs,
+    explicit_variant_count: explicitVariants.length,
+    blockers,
+    authority_boundary: {
+      ordinary_path_count_must_be_one: authority.ordinary_path_count_must_be_one ?? null,
+      variant_can_be_default_without_explicit_selection:
+        authority.variant_can_be_default_without_explicit_selection ?? null,
+      opl_can_write_domain_truth: authority.opl_can_write_domain_truth ?? null,
+      opl_can_authorize_domain_ready: authority.opl_can_authorize_domain_ready ?? null,
+      opl_can_authorize_quality_verdict: authority.opl_can_authorize_quality_verdict ?? null,
+      opl_can_mutate_artifact_body: authority.opl_can_mutate_artifact_body ?? null,
+    },
+  };
+}
+
 export function buildGoldenPathDefaultSurfaceBudgetChecks(repoDir: string) {
   const stageControlPlaneFile = readJsonFile(
     repoDir,
@@ -196,6 +341,7 @@ export function buildGoldenPathDefaultSurfaceBudgetChecks(repoDir: string) {
     const selectedExecutor = isRecord(stage.selected_executor) ? stage.selected_executor : {};
     const stageId = optionalString(stage.stage_id) ?? `stage_${index}`;
     const explicitLaneKind = explicitLaneKindForStage(stage);
+    const inferredLaneKind = inferredVariantLaneKind(stage);
     return {
       stage_id: stageId,
       stage_kind: optionalString(stage.stage_kind),
@@ -203,6 +349,7 @@ export function buildGoldenPathDefaultSurfaceBudgetChecks(repoDir: string) {
       executor_binding_ref: optionalString(selectedExecutor.executor_binding_ref),
       default_route: selectedExecutor.default_executor === true,
       explicit_lane_kind: explicitLaneKind,
+      inferred_variant_lane_kind: inferredLaneKind,
       route_classification: explicitLaneKind ? 'explicit_non_default_lane' : 'ordinary_candidate',
       raw_stage: stage,
     };
@@ -218,6 +365,11 @@ export function buildGoldenPathDefaultSurfaceBudgetChecks(repoDir: string) {
     .map((stage) =>
       `golden_path_explicit_lane_declares_default:${stage.stage_id}:${stage.explicit_lane_kind}`
     );
+  const implicitVariantLaneBlockers = routeStages
+    .filter((stage) => stage.inferred_variant_lane_kind && !stage.explicit_lane_kind)
+    .map((stage) =>
+      `golden_path_variant_lane_not_explicit:${stage.stage_id}:${stage.inferred_variant_lane_kind}`
+    );
   const blockers = [
     stageControlPlaneFile.status === 'resolved'
       ? null
@@ -227,12 +379,15 @@ export function buildGoldenPathDefaultSurfaceBudgetChecks(repoDir: string) {
       ? null
       : `golden_path_single_default_violation:default_route_count=${defaultRouteStageIds.length}`,
     ...explicitDefaultLaneBlockers,
+    ...implicitVariantLaneBlockers,
   ].filter((entry): entry is string => Boolean(entry));
   const domainId = optionalString(stageControlPlane?.target_domain_id);
   const mvpCognitiveKernelAlignment = buildMvpCognitiveKernelAlignment(domainId, routeStages);
+  const goldenPathProfile = buildGoldenPathProfileChecks(repoDir, defaultRouteStageIds);
   const allBlockers = [
     ...blockers,
     ...mvpCognitiveKernelAlignment.blockers,
+    ...goldenPathProfile.blockers,
   ];
 
   return {
@@ -245,6 +400,7 @@ export function buildGoldenPathDefaultSurfaceBudgetChecks(repoDir: string) {
     default_route_stage_ids: defaultRouteStageIds,
     explicit_non_default_lane_stage_ids: explicitNonDefaultLaneStageIds,
     route_stages: routeStages.map(({ raw_stage, ...stage }) => stage),
+    golden_path_profile: goldenPathProfile,
     mvp_cognitive_kernel_alignment: mvpCognitiveKernelAlignment,
     blockers: allBlockers,
     authority_boundary: STANDARD_FOUNDRY_AGENT_GOLDEN_PATH_POLICY.authority_boundary,

@@ -13,6 +13,9 @@
     "surface_kind",
     "schema_version",
     "projection_policy",
+    "default_planning_root",
+    "audit_tail_policy",
+    "evidence_vault_policy",
     "delta_id",
     "domain",
     "desired_delta_kind",
@@ -34,6 +37,15 @@
     },
     "projection_policy": {
       "const": "default_owner_delta_root_audit_tail_passive"
+    },
+    "default_planning_root": {
+      "const": "current_owner_delta_or_provider_human_hard_gate"
+    },
+    "audit_tail_policy": {
+      "const": "raw_worklist_raw_evidence_replay_typed_blocker_group_private_residue_are_passive_until_folded"
+    },
+    "evidence_vault_policy": {
+      "const": "record_everything_plan_from_nothing"
     },
     "delta_id": {
       "type": "string",
@@ -178,9 +190,11 @@
         "route_reconciler_can_evaluate_or_rank_candidates",
         "route_reconciler_can_complete_stage",
         "route_reconciler_can_sign_receipts",
+        "raw_worklist_can_drive_default_planning",
         "raw_evidence_can_drive_default_planning",
         "replay_packet_can_drive_default_planning",
         "typed_blocker_group_can_drive_default_planning",
+        "private_residue_inventory_can_drive_default_planning",
         "audit_tail_can_drive_default_planning"
       ],
       "properties": {
@@ -217,6 +231,9 @@
         "can_claim_production_ready": {
           "const": false
         },
+        "raw_worklist_can_drive_default_planning": {
+          "const": false
+        },
         "raw_evidence_can_drive_default_planning": {
           "const": false
         },
@@ -224,6 +241,9 @@
           "const": false
         },
         "typed_blocker_group_can_drive_default_planning": {
+          "const": false
+        },
+        "private_residue_inventory_can_drive_default_planning": {
           "const": false
         },
         "audit_tail_can_drive_default_planning": {

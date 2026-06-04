@@ -33,7 +33,7 @@ import {
   compactStageReplayMissingReceiptWorkorderAttentionItems,
 } from './family-runtime-evidence-worklist-parts/stage-replay-missing-receipt-workorders.ts';
 import { familyRuntimeEvidenceWorklistAuthorityBoundary } from './family-runtime-evidence-worklist-parts/authority-boundary.ts';
-import { buildWorklistCompactOwnerDeltaProjection } from './family-runtime-evidence-worklist-parts/compact-owner-delta-projection.ts';
+import { buildWorklistOwnerDeltaActionProjection } from './family-runtime-evidence-worklist-parts/compact-owner-delta-projection.ts';
 import { buildProgressFirstOperatorSummary } from './family-runtime-evidence-worklist-parts/progress-first-operator-summary.ts';
 import { domainDispatchRecordRouteAttemptIds, syncTerminalTemporalAttemptsForEvidenceWorklist, type EvidenceWorklistTemporalQuery } from './family-runtime-evidence-worklist-parts/terminal-observation-sync.ts';
 import {
@@ -57,7 +57,6 @@ const OPEN_WORKLIST_STATUS = 'open_safe_action_request_route_available';
 const DIAGNOSTIC_ONLY_STATUS = 'diagnostic_only';
 const DIAGNOSTIC_ONLY_ROUTE_SEMANTICS =
   'read_only_operator_diagnostic_not_safe_action_or_closeable_workorder';
-
 function freshnessRef(route: JsonRecord) {
   return stringValue(route.evidence_source_ref)
     ?? stringValue(route.source_ref)
@@ -882,11 +881,15 @@ export async function runFamilyRuntimeEvidenceWorklist(
   const stageReceiptFreshnessOpenWorkorderCount = openItems.filter((item) =>
     item.claim_scope === 'stage_production_evidence_receipt'
   ).length;
-  const worklistNextSafeActions = nextSafeActions(openItems);
-  const compactOwnerDeltaProjection = buildWorklistCompactOwnerDeltaProjection({
+  const auditWorklistNextSafeActions = nextSafeActions(openItems);
+  const {
+    compactOwnerDeltaProjection,
+    defaultNextSafeActions,
+    auditWorklistNextSafeActions: ownerDeltaAuditWorklistNextSafeActions,
+  } = buildWorklistOwnerDeltaActionProjection({
     drilldown,
     openItems,
-    nextSafeActions: worklistNextSafeActions,
+    nextSafeActions: auditWorklistNextSafeActions,
     counts,
     compactEvidenceEnvelope,
     domainDispatchEvidenceWorkorderSummary,
@@ -955,8 +958,10 @@ export async function runFamilyRuntimeEvidenceWorklist(
     terminal_observation_sync: terminalObservationSync,
     evidence_envelope: compactEvidenceEnvelope,
     progress_first_operator_summary: progressFirstOperatorSummary,
+    current_owner_delta: compactOwnerDeltaProjection.current_owner_delta,
     compact_owner_delta_projection: compactOwnerDeltaProjection,
-    next_safe_actions: worklistNextSafeActions,
+    next_safe_actions: defaultNextSafeActions,
+    audit_worklist_next_safe_actions: ownerDeltaAuditWorklistNextSafeActions,
     effective_current_context: record(drilldown.effective_current_context),
     family_stall_lineage: familyStallLineage,
     zero_open_worklist_guard: zeroOpenWorklistGuard,

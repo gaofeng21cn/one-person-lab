@@ -343,6 +343,21 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
     ),
     true,
   );
+  for (const forbiddenField of [
+    'raw_evidence_browser',
+    'raw_ledger_browser',
+    'ledger_browser',
+    'provider_internal_trace',
+    'route_variant_menu',
+  ]) {
+    assert.equal(
+      policy.surface_model.attention_entry.default_read_contract.forbidden_fast_profile_fields.includes(
+        forbiddenField,
+      ),
+      true,
+      `${forbiddenField} must stay out of app fast/default state`,
+    );
+  }
   assert.equal(
     policy.default_doc_entry_budget.stage_diagnostic_commands.includes('opl stages proof-bundle --domain <domain>'),
     true,
@@ -486,6 +501,8 @@ test('target architecture policy contracts keep progress, guardrail, and wrapper
     state: string;
     required_before_physical_delete: string[];
     forbidden_retirement_shortcuts: string[];
+    generated_default_caller_readiness_can_authorize_physical_delete: boolean;
+    physical_delete_blocked_by_default: string[];
     opl_apply_boundary: Record<string, boolean>;
     authority_boundary: Record<string, boolean>;
   }>('contracts/opl-framework/wrapper-retirement-gate-policy.json');
@@ -498,7 +515,17 @@ test('target architecture policy contracts keep progress, guardrail, and wrapper
     'tombstone_or_provenance_ref',
   ]);
   assert.equal(wrapperRetirement.forbidden_retirement_shortcuts.includes('descriptor_ready_only'), true);
+  assert.equal(
+    wrapperRetirement.forbidden_retirement_shortcuts.includes('generated_default_caller_readiness_only'),
+    true,
+  );
   assert.equal(wrapperRetirement.forbidden_retirement_shortcuts.includes('test_pass_only'), true);
+  assert.equal(wrapperRetirement.generated_default_caller_readiness_can_authorize_physical_delete, false);
+  assert.deepEqual(wrapperRetirement.physical_delete_blocked_by_default, [
+    'generated_default_caller_readiness_is_not_delete_authority',
+    'domain_repo_owner_receipt_or_typed_blocker_required_for_delete_authority',
+    'physical_delete_requires_domain_repo_owner_action_after_all_refs_observed',
+  ]);
   assert.equal(wrapperRetirement.opl_apply_boundary.family_runtime_lifecycle_apply_can_record_refs, true);
   assert.equal(wrapperRetirement.opl_apply_boundary.family_runtime_lifecycle_apply_can_delete_domain_repo_files, false);
   assert.equal(wrapperRetirement.authority_boundary.opl_can_ignore_active_caller, false);

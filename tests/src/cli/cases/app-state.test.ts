@@ -112,6 +112,23 @@ function writeMasProgressPortalFixture(workspaceRoot: string, profilePath: strin
   }, null, 2)}\n`, 'utf8');
 }
 
+function collectObjectKeys(value: unknown, keys = new Set<string>()) {
+  if (!value || typeof value !== 'object') {
+    return keys;
+  }
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      collectObjectKeys(entry, keys);
+    }
+    return keys;
+  }
+  for (const [key, nested] of Object.entries(value)) {
+    keys.add(key);
+    collectObjectKeys(nested, keys);
+  }
+  return keys;
+}
+
 test('app state fast exposes the canonical GUI read model without retired MDS defaults', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-home-'));
   const codexFixture = createFakeCodexFixture(`
@@ -180,6 +197,7 @@ exit 1
             worklist_projection_policy: string;
             first_screen_answers: string[];
             fast_profile_excludes: string[];
+            forbidden_fast_profile_fields: string[];
             shell_contract: {
               shell_must_not_use_full_drilldown_as_normal_state: boolean;
               shell_must_not_derive_layout_from_raw_runtime_projection: boolean;
@@ -320,6 +338,29 @@ exit 1
       output.app_state.operator.default_read_surface_policy.fast_profile_excludes.includes('raw_evidence_envelope'),
       true,
     );
+    assert.deepEqual(
+      output.app_state.operator.default_read_surface_policy.forbidden_fast_profile_fields,
+      [
+        'runtime_tray_snapshot',
+        'raw_evidence_envelope',
+        'raw_evidence_browser',
+        'raw_ledger_browser',
+        'ledger_browser',
+        'stage_replay_packet_body',
+        'private_residue_inventory_body',
+        'provider_internal_ledger_body',
+        'provider_internal_trace',
+        'route_variant_menu',
+      ],
+    );
+    const fastPayloadKeys = collectObjectKeys(output.app_state);
+    for (const field of output.app_state.operator.default_read_surface_policy.forbidden_fast_profile_fields) {
+      assert.equal(
+        fastPayloadKeys.has(field),
+        false,
+        `fast app state must not expose raw ledger/browser field ${field}`,
+      );
+    }
     assert.equal(
       output.app_state.operator.default_read_surface_policy.shell_contract
         .shell_must_not_use_full_drilldown_as_normal_state,

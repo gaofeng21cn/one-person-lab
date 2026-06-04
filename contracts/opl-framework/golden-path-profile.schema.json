@@ -61,7 +61,7 @@
     "explicit_variants": {
       "type": "array",
       "items": {
-        "type": "object"
+        "$ref": "#/$defs/explicit_variant"
       }
     },
     "default_surface_policy": {
@@ -92,6 +92,51 @@
     "ref": {
       "type": "string",
       "minLength": 1
+    },
+    "explicit_variant": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "variant_id",
+        "lane_kind",
+        "stage_refs",
+        "explicit_selection_required",
+        "hidden_by_default",
+        "can_be_default_without_explicit_selection"
+      ],
+      "properties": {
+        "variant_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lane_kind": {
+          "type": "string",
+          "enum": [
+            "proof",
+            "diagnostic",
+            "cleanup",
+            "long_soak",
+            "route_variant",
+            "legacy_provenance"
+          ]
+        },
+        "stage_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/ref"
+          }
+        },
+        "explicit_selection_required": {
+          "const": true
+        },
+        "hidden_by_default": {
+          "const": true
+        },
+        "can_be_default_without_explicit_selection": {
+          "const": false
+        }
+      }
     },
     "authority_boundary": {
       "type": "object",

@@ -130,6 +130,18 @@ export function assertCurrentOwnerDeltaProjection(
     currentOwnerDelta.projection_policy,
     'default_owner_delta_root_audit_tail_passive',
   );
+  assert.equal(
+    currentOwnerDelta.default_planning_root,
+    'current_owner_delta_or_provider_human_hard_gate',
+  );
+  assert.equal(
+    currentOwnerDelta.audit_tail_policy,
+    'raw_worklist_raw_evidence_replay_typed_blocker_group_private_residue_are_passive_until_folded',
+  );
+  assert.equal(
+    currentOwnerDelta.evidence_vault_policy,
+    'record_everything_plan_from_nothing',
+  );
   assert.equal(typeof currentOwnerDelta.delta_id, 'string');
   assert.equal(typeof currentOwnerDelta.current_owner, 'string');
   assert.equal(typeof currentOwnerDelta.desired_delta_description, 'string');
@@ -170,11 +182,19 @@ export function assertCurrentOwnerDeltaProjection(
     false,
   );
   assert.equal(
+    currentOwnerDelta.authority_boundary.raw_worklist_can_drive_default_planning,
+    false,
+  );
+  assert.equal(
     currentOwnerDelta.authority_boundary.replay_packet_can_drive_default_planning,
     false,
   );
   assert.equal(
     currentOwnerDelta.authority_boundary.typed_blocker_group_can_drive_default_planning,
+    false,
+  );
+  assert.equal(
+    currentOwnerDelta.authority_boundary.private_residue_inventory_can_drive_default_planning,
     false,
   );
   assert.equal(currentOwnerDelta.authority_boundary.audit_tail_can_drive_default_planning, false);

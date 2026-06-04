@@ -99,6 +99,15 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
   assert.equal(report.deletion_gate.all_deletion_evidence_requirements_observed, true);
   assert.equal(report.deletion_gate.default_caller_delete_ready, false);
   assert.equal(report.deletion_gate.physical_delete_authorization_status, 'not_authorized_by_opl_projection');
+  assert.equal(report.deletion_gate.generated_default_caller_readiness_can_authorize_physical_delete, false);
+  assert.equal(
+    report.deletion_gate.physical_delete_blocked_by.includes('generated_default_caller_readiness_is_not_delete_authority'),
+    true,
+  );
+  assert.equal(
+    report.deletion_gate.physical_delete_blocked_by.includes('domain_repo_owner_receipt_or_typed_blocker_required_for_delete_authority'),
+    true,
+  );
   assert.equal(report.deletion_gate.deletion_evidence_requirements_are_completion_claims, false);
   assert.equal(report.deletion_gate.not_authorized_claims.includes('default_caller_delete_ready'), true);
   assert.equal(report.deletion_gate.not_authorized_claims.includes('domain_repo_physical_delete_authorization'), true);
@@ -108,6 +117,8 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
       default_caller_delete_ready: boolean;
       worklist_item_is_completion_claim: boolean;
       physical_delete_authorization_status: string;
+      generated_default_caller_readiness_can_authorize_physical_delete: boolean;
+      physical_delete_blocked_by: string[];
       not_authorized_claims: string[];
       authority_boundary: { worklist_can_authorize_domain_repo_physical_delete: boolean };
     }) => (
@@ -115,6 +126,9 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
       && worklist.default_caller_delete_ready === false
       && worklist.worklist_item_is_completion_claim === false
       && worklist.physical_delete_authorization_status === 'not_authorized_by_opl_projection'
+      && worklist.generated_default_caller_readiness_can_authorize_physical_delete === false
+      && worklist.physical_delete_blocked_by.includes('generated_default_caller_readiness_is_not_delete_authority')
+      && worklist.physical_delete_blocked_by.includes('domain_repo_owner_receipt_or_typed_blocker_required_for_delete_authority')
       && worklist.not_authorized_claims.includes('default_caller_delete_ready')
       && worklist.not_authorized_claims.includes('domain_repo_physical_delete_authorization')
       && worklist.authority_boundary.worklist_can_authorize_domain_repo_physical_delete === false

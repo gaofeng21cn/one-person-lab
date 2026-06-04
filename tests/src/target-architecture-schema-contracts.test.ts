@@ -41,8 +41,21 @@ test('target architecture schema contracts keep owner delta root and audit tail 
     ownerDelta.properties.projection_policy.const,
     'default_owner_delta_root_audit_tail_passive',
   );
+  assert.equal(
+    ownerDelta.properties.default_planning_root.const,
+    'current_owner_delta_or_provider_human_hard_gate',
+  );
+  assert.equal(
+    ownerDelta.properties.audit_tail_policy.const,
+    'raw_worklist_raw_evidence_replay_typed_blocker_group_private_residue_are_passive_until_folded',
+  );
+  assert.equal(
+    ownerDelta.properties.evidence_vault_policy.const,
+    'record_everything_plan_from_nothing',
+  );
   assert.equal(ownerDelta.properties.audit_refs.type, 'object');
   assert.equal(ownerDelta.$defs.authority_boundary.properties.audit_tail_can_drive_default_planning.const, false);
+  assert.equal(ownerDelta.$defs.authority_boundary.properties.raw_worklist_can_drive_default_planning.const, false);
   assert.equal(ownerDelta.$defs.authority_boundary.properties.route_not_stage_strategy.const, true);
   assert.equal(
     ownerDelta.$defs.authority_boundary.properties.route_reconciler_role.const,
@@ -64,22 +77,50 @@ test('target architecture schema contracts keep owner delta root and audit tail 
     ownerDelta.$defs.authority_boundary.properties.typed_blocker_group_can_drive_default_planning.const,
     false,
   );
+  assert.equal(
+    ownerDelta.$defs.authority_boundary.properties.private_residue_inventory_can_drive_default_planning.const,
+    false,
+  );
 
   const evidenceVault = schemas['contracts/opl-framework/evidence-vault-event.schema.json'];
+  assert.equal(
+    evidenceVault.properties.vault_policy.const,
+    'record_everything_plan_from_nothing',
+  );
   assert.equal(
     evidenceVault.$defs.authority_boundary.properties.event_can_create_default_action_without_delta.const,
     false,
   );
+  assert.equal(evidenceVault.$defs.authority_boundary.properties.raw_worklist_can_drive_default_planning.const, false);
   assert.equal(evidenceVault.$defs.authority_boundary.properties.raw_evidence_can_drive_default_planning.const, false);
   assert.equal(evidenceVault.$defs.authority_boundary.properties.replay_packet_can_drive_default_planning.const, false);
   assert.equal(
     evidenceVault.$defs.authority_boundary.properties.typed_blocker_group_can_drive_default_planning.const,
     false,
   );
+  assert.equal(
+    evidenceVault.$defs.authority_boundary.properties.private_residue_inventory_can_drive_default_planning.const,
+    false,
+  );
   assert.equal(evidenceVault.$defs.authority_boundary.properties.opl_can_write_domain_truth.const, false);
 
   const goldenPath = schemas['contracts/opl-framework/golden-path-profile.schema.json'];
   assert.equal(goldenPath.properties.default_surface_policy.properties.ordinary_route_count.const, 1);
+  assert.equal(goldenPath.properties.explicit_variants.items.$ref, '#/$defs/explicit_variant');
+  assert.deepEqual(goldenPath.$defs.explicit_variant.properties.lane_kind.enum, [
+    'proof',
+    'diagnostic',
+    'cleanup',
+    'long_soak',
+    'route_variant',
+    'legacy_provenance',
+  ]);
+  assert.equal(goldenPath.$defs.explicit_variant.properties.explicit_selection_required.const, true);
+  assert.equal(goldenPath.$defs.explicit_variant.properties.hidden_by_default.const, true);
+  assert.equal(
+    goldenPath.$defs.explicit_variant.properties.can_be_default_without_explicit_selection.const,
+    false,
+  );
   assert.equal(
     goldenPath.$defs.authority_boundary.properties.variant_can_be_default_without_explicit_selection.const,
     false,

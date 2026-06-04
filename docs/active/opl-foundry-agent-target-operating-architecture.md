@@ -508,6 +508,7 @@ domain-agent-repo/
 - `missing_tool_affordance_boundary` / `invalid_tool_affordance_boundary` 已进入 stage launch blocker 集合：工具目录只能声明 affordance catalog 与安全/责任边界，不能规定工具顺序、定义认知策略、覆盖 stage goal 或授权 forbidden write。
 - `contracts/opl-framework/README*` 已同步目标架构合同组，把上述 schema/policy 纳入 active contract index。
 - 2026-06-04 fresh family conformance 已闭合到 `4/4 passed`、`blocked_count=0`；MAS/MAG/RCA/OMA 均声明唯一 ordinary default route。MAS 的 ordinary default route 固定为 `direction_and_route_selection`，由 MAS canonical generator `build_family_stage_control_plane()` 物化到 `contracts/stage_control_plane.json`，不是手写 JSON 漂移。
+- 本 P0/P1 切片继续收紧 `domain_golden_path_single_default`、`generated_surface_absorbs_wrappers` 与 `app_cockpit_not_ledger_browser` 的机器边界：`opl agents conformance` 会阻断未显式 lane 化的 proof / diagnostic / cleanup / long-soak / route variant stage，并在 domain 声明 `contracts/golden_path_profile.json` 时校验 profile ordinary path 与 `stage_control_plane` 默认 route 一致；`opl agents default-callers` 即使观察到全部 deletion evidence refs，也稳定输出 `generated_default_caller_readiness_can_authorize_physical_delete=false` 与 physical-delete blocked reasons；`opl app state --profile fast --json` 的 default read policy 明确禁止 raw evidence browser、raw ledger browser、ledger browser、provider trace 和 route variant menu 字段出现在 fast/default payload。
 - 本轮关闭的是 stage pack 工具边界机器化落地，不声明 domain ready、artifact ready、quality ready、production ready 或真实 MAS/MAG/RCA/OMA 生产证据尾项已关闭。
 
 ### Phase 0: Freeze design target

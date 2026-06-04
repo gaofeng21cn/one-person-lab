@@ -1,4 +1,7 @@
-import { buildCompactOwnerDeltaProjection } from '../owner-delta-compact-projection.ts';
+import {
+  buildCompactOwnerDeltaProjection,
+  buildDefaultNextActionFromCurrentOwnerDelta,
+} from '../owner-delta-compact-projection.ts';
 import { countValue, record, type JsonRecord } from './json-utils.ts';
 
 export function buildWorklistCompactOwnerDeltaProjection(input: {
@@ -37,4 +40,16 @@ export function buildWorklistCompactOwnerDeltaProjection(input: {
         'opl runtime app-operator-drilldown --detail full --json',
     },
   });
+}
+
+export function buildWorklistOwnerDeltaActionProjection(input: Parameters<typeof buildWorklistCompactOwnerDeltaProjection>[0]) {
+  const compactOwnerDeltaProjection = buildWorklistCompactOwnerDeltaProjection(input);
+  const ownerDeltaDefaultNextAction = buildDefaultNextActionFromCurrentOwnerDelta(
+    compactOwnerDeltaProjection.current_owner_delta,
+  );
+  return {
+    compactOwnerDeltaProjection,
+    defaultNextSafeActions: ownerDeltaDefaultNextAction ? [ownerDeltaDefaultNextAction] : [],
+    auditWorklistNextSafeActions: input.nextSafeActions,
+  };
 }

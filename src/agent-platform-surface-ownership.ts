@@ -125,6 +125,12 @@ const DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS = [
   'artifact_authority',
 ] as const;
 
+const DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS = [
+  'generated_default_caller_readiness_is_not_delete_authority',
+  'domain_repo_owner_receipt_or_typed_blocker_required_for_delete_authority',
+  'physical_delete_requires_domain_repo_owner_action_after_all_refs_observed',
+] as const;
+
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -615,6 +621,8 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
       semantic_equivalence_reason: optionalString(target?.semantic_equivalence_reason),
       physical_delete_authorized: false,
       default_caller_delete_ready: false,
+      generated_default_caller_readiness_can_authorize_physical_delete: false,
+      physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
       worklist_item_is_completion_claim: false,
       physical_delete_authorization_status: 'not_authorized_by_opl_projection',
       not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
@@ -746,6 +754,8 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         physical_delete_authorized: false,
         all_deletion_evidence_requirements_observed: allDeletionEvidenceRequirementsObserved,
         default_caller_delete_ready: false,
+        generated_default_caller_readiness_can_authorize_physical_delete: false,
+        physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
         physical_delete_authorization_status: 'not_authorized_by_opl_projection',
         deletion_evidence_requirements_are_completion_claims: false,
         not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
@@ -793,6 +803,8 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         physical_delete_authorized: false,
         all_deletion_evidence_requirements_observed: false,
         default_caller_delete_ready: false,
+        generated_default_caller_readiness_can_authorize_physical_delete: false,
+        physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
         physical_delete_authorization_status: 'not_authorized_by_opl_projection',
         deletion_evidence_requirements_are_completion_claims: false,
         not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
@@ -858,7 +870,9 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
         no_forbidden_write_proof_still_required: true,
         zero_missing_deletion_evidence_is_not_delete_ready: true,
         observed_deletion_evidence_refs_are_refs_only_inputs: true,
+        generated_default_caller_readiness_can_authorize_physical_delete: false,
         physical_delete_authorized_by_this_report: false,
+        physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
       },
       reports,
       authority_boundary: {

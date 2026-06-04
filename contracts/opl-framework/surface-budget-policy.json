@@ -42,9 +42,14 @@
         "forbidden_fast_profile_fields": [
           "runtime_tray_snapshot",
           "raw_evidence_envelope",
+          "raw_evidence_browser",
+          "raw_ledger_browser",
+          "ledger_browser",
           "stage_replay_packet_body",
           "private_residue_inventory_body",
-          "provider_internal_ledger_body"
+          "provider_internal_ledger_body",
+          "provider_internal_trace",
+          "route_variant_menu"
         ]
       }
     },
