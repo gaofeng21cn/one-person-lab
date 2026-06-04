@@ -45,6 +45,10 @@ export function assertCompactOwnerDeltaProjection(
   assert.equal(compact.schema_version, 'compact-owner-delta-projection.v1');
   assert.equal(typeof compact.current_owner, 'string');
   assert.equal(typeof compact.required_delta, 'string');
+  assertCurrentOwnerDeltaProjection(compact.current_owner_delta, {
+    currentOwner: compact.current_owner,
+    requiredDelta: compact.required_delta,
+  });
   assert.equal(Array.isArray(compact.accepted_return_shapes), true);
   assert.equal(compact.accepted_return_shapes.length > 0, true);
   assert.equal(compact.accepted_return_shapes.includes('typed_blocker_ref'), true);
@@ -111,6 +115,42 @@ export function assertCompactOwnerDeltaProjection(
   assert.equal('domain_ready_verdict' in compact, false);
   assert.equal('production_ready_verdict' in compact, false);
   assert.equal('quality_verdict' in compact, false);
+}
+
+export function assertCurrentOwnerDeltaProjection(
+  currentOwnerDelta: JsonRecord,
+  expected: {
+    currentOwner?: unknown;
+    requiredDelta?: unknown;
+  } = {},
+) {
+  assert.equal(currentOwnerDelta.surface_kind, 'opl_current_owner_delta');
+  assert.equal(currentOwnerDelta.schema_version, 'current-owner-delta.v1');
+  assert.equal(
+    currentOwnerDelta.projection_policy,
+    'default_owner_delta_root_audit_tail_passive',
+  );
+  assert.equal(typeof currentOwnerDelta.delta_id, 'string');
+  assert.equal(typeof currentOwnerDelta.current_owner, 'string');
+  assert.equal(typeof currentOwnerDelta.desired_delta_description, 'string');
+  assert.equal(Array.isArray(currentOwnerDelta.accepted_answer_shape), true);
+  assert.equal(currentOwnerDelta.accepted_answer_shape.includes('typed_blocker_ref'), true);
+  if (typeof expected.currentOwner === 'string') {
+    assert.equal(currentOwnerDelta.current_owner, expected.currentOwner);
+  }
+  if (typeof expected.requiredDelta === 'string') {
+    assert.equal(currentOwnerDelta.desired_delta_description, expected.requiredDelta);
+  }
+  assert.equal(typeof currentOwnerDelta.hard_gate, 'object');
+  assert.equal(Array.isArray(currentOwnerDelta.advisory_warnings), true);
+  assert.equal(typeof currentOwnerDelta.stop_loss_state, 'object');
+  assert.equal(typeof currentOwnerDelta.audit_refs, 'object');
+  assert.equal(typeof currentOwnerDelta.authority_boundary, 'object');
+  assert.equal(currentOwnerDelta.authority_boundary.can_write_domain_truth, false);
+  assert.equal(currentOwnerDelta.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(currentOwnerDelta.authority_boundary.can_create_typed_blocker, false);
+  assert.equal(currentOwnerDelta.authority_boundary.can_close_domain_ready, false);
+  assert.equal(currentOwnerDelta.authority_boundary.audit_tail_can_drive_default_planning, false);
 }
 
 function hasOwnNestedKey(value: unknown, key: string): boolean {
@@ -333,6 +373,18 @@ export function assertOwnerDeltaFirstReadinessProjection(readiness: JsonRecord) 
     readiness.compact_owner_delta_projection,
     attention.compact_owner_delta_projection,
   );
+  assert.deepEqual(
+    readiness.current_owner_delta,
+    attention.current_owner_delta,
+  );
+  assert.deepEqual(
+    readiness.current_owner_delta,
+    readiness.compact_owner_delta_projection.current_owner_delta,
+  );
+  assertCurrentOwnerDeltaProjection(readiness.current_owner_delta, {
+    currentOwner: ownerDeltaHandoffSummary.next_owner,
+    requiredDelta: ownerDeltaHandoffSummary.next_required_delta,
+  });
   assertCompactOwnerDeltaProjection(readiness.compact_owner_delta_projection, {
     currentOwner: ownerDeltaHandoffSummary.next_owner,
     requiredDelta: ownerDeltaHandoffSummary.next_required_delta,
@@ -544,6 +596,14 @@ export function assertOwnerDeltaFirstAppOperatorProjection(drilldown: JsonRecord
       : 'owner_delta_first_default_app_payload_full_refs_routes_and_attempt_graph_require_detail_full',
   );
   assert.equal(ownerDeltaFirst.surface_kind, 'opl_owner_delta_first_projection');
+  assert.deepEqual(
+    attention.current_owner_delta,
+    attention.compact_owner_delta_projection.current_owner_delta,
+  );
+  assertCurrentOwnerDeltaProjection(attention.current_owner_delta, {
+    currentOwner: ownerDeltaFirst.next_owner,
+    requiredDelta: ownerDeltaFirst.next_required_delta,
+  });
   assertCompactOwnerDeltaProjection(attention.compact_owner_delta_projection, {
     currentOwner: ownerDeltaFirst.next_owner,
     requiredDelta: ownerDeltaFirst.next_required_delta,

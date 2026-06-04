@@ -82,6 +82,14 @@ const DOMAIN_DISPATCH_RECORD_REQUIRED_PAYLOAD_REFS = [
   ...DOMAIN_DISPATCH_TYPED_BLOCKER_PAYLOAD_REFS,
 ];
 
+const DOMAIN_DISPATCH_REQUIRED_RETURN_SHAPES = [
+  'domain_owner_receipt_ref',
+  'typed_blocker_ref',
+  'domain_typed_blocker_ref',
+  'owner_chain_ref',
+  'no_regression_ref',
+];
+
 function refsOnlyAuthorityBoundary() {
   return {
     opl: 'app_operator_drilldown_refs_only',
@@ -165,6 +173,7 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
         required_evidence_refs: [
           `domain_dispatch:${domainId}:${stageAttemptId}:owner_receipt_or_typed_blocker`,
         ],
+        required_return_shapes: DOMAIN_DISPATCH_REQUIRED_RETURN_SHAPES,
         success_refs_path_payload: successPayloadExample,
         typed_blocker_path_payload: typedBlockerPayloadExample,
         empty_payload_template_is_success_evidence: false,
@@ -299,12 +308,7 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
     required_evidence_refs: [
       `domain_dispatch:${domainId}:${stageAttemptId}:owner_receipt_or_typed_blocker`,
     ],
-    required_return_shapes: [
-      'domain_owner_receipt_ref',
-      'domain_typed_blocker_ref',
-      'owner_chain_ref',
-      'no_regression_ref',
-    ],
+    required_return_shapes: DOMAIN_DISPATCH_REQUIRED_RETURN_SHAPES,
     can_execute: false as const,
     authority_boundary: {
       ...refsOnlyAuthorityBoundary(),

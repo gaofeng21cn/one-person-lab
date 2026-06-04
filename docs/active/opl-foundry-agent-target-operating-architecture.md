@@ -1,0 +1,501 @@
+# OPL Foundry Agent Target Operating Architecture
+
+Owner: `One Person Lab`
+Purpose: `foundry_agent_target_operating_architecture`
+State: `active_support`
+Machine boundary: 本文是人读目标操作架构。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、owner receipt、typed blocker、真实 workspace 与 App evidence。
+Date: `2026-06-04`
+
+## 读法
+
+本文回答一个更上层的问题：如果不被当前实现分布约束，只从 MVP、AI-first、executor-first 和可维护性出发，OPL / Foundry Agent 应该怎样全面重构，才能让 MAS/MAG/RCA/OMA 最高效地产出、最少被平台噪音拖住、并且最容易长期维护。
+
+本文不替代 live machine truth，也不声明 production ready、domain ready、App release ready、artifact authority ready 或物理删除授权。当前 live 状态、计数、receipt id、attempt id、workorder 数量仍从 CLI/read-model/ledger 读取。
+
+当前 friction 诊断回到 [OPL Foundry Agent MVP Friction Audit](./opl-foundry-agent-mvp-friction-audit.md)。当前 gap owner 回到 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。核心边界回到 `project/status/architecture/invariants/decisions`。
+
+## 目标结论
+
+理想 OPL 不是更厚的流程系统，也不是更大的 worklist / evidence ledger。理想 OPL 是一个 `Agent Operating System`：
+
+```text
+Domain Intent
+  -> Foundry Agent Product Pack
+  -> Stage Runtime Kernel
+  -> Selected Codex Executor
+  -> Stage Artifact Unit
+  -> Independent Gate / Owner Answer
+  -> Compact Owner Delta Projection
+```
+
+它只默认做三件事：
+
+1. 让最强 executor 尽快拿到正确 stage、材料、工具、权限和质量门。
+2. 让每次 attempt 收敛成可验证的 artifact / receipt / typed blocker。
+3. 让 operator / App 只看到当前 owner 欠什么下一步，而不是看到平台内部全部证据尾巴。
+
+因此，目标重构的中心不是 `worklist`，而是 `current_owner_delta`；不是 `evidence envelope`，而是 `stage artifact unit`；不是 `diagnostic route menu`，而是每个 agent 的单一 golden path。
+
+## External Practice Synthesis
+
+本轮重新查阅了成熟工程经验，吸收原则而不引入外部 runtime truth。
+
+| 外部经验 | 可吸收原则 | OPL 目标设计 |
+| --- | --- | --- |
+| [Anthropic Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) | agent 系统优先从简单、可组合 pattern 开始；复杂度只有在必要时加入。 | OPL 默认路径必须短；多 agent、proof lane、diagnostic、replay 和 worklist 只在明确需要时显式进入。 |
+| [OpenAI Agents SDK handoffs](https://openai.github.io/openai-agents-js/guides/handoffs/) | handoff 是显式 delegation，带目标 agent、输入过滤和结构化 payload；不是隐式路由猜测。 | Foundry Agent handoff 必须是 `owner_answer` 或 `current_owner_delta`，不能从 raw evidence 自动推断下一 owner。 |
+| [OpenAI Agents SDK guardrails](https://openai.github.io/openai-agents-python/guardrails/) | guardrail 应按 workflow boundary、input/output/tool 分层。 | OPL guardrail 分为 launch-hard、runtime-enforced、domain/human gate、audit-only；不能把所有 warning 做成启动阻塞。 |
+| [OpenAI Agents SDK tracing](https://openai.github.io/openai-agents-python/tracing/) | trace 记录 LLM、tool、handoff、guardrail 等运行事件，用于 debug / monitor。 | OPL trace/evidence 是 audit plane，不是默认 planner；trace 必须折叠成 owner delta 才能影响 next action。 |
+| [LangGraph persistence](https://docs.langchain.com/oss/python/langgraph/persistence) | checkpoint 支撑 human-in-the-loop、time travel、fault-tolerant execution。 | OPL checkpoint / attempt ledger 服务 resume 和审计；默认进度仍看 stage artifact + owner answer。 |
+| [Kubernetes controllers](https://kubernetes.io/docs/concepts/architecture/controller/) 与 [spec/status](https://kubernetes.io/docs/concepts/overview/working-with-objects/kubernetes-objects/) | controller 比较 desired state 和 current state；spec 与 status 分离。 | `stage pack/current_owner_delta` 是 desired；attempt/provider/receipt/worklist 是 status。status 不能生成新的 domain goal。 |
+| [Temporal docs](https://docs.temporal.io/) | durable execution 把 workflow history、retry、timeout、worker、task queue 放到底座。 | OPL 长跑底座归 Temporal-backed provider；domain repo 不再持有 scheduler、daemon、attempt loop 或 generic queue。 |
+| [Backstage Software Templates](https://backstage.io/docs/features/software-templates) 与 [Golden Paths](https://backstage.io/docs/golden-path/create-app/) | 平台用模板和 golden path 给用户一个默认可成功路径。 | 每个 Foundry Agent 只有一个 ordinary golden path；variants/proof/debug/cleanup 走显式 lane。 |
+| [CNCF Platform Engineering Maturity Model](https://tag-app-delivery.cncf.io/fr/whitepapers/platform-eng-maturity-model/) | 平台成熟度靠 self-service、paved road、feedback loop，而不是工具堆叠。 | OPL 应作为 thinnest viable agent platform，给 domain pack 自助接入和默认路径反馈，而不是把所有 evidence 暴露给用户。 |
+| [Google SRE Eliminating Toil](https://sre.google/sre-book/eliminating-toil/) | manual/repetitive/automatable/tactical/no enduring value/O(n) 工作是 toil。 | receipt-only、read-model reconcile-only、stale route redrive-only、typed-blocker accounting-only 是平台 toil，必须 stop-loss 或设计掉。 |
+| [OpenTelemetry signals](https://opentelemetry.io/docs/concepts/signals/) | traces、metrics、logs 等信号分层，用于理解系统。 | OPL 默认只给 broad owner signal；trace/log/metric/raw refs 全部进 drilldown。 |
+| [DORA continuous delivery capability](https://dora.dev/capabilities/continuous-delivery/) | 高质量快速反馈应对所有团队成员可见。 | Foundry Agent 默认反馈必须是用户能理解的 next owner / artifact delta / blocker，而不是内部计数。 |
+
+这些经验共同给出一个判断：OPL 的理想形态应像平台工程的 golden path + Kubernetes 的 controller + Temporal 的 durable execution + SRE 的 toil 消除 + agent handoff/guardrail/tracing 的分层组合；但 OPL 的领域智能继续由 Codex executor、domain pack 和独立 gate 承担。
+
+## Greenfield Target
+
+如果从零设计，OPL family 应拆成 6 个稳定 primitive。
+
+### 1. Agent Product Pack
+
+每个 Foundry Agent 是一个产品包，而不是一个小平台：
+
+```text
+agent_product_pack
+  identity
+  ordinary_golden_path
+  stages
+  prompts
+  skills
+  knowledge
+  quality_gates
+  artifact_contract
+  memory_contract
+  owner_answer_schema
+  authority_functions
+```
+
+Domain repo 只持有领域语义、质量判断、artifact/memory authority、owner receipt/typed blocker signer、少量 native helper。它不持有 generic scheduler、queue、attempt ledger、session store、workbench、status shell、product-entry wrapper 或 evidence worklist planner。
+
+### 2. Stage Runtime Kernel
+
+Stage 是 OPL 唯一默认执行单元。Kernel 只负责：
+
+- admission：stage id、owner、goal、scope refs、requires/ensures、selected executor、authority boundary；
+- launch：生成 attempt request、绑定 provider、绑定 workspace/artifact root；
+- execution envelope：给 Codex executor 清晰目标、材料、工具、知识、质量门；
+- closeout：要求 artifact unit、owner answer、typed blocker 或 decision receipt；
+- replay/audit refs：只进入 audit plane。
+
+Kernel 不负责决定医学结论、基金质量、视觉审美、agent patch 是否好。开放式专家判断继续由 executor + independent gate + domain owner 完成。
+
+### 3. Current Owner Delta Controller
+
+OPL 默认 read model 的根对象是 `current_owner_delta`：
+
+```text
+current_owner_delta
+  delta_id
+  domain
+  task_or_study_ref
+  stage_ref
+  lineage_ref
+  source_fingerprint
+  desired_delta_kind
+  desired_delta_description
+  current_owner
+  accepted_answer_shape
+  hard_gate
+  advisory_warnings
+  live_attempt_ref
+  latest_owner_answer_ref
+  stop_loss_state
+  audit_refs
+```
+
+Controller 只做 desired/current reconcile：
+
+```text
+desired current_owner_delta
+  vs
+actual queue / provider / attempt / artifact / owner-answer / typed-blocker state
+```
+
+它不从 raw evidence tail 合成新 work，不把 blocked envelope 数量变成 action，不把 receipt 增长写成 progress。
+
+### 4. Stage Artifact Unit
+
+每个 stage attempt 必须落成一个可重建单元：
+
+```text
+stage_artifact_unit
+  physical_outputs
+  manifest
+  content_hashes
+  owner_answer_ref
+  current_pointer
+  lineage
+```
+
+进度公式固定为：
+
+```text
+progress = physical output + valid manifest + owner answer + current pointer
+```
+
+没有 owner answer 的文件是 orphan artifact；有 receipt 但文件/hash 不匹配是 broken artifact；历史 attempt 不被 current pointer 选中就只是 provenance。
+
+### 5. Evidence Vault
+
+Evidence Vault 是 passive audit store：
+
+- raw evidence envelope；
+- provider trace；
+- replay packet；
+- receipt ledger；
+- typed blocker groups；
+- production long-soak refs；
+- no-regression refs；
+- cleanup provenance；
+- diagnostic logs / metrics。
+
+Vault 的原则是 `record everything, plan from nothing`。只有当 evidence 被 fold 成 `current_owner_delta`、hard gate、owner answer 或 typed blocker，它才影响默认路径。
+
+### 6. App Cockpit
+
+App 是 cockpit，不是 ledger browser。默认视图只展示：
+
+- 当前任务；
+- 当前 stage；
+- 当前 owner；
+- 缺什么 answer；
+- 当前 artifact；
+- 是否需要用户介入；
+- provider 是否硬阻塞执行；
+- 下一步 action 的 owner。
+
+所有 raw count、full worklist、receipt group、replay packet、private residue inventory、route variants、provider internal traces 都必须通过显式 drilldown 查看。
+
+## Target Runtime Flow
+
+### Ordinary flow
+
+```text
+User chooses MAS/MAG/RCA/OMA purpose
+  -> App/CLI loads agent_product_pack
+  -> OPL selects ordinary_golden_path
+  -> Stage Runtime Kernel admits next stage
+  -> Current Owner Delta Controller emits one delta
+  -> Temporal-backed provider starts Codex attempt
+  -> Codex produces stage artifact unit
+  -> independent gate/domain owner returns owner_answer
+  -> controller updates next current_owner_delta
+```
+
+### Blocked flow
+
+```text
+stage cannot launch
+  -> classify blocker
+  -> if launch-hard: provider/framework/human/domain owner action
+  -> if domain judgment missing: domain-owned typed blocker
+  -> if advisory: production backlog / audit lane
+  -> never synthesize fallback verdict
+```
+
+### Anti-spin flow
+
+```text
+same lineage repeats receipt-only/platform-repair/read-model-reconcile
+  -> increment stop_loss counter
+  -> freeze default launch
+  -> accept only fresh owner delta or stable typed blocker
+  -> move old attempts to audit lineage
+```
+
+### Improvement flow
+
+```text
+failed/blocked attempt
+  -> Agent Lab reads artifact/receipt/audit refs
+  -> OMA proposes work order or mechanism patch
+  -> OPL work-order execute runs target patch
+  -> target owner returns receipt/typed blocker
+  -> no domain truth written by Agent Lab or OMA
+```
+
+## Default Golden Paths
+
+### MAS
+
+Ordinary path:
+
+```text
+study goal/source
+  -> current paper/evidence/reviewer/human-gate delta
+  -> Codex execution
+  -> manuscript/evidence/reviewer artifact delta
+  -> MAS owner receipt or typed blocker
+```
+
+Non-default:
+
+- historical dispatch refs；
+- stale source repair；
+- MDS/backend provenance；
+- refs-only evidence envelope；
+- full typed blocker group；
+- platform read-model repair；
+- long-soak/provider proof。
+
+MAS 的最大重构点是：`domain_dispatch_evidence` 默认不再是 worklist root，只是 owner-delta 的 audit ref。默认只问：当前 study 有没有新的 paper/reviewer/human gate delta；没有就要 MAS stable typed blocker。
+
+### MAG
+
+Ordinary path:
+
+```text
+selected grant target
+  -> authoring/fundability/export/submission delta
+  -> Codex execution
+  -> proposal/package/gate artifact
+  -> MAG owner receipt or typed blocker
+```
+
+Non-default:
+
+- funding rediscovery；
+- grouped CLI internals；
+- Hermes proof lane；
+- manifest consumer long-soak；
+- product-entry shell diagnostics。
+
+MAG 的重构点是把 `submission_ready_export_gate` 设为 domain/human gate，而不是让 shell、manifest、proof lane 或 runtime-budget warning 抢占 authoring。
+
+### RCA
+
+Ordinary path:
+
+```text
+source truth
+  -> image-first visual artifact stage
+  -> review/export gate
+  -> RCA owner receipt or typed blocker
+```
+
+Non-default:
+
+- HTML/native PPTX route；
+- route alias hygiene；
+- native helper diagnostics；
+- visual long-soak；
+- replay/human-review historical refs。
+
+RCA 的重构点是单一 visual golden path：能产生可看的 artifact 是默认目标，route 多样性只服务显式需求。
+
+### OMA
+
+Ordinary path:
+
+```text
+target agent evidence
+  -> mechanism/candidate/work-order stage
+  -> target owner answer
+  -> receipt or typed blocker
+```
+
+Non-default:
+
+- script materializer internals；
+- reviewer pool orchestration；
+- promotion gate；
+- worktree lifecycle；
+- second Agent Lab behavior。
+
+OMA 的重构点是保持 target-agent generic vocabulary；它不成为第二 OPL Framework，也不直接关闭目标 domain owner receipt。
+
+## What To Remove From Default Design
+
+这些面可以继续存在，但不属于 ordinary path：
+
+| Surface | 目标处置 |
+| --- | --- |
+| Raw evidence envelope | Evidence Vault / full drilldown。 |
+| Full worklist | 从 `current_owner_delta` 派生的 secondary view；不作为 next-action root。 |
+| Stage replay packet | Release/audit lane；只在阻断 launch/handoff 时进入 default blocker。 |
+| Runtime budget / cohort / assumption warning | Production hardening backlog；除非影响启动安全或 provider liveness。 |
+| Private platform residue inventory | Cleanup lane；不作为 agent progress。 |
+| Default caller deletion evidence | No-resurrection guard；不作为 delivery progress。 |
+| Provider scheduler status | Diagnostic query；provider liveness blocker 才进 default。 |
+| Domain dispatch refs-only tail | Audit refs；默认只暴露 compact current owner delta。 |
+| Receipt count / typed blocker count | Metric/audit；不作为 completion claim。 |
+| Route variants / proof lanes | Explicit request only。 |
+
+## Required Contract Changes
+
+目标重构最终应把这些合同做成机器面：
+
+| Contract | 作用 |
+| --- | --- |
+| `current-owner-delta.schema.json` | 默认 owner/delta/hard-gate/action payload。 |
+| `stage-artifact-unit.schema.json` | physical output + manifest + owner answer + current pointer。 |
+| `owner-answer.schema.json` | owner receipt / typed blocker / human decision / route-back 的统一 return shape。 |
+| `evidence-vault-event.schema.json` | audit-only evidence 分类和 bounded envelope。 |
+| `golden-path-profile.schema.json` | 每个 Foundry Agent 的 ordinary path 与 explicit variants。 |
+| `stop-loss-policy.schema.json` | lineage repeat、receipt-only、platform-repair-only、stale-route 的冻结规则。 |
+| `default-surface-budget.schema.json` | default / diagnostic / audit / production / cleanup 的升级门。 |
+
+这些合同不应复制 domain truth；它们只固定 OPL 能看见、能启动、能审计、能 fail-closed 的形状。
+
+## Target Codebase Shape
+
+理想 OPL Framework 代码分层应围绕 primitive，而不是围绕历史命令长文件：
+
+```text
+src/
+  agent-product-pack/
+  stage-runtime-kernel/
+  owner-delta-controller/
+  stage-artifact-kernel/
+  evidence-vault/
+  app-cockpit-projection/
+  generated-surfaces/
+  provider-temporal/
+  agent-lab/
+  cli/
+    commands as thin adapters
+```
+
+CLI、App、runtime tray、Agent Lab、safe action shell 都是 thin adapters。它们不各自判断 readiness，也不各自读取 raw state 拼结论。
+
+Domain repo 理想形态继续是：
+
+```text
+domain-agent-repo/
+  agent/
+  contracts/
+  runtime/authority_functions/
+  runtime/native_helpers/
+  docs/
+  tests/
+```
+
+保留的 `src/` / `packages/` 只实现 domain handler、authority function、native helper、schema helper 或 fixture；任何 generic runtime/queue/session/workbench/status/product wrapper 都是迁移输入。
+
+## Migration Strategy
+
+这次 OPL 基座重构按目标架构一次性落到可验证机器面。Domain 仓的物理 wrapper 删除仍归 domain owner receipt / typed blocker 和 no-active-caller gate 授权；OPL 本仓不把 descriptor ready、conformance pass 或测试通过当作跨仓删除授权。
+
+## Landing Status
+
+2026-06-04 已落地的机器面：
+
+- `current_owner_delta` 成为 App/default operator payload root；`compact_owner_delta_projection` 保留为兼容 alias。
+- `buildCompactOwnerDeltaProjection()` 统一生成内嵌 `current_owner_delta`，并被 framework readiness、runtime tray、App fast state 和 evidence-worklist summary 复用。
+- `family-runtime evidence-worklist` 不再用 `openItems[0]` 覆盖 owner delta；raw worklist item 只保留为 `next_safe_action_or_none`、count 和 full-detail audit refs。
+- `contracts/opl-framework/` 新增 7 个 target architecture schema，并由 `verification-command-surfaces` 检查 metadata、root shape 和 false authority flags。
+- `surface-budget-policy.json` 与 `family-product-operator-projection.json` 的 default projection 已从 `opl_compact_owner_delta_projection` 提升到 `opl_current_owner_delta`。
+- `opl agents conformance` 新增 `golden_path_default_surface_budget_checks`，要求标准 Foundry Agent 只有一个 ordinary default route，proof/diagnostic/cleanup/long-soak 等 lane 必须显式。
+- `lineage_stop_loss` 已接入 Progress-First anti-spin gate：重复 same-source / no-deliverable lineage 会冻结默认 launch，并输出 `stop_loss_state` 与 `stop_loss_policy`；`current_owner_delta` 可消费已折叠的 stop-loss 状态。
+- `stage_artifact_progress_truth` 已落成 `stage-artifact-progress-truth-policy.json`：deliverable progress 必须同时具备 physical output、valid manifest、owner answer 和 current pointer；provider completion、receipt count、file presence 单独不计进度。
+- `guardrail_tier_policy` 已落成 `guardrail-tier-policy.json`：launch-hard、runtime-enforced、domain/human gate、audit-only 分级稳定；audit-only 和 advisory warning 不能绕过 folded owner delta 变成普通 launch blocker。
+- Phase 5 wrapper retirement 已落成 `wrapper-retirement-gate-policy.json`：replacement parity、no-active-caller、domain owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 是物理删除前置门；OPL lifecycle apply 只能记录 refs，不能替 domain repo 执行未授权删除。
+- `contracts/opl-framework/README*` 已同步目标架构合同组，把上述 schema/policy 纳入 active contract index。
+
+### Phase 0: Freeze design target
+
+- 新文档、core docs、active gap 和 contracts README 同步引用本目标架构。
+- 明确 `current_owner_delta` 是默认 root，`worklist` 降为 secondary view。
+- 不改行为，只先冻结命名和 owner boundary。
+
+### Phase 1: Introduce `current_owner_delta` contract
+
+- 新增 schema/type。
+- `framework readiness`、`evidence-worklist.progress_first_operator_summary`、`runtime tray`、`app state fast profile` 统一派生同一对象。
+- 验证：默认 next action 100% 可追溯到 `current_owner_delta` 或 provider/human hard gate。
+
+### Phase 2: Stop worklist-driven planning
+
+- raw envelope / stage replay / typed blocker groups / private residue 不再直接进入 next-action selector。
+- `open_worklist_count` 只做 audit metric。
+- 验证：同一 lineage 的 historical/superseded/typed-blocked attempts 不再产生 per-attempt default action。
+
+### Phase 3: Stage artifact unit becomes progress root
+
+- 每个 stage attempt 生成 external artifact unit。
+- `stage_progress_log` 只从 artifact unit + owner answer + provider metadata 派生。
+- 验证：provider completion / receipt verified / file existence 单独都不能计入 deliverable progress。
+
+### Phase 4: Golden path only in App/CLI
+
+- App/CLI ordinary path 每个 agent 只展示一个 route。
+- variants/proof/diagnostic/cleanup/long-soak 进入 explicit drilldown。
+- 验证：普通用户不需要理解 route menu、provider internals、backend selector 或 proof lane。
+
+### Phase 5: Domain wrapper retirement
+
+- OPL generated/hosted surfaces 吸收 CLI/MCP/App/status/workbench/default-caller shell。
+- Domain repo 只保留 semantic pack、authority functions、native helpers、direct skill path。
+- 验证：replacement parity、no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance。
+
+### Phase 6: Agent Lab improvement loop
+
+- Agent Lab 只读 artifact/evidence/owner answer，输出 improvement candidate。
+- OMA 只产出 work order / mechanism proposal / typed blocker。
+- OPL work-order execute 承担 patch execution；target owner 关闭。
+- 验证：Agent Lab / OMA 不写 domain truth、不签 owner receipt、不声明 quality verdict。
+
+## Acceptance Tests
+
+目标架构需要这些机器可验证门：
+
+| Gate | 必须证明 |
+| --- | --- |
+| `default_owner_delta_derivation` | App fast state、framework readiness、evidence-worklist summary、runtime tray 同源。 |
+| `no_worklist_root_planning` | raw worklist item 不能绕过 owner delta 进入 default next action。 |
+| `lineage_stop_loss` | receipt-only/platform-repair-only/read-model-reconcile-only 重复 lineage 冻结默认 launch。 |
+| `stage_artifact_progress_truth` | progress 必须同时具备 output、manifest、owner answer、current pointer。 |
+| `golden_path_single_default` | 每个 agent ordinary route 只有一个；variants 显式选择。 |
+| `audit_plane_passive` | Evidence Vault 写入不改变 delivery state，除非 fold 成 owner answer / hard gate / owner delta。 |
+| `guardrail_tier_policy` | launch-hard、runtime-enforced、domain/human gate、audit-only 分级稳定。 |
+| `domain_no_generic_runtime` | domain repo 没有长期 generic scheduler/queue/session/workbench/status owner。 |
+| `app_cockpit_boundary` | App 默认页不消费 raw envelope、full replay、private residue、provider internal trace。 |
+| `no_false_ready_claim` | conformance/generated/provider/ledger/replay/test pass 都不能单独声明 domain ready 或 production ready。 |
+
+## Risks
+
+- `current_owner_delta` 若设计太大，会重新变成另一个 full worklist。它必须保持 compact，只承载默认决策需要的字段。
+- Stop-loss 若没有 domain owner escape hatch，会误停真实可推进任务。它必须接受 fresh owner delta 或 stable typed blocker。
+- Golden path 若过度单一路径，会压制 domain 正当变体。变体应保留，但必须显式选择并说明 owner。
+- App cockpit 若完全隐藏 audit，会降低调试能力。解决方式是默认隐藏、显式 drilldown，而不是删除证据。
+- Domain wrapper retirement 若只按文件名删除，会破坏 active caller。必须按 replacement parity 和 owner receipt 迁移。
+
+## Non-Goals
+
+- 不把 OPL 改成 domain quality owner。
+- 不把 Codex executor 的开放式专家行为写成固定 workflow compiler。
+- 不引入新的外部 runtime 作为第二 truth。
+- 不让 App 持有 domain truth、artifact body、memory body、owner receipt 或 production verdict。
+- 不把所有 audit evidence 删除；只是不让它们驱动 ordinary path。
+- 不为了保持兼容而长期保留旧 wrapper、facade、alias 或 product shell。
+
+## Design Decision
+
+推荐方案是 `Owner Delta Kernel + Stage Artifact Unit + Passive Evidence Vault`。
+
+与只修补现有 worklist 相比，它把默认推进根从 “还有多少 evidence item” 改成 “谁欠什么 owner delta”。与完全重写成通用 workflow engine 相比，它保留 OPL 的 AI-first / contract-light / Codex-first 定位，让 domain 专家判断继续由 executor、independent gate 和 owner receipt 承接。
+
+这也是最符合 MVP 的重构：少一个默认入口，多一个稳定 primitive；少暴露一层平台细节，多暴露一个可执行下一步。
+
+## Verification For This Design
+
+本文是 docs-only target architecture。最小验证：
+
+- `rtk git diff --check`
+- `rtk rg -n '^(<<<<<<<|=======|>>>>>>>)' docs/active/opl-foundry-agent-target-operating-architecture.md docs/active/README.md docs/active/opl-foundry-agent-mvp-friction-audit.md`
+- external web refresh used Anthropic, OpenAI Agents SDK, LangGraph, Kubernetes, Temporal, Backstage, CNCF, Google SRE, OpenTelemetry and DORA docs on `2026-06-04 CST`.

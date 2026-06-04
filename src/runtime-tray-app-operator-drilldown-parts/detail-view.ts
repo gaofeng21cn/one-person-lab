@@ -921,6 +921,7 @@ function buildAttentionFirstPayload(drilldown: JsonRecord) {
     blocking: blockingItems(drilldown),
     advisory: advisoryItems(drilldown),
     missing_evidence: missingEvidenceItems(drilldown),
+    current_owner_delta: compactOwnerDeltaProjection.current_owner_delta,
     compact_owner_delta_projection: compactOwnerDeltaProjection,
     owner_delta_first: ownerDeltaFirst,
     evidence_after_contract: evidenceAfterContract,

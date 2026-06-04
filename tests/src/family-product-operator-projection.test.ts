@@ -94,7 +94,8 @@ test('family product operator projection pins OPL as App state/action producer o
 
   assert.equal(boundary.framework_role, 'gui_ready_state_action_producer_only');
   assert.equal(boundary.default_state_command, 'opl app state --profile fast --json');
-  assert.equal(boundary.default_operator_payload, 'compact_owner_delta_projection');
+  assert.equal(boundary.default_operator_payload, 'current_owner_delta');
+  assert.equal(boundary.compatibility_operator_payload, 'compact_owner_delta_projection');
   assert.equal(boundary.full_state_command, 'opl app state --profile full --json');
   assert.equal(
     boundary.action_command,
@@ -107,8 +108,13 @@ test('family product operator projection pins OPL as App state/action producer o
   assert.equal(boundary.state_owner, 'one-person-lab');
   assert.equal(boundary.gui_product_truth_owner, 'one-person-lab-app');
   assert.equal(boundary.shell_role, 'implementation_adapter_only');
-  assert.equal(boundary.default_read_surface_policy.default_projection, 'opl_compact_owner_delta_projection');
+  assert.equal(boundary.default_read_surface_policy.default_projection, 'opl_current_owner_delta');
+  assert.equal(
+    boundary.default_read_surface_policy.compatibility_projection,
+    'opl_compact_owner_delta_projection',
+  );
   assert.deepEqual(boundary.default_read_surface_policy.first_screen_answers, [
+    'current_owner_delta',
     'next_safe_action_or_none',
     'current_owner',
     'required_delta',

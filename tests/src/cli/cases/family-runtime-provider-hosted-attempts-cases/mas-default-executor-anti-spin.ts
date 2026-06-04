@@ -178,6 +178,12 @@ test('family-runtime tick blocks repeated same-source MAS default executor dispa
       assert.equal(eventPayload.reason, 'progress_first_owner_delta_required');
       assert.equal(eventPayload.lineage.repeat_count, 2);
       assert.equal(eventPayload.lineage.next_forced_delta, 'domain_deliverable_or_owner_receipt_delta_required');
+      assert.equal(eventPayload.stop_loss_state.status, 'frozen');
+      assert.equal(eventPayload.stop_loss_state.lineage_repeat_count, 2);
+      assert.equal(eventPayload.stop_loss_state.fresh_owner_delta_required_to_resume, true);
+      assert.equal(eventPayload.stop_loss_policy.freeze_state, 'frozen');
+      assert.equal(eventPayload.stop_loss_policy.authority_boundary.opl_can_freeze_default_launch, true);
+      assert.equal(eventPayload.stop_loss_policy.authority_boundary.opl_can_synthesize_fallback_verdict, false);
       assert.equal(eventPayload.authority_boundary.domain_truth_mutation, false);
       assert.equal(eventPayload.authority_boundary.can_create_owner_receipt, false);
       assert.equal(eventPayload.authority_boundary.can_create_typed_blocker, false);

@@ -1,0 +1,45 @@
+{
+  "contract_kind": "opl_wrapper_retirement_gate_policy.v1",
+  "owner": "one-person-lab",
+  "purpose": "Define the machine-readable delete/tombstone gate for retiring domain private wrappers, aliases, facades, status shells, workbenches, and compatibility-only tests after OPL generated or hosted surfaces replace them.",
+  "state": "active_contract",
+  "machine_boundary": "OPL owns the read-only gate, lifecycle receipt projection, and no-resurrection guard; domain repositories own physical delete authority, domain truth, owner answers, artifacts, and quality verdicts.",
+  "required_before_physical_delete": [
+    "replacement_parity_ref",
+    "no_active_caller_ref",
+    "domain_owner_receipt_ref_or_typed_blocker_ref",
+    "no_forbidden_write_ref",
+    "tombstone_or_provenance_ref"
+  ],
+  "allowed_terminal_actions": [
+    "delete",
+    "history_tombstone",
+    "provenance_reference"
+  ],
+  "forbidden_retirement_shortcuts": [
+    "descriptor_ready_only",
+    "conformance_pass_only",
+    "generated_interface_ready_only",
+    "read_model_projection_ready_only",
+    "test_pass_only",
+    "chat_decision_only"
+  ],
+  "opl_apply_boundary": {
+    "family_runtime_lifecycle_apply_can_record_refs": true,
+    "family_runtime_lifecycle_apply_can_delete_domain_repo_files": false,
+    "cleanup_ledger_can_authorize_domain_truth": false
+  },
+  "source_contracts": [
+    "contracts/opl-framework/functional-privatization-audit-envelope-contract.json",
+    "contracts/opl-framework/agent-platform-surface-ownership-contract.json",
+    "contracts/opl-framework/standard-domain-agent-skeleton-contract.json"
+  ],
+  "authority_boundary": {
+    "opl_can_delete_domain_repo_files_without_owner_receipt": false,
+    "opl_can_treat_descriptor_ready_as_delete_authority": false,
+    "opl_can_ignore_active_caller": false,
+    "opl_can_skip_tombstone_or_provenance": false,
+    "opl_can_write_domain_truth": false,
+    "opl_can_authorize_quality_or_export": false
+  }
+}

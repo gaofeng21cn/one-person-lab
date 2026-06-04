@@ -520,6 +520,33 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
   },
 } as const;
 
+export const STANDARD_FOUNDRY_AGENT_GOLDEN_PATH_POLICY = {
+  surface_kind: 'opl_foundry_agent_golden_path_default_surface_budget_policy',
+  version: 'foundry-agent-golden-path.v1',
+  owner: 'one-person-lab',
+  policy_id: 'golden_path_single_default',
+  default_surface_budget_id: 'default_surface_budget',
+  stage_control_plane_ref: 'contracts/stage_control_plane.json',
+  ordinary_default_route_budget: 1,
+  default_route_selector: 'stages[].selected_executor.default_executor',
+  explicit_lane_kinds: [
+    'variant',
+    'variants',
+    'proof',
+    'diagnostic',
+    'cleanup',
+    'long-soak',
+    'long_soak',
+  ],
+  explicit_lane_default_allowed: false,
+  authority_boundary: {
+    guard_can_write_domain_truth: false,
+    guard_can_write_memory_body: false,
+    guard_can_authorize_quality_or_export: false,
+    guard_can_claim_domain_ready: false,
+  },
+} as const;
+
 export const STANDARD_USER_STAGE_LOG_CONTRACT = {
   surface_kind: 'opl_standard_agent_user_stage_log_contract',
   version: 'standard-user-stage-log.v1',

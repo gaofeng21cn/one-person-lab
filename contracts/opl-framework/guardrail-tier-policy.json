@@ -1,0 +1,85 @@
+{
+  "contract_kind": "opl_guardrail_tier_policy.v1",
+  "owner": "one-person-lab",
+  "purpose": "Define how OPL classifies guardrails so advisory, diagnostic, replay, and audit-only signals do not block ordinary Foundry Agent progress.",
+  "state": "active_contract",
+  "machine_boundary": "OPL owns guardrail tier classification and launch/runtime gating; domain repositories retain domain judgment, truth, owner answers, and quality verdicts.",
+  "tiers": [
+    {
+      "tier_id": "launch_hard",
+      "default_path_role": "may_block_launch",
+      "allowed_reason_classes": [
+        "missing_stage_pack",
+        "missing_workspace_binding",
+        "missing_executor_binding",
+        "forbidden_authority_claim",
+        "unsafe_mutation_boundary",
+        "required_human_decision_missing"
+      ]
+    },
+    {
+      "tier_id": "runtime_enforced",
+      "default_path_role": "may_block_or_cancel_running_attempt",
+      "allowed_reason_classes": [
+        "provider_liveness",
+        "activity_timeout",
+        "cancellation",
+        "retry_dead_letter",
+        "stage_closeout_contract_violation"
+      ]
+    },
+    {
+      "tier_id": "domain_or_human_gate",
+      "default_path_role": "requires_owner_answer_or_decision",
+      "allowed_reason_classes": [
+        "domain_owner_receipt_required",
+        "domain_typed_blocker_required",
+        "human_gate_required",
+        "quality_gate_owner_answer_required",
+        "artifact_authority_answer_required"
+      ]
+    },
+    {
+      "tier_id": "audit_only",
+      "default_path_role": "cannot_block_ordinary_launch_without_folded_delta",
+      "allowed_reason_classes": [
+        "raw_evidence_envelope",
+        "stage_replay_packet",
+        "typed_blocker_group_metric",
+        "receipt_count_metric",
+        "long_soak_evidence_ref",
+        "diagnostic_trace",
+        "private_residue_inventory"
+      ]
+    }
+  ],
+  "default_denied_hard_gate_reason_classes": [
+    "advisory",
+    "diagnostic",
+    "capacity_budget",
+    "domain_validity",
+    "guarantee",
+    "property",
+    "isolation",
+    "raw_evidence_envelope",
+    "receipt_count_metric"
+  ],
+  "folding_policy": {
+    "audit_signal_can_affect_default_path_only_after_folded_into": [
+      "current_owner_delta",
+      "owner_answer",
+      "typed_blocker",
+      "provider_hard_gate",
+      "human_decision"
+    ],
+    "raw_trace_can_create_default_action": false,
+    "warning_can_become_launch_blocker_without_tier_change": false
+  },
+  "authority_boundary": {
+    "guardrail_policy_can_write_domain_truth": false,
+    "guardrail_policy_can_sign_owner_answer": false,
+    "guardrail_policy_can_authorize_quality_verdict": false,
+    "audit_only_guardrail_can_block_launch": false,
+    "advisory_warning_can_block_launch": false
+  }
+}

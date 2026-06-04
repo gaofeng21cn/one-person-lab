@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/stage-artifact-unit.schema.json",
+  "schema_id": "opl.stage_artifact_unit.v1",
+  "surface_kind": "opl_stage_artifact_unit_schema",
+  "owner": "one-person-lab",
+  "purpose": "Define the OPL-owned stage artifact unit that turns one stage attempt into rebuildable physical outputs, manifest, owner answer, current pointer, and lineage refs.",
+  "state": "active_contract",
+  "machine_boundary": "OPL owns the stage artifact unit envelope, pointers, hashes, lineage, and projection; domain repositories retain artifact body authority, truth, receipts, and quality/export verdicts.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "unit_id",
+    "domain",
+    "stage_ref",
+    "attempt_ref",
+    "physical_outputs",
+    "manifest",
+    "content_hashes",
+    "owner_answer_ref",
+    "current_pointer",
+    "lineage",
+    "progress_truth",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_stage_artifact_unit"
+    },
+    "schema_version": {
+      "const": "stage-artifact-unit.v1"
+    },
+    "unit_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stage_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "attempt_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "physical_outputs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ref"
+      }
+    },
+    "manifest": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "manifest_ref",
+        "valid_manifest",
+        "required_outputs_present"
+      ],
+      "properties": {
+        "manifest_ref": {
+          "$ref": "#/$defs/ref"
+        },
+        "valid_manifest": {
+          "type": "boolean"
+        },
+        "required_outputs_present": {
+          "type": "boolean"
+        }
+      }
+    },
+    "content_hashes": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "owner_answer_ref": {
+      "$ref": "#/$defs/nullable_ref"
+    },
+    "current_pointer": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "pointer_ref",
+        "is_current"
+      ],
+      "properties": {
+        "pointer_ref": {
+          "$ref": "#/$defs/ref"
+        },
+        "is_current": {
+          "type": "boolean"
+        }
+      }
+    },
+    "lineage": {
+      "type": "object"
+    },
+    "progress_truth": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "physical_output_present",
+        "valid_manifest",
+        "owner_answer_present",
+        "current_pointer_selected"
+      ],
+      "properties": {
+        "physical_output_present": {
+          "type": "boolean"
+        },
+        "valid_manifest": {
+          "type": "boolean"
+        },
+        "owner_answer_present": {
+          "type": "boolean"
+        },
+        "current_pointer_selected": {
+          "type": "boolean"
+        },
+        "counts_as_deliverable_progress": {
+          "type": "boolean"
+        }
+      }
+    },
+    "authority_boundary": {
+      "$ref": "#/$defs/authority_boundary"
+    }
+  },
+  "$defs": {
+    "ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "nullable_ref": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ref"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "opl_can_create_domain_owner_receipt",
+        "opl_can_write_domain_truth",
+        "opl_can_mutate_artifact_body",
+        "opl_can_authorize_quality_or_export",
+        "provider_completion_counts_as_progress"
+      ],
+      "properties": {
+        "opl_can_create_domain_owner_receipt": {
+          "const": false
+        },
+        "opl_can_write_domain_truth": {
+          "const": false
+        },
+        "opl_can_mutate_artifact_body": {
+          "const": false
+        },
+        "opl_can_authorize_quality_or_export": {
+          "const": false
+        },
+        "provider_completion_counts_as_progress": {
+          "const": false
+        }
+      }
+    }
+  }
+}

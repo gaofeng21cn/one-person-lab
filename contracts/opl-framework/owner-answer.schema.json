@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/owner-answer.schema.json",
+  "schema_id": "opl.owner_answer.v1",
+  "surface_kind": "opl_owner_answer_schema",
+  "owner": "one-person-lab",
+  "purpose": "Define the unified owner return shape consumed by OPL for owner receipts, typed blockers, human decisions, and route-back answers.",
+  "state": "active_contract",
+  "machine_boundary": "OPL consumes and folds owner answer refs into deltas and gates; the answering domain, human, or provider owner retains signing authority and truth/verdict authority.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "answer_id",
+    "domain",
+    "answer_kind",
+    "answer_status",
+    "answer_ref",
+    "target_delta_ref",
+    "audit_refs",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_owner_answer"
+    },
+    "schema_version": {
+      "const": "owner-answer.v1"
+    },
+    "answer_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain": {
+      "type": "string",
+      "minLength": 1
+    },
+    "answer_kind": {
+      "type": "string",
+      "enum": [
+        "owner_receipt",
+        "typed_blocker",
+        "human_decision",
+        "route_back"
+      ]
+    },
+    "answer_status": {
+      "type": "string",
+      "enum": [
+        "accepted",
+        "blocked",
+        "rejected",
+        "route_back",
+        "needs_human"
+      ]
+    },
+    "answer_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "target_delta_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "stage_ref": {
+      "$ref": "#/$defs/nullable_ref"
+    },
+    "attempt_ref": {
+      "$ref": "#/$defs/nullable_ref"
+    },
+    "effective_delta_ref": {
+      "$ref": "#/$defs/nullable_ref"
+    },
+    "audit_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ref"
+      }
+    },
+    "authority_boundary": {
+      "$ref": "#/$defs/authority_boundary"
+    }
+  },
+  "$defs": {
+    "ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "nullable_ref": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ref"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "opl_can_consume_owner_answer",
+        "opl_can_fold_answer_into_delta",
+        "opl_can_sign_domain_owner_answer",
+        "opl_can_infer_domain_truth_from_answer",
+        "opl_can_authorize_domain_ready",
+        "opl_can_authorize_quality_verdict",
+        "opl_can_mutate_artifact_body"
+      ],
+      "properties": {
+        "opl_can_consume_owner_answer": {
+          "const": true
+        },
+        "opl_can_fold_answer_into_delta": {
+          "const": true
+        },
+        "opl_can_sign_domain_owner_answer": {
+          "const": false
+        },
+        "opl_can_infer_domain_truth_from_answer": {
+          "const": false
+        },
+        "opl_can_authorize_domain_ready": {
+          "const": false
+        },
+        "opl_can_authorize_quality_verdict": {
+          "const": false
+        },
+        "opl_can_mutate_artifact_body": {
+          "const": false
+        }
+      }
+    }
+  }
+}

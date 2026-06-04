@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/default-surface-budget.schema.json",
+  "schema_id": "opl.default_surface_budget.v1",
+  "surface_kind": "opl_default_surface_budget_schema",
+  "owner": "one-person-lab",
+  "purpose": "Define the machine gate for promoting a surface into default App/CLI/operator visibility instead of diagnostic, audit, production, or cleanup lanes.",
+  "state": "active_contract",
+  "machine_boundary": "OPL owns default surface classification and promotion gates; default visibility cannot claim domain truth, quality, artifact authority, production readiness, executor planning replacement, or domain ownership.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "surface_id",
+    "visibility_class",
+    "false_flags",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_default_surface_budget"
+    },
+    "schema_version": {
+      "const": "default-surface-budget.v1"
+    },
+    "surface_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "visibility_class": {
+      "type": "string",
+      "enum": [
+        "default",
+        "diagnostic",
+        "audit",
+        "production",
+        "cleanup"
+      ]
+    },
+    "false_flags": {
+      "$ref": "#/$defs/false_flags"
+    },
+    "authority_boundary": {
+      "$ref": "#/$defs/authority_boundary"
+    }
+  },
+  "$defs": {
+    "false_flags": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "can_claim_domain_ready",
+        "can_claim_quality_verdict",
+        "can_claim_artifact_authority",
+        "can_claim_production_ready",
+        "can_replace_executor_planning",
+        "can_replace_domain_owner"
+      ],
+      "properties": {
+        "can_claim_domain_ready": {
+          "const": false
+        },
+        "can_claim_quality_verdict": {
+          "const": false
+        },
+        "can_claim_artifact_authority": {
+          "const": false
+        },
+        "can_claim_production_ready": {
+          "const": false
+        },
+        "can_replace_executor_planning": {
+          "const": false
+        },
+        "can_replace_domain_owner": {
+          "const": false
+        }
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "default_surface_can_claim_domain_ready",
+        "default_surface_can_claim_quality_verdict",
+        "default_surface_can_claim_artifact_authority",
+        "default_surface_can_claim_production_ready",
+        "default_surface_can_replace_executor_planning",
+        "default_surface_can_replace_domain_owner"
+      ],
+      "properties": {
+        "default_surface_can_claim_domain_ready": {
+          "const": false
+        },
+        "default_surface_can_claim_quality_verdict": {
+          "const": false
+        },
+        "default_surface_can_claim_artifact_authority": {
+          "const": false
+        },
+        "default_surface_can_claim_production_ready": {
+          "const": false
+        },
+        "default_surface_can_replace_executor_planning": {
+          "const": false
+        },
+        "default_surface_can_replace_domain_owner": {
+          "const": false
+        }
+      }
+    }
+  }
+}

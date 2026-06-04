@@ -282,6 +282,7 @@ export function frameworkAttentionFirstPayload(input: {
       input.stageReplayMissingReceiptWorkorderAttentionSummary,
     stage_replay_missing_receipt_workorder_attention_items:
       input.stageReplayMissingReceiptWorkorderAttentionItems,
+    current_owner_delta: compactOwnerDeltaProjection.current_owner_delta,
     compact_owner_delta_projection: compactOwnerDeltaProjection,
     owner_delta_first: input.ownerDeltaFirst,
     owner_delta_handoff_summary: input.ownerDeltaHandoffSummary,

@@ -30,11 +30,13 @@
       "role": "default_operator_app_entry",
       "payload_style": "summary_first",
       "default_stage_command": "opl stages readiness --family-defaults",
-      "default_operator_payload": "compact_owner_delta_projection",
+      "default_operator_payload": "current_owner_delta",
+      "compatibility_operator_payload": "compact_owner_delta_projection",
       "default_read_contract": {
         "surface_kind": "opl_default_read_surface_contract",
         "normal_app_state_command": "opl app state --profile fast --json",
-        "default_projection": "opl_compact_owner_delta_projection",
+        "default_projection": "opl_current_owner_delta",
+        "compatibility_projection": "opl_compact_owner_delta_projection",
         "full_detail_policy": "explicit_full_detail_or_lazy_diagnostic_only",
         "raw_refs_policy": "raw_refs_require_explicit_full_detail",
         "forbidden_fast_profile_fields": [

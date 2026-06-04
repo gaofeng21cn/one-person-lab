@@ -36,6 +36,14 @@ function uniqueStringList(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
+function sanitizeIdPart(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80) || 'unknown';
+}
+
 function omitPayloadTemplateDeep(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(omitPayloadTemplateDeep);
@@ -55,10 +63,28 @@ function acceptedReturnShapes(...values: unknown[]) {
   return shapes.length > 0 ? shapes : ['typed_blocker_ref'];
 }
 
+function payloadWorkorderReturnShapes(workorder: JsonRecord) {
+  const declared = stringList(workorder.required_return_shapes);
+  if (declared.length > 0) {
+    return declared;
+  }
+  if (stringValue(workorder.surface_kind) === 'opl_domain_dispatch_evidence_payload_workorder') {
+    return [
+      'domain_owner_receipt_ref',
+      'typed_blocker_ref',
+      'domain_typed_blocker_ref',
+      'owner_chain_ref',
+      'no_regression_ref',
+    ];
+  }
+  return [];
+}
+
 function compactPayloadWorkorder(workorder: JsonRecord) {
   if (Object.keys(workorder).length === 0) {
     return null;
   }
+  const requiredReturnShapes = payloadWorkorderReturnShapes(workorder);
   return {
     surface_kind: stringValue(workorder.surface_kind),
     payload_owner: stringValue(workorder.payload_owner),
@@ -68,7 +94,7 @@ function compactPayloadWorkorder(workorder: JsonRecord) {
     required_operator_payload_refs: stringList(workorder.required_operator_payload_refs),
     supplemental_operator_payload_refs:
       stringList(workorder.supplemental_operator_payload_refs),
-    required_return_shapes: stringList(workorder.required_return_shapes),
+    required_return_shapes: requiredReturnShapes,
     empty_payload_template_is_success_evidence:
       workorder.empty_payload_template_is_success_evidence === true,
     authority_boundary: record(workorder.authority_boundary),
@@ -130,6 +156,228 @@ function falseFlags(input: JsonRecord = {}) {
   };
 }
 
+function desiredDeltaKind(requiredDelta: string) {
+  if (requiredDelta === 'no_opl_operator_actionable_delta_required') {
+    return 'none';
+  }
+  if (requiredDelta.includes('typed_blocker')) {
+    return requiredDelta.includes('receipt')
+      ? 'owner_answer_or_typed_blocker'
+      : 'typed_blocker';
+  }
+  if (requiredDelta.includes('receipt')) {
+    return 'owner_answer';
+  }
+  if (requiredDelta.includes('artifact')) {
+    return 'artifact_delta';
+  }
+  return 'owner_delta';
+}
+
+function stageRefFrom(action: ReturnType<typeof compactNextSafeAction>, ownerDeltaFirst: JsonRecord) {
+  return action?.stage_id
+    ?? stringValue(record(ownerDeltaFirst.primary_item).stage_id)
+    ?? stringValue(record(ownerDeltaFirst.selected_safe_action).stage_id)
+    ?? null;
+}
+
+function defaultStopLossState() {
+  return {
+    status: 'not_triggered',
+    lineage_repeat_count: 0,
+    receipt_only_repeat_count: 0,
+    platform_repair_only_repeat_count: 0,
+    stale_route_repeat_count: 0,
+    fresh_owner_delta_required_to_resume: false,
+  };
+}
+
+function compactStopLossState(...values: unknown[]) {
+  const folded = values.map(record).find((value) => stringValue(value.status));
+  if (!folded) {
+    return defaultStopLossState();
+  }
+  return {
+    ...defaultStopLossState(),
+    surface_kind: stringValue(folded.surface_kind),
+    status: stringValue(folded.status) ?? 'not_triggered',
+    lineage_repeat_count: numberValue(folded.lineage_repeat_count),
+    receipt_only_repeat_count: numberValue(folded.receipt_only_repeat_count),
+    platform_repair_only_repeat_count: numberValue(folded.platform_repair_only_repeat_count),
+    stale_route_repeat_count: numberValue(folded.stale_route_repeat_count),
+    fresh_owner_delta_required_to_resume:
+      folded.fresh_owner_delta_required_to_resume === true,
+    release_conditions: stringList(folded.release_conditions),
+    policy_ref: stringValue(folded.policy_ref),
+  };
+}
+
+function buildCurrentOwnerDeltaProjection(input: {
+  currentOwner: string;
+  requiredDelta: string;
+  acceptedReturnShapes: string[];
+  ownerDeltaFirst: JsonRecord;
+  handoff: JsonRecord;
+  compactAction: ReturnType<typeof compactNextSafeAction>;
+  countSummary: ReturnType<typeof buildCompactCountSummary>;
+  fullDetailRefs: JsonRecord;
+}) {
+  const currentOwner = input.currentOwner;
+  const requiredDelta = input.requiredDelta;
+  const domain = input.compactAction?.domain_id
+    ?? stringValue(input.handoff.domain_id)
+    ?? stringValue(input.ownerDeltaFirst.domain_id)
+    ?? currentOwner;
+  const stageRef = stageRefFrom(input.compactAction, input.ownerDeltaFirst);
+  const auditRefs = {
+    ...input.fullDetailRefs,
+    owner_delta_first_ref:
+      stringValue(input.fullDetailRefs.owner_delta_first_ref)
+      ?? '/framework_readiness/owner_delta_first',
+    next_safe_action_ref: input.compactAction?.next_safe_action_ref ?? null,
+  };
+  const hardGate = {
+    state:
+      input.countSummary.open_safe_action_count > 0
+        ? 'owner_delta_open'
+        : input.countSummary.blocked_refs_only_count > 0
+          ? 'domain_or_human_owner_blocked_refs_only'
+          : 'none',
+    provider_liveness_required: false,
+    human_or_domain_owner_required:
+      input.countSummary.payload_required_count > 0
+      || input.countSummary.blocked_refs_only_count > 0,
+    source: 'owner_delta_controller',
+  };
+
+  return {
+    surface_kind: 'opl_current_owner_delta',
+    schema_version: 'current-owner-delta.v1',
+    projection_policy: 'default_owner_delta_root_audit_tail_passive',
+    delta_id: [
+      'current-owner-delta',
+      sanitizeIdPart(domain),
+      stageRef ? sanitizeIdPart(stageRef) : 'no-stage',
+      sanitizeIdPart(desiredDeltaKind(requiredDelta)),
+    ].join(':'),
+    domain,
+    task_or_study_ref: firstString(
+      input.compactAction?.next_safe_action_ref,
+      stringValue(record(input.ownerDeltaFirst.primary_item).workstream_id),
+      stringValue(record(input.ownerDeltaFirst.primary_item).stage_attempt_id),
+    ),
+    stage_ref: stageRef,
+    lineage_ref: firstString(
+      stringValue(record(input.ownerDeltaFirst.primary_item).stage_attempt_id),
+      input.compactAction?.next_safe_action_ref,
+      stringValue(input.handoff.lineage_ref),
+    ),
+    source_fingerprint: [
+      'owner_delta_first',
+      sanitizeIdPart(currentOwner),
+      sanitizeIdPart(requiredDelta),
+      input.countSummary.open_safe_action_count,
+      input.countSummary.blocked_refs_only_count,
+    ].join(':'),
+    desired_delta_kind: desiredDeltaKind(requiredDelta),
+    desired_delta_description: requiredDelta,
+    current_owner: currentOwner,
+    accepted_answer_shape: input.acceptedReturnShapes,
+    hard_gate: hardGate,
+    advisory_warnings: [
+      ...(input.countSummary.domain_dispatch_workorder_count > 0
+        ? [{
+            warning_id: 'domain_dispatch_workorders_are_audit_tail',
+            count: input.countSummary.domain_dispatch_workorder_count,
+            default_planning_role: 'audit_metric_only',
+          }]
+        : []),
+      ...(input.countSummary.stage_replay_missing_receipt_workorder_count > 0
+        ? [{
+            warning_id: 'stage_replay_missing_receipts_are_audit_tail',
+            count: input.countSummary.stage_replay_missing_receipt_workorder_count,
+            default_planning_role: 'audit_metric_only',
+          }]
+        : []),
+    ],
+    live_attempt_ref: input.compactAction?.next_safe_action_ref ?? null,
+    latest_owner_answer_ref: firstString(
+      stringValue(input.handoff.latest_owner_answer_ref),
+      stringValue(record(input.ownerDeltaFirst.primary_item).latest_owner_answer_ref),
+    ),
+    stop_loss_state: compactStopLossState(
+      input.handoff.stop_loss_state,
+      input.ownerDeltaFirst.stop_loss_state,
+      record(input.ownerDeltaFirst.primary_item).stop_loss_state,
+    ),
+    audit_refs: auditRefs,
+    authority_boundary: {
+      can_execute_domain_action: false,
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_close_owner_chain: false,
+      can_close_domain_ready: false,
+      can_authorize_quality_or_export: false,
+      can_claim_domain_ready: false,
+      can_claim_production_ready: false,
+      audit_tail_can_drive_default_planning: false,
+      evidence_vault_event_is_progress_claim: false,
+    },
+  };
+}
+
+function buildCompactCountSummary(input: {
+  countSummary: {
+    openSafeActionCount?: number;
+    payloadRequiredCount?: number;
+    payloadFreeCount?: number;
+    blockedRefsOnlyCount?: number;
+    evidenceEnvelopeOpenCount?: number;
+    evidenceEnvelopeBlockedCount?: number;
+    domainDispatchWorkorderCount?: number;
+    stageReplayMissingReceiptWorkorderCount?: number;
+  };
+  handoffSummary: JsonRecord;
+  ownerDeltaFirstSummary: JsonRecord;
+}) {
+  return {
+    open_safe_action_count:
+      input.countSummary.openSafeActionCount
+      ?? numberValue(input.handoffSummary.open_safe_action_item_count)
+      ?? 0,
+    payload_required_count:
+      input.countSummary.payloadRequiredCount
+      ?? numberValue(input.handoffSummary.open_safe_action_payload_required_item_count)
+      ?? 0,
+    payload_free_count:
+      input.countSummary.payloadFreeCount
+      ?? numberValue(input.handoffSummary.open_safe_action_payload_free_item_count)
+      ?? 0,
+    blocked_refs_only_count:
+      input.countSummary.blockedRefsOnlyCount
+      ?? numberValue(input.handoffSummary.domain_blocked_attention_count)
+      ?? numberValue(input.ownerDeltaFirstSummary.domain_blocked_attention_count)
+      ?? 0,
+    evidence_envelope_open_count:
+      input.countSummary.evidenceEnvelopeOpenCount
+      ?? numberValue(input.handoffSummary.evidence_envelope_open_count)
+      ?? 0,
+    evidence_envelope_blocked_count:
+      input.countSummary.evidenceEnvelopeBlockedCount
+      ?? numberValue(input.handoffSummary.evidence_envelope_blocked_count)
+      ?? 0,
+    domain_dispatch_workorder_count:
+      input.countSummary.domainDispatchWorkorderCount
+      ?? numberValue(input.handoffSummary.domain_dispatch_workorder_count)
+      ?? 0,
+    stage_replay_missing_receipt_workorder_count:
+      input.countSummary.stageReplayMissingReceiptWorkorderCount
+      ?? numberValue(input.handoffSummary.stage_replay_missing_receipt_workorder_count)
+      ?? 0,
+  };
+}
+
 export function buildCompactOwnerDeltaProjection(input: {
   ownerDeltaFirst?: JsonRecord;
   ownerDeltaHandoffSummary?: JsonRecord;
@@ -165,6 +413,30 @@ export function buildCompactOwnerDeltaProjection(input: {
     compactAction?.payload_requirement,
     'no_opl_operator_actionable_delta_required',
   ) ?? 'no_opl_operator_actionable_delta_required';
+  const acceptedShapes = acceptedReturnShapes(
+    handoff.required_return_shapes,
+    ownerDeltaFirst.required_return_shapes,
+    compactAction?.accepted_return_shapes,
+  );
+  const compactCountSummary = buildCompactCountSummary({
+    countSummary,
+    handoffSummary,
+    ownerDeltaFirstSummary,
+  });
+  const fullDetailRefs = {
+    owner_delta_first_ref: '/framework_readiness/owner_delta_first',
+    ...record(input.fullDetailRefs),
+  };
+  const currentOwnerDelta = buildCurrentOwnerDeltaProjection({
+    currentOwner,
+    requiredDelta,
+    acceptedReturnShapes: acceptedShapes,
+    ownerDeltaFirst,
+    handoff,
+    compactAction,
+    countSummary: compactCountSummary,
+    fullDetailRefs,
+  });
 
   return {
     surface_kind: 'opl_compact_owner_delta_projection',
@@ -173,52 +445,12 @@ export function buildCompactOwnerDeltaProjection(input: {
       'shape_stable_owner_delta_default_alias_raw_refs_require_explicit_full_detail',
     current_owner: currentOwner,
     required_delta: requiredDelta,
-    accepted_return_shapes: acceptedReturnShapes(
-      handoff.required_return_shapes,
-      ownerDeltaFirst.required_return_shapes,
-      compactAction?.accepted_return_shapes,
-    ),
+    accepted_return_shapes: acceptedShapes,
+    current_owner_delta: currentOwnerDelta,
     next_safe_action_or_none: compactAction,
     readiness_false_flags: falseFlags(handoff),
-    count_summary: {
-      open_safe_action_count:
-        countSummary.openSafeActionCount
-        ?? numberValue(handoffSummary.open_safe_action_item_count)
-        ?? 0,
-      payload_required_count:
-        countSummary.payloadRequiredCount
-        ?? numberValue(handoffSummary.open_safe_action_payload_required_item_count)
-        ?? 0,
-      payload_free_count:
-        countSummary.payloadFreeCount
-        ?? numberValue(handoffSummary.open_safe_action_payload_free_item_count)
-        ?? 0,
-      blocked_refs_only_count:
-        countSummary.blockedRefsOnlyCount
-        ?? numberValue(handoffSummary.domain_blocked_attention_count)
-        ?? numberValue(ownerDeltaFirstSummary.domain_blocked_attention_count)
-        ?? 0,
-      evidence_envelope_open_count:
-        countSummary.evidenceEnvelopeOpenCount
-        ?? numberValue(handoffSummary.evidence_envelope_open_count)
-        ?? 0,
-      evidence_envelope_blocked_count:
-        countSummary.evidenceEnvelopeBlockedCount
-        ?? numberValue(handoffSummary.evidence_envelope_blocked_count)
-        ?? 0,
-      domain_dispatch_workorder_count:
-        countSummary.domainDispatchWorkorderCount
-        ?? numberValue(handoffSummary.domain_dispatch_workorder_count)
-        ?? 0,
-      stage_replay_missing_receipt_workorder_count:
-        countSummary.stageReplayMissingReceiptWorkorderCount
-        ?? numberValue(handoffSummary.stage_replay_missing_receipt_workorder_count)
-        ?? 0,
-    },
-    full_detail_refs: {
-      owner_delta_first_ref: '/framework_readiness/owner_delta_first',
-      ...record(input.fullDetailRefs),
-    },
+    count_summary: compactCountSummary,
+    full_detail_refs: fullDetailRefs,
   };
 }
 

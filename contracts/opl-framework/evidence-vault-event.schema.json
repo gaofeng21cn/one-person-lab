@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/evidence-vault-event.schema.json",
+  "schema_id": "opl.evidence_vault_event.v1",
+  "surface_kind": "opl_evidence_vault_event_schema",
+  "owner": "one-person-lab",
+  "purpose": "Define the passive audit-only evidence vault event shape for raw evidence, provider traces, replay packets, receipt ledgers, typed blocker groups, soak refs, no-regression refs, cleanup provenance, and diagnostic signals.",
+  "state": "active_contract",
+  "machine_boundary": "Evidence Vault records bounded refs and summaries for audit, replay, and drilldown; events do not change delivery state unless explicitly folded into an owner answer, hard gate, typed blocker, or current owner delta.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "event_id",
+    "event_kind",
+    "evidence_class",
+    "source_ref",
+    "fold_state",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_evidence_vault_event"
+    },
+    "schema_version": {
+      "const": "evidence-vault-event.v1"
+    },
+    "event_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "event_kind": {
+      "type": "string",
+      "enum": [
+        "raw_evidence_envelope",
+        "provider_trace",
+        "replay_packet",
+        "receipt_ledger",
+        "typed_blocker_group",
+        "production_long_soak_ref",
+        "no_regression_ref",
+        "cleanup_provenance",
+        "diagnostic_log_metric"
+      ]
+    },
+    "evidence_class": {
+      "type": "string",
+      "enum": [
+        "audit_only",
+        "owner_answer_input",
+        "hard_gate_input",
+        "typed_blocker_input",
+        "owner_delta_input"
+      ]
+    },
+    "source_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "fold_state": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "state",
+        "delivery_state_effect"
+      ],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "passive",
+            "folded_to_owner_delta",
+            "folded_to_hard_gate",
+            "folded_to_owner_answer",
+            "folded_to_typed_blocker"
+          ]
+        },
+        "delivery_state_effect": {
+          "type": "string",
+          "enum": [
+            "none",
+            "only_through_folded_ref"
+          ]
+        }
+      }
+    },
+    "authority_boundary": {
+      "$ref": "#/$defs/authority_boundary"
+    }
+  },
+  "$defs": {
+    "ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "event_can_change_delivery_state_without_fold",
+        "event_can_create_default_action_without_delta",
+        "opl_can_write_domain_truth",
+        "opl_can_authorize_domain_ready",
+        "opl_can_authorize_quality_verdict",
+        "opl_can_mutate_artifact_body"
+      ],
+      "properties": {
+        "event_can_change_delivery_state_without_fold": {
+          "const": false
+        },
+        "event_can_create_default_action_without_delta": {
+          "const": false
+        },
+        "opl_can_write_domain_truth": {
+          "const": false
+        },
+        "opl_can_authorize_domain_ready": {
+          "const": false
+        },
+        "opl_can_authorize_quality_verdict": {
+          "const": false
+        },
+        "opl_can_mutate_artifact_body": {
+          "const": false
+        }
+      }
+    }
+  }
+}

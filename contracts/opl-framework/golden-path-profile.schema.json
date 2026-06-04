@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/golden-path-profile.schema.json",
+  "schema_id": "opl.golden_path_profile.v1",
+  "surface_kind": "opl_golden_path_profile_schema",
+  "owner": "one-person-lab",
+  "purpose": "Define the single ordinary golden path and explicit variant lanes for one Foundry Agent without copying domain truth.",
+  "state": "active_contract",
+  "machine_boundary": "OPL owns ordinary path selection, explicit variant metadata, and App/CLI default projection; domain agents retain domain semantics, quality gates, artifact authority, and owner answer authority.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "profile_id",
+    "domain",
+    "ordinary_path",
+    "explicit_variants",
+    "default_surface_policy",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_golden_path_profile"
+    },
+    "schema_version": {
+      "const": "golden-path-profile.v1"
+    },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ordinary_path": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "path_id",
+        "stage_refs"
+      ],
+      "properties": {
+        "path_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path_role": {
+          "const": "ordinary_default"
+        },
+        "stage_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/ref"
+          }
+        }
+      }
+    },
+    "explicit_variants": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "default_surface_policy": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "ordinary_route_count",
+        "variants_hidden_by_default",
+        "raw_evidence_hidden_by_default"
+      ],
+      "properties": {
+        "ordinary_route_count": {
+          "const": 1
+        },
+        "variants_hidden_by_default": {
+          "const": true
+        },
+        "raw_evidence_hidden_by_default": {
+          "const": true
+        }
+      }
+    },
+    "authority_boundary": {
+      "$ref": "#/$defs/authority_boundary"
+    }
+  },
+  "$defs": {
+    "ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "ordinary_path_count_must_be_one",
+        "variant_can_be_default_without_explicit_selection",
+        "opl_can_write_domain_truth",
+        "opl_can_authorize_domain_ready",
+        "opl_can_authorize_quality_verdict",
+        "opl_can_mutate_artifact_body"
+      ],
+      "properties": {
+        "ordinary_path_count_must_be_one": {
+          "const": true
+        },
+        "variant_can_be_default_without_explicit_selection": {
+          "const": false
+        },
+        "opl_can_write_domain_truth": {
+          "const": false
+        },
+        "opl_can_authorize_domain_ready": {
+          "const": false
+        },
+        "opl_can_authorize_quality_verdict": {
+          "const": false
+        },
+        "opl_can_mutate_artifact_body": {
+          "const": false
+        }
+      }
+    }
+  }
+}

@@ -10,6 +10,8 @@ Date: `2026-06-03`
 
 本轮只回答一个问题：从 MVP 原则看，OPL 各 Foundry Agent 的哪些设计面正在帮助智能体最高效地产出，哪些设计面可能把时间耗在 receipt、read-model、replay、diagnostic 或 cleanup 上，反而阻碍 MAS/MAG/RCA/OMA 的核心交付推进。
 
+若要按“不受当前实现分布约束”的理想情况全面重构 OPL / Foundry Agent，目标操作架构回到 [OPL Foundry Agent Target Operating Architecture](./opl-foundry-agent-target-operating-architecture.md)。本文保留 friction 诊断、fresh evidence 和阻力分类；目标文档承接 greenfield primitives、runtime flow、contract changes、migration phases 和 acceptance tests。
+
 这里的 MVP 不是功能少，而是默认推进路径短：
 
 ```text

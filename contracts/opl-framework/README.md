@@ -21,6 +21,7 @@ It is repo-tracked because the current framework needs stable machine-readable i
 - surface-budget governance that keeps new default surfaces limited to launch safety, authority boundary, evidence/replay/audit/route-back, or repeated App/runtime consumption
 - operating-loop adoption governance that maps external Codex work-loop patterns into OPL workstream/thread continuity, goal oracle, heartbeat/steering, artifact-first review, memory refs, receipt, and read-model boundaries without importing an external runtime or authority
 - owner-delta-first readiness projection that lets default App/operator surfaces answer current safe action, waiting owner, required delta / receipt / typed blocker, and readiness blocker before exposing raw refs-only audit counters
+- target architecture contract kernels for current owner delta, stage artifact unit, owner answer, passive evidence vault, ordinary golden path, stop-loss, guardrail tiers, progress truth, wrapper retirement, and default surface budget without moving domain truth into OPL
 - generic workspace/source/artifact/memory substrate projection and App/operator workbench grouping without moving domain truth/body/verdict/authority into OPL
 - framework runtime dependency location for OPL-compatible agents
 - Runtime Manager readiness and state projection
@@ -41,6 +42,32 @@ Start here for the active `OPL Framework / App / Foundry Agents` model:
 - `contracts/README.md`
 
 Read the linked domain repositories when you need the current repo-owned capability surfaces that `opl skill sync` activates.
+
+## Target Architecture Contract Groups
+
+These schema files are the machine-readable OPL target architecture surface. Their machine boundary is framework-owned shape, refs, launch / audit / fail-closed semantics, and App/operator projection only. They do not copy domain truth, artifact bodies, memory bodies, owner receipt authority, quality verdicts, production readiness, or App release authority into OPL.
+
+### Owner Delta Kernel
+
+- `current-owner-delta.schema.json`: compact default owner / delta / hard-gate / action payload and ordinary next-action root.
+- `owner-answer.schema.json`: unified return shape for owner receipt, typed blocker, human decision, and route-back.
+- `stop-loss-policy.schema.json`: lineage repeat, receipt-only, platform-repair-only, read-model-reconcile-only, and stale-route freeze/release policy.
+
+### Stage Artifact Unit
+
+- `stage-artifact-unit.schema.json`: physical output, manifest, content hashes, owner answer, current pointer, lineage, and progress truth boundary.
+- `stage-artifact-progress-truth-policy.json`: family-level rule that deliverable progress requires physical output, valid manifest, owner answer, and current pointer.
+
+### Evidence Vault
+
+- `evidence-vault-event.schema.json`: passive audit-only event envelope for raw evidence, provider trace, replay, receipt ledger, typed blocker groups, soak, no-regression, cleanup, and diagnostic refs.
+
+### Golden Path
+
+- `golden-path-profile.schema.json`: one ordinary Foundry Agent route plus explicit proof/diagnostic/cleanup/replay/debug variants.
+- `default-surface-budget.schema.json`: default / diagnostic / audit / production / cleanup visibility and promotion gate with false authority flags.
+- `guardrail-tier-policy.json`: launch-hard, runtime-enforced, domain/human, and audit-only guardrail tier boundary.
+- `wrapper-retirement-gate-policy.json`: replacement parity, no-active-caller, owner answer, no-forbidden-write, and tombstone/provenance delete gate.
 
 ## How To Read This Directory
 
@@ -69,6 +96,16 @@ Read the linked domain repositories when you need the current repo-owned capabil
 - `family-runtime-attempt-contract.json`
 - `stage-route-scheduler-contract.json`
 - `stage-artifact-runtime-contract.json`
+- `current-owner-delta.schema.json`
+- `stage-artifact-unit.schema.json`
+- `stage-artifact-progress-truth-policy.json`
+- `owner-answer.schema.json`
+- `evidence-vault-event.schema.json`
+- `golden-path-profile.schema.json`
+- `stop-loss-policy.schema.json`
+- `guardrail-tier-policy.json`
+- `wrapper-retirement-gate-policy.json`
+- `default-surface-budget.schema.json`
 - `state-index-kernel-contract.json`
 - `family-transition-runner-contract.json`
 - `family-domain-quality-projection-contract.json`

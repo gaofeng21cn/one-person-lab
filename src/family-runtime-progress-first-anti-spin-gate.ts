@@ -365,6 +365,53 @@ function buildLineagePacket(input: {
   };
 }
 
+function buildStopLossState(lineage: JsonRecord) {
+  return {
+    surface_kind: 'opl_current_owner_delta_stop_loss_state',
+    status: 'frozen',
+    lineage_repeat_count: numberValue(lineage.repeat_count),
+    receipt_only_repeat_count: 0,
+    platform_repair_only_repeat_count: numberValue(lineage.repeat_count),
+    stale_route_repeat_count: 0,
+    fresh_owner_delta_required_to_resume: true,
+    release_conditions: [
+      'fresh_owner_delta',
+      'stable_typed_blocker',
+      'human_decision',
+      'provider_hard_gate_clearance',
+    ],
+    policy_ref: 'contracts/opl-framework/stop-loss-policy.schema.json',
+  };
+}
+
+function buildStopLossPolicy(lineage: JsonRecord) {
+  return {
+    surface_kind: 'opl_stop_loss_policy',
+    schema_version: 'stop-loss-policy.v1',
+    policy_id: `${PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON}:${stringValue(lineage.candidate_task_id) ?? 'unknown'}`,
+    lineage_ref:
+      stringValue(lineage.candidate_task_id)
+        ? `/family-runtime/tasks/${stringValue(lineage.candidate_task_id)}/progress-first-anti-spin`
+        : '/family-runtime/progress-first-anti-spin',
+    freeze_state: 'frozen',
+    release_conditions: [
+      'fresh_owner_delta',
+      'stable_typed_blocker',
+      'human_decision',
+      'provider_hard_gate_clearance',
+    ],
+    authority_boundary: {
+      opl_can_freeze_default_launch: true,
+      opl_can_delete_domain_attempts: false,
+      opl_can_ignore_fresh_owner_delta: false,
+      opl_can_ignore_stable_typed_blocker: false,
+      opl_can_synthesize_fallback_verdict: false,
+      opl_can_authorize_domain_ready: false,
+      opl_can_authorize_quality_verdict: false,
+    },
+  };
+}
+
 function progressFirstAuthorityBoundary() {
   return {
     opl: 'queue_admission_gate_and_refs_only_lineage_projection',
@@ -471,6 +518,8 @@ function blockTaskForProgressFirstAntiSpin(
     payload: {
       reason: PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON,
       lineage: input.lineage,
+      stop_loss_state: buildStopLossState(input.lineage),
+      stop_loss_policy: buildStopLossPolicy(input.lineage),
       blocked_stage_attempt_ids: blockedAttempts.map((attempt) => attempt.stage_attempt_id),
       authority_boundary: progressFirstAuthorityBoundary(),
     },

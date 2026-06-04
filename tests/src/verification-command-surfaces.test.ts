@@ -264,9 +264,11 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
     surface_model: {
       attention_entry: {
         default_operator_payload: string;
+        compatibility_operator_payload: string;
         default_read_contract: {
           normal_app_state_command: string;
           default_projection: string;
+          compatibility_projection: string;
           full_detail_policy: string;
           raw_refs_policy: string;
           forbidden_fast_profile_fields: string[];
@@ -304,13 +306,21 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
   assert.deepEqual(policy.default_doc_entry_budget.stage_default_commands, [
     'opl stages readiness --family-defaults',
   ]);
-  assert.equal(policy.surface_model.attention_entry.default_operator_payload, 'compact_owner_delta_projection');
+  assert.equal(policy.surface_model.attention_entry.default_operator_payload, 'current_owner_delta');
+  assert.equal(
+    policy.surface_model.attention_entry.compatibility_operator_payload,
+    'compact_owner_delta_projection',
+  );
   assert.equal(
     policy.surface_model.attention_entry.default_read_contract.normal_app_state_command,
     'opl app state --profile fast --json',
   );
   assert.equal(
     policy.surface_model.attention_entry.default_read_contract.default_projection,
+    'opl_current_owner_delta',
+  );
+  assert.equal(
+    policy.surface_model.attention_entry.default_read_contract.compatibility_projection,
     'opl_compact_owner_delta_projection',
   );
   assert.equal(
@@ -410,6 +420,175 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
   for (const [claim, allowed] of Object.entries(policy.authority_boundary)) {
     assert.equal(allowed, false, `${claim} must remain false in OPL surface budget policy`);
   }
+});
+
+test('target architecture schema contracts keep owner delta root and audit tail boundaries machine-readable', () => {
+  const schemaPaths = [
+    'contracts/opl-framework/current-owner-delta.schema.json',
+    'contracts/opl-framework/stage-artifact-unit.schema.json',
+    'contracts/opl-framework/owner-answer.schema.json',
+    'contracts/opl-framework/evidence-vault-event.schema.json',
+    'contracts/opl-framework/golden-path-profile.schema.json',
+    'contracts/opl-framework/stop-loss-policy.schema.json',
+    'contracts/opl-framework/default-surface-budget.schema.json',
+  ];
+  const schemas = Object.fromEntries(
+    schemaPaths.map((schemaPath) => [schemaPath, readJson<Record<string, any>>(schemaPath)]),
+  );
+
+  for (const [schemaPath, schema] of Object.entries(schemas)) {
+    assert.equal(schema.owner, 'one-person-lab', `${schemaPath} must stay OPL-owned`);
+    assert.equal(schema.state, 'active_contract', `${schemaPath} must be active contract`);
+    assert.equal(typeof schema.purpose, 'string', `${schemaPath} must declare purpose`);
+    assert.equal(typeof schema.machine_boundary, 'string', `${schemaPath} must declare boundary`);
+    assert.equal(schema.type, 'object', `${schemaPath} must describe an object payload`);
+  }
+
+  const ownerDelta = schemas['contracts/opl-framework/current-owner-delta.schema.json'];
+  assert.equal(ownerDelta.properties.surface_kind.const, 'opl_current_owner_delta');
+  assert.equal(ownerDelta.properties.schema_version.const, 'current-owner-delta.v1');
+  assert.equal(ownerDelta.properties.current_owner.type, 'string');
+  assert.equal(
+    ownerDelta.properties.projection_policy.const,
+    'default_owner_delta_root_audit_tail_passive',
+  );
+  assert.equal(ownerDelta.properties.audit_refs.type, 'object');
+  assert.equal(
+    ownerDelta.$defs.authority_boundary.properties.audit_tail_can_drive_default_planning.const,
+    false,
+  );
+
+  const evidenceVault = schemas['contracts/opl-framework/evidence-vault-event.schema.json'];
+  assert.equal(
+    evidenceVault.$defs.authority_boundary.properties.event_can_create_default_action_without_delta.const,
+    false,
+  );
+  assert.equal(evidenceVault.$defs.authority_boundary.properties.opl_can_write_domain_truth.const, false);
+
+  const goldenPath = schemas['contracts/opl-framework/golden-path-profile.schema.json'];
+  assert.equal(
+    goldenPath.properties.default_surface_policy.properties.ordinary_route_count.const,
+    1,
+  );
+  assert.equal(
+    goldenPath.$defs.authority_boundary.properties.variant_can_be_default_without_explicit_selection.const,
+    false,
+  );
+
+  const stageArtifact = schemas['contracts/opl-framework/stage-artifact-unit.schema.json'];
+  assert.equal(
+    stageArtifact.properties.progress_truth.required.includes('owner_answer_present'),
+    true,
+  );
+  assert.equal(
+    stageArtifact.$defs.authority_boundary.properties.provider_completion_counts_as_progress.const,
+    false,
+  );
+
+  const ownerAnswer = schemas['contracts/opl-framework/owner-answer.schema.json'];
+  assert.equal(
+    ownerAnswer.$defs.authority_boundary.properties.opl_can_sign_domain_owner_answer.const,
+    false,
+  );
+
+  const stopLoss = schemas['contracts/opl-framework/stop-loss-policy.schema.json'];
+  assert.equal(
+    stopLoss.$defs.authority_boundary.properties.opl_can_synthesize_fallback_verdict.const,
+    false,
+  );
+
+  const defaultSurfaceBudget = schemas['contracts/opl-framework/default-surface-budget.schema.json'];
+  assert.equal(
+    defaultSurfaceBudget.$defs.false_flags.properties.can_claim_production_ready.const,
+    false,
+  );
+  assert.equal(
+    defaultSurfaceBudget.$defs.authority_boundary.properties.default_surface_can_replace_domain_owner.const,
+    false,
+  );
+});
+
+test('target architecture policy contracts keep progress, guardrail, and wrapper retirement gates machine-readable', () => {
+  const progressTruth = readJson<{
+    contract_kind: string;
+    owner: string;
+    state: string;
+    progress_truth_required_signals: string[];
+    single_signal_non_progress_reasons: string[];
+    authority_boundary: Record<string, boolean>;
+  }>('contracts/opl-framework/stage-artifact-progress-truth-policy.json');
+  assert.equal(progressTruth.contract_kind, 'opl_stage_artifact_progress_truth_policy.v1');
+  assert.equal(progressTruth.owner, 'one-person-lab');
+  assert.equal(progressTruth.state, 'active_contract');
+  assert.deepEqual(progressTruth.progress_truth_required_signals, [
+    'physical_output_present',
+    'valid_manifest',
+    'owner_answer_present',
+    'current_pointer_selected',
+  ]);
+  assert.equal(progressTruth.single_signal_non_progress_reasons.includes('provider_completion_only'), true);
+  assert.equal(progressTruth.single_signal_non_progress_reasons.includes('file_presence_without_owner_answer'), true);
+  assert.equal(progressTruth.authority_boundary.provider_completion_counts_as_progress, false);
+  assert.equal(progressTruth.authority_boundary.raw_receipt_count_counts_as_progress, false);
+  assert.equal(progressTruth.authority_boundary.file_presence_alone_counts_as_progress, false);
+
+  const guardrailTier = readJson<{
+    contract_kind: string;
+    owner: string;
+    state: string;
+    tiers: Array<{ tier_id: string; default_path_role: string }>;
+    default_denied_hard_gate_reason_classes: string[];
+    folding_policy: {
+      audit_signal_can_affect_default_path_only_after_folded_into: string[];
+      raw_trace_can_create_default_action: boolean;
+      warning_can_become_launch_blocker_without_tier_change: boolean;
+    };
+    authority_boundary: Record<string, boolean>;
+  }>('contracts/opl-framework/guardrail-tier-policy.json');
+  assert.equal(guardrailTier.contract_kind, 'opl_guardrail_tier_policy.v1');
+  assert.deepEqual(guardrailTier.tiers.map((tier) => tier.tier_id), [
+    'launch_hard',
+    'runtime_enforced',
+    'domain_or_human_gate',
+    'audit_only',
+  ]);
+  assert.equal(
+    guardrailTier.tiers.find((tier) => tier.tier_id === 'audit_only')?.default_path_role,
+    'cannot_block_ordinary_launch_without_folded_delta',
+  );
+  assert.equal(guardrailTier.default_denied_hard_gate_reason_classes.includes('raw_evidence_envelope'), true);
+  assert.equal(
+    guardrailTier.folding_policy.audit_signal_can_affect_default_path_only_after_folded_into.includes(
+      'current_owner_delta',
+    ),
+    true,
+  );
+  assert.equal(guardrailTier.folding_policy.raw_trace_can_create_default_action, false);
+  assert.equal(guardrailTier.authority_boundary.audit_only_guardrail_can_block_launch, false);
+
+  const wrapperRetirement = readJson<{
+    contract_kind: string;
+    owner: string;
+    state: string;
+    required_before_physical_delete: string[];
+    forbidden_retirement_shortcuts: string[];
+    opl_apply_boundary: Record<string, boolean>;
+    authority_boundary: Record<string, boolean>;
+  }>('contracts/opl-framework/wrapper-retirement-gate-policy.json');
+  assert.equal(wrapperRetirement.contract_kind, 'opl_wrapper_retirement_gate_policy.v1');
+  assert.deepEqual(wrapperRetirement.required_before_physical_delete, [
+    'replacement_parity_ref',
+    'no_active_caller_ref',
+    'domain_owner_receipt_ref_or_typed_blocker_ref',
+    'no_forbidden_write_ref',
+    'tombstone_or_provenance_ref',
+  ]);
+  assert.equal(wrapperRetirement.forbidden_retirement_shortcuts.includes('descriptor_ready_only'), true);
+  assert.equal(wrapperRetirement.forbidden_retirement_shortcuts.includes('test_pass_only'), true);
+  assert.equal(wrapperRetirement.opl_apply_boundary.family_runtime_lifecycle_apply_can_record_refs, true);
+  assert.equal(wrapperRetirement.opl_apply_boundary.family_runtime_lifecycle_apply_can_delete_domain_repo_files, false);
+  assert.equal(wrapperRetirement.authority_boundary.opl_can_ignore_active_caller, false);
+  assert.equal(wrapperRetirement.authority_boundary.opl_can_skip_tombstone_or_provenance, false);
 });
 
 test('stage artifact runtime contract freezes folder truth and CLI boundaries', () => {
