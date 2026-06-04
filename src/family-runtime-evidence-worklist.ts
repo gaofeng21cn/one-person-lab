@@ -19,8 +19,10 @@ import { buildZeroOpenCompletionGuard, zeroOpenCompletionGuardSummaryFields } fr
 import { operatorRoutesByActionId, payloadHandoffProjection, routeWithOperatorHandoff } from './family-runtime-evidence-worklist-parts/operator-route-handoff.ts';
 import { readOnlyRouteMatchesDefaults } from './family-runtime-evidence-worklist-parts/route-defaults.ts';
 import {
-  commandRef, countValue, firstRef, record, recordList, stringList, stringValue, uniqueStringList, type JsonRecord,
+  commandRef, countValue, record, recordList, stringList, stringValue, uniqueStringList, type JsonRecord,
 } from './family-runtime-evidence-worklist-parts/json-utils.ts';
+import { normalizeWorklistOwnerFields, worklistOwnerId } from './family-runtime-evidence-worklist-parts/owner-normalization.ts';
+import { freshnessRef, readOnlyExpectedRefs } from './family-runtime-evidence-worklist-parts/worklist-route-refs.ts';
 import { buildStageEvidenceWorkorderPacket, compactStageEvidenceWorkorderAttentionItems } from './family-runtime-evidence-worklist-parts/stage-evidence-workorders.ts';
 import {
   domainManifestsForWorklist,
@@ -58,37 +60,6 @@ const DIAGNOSTIC_ONLY_STATUS = 'diagnostic_only';
 const DIAGNOSTIC_ONLY_ROUTE_SEMANTICS =
   'read_only_operator_diagnostic_not_safe_action_or_closeable_workorder';
 
-function worklistOwnerId(value: string | null) {
-  return value && canonicalOwnerId(value) === 'one-person-lab' ? 'opl' : value;
-}
-
-function normalizeWorklistOwnerFields<T extends JsonRecord>(item: T): T {
-  const owner = worklistOwnerId(stringValue(item.owner));
-  const routeOwner = worklistOwnerId(stringValue(item.route_owner));
-  const safeActionOwner = worklistOwnerId(stringValue(item.safe_action_owner));
-  const evidenceRequirement = record(item.evidence_requirement);
-  return {
-    ...item,
-    ...(owner ? { owner } : {}),
-    ...(routeOwner ? { route_owner: routeOwner } : {}),
-    ...(safeActionOwner ? { safe_action_owner: safeActionOwner } : {}),
-    evidence_requirement: {
-      ...evidenceRequirement,
-      ...(owner ? { owner } : {}),
-    },
-  } as T;
-}
-
-function freshnessRef(route: JsonRecord) {
-  return stringValue(route.evidence_source_ref)
-    ?? stringValue(route.source_ref)
-    ?? firstRef(route.monitor_refs)
-    ?? firstRef(route.runtime_event_refs)
-    ?? firstRef(route.source_scope_refs)
-    ?? stringValue(route.schedule_id)
-    ?? '/runtime_tray_snapshot/app_operator_drilldown';
-}
-
 function readOnlyClaimScope(route: JsonRecord) {
   const actionKind = stringValue(route.action_kind) ?? 'operator_action';
   if (actionKind === 'stage_production_attempt_request') {
@@ -119,16 +90,6 @@ function readOnlyClaimScope(route: JsonRecord) {
     return 'progress_first_attempt_supervision';
   }
   return actionKind;
-}
-
-function readOnlyExpectedRefs(route: JsonRecord) {
-  return [
-    ...stringList(route.expected_receipt_refs),
-    ...stringList(route.missing_production_evidence),
-    ...stringList(route.required_evidence_refs),
-    ...stringList(route.monitor_refs),
-    ...stringList(route.runtime_event_refs),
-  ];
 }
 
 function refsOnlyClosureReceipt(route: JsonRecord, drilldown: JsonRecord) {

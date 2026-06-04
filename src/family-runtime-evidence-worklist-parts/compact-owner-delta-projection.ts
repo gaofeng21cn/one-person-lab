@@ -2,12 +2,8 @@ import {
   buildCompactOwnerDeltaProjection,
   buildDefaultNextActionFromCurrentOwnerDelta,
 } from '../owner-delta-compact-projection.ts';
-import { canonicalOwnerId } from '../evidence-envelope.ts';
 import { countValue, record, type JsonRecord } from './json-utils.ts';
-
-function worklistOwnerId(value: unknown) {
-  return typeof value === 'string' && canonicalOwnerId(value) === 'one-person-lab' ? 'opl' : value;
-}
+import { worklistOwnerId } from './owner-normalization.ts';
 
 function normalizeWorklistDefaultNextActionOwner(action: JsonRecord): JsonRecord {
   return {
