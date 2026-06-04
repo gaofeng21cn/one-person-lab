@@ -169,6 +169,92 @@ test('opl index rebuild projects Stage Folder refs into artifact and read-model 
   });
 });
 
+test('opl index rebuild projects medautoscience Stage Folder refs with normalized domain filter', () => {
+  withTempState((root) => {
+    const opened = runCli(
+      [
+        'stage',
+        'open',
+        '--domain',
+        'medautoscience',
+        '--program',
+        'state-index-canary',
+        '--topic',
+        'dm-cvd',
+        '--deliverable',
+        'dm002-runtime-state-index',
+        '--stage',
+        'runtime_storage_refs',
+        '--stage-order',
+        '1',
+        '--attempt',
+        'canary-2026-06-04',
+      ],
+      { OPL_STATE_DIR: root },
+    ).stage_artifact_runtime as {
+      attempt_workspace: { outputs_dir: string; receipts_dir: string };
+    };
+    fs.writeFileSync(path.join(opened.attempt_workspace.outputs_dir, 'restore_proof_canary.json'), '{}');
+    writeJson(path.join(opened.attempt_workspace.receipts_dir, 'mas-owner.json'), {
+      receipt_ref: 'mas-runtime-storage-restore-proof-canary:dm002:20260604T015617Z',
+    });
+    runCli(
+      [
+        'stage',
+        'commit',
+        '--domain',
+        'medautoscience',
+        '--program',
+        'state-index-canary',
+        '--topic',
+        'dm-cvd',
+        '--deliverable',
+        'dm002-runtime-state-index',
+        '--stage',
+        'runtime_storage_refs',
+        '--attempt',
+        'canary-2026-06-04',
+        '--terminal-status',
+        'success',
+        '--required-output',
+        'restore_proof_canary.json',
+        '--owner-receipt-ref',
+        'mas-runtime-storage-restore-proof-canary:dm002:20260604T015617Z',
+      ],
+      { OPL_STATE_DIR: root },
+    );
+
+    const rebuilt = runCli(['index', 'rebuild', '--domain', 'med-autoscience'], { OPL_STATE_DIR: root }).state_index;
+    const runtimeRoot = path.join(root, 'family-runtime');
+    const artifactDb = path.join(runtimeRoot, 'artifact-index.sqlite');
+    const readModelDb = path.join(runtimeRoot, 'read-model.sqlite');
+
+    assert.equal(rebuilt.status, 'ready');
+    assert.equal(rebuilt.stage_artifact_projection.filtered_domain_id, 'med-autoscience');
+    assert.equal(rebuilt.stage_artifact_projection.scanned_attempt_count, 1);
+    assert.equal(rebuilt.stage_artifact_projection.scanned_deliverable_count, 1);
+    assert.equal(rebuilt.stage_artifact_projection.artifact_index_rows.current_pointer_rows, 1);
+    assert.equal(rebuilt.stage_artifact_projection.artifact_index_rows.manifest_rows, 1);
+    assert.equal(rebuilt.stage_artifact_projection.artifact_index_rows.artifact_ref_rows, 1);
+    assert.equal(rebuilt.stage_artifact_projection.artifact_index_rows.receipt_ref_rows, 1);
+    assert.equal(rebuilt.stage_artifact_projection.operator_read_model_rows.artifact_drilldown_rows, 1);
+    assert.equal(rebuilt.stage_artifact_projection.operator_read_model_rows.owner_route_rows, 1);
+    assert.equal(tableCount(artifactDb, 'manifest_index'), 1);
+    assert.equal(tableCount(artifactDb, 'stage_current_pointers'), 1);
+    assert.equal(tableCount(readModelDb, 'owner_route_index'), 1);
+
+    const manifestRow = tableValue<{ domain_id: string; stage_id: string; receipt_ref: string }>(
+      artifactDb,
+      'SELECT domain_id, stage_id, receipt_ref FROM manifest_index',
+    );
+    assert.deepEqual({ ...manifestRow }, {
+      domain_id: 'medautoscience',
+      stage_id: 'runtime_storage_refs',
+      receipt_ref: 'mas-runtime-storage-restore-proof-canary:dm002:20260604T015617Z',
+    });
+  });
+});
+
 test('opl index doctor reports missing sidecar databases before rebuild', () => {
   withTempState((root) => {
     const doctor = runCli(['index', 'doctor'], { OPL_STATE_DIR: root }).state_index;
