@@ -174,6 +174,73 @@ exit 64
   }
 });
 
+test('Codex stage runner injects provider-hosted stage attempt identity into live Codex env', async () => {
+  const expectedStagePacketRef = 'studies/003/artifacts/supervision/consumer/default_executor_dispatches/immutable/return_to_ai_reviewer_workflow/dispatch.json';
+  const expectedWorkspaceRoot = '/tmp/should-be-overwritten-by-attempt';
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  closeout=$(node -e 'const keys = ["OPL_STAGE_ATTEMPT_ID","OPL_STAGE_ID","OPL_STAGE_PACKET_REF","OPL_WORKSPACE_ROOT","OPL_TASK_ID","OPL_WORKFLOW_ID","OPL_STUDY_ID","OPL_QUEST_ID","OPL_ACTION_TYPE","OPL_WORK_UNIT_ID"]; const refs = keys.map((key) => key + "=" + (process.env[key] || "")); process.stdout.write(JSON.stringify({surface_kind:"stage_attempt_closeout_packet", closeout_refs: refs, next_owner:"med-autoscience", domain_ready_verdict:"domain_gate_pending"}));')
+  printf '{"type":"thread.started","thread_id":"thread-stage-env"}\\n'
+  printf '%s\\n' "$(node -e 'const text = process.argv[1]; process.stdout.write(JSON.stringify({type:"item.completed",item:{type:"agent_message",id:"msg-env",text}}));' "$closeout")"
+  printf '{"type":"turn.completed"}\\n'
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_provider_identity_test',
+        workflow_id: 'wf_provider_identity_test',
+        task_id: 'frt_provider_identity_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+          study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+          quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+          action_type: 'return_to_ai_reviewer_workflow',
+          source_refs: [
+            {
+              role: 'owner_route_work_unit_fingerprint',
+              ref: 'truth-snapshot::12538a8351d7513191c2e514',
+            },
+          ],
+        },
+        checkpoint_refs: [expectedStagePacketRef],
+      },
+      stagePacketRef: expectedStagePacketRef,
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+      env: {
+        OPL_WORKSPACE_ROOT: expectedWorkspaceRoot,
+      },
+    });
+
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+      'OPL_STAGE_ATTEMPT_ID=sat_provider_identity_test',
+      'OPL_STAGE_ID=domain_owner/default-executor-dispatch',
+      `OPL_STAGE_PACKET_REF=${expectedStagePacketRef}`,
+      `OPL_WORKSPACE_ROOT=${fixtureRoot}`,
+      'OPL_TASK_ID=frt_provider_identity_test',
+      'OPL_WORKFLOW_ID=wf_provider_identity_test',
+      'OPL_STUDY_ID=003-dpcc-primary-care-phenotype-treatment-gap',
+      'OPL_QUEST_ID=003-dpcc-primary-care-phenotype-treatment-gap',
+      'OPL_ACTION_TYPE=return_to_ai_reviewer_workflow',
+      'OPL_WORK_UNIT_ID=truth-snapshot::12538a8351d7513191c2e514',
+    ]);
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('Codex stage runner rejects terminal prose-prefixed closeout JSON', async () => {
   const closeout = {
     surface_kind: 'domain_stage_closeout_packet',

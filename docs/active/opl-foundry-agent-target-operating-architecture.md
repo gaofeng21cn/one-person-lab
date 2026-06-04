@@ -59,6 +59,67 @@ Domain Intent
 
 这些经验共同给出一个判断：OPL 的理想形态应像平台工程的 golden path + Kubernetes 的 controller + Temporal 的 durable execution + SRE 的 toil 消除 + agent handoff/guardrail/tracing 的分层组合；但 OPL 的领域智能继续由 Codex executor、domain pack 和独立 gate 承担。Stage 内的工具目录只应表达可用能力和安全边界，不应变成约束 executor 的工具流程。
 
+## Combined Design Evaluation
+
+本节把两条对话主线合并成同一个目标态判断：
+
+- `019e83cd-6c5e-74b3-9410-31681dca7a72` 的关注点是 purpose-first / owner-delta-first：从最终产出反推哪些 repo、surface、wrapper、read-model、evidence 和 cleanup 面真正必要。
+- `019e8e48-a561-7a32-a12d-91df71c7bfde` 的关注点是 MVP-first：从最短可用路径判断哪些设计正在帮助 agent 产出，哪些会把系统拖入 receipt、reconcile、replay、diagnostic 或 evidence accounting。
+
+两条线给出的共同结论是：OPL 应该成为更强的底座，而不是更厚的默认流程。理想 OPL 的默认层只负责把正确的 `current_owner_delta`、stage context、authority boundary、available affordances、quality gate 和 durable runtime 交给 Codex executor；其余 evidence、diagnostic、replay、long-soak、cleanup 和 wrapper-retirement 都是显式 lane。
+
+### What is already directionally right
+
+| 面 | 设计判断 |
+| --- | --- |
+| `OPL Framework -> App Cockpit -> Foundry Agents` | 顶层三层是对的。Framework 持 runtime / queue / projection / generated surface；App 展示和介入；domain agent 持 truth / artifact / quality / owner answer。 |
+| `Codex CLI` first-class executor | 符合 AI-first / executor-first。OPL 不应把 stage 内专家判断编译成 rigid workflow。 |
+| Temporal-backed provider | 长跑、resume、retry、dead-letter、history 和 worker liveness 应归 framework substrate；domain repo 不应复制 daemon / scheduler / attempt loop。 |
+| `current_owner_delta` | 这是最重要的默认 root。它把 “还有多少 evidence item” 改成 “谁欠什么可验证 delta”。 |
+| Stage Artifact Unit | 进度应从 physical output、manifest、owner answer 和 current pointer 推导；receipt 或 provider completion 不能单独算 deliverable progress。 |
+| Tool affordance boundary | 工具目录作为能力/权限/凭据/写范围/副作用/forbidden authority 边界有价值；它不能变成工具顺序、认知策略或 quality verdict。 |
+
+### What should be redesigned more aggressively
+
+| 优先级 | 重构点 | 理想目标 |
+| --- | --- | --- |
+| P0 | `owner_delta_contract_as_single_root` | 把 `current_owner_delta` 从 policy / projection 进一步提升成所有 default read surface 的唯一 canonical object；framework readiness、App fast state、runtime tray、evidence-worklist summary 和 Agent Lab improvement input 都从它派生。 |
+| P0 | `no_worklist_root_planning` | worklist、raw evidence envelope、stage replay、typed blocker group 和 private residue inventory 只能是 audit/detail；未 fold 成 owner delta、owner answer、typed blocker 或 hard gate 前，不得生成默认计划或 next action。 |
+| P0 | `lineage_stop_loss_default` | 同一 lineage 反复 receipt-only、platform-repair-only、read-model reconcile-only 或 stale-route redrive-only 时，默认冻结 launch，只接受 fresh domain owner delta 或 stable typed blocker。 |
+| P0 | `domain_golden_path_single_default` | MAS/MAG/RCA/OMA 每个 agent 只有一个 ordinary golden path；proof lane、diagnostic lane、route variant、long-soak、cleanup 和 legacy provenance 必须显式进入。 |
+| P1 | `generated_surface_absorbs_wrappers` | CLI/MCP/App/status/workbench/default-caller shell 由 OPL generated/hosted surface 承担；domain repo 只保 semantic pack、authority functions、native helpers 和 direct skill path。 |
+| P1 | `app_cockpit_not_ledger_browser` | App 默认页只显示任务、stage、owner、缺什么 answer、artifact、hard blocker 和用户介入点；full ledger、raw count、provider trace 和 route menu 只在 drilldown。 |
+| P1 | `evidence_vault_passive` | Evidence Vault 的规则固定为 record everything, plan from nothing；证据增长不等于进度，typed blocker 增长不等于完成。 |
+
+### Per-agent ideal shape
+
+| Agent | 理想默认路径 | 应下沉或退役的面 |
+| --- | --- | --- |
+| MAS | 当前 study -> paper/evidence/reviewer/human-gate delta -> MAS owner receipt or typed blocker。 | historical dispatch refs、MDS/backend provenance、platform repair、read-model accounting、full typed blocker groups、stale route redrive。 |
+| MAG | selected grant -> authoring/fundability/export/submission delta -> MAG owner receipt or typed blocker。 | grouped CLI internals、Hermes proof lane、manifest consumer long-soak、submission 前的 shell/status/diagnostic 抢占。 |
+| RCA | source truth -> image-first visual artifact -> review/export gate -> RCA owner receipt or typed blocker。 | HTML/native PPTX variants、route alias menu、runtimeWatch internals、visual long-soak、historical replay refs。 |
+| OMA | target-agent evidence -> mechanism/candidate/work-order -> target owner answer。 | 第二 Framework / 第二 Agent Lab、reviewer pool owner、worktree lifecycle owner、promotion gate owner、script materializer internals默认化。 |
+
+### Design scorecard
+
+| 维度 | 当前方向 | 理想态评分 | 主要缺口 |
+| --- | --- | --- | --- |
+| 目标对齐 | framework/domain/App owner 边界已经基本正确。 | 高 | 需要继续防止 evidence tail 和 wrapper retirement 被误读成 domain progress。 |
+| MVP 可用性 | ordinary path 已收窄到 owner-delta-first。 | 中高 | worklist/evidence/readiness 仍容易在 operator 视角重新变成 action root。 |
+| 可维护性 | primitive 已明确，但历史命令和长文件仍有迁移压力。 | 中 | 代码结构应继续围绕 `owner-delta-controller`、`stage-attempt-runtime`、`stage-artifact-kernel`、`evidence-vault` 等 primitive 收束。 |
+| 可扩展性 | standard pack / generated surface / conformance 方向正确。 | 中高 | 新 agent onboarding 应从 product pack + golden path + authority functions 生成，而不是复制 MAS/MAG/RCA 历史 wrapper。 |
+| 可审计性 | refs-only ledger、Stage Artifact Unit、Temporal provider 和 owner receipt 边界强。 | 高 | audit plane 必须保持 passive，不能用审计计数驱动 planning。 |
+
+### Recommended redesign sequence
+
+1. 先固化 `current_owner_delta` canonical schema 和 default derivation，确保所有默认读面同源。
+2. 再关闭 worklist-root planning：所有 raw tail 必须通过 owner delta / hard gate / typed blocker fold 才能影响默认动作。
+3. 接着把 stop-loss 作为 control-plane primitive，优先覆盖 MAS stale dispatch / owner-payload tail。
+4. 然后逐 agent 固定唯一 ordinary golden path，并把 route variants、proof lane、diagnostic、cleanup、long-soak 下沉为 explicit lane。
+5. 最后推进 domain wrapper retirement：只在 replacement parity、no-active-caller、domain owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 全满足时物理删除。
+
+这套顺序的目的不是增加设计层，而是减少默认面：先让 operator 永远只看到一个当前 owner delta，再让平台证据成为可下钻的 observability，而不是可误触发的任务来源。
+
 ## Greenfield Target
 
 如果从零设计，OPL family 应拆成 7 个稳定 primitive。

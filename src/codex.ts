@@ -63,6 +63,7 @@ export interface CodexStreamingCommandOptions {
   onStderrLine?: (line: string) => void;
   onStdoutEvent?: (event: CodexExecEvent) => void;
   onProcessStarted?: (pid: number | null) => void;
+  env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
   signal?: AbortSignal;
   timeoutMs?: number;
   noOutputTimeoutMs?: number;
@@ -141,6 +142,21 @@ export function resolveCodexBinary(): CodexBinaryInfo | null {
 
 function quoteTomlString(value: string) {
   return JSON.stringify(value);
+}
+
+function spawnEnvWithOverlay(overlay?: NodeJS.ProcessEnv | Record<string, string | undefined>) {
+  if (!overlay) {
+    return process.env;
+  }
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  for (const [key, value] of Object.entries(overlay)) {
+    if (value === undefined) {
+      delete env[key];
+    } else {
+      env[key] = value;
+    }
+  }
+  return env;
 }
 
 export function buildCodexExecArgs(
@@ -236,7 +252,7 @@ export async function runCodexCommandStreaming(
 
   return await new Promise<CodexCommandResult>((resolve, reject) => {
     const child = spawn(codexBinary.path, args, {
-      env: process.env,
+      env: spawnEnvWithOverlay(options.env),
       detached: true,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
