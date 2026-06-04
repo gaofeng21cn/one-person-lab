@@ -16,25 +16,27 @@ Date: `2026-06-04`
 
 ## 目标结论
 
-理想 OPL 不是更厚的流程系统，也不是更大的 worklist / evidence ledger。理想 OPL 是一个 `Agent Operating System`：
+理想 OPL 不是更厚的流程系统，也不是更大的 worklist / evidence ledger。理想 OPL 是一个面向高价值知识工作的 `Cognitive Computation Kernel + Agent Runtime Platform`：
 
 ```text
 Domain Intent
   -> Foundry Agent Product Pack
-  -> Stage Runtime Kernel
-  -> Selected Codex Executor
+  -> Stage Goal + Context + Authority Boundary + Available Affordances + Quality Gate
+  -> Cognitive Computation Kernel in selected Codex executor
+  -> Stage Attempt Runtime
   -> Stage Artifact Unit
   -> Independent Gate / Owner Answer
   -> Compact Owner Delta Projection
 ```
 
-它只默认做三件事：
+它只默认做四件事：
 
-1. 让最强 executor 尽快拿到正确 stage、材料、工具、权限和质量门。
-2. 让每次 attempt 收敛成可验证的 artifact / receipt / typed blocker。
-3. 让 operator / App 只看到当前 owner 欠什么下一步，而不是看到平台内部全部证据尾巴。
+1. 让最强 executor 尽快拿到正确 stage、材料、权限边界、可用 affordances 和质量门。
+2. 在 stage 内保留开放式认知计算空间：executor 自主规划、调工具、生成候选、反思、比较、修订和追问。
+3. 让每次 attempt 收敛成可验证的 artifact / receipt / typed blocker。
+4. 让 operator / App 只看到当前 owner 欠什么下一步，而不是看到平台内部全部证据尾巴。
 
-因此，目标重构的中心不是 `worklist`，而是 `current_owner_delta`；不是 `evidence envelope`，而是 `stage artifact unit`；不是 `diagnostic route menu`，而是每个 agent 的单一 golden path。
+因此，目标重构的中心不是 `worklist`，而是 `current_owner_delta`；不是 `evidence envelope`，而是 `stage artifact unit`；不是 `tool profile` 或流程脚本，而是 `tool affordance boundary`；不是 `diagnostic route menu`，而是每个 agent 的单一 golden path。
 
 ## External Practice Synthesis
 
@@ -55,11 +57,11 @@ Domain Intent
 | [OpenTelemetry signals](https://opentelemetry.io/docs/concepts/signals/) | traces、metrics、logs 等信号分层，用于理解系统。 | OPL 默认只给 broad owner signal；trace/log/metric/raw refs 全部进 drilldown。 |
 | [DORA continuous delivery capability](https://dora.dev/capabilities/continuous-delivery/) | 高质量快速反馈应对所有团队成员可见。 | Foundry Agent 默认反馈必须是用户能理解的 next owner / artifact delta / blocker，而不是内部计数。 |
 
-这些经验共同给出一个判断：OPL 的理想形态应像平台工程的 golden path + Kubernetes 的 controller + Temporal 的 durable execution + SRE 的 toil 消除 + agent handoff/guardrail/tracing 的分层组合；但 OPL 的领域智能继续由 Codex executor、domain pack 和独立 gate 承担。
+这些经验共同给出一个判断：OPL 的理想形态应像平台工程的 golden path + Kubernetes 的 controller + Temporal 的 durable execution + SRE 的 toil 消除 + agent handoff/guardrail/tracing 的分层组合；但 OPL 的领域智能继续由 Codex executor、domain pack 和独立 gate 承担。Stage 内的工具目录只应表达可用能力和安全边界，不应变成约束 executor 的工具流程。
 
 ## Greenfield Target
 
-如果从零设计，OPL family 应拆成 6 个稳定 primitive。
+如果从零设计，OPL family 应拆成 7 个稳定 primitive。
 
 ### 1. Agent Product Pack
 
@@ -72,6 +74,7 @@ agent_product_pack
   stages
   prompts
   skills
+  tool_affordance_boundaries
   knowledge
   quality_gates
   artifact_contract
@@ -82,19 +85,47 @@ agent_product_pack
 
 Domain repo 只持有领域语义、质量判断、artifact/memory authority、owner receipt/typed blocker signer、少量 native helper。它不持有 generic scheduler、queue、attempt ledger、session store、workbench、status shell、product-entry wrapper 或 evidence worklist planner。
 
-### 2. Stage Runtime Kernel
+### 2. Cognitive Computation Kernel
 
-Stage 是 OPL 唯一默认执行单元。Kernel 只负责：
+认知计算内核是 stage 内的执行策略空间，不是 OPL 的硬编码流程引擎：
+
+```text
+stage_goal + context + authority_boundary + available_affordances + quality_gate
+  -> executor autonomous planning
+  -> candidate generation
+  -> grounded reflection / review
+  -> comparative selection
+  -> evolution / revision
+  -> meta-review / learning proposal
+  -> closeout packet for independent gate
+```
+
+OPL 只要求 stage pack 暴露可审计 refs：
+
+- `prompt_refs`；
+- `skill_refs`；
+- `tool_refs` 与 `tool_affordance_boundary`；
+- `knowledge_refs`；
+- `rubric_refs` / `quality_gate_refs`；
+- candidate pool / handoff / independent gate policy。
+
+其中 `tool_affordance_boundary` 是关键：工具只声明能力、权限、凭据边界、可写范围、side effect 风险和 forbidden authority。它不规定 executor 必须怎么用、什么时候用、按什么顺序用，也不把工具用途写死成 prompt 外的流程约束。具体工具选择、组合、跳过、替代、并行和追问，交给 executor 在 attempt 内自主决定。
+
+OPL 记录实际使用过的工具 refs、证据 refs、artifact refs、owner answer 和 blocker；不把这些记录反向升级成下一轮固定流程。
+
+### 3. Stage Attempt Runtime
+
+Stage 是 OPL 唯一默认执行单元。Attempt Runtime 只负责：
 
 - admission：stage id、owner、goal、scope refs、requires/ensures、selected executor、authority boundary；
 - launch：生成 attempt request、绑定 provider、绑定 workspace/artifact root；
-- execution envelope：给 Codex executor 清晰目标、材料、工具、知识、质量门；
+- execution envelope：给 Codex executor 清晰目标、材料、权限边界、可用 affordances、知识和质量门；
 - closeout：要求 artifact unit、owner answer、typed blocker 或 decision receipt；
 - replay/audit refs：只进入 audit plane。
 
-Kernel 不负责决定医学结论、基金质量、视觉审美、agent patch 是否好。开放式专家判断继续由 executor + independent gate + domain owner 完成。
+Attempt Runtime 不负责生成候选、选择工具、评审、排序、修订或学习，也不负责决定医学结论、基金质量、视觉审美、agent patch 是否好。开放式专家判断继续由 executor + independent gate + domain owner 完成。
 
-### 3. Current Owner Delta Controller
+### 4. Current Owner Delta Controller
 
 OPL 默认 read model 的根对象是 `current_owner_delta`：
 
@@ -128,7 +159,7 @@ actual queue / provider / attempt / artifact / owner-answer / typed-blocker stat
 
 它不从 raw evidence tail 合成新 work，不把 blocked envelope 数量变成 action，不把 receipt 增长写成 progress。
 
-### 4. Stage Artifact Unit
+### 5. Stage Artifact Unit
 
 每个 stage attempt 必须落成一个可重建单元：
 
@@ -150,7 +181,7 @@ progress = physical output + valid manifest + owner answer + current pointer
 
 没有 owner answer 的文件是 orphan artifact；有 receipt 但文件/hash 不匹配是 broken artifact；历史 attempt 不被 current pointer 选中就只是 provenance。
 
-### 5. Evidence Vault
+### 6. Evidence Vault
 
 Evidence Vault 是 passive audit store：
 
@@ -166,7 +197,7 @@ Evidence Vault 是 passive audit store：
 
 Vault 的原则是 `record everything, plan from nothing`。只有当 evidence 被 fold 成 `current_owner_delta`、hard gate、owner answer 或 typed blocker，它才影响默认路径。
 
-### 6. App Cockpit
+### 7. App Cockpit
 
 App 是 cockpit，不是 ledger browser。默认视图只展示：
 
@@ -189,9 +220,10 @@ App 是 cockpit，不是 ledger browser。默认视图只展示：
 User chooses MAS/MAG/RCA/OMA purpose
   -> App/CLI loads agent_product_pack
   -> OPL selects ordinary_golden_path
-  -> Stage Runtime Kernel admits next stage
+  -> Stage Attempt Runtime admits next stage
   -> Current Owner Delta Controller emits one delta
   -> Temporal-backed provider starts Codex attempt
+  -> Cognitive Computation Kernel runs inside selected executor
   -> Codex produces stage artifact unit
   -> independent gate/domain owner returns owner_answer
   -> controller updates next current_owner_delta
@@ -238,7 +270,7 @@ Ordinary path:
 ```text
 study goal/source
   -> current paper/evidence/reviewer/human-gate delta
-  -> Codex execution
+  -> Codex cognitive attempt with source/evidence/tool affordances
   -> manuscript/evidence/reviewer artifact delta
   -> MAS owner receipt or typed blocker
 ```
@@ -253,7 +285,7 @@ Non-default:
 - platform read-model repair；
 - long-soak/provider proof。
 
-MAS 的最大重构点是：`domain_dispatch_evidence` 默认不再是 worklist root，只是 owner-delta 的 audit ref。默认只问：当前 study 有没有新的 paper/reviewer/human gate delta；没有就要 MAS stable typed blocker。
+MAS 的最大重构点是：`domain_dispatch_evidence` 默认不再是 worklist root，只是 owner-delta 的 audit ref。默认只问：当前 study 有没有新的 paper/reviewer/human gate delta；没有就要 MAS stable typed blocker。MAS stage pack 应把医学 source、evidence、reviewer、统计/绘图 helper 等工具作为 affordance 边界暴露，让 executor 自主决定先读、先算、先写还是先请审稿。
 
 ### MAG
 
@@ -262,7 +294,7 @@ Ordinary path:
 ```text
 selected grant target
   -> authoring/fundability/export/submission delta
-  -> Codex execution
+  -> Codex cognitive attempt with writing/review/export affordances
   -> proposal/package/gate artifact
   -> MAG owner receipt or typed blocker
 ```
@@ -275,7 +307,7 @@ Non-default:
 - manifest consumer long-soak；
 - product-entry shell diagnostics。
 
-MAG 的重构点是把 `submission_ready_export_gate` 设为 domain/human gate，而不是让 shell、manifest、proof lane 或 runtime-budget warning 抢占 authoring。
+MAG 的重构点是把 `submission_ready_export_gate` 设为 domain/human gate，而不是让 shell、manifest、proof lane 或 runtime-budget warning 抢占 authoring。MAG 不应把基金写作工具配置成固定流程，而应声明 authoring、fundability review、export、submission evidence 的 affordance 与 forbidden authority。
 
 ### RCA
 
@@ -284,6 +316,7 @@ Ordinary path:
 ```text
 source truth
   -> image-first visual artifact stage
+  -> Codex/RCA cognitive attempt with render/review/export affordances
   -> review/export gate
   -> RCA owner receipt or typed blocker
 ```
@@ -296,7 +329,7 @@ Non-default:
 - visual long-soak；
 - replay/human-review historical refs。
 
-RCA 的重构点是单一 visual golden path：能产生可看的 artifact 是默认目标，route 多样性只服务显式需求。
+RCA 的重构点是单一 visual golden path：能产生可看的 artifact 是默认目标，route 多样性只服务显式需求。RCA 可以暴露 render、screenshot、native PPTX、review/export helper 等 affordance，但不把 visual strategy、工具顺序或版式探索写成 OPL 固定流程。
 
 ### OMA
 
@@ -305,6 +338,7 @@ Ordinary path:
 ```text
 target agent evidence
   -> mechanism/candidate/work-order stage
+  -> OMA cognitive attempt with reviewer/worktree/test affordances
   -> target owner answer
   -> receipt or typed blocker
 ```
@@ -317,7 +351,7 @@ Non-default:
 - worktree lifecycle；
 - second Agent Lab behavior。
 
-OMA 的重构点是保持 target-agent generic vocabulary；它不成为第二 OPL Framework，也不直接关闭目标 domain owner receipt。
+OMA 的重构点是保持 target-agent generic vocabulary；它不成为第二 OPL Framework，也不直接关闭目标 domain owner receipt。OMA 只声明 agent-building、reviewer、worktree、test、patch proposal affordance 边界；机制选择和补丁构思继续交给 executor 与独立 reviewer。
 
 ## What To Remove From Default Design
 
@@ -349,6 +383,7 @@ OMA 的重构点是保持 target-agent generic vocabulary；它不成为第二 O
 | `golden-path-profile.schema.json` | 每个 Foundry Agent 的 ordinary path 与 explicit variants。 |
 | `stop-loss-policy.schema.json` | lineage repeat、receipt-only、platform-repair-only、stale-route 的冻结规则。 |
 | `default-surface-budget.schema.json` | default / diagnostic / audit / production / cleanup 的升级门。 |
+| `cognitive-computation-kernel.json` | stage 内认知计算层、tool affordance boundary、独立 quality gate 和 route/stage 分层边界。 |
 
 这些合同不应复制 domain truth；它们只固定 OPL 能看见、能启动、能审计、能 fail-closed 的形状。
 
@@ -359,7 +394,8 @@ OMA 的重构点是保持 target-agent generic vocabulary；它不成为第二 O
 ```text
 src/
   agent-product-pack/
-  stage-runtime-kernel/
+  cognitive-computation-kernel/
+  stage-attempt-runtime/
   owner-delta-controller/
   stage-artifact-kernel/
   evidence-vault/
@@ -405,6 +441,7 @@ domain-agent-repo/
 - `stage_artifact_progress_truth` 已落成 `stage-artifact-progress-truth-policy.json`：deliverable progress 必须同时具备 physical output、valid manifest、owner answer 和 current pointer；provider completion、receipt count、file presence 单独不计进度。
 - `guardrail_tier_policy` 已落成 `guardrail-tier-policy.json`：launch-hard、runtime-enforced、domain/human gate、audit-only 分级稳定；audit-only 和 advisory warning 不能绕过 folded owner delta 变成普通 launch blocker。
 - Phase 5 wrapper retirement 已落成 `wrapper-retirement-gate-policy.json`：replacement parity、no-active-caller、domain owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 是物理删除前置门；OPL lifecycle apply 只能记录 refs，不能替 domain repo 执行未授权删除。
+- `cognitive-computation-kernel.json` 已落成认知计算内核机器合同：固定 generation、reflection、comparative selection、evolution、meta-review、tool affordance boundary、knowledge 和 independent gate 的 refs-only 组织边界；明确工具目录不是 workflow script，Route 不是小 Stage，OPL 不持有 domain truth 或 quality verdict。
 - `contracts/opl-framework/README*` 已同步目标架构合同组，把上述 schema/policy 纳入 active contract index。
 - 2026-06-04 fresh family conformance 已闭合到 `4/4 passed`、`blocked_count=0`；MAS/MAG/RCA/OMA 均声明唯一 ordinary default route。MAS 的 ordinary default route 固定为 `direction_and_route_selection`，由 MAS canonical generator `build_family_stage_control_plane()` 物化到 `contracts/stage_control_plane.json`，不是手写 JSON 漂移。
 
@@ -412,6 +449,7 @@ domain-agent-repo/
 
 - 新文档、core docs、active gap 和 contracts README 同步引用本目标架构。
 - 明确 `current_owner_delta` 是默认 root，`worklist` 降为 secondary view。
+- 明确 `cognitive-computation-kernel` 与 `tool_affordance_boundary` 是 stage 内目标形态，不是工具流程脚本。
 - 不改行为，只先冻结命名和 owner boundary。
 
 ### Phase 1: Introduce `current_owner_delta` contract
@@ -426,25 +464,31 @@ domain-agent-repo/
 - `open_worklist_count` 只做 audit metric。
 - 验证：同一 lineage 的 historical/superseded/typed-blocked attempts 不再产生 per-attempt default action。
 
-### Phase 3: Stage artifact unit becomes progress root
+### Phase 3: Cognitive computation kernel becomes stage strategy root
+
+- 每个标准 stage pack 声明 prompt / skill / tool affordance / knowledge / rubric / quality gate refs。
+- `tool_refs` 只做 affordance catalog 和安全边界，不定义工具编排。
+- 验证：合同和 conformance 不允许 tool catalog 规定工具使用顺序、替代 executor 规划、授权 forbidden write 或关闭 quality gate。
+
+### Phase 4: Stage artifact unit becomes progress root
 
 - 每个 stage attempt 生成 external artifact unit。
 - `stage_progress_log` 只从 artifact unit + owner answer + provider metadata 派生。
 - 验证：provider completion / receipt verified / file existence 单独都不能计入 deliverable progress。
 
-### Phase 4: Golden path only in App/CLI
+### Phase 5: Golden path only in App/CLI
 
 - App/CLI ordinary path 每个 agent 只展示一个 route。
 - variants/proof/diagnostic/cleanup/long-soak 进入 explicit drilldown。
 - 验证：普通用户不需要理解 route menu、provider internals、backend selector 或 proof lane。
 
-### Phase 5: Domain wrapper retirement
+### Phase 6: Domain wrapper retirement
 
 - OPL generated/hosted surfaces 吸收 CLI/MCP/App/status/workbench/default-caller shell。
 - Domain repo 只保留 semantic pack、authority functions、native helpers、direct skill path。
 - 验证：replacement parity、no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance。
 
-### Phase 6: Agent Lab improvement loop
+### Phase 7: Agent Lab improvement loop
 
 - Agent Lab 只读 artifact/evidence/owner answer，输出 improvement candidate。
 - OMA 只产出 work order / mechanism proposal / typed blocker。
@@ -460,6 +504,8 @@ domain-agent-repo/
 | `default_owner_delta_derivation` | App fast state、framework readiness、evidence-worklist summary、runtime tray 同源。 |
 | `no_worklist_root_planning` | raw worklist item 不能绕过 owner delta 进入 default next action。 |
 | `lineage_stop_loss` | receipt-only/platform-repair-only/read-model-reconcile-only 重复 lineage 冻结默认 launch。 |
+| `cognitive_kernel_executor_first` | stage strategy refs 不写死认知流程；executor 能自主规划、调工具、生成候选、反思、修订和追问。 |
+| `tool_affordance_boundary` | 工具目录只标准化能力、权限、凭据、可写范围、side effect 和 forbidden authority；不能规定工具顺序、替代 executor 规划或授权 forbidden write。 |
 | `stage_artifact_progress_truth` | progress 必须同时具备 output、manifest、owner answer、current pointer。 |
 | `golden_path_single_default` | 每个 agent ordinary route 只有一个；variants 显式选择。 |
 | `audit_plane_passive` | Evidence Vault 写入不改变 delivery state，除非 fold 成 owner answer / hard gate / owner delta。 |
@@ -487,16 +533,18 @@ domain-agent-repo/
 
 ## Design Decision
 
-推荐方案是 `Owner Delta Kernel + Stage Artifact Unit + Passive Evidence Vault`。
+推荐方案是 `Cognitive Computation Kernel + Owner Delta Kernel + Stage Artifact Unit + Passive Evidence Vault`。
 
-与只修补现有 worklist 相比，它把默认推进根从 “还有多少 evidence item” 改成 “谁欠什么 owner delta”。与完全重写成通用 workflow engine 相比，它保留 OPL 的 AI-first / contract-light / Codex-first 定位，让 domain 专家判断继续由 executor、independent gate 和 owner receipt 承接。
+与只修补现有 worklist 相比，它把默认推进根从 “还有多少 evidence item” 改成 “谁欠什么 owner delta”。与完全重写成通用 workflow engine 相比，它保留 OPL 的 AI-first / executor-first / contract-light / Codex-first 定位，让 stage 内认知计算继续由 executor 自主完成，让工具目录保持 affordance catalog，让 domain 专家判断继续由 independent gate 和 owner receipt 承接。
 
-这也是最符合 MVP 的重构：少一个默认入口，多一个稳定 primitive；少暴露一层平台细节，多暴露一个可执行下一步。
+这也是最符合 MVP 的重构：少一个默认入口，多一个稳定 primitive；少暴露一层平台细节，多暴露一个可执行下一步；少一套工具流程标准，多一个安全可审计的工具 affordance 边界。
 
 ## Verification For This Design
 
-本文是 docs-only target architecture。最小验证：
+本文是 target architecture + machine contract 支撑。最小验证：
 
 - `rtk git diff --check`
 - `rtk rg -n '^(<<<<<<<|=======|>>>>>>>)' docs/active/opl-foundry-agent-target-operating-architecture.md docs/active/README.md docs/active/opl-foundry-agent-mvp-friction-audit.md`
+- `rtk node --experimental-strip-types --test tests/src/cognitive-computation-kernel-contract.test.ts`
+- `rtk npm run test:smoke`
 - external web refresh used Anthropic, OpenAI Agents SDK, LangGraph, Kubernetes, Temporal, Backstage, CNCF, Google SRE, OpenTelemetry and DORA docs on `2026-06-04 CST`.

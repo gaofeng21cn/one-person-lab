@@ -30,6 +30,7 @@ const nodeTest = (files, options = {}) => ({
 
 const fastTestFiles = [
   'tests/src/verification-command-surfaces.test.ts',
+  'tests/src/cognitive-computation-kernel-contract.test.ts',
   'tests/src/verification-test-governance.test.ts',
   'tests/src/active-path-residue-scan.test.ts',
   'tests/src/stale-compat-retirement-guard.test.ts',
@@ -235,6 +236,7 @@ const lanes = {
   smoke: [
     nodeTest([
       'tests/src/verification-command-surfaces.test.ts',
+      'tests/src/cognitive-computation-kernel-contract.test.ts',
       'tests/src/verification-test-governance.test.ts',
       'tests/src/cli-modularization.test.ts',
       'tests/src/runtime-state-paths.test.ts',
@@ -256,6 +258,7 @@ const lanes = {
   meta: [
     nodeTest([
       'tests/src/verification-command-surfaces.test.ts',
+      'tests/src/cognitive-computation-kernel-contract.test.ts',
       'tests/src/verification-test-governance.test.ts',
       'tests/src/cli-modularization.test.ts',
       'tests/src/runtime-state-paths.test.ts',

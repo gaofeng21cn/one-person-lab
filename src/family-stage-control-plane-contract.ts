@@ -19,6 +19,17 @@ export interface FamilyStageSurfaceRef {
   label?: string;
 }
 
+export interface FamilyStageToolAffordanceBoundary extends JsonRecord {
+  catalog_role?: string;
+  capability_refs?: FamilyStageSurfaceRef[];
+  permission_scope_refs?: FamilyStageSurfaceRef[];
+  credential_boundary_refs?: FamilyStageSurfaceRef[];
+  write_scope_refs?: FamilyStageSurfaceRef[];
+  side_effect_risk_refs?: FamilyStageSurfaceRef[];
+  forbidden_authority_refs?: FamilyStageSurfaceRef[];
+  executor_autonomy?: JsonRecord;
+}
+
 export interface FamilyStageRuntimeAssumption extends JsonRecord {
   assumption_id?: string;
   id?: string;
@@ -82,14 +93,19 @@ export interface FamilyStageDescriptor {
   summary: string | null;
   goal: string;
   owner: string;
+  stage_pack_conformance_version?: string | null;
+  selected_executor?: JsonRecord | null;
   domain_stage_refs: string[];
   inputs: FamilyStageSurfaceRef[];
   knowledge_refs: FamilyStageSurfaceRef[];
   skills: FamilyStageSurfaceRef[];
   prompt_refs: FamilyStageSurfaceRef[];
+  tool_refs?: FamilyStageSurfaceRef[];
+  tool_affordance_boundary?: FamilyStageToolAffordanceBoundary | null;
   allowed_action_refs: string[];
   outputs: FamilyStageSurfaceRef[];
   evaluation: FamilyStageSurfaceRef[];
+  independent_gate_policy?: JsonRecord | null;
   handoff: JsonRecord | null;
   source_refs: FamilyStageSurfaceRef[];
   freshness: JsonRecord | null;
@@ -107,6 +123,7 @@ export interface FamilyStageControlPlane {
   owner: string;
   authority_boundary: JsonRecord;
   replay_evidence_refs?: FamilyStageSurfaceRef[];
+  stage_pack_conformance_version?: string | null;
   stages: FamilyStageDescriptor[];
   notes: string[];
 }
@@ -165,6 +182,22 @@ function normalizeSurfaceRefs(value: unknown, field: string) {
     return [];
   }
   return value.map((entry, index) => normalizeSurfaceRef(entry, `${field}[${index}]`));
+}
+
+function normalizeToolAffordanceBoundary(value: unknown, field: string): FamilyStageToolAffordanceBoundary | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  return {
+    ...value,
+    capability_refs: normalizeSurfaceRefs(value.capability_refs, `${field}.capability_refs`),
+    permission_scope_refs: normalizeSurfaceRefs(value.permission_scope_refs, `${field}.permission_scope_refs`),
+    credential_boundary_refs: normalizeSurfaceRefs(value.credential_boundary_refs, `${field}.credential_boundary_refs`),
+    write_scope_refs: normalizeSurfaceRefs(value.write_scope_refs, `${field}.write_scope_refs`),
+    side_effect_risk_refs: normalizeSurfaceRefs(value.side_effect_risk_refs, `${field}.side_effect_risk_refs`),
+    forbidden_authority_refs: normalizeSurfaceRefs(value.forbidden_authority_refs, `${field}.forbidden_authority_refs`),
+    executor_autonomy: isRecord(value.executor_autonomy) ? value.executor_autonomy : undefined,
+  };
 }
 
 function normalizeRuntimeAssumption(value: unknown, field: string): string | FamilyStageRuntimeAssumption {
@@ -306,14 +339,22 @@ function normalizeFamilyStageDescriptor(value: unknown, field: string): FamilySt
     summary: optionalString(value.summary),
     goal: requireString(value.goal, `${field}.goal`),
     owner: requireString(value.owner, `${field}.owner`),
+    stage_pack_conformance_version: optionalString(value.stage_pack_conformance_version),
+    selected_executor: isRecord(value.selected_executor) ? value.selected_executor : null,
     domain_stage_refs: readStringList(value.domain_stage_refs),
     inputs: normalizeSurfaceRefs(value.inputs, `${field}.inputs`),
     knowledge_refs: normalizeSurfaceRefs(value.knowledge_refs, `${field}.knowledge_refs`),
     skills: normalizeSurfaceRefs(value.skills, `${field}.skills`),
     prompt_refs: normalizeSurfaceRefs(value.prompt_refs, `${field}.prompt_refs`),
+    tool_refs: normalizeSurfaceRefs(value.tool_refs, `${field}.tool_refs`),
+    tool_affordance_boundary: normalizeToolAffordanceBoundary(
+      value.tool_affordance_boundary,
+      `${field}.tool_affordance_boundary`,
+    ),
     allowed_action_refs: readStringList(value.allowed_action_refs),
     outputs: normalizeSurfaceRefs(value.outputs, `${field}.outputs`),
     evaluation: normalizeSurfaceRefs(value.evaluation, `${field}.evaluation`),
+    independent_gate_policy: isRecord(value.independent_gate_policy) ? value.independent_gate_policy : null,
     handoff: isRecord(value.handoff) ? value.handoff : null,
     source_refs: normalizeSurfaceRefs(value.source_refs, `${field}.source_refs`),
     freshness: isRecord(value.freshness) ? value.freshness : null,
@@ -362,6 +403,7 @@ export function normalizeFamilyStageControlPlane(
     owner: requireString(value.owner, `${field}.owner`),
     authority_boundary: isRecord(value.authority_boundary) ? value.authority_boundary : {},
     replay_evidence_refs: normalizeSurfaceRefs(value.replay_evidence_refs, `${field}.replay_evidence_refs`),
+    stage_pack_conformance_version: optionalString(value.stage_pack_conformance_version),
     stages,
     notes: readStringList(value.notes),
   };

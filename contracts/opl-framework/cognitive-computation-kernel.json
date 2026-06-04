@@ -1,0 +1,207 @@
+{
+  "contract_id": "opl_cognitive_computation_kernel",
+  "surface_kind": "opl_cognitive_computation_kernel",
+  "version": "cognitive-computation-kernel.v1",
+  "owner": "one-person-lab",
+  "state": "active_contract",
+  "purpose": "Define the Stage-internal cognitive computation kernel that organizes candidate generation, grounded reflection, comparative selection, evolution, meta-review, tool affordances, knowledge, and independent quality gates without turning Route into a small Stage or moving domain truth into OPL.",
+  "machine_boundary": "This contract defines framework-owned shape, refs, authority boundaries, and required stage-pack declarations. Machine truth remains in source, runtime ledgers, provider receipts, domain-owned manifests, owner receipts, typed blockers, and real workspace/App evidence.",
+  "design_summary": "Route selects and reconciles owner deltas; Stage attempts execute recoverable work; the cognitive computation kernel is the optional but standard Stage-internal strategy layer that lets stronger AI executors generate, critique, compare, evolve, and learn while OPL keeps only refs, receipts, blockers, and projection boundaries.",
+  "kernel_layers": [
+    {
+      "layer_id": "goal_and_constraints",
+      "owner": "domain_agent",
+      "purpose": "Parse task intent into stage goal, constraints, desired output attributes, source scope, artifact scope, workspace scope, and safety or human-gate limits.",
+      "required_refs": [
+        "stage_goal_ref",
+        "source_scope_refs",
+        "artifact_scope_refs",
+        "workspace_scope_refs",
+        "constraint_refs"
+      ],
+      "output_refs": [
+        "stage_attempt_request_ref"
+      ]
+    },
+    {
+      "layer_id": "candidate_generation",
+      "owner": "selected_executor",
+      "purpose": "Generate one or more candidate plans, drafts, hypotheses, artifacts, patches, or route answers using declared prompts, skills, tools, and knowledge refs.",
+      "allowed_strategy_refs": [
+        "diverse_generation",
+        "literature_or_source_exploration",
+        "simulated_debate",
+        "assumption_decomposition",
+        "research_or_solution_expansion"
+      ],
+      "output_refs": [
+        "candidate_pool_ref"
+      ]
+    },
+    {
+      "layer_id": "grounded_reflection",
+      "owner": "independent_reviewer_or_selected_executor_when_non_gate_feedback",
+      "purpose": "Critique candidates against source refs, private corpus refs, tool evidence, assumptions, correctness, novelty, feasibility, safety, and domain-specific rubrics.",
+      "allowed_strategy_refs": [
+        "fast_screen",
+        "tool_grounded_review",
+        "deep_assumption_verification",
+        "observation_or_counterexample_review",
+        "simulation_review",
+        "recurrent_review_from_prior_feedback"
+      ],
+      "output_refs": [
+        "review_refs",
+        "typed_blocker_refs",
+        "route_back_refs"
+      ]
+    },
+    {
+      "layer_id": "comparative_selection",
+      "owner": "stage_strategy_kernel",
+      "purpose": "Compare candidates, reduce position bias, cluster similar ideas, keep diversity, and select the next candidate or artifact path for refinement or handoff.",
+      "allowed_strategy_refs": [
+        "pairwise_comparison",
+        "scientific_or_domain_debate",
+        "elo_or_relative_ranking",
+        "proximity_graph",
+        "deduplication",
+        "diversity_preservation"
+      ],
+      "output_refs": [
+        "ranking_refs",
+        "selection_reason_refs",
+        "candidate_lineage_refs"
+      ]
+    },
+    {
+      "layer_id": "evolution_and_revision",
+      "owner": "selected_executor",
+      "purpose": "Create improved candidates without mutating accepted artifacts silently; every evolved candidate must retain lineage and pass the same selection and gate rules.",
+      "allowed_strategy_refs": [
+        "grounded_enhancement",
+        "coherence_or_feasibility_revision",
+        "analogy_or_inspiration",
+        "combination",
+        "simplification",
+        "divergent_exploration"
+      ],
+      "output_refs": [
+        "evolved_candidate_refs",
+        "revision_lineage_refs"
+      ]
+    },
+    {
+      "layer_id": "meta_review_learning",
+      "owner": "stage_strategy_kernel",
+      "purpose": "Summarize recurring review patterns, common failure modes, rubric gaps, tool gaps, and stage strategy improvements as versioned refs for future attempts.",
+      "allowed_strategy_refs": [
+        "review_pattern_summary",
+        "common_failure_mode_summary",
+        "rubric_update_proposal",
+        "skill_update_proposal",
+        "knowledge_gap_proposal"
+      ],
+      "output_refs": [
+        "meta_review_refs",
+        "strategy_update_proposal_refs"
+      ]
+    },
+    {
+      "layer_id": "independent_quality_gate",
+      "owner": "domain_agent_or_independent_reviewer",
+      "purpose": "Review the selected artifact or closeout packet in a separate attempt, issue an owner receipt, typed blocker, human gate, or route-back decision.",
+      "required_refs": [
+        "selected_candidate_or_artifact_ref",
+        "review_input_refs",
+        "quality_gate_ref"
+      ],
+      "output_refs": [
+        "owner_receipt_ref",
+        "typed_blocker_ref",
+        "human_gate_ref",
+        "route_back_ref"
+      ]
+    }
+  ],
+  "stage_pack_required_sections": [
+    "prompt_refs",
+    "skill_refs",
+    "tool_refs",
+    "tool_affordance_boundary",
+    "knowledge_refs",
+    "quality_gate_refs",
+    "strategy_refs",
+    "candidate_pool_policy",
+    "independent_gate_policy",
+    "handoff_policy"
+  ],
+  "tool_affordance_boundary": {
+    "catalog_role": "available_affordance_catalog_not_workflow_script",
+    "standardized_boundary_fields": [
+      "capability_refs",
+      "permission_scope_refs",
+      "credential_boundary_refs",
+      "write_scope_refs",
+      "side_effect_risk_refs",
+      "forbidden_authority_refs"
+    ],
+    "executor_autonomy": {
+      "executor_can_choose_tools": true,
+      "executor_can_skip_tools": true,
+      "executor_can_substitute_tools_within_boundary": true,
+      "executor_can_choose_order_and_parallelism": true,
+      "executor_can_request_missing_context_or_human_gate": true,
+      "tool_catalog_can_prescribe_tool_sequence": false,
+      "tool_catalog_can_define_cognitive_strategy": false,
+      "tool_catalog_can_override_stage_goal": false,
+      "tool_catalog_can_authorize_forbidden_write": false
+    },
+    "policy": "OPL standardizes only safety, permission, credential, write-scope, side-effect, and forbidden-authority boundaries. It does not prescribe when, why, or in what order an executor must use tools during a stage attempt."
+  },
+  "foundry_agent_implications": {
+    "mas": "Medical research stages should express paper/evidence/reviewer/human-gate cognitive strategies in MAS-owned stage packs while OPL hosts attempts, refs, and projection only.",
+    "mag": "Grant stages should express direction, authoring, fundability, export, and submission review strategies in MAG-owned packs while OPL keeps route and attempt boundaries.",
+    "rca": "Visual stages should express image-first candidate generation, visual review, export gate, and artifact lineage strategies in RCA-owned packs while OPL hosts the attempt/control plane.",
+    "oma": "Agent-building stages should express target-agent candidate, mechanism proposal, independent reviewer, and owner closeout strategies without becoming a second OPL Framework."
+  },
+  "route_boundary": {
+    "route_is_stage_internal_strategy": false,
+    "route_is_small_stage": false,
+    "route_can_execute_without_stage_attempt": false,
+    "route_can_complete_stage": false,
+    "route_owner": "domain_agent",
+    "opl_route_role": "hydrate_owner_route_refs_into_queue_attempt_conflict_or_projection_and_reconcile_actual_status"
+  },
+  "authority_boundary": {
+    "opl_can_read_domain_body": false,
+    "opl_can_write_domain_truth": false,
+    "opl_can_create_owner_receipt": false,
+    "opl_can_create_typed_blocker": false,
+    "opl_can_claim_domain_ready": false,
+    "opl_can_claim_artifact_ready": false,
+    "opl_can_claim_quality_verdict": false,
+    "opl_can_claim_production_ready": false,
+    "strategy_refs_completeness_is_launch_hard_gate": false,
+    "independent_gate_receipt_required_for_quality_progression": true,
+    "same_attempt_self_review_can_close_quality_gate": false
+  },
+  "implementation_policy": {
+    "default_runtime_owner": "one-person-lab",
+    "default_executor": "codex_cli",
+    "provider_substrate": "temporal_for_production_online_runtime",
+    "domain_repos_declare_strategy_not_generic_runtime": true,
+    "candidate_pool_is_stage_internal_artifact": true,
+    "meta_review_updates_are_proposals_until_owner_acceptance": true,
+    "evidence_vault_events_are_audit_only_until_folded_into_owner_delta_or_owner_answer": true
+  },
+  "contract_refs": [
+    "contracts/opl-framework/current-owner-delta.schema.json",
+    "contracts/opl-framework/stage-artifact-unit.schema.json",
+    "contracts/opl-framework/owner-answer.schema.json",
+    "contracts/opl-framework/evidence-vault-event.schema.json",
+    "contracts/opl-framework/golden-path-profile.schema.json",
+    "contracts/opl-framework/foundry-agent-series-contract.json",
+    "contracts/opl-framework/stage-route-scheduler-contract.json"
+  ]
+}

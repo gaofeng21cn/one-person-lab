@@ -9,7 +9,7 @@
 <h1 align="center">One Person Lab</h1>
 
 <p align="center"><strong>An AI agent framework and workbench for complex knowledge work</strong></p>
-<p align="center">Move papers, grants, presentations, patents, and other demanding projects through clear stages toward real delivery.</p>
+<p align="center">Move papers, grants, presentations, patents, and other demanding projects through clear stages, with open-ended cognitive computation inside each expert stage.</p>
 
 <p align="center">
   <img src="assets/branding/opl-stage-led-delivery-overview-v2.png" alt="One Person Lab stage-led delivery model" width="100%" />
@@ -29,7 +29,7 @@ These tasks raise the same practical questions:
 
 **One Person Lab is built around those questions.**
 
-It breaks complex knowledge work into clear stages: prepare the material, do the work, review quality, revise, and close out delivery. Each stage carries a goal, inputs, outputs, progress, evidence, and next step, so AI agents work toward deliverables instead of disappearing into long conversations.
+It breaks complex knowledge work into clear stages: prepare the material, do the work, review quality, revise, and close out delivery. Route orchestration keeps the outer boundary clear: which owner is responsible, which stage attempt should start next, what receipt or blocker is missing, and when work must route back. Inside each stage, the selected AI executor can generate, reflect, compare, evolve, use tools, read knowledge, and pass quality gates. OPL treats that stage-internal loop as the cognitive computation kernel, so agents work toward deliverables instead of disappearing into long conversations.
 
 ## Core Highlights
 
@@ -37,16 +37,16 @@ It breaks complex knowledge work into clear stages: prepare the material, do the
 <tr>
 <td width="50%" valign="top">
 
-**Stage-led progress for complex work**
+**Stage-led progress with a cognitive kernel**
 
-Papers, grants, presentations, and patents rarely finish in one prompt. OPL organizes them into task stages so it is clear what each step is meant to do, what finished, and what is still blocked.
+Papers, grants, presentations, and patents rarely finish in one prompt. OPL organizes them into task stages, while each stage can run expert generation, critique, comparison, revision, tool use, knowledge grounding, and quality review.
 
 </td>
 <td width="50%" valign="top">
 
 **Specialized agents for specialized work**
 
-Medical research, grant writing, visual delivery, and agent building are handled by different Foundry Agents. Users see one workbench, while each agent keeps its own standards and delivery authority.
+Medical research, grant writing, visual delivery, and agent building are handled by different Foundry Agents. Users see one workbench, while each agent keeps its own domain pack, skills, knowledge, quality gates, standards, and delivery authority.
 
 </td>
 </tr>
@@ -74,9 +74,17 @@ OPL is not limited to one-shot chats. It is designed for multi-round work, backg
 
 If ordinary AI tools answer "what should I say now?", One Person Lab answers "how does this complex work reach delivery?"
 
+## Cognitive Computation Kernel
+
+OPL separates route orchestration from stage-internal cognition. A route says what should happen next: start a stage attempt, wait for a human gate, record an owner receipt, surface a typed blocker, or route back with evidence. A stage attempt is where expert work happens.
+
+Inside a stage, the cognitive computation kernel lets the selected executor run open-ended work patterns: generate candidate outputs, reflect against sources, compare alternatives, evolve a stronger version, summarize repeated review findings, call tools, read knowledge refs, and hand results to an independent quality gate. OPL records the inputs, outputs, receipts, blockers, and handoff refs around that work; it does not turn expert reasoning into a fixed script.
+
+Foundry Agents provide the domain side of this kernel. They declare the domain pack, stage goals, skills, available tool affordances, knowledge refs, rubrics, quality gates, artifact locators, and authority receipts. OPL hosts and observes the attempts, while MAS, MAG, RCA, OPL Meta Agent, and later agents keep their own domain truth and delivery verdicts.
+
 ## Why It Is Different From Workflow-Style Agents
 
-Workflow-style agents are useful for program automation: tool calls, function I/O, graph nodes, and deterministic routing. Complex knowledge delivery needs a different unit of work. A paper, grant, presentation, or patent does not move forward just because one node ran; it moves forward when an expert stage is scoped, grounded, executed, reviewed, revised, and shipped with visible evidence.
+Workflow-style agents are useful for program automation: tool calls, function I/O, graph nodes, and deterministic routing. Complex knowledge delivery needs a different unit of work. A paper, grant, presentation, or patent does not move forward just because one node ran; it moves forward when an expert stage is scoped, grounded, executed, reviewed, revised, and shipped with visible evidence. In OPL, Route remains the thin owner and recovery layer, while Stage is the cognitive computation boundary.
 
 <p align="center">
   <img src="assets/branding/opl-stage-led-delivery-overview.png" alt="One Person Lab compared with workflow-style agents" width="100%" />
@@ -88,9 +96,9 @@ One Person Lab has three user-visible layers:
 
 | Layer | Audience | Role |
 | --- | --- | --- |
-| **OPL Framework** | Developers, technical operators, product integration | Runs long tasks, connects specialized agents, records progress and evidence, and supports recovery, retry, and human intervention. |
+| **OPL Framework** | Developers, technical operators, product integration | Orchestrates routes and stage attempts, hosts the cognitive computation kernel, records progress and evidence, and supports recovery, retry, and human intervention. |
 | **One Person Lab App** | End users | Desktop workbench for choosing tasks, watching progress, opening files, handling blockers, and receiving updates. |
-| **Foundry Agents** | Specialized work | MAS, MAG, RCA, and later agents handle medical research, grant writing, visual delivery, and other high-value knowledge work. |
+| **Foundry Agents** | Specialized work | MAS, MAG, RCA, and later agents provide domain packs, skills, knowledge, quality gates, authority receipts, and deliverables for high-value knowledge work. |
 
 The chain is straightforward: host specialized agents with OPL Framework, then package the framework and agents into a desktop product users can run directly.
 
@@ -137,7 +145,7 @@ Source of truth: https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/re
 ## Product Roadmap
 
 - Improve the desktop App first-install package, update channel, and cross-platform release workflow.
-- Expand the stage-led runtime with stronger recovery, retry, human approval, and progress projection.
+- Expand the stage-led runtime into a clearer cognitive computation kernel with stronger route recovery, retry, human approval, stage quality gates, and progress projection.
 - Use OPL Meta Agent as the Agent Foundry entry for building new domain agents, taking over testing for existing agents, and organizing Agent Lab mechanism evolution.
 - Stabilize the Research, Grant, and Presentation Foundry user experience.
 - Bring Patent, Award, Thesis, and Review work into the same product family.
@@ -179,11 +187,11 @@ Automation should prefer `opl help --json`, machine-readable contracts under `co
 This repository maintains the One Person Lab framework layer:
 
 - CLI entry points for installation, initialization, diagnostics, and repair.
-- Explicit activation, stage control, handoff, receipts, human gates, and recovery.
+- Explicit activation, route orchestration, stage control, cognitive computation kernel boundaries, handoff, receipts, human gates, and recovery.
 - Runtime providers, typed queue, stage attempt ledger, runtime snapshots, and projection consumption.
 - Machine-readable contracts, module discovery, `opl module exec`, and skill synchronization.
 
-OPL follows an AI-first, contract-light surface model: the active framework narrative is `Minimal Trust Kernel + Readiness + Derived Diagnostic Lenses + Surface Budget + AI Capability Aperture`. The kernel admits stage packs and binds owner boundaries, permissions, expected receipts, audit, replay, and route-back evidence. Prompt/tool/knowledge/rubric refs are recommended AI strategy refs for inspectability and reuse, but their completeness is not an OPL launch hard gate. Readiness aggregates launch and evidence gaps without issuing domain verdicts. Diagnostic lenses can explain blockers, stale assumptions, replay gaps, or route-back evidence, but they do not become runtime planners, proof assistants, workflow compilers, or quality authorities. The surface budget keeps new default surfaces limited to launch safety, authority boundary, evidence/replay/audit/route-back, or repeated App/runtime consumption; other learning points stay as refs, warnings, diagnostics, or history. The AI Capability Aperture keeps open-ended expert work available to stronger executors while routing quality, publication, fundability, visual, and export judgment back to independent AI reviewer or domain-owner receipts.
+OPL follows an AI-first, contract-light surface model: the active framework narrative is `Minimal Trust Kernel + Stage Strategy Kernel + Readiness + Derived Diagnostic Lenses + Surface Budget + AI Capability Aperture`. The kernel admits stage packs and binds owner boundaries, permissions, expected receipts, audit, replay, and route-back evidence. Prompt/skill/tool-affordance/knowledge/rubric refs are strategy and boundary refs for inspectability and reuse, but their completeness is not an OPL launch hard gate. Tool refs are an affordance catalog, not a workflow script: OPL standardizes permission, credential, write-scope, side-effect, and forbidden-authority boundaries, while the executor decides which tools to use, skip, combine, replace, or ask about during the attempt. Readiness aggregates launch and evidence gaps without issuing domain verdicts. Diagnostic lenses can explain blockers, stale assumptions, replay gaps, or route-back evidence, but they do not become runtime planners, proof assistants, workflow compilers, or quality authorities. The surface budget keeps new default surfaces limited to launch safety, authority boundary, evidence/replay/audit/route-back, or repeated App/runtime consumption; other learning points stay as refs, warnings, diagnostics, or history. The AI Capability Aperture keeps open-ended expert work available to stronger executors while routing quality, publication, fundability, visual, and export judgment back to independent AI reviewer or domain-owner receipts.
 
 Temporal-backed provider support is the production online runtime target. Local providers are used for development, testing, and offline diagnostics. Codex CLI is the current first-class executor; Hermes-Agent, Claude Code, and similar tools can enter as explicit executor adapters with receipts and auditability.
 
