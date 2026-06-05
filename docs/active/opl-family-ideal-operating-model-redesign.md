@@ -155,17 +155,19 @@ docs/tests
 - Shell：只实现 App contract；上游 AionUI detail 是 implementation material。
 - OPL Doc：只做 workflow steward / doctor / profile sync；doctor clean 不是 truth clean。
 
-## Redesign Backlog
+## Redesign Support Index
 
-| Priority | Lane | Target | Acceptance standard |
-| --- | --- | --- | --- |
-| P0 | `summary_de_noise` | `meets_target_for_framework_default`。OPL default summaries owner-delta-only，raw counts 只作 diagnostic-only。 | ordinary summary 不以 worklist/replay/blocked envelope count 作为 next-action root。 |
-| P0 | `current_owner_delta_cutover` | `meets_target_for_default_root`。默认命名和 payload root 都说 `current_owner_delta`，`compact_owner_delta_projection` 只作 compatibility/full-detail alias。 | `compact_*` 只在 compatibility alias / history / negative guard 中出现，不能成为 default planning root。 |
-| P0 | `domain_wrapper_delete_gate` | `needs_retirement_with_false_positive_guards`。MAG/RCA/MAS/OMA retained wrapper 逐项 delete/tombstone；MAG/RCA 已加强或确认 delete-auth false / safe-to-delete false guard。 | no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance machine-readable。 |
-| P1 | `real_owner_delta_tail` | `partial_owner_currentness_landed` / `needs_domain_evidence`。MAS owner-currentness 已推进，production evidence tail 仍必须回到 domain owner answer。 | 真实 paper/grant/visual/target-agent owner receipt、typed blocker、human gate、review/export receipt 或 no-regression ref。 |
-| P1 | `app_contract_compaction` | `meets_target_for_contract_guard`。App ordinary path contract 收薄，并由 active-shell / release-boundary guard 检查。 | Home/Runtime/Settings 只显示 purpose、task status、next owner、artifact/blocker、release facts；release detail 只在 release/developer/detail 语境。 |
-| P1 | `oma_script_to_pack_hygiene` | `meets_target_for_script_gate_coverage` / `partial_stable_policy_migration_landed` / `needs_retirement_for_remaining_stable_policy`。OMA stable scripts 的定位已降噪，全部 repo-local TS scripts 已有 machine gate 覆盖，developer work-order 默认 policy 已迁入 contract-backed projection。 | 剩余 policy 继续进入 `agent/`、contracts、authority functions 或 OPL primitive；新增或收薄脚本必须更新 gate。 |
-| P2 | `support_entry_clarity` | `meets_target_for_support_entry_boundary`。Shell/doc support repo 首屏边界清楚。 | support repo 不反向定义 OPL/App/domain truth，并持续防止 implementation detail 或 doctor-clean 变成 readiness。 |
+本节只保留理想 operating model 对 backlog lane 的设计含义。当前状态、下一步 owner、证据缺口和 closeout 口径回到 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)，避免本文成为第二份 active plan。
+
+| Lane | Target reading | Acceptance standard |
+| --- | --- | --- |
+| `summary_de_noise` | OPL default summaries owner-delta-only，raw counts 只作 diagnostic-only。 | ordinary summary 不以 worklist/replay/blocked envelope count 作为 next-action root。 |
+| `current_owner_delta_cutover` | 默认命名和 payload root 都说 `current_owner_delta`，`compact_owner_delta_projection` 只作 compatibility/full-detail alias。 | `compact_*` 只在 compatibility alias / history / negative guard 中出现，不能成为 default planning root。 |
+| `domain_wrapper_delete_gate` | retained wrapper 逐项 delete/tombstone；delete-auth false / safe-to-delete false guard 防止 premature physical delete。 | no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance machine-readable。 |
+| `real_owner_delta_tail` | production evidence tail 必须回到 domain owner answer，不用平台 repair 或 docs/provenance 替代。 | 真实 paper/grant/visual/target-agent owner receipt、typed blocker、human gate、review/export receipt 或 no-regression ref。 |
+| `app_contract_compaction` | App ordinary path contract 收薄，并由 active-shell / release-boundary guard 检查。 | Home/Runtime/Settings 只显示 purpose、task status、next owner、artifact/blocker、release facts；release detail 只在 release/developer/detail 语境。 |
+| `oma_script_to_pack_hygiene` | Stable scripts 迁到 `agent/`、contracts、authority functions 或 OPL primitive；保留脚本只能是 refs/smoke/work-order/helper。 | 新增或收薄脚本必须更新 machine gate。 |
+| `support_entry_clarity` | Shell/doc support repo 只做 implementation carrier / workflow steward。 | support repo 不反向定义 OPL/App/domain truth，并持续防止 implementation detail 或 doctor-clean 变成 readiness。 |
 
 ## Audit Standard
 
@@ -185,12 +187,6 @@ docs/tests
 
 禁止用 `test pass`、`conformance pass`、`verified ledger`、`doctor clean` 或 `open_worklist=0` 单独关闭设计 gap。
 
-## Next Baton
+## Baton Boundary
 
-下一轮最有价值的执行顺序：
-
-1. 在 MAG/RCA/MAS/OMA 优先跑 retained wrapper delete gate；MAS 保持 paper-line owner delta 优先，不把 platform repair 写成 research progress。
-2. 在 MAS/MAG/RCA/OMA 跑真实 owner receipt、typed blocker、human gate、review/export receipt、no-regression 或 long-soak evidence；不再用 docs/provenance 或 suite pass 替代。
-3. 在 App 后续 release cohort 继续提供截图、reload/first-run、provider linkage、operator evidence 和 release-owner blocker path；ordinary cockpit contract 已有 guard，只防复活。
-4. 在 OMA 推进真实 target patch-loop scaleout 和剩余 stable policy migration；developer work-order 默认 policy 已迁入 contract-backed projection，下一步是减少仍需保留的 materializer/helper 语义。
-5. Support repo 只做入口边界和 implementation carrier 维护，不进入 core truth set；OPL Framework 对新增 default summary 持续执行 `summary_de_noise` / `current_owner_delta` no-resurrection guard。
+下一步执行顺序不在本文维护。需要行动时读取 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md) 的 `Redesign Backlog 状态`、`测试 / 证据差距` 和 `下一轮 Agent prompt`，再 fresh 读取 live contracts/source/CLI/read-model。本文只提供评估口径：每个新发现的 surface 先分类为 `meets_target`、`needs_demotion` 或 `needs_retirement`。

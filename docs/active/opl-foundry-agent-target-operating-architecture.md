@@ -110,7 +110,9 @@ Domain Intent
 | 可扩展性 | standard pack / generated surface / conformance 方向正确。 | 中高 | 新 agent onboarding 应从 product pack + golden path + authority functions 生成，而不是复制 MAS/MAG/RCA 历史 wrapper。 |
 | 可审计性 | refs-only ledger、Stage Artifact Unit、Temporal provider 和 owner receipt 边界强。 | 高 | audit plane 必须保持 passive，不能用审计计数驱动 planning。 |
 
-### Recommended redesign sequence
+### Target Reading Sequence
+
+本节是目标架构的阅读顺序，不是独立 active roadmap。当前执行顺序、状态和 baton 回到 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。
 
 1. 先固化 `current_owner_delta` canonical schema 和 default derivation，确保所有默认读面同源。
 2. 再关闭 worklist-root planning：所有 raw tail 必须通过 owner delta / hard gate / typed blocker fold 才能影响默认动作。
@@ -477,9 +479,9 @@ OMA 的重构点是保持 target-agent generic vocabulary；它不成为第二 O
 | Receipt count / typed blocker count | Metric/audit；不作为 completion claim。 |
 | Route variants / proof lanes | Explicit request only。 |
 
-## Required Contract Changes
+## Contract Support Categories
 
-目标重构最终应把这些合同做成机器面：
+目标重构需要这些合同类别作为机器支撑；哪些已经落地、哪些仍是 gap，归 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md) 维护：
 
 | Contract | 作用 |
 | --- | --- |
@@ -564,9 +566,9 @@ domain-agent-repo/
 | Wrapper retirement | Domain repo retained surface 逐项按删除门处理；OPL descriptor ready、conformance pass 或 test pass 不授权跨仓删除。 |
 | Agent Lab loop | Agent Lab / OMA 只产出 improvement candidate、work order、mechanism proposal 或 typed blocker；target owner 关闭真实 owner receipt。 |
 
-## Acceptance Tests
+## Acceptance Gate Categories
 
-目标架构需要这些机器可验证门：
+目标架构需要这些机器可验证门；当前 coverage、open tail 和 owner 归 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md) 与 repo-native test/contract 维护：
 
 | Gate | 必须证明 |
 | --- | --- |

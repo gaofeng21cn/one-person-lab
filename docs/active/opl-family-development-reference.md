@@ -84,7 +84,7 @@ OPL 仓负责所有 domain-neutral、跨 MAS/MAG/RCA 可复用、服务长期运
 
 OPL 不负责 domain truth、domain quality verdict、publication/fundability/visual/export ready verdict、memory body、artifact mutation permission 或最终交付 authority。
 
-当前继续应落在 OPL 层面的实现 / 硬化 backlog 是：
+当前若发现实现 / 硬化需求，应按下列 OPL-owned support categories 归位；具体执行状态和下一步回到 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)：
 
 - generic state-machine runner：OPL 已持有 domain-neutral transition contract、runner 和 matrix runner；后续 OPL 层硬化应继续补幂等 tick、provider attempt bridge、retry / dead-letter、human gate transport、dispatch receipt 和 matrix audit。MAS/MAG/RCA 只声明各自的 domain transition table / guard / oracle fixture / owner action。
 - provider SLO 与 repair-loop 执行证据：Temporal production proof 已有 read-model、supervised receipt 与 `family-runtime provider-slo tick --provider temporal` cadence executor；`provider_capability_slo` 已把 restart / re-query / signal history、typed closeout required、missing closeout blocked、retry/dead-letter boundary 和 domain truth boundary preservation 做成 OPL runtime/provider 机器投影。后续仍要保持 cadence/capability 长窗口持续 satisfied，并把真实 domain owner-chain dispatch 和 no-forbidden-write proof 闭合到对应 evidence gate。
@@ -203,7 +203,7 @@ path stability、contract-linked `human_doc:*` 或历史归档暂留原位。
 
 这条规则适用于 Hermes-first、Gateway/frontdoor/federation、local-manager、repo-local runtime pilot、legacy service wrapper、flat shell alias、compatibility facade、旧聚合测试和旧 active-path 文案。保留历史不等于保留兼容接口。
 
-## 后续工作准入
+## 工作准入分类
 
 任何新增 OPL 系列开发工作，先归类到以下之一：
 

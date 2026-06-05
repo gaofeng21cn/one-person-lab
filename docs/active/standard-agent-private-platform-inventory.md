@@ -2,17 +2,17 @@
 
 Owner: `One Person Lab`
 Purpose: `cross_repo_private_platform_inventory`
-State: `active_inventory`
+State: `active_support`
 Machine boundary: 本文是跨 repo 人读治理台账。机器真相继续归 OPL `contracts/`、CLI/API 行为、provider receipt、domain-owned contracts、sidecar/manifest projection、真实 workspace receipt 与各 domain agent owner receipt。
-更新时间：`2026-05-25`
+Date: `2026-06-05`
 
 ## 文档职责
 
-本文只维护 MAS/MAG/RCA/OPL Meta Agent 中仍可能被误读成 repo-local generic platform 的当前 surface 分类、owner 边界和迁移门。它不再保存逐日拆文件流水账、line-count closeout、commit 过程或长 follow-up 清单。
+本文只维护 MAS/MAG/RCA/OPL Meta Agent 中仍可能被误读成 repo-local generic platform 的 surface 分类、owner 边界和迁移门。当前执行目标、Redesign Backlog、remaining residue/delete gate 和下一轮 baton 回到 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。本文不再保存逐日拆文件流水账、line-count closeout、commit 过程、dated readout counter 或长 follow-up 清单。
 
 逐文件拆分过程已归入 [2026-05-22 OPL active ledger consolidation](../history/process/plans/2026-05-22-opl-doc-lifecycle-active-ledger-consolidation.md)。新增 private-platform 清理证据时，active 层只更新本文件的分类结论；过程证据进入 `docs/history/**` 或对应 repo 的 status / gap plan。
 
-## 当前 Clean Truth
+## 当前支撑读法
 
 当前 OPL 标准智能体集合按三层读取：
 
@@ -32,14 +32,14 @@ Machine boundary: 本文是跨 repo 人读治理台账。机器真相继续归 O
 
 当前没有发现应把 MAS/MAG/RCA 的 domain truth 或 quality verdict 迁入 OPL 的 surface。本轮 strict cleanup 后，四仓 active source-purity / default-caller deletion-evidence 读面都已闭合；后续风险来自新代码重新引入 repo-local generic handler / projection / wrapper / script owner，或把 evidence tail 误写成 production ready。治理动作是 fail-closed 防复发：只保留最小 authority function、domain handler target、必要 native implementation 和 machine-readable pack/contract。
 
-2026-05-25 fresh repo audit 结论：MAS/MAG/RCA/OPL Meta Agent 的持续、全自动运行默认 owner 仍是 OPL/Temporal、OPL attempt ledger、typed queue、retry/dead-letter、wakeup/resume 与 App/operator read model；未发现四仓应接管 domain truth、quality/export verdict、artifact authority、memory body 或 owner receipt 的 OPL surface。当前四个 agent 都按标准 OPL Agent structural/source-purity clean 读取；剩余只按 physical-delete authority、domain/live production evidence 和防回归读取：
+稳定治理结论：MAS/MAG/RCA/OPL Meta Agent 的持续、全自动运行默认 owner 仍是 OPL/Temporal、OPL attempt ledger、typed queue、retry/dead-letter、wakeup/resume 与 App/operator read model；未发现四仓应接管 domain truth、quality/export verdict、artifact authority、memory body 或 owner receipt 的 OPL surface。四个 agent 的 structural/source-purity 与 default-caller readiness 必须 fresh 读取 OPL live readout；本文只保留分类口径，不保存当前 counter。剩余只按 physical-delete authority、domain/live production evidence 和防回归读取：
 
 - `MAS` 已完成本轮 strict source shape cutover：wrapper tail 只作为 former tail / deletion-gate provenance 读取；剩余项是 live provider paper-line、memory receipt、artifact lifecycle receipt 与 provider SLO evidence gates，不是功能/结构 gap 或 MAS 私有 runtime owner 回流。
 - `MAG` 顶层合同读为 `standard_agent_source_shape_status=landed`、`claims_opl_replacement_exists=true`、`claims_domain_repo_physical_delete_authorized=false`。MAG 不再作为 structural dirty 或正向私有控制面读取；`attempt_ledger` 等旧词只允许作为合同 policy/provenance/negative guard 中的非 owner claim 出现，不能作为 active residue。
 - `RCA` bridge gate 读为 `source_shape_status=landed`、`functional_structure_gap_count=0`、`remaining_bridge_module_ids=[]`、`declares_no_active_bridge_modules=true`。RCA 不再作为 structural dirty 或 active generic runtime owner 读取；剩余是 explicit owner receipt / no-regression / no-forbidden-write / production evidence tail。
 - `OMA` 当前 structural clean：`functional_structure_gap_count=0`、`domain_repo_retained_generic_surface_count=0`、`source_shape=landed`。其 `domain_handler` default-caller gate 已消费显式 domain handler target refs-only evidence；scripts 只允许 authority implementation、smoke helper、fixture/proof helper 或 work-order materializer，不得变成 Agent Lab runner、promotion gate、queue、attempt ledger、App/workbench 或 target truth writer。
 
-当前 OPL read-model 也保持相同边界：`opl agents conformance --family-defaults --json` 为 `passed_count=4`、`blocked_count=0`、`structural_conformance_status=passed`；`opl agents default-callers --family-defaults --json` 为 `generated_default_caller_surface_count=32`、`blocked_surface_count=0`、`deletion_evidence_worklist_count=32`，且 `missing_domain_owner_receipt_or_typed_blocker_count=0`、`missing_no_forbidden_write_proof_count=0`、`missing_tombstone_or_provenance_ref_count=0`。这些读数说明 standard-agent structural/source-purity 和 default-caller deletion-evidence 均已清干净；它们仍不授权 domain repo 物理删除，也不声明 domain ready 或 production ready。
+OPL read-model 只作为 fresh-live source 使用：`opl agents conformance --family-defaults --json` 读取 structural conformance，`opl agents default-callers --family-defaults --json` 读取 generated/default-caller replacement 与 deletion-evidence worklist。即使这些读面显示 blocked/missing 为零，它们仍不授权 domain repo 物理删除，也不声明 domain ready 或 production ready。
 
 按严格目标态，domain repo 不能重新把 refs-only adapter、developer work-order materializer、status/workbench/domain-action shell 或 tombstone/provenance code path 写成 generic control plane、default caller 或长期产品面。当前剩余风险按 production evidence tail、防回归和 owner authority boundary 读取，不写成 production ready。
 
@@ -66,7 +66,7 @@ Machine boundary: 本文是跨 repo 人读治理台账。机器真相继续归 O
 | Stage attempt / queue / retry / dead-letter | Temporal provider、family runtime、attempt ledger | Owner receipt、typed blocker、domain authority callable | Domain repo 不内置 generic scheduler/daemon/attempt loop。 |
 | Generic transition runner | Family transition runner、stage graph route runtime | Transition spec 或 oracle ref | OPL 执行 spec/transport；domain owns route truth、guard 和 verdict。 |
 
-## Per-Agent Migration Ledger
+## Per-Agent Migration Classification
 
 | agent | 当前保留 authority | 主要 migration candidates | 当前处置 |
 | --- | --- | --- | --- |
@@ -88,7 +88,7 @@ Machine boundary: 本文是跨 repo 人读治理台账。机器真相继续归 O
 | RCA skeleton / locator / native helper | `standard-domain-agent-skeleton*`、native PPT helpers | mixed | Generic skeleton / locator / controlled attempt shell 可上收；visual memory accept/reject、native PPT implementation 和 review/export verdict 留 RCA。 |
 | OMA script materializers | `scripts/*agent*`、`scripts/lib/*materializer*`、bootstrap pack writers | `strict_delete_after_cutover` except true authority functions | OPL Agent Lab work-order readiness、target-owner return、promotion gate read model parity 后删除 generic materializer shell；只保 candidate package / mechanism proposal authority functions，不写 target truth。 |
 
-## Current Primitive Gaps
+## Primitive Support Boundaries
 
 - Generated CLI/MCP/Skill/product-entry/status/domain-handler/workbench default-caller structural replacement is landed: `opl agents default-callers --family-defaults --json` reports 32 surfaces, 0 blocked surfaces and 0 missing deletion-evidence requirements. This is source-purity evidence, not domain physical-delete authorization or production readiness.
 - Generic domain-action dispatch transport still needs production-scale domain owner receipt / typed blocker roundtrip and no-forbidden-write proof across real MAS/MAG/RCA workloads.
