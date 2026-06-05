@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { assert, cliPath, contractsDir, createCodexConfigFixture, createFakeLaunchctlFixture, createGitModuleRemoteFixture, fs, loadFrameworkContracts, os, path, repoRoot, runCli, test } from '../helpers.ts';
 import { buildInternalCommandSpecs } from '../../../../src/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-command-specs.ts';
+import { createFakeFamilySkillWorkspace } from '../../cli-codex-default-shell-helpers.ts';
 import { createFakeCompanionInstallEnv, writeFakeCompanionToolBinaries } from './system-install-fixtures.ts';
 
 function runCliWithStdin(args: string[], stdin: string, envOverrides: Record<string, string>) {
@@ -859,6 +860,86 @@ test('system configure-codex syncs packaged Full companion skills after API key 
     );
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('system configure-codex syncs Full runtime family Codex plugins after API key setup', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-family-plugins-home-'));
+  const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-family-plugins-capture-'));
+  const familyWorkspace = createFakeFamilySkillWorkspace(captureDir);
+  const codexHome = path.join(homeRoot, 'codex-home');
+
+  try {
+    const output = runCliWithStdin(
+      ['system', 'configure-codex', '--api-key-stdin'],
+      'secret-family-key\n',
+      {
+        HOME: homeRoot,
+        CODEX_HOME: codexHome,
+        OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+        OPL_MODULE_PATH_MEDAUTOSCIENCE: path.join(familyWorkspace.workspaceRoot, 'med-autoscience'),
+        OPL_MODULE_PATH_MEDAUTOGRANT: path.join(familyWorkspace.workspaceRoot, 'med-autogrant'),
+        OPL_MODULE_PATH_REDCUBE: path.join(familyWorkspace.workspaceRoot, 'redcube-ai'),
+        OPL_MODULE_PATH_OPLMETAAGENT: path.join(familyWorkspace.workspaceRoot, 'opl-meta-agent'),
+        OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+        PATH: `${process.execPath ? path.dirname(process.execPath) : '/usr/bin'}:/usr/bin:/bin`,
+      },
+    ) as {
+      codex_config: {
+        skill_sync: {
+          packs: Array<{ domain_id: string; sync_status: string; installer_result: Record<string, unknown> | null }>;
+          codex_plugin_registry: {
+            summary: { registered: number; missing_marketplace: number };
+            items: Array<{ module_id: string; status: string; repo_path: string }>;
+          };
+        };
+      };
+    };
+
+    assert.equal(output.codex_config.skill_sync.codex_plugin_registry.summary.registered, 4);
+    assert.equal(output.codex_config.skill_sync.codex_plugin_registry.summary.missing_marketplace, 0);
+    assert.deepEqual(
+      output.codex_config.skill_sync.packs.map((pack) => [pack.domain_id, pack.sync_status]),
+      [
+        ['medautoscience', 'synced'],
+        ['medautogrant', 'synced'],
+        ['redcube', 'synced'],
+        ['oplmetaagent', 'synced'],
+      ],
+    );
+    const omaPack = output.codex_config.skill_sync.packs.find((pack) => pack.domain_id === 'oplmetaagent');
+    assert.equal(
+      (omaPack?.installer_result?.generated_codex_plugin as { source?: string } | undefined)?.source,
+      'opl_generated_agent_interface_bundle_codex_plugin',
+    );
+
+    const config = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
+    assert.match(config, /\[plugins\."mas@mas-local"\]/);
+    assert.match(config, /\[plugins\."mag@mag-local"\]/);
+    assert.match(config, /\[plugins\."rca@rca-local"\]/);
+    assert.match(config, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
+    assert.equal(
+      fs.existsSync(path.join(
+        homeRoot,
+        'opl-state',
+        'generated-codex-plugins',
+        'opl-meta-agent-local',
+        'plugins',
+        'opl-meta-agent',
+        '.codex-plugin',
+        'plugin.json',
+      )),
+      true,
+    );
+    assert.deepEqual(fs.readFileSync(familyWorkspace.syncLogPath, 'utf8').trim().split('\n'), [
+      'med-autoscience',
+      'med-autogrant',
+      'redcube-ai',
+    ]);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(captureDir, { recursive: true, force: true });
+    fs.rmSync(familyWorkspace.workspaceRoot, { recursive: true, force: true });
   }
 });
 

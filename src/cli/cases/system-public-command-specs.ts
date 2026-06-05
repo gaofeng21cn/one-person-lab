@@ -4,6 +4,7 @@ import path from 'node:path';
 import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../../local-codex-defaults.ts';
 import { buildOplFrameworkSemanticHygieneAudit } from '../../framework-semantic-hygiene.ts';
 import { syncOplCompanionSkills } from '../../install-companions.ts';
+import { syncFamilySkillPacks } from '../../opl-skills.ts';
 import { buildOplEnvironment } from '../../system-installation/environment.ts';
 import { buildOplInitialize } from '../../system-installation/initialize.ts';
 import { runOplSystemAction } from '../../system-installation/system-actions.ts';
@@ -65,6 +66,29 @@ function syncPackagedFullCompanionSkillsIfAvailable() {
       process.env.OPL_COMPANION_DISABLE_REMOTE_INSTALL = previousDisableRemoteInstall;
     }
   }
+}
+
+const FULL_RUNTIME_FAMILY_MODULE_ENV = [
+  { domain: 'medautoscience', env: 'OPL_MODULE_PATH_MEDAUTOSCIENCE' },
+  { domain: 'medautogrant', env: 'OPL_MODULE_PATH_MEDAUTOGRANT' },
+  { domain: 'redcube', env: 'OPL_MODULE_PATH_REDCUBE' },
+  { domain: 'oplmetaagent', env: 'OPL_MODULE_PATH_OPLMETAAGENT' },
+] as const;
+
+function syncFullRuntimeFamilyCodexPluginsIfAvailable() {
+  const domains = FULL_RUNTIME_FAMILY_MODULE_ENV
+    .filter((entry) => process.env[entry.env]?.trim())
+    .map((entry) => entry.domain);
+
+  if (domains.length === 0) {
+    return null;
+  }
+
+  return syncFamilySkillPacks({
+    domains,
+    companionMode: 'observe',
+    superpowersProfile: 'keep',
+  });
 }
 
 function buildNoArgSpec(
@@ -148,6 +172,7 @@ export function buildPublicSystemCommandSpecs(
         provider_api_key: apiKey,
         overwrite_existing: true,
       });
+      const familySkillSync = syncFullRuntimeFamilyCodexPluginsIfAvailable();
       const companionSkillSync = syncPackagedFullCompanionSkillsIfAvailable();
       return {
         version: 'g2',
@@ -164,6 +189,7 @@ export function buildPublicSystemCommandSpecs(
             provider_base_url: bootstrap.provider_base_url,
             api_key_present: bootstrap.api_key_present,
           },
+          ...(familySkillSync ? { skill_sync: familySkillSync.skill_sync } : {}),
           ...(companionSkillSync ? { companion_skill_sync: companionSkillSync } : {}),
         },
       };

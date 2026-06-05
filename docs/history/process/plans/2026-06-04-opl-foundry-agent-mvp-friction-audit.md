@@ -2,15 +2,17 @@
 
 Owner: `One Person Lab`
 Purpose: `mvp_friction_audit`
-State: `active_support`
+State: `history_provenance`
 Machine boundary: 本文是人读设计审计。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、owner receipt、typed blocker 和真实 workspace / App evidence。
 Date: `2026-06-04`
+
+Lifecycle note: 本文已在 2026-06-05 归档为 historical friction diagnosis。当前 OPL / Foundry Agent 目标操作架构、迁移阶段和验收门回到 [OPL Foundry Agent Target Operating Architecture](../../../active/opl-foundry-agent-target-operating-architecture.md)，当前 gap owner 回到 [OPL Family 当前状态与理想目标差距](../../../active/current-state-vs-ideal-gap.md)。
 
 ## 审计问题
 
 本轮只回答一个问题：从 MVP 原则看，OPL 各 Foundry Agent 的哪些设计面正在帮助智能体最高效地产出，哪些设计面可能把时间耗在 receipt、read-model、replay、diagnostic 或 cleanup 上，反而阻碍 MAS/MAG/RCA/OMA 的核心交付推进。
 
-若要按“不受当前实现分布约束”的理想情况全面重构 OPL / Foundry Agent，目标操作架构回到 [OPL Foundry Agent Target Operating Architecture](./opl-foundry-agent-target-operating-architecture.md)。本文保留 friction 诊断、fresh evidence 和阻力分类；目标文档承接 greenfield primitives、runtime flow、contract changes、migration phases 和 acceptance tests。
+若要按“不受当前实现分布约束”的理想情况全面重构 OPL / Foundry Agent，目标操作架构回到 [OPL Foundry Agent Target Operating Architecture](../../../active/opl-foundry-agent-target-operating-architecture.md)。本文保留 friction 诊断、fresh evidence 和阻力分类；目标文档承接 greenfield primitives、runtime flow、contract changes、migration phases 和 acceptance tests。
 
 这里的 MVP 不是功能少，而是默认推进路径短：
 
@@ -511,7 +513,7 @@ rtk opl family-runtime attempt list --domain medautoscience --study <study-id> -
 本文是 docs-only design audit。最小验证：
 
 - `rtk git diff --check`
-- `rtk rg -n '^(<<<<<<<|=======|>>>>>>>)' docs/active/opl-foundry-agent-mvp-friction-audit.md docs/active/README.md`
+- `rtk rg -n '^(<<<<<<<|=======|>>>>>>>)' docs/history/process/plans/2026-06-04-opl-foundry-agent-mvp-friction-audit.md docs/active/README.md`
 - fresh CLI readouts listed above were run on `2026-06-03 CST`.
 - external web refresh used Anthropic, OpenAI, Kubernetes, Temporal, Google SRE, Team Topologies TVP examples and OpenTelemetry docs on `2026-06-03 CST`.
 - current local checkout refresh ran on `2026-06-04 CST` with `git status --short --branch`, `./bin/opl agents descriptors --json`, `./bin/opl agents conformance --family-defaults --json`, `./bin/opl stages readiness --family-defaults --json`, `./bin/opl framework readiness --family-defaults --json`, `./bin/opl family-runtime evidence-worklist --family-defaults --detail full --json`, and `./bin/opl agents default-callers --family-defaults --json`; after the tool affordance adoption guard was fixed, `./bin/opl agents conformance --family-defaults --json` was rerun and read `passed_count=4` / `blocked_count=0`.

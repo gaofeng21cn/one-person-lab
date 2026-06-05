@@ -74,10 +74,13 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | `docs/active/current-state-vs-ideal-gap.md` | `active_plan` | OPL family 当前目标、完成进度、功能/结构差距、测试/证据差距和下一轮 baton 的唯一 active owner。 | 保持 compact active plan；只写当前结论、完成口径和动态机器入口，过程证据、dated closeout 和历史长清单进 history。 |
 | `docs/active/current-development-lines.md` | `active_plan` | 当前 framework-first 开发线路图。 | 保持 active plan；旧路线只作输入。 |
 | `docs/active/production-framework-closure-gap-matrix.md` | `active_plan` | production closure 差距矩阵、证据门与功能/结构当前 owner。 | 保持 active plan；不承载 dated proof 流水。 |
+| `docs/active/opl-family-purpose-first-current-design-audit.md` | `active_support` | OPL family 当前 purpose-first 顶层设计审计和 target coverage re-audit。 | 保持 active support；只提供审计判断，不替代 active gap owner、domain active plan 或 live machine truth。 |
+| `docs/active/opl-foundry-agent-target-operating-architecture.md` | `active_support` | OPL / Foundry Agent 目标操作架构、primitive、迁移阶段和验收门。 | 保持 active support；承接 MVP friction 和 purpose-first 设计评估，不承载 live readiness 结论。 |
 | `docs/active/development-document-portfolio.md` | `active_docs_support` | 开发文档组合整理和旧计划吸收/归档规则。 | 保持 active support；只管开发文档组合，不重复全仓治理。 |
 | `docs/active/standard-agent-private-platform-inventory.md` | `active_inventory` | 跨 MAS/MAG/RCA/OPL Meta Agent 的 private-platform surface 分类、owner subdomain、migration gate 和 forbidden claim 台账。 | 保持分类台账；逐日拆分、line-count closeout 和具体执行流水进 history/provenance。 |
 | `docs/history/process/plans/2026-06-01-standard-agent-design-consistency-audit.md` | `history_provenance` | 2026-06-01 MAS/MAG/RCA/OMA 同源设计和历史残留审计快照。 | 只作过程审计；当前结构同源结论回 live conformance/descriptors/default-caller surfaces 与 active inventory。 |
 | `docs/history/process/plans/2026-06-03-opl-family-purpose-first-design-audit.md` | `history_provenance` | 2026-06-03 OPL family purpose-first 顶层设计审计快照。 | 只作过程审计；当前 owner、gap、下一步和完成口径回 active gap plan、closure matrix 和核心五件套。 |
+| `docs/history/process/plans/2026-06-04-opl-foundry-agent-mvp-friction-audit.md` | `history_provenance` | 2026-06-04 OPL Foundry Agent MVP friction 诊断、fresh evidence 和阻力分类快照。 | 只作历史诊断；当前目标操作架构、迁移阶段和验收门回 active target architecture，当前 gap 回 active gap plan。 |
 | `docs/public/*` | `public_support` | 公开 roadmap、task map、operating model 和 UHS 叙事。 | 保持 public 支撑；不作为实现 backlog。 |
 | `docs/product/README.md` 与 `docs/product/opl-public-surface-index.md` | `active_support` | App/workbench、operator/product entry、public surface 与 action routing 边界。 | 保持 product 支撑；App release truth 回 App 仓和 artifact。 |
 | `docs/runtime/opl-runtime-naming-and-boundary-contract.md` | `active_support` | Codex-default executor、Temporal provider、explicit executor adapter 与 retired runtime vocabulary 边界。 | 保持 runtime 支撑；机器 truth 回 contracts/source/CLI/runtime ledger。 |

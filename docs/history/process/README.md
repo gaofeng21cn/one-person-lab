@@ -40,3 +40,4 @@ Machine boundary: 本目录是人读过程历史索引。机器真相继续归 `
 - [2026-06-01 Standard Agent Design Consistency Audit](./plans/2026-06-01-standard-agent-design-consistency-audit.md)：记录 MAS/MAG/RCA/OMA 同源设计和历史残留审计快照；当前结构同源与 production tail 由 live OPL read models 和 active owner docs 接管。
 - [2026-06-03 OPL Family Purpose-First Design Audit](./plans/2026-06-03-opl-family-purpose-first-design-audit.md)：记录 OPL family 目的优先顶层设计审计；当前 gap、owner 和下一步回到 `docs/active/` owner docs。
 - [2026-06-03 OPL Active Gap Plan Lifecycle Cleanup](./plans/2026-06-03-opl-active-gap-plan-lifecycle-cleanup.md)：记录 `current-state-vs-ideal-gap.md` 从 dated proof / receipt ledger / worktree closeout 回收为 compact active gap plan 的过程；当前动态事实回到 live CLI/read-model、runtime ledger、App evidence 和 domain owner refs。
+- [2026-06-04 OPL Foundry Agent MVP Friction Audit](./plans/2026-06-04-opl-foundry-agent-mvp-friction-audit.md)：记录 MAS/MAG/RCA/OMA ordinary path 的 MVP friction 诊断和证据快照；当前目标操作架构、迁移阶段和验收门回到 active target architecture。

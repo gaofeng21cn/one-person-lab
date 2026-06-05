@@ -62,6 +62,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-06-02-opl-series-doc-lifecycle-cleanup-ledger.md` | OPL series docs lifecycle cleanup closeout ledger。 | 当前 truth 归各 repo active truth owner、core docs 和 live code/contracts/tests/read-model；ledger 只记录本轮 active ledger/history foldback、MAS closed record 归档和 App 延后原因。 |
 | `2026-06-03-opl-family-retirement-cleanup-ledger.md` | OPL family legacy / compat / retired surface cleanup snapshot。 | 当前 truth 归各 repo source、contracts、tests、git worktree 和 live read-model；ledger 只记录本轮可落地 OPL structure thinning、跨仓 no-safe-delete 结论和后续 deletion gate。 |
 | `2026-06-03-opl-series-branch-doc-governance-ledger.md` | Automation-2 OPL series branch/worktree and docs-governance tranche ledger。 | 当前 truth 归各 repo active truth owner、core docs 和 live code/contracts/tests/read-model；ledger 只记录本轮 stale branch deletion、active worktree保留理由、active-truth shape 修复、doctor 结果和下一轮覆盖范围。 |
+| `2026-06-04-opl-foundry-agent-mvp-friction-audit.md` | OPL Foundry Agent MVP friction 诊断和 evidence 快照。 | 当前目标操作架构、primitive、迁移阶段和验收门归 `docs/active/opl-foundry-agent-target-operating-architecture.md`；当前 gap owner 归 active gap plan。 |
 
 ## Tombstone Rules
 

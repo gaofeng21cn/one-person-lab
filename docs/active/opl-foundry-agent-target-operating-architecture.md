@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `foundry_agent_target_operating_architecture`
 State: `active_support`
 Machine boundary: 本文是人读目标操作架构。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、owner receipt、typed blocker、真实 workspace 与 App evidence。
-Date: `2026-06-04`
+Date: `2026-06-05`
 
 ## 读法
 
@@ -12,7 +12,7 @@ Date: `2026-06-04`
 
 本文不替代 live machine truth，也不声明 production ready、domain ready、App release ready、artifact authority ready 或物理删除授权。当前 live 状态、计数、receipt id、attempt id、workorder 数量仍从 CLI/read-model/ledger 读取。
 
-当前 friction 诊断回到 [OPL Foundry Agent MVP Friction Audit](./opl-foundry-agent-mvp-friction-audit.md)。当前 gap owner 回到 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。核心边界回到 `project/status/architecture/invariants/decisions`。
+历史 friction 诊断回到 [OPL Foundry Agent MVP Friction Audit](../history/process/plans/2026-06-04-opl-foundry-agent-mvp-friction-audit.md)。当前 gap owner 回到 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。核心边界回到 `project/status/architecture/invariants/decisions`。
 
 ## 目标结论
 
@@ -119,6 +119,52 @@ Domain Intent
 5. 最后推进 domain wrapper retirement：只在 replacement parity、no-active-caller、domain owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 全满足时物理删除。
 
 这套顺序的目的不是增加设计层，而是减少默认面：先让 operator 永远只看到一个当前 owner delta，再让平台证据成为可下钻的 observability，而不是可误触发的任务来源。
+
+### Unified Optimization Direction
+
+两条主线现在合并成同一个优化方向：`目的反推必要性，MVP 检查阻碍性`。
+
+```text
+Purpose-first necessity
+  -> keep only surfaces that move the owner delta, protect authority, or preserve auditability
+MVP-first obstruction check
+  -> remove, demote, or isolate anything that delays the next owner answer or artifact delta
+Unified target
+  -> current_owner_delta-first default path with passive audit and explicit non-default lanes
+```
+
+后续优化不再以“还有哪些 surface 可以补齐”为默认问题，而是先问：
+
+1. 这个 surface 是否让当前 owner 更快产出 answer、artifact delta、receipt、typed blocker、human gate 或 no-regression ref。
+2. 这个 surface 是否是 launch safety、authority boundary、durable execution、replay/audit 或 App/operator 介入的必要下限。
+3. 如果它只解释历史、计数、trace、variant、cleanup、long-soak 或 provider internals，是否已经从 default path 下沉到 explicit diagnostic / audit lane。
+4. 如果它已被 OPL generated/hosted surface 或 App/product contract 替代，是否已经进入 no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 删除门。
+
+符合预期的 OPL 默认形态是：普通 operator 不需要理解 worklist、route menu、provider trace、receipt count、private residue 或 wrapper lineage，也能看清当前谁欠什么、接受什么返回形状、有没有 hard gate、下一步是否能执行。Domain owner 继续用自己的 receipt / blocker / quality gate 关闭真实工作；OPL 只负责把这件事启动、记录、恢复、投影和审计清楚。
+
+### Audit Standard
+
+后续审计按下面标准判定“更符合预期”。
+
+| 审计项 | 符合预期 | 不符合预期 |
+| --- | --- | --- |
+| `default_path` | CLI/App/operator 首屏从 `current_owner_delta` 回答 owner、delta、accepted answer shape、hard gate 和 next owner。 | 默认页先展示 raw worklist count、replay packet、typed blocker group、provider trace、route variants 或 ledger browser。 |
+| `progress_truth` | deliverable progress 只来自 physical output、valid manifest、owner answer / receipt / typed blocker 和 current pointer。 | 把 provider completion、receipt count、verified ledger、schema completeness、file presence 或 conformance pass 写成 domain progress。 |
+| `mvp_friction` | 一次普通尝试能直接进入 stage attempt、产出 artifact delta 或明确 owner blocker。 | 系统在 receipt-only、read-model reconcile、platform repair、stale route redrive、diagnostic proof 或 evidence accounting 里循环。 |
+| `authority_boundary` | OPL/App/Agent Lab 只做 transport、projection、guard、generated surface、work-order execution 和 refs-only audit；domain verdict 留给 MAS/MAG/RCA/OMA owner。 | OPL/App/doctor/schema/provider completion 机械替代 paper、grant、visual、agent patch 的质量、ready 或 artifact authority。 |
+| `surface_budget` | 新 surface 只有在影响 launch safety、authority boundary、audit/replay/route-back，或被 App/runtime 反复消费时才进 default。 | 学习点、debug view、long-soak、cleanup、history 或 support repo detail 直接进入 ordinary user path。 |
+| `golden_path` | 每个 Foundry Agent 只有一个 ordinary route；proof、diagnostic、cleanup、long-soak、variant 都显式 lane 化。 | route variant、proof lane、legacy helper 或 support wrapper 与 ordinary path 同级展示。 |
+| `wrapper_retirement` | replacement parity、no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 满足后删除或 tombstone。 | 为兼容、历史说明或“可能有用”继续保留 active facade、alias、wrapper、session/status shell 或 compatibility-only test。 |
+| `app_cockpit` | App 默认只显示 purpose、task/stage、next owner、accepted answer shape、artifact/blocker、用户介入和 release/user-path facts。 | App 普通页暴露 backend/provider/permission/executor selector、raw ledger、full drilldown、shell candidate 或 upstream implementation detail。 |
+| `evidence_vault` | Evidence Vault 记录一切，但只有 fold 成 owner delta、hard gate、owner answer 或 typed blocker 后影响 default planning。 | evidence 增长、typed blocker 聚合、replay ref 或 production tail count 直接生成默认下一步。 |
+
+审计结论应拆成三类，不再混写：
+
+- `meets_target`: 默认路径更短、owner 更清楚、artifact / receipt / blocker 更可接力，且没有新增默认面。
+- `needs_demotion`: 功能有价值，但应降为 full-detail、diagnostic、audit、history、support 或 explicit lane。
+- `needs_retirement`: 已被 generated/hosted surface、App contract 或 domain authority function 替代，应走删除 / tombstone gate。
+
+不把 `tests passed`、`conformance passed`、`open_worklist=0`、`verified ledger`、`doctor clean` 或 `docs updated` 单独写成“更符合预期”。这些只证明机器门或文档门通过；最终判断仍看默认路径是否减少阻碍、owner delta 是否更清楚、真实 domain progress 是否回到正确 owner。
 
 ## Greenfield Target
 
@@ -613,7 +659,7 @@ domain-agent-repo/
 本文是 target architecture + machine contract 支撑。最小验证：
 
 - `rtk git diff --check`
-- `rtk rg -n '^(<<<<<<<|=======|>>>>>>>)' docs/active/opl-foundry-agent-target-operating-architecture.md docs/active/README.md docs/active/opl-foundry-agent-mvp-friction-audit.md`
+- `rtk rg -n '^(<<<<<<<|=======|>>>>>>>)' docs/active/opl-foundry-agent-target-operating-architecture.md docs/active/README.md docs/history/process/plans/2026-06-04-opl-foundry-agent-mvp-friction-audit.md`
 - `rtk node --experimental-strip-types --test tests/src/cognitive-computation-kernel-contract.test.ts`
 - `rtk npm run test:smoke`
 - external web refresh used Anthropic, OpenAI Agents SDK, LangGraph, Kubernetes, Temporal, Backstage, CNCF, Google SRE, OpenTelemetry and DORA docs on `2026-06-04 CST`.
