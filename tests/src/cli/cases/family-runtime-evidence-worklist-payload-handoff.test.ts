@@ -10,6 +10,7 @@ import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/family-runtime
 import type { FrameworkContracts } from '../../../../src/types.ts';
 import {
   assertCurrentOwnerDeltaReadModel,
+  assertCurrentOwnerDeltaToplineNextAction,
 } from './owner-payload-workorder-assertions.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -567,6 +568,7 @@ test('family-runtime evidence-worklist summary next actions carry domain-dispatc
     worklist.current_owner_delta_read_model?.current_owner_delta,
   );
   assert.equal(worklist.operator_next_owner, worklist.current_owner_delta?.current_owner);
+  assertCurrentOwnerDeltaToplineNextAction(worklist as JsonRecord);
   assert.equal(
     worklist.operator_required_delta,
     worklist.current_owner_delta?.desired_delta_description,

@@ -27,6 +27,7 @@ import {
   assertFrameworkOwnerHandoffPacket,
   assertFrameworkOwnerPayloadAction,
   assertFrameworkOwnerPayloadAttention,
+  assertCurrentOwnerDeltaToplineNextAction,
   assertOwnerDeltaFirstReadinessProjection,
 } from './owner-payload-workorder-assertions.ts';
 import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
@@ -53,6 +54,7 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(readiness.readiness_model.ai_executor_internal_strategy_is_contract, false);
   assert.equal(readiness.attention_first_payload.surface_kind, 'opl_framework_readiness_attention_first_payload');
   assert.equal(readiness.attention_first_payload.status, readiness.status);
+  assertCurrentOwnerDeltaToplineNextAction(readiness);
   assert.equal(
     readiness.attention_first_payload.summary.hard_blocker_count,
     readiness.summary.framework_kernel_hard_blocker_count,

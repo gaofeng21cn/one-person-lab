@@ -130,6 +130,30 @@ export function assertCurrentOwnerDeltaReadModel(
   assert.equal('quality_verdict' in readModel, false);
 }
 
+export function assertCurrentOwnerDeltaToplineNextAction(surface: JsonRecord) {
+  assert.deepEqual(
+    surface.operator_next_action,
+    surface.current_owner_delta_read_model.next_safe_action_or_none,
+  );
+  assert.equal(
+    surface.operator_next_action_kind,
+    surface.current_owner_delta_read_model.next_safe_action_or_none.action_kind,
+  );
+  assert.equal(surface.operator_next_action_owner, surface.operator_next_owner);
+  const boundary = surface.operator_next_action_authority_boundary;
+  assert.equal(boundary.derivation_source, 'current_owner_delta');
+  assert.equal(boundary.default_planning_root, 'current_owner_delta_or_provider_human_hard_gate');
+  assert.equal(boundary.route_requires_domain_or_app_payload, true);
+  assert.equal(boundary.can_submit_to_safe_action_shell, false);
+  assert.equal(boundary.can_execute_domain_action, false);
+  assert.equal(boundary.can_write_domain_truth, false);
+  assert.equal(boundary.can_create_owner_receipt, false);
+  assert.equal(boundary.can_create_typed_blocker, false);
+  assert.equal(boundary.can_close_domain_ready, false);
+  assert.equal(boundary.can_claim_production_ready, false);
+  assert.equal(boundary.worklist_item_is_completion_claim, false);
+}
+
 export function assertCurrentOwnerDeltaProjection(
   currentOwnerDelta: JsonRecord,
   expected: {

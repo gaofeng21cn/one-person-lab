@@ -1,4 +1,7 @@
 import { assert } from '../helpers.ts';
+import {
+  assertCurrentOwnerDeltaToplineNextAction,
+} from './owner-payload-workorder-assertions.ts';
 
 export function assertOwnerDeltaTopline(drilldown: any) {
   assert.deepEqual(
@@ -15,6 +18,7 @@ export function assertOwnerDeltaTopline(drilldown: any) {
   assert.equal(drilldown.operator_required_delta, drilldown.current_owner_delta.desired_delta_description);
   assert.equal(drilldown.operator_payload_requirement, drilldown.current_owner_delta.payload_requirement);
   assert.deepEqual(drilldown.operator_accepted_answer_shape, drilldown.current_owner_delta.accepted_answer_shape);
+  assertCurrentOwnerDeltaToplineNextAction(drilldown);
   assert.equal(drilldown.authority_boundary.can_write_domain_truth, false);
   assert.equal(drilldown.authority_boundary.can_execute_domain_action, false);
   assert.equal(drilldown.authority_boundary.provider_completion_is_domain_ready, false);
