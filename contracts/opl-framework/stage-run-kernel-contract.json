@@ -1,0 +1,164 @@
+{
+  "contract_kind": "opl_stage_run_kernel_contract.v1",
+  "surface_kind": "opl_stage_run_kernel_contract",
+  "owner": "one-person-lab",
+  "purpose": "Freeze the OPL-owned refs-only StageRun substrate for spec/status/event-log/projection rebuild, observed_generation, retry-budget keying, hold scope, and domain-agent adoption boundaries.",
+  "state": "active_contract",
+  "machine_boundary": {
+    "opl_owns": {
+      "stage_run_spec": true,
+      "stage_run_status": true,
+      "event_log": true,
+      "projection_rebuild": true,
+      "observed_generation": true,
+      "retry_budget_accounting": true,
+      "hold_scope_projection": true
+    },
+    "mas_owns": {
+      "stage_semantics": true,
+      "owner_receipt_signing": true,
+      "typed_blocker_creation": true,
+      "publication_verdict": true,
+      "artifact_body": true,
+      "memory_body": true
+    },
+    "read_model_role": "rebuildable_refs_only_projection_not_truth_source"
+  },
+  "stage_run_kernel": {
+    "spec_role": "desired_stage_run_refs_only",
+    "status_role": "opl_owned_current_state_projection",
+    "event_log_role": "append_only_refs_only_stage_run_events",
+    "projection_role": "rebuildable_refs_only_read_model",
+    "status_values": [
+      "declared",
+      "inputs_ready",
+      "admitted",
+      "running",
+      "terminalizing",
+      "domain_accepted",
+      "next_stage_ready",
+      "needs_human_decision",
+      "needs_external_resource",
+      "retry_scheduled",
+      "typed_blocked",
+      "infrastructure_crashed",
+      "superseded"
+    ],
+    "terminal_domain_authority_refs": [
+      "owner_receipt_ref",
+      "typed_blocker_ref"
+    ],
+    "provider_completion_status": "terminalizing",
+    "domain_acceptance_status": "domain_accepted"
+  },
+  "adoption_surface": {
+    "surface_kind": "opl_stage_run_kernel_adoption",
+    "domain_contract_path": "contracts/stage_run_kernel_adoption.json",
+    "domain_agent_required_claims": [
+      "stage_semantics_owner",
+      "owner_receipt_authority",
+      "typed_blocker_authority",
+      "artifact_body_authority",
+      "publication_or_quality_verdict_authority"
+    ],
+    "opl_required_claims": [
+      "stage_run_spec_status_event_log_owner",
+      "read_model_projection_owner",
+      "observed_generation_owner",
+      "retry_budget_owner",
+      "hold_scope_projection_owner"
+    ],
+    "domain_must_not_claim": [
+      "generic_stage_run_kernel_owner",
+      "opl_read_model_truth_source",
+      "sqlite_body_store_owner"
+    ],
+    "opl_must_not_claim": [
+      "domain_stage_semantics_owner",
+      "owner_receipt_signer",
+      "typed_blocker_creator",
+      "publication_or_quality_verdict_authority",
+      "artifact_body_owner",
+      "memory_body_owner"
+    ]
+  },
+  "read_model_projection": {
+    "surface_kind": "opl_stage_run_read_model",
+    "projection_role": "rebuildable_refs_only_projection",
+    "rebuild_from": [
+      "StageRun event log",
+      "StageRun spec refs",
+      "input refs",
+      "owner receipt refs",
+      "typed blocker refs",
+      "provider attempt refs",
+      "hold refs",
+      "retry budget refs"
+    ],
+    "body_access": false,
+    "truth_source": false,
+    "output_fields": [
+      "stage_run_id",
+      "status",
+      "observed_generation",
+      "spec_ref",
+      "consumed_refs",
+      "owner_receipt_refs",
+      "typed_blocker_refs",
+      "provider_attempt_refs",
+      "hold_refs",
+      "retry_budget_ref",
+      "input_fingerprint",
+      "last_event_ref"
+    ]
+  },
+  "event_policy": {
+    "required_event_fields": [
+      "event_id",
+      "event_kind",
+      "stage_run_id",
+      "generation",
+      "observed_at"
+    ],
+    "generation_rule": "only events matching the highest observed generation participate in current projection; older generations remain audit refs",
+    "retry_budget_key": [
+      "stage_run_id",
+      "generation",
+      "input_fingerprint",
+      "failure_signature"
+    ],
+    "hold_scope_rule": "holds must identify exact stage_run_id generation and optional work_unit_ref; study-wide opaque holds cannot silently block a current StageRun"
+  },
+  "forbidden_payloads": [
+    "artifact body",
+    "memory body",
+    "domain truth body",
+    "owner receipt body",
+    "typed blocker body",
+    "publication verdict body",
+    "quality verdict body",
+    "large binary/blob body",
+    "manuscript body",
+    "grant package body",
+    "visual package body"
+  ],
+  "authority_boundary": {
+    "opl_can_create_stage_run_spec": true,
+    "opl_can_update_stage_run_status": true,
+    "opl_can_append_stage_run_event_refs": true,
+    "opl_can_rebuild_read_model": true,
+    "opl_can_account_retry_budget": true,
+    "opl_can_project_hold_scope": true,
+    "opl_can_write_domain_truth": false,
+    "opl_can_mutate_artifact_body": false,
+    "opl_can_store_memory_body": false,
+    "opl_can_create_owner_receipt": false,
+    "opl_can_create_typed_blocker": false,
+    "opl_can_authorize_publication_or_quality_verdict": false,
+    "read_model_can_be_truth_source": false,
+    "provider_completion_counts_as_domain_accepted": false,
+    "file_presence_counts_as_stage_complete": false,
+    "latest_json_counts_as_owner_receipt": false,
+    "sqlite_record_counts_as_domain_progress": false
+  }
+}

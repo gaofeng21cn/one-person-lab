@@ -12,6 +12,8 @@ Date: `2026-06-05`
 
 本文只回答一个支撑问题：当唯一 active owner 需要排序下一步时，各类工作应回到哪个长期 owner。本文不冻结 live counter、readiness 摘要、receipt id、attempt id、workorder 数、branch/worktree 或 closeout 过程。
 
+当前 runtime 边界固定为 Codex-default executor 进入 provider-backed Stage Attempt；legacy wrapper、provenance、diagnostic、history 或 fixture 只作为支撑证据和退役语境，不进入 ordinary owner root。
+
 统一目标仍是：
 
 ```text

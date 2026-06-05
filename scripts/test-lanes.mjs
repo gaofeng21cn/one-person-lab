@@ -44,6 +44,7 @@ const fastTestFiles = [
   'tests/src/mas-mag-cognitive-kernel-stage-pack-fixtures.test.ts',
   'tests/src/stage-artifact-runtime.test.ts',
   'tests/src/state-index-kernel-contract.test.ts',
+  'tests/src/stage-run-kernel-contract.test.ts',
   'tests/src/family-runtime-state-index.test.ts',
   'tests/src/family-runtime-attempt-contract.test.ts',
   'tests/src/family-runtime-current-control-state.test.ts',

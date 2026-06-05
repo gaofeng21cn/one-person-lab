@@ -212,6 +212,10 @@
         },
         {
           "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/stage-run-kernel-contract.json"
+        },
+        {
+          "ref_kind": "machine_contract",
           "ref": "contracts/opl-framework/functional-agent-runtime-harness-contract.json"
         },
         {
@@ -235,7 +239,7 @@
         "opl_domain_agent_catalog"
       ],
       "notes": [
-        "Defines provider-backed stage attempt runtime, OPL Runtime Manager boundaries, and OPL-owned generated-surface handoff plus unified CLI/MCP/Skill/product-entry/tool interface bundles compiled from admitted domain packs."
+        "Defines provider-backed stage attempt runtime, refs-only StageRun spec/status/event-log/read-model substrate, OPL Runtime Manager boundaries, and OPL-owned generated-surface handoff plus unified CLI/MCP/Skill/product-entry/tool interface bundles compiled from admitted domain packs."
       ],
       "surface_budget": {
         "default_surface": true,
