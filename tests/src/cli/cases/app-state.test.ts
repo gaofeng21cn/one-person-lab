@@ -1,4 +1,5 @@
 import { assert, buildManifestCommand, createFakeCodexFixture, fs, loadFamilyManifestFixtures, os, path, runCli, runCliFailure, test } from '../helpers.ts';
+import { buildCurrentOwnerDeltaReadModel } from '../../../../src/current-owner-delta-projection.ts';
 import {
   assertCurrentOwnerDeltaReadModel,
   assertCurrentOwnerDeltaProjection,
@@ -110,6 +111,71 @@ function writeMasProgressPortalFixture(workspaceRoot: string, profilePath: strin
       opl_role: 'family_level_projection_consumer_only',
     },
   }, null, 2)}\n`, 'utf8');
+}
+
+function writeCurrentOwnerDeltaProjectionCacheFixture(stateDir: string) {
+  const readModel = buildCurrentOwnerDeltaReadModel({
+    ownerDeltaFirst: {
+      surface_kind: 'opl_owner_delta_first_projection',
+      next_owner: 'medautoscience',
+      next_required_delta: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+      required_return_shapes: [
+        'domain_owner_receipt_ref',
+        'quality_gate_receipt_ref',
+        'typed_blocker_ref',
+      ],
+      domain_id: 'medautoscience',
+      primary_item: {
+        domain_id: 'medautoscience',
+        stage_id: 'domain_owner/default-executor-dispatch',
+      },
+      selected_safe_action: {
+        domain_id: 'medautoscience',
+        stage_id: 'domain_owner/default-executor-dispatch',
+      },
+    },
+    countSummary: {
+      openSafeActionCount: 0,
+      payloadRequiredCount: 0,
+      payloadFreeCount: 0,
+      blockedRefsOnlyCount: 1,
+      evidenceEnvelopeOpenCount: 0,
+      evidenceEnvelopeBlockedCount: 1,
+      domainDispatchWorkorderCount: 0,
+      stageReplayMissingReceiptWorkorderCount: 0,
+    },
+    fullDetailRefs: {
+      owner_delta_first_ref:
+        '/runtime_tray_snapshot/app_operator_drilldown/attention_first_payload/owner_delta_first',
+      evidence_worklist_ref: '/family_runtime_evidence_worklist',
+      app_operator_drilldown_ref:
+        'opl runtime app-operator-drilldown --detail full --json',
+    },
+  });
+  fs.mkdirSync(stateDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(stateDir, 'current-owner-delta-read-model-cache.json'),
+    `${JSON.stringify({
+      version: 'g1',
+      surface_kind: 'opl_current_owner_delta_read_model_projection_cache',
+      cache_policy:
+        'non_authoritative_app_fast_projection_cache_from_owner_delta_first_sources',
+      source_surface: 'family_runtime_evidence_worklist',
+      source_command:
+        'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --json',
+      cached_at: new Date().toISOString(),
+      current_owner_delta_read_model: readModel,
+      authority_boundary: {
+        cache_is_domain_truth: false,
+        cache_can_create_owner_receipt: false,
+        cache_can_create_typed_blocker: false,
+        cache_can_close_domain_ready: false,
+        cache_can_claim_app_release_ready: false,
+        cache_can_claim_production_ready: false,
+      },
+    }, null, 2)}\n`,
+    'utf8',
+  );
 }
 
 function collectObjectKeys(value: unknown, keys = new Set<string>()) {
@@ -646,6 +712,7 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
   try {
     bindMasWorkspaceForAppState({ stateDir, workspaceRoot: masRepoRoot, profilePath });
     writeMasProgressPortalFixture(workspaceRoot, profilePath);
+    writeCurrentOwnerDeltaProjectionCacheFixture(stateDir);
     const output = runCli(['app', 'state', '--profile', 'fast'], {
       HOME: homeRoot,
       OPL_STATE_DIR: stateDir,
@@ -698,24 +765,23 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
       output.app_state.operator.current_owner_delta_read_model.current_owner_delta,
     );
     assertCurrentOwnerDeltaProjection(output.app_state.operator.current_owner_delta, {
-      currentOwner: 'med-autoscience',
-      requiredDelta: '提交 MAS owner receipt 或 typed blocker。',
+      currentOwner: 'medautoscience',
+      requiredDelta: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
     });
     assertCurrentOwnerDeltaReadModel(output.app_state.operator.current_owner_delta_read_model, {
-      currentOwner: 'med-autoscience',
-      requiredDelta: '提交 MAS owner receipt 或 typed blocker。',
+      currentOwner: 'medautoscience',
+      requiredDelta: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
       acceptedReturnShapes: [
         'domain_owner_receipt_ref',
-        'domain_typed_blocker_ref',
+        'quality_gate_receipt_ref',
         'typed_blocker_ref',
       ],
-      openSafeActionCount: 1,
+      openSafeActionCount: 0,
       payloadRequiredCount: 0,
       fullDetailRefKeys: [
-        'framework_readiness_ref',
+        'owner_delta_first_ref',
         'evidence_worklist_ref',
         'app_operator_drilldown_ref',
-        'runtime_activity_ref',
       ],
     });
     assert.equal(

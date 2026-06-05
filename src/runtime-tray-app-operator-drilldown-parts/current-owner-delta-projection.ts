@@ -1,4 +1,5 @@
 import { buildCurrentOwnerDeltaReadModel } from '../current-owner-delta-projection.ts';
+import { writeCurrentOwnerDeltaReadModelProjectionCache } from '../current-owner-delta-read-model-cache.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -20,7 +21,7 @@ export function buildAppDrilldownCurrentOwnerDeltaReadModel(input: {
   actionCount: number;
 }) {
   const evidence = input.evidenceAfterContract;
-  return buildCurrentOwnerDeltaReadModel({
+  const readModel = buildCurrentOwnerDeltaReadModel({
     ownerDeltaFirst: input.ownerDeltaFirst,
     nextSafeAction: input.selectedSafeAction,
     countSummary: {
@@ -40,4 +41,10 @@ export function buildAppDrilldownCurrentOwnerDeltaReadModel(input: {
         'opl runtime app-operator-drilldown --detail full --json',
     },
   });
+  writeCurrentOwnerDeltaReadModelProjectionCache({
+    readModel,
+    sourceSurface: 'app_operator_drilldown',
+    sourceCommand: 'opl runtime app-operator-drilldown --json',
+  });
+  return readModel;
 }

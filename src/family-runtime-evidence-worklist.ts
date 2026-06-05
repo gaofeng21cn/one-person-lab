@@ -42,6 +42,7 @@ import {
   NOT_AUTHORIZED_CLAIMS,
   OPEN_SAFE_ACTION_PAYLOAD_REQUIREMENT_SEMANTICS,
 } from './family-runtime-evidence-worklist-parts/constants.ts';
+import { writeCurrentOwnerDeltaReadModelProjectionCache } from './current-owner-delta-read-model-cache.ts';
 
 type EvidenceWorklistInput = {
   familyDefaults: boolean;
@@ -879,6 +880,12 @@ export async function runFamilyRuntimeEvidenceWorklist(
     compactEvidenceEnvelope,
     domainDispatchEvidenceWorkorderSummary,
     stageReplayMissingReceiptWorkorderSummary,
+  });
+  writeCurrentOwnerDeltaReadModelProjectionCache({
+    readModel: currentOwnerDeltaReadModel,
+    sourceSurface: 'family_runtime_evidence_worklist',
+    sourceCommand:
+      'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --json',
   });
   const commonPayload = {
     surface_kind: 'opl_family_runtime_evidence_worklist',

@@ -564,7 +564,6 @@ export async function buildFrameworkReadinessSummary(
     providerSloCadenceWindowStatus: appSummary.provider_slo_cadence_window_status,
     providerSloCapabilityStatus: appSummary.provider_slo_capability_status,
   });
-
   return {
     version: 'g1',
     framework_readiness: {

@@ -8,6 +8,7 @@ import {
   frameworkDiagnosticDrilldowns,
 } from './framework-readiness-static-surfaces.ts';
 import { buildCurrentOwnerDeltaReadModel } from './current-owner-delta-projection.ts';
+import { writeCurrentOwnerDeltaReadModelProjectionCache } from './current-owner-delta-read-model-cache.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -212,6 +213,11 @@ export function frameworkAttentionFirstPayload(input: {
       app_operator_drilldown_ref:
         'opl runtime app-operator-drilldown --detail full --json',
     },
+  });
+  writeCurrentOwnerDeltaReadModelProjectionCache({
+    readModel: currentOwnerDeltaReadModel,
+    sourceSurface: 'framework_readiness',
+    sourceCommand: 'opl framework readiness --family-defaults --json',
   });
 
   return {
