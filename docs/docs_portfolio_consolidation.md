@@ -47,7 +47,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | 目录 | 长期职责 | 当前 OPL 承载 |
 | --- | --- | --- |
 | `docs/` root | 文档入口、核心五件套、docs governance | `README.md`、核心五件套、本文件。 |
-| `docs/active/` | 当前执行、当前计划、当前差距、active baton、当前完成门槛 | family 开发主参考、当前开发线路、当前状态与理想差距、生产闭环差距矩阵、开发文档组合整理。 |
+| `docs/active/` | 当前执行、当前计划、当前差距、active baton、当前完成门槛 | `current-state-vs-ideal-gap.md` 是唯一 active owner；family 开发主参考、当前开发线路、生产闭环差距矩阵、ideal operating model、目标架构和设计审计只作 active support。 |
 | `docs/public/` | 仓库首页之后的公开产品方向支撑 | roadmap、task map、operating model、UHS 叙事。 |
 | `docs/product/` | One Person Lab App/workbench、operator entry、product entry、action-routing shell | public surface index 与 App/workbench 消费边界。 |
 | `docs/runtime/` | framework runtime、provider/executor、control plane、projection/read model、resume/wakeup、repair 语义 | runtime 命名与边界合同。 |
@@ -72,9 +72,10 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | `docs/decisions.md` | `active_truth_with_history_notes` | 仍有效决策和被 supersede 决策的当前读法。 | 核心五件套；旧决策必须标明 superseded。 |
 | `docs/active/opl-family-development-reference.md` | `active_support` | OPL 系列项目开发主参考、owner 分层、上收判断和 direct-retirement 规则。 | 保持主参考；不替代单仓 truth。 |
 | `docs/active/current-state-vs-ideal-gap.md` | `active_plan` | OPL family 当前目标、完成进度、功能/结构差距、测试/证据差距和下一轮 baton 的唯一 active owner。 | 保持 compact active plan；只写当前结论、完成口径和动态机器入口，过程证据、dated closeout 和历史长清单进 history。 |
-| `docs/active/current-development-lines.md` | `active_plan` | 当前 framework-first 开发线路图。 | 保持 active plan；旧路线只作输入。 |
-| `docs/active/production-framework-closure-gap-matrix.md` | `active_plan` | production closure 差距矩阵、证据门与功能/结构当前 owner。 | 保持 active plan；不承载 dated proof 流水。 |
-| `docs/active/opl-family-purpose-first-current-design-audit.md` | `active_support` | OPL family 当前 purpose-first 顶层设计审计和 target coverage re-audit。 | 保持 active support；只提供审计判断，不替代 active gap owner、domain active plan 或 live machine truth。 |
+| `docs/active/opl-family-ideal-operating-model-redesign.md` | `active_support` | OPL family 统一 ideal operating model、`目的反推必要性，MVP 检查阻碍性` 和三类审计标准。 | 保持 active support 标准；不承载 live readiness、domain ready、App release ready 或 production ready 结论。 |
+| `docs/active/current-development-lines.md` | `active_support` | 当前开发线路支撑；把工作类型映射回唯一 active owner 和长期 owner。 | 保持路线支撑；不维护独立路线图、不冻结 live counters。 |
+| `docs/active/production-framework-closure-gap-matrix.md` | `active_support` | production closure 证据门支撑；解释证据如何被唯一 active owner 消费。 | 保持矩阵支撑；不维护 dated proof ledger、不声明 production ready。 |
+| `docs/active/opl-family-purpose-first-current-design-audit.md` | `active_support` | OPL family purpose-first 顶层设计审计支撑。 | 保持审计支撑；不替代 active gap owner、domain active plan 或 live machine truth。 |
 | `docs/active/opl-foundry-agent-target-operating-architecture.md` | `active_support` | OPL / Foundry Agent 目标操作架构、primitive、迁移阶段和验收门。 | 保持 active support；承接 MVP friction 和 purpose-first 设计评估，不承载 live readiness 结论。 |
 | `docs/active/development-document-portfolio.md` | `active_docs_support` | 开发文档组合整理和旧计划吸收/归档规则。 | 保持 active support；只管开发文档组合，不重复全仓治理。 |
 | `docs/active/standard-agent-private-platform-inventory.md` | `active_inventory` | 跨 MAS/MAG/RCA/OPL Meta Agent 的 private-platform surface 分类、owner subdomain、migration gate 和 forbidden claim 台账。 | 保持分类台账；逐日拆分、line-count closeout 和具体执行流水进 history/provenance。 |

@@ -26,7 +26,7 @@ Domain Intent
   -> Stage Attempt Runtime
   -> Stage Artifact Unit
   -> Independent Gate / Owner Answer
-  -> Compact Owner Delta Projection
+  -> current_owner_delta
 ```
 
 它只默认做四件事：
@@ -530,83 +530,39 @@ domain-agent-repo/
 
 保留的 `src/` / `packages/` 只实现 domain handler、authority function、native helper、schema helper 或 fixture；任何 generic runtime/queue/session/workbench/status/product wrapper 都是迁移输入。
 
-## Migration Strategy
+## Machine Contract Support
 
-这次 OPL 基座重构按目标架构一次性落到可验证机器面。Domain 仓的物理 wrapper 删除仍归 domain owner receipt / typed blocker 和 no-active-caller gate 授权；OPL 本仓不把 descriptor ready、conformance pass 或测试通过当作跨仓删除授权。
+目标架构对应的机器面应以 contracts、source、CLI/read-model 和 tests 为准；本文只解释它们为什么存在、如何读取，以及为什么不能越权声明 domain ready / production ready / physical delete authorized。
 
-## Landing Status
+当前目标架构的支撑合同组包括：
 
-2026-06-04 已落地的机器面：
+| Contract / policy | 支撑的目标边界 |
+| --- | --- |
+| `current-owner-delta.schema.json` | 默认 owner / delta / accepted answer shape / hard gate payload。 |
+| `stage-artifact-progress-truth-policy.json` | progress 必须同时具备 physical output、valid manifest、owner answer 和 current pointer。 |
+| `cognitive-computation-kernel.json` | stage 内认知计算、tool affordance boundary、knowledge refs 和 independent gate 的 refs-only 组织边界。 |
+| `evidence-vault-event.schema.json` | raw evidence、trace、replay、typed blocker group、long-soak 和 cleanup provenance 只作为 passive audit。 |
+| `stop-loss-policy.schema.json` | receipt-only、platform-repair-only、read-model-reconcile-only 或 stale-route lineage 的默认冻结规则。 |
+| `guardrail-tier-policy.json` | launch-hard、runtime-enforced、domain/human gate、audit-only 分级。 |
+| `wrapper-retirement-gate-policy.json` | replacement parity、no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 删除门。 |
+| `golden-path-profile.schema.json` | 每个 Foundry Agent 的 single ordinary route 与 explicit variants。 |
 
-- `current_owner_delta` 成为 App/default operator payload root；`compact_owner_delta_projection` 保留为兼容 alias。
-- `buildCompactOwnerDeltaProjection()` 统一生成内嵌 `current_owner_delta`，并被 framework readiness、runtime tray、App fast state 和 evidence-worklist summary 复用。
-- `family-runtime evidence-worklist` 不再用 `openItems[0]` 覆盖 owner delta；raw worklist item 只保留为 `next_safe_action_or_none`、count 和 full-detail audit refs。
-- `contracts/opl-framework/` 新增 7 个 target architecture schema，并由 `verification-command-surfaces` 检查 metadata、root shape 和 false authority flags。
-- `surface-budget-policy.json` 与 `family-product-operator-projection.json` 的 default projection 已从 `opl_compact_owner_delta_projection` 提升到 `opl_current_owner_delta`。
-- `opl agents conformance` 新增 `golden_path_default_surface_budget_checks`，要求标准 Foundry Agent 只有一个 ordinary default route，proof/diagnostic/cleanup/long-soak 等 lane 必须显式。
-- `lineage_stop_loss` 已接入 Progress-First anti-spin gate：重复 same-source / no-deliverable lineage 会冻结默认 launch，并输出 `stop_loss_state` 与 `stop_loss_policy`；`current_owner_delta` 可消费已折叠的 stop-loss 状态。
-- `stage_artifact_progress_truth` 已落成 `stage-artifact-progress-truth-policy.json`：deliverable progress 必须同时具备 physical output、valid manifest、owner answer 和 current pointer；provider completion、receipt count、file presence 单独不计进度。
-- `guardrail_tier_policy` 已落成 `guardrail-tier-policy.json`：launch-hard、runtime-enforced、domain/human gate、audit-only 分级稳定；audit-only 和 advisory warning 不能绕过 folded owner delta 变成普通 launch blocker。
-- `route_not_stage_strategy` / `audit_tail_cannot_plan` 已固化到 `stage-route-scheduler-contract.json`、`family-runtime-attempt-contract.json`、`current-owner-delta.schema.json`、`evidence-vault-event.schema.json` 和 compact owner-delta 输出：route reconciler 只能 hydrate/reconcile owner route，不能生成候选、评估排序、完成 stage、签 receipt 或从 raw evidence / replay packet / typed blocker group 生成默认计划。
-- Phase 5 wrapper retirement 已落成 `wrapper-retirement-gate-policy.json`：replacement parity、no-active-caller、domain owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 是物理删除前置门；OPL lifecycle apply 只能记录 refs，不能替 domain repo 执行未授权删除。
-- `cognitive-computation-kernel.json` 已落成认知计算内核机器合同：固定 generation、reflection、comparative selection、evolution、meta-review、tool affordance boundary、knowledge 和 independent gate 的 refs-only 组织边界；明确工具目录不是 workflow script，Route 不是小 Stage，OPL 不持有 domain truth 或 quality verdict。
-- standard stage pack v2 的 `tool_affordance_boundary` 已进入 `family-stage-control-plane` schema、`family-stage-admission` hard blocker、standard agent scaffold / conformance 和 generated interface route projection。新 Foundry Agent skeleton 默认生成 `agent/tools/README.md` 与 `agent/tools/domain_affordances.md`，并在 stage 顶层声明 `tool_refs`、capability / permission / credential / write-scope / side-effect / forbidden-authority refs 与 executor autonomy flags。
-- `missing_tool_affordance_boundary` / `invalid_tool_affordance_boundary` 已进入 stage launch blocker 集合：工具目录只能声明 affordance catalog 与安全/责任边界，不能规定工具顺序、定义认知策略、覆盖 stage goal 或授权 forbidden write。
-- `contracts/opl-framework/README*` 已同步目标架构合同组，把上述 schema/policy 纳入 active contract index。
-- 2026-06-04 fresh family conformance 已闭合到 `4/4 passed`、`blocked_count=0`；MAS/MAG/RCA/OMA 均声明唯一 ordinary default route。MAS 的 ordinary default route 固定为 `direction_and_route_selection`，由 MAS canonical generator `build_family_stage_control_plane()` 物化到 `contracts/stage_control_plane.json`，不是手写 JSON 漂移。
-- 本 P0/P1 切片继续收紧 `domain_golden_path_single_default`、`generated_surface_absorbs_wrappers` 与 `app_cockpit_not_ledger_browser` 的机器边界：`opl agents conformance` 会阻断未显式 lane 化的 proof / diagnostic / cleanup / long-soak / route variant stage，并在 domain 声明 `contracts/golden_path_profile.json` 时校验 profile ordinary path 与 `stage_control_plane` 默认 route 一致；`opl agents default-callers` 即使观察到全部 deletion evidence refs，也稳定输出 `generated_default_caller_readiness_can_authorize_physical_delete=false` 与 physical-delete blocked reasons；`opl app state --profile fast --json` 的 default read policy 明确禁止 raw evidence browser、raw ledger browser、ledger browser、provider trace 和 route variant menu 字段出现在 fast/default payload。
-- 本轮关闭的是 stage pack 工具边界机器化落地，不声明 domain ready、artifact ready、quality ready、production ready 或真实 MAS/MAG/RCA/OMA 生产证据尾项已关闭。
+`compact_owner_delta_projection` 只允许作为 compatibility alias / historical ref / negative guard 读取。默认文档、App contract 和普通 CLI/App/operator summary 应首选 `current_owner_delta`。
 
-### Phase 0: Freeze design target
+## Migration Reading
 
-- 新文档、core docs、active gap 和 contracts README 同步引用本目标架构。
-- 明确 `current_owner_delta` 是默认 root，`worklist` 降为 secondary view。
-- 明确 `cognitive-computation-kernel` 与 `tool_affordance_boundary` 是 stage 内目标形态，不是工具流程脚本。
-- 不改行为，只先冻结命名和 owner boundary。
+迁移阶段只作为目标架构支撑，不再作为独立 active roadmap。当前执行顺序和下一轮 baton 回到 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。
 
-### Phase 1: Introduce `current_owner_delta` contract
-
-- 新增 schema/type。
-- `framework readiness`、`evidence-worklist.progress_first_operator_summary`、`runtime tray`、`app state fast profile` 统一派生同一对象。
-- 验证：默认 next action 100% 可追溯到 `current_owner_delta` 或 provider/human hard gate。
-
-### Phase 2: Stop worklist-driven planning
-
-- raw envelope / stage replay / typed blocker groups / private residue 不再直接进入 next-action selector。
-- `open_worklist_count` 只做 audit metric。
-- 验证：同一 lineage 的 historical/superseded/typed-blocked attempts 不再产生 per-attempt default action。
-
-### Phase 3: Cognitive computation kernel becomes stage strategy root
-
-- 每个标准 stage pack 声明 prompt / skill / tool affordance / knowledge / rubric / quality gate refs。
-- `tool_refs` 只做 affordance catalog 和安全边界，不定义工具编排。
-- 当前落地：standard-stage-pack.v2 已要求 stage 顶层 `tool_refs` 与 `tool_affordance_boundary`；scaffold / conformance / admission / generated interface 已同步消费同一边界。
-- 验证：schema、admission gate 和 conformance 不允许 tool catalog 规定工具使用顺序、替代 executor 规划、授权 forbidden write 或关闭 quality gate。
-
-### Phase 4: Stage artifact unit becomes progress root
-
-- 每个 stage attempt 生成 external artifact unit。
-- `stage_progress_log` 只从 artifact unit + owner answer + provider metadata 派生。
-- 验证：provider completion / receipt verified / file existence 单独都不能计入 deliverable progress。
-
-### Phase 5: Golden path only in App/CLI
-
-- App/CLI ordinary path 每个 agent 只展示一个 route。
-- variants/proof/diagnostic/cleanup/long-soak 进入 explicit drilldown。
-- 验证：普通用户不需要理解 route menu、provider internals、backend selector 或 proof lane。
-
-### Phase 6: Domain wrapper retirement
-
-- OPL generated/hosted surfaces 吸收 CLI/MCP/App/status/workbench/default-caller shell。
-- Domain repo 只保留 semantic pack、authority functions、native helpers、direct skill path。
-- 验证：replacement parity、no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance。
-
-### Phase 7: Agent Lab improvement loop
-
-- Agent Lab 只读 artifact/evidence/owner answer，输出 improvement candidate。
-- OMA 只产出 work order / mechanism proposal / typed blocker。
-- OPL work-order execute 承担 patch execution；target owner 关闭。
-- 验证：Agent Lab / OMA 不写 domain truth、不签 owner receipt、不声明 quality verdict。
+| Phase | 当前读法 |
+| --- | --- |
+| Design target | 目标架构已冻结为 `current_owner_delta + Cognitive Computation Kernel + Stage Artifact Unit + Passive Evidence Vault + App Cockpit`。 |
+| Owner delta contract | 所有默认 read surface 应从同一 `current_owner_delta` 派生；raw worklist 不能覆盖 owner delta。 |
+| Audit-plane passivity | raw evidence、stage replay、typed blocker group 和 private residue 只能在 fold 成 owner answer / typed blocker / hard gate / owner delta 后影响默认路径。 |
+| Cognitive kernel | Stage pack 只声明 prompt / skill / tool affordance / knowledge / rubric / quality gate refs；工具目录不能变成 workflow script。 |
+| Progress truth | Stage attempt progress 从 artifact unit + owner answer + current pointer 推导。 |
+| Golden path | MAS/MAG/RCA/OMA 每个 agent 只有一个 ordinary route；proof/diagnostic/cleanup/long-soak/variant 显式 lane 化。 |
+| Wrapper retirement | Domain repo retained surface 逐项按删除门处理；OPL descriptor ready、conformance pass 或 test pass 不授权跨仓删除。 |
+| Agent Lab loop | Agent Lab / OMA 只产出 improvement candidate、work order、mechanism proposal 或 typed blocker；target owner 关闭真实 owner receipt。 |
 
 ## Acceptance Tests
 

@@ -1,22 +1,32 @@
-# OPL 当前开发线路
+# OPL 当前开发线路支撑
 
 Owner: `One Person Lab`
-Purpose: `current_execution_map`
+Purpose: `current_execution_map_support`
 State: `active_support`
-Machine boundary: 本文是人读执行地图。机器真相继续归 `contracts/`、source code、CLI/API behavior、runtime ledgers、provider receipts、domain-owned manifests 和真实 workspace / App evidence。
-Date: `2026-06-03`
+Machine boundary: 本文是人读路线支撑。机器真相继续归 `contracts/`、source code、CLI/API behavior、runtime ledgers、provider receipts、domain-owned manifests 和真实 workspace / App evidence。
+Date: `2026-06-05`
 
-## 当前结论
+## 读法
 
-OPL 当前开发继续按 Codex-default、provider-backed、framework-first 执行：先守住 OPL 作为完整智能体开发/运行框架，再让 MAS/MAG/RCA/OMA 作为标准 OPL Agents 消费 framework surface，并用真实 domain owner receipt、App evidence、no-regression 和 long-soak refs 验收目标结构。
+当前开发线路不再作为独立 active plan 维护。OPL family 的当前目标、差距、完成口径和下一轮 baton 的唯一 active owner 是 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。
 
-本文只保留当前顺序、owner 边界和完成口径。dated proof、receipt id、具体命令输出、attempt id、worktree/branch 流水和单次 closeout 摘要归档到 `docs/history/**`、runtime ledger、提交历史或 automation memory；当前计数必须重新读取 live CLI/read-model。
+本文只回答一个支撑问题：当唯一 active owner 需要排序下一步时，各类工作应回到哪个长期 owner。本文不冻结 live counter、readiness 摘要、receipt id、attempt id、workorder 数、branch/worktree 或 closeout 过程。
 
-当前 OPL 已具备的 framework surface 包括 Temporal provider、stage attempt ledger、typed queue、typed closeout、evidence worklist read model、domain descriptor aggregation、functional runtime harness、generic substrate projection、Agent Lab、pack compiler handoff、external evidence refs-only receipt ledger、App/operator drilldown read model、App runtime 页面消费路径、managed clean runner、App 启动维护入口以及 Developer Mode / OMA / App release / Codex App runtime / standard-agent template consumption 等 refs-only ledger。它们共同构成 OPL control plane，不授权 domain ready、artifact authority、App release ready 或 production ready。
+统一目标仍是：
+
+```text
+OPL Framework current_owner_delta root
+  -> One Person Lab App cockpit
+  -> Foundry Agent single ordinary golden path
+  -> Stage Artifact Unit progress truth
+  -> domain owner receipt / typed blocker / human gate
+```
+
+审计标准回到 [OPL Family Ideal Operating Model Redesign](./opl-family-ideal-operating-model-redesign.md)：每个新优化项只能归为 `meets_target`、`needs_demotion` 或 `needs_retirement`。
 
 ## Live Truth 读取
 
-每轮开发先读取这些机器面，不从本文继承旧数字：
+每轮开发先读 live 机器面，不从本文继承旧数字：
 
 ```bash
 rtk opl framework readiness --family-defaults --json
@@ -26,95 +36,36 @@ rtk opl agents conformance --family-defaults --json
 rtk opl agents default-callers --family-defaults --json
 ```
 
-当前 read-model schema 使用嵌套 payload：`framework_readiness.summary`、`runtime app-operator-drilldown` 的 summary、`family_runtime_evidence_worklist.summary`、`standard_domain_agent_conformance.summary` 和 `agent_default_caller_readiness.summary` 是默认摘要入口。新增文档或工具不得假设这些摘要字段永远在顶层。
+这些命令只提供 framework、App/operator、generated surface、evidence worklist 和 standard-agent structural 状态。它们不能单独声明 domain ready、App release ready、production ready、artifact authority ready 或 domain repo physical delete authorized。
 
-本轮 fresh 读取的 durable 结论（2026-05-30）：
+## 路线分层
 
-- `standard_domain_agent_conformance.summary` 读为 4 个 repo passed、0 blocked，`structural_conformance_status=passed`，`production_evidence_tail_count=4` 仍单独报告。
-- `agent_default_caller_readiness.summary` 读为 32 个 generated/default caller surfaces、0 blocked、32 个 deletion-evidence worklist，并且 owner/typed-blocker、no-forbidden-write、tombstone/provenance 缺口均为 0。
-- `stages readiness` 读为 13 个 stage admitted、0 blocked、0 hard blocker、23 个 launch warning；warning 只作为 runtime-budget / replay / cohort advisory 读取，不是 domain ready 或 production ready。
-- `framework_readiness.summary` 读为 `framework_control_plane_available_with_blocked_refs_only_attention`，framework/stage/pack/compiler hard blocker 为 0，operator actionable attention tail 为 0，payload-required / payload-free operator tail 均为 0；domain blocked refs-only attention 仍为主要读面，provider cadence / capability SLO 均 satisfied。blocked envelope、domain blocked attention 和 typed blocker 分组计数是动态审计数，只从 fresh CLI 读取，不在本文冻结。
-- `family_runtime_evidence_worklist.summary` 当前读数只从 fresh CLI 读取；open worklist 为 0 只表示当前没有 OPL 可执行 safe-action route，仍不授权 OPL 自造 owner receipt、typed blocker、owner-chain、no-regression、completion、domain ready 或 production ready。默认 payload 另暴露 `progress_first_operator_summary`：它把 open safe action、platform repair / provider supervision、stage replay missing receipt、human gate、blocked refs-only envelope 和 typed blocker 分账，并给出 `next_forced_delta`；`deliverable_progress_delta` 仍由 domain agent 持有，OPL read model 不会把 platform repair 或 refs-only ledger 写成交付物实质进展。closed refs-only item 与 blocked refs-only envelope 数量是动态读数；`zero_open_worklist_guard` 仍读为 `zero_open_worklist_is_completion_claim=false`、`zero_open_worklist_is_domain_ready=false`、`zero_open_worklist_is_production_ready=false`。
-- App/operator drilldown 显示 provider cadence/capability satisfied、App release/user-path evidence gate open count 为 0、Codex App runtime evidence gate open count 为 0、Developer Mode live route closeout refs ready 且 scaleout follow-through open gate 为 0、OMA production-consumption ready 为 true；这些都只是 refs-only / owner-boundary 读面，不是 release ready、domain ready 或 production ready verdict。
+| 路线 | 长期 owner | 默认落点 | 完成口径 |
+| --- | --- | --- | --- |
+| `current_owner_delta_default` | OPL Framework | `current-state-vs-ideal-gap.md` | 默认 CLI/App/operator summary 只回答当前 owner、accepted answer shape、hard gate 和下一步 owner action。raw evidence、worklist、replay、typed-blocker group 和 private residue 只进入 full-detail / diagnostic。 |
+| `stage_attempt_runtime` | OPL Framework / Temporal provider | `docs/runtime/`、contracts、source | Temporal-backed provider、typed queue、stage attempt、retry/dead-letter、human gate 和 provider receipt 可恢复、可审计；local provider 只作 dev/CI/offline diagnostic baseline。 |
+| `stage_artifact_progress_truth` | OPL Framework + domain owner | `current-state-vs-ideal-gap.md`、target architecture | Progress 只能来自 physical output、valid manifest、owner answer 和 current pointer；provider completion、file existence、receipt count 或 conformance pass 单独不算 progress。 |
+| `generated_surface_consumption` | OPL generated surface owner | contracts/source/CLI/App derived surfaces | MAS/MAG/RCA/OMA 生产入口消费 OPL generated/hosted surfaces；domain repo retained wrapper 只作为 refs-only adapter、domain handler target、migration input 或 tombstone candidate。 |
+| `domain_owner_delta_tail` | MAS/MAG/RCA/OMA domain owner | 各 domain active plan / owner receipt | 真实 paper、grant、visual 或 target-agent owner receipt、typed blocker、human gate、review/export receipt、no-regression ref 或 long-soak ref 关闭对应 evidence tail。 |
+| `app_cockpit_consumption` | One Person Lab App | `docs/product/`、App repo contract/release evidence | App 只展示和介入，消费 framework/provider 状态与 domain-owned projection；App release truth 回 App repo contracts、release artifact 和真实 user-path evidence。 |
+| `wrapper_retirement` | OPL cleanup gate + domain owner | private inventory、domain repo gate | 满足 replacement parity、no-active-caller、owner receipt / typed blocker、no-forbidden-write 和 tombstone/provenance 后删除或 tombstone；不新增 compatibility alias、facade 或 wrapper。 |
+| `support_repo_clarity` | App shell / OPL Doc support owner | support repo docs | shell 是 App renderer carrier，OPL Doc 是 workflow steward；support repo 不反向定义 OPL/App/domain truth。 |
 
-## 当前顺序
+## Direct Retirement 读法
 
-1. `opl_framework_foundation`
-   保持 provider-backed stage runtime、typed queue、attempt ledger、signal/query、retry/dead-letter、human gate、receipt/projection、shared lifecycle/index primitive、safe action shell 和 generated surface 基础。Temporal-backed provider 是 production online runtime 的必需 substrate，local provider 只作为 dev/CI/offline diagnostic baseline。
+旧 gateway/frontdoor/federation/Hermes-first/local-manager wording、旧 CLI alias、repo-local generic scheduler/session/workbench/status shell、compat facade、re-export wrapper 和 compatibility-only tests 都只按当前 owner surface 判断：
 
-2. `production_evidence_scaleout`
-   保持 `runtime app-operator-drilldown`、`runtime action execute` 和 `family-runtime evidence-worklist` 的 refs-only worklist、typed blocker、payload preflight 和 workorder 能力。当前重心是真实 production evidence、domain owner-chain、memory/artifact/lifecycle receipt、direct/hosted parity、no-regression、expected receipt、monitor freshness 和 long-soak refs。Open worklist 只说明有可提交 route；payload 必须来自 domain/App/live owner 的真实 refs 或 typed blocker，OPL 不从模板自造 owner receipt、typed blocker、owner-chain、no-regression、release-ready 或 production-ready 证据。
+- 已被 generated/hosted surface、App contract 或 domain authority function 替代：`needs_retirement`。
+- 仍有 diagnostic、audit、history、proof 或 support 价值：`needs_demotion`。
+- 默认路径更短、owner 更清楚、artifact / receipt / blocker 更可接力：`meets_target`。
 
-3. `strict_standard_agent_source_purity`
-   让 OPL generated/hosted CLI、MCP、Skill/product-entry、status、session、workbench、domain-handler 和 harness 成为 MAS/MAG/RCA/OMA 的生产默认 caller。Domain repo 最终只留 domain pack、machine-readable contract、authority function、domain handler target、domain-specific implementation 与必要 native helper。repo-local default caller、wrapper、runtime projection、diagnostic cleanup shell、compat facade、re-export wrapper 和 compatibility-only tests 在 replacement/no-active-caller/provenance 证据成立后直接删除或进入 history/tombstone。
-
-4. `domain_private_residue_retirement`
-   把 framework-generic 能力上收到 OPL，把 domain truth 留在 domain。满足 replacement parity、no-active-caller、domain receipt parity、provenance/history 和 no-forbidden-write 证据后，旧模块、接口、alias、facade、wrapper、旧测试入口和 compatibility tests 直接退役。测试改为锁定当前 machine-readable contract、generated surface、domain owner receipt、fail-closed 行为或 no-resurrection guard。2026-06-03 起，非默认 executor adapter 的长期 owner 固定为 OPL Framework：MAG/RCA 中的 Hermes-named proof、mock、bridge 或 helper 只能作为显式 proof/receipt lane、migration input、negative guard 或 provenance 读取；删除前必须先完成 OPL adapter parity、active caller 迁移、owner receipt / typed blocker 和 repo-native verification。
-
-5. `opl_app_runtime_workbench`
-   App/workbench 消费 provider readiness、stage attempt、route graph、review/repair queue、source refs、artifact refs、memory refs、SLO、workorder packet、owner-aware action routing 和 refs-only graph/timeline/research lens。该面只做展示与 drilldown，不读取论文正文、memory body 或 artifact body，不声明 publication ready、domain ready 或 production ready。`one-person-lab-app` 持有 active-shell candidate contract 与 validator；`opl-agui-codex-shell` / `agui-codex` 当前是 active shell candidate 和测试对象，不属于 cleanup 删除队列。Aion shell cleanup 只处理已由当前 App contract、单测或 bridge path 覆盖的 Team/E2E helper tail，不能删除 active migration window、legacy migration 或 bridge fallback。
-
-6. `domain_soak_and_acceptance`
-   MAS/MAG/RCA 在迁移后目标形态下持续产出真实 progress delta、quality gate movement、human gate、stop-loss、domain owner receipt、typed blocker、no-regression evidence、expected receipt、monitor freshness、memory/artifact/lifecycle receipt 或 long-soak refs。
-
-7. `new_domain_admission`
-   新 domain 只按 OPL scaffold、descriptor、stage/action/memory/artifact locator、authority function ABI、stage evidence workorder policy 和 docs taxonomy 接入。旧 gateway/frontdoor/local-runtime/Hermes-first 路线已退役，不得恢复为默认入口。
-
-## 内容线路
-
-| 线路 | 当前 owner | 当前要做 |
-| --- | --- | --- |
-| `provider_runtime` | OPL Runtime Manager / Temporal provider | 固定 Temporal production provider，保持 cadence / capability SLO satisfied；继续补真实 domain owner-chain dispatch、typed closeout、retry/dead-letter 和 no-forbidden-write 证据。 |
-| `stage_evidence_accounting` | OPL production closeout / App operator shell | Stage/domain evidence workorder 继续是 refs-only route、payload preflight、typed blocker 和 domain/stage packet 守门面；candidate refs 不自动关闭 route、不生成 owner receipt、不声明 domain ready 或 production ready。 |
-| `generated_surface` | OPL pack compiler / generated surface | 从 domain descriptor/stage/action/memory/transition/receipt metadata 派生 entry/status/workbench/harness，并迁移生产 caller。 |
-| `conformance_physical_morphology` | OPL agents conformance | 保持 conformance 主入口为薄聚合器；physical morphology policy、active residue scan 和 provenance/tombstone allowance 只能在 scoped module 中演进，并由 line-budget / modularization tests 防回堆。 |
-| `domain_private_residue` | OPL functional audit + domain repos | 按 OPL replacement、generated surface、refs-only adapter、minimal authority function、tombstone 分类收薄或删除；剩余风险按 no-resurrection、physical-delete authority 和 production evidence tail 读取。 |
-| `lifecycle_memory_artifact` | OPL primitive + domain owner receipt | OPL 只持 locator/index/ledger/ref transport；domain 持 body、mutation authority、accept/reject 和 final verdict。Observed refs 不授权 package/export/visual readiness、physical delete、domain ready、Temporal visual-stage long soak 或 production ready。 |
-| `app_workbench` | One Person Lab App / OPL product surface | 消费 App/operator drilldown、runtime visualization graph/timeline/lens、safe action routes、cleanup plan、stage evidence accounting、OMA production-consumption gates、App release/user-path gates 和 Codex App runtime evidence gates；active shell candidate truth 留在 App contract/validator，`agui-codex` active candidate 不进入 physical-delete lane；不生成 release-ready 或 production-ready verdict。 |
-| `legacy_cleanup` | OPL gate + domain repo owner | replacement proof 和 no-active-caller proof 后直接删除或 tombstone；OPL 可写 cleanup ledger / tombstone refs，domain repo 文件物理删除需要 domain owner receipt 或明确 owner-side proof。 |
-
-## 当前直接退役优先级
-
-| surface family | 当前实际状态 | 执行动作 |
-| --- | --- | --- |
-| OPL 历史 gateway/frontdoor/federation docs | 已在 `docs/history/compatibility/**` 或 `docs/history/frontdoor-legacy/**` 承担 provenance。 | 不恢复 active reference；若有 active doc / README / policy 继续指向旧路线，改为当前 OPL runtime / App / Foundry Agent 边界。 |
-| `family-runtime production-closeout` 等旧 CLI alias | 已被当前 readiness / evidence-worklist / App drilldown route 替代；`opl framework production-closeout` 只作为 framework-level 汇总命令保留。 | 不保留 compatibility alias；仍被测试或文档引用时迁到当前命令或 negative guard。 |
-| domain repo 手写 product/status/workbench/sidecar wrappers | MAS/MAG/RCA 仍有 retained adapter / domain handler / refs-only projection tail。 | 只按 domain handler、refs-only adapter、diagnostic 或 migration input 读取；OPL generated/default caller parity 和 owner proof 成立后删除旧 wrapper 和兼容测试。 |
-| stale compatibility tests | OPL 当前只需要 no-resurrection guard、contract behavior test 或 migration proof。 | 删除只保护旧路径的测试；保留的测试必须断言当前 contract、no-active-caller、fail-closed、retired alias rejection 或 tombstone semantics。 |
-| OMA / Aion shell helper tail | OMA active materializer 与 Aion active migration/bridge path 仍可有 caller；无 caller 的 implicit fixture graph、fixture alias、Team E2E helper tail 可退役。 | 先迁出 active caller、补替代 contract/unit proof，再删除脚本或测试 fixture；保留 active migration window、legacy database migration、explicit bridge fallback 和 App-owned active shell candidate。 |
-| MAG/RCA Hermes proof/helper tail | Hermes-Agent 不是 production substrate；`hermes_agent` 是 OPL-owned explicit executor adapter/backend。MAG/RCA 可保留 domain-local proof lane 或 route bridge residue。 | 把 active owner wording 改成 OPL executor adapter receipt/proof owner；只有 OPL parity、caller migration、typed blocker/owner receipt 和 repo-native verification 全部成立后，才删除 helper、bridge、mock tests。 |
-
-## 合并与退役规则
-
-| 内容类型 | 长期归属 |
-| --- | --- |
-| stage attempt、provider runtime、queue、signal/query、retry/dead-letter、approval transport | OPL Framework / Runtime Manager |
-| expected receipt / monitor freshness route、payload preflight、workorder packet、typed blocker、refs-only evidence ledger | OPL Framework / App operator shell |
-| lifecycle ledger、artifact locator/index、retention、restore proof、migration ledger、workspace lifecycle metadata | OPL Framework primitive |
-| MAS study truth、publication gate、evidence/review ledger、manuscript/package authority | MAS |
-| MAG grant strategy、fundability / proposal quality、specific aims authority | MAG |
-| RCA visual direction、creative artifact generation、review/export gate | RCA |
-| OMA agent-building semantics、candidate package/work-order/proposal materialization refs | OMA / target-agent owner |
-| old gateway/frontdoor/Hermes-first/local-manager default wording | replacement proof 与 no-active-caller scan 通过后删除或进入 history/tombstone |
-| external framework learning | references only，除非明确提升为 contracts/source/active owner docs |
-
-## 完成信号
-
-| 线路 | 完成信号 |
-| --- | --- |
-| `opl_framework_foundation` | OPL provider/framework 能稳定承载 stage attempt、queue/wakeup、retry/dead-letter、approval/human gate、receipt/projection 和 shared lifecycle/index primitive。 |
-| `production_evidence_scaleout` | OPL closeout/workorder accounting 可 fail-closed 投影；真实 production closure 由 App release/user path、domain owner-chain、memory/artifact/lifecycle receipt、direct/hosted parity、no-regression 或 long-soak refs 关闭。 |
-| `generated_surface_production_consumption` | MAS/MAG/RCA/OMA 生产默认 caller 使用 OPL generated/hosted surfaces；domain repo 只保留 domain handler、authority function、refs-only adapter 或 diagnostic cleanup。 |
-| `domain_private_residue_retirement` | 旧默认依赖、legacy compat、重复 UI、过时 manager surface 完成分类、替代和退役；无 active caller 的旧模块、接口、测试、alias、facade 和 wrapper 已删除或 tombstone，不保留兼容入口。 |
-| `opl_app_runtime_workbench` | App/workbench 能按 owner drill down provider、stage attempt、route graph、timeline、domain refs、memory/artifact/source refs、workorder、SLO、repair 和 safe actions，并有截图/发布包/长时 evidence。 |
-| `domain_soak_and_acceptance` | MAS/MAG/RCA 在迁移后目标形态下各自产出真实 progress delta、quality gate movement、human gate、stop-loss、domain owner receipt、no-regression evidence 或 typed blocker。 |
+物理删除必须逐 surface 读取 active caller、contract refs、domain owner receipt / typed blocker、no-forbidden-write 与 tombstone/provenance。OPL conformance、default-caller readiness、ledger verified 或 docs updated 只作为输入，不授权删除。
 
 ## 文档落点
 
-- 当前差距、执行顺序和 baton：`docs/active/`。
-- 目标态和支撑参考：`docs/references/`。
-- runtime/provider/executor/control plane 支撑：`docs/runtime/` 和 `docs/references/runtime-substrate/`。
-- App/workbench/product surface：`docs/product/`。
-- 旧路线、完成计划、dated proof、receipt 流水和 process archive：`docs/history/`。
-
-如果内容仍决定“接下来按什么顺序做、什么算完成”，放当前 owner doc；如果只是来龙去脉或过程证据，放 history/provenance。
+- 当前目标、差距、baton、验证入口：`current-state-vs-ideal-gap.md`。
+- 顶层 operating model 与三类审计标准：`opl-family-ideal-operating-model-redesign.md`。
+- 目标操作架构、primitive、acceptance gate：`opl-foundry-agent-target-operating-architecture.md`。
+- 生产闭环证据门映射：`production-framework-closure-gap-matrix.md`。
+- 私有平台残留分类与迁移门：`standard-agent-private-platform-inventory.md`。
+- dated proof、receipt 流水、closeout 过程、旧路线来龙去脉：`docs/history/**`、runtime ledger 或提交历史。

@@ -159,13 +159,13 @@ docs/tests
 
 | Priority | Lane | Target | Acceptance standard |
 | --- | --- | --- | --- |
-| P0 | `summary_de_noise` | OPL default summaries owner-delta-only。 | ordinary summary 不以 worklist/replay/blocked envelope count 作为 next-action root。 |
-| P0 | `current_owner_delta_cutover` | 默认命名和 payload root 都说 `current_owner_delta`。 | `compact_*` 只在 compatibility alias / history / negative guard 中出现。 |
-| P0 | `domain_wrapper_delete_gate` | MAG/RCA/MAS/OMA retained wrapper 逐项 delete/tombstone。 | no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance machine-readable。 |
+| P0 | `summary_de_noise` | `meets_target_for_framework_default`。OPL default summaries owner-delta-only，raw counts 只作 diagnostic-only。 | ordinary summary 不以 worklist/replay/blocked envelope count 作为 next-action root。 |
+| P0 | `current_owner_delta_cutover` | `meets_target_for_default_root`。默认命名和 payload root 都说 `current_owner_delta`，`compact_owner_delta_projection` 只作 compatibility/full-detail alias。 | `compact_*` 只在 compatibility alias / history / negative guard 中出现，不能成为 default planning root。 |
+| P0 | `domain_wrapper_delete_gate` | `needs_retirement`。MAG/RCA/MAS/OMA retained wrapper 逐项 delete/tombstone。 | no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance machine-readable。 |
 | P1 | `real_owner_delta_tail` | production evidence tail 回到 domain owner answer。 | 真实 paper/grant/visual/target-agent owner receipt、typed blocker、human gate、review/export receipt 或 no-regression ref。 |
 | P1 | `app_contract_compaction` | App ordinary path contract 收薄。 | Home/Runtime/Settings 只显示 purpose、task status、next owner、artifact/blocker、release facts。 |
 | P1 | `oma_script_to_pack_hygiene` | OMA stable scripts 上收或退役。 | policy 进入 `agent/`、contracts、authority functions 或 OPL primitive；脚本保留有 gate。 |
-| P2 | `support_entry_clarity` | Shell/doc support repo 首屏边界清楚。 | support repo 不反向定义 OPL/App/domain truth。 |
+| P2 | `support_entry_clarity` | `needs_demotion`。Shell/doc support repo 首屏边界清楚。 | support repo 不反向定义 OPL/App/domain truth。 |
 
 ## Audit Standard
 
@@ -189,8 +189,8 @@ docs/tests
 
 下一轮最有价值的执行顺序：
 
-1. 在 OPL Framework 做 `summary_de_noise` 和 `current_owner_delta_cutover`。
+1. 在 MAG/RCA/MAS/OMA 优先跑 retained wrapper delete gate；MAS 保持 paper-line owner delta 优先，不把 platform repair 写成 research progress。
 2. 在 App 做 ordinary contract compaction，继续隐藏 shell/provider/backend detail。
-3. 在 MAG/RCA 优先跑 retained wrapper delete gate；MAS 保持 paper-line owner delta 优先，不把 platform repair 写成 research progress。
-4. 在 OMA 推进 script-to-pack hygiene 和真实 target patch-loop scaleout。
-5. Support repo 只做入口边界降噪，不进入 core truth set。
+3. 在 OMA 推进 script-to-pack hygiene 和真实 target patch-loop scaleout。
+4. Support repo 只做入口边界降噪，不进入 core truth set。
+5. OPL Framework 对新增 default summary 持续执行 `summary_de_noise` / `current_owner_delta` no-resurrection guard。
