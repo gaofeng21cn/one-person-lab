@@ -37,8 +37,15 @@
         "normal_app_state_command": "opl app state --profile fast --json",
         "default_projection": "opl_current_owner_delta",
         "compatibility_projection": "opl_compact_owner_delta_projection",
+        "compatibility_projection_policy": "legacy_full_detail_alias_not_default_planning_root",
         "full_detail_policy": "explicit_full_detail_or_lazy_diagnostic_only",
         "raw_refs_policy": "raw_refs_require_explicit_full_detail",
+        "first_screen_answer_policy": "owner_delta_action_artifact_or_blocker_only",
+        "diagnostic_only_answers": [
+          "count_summary",
+          "audit_next_safe_action_or_none",
+          "full_detail_refs"
+        ],
         "forbidden_fast_profile_fields": [
           "runtime_tray_snapshot",
           "raw_evidence_envelope",

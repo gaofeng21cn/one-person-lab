@@ -43,6 +43,18 @@ export function assertCompactOwnerDeltaProjection(
 ) {
   assert.equal(compact.surface_kind, 'opl_compact_owner_delta_projection');
   assert.equal(compact.schema_version, 'compact-owner-delta-projection.v1');
+  assert.equal(compact.compatibility_alias_for, 'current_owner_delta');
+  assert.equal(
+    compact.compatibility_alias_policy,
+    'compatibility_only_full_detail_or_legacy_consumers_must_not_be_default_planning_root',
+  );
+  assert.equal(compact.default_summary.summary_kind, 'owner_delta_only');
+  assert.equal(compact.default_summary.default_path_root, 'current_owner_delta');
+  assert.equal(compact.default_summary.audit_counts_are_first_screen, false);
+  assert.equal(
+    compact.default_summary.count_summary_path,
+    'compact_owner_delta_projection.count_summary',
+  );
   assert.equal(typeof compact.current_owner, 'string');
   assert.equal(typeof compact.required_delta, 'string');
   assertCurrentOwnerDeltaProjection(compact.current_owner_delta, {

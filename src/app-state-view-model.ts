@@ -440,6 +440,8 @@ function buildDefaultReadSurfacePolicy(input: OplAppOperatorViewModelInput) {
     raw_runtime_projection_policy: 'explicit_full_detail_or_lazy_diagnostic_only',
     runtime_tray_projection_policy: 'current_owner_delta_first_runtime_tray_worklist_audit_tail_drilldown',
     worklist_projection_policy: 'secondary_drilldown_never_default_planning_root',
+    compatibility_payload_policy:
+      'compact_owner_delta_projection_is_legacy_full_detail_alias_not_first_screen_root',
     first_screen_answers: [
       'current_owner_delta',
       'next_safe_action_or_none',
@@ -447,7 +449,13 @@ function buildDefaultReadSurfacePolicy(input: OplAppOperatorViewModelInput) {
       'required_delta',
       'accepted_return_shapes',
       'readiness_false_flags',
+      'hard_gate',
+      'latest_owner_answer_ref',
+    ],
+    diagnostic_only_answers: [
       'count_summary',
+      'audit_next_safe_action_or_none',
+      'full_detail_refs',
     ],
     fast_profile_excludes: [
       ...FORBIDDEN_FAST_PROFILE_FIELDS,

@@ -185,7 +185,7 @@ exit 1
         operator: {
           status: string;
           summary: { profile: string; visible_action_count: number };
-          default_read_surface_policy: {
+        default_read_surface_policy: {
             surface_kind: string;
             profile: string;
             default_operator_payload: string;
@@ -195,7 +195,9 @@ exit 1
             raw_runtime_projection_policy: string;
             runtime_tray_projection_policy: string;
             worklist_projection_policy: string;
+            compatibility_payload_policy: string;
             first_screen_answers: string[];
+            diagnostic_only_answers: string[];
             fast_profile_excludes: string[];
             forbidden_fast_profile_fields: string[];
             shell_contract: {
@@ -318,6 +320,10 @@ exit 1
       output.app_state.operator.default_read_surface_policy.worklist_projection_policy,
       'secondary_drilldown_never_default_planning_root',
     );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.compatibility_payload_policy,
+      'compact_owner_delta_projection_is_legacy_full_detail_alias_not_first_screen_root',
+    );
     assert.deepEqual(
       output.app_state.operator.default_read_surface_policy.first_screen_answers,
       [
@@ -327,7 +333,20 @@ exit 1
         'required_delta',
         'accepted_return_shapes',
         'readiness_false_flags',
+        'hard_gate',
+        'latest_owner_answer_ref',
+      ],
+    );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.first_screen_answers.includes('count_summary'),
+      false,
+    );
+    assert.deepEqual(
+      output.app_state.operator.default_read_surface_policy.diagnostic_only_answers,
+      [
         'count_summary',
+        'audit_next_safe_action_or_none',
+        'full_detail_refs',
       ],
     );
     assert.equal(

@@ -532,10 +532,27 @@ export function buildCompactOwnerDeltaProjection(input: {
     fullDetailRefs,
   });
   const defaultNextAction = buildDefaultNextActionFromCurrentOwnerDelta(currentOwnerDelta);
+  const defaultSummary = {
+    summary_kind: 'owner_delta_only',
+    default_path_root: 'current_owner_delta',
+    current_owner: currentOwnerDelta.current_owner,
+    desired_delta_kind: currentOwnerDelta.desired_delta_kind,
+    desired_delta_description: currentOwnerDelta.desired_delta_description,
+    accepted_answer_shape: currentOwnerDelta.accepted_answer_shape,
+    hard_gate: currentOwnerDelta.hard_gate,
+    next_action_kind: defaultNextAction?.action_kind ?? null,
+    next_action_owner: defaultNextAction?.current_owner ?? currentOwnerDelta.current_owner,
+    latest_owner_answer_ref: currentOwnerDelta.latest_owner_answer_ref,
+    audit_counts_are_first_screen: false,
+    count_summary_path: 'compact_owner_delta_projection.count_summary',
+  };
 
   return {
     surface_kind: 'opl_compact_owner_delta_projection',
     schema_version: 'compact-owner-delta-projection.v1',
+    compatibility_alias_for: 'current_owner_delta',
+    compatibility_alias_policy:
+      'compatibility_only_full_detail_or_legacy_consumers_must_not_be_default_planning_root',
     projection_policy:
       'shape_stable_owner_delta_default_alias_raw_refs_require_explicit_full_detail',
     default_next_action_derivation_policy:
@@ -543,6 +560,7 @@ export function buildCompactOwnerDeltaProjection(input: {
     current_owner: currentOwner,
     required_delta: requiredDelta,
     accepted_return_shapes: acceptedShapes,
+    default_summary: defaultSummary,
     current_owner_delta: currentOwnerDelta,
     next_safe_action_or_none: defaultNextAction,
     audit_next_safe_action_or_none: compactAction,

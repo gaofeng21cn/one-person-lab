@@ -51,9 +51,11 @@ export function buildOplAionRuntimeConsumptionContract() {
     surface_kind: 'opl_aion_runtime_consumption_contract',
     shell_adapter: 'aionui',
     consumer: 'one_person_lab_app_runtime_page',
-    default_read_model_command: ['runtime', 'app-operator-drilldown'],
+    default_read_model_command: ['app', 'state', '--profile', 'fast'],
     default_detail_level: 'summary',
-    default_payload_ref: '/app_operator_drilldown/attention_first_payload',
+    default_payload_ref: '/app_state/operator/current_owner_delta',
+    compatibility_payload_ref:
+      '/app_operator_drilldown/attention_first_payload/compact_owner_delta_projection',
     default_sections: [
       'owner',
       'blocking',

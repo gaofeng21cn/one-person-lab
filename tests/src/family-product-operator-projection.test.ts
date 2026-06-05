@@ -113,6 +113,10 @@ test('family product operator projection pins OPL as App state/action producer o
     boundary.default_read_surface_policy.compatibility_projection,
     'opl_compact_owner_delta_projection',
   );
+  assert.equal(
+    boundary.default_read_surface_policy.compatibility_payload_policy,
+    'compact_owner_delta_projection_is_legacy_full_detail_alias_not_first_screen_root',
+  );
   assert.deepEqual(boundary.default_read_surface_policy.first_screen_answers, [
     'current_owner_delta',
     'next_safe_action_or_none',
@@ -120,7 +124,17 @@ test('family product operator projection pins OPL as App state/action producer o
     'required_delta',
     'accepted_return_shapes',
     'readiness_false_flags',
+    'hard_gate',
+    'latest_owner_answer_ref',
+  ]);
+  assert.equal(
+    boundary.default_read_surface_policy.first_screen_answers.includes('count_summary'),
+    false,
+  );
+  assert.deepEqual(boundary.default_read_surface_policy.diagnostic_only_answers, [
     'count_summary',
+    'audit_next_safe_action_or_none',
+    'full_detail_refs',
   ]);
   assert.equal(
     boundary.default_read_surface_policy.full_detail_policy,

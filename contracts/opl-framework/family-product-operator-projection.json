@@ -53,6 +53,7 @@
     "default_read_surface_policy": {
       "default_projection": "opl_current_owner_delta",
       "compatibility_projection": "opl_compact_owner_delta_projection",
+      "compatibility_payload_policy": "compact_owner_delta_projection_is_legacy_full_detail_alias_not_first_screen_root",
       "first_screen_answers": [
         "current_owner_delta",
         "next_safe_action_or_none",
@@ -60,7 +61,13 @@
         "required_delta",
         "accepted_return_shapes",
         "readiness_false_flags",
-        "count_summary"
+        "hard_gate",
+        "latest_owner_answer_ref"
+      ],
+      "diagnostic_only_answers": [
+        "count_summary",
+        "audit_next_safe_action_or_none",
+        "full_detail_refs"
       ],
       "full_detail_policy": "explicit_full_detail_or_lazy_diagnostic_only",
       "raw_refs_policy": "raw_refs_require_explicit_full_detail",
