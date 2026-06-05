@@ -409,6 +409,12 @@ export function buildStandardDomainAgentConformanceReport(args: string[]) {
       surface_kind: 'opl_standard_domain_agent_conformance_report',
       owner: 'one-person-lab',
       status: blockedCount === 0 ? 'passed' : 'blocked',
+      total_repo_count: reports.length,
+      passed_count: passedCount,
+      blocked_count: blockedCount,
+      structural_conformance_status: blockedCount === 0 ? 'passed' : 'blocked',
+      production_evidence_tail_count: productionEvidenceTailCount,
+      production_evidence_tail_policy: 'reported_separately_not_a_structural_pass_condition',
       summary: {
         total_repo_count: reports.length,
         passed_count: passedCount,

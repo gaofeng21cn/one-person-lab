@@ -16,6 +16,14 @@ test('agents default-callers blocks private generic owner claims without authori
   ]).agent_default_caller_readiness;
 
   assert.equal(defaultCallers.status, 'blocked');
+  assert.equal(defaultCallers.blocked_count, 1);
+  assert.equal(defaultCallers.default_caller_delete_ready, false);
+  assert.equal(defaultCallers.physical_delete_authorized, false);
+  assert.equal(defaultCallers.physical_delete_authorization_status, 'not_authorized_by_opl_projection');
+  assert.equal(
+    defaultCallers.physical_delete_blocked_by.includes('generated_default_caller_readiness_is_not_delete_authority'),
+    true,
+  );
   assert.equal(defaultCallers.summary.blocked_count, 1);
   assert.equal(defaultCallers.reports[0].status, 'blocked');
   assert.equal(
@@ -82,6 +90,16 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
     'utf8',
   ));
   assert.equal(defaultCallers.status, 'ready_domain_evidence_required');
+  assert.equal(defaultCallers.blocked_count, 0);
+  assert.equal(defaultCallers.generated_default_caller_surface_count, 8);
+  assert.equal(defaultCallers.deletion_evidence_worklist_count, 8);
+  assert.equal(defaultCallers.missing_domain_owner_receipt_or_typed_blocker_count, 0);
+  assert.equal(defaultCallers.missing_no_forbidden_write_proof_count, 0);
+  assert.equal(defaultCallers.missing_tombstone_or_provenance_ref_count, 0);
+  assert.equal(defaultCallers.default_caller_delete_ready, false);
+  assert.equal(defaultCallers.physical_delete_authorized, false);
+  assert.equal(defaultCallers.summary.default_caller_delete_ready, false);
+  assert.equal(defaultCallers.summary.physical_delete_authorized, false);
   assert.equal(defaultCallers.summary.missing_domain_owner_receipt_or_typed_blocker_count, 0);
   assert.equal(defaultCallers.summary.missing_no_forbidden_write_proof_count, 0);
   assert.equal(defaultCallers.summary.missing_tombstone_or_provenance_ref_count, 0);

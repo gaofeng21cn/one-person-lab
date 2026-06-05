@@ -134,6 +134,12 @@ test('agents conformance reports structural readiness separately from production
   assert.equal(report.surface_kind, 'opl_standard_domain_agent_conformance_report');
   assert.equal(report.owner, 'one-person-lab');
   assert.equal(report.status, 'passed');
+  assert.equal(report.total_repo_count, 1);
+  assert.equal(report.passed_count, 1);
+  assert.equal(report.blocked_count, 0);
+  assert.equal(report.structural_conformance_status, 'passed');
+  assert.equal(report.production_evidence_tail_count, 2);
+  assert.equal(report.production_evidence_tail_policy, 'reported_separately_not_a_structural_pass_condition');
   assert.equal(report.summary.total_repo_count, 1);
   assert.equal(report.summary.passed_count, 1);
   assert.equal(report.summary.blocked_count, 0);
@@ -962,6 +968,8 @@ test('agents conformance blocks legacy sidecar aliases as active physical morpho
   ]).standard_domain_agent_conformance;
 
   assert.equal(report.status, 'blocked');
+  assert.equal(report.passed_count, 0);
+  assert.equal(report.blocked_count, 2);
   assert.equal(report.summary.passed_count, 0);
   assert.equal(report.summary.blocked_count, 2);
   assert.equal(report.reports[0].physical_morphology_checks.status, 'blocked');

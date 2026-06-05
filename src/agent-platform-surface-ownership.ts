@@ -827,42 +827,68 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
     buildAgentDefaultCallerReadinessForRepo(repo.repo_dir, repo.requested_agent_id)
   ));
   const blockedCount = reports.filter((report) => report.status === 'blocked').length;
+  const generatedDefaultCallerSurfaceCount = reports.reduce(
+    (total, report) => total + Number(report.summary.generated_default_caller_surface_count || 0),
+    0,
+  );
+  const blockedSurfaceCount = reports.reduce(
+    (total, report) => total + Number(report.summary.blocked_surface_count || 0),
+    0,
+  );
+  const deletionEvidenceWorklistCount = reports.reduce(
+    (total, report) => total + Number(report.summary.deletion_evidence_worklist_count || 0),
+    0,
+  );
+  const missingDomainOwnerReceiptOrTypedBlockerCount = reports.reduce(
+    (total, report) => (
+      total + Number(report.summary.missing_domain_owner_receipt_or_typed_blocker_count || 0)
+    ),
+    0,
+  );
+  const missingNoForbiddenWriteProofCount = reports.reduce(
+    (total, report) => total + Number(report.summary.missing_no_forbidden_write_proof_count || 0),
+    0,
+  );
+  const missingTombstoneOrProvenanceRefCount = reports.reduce(
+    (total, report) => total + Number(report.summary.missing_tombstone_or_provenance_ref_count || 0),
+    0,
+  );
   return {
     version: 'g1',
     agent_default_caller_readiness: {
       surface_kind: 'opl_agent_generated_default_caller_readiness_report',
       owner: 'one-person-lab',
       status: blockedCount === 0 ? 'ready_domain_evidence_required' : 'blocked',
+      total_repo_count: reports.length,
+      ready_domain_evidence_required_count: reports.length - blockedCount,
+      blocked_count: blockedCount,
+      generated_default_caller_surface_count: generatedDefaultCallerSurfaceCount,
+      blocked_surface_count: blockedSurfaceCount,
+      deletion_evidence_worklist_count: deletionEvidenceWorklistCount,
+      missing_domain_owner_receipt_or_typed_blocker_count:
+        missingDomainOwnerReceiptOrTypedBlockerCount,
+      missing_no_forbidden_write_proof_count: missingNoForbiddenWriteProofCount,
+      missing_tombstone_or_provenance_ref_count: missingTombstoneOrProvenanceRefCount,
+      default_caller_delete_ready: false,
+      physical_delete_authorized: false,
+      generated_default_caller_readiness_can_authorize_physical_delete: false,
+      physical_delete_authorization_status: 'not_authorized_by_opl_projection',
+      physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
       summary: {
         total_repo_count: reports.length,
         ready_domain_evidence_required_count: reports.length - blockedCount,
         blocked_count: blockedCount,
-        generated_default_caller_surface_count: reports.reduce(
-          (total, report) => total + Number(report.summary.generated_default_caller_surface_count || 0),
-          0,
-        ),
-        blocked_surface_count: reports.reduce(
-          (total, report) => total + Number(report.summary.blocked_surface_count || 0),
-          0,
-        ),
-        deletion_evidence_worklist_count: reports.reduce(
-          (total, report) => total + Number(report.summary.deletion_evidence_worklist_count || 0),
-          0,
-        ),
-        missing_domain_owner_receipt_or_typed_blocker_count: reports.reduce(
-          (total, report) => (
-            total + Number(report.summary.missing_domain_owner_receipt_or_typed_blocker_count || 0)
-          ),
-          0,
-        ),
-        missing_no_forbidden_write_proof_count: reports.reduce(
-          (total, report) => total + Number(report.summary.missing_no_forbidden_write_proof_count || 0),
-          0,
-        ),
-        missing_tombstone_or_provenance_ref_count: reports.reduce(
-          (total, report) => total + Number(report.summary.missing_tombstone_or_provenance_ref_count || 0),
-          0,
-        ),
+        generated_default_caller_surface_count: generatedDefaultCallerSurfaceCount,
+        blocked_surface_count: blockedSurfaceCount,
+        deletion_evidence_worklist_count: deletionEvidenceWorklistCount,
+        missing_domain_owner_receipt_or_typed_blocker_count:
+          missingDomainOwnerReceiptOrTypedBlockerCount,
+        missing_no_forbidden_write_proof_count: missingNoForbiddenWriteProofCount,
+        missing_tombstone_or_provenance_ref_count: missingTombstoneOrProvenanceRefCount,
+        default_caller_delete_ready: false,
+        physical_delete_authorized: false,
+        generated_default_caller_readiness_can_authorize_physical_delete: false,
+        physical_delete_authorization_status: 'not_authorized_by_opl_projection',
       },
       migration_gate_policy: {
         opl_generated_default_caller_readiness_is_structural_replacement_evidence: true,
