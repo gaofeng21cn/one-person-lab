@@ -102,7 +102,7 @@ agent-lab-improvement-loop
 | Primitive | 持有职责 | 不持有 |
 | --- | --- | --- |
 | `owner-delta-controller` | desired/current reconcile、next owner、accepted answer shape、hard gate、stop-loss。 | domain goal generation、quality verdict、artifact authority。 |
-| `stage-attempt-runtime` | admission、provider binding、Codex executor launch、retry/dead-letter、closeout refs。 | stage 内认知策略、工具顺序、domain judgment。 |
+| `stage-attempt-runtime` | admission、provider binding、execution authorization、attempt lease、Codex executor launch、retry/dead-letter、closeout receipt binding。 | stage 内认知策略、工具顺序、domain judgment。 |
 | `stage-artifact-kernel` | physical output、manifest、hash、owner answer、current pointer、lineage。 | artifact body verdict、publication/export/visual quality。 |
 | `agent-product-pack-compiler` | domain pack、stage refs、tool affordance、quality gate refs、golden path profile。 | domain-specific truth 或 private runtime loop。 |
 | `generated-surface-host` | CLI/MCP/App/status/workbench/default-caller shell。 | domain repo wrapper compatibility。 |

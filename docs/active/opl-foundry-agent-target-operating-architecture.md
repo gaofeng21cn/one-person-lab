@@ -227,12 +227,14 @@ OPL 记录实际使用过的工具 refs、证据 refs、artifact refs、owner an
 Stage 是 OPL 唯一默认执行单元。Attempt Runtime 只负责：
 
 - admission：stage id、owner、goal、scope refs、requires/ensures、selected executor、authority boundary；
-- launch：生成 attempt request、绑定 provider、绑定 workspace/artifact root；
+- launch：生成 attempt request、绑定 provider、绑定 workspace/artifact root、签发 execution authorization decision 和 attempt lease；
 - execution envelope：给 Codex executor 清晰目标、材料、权限边界、可用 affordances、知识和质量门；
-- closeout：要求 artifact unit、owner answer、typed blocker 或 decision receipt；
+- closeout：要求 artifact unit、owner answer、typed blocker 或 decision receipt，并把 closeout receipt 绑定回 StageRun、stage manifest、current pointer 和 source fingerprint；
 - replay/audit refs：只进入 audit plane。
 
 Attempt Runtime 不负责生成候选、选择工具、评审、排序、修订或学习，也不负责决定医学结论、基金质量、视觉审美、agent patch 是否好。开放式专家判断继续由 executor + independent gate + domain owner 完成。
+
+`OPL execution authorization gate` 是 StageRun Kernel 的 launch-hard / closeout-binding gate：domain terminal owner action 已存在时，OPL provider 仍必须证明 selected executor、attempt lease、workspace/artifact scope、authority boundary、idempotency/source fingerprint、closeout receipt binding 和 forbidden-write guard 都成立。缺任一项时，正确结果是 OPL-owned typed blocker；它阻断 execution，但不改变 domain truth，也不替 domain owner 签 receipt。
 
 ### 4. Current Owner Delta Controller
 
