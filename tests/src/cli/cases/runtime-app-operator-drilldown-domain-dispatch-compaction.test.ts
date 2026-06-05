@@ -5,6 +5,7 @@ import {
   os,
   path,
   runCli,
+  runCliFailure,
   test,
 } from '../helpers.ts';
 
@@ -174,6 +175,34 @@ test('domain dispatch evidence defaults to latest actionable attempt while prese
     assert.equal(supersededEnvelope.claim_allowed.owner_receipt_observed, false);
     assert.equal(supersededEnvelope.claim_allowed.domain_ready, false);
     assert.equal(supersededEnvelope.superseded_by_stage_attempt_id, latest.stage_attempt_id);
+
+    const staleRecordExecution = runCliFailure([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      `domain_dispatch:medautoscience:${superseded.stage_attempt_id}:record`,
+      '--payload',
+      JSON.stringify({
+        typed_blocker_refs: ['mas://typed-blockers/dm002/superseded-attempt'],
+      }),
+    ], env);
+    assert.equal(staleRecordExecution.payload.error.code, 'cli_usage_error');
+    assert.equal(
+      staleRecordExecution.payload.error.details.error_kind,
+      'domain_dispatch_evidence_action_route_superseded',
+    );
+    assert.equal(
+      staleRecordExecution.payload.error.details.stage_attempt_id,
+      superseded.stage_attempt_id,
+    );
+    assert.equal(
+      staleRecordExecution.payload.error.details.superseded_by_stage_attempt_id,
+      latest.stage_attempt_id,
+    );
+    assert.equal(staleRecordExecution.payload.error.details.next_safe_action, null);
+    assert.equal(staleRecordExecution.payload.error.details.can_claim_domain_ready, false);
+    assert.equal(staleRecordExecution.payload.error.details.can_claim_production_ready, false);
 
     const worklist = runCli([
       'family-runtime',

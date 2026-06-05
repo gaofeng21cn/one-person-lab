@@ -141,6 +141,29 @@ function domainDispatchActionRouteClosedDetails(snapshot: JsonRecord, actionId: 
     return null;
   }
   const receiptStatus = stringValue(attempt.dispatch_evidence_receipt_status);
+  const defaultActionabilityStatus = stringValue(attempt.default_actionability_status);
+  if (defaultActionabilityStatus === 'superseded') {
+    return {
+      error_kind: 'domain_dispatch_evidence_action_route_superseded',
+      action_id: actionId,
+      requested_mode: requestedMode,
+      domain_id: domainId,
+      stage_attempt_id: stageAttemptId,
+      stage_id: stringValue(attempt.stage_id),
+      default_actionability_status: defaultActionabilityStatus,
+      superseded_by_stage_attempt_id: stringValue(attempt.superseded_by_stage_attempt_id),
+      superseded_reason: stringValue(attempt.superseded_reason),
+      dispatch_identity_key: stringValue(attempt.dispatch_identity_key),
+      dispatch_supersession_identity_key: stringValue(attempt.dispatch_supersession_identity_key),
+      route_status: 'superseded_by_current_domain_dispatch_attempt',
+      route_status_detail:
+        'Current App/operator drilldown no longer exposes this domain dispatch action because a newer attempt owns the same dispatch identity.',
+      next_safe_action: null,
+      can_claim_domain_ready: false,
+      can_claim_production_ready: false,
+      authority_boundary: executionBoundary(),
+    };
+  }
   if (receiptStatus !== 'recorded' && receiptStatus !== 'verified') {
     return null;
   }
