@@ -8,6 +8,7 @@ import {
   defaultFamilyRepoInputs,
   DEFAULT_FAMILY_REPOS,
 } from './standard-domain-agent-family-repos.ts';
+import { buildDefaultCallerPhysicalDeleteAuthorityReadModel } from './agent-default-caller-delete-read-model.ts';
 import type { FrameworkContracts } from './types.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -853,6 +854,11 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
     (total, report) => total + Number(report.summary.missing_tombstone_or_provenance_ref_count || 0),
     0,
   );
+  const physicalDeleteAuthorityReadModel =
+    buildDefaultCallerPhysicalDeleteAuthorityReadModel(reports, {
+      physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
+      not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
+    });
   return {
     version: 'g1',
     agent_default_caller_readiness: {
@@ -874,6 +880,9 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
       generated_default_caller_readiness_can_authorize_physical_delete: false,
       physical_delete_authorization_status: 'not_authorized_by_opl_projection',
       physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
+      physical_delete_authority_read_model: physicalDeleteAuthorityReadModel,
+      repo_deletion_gate_summary:
+        physicalDeleteAuthorityReadModel.repo_deletion_gate_summary,
       summary: {
         total_repo_count: reports.length,
         ready_domain_evidence_required_count: reports.length - blockedCount,

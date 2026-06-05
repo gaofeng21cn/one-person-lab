@@ -21,6 +21,20 @@ test('agents default-callers blocks private generic owner claims without authori
   assert.equal(defaultCallers.physical_delete_authorized, false);
   assert.equal(defaultCallers.physical_delete_authorization_status, 'not_authorized_by_opl_projection');
   assert.equal(
+    defaultCallers.physical_delete_authority_read_model.status,
+    'not_authorized_by_opl_projection',
+  );
+  assert.equal(defaultCallers.physical_delete_authority_read_model.physical_delete_authorized, false);
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.repo_deletion_gate_summary[0]
+      .all_deletion_evidence_requirements_observed,
+    false,
+  );
+  assert.equal(
+    defaultCallers.repo_deletion_gate_summary[0].physical_delete_authorization_status,
+    'not_authorized_by_opl_projection',
+  );
+  assert.equal(
     defaultCallers.physical_delete_blocked_by.includes('generated_default_caller_readiness_is_not_delete_authority'),
     true,
   );
@@ -106,6 +120,83 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
   assert.equal(defaultCallers.migration_gate_policy.zero_missing_deletion_evidence_is_not_delete_ready, true);
   assert.equal(defaultCallers.migration_gate_policy.observed_deletion_evidence_refs_are_refs_only_inputs, true);
   assert.equal(defaultCallers.migration_gate_policy.physical_delete_authorized_by_this_report, false);
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.surface_kind,
+    'opl_default_caller_physical_delete_authority_read_model',
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.projection_policy,
+    'compact_refs_only_repo_summary_over_default_caller_deletion_evidence_worklists',
+  );
+  assert.equal(defaultCallers.physical_delete_authority_read_model.total_repo_count, 1);
+  assert.equal(defaultCallers.physical_delete_authority_read_model.deletion_evidence_worklist_count, 8);
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model
+      .all_repos_all_deletion_evidence_requirements_observed,
+    true,
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model
+      .zero_missing_deletion_evidence_is_not_delete_ready,
+    true,
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model
+      .observed_deletion_evidence_refs_are_refs_only_inputs,
+    true,
+  );
+  assert.equal(defaultCallers.physical_delete_authority_read_model.physical_delete_authorized, false);
+  assert.equal(defaultCallers.physical_delete_authority_read_model.default_caller_delete_ready, false);
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model
+      .generated_default_caller_readiness_can_authorize_physical_delete,
+    false,
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.next_required_owner_action,
+    'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.not_authorized_claims
+      .includes('domain_repo_physical_delete_authorization'),
+    true,
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.authority_boundary
+      .read_model_can_authorize_domain_repo_physical_delete,
+    false,
+  );
+  assert.equal(defaultCallers.repo_deletion_gate_summary.length, 1);
+  assert.equal(defaultCallers.repo_deletion_gate_summary[0].deletion_evidence_worklist_count, 8);
+  assert.equal(
+    defaultCallers.repo_deletion_gate_summary[0].all_deletion_evidence_requirements_observed,
+    true,
+  );
+  assert.equal(defaultCallers.repo_deletion_gate_summary[0].physical_delete_authorized, false);
+  assert.equal(defaultCallers.repo_deletion_gate_summary[0].default_caller_delete_ready, false);
+  assert.equal(defaultCallers.repo_deletion_gate_summary[0].needs_drilldown_for_surface_refs, true);
+  assert.equal(
+    defaultCallers.repo_deletion_gate_summary[0].surface_deletion_gate_summary.length,
+    8,
+  );
+  assert.equal(
+    defaultCallers.repo_deletion_gate_summary[0].surface_deletion_gate_summary.every((surface: {
+      domain_owner_receipt_or_typed_blocker_observed: boolean;
+      no_forbidden_write_proof_observed: boolean;
+      tombstone_or_provenance_ref_observed: boolean;
+      physical_delete_authorized: boolean;
+      default_caller_delete_ready: boolean;
+      needs_drilldown_for_surface_refs: boolean;
+    }) => (
+      surface.domain_owner_receipt_or_typed_blocker_observed === true
+      && surface.no_forbidden_write_proof_observed === true
+      && surface.tombstone_or_provenance_ref_observed === true
+      && surface.physical_delete_authorized === false
+      && surface.default_caller_delete_ready === false
+      && surface.needs_drilldown_for_surface_refs === true
+    )),
+    true,
+  );
   assert.equal(contract.migration_gate.zero_missing_deletion_evidence_is_not_delete_ready, true);
   assert.equal(contract.migration_gate.observed_deletion_evidence_refs_are_refs_only_inputs, true);
   assert.equal(contract.migration_gate.deletion_evidence_requirements_are_completion_claims, false);
