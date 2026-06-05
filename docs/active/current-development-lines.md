@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `current_owner_map_support`
 State: `active_support`
 Machine boundary: 本文是人读路线支撑。机器真相继续归 `contracts/`、source code、CLI/API behavior、runtime ledgers、provider receipts、domain-owned manifests 和真实 workspace / App evidence。
-Date: `2026-06-05`
+Date: `2026-06-06`
 
 ## 读法
 
@@ -14,7 +14,7 @@ Date: `2026-06-05`
 
 当前 runtime 边界固定为 Codex-default executor 进入 provider-backed Stage Attempt；legacy wrapper、provenance、diagnostic、history 或 fixture 只作为支撑证据和退役语境，不进入 ordinary owner root。
 
-2026-06-05 以后，原先分散的 purpose-first audit、MVP friction、Stage Native Kernel、App cockpit、wrapper retirement、OMA script-to-pack 和 domain canary 线都只按同一个 owner map 读取。已落地结构能力写回对应 owner repo；未闭合项只能保留为 domain-owned live evidence、App release/user-path evidence、wrapper retirement gate 或 support no-resurrection tail。MAS terminal `publication_handoff_owner_gate` callable 已在 MAS main 落地并吸收；它属于 `stage_artifact_progress_truth` 的结构能力。Fresh live audit 只证明 DM002 / DM003 terminal stage folder 已投影到该 gate，targeted dispatch dry-run 尚未执行该 callable；因此不能写成 publication-ready 或 stage handoff live closed。
+2026-06-06 以后，原先分散的 purpose-first audit、MVP friction、Stage Native Kernel、App cockpit、wrapper retirement、OMA script-to-pack 和 domain canary 线都只按同一个 owner map 读取。已落地结构能力写回对应 owner repo；未闭合项只能保留为 domain-owned live evidence、App release/user-path evidence、wrapper retirement gate 或 support no-resurrection tail。MAS terminal `publication_handoff_owner_gate` callable 已在 MAS main 落地并吸收；它属于 `stage_artifact_progress_truth` 的结构能力。Fresh owner-route/currentness follow-through 证明 DM002 / DM003 terminal stage folder 已投影到该 gate，targeted dispatch dry-run 已到达 `publication_handoff_owner_gate.evaluate_terminal_handoff`；fresh apply/readout 被 OPL execution authorization blocker 阻断，只写出 observe-only supervision execution record，没有产生 MAS stage-native `handoff_owner_receipt.json` 或 `receipts/typed_blocker.json`。因此不能写成 publication-ready 或 stage handoff live closed。
 
 统一目标仍是：
 
@@ -50,7 +50,7 @@ rtk opl agents default-callers --family-defaults --json
 | `stage_attempt_runtime` | OPL Framework / Temporal provider | `docs/runtime/`、contracts、source | Temporal-backed provider、typed queue、stage attempt、retry/dead-letter、human gate 和 provider receipt 可恢复、可审计；local provider 只作 dev/CI/offline diagnostic baseline。 |
 | `stage_artifact_progress_truth` | OPL Framework + domain owner | `current-state-vs-ideal-gap.md`、target architecture | Progress 只能来自 physical output、valid manifest、owner answer 和 current pointer；provider completion、file existence、receipt count 或 conformance pass 单独不算 progress。OPL 标准层现在已有 stage_manifest / role artifact / owner receipt / typed blocker schemas、`opl stage validate` 和 StageRun profile conformance gate；MAS terminal handoff callable 已落地为 domain authority function。下一步只排序 live owner receipt / typed blocker / human gate、真实 domain canary、App cockpit consumption 和补偿链退役。 |
 | `generated_surface_consumption` | OPL generated surface owner | contracts/source/CLI/App derived surfaces | MAS/MAG/RCA/OMA 生产入口消费 OPL generated/hosted surfaces；domain repo retained wrapper 只作为 refs-only adapter、domain handler target、migration input 或 tombstone candidate。 |
-| `domain_owner_delta_tail` | MAS/MAG/RCA/OMA domain owner | 各 domain active plan / owner receipt | MAS terminal handoff callable 已可产出 stage-native receipt/blocker，但 live dispatch dry-run 还未执行该 callable；真实 paper、grant、visual 或 target-agent owner receipt、typed blocker、human gate、review/export receipt、no-regression ref 或 long-soak ref 才关闭对应 evidence tail。OPL/App 只记录 refs，不生成 domain answer。 |
+| `domain_owner_delta_tail` | MAS/MAG/RCA/OMA domain owner | 各 domain active plan / owner receipt | MAS terminal handoff callable 已可产出 stage-native receipt/blocker，targeted dispatch dry-run 已到达该 callable；fresh apply/readout 被 OPL execution authorization blocker 阻断，尚未产生 MAS handoff owner receipt、typed blocker、human gate 或 route-back evidence。真实 paper、grant、visual 或 target-agent owner receipt、typed blocker、human gate、review/export receipt、no-regression ref 或 long-soak ref 才关闭对应 evidence tail。OPL/App 只记录 refs，不生成 domain answer。 |
 | `app_cockpit_consumption` | One Person Lab App | `docs/product/`、App repo contract/release evidence | App 只展示和介入，消费 framework/provider 状态与 domain-owned projection；App release truth 回 App repo contracts、release artifact 和真实 user-path evidence。 |
 | `wrapper_retirement` | OPL cleanup gate + domain owner | private inventory、domain repo gate | 满足 replacement parity、no-active-caller、owner receipt / typed blocker、no-forbidden-write 和 tombstone/provenance 后删除或 tombstone；不新增 compatibility alias、facade 或 wrapper。 |
 | `support_repo_clarity` | App shell / OPL Doc support owner | support repo docs | shell 是 App renderer carrier，OPL Doc 是 workflow steward；support repo 不反向定义 OPL/App/domain truth。 |
