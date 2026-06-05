@@ -7,6 +7,9 @@ import assert from 'node:assert/strict';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 
+const scannedSourceExtensions = new Set(['.ts', '.mjs', '.js', '.json', '.sh']);
+const scannedDocExtensions = new Set(['.md']);
+
 const scannedFiles = [
   'README.md',
   'README.zh-CN.md',
@@ -14,7 +17,6 @@ const scannedFiles = [
   'docs/public/roadmap.md',
   'docs/public/operating-model.md',
   'docs/public/task-map.md',
-  'docs/active/current-development-lines.md',
   'docs/product/opl-public-surface-index.md',
   'docs/references/operating-governance/family-domain-memory-governance.md',
   'docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md',
@@ -58,7 +60,7 @@ function assertCurrentBoundary(relativePath: string) {
   }
 }
 
-function* walk(relativeRoot: string): Generator<string> {
+function* walk(relativeRoot: string, extensions = scannedSourceExtensions): Generator<string> {
   const absoluteRoot = path.join(repoRoot, relativeRoot);
   if (!fs.existsSync(absoluteRoot)) {
     return;
@@ -70,7 +72,7 @@ function* walk(relativeRoot: string): Generator<string> {
       yield* walk(relativePath);
       continue;
     }
-    if (entry.isFile() && ['.ts', '.mjs', '.js', '.json', '.sh'].includes(path.extname(entry.name))) {
+    if (entry.isFile() && extensions.has(path.extname(entry.name))) {
       yield relativePath;
     }
   }
@@ -80,10 +82,14 @@ function scannedTextFiles(relativeRoots: string[]) {
   return relativeRoots.flatMap((relativeRoot) => [...walk(relativeRoot)]);
 }
 
+function activeDocFiles() {
+  return [...walk('docs/active', scannedDocExtensions)].sort();
+}
+
 test('active docs and root help do not advertise legacy operator paths as defaults', () => {
   const violations: string[] = [];
 
-  for (const relativePath of scannedFiles) {
+  for (const relativePath of [...scannedFiles, ...activeDocFiles()]) {
     const lines = read(relativePath).split('\n');
     lines.forEach((line, index) => {
       if (allowedRetainedContext.test(line)) {
@@ -110,11 +116,7 @@ test('active operator closeout surfaces keep the current provider-backed boundar
 });
 
 test('active gap docs do not freeze stale checkout, compatibility-audit baselines, or volatile read-model counters', () => {
-  const scannedActiveDocs = [
-    'docs/active/current-development-lines.md',
-    'docs/active/current-state-vs-ideal-gap.md',
-    'docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md',
-  ];
+  const scannedActiveDocs = activeDocFiles();
   const forbiddenPatterns = [
     /四仓根 checkout 都在 `main\.\.\.origin\/main` 且 clean/,
     /path compatibility audit/i,
