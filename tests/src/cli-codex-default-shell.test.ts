@@ -584,10 +584,7 @@ test('opl skill list prefers managed roots over Full runtime module path overrid
     assert.equal(output.skill_catalog.summary.ready_to_sync, 1);
     assert.equal(output.skill_catalog.packs[0].domain_id, 'redcube');
     assert.equal(output.skill_catalog.packs[0].repo_root, path.join(managedModulesRoot, 'redcube-ai'));
-    assert.match(
-      output.skill_catalog.packs[0].command_preview.join(' '),
-      /node --experimental-strip-types .*scripts\/install-codex-plugin\.ts/,
-    );
+    assert.deepEqual(output.skill_catalog.packs[0].command_preview, ['opl', 'skill', 'sync', '--domain', 'redcube']);
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -634,7 +631,7 @@ test('opl skill sync refuses to mirror legacy test skill stubs', () => {
   }
 });
 
-test('opl skill sync runs the lightweight family plugin installers and returns machine-readable results', () => {
+test('opl skill sync registers tracked family plugin sources without writing domain repo marketplaces', () => {
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-sync-'));
   const { workspaceRoot, syncLogPath } = createFakeFamilySkillWorkspace(captureDir);
   const homeDir = path.join(captureDir, 'home');
@@ -665,14 +662,21 @@ test('opl skill sync runs the lightweight family plugin installers and returns m
     });
 
     assert.equal(output.skill_sync.summary.synced, 4);
-    assert.deepEqual(fs.readFileSync(syncLogPath, 'utf8').trim().split('\n'), [
-      'med-autoscience',
-      'med-autogrant',
-      'redcube-ai',
-    ]);
-    assert.equal(output.skill_sync.packs[0].installer_result.repo, 'med-autoscience');
-    assert.equal(output.skill_sync.packs[1].installer_result.repo, 'med-autogrant');
-    assert.equal(output.skill_sync.packs[2].installer_result.repo, 'redcube-ai');
+    assert.equal(fs.existsSync(syncLogPath), false);
+    for (const [project, plugin] of [
+      ['med-autoscience', 'mas'],
+      ['med-autogrant', 'mag'],
+      ['redcube-ai', 'rca'],
+    ] as const) {
+      assert.equal(fs.existsSync(path.join(workspaceRoot, project, '.agents', 'plugins', 'marketplace.json')), false);
+      const pack = output.skill_sync.packs.find((entry: { project: string }) => entry.project === project);
+      assert.equal(pack.installer_result.source, 'tracked_codex_plugin_source');
+      assert.equal(
+        fs.realpathSync(pack.installer_result.plugin_source_path),
+        fs.realpathSync(path.join(workspaceRoot, project, 'plugins', plugin)),
+      );
+      assert.equal(pack.installer_result.repo_local_marketplace_written, false);
+    }
     assert.equal(output.skill_sync.packs[3].installer_result.generated_surface, 'opl_generated_codex_plugin_descriptor');
     assert.match(
       output.skill_sync.packs[3].installer_result.generated_codex_plugin.plugin_root,
@@ -704,6 +708,11 @@ test('opl skill sync runs the lightweight family plugin installers and returns m
     assert.equal(output.skill_sync.codex_plugin_registry.surface_id, 'opl_codex_plugin_registry');
     assert.equal(output.skill_sync.codex_plugin_registry.summary.registered, 4);
     assert.equal(output.skill_sync.codex_plugin_registry.summary.removed_standalone_mcp_servers, 1);
+    for (const item of output.skill_sync.codex_plugin_registry.items) {
+      assert.match(item.marketplace_root, /state\/codex-plugin-marketplaces\/.+-local$/);
+      assert.equal(fs.existsSync(item.marketplace_path), true);
+      assert.equal(fs.existsSync(item.plugin_manifest_path), true);
+    }
     assert.equal(output.skill_sync.companion_skills.surface_id, 'opl_companion_skill_sync');
     assert.equal(output.skill_sync.companion_skills.mode, 'observe');
     assert.equal(output.skill_sync.companion_skills.summary.total >= 6, true);
@@ -739,6 +748,54 @@ test('opl skill sync runs the lightweight family plugin installers and returns m
   }
 });
 
+test('opl skill sync follows Developer Mode sibling checkouts over managed module copies', () => {
+  const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-sync-devmode-'));
+  const { workspaceRoot } = createFakeFamilySkillWorkspace(captureDir);
+  const modulesRoot = path.join(captureDir, 'managed-modules');
+  const { workspaceRoot: managedWorkspaceRoot } = createFakeFamilySkillWorkspace(path.join(captureDir, 'managed-capture'));
+  const homeDir = path.join(captureDir, 'home');
+  const codexHome = path.join(homeDir, '.codex');
+  fs.mkdirSync(codexHome, { recursive: true });
+  fs.mkdirSync(modulesRoot, { recursive: true });
+  fs.renameSync(path.join(managedWorkspaceRoot, 'med-autoscience'), path.join(modulesRoot, 'med-autoscience'));
+  fs.renameSync(path.join(managedWorkspaceRoot, 'med-autogrant'), path.join(modulesRoot, 'med-autogrant'));
+  fs.renameSync(path.join(managedWorkspaceRoot, 'redcube-ai'), path.join(modulesRoot, 'redcube-ai'));
+  fs.renameSync(path.join(managedWorkspaceRoot, 'opl-meta-agent'), path.join(modulesRoot, 'opl-meta-agent'));
+  fs.rmSync(managedWorkspaceRoot, { recursive: true, force: true });
+
+  try {
+    const output = runCli(['skill', 'sync'], {
+      HOME: homeDir,
+      CODEX_HOME: codexHome,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+      OPL_MODULES_ROOT: modulesRoot,
+      OPL_DEVELOPER_MODE_GH_FIXTURE: JSON.stringify({ login: 'gaofeng21cn' }),
+    });
+
+    for (const [project, plugin] of [
+      ['med-autoscience', 'mas'],
+      ['med-autogrant', 'mag'],
+      ['redcube-ai', 'rca'],
+    ] as const) {
+      const pack = output.skill_sync.packs.find((entry: { project: string }) => entry.project === project);
+      assert.equal(
+        fs.realpathSync(pack.installer_result.plugin_source_path),
+        fs.realpathSync(path.join(workspaceRoot, project, 'plugins', plugin)),
+      );
+      const registryItem = output.skill_sync.codex_plugin_registry.items.find(
+        (entry: { plugin_id: string }) => entry.plugin_id === plugin,
+      );
+      assert.equal(
+        fs.realpathSync(path.join(registryItem.marketplace_root, 'plugins', plugin)),
+        fs.realpathSync(path.join(workspaceRoot, project, 'plugins', plugin)),
+      );
+    }
+  } finally {
+    fs.rmSync(captureDir, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('installed opl launcher syncs family skill packs before opening the raw Codex product entry', () => {
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-launcher-skill-sync-'));
   const homeDir = path.join(captureDir, 'home');
@@ -757,11 +814,7 @@ exit 0
     });
 
     assert.equal(result.stdout, 'CODEX ENTRY\n');
-    assert.deepEqual(fs.readFileSync(syncLogPath, 'utf8').trim().split('\n'), [
-      'med-autoscience',
-      'med-autogrant',
-      'redcube-ai',
-    ]);
+    assert.equal(fs.existsSync(syncLogPath), false);
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });

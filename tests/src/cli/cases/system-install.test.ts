@@ -34,17 +34,6 @@ test('install command runs selected module installs and returns one-shot setup p
   const medAutoScienceRemote = createGitModuleRemoteFixture('med-autoscience', {
     extraFiles: {
       'plugins/mas/.codex-plugin/plugin.json': JSON.stringify({ name: 'mas', skills: './skills/' }, null, 2),
-      '.agents/plugins/marketplace.json': JSON.stringify({
-        name: 'mas-local',
-        plugins: [
-          {
-            name: 'mas',
-            source: { source: 'local', path: './plugins/mas' },
-            policy: { installation: 'AVAILABLE', authentication: 'ON_INSTALL' },
-            category: 'Research',
-          },
-        ],
-      }, null, 2),
       'plugins/mas/skills/mas/SKILL.md': [
         '---',
         'name: mas',
@@ -197,7 +186,7 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(output.install.system_initialize.gui_shell.shell_id, 'opl_aion_shell');
     assert.equal(
       fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8').includes(
-        `[marketplaces.mas-local]\nsource_type = "local"\nsource = "${path.join(modulesRoot, 'med-autoscience')}"`,
+        `[marketplaces.mas-local]\nsource_type = "local"\nsource = "${path.join(homeRoot, 'opl-state', 'codex-plugin-marketplaces', 'mas-local')}"`,
       ),
       true,
     );
@@ -207,7 +196,11 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
       ),
       true,
     );
-    assert.deepEqual(fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'), ['bootstrap', 'skill-sync', 'health']);
+    assert.deepEqual(fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'), ['bootstrap', 'health']);
+    assert.equal(
+      fs.existsSync(path.join(modulesRoot, 'med-autoscience', '.agents', 'plugins', 'marketplace.json')),
+      false,
+    );
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });

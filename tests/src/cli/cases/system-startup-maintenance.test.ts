@@ -96,26 +96,6 @@ function createDomainModuleRemote(input: {
 
   return createGitModuleRemoteFixture(input.repoName, {
     extraFiles: {
-      [`.agents/plugins/marketplace.json`]: `${JSON.stringify({
-        name: `${input.pluginName}-local`,
-        interface: {
-          displayName: `${input.pluginName.toUpperCase()} Local`,
-        },
-        plugins: [
-          {
-            name: input.pluginName,
-            source: {
-              source: 'local',
-              path: `./plugins/${input.pluginName}`,
-            },
-            policy: {
-              installation: 'AVAILABLE',
-              authentication: 'ON_INSTALL',
-            },
-            category: 'Productivity',
-          },
-        ],
-      }, null, 2)}\n`,
       [`plugins/${input.pluginName}/.codex-plugin/plugin.json`]: JSON.stringify({
         name: input.pluginName,
         skills: './skills/',
@@ -334,13 +314,10 @@ test('system startup-maintenance installs clean managed modules and returns App 
     ]);
     assert.deepEqual(fs.readFileSync(logPath, 'utf8').trim().split('\n'), [
       'mas-bootstrap',
-      'mas-skill-sync',
       'mas-health',
       'mag-bootstrap',
-      'mag-skill-sync',
       'mag-health',
       'rca-bootstrap',
-      'rca-skill-sync',
       'rca-health',
       'opl-meta-agent-bootstrap',
       'opl-meta-agent-health',
@@ -969,20 +946,29 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
     }
 
     assert.deepEqual(fs.readFileSync(logPath, 'utf8').trim().split('\n'), [
-      'mas-skill-sync',
       'mas-health',
-      'mag-skill-sync',
       'mag-health',
-      'rca-skill-sync',
       'rca-health',
       'opl-meta-agent-health',
     ]);
     const codexConfig = fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8');
-    assert.match(codexConfig, new RegExp(`\\[marketplaces\\.mas-local\\]\\nsource_type = "local"\\nsource = "${siblingCheckouts.medautoscience.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
-    assert.match(codexConfig, new RegExp(`\\[marketplaces\\.mag-local\\]\\nsource_type = "local"\\nsource = "${siblingCheckouts.medautogrant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
-    assert.match(codexConfig, new RegExp(`\\[marketplaces\\.rca-local\\]\\nsource_type = "local"\\nsource = "${siblingCheckouts.redcube.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+    for (const [moduleId, marketplaceId, pluginId] of [
+      ['medautoscience', 'mas-local', 'mas'],
+      ['medautogrant', 'mag-local', 'mag'],
+      ['redcube', 'rca-local', 'rca'],
+    ] as const) {
+      const checkoutPath = siblingCheckouts[moduleId];
+      const marketplaceRoot = path.join(homeRoot, 'opl-state', 'codex-plugin-marketplaces', marketplaceId);
+      assert.equal(fs.existsSync(path.join(checkoutPath, '.agents', 'plugins', 'marketplace.json')), false);
+      assert.equal(fs.existsSync(path.join(marketplaceRoot, '.agents', 'plugins', 'marketplace.json')), true);
+      assert.equal(
+        fs.realpathSync(path.join(marketplaceRoot, 'plugins', pluginId)),
+        fs.realpathSync(path.join(checkoutPath, 'plugins', pluginId)),
+      );
+      assert.match(codexConfig, new RegExp(`\\[marketplaces\\.${marketplaceId}\\]\\nsource_type = "local"\\nsource = "${marketplaceRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+    }
     assert.match(codexConfig, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
-    assert.match(codexConfig, /generated-codex-plugins\/opl-meta-agent-local/);
+    assert.match(codexConfig, /codex-plugin-marketplaces\/opl-meta-agent-local/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(masRemote.fixtureRoot, { recursive: true, force: true });

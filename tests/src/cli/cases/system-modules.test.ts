@@ -132,7 +132,7 @@ EOF
     );
     assert.deepEqual(
       fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'),
-      ['bootstrap', 'skill-sync', 'health'],
+      ['bootstrap', 'health'],
     );
     const globalMasSkillPath = path.join(homeRoot, '.codex', 'skills', 'mas', 'SKILL.md');
     assert.equal(fs.existsSync(globalMasSkillPath), false);
@@ -191,7 +191,7 @@ EOF
     assert.equal(update.module_action.module.git.head_sha, nextSha);
     assert.deepEqual(
       fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'),
-      ['bootstrap', 'skill-sync', 'health', 'bootstrap', 'skill-sync', 'health'],
+      ['bootstrap', 'health', 'bootstrap', 'health'],
     );
     assert.equal(fs.existsSync(globalMasSkillPath), false);
 
@@ -384,7 +384,7 @@ printf 'health\\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(install.module_action.module.checkout_path, managedCheckout);
     assert.deepEqual(
       fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'),
-      ['bootstrap', 'skill-sync', 'health'],
+      ['bootstrap', 'health'],
     );
   } finally {
     fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
@@ -465,7 +465,7 @@ printf 'health\\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(fs.existsSync(path.join(managedCheckout, 'stale-partial-install.txt')), false);
     assert.deepEqual(
       fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'),
-      ['bootstrap', 'skill-sync', 'health'],
+      ['bootstrap', 'health'],
     );
   } finally {
     fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
@@ -637,7 +637,7 @@ git ls-files >/dev/null
     assert.equal(install.module_action.turnkey.skill_sync.domain_id, 'redcube');
     assert.equal(install.module_action.turnkey.health_check.status, 'completed');
     assert.equal(install.module_action.turnkey.health_check.result.packaged_runtime, true);
-    assert.deepEqual(fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'), ['skill-sync']);
+    assert.equal(fs.existsSync(turnkeyLogPath), false);
     assert.equal(fs.existsSync(path.join(homeRoot, '.codex', 'skills', 'rca', 'SKILL.md')), false);
     assert.equal(fs.existsSync(path.join(managedRcaRoot, 'opl-runtime-module.json')), true);
     assert.equal(fs.existsSync(path.join(managedRcaRoot, 'plugins', 'rca', 'skills', 'rca', 'SKILL.md')), true);

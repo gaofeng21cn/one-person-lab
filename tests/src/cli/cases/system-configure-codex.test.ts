@@ -329,6 +329,20 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
     assert.match(config, /\[plugins\."mag@mag-local"\]/);
     assert.match(config, /\[plugins\."rca@rca-local"\]/);
     assert.match(config, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
+    for (const [project, marketplaceId, pluginId] of [
+      ['med-autoscience', 'mas-local', 'mas'],
+      ['med-autogrant', 'mag-local', 'mag'],
+      ['redcube-ai', 'rca-local', 'rca'],
+    ] as const) {
+      const checkoutPath = path.join(familyWorkspace.workspaceRoot, project);
+      const marketplaceRoot = path.join(homeRoot, 'opl-state', 'codex-plugin-marketplaces', marketplaceId);
+      assert.equal(fs.existsSync(path.join(checkoutPath, '.agents', 'plugins', 'marketplace.json')), false);
+      assert.equal(
+        fs.realpathSync(path.join(marketplaceRoot, 'plugins', pluginId)),
+        fs.realpathSync(path.join(checkoutPath, 'plugins', pluginId)),
+      );
+      assert.match(config, new RegExp(`\\[marketplaces\\.${marketplaceId}\\]\\nsource_type = "local"\\nsource = "${marketplaceRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+    }
     assert.equal(
       fs.existsSync(path.join(
         homeRoot,
@@ -342,11 +356,7 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
       )),
       true,
     );
-    assert.deepEqual(fs.readFileSync(familyWorkspace.syncLogPath, 'utf8').trim().split('\n'), [
-      'med-autoscience',
-      'med-autogrant',
-      'redcube-ai',
-    ]);
+    assert.equal(fs.existsSync(familyWorkspace.syncLogPath), false);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(captureDir, { recursive: true, force: true });

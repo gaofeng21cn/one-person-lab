@@ -9,6 +9,8 @@ type CodexFamilyPluginSpec = {
   marketplace_id: string;
   plugin_id: string;
   repo_name: string;
+  display_name: string;
+  category: string;
   legacy_standalone_mcp_server_ids: string[];
 };
 
@@ -17,8 +19,11 @@ export type CodexPluginRegistryItem = {
   marketplace_id: string;
   plugin_id: string;
   repo_path: string;
+  plugin_source_path: string;
+  plugin_manifest_path: string;
+  marketplace_root: string;
   marketplace_path: string;
-  status: 'registered' | 'missing_marketplace';
+  status: 'registered' | 'missing_plugin_manifest';
   note: string | null;
 };
 
@@ -30,6 +35,7 @@ export type CodexPluginRegistryResult = {
     total: number;
     registered: number;
     missing_marketplace: number;
+    missing_plugin_manifest: number;
     removed_standalone_mcp_servers: number;
   };
 };
@@ -40,6 +46,8 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
     marketplace_id: 'mas-local',
     plugin_id: 'mas',
     repo_name: 'med-autoscience',
+    display_name: 'Med Auto Science Local',
+    category: 'Research',
     legacy_standalone_mcp_server_ids: ['med-autoscience', 'medautosci', 'mas'],
   },
   {
@@ -47,6 +55,8 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
     marketplace_id: 'mag-local',
     plugin_id: 'mag',
     repo_name: 'med-autogrant',
+    display_name: 'Med Auto Grant Local',
+    category: 'Research',
     legacy_standalone_mcp_server_ids: ['med-autogrant', 'medautogrant', 'mag'],
   },
   {
@@ -54,6 +64,8 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
     marketplace_id: 'rca-local',
     plugin_id: 'rca',
     repo_name: 'redcube-ai',
+    display_name: 'RedCube AI Local',
+    category: 'Creative',
     legacy_standalone_mcp_server_ids: ['redcube-ai', 'redcube', 'rca'],
   },
   {
@@ -61,6 +73,8 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
     marketplace_id: 'opl-meta-agent-local',
     plugin_id: 'opl-meta-agent',
     repo_name: 'opl-meta-agent',
+    display_name: 'OPL Meta Agent Local',
+    category: 'Productivity',
     legacy_standalone_mcp_server_ids: ['opl-meta-agent', 'oplmetaagent', 'oma'],
   },
 ];
@@ -72,6 +86,13 @@ function resolveHomeDir() {
 function resolveCodexConfigPath(home = resolveHomeDir()) {
   const codexHome = process.env.CODEX_HOME?.trim() || path.join(home, '.codex');
   return path.join(codexHome, 'config.toml');
+}
+
+function resolveOplStateDir(home = resolveHomeDir()) {
+  const explicitStateDir = process.env.OPL_STATE_DIR?.trim();
+  return explicitStateDir
+    ? path.resolve(explicitStateDir)
+    : path.join(home, 'Library', 'Application Support', 'OPL', 'state');
 }
 
 function escapeTomlString(value: string) {
@@ -133,14 +154,75 @@ function removeStandaloneMcpServerTables(text: string, spec: CodexFamilyPluginSp
   return removeTomlTables(text, (header) => prefixes.some((prefix) => header === prefix || header.startsWith(prefix)));
 }
 
-function registerCodexPlugin(configPath: string, spec: CodexFamilyPluginSpec, repoPath: string) {
+function writeJsonFile(filePath: string, value: unknown) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+}
+
+function resolveFirstExistingPath(candidates: string[]) {
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? candidates[0];
+}
+
+function resolvePluginSourcePath(spec: CodexFamilyPluginSpec, repoPath: string) {
+  return resolveFirstExistingPath([
+    path.join(repoPath, '.codex-plugin', 'plugin.json'),
+    path.join(repoPath, 'plugins', spec.plugin_id, '.codex-plugin', 'plugin.json'),
+  ]);
+}
+
+function refreshSourceSymlink(linkPath: string, targetPath: string) {
+  fs.mkdirSync(path.dirname(linkPath), { recursive: true });
+  fs.rmSync(linkPath, { recursive: true, force: true });
+  fs.symlinkSync(targetPath, linkPath, 'dir');
+}
+
+function materializeOplOwnedMarketplace(
+  spec: CodexFamilyPluginSpec,
+  pluginSourcePath: string,
+  home: string,
+) {
+  const pluginManifestPath = path.join(pluginSourcePath, '.codex-plugin', 'plugin.json');
+  const marketplaceRoot = path.join(resolveOplStateDir(home), 'codex-plugin-marketplaces', spec.marketplace_id);
+  const marketplacePath = path.join(marketplaceRoot, '.agents', 'plugins', 'marketplace.json');
+  const linkPath = path.join(marketplaceRoot, 'plugins', spec.plugin_id);
+
+  refreshSourceSymlink(linkPath, pluginSourcePath);
+  writeJsonFile(marketplacePath, {
+    name: spec.marketplace_id,
+    interface: {
+      displayName: spec.display_name,
+    },
+    plugins: [
+      {
+        name: spec.plugin_id,
+        source: {
+          source: 'local',
+          path: `./plugins/${spec.plugin_id}`,
+        },
+        policy: {
+          installation: 'AVAILABLE',
+          authentication: 'ON_INSTALL',
+        },
+        category: spec.category,
+      },
+    ],
+  });
+
+  return {
+    marketplaceRoot,
+    marketplacePath,
+    pluginManifestPath,
+  };
+}
+
+function registerCodexPlugin(configPath: string, spec: CodexFamilyPluginSpec, marketplaceRoot: string) {
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
   let text = fs.existsSync(configPath) ? fs.readFileSync(configPath, 'utf8') : '';
   const standaloneMcpRemoval = removeStandaloneMcpServerTables(text, spec);
   text = standaloneMcpRemoval.text;
   text = upsertTomlTable(text, `[marketplaces.${spec.marketplace_id}]`, [
     'source_type = "local"',
-    `source = "${escapeTomlString(repoPath)}"`,
+    `source = "${escapeTomlString(marketplaceRoot)}"`,
   ]);
   text = upsertTomlTable(text, `[plugins."${spec.plugin_id}@${spec.marketplace_id}"]`, [
     'enabled = true',
@@ -165,27 +247,36 @@ export function registerOplFamilyCodexPlugins(
     }
 
     const repoPath = moduleRepoPaths.get(spec.module_id) ?? path.join(path.dirname(path.dirname(path.dirname(codexConfigPath))), spec.repo_name);
-    const marketplacePath = path.join(repoPath, '.agents', 'plugins', 'marketplace.json');
-    if (!fs.existsSync(marketplacePath)) {
+    const pluginManifestPath = resolvePluginSourcePath(spec, repoPath);
+    if (!fs.existsSync(pluginManifestPath)) {
+      const pluginSourcePath = path.dirname(path.dirname(pluginManifestPath));
       items.push({
         module_id: spec.module_id,
         marketplace_id: spec.marketplace_id,
         plugin_id: spec.plugin_id,
         repo_path: repoPath,
-        marketplace_path: marketplacePath,
-        status: 'missing_marketplace',
-        note: 'Run the module Codex plugin installer before expecting the native Codex App plugin list to show this family plugin.',
+        plugin_source_path: pluginSourcePath,
+        plugin_manifest_path: pluginManifestPath,
+        marketplace_root: path.join(resolveOplStateDir(home), 'codex-plugin-marketplaces', spec.marketplace_id),
+        marketplace_path: path.join(resolveOplStateDir(home), 'codex-plugin-marketplaces', spec.marketplace_id, '.agents', 'plugins', 'marketplace.json'),
+        status: 'missing_plugin_manifest',
+        note: 'The module checkout must provide a tracked .codex-plugin/plugin.json so OPL can generate an OPL-owned marketplace wrapper without writing into the module repo.',
       });
       continue;
     }
 
-    removedStandaloneMcpServers += registerCodexPlugin(codexConfigPath, spec, repoPath);
+    const pluginSourcePath = path.dirname(path.dirname(pluginManifestPath));
+    const marketplace = materializeOplOwnedMarketplace(spec, pluginSourcePath, home);
+    removedStandaloneMcpServers += registerCodexPlugin(codexConfigPath, spec, marketplace.marketplaceRoot);
     items.push({
       module_id: spec.module_id,
       marketplace_id: spec.marketplace_id,
       plugin_id: spec.plugin_id,
       repo_path: repoPath,
-      marketplace_path: marketplacePath,
+      plugin_source_path: pluginSourcePath,
+      plugin_manifest_path: marketplace.pluginManifestPath,
+      marketplace_root: marketplace.marketplaceRoot,
+      marketplace_path: marketplace.marketplacePath,
       status: 'registered',
       note: null,
     });
@@ -198,7 +289,8 @@ export function registerOplFamilyCodexPlugins(
     summary: {
       total: items.length,
       registered: items.filter((item) => item.status === 'registered').length,
-      missing_marketplace: items.filter((item) => item.status === 'missing_marketplace').length,
+      missing_marketplace: items.filter((item) => item.status === 'missing_plugin_manifest').length,
+      missing_plugin_manifest: items.filter((item) => item.status === 'missing_plugin_manifest').length,
       removed_standalone_mcp_servers: removedStandaloneMcpServers,
     },
   };

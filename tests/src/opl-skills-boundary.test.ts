@@ -30,11 +30,19 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
   ]);
 
   try {
-    for (const repoPath of repoPaths.values()) {
-      fs.mkdirSync(path.join(repoPath, '.agents', 'plugins'), { recursive: true });
+    for (const [moduleId, repoPath] of repoPaths) {
+      const pluginId = moduleId === 'medautoscience'
+        ? 'mas'
+        : moduleId === 'medautogrant'
+          ? 'mag'
+          : moduleId === 'redcube'
+            ? 'rca'
+            : 'opl-meta-agent';
+      const pluginRoot = path.join(repoPath, 'plugins', pluginId);
+      fs.mkdirSync(path.join(pluginRoot, '.codex-plugin'), { recursive: true });
       fs.writeFileSync(
-        path.join(repoPath, '.agents', 'plugins', 'marketplace.json'),
-        '{"plugins":[]}\n',
+        path.join(pluginRoot, '.codex-plugin', 'plugin.json'),
+        JSON.stringify({ name: pluginId, skills: './skills/' }, null, 2),
         'utf8',
       );
     }
@@ -76,10 +84,13 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
     assert.match(config, /\[plugins\."mag@mag-local"\]/);
     assert.match(config, /\[plugins\."rca@rca-local"\]/);
     assert.match(config, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
-    assert.match(config, new RegExp(`\\[marketplaces\\.mas-local\\]\\nsource_type = "local"\\nsource = "${repoPaths.get('medautoscience')!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
-    assert.match(config, new RegExp(`\\[marketplaces\\.mag-local\\]\\nsource_type = "local"\\nsource = "${repoPaths.get('medautogrant')!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
-    assert.match(config, new RegExp(`\\[marketplaces\\.rca-local\\]\\nsource_type = "local"\\nsource = "${repoPaths.get('redcube')!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
-    assert.match(config, new RegExp(`\\[marketplaces\\.opl-meta-agent-local\\]\\nsource_type = "local"\\nsource = "${repoPaths.get('oplmetaagent')!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+    for (const item of result.items) {
+      assert.equal(item.status, 'registered');
+      assert.equal(fs.existsSync(item.marketplace_path), true);
+      assert.equal(fs.existsSync(item.plugin_manifest_path), true);
+      assert.equal(fs.existsSync(path.join(item.repo_path, '.agents', 'plugins', 'marketplace.json')), false);
+      assert.match(config, new RegExp(`\\[marketplaces\\.${item.marketplace_id}\\]\\nsource_type = "local"\\nsource = "${item.marketplace_root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+    }
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }

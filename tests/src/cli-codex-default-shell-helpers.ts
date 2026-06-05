@@ -247,14 +247,9 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
     fs.mkdirSync(path.join(pluginRoot, '.codex-plugin'), { recursive: true });
     fs.mkdirSync(skillRoot, { recursive: true });
     fs.mkdirSync(path.dirname(installerPath), { recursive: true });
-    fs.mkdirSync(path.join(repoRoot, '.agents', 'plugins'), { recursive: true });
     fs.writeFileSync(
       path.join(pluginRoot, '.codex-plugin', 'plugin.json'),
       JSON.stringify({ name: spec.canonicalPlugin, skills: './skills/' }, null, 2),
-    );
-    fs.writeFileSync(
-      path.join(repoRoot, '.agents', 'plugins', 'marketplace.json'),
-      JSON.stringify({ name: `${spec.canonicalPlugin}-local`, plugins: [] }, null, 2),
     );
     fs.writeFileSync(
       path.join(skillRoot, 'SKILL.md'),
