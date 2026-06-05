@@ -50,6 +50,22 @@
       "type": "integer",
       "minimum": 0
     },
+    "stage_manifest_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "current_pointer_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_fingerprint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "content_hash": {
+      "type": "string",
+      "minLength": 1
+    },
     "consumed_role_artifacts": {
       "type": "array",
       "items": {

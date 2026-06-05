@@ -234,7 +234,7 @@ Stage 是 OPL 唯一默认执行单元。Attempt Runtime 只负责：
 
 Attempt Runtime 不负责生成候选、选择工具、评审、排序、修订或学习，也不负责决定医学结论、基金质量、视觉审美、agent patch 是否好。开放式专家判断继续由 executor + independent gate + domain owner 完成。
 
-`OPL execution authorization gate` 是 StageRun Kernel 的 launch-hard / closeout-binding gate：domain terminal owner action 已存在时，OPL provider 仍必须证明 selected executor、attempt lease、workspace/artifact scope、authority boundary、idempotency/source fingerprint、closeout receipt binding 和 forbidden-write guard 都成立。缺任一项时，正确结果是 OPL-owned typed blocker；它阻断 execution，但不改变 domain truth，也不替 domain owner 签 receipt。
+`OPL execution authorization gate` 是 StageRun Kernel 的 launch-hard / closeout-binding gate：domain terminal owner action 已存在时，OPL provider 仍必须证明 selected executor、provider attempt、attempt lease、workspace/artifact scope、authority boundary、idempotency/source fingerprint、execution authorization decision、closeout receipt binding 和 forbidden-write guard 都成立。StageRun Kernel 以 `evaluateStageRunExecutionAuthorization` 输出 `opl_stage_run_execution_authorization_report`；缺任一项时，正确结果是 owner=`one-person-lab` 的 OPL runtime blocker。这个 blocker 只阻断 execution authorization 或 closeout receipt binding，不改变 domain truth，不创建 domain typed blocker，也不替 domain owner 签 receipt。
 
 ### 4. Current Owner Delta Controller
 

@@ -159,6 +159,10 @@ test('target architecture schema contracts keep owner delta root and audit tail 
   assert.equal(ownerReceipt.required.includes('consumed_role_artifacts'), true);
   assert.equal(ownerReceipt.required.includes('accepted_delta'), true);
   assert.equal(ownerReceipt.required.includes('next_stage_or_owner'), true);
+  assert.equal(ownerReceipt.properties.stage_manifest_ref.type, 'string');
+  assert.equal(ownerReceipt.properties.current_pointer_ref.type, 'string');
+  assert.equal(ownerReceipt.properties.source_fingerprint.type, 'string');
+  assert.equal(ownerReceipt.properties.content_hash.type, 'string');
   assert.equal(ownerReceipt.$defs.authority_boundary.properties.opl_can_create_owner_receipt.const, false);
   assert.equal(ownerReceipt.$defs.authority_boundary.properties.provider_completion_counts_as_owner_receipt.const, false);
 

@@ -74,6 +74,13 @@ test('StageRun Kernel contract separates launch, closeout, advisory, and forbidd
     'expected_receipt_or_blocker',
     'input_refs',
     'replay_audit_lineage_refs',
+    'provider_attempt_ref',
+    'attempt_lease_ref',
+    'execution_authorization_decision_ref',
+    'workspace_scope_ref',
+    'artifact_scope_ref',
+    'source_fingerprint',
+    'idempotency_key',
   ]);
   assert.deepEqual(writingRules.required_for_closeout, [
     'current_generation_role_artifacts',
@@ -82,6 +89,11 @@ test('StageRun Kernel contract separates launch, closeout, advisory, and forbidd
     'current_pointer',
     'content_hashes',
     'lineage_refs',
+    'closeout_receipt_ref',
+    'closeout_receipt_stage_run_binding',
+    'closeout_receipt_stage_manifest_binding',
+    'closeout_receipt_current_pointer_binding',
+    'closeout_receipt_source_fingerprint_binding',
   ]);
   assert.deepEqual(writingRules.advisory_for_context, [
     'prompt_refs',
@@ -115,6 +127,8 @@ test('StageRun Kernel contract separates launch, closeout, advisory, and forbidd
     'status',
     'launch_blockers',
     'closeout_blockers',
+    'execution_authorization',
+    'closeout_binding_blockers',
     'advisory_warnings',
     'route_back_recommendations',
     'audit_drilldown_refs',
@@ -123,6 +137,8 @@ test('StageRun Kernel contract separates launch, closeout, advisory, and forbidd
   assert.deepEqual(conformance.default_blocking_sections, [
     'launch_blockers',
     'closeout_blockers',
+    'execution_authorization',
+    'closeout_binding_blockers',
   ]);
   assert.deepEqual(conformance.non_blocking_default_sections, [
     'advisory_warnings',
@@ -144,6 +160,12 @@ test('StageRun Kernel contract freezes launch closeout and advisory conformance 
     'expected_receipt_or_typed_blocker_shape',
     'forbidden_write',
     'replay_audit_lineage',
+    'provider_attempt',
+    'attempt_lease',
+    'execution_authorization_decision',
+    'workspace_artifact_scope',
+    'source_fingerprint',
+    'idempotency_key',
   ]);
   assert.equal(contract.admission_policy.strategy_refs_default, 'advisory_or_route_back');
   assert.equal(contract.admission_policy.prompt_skill_tool_knowledge_missing_blocks_launch_by_default, false);
@@ -155,16 +177,25 @@ test('StageRun Kernel contract freezes launch closeout and advisory conformance 
     'content_hash',
     'generation',
     'lineage_refs',
+    'closeout_receipt_binding',
   ]);
   assert.deepEqual(contract.conformance_output.layers, [
     'launch_blockers',
     'closeout_blockers',
+    'execution_authorization',
+    'closeout_binding_blockers',
     'advisory_warnings',
     'route_back_recommendations',
     'audit_drilldown_refs',
     'forbidden_authority_flags',
   ]);
   assert.equal(contract.conformance_output.default_blocking_layers_only.includes('advisory_warnings'), false);
+  assert.equal(contract.execution_authorization_policy.blocked_result.owner, 'one-person-lab');
+  assert.equal(
+    contract.execution_authorization_policy.blocked_result.blocker_code,
+    'stage_run_execution_authorization_blocked',
+  );
+  assert.equal(contract.execution_authorization_policy.blocked_result.domain_typed_blocker_created, false);
   assert.equal(contract.forbidden_as_authority.includes('provider completion'), true);
   assert.equal(contract.forbidden_as_authority.includes('conformance passed'), true);
 });
@@ -388,6 +419,100 @@ test('StageRun closeout admission blocks forbidden authority signals even with o
     'conformance_passed_cannot_close_stage',
   ]);
   assert.equal(report.default_blocked, true);
+});
+
+test('StageRun execution authorization blocks launch without provider attempt lease and decision', async () => {
+  const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);
+  const report = module.evaluateStageRunExecutionAuthorization({
+    phase: 'launch',
+    stage_run_id: 'stage-run-exec-auth',
+    domain_id: 'mas',
+    stage_id: 'publication_handoff_owner_gate',
+    generation: 1,
+    current_pointer: {
+      stage_run_id: 'stage-run-exec-auth',
+      generation: 1,
+      current: true,
+    },
+    selected_executor: 'codex_cli',
+    source_fingerprint: 'sha256:source-1',
+    idempotency_key: 'stage-run-exec-auth:g1',
+    workspace_scope_ref: 'opl://workspace/stage-run-exec-auth',
+    artifact_scope_ref: 'opl://artifacts/stage-run-exec-auth',
+    authority_boundary: {
+      opl_can_write_domain_truth: false,
+      opl_can_create_owner_receipt: false,
+      opl_can_create_typed_blocker: false,
+    },
+    forbidden_write_required: false,
+  });
+
+  assert.equal(report.surface_kind, 'opl_stage_run_execution_authorization_report');
+  assert.equal(report.status, 'blocked');
+  assert.equal(report.execution_authorized, false);
+  assert.deepEqual(report.launch_blockers, [
+    'provider_attempt_ref_missing',
+    'attempt_lease_ref_missing',
+    'execution_authorization_decision_ref_missing',
+  ]);
+  assert.deepEqual(report.closeout_binding_blockers, []);
+  assert.equal(report.opl_runtime_blocker.owner, 'one-person-lab');
+  assert.equal(report.opl_runtime_blocker.blocker_code, 'stage_run_execution_authorization_blocked');
+  assert.deepEqual(report.opl_runtime_blocker.blocked_authority, [
+    'execution_authorization',
+  ]);
+  assert.equal(report.authority_boundary.opl_can_create_typed_blocker, false);
+  assert.equal(report.authority_boundary.opl_can_create_execution_authorization_blocker, true);
+  assert.equal(report.authority_boundary.execution_blocker_is_domain_typed_blocker, false);
+});
+
+test('StageRun execution authorization binds closeout receipt to current manifest pointer and source fingerprint', async () => {
+  const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);
+  const report = module.evaluateStageRunExecutionAuthorization({
+    phase: 'closeout',
+    stage_run_id: 'stage-run-exec-auth',
+    domain_id: 'mas',
+    stage_id: 'publication_handoff_owner_gate',
+    generation: 2,
+    current_pointer: {
+      stage_run_id: 'stage-run-exec-auth',
+      generation: 2,
+      current: true,
+    },
+    selected_executor: 'codex_cli',
+    source_fingerprint: 'sha256:source-2',
+    idempotency_key: 'stage-run-exec-auth:g2',
+    provider_attempt_ref: 'temporal://attempt/stage-run-exec-auth',
+    attempt_lease_ref: 'opl://leases/stage-run-exec-auth:g2',
+    attempt_lease_status: 'active',
+    execution_authorization_decision_ref: 'opl://execution-authorizations/stage-run-exec-auth:g2',
+    workspace_scope_ref: 'opl://workspace/stage-run-exec-auth',
+    artifact_scope_ref: 'opl://artifacts/stage-run-exec-auth',
+    authority_boundary: {
+      opl_can_write_domain_truth: false,
+      opl_can_create_owner_receipt: false,
+      opl_can_create_typed_blocker: false,
+    },
+    forbidden_write_required: false,
+    closeout_receipt_ref: 'mas://receipts/handoff-owner',
+    closeout_receipt_stage_run_id: 'stage-run-exec-auth',
+    closeout_receipt_generation: 2,
+    closeout_receipt_manifest_ref: 'mas://stage-manifests/publication-handoff',
+    stage_manifest_ref: 'mas://stage-manifests/publication-handoff',
+    closeout_receipt_current_pointer_ref: 'opl://current-pointers/stage-run-exec-auth:g2',
+    current_pointer_ref: 'opl://current-pointers/stage-run-exec-auth:g2',
+    closeout_receipt_source_fingerprint: 'sha256:source-2',
+  });
+
+  assert.equal(report.status, 'authorized');
+  assert.equal(report.execution_authorized, true);
+  assert.deepEqual(report.launch_blockers, []);
+  assert.deepEqual(report.closeout_binding_blockers, []);
+  assert.equal(report.opl_runtime_blocker, null);
+  assert.equal(report.closeout_binding.bound_to_stage_run, true);
+  assert.equal(report.closeout_binding.bound_to_stage_manifest, true);
+  assert.equal(report.closeout_binding.bound_to_current_pointer, true);
+  assert.equal(report.closeout_binding.bound_to_source_fingerprint, true);
 });
 
 test('StageRun Kernel primitive rejects events that carry forbidden bodies or domain verdict authority', async () => {

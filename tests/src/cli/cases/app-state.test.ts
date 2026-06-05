@@ -233,6 +233,16 @@ exit 1
               closeout_blockers: string[];
               forbidden_authority_flags: string[];
             };
+            execution_authorization: {
+              status: string;
+              execution_authorized: boolean;
+              launch_blockers: string[];
+              closeout_binding_blockers: string[];
+              opl_runtime_blocker: {
+                owner: string;
+                blocker_code: string;
+              };
+            };
             authority_boundary: {
               refs_only: boolean;
               can_write_domain_truth: boolean;
@@ -485,6 +495,26 @@ exit 1
       output.app_state.operator.stage_run_cockpit.closeout_admission.forbidden_authority_flags
         .includes('provider_completed_cannot_close_stage'),
       true,
+    );
+    assert.equal(output.app_state.operator.stage_run_cockpit.execution_authorization.status, 'blocked');
+    assert.equal(output.app_state.operator.stage_run_cockpit.execution_authorization.execution_authorized, false);
+    assert.equal(
+      output.app_state.operator.stage_run_cockpit.execution_authorization.launch_blockers
+        .includes('provider_attempt_ref_missing'),
+      true,
+    );
+    assert.equal(
+      output.app_state.operator.stage_run_cockpit.execution_authorization.closeout_binding_blockers
+        .includes('closeout_receipt_ref_missing'),
+      true,
+    );
+    assert.equal(
+      output.app_state.operator.stage_run_cockpit.execution_authorization.opl_runtime_blocker.owner,
+      'one-person-lab',
+    );
+    assert.equal(
+      output.app_state.operator.stage_run_cockpit.execution_authorization.opl_runtime_blocker.blocker_code,
+      'stage_run_execution_authorization_blocked',
     );
     assert.equal(output.app_state.operator.stage_run_cockpit.authority_boundary.refs_only, true);
     assert.equal(output.app_state.operator.stage_run_cockpit.authority_boundary.can_write_domain_truth, false);

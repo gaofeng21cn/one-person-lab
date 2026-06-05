@@ -84,6 +84,39 @@ export type StageRunAdmissionReport = {
   authority_boundary: typeof AUTHORITY_BOUNDARY;
 };
 
+export type StageRunExecutionAuthorizationBlocker = {
+  surface_kind: 'opl_stage_run_execution_authorization_blocker';
+  version: 'stage-run-execution-authorization-blocker.v1';
+  owner: 'one-person-lab';
+  blocker_code: 'stage_run_execution_authorization_blocked';
+  blocked_authority: Array<'execution_authorization' | 'closeout_receipt_binding'>;
+  blocker_reasons: string[];
+  domain_truth_changed: false;
+  owner_receipt_signed: false;
+  domain_typed_blocker_created: false;
+};
+
+export type StageRunCloseoutBinding = {
+  closeout_receipt_ref: string | null;
+  bound_to_stage_run: boolean;
+  bound_to_stage_manifest: boolean;
+  bound_to_current_pointer: boolean;
+  bound_to_source_fingerprint: boolean;
+};
+
+export type StageRunExecutionAuthorizationReport = {
+  surface_kind: 'opl_stage_run_execution_authorization_report';
+  version: 'stage-run-execution-authorization.v1';
+  phase: 'launch' | 'closeout';
+  status: 'authorized' | 'blocked';
+  execution_authorized: boolean;
+  launch_blockers: string[];
+  closeout_binding_blockers: string[];
+  closeout_binding: StageRunCloseoutBinding;
+  opl_runtime_blocker: StageRunExecutionAuthorizationBlocker | null;
+  authority_boundary: typeof AUTHORITY_BOUNDARY;
+};
+
 const AUTHORITY_BOUNDARY = {
   owner: 'one-person-lab',
   opl_can_create_stage_run_spec: true,
@@ -97,6 +130,9 @@ const AUTHORITY_BOUNDARY = {
   opl_can_store_memory_body: false,
   opl_can_create_owner_receipt: false,
   opl_can_create_typed_blocker: false,
+  opl_can_create_execution_authorization_blocker: true,
+  execution_blocker_is_domain_typed_blocker: false,
+  execution_blocker_can_change_domain_truth: false,
   opl_can_authorize_publication_or_quality_verdict: false,
   read_model_can_be_truth_source: false,
   provider_completion_counts_as_domain_accepted: false,
@@ -352,6 +388,115 @@ export function evaluateStageRunAdmission(input: JsonRecord): StageRunAdmissionR
   return {
     ...base,
     status: statusFor(base),
+  };
+}
+
+function requiredRefBlocker(input: JsonRecord, field: string, blocker: string) {
+  return isNonEmptyString(input[field]) ? null : blocker;
+}
+
+function launchAuthorizationBlockers(input: JsonRecord) {
+  return [
+    ...stageRunIdentityBlockers(input),
+    requiredRefBlocker(input, 'selected_executor', 'selected_executor_missing'),
+    requiredRefBlocker(input, 'source_fingerprint', 'source_fingerprint_missing'),
+    requiredRefBlocker(input, 'idempotency_key', 'idempotency_key_missing'),
+    requiredRefBlocker(input, 'provider_attempt_ref', 'provider_attempt_ref_missing'),
+    requiredRefBlocker(input, 'attempt_lease_ref', 'attempt_lease_ref_missing'),
+    input.attempt_lease_status === undefined || input.attempt_lease_status === 'active'
+      ? null
+      : 'attempt_lease_not_active',
+    requiredRefBlocker(input, 'execution_authorization_decision_ref', 'execution_authorization_decision_ref_missing'),
+    requiredRefBlocker(input, 'workspace_scope_ref', 'workspace_scope_ref_missing'),
+    requiredRefBlocker(input, 'artifact_scope_ref', 'artifact_scope_ref_missing'),
+    hasSafeAuthorityBoundary(input) ? null : 'authority_boundary_invalid',
+    input.forbidden_write_required === true ? 'forbidden_write_required' : null,
+  ].filter((entry): entry is string => Boolean(entry));
+}
+
+function buildCloseoutBinding(input: JsonRecord): StageRunCloseoutBinding {
+  const closeoutReceiptRef = optionalRef(input.closeout_receipt_ref);
+  const stageManifestRef = optionalRef(input.stage_manifest_ref);
+  const closeoutStageManifestRef = optionalRef(input.closeout_receipt_manifest_ref);
+  const currentPointerRef = optionalRef(input.current_pointer_ref);
+  const closeoutCurrentPointerRef = optionalRef(input.closeout_receipt_current_pointer_ref);
+  const sourceFingerprint = optionalRef(input.source_fingerprint);
+  const closeoutSourceFingerprint = optionalRef(input.closeout_receipt_source_fingerprint);
+  return {
+    closeout_receipt_ref: closeoutReceiptRef,
+    bound_to_stage_run:
+      closeoutReceiptRef !== null
+      && input.closeout_receipt_stage_run_id === input.stage_run_id
+      && input.closeout_receipt_generation === input.generation,
+    bound_to_stage_manifest:
+      closeoutReceiptRef !== null
+      && stageManifestRef !== null
+      && closeoutStageManifestRef === stageManifestRef,
+    bound_to_current_pointer:
+      closeoutReceiptRef !== null
+      && currentPointerRef !== null
+      && closeoutCurrentPointerRef === currentPointerRef,
+    bound_to_source_fingerprint:
+      closeoutReceiptRef !== null
+      && sourceFingerprint !== null
+      && closeoutSourceFingerprint === sourceFingerprint,
+  };
+}
+
+function closeoutBindingBlockers(binding: StageRunCloseoutBinding) {
+  return [
+    binding.closeout_receipt_ref ? null : 'closeout_receipt_ref_missing',
+    binding.bound_to_stage_run ? null : 'closeout_receipt_stage_run_binding_missing',
+    binding.bound_to_stage_manifest ? null : 'closeout_receipt_stage_manifest_binding_missing',
+    binding.bound_to_current_pointer ? null : 'closeout_receipt_current_pointer_binding_missing',
+    binding.bound_to_source_fingerprint ? null : 'closeout_receipt_source_fingerprint_binding_missing',
+  ].filter((entry): entry is string => Boolean(entry));
+}
+
+function executionAuthorizationBlocker(
+  launchBlockers: string[],
+  closeoutBlockers: string[],
+): StageRunExecutionAuthorizationBlocker | null {
+  const blockerReasons = [...new Set([...launchBlockers, ...closeoutBlockers])];
+  if (blockerReasons.length === 0) {
+    return null;
+  }
+  return {
+    surface_kind: 'opl_stage_run_execution_authorization_blocker',
+    version: 'stage-run-execution-authorization-blocker.v1',
+    owner: 'one-person-lab',
+    blocker_code: 'stage_run_execution_authorization_blocked',
+    blocked_authority: [
+      launchBlockers.length > 0 ? 'execution_authorization' : null,
+      closeoutBlockers.length > 0 ? 'closeout_receipt_binding' : null,
+    ].filter((entry): entry is 'execution_authorization' | 'closeout_receipt_binding' => Boolean(entry)),
+    blocker_reasons: blockerReasons,
+    domain_truth_changed: false,
+    owner_receipt_signed: false,
+    domain_typed_blocker_created: false,
+  };
+}
+
+export function evaluateStageRunExecutionAuthorization(input: JsonRecord): StageRunExecutionAuthorizationReport {
+  const phase: StageRunExecutionAuthorizationReport['phase'] = input.phase === 'closeout' ? 'closeout' : 'launch';
+  const launchBlockers = [...new Set(launchAuthorizationBlockers(input))];
+  const closeoutBinding = buildCloseoutBinding(input);
+  const closeoutBindingBlockerList = phase === 'closeout'
+    ? [...new Set(closeoutBindingBlockers(closeoutBinding))]
+    : [];
+  const runtimeBlocker = executionAuthorizationBlocker(launchBlockers, closeoutBindingBlockerList);
+  const executionAuthorized = runtimeBlocker === null;
+  return {
+    surface_kind: 'opl_stage_run_execution_authorization_report',
+    version: 'stage-run-execution-authorization.v1',
+    phase,
+    status: executionAuthorized ? 'authorized' : 'blocked',
+    execution_authorized: executionAuthorized,
+    launch_blockers: launchBlockers,
+    closeout_binding_blockers: closeoutBindingBlockerList,
+    closeout_binding: closeoutBinding,
+    opl_runtime_blocker: runtimeBlocker,
+    authority_boundary: AUTHORITY_BOUNDARY,
   };
 }
 

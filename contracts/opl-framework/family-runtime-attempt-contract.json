@@ -55,6 +55,9 @@
     "stage_attempt_id",
     "provider_kind",
     "idempotency_key",
+    "attempt_lease_ref",
+    "execution_authorization_decision_ref",
+    "closeout_receipt_binding_ref",
     "workflow_id",
     "domain_id",
     "stage_id",
@@ -82,6 +85,9 @@
     "route_impact",
     "usage_projection",
     "closeout_receipt_status",
+    "execution_authorization_status",
+    "attempt_lease_status",
+    "closeout_receipt_binding_status",
     "authority_boundary"
   ],
   "required_projection_fields": [
@@ -99,6 +105,8 @@
     "operator_visibility",
     "current_provider_readiness",
     "completion_boundary",
+    "execution_authorization_boundary",
+    "closeout_receipt_binding_boundary",
     "owner_route_boundary",
     "control_loop_summary",
     "usage_projection",

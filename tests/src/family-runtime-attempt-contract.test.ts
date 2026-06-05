@@ -85,6 +85,9 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'stage_attempt_id',
     'provider_kind',
     'idempotency_key',
+    'attempt_lease_ref',
+    'execution_authorization_decision_ref',
+    'closeout_receipt_binding_ref',
     'workflow_id',
     'domain_id',
     'stage_id',
@@ -109,6 +112,9 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'route_impact',
     'usage_projection',
     'closeout_receipt_status',
+    'execution_authorization_status',
+    'attempt_lease_status',
+    'closeout_receipt_binding_status',
     'authority_boundary',
   ]) {
     assert.ok((contract.required_ledger_fields as string[]).includes(field));
@@ -126,6 +132,8 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'last_observed_projection',
     'operator_visibility',
     'completion_boundary',
+    'execution_authorization_boundary',
+    'closeout_receipt_binding_boundary',
     'owner_route_boundary',
     'control_loop_summary',
     'usage_projection',

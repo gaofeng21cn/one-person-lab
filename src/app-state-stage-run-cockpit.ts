@@ -1,4 +1,4 @@
-import { evaluateStageRunAdmission } from './stage-run-kernel.ts';
+import { evaluateStageRunAdmission, evaluateStageRunExecutionAuthorization } from './stage-run-kernel.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -111,6 +111,30 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
     provider_completed: true,
     read_model_refreshed: true,
   });
+  const executionAuthorization = evaluateStageRunExecutionAuthorization({
+    ...common,
+    phase: 'closeout',
+    selected_executor: 'codex_cli',
+    source_fingerprint: text(currentOwnerDelta.source_fingerprint),
+    idempotency_key: text(currentOwnerDelta.delta_id) ?? runId,
+    provider_attempt_ref: text(currentOwnerDelta.live_attempt_ref),
+    attempt_lease_ref: text(record(currentOwnerDelta.hard_gate).attempt_lease_ref),
+    attempt_lease_status: text(record(currentOwnerDelta.hard_gate).attempt_lease_status) ?? 'active',
+    execution_authorization_decision_ref: text(record(currentOwnerDelta.hard_gate).execution_authorization_decision_ref),
+    workspace_scope_ref: text(record(currentOwnerDelta.audit_refs).workspace_scope_ref)
+      ?? text(currentOwnerDelta.task_or_study_ref),
+    artifact_scope_ref: text(record(currentOwnerDelta.audit_refs).artifact_scope_ref)
+      ?? text(currentOwnerDelta.lineage_ref),
+    forbidden_write_required: false,
+    closeout_receipt_ref: text(currentOwnerDelta.latest_owner_answer_ref),
+    closeout_receipt_stage_run_id: text(record(currentOwnerDelta.hard_gate).closeout_receipt_stage_run_id),
+    closeout_receipt_generation: record(currentOwnerDelta.hard_gate).closeout_receipt_generation,
+    closeout_receipt_manifest_ref: text(record(currentOwnerDelta.hard_gate).closeout_receipt_manifest_ref),
+    stage_manifest_ref: text(record(currentOwnerDelta.hard_gate).stage_manifest_ref),
+    closeout_receipt_current_pointer_ref: text(record(currentOwnerDelta.hard_gate).closeout_receipt_current_pointer_ref),
+    current_pointer_ref: text(record(currentOwnerDelta.hard_gate).current_pointer_ref),
+    closeout_receipt_source_fingerprint: text(record(currentOwnerDelta.hard_gate).closeout_receipt_source_fingerprint),
+  });
 
   return {
     surface_kind: 'opl_app_stage_run_cockpit_projection',
@@ -136,6 +160,7 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
     },
     launch_admission: launchAdmission,
     closeout_admission: closeoutAdmission,
+    execution_authorization: executionAuthorization,
     app_cockpit_policy: {
       default_path_root: 'stage_run_current_owner_delta',
       raw_worklist_default: false,

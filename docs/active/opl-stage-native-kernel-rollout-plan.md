@@ -53,6 +53,8 @@ StageRun Kernel 的目标是让默认路径更短，而不是增加 admission、
 | 检查项 | 必须满足 | 不允许 |
 | --- | --- | --- |
 | `launch_hard_gate` | 只阻断 identity、owner、scope、selected executor、authority boundary、required role artifacts、receipt/blocker shape、forbidden write 和 replay/audit 基础证据。 | 把 prompt、tool、knowledge、rubric completeness 一律变成启动 hard gate。 |
+| `execution_authorization` | provider attempt、attempt lease、execution authorization decision、workspace/artifact scope、source fingerprint 和 idempotency 必须在 launch-hard 后单独成立。 | 用 domain read-model hydrate、旧 dispatch tail、provider trace 或 stale route redrive 代替 execution authorization。 |
+| `closeout_receipt_binding` | closeout receipt 必须绑定 StageRun、stage manifest、current pointer 和 source fingerprint。 | 用 provider completed、read-model refreshed、file presence 或 conformance passed 补 closeout binding。 |
 | `strategy_refs` | prompt/tool/knowledge/evaluation refs 可作为 context、warning、route-back 或 reviewer 输入。 | 用 strategy refs completeness 代替 domain quality gate 或阻塞普通 launch。 |
 | `default_read_surface` | 默认只从 StageRun current owner delta 回答当前 Stage、缺什么 role/receipt/blocker、下一 owner。 | 默认首屏展示 raw worklist、replay packet、provider trace、typed blocker group、evidence ledger browser 或 route variant menu。 |
 | `progress_truth` | progress 从 Stage Folder、manifest、role artifact、owner receipt / typed blocker 和 current pointer 派生。 | 从 SQLite row、Temporal completion、stage_progress_log、readiness clean、verified ledger 或 file presence 推导完成。 |
@@ -70,6 +72,10 @@ launch admission
 closeout admission
   -> 只判断这个 Stage 是否可以被 receipt/blocker 关闭
 ```
+
+`execution authorization` 在 launch admission 之后、实际 provider execution 之前执行。它要求 provider attempt、attempt lease、execution authorization decision、workspace/artifact scope、source fingerprint、idempotency 和 forbidden-write guard 都成立；缺任一项时只返回 OPL-owned execution authorization blocker，owner=`one-person-lab`。这个 blocker 不改变 domain truth，不创建 domain typed blocker，不替 domain owner 签 receipt。
+
+`closeout receipt binding` 在 closeout admission 中单独检查。owner receipt / typed blocker 即使存在，也必须绑定当前 StageRun、stage manifest、current pointer 和 source fingerprint；绑定缺失时继续阻断 closeout。
 
 `launch admission` 的 hard blocker 只允许来自这些事实：
 
@@ -216,6 +222,8 @@ status
 | 缺少 prompt / skill / knowledge refs，但 owner、executor、artifact slots、receipt/blocker shape 完整。 | `launch_blockers=[]`，输出 advisory / route-back，不阻断 launch。 |
 | 缺少 selected executor、authority boundary 或 receipt/blocker shape。 | 进入 `launch_blockers[]`。 |
 | provider completed 且 read-model refreshed，但没有 owner receipt / typed blocker。 | 进入 `closeout_blockers[]`，不得 stage complete。 |
+| provider attempt、attempt lease 或 execution authorization decision 缺失。 | 进入 `execution_authorization` blocker，owner=`one-person-lab`，不得回退到 domain read-model hydrate。 |
+| closeout receipt 没有绑定 StageRun、stage manifest、current pointer 或 source fingerprint。 | 进入 `closeout_binding_blockers[]`，provider completed 或 read-model refreshed 不能补齐。 |
 | gate evidence 存在但没有挂到当前 Stage closeout 或下一 Stage role。 | 进入 `closeout_blockers[]` 或 route-back，不能成为 floating worklist tail。 |
 | route 试图直接写 domain truth、签 receipt、创建 blocker 或执行候选排序。 | 进入 `forbidden_authority_flags[]`。 |
 | App/default CLI 从 raw worklist、readiness 或 replay packet 得出 next action。 | conformance 失败；默认面必须来自 StageRun current owner delta。 |
