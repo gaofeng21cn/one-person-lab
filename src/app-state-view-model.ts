@@ -1,4 +1,4 @@
-import { buildAppStageRunCockpit } from './app-state-stage-run-cockpit.ts';
+import { buildCurrentOwnerDeltaTopline } from './current-owner-delta-topline.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -483,8 +483,9 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
   const status = temporal.ready === true ? 'ready' : 'attention_needed';
   const safeActionRoutes = buildSafeActionRoutes(input);
   const currentOwnerDeltaReadModel = asRecord(input.currentOwnerDeltaReadModel);
-  const currentOwnerDelta = asRecord(currentOwnerDeltaReadModel.current_owner_delta);
-  const stageRunCockpit = buildAppStageRunCockpit(currentOwnerDelta);
+  const currentOwnerDeltaTopline = buildCurrentOwnerDeltaTopline({
+    currentOwnerDeltaReadModel,
+  });
   const defaultReadSurfacePolicy = buildDefaultReadSurfacePolicy(input);
   const lazyRefs = [
     {
@@ -509,15 +510,11 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
     },
     full_detail_surface: 'opl runtime app-operator-drilldown --detail full --json',
     default_read_surface_policy: defaultReadSurfacePolicy,
-    current_owner_delta: currentOwnerDelta,
-    current_owner_delta_read_model: currentOwnerDeltaReadModel,
-    stage_run_cockpit: stageRunCockpit,
+    ...currentOwnerDeltaTopline,
     workbench: {
       view_model_schema: 'opl_app_operator_workbench.v1',
       default_read_surface_policy: defaultReadSurfacePolicy,
-      current_owner_delta: currentOwnerDelta,
-      current_owner_delta_read_model: currentOwnerDeltaReadModel,
-      stage_run_cockpit: stageRunCockpit,
+      ...currentOwnerDeltaTopline,
       summary_cards: buildSummaryCards(input),
       sections: buildSections(input),
       navigation: buildNavigation(),

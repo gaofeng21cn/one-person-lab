@@ -3,6 +3,7 @@ import { buildCurrentOwnerDeltaReadModel } from '../../../../src/current-owner-d
 import {
   assertCurrentOwnerDeltaReadModel,
   assertCurrentOwnerDeltaProjection,
+  assertCurrentOwnerDeltaToplineNextAction,
 } from './owner-payload-workorder-assertions.ts';
 
 function bindMasWorkspaceForAppState(input: {
@@ -278,6 +279,10 @@ exit 1
           };
           current_owner_delta: Record<string, any>;
           current_owner_delta_read_model: Record<string, any>;
+          operator_next_action: Record<string, any>;
+          operator_next_action_kind: string;
+          operator_next_action_owner: string;
+          operator_next_action_authority_boundary: Record<string, any>;
           stage_run_cockpit: {
             surface_kind: string;
             projection_role: string;
@@ -318,12 +323,18 @@ exit 1
               read_model_counts_as_closeout: boolean;
             };
           };
+          stage_run_cockpit_summary: Record<string, any>;
           workbench: {
             view_model_schema: string;
             default_read_surface_policy: Record<string, any>;
             current_owner_delta: Record<string, any>;
             current_owner_delta_read_model: Record<string, any>;
+            operator_next_action: Record<string, any>;
+            operator_next_action_kind: string;
+            operator_next_action_owner: string;
+            operator_next_action_authority_boundary: Record<string, any>;
             stage_run_cockpit: Record<string, any>;
+            stage_run_cockpit_summary: Record<string, any>;
             summary_cards: Array<{ card_id: string; source_ref: string; value: string | number }>;
             sections: Array<{ section_id: string; source_ref: string; lazy: boolean }>;
             navigation: { replacement_policy: string };
@@ -521,6 +532,12 @@ exit 1
       output.app_state.operator.stage_run_cockpit,
       output.app_state.operator.workbench.stage_run_cockpit,
     );
+    assert.deepEqual(
+      output.app_state.operator.stage_run_cockpit_summary,
+      output.app_state.operator.workbench.stage_run_cockpit_summary,
+    );
+    assertCurrentOwnerDeltaToplineNextAction(output.app_state.operator);
+    assertCurrentOwnerDeltaToplineNextAction(output.app_state.operator.workbench);
     assert.equal(output.app_state.operator.stage_run_cockpit.surface_kind, 'opl_app_stage_run_cockpit_projection');
     assert.equal(
       output.app_state.operator.stage_run_cockpit.projection_role,
