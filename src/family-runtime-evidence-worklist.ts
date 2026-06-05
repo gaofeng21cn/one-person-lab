@@ -43,6 +43,7 @@ import {
   OPEN_SAFE_ACTION_PAYLOAD_REQUIREMENT_SEMANTICS,
 } from './family-runtime-evidence-worklist-parts/constants.ts';
 import { writeCurrentOwnerDeltaReadModelProjectionCache } from './current-owner-delta-read-model-cache.ts';
+import { buildCurrentOwnerDeltaTopline } from './current-owner-delta-topline.ts';
 
 type EvidenceWorklistInput = {
   familyDefaults: boolean;
@@ -881,6 +882,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
     domainDispatchEvidenceWorkorderSummary,
     stageReplayMissingReceiptWorkorderSummary,
   });
+  const ownerDeltaTopline = buildCurrentOwnerDeltaTopline({ currentOwnerDeltaReadModel });
   writeCurrentOwnerDeltaReadModelProjectionCache({
     readModel: currentOwnerDeltaReadModel,
     sourceSurface: 'family_runtime_evidence_worklist',
@@ -950,8 +952,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
     terminal_observation_sync: terminalObservationSync,
     evidence_envelope: compactEvidenceEnvelope,
     progress_first_operator_summary: progressFirstOperatorSummary,
-    current_owner_delta: currentOwnerDeltaReadModel.current_owner_delta,
-    current_owner_delta_read_model: currentOwnerDeltaReadModel,
+    ...ownerDeltaTopline,
     next_safe_actions: defaultNextSafeActions,
     audit_worklist_next_safe_actions: ownerDeltaAuditWorklistNextSafeActions,
     effective_current_context: record(drilldown.effective_current_context),

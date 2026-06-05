@@ -57,7 +57,13 @@ type PayloadHandoffWorklist = {
     open_worklist_item_count: number;
     open_safe_action_payload_required_item_count: number;
   };
+  current_owner_delta?: JsonRecord;
   current_owner_delta_read_model?: JsonRecord;
+  operator_next_owner?: string;
+  operator_required_delta?: string;
+  operator_payload_requirement?: string;
+  operator_accepted_answer_shape?: string[];
+  stage_run_cockpit_summary?: JsonRecord;
   next_safe_actions?: PayloadHandoffAction[];
   audit_worklist_next_safe_actions?: PayloadHandoffAction[];
   worklist_items: Array<{
@@ -556,6 +562,28 @@ test('family-runtime evidence-worklist summary next actions carry domain-dispatc
       'app_operator_drilldown_ref',
     ],
   });
+  assert.deepEqual(
+    worklist.current_owner_delta,
+    worklist.current_owner_delta_read_model?.current_owner_delta,
+  );
+  assert.equal(worklist.operator_next_owner, worklist.current_owner_delta?.current_owner);
+  assert.equal(
+    worklist.operator_required_delta,
+    worklist.current_owner_delta?.desired_delta_description,
+  );
+  assert.equal(
+    worklist.operator_payload_requirement,
+    worklist.current_owner_delta?.payload_requirement,
+  );
+  assert.deepEqual(
+    worklist.operator_accepted_answer_shape,
+    worklist.current_owner_delta?.accepted_answer_shape,
+  );
+  assert.equal(
+    worklist.stage_run_cockpit_summary?.current_owner,
+    worklist.current_owner_delta?.current_owner,
+  );
+  assert.equal(worklist.stage_run_cockpit_summary?.refs_only, true);
   const acceptedReturnShapes =
     (worklist.current_owner_delta_read_model as JsonRecord)
       .accepted_return_shapes as unknown[];
