@@ -214,11 +214,42 @@ exit 1
           };
           current_owner_delta: Record<string, any>;
           compact_owner_delta_projection: Record<string, any>;
+          stage_run_cockpit: {
+            surface_kind: string;
+            projection_role: string;
+            default_read_surface: string;
+            stage_run_current_owner_delta: {
+              current_owner: string;
+              required_delta: string;
+              accepted_return_shapes: string[];
+              missing_role_or_answer_summary: {
+                owner_receipt_or_typed_blocker_missing: boolean;
+              };
+            };
+            launch_admission: {
+              default_blocked: boolean;
+              launch_blockers: string[];
+              advisory_warnings: string[];
+            };
+            closeout_admission: {
+              closeout_blockers: string[];
+              forbidden_authority_flags: string[];
+            };
+            authority_boundary: {
+              refs_only: boolean;
+              can_write_domain_truth: boolean;
+              can_create_owner_receipt: boolean;
+              can_create_typed_blocker: boolean;
+              provider_completion_counts_as_closeout: boolean;
+              read_model_counts_as_closeout: boolean;
+            };
+          };
           workbench: {
             view_model_schema: string;
             default_read_surface_policy: Record<string, any>;
             current_owner_delta: Record<string, any>;
             compact_owner_delta_projection: Record<string, any>;
+            stage_run_cockpit: Record<string, any>;
             summary_cards: Array<{ card_id: string; source_ref: string; value: string | number }>;
             sections: Array<{ section_id: string; source_ref: string; lazy: boolean }>;
             navigation: { replacement_policy: string };
@@ -411,6 +442,63 @@ exit 1
     assert.deepEqual(
       output.app_state.operator.compact_owner_delta_projection,
       output.app_state.operator.workbench.compact_owner_delta_projection,
+    );
+    assert.deepEqual(
+      output.app_state.operator.stage_run_cockpit,
+      output.app_state.operator.workbench.stage_run_cockpit,
+    );
+    assert.equal(output.app_state.operator.stage_run_cockpit.surface_kind, 'opl_app_stage_run_cockpit_projection');
+    assert.equal(
+      output.app_state.operator.stage_run_cockpit.projection_role,
+      'app_consumes_stage_run_current_owner_delta',
+    );
+    assert.equal(output.app_state.operator.stage_run_cockpit.default_read_surface, 'stage_run_current_owner_delta');
+    assert.equal(
+      output.app_state.operator.stage_run_cockpit.stage_run_current_owner_delta.current_owner,
+      output.app_state.operator.current_owner_delta.current_owner,
+    );
+    assert.equal(
+      output.app_state.operator.stage_run_cockpit.stage_run_current_owner_delta.required_delta,
+      output.app_state.operator.current_owner_delta.desired_delta_description,
+    );
+    assert.equal(
+      output.app_state.operator.stage_run_cockpit.stage_run_current_owner_delta.accepted_return_shapes
+        .includes('typed_blocker_ref'),
+      true,
+    );
+    assert.equal(
+      output.app_state.operator.stage_run_cockpit.stage_run_current_owner_delta
+        .missing_role_or_answer_summary.owner_receipt_or_typed_blocker_missing,
+      true,
+    );
+    assert.equal(output.app_state.operator.stage_run_cockpit.launch_admission.default_blocked, false);
+    assert.deepEqual(output.app_state.operator.stage_run_cockpit.launch_admission.launch_blockers, []);
+    assert.equal(
+      output.app_state.operator.stage_run_cockpit.launch_admission.advisory_warnings
+        .includes('strategy_ref_missing:prompt_refs'),
+      true,
+    );
+    assert.equal(
+      output.app_state.operator.stage_run_cockpit.closeout_admission.closeout_blockers
+        .includes('owner_receipt_or_typed_blocker_missing'),
+      true,
+    );
+    assert.equal(
+      output.app_state.operator.stage_run_cockpit.closeout_admission.forbidden_authority_flags
+        .includes('provider_completed_cannot_close_stage'),
+      true,
+    );
+    assert.equal(output.app_state.operator.stage_run_cockpit.authority_boundary.refs_only, true);
+    assert.equal(output.app_state.operator.stage_run_cockpit.authority_boundary.can_write_domain_truth, false);
+    assert.equal(output.app_state.operator.stage_run_cockpit.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(output.app_state.operator.stage_run_cockpit.authority_boundary.can_create_typed_blocker, false);
+    assert.equal(
+      output.app_state.operator.stage_run_cockpit.authority_boundary.provider_completion_counts_as_closeout,
+      false,
+    );
+    assert.equal(
+      output.app_state.operator.stage_run_cockpit.authority_boundary.read_model_counts_as_closeout,
+      false,
     );
     assertCurrentOwnerDeltaProjection(output.app_state.operator.current_owner_delta);
     assertCompactOwnerDeltaProjection(output.app_state.operator.workbench.compact_owner_delta_projection, {

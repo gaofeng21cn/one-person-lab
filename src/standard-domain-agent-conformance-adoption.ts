@@ -1,6 +1,7 @@
 import {
   isRecord,
   optionalString,
+  collectFieldValues,
   readJsonFile,
   stringList,
   type JsonRecord,
@@ -126,6 +127,39 @@ const REQUIRED_STAGE_RUN_CANARY_AUTHORITY_FALSE_FLAGS = [
   'opl_can_authorize_quality_or_export',
 ];
 
+const FORBIDDEN_STAGE_RUN_CANARY_CLAIM_FIELDS = [
+  'domain_ready',
+  'domain_ready_claimed',
+  'claims_domain_ready',
+  'quality_ready',
+  'quality_verdict',
+  'quality_or_export_authorized',
+  'export_ready',
+  'export_verdict',
+  'publication_ready',
+  'artifact_ready',
+  'artifact_authority',
+  'production_ready',
+  'live_domain_progress',
+  'live_domain_progress_claimed',
+  'claims_live_domain_progress',
+  'closeout_claims_live_domain_progress',
+];
+
+const FORBIDDEN_STAGE_RUN_CANARY_CLAIM_STRING_VALUES = [
+  'true',
+  'ready',
+  'accepted',
+  'approved',
+  'authorized',
+  'complete',
+  'completed',
+  'passed',
+  'production_ready',
+  'domain_ready',
+  'live_domain_progress',
+];
+
 function refString(value: unknown) {
   return optionalString(value) ?? (isRecord(value) ? optionalString(value.ref) : null);
 }
@@ -143,6 +177,124 @@ function refList(value: unknown): string[] {
     ...(directRef ? [directRef] : []),
     ...nestedRefs,
   ])];
+}
+
+function falseOrNeutralClaimValue(value: unknown) {
+  if (value === false || value === null || value === undefined) {
+    return true;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    return normalized === ''
+      || normalized === 'false'
+      || normalized === '0'
+      || normalized === 'pending'
+      || normalized === 'domain_gate_pending'
+      || normalized.startsWith('not_')
+      || normalized.startsWith('no_')
+      || normalized.endsWith('_pending');
+  }
+  return false;
+}
+
+function buildForbiddenStageRunCanaryClaimFindings(evidence: JsonRecord | null) {
+  if (!evidence) {
+    return [];
+  }
+  return FORBIDDEN_STAGE_RUN_CANARY_CLAIM_FIELDS.flatMap((field) =>
+    collectFieldValues(evidence, field)
+      .filter((entry) => {
+        if (!falseOrNeutralClaimValue(entry.value)) {
+          return true;
+        }
+        if (typeof entry.value !== 'string') {
+          return false;
+        }
+        return FORBIDDEN_STAGE_RUN_CANARY_CLAIM_STRING_VALUES.includes(
+          entry.value.trim().toLowerCase(),
+        );
+      })
+      .map((entry) => ({
+        path: entry.path,
+        field,
+        value: entry.value,
+      }))
+  );
+}
+
+function buildStageRunCanaryOperatorSummary(input: {
+  authority: JsonRecord;
+  blockers: string[];
+  closeout: JsonRecord;
+  currentPointerRef: string | null;
+  domainId: string | null;
+  evidenceScope: string | null;
+  roleArtifactRefs: JsonRecord;
+  stageId: string | null;
+  stageManifestRef: string | null;
+  stageRunRef: string | null;
+  strategyTrace: JsonRecord;
+  terminalOutcome: string | null;
+}) {
+  const cognitiveWork = REQUIRED_STAGE_RUN_CANARY_STRATEGY_LAYERS.map((layer) => ({
+    layer,
+    refs: refList(input.strategyTrace[layer]),
+    ref_count: refList(input.strategyTrace[layer]).length,
+  }));
+  const roleArtifacts = REQUIRED_STAGE_RUN_CANARY_ROLE_ARTIFACT_REFS.map((field) => ({
+    role: field,
+    ref: refString(input.roleArtifactRefs[field]),
+  }));
+  const closeoutRef = refString(input.closeout.owner_receipt_ref)
+    ?? refString(input.closeout.typed_blocker_ref);
+  return {
+    surface_kind: 'opl_stage_run_controlled_canary_operator_summary',
+    owner: 'one-person-lab',
+    status: input.blockers.length === 0 ? 'ready' : 'blocked',
+    read_model_role: 'operator_visible_cognitive_work_refs_without_domain_progress_claim',
+    domain_id: input.domainId,
+    stage_id: input.stageId,
+    evidence_scope: input.evidenceScope,
+    stage_run_ref: input.stageRunRef,
+    stage_manifest_ref: input.stageManifestRef,
+    current_pointer_ref: input.currentPointerRef,
+    cognitive_work: {
+      strategy_layer_count: cognitiveWork.length,
+      strategy_ref_count: cognitiveWork.reduce((total, layer) => total + layer.ref_count, 0),
+      layers: cognitiveWork,
+    },
+    role_artifacts: {
+      required_role_count: roleArtifacts.length,
+      resolved_role_count: roleArtifacts.filter((artifact) => artifact.ref !== null).length,
+      refs: roleArtifacts,
+    },
+    closeout_summary: {
+      terminal_outcome: input.terminalOutcome,
+      closeout_ref: closeoutRef,
+      independent_quality_gate_ref_count:
+        refList(input.strategyTrace.independent_quality_gate).length,
+      same_attempt_self_review: input.closeout.same_attempt_self_review ?? null,
+    },
+    visible_progress_policy: {
+      controlled_fixture_counts_as_live_domain_progress: false,
+      conformance_pass_counts_as_domain_ready: false,
+      provider_completion_counts_as_closeout:
+        input.authority.provider_completion_counts_as_closeout ?? null,
+      read_model_counts_as_closeout:
+        input.authority.read_model_counts_as_closeout ?? null,
+    },
+    authority_boundary: {
+      refs_only: input.authority.refs_only ?? null,
+      can_claim_live_domain_progress: false,
+      can_claim_domain_ready: false,
+      can_claim_quality_or_export_ready: false,
+      can_claim_artifact_ready: false,
+      can_claim_production_ready: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+    },
+    blockers: input.blockers,
+  };
 }
 
 const REQUIRED_STATE_INDEX_DATABASES = [
@@ -557,6 +709,7 @@ export function buildStageRunCanaryEvidenceChecks(repoDir: string) {
   const closeout = isRecord(evidence?.closeout) ? evidence.closeout : {};
   const authority = isRecord(evidence?.authority_boundary) ? evidence.authority_boundary : {};
   const terminalOutcome = optionalString(closeout.terminal_outcome);
+  const forbiddenClaimFindings = buildForbiddenStageRunCanaryClaimFindings(evidence);
   const hasCloseoutRef = refString(closeout.owner_receipt_ref) !== null
     || refString(closeout.typed_blocker_ref) !== null;
   const blockers = [
@@ -596,18 +749,26 @@ export function buildStageRunCanaryEvidenceChecks(repoDir: string) {
     ...REQUIRED_STAGE_RUN_CANARY_AUTHORITY_FALSE_FLAGS
       .filter((flag) => authority[flag] !== false)
       .map((flag) => `stage_run_canary_evidence_authority_flag_must_be_false:${flag}`),
+    ...forbiddenClaimFindings
+      .map((finding) => `stage_run_canary_evidence_forbidden_claim:${finding.field}:${finding.path}`),
   ].filter((entry): entry is string => Boolean(entry));
+  const evidenceScope = optionalString(evidence?.evidence_scope);
+  const domainId = optionalString(evidence?.domain_id);
+  const stageId = optionalString(evidence?.stage_id);
+  const stageRunRef = refString(evidence?.stage_run_ref);
+  const stageManifestRef = refString(evidence?.stage_manifest_ref);
+  const currentPointerRef = refString(evidence?.current_pointer_ref);
   return {
     status: blockers.length === 0 ? 'passed' : 'blocked',
     evidence_status: blockers.length === 0 ? 'declared' : 'blocked',
     evidence_source: 'contracts/stage_run_canary_evidence.json',
-    evidence_scope: optionalString(evidence?.evidence_scope),
-    domain_id: optionalString(evidence?.domain_id),
+    evidence_scope: evidenceScope,
+    domain_id: domainId,
     canary_id: optionalString(evidence?.canary_id),
-    stage_id: optionalString(evidence?.stage_id),
-    stage_run_ref: refString(evidence?.stage_run_ref),
-    stage_manifest_ref: refString(evidence?.stage_manifest_ref),
-    current_pointer_ref: refString(evidence?.current_pointer_ref),
+    stage_id: stageId,
+    stage_run_ref: stageRunRef,
+    stage_manifest_ref: stageManifestRef,
+    current_pointer_ref: currentPointerRef,
     strategy_trace: Object.fromEntries(
       REQUIRED_STAGE_RUN_CANARY_STRATEGY_LAYERS.map((layer) => [layer, refList(strategyTrace[layer])]),
     ),
@@ -626,6 +787,27 @@ export function buildStageRunCanaryEvidenceChecks(repoDir: string) {
         REQUIRED_STAGE_RUN_CANARY_AUTHORITY_FALSE_FLAGS.map((flag) => [flag, authority[flag] ?? null]),
       ),
     },
+    forbidden_claim_scan: {
+      status: forbiddenClaimFindings.length === 0 ? 'passed' : 'blocked',
+      forbidden_claim_count: forbiddenClaimFindings.length,
+      findings: forbiddenClaimFindings,
+      scanned_source: 'contracts/stage_run_canary_evidence.json',
+      policy: 'controlled_canary_may_show_cognitive_work_refs_but_cannot_claim_live_domain_progress_domain_ready_quality_export_artifact_or_production_ready',
+    },
+    operator_summary: buildStageRunCanaryOperatorSummary({
+      authority,
+      blockers,
+      closeout,
+      currentPointerRef,
+      domainId,
+      evidenceScope,
+      roleArtifactRefs,
+      stageId,
+      stageManifestRef,
+      stageRunRef,
+      strategyTrace,
+      terminalOutcome,
+    }),
     blockers,
   };
 }

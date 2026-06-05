@@ -242,6 +242,12 @@ test('agents conformance reports structural readiness separately from production
     repo.stage_run_canary_evidence_checks.authority_boundary.controlled_canary_claims_live_domain_progress,
     false,
   );
+  assert.equal(repo.legacy_runtime_residue_guard.status, 'passed');
+  assert.equal(repo.legacy_runtime_residue_guard.active_private_generic_residue_count, 0);
+  assert.equal(
+    repo.legacy_runtime_residue_guard.authority_boundary.domain_agent_can_own_generic_scheduler_or_queue,
+    false,
+  );
   assert.deepEqual(repo.workspace_file_lifecycle_checks.repo_source_boundaries.required_roots, [
     'agent/',
     'contracts/',

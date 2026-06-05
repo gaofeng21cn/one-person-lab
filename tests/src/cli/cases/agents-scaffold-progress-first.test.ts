@@ -115,6 +115,50 @@ test('agents scaffold emits canonical Foundry series design profile', () => {
   }
 });
 
+test('agents scaffold emits domain-specific controlled StageRun canary evidence', () => {
+  const described = runCli([
+    'agents',
+    'scaffold',
+    '--domain-id',
+    'award-foundry',
+  ]).standard_domain_agent_scaffold;
+
+  assert.equal(described.stage_run_canary_evidence.domain_id, 'award-foundry');
+  assert.equal(
+    described.stage_run_canary_evidence.evidence_scope,
+    'controlled_fixture_not_live_domain_progress',
+  );
+  assert.equal(
+    described.stage_run_canary_evidence.stage_run_ref,
+    'stage-run-ref:award-foundry/controlled-canary',
+  );
+  assert.equal(
+    described.stage_run_canary_evidence.closeout.typed_blocker_ref,
+    'typed-blocker-ref:award-foundry/controlled-canary',
+  );
+
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-canary-scaffold-'));
+  try {
+    runCli([
+      'agents',
+      'scaffold',
+      '--target-dir',
+      targetDir,
+      '--domain-id',
+      'award-foundry',
+    ]);
+    const evidence = JSON.parse(
+      fs.readFileSync(path.join(targetDir, 'contracts/stage_run_canary_evidence.json'), 'utf8'),
+    );
+    assert.equal(evidence.domain_id, 'award-foundry');
+    assert.equal(evidence.canary_id, 'award-foundry.controlled-stage-run-canary.v1');
+    assert.equal(evidence.strategy_trace.candidate_generation[0], 'candidate-pool-ref:award-foundry/controlled-canary');
+    assert.equal(evidence.authority_boundary.controlled_canary_claims_live_domain_progress, false);
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
 test('agents scaffold validation blocks generated skeletons missing stage pack v2 fields', () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-pack-v2-missing-'));
 

@@ -234,3 +234,65 @@ test('agents conformance blocks controlled StageRun canary evidence that claims 
     true,
   );
 });
+
+test('agents conformance projects controlled StageRun canary evidence for operator reading', () => {
+  const repoDir = buildReadyAgentRepo();
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+  const summary = report.reports[0].stage_run_canary_evidence_checks.operator_summary;
+
+  assert.equal(summary.surface_kind, 'opl_stage_run_controlled_canary_operator_summary');
+  assert.equal(summary.status, 'ready');
+  assert.equal(summary.domain_id, 'sample-brief-agent');
+  assert.equal(summary.read_model_role, 'operator_visible_cognitive_work_refs_without_domain_progress_claim');
+  assert.equal(summary.cognitive_work.strategy_layer_count, 6);
+  assert.equal(summary.role_artifacts.required_role_count, 6);
+  assert.equal(summary.role_artifacts.resolved_role_count, 6);
+  assert.equal(summary.visible_progress_policy.controlled_fixture_counts_as_live_domain_progress, false);
+  assert.equal(summary.visible_progress_policy.conformance_pass_counts_as_domain_ready, false);
+  assert.equal(summary.authority_boundary.can_claim_domain_ready, false);
+  assert.equal(summary.authority_boundary.can_claim_quality_or_export_ready, false);
+  assert.equal(summary.authority_boundary.can_claim_production_ready, false);
+});
+
+test('agents conformance blocks controlled StageRun canary evidence overclaim fields', () => {
+  const repoDir = buildReadyAgentRepo();
+  const evidencePath = path.join(repoDir, 'contracts', 'stage_run_canary_evidence.json');
+  const evidence = JSON.parse(fs.readFileSync(evidencePath, 'utf8'));
+  evidence.operator_projection = {
+    domain_ready: true,
+    quality_verdict: 'approved',
+    export_ready: 'ready',
+    production_ready: 'complete',
+  };
+  writeJson(evidencePath, evidence);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+  const checks = report.reports[0].stage_run_canary_evidence_checks;
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(checks.forbidden_claim_scan.status, 'blocked');
+  assert.equal(checks.forbidden_claim_scan.forbidden_claim_count, 4);
+  assert.equal(
+    checks.blockers.some((blocker: string) =>
+      blocker.startsWith('stage_run_canary_evidence_forbidden_claim:domain_ready:')
+    ),
+    true,
+  );
+  assert.equal(
+    checks.blockers.some((blocker: string) =>
+      blocker.startsWith('stage_run_canary_evidence_forbidden_claim:quality_verdict:')
+    ),
+    true,
+  );
+});

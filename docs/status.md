@@ -203,7 +203,7 @@ Repo audit 的 current 读法是：OPL 默认审计面把 active private generic
 
 Substrate projection 证据显示：`opl substrate projection --domain med-autoscience --json` 可解析 MAS 暴露的 body-free source/artifact/memory refs 与 lifecycle projection。OPL 只索引 MAS manifest 暴露的 body-free source/artifact/memory refs；source truth、memory body、artifact body、publication quality verdict 和 artifact mutation authority 仍归 MAS。
 
-当前 active gap 与实施顺序以 [OPL Family 当前状态与理想目标差距](./active/current-state-vs-ideal-gap.md) 和 [生产级框架闭环差距矩阵](./active/production-framework-closure-gap-matrix.md) 为准。dated proof、receipt 明细和阶段 closeout 流水保存在 [OPL family 文档过程归档 2026-05](./history/process/plans/2026-05-18-opl-family-doc-process-history.md)，不在本页展开。
+当前 active gap 与实施顺序只以 [OPL Family 当前状态与理想目标差距](./active/current-state-vs-ideal-gap.md) 为准。[生产级框架闭环差距矩阵](./active/production-framework-closure-gap-matrix.md) 只解释 production closure evidence 如何被唯一 active owner 消费，不维护独立执行顺序。dated proof、receipt 明细和阶段 closeout 流水保存在 [OPL family 文档过程归档 2026-05](./history/process/plans/2026-05-18-opl-family-doc-process-history.md)，不在本页展开。
 
 ## 当前功能/结构差距
 

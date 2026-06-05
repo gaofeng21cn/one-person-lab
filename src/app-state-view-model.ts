@@ -1,3 +1,5 @@
+import { buildAppStageRunCockpit } from './app-state-stage-run-cockpit.ts';
+
 type JsonRecord = Record<string, unknown>;
 
 type OplAppOperatorViewModelInput = {
@@ -485,6 +487,7 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
   const safeActionRoutes = buildSafeActionRoutes(input);
   const compactOwnerDeltaProjection = asRecord(input.compactOwnerDeltaProjection);
   const currentOwnerDelta = asRecord(compactOwnerDeltaProjection.current_owner_delta);
+  const stageRunCockpit = buildAppStageRunCockpit(currentOwnerDelta);
   const defaultReadSurfacePolicy = buildDefaultReadSurfacePolicy(input);
   const lazyRefs = [
     {
@@ -511,11 +514,13 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
     default_read_surface_policy: defaultReadSurfacePolicy,
     current_owner_delta: currentOwnerDelta,
     compact_owner_delta_projection: compactOwnerDeltaProjection,
+    stage_run_cockpit: stageRunCockpit,
     workbench: {
       view_model_schema: 'opl_app_operator_workbench.v1',
       default_read_surface_policy: defaultReadSurfacePolicy,
       current_owner_delta: currentOwnerDelta,
       compact_owner_delta_projection: compactOwnerDeltaProjection,
+      stage_run_cockpit: stageRunCockpit,
       summary_cards: buildSummaryCards(input),
       sections: buildSections(input),
       navigation: buildNavigation(),

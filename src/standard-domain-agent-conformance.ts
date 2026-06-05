@@ -279,6 +279,57 @@ function buildPrivateSurfaceChecks(repoDir: string) {
   };
 }
 
+function buildLegacyRuntimeResidueGuard(privateSurfaceChecks: ReturnType<typeof buildPrivateSurfaceChecks>) {
+  const blockers = [
+    privateSurfaceChecks.active_private_generic_residue_count === 0
+      ? null
+      : `legacy_runtime_residue_active_private_generic_residue_not_retired:${privateSurfaceChecks.active_private_generic_residue_count}`,
+    privateSurfaceChecks.default_watchlist_count === 0
+      ? null
+      : `legacy_runtime_residue_default_watchlist_not_empty:${privateSurfaceChecks.default_watchlist_count}`,
+    privateSurfaceChecks.domain_can_claim_generic_runtime_owner === false
+      ? null
+      : 'legacy_runtime_residue_domain_can_claim_generic_runtime_owner_must_be_false',
+    privateSurfaceChecks.domain_repo_can_own_generated_surface === true
+      ? 'legacy_runtime_residue_domain_repo_can_own_generated_surface_must_not_be_true'
+      : null,
+  ].filter((entry): entry is string => Boolean(entry));
+  return {
+    surface_kind: 'opl_legacy_runtime_residue_guard',
+    owner: 'one-person-lab',
+    status: blockers.length === 0 ? 'passed' : 'blocked',
+    guard_role: 'prevent_domain_agent_private_scheduler_runner_session_status_workbench_residue_from_returning_as_active_runtime',
+    active_private_generic_residue_count: privateSurfaceChecks.active_private_generic_residue_count,
+    default_watchlist_count: privateSurfaceChecks.default_watchlist_count,
+    private_platform_residue_inventory_count: privateSurfaceChecks.private_platform_residue_inventory_count,
+    private_platform_residue_module_ids: privateSurfaceChecks.private_platform_residue_module_ids,
+    accepted_residue_roles: [
+      'minimal_authority_function',
+      'refs_only_domain_adapter',
+      'domain_handler_target',
+      'provenance_or_fixture',
+      'history_or_tombstone',
+    ],
+    forbidden_active_runtime_roles: [
+      'repo_owned_scheduler',
+      'repo_owned_runner',
+      'repo_owned_session_store',
+      'repo_owned_status_shell',
+      'repo_owned_workbench_wrapper',
+      'repo_owned_sidecar_wrapper',
+      'repo_owned_generic_persistence_engine',
+    ],
+    authority_boundary: {
+      domain_agent_can_own_generic_scheduler_or_queue: false,
+      domain_agent_can_claim_generated_surface_owner: false,
+      guard_can_delete_domain_files: false,
+      guard_can_write_domain_truth: false,
+      guard_can_authorize_quality_or_export: false,
+    },
+    blockers,
+  };
+}
+
 function buildRepoConformance(input: RepoInput) {
   const repoDir = path.resolve(input.repo_dir);
   const domainId = readDomainId(repoDir, input.requested_agent_id);
@@ -286,6 +337,7 @@ function buildRepoConformance(input: RepoInput) {
   const packCompilerChecks = buildPackCompilerChecks(repoDir);
   const generatedSurfaceHandoffChecks = buildGeneratedSurfaceHandoffChecks(repoDir);
   const privateSurfaceChecks = buildPrivateSurfaceChecks(repoDir);
+  const legacyRuntimeResidueGuard = buildLegacyRuntimeResidueGuard(privateSurfaceChecks);
   const generatedInterfaceChecks = buildGeneratedInterfaceCheck(repoDir);
   const platformSurfaceOwnershipChecks = buildAgentPlatformSurfaceOwnershipForRepo(repoDir, input.requested_agent_id);
   const physicalMorphologyChecks = buildPhysicalMorphologyChecks(repoDir, domainId);
@@ -301,6 +353,7 @@ function buildRepoConformance(input: RepoInput) {
     ...packCompilerChecks.blockers,
     ...generatedSurfaceHandoffChecks.blockers,
     ...privateSurfaceChecks.blockers,
+    ...legacyRuntimeResidueGuard.blockers,
     ...generatedInterfaceChecks.blockers,
     ...platformSurfaceOwnershipChecks.blockers,
     ...physicalMorphologyChecks.blockers,
@@ -327,6 +380,7 @@ function buildRepoConformance(input: RepoInput) {
     pack_compiler_checks: packCompilerChecks,
     generated_surface_handoff_checks: generatedSurfaceHandoffChecks,
     private_surface_checks: privateSurfaceChecks,
+    legacy_runtime_residue_guard: legacyRuntimeResidueGuard,
     generated_interface_checks: generatedInterfaceChecks,
     platform_surface_ownership_checks: platformSurfaceOwnershipChecks,
     physical_morphology_checks: physicalMorphologyChecks,

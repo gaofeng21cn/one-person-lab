@@ -20,7 +20,7 @@ import {
   STAGE_RUN_KERNEL_PROFILE,
   WORKSPACE_FILE_LIFECYCLE_POLICY,
 } from './standard-domain-agent-scaffold-constants.ts';
-import { STAGE_RUN_CANARY_EVIDENCE } from './standard-domain-agent-scaffold-stage-run-canary.ts';
+import { buildStageRunCanaryEvidence } from './standard-domain-agent-scaffold-stage-run-canary.ts';
 
 export interface ScaffoldFile {
   path: string;
@@ -773,35 +773,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
     {
       path: 'contracts/stage_run_canary_evidence.json',
       content: json({
-        ...STAGE_RUN_CANARY_EVIDENCE,
-        domain_id: domainId,
-        canary_id: `${domainId}.controlled-stage-run-canary.v1`,
-        stage_id: STARTER_STAGE_ID,
-        stage_run_ref: `stage-run-ref:${domainId}/controlled-canary`,
-        stage_manifest_ref: `stage-manifest-ref:${domainId}/controlled-canary`,
-        current_pointer_ref: `stage-current-pointer-ref:${domainId}/controlled-canary`,
-        strategy_trace: {
-          candidate_generation: [`candidate-pool-ref:${domainId}/controlled-canary`],
-          grounded_reflection: [`reflection-review-ref:${domainId}/controlled-canary`],
-          comparative_selection: [`ranking-selection-ref:${domainId}/controlled-canary`],
-          evolution_and_revision: [`revision-lineage-ref:${domainId}/controlled-canary`],
-          meta_review_learning: [`meta-review-ref:${domainId}/controlled-canary`],
-          independent_quality_gate: [`independent-gate-ref:${domainId}/controlled-canary`],
-        },
-        role_artifact_refs: {
-          candidate_pool_ref: `candidate-pool-ref:${domainId}/controlled-canary`,
-          reflection_review_ref: `reflection-review-ref:${domainId}/controlled-canary`,
-          ranking_selection_ref: `ranking-selection-ref:${domainId}/controlled-canary`,
-          revision_lineage_ref: `revision-lineage-ref:${domainId}/controlled-canary`,
-          meta_review_ref: `meta-review-ref:${domainId}/controlled-canary`,
-          independent_gate_ref: `independent-gate-ref:${domainId}/controlled-canary`,
-        },
-        closeout: {
-          terminal_outcome: 'typed_blocker',
-          typed_blocker_ref: `typed-blocker-ref:${domainId}/controlled-canary`,
-          owner_receipt_ref: null,
-          same_attempt_self_review: false,
-        },
+        ...buildStageRunCanaryEvidence(domainId, STARTER_STAGE_ID),
         marker: SCAFFOLD_MARKER,
       }),
     },
