@@ -73,14 +73,14 @@ OPL base optimization
 
 | Repo | 当前更接近目标的部分 | 仍可优化的面 | 分类 |
 | --- | --- | --- | --- |
-| `one-person-lab` | `current_owner_delta` root、Temporal provider、stage attempt、Stage Artifact Unit、Tool Affordance Boundary、single golden path、wrapper retirement gate 已进入主干。 | 普通 summary 仍容易暴露 raw counts、blocked envelope、typed-blocker group 和 replay count；`compact_*` alias 仍会保留旧抽象层。 | `needs_demotion` |
-| `one-person-lab-app` | Codex wrapper、purpose entries、fast state、Runtime owner-action default、release evidence cohort boundary 已明确。 | App contracts/docs 仍偏长，shell/provider/candidate/release 细节容易进入普通用户叙事；下一步是压首屏和 contract wording。 | `needs_demotion` |
-| `med-autoscience` | MAS 已是 Research Foundry pack；generic runtime / wrapper 结构 gap 已基本关闭，paper-line authority 留在 MAS。 | 平台 repair、read-model currentness、storage/index maintenance 容易被误读成 research progress；真实 paper-line owner delta 仍是证据尾项。 | `meets_target` for structure, `needs_demotion` for ops detail |
-| `med-autogrant` | Grant pack、submission-ready human gate、purpose-first adapter thinning、OPL runtime owner boundary 清楚。 | product/status/user-loop/domain-handler/grouped CLI shell 仍作为 active adapter 暂留；submission gate 只能由 human receipt 或 MAG typed blocker 关闭。 | `needs_retirement` |
-| `redcube-ai` | RCA visual pack、image-first path、Stage Artifact adoption、review/export authority、production acceptance refs shape 强。 | session/domain_action_adapter/runtimeWatch/operator projection 和 route variants 仍有 tail；long-soak / no-regression 是真实 production evidence tail。 | `needs_retirement` plus owner-delta evidence tail |
-| `opl-meta-agent` | OMA 边界已经防止第二 Framework：只产出 candidate package、work order、mechanism proposal 或 typed blocker。 | `scripts/` materializer / helper 有增长压力；稳定规则应继续迁入 `agent/`、contracts、authority functions 或 OPL primitive。 | `needs_demotion` / `needs_retirement` |
-| `opl-aion-shell` | Shell boundary 已声明只实现 App-owned contracts；Runtime bridge 默认消费 `opl app state`。 | Root/upstream shell叙事和 implementation detail 仍可能误导普通 OPL reader；legacy IPC / migration path 有明确 deletion gates。 | support `needs_demotion` |
-| `opl-doc` | Doctor / native profile / family-plan 的 no-authority boundary 清楚。 | 风险是把 doctor clean、profile sync 或 family-plan 当 truth/readiness；应保持 workflow steward 定位。 | support `meets_target` |
+| `one-person-lab` | `current_owner_delta` root、Temporal provider、stage attempt、Stage Artifact Unit、Tool Affordance Boundary、single golden path、wrapper retirement gate 已进入主干，default summary / compact alias 复活有 guard。 | 仍需长期守住 no-resurrection；raw count、blocked envelope、typed-blocker group 和 replay count 只能留在 diagnostic/full-detail。 | `meets_target` for default path, `needs_demotion` for diagnostics |
+| `one-person-lab-app` | Codex wrapper、purpose entries、fast state、Runtime owner-action default、ordinary cockpit surface budget、first conversation warmup 和 Full runtime native trust / release-boundary gate 已明确。 | App release/user-path cohort 仍需真实截图、reload/first-run、provider linkage、operator evidence；release proof 不能进入 ordinary cockpit。 | `meets_target` for contract guard, `needs_demotion` for release detail |
+| `med-autoscience` | MAS 已是 Research Foundry pack；AI reviewer record-only handoff/currentness、request persistence 和 provider admission 已从 owner-route 角度推进，paper-line authority 留在 MAS。 | 平台 repair、read-model currentness、storage/index maintenance 仍不能写成 research progress；真实 paper owner receipt / reviewer receipt / publication gate 仍是证据尾项。 | `meets_target` for structure/currentness, `needs_domain_evidence` |
+| `med-autogrant` | Grant pack、submission-ready human gate、purpose-first adapter thinning、OPL runtime owner boundary 清楚；stale specs lifecycle 叙事已降到 docs/provenance。 | product/status/user-loop/domain-handler/grouped CLI shell 仍作为 active adapter 暂留；submission gate 只能由 human receipt 或 MAG typed blocker 关闭。 | `needs_retirement` |
+| `redcube-ai` | RCA visual pack、image-first path、Stage Artifact adoption、review/export authority、production acceptance refs shape 强；real-route probe 已移入 history/process provenance。 | session/domain_action_adapter/runtimeWatch/operator projection 和 route variants 仍有 tail；long-soak / no-regression 是真实 production evidence tail。 | `needs_retirement` plus owner-delta evidence tail |
+| `opl-meta-agent` | OMA 边界已经防止第二 Framework：只产出 candidate package、work order、mechanism proposal 或 typed blocker；active docs 已改为 fresh-read / live evidence 口径。 | `scripts/` materializer / helper 仍有增长压力；稳定规则应继续迁入 `agent/`、contracts、authority functions 或 OPL primitive，并由 machine gate 约束。 | `needs_demotion` / `needs_retirement` |
+| `opl-aion-shell` | Shell boundary 已声明只实现 App-owned contracts；Runtime bridge 默认消费 `opl app state`；ACP initial message warmup 与 Full runtime payload trust 已落地。 | Root/upstream shell叙事和 implementation detail 仍需防止反向定义 OPL/App/domain truth；legacy IPC / migration path 有明确 deletion gates。 | support `meets_target` for entry boundary |
+| `opl-doc` | Doctor / native profile / family-plan 的 no-authority boundary 清楚，README/usage/invariants 已强化 support repo 不进入 Foundry Agent truth set。 | 风险是把 doctor clean、profile sync 或 family-plan 当 truth/readiness；应保持 workflow steward 定位。 | support `meets_target` |
 
 ## Ideal Top-Level Redesign
 
@@ -162,10 +162,10 @@ docs/tests
 | P0 | `summary_de_noise` | `meets_target_for_framework_default`。OPL default summaries owner-delta-only，raw counts 只作 diagnostic-only。 | ordinary summary 不以 worklist/replay/blocked envelope count 作为 next-action root。 |
 | P0 | `current_owner_delta_cutover` | `meets_target_for_default_root`。默认命名和 payload root 都说 `current_owner_delta`，`compact_owner_delta_projection` 只作 compatibility/full-detail alias。 | `compact_*` 只在 compatibility alias / history / negative guard 中出现，不能成为 default planning root。 |
 | P0 | `domain_wrapper_delete_gate` | `needs_retirement`。MAG/RCA/MAS/OMA retained wrapper 逐项 delete/tombstone。 | no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance machine-readable。 |
-| P1 | `real_owner_delta_tail` | production evidence tail 回到 domain owner answer。 | 真实 paper/grant/visual/target-agent owner receipt、typed blocker、human gate、review/export receipt 或 no-regression ref。 |
-| P1 | `app_contract_compaction` | App ordinary path contract 收薄。 | Home/Runtime/Settings 只显示 purpose、task status、next owner、artifact/blocker、release facts。 |
-| P1 | `oma_script_to_pack_hygiene` | OMA stable scripts 上收或退役。 | policy 进入 `agent/`、contracts、authority functions 或 OPL primitive；脚本保留有 gate。 |
-| P2 | `support_entry_clarity` | `needs_demotion`。Shell/doc support repo 首屏边界清楚。 | support repo 不反向定义 OPL/App/domain truth。 |
+| P1 | `real_owner_delta_tail` | `partial_owner_currentness_landed` / `needs_domain_evidence`。MAS owner-currentness 已推进，production evidence tail 仍必须回到 domain owner answer。 | 真实 paper/grant/visual/target-agent owner receipt、typed blocker、human gate、review/export receipt 或 no-regression ref。 |
+| P1 | `app_contract_compaction` | `meets_target_for_contract_guard`。App ordinary path contract 收薄，并由 active-shell / release-boundary guard 检查。 | Home/Runtime/Settings 只显示 purpose、task status、next owner、artifact/blocker、release facts；release detail 只在 release/developer/detail 语境。 |
+| P1 | `oma_script_to_pack_hygiene` | `needs_retirement_with_docs_boundary_landed`。OMA stable scripts 的定位已降噪，但迁移/退役 gate 未完成。 | policy 进入 `agent/`、contracts、authority functions 或 OPL primitive；脚本保留有 machine gate。 |
+| P2 | `support_entry_clarity` | `meets_target_for_support_entry_boundary`。Shell/doc support repo 首屏边界清楚。 | support repo 不反向定义 OPL/App/domain truth，并持续防止 implementation detail 或 doctor-clean 变成 readiness。 |
 
 ## Audit Standard
 
@@ -190,7 +190,7 @@ docs/tests
 下一轮最有价值的执行顺序：
 
 1. 在 MAG/RCA/MAS/OMA 优先跑 retained wrapper delete gate；MAS 保持 paper-line owner delta 优先，不把 platform repair 写成 research progress。
-2. 在 App 做 ordinary contract compaction，继续隐藏 shell/provider/backend detail。
-3. 在 OMA 推进 script-to-pack hygiene 和真实 target patch-loop scaleout。
-4. Support repo 只做入口边界降噪，不进入 core truth set。
-5. OPL Framework 对新增 default summary 持续执行 `summary_de_noise` / `current_owner_delta` no-resurrection guard。
+2. 在 MAS/MAG/RCA/OMA 跑真实 owner receipt、typed blocker、human gate、review/export receipt、no-regression 或 long-soak evidence；不再用 docs/provenance 或 suite pass 替代。
+3. 在 App 后续 release cohort 继续提供截图、reload/first-run、provider linkage、operator evidence 和 release-owner blocker path；ordinary cockpit contract 已有 guard，只防复活。
+4. 在 OMA 推进 script-to-pack hygiene 和真实 target patch-loop scaleout，脚本保留必须有 machine gate。
+5. Support repo 只做入口边界和 implementation carrier 维护，不进入 core truth set；OPL Framework 对新增 default summary 持续执行 `summary_de_noise` / `current_owner_delta` no-resurrection guard。
