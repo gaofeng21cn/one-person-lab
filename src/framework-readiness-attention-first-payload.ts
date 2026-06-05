@@ -192,7 +192,6 @@ export function frameworkAttentionFirstPayload(input: {
   });
   const currentOwnerDeltaReadModel = buildCurrentOwnerDeltaReadModel({
     ownerDeltaFirst: input.ownerDeltaFirst,
-    ownerDeltaHandoffSummary: input.ownerDeltaHandoffSummary,
     nextSafeAction: nextSafeActions[0],
     countSummary: {
       openSafeActionCount: numberValue(record(input.ownerDeltaHandoffSummary.summary).open_safe_action_item_count),

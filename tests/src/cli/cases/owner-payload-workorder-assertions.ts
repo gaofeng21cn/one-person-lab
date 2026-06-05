@@ -458,13 +458,15 @@ export function assertOwnerDeltaFirstReadinessProjection(readiness: JsonRecord) 
     readiness.current_owner_delta_read_model.current_owner_delta,
   );
   assertCurrentOwnerDeltaProjection(readiness.current_owner_delta, {
-    currentOwner: ownerDeltaHandoffSummary.next_owner,
-    requiredDelta: ownerDeltaHandoffSummary.next_required_delta,
+    currentOwner: ownerDeltaFirst.next_owner,
+    requiredDelta: ownerDeltaFirst.next_required_delta,
   });
   assertCurrentOwnerDeltaReadModel(readiness.current_owner_delta_read_model, {
-    currentOwner: ownerDeltaHandoffSummary.next_owner,
-    requiredDelta: ownerDeltaHandoffSummary.next_required_delta,
-    acceptedReturnShapes: ownerDeltaHandoffSummary.required_return_shapes,
+    currentOwner: ownerDeltaFirst.next_owner,
+    requiredDelta: ownerDeltaFirst.next_required_delta,
+    ...(ownerDeltaFirst.required_return_shapes.length > 0
+      ? { acceptedReturnShapes: ownerDeltaFirst.required_return_shapes }
+      : {}),
     openSafeActionCount: readiness.evidence_worklist.open_safe_action_item_count,
     payloadRequiredCount:
       readiness.evidence_worklist.open_safe_action_payload_required_item_count,
@@ -478,6 +480,24 @@ export function assertOwnerDeltaFirstReadinessProjection(readiness: JsonRecord) 
       'app_operator_drilldown_ref',
     ],
   });
+  assert.equal(readiness.operator_next_owner, readiness.current_owner_delta.current_owner);
+  assert.equal(
+    readiness.operator_required_delta,
+    readiness.current_owner_delta.desired_delta_description,
+  );
+  assert.equal(
+    readiness.operator_payload_requirement,
+    readiness.current_owner_delta.payload_requirement,
+  );
+  assert.deepEqual(
+    readiness.operator_accepted_answer_shape,
+    readiness.current_owner_delta.accepted_answer_shape,
+  );
+  assert.equal(readiness.stage_run_cockpit_summary.refs_only, true);
+  assert.equal(
+    readiness.stage_run_cockpit_summary.current_owner,
+    readiness.current_owner_delta.current_owner,
+  );
 
   assert.equal(readiness.owner_delta_first.surface_kind, 'opl_owner_delta_first_projection');
   assert.equal(ownerDeltaFirst.surface_kind, 'opl_owner_delta_first_projection');

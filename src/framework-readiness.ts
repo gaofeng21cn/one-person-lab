@@ -30,6 +30,7 @@ import {
 import { FRAMEWORK_READINESS_SOURCE_COMMANDS as SOURCE_COMMANDS } from './framework-readiness-source-commands.ts';
 import { domainBlockedTypedBlockerAttention } from './framework-readiness-typed-blocker-attention.ts';
 import { buildOwnerDeltaHandoffSummaryFromFrameworkReadiness, OWNER_DELTA_HANDOFF_TAXONOMY, ownerDeltaHandoffFrameworkReadinessSection } from './framework-readiness-owner-delta-handoff-summary.ts';
+import { buildCurrentOwnerDeltaTopline } from './current-owner-delta-topline.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -63,12 +64,6 @@ function countValue(value: unknown) {
 
 function recordList(value: unknown) {
   return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
 }
 
 function booleanValue(value: unknown) {
@@ -564,6 +559,9 @@ export async function buildFrameworkReadinessSummary(
     providerSloCadenceWindowStatus: appSummary.provider_slo_cadence_window_status,
     providerSloCapabilityStatus: appSummary.provider_slo_capability_status,
   });
+  const ownerDeltaTopline = buildCurrentOwnerDeltaTopline({
+    currentOwnerDeltaReadModel: attentionFirstPayload.current_owner_delta_read_model,
+  });
   return {
     version: 'g1',
     framework_readiness: {
@@ -582,8 +580,7 @@ export async function buildFrameworkReadinessSummary(
       },
       status: frameworkStatus,
       attention_first_payload: attentionFirstPayload,
-      current_owner_delta: attentionFirstPayload.current_owner_delta,
-      current_owner_delta_read_model: attentionFirstPayload.current_owner_delta_read_model,
+      ...ownerDeltaTopline,
       kernel_floor: frameworkKernelFloor(),
       diagnostic_drilldowns: frameworkDiagnosticDrilldowns(SOURCE_COMMANDS),
       excluded_ready_verdicts: [
