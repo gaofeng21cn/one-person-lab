@@ -41,6 +41,11 @@ test('family-runtime evidence-worklist keeps raw worklist roots out of compact o
           next_required_delta:
             'domain_deliverable_delta_or_domain_owned_typed_blocker_required',
           required_return_shapes: ['domain_owner_receipt_ref', 'typed_blocker_ref'],
+          required_refs_any_of: [
+            'domain_owner_receipt_ref',
+            'quality_gate_receipt_ref',
+            'typed_blocker_ref',
+          ],
           stop_loss_state: {
             surface_kind: 'opl_current_owner_delta_stop_loss_state',
             status: 'frozen',
@@ -95,9 +100,20 @@ test('family-runtime evidence-worklist keeps raw worklist roots out of compact o
     'domain_deliverable_delta_or_domain_owned_typed_blocker_required',
   );
   assert.equal(projection.current_owner_delta.current_owner, 'med-autoscience');
+  assert.equal(projection.current_owner_delta.owner, 'med-autoscience');
+  assert.equal(projection.current_owner_delta.domain_id, 'med-autoscience');
+  assert.equal(projection.current_owner_delta.stage_id, projection.current_owner_delta.stage_ref);
   assert.equal(
     projection.current_owner_delta.desired_delta_description,
     'domain_deliverable_delta_or_domain_owned_typed_blocker_required',
+  );
+  assert.equal(
+    projection.current_owner_delta.payload_requirement,
+    'domain_deliverable_delta_or_domain_owned_typed_blocker_required',
+  );
+  assert.deepEqual(
+    projection.current_owner_delta.required_return_shapes,
+    ['domain_owner_receipt_ref', 'typed_blocker_ref', 'quality_gate_receipt_ref'],
   );
   assert.equal(
     projection.current_owner_delta.default_planning_root,
@@ -175,6 +191,10 @@ test('family-runtime evidence-worklist keeps raw worklist roots out of compact o
   assert.equal(
     projection.next_safe_action_or_none?.payload_requirement,
     'domain_deliverable_delta_or_domain_owned_typed_blocker_required',
+  );
+  assert.deepEqual(
+    projection.next_safe_action_or_none?.accepted_answer_shape,
+    ['domain_owner_receipt_ref', 'typed_blocker_ref', 'quality_gate_receipt_ref'],
   );
   assert.equal(
     projection.next_safe_action_or_none?.raw_worklist_can_drive_default_planning,

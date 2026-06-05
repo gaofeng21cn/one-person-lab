@@ -65,6 +65,25 @@ function acceptedReturnShapes(...values: unknown[]) {
   return shapes.length > 0 ? shapes : ['typed_blocker_ref'];
 }
 
+function ownerDeltaAcceptedReturnShapes(ownerDeltaFirst: JsonRecord, handoff: JsonRecord) {
+  const primaryItem = record(ownerDeltaFirst.primary_item);
+  const selectedSafeAction = record(ownerDeltaFirst.selected_safe_action);
+  return acceptedReturnShapes(
+    handoff.required_return_shapes,
+    handoff.accepted_answer_shape,
+    handoff.required_refs_any_of,
+    ownerDeltaFirst.required_return_shapes,
+    ownerDeltaFirst.accepted_answer_shape,
+    ownerDeltaFirst.required_refs_any_of,
+    primaryItem.required_return_shapes,
+    primaryItem.accepted_answer_shape,
+    primaryItem.required_refs_any_of,
+    selectedSafeAction.required_return_shapes,
+    selectedSafeAction.accepted_answer_shape,
+    selectedSafeAction.required_refs_any_of,
+  );
+}
+
 function payloadWorkorderReturnShapes(workorder: JsonRecord) {
   const declared = stringList(workorder.required_return_shapes);
   if (declared.length > 0) {
@@ -255,11 +274,12 @@ export function buildDefaultNextActionFromCurrentOwnerDelta(
     delta_id: deltaId,
     owner,
     current_owner: owner,
-    domain_id: stringValue(delta.domain),
-    stage_id: stringValue(delta.stage_ref),
+    domain_id: firstString(delta.domain_id, delta.domain),
+    stage_id: firstString(delta.stage_id, delta.stage_ref),
     desired_delta_kind: desiredDeltaKind,
     payload_requirement:
-      stringValue(delta.desired_delta_description) ?? 'owner_delta_followthrough_required',
+      firstString(delta.payload_requirement, delta.desired_delta_description)
+      ?? 'owner_delta_followthrough_required',
     required_return_shapes: acceptedAnswerShape,
     accepted_answer_shape: acceptedAnswerShape,
     hard_gate: {
@@ -346,12 +366,14 @@ function buildCurrentOwnerDeltaProjection(input: {
       sanitizeIdPart(desiredDeltaKind(requiredDelta)),
     ].join(':'),
     domain,
+    domain_id: domain,
     task_or_study_ref: firstString(
       input.compactAction?.next_safe_action_ref,
       stringValue(record(input.ownerDeltaFirst.primary_item).workstream_id),
       stringValue(record(input.ownerDeltaFirst.primary_item).stage_attempt_id),
     ),
     stage_ref: stageRef,
+    stage_id: stageRef,
     lineage_ref: firstString(
       stringValue(record(input.ownerDeltaFirst.primary_item).stage_attempt_id),
       input.compactAction?.next_safe_action_ref,
@@ -366,8 +388,11 @@ function buildCurrentOwnerDeltaProjection(input: {
     ].join(':'),
     desired_delta_kind: desiredDeltaKind(requiredDelta),
     desired_delta_description: requiredDelta,
+    payload_requirement: requiredDelta,
     current_owner: currentOwner,
+    owner: currentOwner,
     accepted_answer_shape: input.acceptedReturnShapes,
+    required_return_shapes: input.acceptedReturnShapes,
     hard_gate: hardGate,
     advisory_warnings: [
       ...(input.countSummary.domain_dispatch_workorder_count > 0
@@ -508,10 +533,7 @@ export function buildCurrentOwnerDeltaReadModel(input: {
     ownerDeltaFirst.next_required_delta,
     'no_opl_operator_actionable_delta_required',
   ) ?? 'no_opl_operator_actionable_delta_required';
-  const acceptedShapes = acceptedReturnShapes(
-    handoff.required_return_shapes,
-    ownerDeltaFirst.required_return_shapes,
-  );
+  const acceptedShapes = ownerDeltaAcceptedReturnShapes(ownerDeltaFirst, handoff);
   const auditCountSummary = buildCompactCountSummary({
     countSummary,
     handoffSummary,
