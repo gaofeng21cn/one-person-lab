@@ -64,6 +64,7 @@
 - `功能/结构差距` 按目标态判断，不按现有实现是否可用判断；凡现有功能面应由 OPL primitive / pack compiler / App shell 承担，就写成上收、generated surface 替换、收薄或退役差距。
 - 新文档先判断角色，再决定落点；不要把公开主线、合同配套、参考材料和历史记录混在同一层。
 - `README*`、`docs/**` 与参考文档是人读面。代码、测试、contracts、dashboard 或 runtime 不得把 prose path、Markdown 章节或文案当成稳定机器接口；确需关联人读材料时，使用 contract/schema/source 路径或 `human_doc:*` 语义 ID。
+- 根层 `README*` 是面向使用者的公开入口，默认从问题、价值、场景、开始方式和可见效果讲起；关键概念可以在公开区出现，但必须先翻译成用户能理解的效果，例如“认知计算”应解释为 AI 在阶段内理解、比较、创作、审阅和修订；`executor-first`、stage、route、receipt、typed blocker、Tool Affordance Boundary、domain truth、quality verdict 等技术边界只放在折叠的 Agent / 开发者 / operator 区或 canonical 技术文档。
 - 退役定位只能放在 `docs/history/**` 的 archive / tombstone 语境中；active docs 提到 gateway、federation、frontdoor 等旧路线时，必须同时指向当前 truth owner。
 - 如果某条规则需要长期冻结，应写入 `docs/invariants.md` 或相关 contract/doc surface，而不是继续堆在 `AGENTS.md`。
 
