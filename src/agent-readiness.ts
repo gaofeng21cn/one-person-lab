@@ -144,6 +144,7 @@ export function buildAgentReadinessSummary(args: string[]) {
   const conformance = record(conformanceReport.standard_domain_agent_conformance);
   const reports = recordList(conformance.reports);
   const summary = record(conformance.summary);
+  const stageRunDomainAdoptionReadModel = record(conformance.stage_run_domain_adoption_read_model);
   const passedCount = typeof summary.passed_count === 'number' ? summary.passed_count : 0;
   const blockedCount = typeof summary.blocked_count === 'number' ? summary.blocked_count : 0;
   const packCompilerBlockedCount = reports.filter((report) =>
@@ -218,6 +219,14 @@ export function buildAgentReadinessSummary(args: string[]) {
         agent_readiness_production_evidence_tail_count: tailCount,
         agent_readiness_production_evidence_tail_policy:
           'reported_separately_not_a_structural_pass_condition',
+        stage_run_domain_adoption_status:
+          stringValue(stageRunDomainAdoptionReadModel.status),
+        stage_run_domain_adoption_domain_count:
+          typeof stageRunDomainAdoptionReadModel.domain_count === 'number'
+            ? stageRunDomainAdoptionReadModel.domain_count
+            : 0,
+        stage_run_controlled_canary_evidence_scope:
+          stringValue(stageRunDomainAdoptionReadModel.controlled_canary_evidence_scope),
       },
       gates: {
         scaffold_and_conformance: gate(
@@ -256,6 +265,7 @@ export function buildAgentReadinessSummary(args: string[]) {
           'framework_hygiene_guard_only_no_domain_authority',
         ),
       },
+      stage_run_domain_adoption_read_model: stageRunDomainAdoptionReadModel,
       production_evidence_tail_ledger: productionEvidenceTailLedger,
       conformance_report: conformance,
       authority_boundary: {

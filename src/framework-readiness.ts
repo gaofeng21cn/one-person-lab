@@ -309,6 +309,7 @@ export async function buildFrameworkReadinessSummary(
 
   const semanticSummary = record(semanticHygiene.summary);
   const agentSummary = record(agentReadiness.summary);
+  const stageRunDomainAdoptionReadModel = record(record(agentReadiness).stage_run_domain_adoption_read_model);
   const packSummary = record(packCompiler.summary);
   const stagesSummary = record(familyStages.summary);
   const appSummary = record(appOperatorDrilldown.summary);
@@ -749,16 +750,19 @@ export async function buildFrameworkReadinessSummary(
         status: agentReadiness.status,
         structural_conformance_status: agentSummary.structural_conformance_status ?? null,
         conformance_blocked_count: agentHardBlockerCount,
-        agent_readiness_production_evidence_tail_count:
-          agentProductionEvidenceTailTotalCount,
-        agent_readiness_production_evidence_tail_open_count:
-          agentStructuralEvidenceTailCount,
-        agent_readiness_production_evidence_tail_closed_count:
-          agentProductionEvidenceTailClosedCount,
-        agent_readiness_production_evidence_tail_policy:
-          agentSummary.agent_readiness_production_evidence_tail_policy ?? null,
+        agent_readiness_production_evidence_tail_count: agentProductionEvidenceTailTotalCount,
+        agent_readiness_production_evidence_tail_open_count: agentStructuralEvidenceTailCount,
+        agent_readiness_production_evidence_tail_closed_count: agentProductionEvidenceTailClosedCount,
+        agent_readiness_production_evidence_tail_policy: agentSummary.agent_readiness_production_evidence_tail_policy ?? null,
+        stage_run_domain_adoption_status: agentSummary.stage_run_domain_adoption_status ?? null,
+        stage_run_domain_adoption_domain_count: agentSummary.stage_run_domain_adoption_domain_count ?? null,
+        stage_run_controlled_canary_evidence_scope: agentSummary.stage_run_controlled_canary_evidence_scope ?? null,
+        stage_run_domain_adoption_read_model: stageRunDomainAdoptionReadModel,
         diagnostic_failure: agentReadinessDiagnostic.failure,
-        authority_boundary: agentReadiness.authority_boundary ?? authorityBoundary(),
+        authority_boundary: {
+          ...(agentReadiness.authority_boundary ?? authorityBoundary()),
+          stage_run_domain_adoption_authority_boundary: stageRunDomainAdoptionReadModel.authority_boundary ?? null,
+        },
       },
       pack_compiler: {
         source_command: SOURCE_COMMANDS.pack_compiler,
