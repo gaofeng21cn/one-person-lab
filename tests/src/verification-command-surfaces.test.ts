@@ -269,8 +269,11 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
           normal_app_state_command: string;
           default_projection: string;
           compatibility_projection: string;
+          compatibility_projection_policy: string;
           full_detail_policy: string;
           raw_refs_policy: string;
+          first_screen_answer_policy: string;
+          diagnostic_only_answers: string[];
           forbidden_fast_profile_fields: string[];
         };
       };
@@ -322,6 +325,22 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
   assert.equal(
     policy.surface_model.attention_entry.default_read_contract.compatibility_projection,
     'opl_compact_owner_delta_projection',
+  );
+  assert.equal(
+    policy.surface_model.attention_entry.default_read_contract.compatibility_projection_policy,
+    'legacy_full_detail_alias_not_default_planning_root',
+  );
+  assert.equal(
+    policy.surface_model.attention_entry.default_read_contract.first_screen_answer_policy,
+    'owner_delta_action_artifact_or_blocker_only',
+  );
+  assert.deepEqual(
+    policy.surface_model.attention_entry.default_read_contract.diagnostic_only_answers,
+    [
+      'count_summary',
+      'audit_next_safe_action_or_none',
+      'full_detail_refs',
+    ],
   );
   assert.equal(
     policy.surface_model.attention_entry.default_read_contract.full_detail_policy,
