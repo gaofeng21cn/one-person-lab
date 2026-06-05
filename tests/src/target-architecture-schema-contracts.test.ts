@@ -14,6 +14,10 @@ function readJson<T>(relativePath: string): T {
 test('target architecture schema contracts keep owner delta root and audit tail boundaries machine-readable', () => {
   const schemaPaths = [
     'contracts/opl-framework/current-owner-delta.schema.json',
+    'contracts/opl-framework/stage-manifest.schema.json',
+    'contracts/opl-framework/role-artifact-ref.schema.json',
+    'contracts/opl-framework/stage-owner-receipt.schema.json',
+    'contracts/opl-framework/stage-typed-blocker.schema.json',
     'contracts/opl-framework/stage-artifact-unit.schema.json',
     'contracts/opl-framework/owner-answer.schema.json',
     'contracts/opl-framework/evidence-vault-event.schema.json',
@@ -129,6 +133,43 @@ test('target architecture schema contracts keep owner delta root and audit tail 
   const stageArtifact = schemas['contracts/opl-framework/stage-artifact-unit.schema.json'];
   assert.equal(stageArtifact.properties.progress_truth.required.includes('owner_answer_present'), true);
   assert.equal(stageArtifact.$defs.authority_boundary.properties.provider_completion_counts_as_progress.const, false);
+
+  const stageManifest = schemas['contracts/opl-framework/stage-manifest.schema.json'];
+  assert.equal(stageManifest.properties.surface_kind.const, 'opl_stage_manifest');
+  assert.equal(stageManifest.properties.schema_version.const, 'stage-manifest.v1');
+  assert.equal(stageManifest.required.includes('required_roles'), true);
+  assert.equal(stageManifest.required.includes('produced_roles'), true);
+  assert.equal(stageManifest.required.includes('receipt_refs'), true);
+  assert.equal(stageManifest.required.includes('typed_blocker_refs'), true);
+  assert.equal(stageManifest.$defs.authority_boundary.properties.file_presence_counts_as_stage_complete.const, false);
+  assert.equal(stageManifest.$defs.authority_boundary.properties.provider_completion_counts_as_stage_complete.const, false);
+
+  const roleArtifactRef = schemas['contracts/opl-framework/role-artifact-ref.schema.json'];
+  assert.equal(roleArtifactRef.properties.surface_kind.const, 'opl_role_artifact_ref');
+  assert.equal(roleArtifactRef.properties.schema_version.const, 'role-artifact-ref.v1');
+  assert.equal(roleArtifactRef.required.includes('role'), true);
+  assert.equal(roleArtifactRef.required.includes('artifact_ref'), true);
+  assert.equal(roleArtifactRef.required.includes('content_hash'), true);
+  assert.equal(roleArtifactRef.$defs.authority_boundary.properties.file_name_is_role_interface.const, false);
+  assert.equal(roleArtifactRef.$defs.authority_boundary.properties.artifact_body_included.const, false);
+
+  const ownerReceipt = schemas['contracts/opl-framework/stage-owner-receipt.schema.json'];
+  assert.equal(ownerReceipt.properties.surface_kind.const, 'opl_stage_owner_receipt');
+  assert.equal(ownerReceipt.properties.schema_version.const, 'stage-owner-receipt.v1');
+  assert.equal(ownerReceipt.required.includes('consumed_role_artifacts'), true);
+  assert.equal(ownerReceipt.required.includes('accepted_delta'), true);
+  assert.equal(ownerReceipt.required.includes('next_stage_or_owner'), true);
+  assert.equal(ownerReceipt.$defs.authority_boundary.properties.opl_can_create_owner_receipt.const, false);
+  assert.equal(ownerReceipt.$defs.authority_boundary.properties.provider_completion_counts_as_owner_receipt.const, false);
+
+  const typedBlocker = schemas['contracts/opl-framework/stage-typed-blocker.schema.json'];
+  assert.equal(typedBlocker.properties.surface_kind.const, 'opl_stage_typed_blocker');
+  assert.equal(typedBlocker.properties.schema_version.const, 'stage-typed-blocker.v1');
+  assert.equal(typedBlocker.required.includes('blocked_surface'), true);
+  assert.equal(typedBlocker.required.includes('missing_or_failed_input'), true);
+  assert.equal(typedBlocker.required.includes('next_safe_action'), true);
+  assert.equal(typedBlocker.$defs.authority_boundary.properties.opl_can_create_typed_blocker.const, false);
+  assert.equal(typedBlocker.$defs.authority_boundary.properties.blocker_counts_as_stage_success.const, false);
 
   const ownerAnswer = schemas['contracts/opl-framework/owner-answer.schema.json'];
   assert.equal(ownerAnswer.$defs.authority_boundary.properties.opl_can_sign_domain_owner_answer.const, false);

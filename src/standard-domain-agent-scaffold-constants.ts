@@ -15,6 +15,10 @@ export {
 };
 
 export const REQUIRED_REPO_SOURCE_DIRS = ['agent', 'contracts', 'runtime', 'docs'] as const;
+export const SCAFFOLD_MARKER = 'generated_by_opl_standard_domain_agent_scaffold_v1';
+export const STARTER_STAGE_ID = 'domain_intake';
+export const STANDARD_STAGE_PACK_CONFORMANCE_VERSION = 'standard-stage-pack.v2';
+export const DEFAULT_STAGE_EXECUTOR_BINDING_REF = 'default_codex_cli';
 export const FOUNDRY_AGENT_SERIES_POLICY_RELEASE_REF =
   'contracts/opl-framework/foundry-agent-series-policy-release.json';
 export const FOUNDRY_AGENT_SERIES_POLICY_BUNDLE_FINGERPRINT = 'sha256:5d77102e99e6e49acd88714cd94dcafe0969b8f2a5529928d753002ac3d4619d';
@@ -259,6 +263,79 @@ export const STAGE_ARTIFACT_KERNEL_ADOPTION_POLICY = {
     opl_can_write_memory_body: false,
     opl_can_mutate_domain_artifact_body: false,
     opl_can_authorize_quality_or_export: false,
+  },
+} as const;
+
+export const STAGE_RUN_KERNEL_PROFILE = {
+  surface_kind: 'opl_stage_run_kernel_profile',
+  version: 'stage-run-kernel-profile.v1',
+  state: 'active_contract',
+  kernel_contract_ref: 'contracts/opl-framework/stage-run-kernel-contract.json',
+  stage_manifest_schema_ref: 'contracts/opl-framework/stage-manifest.schema.json',
+  role_artifact_ref_schema_ref: 'contracts/opl-framework/role-artifact-ref.schema.json',
+  owner_receipt_schema_ref: 'contracts/opl-framework/stage-owner-receipt.schema.json',
+  typed_blocker_schema_ref: 'contracts/opl-framework/stage-typed-blocker.schema.json',
+  kernel_role: 'minimal_state_shell_not_domain_controller_system',
+  stage_native_unit: [
+    'stage_folder',
+    'stage_manifest',
+    'role_artifacts',
+    'owner_receipt_or_typed_blocker',
+  ],
+  required_object_models: [
+    'StageRun',
+    'RoleArtifactRef',
+    'OwnerReceipt',
+    'TypedBlocker',
+    'ReadModel',
+  ],
+  stage_run_state_machine: {
+    provider_completion_counts_as_domain_accepted: false,
+    file_presence_counts_as_stage_complete: false,
+    latest_json_counts_as_domain_accepted: false,
+    read_model_counts_as_transition_authority: false,
+  },
+  launch_admission_policy: {
+    hard_blockers: [
+      'identity',
+      'owner',
+      'scope',
+      'selected_executor',
+      'authority_boundary',
+      'required_role_artifacts',
+      'receipt_or_blocker_shape',
+      'forbidden_write',
+      'replay_audit_lineage',
+    ],
+    advisory_refs: [
+      'prompt_refs',
+      'skill_refs',
+      'tool_affordance_refs',
+      'knowledge_refs',
+      'rubric_refs',
+      'evaluation_refs',
+    ],
+    advisory_refs_can_block_launch: false,
+  },
+  default_read_surface: {
+    root: 'stage_run_current_owner_delta',
+    raw_worklist_default: false,
+    readiness_default: false,
+    replay_packet_default: false,
+  },
+  transition_authority: {
+    terminal_transition_authority: 'owner_receipt_or_typed_blocker',
+    provider_completion_counts_as_transition: false,
+    file_presence_counts_as_transition: false,
+  },
+  authority_boundary: {
+    opl_can_write_domain_truth: false,
+    opl_can_mutate_artifact_body: false,
+    opl_can_sign_domain_owner_receipt: false,
+    opl_can_create_typed_blocker: false,
+    opl_can_authorize_quality_or_export: false,
+    provider_completion_counts_as_domain_accepted: false,
+    read_model_can_be_truth_source: false,
   },
 } as const;
 
@@ -725,6 +802,8 @@ export const REQUIRED_CONTRACT_SURFACES = [
   'functional_privatization_audit',
   'workspace_lifecycle_policy',
   'stage_artifact_kernel_adoption',
+  'stage_run_kernel_profile',
+  'stage_run_canary_evidence',
   'state_index_kernel_adoption',
 ] as const;
 
@@ -745,13 +824,11 @@ export const REQUIRED_VERIFICATION = [
   'functional_privatization_audit_no_generic_owner',
   'workspace_file_lifecycle_policy_declared',
   'stage_artifact_kernel_adoption_declared',
+  'stage_run_kernel_profile_declared',
+  'stage_run_controlled_canary_evidence_declared',
   'state_index_kernel_adoption_declared',
 ] as const;
 
-export const SCAFFOLD_MARKER = 'generated_by_opl_standard_domain_agent_scaffold_v1';
-export const STARTER_STAGE_ID = 'domain_intake';
-export const STANDARD_STAGE_PACK_CONFORMANCE_VERSION = 'standard-stage-pack.v2';
-export const DEFAULT_STAGE_EXECUTOR_BINDING_REF = 'default_codex_cli';
 export const REQUIRED_AGENT_PACK_SECTIONS = [
   { section: 'prompts', prefix: 'agent/prompts/' },
   { section: 'stages', prefix: 'agent/stages/' },

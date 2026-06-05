@@ -47,7 +47,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | 目录 | 长期职责 | 当前 OPL 承载 |
 | --- | --- | --- |
 | `docs/` root | 文档入口、核心五件套、docs governance | `README.md`、核心五件套、本文件。 |
-| `docs/active/` | 当前执行、当前计划、当前差距、active baton、当前完成门槛 | `current-state-vs-ideal-gap.md` 是唯一 active owner；family 开发主参考、当前开发线路、生产闭环差距矩阵、ideal operating model、目标架构和设计审计只作 active support。 |
+| `docs/active/` | 当前执行、当前计划、当前差距、active baton、当前完成门槛 | `current-state-vs-ideal-gap.md` 是唯一 active owner；family 开发主参考、当前开发线路、生产闭环差距矩阵、ideal operating model、目标架构、Stage Native Kernel rollout 和设计审计只作 active support。 |
 | `docs/public/` | 仓库首页之后的公开产品方向支撑 | roadmap、task map、operating model、UHS 叙事。 |
 | `docs/product/` | One Person Lab App/workbench、operator entry、product entry、action-routing shell | public surface index 与 App/workbench 消费边界。 |
 | `docs/runtime/` | framework runtime、provider/executor、control plane、projection/read model、resume/wakeup、repair 语义 | runtime 命名与边界合同。 |
@@ -71,13 +71,13 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | `docs/invariants.md` | `active_truth` | 硬约束、不可破坏边界和 fail-closed 规则。 | 核心五件套；长期规则优先上提到这里。 |
 | `docs/decisions.md` | `active_truth_with_history_notes` | 仍有效决策和被 supersede 决策的当前读法。 | 核心五件套；旧决策必须标明 superseded。 |
 | `docs/active/opl-family-development-reference.md` | `active_support` | OPL 系列项目开发主参考、owner 分层、上收判断和 direct-retirement 规则。 | 保持主参考；不替代单仓 truth。 |
-| `docs/active/current-state-vs-ideal-gap.md` | `active_plan` | OPL family 当前目标、完成进度、功能/结构差距、测试/证据差距和下一轮 baton 的唯一 active owner。 | 保持 compact active plan；只写当前结论、完成口径和动态机器入口，过程证据、dated closeout 和历史长清单进 history。 |
+| `docs/active/current-state-vs-ideal-gap.md` | `active_plan` | OPL family 当前目标、完成进度、功能/结构差距、测试/证据差距和下一轮 baton 的唯一 active owner；承接 Stage Native Kernel rollout 的落地状态、anti-bloat/admission 折回和仍未闭合 tail。 | 保持 compact active plan；只写当前结论、完成口径和动态机器入口，过程证据、dated closeout 和历史长清单进 history。 |
 | `docs/active/opl-family-ideal-operating-model-redesign.md` | `active_support` | OPL family 统一 ideal operating model、`目的反推必要性，MVP 检查阻碍性` 和三类审计标准。 | 保持 active support 标准；不承载 live readiness、domain ready、App release ready 或 production ready 结论。 |
 | `docs/active/current-development-lines.md` | `active_support` | 当前开发线路支撑；把工作类型映射回唯一 active owner 和长期 owner。 | 保持路线支撑；不维护独立路线图、不冻结 live counters。 |
 | `docs/active/production-framework-closure-gap-matrix.md` | `active_support` | production closure 证据门支撑；解释证据如何被唯一 active owner 消费。 | 保持矩阵支撑；不维护 dated proof ledger、不声明 production ready。 |
 | `docs/active/opl-family-purpose-first-current-design-audit.md` | `active_support` | OPL family purpose-first 顶层设计审计支撑。 | 保持审计支撑；不替代 active gap owner、domain active plan 或 live machine truth。 |
 | `docs/active/opl-foundry-agent-target-operating-architecture.md` | `active_support` | OPL / Foundry Agent 目标操作架构、primitive、迁移阶段和验收门。 | 保持 active support；承接 MVP friction 和 purpose-first 设计评估，不承载 live readiness 结论。 |
-| `docs/active/opl-stage-native-kernel-rollout-plan.md` | `active_plan` | OPL family Stage Native Kernel 推广方案；定义 StageRun Kernel、stage manifest、role artifact、owner receipt / typed blocker、canary 顺序和 compensation cleanup gate。 | 保持 active plan 支撑；折回唯一 active owner，不声明 domain ready、App release ready、production ready 或质量 verdict。 |
+| `docs/active/opl-stage-native-kernel-rollout-plan.md` | `active_support` | OPL family Stage Native Kernel 设计支撑；定义 StageRun Kernel、stage manifest、role artifact、owner receipt / typed blocker、owner split、admission 分层和 forbidden claims。 | 只保留设计边界和反膨胀约束；当前落地状态、domain canary、App cockpit 和 cleanup tail 回 `current-state-vs-ideal-gap.md`，不得维护第二 active plan。 |
 | `docs/active/development-document-portfolio.md` | `active_docs_support` | 开发文档组合整理和旧计划吸收/归档规则。 | 保持 active support；只管开发文档组合，不重复全仓治理。 |
 | `docs/active/standard-agent-private-platform-inventory.md` | `active_inventory` | 跨 MAS/MAG/RCA/OPL Meta Agent 的 private-platform surface 分类、owner subdomain、migration gate 和 forbidden claim 台账。 | 保持分类台账；逐日拆分、line-count closeout 和具体执行流水进 history/provenance。 |
 | `docs/history/process/plans/2026-06-01-standard-agent-design-consistency-audit.md` | `history_provenance` | 2026-06-01 MAS/MAG/RCA/OMA 同源设计和历史残留审计快照。 | 只作过程审计；当前结构同源结论回 live conformance/descriptors/default-caller surfaces 与 active inventory。 |
@@ -113,6 +113,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 
 - 主文档只记录最新情况、当前差距、当前 owner boundary 和当前完善顺序。
 - Active gap / status / inventory 文档只允许保留当前 owner、当前状态、evidence gate、next action 和 forbidden claim；不得继续逐轮追加 receipt ref、cohort ref、attempt id、branch/worktree、line-count closeout、safe-action record/verify 流水或历史 counter。
+- Stage Native Kernel 这类设计支撑文档可以保留对象模型、owner split、admission 分层和 forbidden authority 规则；当前落地状态、canary、迁移层次和 cleanup tail 必须回唯一 active owner，不能让支撑文档继续维护第二执行路线。
 - dated follow-through、closeout 流水、receipt/proof 命令摘要和阶段性校准过程进入 [OPL family 文档过程归档 2026-05](./history/process/plans/2026-05-18-opl-family-doc-process-history.md) 或其他 `docs/history/**`。
 - `docs/decisions.md` 可以保留决策日期日志，但被 supersede 的段落必须显式标注当前读法。
 - path-stable reference/spec 如果仍因 contract、human_doc 或 audit context 保留原路径，必须在索引或文件开头说明生命周期；不得恢复旧 provider、Gateway、frontdoor、compatibility、direct-entry 或 host-agent-only 叙述为 active plan。

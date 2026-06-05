@@ -108,14 +108,15 @@
       "gc_dry_run",
       "gc_archived_attempts",
       "attempt_restored",
-      "conformance_checked"
+      "conformance_checked",
+      "validation_checked"
     ],
     "events_are_refs_only": true
   },
   "cli_surfaces": {
-    "top_level": "opl stage open|commit|status|explain|rebuild|promote|gc|restore|conformance|workbench",
-    "legacy_alias": "opl stage-artifact open|commit|status|explain|rebuild|promote|gc|restore|conformance|workbench",
-    "family_runtime": "opl family-runtime stage-artifact open|commit|status|explain|rebuild|promote|gc|restore|conformance|workbench",
+    "top_level": "opl stage open|commit|status|explain|rebuild|promote|gc|restore|validate|conformance|workbench",
+    "legacy_alias": "opl stage-artifact open|commit|status|explain|rebuild|promote|gc|restore|validate|conformance|workbench",
+    "family_runtime": "opl family-runtime stage-artifact open|commit|status|explain|rebuild|promote|gc|restore|validate|conformance|workbench",
     "open": "create a stage attempt workspace with inputs outputs evidence receipts and stage/deliverable descriptors",
     "commit": "validate manifest terminal status against required outputs and receipt or blocker evidence, write manifest with sha256 content hashes, then atomically advance latest/current pointers",
     "status": "derive stage and attempt state from physical folders",
@@ -124,6 +125,7 @@
     "promote": "write refs-only canonical artifact pointer from manifest-declared refs",
     "gc": "dry-run by default and only archive non-latest non-canonical attempts with restore proof refs when applied",
     "restore": "restore an archived attempt only when a matching restore proof ref is provided",
+    "validate": "run strict Stage Folder + Manifest + Receipt + hash + pointer + lineage validation without creating domain receipts or writing domain truth",
     "conformance": "run strict Stage Folder + Manifest + Receipt + hash + pointer + lineage checks",
     "workbench": "project artifact-native current/canonical/export/lineage/retention/conformance refs for App/operator consumers"
   },

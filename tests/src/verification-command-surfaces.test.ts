@@ -680,7 +680,7 @@ test('stage artifact runtime contract freezes folder truth and CLI boundaries', 
   assert.equal(contract.lineage_semantics.event_kinds.includes('conformance_checked'), true);
   assert.equal(contract.lineage_semantics.events_are_refs_only, true);
 
-  for (const command of ['open', 'commit', 'status', 'explain', 'rebuild', 'promote', 'gc', 'restore', 'conformance', 'workbench']) {
+  for (const command of ['open', 'commit', 'status', 'explain', 'rebuild', 'promote', 'gc', 'restore', 'validate', 'conformance', 'workbench']) {
     assert.match(contract.cli_surfaces.top_level, new RegExp(`opl stage .*${command}`));
     assert.match(contract.cli_surfaces.legacy_alias, new RegExp(`opl stage-artifact .*${command}`));
     assert.match(contract.cli_surfaces.family_runtime, new RegExp(`opl family-runtime stage-artifact .*${command}`));

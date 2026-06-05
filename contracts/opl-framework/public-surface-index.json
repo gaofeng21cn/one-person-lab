@@ -216,6 +216,22 @@
         },
         {
           "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/stage-manifest.schema.json"
+        },
+        {
+          "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/role-artifact-ref.schema.json"
+        },
+        {
+          "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/stage-owner-receipt.schema.json"
+        },
+        {
+          "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/stage-typed-blocker.schema.json"
+        },
+        {
+          "ref_kind": "machine_contract",
           "ref": "contracts/opl-framework/functional-agent-runtime-harness-contract.json"
         },
         {
@@ -229,6 +245,10 @@
         {
           "ref_kind": "machine_cli",
           "ref": "opl agents interfaces --family-defaults"
+        },
+        {
+          "ref_kind": "machine_cli",
+          "ref": "opl stage validate --json"
         },
         {
           "ref_kind": "machine_contract",

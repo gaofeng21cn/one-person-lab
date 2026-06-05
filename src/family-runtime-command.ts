@@ -94,7 +94,7 @@ export type FamilyRuntimeCommandInput =
   | {
     mode: 'stage_artifact';
     input: {
-      action: 'open' | 'commit' | 'status' | 'explain' | 'rebuild' | 'promote' | 'gc' | 'restore' | 'conformance' | 'workbench';
+      action: 'open' | 'commit' | 'status' | 'explain' | 'rebuild' | 'promote' | 'gc' | 'restore' | 'validate' | 'conformance' | 'workbench';
       domain_id: string;
       program_id: string;
       topic_id: string;

@@ -51,6 +51,123 @@
     "provider_completion_status": "terminalizing",
     "domain_acceptance_status": "domain_accepted"
   },
+  "contract_writing_rules": {
+    "required_for_launch": [
+      "stage_run_id",
+      "domain_id",
+      "stage_id",
+      "generation",
+      "current_pointer",
+      "stage_manifest",
+      "owner",
+      "selected_executor",
+      "authority_boundary",
+      "required_role_artifacts",
+      "expected_receipt_or_blocker",
+      "input_refs",
+      "replay_audit_lineage_refs"
+    ],
+    "required_for_closeout": [
+      "current_generation_role_artifacts",
+      "stage_manifest_validity",
+      "owner_receipt_or_typed_blocker",
+      "current_pointer",
+      "content_hashes",
+      "lineage_refs"
+    ],
+    "advisory_for_context": [
+      "prompt_refs",
+      "skill_refs",
+      "tool_affordance_refs",
+      "knowledge_refs",
+      "rubric_refs",
+      "evaluation_refs",
+      "assumption_refs",
+      "monitor_refs"
+    ],
+    "route_back_when_missing": [
+      "prompt_refs",
+      "skill_refs",
+      "tool_affordance_refs",
+      "knowledge_refs",
+      "rubric_refs",
+      "evaluation_refs"
+    ],
+    "forbidden_as_authority": [
+      "State Index",
+      "stage_progress_log",
+      "provider completion",
+      "readiness",
+      "verified ledger",
+      "file presence",
+      "conformance passed"
+    ]
+  },
+  "admission_policy": {
+    "launch_hard_blockers": [
+      "identity",
+      "owner",
+      "scope",
+      "selected_executor",
+      "authority_boundary",
+      "required_role_artifacts",
+      "expected_receipt_or_typed_blocker_shape",
+      "forbidden_write",
+      "replay_audit_lineage"
+    ],
+    "strategy_refs_default": "advisory_or_route_back",
+    "prompt_skill_tool_knowledge_missing_blocks_launch_by_default": false,
+    "closeout_hard_blockers": [
+      "required_role_artifacts",
+      "manifest_validity",
+      "owner_receipt_or_typed_blocker",
+      "current_pointer",
+      "content_hash",
+      "generation",
+      "lineage_refs"
+    ]
+  },
+  "conformance_output": {
+    "required_sections": [
+      "status",
+      "launch_blockers",
+      "closeout_blockers",
+      "advisory_warnings",
+      "route_back_recommendations",
+      "audit_drilldown_refs",
+      "forbidden_authority_flags"
+    ],
+    "layers": [
+      "launch_blockers",
+      "closeout_blockers",
+      "advisory_warnings",
+      "route_back_recommendations",
+      "audit_drilldown_refs",
+      "forbidden_authority_flags"
+    ],
+    "default_blocking_sections": [
+      "launch_blockers",
+      "closeout_blockers"
+    ],
+    "default_blocking_layers_only": [
+      "launch_blockers",
+      "closeout_blockers"
+    ],
+    "non_blocking_default_sections": [
+      "advisory_warnings",
+      "route_back_recommendations",
+      "audit_drilldown_refs"
+    ]
+  },
+  "forbidden_as_authority": [
+    "State Index",
+    "stage_progress_log",
+    "provider completion",
+    "readiness",
+    "verified ledger",
+    "file presence",
+    "conformance passed"
+  ],
   "adoption_surface": {
     "surface_kind": "opl_stage_run_kernel_adoption",
     "domain_contract_path": "contracts/stage_run_kernel_adoption.json",

@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/stage-owner-receipt.schema.json",
+  "schema_id": "opl.stage_owner_receipt.v1",
+  "surface_kind": "opl_stage_owner_receipt_schema",
+  "owner": "one-person-lab",
+  "purpose": "Define the owner-signed receipt shape that can close a StageRun success or route handoff after consuming manifest-backed role artifacts.",
+  "state": "active_contract",
+  "machine_boundary": "OPL can consume owner receipt refs and project deltas. Domain owners sign receipts and retain domain truth, artifact authority, and quality verdicts.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "receipt_id",
+    "domain_id",
+    "stage_id",
+    "stage_run_id",
+    "generation",
+    "consumed_role_artifacts",
+    "accepted_delta",
+    "next_stage_or_owner",
+    "authority_owner",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_stage_owner_receipt"
+    },
+    "schema_version": {
+      "const": "stage-owner-receipt.v1"
+    },
+    "receipt_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stage_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stage_run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "consumed_role_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "accepted_delta": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "next_stage_or_owner": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "authority_owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authority_boundary": {
+      "$ref": "#/$defs/authority_boundary"
+    }
+  },
+  "$defs": {
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "domain_owner_signed",
+        "opl_can_consume_owner_receipt",
+        "opl_can_create_owner_receipt",
+        "opl_can_infer_domain_truth_from_receipt",
+        "opl_can_authorize_quality_or_export",
+        "provider_completion_counts_as_owner_receipt"
+      ],
+      "properties": {
+        "domain_owner_signed": {
+          "const": true
+        },
+        "opl_can_consume_owner_receipt": {
+          "const": true
+        },
+        "opl_can_create_owner_receipt": {
+          "const": false
+        },
+        "opl_can_infer_domain_truth_from_receipt": {
+          "const": false
+        },
+        "opl_can_authorize_quality_or_export": {
+          "const": false
+        },
+        "provider_completion_counts_as_owner_receipt": {
+          "const": false
+        }
+      }
+    }
+  }
+}

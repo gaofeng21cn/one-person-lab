@@ -809,6 +809,29 @@ export function conformanceStageArtifactRuntime(locator: StageArtifactLocator, o
   };
 }
 
+export function validateStageArtifactRuntime(locator: StageArtifactLocator) {
+  const conformance = conformanceStageArtifactRuntime(locator, { record_event: false });
+  const lineage_event = appendLineageEvent(stageArtifactDeliverableRoot(locator), {
+    event_kind: 'validation_checked',
+    locator,
+    passed: conformance.passed,
+    violation_count: conformance.violations.length,
+    wrote_domain_truth: false,
+    created_owner_receipt: false,
+  });
+  return {
+    surface_kind: 'opl_stage_artifact_runtime_validation',
+    version: 'stage-artifact-runtime-validation.v1',
+    locator,
+    passed: conformance.passed,
+    violations: conformance.violations,
+    validates: conformance.required_contract_units,
+    conformance,
+    lineage_event,
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+}
+
 export function workbenchStageArtifactRuntime(locator: StageArtifactLocator) {
   const status = statusStageArtifactRuntime(locator);
   const conformance = conformanceStageArtifactRuntime(locator, { record_event: false });

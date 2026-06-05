@@ -4,12 +4,15 @@ import path from 'node:path';
 import { FrameworkContractError } from './contracts.ts';
 import { buildAgentPlatformSurfaceOwnershipForRepo } from './agent-platform-surface-ownership.ts';
 import { buildGeneratedAgentInterfaces } from './domain-pack-compiler.ts';
+import { buildFunctionalPrivatizationAudit } from './functional-privatization-audit.ts';
 import {
   defaultFamilyRepoInputs,
   DEFAULT_FAMILY_REPOS,
 } from './standard-domain-agent-family-repos.ts';
 import {
   buildStageArtifactKernelAdoptionChecks,
+  buildStageRunCanaryEvidenceChecks,
+  buildStageRunKernelProfileChecks,
   buildStateIndexKernelAdoptionChecks,
   buildWorkspaceFileLifecycleChecks,
 } from './standard-domain-agent-conformance-adoption.ts';
@@ -232,6 +235,13 @@ function buildPrivateSurfaceChecks(repoDir: string) {
   const functionalAudit = readJsonFile(repoDir, 'contracts/functional_privatization_audit.json');
   const payload = functionalAudit.payload;
   const authority = isRecord(payload) && isRecord(payload.authority_boundary) ? payload.authority_boundary : null;
+  const normalizedAudit = buildFunctionalPrivatizationAudit(isRecord(payload)
+    ? {
+        target_domain_id: optionalString(payload.target_domain_id),
+        functional_privatization_audit: payload,
+      }
+    : null);
+  const normalizedSummary = normalizedAudit.summary;
   const activePathScanStates = collectFieldValues(payload, 'active_path_scan_state')
     .map((entry) => ({
       path: entry.path,
@@ -246,6 +256,12 @@ function buildPrivateSurfaceChecks(repoDir: string) {
     authority?.domain_repo_can_own_generated_surface === true
       ? 'functional_audit_domain_repo_can_own_generated_surface_must_not_be_true'
       : null,
+    normalizedSummary.active_private_generic_residue_count === 0
+      ? null
+      : `functional_audit_active_private_generic_residue_not_retired:${normalizedSummary.active_private_generic_residue_count}`,
+    normalizedSummary.default_watchlist_count === 0
+      ? null
+      : `functional_audit_default_watchlist_not_empty:${normalizedSummary.default_watchlist_count}`,
     ...unavailableScans.map((entry) => `active_path_scan_state_not_available:${entry.path}`),
   ].filter((entry): entry is string => Boolean(entry));
   return {
@@ -253,6 +269,11 @@ function buildPrivateSurfaceChecks(repoDir: string) {
     contract_status: functionalAudit.status,
     domain_can_claim_generic_runtime_owner: authority?.domain_can_claim_generic_runtime_owner ?? null,
     domain_repo_can_own_generated_surface: authority?.domain_repo_can_own_generated_surface ?? null,
+    active_private_generic_residue_count: normalizedSummary.active_private_generic_residue_count,
+    default_watchlist_count: normalizedSummary.default_watchlist_count,
+    private_platform_residue_inventory_count: normalizedSummary.private_platform_residue_inventory_count,
+    private_platform_residue_module_ids: normalizedSummary.private_platform_residue_module_ids,
+    source_purity_tail_read_model: normalizedAudit.source_purity_tail_read_model,
     active_path_scan_states: activePathScanStates,
     blockers,
   };
@@ -270,6 +291,8 @@ function buildRepoConformance(input: RepoInput) {
   const physicalMorphologyChecks = buildPhysicalMorphologyChecks(repoDir, domainId);
   const workspaceFileLifecycleChecks = buildWorkspaceFileLifecycleChecks(repoDir);
   const stageArtifactKernelAdoptionChecks = buildStageArtifactKernelAdoptionChecks(repoDir);
+  const stageRunKernelProfileChecks = buildStageRunKernelProfileChecks(repoDir);
+  const stageRunCanaryEvidenceChecks = buildStageRunCanaryEvidenceChecks(repoDir);
   const stateIndexKernelAdoptionChecks = buildStateIndexKernelAdoptionChecks(repoDir);
   const goldenPathDefaultSurfaceBudgetChecks = buildGoldenPathDefaultSurfaceBudgetChecks(repoDir);
   const evidenceTailClassification = buildEvidenceTailClassification(repoDir, domainId, generatedInterfaceChecks);
@@ -283,6 +306,8 @@ function buildRepoConformance(input: RepoInput) {
     ...physicalMorphologyChecks.blockers,
     ...workspaceFileLifecycleChecks.blockers,
     ...stageArtifactKernelAdoptionChecks.blockers,
+    ...stageRunKernelProfileChecks.blockers,
+    ...stageRunCanaryEvidenceChecks.blockers,
     ...stateIndexKernelAdoptionChecks.blockers,
     ...goldenPathDefaultSurfaceBudgetChecks.blockers,
   ]);
@@ -307,6 +332,8 @@ function buildRepoConformance(input: RepoInput) {
     physical_morphology_checks: physicalMorphologyChecks,
     workspace_file_lifecycle_checks: workspaceFileLifecycleChecks,
     stage_artifact_kernel_adoption_checks: stageArtifactKernelAdoptionChecks,
+    stage_run_kernel_profile_checks: stageRunKernelProfileChecks,
+    stage_run_canary_evidence_checks: stageRunCanaryEvidenceChecks,
     state_index_kernel_adoption_checks: stateIndexKernelAdoptionChecks,
     golden_path_default_surface_budget_checks: goldenPathDefaultSurfaceBudgetChecks,
     evidence_tail_classification: evidenceTailClassification,

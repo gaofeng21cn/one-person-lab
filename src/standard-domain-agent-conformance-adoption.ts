@@ -42,6 +42,109 @@ const REQUIRED_STAGE_ARTIFACT_ADOPTION_AUTHORITY_FLAGS = [
   'opl_can_authorize_quality_or_export',
 ];
 
+const REQUIRED_STAGE_RUN_NATIVE_UNITS = [
+  'stage_folder',
+  'stage_manifest',
+  'role_artifacts',
+  'owner_receipt_or_typed_blocker',
+];
+
+const REQUIRED_STAGE_RUN_OBJECT_MODELS = [
+  'StageRun',
+  'RoleArtifactRef',
+  'OwnerReceipt',
+  'TypedBlocker',
+  'ReadModel',
+];
+
+const REQUIRED_STAGE_RUN_STATE_FLAGS = [
+  'provider_completion_counts_as_domain_accepted',
+  'file_presence_counts_as_stage_complete',
+  'latest_json_counts_as_domain_accepted',
+  'read_model_counts_as_transition_authority',
+];
+
+const REQUIRED_STAGE_RUN_AUTHORITY_FALSE_FLAGS = [
+  'opl_can_write_domain_truth',
+  'opl_can_mutate_artifact_body',
+  'opl_can_sign_domain_owner_receipt',
+  'opl_can_create_typed_blocker',
+  'opl_can_authorize_quality_or_export',
+  'provider_completion_counts_as_domain_accepted',
+  'read_model_can_be_truth_source',
+];
+
+const REQUIRED_STAGE_RUN_LAUNCH_HARD_BLOCKERS = [
+  'identity',
+  'owner',
+  'scope',
+  'selected_executor',
+  'authority_boundary',
+  'required_role_artifacts',
+  'receipt_or_blocker_shape',
+  'forbidden_write',
+  'replay_audit_lineage',
+];
+
+const STAGE_RUN_STRATEGY_ADVISORY_REFS = [
+  'prompt_refs',
+  'skill_refs',
+  'tool_affordance_refs',
+  'knowledge_refs',
+  'rubric_refs',
+  'evaluation_refs',
+];
+
+const REQUIRED_STAGE_RUN_CANARY_STRATEGY_LAYERS = [
+  'candidate_generation',
+  'grounded_reflection',
+  'comparative_selection',
+  'evolution_and_revision',
+  'meta_review_learning',
+  'independent_quality_gate',
+];
+
+const REQUIRED_STAGE_RUN_CANARY_ROLE_ARTIFACT_REFS = [
+  'candidate_pool_ref',
+  'reflection_review_ref',
+  'ranking_selection_ref',
+  'revision_lineage_ref',
+  'meta_review_ref',
+  'independent_gate_ref',
+];
+
+const REQUIRED_STAGE_RUN_CANARY_AUTHORITY_FALSE_FLAGS = [
+  'controlled_canary_claims_live_domain_progress',
+  'provider_completion_counts_as_closeout',
+  'file_presence_counts_as_closeout',
+  'read_model_counts_as_closeout',
+  'conformance_pass_counts_as_closeout',
+  'opl_can_write_domain_truth',
+  'opl_can_mutate_artifact_body',
+  'opl_can_sign_owner_receipt',
+  'opl_can_create_typed_blocker',
+  'opl_can_authorize_quality_or_export',
+];
+
+function refString(value: unknown) {
+  return optionalString(value) ?? (isRecord(value) ? optionalString(value.ref) : null);
+}
+
+function refList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return [...new Set(value.map(refString).filter((entry): entry is string => Boolean(entry)))];
+  }
+  if (!isRecord(value)) {
+    return [];
+  }
+  const directRef = refString(value);
+  const nestedRefs = refList(value.refs);
+  return [...new Set([
+    ...(directRef ? [directRef] : []),
+    ...nestedRefs,
+  ])];
+}
+
 const REQUIRED_STATE_INDEX_DATABASES = [
   'queue',
   'lifecycle_index',
@@ -253,6 +356,276 @@ export function buildStageArtifactKernelAdoptionChecks(repoDir: string) {
     authority_boundary: Object.fromEntries(
       REQUIRED_STAGE_ARTIFACT_ADOPTION_AUTHORITY_FLAGS.map((flag) => [flag, authority[flag] ?? null]),
     ),
+    blockers,
+  };
+}
+
+export function buildStageRunKernelProfileChecks(repoDir: string) {
+  const profileFile = readJsonFile(repoDir, 'contracts/stage_run_kernel_profile.json');
+  const profile = isRecord(profileFile.payload) ? profileFile.payload : null;
+  const stateMachine = isRecord(profile?.stage_run_state_machine) ? profile.stage_run_state_machine : {};
+  const transitionAuthority = isRecord(profile?.transition_authority) ? profile.transition_authority : {};
+  const projectionBoundary = isRecord(profile?.projection_boundary) ? profile.projection_boundary : {};
+  const objectModels = isRecord(profile?.object_models) ? profile.object_models : {};
+  const stageRunModel = isRecord(objectModels.StageRun) ? objectModels.StageRun : {};
+  const stageRunAuthority = isRecord(stageRunModel.authority_boundary) ? stageRunModel.authority_boundary : {};
+  const launchAdmissionPolicy = isRecord(profile?.launch_admission_policy)
+    ? profile.launch_admission_policy
+    : {};
+  const defaultReadSurface = isRecord(profile?.default_read_surface)
+    ? profile.default_read_surface
+    : {};
+  const oplMasBoundary = isRecord(profile?.opl_mas_boundary) ? profile.opl_mas_boundary : {};
+  const forbiddenOplAuthority = stringList(oplMasBoundary.forbidden_opl_authority);
+  const authority = isRecord(profile?.authority_boundary) ? profile.authority_boundary : {};
+  const stageNativeUnit = stringList(profile?.stage_native_unit);
+  const requiredObjectModels = stringList(profile?.required_object_models);
+  const launchHardBlockers = stringList(launchAdmissionPolicy.hard_blockers);
+  const launchAdvisoryRefs = stringList(launchAdmissionPolicy.advisory_refs);
+  const hasObjectModel = (model: string) => model === 'RoleArtifactRef'
+    ? requiredObjectModels.includes('RoleArtifactRef') || requiredObjectModels.includes('ArtifactRef')
+    : requiredObjectModels.includes(model);
+  const stateFlagValue = (flag: string) => {
+    if (flag === 'file_presence_counts_as_stage_complete') {
+      return stateMachine.file_presence_counts_as_stage_complete
+        ?? stateMachine.stage_folder_files_count_as_next_stage_ready;
+    }
+    if (flag === 'read_model_counts_as_transition_authority') {
+      return stateMachine.read_model_counts_as_transition_authority
+        ?? projectionBoundary.projection_can_authorize_next_stage;
+    }
+    return stateMachine[flag];
+  };
+  const authorityValue = (flag: string) => {
+    if (flag === 'opl_can_write_domain_truth') {
+      return authority.opl_can_write_domain_truth
+        ?? authority.can_write_mas_truth
+        ?? projectionBoundary.projection_can_write_truth
+        ?? (forbiddenOplAuthority.includes('write_mas_study_truth') ? false : undefined);
+    }
+    if (flag === 'opl_can_mutate_artifact_body') {
+      return authority.opl_can_mutate_artifact_body
+        ?? stageRunAuthority.can_mutate_domain_artifact_body
+        ?? (forbiddenOplAuthority.includes('mutate_domain_artifact_body') ? false : undefined);
+    }
+    if (flag === 'opl_can_sign_domain_owner_receipt') {
+      return authority.opl_can_sign_domain_owner_receipt
+        ?? authority.can_sign_owner_receipt
+        ?? stageRunAuthority.can_sign_owner_receipt
+        ?? (forbiddenOplAuthority.includes('sign_mas_owner_receipt') ? false : undefined);
+    }
+    if (flag === 'opl_can_create_typed_blocker') {
+      return authority.opl_can_create_typed_blocker
+        ?? authority.can_replace_typed_blocker
+        ?? stageRunAuthority.can_replace_typed_blocker
+        ?? (forbiddenOplAuthority.includes('replace_mas_typed_blocker') ? false : undefined);
+    }
+    if (flag === 'opl_can_authorize_quality_or_export') {
+      return authority.opl_can_authorize_quality_or_export
+        ?? (forbiddenOplAuthority.includes('authorize_publication_quality') ? false : undefined);
+    }
+    if (flag === 'provider_completion_counts_as_domain_accepted') {
+      return authority.provider_completion_counts_as_domain_accepted
+        ?? stateMachine.provider_completion_counts_as_domain_accepted;
+    }
+    if (flag === 'read_model_can_be_truth_source') {
+      return authority.read_model_can_be_truth_source
+        ?? projectionBoundary.projection_can_write_truth;
+    }
+    return authority[flag];
+  };
+  const blockers = [
+    profileFile.status === 'resolved' ? null : `stage_run_kernel_profile_${profileFile.status}`,
+    profile ? null : 'stage_run_kernel_profile_not_declared',
+    ['opl_stage_run_kernel_profile', 'mas_opl_stage_run_kernel_profile'].includes(optionalString(profile?.surface_kind) ?? '')
+      ? null
+      : 'stage_run_kernel_profile_surface_kind_invalid',
+    ['contracts/opl-framework/stage-run-kernel-contract.json', 'human_doc:mas_opl_stage_native_state_machine'].includes(
+      optionalString(profile?.kernel_contract_ref) ?? optionalString(profile?.source_design_ref) ?? '',
+    )
+      ? null
+      : 'stage_run_kernel_profile_contract_ref_invalid',
+    optionalString(profile?.stage_manifest_schema_ref) === 'contracts/opl-framework/stage-manifest.schema.json'
+      || stringList(isRecord(profile?.stage_folder_manifest) ? profile.stage_folder_manifest.required_manifest_sections : []).includes('required_role_artifacts')
+      ? null
+      : 'stage_run_kernel_profile_stage_manifest_schema_ref_invalid',
+    optionalString(profile?.role_artifact_ref_schema_ref) === 'contracts/opl-framework/role-artifact-ref.schema.json'
+      || isRecord(isRecord(profile?.stage_folder_manifest) ? profile.stage_folder_manifest.role_artifact_contract : null)
+      ? null
+      : 'stage_run_kernel_profile_role_artifact_ref_schema_ref_invalid',
+    optionalString(profile?.owner_receipt_schema_ref) === 'contracts/opl-framework/stage-owner-receipt.schema.json'
+      || stringList(profile?.required_object_models).includes('OwnerReceipt')
+      ? null
+      : 'stage_run_kernel_profile_owner_receipt_schema_ref_invalid',
+    optionalString(profile?.typed_blocker_schema_ref) === 'contracts/opl-framework/stage-typed-blocker.schema.json'
+      || stringList(profile?.required_object_models).includes('TypedBlocker')
+      ? null
+      : 'stage_run_kernel_profile_typed_blocker_schema_ref_invalid',
+    ['minimal_state_shell_not_domain_controller_system', 'minimal_state_shell_not_mas_controller_system'].includes(optionalString(profile?.kernel_role) ?? '')
+      ? null
+      : 'stage_run_kernel_profile_kernel_role_invalid',
+    ...REQUIRED_STAGE_RUN_NATIVE_UNITS
+      .filter((unit) => !stageNativeUnit.includes(unit))
+      .map((unit) => `stage_run_kernel_profile_native_unit_missing:${unit}`),
+    ...REQUIRED_STAGE_RUN_OBJECT_MODELS
+      .filter((model) => !hasObjectModel(model))
+      .map((model) => `stage_run_kernel_profile_object_model_missing:${model}`),
+    ...REQUIRED_STAGE_RUN_STATE_FLAGS
+      .filter((flag) => stateFlagValue(flag) !== false)
+      .map((flag) => `stage_run_kernel_profile_state_flag_must_be_false:${flag}`),
+    ...REQUIRED_STAGE_RUN_LAUNCH_HARD_BLOCKERS
+      .filter((field) => !launchHardBlockers.includes(field))
+      .map((field) => `stage_run_kernel_profile_launch_hard_blocker_missing:${field}`),
+    ...STAGE_RUN_STRATEGY_ADVISORY_REFS
+      .filter((field) => !launchAdvisoryRefs.includes(field))
+      .map((field) => `stage_run_kernel_profile_advisory_ref_missing:${field}`),
+    launchAdmissionPolicy.advisory_refs_can_block_launch === false
+      ? null
+      : 'stage_run_kernel_profile_advisory_refs_can_block_launch',
+    ...STAGE_RUN_STRATEGY_ADVISORY_REFS
+      .filter((field) => launchHardBlockers.includes(field))
+      .map((field) => `stage_run_kernel_profile_strategy_ref_promoted_to_launch_blocker:${field}`),
+    optionalString(defaultReadSurface.root) === 'stage_run_current_owner_delta'
+      ? null
+      : 'stage_run_kernel_profile_default_read_surface_invalid',
+    defaultReadSurface.raw_worklist_default === false
+      ? null
+      : 'stage_run_kernel_profile_raw_worklist_default_forbidden',
+    defaultReadSurface.readiness_default === false
+      ? null
+      : 'stage_run_kernel_profile_readiness_default_forbidden',
+    defaultReadSurface.replay_packet_default === false
+      ? null
+      : 'stage_run_kernel_profile_replay_packet_default_forbidden',
+    ['owner_receipt_or_typed_blocker', 'mas_owner_receipt_or_typed_blocker_only'].includes(
+      optionalString(transitionAuthority.terminal_transition_authority) ?? optionalString(profile?.transition_authority) ?? '',
+    )
+      ? null
+      : 'stage_run_kernel_profile_terminal_transition_authority_invalid',
+    (transitionAuthority.provider_completion_counts_as_transition ?? stateMachine.provider_completion_counts_as_domain_accepted) === false
+      ? null
+      : 'stage_run_kernel_profile_provider_completion_transition_invalid',
+    (transitionAuthority.file_presence_counts_as_transition ?? stateFlagValue('file_presence_counts_as_stage_complete')) === false
+      ? null
+      : 'stage_run_kernel_profile_file_presence_transition_invalid',
+    ...REQUIRED_STAGE_RUN_AUTHORITY_FALSE_FLAGS
+      .filter((flag) => authorityValue(flag) !== false)
+      .map((flag) => `stage_run_kernel_profile_authority_flag_must_be_false:${flag}`),
+  ].filter((entry): entry is string => Boolean(entry));
+  return {
+    status: blockers.length === 0 ? 'passed' : 'blocked',
+    profile_status: blockers.length === 0 ? 'declared' : 'blocked',
+    profile_source: 'contracts/stage_run_kernel_profile.json',
+    kernel_contract_ref: optionalString(profile?.kernel_contract_ref),
+    kernel_role: optionalString(profile?.kernel_role),
+    stage_native_unit: stageNativeUnit,
+    required_object_models: requiredObjectModels,
+    stage_run_state_machine: Object.fromEntries(
+      REQUIRED_STAGE_RUN_STATE_FLAGS.map((flag) => [flag, stateFlagValue(flag) ?? null]),
+    ),
+    launch_admission_policy: {
+      hard_blockers: launchHardBlockers,
+      advisory_refs: launchAdvisoryRefs,
+      advisory_refs_can_block_launch:
+        launchAdmissionPolicy.advisory_refs_can_block_launch ?? null,
+    },
+    default_read_surface: {
+      root: optionalString(defaultReadSurface.root),
+      raw_worklist_default: defaultReadSurface.raw_worklist_default ?? null,
+      readiness_default: defaultReadSurface.readiness_default ?? null,
+      replay_packet_default: defaultReadSurface.replay_packet_default ?? null,
+    },
+    transition_authority: {
+      terminal_transition_authority: optionalString(transitionAuthority.terminal_transition_authority),
+      provider_completion_counts_as_transition:
+        transitionAuthority.provider_completion_counts_as_transition ?? null,
+      file_presence_counts_as_transition:
+        transitionAuthority.file_presence_counts_as_transition ?? null,
+    },
+    authority_boundary: Object.fromEntries(
+      REQUIRED_STAGE_RUN_AUTHORITY_FALSE_FLAGS.map((flag) => [flag, authorityValue(flag) ?? null]),
+    ),
+    blockers,
+  };
+}
+
+export function buildStageRunCanaryEvidenceChecks(repoDir: string) {
+  const evidenceFile = readJsonFile(repoDir, 'contracts/stage_run_canary_evidence.json');
+  const evidence = isRecord(evidenceFile.payload) ? evidenceFile.payload : null;
+  const strategyTrace = isRecord(evidence?.strategy_trace) ? evidence.strategy_trace : {};
+  const roleArtifactRefs = isRecord(evidence?.role_artifact_refs) ? evidence.role_artifact_refs : {};
+  const closeout = isRecord(evidence?.closeout) ? evidence.closeout : {};
+  const authority = isRecord(evidence?.authority_boundary) ? evidence.authority_boundary : {};
+  const terminalOutcome = optionalString(closeout.terminal_outcome);
+  const hasCloseoutRef = refString(closeout.owner_receipt_ref) !== null
+    || refString(closeout.typed_blocker_ref) !== null;
+  const blockers = [
+    evidenceFile.status === 'resolved' ? null : `stage_run_canary_evidence_${evidenceFile.status}`,
+    evidence ? null : 'stage_run_canary_evidence_not_declared',
+    optionalString(evidence?.surface_kind) === 'opl_stage_run_controlled_canary_evidence'
+      ? null
+      : 'stage_run_canary_evidence_surface_kind_invalid',
+    optionalString(evidence?.version) === 'stage-run-controlled-canary.v1'
+      ? null
+      : 'stage_run_canary_evidence_version_invalid',
+    optionalString(evidence?.evidence_scope) === 'controlled_fixture_not_live_domain_progress'
+      ? null
+      : 'stage_run_canary_evidence_scope_invalid',
+    optionalString(evidence?.domain_id) ? null : 'stage_run_canary_evidence_domain_id_missing',
+    optionalString(evidence?.canary_id) ? null : 'stage_run_canary_evidence_canary_id_missing',
+    optionalString(evidence?.stage_id) ? null : 'stage_run_canary_evidence_stage_id_missing',
+    refString(evidence?.stage_run_ref) ? null : 'stage_run_canary_evidence_stage_run_ref_missing',
+    refString(evidence?.stage_manifest_ref) ? null : 'stage_run_canary_evidence_stage_manifest_ref_missing',
+    refString(evidence?.current_pointer_ref) ? null : 'stage_run_canary_evidence_current_pointer_ref_missing',
+    ...REQUIRED_STAGE_RUN_CANARY_STRATEGY_LAYERS
+      .filter((layer) => refList(strategyTrace[layer]).length === 0)
+      .map((layer) => `stage_run_canary_evidence_strategy_layer_missing:${layer}`),
+    ...REQUIRED_STAGE_RUN_CANARY_ROLE_ARTIFACT_REFS
+      .filter((field) => refString(roleArtifactRefs[field]) === null)
+      .map((field) => `stage_run_canary_evidence_role_artifact_ref_missing:${field}`),
+    ['owner_receipt', 'typed_blocker'].includes(terminalOutcome ?? '')
+      ? null
+      : 'stage_run_canary_evidence_terminal_outcome_invalid',
+    hasCloseoutRef ? null : 'stage_run_canary_evidence_closeout_ref_missing',
+    closeout.same_attempt_self_review === false
+      ? null
+      : 'stage_run_canary_evidence_same_attempt_self_review_forbidden',
+    authority.refs_only === true
+      ? null
+      : 'stage_run_canary_evidence_refs_only_boundary_missing',
+    ...REQUIRED_STAGE_RUN_CANARY_AUTHORITY_FALSE_FLAGS
+      .filter((flag) => authority[flag] !== false)
+      .map((flag) => `stage_run_canary_evidence_authority_flag_must_be_false:${flag}`),
+  ].filter((entry): entry is string => Boolean(entry));
+  return {
+    status: blockers.length === 0 ? 'passed' : 'blocked',
+    evidence_status: blockers.length === 0 ? 'declared' : 'blocked',
+    evidence_source: 'contracts/stage_run_canary_evidence.json',
+    evidence_scope: optionalString(evidence?.evidence_scope),
+    domain_id: optionalString(evidence?.domain_id),
+    canary_id: optionalString(evidence?.canary_id),
+    stage_id: optionalString(evidence?.stage_id),
+    stage_run_ref: refString(evidence?.stage_run_ref),
+    stage_manifest_ref: refString(evidence?.stage_manifest_ref),
+    current_pointer_ref: refString(evidence?.current_pointer_ref),
+    strategy_trace: Object.fromEntries(
+      REQUIRED_STAGE_RUN_CANARY_STRATEGY_LAYERS.map((layer) => [layer, refList(strategyTrace[layer])]),
+    ),
+    role_artifact_refs: Object.fromEntries(
+      REQUIRED_STAGE_RUN_CANARY_ROLE_ARTIFACT_REFS.map((field) => [field, refString(roleArtifactRefs[field])]),
+    ),
+    closeout: {
+      terminal_outcome: terminalOutcome,
+      owner_receipt_ref: refString(closeout.owner_receipt_ref),
+      typed_blocker_ref: refString(closeout.typed_blocker_ref),
+      same_attempt_self_review: closeout.same_attempt_self_review ?? null,
+    },
+    authority_boundary: {
+      refs_only: authority.refs_only ?? null,
+      ...Object.fromEntries(
+        REQUIRED_STAGE_RUN_CANARY_AUTHORITY_FALSE_FLAGS.map((flag) => [flag, authority[flag] ?? null]),
+      ),
+    },
     blockers,
   };
 }

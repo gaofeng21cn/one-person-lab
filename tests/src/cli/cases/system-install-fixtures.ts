@@ -1,4 +1,26 @@
-import { fs, path } from '../helpers.ts';
+import { spawnSync } from 'node:child_process';
+
+import { assert, cliPath, fs, path, repoRoot } from '../helpers.ts';
+
+export function runCliWithStdin(args: string[], stdin: string, envOverrides: Record<string, string>) {
+  const result = spawnSync(
+    process.execPath,
+    ['--experimental-strip-types', cliPath, ...args],
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      input: stdin,
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        ...envOverrides,
+      },
+    },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  return JSON.parse(result.stdout);
+}
 
 function createFakeOfficeCliSource(root: string) {
   fs.mkdirSync(root, { recursive: true });

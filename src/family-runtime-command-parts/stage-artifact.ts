@@ -12,7 +12,7 @@ function requireValue(token: string, value: string | undefined) {
 
 export function parseStageArtifactArgs(rest: string[]): FamilyRuntimeCommandInput | undefined {
   const action = rest[0];
-  if (!action || !['open', 'commit', 'status', 'explain', 'rebuild', 'promote', 'gc', 'restore', 'conformance', 'workbench'].includes(action)) {
+  if (!action || !['open', 'commit', 'status', 'explain', 'rebuild', 'promote', 'gc', 'restore', 'validate', 'conformance', 'workbench'].includes(action)) {
     return undefined;
   }
   const input: Record<string, unknown> = {
@@ -74,7 +74,7 @@ export function parseStageArtifactArgs(rest: string[]): FamilyRuntimeCommandInpu
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown stage-artifact option: ${token}.`, {
         option: token,
-        usage: 'opl stage-artifact status|explain|rebuild|promote|gc|restore|conformance|workbench --domain <domain> --program <id> --topic <id> --deliverable <id>',
+        usage: 'opl stage-artifact status|explain|rebuild|promote|gc|restore|validate|conformance|workbench --domain <domain> --program <id> --topic <id> --deliverable <id>',
       });
     }
   }

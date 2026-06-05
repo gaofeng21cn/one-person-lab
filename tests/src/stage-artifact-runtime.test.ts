@@ -15,6 +15,7 @@ import {
   restoreStageArtifactRuntime,
   stageArtifactAttemptPaths,
   statusStageArtifactRuntime,
+  validateStageArtifactRuntime,
   workbenchStageArtifactRuntime,
 } from '../../src/stage-artifact-runtime.ts';
 import { FrameworkContractError } from '../../src/contracts.ts';
@@ -562,6 +563,30 @@ test('stage artifact CLI exposes conformance and workbench projections', () => {
       (conformance.stage_artifact_runtime as { passed: boolean }).passed,
       true,
     );
+    const validate = runCli(
+      ['stage', 'validate', '--domain', 'redcube_ai', '--program', 'p1', '--topic', 't1', '--deliverable', 'd1'],
+      { OPL_STATE_DIR: root },
+    );
+    assert.equal(
+      (validate.stage_artifact_runtime as { surface_kind: string }).surface_kind,
+      'opl_stage_artifact_runtime_validation',
+    );
+    assert.equal(
+      (validate.stage_artifact_runtime as { passed: boolean }).passed,
+      true,
+    );
+    assert.deepEqual(
+      (validate.stage_artifact_runtime as { validates: string[] }).validates,
+      ['Stage Folder', 'Manifest', 'Receipt', 'content_hashes', 'latest_pointer', 'current_pointer', 'lineage_events'],
+    );
+    const directValidation = validateStageArtifactRuntime({
+      domain_id: 'redcube_ai',
+      program_id: 'p1',
+      topic_id: 't1',
+      deliverable_id: 'd1',
+    });
+    assert.equal(directValidation.conformance.surface_kind, 'opl_stage_artifact_runtime_conformance');
+    assert.equal(directValidation.authority_boundary.opl_can_issue_owner_receipt, false);
     const workbench = runCli(
       ['stage-artifact', 'workbench', '--domain', 'redcube_ai', '--program', 'p1', '--topic', 't1', '--deliverable', 'd1'],
       { OPL_STATE_DIR: root },

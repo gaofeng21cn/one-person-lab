@@ -514,7 +514,7 @@ export function buildInternalCommandSpecs(
       handler: (args) => runFamilyRuntime(args),
     },
     'stage-artifact': {
-      usage: 'opl stage-artifact open|commit|status|explain|rebuild|promote|gc|restore|conformance|workbench --domain <domain> --program <id> --topic <id> --deliverable <id>',
+      usage: 'opl stage-artifact open|commit|status|explain|rebuild|promote|gc|restore|validate|conformance|workbench --domain <domain> --program <id> --topic <id> --deliverable <id>',
       summary:
         'Read or maintain the OPL-owned Stage Folder Contract index without taking domain artifact or receipt authority.',
       examples: [
@@ -523,6 +523,7 @@ export function buildInternalCommandSpecs(
         'opl stage-artifact status --domain redcube_ai --program p1 --topic t1 --deliverable d1',
         'opl stage-artifact explain --domain redcube_ai --program p1 --topic t1 --deliverable d1',
         'opl stage-artifact rebuild --domain redcube_ai --program p1 --topic t1 --deliverable d1',
+        'opl stage-artifact validate --domain redcube_ai --program p1 --topic t1 --deliverable d1',
         'opl stage-artifact conformance --domain redcube_ai --program p1 --topic t1 --deliverable d1',
         'opl stage-artifact workbench --domain redcube_ai --program p1 --topic t1 --deliverable d1',
       ],
@@ -544,7 +545,7 @@ export function buildInternalCommandSpecs(
       },
     },
     stage: {
-      usage: 'opl stage open|commit|status|explain|rebuild|promote|gc|restore|conformance|workbench --domain <domain> --program <id> --topic <id> --deliverable <id>',
+      usage: 'opl stage open|commit|status|explain|rebuild|promote|gc|restore|validate|conformance|workbench --domain <domain> --program <id> --topic <id> --deliverable <id>',
       summary:
         'Operate the Stage Folder + Manifest + Receipt contract through the OPL-owned artifact runtime.',
       examples: [
@@ -552,6 +553,7 @@ export function buildInternalCommandSpecs(
         'opl stage commit --domain redcube_ai --program p1 --topic t1 --deliverable d1 --stage artifact_creation --attempt attempt-1 --terminal-status success --required-output deck.png --owner-receipt-ref rca-owner-receipt:deck',
         'opl stage status --domain redcube_ai --program p1 --topic t1 --deliverable d1',
         'opl stage explain --domain redcube_ai --program p1 --topic t1 --deliverable d1',
+        'opl stage validate --domain redcube_ai --program p1 --topic t1 --deliverable d1',
         'opl stage conformance --domain redcube_ai --program p1 --topic t1 --deliverable d1',
         'opl stage workbench --domain redcube_ai --program p1 --topic t1 --deliverable d1',
       ],

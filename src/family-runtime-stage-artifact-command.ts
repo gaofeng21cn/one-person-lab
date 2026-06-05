@@ -8,6 +8,7 @@ import {
   rebuildStageArtifactRuntime,
   restoreStageArtifactRuntime,
   statusStageArtifactRuntime,
+  validateStageArtifactRuntime,
   workbenchStageArtifactRuntime,
 } from './stage-artifact-runtime.ts';
 import type { FamilyRuntimeCommandInput } from './family-runtime-command.ts';
@@ -92,6 +93,12 @@ export function runFamilyRuntimeStageArtifactCommand(input: StageArtifactInput):
     return {
       version: 'g2',
       stage_artifact_runtime: conformanceStageArtifactRuntime(input),
+    };
+  }
+  if (input.action === 'validate') {
+    return {
+      version: 'g2',
+      stage_artifact_runtime: validateStageArtifactRuntime(input),
     };
   }
   return {

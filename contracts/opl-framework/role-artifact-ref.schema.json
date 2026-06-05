@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/role-artifact-ref.schema.json",
+  "schema_id": "opl.role_artifact_ref.v1",
+  "surface_kind": "opl_role_artifact_ref_schema",
+  "owner": "one-person-lab",
+  "purpose": "Define the refs-only role artifact pointer used by Stage manifests to bind a semantic output role to an artifact ref, content hash, lineage ref, and authority boundary.",
+  "state": "active_contract",
+  "machine_boundary": "OPL consumes role artifact refs as pointers and hashes only. Domain repositories retain role semantics, artifact content, mutation authority, and quality/export verdicts.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "role",
+    "artifact_ref",
+    "content_hash",
+    "lineage_ref",
+    "stage_manifest_ref",
+    "body_included",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_role_artifact_ref"
+    },
+    "schema_version": {
+      "const": "role-artifact-ref.v1"
+    },
+    "role": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "content_hash": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "sha256"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "lineage_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stage_manifest_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "body_included": {
+      "const": false
+    },
+    "authority_boundary": {
+      "$ref": "#/$defs/authority_boundary"
+    }
+  },
+  "$defs": {
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "role_is_interface",
+        "file_name_is_role_interface",
+        "artifact_body_included",
+        "opl_can_read_artifact_body",
+        "opl_can_mutate_artifact_body",
+        "opl_can_authorize_quality_or_export"
+      ],
+      "properties": {
+        "role_is_interface": {
+          "const": true
+        },
+        "file_name_is_role_interface": {
+          "const": false
+        },
+        "artifact_body_included": {
+          "const": false
+        },
+        "opl_can_read_artifact_body": {
+          "const": false
+        },
+        "opl_can_mutate_artifact_body": {
+          "const": false
+        },
+        "opl_can_authorize_quality_or_export": {
+          "const": false
+        }
+      }
+    }
+  }
+}

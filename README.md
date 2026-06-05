@@ -23,13 +23,13 @@ These tasks raise the same practical questions:
 
 - After many rounds of work, where exactly are we?
 - Which sources were used, which files changed, and what evidence was left behind?
-- Can preparation, execution, review, revision, and delivery stay separate instead of being buried in one long chat?
+- Can preparation, execution, review, revision, and delivery keep clear boundaries?
 - Can work continue while the user is away, then report progress, blockers, and next steps?
-- Can specialized agents share one runtime, file, progress, and delivery system instead of each rebuilding its own?
+- Can specialized agents share one runtime, file, progress, and delivery system?
 
 **One Person Lab is built around those questions.**
 
-It breaks complex knowledge work into stages that can actually move forward: prepare the material, do the work, review quality, revise, and close out delivery. Each stage works toward a real deliverable increment instead of just completing a workflow node. AI can organize sources, propose options, compare tradeoffs, use tools, accept review, and revise again; users can still see progress, files, evidence, blockers, and the next step.
+It breaks complex knowledge work into stages that can actually move forward: prepare the material, do the work, review quality, revise, and close out delivery. Each stage works toward a real deliverable increment. AI can organize sources, propose options, compare tradeoffs, use tools, accept review, and revise again; users can still see progress, files, evidence, blockers, and the next step.
 
 ## Core Highlights
 
@@ -39,7 +39,7 @@ It breaks complex knowledge work into stages that can actually move forward: pre
 
 **Turn long tasks into forward-moving stages**
 
-Papers, grants, presentations, and patents rarely finish in one prompt. OPL gives each round a clear goal, output, review point, and next step, so long work does not disappear into chat history.
+Papers, grants, presentations, and patents usually need many rounds. OPL gives each round a clear goal, output, review point, and next step; AI can read material, compare options, accept review, and revise inside the stage.
 
 </td>
 <td width="50%" valign="top">
@@ -62,7 +62,7 @@ You can see which sources were used, what results were produced, which files cha
 
 **Hosted long-running work**
 
-OPL is not limited to one-shot chats. It is designed for multi-round work, background execution, periodic checks, failure recovery, and human review.
+OPL is designed for multi-round work, background execution, periodic checks, failure recovery, and human review.
 
 </td>
 </tr>
@@ -76,15 +76,15 @@ If ordinary AI tools answer "what should I say now?", One Person Lab answers "ho
 
 ## Cognitive Computation for Complex Deliverables
 
-Ordinary automation is good at fixed steps: do A, then B, then output C. Complex knowledge work is different. A paper, proposal, or formal presentation often needs repeated judgment, comparison, rewriting, review, and correction.
+Ordinary automation is good at fixed steps: do A, then B, then output C. Complex knowledge work needs stronger judgment inside the stage. A paper, proposal, or formal presentation often needs repeated judgment, comparison, rewriting, review, and correction.
 
-The key idea is **cognitive computation**: AI should understand, compare, create, review, and revise inside an observable stage instead of only calling tools from a preset flow. OPL keeps progress, evidence, files, and handoff boundaries organized, while leaving open-ended thinking and professional judgment to the right AI and experts.
+The key idea is **cognitive computation**: AI understands, compares, creates, reviews, and revises inside an observable stage. OPL keeps progress, evidence, files, and handoff boundaries organized, while professional AI agents decide how to use sources, tools, candidate options, and revision cycles around the stage goal.
 
 One Person Lab's advantage is that users can still see where the work stands, what should happen next, and where it is blocked, while each professional AI agent has enough room to do real expert work inside a stage: read material, generate several options, compare them, revise from review, and produce the next inspectable version.
 
-That is the difference from a system that only calls tools in sequence. OPL cares less about whether a node ran and more about whether the deliverable truly moved forward with files, evidence, review, and handoff that another person or agent can continue.
+With this design, OPL keeps attention on real progress: whether the next version exists, the evidence is clear, review has happened, and the handoff can continue.
 
-## Why It Is Different From Workflow Tools
+## Designed For Professional Teamwork
 
 Workflow tools are strongest when the task is deterministic: call a few tools, fill a few fields, and produce a fixed output. High-value knowledge work behaves more like a professional team moving a project forward: someone prepares material, someone creates, someone reviews, someone revises, and someone closes out delivery. OPL organizes those roles and stages so AI keeps producing inspectable, editable, deliverable work.
 

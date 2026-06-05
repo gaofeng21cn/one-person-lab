@@ -1,0 +1,212 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/stage-manifest.schema.json",
+  "schema_id": "opl.stage_manifest.v1",
+  "surface_kind": "opl_stage_manifest_schema",
+  "owner": "one-person-lab",
+  "purpose": "Define the Stage Folder manifest shape that binds required roles, produced role artifacts, input/output refs, receipt/blocker refs, current pointer, lineage, and authority boundaries.",
+  "state": "active_contract",
+  "machine_boundary": "OPL owns manifest shape, hashes, refs, lineage, current pointer, and projection checks; domain repositories retain role semantics, artifact body authority, owner receipt signing, typed blocker creation, and quality verdicts.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "manifest_id",
+    "domain_id",
+    "stage_id",
+    "stage_run_id",
+    "generation",
+    "required_roles",
+    "produced_roles",
+    "input_refs",
+    "output_artifact_refs",
+    "receipt_refs",
+    "typed_blocker_refs",
+    "content_hashes",
+    "current_pointer",
+    "lineage_refs",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_stage_manifest"
+    },
+    "schema_version": {
+      "const": "stage-manifest.v1"
+    },
+    "manifest_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stage_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stage_run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "required_roles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/non_empty_string"
+      }
+    },
+    "produced_roles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/non_empty_string"
+      }
+    },
+    "input_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ref"
+      }
+    },
+    "output_artifact_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ref"
+      }
+    },
+    "receipt_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ref"
+      }
+    },
+    "typed_blocker_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ref"
+      }
+    },
+    "content_hashes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/content_hash"
+      }
+    },
+    "current_pointer": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "pointer_ref",
+        "stage_run_id",
+        "generation",
+        "current"
+      ],
+      "properties": {
+        "pointer_ref": {
+          "$ref": "#/$defs/ref"
+        },
+        "stage_run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "generation": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "current": {
+          "type": "boolean"
+        }
+      }
+    },
+    "lineage_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ref"
+      }
+    },
+    "authority_boundary": {
+      "$ref": "#/$defs/authority_boundary"
+    }
+  },
+  "$defs": {
+    "non_empty_string": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "content_hash": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "opl_can_validate_manifest_shape",
+        "opl_can_rebuild_projection",
+        "opl_can_write_domain_truth",
+        "opl_can_mutate_artifact_body",
+        "opl_can_create_owner_receipt",
+        "opl_can_create_typed_blocker",
+        "file_presence_counts_as_stage_complete",
+        "provider_completion_counts_as_stage_complete"
+      ],
+      "properties": {
+        "opl_can_validate_manifest_shape": {
+          "const": true
+        },
+        "opl_can_rebuild_projection": {
+          "const": true
+        },
+        "opl_can_write_domain_truth": {
+          "const": false
+        },
+        "opl_can_mutate_artifact_body": {
+          "const": false
+        },
+        "opl_can_create_owner_receipt": {
+          "const": false
+        },
+        "opl_can_create_typed_blocker": {
+          "const": false
+        },
+        "file_presence_counts_as_stage_complete": {
+          "const": false
+        },
+        "provider_completion_counts_as_stage_complete": {
+          "const": false
+        }
+      }
+    }
+  }
+}

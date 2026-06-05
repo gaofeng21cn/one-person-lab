@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/stage-typed-blocker.schema.json",
+  "schema_id": "opl.stage_typed_blocker.v1",
+  "surface_kind": "opl_stage_typed_blocker_schema",
+  "owner": "one-person-lab",
+  "purpose": "Define the owner-signed typed blocker shape that closes a blocked or deferred StageRun with a required owner and next safe action.",
+  "state": "active_contract",
+  "machine_boundary": "OPL can consume typed blocker refs and stop/re-route safely. Domain or human owners create blockers and retain truth, artifact, and verdict authority.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "blocker_id",
+    "domain_id",
+    "stage_id",
+    "stage_run_id",
+    "generation",
+    "blocked_surface",
+    "missing_or_failed_input",
+    "required_owner",
+    "next_safe_action",
+    "stability_or_retry_policy",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_stage_typed_blocker"
+    },
+    "schema_version": {
+      "const": "stage-typed-blocker.v1"
+    },
+    "blocker_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stage_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stage_run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "blocked_surface": {
+      "type": "string",
+      "minLength": 1
+    },
+    "missing_or_failed_input": {
+      "type": "string",
+      "minLength": 1
+    },
+    "required_owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "next_safe_action": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "stability_or_retry_policy": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "authority_boundary": {
+      "$ref": "#/$defs/authority_boundary"
+    }
+  },
+  "$defs": {
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "domain_or_human_owner_signed",
+        "opl_can_consume_typed_blocker",
+        "opl_can_create_typed_blocker",
+        "opl_can_synthesize_missing_input",
+        "opl_can_authorize_quality_or_export",
+        "blocker_counts_as_stage_success"
+      ],
+      "properties": {
+        "domain_or_human_owner_signed": {
+          "const": true
+        },
+        "opl_can_consume_typed_blocker": {
+          "const": true
+        },
+        "opl_can_create_typed_blocker": {
+          "const": false
+        },
+        "opl_can_synthesize_missing_input": {
+          "const": false
+        },
+        "opl_can_authorize_quality_or_export": {
+          "const": false
+        },
+        "blocker_counts_as_stage_success": {
+          "const": false
+        }
+      }
+    }
+  }
+}

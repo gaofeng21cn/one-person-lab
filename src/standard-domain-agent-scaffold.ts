@@ -20,11 +20,13 @@ import {
   STANDARD_AGENT_DEFAULT_RUNTIME_POLICY,
   STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT,
   STANDARD_PROGRESS_DELTA_POLICY,
+  STAGE_RUN_KERNEL_PROFILE,
   STATE_INDEX_KERNEL_ADOPTION_POLICY,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
   STANDARD_USER_STAGE_LOG_CONTRACT,
   WORKSPACE_FILE_LIFECYCLE_POLICY,
 } from './standard-domain-agent-scaffold-constants.ts';
+import { STAGE_RUN_CANARY_EVIDENCE } from './standard-domain-agent-scaffold-stage-run-canary.ts';
 export {
   buildStandardDomainAgentScaffoldValidation,
   validateStandardDomainAgentScaffold,
@@ -405,6 +407,8 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
       },
       private_functional_surface_admission_policy: PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY,
       workspace_file_lifecycle_policy: WORKSPACE_FILE_LIFECYCLE_POLICY,
+      stage_run_kernel_profile: STAGE_RUN_KERNEL_PROFILE,
+      stage_run_canary_evidence: STAGE_RUN_CANARY_EVIDENCE,
       state_index_kernel_adoption_policy: STATE_INDEX_KERNEL_ADOPTION_POLICY,
       required_verification: REQUIRED_VERIFICATION,
       ...(targetDir ? { template_files: templateFiles.map((file) => file.path) } : {}),

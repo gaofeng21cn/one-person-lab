@@ -69,6 +69,21 @@ export type StageRunReadModel = {
   authority_boundary: typeof AUTHORITY_BOUNDARY;
 };
 
+export type StageRunAdmissionReport = {
+  surface_kind: 'opl_stage_run_admission_report';
+  version: 'stage-run-admission.v1';
+  phase: 'launch' | 'closeout';
+  status: 'passed' | 'passed_with_advisory' | 'blocked';
+  launch_blockers: string[];
+  closeout_blockers: string[];
+  advisory_warnings: string[];
+  route_back_recommendations: string[];
+  audit_drilldown_refs: string[];
+  forbidden_authority_flags: string[];
+  default_blocked: boolean;
+  authority_boundary: typeof AUTHORITY_BOUNDARY;
+};
+
 const AUTHORITY_BOUNDARY = {
   owner: 'one-person-lab',
   opl_can_create_stage_run_spec: true,
@@ -155,6 +170,58 @@ function lastPresent(values: Array<string | null>) {
   return null;
 }
 
+function isNonEmptyString(value: unknown) {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function recordField(value: unknown) {
+  return isRecord(value) ? value : null;
+}
+
+function stringRefs(value: unknown) {
+  return refs(value);
+}
+
+function currentPointerMatches(input: JsonRecord) {
+  const pointer = recordField(input.current_pointer);
+  if (!pointer) {
+    return false;
+  }
+  return pointer.stage_run_id === input.stage_run_id
+    && pointer.generation === input.generation
+    && pointer.current === true;
+}
+
+function hasSafeAuthorityBoundary(input: JsonRecord) {
+  const boundary = recordField(input.authority_boundary);
+  if (!boundary) {
+    return false;
+  }
+  return boundary.opl_can_write_domain_truth === false
+    && boundary.opl_can_create_owner_receipt === false
+    && boundary.opl_can_create_typed_blocker === false;
+}
+
+function stageRunIdentityBlockers(input: JsonRecord) {
+  return [
+    isNonEmptyString(input.stage_run_id) ? null : 'stage_run_id_missing',
+    isNonEmptyString(input.domain_id) ? null : 'domain_id_missing',
+    isNonEmptyString(input.stage_id) ? null : 'stage_id_missing',
+    Number.isInteger(input.generation) && Number(input.generation) >= 0 ? null : 'generation_invalid',
+    currentPointerMatches(input) ? null : 'current_pointer_invalid',
+  ].filter((entry): entry is string => Boolean(entry));
+}
+
+function statusFor(report: Omit<StageRunAdmissionReport, 'status'>): StageRunAdmissionReport['status'] {
+  if (report.launch_blockers.length > 0 || report.closeout_blockers.length > 0 || report.forbidden_authority_flags.length > 0) {
+    return 'blocked';
+  }
+  if (report.advisory_warnings.length > 0 || report.route_back_recommendations.length > 0) {
+    return 'passed_with_advisory';
+  }
+  return 'passed';
+}
+
 function rejectForbiddenPayloads(event: JsonRecord) {
   const bodyFields = Object.keys(event).filter((field) => FORBIDDEN_BODY_FIELDS.has(field));
   if (bodyFields.length > 0) {
@@ -185,6 +252,106 @@ export function stageRunEvent(input: JsonRecord): StageRunEvent {
     stage_run_id: requiredString(input.stage_run_id, 'stage_run_id'),
     generation: requiredGeneration(input.generation),
     observed_at: requiredString(input.observed_at, 'observed_at'),
+  };
+}
+
+export function evaluateStageRunAdmission(input: JsonRecord): StageRunAdmissionReport {
+  const phase: StageRunAdmissionReport['phase'] = input.phase === 'closeout' ? 'closeout' : 'launch';
+  const launchBlockers: string[] = [];
+  const closeoutBlockers: string[] = [];
+  const advisoryWarnings = stringRefs(input.missing_strategy_refs)
+    .map((entry) => `strategy_ref_missing:${entry}`);
+  const routeBackRecommendations = stringRefs(input.route_back_missing_refs)
+    .map((entry) => `route_back_missing:${entry}`);
+  const auditDrilldownRefs = stringRefs(input.audit_drilldown_refs);
+  const forbiddenAuthorityFlags: string[] = [];
+
+  if (phase === 'launch') {
+    launchBlockers.push(...stageRunIdentityBlockers(input));
+    if (!isNonEmptyString(input.owner)) {
+      launchBlockers.push('owner_missing');
+    }
+    if (stringRefs(input.scope_refs).length === 0) {
+      launchBlockers.push('scope_refs_missing');
+    }
+    if (!isNonEmptyString(input.selected_executor)) {
+      launchBlockers.push('selected_executor_missing');
+    }
+    if (!hasSafeAuthorityBoundary(input)) {
+      launchBlockers.push('authority_boundary_invalid');
+    }
+    if (stringRefs(input.required_role_artifacts).length === 0) {
+      launchBlockers.push('required_role_artifacts_missing');
+    }
+    if (!isNonEmptyString(input.expected_receipt_or_blocker_shape)) {
+      launchBlockers.push('expected_receipt_or_typed_blocker_shape_missing');
+    }
+    if (stringRefs(input.input_refs).length === 0) {
+      launchBlockers.push('input_refs_missing');
+    }
+    if (input.forbidden_write_required === true) {
+      launchBlockers.push('forbidden_write_required');
+    }
+    if (stringRefs(input.replay_audit_refs).length === 0) {
+      launchBlockers.push('replay_audit_lineage_missing');
+    }
+  } else {
+    const requiredRoles = stringRefs(input.required_role_artifacts);
+    const producedRoles = stringRefs(input.produced_role_artifacts);
+    closeoutBlockers.push(...stageRunIdentityBlockers(input));
+    if (input.manifest_valid !== true) {
+      closeoutBlockers.push('manifest_invalid');
+    }
+    for (const role of requiredRoles) {
+      if (!producedRoles.includes(role)) {
+        closeoutBlockers.push(`required_role_artifact_missing:${role}`);
+      }
+    }
+    if (requiredRoles.length === 0) {
+      closeoutBlockers.push('required_role_artifacts_missing');
+    }
+    if (stringRefs(input.owner_receipt_refs).length === 0 && stringRefs(input.typed_blocker_refs).length === 0) {
+      closeoutBlockers.push('owner_receipt_or_typed_blocker_missing');
+    }
+    if (stringRefs(input.content_hashes).length === 0) {
+      closeoutBlockers.push('content_hashes_missing');
+    }
+    if (stringRefs(input.lineage_refs).length === 0) {
+      closeoutBlockers.push('lineage_refs_missing');
+    }
+    if (input.provider_completed === true) {
+      forbiddenAuthorityFlags.push('provider_completed_cannot_close_stage');
+    }
+    if (input.read_model_refreshed === true) {
+      forbiddenAuthorityFlags.push('read_model_refreshed_cannot_close_stage');
+    }
+    if (input.file_presence === true) {
+      forbiddenAuthorityFlags.push('file_presence_cannot_close_stage');
+    }
+    if (input.conformance_passed === true) {
+      forbiddenAuthorityFlags.push('conformance_passed_cannot_close_stage');
+    }
+  }
+
+  const base = {
+    surface_kind: 'opl_stage_run_admission_report' as const,
+    version: 'stage-run-admission.v1' as const,
+    phase,
+    launch_blockers: [...new Set(launchBlockers)],
+    closeout_blockers: [...new Set(closeoutBlockers)],
+    advisory_warnings: [...new Set(advisoryWarnings)],
+    route_back_recommendations: [...new Set(routeBackRecommendations)],
+    audit_drilldown_refs: [...new Set(auditDrilldownRefs)],
+    forbidden_authority_flags: [...new Set(forbiddenAuthorityFlags)],
+    default_blocked:
+      launchBlockers.length > 0
+      || closeoutBlockers.length > 0
+      || forbiddenAuthorityFlags.length > 0,
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+  return {
+    ...base,
+    status: statusFor(base),
   };
 }
 

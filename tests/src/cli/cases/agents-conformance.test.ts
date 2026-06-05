@@ -185,6 +185,63 @@ test('agents conformance reports structural readiness separately from production
     repo.stage_artifact_kernel_adoption_checks.authority_boundary.opl_can_create_domain_owner_receipt,
     false,
   );
+  assert.equal(repo.stage_run_kernel_profile_checks.status, 'passed');
+  assert.equal(repo.stage_run_kernel_profile_checks.profile_status, 'declared');
+  assert.equal(repo.stage_run_kernel_profile_checks.kernel_role, 'minimal_state_shell_not_domain_controller_system');
+  assert.deepEqual(repo.stage_run_kernel_profile_checks.stage_native_unit, [
+    'stage_folder',
+    'stage_manifest',
+    'role_artifacts',
+    'owner_receipt_or_typed_blocker',
+  ]);
+  assert.deepEqual(repo.stage_run_kernel_profile_checks.required_object_models, [
+    'StageRun',
+    'RoleArtifactRef',
+    'OwnerReceipt',
+    'TypedBlocker',
+    'ReadModel',
+  ]);
+  assert.equal(
+    repo.stage_run_kernel_profile_checks.stage_run_state_machine.provider_completion_counts_as_domain_accepted,
+    false,
+  );
+  assert.equal(
+    repo.stage_run_kernel_profile_checks.stage_run_state_machine.file_presence_counts_as_stage_complete,
+    false,
+  );
+  assert.equal(
+    repo.stage_run_kernel_profile_checks.transition_authority.terminal_transition_authority,
+    'owner_receipt_or_typed_blocker',
+  );
+  assert.equal(
+    repo.stage_run_kernel_profile_checks.authority_boundary.opl_can_sign_domain_owner_receipt,
+    false,
+  );
+  assert.equal(repo.stage_run_canary_evidence_checks.status, 'passed');
+  assert.equal(repo.stage_run_canary_evidence_checks.evidence_status, 'declared');
+  assert.equal(
+    repo.stage_run_canary_evidence_checks.evidence_scope,
+    'controlled_fixture_not_live_domain_progress',
+  );
+  assert.deepEqual(
+    Object.keys(repo.stage_run_canary_evidence_checks.strategy_trace),
+    [
+      'candidate_generation',
+      'grounded_reflection',
+      'comparative_selection',
+      'evolution_and_revision',
+      'meta_review_learning',
+      'independent_quality_gate',
+    ],
+  );
+  assert.equal(
+    repo.stage_run_canary_evidence_checks.closeout.same_attempt_self_review,
+    false,
+  );
+  assert.equal(
+    repo.stage_run_canary_evidence_checks.authority_boundary.controlled_canary_claims_live_domain_progress,
+    false,
+  );
   assert.deepEqual(repo.workspace_file_lifecycle_checks.repo_source_boundaries.required_roots, [
     'agent/',
     'contracts/',

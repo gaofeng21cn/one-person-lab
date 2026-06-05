@@ -6,7 +6,7 @@ Purpose: `active_docs_index`
 State: `active_support`
 Machine boundary: 本文是人读索引。机器真相继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 App/workspace evidence。
 
-本目录只收纳当前仍决定执行顺序、差距闭环、开发组合治理和当前完成门槛的人读支撑文档。dated closeout、receipt/proof 流水、line-count closeout、worktree/branch 过程、workorder 瞬时计数和历史演变进入 `docs/history/**`。
+本目录只收纳唯一 active owner 以及支撑标准、矩阵、索引和组合治理文档。执行顺序、差距闭环和当前完成门槛只由 `current-state-vs-ideal-gap.md` 维护；dated closeout、receipt/proof 流水、line-count closeout、worktree/branch 过程、workorder 瞬时计数和历史演变进入 `docs/history/**`。
 
 ## 统一读法
 
@@ -24,7 +24,7 @@ OPL Framework current_owner_delta root
 
 `opl-family-ideal-operating-model-redesign.md` 是 active_support 标准：后续审计只按 `meets_target`、`needs_demotion`、`needs_retirement` 判断。`opl-foundry-agent-target-operating-architecture.md` 是该标准的目标架构支撑。路线图、production closure matrix、purpose-first audit 和 private-platform inventory 都必须折回唯一 active owner，不再像平行计划一样追加 long list 或 dated proof。
 
-`opl-stage-native-kernel-rollout-plan.md` 是 active_plan 支撑：它把 MAS Stage Native / StageRun Kernel 设计、RCA stage-artifact 成功经验和 OPL Foundry target architecture 合并成 family 级推广方案。该方案只定义 StageRun Kernel、stage manifest、role artifact、owner receipt / typed blocker 和迁移清理顺序；它不声明任何 domain ready、App release ready、production ready 或质量 verdict。
+`opl-stage-native-kernel-rollout-plan.md` 是 Stage Native 设计支撑：它只保留 StageRun Kernel、stage manifest、role artifact、owner receipt / typed blocker、owner split、admission 分层和 anti-bloat 约束。当前落地状态、domain canary、App StageRun cockpit 和 compensation retirement tail 只回到 `current-state-vs-ideal-gap.md` 与 live machine surfaces。
 
 当前真相仍然先看：
 
@@ -40,10 +40,10 @@ OPL Framework current_owner_delta root
 
 ## 内容
 
-- `current-state-vs-ideal-gap.md`：唯一 active owner；维护当前目标、完成进度、功能/结构差距、测试/证据差距、下一轮 baton 和验证入口。
+- `current-state-vs-ideal-gap.md`：唯一 active owner；维护当前目标、完成进度、功能/结构差距、测试/证据差距、下一轮 baton 和验证入口；承接 Stage Native Kernel rollout 的当前落地状态和仍未闭合的 App/domain canary/cleanup tail。
 - `opl-family-ideal-operating-model-redesign.md`：active_support 标准；提供 `目的反推必要性，MVP 检查阻碍性` 的统一 operating model 和三类审计结论。
 - `opl-foundry-agent-target-operating-architecture.md`：active_support 目标架构；解释 Foundry Agent / OPL primitive、stage artifact、owner delta、passive evidence 和 App cockpit 的长期结构。
-- `opl-stage-native-kernel-rollout-plan.md`：active_plan 支撑；定义 OPL family Stage Native Kernel 的具体推广方案、owner split、对象模型、三层落地、canary 顺序和 cleanup gate。
+- `opl-stage-native-kernel-rollout-plan.md`：active_support；记录 OPL family Stage Native Kernel 的 owner split、对象模型、admission 分层、conformance shape 和 forbidden claims；不能维护当前执行路线、落地清单或 live readiness。
 - `current-development-lines.md`：active_support 路线支撑；只把当前开发线路映射到唯一 active owner，不维护独立路线图或冻结 live counters。
 - `production-framework-closure-gap-matrix.md`：active_support 差距矩阵；只解释 production closure 证据门如何被唯一 active owner 消费，不维护 dated proof ledger。
 - `opl-family-purpose-first-current-design-audit.md`：active_support 审计来源；保留目的优先审计结论，不替代 active gap owner、domain active plan 或 live machine truth。
