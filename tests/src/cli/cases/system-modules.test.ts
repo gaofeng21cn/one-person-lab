@@ -255,6 +255,7 @@ test('module install creates an OPL-managed root even when a sibling checkout is
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_DEVELOPER_MODE_GH_FIXTURE: JSON.stringify({ login: 'ordinary-user' }),
     };
 
     const beforeInstall = runCliInCwd(['modules'], onePersonLabRoot, env) as {

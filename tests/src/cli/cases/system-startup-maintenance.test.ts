@@ -15,6 +15,41 @@ function createDomainModuleRemote(input: {
         'scripts/install-codex-plugin.sh': [
           '#!/usr/bin/env bash',
           'set -euo pipefail',
+          'REPO_ROOT="$PWD"',
+          'while (($#)); do',
+          '  case "$1" in',
+          '    --repo-root)',
+          '      REPO_ROOT="$2"',
+          '      shift 2',
+          '      ;;',
+          '    *)',
+          '      shift',
+          '      ;;',
+          '  esac',
+          'done',
+          'mkdir -p "${REPO_ROOT}/.agents/plugins"',
+          `cat >"\${REPO_ROOT}/.agents/plugins/marketplace.json" <<'EOF_MARKETPLACE_${input.pluginName}'`,
+          JSON.stringify({
+            name: `${input.pluginName}-local`,
+            interface: {
+              displayName: `${input.pluginName.toUpperCase()} Local`,
+            },
+            plugins: [
+              {
+                name: input.pluginName,
+                source: {
+                  source: 'local',
+                  path: `./plugins/${input.pluginName}`,
+                },
+                policy: {
+                  installation: 'AVAILABLE',
+                  authentication: 'ON_INSTALL',
+                },
+                category: 'Productivity',
+              },
+            ],
+          }, null, 2),
+          `EOF_MARKETPLACE_${input.pluginName}`,
           `printf '${input.pluginName}-skill-sync\\n' >> ${JSON.stringify(input.logPath)}`,
           `printf '%s\\n' '{"plugin":"${input.pluginName}","sync":"ok"}'`,
           '',
@@ -22,7 +57,37 @@ function createDomainModuleRemote(input: {
       }
       : {
         'scripts/install-codex-plugin.mjs': [
+          `import path from 'node:path';`,
           `import fs from 'node:fs';`,
+          `let repoRoot = process.cwd();`,
+          `const args = process.argv.slice(2);`,
+          `for (let index = 0; index < args.length; index += 1) {`,
+          `  if (args[index] === '--repo-root' && args[index + 1]) {`,
+          `    repoRoot = path.resolve(args[index + 1]);`,
+          `    index += 1;`,
+          `  }`,
+          `}`,
+          `fs.mkdirSync(path.join(repoRoot, '.agents', 'plugins'), { recursive: true });`,
+          `fs.writeFileSync(path.join(repoRoot, '.agents', 'plugins', 'marketplace.json'), ${JSON.stringify(JSON.stringify({
+            name: `${input.pluginName}-local`,
+            interface: {
+              displayName: `${input.pluginName.toUpperCase()} Local`,
+            },
+            plugins: [
+              {
+                name: input.pluginName,
+                source: {
+                  source: 'local',
+                  path: `./plugins/${input.pluginName}`,
+                },
+                policy: {
+                  installation: 'AVAILABLE',
+                  authentication: 'ON_INSTALL',
+                },
+                category: 'Productivity',
+              },
+            ],
+          }, null, 2) + '\n')}, 'utf8');`,
           `fs.appendFileSync(${JSON.stringify(input.logPath)}, '${input.pluginName}-skill-sync\\n');`,
           `console.log(JSON.stringify({ plugin: '${input.pluginName}', sync: 'ok' }));`,
           '',
@@ -31,6 +96,26 @@ function createDomainModuleRemote(input: {
 
   return createGitModuleRemoteFixture(input.repoName, {
     extraFiles: {
+      [`.agents/plugins/marketplace.json`]: `${JSON.stringify({
+        name: `${input.pluginName}-local`,
+        interface: {
+          displayName: `${input.pluginName.toUpperCase()} Local`,
+        },
+        plugins: [
+          {
+            name: input.pluginName,
+            source: {
+              source: 'local',
+              path: `./plugins/${input.pluginName}`,
+            },
+            policy: {
+              installation: 'AVAILABLE',
+              authentication: 'ON_INSTALL',
+            },
+            category: 'Productivity',
+          },
+        ],
+      }, null, 2)}\n`,
       [`plugins/${input.pluginName}/.codex-plugin/plugin.json`]: JSON.stringify({
         name: input.pluginName,
         skills: './skills/',
@@ -454,6 +539,7 @@ test('system startup-maintenance installs OMA managed root when only a sibling c
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
       OPL_STATE_DIR: stateRoot,
+      OPL_DEVELOPER_MODE_GH_FIXTURE: JSON.stringify({ login: 'ordinary-user' }),
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
     }) as {
@@ -644,7 +730,7 @@ test('system startup-maintenance does not block all modules on a timed-out modul
   }
 });
 
-test('system startup-maintenance reports developer and dirty checkouts for manual review', () => {
+test('system startup-maintenance syncs explicit developer checkouts and reports dirty managed checkouts', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-manual-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const logPath = path.join(homeRoot, 'startup-maintenance.log');
@@ -698,8 +784,8 @@ test('system startup-maintenance reports developer and dirty checkouts for manua
       };
     };
     const firstTargets = new Map(firstRun.system_action.details.module_targets.map((target) => [target.target_id, target]));
-    assert.equal(firstRun.system_action.status, 'manual_required');
-    assert.equal(firstTargets.get('medautoscience')?.status, 'manual_required');
+    assert.equal(firstRun.system_action.status, 'completed');
+    assert.equal(firstTargets.get('medautoscience')?.status, 'completed');
     assert.equal(firstTargets.get('medautoscience')?.reason, 'developer_checkout_visible_not_app_managed');
     assert.equal(firstTargets.get('medautoscience')?.install_origin_before, 'env_override');
 
@@ -735,7 +821,8 @@ test('system startup-maintenance reports developer and dirty checkouts for manua
     };
     const secondTargets = new Map(secondRun.system_action.details.module_targets.map((target) => [target.target_id, target]));
     assert.equal(secondRun.system_action.status, 'manual_required');
-    assert.equal(secondRun.system_action.details.summary.manual_required_targets_count, 2);
+    assert.equal(secondRun.system_action.details.summary.manual_required_targets_count, 1);
+    assert.equal(secondTargets.get('medautoscience')?.status, 'completed');
     assert.equal(secondTargets.get('medautoscience')?.reason, 'developer_checkout_visible_not_app_managed');
     assert.equal(secondTargets.get('medautogrant')?.reason, 'dirty_checkout');
     assert.equal(secondTargets.get('medautogrant')?.action, null);
@@ -748,6 +835,154 @@ test('system startup-maintenance reports developer and dirty checkouts for manua
       ),
       true,
     );
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(masRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(magRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(rcaRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(metaRemote.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('system startup-maintenance uses auto Developer Mode sibling checkouts for domain plugin sync', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-devmode-home-'));
+  const workspaceRoot = path.join(homeRoot, 'workspace');
+  const onePersonLabRoot = path.join(workspaceRoot, 'one-person-lab');
+  const logPath = path.join(homeRoot, 'startup-maintenance-devmode.log');
+  const masRemote = createDomainModuleRemote({
+    repoName: 'med-autoscience',
+    pluginName: 'mas',
+    installerKind: 'bash',
+    logPath,
+  });
+  const magRemote = createDomainModuleRemote({
+    repoName: 'med-autogrant',
+    pluginName: 'mag',
+    installerKind: 'bash',
+    logPath,
+  });
+  const rcaRemote = createDomainModuleRemote({
+    repoName: 'redcube-ai',
+    pluginName: 'rca',
+    installerKind: 'node',
+    logPath,
+  });
+  const metaRemote = createOmaGeneratedSurfaceRemote({
+    logPath,
+  });
+  const siblingCheckouts = {
+    medautoscience: path.join(workspaceRoot, 'med-autoscience'),
+    medautogrant: path.join(workspaceRoot, 'med-autogrant'),
+    redcube: path.join(workspaceRoot, 'redcube-ai'),
+    oplmetaagent: path.join(workspaceRoot, 'opl-meta-agent'),
+  };
+
+  try {
+    fs.mkdirSync(onePersonLabRoot, { recursive: true });
+    runGitFixtureCommand(workspaceRoot, ['clone', masRemote.remoteRoot, siblingCheckouts.medautoscience]);
+    runGitFixtureCommand(workspaceRoot, ['clone', magRemote.remoteRoot, siblingCheckouts.medautogrant]);
+    runGitFixtureCommand(workspaceRoot, ['clone', rcaRemote.remoteRoot, siblingCheckouts.redcube]);
+    runGitFixtureCommand(workspaceRoot, ['clone', metaRemote.remoteRoot, siblingCheckouts.oplmetaagent]);
+
+    const output = runCli(['system', 'startup-maintenance'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_DEVELOPER_MODE_GH_FIXTURE: JSON.stringify({
+        login: 'gaofeng21cn',
+        permissions: {
+          'gaofeng21cn/one-person-lab': 'admin',
+          'gaofeng21cn/med-autoscience': 'admin',
+          'gaofeng21cn/med-autogrant': 'admin',
+          'gaofeng21cn/redcube-ai': 'admin',
+          'gaofeng21cn/opl-meta-agent': 'admin',
+        },
+      }),
+      OPL_GIT_RETRY_ATTEMPTS: '1',
+      ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
+    }) as {
+      system_action: {
+        status: string;
+        details: {
+          summary: {
+            completed_targets_count: number;
+            manual_required_targets_count: number;
+          };
+          managed_install_update_receipts: {
+            recorded_receipt_count: number;
+          };
+          module_targets: Array<{
+            target_id: keyof typeof siblingCheckouts;
+            status: string;
+            reason: string;
+            action: string | null;
+            install_origin_before: string;
+            result: {
+              module: {
+                install_origin: string;
+                checkout_path: string;
+                managed_checkout_path: string;
+                source_policy: {
+                  configured_by: string;
+                  effective_install_update_source: string;
+                };
+              };
+              turnkey: {
+                bootstrap: { status: string };
+                skill_sync: { status: string };
+                health_check: { status: string };
+              };
+            };
+          }>;
+          plugin_cache_freshness: {
+            status: string;
+            synced_domain_packs_count: number;
+          };
+          restart_reload_prompt: {
+            required: boolean;
+          };
+        };
+      };
+    };
+
+    assert.equal(output.system_action.status, 'completed');
+    assert.equal(output.system_action.details.summary.completed_targets_count, 4);
+    assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
+    assert.equal(output.system_action.details.managed_install_update_receipts.recorded_receipt_count, 0);
+    assert.equal(output.system_action.details.plugin_cache_freshness.status, 'freshened');
+    assert.equal(output.system_action.details.plugin_cache_freshness.synced_domain_packs_count, 4);
+    assert.equal(output.system_action.details.restart_reload_prompt.required, true);
+
+    for (const target of output.system_action.details.module_targets) {
+      assert.equal(target.status, 'completed');
+      assert.equal(target.reason, 'developer_checkout_visible_not_app_managed');
+      assert.equal(target.action, 'sync');
+      assert.equal(target.install_origin_before, 'sibling_workspace');
+      assert.equal(target.result.module.install_origin, 'sibling_workspace');
+      assert.equal(target.result.module.checkout_path, siblingCheckouts[target.target_id]);
+      assert.equal(target.result.module.source_policy.configured_by, 'developer_mode');
+      assert.equal(target.result.module.source_policy.effective_install_update_source, 'git_checkout');
+      assert.equal(target.result.turnkey.bootstrap.status, 'skipped');
+      assert.equal(target.result.turnkey.skill_sync.status, 'completed');
+      assert.equal(target.result.turnkey.health_check.status, 'completed');
+    }
+
+    assert.deepEqual(fs.readFileSync(logPath, 'utf8').trim().split('\n'), [
+      'mas-skill-sync',
+      'mas-health',
+      'mag-skill-sync',
+      'mag-health',
+      'rca-skill-sync',
+      'rca-health',
+      'opl-meta-agent-health',
+    ]);
+    const codexConfig = fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8');
+    assert.match(codexConfig, new RegExp(`\\[marketplaces\\.mas-local\\]\\nsource_type = "local"\\nsource = "${siblingCheckouts.medautoscience.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+    assert.match(codexConfig, new RegExp(`\\[marketplaces\\.mag-local\\]\\nsource_type = "local"\\nsource = "${siblingCheckouts.medautogrant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+    assert.match(codexConfig, new RegExp(`\\[marketplaces\\.rca-local\\]\\nsource_type = "local"\\nsource = "${siblingCheckouts.redcube.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+    assert.match(codexConfig, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
+    assert.match(codexConfig, /generated-codex-plugins\/opl-meta-agent-local/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(masRemote.fixtureRoot, { recursive: true, force: true });

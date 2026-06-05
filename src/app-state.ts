@@ -653,7 +653,7 @@ function parseCodexAction(actionId: string): OplEngineAction | null {
 }
 
 function parseModuleAction(actionId: string): OplModuleAction | null {
-  const match = /^module_(install|update|reinstall|remove)$/.exec(actionId);
+  const match = /^module_(install|update|sync|reinstall|remove)$/.exec(actionId);
   return match ? match[1] as OplModuleAction : null;
 }
 

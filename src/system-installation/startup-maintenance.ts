@@ -16,7 +16,7 @@ type StartupMaintenanceModuleTarget = {
   target_id: string;
   status: 'completed' | 'skipped' | 'manual_required';
   reason: string;
-  action: 'install' | 'update' | null;
+  action: 'install' | 'update' | 'sync' | null;
   install_origin_before: ModuleStatus['install_origin'];
   health_status_before: ModuleStatus['health_status'];
   git_before: ModuleStatus['git'];
@@ -99,6 +99,18 @@ function shouldAutoMaintain(module: ModuleStatus) {
   }
   if (!module.installed || module.install_origin === 'missing') {
     return { action: 'install', reason: 'module_missing' } as const;
+  }
+  if (
+    (module.install_origin === 'env_override')
+    || (
+      module.install_origin === 'sibling_workspace'
+      && (
+        module.source_policy.configured_by === 'developer_mode'
+        || module.source_policy.configured_by === 'env_source_mode'
+      )
+    )
+  ) {
+    return { action: 'sync', reason: buildManualReason(module) } as const;
   }
   if (
     module.install_origin === 'sibling_workspace'

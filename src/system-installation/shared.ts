@@ -16,6 +16,7 @@ export type OplModuleId =
 export type OplModuleAction =
   | 'install'
   | 'update'
+  | 'sync'
   | 'reinstall'
   | 'remove';
 

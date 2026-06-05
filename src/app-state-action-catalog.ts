@@ -30,7 +30,7 @@ export function buildActionCatalog() {
     payload_fields: [],
     mutates: 'opl_codex_cli_runtime',
   }));
-  const moduleActions: AppActionCatalogEntry[] = (['install', 'update', 'reinstall', 'remove'] as const).map((action) => ({
+  const moduleActions: AppActionCatalogEntry[] = (['install', 'update', 'sync', 'reinstall', 'remove'] as const).map((action) => ({
     action_id: `module_${action}`,
     label: `${action[0].toUpperCase()}${action.slice(1)} OPL module`,
     surface: 'opl app action execute',

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { FrameworkContractError } from '../contracts.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../runtime-state-paths.ts';
 import { resolveDefaultFamilyWorkspaceRoot } from '../opl-skills.ts';
-import { readOplDeveloperSupervisorConfig } from '../system-preferences.ts';
+import { developerModePrefersLocalCheckouts } from '../developer-mode-source-policy.ts';
 import {
   type DomainModuleSpec,
   type ModuleSourcePolicy,
@@ -318,9 +318,18 @@ function fullRuntimeModuleOverridesAreLaunchSources() {
   return Boolean(normalizeOptionalString(process.env.OPL_FULL_RUNTIME_HOME));
 }
 
-function developerModePrefersLocalCheckouts() {
-  const config = readOplDeveloperSupervisorConfig();
-  return config.enabled === 'on' && config.mode === 'developer_apply_safe';
+function externalCheckoutSyncAvailable(
+  sourcePolicy: ModuleSourcePolicy,
+  installOrigin: OplModuleInstallOrigin,
+) {
+  return installOrigin === 'env_override'
+    || (
+      installOrigin === 'sibling_workspace'
+      && (
+        sourcePolicy.configured_by === 'developer_mode'
+        || sourcePolicy.configured_by === 'env_source_mode'
+      )
+    );
 }
 
 function buildModuleSourcePolicy(spec: DomainModuleSpec): ModuleSourcePolicy {
@@ -533,12 +542,16 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
 
     const git = inspectGitRepo(candidate.path, profile === 'full' && candidate.origin === 'managed_root');
     const updateAvailable = isModuleUpdateAvailable(git);
-    const availableActions: OplModuleAction[] =
-      candidate.origin === 'managed_root'
-        ? [...(updateAvailable ? (['update'] as const) : []), 'reinstall', 'remove']
-        : updateAvailable
-          ? ['update']
-          : [];
+    const availableActions: OplModuleAction[] = (() => {
+      if (candidate.origin === 'managed_root') {
+        return [...(updateAvailable ? (['update'] as const) : []), 'reinstall', 'remove'];
+      }
+
+      return [
+        ...(updateAvailable ? (['update'] as const) : []),
+        ...(externalCheckoutSyncAvailable(sourcePolicy, candidate.origin) ? (['sync'] as const) : []),
+      ];
+    })();
     return {
       module_id: spec.module_id,
       label: spec.label,
@@ -809,6 +822,34 @@ export function runOplModuleAction(
       } else {
         workflow = runExternalModuleWorkflow(spec, updated.checkout_path);
       }
+      break;
+    }
+    case 'sync': {
+      if (!current.installed || current.health_status === 'missing') {
+        throw new FrameworkContractError(
+          'cli_usage_error',
+          'Module sync requires an installed checkout.',
+          {
+            module_id: spec.module_id,
+            checkout_path: current.checkout_path,
+          },
+          2,
+        );
+      }
+      if (current.health_status === 'invalid_checkout') {
+        throw new FrameworkContractError(
+          'cli_usage_error',
+          'Module sync requires a valid git or packaged module checkout.',
+          {
+            module_id: spec.module_id,
+            checkout_path: current.checkout_path,
+          },
+          2,
+        );
+      }
+      workflow = current.install_origin === 'managed_root'
+        ? runManagedModuleWorkflow(spec, current.checkout_path, MODULE_WORKFLOW_DEPS)
+        : runExternalModuleWorkflow(spec, current.checkout_path);
       break;
     }
     case 'reinstall': {

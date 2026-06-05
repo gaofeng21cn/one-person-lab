@@ -76,6 +76,10 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
     assert.match(config, /\[plugins\."mag@mag-local"\]/);
     assert.match(config, /\[plugins\."rca@rca-local"\]/);
     assert.match(config, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
+    assert.match(config, new RegExp(`\\[marketplaces\\.mas-local\\]\\nsource_type = "local"\\nsource = "${repoPaths.get('medautoscience')!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+    assert.match(config, new RegExp(`\\[marketplaces\\.mag-local\\]\\nsource_type = "local"\\nsource = "${repoPaths.get('medautogrant')!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+    assert.match(config, new RegExp(`\\[marketplaces\\.rca-local\\]\\nsource_type = "local"\\nsource = "${repoPaths.get('redcube')!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+    assert.match(config, new RegExp(`\\[marketplaces\\.opl-meta-agent-local\\]\\nsource_type = "local"\\nsource = "${repoPaths.get('oplmetaagent')!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }

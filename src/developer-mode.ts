@@ -1,8 +1,15 @@
-import { spawnSync } from 'node:child_process';
-
 import type { OplDeveloperSupervisorConfigFile } from './system-preferences.ts';
 import { readOplDeveloperSupervisorConfig } from './system-preferences.ts';
 import { listDefaultOplDomainModuleSpecs } from './system-installation/modules.ts';
+import {
+  type DeveloperModeGhFixture,
+  type DeveloperModeGithubIdentityProjection,
+  detectDeveloperModeGithubIdentity,
+  parseGithubRepoFromUrl,
+  permissionAllowsDeveloperModeDirectWrite,
+  readDeveloperModeGhFixture,
+  readDeveloperModeRepoPermission,
+} from './developer-mode-source-policy.ts';
 
 type DeveloperModeStatus = 'ready' | 'limited' | 'blocked' | 'disabled' | 'inactive';
 type DeveloperModeEffectiveState =
@@ -20,8 +27,8 @@ type DeveloperModeAllowedRoute =
   | 'observe_only'
   | 'blocked'
   | 'disabled';
-type GithubIdentityStatus = 'ready' | 'unavailable' | 'skipped';
-type GithubIdentitySource = 'gh_cli' | 'env_fixture' | 'not_checked';
+type GithubIdentityStatus = DeveloperModeGithubIdentityProjection['status'];
+type GithubIdentitySource = DeveloperModeGithubIdentityProjection['source'];
 type RepoAuthorityStatus = 'ready' | 'limited' | 'blocked' | 'disabled' | 'not_checked';
 type RepoTargetSource = 'opl_framework_constant' | 'domain_module_spec';
 type DeveloperProfileId = 'contributor' | 'maintainer' | 'runtime_maintainer';
@@ -98,11 +105,7 @@ export type OplDeveloperModeProjection = {
   inspection_detail?: 'fast' | 'full';
 };
 
-type GhFixture = {
-  user?: unknown;
-  login?: unknown;
-  permissions?: unknown;
-};
+type GhFixture = DeveloperModeGhFixture;
 
 const OPL_FRAMEWORK_REPO_TARGET: RepoAuthorityTarget = {
   target_id: 'opl_framework',
@@ -111,192 +114,6 @@ const OPL_FRAMEWORK_REPO_TARGET: RepoAuthorityTarget = {
   repo_url: 'https://github.com/gaofeng21cn/one-person-lab.git',
   source: 'opl_framework_constant',
 };
-
-const DIRECT_WRITE_PERMISSIONS = new Set(['admin', 'maintain', 'write']);
-
-function normalizeOptionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function normalizePermission(value: unknown) {
-  const permission = normalizeOptionalString(value)?.toLowerCase() ?? null;
-  return permission;
-}
-
-function parseJsonRecord(raw: string | null | undefined) {
-  const trimmed = raw?.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(trimmed) as unknown;
-    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-      return parsed as Record<string, unknown>;
-    }
-  } catch {
-    return null;
-  }
-
-  return null;
-}
-
-function parseGithubRepoFromUrl(repoUrl: string) {
-  const normalized = repoUrl.trim();
-  const httpsMatch = normalized.match(/^https:\/\/github\.com\/([^/]+)\/(.+?)(?:\.git)?$/);
-  if (httpsMatch) {
-    return `${httpsMatch[1]}/${httpsMatch[2]}`;
-  }
-
-  const sshMatch = normalized.match(/^git@github\.com:([^/]+)\/(.+?)(?:\.git)?$/);
-  if (sshMatch) {
-    return `${sshMatch[1]}/${sshMatch[2]}`;
-  }
-
-  const sshUrlMatch = normalized.match(/^ssh:\/\/git@github\.com\/([^/]+)\/(.+?)(?:\.git)?$/);
-  if (sshUrlMatch) {
-    return `${sshUrlMatch[1]}/${sshUrlMatch[2]}`;
-  }
-
-  return null;
-}
-
-function readGhFixture(): GhFixture | null {
-  const parsed = parseJsonRecord(process.env.OPL_DEVELOPER_MODE_GH_FIXTURE);
-  return parsed ? parsed as GhFixture : null;
-}
-
-function readFixtureLogin(fixture: GhFixture | null) {
-  const explicitIdentity = process.env.OPL_DEVELOPER_MODE_GITHUB_IDENTITY_FIXTURE?.trim();
-  if (explicitIdentity) {
-    const parsed = parseJsonRecord(explicitIdentity);
-    if (parsed) {
-      return normalizeOptionalString(parsed.login);
-    }
-    return explicitIdentity;
-  }
-
-  if (!fixture) {
-    return null;
-  }
-
-  const directLogin = normalizeOptionalString(fixture.login);
-  if (directLogin) {
-    return directLogin;
-  }
-
-  if (typeof fixture.user === 'string') {
-    return normalizeOptionalString(fixture.user);
-  }
-
-  if (typeof fixture.user === 'object' && fixture.user !== null && !Array.isArray(fixture.user)) {
-    return normalizeOptionalString((fixture.user as Record<string, unknown>).login);
-  }
-
-  return null;
-}
-
-function readFixturePermission(fixture: GhFixture | null, repo: string) {
-  const explicitPermissions = parseJsonRecord(process.env.OPL_DEVELOPER_MODE_REPO_PERMISSIONS_FIXTURE);
-  const source = explicitPermissions ?? (
-    typeof fixture?.permissions === 'object' && fixture.permissions !== null && !Array.isArray(fixture.permissions)
-      ? fixture.permissions as Record<string, unknown>
-      : null
-  );
-  if (!source || !(repo in source)) {
-    return null;
-  }
-
-  const value = source[repo];
-  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-    return normalizePermission((value as Record<string, unknown>).permission);
-  }
-
-  return normalizePermission(value);
-}
-
-function readGhTimeoutMs() {
-  const parsed = Number.parseInt(process.env.OPL_DEVELOPER_MODE_GH_TIMEOUT_MS ?? '', 10);
-  if (Number.isFinite(parsed) && parsed > 0) {
-    return Math.min(parsed, 10_000);
-  }
-  return 5_000;
-}
-
-function runGhApi(args: string[]) {
-  const ghBinary = process.env.OPL_DEVELOPER_MODE_GH_BINARY?.trim() || 'gh';
-  const result = spawnSync(ghBinary, ['api', ...args], {
-    encoding: 'utf8',
-    env: process.env,
-    timeout: readGhTimeoutMs(),
-    maxBuffer: 1024 * 1024,
-  });
-
-  if (result.error) {
-    return {
-      status: 'unavailable' as const,
-      stdout: result.stdout ?? '',
-      stderr: result.stderr ?? '',
-      reason: result.error.message,
-    };
-  }
-
-  if (result.status !== 0) {
-    return {
-      status: 'unavailable' as const,
-      stdout: result.stdout ?? '',
-      stderr: result.stderr ?? '',
-      reason: (result.stderr ?? '').trim() || `gh exited with code ${result.status ?? 1}`,
-    };
-  }
-
-  return {
-    status: 'ready' as const,
-    stdout: result.stdout ?? '',
-    stderr: result.stderr ?? '',
-    reason: null,
-  };
-}
-
-function detectGithubIdentity(fixture: GhFixture | null): GithubIdentityProjection {
-  const fixtureLogin = readFixtureLogin(fixture);
-  if (fixtureLogin) {
-    return {
-      status: 'ready',
-      login: fixtureLogin,
-      source: 'env_fixture',
-      reason: null,
-    };
-  }
-
-  const result = runGhApi(['user']);
-  if (result.status !== 'ready') {
-    return {
-      status: 'unavailable',
-      login: null,
-      source: 'gh_cli',
-      reason: result.reason,
-    };
-  }
-
-  const parsed = parseJsonRecord(result.stdout);
-  const login = parsed ? normalizeOptionalString(parsed.login) : null;
-  if (!login) {
-    return {
-      status: 'unavailable',
-      login: null,
-      source: 'gh_cli',
-      reason: 'gh api user did not return a login.',
-    };
-  }
-
-  return {
-    status: 'ready',
-    login,
-    source: 'gh_cli',
-    reason: null,
-  };
-}
 
 function buildRepoTargets(): RepoAuthorityTarget[] {
   return [
@@ -353,41 +170,7 @@ function buildNotCheckedRepoAuthority(reason: string): RepoAuthoritySummary {
 }
 
 function readRepoPermission(target: RepoAuthorityTarget, login: string, fixture: GhFixture | null) {
-  const fixturePermission = readFixturePermission(fixture, target.repo);
-  if (fixturePermission) {
-    return {
-      status: 'ready' as const,
-      permission: fixturePermission,
-      reason: null,
-    };
-  }
-
-  const result = runGhApi([
-    `repos/${target.repo}/collaborators/${encodeURIComponent(login)}/permission`,
-  ]);
-  if (result.status !== 'ready') {
-    return {
-      status: 'unavailable' as const,
-      permission: null,
-      reason: result.reason,
-    };
-  }
-
-  const parsed = parseJsonRecord(result.stdout);
-  const permission = parsed ? normalizePermission(parsed.permission) : null;
-  if (!permission) {
-    return {
-      status: 'unavailable' as const,
-      permission: null,
-      reason: 'gh permission response did not include a permission.',
-    };
-  }
-
-  return {
-    status: 'ready' as const,
-    permission,
-    reason: null,
-  };
+  return readDeveloperModeRepoPermission(target.repo, login, fixture);
 }
 
 function buildRepoAuthority(login: string, fixture: GhFixture | null): RepoAuthoritySummary {
@@ -405,7 +188,7 @@ function buildRepoAuthority(login: string, fixture: GhFixture | null): RepoAutho
     }
 
     const permission = permissionResult.permission;
-    const directWriteAllowed = DIRECT_WRITE_PERMISSIONS.has(permission);
+    const directWriteAllowed = permissionAllowsDeveloperModeDirectWrite(permission);
     return {
       ...target,
       status: directWriteAllowed ? 'ready' : 'limited',
@@ -809,8 +592,8 @@ export function buildOplDeveloperModeProjection(
     });
   }
 
-  const fixture = readGhFixture();
-  const identity = detectGithubIdentity(fixture);
+  const fixture = readDeveloperModeGhFixture();
+  const identity = detectDeveloperModeGithubIdentity(fixture);
   if (identity.status !== 'ready' || !identity.login) {
     return buildDeveloperModeProjection({
       status: 'blocked',

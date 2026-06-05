@@ -81,6 +81,7 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'developer_supervisor_refresh',
       'module_install',
       'module_update',
+      'module_sync',
       'module_reinstall',
       'module_remove',
       'provider_scheduler_install',
@@ -95,6 +96,8 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.deepEqual(actions.get('module_update')?.payload_fields, ['module_id']);
     assert.equal(actions.get('module_update')?.route_requires_domain_or_app_payload, true);
     assert.equal(actions.get('module_update')?.can_submit_to_safe_action_shell, false);
+    assert.deepEqual(actions.get('module_sync')?.payload_fields, ['module_id']);
+    assert.equal(actions.get('module_sync')?.delegated_surface, 'opl module sync --module <module_id>');
     assert.equal(actions.get('provider_scheduler_status')?.submit_via, 'opl app action execute');
     assert.equal(actions.get('provider_scheduler_status')?.execution_policy, 'opl_safe_action_shell');
     assert.equal(actions.get('provider_scheduler_status')?.route_requires_domain_or_app_payload, false);
@@ -256,6 +259,21 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
 
     assert.equal(module.delegated_surface, 'opl module reinstall --module oplmetaagent');
     assert.equal(module.result.module_action.status, 'dry_run');
+
+    const moduleSync = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'module_sync',
+      '--payload',
+      '{"module_id":"oplmetaagent"}',
+      '--dry-run',
+    ], env).app_action_execution;
+
+    assert.equal(moduleSync.delegated_surface, 'opl module sync --module oplmetaagent');
+    assert.equal(moduleSync.result.module_action.action, 'sync');
+    assert.equal(moduleSync.result.module_action.status, 'dry_run');
 
     const scheduler = runCli([
       'app',
