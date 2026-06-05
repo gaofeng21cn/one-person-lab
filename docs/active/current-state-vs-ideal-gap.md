@@ -179,12 +179,13 @@ Unified owner-delta 仍按 live 机器面读取，不从本页继承旧 counters
    rtk opl agents default-callers --family-defaults --json
    ```
 
-- Parallel execution discipline: 对互不冲突、写集可隔离、不会阻断当前
-  critical path 的审计、实现、验证或 docs foldback lane，优先使用 subagent +
-  独立 worktree 并行推进；subagent prompt 首行必须写清任务、cwd、权限、
-  source of truth 和停止条件。主会话必须核查 diff、live evidence、验证输出
-  和残余风险，吸收回 main 后清理 worktree / branch / thread；不能把 subagent
-  完成报告当作 owner receipt、domain verdict、delete authority 或最终验收。
+- Parallel execution discipline: 为提高效率，凡任务互不冲突、写集可隔离、
+  source of truth 清楚，且不会阻断当前 critical path，优先用 subagent +
+  独立 worktree 并行推进审计、实现、验证或 docs foldback lane；subagent
+  prompt 首行必须写清任务、cwd、权限、source of truth 和停止条件。主会话必须核查
+  diff、live evidence、验证输出和残余风险，完善后立刻吸收回 main 并清理
+  worktree / branch / thread；不能把 subagent 完成报告当作 owner receipt、
+  domain verdict、delete authority 或最终验收。
   若 lane 只负责 active docs foldback，必须先确认 main checkout 状态、`.worktrees/`
   ignore 状态、既有并发 worktree/branch 和本轮 source-of-truth readouts；只允许在
   指定写集内产出可审查 diff。已有并发 worktree 一律视为外部 owner lane，除非用户
