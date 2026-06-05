@@ -91,12 +91,13 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
   });
   writeJson(functionalAuditPath, functionalAudit);
 
-  const defaultCallers = runCli([
+  const defaultCallersPayload = runCli([
     'agents',
     'default-callers',
     '--agent',
     `sample=${repoDir}`,
-  ]).agent_default_caller_readiness;
+  ]);
+  const defaultCallers = defaultCallersPayload.agent_default_caller_readiness;
 
   const report = defaultCallers.reports[0];
   const contract = JSON.parse(fs.readFileSync(
@@ -112,6 +113,29 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
   assert.equal(defaultCallers.missing_tombstone_or_provenance_ref_count, 0);
   assert.equal(defaultCallers.default_caller_delete_ready, false);
   assert.equal(defaultCallers.physical_delete_authorized, false);
+  assert.equal(defaultCallersPayload.blocked_count, defaultCallers.blocked_count);
+  assert.equal(
+    defaultCallersPayload.deletion_evidence_worklist_count,
+    defaultCallers.deletion_evidence_worklist_count,
+  );
+  assert.equal(
+    defaultCallersPayload.missing_domain_owner_receipt_or_typed_blocker_count,
+    defaultCallers.missing_domain_owner_receipt_or_typed_blocker_count,
+  );
+  assert.equal(
+    defaultCallersPayload.missing_no_forbidden_write_proof_count,
+    defaultCallers.missing_no_forbidden_write_proof_count,
+  );
+  assert.equal(
+    defaultCallersPayload.missing_tombstone_or_provenance_ref_count,
+    defaultCallers.missing_tombstone_or_provenance_ref_count,
+  );
+  assert.equal(defaultCallersPayload.default_caller_delete_ready, false);
+  assert.equal(defaultCallersPayload.physical_delete_authorized, false);
+  assert.equal(
+    defaultCallersPayload.physical_delete_authorization_status,
+    'not_authorized_by_opl_projection',
+  );
   assert.equal(defaultCallers.summary.default_caller_delete_ready, false);
   assert.equal(defaultCallers.summary.physical_delete_authorized, false);
   assert.equal(defaultCallers.summary.missing_domain_owner_receipt_or_typed_blocker_count, 0);
@@ -147,6 +171,10 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
   );
   assert.equal(defaultCallers.physical_delete_authority_read_model.physical_delete_authorized, false);
   assert.equal(defaultCallers.physical_delete_authority_read_model.default_caller_delete_ready, false);
+  assert.deepEqual(
+    defaultCallersPayload.physical_delete_authority_read_model,
+    defaultCallers.physical_delete_authority_read_model,
+  );
   assert.equal(
     defaultCallers.physical_delete_authority_read_model
       .generated_default_caller_readiness_can_authorize_physical_delete,
@@ -174,6 +202,10 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
   );
   assert.equal(defaultCallers.repo_deletion_gate_summary[0].physical_delete_authorized, false);
   assert.equal(defaultCallers.repo_deletion_gate_summary[0].default_caller_delete_ready, false);
+  assert.deepEqual(
+    defaultCallersPayload.repo_deletion_gate_summary,
+    defaultCallers.repo_deletion_gate_summary,
+  );
   assert.equal(defaultCallers.repo_deletion_gate_summary[0].needs_drilldown_for_surface_refs, true);
   assert.equal(
     defaultCallers.repo_deletion_gate_summary[0].surface_deletion_gate_summary.length,

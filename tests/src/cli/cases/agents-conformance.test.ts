@@ -59,77 +59,13 @@ test('agents conformance reports structural readiness separately from production
   );
   assert.equal(platformSurfaces.authority_boundary.report_can_claim_domain_ready, false);
 
-  const defaultCallers = runCli([
-    'agents',
-    'default-callers',
-    '--agent',
-    `sample=${repoDir}`,
-  ]).agent_default_caller_readiness;
-
-  assert.equal(defaultCallers.surface_kind, 'opl_agent_generated_default_caller_readiness_report');
-  assert.equal(defaultCallers.owner, 'one-person-lab');
-  assert.equal(defaultCallers.status, 'ready_domain_evidence_required');
-  assert.equal(defaultCallers.summary.total_repo_count, 1);
-  assert.equal(defaultCallers.summary.generated_default_caller_surface_count, 8);
-  assert.equal(defaultCallers.summary.blocked_surface_count, 0);
-  assert.equal(defaultCallers.summary.deletion_evidence_worklist_count, 8);
-  assert.equal(defaultCallers.summary.missing_domain_owner_receipt_or_typed_blocker_count, 8);
-  assert.equal(defaultCallers.summary.missing_no_forbidden_write_proof_count, 8);
-  assert.equal(defaultCallers.summary.missing_tombstone_or_provenance_ref_count, 8);
-  assert.equal(
-    defaultCallers.migration_gate_policy.domain_owner_receipt_or_typed_blocker_still_required,
-    true,
-  );
-  assert.equal(defaultCallers.migration_gate_policy.physical_delete_authorized_by_this_report, false);
-  assert.equal(defaultCallers.authority_boundary.report_can_claim_domain_ready, false);
-  assert.equal(defaultCallers.authority_boundary.report_can_authorize_domain_repo_physical_delete, false);
-  const sampleDefaultCallerReport = defaultCallers.reports[0];
-  assert.equal(sampleDefaultCallerReport.status, 'ready_domain_evidence_required');
-  assert.equal(sampleDefaultCallerReport.deletion_gate.replacement_parity, 'ready');
-  assert.equal(sampleDefaultCallerReport.deletion_gate.active_caller_cutover, 'ready');
-  assert.equal(sampleDefaultCallerReport.deletion_gate.evidence_worklist_count, 8);
-  assert.equal(sampleDefaultCallerReport.deletion_gate.missing_domain_owner_receipt_or_typed_blocker_count, 8);
-  assert.equal(sampleDefaultCallerReport.deletion_gate.missing_no_forbidden_write_proof_count, 8);
-  assert.equal(sampleDefaultCallerReport.deletion_gate.missing_tombstone_or_provenance_ref_count, 8);
-  assert.equal(
-    sampleDefaultCallerReport.deletion_gate.domain_owner_receipt_or_typed_blocker,
-    'required_from_domain_owner_before_physical_delete',
-  );
-  assert.equal(sampleDefaultCallerReport.deletion_gate.physical_delete_authorized, false);
-  assert.equal(sampleDefaultCallerReport.surface_gates.length, 8);
-  assert.equal(sampleDefaultCallerReport.surface_gates.every((gate: { status: string }) => (
-    gate.status === 'ready_for_default_caller_cutover'
-  )), true);
-  assert.equal(sampleDefaultCallerReport.deletion_evidence_worklists.length, 8);
-  assert.equal(
-    sampleDefaultCallerReport.surface_gates.every((gate: { deletion_evidence_worklist: { surface_kind: string } }) => (
-      gate.deletion_evidence_worklist.surface_kind === 'opl_default_caller_surface_deletion_evidence_worklist'
-    )),
-    true,
-  );
-  const cliDeletionWorklist = sampleDefaultCallerReport.surface_gates
-    .find((gate: { surface_id: string }) => gate.surface_id === 'cli')
-    .deletion_evidence_worklist;
-  assert.equal(cliDeletionWorklist.status, 'domain_evidence_required');
-  assert.equal(cliDeletionWorklist.replacement_parity.status, 'observed');
-  assert.equal(cliDeletionWorklist.active_caller_cutover.status, 'observed');
-  assert.equal(
-    cliDeletionWorklist.domain_owner_receipt_or_typed_blocker.status,
-    'required_from_domain_owner',
-  );
-  assert.equal(cliDeletionWorklist.no_forbidden_write_proof.status, 'required_before_physical_delete');
-  assert.equal(cliDeletionWorklist.tombstone_or_provenance_ref.status, 'required_before_physical_delete');
-  assert.equal(cliDeletionWorklist.semantic_equivalence_status, 'cleared_by_boundary');
-  assert.equal(cliDeletionWorklist.physical_delete_authorized, false);
-  assert.equal(cliDeletionWorklist.authority_boundary.worklist_can_sign_domain_owner_receipt, false);
-  assert.equal(cliDeletionWorklist.authority_boundary.worklist_can_authorize_domain_repo_physical_delete, false);
-
-  const report = runCli([
+  const conformancePayload = runCli([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ]);
+  const report = conformancePayload.standard_domain_agent_conformance;
 
   assert.equal(report.surface_kind, 'opl_standard_domain_agent_conformance_report');
   assert.equal(report.owner, 'one-person-lab');
@@ -145,6 +81,20 @@ test('agents conformance reports structural readiness separately from production
   assert.equal(report.summary.blocked_count, 0);
   assert.equal(report.summary.structural_conformance_status, 'passed');
   assert.equal(report.summary.production_evidence_tail_count, 2);
+  assert.equal(conformancePayload.passed_count, report.passed_count);
+  assert.equal(conformancePayload.blocked_count, report.blocked_count);
+  assert.equal(
+    conformancePayload.structural_conformance_status,
+    report.structural_conformance_status,
+  );
+  assert.equal(
+    conformancePayload.production_evidence_tail_count,
+    report.production_evidence_tail_count,
+  );
+  assert.equal(
+    conformancePayload.production_evidence_tail_policy,
+    'reported_separately_not_a_structural_pass_condition',
+  );
   assert.equal(report.authority_boundary.conformance_report_can_claim_domain_ready, false);
 
   const repo = report.reports[0];

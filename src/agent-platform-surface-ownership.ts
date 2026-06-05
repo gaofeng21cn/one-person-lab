@@ -861,6 +861,18 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
     });
   return {
     version: 'g1',
+    blocked_count: blockedCount,
+    deletion_evidence_worklist_count: deletionEvidenceWorklistCount,
+    missing_domain_owner_receipt_or_typed_blocker_count:
+      missingDomainOwnerReceiptOrTypedBlockerCount,
+    missing_no_forbidden_write_proof_count: missingNoForbiddenWriteProofCount,
+    missing_tombstone_or_provenance_ref_count: missingTombstoneOrProvenanceRefCount,
+    default_caller_delete_ready: false,
+    physical_delete_authorized: false,
+    physical_delete_authorization_status: 'not_authorized_by_opl_projection',
+    physical_delete_authority_read_model: physicalDeleteAuthorityReadModel,
+    repo_deletion_gate_summary:
+      physicalDeleteAuthorityReadModel.repo_deletion_gate_summary,
     agent_default_caller_readiness: {
       surface_kind: 'opl_agent_generated_default_caller_readiness_report',
       owner: 'one-person-lab',

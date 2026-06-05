@@ -403,23 +403,29 @@ export function buildStandardDomainAgentConformanceReport(args: string[]) {
     (total, report) => total + report.evidence_tail_classification.tail_items.length,
     0,
   );
+  const structuralConformanceStatus = blockedCount === 0 ? 'passed' : 'blocked';
   return {
     version: 'g2',
+    passed_count: passedCount,
+    blocked_count: blockedCount,
+    structural_conformance_status: structuralConformanceStatus,
+    production_evidence_tail_count: productionEvidenceTailCount,
+    production_evidence_tail_policy: 'reported_separately_not_a_structural_pass_condition',
     standard_domain_agent_conformance: {
       surface_kind: 'opl_standard_domain_agent_conformance_report',
       owner: 'one-person-lab',
-      status: blockedCount === 0 ? 'passed' : 'blocked',
+      status: structuralConformanceStatus,
       total_repo_count: reports.length,
       passed_count: passedCount,
       blocked_count: blockedCount,
-      structural_conformance_status: blockedCount === 0 ? 'passed' : 'blocked',
+      structural_conformance_status: structuralConformanceStatus,
       production_evidence_tail_count: productionEvidenceTailCount,
       production_evidence_tail_policy: 'reported_separately_not_a_structural_pass_condition',
       summary: {
         total_repo_count: reports.length,
         passed_count: passedCount,
         blocked_count: blockedCount,
-        structural_conformance_status: blockedCount === 0 ? 'passed' : 'blocked',
+        structural_conformance_status: structuralConformanceStatus,
         production_evidence_tail_count: productionEvidenceTailCount,
         production_evidence_tail_policy: 'reported_separately_not_a_structural_pass_condition',
       },
