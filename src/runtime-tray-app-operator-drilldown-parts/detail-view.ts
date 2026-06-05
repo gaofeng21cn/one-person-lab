@@ -32,6 +32,7 @@ import {
   defaultSelectedSafeActionCandidates,
 } from './selected-safe-action-candidates.ts';
 import { buildAppDrilldownCurrentOwnerDeltaReadModel } from './current-owner-delta-projection.ts';
+import { buildAppOperatorOwnerDeltaTopline } from './owner-delta-topline.ts';
 import { buildOwnerPayloadWorkorder } from './owner-payload-workorder.ts';
 import { buildOwnerDeltaFirstProjection } from './owner-delta-first.ts';
 import { ownerDeltaAvailable } from './owner-delta-availability.ts';
@@ -957,42 +958,40 @@ export function applyAppOperatorDrilldownDetail<T extends JsonRecord>(
   detailLevel: AppOperatorDrilldownDetailLevel,
 ): AppOperatorDrilldownDetailResult<T> {
   if (detailLevel === 'full') {
+    const attentionFirstPayload = {
+      ...buildAttentionFirstPayload(drilldown),
+      payload_policy: 'full_detail_attention_overlay_with_complete_refs_no_domain_ready_claim',
+      full_detail_args: [],
+    };
     const fullDrilldown = {
       ...drilldown,
       detail_level: 'full',
       projection_detail_policy: 'full_refs_explicit_request',
-      attention_first_payload: {
-        ...buildAttentionFirstPayload(drilldown),
-        payload_policy:
-          'full_detail_attention_overlay_with_complete_refs_no_domain_ready_claim',
-        full_detail_args: [],
-      },
     };
     return {
       ...fullDrilldown,
       route_graph_refs: markFullRefsObject(record(fullDrilldown.route_graph_refs), 'refs'),
-      operator_action_routing_refs:
-        markFullRefsObject(record(fullDrilldown.operator_action_routing_refs), 'refs'),
-      production_evidence_tail_ledger:
-        markFullRefsObject(record(fullDrilldown.production_evidence_tail_ledger), 'tail_items'),
-      evidence_envelope:
-        markFullRefsObject(record(fullDrilldown.evidence_envelope), 'envelopes'),
-      domain_dispatch_evidence:
-        markFullRefsObject(record(fullDrilldown.domain_dispatch_evidence), 'attempts'),
-      stage_production_evidence:
-        markFullRefsObject(record(fullDrilldown.stage_production_evidence), 'stages'),
+      operator_action_routing_refs: markFullRefsObject(record(fullDrilldown.operator_action_routing_refs), 'refs'),
+      production_evidence_tail_ledger: markFullRefsObject(record(fullDrilldown.production_evidence_tail_ledger), 'tail_items'),
+      evidence_envelope: markFullRefsObject(record(fullDrilldown.evidence_envelope), 'envelopes'),
+      domain_dispatch_evidence: markFullRefsObject(record(fullDrilldown.domain_dispatch_evidence), 'attempts'),
+      stage_production_evidence: markFullRefsObject(record(fullDrilldown.stage_production_evidence), 'stages'),
       runtime_visualization_projection: {
         ...record(fullDrilldown.runtime_visualization_projection),
         detail_policy: 'complete_graph_and_timeline_explicit_full_detail',
       },
+      ...buildAppOperatorOwnerDeltaTopline({ attentionFirstPayload }),
+      attention_first_payload: attentionFirstPayload,
     } as AppOperatorDrilldownDetailResult<T>;
   }
 
+  const attentionFirstPayload = buildAttentionFirstPayload(drilldown);
   return {
     ...omitSummaryDrilldownKeys(drilldown),
     detail_level: 'summary',
     projection_detail_policy: 'attention_first_default_full_refs_via_explicit_drilldown',
     full_detail_args: ['--detail', 'full'],
-    attention_first_payload: buildAttentionFirstPayload(drilldown),
+    ...buildAppOperatorOwnerDeltaTopline({ attentionFirstPayload }),
+    attention_first_payload: attentionFirstPayload,
   } as AppOperatorDrilldownDetailResult<T>;
 }

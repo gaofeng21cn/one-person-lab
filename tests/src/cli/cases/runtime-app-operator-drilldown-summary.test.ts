@@ -44,6 +44,7 @@ import {
 import {
   assertMemoryArtifactLifecycleEvidence,
 } from './runtime-app-operator-drilldown-summary-memory-lifecycle.ts';
+import { assertOwnerDeltaTopline } from './runtime-app-operator-drilldown-owner-delta-topline-assertions.ts';
 
 function seedSummaryStageAttempts(count: number) {
   const { db } = openQueueDb();
@@ -224,6 +225,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     if (metaAgentBound) assert.equal(summaryDrilldown.oma_sections.scaleout_evidence.refs.length >= 2, true);
     assert.equal(summaryDrilldown.attention_first_payload.surface_kind, 'opl_app_drilldown_attention_first_payload');
     assert.deepEqual(summaryDrilldown.attention_first_payload.full_detail_args, ['--detail', 'full']);
+    assertOwnerDeltaTopline(summaryDrilldown);
     assert.deepEqual(
       Object.keys(summaryDrilldown.attention_first_payload).filter((key) => (
         [
@@ -716,6 +718,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       fullDrilldown.attention_first_payload.evidence_after_contract.surface_kind,
       'opl_app_drilldown_evidence_after_contract_attention',
     );
+    assertOwnerDeltaTopline(fullDrilldown);
     assert.equal(
       fullDrilldown.attention_first_payload.evidence_after_contract.domain_dispatch_attention_count,
       fullDrilldown.summary.domain_dispatch_attention_count,
