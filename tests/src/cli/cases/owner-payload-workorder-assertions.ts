@@ -29,8 +29,8 @@ export function assertOwnerPayloadWorkorderProjection(projection: JsonRecord) {
   assert.equal(projection.empty_payload_template_is_success_evidence, false);
 }
 
-export function assertCompactOwnerDeltaProjection(
-  compact: JsonRecord,
+export function assertCurrentOwnerDeltaReadModel(
+  readModel: JsonRecord,
   expected: {
     currentOwner?: unknown;
     requiredDelta?: unknown;
@@ -41,40 +41,41 @@ export function assertCompactOwnerDeltaProjection(
     fullDetailRefKeys?: string[];
   } = {},
 ) {
-  assert.equal(compact.surface_kind, 'opl_compact_owner_delta_projection');
-  assert.equal(compact.schema_version, 'compact-owner-delta-projection.v1');
-  assert.equal(compact.compatibility_alias_for, 'current_owner_delta');
+  assert.equal(readModel.surface_kind, 'opl_current_owner_delta_read_model');
+  assert.equal(readModel.schema_version, 'current-owner-delta-read-model.v1');
+  assert.equal(readModel.compatibility_alias_for, undefined);
+  assert.equal(readModel.compatibility_alias_policy, undefined);
+  assert.equal(readModel.default_summary.summary_kind, 'owner_delta_only');
+  assert.equal(readModel.default_summary.default_path_root, 'current_owner_delta');
+  assert.equal(readModel.default_summary.audit_counts_are_first_screen, false);
   assert.equal(
-    compact.compatibility_alias_policy,
-    'compatibility_only_full_detail_or_legacy_consumers_must_not_be_default_planning_root',
+    readModel.default_summary.count_summary_path,
+    'current_owner_delta_read_model.owner_delta_audit_tail.count_summary',
   );
-  assert.equal(compact.default_summary.summary_kind, 'owner_delta_only');
-  assert.equal(compact.default_summary.default_path_root, 'current_owner_delta');
-  assert.equal(compact.default_summary.audit_counts_are_first_screen, false);
-  assert.equal(
-    compact.default_summary.count_summary_path,
-    'compact_owner_delta_projection.count_summary',
-  );
-  assert.equal(typeof compact.current_owner, 'string');
-  assert.equal(typeof compact.required_delta, 'string');
-  assertCurrentOwnerDeltaProjection(compact.current_owner_delta, {
-    currentOwner: compact.current_owner,
-    requiredDelta: compact.required_delta,
+  assert.equal(typeof readModel.current_owner, 'string');
+  assert.equal(typeof readModel.required_delta, 'string');
+  assertCurrentOwnerDeltaProjection(readModel.current_owner_delta, {
+    currentOwner: readModel.current_owner,
+    requiredDelta: readModel.required_delta,
   });
-  assert.equal(Array.isArray(compact.accepted_return_shapes), true);
-  assert.equal(compact.accepted_return_shapes.length > 0, true);
-  assert.equal(compact.accepted_return_shapes.includes('typed_blocker_ref'), true);
+  assert.equal(Array.isArray(readModel.accepted_return_shapes), true);
+  assert.equal(readModel.accepted_return_shapes.length > 0, true);
+  assert.equal(readModel.accepted_return_shapes.includes('typed_blocker_ref'), true);
   if (typeof expected.currentOwner === 'string') {
-    assert.equal(compact.current_owner, expected.currentOwner);
+    assert.equal(readModel.current_owner, expected.currentOwner);
   }
   if (typeof expected.requiredDelta === 'string') {
-    assert.equal(compact.required_delta, expected.requiredDelta);
+    assert.equal(readModel.required_delta, expected.requiredDelta);
   }
   if (Array.isArray(expected.acceptedReturnShapes)) {
-    assert.deepEqual(compact.accepted_return_shapes, expected.acceptedReturnShapes);
+    assert.deepEqual(readModel.accepted_return_shapes, expected.acceptedReturnShapes);
   }
 
-  const readinessFalseFlags = compact.readiness_false_flags;
+  const auditTail = readModel.owner_delta_audit_tail;
+  assert.equal(auditTail.surface_kind, 'opl_current_owner_delta_audit_tail');
+  assert.equal(auditTail.audit_counts_are_first_screen, false);
+
+  const readinessFalseFlags = auditTail.readiness_false_flags;
   assert.equal(typeof readinessFalseFlags, 'object');
   assert.equal(readinessFalseFlags.can_execute_domain_action, false);
   assert.equal(readinessFalseFlags.can_write_domain_truth, false);
@@ -84,7 +85,7 @@ export function assertCompactOwnerDeltaProjection(
   assert.equal(readinessFalseFlags.can_close_domain_ready, false);
   assert.equal(readinessFalseFlags.can_claim_production_ready, false);
 
-  const countSummary = compact.count_summary;
+  const countSummary = auditTail.count_summary;
   assert.equal(typeof countSummary, 'object');
   assert.equal(typeof countSummary.open_safe_action_count, 'number');
   assert.equal(typeof countSummary.payload_required_count, 'number');
@@ -103,7 +104,7 @@ export function assertCompactOwnerDeltaProjection(
     );
   }
 
-  const nextSafeAction = compact.next_safe_action_or_none;
+  const nextSafeAction = readModel.next_safe_action_or_none;
   if (nextSafeAction !== null) {
     assert.equal(typeof nextSafeAction, 'object');
     assert.equal(hasOwnNestedKey(nextSafeAction, 'payload_template'), false);
@@ -115,7 +116,7 @@ export function assertCompactOwnerDeltaProjection(
     }
   }
 
-  const fullDetailRefs = compact.full_detail_refs;
+  const fullDetailRefs = auditTail.full_detail_refs;
   assert.equal(typeof fullDetailRefs, 'object');
   for (const key of expected.fullDetailRefKeys ?? ['owner_delta_first_ref']) {
     assert.equal(typeof fullDetailRefs[key], 'string');
@@ -124,9 +125,9 @@ export function assertCompactOwnerDeltaProjection(
     assert.equal(typeof value, 'string');
   }
   assert.equal(JSON.stringify(fullDetailRefs).includes('payload_template'), false);
-  assert.equal('domain_ready_verdict' in compact, false);
-  assert.equal('production_ready_verdict' in compact, false);
-  assert.equal('quality_verdict' in compact, false);
+  assert.equal('domain_ready_verdict' in readModel, false);
+  assert.equal('production_ready_verdict' in readModel, false);
+  assert.equal('quality_verdict' in readModel, false);
 }
 
 export function assertCurrentOwnerDeltaProjection(
@@ -445,8 +446,8 @@ export function assertOwnerDeltaFirstReadinessProjection(readiness: JsonRecord) 
   const ownerDeltaHandoffWorkorder = ownerDeltaHandoffSummary.owner_payload_workorder;
   const nextSafeActions = attention.next_safe_actions;
   assert.deepEqual(
-    readiness.compact_owner_delta_projection,
-    attention.compact_owner_delta_projection,
+    readiness.current_owner_delta_read_model,
+    attention.current_owner_delta_read_model,
   );
   assert.deepEqual(
     readiness.current_owner_delta,
@@ -454,13 +455,13 @@ export function assertOwnerDeltaFirstReadinessProjection(readiness: JsonRecord) 
   );
   assert.deepEqual(
     readiness.current_owner_delta,
-    readiness.compact_owner_delta_projection.current_owner_delta,
+    readiness.current_owner_delta_read_model.current_owner_delta,
   );
   assertCurrentOwnerDeltaProjection(readiness.current_owner_delta, {
     currentOwner: ownerDeltaHandoffSummary.next_owner,
     requiredDelta: ownerDeltaHandoffSummary.next_required_delta,
   });
-  assertCompactOwnerDeltaProjection(readiness.compact_owner_delta_projection, {
+  assertCurrentOwnerDeltaReadModel(readiness.current_owner_delta_read_model, {
     currentOwner: ownerDeltaHandoffSummary.next_owner,
     requiredDelta: ownerDeltaHandoffSummary.next_required_delta,
     acceptedReturnShapes: ownerDeltaHandoffSummary.required_return_shapes,
@@ -673,13 +674,13 @@ export function assertOwnerDeltaFirstAppOperatorProjection(drilldown: JsonRecord
   assert.equal(ownerDeltaFirst.surface_kind, 'opl_owner_delta_first_projection');
   assert.deepEqual(
     attention.current_owner_delta,
-    attention.compact_owner_delta_projection.current_owner_delta,
+    attention.current_owner_delta_read_model.current_owner_delta,
   );
   assertCurrentOwnerDeltaProjection(attention.current_owner_delta, {
     currentOwner: ownerDeltaFirst.next_owner,
     requiredDelta: ownerDeltaFirst.next_required_delta,
   });
-  assertCompactOwnerDeltaProjection(attention.compact_owner_delta_projection, {
+  assertCurrentOwnerDeltaReadModel(attention.current_owner_delta_read_model, {
     currentOwner: ownerDeltaFirst.next_owner,
     requiredDelta: ownerDeltaFirst.next_required_delta,
     ...(ownerDeltaFirst.required_return_shapes.length > 0

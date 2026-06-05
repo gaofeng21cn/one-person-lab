@@ -95,7 +95,7 @@ test('family product operator projection pins OPL as App state/action producer o
   assert.equal(boundary.framework_role, 'gui_ready_state_action_producer_only');
   assert.equal(boundary.default_state_command, 'opl app state --profile fast --json');
   assert.equal(boundary.default_operator_payload, 'current_owner_delta');
-  assert.equal(boundary.compatibility_operator_payload, 'compact_owner_delta_projection');
+  assert.equal('compatibility_operator_payload' in boundary, false);
   assert.equal(boundary.full_state_command, 'opl app state --profile full --json');
   assert.equal(
     boundary.action_command,
@@ -109,14 +109,8 @@ test('family product operator projection pins OPL as App state/action producer o
   assert.equal(boundary.gui_product_truth_owner, 'one-person-lab-app');
   assert.equal(boundary.shell_role, 'implementation_adapter_only');
   assert.equal(boundary.default_read_surface_policy.default_projection, 'opl_current_owner_delta');
-  assert.equal(
-    boundary.default_read_surface_policy.compatibility_projection,
-    'opl_compact_owner_delta_projection',
-  );
-  assert.equal(
-    boundary.default_read_surface_policy.compatibility_payload_policy,
-    'compact_owner_delta_projection_is_legacy_full_detail_alias_not_first_screen_root',
-  );
+  assert.equal('compatibility_projection' in boundary.default_read_surface_policy, false);
+  assert.equal('compatibility_payload_policy' in boundary.default_read_surface_policy, false);
   assert.deepEqual(boundary.default_read_surface_policy.first_screen_answers, [
     'current_owner_delta',
     'next_safe_action_or_none',

@@ -46,14 +46,11 @@
     "framework_role": "gui_ready_state_action_producer_only",
     "default_state_command": "opl app state --profile fast --json",
     "default_operator_payload": "current_owner_delta",
-    "compatibility_operator_payload": "compact_owner_delta_projection",
     "full_state_command": "opl app state --profile full --json",
     "action_command": "opl app action execute --action <id> [--payload <json>] [--dry-run] --json",
     "full_runtime_drilldown_exception": "opl runtime app-operator-drilldown --detail full --json",
     "default_read_surface_policy": {
       "default_projection": "opl_current_owner_delta",
-      "compatibility_projection": "opl_compact_owner_delta_projection",
-      "compatibility_payload_policy": "compact_owner_delta_projection_is_legacy_full_detail_alias_not_first_screen_root",
       "first_screen_answers": [
         "current_owner_delta",
         "next_safe_action_or_none",

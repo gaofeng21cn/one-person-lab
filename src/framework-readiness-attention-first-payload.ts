@@ -7,7 +7,7 @@ import { FRAMEWORK_READINESS_SOURCE_COMMANDS as SOURCE_COMMANDS } from './framew
 import {
   frameworkDiagnosticDrilldowns,
 } from './framework-readiness-static-surfaces.ts';
-import { buildCompactOwnerDeltaProjection } from './owner-delta-compact-projection.ts';
+import { buildCurrentOwnerDeltaReadModel } from './current-owner-delta-projection.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -189,7 +189,7 @@ export function frameworkAttentionFirstPayload(input: {
       input.stageReplayMissingReceiptWorkorderAttentionItems,
     itemLimit: 5,
   });
-  const compactOwnerDeltaProjection = buildCompactOwnerDeltaProjection({
+  const currentOwnerDeltaReadModel = buildCurrentOwnerDeltaReadModel({
     ownerDeltaFirst: input.ownerDeltaFirst,
     ownerDeltaHandoffSummary: input.ownerDeltaHandoffSummary,
     nextSafeAction: nextSafeActions[0],
@@ -282,8 +282,8 @@ export function frameworkAttentionFirstPayload(input: {
       input.stageReplayMissingReceiptWorkorderAttentionSummary,
     stage_replay_missing_receipt_workorder_attention_items:
       input.stageReplayMissingReceiptWorkorderAttentionItems,
-    current_owner_delta: compactOwnerDeltaProjection.current_owner_delta,
-    compact_owner_delta_projection: compactOwnerDeltaProjection,
+    current_owner_delta: currentOwnerDeltaReadModel.current_owner_delta,
+    current_owner_delta_read_model: currentOwnerDeltaReadModel,
     owner_delta_first: input.ownerDeltaFirst,
     owner_delta_handoff_summary: input.ownerDeltaHandoffSummary,
     owner_payload_group_attention_policy:

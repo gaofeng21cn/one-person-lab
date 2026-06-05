@@ -549,7 +549,7 @@ domain-agent-repo/
 | `wrapper-retirement-gate-policy.json` | replacement parity、no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 删除门。 |
 | `golden-path-profile.schema.json` | 每个 Foundry Agent 的 single ordinary route 与 explicit variants。 |
 
-`compact_owner_delta_projection` 只允许作为 compatibility alias / historical ref / negative guard 读取。默认文档、App contract 和普通 CLI/App/operator summary 应首选 `current_owner_delta`。
+`compact_owner_delta_projection` 已从 active/default surfaces 退役；旧名只允许出现在 history、tombstone 或 negative guard 语境。默认文档、App contract 和普通 CLI/App/operator summary 只消费 `current_owner_delta`；audit count 和 full-detail refs 进入显式 `current_owner_delta_read_model`。
 
 ## Migration Reading
 

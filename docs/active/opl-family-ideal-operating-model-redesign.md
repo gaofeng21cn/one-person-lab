@@ -114,7 +114,7 @@ agent-lab-improvement-loop
 
 1. 默认 CLI/App/operator summary 改为 owner-delta-only；raw count 只在 `--detail full`。
 2. 所有 new surface 必须先走 surface budget，默认分类为 diagnostic/reference。
-3. `compact_owner_delta_projection` 只保 compatibility alias，文档和 App contract 首选 `current_owner_delta`。
+3. `compact_owner_delta_projection` 从 active/default surfaces 退役，文档和 App contract 只首选 `current_owner_delta`；审计尾项进入显式 `current_owner_delta_read_model`。
 4. generated surfaces 成为 CLI/MCP/status/workbench/default-caller 的默认承载；domain repo retained wrapper 只按 delete gate 暂留。
 5. Evidence Vault 坚持 `record everything, plan from nothing`。
 
@@ -162,7 +162,7 @@ docs/tests
 | Lane | Target reading | Acceptance standard |
 | --- | --- | --- |
 | `summary_de_noise` | OPL default summaries owner-delta-only，raw counts 只作 diagnostic-only。 | ordinary summary 不以 worklist/replay/blocked envelope count 作为 next-action root。 |
-| `current_owner_delta_cutover` | 默认命名和 payload root 都说 `current_owner_delta`，`compact_owner_delta_projection` 只作 compatibility/full-detail alias。 | `compact_*` 只在 compatibility alias / history / negative guard 中出现，不能成为 default planning root。 |
+| `current_owner_delta_cutover` | 默认命名和 payload root 都说 `current_owner_delta`，`current_owner_delta_read_model` 只承载显式 audit/full-detail refs。 | `compact_*` 只在 history / negative guard 中出现，不能成为 default planning root 或 active compatibility alias。 |
 | `domain_wrapper_delete_gate` | retained wrapper 逐项 delete/tombstone；delete-auth false / safe-to-delete false guard 防止 premature physical delete。 | no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance machine-readable。 |
 | `real_owner_delta_tail` | production evidence tail 必须回到 domain owner answer，不用平台 repair 或 docs/provenance 替代。 | 真实 paper/grant/visual/target-agent owner receipt、typed blocker、human gate、review/export receipt 或 no-regression ref。 |
 | `app_contract_compaction` | App ordinary path contract 收薄，并由 active-shell / release-boundary guard 检查。 | Home/Runtime/Settings 只显示 purpose、task status、next owner、artifact/blocker、release facts；release detail 只在 release/developer/detail 语境。 |

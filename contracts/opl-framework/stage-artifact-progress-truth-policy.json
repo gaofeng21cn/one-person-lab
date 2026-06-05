@@ -20,7 +20,7 @@
   ],
   "projection_surfaces": [
     "opl_current_owner_delta",
-    "opl_compact_owner_delta_projection",
+    "opl_current_owner_delta_read_model",
     "opl_stage_artifact_unit",
     "opl_stage_progress_log",
     "opl_family_product_operator_projection"

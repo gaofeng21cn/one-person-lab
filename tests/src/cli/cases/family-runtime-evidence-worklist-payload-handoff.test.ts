@@ -9,7 +9,7 @@ import { runExternalEvidenceApply } from '../../../../src/external-evidence-ledg
 import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/family-runtime-evidence-worklist.ts';
 import type { FrameworkContracts } from '../../../../src/types.ts';
 import {
-  assertCompactOwnerDeltaProjection,
+  assertCurrentOwnerDeltaReadModel,
 } from './owner-payload-workorder-assertions.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -57,7 +57,7 @@ type PayloadHandoffWorklist = {
     open_worklist_item_count: number;
     open_safe_action_payload_required_item_count: number;
   };
-  compact_owner_delta_projection?: JsonRecord;
+  current_owner_delta_read_model?: JsonRecord;
   next_safe_actions?: PayloadHandoffAction[];
   audit_worklist_next_safe_actions?: PayloadHandoffAction[];
   worklist_items: Array<{
@@ -546,7 +546,7 @@ test('family-runtime evidence-worklist summary next actions carry domain-dispatc
     worklist.next_safe_actions?.[0]?.action_kind,
     'current_owner_delta_owner_answer_or_typed_blocker_required',
   );
-  assertCompactOwnerDeltaProjection(worklist.compact_owner_delta_projection as JsonRecord, {
+  assertCurrentOwnerDeltaReadModel(worklist.current_owner_delta_read_model as JsonRecord, {
     currentOwner: 'med-autoscience',
     openSafeActionCount: 1,
     payloadRequiredCount: 1,
@@ -557,7 +557,7 @@ test('family-runtime evidence-worklist summary next actions carry domain-dispatc
     ],
   });
   const acceptedReturnShapes =
-    (worklist.compact_owner_delta_projection as JsonRecord)
+    (worklist.current_owner_delta_read_model as JsonRecord)
       .accepted_return_shapes as unknown[];
   assert.equal(
     acceptedReturnShapes.includes('domain_owner_receipt_ref'),

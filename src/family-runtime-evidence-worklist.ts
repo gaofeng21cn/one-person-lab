@@ -35,7 +35,7 @@ import {
   compactStageReplayMissingReceiptWorkorderAttentionItems,
 } from './family-runtime-evidence-worklist-parts/stage-replay-missing-receipt-workorders.ts';
 import { familyRuntimeEvidenceWorklistAuthorityBoundary } from './family-runtime-evidence-worklist-parts/authority-boundary.ts';
-import { buildWorklistOwnerDeltaActionProjection } from './family-runtime-evidence-worklist-parts/compact-owner-delta-projection.ts';
+import { buildWorklistOwnerDeltaActionProjection } from './family-runtime-evidence-worklist-parts/current-owner-delta-projection.ts';
 import { buildProgressFirstOperatorSummary } from './family-runtime-evidence-worklist-parts/progress-first-operator-summary.ts';
 import { domainDispatchRecordRouteAttemptIds, syncTerminalTemporalAttemptsForEvidenceWorklist, type EvidenceWorklistTemporalQuery } from './family-runtime-evidence-worklist-parts/terminal-observation-sync.ts';
 import {
@@ -868,7 +868,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
   ).length;
   const auditWorklistNextSafeActions = nextSafeActions(openItems);
   const {
-    compactOwnerDeltaProjection,
+    currentOwnerDeltaReadModel,
     defaultNextSafeActions,
     auditWorklistNextSafeActions: ownerDeltaAuditWorklistNextSafeActions,
   } = buildWorklistOwnerDeltaActionProjection({
@@ -943,8 +943,8 @@ export async function runFamilyRuntimeEvidenceWorklist(
     terminal_observation_sync: terminalObservationSync,
     evidence_envelope: compactEvidenceEnvelope,
     progress_first_operator_summary: progressFirstOperatorSummary,
-    current_owner_delta: compactOwnerDeltaProjection.current_owner_delta,
-    compact_owner_delta_projection: compactOwnerDeltaProjection,
+    current_owner_delta: currentOwnerDeltaReadModel.current_owner_delta,
+    current_owner_delta_read_model: currentOwnerDeltaReadModel,
     next_safe_actions: defaultNextSafeActions,
     audit_worklist_next_safe_actions: ownerDeltaAuditWorklistNextSafeActions,
     effective_current_context: record(drilldown.effective_current_context),

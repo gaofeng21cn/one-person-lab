@@ -27,9 +27,9 @@ import { buildAppStateRuntimeActivityItems } from './app-state-runtime-activity.
 import { buildOplAppOperatorViewModel } from './app-state-view-model.ts';
 import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 import {
-  buildCompactOwnerDeltaProjection,
-  buildIdleCompactOwnerDeltaProjection,
-} from './owner-delta-compact-projection.ts';
+  buildCurrentOwnerDeltaReadModel,
+  buildIdleCurrentOwnerDeltaReadModel,
+} from './current-owner-delta-projection.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -51,11 +51,11 @@ function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
-function ownerDeltaFromRuntimeActivity(items: JsonRecord[]) {
+function ownerDeltaReadModelFromRuntimeActivity(items: JsonRecord[]) {
   const selected = items.find((item) => stringValue(item.lane) === 'attention')
     ?? items.find((item) => stringValue(item.lane) === 'running');
   if (!selected) {
-    return buildIdleCompactOwnerDeltaProjection();
+    return buildIdleCurrentOwnerDeltaReadModel();
   }
   const domainOwner = stringValue(selected.domain_owner)
     ?? stringValue(selected.project_id)
@@ -64,7 +64,7 @@ function ownerDeltaFromRuntimeActivity(items: JsonRecord[]) {
     ?? stringValue(selected.action_summary)
     ?? stringValue(selected.summary)
     ?? 'inspect_runtime_activity_projection';
-  return buildCompactOwnerDeltaProjection({
+  return buildCurrentOwnerDeltaReadModel({
     ownerDeltaFirst: {
       next_owner: domainOwner,
       next_required_delta: actionSummary,
@@ -467,7 +467,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const actions = buildActionCatalog();
   const uiDefaults = buildUiDefaults();
   const runtimeActivityItems = buildAppStateRuntimeActivityItems();
-  const compactOwnerDeltaProjection = ownerDeltaFromRuntimeActivity(runtimeActivityItems);
+  const currentOwnerDeltaReadModel = ownerDeltaReadModelFromRuntimeActivity(runtimeActivityItems);
   const fullRuntimeDrilldown = profile === 'full'
     ? (await buildRuntimeTraySnapshot(loadFrameworkContracts() as FrameworkContracts, {
         appOperatorDrilldownDetailLevel: 'full',
@@ -512,7 +512,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
     actions,
     uiDefaults,
     runtimeActivityItems,
-    compactOwnerDeltaProjection,
+    currentOwnerDeltaReadModel,
   });
 
   return {

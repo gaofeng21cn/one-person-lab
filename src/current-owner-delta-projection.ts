@@ -475,7 +475,7 @@ function buildCompactCountSummary(input: {
   };
 }
 
-export function buildCompactOwnerDeltaProjection(input: {
+export function buildCurrentOwnerDeltaReadModel(input: {
   ownerDeltaFirst?: JsonRecord;
   ownerDeltaHandoffSummary?: JsonRecord;
   nextSafeAction?: unknown;
@@ -512,7 +512,7 @@ export function buildCompactOwnerDeltaProjection(input: {
     handoff.required_return_shapes,
     ownerDeltaFirst.required_return_shapes,
   );
-  const compactCountSummary = buildCompactCountSummary({
+  const auditCountSummary = buildCompactCountSummary({
     countSummary,
     handoffSummary,
     ownerDeltaFirstSummary,
@@ -528,7 +528,7 @@ export function buildCompactOwnerDeltaProjection(input: {
     ownerDeltaFirst,
     handoff,
     compactAction,
-    countSummary: compactCountSummary,
+    countSummary: auditCountSummary,
     fullDetailRefs,
   });
   const defaultNextAction = buildDefaultNextActionFromCurrentOwnerDelta(currentOwnerDelta);
@@ -544,17 +544,14 @@ export function buildCompactOwnerDeltaProjection(input: {
     next_action_owner: defaultNextAction?.current_owner ?? currentOwnerDelta.current_owner,
     latest_owner_answer_ref: currentOwnerDelta.latest_owner_answer_ref,
     audit_counts_are_first_screen: false,
-    count_summary_path: 'compact_owner_delta_projection.count_summary',
+    count_summary_path: 'current_owner_delta_read_model.owner_delta_audit_tail.count_summary',
   };
 
   return {
-    surface_kind: 'opl_compact_owner_delta_projection',
-    schema_version: 'compact-owner-delta-projection.v1',
-    compatibility_alias_for: 'current_owner_delta',
-    compatibility_alias_policy:
-      'compatibility_only_full_detail_or_legacy_consumers_must_not_be_default_planning_root',
+    surface_kind: 'opl_current_owner_delta_read_model',
+    schema_version: 'current-owner-delta-read-model.v1',
     projection_policy:
-      'shape_stable_owner_delta_default_alias_raw_refs_require_explicit_full_detail',
+      'current_owner_delta_is_the_only_default_operator_payload_raw_refs_require_explicit_full_detail',
     default_next_action_derivation_policy:
       'derive_default_next_action_only_from_current_owner_delta_or_provider_human_hard_gate',
     current_owner: currentOwner,
@@ -563,15 +560,19 @@ export function buildCompactOwnerDeltaProjection(input: {
     default_summary: defaultSummary,
     current_owner_delta: currentOwnerDelta,
     next_safe_action_or_none: defaultNextAction,
-    audit_next_safe_action_or_none: compactAction,
-    readiness_false_flags: falseFlags(handoff),
-    count_summary: compactCountSummary,
-    full_detail_refs: fullDetailRefs,
+    owner_delta_audit_tail: {
+      surface_kind: 'opl_current_owner_delta_audit_tail',
+      audit_counts_are_first_screen: false,
+      audit_next_safe_action_or_none: compactAction,
+      readiness_false_flags: falseFlags(handoff),
+      count_summary: auditCountSummary,
+      full_detail_refs: fullDetailRefs,
+    },
   };
 }
 
-export function buildIdleCompactOwnerDeltaProjection() {
-  return buildCompactOwnerDeltaProjection({
+export function buildIdleCurrentOwnerDeltaReadModel() {
+  return buildCurrentOwnerDeltaReadModel({
     ownerDeltaFirst: {
       next_owner: 'one-person-lab',
       next_required_delta: 'no_opl_operator_actionable_delta_required',

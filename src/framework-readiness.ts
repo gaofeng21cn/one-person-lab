@@ -584,7 +584,7 @@ export async function buildFrameworkReadinessSummary(
       status: frameworkStatus,
       attention_first_payload: attentionFirstPayload,
       current_owner_delta: attentionFirstPayload.current_owner_delta,
-      compact_owner_delta_projection: attentionFirstPayload.compact_owner_delta_projection,
+      current_owner_delta_read_model: attentionFirstPayload.current_owner_delta_read_model,
       kernel_floor: frameworkKernelFloor(),
       diagnostic_drilldowns: frameworkDiagnosticDrilldowns(SOURCE_COMMANDS),
       excluded_ready_verdicts: [

@@ -1,4 +1,4 @@
-import { buildCompactOwnerDeltaProjection } from '../owner-delta-compact-projection.ts';
+import { buildCurrentOwnerDeltaReadModel } from '../current-owner-delta-projection.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -13,14 +13,14 @@ function numberValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
-export function buildAppDrilldownCompactOwnerDeltaProjection(input: {
+export function buildAppDrilldownCurrentOwnerDeltaReadModel(input: {
   ownerDeltaFirst: JsonRecord;
   selectedSafeAction: JsonRecord | null;
   evidenceAfterContract: JsonRecord;
   actionCount: number;
 }) {
   const evidence = input.evidenceAfterContract;
-  return buildCompactOwnerDeltaProjection({
+  return buildCurrentOwnerDeltaReadModel({
     ownerDeltaFirst: input.ownerDeltaFirst,
     nextSafeAction: input.selectedSafeAction,
     countSummary: {

@@ -1,6 +1,6 @@
 import { assert, buildManifestCommand, createFakeCodexFixture, fs, loadFamilyManifestFixtures, os, path, runCli, runCliFailure, test } from '../helpers.ts';
 import {
-  assertCompactOwnerDeltaProjection,
+  assertCurrentOwnerDeltaReadModel,
   assertCurrentOwnerDeltaProjection,
 } from './owner-payload-workorder-assertions.ts';
 
@@ -189,13 +189,11 @@ exit 1
             surface_kind: string;
             profile: string;
             default_operator_payload: string;
-            compatibility_operator_payload: string;
             normal_state_surface: string;
             full_runtime_drilldown_surface: string;
             raw_runtime_projection_policy: string;
             runtime_tray_projection_policy: string;
             worklist_projection_policy: string;
-            compatibility_payload_policy: string;
             first_screen_answers: string[];
             diagnostic_only_answers: string[];
             fast_profile_excludes: string[];
@@ -213,7 +211,7 @@ exit 1
             };
           };
           current_owner_delta: Record<string, any>;
-          compact_owner_delta_projection: Record<string, any>;
+          current_owner_delta_read_model: Record<string, any>;
           stage_run_cockpit: {
             surface_kind: string;
             projection_role: string;
@@ -248,7 +246,7 @@ exit 1
             view_model_schema: string;
             default_read_surface_policy: Record<string, any>;
             current_owner_delta: Record<string, any>;
-            compact_owner_delta_projection: Record<string, any>;
+            current_owner_delta_read_model: Record<string, any>;
             stage_run_cockpit: Record<string, any>;
             summary_cards: Array<{ card_id: string; source_ref: string; value: string | number }>;
             sections: Array<{ section_id: string; source_ref: string; lazy: boolean }>;
@@ -328,8 +326,8 @@ exit 1
       'current_owner_delta',
     );
     assert.equal(
-      output.app_state.operator.default_read_surface_policy.compatibility_operator_payload,
-      'compact_owner_delta_projection',
+      'compatibility_operator_payload' in output.app_state.operator.default_read_surface_policy,
+      false,
     );
     assert.equal(
       output.app_state.operator.default_read_surface_policy.normal_state_surface,
@@ -352,8 +350,8 @@ exit 1
       'secondary_drilldown_never_default_planning_root',
     );
     assert.equal(
-      output.app_state.operator.default_read_surface_policy.compatibility_payload_policy,
-      'compact_owner_delta_projection_is_legacy_full_detail_alias_not_first_screen_root',
+      'compatibility_payload_policy' in output.app_state.operator.default_read_surface_policy,
+      false,
     );
     assert.deepEqual(
       output.app_state.operator.default_read_surface_policy.first_screen_answers,
@@ -437,11 +435,11 @@ exit 1
     );
     assert.deepEqual(
       output.app_state.operator.current_owner_delta,
-      output.app_state.operator.compact_owner_delta_projection.current_owner_delta,
+      output.app_state.operator.current_owner_delta_read_model.current_owner_delta,
     );
     assert.deepEqual(
-      output.app_state.operator.compact_owner_delta_projection,
-      output.app_state.operator.workbench.compact_owner_delta_projection,
+      output.app_state.operator.current_owner_delta_read_model,
+      output.app_state.operator.workbench.current_owner_delta_read_model,
     );
     assert.deepEqual(
       output.app_state.operator.stage_run_cockpit,
@@ -501,7 +499,7 @@ exit 1
       false,
     );
     assertCurrentOwnerDeltaProjection(output.app_state.operator.current_owner_delta);
-    assertCompactOwnerDeltaProjection(output.app_state.operator.workbench.compact_owner_delta_projection, {
+    assertCurrentOwnerDeltaReadModel(output.app_state.operator.workbench.current_owner_delta_read_model, {
       fullDetailRefKeys: [
         'framework_readiness_ref',
         'evidence_worklist_ref',
@@ -509,7 +507,7 @@ exit 1
       ],
     });
     assert.equal(
-      output.app_state.operator.workbench.compact_owner_delta_projection.full_detail_refs
+      output.app_state.operator.workbench.current_owner_delta_read_model.owner_delta_audit_tail.full_detail_refs
         .app_operator_drilldown_ref,
       'opl runtime app-operator-drilldown --detail full --json',
     );
@@ -628,10 +626,10 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
       app_state: {
         operator: {
           current_owner_delta: Record<string, any>;
-          compact_owner_delta_projection: Record<string, any>;
+          current_owner_delta_read_model: Record<string, any>;
           workbench: {
             current_owner_delta: Record<string, any>;
-            compact_owner_delta_projection: Record<string, any>;
+            current_owner_delta_read_model: Record<string, any>;
             summary_cards: Array<{ card_id: string; value: number | string }>;
             activity_center: {
               active_projects: Array<{ study_id?: string; state: string; active_run_id?: string | null }>;
@@ -658,8 +656,8 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
       ['003-dpcc-primary-care-phenotype-treatment-gap'],
     );
     assert.deepEqual(
-      output.app_state.operator.compact_owner_delta_projection,
-      output.app_state.operator.workbench.compact_owner_delta_projection,
+      output.app_state.operator.current_owner_delta_read_model,
+      output.app_state.operator.workbench.current_owner_delta_read_model,
     );
     assert.deepEqual(
       output.app_state.operator.current_owner_delta,
@@ -667,13 +665,13 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     );
     assert.deepEqual(
       output.app_state.operator.current_owner_delta,
-      output.app_state.operator.compact_owner_delta_projection.current_owner_delta,
+      output.app_state.operator.current_owner_delta_read_model.current_owner_delta,
     );
     assertCurrentOwnerDeltaProjection(output.app_state.operator.current_owner_delta, {
       currentOwner: 'med-autoscience',
       requiredDelta: '提交 MAS owner receipt 或 typed blocker。',
     });
-    assertCompactOwnerDeltaProjection(output.app_state.operator.compact_owner_delta_projection, {
+    assertCurrentOwnerDeltaReadModel(output.app_state.operator.current_owner_delta_read_model, {
       currentOwner: 'med-autoscience',
       requiredDelta: '提交 MAS owner receipt 或 typed blocker。',
       acceptedReturnShapes: [

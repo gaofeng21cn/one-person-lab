@@ -656,10 +656,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     const aionConsumption = buildOplAionRuntimeConsumptionContract();
     assert.deepEqual(aionConsumption.default_read_model_command, ['app', 'state', '--profile', 'fast']);
     assert.equal(aionConsumption.default_payload_ref, '/app_state/operator/current_owner_delta');
-    assert.equal(
-      aionConsumption.compatibility_payload_ref,
-      '/app_operator_drilldown/attention_first_payload/compact_owner_delta_projection',
-    );
+    assert.equal('compatibility_payload_ref' in aionConsumption, false);
     assert.deepEqual(aionConsumption.full_detail_command, [
       'runtime',
       'app-operator-drilldown',

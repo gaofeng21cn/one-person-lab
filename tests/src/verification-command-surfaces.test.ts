@@ -264,12 +264,9 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
     surface_model: {
       attention_entry: {
         default_operator_payload: string;
-        compatibility_operator_payload: string;
         default_read_contract: {
           normal_app_state_command: string;
           default_projection: string;
-          compatibility_projection: string;
-          compatibility_projection_policy: string;
           full_detail_policy: string;
           raw_refs_policy: string;
           first_screen_answer_policy: string;
@@ -310,10 +307,7 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
     'opl stages readiness --family-defaults',
   ]);
   assert.equal(policy.surface_model.attention_entry.default_operator_payload, 'current_owner_delta');
-  assert.equal(
-    policy.surface_model.attention_entry.compatibility_operator_payload,
-    'compact_owner_delta_projection',
-  );
+  assert.equal('compatibility_operator_payload' in policy.surface_model.attention_entry, false);
   assert.equal(
     policy.surface_model.attention_entry.default_read_contract.normal_app_state_command,
     'opl app state --profile fast --json',
@@ -322,14 +316,8 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
     policy.surface_model.attention_entry.default_read_contract.default_projection,
     'opl_current_owner_delta',
   );
-  assert.equal(
-    policy.surface_model.attention_entry.default_read_contract.compatibility_projection,
-    'opl_compact_owner_delta_projection',
-  );
-  assert.equal(
-    policy.surface_model.attention_entry.default_read_contract.compatibility_projection_policy,
-    'legacy_full_detail_alias_not_default_planning_root',
-  );
+  assert.equal('compatibility_projection' in policy.surface_model.attention_entry.default_read_contract, false);
+  assert.equal('compatibility_projection_policy' in policy.surface_model.attention_entry.default_read_contract, false);
   assert.equal(
     policy.surface_model.attention_entry.default_read_contract.first_screen_answer_policy,
     'owner_delta_action_artifact_or_blocker_only',

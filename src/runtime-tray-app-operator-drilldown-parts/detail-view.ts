@@ -31,7 +31,7 @@ import {
   compareDefaultSelectedSafeActions,
   defaultSelectedSafeActionCandidates,
 } from './selected-safe-action-candidates.ts';
-import { buildAppDrilldownCompactOwnerDeltaProjection } from './compact-owner-delta-projection.ts';
+import { buildAppDrilldownCurrentOwnerDeltaReadModel } from './current-owner-delta-projection.ts';
 import { buildOwnerPayloadWorkorder } from './owner-payload-workorder.ts';
 import { buildOwnerDeltaFirstProjection } from './owner-delta-first.ts';
 import { ownerDeltaAvailable } from './owner-delta-availability.ts';
@@ -901,7 +901,7 @@ function buildAttentionFirstPayload(drilldown: JsonRecord) {
     evidenceNextSteps: evidenceNextStepsProjection,
     workstreamOperatingLoop,
   });
-  const compactOwnerDeltaProjection = buildAppDrilldownCompactOwnerDeltaProjection({
+  const currentOwnerDeltaReadModel = buildAppDrilldownCurrentOwnerDeltaReadModel({
     ownerDeltaFirst,
     selectedSafeAction,
     evidenceAfterContract,
@@ -921,8 +921,8 @@ function buildAttentionFirstPayload(drilldown: JsonRecord) {
     blocking: blockingItems(drilldown),
     advisory: advisoryItems(drilldown),
     missing_evidence: missingEvidenceItems(drilldown),
-    current_owner_delta: compactOwnerDeltaProjection.current_owner_delta,
-    compact_owner_delta_projection: compactOwnerDeltaProjection,
+    current_owner_delta: currentOwnerDeltaReadModel.current_owner_delta,
+    current_owner_delta_read_model: currentOwnerDeltaReadModel,
     owner_delta_first: ownerDeltaFirst,
     evidence_after_contract: evidenceAfterContract,
     evidence_next_steps: evidenceNextStepsProjection,

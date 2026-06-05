@@ -1,7 +1,7 @@
 import {
-  buildCompactOwnerDeltaProjection,
+  buildCurrentOwnerDeltaReadModel,
   buildDefaultNextActionFromCurrentOwnerDelta,
-} from '../owner-delta-compact-projection.ts';
+} from '../current-owner-delta-projection.ts';
 import { countValue, record, type JsonRecord } from './json-utils.ts';
 import { worklistOwnerId } from './owner-normalization.ts';
 
@@ -13,7 +13,7 @@ function normalizeWorklistDefaultNextActionOwner(action: JsonRecord): JsonRecord
   };
 }
 
-export function buildWorklistCompactOwnerDeltaProjection(input: {
+export function buildWorklistCurrentOwnerDeltaReadModel(input: {
   drilldown: JsonRecord;
   openItems: JsonRecord[];
   nextSafeActions: JsonRecord[];
@@ -23,7 +23,7 @@ export function buildWorklistCompactOwnerDeltaProjection(input: {
   stageReplayMissingReceiptWorkorderSummary: JsonRecord;
 }) {
   const ownerDeltaFirst = record(record(input.drilldown.attention_first_payload).owner_delta_first);
-  return buildCompactOwnerDeltaProjection({
+  return buildCurrentOwnerDeltaReadModel({
     ownerDeltaFirst,
     nextSafeAction: input.nextSafeActions[0],
     countSummary: {
@@ -51,13 +51,13 @@ export function buildWorklistCompactOwnerDeltaProjection(input: {
   });
 }
 
-export function buildWorklistOwnerDeltaActionProjection(input: Parameters<typeof buildWorklistCompactOwnerDeltaProjection>[0]) {
-  const compactOwnerDeltaProjection = buildWorklistCompactOwnerDeltaProjection(input);
+export function buildWorklistOwnerDeltaActionProjection(input: Parameters<typeof buildWorklistCurrentOwnerDeltaReadModel>[0]) {
+  const currentOwnerDeltaReadModel = buildWorklistCurrentOwnerDeltaReadModel(input);
   const ownerDeltaDefaultNextAction = buildDefaultNextActionFromCurrentOwnerDelta(
-    compactOwnerDeltaProjection.current_owner_delta,
+    currentOwnerDeltaReadModel.current_owner_delta,
   );
   return {
-    compactOwnerDeltaProjection,
+    currentOwnerDeltaReadModel,
     defaultNextSafeActions: ownerDeltaDefaultNextAction
       ? [normalizeWorklistDefaultNextActionOwner(ownerDeltaDefaultNextAction)]
       : [],

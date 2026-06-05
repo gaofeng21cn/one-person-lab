@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  buildWorklistCompactOwnerDeltaProjection,
-} from '../../../../src/family-runtime-evidence-worklist-parts/compact-owner-delta-projection.ts';
+  buildWorklistCurrentOwnerDeltaReadModel,
+} from '../../../../src/family-runtime-evidence-worklist-parts/current-owner-delta-projection.ts';
 
 test('family-runtime evidence-worklist keeps raw worklist roots out of compact owner delta planning', () => {
   const rawWorklistItem = {
@@ -31,7 +31,7 @@ test('family-runtime evidence-worklist keeps raw worklist roots out of compact o
     },
   };
 
-  const projection = buildWorklistCompactOwnerDeltaProjection({
+  const projection = buildWorklistCurrentOwnerDeltaReadModel({
     drilldown: {
       attention_first_payload: {
         owner_delta_first: {
@@ -88,7 +88,7 @@ test('family-runtime evidence-worklist keeps raw worklist roots out of compact o
     },
   });
 
-  assert.equal(projection.count_summary.open_safe_action_count, 1);
+  assert.equal(projection.owner_delta_audit_tail.count_summary.open_safe_action_count, 1);
   assert.equal(projection.current_owner, 'med-autoscience');
   assert.equal(
     projection.required_delta,
@@ -184,15 +184,15 @@ test('family-runtime evidence-worklist keeps raw worklist roots out of compact o
     projection.next_safe_action_or_none?.private_residue_inventory_can_drive_default_planning,
     false,
   );
-  assert.equal(projection.audit_next_safe_action_or_none?.owner, 'redcube-ai');
+  assert.equal(projection.owner_delta_audit_tail.audit_next_safe_action_or_none?.owner, 'redcube-ai');
   assert.equal(
-    projection.audit_next_safe_action_or_none?.payload_requirement,
+    projection.owner_delta_audit_tail.audit_next_safe_action_or_none?.payload_requirement,
     'domain_app_or_live_refs_payload_required_to_record_domain_dispatch_owner_receipt_or_typed_blocker',
   );
   assert.equal(
-    projection.full_detail_refs.owner_delta_first_ref,
+    projection.owner_delta_audit_tail.full_detail_refs.owner_delta_first_ref,
     '/runtime_tray_snapshot/app_operator_drilldown/attention_first_payload/owner_delta_first',
   );
-  const fullDetailRefs = projection.full_detail_refs as Record<string, string>;
+  const fullDetailRefs = projection.owner_delta_audit_tail.full_detail_refs as Record<string, string>;
   assert.equal(fullDetailRefs.evidence_worklist_ref, '/family_runtime_evidence_worklist');
 });
