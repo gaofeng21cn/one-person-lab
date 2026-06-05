@@ -394,6 +394,119 @@ function buildRepoConformance(input: RepoInput) {
   };
 }
 
+type RepoConformanceReport = ReturnType<typeof buildRepoConformance>;
+
+function countTailItems(report: RepoConformanceReport, status: string) {
+  return report.evidence_tail_classification.tail_items
+    .filter((item) => optionalString(item.status) === status)
+    .length;
+}
+
+function stageRunDomainNextAction(report: RepoConformanceReport) {
+  if (report.status === 'blocked') {
+    return 'repair_stage_run_profile_canary_or_structural_conformance_blockers';
+  }
+  if (countTailItems(report, 'open') > 0) {
+    return 'domain_owner_live_receipt_typed_blocker_no_regression_or_long_soak_ref_required';
+  }
+  if (countTailItems(report, 'domain_owned_typed_blocker') > 0) {
+    return 'domain_owner_typed_blocker_ref_observed_wait_for_owner_resolution_or_no_regression_ref';
+  }
+  return 'domain_owner_live_progress_evidence_still_required_before_domain_or_production_ready';
+}
+
+function buildStageRunDomainAdoptionReadModel(reports: RepoConformanceReport[]) {
+  const domains = reports.map((report) => {
+    const profile = report.stage_run_kernel_profile_checks;
+    const canary = report.stage_run_canary_evidence_checks;
+    return {
+      domain_id: report.domain_id,
+      requested_agent_id: report.requested_agent_id,
+      repo_dir: report.repo_dir,
+      status: report.status,
+      stage_run_kernel_profile_status: profile.status,
+      stage_run_kernel_profile_source: profile.profile_source,
+      stage_run_default_read_surface_root: profile.default_read_surface.root,
+      stage_run_terminal_transition_authority:
+        profile.transition_authority.terminal_transition_authority,
+      stage_run_canary_evidence_status: canary.status,
+      stage_run_canary_evidence_scope: canary.evidence_scope,
+      stage_run_canary_operator_status: canary.operator_summary.status,
+      stage_run_canary_stage_id: canary.stage_id,
+      stage_run_canary_id: canary.canary_id,
+      stage_run_ref: canary.stage_run_ref,
+      stage_manifest_ref: canary.stage_manifest_ref,
+      current_pointer_ref: canary.current_pointer_ref,
+      controlled_canary_claims_live_domain_progress: false,
+      production_evidence_tail_status: report.evidence_tail_classification.status,
+      production_evidence_tail_count: report.evidence_tail_classification.tail_items.length,
+      production_evidence_tail_open_count: countTailItems(report, 'open'),
+      production_evidence_tail_typed_blocker_count: countTailItems(report, 'domain_owned_typed_blocker'),
+      structural_conformance_is_domain_ready: false,
+      next_required_owner_action: stageRunDomainNextAction(report),
+      authority_boundary: {
+        can_claim_live_domain_progress: false,
+        can_claim_domain_ready: false,
+        can_claim_quality_or_export_ready: false,
+        can_claim_artifact_ready: false,
+        can_claim_production_ready: false,
+        can_sign_owner_receipt: false,
+        can_create_typed_blocker: false,
+        can_authorize_physical_delete: false,
+      },
+    };
+  });
+  const profilePassedCount = domains
+    .filter((domain) => domain.stage_run_kernel_profile_status === 'passed')
+    .length;
+  const canaryPassedCount = domains
+    .filter((domain) => domain.stage_run_canary_evidence_status === 'passed')
+    .length;
+  const productionEvidenceTailCount = domains.reduce(
+    (total, domain) => total + domain.production_evidence_tail_count,
+    0,
+  );
+  const openProductionEvidenceTailCount = domains.reduce(
+    (total, domain) => total + domain.production_evidence_tail_open_count,
+    0,
+  );
+  return {
+    surface_kind: 'opl_stage_run_domain_adoption_read_model',
+    owner: 'one-person-lab',
+    read_model_role:
+      'top_level_operator_projection_from_standard_domain_agent_conformance_reports',
+    status: profilePassedCount === reports.length && canaryPassedCount === reports.length
+      ? 'passed'
+      : 'blocked',
+    domain_count: reports.length,
+    stage_run_kernel_profile_passed_count: profilePassedCount,
+    stage_run_canary_evidence_passed_count: canaryPassedCount,
+    controlled_canary_evidence_scope: domains.every((domain) =>
+      domain.stage_run_canary_evidence_scope === 'controlled_fixture_not_live_domain_progress'
+    )
+      ? 'controlled_fixture_not_live_domain_progress'
+      : 'mixed_or_blocked',
+    production_evidence_tail_count: productionEvidenceTailCount,
+    open_production_evidence_tail_count: openProductionEvidenceTailCount,
+    production_evidence_tail_policy: 'reported_separately_not_a_structural_pass_condition',
+    controlled_canary_claims_live_domain_progress: false,
+    conformance_pass_counts_as_domain_ready: false,
+    conformance_pass_counts_as_production_ready: false,
+    domains,
+    authority_boundary: {
+      can_claim_live_domain_progress: false,
+      can_claim_domain_ready: false,
+      can_claim_quality_or_export_ready: false,
+      can_claim_artifact_ready: false,
+      can_claim_production_ready: false,
+      can_write_domain_truth: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_authorize_physical_delete: false,
+    },
+  };
+}
+
 export function buildStandardDomainAgentConformanceReport(args: string[]) {
   const repos = parseConformanceArgs(args);
   const reports = repos.map(buildRepoConformance);
@@ -404,6 +517,7 @@ export function buildStandardDomainAgentConformanceReport(args: string[]) {
     0,
   );
   const structuralConformanceStatus = blockedCount === 0 ? 'passed' : 'blocked';
+  const stageRunDomainAdoptionReadModel = buildStageRunDomainAdoptionReadModel(reports);
   return {
     version: 'g2',
     passed_count: passedCount,
@@ -411,6 +525,7 @@ export function buildStandardDomainAgentConformanceReport(args: string[]) {
     structural_conformance_status: structuralConformanceStatus,
     production_evidence_tail_count: productionEvidenceTailCount,
     production_evidence_tail_policy: 'reported_separately_not_a_structural_pass_condition',
+    stage_run_domain_adoption_read_model: stageRunDomainAdoptionReadModel,
     standard_domain_agent_conformance: {
       surface_kind: 'opl_standard_domain_agent_conformance_report',
       owner: 'one-person-lab',
@@ -421,6 +536,7 @@ export function buildStandardDomainAgentConformanceReport(args: string[]) {
       structural_conformance_status: structuralConformanceStatus,
       production_evidence_tail_count: productionEvidenceTailCount,
       production_evidence_tail_policy: 'reported_separately_not_a_structural_pass_condition',
+      stage_run_domain_adoption_read_model: stageRunDomainAdoptionReadModel,
       summary: {
         total_repo_count: reports.length,
         passed_count: passedCount,
@@ -428,6 +544,10 @@ export function buildStandardDomainAgentConformanceReport(args: string[]) {
         structural_conformance_status: structuralConformanceStatus,
         production_evidence_tail_count: productionEvidenceTailCount,
         production_evidence_tail_policy: 'reported_separately_not_a_structural_pass_condition',
+        stage_run_domain_adoption_status: stageRunDomainAdoptionReadModel.status,
+        stage_run_domain_adoption_domain_count: stageRunDomainAdoptionReadModel.domain_count,
+        stage_run_controlled_canary_evidence_scope:
+          stageRunDomainAdoptionReadModel.controlled_canary_evidence_scope,
       },
       reports,
       authority_boundary: {

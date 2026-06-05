@@ -95,9 +95,42 @@ test('agents conformance reports structural readiness separately from production
     conformancePayload.production_evidence_tail_policy,
     'reported_separately_not_a_structural_pass_condition',
   );
+  const adoptionReadModel = conformancePayload.stage_run_domain_adoption_read_model;
+  assert.deepEqual(adoptionReadModel, report.stage_run_domain_adoption_read_model);
+  assert.equal(adoptionReadModel.surface_kind, 'opl_stage_run_domain_adoption_read_model');
+  assert.equal(adoptionReadModel.status, 'passed');
+  assert.equal(adoptionReadModel.domain_count, 1);
+  assert.equal(adoptionReadModel.stage_run_kernel_profile_passed_count, 1);
+  assert.equal(adoptionReadModel.stage_run_canary_evidence_passed_count, 1);
+  assert.equal(adoptionReadModel.controlled_canary_evidence_scope, 'controlled_fixture_not_live_domain_progress');
+  assert.equal(adoptionReadModel.production_evidence_tail_count, 2);
+  assert.equal(adoptionReadModel.open_production_evidence_tail_count, 2);
+  assert.equal(adoptionReadModel.conformance_pass_counts_as_domain_ready, false);
+  assert.equal(adoptionReadModel.conformance_pass_counts_as_production_ready, false);
+  assert.equal(adoptionReadModel.authority_boundary.can_claim_domain_ready, false);
+  assert.equal(adoptionReadModel.authority_boundary.can_create_typed_blocker, false);
+  assert.equal(report.summary.stage_run_domain_adoption_status, 'passed');
+  assert.equal(
+    report.summary.stage_run_controlled_canary_evidence_scope,
+    'controlled_fixture_not_live_domain_progress',
+  );
   assert.equal(report.authority_boundary.conformance_report_can_claim_domain_ready, false);
 
   const repo = report.reports[0];
+  const adoptionDomain = adoptionReadModel.domains[0];
+  assert.equal(adoptionDomain.domain_id, repo.domain_id);
+  assert.equal(adoptionDomain.stage_run_kernel_profile_status, 'passed');
+  assert.equal(adoptionDomain.stage_run_canary_evidence_status, 'passed');
+  assert.equal(adoptionDomain.stage_run_canary_evidence_scope, 'controlled_fixture_not_live_domain_progress');
+  assert.equal(adoptionDomain.stage_run_canary_operator_status, 'ready');
+  assert.equal(adoptionDomain.controlled_canary_claims_live_domain_progress, false);
+  assert.equal(adoptionDomain.production_evidence_tail_status, 'production_evidence_tail_present');
+  assert.equal(adoptionDomain.structural_conformance_is_domain_ready, false);
+  assert.equal(
+    adoptionDomain.next_required_owner_action,
+    'domain_owner_live_receipt_typed_blocker_no_regression_or_long_soak_ref_required',
+  );
+  assert.equal(adoptionDomain.authority_boundary.can_claim_production_ready, false);
   assert.equal(repo.status, 'passed');
   assert.deepEqual(repo.blockers, []);
   assert.equal(repo.scaffold_validation.status, 'passed');
