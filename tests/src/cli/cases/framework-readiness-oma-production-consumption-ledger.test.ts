@@ -1,15 +1,32 @@
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
 import { recordManagedInstallUpdateReceipts } from '../../../../src/managed-install-update-ledger.ts';
 import { recordOmaAppLivePathReceipts } from '../../../../src/oma-app-live-path-ledger.ts';
-import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
+import {
+  createFamilyWorkspaceFixture,
+} from './runtime-app-operator-drilldown-helpers.ts';
 
 function bindOmaFixtureWithoutProductionAcceptance(stateRoot: string) {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-fixture-'));
-  process.env.OPL_META_AGENT_REPO_DIR = createOmaContractFixture(fixtureRoot);
+  const { omaRepoDir, workspaceRoot } = createFamilyWorkspaceFixture(fixtureRoot);
+  process.env.OPL_META_AGENT_REPO_DIR = omaRepoDir;
+  process.env.OPL_FAMILY_WORKSPACE_ROOT = workspaceRoot;
   return fixtureRoot;
 }
 
-function restoreEnv(name: 'OPL_STATE_DIR' | 'OPL_META_AGENT_REPO_DIR', previous: string | undefined) {
+function createReadinessFamilyWorkspace(options: { omaProductionAcceptance?: boolean } = {}) {
+  const familyWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-readiness-family-'));
+  const { omaRepoDir, workspaceRoot } = createFamilyWorkspaceFixture(familyWorkspaceRoot, options);
+  return {
+    familyWorkspaceRoot,
+    omaRepoDir,
+    workspaceRoot,
+  };
+}
+
+function restoreEnv(
+  name: 'OPL_STATE_DIR' | 'OPL_META_AGENT_REPO_DIR' | 'OPL_FAMILY_WORKSPACE_ROOT',
+  previous: string | undefined,
+) {
   if (previous === undefined) {
     delete process.env[name];
   } else {
@@ -21,6 +38,7 @@ test('runtime oma-production-consumption verifies long-soak refs before framewor
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
+  const previousFamilyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
   let fixtureRoot: string | null = null;
   try {
     process.env.OPL_STATE_DIR = stateRoot;
@@ -121,6 +139,7 @@ test('runtime oma-production-consumption verifies long-soak refs before framewor
   } finally {
     restoreEnv('OPL_STATE_DIR', previousStateDir);
     restoreEnv('OPL_META_AGENT_REPO_DIR', previousOmaRepoDir);
+    restoreEnv('OPL_FAMILY_WORKSPACE_ROOT', previousFamilyWorkspaceRoot);
     fs.rmSync(stateRoot, { recursive: true, force: true });
     if (fixtureRoot) {
       fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -130,13 +149,18 @@ test('runtime oma-production-consumption verifies long-soak refs before framewor
 
 test('framework readiness consumes OMA repo-tracked production acceptance refs without runtime ledger state', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-acceptance-state-'));
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-acceptance-fixture-'));
-  const omaRepoDir = createOmaContractFixture(fixtureRoot, { productionAcceptance: true });
+  const {
+    familyWorkspaceRoot: fixtureRoot,
+    omaRepoDir,
+    workspaceRoot,
+  } = createReadinessFamilyWorkspace({ omaProductionAcceptance: true });
   const previousStateDir = process.env.OPL_STATE_DIR;
   const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
+  const previousFamilyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
   try {
     process.env.OPL_STATE_DIR = stateRoot;
     process.env.OPL_META_AGENT_REPO_DIR = omaRepoDir;
+    process.env.OPL_FAMILY_WORKSPACE_ROOT = workspaceRoot;
 
     const ledger = runCli(['runtime', 'oma-production-consumption', 'list'], {
       OPL_STATE_DIR: stateRoot,
@@ -166,6 +190,7 @@ test('framework readiness consumes OMA repo-tracked production acceptance refs w
     const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,
       OPL_META_AGENT_REPO_DIR: omaRepoDir,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     }).framework_readiness;
     const omaFollowthrough =
       readiness.attention_first_payload.oma_production_consumption_followthrough;
@@ -180,6 +205,7 @@ test('framework readiness consumes OMA repo-tracked production acceptance refs w
     const fullDrilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
       OPL_META_AGENT_REPO_DIR: omaRepoDir,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     }).app_operator_drilldown;
     const fullFollowthrough =
       fullDrilldown.opl_meta_agent_workbench_refs.production_consumption_followthrough;
@@ -200,6 +226,7 @@ test('framework readiness consumes OMA repo-tracked production acceptance refs w
   } finally {
     restoreEnv('OPL_STATE_DIR', previousStateDir);
     restoreEnv('OPL_META_AGENT_REPO_DIR', previousOmaRepoDir);
+    restoreEnv('OPL_FAMILY_WORKSPACE_ROOT', previousFamilyWorkspaceRoot);
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
@@ -207,9 +234,15 @@ test('framework readiness consumes OMA repo-tracked production acceptance refs w
 
 test('runtime oma-production-consumption CLI accepts singular ref fields for long-soak payloads', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-singular-state-'));
+  const {
+    familyWorkspaceRoot,
+    workspaceRoot,
+  } = createReadinessFamilyWorkspace();
   const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousFamilyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
   try {
     process.env.OPL_STATE_DIR = stateRoot;
+    process.env.OPL_FAMILY_WORKSPACE_ROOT = workspaceRoot;
     recordManagedInstallUpdateReceipts([{
       module_id: 'oplmetaagent',
       repo_name: 'opl-meta-agent',
@@ -260,6 +293,7 @@ test('runtime oma-production-consumption CLI accepts singular ref fields for lon
 
     const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     }).framework_readiness;
     const omaFollowthrough = readiness.oma_production_consumption_followthrough;
     if (omaFollowthrough.structural_consumption_ready !== true) {
@@ -271,12 +305,10 @@ test('runtime oma-production-consumption CLI accepts singular ref fields for lon
     assert.equal(omaFollowthrough.authority_boundary.can_claim_production_ready, false);
     assert.equal(omaFollowthrough.authority_boundary.can_create_owner_receipt, false);
   } finally {
-    if (previousStateDir === undefined) {
-      delete process.env.OPL_STATE_DIR;
-    } else {
-      process.env.OPL_STATE_DIR = previousStateDir;
-    }
+    restoreEnv('OPL_STATE_DIR', previousStateDir);
+    restoreEnv('OPL_FAMILY_WORKSPACE_ROOT', previousFamilyWorkspaceRoot);
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
   }
 });
 
@@ -284,6 +316,7 @@ test('runtime oma-production-consumption typed blocker refs do not close long-so
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-blocker-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
+  const previousFamilyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
   let fixtureRoot: string | null = null;
   try {
     process.env.OPL_STATE_DIR = stateRoot;
@@ -348,6 +381,7 @@ test('runtime oma-production-consumption typed blocker refs do not close long-so
   } finally {
     restoreEnv('OPL_STATE_DIR', previousStateDir);
     restoreEnv('OPL_META_AGENT_REPO_DIR', previousOmaRepoDir);
+    restoreEnv('OPL_FAMILY_WORKSPACE_ROOT', previousFamilyWorkspaceRoot);
     fs.rmSync(stateRoot, { recursive: true, force: true });
     if (fixtureRoot) {
       fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -357,9 +391,15 @@ test('runtime oma-production-consumption typed blocker refs do not close long-so
 
 test('runtime oma-production-consumption retires stale typed blocker refs after verified long-soak evidence', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-blocker-retired-state-'));
+  const {
+    familyWorkspaceRoot,
+    workspaceRoot,
+  } = createReadinessFamilyWorkspace();
   const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousFamilyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
   try {
     process.env.OPL_STATE_DIR = stateRoot;
+    process.env.OPL_FAMILY_WORKSPACE_ROOT = workspaceRoot;
     recordManagedInstallUpdateReceipts([{
       module_id: 'oplmetaagent',
       repo_name: 'opl-meta-agent',
@@ -419,6 +459,7 @@ test('runtime oma-production-consumption retires stale typed blocker refs after 
 
     const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     }).framework_readiness;
     const omaFollowthrough =
       readiness.attention_first_payload.oma_production_consumption_followthrough;
@@ -434,12 +475,10 @@ test('runtime oma-production-consumption retires stale typed blocker refs after 
     assert.equal(omaFollowthrough.historical_typed_blocker_ref_count, 1);
     assert.equal(omaFollowthrough.authority_boundary.can_claim_production_ready, false);
   } finally {
-    if (previousStateDir === undefined) {
-      delete process.env.OPL_STATE_DIR;
-    } else {
-      process.env.OPL_STATE_DIR = previousStateDir;
-    }
+    restoreEnv('OPL_STATE_DIR', previousStateDir);
+    restoreEnv('OPL_FAMILY_WORKSPACE_ROOT', previousFamilyWorkspaceRoot);
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
   }
 });
 
@@ -447,6 +486,7 @@ test('runtime oma-production-consumption operator evidence refs do not close lon
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-operator-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
+  const previousFamilyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
   let fixtureRoot: string | null = null;
   try {
     process.env.OPL_STATE_DIR = stateRoot;
@@ -507,6 +547,7 @@ test('runtime oma-production-consumption operator evidence refs do not close lon
   } finally {
     restoreEnv('OPL_STATE_DIR', previousStateDir);
     restoreEnv('OPL_META_AGENT_REPO_DIR', previousOmaRepoDir);
+    restoreEnv('OPL_FAMILY_WORKSPACE_ROOT', previousFamilyWorkspaceRoot);
     fs.rmSync(stateRoot, { recursive: true, force: true });
     if (fixtureRoot) {
       fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -516,9 +557,15 @@ test('runtime oma-production-consumption operator evidence refs do not close lon
 
 test('runtime oma-production-consumption long-soak start writes a workorder without closing evidence', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-long-soak-start-state-'));
+  const {
+    familyWorkspaceRoot,
+    workspaceRoot,
+  } = createReadinessFamilyWorkspace();
   const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousFamilyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
   try {
     process.env.OPL_STATE_DIR = stateRoot;
+    process.env.OPL_FAMILY_WORKSPACE_ROOT = workspaceRoot;
     const evidenceDir = path.join(stateRoot, 'oma-long-soak-start');
     const startOutput = runCli([
       'runtime',
@@ -552,6 +599,7 @@ test('runtime oma-production-consumption long-soak start writes a workorder with
 
     const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     }).framework_readiness;
     const omaFollowthrough =
       readiness.attention_first_payload.oma_production_consumption_followthrough;
@@ -561,12 +609,10 @@ test('runtime oma-production-consumption long-soak start writes a workorder with
     assert.equal(omaFollowthrough.production_consumption_ready, false);
     assert.equal(omaFollowthrough.authority_boundary.can_claim_production_ready, false);
   } finally {
-    if (previousStateDir === undefined) {
-      delete process.env.OPL_STATE_DIR;
-    } else {
-      process.env.OPL_STATE_DIR = previousStateDir;
-    }
+    restoreEnv('OPL_STATE_DIR', previousStateDir);
+    restoreEnv('OPL_FAMILY_WORKSPACE_ROOT', previousFamilyWorkspaceRoot);
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
   }
 });
 

@@ -30,15 +30,17 @@ import {
   assertCurrentOwnerDeltaToplineNextAction,
   assertOwnerDeltaFirstReadinessProjection,
 } from './owner-payload-workorder-assertions.ts';
-import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
+import { createFamilyWorkspaceFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 test('framework readiness summarizes default control-plane surfaces without authority claims', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-readiness-state-'));
-  const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
+  const familyWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-readiness-family-'));
   try {
-    process.env.OPL_META_AGENT_REPO_DIR = createOmaContractFixture(stateRoot);
+    const { omaRepoDir, workspaceRoot } = createFamilyWorkspaceFixture(familyWorkspaceRoot);
     const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+      OPL_META_AGENT_REPO_DIR: omaRepoDir,
     }).framework_readiness;
 
     assert.equal(readiness.surface_kind, 'opl_framework_readiness_summary');
@@ -874,7 +876,11 @@ test('framework readiness summarizes default control-plane surfaces without auth
   );
   assert.equal(
     readiness.evidence_tails.agent_structural_evidence_tail.open_item_count,
-    0,
+    readiness.summary.agent_structural_evidence_tail_open_count,
+  );
+  assert.equal(
+    readiness.evidence_tails.agent_structural_evidence_tail.open_item_count > 0,
+    true,
   );
   assert.equal(Object.hasOwn(readiness.agent_conformance_tail, 'production_or_domain_ready'), false);
   assert.equal(
@@ -988,11 +994,7 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(readiness.authority_boundary.can_read_artifact_body, false);
   assert.equal(readiness.authority_boundary.safe_action_route_is_receipt_closure, false);
   } finally {
-    if (previousOmaRepoDir === undefined) {
-      delete process.env.OPL_META_AGENT_REPO_DIR;
-    } else {
-      process.env.OPL_META_AGENT_REPO_DIR = previousOmaRepoDir;
-    }
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
   }
 });

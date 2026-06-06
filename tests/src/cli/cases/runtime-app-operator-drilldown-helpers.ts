@@ -240,6 +240,47 @@ export function createOmaContractFixture(
   return repoDir;
 }
 
+export function createFamilyWorkspaceFixture(
+  fixtureRoot: string,
+  options: { omaProductionAcceptance?: boolean } = {},
+) {
+  const domainDescriptors = [
+    {
+      project: 'med-autoscience',
+      domain_id: 'med-autoscience',
+      domain_label: 'MedAutoScience',
+    },
+    {
+      project: 'med-autogrant',
+      domain_id: 'med-autogrant',
+      domain_label: 'MedAutoGrant',
+    },
+    {
+      project: 'redcube-ai',
+      domain_id: 'redcube_ai',
+      domain_label: 'RedCube AI',
+    },
+  ];
+  for (const descriptor of domainDescriptors) {
+    fs.mkdirSync(path.join(fixtureRoot, descriptor.project, 'contracts'), { recursive: true });
+    writeJson(
+      path.join(fixtureRoot, descriptor.project, 'contracts', 'domain_descriptor.json'),
+      {
+        surface_kind: 'family_domain_descriptor',
+        domain_id: descriptor.domain_id,
+        domain_label: descriptor.domain_label,
+      },
+    );
+  }
+  const omaRepoDir = createOmaContractFixture(fixtureRoot, {
+    productionAcceptance: options.omaProductionAcceptance,
+  });
+  return {
+    workspaceRoot: fixtureRoot,
+    omaRepoDir,
+  };
+}
+
 export function assertMasLifecycleDrilldownProjection(drilldown: any) {
   assert.equal(drilldown.authority_boundary.can_write_domain_truth, false);
   assert.equal(drilldown.authority_boundary.can_read_memory_body, false);
