@@ -25,10 +25,10 @@ Fresh command:
 node ./scripts/family-structure-advisory.mjs --format=json
 ```
 
-Fresh eleven-repo local summary from `2026-06-06T14:00Z` after the AG-UI renderer/main/WebUI/validator, RCA test-structure, OPL owner-delta workstream merge, OMA no-resurrection closeout, and superseded MAS/App/OMA worktree cleanup passes:
+Fresh eleven-repo local summary from `2026-06-06T14:20Z` after the AG-UI renderer/main/WebUI/validator, RCA test-structure, OPL owner-delta workstream merge, OMA no-resurrection closeout, App first-run scenario alias retirement, and superseded MAS/App/OMA/MAG/RCA worktree or branch cleanup passes:
 
 - `one-person-lab`: `needs_design_pass=24`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
-- `med-autoscience`: `needs_design_pass=24`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
+- `med-autoscience`: `needs_design_pass=25`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
 - `med-autogrant`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=5`, `missing_verify_entry=false`
 - `redcube-ai`: `needs_design_pass=5`, `mechanical_residue=0`, `public_surface_risk=9`, `missing_verify_entry=false`
 - `opl-meta-agent`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=1`, `missing_verify_entry=false`
@@ -74,6 +74,8 @@ First landing pass closed the clearest unnatural or family-inconsistent structur
 - `med-autogrant` `2b2ea3c`: added generated aggregate source checks so large generated contracts/schemas have a source-shape guard instead of being physically hand-sharded.
 - `opl-meta-agent` `4dc72ff`: added a source-structure verification lane and stage-control-plane source/parts/leaf-index surface.
 - `one-person-lab-app` `d640d5e`: split active-shell shared contract validators from the top-level validator. The current family scan has no App `needs_design_pass`; future App growth should still split by release boundary, active-shell validation, package building, release notes, and readiness summary before crossing the advisory threshold again.
+- `one-person-lab-app` `34b6add`: recorded the future Full VM evidence boundary as history provenance, keeping future cohort Full VM/local authorization/native trust truth in App contracts, workflows, validators, release artifacts, release-boundary tests, and evidence manifests.
+- `one-person-lab-app` `251c3f0`: retired first-run scenario `aliases` metadata between the Full first-install policy scenario and the Full DMG release VM gate; validation and release-boundary tests now fail closed if first-run scenario aliases return.
 - `opl-meta-agent` `fb6375e`: locked the target-improvement no-resurrection gate into active docs, status, architecture, authority refs, and `tests/source-purity.test.ts`, so missing target-owned improvement policy stays a typed blocker and cannot silently recreate generic `external_agent/*` patch refs.
 - `opl-doc` `757d30c`: split the broad OPL Doc doctor into natural command modules: CLI, profile discovery, invariant checks, plugin sync, family plan, rendering, constants, and common helpers.
 - `opl-flow` `764d1ab`: added a thin repo-native `scripts/verify.sh`, closing the missing family-native verify signal.
@@ -81,7 +83,10 @@ First landing pass closed the clearest unnatural or family-inconsistent structur
 - `opl-agui-codex-shell` `74b4e78`: split shell-local Electron main process, Codex app-server client, OPL CLI bridge, UI smoke evidence, WebUI gateway/routes/runtime/static serving, and candidate source-contract validation into named modules.
 - `med-autoscience`: superseded `.worktrees/mas-owner-delta-closeout` was backed up to `~/.codex/tmp/opl-family-structure-cleanup-20260606/` and removed after independent read-only review confirmed `main` already carries the effective owner-delta semantics in `244b78a8` / `b9da3263`; absorbing it would have regressed closeout binding and currentness behavior.
 - `one-person-lab-app`: superseded detached `.worktrees/opl-family-app-source-shape` was backed up to `~/.codex/tmp/opl-family-structure-cleanup-20260606/` and removed after independent read-only review confirmed `main` already has the more natural Full builder split through `scripts/build-full-first-install-package/macos-trust.ts`, `archive-output.ts`, and `staging.ts`.
+- `one-person-lab-app`: residual `.worktrees/codex/app-full-vm-future-evidence-boundary-20260606` and `.worktrees/app-first-run-scenario-alias-retirement-20260606` were absorbed or re-applied on `main`, verified, backed up to `~/.codex/tmp/opl-family-structure-cleanup-20260606/app-branches/`, and removed with their local `codex/*` branches.
 - `opl-meta-agent`: superseded `.worktrees/oma-target-improvement-policy-fallback-retirement-20260606` was backed up to `~/.codex/tmp/opl-family-structure-cleanup-20260606/` and removed after independent diff review confirmed the branch would delete or regress the fuller `main` implementation/tests; only its durable no-resurrection governance value was re-applied on `main` in `fb6375e`.
+- `med-autogrant`: superseded local `codex/mag-active-inventory-longlist-ssot-20260606`, `codex/mag-private-physical-delete-ssot-20260606`, and `codex/mag-runtime-topology-ssot-20260606` branches had no worktrees and would regress current `main` structure commits; they were backed up under `~/.codex/tmp/opl-family-structure-cleanup-20260606/mag-branches/` and deleted.
+- `redcube-ai`: superseded local `codex/rca-product-entry-support-ssot-20260606` and `codex/rca-source-readiness-ssot-20260606` branches had no worktrees and would regress current RCA structure-test splits; they were backed up under `~/.codex/tmp/opl-family-structure-cleanup-20260606/rca-branches/` and deleted.
 
 Fresh verification recorded during this pass:
 
@@ -89,7 +94,7 @@ Fresh verification recorded during this pass:
 - RCA: `npm run contracts:current-program:check`; `npm run line-budget:strict`; `./scripts/verify.sh line-budget-strict`; `./scripts/verify.sh structure`; `npm run test:meta`; after `86e202a4`, `npm run test:meta -- --test-reporter=dot` and `npm run test:line-budget`.
 - MAG: `./scripts/run-python-clean.sh scripts/check_generated_aggregate_sources.py`; focused generated-source tests; `./scripts/verify.sh meta`.
 - OMA: `./scripts/verify.sh structure:strict`; `./scripts/verify.sh full`; after `fb6375e`, `node --experimental-strip-types --test tests/source-purity.test.ts`; `npm run typecheck`; `npm test`; `npm run verify`; `git diff --check`.
-- App: `npm run validate:active-shell -- --quick`; `npm run validate:release-boundary`; `scripts/verify.sh structure`.
+- App: `npm run validate:active-shell -- --quick`; `npm run validate:release-boundary`; `scripts/verify.sh structure`; after `34b6add` / `251c3f0`, `npm run test:release-boundary -- --runInBand`; `node --experimental-strip-types scripts/validate-active-shell.ts --quick`; `opl-doc-doctor doctor . --format json`; `git diff --check`.
 - OPL Doc: `PYTHONDONTWRITEBYTECODE=1 bash scripts/verify.sh`.
 - OPL Flow: `scripts/verify.sh`.
 - AG-UI shell: `npm run verify`; `npm run build:renderer`; `npm run smoke:webui`.
@@ -126,6 +131,7 @@ Closed in the first landing pass:
 - `opl-flow`: repo-native verify entry is added in `764d1ab`.
 - `med-autogrant`: generated aggregate source checks are added in `2b2ea3c`.
 - `one-person-lab-app`: active-shell shared validator extraction is landed in `d640d5e`, and fresh family scan now shows no App source-shape item.
+- `one-person-lab-app`: first-run scenario alias metadata is retired in `251c3f0`; Full first-install policy and Full DMG release VM gate now use distinct canonical scenario ids without compatibility aliases.
 - `opl-agui-codex-shell`: renderer source modules are split in `3991af4`, and source-only candidate validation now follows the renderer module graph.
 - `opl-agui-codex-shell`: main-process, WebUI server and candidate validator responsibilities are split in `74b4e78`; AG-UI now has no source-shape item in the fresh family scan.
 - `redcube-ai`: `tests/opl-agent-pack-contracts.test.ts` and `tests/rca-retired-surface-guard.test.ts` are replaced by semantic test families and helpers in `86e202a4`.
