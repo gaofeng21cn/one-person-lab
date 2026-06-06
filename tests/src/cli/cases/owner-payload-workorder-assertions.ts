@@ -137,15 +137,23 @@ export function assertCurrentOwnerDeltaToplineNextAction(surface: JsonRecord) {
     surface.operator_next_action,
     expectedNextAction,
   );
-  assert.equal(
-    surface.operator_next_action_kind,
-    expectedNextAction.action_kind,
-  );
-  assert.equal(surface.operator_next_action_owner, surface.operator_next_owner);
   const boundary = surface.operator_next_action_authority_boundary;
-  assert.equal(boundary.derivation_source, 'current_owner_delta');
-  assert.equal(boundary.default_planning_root, 'current_owner_delta_or_provider_human_hard_gate');
-  assert.equal(boundary.route_requires_domain_or_app_payload, true);
+  if (expectedNextAction === null) {
+    assert.equal(surface.operator_next_action_kind, null);
+    assert.equal(surface.operator_next_action_owner, surface.operator_next_owner);
+    assert.equal(boundary.derivation_source, null);
+    assert.equal(boundary.default_planning_root, null);
+    assert.equal(boundary.route_requires_domain_or_app_payload, false);
+  } else {
+    assert.equal(
+      surface.operator_next_action_kind,
+      expectedNextAction.action_kind,
+    );
+    assert.equal(surface.operator_next_action_owner, surface.operator_next_owner);
+    assert.equal(boundary.derivation_source, 'current_owner_delta');
+    assert.equal(boundary.default_planning_root, 'current_owner_delta_or_provider_human_hard_gate');
+    assert.equal(boundary.route_requires_domain_or_app_payload, true);
+  }
   if (stageRunAction !== null) {
     assertStageRunAuthorizationNextAction(stageRunAction as JsonRecord);
     assert.deepEqual(surface.stage_run_next_required_owner_action, stageRunAction);
@@ -207,7 +215,7 @@ export function assertStageRunAuthorizationNextAction(action: JsonRecord) {
       'provider_attempt_ref',
       'attempt_lease_ref',
       'execution_authorization_decision_ref',
-      'closeout_receipt_ref',
+      'owner_answer_ref',
     ].some((ref) => action.missing_input_refs.includes(ref)),
     true,
   );
@@ -216,7 +224,7 @@ export function assertStageRunAuthorizationNextAction(action: JsonRecord) {
     true,
   );
   assert.equal(
-    action.required_ref_shape.closeout_receipt_binding_refs.includes('closeout_receipt_ref'),
+    action.required_ref_shape.closeout_receipt_binding_refs.includes('owner_answer_ref'),
     true,
   );
   assert.equal(action.route_requires_opl_runtime_refs, true);
@@ -601,7 +609,7 @@ export function assertOwnerDeltaFirstReadinessProjection(readiness: JsonRecord) 
     readiness.stage_run_next_missing_input_refs.includes('execution_authorization_decision_ref'),
     true,
   );
-  assert.equal(readiness.stage_run_next_missing_input_refs.includes('closeout_receipt_ref'), true);
+  assert.equal(readiness.stage_run_next_missing_input_refs.includes('owner_answer_ref'), true);
   assert.equal(
     readiness.operator_required_delta,
     readiness.current_owner_delta.desired_delta_description,

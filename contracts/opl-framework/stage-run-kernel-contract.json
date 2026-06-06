@@ -85,7 +85,8 @@
       "closeout_receipt_stage_run_binding",
       "closeout_receipt_stage_manifest_binding",
       "closeout_receipt_current_pointer_binding",
-      "closeout_receipt_source_fingerprint_binding"
+      "closeout_receipt_source_fingerprint_binding",
+      "closeout_owner_answer_idempotency_binding"
     ],
     "advisory_for_context": [
       "prompt_refs",
@@ -165,7 +166,8 @@
       "closeout_receipt_stage_run_binding_missing",
       "closeout_receipt_stage_manifest_binding_missing",
       "closeout_receipt_current_pointer_binding_missing",
-      "closeout_receipt_source_fingerprint_binding_missing"
+      "closeout_receipt_source_fingerprint_binding_missing",
+      "closeout_owner_answer_idempotency_binding_missing"
     ],
     "blocked_result": {
       "surface_kind": "opl_stage_run_execution_authorization_blocker",

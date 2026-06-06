@@ -45,11 +45,12 @@ const EXECUTION_AUTHORIZATION_REQUIRED_REFS = [
 ] as const;
 
 const CLOSEOUT_BINDING_REQUIRED_REFS = [
-  'closeout_receipt_ref',
-  'closeout_receipt_stage_run_binding_ref',
-  'closeout_receipt_stage_manifest_binding_ref',
-  'closeout_receipt_current_pointer_binding_ref',
-  'closeout_receipt_source_fingerprint_binding_ref',
+  'owner_answer_ref',
+  'owner_answer_stage_run_binding_ref',
+  'owner_answer_stage_manifest_binding_ref',
+  'owner_answer_current_pointer_binding_ref',
+  'owner_answer_source_fingerprint_binding_ref',
+  'owner_answer_idempotency_binding_ref',
 ] as const;
 
 const BLOCKER_REASON_REF_MAP: Record<string, string[]> = {
@@ -69,14 +70,36 @@ const BLOCKER_REASON_REF_MAP: Record<string, string[]> = {
   artifact_scope_ref_missing: ['artifact_scope_ref'],
   authority_boundary_invalid: ['stage_run_authority_boundary_ref'],
   forbidden_write_required: ['forbidden_write_guard_ref'],
-  closeout_receipt_ref_missing: ['closeout_receipt_ref'],
-  closeout_receipt_stage_run_binding_missing: ['closeout_receipt_stage_run_binding_ref'],
-  closeout_receipt_stage_manifest_binding_missing: ['closeout_receipt_stage_manifest_binding_ref'],
-  closeout_receipt_current_pointer_binding_missing: ['closeout_receipt_current_pointer_binding_ref'],
+  closeout_receipt_ref_missing: ['owner_answer_ref'],
+  closeout_receipt_stage_run_binding_missing: ['owner_answer_stage_run_binding_ref'],
+  closeout_receipt_stage_manifest_binding_missing: ['owner_answer_stage_manifest_binding_ref'],
+  closeout_receipt_current_pointer_binding_missing: ['owner_answer_current_pointer_binding_ref'],
   closeout_receipt_source_fingerprint_binding_missing: [
-    'closeout_receipt_source_fingerprint_binding_ref',
+    'owner_answer_source_fingerprint_binding_ref',
+  ],
+  closeout_owner_answer_idempotency_binding_missing: [
+    'owner_answer_idempotency_binding_ref',
   ],
 };
+
+function ownerAnswerRef(currentOwnerDelta: JsonRecord) {
+  const hardGate = record(currentOwnerDelta.hard_gate);
+  return text(currentOwnerDelta.latest_owner_answer_ref)
+    ?? text(currentOwnerDelta.latest_owner_receipt_ref)
+    ?? text(currentOwnerDelta.latest_typed_blocker_ref)
+    ?? text(hardGate.owner_answer_ref)
+    ?? text(hardGate.closeout_receipt_ref)
+    ?? text(hardGate.typed_blocker_ref);
+}
+
+function ownerAnswerKind(currentOwnerDelta: JsonRecord) {
+  const hardGate = record(currentOwnerDelta.hard_gate);
+  const explicitKind = text(hardGate.owner_answer_kind) ?? text(currentOwnerDelta.latest_owner_answer_kind);
+  if (explicitKind === 'typed_blocker' || text(currentOwnerDelta.latest_typed_blocker_ref) || text(hardGate.typed_blocker_ref)) {
+    return 'typed_blocker';
+  }
+  return ownerAnswerRef(currentOwnerDelta) ? 'owner_receipt' : null;
+}
 
 function missingRefsFromBlockerReasons(reasons: string[]) {
   return [
@@ -129,13 +152,13 @@ function buildExecutionAuthorizationNextAction(input: {
       'provider_attempt_ref',
       'attempt_lease_ref',
       'execution_authorization_decision_ref',
-      'closeout_receipt_binding_ref',
+      'owner_answer_binding_ref',
     ],
     required_return_shapes: [
       'provider_attempt_ref',
       'attempt_lease_ref',
       'execution_authorization_decision_ref',
-      'closeout_receipt_binding_ref',
+      'owner_answer_binding_ref',
     ],
     blocked_authority: strings(blocker.blocked_authority),
     blocker_code: text(blocker.blocker_code) ?? 'stage_run_execution_authorization_blocked',
@@ -257,14 +280,22 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
     artifact_scope_ref: text(record(currentOwnerDelta.audit_refs).artifact_scope_ref)
       ?? text(currentOwnerDelta.lineage_ref),
     forbidden_write_required: false,
-    closeout_receipt_ref: text(currentOwnerDelta.latest_owner_answer_ref),
-    closeout_receipt_stage_run_id: text(record(currentOwnerDelta.hard_gate).closeout_receipt_stage_run_id),
-    closeout_receipt_generation: record(currentOwnerDelta.hard_gate).closeout_receipt_generation,
-    closeout_receipt_manifest_ref: text(record(currentOwnerDelta.hard_gate).closeout_receipt_manifest_ref),
+    owner_answer_ref: ownerAnswerRef(currentOwnerDelta),
+    owner_answer_kind: ownerAnswerKind(currentOwnerDelta),
+    owner_answer_stage_run_id: text(record(currentOwnerDelta.hard_gate).owner_answer_stage_run_id)
+      ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_stage_run_id),
+    owner_answer_generation: record(currentOwnerDelta.hard_gate).owner_answer_generation
+      ?? record(currentOwnerDelta.hard_gate).closeout_receipt_generation,
+    owner_answer_manifest_ref: text(record(currentOwnerDelta.hard_gate).owner_answer_manifest_ref)
+      ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_manifest_ref),
     stage_manifest_ref: text(record(currentOwnerDelta.hard_gate).stage_manifest_ref),
-    closeout_receipt_current_pointer_ref: text(record(currentOwnerDelta.hard_gate).closeout_receipt_current_pointer_ref),
+    owner_answer_current_pointer_ref: text(record(currentOwnerDelta.hard_gate).owner_answer_current_pointer_ref)
+      ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_current_pointer_ref),
     current_pointer_ref: text(record(currentOwnerDelta.hard_gate).current_pointer_ref),
-    closeout_receipt_source_fingerprint: text(record(currentOwnerDelta.hard_gate).closeout_receipt_source_fingerprint),
+    owner_answer_source_fingerprint: text(record(currentOwnerDelta.hard_gate).owner_answer_source_fingerprint)
+      ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_source_fingerprint),
+    owner_answer_idempotency_key: text(record(currentOwnerDelta.hard_gate).owner_answer_idempotency_key)
+      ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_idempotency_key),
   });
   const nextRequiredOwnerAction = buildExecutionAuthorizationNextAction({
     stageRunId: runId,

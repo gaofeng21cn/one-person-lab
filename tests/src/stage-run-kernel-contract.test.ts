@@ -8,6 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const contractPath = 'contracts/opl-framework/stage-run-kernel-contract.json';
 const modulePath = 'src/stage-run-kernel.ts';
+const cockpitModulePath = 'src/app-state-stage-run-cockpit.ts';
 
 function readJson<T>(relativePath: string): T {
   return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as T;
@@ -94,6 +95,7 @@ test('StageRun Kernel contract separates launch, closeout, advisory, and forbidd
     'closeout_receipt_stage_manifest_binding',
     'closeout_receipt_current_pointer_binding',
     'closeout_receipt_source_fingerprint_binding',
+    'closeout_owner_answer_idempotency_binding',
   ]);
   assert.deepEqual(writingRules.advisory_for_context, [
     'prompt_refs',
@@ -196,6 +198,12 @@ test('StageRun Kernel contract freezes launch closeout and advisory conformance 
     'stage_run_execution_authorization_blocked',
   );
   assert.equal(contract.execution_authorization_policy.blocked_result.domain_typed_blocker_created, false);
+  assert.equal(
+    contract.execution_authorization_policy.closeout_binding_blockers.includes(
+      'closeout_owner_answer_idempotency_binding_missing',
+    ),
+    true,
+  );
   assert.equal(contract.forbidden_as_authority.includes('provider completion'), true);
   assert.equal(contract.forbidden_as_authority.includes('conformance passed'), true);
 });
@@ -502,6 +510,7 @@ test('StageRun execution authorization binds closeout receipt to current manifes
     closeout_receipt_current_pointer_ref: 'opl://current-pointers/stage-run-exec-auth:g2',
     current_pointer_ref: 'opl://current-pointers/stage-run-exec-auth:g2',
     closeout_receipt_source_fingerprint: 'sha256:source-2',
+    closeout_receipt_idempotency_key: 'stage-run-exec-auth:g2',
   });
 
   assert.equal(report.status, 'authorized');
@@ -513,6 +522,166 @@ test('StageRun execution authorization binds closeout receipt to current manifes
   assert.equal(report.closeout_binding.bound_to_stage_manifest, true);
   assert.equal(report.closeout_binding.bound_to_current_pointer, true);
   assert.equal(report.closeout_binding.bound_to_source_fingerprint, true);
+  assert.equal(report.closeout_binding.bound_to_idempotency_key, true);
+});
+
+test('StageRun execution authorization binds typed blocker answer to StageRun manifest pointer source and idempotency', async () => {
+  const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);
+  const report = module.evaluateStageRunExecutionAuthorization({
+    phase: 'closeout',
+    stage_run_id: 'stage-run-typed-blocker',
+    domain_id: 'mas',
+    stage_id: 'publication_handoff_owner_gate',
+    generation: 3,
+    current_pointer: {
+      stage_run_id: 'stage-run-typed-blocker',
+      generation: 3,
+      current: true,
+    },
+    selected_executor: 'codex_cli',
+    source_fingerprint: 'sha256:source-3',
+    idempotency_key: 'stage-run-typed-blocker:g3',
+    provider_attempt_ref: 'temporal://attempt/stage-run-typed-blocker',
+    attempt_lease_ref: 'opl://leases/stage-run-typed-blocker:g3',
+    attempt_lease_status: 'active',
+    execution_authorization_decision_ref: 'opl://execution-authorizations/stage-run-typed-blocker:g3',
+    workspace_scope_ref: 'opl://workspace/stage-run-typed-blocker',
+    artifact_scope_ref: 'opl://artifacts/stage-run-typed-blocker',
+    authority_boundary: {
+      opl_can_write_domain_truth: false,
+      opl_can_create_owner_receipt: false,
+      opl_can_create_typed_blocker: false,
+    },
+    forbidden_write_required: false,
+    owner_answer_ref: 'mas://typed-blockers/publication-handoff',
+    owner_answer_kind: 'typed_blocker',
+    owner_answer_stage_run_id: 'stage-run-typed-blocker',
+    owner_answer_generation: 3,
+    owner_answer_manifest_ref: 'mas://stage-manifests/publication-handoff',
+    stage_manifest_ref: 'mas://stage-manifests/publication-handoff',
+    owner_answer_current_pointer_ref: 'opl://current-pointers/stage-run-typed-blocker:g3',
+    current_pointer_ref: 'opl://current-pointers/stage-run-typed-blocker:g3',
+    owner_answer_source_fingerprint: 'sha256:source-3',
+    owner_answer_idempotency_key: 'stage-run-typed-blocker:g3',
+  });
+
+  assert.equal(report.status, 'authorized');
+  assert.equal(report.execution_authorized, true);
+  assert.equal(report.opl_runtime_blocker, null);
+  assert.equal(report.closeout_binding.owner_answer_kind, 'typed_blocker');
+  assert.equal(report.closeout_binding.owner_answer_ref, 'mas://typed-blockers/publication-handoff');
+  assert.deepEqual(report.closeout_binding_blockers, []);
+  assert.equal(report.closeout_binding.bound_to_stage_run, true);
+  assert.equal(report.closeout_binding.bound_to_stage_manifest, true);
+  assert.equal(report.closeout_binding.bound_to_current_pointer, true);
+  assert.equal(report.closeout_binding.bound_to_source_fingerprint, true);
+  assert.equal(report.closeout_binding.bound_to_idempotency_key, true);
+});
+
+test('StageRun execution authorization fails closed when owner answer idempotency binding is absent', async () => {
+  const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);
+  const report = module.evaluateStageRunExecutionAuthorization({
+    phase: 'closeout',
+    stage_run_id: 'stage-run-typed-blocker',
+    domain_id: 'mas',
+    stage_id: 'publication_handoff_owner_gate',
+    generation: 3,
+    current_pointer: {
+      stage_run_id: 'stage-run-typed-blocker',
+      generation: 3,
+      current: true,
+    },
+    selected_executor: 'codex_cli',
+    source_fingerprint: 'sha256:source-3',
+    idempotency_key: 'stage-run-typed-blocker:g3',
+    provider_attempt_ref: 'temporal://attempt/stage-run-typed-blocker',
+    attempt_lease_ref: 'opl://leases/stage-run-typed-blocker:g3',
+    attempt_lease_status: 'active',
+    execution_authorization_decision_ref: 'opl://execution-authorizations/stage-run-typed-blocker:g3',
+    workspace_scope_ref: 'opl://workspace/stage-run-typed-blocker',
+    artifact_scope_ref: 'opl://artifacts/stage-run-typed-blocker',
+    authority_boundary: {
+      opl_can_write_domain_truth: false,
+      opl_can_create_owner_receipt: false,
+      opl_can_create_typed_blocker: false,
+    },
+    forbidden_write_required: false,
+    owner_answer_ref: 'mas://typed-blockers/publication-handoff',
+    owner_answer_kind: 'typed_blocker',
+    owner_answer_stage_run_id: 'stage-run-typed-blocker',
+    owner_answer_generation: 3,
+    owner_answer_manifest_ref: 'mas://stage-manifests/publication-handoff',
+    stage_manifest_ref: 'mas://stage-manifests/publication-handoff',
+    owner_answer_current_pointer_ref: 'opl://current-pointers/stage-run-typed-blocker:g3',
+    current_pointer_ref: 'opl://current-pointers/stage-run-typed-blocker:g3',
+    owner_answer_source_fingerprint: 'sha256:source-3',
+  });
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(report.execution_authorized, false);
+  assert.equal(
+    report.closeout_binding_blockers.includes('closeout_owner_answer_idempotency_binding_missing'),
+    true,
+  );
+  assert.equal(report.opl_runtime_blocker.owner, 'one-person-lab');
+  assert.equal(report.opl_runtime_blocker.domain_typed_blocker_created, false);
+  assert.deepEqual(report.opl_runtime_blocker.blocked_authority, [
+    'closeout_receipt_binding',
+  ]);
+});
+
+test('App StageRun cockpit consumes typed blocker owner answer binding refs', async () => {
+  const module = await import(pathToFileURL(path.join(repoRoot, cockpitModulePath)).href);
+  const stageRunId = 'app-stage-run:medautoscience:publication-handoff-owner-gate';
+  const currentPointerRef = `opl://current-pointers/${stageRunId}:g0`;
+  const cockpit = module.buildAppStageRunCockpit({
+    domain: 'medautoscience',
+    current_owner: 'publication_gate_owner',
+    stage_ref: 'publication_handoff_owner_gate',
+    desired_delta_kind: 'typed_blocker',
+    desired_delta_description: 'publication_handoff_owner_receipt_or_typed_blocker',
+    accepted_answer_shape: ['domain_owner_receipt_ref', 'typed_blocker_ref'],
+    task_or_study_ref: 'mas://study/DM002',
+    lineage_ref: 'mas://stage-artifact-unit/DM002/08-publication_package_handoff',
+    source_fingerprint: 'sha256:dm002-publication-terminal',
+    delta_id: 'dm002-publication-handoff:g0',
+    live_attempt_ref: 'temporal://attempt/dm002-publication-handoff',
+    latest_typed_blocker_ref: 'mas://typed-blockers/dm002/publication-handoff',
+    hard_gate: {
+      attempt_lease_ref: 'opl://leases/dm002-publication-handoff:g0',
+      attempt_lease_status: 'active',
+      execution_authorization_decision_ref: 'opl://execution-authorizations/dm002-publication-handoff:g0',
+      owner_answer_kind: 'typed_blocker',
+      owner_answer_stage_run_id: stageRunId,
+      owner_answer_generation: 0,
+      owner_answer_manifest_ref: 'mas://stage-manifests/dm002/publication-handoff',
+      stage_manifest_ref: 'mas://stage-manifests/dm002/publication-handoff',
+      owner_answer_current_pointer_ref: currentPointerRef,
+      current_pointer_ref: currentPointerRef,
+      owner_answer_source_fingerprint: 'sha256:dm002-publication-terminal',
+      owner_answer_idempotency_key: 'dm002-publication-handoff:g0',
+    },
+    audit_refs: {
+      app_operator_drilldown_ref: 'opl://drilldown/current-owner-delta',
+      workspace_scope_ref: 'mas://workspace/DM002',
+      artifact_scope_ref: 'mas://stage-artifact-unit/DM002/08-publication_package_handoff',
+    },
+  });
+
+  assert.equal(cockpit.execution_authorization.status, 'authorized');
+  assert.equal(cockpit.execution_authorization.execution_authorized, true);
+  assert.equal(cockpit.execution_authorization.opl_runtime_blocker, null);
+  assert.equal(
+    cockpit.execution_authorization.closeout_binding.owner_answer_ref,
+    'mas://typed-blockers/dm002/publication-handoff',
+  );
+  assert.equal(cockpit.execution_authorization.closeout_binding.owner_answer_kind, 'typed_blocker');
+  assert.equal(cockpit.execution_authorization.closeout_binding.bound_to_stage_run, true);
+  assert.equal(cockpit.execution_authorization.closeout_binding.bound_to_stage_manifest, true);
+  assert.equal(cockpit.execution_authorization.closeout_binding.bound_to_current_pointer, true);
+  assert.equal(cockpit.execution_authorization.closeout_binding.bound_to_source_fingerprint, true);
+  assert.equal(cockpit.execution_authorization.closeout_binding.bound_to_idempotency_key, true);
+  assert.equal(cockpit.next_required_owner_action, null);
 });
 
 test('StageRun Kernel primitive rejects events that carry forbidden bodies or domain verdict authority', async () => {

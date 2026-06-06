@@ -97,11 +97,14 @@ export type StageRunExecutionAuthorizationBlocker = {
 };
 
 export type StageRunCloseoutBinding = {
+  owner_answer_ref: string | null;
+  owner_answer_kind: 'owner_receipt' | 'typed_blocker' | null;
   closeout_receipt_ref: string | null;
   bound_to_stage_run: boolean;
   bound_to_stage_manifest: boolean;
   bound_to_current_pointer: boolean;
   bound_to_source_fingerprint: boolean;
+  bound_to_idempotency_key: boolean;
 };
 
 export type StageRunExecutionAuthorizationReport = {
@@ -416,40 +419,61 @@ function launchAuthorizationBlockers(input: JsonRecord) {
 
 function buildCloseoutBinding(input: JsonRecord): StageRunCloseoutBinding {
   const closeoutReceiptRef = optionalRef(input.closeout_receipt_ref);
+  const ownerAnswerRef = optionalRef(input.owner_answer_ref) ?? closeoutReceiptRef;
+  const ownerAnswerKind = ownerAnswerRef === null
+    ? null
+    : input.owner_answer_kind === 'typed_blocker'
+      ? 'typed_blocker'
+      : 'owner_receipt';
+  const ownerAnswerStageRunId = input.owner_answer_stage_run_id ?? input.closeout_receipt_stage_run_id;
+  const ownerAnswerGeneration = input.owner_answer_generation ?? input.closeout_receipt_generation;
   const stageManifestRef = optionalRef(input.stage_manifest_ref);
-  const closeoutStageManifestRef = optionalRef(input.closeout_receipt_manifest_ref);
+  const ownerAnswerStageManifestRef =
+    optionalRef(input.owner_answer_manifest_ref) ?? optionalRef(input.closeout_receipt_manifest_ref);
   const currentPointerRef = optionalRef(input.current_pointer_ref);
-  const closeoutCurrentPointerRef = optionalRef(input.closeout_receipt_current_pointer_ref);
+  const ownerAnswerCurrentPointerRef =
+    optionalRef(input.owner_answer_current_pointer_ref) ?? optionalRef(input.closeout_receipt_current_pointer_ref);
   const sourceFingerprint = optionalRef(input.source_fingerprint);
-  const closeoutSourceFingerprint = optionalRef(input.closeout_receipt_source_fingerprint);
+  const ownerAnswerSourceFingerprint =
+    optionalRef(input.owner_answer_source_fingerprint) ?? optionalRef(input.closeout_receipt_source_fingerprint);
+  const idempotencyKey = optionalRef(input.idempotency_key);
+  const ownerAnswerIdempotencyKey =
+    optionalRef(input.owner_answer_idempotency_key) ?? optionalRef(input.closeout_receipt_idempotency_key);
   return {
+    owner_answer_ref: ownerAnswerRef,
+    owner_answer_kind: ownerAnswerKind,
     closeout_receipt_ref: closeoutReceiptRef,
     bound_to_stage_run:
-      closeoutReceiptRef !== null
-      && input.closeout_receipt_stage_run_id === input.stage_run_id
-      && input.closeout_receipt_generation === input.generation,
+      ownerAnswerRef !== null
+      && ownerAnswerStageRunId === input.stage_run_id
+      && ownerAnswerGeneration === input.generation,
     bound_to_stage_manifest:
-      closeoutReceiptRef !== null
+      ownerAnswerRef !== null
       && stageManifestRef !== null
-      && closeoutStageManifestRef === stageManifestRef,
+      && ownerAnswerStageManifestRef === stageManifestRef,
     bound_to_current_pointer:
-      closeoutReceiptRef !== null
+      ownerAnswerRef !== null
       && currentPointerRef !== null
-      && closeoutCurrentPointerRef === currentPointerRef,
+      && ownerAnswerCurrentPointerRef === currentPointerRef,
     bound_to_source_fingerprint:
-      closeoutReceiptRef !== null
+      ownerAnswerRef !== null
       && sourceFingerprint !== null
-      && closeoutSourceFingerprint === sourceFingerprint,
+      && ownerAnswerSourceFingerprint === sourceFingerprint,
+    bound_to_idempotency_key:
+      ownerAnswerRef !== null
+      && idempotencyKey !== null
+      && ownerAnswerIdempotencyKey === idempotencyKey,
   };
 }
 
 function closeoutBindingBlockers(binding: StageRunCloseoutBinding) {
   return [
-    binding.closeout_receipt_ref ? null : 'closeout_receipt_ref_missing',
+    binding.owner_answer_ref ? null : 'closeout_receipt_ref_missing',
     binding.bound_to_stage_run ? null : 'closeout_receipt_stage_run_binding_missing',
     binding.bound_to_stage_manifest ? null : 'closeout_receipt_stage_manifest_binding_missing',
     binding.bound_to_current_pointer ? null : 'closeout_receipt_current_pointer_binding_missing',
     binding.bound_to_source_fingerprint ? null : 'closeout_receipt_source_fingerprint_binding_missing',
+    binding.bound_to_idempotency_key ? null : 'closeout_owner_answer_idempotency_binding_missing',
   ].filter((entry): entry is string => Boolean(entry));
 }
 

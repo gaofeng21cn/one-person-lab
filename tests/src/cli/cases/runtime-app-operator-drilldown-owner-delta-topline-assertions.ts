@@ -30,7 +30,7 @@ export function assertOwnerDeltaTopline(drilldown: any) {
     drilldown.stage_run_next_missing_input_refs.includes('execution_authorization_decision_ref'),
     true,
   );
-  assert.equal(drilldown.stage_run_next_missing_input_refs.includes('closeout_receipt_ref'), true);
+  assert.equal(drilldown.stage_run_next_missing_input_refs.includes('owner_answer_ref'), true);
   assert.equal(drilldown.operator_required_delta, drilldown.current_owner_delta.desired_delta_description);
   assert.equal(drilldown.operator_payload_requirement, drilldown.current_owner_delta.payload_requirement);
   assert.deepEqual(drilldown.operator_accepted_answer_shape, drilldown.current_owner_delta.accepted_answer_shape);
