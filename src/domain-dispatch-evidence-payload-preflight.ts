@@ -247,6 +247,17 @@ function ownerDeltaResultCloseoutBindingIdentity(payload: JsonRecord) {
   })) as JsonRecord;
 }
 
+const STAGE_RUN_CLOSEOUT_IDENTITY_FIELDS = [
+  'stage_run_id',
+  'source_fingerprint',
+  'idempotency_key',
+  'stage_manifest_ref',
+  'current_pointer_ref',
+  'provider_attempt_ref',
+  'attempt_lease_ref',
+  'execution_authorization_decision_ref',
+] as const;
+
 function identityBindingPreflight(route: JsonRecord, payload: JsonRecord, refIdentity: JsonRecord = {}) {
   const targetIdentity = record(route.target_identity);
   const authorizationReceiptIdentity = routeAuthorizationReceiptIdentity(route);
@@ -357,10 +368,30 @@ function identityBindingPreflight(route: JsonRecord, payload: JsonRecord, refIde
     } => Boolean(entry.target_value) && Boolean(entry.payload_value));
   const identityConflicts = comparable.filter((entry) => entry.target_value !== entry.payload_value);
   const targetIdentityPresent = targetEntries.some(([, value]) => Boolean(value));
+  const payloadIdentity = Object.fromEntries(payloadEntries.filter(([, value]) => Boolean(value)));
+  const targetIdentityPayload = Object.fromEntries(targetEntries.filter(([, value]) => Boolean(value)));
+  const stageRunCloseoutIdentityRequired = [
+    'stage_run_id',
+    'idempotency_key',
+    'stage_manifest_ref',
+    'current_pointer_ref',
+    'provider_attempt_ref',
+    'attempt_lease_ref',
+    'execution_authorization_decision_ref',
+  ].some((field) => Boolean(targetIdentityPayload[field]));
+  const missingRequiredCloseoutBindingFields = stageRunCloseoutIdentityRequired
+    ? STAGE_RUN_CLOSEOUT_IDENTITY_FIELDS.filter((field) =>
+        Boolean(targetIdentityPayload[field]) && !Boolean(payloadIdentity[field])
+      )
+    : [];
+  const missingRequiredCloseoutIdentity =
+    stageRunCloseoutIdentityRequired && missingRequiredCloseoutBindingFields.length > 0;
   return {
     surface_kind: 'opl_domain_dispatch_evidence_identity_binding_preflight',
     status: identityConflicts.length > 0
       ? 'conflict'
+      : missingRequiredCloseoutIdentity
+        ? 'payload_identity_not_provided'
       : comparable.length > 0
         ? 'matched'
         : targetIdentityPresent
@@ -369,10 +400,12 @@ function identityBindingPreflight(route: JsonRecord, payload: JsonRecord, refIde
     comparable_fields: comparable.map((entry) => entry.field),
     conflict_fields: identityConflicts.map((entry) => entry.field),
     identity_conflicts: identityConflicts,
-    target_identity: Object.fromEntries(targetEntries.filter(([, value]) => Boolean(value))),
-    payload_identity: Object.fromEntries(payloadEntries.filter(([, value]) => Boolean(value))),
+    target_identity: targetIdentityPayload,
+    payload_identity: payloadIdentity,
+    stage_run_closeout_identity_required: stageRunCloseoutIdentityRequired,
+    missing_required_closeout_binding_fields: missingRequiredCloseoutBindingFields,
     policy:
-      'record_fails_closed_when_payload_or_local_owner_answer_ref_identity_conflicts_with_stage_attempt_identity',
+      'record_fails_closed_when_stage_run_closeout_identity_is_missing_or_conflicts_with_target_attempt',
   };
 }
 
@@ -420,11 +453,15 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
       : 'blocked';
   const identityBinding = identityBindingPreflight(route, payload, localOwnerAnswerRefIdentity.identity);
   const identityConflicts = identityBinding.identity_conflicts;
+  const missingRequiredCloseoutBindingFields = stringList(
+    identityBinding.missing_required_closeout_binding_fields,
+  );
   const canRecordRefsOnlyReceipt = allRefs.length > 0
     && forbiddenPlaceholderRefs.length === 0
     && forbiddenPayloadAuthorityClaims.length === 0
     && (successPathReady || typedBlockerPathReady)
-    && identityConflicts.length === 0;
+    && identityConflicts.length === 0
+    && missingRequiredCloseoutBindingFields.length === 0;
   return {
     surface_kind: 'opl_domain_dispatch_evidence_payload_preflight',
     status: canRecordRefsOnlyReceipt ? 'ready_to_record' : 'blocked',

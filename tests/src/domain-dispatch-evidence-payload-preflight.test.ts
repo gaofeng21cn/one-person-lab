@@ -89,6 +89,61 @@ test('typed blocker refs may close a route-declared required evidence gap withou
   assert.deepEqual(preflight.missing_required_evidence_refs, route.required_evidence_refs);
 });
 
+test('typed blocker refs lacking current StageRun closeout binding fail closed when route requires binding', () => {
+  const workspaceRoot = mkdtempSync(join(tmpdir(), 'opl-ref-identity-missing-binding-'));
+  try {
+    const typedBlockerRef =
+      'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/controller_decisions/latest.json';
+    const typedBlockerPath = join(workspaceRoot, typedBlockerRef);
+    mkdirSync(join(typedBlockerPath, '..'), { recursive: true });
+    writeFileSync(typedBlockerPath, JSON.stringify({
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      status: 'blocked',
+      blocked_reason: 'medical_paper_readiness_not_ready',
+    }));
+
+    const preflight = preflightDomainDispatchEvidencePayload(
+      { typed_blocker_refs: [typedBlockerRef] },
+      {
+        target_identity: {
+          study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+          stage_run_id: 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch',
+          stage_manifest_ref: 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch',
+          current_pointer_ref:
+            'opl://stage-runs/app-stage-run%3Amedautoscience%3Adomain-owner-default-executor-dispatch/current',
+          source_fingerprint: 'mas_default_executor_source_current',
+          idempotency_key: 'idem_current',
+          provider_attempt_ref: 'temporal://attempt/sat-current',
+          attempt_lease_ref: 'opl://stage-attempts/sat-current/leases/frt-current/active',
+          execution_authorization_decision_ref:
+            'opl://stage-attempts/sat-current/execution-authorizations/frt-current/wf-current',
+        },
+        workspace_root: workspaceRoot,
+      },
+    );
+
+    assert.equal(preflight.status, 'blocked');
+    assert.equal(preflight.can_record_refs_only_receipt, false);
+    assert.equal(preflight.identity_binding.status, 'payload_identity_not_provided');
+    assert.deepEqual(preflight.identity_binding.missing_required_closeout_binding_fields, [
+      'stage_run_id',
+      'source_fingerprint',
+      'idempotency_key',
+      'stage_manifest_ref',
+      'current_pointer_ref',
+      'provider_attempt_ref',
+      'attempt_lease_ref',
+      'execution_authorization_decision_ref',
+    ]);
+    assert.equal(
+      preflight.identity_binding.policy,
+      'record_fails_closed_when_stage_run_closeout_identity_is_missing_or_conflicts_with_target_attempt',
+    );
+  } finally {
+    rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('MAS paper-line owner-chain result payload feeds success refs without a ready claim', () => {
   const preflight = assertDomainDispatchEvidencePayloadReady(route, {
     evidence_refs: ['mas://dm003/paper-facing-artifact-delta'],
