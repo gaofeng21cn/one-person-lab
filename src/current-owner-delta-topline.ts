@@ -42,6 +42,11 @@ export function buildCurrentOwnerDeltaTopline(input: {
   const effectiveOperatorNextAction =
     stageRunAuthorizationBlocksDefault ? stageRunNextAction : operatorNextAction;
   const defaultOperatorNextAction = effectiveOperatorNextAction ?? {};
+  const stageRunExecutionAuthorization = record(stageRunCockpit.execution_authorization);
+  const stageRunExecutionBlocker = record(stageRunExecutionAuthorization.opl_runtime_blocker);
+  const stageRunLaunchBlockers = strings(stageRunExecutionAuthorization.launch_blockers);
+  const stageRunCloseoutBindingBlockers = strings(stageRunExecutionAuthorization.closeout_binding_blockers);
+  const stageRunBlockedAuthority = strings(stageRunExecutionBlocker.blocked_authority);
   const operatorNextOwner =
     text(defaultOperatorNextAction.next_required_owner)
     ?? text(defaultOperatorNextAction.current_owner)
@@ -141,9 +146,24 @@ export function buildCurrentOwnerDeltaTopline(input: {
       stage_id: text(record(stageRunCockpit.stage_run_current_owner_delta).stage_id),
       required_delta: text(record(stageRunCockpit.stage_run_current_owner_delta).required_delta),
       execution_authorized:
-        record(stageRunCockpit.execution_authorization).execution_authorized === true,
+        stageRunExecutionAuthorization.execution_authorized === true,
       execution_authorization_status:
-        text(record(stageRunCockpit.execution_authorization).status),
+        text(stageRunExecutionAuthorization.status),
+      execution_authorization_phase:
+        text(stageRunExecutionAuthorization.phase),
+      blocked_authority: stageRunBlockedAuthority,
+      launch_blocker_count: stageRunLaunchBlockers.length,
+      closeout_binding_blocker_count: stageRunCloseoutBindingBlockers.length,
+      route_requires_domain_or_app_payload:
+        stageRunNextAction?.route_requires_domain_or_app_payload === true,
+      route_requires_opl_runtime_refs:
+        stageRunNextAction?.route_requires_opl_runtime_refs === true,
+      closeout_binding_blocked:
+        stageRunBlockedAuthority.includes('closeout_receipt_binding')
+        || stageRunCloseoutBindingBlockers.length > 0,
+      execution_authorization_refs_missing:
+        stageRunBlockedAuthority.includes('execution_authorization')
+        || stageRunLaunchBlockers.length > 0,
       next_required_owner:
         text(stageRunNextAction?.next_required_owner),
       next_required_action:

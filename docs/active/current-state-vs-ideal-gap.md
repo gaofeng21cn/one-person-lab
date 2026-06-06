@@ -109,6 +109,8 @@ Unified owner-delta 仍按 live 机器面读取，不从本页继承旧 counters
 
 2026-06-06 follow-through：`family-runtime evidence-worklist --detail full` 的 `worklist_items` 已显式标注 `worklist_lane` 与 `default_owner_delta_eligible`。普通 owner-delta 只能从 `worklist_lane=ordinary` 且 `default_owner_delta_eligible=true` 的 open item 读取；`audit`、`cleanup`、`diagnostic` lane 即使带 `route_requires_domain_or_app_payload=true` 或 verified refs-only receipt，也只是 passive evidence / cleanup / diagnostic tail，不能成为默认 next owner action、completion、domain ready、production ready 或 delete authority。本轮 fresh full readout 的 null lane count 已为 0；当前 ordinary open item 指向 MAS domain-dispatch owner answer payload，stage-production evidence 和 standalone verified receipts 均在 audit lane。
 
+同一 follow-through 也把 StageRun cockpit summary 的 closeout/execution blocker 分层暴露到默认读面。`execution_authorized=false` 必须结合 `execution_authorization_phase`、`blocked_authority`、`launch_blocker_count`、`closeout_binding_blocker_count`、`route_requires_domain_or_app_payload` 和 `route_requires_opl_runtime_refs` 读取。当前 fresh summary 是 `phase=closeout`、`blocked_authority=[closeout_receipt_binding]`、`launch_blocker_count=0`、`execution_authorization_refs_missing=false`、`route_requires_domain_or_app_payload=true`，所以默认 next owner 仍是 MAS/domain owner answer path；它不是 OPL provider attempt / lease / authorization refs 缺失，也不允许 OPL 自造 owner receipt 或 typed blocker。
+
 ## 统一审计标准
 
 后续 closeout、设计评审和跨仓优化都按 [OPL Foundry Agent Target Operating Architecture](./opl-foundry-agent-target-operating-architecture.md) 的 `Audit Standard` 判断，并在本页只保留执行口径：

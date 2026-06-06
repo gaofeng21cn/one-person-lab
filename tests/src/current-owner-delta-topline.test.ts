@@ -120,6 +120,16 @@ test('current owner delta topline keeps domain owner when only owner answer bind
     assert.equal(topline.stage_run_cockpit_summary.current_owner_delta_owner, 'med-autoscience');
     assert.equal(topline.stage_run_cockpit_summary.current_owner, 'med-autoscience');
     assert.equal(topline.stage_run_cockpit_summary.next_required_owner, 'med-autoscience');
+    assert.equal(topline.stage_run_cockpit_summary.execution_authorization_phase, 'closeout');
+    assert.deepEqual(topline.stage_run_cockpit_summary.blocked_authority, [
+      'closeout_receipt_binding',
+    ]);
+    assert.equal(topline.stage_run_cockpit_summary.launch_blocker_count, 0);
+    assert.equal(topline.stage_run_cockpit_summary.closeout_binding_blocker_count, 6);
+    assert.equal(topline.stage_run_cockpit_summary.route_requires_domain_or_app_payload, true);
+    assert.equal(topline.stage_run_cockpit_summary.route_requires_opl_runtime_refs, false);
+    assert.equal(topline.stage_run_cockpit_summary.closeout_binding_blocked, true);
+    assert.equal(topline.stage_run_cockpit_summary.execution_authorization_refs_missing, false);
   } finally {
     if (previousStateDir === undefined) {
       delete process.env.OPL_STATE_DIR;
