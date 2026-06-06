@@ -143,6 +143,101 @@ test('runtime App drilldown selects provider worker start when worker is not rea
   ]);
 });
 
+test('runtime App drilldown keeps provider worker start out of the default next step when owner delta is open', () => {
+  const drilldown = applyAppOperatorDrilldownDetail({
+    operator_action_routing_refs: {
+      refs: [
+        {
+          ref: 'opl family-runtime worker start --provider temporal',
+          action_id: 'provider-worker:temporal:start',
+          action_kind: 'provider_worker_start',
+          owner: 'opl',
+          route_target_kind: 'opl_cli',
+          execution_policy: 'opl_safe_action_shell',
+          execution_surface: 'opl runtime action execute',
+          submit_via: 'opl runtime action execute',
+          can_submit_to_safe_action_shell: true,
+          provider_kind: 'temporal',
+          provider_worker_lifecycle_status: 'worker_not_ready',
+          provider_worker_repair_action_id: 'start_temporal_worker',
+          provider_worker_repair_command: 'opl family-runtime worker start --provider temporal',
+          provider_worker_required_next_action:
+            'Start Temporal worker before rerunning provider proof or provider-backed Codex stages.',
+          opl_cli_args: ['worker', 'start', '--provider', 'temporal'],
+          authority_boundary: {
+            can_write_domain_truth: false,
+            can_claim_production_ready: false,
+          },
+        },
+      ],
+    },
+    workstream_operating_loop: {
+      summary: {
+        workstream_count: 1,
+        goal_oracle_missing_count: 0,
+        next_steering_action_count: 1,
+      },
+      workstreams: [
+        {
+          workstream_id: 'medautoscience:dm002-publication-handoff',
+          domain_id: 'medautoscience',
+          stage_id: 'publication_handoff_owner_gate',
+          stage_attempt_id: 'sat-dm002-handoff',
+          next_steering_action: {
+            action_id: 'provide_owner_receipt_or_typed_blocker',
+            action_kind: 'owner_steering_required',
+            owner: 'medautoscience',
+            status: 'owner_delta_required',
+            required_next_refs_any_of: [
+              'domain_owner_receipt_ref',
+              'quality_gate_receipt_ref',
+              'typed_blocker_ref',
+            ],
+          },
+        },
+      ],
+    },
+    app_execution_bridge: {
+      safe_action_routes: [],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  }, 'full');
+
+  const providerWorkerRoute = drilldown.operator_action_routing_refs.refs.find(
+    (ref: { action_id: string }) => ref.action_id === 'provider-worker:temporal:start',
+  );
+  assert.ok(providerWorkerRoute);
+  assert.equal(providerWorkerRoute.action_kind, 'provider_worker_start');
+  assert.equal(drilldown.attention_first_payload.next_safe_action, null);
+  assert.equal(
+    drilldown.attention_first_payload.owner_delta_first.next_owner,
+    'med-autoscience',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.owner_delta_first.primary_item.source,
+    'workstream_operating_loop',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.current_owner_delta_read_model.default_summary.default_path_root,
+    'current_owner_delta',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none.action_kind,
+    'current_owner_delta_owner_answer_or_typed_blocker_required',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none.owner,
+    'med-autoscience',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none.default_planning_root,
+    'current_owner_delta',
+  );
+});
+
 test('runtime App drilldown does not select developer-checkout shared-state worker start as executable', () => {
   const workerRoutes = buildProviderWorkerActionRoutes({
     stageAttemptWorkbench: {},
@@ -386,7 +481,7 @@ test('runtime App drilldown selects provider worker repair before provider proof
   ]);
 });
 
-test('runtime App drilldown keeps MAS owner handoff ahead of blocked transport redrive', () => {
+test('runtime App drilldown keeps blocked transport redrive behind MAS owner handoff record', () => {
   const ownerHandoffRecordRoute = {
     action_id: 'domain_dispatch:medautoscience:attempt-1:record',
     action_kind: 'domain_dispatch_evidence_receipt_record',
@@ -475,10 +570,29 @@ test('runtime App drilldown keeps MAS owner handoff ahead of blocked transport r
     drilldown.attention_first_payload.owner_delta_first.next_owner,
     'domain_repository_or_app_live_operator',
   );
+  assert.deepEqual(nextSafeAction.submit_args, [
+    'runtime',
+    'action',
+    'execute',
+    '--action',
+    'domain_dispatch:medautoscience:attempt-1:record',
+    '--payload-file',
+    '<payload.json>',
+  ]);
+  assert.equal(nextSafeAction.authority_split.opl_transport_liveness_owner, true);
+  assert.equal(nextSafeAction.authority_split.mas_publication_quality_owner, true);
   assert.equal(nextSafeAction.can_execute_domain_action_directly, false);
+  assert.equal(
+    drilldown.operator_action_routing_refs.refs.some(
+      (ref: { action_id: string; action_kind: string }) =>
+        ref.action_id === 'family-runtime-queue:task-dm002:redrive'
+        && ref.action_kind === 'blocked_transport_redrive',
+    ),
+    true,
+  );
 });
 
-test('runtime App drilldown keeps provider worker repair and transport redrive audit-only when MAS owner handoff is actionable', () => {
+test('runtime App drilldown keeps provider worker repair audit-only when MAS owner handoff payload work is the current owner delta', () => {
   const workerRestartRoute = {
     ref: 'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
     action_id: 'provider-worker:temporal:restart',
@@ -588,7 +702,15 @@ test('runtime App drilldown keeps provider worker repair and transport redrive a
     'med-autoscience',
   );
   assert.equal(
-    drilldown.app_execution_bridge.safe_action_routes.some(
+    drilldown.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none.owner,
+    'med-autoscience',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none.default_planning_root,
+    'current_owner_delta',
+  );
+  assert.equal(
+    drilldown.operator_action_routing_refs.refs.some(
       (ref: { action_id: string; action_kind: string }) =>
         ref.action_id === 'provider-worker:temporal:restart'
         && ref.action_kind === 'provider_worker_restart',

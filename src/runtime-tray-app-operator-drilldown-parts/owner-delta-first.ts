@@ -135,9 +135,13 @@ function firstActionCandidate(input: {
     };
   }
   if (Object.keys(input.nextSafeAction).length > 0) {
+    const selectedActionPayloadRequired =
+      input.nextSafeAction.route_requires_domain_or_app_payload === true;
     return {
       step_kind: stringValue(input.nextSafeAction.action_kind),
-      owner: primaryOwner(input.nextSafeAction.payload_owner, input.nextSafeAction.owner),
+      owner: selectedActionPayloadRequired
+        ? primaryOwner(input.nextSafeAction.payload_owner, input.nextSafeAction.owner)
+        : primaryOwner(input.nextSafeAction.owner, input.nextSafeAction.payload_owner),
       status: stringValue(input.nextSafeAction.open_reason)
         ?? stringValue(input.nextSafeAction.route_status_detail)
         ?? 'safe_action_available',

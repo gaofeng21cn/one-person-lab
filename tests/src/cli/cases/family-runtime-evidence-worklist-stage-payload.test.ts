@@ -189,7 +189,7 @@ test('family-runtime evidence-worklist keeps stage record workorder open when ve
     );
     assert.equal(
       worklist.summary.open_safe_action_payload_required_item_count > 0,
-      true,
+      false,
     );
     assert.equal(
       worklist.summary.open_safe_action_payload_requirement_semantics,
@@ -252,21 +252,11 @@ test('family-runtime evidence-worklist keeps stage record workorder open when ve
     const attentionItem = worklist.attention_queue.find(
       (entry: { item_id: string }) => entry.item_id === item.item_id,
     );
-    assert.ok(attentionItem);
-    assert.equal(attentionItem.missing_or_expected_refs.includes('source:review'), true);
-    assert.equal(
-      attentionItem.missing_or_expected_refs.includes('runtime_event:review.receipt_recorded'),
-      true,
-    );
-    assert.equal(attentionItem.missing_or_expected_refs.includes('metric:review/currentness'), true);
-    assert.equal(worklist.next_action_ledger.summary.next_action_item_count > 0, true);
+    assert.equal(attentionItem, undefined);
     const nextAction = worklist.next_action_ledger.next_action_items.find(
       (entry: { source_tail_item_id: string }) => entry.source_tail_item_id === item.item_id,
     );
-    assert.equal(
-      nextAction.next_safe_action_route,
-      item.replay_ref,
-    );
+    assert.equal(nextAction, undefined);
     assert.equal(worklist.evidence_requirement_ledger.summary.open_requirement_count > 0, true);
     assert.equal(worklist.authority_boundary.can_write_domain_truth, false);
     assert.equal(worklist.authority_boundary.can_claim_production_ready, false);

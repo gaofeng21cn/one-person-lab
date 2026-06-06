@@ -109,7 +109,7 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(worklist.summary.default_caller_deletion_audit_lane_item_count, 0);
     assert.equal(worklist.summary.default_caller_deletion_open_safe_action_item_count, 0);
     assert.equal(worklist.summary.closed_refs_only_item_count, 0);
-    assert.equal(worklist.summary.stage_receipt_freshness_open_workorder_count > 0, true);
+    assert.equal(worklist.summary.stage_receipt_freshness_open_workorder_count, 15);
     assert.equal(worklist.summary.open_safe_action_item_count, 18);
     assert.equal(
       worklist.summary.open_safe_action_payload_requirement_semantics,
