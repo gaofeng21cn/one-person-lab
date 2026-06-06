@@ -131,19 +131,46 @@ export function assertCurrentOwnerDeltaReadModel(
 }
 
 export function assertCurrentOwnerDeltaToplineNextAction(surface: JsonRecord) {
+  const stageRunAction = surface.stage_run_cockpit?.next_required_owner_action ?? null;
+  const expectedNextAction = surface.current_owner_delta_read_model.next_safe_action_or_none;
   assert.deepEqual(
     surface.operator_next_action,
-    surface.current_owner_delta_read_model.next_safe_action_or_none,
+    expectedNextAction,
   );
   assert.equal(
     surface.operator_next_action_kind,
-    surface.current_owner_delta_read_model.next_safe_action_or_none.action_kind,
+    expectedNextAction.action_kind,
   );
   assert.equal(surface.operator_next_action_owner, surface.operator_next_owner);
   const boundary = surface.operator_next_action_authority_boundary;
   assert.equal(boundary.derivation_source, 'current_owner_delta');
   assert.equal(boundary.default_planning_root, 'current_owner_delta_or_provider_human_hard_gate');
   assert.equal(boundary.route_requires_domain_or_app_payload, true);
+  if (stageRunAction !== null) {
+    assertStageRunAuthorizationNextAction(stageRunAction as JsonRecord);
+    assert.deepEqual(surface.stage_run_next_required_owner_action, stageRunAction);
+    assert.equal(
+      surface.stage_run_cockpit_summary.next_required_action,
+      'record_opl_provider_attempt_lease_authorization_and_closeout_receipt_binding_refs',
+    );
+    assert.equal(surface.stage_run_cockpit_summary.next_required_owner, 'one-person-lab');
+    assert.equal(surface.stage_run_cockpit_summary.domain_typed_blocker_created, false);
+    assert.equal(
+      surface.stage_run_next_missing_input_refs.includes('provider_attempt_ref'),
+      true,
+    );
+    const stageRunBoundary =
+      surface.stage_run_execution_authorization_next_action_authority_boundary;
+    assert.equal(stageRunBoundary.derivation_source, 'stage_run_execution_authorization');
+    assert.equal(
+      stageRunBoundary.default_planning_root,
+      'stage_run_execution_authorization_or_closeout_binding',
+    );
+    assert.equal(stageRunBoundary.route_requires_opl_runtime_refs, true);
+    assert.equal(stageRunBoundary.route_requires_domain_or_app_payload, false);
+    assert.equal(stageRunBoundary.domain_typed_blocker_created, false);
+    assert.equal(stageRunBoundary.execution_blocker_is_domain_typed_blocker, false);
+  }
   assert.equal(boundary.can_submit_to_safe_action_shell, false);
   assert.equal(boundary.can_execute_domain_action, false);
   assert.equal(boundary.can_write_domain_truth, false);
@@ -152,6 +179,56 @@ export function assertCurrentOwnerDeltaToplineNextAction(surface: JsonRecord) {
   assert.equal(boundary.can_close_domain_ready, false);
   assert.equal(boundary.can_claim_production_ready, false);
   assert.equal(boundary.worklist_item_is_completion_claim, false);
+}
+
+export function assertStageRunAuthorizationNextAction(action: JsonRecord) {
+  assert.equal(
+    action.surface_kind,
+    'opl_stage_run_execution_authorization_next_required_owner_action',
+  );
+  assert.equal(
+    action.action_kind,
+    'stage_run_execution_authorization_or_closeout_binding_required',
+  );
+  assert.equal(action.owner, 'one-person-lab');
+  assert.equal(action.current_owner, 'one-person-lab');
+  assert.equal(action.next_required_owner, 'one-person-lab');
+  assert.equal(
+    action.next_required_action,
+    'record_opl_provider_attempt_lease_authorization_and_closeout_receipt_binding_refs',
+  );
+  assert.equal(
+    action.payload_requirement,
+    'opl_execution_authorization_and_closeout_binding_refs_required',
+  );
+  assert.equal(action.missing_input_refs.length > 0, true);
+  assert.equal(
+    [
+      'provider_attempt_ref',
+      'attempt_lease_ref',
+      'execution_authorization_decision_ref',
+      'closeout_receipt_ref',
+    ].some((ref) => action.missing_input_refs.includes(ref)),
+    true,
+  );
+  assert.equal(
+    action.required_ref_shape.execution_authorization_refs.includes('provider_attempt_ref'),
+    true,
+  );
+  assert.equal(
+    action.required_ref_shape.closeout_receipt_binding_refs.includes('closeout_receipt_ref'),
+    true,
+  );
+  assert.equal(action.route_requires_opl_runtime_refs, true);
+  assert.equal(action.route_requires_domain_or_app_payload, false);
+  assert.equal(action.can_execute_domain_action, false);
+  assert.equal(action.can_write_domain_truth, false);
+  assert.equal(action.can_create_owner_receipt, false);
+  assert.equal(action.can_create_typed_blocker, false);
+  assert.equal(action.domain_truth_changed, false);
+  assert.equal(action.owner_receipt_signed, false);
+  assert.equal(action.domain_typed_blocker_created, false);
+  assert.equal(action.execution_blocker_is_domain_typed_blocker, false);
 }
 
 export function assertCurrentOwnerDeltaProjection(
@@ -504,7 +581,27 @@ export function assertOwnerDeltaFirstReadinessProjection(readiness: JsonRecord) 
       'app_operator_drilldown_ref',
     ],
   });
+  assert.equal(readiness.operator_current_owner_delta_owner, readiness.current_owner_delta.current_owner);
   assert.equal(readiness.operator_next_owner, readiness.current_owner_delta.current_owner);
+  assert.equal(
+    readiness.operator_next_required_action,
+    'current_owner_delta_owner_answer_or_typed_blocker_required',
+  );
+  assert.equal(
+    readiness.operator_next_missing_input_refs.includes('provider_attempt_ref'),
+    false,
+  );
+  assert.equal(
+    readiness.stage_run_cockpit_summary.next_required_action,
+    'record_opl_provider_attempt_lease_authorization_and_closeout_receipt_binding_refs',
+  );
+  assert.equal(readiness.stage_run_next_missing_input_refs.includes('provider_attempt_ref'), true);
+  assert.equal(readiness.stage_run_next_missing_input_refs.includes('attempt_lease_ref'), true);
+  assert.equal(
+    readiness.stage_run_next_missing_input_refs.includes('execution_authorization_decision_ref'),
+    true,
+  );
+  assert.equal(readiness.stage_run_next_missing_input_refs.includes('closeout_receipt_ref'), true);
   assert.equal(
     readiness.operator_required_delta,
     readiness.current_owner_delta.desired_delta_description,
@@ -522,6 +619,12 @@ export function assertOwnerDeltaFirstReadinessProjection(readiness: JsonRecord) 
     readiness.stage_run_cockpit_summary.current_owner,
     readiness.current_owner_delta.current_owner,
   );
+  assert.equal(readiness.stage_run_cockpit_summary.next_required_owner, 'one-person-lab');
+  assert.equal(
+    readiness.stage_run_cockpit_summary.next_required_action,
+    'record_opl_provider_attempt_lease_authorization_and_closeout_receipt_binding_refs',
+  );
+  assert.equal(readiness.stage_run_cockpit_summary.domain_typed_blocker_created, false);
 
   assert.equal(readiness.owner_delta_first.surface_kind, 'opl_owner_delta_first_projection');
   assert.equal(ownerDeltaFirst.surface_kind, 'opl_owner_delta_first_projection');

@@ -34,6 +34,137 @@ function stageRunId(currentOwnerDelta: JsonRecord) {
     .join(':');
 }
 
+const EXECUTION_AUTHORIZATION_REQUIRED_REFS = [
+  'provider_attempt_ref',
+  'attempt_lease_ref',
+  'execution_authorization_decision_ref',
+  'workspace_scope_ref',
+  'artifact_scope_ref',
+  'source_fingerprint',
+  'idempotency_key',
+] as const;
+
+const CLOSEOUT_BINDING_REQUIRED_REFS = [
+  'closeout_receipt_ref',
+  'closeout_receipt_stage_run_binding_ref',
+  'closeout_receipt_stage_manifest_binding_ref',
+  'closeout_receipt_current_pointer_binding_ref',
+  'closeout_receipt_source_fingerprint_binding_ref',
+] as const;
+
+const BLOCKER_REASON_REF_MAP: Record<string, string[]> = {
+  stage_run_id_missing: ['stage_run_ref'],
+  domain_id_missing: ['domain_id'],
+  stage_id_missing: ['stage_id'],
+  generation_invalid: ['stage_run_generation'],
+  current_pointer_invalid: ['current_pointer_ref'],
+  selected_executor_missing: ['selected_executor_ref'],
+  source_fingerprint_missing: ['source_fingerprint'],
+  idempotency_key_missing: ['idempotency_key'],
+  provider_attempt_ref_missing: ['provider_attempt_ref'],
+  attempt_lease_ref_missing: ['attempt_lease_ref'],
+  attempt_lease_not_active: ['attempt_lease_ref'],
+  execution_authorization_decision_ref_missing: ['execution_authorization_decision_ref'],
+  workspace_scope_ref_missing: ['workspace_scope_ref'],
+  artifact_scope_ref_missing: ['artifact_scope_ref'],
+  authority_boundary_invalid: ['stage_run_authority_boundary_ref'],
+  forbidden_write_required: ['forbidden_write_guard_ref'],
+  closeout_receipt_ref_missing: ['closeout_receipt_ref'],
+  closeout_receipt_stage_run_binding_missing: ['closeout_receipt_stage_run_binding_ref'],
+  closeout_receipt_stage_manifest_binding_missing: ['closeout_receipt_stage_manifest_binding_ref'],
+  closeout_receipt_current_pointer_binding_missing: ['closeout_receipt_current_pointer_binding_ref'],
+  closeout_receipt_source_fingerprint_binding_missing: [
+    'closeout_receipt_source_fingerprint_binding_ref',
+  ],
+};
+
+function missingRefsFromBlockerReasons(reasons: string[]) {
+  return [
+    ...new Set(reasons.flatMap((reason) => BLOCKER_REASON_REF_MAP[reason] ?? [reason])),
+  ];
+}
+
+function buildExecutionAuthorizationNextAction(input: {
+  stageRunId: string;
+  domainId: string;
+  stageId: string;
+  currentOwnerDelta: JsonRecord;
+  executionAuthorization: JsonRecord;
+}) {
+  const hardGate = record(input.currentOwnerDelta.hard_gate);
+  const desiredDeltaKind = text(input.currentOwnerDelta.desired_delta_kind) ?? 'none';
+  const hardGateState = text(hardGate.state) ?? 'none';
+  if (desiredDeltaKind === 'none' && hardGateState === 'none') {
+    return null;
+  }
+  const blocker = record(input.executionAuthorization.opl_runtime_blocker);
+  const reasons = strings(blocker.blocker_reasons);
+  if (text(input.executionAuthorization.status) !== 'blocked' || reasons.length === 0) {
+    return null;
+  }
+  const missingRefs = missingRefsFromBlockerReasons(reasons);
+  return {
+    surface_kind: 'opl_stage_run_execution_authorization_next_required_owner_action',
+    schema_version: 'stage-run-execution-authorization-next-action.v1',
+    action_id: `${input.stageRunId}:execution-authorization-closeout-binding`,
+    action_kind: 'stage_run_execution_authorization_or_closeout_binding_required',
+    step_kind: 'stage_run_execution_authorization_or_closeout_binding_required',
+    derivation_source: 'stage_run_execution_authorization',
+    default_planning_root: 'stage_run_execution_authorization_or_closeout_binding',
+    stage_run_id: input.stageRunId,
+    domain_id: input.domainId,
+    stage_id: input.stageId,
+    current_owner_delta_ref: '/current_owner_delta',
+    stage_run_cockpit_ref: '/stage_run_cockpit',
+    execution_authorization_ref: '/stage_run_cockpit/execution_authorization',
+    owner: 'one-person-lab',
+    current_owner: 'one-person-lab',
+    next_required_owner: 'one-person-lab',
+    next_required_action:
+      'record_opl_provider_attempt_lease_authorization_and_closeout_receipt_binding_refs',
+    next_required_action_summary:
+      'Record OPL provider attempt, active lease, execution authorization decision, workspace/artifact scope, source fingerprint/idempotency, and closeout receipt binding refs before execution or closeout.',
+    payload_requirement: 'opl_execution_authorization_and_closeout_binding_refs_required',
+    accepted_answer_shape: [
+      'provider_attempt_ref',
+      'attempt_lease_ref',
+      'execution_authorization_decision_ref',
+      'closeout_receipt_binding_ref',
+    ],
+    required_return_shapes: [
+      'provider_attempt_ref',
+      'attempt_lease_ref',
+      'execution_authorization_decision_ref',
+      'closeout_receipt_binding_ref',
+    ],
+    blocked_authority: strings(blocker.blocked_authority),
+    blocker_code: text(blocker.blocker_code) ?? 'stage_run_execution_authorization_blocked',
+    blocker_reasons: reasons,
+    missing_input_refs: missingRefs,
+    required_ref_shape: {
+      execution_authorization_refs: [...EXECUTION_AUTHORIZATION_REQUIRED_REFS],
+      closeout_receipt_binding_refs: [...CLOSEOUT_BINDING_REQUIRED_REFS],
+    },
+    route_requires_opl_runtime_refs: true,
+    route_requires_domain_or_app_payload: false,
+    can_submit_to_safe_action_shell: false,
+    authority: 'stage_run_execution_authorization_projection_only',
+    can_execute_domain_action: false,
+    can_write_domain_truth: false,
+    can_create_owner_receipt: false,
+    can_create_typed_blocker: false,
+    can_close_owner_chain: false,
+    can_close_domain_ready: false,
+    can_claim_domain_ready: false,
+    can_claim_production_ready: false,
+    domain_truth_changed: false,
+    owner_receipt_signed: false,
+    domain_typed_blocker_created: false,
+    execution_blocker_is_domain_typed_blocker: false,
+    worklist_item_is_completion_claim: false,
+  };
+}
+
 export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
   const currentOwnerDelta = record(currentOwnerDeltaInput);
   const runId = stageRunId(currentOwnerDelta);
@@ -135,6 +266,13 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
     current_pointer_ref: text(record(currentOwnerDelta.hard_gate).current_pointer_ref),
     closeout_receipt_source_fingerprint: text(record(currentOwnerDelta.hard_gate).closeout_receipt_source_fingerprint),
   });
+  const nextRequiredOwnerAction = buildExecutionAuthorizationNextAction({
+    stageRunId: runId,
+    domainId,
+    stageId,
+    currentOwnerDelta,
+    executionAuthorization,
+  });
 
   return {
     surface_kind: 'opl_app_stage_run_cockpit_projection',
@@ -161,6 +299,7 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
     launch_admission: launchAdmission,
     closeout_admission: closeoutAdmission,
     execution_authorization: executionAuthorization,
+    next_required_owner_action: nextRequiredOwnerAction,
     app_cockpit_policy: {
       default_path_root: 'stage_run_current_owner_delta',
       raw_worklist_default: false,
