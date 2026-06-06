@@ -168,6 +168,8 @@ test('family-runtime temporal workflow input carries checkpoint stage packet and
       '{"workspace_root":"/tmp/dm-cvd"}',
       '--executor-kind',
       'codex_cli',
+      '--source-fingerprint',
+      'truth-snapshot::dm002-dispatch',
       '--checkpoint-ref',
       'studies/002-dm/prompt.json',
     ], familyRuntimeEnv(stateRoot)) as TemporalStageAttemptCreateOutput;
@@ -178,6 +180,41 @@ test('family-runtime temporal workflow input carries checkpoint stage packet and
     assert.equal(input.codex_stage_runner?.runner_mode, 'codex_cli');
     assert.equal(input.codex_stage_runner?.timeout_ms, 3_600_000);
     assert.equal(input.workspace_locator.workspace_root, '/tmp/dm-cvd');
+    assert.equal(input.opl_execution_authorization?.provider_attempt_ref, `temporal://attempt/${created.family_runtime_stage_attempt.attempt.stage_attempt_id}`);
+    assert.equal(input.opl_execution_authorization?.attempt_lease_status, 'active');
+    assert.equal(input.opl_execution_authorization?.source_fingerprint, 'truth-snapshot::dm002-dispatch');
+    assert.equal(input.opl_execution_authorization?.workspace_scope_ref, 'workspace:/tmp/dm-cvd');
+    assert.equal(input.opl_execution_authorization?.artifact_scope_ref, 'stage-packet:studies/002-dm/prompt.json');
+    assert.equal(input.opl_execution_authorization?.stage_run_id, 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch');
+    assert.equal(input.opl_execution_authorization?.authority_boundary.opl_can_create_owner_receipt, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime temporal workflow input does not authorize launch without source fingerprint', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-input-no-auth-'));
+  try {
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'domain_owner/default-executor-dispatch',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/dm-cvd"}',
+      '--executor-kind',
+      'codex_cli',
+      '--checkpoint-ref',
+      'studies/002-dm/prompt.json',
+    ], familyRuntimeEnv(stateRoot)) as TemporalStageAttemptCreateOutput;
+    const input = buildTemporalStageAttemptWorkflowInput(created.family_runtime_stage_attempt.attempt);
+
+    assert.equal(input.opl_execution_authorization, undefined);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -272,7 +309,13 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
         family_runtime_tick: {
           dispatches: Array<{
             status: string;
-            temporal_start: { surface_kind: string };
+            temporal_start: {
+              surface_kind: string;
+              execution_authorization_ledger_record: {
+                status: string;
+              };
+              execution_authorization_receipt_refs: string[];
+            };
             admitted_stage_attempt: { workflow_id: string; stage_attempt_id: string };
           }>;
         };
@@ -297,19 +340,25 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
             provider_kind: string;
             executor_kind: string;
             stage_id: string;
-            provider_run: { provider_status: string };
+            provider_run: {
+              provider_status: string;
+            };
             closeout_receipt_status: string;
             checkpoint_refs: string[];
           }>;
         };
       };
-      return { tick: result, task };
+      return { tick: result, task, startedAttempt };
     });
-    const { tick, task } = result;
+    const { tick, task, startedAttempt } = result;
     const attempt = task.family_runtime_task.stage_attempts[0];
 
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'running');
     assert.equal(tick.family_runtime_tick.dispatches[0].temporal_start.surface_kind, 'temporal_stage_attempt_start_receipt');
+    assert.equal(
+      tick.family_runtime_tick.dispatches[0].temporal_start.execution_authorization_ledger_record.status,
+      'recorded',
+    );
     assert.equal(task.family_runtime_task.task.status, 'blocked');
     assert.equal(task.family_runtime_task.task.last_error, 'typed_closeout_packet_required');
     assert.equal(task.family_runtime_task.task.dead_letter_reason, 'temporal_stage_attempt_not_completed');
@@ -326,6 +375,35 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
     assert.equal(attempt.executor_kind, 'codex_cli');
     assert.equal(attempt.stage_id, 'domain_owner/default-executor-dispatch');
     assert.equal(attempt.provider_run.provider_status, 'blocked');
+    const authorizationLedger = runCli([
+      'runtime',
+      'stage-run-authorization',
+      'list',
+    ], familyRuntimeEnv(stateRoot)) as unknown as {
+      stage_run_execution_authorization_ledger: {
+        receipt_count: number;
+        verified_receipt_count: number;
+        receipts: Array<{
+          stage_attempt_id: string | null;
+          attempt_lease_status: string;
+          execution_authorization_report: {
+            status: string;
+            execution_authorized: boolean;
+          };
+        }>;
+      };
+    };
+    const authorizationReceipt =
+      authorizationLedger.stage_run_execution_authorization_ledger.receipts.find(
+        (receipt) => receipt.stage_attempt_id === startedAttempt.stage_attempt_id,
+      );
+    assert.ok(authorizationReceipt);
+    assert.equal(
+      authorizationReceipt.execution_authorization_report.status,
+      'authorized',
+    );
+    assert.equal(authorizationReceipt.execution_authorization_report.execution_authorized, true);
+    assert.equal(authorizationReceipt.attempt_lease_status, 'active');
     assert.equal(attempt.closeout_receipt_status, null);
     assert.deepEqual(attempt.checkpoint_refs, [dispatchRef]);
   } finally {

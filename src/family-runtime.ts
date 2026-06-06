@@ -101,6 +101,10 @@ function temporalStartProviderRun(attempt: { provider_run: Record<string, unknow
       ? receipt.first_execution_run_id
       : null,
     temporal_start_receipt: receipt,
+    execution_authorization_receipt_refs: Array.isArray(receipt.execution_authorization_receipt_refs)
+      ? receipt.execution_authorization_receipt_refs.filter((entry): entry is string => typeof entry === 'string')
+      : [],
+    execution_authorization_ledger_record: receipt.execution_authorization_ledger_record ?? null,
     temporal_visibility_readiness: receipt.visibility_readiness ?? null,
     started_at: typeof attempt.provider_run.started_at === 'string' ? attempt.provider_run.started_at : nowIso(),
     last_heartbeat_at: nowIso(),

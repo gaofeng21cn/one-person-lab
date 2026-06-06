@@ -92,6 +92,9 @@ import {
   resolveTemporalWorkflowModulePath,
 } from './family-runtime-temporal-provider-parts/workflow-bundle.ts';
 import {
+  recordStageRunExecutionAuthorizationReceipts,
+} from './stage-run-execution-authorization-ledger.ts';
+import {
   runTemporalStageAttemptReplayGate,
 } from './family-runtime-temporal-provider-parts/replay-gate.ts';
 import {
@@ -276,6 +279,10 @@ export async function startTemporalStageAttemptWorkflow(
         ? {}
         : { searchAttributes: buildTemporalStageAttemptSearchAttributes(launchInput) },
     }), options);
+    const authorization = launchInput.opl_execution_authorization;
+    const executionAuthorizationLedgerRecord = authorization
+      ? recordStageRunExecutionAuthorizationReceipts([authorization])
+      : null;
     return {
       surface_kind: 'temporal_stage_attempt_start_receipt',
       provider_kind: 'temporal',
@@ -285,6 +292,12 @@ export async function startTemporalStageAttemptWorkflow(
       eagerly_started: handle.eagerlyStarted,
       namespace: resolveTemporalNamespace(),
       task_queue: resolveTemporalTaskQueue(),
+      execution_authorization: authorization ?? null,
+      execution_authorization_ledger_record: executionAuthorizationLedgerRecord,
+      execution_authorization_receipt_refs:
+        executionAuthorizationLedgerRecord?.status === 'recorded'
+          ? executionAuthorizationLedgerRecord.receipt_refs
+          : [],
       visibility_readiness: visibilityReadiness,
       authority_boundary: {
         opl: 'temporal_workflow_transport_and_control_metadata_only',
