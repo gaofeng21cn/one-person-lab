@@ -198,6 +198,13 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
         no_regression_refs: [`<${domainId}-no-regression-ref>`],
         owner_chain_refs: [`<${domainId}-owner-chain-ref>`],
         evidence_refs: [],
+        ...(closeoutBindingRequirement.closeout_binding_ready
+          ? {
+              owner_delta_result: {
+                closeout_binding: closeoutBindingRequirement.closeout_binding,
+              },
+            }
+          : {}),
       }
     : null;
   const typedBlockerPayloadExample = recordMode

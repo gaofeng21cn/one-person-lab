@@ -109,6 +109,42 @@ test('runtime action execute records and verifies domain dispatch evidence recei
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
     const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
+    const stageRunId = 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch';
+    const stageManifestRef = 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch';
+    const currentPointerRef =
+      'opl://stage-runs/app-stage-run%3Amedautoscience%3Adomain-owner-default-executor-dispatch/current';
+    const idempotencyKey = 'idem_domain_dispatch_evidence';
+    const providerAttemptRef = `temporal://attempt/${attemptId}`;
+    const attemptLeaseRef = `opl://stage-attempts/${attemptId}/leases/frt_domain_dispatch/active`;
+    const executionAuthorizationDecisionRef =
+      `opl://stage-attempts/${attemptId}/execution-authorizations/frt_domain_dispatch/wf_domain_dispatch`;
+    runCli([
+      'runtime',
+      'stage-run-authorization',
+      'record',
+      '--payload',
+      JSON.stringify({
+        stage_run_id: stageRunId,
+        domain_id: 'medautoscience',
+        stage_id: 'write',
+        phase: 'launch',
+        selected_executor: 'codex_cli',
+        provider_attempt_ref: providerAttemptRef,
+        stage_attempt_id: attemptId,
+        attempt_lease_ref: attemptLeaseRef,
+        attempt_lease_status: 'active',
+        execution_authorization_decision_ref: executionAuthorizationDecisionRef,
+        workspace_scope_ref: 'workspace:/tmp/mas',
+        artifact_scope_ref: 'stage-packet:domain-dispatch-evidence',
+        source_fingerprint: 'sha256:domain-dispatch-evidence',
+        idempotency_key: idempotencyKey,
+        current_pointer_ref: currentPointerRef,
+        stage_manifest_ref: stageManifestRef,
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
     runCli([
       'family-runtime',
       'attempt',
@@ -193,12 +229,33 @@ test('runtime action execute records and verifies domain dispatch evidence recei
     assert.equal(recordRoute.payload_workorder.accepted_payload_paths.typed_blocker_path.success_claimed, false);
     assert.equal(recordRoute.payload_workorder.authority_boundary.can_generate_domain_owner_receipt, false);
     assert.equal(recordRoute.payload_workorder.empty_payload_template_is_success_evidence, false);
+    assert.equal(recordRoute.required_closeout_binding.closeout_binding_ready, true);
+    assert.deepEqual(recordRoute.required_closeout_binding.missing_required_fields, []);
+    assert.deepEqual(recordRoute.payload_template.owner_delta_result.closeout_binding, {
+      surface_kind: 'opl_stage_run_closeout_binding',
+      trusted_opl_execution_authorization: true,
+      bound_to_stage_run: true,
+      bound_to_stage_manifest: true,
+      bound_to_current_pointer: true,
+      bound_to_source_fingerprint: true,
+      stage_run_id: stageRunId,
+      stage_manifest_ref: stageManifestRef,
+      current_pointer_ref: currentPointerRef,
+      source_fingerprint: 'sha256:domain-dispatch-evidence',
+      idempotency_key: idempotencyKey,
+      provider_attempt_ref: providerAttemptRef,
+      attempt_lease_ref: attemptLeaseRef,
+      execution_authorization_decision_ref: executionAuthorizationDecisionRef,
+    });
     assert.deepEqual(recordRoute.payload_workorder.success_refs_path_payload, {
       domain_receipt_refs: ['<medautoscience-owner-receipt-ref>'],
       typed_blocker_refs: [],
       no_regression_refs: ['<medautoscience-no-regression-ref>'],
       owner_chain_refs: ['<medautoscience-owner-chain-ref>'],
       evidence_refs: [],
+      owner_delta_result: {
+        closeout_binding: recordRoute.required_closeout_binding.closeout_binding,
+      },
     });
     assert.deepEqual(recordRoute.payload_workorder.typed_blocker_path_payload, {
       domain_receipt_refs: [],
@@ -206,6 +263,9 @@ test('runtime action execute records and verifies domain dispatch evidence recei
       no_regression_refs: [],
       owner_chain_refs: [],
       evidence_refs: [],
+      owner_delta_result: {
+        closeout_binding: recordRoute.required_closeout_binding.closeout_binding,
+      },
     });
     assert.deepEqual(recordRoute.payload_template, {
       domain_receipt_refs: [],
@@ -213,6 +273,9 @@ test('runtime action execute records and verifies domain dispatch evidence recei
       no_regression_refs: [],
       owner_chain_refs: [],
       evidence_refs: [],
+      owner_delta_result: {
+        closeout_binding: recordRoute.required_closeout_binding.closeout_binding,
+      },
     });
 
     const openEnvelope = drilldown.evidence_envelope.envelopes.find(
@@ -290,6 +353,14 @@ test('runtime action execute records and verifies domain dispatch evidence recei
     assert.equal(openDispatchWorkorder.can_execute, false);
     assert.equal(openDispatchWorkorder.creates_domain_action, false);
     assert.equal(openDispatchWorkorder.creates_owner_receipt, false);
+    assert.equal(
+      openDispatchWorkorder.payload_workorder.required_closeout_binding.closeout_binding_ready,
+      true,
+    );
+    assert.deepEqual(
+      openDispatchWorkorder.payload_workorder.required_closeout_binding.closeout_binding,
+      recordRoute.required_closeout_binding.closeout_binding,
+    );
     assert.equal(openDispatchWorkorder.required_operator_payload_refs.includes('domain_receipt_refs'), true);
     assert.equal(openDispatchWorkorder.required_operator_payload_refs.includes('typed_blocker_refs'), true);
     assert.equal(openDispatchWorkorder.required_operator_payload_refs.includes('owner_chain_refs'), true);
