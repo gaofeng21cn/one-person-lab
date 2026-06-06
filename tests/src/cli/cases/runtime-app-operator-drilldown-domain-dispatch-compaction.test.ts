@@ -1020,6 +1020,8 @@ test('domain dispatch evidence keeps older unclosed attempts as superseded prove
     assert.equal(olderEvidence.default_actionability_status, 'superseded');
     assert.equal(olderEvidence.default_actionability_blocker, null);
     assert.equal(olderEvidence.superseded_by_stage_attempt_id, current.stage_attempt_id);
+    assert.equal(currentEvidence.local_status, 'completed');
+    assert.equal(currentEvidence.closeout_receipt_status, 'accepted_typed_closeout');
     assert.equal(currentEvidence.default_actionable, true);
     assert.equal(currentEvidence.default_actionability_status, 'current');
     assert.equal(

@@ -114,7 +114,10 @@ function writeMasProgressPortalFixture(workspaceRoot: string, profilePath: strin
   }, null, 2)}\n`, 'utf8');
 }
 
-function writeCurrentOwnerDeltaProjectionCacheFixture(stateDir: string) {
+function writeCurrentOwnerDeltaProjectionCacheFixture(
+  stateDir: string,
+  options: { nextSafeAction?: Record<string, unknown> } = {},
+) {
   const readModel = buildCurrentOwnerDeltaReadModel({
     ownerDeltaFirst: {
       surface_kind: 'opl_owner_delta_first_projection',
@@ -145,6 +148,7 @@ function writeCurrentOwnerDeltaProjectionCacheFixture(stateDir: string) {
       domainDispatchWorkorderCount: 0,
       stageReplayMissingReceiptWorkorderCount: 0,
     },
+    nextSafeAction: options.nextSafeAction,
     fullDetailRefs: {
       owner_delta_first_ref:
         '/runtime_tray_snapshot/app_operator_drilldown/attention_first_payload/owner_delta_first',
@@ -182,6 +186,7 @@ function writeCurrentOwnerDeltaProjectionCacheFixture(stateDir: string) {
 function writeStageRunAuthorizationLedgerFixture(input: {
   stateDir: string;
   receipt: Record<string, unknown>;
+  receipts?: Array<Record<string, unknown>>;
 }) {
   fs.mkdirSync(input.stateDir, { recursive: true });
   fs.writeFileSync(
@@ -189,7 +194,7 @@ function writeStageRunAuthorizationLedgerFixture(input: {
     `${JSON.stringify({
       surface_kind: 'opl_stage_run_execution_authorization_ledger',
       version: 'stage-run-execution-authorization-ledger.v1',
-      receipts: [input.receipt],
+      receipts: input.receipts ?? [input.receipt],
     }, null, 2)}\n`,
     'utf8',
   );
@@ -198,6 +203,8 @@ function writeStageRunAuthorizationLedgerFixture(input: {
 function appStateStageRunAuthorizationReceipt(overrides: Record<string, unknown> = {}) {
   const stageRunId = 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch';
   const decisionRef = 'opl://stage-attempts/sat_dm003/execution-authorizations/lease_dm003/wf_dm003';
+  const stageManifestRef = 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch';
+  const currentPointerRef = `opl://stage-runs/${encodeURIComponent(stageRunId)}/current`;
   return {
     surface_kind: 'opl_stage_run_execution_authorization_receipt',
     version: 'stage-run-execution-authorization-ledger.v1',
@@ -219,8 +226,8 @@ function appStateStageRunAuthorizationReceipt(overrides: Record<string, unknown>
     artifact_scope_ref: 'stage-packet:studies/003-dpcc-primary-care-phenotype-treatment-gap/dispatch.json',
     source_fingerprint: 'mas_default_executor_source_dm003',
     idempotency_key: 'idem_dm003',
-    current_pointer_ref: `opl://stage-runs/${encodeURIComponent(stageRunId)}/current`,
-    stage_manifest_ref: 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch',
+    current_pointer_ref: currentPointerRef,
+    stage_manifest_ref: stageManifestRef,
     owner_answer_ref: null,
     owner_answer_kind: null,
     closeout_receipt_ref: null,
@@ -275,6 +282,64 @@ function appStateStageRunAuthorizationReceipt(overrides: Record<string, unknown>
     },
     ...overrides,
   };
+}
+
+function appStateStageRunCloseoutAuthorizationReceipt(overrides: Record<string, unknown> = {}) {
+  const stageRunId = 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch';
+  const stageManifestRef = 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch';
+  const currentPointerRef = `opl://stage-runs/${encodeURIComponent(stageRunId)}/current`;
+  const decisionRef = 'opl://stage-attempts/sat_dm003_closeout/execution-authorizations/lease_dm003_closeout/wf_dm003_closeout';
+  const ownerAnswerRef =
+    'artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json';
+  return appStateStageRunAuthorizationReceipt({
+    receipt_ref:
+      `opl://stage-run-execution-authorization/${encodeURIComponent(stageRunId)}/${encodeURIComponent(decisionRef)}`,
+    phase: 'closeout',
+    provider_attempt_ref: 'temporal://attempt/sat_dm003_closeout',
+    stage_attempt_id: 'sat_dm003_closeout',
+    attempt_lease_ref: 'opl://stage-attempts/sat_dm003_closeout/leases/lease_dm003_closeout/active',
+    execution_authorization_decision_ref: decisionRef,
+    source_fingerprint: 'mas_default_executor_source_dm003_closeout',
+    idempotency_key: 'idem_dm003_closeout',
+    current_pointer_ref: currentPointerRef,
+    stage_manifest_ref: stageManifestRef,
+    owner_answer_ref: ownerAnswerRef,
+    owner_answer_kind: 'typed_blocker',
+    closeout_receipt_ref: ownerAnswerRef,
+    owner_answer_stage_run_id: stageRunId,
+    owner_answer_generation: 0,
+    owner_answer_manifest_ref: stageManifestRef,
+    owner_answer_current_pointer_ref: currentPointerRef,
+    owner_answer_source_fingerprint: 'mas_default_executor_source_dm003_closeout',
+    owner_answer_idempotency_key: 'idem_dm003_closeout',
+    closeout_refs: [ownerAnswerRef],
+    execution_authorization_report: {
+      surface_kind: 'opl_stage_run_execution_authorization_report',
+      version: 'stage-run-execution-authorization.v1',
+      phase: 'closeout',
+      status: 'authorized',
+      execution_authorized: true,
+      launch_blockers: [],
+      closeout_binding_blockers: [],
+      closeout_binding: {
+        owner_answer_ref: ownerAnswerRef,
+        owner_answer_kind: 'typed_blocker',
+        closeout_receipt_ref: ownerAnswerRef,
+        bound_to_stage_run: true,
+        bound_to_stage_manifest: true,
+        bound_to_current_pointer: true,
+        bound_to_source_fingerprint: true,
+        bound_to_idempotency_key: true,
+      },
+      opl_runtime_blocker: null,
+      authority_boundary: {
+        opl_can_write_domain_truth: false,
+        opl_can_create_owner_receipt: false,
+        opl_can_create_typed_blocker: false,
+      },
+    },
+    ...overrides,
+  });
 }
 
 function writeMasPublicationHandoffOwnerAnswerProjectionFixture(input: {
@@ -1089,6 +1154,9 @@ test('app state fast folds MAS publication handoff owner answer projection into 
           stage_run_cockpit_summary: Record<string, any>;
           operator_next_action: Record<string, any> | null;
           operator_next_action_source: string | null;
+          operator_next_missing_input_refs: string[];
+          stage_run_next_missing_input_refs: string[];
+          stage_run_next_required_owner_action: Record<string, any> | null;
         };
       };
     };
@@ -1113,7 +1181,104 @@ test('app state fast folds MAS publication handoff owner answer projection into 
     assert.equal(cockpit.authority_boundary.can_create_typed_blocker, false);
     assert.equal(output.app_state.operator.stage_run_cockpit_summary.execution_authorized, true);
     assert.equal(output.app_state.operator.stage_run_cockpit_summary.domain_typed_blocker_created, false);
-    assert.notEqual(output.app_state.operator.operator_next_action_source, 'stage_run_execution_authorization');
+    assert.deepEqual(output.app_state.operator.stage_run_next_missing_input_refs, []);
+    assert.deepEqual(output.app_state.operator.operator_next_missing_input_refs, []);
+    assert.equal(output.app_state.operator.stage_run_next_required_owner_action, null);
+    assert.equal(output.app_state.operator.operator_next_action, null);
+    assert.equal(
+      output.app_state.operator.operator_next_action_source,
+      'stage_run_execution_authorization_closed',
+    );
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(masRepoRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('app state fast prefers legal StageRun closeout owner answer over stale current owner attempt receipt', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-stale-owner-attempt-home-'));
+  const masRepoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-stale-owner-attempt-repo-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-stale-owner-attempt-workspace-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const profilePath = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles', 'dm.workspace.toml');
+  const staleLaunchReceipt = appStateStageRunAuthorizationReceipt({
+    stage_attempt_id: 'sat_stale_launch',
+    provider_attempt_ref: 'temporal://attempt/sat_stale_launch',
+    attempt_lease_ref: 'opl://stage-attempts/sat_stale_launch/leases/lease_stale_launch/active',
+    execution_authorization_decision_ref:
+      'opl://stage-attempts/sat_stale_launch/execution-authorizations/lease_stale_launch/wf_stale_launch',
+  });
+  const closeoutReceipt = appStateStageRunCloseoutAuthorizationReceipt();
+
+  try {
+    bindMasWorkspaceForAppState({ stateDir, workspaceRoot: masRepoRoot, profilePath });
+    fs.mkdirSync(path.dirname(profilePath), { recursive: true });
+    fs.writeFileSync(profilePath, 'workspace_name = "dm-cvd-mortality-risk"\n', 'utf8');
+    writeCurrentOwnerDeltaProjectionCacheFixture(stateDir, {
+      nextSafeAction: {
+        action_id: 'stale-current-owner-delta-attempt',
+        action_kind: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+        next_safe_action_ref: 'opl://stage_attempts/sat_stale_launch/current',
+        domain_id: 'medautoscience',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        route_requires_domain_or_app_payload: true,
+      },
+    });
+    writeStageRunAuthorizationLedgerFixture({
+      stateDir,
+      receipt: staleLaunchReceipt,
+      receipts: [staleLaunchReceipt, closeoutReceipt],
+    });
+
+    const output = runCli(['app', 'state', '--profile', 'fast'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+      OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+      OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+      PATH: '/usr/bin:/bin',
+    }) as {
+      app_state: {
+        operator: {
+          stage_run_next_missing_input_refs: string[];
+          operator_next_missing_input_refs: string[];
+          operator_next_action: Record<string, any> | null;
+          operator_next_action_source: string | null;
+          current_owner_delta_next_action: Record<string, any> | null;
+          stage_run_next_required_owner_action: Record<string, any> | null;
+          stage_run_cockpit: Record<string, any>;
+          stage_run_cockpit_summary: Record<string, any>;
+        };
+      };
+    };
+
+    assert.equal(
+      output.app_state.operator.stage_run_cockpit.stage_run_current_owner_delta.current_owner_delta_stage_attempt_id,
+      'sat_stale_launch',
+    );
+    assert.equal(
+      output.app_state.operator.stage_run_cockpit.execution_authorization_ledger_receipt.stage_attempt_id,
+      'sat_dm003_closeout',
+    );
+    assert.equal(output.app_state.operator.stage_run_cockpit.execution_authorization.status, 'authorized');
+    assert.equal(output.app_state.operator.stage_run_cockpit.execution_authorization.execution_authorized, true);
+    assert.deepEqual(
+      output.app_state.operator.stage_run_cockpit.execution_authorization.closeout_binding_blockers,
+      [],
+    );
+    assert.deepEqual(output.app_state.operator.stage_run_next_missing_input_refs, []);
+    assert.deepEqual(output.app_state.operator.operator_next_missing_input_refs, []);
+    assert.equal(
+      output.app_state.operator.current_owner_delta_next_action?.action_kind,
+      'current_owner_delta_owner_answer_or_typed_blocker_required',
+    );
+    assert.equal(output.app_state.operator.operator_next_action, null);
+    assert.equal(
+      output.app_state.operator.operator_next_action_source,
+      'stage_run_execution_authorization_closed',
+    );
+    assert.equal(output.app_state.operator.stage_run_next_required_owner_action, null);
+    assert.equal(output.app_state.operator.stage_run_cockpit_summary.execution_authorized, true);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(masRepoRoot, { recursive: true, force: true });

@@ -1,5 +1,6 @@
 import { evaluateStageRunAdmission, evaluateStageRunExecutionAuthorization } from './stage-run-kernel.ts';
 import {
+  latestStageRunExecutionAuthorizationCloseoutReceiptForStageRun,
   latestStageRunExecutionAuthorizationReceiptForStageAttempt,
   latestStageRunExecutionAuthorizationReceiptForStageRun,
 } from './stage-run-execution-authorization-ledger.ts';
@@ -274,12 +275,13 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
   };
   const currentStageAttemptId = currentOwnerDeltaStageAttemptId(currentOwnerDelta);
   const latestExecutionAuthorization =
-    currentStageAttemptId
+    latestStageRunExecutionAuthorizationCloseoutReceiptForStageRun(runId)
+    ?? (currentStageAttemptId
       ? latestStageRunExecutionAuthorizationReceiptForStageAttempt({
           stageRunId: runId,
           stageAttemptId: currentStageAttemptId,
         })
-      : latestStageRunExecutionAuthorizationReceiptForStageRun(runId);
+      : latestStageRunExecutionAuthorizationReceiptForStageRun(runId));
   const ownerAnswerProjectionMatch = findMasPublicationHandoffOwnerAnswerProjection({
     receipt: latestExecutionAuthorization,
   });

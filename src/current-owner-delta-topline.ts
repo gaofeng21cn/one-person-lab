@@ -44,9 +44,18 @@ export function buildCurrentOwnerDeltaTopline(input: {
     && stageRunNextAction?.owner_answer_missing_before_opl_closeout_binding === true;
   const ownerAnswerBindingMissingRefs = strings(stageRunNextAction?.missing_input_refs);
   const ownerAnswerBindingRequiredRefShape = record(stageRunNextAction?.required_ref_shape);
+  const stageRunExecutionAuthorization = record(stageRunCockpit.execution_authorization);
+  const stageRunCloseoutBindingBlockers = strings(stageRunExecutionAuthorization.closeout_binding_blockers);
+  const stageRunOwnerAnswerBindingClosed =
+    text(stageRunExecutionAuthorization.status) === 'authorized'
+    && text(stageRunExecutionAuthorization.phase) === 'closeout'
+    && stageRunCloseoutBindingBlockers.length === 0
+    && text(record(stageRunExecutionAuthorization.closeout_binding).owner_answer_ref) !== null;
   const effectiveOperatorNextAction =
     stageRunAuthorizationBlocksDefault
       ? stageRunNextAction
+      : stageRunOwnerAnswerBindingClosed
+        ? null
       : stageRunOwnerAnswerBindingMissing && operatorNextAction
         ? {
             ...operatorNextAction,
@@ -55,13 +64,11 @@ export function buildCurrentOwnerDeltaTopline(input: {
             stage_run_closeout_binding_ref: '/stage_run_cockpit/execution_authorization',
             stage_run_closeout_binding_policy:
               'domain_owner_answer_must_bind_stage_run_manifest_current_pointer_source_fingerprint_and_idempotency',
-          }
+        }
         : operatorNextAction;
   const defaultOperatorNextAction = effectiveOperatorNextAction ?? {};
-  const stageRunExecutionAuthorization = record(stageRunCockpit.execution_authorization);
   const stageRunExecutionBlocker = record(stageRunExecutionAuthorization.opl_runtime_blocker);
   const stageRunLaunchBlockers = strings(stageRunExecutionAuthorization.launch_blockers);
-  const stageRunCloseoutBindingBlockers = strings(stageRunExecutionAuthorization.closeout_binding_blockers);
   const stageRunBlockedAuthority = strings(stageRunExecutionBlocker.blocked_authority);
   const operatorNextOwner =
     text(defaultOperatorNextAction.next_required_owner)
@@ -86,6 +93,8 @@ export function buildCurrentOwnerDeltaTopline(input: {
     operator_next_action: effectiveOperatorNextAction,
     operator_next_action_source: stageRunAuthorizationBlocksDefault
       ? 'stage_run_execution_authorization'
+      : stageRunOwnerAnswerBindingClosed
+        ? 'stage_run_execution_authorization_closed'
       : text(operatorNextAction?.derivation_source),
     current_owner_delta_next_action: operatorNextAction,
     operator_next_action_kind: text(defaultOperatorNextAction.action_kind),

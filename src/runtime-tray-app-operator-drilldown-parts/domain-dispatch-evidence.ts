@@ -411,13 +411,14 @@ function attemptDispatchEvidence(attempt: JsonRecord) {
     + (Array.isArray(impact.typed_blockers) ? impact.typed_blockers.length : 0)
     + (Array.isArray(controlled.typed_blockers) ? controlled.typed_blockers.length : 0);
   const dispatchIdentity = domainDispatchIdentity(attempt);
+  const localStatus = stringValue(attempt.local_status) ?? stringValue(attempt.status);
   return {
     ref: `/stage_attempt_workbench/attempts/${stringValue(attempt.stage_attempt_id) ?? 'unknown'}/domain_dispatch_evidence`,
     domain_id: stringValue(attempt.domain_id) ?? 'unknown',
     stage_id: stringValue(attempt.stage_id),
     stage_attempt_id: stringValue(attempt.stage_attempt_id),
     provider_kind: stringValue(attempt.provider_kind),
-    local_status: stringValue(attempt.local_status),
+    local_status: localStatus,
     closeout_receipt_status: stringValue(attempt.closeout_receipt_status),
     workspace_locator: attemptWorkspaceLocator(attempt),
     source_fingerprint: stringValue(attempt.source_fingerprint),

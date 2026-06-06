@@ -470,6 +470,29 @@ export function latestStageRunExecutionAuthorizationReceiptForStageRun(stageRunI
   return readLedger().receipts.find((receipt) => receipt.stage_run_id === normalizedStageRunId) ?? null;
 }
 
+function receiptHasCloseoutOwnerAnswerBinding(receipt: StageRunExecutionAuthorizationReceipt) {
+  return receipt.phase === 'closeout'
+    && receipt.owner_answer_ref !== null
+    && receipt.execution_authorization_report.closeout_binding_blockers.length === 0
+    && receipt.execution_authorization_report.closeout_binding.owner_answer_ref !== null
+    && receipt.execution_authorization_report.closeout_binding.bound_to_stage_run === true
+    && receipt.execution_authorization_report.closeout_binding.bound_to_stage_manifest === true
+    && receipt.execution_authorization_report.closeout_binding.bound_to_current_pointer === true
+    && receipt.execution_authorization_report.closeout_binding.bound_to_source_fingerprint === true
+    && receipt.execution_authorization_report.closeout_binding.bound_to_idempotency_key === true;
+}
+
+export function latestStageRunExecutionAuthorizationCloseoutReceiptForStageRun(stageRunId: string) {
+  const normalizedStageRunId = optionalString(stageRunId);
+  if (!normalizedStageRunId) {
+    return null;
+  }
+  return readLedger().receipts.find((receipt) =>
+    receipt.stage_run_id === normalizedStageRunId
+    && receiptHasCloseoutOwnerAnswerBinding(receipt)
+  ) ?? null;
+}
+
 export function latestStageRunExecutionAuthorizationReceiptForStageAttempt(input: {
   stageRunId: string;
   stageAttemptId?: string | null;
