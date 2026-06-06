@@ -549,7 +549,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(scienceEntry.skill_runtime_continuity_session_locator_field, 'study_id');
     assert.equal(scienceEntry.skill_runtime_continuity_progress_surface_ref, '/progress_projection');
     assert.match(scienceEntry.skill_runtime_continuity_resume_command, /launch-study/);
-    assert.match(scienceEntry.skill_runtime_continuity_artifact_command, /study progress-projection/);
+    assert.match(scienceEntry.skill_runtime_continuity_artifact_command, /study progress/);
     assert.equal(scienceEntry.domain_entry_contract.entry_adapter, 'MedAutoScienceDomainEntry');
     assert.equal(scienceEntry.domain_agent_entry_id, 'mas');
     assert.equal(scienceEntry.domain_agent_entry_entry_command, 'product-status');

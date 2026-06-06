@@ -422,11 +422,11 @@ test('project-progress promotes current MAS study into a paper-facing summary in
     );
     assert.equal(
       payload.project_progress.recommended_commands.approval,
-      'uv run python -m med_autoscience.cli study progress-projection --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --format json',
+      'uv run python -m med_autoscience.cli study progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --format json',
     );
     assert.equal(
       payload.project_progress.recommended_commands.artifacts,
-      'uv run python -m med_autoscience.cli study progress-projection --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --format json',
+      'uv run python -m med_autoscience.cli study progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --format json',
     );
     assert.equal(
       payload.project_progress.workspace_inbox.sections.running[0].summary,

@@ -49,7 +49,6 @@ function runtimeOwnerForCurrentProvider(): RuntimeTrayItem['runtime_owner'] {
 function commandForMasStudy(
   profileRef: string | null,
   studyId: string,
-  command: 'progress' | 'progress-projection',
 ) {
   if (!profileRef) {
     return null;
@@ -57,7 +56,7 @@ function commandForMasStudy(
   return [
     'uv run python -m med_autoscience.cli',
     'study',
-    command,
+    'progress',
     '--profile',
     shellArgument(profileRef),
     '--study-id',
@@ -138,8 +137,7 @@ function actionForMasPortalItem(study: JsonRecord, lane: RuntimeTrayLane) {
 }
 
 function recommendedCommandsForMasStudy(profileRef: string | null, studyId: string) {
-  const progressCommand = commandForMasStudy(profileRef, studyId, 'progress');
-  const progressProjectionCommand = commandForMasStudy(profileRef, studyId, 'progress-projection');
+  const progressCommand = commandForMasStudy(profileRef, studyId);
   return [
     progressCommand
       ? {
@@ -147,14 +145,6 @@ function recommendedCommandsForMasStudy(profileRef: string | null, studyId: stri
         title: '查看任务进度',
         surface_kind: 'study_progress',
         command: progressCommand,
-      }
-      : null,
-    progressProjectionCommand
-      ? {
-        step_id: 'inspect_progress_projection',
-        title: '查看运行投影',
-        surface_kind: 'study_progress_projection',
-        command: progressProjectionCommand,
       }
       : null,
   ].filter((entry): entry is RuntimeTrayCommand => Boolean(entry));

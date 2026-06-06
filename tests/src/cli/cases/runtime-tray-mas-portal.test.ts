@@ -105,13 +105,9 @@ test('runtime snapshot prefers MAS Progress Portal handoff for study projection 
           surface_kind: 'study_progress',
           command: `uv run python -m med_autoscience.cli study progress --profile ${profilePath} --study-id 002-dm-china-us-mortality-attribution --format json`,
         },
-        {
-          step_id: 'inspect_progress_projection',
-          surface_kind: 'study_progress_projection',
-          command: `uv run python -m med_autoscience.cli study progress-projection --profile ${profilePath} --study-id 002-dm-china-us-mortality-attribution --format json`,
-        },
       ],
     );
+    assert.doesNotMatch(JSON.stringify(dm002.recommended_commands), /progress-projection/);
     assert.equal(dpcc003.active_run_id, 'mas-run-003');
     const recentPortalItem = snapshot.recent_items.find((item: { study_id?: string }) =>
       item.study_id === '004-dpcc-longitudinal-care-inertia-intensification-gap'
@@ -194,13 +190,9 @@ test('runtime snapshot consumes MAS OPL workbench projection as read-only study 
           surface_kind: 'study_progress',
           command: `uv run python -m med_autoscience.cli study progress --profile ${profilePath} --study-id 002-dm-china-us-mortality-attribution --format json`,
         },
-        {
-          step_id: 'inspect_progress_projection',
-          surface_kind: 'study_progress_projection',
-          command: `uv run python -m med_autoscience.cli study progress-projection --profile ${profilePath} --study-id 002-dm-china-us-mortality-attribution --format json`,
-        },
       ],
     );
+    assert.doesNotMatch(JSON.stringify(item.recommended_commands), /progress-projection/);
     assert.equal(item.workbench_projection_source_refs.some((ref: { role: string }) => ref.role === 'mas_opl_runtime_workbench_projection'), true);
     assert.equal(item.source_refs.some((ref: { role: string }) => ref.role === 'mas_opl_runtime_workbench_projection'), true);
   } finally {

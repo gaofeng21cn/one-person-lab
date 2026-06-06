@@ -73,6 +73,25 @@ test('active OPL machine surfaces do not declare compatibility aliases as live',
   assert.deepEqual(violations, []);
 });
 
+test('active OPL MAS command surfaces do not resurrect retired progress-projection public command', () => {
+  const scannedFiles = [
+    ...scannedTextFiles(['src']),
+    'tests/fixtures/family-manifests/med-autoscience-product-entry-manifest.json',
+  ];
+  const violations: string[] = [];
+
+  for (const relativePath of scannedFiles) {
+    const lines = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8').split(/\r?\n/);
+    lines.forEach((line, index) => {
+      if (/\bstudy progress-projection\b/.test(line)) {
+        violations.push(`${relativePath}:${index + 1}`);
+      }
+    });
+  }
+
+  assert.deepEqual(violations, []);
+});
+
 test('active machine surfaces keep Hermes as executor-only, never provider compatibility', () => {
   const scannedFiles = scannedTextFiles([
     'src',

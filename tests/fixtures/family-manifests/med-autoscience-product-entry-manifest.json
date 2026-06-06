@@ -461,7 +461,7 @@
     "artifact_surface": {
       "surface_kind": "study_runtime_status",
       "summary": "读取 runtime 恢复合同与运行态，必要时决定接管/重启。",
-      "command": "uv run python -m med_autoscience.cli study progress-projection --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+      "command": "uv run python -m med_autoscience.cli study progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
       "step_id": "inspect_runtime_status",
       "locator_fields": [
         "profile_ref",
@@ -522,7 +522,7 @@
     "artifact_surface": {
       "surface_kind": "study_runtime_status",
       "summary": "按 study_id 读取 runtime 恢复合同与运行态（artifact/restore 辅助指针）。",
-      "command": "uv run python -m med_autoscience.cli study progress-projection --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+      "command": "uv run python -m med_autoscience.cli study progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
       "step_id": "inspect_runtime_status",
       "locator_fields": [
         "profile_ref",
@@ -570,7 +570,7 @@
         "command_templates": {
           "resume": "uv run python -m med_autoscience.cli launch-study --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
           "check_progress": "uv run python -m med_autoscience.cli study progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --format json",
-          "check_runtime_status": "uv run python -m med_autoscience.cli study progress-projection --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --format json"
+          "check_runtime_status": "uv run python -m med_autoscience.cli study progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --format json"
         },
         "research_gate_surface": {
           "surface_kind": "study_progress",
@@ -631,7 +631,7 @@
     "artifact_surface": {
       "surface_kind": "study_runtime_status",
       "summary": "按 study_id 读取 runtime 恢复合同与运行态。",
-      "command": "uv run python -m med_autoscience.cli study progress-projection --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+      "command": "uv run python -m med_autoscience.cli study progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
       "step_id": "inspect_runtime_status",
       "locator_fields": [
         "profile_ref",
@@ -675,7 +675,7 @@
       "command_templates": {
         "resume": "uv run python -m med_autoscience.cli launch-study --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
         "check_progress": "uv run python -m med_autoscience.cli study progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --format json",
-        "check_runtime_status": "uv run python -m med_autoscience.cli study progress-projection --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>"
+        "check_runtime_status": "uv run python -m med_autoscience.cli study progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>"
       },
       "research_gate_surface": {
         "surface_kind": "study_progress",
@@ -1046,7 +1046,7 @@
             "restore_point_surface_ref": "/return_surface_contract/research_runtime_control_projection_contract/restore_point_surface",
             "recommended_resume_command": "uv run python -m med_autoscience.cli launch-study --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
             "recommended_progress_command": "uv run python -m med_autoscience.cli study progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --format json",
-            "recommended_artifact_command": "uv run python -m med_autoscience.cli study progress-projection --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>"
+            "recommended_artifact_command": "uv run python -m med_autoscience.cli study progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>"
           }
         }
       },

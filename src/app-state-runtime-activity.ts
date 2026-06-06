@@ -51,14 +51,14 @@ function sourceRef(filePath: string, role: string, label: string) {
   };
 }
 
-function commandForMasStudy(profileRef: string | null, studyId: string, command: 'progress' | 'progress-projection') {
+function commandForMasStudy(profileRef: string | null, studyId: string) {
   if (!profileRef) {
     return null;
   }
   return [
     'uv run python -m med_autoscience.cli',
     'study',
-    command,
+    'progress',
     '--profile',
     JSON.stringify(profileRef),
     '--study-id',
@@ -74,13 +74,7 @@ function recommendedCommands(profileRef: string | null, studyId: string) {
       step_id: 'inspect_study_progress',
       title: '查看任务进度',
       surface_kind: 'study_progress',
-      command: commandForMasStudy(profileRef, studyId, 'progress'),
-    },
-    {
-      step_id: 'inspect_progress_projection',
-      title: '查看运行投影',
-      surface_kind: 'study_progress_projection',
-      command: commandForMasStudy(profileRef, studyId, 'progress-projection'),
+      command: commandForMasStudy(profileRef, studyId),
     },
   ].filter((entry): entry is {
     step_id: string;

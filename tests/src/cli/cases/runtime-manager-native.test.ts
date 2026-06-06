@@ -748,11 +748,8 @@ test('runtime snapshot projects MAS live study artifacts from domain manifest wo
       dm002Item.recommended_commands[0].command,
       `uv run python -m med_autoscience.cli study progress --profile ${profilePath} --study-id 002-dm-china-us-mortality-attribution --format json`,
     );
-    assert.equal(dm002Item.recommended_commands[1].surface_kind, 'study_progress_projection');
-    assert.equal(
-      dm002Item.recommended_commands[1].command,
-      `uv run python -m med_autoscience.cli study progress-projection --profile ${profilePath} --study-id 002-dm-china-us-mortality-attribution --format json`,
-    );
+    assert.equal(dm002Item.recommended_commands.length, 1);
+    assert.doesNotMatch(JSON.stringify(dm002Item.recommended_commands), /progress-projection/);
     assert.equal(snapshot.attention_items.some((item: { item_id: string }) => item.item_id === 'opl:provider-continuous-proof:temporal'), true);
     assert.equal(snapshot.running_items.length, 1);
     assert.equal(snapshot.running_items[0].item_id, 'medautoscience:study:003-dpcc-primary-care-phenotype-treatment-gap');
