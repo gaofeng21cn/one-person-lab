@@ -249,7 +249,7 @@ test('Codex stage runner forwards explicit provider authorization refs without d
   const expectedStagePacketRef = 'studies/003/artifacts/supervision/consumer/default_executor_dispatches/immutable/return_to_ai_reviewer_workflow/dispatch.json';
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$1" = "exec" ]; then
-  closeout=$(node -e 'const keys = ["OPL_STAGE_ATTEMPT_ID","OPL_PROVIDER_ATTEMPT_REF","OPL_ATTEMPT_LEASE_REF","OPL_ATTEMPT_LEASE_STATUS","OPL_EXECUTION_AUTHORIZATION_DECISION_REF"]; const refs = keys.map((key) => key + "=" + (process.env[key] || "")); process.stdout.write(JSON.stringify({surface_kind:"stage_attempt_closeout_packet", closeout_refs: refs, next_owner:"med-autoscience", domain_ready_verdict:"domain_gate_pending"}));')
+  closeout=$(node -e 'const keys = ["OPL_STAGE_ATTEMPT_ID","OPL_PROVIDER_ATTEMPT_REF","OPL_ATTEMPT_LEASE_REF","OPL_ATTEMPT_LEASE_STATUS","OPL_EXECUTION_AUTHORIZATION_DECISION_REF","OPL_SOURCE_FINGERPRINT","OPL_IDEMPOTENCY_KEY"]; const refs = keys.map((key) => key + "=" + (process.env[key] || "")); process.stdout.write(JSON.stringify({surface_kind:"stage_attempt_closeout_packet", closeout_refs: refs, next_owner:"med-autoscience", domain_ready_verdict:"domain_gate_pending"}));')
   printf '{"type":"thread.started","thread_id":"thread-stage-auth-env"}\\n'
   printf '%s\\n' "$(node -e 'const text = process.argv[1]; process.stdout.write(JSON.stringify({type:"item.completed",item:{type:"agent_message",id:"msg-auth-env",text}}));' "$closeout")"
   printf '{"type":"turn.completed"}\\n'
@@ -275,6 +275,8 @@ exit 64
           attempt_lease_ref: 'opl://stage-attempts/sat_provider_authorized_test/leases/frt_provider_authorized_test/active',
           attempt_lease_status: 'active',
           execution_authorization_decision_ref: 'opl://stage-attempts/sat_provider_authorized_test/execution-authorizations/frt_provider_authorized_test/wf_provider_authorized_test',
+          source_fingerprint: 'mas_default_executor_source_provider_authorized_test',
+          idempotency_key: 'idem_provider_authorized_test',
         },
         checkpoint_refs: [expectedStagePacketRef],
       },
@@ -289,6 +291,8 @@ exit 64
       'OPL_ATTEMPT_LEASE_REF=opl://stage-attempts/sat_provider_authorized_test/leases/frt_provider_authorized_test/active',
       'OPL_ATTEMPT_LEASE_STATUS=active',
       'OPL_EXECUTION_AUTHORIZATION_DECISION_REF=opl://stage-attempts/sat_provider_authorized_test/execution-authorizations/frt_provider_authorized_test/wf_provider_authorized_test',
+      'OPL_SOURCE_FINGERPRINT=mas_default_executor_source_provider_authorized_test',
+      'OPL_IDEMPOTENCY_KEY=idem_provider_authorized_test',
     ]);
   } finally {
     if (previousCodexBin === undefined) {

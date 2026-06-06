@@ -74,6 +74,8 @@ export function codexStageAttemptEnv(input: {
     authorization,
     'execution_authorization_decision_ref',
   );
+  const sourceFingerprint = explicitAttemptRef(input.attempt, authorization, 'source_fingerprint');
+  const idempotencyKey = explicitAttemptRef(input.attempt, authorization, 'idempotency_key');
   return {
     OPL_STAGE_ATTEMPT_ID: optionalString(input.attempt.stage_attempt_id) ?? undefined,
     OPL_STAGE_ID: stageIdFromAttempt(input.attempt),
@@ -89,5 +91,7 @@ export function codexStageAttemptEnv(input: {
     OPL_ATTEMPT_LEASE_REF: attemptLeaseRef ?? undefined,
     OPL_ATTEMPT_LEASE_STATUS: attemptLeaseStatus ?? undefined,
     OPL_EXECUTION_AUTHORIZATION_DECISION_REF: authorizationDecisionRef ?? undefined,
+    OPL_SOURCE_FINGERPRINT: sourceFingerprint ?? undefined,
+    OPL_IDEMPOTENCY_KEY: idempotencyKey ?? undefined,
   };
 }
