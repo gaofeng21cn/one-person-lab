@@ -1,4 +1,7 @@
 import { evaluateStageRunAdmission, evaluateStageRunExecutionAuthorization } from './stage-run-kernel.ts';
+import {
+  latestStageRunExecutionAuthorizationReceiptForStageRun,
+} from './stage-run-execution-authorization-ledger.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -24,11 +27,15 @@ function stringRefs(...values: unknown[]) {
   return [...new Set(values.flatMap((value) => Array.isArray(value) ? strings(value) : [text(value)].filter(Boolean) as string[]))];
 }
 
+function currentOwnerDeltaStageId(currentOwnerDelta: JsonRecord) {
+  return text(currentOwnerDelta.stage_id) ?? text(currentOwnerDelta.stage_ref);
+}
+
 function stageRunId(currentOwnerDelta: JsonRecord) {
   return [
     'app-stage-run',
     text(currentOwnerDelta.domain) ?? text(currentOwnerDelta.current_owner) ?? 'one-person-lab',
-    text(currentOwnerDelta.stage_ref) ?? 'current-owner-delta',
+    currentOwnerDeltaStageId(currentOwnerDelta) ?? 'current-owner-delta',
   ]
     .map((entry) => entry.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'unknown')
     .join(':');
@@ -193,12 +200,14 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
   const runId = stageRunId(currentOwnerDelta);
   const generation = 0;
   const domainId = text(currentOwnerDelta.domain) ?? text(currentOwnerDelta.current_owner) ?? 'one-person-lab';
-  const stageId = text(currentOwnerDelta.stage_ref) ?? 'current-owner-delta';
+  const stageId = currentOwnerDeltaStageId(currentOwnerDelta) ?? 'current-owner-delta';
   const currentPointer = {
     stage_run_id: runId,
     generation,
     current: true,
   };
+  const latestExecutionAuthorization =
+    latestStageRunExecutionAuthorizationReceiptForStageRun(runId);
   const acceptedReturnShapes = strings(currentOwnerDelta.accepted_answer_shape);
   const requiredRoleArtifacts = ['owner_delta', 'role_artifacts', 'owner_receipt_or_typed_blocker'];
   const producedRoleArtifacts = acceptedReturnShapes.some((entry) =>
@@ -269,33 +278,54 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
     ...common,
     phase: 'closeout',
     selected_executor: 'codex_cli',
-    source_fingerprint: text(currentOwnerDelta.source_fingerprint),
-    idempotency_key: text(currentOwnerDelta.delta_id) ?? runId,
-    provider_attempt_ref: text(currentOwnerDelta.live_attempt_ref),
-    attempt_lease_ref: text(record(currentOwnerDelta.hard_gate).attempt_lease_ref),
-    attempt_lease_status: text(record(currentOwnerDelta.hard_gate).attempt_lease_status) ?? 'active',
-    execution_authorization_decision_ref: text(record(currentOwnerDelta.hard_gate).execution_authorization_decision_ref),
-    workspace_scope_ref: text(record(currentOwnerDelta.audit_refs).workspace_scope_ref)
+    source_fingerprint:
+      latestExecutionAuthorization?.source_fingerprint ?? text(currentOwnerDelta.source_fingerprint),
+    idempotency_key:
+      latestExecutionAuthorization?.idempotency_key ?? text(currentOwnerDelta.delta_id) ?? runId,
+    provider_attempt_ref:
+      latestExecutionAuthorization?.provider_attempt_ref ?? text(currentOwnerDelta.live_attempt_ref),
+    attempt_lease_ref:
+      latestExecutionAuthorization?.attempt_lease_ref ?? text(record(currentOwnerDelta.hard_gate).attempt_lease_ref),
+    attempt_lease_status:
+      latestExecutionAuthorization?.attempt_lease_status
+      ?? text(record(currentOwnerDelta.hard_gate).attempt_lease_status)
+      ?? 'active',
+    execution_authorization_decision_ref:
+      latestExecutionAuthorization?.execution_authorization_decision_ref
+      ?? text(record(currentOwnerDelta.hard_gate).execution_authorization_decision_ref),
+    workspace_scope_ref:
+      latestExecutionAuthorization?.workspace_scope_ref
+      ?? text(record(currentOwnerDelta.audit_refs).workspace_scope_ref)
       ?? text(currentOwnerDelta.task_or_study_ref),
-    artifact_scope_ref: text(record(currentOwnerDelta.audit_refs).artifact_scope_ref)
+    artifact_scope_ref:
+      latestExecutionAuthorization?.artifact_scope_ref
+      ?? text(record(currentOwnerDelta.audit_refs).artifact_scope_ref)
       ?? text(currentOwnerDelta.lineage_ref),
     forbidden_write_required: false,
-    owner_answer_ref: ownerAnswerRef(currentOwnerDelta),
-    owner_answer_kind: ownerAnswerKind(currentOwnerDelta),
+    owner_answer_ref: ownerAnswerRef(currentOwnerDelta) ?? latestExecutionAuthorization?.owner_answer_ref,
+    owner_answer_kind: ownerAnswerKind(currentOwnerDelta) ?? latestExecutionAuthorization?.owner_answer_kind,
     owner_answer_stage_run_id: text(record(currentOwnerDelta.hard_gate).owner_answer_stage_run_id)
-      ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_stage_run_id),
+      ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_stage_run_id)
+      ?? latestExecutionAuthorization?.owner_answer_stage_run_id,
     owner_answer_generation: record(currentOwnerDelta.hard_gate).owner_answer_generation
-      ?? record(currentOwnerDelta.hard_gate).closeout_receipt_generation,
+      ?? record(currentOwnerDelta.hard_gate).closeout_receipt_generation
+      ?? latestExecutionAuthorization?.owner_answer_generation,
     owner_answer_manifest_ref: text(record(currentOwnerDelta.hard_gate).owner_answer_manifest_ref)
-      ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_manifest_ref),
-    stage_manifest_ref: text(record(currentOwnerDelta.hard_gate).stage_manifest_ref),
+      ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_manifest_ref)
+      ?? latestExecutionAuthorization?.owner_answer_manifest_ref,
+    stage_manifest_ref: text(record(currentOwnerDelta.hard_gate).stage_manifest_ref)
+      ?? latestExecutionAuthorization?.stage_manifest_ref,
     owner_answer_current_pointer_ref: text(record(currentOwnerDelta.hard_gate).owner_answer_current_pointer_ref)
-      ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_current_pointer_ref),
-    current_pointer_ref: text(record(currentOwnerDelta.hard_gate).current_pointer_ref),
+      ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_current_pointer_ref)
+      ?? latestExecutionAuthorization?.owner_answer_current_pointer_ref,
+    current_pointer_ref: text(record(currentOwnerDelta.hard_gate).current_pointer_ref)
+      ?? latestExecutionAuthorization?.current_pointer_ref,
     owner_answer_source_fingerprint: text(record(currentOwnerDelta.hard_gate).owner_answer_source_fingerprint)
-      ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_source_fingerprint),
+      ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_source_fingerprint)
+      ?? latestExecutionAuthorization?.owner_answer_source_fingerprint,
     owner_answer_idempotency_key: text(record(currentOwnerDelta.hard_gate).owner_answer_idempotency_key)
-      ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_idempotency_key),
+      ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_idempotency_key)
+      ?? latestExecutionAuthorization?.owner_answer_idempotency_key,
   });
   const nextRequiredOwnerAction = buildExecutionAuthorizationNextAction({
     stageRunId: runId,
@@ -320,6 +350,9 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
         ?? 'no_opl_operator_actionable_delta_required',
       accepted_return_shapes: acceptedReturnShapes.length > 0 ? acceptedReturnShapes : ['typed_blocker_ref'],
       hard_gate: record(currentOwnerDelta.hard_gate),
+      execution_authorization_receipt_ref: latestExecutionAuthorization?.receipt_ref ?? null,
+      execution_authorization_decision_ref:
+        latestExecutionAuthorization?.execution_authorization_decision_ref ?? null,
       missing_role_or_answer_summary: {
         missing_required_role_count: Math.max(requiredRoleArtifacts.length - producedRoleArtifacts.length, 0),
         required_role_artifacts: requiredRoleArtifacts,
@@ -330,6 +363,17 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
     launch_admission: launchAdmission,
     closeout_admission: closeoutAdmission,
     execution_authorization: executionAuthorization,
+    execution_authorization_ledger_receipt: latestExecutionAuthorization
+      ? {
+          receipt_ref: latestExecutionAuthorization.receipt_ref,
+          receipt_status: latestExecutionAuthorization.receipt_status,
+          provider_attempt_ref: latestExecutionAuthorization.provider_attempt_ref,
+          attempt_lease_ref: latestExecutionAuthorization.attempt_lease_ref,
+          execution_authorization_decision_ref:
+            latestExecutionAuthorization.execution_authorization_decision_ref,
+          authority_boundary: latestExecutionAuthorization.authority_boundary,
+        }
+      : null,
     next_required_owner_action: nextRequiredOwnerAction,
     app_cockpit_policy: {
       default_path_root: 'stage_run_current_owner_delta',

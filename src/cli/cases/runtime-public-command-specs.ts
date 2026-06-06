@@ -229,6 +229,28 @@ export function buildPublicRuntimeCommandSpecs(
         examples: ['opl runtime stage-replay-missing-receipt list --json'],
         group: 'runtime',
       }),
+    'runtime stage-run-authorization record':
+      cloneCommandSpec(commandSpecs['runtime stage-run-authorization record'], {
+        usage: 'opl runtime stage-run-authorization record (--payload <json>|--payload-file <path>)',
+        examples: [
+          'opl runtime stage-run-authorization record --payload-file stage-run-authorization.json',
+        ],
+        group: 'runtime',
+      }),
+    'runtime stage-run-authorization verify':
+      cloneCommandSpec(commandSpecs['runtime stage-run-authorization verify'], {
+        usage: 'opl runtime stage-run-authorization verify [--receipt-ref <ref>]',
+        examples: [
+          'opl runtime stage-run-authorization verify --receipt-ref opl://stage-run-execution-authorization/stage-run/decision',
+        ],
+        group: 'runtime',
+      }),
+    'runtime stage-run-authorization list':
+      cloneCommandSpec(commandSpecs['runtime stage-run-authorization list'], {
+        usage: 'opl runtime stage-run-authorization list',
+        examples: ['opl runtime stage-run-authorization list --json'],
+        group: 'runtime',
+      }),
     ...developerModeCloseoutCommandSpecs,
     'runtime oma-app-live-path record':
       cloneCommandSpec(commandSpecs['runtime oma-app-live-path record'], {

@@ -149,6 +149,27 @@
   },
   "execution_authorization_policy": {
     "surface_kind": "opl_stage_run_execution_authorization_policy",
+    "ledger_surface": {
+      "surface_kind": "opl_stage_run_execution_authorization_ledger",
+      "receipt_surface_kind": "opl_stage_run_execution_authorization_receipt",
+      "cli_commands": [
+        "opl runtime stage-run-authorization record",
+        "opl runtime stage-run-authorization verify",
+        "opl runtime stage-run-authorization list"
+      ],
+      "authority_boundary": {
+        "refs_only": true,
+        "authorization_receipt_is_domain_owner_answer": false,
+        "queued_attempt_counts_as_active_lease": false,
+        "registered_workflow_counts_as_execution_authorized": false,
+        "provider_attempt_ref_counts_as_closeout_binding": false,
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
     "launch_hard_blockers": [
       "provider_attempt_ref_missing",
       "attempt_lease_ref_missing",

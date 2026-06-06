@@ -44,6 +44,9 @@ import {
   buildRuntimeStageReplayMissingReceiptCommandSpecs,
 } from './runtime-stage-replay-missing-receipt-command-spec.ts';
 import {
+  buildRuntimeStageRunAuthorizationCommandSpecs,
+} from './runtime-stage-run-authorization-command-spec.ts';
+import {
   buildRuntimeStandardAgentTemplateConsumptionCommandSpecs,
 } from './runtime-standard-agent-template-consumption-command-spec.ts';
 import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseDashboardArgs, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseObservabilityExportArgs, parseProductEntryArgs, parseRuntimeAppOperatorDrilldownArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
@@ -359,6 +362,7 @@ export function buildInternalCommandSpecs(
     ...buildRuntimeDomainOwnerPayloadSummaryCommandSpecs(),
     ...buildRuntimeMagManifestSustainedConsumptionCommandSpecs(),
     ...buildRuntimeStageReplayMissingReceiptCommandSpecs(),
+    ...buildRuntimeStageRunAuthorizationCommandSpecs(),
     ...buildRuntimeDeveloperModeCloseoutCommandSpecs(),
     ...buildRuntimeOmaAppLivePathCommandSpecs(),
     ...buildRuntimeOmaProductionConsumptionCommandSpecs(),

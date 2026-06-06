@@ -198,6 +198,30 @@ test('StageRun Kernel contract freezes launch closeout and advisory conformance 
     'stage_run_execution_authorization_blocked',
   );
   assert.equal(contract.execution_authorization_policy.blocked_result.domain_typed_blocker_created, false);
+  assert.deepEqual(contract.execution_authorization_policy.ledger_surface.cli_commands, [
+    'opl runtime stage-run-authorization record',
+    'opl runtime stage-run-authorization verify',
+    'opl runtime stage-run-authorization list',
+  ]);
+  assert.equal(
+    contract.execution_authorization_policy.ledger_surface.authority_boundary.refs_only,
+    true,
+  );
+  assert.equal(
+    contract.execution_authorization_policy.ledger_surface.authority_boundary
+      .authorization_receipt_is_domain_owner_answer,
+    false,
+  );
+  assert.equal(
+    contract.execution_authorization_policy.ledger_surface.authority_boundary
+      .queued_attempt_counts_as_active_lease,
+    false,
+  );
+  assert.equal(
+    contract.execution_authorization_policy.ledger_surface.authority_boundary
+      .registered_workflow_counts_as_execution_authorized,
+    false,
+  );
   assert.equal(
     contract.execution_authorization_policy.closeout_binding_blockers.includes(
       'closeout_owner_answer_idempotency_binding_missing',

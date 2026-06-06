@@ -127,7 +127,7 @@ export function familyDefaultCallerSupplementalDomains(
   }
   const projectedFamilyDomainIds = projectedDomains
     .map((domain) => stringValue(domain.domain_id) ?? stringValue(domain.project_id))
-    .filter(isFamilyDefaultDomainId);
+    .filter((domainId): domainId is string => isFamilyDefaultDomainId(domainId));
   if (projectedFamilyDomainIds.length === 0) {
     return [];
   }
