@@ -160,6 +160,24 @@ test('family-runtime evidence-worklist keeps family default-caller deletion scop
     assert.equal(defaultCallers.deletion_evidence_worklist_count, 32);
     assert.equal(defaultCallers.missing_no_active_caller_proof_count, 0);
     assert.equal(
+      defaultCallers.physical_delete_authority_read_model.next_required_owner_action,
+      'domain_owner_choose_delete_authorize_keep_or_typed_blocker',
+    );
+    assert.deepEqual(
+      defaultCallers.physical_delete_authority_read_model.accepted_refs_only_result_shapes,
+      [
+        'physical_delete_authorization_ref',
+        'keep_as_authority_adapter_ref',
+        'typed_blocker_ref',
+      ],
+    );
+    assert.equal(
+      defaultCallers.physical_delete_authority_read_model.owner_decision_required_after_all_refs_observed,
+      true,
+    );
+    assert.equal(defaultCallers.physical_delete_authorized, false);
+    assert.equal(defaultCallers.default_caller_delete_ready, false);
+    assert.equal(
       defaultCallers.repo_deletion_gate_summary.some((repo: { domain_id: string }) =>
         repo.domain_id === 'opl-meta-agent'
       ),

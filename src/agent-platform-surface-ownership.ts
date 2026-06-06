@@ -790,6 +790,12 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
         generated_default_caller_readiness_can_authorize_physical_delete: false,
         physical_delete_authorized_by_this_report: false,
         physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
+        owner_decision_after_structural_prerequisites_observed_required: true,
+        next_required_owner_action_after_structural_prerequisites_observed:
+          DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
+        accepted_refs_only_result_shapes_after_structural_prerequisites_observed: [
+          ...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES,
+        ],
       },
       reports,
       authority_boundary: {

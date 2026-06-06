@@ -187,6 +187,25 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
   assert.equal(defaultCallers.migration_gate_policy.observed_deletion_evidence_refs_are_refs_only_inputs, true);
   assert.equal(defaultCallers.migration_gate_policy.physical_delete_authorized_by_this_report, false);
   assert.equal(
+    defaultCallers.migration_gate_policy
+      .owner_decision_after_structural_prerequisites_observed_required,
+    true,
+  );
+  assert.equal(
+    defaultCallers.migration_gate_policy
+      .next_required_owner_action_after_structural_prerequisites_observed,
+    'domain_owner_choose_delete_authorize_keep_or_typed_blocker',
+  );
+  assert.deepEqual(
+    defaultCallers.migration_gate_policy
+      .accepted_refs_only_result_shapes_after_structural_prerequisites_observed,
+    [
+      'physical_delete_authorization_ref',
+      'keep_as_authority_adapter_ref',
+      'typed_blocker_ref',
+    ],
+  );
+  assert.equal(
     defaultCallers.physical_delete_authority_read_model.surface_kind,
     'opl_default_caller_physical_delete_authority_read_model',
   );
