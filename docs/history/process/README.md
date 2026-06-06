@@ -35,6 +35,7 @@ Machine boundary: 本目录是人读过程历史索引。机器真相继续归 `
 
 近期归档：
 
+- [2026-06-07 OPL broader docs portfolio SSOT closeout](./plans/2026-06-07-opl-broader-docs-portfolio-ssot-closeout.md)：记录 root `README*`、`docs/*.md` 与 `docs/**/*.md` 的 broader portfolio currentness / stale-surface routing 覆盖；当前 docs lifecycle 回到 `docs/docs_portfolio_consolidation.md`，唯一 active truth 回到 `docs/active/current-state-vs-ideal-gap.md`。
 - [2026-06-06 OPL series docs governance SSOT tranche ledger](./plans/2026-06-06-opl-series-doc-governance-ssot-tranche-ledger.md)：记录本轮跨 RedCube 与 OPL 主仓的两个 SSOT lane、分类、验证和未覆盖六仓范围；不关闭全局 `/goal`。
 - [2026-06-06 OPL owner map retired vocabulary SSOT closeout](./plans/2026-06-06-opl-owner-map-retired-vocabulary-ssot-closeout.md)：记录 active owner map 中退役路线词汇从 literal list 收敛为 semantic class + history/provenance pointer 的过程；当前 owner map 回到 `docs/active/current-development-lines.md`，active plan 回到 `docs/active/current-state-vs-ideal-gap.md`。
 - [2026-05-15 One Person Lab App 仓库拆分 Closeout](./plans/2026-05-15-one-person-lab-app-repo-split-closeout.md)：记录 Framework repo、clean App repo 与 upstream-backed GUI shell repo 的拆分 closeout；当前 App/workbench 边界回到 `docs/product/`、App 仓合同和真实 release artifact。

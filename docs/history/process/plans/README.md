@@ -22,6 +22,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 
 | File | Historical role | Current owner |
 | --- | --- | --- |
+| `2026-06-07-opl-broader-docs-portfolio-ssot-closeout.md` | OPL broader docs portfolio currentness / stale-surface routing SSOT closeout。 | Current docs lifecycle truth belongs to `docs/docs_portfolio_consolidation.md`; current active truth belongs to `docs/active/current-state-vs-ideal-gap.md`; core status and runtime boundary stay in the core five docs plus live code/contracts/tests/read-model. |
 | `2026-06-06-opl-mas-progress-command-projection-retirement-closeout.md` | OPL-side MAS progress command projection retirement closeout。 | Current public MAS progress command truth belongs to MAS CLI/runtime docs; OPL runtime tray, App-state activity and family fixture projections consume `study progress --format json` only. |
 | `2026-06-06-opl-series-doc-governance-ssot-tranche-ledger.md` | OPL series SSOT-first docs governance tranche ledger for the 2026-06-06 RedCube and OPL main lanes。 | 当前 truth 归各 repo active truth owner、core docs、live code/contracts/tests/read-model；ledger 只记录本轮覆盖、验证、未覆盖范围和下一轮写入范围。 |
 | `2026-06-06-opl-active-docs-role-split-ssot-closeout.md` | OPL active docs role split / single active truth owner SSOT closeout。 | 当前 active gap / completion / next baton 归 `docs/active/current-state-vs-ideal-gap.md`；support docs 只保留标准、owner map、证据门、目标架构、Stage Native 设计、private inventory 和 docs governance。 |
