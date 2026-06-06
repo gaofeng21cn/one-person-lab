@@ -1,4 +1,5 @@
 import { cognitiveKernelBoundary } from './cognitive-kernel-boundary.ts';
+import { buildAppStageRunCockpit } from './app-state-stage-run-cockpit.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -282,6 +283,10 @@ export function buildDefaultNextActionFromCurrentOwnerDelta(
       ?? 'owner_delta_followthrough_required',
     required_return_shapes: acceptedAnswerShape,
     accepted_answer_shape: acceptedAnswerShape,
+    missing_input_refs: stringList(delta.missing_input_refs),
+    required_ref_shape: record(delta.required_ref_shape),
+    stage_run_closeout_binding_ref: stringValue(delta.stage_run_closeout_binding_ref),
+    stage_run_closeout_binding_policy: stringValue(delta.stage_run_closeout_binding_policy),
     hard_gate: {
       state: hardGateState,
       provider_liveness_required: providerLivenessRequired,
@@ -454,6 +459,40 @@ function buildCurrentOwnerDeltaProjection(input: {
   };
 }
 
+function stageRunOwnerAnswerCloseoutBindingAction(currentOwnerDelta: JsonRecord) {
+  const cockpit = buildAppStageRunCockpit(currentOwnerDelta);
+  const action = record(cockpit.next_required_owner_action);
+  if (
+    stringValue(action.derivation_source) !== 'stage_run_execution_authorization'
+    || action.owner_answer_missing_before_opl_closeout_binding !== true
+  ) {
+    return null;
+  }
+  return action;
+}
+
+function withStageRunCloseoutBindingDeltaFields<T extends JsonRecord>(
+  currentOwnerDelta: T,
+  stageRunAction: JsonRecord | null,
+): T & {
+  missing_input_refs?: string[];
+  required_ref_shape?: JsonRecord;
+  stage_run_closeout_binding_ref?: string;
+  stage_run_closeout_binding_policy?: string;
+} {
+  if (!stageRunAction) {
+    return currentOwnerDelta;
+  }
+  return {
+    ...currentOwnerDelta,
+    missing_input_refs: stringList(stageRunAction.missing_input_refs),
+    required_ref_shape: record(stageRunAction.required_ref_shape),
+    stage_run_closeout_binding_ref: '/stage_run_cockpit/execution_authorization',
+    stage_run_closeout_binding_policy:
+      'domain_owner_answer_must_bind_stage_run_manifest_current_pointer_source_fingerprint_and_idempotency',
+  };
+}
+
 function buildCompactCountSummary(input: {
   countSummary: {
     openSafeActionCount?: number;
@@ -548,7 +587,7 @@ export function buildCurrentOwnerDeltaReadModel(input: {
     owner_delta_first_ref: '/framework_readiness/owner_delta_first',
     ...record(input.fullDetailRefs),
   };
-  const currentOwnerDelta = buildCurrentOwnerDeltaProjection({
+  const baseCurrentOwnerDelta = buildCurrentOwnerDeltaProjection({
     currentOwner,
     requiredDelta,
     acceptedReturnShapes: acceptedShapes,
@@ -558,6 +597,12 @@ export function buildCurrentOwnerDeltaReadModel(input: {
     countSummary: auditCountSummary,
     fullDetailRefs,
   });
+  const stageRunOwnerAnswerAction =
+    stageRunOwnerAnswerCloseoutBindingAction(baseCurrentOwnerDelta);
+  const currentOwnerDelta = withStageRunCloseoutBindingDeltaFields(
+    baseCurrentOwnerDelta,
+    stageRunOwnerAnswerAction,
+  );
   const defaultNextAction = buildDefaultNextActionFromCurrentOwnerDelta(currentOwnerDelta);
   const defaultSummary = {
     summary_kind: 'owner_delta_only',

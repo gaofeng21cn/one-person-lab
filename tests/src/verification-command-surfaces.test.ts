@@ -537,7 +537,7 @@ test('target architecture policy contracts keep progress, guardrail, and wrapper
     'docs_foldback_is_not_delete_authority',
     'delete_gate_read_model_is_not_delete_authority',
     'domain_repo_owner_receipt_or_typed_blocker_required_for_delete_authority',
-    'physical_delete_requires_domain_repo_owner_action_after_all_refs_observed',
+    'physical_delete_requires_domain_owner_delete_keep_or_blocker_decision_after_structural_evidence',
   ]);
   assert.equal(wrapperRetirement.docs_foldback_boundary.docs_foldback_can_authorize_physical_delete, false);
   assert.equal(wrapperRetirement.docs_foldback_boundary.docs_foldback_can_claim_domain_ready, false);

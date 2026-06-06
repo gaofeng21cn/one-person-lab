@@ -55,6 +55,13 @@
     "per_surface_deletion_evidence_worklist_required": true,
     "zero_missing_deletion_evidence_is_not_delete_ready": true,
     "observed_deletion_evidence_refs_are_refs_only_inputs": true,
+    "owner_decision_after_structural_prerequisites_observed_required": true,
+    "next_required_owner_action_after_structural_prerequisites_observed": "domain_owner_choose_delete_authorize_keep_or_typed_blocker",
+    "accepted_refs_only_result_shapes_after_structural_prerequisites_observed": [
+      "physical_delete_authorization_ref",
+      "keep_as_authority_adapter_ref",
+      "typed_blocker_ref"
+    ],
     "deletion_evidence_requirements_are_completion_claims": false,
     "not_authorized_claims": [
       "domain_repo_physical_delete_authorization",

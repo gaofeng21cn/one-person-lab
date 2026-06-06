@@ -14,6 +14,8 @@ import {
   buildAppDrilldownRefsOnlyAuthorityBoundary,
 } from './authority-boundary.ts';
 import {
+  DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES,
+  DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
   DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES,
   DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
@@ -132,6 +134,18 @@ function missingRequirementIds(worklist: JsonRecord) {
 function compactDeletionEvidenceWorklist(worklist: JsonRecord) {
   const surfaceId = stringValue(worklist.surface_id) ?? 'unknown_surface';
   const missingIds = missingRequirementIds(worklist);
+  const deleteOrKeepPrerequisitesObserved =
+    requirementStatus(worklist, 'replacement_parity') === 'observed'
+    && requirementStatus(worklist, 'active_caller_cutover') === 'observed'
+    && requirementStatus(worklist, 'no_active_caller_proof') === 'observed'
+    && requirementStatus(worklist, 'no_forbidden_write_proof') === 'observed'
+    && requirementStatus(worklist, 'tombstone_or_provenance_ref') === 'observed';
+  const allRequirementsObserved =
+    stringList(worklist.requirement_ids).length > 0
+    && missingIds.length === 0;
+  const acceptedRefsOnlyResultShapes = deleteOrKeepPrerequisitesObserved
+    ? [...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES]
+    : ['typed_blocker_ref'];
   return {
     ref: `opl://default-callers/${surfaceId}/deletion-evidence`,
     role: 'default_caller_deletion_evidence_worklist_ref',
@@ -170,6 +184,13 @@ function compactDeletionEvidenceWorklist(worklist: JsonRecord) {
     default_caller_delete_ready: false,
     worklist_item_is_completion_claim: false,
     physical_delete_authorization_status: 'not_authorized_by_opl_projection',
+    delete_or_keep_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
+    owner_decision_required_after_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
+    next_required_owner_action: deleteOrKeepPrerequisitesObserved
+      ? DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION
+      : 'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
+    accepted_refs_only_result_shapes: acceptedRefsOnlyResultShapes,
+    owner_decision_required_after_all_refs_observed: allRequirementsObserved,
     not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
@@ -203,6 +224,14 @@ function buildDomainDefaultCallerDeletionRefsFromReadinessReport(
   const countMissing = (requirementId: string) => readyWorklists.filter((worklist) =>
     worklist.missing_requirement_ids.includes(requirementId)
   ).length;
+  const deleteOrKeepPrerequisitesObserved = readyWorklists.length > 0
+    && countMissing('no_active_caller_proof') === 0
+    && countMissing('no_forbidden_write_proof') === 0
+    && countMissing('tombstone_or_provenance_ref') === 0;
+  const allReadyWorklistsObserved = readyWorklists.length > 0 && openRequirementCount === 0;
+  const acceptedRefsOnlyResultShapes = deleteOrKeepPrerequisitesObserved
+    ? [...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES]
+    : ['typed_blocker_ref'];
   return {
     ref: `opl://agents/${domainId}/default-caller-deletion-evidence`,
     role: 'default_caller_deletion_evidence_domain_refs',
@@ -243,6 +272,13 @@ function buildDomainDefaultCallerDeletionRefsFromReadinessReport(
       physical_delete_authorized: false,
       default_caller_delete_ready: false,
       deletion_evidence_requirements_are_completion_claims: false,
+      delete_or_keep_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
+      owner_decision_required_after_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
+      next_required_owner_action: deleteOrKeepPrerequisitesObserved
+        ? DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION
+        : 'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
+      accepted_refs_only_result_shapes: acceptedRefsOnlyResultShapes,
+      owner_decision_required_after_all_refs_observed: allReadyWorklistsObserved,
       not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
     },
     authority_boundary: refsOnlyAuthorityBoundary(),
@@ -278,6 +314,14 @@ function buildDomainDefaultCallerDeletionRefs(project: DomainManifestCatalogEntr
   const countMissing = (requirementId: string) => readyWorklists.filter((worklist) =>
     worklist.missing_requirement_ids.includes(requirementId)
   ).length;
+  const deleteOrKeepPrerequisitesObserved = readyWorklists.length > 0
+    && countMissing('no_active_caller_proof') === 0
+    && countMissing('no_forbidden_write_proof') === 0
+    && countMissing('tombstone_or_provenance_ref') === 0;
+  const allReadyWorklistsObserved = readyWorklists.length > 0 && openRequirementCount === 0;
+  const acceptedRefsOnlyResultShapes = deleteOrKeepPrerequisitesObserved
+    ? [...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES]
+    : ['typed_blocker_ref'];
   return {
     ref: `opl://agents/${domainId}/default-caller-deletion-evidence`,
     role: 'default_caller_deletion_evidence_domain_refs',
@@ -317,6 +361,13 @@ function buildDomainDefaultCallerDeletionRefs(project: DomainManifestCatalogEntr
       physical_delete_authorized: false,
       default_caller_delete_ready: false,
       deletion_evidence_requirements_are_completion_claims: false,
+      delete_or_keep_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
+      owner_decision_required_after_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
+      next_required_owner_action: deleteOrKeepPrerequisitesObserved
+        ? DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION
+        : 'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
+      accepted_refs_only_result_shapes: acceptedRefsOnlyResultShapes,
+      owner_decision_required_after_all_refs_observed: allReadyWorklistsObserved,
       not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
     },
     authority_boundary: refsOnlyAuthorityBoundary(),
@@ -332,13 +383,25 @@ export function buildDefaultCallerDeletionEvidenceRefs(projects: DomainManifestC
   const sum = (field: string) => domains.reduce((total, domain) => (
     total + Number(record(domain.summary)[field] || 0)
   ), 0);
+  const resolvedDomainCount = domains.length;
+  const allDomainsReadyForOwnerDecision = resolvedDomainCount > 0
+    && domains.every((domain) =>
+      record(domain.summary).owner_decision_required_after_all_refs_observed === true
+    );
+  const allDomainsWithDeleteOrKeepPrerequisites = resolvedDomainCount > 0
+    && domains.every((domain) =>
+      record(domain.summary).owner_decision_required_after_prerequisites_observed === true
+    );
+  const acceptedRefsOnlyResultShapes = allDomainsWithDeleteOrKeepPrerequisites
+    ? [...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES]
+    : ['typed_blocker_ref'];
   return {
     surface_kind: 'opl_default_caller_deletion_evidence_refs',
     projection_policy:
       'refs_only_default_caller_delete_evidence_requirements_no_domain_truth_or_physical_delete_authority',
     domains,
     summary: {
-      resolved_domain_count: domains.length,
+      resolved_domain_count: resolvedDomainCount,
       domain_ids: uniqueStrings(domains.map((domain) => domain.domain_id)),
       deletion_evidence_worklist_count: sum('deletion_evidence_worklist_count'),
       ready_domain_evidence_worklist_count: sum('ready_domain_evidence_worklist_count'),
@@ -358,6 +421,13 @@ export function buildDefaultCallerDeletionEvidenceRefs(projects: DomainManifestC
       physical_delete_authorized: false,
       default_caller_delete_ready: false,
       deletion_evidence_requirements_are_completion_claims: false,
+      owner_decision_required_after_prerequisites_observed:
+        allDomainsWithDeleteOrKeepPrerequisites,
+      next_required_owner_action: allDomainsWithDeleteOrKeepPrerequisites
+        ? DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION
+        : 'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
+      accepted_refs_only_result_shapes: acceptedRefsOnlyResultShapes,
+      owner_decision_required_after_all_refs_observed: allDomainsReadyForOwnerDecision,
       not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
     },
     authority_boundary: refsOnlyAuthorityBoundary(),
