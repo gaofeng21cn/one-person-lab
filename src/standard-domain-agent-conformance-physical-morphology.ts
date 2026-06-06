@@ -391,6 +391,7 @@ function metaAgentPhysicalMorphologyPolicyChecks(repoDir: string) {
       'runtime/authority_functions/meta-agent-authority-functions.json',
       'tests/contracts.test.ts',
       'tests/contracts.test.mjs',
+      'tests/support/contracts.ts',
       'tests/source-purity.test.ts',
     ],
     blockers,

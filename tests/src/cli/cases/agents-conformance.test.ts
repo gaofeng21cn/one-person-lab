@@ -694,6 +694,7 @@ test('agents conformance allows opl-meta-agent contract guard tests to name forb
   retargetReadyRepo(metaRepo, 'opl-meta-agent', 'OPL Meta Agent');
   configureReadyMetaMorphology(metaRepo);
   fs.mkdirSync(path.join(metaRepo, 'tests'), { recursive: true });
+  fs.mkdirSync(path.join(metaRepo, 'tests', 'support'), { recursive: true });
   fs.writeFileSync(
     path.join(metaRepo, 'tests', 'contracts.test.ts'),
     [
@@ -706,6 +707,16 @@ test('agents conformance allows opl-meta-agent contract guard tests to name forb
       "  'target_domain_truth_writer',",
       '];',
       'export { forbiddenRoles };',
+      '',
+    ].join('\n'),
+    'utf8',
+  );
+  fs.writeFileSync(
+    path.join(metaRepo, 'tests', 'support', 'contracts.ts'),
+    [
+      'export function assertForbiddenRolesAreOnlyPolicyTerms() {',
+      "  return ['app_shell_owner', 'promotion_gate_owner'];",
+      '}',
       '',
     ].join('\n'),
     'utf8',
@@ -727,6 +738,12 @@ test('agents conformance allows opl-meta-agent contract guard tests to name forb
     ),
     true,
   );
+  assert.equal(
+    forbiddenNameResidue.some((entry: { path: string; allowed: boolean }) =>
+      entry.path === 'tests/support/contracts.ts' && entry.allowed === true
+    ),
+    true,
+  );
   const morphologyChecks = report.reports[0].physical_morphology_checks;
   assert.equal(morphologyChecks.residue_classification_summary.status, 'no_active_forbidden_name_residue');
   assert.equal(morphologyChecks.residue_classification_summary.active_forbidden_name_residue_count, 0);
@@ -737,7 +754,7 @@ test('agents conformance allows opl-meta-agent contract guard tests to name forb
   assert.equal(
     morphologyChecks.residue_classification_summary.allowed_name_residue_by_classification
       .contract_or_legacy_guard_test,
-    6,
+    8,
   );
   assert.equal(
     morphologyChecks.residue_classification_summary.allowed_name_residue_by_classification
