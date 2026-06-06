@@ -81,8 +81,8 @@ Machine boundary: 本文是人读公开路线图。当前实现和 readiness tru
 - `OPL` 是整个 family 的 stage-led framework owner，并以 Agent executor 为最小执行单位，持有 activation、stage attempt、queue/wakeup、receipt、recovery、projection 与 shared modules / contracts / indexes
 - admitted domain 在这个壳层之下继续持有各自 authority
 - 默认 executor 仍是 `Codex CLI`，`OPL Runtime Manager` 是已配置 family runtime provider 之上的产品控制面
-- Temporal production provider 已有最小可验证闭环：workflow/activity/signal/query、worker lifecycle contract、typed closeout ingestion、fail-closed readiness、`stage_attempt_workbench` 投影，以及 repo-native Temporal test server + real worker residency proof；外部 production service / managed worker 的 `--production` proof 入口已 fail-closed 落地，真实 domain soak 仍是下一阶段验收
-- MAS paper-line read-only closeout proof 已落地；provider-hosted guarded apply 和长时 MAS owner-chain proof 仍是下一步 production-closure gate
+- Temporal-backed provider、StageRun、readiness、App/operator drilldown 和 domain owner-chain 的当前证据只从核心五件套、active gap plan、contracts 与 live CLI/read-model 读取；路线图只保留方向和下一跳
+- MAS paper-line、MAG grant、RCA visual 和 OMA target-agent 的真实完成仍回各 domain owner receipt、quality/review gate、human gate 或 typed blocker；OPL public roadmap 不承载这些 live proof 的当前状态
 - 旧 `OPL Gateway`、`opl web`、`Product API`、Hermes default、local-manager 与 AionUI-first-shell 材料，除非被当前核心文档重新提升，否则按 provenance、diagnostic、history 或 fixture context 阅读
 - 未来 hosted / desktop 工作继续沿同一套 runtime / activation truth 演进
 - 新工作线会以边界清楚的 domain surface 进入家族体系
