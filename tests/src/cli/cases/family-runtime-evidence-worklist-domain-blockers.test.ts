@@ -555,23 +555,23 @@ test('family-runtime evidence-worklist classifies verified external blockers wit
       OPL_PROVIDER_PROOF_WINDOW_SECONDS: '86400',
     })).family_runtime_evidence_worklist;
 
-    assert.equal(after.summary.open_safe_action_item_count, 43);
+    assert.equal(after.summary.open_safe_action_item_count, 15);
     assert.equal(
       after.summary.open_safe_action_payload_required_item_count
         + after.summary.open_safe_action_payload_free_item_count,
       after.summary.open_safe_action_item_count,
     );
-    assert.equal(after.summary.open_worklist_item_count, 43);
+    assert.equal(after.summary.open_worklist_item_count, 15);
     assert.equal(after.summary.closed_worklist_item_count, 6);
     assert.equal(after.summary.closed_refs_only_item_count, 6);
     assert.equal(after.next_action_ledger.summary.typed_blocker_tail_item_count, 2);
-    assert.equal(after.next_action_ledger.summary.next_action_item_count, 45);
-    assert.equal(after.next_action_ledger.summary.typed_blocker_ref_count, 2);
-    assert.equal(after.next_action_ledger.summary.unique_typed_blocker_ref_count, 2);
-    assert.equal(after.next_action_ledger.summary.typed_blocker_group_count, 2);
-    assert.equal(after.summary.next_action_typed_blocker_ref_count, 2);
-    assert.equal(after.summary.next_action_unique_typed_blocker_ref_count, 2);
-    assert.equal(after.summary.next_action_typed_blocker_group_count, 2);
+    assert.equal(after.next_action_ledger.summary.next_action_item_count, 15);
+    assert.equal(after.next_action_ledger.summary.typed_blocker_ref_count, 0);
+    assert.equal(after.next_action_ledger.summary.unique_typed_blocker_ref_count, 0);
+    assert.equal(after.next_action_ledger.summary.typed_blocker_group_count, 0);
+    assert.equal(after.summary.next_action_typed_blocker_ref_count, 0);
+    assert.equal(after.summary.next_action_unique_typed_blocker_ref_count, 0);
+    assert.equal(after.summary.next_action_typed_blocker_group_count, 0);
     const blockerItems = after.worklist_items.filter((item: { status: string }) =>
       item.status === 'closed_by_domain_owned_typed_blocker'
     );

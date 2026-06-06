@@ -724,12 +724,16 @@ function itemEligibleForNextActionLedger(item: JsonRecord) {
   const claimScope = stringValue(item.claim_scope);
   const status = stringValue(item.status);
   if (
-    item.ordinary_open_safe_action_attention === false
-    || stringValue(item.worklist_attention_class) === 'audit_cleanup_lane'
+    status !== OPEN_WORKLIST_STATUS
+    || stringValue(item.worklist_lane) !== 'ordinary'
+    || item.default_owner_delta_eligible !== true
   ) {
     return false;
   }
-  if (status === DIAGNOSTIC_ONLY_STATUS) {
+  if (
+    item.ordinary_open_safe_action_attention === false
+    || stringValue(item.worklist_attention_class) === 'audit_cleanup_lane'
+  ) {
     return false;
   }
   if (claimScope === 'provider_scheduler_cadence' && status !== OPEN_WORKLIST_STATUS) {
@@ -740,6 +744,8 @@ function itemEligibleForNextActionLedger(item: JsonRecord) {
 
 function itemEligibleForOrdinaryOpenAttention(item: JsonRecord) {
   return stringValue(item.status) === OPEN_WORKLIST_STATUS
+    && stringValue(item.worklist_lane) === 'ordinary'
+    && item.default_owner_delta_eligible === true
     && item.ordinary_open_safe_action_attention !== false
     && stringValue(item.worklist_attention_class) !== 'audit_cleanup_lane';
 }
@@ -853,7 +859,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
     sourceRef: '/family_runtime_evidence_worklist/worklist_items',
   });
   const evidenceRequirementLedger = buildEvidenceRequirementLedger(worklistItems);
-  const stageEvidenceWorkorderPacket = buildStageEvidenceWorkorderPacket(openOperatorRoutes);
+  const stageEvidenceWorkorderPacket = buildStageEvidenceWorkorderPacket(operatorRoutes);
   const stageEvidenceWorkorderSummary = record(stageEvidenceWorkorderPacket.summary);
   const stageEvidenceWorkorderAttentionItems =
     compactStageEvidenceWorkorderAttentionItems(stageEvidenceWorkorderPacket);
@@ -866,7 +872,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
   const stageReplayMissingReceiptWorkorderAttentionSummary =
     compactStageReplayMissingReceiptWorkorderAttentionSummary(stageReplayMissingReceiptWorkorderPacket);
   const domainDispatchEvidenceWorkorderPacket =
-    buildDomainDispatchEvidenceWorkorderPacket(openOperatorRoutes);
+    buildDomainDispatchEvidenceWorkorderPacket(operatorRoutes);
   const domainDispatchEvidenceWorkorderSummary =
     record(domainDispatchEvidenceWorkorderPacket.summary);
   const domainDispatchEvidenceWorkorderGroupAttentionItems =

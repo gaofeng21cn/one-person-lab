@@ -139,3 +139,81 @@ test('family-runtime evidence-worklist states zero open worklist items do not cl
   assert.equal(worklist.zero_open_worklist_guard.can_authorize_domain_ready, false);
   assert.equal(worklist.zero_open_worklist_guard.can_claim_production_ready, false);
 });
+
+test('family-runtime evidence-worklist excludes non-ordinary lanes from default open owner delta', async () => {
+  const output = await runFamilyRuntimeEvidenceWorklist(contracts, {
+    familyDefaults: true,
+    providerKind: 'temporal',
+    executorKind: 'codex_cli',
+    detailLevel: 'full',
+    runtimeSnapshot: {
+      runtime_tray_snapshot: {
+        runtime_health: {
+          provider_kind: 'temporal',
+        },
+        app_operator_drilldown: {
+          app_execution_bridge: {
+            safe_action_routes: [{
+              action_id: 'diagnostic-open-drift',
+              action_kind: 'progress_first_attempt_supervision',
+              owner: 'opl',
+              route_status: 'request_route_available',
+              default_actionability_status: 'request_route_available',
+              can_submit_to_safe_action_shell: true,
+              default_actionable: true,
+            }, {
+              action_id: 'cleanup-open-drift',
+              action_kind: 'legacy_cleanup_apply',
+              owner: 'opl',
+              route_status: 'request_route_available',
+              default_actionability_status: 'request_route_available',
+              can_submit_to_safe_action_shell: true,
+              default_actionable: true,
+            }],
+          },
+          operator_action_routing_refs: {
+            refs: [],
+          },
+          domain_evidence_request_refs: {
+            external_receipts: [],
+            evidence_gate_receipts: [],
+          },
+          domain_dispatch_evidence: {
+            attempts: [],
+          },
+          default_caller_deletion_evidence_refs: {
+            domains: [],
+          },
+          evidence_envelope: {
+            summary: {
+              blocked_envelope_count: 0,
+              open_envelope_count: 0,
+            },
+          },
+        },
+      },
+    } as never,
+    stageReadiness: {
+      domains: [],
+    },
+  });
+
+  const worklist = output.family_runtime_evidence_worklist;
+  if (!('worklist_items' in worklist) || !('attention_queue' in worklist)) {
+    throw new Error('expected full evidence worklist payload');
+  }
+  const items = worklist.worklist_items as Array<Record<string, any>>;
+  const diagnostic = items.find((item) => item.action_id === 'diagnostic-open-drift');
+  const cleanup = items.find((item) => item.action_id === 'cleanup-open-drift');
+  assert.equal(diagnostic?.worklist_lane, 'diagnostic');
+  assert.equal(diagnostic?.default_owner_delta_eligible, false);
+  assert.equal(cleanup?.worklist_lane, 'cleanup');
+  assert.equal(cleanup?.default_owner_delta_eligible, false);
+  assert.equal(worklist.summary.open_worklist_item_count, 0);
+  assert.equal(worklist.open_worklist_item_count, 0);
+  assert.equal(worklist.next_safe_actions.length, 0);
+  assert.equal(worklist.attention_queue.length, 0);
+  assert.equal(worklist.current_owner_delta_read_model.next_safe_action_or_none, null);
+  assert.equal(worklist.zero_open_worklist_guard.zero_open_worklist_item_count, true);
+  assert.equal(worklist.zero_open_worklist_guard.zero_open_worklist_is_completion_claim, false);
+});
