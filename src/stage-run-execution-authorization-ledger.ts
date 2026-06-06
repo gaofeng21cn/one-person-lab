@@ -469,3 +469,18 @@ export function latestStageRunExecutionAuthorizationReceiptForStageRun(stageRunI
   }
   return readLedger().receipts.find((receipt) => receipt.stage_run_id === normalizedStageRunId) ?? null;
 }
+
+export function latestStageRunExecutionAuthorizationReceiptForStageAttempt(input: {
+  stageRunId: string;
+  stageAttemptId?: string | null;
+}) {
+  const normalizedStageRunId = optionalString(input.stageRunId);
+  const normalizedStageAttemptId = optionalString(input.stageAttemptId);
+  if (!normalizedStageRunId || !normalizedStageAttemptId) {
+    return null;
+  }
+  return readLedger().receipts.find((receipt) =>
+    receipt.stage_run_id === normalizedStageRunId
+    && receipt.stage_attempt_id === normalizedStageAttemptId
+  ) ?? null;
+}

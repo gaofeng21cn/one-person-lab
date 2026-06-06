@@ -1,5 +1,6 @@
 import { evaluateStageRunAdmission, evaluateStageRunExecutionAuthorization } from './stage-run-kernel.ts';
 import {
+  latestStageRunExecutionAuthorizationReceiptForStageAttempt,
   latestStageRunExecutionAuthorizationReceiptForStageRun,
 } from './stage-run-execution-authorization-ledger.ts';
 import {
@@ -42,6 +43,24 @@ function stageRunId(currentOwnerDelta: JsonRecord) {
   ]
     .map((entry) => entry.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'unknown')
     .join(':');
+}
+
+function stageAttemptIdFromRef(value: unknown) {
+  const ref = text(value);
+  if (!ref) {
+    return null;
+  }
+  if (/^sat[_-][A-Za-z0-9_-]+$/.test(ref)) {
+    return ref;
+  }
+  const match = ref.match(/stage[_-]attempts?\/(sat[_-][A-Za-z0-9_-]+)/);
+  return match?.[1] ?? null;
+}
+
+function currentOwnerDeltaStageAttemptId(currentOwnerDelta: JsonRecord) {
+  return stageAttemptIdFromRef(currentOwnerDelta.lineage_ref)
+    ?? stageAttemptIdFromRef(currentOwnerDelta.live_attempt_ref)
+    ?? stageAttemptIdFromRef(currentOwnerDelta.task_or_study_ref);
 }
 
 const EXECUTION_AUTHORIZATION_REQUIRED_REFS = [
@@ -253,8 +272,14 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
     generation,
     current: true,
   };
+  const currentStageAttemptId = currentOwnerDeltaStageAttemptId(currentOwnerDelta);
   const latestExecutionAuthorization =
-    latestStageRunExecutionAuthorizationReceiptForStageRun(runId);
+    currentStageAttemptId
+      ? latestStageRunExecutionAuthorizationReceiptForStageAttempt({
+          stageRunId: runId,
+          stageAttemptId: currentStageAttemptId,
+        })
+      : latestStageRunExecutionAuthorizationReceiptForStageRun(runId);
   const ownerAnswerProjectionMatch = findMasPublicationHandoffOwnerAnswerProjection({
     receipt: latestExecutionAuthorization,
   });
@@ -449,6 +474,7 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
       execution_authorization_receipt_ref: latestExecutionAuthorization?.receipt_ref ?? null,
       execution_authorization_decision_ref:
         latestExecutionAuthorization?.execution_authorization_decision_ref ?? null,
+      current_owner_delta_stage_attempt_id: currentStageAttemptId,
       missing_role_or_answer_summary: {
         missing_required_role_count: Math.max(requiredRoleArtifacts.length - producedRoleArtifacts.length, 0),
         required_role_artifacts: requiredRoleArtifacts,
@@ -481,6 +507,7 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
       ? {
           receipt_ref: latestExecutionAuthorization.receipt_ref,
           receipt_status: latestExecutionAuthorization.receipt_status,
+          stage_attempt_id: latestExecutionAuthorization.stage_attempt_id,
           provider_attempt_ref: latestExecutionAuthorization.provider_attempt_ref,
           attempt_lease_ref: latestExecutionAuthorization.attempt_lease_ref,
           execution_authorization_decision_ref:

@@ -312,6 +312,82 @@ test('App StageRun cockpit consumes authorization ledger while preserving domain
   }
 });
 
+test('App StageRun cockpit ignores authorization ledger receipt from another stage attempt', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-cockpit-auth-stale-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    const record = runCli([
+      'runtime',
+      'stage-run-authorization',
+      'record',
+      '--payload',
+      JSON.stringify(authorizationPayload({
+        provider_attempt_ref: 'opl://stage_attempts/sat_stale',
+        stage_attempt_id: 'sat_stale',
+        attempt_lease_ref: 'opl://stage_attempts/sat_stale/lease/current',
+        execution_authorization_decision_ref:
+          'opl://stage_attempts/sat_stale/execution-authorization/current',
+        idempotency_key: 'idem_stale',
+      })),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).stage_run_execution_authorization_ledger_record;
+    assert.equal(record.status, 'recorded');
+
+    const cockpit = buildAppStageRunCockpit({
+      domain: 'medautoscience',
+      current_owner: 'medautoscience',
+      stage_id: 'finalize_and_publication_handoff',
+      desired_delta_kind: 'owner_delta',
+      desired_delta_description: 'publication_handoff_owner_receipt_or_typed_blocker',
+      accepted_answer_shape: ['domain_owner_receipt_ref', 'typed_blocker_ref'],
+      task_or_study_ref: 'mas://study/003-dpcc-primary-care-phenotype-treatment-gap',
+      lineage_ref: 'sat_current',
+      source_fingerprint:
+        'stage-artifact-index::08-publication_package_handoff::publication_handoff_owner_gate::003-dpcc-primary-care-phenotype-treatment-gap',
+      delta_id: 'dm003-publication-handoff:g0',
+      live_attempt_ref: 'opl://stage_attempts/sat_current',
+      hard_gate: {
+        state: 'owner_delta_open',
+      },
+      audit_refs: {
+        workspace_scope_ref: 'workspace:/Users/gaofeng/workspace/Yang/DM-CVD-Mortality-Risk',
+        artifact_scope_ref: 'stage-artifact:08-publication_package_handoff',
+      },
+    });
+
+    assert.equal(cockpit.stage_run_current_owner_delta.execution_authorization_receipt_ref, null);
+    assert.equal(cockpit.execution_authorization_ledger_receipt, null);
+    assert.equal(
+      cockpit.execution_authorization.launch_blockers.includes('attempt_lease_ref_missing'),
+      true,
+    );
+    assert.equal(
+      cockpit.execution_authorization.launch_blockers.includes(
+        'execution_authorization_decision_ref_missing',
+      ),
+      true,
+    );
+    assert.equal(cockpit.execution_authorization.status, 'blocked');
+    assert.equal(cockpit.execution_authorization.execution_authorized, false);
+    const nextRequiredOwnerAction = cockpit.next_required_owner_action;
+    if (!nextRequiredOwnerAction) {
+      throw new Error('expected stale authorization mismatch to require OPL runtime refs');
+    }
+    assert.equal(nextRequiredOwnerAction.next_required_owner, 'one-person-lab');
+    assert.equal(nextRequiredOwnerAction.route_requires_opl_runtime_refs, true);
+    assert.equal(nextRequiredOwnerAction.route_requires_domain_or_app_payload, false);
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('App StageRun cockpit folds MAS owner-answer projection when it matches OPL authorization refs', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-cockpit-mas-answer-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-cockpit-mas-workspace-'));
