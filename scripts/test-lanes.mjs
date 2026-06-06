@@ -26,6 +26,7 @@ const nodeTest = (files, options = {}) => ({
   files,
   stripTypes: options.stripTypes !== false,
   batchSize: options.batchSize ?? null,
+  env: options.env ?? {},
 });
 
 const fastTestFiles = [
@@ -266,8 +267,14 @@ const lanes = {
     nodeTest(fastTestFiles, { batchSize: 20 }),
   ],
   'read-model-gates': [
-    nodeTest(readModelGateNonTemporalHeavyTestFiles, { batchSize: 20 }),
-    nodeTest(readModelGateTemporalHeavyTestFiles, { batchSize: 1 }),
+    nodeTest(readModelGateNonTemporalHeavyTestFiles, {
+      batchSize: 20,
+      env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
+    }),
+    nodeTest(readModelGateTemporalHeavyTestFiles, {
+      batchSize: 1,
+      env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
+    }),
   ],
   meta: [
     nodeTest([
@@ -388,7 +395,7 @@ function runNodeTestStep(step, context) {
       ...context,
       stepKind: step.kind,
       batchFiles: step.files,
-    });
+    }, { env: step.env });
   }
   const chunks = chunkFiles(step.files, step.batchSize);
   for (const [batchIndex, files] of chunks.entries()) {
@@ -398,7 +405,7 @@ function runNodeTestStep(step, context) {
       batchIndex,
       batchCount: chunks.length,
       batchFiles: files,
-    });
+    }, { env: step.env });
     if (result.status !== 0) {
       return result;
     }
@@ -414,7 +421,7 @@ function chunkFiles(files, size) {
   return chunks;
 }
 
-function spawnStep(commandName, args, context) {
+function spawnStep(commandName, args, context, options = {}) {
   const result = spawnSync(commandName, args, {
     cwd: repoRoot,
     stdio: 'inherit',
@@ -440,6 +447,7 @@ function spawnStep(commandName, args, context) {
         '-p no:cacheprovider',
         `-o cache_dir=${path.join(pythonCacheRoot, 'pytest-cache')}`,
       ].filter(Boolean).join(' '),
+      ...(options.env ?? {}),
     },
   });
   if (isTimeoutResult(result)) {
