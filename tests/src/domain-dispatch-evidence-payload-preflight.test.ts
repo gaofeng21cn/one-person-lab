@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import test from 'node:test';
 
 import {
@@ -6,6 +9,7 @@ import {
   preflightDomainDispatchEvidencePayload,
 } from '../../src/domain-dispatch-evidence-payload-preflight.ts';
 import { FrameworkContractError } from '../../src/contracts.ts';
+import { recordStageRunExecutionAuthorizationReceipts } from '../../src/stage-run-execution-authorization-ledger.ts';
 
 const route = {
   action_id: 'domain_dispatch:medautoscience:sat-dm003:record',
@@ -323,4 +327,120 @@ test('explicit OPL attempt key still conflicts independently from domain source 
   assert.equal(preflight.identity_binding.status, 'conflict');
   assert.deepEqual(preflight.identity_binding.conflict_fields, ['source_fingerprint']);
   assert.equal(preflight.can_record_refs_only_receipt, false);
+});
+
+test('typed blocker ref content identity mismatch fails closed even when payload omits identity fields', () => {
+  const workspaceRoot = mkdtempSync(join(tmpdir(), 'opl-ref-identity-'));
+  const stateRoot = mkdtempSync(join(tmpdir(), 'opl-ref-identity-state-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    const authorizationRecord = recordStageRunExecutionAuthorizationReceipts([{
+      stage_run_id: 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch',
+      domain_id: 'medautoscience',
+      stage_id: 'domain_owner/default-executor-dispatch',
+      phase: 'launch',
+      selected_executor: 'codex_cli',
+      provider_attempt_ref: 'temporal://attempt/sat_current',
+      stage_attempt_id: 'sat-current',
+      attempt_lease_ref: 'opl://stage-attempts/sat_current/leases/frt_current/active',
+      attempt_lease_status: 'active',
+      execution_authorization_decision_ref:
+        'opl://stage-attempts/sat_current/execution-authorizations/frt_current/wf_current',
+      workspace_scope_ref: `workspace:${workspaceRoot}`,
+      artifact_scope_ref: 'stage-packet:current',
+      source_fingerprint: 'mas_default_executor_source_current',
+      idempotency_key: 'idem_current',
+      current_pointer_ref:
+        'opl://stage-runs/app-stage-run%3Amedautoscience%3Adomain-owner-default-executor-dispatch/current',
+      stage_manifest_ref: 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch',
+    }]);
+    assert.equal(authorizationRecord.status, 'recorded');
+
+    const typedBlockerRef =
+      'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json';
+    const typedBlockerPath = join(workspaceRoot, typedBlockerRef);
+    mkdirSync(join(typedBlockerPath, '..'), { recursive: true });
+    writeFileSync(typedBlockerPath, JSON.stringify({
+      surface_kind: 'mas_stage_owner_receipt',
+      receipt_kind: 'typed_blocker',
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      stage_run_id: 'stage-run::003-dpcc-primary-care-phenotype-treatment-gap::08-publication_package_handoff',
+      stage_manifest_ref: 'artifacts/stage_outputs/08-publication_package_handoff/stage_manifest.json',
+      current_pointer_ref: 'artifacts/stage_outputs/08-publication_package_handoff/current.json',
+      source_fingerprint: 'mas_default_executor_source_stale',
+      idempotency_key: 'idem_stale',
+      closeout_binding: {
+        source_fingerprint: 'mas_default_executor_source_stale',
+        idempotency_key: 'idem_stale',
+        provider_attempt_ref: 'temporal://attempt/sat_stale',
+        attempt_lease_ref: 'opl://stage-attempts/sat_stale/leases/frt_stale/active',
+        execution_authorization_decision_ref:
+          'opl://stage-attempts/sat_stale/execution-authorizations/frt_stale/wf_stale',
+      },
+    }));
+
+    const currentRoute = {
+      action_id: 'domain_dispatch:medautoscience:sat-current:record',
+      target_identity: {
+        domain_id: 'medautoscience',
+        stage_attempt_id: 'sat-current',
+        task_kind: 'domain_owner/default-executor-dispatch',
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      },
+      workspace_root: workspaceRoot,
+    };
+
+    const preflight = preflightDomainDispatchEvidencePayload(
+      { typed_blocker_refs: [typedBlockerRef] },
+      currentRoute,
+    );
+
+    assert.equal(preflight.status, 'blocked');
+    assert.equal(preflight.identity_binding.status, 'conflict');
+    assert.deepEqual(preflight.identity_binding.conflict_fields, [
+      'stage_run_id',
+      'source_fingerprint',
+      'idempotency_key',
+      'stage_manifest_ref',
+      'current_pointer_ref',
+      'provider_attempt_ref',
+      'attempt_lease_ref',
+      'execution_authorization_decision_ref',
+    ]);
+    assert.equal(preflight.can_record_refs_only_receipt, false);
+    assert.throws(
+      () => assertDomainDispatchEvidencePayloadReady(
+        currentRoute,
+        { typed_blocker_refs: [typedBlockerRef] },
+      ),
+      (error) => {
+        assert.equal(error instanceof FrameworkContractError, true);
+        const details = (error as FrameworkContractError).details as {
+          error_kind: string;
+          identity_conflicts: Array<{ field: string }>;
+        };
+        assert.equal(details.error_kind, 'domain_dispatch_evidence_receipt_conflict');
+        assert.deepEqual(details.identity_conflicts.map((conflict) => conflict.field), [
+          'stage_run_id',
+          'source_fingerprint',
+          'idempotency_key',
+          'stage_manifest_ref',
+          'current_pointer_ref',
+          'provider_attempt_ref',
+          'attempt_lease_ref',
+          'execution_authorization_decision_ref',
+        ]);
+        return true;
+      },
+    );
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    rmSync(workspaceRoot, { recursive: true, force: true });
+    rmSync(stateRoot, { recursive: true, force: true });
+  }
 });

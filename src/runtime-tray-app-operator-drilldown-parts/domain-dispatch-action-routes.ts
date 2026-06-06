@@ -110,6 +110,7 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
   const sourceRef = stringValue(attempt.ref)
     ?? `/stage_attempt_workbench/attempts/${stageAttemptId}/domain_dispatch_evidence`;
   const targetIdentity = record(attempt.target_identity);
+  const workspaceLocator = record(attempt.workspace_locator);
   const stageAttemptSourceFingerprint = stringValue(attempt.source_fingerprint);
   const actionId = `${requestId}:${mode}`;
   const recordMode = mode === 'record';
@@ -282,6 +283,9 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
     stage_attempt_id: stageAttemptId,
     domain_id: domainId,
     stage_id: stageId,
+    workspace_root: stringValue(workspaceLocator.workspace_root),
+    workspace_path: stringValue(workspaceLocator.workspace_path),
+    workspace_locator: workspaceLocator,
     stage_attempt_source_fingerprint: stageAttemptSourceFingerprint,
     target_identity: targetIdentity,
     dispatch_identity_key: stringValue(attempt.dispatch_identity_key),

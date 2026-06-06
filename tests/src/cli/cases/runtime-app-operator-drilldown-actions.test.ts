@@ -148,6 +148,12 @@ test('runtime action execute records and verifies domain dispatch evidence recei
     assert.equal(recordRoute.action_kind, 'domain_dispatch_evidence_receipt_record');
     assert.equal(recordRoute.request_id, `domain_dispatch:medautoscience:${attemptId}`);
     assert.equal(recordRoute.request_pack_id, 'medautoscience.domain_dispatch_evidence');
+    assert.equal(recordRoute.workspace_root, '/tmp/mas');
+    assert.deepEqual(recordRoute.workspace_locator, {
+      workspace_root: '/tmp/mas',
+      artifact_root: '/tmp/mas/artifacts',
+      dispatch_ref: 'mas-domain-dispatch:dm-cvd:domain-dispatch-evidence',
+    });
     assert.equal(recordRoute.route_requires_domain_or_app_payload, true);
     assert.equal(recordRoute.can_close_without_domain_or_app_payload, false);
     assert.equal(recordRoute.creates_domain_action, false);
