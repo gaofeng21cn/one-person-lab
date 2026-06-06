@@ -230,7 +230,7 @@ test('workstream operating loop anchors missing completion oracle to current own
           },
           current_owner_delta: {
             desired_delta_description: 'publication_handoff_owner_receipt_or_typed_blocker',
-            payload_requirement: 'current_owner_delta_or_provider_human_hard_gate',
+            payload_requirement: 'current_owner_delta',
             owner_answer_ref: 'mas://owner-answers/dm002/publication-handoff',
           },
           stage_contract: {

@@ -20,6 +20,7 @@ import { buildEvidenceTailClassification } from './standard-domain-agent-conform
 import { buildGoldenPathDefaultSurfaceBudgetChecks } from './standard-domain-agent-conformance-golden-path.ts';
 import { buildPhysicalMorphologyChecks } from './standard-domain-agent-conformance-physical-morphology.ts';
 import { validateStandardDomainAgentScaffold } from './standard-domain-agent-scaffold.ts';
+import { canonicalOwnerId } from './owner-id.ts';
 import {
   collectFieldValues,
   isRecord,
@@ -419,8 +420,10 @@ function buildStageRunDomainAdoptionReadModel(reports: RepoConformanceReport[]) 
   const domains = reports.map((report) => {
     const profile = report.stage_run_kernel_profile_checks;
     const canary = report.stage_run_canary_evidence_checks;
+    const domainId = canonicalOwnerId(report.domain_id);
     return {
-      domain_id: report.domain_id,
+      domain_id: domainId,
+      ...(domainId !== report.domain_id ? { source_domain_id: report.domain_id } : {}),
       requested_agent_id: report.requested_agent_id,
       repo_dir: report.repo_dir,
       status: report.status,

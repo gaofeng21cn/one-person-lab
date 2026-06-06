@@ -196,6 +196,24 @@ function desiredDeltaKind(requiredDelta: string) {
   return 'owner_delta';
 }
 
+function ownerAnswerOrTypedBlockerRequired(input: {
+  desiredDeltaKind: string;
+  acceptedAnswerShape: string[];
+}) {
+  if (input.desiredDeltaKind === 'none') {
+    return false;
+  }
+  return input.desiredDeltaKind === 'owner_answer_or_typed_blocker'
+    || input.desiredDeltaKind === 'owner_answer'
+    || input.desiredDeltaKind === 'typed_blocker'
+    || input.acceptedAnswerShape.some((shape) =>
+      shape.includes('receipt')
+      || shape.includes('typed_blocker')
+      || shape.includes('owner_chain')
+      || shape.includes('no_regression')
+    );
+}
+
 function stageRefFrom(action: ReturnType<typeof compactNextSafeAction>, ownerDeltaFirst: JsonRecord) {
   return stringValue(record(ownerDeltaFirst.primary_item).stage_id)
     ?? stringValue(record(ownerDeltaFirst.selected_safe_action).stage_id)
@@ -258,7 +276,13 @@ export function buildDefaultNextActionFromCurrentOwnerDelta(
   const deltaId = stringValue(delta.delta_id) ?? 'current-owner-delta';
   const owner = stringValue(delta.current_owner) ?? 'one-person-lab';
   const providerLivenessRequired = hardGate.provider_liveness_required === true;
-  const humanOrDomainOwnerRequired = hardGate.human_or_domain_owner_required === true;
+  const ownerAnswerRequired = ownerAnswerOrTypedBlockerRequired({
+    desiredDeltaKind,
+    acceptedAnswerShape,
+  });
+  const humanOrDomainOwnerRequired = providerLivenessRequired
+    ? false
+    : hardGate.human_or_domain_owner_required === true || ownerAnswerRequired;
   const actionKind = providerLivenessRequired
     ? 'provider_hard_gate_required'
     : humanOrDomainOwnerRequired
@@ -271,7 +295,7 @@ export function buildDefaultNextActionFromCurrentOwnerDelta(
     action_kind: actionKind,
     step_kind: actionKind,
     derivation_source: 'current_owner_delta',
-    default_planning_root: 'current_owner_delta_or_provider_human_hard_gate',
+    default_planning_root: 'current_owner_delta',
     delta_id: deltaId,
     owner,
     current_owner: owner,
@@ -297,6 +321,7 @@ export function buildDefaultNextActionFromCurrentOwnerDelta(
     current_owner_delta_ref: '/current_owner_delta',
     audit_refs: record(delta.audit_refs),
     can_submit_to_safe_action_shell: false,
+    route_requires_opl_runtime_refs: providerLivenessRequired,
     route_requires_domain_or_app_payload: humanOrDomainOwnerRequired,
     can_close_without_domain_or_app_payload: !humanOrDomainOwnerRequired,
     authority: 'owner_delta_default_projection_only',
@@ -365,7 +390,7 @@ function buildCurrentOwnerDeltaProjection(input: {
     surface_kind: 'opl_current_owner_delta',
     schema_version: 'current-owner-delta.v1',
     projection_policy: 'default_owner_delta_root_audit_tail_passive',
-    default_planning_root: 'current_owner_delta_or_provider_human_hard_gate',
+    default_planning_root: 'current_owner_delta',
     audit_tail_policy:
       'raw_worklist_raw_evidence_replay_typed_blocker_group_private_residue_are_passive_until_folded',
     evidence_vault_policy: 'record_everything_plan_from_nothing',
@@ -625,7 +650,7 @@ export function buildCurrentOwnerDeltaReadModel(input: {
     projection_policy:
       'current_owner_delta_is_the_only_default_operator_payload_raw_refs_require_explicit_full_detail',
     default_next_action_derivation_policy:
-      'derive_default_next_action_only_from_current_owner_delta_or_provider_human_hard_gate',
+      'derive_default_next_action_only_from_current_owner_delta',
     current_owner: currentOwner,
     required_delta: requiredDelta,
     accepted_return_shapes: acceptedShapes,

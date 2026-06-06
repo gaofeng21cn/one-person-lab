@@ -428,7 +428,7 @@ test('stage route scheduler contract freezes route hydration as OPL reconciliati
   assert.equal(contractLaws.route_reconciler_role, 'hydrate_reconcile_owner_routes_only');
   assert.equal(
     contractLaws.default_planning_root,
-    'current_owner_delta_or_provider_human_hard_gate',
+    'current_owner_delta',
   );
   assert.ok((contractLaws.audit_tail_inputs as string[]).includes('raw_evidence_envelope'));
   assert.ok((contractLaws.audit_tail_inputs as string[]).includes('replay_packet'));

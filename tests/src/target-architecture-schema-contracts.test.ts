@@ -47,7 +47,7 @@ test('target architecture schema contracts keep owner delta root and audit tail 
   );
   assert.equal(
     ownerDelta.properties.default_planning_root.const,
-    'current_owner_delta_or_provider_human_hard_gate',
+    'current_owner_delta',
   );
   assert.equal(
     ownerDelta.properties.audit_tail_policy.const,

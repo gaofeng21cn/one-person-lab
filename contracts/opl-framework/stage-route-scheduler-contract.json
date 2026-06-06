@@ -7,7 +7,7 @@
     "route_not_stage_strategy": true,
     "audit_tail_cannot_plan": true,
     "route_reconciler_role": "hydrate_reconcile_owner_routes_only",
-    "default_planning_root": "current_owner_delta_or_provider_human_hard_gate",
+    "default_planning_root": "current_owner_delta",
     "audit_tail_inputs": [
       "raw_evidence_envelope",
       "replay_packet",

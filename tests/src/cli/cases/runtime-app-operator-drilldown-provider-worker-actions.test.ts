@@ -470,7 +470,7 @@ test('runtime App drilldown keeps MAS owner handoff ahead of blocked transport r
   const ownerDeltaNextAction =
     drilldown.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none;
   assert.ok(ownerDeltaNextAction);
-  assert.equal(ownerDeltaNextAction.default_planning_root, 'current_owner_delta_or_provider_human_hard_gate');
+  assert.equal(ownerDeltaNextAction.default_planning_root, 'current_owner_delta');
   assert.equal(
     drilldown.attention_first_payload.owner_delta_first.next_owner,
     'domain_repository_or_app_live_operator',
@@ -581,7 +581,7 @@ test('runtime App drilldown keeps provider worker repair and transport redrive a
   assert.ok(ownerDeltaNextAction);
   assert.equal(
     ownerDeltaNextAction.default_planning_root,
-    'current_owner_delta_or_provider_human_hard_gate',
+    'current_owner_delta',
   );
   assert.equal(
     drilldown.attention_first_payload.owner_delta_first.next_owner,

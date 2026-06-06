@@ -117,7 +117,7 @@ test('family-runtime evidence-worklist keeps raw worklist roots out of current o
   );
   assert.equal(
     projection.current_owner_delta.default_planning_root,
-    'current_owner_delta_or_provider_human_hard_gate',
+    'current_owner_delta',
   );
   assert.equal(
     projection.current_owner_delta.audit_tail_policy,
@@ -186,7 +186,7 @@ test('family-runtime evidence-worklist keeps raw worklist roots out of current o
   assert.equal(projection.next_safe_action_or_none?.owner, 'med-autoscience');
   assert.equal(
     projection.next_safe_action_or_none?.default_planning_root,
-    'current_owner_delta_or_provider_human_hard_gate',
+    'current_owner_delta',
   );
   assert.equal(
     projection.next_safe_action_or_none?.payload_requirement,

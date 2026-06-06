@@ -69,7 +69,7 @@ test('current owner delta topline keeps domain owner when only owner answer bind
           surface_kind: 'opl_current_owner_delta_default_next_action',
           action_kind: 'current_owner_delta_owner_answer_or_typed_blocker_required',
           derivation_source: 'current_owner_delta',
-          default_planning_root: 'current_owner_delta_or_provider_human_hard_gate',
+          default_planning_root: 'current_owner_delta',
           current_owner: 'med-autoscience',
           owner: 'med-autoscience',
           next_required_owner: 'med-autoscience',
@@ -177,4 +177,37 @@ test('current owner delta hard gate ignores generic audit-only open safe-action 
     readModel.owner_delta_audit_tail.audit_next_safe_action_or_none.action_kind,
     'legacy_cleanup_apply',
   );
+});
+
+test('current owner delta provider hard gate remains explicit even with receipt-shaped answers', async () => {
+  const module = await import(pathToFileURL(path.join(repoRoot, projectionModulePath)).href);
+  const nextAction = module.buildDefaultNextActionFromCurrentOwnerDelta({
+    surface_kind: 'opl_current_owner_delta',
+    delta_id: 'current-owner-delta:opl:provider-liveness',
+    current_owner: 'one-person-lab',
+    owner: 'one-person-lab',
+    domain_id: 'one-person-lab',
+    desired_delta_kind: 'provider_liveness',
+    payload_requirement: 'provider_worker_liveness_required',
+    accepted_answer_shape: [
+      'provider_worker_repair_receipt_ref',
+      'domain_owner_receipt_ref',
+    ],
+    hard_gate: {
+      state: 'provider_liveness_required',
+      provider_liveness_required: true,
+      human_or_domain_owner_required: false,
+    },
+  });
+
+  assert.equal(nextAction.action_kind, 'provider_hard_gate_required');
+  assert.equal(nextAction.default_planning_root, 'current_owner_delta');
+  assert.equal(nextAction.hard_gate.provider_liveness_required, true);
+  assert.equal(nextAction.hard_gate.human_or_domain_owner_required, false);
+  assert.equal(nextAction.route_requires_opl_runtime_refs, true);
+  assert.equal(nextAction.route_requires_domain_or_app_payload, false);
+  assert.equal(nextAction.can_close_without_domain_or_app_payload, true);
+  assert.equal(nextAction.can_execute_domain_action, false);
+  assert.equal(nextAction.can_create_owner_receipt, false);
+  assert.equal(nextAction.can_create_typed_blocker, false);
 });

@@ -310,6 +310,26 @@ test('agents platform-surfaces projects RCA guarded action catalog as action met
   assert.equal(rcaReport.authority_boundary.report_can_claim_production_ready, false);
 });
 
+test('agents conformance canonicalizes StageRun adoption owner-facing domain ids', () => {
+  const repoDir = buildReadyAgentRepo();
+  retargetReadyRepo(repoDir, 'redcube_ai', 'RedCube AI');
+  configureReadyRcaMorphology(repoDir);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `rca=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+
+  const adoptionDomain = report.stage_run_domain_adoption_read_model.domains[0];
+  assert.equal(report.status, 'passed');
+  assert.equal(report.reports[0].domain_id, 'redcube_ai');
+  assert.equal(adoptionDomain.domain_id, 'redcube-ai');
+  assert.equal(adoptionDomain.source_domain_id, 'redcube_ai');
+  assert.equal(adoptionDomain.authority_boundary.can_claim_domain_ready, false);
+});
+
 test('agents readiness aggregates structural gates and production evidence tail without claiming authority', () => {
   const repoDir = buildReadyAgentRepo();
   const readiness = runCli([

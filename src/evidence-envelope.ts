@@ -1,24 +1,8 @@
 import type { JsonRecord } from './runtime-tray-snapshot-types.ts';
+export { canonicalOwnerId } from './owner-id.ts';
+import { canonicalOwnerId } from './owner-id.ts';
 
 type EvidenceEnvelopeStatus = 'open' | 'closed' | 'blocked' | 'superseded';
-
-const CANONICAL_OWNER_ALIASES = new Map([
-  ['mas', 'med-autoscience'],
-  ['medautoscience', 'med-autoscience'],
-  ['med-autoscience', 'med-autoscience'],
-  ['med-auto-science', 'med-autoscience'],
-  ['mag', 'med-autogrant'],
-  ['medautogrant', 'med-autogrant'],
-  ['med-autogrant', 'med-autogrant'],
-  ['med-auto-grant', 'med-autogrant'],
-  ['rca', 'redcube-ai'],
-  ['redcube', 'redcube-ai'],
-  ['redcubeai', 'redcube-ai'],
-  ['redcube-ai', 'redcube-ai'],
-  ['opl', 'one-person-lab'],
-  ['onepersonlab', 'one-person-lab'],
-  ['one-person-lab', 'one-person-lab'],
-]);
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -48,15 +32,6 @@ function numberValue(value: unknown) {
 
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
-}
-
-export function canonicalOwnerId(value: string) {
-  const normalized = value.trim();
-  const key = normalized.toLowerCase().replace(/[\s_]+/g, '-');
-  const compact = key.replace(/-/g, '');
-  return CANONICAL_OWNER_ALIASES.get(key)
-    ?? CANONICAL_OWNER_ALIASES.get(compact)
-    ?? normalized;
 }
 
 function sourceAlias(canonical: string, source: string) {

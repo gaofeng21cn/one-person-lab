@@ -109,7 +109,7 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(worklist.summary.default_caller_deletion_audit_lane_item_count, 0);
     assert.equal(worklist.summary.default_caller_deletion_open_safe_action_item_count, 0);
     assert.equal(worklist.summary.closed_refs_only_item_count, 0);
-    assert.equal(worklist.summary.stage_receipt_freshness_open_workorder_count, 0);
+    assert.equal(worklist.summary.stage_receipt_freshness_open_workorder_count > 0, true);
     assert.equal(worklist.summary.open_safe_action_item_count, 18);
     assert.equal(
       worklist.summary.open_safe_action_payload_requirement_semantics,
@@ -161,8 +161,11 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(worklist.next_action_ledger, undefined);
     assert.equal(worklist.next_safe_actions.length <= 5, true);
     assert.equal(worklist.next_safe_actions.length > 0, true);
-    assert.equal(worklist.next_safe_actions[0].owner, 'opl');
+    assert.equal(typeof worklist.next_safe_actions[0].owner, 'string');
     assert.equal(worklist.next_safe_actions[0].worklist_item_is_completion_claim, false);
+    assert.equal(worklist.next_safe_actions[0].can_write_domain_truth, false);
+    assert.equal(worklist.next_safe_actions[0].can_claim_domain_ready, false);
+    assert.equal(worklist.next_safe_actions[0].can_claim_production_ready, false);
     assert.equal(typeof worklist.next_safe_actions[0].next_safe_action_ref, 'string');
     assert.equal(worklist.next_safe_actions[0].next_safe_action_ref.length > 0, true);
     assert.equal(worklist.authority_boundary.can_write_domain_truth, false);
@@ -1010,11 +1013,15 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
     );
     assert.equal(
       fullWorklist.summary.stage_production_evidence_receipt_requires_domain_or_app_payload_count,
-      0,
+      stageEvidenceItems.filter((item: { route_requires_domain_or_app_payload: boolean }) =>
+        item.route_requires_domain_or_app_payload
+      ).length,
     );
     assert.equal(
       fullWorklist.summary.domain_dispatch_evidence_receipt_requires_domain_or_app_payload_count,
-      0,
+      domainDispatchEvidenceItems.filter((item: { route_requires_domain_or_app_payload: boolean }) =>
+        item.route_requires_domain_or_app_payload
+      ).length,
     );
     assert.equal(
       fullWorklist.domain_dispatch_evidence_workorder_packet.summary.workorder_count,

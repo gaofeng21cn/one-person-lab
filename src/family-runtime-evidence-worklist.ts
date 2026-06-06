@@ -601,10 +601,11 @@ function domainDispatchReceiptWorklistItems(drilldown: JsonRecord) {
 function worklistCounts(
   worklistItems: JsonRecord[],
   openItems: JsonRecord[],
+  rawOpenItems: JsonRecord[],
   closedItems: JsonRecord[],
   nextActionLedger: ReturnType<typeof buildProductionTailNextActionLedger>,
 ) {
-  const stageReceiptFreshnessOpenWorkorderCount = openItems.filter((item) =>
+  const stageReceiptFreshnessOpenWorkorderCount = rawOpenItems.filter((item) =>
     item.claim_scope === 'stage_production_evidence_receipt'
   ).length;
   const openSafeActionPayloadRequiredItemCount = openItems.filter((item) =>
@@ -647,7 +648,7 @@ function worklistCounts(
       item.claim_scope === 'stage_production_evidence_receipt'
     ).length,
     stage_production_evidence_receipt_requires_domain_or_app_payload_count:
-      openItems.filter((item) =>
+      rawOpenItems.filter((item) =>
         item.claim_scope === 'stage_production_evidence_receipt'
         && item.route_requires_domain_or_app_payload === true
       ).length,
@@ -662,7 +663,7 @@ function worklistCounts(
       item.claim_scope === 'domain_dispatch_evidence_receipt'
     ).length,
     domain_dispatch_evidence_receipt_requires_domain_or_app_payload_count:
-      openItems.filter((item) =>
+      rawOpenItems.filter((item) =>
         item.claim_scope === 'domain_dispatch_evidence_receipt'
         && item.route_requires_domain_or_app_payload === true
       ).length,
@@ -833,17 +834,20 @@ export async function runFamilyRuntimeEvidenceWorklist(
         readOnlyWorklistItem(route, routes.length + diagnosticRoutes.length + index, drilldown)
       ),
   ].map(normalizeWorklistOwnerFields);
+  const rawOpenItems = worklistItems.filter((item) =>
+    stringValue(item.status) === OPEN_WORKLIST_STATUS
+  );
   const openItems = worklistItems.filter(itemEligibleForOrdinaryOpenAttention);
   const closedItems = worklistItems.filter((item) =>
     item.status !== OPEN_WORKLIST_STATUS
   );
   const closedRefsOnlyItems = closedItems.filter(itemClosedByRefsOnlyReceipt);
-  const openActionIds = new Set(openItems
+  const rawOpenActionIds = new Set(rawOpenItems
     .map((item) => stringValue(item.action_id))
     .filter((actionId): actionId is string => Boolean(actionId)));
-  const openOperatorRoutes = operatorRoutes.filter((route) => {
+  const rawOpenOperatorRoutes = operatorRoutes.filter((route) => {
     const actionId = stringValue(route.action_id);
-    return !actionId || openActionIds.has(actionId);
+    return !actionId || rawOpenActionIds.has(actionId);
   });
   const nextActionLedger = buildProductionTailNextActionLedger({
     surfaceKind: 'opl_family_runtime_evidence_worklist_next_action_ledger',
@@ -859,7 +863,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
     sourceRef: '/family_runtime_evidence_worklist/worklist_items',
   });
   const evidenceRequirementLedger = buildEvidenceRequirementLedger(worklistItems);
-  const stageEvidenceWorkorderPacket = buildStageEvidenceWorkorderPacket(openOperatorRoutes);
+  const stageEvidenceWorkorderPacket = buildStageEvidenceWorkorderPacket(rawOpenOperatorRoutes);
   const stageEvidenceWorkorderSummary = record(stageEvidenceWorkorderPacket.summary);
   const stageEvidenceWorkorderAttentionItems =
     compactStageEvidenceWorkorderAttentionItems(stageEvidenceWorkorderPacket);
@@ -872,7 +876,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
   const stageReplayMissingReceiptWorkorderAttentionSummary =
     compactStageReplayMissingReceiptWorkorderAttentionSummary(stageReplayMissingReceiptWorkorderPacket);
   const domainDispatchEvidenceWorkorderPacket =
-    buildDomainDispatchEvidenceWorkorderPacket(openOperatorRoutes);
+    buildDomainDispatchEvidenceWorkorderPacket(rawOpenOperatorRoutes);
   const domainDispatchEvidenceWorkorderSummary =
     record(domainDispatchEvidenceWorkorderPacket.summary);
   const domainDispatchEvidenceWorkorderGroupAttentionItems =
@@ -896,7 +900,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
     evidenceEnvelopeSummary: record(compactEvidenceEnvelope.summary),
   });
   const counts = {
-    ...worklistCounts(worklistItems, openItems, closedItems, nextActionLedger),
+    ...worklistCounts(worklistItems, openItems, rawOpenItems, closedItems, nextActionLedger),
     closed_refs_only_item_count: closedRefsOnlyItems.length,
     ...zeroOpenCompletionGuardSummaryFields(zeroOpenWorklistGuard),
     stage_source_scope_missing_workorder_count:
@@ -927,9 +931,6 @@ export async function runFamilyRuntimeEvidenceWorklist(
       domainOwnerPayloadSummaryNamingHygieneBlockerCount,
   };
   const detailLevel = input.detailLevel ?? 'summary';
-  const stageReceiptFreshnessOpenWorkorderCount = openItems.filter((item) =>
-    item.claim_scope === 'stage_production_evidence_receipt'
-  ).length;
   const auditWorklistNextSafeActions = nextSafeActions(openItems);
   const {
     currentOwnerDeltaReadModel,
@@ -980,7 +981,8 @@ export async function runFamilyRuntimeEvidenceWorklist(
       counts.open_safe_action_payload_free_item_count,
     open_safe_action_payload_requirement_semantics:
       counts.open_safe_action_payload_requirement_semantics,
-    stage_receipt_freshness_open_workorder_count: stageReceiptFreshnessOpenWorkorderCount,
+    stage_receipt_freshness_open_workorder_count:
+      counts.stage_receipt_freshness_open_workorder_count,
     stage_evidence_workorder_packet_summary: stageEvidenceWorkorderPacket.summary,
     stage_evidence_workorder_attention_items: stageEvidenceWorkorderAttentionItems,
     stage_replay_missing_receipt_workorder_packet_summary:

@@ -39,7 +39,7 @@
       "const": "default_owner_delta_root_audit_tail_passive"
     },
     "default_planning_root": {
-      "const": "current_owner_delta_or_provider_human_hard_gate"
+      "const": "current_owner_delta"
     },
     "audit_tail_policy": {
       "const": "raw_worklist_raw_evidence_replay_typed_blocker_group_private_residue_are_passive_until_folded"

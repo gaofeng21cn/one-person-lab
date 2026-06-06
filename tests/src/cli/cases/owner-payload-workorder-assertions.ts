@@ -215,7 +215,7 @@ export function assertCurrentOwnerDeltaToplineNextAction(surface: JsonRecord) {
     assert.equal(
       boundary.default_planning_root,
       ownerAnswerMissing
-        ? 'current_owner_delta_or_provider_human_hard_gate'
+        ? 'current_owner_delta'
         : 'stage_run_execution_authorization_or_closeout_binding',
     );
     assert.equal(boundary.route_requires_opl_runtime_refs, !ownerAnswerMissing);
@@ -379,7 +379,7 @@ export function assertCurrentOwnerDeltaProjection(
   );
   assert.equal(
     currentOwnerDelta.default_planning_root,
-    'current_owner_delta_or_provider_human_hard_gate',
+    'current_owner_delta',
   );
   assert.equal(
     currentOwnerDelta.audit_tail_policy,
