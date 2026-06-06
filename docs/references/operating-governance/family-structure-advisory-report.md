@@ -27,6 +27,15 @@ Fresh command:
 node ./scripts/family-structure-advisory.mjs --format markdown
 ```
 
+Fresh six-repo summary after this cleanup tranche:
+
+- `one-person-lab`: `needs_design_pass=10`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
+- `med-autoscience`: `needs_design_pass=24`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
+- `med-autogrant`: `needs_design_pass=1`, `mechanical_residue=0`, `public_surface_risk=5`, `missing_verify_entry=false`
+- `redcube-ai`: `needs_design_pass=10`, `mechanical_residue=0`, `public_surface_risk=9`, `missing_verify_entry=false`
+- `opl-meta-agent`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=1`, `missing_verify_entry=false`
+- `one-person-lab-app`: `needs_design_pass=4`, `mechanical_residue=0`, `public_surface_risk=3`, `missing_verify_entry=false`
+
 Current scope:
 
 - Included: `one-person-lab`、`med-autoscience`、`med-autogrant`、`redcube-ai`、`opl-meta-agent`、`one-person-lab-app`
@@ -49,11 +58,11 @@ Current repo disposition:
 | Repo | Current structure finding | Action |
 | --- | --- | --- |
 | `one-person-lab` | No mechanical residue. Remaining signals are long framework/App drilldown/test surfaces and large public contracts. | Keep advisory line-budget plus explicit strict ratchet; split only along owner/runtime/App read-model boundaries in scheduled structure maintenance. |
-| `med-autoscience` | Many nested `_parts/_parts` directories and near-budget files, but root currently has local dirty work. | Read-only classification only in this tranche; next writable pass should rename or regroup natural packages such as action execution, stage review, runtime workbench projection, and domain-dispatch evidence payload export. |
+| `med-autoscience` | Mechanical nested `_parts` residue is now cleared in the fresh advisory scan. Remaining signals are near/over-budget owner-route, runtime-health, study-progress, action-execution, runtime-workbench, MCP projection, publication-gate, and public contract surfaces. | Landed natural package renames for progress portal stage review / runtime workbench / study workbench sections, owner-route domain-dispatch evidence export, progress-first monitoring, and status projection shell. Keep the remaining 24 `needs_design_pass` entries as semantic design-pass input only. |
 | `med-autogrant` | One clear mechanical nested package: `product_entry_parts/manifest_builder_parts/*`. | Landed in an isolated MAG worktree as `product_entry_parts/manifest_shell/*`, with contracts/docs/source refs updated. Also moved Sentrux quality sidecar output out of repo root so scaffold validation and structure diagnostics do not conflict. |
 | `redcube-ai` | No `*_parts/_parts` mechanical residue. The main issue is a large `ppt-deck-runtime-family-parts` bucket and near-budget native PPT files. | Landed targeted native PPT preflight split: the stable `native-ppt-plan-preflight.ts` entry is now thin, with quality role, feedback fixes, retry contract, attempt artifact, and shared schema helpers under `native-ppt-plan-preflight/`. Do not rename the whole `*-parts` directory mechanically. |
-| `opl-meta-agent` | No mechanical residue; oversized tests and large `stage_control_plane.json`. | Split tests by contract family / external-suite behavior; treat contract size as generated/public-surface risk, not source mechanical split. |
-| `one-person-lab-app` | Not over-split; had no repo-native `scripts/verify.sh` and has very large release/validator scripts. | Landed repo-native `scripts/verify.sh` plus `npm run verify` with smoke, structure, active-shell, release-boundary, candidate-shell, and full lanes. Next split release boundary / active-shell validator by release contract, shell candidate, package build, and user-path evidence. |
+| `opl-meta-agent` | No mechanical residue; oversized tests are now split; remaining signal is large `stage_control_plane.json`. | Split tests by contract family / external-suite behavior and updated contract/docs evidence refs. Treat contract size as generated/public-surface risk, not source mechanical split. |
+| `one-person-lab-app` | No mechanical residue and repo-native verify now exists. Remaining signals are large App release / active-shell / package-build tests and scripts plus public contracts. | Landed repo-native `scripts/verify.sh`, `npm run verify`, and `validate-shell-candidates` thin entry with natural validator modules. Next split release boundary / active-shell validator / package build / release readiness by App product and release-contract boundaries. |
 
 Sentrux disposition:
 
@@ -68,11 +77,12 @@ Sentrux disposition:
 
 Residual queue:
 
-- MAS writable cleanup is deferred because `/Users/gaofeng/workspace/med-autoscience` has a local modification in `tests/test_domain_owner_action_dispatch_cases/publication_gate_dispatch.py`; do not overwrite it.
-- RCA targeted native PPT preflight split has landed; remaining RCA structure work should focus on later semantic splits in `ppt-deck-runtime-family-parts` only when a concrete owner boundary appears.
-- App repo-native verify/structure entry has landed; next App tranche should split `scripts/validate-active-shell.ts`, `tests/release/app-release-boundary.test.ts`, `scripts/build-full-first-install-package.ts`, and `scripts/validate-shell-candidates.ts` along App product, release contract, package build, and shell-candidate boundaries.
-- OMA should split oversized tests before adopting new structure tools: `tests/contracts.test.ts` by contract family and `tests/external-suite-self-evolution.test.ts` by external-suite behavior. Treat `contracts/stage_control_plane.json` as generated/public-surface risk unless the generator gains modular source/bundle support.
+- MAS mechanical residue is closed in the fresh scan. Remaining MAS design-pass entries are natural owner-boundary candidates such as `owner_route_reconcile`, `runtime_health_kernel`, `progress_first_monitoring`, `domain_owner_action_dispatch_parts/action_execution`, `runtime_workbench_projection`, `mcp_server_parts/study_progress_projection`, and `publication_gate_parts/discovery_and_drift`. Do not split these by line count alone.
+- RCA targeted native PPT preflight split has landed; remaining RCA structure work should focus on later semantic splits in `ppt-deck-runtime-family-parts`, native Python PPT helpers, and large tests only when a concrete owner boundary appears.
+- App repo-native verify/structure entry and shell-candidate validator split have landed; next App tranche should split `scripts/validate-active-shell.ts`, `tests/release/app-release-boundary.test.ts`, `scripts/build-full-first-install-package.ts`, and `tests/release/release-readiness-summary.test.ts` along App product, release contract, package build, and user-path evidence boundaries.
+- OMA oversized tests are split. `contracts/stage_control_plane.json` remains a generated/public-surface risk unless the generator gains modular source/bundle support.
 - MAG Sentrux rule failures are pre-existing: `sentrux gate .` reports god-file baseline drift on main and worktree; `sentrux check .` reports generated contract/schema `max_file_lines` and a layer-direction violation involving `hosted_contract_bundle.py -> runtime_surfaces.py`. Treat this as a Sentrux rules cleanup follow-up, not as a blocker for the manifest shell rename.
+- MAS focused structural verification surfaced one unrelated existing behavior failure: `tests/study_progress_cases/current_owner_redrive_projection.py::test_redrive_projection_ignores_handoff_older_than_current_controller_truth` still fails on the pre-cleanup MAS worktree and current main with missing `next_system_action`. It is not a structure-rename regression, but it should be handled in a separate owner-route/currentness behavior pass.
 
 ## Scope
 
