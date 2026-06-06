@@ -35,6 +35,8 @@ const DEFAULT_REPOS = [
   ['redcube-ai', path.join(workspaceRoot, 'redcube-ai')],
   ['opl-meta-agent', path.join(workspaceRoot, 'opl-meta-agent')],
   ['one-person-lab-app', path.join(workspaceRoot, 'one-person-lab-app')],
+  ['opl-doc', path.join(workspaceRoot, 'opl-doc')],
+  ['opl-flow', path.join(workspaceRoot, 'opl-flow')],
 ];
 
 const args = parseArgs(process.argv.slice(2));

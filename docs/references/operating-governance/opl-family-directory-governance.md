@@ -10,6 +10,17 @@ Currentness policy: 本文冻结 OPL family 仓库目录归属和 hygiene baseli
 
 这份规则适用于 OPL family 的 shared workbench 仓和 domain agent 仓。它描述目录归属，不改变 domain repo 当前 source tree，也不把 domain runtime truth 搬到 OPL。
 
+## Family Morphology
+
+OPL family 代码组织的目标不是把所有仓库硬套成同一个目录模板，而是让同类职责使用同一种可识别形态：
+
+- `one-person-lab` 是 framework / shared governance owner。它可以持有 `src/`、`contracts/`、`docs/`、`scripts/`、`tests/`、`python/`、`native/` 等 shared runtime / installer / CLI / governance surface，但入口应保持薄，复杂逻辑按 framework runtime、provider、App read-model、Agent Lab、install 或 generated/source boundary 拆分。
+- `med-autoscience`、`med-autogrant`、`redcube-ai`、`opl-meta-agent` 是标准 / Foundry Agent 形态。它们应一眼能看出 `agent/`、`contracts/`、`runtime/`、`src` 或 `packages`、`docs/`、`scripts/verify.sh` 的职责分工；domain truth、quality/export verdict、artifact authority 和 owner receipt 留在 domain owner，通用 stage attempt、queue、projection、index 和 App/operator shell 上收给 OPL。
+- `one-person-lab-app` 是 App product / release / shell-candidate owner。它不需要伪装成 domain agent，但应把 product contracts、release scripts、active-shell validator、package builder、tests 和 user-path evidence 分开；外部 shell carrier 不反向定义 App product truth。
+- `opl-doc` 与 `opl-flow` 是 plugin / workflow support repos。它们可以比标准 agent repo 更轻，但应通过 `.codex-plugin`、`skills/`、`scripts/`、`tests/`、`docs/` 或 repo-native profile 指针表达 source truth；当它们承担 active maintenance 或 validator 职责时，应提供薄 `scripts/verify.sh`。
+
+Family morphology 审计时先判断 repo 类型，再判断是否自然。`parts/`、`*_parts`、`cases/`、`modules/` 这些目录名本身不违规；只要它们命名真实 owner 子域、调用方不需要按编号或文件顺序重新拼回单个巨型文件，就可视为语义拆分。`chunk_*`、`part_001`、`split_002`、嵌套 `*_parts/*_parts`、巨型 `shared.*` 或单个 script/test 同时承担多个 owner boundary 时，才进入不自然拆分或结构 design-pass。
+
 ## 共享目录规则
 
 - 源码、产品实现、脚本和测试留在对应仓库的 source tree 中，由该仓维护。

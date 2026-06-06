@@ -6,17 +6,15 @@ State: `active_support_dated_snapshot`
 Machine boundary: 本文是人读 advisory reference。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests、真实 evidence，以及 `scripts/family-structure-advisory.mjs` 的 fresh 输出。
 
 owner: OPL shared governance
-purpose: advisory structure scan across OPL-family tracked files
-state: OPL-owned current readout plus dated non-OPL refresh rule, not a fail-closed gate
+purpose: advisory structure scan across OPL-related tracked files
+state: OPL-owned current readout, not a fail-closed gate
 machine boundary: generated from `npm run --silent family:structure-advisory -- --format=json|markdown` or explicit `--repo name=/path`
 
 ## Reading Rules
 
 - 本报告是 tracked advisory snapshot，不是结构阻断门。复用精确文件清单、line count、`needs_design_pass`、`mechanical_residue` 或 `public_surface_risk` 前必须重跑 fresh advisory command。
-- 2026-05-30 起，`family:structure-advisory` 默认 scope 已收口到当前 OPL series 六仓：`one-person-lab`、`med-autoscience`、`med-autogrant`、`redcube-ai`、`opl-meta-agent`、`one-person-lab-app`。`med-deepscientist` 不再是默认 OPL series scan target；MDS 只按 MAS archive/reference/fixture 语境读取。
-- `opl-aion-shell` 是外部 fork / App shell implementation carrier，不进入本报告的 OPL-owned structure cleanup scope；它的 upstream intake 和本地 overlay 边界继续按 App/shell 文档读取。
-- 本 tracked 文档的详细 readout 只刷新本 tranche 持有的 `one-person-lab` section。非 OPL repo 的精确 findings 需要在对应 repo clean、snapshot-safe、无活跃 owner lane 时用 explicit `--repo` 或 default six-repo command 重新生成，再折回各 repo owner doc 或新的 process ledger。
-- 若 sibling repo dirty、ahead、最近一小时有写入、存在活跃进程、远端/PR owner 信号，命令输出只能作为本地 read-only preflight，不得把其精确 line count 或 findings 提交到 OPL tracked current docs。
+- 2026-06-06 起，`family:structure-advisory` 默认 scope 覆盖当前 OPL-related 八仓：`one-person-lab`、`med-autoscience`、`med-autogrant`、`redcube-ai`、`opl-meta-agent`、`one-person-lab-app`、`opl-doc`、`opl-flow`。`opl-aion-shell` 是外部 fork / App shell implementation carrier，不进入 OPL-owned structure cleanup scope；`med-deepscientist` 只按 MAS archive/reference/fixture 语境读取。
+- 若 sibling repo dirty、ahead、最近一小时有写入、存在活跃进程、远端/PR owner 信号，命令输出只能作为本地 read-only preflight；精确 line count 或 findings 写入对应 repo owner doc 前必须由该 repo owner lane 刷新并验证。
 - Advisory findings 只能进入 design-pass、contract-surface review 或 cleanup candidate queue；不能直接变成 fail-closed backlog、机械拆分任务、domain ready 判断或 production ready 判断。
 
 ## 2026-06-06 Current Finding
@@ -24,21 +22,24 @@ machine boundary: generated from `npm run --silent family:structure-advisory -- 
 Fresh command:
 
 ```bash
-node ./scripts/family-structure-advisory.mjs --format markdown
+node ./scripts/family-structure-advisory.mjs --format=json
 ```
 
-Fresh six-repo summary after this cleanup tranche:
+Fresh eight-repo summary from `2026-06-06T07:04:25Z`:
 
-- `one-person-lab`: `needs_design_pass=10`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
-- `med-autoscience`: `needs_design_pass=24`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
+- `one-person-lab`: `needs_design_pass=16`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
+- `med-autoscience`: `needs_design_pass=25`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
 - `med-autogrant`: `needs_design_pass=1`, `mechanical_residue=0`, `public_surface_risk=5`, `missing_verify_entry=false`
 - `redcube-ai`: `needs_design_pass=10`, `mechanical_residue=0`, `public_surface_risk=9`, `missing_verify_entry=false`
 - `opl-meta-agent`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=1`, `missing_verify_entry=false`
-- `one-person-lab-app`: `needs_design_pass=4`, `mechanical_residue=0`, `public_surface_risk=3`, `missing_verify_entry=false`
+- `one-person-lab-app`: `needs_design_pass=5`, `mechanical_residue=0`, `public_surface_risk=3`, `missing_verify_entry=false`
+- `opl-doc`: `needs_design_pass=1`, `mechanical_residue=0`, `public_surface_risk=0`, `missing_verify_entry=false`
+- `opl-flow`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=0`, `missing_verify_entry=true`
 
 Current scope:
 
-- Included: `one-person-lab`、`med-autoscience`、`med-autogrant`、`redcube-ai`、`opl-meta-agent`、`one-person-lab-app`
+- Included standard / Foundry Agent repos: `med-autoscience`、`med-autogrant`、`redcube-ai`、`opl-meta-agent`
+- Included framework / product / support repos: `one-person-lab`、`one-person-lab-app`、`opl-doc`、`opl-flow`
 - Excluded: `opl-aion-shell`
 
 External calibration:
@@ -49,102 +50,45 @@ External calibration:
 
 Current conclusion:
 
+- Fresh scan shows no obvious mechanical residue in the eight-repo scope. That means no tracked `chunk_*` / `part_001` / nested `*_parts/*_parts` class hard split remains in the scanner's current pattern set; it does not mean all structure is ideal.
 - Line budget remains useful as a maintainability fitness function, but it is advisory for ordinary development and blocking only in explicit strict maintenance. The strict maintenance unit is `new over-limit growth`, `baseline growth`, `stale baseline`, `retired baseline`, or `missing reviewed owner/reason`; the repair action must be a natural semantic split, owner-boundary move, generated/source separation, or approved reviewed baseline. Do not split a long file into physical shards that must be mentally reassembled.
 - `parts/` is acceptable when it names a real owner subdomain. `*_parts/*_parts` or nested `parts` stacks are review signals; they become cleanup tasks only after reading the caller and confirming the directory name is merely a mechanical consequence of the budget.
 - Sentrux is still valuable where it has explicit repo rules or produces trend diagnostics. Baseline-only Sentrux is advisory; explicit `.sentrux/rules.toml` should also stay advisory in ordinary development and become blocking only in explicit strict maintenance after the rules reflect current repo truth and avoid generated contracts / schema surfaces that are intentionally large.
 
-Current repo disposition:
+Family morphology conclusion:
+
+- Standard / Foundry Agent repos should visibly share the same repo-source shape: `agent/` holds stage prompt / skill / tool affordance / knowledge / quality-gate refs; `contracts/` holds machine-readable domain descriptors and schemas; `runtime/` holds sidecar / projection / lifecycle adapters as source only; `src` or `packages` holds domain implementation and authority functions; `docs/` holds owner truth and policy; `scripts/verify.sh` is the repo-native verification entry.
+- Support repos can be lighter but should still be recognizable: `one-person-lab` is the framework / shared governance owner; `one-person-lab-app` is product / release / shell-candidate owner; `opl-doc` and `opl-flow` are plugin / workflow support repos with `.codex-plugin` + `skills/` where applicable, plus `scripts/verify.sh` when they are more than a passive reference pack.
+- Current inconsistent family signals are not mostly mechanical splits. They are near-budget semantic modules, large tests, generated public contracts, and support repos whose verification / source morphology is thinner than the standard agent repos.
+
+## Repo Disposition
 
 | Repo | Current structure finding | Action |
 | --- | --- | --- |
-| `one-person-lab` | No mechanical residue. Remaining signals are long framework/App drilldown/test surfaces and large public contracts. | Keep advisory line-budget plus explicit strict ratchet; split only along owner/runtime/App read-model boundaries in scheduled structure maintenance. |
-| `med-autoscience` | Mechanical nested `_parts` residue is now cleared in the fresh advisory scan. Remaining signals are near/over-budget owner-route, runtime-health, study-progress, action-execution, runtime-workbench, MCP projection, publication-gate, and public contract surfaces. | Landed natural package renames for progress portal stage review / runtime workbench / study workbench sections, owner-route domain-dispatch evidence export, progress-first monitoring, and status projection shell. Keep the remaining 24 `needs_design_pass` entries as semantic design-pass input only. |
-| `med-autogrant` | One clear mechanical nested package: `product_entry_parts/manifest_builder_parts/*`. | Landed in an isolated MAG worktree as `product_entry_parts/manifest_shell/*`, with contracts/docs/source refs updated. Also moved Sentrux quality sidecar output out of repo root so scaffold validation and structure diagnostics do not conflict. |
-| `redcube-ai` | No `*_parts/_parts` mechanical residue. The main issue is a large `ppt-deck-runtime-family-parts` bucket and near-budget native PPT files. | Landed targeted native PPT preflight split: the stable `native-ppt-plan-preflight.ts` entry is now thin, with quality role, feedback fixes, retry contract, attempt artifact, and shared schema helpers under `native-ppt-plan-preflight/`. Do not rename the whole `*-parts` directory mechanically. |
-| `opl-meta-agent` | No mechanical residue; oversized tests are now split; remaining signal is large `stage_control_plane.json`. | Split tests by contract family / external-suite behavior and updated contract/docs evidence refs. Treat contract size as generated/public-surface risk, not source mechanical split. |
-| `one-person-lab-app` | No mechanical residue and repo-native verify now exists. Remaining signals are large App release / active-shell / package-build tests and scripts plus public contracts. | Landed repo-native `scripts/verify.sh`, `npm run verify`, and `validate-shell-candidates` thin entry with natural validator modules. Next split release boundary / active-shell validator / package build / release readiness by App product and release-contract boundaries. |
+| `one-person-lab` | No mechanical residue. Remaining signals are long framework/App drilldown, Temporal/provider tests, hosted-attempt tests, `family-runtime` files, and large public contracts. | Keep advisory line-budget plus explicit strict ratchet; split only along framework runtime, App read-model, provider, Agent Lab, and generated/source boundaries. Current checkout has unrelated local dirty hosted-attempt changes, so exact counts are read-only audit evidence until that lane is absorbed or discarded. |
+| `med-autoscience` | No scanner-detected mechanical residue. Remaining signals cluster around owner-route reconcile, runtime health, study-progress, domain action dispatch, publication gate, and public contracts. | Do not split by line count alone. Next natural tranche is owner-route/currentness and runtime-health boundary cleanup after current MAS owner-route lane stabilizes; avoid touching dirty MAS files from concurrent work. |
+| `med-autogrant` | No scanner-detected mechanical residue. Only source signal is `product_entry_parts/consumer_thinning_audit.py`; public-surface risk is dominated by generated schemas/contracts. | Keep source split advisory. Generated schema/contract size should be addressed by generator modularity or bundle/source separation, not physical JSON shards. |
+| `redcube-ai` | No scanner-detected mechanical residue. Main source signals are PPT/native helpers, PPT runtime family parts, domain-action adapter parts, large tests, and large runtime-program contracts. | Later semantic split should follow visual delivery boundaries: native layout, native quality, image pages, operator evidence refs, and mock builder responsibilities. Avoid renaming the whole `*-parts` bucket merely for aesthetics. |
+| `opl-meta-agent` | No source design-pass entries. Remaining signal is `contracts/stage_control_plane.json` as a large public surface. | Treat as generated/public-surface risk. Do not split OMA source unless new code growth appears; improve bundle modularity only when generator/source ownership is clear. |
+| `one-person-lab-app` | No mechanical residue, but very large release/user-path tests and scripts remain: release boundary, active-shell validator, Full first-install package build, release notes, readiness summary. | Next App tranche should split by product release boundary, active-shell validator modules, package builder phases, and user-path evidence. This is the clearest remaining non-natural source shape in the support repos. |
+| `opl-doc` | No mechanical residue. `scripts/opl_doc_doctor.py` is over 1000 lines and currently acts as a broad doctor/validator monolith. | Split only after reading command ownership: likely natural modules are profile discovery, doc invariant checks, plugin sync validation, and report rendering. |
+| `opl-flow` | No design-pass entries and no mechanical residue. Missing `scripts/verify.sh` makes it look less family-native than peer plugin repos. | Add a thin repo-native verify entry when the repo moves beyond passive plugin/profile support; until then missing verify is a morphology/advisory signal, not a blocker. |
 
-Sentrux disposition:
-
-| Repo | Current Sentrux state | Keep? | Policy |
-| --- | --- | --- | --- |
-| `one-person-lab` | Baseline plus OPL quality-details support; baseline drift and explicit rules are advisory by default, with strict maintenance entrypoints retained. | Yes. | Keep as structure sidecar; line-budget remains deterministic maintenance signal, not an ordinary-development blocker. |
-| `med-autoscience` | Baseline present; high churn and many nested parts. | Yes, advisory until rules match owner boundaries. | Use to rank cleanup; do not block broad paper/runtime work on stale baseline-only metrics or line-count findings. |
-| `med-autogrant` | Baseline and `.sentrux/rules.toml` present, but fresh `sentrux gate/check` on main already reports stale baseline/rules issues unrelated to this rename. | Yes, but repair rules. | Keep sidecar advisory by default; update rules to ignore generated large contracts/schemas and recalibrate max-depth/layer boundary after dependency cleanup before strict use. |
-| `redcube-ai` | Baseline-only and CI advisory. | Yes, advisory. | Add `.sentrux/rules.toml` only after PPT/native boundaries are stable. |
-| `opl-meta-agent` | No Sentrux. | Optional. | Not urgent; line budget/test split gives clearer signal today. |
-| `one-person-lab-app` | No Sentrux. | Optional after deterministic verify matures. | Repo-native verify entry has landed; keep any future line-budget / structure signal advisory by default. Sentrux before calibrating generated contracts, release scripts, and shell carrier paths would still be noisy. |
-
-Residual queue:
-
-- MAS mechanical residue is closed in the fresh scan. Remaining MAS design-pass entries are natural owner-boundary candidates such as `owner_route_reconcile`, `runtime_health_kernel`, `progress_first_monitoring`, `domain_owner_action_dispatch_parts/action_execution`, `runtime_workbench_projection`, `mcp_server_parts/study_progress_projection`, and `publication_gate_parts/discovery_and_drift`. Do not split these by line count alone.
-- RCA targeted native PPT preflight split has landed; remaining RCA structure work should focus on later semantic splits in `ppt-deck-runtime-family-parts`, native Python PPT helpers, and large tests only when a concrete owner boundary appears.
-- App repo-native verify/structure entry and shell-candidate validator split have landed; next App tranche should split `scripts/validate-active-shell.ts`, `tests/release/app-release-boundary.test.ts`, `scripts/build-full-first-install-package.ts`, and `tests/release/release-readiness-summary.test.ts` along App product, release contract, package build, and user-path evidence boundaries.
-- OMA oversized tests are split. `contracts/stage_control_plane.json` remains a generated/public-surface risk unless the generator gains modular source/bundle support.
-- MAG Sentrux rule failures are pre-existing: `sentrux gate .` reports god-file baseline drift on main and worktree; `sentrux check .` reports generated contract/schema `max_file_lines` and a layer-direction violation involving `hosted_contract_bundle.py -> runtime_surfaces.py`. Treat this as a Sentrux rules cleanup follow-up, not as a blocker for the manifest shell rename.
-- MAS focused structural verification surfaced one unrelated existing behavior failure: `tests/study_progress_cases/current_owner_redrive_projection.py::test_redrive_projection_ignores_handoff_older_than_current_controller_truth` still fails on the pre-cleanup MAS worktree and current main with missing `next_system_action`. It is not a structure-rename regression, but it should be handled in a separate owner-route/currentness behavior pass.
-
-## Scope
-
-Current command default target set:
-
-- `one-person-lab`
-- `med-autoscience`
-- `med-autogrant`
-- `redcube-ai`
-- `opl-meta-agent`
-- `one-person-lab-app`
-
-The guard classifies tracked files that look like semantic parts, mechanical split residue, large shared buckets, near-budget source files, or large public machine-readable surfaces. It does not force semantic holdouts through mechanical splitting.
-
-## Current OPL Readout
-
-Fresh explicit command:
-
-```bash
-npm run --silent family:structure-advisory -- --repo one-person-lab=/Users/gaofeng/workspace/one-person-lab --format=json
-```
-
-Fresh readout at `2026-05-30T01:20:00Z`:
-
-- `advisory_only`: `true`
-- `tracked_files`: `1043`
-- `code_files_scanned`: `763`
-- `missing_verify_entry`: `false`
-- `needs_design_pass`: `13`
-- `mechanical_residue`: `0`
-- `public_surface_risk`: `4`
+## Detailed Readout
 
 ### one-person-lab
-
-safe_to_keep:
-
-- `src/runtime-tray-app-operator-drilldown-parts/*` remains a semantic split below the advisory part budget for the smaller part files; larger tail files below are design-pass inputs, not mechanical split instructions.
-- `tests/src/cli/helpers-parts/*` remains a semantic test helper split below the advisory part budget.
-- Small shared surfaces such as `src/management/shared.ts`, `src/system-installation/shared.ts`, and `src/opl-runtime-paths/shared.ts` stay reviewable.
 
 needs_design_pass:
 
 - `src/runtime-tray-app-operator-drilldown.ts`
-- `tests/src/agent-lab.test.ts`
-- `src/standard-domain-agent-scaffold.ts`
-- `tests/src/cli/cases/runtime-app-operator-drilldown.test.ts`
-- `tests/src/cli/cases/family-runtime.test.ts`
-- `src/family-runtime-stage-attempts.ts`
+- `tests/src/cli/cases/app-state.test.ts`
 - `tests/src/family-runtime-codex-stage-runner.test.ts`
-- `tests/src/cli/cases/domain-pack-compiler.test.ts`
-- `src/app-state.ts`
-- `src/agent-lab-complete.ts`
-- `tests/src/cli/cases/workspace-domain.stages.test.ts`
-- `src/runtime-tray-app-operator-drilldown-parts/app-release-user-path.ts`
-- `src/runtime-tray-app-operator-drilldown-parts/detail-view.ts`
-
-These are design-pass inputs only. Do not mechanically split them unless a real owner boundary, generated/source separation, or reusable OPL primitive falls out of the code path.
-
-resolved_since_last_readout:
-
-- `src/standard-domain-agent-conformance.ts` remains below the blocking line budget after extracting physical morphology policy and active residue scanning into `src/standard-domain-agent-conformance-physical-morphology.ts` and shared helpers into `src/standard-domain-agent-conformance-utils.ts`.
-- Earlier large runtime lifecycle / conformance test files are no longer in the current OPL needs-design-pass top signal; keep them out of active backlog unless a fresh scan reintroduces them.
+- `tests/src/agent-lab.test.ts`
+- `tests/src/cli/cases/runtime-app-operator-drilldown.test.ts`
+- `tests/src/cli/cases/family-runtime-queue-guards.test.ts`
+- `tests/src/cli/cases/family-runtime-stage-attempts-temporal-provider.test.ts`
+- `tests/src/cli/cases/family-runtime-provider-hosted-attempts-cases/mas-default-executor.ts`
+- Additional entries should be read from fresh JSON before implementation.
 
 mechanical_residue:
 
@@ -157,23 +101,118 @@ public_surface_risk:
 - `contracts/family-orchestration/family-stage-proof-bundle.schema.json`
 - `contracts/opl-framework/agent-lab-contract.json`
 
-These are current large machine-readable public surfaces in the OPL-only advisory scan. They are not immediate split targets, but future edits should prefer schema modularity or generated/source separation over growing them further.
+These are current large machine-readable public surfaces in the OPL scan. They are not immediate split targets, but future edits should prefer schema modularity or generated/source separation over growing them further.
 
-## Non-OPL Refresh Status
+### med-autoscience
 
-At this tranche snapshot, non-OPL exact findings were deliberately not folded into this tracked report:
+Top needs_design_pass:
 
-- `med-autoscience`: root `main` was clean but ahead of `origin/main` by 16 commits, with long-running verify / quality processes retained.
-- `med-autogrant`: root was clean/synced but had snapshot-window recent writes from the immediately prior governance tranche.
-- `redcube-ai`: root and multiple worktrees were dirty with active native-PPT / RCA lanes.
-- `opl-meta-agent`: root was clean/synced but had snapshot-window recent docs-portfolio writes from the immediately prior governance tranche.
-- `one-person-lab-app`: root and `codex/full-first-run-stable-gate-20260525` worktree were dirty.
+- `tests/test_domain_owner_action_dispatch_cases/publication_gate_dispatch.py`
+- `src/med_autoscience/controllers/owner_route_reconcile_parts/action_projection.py`
+- `src/med_autoscience/controllers/owner_route_reconcile.py`
+- `src/med_autoscience/controllers/runtime_health_kernel.py`
+- `src/med_autoscience/controllers/domain_owner_action_dispatch_parts/persisted_dispatches.py`
+- `src/med_autoscience/controllers/study_progress_parts/progress_first_monitoring/__init__.py`
+- `src/med_autoscience/controllers/study_progress_parts/publication_runtime.py`
+- `src/med_autoscience/controllers/submission_minimal_parts/shared_base.py`
 
-Each repo needs its own clean or explicitly owner-approved refresh before precise findings are committed into a current doc. Old detailed findings for `med-autogrant`, `med-deepscientist`, and `one-person-lab-app` from the 2026-05-26 snapshot have been retired from this active body; use history/provenance only if the old exact list is needed.
+Interpretation: These are owner-route, currentness, study-progress, dispatch, runtime-health, and publication-gate design-pass inputs. They should be optimized by owner boundary, not by physical chunking.
+
+### med-autogrant
+
+needs_design_pass:
+
+- `src/med_autogrant/product_entry_parts/consumer_thinning_audit.py`
+
+public_surface_risk:
+
+- `schemas/v1/product-entry-manifest.schema.json`
+- `contracts/functional_privatization_audit.json`
+- `contracts/stage_control_plane.json`
+- `contracts/runtime-program/opl-family-contract-adoption.json`
+- `schemas/v1/common.schema.json`
+
+Interpretation: Source shape is mostly clean; large schema/contract files are generated/public surface pressure.
+
+### redcube-ai
+
+Top needs_design_pass:
+
+- `tests/opl-family-contract-adoption.test.ts`
+- `python/redcube_ai/native_helpers/ppt_deck/native_layouts.py`
+- `python/redcube_ai/native_helpers/ppt_deck/native_quality.py`
+- `tests/opl-agent-pack-contracts.test.ts`
+- `tests/rca-retired-surface-guard.test.ts`
+- `packages/redcube-runtime-family-ppt/src/ppt-deck-runtime-family-parts/native-ppt.ts`
+- `packages/redcube-domain-entry/src/actions/domain-action-adapter-parts/visual-pack-compiler-handoff.ts`
+- `packages/redcube-runtime-family-ppt/src/ppt-deck-runtime-family-parts/image-pages.ts`
+
+Interpretation: Remaining split work should follow visual stage / native PPT / generated interface / test-family boundaries.
+
+### opl-meta-agent
+
+needs_design_pass:
+
+- none
+
+public_surface_risk:
+
+- `contracts/stage_control_plane.json`
+
+Interpretation: Current source shape is acceptable. Contract bundle modularity is a generator/source concern, not a source-file split task.
+
+### one-person-lab-app
+
+needs_design_pass:
+
+- `tests/release/app-release-boundary.test.ts`
+- `scripts/validate-active-shell.ts`
+- `scripts/build-full-first-install-package.ts`
+- `scripts/release-notes.ts`
+- `tests/release/release-readiness-summary.test.ts`
+
+Interpretation: This is the strongest remaining natural split queue in the support repos. Split by release boundary, active-shell validation, package building, release note generation, and readiness summary.
+
+### opl-doc
+
+needs_design_pass:
+
+- `scripts/opl_doc_doctor.py`
+
+Interpretation: Split by doctor responsibility only after reading active call sites.
+
+### opl-flow
+
+needs_design_pass:
+
+- none
+
+mechanical_residue:
+
+- none
+
+missing_verify_entry:
+
+- `true`
+
+Interpretation: Add a thin verify entry only when the repo needs family-native active maintenance semantics; otherwise keep it advisory.
+
+## Sentrux Disposition
+
+| Repo | Current Sentrux state | Keep? | Policy |
+| --- | --- | --- | --- |
+| `one-person-lab` | Baseline plus OPL quality-details support; baseline drift and explicit rules are advisory by default, with strict maintenance entrypoints retained. | Yes. | Keep as structure sidecar; line-budget remains deterministic maintenance signal, not an ordinary-development blocker. |
+| `med-autoscience` | Baseline present; high churn and many near-budget owner-route/runtime files. | Yes, advisory until rules match owner boundaries. | Use to rank cleanup; do not block broad paper/runtime work on stale baseline-only metrics or line-count findings. |
+| `med-autogrant` | Baseline and `.sentrux/rules.toml` present; large generated schemas/contracts can make naive line rules noisy. | Yes, but rules need calibration. | Keep sidecar advisory by default; update rules to ignore generated large contracts/schemas before strict use. |
+| `redcube-ai` | Baseline-only / advisory style. | Yes, advisory. | Add or tighten explicit rules only after PPT/native boundaries are stable. |
+| `opl-meta-agent` | No current Sentrux signal in this scan. | Optional. | Not urgent; line budget/test split gives clearer signal today. |
+| `one-person-lab-app` | No current Sentrux signal in this scan. | Optional after deterministic verify matures. | Repo-native verify is more important today; future structure signal should remain advisory by default. |
+| `opl-doc` | No current Sentrux signal in this scan. | Optional. | Use only if doctor/plugin docs validation grows; avoid making docs support work depend on noisy structural gates. |
+| `opl-flow` | No current Sentrux signal in this scan. | Optional. | Not worth adding before a repo-native verify entry and active maintenance surface exist. |
 
 ## Operating Rule
 
-Use default six-repo scope for read-only preflight:
+Use default eight-repo scope for read-only preflight:
 
 ```bash
 npm run --silent family:structure-advisory -- --format=json

@@ -83,6 +83,8 @@ test('default family structure advisory scope follows the current OPL series', (
       'redcube-ai',
       'opl-meta-agent',
       'one-person-lab-app',
+      'opl-doc',
+      'opl-flow',
     ],
   );
 });
@@ -93,7 +95,7 @@ test('tracked family structure report stays aligned to generated public-surface 
 
   assert.equal(report.includes('contracts/opl-framework/candidate-domain-backlog.json'), false);
 
-  const onePersonLabSection = readSection(report, '### one-person-lab', '## Non-OPL Refresh Status');
+  const onePersonLabSection = readSection(report, '### one-person-lab', '### med-autoscience');
   const publicSurfaceRiskStart = onePersonLabSection.indexOf('public_surface_risk:');
   assert.notEqual(publicSurfaceRiskStart, -1, 'missing one-person-lab public_surface_risk section');
   const publicSurfaceRisk = onePersonLabSection.slice(publicSurfaceRiskStart);
