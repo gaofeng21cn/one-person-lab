@@ -5,7 +5,7 @@ Purpose: `opl_series_doc_governance_ssot_tranche_ledger`
 State: `history_provenance`
 Machine boundary: 本文是人读 OPL series 文档治理 tranche ledger。当前机器真相继续归各 repo 的 `contracts/`、source、tests、CLI/read-model、runtime ledger、provider receipt、domain-owned manifests、App evidence 和 repo-local active owner docs。
 
-本文记录 `RUN_SNAPSHOT_TS=2026-06-06T07:28:54Z` 后本轮 OPL Doc 治理已经落地的六十四个高信心 SSOT / retirement lane，以及 App 用户指南同面再生成验证。它不关闭六仓全局 `/goal`，不声明任何 repo production ready、domain ready、App release ready 或 physical delete authorized。
+本文记录 `RUN_SNAPSHOT_TS=2026-06-06T07:28:54Z` 后本轮 OPL Doc 治理已经落地的六十五个高信心 SSOT / retirement lane，以及 App 用户指南同面再生成验证。它不关闭六仓全局 `/goal`，不声明任何 repo production ready、domain ready、App release ready 或 physical delete authorized。
 
 ## Scope
 
