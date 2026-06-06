@@ -104,9 +104,9 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(worklist.selected_executor_kind, 'codex_cli');
     assert.equal(worklist.summary.domain_ready_authorized, false);
     assert.equal(worklist.summary.production_ready_authorized, false);
-    assert.equal(worklist.summary.worklist_item_count, 57);
+    assert.equal(worklist.summary.worklist_item_count, 49);
     assert.equal(worklist.summary.open_worklist_item_count, 48);
-    assert.equal(worklist.summary.default_caller_deletion_audit_lane_item_count, 8);
+    assert.equal(worklist.summary.default_caller_deletion_audit_lane_item_count, 0);
     assert.equal(worklist.summary.default_caller_deletion_open_safe_action_item_count, 0);
     assert.equal(worklist.summary.closed_refs_only_item_count, 0);
     assert.equal(worklist.summary.stage_receipt_freshness_open_workorder_count > 0, true);
@@ -187,7 +187,7 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     const fullWorklist = fullOutput.family_runtime_evidence_worklist;
     assert.equal(fullWorklist.detail_level, 'full');
     assert.equal(fullWorklist.command, 'evidence-worklist');
-    assert.equal(fullWorklist.worklist_items.length, 57);
+    assert.equal(fullWorklist.worklist_items.length, 49);
     assert.equal(fullWorklist.attention_queue.length, 48);
     assert.equal(
       fullWorklist.summary.open_safe_action_payload_required_item_count,
@@ -593,7 +593,7 @@ test('family-runtime evidence-worklist carries default-caller deletion evidence 
     assert.equal(refs.summary.deletion_evidence_worklist_count, 8);
     assert.equal(refs.summary.ready_domain_evidence_worklist_count, 8);
     assert.equal(refs.summary.blocked_until_replacement_ready_count, 0);
-    assert.equal(refs.summary.open_deletion_evidence_requirement_count, 32);
+    assert.equal(refs.summary.open_deletion_evidence_requirement_count, 24);
     assert.equal(refs.summary.physical_delete_authorized, false);
     assert.equal(refs.summary.default_caller_delete_ready, false);
     assert.equal(refs.summary.deletion_evidence_requirements_are_completion_claims, false);
@@ -613,7 +613,7 @@ test('family-runtime evidence-worklist carries default-caller deletion evidence 
     );
     assert.equal(
       fullWorklist.summary.default_caller_deletion_no_active_caller_missing_count,
-      readyWorklistCount,
+      0,
     );
     assert.equal(
       fullWorklist.summary.default_caller_deletion_no_forbidden_write_missing_count,
@@ -795,10 +795,10 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
     assert.equal(Object.hasOwn(worklist, 'command_alias'), false);
     assert.equal(Object.hasOwn(worklist, 'deprecated_alias_of'), false);
     assert.equal(Object.hasOwn(worklist, 'deprecated_alias'), false);
-    assert.equal(worklist.summary.worklist_item_count, 57);
+    assert.equal(worklist.summary.worklist_item_count, 49);
     assert.equal(worklist.summary.closed_worklist_item_count, 10);
     assert.equal(worklist.summary.open_worklist_item_count, 39);
-    assert.equal(worklist.summary.default_caller_deletion_audit_lane_item_count, 8);
+    assert.equal(worklist.summary.default_caller_deletion_audit_lane_item_count, 0);
     assert.equal(worklist.summary.default_caller_deletion_open_safe_action_item_count, 0);
     assert.equal(worklist.summary.closed_refs_only_item_count, 10);
     assert.equal(worklist.summary.open_safe_action_item_count, 39);

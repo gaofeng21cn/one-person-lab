@@ -47,9 +47,25 @@ test('family-runtime evidence-worklist uses repo-native default-caller readiness
     ]).agent_default_caller_readiness;
     assert.equal(defaultCallers.summary.deletion_evidence_worklist_count, 8);
     assert.equal(defaultCallers.summary.missing_domain_owner_receipt_or_typed_blocker_count, 8);
-    assert.equal(defaultCallers.summary.missing_no_active_caller_proof_count, 8);
+    assert.equal(defaultCallers.summary.missing_no_active_caller_proof_count, 0);
     assert.equal(defaultCallers.summary.missing_no_forbidden_write_proof_count, 8);
     assert.equal(defaultCallers.summary.missing_tombstone_or_provenance_ref_count, 8);
+    assert.equal(
+      defaultCallers.reports[0].deletion_evidence_worklists.every((worklist: {
+        no_active_caller_proof: {
+          status: string;
+          observed_from_active_caller_target_proof: boolean;
+          evidence_refs: string[];
+        };
+      }) => (
+        worklist.no_active_caller_proof.status === 'observed'
+        && worklist.no_active_caller_proof.observed_from_active_caller_target_proof === true
+        && worklist.no_active_caller_proof.evidence_refs.some((ref) =>
+          ref.startsWith('active_caller_target_proof.surface_targets.')
+        )
+      )),
+      true,
+    );
     assert.equal(
       defaultCallers.retirement_guard_readout.non_authorizing_surfaces.includes('opl_agents_conformance'),
       true,
@@ -69,9 +85,9 @@ test('family-runtime evidence-worklist uses repo-native default-caller readiness
     ], familyRuntimeEnv(stateRoot, fixtureContractsRoot));
     const refs = drilldown.app_operator_drilldown.default_caller_deletion_evidence_refs;
     assert.equal(refs.summary.deletion_evidence_worklist_count, 8);
-    assert.equal(refs.summary.open_deletion_evidence_requirement_count, 32);
+    assert.equal(refs.summary.open_deletion_evidence_requirement_count, 24);
     assert.equal(refs.summary.missing_domain_owner_receipt_or_typed_blocker_count, 8);
-    assert.equal(refs.summary.missing_no_active_caller_proof_count, 8);
+    assert.equal(refs.summary.missing_no_active_caller_proof_count, 0);
     assert.equal(refs.summary.missing_no_forbidden_write_proof_count, 8);
     assert.equal(refs.summary.missing_tombstone_or_provenance_ref_count, 8);
     assert.deepEqual(refs.summary.mandatory_gate_ids, defaultCallers.retirement_guard_mandatory_gate_ids);
@@ -93,12 +109,12 @@ test('family-runtime evidence-worklist uses repo-native default-caller readiness
       'full',
     ], familyRuntimeEnv(stateRoot, fixtureContractsRoot));
     const fullWorklist = fullOutput.family_runtime_evidence_worklist;
-    assert.equal(fullWorklist.summary.default_caller_deletion_evidence_item_count, 32);
+    assert.equal(fullWorklist.summary.default_caller_deletion_evidence_item_count, 24);
     assert.equal(
       fullWorklist.summary.default_caller_deletion_domain_owner_receipt_or_typed_blocker_missing_count,
       8,
     );
-    assert.equal(fullWorklist.summary.default_caller_deletion_no_active_caller_missing_count, 8);
+    assert.equal(fullWorklist.summary.default_caller_deletion_no_active_caller_missing_count, 0);
     assert.equal(fullWorklist.summary.default_caller_deletion_no_forbidden_write_missing_count, 8);
     assert.equal(fullWorklist.summary.default_caller_deletion_tombstone_or_provenance_missing_count, 8);
     assert.deepEqual(fullWorklist.summary.default_caller_deletion_mandatory_gate_ids, [
@@ -118,7 +134,7 @@ test('family-runtime evidence-worklist uses repo-native default-caller readiness
       fullWorklist.worklist_items.filter((item: { claim_scope: string }) =>
         item.claim_scope === 'default_caller_deletion_evidence'
       ).length,
-      32,
+      24,
     );
     assert.equal(fullWorklist.summary.not_authorized_claims.includes('default_caller_delete_ready'), true);
   } finally {
@@ -142,7 +158,7 @@ test('family-runtime evidence-worklist keeps family default-caller deletion scop
       '--family-defaults',
     ], env);
     assert.equal(defaultCallers.deletion_evidence_worklist_count, 32);
-    assert.equal(defaultCallers.missing_no_active_caller_proof_count, 32);
+    assert.equal(defaultCallers.missing_no_active_caller_proof_count, 0);
     assert.equal(
       defaultCallers.repo_deletion_gate_summary.some((repo: { domain_id: string }) =>
         repo.domain_id === 'opl-meta-agent'
@@ -162,18 +178,18 @@ test('family-runtime evidence-worklist keeps family default-caller deletion scop
       'full',
     ], env);
     const fullWorklist = fullOutput.family_runtime_evidence_worklist;
-    assert.equal(fullWorklist.summary.default_caller_deletion_evidence_item_count, 32);
-    assert.equal(fullWorklist.summary.default_caller_deletion_audit_lane_item_count, 32);
+    assert.equal(fullWorklist.summary.default_caller_deletion_evidence_item_count, 0);
+    assert.equal(fullWorklist.summary.default_caller_deletion_audit_lane_item_count, 0);
     assert.equal(fullWorklist.summary.default_caller_deletion_open_safe_action_item_count, 0);
-    assert.equal(fullWorklist.summary.default_caller_deletion_no_active_caller_missing_count, 32);
-    assert.equal(fullWorklist.summary.default_caller_deletion_audit_lane_item_count, 32);
+    assert.equal(fullWorklist.summary.default_caller_deletion_no_active_caller_missing_count, 0);
+    assert.equal(fullWorklist.summary.default_caller_deletion_audit_lane_item_count, 0);
     assert.equal(fullWorklist.summary.default_caller_deletion_open_safe_action_item_count, 0);
     assert.equal(
       fullWorklist.worklist_items.filter((item: { claim_scope: string; owner: string }) =>
         item.claim_scope === 'default_caller_deletion_evidence'
         && item.owner === 'opl-meta-agent'
       ).length,
-      8,
+      0,
     );
     assert.equal(
       fullWorklist.attention_queue.filter((item: { claim_scope: string; owner: string }) =>

@@ -79,6 +79,36 @@ function defaultCallerTargetAllowed(targetKind: string) {
   return (DEFAULT_CALLER_TARGET_KINDS as readonly string[]).includes(targetKind);
 }
 
+function noActiveCallerProofRefs(input: {
+  ready: boolean;
+  surfaceId: string;
+  canonicalTargetIds: string[];
+  targetSurfaceId: string | null;
+  activeCallerProofStatus: string | null;
+  activeCallerTargetKind: string | null;
+  observedNoActiveCallerRefs: string[];
+}) {
+  if (input.observedNoActiveCallerRefs.length > 0) {
+    return input.observedNoActiveCallerRefs;
+  }
+  if (
+    !input.ready
+    || !input.activeCallerProofStatus
+    || input.activeCallerProofStatus.startsWith('blocked')
+    || !input.activeCallerTargetKind
+    || !defaultCallerTargetAllowed(input.activeCallerTargetKind)
+  ) {
+    return [];
+  }
+  const targetRefs = input.targetSurfaceId
+    ? [`active_caller_target_proof.surface_targets.${input.targetSurfaceId}`]
+    : input.canonicalTargetIds.map((targetId) => `active_caller_target_proof.surface_targets.${targetId}`);
+  return unique([
+    `generated_wrapper_bundle.descriptor_scope.${input.surfaceId}`,
+    ...targetRefs,
+  ]);
+}
+
 export function generatedSurfaceTargetAllowed(targetKind: string) {
   return defaultCallerTargetAllowed(targetKind);
 }
@@ -118,6 +148,7 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
     const activeCallerModuleId =
       optionalString(scope.active_caller_module_id)
       ?? optionalString(target?.active_caller_module_id);
+    const activeCallerTargetSurfaceId = optionalString(target?.surface_id);
     const blockers = stringList(scope.blockers);
     const descriptorStatus = optionalString(scope.descriptor_status);
     const ready = optionalString(scope.status) === 'ready'
@@ -150,6 +181,15 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
       'no_active_default_caller_refs',
       'no_active_default_caller_ref',
     ]);
+    const observedNoActiveCallerProofRefs = noActiveCallerProofRefs({
+      ready,
+      surfaceId,
+      canonicalTargetIds,
+      targetSurfaceId: activeCallerTargetSurfaceId,
+      activeCallerProofStatus,
+      activeCallerTargetKind,
+      observedNoActiveCallerRefs,
+    });
     const observedNoForbiddenWriteRefs = readRefsFromFields(bridgeExitGate, [
       'no_forbidden_write_refs',
       'no_forbidden_write_ref',
@@ -175,11 +215,15 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
         active_caller_module_id: activeCallerModuleId,
       },
       no_active_caller_proof: {
-        status: observedNoActiveCallerRefs.length > 0 ? 'observed' : 'required_before_physical_delete',
-        evidence_refs: observedNoActiveCallerRefs,
+        status: observedNoActiveCallerProofRefs.length > 0 ? 'observed' : 'required_before_physical_delete',
+        evidence_refs: observedNoActiveCallerProofRefs,
+        observed_from_active_caller_target_proof:
+          observedNoActiveCallerRefs.length === 0 && observedNoActiveCallerProofRefs.length > 0,
         active_caller_cutover_status: ready ? 'observed' : 'blocked',
         active_caller_proof_status: activeCallerProofStatus,
         active_caller_module_id: activeCallerModuleId,
+        active_caller_target_kind: activeCallerTargetKind,
+        active_caller_target_surface_id: activeCallerTargetSurfaceId,
       },
       domain_owner_receipt_or_typed_blocker: {
         status: observedDomainReceiptOrBlockerRefs.length > 0 ? 'observed' : 'required_from_domain_owner',
