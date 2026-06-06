@@ -33,6 +33,7 @@ const fastTestFiles = [
   'tests/src/target-architecture-schema-contracts.test.ts',
   'tests/src/cognitive-computation-kernel-contract.test.ts',
   'tests/src/verification-test-governance.test.ts',
+  'tests/src/line-budget.test.ts',
   'tests/src/active-path-residue-scan.test.ts',
   'tests/src/stale-compat-retirement-guard.test.ts',
   'tests/src/managed-shell-command-env.test.ts',

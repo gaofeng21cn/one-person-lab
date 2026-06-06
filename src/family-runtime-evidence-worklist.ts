@@ -14,6 +14,7 @@ import {
   compactDomainDispatchEvidenceWorkorderGroupAttentionItems,
 } from './domain-dispatch-evidence-workorder-packet.ts';
 import { defaultCallerDeletionEvidenceRoutes } from './family-runtime-evidence-worklist-parts/default-caller-deletion-evidence-routes.ts';
+import { defaultCallerDeletionEvidenceCounts } from './family-runtime-evidence-worklist-parts/default-caller-deletion-counts.ts';
 import { attentionQueueItem, nextSafeActions } from './family-runtime-evidence-worklist-parts/attention-actions.ts';
 import { buildZeroOpenCompletionGuard, zeroOpenCompletionGuardSummaryFields } from './family-runtime-evidence-worklist-parts/zero-open-completion-guard.ts';
 import { operatorRoutesByActionId, payloadHandoffProjection, routeWithOperatorHandoff } from './family-runtime-evidence-worklist-parts/operator-route-handoff.ts';
@@ -42,10 +43,6 @@ import {
   NOT_AUTHORIZED_CLAIMS,
   OPEN_SAFE_ACTION_PAYLOAD_REQUIREMENT_SEMANTICS,
 } from './family-runtime-evidence-worklist-parts/constants.ts';
-import {
-  DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS,
-  DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
-} from './default-caller-retirement-guard.ts';
 import { writeCurrentOwnerDeltaReadModelProjectionCache } from './current-owner-delta-read-model-cache.ts';
 import { buildCurrentOwnerDeltaTopline } from './current-owner-delta-topline.ts';
 
@@ -618,31 +615,7 @@ function worklistCounts(
     legacy_cleanup_item_count: worklistItems.filter((item) =>
       item.claim_scope === 'legacy_cleanup_ledger'
     ).length,
-    default_caller_deletion_evidence_item_count: worklistItems.filter((item) =>
-      item.claim_scope === 'default_caller_deletion_evidence'
-    ).length,
-    default_caller_deletion_domain_owner_receipt_or_typed_blocker_missing_count:
-      worklistItems.filter((item) =>
-        item.claim_scope === 'default_caller_deletion_evidence'
-        && item.action_kind === 'default_caller_deletion_domain_owner_receipt_or_typed_blocker_request'
-      ).length,
-    default_caller_deletion_no_active_caller_missing_count:
-      worklistItems.filter((item) =>
-        item.claim_scope === 'default_caller_deletion_evidence'
-        && item.action_kind === 'default_caller_deletion_no_active_caller_proof_request'
-      ).length,
-    default_caller_deletion_no_forbidden_write_missing_count:
-      worklistItems.filter((item) =>
-        item.claim_scope === 'default_caller_deletion_evidence'
-        && item.action_kind === 'default_caller_deletion_no_forbidden_write_proof_request'
-      ).length,
-    default_caller_deletion_tombstone_or_provenance_missing_count:
-      worklistItems.filter((item) =>
-        item.claim_scope === 'default_caller_deletion_evidence'
-        && item.action_kind === 'default_caller_deletion_tombstone_or_provenance_ref_request'
-      ).length,
-    default_caller_deletion_mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
-    default_caller_deletion_retirement_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
+    ...defaultCallerDeletionEvidenceCounts(worklistItems),
     domain_ready_authorized: false,
     production_ready_authorized: false,
     not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],

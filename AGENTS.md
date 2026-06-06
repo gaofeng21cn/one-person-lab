@@ -22,7 +22,7 @@
 - OPL family 以理想目标态为最高优先级：OPL 是完整智能体开发/运行框架，MAS/MAG/RCA 是标准化 OPL Agent。当前 domain 仓内已经存在的私有 scheduler、runner、session store、lifecycle、workbench、sidecar/status/product wrapper 等实现，只能作为迁移输入，不能反过来定义长期架构。
 - 标准 OPL Agent 默认是 `Declarative Domain Pack + OPL generated/hosted surfaces + minimal authority functions`；私有功能面是例外，必须写清接口、active caller、不能上收原因、receipt/blocker/ref 输出边界和退役门。
 - 开发文档先设理想态，再找差距；差距不是妥协清单。为了理想态，可以做革命式重构并完全抛弃旧模块、旧接口、旧测试、旧目录和旧文案，不以兼容为理由保留历史污染面。
-- repo-tracked 源码与测试默认都应保持文件边界清晰，优先控制在 `1000` 行以内；超过 `1500` 行应视为明确的拆分信号，而不是继续堆叠实现。
+- repo-tracked 源码与测试默认都应保持文件边界清晰，优先控制在 `1000` 行以内；超过 `1500` 行应视为明确的拆分信号，而不是继续堆叠实现。已显式审查并写入 `contracts/opl-framework/source-structure-budget.json` 的历史超线文件走 no-growth ratchet：任何增长仍是阻断；新增超线必须按语义边界拆分，或先提交带 owner、reason 与 intended boundary 的 reviewed baseline。
 - 新增能力或继续重构时，优先采用稳定薄入口加 `parts/`、`cases/`、`modules/` 等子模块拆分；不要把新逻辑继续堆回单个超长文件。
 - 若文档提到 `Hermes-Agent`，必须明确它指的是上游外部 runtime 项目 / 服务；仓内自写的 shim、pilot、helper 或过渡 scaffold，不得写成“已接入 Hermes-Agent”。
 - Temporal-backed provider 是 OPL production online runtime 的必需 substrate；`Hermes-Agent` 不再作为目标 24h session/wakeup substrate，但作为可选 Agent executor adapter、显式 proof lane、diagnostic 或历史参考保留。文档和合同必须区分 required production substrate、landed state、executor adapter 与 retained provenance；local provider 只能写成 dev/CI/offline diagnostic baseline，不能写成 Full online readiness 的替代品。

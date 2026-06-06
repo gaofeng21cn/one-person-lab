@@ -49,6 +49,8 @@ Active 文档不能继续充当过程账本。以下内容只能进入 `docs/his
 
 Active 文档只保留当前 owner、当前状态、当前 gap、下一跳 gate、完成口径和验证入口。若过程证据形成长期规则，先抽象成 policy/spec/contract 或核心五件套条款，再把原始流水归档。
 
+line-budget 的逐文件 baseline 清单、当前行数和 locked limit 归 `contracts/opl-framework/source-structure-budget.json` 与 `scripts/line-budget.mjs` 管理；长期文档只写默认预算、reviewed baseline、no-growth ratchet、baseline retirement、自然语义拆分标准和验证入口，不复制逐文件数字账本。
+
 ## 单文档唯一职责
 
 每份长期文档只能承担一个主要职责。允许在开头给出必要导航，但不能同时承担 target state、current truth、active plan、proof ledger、runbook 和 history narrative。

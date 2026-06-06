@@ -7,8 +7,8 @@ import {
 } from '../domain-pack-compiler/generated-interface-read-model.ts';
 import {
   buildAgentDefaultCallerReadinessForRepo,
-  defaultCallerSurfaceGates,
 } from '../agent-platform-surface-ownership.ts';
+import { defaultCallerSurfaceGates } from '../default-caller-surface-gates.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary,

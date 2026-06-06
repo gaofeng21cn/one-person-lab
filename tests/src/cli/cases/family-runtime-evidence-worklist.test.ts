@@ -590,7 +590,7 @@ test('family-runtime evidence-worklist carries default-caller deletion evidence 
     assert.equal(refs.summary.deletion_evidence_worklist_count, 8);
     assert.equal(refs.summary.ready_domain_evidence_worklist_count, 8);
     assert.equal(refs.summary.blocked_until_replacement_ready_count, 0);
-    assert.equal(refs.summary.open_deletion_evidence_requirement_count, 24);
+    assert.equal(refs.summary.open_deletion_evidence_requirement_count, 32);
     assert.equal(refs.summary.physical_delete_authorized, false);
     assert.equal(refs.summary.default_caller_delete_ready, false);
     assert.equal(refs.summary.deletion_evidence_requirements_are_completion_claims, false);
@@ -604,6 +604,10 @@ test('family-runtime evidence-worklist carries default-caller deletion evidence 
     assert.equal(fullWorklist.summary.default_caller_deletion_evidence_item_count, openRequirementCount);
     assert.equal(
       fullWorklist.summary.default_caller_deletion_domain_owner_receipt_or_typed_blocker_missing_count,
+      readyWorklistCount,
+    );
+    assert.equal(
+      fullWorklist.summary.default_caller_deletion_no_active_caller_missing_count,
       readyWorklistCount,
     );
     assert.equal(

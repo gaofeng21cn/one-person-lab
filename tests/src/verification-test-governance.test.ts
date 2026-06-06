@@ -170,6 +170,33 @@ test('lint includes the tracked code line-budget guard', () => {
   assert.equal(fs.existsSync(path.join(repoRoot, 'scripts/line-budget.mjs')), true);
 });
 
+test('line-budget guard is backed by a reviewed ratchet contract', () => {
+  const contractPath = path.join(repoRoot, 'contracts/opl-framework/source-structure-budget.json');
+  const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8')) as {
+    contract_kind?: string;
+    default_limit?: number;
+    baseline_policy?: { mode?: string };
+    reviewed_baselines?: Array<Record<string, unknown>>;
+  };
+  const script = read('scripts/line-budget.mjs');
+
+  assert.equal(contract.contract_kind, 'opl_source_structure_budget.v1');
+  assert.equal(contract.default_limit, 1000);
+  assert.equal(contract.baseline_policy?.mode, 'ratchet_no_growth');
+  assert.equal(Array.isArray(contract.reviewed_baselines), true);
+  assert.ok((contract.reviewed_baselines ?? []).length > 0);
+  for (const entry of contract.reviewed_baselines ?? []) {
+    assert.equal(typeof entry.path, 'string');
+    assert.equal(typeof entry.limit, 'number');
+    assert.equal(typeof entry.owner, 'string');
+    assert.equal(typeof entry.reason, 'string');
+    assert.equal(typeof entry.intended_boundary, 'string');
+  }
+  assert.match(script, /source-structure-budget\.json/);
+  assert.match(script, /ratchet baseline blocks growth/);
+  assert.match(script, /reviewed baseline contract entry/);
+});
+
 test('package.json exposes repo hygiene check and cleanup entrypoints', () => {
   assert.equal(packageJson.scripts?.['repo:hygiene'], 'scripts/repo-hygiene.sh');
   assert.equal(packageJson.scripts?.['repo:hygiene:fix'], 'scripts/repo-hygiene.sh --fix');

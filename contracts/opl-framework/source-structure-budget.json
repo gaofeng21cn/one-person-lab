@@ -1,0 +1,76 @@
+{
+  "contract_kind": "opl_source_structure_budget.v1",
+  "surface_kind": "opl_source_structure_budget",
+  "owner": "one-person-lab",
+  "purpose": "Define the repo-source line budget as a ratchet gate: new oversized files are blocked unless reviewed, existing reviewed baselines cannot grow, and retired baselines must be removed.",
+  "state": "active_contract",
+  "machine_boundary": "This contract owns line-budget thresholds and reviewed oversized-file baselines for tracked source files. It does not define domain truth, production readiness, release readiness, or quality verdict authority.",
+  "default_limit": 1000,
+  "advisory_near_limit": 850,
+  "baseline_policy": {
+    "mode": "ratchet_no_growth",
+    "new_oversized_file": "block_until_split_or_reviewed_baseline",
+    "reviewed_baseline_growth": "block",
+    "stale_baseline": "block",
+    "retired_baseline": "block_until_removed",
+    "line_count_ledger_owner": "this_contract_and_scripts_line_budget"
+  },
+  "reviewed_baselines": [
+    {
+      "path": "src/agent-lab-complete.ts",
+      "limit": 1013,
+      "owner": "agent-lab-runtime-owner",
+      "reason": "reviewed historical runtime completion entry; no-growth ratchet while semantic completion helpers continue to be thinned",
+      "intended_boundary": "agent lab completion entry remains stable while subresponsibilities move to focused agent-lab modules",
+      "review_after": "2026-09-30"
+    },
+    {
+      "path": "src/family-runtime-stage-attempts.ts",
+      "limit": 1054,
+      "owner": "family-runtime-owner",
+      "reason": "reviewed historical stage-attempt surface; no-growth ratchet while durable attempt primitives remain centralized",
+      "intended_boundary": "stage attempt public surface stays stable while query, closeout, and provider-specific helpers move to focused modules",
+      "review_after": "2026-09-30"
+    },
+    {
+      "path": "src/runtime-tray-app-operator-drilldown.ts",
+      "limit": 1408,
+      "owner": "runtime-tray-app-owner",
+      "reason": "reviewed historical app drilldown aggregator; no-growth ratchet while projection groups are reorganized by semantic owner",
+      "intended_boundary": "app drilldown entry should become a thin semantic aggregator over evidence, routes, provider, detail, and summary packages",
+      "review_after": "2026-09-30"
+    },
+    {
+      "path": "tests/src/agent-lab.test.ts",
+      "limit": 1135,
+      "owner": "agent-lab-test-owner",
+      "reason": "reviewed historical agent-lab test file; no-growth ratchet while behavior cases are moved by feature axis",
+      "intended_boundary": "agent lab tests should split by task manifest, recovery, efficiency, promotion, and completion behavior",
+      "review_after": "2026-09-30"
+    },
+    {
+      "path": "tests/src/cli/cases/domain-pack-compiler.test.ts",
+      "limit": 1036,
+      "owner": "domain-pack-compiler-test-owner",
+      "reason": "reviewed historical domain-pack compiler CLI case; no-growth ratchet while independent compiler scenarios move to case files",
+      "intended_boundary": "domain pack compiler tests should split by fixture, compiler contract, drift manifest, and real-repo smoke behavior",
+      "review_after": "2026-09-30"
+    },
+    {
+      "path": "tests/src/cli/cases/runtime-app-operator-drilldown.test.ts",
+      "limit": 1172,
+      "owner": "runtime-tray-app-test-owner",
+      "reason": "reviewed historical app drilldown CLI case; no-growth ratchet while projection-specific tests continue moving to scoped cases",
+      "intended_boundary": "app drilldown tests should split by detail, summary, action routes, provider evidence, domain payloads, and app release evidence",
+      "review_after": "2026-09-30"
+    },
+    {
+      "path": "tests/src/family-runtime-codex-stage-runner.test.ts",
+      "limit": 1153,
+      "owner": "family-runtime-runner-test-owner",
+      "reason": "reviewed historical Codex stage runner test file; no-growth ratchet while provider-env and protocol cases are separated",
+      "intended_boundary": "Codex stage runner tests should split by protocol, provider env, recovery, and launch/closeout behavior",
+      "review_after": "2026-09-30"
+    }
+  ]
+}

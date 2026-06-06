@@ -23,12 +23,12 @@ Currentness policy：查看当前 lane 集合时先读 `package.json` 的 `test:
 | artifact | `npm run test:artifact` | 构建后 artifact 行为，先 `npm run build`，再跑 built CLI 测试。 |
 | fresh-install | `npm run test:fresh-install` | 本机 clean-room install / initialize 矩阵；真实 GUI 首启由 `one-person-lab-app` 的 App VM workflow 承担，并通过 external checkout 调用 `opl-aion-shell`。 |
 
-`scripts/verify.sh` 是 repo-native 验证分发入口。它会先执行 line budget，再分发到 smoke、fast、meta、regression、integration、structure、family、fresh-install、artifact、native、full、lint、line-budget 或 typecheck。`line-budget` lane 只执行统一入口前置的 line-budget 检查，不追加测试。
+`scripts/verify.sh` 是 repo-native 验证分发入口。它会先执行 line budget，再分发到 smoke、fast、meta、regression、integration、structure、family、fresh-install、artifact、native、full、lint、line-budget 或 typecheck。`line-budget` lane 只执行统一入口前置的 line-budget 检查，不追加测试。line-budget 的预算与 reviewed baseline 由 `contracts/opl-framework/source-structure-budget.json` 持有；脚本按 no-growth ratchet 阻断新增超线、超过 locked baseline、stale baseline 与 retired baseline。
 
 | Verify lane | 命令 | 角色 |
 | --- | --- | --- |
 | native | `./scripts/verify.sh native` | native helper doctor、prebuild check、package dry-run、Rust test/build、state cache 与 family smoke。 |
-| structure | `./scripts/verify.sh structure` | 本地结构质量入口；line budget 先由 `scripts/verify.sh` 执行，Sentrux baseline regression 输出 OPL quality details 后按 advisory 处理，`.sentrux/rules.toml` explicit rules failure 仍是 blocking。 |
+| structure | `./scripts/verify.sh structure` | 本地结构质量入口；line budget 先由 `scripts/verify.sh` 执行并按 reviewed-baseline ratchet 阻断结构增长，Sentrux baseline regression 输出 OPL quality details 后按 advisory 处理，`.sentrux/rules.toml` explicit rules failure 仍是 blocking。 |
 | family | `./scripts/verify.sh family` | family shared release 与 Python shared harness bootstrap 验证；Python cache、pytest cache 和临时 venv 必须走 repo 外 temp env。 |
 | lint | `./scripts/verify.sh lint` | `npm run lint`，包含 JS lint 与 line budget。 |
 | typecheck | `./scripts/verify.sh typecheck` | `npm run typecheck`。 |
@@ -48,7 +48,7 @@ Currentness policy：查看当前 lane 集合时先读 `package.json` 的 `test:
 
 ## CI 与结构质量
 
-GitHub `Verify` workflow 按 gate 拆开运行 build/typecheck、fast、read-model-gates、regression、integration、fresh-install、native、lint 和本地 structure。`lint-and-structure` job 会先取 `origin/main` compare ref、安装 Sentrux、运行 `./scripts/verify.sh lint`，再运行 `./scripts/verify.sh structure`。其中 line budget 与 explicit Sentrux rules 是阻断面；baseline regression 由结构脚本降为 advisory 并附带 OPL quality details。`artifact` 与 `full` 是本地 / clean-clone release-style 验证入口，不是当前 Verify workflow 的独立 job。
+GitHub `Verify` workflow 按 gate 拆开运行 build/typecheck、fast、read-model-gates、regression、integration、fresh-install、native、lint 和本地 structure。`lint-and-structure` job 会先取 `origin/main` compare ref、安装 Sentrux、运行 `./scripts/verify.sh lint`，再运行 `./scripts/verify.sh structure`。其中 line budget 与 explicit Sentrux rules 是阻断面；line budget 阻断结构增长和 baseline 漂移，不把 reviewed historical baseline 当成必须在每次提交中一次性清空的旧债；baseline regression 由结构脚本降为 advisory 并附带 OPL quality details。`artifact` 与 `full` 是本地 / clean-clone release-style 验证入口，不是当前 Verify workflow 的独立 job。
 
 `.github/workflows/sentrux-advisory.yml` 是非阻断 advisory signal：它发布 Sentrux 和 OPL quality details sidecar，帮助定位结构变化，但不替代 Verify workflow 的 lint / structure gate，也不改变 `.sentrux/rules.toml`、line budget 或 lane registry 的 owner。
 
