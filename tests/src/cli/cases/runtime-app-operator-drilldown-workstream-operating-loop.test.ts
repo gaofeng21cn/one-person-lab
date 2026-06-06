@@ -317,3 +317,193 @@ test('workstream operating loop anchors missing completion oracle to current own
     0,
   );
 });
+
+test('owner delta first prefers the latest current domain dispatch workstream', () => {
+  const drilldown = buildAppOperatorDrilldown({
+    stageAttemptWorkbench: {
+      attempts: [
+        {
+          stage_attempt_id: 'sat-superseded-dm002',
+          task_id: 'task-dm002-old',
+          domain_id: 'medautoscience',
+          stage_id: 'domain_owner/default-executor-dispatch',
+          status: 'completed',
+          local_status: 'completed',
+          source_fingerprint: 'sha256:old-dm002',
+          created_at: '2026-06-06T16:25:06.270Z',
+          updated_at: '2026-06-06T16:38:58.385Z',
+          workspace_locator: {
+            dispatch_ref: 'studies/002/artifacts/supervision/consumer/default_executor_dispatches/immutable/complete_medical_paper_readiness_surface/request.json',
+            study_id: '002-dm-china-us-mortality-attribution',
+            action_type: 'complete_medical_paper_readiness_surface',
+          },
+          closeout_receipt_status: 'accepted_typed_closeout',
+          current_owner_delta: {
+            delta_id: 'current-owner-delta:dm002-old',
+            lineage_ref: 'sat-superseded-dm002',
+            source_fingerprint: 'sha256:old-dm002',
+          },
+          stage_progress_log: {
+            surface_kind: 'opl_stage_progress_log',
+            progress_delta_classification: 'deliverable_progress',
+            deliverable_progress_delta: {
+              changed_stage_surfaces: ['paper:readiness'],
+            },
+            platform_repair_delta: {
+              changed_stage_surfaces: [],
+            },
+          },
+          route_impact: {},
+        },
+        {
+          stage_attempt_id: 'sat-current-dm003',
+          task_id: 'task-dm003-current',
+          domain_id: 'medautoscience',
+          stage_id: 'domain_owner/default-executor-dispatch',
+          status: 'completed',
+          local_status: 'completed',
+          source_fingerprint: 'sha256:current-dm003',
+          created_at: '2026-06-06T16:40:06.053Z',
+          updated_at: '2026-06-06T16:50:18.414Z',
+          workspace_locator: {
+            dispatch_ref: 'studies/003/artifacts/supervision/consumer/default_executor_dispatches/immutable/complete_medical_paper_readiness_surface/request.json',
+            study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+            action_type: 'complete_medical_paper_readiness_surface',
+          },
+          closeout_receipt_status: 'accepted_typed_closeout',
+          current_owner_delta: {
+            delta_id: 'current-owner-delta:dm003-current',
+            lineage_ref: 'sat-current-dm003',
+            source_fingerprint: 'sha256:current-dm003',
+          },
+          stage_progress_log: {
+            surface_kind: 'opl_stage_progress_log',
+            progress_delta_classification: 'deliverable_progress',
+            deliverable_progress_delta: {
+              changed_stage_surfaces: ['paper:readiness'],
+            },
+            platform_repair_delta: {
+              changed_stage_surfaces: [],
+            },
+          },
+          route_impact: {},
+        },
+      ],
+    },
+    providerContinuousProof: {},
+    domainProjectionIngestion: {},
+    domainManifestProjects: [],
+    detailLevel: 'full',
+  }) as any;
+
+  const [oldWorkstream, currentWorkstream] = drilldown.workstream_operating_loop.workstreams;
+  assert.equal(oldWorkstream.default_actionability_status, 'current');
+  assert.equal(oldWorkstream.superseded_by_stage_attempt_id, null);
+  assert.equal(currentWorkstream.default_actionability_status, 'current');
+
+  assert.equal(
+    drilldown.attention_first_payload.owner_delta_first.primary_item.stage_attempt_id,
+    'sat-current-dm003',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.current_owner_delta_read_model.current_owner_delta.lineage_ref,
+    'sat-current-dm003',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.owner_delta_first.workstream_item.stage_attempt_id,
+    'sat-current-dm003',
+  );
+});
+
+test('owner delta first skips superseded domain dispatch workstreams', () => {
+  const drilldown = buildAppOperatorDrilldown({
+    stageAttemptWorkbench: {
+      attempts: [
+        {
+          stage_attempt_id: 'sat-superseded-dm003',
+          task_id: 'task-dm003-old',
+          domain_id: 'medautoscience',
+          stage_id: 'domain_owner/default-executor-dispatch',
+          status: 'completed',
+          local_status: 'completed',
+          source_fingerprint: 'sha256:old-dm003',
+          created_at: '2026-06-06T16:25:06.270Z',
+          updated_at: '2026-06-06T16:38:58.385Z',
+          workspace_locator: {
+            dispatch_ref: 'studies/003/artifacts/supervision/consumer/default_executor_dispatches/immutable/complete_medical_paper_readiness_surface/request.json',
+            study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+            action_type: 'complete_medical_paper_readiness_surface',
+          },
+          closeout_receipt_status: 'accepted_typed_closeout',
+          current_owner_delta: {
+            delta_id: 'current-owner-delta:dm003-old',
+            lineage_ref: 'sat-superseded-dm003',
+            source_fingerprint: 'sha256:old-dm003',
+          },
+          stage_progress_log: {
+            surface_kind: 'opl_stage_progress_log',
+            progress_delta_classification: 'deliverable_progress',
+            deliverable_progress_delta: {
+              changed_stage_surfaces: ['paper:readiness'],
+            },
+            platform_repair_delta: {
+              changed_stage_surfaces: [],
+            },
+          },
+          route_impact: {},
+        },
+        {
+          stage_attempt_id: 'sat-current-dm003-retry',
+          task_id: 'task-dm003-current',
+          domain_id: 'medautoscience',
+          stage_id: 'domain_owner/default-executor-dispatch',
+          status: 'completed',
+          local_status: 'completed',
+          source_fingerprint: 'sha256:current-dm003',
+          created_at: '2026-06-06T16:40:06.053Z',
+          updated_at: '2026-06-06T16:50:18.414Z',
+          workspace_locator: {
+            dispatch_ref: 'studies/003/artifacts/supervision/consumer/default_executor_dispatches/immutable/complete_medical_paper_readiness_surface/request.json',
+            study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+            action_type: 'complete_medical_paper_readiness_surface',
+          },
+          closeout_receipt_status: 'accepted_typed_closeout',
+          current_owner_delta: {
+            delta_id: 'current-owner-delta:dm003-current',
+            lineage_ref: 'sat-current-dm003-retry',
+            source_fingerprint: 'sha256:current-dm003',
+          },
+          stage_progress_log: {
+            surface_kind: 'opl_stage_progress_log',
+            progress_delta_classification: 'deliverable_progress',
+            deliverable_progress_delta: {
+              changed_stage_surfaces: ['paper:readiness'],
+            },
+            platform_repair_delta: {
+              changed_stage_surfaces: [],
+            },
+          },
+          route_impact: {},
+        },
+      ],
+    },
+    providerContinuousProof: {},
+    domainProjectionIngestion: {},
+    domainManifestProjects: [],
+    detailLevel: 'full',
+  }) as any;
+
+  const [oldWorkstream, currentWorkstream] = drilldown.workstream_operating_loop.workstreams;
+  assert.equal(oldWorkstream.default_actionability_status, 'superseded');
+  assert.equal(oldWorkstream.superseded_by_stage_attempt_id, 'sat-current-dm003-retry');
+  assert.equal(currentWorkstream.default_actionability_status, 'current');
+
+  assert.equal(
+    drilldown.attention_first_payload.owner_delta_first.primary_item.stage_attempt_id,
+    'sat-current-dm003-retry',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.current_owner_delta_read_model.current_owner_delta.lineage_ref,
+    'sat-current-dm003-retry',
+  );
+});

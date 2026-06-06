@@ -1,5 +1,4 @@
 import { buildCurrentOwnerDeltaReadModel } from '../current-owner-delta-projection.ts';
-import { writeCurrentOwnerDeltaReadModelProjectionCache } from '../current-owner-delta-read-model-cache.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -40,11 +39,6 @@ export function buildAppDrilldownCurrentOwnerDeltaReadModel(input: {
       app_operator_drilldown_ref:
         'opl runtime app-operator-drilldown --detail full --json',
     },
-  });
-  writeCurrentOwnerDeltaReadModelProjectionCache({
-    readModel,
-    sourceSurface: 'app_operator_drilldown',
-    sourceCommand: 'opl runtime app-operator-drilldown --json',
   });
   return readModel;
 }

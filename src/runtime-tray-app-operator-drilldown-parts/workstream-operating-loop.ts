@@ -4,6 +4,7 @@ import {
 } from './authority-boundary.ts';
 import {
   record,
+  recordList,
   refsFromRecord,
   stringList,
   stringValue,
@@ -549,11 +550,21 @@ function operatingLoopStatus(input: {
 
 export function buildWorkstreamOperatingLoop(input: {
   attempts: JsonRecord[];
+  domainDispatchEvidence?: JsonRecord;
   artifactRefs: JsonRecord[];
   packageLifecycle: JsonRecord;
   memoryRefs: JsonRecord;
 }) {
+  const domainDispatchEvidenceByAttempt = new Map(
+    recordList(input.domainDispatchEvidence?.attempts)
+      .map((attempt) => [stringValue(attempt.stage_attempt_id), attempt])
+      .filter((entry): entry is [string, JsonRecord] => Boolean(entry[0])),
+  );
   const workstreams = input.attempts.map((attempt) => {
+    const stageAttemptId = stringValue(attempt.stage_attempt_id);
+    const domainDispatchAttempt = stageAttemptId
+      ? domainDispatchEvidenceByAttempt.get(stageAttemptId) ?? {}
+      : {};
     const progressLog = record(attempt.stage_progress_log);
     const progress = progressRefs(attempt);
     const routeRefs = routeImpactRefs(attempt);
@@ -627,7 +638,24 @@ export function buildWorkstreamOperatingLoop(input: {
       domain_id: stringValue(attempt.domain_id),
       task_id: taskKey(attempt),
       stage_id: stringValue(attempt.stage_id),
-      stage_attempt_id: stringValue(attempt.stage_attempt_id),
+      stage_attempt_id: stageAttemptId,
+      attempt_status: stringValue(attempt.status) ?? stringValue(attempt.local_status),
+      local_status: stringValue(attempt.local_status) ?? stringValue(attempt.status),
+      closeout_receipt_status: stringValue(attempt.closeout_receipt_status),
+      source_fingerprint: stringValue(attempt.source_fingerprint),
+      created_at: stringValue(attempt.created_at),
+      updated_at: stringValue(attempt.updated_at),
+      default_actionability_status:
+        stringValue(domainDispatchAttempt.default_actionability_status),
+      default_actionable: domainDispatchAttempt.default_actionable === true,
+      default_actionability_blocker:
+        stringValue(domainDispatchAttempt.default_actionability_blocker),
+      superseded_by_stage_attempt_id:
+        stringValue(domainDispatchAttempt.superseded_by_stage_attempt_id),
+      superseded_reason: stringValue(domainDispatchAttempt.superseded_reason),
+      dispatch_identity_key: stringValue(domainDispatchAttempt.dispatch_identity_key),
+      dispatch_supersession_identity_key:
+        stringValue(domainDispatchAttempt.dispatch_supersession_identity_key),
       operating_loop_status: operatingLoopStatus({
         goalOracle,
         artifactReviewRefs,

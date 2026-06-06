@@ -1079,6 +1079,7 @@ export function buildAppOperatorDrilldown(input: {
   });
   const workstreamOperatingLoop = buildWorkstreamOperatingLoop({
     attempts,
+    domainDispatchEvidence,
     artifactRefs,
     packageLifecycle,
     memoryRefs,

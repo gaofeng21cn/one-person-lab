@@ -81,9 +81,51 @@ function selectedPayloadOwnerFirst(input: {
 }
 
 function firstWorkstreamRequiringOwner(loop: JsonRecord) {
-  return recordList(loop.workstreams).find((item) =>
+  const actionableWorkstreams = recordList(loop.workstreams).filter((item) =>
     stringValue(record(item.next_steering_action).action_id) !== 'continue_workstream_observation'
-  ) ?? recordList(loop.workstreams)[0] ?? {};
+  );
+  return actionableWorkstreams
+    .filter((item) => item.default_actionable === true)
+    .sort(compareWorkstreamCurrentness)[0]
+    ?? actionableWorkstreams
+      .filter((item) => stringValue(item.default_actionability_status) !== 'superseded')
+      .sort(compareWorkstreamCurrentness)[0]
+    ?? recordList(loop.workstreams)
+      .filter((item) => stringValue(item.default_actionability_status) !== 'superseded')
+      .sort(compareWorkstreamCurrentness)[0]
+    ?? actionableWorkstreams.sort(compareWorkstreamCurrentness)[0]
+    ?? recordList(loop.workstreams).sort(compareWorkstreamCurrentness)[0]
+    ?? {};
+}
+
+function timestampMs(value: unknown) {
+  const text = stringValue(value);
+  if (!text) {
+    return 0;
+  }
+  const parsed = Date.parse(text);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function heartbeatRank(value: unknown) {
+  const status = stringValue(value);
+  if (status === 'running' || status === 'checkpointed') {
+    return 3;
+  }
+  if (status === 'blocked') {
+    return 2;
+  }
+  if (status === 'closed') {
+    return 1;
+  }
+  return 0;
+}
+
+function compareWorkstreamCurrentness(left: JsonRecord, right: JsonRecord) {
+  return heartbeatRank(right.heartbeat_status) - heartbeatRank(left.heartbeat_status)
+    || timestampMs(right.updated_at) - timestampMs(left.updated_at)
+    || timestampMs(right.created_at) - timestampMs(left.created_at)
+    || String(right.stage_attempt_id ?? '').localeCompare(String(left.stage_attempt_id ?? ''));
 }
 
 function nextActionFromWorkstream(workstream: JsonRecord) {
