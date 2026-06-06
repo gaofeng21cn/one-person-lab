@@ -25,7 +25,7 @@ Fresh command:
 node ./scripts/family-structure-advisory.mjs --format=json
 ```
 
-Fresh eleven-repo local summary from `2026-06-06T13:33Z` after the AG-UI renderer/main/WebUI/validator, RCA test-structure, OPL owner-delta workstream merge, and superseded MAS/App worktree cleanup passes:
+Fresh eleven-repo local summary from `2026-06-06T14:00Z` after the AG-UI renderer/main/WebUI/validator, RCA test-structure, OPL owner-delta workstream merge, OMA no-resurrection closeout, and superseded MAS/App/OMA worktree cleanup passes:
 
 - `one-person-lab`: `needs_design_pass=24`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
 - `med-autoscience`: `needs_design_pass=24`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
@@ -73,20 +73,22 @@ First landing pass closed the clearest unnatural or family-inconsistent structur
 - `redcube-ai` `86e202a4`: split the two 1000-line RCA structure guard aggregators into OPL pack contract tests, RCA retired-surface guard tests, and shared helpers, then updated the meta test registry.
 - `med-autogrant` `2b2ea3c`: added generated aggregate source checks so large generated contracts/schemas have a source-shape guard instead of being physically hand-sharded.
 - `opl-meta-agent` `4dc72ff`: added a source-structure verification lane and stage-control-plane source/parts/leaf-index surface.
-- `one-person-lab-app` `d640d5e`: split active-shell shared contract validators from the top-level validator; the entry remains large and stays in the next App tranche.
+- `one-person-lab-app` `d640d5e`: split active-shell shared contract validators from the top-level validator. The current family scan has no App `needs_design_pass`; future App growth should still split by release boundary, active-shell validation, package building, release notes, and readiness summary before crossing the advisory threshold again.
+- `opl-meta-agent` `fb6375e`: locked the target-improvement no-resurrection gate into active docs, status, architecture, authority refs, and `tests/source-purity.test.ts`, so missing target-owned improvement policy stays a typed blocker and cannot silently recreate generic `external_agent/*` patch refs.
 - `opl-doc` `757d30c`: split the broad OPL Doc doctor into natural command modules: CLI, profile discovery, invariant checks, plugin sync, family plan, rendering, constants, and common helpers.
 - `opl-flow` `764d1ab`: added a thin repo-native `scripts/verify.sh`, closing the missing family-native verify signal.
 - `opl-agui-codex-shell` `3991af4`: split renderer `App.jsx` and `styles.css` into locale, state, event, thread, view and style responsibility modules, and updated candidate source validation to read the renderer module graph instead of requiring all UI snippets in one file.
 - `opl-agui-codex-shell` `74b4e78`: split shell-local Electron main process, Codex app-server client, OPL CLI bridge, UI smoke evidence, WebUI gateway/routes/runtime/static serving, and candidate source-contract validation into named modules.
 - `med-autoscience`: superseded `.worktrees/mas-owner-delta-closeout` was backed up to `~/.codex/tmp/opl-family-structure-cleanup-20260606/` and removed after independent read-only review confirmed `main` already carries the effective owner-delta semantics in `244b78a8` / `b9da3263`; absorbing it would have regressed closeout binding and currentness behavior.
 - `one-person-lab-app`: superseded detached `.worktrees/opl-family-app-source-shape` was backed up to `~/.codex/tmp/opl-family-structure-cleanup-20260606/` and removed after independent read-only review confirmed `main` already has the more natural Full builder split through `scripts/build-full-first-install-package/macos-trust.ts`, `archive-output.ts`, and `staging.ts`.
+- `opl-meta-agent`: superseded `.worktrees/oma-target-improvement-policy-fallback-retirement-20260606` was backed up to `~/.codex/tmp/opl-family-structure-cleanup-20260606/` and removed after independent diff review confirmed the branch would delete or regress the fuller `main` implementation/tests; only its durable no-resurrection governance value was re-applied on `main` in `fb6375e`.
 
 Fresh verification recorded during this pass:
 
 - MAS: `scripts/run-pytest-clean.sh -q tests/test_domain_owner_action_dispatch_cases/publication_gate_dispatch.py`; `scripts/verify.sh`.
 - RCA: `npm run contracts:current-program:check`; `npm run line-budget:strict`; `./scripts/verify.sh line-budget-strict`; `./scripts/verify.sh structure`; `npm run test:meta`; after `86e202a4`, `npm run test:meta -- --test-reporter=dot` and `npm run test:line-budget`.
 - MAG: `./scripts/run-python-clean.sh scripts/check_generated_aggregate_sources.py`; focused generated-source tests; `./scripts/verify.sh meta`.
-- OMA: `./scripts/verify.sh structure:strict`; `./scripts/verify.sh full`.
+- OMA: `./scripts/verify.sh structure:strict`; `./scripts/verify.sh full`; after `fb6375e`, `node --experimental-strip-types --test tests/source-purity.test.ts`; `npm run typecheck`; `npm test`; `npm run verify`; `git diff --check`.
 - App: `npm run validate:active-shell -- --quick`; `npm run validate:release-boundary`; `scripts/verify.sh structure`.
 - OPL Doc: `PYTHONDONTWRITEBYTECODE=1 bash scripts/verify.sh`.
 - OPL Flow: `scripts/verify.sh`.
@@ -104,7 +106,7 @@ Residual verification note: MAS strict line-budget still flags unrelated existin
 | `med-autogrant` | Source shape remains mostly clean. Generated aggregate source checks are landed; only source signal remains `product_entry_parts/consumer_thinning_audit.py`; public-surface risk is dominated by generated schemas/contracts. | Keep source split advisory. Continue generator modularity / aggregate-source checks for generated schema/contract size, not physical JSON shards. |
 | `redcube-ai` | Duplicate line-budget gate is unified and two 1000-line test aggregators are split. Remaining source signals are PPT/native helper, PPT runtime family, domain-action adapter, operator evidence and mock-builder responsibilities plus large runtime-program contracts. | Continue semantic splits along visual delivery boundaries: native PPT, image pages, operator evidence refs, visual-pack compiler handoff and mock builder responsibilities. Avoid renaming the whole `*-parts` bucket merely for aesthetics. |
 | `opl-meta-agent` | Source design-pass remains clean. Source-structure verify lane is landed; remaining signal is `contracts/stage_control_plane.json` as a large public surface. | Treat as generated/public-surface risk. Continue source/parts/leaf-index direction only when generator/source ownership is clear. |
-| `one-person-lab-app` | Active-shell shared validators split is landed, but the top-level validator and release/user-path tests remain very large: release boundary, active-shell validator, Full first-install package build, release notes, readiness summary. | Next App tranche should split by product release boundary, active-shell validator orchestration phases, package builder phases, and user-path evidence. This is the clearest remaining non-natural source shape in the support repos. |
+| `one-person-lab-app` | Active-shell shared validators split is landed, and the fresh scan has no `needs_design_pass` signal. Public-surface risk remains in large App contracts. | Keep App source-shape cleanup advisory. Future App growth should split by product release boundary, active-shell validator orchestration phases, package builder phases, release notes, readiness summary, and user-path evidence before crossing the advisory threshold again. |
 | `opl-agui-codex-shell` | Renderer, main-process, WebUI server and candidate validator structure splits are landed. Fresh scan has no `needs_design_pass`, no mechanical residue and no public-surface risk. | Keep shell-local implementation thin and App-owned product truth out of the shell. Future growth should stay in the new named modules or split along the same IPC, app-server, WebUI route/runtime/static, smoke-evidence and source-contract boundaries. |
 | `opl-doc` | OPL Doc doctor split is landed. Fresh scan has no `needs_design_pass`, no mechanical residue, no public-surface risk, and repo-native verify passes. | Keep as current good family morphology example for support/plugin repos: thin command entry plus named doctor responsibility modules. |
 | `opl-flow` | Thin repo-native verify entry is landed. Fresh scan has no `needs_design_pass`, no mechanical residue, no public-surface risk, and no missing verify signal. | Keep verify entry thin and repo-native; no Sentrux or extra structure gate is needed until active source growth appears. |
@@ -123,13 +125,14 @@ Closed in the first landing pass:
 - `opl-doc`: doctor implementation is split into responsibility modules in `757d30c`.
 - `opl-flow`: repo-native verify entry is added in `764d1ab`.
 - `med-autogrant`: generated aggregate source checks are added in `2b2ea3c`.
+- `one-person-lab-app`: active-shell shared validator extraction is landed in `d640d5e`, and fresh family scan now shows no App source-shape item.
 - `opl-agui-codex-shell`: renderer source modules are split in `3991af4`, and source-only candidate validation now follows the renderer module graph.
 - `opl-agui-codex-shell`: main-process, WebUI server and candidate validator responsibilities are split in `74b4e78`; AG-UI now has no source-shape item in the fresh family scan.
 - `redcube-ai`: `tests/opl-agent-pack-contracts.test.ts` and `tests/rca-retired-surface-guard.test.ts` are replaced by semantic test families and helpers in `86e202a4`.
+- `opl-meta-agent`: target-improvement no-resurrection governance is locked in `fb6375e`; missing target-owned improvement policy remains a typed blocker, not an implicit source patch work order.
 
 Remaining P1 natural split / source-shape queue:
 
-- `one-person-lab-app`: split `tests/release/app-release-boundary.test.ts`, `scripts/validate-active-shell.ts`, and `scripts/build-full-first-install-package.ts` by release boundary, active-shell orchestration phase, package-builder phase, and user-path evidence. The first shared-validator extraction is landed but not enough to close the App source-shape tranche.
 - `med-autoscience`: split `tests/study_progress_cases/current_executable_owner_action.py` by current-executable-owner-action scenario before using MAS strict line-budget as a clean gate. Owner-route/currentness and runtime-health files remain design-pass inputs.
 - `redcube-ai`: current over-1000 source files remain reviewed-baseline candidates, not mechanical split work: `tests/opl-family-contract-adoption.test.ts`, `python/redcube_ai/native_helpers/ppt_deck/native_layouts.py`, and `python/redcube_ai/native_helpers/ppt_deck/native_quality.py`. Future splits should follow test-family, native layout, native quality, image-page, operator-evidence and visual-pack handoff responsibilities.
 - `opl-meta-agent`: `contracts/stage_control_plane.json` remains the largest standard-agent public contract surface in this scan. Prefer stage / JSON-pointer leaf refs plus generated aggregate, similar to RCA's current-program leaf-index pattern, instead of hand-splitting the JSON file.
