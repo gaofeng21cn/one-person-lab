@@ -77,6 +77,11 @@ type PayloadHandoffWorklist = {
     action_id: string;
     status: string;
     worklist_status_detail: string;
+    default_owner_delta_eligible: boolean;
+    current_owner_delta_route_current?: boolean;
+    current_owner_delta_route_blocker?: string | null;
+    current_owner_delta_lineage_ref?: string | null;
+    current_owner_delta_route_lineage_ref?: string | null;
     typed_blocker_refs: string[];
     payload_workorder: {
       surface_kind: string;
@@ -428,6 +433,115 @@ test('family-runtime evidence-worklist joins domain-dispatch payload handoff fro
   assert.equal(item.evidence_requirement.can_claim_domain_ready, false);
   assert.equal(item.evidence_requirement.can_claim_production_ready, false);
   assert.equal(worklist.authority_boundary.can_write_domain_truth, false);
+});
+
+test('family-runtime evidence-worklist does not expose stale domain-dispatch route as default action', async () => {
+  const actionId = 'domain_dispatch:medautoscience:sat_payload_handoff:record';
+  const output = await runFamilyRuntimeEvidenceWorklist(contracts, {
+    familyDefaults: true,
+    providerKind: 'temporal',
+    executorKind: 'codex_cli',
+    detailLevel: 'full',
+    runtimeSnapshot: {
+      runtime_tray_snapshot: {
+        runtime_health: {
+          provider_kind: 'temporal',
+        },
+        app_operator_drilldown: {
+          attention_first_payload: {
+            owner_delta_first: {
+              surface_kind: 'opl_owner_delta_first_projection',
+              status: 'owner_delta_required',
+              domain_id: 'medautoscience',
+              next_owner: 'med-autoscience',
+              next_required_delta:
+                'domain_app_or_live_refs_payload_required_to_record_domain_dispatch_owner_receipt_or_typed_blocker',
+              required_return_shapes: [
+                'domain_owner_receipt_ref',
+                'typed_blocker_ref',
+                'domain_typed_blocker_ref',
+                'owner_chain_ref',
+                'no_regression_ref',
+              ],
+              primary_item: {
+                stage_id: 'domain_owner/default-executor-dispatch',
+                stage_attempt_id: 'sat_new_owner_delta',
+                owner: 'med-autoscience',
+                status:
+                  'domain_app_or_live_refs_payload_required_to_record_domain_dispatch_owner_receipt_or_typed_blocker',
+              },
+            },
+          },
+          app_execution_bridge: {
+            safe_action_routes: [domainDispatchBridgeRoute(actionId)],
+          },
+          operator_action_routing_refs: {
+            refs: [domainDispatchOperatorRoute(actionId)],
+          },
+          domain_evidence_request_refs: {
+            external_receipts: [],
+            evidence_gate_receipts: [],
+          },
+          domain_dispatch_evidence: {
+            attempts: [],
+          },
+          default_caller_deletion_evidence_refs: {
+            domains: [],
+          },
+          evidence_envelope: {
+            surface_kind: 'opl_evidence_envelope_projection',
+            model_version: 'evidence_envelope.v1',
+            projection_policy: 'fixture_refs_only_projection',
+            source_refs: ['/fixture/evidence_envelope'],
+            summary: {
+              envelope_count: 1,
+              open_envelope_count: 1,
+              closed_envelope_count: 0,
+              blocked_envelope_count: 0,
+              superseded_envelope_count: 0,
+              owner_count: 1,
+              owners: ['med-autoscience'],
+            },
+            authority_boundary: {
+              refs_only: true,
+              can_authorize_domain_ready: false,
+              can_claim_production_ready: false,
+            },
+          },
+        },
+      },
+    } as never,
+  });
+
+  const worklist = output.family_runtime_evidence_worklist as unknown as PayloadHandoffWorklist;
+  const item = worklist.worklist_items.find((entry: { action_id: string }) =>
+    entry.action_id === actionId
+  );
+
+  assert.ok(item);
+  assert.equal(item.status, 'open_safe_action_request_route_available');
+  assert.equal(item.default_owner_delta_eligible, false);
+  assert.equal(item.current_owner_delta_route_current, false);
+  assert.equal(item.current_owner_delta_lineage_ref, 'sat_new_owner_delta');
+  assert.equal(item.current_owner_delta_route_lineage_ref, 'sat_payload_handoff');
+  assert.equal(
+    item.current_owner_delta_route_blocker,
+    'route_stage_attempt_id_does_not_match_current_owner_delta_lineage_ref',
+  );
+  assert.equal(
+    item.worklist_status_detail,
+    'current_owner_delta_lineage_mismatch_not_default_actionable',
+  );
+  assert.equal(worklist.summary.open_worklist_item_count, 0);
+  assert.equal(worklist.summary.open_safe_action_payload_required_item_count, 0);
+  assert.equal(worklist.domain_dispatch_evidence_workorder_packet.workorders.length, 0);
+  assert.deepEqual(worklist.audit_worklist_next_safe_actions, []);
+  assert.deepEqual(worklist.next_safe_actions, []);
+  const countSummary = (worklist.current_owner_delta_read_model as JsonRecord).count_summary as JsonRecord;
+  assert.equal(
+    countSummary.open_safe_action_count,
+    0,
+  );
 });
 
 test('family-runtime evidence-worklist closes domain-dispatch payload workorder after verified typed blocker', async () => {

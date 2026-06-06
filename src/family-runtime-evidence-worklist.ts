@@ -297,6 +297,11 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
   const closure = refsOnlyClosureReceipt(route, drilldown);
   const routeStatus = stringValue(route.route_status) ?? 'request_route_available';
   const actionabilityStatus = stringValue(route.default_actionability_status);
+  const ownerDeltaFirst = record(record(drilldown.attention_first_payload).owner_delta_first);
+  const ownerDeltaPrimary = record(ownerDeltaFirst.primary_item);
+  const ownerDeltaStageAttemptId = stringValue(ownerDeltaPrimary.stage_attempt_id);
+  const routeStageAttemptId = stringValue(record(route.target_identity).stage_attempt_id)
+    ?? stringValue(route.stage_attempt_id);
   const routeBlocked = routeStatus.startsWith(BLOCKED_ROUTE_STATUS_PREFIX)
     || actionabilityStatus?.startsWith(BLOCKED_ROUTE_STATUS_PREFIX);
   const routeNotActionable = route.can_submit_to_safe_action_shell === false
@@ -309,10 +314,16 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
     diagnosticOnlyRoute,
     route,
   });
+  const ownerDeltaLineageGuardApplies = worklistLane === 'ordinary'
+    && !diagnosticOnlyRoute
+    && Boolean(ownerDeltaStageAttemptId && routeStageAttemptId);
+  const ownerDeltaLineageMatchesRoute = !ownerDeltaLineageGuardApplies
+    || ownerDeltaStageAttemptId === routeStageAttemptId;
   const defaultOwnerDeltaEligible = worklistLane === 'ordinary'
     && !routeNotActionable
     && !routeBlocked
-    && !diagnosticOnlyRoute;
+    && !diagnosticOnlyRoute
+    && ownerDeltaLineageMatchesRoute;
   const itemStatus = stringValue(closure?.status)
     ?? (diagnosticOnlyRoute
       ? DIAGNOSTIC_ONLY_STATUS
@@ -354,6 +365,12 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
     ordinary_open_safe_action_attention: route.ordinary_open_safe_action_attention !== false,
     worklist_lane: worklistLane,
     default_owner_delta_eligible: defaultOwnerDeltaEligible,
+    current_owner_delta_lineage_ref: ownerDeltaStageAttemptId,
+    current_owner_delta_route_lineage_ref: routeStageAttemptId,
+    current_owner_delta_route_current: ownerDeltaLineageMatchesRoute,
+    current_owner_delta_route_blocker: ownerDeltaLineageMatchesRoute
+      ? null
+      : 'route_stage_attempt_id_does_not_match_current_owner_delta_lineage_ref',
     audit_lane_visible: worklistLane === 'audit',
     cleanup_lane_visible: worklistLane === 'cleanup',
     mode: itemStatus === DIAGNOSTIC_ONLY_STATUS
@@ -384,6 +401,8 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
           : readOnlyClaimScope(route) === 'legacy_cleanup_ledger'
             ? 'closed_by_opl_cleanup_ledger_receipt'
             : 'closed_by_opl_external_evidence_ledger_receipt'
+      : !ownerDeltaLineageMatchesRoute
+        ? 'current_owner_delta_lineage_mismatch_not_default_actionable'
         : null,
     replay_ref: stringValue(route.ref)
       ?? stringValue(route.action_ref)
