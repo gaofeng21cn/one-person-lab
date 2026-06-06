@@ -121,6 +121,11 @@ test('default family structure advisory scope follows the current OPL series', (
       'DeepScientist',
     ],
   );
+  const homebrew = generatedReport.repositories.find(
+    (repo: { repo: string }) => repo.repo === 'homebrew-one-person-lab',
+  );
+  assert.equal(homebrew.verify_entry_policy, 'not_required');
+  assert.equal(homebrew.summary.missing_verify_entry, false);
 });
 
 test('tracked family structure report stays aligned to generated public-surface risks', () => {
