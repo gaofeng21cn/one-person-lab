@@ -187,6 +187,12 @@ docs/tests
 
 禁止用 `test pass`、`conformance pass`、`verified ledger`、`doctor clean` 或 `open_worklist=0` 单独关闭设计 gap。
 
+## Execution Discipline
+
+为了提高落地效率，凡任务互不冲突、写集可隔离、source of truth 清楚，且不会阻断当前 critical path，默认允许用 subagent + 独立 worktree 并行推进审计、实现、验证或 docs foldback lane。每条 subagent lane 必须写清任务、cwd、权限、source of truth、停止条件和禁止范围；主会话负责核查 diff、live evidence、验证输出和残余风险。
+
+并行 lane 完善后必须及时吸收回 `main`，并清理对应 worktree、branch、thread 与临时状态。已有并发 worktree / branch 默认视为外部 owner lane，除非用户明确授权，不得吸收、清理、覆盖或把其状态并入本轮完成口径。subagent 完成报告不能替代 owner receipt、domain verdict、delete authority、App release readiness、production readiness 或最终验收。
+
 ## Baton Boundary
 
 下一步执行顺序不在本文维护。需要行动时读取 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md) 的 `Redesign Backlog 状态`、`测试 / 证据差距` 和 `下一轮 Agent prompt`，再 fresh 读取 live contracts/source/CLI/read-model。本文只提供评估口径：每个新发现的 surface 先分类为 `meets_target`、`needs_demotion` 或 `needs_retirement`。
