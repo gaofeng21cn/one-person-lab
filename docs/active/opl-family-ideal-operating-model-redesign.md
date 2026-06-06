@@ -76,7 +76,7 @@ OPL base optimization
 | `one-person-lab` | `current_owner_delta` root、Temporal provider、stage attempt、Stage Artifact Unit、Tool Affordance Boundary、single golden path、wrapper retirement gate 已进入主干，default summary / compact alias 复活有 guard。 | 仍需长期守住 no-resurrection；raw count、blocked envelope、typed-blocker group 和 replay count 只能留在 diagnostic/full-detail。 | `meets_target` |
 | `one-person-lab-app` | Codex wrapper、purpose entries、fast state、Runtime owner-action default、ordinary cockpit surface budget、first conversation warmup、Full runtime native trust / release-boundary gate 和 release typed-blocker path contract guard 已明确。 | Release proof 和 cohort evidence 只能留在 release/developer detail；普通 cockpit 不外推 App release ready。 | `meets_target` |
 | `med-autoscience` | MAS 已是 Research Foundry pack；owner-route/currentness/read-model 修复更清楚地把 paper-line authority 留在 MAS。 | 平台 repair、read-model currentness、storage/index maintenance、gate replay routing 和 liveness arbitration 仍不能写成 research progress；真实 paper owner receipt / reviewer receipt / publication gate 仍是 evidence tail。 | `meets_target` |
-| `med-autogrant` | Grant pack、submission-ready human gate、purpose-first adapter thinning、OPL runtime owner boundary 清楚；stale specs lifecycle 叙事已降到 docs/provenance。 | product/status/user-loop/domain-handler/grouped CLI shell 仍作为 active adapter 暂留；submission gate 和 physical delete 只能由 human/MAG owner receipt 或 MAG typed blocker 关闭。 | `needs_retirement` |
+| `med-autogrant` | Grant pack、submission-ready human gate、purpose-first adapter thinning、OPL runtime owner boundary 清楚；stale specs lifecycle 叙事已降到 docs/provenance。 | product/status/user-loop/domain-handler/grouped CLI shell 只作为 retained deletion-gate candidate / domain cleanup surface 读取；submission gate 和 physical delete 只能由 human/MAG owner receipt 或 MAG typed blocker 关闭。 | `needs_retirement` |
 | `redcube-ai` | RCA visual pack、image-first path、Stage Artifact adoption、review/export authority、production acceptance refs shape 强；retained wrapper 审计已有 delete-auth false / safe-to-delete false guard。 | session/domain_action_adapter/runtimeWatch/operator projection 和 route variants 仍有 tail；long-soak / no-regression 是真实 production evidence tail。 | `needs_retirement` |
 | `opl-meta-agent` | OMA 边界已经防止第二 Framework：只产出 candidate package、work order、mechanism proposal 或 typed blocker；script-to-pack 和 developer work-order policy 已归入 contract-backed projection。 | 新增或继续稳定下来的 policy 继续迁入 `agent/`、contracts、authority functions 或 OPL primitive；保留脚本只能作为 refs/smoke/work-order/helper。 | `meets_target` |
 | `opl-aion-shell` | Shell boundary 已声明只实现 App-owned contracts；Runtime bridge 默认消费 `opl app state`；ACP initial message warmup 与 Full runtime payload trust 已落地。 | Root/upstream shell叙事和 implementation detail 仍需防止反向定义 OPL/App/domain truth；legacy IPC / migration path 走 deletion gates。 | `meets_target` |
@@ -115,7 +115,7 @@ agent-lab-improvement-loop
 1. 默认 CLI/App/operator summary 改为 owner-delta-only；raw count 只在 `--detail full`。
 2. 所有 new surface 必须先走 surface budget，默认分类为 diagnostic/reference。
 3. `compact_owner_delta_projection` 从 active/default surfaces 退役，文档和 App contract 只首选 `current_owner_delta`；审计尾项进入显式 `current_owner_delta_read_model`。
-4. generated surfaces 成为 CLI/MCP/status/workbench/default-caller 的默认承载；domain repo retained wrapper 只按 delete gate 暂留。
+4. generated surfaces 成为 CLI/MCP/status/workbench/default-caller 的默认承载；domain repo retained wrapper 只作为 deletion-gate candidate / domain cleanup surface 读取。
 5. Evidence Vault 坚持 `record everything, plan from nothing`。
 
 ### 2. One Person Lab App
