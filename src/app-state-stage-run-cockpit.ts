@@ -157,6 +157,38 @@ function buildExecutionAuthorizationNextAction(input: {
     return null;
   }
   const missingRefs = missingRefsFromBlockerReasons(reasons);
+  const executionAuthorizationMissing = EXECUTION_AUTHORIZATION_REQUIRED_REFS.some((ref) =>
+    missingRefs.includes(ref)
+  );
+  const domainOwnerAnswerMissing = !executionAuthorizationMissing
+    && CLOSEOUT_BINDING_REQUIRED_REFS.some((ref) => missingRefs.includes(ref));
+  const currentDomainOwner =
+    text(input.currentOwnerDelta.current_owner)
+    ?? text(input.currentOwnerDelta.owner)
+    ?? input.domainId;
+  const nextRequiredOwner = domainOwnerAnswerMissing ? currentDomainOwner : 'one-person-lab';
+  const nextRequiredAction = domainOwnerAnswerMissing
+    ? text(input.currentOwnerDelta.desired_delta_description)
+      ?? text(input.currentOwnerDelta.payload_requirement)
+      ?? 'domain_owner_receipt_quality_gate_or_typed_blocker_required'
+    : 'record_opl_provider_attempt_lease_authorization_and_closeout_receipt_binding_refs';
+  const payloadRequirement = domainOwnerAnswerMissing
+    ? text(input.currentOwnerDelta.payload_requirement)
+      ?? 'domain_owner_receipt_quality_gate_or_typed_blocker_required'
+    : 'opl_execution_authorization_and_closeout_binding_refs_required';
+  const acceptedAnswerShape = domainOwnerAnswerMissing
+    ? strings(input.currentOwnerDelta.accepted_answer_shape).length > 0
+      ? strings(input.currentOwnerDelta.accepted_answer_shape)
+      : strings(input.currentOwnerDelta.required_return_shapes).length > 0
+        ? strings(input.currentOwnerDelta.required_return_shapes)
+        : ['domain_owner_receipt_ref', 'typed_blocker_ref']
+    : [
+        'provider_attempt_ref',
+        'attempt_lease_ref',
+        'execution_authorization_decision_ref',
+        'owner_answer_binding_ref',
+      ];
+  const routeRequiresDomainPayload = domainOwnerAnswerMissing;
   return {
     surface_kind: 'opl_stage_run_execution_authorization_next_required_owner_action',
     schema_version: 'stage-run-execution-authorization-next-action.v1',
@@ -171,26 +203,16 @@ function buildExecutionAuthorizationNextAction(input: {
     current_owner_delta_ref: '/current_owner_delta',
     stage_run_cockpit_ref: '/stage_run_cockpit',
     execution_authorization_ref: '/stage_run_cockpit/execution_authorization',
-    owner: 'one-person-lab',
-    current_owner: 'one-person-lab',
-    next_required_owner: 'one-person-lab',
-    next_required_action:
-      'record_opl_provider_attempt_lease_authorization_and_closeout_receipt_binding_refs',
-    next_required_action_summary:
-      'Record OPL provider attempt, active lease, execution authorization decision, workspace/artifact scope, source fingerprint/idempotency, and closeout receipt binding refs before execution or closeout.',
-    payload_requirement: 'opl_execution_authorization_and_closeout_binding_refs_required',
-    accepted_answer_shape: [
-      'provider_attempt_ref',
-      'attempt_lease_ref',
-      'execution_authorization_decision_ref',
-      'owner_answer_binding_ref',
-    ],
-    required_return_shapes: [
-      'provider_attempt_ref',
-      'attempt_lease_ref',
-      'execution_authorization_decision_ref',
-      'owner_answer_binding_ref',
-    ],
+    owner: nextRequiredOwner,
+    current_owner: nextRequiredOwner,
+    next_required_owner: nextRequiredOwner,
+    next_required_action: nextRequiredAction,
+    next_required_action_summary: domainOwnerAnswerMissing
+      ? 'Domain owner must return a legal owner receipt, quality gate receipt, or typed blocker before OPL can record refs-only closeout binding.'
+      : 'Record OPL provider attempt, active lease, execution authorization decision, workspace/artifact scope, source fingerprint/idempotency, and closeout receipt binding refs before execution or closeout.',
+    payload_requirement: payloadRequirement,
+    accepted_answer_shape: acceptedAnswerShape,
+    required_return_shapes: acceptedAnswerShape,
     blocked_authority: strings(blocker.blocked_authority),
     blocker_code: text(blocker.blocker_code) ?? 'stage_run_execution_authorization_blocked',
     blocker_reasons: reasons,
@@ -199,8 +221,8 @@ function buildExecutionAuthorizationNextAction(input: {
       execution_authorization_refs: [...EXECUTION_AUTHORIZATION_REQUIRED_REFS],
       closeout_receipt_binding_refs: [...CLOSEOUT_BINDING_REQUIRED_REFS],
     },
-    route_requires_opl_runtime_refs: true,
-    route_requires_domain_or_app_payload: false,
+    route_requires_opl_runtime_refs: !domainOwnerAnswerMissing,
+    route_requires_domain_or_app_payload: routeRequiresDomainPayload,
     can_submit_to_safe_action_shell: false,
     authority: 'stage_run_execution_authorization_projection_only',
     can_execute_domain_action: false,
@@ -215,6 +237,7 @@ function buildExecutionAuthorizationNextAction(input: {
     owner_receipt_signed: false,
     domain_typed_blocker_created: false,
     execution_blocker_is_domain_typed_blocker: false,
+    owner_answer_missing_before_opl_closeout_binding: domainOwnerAnswerMissing,
     worklist_item_is_completion_claim: false,
   };
 }

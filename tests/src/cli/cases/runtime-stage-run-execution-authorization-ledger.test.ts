@@ -289,7 +289,8 @@ test('App StageRun cockpit consumes authorization ledger while preserving domain
     if (!nextRequiredOwnerAction) {
       throw new Error('expected closeout binding to remain blocked after refs-only authorization');
     }
-    assert.equal(nextRequiredOwnerAction.owner, 'one-person-lab');
+    assert.equal(nextRequiredOwnerAction.owner, 'medautoscience');
+    assert.equal(nextRequiredOwnerAction.owner_answer_missing_before_opl_closeout_binding, true);
     assert.equal(
       nextRequiredOwnerAction.missing_input_refs.includes('attempt_lease_ref'),
       false,

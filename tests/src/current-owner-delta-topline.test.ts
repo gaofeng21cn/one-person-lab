@@ -1,89 +1,133 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
+import {
+  recordStageRunExecutionAuthorizationReceipts,
+} from '../../src/stage-run-execution-authorization-ledger.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const modulePath = 'src/current-owner-delta-topline.ts';
 const projectionModulePath = 'src/current-owner-delta-projection.ts';
 
-test('current owner delta topline uses OPL runtime owner when StageRun execution authorization is blocked', async () => {
+test('current owner delta topline keeps domain owner when only owner answer binding is missing', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-owner-delta-topline-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
   const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);
-  const topline = module.buildCurrentOwnerDeltaTopline({
-    currentOwnerDeltaReadModel: {
-      surface_kind: 'opl_current_owner_delta_read_model',
-      current_owner_delta: {
-        surface_kind: 'opl_current_owner_delta',
-        delta_id: 'current-owner-delta:med-autoscience:paper-closeout:owner-answer',
-        domain: 'med-autoscience',
-        domain_id: 'med-autoscience',
-        current_owner: 'med-autoscience',
-        owner: 'med-autoscience',
-        stage_ref: 'paper_closeout',
-        desired_delta_kind: 'owner_answer',
-        desired_delta_description: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
-        payload_requirement: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
-        accepted_answer_shape: [
-          'domain_owner_receipt_ref',
-          'quality_gate_receipt_ref',
-          'typed_blocker_ref',
-        ],
-        hard_gate: {
-          state: 'owner_delta_open',
-          human_or_domain_owner_required: true,
-        },
-        source_fingerprint: 'sha256:owner-delta-topline-test',
-        audit_refs: {},
-      },
-      next_safe_action_or_none: {
-        surface_kind: 'opl_current_owner_delta_default_next_action',
-        action_kind: 'current_owner_delta_owner_answer_or_typed_blocker_required',
-        derivation_source: 'current_owner_delta',
-        default_planning_root: 'current_owner_delta_or_provider_human_hard_gate',
-        current_owner: 'med-autoscience',
-        owner: 'med-autoscience',
-        route_requires_domain_or_app_payload: true,
-      },
-    },
-  });
+  try {
+    recordStageRunExecutionAuthorizationReceipts([{
+      stage_run_id: 'app-stage-run:med-autoscience:paper-closeout',
+      domain_id: 'med-autoscience',
+      stage_id: 'paper_closeout',
+      phase: 'launch',
+      selected_executor: 'codex_cli',
+      provider_attempt_ref: 'temporal://attempt/sat-owner-delta-topline',
+      stage_attempt_id: 'sat-owner-delta-topline',
+      attempt_lease_ref: 'opl://stage-attempts/sat-owner-delta-topline/leases/task-owner-delta-topline/active',
+      attempt_lease_status: 'active',
+      execution_authorization_decision_ref:
+        'opl://stage-attempts/sat-owner-delta-topline/execution-authorizations/task-owner-delta-topline/wf-owner-delta-topline',
+      workspace_scope_ref: 'workspace:/tmp/mas',
+      artifact_scope_ref: 'stage-packet:owner-delta-topline',
+      source_fingerprint: 'sha256:owner-delta-topline-test',
+      idempotency_key: 'idem-owner-delta-topline',
+      current_pointer_ref: 'opl://stage-runs/app-stage-run%3Amed-autoscience%3Apaper-closeout/current',
+      stage_manifest_ref: 'opl://stage-manifests/paper_closeout',
+    }]);
 
-  assert.equal(topline.operator_current_owner_delta_owner, 'med-autoscience');
-  assert.equal(topline.operator_next_owner, 'one-person-lab');
-  assert.equal(topline.operator_next_action_owner, 'one-person-lab');
-  assert.equal(
-    topline.operator_next_required_action,
-    'record_opl_provider_attempt_lease_authorization_and_closeout_receipt_binding_refs',
-  );
-  assert.equal(
-    topline.operator_payload_requirement,
-    'opl_execution_authorization_and_closeout_binding_refs_required',
-  );
-  assert.deepEqual(topline.operator_accepted_answer_shape, [
-    'provider_attempt_ref',
-    'attempt_lease_ref',
-    'execution_authorization_decision_ref',
-    'owner_answer_binding_ref',
-  ]);
-  assert.equal(
-    topline.operator_next_action_source,
-    'stage_run_execution_authorization',
-  );
-  assert.equal(
-    topline.operator_next_action_authority_boundary.derivation_source,
-    'stage_run_execution_authorization',
-  );
-  assert.equal(
-    topline.stage_run_next_required_owner_action.next_required_owner,
-    'one-person-lab',
-  );
-  assert.equal(
-    topline.stage_run_next_required_owner_action.next_required_action,
-    'record_opl_provider_attempt_lease_authorization_and_closeout_receipt_binding_refs',
-  );
-  assert.equal(topline.stage_run_cockpit_summary.current_owner_delta_owner, 'med-autoscience');
-  assert.equal(topline.stage_run_cockpit_summary.current_owner, 'one-person-lab');
-  assert.equal(topline.stage_run_cockpit_summary.next_required_owner, 'one-person-lab');
+    const topline = module.buildCurrentOwnerDeltaTopline({
+      currentOwnerDeltaReadModel: {
+        surface_kind: 'opl_current_owner_delta_read_model',
+        current_owner_delta: {
+          surface_kind: 'opl_current_owner_delta',
+          delta_id: 'current-owner-delta:med-autoscience:paper-closeout:owner-answer',
+          domain: 'med-autoscience',
+          domain_id: 'med-autoscience',
+          current_owner: 'med-autoscience',
+          owner: 'med-autoscience',
+          stage_ref: 'paper_closeout',
+          desired_delta_kind: 'owner_answer',
+          desired_delta_description: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+          payload_requirement: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+          accepted_answer_shape: [
+            'domain_owner_receipt_ref',
+            'quality_gate_receipt_ref',
+            'typed_blocker_ref',
+          ],
+          hard_gate: {
+            state: 'owner_delta_open',
+            human_or_domain_owner_required: true,
+          },
+          source_fingerprint: 'sha256:owner-delta-topline-test',
+          audit_refs: {},
+        },
+        next_safe_action_or_none: {
+          surface_kind: 'opl_current_owner_delta_default_next_action',
+          action_kind: 'current_owner_delta_owner_answer_or_typed_blocker_required',
+          derivation_source: 'current_owner_delta',
+          default_planning_root: 'current_owner_delta_or_provider_human_hard_gate',
+          current_owner: 'med-autoscience',
+          owner: 'med-autoscience',
+          next_required_owner: 'med-autoscience',
+          next_required_action: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+          payload_requirement: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+          accepted_answer_shape: [
+            'domain_owner_receipt_ref',
+            'quality_gate_receipt_ref',
+            'typed_blocker_ref',
+          ],
+          route_requires_domain_or_app_payload: true,
+        },
+      },
+    });
+
+    assert.equal(topline.operator_current_owner_delta_owner, 'med-autoscience');
+    assert.equal(topline.operator_next_owner, 'med-autoscience');
+    assert.equal(topline.operator_next_action_owner, 'med-autoscience');
+    assert.equal(
+      topline.operator_next_required_action,
+      'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+    );
+    assert.equal(
+      topline.operator_payload_requirement,
+      'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+    );
+    assert.deepEqual(topline.operator_accepted_answer_shape, [
+      'domain_owner_receipt_ref',
+      'quality_gate_receipt_ref',
+      'typed_blocker_ref',
+    ]);
+    assert.equal(
+      topline.operator_next_action_source,
+      'current_owner_delta',
+    );
+    assert.equal(
+      topline.operator_next_action_authority_boundary.derivation_source,
+      'current_owner_delta',
+    );
+    assert.equal(
+      topline.stage_run_next_required_owner_action.next_required_owner,
+      'med-autoscience',
+    );
+    assert.equal(
+      topline.stage_run_next_required_owner_action.next_required_action,
+      'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+    );
+    assert.equal(topline.stage_run_cockpit_summary.current_owner_delta_owner, 'med-autoscience');
+    assert.equal(topline.stage_run_cockpit_summary.current_owner, 'med-autoscience');
+    assert.equal(topline.stage_run_cockpit_summary.next_required_owner, 'med-autoscience');
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
 });
 
 test('current owner delta hard gate ignores generic audit-only open safe-action counts', async () => {

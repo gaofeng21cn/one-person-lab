@@ -64,6 +64,7 @@ type PayloadHandoffWorklist = {
   operator_required_delta?: string;
   operator_payload_requirement?: string;
   operator_accepted_answer_shape?: string[];
+  stage_run_next_missing_input_refs?: string[];
   stage_run_cockpit_summary?: JsonRecord;
   next_safe_actions?: PayloadHandoffAction[];
   audit_worklist_next_safe_actions?: PayloadHandoffAction[];
@@ -567,7 +568,7 @@ test('family-runtime evidence-worklist summary next actions carry domain-dispatc
     worklist.current_owner_delta,
     worklist.current_owner_delta_read_model?.current_owner_delta,
   );
-  assert.equal(worklist.operator_next_owner, 'one-person-lab');
+  assert.equal(worklist.operator_next_owner, 'med-autoscience');
   assertCurrentOwnerDeltaToplineNextAction(worklist as JsonRecord);
   assert.equal(
     worklist.operator_required_delta,
@@ -575,26 +576,45 @@ test('family-runtime evidence-worklist summary next actions carry domain-dispatc
   );
   assert.equal(
     worklist.operator_payload_requirement,
-    'opl_execution_authorization_and_closeout_binding_refs_required',
+    worklist.current_owner_delta?.payload_requirement,
   );
   assert.deepEqual(
     worklist.operator_accepted_answer_shape,
-    [
-      'provider_attempt_ref',
-      'attempt_lease_ref',
-      'execution_authorization_decision_ref',
-      'owner_answer_binding_ref',
-    ],
+    worklist.current_owner_delta?.accepted_answer_shape,
   );
   assert.equal(
     worklist.stage_run_cockpit_summary?.current_owner,
-    'one-person-lab',
+    'med-autoscience',
   );
   assert.equal(
     worklist.stage_run_cockpit_summary?.current_owner_delta_owner,
     worklist.current_owner_delta?.current_owner,
   );
   assert.equal(worklist.stage_run_cockpit_summary?.refs_only, true);
+  assert.equal(
+    worklist.stage_run_cockpit_summary?.next_required_owner,
+    'med-autoscience',
+  );
+  assert.equal(
+    worklist.stage_run_cockpit_summary?.next_required_action,
+    worklist.current_owner_delta?.desired_delta_description,
+  );
+  assert.equal(
+    worklist.stage_run_next_missing_input_refs?.includes('provider_attempt_ref'),
+    false,
+  );
+  assert.equal(
+    worklist.stage_run_next_missing_input_refs?.includes('attempt_lease_ref'),
+    false,
+  );
+  assert.equal(
+    worklist.stage_run_next_missing_input_refs?.includes('execution_authorization_decision_ref'),
+    false,
+  );
+  assert.equal(
+    worklist.stage_run_next_missing_input_refs?.includes('owner_answer_ref'),
+    true,
+  );
   const acceptedReturnShapes =
     (worklist.current_owner_delta_read_model as JsonRecord)
       .accepted_return_shapes as unknown[];
