@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-import { WorkflowIdConflictPolicy, WorkflowIdReusePolicy } from '@temporalio/common';
+import { WorkflowIdConflictPolicy, WorkflowIdReusePolicy, WorkflowNotFoundError } from '@temporalio/common';
 import { NativeConnection, Worker } from '@temporalio/worker';
 
 import { FrameworkContractError } from './contracts.ts';
@@ -331,6 +331,35 @@ export async function signalTemporalStageAttemptWorkflow(input: {
   }, { paths: input.paths });
 }
 
+export function buildTemporalStageAttemptMissingWorkflowCancelReceipt(input: {
+  stageAttemptId: string;
+  workflowId: string;
+  reason: string;
+  source?: string;
+  message?: string;
+}) {
+  return {
+    surface_kind: 'temporal_stage_attempt_cancel_receipt',
+    provider_kind: 'temporal',
+    stage_attempt_id: input.stageAttemptId,
+    workflow_id: input.workflowId,
+    cancel_requested_at: new Date().toISOString(),
+    reason: input.reason,
+    source: input.source ?? 'opl-cli',
+    cancel_status: 'workflow_not_started_or_not_found',
+    degraded_reason: 'temporal_workflow_not_started_or_not_found',
+    error: {
+      code: 'temporal_workflow_not_found',
+      message: input.message ?? `workflow not found for ID: ${input.workflowId}`,
+    },
+    authority_boundary: {
+      opl: 'temporal_workflow_cancellation_transport_only',
+      domain: 'truth_quality_artifact_gate_owner',
+      provider_completion_is_domain_ready: false,
+    },
+  };
+}
+
 export async function cancelTemporalStageAttemptWorkflow(input: {
   attempt: StageAttemptPayload;
   reason: string;
@@ -351,7 +380,20 @@ export async function cancelTemporalStageAttemptWorkflow(input: {
   }
   return withTemporalClient(async (client) => {
     const handle = client.workflow.getHandle(input.attempt.workflow_id);
-    await withTemporalRpcDeadline(client, () => handle.cancel(), { paths: input.paths });
+    try {
+      await withTemporalRpcDeadline(client, () => handle.cancel(), { paths: input.paths });
+    } catch (error) {
+      if (error instanceof WorkflowNotFoundError) {
+        return buildTemporalStageAttemptMissingWorkflowCancelReceipt({
+          stageAttemptId: input.attempt.stage_attempt_id,
+          workflowId: input.attempt.workflow_id,
+          reason,
+          source: input.source,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
     return {
       surface_kind: 'temporal_stage_attempt_cancel_receipt',
       provider_kind: 'temporal',

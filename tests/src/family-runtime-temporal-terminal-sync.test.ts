@@ -11,6 +11,9 @@ import {
 } from '../../src/family-runtime-stage-attempts.ts';
 import { markStageAttemptCancelRequested } from '../../src/family-runtime-stage-attempt-control.ts';
 import { createFamilyRuntimeQueueTables } from '../../src/family-runtime-store.ts';
+import {
+  buildTemporalStageAttemptMissingWorkflowCancelReceipt,
+} from '../../src/family-runtime-temporal-provider.ts';
 
 function withStageAttemptDb(fn: (db: DatabaseSync) => void) {
   const db = new DatabaseSync(':memory:');
@@ -380,6 +383,48 @@ test('operator cancel request immediately blocks linked MAS task until Temporal 
     assert.equal(terminalTask.status, 'blocked');
     assert.equal(terminalTask.last_error, 'temporal_workflow_canceled');
     assert.equal(terminalTask.dead_letter_reason, 'temporal_stage_attempt_canceled');
+  });
+});
+
+test('operator cancel request retires linked MAS task when Temporal workflow is already missing', () => {
+  withStageAttemptDb((db) => {
+    const createdAt = new Date().toISOString();
+    createQueueTables(db);
+    insertMasDefaultExecutorTask(db, {
+      taskId: 'task-mas-default-missing-workflow-cancel',
+      status: 'queued',
+      createdAt,
+    });
+    const attempt = createMasDefaultExecutorAttempt(db, {
+      taskId: 'task-mas-default-missing-workflow-cancel',
+      sourceFingerprint: 'sha256:mas-default-missing-workflow-cancel',
+    });
+    const temporalCancel = buildTemporalStageAttemptMissingWorkflowCancelReceipt({
+      stageAttemptId: attempt.stage_attempt_id,
+      workflowId: attempt.workflow_id,
+      reason: 'superseded_by_publication_handoff_owner_gate',
+      source: 'test-supervisor',
+      message: 'workflow not found',
+    });
+
+    const requested = markStageAttemptCancelRequested(db, {
+      stageAttemptId: attempt.stage_attempt_id,
+      reason: 'superseded_by_publication_handoff_owner_gate',
+      source: 'test-supervisor',
+      temporalCancel,
+    });
+    const task = db.prepare('SELECT status, last_error, dead_letter_reason FROM tasks WHERE task_id = ?').get(
+      'task-mas-default-missing-workflow-cancel',
+    ) as { status: string; last_error: string | null; dead_letter_reason: string | null };
+
+    assert.equal(temporalCancel.cancel_status, 'workflow_not_started_or_not_found');
+    assert.equal(temporalCancel.degraded_reason, 'temporal_workflow_not_started_or_not_found');
+    assert.equal(requested?.status, 'failed');
+    assert.equal(requested?.blocked_reason, 'operator_cancel_requested');
+    assert.equal(requested?.provider_run.provider_status, 'cancel_requested');
+    assert.equal(task.status, 'blocked');
+    assert.equal(task.last_error, 'operator_cancel_requested');
+    assert.equal(task.dead_letter_reason, 'temporal_stage_attempt_canceled');
   });
 });
 

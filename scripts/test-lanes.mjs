@@ -86,6 +86,7 @@ const fastTestFiles = [
 
 const readModelGateTestFiles = [
   'tests/src/verification-test-governance.test.ts',
+  'tests/src/current-owner-delta-topline.test.ts',
   'tests/src/framework-readiness-attention-actions.test.ts',
   'tests/src/generic-substrate-projection.test.ts',
   'tests/src/family-runtime-codex-stage-runner-mas-recovery.test.ts',
