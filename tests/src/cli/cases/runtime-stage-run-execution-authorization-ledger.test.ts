@@ -34,6 +34,116 @@ function authorizationPayload(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function bindMasWorkspaceForAuthorization(input: {
+  stateRoot: string;
+  workspaceRoot: string;
+  profilePath: string;
+}) {
+  const now = new Date().toISOString();
+  fs.mkdirSync(input.stateRoot, { recursive: true });
+  fs.writeFileSync(
+    path.join(input.stateRoot, 'workspace-registry.json'),
+    `${JSON.stringify({
+      version: 'g2',
+      bindings: [
+        {
+          binding_id: 'mas-stage-run-owner-answer',
+          project_id: 'medautoscience',
+          project: 'med-autoscience',
+          workspace_path: input.workspaceRoot,
+          label: null,
+          status: 'active',
+          direct_entry: {
+            command: null,
+            manifest_command: null,
+            url: null,
+            workspace_locator: {
+              surface_kind: 'med_autoscience_workspace_profile',
+              workspace_root: input.workspaceRoot,
+              profile_ref: input.profilePath,
+              input_path: null,
+            },
+          },
+          created_at: now,
+          updated_at: now,
+          archived_at: null,
+        },
+      ],
+    }, null, 2)}\n`,
+    'utf8',
+  );
+}
+
+function writeMasOwnerAnswerProjection(input: {
+  workspaceRoot: string;
+  studyId: string;
+  receipt: Record<string, unknown>;
+  blockerId?: string;
+}) {
+  const stageRoot = path.join(
+    input.workspaceRoot,
+    'studies',
+    input.studyId,
+    'artifacts',
+    'stage_outputs',
+    '08-publication_package_handoff',
+  );
+  const projectionPath = path.join(stageRoot, 'projection', 'current_owner_delta.json');
+  fs.mkdirSync(path.dirname(projectionPath), { recursive: true });
+  const stageRunId = `stage-run::${input.studyId}::08-publication_package_handoff`;
+  const closeoutBinding = {
+    surface_kind: 'publication_handoff_closeout_binding',
+    trusted_opl_execution_authorization: true,
+    provider_attempt_ref: input.receipt.provider_attempt_ref,
+    attempt_lease_ref: input.receipt.attempt_lease_ref,
+    attempt_lease_status: input.receipt.attempt_lease_status,
+    execution_authorization_decision_ref: input.receipt.execution_authorization_decision_ref,
+    source_fingerprint: input.receipt.source_fingerprint,
+    idempotency_key: input.receipt.idempotency_key,
+    stage_run_id: stageRunId,
+    stage_run_ref: stageRunId,
+    generation: 0,
+    stage_manifest_ref: 'artifacts/stage_outputs/08-publication_package_handoff/stage_manifest.json',
+    current_pointer_ref: 'artifacts/stage_outputs/08-publication_package_handoff/current.json',
+    body_included: false,
+    bound_to_stage_run: true,
+    bound_to_stage_manifest: true,
+    bound_to_current_pointer: true,
+    bound_to_source_fingerprint: true,
+  };
+  fs.writeFileSync(
+    projectionPath,
+    `${JSON.stringify({
+      action: 'complete_medical_paper_readiness_surface',
+      closeout_binding: closeoutBinding,
+      current_pointer_ref: closeoutBinding.current_pointer_ref,
+      delta_id: input.receipt.idempotency_key,
+      hard_gate: {
+        state: 'domain_owner_answer_recorded',
+        owner_answer_kind: 'typed_blocker',
+        owner_answer_ref: 'artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json',
+        owner_answer_stage_run_id: stageRunId,
+        owner_answer_generation: 0,
+        owner_answer_manifest_ref: closeoutBinding.stage_manifest_ref,
+        owner_answer_current_pointer_ref: closeoutBinding.current_pointer_ref,
+        owner_answer_source_fingerprint: input.receipt.source_fingerprint,
+        owner_answer_idempotency_key: input.receipt.idempotency_key,
+        stage_manifest_ref: closeoutBinding.stage_manifest_ref,
+        current_pointer_ref: closeoutBinding.current_pointer_ref,
+      },
+      latest_owner_answer_kind: 'typed_blocker',
+      latest_owner_answer_ref: 'artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json',
+      latest_typed_blocker_ref: 'artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json',
+      owner: 'MedAutoScience',
+      reason: input.blockerId ?? 'medical_paper_readiness_not_ready',
+      source_fingerprint: input.receipt.source_fingerprint,
+      stage_manifest_ref: closeoutBinding.stage_manifest_ref,
+      stage_run_id: stageRunId,
+    }, null, 2)}\n`,
+    'utf8',
+  );
+}
+
 test('runtime StageRun execution authorization ledger records refs-only OPL authorization', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-authorization-'));
   try {
@@ -198,5 +308,81 @@ test('App StageRun cockpit consumes authorization ledger while preserving domain
       process.env.OPL_STATE_DIR = previousStateDir;
     }
     fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('App StageRun cockpit folds MAS owner-answer projection when it matches OPL authorization refs', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-cockpit-mas-answer-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-cockpit-mas-workspace-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  const profilePath = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles', 'dm.workspace.toml');
+  fs.mkdirSync(path.dirname(profilePath), { recursive: true });
+  fs.writeFileSync(profilePath, 'workspace_name = "dm-cvd-mortality-risk"\n', 'utf8');
+  try {
+    bindMasWorkspaceForAuthorization({ stateRoot, workspaceRoot, profilePath });
+    const record = runCli([
+      'runtime',
+      'stage-run-authorization',
+      'record',
+      '--payload',
+      JSON.stringify(authorizationPayload()),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).stage_run_execution_authorization_ledger_record;
+    assert.equal(record.status, 'recorded');
+    writeMasOwnerAnswerProjection({
+      workspaceRoot,
+      studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+      receipt: record.receipts[0],
+    });
+
+    const cockpit = buildAppStageRunCockpit({
+      domain: 'medautoscience',
+      current_owner: 'medautoscience',
+      stage_id: 'finalize_and_publication_handoff',
+      desired_delta_kind: 'owner_delta',
+      desired_delta_description: 'publication_handoff_owner_receipt_or_typed_blocker',
+      accepted_answer_shape: ['domain_owner_receipt_ref', 'typed_blocker_ref'],
+      task_or_study_ref: 'mas://study/003-dpcc-primary-care-phenotype-treatment-gap',
+      lineage_ref: 'mas://stage-artifact-unit/DM003/08-publication_package_handoff',
+      hard_gate: {
+        state: 'owner_delta_open',
+      },
+      audit_refs: {
+        workspace_scope_ref: 'workspace:/Users/gaofeng/workspace/Yang/DM-CVD-Mortality-Risk',
+        artifact_scope_ref: 'stage-artifact:08-publication_package_handoff',
+      },
+    });
+
+    assert.equal(cockpit.execution_authorization.status, 'authorized');
+    assert.deepEqual(cockpit.execution_authorization.launch_blockers, []);
+    assert.deepEqual(cockpit.execution_authorization.closeout_binding_blockers, []);
+    assert.equal(cockpit.execution_authorization.closeout_binding.owner_answer_kind, 'typed_blocker');
+    assert.equal(cockpit.execution_authorization.closeout_binding.bound_to_stage_run, true);
+    assert.equal(cockpit.execution_authorization.closeout_binding.bound_to_stage_manifest, true);
+    assert.equal(cockpit.execution_authorization.closeout_binding.bound_to_current_pointer, true);
+    assert.equal(cockpit.execution_authorization.closeout_binding.bound_to_source_fingerprint, true);
+    assert.equal(cockpit.execution_authorization.closeout_binding.bound_to_idempotency_key, true);
+    assert.equal(cockpit.stage_run_current_owner_delta.missing_role_or_answer_summary.owner_receipt_or_typed_blocker_missing, false);
+    const projection = cockpit.stage_run_current_owner_delta.owner_answer_binding_projection;
+    if (!projection) {
+      throw new Error('expected MAS owner-answer binding projection');
+    }
+    assert.equal(projection.study_id, '003-dpcc-primary-care-phenotype-treatment-gap');
+    assert.equal(
+      projection.authority_boundary.can_claim_domain_ready,
+      false,
+    );
+    assert.equal(cockpit.authority_boundary.can_create_typed_blocker, false);
+    assert.equal(cockpit.authority_boundary.can_claim_production_ready, false);
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });

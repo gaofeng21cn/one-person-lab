@@ -2,6 +2,9 @@ import { evaluateStageRunAdmission, evaluateStageRunExecutionAuthorization } fro
 import {
   latestStageRunExecutionAuthorizationReceiptForStageRun,
 } from './stage-run-execution-authorization-ledger.ts';
+import {
+  findMasPublicationHandoffOwnerAnswerProjection,
+} from './app-state-mas-owner-answer-projection.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -108,6 +111,27 @@ function ownerAnswerKind(currentOwnerDelta: JsonRecord) {
   return ownerAnswerRef(currentOwnerDelta) ? 'owner_receipt' : null;
 }
 
+function numberValue(value: unknown) {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null;
+}
+
+function ownerAnswerRefFromProjection(projection: JsonRecord) {
+  const hardGate = record(projection.hard_gate);
+  return text(hardGate.owner_answer_ref)
+    ?? text(projection.latest_owner_answer_ref)
+    ?? text(projection.latest_owner_receipt_ref)
+    ?? text(projection.latest_typed_blocker_ref);
+}
+
+function ownerAnswerKindFromProjection(projection: JsonRecord) {
+  const hardGate = record(projection.hard_gate);
+  const explicitKind = text(hardGate.owner_answer_kind) ?? text(projection.latest_owner_answer_kind);
+  if (explicitKind === 'typed_blocker' || text(projection.latest_typed_blocker_ref)) {
+    return 'typed_blocker';
+  }
+  return ownerAnswerRefFromProjection(projection) ? 'owner_receipt' : null;
+}
+
 function missingRefsFromBlockerReasons(reasons: string[]) {
   return [
     ...new Set(reasons.flatMap((reason) => BLOCKER_REASON_REF_MAP[reason] ?? [reason])),
@@ -208,12 +232,30 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
   };
   const latestExecutionAuthorization =
     latestStageRunExecutionAuthorizationReceiptForStageRun(runId);
+  const ownerAnswerProjectionMatch = findMasPublicationHandoffOwnerAnswerProjection({
+    receipt: latestExecutionAuthorization,
+  });
+  const ownerAnswerProjection = record(ownerAnswerProjectionMatch?.projection);
+  const ownerAnswerProjectionHardGate = record(ownerAnswerProjection.hard_gate);
+  const ownerAnswerProjectionCloseoutBinding = record(ownerAnswerProjection.closeout_binding);
+  const bridgedOwnerAnswerRef = ownerAnswerRefFromProjection(ownerAnswerProjection);
+  const effectiveOwnerAnswerRef = ownerAnswerRef(currentOwnerDelta)
+    ?? latestExecutionAuthorization?.owner_answer_ref
+    ?? bridgedOwnerAnswerRef;
+  const effectiveOwnerAnswerKind = ownerAnswerKind(currentOwnerDelta)
+    ?? latestExecutionAuthorization?.owner_answer_kind
+    ?? ownerAnswerKindFromProjection(ownerAnswerProjection);
+  const hasOwnerAnswer =
+    Boolean(effectiveOwnerAnswerRef);
   const acceptedReturnShapes = strings(currentOwnerDelta.accepted_answer_shape);
   const requiredRoleArtifacts = ['owner_delta', 'role_artifacts', 'owner_receipt_or_typed_blocker'];
-  const producedRoleArtifacts = acceptedReturnShapes.some((entry) =>
+  const producedRoleArtifacts = [
+    ...(acceptedReturnShapes.some((entry) =>
     entry.includes('owner_receipt') || entry.includes('typed_blocker'))
-    ? ['owner_delta', 'role_artifacts']
-    : ['owner_delta'];
+      ? ['owner_delta', 'role_artifacts']
+      : ['owner_delta']),
+    ...(hasOwnerAnswer ? ['owner_receipt_or_typed_blocker'] : []),
+  ];
   const common = {
     stage_run_id: runId,
     domain_id: domainId,
@@ -264,9 +306,16 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
     phase: 'closeout',
     manifest_valid: true,
     produced_role_artifacts: producedRoleArtifacts,
-    owner_receipt_refs: [],
-    typed_blocker_refs: [],
-    content_hashes: [],
+    owner_receipt_refs: effectiveOwnerAnswerKind === 'owner_receipt'
+      ? stringRefs(effectiveOwnerAnswerRef)
+      : [],
+    typed_blocker_refs: effectiveOwnerAnswerKind === 'typed_blocker'
+      ? stringRefs(effectiveOwnerAnswerRef)
+      : [],
+    content_hashes: stringRefs(
+      text(ownerAnswerProjection.source_fingerprint),
+      text(ownerAnswerProjectionCloseoutBinding.source_fingerprint),
+    ),
     lineage_refs: stringRefs(
       text(currentOwnerDelta.lineage_ref),
       text(currentOwnerDelta.source_fingerprint),
@@ -302,30 +351,49 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
       ?? text(record(currentOwnerDelta.audit_refs).artifact_scope_ref)
       ?? text(currentOwnerDelta.lineage_ref),
     forbidden_write_required: false,
-    owner_answer_ref: ownerAnswerRef(currentOwnerDelta) ?? latestExecutionAuthorization?.owner_answer_ref,
-    owner_answer_kind: ownerAnswerKind(currentOwnerDelta) ?? latestExecutionAuthorization?.owner_answer_kind,
+    owner_answer_ref: effectiveOwnerAnswerRef,
+    owner_answer_kind: effectiveOwnerAnswerKind,
     owner_answer_stage_run_id: text(record(currentOwnerDelta.hard_gate).owner_answer_stage_run_id)
       ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_stage_run_id)
-      ?? latestExecutionAuthorization?.owner_answer_stage_run_id,
+      ?? latestExecutionAuthorization?.owner_answer_stage_run_id
+      ?? (bridgedOwnerAnswerRef ? runId : null),
     owner_answer_generation: record(currentOwnerDelta.hard_gate).owner_answer_generation
       ?? record(currentOwnerDelta.hard_gate).closeout_receipt_generation
-      ?? latestExecutionAuthorization?.owner_answer_generation,
+      ?? latestExecutionAuthorization?.owner_answer_generation
+      ?? numberValue(ownerAnswerProjectionHardGate.owner_answer_generation)
+      ?? numberValue(ownerAnswerProjectionCloseoutBinding.generation),
     owner_answer_manifest_ref: text(record(currentOwnerDelta.hard_gate).owner_answer_manifest_ref)
       ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_manifest_ref)
-      ?? latestExecutionAuthorization?.owner_answer_manifest_ref,
+      ?? latestExecutionAuthorization?.owner_answer_manifest_ref
+      ?? text(ownerAnswerProjectionHardGate.owner_answer_manifest_ref)
+      ?? text(ownerAnswerProjectionCloseoutBinding.stage_manifest_ref),
     stage_manifest_ref: text(record(currentOwnerDelta.hard_gate).stage_manifest_ref)
+      ?? text(ownerAnswerProjectionHardGate.stage_manifest_ref)
+      ?? text(ownerAnswerProjection.stage_manifest_ref)
+      ?? text(ownerAnswerProjectionCloseoutBinding.stage_manifest_ref)
       ?? latestExecutionAuthorization?.stage_manifest_ref,
     owner_answer_current_pointer_ref: text(record(currentOwnerDelta.hard_gate).owner_answer_current_pointer_ref)
       ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_current_pointer_ref)
-      ?? latestExecutionAuthorization?.owner_answer_current_pointer_ref,
+      ?? latestExecutionAuthorization?.owner_answer_current_pointer_ref
+      ?? text(ownerAnswerProjectionHardGate.owner_answer_current_pointer_ref)
+      ?? text(ownerAnswerProjectionCloseoutBinding.current_pointer_ref),
     current_pointer_ref: text(record(currentOwnerDelta.hard_gate).current_pointer_ref)
+      ?? text(ownerAnswerProjectionHardGate.current_pointer_ref)
+      ?? text(ownerAnswerProjection.current_pointer_ref)
+      ?? text(ownerAnswerProjectionCloseoutBinding.current_pointer_ref)
       ?? latestExecutionAuthorization?.current_pointer_ref,
     owner_answer_source_fingerprint: text(record(currentOwnerDelta.hard_gate).owner_answer_source_fingerprint)
       ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_source_fingerprint)
-      ?? latestExecutionAuthorization?.owner_answer_source_fingerprint,
+      ?? latestExecutionAuthorization?.owner_answer_source_fingerprint
+      ?? text(ownerAnswerProjectionHardGate.owner_answer_source_fingerprint)
+      ?? text(ownerAnswerProjection.source_fingerprint)
+      ?? text(ownerAnswerProjectionCloseoutBinding.source_fingerprint),
     owner_answer_idempotency_key: text(record(currentOwnerDelta.hard_gate).owner_answer_idempotency_key)
       ?? text(record(currentOwnerDelta.hard_gate).closeout_receipt_idempotency_key)
-      ?? latestExecutionAuthorization?.owner_answer_idempotency_key,
+      ?? latestExecutionAuthorization?.owner_answer_idempotency_key
+      ?? text(ownerAnswerProjectionHardGate.owner_answer_idempotency_key)
+      ?? text(ownerAnswerProjection.delta_id)
+      ?? text(ownerAnswerProjectionCloseoutBinding.idempotency_key),
   });
   const nextRequiredOwnerAction = buildExecutionAuthorizationNextAction({
     stageRunId: runId,
@@ -362,8 +430,26 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
         missing_required_role_count: Math.max(requiredRoleArtifacts.length - producedRoleArtifacts.length, 0),
         required_role_artifacts: requiredRoleArtifacts,
         produced_role_artifacts: producedRoleArtifacts,
-        owner_receipt_or_typed_blocker_missing: true,
+        owner_receipt_or_typed_blocker_missing: !hasOwnerAnswer,
       },
+      owner_answer_binding_projection: ownerAnswerProjectionMatch
+        ? {
+            projection_ref: ownerAnswerProjectionMatch.projection_ref,
+            workspace_root: ownerAnswerProjectionMatch.workspace_root,
+            study_id: ownerAnswerProjectionMatch.study_id,
+            source_stage_run_id:
+              text(ownerAnswerProjection.stage_run_id)
+              ?? text(ownerAnswerProjectionCloseoutBinding.stage_run_id),
+            source_owner_answer_stage_run_id:
+              text(ownerAnswerProjectionHardGate.owner_answer_stage_run_id),
+            bridged_stage_run_id: runId,
+            closeout_binding_source: 'mas_publication_handoff_current_owner_delta',
+            match_policy:
+              'trusted_opl_execution_authorization_provider_attempt_lease_decision_source_idempotency_match',
+            reason: text(ownerAnswerProjection.reason),
+            authority_boundary: ownerAnswerProjectionMatch.authority_boundary,
+          }
+        : null,
     },
     launch_admission: launchAdmission,
     closeout_admission: closeoutAdmission,

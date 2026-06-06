@@ -179,6 +179,174 @@ function writeCurrentOwnerDeltaProjectionCacheFixture(stateDir: string) {
   );
 }
 
+function writeStageRunAuthorizationLedgerFixture(input: {
+  stateDir: string;
+  receipt: Record<string, unknown>;
+}) {
+  fs.mkdirSync(input.stateDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(input.stateDir, 'stage-run-execution-authorization-ledger.json'),
+    `${JSON.stringify({
+      surface_kind: 'opl_stage_run_execution_authorization_ledger',
+      version: 'stage-run-execution-authorization-ledger.v1',
+      receipts: [input.receipt],
+    }, null, 2)}\n`,
+    'utf8',
+  );
+}
+
+function appStateStageRunAuthorizationReceipt(overrides: Record<string, unknown> = {}) {
+  const stageRunId = 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch';
+  const decisionRef = 'opl://stage-attempts/sat_dm003/execution-authorizations/lease_dm003/wf_dm003';
+  return {
+    surface_kind: 'opl_stage_run_execution_authorization_receipt',
+    version: 'stage-run-execution-authorization-ledger.v1',
+    receipt_ref: `opl://stage-run-execution-authorization/${encodeURIComponent(stageRunId)}/${encodeURIComponent(decisionRef)}`,
+    receipt_status: 'recorded',
+    recorded_at: '2026-06-06T00:00:00.000Z',
+    stage_run_id: stageRunId,
+    domain_id: 'medautoscience',
+    stage_id: 'domain_owner/default-executor-dispatch',
+    generation: 0,
+    phase: 'launch',
+    selected_executor: 'codex_cli',
+    provider_attempt_ref: 'temporal://attempt/sat_dm003',
+    stage_attempt_id: 'sat_dm003',
+    attempt_lease_ref: 'opl://stage-attempts/sat_dm003/leases/lease_dm003/active',
+    attempt_lease_status: 'active',
+    execution_authorization_decision_ref: decisionRef,
+    workspace_scope_ref: 'workspace:/fixture/dm-cvd',
+    artifact_scope_ref: 'stage-packet:studies/003-dpcc-primary-care-phenotype-treatment-gap/dispatch.json',
+    source_fingerprint: 'mas_default_executor_source_dm003',
+    idempotency_key: 'idem_dm003',
+    current_pointer_ref: `opl://stage-runs/${encodeURIComponent(stageRunId)}/current`,
+    stage_manifest_ref: 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch',
+    owner_answer_ref: null,
+    owner_answer_kind: null,
+    closeout_receipt_ref: null,
+    owner_answer_stage_run_id: null,
+    owner_answer_generation: null,
+    owner_answer_manifest_ref: null,
+    owner_answer_current_pointer_ref: null,
+    owner_answer_source_fingerprint: null,
+    owner_answer_idempotency_key: null,
+    closeout_refs: [],
+    execution_authorization_report: {
+      surface_kind: 'opl_stage_run_execution_authorization_report',
+      version: 'stage-run-execution-authorization.v1',
+      phase: 'launch',
+      status: 'authorized',
+      execution_authorized: true,
+      launch_blockers: [],
+      closeout_binding_blockers: [],
+      closeout_binding: {
+        owner_answer_ref: null,
+        owner_answer_kind: null,
+        closeout_receipt_ref: null,
+        bound_to_stage_run: false,
+        bound_to_stage_manifest: false,
+        bound_to_current_pointer: false,
+        bound_to_source_fingerprint: false,
+        bound_to_idempotency_key: false,
+      },
+      opl_runtime_blocker: null,
+      authority_boundary: {
+        opl_can_write_domain_truth: false,
+        opl_can_create_owner_receipt: false,
+        opl_can_create_typed_blocker: false,
+      },
+    },
+    authority_boundary: {
+      refs_only: true,
+      owner: 'one-person-lab',
+      can_write_domain_truth: false,
+      can_read_memory_body: false,
+      can_read_artifact_body: false,
+      can_mutate_artifact_body: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_authorize_quality_or_export: false,
+      can_close_owner_chain: false,
+      can_close_domain_ready: false,
+      can_claim_domain_ready: false,
+      can_claim_production_ready: false,
+      provider_completion_counts_as_domain_ready: false,
+      authorization_receipt_is_domain_owner_answer: false,
+    },
+    ...overrides,
+  };
+}
+
+function writeMasPublicationHandoffOwnerAnswerProjectionFixture(input: {
+  workspaceRoot: string;
+  studyId: string;
+  receipt: Record<string, unknown>;
+}) {
+  const stageRoot = path.join(
+    input.workspaceRoot,
+    'studies',
+    input.studyId,
+    'artifacts',
+    'stage_outputs',
+    '08-publication_package_handoff',
+  );
+  const projectionPath = path.join(stageRoot, 'projection', 'current_owner_delta.json');
+  fs.mkdirSync(path.dirname(projectionPath), { recursive: true });
+  const stageRunId = `stage-run::${input.studyId}::08-publication_package_handoff`;
+  const stageManifestRef = 'artifacts/stage_outputs/08-publication_package_handoff/stage_manifest.json';
+  const currentPointerRef = 'artifacts/stage_outputs/08-publication_package_handoff/current.json';
+  fs.writeFileSync(
+    projectionPath,
+    `${JSON.stringify({
+      action: 'complete_medical_paper_readiness_surface',
+      closeout_binding: {
+        surface_kind: 'publication_handoff_closeout_binding',
+        trusted_opl_execution_authorization: true,
+        provider_attempt_ref: input.receipt.provider_attempt_ref,
+        attempt_lease_ref: input.receipt.attempt_lease_ref,
+        attempt_lease_status: input.receipt.attempt_lease_status,
+        execution_authorization_decision_ref: input.receipt.execution_authorization_decision_ref,
+        source_fingerprint: input.receipt.source_fingerprint,
+        idempotency_key: input.receipt.idempotency_key,
+        stage_run_id: stageRunId,
+        stage_run_ref: stageRunId,
+        generation: 0,
+        stage_manifest_ref: stageManifestRef,
+        current_pointer_ref: currentPointerRef,
+        body_included: false,
+        bound_to_stage_run: true,
+        bound_to_stage_manifest: true,
+        bound_to_current_pointer: true,
+        bound_to_source_fingerprint: true,
+      },
+      current_pointer_ref: currentPointerRef,
+      delta_id: input.receipt.idempotency_key,
+      hard_gate: {
+        state: 'domain_owner_answer_recorded',
+        owner_answer_kind: 'typed_blocker',
+        owner_answer_ref: 'artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json',
+        owner_answer_stage_run_id: stageRunId,
+        owner_answer_generation: 0,
+        owner_answer_manifest_ref: stageManifestRef,
+        owner_answer_current_pointer_ref: currentPointerRef,
+        owner_answer_source_fingerprint: input.receipt.source_fingerprint,
+        owner_answer_idempotency_key: input.receipt.idempotency_key,
+        stage_manifest_ref: stageManifestRef,
+        current_pointer_ref: currentPointerRef,
+      },
+      latest_owner_answer_kind: 'typed_blocker',
+      latest_owner_answer_ref: 'artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json',
+      latest_typed_blocker_ref: 'artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json',
+      owner: 'MedAutoScience',
+      reason: 'medical_paper_readiness_not_ready',
+      source_fingerprint: input.receipt.source_fingerprint,
+      stage_manifest_ref: stageManifestRef,
+      stage_run_id: stageRunId,
+    }, null, 2)}\n`,
+    'utf8',
+  );
+}
+
 function collectObjectKeys(value: unknown, keys = new Set<string>()) {
   if (!value || typeof value !== 'object') {
     return keys;
@@ -830,6 +998,71 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
       output.app_state.operator.workbench.task_drilldowns.every((entry) => !entry.study_id || entry.source_ref_count > 0),
       true,
     );
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(masRepoRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('app state fast folds MAS publication handoff owner answer projection into StageRun cockpit', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-owner-answer-home-'));
+  const masRepoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-owner-answer-repo-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-owner-answer-workspace-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const profilePath = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles', 'dm.workspace.toml');
+  const receipt = appStateStageRunAuthorizationReceipt();
+
+  try {
+    bindMasWorkspaceForAppState({ stateDir, workspaceRoot: masRepoRoot, profilePath });
+    fs.mkdirSync(path.dirname(profilePath), { recursive: true });
+    fs.writeFileSync(profilePath, 'workspace_name = "dm-cvd-mortality-risk"\n', 'utf8');
+    writeCurrentOwnerDeltaProjectionCacheFixture(stateDir);
+    writeStageRunAuthorizationLedgerFixture({ stateDir, receipt });
+    writeMasPublicationHandoffOwnerAnswerProjectionFixture({
+      workspaceRoot,
+      studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+      receipt,
+    });
+
+    const output = runCli(['app', 'state', '--profile', 'fast'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+      OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+      OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+      PATH: '/usr/bin:/bin',
+    }) as {
+      app_state: {
+        operator: {
+          stage_run_cockpit: Record<string, any>;
+          stage_run_cockpit_summary: Record<string, any>;
+          operator_next_action: Record<string, any> | null;
+          operator_next_action_source: string | null;
+        };
+      };
+    };
+
+    const cockpit = output.app_state.operator.stage_run_cockpit;
+    assert.equal(cockpit.execution_authorization.status, 'authorized');
+    assert.equal(cockpit.execution_authorization.execution_authorized, true);
+    assert.deepEqual(cockpit.execution_authorization.launch_blockers, []);
+    assert.deepEqual(cockpit.execution_authorization.closeout_binding_blockers, []);
+    assert.equal(cockpit.execution_authorization.closeout_binding.owner_answer_kind, 'typed_blocker');
+    assert.equal(cockpit.stage_run_current_owner_delta.missing_role_or_answer_summary.owner_receipt_or_typed_blocker_missing, false);
+    assert.equal(
+      cockpit.stage_run_current_owner_delta.owner_answer_binding_projection.study_id,
+      '003-dpcc-primary-care-phenotype-treatment-gap',
+    );
+    assert.equal(
+      cockpit.stage_run_current_owner_delta.owner_answer_binding_projection.reason,
+      'medical_paper_readiness_not_ready',
+    );
+    assert.equal(cockpit.stage_run_current_owner_delta.owner_answer_binding_projection.authority_boundary.can_claim_domain_ready, false);
+    assert.equal(cockpit.authority_boundary.can_write_domain_truth, false);
+    assert.equal(cockpit.authority_boundary.can_create_typed_blocker, false);
+    assert.equal(output.app_state.operator.stage_run_cockpit_summary.execution_authorized, true);
+    assert.equal(output.app_state.operator.stage_run_cockpit_summary.domain_typed_blocker_created, false);
+    assert.notEqual(output.app_state.operator.operator_next_action_source, 'stage_run_execution_authorization');
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(masRepoRoot, { recursive: true, force: true });
