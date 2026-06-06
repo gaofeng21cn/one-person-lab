@@ -12,6 +12,8 @@ Date: `2026-06-05`
 
 当前唯一 active owner 是 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。Stage Native 的 machine surface 是否已落地、MAS/MAG/RCA/OMA 是否已通过 conformance、App cockpit 是否消费 StageRun、domain canary 是否完成、旧补偿链是否可退役，都只在唯一 active owner 或 live contracts/source/tests/CLI/read-model 中判断。
 
+2026-06-06 live foldback 口径：`opl agents conformance --family-defaults --json` 当前证明四个 domain 的 StageRun profile 和 controlled canary evidence 已进入结构门；`opl framework readiness --family-defaults --json`、`opl agents default-callers --family-defaults --json` 与 `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json` 当前状态只回 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md) 与 live readout 判断。这里不维护 dated counters，也不把 conformance pass、production evidence tail closed、open tail 为 0、provider SLO satisfied、controlled OMA canary、default-caller no-active-caller proof 或 refs-only ledger 写成 live domain progress、target-agent ready、domain ready、physical delete ready 或 production ready；本文件只保留设计支撑和 anti-bloat 边界。
+
 ## 目标内核
 
 Stage Native 推广对象不是 MAS 论文流程、RCA visual workflow 或 OMA builder internals，而是这套 family 通用执行内核：
