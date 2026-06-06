@@ -7,8 +7,6 @@ fi
 
 lane="${1:-smoke}"
 
-node scripts/line-budget.mjs
-
 case "$lane" in
   smoke)
     npm run test:smoke
@@ -26,7 +24,12 @@ case "$lane" in
     npm run test:integration
     ;;
   structure)
+    node scripts/line-budget.mjs
     ./scripts/run-structural-quality-gate.sh
+    ;;
+  structure:strict)
+    node scripts/line-budget.mjs --strict
+    OPL_STRUCTURAL_QUALITY_STRICT=1 ./scripts/run-structural-quality-gate.sh
     ;;
   family)
     npm run family:shared-release -- check
@@ -76,14 +79,17 @@ case "$lane" in
     npm run lint
     ;;
   line-budget)
-    :
+    node scripts/line-budget.mjs
+    ;;
+  line-budget:strict)
+    node scripts/line-budget.mjs --strict
     ;;
   typecheck)
     npm run typecheck
     ;;
   *)
     echo "Unknown lane: $lane" >&2
-    echo "Usage: scripts/verify.sh [smoke|fast|regression|integration|structure|family|meta|fresh-install|artifact|native|full|lint|line-budget|typecheck]" >&2
+    echo "Usage: scripts/verify.sh [smoke|fast|regression|integration|structure|structure:strict|family|meta|fresh-install|artifact|native|full|lint|line-budget|line-budget:strict|typecheck]" >&2
     exit 1
     ;;
 esac

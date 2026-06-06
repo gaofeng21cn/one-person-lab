@@ -17,7 +17,8 @@ const structuralGatePatterns = [
   /sentrux gate \./,
   /Compare ref \$\{compare_ref\} is unavailable; using HEAD\^ for quality details\./,
   /Sentrux baseline regression reported structural drift/,
-  /line budget and explicit Sentrux rules remain blocking/,
+  /default structure lane is advisory/,
+  /OPL_STRUCTURAL_QUALITY_STRICT=1/,
   /sentrux check \./,
   /quality details --root \./,
   /--compare-ref "\$resolved_compare_ref"/,
@@ -165,12 +166,14 @@ test('GitHub native helper prebuild workflow packs release artifacts across supp
   assertFilePatterns('.github/workflows/native-helper-prebuilds.yml', nativeHelperPrebuildWorkflowPatterns);
 });
 
-test('lint includes the tracked code line-budget guard', () => {
-  assert.equal(packageJson.scripts?.lint, 'node ./scripts/lint.mjs && node ./scripts/line-budget.mjs');
+test('lint remains a JavaScript lint entrypoint while line-budget has explicit advisory and strict entrypoints', () => {
+  assert.equal(packageJson.scripts?.lint, 'node ./scripts/lint.mjs');
+  assert.equal(packageJson.scripts?.['line-budget'], 'node ./scripts/line-budget.mjs');
+  assert.equal(packageJson.scripts?.['line-budget:strict'], 'node ./scripts/line-budget.mjs --strict');
   assert.equal(fs.existsSync(path.join(repoRoot, 'scripts/line-budget.mjs')), true);
 });
 
-test('line-budget guard is backed by a reviewed ratchet contract', () => {
+test('line-budget advisory is backed by a reviewed strict-ratchet contract', () => {
   const contractPath = path.join(repoRoot, 'contracts/opl-framework/source-structure-budget.json');
   const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8')) as {
     contract_kind?: string;
@@ -182,7 +185,7 @@ test('line-budget guard is backed by a reviewed ratchet contract', () => {
 
   assert.equal(contract.contract_kind, 'opl_source_structure_budget.v1');
   assert.equal(contract.default_limit, 1000);
-  assert.equal(contract.baseline_policy?.mode, 'ratchet_no_growth');
+  assert.equal(contract.baseline_policy?.mode, 'scheduled_advisory_with_explicit_strict_ratchet');
   assert.equal(Array.isArray(contract.reviewed_baselines), true);
   assert.ok((contract.reviewed_baselines ?? []).length > 0);
   for (const entry of contract.reviewed_baselines ?? []) {
@@ -193,6 +196,9 @@ test('line-budget guard is backed by a reviewed ratchet contract', () => {
     assert.equal(typeof entry.intended_boundary, 'string');
   }
   assert.match(script, /source-structure-budget\.json/);
+  assert.match(script, /line budget advisory/);
+  assert.match(script, /--strict/);
+  assert.match(script, /OPL_LINE_BUDGET_STRICT/);
   assert.match(script, /ratchet baseline blocks growth/);
   assert.match(script, /reviewed baseline contract entry/);
 });

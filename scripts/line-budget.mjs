@@ -8,6 +8,7 @@ const IGNORED_PARTS = new Set(['node_modules', 'dist', 'build', 'coverage', '.ve
 const IGNORED_SUFFIXES = ['.min.js'];
 
 const args = parseArgs(process.argv.slice(2));
+const strictMode = args.strict || strictEnvEnabled(process.env.OPL_LINE_BUDGET_STRICT);
 const targetRoot = args.root ? path.resolve(args.root) : repoRoot;
 const baselinePath = args.baseline
   ? path.resolve(args.baseline)
@@ -71,10 +72,13 @@ for (const relativePath of retiredBaseline) {
 }
 
 if (failures.length > 0) {
-  process.stderr.write(`line budget check failed (${failures.length} issue${failures.length === 1 ? '' : 's'}):\n`);
+  const label = strictMode ? 'strict line budget check failed' : 'line budget advisory';
+  process.stderr.write(`${label} (${failures.length} issue${failures.length === 1 ? '' : 's'}):\n`);
   process.stderr.write(failures.map((failure) => `- ${failure}`).join('\n'));
   process.stderr.write('\n');
-  process.exit(1);
+  if (strictMode) {
+    process.exit(1);
+  }
 }
 
 function isCodeFile(relativePath) {
@@ -100,11 +104,14 @@ function parseArgs(argv) {
     mode: 'check',
     root: null,
     baseline: null,
+    strict: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
     if (value === '--list') {
       parsed.mode = 'list';
+    } else if (value === '--strict') {
+      parsed.strict = true;
     } else if (value === '--root') {
       parsed.root = readArgValue(argv, index, '--root');
       index += 1;
@@ -121,6 +128,10 @@ function parseArgs(argv) {
     }
   }
   return parsed;
+}
+
+function strictEnvEnabled(value) {
+  return value === '1' || value === 'true' || value === 'yes';
 }
 
 function readArgValue(argv, index, flag) {
@@ -153,8 +164,12 @@ function loadContract(file) {
   if (parsed.contract_kind !== 'opl_source_structure_budget.v1') {
     failures.push(`${path.relative(targetRoot, file)}: contract_kind must be opl_source_structure_budget.v1`);
   }
-  if (parsed.baseline_policy?.mode !== 'ratchet_no_growth') {
-    failures.push(`${path.relative(targetRoot, file)}: baseline_policy.mode must be ratchet_no_growth`);
+  const acceptedModes = new Set([
+    'scheduled_advisory_with_explicit_strict_ratchet',
+    'ratchet_no_growth',
+  ]);
+  if (!acceptedModes.has(parsed.baseline_policy?.mode)) {
+    failures.push(`${path.relative(targetRoot, file)}: baseline_policy.mode must be scheduled_advisory_with_explicit_strict_ratchet`);
   }
 
   const baseline = new Map();

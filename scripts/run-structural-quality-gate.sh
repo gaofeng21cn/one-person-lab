@@ -5,6 +5,7 @@ compare_ref="${OPL_QUALITY_DETAILS_COMPARE_REF:-origin/main}"
 quality_details_bin="${OPL_QUALITY_DETAILS_BIN:-./bin/opl}"
 quality_details_limit="${OPL_QUALITY_DETAILS_LIMIT:-30}"
 quality_details_focus="${OPL_QUALITY_DETAILS_FOCUS:-auto}"
+strict_mode="${OPL_STRUCTURAL_QUALITY_STRICT:-0}"
 
 emit_quality_details() {
   local reason="$1"
@@ -33,7 +34,7 @@ run_gate() {
   local status=$?
   if [ "$status" -ne 0 ]; then
     emit_quality_details "sentrux baseline regression advisory"
-    echo "::warning::Sentrux baseline regression reported structural drift; quality details were emitted for triage, while line budget and explicit Sentrux rules remain blocking." >&2
+    echo "::warning::Sentrux baseline regression reported structural drift; quality details were emitted for triage. Default structure checks are advisory; use ./scripts/verify.sh structure:strict for the maintenance hard gate." >&2
     return 0
   fi
 }
@@ -47,8 +48,12 @@ run_rules_check() {
   sentrux check .
   local status=$?
   if [ "$status" -ne 0 ]; then
-    emit_quality_details "sentrux check failed"
-    return "$status"
+    emit_quality_details "sentrux rules advisory"
+    if [ "$strict_mode" = "1" ] || [ "$strict_mode" = "true" ] || [ "$strict_mode" = "yes" ]; then
+      return "$status"
+    fi
+    echo "::warning::Sentrux explicit rules reported structural drift; default structure lane is advisory. Re-run with OPL_STRUCTURAL_QUALITY_STRICT=1 or ./scripts/verify.sh structure:strict for the maintenance hard gate." >&2
+    return 0
   fi
 }
 

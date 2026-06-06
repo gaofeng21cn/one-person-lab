@@ -736,9 +736,11 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
   assert.match(verifyScript, /run-with-repo-temp-env\.sh/);
   assert.match(verifyScript, /OPL_REPO_TEMP_ENV_ACTIVE/);
   assert.match(verifyScript, /node scripts\/line-budget\.mjs/);
+  assert.match(verifyScript, /node scripts\/line-budget\.mjs --strict/);
+  assert.match(verifyScript, /OPL_STRUCTURAL_QUALITY_STRICT=1/);
   assert.equal(
     (verifyScript.match(/node scripts\/line-budget\.mjs/g) ?? []).length,
-    1,
+    4,
   );
   assert.match(verifyScript, /npm run test:smoke/);
   assert.match(verifyScript, /npm run test:fast/);
@@ -763,7 +765,7 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
   assert.match(verifyScript, /npm run native:cache/);
   assert.match(verifyScript, /npm run native:family-smoke/);
   assert.match(verifyScript, /\.\/scripts\/run-structural-quality-gate\.sh/);
-  assert.match(verifyScript, /smoke\|fast\|regression\|integration\|structure\|family\|meta\|fresh-install\|artifact\|native\|full\|lint\|line-budget\|typecheck/);
+  assert.match(verifyScript, /smoke\|fast\|regression\|integration\|structure\|structure:strict\|family\|meta\|fresh-install\|artifact\|native\|full\|lint\|line-budget\|line-budget:strict\|typecheck/);
 });
 
 test('OPL harness pytest cache defaults outside the checkout', () => {

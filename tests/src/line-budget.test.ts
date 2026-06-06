@@ -40,7 +40,7 @@ function fixture(input: {
     default_limit: input.defaultLimit ?? 3,
     advisory_near_limit: input.defaultLimit ?? 3,
     baseline_policy: {
-      mode: 'ratchet_no_growth',
+      mode: 'scheduled_advisory_with_explicit_strict_ratchet',
     },
     reviewed_baselines: (input.baselines ?? []).map((entry) => ({
       owner: entry.owner ?? 'test-owner',
@@ -88,7 +88,7 @@ test('line budget ratchet allows a reviewed oversized baseline without requiring
   }
 });
 
-test('line budget ratchet blocks growth above a reviewed baseline', () => {
+test('line budget reports reviewed baseline growth as advisory by default', () => {
   const { root, contractPath } = fixture({
     files: { 'src/legacy-entry.ts': 5 },
     defaultLimit: 3,
@@ -98,7 +98,8 @@ test('line budget ratchet blocks growth above a reviewed baseline', () => {
   try {
     const result = runLineBudget(root, contractPath);
 
-    assert.equal(result.status, 1);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stderr, /line budget advisory/);
     assert.match(result.stderr, /src\/legacy-entry\.ts: 5 lines exceeds locked baseline 4/);
     assert.match(result.stderr, /ratchet baseline/);
   } finally {
@@ -106,7 +107,25 @@ test('line budget ratchet blocks growth above a reviewed baseline', () => {
   }
 });
 
-test('line budget blocks a new oversized file until it has a reviewed baseline', () => {
+test('strict line budget blocks growth above a reviewed baseline', () => {
+  const { root, contractPath } = fixture({
+    files: { 'src/legacy-entry.ts': 5 },
+    defaultLimit: 3,
+    baselines: [{ path: 'src/legacy-entry.ts', limit: 4 }],
+  });
+
+  try {
+    const result = runLineBudget(root, contractPath, ['--strict']);
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /strict line budget check failed/);
+    assert.match(result.stderr, /src\/legacy-entry\.ts: 5 lines exceeds locked baseline 4/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('line budget reports a new oversized file as advisory by default', () => {
   const { root, contractPath } = fixture({
     files: { 'src/new-large-entry.ts': 4 },
     defaultLimit: 3,
@@ -115,7 +134,8 @@ test('line budget blocks a new oversized file until it has a reviewed baseline',
   try {
     const result = runLineBudget(root, contractPath);
 
-    assert.equal(result.status, 1);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stderr, /line budget advisory/);
     assert.match(result.stderr, /src\/new-large-entry\.ts: 4 lines exceeds 3 line budget/);
     assert.match(result.stderr, /add a reviewed baseline contract entry/);
   } finally {
@@ -123,7 +143,24 @@ test('line budget blocks a new oversized file until it has a reviewed baseline',
   }
 });
 
-test('line budget rejects baseline entries without review metadata', () => {
+test('strict line budget blocks a new oversized file until it has a reviewed baseline', () => {
+  const { root, contractPath } = fixture({
+    files: { 'src/new-large-entry.ts': 4 },
+    defaultLimit: 3,
+  });
+
+  try {
+    const result = runLineBudget(root, contractPath, ['--strict']);
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /strict line budget check failed/);
+    assert.match(result.stderr, /src\/new-large-entry\.ts: 4 lines exceeds 3 line budget/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('line budget reports baseline entries without review metadata as advisory by default', () => {
   const { root, contractPath } = fixture({
     files: { 'src/legacy-entry.ts': 4 },
     defaultLimit: 3,
@@ -139,7 +176,8 @@ test('line budget rejects baseline entries without review metadata', () => {
   try {
     const result = runLineBudget(root, contractPath);
 
-    assert.equal(result.status, 1);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stderr, /line budget advisory/);
     assert.match(result.stderr, /baseline entry for src\/legacy-entry\.ts is missing owner/);
     assert.match(result.stderr, /baseline entry for src\/legacy-entry\.ts is missing reason/);
     assert.match(result.stderr, /baseline entry for src\/legacy-entry\.ts is missing intended_boundary/);
@@ -148,7 +186,31 @@ test('line budget rejects baseline entries without review metadata', () => {
   }
 });
 
-test('line budget asks for retired baseline removal once a file is back under default budget', () => {
+test('strict line budget rejects baseline entries without review metadata', () => {
+  const { root, contractPath } = fixture({
+    files: { 'src/legacy-entry.ts': 4 },
+    defaultLimit: 3,
+    baselines: [{
+      path: 'src/legacy-entry.ts',
+      limit: 4,
+      owner: '',
+      reason: '',
+      intended_boundary: '',
+    }],
+  });
+
+  try {
+    const result = runLineBudget(root, contractPath, ['--strict']);
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /strict line budget check failed/);
+    assert.match(result.stderr, /baseline entry for src\/legacy-entry\.ts is missing owner/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('line budget asks for retired baseline removal as advisory by default', () => {
   const { root, contractPath } = fixture({
     files: { 'src/legacy-entry.ts': 3 },
     defaultLimit: 3,
@@ -158,7 +220,8 @@ test('line budget asks for retired baseline removal once a file is back under de
   try {
     const result = runLineBudget(root, contractPath);
 
-    assert.equal(result.status, 1);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stderr, /line budget advisory/);
     assert.match(result.stderr, /src\/legacy-entry\.ts: retired line-budget baseline entry/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

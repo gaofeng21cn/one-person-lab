@@ -67,7 +67,7 @@
     "codex:export-default-profile": "node --experimental-strip-types ./scripts/export-codex-default-profile.mjs",
     "repo:hygiene": "scripts/repo-hygiene.sh",
     "repo:hygiene:fix": "scripts/repo-hygiene.sh --fix",
-    "lint": "node ./scripts/lint.mjs && node ./scripts/line-budget.mjs",
+    "lint": "node ./scripts/lint.mjs",
     "hygiene:fallow": "npx --yes fallow@latest --root . --no-cache --production",
     "test:smoke": "node ./scripts/test-lanes.mjs run smoke",
     "test:fast": "node ./scripts/test-lanes.mjs run fast",
@@ -83,6 +83,7 @@
     "test:full": "./scripts/run-parallel-test-lanes.sh full",
     "test": "npm run test:fast",
     "line-budget": "node ./scripts/line-budget.mjs",
+    "line-budget:strict": "node ./scripts/line-budget.mjs --strict",
     "fresh-install:smoke": "node ./scripts/fresh-install-smoke.mjs",
     "new-machine:codex-bootstrap:docker-smoke": "node ./scripts/new-machine-codex-bootstrap-docker-smoke.mjs"
   },

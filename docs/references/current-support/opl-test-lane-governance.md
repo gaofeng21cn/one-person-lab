@@ -23,14 +23,15 @@ Currentness policy：查看当前 lane 集合时先读 `package.json` 的 `test:
 | artifact | `npm run test:artifact` | 构建后 artifact 行为，先 `npm run build`，再跑 built CLI 测试。 |
 | fresh-install | `npm run test:fresh-install` | 本机 clean-room install / initialize 矩阵；真实 GUI 首启由 `one-person-lab-app` 的 App VM workflow 承担，并通过 external checkout 调用 `opl-aion-shell`。 |
 
-`scripts/verify.sh` 是 repo-native 验证分发入口。它会先执行 line budget，再分发到 smoke、fast、meta、regression、integration、structure、family、fresh-install、artifact、native、full、lint、line-budget 或 typecheck。`line-budget` lane 只执行统一入口前置的 line-budget 检查，不追加测试。line-budget 的预算与 reviewed baseline 由 `contracts/opl-framework/source-structure-budget.json` 持有；脚本按 no-growth ratchet 阻断新增超线、超过 locked baseline、stale baseline 与 retired baseline。
+`scripts/verify.sh` 是 repo-native 验证分发入口。它分发到 smoke、fast、meta、regression、integration、structure、structure:strict、family、fresh-install、artifact、native、full、lint、line-budget、line-budget:strict 或 typecheck。line budget 不再作为所有 lane 的前置硬门；`line-budget` lane 只执行 advisory 检查并默认 exit 0，`line-budget:strict` 才执行维护用 strict ratchet。line-budget 的预算与 reviewed baseline 由 `contracts/opl-framework/source-structure-budget.json` 持有；脚本默认报告新增超线、超过 reviewed baseline、stale baseline 与 retired baseline，只有 `--strict` 或 `OPL_LINE_BUDGET_STRICT=1` 才把 findings 作为失败。
 
 | Verify lane | 命令 | 角色 |
 | --- | --- | --- |
 | native | `./scripts/verify.sh native` | native helper doctor、prebuild check、package dry-run、Rust test/build、state cache 与 family smoke。 |
-| structure | `./scripts/verify.sh structure` | 本地结构质量入口；line budget 先由 `scripts/verify.sh` 执行并按 reviewed-baseline ratchet 阻断结构增长，Sentrux baseline regression 输出 OPL quality details 后按 advisory 处理，`.sentrux/rules.toml` explicit rules failure 仍是 blocking。 |
+| structure | `./scripts/verify.sh structure` | 本地结构质量 advisory 入口；line budget 和 Sentrux baseline/rules findings 都会输出诊断与 OPL quality details，但默认不阻断普通开发。 |
+| structure:strict | `./scripts/verify.sh structure:strict` | 显式维护硬门；line budget strict 与 Sentrux explicit rules failure 会返回失败，供每日结构治理或维护者手动检查。 |
 | family | `./scripts/verify.sh family` | family shared release 与 Python shared harness bootstrap 验证；Python cache、pytest cache 和临时 venv 必须走 repo 外 temp env。 |
-| lint | `./scripts/verify.sh lint` | `npm run lint`，包含 JS lint 与 line budget。 |
+| lint | `./scripts/verify.sh lint` | `npm run lint`，只执行 JS lint；行数预算通过 `line-budget` / `line-budget:strict` 或 `structure` / `structure:strict` 查看。 |
 | typecheck | `./scripts/verify.sh typecheck` | `npm run typecheck`。 |
 | full | `npm run test:full` / `./scripts/run-parallel-test-lanes.sh full` | clean-clone 基线入口；先并行 fast-parallel、fresh-install、structure、typecheck 与 lint，再串行 read-model-gates、meta、regression、integration、artifact 与 native。 |
 
@@ -48,9 +49,9 @@ Currentness policy：查看当前 lane 集合时先读 `package.json` 的 `test:
 
 ## CI 与结构质量
 
-GitHub `Verify` workflow 按 gate 拆开运行 build/typecheck、fast、read-model-gates、regression、integration、fresh-install、native、lint 和本地 structure。`lint-and-structure` job 会先取 `origin/main` compare ref、安装 Sentrux、运行 `./scripts/verify.sh lint`，再运行 `./scripts/verify.sh structure`。其中 line budget 与 explicit Sentrux rules 是阻断面；line budget 阻断结构增长和 baseline 漂移，不把 reviewed historical baseline 当成必须在每次提交中一次性清空的旧债；baseline regression 由结构脚本降为 advisory 并附带 OPL quality details。`artifact` 与 `full` 是本地 / clean-clone release-style 验证入口，不是当前 Verify workflow 的独立 job。
+GitHub `Verify` workflow 按 gate 拆开运行 build/typecheck、fast、read-model-gates、regression、integration、fresh-install、native、lint 和本地 structure。`lint-and-structure` job 会先取 `origin/main` compare ref、安装 Sentrux、运行 `./scripts/verify.sh lint`，再运行 `./scripts/verify.sh structure`。默认结构 lane 是 advisory：line budget、Sentrux baseline regression 与 explicit rules findings 都用于 review visibility 和每日治理队列，不阻断普通开发 CI。显式维护检查使用 `line-budget:strict` 或 `structure:strict`，不混入默认 feature verification。`artifact` 与 `full` 是本地 / clean-clone release-style 验证入口，不是当前 Verify workflow 的独立 job。
 
-`.github/workflows/sentrux-advisory.yml` 是非阻断 advisory signal：它发布 Sentrux 和 OPL quality details sidecar，帮助定位结构变化，但不替代 Verify workflow 的 lint / structure gate，也不改变 `.sentrux/rules.toml`、line budget 或 lane registry 的 owner。
+`.github/workflows/sentrux-advisory.yml` 是非阻断 advisory signal：它发布 Sentrux 和 OPL quality details sidecar，帮助定位结构变化，但不替代显式 strict 维护入口，也不改变 `.sentrux/rules.toml`、line budget 或 lane registry 的 owner。
 
 更新测试文件时，先运行：
 

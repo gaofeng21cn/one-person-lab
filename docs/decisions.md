@@ -295,7 +295,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ### 决策：App drilldown 继续通过真实模块拆分恢复 line-budget gate
 
-原因：OPL `scripts/verify.sh` 的第一道结构门是 line-budget。若当前 main 的 App drilldown 聚合器或长测试超过 locked baseline，应通过职责明确的 parts 模块和独立测试文件拆分恢复，而不是跳过 verify，或把结构 debt 当成下游 domain 任务失败。历史超线文件可以通过 `contracts/opl-framework/source-structure-budget.json` 记录 reviewed baseline，但 baseline 只表示 no-growth ratchet，不表示该结构已经理想。
+原因：OPL line budget 仍是结构维护信号，但不再作为普通 `scripts/verify.sh` 的第一道硬门。若当前 main 的 App drilldown 聚合器或长测试超过 reviewed baseline，应通过职责明确的 parts 模块和独立测试文件在结构治理任务中收薄，而不是让普通 feature verify 被行数预算卡住，或把结构 debt 当成下游 domain 任务失败。历史超线文件可以通过 `contracts/opl-framework/source-structure-budget.json` 记录 reviewed baseline，但 baseline 只表示已审查的维护账本，不表示该结构已经理想。
 
 影响：
 
@@ -832,7 +832,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - Rust native helper 现在作为 OPL package lifecycle 的一等面分发：npm package 包含 Cargo workspace 和 doctor/repair 脚本，`native:repair` 负责重建 helper 后输出 lifecycle doctor JSON
 - native helper lifecycle 继续收紧为生产门禁：CI 跑 build/typecheck、fast、regression、integration、fresh-install、native、lint 与 structure；native lane 覆盖 doctor、prebuild check、package dry-run、Rust test/build、state cache 与 family smoke
 - 测试治理采用单一 lane registry：`fast` 是默认本地信号，`regression` 承接宽回归，`integration` 覆盖 ACP/session runtime、install/configure 与 retired surface fail-closed，所有 active 测试文件必须被 `scripts/test-lanes.mjs assert-coverage` 覆盖
-- 本地 `structure` lane 是结构质量入口：line budget 与 explicit Sentrux rules 仍是阻断面，Sentrux baseline regression 按 advisory 输出 OPL quality details；line budget 阻断新增超线、超过 locked reviewed baseline、stale baseline 与 retired baseline，不强制一次提交清空全部历史超线；GitHub Sentrux Advisory workflow 继续作为非阻断 sidecar 信号存在，不替代 Verify workflow 的 lint / structure gate
+- 本地 `structure` lane 是结构质量 advisory 入口：line budget、Sentrux baseline regression 与 explicit Sentrux rules findings 默认输出 OPL quality details / warning，不阻断普通开发；`line-budget:strict`、`structure:strict` 或对应 strict 环境变量才作为维护硬门，检查新增超线、超过 reviewed baseline、stale baseline 与 retired baseline；GitHub Sentrux Advisory workflow 继续作为非阻断 sidecar 信号存在，不替代显式 strict 维护入口
 - prebuild/cache 策略先按 manifest 和 `OPL_STATE_DIR` cache 落地，目标是让 fresh install 优先恢复匹配平台的 helper binary，只有缺失或无效时才走本地 Cargo build
 - native state index 的 lifecycle 必须输出 TTL、history、failure、last-success、freshness、结构化 diff 与 history GC preserved/removed reporting，避免 helper 短暂不可用或 history 被裁剪时丢失可审计状态
 - `opl runtime snapshot` 可以为桌面托盘和 App Runtime Workbench 投影 `attention_items`、`running_items`、`recent_items` 与 MAS study drilldown/read-only workbench 数据，但只读取 domain-owned durable surfaces；为了托盘状态显示或 App drilldown 不新增本地 daemon，也不把 MAS `mas_opl_runtime_workbench_projection` 升级为 OPL-owned study truth
