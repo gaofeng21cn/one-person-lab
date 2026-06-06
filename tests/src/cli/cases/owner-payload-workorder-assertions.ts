@@ -140,7 +140,16 @@ export function assertCurrentOwnerDeltaToplineNextAction(surface: JsonRecord) {
   const ownerAnswerMissing =
     stageRunAction?.owner_answer_missing_before_opl_closeout_binding === true;
   const expectedNextAction =
-    ownerAnswerMissing ? ownerDeltaNextAction : (stageRunAction ?? ownerDeltaNextAction);
+    ownerAnswerMissing && ownerDeltaNextAction
+      ? {
+          ...ownerDeltaNextAction,
+          missing_input_refs: stageRunAction.missing_input_refs,
+          required_ref_shape: stageRunAction.required_ref_shape,
+          stage_run_closeout_binding_ref: '/stage_run_cockpit/execution_authorization',
+          stage_run_closeout_binding_policy:
+            'domain_owner_answer_must_bind_stage_run_manifest_current_pointer_source_fingerprint_and_idempotency',
+        }
+      : (stageRunAction ?? ownerDeltaNextAction);
   assert.deepEqual(
     surface.operator_next_action,
     expectedNextAction,
@@ -225,9 +234,25 @@ export function assertCurrentOwnerDeltaToplineNextAction(surface: JsonRecord) {
     if (ownerAnswerMissing) {
       assert.deepEqual(
         surface.operator_next_missing_input_refs,
-        Array.isArray(ownerDeltaNextAction?.missing_input_refs)
-          ? ownerDeltaNextAction.missing_input_refs
-          : [],
+        stageRunAction.missing_input_refs,
+      );
+      assert.deepEqual(surface.operator_next_action.missing_input_refs, stageRunAction.missing_input_refs);
+      assert.deepEqual(surface.operator_next_action.required_ref_shape, stageRunAction.required_ref_shape);
+      assert.equal(
+        surface.operator_next_action.stage_run_closeout_binding_ref,
+        '/stage_run_cockpit/execution_authorization',
+      );
+      assert.equal(
+        surface.operator_next_action.stage_run_closeout_binding_policy,
+        'domain_owner_answer_must_bind_stage_run_manifest_current_pointer_source_fingerprint_and_idempotency',
+      );
+      assert.equal(
+        surface.operator_next_stage_run_closeout_binding_ref,
+        '/stage_run_cockpit/execution_authorization',
+      );
+      assert.equal(
+        surface.operator_next_stage_run_closeout_binding_policy,
+        'domain_owner_answer_must_bind_stage_run_manifest_current_pointer_source_fingerprint_and_idempotency',
       );
     } else {
       assert.deepEqual(surface.operator_next_missing_input_refs, stageRunAction.missing_input_refs);

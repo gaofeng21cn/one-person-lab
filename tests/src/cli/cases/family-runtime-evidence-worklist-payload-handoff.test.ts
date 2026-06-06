@@ -64,7 +64,10 @@ type PayloadHandoffWorklist = {
   operator_required_delta?: string;
   operator_payload_requirement?: string;
   operator_accepted_answer_shape?: string[];
+  operator_next_action?: JsonRecord;
+  operator_next_missing_input_refs?: string[];
   stage_run_next_missing_input_refs?: string[];
+  stage_run_next_required_ref_shape?: JsonRecord;
   stage_run_cockpit_summary?: JsonRecord;
   next_safe_actions?: PayloadHandoffAction[];
   audit_worklist_next_safe_actions?: PayloadHandoffAction[];
@@ -614,6 +617,30 @@ test('family-runtime evidence-worklist summary next actions carry domain-dispatc
   assert.equal(
     worklist.stage_run_next_missing_input_refs?.includes('owner_answer_ref'),
     true,
+  );
+  assert.deepEqual(
+    worklist.operator_next_missing_input_refs,
+    worklist.stage_run_next_missing_input_refs,
+  );
+  assert.deepEqual(
+    worklist.operator_next_action?.missing_input_refs,
+    worklist.stage_run_next_missing_input_refs,
+  );
+  assert.deepEqual(
+    worklist.operator_next_action?.required_ref_shape,
+    worklist.stage_run_next_required_ref_shape,
+  );
+  assert.equal(
+    worklist.operator_next_action?.stage_run_closeout_binding_policy,
+    'domain_owner_answer_must_bind_stage_run_manifest_current_pointer_source_fingerprint_and_idempotency',
+  );
+  assert.equal(
+    worklist.operator_next_stage_run_closeout_binding_ref,
+    '/stage_run_cockpit/execution_authorization',
+  );
+  assert.equal(
+    worklist.operator_next_stage_run_closeout_binding_policy,
+    'domain_owner_answer_must_bind_stage_run_manifest_current_pointer_source_fingerprint_and_idempotency',
   );
   const acceptedReturnShapes =
     (worklist.current_owner_delta_read_model as JsonRecord)

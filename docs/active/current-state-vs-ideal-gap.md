@@ -111,6 +111,8 @@ Unified owner-delta 仍按 live 机器面读取，不从本页继承旧 counters
 
 同一 follow-through 也把 StageRun cockpit summary 的 closeout/execution blocker 分层暴露到默认读面。`execution_authorized=false` 必须结合 `execution_authorization_phase`、`blocked_authority`、`launch_blocker_count`、`closeout_binding_blocker_count`、`route_requires_domain_or_app_payload` 和 `route_requires_opl_runtime_refs` 读取。当前 fresh summary 是 `phase=closeout`、`blocked_authority=[closeout_receipt_binding]`、`launch_blocker_count=0`、`execution_authorization_refs_missing=false`、`route_requires_domain_or_app_payload=true`，所以默认 next owner 仍是 MAS/domain owner answer path；它不是 OPL provider attempt / lease / authorization refs 缺失，也不允许 OPL 自造 owner receipt 或 typed blocker。
 
+当 StageRun 只剩 MAS owner answer closeout binding refs 时，默认 `operator_next_action` 仍由 `current_owner_delta` 指向 MAS/domain owner，但必须同时携带 StageRun 的 `missing_input_refs`、`required_ref_shape` 和 `stage_run_closeout_binding_policy`，并在顶层同步暴露 `operator_next_stage_run_closeout_binding_ref` / `operator_next_stage_run_closeout_binding_policy` 供 App/CLI 直接读取。这让 MAS owner answer 明确绑定 StageRun、stage manifest、current pointer、source fingerprint 和 idempotency；这些字段只提供接力要求，不让 OPL 生成 owner receipt、typed blocker 或 domain verdict。
+
 ## 统一审计标准
 
 后续 closeout、设计评审和跨仓优化都按 [OPL Foundry Agent Target Operating Architecture](./opl-foundry-agent-target-operating-architecture.md) 的 `Audit Standard` 判断，并在本页只保留执行口径：

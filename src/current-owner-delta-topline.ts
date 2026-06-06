@@ -39,8 +39,24 @@ export function buildCurrentOwnerDeltaTopline(input: {
   const stageRunAuthorizationBlocksDefault =
     text(stageRunNextAction?.derivation_source) === 'stage_run_execution_authorization'
     && text(stageRunNextAction?.next_required_owner) === 'one-person-lab';
+  const stageRunOwnerAnswerBindingMissing =
+    text(stageRunNextAction?.derivation_source) === 'stage_run_execution_authorization'
+    && stageRunNextAction?.owner_answer_missing_before_opl_closeout_binding === true;
+  const ownerAnswerBindingMissingRefs = strings(stageRunNextAction?.missing_input_refs);
+  const ownerAnswerBindingRequiredRefShape = record(stageRunNextAction?.required_ref_shape);
   const effectiveOperatorNextAction =
-    stageRunAuthorizationBlocksDefault ? stageRunNextAction : operatorNextAction;
+    stageRunAuthorizationBlocksDefault
+      ? stageRunNextAction
+      : stageRunOwnerAnswerBindingMissing && operatorNextAction
+        ? {
+            ...operatorNextAction,
+            missing_input_refs: ownerAnswerBindingMissingRefs,
+            required_ref_shape: ownerAnswerBindingRequiredRefShape,
+            stage_run_closeout_binding_ref: '/stage_run_cockpit/execution_authorization',
+            stage_run_closeout_binding_policy:
+              'domain_owner_answer_must_bind_stage_run_manifest_current_pointer_source_fingerprint_and_idempotency',
+          }
+        : operatorNextAction;
   const defaultOperatorNextAction = effectiveOperatorNextAction ?? {};
   const stageRunExecutionAuthorization = record(stageRunCockpit.execution_authorization);
   const stageRunExecutionBlocker = record(stageRunExecutionAuthorization.opl_runtime_blocker);
@@ -81,6 +97,10 @@ export function buildCurrentOwnerDeltaTopline(input: {
       strings(defaultOperatorNextAction.missing_input_refs),
     operator_next_required_ref_shape:
       record(defaultOperatorNextAction.required_ref_shape),
+    operator_next_stage_run_closeout_binding_ref:
+      text(defaultOperatorNextAction.stage_run_closeout_binding_ref),
+    operator_next_stage_run_closeout_binding_policy:
+      text(defaultOperatorNextAction.stage_run_closeout_binding_policy),
     stage_run_next_required_owner_action: stageRunNextAction,
     stage_run_next_missing_input_refs:
       strings(stageRunNextAction?.missing_input_refs),

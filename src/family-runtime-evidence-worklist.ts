@@ -859,7 +859,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
     sourceRef: '/family_runtime_evidence_worklist/worklist_items',
   });
   const evidenceRequirementLedger = buildEvidenceRequirementLedger(worklistItems);
-  const stageEvidenceWorkorderPacket = buildStageEvidenceWorkorderPacket(operatorRoutes);
+  const stageEvidenceWorkorderPacket = buildStageEvidenceWorkorderPacket(openOperatorRoutes);
   const stageEvidenceWorkorderSummary = record(stageEvidenceWorkorderPacket.summary);
   const stageEvidenceWorkorderAttentionItems =
     compactStageEvidenceWorkorderAttentionItems(stageEvidenceWorkorderPacket);
@@ -872,7 +872,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
   const stageReplayMissingReceiptWorkorderAttentionSummary =
     compactStageReplayMissingReceiptWorkorderAttentionSummary(stageReplayMissingReceiptWorkorderPacket);
   const domainDispatchEvidenceWorkorderPacket =
-    buildDomainDispatchEvidenceWorkorderPacket(operatorRoutes);
+    buildDomainDispatchEvidenceWorkorderPacket(openOperatorRoutes);
   const domainDispatchEvidenceWorkorderSummary =
     record(domainDispatchEvidenceWorkorderPacket.summary);
   const domainDispatchEvidenceWorkorderGroupAttentionItems =
