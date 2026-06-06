@@ -105,6 +105,20 @@ test('agents conformance reports structural readiness separately from production
   assert.equal(adoptionReadModel.controlled_canary_evidence_scope, 'controlled_fixture_not_live_domain_progress');
   assert.equal(adoptionReadModel.production_evidence_tail_count, 2);
   assert.equal(adoptionReadModel.open_production_evidence_tail_count, 2);
+  assert.equal(adoptionReadModel.domain_production_acceptance_tail_count, 2);
+  assert.equal(adoptionReadModel.open_domain_production_acceptance_tail_count, 2);
+  assert.equal(
+    adoptionReadModel.domain_production_acceptance_tail_policy,
+    'domain_owned_acceptance_refs_are_reported_separately_from_live_stage_run_progress',
+  );
+  assert.equal(
+    adoptionReadModel.live_stage_run_progress_evidence_status,
+    'required_from_domain_owner',
+  );
+  assert.equal(
+    adoptionReadModel.live_stage_run_progress_evidence_policy,
+    'controlled_canary_and_structural_conformance_do_not_close_live_domain_progress_evidence',
+  );
   assert.equal(adoptionReadModel.conformance_pass_counts_as_domain_ready, false);
   assert.equal(adoptionReadModel.conformance_pass_counts_as_production_ready, false);
   assert.equal(adoptionReadModel.authority_boundary.can_claim_domain_ready, false);
@@ -124,7 +138,23 @@ test('agents conformance reports structural readiness separately from production
   assert.equal(adoptionDomain.stage_run_canary_evidence_scope, 'controlled_fixture_not_live_domain_progress');
   assert.equal(adoptionDomain.stage_run_canary_operator_status, 'ready');
   assert.equal(adoptionDomain.controlled_canary_claims_live_domain_progress, false);
+  assert.equal(
+    adoptionDomain.domain_production_acceptance_tail_status,
+    'production_evidence_tail_present',
+  );
+  assert.equal(adoptionDomain.domain_production_acceptance_tail_count, 2);
+  assert.equal(adoptionDomain.domain_production_acceptance_tail_open_count, 2);
+  assert.equal(adoptionDomain.domain_production_acceptance_tail_typed_blocker_count, 0);
+  assert.equal(
+    adoptionDomain.domain_production_acceptance_tail_scope,
+    'domain_owned_acceptance_refs_not_live_stage_run_progress_evidence',
+  );
   assert.equal(adoptionDomain.production_evidence_tail_status, 'production_evidence_tail_present');
+  assert.equal(
+    adoptionDomain.live_stage_run_progress_evidence_status,
+    'required_from_domain_owner',
+  );
+  assert.equal(adoptionDomain.live_stage_run_progress_evidence_required_from, 'domain_owner');
   assert.equal(adoptionDomain.structural_conformance_is_domain_ready, false);
   assert.equal(
     adoptionDomain.next_required_owner_action,

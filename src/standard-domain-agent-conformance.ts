@@ -441,10 +441,21 @@ function buildStageRunDomainAdoptionReadModel(reports: RepoConformanceReport[]) 
       stage_manifest_ref: canary.stage_manifest_ref,
       current_pointer_ref: canary.current_pointer_ref,
       controlled_canary_claims_live_domain_progress: false,
+      domain_production_acceptance_tail_status: report.evidence_tail_classification.status,
+      domain_production_acceptance_tail_count: report.evidence_tail_classification.tail_items.length,
+      domain_production_acceptance_tail_open_count: countTailItems(report, 'open'),
+      domain_production_acceptance_tail_typed_blocker_count: countTailItems(
+        report,
+        'domain_owned_typed_blocker',
+      ),
+      domain_production_acceptance_tail_scope:
+        'domain_owned_acceptance_refs_not_live_stage_run_progress_evidence',
       production_evidence_tail_status: report.evidence_tail_classification.status,
       production_evidence_tail_count: report.evidence_tail_classification.tail_items.length,
       production_evidence_tail_open_count: countTailItems(report, 'open'),
       production_evidence_tail_typed_blocker_count: countTailItems(report, 'domain_owned_typed_blocker'),
+      live_stage_run_progress_evidence_status: 'required_from_domain_owner',
+      live_stage_run_progress_evidence_required_from: 'domain_owner',
       structural_conformance_is_domain_ready: false,
       next_required_owner_action: stageRunDomainNextAction(report),
       authority_boundary: {
@@ -473,6 +484,14 @@ function buildStageRunDomainAdoptionReadModel(reports: RepoConformanceReport[]) 
     (total, domain) => total + domain.production_evidence_tail_open_count,
     0,
   );
+  const domainProductionAcceptanceTailCount = domains.reduce(
+    (total, domain) => total + domain.domain_production_acceptance_tail_count,
+    0,
+  );
+  const openDomainProductionAcceptanceTailCount = domains.reduce(
+    (total, domain) => total + domain.domain_production_acceptance_tail_open_count,
+    0,
+  );
   return {
     surface_kind: 'opl_stage_run_domain_adoption_read_model',
     owner: 'one-person-lab',
@@ -492,6 +511,13 @@ function buildStageRunDomainAdoptionReadModel(reports: RepoConformanceReport[]) 
     production_evidence_tail_count: productionEvidenceTailCount,
     open_production_evidence_tail_count: openProductionEvidenceTailCount,
     production_evidence_tail_policy: 'reported_separately_not_a_structural_pass_condition',
+    domain_production_acceptance_tail_count: domainProductionAcceptanceTailCount,
+    open_domain_production_acceptance_tail_count: openDomainProductionAcceptanceTailCount,
+    domain_production_acceptance_tail_policy:
+      'domain_owned_acceptance_refs_are_reported_separately_from_live_stage_run_progress',
+    live_stage_run_progress_evidence_status: 'required_from_domain_owner',
+    live_stage_run_progress_evidence_policy:
+      'controlled_canary_and_structural_conformance_do_not_close_live_domain_progress_evidence',
     controlled_canary_claims_live_domain_progress: false,
     conformance_pass_counts_as_domain_ready: false,
     conformance_pass_counts_as_production_ready: false,
