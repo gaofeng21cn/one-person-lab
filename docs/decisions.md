@@ -16,6 +16,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - StageRun execution authorization blocked 时，App state、framework readiness、runtime drilldown 和 family-runtime evidence-worklist 的默认 `operator_next_action`、`operator_next_owner`、payload requirement 和 accepted answer shape 以 OPL runtime blocker 为准。
 - 原始 domain owner delta 仍保留为 `current_owner_delta` / `operator_current_owner_delta_owner` / `current_owner_delta_owner`，用于说明后续授权满足后要回到哪个 domain owner answer。
 - OPL runtime blocker 只阻断 provider execution 或 owner-answer binding；它不写 domain truth、不创建 domain typed blocker、不签 domain owner receipt、不声明 domain ready、App release ready 或 production ready。
+- Domain owner receipt / typed blocker 仍是成功关闭 domain stage 的唯一语义；OPL execution authorization 只负责把执行许可和 closeout binding 做成可恢复、可审计的前置条件。
 
 ### 决策：default-caller deletion / cleanup gate 不得占用 ordinary progress worklist
 

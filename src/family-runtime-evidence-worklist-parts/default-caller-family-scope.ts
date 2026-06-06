@@ -107,6 +107,10 @@ function isFamilyDefaultDomainId(domainId: string | null) {
   ].includes(domainId ?? '');
 }
 
+function isFamilyDefaultDomainIdString(domainId: string | null): domainId is string {
+  return isFamilyDefaultDomainId(domainId);
+}
+
 function isThreeDomainDefaultProjection(domainIds: string[]) {
   const values = new Set(domainIds);
   return [
@@ -127,7 +131,7 @@ export function familyDefaultCallerSupplementalDomains(
   }
   const projectedFamilyDomainIds = projectedDomains
     .map((domain) => stringValue(domain.domain_id) ?? stringValue(domain.project_id))
-    .filter((domainId): domainId is string => isFamilyDefaultDomainId(domainId));
+    .filter(isFamilyDefaultDomainIdString);
   if (projectedFamilyDomainIds.length === 0) {
     return [];
   }

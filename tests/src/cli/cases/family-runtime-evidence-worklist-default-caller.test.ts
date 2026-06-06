@@ -166,6 +166,8 @@ test('family-runtime evidence-worklist keeps family default-caller deletion scop
     assert.equal(fullWorklist.summary.default_caller_deletion_audit_lane_item_count, 32);
     assert.equal(fullWorklist.summary.default_caller_deletion_open_safe_action_item_count, 0);
     assert.equal(fullWorklist.summary.default_caller_deletion_no_active_caller_missing_count, 32);
+    assert.equal(fullWorklist.summary.default_caller_deletion_audit_lane_item_count, 32);
+    assert.equal(fullWorklist.summary.default_caller_deletion_open_safe_action_item_count, 0);
     assert.equal(
       fullWorklist.worklist_items.filter((item: { claim_scope: string; owner: string }) =>
         item.claim_scope === 'default_caller_deletion_evidence'
