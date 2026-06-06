@@ -90,7 +90,13 @@ const DEFAULT_EXECUTOR_NEXT_OWNERS = new Set([
   'ai_reviewer',
   'write/ai_reviewer',
   'gate_clearing_batch',
+  'medautoscience',
   'publication_gate_owner',
+]);
+const DEFAULT_EXECUTOR_NEXT_OWNER_ALIASES = new Map([
+  ['mas', 'medautoscience'],
+  ['med-autoscience', 'medautoscience'],
+  ['med_auto_science', 'medautoscience'],
 ]);
 const DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
 const DEFAULT_EXECUTOR_CROSS_TASK_STARTED_ATTEMPT_STATUSES = new Set(['running', 'checkpointed', 'human_gate']);
@@ -234,7 +240,11 @@ function familyTransitionResult(payload: Record<string, unknown>) {
 }
 
 export function isAdmittedDefaultExecutorNextOwner(nextOwner: string | null) {
-  return nextOwner !== null && DEFAULT_EXECUTOR_NEXT_OWNERS.has(nextOwner);
+  if (nextOwner === null) {
+    return false;
+  }
+  const normalized = nextOwner.trim().toLowerCase();
+  return DEFAULT_EXECUTOR_NEXT_OWNERS.has(DEFAULT_EXECUTOR_NEXT_OWNER_ALIASES.get(normalized) ?? normalized);
 }
 
 export function isDefaultExecutorDispatchTask(
