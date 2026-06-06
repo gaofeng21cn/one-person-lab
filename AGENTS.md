@@ -86,7 +86,7 @@
 
 - 大改动、长链路工作、并行多 AI 开发，默认先从最新 `main` 开独立 worktree，再在 worktree 内实现和验证。
 - 共享根 checkout 只用于轻量阅读、评审、吸收验证后提交、push 和清理，不应长期承担重型实现。
-- 对互不冲突、写集可隔离、source of truth 清楚的任务，可以用 subagent 并行开多个 worktree 推进；完善后由主会话核查 diff、验证、吸收回 `main` 并清理 worktree / branch / thread。
+- 对互不冲突、写集可隔离、source of truth 清楚的任务，默认优先用 subagent 并行开多个 worktree 推进，以提高落地效率；完善后由主会话核查 diff、验证、吸收回 `main` 并清理 worktree / branch / thread。
 - 需要多条 lane 时创建多个 worktree，不要把多条长线塞进同一工作目录。
 - worktree 内实现和验证完成后，应尽快吸收回 `main`，并清理对应 worktree、分支与临时状态。
 
