@@ -131,7 +131,7 @@ Closed in the first landing pass:
 - `opl-flow`: repo-native verify entry is added in `764d1ab`.
 - `med-autogrant`: generated aggregate source checks are added in `2b2ea3c`.
 - `one-person-lab-app`: active-shell shared validator extraction is landed in `d640d5e`, and fresh family scan now shows no App source-shape item.
-- `one-person-lab-app`: first-run scenario alias metadata is retired in `251c3f0`; Full first-install policy and Full DMG release VM gate now use distinct canonical scenario ids without compatibility aliases.
+- `one-person-lab-app`: first-run scenario alias metadata is retired in `251c3f0`; Full first-install policy and Full DMG release VM gate now use distinct canonical scenario ids without alias metadata.
 - `opl-agui-codex-shell`: renderer source modules are split in `3991af4`, and source-only candidate validation now follows the renderer module graph.
 - `opl-agui-codex-shell`: main-process, WebUI server and candidate validator responsibilities are split in `74b4e78`; AG-UI now has no source-shape item in the fresh family scan.
 - `redcube-ai`: `tests/opl-agent-pack-contracts.test.ts` and `tests/rca-retired-surface-guard.test.ts` are replaced by semantic test families and helpers in `86e202a4`.
