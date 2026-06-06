@@ -10,14 +10,14 @@ import {
 } from './standard-domain-agent-family-repos.ts';
 import { buildDefaultCallerPhysicalDeleteAuthorityReadModel } from './agent-default-caller-delete-read-model.ts';
 import {
+  DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES,
+  DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
   DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES,
   DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
 } from './default-caller-retirement-guard.ts';
 import {
   DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS,
-  DEFAULT_CALLER_PHYSICAL_DELETE_ACCEPTED_REFS_ONLY_RESULT_SHAPES,
-  DEFAULT_CALLER_PHYSICAL_DELETE_OWNER_DECISION_ACTION,
   DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS,
   defaultCallerSurfaceGates,
   generatedSurfaceTargetAllowed,
@@ -583,9 +583,9 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         generated_default_caller_readiness_can_authorize_physical_delete: false,
         physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
         physical_delete_authorization_status: 'not_authorized_by_opl_projection',
-        next_required_owner_action: DEFAULT_CALLER_PHYSICAL_DELETE_OWNER_DECISION_ACTION,
+        next_required_owner_action: DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
         accepted_refs_only_result_shapes: [
-          ...DEFAULT_CALLER_PHYSICAL_DELETE_ACCEPTED_REFS_ONLY_RESULT_SHAPES,
+          ...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES,
         ],
         owner_decision_required_after_all_refs_observed: true,
         deletion_evidence_requirements_are_completion_claims: false,
@@ -638,9 +638,9 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         generated_default_caller_readiness_can_authorize_physical_delete: false,
         physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
         physical_delete_authorization_status: 'not_authorized_by_opl_projection',
-        next_required_owner_action: DEFAULT_CALLER_PHYSICAL_DELETE_OWNER_DECISION_ACTION,
+        next_required_owner_action: DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
         accepted_refs_only_result_shapes: [
-          ...DEFAULT_CALLER_PHYSICAL_DELETE_ACCEPTED_REFS_ONLY_RESULT_SHAPES,
+          ...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES,
         ],
         owner_decision_required_after_all_refs_observed: true,
         deletion_evidence_requirements_are_completion_claims: false,

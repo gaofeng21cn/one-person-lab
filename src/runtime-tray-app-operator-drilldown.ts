@@ -1218,6 +1218,12 @@ export function buildAppOperatorDrilldown(input: {
       record(workstreamOperatingLoop.summary).platform_repair_only_workstream_count,
     workstream_operating_loop_goal_oracle_missing_count:
       record(workstreamOperatingLoop.summary).goal_oracle_missing_count,
+    workstream_operating_loop_goal_oracle_target_anchor_observed_count:
+      record(workstreamOperatingLoop.summary).goal_oracle_target_anchor_observed_count,
+    workstream_operating_loop_deliverable_target_ref_observed_count:
+      record(workstreamOperatingLoop.summary).deliverable_target_ref_observed_count,
+    workstream_operating_loop_goal_oracle_advisory_count:
+      record(workstreamOperatingLoop.summary).goal_oracle_advisory_count,
   };
   const sourceRefs: RuntimeTraySourceRef[] = uniqueByRef([
     sourceRef('/runtime_tray_snapshot/stage_attempt_workbench', 'stage_attempt_workbench'),

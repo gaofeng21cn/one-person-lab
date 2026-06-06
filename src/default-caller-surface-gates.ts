@@ -1,4 +1,6 @@
 import {
+  DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES,
+  DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
   DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES,
   DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
@@ -25,16 +27,7 @@ export const DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS = [
 export const DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS = [
   'generated_default_caller_readiness_is_not_delete_authority',
   'domain_repo_owner_receipt_or_typed_blocker_required_for_delete_authority',
-  'physical_delete_requires_domain_repo_owner_action_after_all_refs_observed',
-] as const;
-
-export const DEFAULT_CALLER_PHYSICAL_DELETE_OWNER_DECISION_ACTION =
-  'domain_owner_choose_delete_authorize_keep_or_typed_blocker';
-
-export const DEFAULT_CALLER_PHYSICAL_DELETE_ACCEPTED_REFS_ONLY_RESULT_SHAPES = [
-  'physical_delete_authorization_ref',
-  'keep_as_authority_adapter_ref',
-  'typed_blocker_ref',
+  'physical_delete_requires_domain_owner_delete_keep_or_blocker_decision_after_structural_evidence',
 ] as const;
 
 const DEFAULT_CALLER_CANONICAL_TARGET_IDS: Record<string, string[]> = {
@@ -260,9 +253,9 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
       worklist_item_is_completion_claim: false,
       physical_delete_authorization_status: 'not_authorized_by_opl_projection',
       not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
-      next_required_owner_action: DEFAULT_CALLER_PHYSICAL_DELETE_OWNER_DECISION_ACTION,
+      next_required_owner_action: DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
       accepted_refs_only_result_shapes: [
-        ...DEFAULT_CALLER_PHYSICAL_DELETE_ACCEPTED_REFS_ONLY_RESULT_SHAPES,
+        ...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES,
       ],
       owner_decision_required_after_all_refs_observed: true,
       retirement_guard: {

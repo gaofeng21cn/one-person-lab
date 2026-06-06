@@ -274,6 +274,12 @@ export function frameworkAttentionFirstPayload(input: {
         numberValue(record(input.workstreamOperatingLoop.summary).artifact_first_review_available_count),
       workstream_operating_loop_goal_oracle_missing_count:
         numberValue(record(input.workstreamOperatingLoop.summary).goal_oracle_missing_count),
+      workstream_operating_loop_goal_oracle_target_anchor_observed_count:
+        numberValue(record(input.workstreamOperatingLoop.summary).goal_oracle_target_anchor_observed_count),
+      workstream_operating_loop_deliverable_target_ref_observed_count:
+        numberValue(record(input.workstreamOperatingLoop.summary).deliverable_target_ref_observed_count),
+      workstream_operating_loop_goal_oracle_advisory_count:
+        numberValue(record(input.workstreamOperatingLoop.summary).goal_oracle_advisory_count),
       owner_delta_handoff_status:
         input.ownerDeltaHandoffSummary.status ?? null,
       owner_delta_handoff_current_operator_action_state:

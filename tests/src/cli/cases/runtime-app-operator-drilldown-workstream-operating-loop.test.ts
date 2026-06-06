@@ -285,6 +285,18 @@ test('workstream operating loop anchors missing completion oracle to current own
   assert.equal(loop.summary.deliverable_target_ref_observed_count, 1);
   assert.equal(loop.summary.goal_oracle_advisory_count, 1);
   assert.equal(
+    drilldown.summary.workstream_operating_loop_goal_oracle_target_anchor_observed_count,
+    1,
+  );
+  assert.equal(
+    drilldown.summary.workstream_operating_loop_deliverable_target_ref_observed_count,
+    1,
+  );
+  assert.equal(
+    drilldown.summary.workstream_operating_loop_goal_oracle_advisory_count,
+    1,
+  );
+  assert.equal(
     drilldown.attention_first_payload.owner_delta_first.next_required_delta,
     'domain_owner_receipt_quality_gate_or_typed_blocker_required',
   );

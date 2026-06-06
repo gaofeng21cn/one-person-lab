@@ -19,6 +19,30 @@ export function assertFrameworkWorkstreamOperatingLoop(readiness: any) {
     readiness.attention_first_payload.summary.workstream_operating_loop_workstream_count,
     workstreamOperatingLoop.summary.workstream_count,
   );
+  assert.equal(
+    readiness.summary.workstream_operating_loop_goal_oracle_target_anchor_observed_count,
+    workstreamOperatingLoop.summary.goal_oracle_target_anchor_observed_count,
+  );
+  assert.equal(
+    readiness.summary.workstream_operating_loop_deliverable_target_ref_observed_count,
+    workstreamOperatingLoop.summary.deliverable_target_ref_observed_count,
+  );
+  assert.equal(
+    readiness.summary.workstream_operating_loop_goal_oracle_advisory_count,
+    workstreamOperatingLoop.summary.goal_oracle_advisory_count,
+  );
+  assert.equal(
+    readiness.attention_first_payload.summary.workstream_operating_loop_goal_oracle_target_anchor_observed_count,
+    workstreamOperatingLoop.summary.goal_oracle_target_anchor_observed_count,
+  );
+  assert.equal(
+    readiness.attention_first_payload.summary.workstream_operating_loop_deliverable_target_ref_observed_count,
+    workstreamOperatingLoop.summary.deliverable_target_ref_observed_count,
+  );
+  assert.equal(
+    readiness.attention_first_payload.summary.workstream_operating_loop_goal_oracle_advisory_count,
+    workstreamOperatingLoop.summary.goal_oracle_advisory_count,
+  );
   const ownerDeltaFirst = readiness.attention_first_payload.owner_delta_first;
   assert.equal(readiness.owner_delta_first.surface_kind, 'opl_owner_delta_first_projection');
   assert.equal(ownerDeltaFirst.surface_kind, 'opl_owner_delta_first_projection');

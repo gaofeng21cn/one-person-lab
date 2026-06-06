@@ -20,3 +20,12 @@ export const DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES = [
   'opl_family_runtime_evidence_worklist_refs_only_receipt',
   'opl_runtime_app_operator_drilldown_projection',
 ] as const;
+
+export const DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION =
+  'domain_owner_choose_delete_authorize_keep_or_typed_blocker' as const;
+
+export const DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES = [
+  'physical_delete_authorization_ref',
+  'keep_as_authority_adapter_ref',
+  'typed_blocker_ref',
+] as const;
