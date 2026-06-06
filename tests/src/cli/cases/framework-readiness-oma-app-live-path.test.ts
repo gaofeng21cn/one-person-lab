@@ -5,9 +5,12 @@ import {
   recordOmaProductionConsumptionReceipts,
   verifyOmaProductionConsumptionReceipt,
 } from '../../../../src/oma-production-consumption-ledger.ts';
-import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
+import { createFamilyWorkspaceFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
-function restoreEnv(name: 'OPL_STATE_DIR' | 'OPL_META_AGENT_REPO_DIR', previous: string | undefined) {
+function restoreEnv(
+  name: 'OPL_STATE_DIR' | 'OPL_META_AGENT_REPO_DIR' | 'OPL_FAMILY_WORKSPACE_ROOT',
+  previous: string | undefined,
+) {
   if (previous === undefined) {
     delete process.env[name];
   } else {
@@ -20,9 +23,12 @@ test('framework readiness consumes OMA App live path receipts without reopening 
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-live-fixture-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
+  const previousFamilyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
   try {
     process.env.OPL_STATE_DIR = stateRoot;
-    process.env.OPL_META_AGENT_REPO_DIR = createOmaContractFixture(fixtureRoot);
+    const { omaRepoDir, workspaceRoot } = createFamilyWorkspaceFixture(fixtureRoot);
+    process.env.OPL_META_AGENT_REPO_DIR = omaRepoDir;
+    process.env.OPL_FAMILY_WORKSPACE_ROOT = workspaceRoot;
     recordManagedInstallUpdateReceipts([{
       module_id: 'oplmetaagent',
       repo_name: 'opl-meta-agent',
@@ -46,6 +52,7 @@ test('framework readiness consumes OMA App live path receipts without reopening 
     const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,
       OPL_META_AGENT_REPO_DIR: process.env.OPL_META_AGENT_REPO_DIR,
+      OPL_FAMILY_WORKSPACE_ROOT: process.env.OPL_FAMILY_WORKSPACE_ROOT,
     }).framework_readiness;
     const omaFollowthrough = readiness.attention_first_payload.oma_production_consumption_followthrough;
     if (omaFollowthrough.structural_consumption_ready !== true) {
@@ -106,6 +113,7 @@ test('framework readiness consumes OMA App live path receipts without reopening 
   } finally {
     restoreEnv('OPL_STATE_DIR', previousStateDir);
     restoreEnv('OPL_META_AGENT_REPO_DIR', previousOmaRepoDir);
+    restoreEnv('OPL_FAMILY_WORKSPACE_ROOT', previousFamilyWorkspaceRoot);
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
@@ -116,9 +124,12 @@ test('framework readiness consumes verified OMA production-consumption long-soak
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-consumption-fixture-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
+  const previousFamilyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
   try {
     process.env.OPL_STATE_DIR = stateRoot;
-    process.env.OPL_META_AGENT_REPO_DIR = createOmaContractFixture(fixtureRoot);
+    const { omaRepoDir, workspaceRoot } = createFamilyWorkspaceFixture(fixtureRoot);
+    process.env.OPL_META_AGENT_REPO_DIR = omaRepoDir;
+    process.env.OPL_FAMILY_WORKSPACE_ROOT = workspaceRoot;
     recordManagedInstallUpdateReceipts([{
       module_id: 'oplmetaagent',
       repo_name: 'opl-meta-agent',
@@ -146,6 +157,7 @@ test('framework readiness consumes verified OMA production-consumption long-soak
     const recordedReadiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,
       OPL_META_AGENT_REPO_DIR: process.env.OPL_META_AGENT_REPO_DIR,
+      OPL_FAMILY_WORKSPACE_ROOT: process.env.OPL_FAMILY_WORKSPACE_ROOT,
     }).framework_readiness;
     const recordedFollowthrough = recordedReadiness.oma_production_consumption_followthrough;
     if (recordedFollowthrough.structural_consumption_ready !== true) {
@@ -171,6 +183,7 @@ test('framework readiness consumes verified OMA production-consumption long-soak
     const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,
       OPL_META_AGENT_REPO_DIR: process.env.OPL_META_AGENT_REPO_DIR,
+      OPL_FAMILY_WORKSPACE_ROOT: process.env.OPL_FAMILY_WORKSPACE_ROOT,
     }).framework_readiness;
     const omaFollowthrough = readiness.oma_production_consumption_followthrough;
     if (omaFollowthrough.structural_consumption_ready !== true) {
@@ -189,6 +202,7 @@ test('framework readiness consumes verified OMA production-consumption long-soak
   } finally {
     restoreEnv('OPL_STATE_DIR', previousStateDir);
     restoreEnv('OPL_META_AGENT_REPO_DIR', previousOmaRepoDir);
+    restoreEnv('OPL_FAMILY_WORKSPACE_ROOT', previousFamilyWorkspaceRoot);
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }

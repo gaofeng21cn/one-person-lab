@@ -1,13 +1,17 @@
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
 import { recordManagedInstallUpdateReceipts } from '../../../../src/managed-install-update-ledger.ts';
-import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
+import { createFamilyWorkspaceFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 test('framework readiness consumes OPL-managed OMA install update receipts', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-managed-state-'));
+  const familyWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-managed-family-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
+  const previousFamilyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
   try {
-    process.env.OPL_META_AGENT_REPO_DIR = createOmaContractFixture(stateRoot);
+    const { omaRepoDir, workspaceRoot } = createFamilyWorkspaceFixture(familyWorkspaceRoot);
+    process.env.OPL_META_AGENT_REPO_DIR = omaRepoDir;
+    process.env.OPL_FAMILY_WORKSPACE_ROOT = workspaceRoot;
     process.env.OPL_STATE_DIR = stateRoot;
     recordManagedInstallUpdateReceipts([{
       module_id: 'oplmetaagent',
@@ -26,6 +30,7 @@ test('framework readiness consumes OPL-managed OMA install update receipts', () 
 
     const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     }).framework_readiness;
     const omaFollowthrough = readiness.attention_first_payload.oma_production_consumption_followthrough;
     if (omaFollowthrough.structural_consumption_ready !== true) {
@@ -60,6 +65,12 @@ test('framework readiness consumes OPL-managed OMA install update receipts', () 
     } else {
       process.env.OPL_META_AGENT_REPO_DIR = previousOmaRepoDir;
     }
+    if (previousFamilyWorkspaceRoot === undefined) {
+      delete process.env.OPL_FAMILY_WORKSPACE_ROOT;
+    } else {
+      process.env.OPL_FAMILY_WORKSPACE_ROOT = previousFamilyWorkspaceRoot;
+    }
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
   }
 });
