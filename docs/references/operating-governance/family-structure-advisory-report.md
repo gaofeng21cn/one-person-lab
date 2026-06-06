@@ -25,7 +25,7 @@ Fresh command:
 node ./scripts/family-structure-advisory.mjs --format=json
 ```
 
-Fresh eleven-repo local summary from `2026-06-06T13:13Z` after the AG-UI renderer/main/WebUI/validator, RCA test-structure, and OPL owner-delta workstream merge passes:
+Fresh eleven-repo local summary from `2026-06-06T13:33Z` after the AG-UI renderer/main/WebUI/validator, RCA test-structure, OPL owner-delta workstream merge, and superseded MAS/App worktree cleanup passes:
 
 - `one-person-lab`: `needs_design_pass=24`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
 - `med-autoscience`: `needs_design_pass=24`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
@@ -78,6 +78,8 @@ First landing pass closed the clearest unnatural or family-inconsistent structur
 - `opl-flow` `764d1ab`: added a thin repo-native `scripts/verify.sh`, closing the missing family-native verify signal.
 - `opl-agui-codex-shell` `3991af4`: split renderer `App.jsx` and `styles.css` into locale, state, event, thread, view and style responsibility modules, and updated candidate source validation to read the renderer module graph instead of requiring all UI snippets in one file.
 - `opl-agui-codex-shell` `74b4e78`: split shell-local Electron main process, Codex app-server client, OPL CLI bridge, UI smoke evidence, WebUI gateway/routes/runtime/static serving, and candidate source-contract validation into named modules.
+- `med-autoscience`: superseded `.worktrees/mas-owner-delta-closeout` was backed up to `~/.codex/tmp/opl-family-structure-cleanup-20260606/` and removed after independent read-only review confirmed `main` already carries the effective owner-delta semantics in `244b78a8` / `b9da3263`; absorbing it would have regressed closeout binding and currentness behavior.
+- `one-person-lab-app`: superseded detached `.worktrees/opl-family-app-source-shape` was backed up to `~/.codex/tmp/opl-family-structure-cleanup-20260606/` and removed after independent read-only review confirmed `main` already has the more natural Full builder split through `scripts/build-full-first-install-package/macos-trust.ts`, `archive-output.ts`, and `staging.ts`.
 
 Fresh verification recorded during this pass:
 
@@ -89,6 +91,7 @@ Fresh verification recorded during this pass:
 - OPL Doc: `PYTHONDONTWRITEBYTECODE=1 bash scripts/verify.sh`.
 - OPL Flow: `scripts/verify.sh`.
 - AG-UI shell: `npm run verify`; `npm run build:renderer`; `npm run smoke:webui`.
+- Final OPL family advisory refresh: `node scripts/family-structure-advisory.mjs --format=json`; `node --experimental-strip-types --test tests/src/family-structure-advisory.test.ts`; `git diff --check`.
 
 Residual verification note: MAS strict line-budget still flags unrelated existing `tests/study_progress_cases/current_executable_owner_action.py` at 1023 lines. That is a target-external natural split candidate, not a regression from the publication-gate split.
 
