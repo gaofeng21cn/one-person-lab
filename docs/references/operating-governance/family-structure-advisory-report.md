@@ -25,10 +25,10 @@ Fresh command:
 node ./scripts/family-structure-advisory.mjs --format=json
 ```
 
-Fresh eight-repo summary from `2026-06-06T07:04:25Z`:
+Fresh eight-repo summary from `2026-06-06T08:17:02Z`:
 
-- `one-person-lab`: `needs_design_pass=16`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
-- `med-autoscience`: `needs_design_pass=25`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
+- `one-person-lab`: `needs_design_pass=17`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
+- `med-autoscience`: `needs_design_pass=24`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
 - `med-autogrant`: `needs_design_pass=1`, `mechanical_residue=0`, `public_surface_risk=5`, `missing_verify_entry=false`
 - `redcube-ai`: `needs_design_pass=10`, `mechanical_residue=0`, `public_surface_risk=9`, `missing_verify_entry=false`
 - `opl-meta-agent`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=1`, `missing_verify_entry=false`
@@ -74,6 +74,17 @@ Family morphology conclusion:
 | `opl-doc` | No mechanical residue. `scripts/opl_doc_doctor.py` is over 1000 lines and currently acts as a broad doctor/validator monolith. | Split only after reading command ownership: likely natural modules are profile discovery, doc invariant checks, plugin sync validation, and report rendering. |
 | `opl-flow` | No design-pass entries and no mechanical residue. Missing `scripts/verify.sh` makes it look less family-native than peer plugin repos. | Add a thin repo-native verify entry when the repo moves beyond passive plugin/profile support; until then missing verify is a morphology/advisory signal, not a blocker. |
 
+## P1 Structure Queue
+
+These items are higher-signal than generic line-count cleanup. They should be handled in clean or owner-approved repo lanes, not by physically splitting files to satisfy a number.
+
+- `med-autoscience`: `tests/test_domain_owner_action_dispatch_cases/publication_gate_dispatch.py` now exceeds MAS strict line budget at 1036 lines. Split it by publication-gate behavior scenarios into a thin entry plus `publication_gate_dispatch_cases/` only after the current MAS dirty owner-route lane is stable.
+- `redcube-ai`: RCA currently has two line-budget surfaces with different semantics: `scripts/line-budget.ts` uses the current reviewed-baseline ratchet, while `scripts/check-line-budget.ts` still carries the older warn/fail threshold model and is still called by `scripts/verify.sh`. Unify this into one authoritative structure gate before doing more PPT/native helper splits.
+- `redcube-ai`: current over-1000 source files are reviewed-baseline candidates, not mechanical split work: `tests/opl-family-contract-adoption.test.ts`, `python/redcube_ai/native_helpers/ppt_deck/native_layouts.py`, and `python/redcube_ai/native_helpers/ppt_deck/native_quality.py`. Future splits should follow test-family, native layout, and native quality responsibilities.
+- `opl-meta-agent`: source shape is clean, but it lacks a family-level line-budget / source-structure lane in `scripts/verify.sh`. Add a lightweight structure lane when OMA starts active code growth.
+- `opl-meta-agent`: `contracts/stage_control_plane.json` is the largest standard-agent public contract surface in this scan. Prefer stage / JSON-pointer leaf refs plus generated aggregate, similar to RCA's current-program leaf-index pattern, instead of hand-splitting the JSON file.
+- `med-autogrant`: code line-budget is clean, but large schemas/contracts (`product-entry-manifest.schema.json`, `functional_privatization_audit.json`, `stage_control_plane.json`) should move toward generated aggregate / leaf-source separation if they keep growing.
+
 ## Detailed Readout
 
 ### one-person-lab
@@ -81,10 +92,11 @@ Family morphology conclusion:
 needs_design_pass:
 
 - `src/runtime-tray-app-operator-drilldown.ts`
-- `tests/src/cli/cases/app-state.test.ts`
 - `tests/src/family-runtime-codex-stage-runner.test.ts`
+- `tests/src/cli/cases/app-state.test.ts`
 - `tests/src/agent-lab.test.ts`
 - `tests/src/cli/cases/runtime-app-operator-drilldown.test.ts`
+- `src/family-runtime-codex-stage-runner.ts`
 - `tests/src/cli/cases/family-runtime-queue-guards.test.ts`
 - `tests/src/cli/cases/family-runtime-stage-attempts-temporal-provider.test.ts`
 - `tests/src/cli/cases/family-runtime-provider-hosted-attempts-cases/mas-default-executor.ts`
@@ -107,7 +119,6 @@ These are current large machine-readable public surfaces in the OPL scan. They a
 
 Top needs_design_pass:
 
-- `tests/test_domain_owner_action_dispatch_cases/publication_gate_dispatch.py`
 - `src/med_autoscience/controllers/owner_route_reconcile_parts/action_projection.py`
 - `src/med_autoscience/controllers/owner_route_reconcile.py`
 - `src/med_autoscience/controllers/runtime_health_kernel.py`
