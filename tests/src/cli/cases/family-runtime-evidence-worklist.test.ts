@@ -19,9 +19,32 @@ import {
   assertDomainDispatchGroupExecutorHints,
 } from './domain-dispatch-group-executor-hints-assertions.ts';
 
+function createMinimalFamilyWorkspaceRoot() {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-defaults-discovery-'));
+  for (const descriptor of [
+    { project: 'med-autoscience', domain_id: 'med-autoscience', domain_label: 'MedAutoScience' },
+    { project: 'med-autogrant', domain_id: 'med-autogrant', domain_label: 'MedAutoGrant' },
+    { project: 'redcube-ai', domain_id: 'redcube_ai', domain_label: 'RedCube AI' },
+  ]) {
+    const contractsRoot = path.join(workspaceRoot, descriptor.project, 'contracts');
+    fs.mkdirSync(contractsRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(contractsRoot, 'domain_descriptor.json'),
+      `${JSON.stringify({
+        surface_kind: 'family_domain_descriptor',
+        domain_id: descriptor.domain_id,
+        domain_label: descriptor.domain_label,
+      }, null, 2)}\n`,
+      'utf8',
+    );
+  }
+  return workspaceRoot;
+}
+
 test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure without domain authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const familyWorkspaceRoot = createMinimalFamilyWorkspaceRoot();
   const baseManifests = loadFamilyManifestFixtures();
   const manifests = {
     medautogrant: withEvidenceWorklistSurfaces(
@@ -81,6 +104,7 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
       'codex_cli',
     ], {
       ...familyRuntimeEnv(stateRoot, fixtureContractsRoot),
+      OPL_FAMILY_WORKSPACE_ROOT: familyWorkspaceRoot,
     });
     const worklist = output.family_runtime_evidence_worklist;
 
@@ -186,6 +210,7 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: familyWorkspaceRoot,
     });
     const fullWorklist = fullOutput.family_runtime_evidence_worklist;
     assert.equal(fullWorklist.detail_level, 'full');
@@ -577,6 +602,7 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
   }
 });
 
@@ -735,6 +761,7 @@ test('family-runtime evidence-worklist carries default-caller deletion evidence 
 test('family-runtime evidence-worklist closes only OPL-owned provider and cleanup receipts', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-closed-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const familyWorkspaceRoot = createMinimalFamilyWorkspaceRoot();
   const baseManifests = loadFamilyManifestFixtures();
   const manifests = {
     medautogrant: withEvidenceWorklistSurfaces(
@@ -823,6 +850,7 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
       'codex_cli',
     ], familyRuntimeEnv(stateRoot, fixtureContractsRoot, {
       OPL_PROVIDER_PROOF_WINDOW_SECONDS: '86400',
+      OPL_FAMILY_WORKSPACE_ROOT: familyWorkspaceRoot,
     }));
     const worklist = output.family_runtime_evidence_worklist;
 
@@ -1077,5 +1105,6 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
   }
 });
