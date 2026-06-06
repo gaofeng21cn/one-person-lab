@@ -416,6 +416,22 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
   );
   assert.equal(contract.migration_gate.zero_missing_deletion_evidence_is_not_delete_ready, true);
   assert.equal(contract.migration_gate.observed_deletion_evidence_refs_are_refs_only_inputs, true);
+  assert.equal(
+    contract.migration_gate.owner_decision_after_structural_prerequisites_observed_required,
+    true,
+  );
+  assert.equal(
+    contract.migration_gate.next_required_owner_action_after_structural_prerequisites_observed,
+    'domain_owner_choose_delete_authorize_keep_or_typed_blocker',
+  );
+  assert.deepEqual(
+    contract.migration_gate.accepted_refs_only_result_shapes_after_structural_prerequisites_observed,
+    [
+      'physical_delete_authorization_ref',
+      'keep_as_authority_adapter_ref',
+      'typed_blocker_ref',
+    ],
+  );
   assert.equal(contract.migration_gate.deletion_evidence_requirements_are_completion_claims, false);
   assert.deepEqual(contract.migration_gate.retirement_guard_target_classes, [
     'legacy_reconcile_compensation_path',
@@ -509,4 +525,119 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
     true,
   );
   assert.equal(defaultCallers.authority_boundary.report_can_authorize_domain_repo_physical_delete, false);
+});
+
+test('agents default-callers asks domain owner to choose delete keep or blocker after structural delete evidence', () => {
+  const repoDir = buildReadyAgentRepo();
+  const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
+  const functionalAudit = JSON.parse(fs.readFileSync(functionalAuditPath, 'utf8'));
+  const bridgeExitGate = {
+    no_active_caller_refs: ['no-active-caller:sample/default-caller-delete'],
+    no_forbidden_write_refs: ['no-forbidden-write:sample/default-caller-delete'],
+    tombstone_refs: ['tombstone:sample/default-caller-delete'],
+    provenance_refs: ['provenance:sample/default-caller-delete'],
+    physical_delete_authorized: false,
+    authority_boundary: {
+      can_authorize_domain_repo_physical_delete: false,
+    },
+  };
+  functionalAudit.modules = functionalAudit.modules.map((module: { module_id?: string }) => {
+    if (module.module_id === 'sample_brief_generated_wrappers') {
+      return {
+        ...module,
+        current_surface_refs: [
+          'cli',
+          'mcp',
+          'skill',
+          'product_entry_manifest',
+          'status_read_model',
+        ],
+        bridge_exit_gate: bridgeExitGate,
+      };
+    }
+    if (
+      module.module_id === 'sample_brief_domain_handler'
+      || module.module_id === 'sample_brief_workbench_projection'
+    ) {
+      return {
+        ...module,
+        bridge_exit_gate: bridgeExitGate,
+      };
+    }
+    return module;
+  });
+  writeJson(functionalAuditPath, functionalAudit);
+
+  const defaultCallersPayload = runCli([
+    'agents',
+    'default-callers',
+    '--agent',
+    `sample=${repoDir}`,
+  ]);
+  const defaultCallers = defaultCallersPayload.agent_default_caller_readiness;
+
+  assert.equal(defaultCallers.missing_domain_owner_receipt_or_typed_blocker_count, 8);
+  assert.equal(defaultCallers.missing_no_active_caller_proof_count, 0);
+  assert.equal(defaultCallers.missing_no_forbidden_write_proof_count, 0);
+  assert.equal(defaultCallers.missing_tombstone_or_provenance_ref_count, 0);
+  assert.equal(defaultCallers.default_caller_delete_ready, false);
+  assert.equal(defaultCallers.physical_delete_authorized, false);
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model
+      .all_repos_delete_or_keep_prerequisites_observed,
+    true,
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model
+      .all_repos_all_deletion_evidence_requirements_observed,
+    false,
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.next_required_owner_action,
+    'domain_owner_choose_delete_authorize_keep_or_typed_blocker',
+  );
+  assert.deepEqual(
+    defaultCallers.physical_delete_authority_read_model.accepted_refs_only_result_shapes,
+    [
+      'physical_delete_authorization_ref',
+      'keep_as_authority_adapter_ref',
+      'typed_blocker_ref',
+    ],
+  );
+  assert.equal(
+    defaultCallers.repo_deletion_gate_summary[0].delete_or_keep_prerequisites_observed,
+    true,
+  );
+  assert.equal(
+    defaultCallers.repo_deletion_gate_summary[0].all_deletion_evidence_requirements_observed,
+    false,
+  );
+  assert.equal(
+    defaultCallers.repo_deletion_gate_summary[0].next_required_owner_action,
+    'domain_owner_choose_delete_authorize_keep_or_typed_blocker',
+  );
+  assert.equal(defaultCallers.repo_deletion_gate_summary[0].physical_delete_authorized, false);
+  assert.equal(defaultCallers.repo_deletion_gate_summary[0].default_caller_delete_ready, false);
+  assert.equal(
+    defaultCallers.repo_deletion_gate_summary[0].surface_deletion_gate_summary.every((surface: {
+      delete_or_keep_prerequisites_observed: boolean;
+      owner_decision_required_after_prerequisites_observed: boolean;
+      next_required_owner_action: string;
+      accepted_refs_only_result_shapes: string[];
+      domain_owner_receipt_or_typed_blocker_observed: boolean;
+      physical_delete_authorized: boolean;
+      default_caller_delete_ready: boolean;
+    }) => (
+      surface.delete_or_keep_prerequisites_observed === true
+      && surface.owner_decision_required_after_prerequisites_observed === true
+      && surface.next_required_owner_action === 'domain_owner_choose_delete_authorize_keep_or_typed_blocker'
+      && surface.accepted_refs_only_result_shapes.includes('physical_delete_authorization_ref')
+      && surface.accepted_refs_only_result_shapes.includes('keep_as_authority_adapter_ref')
+      && surface.accepted_refs_only_result_shapes.includes('typed_blocker_ref')
+      && surface.domain_owner_receipt_or_typed_blocker_observed === false
+      && surface.physical_delete_authorized === false
+      && surface.default_caller_delete_ready === false
+    )),
+    true,
+  );
 });

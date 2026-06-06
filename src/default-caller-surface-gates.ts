@@ -260,7 +260,6 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
       physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
       worklist_item_is_completion_claim: false,
       physical_delete_authorization_status: 'not_authorized_by_opl_projection',
-      not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
       delete_or_keep_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
       owner_decision_required_after_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
       next_required_owner_action: deleteOrKeepPrerequisitesObserved
@@ -270,6 +269,7 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
         ? [...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES]
         : ['typed_blocker_ref'],
       owner_decision_required_after_all_refs_observed: allDeletionEvidenceRequirementsObserved,
+      not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
       retirement_guard: {
         target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
         mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],

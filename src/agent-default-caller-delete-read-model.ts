@@ -70,7 +70,9 @@ function ownerDecisionReadout(prerequisitesObserved: boolean, allRequirementsObs
 }
 
 function compactSurfaceDeletionGate(worklist: JsonRecord) {
-  const prerequisitesObserved = statusIsObserved(worklist.no_active_caller_proof)
+  const prerequisitesObserved = statusIsObserved(worklist.replacement_parity)
+    && statusIsObserved(worklist.active_caller_cutover)
+    && statusIsObserved(worklist.no_active_caller_proof)
     && statusIsObserved(worklist.no_forbidden_write_proof)
     && statusIsObserved(worklist.tombstone_or_provenance_ref);
   const allRequirementsObserved = prerequisitesObserved
@@ -202,6 +204,8 @@ export function buildDefaultCallerPhysicalDeleteAuthorityReadModel(
     deletion_evidence_worklist_count: deletionEvidenceWorklistCount,
     all_repos_all_deletion_evidence_requirements_observed:
       allReposAllDeletionEvidenceRequirementsObserved,
+    all_repos_delete_or_keep_prerequisites_observed:
+      allReposHaveDeleteOrKeepPrerequisites,
     missing_domain_owner_receipt_or_typed_blocker_count:
       missingDomainOwnerReceiptOrTypedBlockerCount,
     missing_no_active_caller_proof_count: missingNoActiveCallerProofCount,
