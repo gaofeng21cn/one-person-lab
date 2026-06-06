@@ -334,6 +334,10 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
     currentOwnerDelta,
     executionAuthorization,
   });
+  const currentOwnerDeltaOwner = text(currentOwnerDelta.current_owner) ?? domainId;
+  const stageRunCurrentOwner =
+    text(nextRequiredOwnerAction?.next_required_owner)
+    ?? currentOwnerDeltaOwner;
 
   return {
     surface_kind: 'opl_app_stage_run_cockpit_projection',
@@ -345,7 +349,8 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
       stage_run_id: runId,
       domain_id: domainId,
       stage_id: stageId,
-      current_owner: text(currentOwnerDelta.current_owner) ?? domainId,
+      current_owner: stageRunCurrentOwner,
+      current_owner_delta_owner: currentOwnerDeltaOwner,
       required_delta: text(currentOwnerDelta.desired_delta_description)
         ?? 'no_opl_operator_actionable_delta_required',
       accepted_return_shapes: acceptedReturnShapes.length > 0 ? acceptedReturnShapes : ['typed_blocker_ref'],

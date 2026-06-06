@@ -90,6 +90,7 @@ const DEFAULT_EXECUTOR_NEXT_OWNERS = new Set([
   'ai_reviewer',
   'write/ai_reviewer',
   'gate_clearing_batch',
+  'publication_gate_owner',
 ]);
 const DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
 const DEFAULT_EXECUTOR_CROSS_TASK_STARTED_ATTEMPT_STATUSES = new Set(['running', 'checkpointed', 'human_gate']);

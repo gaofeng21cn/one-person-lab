@@ -84,6 +84,10 @@ export function defaultCallerDeletionEvidenceRoutes(
               'opl_may_project_requirement_but_must_not_sign_domain_receipt_or_authorize_physical_delete',
             execution_surface: 'opl runtime action execute',
             route_target_kind: 'domain_owned_delete_evidence_refs',
+            worklist_attention_class: 'audit_cleanup_lane',
+            ordinary_open_safe_action_attention: false,
+            audit_lane_visible: true,
+            cleanup_lane_visible: true,
             not_authorized_claims: [...notAuthorizedClaims],
             retirement_guard: record(worklist.retirement_guard),
           };

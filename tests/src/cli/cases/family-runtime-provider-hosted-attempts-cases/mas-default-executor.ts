@@ -13,7 +13,11 @@ import { DatabaseSync } from 'node:sqlite';
 import { enqueueTask } from '../../../../../src/family-runtime-enqueue.ts';
 import { startDefaultExecutorStageAttempt } from '../../../../../src/family-runtime-default-executor-start.ts';
 import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
-import { createFamilyRuntimeQueueTables, familyRuntimePaths } from '../../../../../src/family-runtime-store.ts';
+import {
+  createFamilyRuntimeQueueTables,
+  familyRuntimePaths,
+  insertEvent,
+} from '../../../../../src/family-runtime-store.ts';
 import { runFamilyRuntimeQueueTick } from '../../../../../src/family-runtime-tick.ts';
 import {
   listStageAttemptsForTask,
@@ -232,6 +236,125 @@ test('family-runtime does not auto-requeue succeeded MAS default executor dispat
     assert.equal(task.status, 'succeeded');
     assert.equal(JSON.parse(task.payload_json).source_fingerprint, 'source-before');
     assert.equal(requeueEvents.count, 0);
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime admits MAS publication gate owner default executor dispatch as a provider-hosted attempt', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    withIsolatedFamilyRuntimeEnv(() => {
+      createQueueTables(db);
+      const taskId = 'task-mas-default-publication-gate-owner';
+      const payload = {
+        ...defaultExecutorPayload('publication-gate-owner-source'),
+        action_type: 'publication_handoff_owner_gate',
+        dispatch_authority: 'consumer_default_executor_dispatch',
+        next_executable_owner: 'publication_gate_owner',
+        domain_owner: 'publication_gate_owner',
+        work_unit_id: 'publication_handoff_owner_gate',
+        dispatch_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/publication_handoff_owner_gate.json',
+      };
+      insertSucceededTask(db, {
+        taskId,
+        domainId: 'medautoscience',
+        taskKind: 'domain_owner/default-executor-dispatch',
+        payload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:publication_handoff_owner_gate:publication-gate-owner',
+      });
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(taskId);
+      const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as Parameters<
+        typeof ensureProviderHostedStageAttempt
+      >[1];
+
+      const attempt = ensureProviderHostedStageAttempt(db, row, payload);
+      const attempts = listStageAttemptsForTask(db, taskId);
+
+      assert.ok(attempt);
+      assert.equal(attempt.stage_id, 'domain_owner/default-executor-dispatch');
+      assert.equal(attempt.executor_kind, 'codex_cli');
+      assert.equal(attempt.workspace_locator.next_executable_owner, 'publication_gate_owner');
+      assert.equal(attempt.workspace_locator.action_type, 'publication_handoff_owner_gate');
+      assert.equal(attempts.length, 1);
+      assert.equal(attempts[0].stage_attempt_id, attempt.stage_attempt_id);
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime requeues transport-only succeeded MAS publication gate admission with no provider attempt', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    createQueueTables(db);
+    const taskId = 'task-mas-default-transport-only-publication-gate';
+    const dedupeKey = 'mas:dm-cvd:002:default-executor:publication_handoff_owner_gate:transport-only';
+    const payload = {
+      ...defaultExecutorPayload('publication-gate-transport-only-source'),
+      action_type: 'publication_handoff_owner_gate',
+      dispatch_authority: 'consumer_default_executor_dispatch',
+      next_executable_owner: 'publication_gate_owner',
+      domain_owner: 'publication_gate_owner',
+      work_unit_id: 'publication_handoff_owner_gate',
+      dispatch_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/publication_handoff_owner_gate.json',
+    };
+    insertSucceededTask(db, {
+      taskId,
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload,
+      dedupeKey,
+    });
+    insertEvent(db, {
+      taskId,
+      domainId: 'medautoscience',
+      eventType: 'task_dispatch_succeeded',
+      source: 'test-legacy-domain-handler',
+      payload: {
+        output: {
+          surface_kind: 'mas_family_domain_handler_dispatch_receipt',
+          accepted: true,
+          opl_attempt_admission_requested: true,
+          opl_attempt_admission_status: 'requested',
+          dispatch: {
+            execution_policy: 'opl_default_executor_stage_attempt_admission',
+            result: {
+              status: 'opl_attempt_admission_requested',
+              next_owner: 'publication_gate_owner',
+            },
+          },
+        },
+      },
+    });
+
+    const result = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload,
+      dedupeKey,
+      source: 'test-domain-export-replay',
+    });
+    const task = db.prepare('SELECT status, attempts, last_error, dead_letter_reason FROM tasks WHERE task_id = ?').get(
+      taskId,
+    ) as { status: string; attempts: number; last_error: string | null; dead_letter_reason: string | null };
+    const requeueEvent = db.prepare(`
+      SELECT payload_json
+      FROM events
+      WHERE task_id = ? AND event_type = 'task_requeued_from_transport_only_succeeded_default_executor_admission'
+      LIMIT 1
+    `).get(taskId) as { payload_json: string } | undefined;
+
+    assert.equal(result.accepted, true);
+    assert.equal(result.requeued_from_terminal, true);
+    assert.equal(result.idempotent_noop, false);
+    assert.equal(result.task?.status, 'queued');
+    assert.equal(task.status, 'queued');
+    assert.equal(task.attempts, 0);
+    assert.equal(task.last_error, null);
+    assert.equal(task.dead_letter_reason, null);
+    assert.ok(requeueEvent);
+    assert.equal(JSON.parse(requeueEvent.payload_json).reason, 'transport_only_admission_without_provider_stage_attempt');
   } finally {
     db.close();
   }

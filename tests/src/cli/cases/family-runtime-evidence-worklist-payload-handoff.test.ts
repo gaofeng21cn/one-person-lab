@@ -567,7 +567,7 @@ test('family-runtime evidence-worklist summary next actions carry domain-dispatc
     worklist.current_owner_delta,
     worklist.current_owner_delta_read_model?.current_owner_delta,
   );
-  assert.equal(worklist.operator_next_owner, worklist.current_owner_delta?.current_owner);
+  assert.equal(worklist.operator_next_owner, 'one-person-lab');
   assertCurrentOwnerDeltaToplineNextAction(worklist as JsonRecord);
   assert.equal(
     worklist.operator_required_delta,
@@ -575,14 +575,23 @@ test('family-runtime evidence-worklist summary next actions carry domain-dispatc
   );
   assert.equal(
     worklist.operator_payload_requirement,
-    worklist.current_owner_delta?.payload_requirement,
+    'opl_execution_authorization_and_closeout_binding_refs_required',
   );
   assert.deepEqual(
     worklist.operator_accepted_answer_shape,
-    worklist.current_owner_delta?.accepted_answer_shape,
+    [
+      'provider_attempt_ref',
+      'attempt_lease_ref',
+      'execution_authorization_decision_ref',
+      'owner_answer_binding_ref',
+    ],
   );
   assert.equal(
     worklist.stage_run_cockpit_summary?.current_owner,
+    'one-person-lab',
+  );
+  assert.equal(
+    worklist.stage_run_cockpit_summary?.current_owner_delta_owner,
     worklist.current_owner_delta?.current_owner,
   );
   assert.equal(worklist.stage_run_cockpit_summary?.refs_only, true);

@@ -448,6 +448,117 @@ PY
   }
 });
 
+test('family-runtime queue retire blocks stale residue and prevents dedupe rehydration', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-queue-retire-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot);
+    const enqueued = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_autonomy/guarded-apply',
+      '--payload',
+      JSON.stringify({
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        source_fingerprint: 'old-guarded-apply-source',
+      }),
+      '--dedupe-key',
+      'mas:dm003:provider-hosted-guarded-apply:opl-temporal',
+    ], env);
+    const taskId = enqueued.family_runtime_enqueue.task.task_id;
+    const attempt = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'paper_autonomy/guarded-apply',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas","study_id":"003-dpcc-primary-care-phenotype-treatment-gap"}',
+      '--source-fingerprint',
+      'old-guarded-apply-source',
+      '--executor-kind',
+      'codex_cli',
+      '--task',
+      taskId,
+    ], env).family_runtime_stage_attempt.attempt;
+
+    const retire = runCli([
+      'family-runtime',
+      'queue',
+      'retire',
+      '--study',
+      '003-dpcc-primary-care-phenotype-treatment-gap',
+      '--task-kind',
+      'paper_autonomy/guarded-apply',
+      '--reason',
+      'superseded_by_publication_handoff_owner_gate',
+      '--source',
+      'test-retire',
+    ], env);
+    const rehydrate = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_autonomy/guarded-apply',
+      '--payload',
+      JSON.stringify({
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        source_fingerprint: 'old-guarded-apply-source',
+      }),
+      '--dedupe-key',
+      'mas:dm003:provider-hosted-guarded-apply:opl-temporal',
+      '--source',
+      'test-rehydrate',
+    ], env);
+    const queued = runCli([
+      'family-runtime',
+      'queue',
+      'list',
+      '--study',
+      '003-dpcc-primary-care-phenotype-treatment-gap',
+      '--status',
+      'queued',
+    ], env);
+    const blocked = runCli([
+      'family-runtime',
+      'queue',
+      'inspect',
+      taskId,
+    ], env);
+    const retiredAttempt = blocked.family_runtime_task.stage_attempts.find((entry: { stage_attempt_id: string }) =>
+      entry.stage_attempt_id === attempt.stage_attempt_id
+    );
+
+    assert.equal(retire.family_runtime_queue_retire.retired_count, 1);
+    assert.equal(retire.family_runtime_queue_retire.retired_attempt_count, 1);
+    assert.equal(retire.family_runtime_queue_retire.retired_tasks[0].status, 'blocked');
+    assert.equal(
+      retire.family_runtime_queue_retire.retired_tasks[0].dead_letter_reason,
+      'operator_retired_stale_runtime_residue:superseded_by_publication_handoff_owner_gate',
+    );
+    assert.equal(rehydrate.family_runtime_enqueue.accepted, false);
+    assert.equal(rehydrate.family_runtime_enqueue.idempotent_noop, true);
+    assert.equal(rehydrate.family_runtime_enqueue.task.status, 'blocked');
+    assert.equal(queued.family_runtime_queue.queue.total, 0);
+    assert.equal(blocked.family_runtime_task.task.status, 'blocked');
+    assert.equal(retiredAttempt.status, 'blocked');
+    assert.equal(
+      retiredAttempt.blocked_reason,
+      'operator_retired_stale_runtime_residue:superseded_by_publication_handoff_owner_gate',
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime queue list filters by domain, study, and status for Progress-First monitoring', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-queue-list-filter-'));
   try {

@@ -20,6 +20,7 @@ import {
   isAdmittedDefaultExecutorNextOwner,
   refreshDefaultExecutorLiveAttemptTaskLease,
 } from './family-runtime-provider-hosted-attempts.ts';
+import { listStageAttemptsForTask } from './family-runtime-stage-attempts.ts';
 import { activeQueueHoldForTaskInput } from './family-runtime-queue-holds.ts';
 
 const DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
@@ -27,6 +28,7 @@ const MAS_PAPER_AUTONOMY_STALE_DEAD_LETTER_MARKERS = [
   'owner_route_stale',
   'controller_route_work_unit_unsupported',
 ] as const;
+const OPERATOR_RETIRED_STALE_RESIDUE_PREFIX = 'operator_retired_stale_runtime_residue:';
 
 function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
@@ -212,6 +214,52 @@ function defaultExecutorCloseoutRedriveDecision(
   };
 }
 
+function transportOnlySucceededDefaultExecutorAdmissionRedriveDecision(
+  db: DatabaseSync,
+  existing: FamilyRuntimeTaskRow,
+  existingPayload: Record<string, unknown>,
+  nextPayload: Record<string, unknown>,
+) {
+  if (
+    existing.status !== 'succeeded'
+    || !isDefaultExecutorDispatch(existing, existingPayload)
+    || !isDefaultExecutorDispatch(existing, nextPayload)
+    || listStageAttemptsForTask(db, existing.task_id).length > 0
+  ) {
+    return null;
+  }
+  const row = db.prepare(`
+    SELECT payload_json
+    FROM events
+    WHERE task_id = ? AND event_type = 'task_dispatch_succeeded'
+    ORDER BY created_at DESC
+    LIMIT 1
+  `).get(existing.task_id) as { payload_json: string } | undefined;
+  if (!row) {
+    return null;
+  }
+  const eventPayload = recordValue(JSON.parse(row.payload_json));
+  const output = recordValue(eventPayload?.output);
+  const dispatch = recordValue(output?.dispatch);
+  const result = recordValue(dispatch?.result);
+  const admissionRequested = output?.opl_attempt_admission_requested === true
+    || optionalString(output?.opl_attempt_admission_status) === 'requested'
+    || optionalString(result?.status) === 'opl_attempt_admission_requested';
+  if (
+    !admissionRequested
+    || optionalString(dispatch?.execution_policy) !== 'opl_default_executor_stage_attempt_admission'
+  ) {
+    return null;
+  }
+  return {
+    reason: 'transport_only_admission_without_provider_stage_attempt',
+    previous_source_fingerprint: sourceFingerprint(existingPayload),
+    next_source_fingerprint: sourceFingerprint(nextPayload),
+    previous_next_executable_owner: optionalString(existingPayload.next_executable_owner),
+    next_executable_owner: optionalString(nextPayload.next_executable_owner),
+  };
+}
+
 function masPaperAutonomyDeadLetterCurrentnessBlock(existing: FamilyRuntimeTaskRow) {
   if (
     existing.domain_id !== 'medautoscience'
@@ -229,6 +277,20 @@ function masPaperAutonomyDeadLetterCurrentnessBlock(existing: FamilyRuntimeTaskR
   return {
     reason: 'mas_paper_autonomy_stale_or_unsupported_owner_route',
     domain_blocker_marker: marker,
+  };
+}
+
+function operatorRetiredStaleResidueBlock(existing: FamilyRuntimeTaskRow) {
+  const marker = existing.dead_letter_reason ?? existing.last_error ?? '';
+  if (
+    existing.status !== 'blocked'
+    || !marker.startsWith(OPERATOR_RETIRED_STALE_RESIDUE_PREFIX)
+  ) {
+    return null;
+  }
+  return {
+    reason: 'operator_retired_stale_runtime_residue',
+    operator_retirement_reason: marker.slice(OPERATOR_RETIRED_STALE_RESIDUE_PREFIX.length),
   };
 }
 
@@ -266,6 +328,10 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         && isDefaultExecutorDispatchInput(input.domainId, taskKind, payload);
       const closeoutRedrive = defaultExecutorSucceededAdmissionRefresh
         ? defaultExecutorCloseoutRedriveDecision(existing, existingPayload, payload)
+        : null;
+      const transportOnlyAdmissionRedrive = isDefaultExecutorDispatch(existing, existingPayload)
+        && isDefaultExecutorDispatchInput(input.domainId, taskKind, payload)
+        ? transportOnlySucceededDefaultExecutorAdmissionRedriveDecision(db, existing, existingPayload, payload)
         : null;
       if (exportedTaskChanged && closeoutRedrive) {
         const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
@@ -314,6 +380,63 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           taskId: refreshed.task_id,
           severity: 'info',
           title: 'Family runtime task requeued from MAS closeout redrive',
+          body: `${input.domainId}:${taskKind}`,
+          payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
+        });
+        return {
+          accepted: true,
+          requeued_from_terminal: true,
+          idempotent_noop: false,
+          task: taskToPayload(refreshed),
+        };
+      }
+      if (transportOnlyAdmissionRedrive) {
+        const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
+        db.prepare(`
+          UPDATE tasks
+          SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
+            attempts = 0, source = ?, requires_approval = ?, approved_at = NULL,
+            lease_owner = NULL, lease_expires_at = NULL, last_error = ?,
+            dead_letter_reason = NULL, updated_at = ?
+          WHERE task_id = ?
+        `).run(
+          input.domainId,
+          taskKind,
+          exportedPayloadJson,
+          input.priority ?? 0,
+          nextStatus,
+          input.source ?? 'opl-cli',
+          requiresApproval ? 1 : 0,
+          initialLastError,
+          createdAt,
+          existing.task_id,
+        );
+        const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
+        insertEvent(db, {
+          taskId: refreshed.task_id,
+          domainId: refreshed.domain_id,
+          eventType: 'task_requeued_from_transport_only_succeeded_default_executor_admission',
+          source: input.source ?? 'opl-cli',
+          payload: {
+            dedupe_key: dedupeKey,
+            previous_status: existing.status,
+            next_status: nextStatus,
+            active_hold_id: activeHold?.hold_id ?? null,
+            ...transportOnlyAdmissionRedrive,
+            authority_boundary: {
+              opl: 'provider_transport_redrive_from_transport_only_admission_receipt',
+              domain: 'truth_quality_artifact_gate_owner',
+              domain_truth_mutation: false,
+              publication_quality_mutation: false,
+              artifact_gate_mutation: false,
+              current_package_mutation: false,
+            },
+          },
+        });
+        insertNotification(db, {
+          taskId: refreshed.task_id,
+          severity: 'info',
+          title: 'Family runtime task requeued from transport-only admission',
           body: `${input.domainId}:${taskKind}`,
           payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
         });
@@ -425,6 +548,34 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
       const paperAutonomyDeadLetterBlock = deadLetterRedrive
         ? masPaperAutonomyDeadLetterCurrentnessBlock(existing)
         : null;
+      const retiredResidueBlock = operatorRetiredStaleResidueBlock(existing);
+      if (retiredResidueBlock) {
+        insertEvent(db, {
+          taskId: existing.task_id,
+          domainId: existing.domain_id,
+          eventType: 'task_requeue_blocked_by_operator_retired_residue',
+          source: input.source ?? 'opl-cli',
+          payload: {
+            dedupe_key: dedupeKey,
+            retained_status: existing.status,
+            ...retiredResidueBlock,
+            authority_boundary: {
+              opl: 'queue_lifecycle_retirement_guard_only',
+              domain: 'truth_quality_artifact_gate_owner',
+              domain_truth_mutation: false,
+              publication_quality_mutation: false,
+              artifact_gate_mutation: false,
+              current_package_mutation: false,
+              provider_stage_attempt_started: false,
+            },
+          },
+        });
+        return {
+          accepted: false,
+          idempotent_noop: true,
+          task: taskToPayload(existing),
+        };
+      }
       if (exportedTaskChanged && blockedRedrive) {
         const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
         db.prepare(`

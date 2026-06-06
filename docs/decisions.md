@@ -5,6 +5,28 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-06-06
+
+### 决策：execution authorization blocker 必须优先折成默认 owner delta
+
+原因：live App / evidence-worklist 曾同时暴露两种下一步：`current_owner_delta` 指向 domain owner answer / typed blocker，而 StageRun cockpit 又显示 `execution_authorized=false`、`next_required_owner=one-person-lab`，缺 provider attempt / active lease / execution authorization decision / closeout binding refs。这个 owner split 会让 operator 先去找 domain payload，实际最快推进点却是 OPL runtime 补齐 execution authorization 和 owner-answer binding。
+
+影响：
+
+- StageRun execution authorization blocked 时，App state、framework readiness、runtime drilldown 和 family-runtime evidence-worklist 的默认 `operator_next_action`、`operator_next_owner`、payload requirement 和 accepted answer shape 以 OPL runtime blocker 为准。
+- 原始 domain owner delta 仍保留为 `current_owner_delta` / `operator_current_owner_delta_owner` / `current_owner_delta_owner`，用于说明后续授权满足后要回到哪个 domain owner answer。
+- OPL runtime blocker 只阻断 provider execution 或 owner-answer binding；它不写 domain truth、不创建 domain typed blocker、不签 domain owner receipt、不声明 domain ready、App release ready 或 production ready。
+
+### 决策：default-caller deletion / cleanup gate 不得占用 ordinary progress worklist
+
+原因：default-caller deletion evidence、wrapper retirement 和 cleanup gate 有长期治理价值，但它们不是论文、基金、视觉或 target-agent 的交付推进。若这类 gate 进入普通 open safe action / first-screen next action，会把 operator 注意力从 owner delta 拉回 cleanup accounting。
+
+影响：
+
+- default-caller deletion / cleanup gate 默认降为 `audit_cleanup_lane`；ordinary open safe action、default progress attention 和 first-screen next action 不得由这类 gate 驱动。
+- full detail 仍保留 replacement parity、no-active-caller、domain owner receipt / typed blocker、no-forbidden-write、tombstone/provenance、physical-delete false authority flags 和 per-surface drilldown refs。
+- `physical_delete_authorized=false`、`default_caller_delete_ready=false` 和 `domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review` 继续作为 cleanup owner gate，而不是 domain progress blocker。
+
 ## 2026-06-03
 
 ### 决策：active shell candidate 与非默认 executor adapter 不能被 cleanup 误删

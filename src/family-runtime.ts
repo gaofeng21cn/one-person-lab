@@ -60,6 +60,7 @@ import { hydrateDomainTasks, readMasManagedProviderProjection } from './family-r
 import { redriveFamilyRuntimeTask } from './family-runtime-redrive.ts';
 import { holdFamilyRuntimeQueueTasks } from './family-runtime-queue-hold.ts';
 import { releaseFamilyRuntimeQueueHold } from './family-runtime-queue-release.ts';
+import { retireFamilyRuntimeQueueResidue } from './family-runtime-queue-retire.ts';
 import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-query.ts';
 import { reconcileFamilyRuntimeLifecycleRefs, runFamilyRuntimeLifecycleApply } from './family-runtime-lifecycle-index.ts';
 import { buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
@@ -578,6 +579,20 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
             reason: parsed.reason,
             source: parsed.source,
             repairStrandedHold: parsed.repairStrandedHold,
+          }),
+          queue: queueSummary(db),
+        },
+      };
+    }
+    if (parsed.mode === 'queue_retire') {
+      return {
+        version: 'g2',
+        family_runtime_queue_retire: {
+          surface_id: 'opl_family_runtime_queue_retire',
+          ...retireFamilyRuntimeQueueResidue(db, {
+            taskScope: parsed.taskScope,
+            reason: parsed.reason,
+            source: parsed.source,
           }),
           queue: queueSummary(db),
         },

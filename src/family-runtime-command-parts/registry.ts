@@ -46,7 +46,7 @@ function staticCommand(
   };
 }
 
-const FAMILY_RUNTIME_COMMAND_USAGE = 'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|service start|service status|service stop|worker start|worker status|worker stop|scheduler status|scheduler install|scheduler remove|scheduler trigger|scheduler tick|evidence-worklist|intake|tick|enqueue|lifecycle apply|stage-artifact open|stage-artifact commit|stage-artifact status|stage-artifact explain|stage-artifact rebuild|stage-artifact promote|stage-artifact gc|stage-artifact restore|stage-artifact validate|stage-artifact conformance|stage-artifact workbench|attempt create|attempt start|attempt cancel|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|queue redrive|queue hold|queue release|approve|notify list|events export';
+const FAMILY_RUNTIME_COMMAND_USAGE = 'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|service start|service status|service stop|worker start|worker status|worker stop|scheduler status|scheduler install|scheduler remove|scheduler trigger|scheduler tick|evidence-worklist|intake|tick|enqueue|lifecycle apply|stage-artifact open|stage-artifact commit|stage-artifact status|stage-artifact explain|stage-artifact rebuild|stage-artifact promote|stage-artifact gc|stage-artifact restore|stage-artifact validate|stage-artifact conformance|stage-artifact workbench|attempt create|attempt start|attempt cancel|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|queue redrive|queue hold|queue release|queue retire|approve|notify list|events export';
 
 const FAMILY_RUNTIME_COMMAND_REGISTRY: FamilyRuntimeCommandParser[] = [
   {

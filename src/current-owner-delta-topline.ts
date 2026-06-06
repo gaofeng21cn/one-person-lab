@@ -36,20 +36,37 @@ export function buildCurrentOwnerDeltaTopline(input: {
       : strings(currentOwnerDelta.required_return_shapes);
   const operatorNextAction = optionalRecord(readModel.next_safe_action_or_none);
   const stageRunNextAction = optionalRecord(stageRunCockpit.next_required_owner_action);
-  const defaultOperatorNextAction = operatorNextAction ?? {};
+  const stageRunAuthorizationBlocksDefault =
+    text(stageRunNextAction?.derivation_source) === 'stage_run_execution_authorization'
+    && text(stageRunNextAction?.next_required_owner) === 'one-person-lab';
+  const effectiveOperatorNextAction =
+    stageRunAuthorizationBlocksDefault ? stageRunNextAction : operatorNextAction;
+  const defaultOperatorNextAction = effectiveOperatorNextAction ?? {};
   const operatorNextOwner =
-    text(defaultOperatorNextAction.current_owner)
+    text(defaultOperatorNextAction.next_required_owner)
+    ?? text(defaultOperatorNextAction.current_owner)
     ?? text(defaultOperatorNextAction.owner)
     ?? text(currentOwnerDelta.current_owner);
+  const operatorPayloadRequirement =
+    text(defaultOperatorNextAction.payload_requirement)
+    ?? text(currentOwnerDelta.payload_requirement);
+  const effectiveAcceptedAnswerShape =
+    strings(defaultOperatorNextAction.accepted_answer_shape).length > 0
+      ? strings(defaultOperatorNextAction.accepted_answer_shape)
+      : operatorAcceptedAnswerShape;
   return {
     current_owner_delta: currentOwnerDelta,
     current_owner_delta_read_model: readModel,
     operator_current_owner_delta_owner: text(currentOwnerDelta.current_owner),
     operator_next_owner: operatorNextOwner,
     operator_required_delta: text(currentOwnerDelta.desired_delta_description),
-    operator_payload_requirement: text(currentOwnerDelta.payload_requirement),
-    operator_accepted_answer_shape: operatorAcceptedAnswerShape,
-    operator_next_action: operatorNextAction,
+    operator_payload_requirement: operatorPayloadRequirement,
+    operator_accepted_answer_shape: effectiveAcceptedAnswerShape,
+    operator_next_action: effectiveOperatorNextAction,
+    operator_next_action_source: stageRunAuthorizationBlocksDefault
+      ? 'stage_run_execution_authorization'
+      : text(operatorNextAction?.derivation_source),
+    current_owner_delta_next_action: operatorNextAction,
     operator_next_action_kind: text(defaultOperatorNextAction.action_kind),
     operator_next_action_owner: operatorNextOwner,
     operator_next_required_action:
@@ -118,6 +135,9 @@ export function buildCurrentOwnerDeltaTopline(input: {
     stage_run_cockpit_summary: {
       surface_kind: stageRunCockpit.surface_kind,
       current_owner: text(record(stageRunCockpit.stage_run_current_owner_delta).current_owner),
+      current_owner_delta_owner:
+        text(record(stageRunCockpit.stage_run_current_owner_delta).current_owner_delta_owner)
+        ?? text(currentOwnerDelta.current_owner),
       stage_id: text(record(stageRunCockpit.stage_run_current_owner_delta).stage_id),
       required_delta: text(record(stageRunCockpit.stage_run_current_owner_delta).required_delta),
       execution_authorized:

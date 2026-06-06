@@ -213,6 +213,46 @@ export function parseQueueArgs(rest: string[]): FamilyRuntimeCommandInput | unde
       repairStrandedHold,
     };
   }
+  if (rest[0] === 'retire') {
+    let reason = '';
+    let source: string | undefined;
+    const taskScope: FamilyRuntimeTaskScope = {};
+    for (let index = 1; index < rest.length; index += 1) {
+      const token = rest[index];
+      const value = rest[index + 1];
+      if (token === '--reason' && value) {
+        reason = value;
+        index += 1;
+      } else if (token === '--source' && value) {
+        source = value;
+        index += 1;
+      } else if (parseTaskScopeOption(taskScope, token, value)) {
+        index += 1;
+      } else {
+        throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime queue retire option: ${token}.`, {
+          option: token,
+          usage: 'opl family-runtime queue retire --study <study_id> --reason <operator_reason> [--domain <domain>] [--task-kind <kind>] [--payload-match <path=value>] [--source <source>]',
+        });
+      }
+    }
+    if (!reason.trim()) {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime queue retire requires --reason.', {
+        usage: 'opl family-runtime queue retire --study <study_id> --reason <operator_reason>',
+      });
+    }
+    const normalizedScope = normalizedTaskScope(taskScope);
+    if (!normalizedScope) {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime queue retire requires at least one task scope selector.', {
+        required_scope_options: ['--domain', '--study', '--task-kind', '--payload-match'],
+      });
+    }
+    return {
+      mode: 'queue_retire',
+      taskScope: normalizedScope,
+      reason,
+      source,
+    };
+  }
   return undefined;
 }
 

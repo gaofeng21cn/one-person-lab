@@ -289,6 +289,7 @@ exit 1
             default_read_surface: string;
             stage_run_current_owner_delta: {
               current_owner: string;
+              current_owner_delta_owner: string;
               required_delta: string;
               accepted_return_shapes: string[];
               missing_role_or_answer_summary: {
@@ -546,6 +547,10 @@ exit 1
     assert.equal(output.app_state.operator.stage_run_cockpit.default_read_surface, 'stage_run_current_owner_delta');
     assert.equal(
       output.app_state.operator.stage_run_cockpit.stage_run_current_owner_delta.current_owner,
+      'one-person-lab',
+    );
+    assert.equal(
+      output.app_state.operator.stage_run_cockpit.stage_run_current_owner_delta.current_owner_delta_owner,
       output.app_state.operator.current_owner_delta.current_owner,
     );
     assert.equal(

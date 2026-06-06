@@ -308,6 +308,10 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
     safe_action_owner: routeOwner,
     domain_id: routeDomainId,
     stage_id: stringValue(route.stage_id),
+    worklist_attention_class: stringValue(route.worklist_attention_class),
+    ordinary_open_safe_action_attention: route.ordinary_open_safe_action_attention !== false,
+    audit_lane_visible: route.audit_lane_visible === true,
+    cleanup_lane_visible: route.cleanup_lane_visible === true,
     mode: itemStatus === DIAGNOSTIC_ONLY_STATUS
       ? 'diagnostic_query_only'
       : actionKind.endsWith('_verify') || actionKind === 'provider_scheduler_status'
@@ -667,6 +671,12 @@ function buildEvidenceRequirementLedger(worklistItems: JsonRecord[]) {
 function itemEligibleForNextActionLedger(item: JsonRecord) {
   const claimScope = stringValue(item.claim_scope);
   const status = stringValue(item.status);
+  if (
+    item.ordinary_open_safe_action_attention === false
+    || stringValue(item.worklist_attention_class) === 'audit_cleanup_lane'
+  ) {
+    return false;
+  }
   if (status === DIAGNOSTIC_ONLY_STATUS) {
     return false;
   }
@@ -674,6 +684,12 @@ function itemEligibleForNextActionLedger(item: JsonRecord) {
     return false;
   }
   return true;
+}
+
+function itemEligibleForOrdinaryOpenAttention(item: JsonRecord) {
+  return stringValue(item.status) === OPEN_WORKLIST_STATUS
+    && item.ordinary_open_safe_action_attention !== false
+    && stringValue(item.worklist_attention_class) !== 'audit_cleanup_lane';
 }
 
 function itemClosedByRefsOnlyReceipt(item: JsonRecord) {
@@ -759,9 +775,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
         readOnlyWorklistItem(route, routes.length + diagnosticRoutes.length + index, drilldown)
       ),
   ].map(normalizeWorklistOwnerFields);
-  const openItems = worklistItems.filter((item) =>
-    item.status === OPEN_WORKLIST_STATUS
-  );
+  const openItems = worklistItems.filter(itemEligibleForOrdinaryOpenAttention);
   const closedItems = worklistItems.filter((item) =>
     item.status !== OPEN_WORKLIST_STATUS
   );

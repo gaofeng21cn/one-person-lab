@@ -13,12 +13,16 @@ export function assertOwnerDeltaTopline(drilldown: any) {
   assert.deepEqual(drilldown.workbench.stage_run_cockpit, drilldown.stage_run_cockpit);
   assert.equal(drilldown.stage_run_cockpit.surface_kind, 'opl_app_stage_run_cockpit_projection');
   assert.equal(drilldown.stage_run_cockpit_summary.refs_only, true);
-  assert.equal(drilldown.stage_run_cockpit_summary.current_owner, drilldown.current_owner_delta.current_owner);
+  assert.equal(drilldown.stage_run_cockpit_summary.current_owner, 'one-person-lab');
+  assert.equal(
+    drilldown.stage_run_cockpit_summary.current_owner_delta_owner,
+    drilldown.current_owner_delta.current_owner,
+  );
   assert.equal(drilldown.operator_current_owner_delta_owner, drilldown.current_owner_delta.current_owner);
-  assert.equal(drilldown.operator_next_owner, drilldown.current_owner_delta.current_owner);
+  assert.equal(drilldown.operator_next_owner, 'one-person-lab');
   assert.equal(
     drilldown.operator_next_required_action,
-    'current_owner_delta_owner_answer_or_typed_blocker_required',
+    'record_opl_provider_attempt_lease_authorization_and_closeout_receipt_binding_refs',
   );
   assert.equal(
     drilldown.stage_run_cockpit_summary.next_required_action,
@@ -32,8 +36,16 @@ export function assertOwnerDeltaTopline(drilldown: any) {
   );
   assert.equal(drilldown.stage_run_next_missing_input_refs.includes('owner_answer_ref'), true);
   assert.equal(drilldown.operator_required_delta, drilldown.current_owner_delta.desired_delta_description);
-  assert.equal(drilldown.operator_payload_requirement, drilldown.current_owner_delta.payload_requirement);
-  assert.deepEqual(drilldown.operator_accepted_answer_shape, drilldown.current_owner_delta.accepted_answer_shape);
+  assert.equal(
+    drilldown.operator_payload_requirement,
+    'opl_execution_authorization_and_closeout_binding_refs_required',
+  );
+  assert.deepEqual(drilldown.operator_accepted_answer_shape, [
+    'provider_attempt_ref',
+    'attempt_lease_ref',
+    'execution_authorization_decision_ref',
+    'owner_answer_binding_ref',
+  ]);
   assertCurrentOwnerDeltaToplineNextAction(drilldown);
   assert.equal(drilldown.authority_boundary.can_write_domain_truth, false);
   assert.equal(drilldown.authority_boundary.can_execute_domain_action, false);

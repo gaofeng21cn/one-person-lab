@@ -763,6 +763,7 @@ test('family-runtime nested --help returns command help without executing runtim
     assert.match(output.help.usage, /provider-slo tick/);
     assert.match(output.help.usage, /queue list/);
     assert.match(output.help.usage, /queue release/);
+    assert.match(output.help.usage, /queue retire/);
     assert.equal(Object.hasOwn(output, 'family_runtime_queue'), false);
     assert.equal(Object.hasOwn(output, 'family_runtime_queue_release'), false);
     assert.equal(Object.hasOwn(output, 'family_runtime_tick'), false);
