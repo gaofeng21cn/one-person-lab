@@ -448,6 +448,7 @@ exit 1
           current_owner_delta: Record<string, any>;
           current_owner_delta_read_model: Record<string, any>;
           operator_next_action: Record<string, any>;
+          operator_next_action_source: string | null;
           operator_next_action_kind: string;
           operator_next_action_owner: string;
           operator_next_action_authority_boundary: Record<string, any>;
@@ -499,6 +500,7 @@ exit 1
             current_owner_delta: Record<string, any>;
             current_owner_delta_read_model: Record<string, any>;
             operator_next_action: Record<string, any>;
+            operator_next_action_source: string | null;
             operator_next_action_kind: string;
             operator_next_action_owner: string;
             operator_next_action_authority_boundary: Record<string, any>;
@@ -727,7 +729,17 @@ exit 1
     );
     assert.equal(
       output.app_state.operator.stage_run_cockpit.stage_run_current_owner_delta.accepted_return_shapes
-        .includes('typed_blocker_ref'),
+        .includes('framework_readiness_ref'),
+      true,
+    );
+    assert.equal(
+      output.app_state.operator.stage_run_cockpit.stage_run_current_owner_delta.accepted_return_shapes
+        .includes('family_runtime_evidence_worklist_ref'),
+      true,
+    );
+    assert.equal(
+      output.app_state.operator.stage_run_cockpit.stage_run_current_owner_delta.accepted_return_shapes
+        .includes('app_operator_drilldown_ref'),
       true,
     );
     assert.equal(
@@ -735,6 +747,53 @@ exit 1
         .missing_role_or_answer_summary.owner_receipt_or_typed_blocker_missing,
       true,
     );
+    assertCurrentOwnerDeltaProjection(output.app_state.operator.current_owner_delta, {
+      currentOwner: 'one-person-lab',
+      requiredDelta: 'refresh_current_owner_delta_read_model_required',
+      acceptedAnswerShapeIncludes: [
+        'framework_readiness_ref',
+        'family_runtime_evidence_worklist_ref',
+        'app_operator_drilldown_ref',
+      ],
+    });
+    assertCurrentOwnerDeltaReadModel(output.app_state.operator.workbench.current_owner_delta_read_model, {
+      currentOwner: 'one-person-lab',
+      requiredDelta: 'refresh_current_owner_delta_read_model_required',
+      acceptedReturnShapes: [
+        'framework_readiness_ref',
+        'family_runtime_evidence_worklist_ref',
+        'app_operator_drilldown_ref',
+      ],
+      acceptedAnswerShapeIncludes: [
+        'framework_readiness_ref',
+        'family_runtime_evidence_worklist_ref',
+        'app_operator_drilldown_ref',
+      ],
+      openSafeActionCount: 0,
+      payloadRequiredCount: 0,
+      fullDetailRefKeys: [
+        'framework_readiness_ref',
+        'evidence_worklist_ref',
+        'app_operator_drilldown_ref',
+        'cache_refresh_policy',
+      ],
+    });
+    assert.equal(
+      output.app_state.operator.current_owner_delta_read_model.owner_delta_audit_tail.full_detail_refs
+        .cache_refresh_policy,
+      'fast_profile_cache_miss_requires_authoritative_owner_delta_refresh_before_claiming_no_action',
+    );
+    assert.equal(
+      output.app_state.operator.current_owner_delta.desired_delta_description,
+      'refresh_current_owner_delta_read_model_required',
+    );
+    assert.equal(output.app_state.operator.operator_next_action_kind, 'stage_run_execution_authorization_or_closeout_binding_required');
+    assert.equal(output.app_state.operator.operator_next_action_owner, 'one-person-lab');
+    assert.equal(output.app_state.operator.operator_next_action_source, 'stage_run_execution_authorization');
+    assert.equal(output.app_state.operator.operator_next_action_authority_boundary.route_requires_opl_runtime_refs, true);
+    assert.equal(output.app_state.operator.operator_next_action_authority_boundary.route_requires_domain_or_app_payload, false);
+    assert.equal(output.app_state.operator.operator_next_action_authority_boundary.can_write_domain_truth, false);
+    assert.equal(output.app_state.operator.operator_next_action_authority_boundary.can_create_owner_receipt, false);
     assert.equal(output.app_state.operator.stage_run_cockpit.launch_admission.default_blocked, false);
     assert.deepEqual(output.app_state.operator.stage_run_cockpit.launch_admission.launch_blockers, []);
     assert.equal(
@@ -784,14 +843,6 @@ exit 1
       output.app_state.operator.stage_run_cockpit.authority_boundary.read_model_counts_as_closeout,
       false,
     );
-    assertCurrentOwnerDeltaProjection(output.app_state.operator.current_owner_delta);
-    assertCurrentOwnerDeltaReadModel(output.app_state.operator.workbench.current_owner_delta_read_model, {
-      fullDetailRefKeys: [
-        'framework_readiness_ref',
-        'evidence_worklist_ref',
-        'app_operator_drilldown_ref',
-      ],
-    });
     assert.equal(
       output.app_state.operator.workbench.current_owner_delta_read_model.owner_delta_audit_tail.full_detail_refs
         .app_operator_drilldown_ref,

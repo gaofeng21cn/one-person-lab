@@ -624,3 +624,40 @@ export function buildIdleCurrentOwnerDeltaReadModel() {
     },
   });
 }
+
+export function buildCurrentOwnerDeltaCacheRefreshRequiredReadModel() {
+  return buildCurrentOwnerDeltaReadModel({
+    ownerDeltaFirst: {
+      next_owner: 'one-person-lab',
+      next_required_delta: 'refresh_current_owner_delta_read_model_required',
+      required_return_shapes: [
+        'framework_readiness_ref',
+        'family_runtime_evidence_worklist_ref',
+        'app_operator_drilldown_ref',
+      ],
+      summary: {
+        source: 'app_state_fast_cache_miss',
+        cache_miss_is_not_no_action: true,
+      },
+    },
+    countSummary: {
+      openSafeActionCount: 0,
+      payloadRequiredCount: 0,
+      payloadFreeCount: 0,
+      blockedRefsOnlyCount: 0,
+      evidenceEnvelopeOpenCount: 0,
+      evidenceEnvelopeBlockedCount: 0,
+      domainDispatchWorkorderCount: 0,
+      stageReplayMissingReceiptWorkorderCount: 0,
+    },
+    fullDetailRefs: {
+      framework_readiness_ref: 'opl framework readiness --family-defaults --json',
+      evidence_worklist_ref:
+        'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --json',
+      app_operator_drilldown_ref:
+        'opl runtime app-operator-drilldown --detail full --json',
+      cache_refresh_policy:
+        'fast_profile_cache_miss_requires_authoritative_owner_delta_refresh_before_claiming_no_action',
+    },
+  });
+}

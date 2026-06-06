@@ -35,6 +35,7 @@ export function assertCurrentOwnerDeltaReadModel(
     currentOwner?: unknown;
     requiredDelta?: unknown;
     acceptedReturnShapes?: unknown;
+    acceptedAnswerShapeIncludes?: string[];
     openSafeActionCount?: unknown;
     payloadRequiredCount?: unknown;
     domainDispatchWorkorderCount?: unknown;
@@ -57,10 +58,13 @@ export function assertCurrentOwnerDeltaReadModel(
   assertCurrentOwnerDeltaProjection(readModel.current_owner_delta, {
     currentOwner: readModel.current_owner,
     requiredDelta: readModel.required_delta,
+    acceptedAnswerShapeIncludes: expected.acceptedAnswerShapeIncludes,
   });
   assert.equal(Array.isArray(readModel.accepted_return_shapes), true);
   assert.equal(readModel.accepted_return_shapes.length > 0, true);
-  assert.equal(readModel.accepted_return_shapes.includes('typed_blocker_ref'), true);
+  for (const shape of expected.acceptedAnswerShapeIncludes ?? ['typed_blocker_ref']) {
+    assert.equal(readModel.accepted_return_shapes.includes(shape), true);
+  }
   if (typeof expected.currentOwner === 'string') {
     assert.equal(readModel.current_owner, expected.currentOwner);
   }
@@ -339,6 +343,7 @@ export function assertCurrentOwnerDeltaProjection(
   expected: {
     currentOwner?: unknown;
     requiredDelta?: unknown;
+    acceptedAnswerShapeIncludes?: string[];
   } = {},
 ) {
   assert.equal(currentOwnerDelta.surface_kind, 'opl_current_owner_delta');
@@ -363,7 +368,9 @@ export function assertCurrentOwnerDeltaProjection(
   assert.equal(typeof currentOwnerDelta.current_owner, 'string');
   assert.equal(typeof currentOwnerDelta.desired_delta_description, 'string');
   assert.equal(Array.isArray(currentOwnerDelta.accepted_answer_shape), true);
-  assert.equal(currentOwnerDelta.accepted_answer_shape.includes('typed_blocker_ref'), true);
+  for (const shape of expected.acceptedAnswerShapeIncludes ?? ['typed_blocker_ref']) {
+    assert.equal(currentOwnerDelta.accepted_answer_shape.includes(shape), true);
+  }
   if (typeof expected.currentOwner === 'string') {
     assert.equal(currentOwnerDelta.current_owner, expected.currentOwner);
   }

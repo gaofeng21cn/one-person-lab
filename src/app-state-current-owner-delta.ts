@@ -1,8 +1,8 @@
 import type { OplStatePaths } from './runtime-state-paths.ts';
 import { readCurrentOwnerDeltaReadModelProjectionCache } from './current-owner-delta-read-model-cache.ts';
 import {
+  buildCurrentOwnerDeltaCacheRefreshRequiredReadModel,
   buildCurrentOwnerDeltaReadModel,
-  buildIdleCurrentOwnerDeltaReadModel,
 } from './current-owner-delta-projection.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -19,7 +19,7 @@ function ownerDeltaReadModelFromRuntimeActivity(items: JsonRecord[]) {
   const selected = items.find((item) => stringValue(item.lane) === 'attention')
     ?? items.find((item) => stringValue(item.lane) === 'running');
   if (!selected) {
-    return buildIdleCurrentOwnerDeltaReadModel();
+    return buildCurrentOwnerDeltaCacheRefreshRequiredReadModel();
   }
   const domainOwner = stringValue(selected.domain_owner)
     ?? stringValue(selected.project_id)
