@@ -25,7 +25,7 @@ Fresh command:
 node ./scripts/family-structure-advisory.mjs --format=json
 ```
 
-Fresh eleven-repo local summary from `2026-06-06T13:07Z` after the AG-UI renderer/main/WebUI/validator and RCA test-structure passes. The `one-person-lab` count includes current local dirty workstream changes and should be refreshed again before committing a separate framework source-shape tranche:
+Fresh eleven-repo local summary from `2026-06-06T13:13Z` after the AG-UI renderer/main/WebUI/validator, RCA test-structure, and OPL owner-delta workstream merge passes:
 
 - `one-person-lab`: `needs_design_pass=24`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
 - `med-autoscience`: `needs_design_pass=24`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
