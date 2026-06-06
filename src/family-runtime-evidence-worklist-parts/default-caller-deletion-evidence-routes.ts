@@ -25,9 +25,19 @@ function stringList(value: unknown) {
 export function defaultCallerDeletionEvidenceRoutes(
   drilldown: JsonRecord,
   notAuthorizedClaims: string[],
+  additionalDomains: JsonRecord[] = [],
 ) {
   const projection = record(drilldown.default_caller_deletion_evidence_refs);
-  const domains = recordList(projection.domains);
+  const observedDomainIds = new Set(recordList(projection.domains)
+    .map((domain) => stringValue(domain.domain_id) ?? stringValue(domain.project_id))
+    .filter((domainId): domainId is string => Boolean(domainId)));
+  const domains = [
+    ...recordList(projection.domains),
+    ...additionalDomains.filter((domain) => {
+      const domainId = stringValue(domain.domain_id) ?? stringValue(domain.project_id);
+      return domainId !== null && !observedDomainIds.has(domainId);
+    }),
+  ];
   return domains.flatMap((domain) => {
     const domainId = stringValue(domain.domain_id) ?? stringValue(domain.project_id);
     return recordList(domain.deletion_evidence_worklists).flatMap((worklist) => {

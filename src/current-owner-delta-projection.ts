@@ -337,6 +337,8 @@ function buildCurrentOwnerDeltaProjection(input: {
       ?? '/framework_readiness/owner_delta_first',
     audit_next_safe_action_ref: input.compactAction?.next_safe_action_ref ?? null,
   };
+  const selectedActionRequiresDomainOrAppPayload =
+    input.compactAction?.route_requires_domain_or_app_payload === true;
   const hardGate = {
     state:
       input.countSummary.open_safe_action_count > 0
@@ -346,7 +348,8 @@ function buildCurrentOwnerDeltaProjection(input: {
           : 'none',
     provider_liveness_required: false,
     human_or_domain_owner_required:
-      input.countSummary.payload_required_count > 0
+      selectedActionRequiresDomainOrAppPayload
+      || input.countSummary.payload_required_count > 0
       || input.countSummary.blocked_refs_only_count > 0,
     source: 'owner_delta_controller',
   };

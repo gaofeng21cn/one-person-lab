@@ -2,20 +2,20 @@
 
 Owner: `One Person Lab`
 Purpose: `opl_family_ideal_operating_model_redesign`
-State: `active_support`
+State: `active_reference`
 Machine boundary: 本文是人读顶层重设计与审计标准。机器真相继续归各 repo 的 contracts、source、tests、CLI/read-model、runtime ledger、provider receipt、domain-owned manifest、owner receipt、typed blocker、release artifact 和真实 workspace/App evidence。
-Date: `2026-06-05`
+Date: `2026-06-06`
 
 ## 读法
 
-本文按 `目的反推必要性，MVP 检查阻碍性` 重新评估 OPL 相关 repo 的实际情况，并给出理想目标态设计。它不声明 production ready、domain ready、App release ready、artifact authority ready 或 physical delete 授权。
+本文按 `目的反推必要性，MVP 检查阻碍性` 重新评估 OPL 相关 repo 的实际情况，并给出理想目标态设计。它已经不是 active backlog owner；只保留评估口径、分类标准和目标操作架构说明。它不声明 production ready、domain ready、App release ready、artifact authority ready 或 physical delete 授权。
 
 评估范围：
 
 - Core repos: `one-person-lab`、`one-person-lab-app`、`med-autoscience`、`med-autogrant`、`redcube-ai`、`opl-meta-agent`。
 - Support repos: `opl-aion-shell`、`opl-doc`。它们是 implementation / governance support，不是 Foundry Agent truth owner。
 
-当前 gap owner 仍是 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。目标操作架构回到 [OPL Foundry Agent Target Operating Architecture](./opl-foundry-agent-target-operating-architecture.md)。本文件只承载这一轮顶层重设计判断、跨仓优化方向和审计标准。
+当前 gap、gate、next action 和执行顺序的唯一 active owner 是 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。目标操作架构回到 [OPL Foundry Agent Target Operating Architecture](./opl-foundry-agent-target-operating-architecture.md)。本文件只承载顶层重设计判断、跨仓优化方向和审计标准。
 
 ## 结论
 

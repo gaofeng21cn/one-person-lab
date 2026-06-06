@@ -13,6 +13,7 @@ import {
   compactDomainDispatchEvidenceWorkorderAttentionItems,
   compactDomainDispatchEvidenceWorkorderGroupAttentionItems,
 } from './domain-dispatch-evidence-workorder-packet.ts';
+import { familyDefaultCallerSupplementalDomains } from './family-runtime-evidence-worklist-parts/default-caller-family-scope.ts';
 import { defaultCallerDeletionEvidenceRoutes } from './family-runtime-evidence-worklist-parts/default-caller-deletion-evidence-routes.ts';
 import { defaultCallerDeletionEvidenceCounts } from './family-runtime-evidence-worklist-parts/default-caller-deletion-counts.ts';
 import { attentionQueueItem, nextSafeActions } from './family-runtime-evidence-worklist-parts/attention-actions.ts';
@@ -749,7 +750,11 @@ export async function runFamilyRuntimeEvidenceWorklist(
     ),
     ...externalEvidenceReceiptWorklistItems(drilldown),
     ...domainDispatchReceiptWorklistItems(drilldown),
-    ...defaultCallerDeletionEvidenceRoutes(drilldown, NOT_AUTHORIZED_CLAIMS)
+    ...defaultCallerDeletionEvidenceRoutes(
+      drilldown,
+      NOT_AUTHORIZED_CLAIMS,
+      familyDefaultCallerSupplementalDomains(input, drilldown),
+    )
       .map((route, index) =>
         readOnlyWorklistItem(route, routes.length + diagnosticRoutes.length + index, drilldown)
       ),

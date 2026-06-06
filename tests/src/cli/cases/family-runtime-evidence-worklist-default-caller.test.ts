@@ -6,6 +6,7 @@ import {
   loadFamilyManifestFixtures,
   os,
   path,
+  repoRoot,
   runCli,
   test,
 } from '../helpers.ts';
@@ -122,6 +123,62 @@ test('family-runtime evidence-worklist uses repo-native default-caller readiness
     assert.equal(fullWorklist.summary.not_authorized_claims.includes('default_caller_delete_ready'), true);
   } finally {
     fs.rmSync(repoDir, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime evidence-worklist keeps family default-caller deletion scope aligned with OMA', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-default-caller-oma-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const env = familyRuntimeEnv(stateRoot, fixtureContractsRoot, {
+    OPL_FAMILY_WORKSPACE_ROOT: path.dirname(repoRoot),
+  });
+
+  try {
+    const defaultCallers = runCli([
+      'agents',
+      'default-callers',
+      '--family-defaults',
+    ], env);
+    assert.equal(defaultCallers.deletion_evidence_worklist_count, 32);
+    assert.equal(defaultCallers.missing_no_active_caller_proof_count, 32);
+    assert.equal(
+      defaultCallers.repo_deletion_gate_summary.some((repo: { domain_id: string }) =>
+        repo.domain_id === 'opl-meta-agent'
+      ),
+      true,
+    );
+
+    const fullOutput = runCli([
+      'family-runtime',
+      'evidence-worklist',
+      '--family-defaults',
+      '--provider',
+      'temporal',
+      '--executor-kind',
+      'codex_cli',
+      '--detail',
+      'full',
+    ], env);
+    const fullWorklist = fullOutput.family_runtime_evidence_worklist;
+    assert.equal(fullWorklist.summary.default_caller_deletion_evidence_item_count, 32);
+    assert.equal(fullWorklist.summary.default_caller_deletion_no_active_caller_missing_count, 32);
+    assert.equal(
+      fullWorklist.worklist_items.filter((item: { claim_scope: string; owner: string }) =>
+        item.claim_scope === 'default_caller_deletion_evidence'
+        && item.owner === 'opl-meta-agent'
+      ).length,
+      8,
+    );
+    assert.equal(
+      fullWorklist.attention_queue.filter((item: { claim_scope: string; owner: string }) =>
+        item.claim_scope === 'default_caller_deletion_evidence'
+        && item.owner === 'opl-meta-agent'
+      ).length,
+      8,
+    );
+  } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
