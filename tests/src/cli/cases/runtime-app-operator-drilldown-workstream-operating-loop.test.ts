@@ -229,9 +229,11 @@ test('workstream operating loop anchors missing completion oracle to current own
             stage_packet_ref: 'packet:dm002-publication-handoff',
           },
           current_owner_delta: {
+            delta_id: 'current-owner-delta:dm002-publication-handoff',
             desired_delta_description: 'publication_handoff_owner_receipt_or_typed_blocker',
-            payload_requirement: 'current_owner_delta',
+            payload_requirement: 'current_owner_delta_or_provider_human_hard_gate',
             owner_answer_ref: 'mas://owner-answers/dm002/publication-handoff',
+            lineage_ref: 'mas://stage-artifact-unit/DM002/08-publication_package_handoff',
           },
           stage_contract: {
             expected_deliverable_refs: ['deliverable:dm002-publication-package-handoff'],
@@ -265,8 +267,18 @@ test('workstream operating loop anchors missing completion oracle to current own
   const item = loop.workstreams[0];
   assert.equal(item.goal_oracle_status, 'target_anchor_observed_owner_or_gate_needed');
   assert.equal(item.operating_loop_status, 'needs_owner_oracle_for_target_anchor');
-  assert.deepEqual(item.goal_oracle_refs, ['owner-receipt:dm002-publication-handoff']);
-  assert.deepEqual(item.deliverable_target_refs, ['deliverable:dm002-publication-package-handoff']);
+  assert.deepEqual(item.goal_oracle_refs, [
+    'owner-receipt:dm002-publication-handoff',
+    'mas://owner-answers/dm002/publication-handoff',
+  ]);
+  assert.deepEqual(item.deliverable_target_refs, [
+    'deliverable:dm002-publication-package-handoff',
+    'mas://stage-artifact-unit/DM002/08-publication_package_handoff',
+  ]);
+  assert.deepEqual(item.current_owner_delta_refs, [
+    'current-owner-delta:dm002-publication-handoff',
+    'mas://stage-artifact-unit/DM002/08-publication_package_handoff',
+  ]);
   assert.deepEqual(item.owner_handoff_packet_refs, ['owner-handoff:mas/publication-handoff']);
   assert.deepEqual(item.stage_pack_refs, [
     'stage-pack:mas/publication-handoff',

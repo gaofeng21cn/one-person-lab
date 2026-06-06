@@ -224,16 +224,19 @@ test('runtime App drilldown keeps provider worker start out of the default next 
     drilldown.attention_first_payload.current_owner_delta_read_model.default_summary.default_path_root,
     'current_owner_delta',
   );
+  const ownerDeltaNextAction =
+    drilldown.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none;
+  assert.ok(ownerDeltaNextAction);
   assert.equal(
-    drilldown.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none.action_kind,
+    ownerDeltaNextAction.action_kind,
     'current_owner_delta_owner_answer_or_typed_blocker_required',
   );
   assert.equal(
-    drilldown.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none.owner,
+    ownerDeltaNextAction.owner,
     'med-autoscience',
   );
   assert.equal(
-    drilldown.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none.default_planning_root,
+    ownerDeltaNextAction.default_planning_root,
     'current_owner_delta',
   );
 });
@@ -702,11 +705,11 @@ test('runtime App drilldown keeps provider worker repair audit-only when MAS own
     'med-autoscience',
   );
   assert.equal(
-    drilldown.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none.owner,
+    ownerDeltaNextAction.owner,
     'med-autoscience',
   );
   assert.equal(
-    drilldown.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none.default_planning_root,
+    ownerDeltaNextAction.default_planning_root,
     'current_owner_delta',
   );
   assert.equal(

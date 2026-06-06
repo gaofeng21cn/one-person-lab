@@ -35,13 +35,13 @@ Jason Liu 的 Codex-maxxing 原文可作为 operating-loop 参考，但不能成
 App/operator 默认读面应显示 continuity 和 attention，而不是再造 runtime：
 
 - active workstream / pinned thread refs
-- 当前 goal oracle 状态、target anchor refs 与 missing oracle advisory
+- 当前 goal oracle 状态、`goal_oracle_ref`、`deliverable_target_ref`、`current_owner_delta_ref`、owner handoff packet refs、stage pack / packet refs 与 missing oracle advisory
 - heartbeat / monitor / liveness attention
 - artifact review refs、comment refs 与 route-back refs
 - memory trace projection、writeback proposal refs 与 writeback receipt refs
 - next safe action、owner route 或 human gate
 
-workstream summary 会从 current owner delta、stage expected receipt / deliverable refs、owner handoff packet refs、stage pack / packet refs、artifact/package/export refs 派生目标锚点。若只有目标锚点而没有 owner receipt、quality gate 或 typed blocker，状态是 bounded advisory：`target_anchor_observed_owner_or_gate_needed`，要求 domain owner / App live operator 提供 `domain_owner_receipt_ref`、`quality_gate_receipt_ref` 或 `typed_blocker_ref`。该 advisory 不进入 launch hard gate，不关闭 stage、domain ready、quality ready 或 production ready。
+workstream summary 会优先从 current owner delta、stage expected receipt / deliverable refs、owner handoff packet refs、stage pack / packet refs、artifact/package/export refs 派生目标锚点。若只有目标锚点而没有 owner receipt、quality gate 或 typed blocker，状态只能是 bounded advisory：`target_anchor_observed_owner_or_gate_needed`，并要求 domain owner / App live operator 提供 `domain_owner_receipt_ref`、`quality_gate_receipt_ref` 或 `typed_blocker_ref`。该 advisory 不进入 launch hard gate，不关闭 stage、domain ready、quality ready 或 production ready。
 
 这些内容必须继续保持 summary-first、refs-only、owner-aware 和 explicit drilldown。full detail 可以展开 attempt、artifact、memory、receipt、Temporal 或 provider refs；默认页面不能读取 transcript、memory body、artifact body 或 domain verdict body 来合成 truth。
 

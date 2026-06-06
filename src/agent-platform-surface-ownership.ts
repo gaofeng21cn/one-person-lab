@@ -594,7 +594,6 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         generated_default_caller_readiness_can_authorize_physical_delete: false,
         physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
         physical_delete_authorization_status: 'not_authorized_by_opl_projection',
-        delete_or_keep_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
         owner_decision_required_after_prerequisites_observed:
           deleteOrKeepPrerequisitesObserved,
         next_required_owner_action: nextRequiredOwnerAction,
@@ -652,7 +651,6 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         generated_default_caller_readiness_can_authorize_physical_delete: false,
         physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
         physical_delete_authorization_status: 'not_authorized_by_opl_projection',
-        delete_or_keep_prerequisites_observed: false,
         next_required_owner_action:
           'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
         accepted_refs_only_result_shapes: ['typed_blocker_ref'],

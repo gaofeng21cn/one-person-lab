@@ -4,7 +4,6 @@ import {
 } from './authority-boundary.ts';
 import {
   record,
-  recordList,
   refsFromRecord,
   stringList,
   stringValue,
@@ -113,17 +112,6 @@ function stageContractRefs(attempt: JsonRecord) {
   };
 }
 
-function stagePackRefs(attempt: JsonRecord) {
-  return uniqueStrings([
-    ...stringList(attempt.stage_pack_refs),
-    ...stringList(attempt.stage_pack_ref),
-    ...stringList(record(attempt.workspace_locator).stage_pack_refs),
-    ...stringList(record(attempt.workspace_locator).stage_packet_refs),
-    stringValue(record(attempt.workspace_locator).stage_pack_ref),
-    stringValue(record(attempt.workspace_locator).stage_packet_ref),
-  ].filter((entry): entry is string => Boolean(entry)));
-}
-
 function attemptArtifactRefs(attempt: JsonRecord) {
   return refsFromRecord(attempt, [
     'artifact_refs',
@@ -172,14 +160,241 @@ function artifactRefsForAttempt(artifactRefs: JsonRecord[], attempt: JsonRecord)
     .filter((entry): entry is string => Boolean(entry)));
 }
 
+function refsFromSources(sources: JsonRecord[], keys: string[]) {
+  return uniqueStrings(sources.flatMap((source) =>
+    keys.flatMap((key) => refsFromValue(source[key]))
+  ));
+}
+
+function refsFromValue(value: unknown): string[] {
+  if (typeof value === 'string') {
+    const ref = stringValue(value);
+    return ref ? [ref] : [];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap(refsFromValue);
+  }
+  const item = record(value);
+  return uniqueStrings([
+    stringValue(item.ref),
+    stringValue(item.ref_id),
+    stringValue(item.uri),
+    stringValue(item.path),
+    stringValue(item.id),
+  ].filter((entry): entry is string => Boolean(entry)));
+}
+
+function stagePackRefs(attempt: JsonRecord) {
+  return refsFromSources([
+    attempt,
+    record(attempt.workspace_locator),
+    record(attempt.stage_progress_log).intended_work as JsonRecord,
+    record(attempt.control_loop_summary).trigger as JsonRecord,
+    record(attempt.attempt_launch_envelope),
+  ].map(record), [
+    'stage_pack_ref',
+    'stage_pack_refs',
+    'stage_packet_ref',
+    'stage_packet_refs',
+    'stage_manifest_ref',
+    'stage_manifest_refs',
+  ]);
+}
+
+function goalOracleRefs(input: {
+  attempt: JsonRecord;
+  routeRefs: ReturnType<typeof routeImpactRefs>;
+}) {
+  const stageContract = record(input.attempt.stage_contract);
+  const currentOwnerDelta = record(input.attempt.current_owner_delta);
+  const closeoutBinding = record(currentOwnerDelta.closeout_binding);
+  const ownerAnswerBinding = record(currentOwnerDelta.owner_answer_binding_projection);
+  const closeoutContract = record(input.attempt.closeout_refs_only_contract);
+  return uniqueStrings([
+    ...input.routeRefs.ownerReceiptRefs,
+    ...input.routeRefs.qualityGateRefs,
+    ...refsFromSources([
+      input.attempt,
+      record(input.attempt.route_impact),
+      stageContract,
+      currentOwnerDelta,
+      closeoutBinding,
+      ownerAnswerBinding,
+      closeoutContract,
+    ], [
+      'goal_oracle_ref',
+      'goal_oracle_refs',
+      'expected_receipt_ref',
+      'expected_receipt_refs',
+      'owner_receipt_ref',
+      'owner_receipt_refs',
+      'owner_answer_ref',
+      'owner_answer_refs',
+      'domain_owner_receipt_ref',
+      'domain_owner_receipt_refs',
+      'quality_gate_ref',
+      'quality_gate_refs',
+      'gate_receipt_ref',
+      'gate_receipt_refs',
+      'review_receipt_ref',
+      'review_receipt_refs',
+    ]),
+  ]);
+}
+
+function currentOwnerDeltaRefs(attempt: JsonRecord) {
+  const currentOwnerDelta = record(attempt.current_owner_delta);
+  return refsFromSources([
+    currentOwnerDelta,
+    record(currentOwnerDelta.audit_refs),
+    record(currentOwnerDelta.hard_gate),
+  ], [
+    'current_owner_delta_ref',
+    'delta_ref',
+    'delta_id',
+    'task_or_study_ref',
+    'lineage_ref',
+    'live_attempt_ref',
+    'source_fingerprint',
+    'attempt_lease_ref',
+    'execution_authorization_decision_ref',
+  ]);
+}
+
+function deliverableTargetRefs(input: {
+  attempt: JsonRecord;
+  progress: ReturnType<typeof progressRefs>;
+  artifactReviewRefs: string[];
+  packageRefs: string[];
+  exportRefs: string[];
+}) {
+  const stageContract = record(input.attempt.stage_contract);
+  const currentOwnerDelta = record(input.attempt.current_owner_delta);
+  const progressLog = record(input.attempt.stage_progress_log);
+  const intendedWork = record(progressLog.intended_work);
+  const deliverable = record(progressLog.deliverable_progress_delta);
+  return uniqueStrings([
+    ...input.artifactReviewRefs,
+    ...input.packageRefs,
+    ...input.exportRefs,
+    ...refsFromSources([
+      input.attempt,
+      stageContract,
+      currentOwnerDelta,
+      progressLog,
+      intendedWork,
+      deliverable,
+    ], [
+      'deliverable_target_ref',
+      'deliverable_target_refs',
+      'expected_deliverable_ref',
+      'expected_deliverable_refs',
+      'artifact_scope_ref',
+      'artifact_scope_refs',
+      'artifact_ref',
+      'artifact_refs',
+      'package_ref',
+      'package_refs',
+      'export_ref',
+      'export_refs',
+      'target_artifact_ref',
+      'target_artifact_refs',
+      'lineage_ref',
+      'lineage_refs',
+    ]),
+  ]);
+}
+
+function ownerHandoffPacketRefs(attempt: JsonRecord) {
+  return refsFromSources([
+    attempt,
+    record(attempt.route_impact),
+    record(attempt.current_owner_delta),
+    record(attempt.owner_handoff_packet),
+    record(attempt.control_loop_summary).decision as JsonRecord,
+  ].map(record), [
+    'owner_handoff_packet_ref',
+    'owner_handoff_packet_refs',
+    'owner_route_handoff_ref',
+    'owner_route_handoff_refs',
+    'handoff_ref',
+    'handoff_refs',
+  ]);
+}
+
+function targetAnchorRefs(input: {
+  goalOracleRefs: string[];
+  deliverableTargetRefs: string[];
+  currentOwnerDeltaRefs: string[];
+  ownerHandoffPacketRefs: string[];
+  stagePackRefs: string[];
+}) {
+  return uniqueStrings([
+    ...input.goalOracleRefs,
+    ...input.deliverableTargetRefs,
+    ...input.currentOwnerDeltaRefs,
+    ...input.ownerHandoffPacketRefs,
+    ...input.stagePackRefs,
+  ]);
+}
+
+function missingGoalOracleSignal(input: {
+  goalOracle: string;
+  targetAnchorRefs: string[];
+  typedBlockerRefs: string[];
+}) {
+  if (input.goalOracle === 'target_anchor_observed_owner_or_gate_needed') {
+    return {
+      signal_kind: 'bounded_goal_oracle_advisory',
+      status: 'target_anchor_observed_completion_oracle_pending',
+      missing_refs_any_of: [
+        'domain_owner_receipt_ref',
+        'quality_gate_receipt_ref',
+        'typed_blocker_ref',
+      ],
+      target_anchor_refs: input.targetAnchorRefs,
+      hard_gate: false,
+      launch_gate: false,
+      can_claim_domain_ready: false,
+    };
+  }
+  if (input.goalOracle === 'missing') {
+    return {
+      signal_kind: 'typed_missing_goal_oracle_warning',
+      status: 'goal_oracle_and_target_anchor_missing',
+      missing_refs_any_of: [
+        'goal_oracle_ref',
+        'deliverable_target_ref',
+        'domain_owner_receipt_ref',
+        'quality_gate_receipt_ref',
+        'typed_blocker_ref',
+      ],
+      target_anchor_refs: [],
+      hard_gate: false,
+      launch_gate: false,
+      can_claim_domain_ready: false,
+    };
+  }
+  if (input.goalOracle === 'blocked_by_domain_typed_blocker') {
+    return {
+      signal_kind: 'domain_typed_blocker_goal_oracle_signal',
+      status: 'domain_typed_blocker_observed',
+      typed_blocker_refs: input.typedBlockerRefs,
+      hard_gate: false,
+      launch_gate: false,
+      can_claim_domain_ready: false,
+    };
+  }
+  return null;
+}
+
 function goalOracleStatus(input: {
   ownerReceiptRefs: string[];
   qualityGateRefs: string[];
   typedBlockerRefs: string[];
+  targetAnchorRefs: string[];
   progressClassification: string;
   deliverableChangedSurfaces: string[];
-  deliverableTargetRefs: string[];
-  goalOracleRefs: string[];
 }) {
   if (input.ownerReceiptRefs.length > 0 || input.qualityGateRefs.length > 0) {
     return 'observed';
@@ -187,7 +402,7 @@ function goalOracleStatus(input: {
   if (input.typedBlockerRefs.length > 0 && input.deliverableChangedSurfaces.length > 0) {
     return 'blocked_by_domain_typed_blocker';
   }
-  if (input.deliverableTargetRefs.length > 0 || input.goalOracleRefs.length > 0) {
+  if (input.targetAnchorRefs.length > 0) {
     return 'target_anchor_observed_owner_or_gate_needed';
   }
   if (
@@ -219,6 +434,7 @@ function nextSteeringAction(input: {
   goalOracle: string;
   artifactReviewRefs: string[];
   typedBlockerRefs: string[];
+  targetAnchorRefs: string[];
   progressClassification: string;
 }) {
   if (input.goalOracle === 'target_anchor_observed_owner_or_gate_needed') {
@@ -226,12 +442,13 @@ function nextSteeringAction(input: {
       action_id: 'record_owner_or_gate_for_target_anchor',
       action_kind: 'owner_steering_required',
       owner: 'domain_repository_or_app_live_operator',
-      status: 'target_anchor_observed_owner_or_gate_needed',
+      status: 'target_anchor_observed_completion_oracle_pending',
       required_next_refs_any_of: [
         'domain_owner_receipt_ref',
         'quality_gate_receipt_ref',
         'typed_blocker_ref',
       ],
+      target_anchor_refs: input.targetAnchorRefs,
       can_execute_domain_action: false,
       can_create_owner_receipt: false,
       can_claim_domain_ready: false,
@@ -340,8 +557,6 @@ export function buildWorkstreamOperatingLoop(input: {
     const progressLog = record(attempt.stage_progress_log);
     const progress = progressRefs(attempt);
     const routeRefs = routeImpactRefs(attempt);
-    const contractRefs = stageContractRefs(attempt);
-    const packRefs = stagePackRefs(attempt);
     const packageLifecycleRefs = attemptPackageLifecycleRefs({
       attempt,
       packageLifecycle: input.packageLifecycle,
@@ -352,6 +567,32 @@ export function buildWorkstreamOperatingLoop(input: {
       ...progress.deliverableArtifactRefs,
       ...attemptArtifactRefs(attempt),
     ]);
+    const packageRefs = uniqueStrings([
+      ...routeRefs.packageRefs,
+      ...packageLifecycleRefs.packageRefs,
+    ]);
+    const exportRefs = uniqueStrings([
+      ...routeRefs.exportRefs,
+      ...packageLifecycleRefs.exportRefs,
+    ]);
+    const goalOracleAnchorRefs = goalOracleRefs({ attempt, routeRefs });
+    const currentOwnerDeltaAnchors = currentOwnerDeltaRefs(attempt);
+    const deliverableTargets = deliverableTargetRefs({
+      attempt,
+      progress,
+      artifactReviewRefs,
+      packageRefs,
+      exportRefs,
+    });
+    const ownerHandoffRefs = ownerHandoffPacketRefs(attempt);
+    const stagePacks = stagePackRefs(attempt);
+    const targetAnchors = targetAnchorRefs({
+      goalOracleRefs: goalOracleAnchorRefs,
+      deliverableTargetRefs: deliverableTargets,
+      currentOwnerDeltaRefs: currentOwnerDeltaAnchors,
+      ownerHandoffPacketRefs: ownerHandoffRefs,
+      stagePackRefs: stagePacks,
+    });
     const memoryRefs = uniqueStrings([
       ...stringList(attempt.consumed_memory_refs),
       ...stringList(input.memoryRefs.consumed_memory_refs),
@@ -365,16 +606,21 @@ export function buildWorkstreamOperatingLoop(input: {
       ownerReceiptRefs: routeRefs.ownerReceiptRefs,
       qualityGateRefs: routeRefs.qualityGateRefs,
       typedBlockerRefs: routeRefs.typedBlockerRefs,
+      targetAnchorRefs: targetAnchors,
       progressClassification: classification,
       deliverableChangedSurfaces: progress.deliverableChangedSurfaces,
-      deliverableTargetRefs: contractRefs.expectedDeliverableRefs,
-      goalOracleRefs: contractRefs.expectedReceiptRefs,
     });
     const nextAction = nextSteeringAction({
       goalOracle,
       artifactReviewRefs,
       typedBlockerRefs: routeRefs.typedBlockerRefs,
+      targetAnchorRefs: targetAnchors,
       progressClassification: classification,
+    });
+    const goalOracleSignal = missingGoalOracleSignal({
+      goalOracle,
+      targetAnchorRefs: targetAnchors,
+      typedBlockerRefs: routeRefs.typedBlockerRefs,
     });
     return {
       workstream_id: workstreamId(attempt),
@@ -389,6 +635,13 @@ export function buildWorkstreamOperatingLoop(input: {
         typedBlockerRefs: routeRefs.typedBlockerRefs,
       }),
       goal_oracle_status: goalOracle,
+      goal_oracle_refs: goalOracleAnchorRefs,
+      deliverable_target_refs: deliverableTargets,
+      current_owner_delta_refs: currentOwnerDeltaAnchors,
+      owner_handoff_packet_refs: ownerHandoffRefs,
+      stage_pack_refs: stagePacks,
+      target_anchor_refs: targetAnchors,
+      ...(goalOracleSignal ? { missing_goal_oracle_signal: goalOracleSignal } : {}),
       heartbeat_status: heartbeatStatus(attempt),
       progress_classification: classification,
       deliverable_changed_surfaces: progress.deliverableChangedSurfaces,
@@ -400,31 +653,8 @@ export function buildWorkstreamOperatingLoop(input: {
       owner_receipt_refs: routeRefs.ownerReceiptRefs,
       typed_blocker_refs: routeRefs.typedBlockerRefs,
       quality_gate_refs: routeRefs.qualityGateRefs,
-      goal_oracle_refs: contractRefs.expectedReceiptRefs,
-      deliverable_target_refs: contractRefs.expectedDeliverableRefs,
-      owner_handoff_packet_refs: stringList(attempt.owner_handoff_packet_refs),
-      stage_pack_refs: packRefs,
-      missing_goal_oracle_signal:
-        goalOracle === 'target_anchor_observed_owner_or_gate_needed'
-          ? {
-              signal_kind: 'bounded_goal_oracle_advisory',
-              hard_gate: false,
-              target_anchor_observed: true,
-              required_next_refs_any_of: [
-                'domain_owner_receipt_ref',
-                'quality_gate_receipt_ref',
-                'typed_blocker_ref',
-              ],
-            }
-          : null,
-      package_refs: uniqueStrings([
-        ...routeRefs.packageRefs,
-        ...packageLifecycleRefs.packageRefs,
-      ]),
-      export_refs: uniqueStrings([
-        ...routeRefs.exportRefs,
-        ...packageLifecycleRefs.exportRefs,
-      ]),
+      package_refs: packageRefs,
+      export_refs: exportRefs,
       next_steering_action: nextAction,
       source_refs: [
         `/stage_attempt_workbench/attempts/${stringValue(attempt.stage_attempt_id) ?? taskKey(attempt)}`,
