@@ -130,7 +130,7 @@ test('runtime App drilldown projects a refs-only workstream operating loop for a
     drilldown.attention_first_payload.owner_delta_first.projection_policy,
     'default_operator_surface_prioritizes_next_owner_delta_raw_refs_only_counters_are_drilldown',
   );
-  assert.equal(drilldown.attention_first_payload.owner_delta_first.next_owner, 'medautoscience');
+  assert.equal(drilldown.attention_first_payload.owner_delta_first.next_owner, 'med-autoscience');
   assert.equal(
     drilldown.attention_first_payload.owner_delta_first.next_required_delta,
     'artifact_review_or_domain_owner_receipt_required',
@@ -213,4 +213,83 @@ test('workstream operating loop separates platform repair from deliverable progr
   );
   assert.equal(drilldown.workstream_operating_loop.summary.goal_oracle_missing_count, 1);
   assert.equal(drilldown.workstream_operating_loop.summary.artifact_first_review_available_count, 0);
+});
+
+test('workstream operating loop anchors missing completion oracle to current owner delta and stage target refs', () => {
+  const drilldown = buildAppOperatorDrilldown({
+    stageAttemptWorkbench: {
+      attempts: [
+        {
+          stage_attempt_id: 'sat-current-owner-delta-target',
+          task_id: 'task-owner-delta-target',
+          domain_id: 'medautoscience',
+          stage_id: 'publication_handoff_owner_gate',
+          status: 'checkpointed',
+          workspace_locator: {
+            stage_packet_ref: 'packet:dm002-publication-handoff',
+          },
+          current_owner_delta: {
+            desired_delta_description: 'publication_handoff_owner_receipt_or_typed_blocker',
+            payload_requirement: 'current_owner_delta_or_provider_human_hard_gate',
+            owner_answer_ref: 'mas://owner-answers/dm002/publication-handoff',
+          },
+          stage_contract: {
+            expected_deliverable_refs: ['deliverable:dm002-publication-package-handoff'],
+            expected_receipt_refs: ['owner-receipt:dm002-publication-handoff'],
+          },
+          stage_pack_refs: ['stage-pack:mas/publication-handoff'],
+          owner_handoff_packet_refs: ['owner-handoff:mas/publication-handoff'],
+          stage_progress_log: {
+            surface_kind: 'opl_stage_progress_log',
+            progress_delta_classification: 'deliverable_progress',
+            deliverable_progress_delta: {
+              changed_stage_surfaces: ['publication:handoff'],
+            },
+            platform_repair_delta: {
+              changed_stage_surfaces: [],
+            },
+          },
+          route_impact: {
+            typed_blocker_refs: [],
+          },
+        },
+      ],
+    },
+    providerContinuousProof: {},
+    domainProjectionIngestion: {},
+    domainManifestProjects: [],
+    detailLevel: 'full',
+  }) as any;
+
+  const loop = drilldown.workstream_operating_loop;
+  const item = loop.workstreams[0];
+  assert.equal(item.goal_oracle_status, 'target_anchor_observed_owner_or_gate_needed');
+  assert.equal(item.operating_loop_status, 'needs_owner_oracle_for_target_anchor');
+  assert.deepEqual(item.goal_oracle_refs, ['owner-receipt:dm002-publication-handoff']);
+  assert.deepEqual(item.deliverable_target_refs, ['deliverable:dm002-publication-package-handoff']);
+  assert.deepEqual(item.owner_handoff_packet_refs, ['owner-handoff:mas/publication-handoff']);
+  assert.deepEqual(item.stage_pack_refs, [
+    'stage-pack:mas/publication-handoff',
+    'packet:dm002-publication-handoff',
+  ]);
+  assert.equal(item.missing_goal_oracle_signal.signal_kind, 'bounded_goal_oracle_advisory');
+  assert.equal(item.missing_goal_oracle_signal.hard_gate, false);
+  assert.equal(item.next_steering_action.action_id, 'record_owner_or_gate_for_target_anchor');
+  assert.deepEqual(item.next_steering_action.required_next_refs_any_of, [
+    'domain_owner_receipt_ref',
+    'quality_gate_receipt_ref',
+    'typed_blocker_ref',
+  ]);
+  assert.equal(loop.summary.goal_oracle_missing_count, 0);
+  assert.equal(loop.summary.goal_oracle_target_anchor_observed_count, 1);
+  assert.equal(loop.summary.deliverable_target_ref_observed_count, 1);
+  assert.equal(loop.summary.goal_oracle_advisory_count, 1);
+  assert.equal(
+    drilldown.attention_first_payload.owner_delta_first.next_required_delta,
+    'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.owner_delta_first.summary.workstream_goal_oracle_missing_count,
+    0,
+  );
 });

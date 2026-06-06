@@ -96,6 +96,34 @@ function routeImpactRefs(attempt: JsonRecord) {
   };
 }
 
+function stageContractRefs(attempt: JsonRecord) {
+  const stageContract = record(attempt.stage_contract);
+  return {
+    expectedDeliverableRefs: refsFromRecord(stageContract, [
+      'expected_deliverable_refs',
+      'deliverable_target_refs',
+      'target_deliverable_refs',
+    ]),
+    expectedReceiptRefs: refsFromRecord(stageContract, [
+      'expected_receipt_refs',
+      'goal_oracle_refs',
+      'owner_receipt_refs',
+      'quality_gate_refs',
+    ]),
+  };
+}
+
+function stagePackRefs(attempt: JsonRecord) {
+  return uniqueStrings([
+    ...stringList(attempt.stage_pack_refs),
+    ...stringList(attempt.stage_pack_ref),
+    ...stringList(record(attempt.workspace_locator).stage_pack_refs),
+    ...stringList(record(attempt.workspace_locator).stage_packet_refs),
+    stringValue(record(attempt.workspace_locator).stage_pack_ref),
+    stringValue(record(attempt.workspace_locator).stage_packet_ref),
+  ].filter((entry): entry is string => Boolean(entry)));
+}
+
 function attemptArtifactRefs(attempt: JsonRecord) {
   return refsFromRecord(attempt, [
     'artifact_refs',
@@ -150,12 +178,17 @@ function goalOracleStatus(input: {
   typedBlockerRefs: string[];
   progressClassification: string;
   deliverableChangedSurfaces: string[];
+  deliverableTargetRefs: string[];
+  goalOracleRefs: string[];
 }) {
   if (input.ownerReceiptRefs.length > 0 || input.qualityGateRefs.length > 0) {
     return 'observed';
   }
   if (input.typedBlockerRefs.length > 0 && input.deliverableChangedSurfaces.length > 0) {
     return 'blocked_by_domain_typed_blocker';
+  }
+  if (input.deliverableTargetRefs.length > 0 || input.goalOracleRefs.length > 0) {
+    return 'target_anchor_observed_owner_or_gate_needed';
   }
   if (
     input.progressClassification === 'deliverable_progress'
@@ -188,6 +221,22 @@ function nextSteeringAction(input: {
   typedBlockerRefs: string[];
   progressClassification: string;
 }) {
+  if (input.goalOracle === 'target_anchor_observed_owner_or_gate_needed') {
+    return {
+      action_id: 'record_owner_or_gate_for_target_anchor',
+      action_kind: 'owner_steering_required',
+      owner: 'domain_repository_or_app_live_operator',
+      status: 'target_anchor_observed_owner_or_gate_needed',
+      required_next_refs_any_of: [
+        'domain_owner_receipt_ref',
+        'quality_gate_receipt_ref',
+        'typed_blocker_ref',
+      ],
+      can_execute_domain_action: false,
+      can_create_owner_receipt: false,
+      can_claim_domain_ready: false,
+    };
+  }
   if (input.goalOracle === 'missing') {
     return {
       action_id: 'provide_goal_oracle_or_owner_receipt',
@@ -263,6 +312,9 @@ function operatingLoopStatus(input: {
   if (input.goalOracle === 'missing') {
     return 'needs_goal_oracle_or_owner_receipt';
   }
+  if (input.goalOracle === 'target_anchor_observed_owner_or_gate_needed') {
+    return 'needs_owner_oracle_for_target_anchor';
+  }
   if (input.typedBlockerRefs.length > 0) {
     return 'blocked_by_domain_typed_blocker';
   }
@@ -288,6 +340,8 @@ export function buildWorkstreamOperatingLoop(input: {
     const progressLog = record(attempt.stage_progress_log);
     const progress = progressRefs(attempt);
     const routeRefs = routeImpactRefs(attempt);
+    const contractRefs = stageContractRefs(attempt);
+    const packRefs = stagePackRefs(attempt);
     const packageLifecycleRefs = attemptPackageLifecycleRefs({
       attempt,
       packageLifecycle: input.packageLifecycle,
@@ -313,6 +367,8 @@ export function buildWorkstreamOperatingLoop(input: {
       typedBlockerRefs: routeRefs.typedBlockerRefs,
       progressClassification: classification,
       deliverableChangedSurfaces: progress.deliverableChangedSurfaces,
+      deliverableTargetRefs: contractRefs.expectedDeliverableRefs,
+      goalOracleRefs: contractRefs.expectedReceiptRefs,
     });
     const nextAction = nextSteeringAction({
       goalOracle,
@@ -344,6 +400,23 @@ export function buildWorkstreamOperatingLoop(input: {
       owner_receipt_refs: routeRefs.ownerReceiptRefs,
       typed_blocker_refs: routeRefs.typedBlockerRefs,
       quality_gate_refs: routeRefs.qualityGateRefs,
+      goal_oracle_refs: contractRefs.expectedReceiptRefs,
+      deliverable_target_refs: contractRefs.expectedDeliverableRefs,
+      owner_handoff_packet_refs: stringList(attempt.owner_handoff_packet_refs),
+      stage_pack_refs: packRefs,
+      missing_goal_oracle_signal:
+        goalOracle === 'target_anchor_observed_owner_or_gate_needed'
+          ? {
+              signal_kind: 'bounded_goal_oracle_advisory',
+              hard_gate: false,
+              target_anchor_observed: true,
+              required_next_refs_any_of: [
+                'domain_owner_receipt_ref',
+                'quality_gate_receipt_ref',
+                'typed_blocker_ref',
+              ],
+            }
+          : null,
       package_refs: uniqueStrings([
         ...routeRefs.packageRefs,
         ...packageLifecycleRefs.packageRefs,
@@ -389,6 +462,15 @@ export function buildWorkstreamOperatingLoop(input: {
       platform_repair_only_workstream_count: platformRepairOnlyWorkstreams.length,
       goal_oracle_missing_count: workstreams.filter((item) =>
         item.goal_oracle_status === 'missing'
+      ).length,
+      goal_oracle_target_anchor_observed_count: workstreams.filter((item) =>
+        item.goal_oracle_status === 'target_anchor_observed_owner_or_gate_needed'
+      ).length,
+      deliverable_target_ref_observed_count: workstreams.filter((item) =>
+        item.deliverable_target_refs.length > 0
+      ).length,
+      goal_oracle_advisory_count: workstreams.filter((item) =>
+        record(item.missing_goal_oracle_signal).signal_kind === 'bounded_goal_oracle_advisory'
       ).length,
       typed_blocker_workstream_count: workstreams.filter((item) =>
         item.typed_blocker_refs.length > 0

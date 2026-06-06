@@ -66,6 +66,8 @@ type PayloadHandoffWorklist = {
   operator_accepted_answer_shape?: string[];
   operator_next_action?: JsonRecord;
   operator_next_missing_input_refs?: string[];
+  operator_next_stage_run_closeout_binding_ref?: string;
+  operator_next_stage_run_closeout_binding_policy?: string;
   stage_run_next_missing_input_refs?: string[];
   stage_run_next_required_ref_shape?: JsonRecord;
   stage_run_cockpit_summary?: JsonRecord;

@@ -107,6 +107,9 @@ function stageEvidenceRouteClosedByDomainTypedBlocker(action: JsonRecord) {
 function providerMaintenanceRoute(action: JsonRecord) {
   const actionKind = stringValue(action.action_kind) ?? '';
   return actionKind === 'provider_slo_cadence_execution'
+    || actionKind === 'provider_worker_start'
+    || actionKind === 'provider_worker_restart'
+    || actionKind === 'blocked_transport_redrive'
     || actionKind === 'provider_scheduler_install'
     || actionKind === 'provider_scheduler_tick'
     || actionKind === 'provider_scheduler_trigger'

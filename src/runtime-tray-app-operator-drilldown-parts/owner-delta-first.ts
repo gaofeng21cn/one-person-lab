@@ -1,4 +1,5 @@
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
+import { canonicalOwnerId } from '../evidence-envelope.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary,
 } from './authority-boundary.ts';
@@ -41,9 +42,42 @@ function firstString(...values: unknown[]) {
 
 function concreteOwner(...values: unknown[]) {
   const generic = 'domain_repository_or_app_live_operator';
-  return firstString(...values.filter((value) => stringValue(value) !== generic))
+  const owner = firstString(...values.filter((value) => stringValue(value) !== generic))
     ?? firstString(...values)
     ?? generic;
+  return owner === generic ? owner : canonicalOwnerId(owner);
+}
+
+function primaryOwner(...values: unknown[]) {
+  const generic = 'domain_repository_or_app_live_operator';
+  const owner = firstString(...values) ?? generic;
+  return owner === generic ? owner : canonicalOwnerId(owner);
+}
+
+function selectedPayloadOwnerFirst(input: {
+  nextSafeAction: JsonRecord;
+  primary: JsonRecord;
+  evidenceNextSteps: JsonRecord;
+}) {
+  const generic = 'domain_repository_or_app_live_operator';
+  const selectedPayloadOwner = stringValue(input.nextSafeAction.payload_owner);
+  if (selectedPayloadOwner && selectedPayloadOwner !== generic) {
+    return canonicalOwnerId(selectedPayloadOwner);
+  }
+  if (
+    selectedPayloadOwner === generic
+    && input.nextSafeAction.route_requires_domain_or_app_payload === true
+  ) {
+    return generic;
+  }
+  return primaryOwner(
+    selectedPayloadOwner,
+    input.primary.payload_owner,
+    input.primary.owner,
+    input.evidenceNextSteps.next_owner,
+    input.nextSafeAction.owner,
+    'one-person-lab',
+  );
 }
 
 function firstWorkstreamRequiringOwner(loop: JsonRecord) {
@@ -103,7 +137,7 @@ function firstActionCandidate(input: {
   if (Object.keys(input.nextSafeAction).length > 0) {
     return {
       step_kind: stringValue(input.nextSafeAction.action_kind),
-      owner: firstString(input.nextSafeAction.owner, input.nextSafeAction.payload_owner),
+      owner: primaryOwner(input.nextSafeAction.payload_owner, input.nextSafeAction.owner),
       status: stringValue(input.nextSafeAction.open_reason)
         ?? stringValue(input.nextSafeAction.route_status_detail)
         ?? 'safe_action_available',
@@ -168,12 +202,11 @@ export function buildOwnerDeltaFirstProjection(input: {
     evidenceStep,
     workstreamAction,
   });
-  const owner = concreteOwner(
-    primary.owner,
-    primary.payload_owner,
-    input.evidenceNextSteps.next_owner,
-    'one-person-lab',
-  );
+  const owner = selectedPayloadOwnerFirst({
+    nextSafeAction,
+    primary,
+    evidenceNextSteps: input.evidenceNextSteps,
+  });
   const safeActionAvailable = Object.keys(nextSafeAction).length > 0;
   const totalEvidenceNextStepCount = numberValue(input.evidenceNextSteps.total_count);
   const goalOracleMissingCount =

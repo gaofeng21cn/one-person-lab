@@ -232,7 +232,19 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
   );
   assert.equal(
     defaultCallers.physical_delete_authority_read_model.next_required_owner_action,
-    'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
+    'domain_owner_choose_delete_authorize_keep_or_typed_blocker',
+  );
+  assert.deepEqual(
+    defaultCallers.physical_delete_authority_read_model.accepted_refs_only_result_shapes,
+    [
+      'physical_delete_authorization_ref',
+      'keep_as_authority_adapter_ref',
+      'typed_blocker_ref',
+    ],
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.owner_decision_required_after_all_refs_observed,
+    true,
   );
   assert.equal(
     defaultCallers.physical_delete_authority_read_model.not_authorized_claims
@@ -252,6 +264,22 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
   );
   assert.equal(defaultCallers.repo_deletion_gate_summary[0].physical_delete_authorized, false);
   assert.equal(defaultCallers.repo_deletion_gate_summary[0].default_caller_delete_ready, false);
+  assert.equal(
+    defaultCallers.repo_deletion_gate_summary[0].next_required_owner_action,
+    'domain_owner_choose_delete_authorize_keep_or_typed_blocker',
+  );
+  assert.deepEqual(
+    defaultCallers.repo_deletion_gate_summary[0].accepted_refs_only_result_shapes,
+    [
+      'physical_delete_authorization_ref',
+      'keep_as_authority_adapter_ref',
+      'typed_blocker_ref',
+    ],
+  );
+  assert.equal(
+    defaultCallers.repo_deletion_gate_summary[0].owner_decision_required_after_all_refs_observed,
+    true,
+  );
   assert.deepEqual(
     defaultCallersPayload.repo_deletion_gate_summary,
     defaultCallers.repo_deletion_gate_summary,
@@ -271,6 +299,9 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
       physical_delete_authorized: boolean;
       default_caller_delete_ready: boolean;
       needs_drilldown_for_surface_refs: boolean;
+      next_required_owner_action: string;
+      accepted_refs_only_result_shapes: string[];
+      owner_decision_required_after_all_refs_observed: boolean;
     }) => (
       surface.no_active_caller_proof_observed === true
       && surface.domain_owner_receipt_or_typed_blocker_observed === true
@@ -279,6 +310,11 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
       && surface.physical_delete_authorized === false
       && surface.default_caller_delete_ready === false
       && surface.needs_drilldown_for_surface_refs === true
+      && surface.next_required_owner_action === 'domain_owner_choose_delete_authorize_keep_or_typed_blocker'
+      && surface.accepted_refs_only_result_shapes.includes('physical_delete_authorization_ref')
+      && surface.accepted_refs_only_result_shapes.includes('keep_as_authority_adapter_ref')
+      && surface.accepted_refs_only_result_shapes.includes('typed_blocker_ref')
+      && surface.owner_decision_required_after_all_refs_observed === true
     )),
     true,
   );
@@ -307,6 +343,16 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
   assert.equal(report.deletion_gate.default_caller_delete_ready, false);
   assert.deepEqual(report.deletion_gate.mandatory_gate_ids, defaultCallers.retirement_guard_mandatory_gate_ids);
   assert.equal(report.deletion_gate.physical_delete_authorization_status, 'not_authorized_by_opl_projection');
+  assert.equal(
+    report.deletion_gate.next_required_owner_action,
+    'domain_owner_choose_delete_authorize_keep_or_typed_blocker',
+  );
+  assert.deepEqual(report.deletion_gate.accepted_refs_only_result_shapes, [
+    'physical_delete_authorization_ref',
+    'keep_as_authority_adapter_ref',
+    'typed_blocker_ref',
+  ]);
+  assert.equal(report.deletion_gate.owner_decision_required_after_all_refs_observed, true);
   assert.equal(report.deletion_gate.generated_default_caller_readiness_can_authorize_physical_delete, false);
   assert.equal(
     report.deletion_gate.physical_delete_blocked_by.includes('generated_default_caller_readiness_is_not_delete_authority'),
@@ -328,6 +374,9 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
       generated_default_caller_readiness_can_authorize_physical_delete: boolean;
       physical_delete_blocked_by: string[];
       not_authorized_claims: string[];
+      next_required_owner_action: string;
+      accepted_refs_only_result_shapes: string[];
+      owner_decision_required_after_all_refs_observed: boolean;
       retirement_guard: {
         target_classes: string[];
         mandatory_gate_ids: string[];
@@ -344,6 +393,11 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
       && worklist.physical_delete_blocked_by.includes('domain_repo_owner_receipt_or_typed_blocker_required_for_delete_authority')
       && worklist.not_authorized_claims.includes('default_caller_delete_ready')
       && worklist.not_authorized_claims.includes('domain_repo_physical_delete_authorization')
+      && worklist.next_required_owner_action === 'domain_owner_choose_delete_authorize_keep_or_typed_blocker'
+      && worklist.accepted_refs_only_result_shapes.includes('physical_delete_authorization_ref')
+      && worklist.accepted_refs_only_result_shapes.includes('keep_as_authority_adapter_ref')
+      && worklist.accepted_refs_only_result_shapes.includes('typed_blocker_ref')
+      && worklist.owner_decision_required_after_all_refs_observed === true
       && worklist.retirement_guard.target_classes.includes('legacy_reconcile_compensation_path')
       && worklist.retirement_guard.target_classes.includes('retained_domain_wrapper')
       && worklist.retirement_guard.mandatory_gate_ids.includes('no_active_caller_proof')

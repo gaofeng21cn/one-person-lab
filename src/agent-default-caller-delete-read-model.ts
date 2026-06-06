@@ -1,4 +1,8 @@
 import {
+  DEFAULT_CALLER_PHYSICAL_DELETE_ACCEPTED_REFS_ONLY_RESULT_SHAPES,
+  DEFAULT_CALLER_PHYSICAL_DELETE_OWNER_DECISION_ACTION,
+} from './default-caller-surface-gates.ts';
+import {
   DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES,
   DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
@@ -55,6 +59,11 @@ function compactSurfaceDeletionGate(worklist: JsonRecord) {
     physical_delete_authorized: false,
     default_caller_delete_ready: false,
     needs_drilldown_for_surface_refs: true,
+    next_required_owner_action: DEFAULT_CALLER_PHYSICAL_DELETE_OWNER_DECISION_ACTION,
+    accepted_refs_only_result_shapes: [
+      ...DEFAULT_CALLER_PHYSICAL_DELETE_ACCEPTED_REFS_ONLY_RESULT_SHAPES,
+    ],
+    owner_decision_required_after_all_refs_observed: true,
   };
 }
 
@@ -114,8 +123,11 @@ function repoDeletionGateSummary(
       ?? 'domain_repo_owner_after_receipt_parity',
     retirement_guard_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
     mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
-    next_required_owner_action:
-      'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
+    next_required_owner_action: DEFAULT_CALLER_PHYSICAL_DELETE_OWNER_DECISION_ACTION,
+    accepted_refs_only_result_shapes: [
+      ...DEFAULT_CALLER_PHYSICAL_DELETE_ACCEPTED_REFS_ONLY_RESULT_SHAPES,
+    ],
+    owner_decision_required_after_all_refs_observed: true,
     physical_delete_blocked_by: physicalDeleteBlockedBy,
     not_authorized_claims: notAuthorizedClaims,
     needs_drilldown_for_surface_refs: worklists.length > 0,
@@ -173,8 +185,11 @@ export function buildDefaultCallerPhysicalDeleteAuthorityReadModel(
     generated_default_caller_readiness_can_authorize_physical_delete: false,
     physical_delete_authorization_status: 'not_authorized_by_opl_projection',
     physical_delete_authority_owner: 'domain_repo_owner_after_receipt_parity',
-    next_required_owner_action:
-      'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
+    next_required_owner_action: DEFAULT_CALLER_PHYSICAL_DELETE_OWNER_DECISION_ACTION,
+    accepted_refs_only_result_shapes: [
+      ...DEFAULT_CALLER_PHYSICAL_DELETE_ACCEPTED_REFS_ONLY_RESULT_SHAPES,
+    ],
+    owner_decision_required_after_all_refs_observed: true,
     physical_delete_blocked_by: policy.physical_delete_blocked_by,
     not_authorized_claims: policy.not_authorized_claims,
     needs_drilldown_for_surface_refs: deletionEvidenceWorklistCount > 0,

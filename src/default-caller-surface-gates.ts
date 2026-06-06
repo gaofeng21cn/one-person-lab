@@ -28,6 +28,15 @@ export const DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS = [
   'physical_delete_requires_domain_repo_owner_action_after_all_refs_observed',
 ] as const;
 
+export const DEFAULT_CALLER_PHYSICAL_DELETE_OWNER_DECISION_ACTION =
+  'domain_owner_choose_delete_authorize_keep_or_typed_blocker';
+
+export const DEFAULT_CALLER_PHYSICAL_DELETE_ACCEPTED_REFS_ONLY_RESULT_SHAPES = [
+  'physical_delete_authorization_ref',
+  'keep_as_authority_adapter_ref',
+  'typed_blocker_ref',
+] as const;
+
 const DEFAULT_CALLER_CANONICAL_TARGET_IDS: Record<string, string[]> = {
   product_entry: ['product_entry', 'product_entry_manifest'],
   product_status: ['product_status', 'status_read_model'],
@@ -251,6 +260,11 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
       worklist_item_is_completion_claim: false,
       physical_delete_authorization_status: 'not_authorized_by_opl_projection',
       not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
+      next_required_owner_action: DEFAULT_CALLER_PHYSICAL_DELETE_OWNER_DECISION_ACTION,
+      accepted_refs_only_result_shapes: [
+        ...DEFAULT_CALLER_PHYSICAL_DELETE_ACCEPTED_REFS_ONLY_RESULT_SHAPES,
+      ],
+      owner_decision_required_after_all_refs_observed: true,
       retirement_guard: {
         target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
         mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],

@@ -16,6 +16,8 @@ import {
 } from './default-caller-retirement-guard.ts';
 import {
   DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS,
+  DEFAULT_CALLER_PHYSICAL_DELETE_ACCEPTED_REFS_ONLY_RESULT_SHAPES,
+  DEFAULT_CALLER_PHYSICAL_DELETE_OWNER_DECISION_ACTION,
   DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS,
   defaultCallerSurfaceGates,
   generatedSurfaceTargetAllowed,
@@ -581,6 +583,11 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         generated_default_caller_readiness_can_authorize_physical_delete: false,
         physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
         physical_delete_authorization_status: 'not_authorized_by_opl_projection',
+        next_required_owner_action: DEFAULT_CALLER_PHYSICAL_DELETE_OWNER_DECISION_ACTION,
+        accepted_refs_only_result_shapes: [
+          ...DEFAULT_CALLER_PHYSICAL_DELETE_ACCEPTED_REFS_ONLY_RESULT_SHAPES,
+        ],
+        owner_decision_required_after_all_refs_observed: true,
         deletion_evidence_requirements_are_completion_claims: false,
         not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
         physical_delete_authority_owner: 'domain_repo_owner_after_receipt_parity',
@@ -631,6 +638,11 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         generated_default_caller_readiness_can_authorize_physical_delete: false,
         physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
         physical_delete_authorization_status: 'not_authorized_by_opl_projection',
+        next_required_owner_action: DEFAULT_CALLER_PHYSICAL_DELETE_OWNER_DECISION_ACTION,
+        accepted_refs_only_result_shapes: [
+          ...DEFAULT_CALLER_PHYSICAL_DELETE_ACCEPTED_REFS_ONLY_RESULT_SHAPES,
+        ],
+        owner_decision_required_after_all_refs_observed: true,
         deletion_evidence_requirements_are_completion_claims: false,
         not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
         physical_delete_authority_owner: 'domain_repo_owner_after_receipt_parity',

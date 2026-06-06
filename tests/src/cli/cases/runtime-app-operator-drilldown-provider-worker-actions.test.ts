@@ -366,7 +366,7 @@ test('runtime App drilldown selects provider worker repair before provider proof
       can_write_domain_truth: false,
       can_claim_production_ready: false,
     },
-  }, 'summary');
+  }, 'full');
   const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
   assert.ok(nextSafeAction);
 
@@ -386,7 +386,7 @@ test('runtime App drilldown selects provider worker repair before provider proof
   ]);
 });
 
-test('runtime App drilldown selects blocked transport redrive before MAS owner handoff record', () => {
+test('runtime App drilldown keeps MAS owner handoff ahead of blocked transport redrive', () => {
   const ownerHandoffRecordRoute = {
     action_id: 'domain_dispatch:medautoscience:attempt-1:record',
     action_kind: 'domain_dispatch_evidence_receipt_record',
@@ -459,30 +459,26 @@ test('runtime App drilldown selects blocked transport redrive before MAS owner h
       can_write_domain_truth: false,
       can_claim_production_ready: false,
     },
-  }, 'summary');
+  }, 'full');
   const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
   assert.ok(nextSafeAction);
 
-  assert.equal(nextSafeAction.action_id, 'family-runtime-queue:task-dm002:redrive');
-  assert.equal(nextSafeAction.action_kind, 'blocked_transport_redrive');
-  assert.equal(nextSafeAction.blocked_transport_dead_letter_reason, 'temporal_stage_attempt_not_completed');
+  assert.equal(nextSafeAction.action_id, 'domain_dispatch:medautoscience:attempt-1:record');
+  assert.equal(nextSafeAction.action_kind, 'domain_dispatch_evidence_receipt_record');
+  assert.equal(nextSafeAction.route_requires_domain_or_app_payload, true);
+  assert.equal(nextSafeAction.can_close_without_domain_or_app_payload, false);
+  const ownerDeltaNextAction =
+    drilldown.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none;
+  assert.ok(ownerDeltaNextAction);
+  assert.equal(ownerDeltaNextAction.default_planning_root, 'current_owner_delta_or_provider_human_hard_gate');
   assert.equal(
-    nextSafeAction.provider_transport_redrive_command,
-    'opl family-runtime queue redrive task-dm002 --reason provider_transport_retry_requested --source app-operator',
+    drilldown.attention_first_payload.owner_delta_first.next_owner,
+    'domain_repository_or_app_live_operator',
   );
-  assert.deepEqual(nextSafeAction.submit_args, [
-    'runtime',
-    'action',
-    'execute',
-    '--action',
-    'family-runtime-queue:task-dm002:redrive',
-  ]);
-  assert.equal(nextSafeAction.authority_split.opl_transport_liveness_owner, true);
-  assert.equal(nextSafeAction.authority_split.mas_publication_quality_owner, true);
   assert.equal(nextSafeAction.can_execute_domain_action_directly, false);
 });
 
-test('runtime App drilldown prioritizes provider worker repair before transport redrive and MAS owner handoff payload work', () => {
+test('runtime App drilldown keeps provider worker repair and transport redrive audit-only when MAS owner handoff is actionable', () => {
   const workerRestartRoute = {
     ref: 'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
     action_id: 'provider-worker:temporal:restart',
@@ -570,15 +566,51 @@ test('runtime App drilldown prioritizes provider worker repair before transport 
       can_write_domain_truth: false,
       can_claim_production_ready: false,
     },
-  }, 'summary');
+  }, 'full');
 
   const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
   assert.ok(nextSafeAction);
-  assert.equal(nextSafeAction.action_id, 'provider-worker:temporal:restart');
-  assert.equal(nextSafeAction.action_kind, 'provider_worker_restart');
+  assert.equal(nextSafeAction.action_id, 'domain_dispatch:medautoscience:attempt-1:record');
+  assert.equal(nextSafeAction.action_kind, 'domain_dispatch_evidence_receipt_record');
   assert.equal(nextSafeAction.can_execute_domain_action_directly, false);
   assert.equal(nextSafeAction.can_submit_to_safe_action_shell, true);
-  assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 2);
+  assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 0);
+  assert.equal(drilldown.app_execution_bridge.safe_action_routes.length, 3);
+  const ownerDeltaNextAction =
+    drilldown.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none;
+  assert.ok(ownerDeltaNextAction);
+  assert.equal(
+    ownerDeltaNextAction.default_planning_root,
+    'current_owner_delta_or_provider_human_hard_gate',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.owner_delta_first.next_owner,
+    'med-autoscience',
+  );
+  assert.equal(
+    drilldown.app_execution_bridge.safe_action_routes.some(
+      (ref: { action_id: string; action_kind: string }) =>
+        ref.action_id === 'provider-worker:temporal:restart'
+        && ref.action_kind === 'provider_worker_restart',
+    ),
+    true,
+  );
+  assert.equal(
+    drilldown.app_execution_bridge.safe_action_routes.some(
+      (ref: { action_id: string; action_kind: string }) =>
+        ref.action_id === 'family-runtime:redrive:mas-default-executor:task-1'
+        && ref.action_kind === 'blocked_transport_redrive',
+    ),
+    true,
+  );
+  assert.equal(
+    drilldown.app_execution_bridge.safe_action_routes.some(
+      (ref: { action_id: string; action_kind: string }) =>
+        ref.action_id === 'domain_dispatch:medautoscience:attempt-1:record'
+        && ref.action_kind === 'domain_dispatch_evidence_receipt_record',
+    ),
+    true,
+  );
 });
 
 test('runtime App drilldown keeps active attempts with missing progress signals actionable', () => {

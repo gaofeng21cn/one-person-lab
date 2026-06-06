@@ -132,7 +132,7 @@ function compactNextSafeAction(action: unknown) {
     item_id: stringValue(item.item_id),
     action_id: stringValue(item.action_id),
     action_kind: firstString(item.action_kind, item.step_kind),
-    owner: firstString(item.owner, item.payload_owner),
+    owner: firstString(item.payload_owner, item.owner),
     domain_id: stringValue(item.domain_id),
     stage_id: stringValue(item.stage_id),
     route_status: stringValue(item.route_status),
