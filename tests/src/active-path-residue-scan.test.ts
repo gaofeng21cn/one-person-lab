@@ -128,6 +128,9 @@ test('active gap docs do not freeze stale checkout, compatibility-audit baseline
     /domain_dispatch_evidence_receipt_record_requires_domain_or_app_payload_count=\d+/,
     /domain_dispatch_evidence_current_default_actionable_attempt_count=\d+/,
     /evidence_envelope_open_count=\d+/,
+    /当前 live `family-runtime evidence-worklist` 未暴露 open OPL safe-action/i,
+    /fresh evidence-worklist 当前没有 open domain-dispatch workorder/i,
+    /fresh evidence-worklist 当前没有 open domain-dispatch workorder，也没有 OPL safe-action route/i,
   ];
   const violations: string[] = [];
 
@@ -136,6 +139,29 @@ test('active gap docs do not freeze stale checkout, compatibility-audit baseline
     for (const pattern of forbiddenPatterns) {
       if (pattern.test(content)) {
         violations.push(`${relativePath}: ${pattern}`);
+      }
+    }
+  }
+
+  assert.deepEqual(violations, []);
+});
+
+test('active baton live-readout hints match current CLI envelopes and existing support docs', () => {
+  const scannedActiveDocs = activeDocFiles();
+  const violations: string[] = [];
+
+  for (const relativePath of scannedActiveDocs) {
+    const content = read(relativePath);
+    if (/runtime app-operator-drilldown --json[\s\S]{0,120}runtime_tray_snapshot/.test(content)) {
+      violations.push(`${relativePath}: app-operator-drilldown now returns .app_operator_drilldown`);
+    }
+    if (/mas-opl-stage-native-state-machine\.md/.test(content)) {
+      violations.push(`${relativePath}: references retired mas-opl-stage-native-state-machine.md`);
+    }
+    for (const match of content.matchAll(/\]\(\.\/([^)\s]+\.md)\)/g)) {
+      const target = path.join('docs/active', match[1]);
+      if (!fs.existsSync(path.join(repoRoot, target))) {
+        violations.push(`${relativePath}: missing active doc link target ${target}`);
       }
     }
   }
