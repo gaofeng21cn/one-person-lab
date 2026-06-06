@@ -16,6 +16,7 @@ import {
 import {
   domainBlockedTypedBlockerAttention,
 } from '../../../../src/framework-readiness-typed-blocker-attention.ts';
+import { createFamilyWorkspaceFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 test('framework readiness status treats blocked refs-only attention separately from operator-actionable work', () => {
   assert.equal(
@@ -110,9 +111,12 @@ test('framework readiness typed blocker attention uses union unique refs across 
 
 test('framework readiness separates operator-actionable and domain-blocked attention tails', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-attention-semantics-'));
+  const familyWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-attention-family-'));
   try {
+    const { workspaceRoot } = createFamilyWorkspaceFixture(familyWorkspaceRoot);
     const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     }).framework_readiness;
     const summary = readiness.summary;
     const attentionSummary = readiness.attention_first_payload.summary;
@@ -257,14 +261,17 @@ test('framework readiness separates operator-actionable and domain-blocked atten
     }
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
   }
 });
 
 test('framework readiness keeps mutation-guarded provider SLO tail out of operator-actionable attention', async () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-provider-slo-guard-home-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const familyWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-provider-slo-guard-family-'));
   const server = net.createServer((socket) => socket.end());
   try {
+    const { workspaceRoot } = createFamilyWorkspaceFixture(familyWorkspaceRoot);
     const stateRoot = path.join(homeRoot, 'Library', 'Application Support', 'OPL', 'state');
     fs.mkdirSync(path.join(stateRoot, 'family-runtime'), { recursive: true });
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -273,6 +280,7 @@ test('framework readiness keeps mutation-guarded provider SLO tail out of operat
       HOME: homeRoot,
       OPL_STATE_DIR: '',
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
       OPL_TEMPORAL_ADDRESS: temporalAddress,
       OPL_TEMPORAL_NAMESPACE: 'opl-framework-provider-slo-guard',
       OPL_TEMPORAL_TASK_QUEUE: 'opl-framework-provider-slo-guard',
@@ -331,5 +339,6 @@ test('framework readiness keeps mutation-guarded provider SLO tail out of operat
     await new Promise<void>((resolve) => server.close(() => resolve()));
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
   }
 });
