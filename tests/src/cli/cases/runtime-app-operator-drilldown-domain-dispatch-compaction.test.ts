@@ -479,6 +479,205 @@ test('domain dispatch evidence compacts superseded attempts across dispatch auth
   }
 });
 
+test('domain dispatch evidence compacts MAS default executor immutable dispatch refs to same-study current work unit', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-dispatch-same-study-current-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+  };
+  const baseLocator = {
+    surface_kind: 'opl_provider_hosted_task_workspace_locator',
+    workspace_root: '/tmp/dm-cvd',
+    profile: '/tmp/dm-cvd/ops/medautoscience/profiles/dm-cvd.local.toml',
+    study_id: '002-dm-china-us-mortality-attribution',
+    dispatch_authority: 'consumer_default_executor_dispatch',
+    next_executable_owner: 'publication_gate_owner',
+    domain_truth_owner: 'med-autoscience',
+    opl_writes_domain_truth: false,
+    opl_writes_publication_quality: false,
+    opl_writes_artifact_gate: false,
+    opl_writes_current_package: false,
+  };
+  const closeoutPacket = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    closeout_refs: ['receipt:publication-handoff'],
+    next_owner: 'publication_gate_owner',
+    domain_ready_verdict: 'domain_gate_pending',
+    route_impact: {
+      decision: 'publication_handoff_owner_gate',
+      next_owner: 'publication_gate_owner',
+      domain_ready_verdict: 'domain_gate_pending',
+    },
+  };
+
+  try {
+    const staleQualityRepair = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'domain_owner/default-executor-dispatch',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      JSON.stringify({
+        ...baseLocator,
+        action_type: 'run_quality_repair_batch',
+        dispatch_ref:
+          'studies/002-dm/artifacts/supervision/consumer/default_executor_dispatches/immutable/run_quality_repair_batch/old.json',
+      }),
+      '--task',
+      'task-same-study-stale-quality-repair',
+      '--source-fingerprint',
+      'truth-snapshot::old-quality-repair',
+    ], env).family_runtime_stage_attempt.attempt;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      staleQualityRepair.stage_attempt_id,
+      '--closeout-packet',
+      JSON.stringify(closeoutPacket),
+    ], env);
+
+    const stalePublicationHandoff = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'domain_owner/default-executor-dispatch',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      JSON.stringify({
+        ...baseLocator,
+        action_type: 'publication_handoff_owner_gate',
+        dispatch_ref:
+          'studies/002-dm/artifacts/supervision/consumer/default_executor_dispatches/immutable/publication_handoff_owner_gate/old.json',
+      }),
+      '--task',
+      'task-same-study-stale-publication-handoff',
+      '--source-fingerprint',
+      'truth-snapshot::old-publication-handoff',
+      '--new-attempt',
+    ], env).family_runtime_stage_attempt.attempt;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      stalePublicationHandoff.stage_attempt_id,
+      '--closeout-packet',
+      JSON.stringify(closeoutPacket),
+    ], env);
+
+    const currentPublicationHandoff = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'domain_owner/default-executor-dispatch',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      JSON.stringify({
+        ...baseLocator,
+        action_type: 'publication_handoff_owner_gate',
+        dispatch_ref:
+          'studies/002-dm/artifacts/supervision/consumer/default_executor_dispatches/immutable/publication_handoff_owner_gate/current.json',
+      }),
+      '--task',
+      'task-same-study-current-publication-handoff',
+      '--source-fingerprint',
+      'truth-snapshot::current-publication-handoff',
+      '--new-attempt',
+    ], env).family_runtime_stage_attempt.attempt;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      currentPublicationHandoff.stage_attempt_id,
+      '--closeout-packet',
+      JSON.stringify(closeoutPacket),
+    ], env);
+
+    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+      .app_operator_drilldown;
+    const attempts = drilldown.domain_dispatch_evidence.attempts.filter(
+      (attempt: { stage_id: string; workspace_locator: { study_id?: string } }) =>
+        attempt.stage_id === 'domain_owner/default-executor-dispatch'
+        && attempt.workspace_locator.study_id === baseLocator.study_id,
+    );
+    const staleQualityRepairEvidence = attempts.find(
+      (attempt: { stage_attempt_id: string }) =>
+        attempt.stage_attempt_id === staleQualityRepair.stage_attempt_id,
+    );
+    const stalePublicationHandoffEvidence = attempts.find(
+      (attempt: { stage_attempt_id: string }) =>
+        attempt.stage_attempt_id === stalePublicationHandoff.stage_attempt_id,
+    );
+    const currentPublicationHandoffEvidence = attempts.find(
+      (attempt: { stage_attempt_id: string }) =>
+        attempt.stage_attempt_id === currentPublicationHandoff.stage_attempt_id,
+    );
+
+    assert.equal(currentPublicationHandoffEvidence.default_actionable, true);
+    assert.equal(currentPublicationHandoffEvidence.default_actionability_status, 'current');
+    assert.equal(staleQualityRepairEvidence.default_actionable, false);
+    assert.equal(staleQualityRepairEvidence.default_actionability_status, 'superseded');
+    assert.equal(
+      staleQualityRepairEvidence.superseded_by_stage_attempt_id,
+      currentPublicationHandoff.stage_attempt_id,
+    );
+    assert.equal(
+      staleQualityRepairEvidence.superseded_reason,
+      'newer_stage_attempt_with_same_domain_dispatch_supersession_identity',
+    );
+    assert.equal(stalePublicationHandoffEvidence.default_actionable, false);
+    assert.equal(stalePublicationHandoffEvidence.default_actionability_status, 'superseded');
+    assert.equal(
+      stalePublicationHandoffEvidence.superseded_by_stage_attempt_id,
+      currentPublicationHandoff.stage_attempt_id,
+    );
+    assert.equal(drilldown.summary.domain_dispatch_evidence_current_default_actionable_attempt_count, 1);
+    assert.equal(drilldown.summary.domain_dispatch_evidence_receipt_action_route_count, 1);
+
+    const recordRoutes = drilldown.operator_action_routing_refs.refs.filter(
+      (route: { action_kind: string }) =>
+        route.action_kind === 'domain_dispatch_evidence_receipt_record',
+    );
+    assert.equal(recordRoutes.length, 1);
+    assert.equal(recordRoutes[0].stage_attempt_id, currentPublicationHandoff.stage_attempt_id);
+
+    const worklist = runCli([
+      'family-runtime',
+      'evidence-worklist',
+      '--family-defaults',
+      '--provider',
+      'temporal',
+      '--executor-kind',
+      'codex_cli',
+      '--detail',
+      'full',
+    ], env).family_runtime_evidence_worklist;
+    assert.equal(worklist.summary.domain_dispatch_evidence_workorder_count, 1);
+    assert.equal(worklist.domain_dispatch_evidence_workorder_packet.summary.workorder_count, 1);
+    assert.equal(
+      worklist.domain_dispatch_evidence_workorder_packet.workorders[0].stage_attempt_id,
+      currentPublicationHandoff.stage_attempt_id,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('domain dispatch evidence does not expose unbound attempts as default record workorders', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-dispatch-unbound-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();

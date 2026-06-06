@@ -80,6 +80,19 @@ function domainDispatchIdentity(attempt: JsonRecord) {
       fields,
     };
   }
+  const defaultExecutorSameStudySupersession =
+    stageId === 'domain_owner/default-executor-dispatch'
+    && fields.workspace_root
+    && profile
+    && fields.study_id
+      ? [
+          canonicalDomainId,
+          stageId,
+          fields.workspace_root,
+          profile,
+          fields.study_id,
+        ].map(identityPart).join('|')
+      : null;
   return {
     key: [
       canonicalDomainId,
@@ -91,7 +104,7 @@ function domainDispatchIdentity(attempt: JsonRecord) {
       fields.dispatch_authority,
       dispatchRef,
     ].map(identityPart).join('|'),
-    supersession_key: [
+    supersession_key: defaultExecutorSameStudySupersession ?? [
       canonicalDomainId,
       stageId,
       fields.workspace_root,
@@ -446,7 +459,7 @@ export function buildDomainDispatchEvidence(attempts: JsonRecord[]) {
     surface_kind: 'opl_app_drilldown_domain_dispatch_evidence',
     projection_policy: 'refs_only_owner_chain_dispatch_evidence_no_domain_verdict_authority',
     default_actionability_policy:
-      'only_latest_attempt_per_bound_dispatch_supersession_identity_is_default_actionable_unbound_attempts_remain_full_detail_provenance_exact_dispatch_identity_remains_audit_key',
+      'only_latest_attempt_per_bound_dispatch_supersession_identity_is_default_actionable_for_default_executor_dispatch_this_is_same_study_current_work_unit_unbound_attempts_remain_full_detail_provenance_exact_dispatch_identity_remains_audit_key',
     summary: {
       domain_count: domainGroups.length,
       attempt_count: attemptEvidence.length,
