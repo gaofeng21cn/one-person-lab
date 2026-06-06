@@ -7,6 +7,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-06-06
 
+### 决策：domain owner-delta closeout binding 可作为 StageRun owner-answer identity 输入
+
+原因：OPL provider-hosted attempt 已能签发 provider attempt、active lease、execution authorization decision、stage manifest、current pointer、source fingerprint 和 idempotency refs，但 MAS/domain owner answer 仍需要把这些 refs 绑定回合法 owner receipt、quality gate receipt 或 typed blocker。若 OPL safe-action shell 只接受顶层 payload 字段或本地 JSON ref identity，domain owner callable 返回的 `owner_delta_result.closeout_binding` 无法直接参与 StageRun closeout identity 校验，operator 还会被迫手工重组同一组 binding 字段。
+
+影响：
+
+- Codex stage runner 的 refs-only provider env 现在同时暴露 `OPL_STAGE_RUN_ID`、`OPL_STAGE_MANIFEST_REF`、`OPL_CURRENT_POINTER_REF` 和 `OPL_CLOSEOUT_BINDING_JSON`；这些字段只来自 attempt 内既有 OPL execution authorization，不从 queued attempt、workflow id、task id 或 provider identity 合成 active lease / authorization decision。
+- Domain-dispatch record route 在 `required_closeout_binding` 和 payload workorder 中暴露 StageRun closeout binding target shape；当 target identity 完整时，typed-blocker payload template 可携带 `owner_delta_result.closeout_binding`。
+- `preflightDomainDispatchEvidencePayload` 接受 `payload.owner_delta_result.closeout_binding` 作为 payload identity source，并与 route target identity / local owner-answer ref identity fail-closed 对比。冲突字段会阻止 refs-only receipt 记录。
+- 这只关闭 binding transport 和 identity validation 缺口；OPL 仍不能生成 domain owner receipt、quality gate receipt、typed blocker、owner-chain ref、no-regression ref，不能声明 domain ready、paper ready、App release ready 或 production ready。
+
 ### 决策：StageRun blocker 按缺口类型选择默认 owner
 
 原因：live App / evidence-worklist 曾同时暴露两种下一步：`current_owner_delta` 指向 domain owner answer / typed blocker，而 StageRun cockpit 又显示 `execution_authorized=false`、`next_required_owner=one-person-lab`。当缺口仍包含 provider attempt、active lease 或 execution authorization decision 时，实际最快推进点是 OPL runtime 补齐 execution authorization；当这些 launch / execution authorization refs 已存在、只缺 owner answer 及 StageRun / manifest / current pointer / source fingerprint / idempotency binding refs 时，默认 owner 应回到 domain owner，因为 OPL 不能替 domain 生成合法 owner receipt、quality gate receipt 或 typed blocker。
