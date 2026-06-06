@@ -40,12 +40,40 @@ function workUnitIdFromAttempt(attempt: JsonRecord) {
   return workUnitFingerprint?.startsWith('truth-snapshot::') ? workUnitFingerprint : null;
 }
 
+function explicitExecutionAuthorization(attempt: JsonRecord) {
+  const candidates = [
+    attempt.opl_execution_authorization,
+    attempt.execution_authorization,
+    attempt.execution_authorization_receipt,
+    attempt.stage_run_execution_authorization,
+  ];
+  for (const candidate of candidates) {
+    if (isRecord(candidate)) {
+      return candidate;
+    }
+  }
+  return {};
+}
+
+function explicitAttemptRef(attempt: JsonRecord, authorization: JsonRecord, key: string) {
+  return optionalString(authorization[key]) ?? optionalString(attempt[key]);
+}
+
 export function codexStageAttemptEnv(input: {
   attempt: JsonRecord;
   stagePacketRef: string;
   workspaceRoot: string;
 }): Record<string, string | undefined> {
   const workspaceLocator = isRecord(input.attempt.workspace_locator) ? input.attempt.workspace_locator : {};
+  const authorization = explicitExecutionAuthorization(input.attempt);
+  const providerAttemptRef = explicitAttemptRef(input.attempt, authorization, 'provider_attempt_ref');
+  const attemptLeaseRef = explicitAttemptRef(input.attempt, authorization, 'attempt_lease_ref');
+  const attemptLeaseStatus = explicitAttemptRef(input.attempt, authorization, 'attempt_lease_status');
+  const authorizationDecisionRef = explicitAttemptRef(
+    input.attempt,
+    authorization,
+    'execution_authorization_decision_ref',
+  );
   return {
     OPL_STAGE_ATTEMPT_ID: optionalString(input.attempt.stage_attempt_id) ?? undefined,
     OPL_STAGE_ID: stageIdFromAttempt(input.attempt),
@@ -57,5 +85,9 @@ export function codexStageAttemptEnv(input: {
     OPL_QUEST_ID: optionalString(workspaceLocator.quest_id) ?? undefined,
     OPL_ACTION_TYPE: optionalString(workspaceLocator.action_type) ?? undefined,
     OPL_WORK_UNIT_ID: workUnitIdFromAttempt(input.attempt) ?? undefined,
+    OPL_PROVIDER_ATTEMPT_REF: providerAttemptRef ?? undefined,
+    OPL_ATTEMPT_LEASE_REF: attemptLeaseRef ?? undefined,
+    OPL_ATTEMPT_LEASE_STATUS: attemptLeaseStatus ?? undefined,
+    OPL_EXECUTION_AUTHORIZATION_DECISION_REF: authorizationDecisionRef ?? undefined,
   };
 }
