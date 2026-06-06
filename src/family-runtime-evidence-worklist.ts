@@ -42,6 +42,10 @@ import {
   NOT_AUTHORIZED_CLAIMS,
   OPEN_SAFE_ACTION_PAYLOAD_REQUIREMENT_SEMANTICS,
 } from './family-runtime-evidence-worklist-parts/constants.ts';
+import {
+  DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS,
+  DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
+} from './default-caller-retirement-guard.ts';
 import { writeCurrentOwnerDeltaReadModelProjectionCache } from './current-owner-delta-read-model-cache.ts';
 import { buildCurrentOwnerDeltaTopline } from './current-owner-delta-topline.ts';
 
@@ -364,6 +368,7 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
     blocked_reason: stringValue(route.blocked_reason),
     supervisor_safe_action_kind: stringValue(route.supervisor_safe_action_kind),
     typed_blocker_requirement: record(route.typed_blocker_requirement),
+    retirement_guard: record(route.retirement_guard),
     not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
   };
   const evidenceRequirementStatus = itemStatus.startsWith(BLOCKED_ROUTE_STATUS_PREFIX)
@@ -621,6 +626,11 @@ function worklistCounts(
         item.claim_scope === 'default_caller_deletion_evidence'
         && item.action_kind === 'default_caller_deletion_domain_owner_receipt_or_typed_blocker_request'
       ).length,
+    default_caller_deletion_no_active_caller_missing_count:
+      worklistItems.filter((item) =>
+        item.claim_scope === 'default_caller_deletion_evidence'
+        && item.action_kind === 'default_caller_deletion_no_active_caller_proof_request'
+      ).length,
     default_caller_deletion_no_forbidden_write_missing_count:
       worklistItems.filter((item) =>
         item.claim_scope === 'default_caller_deletion_evidence'
@@ -631,6 +641,8 @@ function worklistCounts(
         item.claim_scope === 'default_caller_deletion_evidence'
         && item.action_kind === 'default_caller_deletion_tombstone_or_provenance_ref_request'
       ).length,
+    default_caller_deletion_mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+    default_caller_deletion_retirement_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
     domain_ready_authorized: false,
     production_ready_authorized: false,
     not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],

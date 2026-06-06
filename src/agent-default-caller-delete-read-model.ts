@@ -1,3 +1,9 @@
+import {
+  DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS,
+  DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES,
+  DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
+} from './default-caller-retirement-guard.ts';
+
 type JsonRecord = Record<string, unknown>;
 
 interface DefaultCallerPhysicalDeleteAuthorityPolicy {
@@ -41,6 +47,7 @@ function compactSurfaceDeletionGate(worklist: JsonRecord) {
     status: optionalString(worklist.status) ?? 'unknown',
     replacement_parity_observed: statusIsObserved(worklist.replacement_parity),
     active_caller_cutover_observed: statusIsObserved(worklist.active_caller_cutover),
+    no_active_caller_proof_observed: statusIsObserved(worklist.no_active_caller_proof),
     domain_owner_receipt_or_typed_blocker_observed:
       statusIsObserved(worklist.domain_owner_receipt_or_typed_blocker),
     no_forbidden_write_proof_observed: statusIsObserved(worklist.no_forbidden_write_proof),
@@ -68,12 +75,15 @@ function repoDeletionGateSummary(
       : policy.not_authorized_claims;
   const missingDomainOwnerReceiptOrTypedBlockerCount =
     numberValue(summary.missing_domain_owner_receipt_or_typed_blocker_count);
+  const missingNoActiveCallerProofCount =
+    numberValue(summary.missing_no_active_caller_proof_count);
   const missingNoForbiddenWriteProofCount =
     numberValue(summary.missing_no_forbidden_write_proof_count);
   const missingTombstoneOrProvenanceRefCount =
     numberValue(summary.missing_tombstone_or_provenance_ref_count);
   const allRequirementsObserved = worklists.length > 0
     && missingDomainOwnerReceiptOrTypedBlockerCount === 0
+    && missingNoActiveCallerProofCount === 0
     && missingNoForbiddenWriteProofCount === 0
     && missingTombstoneOrProvenanceRefCount === 0;
 
@@ -90,6 +100,7 @@ function repoDeletionGateSummary(
     all_deletion_evidence_requirements_observed: allRequirementsObserved,
     missing_domain_owner_receipt_or_typed_blocker_count:
       missingDomainOwnerReceiptOrTypedBlockerCount,
+    missing_no_active_caller_proof_count: missingNoActiveCallerProofCount,
     missing_no_forbidden_write_proof_count: missingNoForbiddenWriteProofCount,
     missing_tombstone_or_provenance_ref_count: missingTombstoneOrProvenanceRefCount,
     physical_delete_authorized: false,
@@ -101,6 +112,8 @@ function repoDeletionGateSummary(
     physical_delete_authority_owner:
       optionalString(deletionGate.physical_delete_authority_owner)
       ?? 'domain_repo_owner_after_receipt_parity',
+    retirement_guard_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
+    mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
     next_required_owner_action:
       'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
     physical_delete_blocked_by: physicalDeleteBlockedBy,
@@ -123,6 +136,10 @@ export function buildDefaultCallerPhysicalDeleteAuthorityReadModel(
     (total, repo) => total + repo.missing_domain_owner_receipt_or_typed_blocker_count,
     0,
   );
+  const missingNoActiveCallerProofCount = repoSummaries.reduce(
+    (total, repo) => total + repo.missing_no_active_caller_proof_count,
+    0,
+  );
   const missingNoForbiddenWriteProofCount = repoSummaries.reduce(
     (total, repo) => total + repo.missing_no_forbidden_write_proof_count,
     0,
@@ -143,10 +160,14 @@ export function buildDefaultCallerPhysicalDeleteAuthorityReadModel(
       && repoSummaries.every((repo) => repo.all_deletion_evidence_requirements_observed),
     missing_domain_owner_receipt_or_typed_blocker_count:
       missingDomainOwnerReceiptOrTypedBlockerCount,
+    missing_no_active_caller_proof_count: missingNoActiveCallerProofCount,
     missing_no_forbidden_write_proof_count: missingNoForbiddenWriteProofCount,
     missing_tombstone_or_provenance_ref_count: missingTombstoneOrProvenanceRefCount,
     zero_missing_deletion_evidence_is_not_delete_ready: true,
     observed_deletion_evidence_refs_are_refs_only_inputs: true,
+    retirement_guard_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
+    mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+    non_authorizing_surfaces: [...DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES],
     physical_delete_authorized: false,
     default_caller_delete_ready: false,
     generated_default_caller_readiness_can_authorize_physical_delete: false,

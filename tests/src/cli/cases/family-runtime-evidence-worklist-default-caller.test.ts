@@ -46,8 +46,19 @@ test('family-runtime evidence-worklist uses repo-native default-caller readiness
     ]).agent_default_caller_readiness;
     assert.equal(defaultCallers.summary.deletion_evidence_worklist_count, 8);
     assert.equal(defaultCallers.summary.missing_domain_owner_receipt_or_typed_blocker_count, 8);
+    assert.equal(defaultCallers.summary.missing_no_active_caller_proof_count, 8);
     assert.equal(defaultCallers.summary.missing_no_forbidden_write_proof_count, 8);
     assert.equal(defaultCallers.summary.missing_tombstone_or_provenance_ref_count, 8);
+    assert.equal(
+      defaultCallers.retirement_guard_readout.non_authorizing_surfaces.includes('opl_agents_conformance'),
+      true,
+    );
+    assert.equal(
+      defaultCallers.retirement_guard_readout.non_authorizing_surfaces.includes(
+        'opl_family_runtime_evidence_worklist_refs_only_receipt',
+      ),
+      true,
+    );
 
     const drilldown = runCli([
       'runtime',
@@ -57,10 +68,14 @@ test('family-runtime evidence-worklist uses repo-native default-caller readiness
     ], familyRuntimeEnv(stateRoot, fixtureContractsRoot));
     const refs = drilldown.app_operator_drilldown.default_caller_deletion_evidence_refs;
     assert.equal(refs.summary.deletion_evidence_worklist_count, 8);
-    assert.equal(refs.summary.open_deletion_evidence_requirement_count, 24);
+    assert.equal(refs.summary.open_deletion_evidence_requirement_count, 32);
     assert.equal(refs.summary.missing_domain_owner_receipt_or_typed_blocker_count, 8);
+    assert.equal(refs.summary.missing_no_active_caller_proof_count, 8);
     assert.equal(refs.summary.missing_no_forbidden_write_proof_count, 8);
     assert.equal(refs.summary.missing_tombstone_or_provenance_ref_count, 8);
+    assert.deepEqual(refs.summary.mandatory_gate_ids, defaultCallers.retirement_guard_mandatory_gate_ids);
+    assert.equal(refs.summary.retirement_guard_target_classes.includes('legacy_dispatch_compensation_path'), true);
+    assert.equal(refs.summary.retirement_guard_target_classes.includes('retained_domain_wrapper'), true);
     assert.equal(refs.domains[0].source, 'agent_default_caller_readiness_repo_projection');
     assert.equal(refs.summary.default_caller_delete_ready, false);
     assert.equal(refs.summary.not_authorized_claims.includes('default_caller_delete_ready'), true);
@@ -77,18 +92,32 @@ test('family-runtime evidence-worklist uses repo-native default-caller readiness
       'full',
     ], familyRuntimeEnv(stateRoot, fixtureContractsRoot));
     const fullWorklist = fullOutput.family_runtime_evidence_worklist;
-    assert.equal(fullWorklist.summary.default_caller_deletion_evidence_item_count, 24);
+    assert.equal(fullWorklist.summary.default_caller_deletion_evidence_item_count, 32);
     assert.equal(
       fullWorklist.summary.default_caller_deletion_domain_owner_receipt_or_typed_blocker_missing_count,
       8,
     );
+    assert.equal(fullWorklist.summary.default_caller_deletion_no_active_caller_missing_count, 8);
     assert.equal(fullWorklist.summary.default_caller_deletion_no_forbidden_write_missing_count, 8);
     assert.equal(fullWorklist.summary.default_caller_deletion_tombstone_or_provenance_missing_count, 8);
+    assert.deepEqual(fullWorklist.summary.default_caller_deletion_mandatory_gate_ids, [
+      'replacement_parity',
+      'no_active_caller_proof',
+      'domain_owner_receipt_or_typed_blocker',
+      'no_forbidden_write_proof',
+      'tombstone_or_provenance_ref',
+    ]);
+    assert.equal(
+      fullWorklist.summary.default_caller_deletion_retirement_target_classes.includes(
+        'legacy_materialize_compensation_path',
+      ),
+      true,
+    );
     assert.equal(
       fullWorklist.worklist_items.filter((item: { claim_scope: string }) =>
         item.claim_scope === 'default_caller_deletion_evidence'
       ).length,
-      24,
+      32,
     );
     assert.equal(fullWorklist.summary.not_authorized_claims.includes('default_caller_delete_ready'), true);
   } finally {

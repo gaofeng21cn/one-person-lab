@@ -38,6 +38,7 @@ export function defaultCallerDeletionEvidenceRoutes(
       return stringList(worklist.missing_requirement_ids)
         .filter((requirementId) => [
           'domain_owner_receipt_or_typed_blocker',
+          'no_active_caller_proof',
           'no_forbidden_write_proof',
           'tombstone_or_provenance_ref',
         ].includes(requirementId))
@@ -74,6 +75,7 @@ export function defaultCallerDeletionEvidenceRoutes(
             execution_surface: 'opl runtime action execute',
             route_target_kind: 'domain_owned_delete_evidence_refs',
             not_authorized_claims: [...notAuthorizedClaims],
+            retirement_guard: record(worklist.retirement_guard),
           };
         });
     });

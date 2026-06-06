@@ -9,6 +9,11 @@ import {
   DEFAULT_FAMILY_REPOS,
 } from './standard-domain-agent-family-repos.ts';
 import { buildDefaultCallerPhysicalDeleteAuthorityReadModel } from './agent-default-caller-delete-read-model.ts';
+import {
+  DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS,
+  DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES,
+  DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
+} from './default-caller-retirement-guard.ts';
 import type { FrameworkContracts } from './types.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -109,13 +114,7 @@ function defaultCallerTargetAllowed(targetKind: string) {
   return (DEFAULT_CALLER_TARGET_KINDS as readonly string[]).includes(targetKind);
 }
 
-const DELETION_EVIDENCE_REQUIREMENTS = [
-  'replacement_parity',
-  'active_caller_cutover',
-  'domain_owner_receipt_or_typed_blocker',
-  'no_forbidden_write_proof',
-  'tombstone_or_provenance_ref',
-] as const;
+const DELETION_EVIDENCE_REQUIREMENTS = DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS;
 
 const DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS = [
   'domain_repo_physical_delete_authorization',
@@ -577,6 +576,12 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
       'typed_blocker_refs',
       'typed_blocker_ref',
     ]);
+    const observedNoActiveCallerRefs = readRefsFromFields(bridgeExitGate, [
+      'no_active_caller_refs',
+      'no_active_caller_ref',
+      'no_active_default_caller_refs',
+      'no_active_default_caller_ref',
+    ]);
     const observedNoForbiddenWriteRefs = readRefsFromFields(bridgeExitGate, [
       'no_forbidden_write_refs',
       'no_forbidden_write_ref',
@@ -599,6 +604,13 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
         status: ready ? 'observed' : 'blocked',
         proof_status: activeCallerProofStatus,
         target_kind: activeCallerTargetKind,
+        active_caller_module_id: activeCallerModuleId,
+      },
+      no_active_caller_proof: {
+        status: observedNoActiveCallerRefs.length > 0 ? 'observed' : 'required_before_physical_delete',
+        evidence_refs: observedNoActiveCallerRefs,
+        active_caller_cutover_status: ready ? 'observed' : 'blocked',
+        active_caller_proof_status: activeCallerProofStatus,
         active_caller_module_id: activeCallerModuleId,
       },
       domain_owner_receipt_or_typed_blocker: {
@@ -627,6 +639,13 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
       worklist_item_is_completion_claim: false,
       physical_delete_authorization_status: 'not_authorized_by_opl_projection',
       not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
+      retirement_guard: {
+        target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
+        mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+        non_authorizing_surfaces: [...DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES],
+        physical_delete_authorized: false,
+        refs_only_receipt_can_authorize_physical_delete: false,
+      },
       authority_boundary: {
         worklist_can_write_domain_truth: false,
         worklist_can_sign_domain_owner_receipt: false,
@@ -704,6 +723,10 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
       isRecord(worklist.domain_owner_receipt_or_typed_blocker)
       && optionalString(worklist.domain_owner_receipt_or_typed_blocker.status) !== 'observed'
     )).length;
+    const missingNoActiveCallerProofCount = deletionEvidenceWorklists.filter((worklist) => (
+      isRecord(worklist.no_active_caller_proof)
+      && optionalString(worklist.no_active_caller_proof.status) !== 'observed'
+    )).length;
     const missingNoForbiddenWriteCount = deletionEvidenceWorklists.filter((worklist) => (
       isRecord(worklist.no_forbidden_write_proof)
       && optionalString(worklist.no_forbidden_write_proof.status) !== 'observed'
@@ -714,6 +737,7 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
     )).length;
     const allDeletionEvidenceRequirementsObserved = deletionEvidenceWorklists.length > 0
       && missingDomainEvidenceCount === 0
+      && missingNoActiveCallerProofCount === 0
       && missingNoForbiddenWriteCount === 0
       && missingTombstoneOrProvenanceCount === 0;
     return {
@@ -731,8 +755,11 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         blocker_count: blockers.length,
         deletion_evidence_worklist_count: deletionEvidenceWorklists.length,
         missing_domain_owner_receipt_or_typed_blocker_count: missingDomainEvidenceCount,
+        missing_no_active_caller_proof_count: missingNoActiveCallerProofCount,
         missing_no_forbidden_write_proof_count: missingNoForbiddenWriteCount,
         missing_tombstone_or_provenance_ref_count: missingTombstoneOrProvenanceCount,
+        retirement_guard_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
+        retirement_guard_mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
       },
       default_caller_owner: 'one-person-lab',
       source_commands: {
@@ -749,9 +776,12 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
       deletion_gate: {
         replacement_parity: replacementReady ? 'ready' : 'blocked',
         active_caller_cutover: replacementReady ? 'ready' : 'blocked',
+        no_active_caller_proof: 'required_before_physical_delete',
         domain_owner_receipt_or_typed_blocker: 'required_from_domain_owner_before_physical_delete',
         no_forbidden_write_proof: 'required_before_physical_delete',
         tombstone_or_provenance_ref: 'required_before_physical_delete',
+        mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+        retirement_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
         physical_delete_authorized: false,
         all_deletion_evidence_requirements_observed: allDeletionEvidenceRequirementsObserved,
         default_caller_delete_ready: false,
@@ -763,6 +793,7 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         physical_delete_authority_owner: 'domain_repo_owner_after_receipt_parity',
         evidence_worklist_count: deletionEvidenceWorklists.length,
         missing_domain_owner_receipt_or_typed_blocker_count: missingDomainEvidenceCount,
+        missing_no_active_caller_proof_count: missingNoActiveCallerProofCount,
         missing_no_forbidden_write_proof_count: missingNoForbiddenWriteCount,
         missing_tombstone_or_provenance_ref_count: missingTombstoneOrProvenanceCount,
       },
@@ -846,6 +877,10 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
     ),
     0,
   );
+  const missingNoActiveCallerProofCount = reports.reduce(
+    (total, report) => total + Number(report.summary.missing_no_active_caller_proof_count || 0),
+    0,
+  );
   const missingNoForbiddenWriteProofCount = reports.reduce(
     (total, report) => total + Number(report.summary.missing_no_forbidden_write_proof_count || 0),
     0,
@@ -865,8 +900,20 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
     deletion_evidence_worklist_count: deletionEvidenceWorklistCount,
     missing_domain_owner_receipt_or_typed_blocker_count:
       missingDomainOwnerReceiptOrTypedBlockerCount,
+    missing_no_active_caller_proof_count: missingNoActiveCallerProofCount,
     missing_no_forbidden_write_proof_count: missingNoForbiddenWriteProofCount,
     missing_tombstone_or_provenance_ref_count: missingTombstoneOrProvenanceRefCount,
+    retirement_guard_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
+    retirement_guard_mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+    retirement_guard_readout: {
+      target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
+      mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+      non_authorizing_surfaces: [...DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES],
+      physical_delete_authorized: false,
+      refs_only_receipt_can_authorize_physical_delete: false,
+      conformance_can_authorize_physical_delete: false,
+      readiness_can_authorize_physical_delete: false,
+    },
     default_caller_delete_ready: false,
     physical_delete_authorized: false,
     physical_delete_authorization_status: 'not_authorized_by_opl_projection',
@@ -885,8 +932,20 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
       deletion_evidence_worklist_count: deletionEvidenceWorklistCount,
       missing_domain_owner_receipt_or_typed_blocker_count:
         missingDomainOwnerReceiptOrTypedBlockerCount,
+      missing_no_active_caller_proof_count: missingNoActiveCallerProofCount,
       missing_no_forbidden_write_proof_count: missingNoForbiddenWriteProofCount,
       missing_tombstone_or_provenance_ref_count: missingTombstoneOrProvenanceRefCount,
+      retirement_guard_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
+      retirement_guard_mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+      retirement_guard_readout: {
+        target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
+        mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+        non_authorizing_surfaces: [...DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES],
+        physical_delete_authorized: false,
+        refs_only_receipt_can_authorize_physical_delete: false,
+        conformance_can_authorize_physical_delete: false,
+        readiness_can_authorize_physical_delete: false,
+      },
       default_caller_delete_ready: false,
       physical_delete_authorized: false,
       generated_default_caller_readiness_can_authorize_physical_delete: false,
@@ -904,8 +963,10 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
         deletion_evidence_worklist_count: deletionEvidenceWorklistCount,
         missing_domain_owner_receipt_or_typed_blocker_count:
           missingDomainOwnerReceiptOrTypedBlockerCount,
+        missing_no_active_caller_proof_count: missingNoActiveCallerProofCount,
         missing_no_forbidden_write_proof_count: missingNoForbiddenWriteProofCount,
         missing_tombstone_or_provenance_ref_count: missingTombstoneOrProvenanceRefCount,
+        retirement_guard_mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
         default_caller_delete_ready: false,
         physical_delete_authorized: false,
         generated_default_caller_readiness_can_authorize_physical_delete: false,
@@ -914,9 +975,13 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
       migration_gate_policy: {
         opl_generated_default_caller_readiness_is_structural_replacement_evidence: true,
         domain_owner_receipt_or_typed_blocker_still_required: true,
+        no_active_caller_proof_still_required: true,
         no_forbidden_write_proof_still_required: true,
         zero_missing_deletion_evidence_is_not_delete_ready: true,
         observed_deletion_evidence_refs_are_refs_only_inputs: true,
+        retirement_guard_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
+        mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+        non_authorizing_surfaces: [...DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES],
         generated_default_caller_readiness_can_authorize_physical_delete: false,
         physical_delete_authorized_by_this_report: false,
         physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],

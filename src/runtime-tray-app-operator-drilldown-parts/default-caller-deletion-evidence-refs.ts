@@ -13,6 +13,11 @@ import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary,
 } from './authority-boundary.ts';
+import {
+  DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS,
+  DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES,
+  DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
+} from '../default-caller-retirement-guard.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -154,6 +159,13 @@ function compactDeletionEvidenceWorklist(worklist: JsonRecord) {
     cannot_absorb_reason: stringValue(worklist.cannot_absorb_reason),
     audit_visibility: stringValue(worklist.audit_visibility),
     semantic_equivalence_status: stringValue(worklist.semantic_equivalence_status),
+    retirement_guard: {
+      target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
+      mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+      non_authorizing_surfaces: [...DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES],
+      physical_delete_authorized: false,
+      refs_only_receipt_can_authorize_physical_delete: false,
+    },
     physical_delete_authorized: false,
     default_caller_delete_ready: false,
     worklist_item_is_completion_claim: false,
@@ -219,10 +231,15 @@ function buildDomainDefaultCallerDeletionRefsFromReadinessReport(
       open_deletion_evidence_requirement_count: openRequirementCount,
       missing_domain_owner_receipt_or_typed_blocker_count:
         countMissing('domain_owner_receipt_or_typed_blocker'),
+      missing_no_active_caller_proof_count:
+        countMissing('no_active_caller_proof'),
       missing_no_forbidden_write_proof_count:
         countMissing('no_forbidden_write_proof'),
       missing_tombstone_or_provenance_ref_count:
         countMissing('tombstone_or_provenance_ref'),
+      mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+      retirement_guard_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
+      non_authorizing_surfaces: [...DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES],
       physical_delete_authorized: false,
       default_caller_delete_ready: false,
       deletion_evidence_requirements_are_completion_claims: false,
@@ -288,10 +305,15 @@ function buildDomainDefaultCallerDeletionRefs(project: DomainManifestCatalogEntr
       open_deletion_evidence_requirement_count: openRequirementCount,
       missing_domain_owner_receipt_or_typed_blocker_count:
         countMissing('domain_owner_receipt_or_typed_blocker'),
+      missing_no_active_caller_proof_count:
+        countMissing('no_active_caller_proof'),
       missing_no_forbidden_write_proof_count:
         countMissing('no_forbidden_write_proof'),
       missing_tombstone_or_provenance_ref_count:
         countMissing('tombstone_or_provenance_ref'),
+      mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+      retirement_guard_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
+      non_authorizing_surfaces: [...DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES],
       physical_delete_authorized: false,
       default_caller_delete_ready: false,
       deletion_evidence_requirements_are_completion_claims: false,
@@ -324,10 +346,15 @@ export function buildDefaultCallerDeletionEvidenceRefs(projects: DomainManifestC
       open_deletion_evidence_requirement_count: sum('open_deletion_evidence_requirement_count'),
       missing_domain_owner_receipt_or_typed_blocker_count:
         sum('missing_domain_owner_receipt_or_typed_blocker_count'),
+      missing_no_active_caller_proof_count:
+        sum('missing_no_active_caller_proof_count'),
       missing_no_forbidden_write_proof_count:
         sum('missing_no_forbidden_write_proof_count'),
       missing_tombstone_or_provenance_ref_count:
         sum('missing_tombstone_or_provenance_ref_count'),
+      mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+      retirement_guard_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
+      non_authorizing_surfaces: [...DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES],
       physical_delete_authorized: false,
       default_caller_delete_ready: false,
       deletion_evidence_requirements_are_completion_claims: false,

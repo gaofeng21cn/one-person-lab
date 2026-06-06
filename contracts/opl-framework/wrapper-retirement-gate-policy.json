@@ -11,6 +11,19 @@
     "no_forbidden_write_ref",
     "tombstone_or_provenance_ref"
   ],
+  "retirement_target_classes": [
+    "legacy_reconcile_compensation_path",
+    "legacy_materialize_compensation_path",
+    "legacy_dispatch_compensation_path",
+    "retained_domain_wrapper"
+  ],
+  "mandatory_gate_ids": [
+    "replacement_parity",
+    "no_active_caller_proof",
+    "domain_owner_receipt_or_typed_blocker",
+    "no_forbidden_write_proof",
+    "tombstone_or_provenance_ref"
+  ],
   "allowed_terminal_actions": [
     "delete",
     "history_tombstone",
@@ -23,6 +36,7 @@
     "generated_default_caller_readiness_only",
     "read_model_projection_ready_only",
     "test_pass_only",
+    "conformance_readiness_or_refs_only_receipt",
     "chat_decision_only"
   ],
   "physical_delete_blocked_by_default": [
