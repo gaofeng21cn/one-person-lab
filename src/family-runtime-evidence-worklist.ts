@@ -64,6 +64,38 @@ const DIAGNOSTIC_ONLY_STATUS = 'diagnostic_only';
 const DIAGNOSTIC_ONLY_ROUTE_SEMANTICS =
   'read_only_operator_diagnostic_not_safe_action_or_closeable_workorder';
 
+function worklistLaneFor(input: {
+  claimScope: string;
+  actionKind: string;
+  diagnosticOnlyRoute: boolean;
+  route: JsonRecord;
+}) {
+  if (input.diagnosticOnlyRoute) {
+    return 'diagnostic';
+  }
+  if (
+    input.claimScope === 'legacy_cleanup_ledger'
+    || input.claimScope === 'default_caller_deletion_evidence'
+    || input.route.cleanup_lane_visible === true
+  ) {
+    return 'cleanup';
+  }
+  if (
+    input.claimScope === 'external_evidence_receipt'
+    || input.claimScope === 'evidence_gate_receipt'
+    || (
+      input.claimScope === 'domain_dispatch_evidence_receipt'
+      && input.actionKind.endsWith('_verified')
+    )
+    || input.actionKind === 'domain_dispatch_evidence_typed_blocker_verified'
+    || input.claimScope === 'stage_production_evidence_receipt'
+    || input.route.audit_lane_visible === true
+  ) {
+    return 'audit';
+  }
+  return 'ordinary';
+}
+
 function readOnlyClaimScope(route: JsonRecord) {
   const actionKind = stringValue(route.action_kind) ?? 'operator_action';
   if (actionKind === 'stage_production_attempt_request') {
@@ -271,6 +303,16 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
     || route.default_actionable === false;
   const diagnosticOnlyRoute = actionabilityStatus === 'diagnostic_only_not_operator_actionable'
     || actionKind === 'progress_first_attempt_supervision';
+  const worklistLane = worklistLaneFor({
+    claimScope,
+    actionKind,
+    diagnosticOnlyRoute,
+    route,
+  });
+  const defaultOwnerDeltaEligible = worklistLane === 'ordinary'
+    && !routeNotActionable
+    && !routeBlocked
+    && !diagnosticOnlyRoute;
   const itemStatus = stringValue(closure?.status)
     ?? (diagnosticOnlyRoute
       ? DIAGNOSTIC_ONLY_STATUS
@@ -310,8 +352,10 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
     stage_id: stringValue(route.stage_id),
     worklist_attention_class: stringValue(route.worklist_attention_class),
     ordinary_open_safe_action_attention: route.ordinary_open_safe_action_attention !== false,
-    audit_lane_visible: route.audit_lane_visible === true,
-    cleanup_lane_visible: route.cleanup_lane_visible === true,
+    worklist_lane: worklistLane,
+    default_owner_delta_eligible: defaultOwnerDeltaEligible,
+    audit_lane_visible: worklistLane === 'audit',
+    cleanup_lane_visible: worklistLane === 'cleanup',
     mode: itemStatus === DIAGNOSTIC_ONLY_STATUS
       ? 'diagnostic_query_only'
       : actionKind.endsWith('_verify') || actionKind === 'provider_scheduler_status'
@@ -436,6 +480,10 @@ function externalEvidenceReceiptWorklistItems(drilldown: JsonRecord) {
       safe_action_owner: 'opl',
       domain_id: domainId,
       stage_id: null,
+      worklist_lane: 'audit',
+      default_owner_delta_eligible: false,
+      audit_lane_visible: true,
+      cleanup_lane_visible: false,
       mode: 'verify',
       status: typedBlockerOnly
         ? 'closed_by_domain_owned_typed_blocker'
@@ -506,6 +554,10 @@ function domainDispatchReceiptWorklistItems(drilldown: JsonRecord) {
       safe_action_owner: 'opl',
       domain_id: domainId,
       stage_id: stringValue(attempt.stage_id),
+      worklist_lane: 'audit',
+      default_owner_delta_eligible: false,
+      audit_lane_visible: true,
+      cleanup_lane_visible: false,
       mode: 'verify',
       status: typedBlockerOnly
         ? 'closed_by_domain_owned_typed_blocker'

@@ -107,6 +107,8 @@ Follow-on gate 的当前口径已经收敛为三类 owner delta：OMA script-to-
 
 Unified owner-delta 仍按 live 机器面读取，不从本页继承旧 counters。若 fresh readiness 指向 MAS/domain/App/live owner，OPL 只能记录或验证 refs-only payload、typed blocker 或 owner-chain support refs；不能自造 MAS owner receipt、typed blocker、owner-chain ref 或 no-regression ref。平台 currentness、gate replay、provider dispatch 和 monitoring 修复只改善 owner route，不关闭 MAS paper owner receipt、publication ready、current package、App release ready 或 production ready。具体 worklist 数字、safe-action id、receipt ref 和 closeout 流水每轮都必须从 live 命令读取。
 
+2026-06-06 follow-through：`family-runtime evidence-worklist --detail full` 的 `worklist_items` 已显式标注 `worklist_lane` 与 `default_owner_delta_eligible`。普通 owner-delta 只能从 `worklist_lane=ordinary` 且 `default_owner_delta_eligible=true` 的 open item 读取；`audit`、`cleanup`、`diagnostic` lane 即使带 `route_requires_domain_or_app_payload=true` 或 verified refs-only receipt，也只是 passive evidence / cleanup / diagnostic tail，不能成为默认 next owner action、completion、domain ready、production ready 或 delete authority。本轮 fresh full readout 的 null lane count 已为 0；当前 ordinary open item 指向 MAS domain-dispatch owner answer payload，stage-production evidence 和 standalone verified receipts 均在 audit lane。
+
 ## 统一审计标准
 
 后续 closeout、设计评审和跨仓优化都按 [OPL Foundry Agent Target Operating Architecture](./opl-foundry-agent-target-operating-architecture.md) 的 `Audit Standard` 判断，并在本页只保留执行口径：

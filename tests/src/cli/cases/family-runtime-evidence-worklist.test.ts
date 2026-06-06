@@ -188,6 +188,16 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(fullWorklist.detail_level, 'full');
     assert.equal(fullWorklist.command, 'evidence-worklist');
     assert.equal(fullWorklist.worklist_items.length, 49);
+    assert.equal(
+      fullWorklist.worklist_items.every((item: {
+        worklist_lane: string;
+        default_owner_delta_eligible: boolean;
+      }) =>
+        ['ordinary', 'audit', 'cleanup', 'diagnostic'].includes(item.worklist_lane)
+        && typeof item.default_owner_delta_eligible === 'boolean'
+      ),
+      true,
+    );
     assert.equal(fullWorklist.attention_queue.length, 48);
     assert.equal(
       fullWorklist.summary.open_safe_action_payload_required_item_count,
@@ -209,6 +219,9 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(stageItem.owner, 'opl');
     assert.equal(stageItem.status, 'open_safe_action_request_route_available');
     assert.equal(stageItem.worklist_item_is_completion_claim, false);
+    assert.equal(stageItem.worklist_lane, 'ordinary');
+    assert.equal(stageItem.default_owner_delta_eligible, true);
+    assert.equal(stageItem.audit_lane_visible, false);
     assert.equal(stageItem.route_status, 'request_route_available');
     assert.equal(stageItem.route_semantics, 'open_safe_action_request_apply_verify_route');
     assert.equal(stageItem.receipt_ref, null);
@@ -924,6 +937,18 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
     const domainDispatchEvidenceItems = fullWorklist.worklist_items.filter((item: { claim_scope: string }) =>
       item.claim_scope === 'domain_dispatch_evidence_receipt'
     );
+    assert.equal(
+      externalItems.every((item: {
+        worklist_lane: string;
+        default_owner_delta_eligible: boolean;
+        audit_lane_visible: boolean;
+      }) =>
+        item.worklist_lane === 'audit'
+        && item.default_owner_delta_eligible === false
+        && item.audit_lane_visible === true
+      ),
+      true,
+    );
     for (const item of [...externalItems, ...gateItems, ...stageItems]) {
       assert.equal(item.status, 'open_safe_action_request_route_available');
       assert.equal(item.receipt_ref, null);
@@ -932,10 +957,16 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
     assert.equal(
       stageEvidenceItems.every((item: {
         status: string;
+        worklist_lane: string;
+        default_owner_delta_eligible: boolean;
+        audit_lane_visible: boolean;
         route_requires_domain_or_app_payload: boolean;
         payload_owner: string;
       }) =>
         item.status === 'open_safe_action_request_route_available'
+        && item.worklist_lane === 'audit'
+        && item.default_owner_delta_eligible === false
+        && item.audit_lane_visible === true
         && item.route_requires_domain_or_app_payload
         && item.payload_owner === 'domain_repository_or_app_live_operator'
       ),
@@ -968,6 +999,22 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
     assert.equal(
       fullWorklist.domain_dispatch_evidence_workorder_packet.summary.success_payload_owner,
       'domain_repository_or_app_live_operator',
+    );
+    assert.equal(
+      domainDispatchEvidenceItems
+        .filter((item: { route_requires_domain_or_app_payload: boolean }) =>
+          item.route_requires_domain_or_app_payload
+        )
+        .every((item: {
+          worklist_lane: string;
+          default_owner_delta_eligible: boolean;
+          audit_lane_visible: boolean;
+        }) =>
+          item.worklist_lane === 'ordinary'
+          && item.default_owner_delta_eligible === true
+          && item.audit_lane_visible === false
+        ),
+      true,
     );
     assert.equal(
       fullWorklist.domain_dispatch_evidence_workorder_packet.authority_boundary.can_write_domain_truth,
