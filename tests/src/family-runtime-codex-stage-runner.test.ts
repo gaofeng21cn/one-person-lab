@@ -87,6 +87,41 @@ test('Codex stage activity command preview carries strict terminal closeout cont
   assert.equal(activity.expected_closeout.free_text_closeout_accepted, false);
 });
 
+test('Codex stage activity prompt carries refs-only OPL execution authorization context', () => {
+  const activity = buildCodexStageActivityInput({
+    attempt: {
+      stage_attempt_id: 'sat_codex_auth_prompt_test',
+      workflow_id: 'wf_codex_auth_prompt_test',
+      task_id: 'frt_codex_auth_prompt_test',
+      stage_id: 'domain_owner/default-executor-dispatch',
+      executor_kind: 'codex_cli',
+      workspace_locator: {
+        workspace_root: '/tmp/mas',
+        study_id: '002-dm-china-us-mortality-attribution',
+        action_type: 'complete_medical_paper_readiness_surface',
+      },
+      opl_execution_authorization: {
+        provider_attempt_ref: 'temporal://attempt/sat_codex_auth_prompt_test',
+        attempt_lease_ref: 'opl://stage-attempts/sat_codex_auth_prompt_test/leases/frt_codex_auth_prompt_test/active',
+        attempt_lease_status: 'active',
+        execution_authorization_decision_ref:
+          'opl://stage-attempts/sat_codex_auth_prompt_test/execution-authorizations/frt_codex_auth_prompt_test/wf_codex_auth_prompt_test',
+        source_fingerprint: 'mas_default_executor_source_codex_auth_prompt_test',
+        idempotency_key: 'idem_codex_auth_prompt_test',
+      },
+      checkpoint_refs: ['studies/002/artifacts/supervision/consumer/default_executor_dispatches/immutable/packet.json'],
+    },
+  });
+
+  const commandPreview = activity.runner_status.command_preview.join('\n');
+  assert.match(commandPreview, /explicitly pass these OPL_\* bindings to the child command environment/);
+  assert.match(commandPreview, /"OPL_PROVIDER_ATTEMPT_REF":"temporal:\/\/attempt\/sat_codex_auth_prompt_test"/);
+  assert.match(commandPreview, /"OPL_ATTEMPT_LEASE_STATUS":"active"/);
+  assert.match(commandPreview, /"OPL_EXECUTION_AUTHORIZATION_DECISION_REF":"opl:\/\/stage-attempts\/sat_codex_auth_prompt_test\/execution-authorizations\/frt_codex_auth_prompt_test\/wf_codex_auth_prompt_test"/);
+  assert.match(commandPreview, /"OPL_STAGE_PACKET_REF":"studies\/002\/artifacts\/supervision\/consumer\/default_executor_dispatches\/immutable\/packet.json"/);
+  assert.match(commandPreview, /do not grant domain truth, artifact, quality, or readiness authority/);
+});
+
 test('Codex stage runner fails closed when live runner lacks packet or workspace binding', async () => {
   await assert.rejects(
     () => runPublicCodexStageRunner({

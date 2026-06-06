@@ -4,7 +4,7 @@
   "schema_id": "opl.current_owner_delta.v1",
   "surface_kind": "opl_current_owner_delta_schema",
   "owner": "one-person-lab",
-  "purpose": "Define the compact OPL-owned default owner/delta/hard-gate/action payload used as the root of ordinary planning and App/operator projection.",
+  "purpose": "Define the bounded OPL-owned default owner/delta/hard-gate/action payload used as the root of ordinary planning and App/operator projection.",
   "state": "active_contract",
   "machine_boundary": "OPL owns desired/current reconciliation, launch gating, refs, and projection shape; domain repositories retain domain truth, artifact authority, quality verdicts, and owner receipt signing.",
   "type": "object",

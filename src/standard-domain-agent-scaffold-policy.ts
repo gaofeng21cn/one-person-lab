@@ -319,7 +319,7 @@ export const WORKSPACE_FILE_LIFECYCLE_POLICY = {
   },
 } as const;
 
-export const DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED = [
+export const DOMAIN_RETAINED_THIN_SURFACES = [
   'domain_truth',
   'domain_transition_spec',
   'domain_stage_descriptors',

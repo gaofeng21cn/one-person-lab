@@ -22,6 +22,8 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 
 | File | Historical role | Current owner |
 | --- | --- | --- |
+| `2026-06-06-opl-series-doc-governance-ssot-tranche-ledger.md` | OPL series SSOT-first docs governance tranche ledger for the 2026-06-06 RedCube and OPL main lanes。 | 当前 truth 归各 repo active truth owner、core docs、live code/contracts/tests/read-model；ledger 只记录本轮覆盖、验证、未覆盖范围和下一轮写入范围。 |
+| `2026-06-06-opl-owner-map-retired-vocabulary-ssot-closeout.md` | Active owner map retired-route vocabulary SSOT closeout。 | 当前 owner map 归 `docs/active/current-development-lines.md`；active gap / next baton 归 `docs/active/current-state-vs-ideal-gap.md`；退役路线来龙去脉归 `docs/history/**`。 |
 | `2026-04-02-bilingual-homepage-and-core-docs-implementation.md` | 早期 bilingual homepage / public docs rollout 计划。 | 当前公开入口归 root `README*`、`docs/README.md`、`docs/public/` 和核心五件套。 |
 | `2026-04-07-g2-release-closeout-note.md` | G2 public baseline closeout 记录。 | 当前 release / runtime / domain 边界归核心五件套、contracts 和 live read-model。 |
 | `2026-04-07-g3-thin-handoff-planning-brief.md` | G3 thin handoff planning freeze 记录。 | 当前 handoff / domain activation 归 stage-led framework、domain onboarding 和 runtime boundary。 |

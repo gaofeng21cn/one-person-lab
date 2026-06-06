@@ -6,6 +6,7 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const modulePath = 'src/current-owner-delta-topline.ts';
+const projectionModulePath = 'src/current-owner-delta-projection.ts';
 
 test('current owner delta topline uses OPL runtime owner when StageRun execution authorization is blocked', async () => {
   const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);
@@ -61,4 +62,43 @@ test('current owner delta topline uses OPL runtime owner when StageRun execution
   assert.equal(topline.stage_run_cockpit_summary.current_owner_delta_owner, 'med-autoscience');
   assert.equal(topline.stage_run_cockpit_summary.current_owner, 'one-person-lab');
   assert.equal(topline.stage_run_cockpit_summary.next_required_owner, 'one-person-lab');
+});
+
+test('current owner delta hard gate ignores generic audit-only open safe-action counts', async () => {
+  const module = await import(pathToFileURL(path.join(repoRoot, projectionModulePath)).href);
+  const readModel = module.buildCurrentOwnerDeltaReadModel({
+    ownerDeltaFirst: {
+      next_owner: 'one-person-lab',
+      next_required_delta: 'no_opl_operator_actionable_delta_required',
+      required_return_shapes: ['typed_blocker_ref'],
+    },
+    nextSafeAction: {
+      action_id: 'legacy-cleanup:medautoscience:apply',
+      action_kind: 'legacy_cleanup_apply',
+      owner: 'opl',
+      ref: 'opl agents legacy-cleanup apply --domain medautoscience --mode apply',
+      route_requires_domain_or_app_payload: false,
+    },
+    countSummary: {
+      openSafeActionCount: 1,
+      payloadRequiredCount: 0,
+      payloadFreeCount: 1,
+      blockedRefsOnlyCount: 0,
+      evidenceEnvelopeOpenCount: 0,
+      evidenceEnvelopeBlockedCount: 0,
+      domainDispatchWorkorderCount: 0,
+      stageReplayMissingReceiptWorkorderCount: 0,
+    },
+  });
+
+  assert.equal(readModel.default_summary.default_path_root, 'current_owner_delta');
+  assert.equal(readModel.current_owner_delta.desired_delta_kind, 'none');
+  assert.equal(readModel.current_owner_delta.hard_gate.state, 'none');
+  assert.equal(readModel.current_owner_delta.hard_gate.human_or_domain_owner_required, false);
+  assert.equal(readModel.next_safe_action_or_none, null);
+  assert.equal(readModel.owner_delta_audit_tail.count_summary.open_safe_action_count, 1);
+  assert.equal(
+    readModel.owner_delta_audit_tail.audit_next_safe_action_or_none.action_kind,
+    'legacy_cleanup_apply',
+  );
 });

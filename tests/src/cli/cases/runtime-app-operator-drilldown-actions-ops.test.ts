@@ -660,6 +660,47 @@ test('runtime App drilldown does not select legacy cleanup routes already closed
   assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 0);
 });
 
+test('runtime App drilldown keeps ready legacy cleanup routes audit-only for default attention', () => {
+  const drilldown = applyAppOperatorDrilldownDetail(selectionDrilldownFixture({
+    operator_action_routing_refs: {
+      refs: [
+        {
+          ref: 'opl agents legacy-cleanup apply --domain medautoscience --mode apply --source-ref opl://agents/med-autoscience/legacy-cleanup-plan',
+          action_id: 'legacy-cleanup:medautoscience:apply',
+          action_kind: 'legacy_cleanup_apply',
+          owner: 'opl',
+          route_target_kind: 'opl_cli',
+          execution_policy: 'opl_safe_action_shell',
+          execution_surface: 'opl runtime action execute',
+          domain_id: 'medautoscience',
+          target_domain_id: 'med-autoscience',
+          source_ref: 'opl://agents/med-autoscience/legacy-cleanup-plan',
+          action_count: 2,
+          can_submit_to_safe_action_shell: true,
+          worklist_attention_class: 'audit_cleanup_lane',
+          ordinary_open_safe_action_attention: false,
+          default_selected_action_eligible: false,
+          default_planning_root_allowed: false,
+        },
+      ],
+    },
+    app_execution_bridge: {
+      safe_action_routes: [],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  }), 'summary');
+
+  assert.equal(drilldown.attention_first_payload.next_safe_action, null);
+  assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 0);
+  assert.equal(
+    drilldown.attention_first_payload.current_owner_delta_read_model.current_owner_delta.hard_gate.state,
+    'none',
+  );
+});
+
 test('runtime App drilldown does not select no-op legacy cleanup routes as next action', () => {
   const drilldown = applyAppOperatorDrilldownDetail(selectionDrilldownFixture({
     operator_action_routing_refs: {

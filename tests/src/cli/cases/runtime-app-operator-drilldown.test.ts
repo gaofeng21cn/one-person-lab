@@ -690,6 +690,10 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(legacyCleanupApplyRoute.domain_physical_delete_requires_owner_receipt, true);
     assert.equal(legacyCleanupApplyRoute.domain_physical_delete_can_execute, false);
     assert.equal(legacyCleanupApplyRoute.domain_delete_ready, undefined);
+    assert.equal(legacyCleanupApplyRoute.worklist_attention_class, 'audit_cleanup_lane');
+    assert.equal(legacyCleanupApplyRoute.ordinary_open_safe_action_attention, false);
+    assert.equal(legacyCleanupApplyRoute.default_selected_action_eligible, false);
+    assert.equal(legacyCleanupApplyRoute.default_planning_root_allowed, false);
     assert.deepEqual(legacyCleanupApplyRoute.opl_cli_args, [
       'agents',
       'legacy-cleanup',

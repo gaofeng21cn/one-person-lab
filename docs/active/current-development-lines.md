@@ -57,7 +57,7 @@ rtk opl agents default-callers --family-defaults --json
 
 ## Direct Retirement 读法
 
-旧 gateway/frontdoor/federation/Hermes-first/local-manager wording、旧 CLI alias、repo-local generic scheduler/session/workbench/status shell、compat facade、re-export wrapper 和 compatibility-only tests 都只按当前 owner surface 判断：
+已退役入口、旧 runtime / provider 叙事、旧产品壳路线、旧 CLI alias、repo-local generic scheduler/session/workbench/status shell、compat facade、re-export wrapper 和 compatibility-only tests 都只按当前 owner surface 判断。具体旧词和历史路线归 `docs/history/**`、tombstone 或 provenance owner；本文不保存旧路线词清单，不把它们恢复为 active topology：
 
 - 已被 generated/hosted surface、App contract 或 domain authority function 替代：`needs_retirement`。
 - 仍有 diagnostic、audit、history、proof 或 support 价值：`needs_demotion`。
@@ -72,4 +72,4 @@ rtk opl agents default-callers --family-defaults --json
 - 目标操作架构、primitive、acceptance gate：`opl-foundry-agent-target-operating-architecture.md`。
 - 生产闭环证据门映射：`production-framework-closure-gap-matrix.md`。
 - 私有平台残留分类与迁移门：`standard-agent-private-platform-inventory.md`。
-- dated proof、receipt 流水、closeout 过程、旧路线来龙去脉：`docs/history/**`、runtime ledger 或提交历史。
+- dated proof、receipt 流水、closeout 过程、退役路线来龙去脉：`docs/history/**`、runtime ledger 或提交历史。

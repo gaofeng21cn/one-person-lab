@@ -208,6 +208,28 @@ function workspaceRootFromAttempt(attempt: JsonRecord) {
   return optionalString(workspaceLocator.workspace_root) ?? optionalString(workspaceLocator.repo_root);
 }
 
+function providerAuthorizationPromptLines(input: { attempt: JsonRecord; stagePacketRef?: string | null }) {
+  const workspaceRoot = workspaceRootFromAttempt(input.attempt);
+  if (!workspaceRoot) {
+    return [];
+  }
+  const env = codexStageAttemptEnv({
+    attempt: input.attempt,
+    stagePacketRef: resolvedStagePacketRef(input) ?? 'unavailable',
+    workspaceRoot,
+  });
+  const entries = Object.entries(env).filter(([, value]) => typeof value === 'string' && value.length > 0);
+  if (entries.length === 0) {
+    return [];
+  }
+  return [
+    'OPL provider execution authorization context follows as refs-only environment bindings.',
+    'When invoking domain/provider-hosted commands from this attempt, explicitly pass these OPL_* bindings to the child command environment; do not rely on implicit shell inheritance.',
+    'These refs authorize only this provider attempt and do not grant domain truth, artifact, quality, or readiness authority.',
+    JSON.stringify(Object.fromEntries(entries)),
+  ];
+}
+
 function runnerPromptFor(input: { attempt: JsonRecord; stagePacketRef?: string | null }) {
   const stageId = stageIdFromAttempt(input.attempt);
   const attemptId = optionalString(input.attempt.stage_attempt_id) ?? 'unknown-attempt';
@@ -224,6 +246,7 @@ function runnerPromptFor(input: { attempt: JsonRecord; stagePacketRef?: string |
     'That JSON object MUST have surface_kind stage_attempt_closeout_packet, stage_memory_closeout_packet, or domain_stage_closeout_packet, and at least one closeout ref.',
     'Do not wrap the JSON in Markdown. Do not add prose, code fences, prefixes, suffixes, explanations, or status text before or after the JSON.',
     'If the stage is blocked and no typed closeout packet exists, make the final assistant message a pure JSON typed blocker/closeout packet emitted by the domain-owned path, not free text.',
+    ...providerAuthorizationPromptLines(input),
   ].join('\n');
 }
 

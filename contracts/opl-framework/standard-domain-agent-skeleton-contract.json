@@ -1290,19 +1290,6 @@
       "domain_handler_target_or_opaque_ref_projection_output",
       "domain_entry_and_tests"
     ],
-    "domain_retained_thin_surfaces_deprecated": [
-      "domain_truth",
-      "domain_transition_spec",
-      "domain_stage_descriptors",
-      "domain_action_metadata",
-      "quality_or_export_verdict",
-      "artifact_authority",
-      "memory_body",
-      "owner_receipt",
-      "typed_blocker",
-      "domain_handler_target_or_opaque_ref_projection_output",
-      "domain_entry_and_tests"
-    ],
     "forbidden_domain_generic_owner_roles": [
       "generic_scheduler_owner",
       "generic_daemon_owner",

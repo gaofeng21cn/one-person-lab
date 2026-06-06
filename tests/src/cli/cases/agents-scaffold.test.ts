@@ -213,14 +213,15 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     'functional_privatization_audit_source_ref',
     'generated_surface_handoff_source_ref',
   ]);
-  assert.equal(scaffold.domain_retained_thin_surfaces_deprecated.includes('domain_truth'), true);
+  assert.equal(scaffold.domain_retained_thin_surfaces.includes('domain_truth'), true);
   assert.equal(
-    scaffold.domain_retained_thin_surfaces_deprecated.includes(
+    scaffold.domain_retained_thin_surfaces.includes(
       'domain_handler_target_or_opaque_ref_projection_output',
     ),
     true,
   );
-  assert.equal(scaffold.domain_retained_thin_surfaces_deprecated.includes('sidecar_or_projection_adapter'), false);
+  assert.equal(scaffold.domain_retained_thin_surfaces.includes('sidecar_or_projection_adapter'), false);
+  assert.equal('domain_retained_thin_surfaces_deprecated' in scaffold, false);
   assert.equal(
     scaffold.private_functional_surface_admission_policy.surface_kind,
     'opl_domain_private_functional_surface_admission_policy',

@@ -113,6 +113,16 @@ function providerMaintenanceRoute(action: JsonRecord) {
     || actionKind === 'provider_scheduler_status';
 }
 
+function auditCleanupRoute(action: JsonRecord) {
+  const actionKind = stringValue(action.action_kind) ?? '';
+  return action.worklist_attention_class === 'audit_cleanup_lane'
+    || action.ordinary_open_safe_action_attention === false
+    || action.default_selected_action_eligible === false
+    || action.default_planning_root_allowed === false
+    || actionKind === 'legacy_cleanup_apply'
+    || actionKind === 'legacy_cleanup_verify';
+}
+
 function routeIsClosedForDefaultCaller(action: JsonRecord, drilldown: JsonRecord) {
   const routeStatus = stringValue(action.route_status);
   const actionabilityStatus = stringValue(action.default_actionability_status);
@@ -123,6 +133,7 @@ function routeIsClosedForDefaultCaller(action: JsonRecord, drilldown: JsonRecord
     || routeStatus?.startsWith('closed_by_')
     || actionabilityStatus?.startsWith('closed_by_')
     || action.default_actionable === false
+    || auditCleanupRoute(action)
   ) {
     return true;
   }
@@ -151,9 +162,7 @@ function routeEligibleForDefaultSelectedAction(action: JsonRecord) {
     || actionKind === 'evidence_gate_receipt_verify'
     || actionKind === 'provider_scheduler_install'
     || actionKind === 'provider_scheduler_tick'
-    || actionKind === 'provider_scheduler_trigger'
-    || actionKind === 'legacy_cleanup_apply'
-    || actionKind === 'legacy_cleanup_verify';
+    || actionKind === 'provider_scheduler_trigger';
 }
 
 export function defaultSelectedSafeActionCandidates(
@@ -216,10 +225,6 @@ function actionPriority(action: JsonRecord) {
   if (actionKind === 'provider_scheduler_tick'
     || actionKind === 'provider_scheduler_trigger') {
     return 14;
-  }
-  if (actionKind === 'legacy_cleanup_apply'
-    || actionKind === 'legacy_cleanup_verify') {
-    return 15;
   }
   return 16;
 }

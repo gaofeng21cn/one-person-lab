@@ -5,7 +5,7 @@ import {
   AGENT_PACK_CONTRACT,
   DECLARATIVE_DOMAIN_PACK,
   DOCS_TAXONOMY,
-  DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED,
+  DOMAIN_RETAINED_THIN_SURFACES,
   FOUNDRY_AGENT_SERIES_POLICY_RELEASE,
   FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
   GENERATED_SURFACE_CONTRACT,
@@ -329,8 +329,7 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
       foundry_agent_series_contract: STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT,
       foundry_agent_series_policy_release: FOUNDRY_AGENT_SERIES_POLICY_RELEASE,
       opl_generated_surfaces: OPL_GENERATED_SURFACES,
-      domain_retained_thin_surfaces: DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED,
-      domain_retained_thin_surfaces_deprecated: DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED,
+      domain_retained_thin_surfaces: DOMAIN_RETAINED_THIN_SURFACES,
       forbidden_domain_generic_owner_roles: FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
       retirement_gate: {
         surface_kind: 'opl_legacy_retirement_gate_checklist',

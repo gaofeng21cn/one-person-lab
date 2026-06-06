@@ -4,7 +4,7 @@ import {
   buildWorklistCurrentOwnerDeltaReadModel,
 } from '../../../../src/family-runtime-evidence-worklist-parts/current-owner-delta-projection.ts';
 
-test('family-runtime evidence-worklist keeps raw worklist roots out of compact owner delta planning', () => {
+test('family-runtime evidence-worklist keeps raw worklist roots out of current owner delta planning', () => {
   const rawWorklistItem = {
     item_id: 'evidence-worklist:domain_dispatch:redcube:stale-audit-record',
     action_id: 'domain_dispatch:redcube:stale-audit-record:record',

@@ -339,18 +339,20 @@ function buildCurrentOwnerDeltaProjection(input: {
   };
   const selectedActionRequiresDomainOrAppPayload =
     input.compactAction?.route_requires_domain_or_app_payload === true;
+  const explicitOwnerDeltaOpen = requiredDelta !== 'no_opl_operator_actionable_delta_required';
+  const blockedRefsOnly = input.countSummary.blocked_refs_only_count > 0;
   const hardGate = {
     state:
-      input.countSummary.open_safe_action_count > 0
+      explicitOwnerDeltaOpen
         ? 'owner_delta_open'
-        : input.countSummary.blocked_refs_only_count > 0
+        : blockedRefsOnly
           ? 'domain_or_human_owner_blocked_refs_only'
           : 'none',
     provider_liveness_required: false,
     human_or_domain_owner_required:
       selectedActionRequiresDomainOrAppPayload
-      || input.countSummary.payload_required_count > 0
-      || input.countSummary.blocked_refs_only_count > 0,
+      || (explicitOwnerDeltaOpen && input.countSummary.payload_required_count > 0)
+      || blockedRefsOnly,
     source: 'owner_delta_controller',
   };
 
