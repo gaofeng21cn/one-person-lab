@@ -219,9 +219,38 @@ function forbiddenPaperLineOwnerChainPayloadClaims(payload: JsonRecord) {
   });
 }
 
+function ownerDeltaResultCloseoutBindingIdentity(payload: JsonRecord) {
+  const ownerDeltaResult = payload.owner_delta_result;
+  const results = isRecord(ownerDeltaResult)
+    ? [ownerDeltaResult]
+    : Array.isArray(ownerDeltaResult)
+      ? ownerDeltaResult.filter(isRecord)
+      : [];
+  const fields = [
+    'stage_run_id',
+    'stage_manifest_ref',
+    'current_pointer_ref',
+    'source_fingerprint',
+    'idempotency_key',
+    'provider_attempt_ref',
+    'attempt_lease_ref',
+    'execution_authorization_decision_ref',
+  ] as const;
+  return Object.fromEntries(fields.flatMap((field) => {
+    const values = uniqueList(results
+      .map((result) => {
+        const closeoutBinding = record(result.closeout_binding);
+        return stringValue(result[field]) ?? stringValue(closeoutBinding[field]);
+      })
+      .filter((value): value is string => Boolean(value)));
+    return values.length === 1 ? [[field, values[0]]] : [];
+  })) as JsonRecord;
+}
+
 function identityBindingPreflight(route: JsonRecord, payload: JsonRecord, refIdentity: JsonRecord = {}) {
   const targetIdentity = record(route.target_identity);
   const authorizationReceiptIdentity = routeAuthorizationReceiptIdentity(route);
+  const ownerDeltaBindingIdentity = ownerDeltaResultCloseoutBindingIdentity(payload);
   const targetDomainSourceFingerprint = stringValue(targetIdentity.domain_source_fingerprint)
     ?? stringValue(route.domain_source_fingerprint);
   const payloadDomainSourceFingerprint = stringValue(payload.domain_source_fingerprint)
@@ -288,25 +317,26 @@ function identityBindingPreflight(route: JsonRecord, payload: JsonRecord, refIde
     ['domain_id', stringValue(payload.domain_id)],
     ['stage_id', stringValue(payload.stage_id) ?? stringValue(refIdentity.stage_id)],
     ['stage_attempt_id', stringValue(payload.stage_attempt_id) ?? stringValue(refIdentity.stage_attempt_id)],
-    ['stage_run_id', stringValue(payload.stage_run_id) ?? stringValue(refIdentity.stage_run_id)],
+    ['stage_run_id', stringValue(payload.stage_run_id) ?? stringValue(ownerDeltaBindingIdentity.stage_run_id) ?? stringValue(refIdentity.stage_run_id)],
     ['task_kind', stringValue(payload.task_kind) ?? stringValue(payload.recommended_task_kind)],
     ['study_id', stringValue(payload.study_id) ?? stringValue(refIdentity.study_id)],
-    ['source_fingerprint', payloadAttemptSourceFingerprint ?? stringValue(refIdentity.source_fingerprint)],
+    ['source_fingerprint', payloadAttemptSourceFingerprint ?? stringValue(ownerDeltaBindingIdentity.source_fingerprint) ?? stringValue(refIdentity.source_fingerprint)],
     ['domain_source_fingerprint', payloadDomainSourceFingerprint],
-    ['idempotency_key', stringValue(payload.idempotency_key) ?? stringValue(refIdentity.idempotency_key)],
+    ['idempotency_key', stringValue(payload.idempotency_key) ?? stringValue(ownerDeltaBindingIdentity.idempotency_key) ?? stringValue(refIdentity.idempotency_key)],
     [
       'stage_manifest_ref',
-      stringValue(payload.stage_manifest_ref) ?? stringValue(refIdentity.stage_manifest_ref),
+      stringValue(payload.stage_manifest_ref) ?? stringValue(ownerDeltaBindingIdentity.stage_manifest_ref) ?? stringValue(refIdentity.stage_manifest_ref),
     ],
     [
       'current_pointer_ref',
-      stringValue(payload.current_pointer_ref) ?? stringValue(refIdentity.current_pointer_ref),
+      stringValue(payload.current_pointer_ref) ?? stringValue(ownerDeltaBindingIdentity.current_pointer_ref) ?? stringValue(refIdentity.current_pointer_ref),
     ],
-    ['provider_attempt_ref', stringValue(payload.provider_attempt_ref) ?? stringValue(refIdentity.provider_attempt_ref)],
-    ['attempt_lease_ref', stringValue(payload.attempt_lease_ref) ?? stringValue(refIdentity.attempt_lease_ref)],
+    ['provider_attempt_ref', stringValue(payload.provider_attempt_ref) ?? stringValue(ownerDeltaBindingIdentity.provider_attempt_ref) ?? stringValue(refIdentity.provider_attempt_ref)],
+    ['attempt_lease_ref', stringValue(payload.attempt_lease_ref) ?? stringValue(ownerDeltaBindingIdentity.attempt_lease_ref) ?? stringValue(refIdentity.attempt_lease_ref)],
     [
       'execution_authorization_decision_ref',
       stringValue(payload.execution_authorization_decision_ref)
+        ?? stringValue(ownerDeltaBindingIdentity.execution_authorization_decision_ref)
         ?? stringValue(refIdentity.execution_authorization_decision_ref),
     ],
     ['profile', stringValue(payload.profile)],

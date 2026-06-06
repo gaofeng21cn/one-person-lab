@@ -535,6 +535,16 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
       && missingNoActiveCallerProofCount === 0
       && missingNoForbiddenWriteCount === 0
       && missingTombstoneOrProvenanceCount === 0;
+    const deleteOrKeepPrerequisitesObserved = deletionEvidenceWorklists.length > 0
+      && missingNoActiveCallerProofCount === 0
+      && missingNoForbiddenWriteCount === 0
+      && missingTombstoneOrProvenanceCount === 0;
+    const nextRequiredOwnerAction = deleteOrKeepPrerequisitesObserved
+      ? DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION
+      : 'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review';
+    const acceptedRefsOnlyResultShapes = deleteOrKeepPrerequisitesObserved
+      ? [...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES]
+      : ['typed_blocker_ref'];
     return {
       surface_kind: 'opl_agent_generated_default_caller_readiness_projection',
       version: 'v1',
@@ -583,11 +593,11 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         generated_default_caller_readiness_can_authorize_physical_delete: false,
         physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
         physical_delete_authorization_status: 'not_authorized_by_opl_projection',
-        next_required_owner_action: DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
-        accepted_refs_only_result_shapes: [
-          ...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES,
-        ],
-        owner_decision_required_after_all_refs_observed: true,
+        delete_or_keep_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
+        owner_decision_required_after_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
+        next_required_owner_action: nextRequiredOwnerAction,
+        accepted_refs_only_result_shapes: acceptedRefsOnlyResultShapes,
+        owner_decision_required_after_all_refs_observed: allDeletionEvidenceRequirementsObserved,
         deletion_evidence_requirements_are_completion_claims: false,
         not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
         physical_delete_authority_owner: 'domain_repo_owner_after_receipt_parity',
@@ -638,11 +648,12 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         generated_default_caller_readiness_can_authorize_physical_delete: false,
         physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
         physical_delete_authorization_status: 'not_authorized_by_opl_projection',
-        next_required_owner_action: DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
-        accepted_refs_only_result_shapes: [
-          ...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES,
-        ],
-        owner_decision_required_after_all_refs_observed: true,
+        delete_or_keep_prerequisites_observed: false,
+        owner_decision_required_after_prerequisites_observed: false,
+        next_required_owner_action:
+          'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
+        accepted_refs_only_result_shapes: ['typed_blocker_ref'],
+        owner_decision_required_after_all_refs_observed: false,
         deletion_evidence_requirements_are_completion_claims: false,
         not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
         physical_delete_authority_owner: 'domain_repo_owner_after_receipt_parity',

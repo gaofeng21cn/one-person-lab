@@ -180,6 +180,103 @@ test('MAS owner delta result payload feeds quality gate and stable blocker refs 
   assert.equal(preflight.accepted_payload_paths.typed_blocker_path.can_claim_production_ready, false);
 });
 
+test('MAS owner delta result closeout binding can satisfy StageRun owner-answer identity', () => {
+  const preflight = preflightDomainDispatchEvidencePayload(
+    {
+      owner_delta_result: {
+        surface_kind: 'mas_current_owner_delta_result',
+        study_id: '002-dm-china-us-mortality-attribution',
+        result_kind: 'stable_typed_blocker',
+        required_return_shape_satisfied: true,
+        owner_receipt_refs: [],
+        quality_gate_receipt_refs: [],
+        stable_typed_blocker_refs: ['mas://dm002/blockers/medical-paper-readiness'],
+        body_included: false,
+        closeout_binding: {
+          stage_run_id: 'stage-run::dm002::domain-owner-dispatch',
+          stage_manifest_ref: 'mas://stage-manifests/dm002/domain-owner-dispatch',
+          current_pointer_ref: 'mas://current-pointers/dm002/domain-owner-dispatch',
+          source_fingerprint: 'mas_default_executor_source_current',
+          idempotency_key: 'owner-route::dm002::medical-paper-readiness',
+          provider_attempt_ref: 'opl://stage-attempts/sat-dm002-readiness',
+          attempt_lease_ref: 'opl://stage-attempts/sat-dm002-readiness/leases/current',
+          execution_authorization_decision_ref:
+            'opl://stage-attempts/sat-dm002-readiness/execution-authorizations/current',
+        },
+      },
+    },
+    {
+      target_identity: {
+        study_id: '002-dm-china-us-mortality-attribution',
+        stage_run_id: 'stage-run::dm002::domain-owner-dispatch',
+        stage_manifest_ref: 'mas://stage-manifests/dm002/domain-owner-dispatch',
+        current_pointer_ref: 'mas://current-pointers/dm002/domain-owner-dispatch',
+        source_fingerprint: 'mas_default_executor_source_current',
+        idempotency_key: 'owner-route::dm002::medical-paper-readiness',
+        provider_attempt_ref: 'opl://stage-attempts/sat-dm002-readiness',
+        attempt_lease_ref: 'opl://stage-attempts/sat-dm002-readiness/leases/current',
+        execution_authorization_decision_ref:
+          'opl://stage-attempts/sat-dm002-readiness/execution-authorizations/current',
+      },
+    },
+  );
+
+  assert.equal(preflight.status, 'ready_to_record');
+  assert.equal(preflight.identity_binding.status, 'matched');
+  assert.deepEqual(preflight.identity_binding.conflict_fields, []);
+  assert.equal(
+    preflight.identity_binding.payload_identity.stage_run_id,
+    'stage-run::dm002::domain-owner-dispatch',
+  );
+  assert.equal(
+    preflight.identity_binding.payload_identity.idempotency_key,
+    'owner-route::dm002::medical-paper-readiness',
+  );
+});
+
+test('MAS owner delta result closeout binding conflicts fail closed', () => {
+  const preflight = preflightDomainDispatchEvidencePayload(
+    {
+      owner_delta_result: {
+        surface_kind: 'mas_current_owner_delta_result',
+        study_id: '002-dm-china-us-mortality-attribution',
+        result_kind: 'stable_typed_blocker',
+        required_return_shape_satisfied: true,
+        stable_typed_blocker_refs: ['mas://dm002/blockers/medical-paper-readiness'],
+        body_included: false,
+        closeout_binding: {
+          stage_run_id: 'stage-run::dm002::stale',
+          stage_manifest_ref: 'mas://stage-manifests/dm002/stale',
+          current_pointer_ref: 'mas://current-pointers/dm002/stale',
+          source_fingerprint: 'mas_default_executor_source_stale',
+          idempotency_key: 'owner-route::dm002::stale',
+        },
+      },
+    },
+    {
+      target_identity: {
+        study_id: '002-dm-china-us-mortality-attribution',
+        stage_run_id: 'stage-run::dm002::current',
+        stage_manifest_ref: 'mas://stage-manifests/dm002/current',
+        current_pointer_ref: 'mas://current-pointers/dm002/current',
+        source_fingerprint: 'mas_default_executor_source_current',
+        idempotency_key: 'owner-route::dm002::current',
+      },
+    },
+  );
+
+  assert.equal(preflight.status, 'blocked');
+  assert.equal(preflight.identity_binding.status, 'conflict');
+  assert.deepEqual(preflight.identity_binding.conflict_fields, [
+    'stage_run_id',
+    'source_fingerprint',
+    'idempotency_key',
+    'stage_manifest_ref',
+    'current_pointer_ref',
+  ]);
+  assert.equal(preflight.can_record_refs_only_receipt, false);
+});
+
 test('MAS paper-line result carrying body or readiness claims fails closed', () => {
   assert.throws(
     () => assertDomainDispatchEvidencePayloadReady(route, {

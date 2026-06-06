@@ -423,6 +423,8 @@ export function buildDefaultCallerDeletionEvidenceRefs(projects: DomainManifestC
       deletion_evidence_requirements_are_completion_claims: false,
       owner_decision_required_after_prerequisites_observed:
         allDomainsWithDeleteOrKeepPrerequisites,
+      delete_or_keep_prerequisites_observed:
+        allDomainsWithDeleteOrKeepPrerequisites,
       next_required_owner_action: allDomainsWithDeleteOrKeepPrerequisites
         ? DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION
         : 'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',

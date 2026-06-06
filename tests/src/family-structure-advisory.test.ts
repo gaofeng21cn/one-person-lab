@@ -18,6 +18,7 @@ test('family structure advisory classifies tracked structural risks without fail
     run('git', ['config', 'user.name', 'Test User'], fixtureRoot);
 
     writeLines(fixtureRoot, 'src/product_entry_parts/manifest_builder.py', 860);
+    writeLines(fixtureRoot, 'src/product_entry_parts/consumer_thinning_audit_parts/model.py', 10);
     writeLines(fixtureRoot, 'src/part_001.py', 12);
     writeLines(fixtureRoot, 'src/shared.py', 610);
     writeLines(fixtureRoot, 'schemas/v1/public.schema.json', 1005);
@@ -37,10 +38,16 @@ test('family structure advisory classifies tracked structural risks without fail
 
     const fixture = report.repositories[0];
     assert.equal(fixture.repo, 'fixture');
+    assert.equal(fixture.repo_role, 'custom_scope');
+    assert.equal(fixture.verify_entry_policy, 'required');
+    assert.equal(fixture.summary.verify_entry_present, false);
     assert.equal(fixture.summary.missing_verify_entry, true);
     assert.deepEqual(
       fixture.categories.needs_design_pass.map((finding: { path: string }) => finding.path),
-      ['src/product_entry_parts/manifest_builder.py'],
+      [
+        'src/product_entry_parts/manifest_builder.py',
+        'src/product_entry_parts/consumer_thinning_audit_parts/model.py',
+      ],
     );
     assert.deepEqual(
       fixture.categories.mechanical_residue.map((finding: { path: string }) => finding.path),
@@ -83,8 +90,35 @@ test('default family structure advisory scope follows the current OPL series', (
       'redcube-ai',
       'opl-meta-agent',
       'one-person-lab-app',
+      'opl-agui-codex-shell',
       'opl-doc',
       'opl-flow',
+      'homebrew-one-person-lab',
+      'OPL-PPT',
+    ],
+  );
+  assert.deepEqual(
+    generatedReport.repositories.map((repo: { repo_role: string }) => repo.repo_role),
+    [
+      'framework_governance',
+      'standard_foundry_agent',
+      'standard_foundry_agent',
+      'standard_foundry_agent',
+      'standard_foundry_agent',
+      'app_product_release_owner',
+      'app_shell_candidate',
+      'plugin_workflow_support',
+      'plugin_workflow_support',
+      'distribution_tap_support',
+      'artifact_reference_support',
+    ],
+  );
+  assert.deepEqual(
+    generatedReport.excluded_repositories.map((repo: { repo: string }) => repo.repo),
+    [
+      'opl-aion-shell',
+      'med-deepscientist',
+      'DeepScientist',
     ],
   );
 });

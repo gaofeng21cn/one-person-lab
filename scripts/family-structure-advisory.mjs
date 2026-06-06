@@ -29,15 +29,54 @@ const LARGE_SHARED_BUCKET_LIMIT = 600;
 const PUBLIC_SURFACE_LINE_LIMIT = 1000;
 
 const DEFAULT_REPOS = [
-  ['one-person-lab', repoRoot],
-  ['med-autoscience', path.join(workspaceRoot, 'med-autoscience')],
-  ['med-autogrant', path.join(workspaceRoot, 'med-autogrant')],
-  ['redcube-ai', path.join(workspaceRoot, 'redcube-ai')],
-  ['opl-meta-agent', path.join(workspaceRoot, 'opl-meta-agent')],
-  ['one-person-lab-app', path.join(workspaceRoot, 'one-person-lab-app')],
-  ['opl-doc', path.join(workspaceRoot, 'opl-doc')],
-  ['opl-flow', path.join(workspaceRoot, 'opl-flow')],
+  repoEntry('one-person-lab', repoRoot, 'framework_governance'),
+  repoEntry('med-autoscience', path.join(workspaceRoot, 'med-autoscience'), 'standard_foundry_agent'),
+  repoEntry('med-autogrant', path.join(workspaceRoot, 'med-autogrant'), 'standard_foundry_agent'),
+  repoEntry('redcube-ai', path.join(workspaceRoot, 'redcube-ai'), 'standard_foundry_agent'),
+  repoEntry('opl-meta-agent', path.join(workspaceRoot, 'opl-meta-agent'), 'standard_foundry_agent'),
+  repoEntry('one-person-lab-app', path.join(workspaceRoot, 'one-person-lab-app'), 'app_product_release_owner'),
+  repoEntry('opl-agui-codex-shell', path.join(workspaceRoot, 'opl-agui-codex-shell'), 'app_shell_candidate'),
+  repoEntry('opl-doc', path.join(workspaceRoot, 'opl-doc'), 'plugin_workflow_support'),
+  repoEntry('opl-flow', path.join(workspaceRoot, 'opl-flow'), 'plugin_workflow_support'),
+  repoEntry('homebrew-one-person-lab', path.join(workspaceRoot, 'homebrew-one-person-lab'), 'distribution_tap_support', {
+    verifyEntryPolicy: 'not_required',
+  }),
+  repoEntry('OPL-PPT', path.join(workspaceRoot, 'OPL-PPT'), 'artifact_reference_support', {
+    cleanupScope: 'reference_artifact_support',
+    verifyEntryPolicy: 'not_required',
+  }),
 ];
+
+const DEFAULT_EXCLUDED_REPOS = [
+  {
+    repo: 'opl-aion-shell',
+    root: path.join(workspaceRoot, 'opl-aion-shell'),
+    repo_role: 'external_fork_app_shell_carrier',
+    exclusion_reason: 'user_excluded_external_fork',
+  },
+  {
+    repo: 'med-deepscientist',
+    root: path.join(workspaceRoot, 'med-deepscientist'),
+    repo_role: 'mas_archive_reference_fixture',
+    exclusion_reason: 'archive_reference_not_active_opl_cleanup_scope',
+  },
+  {
+    repo: 'DeepScientist',
+    root: path.join(workspaceRoot, 'DeepScientist'),
+    repo_role: 'external_upstream_reference',
+    exclusion_reason: 'external_reference_not_active_opl_cleanup_scope',
+  },
+];
+
+function repoEntry(name, root, role, options = {}) {
+  return {
+    name,
+    root,
+    role,
+    cleanupScope: options.cleanupScope ?? 'governed_opl_related',
+    verifyEntryPolicy: options.verifyEntryPolicy ?? 'required',
+  };
+}
 
 const args = parseArgs(process.argv.slice(2));
 const repos = args.repos.length > 0 ? args.repos : DEFAULT_REPOS;
@@ -91,14 +130,14 @@ function parseRepoArg(value) {
   const separator = value.indexOf('=');
   if (separator === -1) {
     const root = path.resolve(value);
-    return [path.basename(root), root];
+    return repoEntry(path.basename(root), root, 'custom_scope');
   }
-  return [value.slice(0, separator), path.resolve(value.slice(separator + 1))];
+  return repoEntry(value.slice(0, separator), path.resolve(value.slice(separator + 1)), 'custom_scope');
 }
 
 function buildReport(repoEntries) {
   const generatedAt = new Date().toISOString();
-  const repositories = repoEntries.map(([name, root]) => scanRepository(name, root));
+  const repositories = repoEntries.map((entry) => scanRepository(entry));
   return {
     report_kind: 'opl_family_structure_advisory',
     generated_at: generatedAt,
@@ -109,14 +148,18 @@ function buildReport(repoEntries) {
       large_shared_bucket_limit: LARGE_SHARED_BUCKET_LIMIT,
       public_surface_line_limit: PUBLIC_SURFACE_LINE_LIMIT,
     },
+    excluded_repositories: args.repos.length > 0 ? [] : DEFAULT_EXCLUDED_REPOS,
     repositories,
   };
 }
 
-function scanRepository(name, root) {
+function scanRepository(entry) {
   const repo = {
-    repo: name,
-    root,
+    repo: entry.name,
+    root: entry.root,
+    repo_role: entry.role,
+    cleanup_scope: entry.cleanupScope,
+    verify_entry_policy: entry.verifyEntryPolicy,
     status: 'scanned',
     categories: {
       safe_to_keep: [],
@@ -129,16 +172,17 @@ function scanRepository(name, root) {
       code_files: 0,
       part_like_files: 0,
       shared_like_files: 0,
+      verify_entry_present: false,
       missing_verify_entry: false,
     },
   };
 
-  if (!fs.existsSync(root)) {
+  if (!fs.existsSync(entry.root)) {
     repo.status = 'missing';
     return repo;
   }
 
-  const tracked = spawnSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' });
+  const tracked = spawnSync('git', ['ls-files'], { cwd: entry.root, encoding: 'utf8' });
   if (tracked.status !== 0) {
     repo.status = 'git_ls_files_failed';
     repo.error = tracked.stderr.trim();
@@ -147,10 +191,12 @@ function scanRepository(name, root) {
 
   const files = tracked.stdout.split('\n').filter(Boolean);
   repo.summary.tracked_files = files.length;
-  repo.summary.missing_verify_entry = !fs.existsSync(path.join(root, 'scripts', 'verify.sh'));
+  const hasVerifyEntry = fs.existsSync(path.join(entry.root, 'scripts', 'verify.sh'));
+  repo.summary.verify_entry_present = hasVerifyEntry;
+  repo.summary.missing_verify_entry = entry.verifyEntryPolicy !== 'not_required' && !hasVerifyEntry;
 
   for (const relativePath of files) {
-    const absolutePath = path.join(root, relativePath);
+    const absolutePath = path.join(entry.root, relativePath);
     if (!fs.existsSync(absolutePath) || shouldIgnore(relativePath)) {
       continue;
     }
@@ -230,7 +276,7 @@ function classifyPath(relativePath, lineCount, { isCode, isGeneratedOrVendorSour
   }
 
   if (partSegments.length > 1) {
-    findings.push({ category: 'mechanical_residue', reason: 'nested_parts_directory' });
+    findings.push({ category: 'needs_design_pass', reason: 'nested_parts_directory_design_review' });
   }
 
   if (isCode && lineCount >= SOURCE_LINE_LIMIT) {
@@ -311,12 +357,24 @@ function renderMarkdown(report) {
     '',
   ];
 
+  if (report.excluded_repositories.length > 0) {
+    lines.push('## Excluded repositories', '');
+    for (const excluded of report.excluded_repositories) {
+      lines.push(`- \`${excluded.repo}\` (${excluded.repo_role}): ${excluded.exclusion_reason}`);
+    }
+    lines.push('');
+  }
+
   for (const repo of report.repositories) {
     lines.push(`## ${repo.repo}`, '');
     lines.push(`- root: \`${repo.root}\``);
+    lines.push(`- repo role: \`${repo.repo_role}\``);
+    lines.push(`- cleanup scope: \`${repo.cleanup_scope}\``);
+    lines.push(`- verify entry policy: \`${repo.verify_entry_policy}\``);
     lines.push(`- status: \`${repo.status}\``);
     lines.push(`- tracked files: ${repo.summary.tracked_files}`);
     lines.push(`- code files scanned: ${repo.summary.code_files}`);
+    lines.push(`- verify entry present: ${repo.summary.verify_entry_present ? 'yes' : 'no'}`);
     lines.push(`- missing verify entry: ${repo.summary.missing_verify_entry ? 'yes' : 'no'}`);
     lines.push('');
 

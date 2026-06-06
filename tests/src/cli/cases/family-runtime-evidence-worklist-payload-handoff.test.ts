@@ -85,6 +85,13 @@ type PayloadHandoffWorklist = {
     accepted_payload_paths: Record<string, unknown>;
     required_operator_payload_refs: string[];
     supplemental_operator_payload_refs: string[];
+    expected_receipt_refs: string[];
+    unobserved_expected_receipt_refs: string[];
+    monitor_refs: string[];
+    unobserved_monitor_refs: string[];
+    unobserved_source_scope_refs: string[];
+    unobserved_runtime_event_refs: string[];
+    required_receipt_shapes: string[];
     payload_preflight_policy: string;
     payload_preflight_blocked_error_kind: string;
     identity_binding_policy: string;
@@ -103,6 +110,13 @@ type PayloadHandoffWorklist = {
       action_id: string;
       payload_workorder: Record<string, unknown>;
       accepted_payload_paths: Record<string, unknown>;
+      expected_receipt_refs: string[];
+      unobserved_expected_receipt_refs: string[];
+      monitor_refs: string[];
+      unobserved_monitor_refs: string[];
+      unobserved_source_scope_refs: string[];
+      unobserved_runtime_event_refs: string[];
+      required_receipt_shapes: string[];
     }>;
   };
   authority_boundary: Record<string, boolean>;
@@ -161,6 +175,28 @@ function domainDispatchBridgeRoute(actionId: string) {
     supplemental_operator_payload_refs: ['evidence_refs'],
     required_evidence_refs: [
       'domain_dispatch:medautoscience:sat_payload_handoff:owner_receipt_or_typed_blocker',
+    ],
+    expected_receipt_refs: [
+      'mas://expected-receipts/default-executor-owner',
+    ],
+    unobserved_expected_receipt_refs: [
+      'mas://expected-receipts/default-executor-owner',
+    ],
+    monitor_refs: [
+      'metric:domain-dispatch-owner-currentness',
+    ],
+    unobserved_monitor_refs: [
+      'metric:domain-dispatch-owner-currentness',
+    ],
+    unobserved_source_scope_refs: [
+      'source:domain-dispatch-owner-route',
+    ],
+    unobserved_runtime_event_refs: [
+      'runtime_event:domain_dispatch.owner_receipt_recorded',
+    ],
+    required_receipt_shapes: [
+      'domain_owner_receipt_ref',
+      'typed_blocker_ref',
     ],
   };
 }
@@ -352,6 +388,29 @@ test('family-runtime evidence-worklist joins domain-dispatch payload handoff fro
     'typed_blocker_refs',
   ]);
   assert.deepEqual(item.supplemental_operator_payload_refs, ['evidence_refs']);
+  assert.deepEqual(item.expected_receipt_refs, [
+    'mas://expected-receipts/default-executor-owner',
+  ]);
+  assert.deepEqual(packetWorkorder.expected_receipt_refs, item.expected_receipt_refs);
+  assert.deepEqual(item.unobserved_expected_receipt_refs, [
+    'mas://expected-receipts/default-executor-owner',
+  ]);
+  assert.deepEqual(packetWorkorder.unobserved_expected_receipt_refs, item.unobserved_expected_receipt_refs);
+  assert.deepEqual(item.monitor_refs, ['metric:domain-dispatch-owner-currentness']);
+  assert.deepEqual(packetWorkorder.monitor_refs, item.monitor_refs);
+  assert.deepEqual(item.unobserved_monitor_refs, ['metric:domain-dispatch-owner-currentness']);
+  assert.deepEqual(packetWorkorder.unobserved_monitor_refs, item.unobserved_monitor_refs);
+  assert.deepEqual(item.unobserved_source_scope_refs, ['source:domain-dispatch-owner-route']);
+  assert.deepEqual(packetWorkorder.unobserved_source_scope_refs, item.unobserved_source_scope_refs);
+  assert.deepEqual(item.unobserved_runtime_event_refs, [
+    'runtime_event:domain_dispatch.owner_receipt_recorded',
+  ]);
+  assert.deepEqual(packetWorkorder.unobserved_runtime_event_refs, item.unobserved_runtime_event_refs);
+  assert.deepEqual(item.required_receipt_shapes, [
+    'domain_owner_receipt_ref',
+    'typed_blocker_ref',
+  ]);
+  assert.deepEqual(packetWorkorder.required_receipt_shapes, item.required_receipt_shapes);
   assert.equal(
     item.payload_preflight_policy,
     'domain_dispatch_evidence_payload_must_pass_success_refs_or_typed_blocker_path_preflight',

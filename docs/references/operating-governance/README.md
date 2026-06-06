@@ -24,7 +24,7 @@ Currentness policy：本目录不冻结 hard blocker、stage attempt、route、w
 | `family-product-operator-projection.md` | `support_reference` | Operator projection 支撑；不是 action authority。 |
 | `family-incident-learning-loop.md` | `support_reference` | Incident learning 支撑；domain truth 仍由 domain 持有。 |
 | `opl-family-directory-governance.md` | `support_reference` | Family repo layout 的目录治理支撑。 |
-| `family-structure-advisory-report.md` | `active_support_dated_snapshot` | 结构 advisory 支撑；默认命令 scope 已是当前 OPL-related 八仓，排除 `opl-aion-shell`，复用精确状态前仍必须刷新。 |
+| `family-structure-advisory-report.md` | `active_support_dated_snapshot` | 结构 advisory 支撑；默认命令 scope 已是当前 OPL-related 十一仓，排除 `opl-aion-shell`，复用精确状态前仍必须刷新。 |
 
 ## 已归档的 Gateway-Derived Surface
 

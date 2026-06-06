@@ -198,6 +198,14 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
       'no_forbidden_write_evidence_refs',
       'no_forbidden_write_evidence_ref',
     ]);
+    const deleteOrKeepPrerequisitesObserved =
+      ready
+      && observedNoActiveCallerProofRefs.length > 0
+      && observedNoForbiddenWriteRefs.length > 0
+      && observedTombstoneOrProvenanceRefs.length > 0;
+    const allDeletionEvidenceRequirementsObserved =
+      deleteOrKeepPrerequisitesObserved
+      && observedDomainReceiptOrBlockerRefs.length > 0;
     const deletionEvidenceWorklist = {
       surface_kind: 'opl_default_caller_surface_deletion_evidence_worklist',
       surface_id: surfaceId,
@@ -253,11 +261,15 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
       worklist_item_is_completion_claim: false,
       physical_delete_authorization_status: 'not_authorized_by_opl_projection',
       not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
-      next_required_owner_action: DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
-      accepted_refs_only_result_shapes: [
-        ...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES,
-      ],
-      owner_decision_required_after_all_refs_observed: true,
+      delete_or_keep_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
+      owner_decision_required_after_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
+      next_required_owner_action: deleteOrKeepPrerequisitesObserved
+        ? DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION
+        : 'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
+      accepted_refs_only_result_shapes: deleteOrKeepPrerequisitesObserved
+        ? [...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES]
+        : ['typed_blocker_ref'],
+      owner_decision_required_after_all_refs_observed: allDeletionEvidenceRequirementsObserved,
       retirement_guard: {
         target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
         mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],

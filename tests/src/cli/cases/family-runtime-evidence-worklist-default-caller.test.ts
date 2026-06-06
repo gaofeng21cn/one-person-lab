@@ -51,6 +51,18 @@ test('family-runtime evidence-worklist uses repo-native default-caller readiness
     assert.equal(defaultCallers.summary.missing_no_forbidden_write_proof_count, 8);
     assert.equal(defaultCallers.summary.missing_tombstone_or_provenance_ref_count, 8);
     assert.equal(
+      defaultCallers.physical_delete_authority_read_model.delete_or_keep_prerequisites_observed,
+      false,
+    );
+    assert.equal(
+      defaultCallers.physical_delete_authority_read_model.next_required_owner_action,
+      'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
+    );
+    assert.deepEqual(
+      defaultCallers.physical_delete_authority_read_model.accepted_refs_only_result_shapes,
+      ['typed_blocker_ref'],
+    );
+    assert.equal(
       defaultCallers.reports[0].deletion_evidence_worklists.every((worklist: {
         no_active_caller_proof: {
           status: string;
@@ -90,6 +102,12 @@ test('family-runtime evidence-worklist uses repo-native default-caller readiness
     assert.equal(refs.summary.missing_no_active_caller_proof_count, 0);
     assert.equal(refs.summary.missing_no_forbidden_write_proof_count, 8);
     assert.equal(refs.summary.missing_tombstone_or_provenance_ref_count, 8);
+    assert.equal(refs.summary.delete_or_keep_prerequisites_observed, false);
+    assert.equal(
+      refs.summary.next_required_owner_action,
+      'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
+    );
+    assert.deepEqual(refs.summary.accepted_refs_only_result_shapes, ['typed_blocker_ref']);
     assert.deepEqual(refs.summary.mandatory_gate_ids, defaultCallers.retirement_guard_mandatory_gate_ids);
     assert.equal(refs.summary.retirement_guard_target_classes.includes('legacy_dispatch_compensation_path'), true);
     assert.equal(refs.summary.retirement_guard_target_classes.includes('retained_domain_wrapper'), true);

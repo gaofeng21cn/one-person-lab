@@ -13,7 +13,7 @@ machine boundary: generated from `npm run --silent family:structure-advisory -- 
 ## Reading Rules
 
 - 本报告是 tracked advisory snapshot，不是结构阻断门。复用精确文件清单、line count、`needs_design_pass`、`mechanical_residue` 或 `public_surface_risk` 前必须重跑 fresh advisory command。
-- 2026-06-06 起，`family:structure-advisory` 默认 scope 覆盖当前 OPL-related 八仓：`one-person-lab`、`med-autoscience`、`med-autogrant`、`redcube-ai`、`opl-meta-agent`、`one-person-lab-app`、`opl-doc`、`opl-flow`。`opl-aion-shell` 是外部 fork / App shell implementation carrier，不进入 OPL-owned structure cleanup scope；`med-deepscientist` 只按 MAS archive/reference/fixture 语境读取。
+- 2026-06-06 起，`family:structure-advisory` 默认 scope 覆盖当前 OPL-related 十一仓：`one-person-lab`、`med-autoscience`、`med-autogrant`、`redcube-ai`、`opl-meta-agent`、`one-person-lab-app`、`opl-agui-codex-shell`、`opl-doc`、`opl-flow`、`homebrew-one-person-lab`、`OPL-PPT`。`opl-aion-shell` 是用户明确排除的外部 fork / App shell implementation carrier，不进入 OPL-owned structure cleanup scope；`med-deepscientist` 和 `DeepScientist` 只按 archive/reference/fixture 语境读取。
 - 若 sibling repo dirty、ahead、最近一小时有写入、存在活跃进程、远端/PR owner 信号，命令输出只能作为本地 read-only preflight；精确 line count 或 findings 写入对应 repo owner doc 前必须由该 repo owner lane 刷新并验证。
 - Advisory findings 只能进入 design-pass、contract-surface review 或 cleanup candidate queue；不能直接变成 fail-closed backlog、机械拆分任务、domain ready 判断或 production ready 判断。
 
@@ -25,22 +25,25 @@ Fresh command:
 node ./scripts/family-structure-advisory.mjs --format=json
 ```
 
-Fresh eight-repo summary from `2026-06-06T10:35:43Z` after the first landing pass:
+Fresh eleven-repo summary from `2026-06-06T12:39Z` after the AG-UI renderer structure pass:
 
-- `one-person-lab`: `needs_design_pass=21`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
-- `med-autoscience`: `needs_design_pass=25`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
-- `med-autogrant`: `needs_design_pass=1`, `mechanical_residue=0`, `public_surface_risk=5`, `missing_verify_entry=false`
-- `redcube-ai`: `needs_design_pass=10`, `mechanical_residue=0`, `public_surface_risk=9`, `missing_verify_entry=false`
+- `one-person-lab`: `needs_design_pass=23`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
+- `med-autoscience`: `needs_design_pass=24`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
+- `med-autogrant`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=5`, `missing_verify_entry=false`
+- `redcube-ai`: `needs_design_pass=7`, `mechanical_residue=0`, `public_surface_risk=9`, `missing_verify_entry=false`
 - `opl-meta-agent`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=1`, `missing_verify_entry=false`
-- `one-person-lab-app`: `needs_design_pass=5`, `mechanical_residue=0`, `public_surface_risk=3`, `missing_verify_entry=false`
+- `one-person-lab-app`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=3`, `missing_verify_entry=false`
+- `opl-agui-codex-shell`: `needs_design_pass=3`, `mechanical_residue=0`, `public_surface_risk=0`, `missing_verify_entry=false`
 - `opl-doc`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=0`, `missing_verify_entry=false`
 - `opl-flow`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=0`, `missing_verify_entry=false`
+- `homebrew-one-person-lab`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=0`, `missing_verify_entry=false`
+- `OPL-PPT`: `needs_design_pass=2`, `mechanical_residue=0`, `public_surface_risk=0`, `missing_verify_entry=false`
 
 Current scope:
 
 - Included standard / Foundry Agent repos: `med-autoscience`、`med-autogrant`、`redcube-ai`、`opl-meta-agent`
-- Included framework / product / support repos: `one-person-lab`、`one-person-lab-app`、`opl-doc`、`opl-flow`
-- Excluded: `opl-aion-shell`
+- Included framework / product / shell / support repos: `one-person-lab`、`one-person-lab-app`、`opl-agui-codex-shell`、`opl-doc`、`opl-flow`、`homebrew-one-person-lab`、`OPL-PPT`
+- Excluded: `opl-aion-shell`、`med-deepscientist`、`DeepScientist`
 
 External calibration:
 
@@ -50,7 +53,7 @@ External calibration:
 
 Current conclusion:
 
-- Fresh scan shows no obvious mechanical residue in the eight-repo scope. That means no tracked `chunk_*` / `part_001` / nested `*_parts/*_parts` class hard split remains in the scanner's current pattern set; it does not mean all structure is ideal.
+- Fresh scan shows no obvious mechanical residue in the eleven-repo scope. That means no tracked `chunk_*` / `part_001` / nested `*_parts/*_parts` class hard split remains in the scanner's current pattern set; it does not mean all structure is ideal.
 - Line budget remains useful as a maintainability fitness function, but it is advisory for ordinary development and blocking only in explicit strict maintenance. The strict maintenance unit is `new over-limit growth`, `baseline growth`, `stale baseline`, `retired baseline`, or `missing reviewed owner/reason`; the repair action must be a natural semantic split, owner-boundary move, generated/source separation, or approved reviewed baseline. Do not split a long file into physical shards that must be mentally reassembled.
 - `parts/` is acceptable when it names a real owner subdomain. `*_parts/*_parts` or nested `parts` stacks are review signals; they become cleanup tasks only after reading the caller and confirming the directory name is merely a mechanical consequence of the budget.
 - Sentrux is still valuable where it has explicit repo rules or produces trend diagnostics. Baseline-only Sentrux is advisory; explicit `.sentrux/rules.toml` should also stay advisory in ordinary development and become blocking only in explicit strict maintenance after the rules reflect current repo truth and avoid generated contracts / schema surfaces that are intentionally large.
@@ -58,7 +61,7 @@ Current conclusion:
 Family morphology conclusion:
 
 - Standard / Foundry Agent repos should visibly share the same repo-source shape: `agent/` holds stage prompt / skill / tool affordance / knowledge / quality-gate refs; `contracts/` holds machine-readable domain descriptors and schemas; `runtime/` holds sidecar / projection / lifecycle adapters as source only; `src` or `packages` holds domain implementation and authority functions; `docs/` holds owner truth and policy; `scripts/verify.sh` is the repo-native verification entry.
-- Support repos can be lighter but should still be recognizable: `one-person-lab` is the framework / shared governance owner; `one-person-lab-app` is product / release / shell-candidate owner; `opl-doc` and `opl-flow` are plugin / workflow support repos with `.codex-plugin` + `skills/` where applicable, plus `scripts/verify.sh` when they are more than a passive reference pack.
+- Support repos can be lighter but should still be recognizable: `one-person-lab` is the framework / shared governance owner; `one-person-lab-app` is product / release / shell-candidate owner; `opl-agui-codex-shell` is App-owned shell-candidate implementation support; `opl-doc` and `opl-flow` are plugin / workflow support repos with `.codex-plugin` + `skills/` where applicable, plus `scripts/verify.sh` when they are more than a passive reference pack; `homebrew-one-person-lab` is distribution transport support; `OPL-PPT` is artifact reference support, so scratch/reference build scripts are advisory rather than active runtime cleanup blockers.
 - Current inconsistent family signals are not mostly mechanical splits. They are near-budget semantic modules, large tests, generated public contracts, and support repos whose verification / source morphology is thinner than the standard agent repos.
 
 ## 2026-06-06 Landing Evidence
@@ -72,6 +75,7 @@ First landing pass closed the clearest unnatural or family-inconsistent structur
 - `one-person-lab-app` `d640d5e`: split active-shell shared contract validators from the top-level validator; the entry remains large and stays in the next App tranche.
 - `opl-doc` `757d30c`: split the broad OPL Doc doctor into natural command modules: CLI, profile discovery, invariant checks, plugin sync, family plan, rendering, constants, and common helpers.
 - `opl-flow` `764d1ab`: added a thin repo-native `scripts/verify.sh`, closing the missing family-native verify signal.
+- `opl-agui-codex-shell` `3991af4`: split renderer `App.jsx` and `styles.css` into locale, state, event, thread, view and style responsibility modules, and updated candidate source validation to read the renderer module graph instead of requiring all UI snippets in one file.
 
 Fresh verification recorded during this pass:
 
@@ -82,6 +86,7 @@ Fresh verification recorded during this pass:
 - App: `npm run validate:active-shell -- --quick`; `npm run validate:release-boundary`; `scripts/verify.sh structure`.
 - OPL Doc: `PYTHONDONTWRITEBYTECODE=1 bash scripts/verify.sh`.
 - OPL Flow: `scripts/verify.sh`.
+- AG-UI shell: `npm run verify`; `npm run build:renderer`.
 
 Residual verification note: MAS strict line-budget still flags unrelated existing `tests/study_progress_cases/current_executable_owner_action.py` at 1023 lines. That is a target-external natural split candidate, not a regression from the publication-gate split.
 
@@ -95,8 +100,11 @@ Residual verification note: MAS strict line-budget still flags unrelated existin
 | `redcube-ai` | Duplicate line-budget gate is unified. Remaining source signals are PPT/native helpers, PPT runtime family parts, domain-action adapter parts, large tests, and large runtime-program contracts. | Later semantic split should follow visual delivery boundaries: native layout, native quality, image pages, operator evidence refs, and mock builder responsibilities. Avoid renaming the whole `*-parts` bucket merely for aesthetics. |
 | `opl-meta-agent` | Source design-pass remains clean. Source-structure verify lane is landed; remaining signal is `contracts/stage_control_plane.json` as a large public surface. | Treat as generated/public-surface risk. Continue source/parts/leaf-index direction only when generator/source ownership is clear. |
 | `one-person-lab-app` | Active-shell shared validators split is landed, but the top-level validator and release/user-path tests remain very large: release boundary, active-shell validator, Full first-install package build, release notes, readiness summary. | Next App tranche should split by product release boundary, active-shell validator orchestration phases, package builder phases, and user-path evidence. This is the clearest remaining non-natural source shape in the support repos. |
+| `opl-agui-codex-shell` | Renderer structure split is landed. Remaining large files are shell-local main process, WebUI dev server and candidate validator. | Continue splitting by IPC/main-process support, WebUI route/gateway/event-stream/static serving, and validator source/package/evidence responsibilities; do not move App product truth into this shell. |
 | `opl-doc` | OPL Doc doctor split is landed. Fresh scan has no `needs_design_pass`, no mechanical residue, no public-surface risk, and repo-native verify passes. | Keep as current good family morphology example for support/plugin repos: thin command entry plus named doctor responsibility modules. |
 | `opl-flow` | Thin repo-native verify entry is landed. Fresh scan has no `needs_design_pass`, no mechanical residue, no public-surface risk, and no missing verify signal. | Keep verify entry thin and repo-native; no Sentrux or extra structure gate is needed until active source growth appears. |
+| `homebrew-one-person-lab` | No source design-pass signal; no repo-native verify required by current policy. | Keep lightweight as distribution transport support. Do not add structure gates until formula support grows beyond the current tap shape. |
+| `OPL-PPT` | Two large `scratch/skill-route-comparison-*` build scripts remain as artifact-reference signals. | Treat as scratch/reference artifact support, not active runtime cleanup. If reused, split by generated deck route / skill-route comparison responsibility in that reference repo. |
 
 ## P1 Structure Queue
 
@@ -110,10 +118,12 @@ Closed in the first landing pass:
 - `opl-doc`: doctor implementation is split into responsibility modules in `757d30c`.
 - `opl-flow`: repo-native verify entry is added in `764d1ab`.
 - `med-autogrant`: generated aggregate source checks are added in `2b2ea3c`.
+- `opl-agui-codex-shell`: renderer source modules are split in `3991af4`, and source-only candidate validation now follows the renderer module graph.
 
 Remaining P1 natural split / source-shape queue:
 
 - `one-person-lab-app`: split `tests/release/app-release-boundary.test.ts`, `scripts/validate-active-shell.ts`, and `scripts/build-full-first-install-package.ts` by release boundary, active-shell orchestration phase, package-builder phase, and user-path evidence. The first shared-validator extraction is landed but not enough to close the App source-shape tranche.
+- `opl-agui-codex-shell`: split `src/main/main.js`、`scripts/dev-webui-server.js`、`scripts/validate-agui-codex-candidate.ts` by shell-local main-process, WebUI server and validator responsibility; renderer no longer belongs in this queue.
 - `med-autoscience`: split `tests/study_progress_cases/current_executable_owner_action.py` by current-executable-owner-action scenario before using MAS strict line-budget as a clean gate. Owner-route/currentness and runtime-health files remain design-pass inputs.
 - `redcube-ai`: current over-1000 source files remain reviewed-baseline candidates, not mechanical split work: `tests/opl-family-contract-adoption.test.ts`, `python/redcube_ai/native_helpers/ppt_deck/native_layouts.py`, and `python/redcube_ai/native_helpers/ppt_deck/native_quality.py`. Future splits should follow test-family, native layout, and native quality responsibilities.
 - `opl-meta-agent`: `contracts/stage_control_plane.json` remains the largest standard-agent public contract surface in this scan. Prefer stage / JSON-pointer leaf refs plus generated aggregate, similar to RCA's current-program leaf-index pattern, instead of hand-splitting the JSON file.
@@ -213,13 +223,19 @@ Interpretation: Current source shape is acceptable. Contract bundle modularity i
 
 needs_design_pass:
 
-- `tests/release/app-release-boundary.test.ts`
-- `scripts/validate-active-shell.ts`
-- `scripts/build-full-first-install-package.ts`
-- `scripts/release-notes.ts`
-- `tests/release/release-readiness-summary.test.ts`
+- none in the fresh `2026-06-06T12:39Z` eleven-repo scan.
 
-Interpretation: This is the strongest remaining natural split queue in the support repos. Split by release boundary, active-shell validation, package building, release note generation, and readiness summary.
+Interpretation: The previous support-repo source-shape pressure has been reduced by App-side and shell-side splits. Future App growth should still split by release boundary, active-shell validation, package building, release note generation, and readiness summary before it crosses the advisory threshold again.
+
+### opl-agui-codex-shell
+
+needs_design_pass:
+
+- `src/main/main.js`
+- `scripts/dev-webui-server.js`
+- `scripts/validate-agui-codex-candidate.ts`
+
+Interpretation: Renderer `App.jsx` is no longer a source-shape finding after the `3991af4` split. Remaining work is shell-local and should be split by main-process IPC / Codex server client / executable resolution / smoke evidence, WebUI gateway / HTTP routes / event-stream / static renderer serving, and candidate validation source/package/evidence responsibilities.
 
 ### opl-doc
 
@@ -245,6 +261,23 @@ missing_verify_entry:
 
 Interpretation: Thin verify entry is landed; keep it as the repo-native maintenance surface.
 
+### homebrew-one-person-lab
+
+needs_design_pass:
+
+- none
+
+Interpretation: The tap is lightweight distribution transport support. It does not need a repo-native verify entry or Sentrux lane until active source growth appears.
+
+### OPL-PPT
+
+needs_design_pass:
+
+- `scratch/skill-route-comparison-opl-v3b-32p/officecli-pptx-skill/src/build-opl-v3b-officecli-pptx-skill.mjs`
+- `scratch/skill-route-comparison-opl-v3b-32p/presentations-skill/src/build-opl-v3b-presentations-skill.mjs`
+
+Interpretation: These are scratch/reference artifact-support scripts, not active runtime or standard-agent source. If they become reusable support code, split them by presentation route, deck build phase and skill-route comparison responsibility inside OPL-PPT.
+
 ## Sentrux Disposition
 
 | Repo | Current Sentrux state | Keep? | Policy |
@@ -255,12 +288,15 @@ Interpretation: Thin verify entry is landed; keep it as the repo-native maintena
 | `redcube-ai` | Baseline-only / advisory style. | Yes, advisory. | Add or tighten explicit rules only after PPT/native boundaries are stable. |
 | `opl-meta-agent` | No current Sentrux signal in this scan. | Optional. | Not urgent; line budget/test split gives clearer signal today. |
 | `one-person-lab-app` | No current Sentrux signal in this scan. | Optional after deterministic verify matures. | Repo-native verify is more important today; future structure signal should remain advisory by default. |
+| `opl-agui-codex-shell` | No current Sentrux signal in this scan. | Optional. | Candidate validator and repo-native verify give clearer signal today; add Sentrux only after shell-candidate source boundaries stabilize. |
 | `opl-doc` | No current Sentrux signal in this scan. | Optional. | Use only if doctor/plugin docs validation grows; avoid making docs support work depend on noisy structural gates. |
 | `opl-flow` | No current Sentrux signal in this scan. | Optional. | Not worth adding before active source growth; current repo-native verify is sufficient. |
+| `homebrew-one-person-lab` | No current Sentrux signal in this scan. | No. | Tap formula transport is too small for a structural sidecar today. |
+| `OPL-PPT` | No current Sentrux signal in this scan. | Optional only if scratch becomes maintained source. | Do not gate reference artifact scratch work on Sentrux unless it becomes active support code. |
 
 ## Operating Rule
 
-Use default eight-repo scope for read-only preflight:
+Use default eleven-repo scope for read-only preflight:
 
 ```bash
 npm run --silent family:structure-advisory -- --format=json

@@ -108,6 +108,10 @@ test('Codex stage activity prompt carries refs-only OPL execution authorization 
           'opl://stage-attempts/sat_codex_auth_prompt_test/execution-authorizations/frt_codex_auth_prompt_test/wf_codex_auth_prompt_test',
         source_fingerprint: 'mas_default_executor_source_codex_auth_prompt_test',
         idempotency_key: 'idem_codex_auth_prompt_test',
+        stage_run_id: 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch',
+        stage_manifest_ref: 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch',
+        current_pointer_ref:
+          'opl://stage-runs/app-stage-run%3Amedautoscience%3Adomain-owner-default-executor-dispatch/current',
       },
       checkpoint_refs: ['studies/002/artifacts/supervision/consumer/default_executor_dispatches/immutable/packet.json'],
     },
@@ -118,6 +122,10 @@ test('Codex stage activity prompt carries refs-only OPL execution authorization 
   assert.match(commandPreview, /"OPL_PROVIDER_ATTEMPT_REF":"temporal:\/\/attempt\/sat_codex_auth_prompt_test"/);
   assert.match(commandPreview, /"OPL_ATTEMPT_LEASE_STATUS":"active"/);
   assert.match(commandPreview, /"OPL_EXECUTION_AUTHORIZATION_DECISION_REF":"opl:\/\/stage-attempts\/sat_codex_auth_prompt_test\/execution-authorizations\/frt_codex_auth_prompt_test\/wf_codex_auth_prompt_test"/);
+  assert.match(commandPreview, /"OPL_STAGE_RUN_ID":"app-stage-run:medautoscience:domain-owner-default-executor-dispatch"/);
+  assert.match(commandPreview, /"OPL_STAGE_MANIFEST_REF":"opl:\/\/stage-manifests\/domain_owner%2Fdefault-executor-dispatch"/);
+  assert.match(commandPreview, /"OPL_CURRENT_POINTER_REF":"opl:\/\/stage-runs\/app-stage-run%3Amedautoscience%3Adomain-owner-default-executor-dispatch\/current"/);
+  assert.match(commandPreview, /"OPL_CLOSEOUT_BINDING_JSON":/);
   assert.match(commandPreview, /"OPL_STAGE_PACKET_REF":"studies\/002\/artifacts\/supervision\/consumer\/default_executor_dispatches\/immutable\/packet.json"/);
   assert.match(commandPreview, /do not grant domain truth, artifact, quality, or readiness authority/);
 });
@@ -280,11 +288,11 @@ exit 64
   }
 });
 
-test('Codex stage runner forwards explicit provider authorization refs without deriving active lease from identity', async () => {
+test('Codex stage runner forwards explicit provider authorization and closeout binding refs without deriving active lease from identity', async () => {
   const expectedStagePacketRef = 'studies/003/artifacts/supervision/consumer/default_executor_dispatches/immutable/return_to_ai_reviewer_workflow/dispatch.json';
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$1" = "exec" ]; then
-  closeout=$(node -e 'const keys = ["OPL_STAGE_ATTEMPT_ID","OPL_PROVIDER_ATTEMPT_REF","OPL_ATTEMPT_LEASE_REF","OPL_ATTEMPT_LEASE_STATUS","OPL_EXECUTION_AUTHORIZATION_DECISION_REF","OPL_SOURCE_FINGERPRINT","OPL_IDEMPOTENCY_KEY"]; const refs = keys.map((key) => key + "=" + (process.env[key] || "")); process.stdout.write(JSON.stringify({surface_kind:"stage_attempt_closeout_packet", closeout_refs: refs, next_owner:"med-autoscience", domain_ready_verdict:"domain_gate_pending"}));')
+  closeout=$(node -e 'const keys = ["OPL_STAGE_ATTEMPT_ID","OPL_PROVIDER_ATTEMPT_REF","OPL_ATTEMPT_LEASE_REF","OPL_ATTEMPT_LEASE_STATUS","OPL_EXECUTION_AUTHORIZATION_DECISION_REF","OPL_SOURCE_FINGERPRINT","OPL_IDEMPOTENCY_KEY","OPL_STAGE_RUN_ID","OPL_STAGE_MANIFEST_REF","OPL_CURRENT_POINTER_REF","OPL_CLOSEOUT_BINDING_JSON"]; const refs = keys.map((key) => key + "=" + (process.env[key] || "")); process.stdout.write(JSON.stringify({surface_kind:"stage_attempt_closeout_packet", closeout_refs: refs, next_owner:"med-autoscience", domain_ready_verdict:"domain_gate_pending"}));')
   printf '{"type":"thread.started","thread_id":"thread-stage-auth-env"}\\n'
   printf '%s\\n' "$(node -e 'const text = process.argv[1]; process.stdout.write(JSON.stringify({type:"item.completed",item:{type:"agent_message",id:"msg-auth-env",text}}));' "$closeout")"
   printf '{"type":"turn.completed"}\\n'
@@ -312,6 +320,10 @@ exit 64
           execution_authorization_decision_ref: 'opl://stage-attempts/sat_provider_authorized_test/execution-authorizations/frt_provider_authorized_test/wf_provider_authorized_test',
           source_fingerprint: 'mas_default_executor_source_provider_authorized_test',
           idempotency_key: 'idem_provider_authorized_test',
+          stage_run_id: 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch',
+          stage_manifest_ref: 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch',
+          current_pointer_ref:
+            'opl://stage-runs/app-stage-run%3Amedautoscience%3Adomain-owner-default-executor-dispatch/current',
         },
         checkpoint_refs: [expectedStagePacketRef],
       },
@@ -328,6 +340,32 @@ exit 64
       'OPL_EXECUTION_AUTHORIZATION_DECISION_REF=opl://stage-attempts/sat_provider_authorized_test/execution-authorizations/frt_provider_authorized_test/wf_provider_authorized_test',
       'OPL_SOURCE_FINGERPRINT=mas_default_executor_source_provider_authorized_test',
       'OPL_IDEMPOTENCY_KEY=idem_provider_authorized_test',
+      'OPL_STAGE_RUN_ID=app-stage-run:medautoscience:domain-owner-default-executor-dispatch',
+      'OPL_STAGE_MANIFEST_REF=opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch',
+      'OPL_CURRENT_POINTER_REF=opl://stage-runs/app-stage-run%3Amedautoscience%3Adomain-owner-default-executor-dispatch/current',
+      [
+        'OPL_CLOSEOUT_BINDING_JSON=',
+        JSON.stringify({
+          surface_kind: 'opl_stage_run_closeout_binding',
+          trusted_opl_execution_authorization: true,
+          bound_to_stage_run: true,
+          bound_to_stage_manifest: true,
+          bound_to_current_pointer: true,
+          bound_to_source_fingerprint: true,
+          stage_run_id: 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch',
+          stage_manifest_ref: 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch',
+          current_pointer_ref:
+            'opl://stage-runs/app-stage-run%3Amedautoscience%3Adomain-owner-default-executor-dispatch/current',
+          provider_attempt_ref: 'opl://stage-attempts/sat_provider_authorized_test',
+          attempt_lease_ref:
+            'opl://stage-attempts/sat_provider_authorized_test/leases/frt_provider_authorized_test/active',
+          attempt_lease_status: 'active',
+          execution_authorization_decision_ref:
+            'opl://stage-attempts/sat_provider_authorized_test/execution-authorizations/frt_provider_authorized_test/wf_provider_authorized_test',
+          source_fingerprint: 'mas_default_executor_source_provider_authorized_test',
+          idempotency_key: 'idem_provider_authorized_test',
+        }),
+      ].join(''),
     ]);
   } finally {
     if (previousCodexBin === undefined) {
