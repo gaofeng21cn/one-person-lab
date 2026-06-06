@@ -147,6 +147,39 @@ test('MAS paper-line stable typed blocker result feeds blocker path without succ
   assert.equal(preflight.accepted_payload_paths.typed_blocker_path.can_claim_domain_ready, false);
 });
 
+test('MAS owner delta result payload feeds quality gate and stable blocker refs without body access', () => {
+  const preflight = preflightDomainDispatchEvidencePayload(
+    {
+      owner_delta_result: {
+        surface_kind: 'mas_current_owner_delta_result',
+        study_id: '002-dm-china-us-mortality-attribution',
+        result_kind: 'quality_gate_receipt_with_stable_typed_blocker',
+        required_return_shape_satisfied: true,
+        owner_receipt_refs: [],
+        quality_gate_receipt_refs: [
+          'mas://dm003/domain-owner-receipt',
+          'mas://dm003/ai-reviewer-currentness',
+        ],
+        stable_typed_blocker_refs: ['mas://dm003/blockers/medical-paper-readiness'],
+        body_included: false,
+        authority_boundary: {
+          writes_publication_eval: false,
+          quality_claim_authorized: false,
+        },
+      },
+    },
+    route,
+  );
+
+  assert.equal(preflight.status, 'ready_to_record');
+  assert.equal(preflight.selected_payload_path, 'typed_blocker_path');
+  assert.equal(preflight.accepted_ref_counts.domain_receipt_refs, 2);
+  assert.equal(preflight.accepted_ref_counts.typed_blocker_refs, 1);
+  assert.equal(preflight.accepted_payload_paths.typed_blocker_path.success_claimed, false);
+  assert.equal(preflight.accepted_payload_paths.typed_blocker_path.can_claim_domain_ready, false);
+  assert.equal(preflight.accepted_payload_paths.typed_blocker_path.can_claim_production_ready, false);
+});
+
 test('MAS paper-line result carrying body or readiness claims fails closed', () => {
   assert.throws(
     () => assertDomainDispatchEvidencePayloadReady(route, {

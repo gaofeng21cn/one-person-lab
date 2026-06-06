@@ -39,8 +39,17 @@ function paperLineOwnerChainResults(payload: JsonRecord) {
     : [];
 }
 
+function ownerDeltaResults(payload: JsonRecord) {
+  const result = payload.owner_delta_result;
+  if (isRecord(result)) {
+    return [result];
+  }
+  return Array.isArray(result) ? result.filter(isRecord) : [];
+}
+
 export function domainDispatchEvidencePayloadRefs(payload: JsonRecord) {
   const paperLineResults = paperLineOwnerChainResults(payload);
+  const ownerDeltaResultRefs = ownerDeltaResults(payload);
   const paperLineOwnerReceiptRefs = paperLineResults.flatMap((result) =>
     stringList(result.owner_receipt_refs)
   );
@@ -54,6 +63,13 @@ export function domainDispatchEvidencePayloadRefs(payload: JsonRecord) {
     ...stringList(result.human_gate_or_resume_refs),
     ...stringRefs(result.no_forbidden_write_proof_ref),
   ]);
+  const ownerDeltaDomainReceiptRefs = ownerDeltaResultRefs.flatMap((result) => [
+    ...stringList(result.owner_receipt_refs),
+    ...stringList(result.quality_gate_receipt_refs),
+  ]);
+  const ownerDeltaTypedBlockerRefs = ownerDeltaResultRefs.flatMap((result) =>
+    stringList(result.stable_typed_blocker_refs)
+  );
 
   return {
     evidenceRefs: refsFromPayload(payload, ['evidence_refs', 'evidence_ref']),
@@ -65,10 +81,12 @@ export function domainDispatchEvidencePayloadRefs(payload: JsonRecord) {
         'receipt_ref',
       ]),
       ...paperLineOwnerReceiptRefs,
+      ...ownerDeltaDomainReceiptRefs,
     ]),
     typedBlockerRefs: uniqueStrings([
       ...refsFromPayload(payload, ['typed_blocker_refs', 'typed_blocker_ref']),
       ...paperLineTypedBlockerRefs,
+      ...ownerDeltaTypedBlockerRefs,
     ]),
     noRegressionRefs: refsFromPayload(payload, ['no_regression_refs', 'no_regression_ref']),
     ownerChainRefs: uniqueStrings([
