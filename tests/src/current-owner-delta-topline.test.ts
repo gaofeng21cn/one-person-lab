@@ -56,8 +56,30 @@ test('current owner delta topline uses OPL runtime owner when StageRun execution
     'record_opl_provider_attempt_lease_authorization_and_closeout_receipt_binding_refs',
   );
   assert.equal(
+    topline.operator_payload_requirement,
+    'opl_execution_authorization_and_closeout_binding_refs_required',
+  );
+  assert.deepEqual(topline.operator_accepted_answer_shape, [
+    'provider_attempt_ref',
+    'attempt_lease_ref',
+    'execution_authorization_decision_ref',
+    'owner_answer_binding_ref',
+  ]);
+  assert.equal(
+    topline.operator_next_action_source,
+    'stage_run_execution_authorization',
+  );
+  assert.equal(
     topline.operator_next_action_authority_boundary.derivation_source,
     'stage_run_execution_authorization',
+  );
+  assert.equal(
+    topline.stage_run_next_required_owner_action.next_required_owner,
+    'one-person-lab',
+  );
+  assert.equal(
+    topline.stage_run_next_required_owner_action.next_required_action,
+    'record_opl_provider_attempt_lease_authorization_and_closeout_receipt_binding_refs',
   );
   assert.equal(topline.stage_run_cockpit_summary.current_owner_delta_owner, 'med-autoscience');
   assert.equal(topline.stage_run_cockpit_summary.current_owner, 'one-person-lab');

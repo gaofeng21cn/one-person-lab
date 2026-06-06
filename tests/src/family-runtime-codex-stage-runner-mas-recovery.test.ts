@@ -160,6 +160,106 @@ exit 64
   }
 });
 
+test('Codex stage runner refuses MAS default-executor recovery without current OPL authorization binding', async () => {
+  const threadId = 'thread-mas-default-executor-recovery-with-stale-auth';
+  const studyId = '002-dm-china-us-mortality-attribution';
+  const stagePacketRef = `studies/${studyId}/artifacts/supervision/consumer/default_executor_dispatches/immutable/complete_medical_paper_readiness_surface/packet.json`;
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"timestamp":"2026-06-06T07:30:00.000Z","type":"session_meta","payload":{"id":"${threadId}"}}\\n'
+  sleep 2
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const stagePacketPath = path.join(fixtureRoot, stagePacketRef);
+  fs.mkdirSync(path.dirname(stagePacketPath), { recursive: true });
+  fs.writeFileSync(stagePacketPath, `${JSON.stringify({
+    surface: 'default_executor_dispatch_request',
+    dispatch_status: 'ready',
+    study_id: studyId,
+    quest_id: studyId,
+    action_type: 'complete_medical_paper_readiness_surface',
+    action_fingerprint: 'paper_progress_stall:current-readiness',
+    idempotency_key: 'owner-route::current-readiness',
+  })}\n`);
+  const executionRef = `studies/${studyId}/artifacts/supervision/consumer/default_executor_execution/latest.json`;
+  const executionPath = path.join(fixtureRoot, executionRef);
+  fs.mkdirSync(path.dirname(executionPath), { recursive: true });
+  fs.writeFileSync(executionPath, `${JSON.stringify({
+    surface: 'default_executor_dispatch_execution_study_latest',
+    schema_version: 1,
+    study_id: studyId,
+    generated_at: '2026-06-06T07:23:27Z',
+    executions: [{
+      surface: 'default_executor_dispatch_execution',
+      schema_version: 1,
+      study_id: studyId,
+      quest_id: studyId,
+      action_type: 'complete_medical_paper_readiness_surface',
+      action_fingerprint: 'paper_progress_stall:current-readiness',
+      idempotency_key: 'owner-route::current-readiness',
+      execution_status: 'blocked',
+      blocked_reason: 'opl_execution_authorization_required',
+      execution_id: 'execution::002::complete_medical_paper_readiness_surface::stale',
+      owner_callable_surface: null,
+      required_output_surface: 'complete_medical_paper_readiness_surface',
+    }],
+  })}\n`);
+
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  const previousNoOutputTimeout = process.env.OPL_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    process.env.OPL_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS = '100';
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_current_auth_recovery_test',
+        workflow_id: 'wf_current_auth_recovery_test',
+        task_id: 'frt_current_auth_recovery_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        domain_id: 'medautoscience',
+        source_fingerprint: 'mas_default_executor_source_current_auth',
+        idempotency_key: 'owner-route::current-readiness',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        opl_execution_authorization: {
+          owner: 'one-person-lab',
+          executor_kind: 'codex_cli',
+          provider_attempt_ref: 'temporal://attempt/sat_current_auth_recovery_test',
+          stage_attempt_id: 'sat_current_auth_recovery_test',
+          attempt_lease_ref: 'opl://stage-attempts/sat_current_auth_recovery_test/leases/frt_current_auth_recovery_test/active',
+          attempt_lease_status: 'active',
+          execution_authorization_decision_ref: 'opl://stage-attempts/sat_current_auth_recovery_test/execution-authorizations/frt_current_auth_recovery_test/wf_current_auth_recovery_test',
+          source_fingerprint: 'mas_default_executor_source_current_auth',
+          idempotency_key: 'owner-route::current-readiness',
+        },
+        checkpoint_refs: [stagePacketRef],
+      },
+      stagePacketRef,
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+    });
+
+    assert.equal(receipt.closeout_packet, null);
+    assert.equal(receipt.process_output_summary?.domain_receipt_recovery_status, 'authorization_binding_mismatch');
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    if (previousNoOutputTimeout === undefined) {
+      delete process.env.OPL_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS;
+    } else {
+      process.env.OPL_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS = previousNoOutputTimeout;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('Codex stage runner does not recover stale MAS default-executor receipts from another owner route', async () => {
   const studyId = '003-dpcc-primary-care-phenotype-treatment-gap';
   const stagePacketRef = `studies/${studyId}/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json`;
