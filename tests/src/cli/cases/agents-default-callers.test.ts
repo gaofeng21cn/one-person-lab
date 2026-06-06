@@ -276,6 +276,14 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
     false,
   );
   assert.equal(defaultCallers.repo_deletion_gate_summary.length, 1);
+  assert.equal(
+    defaultCallers.repo_deletion_gate_summary[0].repo_id,
+    defaultCallers.repo_deletion_gate_summary[0].domain_id,
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.repo_deletion_gate_summary[0].repo_id,
+    defaultCallers.repo_deletion_gate_summary[0].repo_id,
+  );
   assert.equal(defaultCallers.repo_deletion_gate_summary[0].deletion_evidence_worklist_count, 8);
   assert.equal(
     defaultCallers.repo_deletion_gate_summary[0].all_deletion_evidence_requirements_observed,

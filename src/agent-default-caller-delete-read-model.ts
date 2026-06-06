@@ -94,8 +94,10 @@ function repoDeletionGateSummary(
     && missingNoForbiddenWriteProofCount === 0
     && missingTombstoneOrProvenanceRefCount === 0;
 
+  const domainId = optionalString(report.domain_id) ?? 'unknown_domain';
   return {
-    domain_id: optionalString(report.domain_id) ?? 'unknown_domain',
+    repo_id: domainId,
+    domain_id: domainId,
     requested_agent_id: optionalString(report.requested_agent_id),
     repo_dir: optionalString(report.repo_dir),
     status: optionalString(report.status) ?? 'unknown',

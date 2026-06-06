@@ -178,9 +178,13 @@ test('family-runtime evidence-worklist keeps family default-caller deletion scop
     assert.equal(defaultCallers.physical_delete_authorized, false);
     assert.equal(defaultCallers.default_caller_delete_ready, false);
     assert.equal(
-      defaultCallers.repo_deletion_gate_summary.some((repo: { domain_id: string }) =>
+      defaultCallers.repo_deletion_gate_summary.some((repo: {
+        domain_id: string;
+        repo_id: string;
+      }) => (
         repo.domain_id === 'opl-meta-agent'
-      ),
+        && repo.repo_id === repo.domain_id
+      )),
       true,
     );
 
