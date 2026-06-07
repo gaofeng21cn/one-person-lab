@@ -28,6 +28,10 @@ import {
   type CodexSessionUsageRef,
 } from './family-runtime-codex-session-usage.ts';
 import { codexStageAttemptEnv } from './family-runtime-codex-stage-runner-parts/provider-env.ts';
+import {
+  runMasOwnerDispatchBridge,
+  type MasOwnerDispatchBridgeResult,
+} from './family-runtime-codex-stage-runner-parts/mas-owner-dispatch-bridge.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -124,6 +128,7 @@ type CodexStageRunnerProcessOutputSummary = {
   session_recovery_attempts?: number;
   domain_receipt_recovery_status?: string;
   domain_receipt_recovery_ref?: string;
+  mas_owner_dispatch_bridge?: MasOwnerDispatchBridgeResult;
   closeout_rejection_reason?: 'stage_attempt_id_mismatch' | 'idempotency_key_mismatch';
   rejected_closeout_stage_attempt_id?: string;
   rejected_closeout_idempotency_key?: string;
@@ -768,14 +773,15 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     process.env.OPL_CODEX_STAGE_RUNNER_COMMAND_NO_PROGRESS_TIMEOUT_MS,
     DEFAULT_CODEX_STAGE_RUNNER_COMMAND_NO_PROGRESS_TIMEOUT_MS,
   );
+  const providerEnv = codexStageAttemptEnv({
+    attempt: input.attempt,
+    stagePacketRef,
+    workspaceRoot,
+  });
   const result = await runCodexCommandStreaming(args, {
     env: {
       ...input.env,
-      ...codexStageAttemptEnv({
-        attempt: input.attempt,
-        stagePacketRef,
-        workspaceRoot,
-      }),
+      ...providerEnv,
     },
     timeoutMs,
     noOutputTimeoutMs,
@@ -799,6 +805,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   let sessionUsageRef: CodexSessionUsageRef | null = null;
   let domainReceiptRecoveryStatus: string | null = null;
   let domainReceiptRecoveryRef: string | null = null;
+  let masOwnerDispatchBridge: MasOwnerDispatchBridgeResult | null = null;
   let closeoutRejection: ReturnType<typeof validateCloseoutPacketForAttempt>['rejection'] = null;
   if (
     !closeoutPacket
@@ -831,6 +838,27 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     domainReceiptRecoveryStatus = domainReceiptRecovery.status;
     domainReceiptRecoveryRef = domainReceiptRecovery.receiptRef;
     closeoutPacket = domainReceiptRecovery.closeoutPacket;
+    if (!closeoutPacket) {
+      masOwnerDispatchBridge = runMasOwnerDispatchBridge({
+        workspaceRoot,
+        stagePacketRef,
+        attempt: input.attempt,
+        env: {
+          ...input.env,
+          ...providerEnv,
+        },
+      });
+      if (masOwnerDispatchBridge.status === 'command_completed') {
+        const retriedDomainReceiptRecovery = recoverDefaultExecutorDomainReceiptCloseout({
+          workspaceRoot,
+          stagePacketRef,
+          attempt: input.attempt,
+        });
+        domainReceiptRecoveryStatus = `after_mas_owner_dispatch:${retriedDomainReceiptRecovery.status}`;
+        domainReceiptRecoveryRef = retriedDomainReceiptRecovery.receiptRef;
+        closeoutPacket = retriedDomainReceiptRecovery.closeoutPacket;
+      }
+    }
   }
   const validatedCloseout = validateCloseoutPacketForAttempt({
     closeoutPacket,
@@ -908,6 +936,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
             ...(domainReceiptRecoveryRef ? { domain_receipt_recovery_ref: domainReceiptRecoveryRef } : {}),
           }
         : {}),
+      ...(masOwnerDispatchBridge ? { mas_owner_dispatch_bridge: masOwnerDispatchBridge } : {}),
       ...(closeoutRejection
         ? {
             closeout_rejection_reason: closeoutRejection.reason,
