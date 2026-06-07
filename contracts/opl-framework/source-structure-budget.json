@@ -41,14 +41,6 @@
       "review_after": "2026-09-30"
     },
     {
-      "path": "src/runtime-tray-app-operator-drilldown.ts",
-      "limit": 1408,
-      "owner": "runtime-tray-app-owner",
-      "reason": "reviewed historical app drilldown aggregator; scheduled structure maintenance continues projection group reorganization by semantic owner",
-      "intended_boundary": "app drilldown entry should become a thin semantic aggregator over evidence, routes, provider, detail, and summary packages",
-      "review_after": "2026-09-30"
-    },
-    {
       "path": "tests/src/agent-lab.test.ts",
       "limit": 1135,
       "owner": "agent-lab-test-owner",
