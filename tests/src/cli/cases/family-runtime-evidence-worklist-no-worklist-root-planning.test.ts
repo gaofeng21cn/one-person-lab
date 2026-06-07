@@ -216,3 +216,100 @@ test('family-runtime evidence-worklist keeps raw worklist roots out of current o
   const fullDetailRefs = projection.owner_delta_audit_tail.full_detail_refs as Record<string, string>;
   assert.equal(fullDetailRefs.evidence_worklist_ref, '/family_runtime_evidence_worklist');
 });
+
+test('family-runtime evidence-worklist keeps stage replay guidance out of default owner planning', () => {
+  const stageReplayGuidance = {
+    action_id: 'review_stage_replay_missing_receipt_workorder',
+    action_kind: 'stage_replay_missing_receipt_guidance',
+    step_kind: 'record_stage_replay_missing_receipt_payload',
+    owner: 'domain_or_human_gate_owner',
+    domain_id: 'med-autoscience',
+    stage_id: 'publication',
+    missing_ref: 'owner_receipt:publication',
+    missing_ref_kind: 'owner_receipt',
+    payload_requirement: 'stage_replay_missing_receipt_refs_payload_required',
+    route_requires_domain_or_app_payload: false,
+    next_safe_action_ref: 'stage-replay-missing-receipt-workorder:med-autoscience:publication',
+    can_submit_record_to_safe_action_shell: false,
+    can_execute_domain_action: false,
+    can_create_owner_receipt: false,
+    can_close_domain_ready: false,
+    can_claim_production_ready: false,
+  };
+
+  const projection = buildWorklistCurrentOwnerDeltaReadModel({
+    drilldown: {
+      attention_first_payload: {
+        owner_delta_first: {
+          surface_kind: 'opl_owner_delta_first_projection',
+          status: 'owner_delta_required',
+          next_owner: 'med-autoscience',
+          next_required_delta: 'owner_answer_or_typed_blocker_required',
+          required_return_shapes: ['owner_answer_ref', 'typed_blocker_ref'],
+          primary_item: {
+            owner: 'med-autoscience',
+            stage_id: 'domain_route/reconcile-apply',
+          },
+          authority_boundary: {
+            replay_packet_can_drive_default_planning: false,
+          },
+        },
+      },
+    },
+    openItems: [],
+    nextSafeActions: [stageReplayGuidance],
+    counts: {
+      open_safe_action_payload_required_item_count: 0,
+      open_safe_action_payload_free_item_count: 0,
+    },
+    compactEvidenceEnvelope: {
+      summary: {
+        open_envelope_count: 0,
+        blocked_envelope_count: 0,
+      },
+    },
+    domainDispatchEvidenceWorkorderSummary: {
+      workorder_count: 0,
+    },
+    stageReplayMissingReceiptWorkorderSummary: {
+      workorder_count: 14,
+    },
+  });
+
+  assert.equal(
+    projection.current_owner_delta.advisory_warnings.some(
+      (warning: { warning_id?: string; default_planning_role?: string }) =>
+        warning.warning_id === 'stage_replay_missing_receipts_are_audit_tail'
+        && warning.default_planning_role === 'audit_metric_only',
+    ),
+    true,
+  );
+  assert.equal(
+    projection.current_owner_delta.authority_boundary.replay_packet_can_drive_default_planning,
+    false,
+  );
+  assert.equal(
+    projection.next_safe_action_or_none?.derivation_source,
+    'current_owner_delta',
+  );
+  assert.equal(
+    projection.next_safe_action_or_none?.action_kind,
+    'current_owner_delta_owner_answer_or_typed_blocker_required',
+  );
+  assert.equal(
+    projection.next_safe_action_or_none?.replay_packet_can_drive_default_planning,
+    false,
+  );
+  assert.equal(
+    projection.owner_delta_audit_tail.audit_next_safe_action_or_none?.action_kind,
+    'stage_replay_missing_receipt_guidance',
+  );
+  assert.equal(
+    projection.owner_delta_audit_tail.audit_next_safe_action_or_none?.owner,
+    'domain_or_human_gate_owner',
+  );
+  assert.equal(
+    projection.owner_delta_audit_tail.audit_next_safe_action_or_none?.can_create_owner_receipt,
+    false,
+  );
+});
