@@ -16,6 +16,8 @@ import {
 } from './app-state-cases/fixtures.ts';
 import './app-state-cases/public-surface.ts';
 
+type AppStateListEntry = Record<string, any>;
+
 test('app state fast exposes the canonical GUI read model without retired MDS defaults', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-home-'));
   const codexFixture = createFakeCodexFixture(`
@@ -347,16 +349,16 @@ exit 1
       'opl runtime app-operator-drilldown --detail full --json',
     );
     assert.deepEqual(
-      output.app_state.operator.workbench.summary_cards.map((entry) => entry.card_id),
+      output.app_state.operator.workbench.summary_cards.map((entry: AppStateListEntry) => entry.card_id),
       ['active_projects', 'runtime_status', 'codex_cli', 'temporal_provider', 'runtime_modules', 'release_channel'],
     );
     assert.equal(
-      output.app_state.operator.workbench.summary_cards.find((entry) => entry.card_id === 'active_projects')?.value,
+      output.app_state.operator.workbench.summary_cards.find((entry: AppStateListEntry) => entry.card_id === 'active_projects')?.value,
       0,
     );
     assert.equal(
       output.app_state.operator.workbench.sections.some(
-        (entry) => entry.section_id === 'full_runtime_drilldown' && entry.lazy === true,
+        (entry: AppStateListEntry) => entry.section_id === 'full_runtime_drilldown' && entry.lazy === true,
       ),
       true,
     );
@@ -371,7 +373,7 @@ exit 1
     assert.equal(output.app_state.operator.workbench.task_drilldowns.length, 4);
     assert.equal(output.app_state.operator.workbench.safe_action_routes.length > 0, true);
     assert.equal(
-      output.app_state.operator.workbench.safe_action_routes.every((entry) =>
+      output.app_state.operator.workbench.safe_action_routes.every((entry: AppStateListEntry) =>
         entry.route.startsWith('opl app action execute --action ')
       ),
       true,
@@ -392,7 +394,7 @@ exit 1
     );
     assert.equal(
       output.app_state.operator.workbench.lazy_refs.some(
-        (entry) => entry.ref_id === 'full_runtime_drilldown'
+        (entry: AppStateListEntry) => entry.ref_id === 'full_runtime_drilldown'
           && entry.surface === 'opl runtime app-operator-drilldown --detail full --json',
       ),
       true,
@@ -410,7 +412,7 @@ exit 1
     assert.equal(output.app_state.opl_agent_codex_context.policy, 'app_repo_owns_gui_context_text');
     assert.equal(output.app_state.modules.source.mode, 'managed_runtime');
     assert.deepEqual(
-      output.app_state.modules.items.map((entry) => [entry.module_id, entry.label, entry.default_install]),
+      output.app_state.modules.items.map((entry: AppStateListEntry) => [entry.module_id, entry.label, entry.default_install]),
       [
         ['medautoscience', 'Med Auto Science', true],
         ['medautogrant', 'Med Auto Grant', true],
@@ -419,11 +421,11 @@ exit 1
       ],
     );
     assert.equal(
-      output.app_state.modules.items.some((entry) => entry.module_id === 'meddeepscientist'),
+      output.app_state.modules.items.some((entry: AppStateListEntry) => entry.module_id === 'meddeepscientist'),
       false,
     );
     assert.deepEqual(
-      output.app_state.assistants.items.map((entry) => [entry.assistant_id, entry.label, entry.launch_hint]),
+      output.app_state.assistants.items.map((entry: AppStateListEntry) => [entry.assistant_id, entry.label, entry.launch_hint]),
       [
         ['medautoscience', 'Med Auto Science', 'direct_click'],
         ['medautogrant', 'Med Auto Grant', 'direct_click'],
@@ -432,7 +434,7 @@ exit 1
       ],
     );
     assert.equal(
-      output.app_state.actions.some((entry) => entry.action_id === 'developer_supervisor' && entry.surface === 'opl app action execute'),
+      output.app_state.actions.some((entry: AppStateListEntry) => entry.action_id === 'developer_supervisor' && entry.surface === 'opl app action execute'),
       true,
     );
   } finally {
