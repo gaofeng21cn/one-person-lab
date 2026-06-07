@@ -23,7 +23,7 @@ export function createJsonExportFixture(payload: Record<string, unknown>) {
     `process.stdout.write(${JSON.stringify(`${JSON.stringify(payload)}\n`)});\n`,
     { mode: 0o755 },
   );
-  return { fixtureRoot, exportPath: `/opt/homebrew/Cellar/node/26.0.0/bin/node ${exportPath}` };
+  return { fixtureRoot, exportPath: `${process.execPath} ${exportPath}` };
 }
 
 export function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
