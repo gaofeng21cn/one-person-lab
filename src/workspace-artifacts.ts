@@ -29,6 +29,14 @@ export const STAGE_OUTPUT_REQUIRED_DIRECTORIES = [
 export const STAGE_OUTPUT_REQUIRED_FILES = [
   'stage_manifest.json',
 ] as const;
+export const STAGE_LIFECYCLE_STATUSES = [
+  'open',
+  'active',
+  'completed',
+  'blocked',
+  'superseded',
+  'archived',
+] as const;
 
 type WorkspaceArtifactContext = {
   workspaceId: string;
@@ -224,14 +232,7 @@ export function buildStageOutputsIndex(input: {
     agent_id: input.agent.agent_id,
     project_id: input.project.project_id,
     stage_outputs_root: input.project.stage_outputs_root,
-    stage_lifecycle_model: [
-      'open',
-      'active',
-      'completed',
-      'blocked',
-      'superseded',
-      'archived',
-    ],
+    stage_lifecycle_model: [...STAGE_LIFECYCLE_STATUSES],
     current_stage_pointer_ref: currentStagePointerRef(input.project.stage_outputs_root),
     stage_folder_protocol: {
       stage_folder_pattern: `${input.project.stage_outputs_root}/<stage-id>/`,
@@ -269,14 +270,7 @@ export function buildCurrentStagePointer(input: {
     current_stage_manifest_ref: null,
     latest_owner_receipt_ref: null,
     latest_typed_blocker_ref: null,
-    lifecycle_model: [
-      'open',
-      'active',
-      'completed',
-      'blocked',
-      'superseded',
-      'archived',
-    ],
+    lifecycle_model: [...STAGE_LIFECYCLE_STATUSES],
     empty_state: 'no_stage_opened_yet',
     authority_boundary: {
       pointer_is_projection_only: true,

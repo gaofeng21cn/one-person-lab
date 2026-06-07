@@ -169,7 +169,7 @@ export function defaultWorkspaceProfileId(agent: WorkspaceAgentProfile): Workspa
 export function selectWorkspaceProfileId(
   agent: WorkspaceAgentProfile,
   requestedMode: WorkspaceModeInput,
-  commandName: 'workspace init' | 'workspace adopt' = 'workspace init',
+  commandName: 'workspace init' | 'workspace ensure' | 'workspace adopt' = 'workspace init',
 ): WorkspaceProfileId {
   if (requestedMode === 'auto') {
     return defaultWorkspaceProfileId(agent);

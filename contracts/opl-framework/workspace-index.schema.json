@@ -932,6 +932,24 @@
             }
           ]
         },
+        "current_stage_manifest_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "latest_owner_receipt_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "latest_typed_blocker_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "lifecycle_model": {
           "type": "array",
           "prefixItems": [

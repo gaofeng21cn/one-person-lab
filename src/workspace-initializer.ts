@@ -214,6 +214,15 @@ function normalizeExistingProjects(projects: unknown) {
     .filter((project) => project.project_id.trim().length > 0);
 }
 
+function profileIdFromWorkspaceIndex(index: Record<string, unknown> | null): WorkspaceProfileId | null {
+  const profile = isRecord(index?.workspace_topology_profile) ? index.workspace_topology_profile : null;
+  const profileId = profile?.profile_id;
+  if (profileId === 'one_off' || profileId === 'rca_series' || profileId === 'mas_portfolio') {
+    return profileId;
+  }
+  return null;
+}
+
 function mergeWorkspaceProjects(
   existingProjects: WorkspaceProjectIndexEntry[],
   currentProject: WorkspaceProjectIndexEntry,
@@ -786,6 +795,84 @@ export function ensureWorkspace(
     : null;
 
   if (activeWorkspacePath && activeWorkspaceIndexPath && indexedProject && !options.force) {
+    const refreshedIndex = readExistingWorkspaceIndex(activeWorkspaceIndexPath);
+    const profileId = profileIdFromWorkspaceIndex(refreshedIndex) ?? selectWorkspaceProfileId(agent, 'auto', 'workspace ensure');
+    const profile = profileFromTopologyContract(profileId);
+    if (refreshedIndex) {
+      assertCompatibleExistingIndex({ existingIndex: refreshedIndex, agent, profileId, profile });
+    }
+    const projects = normalizeExistingProjects(refreshedIndex?.projects);
+    const refreshedProject = projects.find((project) => project.project_id === projectId) ?? indexedProject;
+    const workspaceId = normalizeRequiredSegment(path.basename(activeWorkspacePath), 'workspace_id');
+    const updatedAt = new Date().toISOString();
+    const title = typeof refreshedIndex?.title === 'string' && refreshedIndex.title.trim()
+      ? refreshedIndex.title
+      : null;
+    const refreshedWorkspaceIndex = buildWorkspaceIndex({
+      contracts,
+      workspaceId,
+      workspacePath: activeWorkspacePath,
+      title,
+      agent,
+      profileId,
+      profile,
+      projectId,
+      projectRootRef: refreshedProject.project_root,
+      stageOutputsRootRef: refreshedProject.stage_outputs_root,
+      createdAt: typeof refreshedIndex?.created_at === 'string' ? refreshedIndex.created_at : updatedAt,
+      updatedAt,
+      projects,
+    });
+    if (typeof refreshedIndex?.created_at === 'string') {
+      refreshedWorkspaceIndex.created_at = refreshedIndex.created_at;
+    }
+    const createdDirectories: string[] = [];
+    let writtenGeneratedFiles: string[] = [];
+    if (!options.dryRun) {
+      ensureDir(activeWorkspacePath, createdDirectories);
+      for (const sharedRoot of profile.shared_resource_roots) {
+        ensureDir(path.join(activeWorkspacePath, sharedRoot), createdDirectories);
+      }
+      ensureDir(path.join(activeWorkspacePath, profile.project_collection_path), createdDirectories);
+      for (const project of projects) {
+        const projectRoot = path.join(activeWorkspacePath, project.project_root);
+        ensureDir(projectRoot, createdDirectories);
+        for (const relativePath of [
+          project.control_root,
+          project.inputs_root,
+          project.stage_outputs_root,
+          project.exports_root,
+          project.packages_root,
+          project.review_root,
+          project.handoff_root,
+          project.archive_root,
+        ]) {
+          ensureDir(path.join(activeWorkspacePath, relativePath), createdDirectories);
+        }
+      }
+      fs.writeFileSync(
+        path.join(activeWorkspacePath, 'workspace.yaml'),
+        buildWorkspaceYaml({
+          workspaceId,
+          title,
+          agent,
+          profileId,
+          profile,
+          projects,
+        }),
+      );
+      fs.writeFileSync(activeWorkspaceIndexPath, `${JSON.stringify(refreshedWorkspaceIndex, null, 2)}\n`);
+      writtenGeneratedFiles = materializeWorkspaceGeneratedArtifacts({
+        workspaceId,
+        title,
+        workspacePath: activeWorkspacePath,
+        agent,
+        profile,
+        projects,
+        createdAt: refreshedWorkspaceIndex.created_at,
+        updatedAt: refreshedWorkspaceIndex.updated_at,
+      });
+    }
     return {
       version: 'g2',
       contracts_context: {
@@ -802,9 +889,14 @@ export function ensureWorkspace(
         workspace_id: path.basename(activeWorkspacePath),
         workspace_config_path: path.join(activeWorkspacePath, 'workspace.yaml'),
         workspace_index_path: activeWorkspaceIndexPath,
-        project_root: path.join(activeWorkspacePath, indexedProject.project_root),
-        project_stage_outputs_root: path.join(activeWorkspacePath, indexedProject.stage_outputs_root),
-        created_directories: [],
+        workspace_map_path: path.join(activeWorkspacePath, WORKSPACE_MAP_REF),
+        workspace_health_path: path.join(activeWorkspacePath, WORKSPACE_HEALTH_REF),
+        workspace_inspection_path: path.join(activeWorkspacePath, WORKSPACE_INSPECTION_REF),
+        workspace_resource_inventory_path: path.join(activeWorkspacePath, WORKSPACE_RESOURCE_INVENTORY_REF),
+        project_root: path.join(activeWorkspacePath, refreshedProject.project_root),
+        project_stage_outputs_root: path.join(activeWorkspacePath, refreshedProject.stage_outputs_root),
+        created_directories: createdDirectories,
+        written_generated_files: writtenGeneratedFiles,
         agent: {
           agent_id: agent.agent_id,
           label: agent.label,
@@ -813,12 +905,12 @@ export function ensureWorkspace(
           workspace_kind: agent.workspace_kind,
           project_kind: agent.project_kind,
         },
-        project: indexedProject,
+        project: refreshedProject,
+        indexed_projects: projects,
+        generated_refs: refreshedWorkspaceIndex.generated_refs,
+        user_inspection: refreshedWorkspaceIndex.user_inspection,
         binding: activeBinding,
-        workspace_norm: buildAgentWorkspaceNormProjection({
-          contract: contracts.agentWorkspaceNorm,
-          agentId: agent.agent_id,
-        }),
+        workspace_norm: refreshedWorkspaceIndex.workspace_norm,
         interface_projection: buildInterfaceProjection(
           contracts.agentWorkspaceNorm,
           agent,

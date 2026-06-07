@@ -353,7 +353,12 @@ const BRAND_MODULE_CLI_OPERATIONS = [
   'interfaces',
   'validate',
   'doctor',
-] as const;
+] as const satisfies readonly BrandModuleCliOperation[];
+
+const WORKSPACE_BRAND_MODULE_CLI_OPERATIONS = [
+  'status',
+  'inspect',
+] as const satisfies readonly BrandModuleCliOperation[];
 
 const AGENT_INTERNAL_BRAND_MODULE_CLI_OPERATIONS = [
   'list',
@@ -689,7 +694,7 @@ function validateBrandCliGovernance(
       BRAND_MODULE_CLI_OPERATIONS,
     );
     const expectedOperations: readonly BrandModuleCliOperation[] = moduleId === 'workspace'
-      ? (['status', 'inspect'] as const)
+      ? WORKSPACE_BRAND_MODULE_CLI_OPERATIONS
       : BRAND_MODULE_CLI_OPERATIONS;
     requireEveryValue(operations, expectedOperations, 'platform_frontdoors.operations', filePath);
     const unexpectedOperations = operations.filter((operation) => !expectedOperations.includes(operation));

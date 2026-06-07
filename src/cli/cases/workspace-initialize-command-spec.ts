@@ -16,6 +16,7 @@ import {
   workspaceHealth,
   workspaceInventory,
 } from '../../workspace-lifecycle.ts';
+import { buildBrandModuleSurfaceInspect } from '../../brand-modules.ts';
 import type { FrameworkContracts } from '../../types.ts';
 import {
   assertNoArgs,
@@ -207,6 +208,9 @@ export function buildWorkspaceInitializeCommandSpecs(
         'opl workspace inspect --workspace /Users/gaofeng/workspace/visual-theme-a',
       ],
       handler: (args) => {
+        if (args.length === 0) {
+          return buildBrandModuleSurfaceInspect(getContracts(), 'workspace');
+        }
         const parsed = parseWorkspaceValidationArgs(args, specs['workspace inspect']);
         return inspectWorkspace(getContracts(), {
           workspacePath: parsed.workspacePath,

@@ -14,6 +14,60 @@ import {
   withIsolatedFamilyRuntimeEnv,
 } from './mas-default-executor-helpers.ts';
 
+function readinessSurfacePayload(sourceFingerprint: string) {
+  return {
+    ...defaultExecutorPayload(sourceFingerprint),
+    action_type: 'complete_medical_paper_readiness_surface',
+    dispatch_authority: 'consumer_default_executor_dispatch',
+    next_executable_owner: 'MedAutoScience',
+    domain_owner: 'MedAutoScience',
+    work_unit_id: 'complete_medical_paper_readiness_surface',
+    dispatch_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/immutable/complete_medical_paper_readiness_surface/186ef28f465b50a2961653c6.json',
+    owner_route_currentness_basis: {
+      work_unit_id: 'complete_medical_paper_readiness_surface',
+      work_unit_fingerprint: `stage-current-owner-delta::complete_medical_paper_readiness_surface::${sourceFingerprint}`,
+    },
+  };
+}
+
+function completedTemporalObservation(input: {
+  stageAttemptId: string;
+  workflowId: string;
+  closeoutRefs: string[];
+  routeImpact?: Record<string, unknown>;
+}) {
+  return {
+    surface_kind: 'temporal_stage_attempt_query_receipt',
+    provider_kind: 'temporal',
+    stage_attempt_id: input.stageAttemptId,
+    workflow_id: input.workflowId,
+    workflow_status: 'COMPLETED',
+    query: {
+      status: 'completed',
+      closeout_refs: input.closeoutRefs,
+      consumed_refs: ['dispatch:dm002/medical-readiness'],
+      consumed_memory_refs: [],
+      writeback_receipt_refs: [],
+      rejected_writes: [],
+      next_owner: 'medautoscience',
+      route_impact: input.routeImpact ?? {},
+      completion_boundary: {
+        provider_completion: 'completed',
+        domain_ready_verdict: 'domain_gate_pending',
+      },
+      closeout_packet: {
+        surface_kind: 'domain_stage_closeout_packet',
+        closeout_refs: input.closeoutRefs,
+        consumed_refs: ['dispatch:dm002/medical-readiness'],
+        writeback_receipt_refs: [],
+        next_owner: 'medautoscience',
+        domain_ready_verdict: 'domain_gate_pending',
+        route_impact: input.routeImpact ?? {},
+      },
+    },
+  };
+}
+
 test('family-runtime blocks a requeued MAS default executor task when its linked Temporal attempt terminally fails', () => {
   const db = new DatabaseSync(':memory:');
   try {

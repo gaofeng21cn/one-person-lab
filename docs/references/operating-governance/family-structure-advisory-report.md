@@ -27,7 +27,7 @@ node ./scripts/family-structure-advisory.mjs --format=json
 
 Fresh eleven-repo local summary from `2026-06-07T07:15:45Z` after the OPL App-release user-path evidence split and MAS OPL standard-pack, publication-runtime followthrough, gate-replay owner-route, runtime-health and progress-first splits. `opl-aion-shell` remains excluded as an external fork / shell carrier:
 
-- `one-person-lab`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
+- `one-person-lab`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=5`, `missing_verify_entry=false`
 - `med-autoscience`: `needs_design_pass=21`, `mechanical_residue=0`, `public_surface_risk=5`, `missing_verify_entry=false`
 - `med-autogrant`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=5`, `missing_verify_entry=false`
 - `redcube-ai`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=9`, `missing_verify_entry=false`
@@ -152,7 +152,7 @@ Current interpretation:
 
 | Repo | Current structure finding | Action |
 | --- | --- | --- |
-| `one-person-lab` | Fresh scan has no source-shape item, no mechanical residue and no missing verify signal. App-release user-path evidence gate/payload logic is split, and prior framework/test split tranches remain in place. Public-surface risk remains in large OPL contracts. | Keep advisory line-budget plus explicit strict ratchet. Future source growth should continue thin-entry plus named responsibility modules; future contract growth should prefer schema/source modularity or generated/source separation. |
+| `one-person-lab` | Fresh scan has no source-shape item, no mechanical residue and no missing verify signal. App-release user-path evidence gate/payload logic is split, and prior framework/test split tranches remain in place. Public-surface risk remains in large OPL contracts, including the Workspace Protocol index schema. | Keep advisory line-budget plus explicit strict ratchet. Future source growth should continue thin-entry plus named responsibility modules; future contract growth should prefer schema/source modularity or generated/source separation. |
 | `med-autoscience` | No mechanical residue. OPL standard-pack, publication-runtime followthrough, gate-replay owner routes, runtime-health and progress-first monitoring are now naturally split. Fresh scan still reports 21 near-budget part files, all between 851 and 990 lines. Public-surface risk remains in large MAS contracts and one shared case helper. | Keep MAS residual queue advisory. Continue only where caller review confirms a real owner boundary, especially action projection, submission minimal shared base, provider adapters, projection assembly/projection, runtime storage maintenance, provider readiness and dispatch handoff modules. Treat public-surface risk as contract/generator/shared-helper review. |
 | `med-autogrant` | Fresh scan has no source-shape item, no mechanical residue and no missing verify signal. Product-entry manifest/status cases and generated aggregate-source checks are landed. Public-surface risk remains in generated schemas/contracts. | Continue generator modularity / aggregate-source checks for generated schema/contract size, not physical JSON shards. |
 | `redcube-ai` | Fresh scan has no source-shape findings after the RCA PPT/native/image/operator-evidence/visual-pack handoff split. Remaining risk is generated/public contract size and large shared buckets. | Keep the new semantic PPT/native/image/operator-evidence module boundaries; future work should target generated/public-surface modularity and shared-bucket ownership, not physical shards. |
@@ -212,8 +212,9 @@ public_surface_risk:
 - `contracts/family-orchestration/family-product-entry-manifest-v2.schema.json`
 - `contracts/family-orchestration/family-stage-proof-bundle.schema.json`
 - `contracts/opl-framework/agent-lab-contract.json`
+- `contracts/opl-framework/workspace-index.schema.json`
 
-Interpretation: OPL framework source/test shape is currently clean under the scanner. Public-surface risk is generated contract pressure, not a source split task. Future source growth should keep the same family style: thin entries, named source modules, case-family tests and strict line-budget ratchet only in explicit maintenance.
+Interpretation: OPL framework source/test shape is currently clean under the scanner. Public-surface risk is generated contract and large machine-readable schema pressure, not a source split task; the Workspace Protocol expansion makes `workspace-index.schema.json` part of that review queue. Future source growth should keep the same family style: thin entries, named source modules, case-family tests and strict line-budget ratchet only in explicit maintenance.
 
 ### med-autoscience
 
