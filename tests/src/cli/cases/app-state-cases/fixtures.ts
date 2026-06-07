@@ -1,4 +1,4 @@
-import { buildManifestCommand, fs, loadFamilyManifestFixtures, path } from '../../helpers.ts';
+import { buildManifestCommand, fs, loadFamilyManifestFixtures, path, writeMasCleanRunnerFixture } from '../../helpers.ts';
 import { buildCurrentOwnerDeltaReadModel } from '../../../../../src/current-owner-delta-projection.ts';
 
 export function bindMasWorkspaceForAppState(input: {
@@ -13,6 +13,10 @@ export function bindMasWorkspaceForAppState(input: {
     profile_ref: input.profilePath,
     profile_name: 'dm-cvd-mortality-risk',
   };
+  writeMasCleanRunnerFixture(input.workspaceRoot, {
+    profilePath: input.profilePath,
+    manifest,
+  });
   const now = new Date().toISOString();
   fs.mkdirSync(input.stateDir, { recursive: true });
   fs.writeFileSync(
