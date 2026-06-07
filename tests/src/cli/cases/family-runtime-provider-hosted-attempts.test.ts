@@ -1,4 +1,5 @@
 import './family-runtime-provider-hosted-attempts-cases/mas-default-executor.ts';
+import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-export-updates.ts';
 import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-gate-clearing.ts';
 import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-medautoscience-owner.ts';
 import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-redrive.ts';
