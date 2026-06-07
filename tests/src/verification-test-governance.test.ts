@@ -187,7 +187,6 @@ test('line-budget advisory is backed by a reviewed strict-ratchet contract', () 
   assert.equal(contract.default_limit, 1000);
   assert.equal(contract.baseline_policy?.mode, 'scheduled_advisory_with_explicit_strict_ratchet');
   assert.equal(Array.isArray(contract.reviewed_baselines), true);
-  assert.ok((contract.reviewed_baselines ?? []).length > 0);
   for (const entry of contract.reviewed_baselines ?? []) {
     assert.equal(typeof entry.path, 'string');
     assert.equal(typeof entry.limit, 'number');

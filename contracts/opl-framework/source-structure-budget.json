@@ -23,14 +23,5 @@
     "retired_baseline": "advisory_by_default_strict_blocks_until_removed",
     "line_count_ledger_owner": "this_contract_and_scripts_line_budget"
   },
-  "reviewed_baselines": [
-    {
-      "path": "src/agent-lab-complete.ts",
-      "limit": 1013,
-      "owner": "agent-lab-runtime-owner",
-      "reason": "reviewed historical runtime completion entry; scheduled structure maintenance continues semantic thinning",
-      "intended_boundary": "agent lab completion entry remains stable while subresponsibilities move to focused agent-lab modules",
-      "review_after": "2026-09-30"
-    }
-  ]
+  "reviewed_baselines": []
 }
