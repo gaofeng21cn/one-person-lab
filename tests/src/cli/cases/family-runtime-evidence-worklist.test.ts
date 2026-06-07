@@ -23,6 +23,7 @@ import {
 test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure without domain authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const familyWorkspaceRoot = createMinimalFamilyWorkspaceRoot();
   const baseManifests = loadFamilyManifestFixtures();
   const manifests = {
     medautogrant: withEvidenceWorklistSurfaces(
@@ -82,6 +83,7 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
       'codex_cli',
     ], {
       ...familyRuntimeEnv(stateRoot, fixtureContractsRoot),
+      OPL_FAMILY_WORKSPACE_ROOT: familyWorkspaceRoot,
     });
     const worklist = output.family_runtime_evidence_worklist;
 
@@ -187,6 +189,7 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: familyWorkspaceRoot,
     });
     const fullWorklist = fullOutput.family_runtime_evidence_worklist;
     assert.equal(fullWorklist.detail_level, 'full');
@@ -578,6 +581,7 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
   }
 });
 
