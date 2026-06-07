@@ -120,6 +120,23 @@ test('agents conformance reports structural readiness separately from production
     adoptionReadModel.live_stage_run_progress_evidence_policy,
     'controlled_canary_and_structural_conformance_do_not_close_live_domain_progress_evidence',
   );
+  const liveProgressWorklist = adoptionReadModel.live_stage_run_progress_evidence_worklist;
+  assert.equal(liveProgressWorklist.surface_kind, 'opl_live_stage_run_progress_evidence_worklist');
+  assert.equal(liveProgressWorklist.owner, 'domain_owner');
+  assert.equal(liveProgressWorklist.status, 'required_from_domain_owner');
+  assert.equal(liveProgressWorklist.open_domain_count, 1);
+  assert.deepEqual(liveProgressWorklist.accepted_refs_only_result_shapes, [
+    'domain_owner_receipt_ref',
+    'typed_blocker_ref',
+    'human_gate_ref',
+    'quality_or_export_receipt_ref',
+    'no_regression_ref',
+    'long_soak_ref',
+  ]);
+  assert.equal(liveProgressWorklist.authority_boundary.can_claim_live_domain_progress, false);
+  assert.equal(liveProgressWorklist.authority_boundary.can_claim_domain_ready, false);
+  assert.equal(liveProgressWorklist.authority_boundary.can_sign_owner_receipt, false);
+  assert.equal(liveProgressWorklist.authority_boundary.can_create_typed_blocker, false);
   assert.equal(adoptionReadModel.conformance_pass_counts_as_domain_ready, false);
   assert.equal(adoptionReadModel.conformance_pass_counts_as_production_ready, false);
   assert.equal(adoptionReadModel.authority_boundary.can_claim_domain_ready, false);
@@ -157,6 +174,13 @@ test('agents conformance reports structural readiness separately from production
   );
   assert.equal(adoptionDomain.live_stage_run_progress_evidence_required_from, 'domain_owner');
   assert.equal(adoptionDomain.structural_conformance_is_domain_ready, false);
+  assert.equal(liveProgressWorklist.domains[0].domain_id, adoptionDomain.domain_id);
+  assert.equal(
+    liveProgressWorklist.domains[0].next_required_owner_action,
+    adoptionDomain.next_required_owner_action,
+  );
+  assert.equal(liveProgressWorklist.domains[0].conformance_can_claim_domain_ready, false);
+  assert.equal(liveProgressWorklist.domains[0].can_create_typed_blocker, false);
   assert.equal(
     adoptionDomain.next_required_owner_action,
     'domain_owner_live_receipt_typed_blocker_no_regression_or_long_soak_ref_required',

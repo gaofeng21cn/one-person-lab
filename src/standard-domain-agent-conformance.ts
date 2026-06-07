@@ -424,6 +424,15 @@ function stageRunDomainNextAction(report: RepoConformanceReport) {
   return 'domain_owner_live_progress_evidence_still_required_before_domain_or_production_ready';
 }
 
+const LIVE_STAGE_RUN_PROGRESS_ACCEPTED_RESULT_SHAPES = [
+  'domain_owner_receipt_ref',
+  'typed_blocker_ref',
+  'human_gate_ref',
+  'quality_or_export_receipt_ref',
+  'no_regression_ref',
+  'long_soak_ref',
+];
+
 function buildStageRunDomainAdoptionReadModel(reports: RepoConformanceReport[]) {
   const domains = reports.map((report) => {
     const profile = report.stage_run_kernel_profile_checks;
@@ -514,6 +523,39 @@ function buildStageRunDomainAdoptionReadModel(reports: RepoConformanceReport[]) 
     (total, domain) => total + domain.domain_production_acceptance_tail_open_count,
     0,
   );
+  const liveStageRunProgressEvidenceWorklist = {
+    surface_kind: 'opl_live_stage_run_progress_evidence_worklist',
+    owner: 'domain_owner',
+    status: 'required_from_domain_owner',
+    open_domain_count: domains.length,
+    required_from: 'domain_owner',
+    accepted_refs_only_result_shapes: LIVE_STAGE_RUN_PROGRESS_ACCEPTED_RESULT_SHAPES,
+    domains: domains.map((domain) => ({
+      domain_id: domain.domain_id,
+      requested_agent_id: domain.requested_agent_id,
+      repo_dir: domain.repo_dir,
+      status: domain.live_stage_run_progress_evidence_status,
+      next_required_owner_action: domain.next_required_owner_action,
+      accepted_refs_only_result_shapes: LIVE_STAGE_RUN_PROGRESS_ACCEPTED_RESULT_SHAPES,
+      structural_conformance_is_domain_ready: domain.structural_conformance_is_domain_ready,
+      conformance_can_claim_live_domain_progress: false,
+      conformance_can_claim_domain_ready: false,
+      conformance_can_claim_production_ready: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+    })),
+    authority_boundary: {
+      can_claim_live_domain_progress: false,
+      can_claim_domain_ready: false,
+      can_claim_quality_or_export_ready: false,
+      can_claim_artifact_ready: false,
+      can_claim_production_ready: false,
+      can_write_domain_truth: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_authorize_physical_delete: false,
+    },
+  };
   return {
     surface_kind: 'opl_stage_run_domain_adoption_read_model',
     owner: 'one-person-lab',
@@ -540,6 +582,7 @@ function buildStageRunDomainAdoptionReadModel(reports: RepoConformanceReport[]) 
     live_stage_run_progress_evidence_status: 'required_from_domain_owner',
     live_stage_run_progress_evidence_policy:
       'controlled_canary_and_structural_conformance_do_not_close_live_domain_progress_evidence',
+    live_stage_run_progress_evidence_worklist: liveStageRunProgressEvidenceWorklist,
     controlled_canary_claims_live_domain_progress: false,
     conformance_pass_counts_as_domain_ready: false,
     conformance_pass_counts_as_production_ready: false,
