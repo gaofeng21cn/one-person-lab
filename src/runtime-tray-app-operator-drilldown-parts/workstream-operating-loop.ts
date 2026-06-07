@@ -84,7 +84,12 @@ function routeImpactRefs(attempt: JsonRecord) {
       'readiness_refs',
       'publication_eval_refs',
       'review_receipt_refs',
+      'quality_gate_receipt_ref',
+      'quality_gate_receipt_refs',
+      'gate_receipt_ref',
       'gate_receipt_refs',
+      'publication_gate_receipt_ref',
+      'publication_gate_receipt_refs',
     ]),
     packageRefs: refsFromRecord(routeImpact, ['package_refs']),
     exportRefs: refsFromRecord(routeImpact, ['export_refs']),
@@ -414,6 +419,26 @@ function goalOracleStatus(input: {
   return 'missing';
 }
 
+function latestOwnerAnswer(input: {
+  ownerReceiptRefs: string[];
+  qualityGateRefs: string[];
+  typedBlockerRefs: string[];
+}) {
+  const ownerReceiptRef = input.ownerReceiptRefs[0];
+  if (ownerReceiptRef) {
+    return { ref: ownerReceiptRef, kind: 'domain_owner_receipt' };
+  }
+  const qualityGateRef = input.qualityGateRefs[0];
+  if (qualityGateRef) {
+    return { ref: qualityGateRef, kind: 'quality_gate_receipt' };
+  }
+  const typedBlockerRef = input.typedBlockerRefs[0];
+  if (typedBlockerRef) {
+    return { ref: typedBlockerRef, kind: 'typed_blocker' };
+  }
+  return { ref: null, kind: null };
+}
+
 function heartbeatStatus(attempt: JsonRecord) {
   const status = stringValue(attempt.status)
     ?? stringValue(attempt.local_status)
@@ -612,6 +637,11 @@ export function buildWorkstreamOperatingLoop(input: {
       ...stringList(input.memoryRefs.writeback_receipt_refs),
     ]);
     const classification = progressClassification(progressLog);
+    const ownerAnswer = latestOwnerAnswer({
+      ownerReceiptRefs: routeRefs.ownerReceiptRefs,
+      qualityGateRefs: routeRefs.qualityGateRefs,
+      typedBlockerRefs: routeRefs.typedBlockerRefs,
+    });
     const goalOracle = goalOracleStatus({
       ownerReceiptRefs: routeRefs.ownerReceiptRefs,
       qualityGateRefs: routeRefs.qualityGateRefs,
@@ -680,6 +710,9 @@ export function buildWorkstreamOperatingLoop(input: {
       owner_receipt_refs: routeRefs.ownerReceiptRefs,
       typed_blocker_refs: routeRefs.typedBlockerRefs,
       quality_gate_refs: routeRefs.qualityGateRefs,
+      latest_owner_answer_ref: ownerAnswer.ref,
+      latest_owner_answer_kind: ownerAnswer.kind,
+      latest_owner_answer_is_domain_ready_verdict: false,
       package_refs: packageRefs,
       export_refs: exportRefs,
       next_steering_action: nextAction,

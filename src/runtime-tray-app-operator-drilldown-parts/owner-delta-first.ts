@@ -144,6 +144,10 @@ function nextActionFromWorkstream(workstream: JsonRecord) {
     required_refs_any_of: stringList(action.required_next_refs_any_of),
     artifact_review_refs: stringList(action.artifact_review_refs),
     typed_blocker_refs: stringList(action.typed_blocker_refs),
+    latest_owner_answer_ref: stringValue(workstream.latest_owner_answer_ref),
+    latest_owner_answer_kind: stringValue(workstream.latest_owner_answer_kind),
+    latest_owner_answer_is_domain_ready_verdict:
+      workstream.latest_owner_answer_is_domain_ready_verdict === true,
     source: 'workstream_operating_loop',
   };
 }

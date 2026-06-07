@@ -318,6 +318,73 @@ test('workstream operating loop anchors missing completion oracle to current own
   );
 });
 
+test('workstream operating loop treats current gate replay receipt as owner answer without ready claim', () => {
+  const gateReceiptRef =
+    'runtime/quests/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/reports/publishability_gate/2026-06-07T015349Z.json';
+  const drilldown = buildAppOperatorDrilldown({
+    stageAttemptWorkbench: {
+      attempts: [
+        {
+          stage_attempt_id: 'sat-current-gate-replay',
+          task_id: 'task-dm003-gate-replay',
+          domain_id: 'medautoscience',
+          stage_id: 'domain_owner/default-executor-dispatch',
+          status: 'completed',
+          local_status: 'completed',
+          source_fingerprint: 'mas_default_executor_source_gate_replay',
+          created_at: '2026-06-07T01:50:27.773Z',
+          updated_at: '2026-06-07T01:53:49.217Z',
+          workspace_locator: {
+            dispatch_ref:
+              'studies/003/artifacts/supervision/consumer/default_executor_dispatches/immutable/run_gate_clearing_batch/request.json',
+            study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+            action_type: 'run_gate_clearing_batch',
+          },
+          closeout_receipt_status: 'accepted_typed_closeout',
+          stage_progress_log: {
+            surface_kind: 'opl_stage_progress_log',
+            progress_delta_classification: 'typed_blocker',
+            deliverable_progress_delta: {
+              changed_stage_surfaces: [],
+            },
+            platform_repair_delta: {
+              changed_stage_surfaces: [],
+            },
+          },
+          route_impact: {
+            gate_receipt_ref: gateReceiptRef,
+            domain_ready_verdict: 'publication_gate_blocked',
+          },
+        },
+      ],
+    },
+    providerContinuousProof: {},
+    domainProjectionIngestion: {},
+    domainManifestProjects: [],
+    detailLevel: 'full',
+  }) as any;
+
+  const workstream = drilldown.workstream_operating_loop.workstreams[0];
+  assert.equal(workstream.goal_oracle_status, 'observed');
+  assert.deepEqual(workstream.quality_gate_refs, [gateReceiptRef]);
+  assert.equal(workstream.latest_owner_answer_ref, gateReceiptRef);
+  assert.equal(workstream.latest_owner_answer_kind, 'quality_gate_receipt');
+  assert.equal(workstream.latest_owner_answer_is_domain_ready_verdict, false);
+
+  const currentOwnerDelta =
+    drilldown.attention_first_payload.current_owner_delta_read_model.current_owner_delta;
+  assert.equal(currentOwnerDelta.lineage_ref, 'sat-current-gate-replay');
+  assert.equal(currentOwnerDelta.latest_owner_answer_ref, gateReceiptRef);
+  assert.equal(currentOwnerDelta.latest_owner_answer_kind, 'quality_gate_receipt');
+  assert.equal(currentOwnerDelta.hard_gate.state, 'domain_owner_answer_recorded');
+  assert.equal(currentOwnerDelta.hard_gate.human_or_domain_owner_required, false);
+  assert.equal(currentOwnerDelta.hard_gate.domain_ready_authorized, false);
+  assert.equal(
+    drilldown.attention_first_payload.current_owner_delta_read_model.next_safe_action_or_none,
+    null,
+  );
+});
+
 test('owner delta first prefers the latest current domain dispatch workstream', () => {
   const drilldown = buildAppOperatorDrilldown({
     stageAttemptWorkbench: {

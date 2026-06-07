@@ -276,6 +276,9 @@ export function buildDefaultNextActionFromCurrentOwnerDelta(
   const deltaId = stringValue(delta.delta_id) ?? 'current-owner-delta';
   const owner = stringValue(delta.current_owner) ?? 'one-person-lab';
   const providerLivenessRequired = hardGate.provider_liveness_required === true;
+  if (hardGateState === 'domain_owner_answer_recorded') {
+    return null;
+  }
   const ownerAnswerRequired = ownerAnswerOrTypedBlockerRequired({
     desiredDeltaKind,
     acceptedAnswerShape,
@@ -371,19 +374,36 @@ function buildCurrentOwnerDeltaProjection(input: {
     input.compactAction?.route_requires_domain_or_app_payload === true;
   const explicitOwnerDeltaOpen = requiredDelta !== 'no_opl_operator_actionable_delta_required';
   const blockedRefsOnly = input.countSummary.blocked_refs_only_count > 0;
+  const latestOwnerAnswerRef = firstString(
+    stringValue(input.handoff.latest_owner_answer_ref),
+    stringValue(record(input.ownerDeltaFirst.primary_item).latest_owner_answer_ref),
+  );
+  const latestOwnerAnswerKind = firstString(
+    stringValue(input.handoff.latest_owner_answer_kind),
+    stringValue(record(input.ownerDeltaFirst.primary_item).latest_owner_answer_kind),
+  );
+  const ownerAnswerRecorded = latestOwnerAnswerRef !== null;
   const hardGate = {
     state:
-      explicitOwnerDeltaOpen
+      ownerAnswerRecorded
+        ? 'domain_owner_answer_recorded'
+        : explicitOwnerDeltaOpen
         ? 'owner_delta_open'
         : blockedRefsOnly
           ? 'domain_or_human_owner_blocked_refs_only'
           : 'none',
     provider_liveness_required: false,
     human_or_domain_owner_required:
-      selectedActionRequiresDomainOrAppPayload
-      || (explicitOwnerDeltaOpen && input.countSummary.payload_required_count > 0)
-      || blockedRefsOnly,
+      ownerAnswerRecorded
+        ? false
+        : selectedActionRequiresDomainOrAppPayload
+        || (explicitOwnerDeltaOpen && input.countSummary.payload_required_count > 0)
+        || blockedRefsOnly,
     source: 'owner_delta_controller',
+    owner_answer_ref: latestOwnerAnswerRef,
+    owner_answer_kind: latestOwnerAnswerKind,
+    domain_ready_authorized: false,
+    quality_or_export_authorized: false,
   };
 
   return {
@@ -446,10 +466,8 @@ function buildCurrentOwnerDeltaProjection(input: {
         : []),
     ],
     live_attempt_ref: input.compactAction?.next_safe_action_ref ?? null,
-    latest_owner_answer_ref: firstString(
-      stringValue(input.handoff.latest_owner_answer_ref),
-      stringValue(record(input.ownerDeltaFirst.primary_item).latest_owner_answer_ref),
-    ),
+    latest_owner_answer_ref: latestOwnerAnswerRef,
+    latest_owner_answer_kind: latestOwnerAnswerKind,
     cognitive_kernel_boundary: cognitiveKernelBoundary(),
     stop_loss_state: compactStopLossState(
       input.handoff.stop_loss_state,

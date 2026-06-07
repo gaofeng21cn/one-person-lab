@@ -128,6 +128,9 @@ function ownerAnswerKind(currentOwnerDelta: JsonRecord) {
   if (explicitKind === 'typed_blocker' || text(currentOwnerDelta.latest_typed_blocker_ref) || text(hardGate.typed_blocker_ref)) {
     return 'typed_blocker';
   }
+  if (explicitKind === 'quality_gate_receipt') {
+    return null;
+  }
   return ownerAnswerRef(currentOwnerDelta) ? 'owner_receipt' : null;
 }
 
@@ -149,7 +152,16 @@ function ownerAnswerKindFromProjection(projection: JsonRecord) {
   if (explicitKind === 'typed_blocker' || text(projection.latest_typed_blocker_ref)) {
     return 'typed_blocker';
   }
+  if (explicitKind === 'quality_gate_receipt') {
+    return null;
+  }
   return ownerAnswerRefFromProjection(projection) ? 'owner_receipt' : null;
+}
+
+function hasExplicitQualityGateReceiptAnswer(value: JsonRecord) {
+  const hardGate = record(value.hard_gate);
+  return text(hardGate.owner_answer_kind) === 'quality_gate_receipt'
+    || text(value.latest_owner_answer_kind) === 'quality_gate_receipt';
 }
 
 function missingRefsFromBlockerReasons(reasons: string[]) {
@@ -289,12 +301,17 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
   const ownerAnswerProjectionHardGate = record(ownerAnswerProjection.hard_gate);
   const ownerAnswerProjectionCloseoutBinding = record(ownerAnswerProjection.closeout_binding);
   const bridgedOwnerAnswerRef = ownerAnswerRefFromProjection(ownerAnswerProjection);
-  const effectiveOwnerAnswerRef = ownerAnswerRef(currentOwnerDelta)
-    ?? latestExecutionAuthorization?.owner_answer_ref
-    ?? bridgedOwnerAnswerRef;
-  const effectiveOwnerAnswerKind = ownerAnswerKind(currentOwnerDelta)
+  const currentOwnerDeltaHasQualityGateReceipt =
+    hasExplicitQualityGateReceiptAnswer(currentOwnerDelta);
+  const effectiveOwnerAnswerKind = currentOwnerDeltaHasQualityGateReceipt
+    ? null
+    : ownerAnswerKind(currentOwnerDelta)
     ?? latestExecutionAuthorization?.owner_answer_kind
     ?? ownerAnswerKindFromProjection(ownerAnswerProjection);
+  const rawOwnerAnswerRef = ownerAnswerRef(currentOwnerDelta)
+    ?? latestExecutionAuthorization?.owner_answer_ref
+    ?? bridgedOwnerAnswerRef;
+  const effectiveOwnerAnswerRef = effectiveOwnerAnswerKind ? rawOwnerAnswerRef : null;
   const hasOwnerAnswer =
     Boolean(effectiveOwnerAnswerRef);
   const acceptedReturnShapes = strings(currentOwnerDelta.accepted_answer_shape);

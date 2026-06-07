@@ -312,6 +312,60 @@ test('App StageRun cockpit consumes authorization ledger while preserving domain
   }
 });
 
+test('App StageRun cockpit does not promote quality gate receipt to StageRun closeout owner answer', () => {
+  const cockpit = buildAppStageRunCockpit({
+    domain: 'medautoscience',
+    current_owner: 'medautoscience',
+    stage_id: 'domain_owner/default-executor-dispatch',
+    desired_delta_kind: 'owner_delta',
+    desired_delta_description: 'publication_gate_replay_blocked',
+    accepted_answer_shape: [
+      'domain_owner_receipt_ref',
+      'quality_gate_receipt_ref',
+      'typed_blocker_ref',
+    ],
+    task_or_study_ref: 'mas://study/003-dpcc-primary-care-phenotype-treatment-gap',
+    lineage_ref: 'sat_current_gate_replay',
+    source_fingerprint: 'mas_default_executor_source_gate_replay',
+    delta_id: 'dm003-gate-replay:g0',
+    latest_owner_answer_kind: 'quality_gate_receipt',
+    latest_owner_answer_ref:
+      'runtime/quests/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/reports/publishability_gate/2026-06-07T015349Z.json',
+    hard_gate: {
+      state: 'domain_owner_answer_recorded',
+      owner_answer_kind: 'quality_gate_receipt',
+      owner_answer_ref:
+        'runtime/quests/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/reports/publishability_gate/2026-06-07T015349Z.json',
+      domain_ready_authorized: false,
+      quality_or_export_authorized: false,
+    },
+    audit_refs: {
+      workspace_scope_ref: 'workspace:/Users/gaofeng/workspace/Yang/DM-CVD-Mortality-Risk',
+      artifact_scope_ref: 'stage-packet:studies/003-dpcc-primary-care-phenotype-treatment-gap/gate-replay.json',
+      app_operator_drilldown_ref: 'opl://drilldown/current-owner-delta',
+    },
+  });
+
+  assert.equal(cockpit.execution_authorization.closeout_binding.owner_answer_ref, null);
+  assert.equal(cockpit.execution_authorization.closeout_binding.owner_answer_kind, null);
+  assert.equal(
+    cockpit.stage_run_current_owner_delta.missing_role_or_answer_summary
+      .owner_receipt_or_typed_blocker_missing,
+    true,
+  );
+  assert.equal(cockpit.execution_authorization.execution_authorized, false);
+  assert.equal(
+    cockpit.execution_authorization.closeout_binding_blockers.includes(
+      'closeout_receipt_ref_missing',
+    ),
+    true,
+  );
+  assert.equal(
+    cockpit.stage_run_current_owner_delta.hard_gate.domain_ready_authorized,
+    false,
+  );
+});
+
 test('App StageRun cockpit ignores authorization ledger receipt from another stage attempt', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-cockpit-auth-stale-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
