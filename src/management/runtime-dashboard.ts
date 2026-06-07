@@ -1,20 +1,3 @@
-
-function buildRetiredHostedRuntimeReadiness() {
-  return {
-    surface_kind: 'opl_hosted_runtime_readiness',
-    status: 'retired',
-    local_product_api_landed: false,
-    web_bundle_landed: false,
-    self_hostable_web_package_landed: false,
-    service_safe_local_packaging_landed: false,
-    replacement_surface: 'AionUI remote WebUI',
-    blocking_gaps: [],
-    recommended_next_actions: [
-      'Use the OPL desktop GUI / AionUI remote WebUI path instead of the retired local Product API service.',
-    ],
-  };
-}
-
 import { findDomainOrThrow, FrameworkContractError } from '../contracts.ts';
 import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from '../family-domain-catalog.ts';
 import { buildOplRuntimeEndpoints } from '../opl-runtime-paths/current.ts';
@@ -156,7 +139,6 @@ export async function buildOplDashboard(
   })).runtime_status;
   const workspaceCatalog = buildWorkspaceCatalog(contracts).workspace_catalog;
   const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
-  const hostedRuntimeReadiness = buildRetiredHostedRuntimeReadiness();
   const domainEntryParity = buildDomainEntryParity(domainManifests.projects);
   const recommendedEntrySurfaces = buildRecommendedEntrySurfaces(domainManifests.projects);
   const currentSurfaceRefs = buildCurrentDashboardSurfaceRefs(options);
@@ -170,15 +152,12 @@ export async function buildOplDashboard(
       gui_runtime: {
         direct_entry_command: 'opl',
         local_shell_status: 'landed',
-        local_web_command: null,
-        local_web_status: 'retired',
         desktop_shell_status: 'aionui_shell',
         desktop_default_entry_status: 'release_or_installed_app',
         interaction_mode: runtimeModes.interaction_mode,
         execution_mode: runtimeModes.execution_mode,
         acp_runtime_surface_status: 'landed',
         aionui_adapter_status: 'landed',
-        hosted_runtime_readiness: hostedRuntimeReadiness,
         entry_guide_surface: currentSurfaceRefs.entry_guide_surface,
         readiness_surface: currentSurfaceRefs.readiness_surface,
         workspace_registry_status: 'landed',

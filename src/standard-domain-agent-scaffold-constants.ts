@@ -171,12 +171,6 @@ export const STANDARD_AGENT_DEFAULT_RUNTIME_POLICY = {
       'user_stage_log',
       'stage_log_summary',
       'human_stage_log',
-      'human_summary',
-      'paper_stage_log',
-    ],
-    legacy_alias_fields: [
-      'paper_work_done',
-      'changed_paper_surfaces',
     ],
     missing_semantic_summary_status: 'missing_domain_semantic_summary',
     completion_transparency_rule:

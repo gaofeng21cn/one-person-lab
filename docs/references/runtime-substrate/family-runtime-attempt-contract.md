@@ -44,7 +44,7 @@ Temporal-backed attempt 必须把 durable history、activity heartbeat、workflo
 
 当前 contract 要求 completed attempt 必须有 typed closeout；free-text closeout 不能被接受为完成证据。OPL 只记录 closeout refs、consumed refs、memory/writeback refs、rejected writes、route impact、next owner 和 domain-provided user-stage-log fields；它不从 artifact body、memory body、publication verdict body 或 quality verdict body 推断语义。
 
-`user_stage_log` 是用户透明度投影，不是 domain truth。OPL 负责时间、usage、refs、observed/missing/null 和 authority boundary；domain closeout 负责 `stage_name`、`problem_summary`、`stage_goal`、`stage_work_done`、`changed_stage_surfaces`、`outcome`、`remaining_blockers` 和 evidence refs。MAS 的 `paper_work_done` / `changed_paper_surfaces` 只是论文场景 alias；标准 OPL Agent 优先使用 `stage_work_done` / `changed_stage_surfaces`。缺少 domain 人话语义时必须显示 `missing_domain_semantic_summary`，不得补写或猜测。
+`user_stage_log` 是用户透明度投影，不是 domain truth。OPL 负责时间、usage、refs、observed/missing/null 和 authority boundary；domain closeout 负责 `stage_name`、`problem_summary`、`stage_goal`、`stage_work_done`、`changed_stage_surfaces`、`outcome`、`remaining_blockers` 和 evidence refs。标准 OPL Agent 使用 `stage_work_done` / `changed_stage_surfaces`；缺少 domain 人话语义时必须显示 `missing_domain_semantic_summary`，不得补写或猜测。
 
 `current_control_state` 是 OPL-only reconciled projection。它只从 family queue、stage attempt ledger、provider run projection 和 typed stage closeout ledger 派生；不得从 `mas_latest`、`mas_dispatch_latest`、publication-ready verdict 或 artifact-ready verdict 派生。missing identity、stale route/source/truth epoch、provider completed without typed closeout 等状态必须 fail-closed。若存在新 queue / stage attempt 或更新 closeout，旧 terminal attempt 不能覆盖 task-level currentness。
 

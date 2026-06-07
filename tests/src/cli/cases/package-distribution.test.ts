@@ -59,13 +59,6 @@ test('packages manifest exposes active package-channel coordinates for module in
           base_url_role: string;
           model_profile_role: string;
         };
-        webui_docker_image: {
-          image: string;
-          aliases: string[];
-          package_publish_owner: string;
-          framework_role: string;
-          framework_workflow_publish_status: string;
-        };
         native_helper: {
           image: string;
           channel_status: string;
@@ -187,22 +180,7 @@ test('packages manifest exposes active package-channel coordinates for module in
     'force_publish',
   );
   assert.ok(output.packages_manifest.release_automation.cleanup.protected_tags.includes('latest'));
-  assert.equal(
-    output.packages_manifest.packages.webui_docker_image.image,
-    'ghcr.io/gaofeng21cn/one-person-lab-webui:26.4.27',
-  );
-  assert.equal(
-    output.packages_manifest.packages.webui_docker_image.package_publish_owner,
-    'one-person-lab-app',
-  );
-  assert.equal(
-    output.packages_manifest.packages.webui_docker_image.framework_role,
-    'external_app_owned_package_reference',
-  );
-  assert.equal(
-    output.packages_manifest.packages.webui_docker_image.framework_workflow_publish_status,
-    'not_published_by_framework_packages_workflow',
-  );
+  assert.equal(Object.hasOwn(output.packages_manifest.packages, 'webui_docker_image'), false);
   assert.equal(
     output.packages_manifest.packages.native_helper.channel_status,
     'active_ghcr_oci_prebuild',
@@ -413,7 +391,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.release_automation.daily_package_channel.no_change_behavior, 'skip_without_publish');
   assert.equal(manifest.release_automation.daily_package_channel.version_template, '<utc_yy.m.d>-nightly');
   assert.equal(manifest.release_automation.daily_package_channel.force_publish_input, 'force_publish');
-  assert.equal(manifest.packages.webui_docker_image.framework_workflow_publish_status, 'not_published_by_framework_packages_workflow');
+  assert.equal(Object.hasOwn(manifest.packages, 'webui_docker_image'), false);
   assert.equal(manifest.packages.native_helper.channel_status, 'active_ghcr_oci_prebuild');
   assert.equal(manifest.packages.native_helper.retention_policy.retain_versions, 4);
   assert.ok(manifest.packages.native_helper.retention_policy.protected_tags.includes('latest'));

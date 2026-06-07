@@ -133,10 +133,7 @@ function validateManifest(manifest) {
     validateModule(moduleId, entry, failures);
   }
 
-  const webui = manifest.packages?.webui_docker_image;
-  assertCondition(webui?.package_publish_owner === 'one-person-lab-app', 'WebUI package publish owner must remain one-person-lab-app', failures);
-  assertCondition(webui?.framework_role === 'external_app_owned_package_reference', 'Framework WebUI role must remain external App-owned reference', failures);
-  assertCondition(webui?.framework_workflow_publish_status === 'not_published_by_framework_packages_workflow', 'Framework package workflow must not publish WebUI', failures);
+  assertCondition(!Object.hasOwn(manifest.packages ?? {}, 'webui_docker_image'), 'Framework package manifest must not carry App-owned WebUI image coordinates', failures);
 
   const nativeHelper = manifest.packages?.native_helper;
   assertCondition(nativeHelper?.channel_status === 'active_ghcr_oci_prebuild', 'native helper must remain active GHCR OCI prebuild', failures);

@@ -465,14 +465,10 @@ function domainStageSummary(input: StageProgressLogInput) {
     'user_stage_log',
     'stage_log_summary',
     'human_stage_log',
-    'human_summary',
-    'paper_stage_log',
   ]) ?? firstRecordFrom(input.routeImpact, [
     'user_stage_log',
     'stage_log_summary',
     'human_stage_log',
-    'human_summary',
-    'paper_stage_log',
   ]);
 }
 
@@ -484,8 +480,6 @@ function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: num
         'user_stage_log',
         'stage_log_summary',
         'human_stage_log',
-        'human_summary',
-        'paper_stage_log',
       ].some((key) => input.latestCloseout?.[key] === semanticSummary)
         ? 'latest_closeout'
         : 'route_impact'
@@ -500,7 +494,6 @@ function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: num
   const stageWorkDone = semanticList(semanticSummary, [
     'stage_work_done',
     'deliverable_work_done',
-    'paper_work_done',
     'work_done_summary',
     'work_done',
     'actual_work',
@@ -509,13 +502,9 @@ function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: num
   const changedStageSurfaces = semanticList(semanticSummary, [
     'changed_stage_surfaces',
     'changed_deliverable_surfaces',
-    'changed_paper_surfaces',
     'changed_surfaces',
     'artifact_surfaces',
-    'paper_surfaces',
   ]);
-  const paperWorkDone = semanticList(semanticSummary, ['paper_work_done']);
-  const changedPaperSurfaces = semanticList(semanticSummary, ['changed_paper_surfaces', 'paper_surfaces']);
   const remainingBlockers = uniqueStrings([
     ...semanticList(semanticSummary, ['remaining_blockers', 'blockers', 'remaining_issues']),
     ...semanticList(input.routeImpact, ['remaining_blockers', 'typed_blockers']),
@@ -571,8 +560,6 @@ function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: num
     next_forced_delta: progressDeltas.next_forced_delta,
     stage_work_done: stageWorkDone,
     changed_stage_surfaces: changedStageSurfaces,
-    paper_work_done: paperWorkDone.length > 0 ? paperWorkDone : stageWorkDone,
-    changed_paper_surfaces: changedPaperSurfaces.length > 0 ? changedPaperSurfaces : changedStageSurfaces,
     outcome,
     remaining_blockers: remainingBlockers,
     duration,

@@ -376,14 +376,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
 
     const dashboardOutput = runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], env);
     assert.equal(dashboardOutput.dashboard.gui_runtime.recommended_entry_surfaces_count, 3);
-    assert.equal(
-      dashboardOutput.dashboard.gui_runtime.hosted_runtime_readiness.surface_kind,
-      'opl_hosted_runtime_readiness',
-    );
-    assert.equal(
-      dashboardOutput.dashboard.gui_runtime.hosted_runtime_readiness.status,
-      'retired',
-    );
+    assert.equal(Object.hasOwn(dashboardOutput.dashboard.gui_runtime, 'hosted_runtime_readiness'), false);
     assert.equal(
       dashboardOutput.dashboard.gui_runtime.domain_entry_parity.summary.total_projects_count,
       3,

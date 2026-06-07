@@ -778,13 +778,7 @@
         "accepted_domain_semantic_sources": [
           "user_stage_log",
           "stage_log_summary",
-          "human_stage_log",
-          "human_summary",
-          "paper_stage_log"
-        ],
-        "legacy_alias_fields": [
-          "paper_work_done",
-          "changed_paper_surfaces"
+          "human_stage_log"
         ],
         "missing_semantic_summary_status": "missing_domain_semantic_summary",
         "completion_transparency_rule": "stage attempts without domain-provided user-readable semantics remain visible as a semantic gap and cannot be treated as user-transparent closeout",

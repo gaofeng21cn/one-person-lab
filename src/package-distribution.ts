@@ -209,13 +209,6 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
     release_automation: buildReleaseAutomation(retainVersions, rollbackVersion),
     packages: {
       codex_default_profile: readBundledCodexDefaultProfile(),
-      webui_docker_image: {
-        image: `ghcr.io/${owner}/one-person-lab-webui:${version}`,
-        aliases: [`ghcr.io/${owner}/one-person-lab-webui:latest`],
-        package_publish_owner: 'one-person-lab-app',
-        framework_role: 'external_app_owned_package_reference',
-        framework_workflow_publish_status: 'not_published_by_framework_packages_workflow',
-      },
       native_helper: {
         image: `ghcr.io/${owner}/one-person-lab-native-helper`,
         channel_status: 'active_ghcr_oci_prebuild',

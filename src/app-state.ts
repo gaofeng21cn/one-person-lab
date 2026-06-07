@@ -403,15 +403,6 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const developerProfile = {
     ...developerMode.developer_profile,
     capabilities: developerMode.capabilities,
-    legacy_developer_mode: {
-      surface_id: developerMode.surface_id,
-      status: developerMode.status,
-      enabled: developerMode.enabled,
-      effective_state: developerMode.effective_state,
-      mode: developerMode.mode,
-      config_source: developerMode.config_source,
-      allowed_route: developerMode.allowed_route,
-    },
   };
   const provider = await buildProviderState(profile);
   const release = buildReleaseState();

@@ -54,7 +54,6 @@ function progressRefs(attempt: JsonRecord) {
   return {
     deliverableChangedSurfaces: uniqueStrings([
       ...stringList(deliverable.changed_stage_surfaces),
-      ...stringList(deliverable.changed_paper_surfaces),
       ...stringList(record(progressLog.user_stage_log).changed_stage_surfaces),
       ...stringList(record(progressLog.stage_log_summary).changed_stage_surfaces),
     ]),

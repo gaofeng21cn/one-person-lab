@@ -240,9 +240,6 @@ test('app state fast shows developer checkout source when Developer Mode prefers
               impact: string;
             };
           };
-          legacy_developer_mode: {
-            effective_state: string;
-          };
         };
         developer_mode: {
           enabled: string;
@@ -278,7 +275,7 @@ test('app state fast shows developer checkout source when Developer Mode prefers
     const mas = output.app_state.modules.items.find((entry) => entry.module_id === 'medautoscience');
     assert.ok(mas);
     assert.equal(output.app_state.developer_profile.profile_id, 'runtime_maintainer');
-    assert.equal(output.app_state.developer_profile.legacy_developer_mode.effective_state, 'active_direct');
+    assert.equal(Object.hasOwn(output.app_state.developer_profile, 'legacy_developer_mode'), false);
     assert.deepEqual(output.app_state.developer_profile.capabilities.source_channel, {
       status: 'ready',
       level: 'local_checkout',

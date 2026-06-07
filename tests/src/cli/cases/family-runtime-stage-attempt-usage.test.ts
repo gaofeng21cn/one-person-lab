@@ -370,7 +370,7 @@ db.close();`;
     });
     assert.equal(userStageLog.next_forced_delta, 'domain_user_stage_log_or_typed_blocker_with_lineage_required');
     assert.deepEqual(userStageLog.stage_work_done, []);
-    assert.deepEqual(userStageLog.paper_work_done, []);
+    assert.equal(Object.hasOwn(userStageLog, 'paper_work_done'), false);
     assert.deepEqual(userStageLog.semantic_gap.required_domain_fields, [
       'stage_name',
       'problem_summary',
@@ -532,7 +532,7 @@ test('family-runtime attempt query exposes a unified stage progress log with int
         ],
         next_owner: 'med-autoscience',
         domain_ready_verdict: 'domain_gate_pending',
-        paper_stage_log: {
+        stage_log_summary: {
           stage_name: 'DM002 manuscript reporting consistency repair',
           problem_summary: 'The manuscript had inconsistent Methods and Results reporting around model validation, display provenance, and Figure 5/Table support.',
           stage_goal: 'Make the current manuscript explain the fixed validation cohort and align the paper-facing displays with the same evidence base.',
@@ -552,12 +552,12 @@ test('family-runtime attempt query exposes a unified stage progress log with int
             delta_summary: null,
           },
           next_forced_delta: 'ai_reviewer_current_record_or_stable_typed_blocker',
-          paper_work_done: [
+          stage_work_done: [
             'Clarified the complete-case validation sample and fixed predictor set in Methods.',
             'Aligned Table 1, Table 2, and Figure 5 claims to the same validation evidence.',
             'Kept absolute-risk and deployment language bounded until recalibration evidence is available.',
           ],
-          changed_paper_surfaces: [
+          changed_stage_surfaces: [
             'manuscript draft',
             'review manuscript',
             'display provenance ledger',
@@ -710,26 +710,18 @@ db.close();`;
       log.user_stage_log.stage_goal,
       'Make the current manuscript explain the fixed validation cohort and align the paper-facing displays with the same evidence base.',
     );
-    assert.deepEqual(log.user_stage_log.paper_work_done, [
-      'Clarified the complete-case validation sample and fixed predictor set in Methods.',
-      'Aligned Table 1, Table 2, and Figure 5 claims to the same validation evidence.',
-      'Kept absolute-risk and deployment language bounded until recalibration evidence is available.',
-    ]);
     assert.deepEqual(log.user_stage_log.stage_work_done, [
       'Clarified the complete-case validation sample and fixed predictor set in Methods.',
       'Aligned Table 1, Table 2, and Figure 5 claims to the same validation evidence.',
       'Kept absolute-risk and deployment language bounded until recalibration evidence is available.',
-    ]);
-    assert.deepEqual(log.user_stage_log.changed_paper_surfaces, [
-      'manuscript draft',
-      'review manuscript',
-      'display provenance ledger',
     ]);
     assert.deepEqual(log.user_stage_log.changed_stage_surfaces, [
       'manuscript draft',
       'review manuscript',
       'display provenance ledger',
     ]);
+    assert.equal(Object.hasOwn(log.user_stage_log, 'paper_work_done'), false);
+    assert.equal(Object.hasOwn(log.user_stage_log, 'changed_paper_surfaces'), false);
     assert.equal(log.user_stage_log.duration.duration_ms, 1800000);
     assert.equal(log.user_stage_log.duration.duration_source, 'usage_projection');
     assert.equal(log.user_stage_log.token_usage.total_tokens, 3040);
@@ -903,8 +895,8 @@ test('family-runtime stage progress log accepts standard domain human summaries 
       'Aligned critique response with fundability blocker refs.',
     ]);
     assert.deepEqual(grantLog.changed_stage_surfaces, ['specific_aims', 'strategy_narrative', 'review_response']);
-    assert.deepEqual(grantLog.paper_work_done, grantLog.stage_work_done);
-    assert.deepEqual(grantLog.changed_paper_surfaces, grantLog.changed_stage_surfaces);
+    assert.equal(Object.hasOwn(grantLog, 'paper_work_done'), false);
+    assert.equal(Object.hasOwn(grantLog, 'changed_paper_surfaces'), false);
 
     assert.equal(visualLog.semantic_status, 'provided_by_domain');
     assert.equal(visualLog.stage_name, 'RCA visual refresh');

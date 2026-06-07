@@ -221,8 +221,6 @@
       "rejected_writes",
       "user_stage_log",
       "human_stage_log",
-      "human_summary",
-      "paper_stage_log",
       "stage_log_summary",
       "route_impact",
       "next_owner",
@@ -361,13 +359,9 @@
         "typed_closeout_packet.user_stage_log",
         "typed_closeout_packet.stage_log_summary",
         "typed_closeout_packet.human_stage_log",
-        "typed_closeout_packet.human_summary",
-        "typed_closeout_packet.paper_stage_log",
         "route_impact.user_stage_log",
         "route_impact.stage_log_summary",
-        "route_impact.human_stage_log",
-        "route_impact.human_summary",
-        "route_impact.paper_stage_log"
+        "route_impact.human_stage_log"
       ],
       "required_sections": [
         "stage_name",
@@ -379,8 +373,6 @@
         "deliverable_progress_delta",
         "platform_repair_delta",
         "next_forced_delta",
-        "paper_work_done",
-        "changed_paper_surfaces",
         "duration",
         "token_usage",
         "cost",
@@ -404,10 +396,6 @@
         "remaining_blockers"
       ],
       "domain_examples": {
-        "medautoscience": {
-          "stage_work_done_alias": "paper_work_done",
-          "changed_stage_surfaces_alias": "changed_paper_surfaces"
-        },
         "medautogrant": {
           "stage_work_done_examples": [
             "Revised Specific Aims significance and approach rationale.",
@@ -431,10 +419,6 @@
           ]
         }
       },
-      "legacy_alias_sections": [
-        "paper_work_done",
-        "changed_paper_surfaces"
-      ],
       "progress_delta_policy": {
         "surface_kind": "opl_stage_progress_delta_policy",
         "required_fields": [

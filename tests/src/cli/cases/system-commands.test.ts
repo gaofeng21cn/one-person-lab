@@ -103,13 +103,13 @@ test('status dashboard aggregates current OPL management surfaces into one view'
     assert.equal(output.version, 'g2');
     assert.equal(directDashboard?.dashboard.gui_runtime.entry_guide_surface.surface_id, 'opl_current_entry_guide');
     assert.equal(output.dashboard.gui_runtime.direct_entry_command, 'opl');
-    assert.equal(output.dashboard.gui_runtime.local_web_status, 'retired');
-    assert.equal(output.dashboard.gui_runtime.local_web_command, null);
+    assert.equal(Object.hasOwn(output.dashboard.gui_runtime, 'local_web_status'), false);
+    assert.equal(Object.hasOwn(output.dashboard.gui_runtime, 'local_web_command'), false);
     assert.equal(output.dashboard.gui_runtime.desktop_shell_status, 'aionui_shell');
     assert.equal(output.dashboard.gui_runtime.desktop_default_entry_status, 'release_or_installed_app');
     assert.equal(output.dashboard.gui_runtime.recommended_entry_surfaces_count, 0);
     assert.deepEqual(output.dashboard.gui_runtime.recommended_entry_surfaces, []);
-    assert.equal(output.dashboard.gui_runtime.hosted_runtime_readiness.status, 'retired');
+    assert.equal(Object.hasOwn(output.dashboard.gui_runtime, 'hosted_runtime_readiness'), false);
     assert.equal(output.dashboard.gui_runtime.entry_guide_surface.surface_id, 'opl_current_entry_guide');
     assert.equal(output.dashboard.gui_runtime.readiness_surface.surface_id, 'opl_current_readiness_projection');
     assert.equal('hosted_web_status' in output.dashboard.gui_runtime, false);

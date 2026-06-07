@@ -166,8 +166,6 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'rejected_writes',
     'user_stage_log',
     'human_stage_log',
-    'human_summary',
-    'paper_stage_log',
     'stage_log_summary',
     'route_impact',
     'next_owner',
@@ -255,13 +253,9 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'typed_closeout_packet.user_stage_log',
     'typed_closeout_packet.stage_log_summary',
     'typed_closeout_packet.human_stage_log',
-    'typed_closeout_packet.human_summary',
-    'typed_closeout_packet.paper_stage_log',
     'route_impact.user_stage_log',
     'route_impact.stage_log_summary',
     'route_impact.human_stage_log',
-    'route_impact.human_summary',
-    'route_impact.paper_stage_log',
   ]);
   assert.ok(userStageLog.required_sections.includes('problem_summary'));
   assert.ok(userStageLog.required_sections.includes('stage_work_done'));
@@ -270,9 +264,10 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
   assert.ok(userStageLog.required_sections.includes('deliverable_progress_delta'));
   assert.ok(userStageLog.required_sections.includes('platform_repair_delta'));
   assert.ok(userStageLog.required_sections.includes('next_forced_delta'));
-  assert.ok(userStageLog.required_sections.includes('paper_work_done'));
+  assert.equal(userStageLog.required_sections.includes('paper_work_done'), false);
+  assert.equal(userStageLog.required_sections.includes('changed_paper_surfaces'), false);
   assert.ok(userStageLog.required_sections.includes('token_usage'));
-  assert.deepEqual(userStageLog.legacy_alias_sections, ['paper_work_done', 'changed_paper_surfaces']);
+  assert.equal(Object.hasOwn(userStageLog, 'legacy_alias_sections'), false);
   assert.equal(userStageLog.progress_delta_policy.surface_kind, 'opl_stage_progress_delta_policy');
   assert.deepEqual(userStageLog.progress_delta_policy.required_fields, [
     'progress_delta_classification',
