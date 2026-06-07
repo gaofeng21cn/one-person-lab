@@ -63,14 +63,6 @@
       "reason": "reviewed historical app drilldown CLI case; scheduled structure maintenance continues projection-specific test movement to scoped cases",
       "intended_boundary": "app drilldown tests should split by detail, summary, action routes, provider evidence, domain payloads, and app release evidence",
       "review_after": "2026-09-30"
-    },
-    {
-      "path": "tests/src/family-runtime-codex-stage-runner.test.ts",
-      "limit": 1153,
-      "owner": "family-runtime-runner-test-owner",
-      "reason": "reviewed historical Codex stage runner test file; scheduled structure maintenance continues provider-env and protocol case separation",
-      "intended_boundary": "Codex stage runner tests should split by protocol, provider env, recovery, and launch/closeout behavior",
-      "review_after": "2026-09-30"
     }
   ]
 }
