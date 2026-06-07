@@ -435,6 +435,22 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, enforce
   const seriesDesignProfile = isPlainRecord(contract?.series_design_profile)
     ? contract.series_design_profile
     : null;
+  const workspaceTopologyProfile = isPlainRecord(contract?.workspace_topology_profile)
+    ? contract.workspace_topology_profile
+    : null;
+  const defaultWorkspace = isPlainRecord(workspaceTopologyProfile?.default_workspace)
+    ? workspaceTopologyProfile.default_workspace
+    : null;
+  const domainProfiles = isPlainRecord(workspaceTopologyProfile?.domain_profiles)
+    ? workspaceTopologyProfile.domain_profiles
+    : null;
+  const masWorkspaceProfile = isPlainRecord(domainProfiles?.mas)
+    ? domainProfiles.mas
+    : null;
+  const rcaWorkspaceProfile = isPlainRecord(domainProfiles?.rca)
+    ? domainProfiles.rca
+    : null;
+  const allowedWorkspaceModes = readStringArray(workspaceTopologyProfile?.allowed_workspace_modes);
   const sharedLifecyclePipeline = readStringArray(seriesDesignProfile?.shared_lifecycle_pipeline);
   const stagePackSections = readStringArray(seriesDesignProfile?.stage_pack_sections);
   const domainIoProfile = isPlainRecord(seriesDesignProfile?.domain_io_profile)
@@ -565,6 +581,52 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, enforce
     profileAuthorityInvariants?.domain_owns_input_truth_and_output_authority === true
       ? null
       : 'foundry_agent_series_design_profile_domain_authority_required',
+    workspaceTopologyProfile ? null : 'foundry_agent_series_workspace_topology_profile_missing_or_invalid',
+    readOptionalString(workspaceTopologyProfile?.surface_kind) === 'opl_workspace_topology_profile'
+      ? null
+      : 'foundry_agent_series_workspace_topology_surface_kind_invalid',
+    readOptionalString(workspaceTopologyProfile?.profile_id) === 'opl.workspace_topology_profile.v1'
+      ? null
+      : 'foundry_agent_series_workspace_topology_profile_id_invalid',
+    readOptionalString(workspaceTopologyProfile?.stage_outputs_root) === 'artifacts/stage_outputs'
+      ? null
+      : 'foundry_agent_series_workspace_topology_stage_outputs_root_invalid',
+    readOptionalString(defaultWorkspace?.workspace_mode) === 'one_off'
+      ? null
+      : 'foundry_agent_series_workspace_topology_default_mode_invalid',
+    defaultWorkspace?.series_capable === true
+      ? null
+      : 'foundry_agent_series_workspace_topology_default_must_be_series_capable',
+    readOptionalString(defaultWorkspace?.project_collection_path) === 'deliverables/studies'
+      ? null
+      : 'foundry_agent_series_workspace_topology_default_collection_path_invalid',
+    readOptionalString(masWorkspaceProfile?.workspace_mode) === 'portfolio'
+      ? null
+      : 'foundry_agent_series_workspace_topology_mas_mode_invalid',
+    readOptionalString(masWorkspaceProfile?.project_collection_path) === 'studies'
+      ? null
+      : 'foundry_agent_series_workspace_topology_mas_collection_path_invalid',
+    readOptionalString(masWorkspaceProfile?.stage_outputs_root) === 'artifacts/stage_outputs'
+      ? null
+      : 'foundry_agent_series_workspace_topology_mas_stage_outputs_root_invalid',
+    readOptionalString(rcaWorkspaceProfile?.workspace_mode) === 'series'
+      ? null
+      : 'foundry_agent_series_workspace_topology_rca_mode_invalid',
+    readOptionalString(rcaWorkspaceProfile?.project_collection_path) === 'deliverables'
+      ? null
+      : 'foundry_agent_series_workspace_topology_rca_collection_path_invalid',
+    readOptionalString(rcaWorkspaceProfile?.stage_outputs_root) === 'artifacts/stage_outputs'
+      ? null
+      : 'foundry_agent_series_workspace_topology_rca_stage_outputs_root_invalid',
+    allowedWorkspaceModes.includes('one_off')
+      ? null
+      : 'foundry_agent_series_workspace_topology_missing_one_off_mode',
+    allowedWorkspaceModes.includes('series')
+      ? null
+      : 'foundry_agent_series_workspace_topology_missing_series_mode',
+    allowedWorkspaceModes.includes('portfolio')
+      ? null
+      : 'foundry_agent_series_workspace_topology_missing_portfolio_mode',
     supportedPinSources.includes('pyproject.toml')
       ? null
       : 'foundry_agent_series_missing_python_pin_source',
@@ -644,6 +706,7 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, enforce
     required_stage_packets: requiredStagePackets,
     shared_progress_projection_fields: sharedProgressProjectionFields,
     series_design_profile: seriesDesignProfile,
+    workspace_topology_profile: workspaceTopologyProfile,
     contract_version_policy: contractVersionPolicy,
     shared_release_pin_strategy: sharedReleasePinStrategy,
     shared_policy_release: sharedPolicyRelease,

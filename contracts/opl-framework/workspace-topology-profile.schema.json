@@ -1,0 +1,597 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/workspace-topology-profile.schema.json",
+  "schema_id": "opl.workspace_topology_profile.v1",
+  "surface_kind": "opl_workspace_topology_profile_schema",
+  "owner": "one-person-lab",
+  "purpose": "Define the OPL-owned workspace topology profile that maps Workspace Group to Project Unit to Stage Artifact Unit to owner receipt or typed blocker while keeping runtime-state as backing/provenance.",
+  "state": "active_contract",
+  "machine_boundary": "OPL owns the topology envelope, generic workspace modes, collection paths, shared resource root refs, project stage outputs root, and refs-only projection boundary. Domain repositories own domain truth, product views, artifact bodies, owner receipts, typed blockers, quality verdicts, and domain-specific workspace profiles.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "profile_id",
+    "workspace_mode",
+    "collection_path",
+    "shared_resource_roots",
+    "project_stage_outputs_root",
+    "workspace_groups",
+    "default_user_inspection_surface",
+    "runtime_state_boundary",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_workspace_topology_profile"
+    },
+    "schema_version": {
+      "const": "workspace-topology-profile.v1"
+    },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workspace_mode": {
+      "type": "string",
+      "enum": [
+        "one_off",
+        "series",
+        "portfolio"
+      ]
+    },
+    "collection_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Workspace-local path or URI that groups project units. In portfolio mode this is the portfolio root; in series mode this is the series root; in one_off mode this is the single project collection root."
+    },
+    "shared_resource_roots": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "$ref": "#/$defs/path_ref"
+      }
+    },
+    "project_stage_outputs_root": {
+      "const": "artifacts/stage_outputs"
+    },
+    "workspace_groups": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/workspace_group"
+      }
+    },
+    "default_user_inspection_surface": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "stage_native_default_path",
+        "ordinary_user_default_surface",
+        "runtime_state_is_default_user_surface",
+        "product_views_are_stage_outputs"
+      ],
+      "properties": {
+        "stage_native_default_path": {
+          "const": "artifacts/stage_outputs"
+        },
+        "ordinary_user_default_surface": {
+          "const": "workspace_local_stage_outputs"
+        },
+        "runtime_state_is_default_user_surface": {
+          "const": false
+        },
+        "product_views_are_stage_outputs": {
+          "const": false
+        }
+      }
+    },
+    "runtime_state_boundary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "role",
+        "runtime_state_can_be_canonical_project_root",
+        "runtime_state_can_close_stage",
+        "runtime_state_can_replace_owner_receipt_or_typed_blocker"
+      ],
+      "properties": {
+        "role": {
+          "const": "backing_provenance_runtime_execution_state"
+        },
+        "runtime_state_can_be_canonical_project_root": {
+          "const": false
+        },
+        "runtime_state_can_close_stage": {
+          "const": false
+        },
+        "runtime_state_can_replace_owner_receipt_or_typed_blocker": {
+          "const": false
+        }
+      }
+    },
+    "authority_boundary": {
+      "$ref": "#/$defs/authority_boundary"
+    }
+  },
+  "$defs": {
+    "path_ref": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "path",
+        "role"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "truth_level": {
+          "type": "string",
+          "enum": [
+            "shared_resource",
+            "project_identity",
+            "product_view",
+            "stage_evidence",
+            "runtime_backing",
+            "provenance_only"
+          ]
+        }
+      }
+    },
+    "workspace_group": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "group_id",
+        "workspace_mode",
+        "collection_path",
+        "shared_resource_roots",
+        "project_units"
+      ],
+      "properties": {
+        "group_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "domain_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workspace_mode": {
+          "type": "string",
+          "enum": [
+            "one_off",
+            "series",
+            "portfolio"
+          ]
+        },
+        "collection_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "shared_resource_roots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path_ref"
+          }
+        },
+        "project_units": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/project_unit"
+          }
+        }
+      }
+    },
+    "project_unit": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "project_id",
+        "project_root",
+        "project_stage_outputs_root",
+        "stage_artifact_units",
+        "product_view_roots",
+        "runtime_backing_refs"
+      ],
+      "properties": {
+        "project_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "project_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "project_root": {
+          "type": "string",
+          "minLength": 1
+        },
+        "project_stage_outputs_root": {
+          "const": "artifacts/stage_outputs"
+        },
+        "stage_artifact_units": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/stage_artifact_unit"
+          }
+        },
+        "product_view_roots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path_ref"
+          }
+        },
+        "runtime_backing_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path_ref"
+          }
+        }
+      }
+    },
+    "stage_artifact_unit": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "stage_id",
+        "stage_root",
+        "manifest_ref",
+        "terminal_owner_answer"
+      ],
+      "properties": {
+        "stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage_root": {
+          "type": "string",
+          "pattern": "^artifacts/stage_outputs/.+"
+        },
+        "manifest_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role_artifact_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "terminal_owner_answer": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/owner_receipt_terminal"
+            },
+            {
+              "$ref": "#/$defs/typed_blocker_terminal"
+            },
+            {
+              "$ref": "#/$defs/open_terminal"
+            }
+          ]
+        }
+      }
+    },
+    "owner_receipt_terminal": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "status",
+        "owner_receipt_ref",
+        "typed_blocker_ref"
+      ],
+      "properties": {
+        "status": {
+          "const": "success"
+        },
+        "owner_receipt_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "typed_blocker_ref": {
+          "type": "null"
+        }
+      }
+    },
+    "typed_blocker_terminal": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "status",
+        "owner_receipt_ref",
+        "typed_blocker_ref"
+      ],
+      "properties": {
+        "status": {
+          "const": "blocked"
+        },
+        "owner_receipt_ref": {
+          "type": "null"
+        },
+        "typed_blocker_ref": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "open_terminal": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "status",
+        "owner_receipt_ref",
+        "typed_blocker_ref"
+      ],
+      "properties": {
+        "status": {
+          "const": "open"
+        },
+        "owner_receipt_ref": {
+          "type": "null"
+        },
+        "typed_blocker_ref": {
+          "type": "null"
+        }
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "opl_can_define_topology_contract",
+        "opl_can_project_workspace_refs",
+        "opl_can_write_domain_truth",
+        "opl_can_mutate_artifact_body",
+        "opl_can_create_owner_receipt",
+        "opl_can_create_typed_blocker",
+        "runtime_state_counts_as_user_default_surface"
+      ],
+      "properties": {
+        "opl_can_define_topology_contract": {
+          "const": true
+        },
+        "opl_can_project_workspace_refs": {
+          "const": true
+        },
+        "opl_can_write_domain_truth": {
+          "const": false
+        },
+        "opl_can_mutate_artifact_body": {
+          "const": false
+        },
+        "opl_can_create_owner_receipt": {
+          "const": false
+        },
+        "opl_can_create_typed_blocker": {
+          "const": false
+        },
+        "runtime_state_counts_as_user_default_surface": {
+          "const": false
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "surface_kind": "opl_workspace_topology_profile",
+      "schema_version": "workspace-topology-profile.v1",
+      "profile_id": "mas_publication_portfolio_workspace.v1",
+      "workspace_mode": "portfolio",
+      "collection_path": "studies",
+      "shared_resource_roots": [
+        {
+          "path": "data",
+          "role": "portfolio_data_catalog",
+          "truth_level": "shared_resource"
+        },
+        {
+          "path": "literature",
+          "role": "portfolio_literature_corpus",
+          "truth_level": "shared_resource"
+        },
+        {
+          "path": "memory",
+          "role": "portfolio_memory_refs",
+          "truth_level": "shared_resource"
+        }
+      ],
+      "project_stage_outputs_root": "artifacts/stage_outputs",
+      "workspace_groups": [
+        {
+          "group_id": "mas.dm-cvd.publication-portfolio",
+          "domain_id": "mas",
+          "workspace_mode": "portfolio",
+          "collection_path": "studies",
+          "shared_resource_roots": [
+            {
+              "path": "data",
+              "role": "shared_data",
+              "truth_level": "shared_resource"
+            },
+            {
+              "path": "literature",
+              "role": "shared_literature",
+              "truth_level": "shared_resource"
+            }
+          ],
+          "project_units": [
+            {
+              "project_id": "002-dm-china-us-mortality-attribution",
+              "project_kind": "publication_study",
+              "project_root": "studies/002-dm-china-us-mortality-attribution",
+              "project_stage_outputs_root": "artifacts/stage_outputs",
+              "stage_artifact_units": [
+                {
+                  "stage_id": "06-manuscript_writing",
+                  "stage_root": "artifacts/stage_outputs/06-manuscript_writing",
+                  "manifest_ref": "artifacts/stage_outputs/06-manuscript_writing/stage_manifest.json",
+                  "role_artifact_refs": [
+                    "artifacts/stage_outputs/06-manuscript_writing/role_artifacts/executor_closeout.json"
+                  ],
+                  "terminal_owner_answer": {
+                    "status": "blocked",
+                    "owner_receipt_ref": null,
+                    "typed_blocker_ref": "artifacts/stage_outputs/06-manuscript_writing/receipts/typed_blocker.json"
+                  }
+                }
+              ],
+              "product_view_roots": [
+                {
+                  "path": "paper",
+                  "role": "current_manuscript_view",
+                  "truth_level": "product_view"
+                },
+                {
+                  "path": "publication",
+                  "role": "current_package_view",
+                  "truth_level": "product_view"
+                }
+              ],
+              "runtime_backing_refs": [
+                {
+                  "path": "runtime/quests/002-dm-china-us-mortality-attribution",
+                  "role": "runtime_provenance",
+                  "truth_level": "runtime_backing"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "default_user_inspection_surface": {
+        "stage_native_default_path": "artifacts/stage_outputs",
+        "ordinary_user_default_surface": "workspace_local_stage_outputs",
+        "runtime_state_is_default_user_surface": false,
+        "product_views_are_stage_outputs": false
+      },
+      "runtime_state_boundary": {
+        "role": "backing_provenance_runtime_execution_state",
+        "runtime_state_can_be_canonical_project_root": false,
+        "runtime_state_can_close_stage": false,
+        "runtime_state_can_replace_owner_receipt_or_typed_blocker": false
+      },
+      "authority_boundary": {
+        "opl_can_define_topology_contract": true,
+        "opl_can_project_workspace_refs": true,
+        "opl_can_write_domain_truth": false,
+        "opl_can_mutate_artifact_body": false,
+        "opl_can_create_owner_receipt": false,
+        "opl_can_create_typed_blocker": false,
+        "runtime_state_counts_as_user_default_surface": false
+      }
+    },
+    {
+      "surface_kind": "opl_workspace_topology_profile",
+      "schema_version": "workspace-topology-profile.v1",
+      "profile_id": "rca_visual_deck_series_workspace.v1",
+      "workspace_mode": "series",
+      "collection_path": "series",
+      "shared_resource_roots": [
+        {
+          "path": "sources",
+          "role": "series_source_library",
+          "truth_level": "shared_resource"
+        },
+        {
+          "path": "brand",
+          "role": "series_visual_identity_refs",
+          "truth_level": "shared_resource"
+        }
+      ],
+      "project_stage_outputs_root": "artifacts/stage_outputs",
+      "workspace_groups": [
+        {
+          "group_id": "rca.same-topic.deck-series",
+          "domain_id": "rca",
+          "workspace_mode": "series",
+          "collection_path": "series/redcube-ai-market-map",
+          "shared_resource_roots": [
+            {
+              "path": "sources",
+              "role": "shared_source_refs",
+              "truth_level": "shared_resource"
+            },
+            {
+              "path": "brand",
+              "role": "shared_visual_system_refs",
+              "truth_level": "shared_resource"
+            }
+          ],
+          "project_units": [
+            {
+              "project_id": "market-map-investor-deck",
+              "project_kind": "visual_deck",
+              "project_root": "series/redcube-ai-market-map/decks/market-map-investor-deck",
+              "project_stage_outputs_root": "artifacts/stage_outputs",
+              "stage_artifact_units": [
+                {
+                  "stage_id": "04-visual_review_and_revision",
+                  "stage_root": "artifacts/stage_outputs/04-visual_review_and_revision",
+                  "manifest_ref": "artifacts/stage_outputs/04-visual_review_and_revision/stage_manifest.json",
+                  "role_artifact_refs": [
+                    "artifacts/stage_outputs/04-visual_review_and_revision/role_artifacts/visual_reviewer_closeout.json"
+                  ],
+                  "terminal_owner_answer": {
+                    "status": "open",
+                    "owner_receipt_ref": null,
+                    "typed_blocker_ref": null
+                  }
+                }
+              ],
+              "product_view_roots": [
+                {
+                  "path": "deck",
+                  "role": "current_deck_view",
+                  "truth_level": "product_view"
+                },
+                {
+                  "path": "export",
+                  "role": "current_export_view",
+                  "truth_level": "product_view"
+                }
+              ],
+              "runtime_backing_refs": [
+                {
+                  "path": "runtime/visual-deliverables/market-map-investor-deck",
+                  "role": "runtime_provenance",
+                  "truth_level": "runtime_backing"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "default_user_inspection_surface": {
+        "stage_native_default_path": "artifacts/stage_outputs",
+        "ordinary_user_default_surface": "workspace_local_stage_outputs",
+        "runtime_state_is_default_user_surface": false,
+        "product_views_are_stage_outputs": false
+      },
+      "runtime_state_boundary": {
+        "role": "backing_provenance_runtime_execution_state",
+        "runtime_state_can_be_canonical_project_root": false,
+        "runtime_state_can_close_stage": false,
+        "runtime_state_can_replace_owner_receipt_or_typed_blocker": false
+      },
+      "authority_boundary": {
+        "opl_can_define_topology_contract": true,
+        "opl_can_project_workspace_refs": true,
+        "opl_can_write_domain_truth": false,
+        "opl_can_mutate_artifact_body": false,
+        "opl_can_create_owner_receipt": false,
+        "opl_can_create_typed_blocker": false,
+        "runtime_state_counts_as_user_default_surface": false
+      }
+    }
+  ]
+}

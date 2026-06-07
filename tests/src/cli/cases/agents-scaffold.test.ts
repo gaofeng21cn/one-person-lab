@@ -149,6 +149,30 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     scaffold.foundry_agent_series_contract.domain_adapter_policy.no_parallel_progress_schema,
     true,
   );
+  assert.deepEqual(scaffold.foundry_agent_series_contract.workspace_topology_profile, {
+    surface_kind: 'opl_workspace_topology_profile',
+    version: 'workspace-topology-profile.v1',
+    profile_id: 'opl.workspace_topology_profile.v1',
+    stage_outputs_root: 'artifacts/stage_outputs',
+    default_workspace: {
+      workspace_mode: 'one_off',
+      series_capable: true,
+      project_collection_path: 'deliverables/studies',
+    },
+    domain_profiles: {
+      mas: {
+        workspace_mode: 'portfolio',
+        project_collection_path: 'studies',
+        stage_outputs_root: 'artifacts/stage_outputs',
+      },
+      rca: {
+        workspace_mode: 'series',
+        project_collection_path: 'deliverables',
+        stage_outputs_root: 'artifacts/stage_outputs',
+      },
+    },
+    allowed_workspace_modes: ['one_off', 'series', 'portfolio'],
+  });
   assert.deepEqual(scaffold.foundry_agent_series_contract.contract_version_policy, {
     current_version: 'foundry-agent-series.v1',
     domain_contract_ref: 'contracts/foundry_agent_series.json',
@@ -474,6 +498,20 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(foundryAgentSeries.foundry_agent_id, 'award-foundry');
     assert.equal(foundryAgentSeries.authority_owner, 'award-foundry');
     assert.equal(foundryAgentSeries.stage_control_plane_ref, 'contracts/stage_control_plane.json');
+    assert.equal(foundryAgentSeries.workspace_topology_profile.default_workspace.workspace_mode, 'one_off');
+    assert.equal(foundryAgentSeries.workspace_topology_profile.default_workspace.series_capable, true);
+    assert.equal(
+      foundryAgentSeries.workspace_topology_profile.default_workspace.project_collection_path,
+      'deliverables/studies',
+    );
+    assert.equal(foundryAgentSeries.workspace_topology_profile.stage_outputs_root, 'artifacts/stage_outputs');
+    assert.equal(foundryAgentSeries.workspace_topology_profile.domain_profiles.mas.workspace_mode, 'portfolio');
+    assert.equal(foundryAgentSeries.workspace_topology_profile.domain_profiles.mas.project_collection_path, 'studies');
+    assert.equal(foundryAgentSeries.workspace_topology_profile.domain_profiles.rca.workspace_mode, 'series');
+    assert.equal(
+      foundryAgentSeries.workspace_topology_profile.domain_profiles.rca.project_collection_path,
+      'deliverables',
+    );
     assert.equal(foundryAgentSeries.domain_adapter_policy.no_parallel_progress_schema, true);
     assert.equal(foundryAgentSeries.domain_adapter_policy.no_parallel_blocker_lineage_schema, true);
     assert.equal(
@@ -710,6 +748,10 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(
       validated.validation.foundry_agent_series_validation.shared_policy_release.consumer_alignment_check,
       'foundry:policy-release',
+    );
+    assert.equal(
+      validated.validation.foundry_agent_series_validation.workspace_topology_profile.stage_outputs_root,
+      'artifacts/stage_outputs',
     );
     assert.deepEqual(validated.validation.foundry_agent_series_validation.blockers, []);
     assert.equal(validated.validation.stage_pack_v2_validation.status, 'passed');

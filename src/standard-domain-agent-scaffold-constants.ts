@@ -521,6 +521,30 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
       domain_owns_input_truth_and_output_authority: true,
     },
   },
+  workspace_topology_profile: {
+    surface_kind: 'opl_workspace_topology_profile',
+    version: 'workspace-topology-profile.v1',
+    profile_id: 'opl.workspace_topology_profile.v1',
+    stage_outputs_root: 'artifacts/stage_outputs',
+    default_workspace: {
+      workspace_mode: 'one_off',
+      series_capable: true,
+      project_collection_path: 'deliverables/studies',
+    },
+    domain_profiles: {
+      mas: {
+        workspace_mode: 'portfolio',
+        project_collection_path: 'studies',
+        stage_outputs_root: 'artifacts/stage_outputs',
+      },
+      rca: {
+        workspace_mode: 'series',
+        project_collection_path: 'deliverables',
+        stage_outputs_root: 'artifacts/stage_outputs',
+      },
+    },
+    allowed_workspace_modes: ['one_off', 'series', 'portfolio'],
+  },
   contract_version_policy: {
     current_version: 'foundry-agent-series.v1',
     domain_contract_ref: 'contracts/foundry_agent_series.json',

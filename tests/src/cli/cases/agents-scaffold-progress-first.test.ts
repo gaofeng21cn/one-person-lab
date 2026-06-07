@@ -115,6 +115,73 @@ test('agents scaffold emits canonical Foundry series design profile', () => {
   }
 });
 
+test('agents scaffold emits canonical workspace topology profile', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-topology-profile-'));
+
+  try {
+    runCli([
+      'agents',
+      'scaffold',
+      '--target-dir',
+      targetDir,
+      '--domain-id',
+      'workspace-topology-profile',
+    ]);
+    const foundryContract = JSON.parse(
+      fs.readFileSync(path.join(targetDir, 'contracts/foundry_agent_series.json'), 'utf8'),
+    );
+    const topology = foundryContract.workspace_topology_profile;
+
+    assert.equal(topology.surface_kind, 'opl_workspace_topology_profile');
+    assert.equal(topology.version, 'workspace-topology-profile.v1');
+    assert.equal(topology.profile_id, 'opl.workspace_topology_profile.v1');
+    assert.deepEqual(topology.allowed_workspace_modes, ['one_off', 'series', 'portfolio']);
+    assert.equal(topology.stage_outputs_root, 'artifacts/stage_outputs');
+    assert.equal(topology.default_workspace.workspace_mode, 'one_off');
+    assert.equal(topology.default_workspace.series_capable, true);
+    assert.equal(topology.default_workspace.project_collection_path, 'deliverables/studies');
+    assert.equal(topology.domain_profiles.mas.workspace_mode, 'portfolio');
+    assert.equal(topology.domain_profiles.mas.project_collection_path, 'studies');
+    assert.equal(topology.domain_profiles.mas.stage_outputs_root, 'artifacts/stage_outputs');
+    assert.equal(topology.domain_profiles.rca.workspace_mode, 'series');
+    assert.equal(topology.domain_profiles.rca.project_collection_path, 'deliverables');
+    assert.equal(topology.domain_profiles.rca.stage_outputs_root, 'artifacts/stage_outputs');
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
+test('agents scaffold validation blocks Foundry contracts missing workspace topology profile', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-topology-profile-missing-'));
+
+  try {
+    runCli([
+      'agents',
+      'scaffold',
+      '--target-dir',
+      targetDir,
+      '--domain-id',
+      'workspace-topology-profile-missing',
+    ]);
+    const foundryContractPath = path.join(targetDir, 'contracts/foundry_agent_series.json');
+    const foundryContract = JSON.parse(fs.readFileSync(foundryContractPath, 'utf8'));
+    delete foundryContract.workspace_topology_profile;
+    fs.writeFileSync(foundryContractPath, `${JSON.stringify(foundryContract, null, 2)}\n`);
+
+    const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
+    assert.equal(validated.mode, 'validate');
+    assert.equal(validated.state, 'validation_blocked');
+    assert.equal(validated.validation.status, 'blocked');
+    assert.equal(validated.validation.foundry_agent_series_validation.status, 'blocked');
+    assert.equal(
+      validated.validation.blockers.includes('foundry_agent_series_workspace_topology_profile_missing_or_invalid'),
+      true,
+    );
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
 test('agents scaffold emits domain-specific controlled StageRun canary evidence', () => {
   const described = runCli([
     'agents',
