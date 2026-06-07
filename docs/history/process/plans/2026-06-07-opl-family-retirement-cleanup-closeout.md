@@ -15,7 +15,7 @@ Machine boundary: 本文只记录本轮跨仓退役清理过程与证据边界�
 | --- | --- | --- | --- |
 | `one-person-lab-app` | Release-boundary tests no longer treat narrative docs or `scripts/README.md` prose as machine oracle. | `c5a645e test: retire release-boundary docs prose oracles` | Retired docs-prose release-boundary assertions and recorded App-local history closeout. |
 | `one-person-lab-app` | Homebrew tap update path is direct-commit-only; PR mode and workflow compatibility were removed. | `93e76d7 ci: make Homebrew tap updates direct-only` | Retired `write_mode`, `pull_request` mode, `peter-evans/create-pull-request`, Nightly App tap PR job, and App release workflow PR permission. |
-| `one-person-lab` | Framework active outputs no longer expose retained App/WebUI, Product API, legacy developer-mode, or MAS paper-alias compatibility fields. | pending in this worktree | Retired duplicate App state / dashboard / package / stage-log compatibility surfaces and updated contracts, tests, and support docs. |
+| `one-person-lab` | Framework active outputs no longer expose retained App/WebUI, Product API, legacy developer-mode, or MAS paper-alias compatibility fields. | `01d60cbf refactor: retire framework compatibility surfaces` | Retired duplicate App state / dashboard / package / stage-log compatibility surfaces and updated contracts, tests, and support docs. |
 
 ## App release-boundary docs-prose oracle retirement
 
@@ -130,6 +130,32 @@ Updated owner surfaces:
 
 This is a Framework surface thinning, not a domain cleanup receipt. MAS progress-study snapshots that still contain `human_summary` remain domain/MAS progress material and are not the standard OPL stage-log contract.
 
+## Fresh family stale-surface audit tranche
+
+Fresh status on `2026-06-07`:
+
+| repo | git status | stale-surface result |
+| --- | --- | --- |
+| `one-person-lab` | `main` at `9c7de95d`, ahead `origin/main` by one commit, with only this closeout document dirty; one clean residual CI worktree at `.worktrees/github-ci-20260607-readmodel-closeout-fix` | Framework compatibility thinning is already on `main` via `01d60cbf`; stage operating principles are active via `02fc83f0` and `ba3beea7`. No additional main-checkout physical deletion candidate had enough owner evidence in this tranche. |
+| `med-autoscience` | clean `main` at `72086f53` | Current recent main includes workspace topology and stage operating principles adoption. No fresh dirty residue or immediately deletable stale module was observed from this tranche. |
+| `med-autogrant` | clean `main` at `a13b59d` | Sentrux/runtime facade and product-entry facade retirement candidates are already closed in current source/ledger; remaining `legacy` / `alias` / `facade` hits are negative guards, tombstone/provenance, domain aliases, or evidence-gated wrapper delete tails. |
+| `redcube-ai` | clean `main` at `52db85b9` | Flat Stage Folder fixture retirement is already on `main`; remaining retired-surface hits are no-resurrection guards, tombstones, RCA domain alias metadata, or strict post-cutover wrapper delete tails. |
+| `opl-meta-agent` | clean `main` at `c685dbf` | Meta-agent-loop facade and target-progress alias retirement candidates are already closed on current `main`; remaining generic wrapper/materializer tails need OMA/OPL generated-surface caller proof before physical deletion. |
+| `one-person-lab-app` | `main` with unrelated local `package.json` modification and untracked `index.js` | App Build and Release workflow retirement is already closed in current history; this tranche did not mutate App because the dirty files were outside the current write set. Remaining candidate-shell and release surfaces stay under App-owned contracts. |
+
+The earlier residual `opl-management-speed-gate-20260607` lane is not an absorb target for this closeout. Its old stage operating implementation has been superseded by the current main source and tests:
+
+- `src/standard-domain-agent-stage-operating-principles.ts`
+- `src/standard-domain-agent-conformance.ts`
+- `src/standard-domain-agent-scaffold-template.ts`
+- `contracts/stage_operating_principles.json`
+- `tests/src/cli/cases/agents-conformance-stage-operating-principles.test.ts`
+- `tests/src/cli/cases/agents-scaffold.test.ts`
+
+Current main evidence: `02fc83f0 test: gate stage operating principles`, `ba3beea7 Require stage operating principles in agent scaffold`, and `a7b279d4 docs: fold scaffold stage policy gate into active gap`.
+
+This tranche deliberately did not delete tests that assert absence of retired fields, block legacy alias resurrection, or keep tombstone/provenance classifications. Those tests are active no-resurrection guards, not compatibility surfaces.
+
 ## Remaining retirement work
 
 Broader OPL-family cleanup remains a live multi-repo effort. Future physical deletion still needs per-surface proof from current owners:
@@ -142,3 +168,10 @@ Broader OPL-family cleanup remains a live multi-repo effort. Future physical del
 - Tombstone/provenance only when history is still useful.
 
 OPL refs-only cleanup read models, conformance passes, doc foldback, and tests are not physical delete authority by themselves.
+
+Carry-forward scope:
+
+- Keep scanning README/docs/source/test/contract surfaces in the six core repos until the coverage ledger has no unreviewed sections.
+- For MAG/RCA/OMA repo-local wrapper or adapter tails, require generated/default-caller consumption, no-active-caller proof, owner receipt or typed blocker, no-forbidden-write proof, and repo-native verification before physical deletion.
+- For App candidate shells, release workflow, installer, and Homebrew surfaces, use App-owned contracts and release-boundary validators as the authority; do not let shell-carrier or design-reference evidence retire App product authority.
+- Preserve negative guards and tombstones when they are the machine-readable no-resurrection boundary.
