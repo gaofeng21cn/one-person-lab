@@ -55,6 +55,51 @@ function recordActivityHeartbeat(input: {
   }
 }
 
+function providerRuntimeBlockerCloseout(input: {
+  stageAttemptId: string;
+  stageId: string;
+  domainId: string;
+  providerBlockerReason: string | null;
+  routeImpact: Record<string, unknown>;
+}) {
+  if (!input.providerBlockerReason) {
+    return null;
+  }
+  const blockerRef = `opl://stage-attempts/${
+    encodeURIComponent(input.stageAttemptId)
+  }/runtime-blockers/${encodeURIComponent(input.providerBlockerReason)}`;
+  return {
+    closeout_refs: [blockerRef],
+    rejected_writes: [{
+      surface_kind: 'opl_provider_runtime_typed_blocker_ref',
+      blocker_id: input.providerBlockerReason,
+      blocker_ref: blockerRef,
+      stage_attempt_id: input.stageAttemptId,
+      stage_id: input.stageId,
+      domain_id: input.domainId,
+      owner: 'one-person-lab',
+      reason: input.providerBlockerReason,
+      provider_completion_is_domain_ready: false,
+      authority_boundary: {
+        opl: 'provider_runtime_blocker_ref_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        can_write_domain_truth: false,
+        can_create_domain_owner_receipt: false,
+        can_create_domain_typed_blocker: false,
+        can_authorize_quality_verdict: false,
+        can_claim_domain_ready: false,
+      },
+    }],
+    route_impact: {
+      ...input.routeImpact,
+      runtime_blocker_ref: blockerRef,
+      runtime_blocker_owner: 'one-person-lab',
+      runtime_blocker_is_domain_owner_answer: false,
+      provider_completion_is_domain_ready: false,
+    },
+  };
+}
+
 export async function codexStageActivity(input: TemporalStageAttemptWorkflowInput) {
   const observedAt = new Date().toISOString();
   heartbeat({
@@ -137,25 +182,36 @@ export async function domainHandlerDispatchActivity(input: TemporalStageAttemptW
   });
   if (!input.closeout_packet) {
     const providerBlockerReason = input.provider_blocker?.blocked_reason?.trim() || null;
+    const routeImpact = input.provider_blocker?.route_impact ?? {};
+    const runtimeBlocker = providerRuntimeBlockerCloseout({
+      stageAttemptId: input.stage_attempt_id,
+      stageId: input.stage_id,
+      domainId: input.domain_id,
+      providerBlockerReason,
+      routeImpact,
+    });
     return {
       surface_kind: 'temporal_domain_handler_dispatch_receipt',
       activity_kind: 'domain_handler_dispatch_activity',
       activity_status: 'blocked',
       stage_attempt_id: input.stage_attempt_id,
       domain_id: input.domain_id,
-      closeout_refs: [],
+      closeout_refs: runtimeBlocker?.closeout_refs ?? [],
       consumed_refs: [],
       consumed_memory_refs: [],
       writeback_receipt_refs: [],
-      rejected_writes: [],
+      rejected_writes: runtimeBlocker?.rejected_writes ?? [],
       next_owner: input.domain_id,
       domain_ready_verdict: null,
-      route_impact: input.provider_blocker?.route_impact ?? {},
+      route_impact: runtimeBlocker?.route_impact ?? routeImpact,
       blocked_reason: providerBlockerReason ?? 'typed_closeout_packet_required',
       closeout_packet_surface_kind: null,
       authority_boundary: {
         opl: 'domain_handler_transport_only',
         domain: 'domain_handler_dispatch_and_receipt_owner',
+        provider_runtime_blocker_ref_only: Boolean(runtimeBlocker),
+        provider_runtime_blocker_is_domain_owner_answer: false,
+        provider_completion_is_domain_ready: false,
       },
     };
   }

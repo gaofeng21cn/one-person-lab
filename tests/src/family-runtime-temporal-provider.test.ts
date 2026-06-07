@@ -694,6 +694,15 @@ test('Temporal StageAttemptWorkflow surfaces Codex runner protocol blockers befo
       (dispatchEvent?.route_impact as Record<string, unknown>)?.provider_blocker_reason,
       'codex_cli_unsupported_function_call',
     );
+    assert.deepEqual(result.closeout_refs, [
+      'opl://stage-attempts/sat_temporal_test/runtime-blockers/codex_cli_unsupported_function_call',
+    ]);
+    assert.equal(result.completion_boundary.provider_completion, 'not_completed');
+    assert.equal(result.completion_boundary.provider_completion_is_domain_ready, false);
+    assert.equal(
+      (dispatchEvent?.route_impact as Record<string, unknown>)?.runtime_blocker_is_domain_owner_answer,
+      false,
+    );
   } finally {
     await testEnv.teardown();
   }
@@ -812,6 +821,21 @@ test('Temporal StageAttemptWorkflow stores refs-only Codex activity summaries in
     assert.equal(JSON.stringify(codexEvent).includes('must-not-enter-workflow-history'), false);
     assert.equal(JSON.stringify(codexEvent).includes('xxxx'), false);
     assert.equal(JSON.stringify(codexEvent).includes('yyyy'), false);
+
+    const dispatchEvent = result.activity_events.find(
+      (event) => event.activity_kind === 'domain_handler_dispatch_activity',
+    );
+    assert.equal(dispatchEvent?.activity_status, 'blocked');
+    assert.equal(dispatchEvent?.blocked_reason, 'codex_cli_activity_cancelled');
+    assert.deepEqual(result.closeout_refs, [
+      'opl://stage-attempts/sat_temporal_test/runtime-blockers/codex_cli_activity_cancelled',
+    ]);
+    assert.equal(result.completion_boundary.provider_completion, 'not_completed');
+    assert.equal(result.completion_boundary.provider_completion_is_domain_ready, false);
+    assert.equal(
+      (dispatchEvent?.route_impact as Record<string, unknown>)?.runtime_blocker_is_domain_owner_answer,
+      false,
+    );
   } finally {
     await testEnv.teardown();
   }
@@ -914,12 +938,18 @@ test('Temporal StageAttemptWorkflow rejects Codex activity closeout for a differ
 
     assert.equal(result.status, 'blocked');
     assert.equal(result.completion_boundary.provider_completion, 'not_completed');
-    assert.deepEqual(result.closeout_refs, []);
+    assert.deepEqual(result.closeout_refs, [
+      'opl://stage-attempts/sat_temporal_test/runtime-blockers/typed_closeout_stage_attempt_id_mismatch',
+    ]);
     const dispatchEvent = result.activity_events.find(
       (event) => event.activity_kind === 'domain_handler_dispatch_activity',
     );
     assert.equal(dispatchEvent?.activity_status, 'blocked');
     assert.equal(dispatchEvent?.blocked_reason, 'typed_closeout_stage_attempt_id_mismatch');
+    assert.equal(
+      (dispatchEvent?.route_impact as Record<string, unknown>)?.runtime_blocker_is_domain_owner_answer,
+      false,
+    );
   } finally {
     await testEnv.teardown();
   }
