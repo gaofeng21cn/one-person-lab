@@ -139,6 +139,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
   );
   const closedRefsOnlyItems = closedItems.filter(itemClosedByRefsOnlyReceipt);
   const rawOpenOperatorRoutes = rawOpenOperatorRoutesForWorklist(operatorRoutes, rawOpenItems);
+  const openOperatorRoutes = rawOpenOperatorRoutesForWorklist(operatorRoutes, openItems);
   const nextActionLedger = buildProductionTailNextActionLedger({
     surfaceKind: 'opl_family_runtime_evidence_worklist_next_action_ledger',
     sourceTailSummary: {
@@ -166,7 +167,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
   const stageReplayMissingReceiptWorkorderAttentionSummary =
     compactStageReplayMissingReceiptWorkorderAttentionSummary(stageReplayMissingReceiptWorkorderPacket);
   const domainDispatchEvidenceWorkorderPacket =
-    buildDomainDispatchEvidenceWorkorderPacket(rawOpenOperatorRoutes);
+    buildDomainDispatchEvidenceWorkorderPacket(openOperatorRoutes);
   const domainDispatchEvidenceWorkorderSummary =
     record(domainDispatchEvidenceWorkorderPacket.summary);
   const domainDispatchEvidenceWorkorderGroupAttentionItems =

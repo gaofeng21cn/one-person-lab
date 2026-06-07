@@ -1,8 +1,11 @@
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { createFamilyWorkspaceFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 test('framework readiness keeps recorded App release user-path receipts in verify follow-through', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-app-release-state-'));
+  const familyWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-app-release-family-'));
   try {
+    const { omaRepoDir, workspaceRoot } = createFamilyWorkspaceFixture(familyWorkspaceRoot);
     const payload = {
       release_package_refs: ['release://opl-app/full/2026-05-22/dmg'],
       screenshot_refs: ['screenshot://opl-app/first-run/2026-05-22.png'],
@@ -23,6 +26,8 @@ test('framework readiness keeps recorded App release user-path receipts in verif
 
     const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+      OPL_META_AGENT_REPO_DIR: omaRepoDir,
     }).framework_readiness;
     const evidence = readiness.attention_first_payload.app_release_user_path_evidence;
     assert.equal(evidence.status, 'app_release_user_path_evidence_open');
@@ -81,6 +86,8 @@ test('framework readiness keeps recorded App release user-path receipts in verif
     });
     const verifiedReadiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+      OPL_META_AGENT_REPO_DIR: omaRepoDir,
     }).framework_readiness;
     assert.equal(
       verifiedReadiness.attention_first_payload.app_release_user_path_evidence.status,
@@ -93,5 +100,6 @@ test('framework readiness keeps recorded App release user-path receipts in verif
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
   }
 });
