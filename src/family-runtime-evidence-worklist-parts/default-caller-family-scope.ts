@@ -12,6 +12,10 @@ type EvidenceWorklistFamilyScopeInput = {
   familyDefaults: boolean;
 };
 
+function hasDefaultCallerProjection(drilldown: JsonRecord) {
+  return drilldown.default_caller_deletion_evidence_refs !== undefined;
+}
+
 function compactDefaultCallerReadinessWorklist(worklist: JsonRecord) {
   const requirementIds = stringList(worklist.requirement_ids);
   const missingRequirementIds = requirementIds.filter((requirementId) =>
@@ -127,6 +131,9 @@ export function familyDefaultCallerSupplementalDomains(
   const projection = record(drilldown.default_caller_deletion_evidence_refs);
   const projectedDomains = recordList(projection.domains);
   if (projectedDomains.length === 0) {
+    if (hasDefaultCallerProjection(drilldown)) {
+      return [];
+    }
     return familyDefaultCallerDeletionEvidenceDomains(input);
   }
   const projectedFamilyDomainIds = projectedDomains
