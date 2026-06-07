@@ -23,6 +23,8 @@ export type WorkspaceProjectIndexEntry = {
   project_index_ref: string;
   stage_outputs_root: string;
   stage_outputs_manifest_ref: string;
+  stage_outputs_index_ref: string;
+  current_stage_pointer_ref: string;
   control_root: string;
   inputs_root: string;
   exports_root: string;
@@ -203,6 +205,8 @@ export function workspaceProjectEntry(
     project_index_ref: `${projectRootRef}/project_index.json`,
     stage_outputs_root: stageOutputsRootRef,
     stage_outputs_manifest_ref: `${stageOutputsRootRef}/opl_stage_outputs_manifest.json`,
+    stage_outputs_index_ref: `${stageOutputsRootRef}/stage_outputs_index.json`,
+    current_stage_pointer_ref: `${stageOutputsRootRef}/current_stage.json`,
     control_root: `${projectRootRef}/control`,
     inputs_root: `${projectRootRef}/inputs`,
     exports_root: `${projectRootRef}/artifacts/exports`,

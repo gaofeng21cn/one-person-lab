@@ -11,10 +11,14 @@ import type { WorkspaceAgentProfile } from './workspace-agent-defaults.ts';
 
 export const WORKSPACE_MAP_REF = 'workspace_map.json';
 export const WORKSPACE_HEALTH_REF = 'workspace_health.json';
+export const WORKSPACE_INSPECTION_REF = 'workspace_inspection.json';
+export const WORKSPACE_RESOURCE_INVENTORY_REF = 'workspace_resource_inventory.json';
 export const PROJECT_CONFIG_BASENAME = 'project.yaml';
 export const PROJECT_INDEX_BASENAME = 'project_index.json';
 export const SHARED_RESOURCE_MANIFEST_BASENAME = 'opl_resource_manifest.json';
 export const STAGE_OUTPUTS_MANIFEST_BASENAME = 'opl_stage_outputs_manifest.json';
+export const STAGE_OUTPUTS_INDEX_BASENAME = 'stage_outputs_index.json';
+export const CURRENT_STAGE_POINTER_BASENAME = 'current_stage.json';
 export const STAGE_OUTPUT_REQUIRED_DIRECTORIES = [
   'inputs',
   'outputs',
@@ -36,6 +40,14 @@ type WorkspaceArtifactContext = {
   createdAt: string;
   updatedAt: string;
 };
+
+export function stageOutputsIndexRef(stageOutputsRootRef: string) {
+  return `${stageOutputsRootRef}/${STAGE_OUTPUTS_INDEX_BASENAME}`;
+}
+
+export function currentStagePointerRef(stageOutputsRootRef: string) {
+  return `${stageOutputsRootRef}/${CURRENT_STAGE_POINTER_BASENAME}`;
+}
 
 export function sharedResourceManifestRef(resourcePath: string) {
   return `${resourcePath}/${SHARED_RESOURCE_MANIFEST_BASENAME}`;
@@ -76,6 +88,12 @@ export function normalizeWorkspaceProjectEntry(project: Partial<WorkspaceProject
     stage_outputs_manifest_ref: typeof project.stage_outputs_manifest_ref === 'string'
       ? project.stage_outputs_manifest_ref
       : stageOutputsManifestRef(stageOutputsRoot),
+    stage_outputs_index_ref: typeof project.stage_outputs_index_ref === 'string'
+      ? project.stage_outputs_index_ref
+      : stageOutputsIndexRef(stageOutputsRoot),
+    current_stage_pointer_ref: typeof project.current_stage_pointer_ref === 'string'
+      ? project.current_stage_pointer_ref
+      : currentStagePointerRef(stageOutputsRoot),
     control_root: typeof project.control_root === 'string' ? project.control_root : `${projectRoot}/control`,
     inputs_root: typeof project.inputs_root === 'string' ? project.inputs_root : `${projectRoot}/inputs`,
     exports_root: typeof project.exports_root === 'string' ? project.exports_root : `${projectRoot}/artifacts/exports`,
@@ -133,6 +151,15 @@ export function buildSharedResourceManifest(input: {
       opl_can_store_resource_body: false,
       manifest_is_index_only: true,
     },
+    inventory_entry_protocol: {
+      may_record_source_refs: true,
+      may_record_material_refs: true,
+      may_record_checksum: true,
+      may_record_provenance: true,
+      may_record_reuse_scope: true,
+      may_record_staleness: true,
+      body_storage_allowed: false,
+    },
     updated_at: input.updatedAt,
   };
 }
@@ -164,8 +191,11 @@ export function buildStageOutputsManifest(input: {
     stage_artifact_runtime: {
       canonical_stage_manifest_surface: 'opl_stage_manifest',
       canonical_runtime_command: 'opl stage open|commit|validate',
+      stage_outputs_index_ref: stageOutputsIndexRef(input.project.stage_outputs_root),
+      current_stage_pointer_ref: currentStagePointerRef(input.project.stage_outputs_root),
       root_manifest_is_stage_completion_proof: false,
       stage_folder_shape_is_completion_proof: false,
+      current_pointer_is_progress_truth: false,
     },
     authority_boundary: {
       file_presence_counts_as_stage_complete: false,
@@ -173,6 +203,86 @@ export function buildStageOutputsManifest(input: {
       root_manifest_can_replace_typed_blocker: false,
       stage_folder_shape_can_replace_owner_receipt: false,
       stage_folder_shape_can_replace_typed_blocker: false,
+      current_pointer_can_replace_owner_receipt: false,
+      current_pointer_can_replace_typed_blocker: false,
+      opl_can_write_domain_truth: false,
+    },
+    updated_at: input.updatedAt,
+  };
+}
+
+export function buildStageOutputsIndex(input: {
+  workspaceId: string;
+  agent: WorkspaceAgentProfile;
+  project: WorkspaceProjectIndexEntry;
+  updatedAt: string;
+}) {
+  return {
+    surface_kind: 'opl_stage_outputs_index',
+    version: 'workspace-stage-outputs-index.v1',
+    workspace_id: input.workspaceId,
+    agent_id: input.agent.agent_id,
+    project_id: input.project.project_id,
+    stage_outputs_root: input.project.stage_outputs_root,
+    stage_lifecycle_model: [
+      'open',
+      'active',
+      'completed',
+      'blocked',
+      'superseded',
+      'archived',
+    ],
+    current_stage_pointer_ref: currentStagePointerRef(input.project.stage_outputs_root),
+    stage_folder_protocol: {
+      stage_folder_pattern: `${input.project.stage_outputs_root}/<stage-id>/`,
+      required_directories: [...STAGE_OUTPUT_REQUIRED_DIRECTORIES],
+      required_files: [...STAGE_OUTPUT_REQUIRED_FILES],
+      closeout_answer_unit: 'owner_receipt_or_typed_blocker',
+    },
+    stages: [],
+    authority_boundary: {
+      index_is_projection_only: true,
+      index_can_claim_stage_complete: false,
+      index_can_replace_owner_receipt: false,
+      index_can_replace_typed_blocker: false,
+      opl_can_write_domain_truth: false,
+    },
+    updated_at: input.updatedAt,
+  };
+}
+
+export function buildCurrentStagePointer(input: {
+  workspaceId: string;
+  agent: WorkspaceAgentProfile;
+  project: WorkspaceProjectIndexEntry;
+  updatedAt: string;
+}) {
+  return {
+    surface_kind: 'opl_current_stage_pointer',
+    version: 'workspace-current-stage-pointer.v1',
+    workspace_id: input.workspaceId,
+    agent_id: input.agent.agent_id,
+    project_id: input.project.project_id,
+    project_root: input.project.project_root,
+    stage_outputs_root: input.project.stage_outputs_root,
+    current_stage: null,
+    current_stage_manifest_ref: null,
+    latest_owner_receipt_ref: null,
+    latest_typed_blocker_ref: null,
+    lifecycle_model: [
+      'open',
+      'active',
+      'completed',
+      'blocked',
+      'superseded',
+      'archived',
+    ],
+    empty_state: 'no_stage_opened_yet',
+    authority_boundary: {
+      pointer_is_projection_only: true,
+      pointer_can_claim_stage_complete: false,
+      pointer_can_replace_owner_receipt: false,
+      pointer_can_replace_typed_blocker: false,
       opl_can_write_domain_truth: false,
     },
     updated_at: input.updatedAt,
@@ -267,10 +377,20 @@ export function buildProjectIndex(input: {
     stage_artifact_unit: {
       root: input.project.stage_outputs_root,
       manifest_ref: input.project.stage_outputs_manifest_ref,
+      index_ref: stageOutputsIndexRef(input.project.stage_outputs_root),
+      current_stage_pointer_ref: currentStagePointerRef(input.project.stage_outputs_root),
       stage_folder_pattern: `${input.project.stage_outputs_root}/<stage-id>/`,
       required_directories: [...STAGE_OUTPUT_REQUIRED_DIRECTORIES],
       required_files: [...STAGE_OUTPUT_REQUIRED_FILES],
       ordinary_user_default_surface: true,
+      lifecycle_model: [
+        'open',
+        'active',
+        'completed',
+        'blocked',
+        'superseded',
+        'archived',
+      ],
     },
     lifecycle: input.project.lifecycle,
     authority_boundary: {
@@ -310,13 +430,31 @@ export function buildWorkspaceMap(input: WorkspaceArtifactContext) {
       project_index_ref: `${project.project_root}/${PROJECT_INDEX_BASENAME}`,
       stage_outputs_root: project.stage_outputs_root,
       stage_outputs_manifest_ref: project.stage_outputs_manifest_ref,
+      stage_outputs_index_ref: stageOutputsIndexRef(project.stage_outputs_root),
+      current_stage_pointer_ref: currentStagePointerRef(project.stage_outputs_root),
       lifecycle: project.lifecycle,
       user_inspection: {
         stage_outputs_root: project.stage_outputs_root,
+        stage_outputs_index_ref: stageOutputsIndexRef(project.stage_outputs_root),
+        current_stage_pointer_ref: currentStagePointerRef(project.stage_outputs_root),
+        stage_folder_pattern: `${project.stage_outputs_root}/<stage-id>/`,
+        stage_manifest_pattern: `${project.stage_outputs_root}/<stage-id>/stage_manifest.json`,
+        inputs_pattern: `${project.stage_outputs_root}/<stage-id>/inputs`,
+        outputs_pattern: `${project.stage_outputs_root}/<stage-id>/outputs`,
+        review_pattern: `${project.stage_outputs_root}/<stage-id>/review`,
+        receipts_pattern: `${project.stage_outputs_root}/<stage-id>/receipts`,
+        handoff_pattern: `${project.stage_outputs_root}/<stage-id>/handoff`,
+        required_stage_folder_shape: [
+          ...STAGE_OUTPUT_REQUIRED_DIRECTORIES,
+          ...STAGE_OUTPUT_REQUIRED_FILES,
+        ],
         inputs_root: project.inputs_root,
         review_root: project.review_root,
         handoff_root: project.handoff_root,
         exports_root: project.exports_root,
+        archive_root: project.archive_root,
+        runtime_state_is_default_user_surface: false,
+        product_views_are_stage_outputs: false,
       },
     })),
     generated_refs: {
@@ -324,8 +462,12 @@ export function buildWorkspaceMap(input: WorkspaceArtifactContext) {
       workspace_config_ref: 'workspace.yaml',
       workspace_map_ref: WORKSPACE_MAP_REF,
       workspace_health_ref: WORKSPACE_HEALTH_REF,
+      workspace_inspection_ref: WORKSPACE_INSPECTION_REF,
+      workspace_resource_inventory_ref: WORKSPACE_RESOURCE_INVENTORY_REF,
       project_config_basename: PROJECT_CONFIG_BASENAME,
       project_index_basename: PROJECT_INDEX_BASENAME,
+      stage_outputs_index_basename: STAGE_OUTPUTS_INDEX_BASENAME,
+      current_stage_pointer_basename: CURRENT_STAGE_POINTER_BASENAME,
     },
     authority_boundary: {
       map_is_projection_only: true,
@@ -333,6 +475,86 @@ export function buildWorkspaceMap(input: WorkspaceArtifactContext) {
       map_can_replace_owner_receipt_or_typed_blocker: false,
     },
     created_at: input.createdAt,
+    updated_at: input.updatedAt,
+  };
+}
+
+export function buildWorkspaceInspection(input: WorkspaceArtifactContext) {
+  const activeProjects = input.projects.filter((project) => project.lifecycle.status === 'active');
+  const currentProject = activeProjects[activeProjects.length - 1] ?? input.projects[input.projects.length - 1] ?? null;
+  return {
+    surface_kind: 'opl_workspace_inspection',
+    version: 'workspace-inspection.v1',
+    workspace_id: input.workspaceId,
+    workspace_path: input.workspacePath,
+    agent_id: input.agent.agent_id,
+    ordinary_user_default_surface: 'workspace_local_project_stage_outputs',
+    current_project_id: currentProject?.project_id ?? null,
+    current_project_root: currentProject?.project_root ?? null,
+    current_stage_outputs_root: currentProject?.stage_outputs_root ?? null,
+    current_stage_pointer_ref: currentProject
+      ? currentStagePointerRef(currentProject.stage_outputs_root)
+      : null,
+    latest_stage_outputs_index_ref: currentProject
+      ? stageOutputsIndexRef(currentProject.stage_outputs_root)
+      : null,
+    project_inspection: input.projects.map((project) => ({
+      project_id: project.project_id,
+      lifecycle: project.lifecycle,
+      project_root: project.project_root,
+      stage_outputs_root: project.stage_outputs_root,
+      stage_outputs_manifest_ref: project.stage_outputs_manifest_ref,
+      stage_outputs_index_ref: stageOutputsIndexRef(project.stage_outputs_root),
+      current_stage_pointer_ref: currentStagePointerRef(project.stage_outputs_root),
+      stage_folder_pattern: `${project.stage_outputs_root}/<stage-id>/`,
+      stage_manifest_pattern: `${project.stage_outputs_root}/<stage-id>/stage_manifest.json`,
+      receipts_pattern: `${project.stage_outputs_root}/<stage-id>/receipts`,
+      exports_root: project.exports_root,
+      review_root: project.review_root,
+      handoff_root: project.handoff_root,
+      archive_root: project.archive_root,
+    })),
+    domain_product_views_are_separate: true,
+    runtime_state_is_default_user_surface: false,
+    authority_boundary: {
+      inspection_is_projection_only: true,
+      inspection_can_replace_owner_receipt: false,
+      inspection_can_replace_typed_blocker: false,
+      inspection_can_claim_stage_complete: false,
+      opl_can_write_domain_truth: false,
+    },
+    updated_at: input.updatedAt,
+  };
+}
+
+export function buildWorkspaceResourceInventory(input: WorkspaceArtifactContext) {
+  const resources = buildSharedResources(input.profile);
+  return {
+    surface_kind: 'opl_workspace_resource_inventory',
+    version: 'workspace-resource-inventory.v1',
+    workspace_id: input.workspaceId,
+    agent_id: input.agent.agent_id,
+    workspace_path: input.workspacePath,
+    inventory_scope: 'workspace_shared_resources',
+    resources: resources.map((resource) => ({
+      path: resource.path,
+      role: resource.role,
+      manifest_ref: resource.manifest_ref,
+      owner: resource.owner,
+      user_visible: resource.user_visible,
+      domain_truth_owner: resource.domain_truth_owner,
+      provenance_policy: 'manifest_records_source_refs_not_resource_body',
+      checksum_policy: 'resource_entry_may_record_checksum_when_known',
+      reuse_scope: input.profile.workspace_mode === 'portfolio' ? 'workspace_group' : 'workspace_group_or_project_series',
+      staleness_policy: 'domain_agent_or_owner_updates_staleness',
+    })),
+    authority_boundary: {
+      inventory_is_index_only: true,
+      inventory_can_store_resource_body: false,
+      inventory_can_write_domain_truth: false,
+      inventory_can_replace_source_provenance: false,
+      opl_can_write_domain_truth: false,
+    },
     updated_at: input.updatedAt,
   };
 }
@@ -364,6 +586,17 @@ export function buildWorkspaceHealth(input: WorkspaceArtifactContext & {
 
 export function writeJsonArtifact(filePath: string, payload: unknown) {
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`);
+}
+
+function writeJsonArtifactIfMissing(filePath: string, payload: unknown) {
+  if (fs.existsSync(filePath)) {
+    if (!fs.statSync(filePath).isFile()) {
+      throw new Error(`Expected file but found non-file path: ${filePath}`);
+    }
+    return false;
+  }
+  writeJsonArtifact(filePath, payload);
+  return true;
 }
 
 export function materializeWorkspaceGeneratedArtifacts(input: WorkspaceArtifactContext) {
@@ -406,10 +639,32 @@ export function materializeWorkspaceGeneratedArtifacts(input: WorkspaceArtifactC
       updatedAt: input.updatedAt,
     }));
     writtenFiles.push(manifestPath);
+    const stageOutputsIndexPath = path.join(input.workspacePath, stageOutputsIndexRef(project.stage_outputs_root));
+    if (writeJsonArtifactIfMissing(stageOutputsIndexPath, buildStageOutputsIndex({
+      workspaceId: input.workspaceId,
+      agent: input.agent,
+      project,
+      updatedAt: input.updatedAt,
+    }))) {
+      writtenFiles.push(stageOutputsIndexPath);
+    }
+    const currentStagePointerPath = path.join(input.workspacePath, currentStagePointerRef(project.stage_outputs_root));
+    if (writeJsonArtifactIfMissing(currentStagePointerPath, buildCurrentStagePointer({
+      workspaceId: input.workspaceId,
+      agent: input.agent,
+      project,
+      updatedAt: input.updatedAt,
+    }))) {
+      writtenFiles.push(currentStagePointerPath);
+    }
   }
   writeJsonArtifact(path.join(input.workspacePath, WORKSPACE_MAP_REF), buildWorkspaceMap(input));
   writtenFiles.push(path.join(input.workspacePath, WORKSPACE_MAP_REF));
   writeJsonArtifact(path.join(input.workspacePath, WORKSPACE_HEALTH_REF), buildWorkspaceHealth(input));
   writtenFiles.push(path.join(input.workspacePath, WORKSPACE_HEALTH_REF));
+  writeJsonArtifact(path.join(input.workspacePath, WORKSPACE_INSPECTION_REF), buildWorkspaceInspection(input));
+  writtenFiles.push(path.join(input.workspacePath, WORKSPACE_INSPECTION_REF));
+  writeJsonArtifact(path.join(input.workspacePath, WORKSPACE_RESOURCE_INVENTORY_REF), buildWorkspaceResourceInventory(input));
+  writtenFiles.push(path.join(input.workspacePath, WORKSPACE_RESOURCE_INVENTORY_REF));
   return writtenFiles;
 }

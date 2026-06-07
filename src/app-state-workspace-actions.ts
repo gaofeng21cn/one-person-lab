@@ -7,8 +7,10 @@ import {
 import {
   archiveWorkspaceProject,
   exportWorkspaceMap,
+  inspectWorkspace,
   upgradeWorkspace,
   workspaceHealth,
+  workspaceInventory,
 } from './workspace-lifecycle.ts';
 import { ensureWorkspace, initializeWorkspace } from './workspace-initializer.ts';
 import type { FrameworkContracts } from './types.ts';
@@ -182,6 +184,24 @@ export function executeWorkspaceAppAction(
     return {
       delegatedSurface: 'opl workspace export-map',
       result: exportWorkspaceMap(contracts, {
+        workspacePath: workspacePathPayload(options.payload, options.actionId),
+      }),
+    };
+  }
+
+  if (options.actionId === 'workspace_inspect') {
+    return {
+      delegatedSurface: 'opl workspace inspect',
+      result: inspectWorkspace(contracts, {
+        workspacePath: workspacePathPayload(options.payload, options.actionId),
+      }),
+    };
+  }
+
+  if (options.actionId === 'workspace_inventory') {
+    return {
+      delegatedSurface: 'opl workspace inventory',
+      result: workspaceInventory(contracts, {
         workspacePath: workspacePathPayload(options.payload, options.actionId),
       }),
     };

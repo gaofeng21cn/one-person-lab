@@ -6,12 +6,16 @@ import type { FrameworkContracts } from './types.ts';
 import { doctorWorkspace, type WorkspaceLifecycleOptions, type WorkspaceValidationOptions } from './workspace-diagnostics.ts';
 import {
   buildWorkspaceHealth,
+  buildWorkspaceInspection,
   buildWorkspaceMap,
+  buildWorkspaceResourceInventory,
   ensureDirectory,
   materializeWorkspaceGeneratedArtifacts,
   normalizeWorkspaceProjectEntry,
   WORKSPACE_HEALTH_REF,
+  WORKSPACE_INSPECTION_REF,
   WORKSPACE_MAP_REF,
+  WORKSPACE_RESOURCE_INVENTORY_REF,
   writeJsonArtifact,
 } from './workspace-artifacts.ts';
 import {
@@ -351,6 +355,8 @@ export function upgradeWorkspace(
       workspace_index_path: context.workspaceIndexPath,
       workspace_map_path: path.join(context.workspacePath, WORKSPACE_MAP_REF),
       workspace_health_path: path.join(context.workspacePath, WORKSPACE_HEALTH_REF),
+      workspace_inspection_path: path.join(context.workspacePath, WORKSPACE_INSPECTION_REF),
+      workspace_resource_inventory_path: path.join(context.workspacePath, WORKSPACE_RESOURCE_INVENTORY_REF),
       would_or_did_create_directories: createdDirectories,
       written_generated_files: written?.writtenGeneratedFiles ?? [],
       blockers_after_apply: doctor?.blockers ?? [],
@@ -483,6 +489,56 @@ export function workspaceHealth(
       createdAt: indexCreatedAt(context.index, updatedAt),
       updatedAt,
       blockers: doctor.blockers,
+    }),
+  };
+}
+
+export function inspectWorkspace(
+  contracts: FrameworkContracts,
+  options: WorkspaceValidationOptions,
+) {
+  const context = readValidatedWorkspaceIndex(options.workspacePath);
+  const updatedAt = indexUpdatedAt(context.index);
+  return {
+    version: 'g2',
+    contracts_context: {
+      contracts_dir: contracts.contractsDir,
+      contracts_root_source: contracts.contractsRootSource,
+    },
+    workspace_inspection: buildWorkspaceInspection({
+      workspaceId: indexWorkspaceId(context.index, context.workspacePath),
+      title: indexTitle(context.index),
+      workspacePath: context.workspacePath,
+      agent: context.agent,
+      profile: context.profile,
+      projects: context.projects,
+      createdAt: indexCreatedAt(context.index, updatedAt),
+      updatedAt,
+    }),
+  };
+}
+
+export function workspaceInventory(
+  contracts: FrameworkContracts,
+  options: WorkspaceValidationOptions,
+) {
+  const context = readValidatedWorkspaceIndex(options.workspacePath);
+  const updatedAt = indexUpdatedAt(context.index);
+  return {
+    version: 'g2',
+    contracts_context: {
+      contracts_dir: contracts.contractsDir,
+      contracts_root_source: contracts.contractsRootSource,
+    },
+    workspace_resource_inventory: buildWorkspaceResourceInventory({
+      workspaceId: indexWorkspaceId(context.index, context.workspacePath),
+      title: indexTitle(context.index),
+      workspacePath: context.workspacePath,
+      agent: context.agent,
+      profile: context.profile,
+      projects: context.projects,
+      createdAt: indexCreatedAt(context.index, updatedAt),
+      updatedAt,
     }),
   };
 }

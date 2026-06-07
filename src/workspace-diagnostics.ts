@@ -8,13 +8,19 @@ import {
   buildProjectIndex,
   buildSharedResourceManifest,
   buildStageOutputsManifest,
+  buildWorkspaceInspection,
   buildWorkspaceMap,
+  buildWorkspaceResourceInventory,
+  currentStagePointerRef,
   normalizeWorkspaceProjectEntry,
   PROJECT_CONFIG_BASENAME,
   PROJECT_INDEX_BASENAME,
   sharedResourceManifestRef,
+  stageOutputsIndexRef,
   WORKSPACE_HEALTH_REF,
+  WORKSPACE_INSPECTION_REF,
   WORKSPACE_MAP_REF,
+  WORKSPACE_RESOURCE_INVENTORY_REF,
 } from './workspace-artifacts.ts';
 import {
   buildCanonicalTopology,
@@ -81,6 +87,7 @@ const BLOCKER_MESSAGES: Record<string, string> = {
   shared_resource_root_missing: 'A declared shared resource root is missing on disk.',
   shared_resource_manifest_missing: 'A declared shared resource manifest is missing on disk.',
   shared_resource_manifest_drift: 'A declared shared resource manifest does not match the OPL projection.',
+  domain_topology_profile_drift: 'workspace_index.json agent topology profile does not match the executable OPL norm contract.',
   project_collection_missing: 'The project collection directory is missing.',
   indexed_projects_missing: 'workspace_index.json does not list any projects.',
   indexed_project_shape_invalid: 'An indexed project has invalid path fields.',
@@ -95,12 +102,20 @@ const BLOCKER_MESSAGES: Record<string, string> = {
   indexed_stage_outputs_root_missing: 'An indexed project stage outputs root is missing on disk.',
   indexed_stage_outputs_manifest_missing: 'An indexed project stage outputs manifest is missing on disk.',
   indexed_stage_outputs_manifest_drift: 'An indexed project stage outputs manifest does not match the OPL projection.',
+  indexed_stage_outputs_index_missing: 'An indexed project stage outputs index is missing on disk.',
+  indexed_stage_outputs_index_drift: 'An indexed project stage outputs index does not match the OPL projection.',
+  indexed_current_stage_pointer_missing: 'An indexed project current stage pointer is missing on disk.',
+  indexed_current_stage_pointer_drift: 'An indexed project current stage pointer does not match the OPL projection.',
   indexed_control_root_missing: 'An indexed project control root is missing on disk.',
   indexed_review_root_missing: 'An indexed project review root is missing on disk.',
   indexed_handoff_root_missing: 'An indexed project handoff root is missing on disk.',
   workspace_map_missing: 'workspace_map.json is missing.',
   workspace_map_drift: 'workspace_map.json does not match the OPL projection.',
   workspace_health_missing: 'workspace_health.json is missing.',
+  workspace_inspection_missing: 'workspace_inspection.json is missing.',
+  workspace_inspection_drift: 'workspace_inspection.json does not match the OPL projection.',
+  workspace_resource_inventory_missing: 'workspace_resource_inventory.json is missing.',
+  workspace_resource_inventory_drift: 'workspace_resource_inventory.json does not match the OPL projection.',
   generated_refs_missing: 'workspace_index.json is missing generated_refs.',
   interface_projection_missing: 'workspace_index.json is missing interface_projection.',
   authority_boundary_overclaim: 'authority_boundary grants authority that OPL must not hold.',
@@ -108,6 +123,15 @@ const BLOCKER_MESSAGES: Record<string, string> = {
   workspace_norm_missing: 'workspace_index.json is missing workspace_norm projection.',
   workspace_norm_drift: 'workspace_norm projection does not match the executable norm contract.',
 };
+
+const STAGE_LIFECYCLE_STATUSES = [
+  'open',
+  'active',
+  'completed',
+  'blocked',
+  'superseded',
+  'archived',
+] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -250,6 +274,121 @@ function readJsonRecord(filePath: string) {
   }
 }
 
+function isStageLifecycleStatus(value: unknown) {
+  return typeof value === 'string' && STAGE_LIFECYCLE_STATUSES.includes(value as typeof STAGE_LIFECYCLE_STATUSES[number]);
+}
+
+function validateStageOutputsIndexShape(input: {
+  actual: Record<string, unknown>;
+  workspaceId: string;
+  agent: WorkspaceAgentProfile;
+  project: WorkspaceProjectIndexEntry;
+}) {
+  const protocol = isRecord(input.actual.stage_folder_protocol)
+    ? input.actual.stage_folder_protocol
+    : {};
+  const authority = isRecord(input.actual.authority_boundary)
+    ? input.actual.authority_boundary
+    : {};
+  const stages = Array.isArray(input.actual.stages) ? input.actual.stages : null;
+  const blockers = [
+    input.actual.surface_kind === 'opl_stage_outputs_index' ? null : 'surface_kind',
+    input.actual.version === 'workspace-stage-outputs-index.v1' ? null : 'version',
+    input.actual.workspace_id === input.workspaceId ? null : 'workspace_id',
+    input.actual.agent_id === input.agent.agent_id ? null : 'agent_id',
+    input.actual.project_id === input.project.project_id ? null : 'project_id',
+    input.actual.stage_outputs_root === input.project.stage_outputs_root ? null : 'stage_outputs_root',
+    input.actual.current_stage_pointer_ref === currentStagePointerRef(input.project.stage_outputs_root)
+      ? null
+      : 'current_stage_pointer_ref',
+    sameJson(input.actual.stage_lifecycle_model, STAGE_LIFECYCLE_STATUSES) ? null : 'stage_lifecycle_model',
+    protocol.closeout_answer_unit === 'owner_receipt_or_typed_blocker' ? null : 'closeout_answer_unit',
+    authority.index_is_projection_only === true ? null : 'index_is_projection_only',
+    authority.index_can_claim_stage_complete === false ? null : 'index_can_claim_stage_complete',
+    authority.index_can_replace_owner_receipt === false ? null : 'index_can_replace_owner_receipt',
+    authority.index_can_replace_typed_blocker === false ? null : 'index_can_replace_typed_blocker',
+    authority.opl_can_write_domain_truth === false ? null : 'opl_can_write_domain_truth',
+  ].filter((entry): entry is string => Boolean(entry));
+
+  if (!stages) {
+    blockers.push('stages');
+  } else {
+    stages.forEach((stage, index) => {
+      if (!isRecord(stage) || typeof stage.stage_id !== 'string') {
+        blockers.push(`stages[${index}].stage_id`);
+        return;
+      }
+      const lifecycle = isRecord(stage.lifecycle) ? stage.lifecycle : {};
+      const status = lifecycle.status ?? stage.status;
+      if (status !== undefined && !isStageLifecycleStatus(status)) {
+        blockers.push(`stages[${index}].lifecycle.status`);
+      }
+      const authorityBoundary = isRecord(stage.authority_boundary) ? stage.authority_boundary : null;
+      if (authorityBoundary) {
+        if (authorityBoundary.file_presence_counts_as_stage_complete !== false) {
+          blockers.push(`stages[${index}].authority_boundary.file_presence_counts_as_stage_complete`);
+        }
+        if (authorityBoundary.stage_folder_can_replace_owner_receipt !== false) {
+          blockers.push(`stages[${index}].authority_boundary.stage_folder_can_replace_owner_receipt`);
+        }
+        if (authorityBoundary.stage_folder_can_replace_typed_blocker !== false) {
+          blockers.push(`stages[${index}].authority_boundary.stage_folder_can_replace_typed_blocker`);
+        }
+      }
+    });
+  }
+
+  return blockers;
+}
+
+function validateCurrentStagePointerShape(input: {
+  actual: Record<string, unknown>;
+  workspaceId: string;
+  agent: WorkspaceAgentProfile;
+  project: WorkspaceProjectIndexEntry;
+}) {
+  const authority = isRecord(input.actual.authority_boundary)
+    ? input.actual.authority_boundary
+    : {};
+  const currentStage = input.actual.current_stage;
+  const blockers = [
+    input.actual.surface_kind === 'opl_current_stage_pointer' ? null : 'surface_kind',
+    input.actual.version === 'workspace-current-stage-pointer.v1' ? null : 'version',
+    input.actual.workspace_id === input.workspaceId ? null : 'workspace_id',
+    input.actual.agent_id === input.agent.agent_id ? null : 'agent_id',
+    input.actual.project_id === input.project.project_id ? null : 'project_id',
+    input.actual.project_root === input.project.project_root ? null : 'project_root',
+    input.actual.stage_outputs_root === input.project.stage_outputs_root ? null : 'stage_outputs_root',
+    sameJson(input.actual.lifecycle_model, STAGE_LIFECYCLE_STATUSES) ? null : 'lifecycle_model',
+    authority.pointer_is_projection_only === true ? null : 'pointer_is_projection_only',
+    authority.pointer_can_claim_stage_complete === false ? null : 'pointer_can_claim_stage_complete',
+    authority.pointer_can_replace_owner_receipt === false ? null : 'pointer_can_replace_owner_receipt',
+    authority.pointer_can_replace_typed_blocker === false ? null : 'pointer_can_replace_typed_blocker',
+    authority.opl_can_write_domain_truth === false ? null : 'opl_can_write_domain_truth',
+  ].filter((entry): entry is string => Boolean(entry));
+
+  if (currentStage !== null) {
+    if (!isRecord(currentStage)) {
+      blockers.push('current_stage');
+    } else {
+      if (typeof currentStage.stage_id !== 'string' || !currentStage.stage_id.trim()) {
+        blockers.push('current_stage.stage_id');
+      }
+      if (!isStageLifecycleStatus(currentStage.status)) {
+        blockers.push('current_stage.status');
+      }
+      if (
+        input.actual.current_stage_manifest_ref !== null
+        && typeof input.actual.current_stage_manifest_ref !== 'string'
+      ) {
+        blockers.push('current_stage_manifest_ref');
+      }
+    }
+  }
+
+  return blockers;
+}
+
 function indexWorkspaceId(index: Record<string, unknown>, workspacePath: string) {
   return typeof index.workspace_id === 'string' && index.workspace_id.trim()
     ? index.workspace_id
@@ -317,6 +456,26 @@ function validateIndexSemantics(input: {
       profileId,
       profile,
     });
+    const declaredDomainProfile = input.contracts.agentWorkspaceNorm.domain_topology_profiles[agent.agent_id];
+    const domainProfileMatches = declaredDomainProfile
+      && declaredDomainProfile.profile === profileId
+      && declaredDomainProfile.workspace_mode === profile.workspace_mode
+      && declaredDomainProfile.project_kind === agent.project_kind
+      && declaredDomainProfile.project_collection_path === profile.project_collection_path
+      && sameJson(declaredDomainProfile.shared_resource_roots, profile.shared_resource_roots);
+    if (!domainProfileMatches) {
+      addBlocker(blockers, 'domain_topology_profile_drift', {
+        agent_id: agent.agent_id,
+        expected: declaredDomainProfile ?? null,
+        actual: {
+          profile: profileId,
+          workspace_mode: profile.workspace_mode,
+          project_kind: agent.project_kind,
+          project_collection_path: profile.project_collection_path,
+          shared_resource_roots: profile.shared_resource_roots,
+        },
+      });
+    }
 
     if (!isRecord(input.index.canonical_topology)) {
       addBlocker(blockers, 'canonical_topology_missing');
@@ -499,6 +658,56 @@ function validateIndexSemantics(input: {
           });
         }
       }
+      const stageIndexRef = normalized.stage_outputs_index_ref || stageOutputsIndexRef(normalized.stage_outputs_root);
+      const stageIndexPath = path.join(input.workspacePath, stageIndexRef);
+      if (!fs.existsSync(stageIndexPath) || !fs.statSync(stageIndexPath).isFile()) {
+        addBlocker(blockers, 'indexed_stage_outputs_index_missing', {
+          project_id: normalized.project_id,
+          path: stageIndexRef,
+        });
+      } else {
+        const actual = readJsonRecord(stageIndexPath);
+        const driftFields = actual
+          ? validateStageOutputsIndexShape({
+              actual,
+              workspaceId: indexWorkspaceId(input.index, input.workspacePath),
+              agent,
+              project: normalized,
+            })
+          : ['invalid_json'];
+        if (driftFields.length > 0) {
+          addBlocker(blockers, 'indexed_stage_outputs_index_drift', {
+            project_id: normalized.project_id,
+            path: stageIndexRef,
+            drift_fields: driftFields,
+          });
+        }
+      }
+      const currentPointerRef = normalized.current_stage_pointer_ref || currentStagePointerRef(normalized.stage_outputs_root);
+      const currentPointerPath = path.join(input.workspacePath, currentPointerRef);
+      if (!fs.existsSync(currentPointerPath) || !fs.statSync(currentPointerPath).isFile()) {
+        addBlocker(blockers, 'indexed_current_stage_pointer_missing', {
+          project_id: normalized.project_id,
+          path: currentPointerRef,
+        });
+      } else {
+        const actual = readJsonRecord(currentPointerPath);
+        const driftFields = actual
+          ? validateCurrentStagePointerShape({
+              actual,
+              workspaceId: indexWorkspaceId(input.index, input.workspacePath),
+              agent,
+              project: normalized,
+            })
+          : ['invalid_json'];
+        if (driftFields.length > 0) {
+          addBlocker(blockers, 'indexed_current_stage_pointer_drift', {
+            project_id: normalized.project_id,
+            path: currentPointerRef,
+            drift_fields: driftFields,
+          });
+        }
+      }
     }
   });
 
@@ -531,6 +740,28 @@ function validateIndexSemantics(input: {
     const healthPath = path.join(input.workspacePath, WORKSPACE_HEALTH_REF);
     if (!fs.existsSync(healthPath) || !fs.statSync(healthPath).isFile()) {
       addBlocker(blockers, 'workspace_health_missing', { path: WORKSPACE_HEALTH_REF });
+    }
+    const inspectionPath = path.join(input.workspacePath, WORKSPACE_INSPECTION_REF);
+    if (!fs.existsSync(inspectionPath) || !fs.statSync(inspectionPath).isFile()) {
+      addBlocker(blockers, 'workspace_inspection_missing', { path: WORKSPACE_INSPECTION_REF });
+    } else {
+      const actualInspection = readJsonRecord(inspectionPath);
+      const expectedInspection = buildWorkspaceInspection(context);
+      if (!actualInspection || !sameJson(actualInspection, expectedInspection)) {
+        addBlocker(blockers, 'workspace_inspection_drift', { path: WORKSPACE_INSPECTION_REF });
+      }
+    }
+    const resourceInventoryPath = path.join(input.workspacePath, WORKSPACE_RESOURCE_INVENTORY_REF);
+    if (!fs.existsSync(resourceInventoryPath) || !fs.statSync(resourceInventoryPath).isFile()) {
+      addBlocker(blockers, 'workspace_resource_inventory_missing', { path: WORKSPACE_RESOURCE_INVENTORY_REF });
+    } else {
+      const actualInventory = readJsonRecord(resourceInventoryPath);
+      const expectedInventory = buildWorkspaceResourceInventory(context);
+      if (!actualInventory || !sameJson(actualInventory, expectedInventory)) {
+        addBlocker(blockers, 'workspace_resource_inventory_drift', {
+          path: WORKSPACE_RESOURCE_INVENTORY_REF,
+        });
+      }
     }
   }
 

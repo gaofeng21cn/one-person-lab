@@ -11,8 +11,10 @@ import {
 import {
   archiveWorkspaceProject,
   exportWorkspaceMap,
+  inspectWorkspace,
   upgradeWorkspace,
   workspaceHealth,
+  workspaceInventory,
 } from '../../workspace-lifecycle.ts';
 import type { FrameworkContracts } from '../../types.ts';
 import {
@@ -193,6 +195,34 @@ export function buildWorkspaceInitializeCommandSpecs(
       handler: (args) => {
         const parsed = parseWorkspaceValidationArgs(args, specs['workspace health']);
         return workspaceHealth(getContracts(), {
+          workspacePath: parsed.workspacePath,
+        });
+      },
+    },
+    'workspace inspect': {
+      usage: 'opl workspace inspect --workspace <path>',
+      summary:
+        'Return the user-first workspace inspection projection with current project, Stage Native roots, and current pointer refs.',
+      examples: [
+        'opl workspace inspect --workspace /Users/gaofeng/workspace/visual-theme-a',
+      ],
+      handler: (args) => {
+        const parsed = parseWorkspaceValidationArgs(args, specs['workspace inspect']);
+        return inspectWorkspace(getContracts(), {
+          workspacePath: parsed.workspacePath,
+        });
+      },
+    },
+    'workspace inventory': {
+      usage: 'opl workspace inventory --workspace <path>',
+      summary:
+        'Return the refs-only shared resource inventory projection for workspace sources, materials, memory, and style roots.',
+      examples: [
+        'opl workspace inventory --workspace /Users/gaofeng/workspace/visual-theme-a',
+      ],
+      handler: (args) => {
+        const parsed = parseWorkspaceValidationArgs(args, specs['workspace inventory']);
+        return workspaceInventory(getContracts(), {
           workspacePath: parsed.workspacePath,
         });
       },

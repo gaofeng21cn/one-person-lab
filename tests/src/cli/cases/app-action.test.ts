@@ -98,6 +98,8 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'workspace_upgrade',
       'workspace_project_archive',
       'workspace_export_map',
+      'workspace_inspect',
+      'workspace_inventory',
       'workspace_health',
     ]) {
       assert.ok(actions.has(actionId), `missing App action: ${actionId}`);
@@ -151,6 +153,12 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.equal(actions.get('workspace_project_archive')?.mutates, 'opl_workspace_project_lifecycle_projection');
     assert.equal(actions.get('workspace_export_map')?.delegated_surface, 'opl workspace export-map');
     assert.equal(actions.get('workspace_export_map')?.mutates, 'none_read_only');
+    assert.equal(actions.get('workspace_inspect')?.delegated_surface, 'opl workspace inspect');
+    assert.equal(actions.get('workspace_inspect')?.mutates, 'none_read_only');
+    assert.deepEqual(actions.get('workspace_inspect')?.payload_fields, ['workspace_path']);
+    assert.equal(actions.get('workspace_inventory')?.delegated_surface, 'opl workspace inventory');
+    assert.equal(actions.get('workspace_inventory')?.mutates, 'none_read_only');
+    assert.deepEqual(actions.get('workspace_inventory')?.payload_fields, ['workspace_path']);
     assert.equal(actions.get('workspace_health')?.delegated_surface, 'opl workspace health');
     assert.equal(actions.get('workspace_health')?.mutates, 'none_read_only');
     assert.deepEqual(actions.get('provider_scheduler_tick')?.payload_fields, ['force', 'limit', 'hydrate']);
@@ -435,6 +443,42 @@ test('app action execute owns settings, release channel, workspace root, and pro
 
     assert.equal(workspaceMap.delegated_surface, 'opl workspace export-map');
     assert.equal(workspaceMap.result.workspace_map.projects[0].lifecycle.status, 'archived');
+
+    const workspaceInspectAction = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'workspace_inspect',
+      '--payload',
+      JSON.stringify({
+        workspace_path: path.join(workspaceRoot, 'visual-theme-a'),
+      }),
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+    }).app_action_execution;
+
+    assert.equal(workspaceInspectAction.delegated_surface, 'opl workspace inspect');
+    assert.equal(workspaceInspectAction.result.workspace_inspection.current_project_id, 'deck-001');
+
+    const workspaceInventoryAction = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'workspace_inventory',
+      '--payload',
+      JSON.stringify({
+        workspace_path: path.join(workspaceRoot, 'visual-theme-a'),
+      }),
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+    }).app_action_execution;
+
+    assert.equal(workspaceInventoryAction.delegated_surface, 'opl workspace inventory');
+    assert.equal(workspaceInventoryAction.result.workspace_resource_inventory.resources[0].domain_truth_owner, 'domain_agent');
 
     const workspaceHealthAction = runCli([
       'app',

@@ -110,7 +110,21 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     );
     assert.equal(workspaceIndex.generated_refs.workspace_map_ref, 'workspace_map.json');
     assert.equal(workspaceIndex.generated_refs.workspace_health_ref, 'workspace_health.json');
+    assert.equal(workspaceIndex.generated_refs.workspace_inspection_ref, 'workspace_inspection.json');
+    assert.equal(workspaceIndex.generated_refs.workspace_resource_inventory_ref, 'workspace_resource_inventory.json');
+    assert.equal(workspaceIndex.generated_refs.stage_outputs_index_basename, 'stage_outputs_index.json');
+    assert.equal(workspaceIndex.generated_refs.current_stage_pointer_basename, 'current_stage.json');
     assert.equal(workspaceIndex.user_inspection.default_stage_outputs, 'deliverables/deck-001/artifacts/stage_outputs');
+    assert.equal(workspaceIndex.user_inspection.workspace_inspection_ref, 'workspace_inspection.json');
+    assert.equal(workspaceIndex.user_inspection.workspace_resource_inventory_ref, 'workspace_resource_inventory.json');
+    assert.equal(
+      workspaceIndex.user_inspection.default_stage_outputs_index_ref,
+      'deliverables/deck-001/artifacts/stage_outputs/stage_outputs_index.json',
+    );
+    assert.equal(
+      workspaceIndex.user_inspection.default_current_stage_pointer_ref,
+      'deliverables/deck-001/artifacts/stage_outputs/current_stage.json',
+    );
     assert.equal(workspaceIndex.workspace_norm.norm_id, 'opl.agent_workspace_norm.v1');
     assert.equal(workspaceIndex.workspace_norm.default_workspace_precondition.command, 'opl workspace ensure');
     assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.profile, 'rca_series');
@@ -159,12 +173,81 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     ));
     assert.equal(stageOutputsManifest.surface_kind, 'opl_stage_outputs_root_manifest');
     assert.equal(stageOutputsManifest.stage_artifact_runtime.root_manifest_is_stage_completion_proof, false);
+    assert.equal(
+      stageOutputsManifest.stage_artifact_runtime.stage_outputs_index_ref,
+      'deliverables/deck-001/artifacts/stage_outputs/stage_outputs_index.json',
+    );
+    assert.equal(
+      stageOutputsManifest.stage_artifact_runtime.current_stage_pointer_ref,
+      'deliverables/deck-001/artifacts/stage_outputs/current_stage.json',
+    );
+    const stageOutputsIndex = readJsonFile(path.join(
+      workspacePath,
+      'deliverables',
+      'deck-001',
+      'artifacts',
+      'stage_outputs',
+      'stage_outputs_index.json',
+    ));
+    assert.equal(stageOutputsIndex.surface_kind, 'opl_stage_outputs_index');
+    assert.deepEqual(stageOutputsIndex.stage_lifecycle_model, [
+      'open',
+      'active',
+      'completed',
+      'blocked',
+      'superseded',
+      'archived',
+    ]);
+    assert.equal(stageOutputsIndex.stage_folder_protocol.closeout_answer_unit, 'owner_receipt_or_typed_blocker');
+    assert.equal(stageOutputsIndex.authority_boundary.index_can_claim_stage_complete, false);
+    const currentStagePointer = readJsonFile(path.join(
+      workspacePath,
+      'deliverables',
+      'deck-001',
+      'artifacts',
+      'stage_outputs',
+      'current_stage.json',
+    ));
+    assert.equal(currentStagePointer.surface_kind, 'opl_current_stage_pointer');
+    assert.equal(currentStagePointer.current_stage, null);
+    assert.equal(currentStagePointer.empty_state, 'no_stage_opened_yet');
+    assert.equal(currentStagePointer.authority_boundary.pointer_can_replace_owner_receipt, false);
     const workspaceMap = readJsonFile(path.join(workspacePath, 'workspace_map.json'));
     assert.equal(workspaceMap.surface_kind, 'opl_workspace_map');
     assert.equal(workspaceMap.projects[0].project_id, 'deck-001');
+    assert.equal(
+      workspaceMap.projects[0].user_inspection.stage_manifest_pattern,
+      'deliverables/deck-001/artifacts/stage_outputs/<stage-id>/stage_manifest.json',
+    );
+    assert.equal(
+      workspaceMap.projects[0].user_inspection.receipts_pattern,
+      'deliverables/deck-001/artifacts/stage_outputs/<stage-id>/receipts',
+    );
     const workspaceHealth = readJsonFile(path.join(workspacePath, 'workspace_health.json'));
     assert.equal(workspaceHealth.surface_kind, 'opl_workspace_health');
     assert.equal(workspaceHealth.status, 'passed');
+    const workspaceInspection = readJsonFile(path.join(workspacePath, 'workspace_inspection.json'));
+    assert.equal(workspaceInspection.surface_kind, 'opl_workspace_inspection');
+    assert.equal(workspaceInspection.current_project_id, 'deck-001');
+    assert.equal(
+      workspaceInspection.current_stage_pointer_ref,
+      'deliverables/deck-001/artifacts/stage_outputs/current_stage.json',
+    );
+    assert.equal(workspaceInspection.authority_boundary.inspection_can_claim_stage_complete, false);
+    const workspaceResourceInventory = readJsonFile(path.join(workspacePath, 'workspace_resource_inventory.json'));
+    assert.equal(workspaceResourceInventory.surface_kind, 'opl_workspace_resource_inventory');
+    assert.equal(workspaceResourceInventory.resources[0].provenance_policy, 'manifest_records_source_refs_not_resource_body');
+    assert.equal(workspaceResourceInventory.authority_boundary.inventory_can_store_resource_body, false);
+    const inspect = runCli(['workspace', 'inspect', '--workspace', workspacePath], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(inspect.workspace_inspection.surface_kind, 'opl_workspace_inspection');
+    assert.equal(inspect.workspace_inspection.current_project_id, 'deck-001');
+    const inventory = runCli(['workspace', 'inventory', '--workspace', workspacePath], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(inventory.workspace_resource_inventory.surface_kind, 'opl_workspace_resource_inventory');
+    assert.equal(inventory.workspace_resource_inventory.resources.length, 5);
 
     const catalog = runCli(['workspace', 'list'], {
       OPL_STATE_DIR: stateRoot,
@@ -718,6 +801,8 @@ test('workspace interfaces exports the OPL-owned initializer surfaces for tools 
   assert.equal(output.workspace_interfaces.surfaces.management_commands.upgrade.command, 'opl workspace upgrade');
   assert.equal(output.workspace_interfaces.surfaces.management_commands.project_archive.command, 'opl workspace project archive');
   assert.equal(output.workspace_interfaces.surfaces.management_commands.export_map.command, 'opl workspace export-map');
+  assert.equal(output.workspace_interfaces.surfaces.management_commands.inspect.command, 'opl workspace inspect');
+  assert.equal(output.workspace_interfaces.surfaces.management_commands.inventory.command, 'opl workspace inventory');
   assert.equal(output.workspace_interfaces.surfaces.management_commands.health.command, 'opl workspace health');
   assert.equal(output.workspace_interfaces.surfaces.skill.intent, 'ensure_opl_workspace');
   assert.match(output.workspace_interfaces.surfaces.skill.management_instruction, /workspace validate/);
@@ -730,6 +815,8 @@ test('workspace interfaces exports the OPL-owned initializer surfaces for tools 
   assert.equal(output.workspace_interfaces.surfaces.app.upgrade_action_id, 'workspace_upgrade');
   assert.equal(output.workspace_interfaces.surfaces.app.project_archive_action_id, 'workspace_project_archive');
   assert.equal(output.workspace_interfaces.surfaces.app.export_map_action_id, 'workspace_export_map');
+  assert.equal(output.workspace_interfaces.surfaces.app.inspect_action_id, 'workspace_inspect');
+  assert.equal(output.workspace_interfaces.surfaces.app.inventory_action_id, 'workspace_inventory');
   assert.equal(output.workspace_interfaces.surfaces.app.health_action_id, 'workspace_health');
   assert.deepEqual(output.workspace_interfaces.supported_agents, ['mas', 'mag', 'rca', 'oma']);
 });
@@ -778,6 +865,14 @@ test('workspace validate and doctor inspect generated workspace topology semanti
       'stage_outputs',
       'opl_stage_outputs_manifest.json',
     ));
+    fs.rmSync(path.join(
+      workspacePath,
+      'deliverables',
+      'deck-001',
+      'artifacts',
+      'stage_outputs',
+      'current_stage.json',
+    ));
     const blocked = runCli(['workspace', 'doctor', '--workspace', workspacePath], {
       OPL_STATE_DIR: stateRoot,
     });
@@ -785,6 +880,12 @@ test('workspace validate and doctor inspect generated workspace topology semanti
     assert.equal(
       blocked.workspace_doctor.blockers.some((entry: { code: string }) => (
         entry.code === 'indexed_stage_outputs_manifest_missing'
+      )),
+      true,
+    );
+    assert.equal(
+      blocked.workspace_doctor.blockers.some((entry: { code: string }) => (
+        entry.code === 'indexed_current_stage_pointer_missing'
       )),
       true,
     );
@@ -902,6 +1003,29 @@ test('workspace upgrade restores generated manifests without moving project root
     const workspacePath = path.join(workspaceRoot, 'nsfc-p2c');
     fs.rmSync(path.join(workspacePath, 'shared', 'memory', 'opl_resource_manifest.json'));
     fs.rmSync(path.join(workspacePath, 'workspace_map.json'));
+    fs.rmSync(path.join(
+      workspacePath,
+      'deliverables',
+      'grant-001',
+      'artifacts',
+      'stage_outputs',
+      'stage_outputs_index.json',
+    ));
+    const currentPointerPath = path.join(
+      workspacePath,
+      'deliverables',
+      'grant-001',
+      'artifacts',
+      'stage_outputs',
+      'current_stage.json',
+    );
+    const currentPointer = readJsonFile(currentPointerPath);
+    currentPointer.current_stage = {
+      stage_id: 'draft',
+      status: 'active',
+    };
+    currentPointer.current_stage_manifest_ref = 'deliverables/grant-001/artifacts/stage_outputs/draft/stage_manifest.json';
+    fs.writeFileSync(currentPointerPath, `${JSON.stringify(currentPointer, null, 2)}\n`);
 
     const dryRun = runCli(['workspace', 'upgrade', '--workspace', workspacePath, '--dry-run'], {
       OPL_STATE_DIR: stateRoot,
@@ -917,6 +1041,19 @@ test('workspace upgrade restores generated manifests without moving project root
     assert.equal(applied.workspace_upgrade.authority_boundary.upgrade_moves_project_roots, false);
     assert.equal(fs.statSync(path.join(workspacePath, 'shared', 'memory', 'opl_resource_manifest.json')).isFile(), true);
     assert.equal(fs.statSync(path.join(workspacePath, 'workspace_map.json')).isFile(), true);
+    assert.equal(fs.statSync(path.join(
+      workspacePath,
+      'deliverables',
+      'grant-001',
+      'artifacts',
+      'stage_outputs',
+      'stage_outputs_index.json',
+    )).isFile(), true);
+    const upgradedCurrentPointer = readJsonFile(currentPointerPath);
+    assert.deepEqual(upgradedCurrentPointer.current_stage, {
+      stage_id: 'draft',
+      status: 'active',
+    });
     assert.equal(runCli(['workspace', 'validate', '--workspace', workspacePath], {
       OPL_STATE_DIR: stateRoot,
     }).workspace_validation.status, 'passed');

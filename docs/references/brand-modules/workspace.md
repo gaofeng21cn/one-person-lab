@@ -25,10 +25,14 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 workspa
 | 对象 | 作用 |
 | --- | --- |
 | `workspace.yaml` | workspace identity、agent binding、mode、root policy。 |
-| `workspace_index.json` | canonical topology、display labels、shared resources、indexed projects。 |
+| `workspace_index.json` | canonical topology、display labels、shared resources、indexed projects、generated refs 和用户检查 refs。 |
+| `workspace_inspection.json` | 用户优先检查投影：当前 project、Stage Native roots、current pointer refs、authority false flags。 |
+| `workspace_resource_inventory.json` | refs-only shared resource inventory：sources、materials、memory、brand/style roots 的 index，不保存 body。 |
 | `workspace_group` | 一个 agent 或 portfolio 下的项目集合。 |
 | `project_unit` | 一个 paper、study、grant、deck、agent target 或 deliverable project；`studies/` 与 `deliverables/` 都只是物理/display alias。 |
 | `stage_artifact_unit` | 某个 stage 的用户可检查产出位置，默认落在 `<project-root>/artifacts/stage_outputs/<stage-id>/`。 |
+| `stage_outputs_index.json` | project-local Stage Native 索引，记录 stage lifecycle protocol、folder refs、current pointer ref 和 refs-only authority boundary。 |
+| `current_stage.json` | project-local 当前 stage 指针 projection；runtime 可写合法非空指针，workspace upgrade 只补缺失，不把它重置成空模板。 |
 | `shared_resources` | sources、brand、visual memory、literature、data、style system 等共享材料。 |
 | `inspection_roots` | App/用户默认可查看路径。 |
 
@@ -42,6 +46,8 @@ opl workspace init --agent <id> --workspace <path> --json
 opl workspace validate --workspace <path> --json
 opl workspace doctor --workspace <path> --json
 opl workspace adopt --agent <id> --workspace <path> --dry-run --json
+opl workspace inspect --workspace <path> --json
+opl workspace inventory --workspace <path> --json
 opl workspace interfaces --json
 ```
 
@@ -60,6 +66,7 @@ contracts/opl-framework/agent-workspace-norm-contract.json
 - 不签 domain owner receipt。
 - 不判断 artifact quality/export readiness。
 - 不把 workspace index 当成 artifact body store。
+- 不把 `workspace_inspection.json`、`workspace_resource_inventory.json`、`stage_outputs_index.json` 或 `current_stage.json` 当成 owner receipt、typed blocker、quality verdict 或 domain truth。
 - 不把 runtime-state、SQLite sidecar、provider ledger 或 App projection 当成普通用户默认查看面。
 - 不让 Skill/MCP/App/OpenAI/AI SDK 通过猜目录直接写 workspace。
 
@@ -67,5 +74,7 @@ contracts/opl-framework/agent-workspace-norm-contract.json
 
 - App、CLI、Skill/MCP/OpenAI/AI SDK delegate 都以 `workspace ensure` 为默认 pre-task gate，并从 `workspace interfaces` 读取可调用 surface。
 - 每个 project 都有用户可理解的 display label 和 inspection root。
+- 每个 workspace 自动生成并索引 `workspace_inspection.json` 与 `workspace_resource_inventory.json`；每个 project 自动生成并索引 `artifacts/stage_outputs/stage_outputs_index.json` 与 `artifacts/stage_outputs/current_stage.json`。
+- `workspace validate` / `doctor` 能检查 generated refs、inspection/resource inventory、stage outputs index/current pointer 的存在和协议形状；对合法 runtime projection 不做空模板覆盖。
 - Existing directory adoption 先 dry-run，避免破坏用户文件。
 - Workspace 可以独立检查结构健康，且不依赖 domain truth body。

@@ -236,6 +236,9 @@ export interface AgentWorkspaceNormContract {
     stage_output_root_protocol: {
       root: string;
       stage_folder_unit: string;
+      stage_outputs_index_file: string;
+      current_stage_pointer_file: string;
+      stage_lifecycle_model: string[];
       required_stage_folder_shape: string[];
     };
     default_project_collection_path: string;
@@ -259,6 +262,10 @@ export interface AgentWorkspaceNormContract {
     project_stage_outputs_pattern: string;
     workspace_index_file: string;
     workspace_config_file: string;
+    workspace_inspection_file: string;
+    workspace_resource_inventory_file: string;
+    stage_outputs_index_file: string;
+    current_stage_pointer_file: string;
     canonical_user_inspection_roots: string[];
     runtime_state_is_default_user_surface: boolean;
     product_views_are_stage_outputs: boolean;

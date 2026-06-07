@@ -76,6 +76,9 @@ export const MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT: AgentWorkspaceNormContract =
     stage_output_root_protocol: {
       root: 'artifacts/stage_outputs',
       stage_folder_unit: 'stage_artifact_unit',
+      stage_outputs_index_file: 'stage_outputs_index.json',
+      current_stage_pointer_file: 'current_stage.json',
+      stage_lifecycle_model: ['open', 'active', 'completed', 'blocked', 'superseded', 'archived'],
       required_stage_folder_shape: ['inputs', 'outputs', 'review', 'receipts', 'handoff', 'stage_manifest.json'],
     },
     default_project_collection_path: 'deliverables',
@@ -137,6 +140,10 @@ export const MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT: AgentWorkspaceNormContract =
     project_stage_outputs_pattern: '<project-root>/artifacts/stage_outputs/<stage-id>/',
     workspace_index_file: 'workspace_index.json',
     workspace_config_file: 'workspace.yaml',
+    workspace_inspection_file: 'workspace_inspection.json',
+    workspace_resource_inventory_file: 'workspace_resource_inventory.json',
+    stage_outputs_index_file: 'stage_outputs_index.json',
+    current_stage_pointer_file: 'current_stage.json',
     canonical_user_inspection_roots: [
       '<project-root>/artifacts/stage_outputs',
       '<project-root>/artifacts/stage_outputs/<stage-id>/inputs',

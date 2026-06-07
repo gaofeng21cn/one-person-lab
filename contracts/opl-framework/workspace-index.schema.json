@@ -103,6 +103,10 @@
       "additionalProperties": true,
       "required": [
         "ordinary_user_default_surface",
+        "workspace_inspection_ref",
+        "workspace_resource_inventory_ref",
+        "default_stage_outputs_index_ref",
+        "default_current_stage_pointer_ref",
         "project_stage_outputs_pattern",
         "runtime_state_is_default_user_surface",
         "product_views_are_stage_outputs"
@@ -110,6 +114,18 @@
       "properties": {
         "ordinary_user_default_surface": {
           "const": "workspace_local_project_stage_outputs"
+        },
+        "workspace_inspection_ref": {
+          "const": "workspace_inspection.json"
+        },
+        "workspace_resource_inventory_ref": {
+          "const": "workspace_resource_inventory.json"
+        },
+        "default_stage_outputs_index_ref": {
+          "type": "string"
+        },
+        "default_current_stage_pointer_ref": {
+          "type": "string"
         },
         "project_stage_outputs_pattern": {
           "const": "<project-root>/artifacts/stage_outputs/<stage-id>/"
@@ -566,6 +582,8 @@
         "project_index_ref",
         "stage_outputs_root",
         "stage_outputs_manifest_ref",
+        "stage_outputs_index_ref",
+        "current_stage_pointer_ref",
         "control_root",
         "inputs_root",
         "exports_root",
@@ -593,6 +611,12 @@
           "type": "string"
         },
         "stage_outputs_manifest_ref": {
+          "type": "string"
+        },
+        "stage_outputs_index_ref": {
+          "type": "string"
+        },
+        "current_stage_pointer_ref": {
           "type": "string"
         },
         "control_root": {
@@ -678,10 +702,14 @@
         "workspace_index_ref",
         "workspace_map_ref",
         "workspace_health_ref",
+        "workspace_inspection_ref",
+        "workspace_resource_inventory_ref",
         "project_config_basename",
         "project_index_basename",
         "shared_resource_manifest_basename",
-        "stage_outputs_manifest_basename"
+        "stage_outputs_manifest_basename",
+        "stage_outputs_index_basename",
+        "current_stage_pointer_basename"
       ],
       "properties": {
         "workspace_config_ref": {
@@ -696,6 +724,12 @@
         "workspace_health_ref": {
           "const": "workspace_health.json"
         },
+        "workspace_inspection_ref": {
+          "const": "workspace_inspection.json"
+        },
+        "workspace_resource_inventory_ref": {
+          "const": "workspace_resource_inventory.json"
+        },
         "project_config_basename": {
           "const": "project.yaml"
         },
@@ -707,6 +741,322 @@
         },
         "stage_outputs_manifest_basename": {
           "const": "opl_stage_outputs_manifest.json"
+        },
+        "stage_outputs_index_basename": {
+          "const": "stage_outputs_index.json"
+        },
+        "current_stage_pointer_basename": {
+          "const": "current_stage.json"
+        }
+      }
+    },
+    "stage_lifecycle_status": {
+      "enum": [
+        "open",
+        "active",
+        "completed",
+        "blocked",
+        "superseded",
+        "archived"
+      ]
+    },
+    "stage_outputs_index": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind",
+        "version",
+        "workspace_id",
+        "agent_id",
+        "project_id",
+        "stage_outputs_root",
+        "stage_lifecycle_model",
+        "current_stage_pointer_ref",
+        "stage_folder_protocol",
+        "stages",
+        "authority_boundary"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "opl_stage_outputs_index"
+        },
+        "version": {
+          "const": "workspace-stage-outputs-index.v1"
+        },
+        "stage_lifecycle_model": {
+          "type": "array",
+          "prefixItems": [
+            { "const": "open" },
+            { "const": "active" },
+            { "const": "completed" },
+            { "const": "blocked" },
+            { "const": "superseded" },
+            { "const": "archived" }
+          ],
+          "minItems": 6,
+          "maxItems": 6
+        },
+        "stage_folder_protocol": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "stage_folder_pattern",
+            "required_directories",
+            "required_files",
+            "closeout_answer_unit"
+          ],
+          "properties": {
+            "closeout_answer_unit": {
+              "const": "owner_receipt_or_typed_blocker"
+            }
+          }
+        },
+        "stages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/stage_unit_index_entry"
+          }
+        },
+        "authority_boundary": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "index_is_projection_only",
+            "index_can_claim_stage_complete",
+            "index_can_replace_owner_receipt",
+            "index_can_replace_typed_blocker",
+            "opl_can_write_domain_truth"
+          ],
+          "properties": {
+            "index_is_projection_only": { "const": true },
+            "index_can_claim_stage_complete": { "const": false },
+            "index_can_replace_owner_receipt": { "const": false },
+            "index_can_replace_typed_blocker": { "const": false },
+            "opl_can_write_domain_truth": { "const": false }
+          }
+        }
+      }
+    },
+    "stage_unit_index_entry": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "stage_id"
+      ],
+      "properties": {
+        "stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage_manifest_ref": {
+          "type": "string"
+        },
+        "current_pointer_ref": {
+          "type": "string"
+        },
+        "lifecycle": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "$ref": "#/$defs/stage_lifecycle_status"
+            }
+          }
+        },
+        "owner_answer_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "authority_boundary": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "file_presence_counts_as_stage_complete": { "const": false },
+            "stage_folder_can_replace_owner_receipt": { "const": false },
+            "stage_folder_can_replace_typed_blocker": { "const": false }
+          }
+        }
+      }
+    },
+    "current_stage_pointer": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind",
+        "version",
+        "workspace_id",
+        "agent_id",
+        "project_id",
+        "project_root",
+        "stage_outputs_root",
+        "current_stage",
+        "current_stage_manifest_ref",
+        "latest_owner_receipt_ref",
+        "latest_typed_blocker_ref",
+        "lifecycle_model",
+        "authority_boundary"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "opl_current_stage_pointer"
+        },
+        "version": {
+          "const": "workspace-current-stage-pointer.v1"
+        },
+        "current_stage": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "required": [
+                "stage_id",
+                "status"
+              ],
+              "properties": {
+                "stage_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "$ref": "#/$defs/stage_lifecycle_status"
+                }
+              }
+            }
+          ]
+        },
+        "lifecycle_model": {
+          "type": "array",
+          "prefixItems": [
+            { "const": "open" },
+            { "const": "active" },
+            { "const": "completed" },
+            { "const": "blocked" },
+            { "const": "superseded" },
+            { "const": "archived" }
+          ],
+          "minItems": 6,
+          "maxItems": 6
+        },
+        "authority_boundary": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "pointer_is_projection_only",
+            "pointer_can_claim_stage_complete",
+            "pointer_can_replace_owner_receipt",
+            "pointer_can_replace_typed_blocker",
+            "opl_can_write_domain_truth"
+          ],
+          "properties": {
+            "pointer_is_projection_only": { "const": true },
+            "pointer_can_claim_stage_complete": { "const": false },
+            "pointer_can_replace_owner_receipt": { "const": false },
+            "pointer_can_replace_typed_blocker": { "const": false },
+            "opl_can_write_domain_truth": { "const": false }
+          }
+        }
+      }
+    },
+    "workspace_inspection": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind",
+        "version",
+        "ordinary_user_default_surface",
+        "project_inspection",
+        "runtime_state_is_default_user_surface",
+        "authority_boundary"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "opl_workspace_inspection"
+        },
+        "version": {
+          "const": "workspace-inspection.v1"
+        },
+        "ordinary_user_default_surface": {
+          "const": "workspace_local_project_stage_outputs"
+        },
+        "runtime_state_is_default_user_surface": {
+          "const": false
+        },
+        "authority_boundary": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "inspection_is_projection_only": { "const": true },
+            "inspection_can_replace_owner_receipt": { "const": false },
+            "inspection_can_replace_typed_blocker": { "const": false },
+            "inspection_can_claim_stage_complete": { "const": false },
+            "opl_can_write_domain_truth": { "const": false }
+          }
+        }
+      }
+    },
+    "workspace_resource_inventory": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind",
+        "version",
+        "inventory_scope",
+        "resources",
+        "authority_boundary"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "opl_workspace_resource_inventory"
+        },
+        "version": {
+          "const": "workspace-resource-inventory.v1"
+        },
+        "inventory_scope": {
+          "const": "workspace_shared_resources"
+        },
+        "resources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "path",
+              "role",
+              "manifest_ref",
+              "domain_truth_owner",
+              "provenance_policy",
+              "checksum_policy",
+              "reuse_scope",
+              "staleness_policy"
+            ],
+            "properties": {
+              "domain_truth_owner": {
+                "const": "domain_agent"
+              },
+              "provenance_policy": {
+                "const": "manifest_records_source_refs_not_resource_body"
+              }
+            }
+          }
+        },
+        "authority_boundary": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "inventory_is_index_only": { "const": true },
+            "inventory_can_store_resource_body": { "const": false },
+            "inventory_can_write_domain_truth": { "const": false },
+            "inventory_can_replace_source_provenance": { "const": false },
+            "opl_can_write_domain_truth": { "const": false }
+          }
         }
       }
     },

@@ -309,12 +309,64 @@ test('target architecture schema contracts keep owner delta root and audit tail 
     true,
   );
   assert.equal(
+    workspaceIndex.$defs.project.required.includes('stage_outputs_index_ref'),
+    true,
+  );
+  assert.equal(
+    workspaceIndex.$defs.project.required.includes('current_stage_pointer_ref'),
+    true,
+  );
+  assert.equal(
     workspaceIndex.$defs.project.required.includes('lifecycle'),
     true,
   );
   assert.deepEqual(
     workspaceIndex.$defs.project.properties.lifecycle.properties.status.enum,
     ['active', 'archived'],
+  );
+  assert.equal(
+    workspaceIndex.$defs.generated_refs.properties.workspace_inspection_ref.const,
+    'workspace_inspection.json',
+  );
+  assert.equal(
+    workspaceIndex.$defs.generated_refs.properties.workspace_resource_inventory_ref.const,
+    'workspace_resource_inventory.json',
+  );
+  assert.equal(
+    workspaceIndex.$defs.generated_refs.properties.stage_outputs_index_basename.const,
+    'stage_outputs_index.json',
+  );
+  assert.equal(
+    workspaceIndex.$defs.generated_refs.properties.current_stage_pointer_basename.const,
+    'current_stage.json',
+  );
+  assert.deepEqual(
+    workspaceIndex.$defs.stage_lifecycle_status.enum,
+    ['open', 'active', 'completed', 'blocked', 'superseded', 'archived'],
+  );
+  assert.equal(
+    workspaceIndex.$defs.stage_outputs_index.properties.surface_kind.const,
+    'opl_stage_outputs_index',
+  );
+  assert.equal(
+    workspaceIndex.$defs.stage_outputs_index.properties.authority_boundary.properties.index_can_claim_stage_complete.const,
+    false,
+  );
+  assert.equal(
+    workspaceIndex.$defs.current_stage_pointer.properties.surface_kind.const,
+    'opl_current_stage_pointer',
+  );
+  assert.equal(
+    workspaceIndex.$defs.current_stage_pointer.properties.authority_boundary.properties.pointer_can_replace_owner_receipt.const,
+    false,
+  );
+  assert.equal(
+    workspaceIndex.$defs.workspace_inspection.properties.surface_kind.const,
+    'opl_workspace_inspection',
+  );
+  assert.equal(
+    workspaceIndex.$defs.workspace_resource_inventory.properties.surface_kind.const,
+    'opl_workspace_resource_inventory',
   );
   assert.equal(
     workspaceIndex.$defs.runtime_state_boundary.properties.runtime_state_can_be_canonical_project_root.const,

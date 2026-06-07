@@ -261,6 +261,8 @@ Repo source 保存 source、contracts、schemas、prompts、skills、stage defin
 
 OPL Workspace Protocol 固定 `Workspace Group -> Project Unit -> Stage Artifact Unit -> Owner Receipt / Typed Blocker`。`one_off`、`series`、`portfolio` 都使用 series-capable skeleton；MAS 可以保留 `studies/<study-id>` 物理命名，但语义必须映射到 Project Unit；MAG/RCA/OMA 的 `deliverables/<project-id>` 只是 domain display alias，不定义新的 lifecycle。
 
+OPL Workspace Protocol 的实例级默认 projection 包括 workspace-local `workspace_inspection.json`、`workspace_resource_inventory.json`，以及每个 Project Unit 下的 `artifacts/stage_outputs/stage_outputs_index.json` 和 `artifacts/stage_outputs/current_stage.json`。这些文件服务用户检查、shared resource inventory、stage lifecycle shape、current pointer 与 App/CLI read model；它们只保存 refs、路径、状态枚举、authority false flags 和 freshness / inventory metadata，不保存 artifact body、memory body、domain truth、quality verdict 或 owner answer。Stage runtime 可以把 `current_stage.json` 写成合法非空 pointer；workspace upgrade 只能补齐缺失 projection 或刷新 OPL-owned metadata，不能把 runtime 已写入的合法 pointer 重置成空态。
+
 Domain workspace 保存用户输入、source assets、domain truth、runtime state、controller decisions、quality records、memory pack、writeback receipts、analysis/artifact outputs、canonical deliverables 和 package/export evidence。普通用户默认检查 project-local `artifacts/stage_outputs/<stage-id>/` 与 domain-owned product views；runtime-state、SQLite sidecar、provider ledger 和 App projection 都不是默认用户检查面。
 
 OPL/provider 保存 attempt metadata、workflow id、provider receipt、queue item、signal/query history、retry/dead-letter state、framework closeout refs、locator refs、freshness 和 operator projection。

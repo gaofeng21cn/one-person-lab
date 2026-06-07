@@ -10,10 +10,14 @@ import { readOplWorkspaceRoot } from './system-preferences.ts';
 import type { AgentWorkspaceNormContract, FrameworkContracts } from './types.ts';
 import {
   buildWorkspaceLifecycle,
+  CURRENT_STAGE_POINTER_BASENAME,
   materializeWorkspaceGeneratedArtifacts,
   normalizeWorkspaceProjectEntry,
   WORKSPACE_HEALTH_REF,
+  WORKSPACE_INSPECTION_REF,
   WORKSPACE_MAP_REF,
+  WORKSPACE_RESOURCE_INVENTORY_REF,
+  STAGE_OUTPUTS_INDEX_BASENAME,
 } from './workspace-artifacts.ts';
 import {
   buildCanonicalTopology,
@@ -376,6 +380,8 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
           upgrade_command: 'opl workspace upgrade --apply',
           project_archive_command: 'opl workspace project archive --apply',
           export_map_command: 'opl workspace export-map',
+          inspect_command: 'opl workspace inspect',
+          inventory_command: 'opl workspace inventory',
           health_command: 'opl workspace health',
           usage:
             'opl workspace ensure --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio]',
@@ -411,6 +417,16 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
             role: 'read_only_workspace_map_projection',
             required_inputs: ['workspace_path'],
           },
+          inspect: {
+            command: 'opl workspace inspect',
+            role: 'read_only_user_inspection_projection',
+            required_inputs: ['workspace_path'],
+          },
+          inventory: {
+            command: 'opl workspace inventory',
+            role: 'read_only_shared_resource_inventory_projection',
+            required_inputs: ['workspace_path'],
+          },
           health: {
             command: 'opl workspace health',
             role: 'read_only_structure_health_projection',
@@ -430,6 +446,8 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
             upgrade: 'opl workspace upgrade --apply',
             project_archive: 'opl workspace project archive --apply',
             export_map: 'opl workspace export-map',
+            inspect: 'opl workspace inspect',
+            inventory: 'opl workspace inventory',
             health: 'opl workspace health',
           },
         },
@@ -438,7 +456,7 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
           instruction:
             'Use this OPL-owned ensure action before MAS/MAG/RCA/OMA task execution; it reuses an active workspace binding or initializes the default topology.',
           management_instruction:
-            'Use workspace validate as the fail-closed gate, workspace doctor for user inspection blockers, workspace adopt --dry-run before --apply, workspace upgrade --apply to refresh OPL projections, workspace project archive --apply to mark projects archived without deleting files, and export-map/health for user inspection.',
+            'Use workspace validate as the fail-closed gate, workspace doctor for user inspection blockers, workspace adopt --dry-run before --apply, workspace upgrade --apply to refresh OPL projections, workspace project archive --apply to mark projects archived without deleting files, and export-map/inspect/inventory/health for user inspection.',
         },
         app: {
           action_id: contracts.agentWorkspaceNorm.default_workspace_precondition.app_action_id,
@@ -450,6 +468,8 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
           upgrade_action_id: 'workspace_upgrade',
           project_archive_action_id: 'workspace_project_archive',
           export_map_action_id: 'workspace_export_map',
+          inspect_action_id: 'workspace_inspect',
+          inventory_action_id: 'workspace_inventory',
           health_action_id: 'workspace_health',
           route: 'opl app action execute --action workspace_ensure --payload <json>',
         },
@@ -489,10 +509,14 @@ export function buildWorkspaceIndex(input: {
       workspace_index_ref: 'workspace_index.json',
       workspace_map_ref: WORKSPACE_MAP_REF,
       workspace_health_ref: WORKSPACE_HEALTH_REF,
+      workspace_inspection_ref: WORKSPACE_INSPECTION_REF,
+      workspace_resource_inventory_ref: WORKSPACE_RESOURCE_INVENTORY_REF,
       project_config_basename: 'project.yaml',
       project_index_basename: 'project_index.json',
       shared_resource_manifest_basename: 'opl_resource_manifest.json',
       stage_outputs_manifest_basename: 'opl_stage_outputs_manifest.json',
+      stage_outputs_index_basename: STAGE_OUTPUTS_INDEX_BASENAME,
+      current_stage_pointer_basename: CURRENT_STAGE_POINTER_BASENAME,
     },
     agent: {
       agent_id: input.agent.agent_id,
@@ -518,6 +542,10 @@ export function buildWorkspaceIndex(input: {
     user_inspection: {
       ordinary_user_default_surface: 'workspace_local_project_stage_outputs',
       default_stage_outputs: input.stageOutputsRootRef,
+      workspace_inspection_ref: WORKSPACE_INSPECTION_REF,
+      workspace_resource_inventory_ref: WORKSPACE_RESOURCE_INVENTORY_REF,
+      default_stage_outputs_index_ref: `${input.stageOutputsRootRef}/${STAGE_OUTPUTS_INDEX_BASENAME}`,
+      default_current_stage_pointer_ref: `${input.stageOutputsRootRef}/${CURRENT_STAGE_POINTER_BASENAME}`,
       project_stage_outputs_pattern: '<project-root>/artifacts/stage_outputs/<stage-id>/',
       runtime_state_is_default_user_surface: false,
       product_views_are_stage_outputs: false,
@@ -687,6 +715,8 @@ export function initializeWorkspace(
       workspace_index_path: workspaceIndexPath,
       workspace_map_path: path.join(workspacePath, WORKSPACE_MAP_REF),
       workspace_health_path: path.join(workspacePath, WORKSPACE_HEALTH_REF),
+      workspace_inspection_path: path.join(workspacePath, WORKSPACE_INSPECTION_REF),
+      workspace_resource_inventory_path: path.join(workspacePath, WORKSPACE_RESOURCE_INVENTORY_REF),
       project_root: projectRoot,
       project_stage_outputs_root: stageOutputsRoot,
       created_directories: createdDirectories,

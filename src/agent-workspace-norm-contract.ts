@@ -93,6 +93,9 @@ function validateStageOutputRootProtocol(section: Record<string, unknown>, fileP
   return {
     root: stringField(section, 'root', filePath),
     stage_folder_unit: stringField(section, 'stage_folder_unit', filePath),
+    stage_outputs_index_file: stringField(section, 'stage_outputs_index_file', filePath),
+    current_stage_pointer_file: stringField(section, 'current_stage_pointer_file', filePath),
+    stage_lifecycle_model: stringArrayField(section, 'stage_lifecycle_model', filePath),
     required_stage_folder_shape: stringArrayField(section, 'required_stage_folder_shape', filePath),
   };
 }
@@ -312,6 +315,24 @@ function validateAgentWorkspaceNormSemantics(
   assertExactString(topology.project_stage_outputs_root, 'artifacts/stage_outputs', 'topology_contract.project_stage_outputs_root', filePath);
   assertExactString(topology.stage_output_root_protocol.root, 'artifacts/stage_outputs', 'topology_contract.stage_output_root_protocol.root', filePath);
   assertExactString(topology.stage_output_root_protocol.stage_folder_unit, 'stage_artifact_unit', 'topology_contract.stage_output_root_protocol.stage_folder_unit', filePath);
+  assertExactString(
+    topology.stage_output_root_protocol.stage_outputs_index_file,
+    'stage_outputs_index.json',
+    'topology_contract.stage_output_root_protocol.stage_outputs_index_file',
+    filePath,
+  );
+  assertExactString(
+    topology.stage_output_root_protocol.current_stage_pointer_file,
+    'current_stage.json',
+    'topology_contract.stage_output_root_protocol.current_stage_pointer_file',
+    filePath,
+  );
+  assertExactStringArray(
+    topology.stage_output_root_protocol.stage_lifecycle_model,
+    ['open', 'active', 'completed', 'blocked', 'superseded', 'archived'],
+    'topology_contract.stage_output_root_protocol.stage_lifecycle_model',
+    filePath,
+  );
   assertExactStringArray(
     topology.stage_output_root_protocol.required_stage_folder_shape,
     ['inputs', 'outputs', 'review', 'receipts', 'handoff', 'stage_manifest.json'],
@@ -382,6 +403,10 @@ function validateAgentWorkspaceNormSemantics(
   assertExactString(inspection.project_stage_outputs_pattern, '<project-root>/artifacts/stage_outputs/<stage-id>/', 'user_inspection.project_stage_outputs_pattern', filePath);
   assertExactString(inspection.workspace_index_file, 'workspace_index.json', 'user_inspection.workspace_index_file', filePath);
   assertExactString(inspection.workspace_config_file, 'workspace.yaml', 'user_inspection.workspace_config_file', filePath);
+  assertExactString(inspection.workspace_inspection_file, 'workspace_inspection.json', 'user_inspection.workspace_inspection_file', filePath);
+  assertExactString(inspection.workspace_resource_inventory_file, 'workspace_resource_inventory.json', 'user_inspection.workspace_resource_inventory_file', filePath);
+  assertExactString(inspection.stage_outputs_index_file, 'stage_outputs_index.json', 'user_inspection.stage_outputs_index_file', filePath);
+  assertExactString(inspection.current_stage_pointer_file, 'current_stage.json', 'user_inspection.current_stage_pointer_file', filePath);
   assertExactStringArray(
     inspection.canonical_user_inspection_roots,
     [
@@ -518,6 +543,10 @@ export function validateAgentWorkspaceNorm(
       project_stage_outputs_pattern: stringField(userInspection, 'project_stage_outputs_pattern', filePath),
       workspace_index_file: stringField(userInspection, 'workspace_index_file', filePath),
       workspace_config_file: stringField(userInspection, 'workspace_config_file', filePath),
+      workspace_inspection_file: stringField(userInspection, 'workspace_inspection_file', filePath),
+      workspace_resource_inventory_file: stringField(userInspection, 'workspace_resource_inventory_file', filePath),
+      stage_outputs_index_file: stringField(userInspection, 'stage_outputs_index_file', filePath),
+      current_stage_pointer_file: stringField(userInspection, 'current_stage_pointer_file', filePath),
       canonical_user_inspection_roots: stringArrayField(userInspection, 'canonical_user_inspection_roots', filePath),
       runtime_state_is_default_user_surface: booleanField(
         userInspection,

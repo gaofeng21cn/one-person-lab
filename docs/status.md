@@ -53,7 +53,7 @@ OPL 已具备 framework 主干：
 - domain descriptor / stage / action / memory discovery；
 - Temporal provider code、service / worker lifecycle、typed family queue、stage attempt ledger、typed closeout、retry/dead-letter、human gate 和 execution authorization / closeout binding guard；
 - evidence worklist read model、provider proof / SLO projection、runtime snapshot、safe runtime action shell、App/operator drilldown read model 和 refs-only external evidence ledger；
-- State Index Kernel、Stage Artifact / Workspace topology、workspace ensure/validate/doctor/adopt/upgrade/export-map/health surfaces；
+- State Index Kernel、Stage Artifact / Workspace topology、workspace ensure/validate/doctor/adopt/upgrade/export-map/health/inspect/inventory surfaces；
 - Agent Lab、Foundry Agent series contract、standard domain-agent scaffold / conformance、generated/hosted interface 和 default-caller / cleanup / no-resurrection guard；
 - OPL-owned refs-only intake / projection for domain-dispatch、stage-production evidence、memory/artifact/lifecycle/no-regression receipt refs。
 
@@ -69,7 +69,7 @@ Agent Lab、observability eval 和 mechanism improvement 继续是 refs-only con
 | App/operator | 默认 owner-delta-first；App 只启动、观察、介入和展示，不驱动外围长跑任务。 |
 | Foundry Agent structure | MAS/MAG/RCA/OMA 通过 contracts / descriptors / conformance 暴露标准 pack、stage、quality gate、authority function 和 direct/generated skill path。 |
 | StageRun / owner answer | OPL 可签发 provider attempt、active lease、execution authorization decision 和 closeout binding refs；合法 closeout 仍必须来自 domain owner receipt、quality gate receipt、typed blocker、human gate 或 route-back evidence。 |
-| Workspace / State Index | OPL 维护 workspace topology、Stage Artifact Unit 和 refs-only SQLite sidecar；完成状态继续由 stage folder、manifest validity、owner receipt / typed blocker、current pointer 和 lineage 推导。 |
+| Workspace / State Index | OPL 维护 workspace topology、workspace inspection、resource inventory、Stage Artifact Unit、stage outputs index/current pointer 和 refs-only SQLite sidecar；完成状态继续由 stage folder、manifest validity、owner receipt / typed blocker、current pointer 和 lineage 推导。 |
 | External evidence | OPL 可记录/验证 body-free refs-only receipts；verified ledger 只证明 refs transport 与 preflight 可用，不关闭 domain verdict 或 production evidence。 |
 
 ## 未闭合项
@@ -105,6 +105,8 @@ rtk opl agents conformance --family-defaults --json
 rtk opl agents default-callers --family-defaults --json
 rtk opl index doctor --json
 rtk opl workspace interfaces --json
+rtk opl workspace inspect --workspace <path> --json
+rtk opl workspace inventory --workspace <path> --json
 ```
 
 默认阅读顺序是 owner-delta-first：先从 `current_owner_delta` 看等待哪个 owner、需要什么 deliverable delta / receipt / typed blocker，以及该等待是否阻断 readiness。OPL provider / transport safe action 只有在没有 current owner delta 时才可成为默认下一步。raw refs-only counters、provider worker / redrive / scheduler route、evidence envelope、stage replay packet、typed blocker group、private residue inventory 和历史 receipt 计数都只作 drilldown。

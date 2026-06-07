@@ -807,6 +807,20 @@ export function buildPublicCommandSpecs(
       ],
       group: 'workspace',
     }),
+    'workspace inspect': cloneCommandSpec(commandSpecs['workspace inspect'], {
+      usage: 'opl workspace inspect --workspace <path>',
+      examples: [
+        'opl workspace inspect --workspace /Users/gaofeng/workspace/visual-theme-a',
+      ],
+      group: 'workspace',
+    }),
+    'workspace inventory': cloneCommandSpec(commandSpecs['workspace inventory'], {
+      usage: 'opl workspace inventory --workspace <path>',
+      examples: [
+        'opl workspace inventory --workspace /Users/gaofeng/workspace/visual-theme-a',
+      ],
+      group: 'workspace',
+    }),
     'workspace interfaces': cloneCommandSpec(commandSpecs['workspace interfaces'], {
       usage: 'opl workspace interfaces',
       examples: ['opl workspace interfaces'],

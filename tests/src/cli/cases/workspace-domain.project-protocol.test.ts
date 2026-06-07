@@ -51,6 +51,8 @@ test('workspace init materializes project unit metadata and stage output require
     assert.equal(project.canonical_semantics.domain_alias_is_canonical, false);
     assert.equal(project.project_config_ref, 'deliverables/deck-001/project.yaml');
     assert.equal(project.project_index_ref, 'deliverables/deck-001/project_index.json');
+    assert.equal(project.stage_outputs_index_ref, 'deliverables/deck-001/artifacts/stage_outputs/stage_outputs_index.json');
+    assert.equal(project.current_stage_pointer_ref, 'deliverables/deck-001/artifacts/stage_outputs/current_stage.json');
     assert.equal(project.inputs_root, 'deliverables/deck-001/inputs');
     assert.equal(project.exports_root, 'deliverables/deck-001/artifacts/exports');
     assert.equal(project.packages_root, 'deliverables/deck-001/artifacts/packages');
@@ -74,6 +76,16 @@ test('workspace init materializes project unit metadata and stage output require
       'handoff',
     ]);
     assert.deepEqual(projectIndex.stage_artifact_unit.required_files, ['stage_manifest.json']);
+    assert.equal(projectIndex.stage_artifact_unit.index_ref, 'deliverables/deck-001/artifacts/stage_outputs/stage_outputs_index.json');
+    assert.equal(projectIndex.stage_artifact_unit.current_stage_pointer_ref, 'deliverables/deck-001/artifacts/stage_outputs/current_stage.json');
+    assert.deepEqual(projectIndex.stage_artifact_unit.lifecycle_model, [
+      'open',
+      'active',
+      'completed',
+      'blocked',
+      'superseded',
+      'archived',
+    ]);
     assert.equal(projectIndex.authority_boundary.project_index_can_claim_stage_complete, false);
 
     const stageOutputsManifest = readJsonFile(path.join(
@@ -92,6 +104,22 @@ test('workspace init materializes project unit metadata and stage output require
     assert.deepEqual(stageOutputsManifest.stage_folder_required_shape.required_files, ['stage_manifest.json']);
     assert.equal(stageOutputsManifest.stage_artifact_runtime.stage_folder_shape_is_completion_proof, false);
     assert.equal(stageOutputsManifest.authority_boundary.stage_folder_shape_can_replace_owner_receipt, false);
+    const stageOutputsIndex = readJsonFile(path.join(
+      projectRoot,
+      'artifacts',
+      'stage_outputs',
+      'stage_outputs_index.json',
+    ));
+    assert.equal(stageOutputsIndex.surface_kind, 'opl_stage_outputs_index');
+    assert.equal(stageOutputsIndex.authority_boundary.index_can_replace_typed_blocker, false);
+    const currentStagePointer = readJsonFile(path.join(
+      projectRoot,
+      'artifacts',
+      'stage_outputs',
+      'current_stage.json',
+    ));
+    assert.equal(currentStagePointer.surface_kind, 'opl_current_stage_pointer');
+    assert.equal(currentStagePointer.authority_boundary.pointer_can_claim_stage_complete, false);
 
     const validation = runCli(['workspace', 'validate', '--workspace', workspacePath], {
       OPL_STATE_DIR: stateRoot,
@@ -154,6 +182,80 @@ test('workspace upgrade restores project unit protocol refs without moving roots
     assert.equal(runCli(['workspace', 'validate', '--workspace', workspacePath], {
       OPL_STATE_DIR: stateRoot,
     }).workspace_validation.status, 'passed');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace doctor blocks MAS alias drift and invalid stage lifecycle drift', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-project-drift-state-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-project-drift-root-'));
+
+  try {
+    runCli([
+      'workspace',
+      'init',
+      '--agent',
+      'mas',
+      '--workspace-root',
+      workspaceRoot,
+      '--workspace-id',
+      'dm-cvd',
+      '--project-id',
+      'DM002',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const workspacePath = path.join(workspaceRoot, 'dm-cvd');
+    const workspaceIndexPath = path.join(workspacePath, 'workspace_index.json');
+    const workspaceIndex = readJsonFile(workspaceIndexPath);
+    workspaceIndex.canonical_topology.project_collection_role = 'studies';
+    workspaceIndex.projects[0].canonical_semantics.unit = 'study';
+    workspaceIndex.projects[0].canonical_semantics.domain_alias_is_canonical = true;
+    fs.writeFileSync(workspaceIndexPath, `${JSON.stringify(workspaceIndex, null, 2)}\n`);
+
+    const aliasDrift = runCli(['workspace', 'doctor', '--workspace', workspacePath], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(aliasDrift.workspace_doctor.status, 'blocked');
+    assert.equal(
+      aliasDrift.workspace_doctor.blockers.some((entry: { code: string }) => (
+        entry.code === 'canonical_topology_drift'
+      )),
+      true,
+    );
+
+    const restored = runCli(['workspace', 'upgrade', '--workspace', workspacePath, '--apply'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(restored.workspace_upgrade.status, 'applied');
+    const currentPointerPath = path.join(
+      workspacePath,
+      'studies',
+      'DM002',
+      'artifacts',
+      'stage_outputs',
+      'current_stage.json',
+    );
+    const currentPointer = readJsonFile(currentPointerPath);
+    currentPointer.current_stage = {
+      stage_id: 'draft',
+      status: 'success',
+    };
+    fs.writeFileSync(currentPointerPath, `${JSON.stringify(currentPointer, null, 2)}\n`);
+
+    const stageDrift = runCli(['workspace', 'doctor', '--workspace', workspacePath], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(stageDrift.workspace_doctor.status, 'blocked');
+    assert.equal(
+      stageDrift.workspace_doctor.blockers.some((entry: { code: string }) => (
+        entry.code === 'indexed_current_stage_pointer_drift'
+      )),
+      true,
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
