@@ -25,6 +25,26 @@ test('framework readiness projects agent StageRun adoption without authority pro
       adoption.controlled_canary_evidence_scope,
     );
     assert.equal(adoption.controlled_canary_claims_live_domain_progress, false);
+    assert.equal(
+      adoption.live_stage_run_progress_evidence_worklist.surface_kind,
+      'opl_live_stage_run_progress_evidence_worklist',
+    );
+    assert.equal(
+      adoption.live_stage_run_progress_evidence_worklist.status,
+      'required_from_domain_owner',
+    );
+    assert.equal(
+      adoption.live_stage_run_progress_evidence_worklist.open_domain_count,
+      adoption.domain_count,
+    );
+    assert.equal(
+      adoption.live_stage_run_progress_evidence_worklist.authority_boundary.can_claim_domain_ready,
+      false,
+    );
+    assert.equal(
+      adoption.live_stage_run_progress_evidence_worklist.authority_boundary.can_create_typed_blocker,
+      false,
+    );
     assert.equal(adoption.conformance_pass_counts_as_domain_ready, false);
     assert.equal(adoption.conformance_pass_counts_as_production_ready, false);
     assert.equal(adoption.authority_boundary.can_claim_live_domain_progress, false);

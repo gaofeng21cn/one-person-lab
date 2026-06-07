@@ -17,6 +17,23 @@ test('agents readiness exposes StageRun adoption read model without readiness au
   assert.equal(adoption.controlled_canary_evidence_scope, 'controlled_fixture_not_live_domain_progress');
   assert.equal(adoption.production_evidence_tail_count, 2);
   assert.equal(adoption.open_production_evidence_tail_count, 2);
+  assert.equal(
+    adoption.live_stage_run_progress_evidence_worklist.surface_kind,
+    'opl_live_stage_run_progress_evidence_worklist',
+  );
+  assert.equal(adoption.live_stage_run_progress_evidence_worklist.open_domain_count, 1);
+  assert.equal(
+    adoption.live_stage_run_progress_evidence_worklist.domains[0].next_required_owner_action,
+    'domain_owner_live_receipt_typed_blocker_no_regression_or_long_soak_ref_required',
+  );
+  assert.equal(
+    adoption.live_stage_run_progress_evidence_worklist.authority_boundary.can_sign_owner_receipt,
+    false,
+  );
+  assert.equal(
+    adoption.live_stage_run_progress_evidence_worklist.authority_boundary.can_create_typed_blocker,
+    false,
+  );
   assert.equal(adoption.controlled_canary_claims_live_domain_progress, false);
   assert.equal(adoption.conformance_pass_counts_as_domain_ready, false);
   assert.equal(adoption.conformance_pass_counts_as_production_ready, false);
