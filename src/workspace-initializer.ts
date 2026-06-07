@@ -799,6 +799,8 @@ export function ensureWorkspace(
     agentId: agent.agent_id,
     projectId,
     workspacePath: explicitWorkspacePath ?? activeWorkspacePath ?? options.workspacePath,
+    workspaceRoot: explicitWorkspacePath || activeWorkspacePath ? undefined : options.workspaceRoot,
+    workspaceId: explicitWorkspacePath || activeWorkspacePath ? undefined : options.workspaceId,
     bind: options.bind,
   });
   return {

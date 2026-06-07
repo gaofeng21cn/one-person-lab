@@ -532,6 +532,54 @@ test('workspace ensure appends a missing project to an active series workspace',
   }
 });
 
+test('workspace ensure appends to active binding when workspace-root is also provided', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-ensure-root-append-state-'));
+  const firstWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-ensure-root-append-a-'));
+  const secondWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-ensure-root-append-b-'));
+
+  try {
+    runCli([
+      'workspace',
+      'init',
+      '--agent',
+      'rca',
+      '--workspace-root',
+      firstWorkspaceRoot,
+      '--workspace-id',
+      'visual-theme-a',
+      '--project-id',
+      'deck-001',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const output = runCli([
+      'workspace',
+      'ensure',
+      '--agent',
+      'rca',
+      '--workspace-root',
+      secondWorkspaceRoot,
+      '--workspace-id',
+      'another-theme',
+      '--project-id',
+      'deck-002',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const activeWorkspacePath = path.join(firstWorkspaceRoot, 'visual-theme-a');
+    assert.equal(output.workspace_initialization.ensure_status, 'initialized_missing_project_in_active_binding');
+    assert.equal(output.workspace_initialization.workspace_path, activeWorkspacePath);
+    assert.equal(fs.statSync(path.join(activeWorkspacePath, 'deliverables', 'deck-002')).isDirectory(), true);
+    assert.equal(fs.existsSync(path.join(secondWorkspaceRoot, 'another-theme')), false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(firstWorkspaceRoot, { recursive: true, force: true });
+    fs.rmSync(secondWorkspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('workspace init dry-run exposes CLI MCP and skill call surfaces without writing files', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-dry-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-dry-root-'));
