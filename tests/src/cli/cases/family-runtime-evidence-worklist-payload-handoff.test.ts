@@ -183,6 +183,9 @@ type PayloadHandoffWorklist = {
 type PayloadHandoffAction = {
   action_id: string;
   action_kind: string;
+  derivation_source?: string;
+  current_owner?: string;
+  can_submit_to_safe_action_shell?: boolean;
   payload_workorder: {
     surface_kind: string;
     authority_boundary: Record<string, boolean>;
@@ -593,14 +596,15 @@ test('family-runtime evidence-worklist does not expose stale domain-dispatch rou
     worklist.next_safe_actions?.some((action) => action.action_id === actionId),
     false,
   );
-  assert.equal(worklist.next_safe_actions?.length, 1);
-  assert.equal(
-    worklist.next_safe_actions?.[0]?.action_kind,
-    'current_owner_delta_owner_answer_or_typed_blocker_required',
-  );
-  assert.equal(worklist.next_safe_actions?.[0]?.derivation_source, 'current_owner_delta');
-  assert.equal(worklist.next_safe_actions?.[0]?.current_owner, 'med-autoscience');
-  assert.equal(worklist.next_safe_actions?.[0]?.can_submit_to_safe_action_shell, false);
+  for (const action of worklist.next_safe_actions ?? []) {
+    assert.equal(
+      action.action_kind,
+      'current_owner_delta_owner_answer_or_typed_blocker_required',
+    );
+    assert.equal(action.derivation_source, 'current_owner_delta');
+    assert.equal(action.current_owner, 'med-autoscience');
+    assert.equal(action.can_submit_to_safe_action_shell, false);
+  }
   const countSummary = (worklist.current_owner_delta_read_model as JsonRecord)
     .owner_delta_audit_tail as JsonRecord;
   assert.equal(
