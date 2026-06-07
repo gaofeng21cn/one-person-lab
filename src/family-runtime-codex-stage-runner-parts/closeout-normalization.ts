@@ -1,0 +1,123 @@
+import { FrameworkContractError } from '../contracts.ts';
+import {
+  isRecord,
+  optionalString,
+  readRecordList,
+  readStringList,
+  type JsonRecord,
+} from './shared.ts';
+
+export type TypedStageCloseoutPacket = {
+  surface_kind: 'stage_attempt_closeout_packet' | 'stage_memory_closeout_packet' | 'domain_stage_closeout_packet';
+  stage_attempt_id?: string;
+  idempotency_key?: string;
+  closeout_id?: string;
+  closeout_refs: string[];
+  consumed_refs: string[];
+  consumed_memory_refs: string[];
+  writeback_receipt_refs: string[];
+  rejected_writes: JsonRecord[];
+  next_owner: string | null;
+  domain_ready_verdict: string | null;
+  user_stage_log?: JsonRecord;
+  stage_log_summary?: JsonRecord;
+  human_stage_log?: JsonRecord;
+  route_impact?: JsonRecord;
+  authority_boundary: JsonRecord;
+};
+
+export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageCloseoutPacket {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Stage closeout packet must be a JSON object.', {
+      surface_kind: null,
+    });
+  }
+  const surfaceKind = optionalString(value.surface_kind);
+  if (
+    surfaceKind !== 'stage_attempt_closeout_packet'
+    && surfaceKind !== 'stage_memory_closeout_packet'
+    && surfaceKind !== 'domain_stage_closeout_packet'
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage closeout packet must declare a supported typed surface_kind.',
+      {
+        surface_kind: surfaceKind,
+        allowed_surface_kinds: [
+          'stage_attempt_closeout_packet',
+          'stage_memory_closeout_packet',
+          'domain_stage_closeout_packet',
+        ],
+      },
+    );
+  }
+
+  const closeoutRefs = [
+    ...readStringList(value.closeout_refs),
+    optionalString(value.closeout_ref),
+    optionalString(value.receipt_ref),
+    optionalString(value.packet_ref),
+  ].filter((entry): entry is string => Boolean(entry));
+  if (closeoutRefs.length === 0) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Typed stage closeout must include at least one closeout ref.', {
+      required: ['closeout_refs|closeout_ref|receipt_ref|packet_ref'],
+    });
+  }
+
+  return {
+    surface_kind: surfaceKind,
+    ...(optionalString(value.stage_attempt_id) ? { stage_attempt_id: optionalString(value.stage_attempt_id)! } : {}),
+    ...(optionalString(value.idempotency_key) ? { idempotency_key: optionalString(value.idempotency_key)! } : {}),
+    ...(optionalString(value.closeout_id) ? { closeout_id: optionalString(value.closeout_id)! } : {}),
+    closeout_refs: [...new Set(closeoutRefs)],
+    consumed_refs: readStringList(value.consumed_refs),
+    consumed_memory_refs: readStringList(value.consumed_memory_refs),
+    writeback_receipt_refs: readStringList(value.writeback_receipt_refs),
+    rejected_writes: readRecordList(value.rejected_writes),
+    next_owner: optionalString(value.next_owner),
+    domain_ready_verdict: optionalString(value.domain_ready_verdict),
+    ...(isRecord(value.user_stage_log) ? { user_stage_log: value.user_stage_log } : {}),
+    ...(isRecord(value.stage_log_summary) ? { stage_log_summary: value.stage_log_summary } : {}),
+    ...(isRecord(value.human_stage_log) ? { human_stage_log: value.human_stage_log } : {}),
+    ...(isRecord(value.route_impact) ? { route_impact: value.route_impact } : {}),
+    authority_boundary: isRecord(value.authority_boundary)
+      ? value.authority_boundary
+      : {
+          opl: 'closeout_transport_only',
+          domain: 'truth_quality_artifact_gate_owner',
+        },
+  };
+}
+
+export function validateCloseoutPacketForAttempt(input: {
+  closeoutPacket: TypedStageCloseoutPacket | null;
+  attempt: JsonRecord;
+}) {
+  const closeoutPacket = input.closeoutPacket;
+  if (!closeoutPacket) {
+    return { closeoutPacket: null, rejection: null };
+  }
+  const attemptId = optionalString(input.attempt.stage_attempt_id);
+  if (attemptId && closeoutPacket.stage_attempt_id && closeoutPacket.stage_attempt_id !== attemptId) {
+    return {
+      closeoutPacket: null,
+      rejection: {
+        reason: 'stage_attempt_id_mismatch' as const,
+        stage_attempt_id: closeoutPacket.stage_attempt_id,
+        idempotency_key: closeoutPacket.idempotency_key ?? null,
+      },
+    };
+  }
+  const idempotencyKey = optionalString(input.attempt.idempotency_key);
+  if (idempotencyKey && closeoutPacket.idempotency_key && closeoutPacket.idempotency_key !== idempotencyKey) {
+    return {
+      closeoutPacket: null,
+      rejection: {
+        reason: 'idempotency_key_mismatch' as const,
+        stage_attempt_id: closeoutPacket.stage_attempt_id ?? null,
+        idempotency_key: closeoutPacket.idempotency_key,
+      },
+    };
+  }
+  return { closeoutPacket, rejection: null };
+}
