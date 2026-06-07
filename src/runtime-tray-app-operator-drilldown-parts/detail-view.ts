@@ -11,7 +11,6 @@ import {
 } from './oma-production-consumption.ts';
 import {
   appReleaseUserPathEvidenceNextStep,
-  buildAppReleaseUserPathEvidence,
 } from './app-release-user-path.ts';
 import {
   codexAppRuntimeEvidenceNextStep,
@@ -131,6 +130,10 @@ function authorityBoundary(drilldown: JsonRecord) {
   return record(drilldown.authority_boundary);
 }
 
+function appReleaseUserPathEvidenceSurface(drilldown: JsonRecord) {
+  return record(drilldown.app_release_user_path_evidence);
+}
+
 function evidenceAfterContractAttention(drilldown: JsonRecord) {
   const summary = record(drilldown.summary);
   const ownerPayloadGroups = ownerPayloadAttentionGroups(drilldown);
@@ -139,7 +142,7 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
   const domainDispatchWorkorders = domainDispatchEvidenceWorkorders(drilldown);
   const omaProductionConsumption =
     buildOmaProductionConsumptionFollowthroughAttention(drilldown);
-  const appReleaseUserPathEvidence = buildAppReleaseUserPathEvidence(drilldown);
+  const appReleaseUserPathEvidence = appReleaseUserPathEvidenceSurface(drilldown);
   const developerModeLiveCloseoutEvidence =
     buildDeveloperModeLiveCloseoutEvidenceAttention(drilldown);
   const evidenceEnvelopeAttentionCount = (

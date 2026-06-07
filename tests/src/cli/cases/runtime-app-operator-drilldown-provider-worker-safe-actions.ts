@@ -14,6 +14,9 @@ import {
   applyAppOperatorDrilldownDetail,
 } from '../../../../src/runtime-tray-app-operator-drilldown-parts/detail-view.ts';
 import {
+  recordAppReleaseUserPathEvidenceReceipts,
+} from '../../../../src/app-release-user-path-evidence-ledger.ts';
+import {
   buildProviderWorkerActionRoutes,
 } from '../../../../src/runtime-tray-app-operator-drilldown-parts/provider-worker-action-routes.ts';
 import {
@@ -138,6 +141,67 @@ test('runtime App drilldown selects provider worker start when worker is not rea
     '--action',
     'provider-worker:temporal:start',
   ]);
+});
+
+test('runtime App drilldown detail overlay does not synthesize App release owner delta from state', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-detail-overlay-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    recordAppReleaseUserPathEvidenceReceipts([
+      {
+        release_package_refs: ['release:package/app-v0.1.0.dmg'],
+      },
+    ]);
+    const drilldown = applyAppOperatorDrilldownDetail({
+      operator_action_routing_refs: {
+        refs: [
+          {
+            ref: 'opl family-runtime worker start --provider temporal',
+            action_id: 'provider-worker:temporal:start',
+            action_kind: 'provider_worker_start',
+            owner: 'opl',
+            route_target_kind: 'opl_cli',
+            execution_policy: 'opl_safe_action_shell',
+            execution_surface: 'opl runtime action execute',
+            submit_via: 'opl runtime action execute',
+            can_submit_to_safe_action_shell: true,
+            provider_kind: 'temporal',
+            provider_worker_lifecycle_status: 'worker_not_ready',
+            provider_worker_repair_action_id: 'start_temporal_worker',
+            provider_worker_repair_command: 'opl family-runtime worker start --provider temporal',
+            provider_worker_required_next_action:
+              'Start Temporal worker before rerunning provider proof or provider-backed Codex stages.',
+            opl_cli_args: ['worker', 'start', '--provider', 'temporal'],
+            authority_boundary: {
+              can_write_domain_truth: false,
+              can_claim_production_ready: false,
+            },
+          },
+        ],
+      },
+      app_execution_bridge: {
+        safe_action_routes: [],
+      },
+      authority_boundary: {
+        can_write_domain_truth: false,
+        can_claim_production_ready: false,
+      },
+    }, 'full');
+
+    assert.equal(drilldown.attention_first_payload.evidence_next_steps.total_count, 0);
+    assert.equal(
+      drilldown.attention_first_payload.next_safe_action?.action_id,
+      'provider-worker:temporal:start',
+    );
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
 });
 
 test('runtime App drilldown keeps provider worker start out of the default next step when owner delta is open', () => {
