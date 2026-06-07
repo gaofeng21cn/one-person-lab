@@ -157,11 +157,11 @@ export function buildActionCatalog(contracts: FrameworkContracts) {
     payload_fields: [],
     mutates: 'opl_codex_cli_runtime',
   }));
-  const moduleActions: AppActionCatalogEntry[] = (['install', 'update', 'sync', 'reinstall', 'remove'] as const).map((action) => ({
+  const moduleActions: AppActionCatalogEntry[] = (['install', 'update', 'reinstall', 'remove'] as const).map((action) => ({
     action_id: `module_${action}`,
     label: `${action[0].toUpperCase()}${action.slice(1)} OPL module`,
     surface: 'opl app action execute',
-    delegated_surface: `opl module ${action} --module <module_id>`,
+    delegated_surface: `opl connect ${action} --module <module_id>`,
     payload_fields: ['module_id'],
     mutates: 'opl_module_checkout',
   }));
@@ -196,6 +196,14 @@ export function buildActionCatalog(contracts: FrameworkContracts) {
     },
     ...codexActions,
     ...moduleActions,
+    {
+      action_id: 'module_sync',
+      label: 'Sync OPL modules',
+      surface: 'opl app action execute',
+      delegated_surface: 'opl connect reconcile-modules',
+      payload_fields: [],
+      mutates: 'opl_module_checkout',
+    },
     {
       action_id: 'runtime_action_execute',
       label: 'Execute runtime operator action',

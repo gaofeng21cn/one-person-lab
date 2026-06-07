@@ -64,7 +64,7 @@ test('module install retries transient managed git clone failures', () => {
 
   try {
     const install = runCli(
-      ['module', 'install', '--module', 'medautoscience'],
+      ['connect', 'install', '--module', 'medautoscience'],
       env,
     ) as {
       module_action: {

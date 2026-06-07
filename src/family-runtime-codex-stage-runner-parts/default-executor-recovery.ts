@@ -135,12 +135,21 @@ function closeoutPacketFromDefaultExecutorExecution(input: {
     return null;
   }
   const ownerResult = isRecord(input.execution.owner_result) ? input.execution.owner_result : {};
+  const stageNativeCloseout = isRecord(ownerResult.stage_native_closeout)
+    ? ownerResult.stage_native_closeout
+    : null;
+  const stageNativeOwnerAnswerRef = optionalString(ownerResult.stage_native_owner_answer_ref);
+  const closeoutRefs = [
+    input.receiptRef,
+    ...(stageNativeOwnerAnswerRef ? [stageNativeOwnerAnswerRef] : []),
+    ...readStringList(stageNativeCloseout?.written_ref),
+  ];
   const blockedReason = optionalString(ownerResult.blocked_reason)
     ?? optionalString(input.execution.blocked_reason)
     ?? optionalString(input.execution.error);
   return normalizeTypedStageCloseoutPacket({
     surface_kind: 'domain_stage_closeout_packet',
-    closeout_refs: [input.receiptRef],
+    closeout_refs: [...new Set(closeoutRefs)],
     consumed_refs: readStringList(input.execution.source_refs),
     consumed_memory_refs: readStringList(input.execution.consumed_memory_refs),
     writeback_receipt_refs: readStringList(input.execution.writeback_receipt_refs),
@@ -166,6 +175,9 @@ function closeoutPacketFromDefaultExecutorExecution(input: {
       required_output_surface: optionalString(input.execution.required_output_surface),
       blocked_reason: blockedReason,
       owner_result_status: optionalString(ownerResult.status),
+      stage_native_closeout: stageNativeCloseout ?? undefined,
+      stage_native_owner_answer_ref: stageNativeOwnerAnswerRef,
+      stage_native_terminal_outcome_kind: optionalString(ownerResult.stage_native_terminal_outcome_kind),
       quality_authorized: ownerResult.quality_authorized === true,
       submission_authorized: ownerResult.submission_authorized === true,
       current_package_write_authorized: ownerResult.current_package_write_authorized === true,

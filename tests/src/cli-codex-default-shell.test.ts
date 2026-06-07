@@ -465,7 +465,7 @@ test('opl skill list discovers the family plugin packs through the configured si
   const stateDir = path.join(captureDir, 'opl-state');
 
   try {
-    const output = runCli(['skill', 'list'], {
+    const output = runCli(['connect', 'skills'], {
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
       OPL_STATE_DIR: stateDir,
     });
@@ -531,7 +531,7 @@ test('opl skill list discovers OPL-managed module installs without OPL_FAMILY_WO
       path.join(managedModulesRoot, 'med-autoscience'),
     );
 
-    const output = runCli(['skill', 'list'], {
+    const output = runCli(['connect', 'skills'], {
       HOME: homeRoot,
       OPL_STATE_DIR: stateDir,
       OPL_MEDAUTOGRANT_REPO_ROOT: path.join(missingRepoRoot, 'med-autogrant'),
@@ -574,7 +574,7 @@ test('opl skill list prefers managed roots over Full runtime module path overrid
     const packagedRcaRoot = path.join(homeRoot, 'runtime', 'current', 'modules', 'rca');
     fs.mkdirSync(packagedRcaRoot, { recursive: true });
 
-    const output = runCli(['skill', 'list', '--domain', 'rca'], {
+    const output = runCli(['connect', 'skills', '--domain', 'rca'], {
       HOME: homeRoot,
       OPL_STATE_DIR: stateDir,
       OPL_MODULE_PATH_REDCUBE: packagedRcaRoot,
@@ -609,7 +609,7 @@ test('opl skill sync refuses to mirror legacy test skill stubs', () => {
   fs.writeFileSync(stubPath, '---\nname: mas\ndescription: mas test skill\n---\n\n# mas\n');
 
   try {
-    const output = runCli(['skill', 'sync', '--domain', 'medautoscience'], {
+    const output = runCli(['connect', 'sync-skills', '--domain', 'medautoscience'], {
       HOME: homeDir,
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     });
@@ -655,7 +655,7 @@ test('opl skill sync registers tracked family plugin sources without writing dom
   );
 
   try {
-    const output = runCli(['skill', 'sync'], {
+    const output = runCli(['connect', 'sync-skills'], {
       HOME: homeDir,
       CODEX_HOME: codexHome,
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
@@ -764,7 +764,7 @@ test('opl skill sync follows Developer Mode sibling checkouts over managed modul
   fs.rmSync(managedWorkspaceRoot, { recursive: true, force: true });
 
   try {
-    const output = runCli(['skill', 'sync'], {
+    const output = runCli(['connect', 'sync-skills'], {
       HOME: homeDir,
       CODEX_HOME: codexHome,
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,

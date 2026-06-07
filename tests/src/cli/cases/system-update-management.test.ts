@@ -256,8 +256,8 @@ EOF
   };
 
   try {
-    runCli(['module', 'install', '--module', 'medautoscience'], env);
-    const medAutoGrantInstall = runCli(['module', 'install', '--module', 'medautogrant'], env) as {
+    runCli(['connect', 'install', '--module', 'medautoscience'], env);
+    const medAutoGrantInstall = runCli(['connect', 'install', '--module', 'medautogrant'], env) as {
       module_action: { module: { checkout_path: string } };
     };
     fs.writeFileSync(
@@ -311,7 +311,7 @@ EOF
     assert.equal(targets.get('module:meddeepscientist')?.reason, 'module_missing');
 
     const updatedMas = (
-      runCli(['modules'], env) as {
+      runCli(['connect', 'modules'], env) as {
         modules: { items: Array<{ module_id: string; git: Record<string, unknown> | null; recommended_action: string | null }> };
       }
     ).modules.items.find((entry) => entry.module_id === 'medautoscience');
@@ -363,7 +363,7 @@ test('module bootstrap recovers broken bundled npm shim during system-managed in
   });
 
   try {
-    const output = runCli(['module', 'install', '--module', 'oplmetaagent'], {
+    const output = runCli(['connect', 'install', '--module', 'oplmetaagent'], {
       HOME: homeRoot,
       OPL_MODULES_ROOT: modulesRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaAgentRemote.remoteRoot,
@@ -599,8 +599,8 @@ console.log(JSON.stringify({ sync: 'ok' }));
   };
 
   try {
-    runCli(['module', 'install', '--module', 'medautoscience'], env);
-    const grantInstall = runCli(['module', 'install', '--module', 'medautogrant'], env) as {
+    runCli(['connect', 'install', '--module', 'medautoscience'], env);
+    const grantInstall = runCli(['connect', 'install', '--module', 'medautogrant'], env) as {
       module_action: { module: { checkout_path: string } };
     };
     fs.writeFileSync(path.join(grantInstall.module_action.module.checkout_path, 'LOCAL-CHANGE.md'), '# Local change\n');
@@ -661,7 +661,7 @@ console.log(JSON.stringify({ sync: 'ok' }));
     assert.match(turnkeyLog, /bootstrap:opl-meta-agent/);
     assert.match(turnkeyLog, /health:opl-meta-agent:smoke/);
 
-    const modules = runCli(['modules'], env) as {
+    const modules = runCli(['connect', 'modules'], env) as {
       modules: {
         items: Array<{ module_id: string; installed: boolean; git: { head_sha: string | null } | null }>;
       };
@@ -764,7 +764,7 @@ test('system reconcile-modules promotes Full packaged module seeds to latest man
 
   try {
     for (const moduleId of Object.keys(packagedModules)) {
-      const install = runCli(['module', 'install', '--module', moduleId], env) as {
+      const install = runCli(['connect', 'install', '--module', moduleId], env) as {
         module_action: {
           module: {
             checkout_path: string;
@@ -797,7 +797,7 @@ test('system reconcile-modules promotes Full packaged module seeds to latest man
       assert.equal(targets.get(moduleId)?.reason, 'module_update_available');
     }
 
-    const modules = runCli(['modules'], env) as {
+    const modules = runCli(['connect', 'modules'], env) as {
       modules: {
         items: Array<{
           module_id: string;

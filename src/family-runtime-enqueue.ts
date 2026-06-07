@@ -5,6 +5,9 @@ import { deadLetterRedriveDecision } from './family-runtime-dead-letter-redrive.
 import { canonicalFamilyRuntimeTaskKind } from './family-runtime-mas-domain-route.ts';
 import { MAS_PAPER_AUTONOMY_TASK_KINDS } from './family-runtime-paper-autonomy.ts';
 import {
+  defaultExecutorMissingStageNativeOwnerAnswerRedriveDecision,
+} from './family-runtime-mas-stage-native-owner-answer.ts';
+import {
   DEFAULT_MAX_ATTEMPTS,
   insertEvent,
   insertNotification,
@@ -326,6 +329,10 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         && exportedTaskChanged
         && isDefaultExecutorDispatch(existing, existingPayload)
         && isDefaultExecutorDispatchInput(input.domainId, taskKind, payload);
+      const existingStageAttempts = isDefaultExecutorDispatch(existing, existingPayload)
+        && isDefaultExecutorDispatchInput(input.domainId, taskKind, payload)
+        ? listStageAttemptsForTask(db, existing.task_id)
+        : [];
       const closeoutRedrive = defaultExecutorSucceededAdmissionRefresh
         ? defaultExecutorCloseoutRedriveDecision(existing, existingPayload, payload)
         : null;
@@ -333,6 +340,13 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         && isDefaultExecutorDispatchInput(input.domainId, taskKind, payload)
         ? transportOnlySucceededDefaultExecutorAdmissionRedriveDecision(db, existing, existingPayload, payload)
         : null;
+      const missingStageNativeOwnerAnswerRedrive = defaultExecutorMissingStageNativeOwnerAnswerRedriveDecision({
+        db,
+        existing,
+        existingPayload,
+        nextPayload: payload,
+        stageAttempts: existingStageAttempts,
+      });
       if (exportedTaskChanged && closeoutRedrive) {
         const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
         db.prepare(`
@@ -437,6 +451,64 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           taskId: refreshed.task_id,
           severity: 'info',
           title: 'Family runtime task requeued from transport-only admission',
+          body: `${input.domainId}:${taskKind}`,
+          payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
+        });
+        return {
+          accepted: true,
+          requeued_from_terminal: true,
+          idempotent_noop: false,
+          task: taskToPayload(refreshed),
+        };
+      }
+      if (missingStageNativeOwnerAnswerRedrive) {
+        const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
+        db.prepare(`
+          UPDATE tasks
+          SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
+            attempts = 0, source = ?, requires_approval = ?, approved_at = NULL,
+            lease_owner = NULL, lease_expires_at = NULL, last_error = ?,
+            dead_letter_reason = NULL, updated_at = ?
+          WHERE task_id = ?
+        `).run(
+          input.domainId,
+          taskKind,
+          exportedPayloadJson,
+          input.priority ?? 0,
+          nextStatus,
+          input.source ?? 'opl-cli',
+          requiresApproval ? 1 : 0,
+          initialLastError,
+          createdAt,
+          existing.task_id,
+        );
+        const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
+        insertEvent(db, {
+          taskId: refreshed.task_id,
+          domainId: refreshed.domain_id,
+          eventType: 'task_requeued_from_missing_stage_native_owner_answer',
+          source: input.source ?? 'opl-cli',
+          payload: {
+            dedupe_key: dedupeKey,
+            previous_status: existing.status,
+            next_status: nextStatus,
+            active_hold_id: activeHold?.hold_id ?? null,
+            ...missingStageNativeOwnerAnswerRedrive,
+            authority_boundary: {
+              opl: 'queue_redrive_until_domain_owner_answer_observed_only',
+              domain: 'truth_quality_artifact_gate_owner',
+              domain_truth_mutation: false,
+              publication_quality_mutation: false,
+              artifact_gate_mutation: false,
+              current_package_mutation: false,
+              provider_completion_is_domain_ready: false,
+            },
+          },
+        });
+        insertNotification(db, {
+          taskId: refreshed.task_id,
+          severity: 'info',
+          title: 'Family runtime task requeued for missing MAS owner answer',
           body: `${input.domainId}:${taskKind}`,
           payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
         });

@@ -171,7 +171,7 @@ test('managed module install and update consume the package channel by default',
   };
 
   try {
-    const install = runCli(['module', 'install', '--module', 'medautoscience'], baseEnv) as {
+    const install = runCli(['connect', 'install', '--module', 'medautoscience'], baseEnv) as {
       module_action: {
         module: {
           module_id: string;
@@ -223,7 +223,7 @@ test('managed module install and update consume the package channel by default',
         ].join('\n'),
       },
     });
-    const update = runCli(['module', 'update', '--module', 'medautoscience'], {
+    const update = runCli(['connect', 'update', '--module', 'medautoscience'], {
       ...baseEnv,
       PATH: `${secondChannel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
       OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.6.2',
@@ -276,7 +276,7 @@ test('module-specific git checkout override bypasses the package channel', () =>
   };
 
   try {
-    const install = runCli(['module', 'install', '--module', 'medautoscience'], env) as {
+    const install = runCli(['connect', 'install', '--module', 'medautoscience'], env) as {
       module_action: {
         module: {
           install_origin: string;
@@ -337,7 +337,7 @@ test('Developer Mode git checkout source bypasses the package channel without ra
   );
 
   try {
-    const install = runCli(['module', 'install', '--module', 'medautoscience'], {
+    const install = runCli(['connect', 'install', '--module', 'medautoscience'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       GIT_CONFIG_GLOBAL: gitConfigPath,

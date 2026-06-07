@@ -211,29 +211,6 @@ export function buildPublicCommandSpecs(
     ...buildBrandModuleSurfaceSpecs('connect'),
   };
 
-  const modulesSpec = buildNoArgSpec(
-    {
-      usage: 'opl modules',
-      summary: 'List the OPL-managed domain modules available to the current install.',
-      examples: ['opl modules'],
-      group: 'module',
-    },
-    () => buildPublicModulesPayload(buildOplModules()),
-  );
-
-  const packagesManifestSpec = buildNoArgSpec(
-    {
-      usage: 'opl packages manifest',
-      summary: 'Compatibility surface for `opl connect packages manifest`; shows the machine-readable OPL Packages manifest for GUI, Docker, native helper, and domain modules.',
-      examples: ['opl packages manifest'],
-      group: 'package',
-      help_surface: 'migration_compatibility',
-    },
-    () => ({
-      version: 'g2',
-      packages_manifest: buildOplPackageManifest(),
-    }),
-  );
   const connectPackagesManifestSpec = buildNoArgSpec(
     {
       usage: 'opl connect packages manifest',
@@ -246,43 +223,6 @@ export function buildPublicCommandSpecs(
       packages_manifest: buildOplPackageManifest(),
     }),
   );
-
-  const moduleInstallSpec = buildModuleActionSpec(
-    'install',
-    'opl module install --module <module_id>',
-    'opl module install --module medautoscience',
-  );
-  const moduleUpdateSpec = buildModuleActionSpec(
-    'update',
-    'opl module update --module <module_id>',
-    'opl module update --module medautoscience',
-  );
-  const moduleReinstallSpec = buildModuleActionSpec(
-    'reinstall',
-    'opl module reinstall --module <module_id>',
-    'opl module reinstall --module medautoscience',
-  );
-  const moduleRemoveSpec = buildModuleActionSpec(
-    'remove',
-    'opl module remove --module <module_id>',
-    'opl module remove --module medautoscience',
-  );
-  const moduleExecSpec: CommandSpec = {
-    usage: 'opl module exec --module <module_id> -- <domain_cli_args...>',
-    summary: 'Run a domain module CLI through the OPL-managed module checkout instead of a global PATH tool.',
-    examples: [
-      'opl module exec --module medautoscience -- doctor entry-modes',
-      'opl module exec --module medautogrant -- --help',
-      'opl module exec --module redcube -- product manifest --workspace-root /tmp/demo',
-    ],
-    group: 'module',
-    handler: (args) => {
-      const parsed = parseOplModuleExecArgs(args, moduleExecSpec);
-      return buildPublicModuleExecPayload(
-        runOplModuleExec(parsed.moduleId, parsed.args),
-      );
-    },
-  };
 
   const engineInstallSpec = buildEngineActionSpec(
     'install',
@@ -309,7 +249,7 @@ export function buildPublicCommandSpecs(
     help: {
       usage: 'opl help [command ...]',
       summary: 'Show the top-level command groups or command-scoped runnable examples.',
-      examples: ['opl help', 'opl help status workspace', 'opl help module install'],
+      examples: ['opl help', 'opl help status workspace', 'opl help connect install'],
       group: 'top_level',
       handler: (args) => {
         if (args.length === 0) {
@@ -569,7 +509,6 @@ export function buildPublicCommandSpecs(
       },
     },
     ...agentLabCommandSpecs,
-    'packages manifest': packagesManifestSpec,
     doctor: cloneCommandSpec(commandSpecs.doctor, { group: 'top_level' }),
     start: cloneCommandSpec(commandSpecs.start, { group: 'top_level' }),
     'quality details': {
@@ -601,18 +540,6 @@ export function buildPublicCommandSpecs(
         };
       },
     },
-    'skill list': cloneCommandSpec(commandSpecs['skill-list'], {
-      usage: 'opl skill list [--domain <domain_id>]',
-      summary: 'Compatibility surface for `opl connect skills`; inspect family domain plugin packs.',
-      group: 'skill',
-      help_surface: 'migration_compatibility',
-    }),
-    'skill sync': cloneCommandSpec(commandSpecs['skill-sync'], {
-      usage: 'opl skill sync [--domain <domain_id>] [--home <home_path>] [--quiet]',
-      summary: 'Compatibility surface for `opl connect sync-skills`; register family domain plugin packs.',
-      group: 'skill',
-      help_surface: 'migration_compatibility',
-    }),
     'skill companion status': cloneCommandSpec(commandSpecs['skill-companion-status'], {
       usage: 'opl skill companion status [--home <home_path>] [--superpowers <keep|lite|full>]',
       group: 'skill',
@@ -1248,36 +1175,6 @@ export function buildPublicCommandSpecs(
       group: 'contract',
     }),
     ...systemCommandSpecs,
-    modules: {
-      ...modulesSpec,
-      summary: 'Compatibility surface for `opl connect modules`; list OPL-managed domain modules.',
-      help_surface: 'migration_compatibility',
-    },
-    'module install': {
-      ...moduleInstallSpec,
-      summary: 'Compatibility surface for `opl connect install`; install one OPL-managed domain module.',
-      help_surface: 'migration_compatibility',
-    },
-    'module update': {
-      ...moduleUpdateSpec,
-      summary: 'Compatibility surface for `opl connect update`; update one OPL-managed domain module.',
-      help_surface: 'migration_compatibility',
-    },
-    'module reinstall': {
-      ...moduleReinstallSpec,
-      summary: 'Compatibility surface for `opl connect reinstall`; reinstall one OPL-managed domain module.',
-      help_surface: 'migration_compatibility',
-    },
-    'module remove': {
-      ...moduleRemoveSpec,
-      summary: 'Compatibility surface for `opl connect remove`; remove one OPL-managed domain module.',
-      help_surface: 'migration_compatibility',
-    },
-    'module exec': {
-      ...moduleExecSpec,
-      summary: 'Compatibility surface for `opl connect exec`; run a domain module CLI through OPL-managed module checkout.',
-      help_surface: 'migration_compatibility',
-    },
     'engine install': engineInstallSpec,
     'engine update': engineUpdateSpec,
     'engine reinstall': engineReinstallSpec,

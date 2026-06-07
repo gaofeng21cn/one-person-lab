@@ -603,7 +603,7 @@ function parseCodexAction(actionId: string): OplEngineAction | null {
 }
 
 function parseModuleAction(actionId: string): OplModuleAction | null {
-  const match = /^module_(install|update|sync|reinstall|remove)$/.exec(actionId);
+  const match = /^module_(install|update|reinstall|remove)$/.exec(actionId);
   return match ? match[1] as OplModuleAction : null;
 }
 
@@ -724,10 +724,24 @@ async function executeDirectAppAction(
   if (moduleAction) {
     const moduleId = modulePayload(options.payload);
     return {
-      delegatedSurface: `opl module ${moduleAction} --module ${moduleId}`,
+      delegatedSurface: `opl connect ${moduleAction} --module ${moduleId}`,
       result: options.dryRun
         ? dryRunModuleAction(moduleAction, moduleId)
         : runOplModuleAction(moduleAction, moduleId),
+    };
+  }
+
+  if (options.actionId === 'module_sync') {
+    return {
+      delegatedSurface: 'opl connect reconcile-modules',
+      result: options.dryRun
+        ? {
+            system_action: {
+              action: 'reconcile_modules',
+              status: 'dry_run',
+            },
+          }
+        : await runOplSystemAction(contracts, 'reconcile_modules'),
     };
   }
 

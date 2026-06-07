@@ -259,7 +259,7 @@ function offlineModuleInstallBlocker(root) {
   const env = baseEnv(root, {
     OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: path.join(root, 'missing-remote.git'),
   });
-  const output = runOpl(['module', 'install', '--module', 'medautoscience'], env, 3);
+  const output = runOpl(['connect', 'install', '--module', 'medautoscience'], env, 3);
   assert.equal(output.error.code, 'build_command_failed');
   return { observations: { error_code: output.error.code } };
 }

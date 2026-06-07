@@ -3,17 +3,19 @@ import type { DatabaseSync } from 'node:sqlite';
 import {
   insertEvent,
   insertNotification,
+  type FamilyRuntimeTaskRow,
 } from './family-runtime-store.ts';
 import type { StageAttemptRow } from './family-runtime-stage-attempt-ledger.ts';
+import {
+  MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
+  isMasReadinessStageNativeOwnerAction,
+  stageAttemptRowHasMasStageNativeOwnerAnswer,
+} from './family-runtime-mas-stage-native-owner-answer.ts';
 
-type LinkedTask = {
-  task_id: string;
-  domain_id: string;
-  task_kind: string;
-  status: string;
-  last_error: string | null;
-  dead_letter_reason: string | null;
-};
+type LinkedTask = Pick<
+  FamilyRuntimeTaskRow,
+  'task_id' | 'domain_id' | 'task_kind' | 'payload_json' | 'status' | 'last_error' | 'dead_letter_reason'
+>;
 
 const DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
 const PROVIDER_ONLY_TASK_DEAD_LETTER_REASONS = new Set([
@@ -31,7 +33,7 @@ function linkedDefaultExecutorTask(
     return null;
   }
   const task = db.prepare(`
-    SELECT task_id, domain_id, task_kind, status, last_error, dead_letter_reason
+    SELECT task_id, domain_id, task_kind, payload_json, status, last_error, dead_letter_reason
     FROM tasks
     WHERE task_id = ?
   `).get(row.task_id) as LinkedTask | undefined;
@@ -119,6 +121,76 @@ function canSucceedFromTypedCloseout(task: LinkedTask) {
     && PROVIDER_ONLY_TASK_DEAD_LETTER_REASONS.has(task.dead_letter_reason);
 }
 
+function parseTaskPayload(task: LinkedTask) {
+  try {
+    const parsed = JSON.parse(task.payload_json);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function shouldBlockMissingStageNativeOwnerAnswer(task: LinkedTask, row: StageAttemptRow) {
+  const payload = parseTaskPayload(task);
+  return isMasReadinessStageNativeOwnerAction(task, payload)
+    && !stageAttemptRowHasMasStageNativeOwnerAnswer(row, payload);
+}
+
+function blockMissingStageNativeOwnerAnswer(
+  db: DatabaseSync,
+  input: {
+    task: LinkedTask;
+    row: StageAttemptRow;
+    observedAt: string;
+  },
+) {
+  db.prepare(`
+    UPDATE tasks
+    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
+      last_error = ?, dead_letter_reason = ?, updated_at = ?
+    WHERE task_id = ?
+  `).run(
+    MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
+    MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
+    input.observedAt,
+    input.task.task_id,
+  );
+  insertEvent(db, {
+    taskId: input.task.task_id,
+    domainId: input.task.domain_id,
+    eventType: 'stage_attempt_terminal_missing_stage_native_owner_answer_task',
+    source: 'opl-family-runtime',
+    payload: {
+      stage_attempt_id: input.row.stage_attempt_id,
+      workflow_id: input.row.workflow_id,
+      reason: MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
+      previous_status: input.task.status,
+      cleared_dead_letter_reason: input.task.dead_letter_reason,
+      authority_boundary: {
+        opl: 'provider_attempt_status_projection_and_redrive_guard_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        domain_truth_mutation: false,
+        publication_quality_mutation: false,
+        artifact_gate_mutation: false,
+        current_package_mutation: false,
+        provider_completion_is_domain_ready: false,
+      },
+    },
+  });
+  insertNotification(db, {
+    taskId: input.task.task_id,
+    severity: 'warning',
+    title: 'Family runtime default executor owner answer missing',
+    body: input.row.stage_attempt_id,
+    payload: {
+      stage_attempt_id: input.row.stage_attempt_id,
+      reason: MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
+    },
+  });
+}
+
 export function markLinkedDefaultExecutorTaskCompleted(
   db: DatabaseSync,
   input: {
@@ -134,6 +206,14 @@ export function markLinkedDefaultExecutorTaskCompleted(
     && task.last_error === null
     && task.dead_letter_reason === null;
   if (alreadySucceeded || !canSucceedFromTypedCloseout(task)) {
+    return;
+  }
+  if (shouldBlockMissingStageNativeOwnerAnswer(task, input.row)) {
+    blockMissingStageNativeOwnerAnswer(db, {
+      task,
+      row: input.row,
+      observedAt: input.observedAt,
+    });
     return;
   }
   db.prepare(`

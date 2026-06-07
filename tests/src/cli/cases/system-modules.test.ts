@@ -62,7 +62,7 @@ EOF
   };
 
   try {
-    const initial = runCli(['modules'], env) as {
+    const initial = runCli(['connect', 'modules'], env) as {
       modules: {
         summary: {
           total_modules_count: number;
@@ -84,7 +84,7 @@ EOF
     assert.equal(initialMas.available_actions.includes('install'), true);
 
     const install = runCli(
-      ['module', 'install', '--module', 'medautoscience'],
+      ['connect', 'install', '--module', 'medautoscience'],
       env,
     ) as {
       module_action: {
@@ -138,7 +138,7 @@ EOF
     assert.equal(fs.existsSync(globalMasSkillPath), false);
 
     const readMasModule = () => (
-      runCli(['modules'], env) as {
+      runCli(['connect', 'modules'], env) as {
         modules: { items: Array<{ module_id: string; recommended_action: string | null; available_actions: string[]; git: Record<string, unknown> | null }> };
       }
     ).modules.items.find((entry) => entry.module_id === 'medautoscience');
@@ -173,7 +173,7 @@ EOF
     assert.equal(behindMas.available_actions.includes('update'), true);
 
     const update = runCli(
-      ['module', 'update', '--module', 'medautoscience'],
+      ['connect', 'update', '--module', 'medautoscience'],
       env,
     ) as {
       module_action: {
@@ -196,7 +196,7 @@ EOF
     assert.equal(fs.existsSync(globalMasSkillPath), false);
 
     const remove = runCli(
-      ['module', 'remove', '--module', 'medautoscience'],
+      ['connect', 'remove', '--module', 'medautoscience'],
       env,
     ) as {
       module_action: {
@@ -258,7 +258,7 @@ test('module install creates an OPL-managed root even when a sibling checkout is
       OPL_DEVELOPER_MODE_GH_FIXTURE: JSON.stringify({ login: 'ordinary-user' }),
     };
 
-    const beforeInstall = runCliInCwd(['modules'], onePersonLabRoot, env) as {
+    const beforeInstall = runCliInCwd(['connect', 'modules'], onePersonLabRoot, env) as {
       modules: {
         items: Array<{
           module_id: string;
@@ -274,7 +274,7 @@ test('module install creates an OPL-managed root even when a sibling checkout is
     assert.equal(beforeMeta?.health_status, 'dirty');
 
     const install = runCliInCwd(
-      ['module', 'install', '--module', 'oplmetaagent'],
+      ['connect', 'install', '--module', 'oplmetaagent'],
       onePersonLabRoot,
       env,
     ) as {
@@ -363,7 +363,7 @@ printf 'health\\n' >> ${JSON.stringify(turnkeyLogPath)}
     };
 
     const install = runCli(
-      ['module', 'install', '--module', 'medautoscience'],
+      ['connect', 'install', '--module', 'medautoscience'],
       env,
     ) as {
       module_action: {
@@ -442,7 +442,7 @@ printf 'health\\n' >> ${JSON.stringify(turnkeyLogPath)}
     };
 
     const install = runCli(
-      ['module', 'install', '--module', 'medautoscience'],
+      ['connect', 'install', '--module', 'medautoscience'],
       env,
     ) as {
       module_action: {
@@ -518,7 +518,7 @@ test('modules projection prefers local developer checkouts when Developer Mode i
       env,
     );
 
-    const output = runCliInCwd(['modules'], onePersonLabRoot, env) as {
+    const output = runCliInCwd(['connect', 'modules'], onePersonLabRoot, env) as {
       modules: {
         summary: {
           managed_default_modules_count: number;
@@ -604,7 +604,7 @@ git ls-files >/dev/null
   };
 
   try {
-    const beforeInstall = runCli(['modules'], env) as {
+    const beforeInstall = runCli(['connect', 'modules'], env) as {
       modules: { items: Array<{ module_id: string; installed: boolean; install_origin: string; checkout_path: string }> };
     };
     const beforeRca = beforeInstall.modules.items.find((entry) => entry.module_id === 'redcube');
@@ -612,7 +612,7 @@ git ls-files >/dev/null
     assert.equal(beforeRca?.install_origin, 'missing');
     assert.equal(beforeRca?.checkout_path, managedRcaRoot);
 
-    const install = runCli(['module', 'install', '--module', 'redcube'], env) as {
+    const install = runCli(['connect', 'install', '--module', 'redcube'], env) as {
       module_action: {
         module: {
           module_id: string;
@@ -680,7 +680,7 @@ test('modules projection treats Full runtime packaged overrides as launch source
       env[`OPL_MODULE_PATH_${moduleId.toUpperCase()}`] = moduleRoot;
     }
 
-    const output = runCli(['modules'], env) as {
+    const output = runCli(['connect', 'modules'], env) as {
       modules: {
         summary: {
           installed_default_modules_count: number;
@@ -771,7 +771,7 @@ printf '{"ok":true,"runner":"npm"}\\n'
 
   try {
     const masExec = runCli(
-      ['module', 'exec', '--module', 'medautoscience', '--', 'doctor', 'entry-modes', '--json'],
+      ['connect', 'exec', '--module', 'medautoscience', '--', 'doctor', 'entry-modes', '--json'],
       env,
     ) as {
       module_exec: {
@@ -802,7 +802,7 @@ printf '{"ok":true,"runner":"npm"}\\n'
     assert.deepEqual(readLines(uvArgvPath), masExec.module_exec.command_preview.slice(1));
 
     const magExec = runCli(
-      ['module', 'exec', '--module', 'mag', '--', '--help'],
+      ['connect', 'exec', '--module', 'mag', '--', '--help'],
       env,
     ) as {
       module_exec: {
@@ -824,7 +824,7 @@ printf '{"ok":true,"runner":"npm"}\\n'
     ]);
 
     const rcaExec = runCli(
-      ['module', 'exec', '--module', 'redcube', '--', 'product', 'manifest', '--workspace-root', '/tmp/demo'],
+      ['connect', 'exec', '--module', 'redcube', '--', 'product', 'manifest', '--workspace-root', '/tmp/demo'],
       env,
     ) as {
       module_exec: {
@@ -852,7 +852,7 @@ printf '{"ok":true,"runner":"npm"}\\n'
     assert.deepEqual(readLines(npmArgvPath), rcaExec.module_exec.command_preview.slice(1));
 
     const mdsFailure = runCliFailure(
-      ['module', 'exec', '--module', 'mds', '--', '--help'],
+      ['connect', 'exec', '--module', 'mds', '--', '--help'],
       env,
     );
     assert.equal(mdsFailure.status, 2);
@@ -894,7 +894,7 @@ PY
 
   try {
     const masExec = runCli(
-      ['module', 'exec', '--module', 'medautoscience', '--', 'sidecar', 'export', '--format', 'json'],
+      ['connect', 'exec', '--module', 'medautoscience', '--', 'sidecar', 'export', '--format', 'json'],
       env,
     ) as {
       module_exec: {
@@ -956,7 +956,7 @@ printf 'health\\n' >> ${JSON.stringify(turnkeyLogPath)}
   };
 
   try {
-    const install = runCli(['module', 'install', '--module', 'meddeepscientist'], env) as {
+    const install = runCli(['connect', 'install', '--module', 'meddeepscientist'], env) as {
       module_action: {
         module: {
           module_id: string;

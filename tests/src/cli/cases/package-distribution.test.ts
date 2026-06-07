@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { assert, createGitModuleRemoteFixture, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
 
 test('packages manifest exposes active package-channel coordinates for module install updates', () => {
-  const output = runCli(['packages', 'manifest'], {
+  const output = runCli(['connect', 'packages', 'manifest'], {
     OPL_RELEASE_VERSION: '26.4.27',
     OPL_PACKAGES_OWNER: 'gaofeng21cn',
     OPL_RELEASE_CHANNEL: 'stable',
@@ -663,7 +663,7 @@ test('release discipline fails closed when workflow restores tag-push or WebUI p
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-discipline-root-'));
   const workflowPath = path.join(tempRoot, '.github', 'workflows', 'packages.yml');
   const manifestPath = path.join(tempRoot, 'opl-release-manifest.json');
-  const manifest = (runCli(['packages', 'manifest'], {
+  const manifest = (runCli(['connect', 'packages', 'manifest'], {
     OPL_RELEASE_VERSION: '26.4.35',
     OPL_PACKAGES_OWNER: 'gaofeng21cn',
   }) as { packages_manifest: unknown }).packages_manifest;
