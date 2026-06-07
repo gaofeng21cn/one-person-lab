@@ -6,6 +6,9 @@ import type {
   ContractsRootSource,
   FrameworkContracts,
   FrameworkContractsLoadOptions,
+  BrandModuleAuthorityBoundary,
+  BrandModuleId,
+  BrandModuleRegistryContract,
   PublicSurfaceIndexContract,
   StageSelectionVocabularyContract,
   TaskTopologyContract,
@@ -31,6 +34,7 @@ const REQUIRED_CONTRACT_FILE_NAMES = [
   'task-topology.json',
   'public-surface-index.json',
   'agent-workspace-norm-contract.json',
+  'brand-module-registry.json',
 ] as const;
 
 type NormalizedFrameworkContractsLoadOptions = {
@@ -326,6 +330,228 @@ function expectFalseBoolean(value: unknown, field: string, filePath: string) {
     throw new FrameworkContractError('contract_shape_invalid', `${field} must be false.`, { file: filePath, field });
   }
   return false as const;
+}
+
+const BRAND_MODULE_IDS = [
+  'charter',
+  'atlas',
+  'workspace',
+  'stagecraft',
+  'runway',
+  'vault',
+  'console',
+  'foundry-lab',
+  'connect',
+] as const satisfies readonly BrandModuleId[];
+
+const BRAND_MODULE_L4_GATES = [
+  'brand_doc_ref',
+  'registry_entry',
+  'contract_or_policy_ref',
+  'cli_surface_ref',
+  'app_or_operator_surface_ref',
+  'descriptor_surface_ref',
+  'validation_surface_ref',
+  'status_or_maturity_doc_ref',
+  'authority_boundary',
+  'forbidden_claims',
+] as const;
+
+const BRAND_MODULE_AUTHORITY_FIELDS = [
+  'can_claim_domain_ready',
+  'can_claim_quality_verdict',
+  'can_claim_artifact_authority',
+  'can_claim_production_ready',
+  'can_write_domain_truth',
+  'can_write_memory_body',
+  'can_mutate_artifact_body',
+  'can_sign_owner_receipt',
+  'can_create_typed_blocker',
+  'can_replace_domain_owner',
+  'can_replace_ai_executor_planning',
+] as const satisfies readonly (keyof BrandModuleAuthorityBoundary)[];
+
+function expectBrandModuleId(value: unknown, field: string, filePath: string): BrandModuleId {
+  const moduleId = expectString(value, field, filePath);
+  if (!(BRAND_MODULE_IDS as readonly string[]).includes(moduleId)) {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} must be a known OPL brand module id.`, {
+      file: filePath,
+      field,
+      actual: moduleId,
+      allowed: [...BRAND_MODULE_IDS],
+    });
+  }
+
+  return moduleId as BrandModuleId;
+}
+
+function expectNonEmptyStringArray(value: unknown, field: string, filePath: string) {
+  const items = expectStringArray(value, field, filePath);
+  if (items.length === 0) {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} must contain at least one entry.`, {
+      file: filePath,
+      field,
+    });
+  }
+  return items;
+}
+
+function validateBrandModuleAuthorityBoundary(filePath: string, value: unknown) {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'authority_boundary must be an object.', {
+      file: filePath,
+      field: 'authority_boundary',
+    });
+  }
+
+  const boundary = {} as BrandModuleAuthorityBoundary;
+  for (const field of BRAND_MODULE_AUTHORITY_FIELDS) {
+    boundary[field] = expectFalseBoolean(value[field], `authority_boundary.${field}`, filePath);
+  }
+  return boundary;
+}
+
+function validateBrandModuleRegistry(
+  filePath: string,
+  value: unknown,
+): BrandModuleRegistryContract {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'brand-module-registry.json must contain an object root.',
+      { file: filePath },
+    );
+  }
+
+  const maturityModelRaw = value.maturity_model;
+  const modulesRaw = value.modules;
+  if (!Array.isArray(maturityModelRaw) || !Array.isArray(modulesRaw)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'brand-module-registry.json must contain maturity_model and modules arrays.',
+      { file: filePath },
+    );
+  }
+
+  const maturityModel = maturityModelRaw.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each maturity_model entry must be an object.', {
+        file: filePath,
+        index,
+      });
+    }
+    const level = expectString(entry.level, 'maturity_model.level', filePath);
+    if (level !== 'L4_structural_baseline') {
+      throw new FrameworkContractError('contract_shape_invalid', 'brand module maturity model only admits L4_structural_baseline.', {
+        file: filePath,
+        index,
+        field: 'maturity_model.level',
+        actual: level,
+      });
+    }
+    const requiredGates = expectNonEmptyStringArray(entry.required_gates, 'maturity_model.required_gates', filePath);
+    if (!BRAND_MODULE_L4_GATES.every((gate) => requiredGates.includes(gate))) {
+      throw new FrameworkContractError('contract_shape_invalid', 'maturity_model.required_gates must include every L4 brand module gate.', {
+        file: filePath,
+        index,
+        field: 'maturity_model.required_gates',
+        required_gates: [...BRAND_MODULE_L4_GATES],
+      });
+    }
+
+    return {
+      level: 'L4_structural_baseline' as const,
+      definition: expectString(entry.definition, 'maturity_model.definition', filePath),
+      required_gates: requiredGates,
+    };
+  });
+
+  const seen = new Set<string>();
+  const modules = modulesRaw.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each brand module entry must be an object.', {
+        file: filePath,
+        index,
+      });
+    }
+
+    const moduleId = expectBrandModuleId(entry.module_id, 'module_id', filePath);
+    if (seen.has(moduleId)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each brand module id must be unique.', {
+        file: filePath,
+        index,
+        module_id: moduleId,
+      });
+    }
+    seen.add(moduleId);
+
+    const maturityLevel = expectString(entry.maturity_level, 'maturity_level', filePath);
+    if (maturityLevel !== 'L4_structural_baseline') {
+      throw new FrameworkContractError('contract_shape_invalid', 'Every brand module must be at the L4 structural baseline.', {
+        file: filePath,
+        index,
+        module_id: moduleId,
+        field: 'maturity_level',
+        actual: maturityLevel,
+      });
+    }
+
+    const l4Gates = expectNonEmptyStringArray(entry.l4_gates, 'l4_gates', filePath);
+    for (const gate of BRAND_MODULE_L4_GATES) {
+      if (!l4Gates.includes(gate)) {
+        throw new FrameworkContractError('contract_shape_invalid', 'Each brand module must declare every L4 gate.', {
+          file: filePath,
+          index,
+          module_id: moduleId,
+          field: 'l4_gates',
+          missing_gate: gate,
+        });
+      }
+    }
+
+    return {
+      module_id: moduleId,
+      brand_name: expectString(entry.brand_name, 'brand_name', filePath),
+      owner: expectString(entry.owner, 'owner', filePath),
+      purpose: expectString(entry.purpose, 'purpose', filePath),
+      state: expectString(entry.state, 'state', filePath),
+      machine_boundary: expectString(entry.machine_boundary, 'machine_boundary', filePath),
+      module_doc_ref: expectString(entry.module_doc_ref, 'module_doc_ref', filePath),
+      contract_refs: expectNonEmptyStringArray(entry.contract_refs, 'contract_refs', filePath),
+      cli_surfaces: expectNonEmptyStringArray(entry.cli_surfaces, 'cli_surfaces', filePath),
+      app_surfaces: expectNonEmptyStringArray(entry.app_surfaces, 'app_surfaces', filePath),
+      descriptor_surfaces: expectNonEmptyStringArray(entry.descriptor_surfaces, 'descriptor_surfaces', filePath),
+      validation_surfaces: expectNonEmptyStringArray(entry.validation_surfaces, 'validation_surfaces', filePath),
+      status_doc_refs: expectNonEmptyStringArray(entry.status_doc_refs, 'status_doc_refs', filePath),
+      l4_gates: l4Gates,
+      maturity_level: 'L4_structural_baseline' as const,
+      authority_boundary: validateBrandModuleAuthorityBoundary(filePath, entry.authority_boundary),
+      forbidden_claims: expectNonEmptyStringArray(entry.forbidden_claims, 'forbidden_claims', filePath),
+    };
+  });
+
+  const missingModuleIds = BRAND_MODULE_IDS.filter((moduleId) => !seen.has(moduleId));
+  if (missingModuleIds.length > 0 || seen.size !== BRAND_MODULE_IDS.length) {
+    throw new FrameworkContractError('contract_shape_invalid', 'brand-module-registry.json must contain exactly the nine OPL brand modules.', {
+      file: filePath,
+      expected_module_ids: [...BRAND_MODULE_IDS],
+      missing_module_ids: missingModuleIds,
+      actual_module_ids: [...seen],
+    });
+  }
+
+  return {
+    version: expectString(value.version, 'version', filePath),
+    scope: expectString(value.scope, 'scope', filePath),
+    owner: expectString(value.owner, 'owner', filePath),
+    purpose: expectString(value.purpose, 'purpose', filePath),
+    state: expectString(value.state, 'state', filePath),
+    machine_boundary: expectString(value.machine_boundary, 'machine_boundary', filePath),
+    baseline_module_id: expectBrandModuleId(value.baseline_module_id, 'baseline_module_id', filePath),
+    maturity_model: maturityModel,
+    external_reference_principles: expectNonEmptyStringArray(value.external_reference_principles, 'external_reference_principles', filePath),
+    modules,
+  };
 }
 
 function optionalStringField(value: Record<string, unknown>, field: string) {
@@ -737,6 +963,11 @@ const REQUIRED_CONTRACT_FILES = [
     file_name: 'agent-workspace-norm-contract.json',
     schema_version: (contracts: FrameworkContracts) => contracts.agentWorkspaceNorm.version,
   },
+  {
+    contract_id: 'brand_module_registry',
+    file_name: 'brand-module-registry.json',
+    schema_version: (contracts: FrameworkContracts) => contracts.brandModuleRegistry.version,
+  },
 ] as const;
 
 export function validateFrameworkContracts(
@@ -790,6 +1021,10 @@ export function loadFrameworkContracts(
       agentWorkspaceNorm: validateAgentWorkspaceNorm(
         path.join(contractsDir, 'agent-workspace-norm-contract.json'),
         parseJsonFile(path.join(contractsDir, 'agent-workspace-norm-contract.json')),
+      ),
+      brandModuleRegistry: validateBrandModuleRegistry(
+        path.join(contractsDir, 'brand-module-registry.json'),
+        parseJsonFile(path.join(contractsDir, 'brand-module-registry.json')),
       ),
     };
   } catch (error) {

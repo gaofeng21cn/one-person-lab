@@ -1,4 +1,4 @@
-import type { AgentWorkspaceNormContract } from '../../../../src/types.ts';
+import type { AgentWorkspaceNormContract, BrandModuleRegistryContract } from '../../../../src/types.ts';
 
 export const MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT: AgentWorkspaceNormContract = {
   surface_kind: 'opl_agent_workspace_norm_contract',
@@ -121,4 +121,78 @@ export const MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT: AgentWorkspaceNormContract =
     workspace_norm_pass_can_claim_artifact_or_quality_ready: false,
     blocked_reasons: [],
   },
+};
+
+const MINIMAL_BRAND_MODULE_IDS = [
+  'charter',
+  'atlas',
+  'workspace',
+  'stagecraft',
+  'runway',
+  'vault',
+  'console',
+  'foundry-lab',
+  'connect',
+] as const;
+
+const MINIMAL_BRAND_MODULE_GATES = [
+  'brand_doc_ref',
+  'registry_entry',
+  'contract_or_policy_ref',
+  'cli_surface_ref',
+  'app_or_operator_surface_ref',
+  'descriptor_surface_ref',
+  'validation_surface_ref',
+  'status_or_maturity_doc_ref',
+  'authority_boundary',
+  'forbidden_claims',
+];
+
+export const MINIMAL_BRAND_MODULE_REGISTRY_CONTRACT: BrandModuleRegistryContract = {
+  version: 'brand-modules.test',
+  scope: 'opl_brand_module_registry',
+  owner: 'one-person-lab',
+  purpose: 'test fixture',
+  state: 'test_fixture',
+  machine_boundary: 'test fixture',
+  baseline_module_id: 'workspace',
+  maturity_model: [
+    {
+      level: 'L4_structural_baseline',
+      definition: 'test fixture',
+      required_gates: MINIMAL_BRAND_MODULE_GATES,
+    },
+  ],
+  external_reference_principles: ['test fixture'],
+  modules: MINIMAL_BRAND_MODULE_IDS.map((moduleId) => ({
+    module_id: moduleId,
+    brand_name: `OPL ${moduleId}`,
+    owner: 'one-person-lab',
+    purpose: 'test fixture',
+    state: 'test_fixture',
+    machine_boundary: 'test fixture',
+    module_doc_ref: `human_doc:opl_brand_module_${moduleId.replace(/-/g, '_')}`,
+    contract_refs: ['contracts/opl-framework/brand-module-registry.json'],
+    cli_surfaces: ['opl brand-modules list --json'],
+    app_surfaces: ['opl brand-modules interfaces --json#app'],
+    descriptor_surfaces: ['opl brand-modules interfaces --json#descriptor'],
+    validation_surfaces: ['opl brand-modules validate --json'],
+    status_doc_refs: ['human_doc:opl_brand_module_maturity_against_workspace'],
+    l4_gates: MINIMAL_BRAND_MODULE_GATES,
+    maturity_level: 'L4_structural_baseline',
+    authority_boundary: {
+      can_claim_domain_ready: false,
+      can_claim_quality_verdict: false,
+      can_claim_artifact_authority: false,
+      can_claim_production_ready: false,
+      can_write_domain_truth: false,
+      can_write_memory_body: false,
+      can_mutate_artifact_body: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_replace_domain_owner: false,
+      can_replace_ai_executor_planning: false,
+    },
+    forbidden_claims: ['domain_ready'],
+  })),
 };

@@ -25,6 +25,13 @@ import {
   buildAgentDefaultCallerReadinessReport,
   buildAgentPlatformSurfaceOwnershipReport,
 } from '../../agent-platform-surface-ownership.ts';
+import {
+  buildBrandModuleInspect,
+  buildBrandModuleInterfaces,
+  buildBrandModuleMaturity,
+  buildBrandModulesList,
+  buildBrandModuleValidation,
+} from '../../brand-modules.ts';
 import { buildAgentReadinessSummary } from '../../agent-readiness.ts';
 import { buildStandardDomainAgentConformanceReport } from '../../standard-domain-agent-conformance.ts';
 import { agentsEvidenceApplySpec } from './agent-evidence-command-spec.ts';
@@ -277,6 +284,53 @@ export function buildPublicCommandSpecs(
       ],
       group: 'app',
       handler: (args) => runOplAppActionExecute(getContracts(), parseAppActionExecuteArgs(args)),
+    },
+    'brand-modules list': {
+      usage: 'opl brand-modules list',
+      summary: 'List the nine OPL brand modules and their Workspace-level structural baseline refs.',
+      examples: ['opl brand-modules list --json'],
+      group: 'brand',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['brand-modules list']);
+        return buildBrandModulesList(getContracts());
+      },
+    },
+    'brand-modules inspect': {
+      usage: 'opl brand-modules inspect --module <module_id>',
+      summary: 'Inspect one OPL brand module with contract, CLI, App, descriptor, validation, status, and authority-boundary refs.',
+      examples: ['opl brand-modules inspect --module workspace --json'],
+      group: 'brand',
+      handler: (args) => buildBrandModuleInspect(getContracts(), args),
+    },
+    'brand-modules maturity': {
+      usage: 'opl brand-modules maturity',
+      summary: 'Read the Workspace-baseline maturity matrix for all OPL brand modules.',
+      examples: ['opl brand-modules maturity --json'],
+      group: 'brand',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['brand-modules maturity']);
+        return buildBrandModuleMaturity(getContracts());
+      },
+    },
+    'brand-modules validate': {
+      usage: 'opl brand-modules validate',
+      summary: 'Validate OPL brand module L4 gates and false-authority boundaries from the registry contract.',
+      examples: ['opl brand-modules validate --json'],
+      group: 'brand',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['brand-modules validate']);
+        return buildBrandModuleValidation(getContracts());
+      },
+    },
+    'brand-modules interfaces': {
+      usage: 'opl brand-modules interfaces',
+      summary: 'Expose descriptor-only CLI, App, validation, and registry surfaces for the OPL brand module bundle.',
+      examples: ['opl brand-modules interfaces --json'],
+      group: 'brand',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['brand-modules interfaces']);
+        return buildBrandModuleInterfaces(getContracts());
+      },
     },
     ...workOrderCommandSpecs,
     'framework locate': {

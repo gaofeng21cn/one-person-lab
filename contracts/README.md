@@ -41,6 +41,7 @@ Machine boundary: 本文是人读合同目录说明和边界索引。机器 trut
 当前保留的 repo-tracked machine-readable truth：
 
 - `contracts/opl-framework/*.json`：当前 stage-led OPL framework、App consumer surface、Foundry package/domain-agent catalog、runtime 与 supporting-surface contract
+- `contracts/opl-framework/brand-module-registry.json`：九个 OPL 品牌模块的机器注册表；`opl brand-modules list|inspect|maturity|validate|interfaces --json` 从这里派生，只证明 Workspace-level `L4_structural_baseline`，不声明 domain ready、quality verdict、artifact authority、production ready、owner receipt、typed blocker 或 App release truth
 - `contracts/opl-framework/surface-budget-policy.json`：AI-first、contract-light 的 surface budget 机器政策；它限制 default surface / hard gate 的升级条件，并防止 diagnostic lenses 或旧 capacity/domain-validity 面回到普通 help/docs 入口
 - `contracts/opl-framework/public-surface-index.json`：active public surface 索引；每个 surface 必须声明 `surface_budget`，包括 default 状态、允许理由、promotion evidence refs、consumer refs 和不得声明 domain ready / quality verdict / artifact authority / production ready / executor planning / domain owner 的 authority false flags
 - `contracts/opl-framework/README.md`：这些 active JSON contract 的人类可读说明

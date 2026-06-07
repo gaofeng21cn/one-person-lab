@@ -30,16 +30,28 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 Agent L
 | `promotion_receipt` | risk-tier promotion / rollback / no-regression refs。 |
 | `target_agent_handoff` | 给目标 agent/domain owner 的交接。 |
 
+## L4 结构基线 refs
+
+| 层面 | 目标 refs |
+| --- | --- |
+| `contract` | `agent-lab-contract.json`、standard domain agent skeleton contract、work-order receipt contract、promotion receipt contract。 |
+| `CLI` | `opl brand-modules inspect --module foundry-lab --json`、`opl agents scaffold`、`opl agents conformance --family-defaults --json`、`opl agents readiness --family-defaults --json`、`opl agents default-callers --family-defaults --json`、`opl work-order execute`。 |
+| `App` | Agent Lab entry、work-order review、canary evidence、promotion/rollback decision、target-agent handoff。 |
+| `descriptor` | agent blueprint descriptor、evaluation report descriptor、developer work order descriptor、promotion receipt descriptor。 |
+| `validation` | skeleton conformance、work-order dry-run/execute receipts、canary/no-regression evidence、promotion verify。 |
+| `status` | `docs/status.md`、`docs/runtime/opl-agent-lab-control-plane.md`、target repo owner closeout。 |
+
 ## 接口与文档
 
-理想接口：
+当前 L4 落地接口：
 
 ```text
-opl agent-lab evaluate --agent <id> --json
-opl agent-lab propose --agent <id> --json
+opl brand-modules inspect --module foundry-lab --json
+opl agents scaffold --json
+opl agents conformance --family-defaults --json
+opl agents readiness --family-defaults --json
+opl agents default-callers --family-defaults --json
 opl work-order execute --work-order <file> --json
-opl agent-lab risk-tier-promotion record|verify|list
-opl agents scaffold --agent <id> --json
 ```
 
 理想文档：
@@ -51,17 +63,27 @@ contracts/opl-framework/agent-lab-contract.json
 contracts/opl-framework/standard-domain-agent-skeleton-contract.json
 ```
 
-## 不做什么
+## Authority boundary
+
+- Foundry Lab 持有 agent blueprint、evaluation、developer work order、canary 和 promotion/rollback 的改进循环边界。
+- Target domain owner 持有 domain truth、owner receipt、artifact authority 和最终 adoption/rollback 裁决。
+- OPL Meta Agent 可作为 builder/tester module 提供 work order 和测试接管能力，但不成为 OPL Framework 或目标 domain 的 truth owner。
+- Console、Atlas 和 Vault 只能消费 Foundry Lab 输出的 descriptor、receipt 或 refs，不从 Lab 推导 domain ready。
+
+## Forbidden claims
 
 - 不替 domain owner 签 receipt。
 - 不把 eval pass 写成 production ready。
 - 不直接删除 target repo surface；删除仍需 owner gate / no-active-caller / tombstone。
 - 不把 OMA 变成第二 OPL Framework。
+- 不把 canary 通过写成全量 rollout 通过。
+- 不把 developer work order 完成写成 owner 已接受。
 
-## 成功标准
+## L4 structural baseline 成功标准
 
 - 新 Agent 能从 blueprint/scaffold 进入 standard skeleton。
 - 失败能转成 work order、canary、rollback 或 typed blocker。
 - 改进 loop 有独立 reviewer/no-regression refs。
 - Foundry Lab 输出能被 Console 和 Atlas 消费，但不污染 domain authority。
-
+- 合同、CLI、App action、descriptor、validation 和 status refs 能互相追踪。
+- 每次 promotion/rollback 都能指向 risk tier、证据 refs、owner gate 和残余风险。

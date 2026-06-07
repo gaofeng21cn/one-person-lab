@@ -30,17 +30,19 @@ Machine boundary: 本文是人读现状对照。当前完成度、计数、recei
 
 ## 九模块完成度
 
+当前九模块都已达到 `L4_structural_baseline`。这里的 L4 是 `Workspace` 水平的结构完成：品牌文档、机器注册表、contract/policy refs、CLI/App/descriptor/validation/status refs、authority boundary 和 forbidden claims 已经同源落到 `contracts/opl-framework/brand-module-registry.json`，并由 `opl brand-modules validate --json` 与 `opl contract validate --json` 守门。
+
 | 模块 | 当前完成度 | 相对 Workspace | 判断 |
 | --- | --- | --- | --- |
-| `OPL Charter` | `L2 emerging` | 低于 Workspace | 核心五件套、docs lifecycle、invariants、decisions 已经很强，但还没有独立 `brand_module_registry`、authority matrix 和 term lifecycle contract。 |
-| `OPL Atlas` | `L3 structural` | 略低于 Workspace | Domain descriptor、action catalog、stage control plane、generated interfaces、conformance 已形成结构，但还没有统一品牌化 `atlas` command/doc/graph 入口。 |
-| `OPL Workspace` | `L4 baseline` | 基线 | 当前九模块里最接近“品牌 + 合同 + CLI/App + 验证 + docs”的完整形态。 |
-| `OPL Stagecraft` | `L3 structural` | 略低于 Workspace | Cognitive kernel、tool affordance、stage pack、stage admission 和 StageRun 设计已较成熟；真实 independent quality gate / domain owner receipt scaleout 仍是证据尾项。 |
-| `OPL Runway` | `L3 structural` | 略低于 Workspace | Runtime Manager、Temporal provider、typed queue、attempt ledger、authorization、blocker projection 已成型；生产 long-soak、provider-hosted owner-chain evidence 和 App/user-path 证据仍开放。 |
-| `OPL Vault` | `L3 structural` | 略低于 Workspace | Evidence ledger、receipt/blocker refs、state index、artifact lineage/read-model 已强；统一 `vault` 品牌入口和 domain-scale artifact/memory/lifecycle receipts 还未像 Workspace 一样收束。 |
-| `OPL Console` | `L2 emerging` | 低于 Workspace | App/operator projection、current owner delta、safe actions、workspace actions 已有；GUI product truth 和 release/user-path evidence 在 App 仓，当前 latest release evidence 不能与 Workspace 的结构基线等价。 |
-| `OPL Foundry Lab` | `L2 emerging` | 低于 Workspace | Agent Lab、developer work order、risk-tier promotion、OMA 支撑已存在；品牌模块、用户可见路径、跨 agent scaleout evidence 和独立 Lab 文档体系仍不完整。 |
-| `OPL Connect` | `L2 emerging` | 低于 Workspace | Pack compiler、interfaces、skill sync、module install、release docs 已有；外部 surface 和 release/install evidence 分散，尚未形成统一 `Connect` 品牌和 drift/release matrix。 |
+| `OPL Charter` | `L4_structural_baseline` | 达到 Workspace | 已有品牌文档、registry entry、surface-budget/registry refs、统一 `opl brand-modules` CLI、App/descriptor-only projection、validation 和 forbidden authority flags。 |
+| `OPL Atlas` | `L4_structural_baseline` | 达到 Workspace | Domain descriptors、actions、stages、generated interfaces 与 conformance 已折入品牌 registry 和统一 inspection surface。 |
+| `OPL Workspace` | `L4_structural_baseline` | 基线 | 保持 Workspace topology/schema、CLI/App action、validation/doctor、interfaces 和 docs/status foldback。 |
+| `OPL Stagecraft` | `L4_structural_baseline` | 达到 Workspace | StageRun/cognitive kernel/stage manifest/receipt/blocker refs 已折入 registry、CLI、descriptor 和 validation gates。 |
+| `OPL Runway` | `L4_structural_baseline` | 达到 Workspace | Runtime manager、Temporal provider、typed queue、attempt ledger、provider SLO refs 已折入 registry、CLI、operator projection 和 validation gates。 |
+| `OPL Vault` | `L4_structural_baseline` | 达到 Workspace | Evidence vault、state index、stage artifact runtime、receipt/blocker refs 已折入 registry、CLI、operator projection 和 validation gates。 |
+| `OPL Console` | `L4_structural_baseline` | 达到 Workspace | App state/action、current owner delta、operator projection 与 safe action shell 已作为 Console refs-only module surface 登记。 |
+| `OPL Foundry Lab` | `L4_structural_baseline` | 达到 Workspace | Agent Lab、Foundry Agent series、scaffold/conformance/readiness/default-caller refs 已作为 Lab module surface 登记。 |
+| `OPL Connect` | `L4_structural_baseline` | 达到 Workspace | CLI/Skill/module/package/generated interface/release discipline refs 已作为 Connect descriptor/distribution surface 登记。 |
 
 ## L5 规划
 
@@ -56,30 +58,29 @@ Machine boundary: 本文是人读现状对照。当前完成度、计数、recei
 - `Foundry Lab`: agent improvement loop 能从 evidence -> work order -> canary -> promotion/rollback -> owner acceptance 持续闭环。
 - `Connect`: CLI/MCP/Skill/OpenAI/AI SDK/App/release/install surfaces 从同一 contract 派生，并有 drift matrix、release evidence 和安装证据。
 
-## 优先级建议
+## 当前机器验收
 
-第一优先级是把 `Charter` 和 `Atlas` 补到 `L3/L4`。原因是它们是顶层治理和目录真相，能降低后续模块维护成本：
+当前验收入口：
 
-- `Charter`: 增加品牌模块注册表、authority matrix、term lifecycle policy、ADR/RFC 模板。
-- `Atlas`: 把 descriptors、actions、stages、interfaces、lifecycle state 收成统一 catalog graph 和 `opl atlas` 入口。
+```text
+opl brand-modules list --json
+opl brand-modules inspect --module workspace --json
+opl brand-modules maturity --json
+opl brand-modules validate --json
+opl brand-modules interfaces --json
+opl contract validate --json
+```
 
-第二优先级是把 `Vault` 和 `Runway` 品牌化，而不是继续堆 runtime/evidence 细节：
+`opl brand-modules maturity --json` 当前应读为 `module_count=9`、`l4_structural_baseline_count=9`、`below_baseline_module_ids=[]`。
 
-- `Runway`: 将 provider、queue、attempt、lease、human gate、retry/dead-letter、runtime blocker 收成用户能理解的 durable run 模块。
-- `Vault`: 将 evidence、receipt、typed blocker、artifact lineage、restore proof、no-regression 收成统一 record/verify/list 模块。
-
-第三优先级是 `Console`、`Foundry Lab`、`Connect`：
-
-- `Console` 需要 App release/user-path evidence 支撑，否则容易只有 projection 没有真实用户体验。
-- `Foundry Lab` 需要更多真实 agent improvement loop 和 canary evidence。
-- `Connect` 需要把 CLI/MCP/Skill/OpenAI/AI SDK/App/release 分发统一成 generated surface + drift manifest + install evidence matrix。
+详细 rollout 和并行写集见 [OPL 品牌模块 L4 一步到位计划](../../active/brand-module-l4-rollout-plan.md)。
 
 ## Forbidden Claims
 
-- `Workspace L4` 不等于 MAS/MAG/RCA/OMA domain ready。
+- 九模块 `L4_structural_baseline` 不等于 MAS/MAG/RCA/OMA domain ready。
 - 任何模块的 `L5` 都不能由 docs foldback、conformance pass、provider completion、verified ledger 或 App projection 单独声明。
-- `Stagecraft L3` 不等于 quality gate 全部真实闭合。
-- `Runway L3` 不等于 production long-soak complete。
-- `Vault L3` 不等于 artifact/memory body authority 已迁给 OPL。
-- `Console L2` 不等于 App release ready。
-- `Connect L2` 不等于所有安装/分发路径 ready。
+- `Stagecraft L4` 不等于 quality gate 全部真实闭合。
+- `Runway L4` 不等于 production long-soak complete。
+- `Vault L4` 不等于 artifact/memory body authority 已迁给 OPL。
+- `Console L4` 不等于 App release ready。
+- `Connect L4` 不等于所有安装/分发路径已有真实 release/install evidence。

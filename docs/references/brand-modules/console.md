@@ -30,6 +30,17 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 App con
 | `action_route` | owner-aware safe action、App action 或 human gate action。 |
 | `diagnostic_drilldown` | full detail、audit refs、provider trace、legacy cleanup。 |
 
+## L4 结构基线 refs
+
+| 层面 | 目标 refs |
+| --- | --- |
+| `contract` | App action contract、public surface index、workspace action contract、runtime projection contract。 |
+| `CLI` | `opl brand-modules inspect --module console --json`、`opl app state`、`opl app action execute`、`opl runtime app-operator-drilldown`。 |
+| `App` | `current_owner`、`workspace_ensure`、`workspace_validate`、`workspace_doctor`、`blocker_drilldown`、`repair_route` action。 |
+| `descriptor` | App action descriptor、operator drilldown descriptor、task entry descriptor、diagnostic drilldown descriptor。 |
+| `validation` | App active shell validation、action catalog conformance、user-path smoke、release artifact evidence。 |
+| `status` | `docs/status.md`、`docs/product/opl-public-surface-index.md`、App release/user-path evidence。 |
+
 ## 接口与文档
 
 理想接口：
@@ -37,7 +48,6 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 App con
 ```text
 opl app state --profile fast --json
 opl app state --profile full --json
-opl app action list --json
 opl app action execute --action <id> --payload <json> --json
 opl runtime app-operator-drilldown --json
 ```
@@ -51,17 +61,27 @@ one-person-lab-app/docs/product/*
 one-person-lab-app/contracts/*
 ```
 
-## 不做什么
+## Authority boundary
+
+- Console 持有 App/operator projection、safe action routing 和用户检查面的展示边界。
+- OPL Framework 持有 runtime projection、workspace/read-model/action catalog 的机器边界。
+- Domain agent 持有 domain truth、quality verdict、owner receipt 和 artifact authority。
+- App release/user-path evidence 只证明 Console 用户路径可用，不替代 runtime long-soak 或 domain ready。
+
+## Forbidden claims
 
 - 不把 AionUI backend / Agent selector 暴露为普通用户 truth。
 - 不直接读写 SQLite sidecar。
 - 不签 owner receipt 或 quality verdict。
 - 不把 release-ready 写成 runtime-ready。
+- 不把 Console projection 写成 MAS/MAG/RCA/OMA 已完成。
+- 不把 App action 可点击写成 owner 已接受。
 
-## 成功标准
+## L4 structural baseline 成功标准
 
 - 用户能从首屏知道下一步等谁、要交付什么、产物在哪里。
 - App action 与 CLI/action catalog 同源。
 - Full drilldown 可解释 blocker，但默认不让用户被 raw evidence 淹没。
 - Release/user-path evidence 足够支撑“用户真的能用”。
-
+- 合同、CLI、App action、descriptor、validation 和 status refs 能互相追踪。
+- Console 的 ready 声明能明确区分 App readiness、runtime readiness 和 domain owner acceptance。

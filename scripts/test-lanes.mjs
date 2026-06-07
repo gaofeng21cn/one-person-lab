@@ -84,6 +84,7 @@ const fastTestFiles = [
   'tests/src/family-incident-learning-loop.test.ts',
   'tests/src/family-product-operator-projection.test.ts',
   'tests/src/quality-details.test.ts',
+  'tests/src/cli/cases/brand-modules.test.ts',
 ];
 
 const readModelGateTestFiles = [

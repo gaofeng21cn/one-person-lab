@@ -31,6 +31,17 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 contrac
 | `release_channel` | Homebrew、DMG、Full bundle、Docker/WebUI、GHCR 等分发入口。 |
 | `generated_drift_manifest` | source input 与 generated artifact 的对齐状态。 |
 
+## L4 结构基线 refs
+
+| 层面 | 目标 refs |
+| --- | --- |
+| `contract` | domain pack compiler contract、public surface index、generated interface schema、release package manifest。 |
+| `CLI` | `opl agents interfaces`、`opl actions export`、`opl skill sync`、`opl module install`、`opl system startup-maintenance`。 |
+| `App` | App action descriptors、module health、release/update surface、installed agent capability projection。 |
+| `descriptor` | CLI spec、MCP descriptor、skill/plugin manifest、OpenAI tool descriptor、AI SDK tool descriptor、App action descriptor。 |
+| `validation` | descriptor drift check、generated artifact fingerprint check、clean install/upgrade smoke、skill sync verify、module health verify。 |
+| `status` | `docs/status.md`、release package docs、public surface index、install evidence matrix。 |
+
 ## 接口与文档
 
 理想接口：
@@ -53,17 +64,27 @@ contracts/opl-framework/domain-pack-compiler-contract.json
 contracts/opl-framework/public-surface-index.json
 ```
 
-## 不做什么
+## Authority boundary
+
+- Connect 持有 external surface generation、descriptor distribution、install transport 和 drift evidence。
+- Atlas、Stagecraft、Workspace、Runway、Vault 持有被派生 surface 的 canonical source。
+- App release、Homebrew、Full bundle、skill/plugin sync 只证明 transport/install path；domain ready 继续归 domain owner 和 runtime evidence。
+- 非默认 executor adapter 只能通过显式 descriptor、binding 和 validation refs 暴露。
+
+## Forbidden claims
 
 - 不把 generated descriptor 当成 handler implementation。
 - 不让 wrapper / facade 成为第二 truth。
 - 不把 release/install pass 写成 App release-ready 之外的 domain ready。
 - 不把 Homebrew transport 写成 semantic authority。
+- 不把 Skill/MCP/OpenAI/AI SDK descriptor 存在写成 handler 可用。
+- 不把单一 channel 安装成功写成全渠道 release complete。
 
-## 成功标准
+## L4 structural baseline 成功标准
 
 - CLI/MCP/Skill/OpenAI/AI SDK/App action 语义一致。
 - Generated surface drift 能被机器发现。
 - Clean install / upgrade / skill sync / module health 有明确 evidence。
 - 非默认 executor adapter 和 diagnostic tools 只在显式绑定下出现。
-
+- 合同、CLI、App action、descriptor、validation 和 status refs 能互相追踪。
+- 每个 release/install 声明都能区分 transport readiness、semantic surface consistency 和 domain owner readiness。

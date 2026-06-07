@@ -197,6 +197,12 @@ test('validateFrameworkContracts returns a stable summary for the required contr
         schema_version: contracts.agentWorkspaceNorm.version,
         status: 'valid',
       },
+      {
+        contract_id: 'brand_module_registry',
+        file: path.join(contractsDir, 'brand-module-registry.json'),
+        schema_version: contracts.brandModuleRegistry.version,
+        status: 'valid',
+      },
     ],
   });
 });
@@ -246,6 +252,12 @@ test('contract validate returns a stable machine-readable contract summary', () 
           contract_id: 'agent_workspace_norm',
           file: path.join(contractsDir, 'agent-workspace-norm-contract.json'),
           schema_version: contracts.agentWorkspaceNorm.version,
+          status: 'valid',
+        },
+        {
+          contract_id: 'brand_module_registry',
+          file: path.join(contractsDir, 'brand-module-registry.json'),
+          schema_version: contracts.brandModuleRegistry.version,
           status: 'valid',
         },
       ],

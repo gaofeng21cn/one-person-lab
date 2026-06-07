@@ -260,6 +260,70 @@ export interface AgentWorkspaceNormContract {
   };
 }
 
+export type BrandModuleId =
+  | 'charter'
+  | 'atlas'
+  | 'workspace'
+  | 'stagecraft'
+  | 'runway'
+  | 'vault'
+  | 'console'
+  | 'foundry-lab'
+  | 'connect';
+
+export type BrandModuleMaturityLevel = 'L4_structural_baseline';
+
+export interface BrandModuleAuthorityBoundary {
+  can_claim_domain_ready: false;
+  can_claim_quality_verdict: false;
+  can_claim_artifact_authority: false;
+  can_claim_production_ready: false;
+  can_write_domain_truth: false;
+  can_write_memory_body: false;
+  can_mutate_artifact_body: false;
+  can_sign_owner_receipt: false;
+  can_create_typed_blocker: false;
+  can_replace_domain_owner: false;
+  can_replace_ai_executor_planning: false;
+}
+
+export interface BrandModuleRegistryEntry {
+  module_id: BrandModuleId;
+  brand_name: string;
+  owner: string;
+  purpose: string;
+  state: string;
+  machine_boundary: string;
+  module_doc_ref: string;
+  contract_refs: string[];
+  cli_surfaces: string[];
+  app_surfaces: string[];
+  descriptor_surfaces: string[];
+  validation_surfaces: string[];
+  status_doc_refs: string[];
+  l4_gates: string[];
+  maturity_level: BrandModuleMaturityLevel;
+  authority_boundary: BrandModuleAuthorityBoundary;
+  forbidden_claims: string[];
+}
+
+export interface BrandModuleRegistryContract {
+  version: string;
+  scope: string;
+  owner: string;
+  purpose: string;
+  state: string;
+  machine_boundary: string;
+  baseline_module_id: BrandModuleId;
+  maturity_model: Array<{
+    level: BrandModuleMaturityLevel;
+    definition: string;
+    required_gates: string[];
+  }>;
+  external_reference_principles: string[];
+  modules: BrandModuleRegistryEntry[];
+}
+
 export interface WorkstreamsRegistry {
   version: string;
   workstreams: WorkstreamContract[];
@@ -287,6 +351,7 @@ export interface FrameworkContracts {
   taskTopology: TaskTopologyContract;
   publicSurfaceIndex: PublicSurfaceIndexContract;
   agentWorkspaceNorm: AgentWorkspaceNormContract;
+  brandModuleRegistry: BrandModuleRegistryContract;
 }
 
 export interface ContractValidationEntry {
@@ -296,7 +361,8 @@ export interface ContractValidationEntry {
     | 'stage_selection_vocabulary'
     | 'task_topology'
     | 'public_surface_index'
-    | 'agent_workspace_norm';
+    | 'agent_workspace_norm'
+    | 'brand_module_registry';
   file: string;
   schema_version: string;
   status: 'valid';
