@@ -5,6 +5,7 @@ import {
   path,
   runCli,
   test,
+  writeMasCleanRunnerFixture,
 } from '../helpers.ts';
 import { buildAppStageRunCockpit } from '../../../../src/app-state-stage-run-cockpit.ts';
 
@@ -450,6 +451,7 @@ test('App StageRun cockpit folds MAS owner-answer projection when it matches OPL
   const profilePath = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles', 'dm.workspace.toml');
   fs.mkdirSync(path.dirname(profilePath), { recursive: true });
   fs.writeFileSync(profilePath, 'workspace_name = "dm-cvd-mortality-risk"\n', 'utf8');
+  writeMasCleanRunnerFixture(workspaceRoot);
   try {
     bindMasWorkspaceForAuthorization({ stateRoot, workspaceRoot, profilePath });
     const record = runCli([

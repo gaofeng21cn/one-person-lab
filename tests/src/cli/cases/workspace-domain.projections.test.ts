@@ -58,7 +58,7 @@ test('workspace ensure refreshes generated refs when reusing an active binding',
     assert.equal(
       ensured.workspace_initialization.written_generated_files.includes(path.join(
         workspacePath,
-        'deliverables',
+        'projects',
         'deck-001',
         'artifacts',
         'stage_outputs',
@@ -70,7 +70,7 @@ test('workspace ensure refreshes generated refs when reusing an active binding',
     assert.equal(fs.statSync(path.join(workspacePath, 'workspace_resource_inventory.json')).isFile(), true);
     assert.equal(fs.statSync(path.join(
       workspacePath,
-      'deliverables',
+      'projects',
       'deck-001',
       'artifacts',
       'stage_outputs',
@@ -123,7 +123,7 @@ test('workspace validate and doctor inspect generated workspace topology semanti
 
     fs.rmSync(path.join(
       workspacePath,
-      'deliverables',
+      'projects',
       'deck-001',
       'artifacts',
       'stage_outputs',
@@ -131,7 +131,7 @@ test('workspace validate and doctor inspect generated workspace topology semanti
     ));
     fs.rmSync(path.join(
       workspacePath,
-      'deliverables',
+      'projects',
       'deck-001',
       'artifacts',
       'stage_outputs',
@@ -187,7 +187,7 @@ test('workspace adopt apply materializes OPL metadata and generated inspection r
     assert.equal(fs.statSync(path.join(workspacePath, 'workspace_resource_inventory.json')).isFile(), true);
     assert.equal(fs.statSync(path.join(
       workspacePath,
-      'deliverables',
+      'projects',
       'deck-001',
       'artifacts',
       'stage_outputs',
@@ -224,7 +224,7 @@ test('workspace upgrade restores generated manifests without moving project root
     fs.rmSync(path.join(workspacePath, 'workspace_map.json'));
     fs.rmSync(path.join(
       workspacePath,
-      'deliverables',
+      'projects',
       'grant-001',
       'artifacts',
       'stage_outputs',
@@ -232,7 +232,7 @@ test('workspace upgrade restores generated manifests without moving project root
     ));
     const currentPointerPath = path.join(
       workspacePath,
-      'deliverables',
+      'projects',
       'grant-001',
       'artifacts',
       'stage_outputs',
@@ -264,7 +264,7 @@ test('workspace upgrade restores generated manifests without moving project root
     assert.equal(fs.statSync(path.join(workspacePath, 'workspace_map.json')).isFile(), true);
     assert.equal(fs.statSync(path.join(
       workspacePath,
-      'deliverables',
+      'projects',
       'grant-001',
       'artifacts',
       'stage_outputs',
@@ -307,7 +307,7 @@ test('workspace doctor blocks invalid current pointer refs', () => {
     const workspacePath = path.join(workspaceRoot, 'nsfc-p2c');
     const pointerPath = path.join(
       workspacePath,
-      'deliverables',
+      'projects',
       'grant-001',
       'artifacts',
       'stage_outputs',

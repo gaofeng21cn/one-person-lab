@@ -165,15 +165,19 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(foundryAgentSeries.workspace_topology_profile.default_profiles.one_off.series_capable_skeleton, true);
     assert.equal(
       foundryAgentSeries.workspace_topology_profile.default_profiles.one_off.project_collection_path,
-      'deliverables',
+      'projects',
     );
     assert.equal(foundryAgentSeries.workspace_topology_profile.default_project_stage_outputs_root, 'artifacts/stage_outputs');
     assert.equal(foundryAgentSeries.workspace_topology_profile.default_profiles.mas_portfolio.workspace_mode, 'portfolio');
-    assert.equal(foundryAgentSeries.workspace_topology_profile.default_profiles.mas_portfolio.project_collection_path, 'studies');
+    assert.equal(foundryAgentSeries.workspace_topology_profile.default_profiles.mas_portfolio.project_collection_path, 'projects');
     assert.equal(foundryAgentSeries.workspace_topology_profile.default_profiles.rca_series.workspace_mode, 'series');
     assert.equal(
       foundryAgentSeries.workspace_topology_profile.default_profiles.rca_series.project_collection_path,
-      'deliverables',
+      'projects',
+    );
+    assert.deepEqual(
+      foundryAgentSeries.workspace_topology_profile.workspace_initialization_policy.legacy_project_collection_aliases,
+      ['deliverables', 'studies'],
     );
     assert.equal(foundryAgentSeries.domain_adapter_policy.no_parallel_progress_schema, true);
     assert.equal(foundryAgentSeries.domain_adapter_policy.no_parallel_blocker_lineage_schema, true);

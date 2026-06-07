@@ -165,7 +165,7 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     assert.equal(sharedManifest.body_authority.manifest_is_index_only, true);
     const stageOutputsManifest = readJsonFile(path.join(
       workspacePath,
-      'deliverables',
+      'projects',
       'deck-001',
       'artifacts',
       'stage_outputs',
@@ -183,7 +183,7 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     );
     const stageOutputsIndex = readJsonFile(path.join(
       workspacePath,
-      'deliverables',
+      'projects',
       'deck-001',
       'artifacts',
       'stage_outputs',
@@ -202,7 +202,7 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     assert.equal(stageOutputsIndex.authority_boundary.index_can_claim_stage_complete, false);
     const currentStagePointer = readJsonFile(path.join(
       workspacePath,
-      'deliverables',
+      'projects',
       'deck-001',
       'artifacts',
       'stage_outputs',

@@ -233,7 +233,7 @@ test('workspace doctor blocks MAS alias drift and invalid stage lifecycle drift'
     assert.equal(restored.workspace_upgrade.status, 'applied');
     const currentPointerPath = path.join(
       workspacePath,
-      'studies',
+      'projects',
       'DM002',
       'artifacts',
       'stage_outputs',
