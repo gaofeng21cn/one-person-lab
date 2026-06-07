@@ -2,9 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from './contracts.ts';
+import {
+  AGENT_WORKSPACE_NORM_CONTRACT_REF,
+  buildAgentWorkspaceNormProjection,
+} from './agent-workspace-norm.ts';
 import { STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT } from './standard-domain-agent-scaffold-constants-parts/foundry-series.ts';
 import { readOplWorkspaceRoot } from './system-preferences.ts';
-import type { FrameworkContracts } from './types.ts';
+import type { AgentWorkspaceNormContract, FrameworkContracts } from './types.ts';
 import {
   findWorkspaceAgentProfile,
   type WorkspaceAgentProfile,
@@ -423,50 +427,44 @@ function buildWorkspaceYaml(input: {
 }
 
 function buildInterfaceProjection(
+  contract: AgentWorkspaceNormContract,
   agent: WorkspaceAgentProfile,
   workspacePath: string,
   projectId: string,
 ) {
-  const initExample = [
-    'opl', 'workspace', 'init', '--agent', agent.agent_id, '--workspace', workspacePath, '--project-id', projectId,
-  ].join(' ');
-  const ensureExample = [
-    'opl', 'workspace', 'ensure', '--agent', agent.agent_id, '--project-id', projectId,
-  ].join(' ');
+  const initExample = `${contract.explicit_initialization.command} --agent ${agent.agent_id} --workspace ${workspacePath} --project-id ${projectId}`;
+  const ensureExample = `${contract.default_workspace_precondition.command} --agent ${agent.agent_id} --project-id ${projectId}`;
   return {
     surface_kind: 'opl_workspace_initialize_interface_projection',
     owner: 'one-person-lab',
-    action_id: 'opl_workspace_ensure',
-    required_inputs: ['agent_id'],
-    optional_inputs: ['workspace_path_or_workspace_root', 'workspace_id', 'project_id', 'mode', 'title', 'dry_run', 'force', 'bind'],
+    action_id: contract.default_workspace_precondition.action_id,
+    required_inputs: contract.default_workspace_precondition.required_inputs,
+    optional_inputs: contract.default_workspace_precondition.optional_inputs,
+    norm_contract_ref: AGENT_WORKSPACE_NORM_CONTRACT_REF,
     cli: {
-      command: 'opl workspace init',
-      ensure_command: 'opl workspace ensure',
+      command: contract.explicit_initialization.command,
+      ensure_command: contract.default_workspace_precondition.command,
       example: initExample,
       ensure_example: ensureExample,
     },
     mcp: {
-      tool_name: 'opl_workspace_ensure',
-      execution: 'delegate_to_opl_cli',
-      command_contract_id: 'opl_workspace_ensure',
-      descriptor_only: true,
-      public_runtime: false,
+      ...contract.descriptor_delegates.mcp,
+      command_contract_id: contract.default_workspace_precondition.action_id,
     },
     skill: {
-      intent: 'ensure_opl_workspace',
-      command_contract_id: 'opl_workspace_ensure',
+      ...contract.descriptor_delegates.skill,
       instruction: 'Call the OPL workspace ensure action before running a MAS/MAG/RCA/OMA task.',
     },
     openai: {
-      tool_name: 'opl_workspace_ensure',
+      ...contract.descriptor_delegates.openai,
     },
     ai_sdk: {
-      tool_name: 'oplWorkspaceEnsure',
+      ...contract.descriptor_delegates.ai_sdk,
     },
   };
 }
 
-export function buildWorkspaceInitializeInterfaces() {
+export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts) {
   return {
     version: 'g2',
     workspace_interfaces: {
@@ -481,53 +479,51 @@ export function buildWorkspaceInitializeInterfaces() {
         creates_typed_blocker: false,
         mutates_artifact_body: false,
       },
+      workspace_norm: buildAgentWorkspaceNormProjection({
+        contract: contracts.agentWorkspaceNorm,
+        agentId: null,
+      }),
       command_contract: {
-        action_id: 'opl_workspace_ensure',
-        command: 'opl workspace ensure',
-        initializer_command: 'opl workspace init',
-        required_inputs: ['agent_id'],
-        optional_inputs: ['workspace_path_or_workspace_root', 'workspace_id', 'project_id', 'mode', 'title', 'dry_run', 'force', 'bind'],
+        action_id: contracts.agentWorkspaceNorm.default_workspace_precondition.action_id,
+        command: contracts.agentWorkspaceNorm.default_workspace_precondition.command,
+        initializer_command: contracts.agentWorkspaceNorm.explicit_initialization.command,
+        required_inputs: contracts.agentWorkspaceNorm.default_workspace_precondition.required_inputs,
+        optional_inputs: contracts.agentWorkspaceNorm.default_workspace_precondition.optional_inputs,
+        norm_contract_ref: AGENT_WORKSPACE_NORM_CONTRACT_REF,
       },
-      supported_agents: ['mas', 'mag', 'rca', 'oma'],
+      supported_agents: contracts.agentWorkspaceNorm.supported_agents,
       surfaces: {
         cli: {
-          command: 'opl workspace ensure',
-          initializer_command: 'opl workspace init',
+          command: contracts.agentWorkspaceNorm.default_workspace_precondition.command,
+          initializer_command: contracts.agentWorkspaceNorm.explicit_initialization.command,
           usage:
             'opl workspace ensure --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio]',
         },
         mcp: {
-          tool_name: 'opl_workspace_ensure',
-          execution: 'delegate_to_opl_cli',
-          descriptor_only: true,
-          public_runtime: false,
+          ...contracts.agentWorkspaceNorm.descriptor_delegates.mcp,
           input_schema_ref: 'opl://workspace/ensure/input.schema.json',
-          delegates_to: 'opl workspace ensure',
-          fallback_initializer: 'opl workspace init',
+          delegates_to: contracts.agentWorkspaceNorm.default_workspace_precondition.command,
+          fallback_initializer: contracts.agentWorkspaceNorm.explicit_initialization.command,
         },
         skill: {
-          intent: 'ensure_opl_workspace',
-          command_contract_id: 'opl_workspace_ensure',
+          ...contracts.agentWorkspaceNorm.descriptor_delegates.skill,
           instruction:
             'Use this OPL-owned ensure action before MAS/MAG/RCA/OMA task execution; it reuses an active workspace binding or initializes the default topology.',
         },
         app: {
-          action_id: 'workspace_ensure',
-          initializer_action_id: 'workspace_initialize',
+          action_id: contracts.agentWorkspaceNorm.default_workspace_precondition.app_action_id,
+          initializer_action_id: contracts.agentWorkspaceNorm.explicit_initialization.app_action_id,
           route: 'opl app action execute --action workspace_ensure --payload <json>',
         },
-        openai: {
-          tool_name: 'opl_workspace_ensure',
-        },
-        ai_sdk: {
-          tool_name: 'oplWorkspaceEnsure',
-        },
+        openai: contracts.agentWorkspaceNorm.descriptor_delegates.openai,
+        ai_sdk: contracts.agentWorkspaceNorm.descriptor_delegates.ai_sdk,
       },
     },
   };
 }
 
 function buildWorkspaceIndex(input: {
+  contracts: FrameworkContracts;
   workspaceId: string;
   workspacePath: string;
   title: string | null;
@@ -588,7 +584,16 @@ function buildWorkspaceIndex(input: {
       opl_can_create_typed_blocker: false,
       runtime_state_counts_as_user_default_surface: false,
     },
-    interface_projection: buildInterfaceProjection(input.agent, input.workspacePath, input.projectId),
+    workspace_norm: buildAgentWorkspaceNormProjection({
+      contract: input.contracts.agentWorkspaceNorm,
+      agentId: input.agent.agent_id,
+    }),
+    interface_projection: buildInterfaceProjection(
+      input.contracts.agentWorkspaceNorm,
+      input.agent,
+      input.workspacePath,
+      input.projectId,
+    ),
   };
 }
 
@@ -624,6 +629,7 @@ export function initializeWorkspace(
   const createdDirectories: string[] = [];
 
   const workspaceIndex = buildWorkspaceIndex({
+    contracts,
     workspaceId,
     workspacePath,
     title,
@@ -729,6 +735,7 @@ export function initializeWorkspace(
         stage_outputs_root: stageOutputsRootRef,
       },
       indexed_projects: mergedProjects.projects,
+      workspace_norm: workspaceIndex.workspace_norm,
       user_inspection: workspaceIndex.user_inspection,
       authority_boundary: workspaceIndex.authority_boundary,
       interface_projection: workspaceIndex.interface_projection,
@@ -794,7 +801,16 @@ export function ensureWorkspace(
         },
         project: indexedProject,
         binding: activeBinding,
-        interface_projection: buildInterfaceProjection(agent, activeWorkspacePath, projectId),
+        workspace_norm: buildAgentWorkspaceNormProjection({
+          contract: contracts.agentWorkspaceNorm,
+          agentId: agent.agent_id,
+        }),
+        interface_projection: buildInterfaceProjection(
+          contracts.agentWorkspaceNorm,
+          agent,
+          activeWorkspacePath,
+          projectId,
+        ),
       },
     };
   }

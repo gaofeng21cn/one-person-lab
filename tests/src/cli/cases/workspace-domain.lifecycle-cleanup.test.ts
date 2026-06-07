@@ -4,6 +4,7 @@ import {
 } from '../../../../src/family-domain-agent-skeleton.ts';
 import type { DomainManifestCatalogEntry } from '../../../../src/domain-manifest/types.ts';
 import type { FrameworkContracts } from '../../../../src/types.ts';
+import { MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT } from './agent-workspace-norm-fixture.ts';
 import {
   assert,
   buildManifestCommand,
@@ -107,6 +108,7 @@ const contracts: FrameworkContracts = {
     surface_categories: [],
     surfaces: [],
   },
+  agentWorkspaceNorm: MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT,
 };
 
 function manifestWithCleanupResidue() {

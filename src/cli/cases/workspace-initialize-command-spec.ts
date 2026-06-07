@@ -71,7 +71,7 @@ export function buildWorkspaceInitializeCommandSpecs(
       examples: ['opl workspace interfaces'],
       handler: (args) => {
         assertNoArgs(args, specs['workspace interfaces']);
-        return buildWorkspaceInitializeInterfaces();
+        return buildWorkspaceInitializeInterfaces(getContracts());
       },
     },
   };

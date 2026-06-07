@@ -15,6 +15,7 @@ import {
   assertCurrentOwnerDeltaReadModel,
   assertCurrentOwnerDeltaToplineNextAction,
 } from './owner-payload-workorder-assertions.ts';
+import { MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT } from './agent-workspace-norm-fixture.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -54,6 +55,7 @@ const contracts = {
     surface_categories: [],
     surfaces: [],
   },
+  agentWorkspaceNorm: MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT,
 } as FrameworkContracts;
 
 async function withIsolatedOplState<T>(

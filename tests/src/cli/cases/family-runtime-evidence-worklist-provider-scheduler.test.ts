@@ -4,6 +4,7 @@ import {
 } from '../helpers.ts';
 import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/family-runtime-evidence-worklist.ts';
 import type { FrameworkContracts } from '../../../../src/types.ts';
+import { MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT } from './agent-workspace-norm-fixture.ts';
 
 const minimalContracts = {
   contractsDir: '/tmp/opl-scheduler-guard-worklist-contracts',
@@ -41,6 +42,7 @@ const minimalContracts = {
     surface_categories: [],
     surfaces: [],
   },
+  agentWorkspaceNorm: MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT,
 } as FrameworkContracts;
 
 function schedulerRoute(action: string, actionKind: string) {

@@ -160,6 +160,106 @@ export interface PublicSurfaceIndexContract {
   surfaces: PublicSurfaceContractEntry[];
 }
 
+export interface AgentWorkspaceNormContract {
+  surface_kind: string;
+  version: string;
+  norm_id: string;
+  owner: string;
+  scope: string;
+  machine_boundary: string;
+  supported_agents: string[];
+  default_workspace_precondition: {
+    action_id: string;
+    command: string;
+    app_action_id: string;
+    required_inputs: string[];
+    optional_inputs: string[];
+    must_run_before_domain_task_when_no_active_binding: boolean;
+    reuse_active_binding_first: boolean;
+    initialize_missing_workspace: boolean;
+    append_missing_project_in_compatible_series_or_portfolio: boolean;
+    default_entry_for_agents: boolean;
+  };
+  explicit_initialization: {
+    command: string;
+    app_action_id: string;
+    role: string;
+    default_entry_for_agents: boolean;
+  };
+  descriptor_delegates: {
+    mcp: {
+      tool_name: string;
+      execution: string;
+      descriptor_only: boolean;
+      public_runtime: boolean;
+    };
+    skill: {
+      intent: string;
+      command_contract_id: string;
+    };
+    openai: {
+      tool_name: string;
+    };
+    ai_sdk: {
+      tool_name: string;
+    };
+  };
+  topology_contract: {
+    contract_ref: string;
+    profile_id: string;
+    topology_model: string[];
+    project_stage_outputs_root: string;
+    default_project_collection_path: string;
+    workspace_modes: string[];
+    series_capable_one_off_skeleton: boolean;
+  };
+  domain_topology_profiles: Record<string, {
+    profile: string;
+    workspace_mode: string;
+    project_kind: string;
+    project_collection_path: string;
+    shared_resource_roots: string[];
+  }>;
+  user_inspection: {
+    ordinary_user_default_surface: string;
+    project_stage_outputs_pattern: string;
+    workspace_index_file: string;
+    workspace_config_file: string;
+    runtime_state_is_default_user_surface: boolean;
+    product_views_are_stage_outputs: boolean;
+  };
+  registry_policy: {
+    writes_opl_workspace_registry: boolean;
+    binding_owner: string;
+    domain_repo_can_write_opl_registry: boolean;
+  };
+  runtime_state_boundary: {
+    role: string;
+    runtime_state_can_be_canonical_project_root: boolean;
+    runtime_state_can_close_stage: boolean;
+    runtime_state_can_replace_owner_receipt_or_typed_blocker: boolean;
+  };
+  authority_boundary: {
+    opl_can_define_topology_contract: boolean;
+    opl_can_project_workspace_refs: boolean;
+    opl_can_write_domain_truth: boolean;
+    opl_can_write_memory_body: boolean;
+    opl_can_mutate_artifact_body: boolean;
+    opl_can_create_owner_receipt: boolean;
+    opl_can_create_typed_blocker: boolean;
+    opl_can_authorize_quality_or_export: boolean;
+    runtime_state_counts_as_user_default_surface: boolean;
+    conformance_pass_counts_as_domain_ready: boolean;
+  };
+  conformance_policy: {
+    family_conformance_must_report_workspace_norm: boolean;
+    workspace_norm_pass_is_structural_only: boolean;
+    workspace_norm_pass_can_claim_domain_ready: boolean;
+    workspace_norm_pass_can_claim_artifact_or_quality_ready: boolean;
+    blocked_reasons: string[];
+  };
+}
+
 export interface WorkstreamsRegistry {
   version: string;
   workstreams: WorkstreamContract[];
@@ -186,6 +286,7 @@ export interface FrameworkContracts {
   stageSelectionVocabulary: StageSelectionVocabularyContract;
   taskTopology: TaskTopologyContract;
   publicSurfaceIndex: PublicSurfaceIndexContract;
+  agentWorkspaceNorm: AgentWorkspaceNormContract;
 }
 
 export interface ContractValidationEntry {
@@ -194,7 +295,8 @@ export interface ContractValidationEntry {
     | 'domains'
     | 'stage_selection_vocabulary'
     | 'task_topology'
-    | 'public_surface_index';
+    | 'public_surface_index'
+    | 'agent_workspace_norm';
   file: string;
   schema_version: string;
   status: 'valid';

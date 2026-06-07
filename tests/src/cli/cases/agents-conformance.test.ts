@@ -282,6 +282,16 @@ test('agents conformance reports structural readiness separately from production
     repo.stage_run_canary_evidence_checks.closeout.same_attempt_self_review,
     false,
   );
+  assert.equal(repo.workspace_norm_checks.status, 'passed');
+  assert.equal(repo.workspace_norm_checks.default_precondition_command, 'opl workspace ensure');
+  assert.equal(repo.workspace_norm_checks.app_action_id, 'workspace_ensure');
+  assert.equal(repo.workspace_norm_checks.descriptor_delegate_tool, 'opl_workspace_ensure');
+  assert.equal(repo.workspace_norm_checks.descriptor_delegate_is_mcp_runtime, false);
+  assert.equal(repo.workspace_norm_checks.user_default_surface, 'workspace_local_project_stage_outputs');
+  assert.equal(repo.workspace_norm_checks.runtime_state_is_default_user_surface, false);
+  assert.equal(repo.workspace_norm_checks.conformance_pass_counts_as_domain_ready, false);
+  assert.equal(repo.workspace_norm_projection.contract_ref, 'contracts/opl-framework/agent-workspace-norm-contract.json');
+  assert.equal(repo.workspace_norm_projection.default_workspace_precondition.must_run_before_domain_task_when_no_active_binding, true);
   assert.equal(
     repo.stage_run_canary_evidence_checks.authority_boundary.controlled_canary_claims_live_domain_progress,
     false,

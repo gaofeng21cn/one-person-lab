@@ -1,3 +1,5 @@
+import type { AgentWorkspaceNormContract, FrameworkContracts } from './types.ts';
+
 type AppActionCatalogEntry = {
   action_id: string;
   label: string;
@@ -23,7 +25,40 @@ function annotateAppActionRoute(action: AppActionCatalogEntry) {
   };
 }
 
-export function buildActionCatalog() {
+function payloadFieldsFromWorkspaceNorm(contract: AgentWorkspaceNormContract) {
+  return contract.default_workspace_precondition.optional_inputs
+    .filter((field) => !['dry_run', 'force', 'bind'].includes(field))
+    .map((field) => field === 'workspace_path_or_workspace_root' ? 'workspace_root_optional' : field);
+}
+
+function workspaceActionsFromNorm(contract: AgentWorkspaceNormContract): AppActionCatalogEntry[] {
+  const payloadFields = [
+    ...contract.default_workspace_precondition.required_inputs,
+    ...payloadFieldsFromWorkspaceNorm(contract),
+  ];
+  return [
+    {
+      action_id: contract.explicit_initialization.app_action_id,
+      label: 'Initialize agent workspace',
+      surface: 'opl app action execute',
+      delegated_surface: contract.explicit_initialization.command,
+      payload_fields: payloadFields,
+      mutates: 'opl_workspace_topology_and_registry',
+      dry_run_supported: true,
+    },
+    {
+      action_id: contract.default_workspace_precondition.app_action_id,
+      label: 'Ensure agent workspace',
+      surface: 'opl app action execute',
+      delegated_surface: contract.default_workspace_precondition.command,
+      payload_fields: payloadFields,
+      mutates: 'opl_workspace_topology_and_registry',
+      dry_run_supported: true,
+    },
+  ];
+}
+
+export function buildActionCatalog(contracts: FrameworkContracts) {
   const codexActions: AppActionCatalogEntry[] = (['install', 'update', 'reinstall', 'remove'] as const).map((action) => ({
     action_id: `codex_${action}`,
     label: `${action[0].toUpperCase()}${action.slice(1)} Codex CLI`,
@@ -87,24 +122,7 @@ export function buildActionCatalog() {
       payload_fields: ['path'],
       mutates: 'opl_workspace_root_config',
     },
-    {
-      action_id: 'workspace_initialize',
-      label: 'Initialize agent workspace',
-      surface: 'opl app action execute',
-      delegated_surface: 'opl workspace init',
-      payload_fields: ['agent_id', 'workspace_root_optional', 'workspace_id', 'project_id', 'mode', 'title'],
-      mutates: 'opl_workspace_topology_and_registry',
-      dry_run_supported: true,
-    },
-    {
-      action_id: 'workspace_ensure',
-      label: 'Ensure agent workspace',
-      surface: 'opl app action execute',
-      delegated_surface: 'opl workspace ensure',
-      payload_fields: ['agent_id', 'workspace_root_optional', 'workspace_id', 'project_id', 'mode', 'title'],
-      mutates: 'opl_workspace_topology_and_registry',
-      dry_run_supported: true,
-    },
+    ...workspaceActionsFromNorm(contracts.agentWorkspaceNorm),
     {
       action_id: 'provider_scheduler_status',
       label: 'Read Temporal scheduler status',

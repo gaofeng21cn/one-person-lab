@@ -1,7 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from './contracts.ts';
+import { FrameworkContractError, loadFrameworkContracts } from './contracts.ts';
+import {
+  buildAgentWorkspaceNormChecks,
+  buildAgentWorkspaceNormProjection,
+} from './agent-workspace-norm.ts';
 import { buildAgentPlatformSurfaceOwnershipForRepo } from './agent-platform-surface-ownership.ts';
 import { buildGeneratedAgentInterfaces } from './domain-pack-compiler.ts';
 import { buildFunctionalPrivatizationAudit } from './functional-privatization-audit.ts';
@@ -332,7 +336,7 @@ function buildLegacyRuntimeResidueGuard(privateSurfaceChecks: ReturnType<typeof 
   };
 }
 
-function buildRepoConformance(input: RepoInput) {
+function buildRepoConformance(input: RepoInput, contracts: FrameworkContracts) {
   const repoDir = path.resolve(input.repo_dir);
   const domainId = readDomainId(repoDir, input.requested_agent_id);
   const scaffoldValidation = validateStandardDomainAgentScaffold({ repoDir }).standard_domain_agent_scaffold_validation;
@@ -350,6 +354,11 @@ function buildRepoConformance(input: RepoInput) {
   const stageOperatingPrincipleChecks = buildStageOperatingPrincipleChecks(repoDir);
   const stateIndexKernelAdoptionChecks = buildStateIndexKernelAdoptionChecks(repoDir);
   const goldenPathDefaultSurfaceBudgetChecks = buildGoldenPathDefaultSurfaceBudgetChecks(repoDir);
+  const workspaceNormChecks = buildAgentWorkspaceNormChecks(contracts.agentWorkspaceNorm);
+  const workspaceNormProjection = buildAgentWorkspaceNormProjection({
+    contract: contracts.agentWorkspaceNorm,
+    agentId: input.requested_agent_id ?? null,
+  });
   const evidenceTailClassification = buildEvidenceTailClassification(repoDir, domainId, generatedInterfaceChecks);
   const blockers = unique([
     ...scaffoldValidation.blockers,
@@ -367,6 +376,7 @@ function buildRepoConformance(input: RepoInput) {
     ...stageOperatingPrincipleChecks.blockers,
     ...stateIndexKernelAdoptionChecks.blockers,
     ...goldenPathDefaultSurfaceBudgetChecks.blockers,
+    ...workspaceNormChecks.blockers,
   ]);
 
   return {
@@ -395,15 +405,20 @@ function buildRepoConformance(input: RepoInput) {
     stage_operating_principle_checks: stageOperatingPrincipleChecks,
     state_index_kernel_adoption_checks: stateIndexKernelAdoptionChecks,
     golden_path_default_surface_budget_checks: goldenPathDefaultSurfaceBudgetChecks,
+    workspace_norm_checks: workspaceNormChecks,
+    workspace_norm_projection: workspaceNormProjection,
     evidence_tail_classification: evidenceTailClassification,
   };
 }
 
 type RepoConformanceReport = ReturnType<typeof buildRepoConformance>;
 
-export function buildStandardDomainAgentConformanceReport(args: string[]) {
+export function buildStandardDomainAgentConformanceReport(
+  args: string[],
+  contracts: FrameworkContracts = loadFrameworkContracts(),
+) {
   const repos = parseConformanceArgs(args);
-  const reports = repos.map(buildRepoConformance);
+  const reports = repos.map((repo) => buildRepoConformance(repo, contracts));
   const passedCount = reports.filter((report) => report.status === 'passed').length;
   const blockedCount = reports.length - passedCount;
   const productionEvidenceTailCount = reports.reduce(

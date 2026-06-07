@@ -4,6 +4,7 @@ import {
 } from '../helpers.ts';
 import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/family-runtime-evidence-worklist.ts';
 import type { FrameworkContracts } from '../../../../src/types.ts';
+import { MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT } from './agent-workspace-norm-fixture.ts';
 
 const contracts = {
   contractsDir: '/tmp/opl-zero-open-guard-contracts',
@@ -41,6 +42,7 @@ const contracts = {
     surface_categories: [],
     surfaces: [],
   },
+  agentWorkspaceNorm: MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT,
 } as FrameworkContracts;
 
 test('family-runtime evidence-worklist states zero open worklist items do not close blocked refs-only envelopes', async () => {

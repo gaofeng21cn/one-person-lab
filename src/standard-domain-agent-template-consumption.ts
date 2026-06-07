@@ -4,12 +4,14 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { buildAgentReadinessSummary } from './agent-readiness.ts';
+import { loadFrameworkContracts } from './contracts.ts';
 import { buildStandardDomainAgentConformanceReport } from './standard-domain-agent-conformance.ts';
 import {
   DEFAULT_TEMPLATE_CONSUMPTION_SAMPLE_DOMAINS,
   buildStandardDomainAgentScaffold,
   validateStandardDomainAgentScaffold,
 } from './standard-domain-agent-scaffold.ts';
+import type { FrameworkContracts } from './types.ts';
 
 type ScaffoldInput = {
   domainId?: string;
@@ -157,16 +159,16 @@ function buildValidatedScaffoldConsumptionRefs(input: {
   };
 }
 
-function buildSurfaceConsumptionProof(repoDir: string, domainId: string) {
+function buildSurfaceConsumptionProof(repoDir: string, domainId: string, contracts: FrameworkContracts) {
   const conformance = buildStandardDomainAgentConformanceReport([
     '--agent',
     `${domainId}=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ], contracts).standard_domain_agent_conformance;
   const conformanceSummary = record(conformance.summary);
   const readiness = buildAgentReadinessSummary([
     '--agent',
     `${domainId}=${repoDir}`,
-  ]).agent_readiness;
+  ], contracts).agent_readiness;
   const readinessSummary = record(readiness.summary);
   const readinessGates = record(readiness.gates);
   const scaffoldGate = record(readinessGates.scaffold_and_conformance);
@@ -216,7 +218,7 @@ function buildSurfaceConsumptionProof(repoDir: string, domainId: string) {
   };
 }
 
-function buildSample(input: Required<ScaffoldInput>) {
+function buildSample(input: Required<ScaffoldInput>, contracts: FrameworkContracts) {
   const domainId = normalizeDomainId(input.domainId);
   const domainLabel = domainLabelFromId(domainId, input.domainLabel);
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-agent-consumption-'));
@@ -240,7 +242,7 @@ function buildSample(input: Required<ScaffoldInput>) {
       generatedWrittenFileCount,
       validation,
     });
-    const surfaceConsumptionProof = buildSurfaceConsumptionProof(targetDir, domainId);
+    const surfaceConsumptionProof = buildSurfaceConsumptionProof(targetDir, domainId, contracts);
     const validationStatus = stringValue(validation.status);
     const evidenceFingerprint = sha256Stable({
       domain_id: domainId,
@@ -318,6 +320,7 @@ function buildSample(input: Required<ScaffoldInput>) {
 }
 
 export function buildStandardDomainAgentScaffoldConsumptionEvidence(input: ScaffoldInput = {}) {
+  const contracts = loadFrameworkContracts();
   const explicitSampleRequested = Boolean(input.domainId || input.domainLabel);
   const samples = explicitSampleRequested
     ? [{
@@ -325,7 +328,7 @@ export function buildStandardDomainAgentScaffoldConsumptionEvidence(input: Scaff
       domainLabel: domainLabelFromId(normalizeDomainId(input.domainId), input.domainLabel),
     }]
     : DEFAULT_TEMPLATE_CONSUMPTION_SAMPLE_DOMAINS;
-  const sampleEvidence = samples.map((sample) => buildSample(sample));
+  const sampleEvidence = samples.map((sample) => buildSample(sample, contracts));
   const primary = sampleEvidence[0];
   const blockedSamples = sampleEvidence.filter((sample) => sample.status !== 'passed');
   const passedSamples = sampleEvidence.filter((sample) => sample.status === 'passed');

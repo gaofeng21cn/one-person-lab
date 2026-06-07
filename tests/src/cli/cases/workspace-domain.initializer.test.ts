@@ -73,6 +73,11 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     assert.equal(workspaceIndex.projects[0].project_id, 'deck-001');
     assert.equal(workspaceIndex.projects[0].stage_outputs_root, 'deliverables/deck-001/artifacts/stage_outputs');
     assert.equal(workspaceIndex.user_inspection.default_stage_outputs, 'deliverables/deck-001/artifacts/stage_outputs');
+    assert.equal(workspaceIndex.workspace_norm.norm_id, 'opl.agent_workspace_norm.v1');
+    assert.equal(workspaceIndex.workspace_norm.default_workspace_precondition.command, 'opl workspace ensure');
+    assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.profile, 'rca_series');
+    assert.equal(workspaceIndex.workspace_norm.user_inspection.runtime_state_is_default_user_surface, false);
+    assert.equal(workspaceIndex.workspace_norm.authority_boundary.opl_can_create_owner_receipt, false);
 
     const catalog = runCli(['workspace', 'list'], {
       OPL_STATE_DIR: stateRoot,
@@ -388,6 +393,8 @@ test('workspace ensure initializes once and then reuses the active binding', () 
     assert.equal(second.workspace_initialization.workspace_path, workspacePath);
     assert.equal(second.workspace_initialization.created_directories.length, 0);
     assert.equal(second.workspace_initialization.binding.project_id, 'redcube');
+    assert.equal(second.workspace_initialization.workspace_norm.default_workspace_precondition.default_entry_for_agents, true);
+    assert.equal(second.workspace_initialization.workspace_norm.descriptor_delegates.mcp.descriptor_only, true);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -475,6 +482,9 @@ test('workspace init dry-run exposes CLI MCP and skill call surfaces without wri
     assert.equal(output.workspace_initialization.interface_projection.mcp.descriptor_only, true);
     assert.equal(output.workspace_initialization.interface_projection.mcp.public_runtime, false);
     assert.equal(output.workspace_initialization.interface_projection.skill.intent, 'ensure_opl_workspace');
+    assert.equal(output.workspace_initialization.workspace_norm.contract_ref, 'contracts/opl-framework/agent-workspace-norm-contract.json');
+    assert.equal(output.workspace_initialization.workspace_norm.default_workspace_precondition.command, 'opl workspace ensure');
+    assert.equal(output.workspace_initialization.workspace_norm.explicit_initialization.default_entry_for_agents, false);
     assert.deepEqual(
       output.workspace_initialization.interface_projection.required_inputs,
       ['agent_id'],
@@ -500,7 +510,17 @@ test('workspace interfaces exports the OPL-owned initializer surfaces for tools 
   assert.equal(output.workspace_interfaces.boundary.writes_domain_truth, false);
   assert.equal(output.workspace_interfaces.command_contract.command, 'opl workspace ensure');
   assert.equal(output.workspace_interfaces.command_contract.initializer_command, 'opl workspace init');
+  assert.equal(
+    output.workspace_interfaces.command_contract.norm_contract_ref,
+    'contracts/opl-framework/agent-workspace-norm-contract.json',
+  );
   assert.deepEqual(output.workspace_interfaces.command_contract.required_inputs, ['agent_id']);
+  assert.equal(output.workspace_interfaces.workspace_norm.norm_id, 'opl.agent_workspace_norm.v1');
+  assert.equal(output.workspace_interfaces.workspace_norm.default_workspace_precondition.default_entry_for_agents, true);
+  assert.equal(output.workspace_interfaces.workspace_norm.explicit_initialization.default_entry_for_agents, false);
+  assert.equal(output.workspace_interfaces.workspace_norm.user_inspection.project_stage_outputs_pattern, '<project-root>/artifacts/stage_outputs/<stage-id>/');
+  assert.equal(output.workspace_interfaces.workspace_norm.runtime_state_boundary.runtime_state_can_close_stage, false);
+  assert.equal(output.workspace_interfaces.workspace_norm.authority_boundary.conformance_pass_counts_as_domain_ready, false);
   assert.equal(output.workspace_interfaces.surfaces.mcp.tool_name, 'opl_workspace_ensure');
   assert.equal(output.workspace_interfaces.surfaces.mcp.descriptor_only, true);
   assert.equal(output.workspace_interfaces.surfaces.mcp.public_runtime, false);

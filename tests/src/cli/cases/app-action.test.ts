@@ -218,6 +218,11 @@ test('app action execute owns settings, release channel, workspace root, and pro
     assert.equal(workspaceInitialize.result.workspace_initialization.agent.agent_id, 'rca');
     assert.equal(workspaceInitialize.result.workspace_initialization.interface_projection.mcp.tool_name, 'opl_workspace_ensure');
     assert.equal(workspaceInitialize.result.workspace_initialization.interface_projection.mcp.descriptor_only, true);
+    assert.equal(workspaceInitialize.result.workspace_initialization.workspace_norm.norm_id, 'opl.agent_workspace_norm.v1');
+    assert.equal(
+      workspaceInitialize.result.workspace_initialization.workspace_norm.default_workspace_precondition.command,
+      'opl workspace ensure',
+    );
 
     const magWorkspace = runCli([
       'app',
@@ -264,6 +269,11 @@ test('app action execute owns settings, release channel, workspace root, and pro
     assert.equal(magEnsure.result.workspace_initialization.action, 'ensure');
     assert.equal(magEnsure.result.workspace_initialization.ensure_status, 'reused_active_binding');
     assert.equal(magEnsure.result.workspace_initialization.binding.project_id, 'medautogrant');
+    assert.equal(
+      magEnsure.result.workspace_initialization.workspace_norm.default_workspace_precondition.app_action_id,
+      'workspace_ensure',
+    );
+    assert.equal(magEnsure.result.workspace_initialization.workspace_norm.registry_policy.writes_opl_workspace_registry, true);
 
     const provider = runCli([
       'app',

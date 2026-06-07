@@ -191,6 +191,12 @@ test('validateFrameworkContracts returns a stable summary for the required contr
         schema_version: contracts.publicSurfaceIndex.version,
         status: 'valid',
       },
+      {
+        contract_id: 'agent_workspace_norm',
+        file: path.join(contractsDir, 'agent-workspace-norm-contract.json'),
+        schema_version: contracts.agentWorkspaceNorm.version,
+        status: 'valid',
+      },
     ],
   });
 });
@@ -236,9 +242,57 @@ test('contract validate returns a stable machine-readable contract summary', () 
           schema_version: contracts.publicSurfaceIndex.version,
           status: 'valid',
         },
+        {
+          contract_id: 'agent_workspace_norm',
+          file: path.join(contractsDir, 'agent-workspace-norm-contract.json'),
+          schema_version: contracts.agentWorkspaceNorm.version,
+          status: 'valid',
+        },
       ],
     },
   });
+});
+
+test('agent workspace norm contract is fail-closed during load and validation', () => {
+  const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
+    const normPath = path.join(contractsRoot, 'agent-workspace-norm-contract.json');
+    const normContract = JSON.parse(fs.readFileSync(normPath, 'utf8'));
+    normContract.default_workspace_precondition.command = 'opl workspace bootstrap';
+    fs.writeFileSync(normPath, `${JSON.stringify(normContract, null, 2)}\n`);
+  });
+
+  try {
+    assert.throws(
+      () => loadFrameworkContracts({
+        contractsDir: fixtureContractsRoot,
+        source: 'api',
+      }),
+      (error: unknown) => {
+        assert.ok(error instanceof FrameworkContractError);
+        assert.equal(error.code, 'contract_shape_invalid');
+        assert.equal(error.details?.field, 'default_workspace_precondition.command');
+        assert.equal(error.details?.expected, 'opl workspace ensure');
+        assert.equal(error.details?.actual, 'opl workspace bootstrap');
+        assert.equal(error.details?.file, path.join(fixtureContractsRoot, 'agent-workspace-norm-contract.json'));
+        return true;
+      },
+    );
+
+    const { status, payload } = runCliFailure([
+      '--contracts-dir',
+      fixtureContractsRoot,
+      'contract',
+      'validate',
+    ]);
+    assert.equal(status, 3);
+    assert.equal(payload.error.code, 'contract_shape_invalid');
+    assert.equal(payload.error.details.field, 'default_workspace_precondition.command');
+    assert.equal(payload.error.details.expected, 'opl workspace ensure');
+    assert.equal(payload.error.details.actual, 'opl workspace bootstrap');
+    assert.equal(payload.error.details.file, path.join(fixtureContractsRoot, 'agent-workspace-norm-contract.json'));
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 });
 
 test('doctor reports a Codex-default ready local entry without Hermes compatibility diagnostics', () => {

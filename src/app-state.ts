@@ -394,6 +394,7 @@ function fullRuntimeWorkbenchSummary(fullDrilldown: JsonRecord | null) {
 export async function buildOplAppState(input: { profile?: AppStateProfile } = {}) {
   const startedAt = Date.now();
   const profile = input.profile ?? 'fast';
+  const contracts = loadFrameworkContracts() as FrameworkContracts;
   const statePaths = ensureOplStateDir(resolveOplStatePaths());
   const modules = publicModuleItems(profile);
   const moduleSource = resolveModuleSource(modules);
@@ -409,11 +410,11 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const release = buildReleaseState();
   const workspaceRoot = readOplWorkspaceRoot();
   const core = buildCoreState(profile);
-  const actions = buildActionCatalog();
+  const actions = buildActionCatalog(contracts);
   const uiDefaults = buildUiDefaults();
   const runtimeActivityItems = buildAppStateRuntimeActivityItems();
   const fullRuntimeDrilldown = profile === 'full'
-    ? (await buildRuntimeTraySnapshot(loadFrameworkContracts() as FrameworkContracts, {
+    ? (await buildRuntimeTraySnapshot(contracts, {
         appOperatorDrilldownDetailLevel: 'full',
       })).runtime_tray_snapshot.app_operator_drilldown as JsonRecord
     : null;

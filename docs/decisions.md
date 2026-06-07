@@ -580,6 +580,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `opl workspace ensure --agent <mas|mag|rca|oma>` 是默认快速入口：先复用 active binding 和已有 project，缺 workspace 或缺 project 时再调用同一 topology initializer。`opl workspace interfaces` 以 ensure 作为 CLI/App/MCP/Skill/OpenAI/AI SDK command contract；App 的 `workspace_ensure` action 调 ensure，`workspace_initialize` 保留为显式 init action。
 - `opl actions export --domain ...` 继续只投影 domain-owned `family_action_catalog`，不导出或执行 framework workspace initialization。
 - 该 action 只写 OPL topology metadata 和 registry binding，不写 domain truth、不创建 owner receipt 或 typed blocker、不修改 artifact body、不授权 quality/export 或 production readiness。
+- 2026-06-07 追加：`contracts/opl-framework/agent-workspace-norm-contract.json` 是 OPL Agent workspace 的可执行规范锚点，`contract validate`、`opl workspace interfaces`、workspace-local `workspace_index.json`、App workspace actions 和 `opl agents conformance` 都必须消费它。它固定 `workspace ensure` 为默认 pre-task gate、`workspace init` 为显式初始化、MCP/Skill/OpenAI/AI SDK 为 descriptor-only delegate、Stage Native 用户检查面为 project-local `artifacts/stage_outputs`，并把 runtime-state / conformance pass / OPL registry projection 的 authority false flags 固定为机器检查项，避免各 domain agent 或 GUI 入口各自漂移。
 
 ### 决策：generic workspace / source / artifact / memory substrate 由 OPL 持有 locator / index / lifecycle / projection，domain agent 持有 truth / body / verdict / authority
 

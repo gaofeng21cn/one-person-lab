@@ -1,5 +1,6 @@
 import { buildConformanceProductionEvidenceTailLedger } from './production-evidence-tail-ledger.ts';
 import { buildStandardDomainAgentConformanceReport } from './standard-domain-agent-conformance.ts';
+import type { FrameworkContracts } from './types.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -139,8 +140,8 @@ function buildAttentionFirstPayload(
   };
 }
 
-export function buildAgentReadinessSummary(args: string[]) {
-  const conformanceReport = buildStandardDomainAgentConformanceReport(args);
+export function buildAgentReadinessSummary(args: string[], contracts?: FrameworkContracts) {
+  const conformanceReport = buildStandardDomainAgentConformanceReport(args, contracts);
   const conformance = record(conformanceReport.standard_domain_agent_conformance);
   const reports = recordList(conformance.reports);
   const summary = record(conformance.summary);

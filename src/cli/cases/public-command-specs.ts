@@ -697,7 +697,7 @@ export function buildPublicCommandSpecs(
         'opl agents conformance --agent mas=/path/to/med-autoscience',
       ],
       group: 'domain',
-      handler: (args) => buildStandardDomainAgentConformanceReport(args),
+      handler: (args) => buildStandardDomainAgentConformanceReport(args, getContracts()),
     },
     'agents readiness': {
       usage: 'opl agents readiness [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]',

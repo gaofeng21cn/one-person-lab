@@ -19,6 +19,7 @@ import {
   isRecord,
   type ErrorCode,
 } from './contract-validation.ts';
+import { validateAgentWorkspaceNorm } from './agent-workspace-norm-contract.ts';
 import { validateDomainsRegistry } from './domain-contracts.ts';
 
 export { FrameworkContractError } from './contract-validation.ts';
@@ -29,6 +30,7 @@ const REQUIRED_CONTRACT_FILE_NAMES = [
   'stage-selection-vocabulary.json',
   'task-topology.json',
   'public-surface-index.json',
+  'agent-workspace-norm-contract.json',
 ] as const;
 
 type NormalizedFrameworkContractsLoadOptions = {
@@ -730,6 +732,11 @@ const REQUIRED_CONTRACT_FILES = [
     file_name: 'public-surface-index.json',
     schema_version: (contracts: FrameworkContracts) => contracts.publicSurfaceIndex.version,
   },
+  {
+    contract_id: 'agent_workspace_norm',
+    file_name: 'agent-workspace-norm-contract.json',
+    schema_version: (contracts: FrameworkContracts) => contracts.agentWorkspaceNorm.version,
+  },
 ] as const;
 
 export function validateFrameworkContracts(
@@ -779,6 +786,10 @@ export function loadFrameworkContracts(
       publicSurfaceIndex: validatePublicSurfaceIndex(
         path.join(contractsDir, 'public-surface-index.json'),
         parseJsonFile(path.join(contractsDir, 'public-surface-index.json')),
+      ),
+      agentWorkspaceNorm: validateAgentWorkspaceNorm(
+        path.join(contractsDir, 'agent-workspace-norm-contract.json'),
+        parseJsonFile(path.join(contractsDir, 'agent-workspace-norm-contract.json')),
       ),
     };
   } catch (error) {
