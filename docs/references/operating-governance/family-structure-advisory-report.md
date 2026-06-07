@@ -17,7 +17,7 @@ machine boundary: generated from `npm run --silent family:structure-advisory -- 
 - 若 sibling repo dirty、ahead、最近一小时有写入、存在活跃进程、远端/PR owner 信号，命令输出只能作为本地 read-only preflight；精确 line count 或 findings 写入对应 repo owner doc 前必须由该 repo owner lane 刷新并验证。
 - Advisory findings 只能进入 design-pass、contract-surface review 或 cleanup candidate queue；不能直接变成 fail-closed backlog、机械拆分任务、domain ready 判断或 production ready 判断。
 
-## 2026-06-06 Current Finding
+## 2026-06-07 Current Finding
 
 Fresh command:
 
@@ -25,19 +25,19 @@ Fresh command:
 node ./scripts/family-structure-advisory.mjs --format=json
 ```
 
-Fresh eleven-repo local summary from `2026-06-06T14:20Z` after the AG-UI renderer/main/WebUI/validator, RCA test-structure, OPL owner-delta workstream merge, OMA no-resurrection closeout, App first-run scenario alias retirement, and superseded MAS/App/OMA/MAG/RCA worktree or branch cleanup passes:
+Fresh eleven-repo local summary from `2026-06-07T02:29Z` after the MAG product-entry test split, RCA PPT semantic parts split, OPL-PPT route-builder split, OPL framework evidence/drilldown split, OPL Codex stage-runner test split, and MAS medical-readiness split verification:
 
-- `one-person-lab`: `needs_design_pass=24`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
-- `med-autoscience`: `needs_design_pass=25`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
+- `one-person-lab`: `needs_design_pass=22`, `mechanical_residue=0`, `public_surface_risk=4`, `missing_verify_entry=false`
+- `med-autoscience`: `needs_design_pass=27`, `mechanical_residue=0`, `public_surface_risk=5`, `missing_verify_entry=false`
 - `med-autogrant`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=5`, `missing_verify_entry=false`
-- `redcube-ai`: `needs_design_pass=5`, `mechanical_residue=0`, `public_surface_risk=9`, `missing_verify_entry=false`
+- `redcube-ai`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=9`, `missing_verify_entry=false`
 - `opl-meta-agent`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=1`, `missing_verify_entry=false`
 - `one-person-lab-app`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=3`, `missing_verify_entry=false`
 - `opl-agui-codex-shell`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=0`, `missing_verify_entry=false`
 - `opl-doc`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=0`, `missing_verify_entry=false`
 - `opl-flow`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=0`, `missing_verify_entry=false`
 - `homebrew-one-person-lab`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=0`, `missing_verify_entry=false`
-- `OPL-PPT`: `needs_design_pass=2`, `mechanical_residue=0`, `public_surface_risk=0`, `missing_verify_entry=false`
+- `OPL-PPT`: `needs_design_pass=0`, `mechanical_residue=0`, `public_surface_risk=0`, `missing_verify_entry=false`
 
 Current scope:
 
@@ -61,6 +61,7 @@ Current conclusion:
 Family morphology conclusion:
 
 - Standard / Foundry Agent repos should visibly share the same repo-source shape: `agent/` holds stage prompt / skill / tool affordance / knowledge / quality-gate refs; `contracts/` holds machine-readable domain descriptors and schemas; `runtime/` holds sidecar / projection / lifecycle adapters as source only; `src` or `packages` holds domain implementation and authority functions; `docs/` holds owner truth and policy; `scripts/verify.sh` is the repo-native verification entry.
+- Fresh standard-agent skeleton check confirms `med-autoscience`、`med-autogrant`、`redcube-ai` and `opl-meta-agent` all currently carry `AGENTS.md`、`TASTE.md`、`README.md`、`docs/status.md`、`docs/architecture.md`、`docs/invariants.md`、`docs/decisions.md`、`scripts/verify.sh`、`contracts/domain_descriptor.json`、`contracts/pack_compiler_input.json` and `agent/`. MAS/MAG are Python-first, RCA is mixed Python/Node, and OMA is Node-first; that language split is domain/runtime reality, not a family-shape inconsistency.
 - Support repos can be lighter but should still be recognizable: `one-person-lab` is the framework / shared governance owner; `one-person-lab-app` is product / release / shell-candidate owner; `opl-agui-codex-shell` is App-owned shell-candidate implementation support; `opl-doc` and `opl-flow` are plugin / workflow support repos with `.codex-plugin` + `skills/` where applicable, plus `scripts/verify.sh` when they are more than a passive reference pack; `homebrew-one-person-lab` is distribution transport support; `OPL-PPT` is artifact reference support, so scratch/reference build scripts are advisory rather than active runtime cleanup blockers.
 - Current inconsistent family signals are not mostly mechanical splits. They are near-budget semantic modules, large tests, generated public contracts, and support repos whose verification / source morphology is thinner than the standard agent repos.
 
@@ -102,21 +103,48 @@ Fresh verification recorded during this pass:
 
 Residual verification note: MAS strict line-budget still flags unrelated existing `tests/study_progress_cases/current_executable_owner_action.py` at 1023 lines. That is a target-external natural split candidate, not a regression from the publication-gate split.
 
+## 2026-06-07 Landing Evidence
+
+Second landing pass closed the P1 items that were ready for direct semantic splitting, while keeping the remaining queue advisory and owner-boundary based:
+
+- `one-person-lab` `a0f51ac8` / merge `15c3f71d`: split `src/family-runtime-evidence-worklist.ts` into route worklist items, receipt worklist items and worklist ledger modules; split `src/runtime-tray-app-operator-drilldown.ts` into current-control safe-action and route-transition context modules; removed the retired drilldown line-budget baseline entry.
+- `one-person-lab` `c91cf75d`: split Codex stage-runner lifecycle tests into protocol, process lifecycle, session recovery and MAS recovery support modules.
+- `one-person-lab` `6c8f03c9`: moved family evidence-worklist fixture setup into shared helpers and made `OPL_FAMILY_WORKSPACE_ROOT` an explicit discovery override, avoiding real sibling-repo drift in structure tests.
+- `med-autoscience` `42cf9a92` / `34f02422`: split `tests/test_domain_owner_action_dispatch_cases/medical_paper_readiness_dispatch.py` into medical-readiness scenario cases and fixed followthrough tests to import shared helpers from the case package.
+- `med-autoscience`: `src/med_autoscience/controllers/medical_paper_readiness_payload_authoring.py` is now a thin 439-line router over named payload-authoring parts; all current payload-authoring parts are under the advisory limit.
+- `med-autogrant` `5795bb5`: split `tests/product_entry_cases/test_manifest_and_status.py` into manifest shell, runtime control, authority handoff, standard agent, status projection, start-surface and readiness cases. Fresh scan now has no MAG source-shape finding.
+- `redcube-ai` `fe448d6c`: split RCA PPT/native/image/operator-evidence/visual-pack handoff files into semantic modules: native PPT artifact input/repair scope/shape-plan generation, image generation/prompt-style/repair source, visual-pack authority/generated/contract surfaces, operator evidence constants/scaleout/tail/receipt/efficiency, and mock native builder geometry/intent/grammar. Fresh scan now has no RCA source-shape finding.
+- `OPL-PPT` `92c0520`: split both scratch skill-route comparison build scripts by presentation route, deck build phase, route config, primitives/layouts and skill-route comparison responsibility. Fresh scan now has no OPL-PPT source-shape finding.
+
+Fresh verification recorded during this pass:
+
+- OPL: `node --experimental-strip-types --test tests/src/cli/cases/family-runtime-evidence-worklist.test.ts`; `node --experimental-strip-types --test tests/src/cli/cases/family-runtime-evidence-worklist-default-caller.test.ts tests/src/cli/cases/family-runtime-evidence-worklist-domain-blockers.test.ts`; `node --experimental-strip-types --test tests/src/cli/cases/runtime-app-operator-drilldown-actions.test.ts`; `npm run line-budget`; `node scripts/family-structure-advisory.mjs --format=json`; `node --experimental-strip-types --test tests/src/family-structure-advisory.test.ts`; `git diff --check`.
+- MAS: `scripts/run-pytest-clean.sh -q tests/test_domain_owner_action_dispatch_cases/medical_paper_readiness_dispatch.py tests/test_domain_owner_action_dispatch_cases/medical_paper_readiness_followthrough.py`; `git diff --check`.
+- MAG: `scripts/run-pytest-clean.sh tests/product_entry_cases/test_manifest_and_status.py -q`; `scripts/verify.sh meta`; `scripts/run-python-clean.sh scripts/line_budget.py`; `git diff --check`.
+- RCA: `npm run typecheck`; `npm run test:line-budget`; `git diff --check`.
+- OPL-PPT: `node --check` over both thin route-builder entries and all new route modules; `git diff --check`.
+
+Current interpretation:
+
+- Fresh scan from `2026-06-07T02:29Z` still shows no scanner-detected mechanical split residue in the included eleven-repo scope.
+- MAG, RCA and OPL-PPT now have no source-shape findings. OPL source-shape findings dropped from 24 to 22, and MAS from 28 to 27; both still have real residual design-pass queues.
+- Remaining source-shape work should be handled as natural owner-boundary design work, not as a fail-closed line-count gate. Strongest residual queues are OPL App-state/runtime-drilldown tests, Agent Lab/domain-pack/provider-hosted attempts, Codex stage-runner/provider families, and MAS stage-artifact/owner-route/currentness/runtime-health/progress-monitoring files.
+
 ## Repo Disposition
 
 | Repo | Current structure finding | Action |
 | --- | --- | --- |
-| `one-person-lab` | No mechanical residue. Remaining signals are long framework/App drilldown, Temporal/provider tests, hosted-attempt tests, `family-runtime` files, and large public contracts. | Keep advisory line-budget plus explicit strict ratchet; split only along framework runtime, App read-model, provider, Agent Lab, and generated/source boundaries. |
-| `med-autoscience` | Publication-gate dispatch test split is landed. Remaining signals cluster around owner-route reconcile, runtime health, study-progress, persisted dispatches, current executable owner action, and public contracts. | Do not split by line count alone. Next natural tranche is owner-route/currentness, study-progress current executable owner action, and runtime-health boundary cleanup; avoid touching dirty MAS files from concurrent work. |
-| `med-autogrant` | Source shape remains mostly clean. Generated aggregate source checks are landed; only source signal remains `product_entry_parts/consumer_thinning_audit.py`; public-surface risk is dominated by generated schemas/contracts. | Keep source split advisory. Continue generator modularity / aggregate-source checks for generated schema/contract size, not physical JSON shards. |
-| `redcube-ai` | Duplicate line-budget gate is unified and two 1000-line test aggregators are split. Remaining source signals are PPT/native helper, PPT runtime family, domain-action adapter, operator evidence and mock-builder responsibilities plus large runtime-program contracts. | Continue semantic splits along visual delivery boundaries: native PPT, image pages, operator evidence refs, visual-pack compiler handoff and mock builder responsibilities. Avoid renaming the whole `*-parts` bucket merely for aesthetics. |
+| `one-person-lab` | No mechanical residue. Evidence worklist and main drilldown entries are split; remaining signals are App-state/runtime-drilldown tests, Agent Lab/domain-pack tests, Codex stage-runner/provider families, hosted-attempt tests, framework readiness/system installation and large public contracts. | Keep advisory line-budget plus explicit strict ratchet; next splits should follow test-family, provider lifecycle, Agent Lab, domain-pack, system-installation and generated/source boundaries. |
+| `med-autoscience` | Publication-gate and medical-readiness dispatch splits are landed, and payload authoring is a thin router. Fresh scan still flags stage-artifact index, owner-route/currentness, OPL current-control handoff, persisted dispatches, runtime health, progress-first monitoring, near-budget provider adapters and public contracts. | Do not split by line count alone. Next natural tranche is stage-artifact index, owner-route/currentness, action-execution/progress-monitoring `__init__.py` thinning, study-progress handoff, runtime-health and near-budget provider-adapter boundary cleanup; avoid touching unrelated dirty MAS files. |
+| `med-autogrant` | Source shape is clean in the fresh scan; product-entry manifest/status cases are split. Public-surface risk is dominated by generated schemas/contracts. | Continue generator modularity / aggregate-source checks for generated schema/contract size, not physical JSON shards. |
+| `redcube-ai` | Fresh scan has no source-shape findings after the RCA PPT/native/image/operator-evidence/visual-pack handoff split. Remaining risk is generated/public contract size and large shared buckets. | Keep the new semantic PPT/native/image/operator-evidence module boundaries; future work should target generated/public-surface modularity and shared-bucket ownership, not physical shards. |
 | `opl-meta-agent` | Source design-pass remains clean. Source-structure verify lane is landed; remaining signal is `contracts/stage_control_plane.json` as a large public surface. | Treat as generated/public-surface risk. Continue source/parts/leaf-index direction only when generator/source ownership is clear. |
 | `one-person-lab-app` | Active-shell shared validators split is landed, and the fresh scan has no `needs_design_pass` signal. Public-surface risk remains in large App contracts. | Keep App source-shape cleanup advisory. Future App growth should split by product release boundary, active-shell validator orchestration phases, package builder phases, release notes, readiness summary, and user-path evidence before crossing the advisory threshold again. |
 | `opl-agui-codex-shell` | Renderer, main-process, WebUI server and candidate validator structure splits are landed. Fresh scan has no `needs_design_pass`, no mechanical residue and no public-surface risk. | Keep shell-local implementation thin and App-owned product truth out of the shell. Future growth should stay in the new named modules or split along the same IPC, app-server, WebUI route/runtime/static, smoke-evidence and source-contract boundaries. |
 | `opl-doc` | OPL Doc doctor split is landed. Fresh scan has no `needs_design_pass`, no mechanical residue, no public-surface risk, and repo-native verify passes. | Keep as current good family morphology example for support/plugin repos: thin command entry plus named doctor responsibility modules. |
 | `opl-flow` | Thin repo-native verify entry is landed. Fresh scan has no `needs_design_pass`, no mechanical residue, no public-surface risk, and no missing verify signal. | Keep verify entry thin and repo-native; no Sentrux or extra structure gate is needed until active source growth appears. |
 | `homebrew-one-person-lab` | No source design-pass signal; no repo-native verify required by current policy. | Keep lightweight as distribution transport support. Do not add structure gates until formula support grows beyond the current tap shape. |
-| `OPL-PPT` | Two large `scratch/skill-route-comparison-*` build scripts remain as artifact-reference signals. | Treat as scratch/reference artifact support, not active runtime cleanup. If reused, split by generated deck route / skill-route comparison responsibility in that reference repo. |
+| `OPL-PPT` | Fresh scan has no source-shape findings after route-builder scripts were split into route, deck phase, layout/primitive and comparison modules. | Keep as artifact reference support; if scratch graduates into maintained support code, preserve the same route/build-phase/comparison module shape. |
 
 ## P1 Structure Queue
 
@@ -139,10 +167,9 @@ Closed in the first landing pass:
 
 Remaining P1 natural split / source-shape queue:
 
-- `med-autoscience`: split `tests/study_progress_cases/current_executable_owner_action.py` by current-executable-owner-action scenario before using MAS strict line-budget as a clean gate. Owner-route/currentness and runtime-health files remain design-pass inputs.
-- `redcube-ai`: current over-1000 source files remain reviewed-baseline candidates, not mechanical split work: `tests/opl-family-contract-adoption.test.ts`, `python/redcube_ai/native_helpers/ppt_deck/native_layouts.py`, and `python/redcube_ai/native_helpers/ppt_deck/native_quality.py`. Future splits should follow test-family, native layout, native quality, image-page, operator-evidence and visual-pack handoff responsibilities.
+- `one-person-lab`: continue residual test/runtime splits by real owner boundary: App state, runtime drilldown action/domain/provider tests, Agent Lab, domain-pack compiler, provider-hosted attempts, Codex stage-runner/provider lifecycle and framework readiness/system-installation. Evidence-worklist and main drilldown entries are no longer the top source files after `15c3f71d`.
+- `med-autoscience`: continue residual splits around `stage_artifact_index.py`, owner-route/currentness, OPL current-control handoff, persisted dispatches, runtime health, progress-first monitoring, near-budget `medical_paper_readiness_payload_authoring_parts/provider_adapters.py`, and large implementation-bearing `__init__.py` files. Medical-readiness dispatch and payload-authoring entry are already split.
 - `opl-meta-agent`: `contracts/stage_control_plane.json` remains the largest standard-agent public contract surface in this scan. Prefer stage / JSON-pointer leaf refs plus generated aggregate, similar to RCA's current-program leaf-index pattern, instead of hand-splitting the JSON file.
-- `med-autogrant`: code line-budget is clean except `consumer_thinning_audit.py`; large schemas/contracts (`product-entry-manifest.schema.json`, `functional_privatization_audit.json`, `stage_control_plane.json`) should continue moving toward generated aggregate / leaf-source separation if they keep growing.
 
 ## Detailed Readout
 
@@ -150,17 +177,18 @@ Remaining P1 natural split / source-shape queue:
 
 needs_design_pass:
 
-- `src/runtime-tray-app-operator-drilldown.ts`
-- `tests/src/family-runtime-codex-stage-runner.test.ts`
 - `tests/src/cli/cases/app-state.test.ts`
 - `tests/src/cli/cases/runtime-app-operator-drilldown-actions.test.ts`
 - `tests/src/agent-lab.test.ts`
 - `tests/src/cli/cases/runtime-app-operator-drilldown.test.ts`
-- `tests/src/cli/cases/family-runtime-evidence-worklist.test.ts`
 - `src/family-runtime-codex-stage-runner.ts`
+- `tests/src/cli/cases/family-runtime-evidence-worklist.test.ts`
 - `tests/src/cli/cases/family-runtime-queue-guards.test.ts`
 - `tests/src/cli/cases/family-runtime-stage-attempts-temporal-provider.test.ts`
 - `tests/src/cli/cases/family-runtime-provider-hosted-attempts-cases/mas-default-executor.ts`
+- `src/family-runtime-temporal-provider.ts`
+- `tests/src/cli/cases/owner-payload-workorder-assertions.ts`
+- `tests/src/cli/cases/agents-conformance.test.ts`
 - Additional entries should be read from fresh JSON before implementation.
 
 mechanical_residue:
@@ -180,22 +208,25 @@ These are current large machine-readable public surfaces in the OPL scan. They a
 
 Top needs_design_pass:
 
-- `src/med_autoscience/controllers/owner_route_reconcile_parts/action_projection.py`
+- `src/med_autoscience/controllers/stage_artifact_index.py`
+- `src/med_autoscience/controllers/owner_route_reconcile_parts/current_truth_owner.py`
+- `src/med_autoscience/controllers/study_progress_parts/opl_current_control_state_handoff.py`
+- `src/med_autoscience/controllers/domain_owner_action_dispatch_parts/persisted_dispatches.py`
 - `src/med_autoscience/controllers/owner_route_reconcile.py`
 - `src/med_autoscience/controllers/runtime_health_kernel.py`
-- `tests/study_progress_cases/current_executable_owner_action.py`
-- `src/med_autoscience/controllers/domain_owner_action_dispatch_parts/persisted_dispatches.py`
 - `src/med_autoscience/controllers/study_progress_parts/progress_first_monitoring/__init__.py`
 - `src/med_autoscience/controllers/study_progress_parts/publication_runtime.py`
+- `src/med_autoscience/controllers/owner_route_reconcile_parts/action_projection.py`
 - `src/med_autoscience/controllers/submission_minimal_parts/shared_base.py`
+- `src/med_autoscience/controllers/medical_paper_readiness_payload_authoring_parts/provider_adapters.py`
 
-Interpretation: These are owner-route, currentness, study-progress, dispatch, runtime-health, and publication-gate design-pass inputs. They should be optimized by owner boundary, not by physical chunking.
+Interpretation: These are stage-artifact, owner-route/currentness, study-progress, dispatch, runtime-health, publication runtime and near-budget provider-adapter design-pass inputs. The remaining large `__init__.py` files are still family-style smells because OPL standard-agent code should put implementation in named responsibility modules, not package initializers.
 
 ### med-autogrant
 
 needs_design_pass:
 
-- `src/med_autogrant/product_entry_parts/consumer_thinning_audit.py`
+- none
 
 public_surface_risk:
 
@@ -205,20 +236,15 @@ public_surface_risk:
 - `contracts/runtime-program/opl-family-contract-adoption.json`
 - `schemas/v1/common.schema.json`
 
-Interpretation: Source shape is mostly clean; large schema/contract files are generated/public surface pressure.
+Interpretation: Source shape is clean in the fresh scan; large schema/contract files remain generated/public surface pressure.
 
 ### redcube-ai
 
-Top needs_design_pass:
+needs_design_pass:
 
-- `tests/opl-family-contract-adoption.test.ts`
-- `python/redcube_ai/native_helpers/ppt_deck/native_layouts.py`
-- `python/redcube_ai/native_helpers/ppt_deck/native_quality.py`
-- `packages/redcube-runtime-family-ppt/src/ppt-deck-runtime-family-parts/native-ppt.ts`
-- `packages/redcube-domain-entry/src/actions/domain-action-adapter-parts/visual-pack-compiler-handoff.ts`
-- `packages/redcube-runtime-family-ppt/src/ppt-deck-runtime-family-parts/image-pages.ts`
+- none
 
-Interpretation: Remaining split work should follow visual stage / native PPT / generated interface / test-family boundaries.
+Interpretation: The prior PPT/native/image/operator-evidence/visual-pack handoff findings are split. Remaining RCA structure pressure is generated/public-surface size and large shared buckets, not source-file semantic ownership.
 
 ### opl-meta-agent
 
@@ -236,7 +262,7 @@ Interpretation: Current source shape is acceptable. Contract bundle modularity i
 
 needs_design_pass:
 
-- none in the fresh `2026-06-06T12:39Z` eleven-repo scan.
+- none in the fresh `2026-06-07T01:31Z` eleven-repo scan.
 
 Interpretation: The previous support-repo source-shape pressure has been reduced by App-side and shell-side splits. Future App growth should still split by release boundary, active-shell validation, package building, release note generation, and readiness summary before it crosses the advisory threshold again.
 
@@ -284,10 +310,9 @@ Interpretation: The tap is lightweight distribution transport support. It does n
 
 needs_design_pass:
 
-- `scratch/skill-route-comparison-opl-v3b-32p/officecli-pptx-skill/src/build-opl-v3b-officecli-pptx-skill.mjs`
-- `scratch/skill-route-comparison-opl-v3b-32p/presentations-skill/src/build-opl-v3b-presentations-skill.mjs`
+- none
 
-Interpretation: These are scratch/reference artifact-support scripts, not active runtime or standard-agent source. If they become reusable support code, split them by presentation route, deck build phase and skill-route comparison responsibility inside OPL-PPT.
+Interpretation: The scratch route builders are now split by route, deck phase, layout/primitive and comparison responsibility. Keep this shape if the reference scripts become maintained support code.
 
 ## Sentrux Disposition
 
