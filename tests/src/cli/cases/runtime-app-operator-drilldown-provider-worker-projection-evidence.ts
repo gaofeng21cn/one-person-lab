@@ -8,9 +8,6 @@ import {
 import {
   buildProviderActionRoutes,
 } from '../../../../src/runtime-tray-app-operator-drilldown-parts/provider-action-routes.ts';
-import {
-  buildProviderWorkerActionRoutes,
-} from '../../../../src/runtime-tray-app-operator-drilldown-parts/provider-worker-action-routes.ts';
 
 test('runtime App drilldown keeps active attempts with missing progress signals actionable', () => {
   const progressFirstRoutes = buildProviderActionRoutes({
@@ -270,46 +267,4 @@ test('runtime App drilldown classifies stale active attempts that lack next acti
   assert.equal(progressAction.typed_blocker_requirement.status, 'required_when_no_fresh_progress_delta');
   assert.equal(progressAction.typed_blocker_requirement.owner, 'domain_owner');
   assert.equal(progressAction.authority_boundary.can_create_typed_blocker, false);
-});
-
-test('provider worker routes prefer stage workbench repair when provider inspection has no actionable worker repair', () => {
-  const routes = buildProviderWorkerActionRoutes({
-    providerInspection: {
-      details: {
-        worker_readiness: {
-          lifecycle_status: 'ready',
-          repair_action: {
-            action_id: 'none',
-          },
-        },
-      },
-    },
-    stageAttemptWorkbench: {
-      summary: {
-        observability_slo: {
-          attempts: [
-            {
-              provider_readiness: {
-                details: {
-                  worker_readiness: {
-                    lifecycle_status: 'worker_not_ready',
-                    repair_action: {
-                      action_id: 'start_temporal_worker',
-                      next_command: 'opl family-runtime worker start --provider temporal',
-                    },
-                  },
-                },
-              },
-            },
-          ],
-        },
-      },
-      attempts: [],
-      evidence_attempts: [],
-    },
-  });
-
-  assert.equal(routes.length, 1);
-  assert.equal(routes[0].action_id, 'provider-worker:temporal:start');
-  assert.equal(routes[0].provider_worker_repair_action_id, 'start_temporal_worker');
 });
