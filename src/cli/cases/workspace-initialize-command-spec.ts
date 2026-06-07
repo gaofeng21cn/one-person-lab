@@ -9,10 +9,11 @@ export function buildWorkspaceInitializeCommandSpecs(
   const specs: Record<string, CommandSpec> = {
     'workspace-init': {
       usage:
-        'opl workspace init --agent <mas|mag|rca|oma> (--workspace <path>|--workspace-root <dir>) [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio] [--title <title>] [--dry-run] [--no-bind] [--force]',
+        'opl workspace init --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio] [--title <title>] [--dry-run] [--no-bind] [--force]',
       summary:
         'Materialize the OPL standard workspace topology for a family agent and optionally activate it in the workspace registry.',
       examples: [
+        'opl workspace init --agent rca --workspace-id visual-theme-a --project-id deck-001',
         'opl workspace init --agent rca --workspace-root /Users/gaofeng/workspace --workspace-id visual-theme-a --project-id deck-001',
         'opl workspace init --agent mas --workspace-root /Users/gaofeng/workspace --workspace-id dm-cvd --project-id DM002',
         'opl workspace init --agent oma --workspace /Users/gaofeng/workspace/agent-foundry --dry-run',

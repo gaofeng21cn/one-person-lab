@@ -268,7 +268,7 @@ test('workspace init dry-run exposes CLI MCP and skill call surfaces without wri
     assert.equal(output.workspace_initialization.interface_projection.skill.intent, 'initialize_opl_workspace');
     assert.deepEqual(
       output.workspace_initialization.interface_projection.required_inputs,
-      ['agent_id', 'workspace_path_or_workspace_root'],
+      ['agent_id'],
     );
 
     const catalog = runCli(['workspace', 'list'], {

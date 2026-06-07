@@ -576,8 +576,8 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 影响：
 
-- `opl workspace init --agent <mas|mag|rca|oma>` 是可执行初始化面，按 `workspace_topology_profile` 物化 shared roots、project root、`artifacts/stage_outputs`、`workspace.yaml` 和 `workspace_index.json`，并默认激活 workspace registry binding。
-- `opl workspace interfaces` 是同一 command contract 的 CLI/MCP/Skill/App/OpenAI/AI SDK descriptor；App 的 `workspace_initialize` action 调同一个 initializer。
+- `opl workspace init --agent <mas|mag|rca|oma>` 是可执行初始化面，可使用已配置 OPL workspace root 或显式路径，按 `workspace_topology_profile` 物化 shared roots、project root、`artifacts/stage_outputs`、`workspace.yaml` 和 `workspace_index.json`，并默认激活 workspace registry binding。
+- `opl workspace interfaces` 是同一 command contract 的 CLI/App 执行入口和 MCP/Skill/OpenAI/AI SDK descriptor-only delegate；App 的 `workspace_initialize` action 调同一个 initializer。
 - `opl actions export --domain ...` 继续只投影 domain-owned `family_action_catalog`，不导出或执行 framework workspace initialization。
 - 该 action 只写 OPL topology metadata 和 registry binding，不写 domain truth、不创建 owner receipt 或 typed blocker、不修改 artifact body、不授权 quality/export 或 production readiness。
 

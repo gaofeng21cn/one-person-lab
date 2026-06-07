@@ -109,7 +109,7 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.equal(actions.get('workspace_initialize')?.dry_run_supported, true);
     assert.deepEqual(actions.get('workspace_initialize')?.payload_fields, [
       'agent_id',
-      'workspace_root',
+      'workspace_root_optional',
       'workspace_id',
       'project_id',
       'mode',
@@ -206,6 +206,7 @@ test('app action execute owns settings, release channel, workspace root, and pro
     assert.equal(workspaceInitialize.result.workspace_initialization.dry_run, true);
     assert.equal(workspaceInitialize.result.workspace_initialization.agent.agent_id, 'rca');
     assert.equal(workspaceInitialize.result.workspace_initialization.interface_projection.mcp.tool_name, 'opl_workspace_initialize');
+    assert.equal(workspaceInitialize.result.workspace_initialization.interface_projection.mcp.descriptor_only, true);
 
     const magWorkspace = runCli([
       'app',
@@ -216,7 +217,6 @@ test('app action execute owns settings, release channel, workspace root, and pro
       '--payload',
       JSON.stringify({
         agent_id: 'mag',
-        workspace_root: workspaceRoot,
         workspace_id: 'nsfc-p2c',
         project_id: 'grant-001',
       }),

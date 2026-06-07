@@ -92,7 +92,7 @@ export function buildActionCatalog() {
       label: 'Initialize agent workspace',
       surface: 'opl app action execute',
       delegated_surface: 'opl workspace init',
-      payload_fields: ['agent_id', 'workspace_root', 'workspace_id', 'project_id', 'mode', 'title'],
+      payload_fields: ['agent_id', 'workspace_root_optional', 'workspace_id', 'project_id', 'mode', 'title'],
       mutates: 'opl_workspace_topology_and_registry',
       dry_run_supported: true,
     },

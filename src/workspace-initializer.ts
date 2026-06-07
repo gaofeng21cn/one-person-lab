@@ -309,8 +309,8 @@ function buildInterfaceProjection(agent: WorkspaceAgentProfile, workspacePath: s
     surface_kind: 'opl_workspace_initialize_interface_projection',
     owner: 'one-person-lab',
     action_id: 'opl_workspace_initialize',
-    required_inputs: ['agent_id', 'workspace_path_or_workspace_root'],
-    optional_inputs: ['workspace_id', 'project_id', 'mode', 'title', 'dry_run', 'force', 'bind'],
+    required_inputs: ['agent_id'],
+    optional_inputs: ['workspace_path_or_workspace_root', 'workspace_id', 'project_id', 'mode', 'title', 'dry_run', 'force', 'bind'],
     cli: {
       command: 'opl workspace init',
       example,
