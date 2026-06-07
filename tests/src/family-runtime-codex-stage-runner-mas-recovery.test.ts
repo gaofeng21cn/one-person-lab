@@ -4,16 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { createFakeCodexFixture } from './cli/helpers.ts';
-import { runAgentStageRunner } from '../../src/family-runtime-codex-stage-runner.ts';
-
-async function runPublicCodexStageRunner(
-  input: Parameters<typeof runAgentStageRunner>[0],
-) {
-  const receipt = await runAgentStageRunner(input);
-  assert.equal(receipt.runner_status.runner_kind, 'codex_cli_stage_runner');
-  assert.ok('closeout_packet' in receipt, 'Codex stage runner receipt must expose closeout_packet.');
-  return receipt;
-}
+import { runPublicCodexStageRunner } from './family-runtime-codex-stage-runner-helpers.ts';
 
 test('Codex stage runner recovers MAS default-executor receipt when final closeout message is missing', async () => {
   const threadId = 'thread-mas-default-executor-receipt-recovery';
