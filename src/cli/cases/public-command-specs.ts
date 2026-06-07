@@ -480,6 +480,21 @@ export function buildPublicCommandSpecs(
       examples: ['opl workspace root doctor'],
       group: 'workspace',
     }),
+    'workspace init': cloneCommandSpec(commandSpecs['workspace-init'], {
+      usage:
+        'opl workspace init --agent <mas|mag|rca|oma> (--workspace <path>|--workspace-root <dir>) [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio] [--title <title>] [--dry-run] [--no-bind] [--force]',
+      examples: [
+        'opl workspace init --agent rca --workspace-root /Users/gaofeng/workspace --workspace-id visual-theme-a --project-id deck-001',
+        'opl workspace init --agent mas --workspace-root /Users/gaofeng/workspace --workspace-id dm-cvd --project-id DM002',
+        'opl workspace init --agent oma --workspace /Users/gaofeng/workspace/agent-foundry --dry-run',
+      ],
+      group: 'workspace',
+    }),
+    'workspace interfaces': cloneCommandSpec(commandSpecs['workspace interfaces'], {
+      usage: 'opl workspace interfaces',
+      examples: ['opl workspace interfaces'],
+      group: 'workspace',
+    }),
     'workspace bind': cloneCommandSpec(commandSpecs['workspace-bind'], {
       usage:
         'opl workspace bind --project <project_id> --path <workspace_path> [--label <label>] [--entry-command <command>] [--manifest-command <command>] [--entry-url <url>] [--workspace-root <dir>] [--profile <file>] [--input <file>]',

@@ -49,6 +49,7 @@ import {
 import {
   buildRuntimeStandardAgentTemplateConsumptionCommandSpecs,
 } from './runtime-standard-agent-template-consumption-command-spec.ts';
+import { buildWorkspaceInitializeCommandSpecs } from './workspace-initialize-command-spec.ts';
 import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseDashboardArgs, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseObservabilityExportArgs, parseProductEntryArgs, parseRuntimeAppOperatorDrilldownArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
 
@@ -832,6 +833,7 @@ resume: {
         return buildOplWorkspaceRootSurface();
       },
     },
+    ...buildWorkspaceInitializeCommandSpecs(getContracts),
     'workspace-bind': {
       usage:
         'opl workspace bind --project <project_id> --path <workspace_path> [--label <label>] [--entry-command <command>] [--manifest-command <command>] [--entry-url <url>] [--workspace-root <dir>] [--profile <file>] [--input <file>]',

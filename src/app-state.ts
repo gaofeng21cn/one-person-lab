@@ -27,6 +27,7 @@ import { buildAppStateRuntimeActivityItems } from './app-state-runtime-activity.
 import { buildOplAppOperatorViewModel } from './app-state-view-model.ts';
 import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 import { selectAppStateCurrentOwnerDeltaReadModel } from './app-state-current-owner-delta.ts';
+import { initializeWorkspace } from './workspace-initializer.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -576,6 +577,40 @@ function workspaceRootPayload(payload: JsonRecord) {
   return workspaceRoot;
 }
 
+function workspaceInitializePayload(payload: JsonRecord) {
+  const agentId = stringPayloadField(payload, 'agent_id')
+    ?? stringPayloadField(payload, 'agentId')
+    ?? stringPayloadField(payload, 'agent');
+  const workspacePath = stringPayloadField(payload, 'workspace')
+    ?? stringPayloadField(payload, 'workspace_path')
+    ?? stringPayloadField(payload, 'workspacePath');
+  const workspaceRoot = stringPayloadField(payload, 'workspace_root')
+    ?? stringPayloadField(payload, 'workspaceRoot')
+    ?? stringPayloadField(payload, 'root')
+    ?? stringPayloadField(payload, 'path');
+  if (!agentId) {
+    throw new FrameworkContractError('cli_usage_error', 'workspace_initialize action requires payload.agent_id.', {
+      action_id: 'workspace_initialize',
+      required: ['agent_id'],
+    });
+  }
+  return {
+    agentId,
+    workspacePath: workspacePath ?? undefined,
+    workspaceRoot: workspaceRoot ?? undefined,
+    workspaceId: stringPayloadField(payload, 'workspace_id') ?? stringPayloadField(payload, 'workspaceId') ?? undefined,
+    projectId: stringPayloadField(payload, 'project_id')
+      ?? stringPayloadField(payload, 'projectId')
+      ?? stringPayloadField(payload, 'deliverable_id')
+      ?? stringPayloadField(payload, 'study_id')
+      ?? undefined,
+    title: stringPayloadField(payload, 'title') ?? undefined,
+    mode: stringPayloadField(payload, 'mode') as 'auto' | 'one_off' | 'series' | 'portfolio' | undefined,
+    bind: payload.bind === false ? false : undefined,
+    force: payload.force === true,
+  };
+}
+
 function booleanPayloadField(payload: JsonRecord, field: string, fallback = false) {
   const value = payload[field];
   return typeof value === 'boolean' ? value : fallback;
@@ -791,6 +826,16 @@ async function executeDirectAppAction(
             },
           }
         : writeOplWorkspaceRootSurface(workspaceRoot),
+    };
+  }
+
+  if (options.actionId === 'workspace_initialize') {
+    return {
+      delegatedSurface: 'opl workspace init',
+      result: initializeWorkspace(contracts, {
+        ...workspaceInitializePayload(options.payload),
+        dryRun: options.dryRun,
+      }),
     };
   }
 

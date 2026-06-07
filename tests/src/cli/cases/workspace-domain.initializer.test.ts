@@ -1,0 +1,300 @@
+import {
+  assert,
+  fs,
+  os,
+  path,
+  runCli,
+  test,
+} from '../helpers.ts';
+
+function readJsonFile(filePath: string) {
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+test('workspace init materializes RCA series topology and binds the workspace', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-state-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-root-'));
+
+  try {
+    const output = runCli([
+      'workspace',
+      'init',
+      '--agent',
+      'rca',
+      '--workspace-root',
+      workspaceRoot,
+      '--workspace-id',
+      'visual-theme-a',
+      '--project-id',
+      'deck-001',
+      '--title',
+      'Visual Theme A',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const workspacePath = path.join(workspaceRoot, 'visual-theme-a');
+    const projectRoot = path.join(workspacePath, 'deliverables', 'deck-001');
+
+    assert.equal(output.workspace_initialization.action, 'init');
+    assert.equal(output.workspace_initialization.agent.agent_id, 'rca');
+    assert.equal(output.workspace_initialization.profile.profile_id, 'rca_series');
+    assert.equal(output.workspace_initialization.profile.workspace_mode, 'series');
+    assert.equal(output.workspace_initialization.workspace_path, workspacePath);
+    assert.equal(output.workspace_initialization.project_root, projectRoot);
+    assert.equal(output.workspace_initialization.binding?.project_id, 'redcube');
+
+    for (const relativePath of [
+      'shared/sources',
+      'shared/brand',
+      'shared/visual_memory',
+      'shared/style_system',
+      'shared/material_inventory',
+      'deliverables',
+      'deliverables/deck-001/control',
+      'deliverables/deck-001/artifacts/stage_outputs',
+      'deliverables/deck-001/review',
+      'deliverables/deck-001/handoff',
+    ]) {
+      assert.equal(fs.statSync(path.join(workspacePath, relativePath)).isDirectory(), true, relativePath);
+    }
+
+    const workspaceYaml = fs.readFileSync(path.join(workspacePath, 'workspace.yaml'), 'utf8');
+    assert.match(workspaceYaml, /workspace_kind: visual_theme_workspace/);
+    assert.match(workspaceYaml, /workspace_mode: series/);
+    assert.match(workspaceYaml, /project_collection_path: deliverables/);
+    assert.match(workspaceYaml, /project_stage_outputs_root: artifacts\/stage_outputs/);
+
+    const workspaceIndex = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
+    assert.equal(workspaceIndex.surface_kind, 'opl_workspace_index');
+    assert.equal(workspaceIndex.agent.agent_id, 'rca');
+    assert.equal(workspaceIndex.agent.project_id, 'redcube');
+    assert.equal(workspaceIndex.workspace_topology_profile.profile_id, 'rca_series');
+    assert.equal(workspaceIndex.projects[0].project_id, 'deck-001');
+    assert.equal(workspaceIndex.projects[0].stage_outputs_root, 'deliverables/deck-001/artifacts/stage_outputs');
+    assert.equal(workspaceIndex.user_inspection.default_stage_outputs, 'deliverables/deck-001/artifacts/stage_outputs');
+
+    const catalog = runCli(['workspace', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const redcube = catalog.workspace_catalog.projects.find((entry: { project_id: string }) => entry.project_id === 'redcube');
+    assert.equal(redcube.active_binding.workspace_path, workspacePath);
+    assert.equal(redcube.active_binding.direct_entry.workspace_locator.surface_kind, 'redcube_workspace');
+    assert.equal(redcube.available_actions.includes('init'), true);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace init materializes MAS portfolio topology with study roots', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-mas-state-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-mas-root-'));
+
+  try {
+    const output = runCli([
+      'workspace',
+      'init',
+      '--agent',
+      'mas',
+      '--workspace-root',
+      workspaceRoot,
+      '--workspace-id',
+      'dm-cvd',
+      '--project-id',
+      'DM002',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const workspacePath = path.join(workspaceRoot, 'dm-cvd');
+    const studyRoot = path.join(workspacePath, 'studies', 'DM002');
+
+    assert.equal(output.workspace_initialization.agent.project_id, 'medautoscience');
+    assert.equal(output.workspace_initialization.profile.profile_id, 'mas_portfolio');
+    assert.equal(output.workspace_initialization.profile.workspace_mode, 'portfolio');
+    assert.equal(output.workspace_initialization.project_root, studyRoot);
+
+    for (const relativePath of [
+      'data',
+      'literature',
+      'memory',
+      'shared/sources',
+      'studies/DM002/control',
+      'studies/DM002/artifacts/stage_outputs',
+      'studies/DM002/review',
+      'studies/DM002/handoff',
+    ]) {
+      assert.equal(fs.statSync(path.join(workspacePath, relativePath)).isDirectory(), true, relativePath);
+    }
+
+    const workspaceIndex = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
+    assert.equal(workspaceIndex.workspace_topology_profile.project_collection_path, 'studies');
+    assert.equal(workspaceIndex.projects[0].stage_outputs_root, 'studies/DM002/artifacts/stage_outputs');
+    assert.equal(workspaceIndex.authority_boundary.opl_can_write_domain_truth, false);
+
+    const catalog = runCli(['workspace', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const mas = catalog.workspace_catalog.projects.find((entry: { project_id: string }) => entry.project_id === 'medautoscience');
+    assert.equal(mas.active_binding.workspace_path, workspacePath);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace init materializes MAG one-off deliverable topology', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-mag-state-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-mag-root-'));
+
+  try {
+    const output = runCli([
+      'workspace',
+      'init',
+      '--agent',
+      'mag',
+      '--workspace-root',
+      workspaceRoot,
+      '--workspace-id',
+      'nsfc-p2c',
+      '--project-id',
+      'grant-001',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const workspacePath = path.join(workspaceRoot, 'nsfc-p2c');
+    assert.equal(output.workspace_initialization.agent.project_id, 'medautogrant');
+    assert.equal(output.workspace_initialization.profile.profile_id, 'one_off');
+    assert.equal(output.workspace_initialization.profile.workspace_mode, 'one_off');
+
+    for (const relativePath of [
+      'shared/sources',
+      'shared/memory',
+      'shared/style_system',
+      'deliverables/grant-001/control',
+      'deliverables/grant-001/artifacts/stage_outputs',
+      'deliverables/grant-001/review',
+      'deliverables/grant-001/handoff',
+    ]) {
+      assert.equal(fs.statSync(path.join(workspacePath, relativePath)).isDirectory(), true, relativePath);
+    }
+
+    const catalog = runCli(['workspace', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const mag = catalog.workspace_catalog.projects.find((entry: { project_id: string }) => entry.project_id === 'medautogrant');
+    assert.equal(mag.active_binding.workspace_path, workspacePath);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace init uses configured OPL workspace root when no path is provided', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-home-'));
+  const stateRoot = path.join(homeRoot, 'opl-state');
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-default-root-'));
+
+  try {
+    runCli(['workspace', 'root', 'set', '--path', workspaceRoot], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const output = runCli([
+      'workspace',
+      'init',
+      '--agent',
+      'oma',
+      '--workspace-id',
+      'agent-factory',
+      '--project-id',
+      'capability-001',
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const workspacePath = path.join(workspaceRoot, 'agent-factory');
+    assert.equal(output.workspace_initialization.workspace_path, workspacePath);
+    assert.equal(output.workspace_initialization.agent.project_id, 'opl-meta-agent');
+    assert.equal(fs.statSync(path.join(workspacePath, 'deliverables', 'capability-001', 'artifacts', 'stage_outputs')).isDirectory(), true);
+    const catalog = runCli(['workspace', 'list'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+    const oma = catalog.workspace_catalog.projects.find((entry: { project_id: string }) => entry.project_id === 'opl-meta-agent');
+    assert.equal(oma.active_binding.workspace_path, workspacePath);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace init dry-run exposes CLI MCP and skill call surfaces without writing files', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-dry-state-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-dry-root-'));
+
+  try {
+    const output = runCli([
+      'workspace',
+      'init',
+      '--agent',
+      'oma',
+      '--workspace-root',
+      workspaceRoot,
+      '--workspace-id',
+      'agent-factory',
+      '--project-id',
+      'capability-001',
+      '--dry-run',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const workspacePath = path.join(workspaceRoot, 'agent-factory');
+    assert.equal(output.workspace_initialization.dry_run, true);
+    assert.equal(output.workspace_initialization.agent.project_id, 'opl-meta-agent');
+    assert.equal(output.workspace_initialization.profile.profile_id, 'one_off');
+    assert.equal(output.workspace_initialization.binding, null);
+    assert.equal(fs.existsSync(workspacePath), false);
+
+    assert.equal(output.workspace_initialization.interface_projection.cli.command, 'opl workspace init');
+    assert.equal(output.workspace_initialization.interface_projection.mcp.tool_name, 'opl_workspace_initialize');
+    assert.equal(output.workspace_initialization.interface_projection.mcp.descriptor_only, true);
+    assert.equal(output.workspace_initialization.interface_projection.mcp.public_runtime, false);
+    assert.equal(output.workspace_initialization.interface_projection.skill.intent, 'initialize_opl_workspace');
+    assert.deepEqual(
+      output.workspace_initialization.interface_projection.required_inputs,
+      ['agent_id', 'workspace_path_or_workspace_root'],
+    );
+
+    const catalog = runCli(['workspace', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const oma = catalog.workspace_catalog.projects.find((entry: { project_id: string }) => entry.project_id === 'opl-meta-agent');
+    assert.equal(oma.active_binding, null);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace interfaces exports the OPL-owned initializer surfaces for tools and skills', () => {
+  const output = runCli(['workspace', 'interfaces']);
+
+  assert.equal(output.workspace_interfaces.surface_kind, 'opl_workspace_initialize_interfaces');
+  assert.equal(output.workspace_interfaces.boundary.is_domain_family_action_catalog, false);
+  assert.equal(output.workspace_interfaces.boundary.writes_opl_workspace_registry, true);
+  assert.equal(output.workspace_interfaces.boundary.writes_domain_truth, false);
+  assert.equal(output.workspace_interfaces.command_contract.command, 'opl workspace init');
+  assert.deepEqual(output.workspace_interfaces.command_contract.required_inputs, ['agent_id']);
+  assert.equal(output.workspace_interfaces.surfaces.mcp.tool_name, 'opl_workspace_initialize');
+  assert.equal(output.workspace_interfaces.surfaces.mcp.descriptor_only, true);
+  assert.equal(output.workspace_interfaces.surfaces.mcp.public_runtime, false);
+  assert.equal(output.workspace_interfaces.surfaces.skill.intent, 'initialize_opl_workspace');
+  assert.equal(output.workspace_interfaces.surfaces.app.action_id, 'workspace_initialize');
+  assert.deepEqual(output.workspace_interfaces.supported_agents, ['mas', 'mag', 'rca', 'oma']);
+});

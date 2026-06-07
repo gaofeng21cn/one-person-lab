@@ -184,6 +184,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl module exec --module medautoscience -- doctor entry-modes',
         'opl engine install --engine codex',
         'opl workspace projects',
+        'opl workspace init --agent rca --workspace-root /Users/gaofeng/workspace --workspace-id visual-theme-a --project-id deck-001',
         'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai',
         'opl domain launch --project redcube --dry-run',
         'opl contract handoff-envelope "Prepare a defense-ready slide deck." --preferred-family ppt_deck',

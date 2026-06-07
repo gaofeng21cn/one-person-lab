@@ -50,6 +50,7 @@ export {
   parseSystemConfigureCodexArgs,
   parseTurnkeyInstallArgs,
   parseUpdateChannelArgs,
+  parseWorkspaceInitializeArgs,
   parseWorkspaceRegistryArgs,
   parseWorkspaceRootArgs,
 } from './system-action-parsers.ts';
@@ -73,6 +74,7 @@ export type {
   SkillPacksCliInput,
   StartCliInput,
   UpdateChannelCliInput,
+  WorkspaceInitializeCliInput,
   WorkspaceRegistryCliInput,
   WorkspaceRootCliInput,
   WorkspaceStatusCliInput,

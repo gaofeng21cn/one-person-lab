@@ -114,6 +114,19 @@ type WorkspaceRegistryCliInput = {
   inputPath?: string;
 };
 
+type WorkspaceInitializeCliInput = {
+  agentId?: string;
+  workspacePath?: string;
+  workspaceRoot?: string;
+  workspaceId?: string;
+  projectId?: string;
+  title?: string;
+  mode?: 'auto' | 'one_off' | 'series' | 'portfolio';
+  bind?: boolean;
+  dryRun?: boolean;
+  force?: boolean;
+};
+
 type WebCliInput = {
   host?: string;
   port?: number;
@@ -226,6 +239,7 @@ export type {
   TurnkeyInstallCliInput,
   UpdateChannelCliInput,
   WebCliInput,
+  WorkspaceInitializeCliInput,
   WorkspaceRegistryCliInput,
   WorkspaceRootCliInput,
   WorkspaceStatusCliInput,

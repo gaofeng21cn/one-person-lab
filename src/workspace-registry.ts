@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { FrameworkContractError } from './contracts.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 import type { FrameworkContracts } from './types.ts';
+import { OPL_WORKSPACE_AGENT_PROFILES } from './workspace-agent-defaults.ts';
 
 type BoundWorkspaceLocator = {
   surface_kind: string;
@@ -68,6 +69,7 @@ type WorkspaceRegistryOptions = {
   workspaceRoot?: string;
   profileRef?: string;
   inputPath?: string;
+  deriveDirectEntry?: boolean;
 };
 
 function nowIso() {
@@ -171,15 +173,25 @@ function writeWorkspaceRegistryFile(payload: WorkspaceRegistryFile) {
 }
 
 function allowedProjects(contracts: FrameworkContracts) {
+  const domainProjects = contracts.domains.domains.map((domain) => ({
+    project_id: domain.domain_id,
+    project: domain.project,
+  }));
+  const projectIds = new Set(['opl', ...domainProjects.map((entry) => entry.project_id)]);
+  const generatedAgentProjects = OPL_WORKSPACE_AGENT_PROFILES
+    .filter((entry) => !projectIds.has(entry.project_id))
+    .map((entry) => ({
+      project_id: entry.project_id,
+      project: entry.project,
+    }));
+
   return [
     {
       project_id: 'opl',
       project: 'one-person-lab',
     },
-    ...contracts.domains.domains.map((domain) => ({
-      project_id: domain.domain_id,
-      project: domain.project,
-    })),
+    ...domainProjects,
+    ...generatedAgentProjects,
   ];
 }
 
@@ -598,6 +610,7 @@ function buildProjectCatalogEntry(
     binding_contract: buildProjectBindingContract(projectId, projectName),
     last_updated_at: lastUpdatedAt,
     available_actions: [
+      'init',
       'bind',
       'activate',
       'archive',
@@ -723,7 +736,12 @@ export function bindWorkspace(
     profileRef: options.profileRef,
     inputPath: options.inputPath,
   });
-  const derivedDirectEntry = buildDerivedDirectEntryLocator(workspaceLocator);
+  const derivedDirectEntry = options.deriveDirectEntry === false
+    ? {
+        command: null,
+        manifest_command: null,
+      }
+    : buildDerivedDirectEntryLocator(workspaceLocator);
 
   binding.project = project.project;
   binding.label = normalizeOptionalString(options.label);

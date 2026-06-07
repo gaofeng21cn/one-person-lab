@@ -5,10 +5,12 @@ type AppActionCatalogEntry = {
   delegated_surface: string;
   payload_fields: string[];
   mutates: string;
+  dry_run_supported?: boolean;
 };
 
 function annotateAppActionRoute(action: AppActionCatalogEntry) {
   const payloadRequired = action.payload_fields.length > 0;
+  const dryRunSupported = action.dry_run_supported ?? !payloadRequired;
   return {
     ...action,
     owner: 'opl_framework',
@@ -16,7 +18,7 @@ function annotateAppActionRoute(action: AppActionCatalogEntry) {
     execution_policy: 'opl_safe_action_shell',
     route_requires_domain_or_app_payload: payloadRequired,
     can_submit_to_safe_action_shell: !payloadRequired,
-    dry_run_supported: !payloadRequired,
+    dry_run_supported: dryRunSupported,
     route: `opl app action execute --action ${action.action_id}`,
   };
 }
@@ -84,6 +86,15 @@ export function buildActionCatalog() {
       delegated_surface: 'opl workspace root set',
       payload_fields: ['path'],
       mutates: 'opl_workspace_root_config',
+    },
+    {
+      action_id: 'workspace_initialize',
+      label: 'Initialize agent workspace',
+      surface: 'opl app action execute',
+      delegated_surface: 'opl workspace init',
+      payload_fields: ['agent_id', 'workspace_root', 'workspace_id', 'project_id', 'mode', 'title'],
+      mutates: 'opl_workspace_topology_and_registry',
+      dry_run_supported: true,
     },
     {
       action_id: 'provider_scheduler_status',

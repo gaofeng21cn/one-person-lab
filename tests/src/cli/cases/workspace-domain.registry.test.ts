@@ -35,32 +35,39 @@ test('workspace registry commands bind activate and archive project workspaces w
     const catalogOutput = runCli(['workspace', 'list'], {
       OPL_STATE_DIR: stateRoot,
     });
-    assert.equal(catalogOutput.workspace_catalog.projects.length, 4);
-    assert.equal(catalogOutput.workspace_catalog.projects[3].project_id, 'redcube');
-    assert.equal(catalogOutput.workspace_catalog.projects[3].active_binding.workspace_path, repoRoot);
-    assert.equal(catalogOutput.workspace_catalog.projects[3].bindings_count.total, 1);
-    assert.equal(catalogOutput.workspace_catalog.projects[3].bindings_count.direct_entry_ready, 1);
-    assert.equal(catalogOutput.workspace_catalog.projects[3].bindings_count.manifest_ready, 1);
-    assert.equal(catalogOutput.workspace_catalog.projects[3].last_updated_at, bindOutput.workspace_catalog.binding.updated_at);
-    assert.deepEqual(catalogOutput.workspace_catalog.projects[3].available_actions, ['bind', 'activate', 'archive', 'launch']);
+    assert.equal(catalogOutput.workspace_catalog.projects.length, 5);
+    const redcubeProject = catalogOutput.workspace_catalog.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'redcube',
+    );
+    const omaProject = catalogOutput.workspace_catalog.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'opl-meta-agent',
+    );
+    assert.equal(redcubeProject.active_binding.workspace_path, repoRoot);
+    assert.equal(redcubeProject.bindings_count.total, 1);
+    assert.equal(redcubeProject.bindings_count.direct_entry_ready, 1);
+    assert.equal(redcubeProject.bindings_count.manifest_ready, 1);
+    assert.equal(redcubeProject.last_updated_at, bindOutput.workspace_catalog.binding.updated_at);
+    assert.equal(omaProject.active_binding, null);
+    assert.deepEqual(omaProject.available_actions, ['init', 'bind', 'activate', 'archive']);
+    assert.deepEqual(redcubeProject.available_actions, ['init', 'bind', 'activate', 'archive', 'launch']);
     assert.equal(
-      catalogOutput.workspace_catalog.projects[3].binding_contract.surface_id,
+      redcubeProject.binding_contract.surface_id,
       'opl_project_workspace_binding_contract',
     );
     assert.deepEqual(
-      catalogOutput.workspace_catalog.projects[3].binding_contract.required_locator_fields,
+      redcubeProject.binding_contract.required_locator_fields,
       [],
     );
     assert.deepEqual(
-      catalogOutput.workspace_catalog.projects[3].binding_contract.optional_locator_fields,
+      redcubeProject.binding_contract.optional_locator_fields,
       ['workspace_root'],
     );
     assert.equal(
-      catalogOutput.workspace_catalog.projects[3].binding_contract.derived_entry_command_template,
+      redcubeProject.binding_contract.derived_entry_command_template,
       'node -e <redcube_generated_product_status_materializer>',
     );
     assert.equal(
-      catalogOutput.workspace_catalog.projects[3].binding_contract.derived_manifest_command_template,
+      redcubeProject.binding_contract.derived_manifest_command_template,
       'node -e <redcube_generated_product_entry_manifest_materializer>',
     );
     assert.equal(catalogOutput.workspace_catalog.summary.active_projects_count, 1);

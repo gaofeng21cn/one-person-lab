@@ -8,10 +8,90 @@ import type {
   SessionRuntimeCliInput,
   TurnkeyInstallCliInput,
   UpdateChannelCliInput,
+  WorkspaceInitializeCliInput,
   WorkspaceRegistryCliInput,
   WorkspaceRootCliInput,
 } from './types.ts';
 import { buildUsageError } from './runtime-helpers.ts';
+
+function parseWorkspaceInitializeArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): WorkspaceInitializeCliInput {
+  const parsed: WorkspaceInitializeCliInput = { mode: 'auto', bind: true };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (token === '--dry-run') {
+      parsed.dryRun = true;
+      continue;
+    }
+    if (token === '--no-bind') {
+      parsed.bind = false;
+      continue;
+    }
+    if (token === '--force') {
+      parsed.force = true;
+      continue;
+    }
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--agent':
+        parsed.agentId = value;
+        break;
+      case '--workspace':
+      case '--workspace-path':
+        parsed.workspacePath = value;
+        break;
+      case '--workspace-root':
+        parsed.workspaceRoot = value;
+        break;
+      case '--workspace-id':
+        parsed.workspaceId = value;
+        break;
+      case '--project-id':
+      case '--deliverable-id':
+      case '--study-id':
+        parsed.projectId = value;
+        break;
+      case '--title':
+        parsed.title = value;
+        break;
+      case '--mode':
+        if (value !== 'auto' && value !== 'one_off' && value !== 'series' && value !== 'portfolio') {
+          throw buildUsageError(
+            'workspace init --mode requires auto, one_off, series, or portfolio.',
+            spec,
+            { option: token, value },
+          );
+        }
+        parsed.mode = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for workspace init command: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
 
 
 function parseWorkspaceRegistryArgs(
@@ -450,6 +530,7 @@ export {
   parseSystemConfigureCodexArgs,
   parseTurnkeyInstallArgs,
   parseUpdateChannelArgs,
+  parseWorkspaceInitializeArgs,
   parseWorkspaceRegistryArgs,
   parseWorkspaceRootArgs,
 };
