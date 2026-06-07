@@ -31,11 +31,6 @@ import {
   buildBrandModuleMaturity,
   buildBrandModulesList,
   buildBrandModuleValidation,
-  buildBrandModuleSurfaceDoctor,
-  buildBrandModuleSurfaceInspect,
-  buildBrandModuleSurfaceInterfaces,
-  buildBrandModuleSurfaceStatus,
-  buildBrandModuleSurfaceValidation,
   buildAgentInternalBrandModuleDoctor,
   buildAgentInternalBrandModuleInspect,
   buildAgentInternalBrandModuleInterfaces,
@@ -46,6 +41,11 @@ import {
   FOUNDRY_AGENT_OPERATIONS,
   buildFoundryAgentCliSpine,
 } from '../../foundry-agent-cli-spine.ts';
+import {
+  buildBrandModuleObjectView,
+  buildBrandModuleSurfaceCommand,
+  listBrandModuleObjectViewCommands,
+} from '../../brand-module-surfaces.ts';
 import { buildAgentReadinessSummary } from '../../agent-readiness.ts';
 import { buildStandardDomainAgentConformanceReport } from '../../standard-domain-agent-conformance.ts';
 import { agentsEvidenceApplySpec } from './agent-evidence-command-spec.ts';
@@ -96,7 +96,7 @@ import {
 } from '../modules/public-payloads.ts';
 import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, cloneCommandSpec, parseOplEngineArgs, parseOplModuleExecArgs, parseOplModuleArgs, parseResumeArgs, parseTurnkeyInstallArgs, printJson, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
-import type { BrandModuleCliOperation, BrandModuleId } from '../../types.ts';
+import type { BrandModuleId } from '../../types.ts';
 
 export function buildPublicCommandSpecs(
   commandSpecs: Record<string, CommandSpec>,
@@ -178,41 +178,50 @@ export function buildPublicCommandSpecs(
   const runtimeCommandSpecs = buildPublicRuntimeCommandSpecs(commandSpecs);
   const buildBrandModuleSurfaceSpecs = (
     moduleId: BrandModuleId,
-    operations: readonly BrandModuleCliOperation[] = ['status', 'inspect', 'interfaces', 'validate', 'doctor'],
+    group: string,
+    subcommands: ReadonlyArray<'status' | 'inspect' | 'interfaces' | 'validate' | 'doctor'> = ['status', 'inspect', 'interfaces', 'validate', 'doctor'],
   ): Record<string, CommandSpec> => {
-    const builders = {
-      status: buildBrandModuleSurfaceStatus,
-      inspect: buildBrandModuleSurfaceInspect,
-      interfaces: buildBrandModuleSurfaceInterfaces,
-      validate: buildBrandModuleSurfaceValidation,
-      doctor: buildBrandModuleSurfaceDoctor,
-    } as const;
-    return Object.fromEntries(operations.map((operation) => {
-      const command = `${moduleId} ${operation}`;
-      const spec: CommandSpec = {
-        usage: `opl ${moduleId} ${operation}`,
-        summary: `Read the ${moduleId} brand module ${operation} surface from the canonical registry/governance contracts.`,
-        examples: [`opl ${moduleId} ${operation} --json`],
-        group: moduleId,
+    const label = `OPL ${moduleId}`;
+    const specs: Record<string, CommandSpec> = {};
+    for (const subcommand of subcommands) {
+      const command = `${moduleId} ${subcommand}`;
+      specs[command] = {
+        usage: `opl ${moduleId} ${subcommand}`,
+        summary: `Read the ${label} module-owned ${subcommand} surface instead of relying on the aggregate brand registry.`,
+        examples: [`opl ${moduleId} ${subcommand} --json`],
+        group,
         handler: (args) => {
-          assertNoArgs(args, spec);
-          return builders[operation](getContracts(), moduleId);
+          assertNoArgs(args, specs[command]);
+          return buildBrandModuleSurfaceCommand(getContracts(), moduleId, subcommand);
         },
       };
-      return [command, spec];
-    }));
+    }
+    for (const viewId of listBrandModuleObjectViewCommands(moduleId)) {
+      const command = `${moduleId} ${viewId}`;
+      specs[command] = {
+        usage: `opl ${moduleId} ${viewId}`,
+        summary: `Read the ${label} ${viewId} object-model view from the module-owned surface contract.`,
+        examples: [`opl ${moduleId} ${viewId} --json`],
+        group,
+        handler: (args) => {
+          assertNoArgs(args, specs[command]);
+          return buildBrandModuleObjectView(getContracts(), moduleId, viewId);
+        },
+      };
+    }
+    return specs;
   };
 
-  const brandModuleSurfaceSpecs: Record<string, CommandSpec> = {
-    ...buildBrandModuleSurfaceSpecs('charter'),
-    ...buildBrandModuleSurfaceSpecs('atlas'),
-    ...buildBrandModuleSurfaceSpecs('workspace', ['status', 'inspect']),
-    ...buildBrandModuleSurfaceSpecs('stagecraft'),
-    ...buildBrandModuleSurfaceSpecs('runway'),
-    ...buildBrandModuleSurfaceSpecs('vault'),
-    ...buildBrandModuleSurfaceSpecs('console'),
-    ...buildBrandModuleSurfaceSpecs('foundry-lab'),
-    ...buildBrandModuleSurfaceSpecs('connect'),
+  const brandModuleSurfaceSpecs = {
+    ...buildBrandModuleSurfaceSpecs('charter', 'brand-charter'),
+    ...buildBrandModuleSurfaceSpecs('atlas', 'brand-atlas'),
+    ...buildBrandModuleSurfaceSpecs('workspace', 'workspace', ['status', 'inspect']),
+    ...buildBrandModuleSurfaceSpecs('stagecraft', 'brand-stagecraft'),
+    ...buildBrandModuleSurfaceSpecs('runway', 'brand-runway'),
+    ...buildBrandModuleSurfaceSpecs('vault', 'brand-vault'),
+    ...buildBrandModuleSurfaceSpecs('console', 'brand-console'),
+    ...buildBrandModuleSurfaceSpecs('foundry-lab', 'brand-foundry-lab'),
+    ...buildBrandModuleSurfaceSpecs('connect', 'brand-connect'),
   };
 
   const foundryAgentCommandSpecs: Record<string, CommandSpec> = Object.fromEntries(

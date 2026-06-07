@@ -39,26 +39,36 @@
       "machine_boundary": "Charter governs names, owner boundaries, lifecycle policy, and brand registry metadata. It does not execute runtime work or sign domain receipts.",
       "module_doc_ref": "human_doc:opl_brand_module_charter",
       "contract_refs": [
+        "contracts/opl-framework/brand-module-surfaces.json",
         "contracts/opl-framework/brand-module-registry.json",
         "contracts/opl-framework/public-surface-index.json",
         "contracts/opl-framework/surface-budget-policy.json"
       ],
       "cli_surfaces": [
+        "opl charter status --json",
+        "opl charter inspect --json",
+        "opl charter interfaces --json",
+        "opl charter validate --json",
+        "opl charter doctor --json",
         "opl brand-modules list --json",
-        "opl brand-modules inspect --module charter --json",
         "opl brand-modules validate --json",
         "opl contract validate --json"
       ],
       "app_surfaces": [
+        "app_action:charter_status",
+        "app_action:charter_inspect",
         "opl brand-modules interfaces --json#app.descriptors.brand_modules_list",
         "opl app state --profile fast --json"
       ],
       "descriptor_surfaces": [
+        "opl charter interfaces --json",
+        "contracts/opl-framework/brand-module-surfaces.json#modules.charter",
         "opl brand-modules interfaces --json#descriptor.brand_modules_registry",
         "contracts/opl-framework/brand-module-registry.json#modules.charter"
       ],
       "validation_surfaces": [
-        "opl brand-modules validate --json",
+        "opl charter validate --json",
+        "opl charter doctor --json",
         "opl contract validate --json"
       ],
       "status_doc_refs": [
@@ -109,6 +119,7 @@
       "machine_boundary": "Atlas indexes and relates descriptors and refs. It does not execute actions, mutate artifacts, or decide domain quality.",
       "module_doc_ref": "human_doc:opl_brand_module_atlas",
       "contract_refs": [
+        "contracts/opl-framework/brand-module-surfaces.json",
         "contracts/opl-framework/domains.json",
         "contracts/opl-framework/workstreams.json",
         "contracts/opl-framework/public-surface-index.json",
@@ -116,24 +127,33 @@
         "contracts/opl-framework/standard-domain-agent-skeleton-contract.json"
       ],
       "cli_surfaces": [
+        "opl atlas status --json",
+        "opl atlas inspect --json",
+        "opl atlas interfaces --json",
+        "opl atlas validate --json",
+        "opl atlas doctor --json",
         "opl agents descriptors --json",
         "opl agents descriptor --domain mas --json",
         "opl actions list --json",
-        "opl stages list --json",
-        "opl brand-modules inspect --module atlas --json"
+        "opl stages list --json"
       ],
       "app_surfaces": [
+        "app_action:atlas_status",
+        "app_action:atlas_inspect",
         "opl brand-modules interfaces --json#app.descriptors.brand_modules_inspect",
         "opl app state --profile full --json"
       ],
       "descriptor_surfaces": [
+        "opl atlas interfaces --json",
+        "contracts/opl-framework/brand-module-surfaces.json#modules.atlas",
         "opl agents interfaces --family-defaults --json",
         "opl brand-modules interfaces --json#descriptor.brand_modules_registry",
         "contracts/opl-framework/brand-module-registry.json#modules.atlas"
       ],
       "validation_surfaces": [
+        "opl atlas validate --json",
+        "opl atlas doctor --json",
         "opl agents conformance --family-defaults --json",
-        "opl brand-modules validate --json",
         "opl contract validate --json"
       ],
       "status_doc_refs": [
@@ -184,20 +204,27 @@
       "machine_boundary": "Workspace owns topology metadata, generated refs, validation, and project inspection roots. It does not own domain artifact bodies, owner receipts, typed blockers, or quality/export verdicts.",
       "module_doc_ref": "human_doc:opl_brand_module_workspace",
       "contract_refs": [
+        "contracts/opl-framework/brand-module-surfaces.json",
         "contracts/opl-framework/workspace-topology-profile.schema.json",
         "contracts/opl-framework/workspace-index.schema.json",
         "contracts/opl-framework/agent-workspace-norm-contract.json",
         "contracts/opl-framework/generic-substrate-projection-contract.json"
       ],
       "cli_surfaces": [
+        "opl workspace status --json",
+        "opl workspace inspect --json",
+        "opl workspace interfaces --json",
+        "opl workspace validate --json",
+        "opl workspace doctor --json",
         "opl workspace ensure --json",
         "opl workspace init --json",
         "opl workspace validate --json",
         "opl workspace doctor --json",
-        "opl workspace interfaces --json",
-        "opl brand-modules inspect --module workspace --json"
+        "opl workspace interfaces --json"
       ],
       "app_surfaces": [
+        "app_action:workspace_status",
+        "app_action:workspace_inspect",
         "app_action:workspace_ensure",
         "app_action:workspace_initialize",
         "app_action:workspace_validate",
@@ -206,14 +233,17 @@
       ],
       "descriptor_surfaces": [
         "opl workspace interfaces --json",
+        "contracts/opl-framework/brand-module-surfaces.json#modules.workspace",
+        "opl workspace interfaces --json",
         "contracts/opl-framework/agent-workspace-norm-contract.json#descriptor_delegates",
         "contracts/opl-framework/brand-module-registry.json#modules.workspace"
       ],
       "validation_surfaces": [
         "opl workspace validate --json",
         "opl workspace doctor --json",
-        "opl agents conformance --family-defaults --json",
-        "opl brand-modules validate --json"
+        "opl workspace validate --json",
+        "opl workspace doctor --json",
+        "opl agents conformance --family-defaults --json"
       ],
       "status_doc_refs": [
         "human_doc:opl_brand_module_maturity_against_workspace",
@@ -264,6 +294,7 @@
       "machine_boundary": "Stagecraft defines stage strategy and stage contracts. It does not run durable attempts or issue domain quality/export verdicts.",
       "module_doc_ref": "human_doc:opl_brand_module_stagecraft",
       "contract_refs": [
+        "contracts/opl-framework/brand-module-surfaces.json",
         "contracts/opl-framework/cognitive-computation-kernel.json",
         "contracts/opl-framework/stage-run-kernel-contract.json",
         "contracts/opl-framework/stage-manifest.schema.json",
@@ -271,25 +302,34 @@
         "contracts/opl-framework/stage-typed-blocker.schema.json"
       ],
       "cli_surfaces": [
+        "opl stagecraft status --json",
+        "opl stagecraft inspect --json",
+        "opl stagecraft interfaces --json",
+        "opl stagecraft validate --json",
+        "opl stagecraft doctor --json",
         "opl stages readiness --family-defaults --json",
         "opl stages graph --domain mas --json",
         "opl stage validate --json",
-        "opl stage conformance --json",
-        "opl brand-modules inspect --module stagecraft --json"
+        "opl stage conformance --json"
       ],
       "app_surfaces": [
+        "app_action:stagecraft_status",
+        "app_action:stagecraft_inspect",
         "opl brand-modules interfaces --json#app.descriptors.brand_modules_inspect",
         "opl app state --profile full --json"
       ],
       "descriptor_surfaces": [
+        "opl stagecraft interfaces --json",
+        "contracts/opl-framework/brand-module-surfaces.json#modules.stagecraft",
         "opl agents interfaces --family-defaults --json#stage_routes",
         "contracts/opl-framework/stage-run-kernel-contract.json",
         "contracts/opl-framework/brand-module-registry.json#modules.stagecraft"
       ],
       "validation_surfaces": [
+        "opl stagecraft validate --json",
+        "opl stagecraft doctor --json",
         "opl stages readiness --family-defaults --json",
         "opl stage validate --json",
-        "opl brand-modules validate --json",
         "opl contract validate --json"
       ],
       "status_doc_refs": [
@@ -341,6 +381,7 @@
       "machine_boundary": "Runway owns provider-backed execution control, queueing, attempts, and recovery refs. It does not create domain owner closeout payloads or production long-soak claims.",
       "module_doc_ref": "human_doc:opl_brand_module_runway",
       "contract_refs": [
+        "contracts/opl-framework/brand-module-surfaces.json",
         "contracts/opl-framework/runtime-manager-contract.json",
         "contracts/opl-framework/family-runtime-attempt-contract.json",
         "contracts/opl-framework/family-runtime-online-substrate-contract.json",
@@ -348,25 +389,34 @@
         "contracts/opl-framework/managed-runtime-three-layer-contract.json"
       ],
       "cli_surfaces": [
+        "opl runway status --json",
+        "opl runway inspect --json",
+        "opl runway interfaces --json",
+        "opl runway validate --json",
+        "opl runway doctor --json",
         "opl family-runtime status --json",
         "opl family-runtime queue list --json",
         "opl family-runtime attempt list --json",
-        "opl family-runtime provider-slo tick --provider temporal --json",
-        "opl brand-modules inspect --module runway --json"
+        "opl family-runtime provider-slo tick --provider temporal --json"
       ],
       "app_surfaces": [
+        "app_action:runway_status",
+        "app_action:runway_inspect",
         "opl runtime app-operator-drilldown --detail full --json",
         "opl app state --profile full --json"
       ],
       "descriptor_surfaces": [
+        "opl runway interfaces --json",
+        "contracts/opl-framework/brand-module-surfaces.json#modules.runway",
         "contracts/opl-framework/runtime-manager-contract.json",
         "contracts/opl-framework/family-runtime-attempt-contract.json",
         "contracts/opl-framework/brand-module-registry.json#modules.runway"
       ],
       "validation_surfaces": [
+        "opl runway validate --json",
+        "opl runway doctor --json",
         "opl family-runtime doctor --json",
         "opl family-runtime provider-slo tick --provider temporal --json",
-        "opl brand-modules validate --json",
         "opl contract validate --json"
       ],
       "status_doc_refs": [
@@ -418,6 +468,7 @@
       "machine_boundary": "Vault stores and validates refs-only evidence projections. It does not store artifact or memory bodies, accept/reject memory writes, or sign owner receipts.",
       "module_doc_ref": "human_doc:opl_brand_module_vault",
       "contract_refs": [
+        "contracts/opl-framework/brand-module-surfaces.json",
         "contracts/opl-framework/evidence-vault-event.schema.json",
         "contracts/opl-framework/state-index-kernel-contract.json",
         "contracts/opl-framework/stage-artifact-runtime-contract.json",
@@ -426,25 +477,34 @@
         "contracts/opl-framework/stage-typed-blocker.schema.json"
       ],
       "cli_surfaces": [
+        "opl vault status --json",
+        "opl vault inspect --json",
+        "opl vault interfaces --json",
+        "opl vault validate --json",
+        "opl vault doctor --json",
         "opl index doctor --json",
         "opl index integrity-check --json",
         "opl stage-artifact validate --json",
-        "opl stage-artifact status --json",
-        "opl brand-modules inspect --module vault --json"
+        "opl stage-artifact status --json"
       ],
       "app_surfaces": [
+        "app_action:vault_status",
+        "app_action:vault_inspect",
         "opl runtime app-operator-drilldown --detail full --json",
         "opl app state --profile full --json"
       ],
       "descriptor_surfaces": [
+        "opl vault interfaces --json",
+        "contracts/opl-framework/brand-module-surfaces.json#modules.vault",
         "contracts/opl-framework/evidence-vault-event.schema.json",
         "contracts/opl-framework/state-index-kernel-contract.json",
         "contracts/opl-framework/brand-module-registry.json#modules.vault"
       ],
       "validation_surfaces": [
+        "opl vault validate --json",
+        "opl vault doctor --json",
         "opl index integrity-check --json",
         "opl stage-artifact validate --json",
-        "opl brand-modules validate --json",
         "opl contract validate --json"
       ],
       "status_doc_refs": [
@@ -496,33 +556,43 @@
       "machine_boundary": "Console consumes OPL and domain projections through App state/action descriptors. It does not own GUI release truth inside this repo, runtime provider truth, or domain truth.",
       "module_doc_ref": "human_doc:opl_brand_module_console",
       "contract_refs": [
+        "contracts/opl-framework/brand-module-surfaces.json",
         "contracts/opl-framework/family-product-operator-projection.json",
         "contracts/opl-framework/current-owner-delta.schema.json",
         "contracts/opl-framework/public-surface-index.json",
         "contracts/opl-framework/agent-platform-surface-ownership-contract.json"
       ],
       "cli_surfaces": [
+        "opl console status --json",
+        "opl console inspect --json",
+        "opl console interfaces --json",
+        "opl console validate --json",
+        "opl console doctor --json",
         "opl app state --profile fast --json",
         "opl app state --profile full --json",
         "opl app action execute --json",
-        "opl runtime app-operator-drilldown --detail full --json",
-        "opl brand-modules inspect --module console --json"
+        "opl runtime app-operator-drilldown --detail full --json"
       ],
       "app_surfaces": [
+        "app_action:console_status",
+        "app_action:console_inspect",
         "app_projection:current_owner_delta",
         "app_projection:evidence_next_steps",
         "app_action:workspace_ensure",
         "app_action:provider_scheduler_status"
       ],
       "descriptor_surfaces": [
+        "opl console interfaces --json",
+        "contracts/opl-framework/brand-module-surfaces.json#modules.console",
         "opl brand-modules interfaces --json#app",
         "contracts/opl-framework/family-product-operator-projection.json",
         "contracts/opl-framework/brand-module-registry.json#modules.console"
       ],
       "validation_surfaces": [
+        "opl console validate --json",
+        "opl console doctor --json",
         "opl app state --profile fast --json",
         "opl system semantic-hygiene --json",
-        "opl brand-modules validate --json",
         "opl contract validate --json"
       ],
       "status_doc_refs": [
@@ -574,6 +644,7 @@
       "machine_boundary": "Foundry Lab creates and improves OPL-compatible agent structures and work orders. It does not take over domain authority or certify domain deliverables.",
       "module_doc_ref": "human_doc:opl_brand_module_foundry_lab",
       "contract_refs": [
+        "contracts/opl-framework/brand-module-surfaces.json",
         "contracts/opl-framework/agent-lab-contract.json",
         "contracts/opl-framework/foundry-agent-series-contract.json",
         "contracts/opl-framework/standard-domain-agent-skeleton-contract.json",
@@ -581,25 +652,34 @@
         "contracts/opl-framework/guardrail-tier-policy.json"
       ],
       "cli_surfaces": [
+        "opl foundry-lab status --json",
+        "opl foundry-lab inspect --json",
+        "opl foundry-lab interfaces --json",
+        "opl foundry-lab validate --json",
+        "opl foundry-lab doctor --json",
         "opl agents scaffold --json",
         "opl agents conformance --family-defaults --json",
         "opl agents readiness --family-defaults --json",
-        "opl agents default-callers --family-defaults --json",
-        "opl brand-modules inspect --module foundry-lab --json"
+        "opl agents default-callers --family-defaults --json"
       ],
       "app_surfaces": [
+        "app_action:foundry_lab_status",
+        "app_action:foundry_lab_inspect",
         "opl app state --profile full --json#developer_mode",
         "opl brand-modules interfaces --json#app.descriptors.brand_modules_inspect"
       ],
       "descriptor_surfaces": [
+        "opl foundry-lab interfaces --json",
+        "contracts/opl-framework/brand-module-surfaces.json#modules.foundry-lab",
         "contracts/opl-framework/agent-lab-contract.json",
         "contracts/opl-framework/foundry-agent-series-contract.json",
         "contracts/opl-framework/brand-module-registry.json#modules.foundry-lab"
       ],
       "validation_surfaces": [
+        "opl foundry-lab validate --json",
+        "opl foundry-lab doctor --json",
         "opl agents conformance --family-defaults --json",
         "opl agents readiness --family-defaults --json",
-        "opl brand-modules validate --json",
         "opl contract validate --json"
       ],
       "status_doc_refs": [
@@ -651,6 +731,7 @@
       "machine_boundary": "Connect publishes descriptors and distribution surfaces derived from canonical contracts. It does not reinterpret domain semantics or claim install/release evidence that belongs to a release artifact owner.",
       "module_doc_ref": "human_doc:opl_brand_module_connect",
       "contract_refs": [
+        "contracts/opl-framework/brand-module-surfaces.json",
         "contracts/opl-framework/public-surface-index.json",
         "contracts/opl-framework/domain-pack-compiler-contract.json",
         "contracts/opl-framework/codex-default-profile.json",
@@ -658,27 +739,42 @@
         "contracts/opl-framework/fresh-install-test-matrix.json"
       ],
       "cli_surfaces": [
+        "opl connect status --json",
+        "opl connect inspect --json",
+        "opl connect interfaces --json",
+        "opl connect validate --json",
+        "opl connect doctor --json",
         "opl connect sync-skills --json",
         "opl connect skills --json",
         "opl connect modules --json",
         "opl connect install --module medautoscience --json",
         "opl connect packages manifest --json",
-        "opl brand-modules inspect --module connect --json"
+        "opl skill sync --json",
+        "opl skill list --json",
+        "opl modules --json",
+        "opl module install --module medautoscience --json",
+        "opl packages manifest --json"
       ],
       "app_surfaces": [
+        "app_action:connect_status",
+        "app_action:connect_inspect",
         "opl brand-modules interfaces --json#app.descriptors.brand_modules_list",
         "opl app state --profile full --json"
       ],
       "descriptor_surfaces": [
+        "opl connect interfaces --json",
+        "contracts/opl-framework/brand-module-surfaces.json#modules.connect",
         "opl agents interfaces --family-defaults --json",
         "opl actions export --domain medautoscience --format openai --json",
         "opl actions export --domain medautoscience --format ai-sdk --json",
         "contracts/opl-framework/brand-module-registry.json#modules.connect"
       ],
       "validation_surfaces": [
+        "opl connect validate --json",
+        "opl connect doctor --json",
         "opl system semantic-hygiene --json",
         "opl connect packages manifest --json",
-        "opl brand-modules validate --json",
+        "opl packages manifest --json",
         "opl contract validate --json"
       ],
       "status_doc_refs": [

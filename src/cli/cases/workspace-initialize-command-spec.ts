@@ -16,7 +16,7 @@ import {
   workspaceHealth,
   workspaceInventory,
 } from '../../workspace-lifecycle.ts';
-import { buildBrandModuleSurfaceInspect } from '../../brand-modules.ts';
+import { buildBrandModuleSurfaceInspect } from '../../brand-module-surfaces.ts';
 import type { FrameworkContracts } from '../../types.ts';
 import {
   assertNoArgs,

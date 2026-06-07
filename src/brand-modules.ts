@@ -58,6 +58,10 @@ function brandCliGovernance(contracts: FrameworkContracts) {
   return contracts.brandCliGovernance;
 }
 
+function brandModuleSurface(contracts: FrameworkContracts, moduleId: BrandModuleId) {
+  return contracts.brandModuleSurfaces.modules.find((entry) => entry.module_id === moduleId);
+}
+
 function statusDocPaths(entry: BrandModuleRegistryEntry) {
   return entry.status_doc_refs
     .map((ref) => HUMAN_DOC_PATHS[ref])
@@ -436,6 +440,8 @@ export function buildBrandModuleInterfaces(contracts: FrameworkContracts) {
       modules: registry.modules.map((entry) => ({
         module_id: entry.module_id,
         brand_name: entry.brand_name,
+        native_cli_family: brandModuleSurface(contracts, entry.module_id)?.native_cli_family ?? null,
+        module_surface_contract_ref: `contracts/opl-framework/brand-module-surfaces.json#modules.${entry.module_id}`,
         cli_surfaces: entry.cli_surfaces,
         app_surfaces: entry.app_surfaces,
         descriptor_surfaces: entry.descriptor_surfaces,

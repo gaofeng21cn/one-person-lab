@@ -421,6 +421,75 @@ export interface BrandCliGovernanceContract {
   drift_guards: string[];
 }
 
+export interface BrandModuleNativeCliFamily {
+  status: string;
+  inspect: string;
+  interfaces: string;
+  validate: string;
+  doctor: string;
+  additional_commands: string[];
+}
+
+export interface BrandModuleSurfaceAppDescriptor {
+  action_id: string;
+  command: string;
+  mutation: boolean;
+  descriptor_only: boolean;
+}
+
+export interface BrandModuleSurfaceContractEntry {
+  module_id: BrandModuleId;
+  brand_name: string;
+  command_prefix: string;
+  surface_kind_prefix: string;
+  state: string;
+  module_doc_ref: string;
+  object_model: {
+    primary_objects: string[];
+    canonical_contract_refs: string[];
+    read_model_refs: string[];
+  };
+  native_cli_family: BrandModuleNativeCliFamily;
+  app_read_model: {
+    descriptors: BrandModuleSurfaceAppDescriptor[];
+    projection_refs: string[];
+  };
+  descriptor_surface: {
+    delegate_ids: string[];
+    descriptor_refs: string[];
+  };
+  validation: {
+    commands: string[];
+    checks: string[];
+    required_refs: string[];
+  };
+  doctor: {
+    checks: string[];
+    fail_closed_on: string[];
+  };
+  status: {
+    completion_level: BrandModuleMaturityLevel;
+    evidence_refs: string[];
+    not_claims: string[];
+  };
+  authority_boundary: BrandModuleAuthorityBoundary;
+  forbidden_claims: string[];
+  notes: string;
+}
+
+export interface BrandModuleSurfacesContract {
+  version: string;
+  scope: string;
+  owner: string;
+  purpose: string;
+  state: string;
+  machine_boundary: string;
+  baseline_module_id: BrandModuleId;
+  required_native_subcommands: string[];
+  required_gates: string[];
+  modules: BrandModuleSurfaceContractEntry[];
+}
+
 export interface WorkstreamsRegistry {
   version: string;
   workstreams: WorkstreamContract[];
@@ -450,6 +519,7 @@ export interface FrameworkContracts {
   agentWorkspaceNorm: AgentWorkspaceNormContract;
   brandModuleRegistry: BrandModuleRegistryContract;
   brandCliGovernance: BrandCliGovernanceContract;
+  brandModuleSurfaces: BrandModuleSurfacesContract;
 }
 
 export interface ContractValidationEntry {
@@ -461,7 +531,8 @@ export interface ContractValidationEntry {
     | 'public_surface_index'
     | 'agent_workspace_norm'
     | 'brand_module_registry'
-    | 'brand_cli_governance';
+    | 'brand_cli_governance'
+    | 'brand_module_surfaces';
   file: string;
   schema_version: string;
   status: 'valid';

@@ -1,4 +1,9 @@
-import type { AgentWorkspaceNormContract, BrandCliGovernanceContract, BrandModuleRegistryContract } from '../../../../src/types.ts';
+import type {
+  AgentWorkspaceNormContract,
+  BrandCliGovernanceContract,
+  BrandModuleRegistryContract,
+  BrandModuleSurfacesContract,
+} from '../../../../src/types.ts';
 
 export const MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT: AgentWorkspaceNormContract = {
   surface_kind: 'opl_agent_workspace_norm_contract',
@@ -237,11 +242,33 @@ export const MINIMAL_BRAND_MODULE_REGISTRY_CONTRACT: BrandModuleRegistryContract
     state: 'test_fixture',
     machine_boundary: 'test fixture',
     module_doc_ref: `human_doc:opl_brand_module_${moduleId.replace(/-/g, '_')}`,
-    contract_refs: ['contracts/opl-framework/brand-module-registry.json'],
-    cli_surfaces: ['opl brand-modules list --json'],
-    app_surfaces: ['opl brand-modules interfaces --json#app'],
-    descriptor_surfaces: ['opl brand-modules interfaces --json#descriptor'],
-    validation_surfaces: ['opl brand-modules validate --json'],
+    contract_refs: [
+      'contracts/opl-framework/brand-module-surfaces.json',
+      'contracts/opl-framework/brand-module-registry.json',
+    ],
+    cli_surfaces: [
+      `opl ${moduleId} status --json`,
+      `opl ${moduleId} inspect --json`,
+      `opl ${moduleId} interfaces --json`,
+      `opl ${moduleId} validate --json`,
+      `opl ${moduleId} doctor --json`,
+      'opl brand-modules list --json',
+    ],
+    app_surfaces: [
+      `app_action:${moduleId.replace(/-/g, '_')}_status`,
+      `app_action:${moduleId.replace(/-/g, '_')}_inspect`,
+      'opl brand-modules interfaces --json#app',
+    ],
+    descriptor_surfaces: [
+      `opl ${moduleId} interfaces --json`,
+      `contracts/opl-framework/brand-module-surfaces.json#modules.${moduleId}`,
+      'opl brand-modules interfaces --json#descriptor',
+    ],
+    validation_surfaces: [
+      `opl ${moduleId} validate --json`,
+      `opl ${moduleId} doctor --json`,
+      'opl brand-modules validate --json',
+    ],
     status_doc_refs: ['human_doc:opl_brand_module_maturity_against_workspace'],
     l4_gates: MINIMAL_BRAND_MODULE_GATES,
     maturity_level: 'L4_structural_baseline',
@@ -259,6 +286,105 @@ export const MINIMAL_BRAND_MODULE_REGISTRY_CONTRACT: BrandModuleRegistryContract
       can_replace_ai_executor_planning: false,
     },
     forbidden_claims: ['domain_ready'],
+  })),
+};
+
+export const MINIMAL_BRAND_MODULE_SURFACES_CONTRACT: BrandModuleSurfacesContract = {
+  version: 'brand-module-surfaces.test',
+  scope: 'opl_brand_module_executable_surfaces',
+  owner: 'one-person-lab',
+  purpose: 'test fixture',
+  state: 'test_fixture',
+  machine_boundary: 'test fixture',
+  baseline_module_id: 'workspace',
+  required_native_subcommands: ['status', 'inspect', 'interfaces', 'validate', 'doctor'],
+  required_gates: [
+    'object_model',
+    'native_cli_family',
+    'app_read_model',
+    'descriptor_surface',
+    'validation',
+    'doctor',
+    'status',
+    'authority_boundary',
+    'forbidden_claims',
+  ],
+  modules: MINIMAL_BRAND_MODULE_IDS.map((moduleId) => ({
+    module_id: moduleId,
+    brand_name: `OPL ${moduleId}`,
+    command_prefix: moduleId,
+    surface_kind_prefix: `opl_${moduleId.replace(/-/g, '_')}`,
+    state: 'L4_module_surface_baseline',
+    module_doc_ref: `human_doc:opl_brand_module_${moduleId.replace(/-/g, '_')}`,
+    object_model: {
+      primary_objects: ['test_object'],
+      canonical_contract_refs: ['contracts/opl-framework/brand-module-registry.json'],
+      read_model_refs: [`opl ${moduleId} status --json`, `opl ${moduleId} inspect --json`],
+    },
+    native_cli_family: {
+      status: `opl ${moduleId} status --json`,
+      inspect: `opl ${moduleId} inspect --json`,
+      interfaces: `opl ${moduleId} interfaces --json`,
+      validate: `opl ${moduleId} validate --json`,
+      doctor: `opl ${moduleId} doctor --json`,
+      additional_commands: ['opl brand-modules list --json'],
+    },
+    app_read_model: {
+      descriptors: [
+        {
+          action_id: `${moduleId.replace(/-/g, '_')}_status`,
+          command: `opl ${moduleId} status --json`,
+          mutation: false,
+          descriptor_only: true,
+        },
+        {
+          action_id: `${moduleId.replace(/-/g, '_')}_inspect`,
+          command: `opl ${moduleId} inspect --json`,
+          mutation: false,
+          descriptor_only: true,
+        },
+        {
+          action_id: `${moduleId.replace(/-/g, '_')}_doctor`,
+          command: `opl ${moduleId} doctor --json`,
+          mutation: false,
+          descriptor_only: true,
+        },
+      ],
+      projection_refs: ['opl brand-modules interfaces --json#app'],
+    },
+    descriptor_surface: {
+      delegate_ids: [`${moduleId.replace(/-/g, '_')}_surface_contract`],
+      descriptor_refs: [`opl ${moduleId} interfaces --json`],
+    },
+    validation: {
+      commands: [`opl ${moduleId} validate --json`, `opl ${moduleId} doctor --json`],
+      checks: ['module_surface_contract'],
+      required_refs: [`contracts/opl-framework/brand-module-surfaces.json#modules.${moduleId}`],
+    },
+    doctor: {
+      checks: ['surface_contract_loaded'],
+      fail_closed_on: ['missing_surface_contract'],
+    },
+    status: {
+      completion_level: 'L4_structural_baseline',
+      evidence_refs: [`opl ${moduleId} validate --json`],
+      not_claims: ['domain_ready'],
+    },
+    authority_boundary: {
+      can_claim_domain_ready: false,
+      can_claim_quality_verdict: false,
+      can_claim_artifact_authority: false,
+      can_claim_production_ready: false,
+      can_write_domain_truth: false,
+      can_write_memory_body: false,
+      can_mutate_artifact_body: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_replace_domain_owner: false,
+      can_replace_ai_executor_planning: false,
+    },
+    forbidden_claims: ['domain_ready'],
+    notes: 'test fixture',
   })),
 };
 

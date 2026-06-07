@@ -607,6 +607,7 @@ export function buildInternalCommandSpecs(
         'opl skill list --domain medautoscience',
         'opl skill list --domain rca',
       ],
+      help_surface: 'migration_compatibility',
       handler: (args) => {
         const parsed = parseSkillPackArgs(args, commandSpecs['skill-list']);
         return readFamilySkillPacks({ domains: parsed.domains });
@@ -620,6 +621,7 @@ export function buildInternalCommandSpecs(
         'opl skill sync --domain medautoscience',
         'opl skill sync --home /tmp/codex-home',
       ],
+      help_surface: 'migration_compatibility',
       handler: (args) => {
         const parsed = parseSkillPackArgs(args, commandSpecs['skill-sync']);
         return syncFamilySkillPacks({

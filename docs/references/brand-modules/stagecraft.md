@@ -3,13 +3,19 @@
 Owner: `One Person Lab`
 Purpose: `brand_module_design`
 State: `support_reference`
-Machine boundary: 本文是人读目标态参考。机器真相继续归 stage contracts、domain stage packs、source、CLI/API 行为、runtime receipt 和 domain-owned quality gates。
+Machine boundary: 本文是人读目标态与 L4 验收说明。机器真相继续归 stage contracts、domain stage packs、source、CLI/API 行为、runtime receipt、domain-owned quality gates、App read-model 和测试输出。
 
 ## 品牌定位
 
 `OPL Stagecraft` 是 OPL 的 stage 设计与认知计算模块。它定义一个复杂知识工作阶段应该怎样被描述、启动、审核、交接和关闭。
 
 一句话：`Stagecraft` 管“每个 stage 要做什么、可用什么工具和知识、怎么证明可以进入下一步”。
+
+## 真实 L4 口径
+
+`Stagecraft` 达到真实 Workspace 级 `L4` 时，不能只依赖 `contracts/opl-framework/brand-module-registry.json` 里的模块描述。它必须像 `OPL Workspace` 一样具备独立对象模型、schema/contract、专属 CLI family、App action/read-model、doctor/validate、测试覆盖和状态文档。
+
+当前 registry 已记录 Stagecraft 的结构入口和 authority boundary；模块级 `opl stagecraft ...` CLI、App action/read-model 与 focused tests 落地后，才可声明 Stagecraft 达到真实 Workspace 级 L4。
 
 ## 设计理念
 
@@ -19,50 +25,117 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 stage c
 - Contract-light：合同只固定目标、refs、owner、scope、authority boundary、quality gate 和 receipt 下限。
 - Quality gate 独立：执行 attempt 与 reviewer / auditor attempt 分离。
 
-## 核心对象
+## 核心对象模型
 
-| 对象 | 作用 |
+| 对象 | 作用 | L4 验收要点 |
+| --- | --- | --- |
+| `stagecraft_profile` | Stagecraft 模块身份、stage policy、quality gate policy 和 authority flags。 | `status/inspect/interfaces` 必须返回 profile、contract refs、forbidden claims。 |
+| `stage_pack` | stage goal、inputs、outputs、owner、scope、quality gate 和 strategy refs。 | `inspect` 必须能展示 stage pack shape 和 missing required refs。 |
+| `stage_manifest` | domain stage 的 machine-readable manifest。 | `validate` 必须验证 manifest schema、owner、inputs、outputs、handoff 和 forbidden writes。 |
+| `stage_strategy_refs` | prompt、skill、tool、knowledge、rubric、reviewer refs。 | `inspect` 必须返回 refs，不把 refs 写成固定 workflow script。 |
+| `tool_affordance_boundary` | capability、permission、credential、write scope、side-effect risk、forbidden authority。 | `doctor` 必须发现缺失 permission/write-scope/credential boundary。 |
+| `stage_admission` | launch 前的 static / runtime / domain-owned boundary check。 | `validate` 必须 fail closed，缺 source/artifact/workspace scope 时不能进入 stage。 |
+| `quality_gate_plan` | 独立 reviewer / auditor gate 计划。 | `doctor` 必须发现 self-review、missing reviewer owner 或 missing gate output。 |
+| `handoff_envelope` | 下游 stage 或 owner 所需的显式输入。 | `inspect` 必须展示下游需要的 refs 和 owner acceptance requirement。 |
+| `route_back_ref` | 质量、证据、source 或 artifact 缺口回退到前序 owner。 | `status/doctor` 必须把 route-back 作为 owner route，不写成 stage success。 |
+
+## Schema / Contract
+
+真实 L4 至少绑定这些机器 contract：
+
+```text
+contracts/opl-framework/cognitive-computation-kernel.json
+contracts/opl-framework/stage-run-kernel-contract.json
+contracts/opl-framework/stage-manifest.schema.json
+contracts/opl-framework/stage-owner-receipt.schema.json
+contracts/opl-framework/stage-typed-blocker.schema.json
+contracts/opl-framework/brand-module-registry.json#modules.stagecraft
+```
+
+Stagecraft contract 的职责是表达 stage pack、stage manifest、cognitive kernel、strategy refs、tool affordance boundary、admission、quality gate、handoff、route-back、owner receipt ref 和 typed blocker ref 的 shape。它不运行 durable attempts，不签 domain quality/export verdict，不接管 domain owner。
+
+## 模块级 CLI Family
+
+真实 L4 必须有专属 CLI family，并继续把底层实现委托给 stages/stage readiness 和 stage manifest validation 真实 source。
+
+| 命令 | 验收说明 |
 | --- | --- |
-| `stage_pack` | stage goal、inputs、outputs、owner、scope、quality gate 和 strategy refs。 |
-| `stage_strategy_refs` | prompt、skill、tool、knowledge、rubric、reviewer refs。 |
-| `tool_affordance_boundary` | capability、permission、credential、write scope、side-effect risk、forbidden authority。 |
-| `stage_admission` | launch 前的 static / runtime / domain-owned boundary check。 |
-| `quality_gate_receipt` | 独立 gate attempt 输出的 review / route-back / typed blocker ref。 |
-| `handoff_envelope` | 下游 stage 或 owner 所需的显式输入。 |
-| `route_back_ref` | 质量、证据、source 或 artifact 缺口回退到前序 owner。 |
+| `opl stagecraft status --json` | 返回 Stagecraft profile、family stage readiness summary、stage graph summary、admission blocker summary、quality gate coverage、handoff/route-back summary 和 forbidden claim flags。 |
+| `opl stagecraft inspect --domain <domain> --json` | 返回该 domain 的 stage graph、stage packs、strategy refs、quality gate refs、handoff envelopes 和 route-back refs。 |
+| `opl stagecraft inspect --stage <stage_id> --json` | 返回单个 stage 的 manifest、admission requirements、tool affordance boundary、quality gate plan、receipt/blocker refs 和 downstream handoff。 |
+| `opl stagecraft interfaces --json` | 返回 CLI command specs、App action ids、read-model keys、descriptor delegates、contract refs、validation commands 和 status docs。 |
+| `opl stagecraft validate --json` | 静态验证 registry refs、contract refs、stage manifests、stage packs、tool affordance boundary、quality gate separation、handoff envelope、authority flags 和 forbidden claims。 |
+| `opl stagecraft doctor --json` | 诊断 missing stage manifest、missing source/artifact/workspace scope、missing quality gate owner、self-review risk、missing handoff、route-back gap 和 stale stage graph。 |
 
-## 接口与文档
-
-理想接口：
+允许复用的底层现有 surface：
 
 ```text
 opl stages readiness --family-defaults --json
 opl stages readiness --domain <domain> --json
 opl stages graph --domain <domain> --json
-opl stages proof-bundle --domain <domain> --json
-opl stage validate --stage-folder <path> --json
+opl stage validate --json
+opl stage conformance --json
+opl agents interfaces --family-defaults --json
+opl brand-modules inspect --module stagecraft --json
 ```
 
-理想文档：
+这些 surface 是 Stagecraft 的 source/delegate，不足以单独构成真实 L4；真实 L4 需要 `opl stagecraft status|inspect|interfaces|validate|doctor` 成为用户和 App 可消费的模块级入口。
 
-```text
-docs/references/brand-modules/stagecraft.md
-contracts/opl-framework/cognitive-computation-kernel.json
-contracts/family-orchestration/family-stage-control-plane.schema.json
-contracts/family-orchestration/family-stage-admission.schema.json
-```
+## App Action / Read-Model
 
-## 不做什么
+真实 L4 必须给 App 和 operator 提供 Stagecraft 自身读面：
+
+| Surface | 验收说明 |
+| --- | --- |
+| `app_action:stagecraft_status` | 只读 status action，delegated surface 为 `opl stagecraft status --json`。 |
+| `app_action:stagecraft_inspect` | 只读 drilldown action，支持 domain 或 stage scope。 |
+| `app_action:stagecraft_validate` | 结构验证 action，返回 checked stage packs、manifest blockers、quality gate separation 和 authority flags。 |
+| `app_action:stagecraft_doctor` | 诊断 action，返回 missing scope、missing gate、handoff gap、route-back gap 和 repair plan。 |
+| `read_model.stagecraft.stage_graph` | domain stage graph 与 stage pack summary。 |
+| `read_model.stagecraft.admission` | source/artifact/workspace scope、owner、tool boundary 和 launch blockers。 |
+| `read_model.stagecraft.quality_gates` | independent reviewer/gate requirements 和 receipt refs。 |
+| `read_model.stagecraft.handoff_route_back` | downstream handoff requirements、route-back refs 和 owner route。 |
+
+App read-model 只投影 Stagecraft refs。它不得把 readiness、schema completeness、quality gate presence 或 route-back closure 写成 domain ready、quality verdict、artifact authority 或 production ready。
+
+## Validate / Doctor
+
+`validate` 是结构门：
+
+- registry entry、contract refs、CLI specs、App action specs、descriptor delegates 和 status docs 必须齐全。
+- stage manifest、stage pack、strategy refs、tool affordance boundary、admission、quality gate、handoff envelope、owner receipt ref 和 typed blocker ref 必须可被机器验证。
+- reviewer / auditor gate 必须与 executor attempt 分离；同一 executor attempt 不能在同一上下文中自审并关闭质量门。
+
+`doctor` 是 stage health 门：
+
+- 缺 source/artifact/workspace scope、owner、quality gate、tool boundary、handoff 或 forbidden-write guard 时必须 fail closed。
+- route-back、typed blocker 和 missing receipt 必须投影为 owner action，不得被解释为 stage complete。
+- repair plan 只能修 stage pack、manifest、tool boundary、handoff 或 gate refs；domain verdict 必须留给 domain owner。
+
+## 测试覆盖
+
+真实 L4 至少需要 focused tests 覆盖：
+
+- `opl stagecraft status|inspect|interfaces|validate|doctor --json` 的 public help、JSON shape 和 error envelope。
+- `stagecraft` module registry refs 与 CLI/App/descriptor/validation refs 一致。
+- missing stage manifest、missing tool boundary、self-review risk、missing quality gate、route-back fixture。
+- App action catalog 中 `stagecraft_*` actions 的 delegated surface 与 read-model keys。
+- forbidden claims negative guards：readiness pass、manifest complete 或 gate ref present 不得授权 domain ready / quality verdict / durable runtime owner。
+
+## Authority Boundary
+
+| Stagecraft 可以做 | Stagecraft 不可以做 |
+| --- | --- |
+| 定义 stage pack、stage manifest、tool affordance boundary、admission、quality gate shape 和 handoff envelope。 | 运行 durable provider attempt、queue、lease、retry 或 dead-letter。 |
+| 验证 stage 结构、launch precondition、reviewer separation 和 route-back refs。 | 替 domain owner 签 owner receipt、quality verdict、artifact/export verdict 或 typed blocker。 |
+| 为 CLI、App、descriptor delegate 和 readiness 提供 stage design/readiness projection。 | 把 readiness、scorecard 或 schema completeness 写成 domain ready。 |
+| 把缺口投影为 route-back、typed blocker requirement 或 owner action。 | 把 route reconciler 写成 planner、reviewer 或 domain decision maker。 |
+
+## Forbidden Claims
 
 - 不规定工具调用顺序。
 - 不把 readiness / scorecard / schema completeness 升级成 domain verdict。
 - 不让同一 executor attempt 在同一上下文中自审并关闭质量门。
 - 不把 route reconciler 写成 planner 或 reviewer。
-
-## 成功标准
-
-- 每个 Foundry Agent 都能用同一 stage pack shape 描述 domain 工作。
-- Stage 内 AI 自主性和 authority boundary 同时清楚。
-- 缺少 source/artifact/workspace scope、owner、quality gate 或 forbidden-write guard 时 fail closed。
-- Reviewer receipt / typed blocker / route-back 是进入下一 stage 的真实依据。
-
+- 不声明 durable runtime owner。
+- 不声明 artifact authority、quality verdict、domain ready 或 production ready。

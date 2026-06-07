@@ -1,0 +1,1477 @@
+{
+  "version": "brand-module-surfaces.v1",
+  "scope": "opl_brand_module_executable_surfaces",
+  "owner": "one-person-lab",
+  "purpose": "Freeze the module-owned executable surface baseline for the nine OPL brand modules so L4 is proven by each module family, not only by the aggregate registry.",
+  "state": "active_contract",
+  "machine_boundary": "This contract defines module-level object models, native CLI families, App/read-model descriptors, validation and doctor gates, and false-authority boundaries. It does not claim domain ready, production ready, quality verdict, artifact authority, owner receipt, typed blocker, App release truth, or body storage authority.",
+  "baseline_module_id": "workspace",
+  "required_native_subcommands": [
+    "status",
+    "inspect",
+    "interfaces",
+    "validate",
+    "doctor"
+  ],
+  "required_gates": [
+    "object_model",
+    "native_cli_family",
+    "app_read_model",
+    "descriptor_surface",
+    "validation",
+    "doctor",
+    "status",
+    "authority_boundary",
+    "forbidden_claims"
+  ],
+  "modules": [
+    {
+      "module_id": "charter",
+      "brand_name": "OPL Charter",
+      "command_prefix": "charter",
+      "surface_kind_prefix": "opl_charter",
+      "state": "L4_module_surface_baseline",
+      "module_doc_ref": "human_doc:opl_brand_module_charter",
+      "object_model": {
+        "primary_objects": [
+          "brand_module",
+          "authority_matrix",
+          "term_lifecycle",
+          "adr_rfc_record",
+          "forbidden_claim"
+        ],
+        "canonical_contract_refs": [
+          "contracts/opl-framework/brand-module-registry.json",
+          "contracts/opl-framework/public-surface-index.json",
+          "contracts/opl-framework/surface-budget-policy.json"
+        ],
+        "read_model_refs": [
+          "opl charter status --json",
+          "opl charter inspect --json"
+        ]
+      },
+      "native_cli_family": {
+        "status": "opl charter status --json",
+        "inspect": "opl charter inspect --json",
+        "interfaces": "opl charter interfaces --json",
+        "validate": "opl charter validate --json",
+        "doctor": "opl charter doctor --json",
+        "additional_commands": [
+          "opl charter authority --json",
+          "opl charter terms --json",
+          "opl charter decisions --json",
+          "opl brand-modules list --json",
+          "opl brand-modules maturity --json"
+        ]
+      },
+      "app_read_model": {
+        "descriptors": [
+          {
+            "action_id": "charter_status",
+            "command": "opl charter status --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "charter_inspect",
+            "command": "opl charter inspect --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "charter_doctor",
+            "command": "opl charter doctor --json",
+            "mutation": false,
+            "descriptor_only": true
+          }
+        ],
+        "projection_refs": [
+          "opl brand-modules interfaces --json#app.descriptors.brand_modules_list",
+          "opl app state --profile fast --json"
+        ]
+      },
+      "descriptor_surface": {
+        "delegate_ids": [
+          "charter_surface_contract",
+          "charter_cli_family"
+        ],
+        "descriptor_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.charter",
+          "opl charter interfaces --json",
+          "opl brand-modules interfaces --json#descriptor.brand_modules_registry",
+          "contracts/opl-framework/brand-module-registry.json#modules.charter"
+        ]
+      },
+      "validation": {
+        "commands": [
+          "opl charter validate --json",
+          "opl charter doctor --json",
+          "opl contract validate --json"
+        ],
+        "checks": [
+          "module_surface_contract",
+          "native_cli_family",
+          "app_read_model",
+          "descriptor_surface",
+          "validation_surface",
+          "false_authority_boundary",
+          "forbidden_claims"
+        ],
+        "required_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.charter",
+          "contracts/opl-framework/brand-module-registry.json#modules.charter"
+        ]
+      },
+      "doctor": {
+        "checks": [
+          "surface_contract_loaded",
+          "registry_cross_reference",
+          "native_cli_family_present",
+          "app_descriptor_present",
+          "validation_commands_present",
+          "authority_boundary_false",
+          "forbidden_claims_present"
+        ],
+        "fail_closed_on": [
+          "missing_surface_contract",
+          "missing_registry_entry",
+          "missing_native_cli_command",
+          "authority_boundary_violation",
+          "forbidden_claim_missing"
+        ]
+      },
+      "status": {
+        "completion_level": "L4_structural_baseline",
+        "evidence_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.charter",
+          "opl charter validate --json",
+          "opl charter doctor --json",
+          "human_doc:opl_brand_module_maturity_against_workspace",
+          "human_doc:opl_brand_module_l4_rollout_plan",
+          "human_doc:opl_status"
+        ],
+        "not_claims": [
+          "domain_ready",
+          "quality_verdict",
+          "artifact_authority",
+          "production_ready",
+          "owner_receipt_signed_by_opl"
+        ]
+      },
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "can_claim_production_ready": false,
+        "can_write_domain_truth": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_replace_domain_owner": false,
+        "can_replace_ai_executor_planning": false
+      },
+      "forbidden_claims": [
+        "domain_ready",
+        "quality_verdict",
+        "artifact_authority",
+        "production_ready",
+        "owner_receipt_signed_by_opl"
+      ],
+      "notes": "Charter owns OPL module governance, terms, authority, and decision lifecycle surfaces; it does not own runtime or domain truth."
+    },
+    {
+      "module_id": "atlas",
+      "brand_name": "OPL Atlas",
+      "command_prefix": "atlas",
+      "surface_kind_prefix": "opl_atlas",
+      "state": "L4_module_surface_baseline",
+      "module_doc_ref": "human_doc:opl_brand_module_atlas",
+      "object_model": {
+        "primary_objects": [
+          "agent_descriptor",
+          "surface_descriptor",
+          "catalog_graph",
+          "lifecycle_state",
+          "generated_interface_bundle"
+        ],
+        "canonical_contract_refs": [
+          "contracts/opl-framework/domains.json",
+          "contracts/opl-framework/workstreams.json",
+          "contracts/opl-framework/public-surface-index.json",
+          "contracts/opl-framework/domain-pack-compiler-contract.json",
+          "contracts/opl-framework/standard-domain-agent-skeleton-contract.json"
+        ],
+        "read_model_refs": [
+          "opl atlas status --json",
+          "opl atlas inspect --json"
+        ]
+      },
+      "native_cli_family": {
+        "status": "opl atlas status --json",
+        "inspect": "opl atlas inspect --json",
+        "interfaces": "opl atlas interfaces --json",
+        "validate": "opl atlas validate --json",
+        "doctor": "opl atlas doctor --json",
+        "additional_commands": [
+          "opl atlas list --json",
+          "opl atlas surfaces --json",
+          "opl atlas graph --json",
+          "opl atlas lifecycle --json",
+          "opl agents descriptors --json",
+          "opl agents interfaces --family-defaults --json",
+          "opl actions list --json",
+          "opl stages list --json"
+        ]
+      },
+      "app_read_model": {
+        "descriptors": [
+          {
+            "action_id": "atlas_status",
+            "command": "opl atlas status --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "atlas_inspect",
+            "command": "opl atlas inspect --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "atlas_doctor",
+            "command": "opl atlas doctor --json",
+            "mutation": false,
+            "descriptor_only": true
+          }
+        ],
+        "projection_refs": [
+          "opl brand-modules interfaces --json#app.descriptors.brand_modules_inspect",
+          "opl app state --profile full --json"
+        ]
+      },
+      "descriptor_surface": {
+        "delegate_ids": [
+          "atlas_surface_contract",
+          "atlas_cli_family"
+        ],
+        "descriptor_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.atlas",
+          "opl atlas interfaces --json",
+          "opl agents interfaces --family-defaults --json",
+          "opl brand-modules interfaces --json#descriptor.brand_modules_registry",
+          "contracts/opl-framework/brand-module-registry.json#modules.atlas"
+        ]
+      },
+      "validation": {
+        "commands": [
+          "opl atlas validate --json",
+          "opl atlas doctor --json",
+          "opl contract validate --json"
+        ],
+        "checks": [
+          "module_surface_contract",
+          "native_cli_family",
+          "app_read_model",
+          "descriptor_surface",
+          "validation_surface",
+          "false_authority_boundary",
+          "forbidden_claims"
+        ],
+        "required_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.atlas",
+          "contracts/opl-framework/brand-module-registry.json#modules.atlas"
+        ]
+      },
+      "doctor": {
+        "checks": [
+          "surface_contract_loaded",
+          "registry_cross_reference",
+          "native_cli_family_present",
+          "app_descriptor_present",
+          "validation_commands_present",
+          "authority_boundary_false",
+          "forbidden_claims_present"
+        ],
+        "fail_closed_on": [
+          "missing_surface_contract",
+          "missing_registry_entry",
+          "missing_native_cli_command",
+          "authority_boundary_violation",
+          "forbidden_claim_missing"
+        ]
+      },
+      "status": {
+        "completion_level": "L4_structural_baseline",
+        "evidence_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.atlas",
+          "opl atlas validate --json",
+          "opl atlas doctor --json",
+          "human_doc:opl_brand_module_maturity_against_workspace",
+          "human_doc:opl_brand_module_l4_rollout_plan",
+          "human_doc:opl_status"
+        ],
+        "not_claims": [
+          "domain_ready",
+          "catalog_executes_actions",
+          "quality_verdict",
+          "artifact_authority",
+          "production_ready"
+        ]
+      },
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "can_claim_production_ready": false,
+        "can_write_domain_truth": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_replace_domain_owner": false,
+        "can_replace_ai_executor_planning": false
+      },
+      "forbidden_claims": [
+        "domain_ready",
+        "catalog_executes_actions",
+        "quality_verdict",
+        "artifact_authority",
+        "production_ready"
+      ],
+      "notes": "Atlas owns refs-only catalog, descriptor, graph, lifecycle, and generated interface read models; it does not execute cataloged actions."
+    },
+    {
+      "module_id": "workspace",
+      "brand_name": "OPL Workspace",
+      "command_prefix": "workspace",
+      "surface_kind_prefix": "opl_workspace",
+      "state": "L4_module_surface_baseline",
+      "module_doc_ref": "human_doc:opl_brand_module_workspace",
+      "object_model": {
+        "primary_objects": [
+          "workspace_group",
+          "project_unit",
+          "stage_artifact_unit",
+          "workspace_index",
+          "workspace_binding"
+        ],
+        "canonical_contract_refs": [
+          "contracts/opl-framework/workspace-topology-profile.schema.json",
+          "contracts/opl-framework/workspace-index.schema.json",
+          "contracts/opl-framework/agent-workspace-norm-contract.json",
+          "contracts/opl-framework/generic-substrate-projection-contract.json"
+        ],
+        "read_model_refs": [
+          "opl workspace status --json",
+          "opl workspace inspect --json"
+        ]
+      },
+      "native_cli_family": {
+        "status": "opl workspace status --json",
+        "inspect": "opl workspace inspect --json",
+        "interfaces": "opl workspace interfaces --json",
+        "validate": "opl workspace validate --json",
+        "doctor": "opl workspace doctor --json",
+        "additional_commands": [
+          "opl workspace ensure --json",
+          "opl workspace init --json",
+          "opl workspace adopt --json"
+        ]
+      },
+      "app_read_model": {
+        "descriptors": [
+          {
+            "action_id": "workspace_status",
+            "command": "opl workspace status --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "workspace_inspect",
+            "command": "opl workspace inspect --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "workspace_doctor",
+            "command": "opl workspace doctor --json",
+            "mutation": false,
+            "descriptor_only": true
+          }
+        ],
+        "projection_refs": [
+          "app_action:workspace_ensure",
+          "app_action:workspace_initialize",
+          "app_action:workspace_validate",
+          "app_action:workspace_doctor",
+          "opl app state --profile fast --json"
+        ]
+      },
+      "descriptor_surface": {
+        "delegate_ids": [
+          "workspace_surface_contract",
+          "workspace_cli_family"
+        ],
+        "descriptor_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.workspace",
+          "opl workspace interfaces --json",
+          "opl workspace interfaces --json",
+          "contracts/opl-framework/agent-workspace-norm-contract.json#descriptor_delegates",
+          "contracts/opl-framework/brand-module-registry.json#modules.workspace"
+        ]
+      },
+      "validation": {
+        "commands": [
+          "opl workspace validate --json",
+          "opl workspace doctor --json",
+          "opl contract validate --json"
+        ],
+        "checks": [
+          "module_surface_contract",
+          "native_cli_family",
+          "app_read_model",
+          "descriptor_surface",
+          "validation_surface",
+          "false_authority_boundary",
+          "forbidden_claims"
+        ],
+        "required_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.workspace",
+          "contracts/opl-framework/brand-module-registry.json#modules.workspace"
+        ]
+      },
+      "doctor": {
+        "checks": [
+          "surface_contract_loaded",
+          "registry_cross_reference",
+          "native_cli_family_present",
+          "app_descriptor_present",
+          "validation_commands_present",
+          "authority_boundary_false",
+          "forbidden_claims_present"
+        ],
+        "fail_closed_on": [
+          "missing_surface_contract",
+          "missing_registry_entry",
+          "missing_native_cli_command",
+          "authority_boundary_violation",
+          "forbidden_claim_missing"
+        ]
+      },
+      "status": {
+        "completion_level": "L4_structural_baseline",
+        "evidence_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.workspace",
+          "opl workspace validate --json",
+          "opl workspace doctor --json",
+          "human_doc:opl_brand_module_maturity_against_workspace",
+          "human_doc:opl_brand_module_l4_rollout_plan",
+          "human_doc:opl_architecture",
+          "human_doc:opl_status"
+        ],
+        "not_claims": [
+          "domain_ready",
+          "quality_verdict",
+          "artifact_body_store",
+          "owner_receipt_signed_by_opl",
+          "production_ready"
+        ]
+      },
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "can_claim_production_ready": false,
+        "can_write_domain_truth": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_replace_domain_owner": false,
+        "can_replace_ai_executor_planning": false
+      },
+      "forbidden_claims": [
+        "domain_ready",
+        "quality_verdict",
+        "artifact_body_store",
+        "owner_receipt_signed_by_opl",
+        "production_ready"
+      ],
+      "notes": "Workspace owns workspace topology, binding, index, and project/stage artifact location surfaces; it does not own domain truth or artifact bodies."
+    },
+    {
+      "module_id": "stagecraft",
+      "brand_name": "OPL Stagecraft",
+      "command_prefix": "stagecraft",
+      "surface_kind_prefix": "opl_stagecraft",
+      "state": "L4_module_surface_baseline",
+      "module_doc_ref": "human_doc:opl_brand_module_stagecraft",
+      "object_model": {
+        "primary_objects": [
+          "stage_manifest",
+          "stage_run",
+          "role_artifact_ref",
+          "owner_receipt",
+          "typed_blocker",
+          "cognitive_strategy"
+        ],
+        "canonical_contract_refs": [
+          "contracts/opl-framework/cognitive-computation-kernel.json",
+          "contracts/opl-framework/stage-run-kernel-contract.json",
+          "contracts/opl-framework/stage-manifest.schema.json",
+          "contracts/opl-framework/stage-owner-receipt.schema.json",
+          "contracts/opl-framework/stage-typed-blocker.schema.json"
+        ],
+        "read_model_refs": [
+          "opl stagecraft status --json",
+          "opl stagecraft inspect --json"
+        ]
+      },
+      "native_cli_family": {
+        "status": "opl stagecraft status --json",
+        "inspect": "opl stagecraft inspect --json",
+        "interfaces": "opl stagecraft interfaces --json",
+        "validate": "opl stagecraft validate --json",
+        "doctor": "opl stagecraft doctor --json",
+        "additional_commands": [
+          "opl stagecraft stages --json",
+          "opl stagecraft graph --json",
+          "opl stagecraft receipts --json",
+          "opl stagecraft blockers --json",
+          "opl stages readiness --family-defaults --json",
+          "opl stages graph --domain mas --json"
+        ]
+      },
+      "app_read_model": {
+        "descriptors": [
+          {
+            "action_id": "stagecraft_status",
+            "command": "opl stagecraft status --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "stagecraft_inspect",
+            "command": "opl stagecraft inspect --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "stagecraft_doctor",
+            "command": "opl stagecraft doctor --json",
+            "mutation": false,
+            "descriptor_only": true
+          }
+        ],
+        "projection_refs": [
+          "opl brand-modules interfaces --json#app.descriptors.brand_modules_inspect",
+          "opl app state --profile full --json"
+        ]
+      },
+      "descriptor_surface": {
+        "delegate_ids": [
+          "stagecraft_surface_contract",
+          "stagecraft_cli_family"
+        ],
+        "descriptor_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.stagecraft",
+          "opl stagecraft interfaces --json",
+          "opl agents interfaces --family-defaults --json#stage_routes",
+          "contracts/opl-framework/stage-run-kernel-contract.json",
+          "contracts/opl-framework/brand-module-registry.json#modules.stagecraft"
+        ]
+      },
+      "validation": {
+        "commands": [
+          "opl stagecraft validate --json",
+          "opl stagecraft doctor --json",
+          "opl contract validate --json"
+        ],
+        "checks": [
+          "module_surface_contract",
+          "native_cli_family",
+          "app_read_model",
+          "descriptor_surface",
+          "validation_surface",
+          "false_authority_boundary",
+          "forbidden_claims"
+        ],
+        "required_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.stagecraft",
+          "contracts/opl-framework/brand-module-registry.json#modules.stagecraft"
+        ]
+      },
+      "doctor": {
+        "checks": [
+          "surface_contract_loaded",
+          "registry_cross_reference",
+          "native_cli_family_present",
+          "app_descriptor_present",
+          "validation_commands_present",
+          "authority_boundary_false",
+          "forbidden_claims_present"
+        ],
+        "fail_closed_on": [
+          "missing_surface_contract",
+          "missing_registry_entry",
+          "missing_native_cli_command",
+          "authority_boundary_violation",
+          "forbidden_claim_missing"
+        ]
+      },
+      "status": {
+        "completion_level": "L4_structural_baseline",
+        "evidence_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.stagecraft",
+          "opl stagecraft validate --json",
+          "opl stagecraft doctor --json",
+          "human_doc:opl_brand_module_maturity_against_workspace",
+          "human_doc:opl_brand_module_l4_rollout_plan",
+          "human_doc:opl_stage_native_kernel_rollout_plan",
+          "human_doc:opl_status"
+        ],
+        "not_claims": [
+          "stage_quality_verdict_closed_by_opl",
+          "domain_ready",
+          "artifact_authority",
+          "durable_runtime_owner",
+          "production_ready"
+        ]
+      },
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "can_claim_production_ready": false,
+        "can_write_domain_truth": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_replace_domain_owner": false,
+        "can_replace_ai_executor_planning": false
+      },
+      "forbidden_claims": [
+        "stage_quality_verdict_closed_by_opl",
+        "domain_ready",
+        "artifact_authority",
+        "durable_runtime_owner",
+        "production_ready"
+      ],
+      "notes": "Stagecraft owns stage grammar, StageRun shape, role artifact interfaces, and receipt/blocker binding surfaces; it does not sign domain receipts."
+    },
+    {
+      "module_id": "runway",
+      "brand_name": "OPL Runway",
+      "command_prefix": "runway",
+      "surface_kind_prefix": "opl_runway",
+      "state": "L4_module_surface_baseline",
+      "module_doc_ref": "human_doc:opl_brand_module_runway",
+      "object_model": {
+        "primary_objects": [
+          "runtime_provider",
+          "queue_item",
+          "stage_attempt",
+          "attempt_lease",
+          "runtime_blocker",
+          "slo_tick"
+        ],
+        "canonical_contract_refs": [
+          "contracts/opl-framework/runtime-manager-contract.json",
+          "contracts/opl-framework/family-runtime-attempt-contract.json",
+          "contracts/opl-framework/family-runtime-online-substrate-contract.json",
+          "contracts/opl-framework/stage-route-scheduler-contract.json",
+          "contracts/opl-framework/managed-runtime-three-layer-contract.json"
+        ],
+        "read_model_refs": [
+          "opl runway status --json",
+          "opl runway inspect --json"
+        ]
+      },
+      "native_cli_family": {
+        "status": "opl runway status --json",
+        "inspect": "opl runway inspect --json",
+        "interfaces": "opl runway interfaces --json",
+        "validate": "opl runway validate --json",
+        "doctor": "opl runway doctor --json",
+        "additional_commands": [
+          "opl runway queue --json",
+          "opl runway attempts --json",
+          "opl runway provider --json",
+          "opl runway blockers --json",
+          "opl family-runtime status --json",
+          "opl family-runtime queue list --json",
+          "opl family-runtime attempt list --json"
+        ]
+      },
+      "app_read_model": {
+        "descriptors": [
+          {
+            "action_id": "runway_status",
+            "command": "opl runway status --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "runway_inspect",
+            "command": "opl runway inspect --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "runway_doctor",
+            "command": "opl runway doctor --json",
+            "mutation": false,
+            "descriptor_only": true
+          }
+        ],
+        "projection_refs": [
+          "opl runtime app-operator-drilldown --detail full --json",
+          "opl app state --profile full --json"
+        ]
+      },
+      "descriptor_surface": {
+        "delegate_ids": [
+          "runway_surface_contract",
+          "runway_cli_family"
+        ],
+        "descriptor_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.runway",
+          "opl runway interfaces --json",
+          "contracts/opl-framework/runtime-manager-contract.json",
+          "contracts/opl-framework/family-runtime-attempt-contract.json",
+          "contracts/opl-framework/brand-module-registry.json#modules.runway"
+        ]
+      },
+      "validation": {
+        "commands": [
+          "opl runway validate --json",
+          "opl runway doctor --json",
+          "opl contract validate --json"
+        ],
+        "checks": [
+          "module_surface_contract",
+          "native_cli_family",
+          "app_read_model",
+          "descriptor_surface",
+          "validation_surface",
+          "false_authority_boundary",
+          "forbidden_claims"
+        ],
+        "required_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.runway",
+          "contracts/opl-framework/brand-module-registry.json#modules.runway"
+        ]
+      },
+      "doctor": {
+        "checks": [
+          "surface_contract_loaded",
+          "registry_cross_reference",
+          "native_cli_family_present",
+          "app_descriptor_present",
+          "validation_commands_present",
+          "authority_boundary_false",
+          "forbidden_claims_present"
+        ],
+        "fail_closed_on": [
+          "missing_surface_contract",
+          "missing_registry_entry",
+          "missing_native_cli_command",
+          "authority_boundary_violation",
+          "forbidden_claim_missing"
+        ]
+      },
+      "status": {
+        "completion_level": "L4_structural_baseline",
+        "evidence_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.runway",
+          "opl runway validate --json",
+          "opl runway doctor --json",
+          "human_doc:opl_brand_module_maturity_against_workspace",
+          "human_doc:opl_brand_module_l4_rollout_plan",
+          "human_doc:opl_runtime_index",
+          "human_doc:opl_status"
+        ],
+        "not_claims": [
+          "domain_owner_closeout_generated_by_opl",
+          "domain_ready",
+          "quality_verdict",
+          "production_long_soak_complete",
+          "artifact_authority"
+        ]
+      },
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "can_claim_production_ready": false,
+        "can_write_domain_truth": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_replace_domain_owner": false,
+        "can_replace_ai_executor_planning": false
+      },
+      "forbidden_claims": [
+        "domain_owner_closeout_generated_by_opl",
+        "domain_ready",
+        "quality_verdict",
+        "production_long_soak_complete",
+        "artifact_authority"
+      ],
+      "notes": "Runway owns durable runtime transport, queue, attempt, lease, provider, and runtime blocker surfaces; it does not convert provider completion into domain readiness."
+    },
+    {
+      "module_id": "vault",
+      "brand_name": "OPL Vault",
+      "command_prefix": "vault",
+      "surface_kind_prefix": "opl_vault",
+      "state": "L4_module_surface_baseline",
+      "module_doc_ref": "human_doc:opl_brand_module_vault",
+      "object_model": {
+        "primary_objects": [
+          "evidence_event",
+          "receipt_ref",
+          "typed_blocker_ref",
+          "artifact_lineage",
+          "state_index_ref",
+          "restore_proof"
+        ],
+        "canonical_contract_refs": [
+          "contracts/opl-framework/evidence-vault-event.schema.json",
+          "contracts/opl-framework/state-index-kernel-contract.json",
+          "contracts/opl-framework/stage-artifact-runtime-contract.json",
+          "contracts/opl-framework/role-artifact-ref.schema.json",
+          "contracts/opl-framework/stage-owner-receipt.schema.json",
+          "contracts/opl-framework/stage-typed-blocker.schema.json"
+        ],
+        "read_model_refs": [
+          "opl vault status --json",
+          "opl vault inspect --json"
+        ]
+      },
+      "native_cli_family": {
+        "status": "opl vault status --json",
+        "inspect": "opl vault inspect --json",
+        "interfaces": "opl vault interfaces --json",
+        "validate": "opl vault validate --json",
+        "doctor": "opl vault doctor --json",
+        "additional_commands": [
+          "opl vault evidence --json",
+          "opl vault artifacts --json",
+          "opl vault receipts --json",
+          "opl vault lineage --json",
+          "opl index doctor --json",
+          "opl index integrity-check --json",
+          "opl stage-artifact status --json"
+        ]
+      },
+      "app_read_model": {
+        "descriptors": [
+          {
+            "action_id": "vault_status",
+            "command": "opl vault status --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "vault_inspect",
+            "command": "opl vault inspect --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "vault_doctor",
+            "command": "opl vault doctor --json",
+            "mutation": false,
+            "descriptor_only": true
+          }
+        ],
+        "projection_refs": [
+          "opl runtime app-operator-drilldown --detail full --json",
+          "opl app state --profile full --json"
+        ]
+      },
+      "descriptor_surface": {
+        "delegate_ids": [
+          "vault_surface_contract",
+          "vault_cli_family"
+        ],
+        "descriptor_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.vault",
+          "opl vault interfaces --json",
+          "contracts/opl-framework/evidence-vault-event.schema.json",
+          "contracts/opl-framework/state-index-kernel-contract.json",
+          "contracts/opl-framework/brand-module-registry.json#modules.vault"
+        ]
+      },
+      "validation": {
+        "commands": [
+          "opl vault validate --json",
+          "opl vault doctor --json",
+          "opl contract validate --json"
+        ],
+        "checks": [
+          "module_surface_contract",
+          "native_cli_family",
+          "app_read_model",
+          "descriptor_surface",
+          "validation_surface",
+          "false_authority_boundary",
+          "forbidden_claims"
+        ],
+        "required_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.vault",
+          "contracts/opl-framework/brand-module-registry.json#modules.vault"
+        ]
+      },
+      "doctor": {
+        "checks": [
+          "surface_contract_loaded",
+          "registry_cross_reference",
+          "native_cli_family_present",
+          "app_descriptor_present",
+          "validation_commands_present",
+          "authority_boundary_false",
+          "forbidden_claims_present"
+        ],
+        "fail_closed_on": [
+          "missing_surface_contract",
+          "missing_registry_entry",
+          "missing_native_cli_command",
+          "authority_boundary_violation",
+          "forbidden_claim_missing"
+        ]
+      },
+      "status": {
+        "completion_level": "L4_structural_baseline",
+        "evidence_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.vault",
+          "opl vault validate --json",
+          "opl vault doctor --json",
+          "human_doc:opl_brand_module_maturity_against_workspace",
+          "human_doc:opl_brand_module_l4_rollout_plan",
+          "human_doc:opl_delivery_index",
+          "human_doc:opl_status"
+        ],
+        "not_claims": [
+          "artifact_body_store",
+          "memory_body_store",
+          "owner_receipt_signed_by_opl",
+          "quality_verdict",
+          "production_ready"
+        ]
+      },
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "can_claim_production_ready": false,
+        "can_write_domain_truth": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_replace_domain_owner": false,
+        "can_replace_ai_executor_planning": false
+      },
+      "forbidden_claims": [
+        "artifact_body_store",
+        "memory_body_store",
+        "owner_receipt_signed_by_opl",
+        "quality_verdict",
+        "production_ready"
+      ],
+      "notes": "Vault owns refs-only evidence, receipt, blocker, lineage, restore, and index audit surfaces; it does not store artifact or memory bodies."
+    },
+    {
+      "module_id": "console",
+      "brand_name": "OPL Console",
+      "command_prefix": "console",
+      "surface_kind_prefix": "opl_console",
+      "state": "L4_module_surface_baseline",
+      "module_doc_ref": "human_doc:opl_brand_module_console",
+      "object_model": {
+        "primary_objects": [
+          "app_state_projection",
+          "safe_action",
+          "operator_drilldown",
+          "current_owner_delta",
+          "evidence_next_step"
+        ],
+        "canonical_contract_refs": [
+          "contracts/opl-framework/family-product-operator-projection.json",
+          "contracts/opl-framework/current-owner-delta.schema.json",
+          "contracts/opl-framework/public-surface-index.json",
+          "contracts/opl-framework/agent-platform-surface-ownership-contract.json"
+        ],
+        "read_model_refs": [
+          "opl console status --json",
+          "opl console inspect --json"
+        ]
+      },
+      "native_cli_family": {
+        "status": "opl console status --json",
+        "inspect": "opl console inspect --json",
+        "interfaces": "opl console interfaces --json",
+        "validate": "opl console validate --json",
+        "doctor": "opl console doctor --json",
+        "additional_commands": [
+          "opl console actions --json",
+          "opl console read-model --json",
+          "opl console drilldown --json",
+          "opl app state --profile fast --json",
+          "opl app action execute --json",
+          "opl runtime app-operator-drilldown --detail full --json"
+        ]
+      },
+      "app_read_model": {
+        "descriptors": [
+          {
+            "action_id": "console_status",
+            "command": "opl console status --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "console_inspect",
+            "command": "opl console inspect --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "console_doctor",
+            "command": "opl console doctor --json",
+            "mutation": false,
+            "descriptor_only": true
+          }
+        ],
+        "projection_refs": [
+          "app_projection:current_owner_delta",
+          "app_projection:evidence_next_steps",
+          "app_action:workspace_ensure",
+          "app_action:provider_scheduler_status"
+        ]
+      },
+      "descriptor_surface": {
+        "delegate_ids": [
+          "console_surface_contract",
+          "console_cli_family"
+        ],
+        "descriptor_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.console",
+          "opl console interfaces --json",
+          "opl brand-modules interfaces --json#app",
+          "contracts/opl-framework/family-product-operator-projection.json",
+          "contracts/opl-framework/brand-module-registry.json#modules.console"
+        ]
+      },
+      "validation": {
+        "commands": [
+          "opl console validate --json",
+          "opl console doctor --json",
+          "opl contract validate --json"
+        ],
+        "checks": [
+          "module_surface_contract",
+          "native_cli_family",
+          "app_read_model",
+          "descriptor_surface",
+          "validation_surface",
+          "false_authority_boundary",
+          "forbidden_claims"
+        ],
+        "required_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.console",
+          "contracts/opl-framework/brand-module-registry.json#modules.console"
+        ]
+      },
+      "doctor": {
+        "checks": [
+          "surface_contract_loaded",
+          "registry_cross_reference",
+          "native_cli_family_present",
+          "app_descriptor_present",
+          "validation_commands_present",
+          "authority_boundary_false",
+          "forbidden_claims_present"
+        ],
+        "fail_closed_on": [
+          "missing_surface_contract",
+          "missing_registry_entry",
+          "missing_native_cli_command",
+          "authority_boundary_violation",
+          "forbidden_claim_missing"
+        ]
+      },
+      "status": {
+        "completion_level": "L4_structural_baseline",
+        "evidence_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.console",
+          "opl console validate --json",
+          "opl console doctor --json",
+          "human_doc:opl_brand_module_maturity_against_workspace",
+          "human_doc:opl_brand_module_l4_rollout_plan",
+          "human_doc:opl_public_surface_index",
+          "human_doc:opl_status"
+        ],
+        "not_claims": [
+          "gui_release_ready",
+          "domain_ready",
+          "quality_verdict",
+          "runtime_provider_truth_owner",
+          "production_ready"
+        ]
+      },
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "can_claim_production_ready": false,
+        "can_write_domain_truth": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_replace_domain_owner": false,
+        "can_replace_ai_executor_planning": false
+      },
+      "forbidden_claims": [
+        "gui_release_ready",
+        "domain_ready",
+        "quality_verdict",
+        "runtime_provider_truth_owner",
+        "production_ready"
+      ],
+      "notes": "Console owns OPL-produced App/operator read models and safe action descriptors; App release truth remains in the App repository."
+    },
+    {
+      "module_id": "foundry-lab",
+      "brand_name": "OPL Foundry Lab",
+      "command_prefix": "foundry-lab",
+      "surface_kind_prefix": "opl_foundry_lab",
+      "state": "L4_module_surface_baseline",
+      "module_doc_ref": "human_doc:opl_brand_module_foundry_lab",
+      "object_model": {
+        "primary_objects": [
+          "agent_blueprint",
+          "developer_work_order",
+          "conformance_report",
+          "risk_tier_promotion",
+          "canary_evidence",
+          "target_agent_handoff"
+        ],
+        "canonical_contract_refs": [
+          "contracts/opl-framework/agent-lab-contract.json",
+          "contracts/opl-framework/foundry-agent-series-contract.json",
+          "contracts/opl-framework/standard-domain-agent-skeleton-contract.json",
+          "contracts/opl-framework/domain-pack-compiler-contract.json",
+          "contracts/opl-framework/guardrail-tier-policy.json"
+        ],
+        "read_model_refs": [
+          "opl foundry-lab status --json",
+          "opl foundry-lab inspect --json"
+        ]
+      },
+      "native_cli_family": {
+        "status": "opl foundry-lab status --json",
+        "inspect": "opl foundry-lab inspect --json",
+        "interfaces": "opl foundry-lab interfaces --json",
+        "validate": "opl foundry-lab validate --json",
+        "doctor": "opl foundry-lab doctor --json",
+        "additional_commands": [
+          "opl foundry-lab blueprints --json",
+          "opl foundry-lab work-orders --json",
+          "opl foundry-lab conformance --json",
+          "opl foundry-lab promotions --json",
+          "opl agents scaffold --json",
+          "opl agents conformance --family-defaults --json",
+          "opl agents readiness --family-defaults --json"
+        ]
+      },
+      "app_read_model": {
+        "descriptors": [
+          {
+            "action_id": "foundry_lab_status",
+            "command": "opl foundry-lab status --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "foundry_lab_inspect",
+            "command": "opl foundry-lab inspect --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "foundry_lab_doctor",
+            "command": "opl foundry-lab doctor --json",
+            "mutation": false,
+            "descriptor_only": true
+          }
+        ],
+        "projection_refs": [
+          "opl app state --profile full --json#developer_mode",
+          "opl brand-modules interfaces --json#app.descriptors.brand_modules_inspect"
+        ]
+      },
+      "descriptor_surface": {
+        "delegate_ids": [
+          "foundry_lab_surface_contract",
+          "foundry_lab_cli_family"
+        ],
+        "descriptor_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.foundry-lab",
+          "opl foundry-lab interfaces --json",
+          "contracts/opl-framework/agent-lab-contract.json",
+          "contracts/opl-framework/foundry-agent-series-contract.json",
+          "contracts/opl-framework/brand-module-registry.json#modules.foundry-lab"
+        ]
+      },
+      "validation": {
+        "commands": [
+          "opl foundry-lab validate --json",
+          "opl foundry-lab doctor --json",
+          "opl contract validate --json"
+        ],
+        "checks": [
+          "module_surface_contract",
+          "native_cli_family",
+          "app_read_model",
+          "descriptor_surface",
+          "validation_surface",
+          "false_authority_boundary",
+          "forbidden_claims"
+        ],
+        "required_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.foundry-lab",
+          "contracts/opl-framework/brand-module-registry.json#modules.foundry-lab"
+        ]
+      },
+      "doctor": {
+        "checks": [
+          "surface_contract_loaded",
+          "registry_cross_reference",
+          "native_cli_family_present",
+          "app_descriptor_present",
+          "validation_commands_present",
+          "authority_boundary_false",
+          "forbidden_claims_present"
+        ],
+        "fail_closed_on": [
+          "missing_surface_contract",
+          "missing_registry_entry",
+          "missing_native_cli_command",
+          "authority_boundary_violation",
+          "forbidden_claim_missing"
+        ]
+      },
+      "status": {
+        "completion_level": "L4_structural_baseline",
+        "evidence_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.foundry-lab",
+          "opl foundry-lab validate --json",
+          "opl foundry-lab doctor --json",
+          "human_doc:opl_brand_module_maturity_against_workspace",
+          "human_doc:opl_brand_module_l4_rollout_plan",
+          "human_doc:opl_foundry_agent_target_operating_architecture",
+          "human_doc:opl_status"
+        ],
+        "not_claims": [
+          "domain_agent_quality_certified",
+          "domain_ready",
+          "artifact_authority",
+          "owner_receipt_signed_by_opl",
+          "production_ready"
+        ]
+      },
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "can_claim_production_ready": false,
+        "can_write_domain_truth": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_replace_domain_owner": false,
+        "can_replace_ai_executor_planning": false
+      },
+      "forbidden_claims": [
+        "domain_agent_quality_certified",
+        "domain_ready",
+        "artifact_authority",
+        "owner_receipt_signed_by_opl",
+        "production_ready"
+      ],
+      "notes": "Foundry Lab owns agent blueprint, conformance, work-order, canary, and promotion/rollback improvement surfaces; domain owner acceptance remains external."
+    },
+    {
+      "module_id": "connect",
+      "brand_name": "OPL Connect",
+      "command_prefix": "connect",
+      "surface_kind_prefix": "opl_connect",
+      "state": "L4_module_surface_baseline",
+      "module_doc_ref": "human_doc:opl_brand_module_connect",
+      "object_model": {
+        "primary_objects": [
+          "generated_descriptor",
+          "release_channel",
+          "module_package",
+          "skill_sync",
+          "install_matrix",
+          "drift_manifest"
+        ],
+        "canonical_contract_refs": [
+          "contracts/opl-framework/public-surface-index.json",
+          "contracts/opl-framework/domain-pack-compiler-contract.json",
+          "contracts/opl-framework/codex-default-profile.json",
+          "contracts/opl-framework/native-helper-contract.json",
+          "contracts/opl-framework/fresh-install-test-matrix.json"
+        ],
+        "read_model_refs": [
+          "opl connect status --json",
+          "opl connect inspect --json"
+        ]
+      },
+      "native_cli_family": {
+        "status": "opl connect status --json",
+        "inspect": "opl connect inspect --json",
+        "interfaces": "opl connect interfaces --json",
+        "validate": "opl connect validate --json",
+        "doctor": "opl connect doctor --json",
+        "additional_commands": [
+          "opl connect descriptors --json",
+          "opl connect packages --json",
+          "opl connect channels --json",
+          "opl connect drift --json",
+          "opl skill sync --json",
+          "opl skill list --json",
+          "opl modules --json",
+          "opl packages manifest --json"
+        ]
+      },
+      "app_read_model": {
+        "descriptors": [
+          {
+            "action_id": "connect_status",
+            "command": "opl connect status --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "connect_inspect",
+            "command": "opl connect inspect --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "connect_doctor",
+            "command": "opl connect doctor --json",
+            "mutation": false,
+            "descriptor_only": true
+          }
+        ],
+        "projection_refs": [
+          "opl brand-modules interfaces --json#app.descriptors.brand_modules_list",
+          "opl app state --profile full --json"
+        ]
+      },
+      "descriptor_surface": {
+        "delegate_ids": [
+          "connect_surface_contract",
+          "connect_cli_family"
+        ],
+        "descriptor_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.connect",
+          "opl connect interfaces --json",
+          "opl agents interfaces --family-defaults --json",
+          "opl actions export --domain medautoscience --format openai --json",
+          "opl actions export --domain medautoscience --format ai-sdk --json",
+          "contracts/opl-framework/brand-module-registry.json#modules.connect"
+        ]
+      },
+      "validation": {
+        "commands": [
+          "opl connect validate --json",
+          "opl connect doctor --json",
+          "opl contract validate --json"
+        ],
+        "checks": [
+          "module_surface_contract",
+          "native_cli_family",
+          "app_read_model",
+          "descriptor_surface",
+          "validation_surface",
+          "false_authority_boundary",
+          "forbidden_claims"
+        ],
+        "required_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.connect",
+          "contracts/opl-framework/brand-module-registry.json#modules.connect"
+        ]
+      },
+      "doctor": {
+        "checks": [
+          "surface_contract_loaded",
+          "registry_cross_reference",
+          "native_cli_family_present",
+          "app_descriptor_present",
+          "validation_commands_present",
+          "authority_boundary_false",
+          "forbidden_claims_present"
+        ],
+        "fail_closed_on": [
+          "missing_surface_contract",
+          "missing_registry_entry",
+          "missing_native_cli_command",
+          "authority_boundary_violation",
+          "forbidden_claim_missing"
+        ]
+      },
+      "status": {
+        "completion_level": "L4_structural_baseline",
+        "evidence_refs": [
+          "contracts/opl-framework/brand-module-surfaces.json#modules.connect",
+          "opl connect validate --json",
+          "opl connect doctor --json",
+          "human_doc:opl_brand_module_maturity_against_workspace",
+          "human_doc:opl_brand_module_l4_rollout_plan",
+          "human_doc:opl_public_surface_index",
+          "human_doc:opl_status"
+        ],
+        "not_claims": [
+          "all_install_paths_verified",
+          "app_release_ready",
+          "domain_ready",
+          "quality_verdict",
+          "production_ready"
+        ]
+      },
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "can_claim_production_ready": false,
+        "can_write_domain_truth": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_replace_domain_owner": false,
+        "can_replace_ai_executor_planning": false
+      },
+      "forbidden_claims": [
+        "all_install_paths_verified",
+        "app_release_ready",
+        "domain_ready",
+        "quality_verdict",
+        "production_ready"
+      ],
+      "notes": "Connect owns generated descriptors, package/install surfaces, skill sync, channel, and drift projections; transport success is not semantic authority."
+    }
+  ]
+}

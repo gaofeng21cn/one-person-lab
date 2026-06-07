@@ -39,14 +39,11 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 domain 
 
 ## 接口与文档
 
-当前 L4 落地接口：
+当前可调用 surface 分为聚合目录层和 Atlas 自身模块层。
+
+聚合目录层与 Atlas 输入 refs：
 
 ```text
-opl atlas status --json
-opl atlas inspect --json
-opl atlas interfaces --json
-opl atlas validate --json
-opl atlas doctor --json
 opl brand-modules inspect --module atlas --json
 opl brand-modules validate --json
 opl agents descriptors --json
@@ -56,14 +53,32 @@ opl actions list --json
 opl stages list --json
 ```
 
-目标 App / descriptor：
+这些命令证明 `Atlas` 已进入统一 brand registry，并且 agent descriptors、actions、stages、generated interfaces 与 conformance 已有可调用 read-model refs。
+
+Atlas 自身模块层：
+
+```text
+opl atlas status --json
+opl atlas list --json
+opl atlas inspect --json
+opl atlas surfaces --json
+opl atlas graph --json
+opl atlas lifecycle --json
+opl atlas interfaces --json
+opl atlas validate --json
+opl atlas doctor --json
+```
+
+这些命令由 `contracts/opl-framework/brand-module-surfaces.json#modules.atlas` 定义，并从同一 Atlas catalog/read-model 派生 CLI、App descriptor、validation、doctor 与 status 输出。因此 `Atlas` 当前可以声明达到 Workspace 级 `L4_structural_baseline`；该声明只覆盖结构完成度，不覆盖 MAS/MAG/RCA/OMA ready、handler readiness、App release evidence 或 production ready。
+
+当前 App / descriptor refs：
 
 ```text
 App descriptors: brand_modules_list, brand_modules_inspect, brand_modules_maturity
 Descriptor delegates: MCP / Skill / OpenAI / AI SDK 从同一 generated interface bundle 投影，只描述调用面。
 ```
 
-当前支撑 refs：
+当前 contract / read-model refs：
 
 ```text
 docs/references/brand-modules/atlas.md
@@ -73,7 +88,6 @@ docs/architecture.md
 docs/status.md
 contracts/opl-framework/atlas-catalog.schema.json
 contracts/opl-framework/brand-module-registry.json
-contracts/opl-framework/brand-cli-governance.json
 contracts/opl-framework/domain-pack-compiler-contract.json
 contracts/opl-framework/foundry-agent-series-contract.json
 contracts/opl-framework/standard-domain-agent-skeleton-contract.json
@@ -82,7 +96,7 @@ src/domain-pack-compiler.ts
 src/standard-domain-agent-conformance.ts
 ```
 
-目标 L4 validation refs：
+当前 validation refs：
 
 ```text
 opl brand-modules validate --json
@@ -92,7 +106,21 @@ opl agents conformance --json
 opl contract validate --json
 ```
 
-`opl atlas status|inspect|interfaces|validate|doctor` 是当前 Atlas 自有只读品牌 frontdoor；它读取 registry / governance / descriptor refs，不执行 catalog action，也不替代 `opl agents descriptors|interfaces|conformance` 的 operational surface。
+模块级 L4 CLI / read-model / validation surface：
+
+```text
+opl atlas status --json
+opl atlas list --json
+opl atlas inspect --id <agent_or_surface_id> --json
+opl atlas surfaces --json
+opl atlas graph --json
+opl atlas lifecycle --json
+opl atlas interfaces --json
+opl atlas validate --json
+opl atlas doctor --json
+```
+
+统一 `opl brand-modules ...` inspection surface 与现有 `opl agents/actions/stages ...` 命令只作为 Atlas 的 registry/input refs；Workspace 级 L4 结构完成度以 `brand-module-surfaces.json` 和 `opl atlas validate|doctor --json` 为模块自身验收。
 
 `Atlas` 的人读文档解释 catalog 设计；机器合同固定 descriptor shape、catalog graph、generated interface bundle、lifecycle state、owner refs 和 conformance 输出。测试只验证 contract / schema / CLI/App 行为，不固定 prose wording。
 
@@ -111,23 +139,55 @@ opl contract validate --json
 
 ## Forbidden Claims
 
-- `Atlas L4` 不等于 MAS/MAG/RCA/OMA ready。
+- `Atlas L4` 即使完成，也不等于 MAS/MAG/RCA/OMA ready。
 - agent 出现在 catalog 不等于 admitted、active、release-ready 或 production-ready。
 - generated CLI/App/MCP/Skill/OpenAI/AI SDK descriptor 不等于 handler 已实现或用户路径已验证。
 - `opl agents conformance` 通过不等于 live soak、owner acceptance、quality verdict 或 App release evidence。
 - catalog graph dependency 不等于 runtime route execution，也不迁移 owner authority。
 - deprecated / retired surface 可查询不等于可作为默认入口使用。
 
-## 成功标准
+## 目标验收
 
-L4 structural baseline 成功标准：
+模块级 L4 baseline 成功标准：
 
 - `atlas_catalog`、domain descriptor、generated interface bundle、lifecycle state 和 conformance report 有 schema / contract，并能由 `contract validate` 或等价验证检查。
-- `opl atlas status|inspect|interfaces|validate|doctor`、`opl brand-modules inspect --module atlas`、`opl agents descriptors|interfaces|conformance` 与 App descriptors 从同一 catalog / generated interface bundle 派生。
+- `opl atlas status|list|inspect|surfaces|graph|lifecycle|interfaces|validate|doctor --json` 真实可调用，并与 App descriptors 从同一 Atlas catalog/read-model 派生。
+- `opl atlas validate --json` 能检查 descriptor shape、catalog graph、generated interface bundle、lifecycle state、owner refs、conformance 输出和 forbidden claims。
+- `opl atlas doctor --json` 能输出 orphan agent、orphan action、orphan stage、ownerless surface、missing lifecycle、descriptor drift、generated bundle drift 和 unsupported default deprecated surface 的诊断。
 - MCP、Skill、OpenAI、AI SDK descriptors 只做 delegate，不写 domain truth、不执行 action、不声明 readiness。
 - validation fail-closed：发现 orphan agent、orphan action、orphan stage、ownerless surface、missing lifecycle、descriptor drift、generated bundle drift 或 unsupported default deprecated surface 时失败。
 - MAS/MAG/RCA/OMA 和新 scaffold 能被同一 catalog graph 表达，并保留 domain-owned descriptor source。
 - `docs/project.md`、`docs/architecture.md`、`docs/status.md` 与 `current-maturity-against-workspace.md` 能表达 Atlas 当前完成度和 forbidden claims，不把结构 pass 写成 L5。
+
+聚合验收命令：
+
+```text
+opl brand-modules inspect --module atlas --json
+opl agents descriptors --json
+opl agents interfaces --family-defaults --json
+opl agents conformance --family-defaults --json
+opl actions list --json
+opl stages list --json
+opl brand-modules validate --json
+opl contract validate --json
+```
+
+模块自身验收命令：
+
+```text
+opl atlas status --json
+opl atlas list --json
+opl atlas inspect --json
+opl atlas surfaces --json
+opl atlas graph --json
+opl atlas lifecycle --json
+opl atlas interfaces --json
+opl atlas validate --json
+opl atlas doctor --json
+opl brand-modules inspect --module atlas --json
+opl brand-modules validate --json
+opl contract validate --json
+```
 
 基础成功标准：
 

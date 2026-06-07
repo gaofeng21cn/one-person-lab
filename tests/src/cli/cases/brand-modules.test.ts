@@ -1,4 +1,6 @@
-import { assert, loadFrameworkContracts, repoRoot, runCli, test } from '../helpers.ts';
+import { spawnSync } from 'node:child_process';
+
+import { assert, loadFrameworkContracts, path, repoRoot, runCli, test } from '../helpers.ts';
 
 const expectedModuleIds = [
   'charter',
@@ -12,12 +14,19 @@ const expectedModuleIds = [
   'connect',
 ];
 
+const moduleSurfaceIds = expectedModuleIds.filter((moduleId) => moduleId !== 'workspace');
+
 test('brand module registry is loaded as a required framework contract', () => {
   const contracts = loadFrameworkContracts(repoRoot);
 
   assert.equal(contracts.brandModuleRegistry.scope, 'opl_brand_module_registry');
+  assert.equal(contracts.brandModuleSurfaces.scope, 'opl_brand_module_executable_surfaces');
   assert.deepEqual(
     contracts.brandModuleRegistry.modules.map((entry) => entry.module_id),
+    expectedModuleIds,
+  );
+  assert.deepEqual(
+    contracts.brandModuleSurfaces.modules.map((entry) => entry.module_id),
     expectedModuleIds,
   );
 });
@@ -90,31 +99,42 @@ test('brand modules interfaces expose CLI, app, descriptor, and validation surfa
   assert.equal(interfaces.authority_boundary.can_sign_owner_receipt, false);
 });
 
-test('each non-Workspace OPL platform brand module has its own executable CLI frontdoor family', () => {
-  const operations = ['status', 'inspect', 'interfaces', 'validate', 'doctor'];
-  const moduleIds = expectedModuleIds.filter((moduleId) => moduleId !== 'workspace');
+test('bin/opl routes module-owned brand commands into the OPL CLI instead of Codex passthrough', () => {
+  const result = spawnSync(
+    path.join(repoRoot, 'bin', 'opl'),
+    ['charter', 'status', '--json'],
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        OPL_SKIP_SKILL_SYNC: '1',
+      },
+    },
+  );
 
-  for (const moduleId of moduleIds) {
+  assert.equal(result.status, 0, result.stderr);
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.brand_module_surface.surface_kind, 'opl_charter_brand_module_status');
+  assert.equal(output.opl_charter_status.status, 'valid');
+});
+
+test('each non-workspace brand module exposes its own executable status validate doctor and interfaces family', () => {
+  const operations = ['status', 'inspect', 'interfaces', 'validate', 'doctor'] as const;
+
+  for (const moduleId of moduleSurfaceIds) {
+    const surfaceKindPrefix = `opl_${moduleId.replace(/-/g, '_')}`;
+
     for (const operation of operations) {
       const output = runCli([moduleId, operation]);
       const surface = output.brand_module_surface;
 
-      assert.equal(surface.surface_kind, `opl_${moduleId.replace('-', '_')}_brand_module_${operation}`);
+      assert.equal(surface.surface_kind, `${surfaceKindPrefix}_brand_module_${operation}`);
       assert.equal(surface.module_id, moduleId);
       assert.equal(surface.operation, operation);
       assert.equal(surface.canonical_frontdoor, `opl ${moduleId}`);
       assert.equal(surface.status, operation === 'doctor' ? 'pass' : 'valid');
-      assert.equal(surface.registry_ref, `contracts/opl-framework/brand-module-registry.json#modules.${moduleId}`);
-      assert.equal(surface.governance_ref, `contracts/opl-framework/brand-cli-governance.json#platform_frontdoors.${moduleId}`);
-      assert.equal(Array.isArray(surface.contract_refs) && surface.contract_refs.length > 0, true);
-      assert.equal(Array.isArray(surface.cli_surfaces) && surface.cli_surfaces.length > 0, true);
-      assert.equal(Array.isArray(surface.app_surfaces) && surface.app_surfaces.length > 0, true);
-      assert.equal(Array.isArray(surface.descriptor_surfaces) && surface.descriptor_surfaces.length > 0, true);
-      assert.equal(Array.isArray(surface.validation_surfaces) && surface.validation_surfaces.length > 0, true);
-      assert.equal(
-        surface.checks.every((entry: { status: string }) => entry.status === 'pass'),
-        true,
-      );
       assert.equal(surface.authority_boundary.can_claim_domain_ready, false);
       assert.equal(surface.authority_boundary.can_claim_quality_verdict, false);
       assert.equal(surface.authority_boundary.can_claim_artifact_authority, false);
@@ -122,29 +142,60 @@ test('each non-Workspace OPL platform brand module has its own executable CLI fr
       assert.equal(surface.authority_boundary.can_write_domain_truth, false);
       assert.equal(surface.authority_boundary.can_sign_owner_receipt, false);
     }
+
+    const statusKey = `${surfaceKindPrefix}_status`;
+    const validationKey = `${surfaceKindPrefix}_validation`;
+    const doctorKey = `${surfaceKindPrefix}_doctor`;
+    const interfacesKey = `${surfaceKindPrefix}_interfaces`;
+
+    const status = runCli([moduleId, 'status'])[statusKey];
+    assert.equal(status.module_id, moduleId);
+    assert.equal(status.completion_level, 'L4_structural_baseline');
+    assert.equal(status.status, 'valid');
+    assert.equal(status.native_cli_family.status, `opl ${moduleId} status --json`);
+    assert.equal(status.native_cli_family.inspect, `opl ${moduleId} inspect --json`);
+    assert.equal(status.native_cli_family.interfaces, `opl ${moduleId} interfaces --json`);
+    assert.equal(status.native_cli_family.validate, `opl ${moduleId} validate --json`);
+    assert.equal(status.native_cli_family.doctor, `opl ${moduleId} doctor --json`);
+    assert.equal(status.checks.every((entry: { status: string }) => entry.status === 'pass'), true);
+    assert.equal(status.authority_boundary.can_claim_domain_ready, false);
+    assert.equal(status.authority_boundary.can_sign_owner_receipt, false);
+
+    const validation = runCli([moduleId, 'validate'])[validationKey];
+    assert.equal(validation.status, 'valid');
+    assert.equal(validation.contract_ref, `contracts/opl-framework/brand-module-surfaces.json#modules.${moduleId}`);
+    assert.equal(validation.checks.every((entry: { status: string }) => entry.status === 'pass'), true);
+
+    const doctor = runCli([moduleId, 'doctor'])[doctorKey];
+    assert.equal(doctor.status, 'pass');
+    assert.equal(doctor.next_safe_action, null);
+
+    const interfaces = runCli([moduleId, 'interfaces'])[interfacesKey];
+    assert.equal(interfaces.cli.commands.includes(`opl ${moduleId} status --json`), true);
+    assert.equal(interfaces.cli.commands.includes(`opl ${moduleId} validate --json`), true);
+    assert.equal(interfaces.app.descriptors.some((entry: { action_id: string }) => entry.action_id === `${moduleId.replace(/-/g, '_')}_status`), true);
+    assert.equal(interfaces.descriptor.descriptor_refs.includes(`opl ${moduleId} interfaces --json`), true);
   }
 });
 
-test('Workspace keeps existing validate doctor interfaces semantics and adds non-conflicting brand status inspect commands', () => {
-  for (const operation of ['status', 'inspect']) {
-    const output = runCli(['workspace', operation]);
-    const surface = output.brand_module_surface;
+test('workspace keeps its existing validate doctor and interfaces implementations while gaining status and inspect', () => {
+  const statusOutput = runCli(['workspace', 'status']);
+  const inspectOutput = runCli(['workspace', 'inspect']);
+  const status = statusOutput.opl_workspace_status;
+  const inspect = inspectOutput.opl_workspace_inspect;
+  const interfaces = runCli(['workspace', 'interfaces']).workspace_interfaces;
 
-    assert.equal(surface.surface_kind, `opl_workspace_brand_module_${operation}`);
-    assert.equal(surface.module_id, 'workspace');
-    assert.equal(surface.operation, operation);
-    assert.equal(surface.canonical_frontdoor, 'opl workspace');
-    assert.equal(surface.status, 'valid');
-    assert.equal(surface.registry_ref, 'contracts/opl-framework/brand-module-registry.json#modules.workspace');
-    assert.equal(surface.governance_ref, 'contracts/opl-framework/brand-cli-governance.json#platform_frontdoors.workspace');
-    assert.equal(Array.isArray(surface.contract_refs) && surface.contract_refs.length > 0, true);
-    assert.equal(Array.isArray(surface.validation_surfaces) && surface.validation_surfaces.length > 0, true);
-    assert.equal(
-      surface.checks.every((entry: { status: string }) => entry.status === 'pass'),
-      true,
-    );
-    assert.equal(surface.frontdoor_collision_policy, 'preserve_workspace_operational_validate_doctor_interfaces');
-  }
+  assert.equal(statusOutput.brand_module_surface.surface_kind, 'opl_workspace_brand_module_status');
+  assert.equal(statusOutput.brand_module_surface.frontdoor_collision_policy, 'preserve_workspace_operational_validate_doctor_interfaces');
+  assert.equal(inspectOutput.brand_module_surface.surface_kind, 'opl_workspace_brand_module_inspect');
+  assert.equal(inspectOutput.brand_module_surface.frontdoor_collision_policy, 'preserve_workspace_operational_validate_doctor_interfaces');
+  assert.equal(status.module_id, 'workspace');
+  assert.equal(inspect.module_id, 'workspace');
+  assert.equal(status.status, 'valid');
+  assert.equal(inspect.status, 'valid');
+  assert.equal(interfaces.surface_kind, 'opl_workspace_initialize_interfaces');
+  assert.equal(interfaces.surfaces.cli.validator_command, 'opl workspace validate');
+  assert.equal(interfaces.surfaces.cli.doctor_command, 'opl workspace doctor');
 });
 
 test('agent-owned internal modules expose the same branding spine without becoming OPL platform modules', () => {
@@ -177,6 +228,12 @@ test('agent-owned internal modules expose the same branding spine without becomi
   assert.equal(inspect.module_frontdoor, 'opl agents modules inspect --domain medautoscience --module agent-runway');
   assert.equal(inspect.authority_boundary.can_write_domain_truth, false);
   assert.equal(inspect.authority_boundary.can_claim_production_ready, false);
+
+  const interfaces = runCli(['agents', 'modules', 'interfaces']).agent_internal_module_interfaces;
+  assert.equal(interfaces.surface_kind, 'opl_agent_internal_brand_module_interfaces');
+  assert.equal(interfaces.cli.commands.includes('opl agents modules validate --json'), true);
+  assert.equal(interfaces.descriptor.refs.includes('contracts/opl-framework/brand-cli-governance.json#agent_internal_modules'), true);
+  assert.equal(interfaces.authority_boundary.can_write_domain_truth, false);
 
   const validation = runCli(['agents', 'modules', 'validate']).agent_internal_module_validation;
   assert.equal(validation.surface_kind, 'opl_agent_internal_brand_module_validation');

@@ -23,27 +23,51 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 Agent L
 | 对象 | 作用 |
 | --- | --- |
 | `agent_blueprint` | 新 Foundry Agent 的 domain pack / stage skeleton / authority boundary 蓝图。 |
+| `foundry_series` | 同一 Agent family 的 scaffold、evaluation、work-order、canary、promotion/rollback 生命周期。 |
 | `evaluation_run` | 对 descriptor、stage、receipt、tool boundary、App projection 的评估。 |
 | `improvement_candidate` | 机制改进候选、预期影响、风险层级。 |
 | `developer_work_order` | 可执行 patch work order、验证命令、禁止范围和 owner closeout。 |
 | `canary_ref` | 小范围真实或 controlled canary 证据。 |
 | `promotion_receipt` | risk-tier promotion / rollback / no-regression refs。 |
 | `target_agent_handoff` | 给目标 agent/domain owner 的交接。 |
+| `owner_acceptance_ref` | target domain owner 的独立采纳/拒绝 refs；Foundry Lab 只能引用，不能签发。 |
 
-## L4 结构基线 refs
+Workspace 级 L4 的 Foundry Lab 对象模型必须像 Workspace 一样有自己的 schema、CLI、App/read-model、validate/doctor、测试和状态折返。最低模型如下：
+
+| 对象 | L4 验收含义 |
+| --- | --- |
+| `foundry_lab_read_model` | Agent scaffold/readiness/conformance/work-order/canary/promotion 的 refs-only summary，供 App developer surface 和 Console drilldown 消费。 |
+| `foundry_lab_interface_bundle` | `status`、`inspect`、`interfaces`、`validate`、`doctor` 的 CLI 与 descriptor shape。 |
+| `foundry_lab_validation_report` | skeleton、domain pack compiler、guardrail tier、work-order receipt、promotion receipt 和 forbidden claims 的机器检查结果。 |
+| `foundry_lab_doctor_report` | scaffold 缺口、conformance drift、测试缺口、canary 缺口、promotion gate 缺口和 owner acceptance pending。 |
+| `target_owner_handoff` | 给 MAS/MAG/RCA/OMA 等目标 owner 的 refs-only handoff，不包含 domain verdict。 |
+
+## Workspace 级 L4 验收 refs
 
 | 层面 | 目标 refs |
 | --- | --- |
-| `contract` | `agent-lab-contract.json`、standard domain agent skeleton contract、work-order receipt contract、promotion receipt contract。 |
-| `CLI` | `opl brand-modules inspect --module foundry-lab --json`、`opl agents scaffold`、`opl agents conformance --family-defaults --json`、`opl agents readiness --family-defaults --json`、`opl agents default-callers --family-defaults --json`、`opl work-order execute`。 |
-| `App` | Agent Lab entry、work-order review、canary evidence、promotion/rollback decision、target-agent handoff。 |
-| `descriptor` | agent blueprint descriptor、evaluation report descriptor、developer work order descriptor、promotion receipt descriptor。 |
-| `validation` | skeleton conformance、work-order dry-run/execute receipts、canary/no-regression evidence、promotion verify。 |
-| `status` | `docs/status.md`、`docs/runtime/opl-agent-lab-control-plane.md`、target repo owner closeout。 |
+| `schema / contract` | `contracts/opl-framework/agent-lab-contract.json`、`contracts/opl-framework/foundry-agent-series-contract.json`、`contracts/opl-framework/standard-domain-agent-skeleton-contract.json`、`contracts/opl-framework/domain-pack-compiler-contract.json`、`contracts/opl-framework/guardrail-tier-policy.json`。 |
+| `CLI family` | `opl foundry-lab status --json`、`opl foundry-lab inspect --json`、`opl foundry-lab interfaces --json`、`opl foundry-lab validate --json`、`opl foundry-lab doctor --json`。 |
+| `current delegate CLI` | `opl agents scaffold --json`、`opl agents conformance --family-defaults --json`、`opl agents readiness --family-defaults --json`、`opl agents default-callers --family-defaults --json`、`opl brand-modules inspect --module foundry-lab --json`。 |
+| `App action / read-model` | Developer surface 的 Agent Lab entry、work-order review、canary evidence、promotion/rollback decision、target-agent handoff；当前 registry refs 为 `opl app state --profile full --json#developer_mode` 和 `opl brand-modules interfaces --json#app.descriptors.brand_modules_inspect`。 |
+| `descriptor` | agent blueprint descriptor、evaluation report descriptor、developer work order descriptor、promotion receipt descriptor、target owner handoff descriptor。 |
+| `validation / doctor` | `opl foundry-lab validate --json` 检查 skeleton/conformance/readiness/work-order/promotion contract；`opl foundry-lab doctor --json` 报告缺 scaffold、缺 tests、缺 canary、缺 owner gate 或 target repo handoff gap。 |
+| `tests` | CLI public spec、agent scaffold fixture、conformance/readiness regression、work-order receipt fixture、promotion/rollback negative authority、owner-acceptance-not-claimed guard。 |
+| `status` | `docs/status.md`、`docs/runtime/opl-agent-lab-control-plane.md`、`docs/references/brand-modules/current-maturity-against-workspace.md`、target repo owner closeout refs。 |
 
 ## 接口与文档
 
-当前 L4 落地接口：
+模块级 CLI family 验收入口：
+
+```text
+opl foundry-lab status --json
+opl foundry-lab inspect --detail full --json
+opl foundry-lab interfaces --json
+opl foundry-lab validate --json
+opl foundry-lab doctor --json
+```
+
+现有 delegate / source-of-truth 入口：
 
 ```text
 opl brand-modules inspect --module foundry-lab --json
@@ -67,10 +91,18 @@ contracts/opl-framework/agent-lab-contract.json
 contracts/opl-framework/standard-domain-agent-skeleton-contract.json
 ```
 
+## 模块级 CLI 验收说明
+
+- `status`：返回 foundry series、scaffold readiness、conformance/readiness summary、open work orders、canary/promotion refs 和 owner acceptance pending refs。
+- `inspect`：返回对象模型、contract refs、target agent handoff refs、descriptor refs、forbidden claims 和与 `opl agents *` delegate 的 mapping。
+- `interfaces`：输出 Agent Lab App developer surface、work-order review payload、canary evidence descriptor、promotion/rollback descriptor 和 target-owner handoff schema。
+- `validate`：fail closed 检查 agent-lab contract、foundry series contract、standard skeleton、domain pack compiler、guardrail tier、work-order/promotion receipts 和 false authority flags。
+- `doctor`：定位 scaffold drift、descriptor drift、缺测试、缺 canary、promotion gate 不足、target repo 不可达或 owner acceptance pending；输出只能是 Foundry Lab 诊断或 handoff，不能升级成 domain acceptance。
+
 ## Authority boundary
 
 - Foundry Lab 持有 agent blueprint、evaluation、developer work order、canary 和 promotion/rollback 的改进循环边界。
-- Target domain owner 持有 domain truth、owner receipt、artifact authority 和最终 adoption/rollback 裁决。
+- Target domain owner 持有 domain truth、owner receipt、artifact authority、domain quality verdict 和最终 adoption/rollback 裁决。
 - OPL Meta Agent 可作为 builder/tester module 提供 work order 和测试接管能力，但不成为 OPL Framework 或目标 domain 的 truth owner。
 - Console、Atlas 和 Vault 只能消费 Foundry Lab 输出的 descriptor、receipt 或 refs，不从 Lab 推导 domain ready。
 
@@ -82,12 +114,13 @@ contracts/opl-framework/standard-domain-agent-skeleton-contract.json
 - 不把 OMA 变成第二 OPL Framework。
 - 不把 canary 通过写成全量 rollout 通过。
 - 不把 developer work order 完成写成 owner 已接受。
+- 不把 Foundry Lab promotion 写成 target domain owner acceptance。
 
 ## L4 structural baseline 成功标准
 
-- 新 Agent 能从 blueprint/scaffold 进入 standard skeleton。
-- 失败能转成 work order、canary、rollback 或 typed blocker。
-- 改进 loop 有独立 reviewer/no-regression refs。
+- `opl foundry-lab status|inspect|interfaces|validate|doctor` 与 `opl agents scaffold|conformance|readiness|default-callers` 从同一 Agent Lab / series / skeleton contracts 派生。
+- Foundry Lab 有自己的 foundry series、read-model、interface bundle、validate gate 和 doctor report，不只依赖 `brand-module-registry` 说明。
+- 新 Agent 能从 blueprint/scaffold 进入 standard skeleton；失败能转成 work order、canary、rollback、typed blocker 或 target-owner handoff。
+- 改进 loop 有独立 reviewer/no-regression refs，tests 覆盖 scaffold、conformance/readiness、promotion/rollback 和 forbidden owner-acceptance claim。
 - Foundry Lab 输出能被 Console 和 Atlas 消费，但不污染 domain authority。
-- 合同、CLI、App action、descriptor、validation 和 status refs 能互相追踪。
-- 每次 promotion/rollback 都能指向 risk tier、证据 refs、owner gate 和残余风险。
+- 每次 promotion/rollback 都能指向 risk tier、证据 refs、owner gate、owner acceptance pending 和残余风险。
