@@ -46,19 +46,54 @@ function validateDelegateSection(
     mcp: {
       tool_name: stringField(mcp, 'tool_name', filePath),
       execution: stringField(mcp, 'execution', filePath),
+      delegates_to_action_id: stringField(mcp, 'delegates_to_action_id', filePath),
       descriptor_only: booleanField(mcp, 'descriptor_only', filePath),
       public_runtime: booleanField(mcp, 'public_runtime', filePath),
     },
     skill: {
       intent: stringField(skill, 'intent', filePath),
       command_contract_id: stringField(skill, 'command_contract_id', filePath),
+      delegates_to_action_id: stringField(skill, 'delegates_to_action_id', filePath),
+      descriptor_only: booleanField(skill, 'descriptor_only', filePath),
+      public_runtime: booleanField(skill, 'public_runtime', filePath),
     },
     openai: {
       tool_name: stringField(openai, 'tool_name', filePath),
+      delegates_to_action_id: stringField(openai, 'delegates_to_action_id', filePath),
+      descriptor_only: booleanField(openai, 'descriptor_only', filePath),
+      public_runtime: booleanField(openai, 'public_runtime', filePath),
     },
     ai_sdk: {
       tool_name: stringField(aiSdk, 'tool_name', filePath),
+      delegates_to_action_id: stringField(aiSdk, 'delegates_to_action_id', filePath),
+      descriptor_only: booleanField(aiSdk, 'descriptor_only', filePath),
+      public_runtime: booleanField(aiSdk, 'public_runtime', filePath),
     },
+  };
+}
+
+function validateCanonicalProjectUnitSemantics(section: Record<string, unknown>, filePath: string) {
+  const masStudiesBoundary = requireSection(section, 'mas_studies_boundary', filePath);
+  return {
+    workspace_unit: stringField(section, 'workspace_unit', filePath),
+    project_collection_role: stringField(section, 'project_collection_role', filePath),
+    project_unit_kind: stringField(section, 'project_unit_kind', filePath),
+    stage_artifact_unit: stringField(section, 'stage_artifact_unit', filePath),
+    owner_answer_unit: stringField(section, 'owner_answer_unit', filePath),
+    mas_studies_boundary: {
+      project_collection_path: stringField(masStudiesBoundary, 'project_collection_path', filePath),
+      alias_role: stringField(masStudiesBoundary, 'alias_role', filePath),
+      canonical_role: stringField(masStudiesBoundary, 'canonical_role', filePath),
+      canonical_project_unit_kind: stringField(masStudiesBoundary, 'canonical_project_unit_kind', filePath),
+    },
+  };
+}
+
+function validateStageOutputRootProtocol(section: Record<string, unknown>, filePath: string) {
+  return {
+    root: stringField(section, 'root', filePath),
+    stage_folder_unit: stringField(section, 'stage_folder_unit', filePath),
+    required_stage_folder_shape: stringArrayField(section, 'required_stage_folder_shape', filePath),
   };
 }
 
@@ -75,6 +110,11 @@ function validateDomainProfiles(
       workspace_mode: stringField(profile, 'workspace_mode', filePath),
       project_kind: stringField(profile, 'project_kind', filePath),
       project_collection_path: stringField(profile, 'project_collection_path', filePath),
+      canonical_project_collection_role: stringField(profile, 'canonical_project_collection_role', filePath),
+      project_collection_alias_role: stringField(profile, 'project_collection_alias_role', filePath),
+      project_collection_display_label: stringField(profile, 'project_collection_display_label', filePath),
+      project_semantic_aliases: stringArrayField(profile, 'project_semantic_aliases', filePath),
+      user_inspection_roots: stringArrayField(profile, 'user_inspection_roots', filePath),
       shared_resource_roots: stringArrayField(profile, 'shared_resource_roots', filePath),
     };
   }
@@ -144,6 +184,36 @@ function assertDomainProfile(
     `${agentId}.project_collection_path`,
     filePath,
   );
+  assertExactString(
+    profile.canonical_project_collection_role,
+    expected.canonical_project_collection_role,
+    `${agentId}.canonical_project_collection_role`,
+    filePath,
+  );
+  assertExactString(
+    profile.project_collection_alias_role,
+    expected.project_collection_alias_role,
+    `${agentId}.project_collection_alias_role`,
+    filePath,
+  );
+  assertExactString(
+    profile.project_collection_display_label,
+    expected.project_collection_display_label,
+    `${agentId}.project_collection_display_label`,
+    filePath,
+  );
+  assertExactStringArray(
+    profile.project_semantic_aliases,
+    expected.project_semantic_aliases,
+    `${agentId}.project_semantic_aliases`,
+    filePath,
+  );
+  assertExactStringArray(
+    profile.user_inspection_roots,
+    expected.user_inspection_roots,
+    `${agentId}.user_inspection_roots`,
+    filePath,
+  );
   assertExactStringArray(
     profile.shared_resource_roots,
     expected.shared_resource_roots,
@@ -198,12 +268,22 @@ function validateAgentWorkspaceNormSemantics(
   const delegates = contract.descriptor_delegates;
   assertExactString(delegates.mcp.tool_name, 'opl_workspace_ensure', 'descriptor_delegates.mcp.tool_name', filePath);
   assertExactString(delegates.mcp.execution, 'delegate_to_opl_cli', 'descriptor_delegates.mcp.execution', filePath);
+  assertExactString(delegates.mcp.delegates_to_action_id, 'opl_workspace_ensure', 'descriptor_delegates.mcp.delegates_to_action_id', filePath);
   assertExactBoolean(delegates.mcp.descriptor_only, true, 'descriptor_delegates.mcp.descriptor_only', filePath);
   assertExactBoolean(delegates.mcp.public_runtime, false, 'descriptor_delegates.mcp.public_runtime', filePath);
   assertExactString(delegates.skill.intent, 'ensure_opl_workspace', 'descriptor_delegates.skill.intent', filePath);
   assertExactString(delegates.skill.command_contract_id, 'opl_workspace_ensure', 'descriptor_delegates.skill.command_contract_id', filePath);
+  assertExactString(delegates.skill.delegates_to_action_id, 'opl_workspace_ensure', 'descriptor_delegates.skill.delegates_to_action_id', filePath);
+  assertExactBoolean(delegates.skill.descriptor_only, true, 'descriptor_delegates.skill.descriptor_only', filePath);
+  assertExactBoolean(delegates.skill.public_runtime, false, 'descriptor_delegates.skill.public_runtime', filePath);
   assertExactString(delegates.openai.tool_name, 'opl_workspace_ensure', 'descriptor_delegates.openai.tool_name', filePath);
+  assertExactString(delegates.openai.delegates_to_action_id, 'opl_workspace_ensure', 'descriptor_delegates.openai.delegates_to_action_id', filePath);
+  assertExactBoolean(delegates.openai.descriptor_only, true, 'descriptor_delegates.openai.descriptor_only', filePath);
+  assertExactBoolean(delegates.openai.public_runtime, false, 'descriptor_delegates.openai.public_runtime', filePath);
   assertExactString(delegates.ai_sdk.tool_name, 'oplWorkspaceEnsure', 'descriptor_delegates.ai_sdk.tool_name', filePath);
+  assertExactString(delegates.ai_sdk.delegates_to_action_id, 'opl_workspace_ensure', 'descriptor_delegates.ai_sdk.delegates_to_action_id', filePath);
+  assertExactBoolean(delegates.ai_sdk.descriptor_only, true, 'descriptor_delegates.ai_sdk.descriptor_only', filePath);
+  assertExactBoolean(delegates.ai_sdk.public_runtime, false, 'descriptor_delegates.ai_sdk.public_runtime', filePath);
 
   const topology = contract.topology_contract;
   assertExactString(
@@ -219,7 +299,25 @@ function validateAgentWorkspaceNormSemantics(
     'topology_contract.topology_model',
     filePath,
   );
+  assertExactString(topology.canonical_project_collection_role, 'project_units', 'topology_contract.canonical_project_collection_role', filePath);
+  assertExactString(topology.canonical_project_unit_semantics.workspace_unit, 'workspace_group', 'topology_contract.canonical_project_unit_semantics.workspace_unit', filePath);
+  assertExactString(topology.canonical_project_unit_semantics.project_collection_role, 'project_units', 'topology_contract.canonical_project_unit_semantics.project_collection_role', filePath);
+  assertExactString(topology.canonical_project_unit_semantics.project_unit_kind, 'project_unit', 'topology_contract.canonical_project_unit_semantics.project_unit_kind', filePath);
+  assertExactString(topology.canonical_project_unit_semantics.stage_artifact_unit, 'stage_artifact_unit', 'topology_contract.canonical_project_unit_semantics.stage_artifact_unit', filePath);
+  assertExactString(topology.canonical_project_unit_semantics.owner_answer_unit, 'owner_receipt_or_typed_blocker', 'topology_contract.canonical_project_unit_semantics.owner_answer_unit', filePath);
+  assertExactString(topology.canonical_project_unit_semantics.mas_studies_boundary.project_collection_path, 'studies', 'topology_contract.canonical_project_unit_semantics.mas_studies_boundary.project_collection_path', filePath);
+  assertExactString(topology.canonical_project_unit_semantics.mas_studies_boundary.alias_role, 'display_domain_alias', 'topology_contract.canonical_project_unit_semantics.mas_studies_boundary.alias_role', filePath);
+  assertExactString(topology.canonical_project_unit_semantics.mas_studies_boundary.canonical_role, 'project_units', 'topology_contract.canonical_project_unit_semantics.mas_studies_boundary.canonical_role', filePath);
+  assertExactString(topology.canonical_project_unit_semantics.mas_studies_boundary.canonical_project_unit_kind, 'project_unit', 'topology_contract.canonical_project_unit_semantics.mas_studies_boundary.canonical_project_unit_kind', filePath);
   assertExactString(topology.project_stage_outputs_root, 'artifacts/stage_outputs', 'topology_contract.project_stage_outputs_root', filePath);
+  assertExactString(topology.stage_output_root_protocol.root, 'artifacts/stage_outputs', 'topology_contract.stage_output_root_protocol.root', filePath);
+  assertExactString(topology.stage_output_root_protocol.stage_folder_unit, 'stage_artifact_unit', 'topology_contract.stage_output_root_protocol.stage_folder_unit', filePath);
+  assertExactStringArray(
+    topology.stage_output_root_protocol.required_stage_folder_shape,
+    ['inputs', 'outputs', 'review', 'receipts', 'handoff', 'stage_manifest.json'],
+    'topology_contract.stage_output_root_protocol.required_stage_folder_shape',
+    filePath,
+  );
   assertExactString(topology.default_project_collection_path, 'deliverables', 'topology_contract.default_project_collection_path', filePath);
   assertExactStringArray(topology.workspace_modes, ['one_off', 'series', 'portfolio'], 'topology_contract.workspace_modes', filePath);
   assertExactBoolean(topology.series_capable_one_off_skeleton, true, 'topology_contract.series_capable_one_off_skeleton', filePath);
@@ -229,6 +327,11 @@ function validateAgentWorkspaceNormSemantics(
     workspace_mode: 'portfolio',
     project_kind: 'study',
     project_collection_path: 'studies',
+    canonical_project_collection_role: 'project_units',
+    project_collection_alias_role: 'display_domain_alias',
+    project_collection_display_label: 'studies',
+    project_semantic_aliases: ['study', 'studies'],
+    user_inspection_roots: ['studies/<project-id>/artifacts/stage_outputs'],
     shared_resource_roots: ['data', 'literature', 'memory', 'shared/sources'],
   }, filePath);
   assertDomainProfile(contract, 'mag', {
@@ -236,6 +339,11 @@ function validateAgentWorkspaceNormSemantics(
     workspace_mode: 'one_off',
     project_kind: 'grant_project',
     project_collection_path: 'deliverables',
+    canonical_project_collection_role: 'project_units',
+    project_collection_alias_role: 'canonical_display_label',
+    project_collection_display_label: 'deliverables',
+    project_semantic_aliases: ['grant_project', 'deliverable'],
+    user_inspection_roots: ['deliverables/<project-id>/artifacts/stage_outputs'],
     shared_resource_roots: ['shared/sources', 'shared/memory', 'shared/style_system'],
   }, filePath);
   assertDomainProfile(contract, 'rca', {
@@ -243,6 +351,11 @@ function validateAgentWorkspaceNormSemantics(
     workspace_mode: 'series',
     project_kind: 'slide_deck',
     project_collection_path: 'deliverables',
+    canonical_project_collection_role: 'project_units',
+    project_collection_alias_role: 'canonical_display_label',
+    project_collection_display_label: 'deliverables',
+    project_semantic_aliases: ['slide_deck', 'deck', 'deliverable'],
+    user_inspection_roots: ['deliverables/<project-id>/artifacts/stage_outputs'],
     shared_resource_roots: [
       'shared/sources',
       'shared/brand',
@@ -256,6 +369,11 @@ function validateAgentWorkspaceNormSemantics(
     workspace_mode: 'one_off',
     project_kind: 'agent_capability',
     project_collection_path: 'deliverables',
+    canonical_project_collection_role: 'project_units',
+    project_collection_alias_role: 'canonical_display_label',
+    project_collection_display_label: 'deliverables',
+    project_semantic_aliases: ['agent_capability', 'deliverable'],
+    user_inspection_roots: ['deliverables/<project-id>/artifacts/stage_outputs'],
     shared_resource_roots: ['shared/sources', 'shared/memory', 'shared/style_system'],
   }, filePath);
 
@@ -264,6 +382,20 @@ function validateAgentWorkspaceNormSemantics(
   assertExactString(inspection.project_stage_outputs_pattern, '<project-root>/artifacts/stage_outputs/<stage-id>/', 'user_inspection.project_stage_outputs_pattern', filePath);
   assertExactString(inspection.workspace_index_file, 'workspace_index.json', 'user_inspection.workspace_index_file', filePath);
   assertExactString(inspection.workspace_config_file, 'workspace.yaml', 'user_inspection.workspace_config_file', filePath);
+  assertExactStringArray(
+    inspection.canonical_user_inspection_roots,
+    [
+      '<project-root>/artifacts/stage_outputs',
+      '<project-root>/artifacts/stage_outputs/<stage-id>/inputs',
+      '<project-root>/artifacts/stage_outputs/<stage-id>/outputs',
+      '<project-root>/artifacts/stage_outputs/<stage-id>/review',
+      '<project-root>/artifacts/stage_outputs/<stage-id>/receipts',
+      '<project-root>/artifacts/stage_outputs/<stage-id>/handoff',
+      '<project-root>/artifacts/stage_outputs/<stage-id>/stage_manifest.json',
+    ],
+    'user_inspection.canonical_user_inspection_roots',
+    filePath,
+  );
   assertExactBoolean(inspection.runtime_state_is_default_user_surface, false, 'user_inspection.runtime_state_is_default_user_surface', filePath);
   assertExactBoolean(inspection.product_views_are_stage_outputs, false, 'user_inspection.product_views_are_stage_outputs', filePath);
 
@@ -366,7 +498,16 @@ export function validateAgentWorkspaceNorm(
       contract_ref: stringField(topologyContract, 'contract_ref', filePath),
       profile_id: stringField(topologyContract, 'profile_id', filePath),
       topology_model: stringArrayField(topologyContract, 'topology_model', filePath),
+      canonical_project_collection_role: stringField(topologyContract, 'canonical_project_collection_role', filePath),
+      canonical_project_unit_semantics: validateCanonicalProjectUnitSemantics(
+        requireSection(topologyContract, 'canonical_project_unit_semantics', filePath),
+        filePath,
+      ),
       project_stage_outputs_root: stringField(topologyContract, 'project_stage_outputs_root', filePath),
+      stage_output_root_protocol: validateStageOutputRootProtocol(
+        requireSection(topologyContract, 'stage_output_root_protocol', filePath),
+        filePath,
+      ),
       default_project_collection_path: stringField(topologyContract, 'default_project_collection_path', filePath),
       workspace_modes: stringArrayField(topologyContract, 'workspace_modes', filePath),
       series_capable_one_off_skeleton: booleanField(topologyContract, 'series_capable_one_off_skeleton', filePath),
@@ -377,6 +518,7 @@ export function validateAgentWorkspaceNorm(
       project_stage_outputs_pattern: stringField(userInspection, 'project_stage_outputs_pattern', filePath),
       workspace_index_file: stringField(userInspection, 'workspace_index_file', filePath),
       workspace_config_file: stringField(userInspection, 'workspace_config_file', filePath),
+      canonical_user_inspection_roots: stringArrayField(userInspection, 'canonical_user_inspection_roots', filePath),
       runtime_state_is_default_user_surface: booleanField(
         userInspection,
         'runtime_state_is_default_user_surface',

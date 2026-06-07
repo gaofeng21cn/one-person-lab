@@ -38,7 +38,7 @@ Machine boundary: 本文是人读现状对照。当前完成度、计数、recei
 | `OPL Atlas` | `L4_structural_baseline` | 达到 Workspace | Domain descriptors、actions、stages、generated interfaces 与 conformance 已折入品牌 registry 和统一 inspection surface。 |
 | `OPL Workspace` | `L4_structural_baseline` | 基线 | 保持 Workspace topology/schema、CLI/App action、validation/doctor、interfaces 和 docs/status foldback。 |
 | `OPL Stagecraft` | `L4_structural_baseline` | 达到 Workspace | StageRun/cognitive kernel/stage manifest/receipt/blocker refs 已折入 registry、CLI、descriptor 和 validation gates。 |
-| `OPL Runway` | `L4_structural_baseline` | 达到 Workspace | Runtime manager、Temporal provider、typed queue、attempt ledger、provider SLO refs 已折入 registry、CLI、operator projection 和 validation gates。 |
+| `OPL Runway` | `L4_structural_baseline` | 达到 Workspace | Runtime manager、Temporal orchestration refs、worker lifecycle/readiness surface、typed queue、attempt ledger、provider SLO health/repair refs 已折入 registry、CLI、operator projection 和 validation gates。 |
 | `OPL Vault` | `L4_structural_baseline` | 达到 Workspace | Evidence vault、state index、stage artifact runtime、receipt/blocker refs 已折入 registry、CLI、operator projection 和 validation gates。 |
 | `OPL Console` | `L4_structural_baseline` | 达到 Workspace | App state/action、current owner delta、operator projection 与 safe action shell 已作为 Console refs-only module surface 登记。 |
 | `OPL Foundry Lab` | `L4_structural_baseline` | 达到 Workspace | Agent Lab、Foundry Agent series、scaffold/conformance/readiness/default-caller refs 已作为 Lab module surface 登记。 |
@@ -52,7 +52,7 @@ Machine boundary: 本文是人读现状对照。当前完成度、计数、recei
 - `Atlas`: agent / capability / surface / owner catalog 能被 CLI、App、conformance、release 和 operator drilldown 同源消费。
 - `Workspace`: 真实 MAS/MAG/RCA/OMA 用户项目能长期通过 workspace ensure/adopt/validate/doctor/upgrade/export-map 跑通，并留下 owner acceptance 或 typed blocker。
 - `Stagecraft`: 多个真实 domain stage 持续产出独立 quality gate、owner receipt、typed blocker 或 route-back evidence。
-- `Runway`: Temporal-backed provider、queue、lease、retry/dead-letter、human gate 和 recovery 在长窗口内稳定承接真实 owner chain。
+- `Runway`: Temporal-backed durable orchestration、Runway worker lifecycle/readiness surface、部署 substrate、queue、lease、retry/dead-letter、human gate 和 recovery 在长窗口内稳定承接真实 owner chain。
 - `Vault`: memory/artifact/lifecycle/restore/no-regression receipts 在多个 domain 中形成 body-free、可验证、可回放的运营 ledger。
 - `Console`: App 普通用户路径有同 cohort release/user-path evidence，能稳定展示 current owner、accepted answer shape、artifact/blocker 和 repair loop。
 - `Foundry Lab`: agent improvement loop 能从 evidence -> work order -> canary -> promotion/rollback -> owner acceptance 持续闭环。

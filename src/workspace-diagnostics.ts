@@ -5,10 +5,13 @@ import { FrameworkContractError } from './contracts.ts';
 import type { FrameworkContracts } from './types.ts';
 import { initializeWorkspace } from './workspace-initializer.ts';
 import {
+  buildProjectIndex,
   buildSharedResourceManifest,
   buildStageOutputsManifest,
   buildWorkspaceMap,
   normalizeWorkspaceProjectEntry,
+  PROJECT_CONFIG_BASENAME,
+  PROJECT_INDEX_BASENAME,
   sharedResourceManifestRef,
   WORKSPACE_HEALTH_REF,
   WORKSPACE_MAP_REF,
@@ -82,6 +85,13 @@ const BLOCKER_MESSAGES: Record<string, string> = {
   indexed_projects_missing: 'workspace_index.json does not list any projects.',
   indexed_project_shape_invalid: 'An indexed project has invalid path fields.',
   indexed_project_root_missing: 'An indexed project root is missing on disk.',
+  indexed_project_config_missing: 'An indexed project config is missing on disk.',
+  indexed_project_index_missing: 'An indexed project index is missing on disk.',
+  indexed_project_index_drift: 'An indexed project index does not match the OPL projection.',
+  indexed_inputs_root_missing: 'An indexed project inputs root is missing on disk.',
+  indexed_exports_root_missing: 'An indexed project exports root is missing on disk.',
+  indexed_packages_root_missing: 'An indexed project packages root is missing on disk.',
+  indexed_archive_root_missing: 'An indexed project archive root is missing on disk.',
   indexed_stage_outputs_root_missing: 'An indexed project stage outputs root is missing on disk.',
   indexed_stage_outputs_manifest_missing: 'An indexed project stage outputs manifest is missing on disk.',
   indexed_stage_outputs_manifest_drift: 'An indexed project stage outputs manifest does not match the OPL projection.',
@@ -416,10 +426,14 @@ function validateIndexSemantics(input: {
     normalizedProjects.push(normalized);
     const requiredDirs = [
       ['indexed_project_root_missing', normalized.project_root],
-      ['indexed_stage_outputs_root_missing', normalized.stage_outputs_root],
       ['indexed_control_root_missing', normalized.control_root],
+      ['indexed_inputs_root_missing', normalized.inputs_root],
+      ['indexed_stage_outputs_root_missing', normalized.stage_outputs_root],
+      ['indexed_exports_root_missing', normalized.exports_root],
+      ['indexed_packages_root_missing', normalized.packages_root],
       ['indexed_review_root_missing', normalized.review_root],
       ['indexed_handoff_root_missing', normalized.handoff_root],
+      ['indexed_archive_root_missing', normalized.archive_root],
     ] as const;
     for (const [code, relativePath] of requiredDirs) {
       const absolute = path.join(input.workspacePath, relativePath);
@@ -430,7 +444,39 @@ function validateIndexSemantics(input: {
         });
       }
     }
-    if (agent) {
+    const projectConfigRef = normalized.project_config_ref || `${normalized.project_root}/${PROJECT_CONFIG_BASENAME}`;
+    const projectConfigPath = path.join(input.workspacePath, projectConfigRef);
+    if (!fs.existsSync(projectConfigPath) || !fs.statSync(projectConfigPath).isFile()) {
+      addBlocker(blockers, 'indexed_project_config_missing', {
+        project_id: normalized.project_id,
+        path: projectConfigRef,
+      });
+    }
+    if (agent && profile) {
+      const projectIndexRef = normalized.project_index_ref || `${normalized.project_root}/${PROJECT_INDEX_BASENAME}`;
+      const projectIndexPath = path.join(input.workspacePath, projectIndexRef);
+      if (!fs.existsSync(projectIndexPath) || !fs.statSync(projectIndexPath).isFile()) {
+        addBlocker(blockers, 'indexed_project_index_missing', {
+          project_id: normalized.project_id,
+          path: projectIndexRef,
+        });
+      } else {
+        const actual = readJsonRecord(projectIndexPath);
+        const expected = buildProjectIndex({
+          workspaceId: indexWorkspaceId(input.index, input.workspacePath),
+          agent,
+          profile,
+          project: normalized,
+          updatedAt: indexUpdatedAt(input.index),
+        });
+        if (!actual || !sameJson(actual, expected)) {
+          addBlocker(blockers, 'indexed_project_index_drift', {
+            project_id: normalized.project_id,
+            path: projectIndexRef,
+            expected,
+          });
+        }
+      }
       const manifestPath = path.join(input.workspacePath, normalized.stage_outputs_manifest_ref);
       if (!fs.existsSync(manifestPath) || !fs.statSync(manifestPath).isFile()) {
         addBlocker(blockers, 'indexed_stage_outputs_manifest_missing', {
@@ -726,9 +772,13 @@ export function adoptWorkspace(
     path.join(workspacePath, profile.project_collection_path),
     projectRoot,
     path.join(projectRoot, 'control'),
+    path.join(projectRoot, 'inputs'),
     stageOutputsRoot,
+    path.join(projectRoot, 'artifacts', 'exports'),
+    path.join(projectRoot, 'artifacts', 'packages'),
     path.join(projectRoot, 'review'),
     path.join(projectRoot, 'handoff'),
+    path.join(projectRoot, 'archive'),
   ];
   const existingIndexPath = path.join(workspacePath, 'workspace_index.json');
   const existingIndex = fs.existsSync(existingIndexPath)

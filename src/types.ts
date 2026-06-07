@@ -190,25 +190,54 @@ export interface AgentWorkspaceNormContract {
     mcp: {
       tool_name: string;
       execution: string;
+      delegates_to_action_id: string;
       descriptor_only: boolean;
       public_runtime: boolean;
     };
     skill: {
       intent: string;
       command_contract_id: string;
+      delegates_to_action_id: string;
+      descriptor_only: boolean;
+      public_runtime: boolean;
     };
     openai: {
       tool_name: string;
+      delegates_to_action_id: string;
+      descriptor_only: boolean;
+      public_runtime: boolean;
     };
     ai_sdk: {
       tool_name: string;
+      delegates_to_action_id: string;
+      descriptor_only: boolean;
+      public_runtime: boolean;
     };
   };
   topology_contract: {
     contract_ref: string;
     profile_id: string;
     topology_model: string[];
+    canonical_project_collection_role: string;
+    canonical_project_unit_semantics: {
+      workspace_unit: string;
+      project_collection_role: string;
+      project_unit_kind: string;
+      stage_artifact_unit: string;
+      owner_answer_unit: string;
+      mas_studies_boundary: {
+        project_collection_path: string;
+        alias_role: string;
+        canonical_role: string;
+        canonical_project_unit_kind: string;
+      };
+    };
     project_stage_outputs_root: string;
+    stage_output_root_protocol: {
+      root: string;
+      stage_folder_unit: string;
+      required_stage_folder_shape: string[];
+    };
     default_project_collection_path: string;
     workspace_modes: string[];
     series_capable_one_off_skeleton: boolean;
@@ -218,6 +247,11 @@ export interface AgentWorkspaceNormContract {
     workspace_mode: string;
     project_kind: string;
     project_collection_path: string;
+    canonical_project_collection_role: string;
+    project_collection_alias_role: string;
+    project_collection_display_label: string;
+    project_semantic_aliases: string[];
+    user_inspection_roots: string[];
     shared_resource_roots: string[];
   }>;
   user_inspection: {
@@ -225,6 +259,7 @@ export interface AgentWorkspaceNormContract {
     project_stage_outputs_pattern: string;
     workspace_index_file: string;
     workspace_config_file: string;
+    canonical_user_inspection_roots: string[];
     runtime_state_is_default_user_surface: boolean;
     product_views_are_stage_outputs: boolean;
   };

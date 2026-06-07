@@ -135,7 +135,9 @@
         "surface_kind",
         "norm_id",
         "default_workspace_precondition",
-        "descriptor_delegates"
+        "descriptor_delegates",
+        "topology_contract",
+        "user_inspection"
       ],
       "properties": {
         "surface_kind": {
@@ -143,6 +145,18 @@
         },
         "norm_id": {
           "const": "opl.agent_workspace_norm.v1"
+        },
+        "descriptor_delegates": {
+          "$ref": "#/$defs/descriptor_delegates"
+        },
+        "topology_contract": {
+          "$ref": "#/$defs/norm_topology_contract"
+        },
+        "domain_topology_profile": {
+          "$ref": "#/$defs/domain_topology_profile"
+        },
+        "user_inspection": {
+          "$ref": "#/$defs/norm_user_inspection"
         }
       }
     }
@@ -252,6 +266,261 @@
         }
       }
     },
+    "descriptor_delegates": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "mcp",
+        "skill",
+        "openai",
+        "ai_sdk"
+      ],
+      "properties": {
+        "mcp": {
+          "$ref": "#/$defs/descriptor_delegate"
+        },
+        "skill": {
+          "$ref": "#/$defs/descriptor_delegate"
+        },
+        "openai": {
+          "$ref": "#/$defs/descriptor_delegate"
+        },
+        "ai_sdk": {
+          "$ref": "#/$defs/descriptor_delegate"
+        }
+      }
+    },
+    "descriptor_delegate": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "delegates_to_action_id",
+        "descriptor_only",
+        "public_runtime"
+      ],
+      "properties": {
+        "delegates_to_action_id": {
+          "const": "opl_workspace_ensure"
+        },
+        "descriptor_only": {
+          "const": true
+        },
+        "public_runtime": {
+          "const": false
+        }
+      }
+    },
+    "norm_topology_contract": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "canonical_project_collection_role",
+        "canonical_project_unit_semantics",
+        "stage_output_root_protocol"
+      ],
+      "properties": {
+        "canonical_project_collection_role": {
+          "const": "project_units"
+        },
+        "canonical_project_unit_semantics": {
+          "$ref": "#/$defs/canonical_project_unit_semantics"
+        },
+        "stage_output_root_protocol": {
+          "$ref": "#/$defs/stage_output_root_protocol"
+        }
+      }
+    },
+    "canonical_project_unit_semantics": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "workspace_unit",
+        "project_collection_role",
+        "project_unit_kind",
+        "stage_artifact_unit",
+        "owner_answer_unit",
+        "mas_studies_boundary"
+      ],
+      "properties": {
+        "workspace_unit": {
+          "const": "workspace_group"
+        },
+        "project_collection_role": {
+          "const": "project_units"
+        },
+        "project_unit_kind": {
+          "const": "project_unit"
+        },
+        "stage_artifact_unit": {
+          "const": "stage_artifact_unit"
+        },
+        "owner_answer_unit": {
+          "const": "owner_receipt_or_typed_blocker"
+        },
+        "mas_studies_boundary": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "project_collection_path",
+            "alias_role",
+            "canonical_role",
+            "canonical_project_unit_kind"
+          ],
+          "properties": {
+            "project_collection_path": {
+              "const": "studies"
+            },
+            "alias_role": {
+              "const": "display_domain_alias"
+            },
+            "canonical_role": {
+              "const": "project_units"
+            },
+            "canonical_project_unit_kind": {
+              "const": "project_unit"
+            }
+          }
+        }
+      }
+    },
+    "stage_output_root_protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "root",
+        "stage_folder_unit",
+        "required_stage_folder_shape"
+      ],
+      "properties": {
+        "root": {
+          "const": "artifacts/stage_outputs"
+        },
+        "stage_folder_unit": {
+          "const": "stage_artifact_unit"
+        },
+        "required_stage_folder_shape": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "inputs"
+            },
+            {
+              "const": "outputs"
+            },
+            {
+              "const": "review"
+            },
+            {
+              "const": "receipts"
+            },
+            {
+              "const": "handoff"
+            },
+            {
+              "const": "stage_manifest.json"
+            }
+          ],
+          "minItems": 6,
+          "maxItems": 6
+        }
+      }
+    },
+    "domain_topology_profile": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": true,
+      "required": [
+        "project_collection_path",
+        "canonical_project_collection_role",
+        "project_collection_alias_role",
+        "project_collection_display_label",
+        "project_semantic_aliases",
+        "user_inspection_roots"
+      ],
+      "properties": {
+        "canonical_project_collection_role": {
+          "const": "project_units"
+        },
+        "project_collection_alias_role": {
+          "enum": [
+            "canonical_display_label",
+            "display_domain_alias"
+          ]
+        },
+        "project_collection_display_label": {
+          "type": "string"
+        },
+        "project_semantic_aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "user_inspection_roots": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "norm_user_inspection": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "ordinary_user_default_surface",
+        "project_stage_outputs_pattern",
+        "canonical_user_inspection_roots",
+        "runtime_state_is_default_user_surface",
+        "product_views_are_stage_outputs"
+      ],
+      "properties": {
+        "ordinary_user_default_surface": {
+          "const": "workspace_local_project_stage_outputs"
+        },
+        "project_stage_outputs_pattern": {
+          "const": "<project-root>/artifacts/stage_outputs/<stage-id>/"
+        },
+        "canonical_user_inspection_roots": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "<project-root>/artifacts/stage_outputs"
+            },
+            {
+              "const": "<project-root>/artifacts/stage_outputs/<stage-id>/inputs"
+            },
+            {
+              "const": "<project-root>/artifacts/stage_outputs/<stage-id>/outputs"
+            },
+            {
+              "const": "<project-root>/artifacts/stage_outputs/<stage-id>/review"
+            },
+            {
+              "const": "<project-root>/artifacts/stage_outputs/<stage-id>/receipts"
+            },
+            {
+              "const": "<project-root>/artifacts/stage_outputs/<stage-id>/handoff"
+            },
+            {
+              "const": "<project-root>/artifacts/stage_outputs/<stage-id>/stage_manifest.json"
+            }
+          ],
+          "minItems": 7,
+          "maxItems": 7
+        },
+        "runtime_state_is_default_user_surface": {
+          "const": false
+        },
+        "product_views_are_stage_outputs": {
+          "const": false
+        }
+      }
+    },
     "shared_resource": {
       "type": "object",
       "additionalProperties": false,
@@ -293,11 +562,18 @@
       "required": [
         "project_id",
         "project_root",
+        "project_config_ref",
+        "project_index_ref",
         "stage_outputs_root",
         "stage_outputs_manifest_ref",
         "control_root",
+        "inputs_root",
+        "exports_root",
+        "packages_root",
         "review_root",
         "handoff_root",
+        "archive_root",
+        "canonical_semantics",
         "lifecycle"
       ],
       "properties": {
@@ -305,6 +581,12 @@
           "type": "string"
         },
         "project_root": {
+          "type": "string"
+        },
+        "project_config_ref": {
+          "type": "string"
+        },
+        "project_index_ref": {
           "type": "string"
         },
         "stage_outputs_root": {
@@ -316,11 +598,26 @@
         "control_root": {
           "type": "string"
         },
+        "inputs_root": {
+          "type": "string"
+        },
+        "exports_root": {
+          "type": "string"
+        },
+        "packages_root": {
+          "type": "string"
+        },
         "review_root": {
           "type": "string"
         },
         "handoff_root": {
           "type": "string"
+        },
+        "archive_root": {
+          "type": "string"
+        },
+        "canonical_semantics": {
+          "$ref": "#/$defs/project_canonical_semantics"
         },
         "lifecycle": {
           "type": "object",
@@ -353,6 +650,26 @@
         }
       }
     },
+    "project_canonical_semantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "unit",
+        "collection_role",
+        "domain_alias_is_canonical"
+      ],
+      "properties": {
+        "unit": {
+          "const": "project_unit"
+        },
+        "collection_role": {
+          "const": "project_units"
+        },
+        "domain_alias_is_canonical": {
+          "const": false
+        }
+      }
+    },
     "generated_refs": {
       "type": "object",
       "additionalProperties": false,
@@ -361,6 +678,8 @@
         "workspace_index_ref",
         "workspace_map_ref",
         "workspace_health_ref",
+        "project_config_basename",
+        "project_index_basename",
         "shared_resource_manifest_basename",
         "stage_outputs_manifest_basename"
       ],
@@ -376,6 +695,12 @@
         },
         "workspace_health_ref": {
           "const": "workspace_health.json"
+        },
+        "project_config_basename": {
+          "const": "project.yaml"
+        },
+        "project_index_basename": {
+          "const": "project_index.json"
         },
         "shared_resource_manifest_basename": {
           "const": "opl_resource_manifest.json"

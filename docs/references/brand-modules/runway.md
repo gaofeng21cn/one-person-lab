@@ -7,16 +7,26 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 runtime
 
 ## 品牌定位
 
-`OPL Runway` 是 OPL 的长跑执行与恢复模块。它把 stage attempt 放进 durable runtime，负责启动、lease、heartbeat、retry、dead-letter、resume、human gate 和 provider status。
+`OPL Runway` 是 OPL 的长跑执行与恢复模块。它把 stage attempt 放进 durable runtime，负责启动、lease、heartbeat、retry、dead-letter、resume、human gate、provider status 和 worker lifecycle/readiness projection。
 
 一句话：`Runway` 管“任务怎么持续跑、怎么恢复、怎么知道现在停在哪里”。
 
 ## 设计理念
 
 - Desired/current reconciliation：domain owner 声明目标、下一步或 typed blocker，Runway 只负责把可执行部分投影成可恢复 attempt，并持续对账 current state。
-- Durable execution：Temporal-backed provider 是 production online substrate；attempt history、signal、query、retry、timeout 和 replay 必须可恢复。
+- Durable execution：Temporal-backed provider 是 production online substrate；Temporal 负责 workflow history、task queue、signal/query、retry、timeout、timer 和 replay，worker process/service 的启动、保活、重启、版本与依赖 readiness 由 Runway worker lifecycle surface 和部署 substrate 承担。
+- Worker lifecycle supervision：Runway 必须投影 service/worker readiness、managed process/crash diagnostic、poll/heartbeat、SLO health 和 repair action；SLO watchdog 只是 health check / repair trigger，不替代 worker supervisor。
 - Progress-first supervision：Runway 读面默认回答“当前是否在跑、卡在哪里、下一 owner 是谁”，不把 provider 运维动作抢成 domain 交付进展。
 - Fail-closed authority：缺 provider attempt、active lease、execution authorization、workspace/artifact scope、source fingerprint 或 closeout binding 时，Runway 只能返回 OPL runtime blocker。
+
+## Temporal / Runway / Deployment / Domain 分工
+
+| 层 | 负责 | 不负责 |
+| --- | --- | --- |
+| Temporal Server / Cloud | workflow history、timer、retry/timeout、task queue、signal/query/update、visibility 和 replay。 | OPL worker process 永久在线、domain truth、owner receipt、artifact verdict。 |
+| OPL Runway | provider readiness、worker lifecycle/readiness 投影、typed queue、attempt ledger、lease、heartbeat、SLO health、repair action、dead-letter 和 runtime blocker。 | 在没有部署 substrate 的情况下承诺进程永久保活；替 domain owner 生成 truth、receipt 或 quality verdict。 |
+| Deployment substrate | worker service 的启动、保活、重启、扩缩容、rolling deployment 和 health check 容器；本地可用 launchd/systemd/Docker Compose，生产形态应使用 Kubernetes/ECS/托管服务等。 | OPL attempt ledger、Temporal workflow truth、domain truth 或质量判断。 |
+| Domain agent | owner route、typed blocker、owner receipt、domain artifact、quality/export verdict 和用户交付物 truth。 | provider lifecycle、Temporal worker readiness、queue lease 或 OPL runtime blocker。 |
 
 ## 核心对象
 
@@ -79,7 +89,10 @@ contracts/opl-framework/family-runtime-attempt-contract.json
 - 不把 provider completed 当成 domain ready。
 - 不保存 artifact/memory body。
 - 不让 domain repo 重建私有 daemon、queue、attempt ledger 或 scheduler。
+- 不把 Temporal service reachable、workflow history available 或 provider refs available 写成 worker process 永久在线。
 - 不把 Temporal provider ready 写成 production long-soak complete。
+- 不把 SLO watchdog 写成 worker supervisor、domain progress 或 production long-soak。
+- 不把 LaunchAgent / 300 秒 cadence 写成 production topology；它只可作为 local/small-install fallback 或 diagnostic。
 - 不把 local provider 写成 Full online readiness 替代品。
 - 不把 runtime blocker 写成 domain typed blocker。
 - 不把 App/operator safe action 写成用户交付物进展。

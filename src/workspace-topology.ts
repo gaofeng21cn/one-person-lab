@@ -19,11 +19,22 @@ export type TopologyProfile = {
 export type WorkspaceProjectIndexEntry = {
   project_id: string;
   project_root: string;
+  project_config_ref: string;
+  project_index_ref: string;
   stage_outputs_root: string;
   stage_outputs_manifest_ref: string;
   control_root: string;
+  inputs_root: string;
+  exports_root: string;
+  packages_root: string;
   review_root: string;
   handoff_root: string;
+  archive_root: string;
+  canonical_semantics: {
+    unit: 'project_unit';
+    collection_role: 'project_units';
+    domain_alias_is_canonical: false;
+  };
   lifecycle: {
     status: 'active' | 'archived';
     archived_at: string | null;
@@ -188,11 +199,22 @@ export function workspaceProjectEntry(
   return {
     project_id: projectId,
     project_root: projectRootRef,
+    project_config_ref: `${projectRootRef}/project.yaml`,
+    project_index_ref: `${projectRootRef}/project_index.json`,
     stage_outputs_root: stageOutputsRootRef,
     stage_outputs_manifest_ref: `${stageOutputsRootRef}/opl_stage_outputs_manifest.json`,
     control_root: `${projectRootRef}/control`,
+    inputs_root: `${projectRootRef}/inputs`,
+    exports_root: `${projectRootRef}/artifacts/exports`,
+    packages_root: `${projectRootRef}/artifacts/packages`,
     review_root: `${projectRootRef}/review`,
     handoff_root: `${projectRootRef}/handoff`,
+    archive_root: `${projectRootRef}/archive`,
+    canonical_semantics: {
+      unit: 'project_unit',
+      collection_role: 'project_units',
+      domain_alias_is_canonical: false,
+    },
     lifecycle: {
       status: 'active',
       archived_at: null,

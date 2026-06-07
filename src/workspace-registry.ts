@@ -164,6 +164,11 @@ function normalizeWorkspaceBinding(binding: Partial<WorkspaceBinding>): Workspac
     archived_at: binding.archived_at ? String(binding.archived_at) : null,
   };
 
+  const derivedDirectEntry = buildDerivedDirectEntryLocator(normalized.direct_entry.workspace_locator);
+  normalized.direct_entry.command = normalized.direct_entry.command ?? derivedDirectEntry.command;
+  normalized.direct_entry.manifest_command =
+    normalized.direct_entry.manifest_command ?? derivedDirectEntry.manifest_command;
+
   return normalized;
 }
 

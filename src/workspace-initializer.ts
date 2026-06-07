@@ -489,6 +489,8 @@ export function buildWorkspaceIndex(input: {
       workspace_index_ref: 'workspace_index.json',
       workspace_map_ref: WORKSPACE_MAP_REF,
       workspace_health_ref: WORKSPACE_HEALTH_REF,
+      project_config_basename: 'project.yaml',
+      project_index_basename: 'project_index.json',
       shared_resource_manifest_basename: 'opl_resource_manifest.json',
       stage_outputs_manifest_basename: 'opl_stage_outputs_manifest.json',
     },
@@ -620,9 +622,13 @@ export function initializeWorkspace(
     ensureDir(projectRoot, createdDirectories);
     for (const relativePath of [
       'control',
+      'inputs',
       profile.project_stage_outputs_root,
+      'artifacts/exports',
+      'artifacts/packages',
       'review',
       'handoff',
+      'archive',
     ]) {
       ensureDir(path.join(projectRoot, relativePath), createdDirectories);
     }
@@ -657,7 +663,6 @@ export function initializeWorkspace(
         workspacePath,
         label: title ?? `${agent.label} ${workspaceId}`,
         workspaceRoot: agent.agent_id === 'rca' ? workspacePath : undefined,
-        deriveDirectEntry: false,
       })
     : null;
 

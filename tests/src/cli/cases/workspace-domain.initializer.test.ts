@@ -114,7 +114,35 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     assert.equal(workspaceIndex.workspace_norm.norm_id, 'opl.agent_workspace_norm.v1');
     assert.equal(workspaceIndex.workspace_norm.default_workspace_precondition.command, 'opl workspace ensure');
     assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.profile, 'rca_series');
+    assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.canonical_project_collection_role, 'project_units');
+    assert.deepEqual(
+      workspaceIndex.workspace_norm.domain_topology_profile.project_semantic_aliases,
+      ['slide_deck', 'deck', 'deliverable'],
+    );
+    assert.deepEqual(
+      workspaceIndex.workspace_norm.topology_contract.stage_output_root_protocol.required_stage_folder_shape,
+      ['inputs', 'outputs', 'review', 'receipts', 'handoff', 'stage_manifest.json'],
+    );
+    assert.equal(
+      workspaceIndex.workspace_norm.descriptor_delegates.openai.delegates_to_action_id,
+      'opl_workspace_ensure',
+    );
+    assert.equal(workspaceIndex.workspace_norm.descriptor_delegates.openai.descriptor_only, true);
+    assert.equal(workspaceIndex.workspace_norm.descriptor_delegates.openai.public_runtime, false);
+    assert.equal(workspaceIndex.workspace_norm.descriptor_delegates.ai_sdk.descriptor_only, true);
     assert.equal(workspaceIndex.workspace_norm.user_inspection.runtime_state_is_default_user_surface, false);
+    assert.deepEqual(
+      workspaceIndex.workspace_norm.user_inspection.canonical_user_inspection_roots,
+      [
+        '<project-root>/artifacts/stage_outputs',
+        '<project-root>/artifacts/stage_outputs/<stage-id>/inputs',
+        '<project-root>/artifacts/stage_outputs/<stage-id>/outputs',
+        '<project-root>/artifacts/stage_outputs/<stage-id>/review',
+        '<project-root>/artifacts/stage_outputs/<stage-id>/receipts',
+        '<project-root>/artifacts/stage_outputs/<stage-id>/handoff',
+        '<project-root>/artifacts/stage_outputs/<stage-id>/stage_manifest.json',
+      ],
+    );
     assert.equal(workspaceIndex.workspace_norm.authority_boundary.opl_can_create_owner_receipt, false);
     assert.equal(workspaceIndex.expected_domain_topology_profile.profile, 'rca_series');
     assert.equal(workspaceIndex.expected_domain_topology_profile.project_kind, 'slide_deck');
@@ -144,6 +172,10 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     const redcube = catalog.workspace_catalog.projects.find((entry: { project_id: string }) => entry.project_id === 'redcube');
     assert.equal(redcube.active_binding.workspace_path, workspacePath);
     assert.equal(redcube.active_binding.direct_entry.workspace_locator.surface_kind, 'redcube_workspace');
+    assert.match(redcube.active_binding.direct_entry.command, /getProductStatus/);
+    assert.match(redcube.active_binding.direct_entry.manifest_command, /getProductEntryManifest/);
+    assert.equal(redcube.bindings_count.direct_entry_ready, 1);
+    assert.equal(redcube.bindings_count.manifest_ready, 1);
     assert.equal(redcube.available_actions.includes('init'), true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -275,6 +307,19 @@ test('workspace init materializes MAS portfolio topology with study roots', () =
     );
     assert.equal(workspaceIndex.projects[0].stage_outputs_root, 'studies/DM002/artifacts/stage_outputs');
     assert.equal(workspaceIndex.authority_boundary.opl_can_write_domain_truth, false);
+    assert.equal(workspaceIndex.workspace_norm.topology_contract.canonical_project_collection_role, 'project_units');
+    assert.equal(
+      workspaceIndex.workspace_norm.topology_contract.canonical_project_unit_semantics.mas_studies_boundary.alias_role,
+      'display_domain_alias',
+    );
+    assert.equal(
+      workspaceIndex.workspace_norm.topology_contract.canonical_project_unit_semantics.mas_studies_boundary.canonical_role,
+      'project_units',
+    );
+    assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.project_collection_path, 'studies');
+    assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.project_collection_alias_role, 'display_domain_alias');
+    assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.canonical_project_collection_role, 'project_units');
+    assert.deepEqual(workspaceIndex.workspace_norm.domain_topology_profile.project_semantic_aliases, ['study', 'studies']);
 
     const catalog = runCli(['workspace', 'list'], {
       OPL_STATE_DIR: stateRoot,
@@ -650,12 +695,20 @@ test('workspace interfaces exports the OPL-owned initializer surfaces for tools 
   assert.equal(output.workspace_interfaces.workspace_norm.norm_id, 'opl.agent_workspace_norm.v1');
   assert.equal(output.workspace_interfaces.workspace_norm.default_workspace_precondition.default_entry_for_agents, true);
   assert.equal(output.workspace_interfaces.workspace_norm.explicit_initialization.default_entry_for_agents, false);
+  assert.equal(output.workspace_interfaces.workspace_norm.topology_contract.canonical_project_collection_role, 'project_units');
+  assert.deepEqual(
+    output.workspace_interfaces.workspace_norm.topology_contract.stage_output_root_protocol.required_stage_folder_shape,
+    ['inputs', 'outputs', 'review', 'receipts', 'handoff', 'stage_manifest.json'],
+  );
   assert.equal(output.workspace_interfaces.workspace_norm.user_inspection.project_stage_outputs_pattern, '<project-root>/artifacts/stage_outputs/<stage-id>/');
   assert.equal(output.workspace_interfaces.workspace_norm.runtime_state_boundary.runtime_state_can_close_stage, false);
   assert.equal(output.workspace_interfaces.workspace_norm.authority_boundary.conformance_pass_counts_as_domain_ready, false);
   assert.equal(output.workspace_interfaces.surfaces.mcp.tool_name, 'opl_workspace_ensure');
   assert.equal(output.workspace_interfaces.surfaces.mcp.descriptor_only, true);
   assert.equal(output.workspace_interfaces.surfaces.mcp.public_runtime, false);
+  assert.equal(output.workspace_interfaces.surfaces.openai.descriptor_only, true);
+  assert.equal(output.workspace_interfaces.surfaces.openai.public_runtime, false);
+  assert.equal(output.workspace_interfaces.surfaces.ai_sdk.delegates_to_action_id, 'opl_workspace_ensure');
   assert.equal(output.workspace_interfaces.surfaces.mcp.management_delegates.validate, 'opl workspace validate');
   assert.equal(output.workspace_interfaces.surfaces.mcp.management_delegates.adopt_apply, 'opl workspace adopt --apply');
   assert.equal(output.workspace_interfaces.surfaces.mcp.management_delegates.upgrade, 'opl workspace upgrade --apply');

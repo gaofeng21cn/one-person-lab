@@ -7,16 +7,18 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 workspa
 
 ## 品牌定位
 
-`OPL Workspace` 是 OPL 的项目与文件管理模块。它把用户材料、共享资源、stage output、working artifacts、review、handoff、owner receipt 和 typed blocker 放在一个可检查、可恢复、可迁移的项目空间里。
+`OPL Workspace` 是 OPL 的 workspace protocol 与文件生命周期模块。它不是一套目录命名偏好，而是把用户材料、共享资源、stage output、working artifacts、review、handoff、owner receipt 和 typed blocker 绑定到可检查、可恢复、可迁移的项目空间协议里。
 
-一句话：`Workspace` 管“这个任务的文件在哪里、哪些是输入、哪些是 stage 产物、哪些可交付、哪些只是 runtime 证据”。
+一句话：`Workspace` 管“这个任务属于哪个 Workspace Group / Project Unit，stage 产物在哪里，哪些是 owner receipt / typed blocker，哪些只是 runtime 证据”。
 
 ## 设计理念
 
-- 用户检查面优先：普通用户应看到 project、sources、stage outputs、reviews、handoff 和 deliverables，而不是 provider internals。
-- 机器 topology 优先：物理目录可以保留领域语义，但必须投影到统一 `Workspace Group -> Project Unit -> Stage Artifact Unit -> Owner Receipt / Typed Blocker`。
-- Series-ready by default：一次性项目也使用可升级成 series / portfolio 的 skeleton。
+- 用户检查面优先：普通用户默认查看 project-local `artifacts/stage_outputs/<stage-id>/`、domain-owned product views、review 和 handoff，而不是 provider internals、runtime-state、SQLite 或 App projection。
+- 机器协议优先：物理目录可以保留领域语义，但必须投影到统一 `Workspace Group -> Project Unit -> Stage Artifact Unit -> Owner Receipt / Typed Blocker`。
+- Series-ready by default：`one_off`、`series`、`portfolio` 都使用 series-capable skeleton；一次性项目后续升级 series / portfolio 不搬已有 project root。
+- Display alias 不改语义：MAS 保留 `studies/<study-id>` 命名但机器语义是 Project Unit；RCA/MAG/OMA 使用 `deliverables/<project-id>` 只是 domain display alias，不是新的 lifecycle。
 - Runtime-state 降级为 backing/provenance：它不能替代 stage folder、owner receipt 或 typed blocker。
+- Interface delegate 优先：Skill、MCP、App、OpenAI tool 和 AI SDK tool 只能通过 `opl workspace ensure` / `opl workspace interfaces` 暴露的 command contract 进入 workspace；不得自由猜测目录或绕过 workspace binding。
 
 ## 核心对象
 
@@ -25,8 +27,8 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 workspa
 | `workspace.yaml` | workspace identity、agent binding、mode、root policy。 |
 | `workspace_index.json` | canonical topology、display labels、shared resources、indexed projects。 |
 | `workspace_group` | 一个 agent 或 portfolio 下的项目集合。 |
-| `project_unit` | 一个 paper、grant、deck、agent target 或 deliverable project。 |
-| `stage_artifact_unit` | 某个 stage 的用户可检查产出位置。 |
+| `project_unit` | 一个 paper、study、grant、deck、agent target 或 deliverable project；`studies/` 与 `deliverables/` 都只是物理/display alias。 |
+| `stage_artifact_unit` | 某个 stage 的用户可检查产出位置，默认落在 `<project-root>/artifacts/stage_outputs/<stage-id>/`。 |
 | `shared_resources` | sources、brand、visual memory、literature、data、style system 等共享材料。 |
 | `inspection_roots` | App/用户默认可查看路径。 |
 
@@ -58,11 +60,12 @@ contracts/opl-framework/agent-workspace-norm-contract.json
 - 不签 domain owner receipt。
 - 不判断 artifact quality/export readiness。
 - 不把 workspace index 当成 artifact body store。
-- 不把 runtime-state 当成普通用户默认查看面。
+- 不把 runtime-state、SQLite sidecar、provider ledger 或 App projection 当成普通用户默认查看面。
+- 不让 Skill/MCP/App/OpenAI/AI SDK 通过猜目录直接写 workspace。
 
 ## 成功标准
 
-- App、CLI、Skill/MCP delegate 都以 `workspace ensure` 为默认 pre-task gate。
+- App、CLI、Skill/MCP/OpenAI/AI SDK delegate 都以 `workspace ensure` 为默认 pre-task gate，并从 `workspace interfaces` 读取可调用 surface。
 - 每个 project 都有用户可理解的 display label 和 inspection root。
 - Existing directory adoption 先 dry-run，避免破坏用户文件。
 - Workspace 可以独立检查结构健康，且不依赖 domain truth body。

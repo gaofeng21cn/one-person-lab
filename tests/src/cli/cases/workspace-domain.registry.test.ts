@@ -92,6 +92,65 @@ test('workspace registry commands bind activate and archive project workspaces w
   }
 });
 
+test('workspace registry hydrates derived RCA manifest commands for legacy locator-only bindings', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-legacy-rca-binding-state-'));
+  const workspaceRegistryPath = path.join(stateRoot, 'workspace-registry.json');
+
+  try {
+    fs.mkdirSync(stateRoot, { recursive: true });
+    fs.writeFileSync(workspaceRegistryPath, `${JSON.stringify({
+      version: 'g2',
+      bindings: [
+        {
+          binding_id: 'legacy-redcube-binding',
+          project_id: 'redcube',
+          project: 'redcube-ai',
+          workspace_path: repoRoot,
+          label: 'Legacy RedCube Binding',
+          status: 'active',
+          direct_entry: {
+            command: null,
+            manifest_command: null,
+            url: null,
+            workspace_locator: {
+              surface_kind: 'redcube_workspace',
+              workspace_root: repoRoot,
+              profile_ref: null,
+              input_path: null,
+            },
+          },
+          created_at: '2026-06-07T00:00:00.000Z',
+          updated_at: '2026-06-07T00:00:00.000Z',
+          archived_at: null,
+        },
+      ],
+    }, null, 2)}\n`);
+
+    const catalogOutput = runCli(['workspace', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const redcube = catalogOutput.workspace_catalog.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'redcube',
+    );
+    assert.match(redcube.active_binding.direct_entry.command, /getProductStatus/);
+    assert.match(redcube.active_binding.direct_entry.manifest_command, /getProductEntryManifest/);
+    assert.equal(redcube.bindings_count.direct_entry_ready, 1);
+    assert.equal(redcube.bindings_count.manifest_ready, 1);
+
+    const manifests = runCli(['domain', 'manifests'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: contractsDir,
+    });
+    const redcubeManifest = manifests.domain_manifests.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'redcube',
+    );
+    assert.notEqual(redcubeManifest.manifest_command, null);
+    assert.notEqual(redcubeManifest.status, 'manifest_not_configured');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('domain manifests resolves real family manifest fixtures while workspace list stays registry-only', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-state-'));
   const fixtures = loadFamilyManifestFixtures();

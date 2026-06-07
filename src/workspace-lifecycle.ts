@@ -300,9 +300,13 @@ export function upgradeWorkspace(
     for (const relativePath of [
       project.project_root,
       project.control_root,
+      project.inputs_root,
       project.stage_outputs_root,
+      project.exports_root,
+      project.packages_root,
       project.review_root,
       project.handoff_root,
+      project.archive_root,
     ]) {
       const dirPath = path.join(context.workspacePath, relativePath);
       if (!fs.existsSync(dirPath) || !fs.statSync(dirPath).isDirectory()) {

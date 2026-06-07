@@ -259,11 +259,15 @@ domain-agent-repo/
 
 Repo source 保存 source、contracts、schemas、prompts、skills、stage definitions、quality gates、projection builders、fixtures、tests 和 docs。
 
-Domain workspace 保存用户输入、source assets、domain truth、runtime state、controller decisions、quality records、memory pack、writeback receipts、analysis/artifact outputs、canonical deliverables 和 package/export evidence。
+OPL Workspace Protocol 固定 `Workspace Group -> Project Unit -> Stage Artifact Unit -> Owner Receipt / Typed Blocker`。`one_off`、`series`、`portfolio` 都使用 series-capable skeleton；MAS 可以保留 `studies/<study-id>` 物理命名，但语义必须映射到 Project Unit；MAG/RCA/OMA 的 `deliverables/<project-id>` 只是 domain display alias，不定义新的 lifecycle。
+
+Domain workspace 保存用户输入、source assets、domain truth、runtime state、controller decisions、quality records、memory pack、writeback receipts、analysis/artifact outputs、canonical deliverables 和 package/export evidence。普通用户默认检查 project-local `artifacts/stage_outputs/<stage-id>/` 与 domain-owned product views；runtime-state、SQLite sidecar、provider ledger 和 App projection 都不是默认用户检查面。
 
 OPL/provider 保存 attempt metadata、workflow id、provider receipt、queue item、signal/query history、retry/dead-letter state、framework closeout refs、locator refs、freshness 和 operator projection。
 
 真实运行产物、private evidence、receipt instance、memory body、PPT/PDF/PNG/DOCX/zip 等不进入 repo source tree。
+
+Skill、MCP、App、OpenAI tool 和 AI SDK tool 的 workspace 入口必须通过 `opl workspace ensure` / `opl workspace interfaces` 派生或委托；它们不能绕过 workspace binding 自行猜测或创建目录。
 
 ## 理想完成门槛
 
