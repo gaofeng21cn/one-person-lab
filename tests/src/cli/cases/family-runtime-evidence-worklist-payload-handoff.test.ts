@@ -589,7 +589,18 @@ test('family-runtime evidence-worklist does not expose stale domain-dispatch rou
   assert.equal(worklist.summary.open_safe_action_payload_required_item_count, 0);
   assert.equal(worklist.domain_dispatch_evidence_workorder_packet.workorders.length, 0);
   assert.deepEqual(worklist.audit_worklist_next_safe_actions, []);
-  assert.deepEqual(worklist.next_safe_actions, []);
+  assert.equal(
+    worklist.next_safe_actions?.some((action) => action.action_id === actionId),
+    false,
+  );
+  assert.equal(worklist.next_safe_actions?.length, 1);
+  assert.equal(
+    worklist.next_safe_actions?.[0]?.action_kind,
+    'current_owner_delta_owner_answer_or_typed_blocker_required',
+  );
+  assert.equal(worklist.next_safe_actions?.[0]?.derivation_source, 'current_owner_delta');
+  assert.equal(worklist.next_safe_actions?.[0]?.current_owner, 'med-autoscience');
+  assert.equal(worklist.next_safe_actions?.[0]?.can_submit_to_safe_action_shell, false);
   const countSummary = (worklist.current_owner_delta_read_model as JsonRecord)
     .owner_delta_audit_tail as JsonRecord;
   assert.equal(
