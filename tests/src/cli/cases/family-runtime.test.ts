@@ -17,6 +17,7 @@ import {
   test,
 } from '../helpers.ts';
 import { STANDARD_PROGRESS_DELTA_POLICY, STANDARD_TYPED_BLOCKER_LINEAGE_POLICY } from '../../../../src/standard-domain-agent-scaffold-constants.ts';
+import { createMinimalFamilyWorkspaceRoot } from './family-runtime-evidence-worklist-helpers.ts';
 
 function createDispatchFixture(body: string) {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-dispatch-'));
@@ -100,6 +101,7 @@ test('family-runtime status exposes provider-backed stage attempt runtime and SQ
 test('family-runtime evidence-worklist reports safe-action evidence tail without authority claims', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-evidence-worklist-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const familyWorkspaceRoot = createMinimalFamilyWorkspaceRoot();
   const fixtures = loadFamilyManifestFixtures();
 
   try {
@@ -134,6 +136,7 @@ test('family-runtime evidence-worklist reports safe-action evidence tail without
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: familyWorkspaceRoot,
     });
     const report = worklist.family_runtime_evidence_worklist;
 
@@ -176,6 +179,7 @@ test('family-runtime evidence-worklist reports safe-action evidence tail without
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: familyWorkspaceRoot,
     }).family_runtime_evidence_worklist;
     assert.equal(fullWorklist.detail_level, 'full');
     assert.equal(fullWorklist.command, 'evidence-worklist');
@@ -188,6 +192,7 @@ test('family-runtime evidence-worklist reports safe-action evidence tail without
 
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
