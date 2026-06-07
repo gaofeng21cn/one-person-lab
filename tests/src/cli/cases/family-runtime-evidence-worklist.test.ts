@@ -901,6 +901,7 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
       'full',
     ], familyRuntimeEnv(stateRoot, fixtureContractsRoot, {
       OPL_PROVIDER_PROOF_WINDOW_SECONDS: '86400',
+      OPL_FAMILY_WORKSPACE_ROOT: familyWorkspaceRoot,
     }));
     const fullWorklist = fullOutput.family_runtime_evidence_worklist;
     assert.equal(fullWorklist.detail_level, 'full');
