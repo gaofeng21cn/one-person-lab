@@ -93,7 +93,19 @@ export function buildAgentWorkspaceNormChecks(contract: AgentWorkspaceNormContra
     topology.canonical_project_unit_semantics.project_collection_role === 'project_units'
       ? null
       : 'workspace_project_unit_semantics_drift',
-    topology.canonical_project_unit_semantics.mas_studies_boundary.alias_role === 'display_domain_alias'
+    topology.default_project_collection_path === 'projects'
+      ? null
+      : 'workspace_default_project_collection_path_drift',
+    topology.legacy_project_collection_aliases.join('/') === 'deliverables/studies'
+      ? null
+      : 'workspace_legacy_project_collection_aliases_drift',
+    topology.canonical_project_unit_semantics.mas_studies_boundary.project_collection_path === 'projects'
+      ? null
+      : 'workspace_mas_studies_physical_root_drift',
+    topology.canonical_project_unit_semantics.mas_studies_boundary.legacy_project_collection_path === 'studies'
+      ? null
+      : 'workspace_mas_studies_legacy_path_drift',
+    topology.canonical_project_unit_semantics.mas_studies_boundary.alias_role === 'legacy_display_domain_alias'
       ? null
       : 'workspace_mas_studies_alias_role_drift',
     topology.canonical_project_unit_semantics.mas_studies_boundary.canonical_role === 'project_units'

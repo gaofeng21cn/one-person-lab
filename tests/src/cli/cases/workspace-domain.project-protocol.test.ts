@@ -32,7 +32,7 @@ test('workspace init materializes project unit metadata and stage output require
     });
 
     const workspacePath = path.join(workspaceRoot, 'visual-theme-a');
-    const projectRoot = path.join(workspacePath, 'deliverables', 'deck-001');
+    const projectRoot = path.join(workspacePath, 'projects', 'deck-001');
 
     for (const relativePath of [
       'inputs',
@@ -49,14 +49,14 @@ test('workspace init materializes project unit metadata and stage output require
     assert.equal(project.canonical_semantics.unit, 'project_unit');
     assert.equal(project.canonical_semantics.collection_role, 'project_units');
     assert.equal(project.canonical_semantics.domain_alias_is_canonical, false);
-    assert.equal(project.project_config_ref, 'deliverables/deck-001/project.yaml');
-    assert.equal(project.project_index_ref, 'deliverables/deck-001/project_index.json');
-    assert.equal(project.stage_outputs_index_ref, 'deliverables/deck-001/artifacts/stage_outputs/stage_outputs_index.json');
-    assert.equal(project.current_stage_pointer_ref, 'deliverables/deck-001/artifacts/stage_outputs/current_stage.json');
-    assert.equal(project.inputs_root, 'deliverables/deck-001/inputs');
-    assert.equal(project.exports_root, 'deliverables/deck-001/artifacts/exports');
-    assert.equal(project.packages_root, 'deliverables/deck-001/artifacts/packages');
-    assert.equal(project.archive_root, 'deliverables/deck-001/archive');
+    assert.equal(project.project_config_ref, 'projects/deck-001/project.yaml');
+    assert.equal(project.project_index_ref, 'projects/deck-001/project_index.json');
+    assert.equal(project.stage_outputs_index_ref, 'projects/deck-001/artifacts/stage_outputs/stage_outputs_index.json');
+    assert.equal(project.current_stage_pointer_ref, 'projects/deck-001/artifacts/stage_outputs/current_stage.json');
+    assert.equal(project.inputs_root, 'projects/deck-001/inputs');
+    assert.equal(project.exports_root, 'projects/deck-001/artifacts/exports');
+    assert.equal(project.packages_root, 'projects/deck-001/artifacts/packages');
+    assert.equal(project.archive_root, 'projects/deck-001/archive');
 
     const projectYaml = fs.readFileSync(path.join(projectRoot, 'project.yaml'), 'utf8');
     assert.match(projectYaml, /unit: project_unit/);
@@ -76,8 +76,8 @@ test('workspace init materializes project unit metadata and stage output require
       'handoff',
     ]);
     assert.deepEqual(projectIndex.stage_artifact_unit.required_files, ['stage_manifest.json']);
-    assert.equal(projectIndex.stage_artifact_unit.index_ref, 'deliverables/deck-001/artifacts/stage_outputs/stage_outputs_index.json');
-    assert.equal(projectIndex.stage_artifact_unit.current_stage_pointer_ref, 'deliverables/deck-001/artifacts/stage_outputs/current_stage.json');
+    assert.equal(projectIndex.stage_artifact_unit.index_ref, 'projects/deck-001/artifacts/stage_outputs/stage_outputs_index.json');
+    assert.equal(projectIndex.stage_artifact_unit.current_stage_pointer_ref, 'projects/deck-001/artifacts/stage_outputs/current_stage.json');
     assert.deepEqual(projectIndex.stage_artifact_unit.lifecycle_model, [
       'open',
       'active',
@@ -152,7 +152,7 @@ test('workspace upgrade restores project unit protocol refs without moving roots
     });
 
     const workspacePath = path.join(workspaceRoot, 'nsfc-p2c');
-    const projectRoot = path.join(workspacePath, 'deliverables', 'grant-001');
+    const projectRoot = path.join(workspacePath, 'projects', 'grant-001');
     fs.rmSync(path.join(projectRoot, 'project_index.json'));
     fs.rmSync(path.join(projectRoot, 'artifacts', 'exports'), { recursive: true, force: true });
 

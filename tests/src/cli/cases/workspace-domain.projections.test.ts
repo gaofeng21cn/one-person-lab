@@ -35,8 +35,8 @@ test('workspace ensure refreshes generated refs when reusing an active binding',
     for (const relativePath of [
       'workspace_inspection.json',
       'workspace_resource_inventory.json',
-      'deliverables/deck-001/artifacts/stage_outputs/stage_outputs_index.json',
-      'deliverables/deck-001/artifacts/stage_outputs/current_stage.json',
+      'projects/deck-001/artifacts/stage_outputs/stage_outputs_index.json',
+      'projects/deck-001/artifacts/stage_outputs/current_stage.json',
     ]) {
       fs.rmSync(path.join(workspacePath, relativePath));
     }
@@ -243,8 +243,8 @@ test('workspace upgrade restores generated manifests without moving project root
       stage_id: 'draft',
       status: 'active',
     };
-    currentPointer.current_stage_manifest_ref = 'deliverables/grant-001/artifacts/stage_outputs/draft/stage_manifest.json';
-    currentPointer.latest_owner_receipt_ref = 'deliverables/grant-001/artifacts/stage_outputs/draft/receipts/owner_receipt.json';
+    currentPointer.current_stage_manifest_ref = 'projects/grant-001/artifacts/stage_outputs/draft/stage_manifest.json';
+    currentPointer.latest_owner_receipt_ref = 'projects/grant-001/artifacts/stage_outputs/draft/receipts/owner_receipt.json';
     currentPointer.latest_typed_blocker_ref = null;
     fs.writeFileSync(currentPointerPath, `${JSON.stringify(currentPointer, null, 2)}\n`);
 
@@ -277,7 +277,7 @@ test('workspace upgrade restores generated manifests without moving project root
     });
     assert.equal(
       upgradedCurrentPointer.latest_owner_receipt_ref,
-      'deliverables/grant-001/artifacts/stage_outputs/draft/receipts/owner_receipt.json',
+      'projects/grant-001/artifacts/stage_outputs/draft/receipts/owner_receipt.json',
     );
     assert.equal(runCli(['workspace', 'validate', '--workspace', workspacePath], {
       OPL_STATE_DIR: stateRoot,

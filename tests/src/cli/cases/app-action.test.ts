@@ -280,7 +280,7 @@ test('app action execute owns settings, release channel, workspace root, and pro
     assert.equal(magWorkspace.result.workspace_initialization.dry_run, false);
     assert.equal(magWorkspace.result.workspace_initialization.binding.project_id, 'medautogrant');
     assert.equal(
-      fs.statSync(path.join(workspaceRoot, 'nsfc-p2c', 'deliverables', 'grant-001', 'artifacts', 'stage_outputs')).isDirectory(),
+      fs.statSync(path.join(workspaceRoot, 'nsfc-p2c', 'projects', 'grant-001', 'artifacts', 'stage_outputs')).isDirectory(),
       true,
     );
 

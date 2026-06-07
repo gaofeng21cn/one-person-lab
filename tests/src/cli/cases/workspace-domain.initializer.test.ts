@@ -35,7 +35,7 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     });
 
     const workspacePath = path.join(workspaceRoot, 'visual-theme-a');
-    const projectRoot = path.join(workspacePath, 'deliverables', 'deck-001');
+    const projectRoot = path.join(workspacePath, 'projects', 'deck-001');
 
     assert.equal(output.workspace_initialization.action, 'init');
     assert.equal(output.workspace_initialization.agent.agent_id, 'rca');
@@ -51,11 +51,11 @@ test('workspace init materializes RCA series topology and binds the workspace', 
       'shared/visual_memory',
       'shared/style_system',
       'shared/material_inventory',
-      'deliverables',
-      'deliverables/deck-001/control',
-      'deliverables/deck-001/artifacts/stage_outputs',
-      'deliverables/deck-001/review',
-      'deliverables/deck-001/handoff',
+      'projects',
+      'projects/deck-001/control',
+      'projects/deck-001/artifacts/stage_outputs',
+      'projects/deck-001/review',
+      'projects/deck-001/handoff',
     ]) {
       assert.equal(fs.statSync(path.join(workspacePath, relativePath)).isDirectory(), true, relativePath);
     }
@@ -63,7 +63,7 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     const workspaceYaml = fs.readFileSync(path.join(workspacePath, 'workspace.yaml'), 'utf8');
     assert.match(workspaceYaml, /workspace_kind: visual_theme_workspace/);
     assert.match(workspaceYaml, /workspace_mode: series/);
-    assert.match(workspaceYaml, /project_collection_path: deliverables/);
+    assert.match(workspaceYaml, /project_collection_path: projects/);
     assert.match(workspaceYaml, /project_stage_outputs_root: artifacts\/stage_outputs/);
 
     const workspaceIndex = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
@@ -74,7 +74,7 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     assert.deepEqual(workspaceIndex.canonical_topology, {
       workspace_unit: 'workspace_group',
       project_collection_role: 'project_units',
-      project_collection_path: 'deliverables',
+      project_collection_path: 'projects',
       project_unit_kind: 'slide_deck',
       stage_artifact_unit: 'stage_artifact_unit',
       stage_outputs_root: 'artifacts/stage_outputs',
@@ -98,10 +98,10 @@ test('workspace init materializes RCA series topology and binds the workspace', 
       ],
     );
     assert.equal(workspaceIndex.projects[0].project_id, 'deck-001');
-    assert.equal(workspaceIndex.projects[0].stage_outputs_root, 'deliverables/deck-001/artifacts/stage_outputs');
+    assert.equal(workspaceIndex.projects[0].stage_outputs_root, 'projects/deck-001/artifacts/stage_outputs');
     assert.equal(
       workspaceIndex.projects[0].stage_outputs_manifest_ref,
-      'deliverables/deck-001/artifacts/stage_outputs/opl_stage_outputs_manifest.json',
+      'projects/deck-001/artifacts/stage_outputs/opl_stage_outputs_manifest.json',
     );
     assert.equal(workspaceIndex.projects[0].lifecycle.status, 'active');
     assert.equal(
@@ -114,16 +114,16 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     assert.equal(workspaceIndex.generated_refs.workspace_resource_inventory_ref, 'workspace_resource_inventory.json');
     assert.equal(workspaceIndex.generated_refs.stage_outputs_index_basename, 'stage_outputs_index.json');
     assert.equal(workspaceIndex.generated_refs.current_stage_pointer_basename, 'current_stage.json');
-    assert.equal(workspaceIndex.user_inspection.default_stage_outputs, 'deliverables/deck-001/artifacts/stage_outputs');
+    assert.equal(workspaceIndex.user_inspection.default_stage_outputs, 'projects/deck-001/artifacts/stage_outputs');
     assert.equal(workspaceIndex.user_inspection.workspace_inspection_ref, 'workspace_inspection.json');
     assert.equal(workspaceIndex.user_inspection.workspace_resource_inventory_ref, 'workspace_resource_inventory.json');
     assert.equal(
       workspaceIndex.user_inspection.default_stage_outputs_index_ref,
-      'deliverables/deck-001/artifacts/stage_outputs/stage_outputs_index.json',
+      'projects/deck-001/artifacts/stage_outputs/stage_outputs_index.json',
     );
     assert.equal(
       workspaceIndex.user_inspection.default_current_stage_pointer_ref,
-      'deliverables/deck-001/artifacts/stage_outputs/current_stage.json',
+      'projects/deck-001/artifacts/stage_outputs/current_stage.json',
     );
     assert.equal(workspaceIndex.workspace_norm.norm_id, 'opl.agent_workspace_norm.v1');
     assert.equal(workspaceIndex.workspace_norm.default_workspace_precondition.command, 'opl workspace ensure');
@@ -175,11 +175,11 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     assert.equal(stageOutputsManifest.stage_artifact_runtime.root_manifest_is_stage_completion_proof, false);
     assert.equal(
       stageOutputsManifest.stage_artifact_runtime.stage_outputs_index_ref,
-      'deliverables/deck-001/artifacts/stage_outputs/stage_outputs_index.json',
+      'projects/deck-001/artifacts/stage_outputs/stage_outputs_index.json',
     );
     assert.equal(
       stageOutputsManifest.stage_artifact_runtime.current_stage_pointer_ref,
-      'deliverables/deck-001/artifacts/stage_outputs/current_stage.json',
+      'projects/deck-001/artifacts/stage_outputs/current_stage.json',
     );
     const stageOutputsIndex = readJsonFile(path.join(
       workspacePath,
@@ -217,11 +217,11 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     assert.equal(workspaceMap.projects[0].project_id, 'deck-001');
     assert.equal(
       workspaceMap.projects[0].user_inspection.stage_manifest_pattern,
-      'deliverables/deck-001/artifacts/stage_outputs/<stage-id>/stage_manifest.json',
+      'projects/deck-001/artifacts/stage_outputs/<stage-id>/stage_manifest.json',
     );
     assert.equal(
       workspaceMap.projects[0].user_inspection.receipts_pattern,
-      'deliverables/deck-001/artifacts/stage_outputs/<stage-id>/receipts',
+      'projects/deck-001/artifacts/stage_outputs/<stage-id>/receipts',
     );
     const workspaceHealth = readJsonFile(path.join(workspacePath, 'workspace_health.json'));
     assert.equal(workspaceHealth.surface_kind, 'opl_workspace_health');
@@ -231,7 +231,7 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     assert.equal(workspaceInspection.current_project_id, 'deck-001');
     assert.equal(
       workspaceInspection.current_stage_pointer_ref,
-      'deliverables/deck-001/artifacts/stage_outputs/current_stage.json',
+      'projects/deck-001/artifacts/stage_outputs/current_stage.json',
     );
     assert.equal(workspaceInspection.authority_boundary.inspection_can_claim_stage_complete, false);
     const workspaceResourceInventory = readJsonFile(path.join(workspacePath, 'workspace_resource_inventory.json'));
@@ -303,14 +303,14 @@ test('workspace init appends RCA series deliverables inside one workspace', () =
 
     const workspacePath = path.join(workspaceRoot, 'visual-theme-a');
     assert.equal(output.workspace_initialization.metadata_action, 'appended_project');
-    assert.equal(fs.statSync(path.join(workspacePath, 'deliverables', 'deck-002', 'artifacts', 'stage_outputs')).isDirectory(), true);
+    assert.equal(fs.statSync(path.join(workspacePath, 'projects', 'deck-002', 'artifacts', 'stage_outputs')).isDirectory(), true);
 
     const workspaceIndex = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
     assert.deepEqual(
       workspaceIndex.projects.map((entry: { project_id: string }) => entry.project_id),
       ['deck-001', 'deck-002'],
     );
-    assert.equal(workspaceIndex.projects[1].stage_outputs_root, 'deliverables/deck-002/artifacts/stage_outputs');
+    assert.equal(workspaceIndex.projects[1].stage_outputs_root, 'projects/deck-002/artifacts/stage_outputs');
     const workspaceYaml = fs.readFileSync(path.join(workspacePath, 'workspace.yaml'), 'utf8');
     assert.match(workspaceYaml, /project_id: deck-001/);
     assert.match(workspaceYaml, /project_id: deck-002/);
@@ -341,7 +341,7 @@ test('workspace init materializes MAS portfolio topology with study roots', () =
     });
 
     const workspacePath = path.join(workspaceRoot, 'dm-cvd');
-    const studyRoot = path.join(workspacePath, 'studies', 'DM002');
+    const studyRoot = path.join(workspacePath, 'projects', 'DM002');
 
     assert.equal(output.workspace_initialization.agent.project_id, 'medautoscience');
     assert.equal(output.workspace_initialization.profile.profile_id, 'mas_portfolio');
@@ -353,20 +353,20 @@ test('workspace init materializes MAS portfolio topology with study roots', () =
       'literature',
       'memory',
       'shared/sources',
-      'studies/DM002/control',
-      'studies/DM002/artifacts/stage_outputs',
-      'studies/DM002/review',
-      'studies/DM002/handoff',
+      'projects/DM002/control',
+      'projects/DM002/artifacts/stage_outputs',
+      'projects/DM002/review',
+      'projects/DM002/handoff',
     ]) {
       assert.equal(fs.statSync(path.join(workspacePath, relativePath)).isDirectory(), true, relativePath);
     }
 
     const workspaceIndex = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
-    assert.equal(workspaceIndex.workspace_topology_profile.project_collection_path, 'studies');
+    assert.equal(workspaceIndex.workspace_topology_profile.project_collection_path, 'projects');
     assert.deepEqual(workspaceIndex.canonical_topology, {
       workspace_unit: 'workspace_group',
       project_collection_role: 'project_units',
-      project_collection_path: 'studies',
+      project_collection_path: 'projects',
       project_unit_kind: 'study',
       stage_artifact_unit: 'stage_artifact_unit',
       stage_outputs_root: 'artifacts/stage_outputs',
@@ -388,21 +388,22 @@ test('workspace init materializes MAS portfolio topology with study roots', () =
         ['shared/sources', 'source_intake'],
       ],
     );
-    assert.equal(workspaceIndex.projects[0].stage_outputs_root, 'studies/DM002/artifacts/stage_outputs');
+    assert.equal(workspaceIndex.projects[0].stage_outputs_root, 'projects/DM002/artifacts/stage_outputs');
     assert.equal(workspaceIndex.authority_boundary.opl_can_write_domain_truth, false);
     assert.equal(workspaceIndex.workspace_norm.topology_contract.canonical_project_collection_role, 'project_units');
     assert.equal(
       workspaceIndex.workspace_norm.topology_contract.canonical_project_unit_semantics.mas_studies_boundary.alias_role,
-      'display_domain_alias',
+      'legacy_display_domain_alias',
     );
     assert.equal(
       workspaceIndex.workspace_norm.topology_contract.canonical_project_unit_semantics.mas_studies_boundary.canonical_role,
       'project_units',
     );
-    assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.project_collection_path, 'studies');
-    assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.project_collection_alias_role, 'display_domain_alias');
+    assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.project_collection_path, 'projects');
+    assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.project_collection_alias_role, 'legacy_display_alias');
     assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.canonical_project_collection_role, 'project_units');
     assert.deepEqual(workspaceIndex.workspace_norm.domain_topology_profile.project_semantic_aliases, ['study', 'studies']);
+    assert.deepEqual(workspaceIndex.workspace_norm.domain_topology_profile.legacy_project_collection_aliases, ['studies']);
 
     const catalog = runCli(['workspace', 'list'], {
       OPL_STATE_DIR: stateRoot,
@@ -452,7 +453,7 @@ test('workspace init appends MAS portfolio studies without replacing shared root
 
     const workspacePath = path.join(workspaceRoot, 'dm-cvd');
     assert.equal(output.workspace_initialization.metadata_action, 'appended_project');
-    assert.equal(fs.statSync(path.join(workspacePath, 'studies', 'DM003', 'artifacts', 'stage_outputs')).isDirectory(), true);
+    assert.equal(fs.statSync(path.join(workspacePath, 'projects', 'DM003', 'artifacts', 'stage_outputs')).isDirectory(), true);
     assert.equal(fs.statSync(path.join(workspacePath, 'data')).isDirectory(), true);
     assert.equal(fs.statSync(path.join(workspacePath, 'literature')).isDirectory(), true);
     assert.equal(fs.statSync(path.join(workspacePath, 'memory')).isDirectory(), true);
@@ -462,7 +463,7 @@ test('workspace init appends MAS portfolio studies without replacing shared root
       workspaceIndex.projects.map((entry: { project_id: string }) => entry.project_id),
       ['DM002', 'DM003'],
     );
-    assert.equal(workspaceIndex.projects[1].stage_outputs_root, 'studies/DM003/artifacts/stage_outputs');
+    assert.equal(workspaceIndex.projects[1].stage_outputs_root, 'projects/DM003/artifacts/stage_outputs');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -498,10 +499,10 @@ test('workspace init materializes MAG one-off deliverable topology', () => {
       'shared/sources',
       'shared/memory',
       'shared/style_system',
-      'deliverables/grant-001/control',
-      'deliverables/grant-001/artifacts/stage_outputs',
-      'deliverables/grant-001/review',
-      'deliverables/grant-001/handoff',
+      'projects/grant-001/control',
+      'projects/grant-001/artifacts/stage_outputs',
+      'projects/grant-001/review',
+      'projects/grant-001/handoff',
     ]) {
       assert.equal(fs.statSync(path.join(workspacePath, relativePath)).isDirectory(), true, relativePath);
     }
@@ -545,7 +546,7 @@ test('workspace init uses configured OPL workspace root when no path is provided
     const workspacePath = path.join(workspaceRoot, 'agent-factory');
     assert.equal(output.workspace_initialization.workspace_path, workspacePath);
     assert.equal(output.workspace_initialization.agent.project_id, 'opl-meta-agent');
-    assert.equal(fs.statSync(path.join(workspacePath, 'deliverables', 'capability-001', 'artifacts', 'stage_outputs')).isDirectory(), true);
+    assert.equal(fs.statSync(path.join(workspacePath, 'projects', 'capability-001', 'artifacts', 'stage_outputs')).isDirectory(), true);
     const catalog = runCli(['workspace', 'list'], {
       HOME: homeRoot,
       OPL_STATE_DIR: stateRoot,
@@ -586,7 +587,7 @@ test('workspace ensure initializes once and then reuses the active binding', () 
     const workspacePath = path.join(workspaceRoot, 'visual-theme-a');
     assert.equal(first.workspace_initialization.action, 'ensure');
     assert.equal(first.workspace_initialization.ensure_status, 'initialized_default_workspace');
-    assert.equal(fs.statSync(path.join(workspacePath, 'deliverables', 'deck-001', 'artifacts', 'stage_outputs')).isDirectory(), true);
+    assert.equal(fs.statSync(path.join(workspacePath, 'projects', 'deck-001', 'artifacts', 'stage_outputs')).isDirectory(), true);
 
     const second = runCli([
       'workspace',
@@ -647,7 +648,7 @@ test('workspace ensure appends a missing project to an active series workspace',
     const workspacePath = path.join(workspaceRoot, 'visual-theme-a');
     assert.equal(output.workspace_initialization.ensure_status, 'initialized_missing_project_in_active_binding');
     assert.equal(output.workspace_initialization.metadata_action, 'appended_project');
-    assert.equal(fs.statSync(path.join(workspacePath, 'deliverables', 'deck-002', 'artifacts', 'stage_outputs')).isDirectory(), true);
+    assert.equal(fs.statSync(path.join(workspacePath, 'projects', 'deck-002', 'artifacts', 'stage_outputs')).isDirectory(), true);
 
     const workspaceIndex = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
     assert.deepEqual(
@@ -699,7 +700,7 @@ test('workspace ensure appends to active binding when workspace-root is also pro
     const activeWorkspacePath = path.join(firstWorkspaceRoot, 'visual-theme-a');
     assert.equal(output.workspace_initialization.ensure_status, 'initialized_missing_project_in_active_binding');
     assert.equal(output.workspace_initialization.workspace_path, activeWorkspacePath);
-    assert.equal(fs.statSync(path.join(activeWorkspacePath, 'deliverables', 'deck-002')).isDirectory(), true);
+    assert.equal(fs.statSync(path.join(activeWorkspacePath, 'projects', 'deck-002')).isDirectory(), true);
     assert.equal(fs.existsSync(path.join(secondWorkspaceRoot, 'another-theme')), false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -858,11 +859,11 @@ test('workspace adopt dry-run plans OPL topology without writing metadata', () =
     assert.equal(output.workspace_adoption.status, 'dry_run_ready');
     assert.equal(output.workspace_adoption.write_allowed, false);
     assert.equal(output.workspace_adoption.profile.profile_id, 'mas_portfolio');
-    assert.equal(output.workspace_adoption.canonical_topology.project_collection_path, 'studies');
+    assert.equal(output.workspace_adoption.canonical_topology.project_collection_path, 'projects');
     assert.equal(output.workspace_adoption.canonical_topology.project_unit_kind, 'study');
-    assert.equal(output.workspace_adoption.project.stage_outputs_root, 'studies/DM002/artifacts/stage_outputs');
+    assert.equal(output.workspace_adoption.project.stage_outputs_root, 'projects/DM002/artifacts/stage_outputs');
     assert.equal(output.workspace_adoption.would_create_metadata_files.includes(path.join(workspacePath, 'workspace_index.json')), true);
-    assert.equal(output.workspace_adoption.would_create_directories.includes(path.join(workspacePath, 'studies', 'DM002', 'artifacts', 'stage_outputs')), true);
+    assert.equal(output.workspace_adoption.would_create_directories.includes(path.join(workspacePath, 'projects', 'DM002', 'artifacts', 'stage_outputs')), true);
     assert.equal(output.workspace_adoption.would_index_projects[0].project_id, 'DM002');
     assert.equal(fs.existsSync(path.join(workspacePath, 'workspace_index.json')), false);
   } finally {
@@ -909,7 +910,7 @@ test('workspace project archive marks project lifecycle without deleting files o
     assert.equal(output.workspace_project_archive.lifecycle.status, 'archived');
     assert.equal(output.workspace_project_archive.lifecycle.archive_reason, 'superseded');
     assert.equal(output.workspace_project_archive.authority_boundary.archive_deletes_files, false);
-    assert.equal(fs.statSync(path.join(workspacePath, 'studies', 'DM002')).isDirectory(), true);
+    assert.equal(fs.statSync(path.join(workspacePath, 'projects', 'DM002')).isDirectory(), true);
     const workspaceMap = runCli(['workspace', 'export-map', '--workspace', workspacePath], {
       OPL_STATE_DIR: stateRoot,
     }).workspace_map;

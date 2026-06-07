@@ -145,10 +145,10 @@ test('agents scaffold emits canonical workspace topology profile', () => {
     assert.equal(topology.default_project_stage_outputs_root, 'artifacts/stage_outputs');
     assert.equal(topology.default_profiles.one_off.workspace_mode, 'one_off');
     assert.equal(topology.default_profiles.one_off.series_capable_skeleton, true);
-    assert.equal(topology.default_profiles.one_off.project_collection_path, 'deliverables');
+    assert.equal(topology.default_profiles.one_off.project_collection_path, 'projects');
     assert.equal(topology.default_profiles.one_off.project_stage_outputs_root, 'artifacts/stage_outputs');
     assert.equal(topology.default_profiles.mas_portfolio.workspace_mode, 'portfolio');
-    assert.equal(topology.default_profiles.mas_portfolio.project_collection_path, 'studies');
+    assert.equal(topology.default_profiles.mas_portfolio.project_collection_path, 'projects');
     assert.equal(topology.default_profiles.mas_portfolio.project_stage_outputs_root, 'artifacts/stage_outputs');
     assert.deepEqual(topology.default_profiles.mas_portfolio.shared_resource_roots, [
       'data',
@@ -157,7 +157,7 @@ test('agents scaffold emits canonical workspace topology profile', () => {
       'shared/sources',
     ]);
     assert.equal(topology.default_profiles.rca_series.workspace_mode, 'series');
-    assert.equal(topology.default_profiles.rca_series.project_collection_path, 'deliverables');
+    assert.equal(topology.default_profiles.rca_series.project_collection_path, 'projects');
     assert.equal(topology.default_profiles.rca_series.project_stage_outputs_root, 'artifacts/stage_outputs');
     assert.equal(topology.domain_profile_defaults.mas, 'mas_portfolio');
     assert.equal(topology.domain_profile_defaults.rca, 'rca_series');

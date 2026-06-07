@@ -86,6 +86,13 @@ const SHARED_RESOURCE_ROLES: Record<string, string> = {
   'shared/material_inventory': 'material_inventory',
 };
 
+const PROJECT_COLLECTION_DISPLAY_LABELS: Record<WorkspaceAgentProfile['agent_id'], string> = {
+  mas: 'studies',
+  mag: 'deliverables',
+  rca: 'deliverables',
+  oma: 'deliverables',
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -252,7 +259,7 @@ export function buildWorkspaceDisplayLabels(
 ): WorkspaceDisplayLabels {
   return {
     workspace: agent.workspace_kind,
-    project_collection: profile.project_collection_path,
+    project_collection: PROJECT_COLLECTION_DISPLAY_LABELS[agent.agent_id],
     project_unit: agent.project_kind,
     stage_outputs: profile.project_stage_outputs_root,
     shared_resources: 'shared_resources',

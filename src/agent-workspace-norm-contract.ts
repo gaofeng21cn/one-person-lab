@@ -82,6 +82,7 @@ function validateCanonicalProjectUnitSemantics(section: Record<string, unknown>,
     owner_answer_unit: stringField(section, 'owner_answer_unit', filePath),
     mas_studies_boundary: {
       project_collection_path: stringField(masStudiesBoundary, 'project_collection_path', filePath),
+      legacy_project_collection_path: stringField(masStudiesBoundary, 'legacy_project_collection_path', filePath),
       alias_role: stringField(masStudiesBoundary, 'alias_role', filePath),
       canonical_role: stringField(masStudiesBoundary, 'canonical_role', filePath),
       canonical_project_unit_kind: stringField(masStudiesBoundary, 'canonical_project_unit_kind', filePath),
@@ -117,6 +118,7 @@ function validateDomainProfiles(
       project_collection_alias_role: stringField(profile, 'project_collection_alias_role', filePath),
       project_collection_display_label: stringField(profile, 'project_collection_display_label', filePath),
       project_semantic_aliases: stringArrayField(profile, 'project_semantic_aliases', filePath),
+      legacy_project_collection_aliases: stringArrayField(profile, 'legacy_project_collection_aliases', filePath),
       user_inspection_roots: stringArrayField(profile, 'user_inspection_roots', filePath),
       shared_resource_roots: stringArrayField(profile, 'shared_resource_roots', filePath),
     };
@@ -308,8 +310,9 @@ function validateAgentWorkspaceNormSemantics(
   assertExactString(topology.canonical_project_unit_semantics.project_unit_kind, 'project_unit', 'topology_contract.canonical_project_unit_semantics.project_unit_kind', filePath);
   assertExactString(topology.canonical_project_unit_semantics.stage_artifact_unit, 'stage_artifact_unit', 'topology_contract.canonical_project_unit_semantics.stage_artifact_unit', filePath);
   assertExactString(topology.canonical_project_unit_semantics.owner_answer_unit, 'owner_receipt_or_typed_blocker', 'topology_contract.canonical_project_unit_semantics.owner_answer_unit', filePath);
-  assertExactString(topology.canonical_project_unit_semantics.mas_studies_boundary.project_collection_path, 'studies', 'topology_contract.canonical_project_unit_semantics.mas_studies_boundary.project_collection_path', filePath);
-  assertExactString(topology.canonical_project_unit_semantics.mas_studies_boundary.alias_role, 'display_domain_alias', 'topology_contract.canonical_project_unit_semantics.mas_studies_boundary.alias_role', filePath);
+  assertExactString(topology.canonical_project_unit_semantics.mas_studies_boundary.project_collection_path, 'projects', 'topology_contract.canonical_project_unit_semantics.mas_studies_boundary.project_collection_path', filePath);
+  assertExactString(topology.canonical_project_unit_semantics.mas_studies_boundary.legacy_project_collection_path, 'studies', 'topology_contract.canonical_project_unit_semantics.mas_studies_boundary.legacy_project_collection_path', filePath);
+  assertExactString(topology.canonical_project_unit_semantics.mas_studies_boundary.alias_role, 'legacy_display_domain_alias', 'topology_contract.canonical_project_unit_semantics.mas_studies_boundary.alias_role', filePath);
   assertExactString(topology.canonical_project_unit_semantics.mas_studies_boundary.canonical_role, 'project_units', 'topology_contract.canonical_project_unit_semantics.mas_studies_boundary.canonical_role', filePath);
   assertExactString(topology.canonical_project_unit_semantics.mas_studies_boundary.canonical_project_unit_kind, 'project_unit', 'topology_contract.canonical_project_unit_semantics.mas_studies_boundary.canonical_project_unit_kind', filePath);
   assertExactString(topology.project_stage_outputs_root, 'artifacts/stage_outputs', 'topology_contract.project_stage_outputs_root', filePath);
@@ -339,7 +342,8 @@ function validateAgentWorkspaceNormSemantics(
     'topology_contract.stage_output_root_protocol.required_stage_folder_shape',
     filePath,
   );
-  assertExactString(topology.default_project_collection_path, 'deliverables', 'topology_contract.default_project_collection_path', filePath);
+  assertExactString(topology.default_project_collection_path, 'projects', 'topology_contract.default_project_collection_path', filePath);
+  assertExactStringArray(topology.legacy_project_collection_aliases, ['deliverables', 'studies'], 'topology_contract.legacy_project_collection_aliases', filePath);
   assertExactStringArray(topology.workspace_modes, ['one_off', 'series', 'portfolio'], 'topology_contract.workspace_modes', filePath);
   assertExactBoolean(topology.series_capable_one_off_skeleton, true, 'topology_contract.series_capable_one_off_skeleton', filePath);
 
@@ -347,36 +351,39 @@ function validateAgentWorkspaceNormSemantics(
     profile: 'mas_portfolio',
     workspace_mode: 'portfolio',
     project_kind: 'study',
-    project_collection_path: 'studies',
+    project_collection_path: 'projects',
     canonical_project_collection_role: 'project_units',
-    project_collection_alias_role: 'display_domain_alias',
+    project_collection_alias_role: 'legacy_display_alias',
     project_collection_display_label: 'studies',
     project_semantic_aliases: ['study', 'studies'],
-    user_inspection_roots: ['studies/<project-id>/artifacts/stage_outputs'],
+    legacy_project_collection_aliases: ['studies'],
+    user_inspection_roots: ['projects/<project-id>/artifacts/stage_outputs'],
     shared_resource_roots: ['data', 'literature', 'memory', 'shared/sources'],
   }, filePath);
   assertDomainProfile(contract, 'mag', {
     profile: 'one_off',
     workspace_mode: 'one_off',
     project_kind: 'grant_project',
-    project_collection_path: 'deliverables',
+    project_collection_path: 'projects',
     canonical_project_collection_role: 'project_units',
-    project_collection_alias_role: 'canonical_display_label',
+    project_collection_alias_role: 'legacy_display_alias',
     project_collection_display_label: 'deliverables',
     project_semantic_aliases: ['grant_project', 'deliverable'],
-    user_inspection_roots: ['deliverables/<project-id>/artifacts/stage_outputs'],
+    legacy_project_collection_aliases: ['deliverables'],
+    user_inspection_roots: ['projects/<project-id>/artifacts/stage_outputs'],
     shared_resource_roots: ['shared/sources', 'shared/memory', 'shared/style_system'],
   }, filePath);
   assertDomainProfile(contract, 'rca', {
     profile: 'rca_series',
     workspace_mode: 'series',
     project_kind: 'slide_deck',
-    project_collection_path: 'deliverables',
+    project_collection_path: 'projects',
     canonical_project_collection_role: 'project_units',
-    project_collection_alias_role: 'canonical_display_label',
+    project_collection_alias_role: 'legacy_display_alias',
     project_collection_display_label: 'deliverables',
     project_semantic_aliases: ['slide_deck', 'deck', 'deliverable'],
-    user_inspection_roots: ['deliverables/<project-id>/artifacts/stage_outputs'],
+    legacy_project_collection_aliases: ['deliverables'],
+    user_inspection_roots: ['projects/<project-id>/artifacts/stage_outputs'],
     shared_resource_roots: [
       'shared/sources',
       'shared/brand',
@@ -389,12 +396,13 @@ function validateAgentWorkspaceNormSemantics(
     profile: 'one_off',
     workspace_mode: 'one_off',
     project_kind: 'agent_capability',
-    project_collection_path: 'deliverables',
+    project_collection_path: 'projects',
     canonical_project_collection_role: 'project_units',
-    project_collection_alias_role: 'canonical_display_label',
+    project_collection_alias_role: 'legacy_display_alias',
     project_collection_display_label: 'deliverables',
     project_semantic_aliases: ['agent_capability', 'deliverable'],
-    user_inspection_roots: ['deliverables/<project-id>/artifacts/stage_outputs'],
+    legacy_project_collection_aliases: ['deliverables'],
+    user_inspection_roots: ['projects/<project-id>/artifacts/stage_outputs'],
     shared_resource_roots: ['shared/sources', 'shared/memory', 'shared/style_system'],
   }, filePath);
 
@@ -534,6 +542,7 @@ export function validateAgentWorkspaceNorm(
         filePath,
       ),
       default_project_collection_path: stringField(topologyContract, 'default_project_collection_path', filePath),
+      legacy_project_collection_aliases: stringArrayField(topologyContract, 'legacy_project_collection_aliases', filePath),
       workspace_modes: stringArrayField(topologyContract, 'workspace_modes', filePath),
       series_capable_one_off_skeleton: booleanField(topologyContract, 'series_capable_one_off_skeleton', filePath),
     },

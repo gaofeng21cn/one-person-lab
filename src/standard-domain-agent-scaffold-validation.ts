@@ -633,7 +633,7 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, enforce
     oneOffWorkspaceProfile?.series_capable_skeleton === true
       ? null
       : 'foundry_agent_series_workspace_topology_default_must_be_series_capable',
-    readOptionalString(oneOffWorkspaceProfile?.project_collection_path) === 'deliverables'
+    readOptionalString(oneOffWorkspaceProfile?.project_collection_path) === 'projects'
       ? null
       : 'foundry_agent_series_workspace_topology_default_collection_path_invalid',
     readOptionalString(oneOffWorkspaceProfile?.project_stage_outputs_root) === 'artifacts/stage_outputs'
@@ -645,7 +645,7 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, enforce
     readOptionalString(masPortfolioWorkspaceProfile?.workspace_mode) === 'portfolio'
       ? null
       : 'foundry_agent_series_workspace_topology_mas_mode_invalid',
-    readOptionalString(masPortfolioWorkspaceProfile?.project_collection_path) === 'studies'
+    readOptionalString(masPortfolioWorkspaceProfile?.project_collection_path) === 'projects'
       ? null
       : 'foundry_agent_series_workspace_topology_mas_collection_path_invalid',
     readOptionalString(masPortfolioWorkspaceProfile?.project_stage_outputs_root)
@@ -664,7 +664,7 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, enforce
     readOptionalString(rcaSeriesWorkspaceProfile?.workspace_mode) === 'series'
       ? null
       : 'foundry_agent_series_workspace_topology_rca_mode_invalid',
-    readOptionalString(rcaSeriesWorkspaceProfile?.project_collection_path) === 'deliverables'
+    readOptionalString(rcaSeriesWorkspaceProfile?.project_collection_path) === 'projects'
       ? null
       : 'foundry_agent_series_workspace_topology_rca_collection_path_invalid',
     readOptionalString(rcaSeriesWorkspaceProfile?.project_stage_outputs_root)

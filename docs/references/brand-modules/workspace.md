@@ -14,9 +14,9 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 workspa
 ## 设计理念
 
 - 用户检查面优先：普通用户默认查看 project-local `artifacts/stage_outputs/<stage-id>/`、domain-owned product views、review 和 handoff，而不是 provider internals、runtime-state、SQLite 或 App projection。
-- 机器协议优先：物理目录可以保留领域语义，但必须投影到统一 `Workspace Group -> Project Unit -> Stage Artifact Unit -> Owner Receipt / Typed Blocker`。
+- 机器协议优先：新 workspace 的物理 Project Unit 集合统一是 `projects/`，领域语义通过 display label、legacy alias 和 semantic alias 投影到统一 `Workspace Group -> Project Unit -> Stage Artifact Unit -> Owner Receipt / Typed Blocker`。
 - Series-ready by default：`one_off`、`series`、`portfolio` 都使用 series-capable skeleton；一次性项目后续升级 series / portfolio 不搬已有 project root。
-- Display alias 不改语义：MAS 保留 `studies/<study-id>` 命名但机器语义是 Project Unit；RCA/MAG/OMA 使用 `deliverables/<project-id>` 只是 domain display alias，不是新的 lifecycle。
+- Display / legacy alias 不改语义：MAS 的 `studies` 与 RCA/MAG/OMA 的 `deliverables` 只用于显示、旧目录采用、兼容导入或 provenance；新 workspace 的默认 physical root 是 `projects/<project-id>`。
 - Runtime-state 降级为 backing/provenance：它不能替代 stage folder、owner receipt 或 typed blocker。
 - Interface delegate 优先：Skill、MCP、App、OpenAI tool 和 AI SDK tool 只能通过 `opl workspace ensure` / `opl workspace interfaces` 暴露的 command contract 进入 workspace；不得自由猜测目录或绕过 workspace binding。
 
@@ -29,7 +29,7 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 workspa
 | `workspace_inspection.json` | 用户优先检查投影：当前 project、Stage Native roots、current pointer refs、authority false flags。 |
 | `workspace_resource_inventory.json` | refs-only shared resource inventory：sources、materials、memory、brand/style roots 的 index，不保存 body。 |
 | `workspace_group` | 一个 agent 或 portfolio 下的项目集合。 |
-| `project_unit` | 一个 paper、study、grant、deck、agent target 或 deliverable project；`studies/` 与 `deliverables/` 都只是物理/display alias。 |
+| `project_unit` | 一个 paper、study、grant、deck、agent target 或 deliverable project；默认物理根是 `projects/<project-id>`，`studies/` 与 `deliverables/` 只是 display / legacy alias。 |
 | `stage_artifact_unit` | 某个 stage 的用户可检查产出位置，默认落在 `<project-root>/artifacts/stage_outputs/<stage-id>/`。 |
 | `stage_outputs_index.json` | project-local Stage Native 索引，记录 stage lifecycle protocol、folder refs、current pointer ref 和 refs-only authority boundary。 |
 | `current_stage.json` | project-local 当前 stage 指针 projection；runtime 可写合法非空指针，workspace upgrade 只补缺失，不把它重置成空模板。 |

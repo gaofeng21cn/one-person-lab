@@ -213,7 +213,7 @@ test('target architecture schema contracts keep owner delta root and audit tail 
   );
   assert.equal(
     workspaceTopology.$defs.one_off_profile.properties.project_collection_path.const,
-    'deliverables',
+    'projects',
   );
   assert.equal(
     workspaceTopology.$defs.one_off_profile.properties.series_capable_skeleton.const,
@@ -221,11 +221,11 @@ test('target architecture schema contracts keep owner delta root and audit tail 
   );
   assert.equal(
     workspaceTopology.$defs.rca_series_profile.properties.project_collection_path.const,
-    'deliverables',
+    'projects',
   );
   assert.equal(
     workspaceTopology.$defs.mas_portfolio_profile.properties.project_collection_path.const,
-    'studies',
+    'projects',
   );
   assert.equal(
     workspaceTopology.properties.default_user_inspection_surface.properties.runtime_state_is_default_user_surface.const,

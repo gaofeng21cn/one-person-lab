@@ -69,7 +69,7 @@ Agent Lab、observability eval 和 mechanism improvement 继续是 refs-only con
 | App/operator | 默认 owner-delta-first；App 只启动、观察、介入和展示，不驱动外围长跑任务。 |
 | Foundry Agent structure | MAS/MAG/RCA/OMA 通过 contracts / descriptors / conformance 暴露标准 pack、stage、quality gate、authority function 和 direct/generated skill path。 |
 | StageRun / owner answer | OPL 可签发 provider attempt、active lease、execution authorization decision 和 closeout binding refs；合法 closeout 仍必须来自 domain owner receipt、quality gate receipt、typed blocker、human gate 或 route-back evidence。 |
-| Workspace / State Index | OPL 维护 workspace topology、workspace inspection、resource inventory、Stage Artifact Unit、stage outputs index/current pointer 和 refs-only SQLite sidecar；完成状态继续由 stage folder、manifest validity、owner receipt / typed blocker、current pointer 和 lineage 推导。 |
+| Workspace / State Index | OPL 维护 workspace topology、workspace inspection、resource inventory、Stage Artifact Unit、stage outputs index/current pointer 和 refs-only SQLite sidecar；新 workspace 的 Project Unit 默认物理集合是 `projects/<project-id>`，MAS `studies` 与 RCA/MAG/OMA `deliverables` 只作为 display / legacy alias；完成状态继续由 stage folder、manifest validity、owner receipt / typed blocker、current pointer 和 lineage 推导。 |
 | External evidence | OPL 可记录/验证 body-free refs-only receipts；verified ledger 只证明 refs transport 与 preflight 可用，不关闭 domain verdict 或 production evidence。 |
 
 ## 未闭合项

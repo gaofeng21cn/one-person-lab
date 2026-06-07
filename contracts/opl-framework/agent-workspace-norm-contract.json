@@ -85,10 +85,11 @@
       "stage_artifact_unit": "stage_artifact_unit",
       "owner_answer_unit": "owner_receipt_or_typed_blocker",
       "mas_studies_boundary": {
-        "project_collection_path": "studies",
-        "alias_role": "display_domain_alias",
+        "project_collection_path": "projects",
+        "alias_role": "legacy_display_domain_alias",
         "canonical_role": "project_units",
-        "canonical_project_unit_kind": "project_unit"
+        "canonical_project_unit_kind": "project_unit",
+        "legacy_project_collection_path": "studies"
       }
     },
     "project_stage_outputs_root": "artifacts/stage_outputs",
@@ -114,65 +115,75 @@
         "stage_manifest.json"
       ]
     },
-    "default_project_collection_path": "deliverables",
+    "default_project_collection_path": "projects",
     "workspace_modes": [
       "one_off",
       "series",
       "portfolio"
     ],
-    "series_capable_one_off_skeleton": true
+    "series_capable_one_off_skeleton": true,
+    "legacy_project_collection_aliases": [
+      "deliverables",
+      "studies"
+    ]
   },
   "domain_topology_profiles": {
     "mas": {
       "profile": "mas_portfolio",
       "workspace_mode": "portfolio",
       "project_kind": "study",
-      "project_collection_path": "studies",
+      "project_collection_path": "projects",
       "canonical_project_collection_role": "project_units",
-      "project_collection_alias_role": "display_domain_alias",
+      "project_collection_alias_role": "legacy_display_alias",
       "project_collection_display_label": "studies",
       "project_semantic_aliases": [
         "study",
         "studies"
       ],
       "user_inspection_roots": [
-        "studies/<project-id>/artifacts/stage_outputs"
+        "projects/<project-id>/artifacts/stage_outputs"
       ],
       "shared_resource_roots": [
         "data",
         "literature",
         "memory",
         "shared/sources"
+      ],
+      "legacy_project_collection_aliases": [
+        "studies"
       ]
     },
     "mag": {
       "profile": "one_off",
       "workspace_mode": "one_off",
       "project_kind": "grant_project",
-      "project_collection_path": "deliverables",
+      "project_collection_path": "projects",
       "canonical_project_collection_role": "project_units",
-      "project_collection_alias_role": "canonical_display_label",
+      "project_collection_alias_role": "legacy_display_alias",
       "project_collection_display_label": "deliverables",
       "project_semantic_aliases": [
         "grant_project",
         "deliverable"
       ],
       "user_inspection_roots": [
-        "deliverables/<project-id>/artifacts/stage_outputs"
+        "projects/<project-id>/artifacts/stage_outputs"
       ],
       "shared_resource_roots": [
         "shared/sources",
         "shared/memory",
         "shared/style_system"
+      ],
+      "legacy_project_collection_aliases": [
+        "deliverables"
       ]
     },
     "rca": {
       "profile": "rca_series",
       "workspace_mode": "series",
       "project_kind": "slide_deck",
-      "project_collection_path": "deliverables",
+      "project_collection_path": "projects",
       "canonical_project_collection_role": "project_units",
-      "project_collection_alias_role": "canonical_display_label",
+      "project_collection_alias_role": "legacy_display_alias",
       "project_collection_display_label": "deliverables",
       "project_semantic_aliases": [
         "slide_deck",
@@ -180,7 +191,7 @@
         "deliverable"
       ],
       "user_inspection_roots": [
-        "deliverables/<project-id>/artifacts/stage_outputs"
+        "projects/<project-id>/artifacts/stage_outputs"
       ],
       "shared_resource_roots": [
         "shared/sources",
@@ -188,27 +199,33 @@
         "shared/visual_memory",
         "shared/style_system",
         "shared/material_inventory"
+      ],
+      "legacy_project_collection_aliases": [
+        "deliverables"
       ]
     },
     "oma": {
       "profile": "one_off",
       "workspace_mode": "one_off",
       "project_kind": "agent_capability",
-      "project_collection_path": "deliverables",
+      "project_collection_path": "projects",
       "canonical_project_collection_role": "project_units",
-      "project_collection_alias_role": "canonical_display_label",
+      "project_collection_alias_role": "legacy_display_alias",
       "project_collection_display_label": "deliverables",
       "project_semantic_aliases": [
         "agent_capability",
         "deliverable"
       ],
       "user_inspection_roots": [
-        "deliverables/<project-id>/artifacts/stage_outputs"
+        "projects/<project-id>/artifacts/stage_outputs"
       ],
       "shared_resource_roots": [
         "shared/sources",
         "shared/memory",
         "shared/style_system"
+      ],
+      "legacy_project_collection_aliases": [
+        "deliverables"
       ]
     }
   },

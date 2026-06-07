@@ -380,20 +380,24 @@
             "project_collection_path",
             "alias_role",
             "canonical_role",
-            "canonical_project_unit_kind"
+            "canonical_project_unit_kind",
+            "legacy_project_collection_path"
           ],
           "properties": {
             "project_collection_path": {
-              "const": "studies"
+              "const": "projects"
             },
             "alias_role": {
-              "const": "display_domain_alias"
+              "const": "legacy_display_domain_alias"
             },
             "canonical_role": {
               "const": "project_units"
             },
             "canonical_project_unit_kind": {
               "const": "project_unit"
+            },
+            "legacy_project_collection_path": {
+              "const": "studies"
             }
           }
         }
@@ -453,7 +457,8 @@
         "project_collection_alias_role",
         "project_collection_display_label",
         "project_semantic_aliases",
-        "user_inspection_roots"
+        "user_inspection_roots",
+        "legacy_project_collection_aliases"
       ],
       "properties": {
         "canonical_project_collection_role": {
@@ -461,7 +466,7 @@
         },
         "project_collection_alias_role": {
           "enum": [
-            "canonical_display_label",
+            "legacy_display_alias",
             "display_domain_alias"
           ]
         },
@@ -481,6 +486,15 @@
             "type": "string"
           },
           "minItems": 1
+        },
+        "project_collection_path": {
+          "const": "projects"
+        },
+        "legacy_project_collection_aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -786,12 +800,24 @@
         "stage_lifecycle_model": {
           "type": "array",
           "prefixItems": [
-            { "const": "open" },
-            { "const": "active" },
-            { "const": "completed" },
-            { "const": "blocked" },
-            { "const": "superseded" },
-            { "const": "archived" }
+            {
+              "const": "open"
+            },
+            {
+              "const": "active"
+            },
+            {
+              "const": "completed"
+            },
+            {
+              "const": "blocked"
+            },
+            {
+              "const": "superseded"
+            },
+            {
+              "const": "archived"
+            }
           ],
           "minItems": 6,
           "maxItems": 6
@@ -828,11 +854,21 @@
             "opl_can_write_domain_truth"
           ],
           "properties": {
-            "index_is_projection_only": { "const": true },
-            "index_can_claim_stage_complete": { "const": false },
-            "index_can_replace_owner_receipt": { "const": false },
-            "index_can_replace_typed_blocker": { "const": false },
-            "opl_can_write_domain_truth": { "const": false }
+            "index_is_projection_only": {
+              "const": true
+            },
+            "index_can_claim_stage_complete": {
+              "const": false
+            },
+            "index_can_replace_owner_receipt": {
+              "const": false
+            },
+            "index_can_replace_typed_blocker": {
+              "const": false
+            },
+            "opl_can_write_domain_truth": {
+              "const": false
+            }
           }
         }
       }
@@ -876,9 +912,15 @@
           "type": "object",
           "additionalProperties": true,
           "properties": {
-            "file_presence_counts_as_stage_complete": { "const": false },
-            "stage_folder_can_replace_owner_receipt": { "const": false },
-            "stage_folder_can_replace_typed_blocker": { "const": false }
+            "file_presence_counts_as_stage_complete": {
+              "const": false
+            },
+            "stage_folder_can_replace_owner_receipt": {
+              "const": false
+            },
+            "stage_folder_can_replace_typed_blocker": {
+              "const": false
+            }
           }
         }
       }
@@ -953,12 +995,24 @@
         "lifecycle_model": {
           "type": "array",
           "prefixItems": [
-            { "const": "open" },
-            { "const": "active" },
-            { "const": "completed" },
-            { "const": "blocked" },
-            { "const": "superseded" },
-            { "const": "archived" }
+            {
+              "const": "open"
+            },
+            {
+              "const": "active"
+            },
+            {
+              "const": "completed"
+            },
+            {
+              "const": "blocked"
+            },
+            {
+              "const": "superseded"
+            },
+            {
+              "const": "archived"
+            }
           ],
           "minItems": 6,
           "maxItems": 6
@@ -974,11 +1028,21 @@
             "opl_can_write_domain_truth"
           ],
           "properties": {
-            "pointer_is_projection_only": { "const": true },
-            "pointer_can_claim_stage_complete": { "const": false },
-            "pointer_can_replace_owner_receipt": { "const": false },
-            "pointer_can_replace_typed_blocker": { "const": false },
-            "opl_can_write_domain_truth": { "const": false }
+            "pointer_is_projection_only": {
+              "const": true
+            },
+            "pointer_can_claim_stage_complete": {
+              "const": false
+            },
+            "pointer_can_replace_owner_receipt": {
+              "const": false
+            },
+            "pointer_can_replace_typed_blocker": {
+              "const": false
+            },
+            "opl_can_write_domain_truth": {
+              "const": false
+            }
           }
         }
       }
@@ -1011,11 +1075,21 @@
           "type": "object",
           "additionalProperties": true,
           "properties": {
-            "inspection_is_projection_only": { "const": true },
-            "inspection_can_replace_owner_receipt": { "const": false },
-            "inspection_can_replace_typed_blocker": { "const": false },
-            "inspection_can_claim_stage_complete": { "const": false },
-            "opl_can_write_domain_truth": { "const": false }
+            "inspection_is_projection_only": {
+              "const": true
+            },
+            "inspection_can_replace_owner_receipt": {
+              "const": false
+            },
+            "inspection_can_replace_typed_blocker": {
+              "const": false
+            },
+            "inspection_can_claim_stage_complete": {
+              "const": false
+            },
+            "opl_can_write_domain_truth": {
+              "const": false
+            }
           }
         }
       }
@@ -1069,11 +1143,21 @@
           "type": "object",
           "additionalProperties": true,
           "properties": {
-            "inventory_is_index_only": { "const": true },
-            "inventory_can_store_resource_body": { "const": false },
-            "inventory_can_write_domain_truth": { "const": false },
-            "inventory_can_replace_source_provenance": { "const": false },
-            "opl_can_write_domain_truth": { "const": false }
+            "inventory_is_index_only": {
+              "const": true
+            },
+            "inventory_can_store_resource_body": {
+              "const": false
+            },
+            "inventory_can_write_domain_truth": {
+              "const": false
+            },
+            "inventory_can_replace_source_provenance": {
+              "const": false
+            },
+            "opl_can_write_domain_truth": {
+              "const": false
+            }
           }
         }
       }

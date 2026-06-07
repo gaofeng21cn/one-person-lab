@@ -259,7 +259,7 @@ domain-agent-repo/
 
 Repo source 保存 source、contracts、schemas、prompts、skills、stage definitions、quality gates、projection builders、fixtures、tests 和 docs。
 
-OPL Workspace Protocol 固定 `Workspace Group -> Project Unit -> Stage Artifact Unit -> Owner Receipt / Typed Blocker`。`one_off`、`series`、`portfolio` 都使用 series-capable skeleton；MAS 可以保留 `studies/<study-id>` 物理命名，但语义必须映射到 Project Unit；MAG/RCA/OMA 的 `deliverables/<project-id>` 只是 domain display alias，不定义新的 lifecycle。
+OPL Workspace Protocol 固定 `Workspace Group -> Project Unit -> Stage Artifact Unit -> Owner Receipt / Typed Blocker`。`one_off`、`series`、`portfolio` 都使用 series-capable skeleton；默认 physical Project Unit 集合统一为 `projects`，即新 workspace 默认生成 `projects/<project-id>`。MAS 保留 `studies` 作为 display / legacy alias 并继续把 study 映射到 Project Unit；MAG/RCA/OMA 保留 `deliverables` 作为 display / legacy alias，不定义新的 lifecycle 或 canonical physical root。
 
 OPL Workspace Protocol 的实例级默认 projection 包括 workspace-local `workspace_inspection.json`、`workspace_resource_inventory.json`，以及每个 Project Unit 下的 `artifacts/stage_outputs/stage_outputs_index.json` 和 `artifacts/stage_outputs/current_stage.json`。这些文件服务用户检查、shared resource inventory、stage lifecycle shape、current pointer 与 App/CLI read model；它们只保存 refs、路径、状态枚举、authority false flags 和 freshness / inventory metadata，不保存 artifact body、memory body、domain truth、quality verdict 或 owner answer。Stage runtime 可以把 `current_stage.json` 写成合法非空 pointer；workspace upgrade 只能补齐缺失 projection 或刷新 OPL-owned metadata，不能把 runtime 已写入的合法 pointer 重置成空态。
 

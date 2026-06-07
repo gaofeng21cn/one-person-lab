@@ -227,6 +227,7 @@ export interface AgentWorkspaceNormContract {
       owner_answer_unit: string;
       mas_studies_boundary: {
         project_collection_path: string;
+        legacy_project_collection_path: string;
         alias_role: string;
         canonical_role: string;
         canonical_project_unit_kind: string;
@@ -242,6 +243,7 @@ export interface AgentWorkspaceNormContract {
       required_stage_folder_shape: string[];
     };
     default_project_collection_path: string;
+    legacy_project_collection_aliases: string[];
     workspace_modes: string[];
     series_capable_one_off_skeleton: boolean;
   };
@@ -254,6 +256,7 @@ export interface AgentWorkspaceNormContract {
     project_collection_alias_role: string;
     project_collection_display_label: string;
     project_semantic_aliases: string[];
+    legacy_project_collection_aliases: string[];
     user_inspection_roots: string[];
     shared_resource_roots: string[];
   }>;
