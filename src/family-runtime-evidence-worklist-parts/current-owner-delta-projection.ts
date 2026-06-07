@@ -13,17 +13,6 @@ function normalizeWorklistDefaultNextActionOwner(action: JsonRecord): JsonRecord
   };
 }
 
-function suppressDefaultNextAction<T extends JsonRecord>(readModel: T): T {
-  return {
-    ...readModel,
-    next_safe_action_or_none: null,
-    default_summary: {
-      ...record(readModel.default_summary),
-      next_action_kind: null,
-    },
-  };
-}
-
 export function buildWorklistCurrentOwnerDeltaReadModel(input: {
   drilldown: JsonRecord;
   openItems: JsonRecord[];
@@ -34,7 +23,7 @@ export function buildWorklistCurrentOwnerDeltaReadModel(input: {
   stageReplayMissingReceiptWorkorderSummary: JsonRecord;
 }) {
   const ownerDeltaFirst = record(record(input.drilldown.attention_first_payload).owner_delta_first);
-  const readModel = buildCurrentOwnerDeltaReadModel({
+  return buildCurrentOwnerDeltaReadModel({
     ownerDeltaFirst,
     nextSafeAction: input.nextSafeActions[0],
     countSummary: {
@@ -60,7 +49,6 @@ export function buildWorklistCurrentOwnerDeltaReadModel(input: {
         'opl runtime app-operator-drilldown --detail full --json',
     },
   });
-  return input.openItems.length > 0 ? readModel : suppressDefaultNextAction(readModel);
 }
 
 export function buildWorklistOwnerDeltaActionProjection(input: Parameters<typeof buildWorklistCurrentOwnerDeltaReadModel>[0]) {
