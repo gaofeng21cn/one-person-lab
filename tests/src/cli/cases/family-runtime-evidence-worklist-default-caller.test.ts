@@ -113,10 +113,31 @@ test('family-runtime evidence-worklist uses repo-native default-caller readiness
       'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
     );
     assert.deepEqual(refs.summary.accepted_refs_only_result_shapes, ['typed_blocker_ref']);
+    assert.equal(refs.summary.owner_decision_status, 'waiting_for_structural_prerequisites');
+    assert.equal(
+      refs.summary.non_authorizing_surfaces.includes(
+        'opl_family_runtime_evidence_worklist_refs_only_receipt',
+      ),
+      true,
+    );
     assert.deepEqual(refs.summary.mandatory_gate_ids, defaultCallers.retirement_guard_mandatory_gate_ids);
     assert.equal(refs.summary.retirement_guard_target_classes.includes('legacy_dispatch_compensation_path'), true);
     assert.equal(refs.summary.retirement_guard_target_classes.includes('retained_domain_wrapper'), true);
     assert.equal(refs.domains[0].source, 'agent_default_caller_readiness_repo_projection');
+    assert.equal(refs.domains[0].summary.owner_decision_status, 'waiting_for_structural_prerequisites');
+    assert.equal(
+      refs.domains[0].deletion_evidence_worklists.every((worklist: {
+        owner_decision_status: string;
+        non_authorizing_surfaces: string[];
+      }) => (
+        worklist.owner_decision_status === 'waiting_for_structural_prerequisites'
+        && worklist.non_authorizing_surfaces.includes('opl_agents_default_callers_readiness')
+        && worklist.non_authorizing_surfaces.includes(
+          'opl_family_runtime_evidence_worklist_refs_only_receipt',
+        )
+      )),
+      true,
+    );
     assert.equal(refs.summary.default_caller_delete_ready, false);
     assert.equal(refs.summary.not_authorized_claims.includes('default_caller_delete_ready'), true);
 
