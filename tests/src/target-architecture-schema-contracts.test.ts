@@ -24,6 +24,7 @@ test('target architecture schema contracts keep owner delta root and audit tail 
     'contracts/opl-framework/golden-path-profile.schema.json',
     'contracts/opl-framework/stop-loss-policy.schema.json',
     'contracts/opl-framework/default-surface-budget.schema.json',
+    'contracts/opl-framework/workspace-topology-profile.schema.json',
   ];
   const schemas = Object.fromEntries(
     schemaPaths.map((schemaPath) => [schemaPath, readJson<Record<string, any>>(schemaPath)]),
@@ -186,5 +187,59 @@ test('target architecture schema contracts keep owner delta root and audit tail 
   assert.equal(
     defaultSurfaceBudget.$defs.authority_boundary.properties.default_surface_can_replace_domain_owner.const,
     false,
+  );
+
+  const workspaceTopology = schemas['contracts/opl-framework/workspace-topology-profile.schema.json'];
+  assert.equal(workspaceTopology.properties.surface_kind.const, 'opl_workspace_topology_profile');
+  assert.equal(workspaceTopology.properties.schema_version.const, 'workspace-topology-profile.v1');
+  assert.deepEqual(workspaceTopology.properties.workspace_mode.enum, ['one_off', 'series', 'portfolio']);
+  assert.equal(workspaceTopology.properties.project_stage_outputs_root.const, 'artifacts/stage_outputs');
+  assert.equal(workspaceTopology.required.includes('workspace_groups'), true);
+  assert.equal(workspaceTopology.required.includes('default_user_inspection_surface'), true);
+  assert.equal(workspaceTopology.required.includes('runtime_state_boundary'), true);
+  assert.equal(
+    workspaceTopology.properties.default_user_inspection_surface.properties.stage_native_default_path.const,
+    'artifacts/stage_outputs',
+  );
+  assert.equal(
+    workspaceTopology.properties.default_user_inspection_surface.properties.runtime_state_is_default_user_surface.const,
+    false,
+  );
+  assert.equal(
+    workspaceTopology.properties.runtime_state_boundary.properties.runtime_state_can_be_canonical_project_root.const,
+    false,
+  );
+  assert.equal(
+    workspaceTopology.properties.runtime_state_boundary.properties.runtime_state_can_close_stage.const,
+    false,
+  );
+  assert.equal(
+    workspaceTopology.properties.runtime_state_boundary.properties
+      .runtime_state_can_replace_owner_receipt_or_typed_blocker.const,
+    false,
+  );
+  assert.equal(
+    workspaceTopology.$defs.authority_boundary.properties.opl_can_write_domain_truth.const,
+    false,
+  );
+  assert.equal(
+    workspaceTopology.$defs.authority_boundary.properties.opl_can_mutate_artifact_body.const,
+    false,
+  );
+  assert.equal(
+    workspaceTopology.$defs.authority_boundary.properties.opl_can_create_owner_receipt.const,
+    false,
+  );
+  assert.equal(
+    workspaceTopology.$defs.authority_boundary.properties.opl_can_create_typed_blocker.const,
+    false,
+  );
+  assert.equal(
+    workspaceTopology.examples[0].workspace_mode,
+    'portfolio',
+  );
+  assert.equal(
+    workspaceTopology.examples[1].workspace_mode,
+    'series',
   );
 });
