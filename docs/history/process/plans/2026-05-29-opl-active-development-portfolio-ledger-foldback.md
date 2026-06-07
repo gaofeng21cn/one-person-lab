@@ -9790,6 +9790,66 @@ Next tranche write scope:
 - When the dirty App release/testing lane is safe or explicitly assigned, perform App paragraph-level body governance as recorded in the App repo-local ledger.
 - Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
 
+Date: `2026-06-07 10:52 CST`
+Tranche: `opl-doc-support-active-truth-owner`
+State: `tranche_verified`
+
+本轮覆盖 support repo `opl-doc` 的 Active Truth owner 缺口。`opl-doc` 是本轮治理工具与 support repo extension，不进入默认 Foundry Agent truth owner 集合；但本轮目标显式触及 OPL Doc 与 support repo coverage/next-scope 证据，因此需要让 support repo 自身也能承载当前完成进度、当前差距、下一轮 Agent prompt 和 coverage foldback。本轮不改 doctor 行为、不改核心六仓 domain/runtime truth、不关闭 OPL series 全局 `/goal`。
+
+Fresh live truth inputs:
+
+- `opl-doc` `AGENTS.md`, user-level fallback `TASTE.md`, `README.md`, `README.zh-CN.md`, `docs/README.md`, `docs/project.md`, `docs/status.md`, `docs/architecture.md`, `docs/invariants.md`, `docs/decisions.md`.
+- OPL Doc skill and machine surfaces: `.codex-plugin/plugin.json`, `skills/opl-doc/SKILL.md`, `skills/opl-doc/agents/openai.yaml`, `scripts/opl_doc_doctor.py`, `scripts/opl_doc_doctor_parts/`, `scripts/install_local_plugin.py`, `tests/test_opl_doc_doctor.py`, `tests/test_install_local_plugin.py`, and `scripts/verify.sh`.
+- Preflight `opl-doc-doctor doctor /Users/gaofeng/workspace/opl-doc --format json` returned `active_truth_health.status=missing_active_truth_owner`, `finding_count=0`, and no active stale-surface findings; the missing owner was a support-repo governance gap, not a repo truth claim.
+
+Fresh semantic result:
+
+- Added `opl-doc` support active truth owner at `docs/active/opl-doc-active-truth-plan.md`.
+- Updated `docs/README.md` and `docs/status.md` to point to the new owner.
+- The new active plan records current completion progress, current-state vs ideal-state gaps, executable next-round Agent prompt, support repo boundaries, and no-resurrection guards for already retired `opl-doc-governance` and doctor facade surfaces.
+- Post-change `python3 scripts/opl_doc_doctor.py doctor . --format json` in `opl-doc` main returned `active_truth_health.status=pass`, `owner_docs=["docs/active/opl-doc-active-truth-plan.md"]`, `missing_item_count=0`, `next_round_agent_prompt_not_ready_count=0`, `process_log_heading_count=0`, and `finding_count=0`.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `opl-doc` | `AGENTS.md`, fallback `TASTE.md`, root READMEs, canonical docs listed above, skill, plugin manifest, doctor scripts, installer, tests, and new active owner. | `docs/active/opl-doc-active-truth-plan.md`, `docs/README.md`, `docs/status.md` |
+| `one-person-lab` | OPL family coverage ledger foldback for this support repo tranche; no OPL source/contract/runtime semantics changed. | `docs/history/process/plans/2026-05-29-opl-active-development-portfolio-ledger-foldback.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. Existing `opl-doc` tombstones remain current: `docs/history/opl-doc-governance-tombstone.md`, `docs/history/opl-doc-governance-installer-cleanup-tail-retirement.md`, `docs/history/opl-doc-doctor-entrypoint-facade-retirement.md`, and `docs/history/opl-doc-doctor-parts-package-facade-retirement.md`.
+
+Unreviewed docs:
+
+- This tranche did not reopen core six-repo paragraph-level ledgers. MAG/RCA/OMA doctor preflight remained pass; App and MAS main checkouts had external dirty lanes and were kept outside this write scope.
+- `opl-doc` full support repo docs are now covered for the active-owner gap, but future profile-contract materialization remains a next-scope item rather than closed.
+
+Remaining stale / retire candidates:
+
+- `opl-doc`: no active `skills/opl-doc-governance` surface, installer cleanup tail, broad doctor entrypoint facade, or package-root facade should be restored. Any future old-name skill, marketplace entry, installer cleanup branch, alias, facade, wrapper, or active README quick-start wording is stale pollution.
+- `opl-doc`: decide in a future explicit tranche whether to materialize `contracts/opl-native-profile.json` for support-repo profile drift checking; do not create it implicitly while only closing the active-owner gap.
+- Core six repo remaining stale/retire candidates remain governed by their own ledgers and current dirty-lane safety constraints.
+
+Worktree / branch cleanup:
+
+- `opl-doc` implementation worktree `codex/opl-doc-active-truth-owner-20260607` was absorbed into `opl-doc` main as commit `603a728 docs: add opl-doc active truth owner`, then its worktree and branch were removed.
+- OPL ledger foldback used isolated worktree `codex/opl-doc-support-coverage-foldback-20260607`; remove it after this ledger commit is absorbed.
+
+Verification before absorb:
+
+- `opl-doc`: `python3 scripts/opl_doc_doctor.py doctor . --format json` after absorb returned active truth pass and no findings.
+- `opl-doc`: `bash scripts/verify.sh` after absorb passed with `29 passed`.
+- `opl-doc`: `git diff --check` passed; conflict-marker scan returned no matches.
+- OPL ledger worktree: `git diff --check`; conflict-marker scan over the edited ledger; no source/runtime tests required because this foldback changes only narrative coverage evidence.
+
+Next tranche write scope:
+
+- Re-run fresh six-repo status/doctor snapshot before choosing another write lane.
+- If App/MAS remain dirty, continue with clean MAG/RCA/OMA or support-repo items whose write sets do not overlap external dirty lanes.
+- `opl-doc` next support tranche should be limited to `contracts/opl-native-profile.json` materialization decision and its associated docs/tests, if selected.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into executable next-round Agent prompts.
+
 Date: `2026-05-30 17:32 CST`
 Tranche: `opl-history-runtime-reference-exact-reconcile`
 State: `tranche_verified`
