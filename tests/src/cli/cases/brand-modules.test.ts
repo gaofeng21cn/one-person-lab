@@ -89,3 +89,82 @@ test('brand modules interfaces expose CLI, app, descriptor, and validation surfa
   assert.equal(interfaces.authority_boundary.can_write_domain_truth, false);
   assert.equal(interfaces.authority_boundary.can_sign_owner_receipt, false);
 });
+
+test('each non-Workspace OPL platform brand module has its own executable CLI frontdoor family', () => {
+  const operations = ['status', 'inspect', 'interfaces', 'validate', 'doctor'];
+  const moduleIds = expectedModuleIds.filter((moduleId) => moduleId !== 'workspace');
+
+  for (const moduleId of moduleIds) {
+    for (const operation of operations) {
+      const output = runCli([moduleId, operation]);
+      const surface = output.brand_module_surface;
+
+      assert.equal(surface.surface_kind, `opl_${moduleId.replace('-', '_')}_brand_module_${operation}`);
+      assert.equal(surface.module_id, moduleId);
+      assert.equal(surface.operation, operation);
+      assert.equal(surface.canonical_frontdoor, `opl ${moduleId}`);
+      assert.equal(surface.status, operation === 'doctor' ? 'pass' : 'valid');
+      assert.equal(surface.authority_boundary.can_claim_domain_ready, false);
+      assert.equal(surface.authority_boundary.can_claim_quality_verdict, false);
+      assert.equal(surface.authority_boundary.can_claim_artifact_authority, false);
+      assert.equal(surface.authority_boundary.can_claim_production_ready, false);
+      assert.equal(surface.authority_boundary.can_write_domain_truth, false);
+      assert.equal(surface.authority_boundary.can_sign_owner_receipt, false);
+    }
+  }
+});
+
+test('Workspace keeps existing validate doctor interfaces semantics and adds non-conflicting brand status inspect commands', () => {
+  for (const operation of ['status', 'inspect']) {
+    const output = runCli(['workspace', operation]);
+    const surface = output.brand_module_surface;
+
+    assert.equal(surface.surface_kind, `opl_workspace_brand_module_${operation}`);
+    assert.equal(surface.module_id, 'workspace');
+    assert.equal(surface.operation, operation);
+    assert.equal(surface.canonical_frontdoor, 'opl workspace');
+    assert.equal(surface.status, 'valid');
+    assert.equal(surface.frontdoor_collision_policy, 'preserve_workspace_operational_validate_doctor_interfaces');
+  }
+});
+
+test('agent-owned internal modules expose the same branding spine without becoming OPL platform modules', () => {
+  const list = runCli(['agents', 'modules', 'list']).agent_internal_modules;
+
+  assert.equal(list.surface_kind, 'opl_agent_internal_brand_module_list');
+  assert.deepEqual(list.platform_module_ids, expectedModuleIds);
+  assert.deepEqual(list.agent_module_ids, expectedModuleIds.map((moduleId) => `agent-${moduleId}`));
+  assert.equal(list.domain_count, 3);
+  assert.equal(list.module_count_per_domain, 9);
+  assert.equal(list.canonical_frontdoor, 'opl agents modules');
+  assert.equal(list.authority_boundary.can_write_domain_truth, false);
+  assert.equal(list.authority_boundary.can_replace_domain_owner, false);
+
+  const inspect = runCli([
+    'agents',
+    'modules',
+    'inspect',
+    '--domain',
+    'medautoscience',
+    '--module',
+    'agent-runway',
+  ]).agent_internal_module;
+
+  assert.equal(inspect.surface_kind, 'opl_agent_internal_brand_module_inspect');
+  assert.equal(inspect.domain_id, 'medautoscience');
+  assert.equal(inspect.agent_module_id, 'agent-runway');
+  assert.equal(inspect.platform_analogue_module_id, 'runway');
+  assert.equal(inspect.canonical_frontdoor, 'opl agents modules');
+  assert.equal(inspect.module_frontdoor, 'opl agents modules inspect --domain medautoscience --module agent-runway');
+  assert.equal(inspect.authority_boundary.can_write_domain_truth, false);
+  assert.equal(inspect.authority_boundary.can_claim_production_ready, false);
+
+  const validation = runCli(['agents', 'modules', 'validate']).agent_internal_module_validation;
+  assert.equal(validation.surface_kind, 'opl_agent_internal_brand_module_validation');
+  assert.equal(validation.status, 'valid');
+  assert.deepEqual(validation.missing_domain_module_sets, []);
+
+  const doctor = runCli(['agents', 'modules', 'doctor']).agent_internal_module_doctor;
+  assert.equal(doctor.surface_kind, 'opl_agent_internal_brand_module_doctor');
+  assert.equal(doctor.status, 'pass');
+});
