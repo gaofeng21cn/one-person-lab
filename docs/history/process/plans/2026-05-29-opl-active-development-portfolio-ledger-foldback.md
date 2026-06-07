@@ -9790,6 +9790,73 @@ Next tranche write scope:
 - When the dirty App release/testing lane is safe or explicitly assigned, perform App paragraph-level body governance as recorded in the App repo-local ledger.
 - Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into the next-round Agent prompt.
 
+Date: `2026-06-07 11:15 CST`
+Tranche: `oma-target-progress-alias-retirement-and-family-readonly-sweep`
+State: `tranche_verified`
+
+本轮覆盖 `opl-meta-agent` developer work-order / stage progress policy 中的重复 alias surface 退役，并把 MAG/RCA/OMA 三个只读 subagent 审计结果折回本 family ledger。全局 `/goal` 仍保持 active；本轮只关闭 OMA `target_progress_accounting` alias compatibility surface，不声明 OMA production ready、domain ready、App live rendering、quality/export verdict、owner receipt body、default promotion 或 OPL series global complete。
+
+Fresh live truth inputs:
+
+- OMA `AGENTS.md`, `TASTE.md`, `docs/active/opl-meta-agent-ideal-state-gap-plan.md`, `docs/status.md`, `docs/decisions.md`, `docs/history/process/README.md`, `package.json`.
+- OMA machine surfaces: `scripts/lib/work-order-builders.ts`, `scripts/lib/work-order-validation.ts`, `contracts/app_workbench_projection.json`, `contracts/standard_foundry_policies.json`, `contracts/stage_control_plane.source.json`, `contracts/stage_control_plane.parts/stages/*.json`, `contracts/stage_control_plane.json`, and related work-order / App projection / stage-control / source-purity tests.
+- Subagent read-only sweeps for MAG, RCA and OMA checked their AGENTS/TASTE, core docs, active gap plans, contracts, source/tests, CodeGraph/caller evidence and doctor output; all three reported no additional high-confidence physical delete candidate beyond already retired tombstone / negative-guard surfaces.
+- Dirty-lane boundary at foldback time: OMA main still has an external user dirty file `tests/source-structure-lane.test.ts`; MAG has external `tests/test_line_budget.py`; RCA has external `tests/line-budget.test.ts`; OPL main has unrelated dirty tests. None overlap this tranche write set.
+
+Fresh semantic result:
+
+- OMA no longer emits `target_progress_accounting.substantive_deliverable_delta_refs` or `target_progress_accounting.platform_interface_repair_refs`.
+- OMA work-order validation now rejects those retired alias fields before delegating to OPL work-order execution; this is a fail-closed no-resurrection guard, not silent compatibility ignore.
+- OMA App/workbench projection and stage-control policy surfaces expose only canonical Progress-First fields: `progress_delta_classification`, `deliverable_progress_delta`, `platform_repair_delta`, and `target_progress_accounting_ref`.
+- Standard Foundry stage progress policy no longer exposes `deliverable_delta_aliases` or `platform_delta_aliases`; generated `contracts/stage_control_plane.json` was rebuilt from source parts with `npm run stage-control:write`.
+- Added OMA history closeout `docs/history/process/2026-06-07-oma-target-progress-alias-retirement-closeout.md` and indexed it in `docs/history/process/README.md`.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `opl-meta-agent` | Active plan/status/decisions/process index; work-order builder and validator; App projection contract; Standard Foundry policy contract; stage-control generated/source parts; affected tests listed in verification. | `scripts/lib/work-order-builders.ts`, `scripts/lib/work-order-validation.ts`, `contracts/app_workbench_projection.json`, `contracts/standard_foundry_policies.json`, `contracts/stage_control_plane.parts/stages/*.json`, `contracts/stage_control_plane.json`, `docs/decisions.md`, `docs/history/process/README.md`, `docs/history/process/2026-06-07-oma-target-progress-alias-retirement-closeout.md`, related tests. |
+| `med-autogrant` | Read-only stale-surface sweep over docs/contracts/source/tests and OPL default-caller read model. | none |
+| `redcube-ai` | Read-only stale-surface sweep over docs/contracts/source/tests and physical deletion guard / privatized module evidence. | none |
+| `one-person-lab` | OPL family coverage ledger foldback for this OMA tranche; no OPL active truth / source / runtime semantics changed. | `docs/history/process/plans/2026-05-29-opl-active-development-portfolio-ledger-foldback.md` |
+
+Archived / tombstoned / deleted docs:
+
+- OMA: added one historical closeout for the retired target-progress alias surface; no active doc was archived or deleted.
+- MAG/RCA: none. Their read-only sweeps found no current surface meeting no-active-caller plus replacement-owner plus delete-authority criteria.
+
+Unreviewed docs:
+
+- This tranche did not reopen full paragraph-level coverage for all OMA repo-root `README*`, `docs/**/*.md`, or tracked `agent/*/README.md`; it reviewed the exact alias-related semantic surface and active truth context.
+- MAG and RCA were read-only stale-surface sweeps, not full docs body governance passes.
+- App and MAS remained outside this write scope because their main checkouts still had external dirty lanes.
+
+Remaining stale / retire candidates:
+
+- MAG: `cli`, `mcp`, `skill`, `product_entry`, `product_status`, `product_session`, `domain_handler`, and `workbench` default-caller surfaces remain owner-decision-gated; subagent evidence showed `physical_delete_authorized=false` / `default_caller_delete_ready=false`, so deleting them now would bypass the current machine gate.
+- RCA: current machine SSOT reports `current_safe_tombstone_candidate_count=0`; 12 privatized module leaves are `safe_to_delete_now=false`. Future RCA cleanup should triage fallow production dead-code/unused-export hints through public API, contract entry, test entry and package surface evidence before deleting anything.
+- OMA: target-progress aliases retired in this tranche. Remaining OMA evidence/hygiene tails stay active: App live render/runtime drilldown evidence, repeat long-soak, real target patch-loop owner receipts or typed blockers, standard target-agent handoff convergence, and script-to-pack / OPL primitive hygiene.
+
+Worktree / branch cleanup:
+
+- OMA implementation worktree `codex/oma-target-progress-alias-retirement-20260607` landed in OMA main as commit `220d22a refactor: retire target progress alias fields`; its temporary worktree and branch were removed.
+- MAG/RCA/OMA subagents were closed after their read-only results were recorded.
+- This OPL ledger worktree `codex/opl-oma-progress-alias-ledger-20260607` should be removed after this ledger commit is absorbed into OPL main.
+
+Verification before foldback:
+
+- OMA implementation worktree: `npm run stage-control:check` passed; focused node tests over execute-work-order, developer-work-order, patch-loop projection, owner receipt behavior, stage-control, stage-decomposition and source-purity passed `33` tests / `0` failures; `npm run typecheck` passed; `npm test` passed `81` tests / `0` failures; `npm run verify` passed `81` tests / `0` failures; `opl-doc-doctor doctor . --format json` returned `finding_count=0`, active truth `pass`; `git diff --check` and strict line-start conflict scan passed.
+- OMA main after absorb: `npm run stage-control:check`, `npm run typecheck` and `npm test` passed `81` tests / `0` failures; doctor returned `finding_count=0`, active truth `pass`. User dirty `tests/source-structure-lane.test.ts` remained untouched.
+- OPL ledger worktree: run `git diff --check`, strict line-start conflict scan over the edited ledger, and `opl-doc-doctor doctor . --format json` before absorb; no source/runtime tests are required because this foldback changes only narrative coverage evidence.
+
+Next tranche write scope:
+
+- Re-run fresh six-repo status/doctor snapshot before choosing another write lane.
+- Do not delete MAG default-caller surfaces until owner decision returns physical delete authorization or typed blocker / keep-as-authority evidence.
+- Do not delete RCA privatized modules while the current safe tombstone candidate count remains zero; handle fallow production hints as a separate API/contract/test/package-surface triage.
+- If App/MAS remain dirty, continue only with newly reopened OPL/MAG/RCA/OMA exact inventory or support README accounting items that do not touch external dirty lanes.
+- Keep the global `/goal` active until all six repos' `README*` and `docs/**/*.md` ledgers have no uncovered docs and remaining gaps are either closed or carried into executable next-round Agent prompts.
+
 Date: `2026-06-07 10:52 CST`
 Tranche: `opl-doc-support-active-truth-owner`
 State: `tranche_verified`
