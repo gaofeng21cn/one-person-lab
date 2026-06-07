@@ -19,6 +19,7 @@
     "display_labels",
     "shared_resource_roots",
     "shared_resources",
+    "generated_refs",
     "projects",
     "user_inspection",
     "runtime_state_boundary",
@@ -86,6 +87,9 @@
       "items": {
         "$ref": "#/$defs/shared_resource"
       }
+    },
+    "generated_refs": {
+      "$ref": "#/$defs/generated_refs"
     },
     "projects": {
       "type": "array",
@@ -254,6 +258,7 @@
       "required": [
         "path",
         "role",
+        "manifest_ref",
         "owner",
         "user_visible",
         "domain_truth_owner"
@@ -263,6 +268,9 @@
           "type": "string"
         },
         "role": {
+          "type": "string"
+        },
+        "manifest_ref": {
           "type": "string"
         },
         "owner": {
@@ -286,9 +294,11 @@
         "project_id",
         "project_root",
         "stage_outputs_root",
+        "stage_outputs_manifest_ref",
         "control_root",
         "review_root",
-        "handoff_root"
+        "handoff_root",
+        "lifecycle"
       ],
       "properties": {
         "project_id": {
@@ -300,6 +310,9 @@
         "stage_outputs_root": {
           "type": "string"
         },
+        "stage_outputs_manifest_ref": {
+          "type": "string"
+        },
         "control_root": {
           "type": "string"
         },
@@ -308,6 +321,67 @@
         },
         "handoff_root": {
           "type": "string"
+        },
+        "lifecycle": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "archived_at",
+            "archive_reason"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "active",
+                "archived"
+              ]
+            },
+            "archived_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "archive_reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "generated_refs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workspace_config_ref",
+        "workspace_index_ref",
+        "workspace_map_ref",
+        "workspace_health_ref",
+        "shared_resource_manifest_basename",
+        "stage_outputs_manifest_basename"
+      ],
+      "properties": {
+        "workspace_config_ref": {
+          "const": "workspace.yaml"
+        },
+        "workspace_index_ref": {
+          "const": "workspace_index.json"
+        },
+        "workspace_map_ref": {
+          "const": "workspace_map.json"
+        },
+        "workspace_health_ref": {
+          "const": "workspace_health.json"
+        },
+        "shared_resource_manifest_basename": {
+          "const": "opl_resource_manifest.json"
+        },
+        "stage_outputs_manifest_basename": {
+          "const": "opl_stage_outputs_manifest.json"
         }
       }
     },

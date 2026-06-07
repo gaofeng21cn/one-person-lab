@@ -517,10 +517,38 @@ export function buildPublicCommandSpecs(
     }),
     'workspace adopt': cloneCommandSpec(commandSpecs['workspace adopt'], {
       usage:
-        'opl workspace adopt --agent <mas|mag|rca|oma> --workspace <path> [--project-id <id>] [--mode auto|one_off|series|portfolio] --dry-run',
+        'opl workspace adopt --agent <mas|mag|rca|oma> --workspace <path> [--project-id <id>] [--mode auto|one_off|series|portfolio] [--dry-run|--apply]',
       examples: [
         'opl workspace adopt --agent rca --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --dry-run',
-        'opl workspace adopt --agent mas --workspace /Users/gaofeng/workspace/dm-cvd --study-id DM002 --dry-run',
+        'opl workspace adopt --agent mas --workspace /Users/gaofeng/workspace/dm-cvd --study-id DM002 --apply',
+      ],
+      group: 'workspace',
+    }),
+    'workspace upgrade': cloneCommandSpec(commandSpecs['workspace upgrade'], {
+      usage: 'opl workspace upgrade --workspace <path> [--dry-run|--apply]',
+      examples: [
+        'opl workspace upgrade --workspace /Users/gaofeng/workspace/visual-theme-a --apply',
+      ],
+      group: 'workspace',
+    }),
+    'workspace project archive': cloneCommandSpec(commandSpecs['workspace project archive'], {
+      usage: 'opl workspace project archive --workspace <path> --project-id <id> [--reason <text>] [--dry-run|--apply]',
+      examples: [
+        'opl workspace project archive --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --apply',
+      ],
+      group: 'workspace',
+    }),
+    'workspace export-map': cloneCommandSpec(commandSpecs['workspace export-map'], {
+      usage: 'opl workspace export-map --workspace <path>',
+      examples: [
+        'opl workspace export-map --workspace /Users/gaofeng/workspace/visual-theme-a',
+      ],
+      group: 'workspace',
+    }),
+    'workspace health': cloneCommandSpec(commandSpecs['workspace health'], {
+      usage: 'opl workspace health --workspace <path>',
+      examples: [
+        'opl workspace health --workspace /Users/gaofeng/workspace/visual-theme-a',
       ],
       group: 'workspace',
     }),

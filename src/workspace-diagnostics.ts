@@ -4,6 +4,24 @@ import path from 'node:path';
 import { FrameworkContractError } from './contracts.ts';
 import type { FrameworkContracts } from './types.ts';
 import {
+  buildWorkspaceIndex,
+  buildWorkspaceYaml,
+  initializeWorkspace,
+} from './workspace-initializer.ts';
+import {
+  buildSharedResourceManifest,
+  buildStageOutputsManifest,
+  buildWorkspaceHealth,
+  buildWorkspaceMap,
+  ensureDirectory,
+  materializeWorkspaceGeneratedArtifacts,
+  normalizeWorkspaceProjectEntry,
+  sharedResourceManifestRef,
+  WORKSPACE_HEALTH_REF,
+  WORKSPACE_MAP_REF,
+  writeJsonArtifact,
+} from './workspace-artifacts.ts';
+import {
   buildCanonicalTopology,
   buildSharedResources,
   buildWorkspaceDisplayLabels,
@@ -38,6 +56,15 @@ export type WorkspaceAdoptOptions = {
   title?: string;
   mode?: WorkspaceModeInput;
   dryRun?: boolean;
+  apply?: boolean;
+};
+
+export type WorkspaceLifecycleOptions = {
+  workspacePath?: string;
+  projectId?: string;
+  reason?: string;
+  dryRun?: boolean;
+  apply?: boolean;
 };
 
 const BLOCKER_MESSAGES: Record<string, string> = {
@@ -57,14 +84,23 @@ const BLOCKER_MESSAGES: Record<string, string> = {
   shared_resources_missing: 'workspace_index.json is missing shared_resources.',
   shared_resources_drift: 'shared_resources do not match shared_resource_roots.',
   shared_resource_root_missing: 'A declared shared resource root is missing on disk.',
+  shared_resource_manifest_missing: 'A declared shared resource manifest is missing on disk.',
+  shared_resource_manifest_drift: 'A declared shared resource manifest does not match the OPL projection.',
   project_collection_missing: 'The project collection directory is missing.',
   indexed_projects_missing: 'workspace_index.json does not list any projects.',
   indexed_project_shape_invalid: 'An indexed project has invalid path fields.',
   indexed_project_root_missing: 'An indexed project root is missing on disk.',
   indexed_stage_outputs_root_missing: 'An indexed project stage outputs root is missing on disk.',
+  indexed_stage_outputs_manifest_missing: 'An indexed project stage outputs manifest is missing on disk.',
+  indexed_stage_outputs_manifest_drift: 'An indexed project stage outputs manifest does not match the OPL projection.',
   indexed_control_root_missing: 'An indexed project control root is missing on disk.',
   indexed_review_root_missing: 'An indexed project review root is missing on disk.',
   indexed_handoff_root_missing: 'An indexed project handoff root is missing on disk.',
+  workspace_map_missing: 'workspace_map.json is missing.',
+  workspace_map_drift: 'workspace_map.json does not match the OPL projection.',
+  workspace_health_missing: 'workspace_health.json is missing.',
+  generated_refs_missing: 'workspace_index.json is missing generated_refs.',
+  interface_projection_missing: 'workspace_index.json is missing interface_projection.',
   authority_boundary_overclaim: 'authority_boundary grants authority that OPL must not hold.',
   runtime_state_boundary_overclaim: 'runtime_state_boundary treats runtime-state as user/project truth.',
   workspace_norm_missing: 'workspace_index.json is missing workspace_norm projection.',
@@ -135,14 +171,7 @@ function normalizeProjectEntry(project: Record<string, unknown>): WorkspaceProje
   if (!fields.every((entry) => typeof entry === 'string' && entry.trim().length > 0)) {
     return null;
   }
-  return {
-    project_id: String(project.project_id),
-    project_root: String(project.project_root),
-    stage_outputs_root: String(project.stage_outputs_root),
-    control_root: String(project.control_root),
-    review_root: String(project.review_root),
-    handoff_root: String(project.handoff_root),
-  };
+  return normalizeWorkspaceProjectEntry(project);
 }
 
 function profileIdFromIndex(index: Record<string, unknown>): WorkspaceProfileId | null {
@@ -210,6 +239,55 @@ function readWorkspaceIndex(indexPath: string) {
   }
 }
 
+function readJsonRecord(filePath: string) {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
+    return isRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function indexWorkspaceId(index: Record<string, unknown>, workspacePath: string) {
+  return typeof index.workspace_id === 'string' && index.workspace_id.trim()
+    ? index.workspace_id
+    : path.basename(workspacePath);
+}
+
+function indexTitle(index: Record<string, unknown>) {
+  return typeof index.title === 'string' && index.title.trim() ? index.title : null;
+}
+
+function indexUpdatedAt(index: Record<string, unknown>) {
+  return typeof index.updated_at === 'string' && index.updated_at.trim()
+    ? index.updated_at
+    : new Date().toISOString();
+}
+
+function indexCreatedAt(index: Record<string, unknown>, fallback: string) {
+  return typeof index.created_at === 'string' && index.created_at.trim()
+    ? index.created_at
+    : fallback;
+}
+
+function normalizeWorkspaceLifecycle(value: unknown): {
+  status: 'active' | 'archived';
+  archived_at: string | null;
+  archive_reason: string | null;
+} {
+  const lifecycle = isRecord(value) ? value : {};
+  const status: 'active' | 'archived' = lifecycle.status === 'archived' ? 'archived' : 'active';
+  return {
+    status,
+    archived_at: status === 'archived' && typeof lifecycle.archived_at === 'string'
+      ? lifecycle.archived_at
+      : null,
+    archive_reason: status === 'archived' && typeof lifecycle.archive_reason === 'string'
+      ? lifecycle.archive_reason
+      : null,
+  };
+}
+
 function validateIndexSemantics(input: {
   contracts: FrameworkContracts;
   workspacePath: string;
@@ -265,6 +343,10 @@ function validateIndexSemantics(input: {
       });
     }
 
+    if (!isRecord(input.index.generated_refs)) {
+      addBlocker(blockers, 'generated_refs_missing');
+    }
+
     if (
       !isRecord(input.index.expected_domain_topology_profile)
       || !sameJson(input.index.expected_domain_topology_profile, expectedNormProfile)
@@ -279,6 +361,27 @@ function validateIndexSemantics(input: {
       const absolute = path.join(input.workspacePath, sharedRoot);
       if (!fs.existsSync(absolute) || !fs.statSync(absolute).isDirectory()) {
         addBlocker(blockers, 'shared_resource_root_missing', { path: sharedRoot });
+      }
+    }
+    for (const resource of expectedSharedResources) {
+      const manifestRef = sharedResourceManifestRef(resource.path);
+      const manifestPath = path.join(input.workspacePath, manifestRef);
+      if (!fs.existsSync(manifestPath) || !fs.statSync(manifestPath).isFile()) {
+        addBlocker(blockers, 'shared_resource_manifest_missing', { path: manifestRef });
+      } else {
+        const actual = readJsonRecord(manifestPath);
+        const expected = buildSharedResourceManifest({
+          workspaceId: indexWorkspaceId(input.index, input.workspacePath),
+          agent,
+          resource,
+          updatedAt: indexUpdatedAt(input.index),
+        });
+        if (!actual || !sameJson(actual, expected)) {
+          addBlocker(blockers, 'shared_resource_manifest_drift', {
+            path: manifestRef,
+            expected,
+          });
+        }
       }
     }
 
@@ -335,7 +438,63 @@ function validateIndexSemantics(input: {
         });
       }
     }
+    if (agent) {
+      const manifestPath = path.join(input.workspacePath, normalized.stage_outputs_manifest_ref);
+      if (!fs.existsSync(manifestPath) || !fs.statSync(manifestPath).isFile()) {
+        addBlocker(blockers, 'indexed_stage_outputs_manifest_missing', {
+          project_id: normalized.project_id,
+          path: normalized.stage_outputs_manifest_ref,
+        });
+      } else {
+        const actual = readJsonRecord(manifestPath);
+        const expected = buildStageOutputsManifest({
+          workspaceId: indexWorkspaceId(input.index, input.workspacePath),
+          agent,
+          project: normalized,
+          updatedAt: indexUpdatedAt(input.index),
+        });
+        if (!actual || !sameJson(actual, expected)) {
+          addBlocker(blockers, 'indexed_stage_outputs_manifest_drift', {
+            project_id: normalized.project_id,
+            path: normalized.stage_outputs_manifest_ref,
+            expected,
+          });
+        }
+      }
+    }
   });
+
+  if (!isRecord(input.index.interface_projection)) {
+    addBlocker(blockers, 'interface_projection_missing');
+  }
+
+  if (agent && profile) {
+    const now = indexUpdatedAt(input.index);
+    const context = {
+      workspaceId: indexWorkspaceId(input.index, input.workspacePath),
+      title: indexTitle(input.index),
+      workspacePath: input.workspacePath,
+      agent,
+      profile,
+      projects: normalizedProjects,
+      createdAt: indexCreatedAt(input.index, now),
+      updatedAt: now,
+    };
+    const mapPath = path.join(input.workspacePath, WORKSPACE_MAP_REF);
+    if (!fs.existsSync(mapPath) || !fs.statSync(mapPath).isFile()) {
+      addBlocker(blockers, 'workspace_map_missing', { path: WORKSPACE_MAP_REF });
+    } else {
+      const actualMap = readJsonRecord(mapPath);
+      const expectedMap = buildWorkspaceMap(context);
+      if (!actualMap || !sameJson(actualMap, expectedMap)) {
+        addBlocker(blockers, 'workspace_map_drift', { path: WORKSPACE_MAP_REF });
+      }
+    }
+    const healthPath = path.join(input.workspacePath, WORKSPACE_HEALTH_REF);
+    if (!fs.existsSync(healthPath) || !fs.statSync(healthPath).isFile()) {
+      addBlocker(blockers, 'workspace_health_missing', { path: WORKSPACE_HEALTH_REF });
+    }
+  }
 
   const authority = isRecord(input.index.authority_boundary) ? input.index.authority_boundary : {};
   if (
@@ -545,13 +704,14 @@ export function adoptWorkspace(
   contracts: FrameworkContracts,
   options: WorkspaceAdoptOptions,
 ) {
-  if (options.dryRun !== true) {
+  if (options.dryRun === true && options.apply === true) {
     throw new FrameworkContractError(
       'cli_usage_error',
-      'workspace adopt currently requires --dry-run; use workspace init/ensure to write OPL metadata.',
-      { required: ['--dry-run'] },
+      'workspace adopt accepts either --dry-run or --apply, not both.',
+      { mutually_exclusive: ['--dry-run', '--apply'] },
     );
   }
+  const apply = options.apply === true;
 
   const agent = findWorkspaceAgentProfile(options.agentId);
   const mode = normalizeMode(options.mode);
@@ -589,6 +749,43 @@ export function adoptWorkspace(
   const wouldIndexProjects = projectIds.has(projectId)
     ? indexedProjects
     : [...indexedProjects, currentProject];
+
+  if (apply) {
+    const initialized = initializeWorkspace(contracts, {
+      agentId: agent.agent_id,
+      workspacePath,
+      projectId,
+      title: options.title,
+      mode: options.mode,
+      bind: false,
+      force: false,
+    });
+    return {
+      version: 'g2',
+      contracts_context: initialized.contracts_context,
+      workspace_adoption: {
+        surface_kind: 'opl_workspace_adoption',
+        status: 'applied',
+        dry_run: false,
+        write_allowed: true,
+        workspace_path: workspacePath,
+        workspace_id: workspaceId,
+        project: initialized.workspace_initialization.project,
+        profile: initialized.workspace_initialization.profile,
+        created_directories: initialized.workspace_initialization.created_directories,
+        written_generated_files: initialized.workspace_initialization.written_generated_files,
+        workspace_index_path: initialized.workspace_initialization.workspace_index_path,
+        workspace_map_path: initialized.workspace_initialization.workspace_map_path,
+        workspace_health_path: initialized.workspace_initialization.workspace_health_path,
+        authority_boundary: {
+          opl_can_write_domain_truth: false,
+          opl_can_mutate_artifact_body: false,
+          opl_can_create_owner_receipt: false,
+          opl_can_create_typed_blocker: false,
+        },
+      },
+    };
+  }
 
   return {
     version: 'g2',
@@ -633,7 +830,7 @@ export function adoptWorkspace(
       )),
       would_index_projects: wouldIndexProjects,
       existing_workspace_index_detected: Boolean(existingIndex),
-      next_apply_command: `opl workspace init --agent ${agent.agent_id} --workspace ${workspacePath} --project-id ${projectId} --mode ${profile.workspace_mode}`,
+      next_apply_command: `opl workspace adopt --agent ${agent.agent_id} --workspace ${workspacePath} --project-id ${projectId} --mode ${profile.workspace_mode} --apply`,
       authority_boundary: {
         adopt_dry_run_can_write_files: false,
         opl_can_write_domain_truth: false,
@@ -642,5 +839,331 @@ export function adoptWorkspace(
         opl_can_create_typed_blocker: false,
       },
     },
+  };
+}
+
+function readValidatedWorkspaceIndex(workspacePathInput: string | undefined) {
+  const workspacePath = normalizeOptionalString(workspacePathInput);
+  if (!workspacePath) {
+    throw new FrameworkContractError('cli_usage_error', 'Workspace lifecycle command requires --workspace.', {
+      required: ['--workspace'],
+    });
+  }
+  const absoluteWorkspacePath = path.resolve(workspacePath);
+  const indexPath = path.join(absoluteWorkspacePath, 'workspace_index.json');
+  const parsed = readWorkspaceIndex(indexPath);
+  if (!parsed.index) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Workspace lifecycle command requires a valid workspace_index.json.',
+      {
+        workspace_path: absoluteWorkspacePath,
+        workspace_index_path: indexPath,
+        blocker: parsed.blocker,
+        ...(parsed.cause ? { cause: parsed.cause } : {}),
+      },
+    );
+  }
+  const agent = agentFromIndex(parsed.index);
+  const profile = profileFromIndex(parsed.index);
+  const profileId = profileIdFromIndex(parsed.index);
+  if (!agent || !profile || !profileId) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Workspace lifecycle command requires agent and topology profile metadata in workspace_index.json.',
+      {
+        workspace_path: absoluteWorkspacePath,
+        workspace_index_path: indexPath,
+      },
+    );
+  }
+  const projects = Array.isArray(parsed.index.projects)
+    ? parsed.index.projects.filter(isRecord).map(normalizeProjectEntry).filter((entry): entry is WorkspaceProjectIndexEntry => Boolean(entry))
+    : [];
+  if (projects.length === 0) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Workspace lifecycle command requires at least one indexed project.',
+      { workspace_path: absoluteWorkspacePath, workspace_index_path: indexPath },
+    );
+  }
+  return {
+    workspacePath: absoluteWorkspacePath,
+    workspaceIndexPath: indexPath,
+    index: parsed.index,
+    agent,
+    profile,
+    profileId,
+    projects,
+  };
+}
+
+function writeWorkspaceMetadata(input: {
+  contracts: FrameworkContracts;
+  workspacePath: string;
+  workspaceIndexPath: string;
+  existingIndex: Record<string, unknown>;
+  agent: WorkspaceAgentProfile;
+  profile: TopologyProfile;
+  profileId: WorkspaceProfileId;
+  projects: WorkspaceProjectIndexEntry[];
+  updatedAt: string;
+}) {
+  const workspaceId = indexWorkspaceId(input.existingIndex, input.workspacePath);
+  const title = indexTitle(input.existingIndex);
+  const createdAt = indexCreatedAt(input.existingIndex, input.updatedAt);
+  const firstProject = input.projects[0];
+  const nextIndex = buildWorkspaceIndex({
+    contracts: input.contracts,
+    workspaceId,
+    workspacePath: input.workspacePath,
+    title,
+    agent: input.agent,
+    profileId: input.profileId,
+    profile: input.profile,
+    projectId: firstProject.project_id,
+    projectRootRef: firstProject.project_root,
+    stageOutputsRootRef: firstProject.stage_outputs_root,
+    createdAt,
+    updatedAt: input.updatedAt,
+    projects: input.projects,
+  });
+  nextIndex.workspace_lifecycle = normalizeWorkspaceLifecycle(input.existingIndex.workspace_lifecycle);
+  const workspaceYamlPath = path.join(input.workspacePath, 'workspace.yaml');
+  writeJsonArtifact(input.workspaceIndexPath, nextIndex);
+  fs.writeFileSync(
+    workspaceYamlPath,
+    buildWorkspaceYaml({
+      workspaceId,
+      title,
+      agent: input.agent,
+      profileId: input.profileId,
+      profile: input.profile,
+      projects: input.projects,
+    }),
+  );
+  const writtenGeneratedFiles = materializeWorkspaceGeneratedArtifacts({
+    workspaceId,
+    title,
+    workspacePath: input.workspacePath,
+    agent: input.agent,
+    profile: input.profile,
+    projects: input.projects,
+    createdAt,
+    updatedAt: input.updatedAt,
+  });
+  return {
+    workspaceId,
+    title,
+    createdAt,
+    nextIndex,
+    workspaceYamlPath,
+    writtenGeneratedFiles,
+  };
+}
+
+export function upgradeWorkspace(
+  contracts: FrameworkContracts,
+  options: WorkspaceLifecycleOptions,
+) {
+  const context = readValidatedWorkspaceIndex(options.workspacePath);
+  const updatedAt = new Date().toISOString();
+  const createdDirectories: string[] = [];
+  const apply = options.apply === true && options.dryRun !== true;
+
+  for (const sharedRoot of context.profile.shared_resource_roots) {
+    const dirPath = path.join(context.workspacePath, sharedRoot);
+    if (!fs.existsSync(dirPath) || !fs.statSync(dirPath).isDirectory()) {
+      if (apply) {
+        ensureDirectory(dirPath, createdDirectories);
+      } else {
+        createdDirectories.push(dirPath);
+      }
+    }
+  }
+  for (const project of context.projects) {
+    for (const relativePath of [
+      project.project_root,
+      project.control_root,
+      project.stage_outputs_root,
+      project.review_root,
+      project.handoff_root,
+    ]) {
+      const dirPath = path.join(context.workspacePath, relativePath);
+      if (!fs.existsSync(dirPath) || !fs.statSync(dirPath).isDirectory()) {
+        if (apply) {
+          ensureDirectory(dirPath, createdDirectories);
+        } else {
+          createdDirectories.push(dirPath);
+        }
+      }
+    }
+  }
+
+  const written = apply
+    ? writeWorkspaceMetadata({
+        contracts,
+        workspacePath: context.workspacePath,
+        workspaceIndexPath: context.workspaceIndexPath,
+        existingIndex: context.index,
+        agent: context.agent,
+        profile: context.profile,
+        profileId: context.profileId,
+        projects: context.projects,
+        updatedAt,
+      })
+    : null;
+  const doctor = apply
+    ? doctorWorkspace(contracts, { workspacePath: context.workspacePath }).workspace_doctor
+    : null;
+
+  return {
+    version: 'g2',
+    contracts_context: {
+      contracts_dir: contracts.contractsDir,
+      contracts_root_source: contracts.contractsRootSource,
+    },
+    workspace_upgrade: {
+      surface_kind: 'opl_workspace_upgrade',
+      status: apply ? (doctor?.status === 'passed' ? 'applied' : 'applied_with_blockers') : 'dry_run_ready',
+      dry_run: !apply,
+      write_allowed: apply,
+      workspace_path: context.workspacePath,
+      workspace_index_path: context.workspaceIndexPath,
+      workspace_map_path: path.join(context.workspacePath, WORKSPACE_MAP_REF),
+      workspace_health_path: path.join(context.workspacePath, WORKSPACE_HEALTH_REF),
+      would_or_did_create_directories: createdDirectories,
+      written_generated_files: written?.writtenGeneratedFiles ?? [],
+      blockers_after_apply: doctor?.blockers ?? [],
+      authority_boundary: {
+        upgrade_moves_project_roots: false,
+        upgrade_writes_domain_truth: false,
+        upgrade_changes_domain_artifact_bodies: false,
+      },
+    },
+  };
+}
+
+export function archiveWorkspaceProject(
+  contracts: FrameworkContracts,
+  options: WorkspaceLifecycleOptions,
+) {
+  const context = readValidatedWorkspaceIndex(options.workspacePath);
+  const projectId = normalizeOptionalString(options.projectId);
+  if (!projectId) {
+    throw new FrameworkContractError('cli_usage_error', 'workspace project archive requires --project-id.', {
+      required: ['--project-id'],
+    });
+  }
+  const existingProject = context.projects.find((project) => project.project_id === projectId);
+  if (!existingProject) {
+    throw new FrameworkContractError('contract_shape_invalid', 'workspace project archive requires an indexed project.', {
+      project_id: projectId,
+      indexed_project_ids: context.projects.map((project) => project.project_id),
+    });
+  }
+  const apply = options.apply === true && options.dryRun !== true;
+  const updatedAt = new Date().toISOString();
+  const projects = context.projects.map((project) => (
+    project.project_id === projectId
+      ? {
+          ...project,
+          lifecycle: {
+            status: 'archived' as const,
+            archived_at: updatedAt,
+            archive_reason: normalizeOptionalString(options.reason),
+          },
+        }
+      : project
+  ));
+  const written = apply
+    ? writeWorkspaceMetadata({
+        contracts,
+        workspacePath: context.workspacePath,
+        workspaceIndexPath: context.workspaceIndexPath,
+        existingIndex: context.index,
+        agent: context.agent,
+        profile: context.profile,
+        profileId: context.profileId,
+        projects,
+        updatedAt,
+      })
+    : null;
+
+  return {
+    version: 'g2',
+    contracts_context: {
+      contracts_dir: contracts.contractsDir,
+      contracts_root_source: contracts.contractsRootSource,
+    },
+    workspace_project_archive: {
+      surface_kind: 'opl_workspace_project_archive',
+      status: apply ? 'applied' : 'dry_run_ready',
+      dry_run: !apply,
+      write_allowed: apply,
+      workspace_path: context.workspacePath,
+      workspace_index_path: context.workspaceIndexPath,
+      project_id: projectId,
+      project_root: existingProject.project_root,
+      lifecycle: projects.find((project) => project.project_id === projectId)?.lifecycle,
+      written_generated_files: written?.writtenGeneratedFiles ?? [],
+      authority_boundary: {
+        archive_deletes_files: false,
+        archive_archives_registry_binding: false,
+        archive_writes_domain_truth: false,
+      },
+    },
+  };
+}
+
+export function exportWorkspaceMap(
+  contracts: FrameworkContracts,
+  options: WorkspaceValidationOptions,
+) {
+  const context = readValidatedWorkspaceIndex(options.workspacePath);
+  const updatedAt = indexUpdatedAt(context.index);
+  return {
+    version: 'g2',
+    contracts_context: {
+      contracts_dir: contracts.contractsDir,
+      contracts_root_source: contracts.contractsRootSource,
+    },
+    workspace_map: buildWorkspaceMap({
+      workspaceId: indexWorkspaceId(context.index, context.workspacePath),
+      title: indexTitle(context.index),
+      workspacePath: context.workspacePath,
+      agent: context.agent,
+      profile: context.profile,
+      projects: context.projects,
+      createdAt: indexCreatedAt(context.index, updatedAt),
+      updatedAt,
+    }),
+  };
+}
+
+export function workspaceHealth(
+  contracts: FrameworkContracts,
+  options: WorkspaceValidationOptions,
+) {
+  const context = readValidatedWorkspaceIndex(options.workspacePath);
+  const doctor = doctorWorkspace(contracts, options).workspace_doctor;
+  const updatedAt = doctor.checked_at;
+  return {
+    version: 'g2',
+    contracts_context: {
+      contracts_dir: contracts.contractsDir,
+      contracts_root_source: contracts.contractsRootSource,
+    },
+    workspace_health: buildWorkspaceHealth({
+      workspaceId: indexWorkspaceId(context.index, context.workspacePath),
+      title: indexTitle(context.index),
+      workspacePath: context.workspacePath,
+      agent: context.agent,
+      profile: context.profile,
+      projects: context.projects,
+      createdAt: indexCreatedAt(context.index, updatedAt),
+      updatedAt,
+      blockers: doctor.blockers,
+    }),
   };
 }

@@ -94,6 +94,11 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'workspace_validate',
       'workspace_doctor',
       'workspace_adopt_dry_run',
+      'workspace_adopt_apply',
+      'workspace_upgrade',
+      'workspace_project_archive',
+      'workspace_export_map',
+      'workspace_health',
     ]) {
       assert.ok(actions.has(actionId), `missing App action: ${actionId}`);
       assert.equal(actions.get(actionId)?.delegated_surface.startsWith('opl '), true);
@@ -138,6 +143,16 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.equal(actions.get('workspace_adopt_dry_run')?.delegated_surface, 'opl workspace adopt --dry-run');
     assert.equal(actions.get('workspace_adopt_dry_run')?.mutates, 'none_read_only');
     assert.equal(actions.get('workspace_adopt_dry_run')?.dry_run_supported, true);
+    assert.equal(actions.get('workspace_adopt_apply')?.delegated_surface, 'opl workspace adopt --apply');
+    assert.equal(actions.get('workspace_adopt_apply')?.mutates, 'opl_workspace_topology_projection');
+    assert.equal(actions.get('workspace_upgrade')?.delegated_surface, 'opl workspace upgrade');
+    assert.equal(actions.get('workspace_upgrade')?.mutates, 'opl_workspace_topology_projection');
+    assert.equal(actions.get('workspace_project_archive')?.delegated_surface, 'opl workspace project archive');
+    assert.equal(actions.get('workspace_project_archive')?.mutates, 'opl_workspace_project_lifecycle_projection');
+    assert.equal(actions.get('workspace_export_map')?.delegated_surface, 'opl workspace export-map');
+    assert.equal(actions.get('workspace_export_map')?.mutates, 'none_read_only');
+    assert.equal(actions.get('workspace_health')?.delegated_surface, 'opl workspace health');
+    assert.equal(actions.get('workspace_health')?.mutates, 'none_read_only');
     assert.deepEqual(actions.get('provider_scheduler_tick')?.payload_fields, ['force', 'limit', 'hydrate']);
     assert.equal(actions.get('provider_scheduler_tick')?.route_requires_domain_or_app_payload, true);
     assert.equal(actions.get('provider_scheduler_tick')?.can_submit_to_safe_action_shell, false);
@@ -344,6 +359,100 @@ test('app action execute owns settings, release channel, workspace root, and pro
     assert.equal(workspaceAdopt.delegated_surface, 'opl workspace adopt --dry-run');
     assert.equal(workspaceAdopt.result.workspace_adoption.write_allowed, false);
     assert.equal(workspaceAdopt.result.workspace_adoption.profile.profile_id, 'mas_portfolio');
+
+    const workspaceAdoptApply = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'workspace_adopt_apply',
+      '--payload',
+      JSON.stringify({
+        agent_id: 'rca',
+        workspace: path.join(workspaceRoot, 'visual-theme-a'),
+        project_id: 'deck-001',
+      }),
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+    }).app_action_execution;
+
+    assert.equal(workspaceAdoptApply.delegated_surface, 'opl workspace adopt --apply');
+    assert.equal(workspaceAdoptApply.result.workspace_adoption.status, 'applied');
+
+    const workspaceUpgrade = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'workspace_upgrade',
+      '--payload',
+      JSON.stringify({
+        workspace_path: path.join(workspaceRoot, 'visual-theme-a'),
+      }),
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+    }).app_action_execution;
+
+    assert.equal(workspaceUpgrade.delegated_surface, 'opl workspace upgrade');
+    assert.equal(workspaceUpgrade.result.workspace_upgrade.status, 'applied');
+
+    const workspaceProjectArchive = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'workspace_project_archive',
+      '--payload',
+      JSON.stringify({
+        workspace_path: path.join(workspaceRoot, 'visual-theme-a'),
+        project_id: 'deck-001',
+        reason: 'superseded',
+      }),
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+    }).app_action_execution;
+
+    assert.equal(workspaceProjectArchive.delegated_surface, 'opl workspace project archive');
+    assert.equal(workspaceProjectArchive.result.workspace_project_archive.lifecycle.status, 'archived');
+
+    const workspaceMap = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'workspace_export_map',
+      '--payload',
+      JSON.stringify({
+        workspace_path: path.join(workspaceRoot, 'visual-theme-a'),
+      }),
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+    }).app_action_execution;
+
+    assert.equal(workspaceMap.delegated_surface, 'opl workspace export-map');
+    assert.equal(workspaceMap.result.workspace_map.projects[0].lifecycle.status, 'archived');
+
+    const workspaceHealthAction = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'workspace_health',
+      '--payload',
+      JSON.stringify({
+        workspace_path: path.join(workspaceRoot, 'visual-theme-a'),
+      }),
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+    }).app_action_execution;
+
+    assert.equal(workspaceHealthAction.delegated_surface, 'opl workspace health');
+    assert.equal(workspaceHealthAction.result.workspace_health.status, 'passed');
 
     const provider = runCli([
       'app',

@@ -199,6 +199,10 @@ test('help advertises initialize and environment management command surfaces', (
   assert.equal(commands.includes('workspace validate'), true);
   assert.equal(commands.includes('workspace doctor'), true);
   assert.equal(commands.includes('workspace adopt'), true);
+  assert.equal(commands.includes('workspace upgrade'), true);
+  assert.equal(commands.includes('workspace project archive'), true);
+  assert.equal(commands.includes('workspace export-map'), true);
+  assert.equal(commands.includes('workspace health'), true);
   assert.equal(commands.includes('workspace interfaces'), true);
 });
 

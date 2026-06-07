@@ -1,5 +1,13 @@
 import { FrameworkContractError } from './contracts.ts';
-import { adoptWorkspace, doctorWorkspace, validateWorkspace } from './workspace-diagnostics.ts';
+import {
+  adoptWorkspace,
+  archiveWorkspaceProject,
+  doctorWorkspace,
+  exportWorkspaceMap,
+  upgradeWorkspace,
+  validateWorkspace,
+  workspaceHealth,
+} from './workspace-diagnostics.ts';
 import { ensureWorkspace, initializeWorkspace } from './workspace-initializer.ts';
 import type { FrameworkContracts } from './types.ts';
 
@@ -64,6 +72,25 @@ function workspacePathPayload(payload: JsonRecord, actionId: string) {
   return workspacePath;
 }
 
+function workspaceProjectLifecyclePayload(payload: JsonRecord, actionId: string) {
+  const workspacePath = workspacePathPayload(payload, actionId);
+  const projectId = stringPayloadField(payload, 'project_id')
+    ?? stringPayloadField(payload, 'projectId')
+    ?? stringPayloadField(payload, 'deliverable_id')
+    ?? stringPayloadField(payload, 'study_id');
+  if (!projectId) {
+    throw new FrameworkContractError('cli_usage_error', `${actionId} action requires payload.project_id.`, {
+      action_id: actionId,
+      required: ['project_id'],
+    });
+  }
+  return {
+    workspacePath,
+    projectId,
+    reason: stringPayloadField(payload, 'reason') ?? undefined,
+  };
+}
+
 export function executeWorkspaceAppAction(
   contracts: FrameworkContracts,
   options: WorkspaceAppActionOptions,
@@ -112,6 +139,57 @@ export function executeWorkspaceAppAction(
       result: adoptWorkspace(contracts, {
         ...workspaceInitializePayload(options.payload, options.actionId),
         dryRun: true,
+      }),
+    };
+  }
+
+  if (options.actionId === 'workspace_adopt_apply') {
+    return {
+      delegatedSurface: 'opl workspace adopt --apply',
+      result: adoptWorkspace(contracts, {
+        ...workspaceInitializePayload(options.payload, options.actionId),
+        apply: options.dryRun !== true,
+        dryRun: options.dryRun === true,
+      }),
+    };
+  }
+
+  if (options.actionId === 'workspace_upgrade') {
+    return {
+      delegatedSurface: 'opl workspace upgrade',
+      result: upgradeWorkspace(contracts, {
+        workspacePath: workspacePathPayload(options.payload, options.actionId),
+        apply: options.dryRun !== true,
+        dryRun: options.dryRun === true,
+      }),
+    };
+  }
+
+  if (options.actionId === 'workspace_project_archive') {
+    return {
+      delegatedSurface: 'opl workspace project archive',
+      result: archiveWorkspaceProject(contracts, {
+        ...workspaceProjectLifecyclePayload(options.payload, options.actionId),
+        apply: options.dryRun !== true,
+        dryRun: options.dryRun === true,
+      }),
+    };
+  }
+
+  if (options.actionId === 'workspace_export_map') {
+    return {
+      delegatedSurface: 'opl workspace export-map',
+      result: exportWorkspaceMap(contracts, {
+        workspacePath: workspacePathPayload(options.payload, options.actionId),
+      }),
+    };
+  }
+
+  if (options.actionId === 'workspace_health') {
+    return {
+      delegatedSurface: 'opl workspace health',
+      result: workspaceHealth(contracts, {
+        workspacePath: workspacePathPayload(options.payload, options.actionId),
       }),
     };
   }

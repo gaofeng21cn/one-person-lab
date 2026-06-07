@@ -9,6 +9,13 @@ import {
 import { readOplWorkspaceRoot } from './system-preferences.ts';
 import type { AgentWorkspaceNormContract, FrameworkContracts } from './types.ts';
 import {
+  buildWorkspaceLifecycle,
+  materializeWorkspaceGeneratedArtifacts,
+  normalizeWorkspaceProjectEntry,
+  WORKSPACE_HEALTH_REF,
+  WORKSPACE_MAP_REF,
+} from './workspace-artifacts.ts';
+import {
   buildCanonicalTopology,
   buildSharedResources,
   buildWorkspaceDisplayLabels,
@@ -199,14 +206,7 @@ function normalizeExistingProjects(projects: unknown) {
   }
   return projects
     .filter(isRecord)
-    .map((project) => ({
-      project_id: String(project.project_id),
-      project_root: String(project.project_root),
-      stage_outputs_root: String(project.stage_outputs_root),
-      control_root: String(project.control_root),
-      review_root: String(project.review_root),
-      handoff_root: String(project.handoff_root),
-    }))
+    .map((project) => normalizeWorkspaceProjectEntry(project))
     .filter((project) => project.project_id.trim().length > 0);
 }
 
@@ -253,7 +253,7 @@ function yamlList(values: string[], indent: string) {
   return values.map((value) => `${indent}- ${yamlScalar(value)}`);
 }
 
-function buildWorkspaceYaml(input: {
+export function buildWorkspaceYaml(input: {
   workspaceId: string;
   title: string | null;
   agent: WorkspaceAgentProfile;
@@ -371,7 +371,12 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
           initializer_command: contracts.agentWorkspaceNorm.explicit_initialization.command,
           validator_command: 'opl workspace validate',
           doctor_command: 'opl workspace doctor',
-          adopt_command: 'opl workspace adopt --dry-run',
+          adopt_dry_run_command: 'opl workspace adopt --dry-run',
+          adopt_apply_command: 'opl workspace adopt --apply',
+          upgrade_command: 'opl workspace upgrade --apply',
+          project_archive_command: 'opl workspace project archive --apply',
+          export_map_command: 'opl workspace export-map',
+          health_command: 'opl workspace health',
           usage:
             'opl workspace ensure --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio]',
         },
@@ -388,8 +393,28 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
           },
           adopt: {
             command: 'opl workspace adopt',
-            role: 'dry_run_existing_directory_adoption_plan',
-            required_inputs: ['agent_id', 'workspace_path', 'dry_run'],
+            role: 'plan_or_apply_existing_directory_adoption',
+            required_inputs: ['agent_id', 'workspace_path', 'dry_run_or_apply'],
+          },
+          upgrade: {
+            command: 'opl workspace upgrade',
+            role: 'refresh_opl_metadata_manifests_map_and_health',
+            required_inputs: ['workspace_path', 'dry_run_or_apply'],
+          },
+          project_archive: {
+            command: 'opl workspace project archive',
+            role: 'mark_indexed_project_archived_without_deleting_files',
+            required_inputs: ['workspace_path', 'project_id', 'dry_run_or_apply'],
+          },
+          export_map: {
+            command: 'opl workspace export-map',
+            role: 'read_only_workspace_map_projection',
+            required_inputs: ['workspace_path'],
+          },
+          health: {
+            command: 'opl workspace health',
+            role: 'read_only_structure_health_projection',
+            required_inputs: ['workspace_path'],
           },
         },
         mcp: {
@@ -401,6 +426,11 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
             validate: 'opl workspace validate',
             doctor: 'opl workspace doctor',
             adopt_dry_run: 'opl workspace adopt --dry-run',
+            adopt_apply: 'opl workspace adopt --apply',
+            upgrade: 'opl workspace upgrade --apply',
+            project_archive: 'opl workspace project archive --apply',
+            export_map: 'opl workspace export-map',
+            health: 'opl workspace health',
           },
         },
         skill: {
@@ -408,7 +438,7 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
           instruction:
             'Use this OPL-owned ensure action before MAS/MAG/RCA/OMA task execution; it reuses an active workspace binding or initializes the default topology.',
           management_instruction:
-            'Use workspace validate as the fail-closed gate, workspace doctor for user inspection blockers, and workspace adopt --dry-run before adopting an existing directory.',
+            'Use workspace validate as the fail-closed gate, workspace doctor for user inspection blockers, workspace adopt --dry-run before --apply, workspace upgrade --apply to refresh OPL projections, workspace project archive --apply to mark projects archived without deleting files, and export-map/health for user inspection.',
         },
         app: {
           action_id: contracts.agentWorkspaceNorm.default_workspace_precondition.app_action_id,
@@ -416,6 +446,11 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
           validator_action_id: 'workspace_validate',
           doctor_action_id: 'workspace_doctor',
           adopt_dry_run_action_id: 'workspace_adopt_dry_run',
+          adopt_apply_action_id: 'workspace_adopt_apply',
+          upgrade_action_id: 'workspace_upgrade',
+          project_archive_action_id: 'workspace_project_archive',
+          export_map_action_id: 'workspace_export_map',
+          health_action_id: 'workspace_health',
           route: 'opl app action execute --action workspace_ensure --payload <json>',
         },
         openai: contracts.agentWorkspaceNorm.descriptor_delegates.openai,
@@ -425,7 +460,7 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
   };
 }
 
-function buildWorkspaceIndex(input: {
+export function buildWorkspaceIndex(input: {
   contracts: FrameworkContracts;
   workspaceId: string;
   workspacePath: string;
@@ -437,6 +472,7 @@ function buildWorkspaceIndex(input: {
   projectRootRef: string;
   stageOutputsRootRef: string;
   createdAt: string;
+  updatedAt: string;
   projects: WorkspaceProjectIndexEntry[];
 }) {
   return {
@@ -446,7 +482,16 @@ function buildWorkspaceIndex(input: {
     title: input.title,
     workspace_path: input.workspacePath,
     created_at: input.createdAt,
-    updated_at: input.createdAt,
+    updated_at: input.updatedAt,
+    workspace_lifecycle: buildWorkspaceLifecycle({}),
+    generated_refs: {
+      workspace_config_ref: 'workspace.yaml',
+      workspace_index_ref: 'workspace_index.json',
+      workspace_map_ref: WORKSPACE_MAP_REF,
+      workspace_health_ref: WORKSPACE_HEALTH_REF,
+      shared_resource_manifest_basename: 'opl_resource_manifest.json',
+      stage_outputs_manifest_basename: 'opl_stage_outputs_manifest.json',
+    },
     agent: {
       agent_id: input.agent.agent_id,
       label: input.agent.label,
@@ -525,6 +570,7 @@ export function initializeWorkspace(
   );
   const title = normalizeOptionalString(options.title);
   const createdAt = new Date().toISOString();
+  const updatedAt = createdAt;
   const projectRoot = path.join(workspacePath, profile.project_collection_path, projectId);
   const stageOutputsRoot = path.join(projectRoot, profile.project_stage_outputs_root);
   const projectRootRef = toWorkspaceRelative(workspacePath, projectRoot);
@@ -552,13 +598,15 @@ export function initializeWorkspace(
     projectRootRef,
     stageOutputsRootRef,
     createdAt,
+    updatedAt,
     projects: mergedProjects.projects,
   });
   if (existingIndex && typeof existingIndex.created_at === 'string') {
     workspaceIndex.created_at = existingIndex.created_at;
-    workspaceIndex.updated_at = createdAt;
+    workspaceIndex.updated_at = updatedAt;
   }
 
+  let writtenGeneratedFiles: string[] = [];
   if (!options.dryRun) {
     if (!existingIndex) {
       assertWritableMetadataPath(workspaceYamlPath, options.force);
@@ -590,6 +638,16 @@ export function initializeWorkspace(
       }),
     );
     fs.writeFileSync(workspaceIndexPath, `${JSON.stringify(workspaceIndex, null, 2)}\n`);
+    writtenGeneratedFiles = materializeWorkspaceGeneratedArtifacts({
+      workspaceId,
+      title,
+      workspacePath,
+      agent,
+      profile,
+      projects: mergedProjects.projects,
+      createdAt: workspaceIndex.created_at,
+      updatedAt: workspaceIndex.updated_at,
+    });
   }
 
   const shouldBind = options.bind !== false;
@@ -622,9 +680,12 @@ export function initializeWorkspace(
       workspace_id: workspaceId,
       workspace_config_path: workspaceYamlPath,
       workspace_index_path: workspaceIndexPath,
+      workspace_map_path: path.join(workspacePath, WORKSPACE_MAP_REF),
+      workspace_health_path: path.join(workspacePath, WORKSPACE_HEALTH_REF),
       project_root: projectRoot,
       project_stage_outputs_root: stageOutputsRoot,
       created_directories: createdDirectories,
+      written_generated_files: writtenGeneratedFiles,
       agent: {
         agent_id: agent.agent_id,
         label: agent.label,
@@ -645,8 +706,11 @@ export function initializeWorkspace(
         project_id: projectId,
         project_root: projectRootRef,
         stage_outputs_root: stageOutputsRootRef,
+        stage_outputs_manifest_ref: currentProject.stage_outputs_manifest_ref,
+        lifecycle: currentProject.lifecycle,
       },
       indexed_projects: mergedProjects.projects,
+      generated_refs: workspaceIndex.generated_refs,
       workspace_norm: workspaceIndex.workspace_norm,
       canonical_topology: workspaceIndex.canonical_topology,
       display_labels: workspaceIndex.display_labels,

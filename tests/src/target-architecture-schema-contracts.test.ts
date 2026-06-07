@@ -275,6 +275,7 @@ test('target architecture schema contracts keep owner delta root and audit tail 
   assert.equal(workspaceIndex.required.includes('canonical_topology'), true);
   assert.equal(workspaceIndex.required.includes('display_labels'), true);
   assert.equal(workspaceIndex.required.includes('shared_resources'), true);
+  assert.equal(workspaceIndex.required.includes('generated_refs'), true);
   assert.equal(
     workspaceIndex.$defs.canonical_topology.properties.workspace_unit.const,
     'workspace_group',
@@ -298,6 +299,22 @@ test('target architecture schema contracts keep owner delta root and audit tail 
   assert.equal(
     workspaceIndex.$defs.shared_resource.properties.domain_truth_owner.const,
     'domain_agent',
+  );
+  assert.equal(
+    workspaceIndex.$defs.shared_resource.required.includes('manifest_ref'),
+    true,
+  );
+  assert.equal(
+    workspaceIndex.$defs.project.required.includes('stage_outputs_manifest_ref'),
+    true,
+  );
+  assert.equal(
+    workspaceIndex.$defs.project.required.includes('lifecycle'),
+    true,
+  );
+  assert.deepEqual(
+    workspaceIndex.$defs.project.properties.lifecycle.properties.status.enum,
+    ['active', 'archived'],
   );
   assert.equal(
     workspaceIndex.$defs.runtime_state_boundary.properties.runtime_state_can_be_canonical_project_root.const,

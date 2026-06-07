@@ -20,9 +20,15 @@ export type WorkspaceProjectIndexEntry = {
   project_id: string;
   project_root: string;
   stage_outputs_root: string;
+  stage_outputs_manifest_ref: string;
   control_root: string;
   review_root: string;
   handoff_root: string;
+  lifecycle: {
+    status: 'active' | 'archived';
+    archived_at: string | null;
+    archive_reason: string | null;
+  };
 };
 
 export type WorkspaceCanonicalTopology = {
@@ -46,6 +52,7 @@ export type WorkspaceDisplayLabels = {
 export type WorkspaceSharedResourceEntry = {
   path: string;
   role: string;
+  manifest_ref: string;
   owner: 'workspace_group' | 'opl_framework_projection';
   user_visible: boolean;
   domain_truth_owner: 'domain_agent';
@@ -182,9 +189,15 @@ export function workspaceProjectEntry(
     project_id: projectId,
     project_root: projectRootRef,
     stage_outputs_root: stageOutputsRootRef,
+    stage_outputs_manifest_ref: `${stageOutputsRootRef}/opl_stage_outputs_manifest.json`,
     control_root: `${projectRootRef}/control`,
     review_root: `${projectRootRef}/review`,
     handoff_root: `${projectRootRef}/handoff`,
+    lifecycle: {
+      status: 'active',
+      archived_at: null,
+      archive_reason: null,
+    },
   };
 }
 
@@ -224,6 +237,7 @@ export function buildSharedResources(profile: TopologyProfile): WorkspaceSharedR
   return profile.shared_resource_roots.map((resourcePath) => ({
     path: resourcePath,
     role: SHARED_RESOURCE_ROLES[resourcePath] ?? 'shared_resource',
+    manifest_ref: `${resourcePath}/opl_resource_manifest.json`,
     owner: 'workspace_group',
     user_visible: true,
     domain_truth_owner: 'domain_agent',

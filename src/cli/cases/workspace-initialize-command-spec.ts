@@ -5,14 +5,19 @@ import {
 } from '../../workspace-initializer.ts';
 import {
   adoptWorkspace,
+  archiveWorkspaceProject,
   doctorWorkspace,
+  exportWorkspaceMap,
+  upgradeWorkspace,
   validateWorkspace,
+  workspaceHealth,
 } from '../../workspace-diagnostics.ts';
 import type { FrameworkContracts } from '../../types.ts';
 import {
   assertNoArgs,
   parseWorkspaceAdoptArgs,
   parseWorkspaceInitializeArgs,
+  parseWorkspaceLifecycleArgs,
   parseWorkspaceValidationArgs,
 } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
@@ -104,12 +109,12 @@ export function buildWorkspaceInitializeCommandSpecs(
     },
     'workspace adopt': {
       usage:
-        'opl workspace adopt --agent <mas|mag|rca|oma> --workspace <path> [--project-id <id>] [--mode auto|one_off|series|portfolio] --dry-run',
+        'opl workspace adopt --agent <mas|mag|rca|oma> --workspace <path> [--project-id <id>] [--mode auto|one_off|series|portfolio] [--dry-run|--apply]',
       summary:
-        'Plan how an existing directory would be adopted into the OPL workspace topology; dry-run only and does not write files.',
+        'Plan or apply OPL-owned workspace topology metadata and generated inspection refs for an existing directory without writing domain truth.',
       examples: [
         'opl workspace adopt --agent rca --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --dry-run',
-        'opl workspace adopt --agent mas --workspace /Users/gaofeng/workspace/dm-cvd --study-id DM002 --dry-run',
+        'opl workspace adopt --agent mas --workspace /Users/gaofeng/workspace/dm-cvd --study-id DM002 --apply',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceAdoptArgs(args, specs['workspace adopt']);
@@ -122,6 +127,71 @@ export function buildWorkspaceInitializeCommandSpecs(
           title: parsed.title,
           mode: parsed.mode,
           dryRun: parsed.dryRun,
+          apply: parsed.apply,
+        });
+      },
+    },
+    'workspace upgrade': {
+      usage: 'opl workspace upgrade --workspace <path> [--dry-run|--apply]',
+      summary:
+        'Refresh OPL-owned workspace metadata, manifests, map, and health refs in place without moving project roots.',
+      examples: [
+        'opl workspace upgrade --workspace /Users/gaofeng/workspace/visual-theme-a --dry-run',
+        'opl workspace upgrade --workspace /Users/gaofeng/workspace/visual-theme-a --apply',
+      ],
+      handler: (args) => {
+        const parsed = parseWorkspaceLifecycleArgs(args, specs['workspace upgrade']);
+        return upgradeWorkspace(getContracts(), {
+          workspacePath: parsed.workspacePath,
+          dryRun: parsed.dryRun,
+          apply: parsed.apply,
+        });
+      },
+    },
+    'workspace project archive': {
+      usage: 'opl workspace project archive --workspace <path> --project-id <id> [--reason <text>] [--dry-run|--apply]',
+      summary:
+        'Mark one indexed workspace project or study archived in workspace_index.json and generated maps without deleting files or archiving registry bindings.',
+      examples: [
+        'opl workspace project archive --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --apply',
+        'opl workspace project archive --workspace /Users/gaofeng/workspace/dm-cvd --study-id DM002 --reason superseded --dry-run',
+      ],
+      handler: (args) => {
+        const parsed = parseWorkspaceLifecycleArgs(args, specs['workspace project archive']);
+        return archiveWorkspaceProject(getContracts(), {
+          workspacePath: parsed.workspacePath,
+          projectId: parsed.projectId,
+          reason: parsed.reason,
+          dryRun: parsed.dryRun,
+          apply: parsed.apply,
+        });
+      },
+    },
+    'workspace export-map': {
+      usage: 'opl workspace export-map --workspace <path>',
+      summary:
+        'Export the machine-readable workspace map projection derived from workspace_index.json.',
+      examples: [
+        'opl workspace export-map --workspace /Users/gaofeng/workspace/visual-theme-a',
+      ],
+      handler: (args) => {
+        const parsed = parseWorkspaceValidationArgs(args, specs['workspace export-map']);
+        return exportWorkspaceMap(getContracts(), {
+          workspacePath: parsed.workspacePath,
+        });
+      },
+    },
+    'workspace health': {
+      usage: 'opl workspace health --workspace <path>',
+      summary:
+        'Return the structure-only workspace health projection derived from workspace doctor blockers.',
+      examples: [
+        'opl workspace health --workspace /Users/gaofeng/workspace/visual-theme-a',
+      ],
+      handler: (args) => {
+        const parsed = parseWorkspaceValidationArgs(args, specs['workspace health']);
+        return workspaceHealth(getContracts(), {
+          workspacePath: parsed.workspacePath,
         });
       },
     },

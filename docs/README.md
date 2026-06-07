@@ -59,6 +59,7 @@ Repo 角色按当前 App 边界固定读取：`one-person-lab` 是 framework/run
 - [OPL 开发文档组合整理](./active/development-document-portfolio.md)
 - [OPL Family 当前状态与理想目标差距](./active/current-state-vs-ideal-gap.md)
 - [OPL 与 Foundry Agents 理想目标态](./references/runtime-substrate/opl-family-agent-ideal-state.md)
+- [OPL 品牌模块理想态](./references/brand-modules/README.md)
 - [AI-first / executor-first 长期优化调研入口](./references/runtime-substrate/ai-first-executor-first-long-horizon-optimization.md)
 3. 专题支撑，只在触及对应 owner 时读取：
 - [OPL Runtime Manager 目标形态](./references/runtime-substrate/opl-runtime-manager-target.md)
@@ -129,6 +130,7 @@ OPL 系列项目开发的主参考是 [OPL 系列项目开发主参考](./active
 - [Runtime Substrate 参考索引](./references/runtime-substrate/README.md)
 - [OPL Runtime Manager 目标形态](./references/runtime-substrate/opl-runtime-manager-target.md)
 - [OPL stage-led agent framework roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md)
+- [OPL 品牌模块理想态](./references/brand-modules/README.md)
 - [AI-first / executor-first 长期优化调研入口](./references/runtime-substrate/ai-first-executor-first-long-horizon-optimization.md)
 - [当前支撑参考索引](./references/current-support/README.md)
 - [Operating governance 参考索引](./references/operating-governance/README.md)
