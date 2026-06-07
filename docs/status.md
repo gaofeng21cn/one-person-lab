@@ -105,6 +105,8 @@ rtk opl workspace interfaces --json
 
 默认阅读顺序是 owner-delta-first：先从 `current_owner_delta` 看等待哪个 owner、需要什么 deliverable delta / receipt / typed blocker，以及该等待是否阻断 readiness。OPL provider / transport safe action 只有在没有 current owner delta 时才可成为默认下一步。raw refs-only counters、provider worker / redrive / scheduler route、evidence envelope、stage replay packet、typed blocker group、private residue inventory 和历史 receipt 计数都只作 drilldown。
 
+`family-runtime provider-worker supervisor` 现在提供 provider worker process 的本机监督面：macOS 上安装 LaunchAgent 后由 `KeepAlive` / `RunAtLoad` 托管 resident Temporal foreground worker，并把 `--family-runtime-root` 绑定到当前 OPL state root。这个 supervisor 对齐 Temporal 的部署分层：Temporal Service 持有 workflow history、task queue、retry 和 activity timeout；Worker process 的存活由 deployment / supervisor 层保证，云端目标是 Kubernetes / systemd / container supervisor，本机目标是 launchd。旧 `provider-slo watchdog` 的 5 分钟 `StartInterval` tick 安装面已退役，安装新 supervisor 时会清理旧 `ai.opl.family-runtime.provider-slo` LaunchAgent。`provider-slo tick` 继续作为显式 health-check / production proof / fallback repair receipt，不作为主调度器、不消费 domain queue、不写 MAS/MAG/RCA truth、不生成 owner receipt 或 typed blocker，也不把 provider 恢复解释成 paper/grant/visual 进展。默认读面仍必须先看 current owner delta；supervisor 只负责让 OPL provider worker 不因进程退出而静默停止。
+
 ## 当前默认入口
 
 - 默认前门是 `opl`；`opl --help` / `opl help` 展示 OPL Framework 自有命令树，`opl exec` 负责一次性请求，`opl exec --help` 保留 Codex-compatible 执行器帮助边界，`opl resume` 负责续接会话。

@@ -445,7 +445,7 @@ export function buildPublicCommandSpecs(
     }),
     'family-runtime': cloneCommandSpec(commandSpecs['family-runtime'], {
       usage:
-        'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|intake|tick|enqueue|scheduler status|scheduler install|scheduler trigger|scheduler remove|scheduler tick|evidence-worklist|queue list|queue inspect|queue redrive|queue hold|queue release|queue retire|attempt list|attempt inspect|attempt query|attempt cancel|approve|notify list|events export [options]',
+        'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|provider-worker supervisor|intake|tick|enqueue|scheduler status|scheduler install|scheduler trigger|scheduler remove|scheduler tick|evidence-worklist|queue list|queue inspect|queue redrive|queue hold|queue release|queue retire|attempt list|attempt inspect|attempt query|attempt cancel|approve|notify list|events export [options]',
       examples: [
         'opl family-runtime status',
         'opl family-runtime repair',
@@ -453,6 +453,7 @@ export function buildPublicCommandSpecs(
         'opl family-runtime tick --source provider-cron --hydrate',
         'opl family-runtime lifecycle apply --mode dry-run --domain medautogrant --source-ref mag://cleanup/plan --action \'{"action_id":"mark-opl-tombstone","owner_scope":"opl_owned_tombstone_ref","target_ref":"opl://history/mag/tombstone"}\'',
         'opl family-runtime provider-slo tick --provider temporal',
+        'opl family-runtime provider-worker supervisor install --provider temporal',
         'opl family-runtime scheduler install --provider temporal',
         'opl family-runtime scheduler status --provider temporal',
         'opl family-runtime scheduler trigger --provider temporal',

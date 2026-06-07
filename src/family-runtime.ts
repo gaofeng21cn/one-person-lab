@@ -37,6 +37,7 @@ import {
   temporalProviderSloExecutionReceipt,
 } from './family-runtime-provider-proof-receipts.ts';
 import { runTemporalProviderSloTick } from './family-runtime-provider-slo-executor.ts';
+import { runProviderWorkerSupervisorCommand } from './family-runtime-provider-worker-supervisor.ts';
 import {
   familyRuntimePaths,
   inspectTask,
@@ -359,6 +360,12 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
         family_runtime_provider_slo_tick: await runTemporalProviderSloTick(db, paths, {
           force: parsed.force,
         }),
+      };
+    }
+    if (parsed.mode === 'provider_worker_supervisor') {
+      return {
+        version: 'g2',
+        family_runtime_provider_worker_supervisor: await runProviderWorkerSupervisorCommand(db, paths, parsed),
       };
     }
     if (parsed.mode === 'scheduler_tick') {

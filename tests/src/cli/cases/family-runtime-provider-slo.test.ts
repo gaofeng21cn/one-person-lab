@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import net from 'node:net';
 import { DatabaseSync } from 'node:sqlite';
 
-import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, createFakeLaunchctlFixture, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
 import {
   createFamilyRuntimeQueueTables,
   familyRuntimePaths,
@@ -357,6 +357,107 @@ db.close();`,
   });
   assert.equal(result.status, 0, result.stderr);
 }
+
+test('family-runtime provider-worker supervisor installs a KeepAlive resident Temporal worker', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-provider-worker-supervisor-home-'));
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-provider-worker-supervisor-state-'));
+  const launchctl = createFakeLaunchctlFixture();
+  const env = familyRuntimeEnv(stateRoot, {
+    HOME: homeRoot,
+    PATH: `${launchctl.fixtureRoot}:/usr/bin:/bin`,
+    OPL_TEMPORAL_ADDRESS: '127.0.0.1:7233',
+    TEMPORAL_ADDRESS: '',
+  });
+  try {
+    insertProvenTemporalProofEvent(stateRoot);
+    const legacyPlistPath = path.join(homeRoot, 'Library', 'LaunchAgents', 'ai.opl.family-runtime.provider-slo.plist');
+    fs.mkdirSync(path.dirname(legacyPlistPath), { recursive: true });
+    fs.writeFileSync(legacyPlistPath, '<plist><dict><key>StartInterval</key><integer>300</integer></dict></plist>');
+
+    const before = runCli([
+      'family-runtime',
+      'provider-worker',
+      'supervisor',
+      'status',
+      '--provider',
+      'temporal',
+    ], env).family_runtime_provider_worker_supervisor;
+
+    assert.equal(before.status, 'not_installed');
+    assert.equal(before.temporal_worker_dependency, true);
+    assert.equal(before.provider_scheduler_dependency, false);
+    assert.equal(before.authority_boundary.can_write_domain_truth, false);
+
+    const installed = runCli([
+      'family-runtime',
+      'provider-worker',
+      'supervisor',
+      'install',
+      '--provider',
+      'temporal',
+    ], env).family_runtime_provider_worker_supervisor;
+
+    assert.equal(installed.status, 'installed');
+    assert.equal(installed.provider_kind, 'temporal');
+    assert.equal(installed.supervisor_owner, 'opl_provider_runtime_manager');
+    assert.equal(installed.supervisor_role, 'provider_worker_process_supervisor');
+    assert.equal(installed.temporal_worker_dependency, true);
+    assert.equal(installed.provider_scheduler_dependency, false);
+    assert.equal(installed.keep_alive, true);
+    assert.equal(installed.run_at_load, true);
+    assert.equal(installed.resident_worker_process, true);
+    assert.equal(installed.primary_dispatcher, false);
+    assert.equal(installed.provider_slo_tick_is_fallback_health_check, true);
+    assert.equal(installed.command.join(' '), 'opl family-runtime worker start --provider temporal --foreground');
+    assert.equal(installed.environment_variables.OPL_FAMILY_RUNTIME_PROVIDER, 'temporal');
+    assert.equal(installed.environment_variables.OPL_STATE_DIR, stateRoot);
+    assert.equal(installed.environment_variables.PATH, `${launchctl.fixtureRoot}:/usr/bin:/bin`);
+    assert.equal(installed.health_check_command.join(' '), 'opl family-runtime provider-slo tick --provider temporal');
+    assert.equal(installed.legacy_watchdog_cleanup.removed, true);
+    assert.equal(fs.existsSync(legacyPlistPath), false);
+    assert.equal(installed.authority_boundary.can_execute_domain_action, false);
+    assert.equal(installed.authority_boundary.can_write_domain_truth, false);
+
+    const plist = fs.readFileSync(installed.plist_path, 'utf8');
+    assert.match(plist, /ai\.opl\.family-runtime\.provider-worker/);
+    assert.match(plist, /<key>KeepAlive<\/key>/);
+    assert.match(plist, /<key>RunAtLoad<\/key>/);
+    assert.match(plist, /family-runtime-temporal-provider/);
+    assert.match(plist, /--temporal-worker-foreground/);
+    assert.match(plist, /--family-runtime-root/);
+    assert.match(plist, /OPL_STATE_DIR/);
+    assert.match(plist, /<key>PATH<\/key>/);
+    assert.match(plist, new RegExp(stateRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.doesNotMatch(plist, /StartInterval/);
+    assert.doesNotMatch(plist, /<string>provider-slo<\/string>/);
+    assert.doesNotMatch(plist, /<string>tick<\/string>/);
+    assert.doesNotMatch(plist, /scheduler tick/);
+    assert.doesNotMatch(plist, /SchedulerTickWorkflow/);
+
+    const launchctlCalls = fs.readFileSync(launchctl.callsPath, 'utf8');
+    assert.match(launchctlCalls, /bootout gui\/\d+ .*ai\.opl\.family-runtime\.provider-slo\.plist/);
+    assert.match(launchctlCalls, /bootstrap gui\/\d+ .*ai\.opl\.family-runtime\.provider-worker\.plist/);
+
+    const trigger = runCli([
+      'family-runtime',
+      'provider-worker',
+      'supervisor',
+      'trigger',
+      '--provider',
+      'temporal',
+    ], env).family_runtime_provider_worker_supervisor;
+
+    assert.equal(trigger.status, 'triggered');
+    assert.equal(trigger.provider_slo_tick.surface_id, 'opl_family_runtime_provider_slo_tick');
+    assert.equal(trigger.provider_slo_tick.authority_boundary.can_write_domain_truth, false);
+    assert.equal(trigger.temporal_worker_dependency, true);
+    assert.equal(trigger.provider_scheduler_dependency, false);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(launchctl.fixtureRoot, { recursive: true, force: true });
+  }
+});
 
 test('family-runtime provider-slo tick executes production proof when provider SLO is due', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-slo-execute-'));

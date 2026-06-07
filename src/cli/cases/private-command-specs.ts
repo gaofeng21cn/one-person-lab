@@ -482,7 +482,7 @@ export function buildInternalCommandSpecs(
     },
     'family-runtime': {
       usage:
-        'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|intake|tick|enqueue|service start|service status|service stop|worker start|worker status|worker stop|scheduler install|scheduler status|scheduler trigger|scheduler remove|scheduler tick|evidence-worklist|residency proof|attempt create|attempt list|attempt inspect|attempt start|attempt cancel|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|queue redrive|queue hold|queue release|queue retire|approve|notify list|events export [options]',
+        'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|provider-worker supervisor|intake|tick|enqueue|service start|service status|service stop|worker start|worker status|worker stop|scheduler install|scheduler status|scheduler trigger|scheduler remove|scheduler tick|evidence-worklist|residency proof|attempt create|attempt list|attempt inspect|attempt start|attempt cancel|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|queue redrive|queue hold|queue release|queue retire|approve|notify list|events export [options]',
       summary:
         'Manage the provider-backed OPL family runtime queue, stage attempts, evidence worklist, notifications, approvals, and events.',
       examples: [
@@ -504,6 +504,8 @@ export function buildInternalCommandSpecs(
         'opl family-runtime provider repair --provider temporal',
         'opl family-runtime residency proof --provider temporal [--live|--production]',
         'opl family-runtime provider-slo tick --provider temporal',
+        'opl family-runtime provider-worker supervisor install --provider temporal',
+        'opl family-runtime provider-worker supervisor status --provider temporal',
         'opl family-runtime scheduler install --provider temporal',
         'opl family-runtime scheduler status --provider temporal',
         'opl family-runtime scheduler trigger --provider temporal',
