@@ -17,6 +17,131 @@ Date: `2026-05-29T02:20:00+0800`
 - 任何旧 tranche 中的 read-model 计数、branch/worktree 名称、验证命令、next write scope 或状态判断都只按当时语境阅读，不能作为当前 active truth、runtime truth、domain readiness、App release readiness、production readiness 或全局 `/goal` 完成证据。
 
 ## Archived Coverage Ledger
+Date: `2026-06-07 12:40 CST`
+Tranche: `mas-mds-absorb-meta-guard-retirement-and-family-audit-foldback`
+State: `tranche_verified`
+
+本轮延续全局 `/goal` 与 OPL family docs-governance cleanup 口径，系统复核
+OPL series 近期重构后的旧模块 / 接口 / 测试退役候选。执行口径是 target-state
+first：已有 current owner surface 替代且没有 active runtime caller 的旧面直接物理退役；
+仍缺 domain-owner physical delete authorization 的 broader default-caller surface 只记录为
+owner-decision tail，不用 compatibility shim、alias 或聚合测试保护旧实现。
+
+Fresh live truth inputs:
+
+- MAS root `main` 吸收退役提交 `e77bec8e refactor: retire mds absorb meta guards`，
+  删除 `src/med_autoscience/controllers/mds_retained_capability_absorb.py`、
+  `src/med_autoscience/controllers/mas_mds_absorb_governance.py`、
+  `tests/test_mds_retained_capability_absorb.py` 和
+  `tests/test_mas_mds_absorb_governance.py`。
+- MAS replacement owner 读作 `src/med_autoscience/controllers/mds_capability_parity.py`
+  与 `docs/references/med-deepscientist/source_provenance.json`；本轮把
+  `tests/test_mds_capability_parity.py` 扩展为 source provenance machine-readable
+  parity owner 检查。
+- MAS `contracts/foundry_agent_series.json` 由
+  `src/med_autoscience/opl_standard_pack.py` 生成并补齐
+  `workspace_topology_profile`，对齐 OPL current scaffold contract；这关闭了本轮
+  `make test-meta` 中暴露的 workspace topology scaffold blocker。
+- Fresh OPL default-caller readout：
+  `./bin/opl agents default-callers --family-defaults --json` 返回
+  `status=ready_domain_evidence_required`、`generated_default_caller_surface_count=32`、
+  `blocked_surface_count=0`、missing domain-owner / no-forbidden-write /
+  tombstone-provenance counts 均为 `0`，但
+  `default_caller_delete_ready=false`、
+  `physical_delete_authorized=false`、
+  `physical_delete_authorization_status=not_authorized_by_opl_projection`。
+- Subagent / main-session audit result for non-MAS lanes: MAG, RCA, OMA, App and
+  `opl-doc` produced no additional high-confidence physical-delete candidate in
+  this tranche. Their retained surfaces either still have active callers,
+  current owner-decision gates, explicit tombstone / negative guard roles, or
+  candidate / design-reference status.
+
+Fresh semantic result:
+
+- The two MAS MDS absorb governance modules were meta-only guard/materialization
+  surfaces after MDS had been reduced to source provenance, historical fixture,
+  explicit archive import, backend audit, upstream learning and parity oracle
+  reference. Active machine ownership now sits in MDS parity/source-provenance
+  surfaces, so keeping the old controllers/tests would create a second owner
+  signal rather than preserving useful runtime behavior.
+- The MAS cleanup did not delete MDS provenance itself. It removed obsolete
+  absorb-governance code and tests, then moved the machine-readable guarantee to
+  the current parity owner test and docs.
+- OPL default-caller structural evidence remains broader than this MAS deletion.
+  The family-level report can prove replacement/no-active-caller/no-forbidden /
+  tombstone-provenance prerequisites are observed, but it still cannot authorize
+  domain repo physical deletes. Remaining generated/default-caller tails require
+  explicit domain owner physical-delete authorization, keep-as-authority-adapter
+  decision, or typed blocker ref.
+
+Reviewed documents / sections:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | `AGENTS.md`, `TASTE.md`, `contracts/foundry_agent_series.json`, `src/med_autoscience/opl_standard_pack.py`, deleted MDS absorb governance modules/tests, `tests/test_mds_capability_parity.py`, `docs/architecture.md`, `docs/status.md`, `docs/policies/runtime-governance/mas_mds_owner_boundary_contract.md`, `docs/references/mds-parity/mds_capability_parity_matrix.md`, OPL scaffold validation output. | MAS commit `e77bec8e` touched 13 files; 2 obsolete modules and 2 obsolete tests were deleted. |
+| `one-person-lab` | Fresh `opl agents default-callers --family-defaults --json`, OPL scaffold contract / validation behavior, and this foldback ledger. OPL root checkout had concurrent scaffold/conformance dirty work, so ledger editing used an isolated worktree. | `docs/history/process/plans/2026-05-29-opl-active-development-portfolio-ledger-foldback.md` |
+| `med-autogrant` | Subagent audit of old domain runtime, gateway, local manager, host-agent, product/domain-handler and Hermes helper candidates. | none |
+| `redcube-ai` | Subagent audit of product-entry/session, domain action adapter, runtime records, hardening docs and retired guard tests. | none |
+| `opl-meta-agent` | Subagent audit plus earlier landed target-progress alias retirement; current scripts classified as active helpers/materializers. | none in this tranche |
+| `one-person-lab-app` | Subagent audit of manual build workflow, compatibility field references, and shell candidate boundary. | none |
+| `opl-doc` | Subagent audit of retired governance-skill naming and current doctor bootstrap role. | none |
+
+Archived / tombstoned / deleted source/tests:
+
+- MAS deleted `mds_retained_capability_absorb.py` and
+  `mas_mds_absorb_governance.py`.
+- MAS deleted `tests/test_mds_retained_capability_absorb.py` and
+  `tests/test_mas_mds_absorb_governance.py`.
+- No compatibility wrapper, alias, facade or no-op test was retained for those
+  deleted surfaces.
+
+Worktree / branch cleanup:
+
+- MAS implementation started in isolated worktree
+  `/Users/gaofeng/workspace/med-autoscience/.worktrees/mas-mds-meta-guard-retirement-20260607`
+  on branch `codex/mas-mds-meta-guard-retirement-20260607`.
+- Because MAS `main` had advanced to `67d6ca5c` after the worktree branch was
+  created, fast-forward absorb was impossible. The single verified retirement
+  commit `08394f5f` was cherry-picked onto MAS `main` as `e77bec8e`.
+- OPL ledger editing used isolated worktree
+  `/Users/gaofeng/workspace/one-person-lab/.worktrees/opl-family-ledger-mas-mds-retirement-20260607`
+  on branch `codex/opl-family-ledger-mas-mds-retirement-20260607` to avoid
+  touching concurrent OPL root checkout dirty files.
+
+Verification:
+
+- MAS worktree before absorb:
+  `scripts/run-pytest-clean.sh tests/test_mds_capability_parity.py tests/test_mds_truth_boundary.py tests/test_med_deepscientist_repo_manifest.py -q`
+  passed `17` tests; broader focused
+  `tests/test_mds_capability_parity.py tests/test_med_deepscientist_repo_manifest.py tests/test_workspace_contracts.py tests/test_backend_audit.py`
+  passed `33` tests; `make test-meta` passed `305` tests / `4344` deselected;
+  OPL scaffold validate passed with `blockers=[]`; `scripts/verify.sh` passed
+  smoke tests with only existing line-budget advisory.
+- MAS root after cherry-pick:
+  OPL scaffold validate passed with `blockers=[]`; focused MDS tests passed
+  `17` tests; `make test-meta` passed `305` tests / `4344` deselected;
+  `scripts/verify.sh` passed smoke tests with existing line-budget advisory for
+  `src/med_autoscience/controllers/owner_route_reconcile.py`.
+- Residual scan over MAS active `src tests docs contracts scripts` excluding
+  `docs/history/**` found no active references to
+  `mds_retained_capability_absorb`, `mas_mds_absorb_governance`,
+  `test_mds_retained_capability_absorb`,
+  `test_mas_mds_absorb_governance` or
+  `mas_mds_doc_reference_semantic_guard`.
+- `git diff --check` and strict conflict-marker scans passed for touched MAS
+  files and this OPL ledger worktree.
+
+Unreviewed docs / residual risk:
+
+- This tranche does not claim paragraph-level re-read of every OPL series
+  README/docs file. It records a focused cleanup tranche: all audited repos were
+  scanned for high-confidence obsolete module/interface/test candidates, and
+  only MAS had deletion-ready evidence.
+- Default-caller physical delete remains domain-owner gated even when OPL
+  structural prerequisites read as observed. Future cleanup must not treat
+  `blocked_surface_count=0`, missing evidence counts `0`, or OPL scaffold /
+  conformance pass as physical-delete authorization.
+
 Date: `2026-05-29 02:20 CST`
 Tranche: `opl-developer-mode-risk-tier-and-workspace-bind-currentness`
 State: `tranche_verified`
