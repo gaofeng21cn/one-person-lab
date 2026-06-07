@@ -47,22 +47,6 @@
       "reason": "reviewed historical agent-lab test file; scheduled structure maintenance continues behavior-case movement by feature axis",
       "intended_boundary": "agent lab tests should split by task manifest, recovery, efficiency, promotion, and completion behavior",
       "review_after": "2026-09-30"
-    },
-    {
-      "path": "tests/src/cli/cases/domain-pack-compiler.test.ts",
-      "limit": 1036,
-      "owner": "domain-pack-compiler-test-owner",
-      "reason": "reviewed historical domain-pack compiler CLI case; scheduled structure maintenance continues independent compiler scenario movement to case files",
-      "intended_boundary": "domain pack compiler tests should split by fixture, compiler contract, drift manifest, and real-repo smoke behavior",
-      "review_after": "2026-09-30"
-    },
-    {
-      "path": "tests/src/cli/cases/runtime-app-operator-drilldown.test.ts",
-      "limit": 1172,
-      "owner": "runtime-tray-app-test-owner",
-      "reason": "reviewed historical app drilldown CLI case; scheduled structure maintenance continues projection-specific test movement to scoped cases",
-      "intended_boundary": "app drilldown tests should split by detail, summary, action routes, provider evidence, domain payloads, and app release evidence",
-      "review_after": "2026-09-30"
     }
   ]
 }

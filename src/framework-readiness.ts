@@ -31,48 +31,21 @@ import { FRAMEWORK_READINESS_SOURCE_COMMANDS as SOURCE_COMMANDS } from './framew
 import { domainBlockedTypedBlockerAttention } from './framework-readiness-typed-blocker-attention.ts';
 import { buildOwnerDeltaHandoffSummaryFromFrameworkReadiness, OWNER_DELTA_HANDOFF_TAXONOMY, ownerDeltaHandoffFrameworkReadinessSection } from './framework-readiness-owner-delta-handoff-summary.ts';
 import { buildCurrentOwnerDeltaTopline } from './current-owner-delta-topline.ts';
-
-type JsonRecord = Record<string, unknown>;
+import {
+  booleanValue,
+  countValue,
+  type JsonRecord,
+  numberValue,
+  record,
+  recordList,
+  stringValue,
+} from './framework-readiness-values.ts';
 
 type FrameworkReadinessInput = {
   familyDefaults: boolean;
 };
 
 const FRAMEWORK_READINESS_MANIFEST_COMMAND_TIMEOUT_MS = 5_000;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function numberValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-}
-
-function countValue(value: unknown) {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value;
-  }
-  if (isRecord(value)) {
-    return numberValue(value.value);
-  }
-  return 0;
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-function booleanValue(value: unknown) {
-  return typeof value === 'boolean' ? value : false;
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
 
 function routeIsProviderWorkerMutationGuarded(route: JsonRecord) {
   return stringValue(route.route_status) === 'blocked_by_provider_worker_mutation_guard'
