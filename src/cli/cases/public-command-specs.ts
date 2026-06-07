@@ -42,6 +42,10 @@ import {
   buildAgentInternalBrandModulesList,
   buildAgentInternalBrandModuleValidation,
 } from '../../brand-modules.ts';
+import {
+  FOUNDRY_AGENT_OPERATIONS,
+  buildFoundryAgentCliSpine,
+} from '../../foundry-agent-cli-spine.ts';
 import { buildAgentReadinessSummary } from '../../agent-readiness.ts';
 import { buildStandardDomainAgentConformanceReport } from '../../standard-domain-agent-conformance.ts';
 import { agentsEvidenceApplySpec } from './agent-evidence-command-spec.ts';
@@ -211,6 +215,20 @@ export function buildPublicCommandSpecs(
     ...buildBrandModuleSurfaceSpecs('connect'),
   };
 
+  const foundryAgentCommandSpecs: Record<string, CommandSpec> = Object.fromEntries(
+    FOUNDRY_AGENT_OPERATIONS.map((operation) => {
+      const command = `agents foundry ${operation}`;
+      const spec: CommandSpec = {
+        usage: `opl ${command}`,
+        summary: `Read the Foundry Agent series ${operation} spine for OPL-generated agent CLIs, skills, MCP descriptors, and App action projections.`,
+        examples: [`opl ${command} --json`],
+        group: 'foundry',
+        handler: (args) => buildFoundryAgentCliSpine(operation, args),
+      };
+      return [command, spec];
+    }),
+  );
+
   const connectPackagesManifestSpec = buildNoArgSpec(
     {
       usage: 'opl connect packages manifest',
@@ -335,6 +353,7 @@ export function buildPublicCommandSpecs(
       },
     },
     ...brandModuleSurfaceSpecs,
+    ...foundryAgentCommandSpecs,
     'connect modules': buildNoArgSpec(
       {
         usage: 'opl connect modules',

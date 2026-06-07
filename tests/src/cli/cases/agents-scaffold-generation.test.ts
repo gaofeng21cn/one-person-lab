@@ -73,6 +73,63 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(foundryAgentSeries.surface_kind, 'opl_foundry_agent_series_contract');
     assert.equal(foundryAgentSeries.version, 'foundry-agent-series.v1');
     assert.equal(
+      foundryAgentSeries.framework_brand_taxonomy_policy.agent_cli_public_frontdoor_role,
+      'foundry_agent_series_spine',
+    );
+    assert.deepEqual(foundryAgentSeries.framework_brand_taxonomy_policy.top_level_modules, [
+      'charter',
+      'atlas',
+      'workspace',
+      'stagecraft',
+      'runway',
+      'vault',
+      'console',
+      'foundry-lab',
+      'connect',
+    ]);
+    assert.equal(
+      foundryAgentSeries.framework_brand_taxonomy_policy.agent_cli_must_not_replicate_top_level_modules_as_series_spine,
+      true,
+    );
+    assert.equal(
+      foundryAgentSeries.agent_cli_frontdoor_policy.policy_id,
+      'foundry_agent_series_spine_public_frontdoor',
+    );
+    assert.deepEqual(foundryAgentSeries.agent_cli_frontdoor_policy.ordinary_public_frontdoor_spine, [
+      'workspace',
+      'work',
+      'stage',
+      'run',
+      'vault',
+      'handoff',
+      'connect',
+    ]);
+    assert.deepEqual(foundryAgentSeries.agent_cli_frontdoor_policy.required_public_surface_derivatives, [
+      'cli',
+      'skill',
+      'mcp',
+      'app_action',
+    ]);
+    assert.equal(
+      foundryAgentSeries.legacy_implementation_bucket_retirement_policy.ordinary_public_frontdoor_allowed,
+      false,
+    );
+    assert.ok(
+      foundryAgentSeries.legacy_implementation_bucket_retirement_policy.retired_bucket_prefixes.includes('skill'),
+    );
+    assert.equal(
+      foundryAgentSeries.skill_mcp_surface_policy.skill_pack_must_delegate_to_series_spine,
+      true,
+    );
+    assert.equal(
+      foundryAgentSeries.skill_mcp_surface_policy.mcp_descriptor_must_delegate_to_series_spine,
+      true,
+    );
+    assert.equal(
+      foundryAgentSeries.skill_mcp_surface_policy.canonical_skill_sync_frontdoor,
+      'opl connect sync-skills',
+    );
+    assert.equal(
       foundryAgentSeries.contract_version_policy.current_version,
       'foundry-agent-series.v1',
     );

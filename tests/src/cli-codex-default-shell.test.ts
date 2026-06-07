@@ -398,6 +398,15 @@ exit 0
 test('installed opl launcher routes family discovery commands to OPL instead of Codex passthrough', () => {
   const commandMatrix = [
     {
+      args: ['agents', 'foundry', 'status'],
+      assertPayload: (payload: Record<string, unknown>) => {
+        assert.equal(
+          (payload.foundry_agent_cli_spine as { canonical_frontdoor: string }).canonical_frontdoor,
+          'opl agents foundry',
+        );
+      },
+    },
+    {
       args: ['agents', 'list'],
       assertPayload: (payload: Record<string, unknown>) => {
         assert.equal(
@@ -522,6 +531,10 @@ test('opl connect skills discovers the family plugin packs through the configure
     assert.equal(metaPack?.source_kind, 'opl_generated_plugin_surface');
     assert.equal(metaPack?.ready_to_sync, true);
     assert.deepEqual(metaPack?.command_preview?.slice(0, 3), ['opl', 'agents', 'interfaces']);
+    assert.equal(metaPack?.foundry_agent_series?.canonical_frontdoor, 'opl agents foundry');
+    assert.equal(metaPack?.frontdoor_spine?.skill_sync_frontdoor, 'opl connect sync-skills');
+    assert.equal(metaPack?.mcp_projection?.mcp_descriptor_must_delegate_to_series_spine, true);
+    assert.equal(metaPack?.legacy_implementation_bucket_policy?.ordinary_public_frontdoor_allowed, false);
     const previewOutput = runCli(metaPack.command_preview.slice(1), {
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
       OPL_STATE_DIR: stateDir,
@@ -613,7 +626,8 @@ test('opl connect skills prefers managed roots over Full runtime module path ove
     assert.equal(output.skill_catalog.summary.ready_to_sync, 1);
     assert.equal(output.skill_catalog.packs[0].domain_id, 'redcube');
     assert.equal(output.skill_catalog.packs[0].repo_root, path.join(managedModulesRoot, 'redcube-ai'));
-    assert.deepEqual(output.skill_catalog.packs[0].command_preview, ['opl', 'skill', 'sync', '--domain', 'redcube']);
+    assert.deepEqual(output.skill_catalog.packs[0].command_preview, ['opl', 'connect', 'sync-skills', '--domain', 'redcube']);
+    assert.equal(output.skill_catalog.packs[0].foundry_agent_series.canonical_frontdoor, 'opl agents foundry');
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -948,6 +962,8 @@ test('help text advertises Codex and Connect as default entries without retired 
   assert.equal(commands.some((entry) => entry.command === 'shell'), false);
   assert.equal(commands.some((entry) => entry.command === 'connect skills'), true);
   assert.equal(commands.some((entry) => entry.command === 'connect sync-skills'), true);
+  assert.equal(commands.some((entry) => entry.command === 'agents foundry status'), true);
+  assert.equal(commands.some((entry) => entry.command === 'agents foundry peers'), true);
   assert.equal(commands.some((entry) => entry.command === 'skill list'), false);
   assert.equal(commands.some((entry) => entry.command === 'skill sync'), false);
 });

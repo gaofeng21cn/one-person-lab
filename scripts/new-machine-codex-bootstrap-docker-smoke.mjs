@@ -40,6 +40,12 @@ for (const id of wanted) {
   if (!pack.ready_to_sync) {
     throw new Error('not ready_to_sync ' + id + ': ' + JSON.stringify(pack));
   }
+  if (pack.foundry_agent_series?.canonical_frontdoor !== 'opl agents foundry') {
+    throw new Error('missing Foundry Agent series frontdoor for ' + id);
+  }
+  if (pack.mcp_projection?.mcp_descriptor_must_delegate_to_series_spine !== true) {
+    throw new Error('missing Foundry MCP delegate projection for ' + id);
+  }
 }
 
 const sync = JSON.parse(fs.readFileSync('/tmp/opl-connect-sync-skills.json', 'utf8'));

@@ -42,6 +42,8 @@ test('public and internal command specs no longer carry removed UI adapter comma
   assert.equal(typeof publicSpecs['connect sync-skills'].handler, 'function');
   assert.equal(typeof publicSpecs['connect packages manifest'].handler, 'function');
   assert.equal(typeof publicSpecs['connect reconcile-modules'].handler, 'function');
+  assert.equal(typeof publicSpecs['agents foundry status'].handler, 'function');
+  assert.equal(typeof publicSpecs['agents foundry peers'].handler, 'function');
   assert.equal(typeof publicSpecs['engine install'].handler, 'function');
   assert.equal(publicSpecs['service install'], undefined);
 });
@@ -200,12 +202,17 @@ test('default help advertises Connect canonical installation surfaces while reti
   assert.equal(commands.includes('connect sync-skills'), true);
   assert.equal(commands.includes('connect packages manifest'), true);
   assert.equal(commands.includes('connect reconcile-modules'), true);
+  assert.equal(commands.includes('agents foundry status'), true);
+  assert.equal(commands.includes('agents foundry interfaces'), true);
+  assert.equal(commands.includes('agents foundry peers'), true);
   assert.equal(commands.includes('modules'), false);
   assert.equal(commands.includes('module install'), false);
   assert.equal(commands.includes('skill sync'), false);
   assert.equal(commands.includes('packages manifest'), false);
   assert.match(examples, /opl connect install --module medautoscience/);
   assert.match(examples, /opl connect sync-skills/);
+  assert.match(examples, /opl agents foundry status/);
+  assert.match(examples, /opl agents foundry peers/);
   assert.doesNotMatch(examples, /opl module install --module medautoscience/);
   assert.doesNotMatch(examples, /opl skill sync/);
 

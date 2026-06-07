@@ -17,6 +17,12 @@ test('OPL system skill sync catalog excludes MAS/MDS project-local stage skills'
   assert.equal(domainIds.includes('meddeepscientist'), false);
   assert.equal(pluginNames.includes('deepscientist'), false);
   assert.equal(pluginNames.includes('opl-meta-agent'), true);
+  for (const pack of catalog.packs) {
+    assert.equal(pack.foundry_agent_series.canonical_frontdoor, 'opl agents foundry');
+    assert.equal(pack.frontdoor_spine.skill_sync_frontdoor, 'opl connect sync-skills');
+    assert.equal(pack.mcp_projection.mcp_descriptor_must_delegate_to_series_spine, true);
+    assert.equal(pack.legacy_implementation_bucket_policy.ordinary_public_frontdoor_allowed, false);
+  }
 });
 
 test('OPL Codex plugin registry removes standalone family MCP server blocks', () => {

@@ -19,6 +19,18 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `L5` 需要真实用户路径、跨 agent scaleout、长跑/恢复 evidence、release/install evidence、运维闭环和 owner acceptance。docs foldback、conformance pass、provider completion、verified ledger 或 App projection 只能作为输入，不能单独形成 L5 结论。
 - `Charter / Atlas / Runway / Vault` 是下一轮 L3/L4 优先补强对象；`Console / Foundry Lab / Connect` 的成熟度必须绑定 App release/user-path、agent improvement loop、install/release drift matrix 和真实 owner evidence。
 
+### 决策：Foundry Agent CLI 使用系列 spine，不复制 OPL 九模块
+
+原因：基于 OPL 的智能体需要让用户明确看出“这是同一系列”，但智能体 CLI 的心智模型不应再暴露 OPL Framework 的旧实现桶，也不应把九个 framework brand module 原样复制到每个 agent。九模块是 OPL Framework 顶层 taxonomy；Foundry Agent 的普通入口应围绕用户实际执行链路组织成 series spine。
+
+影响：
+
+- `opl agents foundry status|inspect|interfaces|validate|doctor|peers` 成为 Foundry Agent series 的普通 CLI frontdoor，表达 `workspace -> work -> stage -> run -> vault -> handoff -> connect` 的同源执行链。
+- `contracts/opl-framework/foundry-agent-series-contract.json` 固定 `agent_cli_frontdoor_policy`、`skill_mcp_surface_policy` 和 `legacy_implementation_bucket_retirement_policy`；新 scaffold 生成的 `contracts/foundry_agent_series.json` 必须继承这些字段。
+- `opl connect skills` / `opl connect sync-skills` 输出同一 series contract 派生的 `foundry_agent_series`、`frontdoor_spine`、`mcp_projection` 和旧桶退役策略，Skill/MCP 不再另起一套解释。
+- 旧 `skill`、`module/modules`、`packages`、`engine` 等实现桶作为普通入口已退役并 fail closed 到 Connect；`runtime`、`family-runtime`、`index`、`stage-artifact` 等只能作为诊断、迁移或内部治理读面，不构成 Foundry Agent 用户 frontdoor。
+- 该 series spine 只声明 CLI/Skill/MCP/App action 的同源暴露面，不写 domain truth、不生成 owner receipt / typed blocker、不声明 domain ready、quality/export ready、artifact ready 或 production ready。
+
 ## 2026-06-06
 
 ### 决策：domain owner-delta closeout binding 可作为 StageRun owner-answer identity 输入

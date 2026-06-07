@@ -187,3 +187,35 @@ test('agent-owned internal modules expose the same branding spine without becomi
   assert.equal(doctor.surface_kind, 'opl_agent_internal_brand_module_doctor');
   assert.equal(doctor.status, 'pass');
 });
+
+test('Foundry Agent series exposes a shared CLI spine instead of copying the nine OPL modules into each agent', () => {
+  for (const operation of ['status', 'inspect', 'interfaces', 'validate', 'doctor', 'peers']) {
+    const output = runCli(['agents', 'foundry', operation]).foundry_agent_cli_spine;
+
+    assert.equal(output.series_id, 'opl_foundry_agent_series.v1');
+    assert.equal(output.series_label, 'OPL Foundry Agent');
+    assert.equal(output.operation, operation);
+    assert.equal(output.canonical_frontdoor, 'opl agents foundry');
+    assert.equal(output.status, operation === 'doctor' ? 'pass' : 'valid');
+    assert.equal(output.frontdoor_policy.agent_cli_uses_foundry_series_spine, true);
+    assert.equal(output.frontdoor_policy.agent_cli_does_not_replicate_opl_nine_brand_modules, true);
+    assert.equal(output.frontdoor_policy.old_implementation_buckets_are_not_ordinary_frontdoors, true);
+    assert.deepEqual(
+      output.spine.map((entry: { object: string }) => entry.object),
+      ['workspace', 'work', 'stage', 'run', 'vault', 'handoff', 'connect'],
+    );
+    assert.deepEqual(
+      output.peers.map((entry: { agent_id: string }) => entry.agent_id),
+      ['mas', 'mag', 'rca', 'oma'],
+    );
+    assert.equal(output.authority_boundary.generated_surface_can_write_domain_truth, false);
+    assert.equal(output.authority_boundary.generated_surface_can_create_owner_receipt, false);
+    assert.equal(output.mcp_and_skill_policy.skill_pack_must_delegate_to_series_spine, true);
+    assert.equal(output.mcp_and_skill_policy.mcp_descriptor_must_delegate_to_series_spine, true);
+    assert.equal(output.mcp_and_skill_policy.expose_legacy_buckets_as_diagnostic_or_migration_only, true);
+    assert.equal(
+      output.retired_implementation_buckets.some((entry: { bucket: string }) => entry.bucket === 'skill'),
+      true,
+    );
+  }
+});

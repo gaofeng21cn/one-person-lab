@@ -43,6 +43,10 @@ type InspectFamilySkillPack = {
   label: string;
   plugin_name: string;
   canonical_plugin_name: string;
+  foundry_agent_series: Record<string, unknown>;
+  frontdoor_spine: Record<string, unknown>;
+  mcp_projection: Record<string, unknown>;
+  legacy_implementation_bucket_policy: Record<string, unknown>;
   plugin_source_path: string;
   repo_root: string;
   repo_found: boolean;
@@ -149,6 +153,13 @@ const DOMAIN_ALIAS_MAP = new Map<string, SkillPackSpec['domain_id']>([
   ['meta-agent', 'oplmetaagent'],
   ['meta_agent', 'oplmetaagent'],
 ]);
+
+const FOUNDRY_AGENT_SERIES_CONTRACT_REF = 'contracts/opl-framework/foundry-agent-series-contract.json';
+const FOUNDRY_AGENT_SERIES_CONTRACT_URL = new URL(
+  '../contracts/opl-framework/foundry-agent-series-contract.json',
+  import.meta.url,
+);
+let cachedFoundryAgentSeriesContract: Record<string, unknown> | null = null;
 
 function isDirectory(filePath: string) {
   return fs.existsSync(filePath) && fs.statSync(filePath).isDirectory();
@@ -305,11 +316,142 @@ function buildInstallerCommandPreview(
     return ['opl', 'agents', 'interfaces', '--repo-dir', repoRoot, '--format', 'skill'];
   }
 
-  return ['opl', 'skill', 'sync', '--domain', spec.domain_id];
+  return ['opl', 'connect', 'sync-skills', '--domain', spec.domain_id];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readFoundryAgentSeriesContract() {
+  if (!cachedFoundryAgentSeriesContract) {
+    const contract = JSON.parse(
+      fs.readFileSync(FOUNDRY_AGENT_SERIES_CONTRACT_URL, 'utf8'),
+    ) as unknown;
+    if (!isRecord(contract)) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Foundry Agent series contract must contain an object root.',
+        { file: FOUNDRY_AGENT_SERIES_CONTRACT_REF },
+      );
+    }
+    cachedFoundryAgentSeriesContract = contract;
+  }
+  return cachedFoundryAgentSeriesContract;
+}
+
+function readObjectField(source: Record<string, unknown>, field: string) {
+  const value = source[field];
+  if (!isRecord(value)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      `Foundry Agent series contract is missing object field: ${field}.`,
+      { file: FOUNDRY_AGENT_SERIES_CONTRACT_REF, field },
+    );
+  }
+  return value;
+}
+
+function readStringField(source: Record<string, unknown>, field: string) {
+  const value = source[field];
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      `Foundry Agent series contract is missing string field: ${field}.`,
+      { file: FOUNDRY_AGENT_SERIES_CONTRACT_REF, field },
+    );
+  }
+  return value.trim();
+}
+
+function readStringListField(source: Record<string, unknown>, field: string) {
+  const value = source[field];
+  if (!Array.isArray(value)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      `Foundry Agent series contract is missing string list field: ${field}.`,
+      { file: FOUNDRY_AGENT_SERIES_CONTRACT_REF, field },
+    );
+  }
+  return value.map((entry, index) => {
+    if (typeof entry !== 'string' || !entry.trim()) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        `Foundry Agent series contract is missing string field: ${field}[${index}].`,
+        { file: FOUNDRY_AGENT_SERIES_CONTRACT_REF, field: `${field}[${index}]` },
+      );
+    }
+    return entry.trim();
+  });
+}
+
+function readBooleanField(source: Record<string, unknown>, field: string) {
+  const value = source[field];
+  if (typeof value !== 'boolean') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      `Foundry Agent series contract is missing boolean field: ${field}.`,
+      { file: FOUNDRY_AGENT_SERIES_CONTRACT_REF, field },
+    );
+  }
+  return value;
+}
+
+function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
+  const contract = readFoundryAgentSeriesContract();
+  const frontdoor = readObjectField(contract, 'agent_cli_frontdoor_policy');
+  const skillMcp = readObjectField(contract, 'skill_mcp_surface_policy');
+  const retirement = readObjectField(contract, 'legacy_implementation_bucket_retirement_policy');
+  const versionPolicy = readObjectField(contract, 'contract_version_policy');
+  const policyRelease = readObjectField(contract, 'shared_policy_release');
+  const foundryAgentId = spec.canonical_plugin_name === 'opl-meta-agent' ? 'oma' : spec.canonical_plugin_name;
+
+  return {
+    foundry_agent_series: {
+      series_id: 'opl_foundry_agent_series.v1',
+      series_label: readStringField(frontdoor, 'agent_cli_series_label'),
+      foundry_agent_id: foundryAgentId,
+      domain_id: spec.domain_id,
+      canonical_frontdoor: readStringField(frontdoor, 'canonical_opl_frontdoor'),
+      product_model: readStringField(contract, 'product_model'),
+      series_contract_ref: FOUNDRY_AGENT_SERIES_CONTRACT_REF,
+      domain_contract_ref: readStringField(versionPolicy, 'domain_contract_ref'),
+      policy_release_ref: readStringField(policyRelease, 'policy_release_contract_ref'),
+    },
+    frontdoor_spine: {
+      surface_kind: 'opl_foundry_agent_skill_frontdoor_spine_projection',
+      ordinary_public_frontdoor_spine: readStringListField(frontdoor, 'ordinary_public_frontdoor_spine'),
+      ordinary_operations: readStringListField(frontdoor, 'ordinary_operations'),
+      required_public_surface_derivatives: readStringListField(frontdoor, 'required_public_surface_derivatives'),
+      skill_sync_frontdoor: readStringField(skillMcp, 'canonical_skill_sync_frontdoor'),
+      skill_inspect_frontdoor: readStringField(skillMcp, 'canonical_skill_connect_frontdoor'),
+      agent_cli_must_use_series_spine: readBooleanField(frontdoor, 'agent_cli_must_use_series_spine'),
+      agent_cli_must_not_replicate_top_level_modules: readBooleanField(
+        frontdoor,
+        'agent_cli_must_not_replicate_top_level_modules',
+      ),
+    },
+    mcp_projection: {
+      surface_kind: 'opl_foundry_agent_mcp_delegate_projection',
+      descriptor_ref: readStringField(skillMcp, 'canonical_mcp_projection_ref'),
+      mcp_descriptor_must_delegate_to_series_spine: readBooleanField(
+        skillMcp,
+        'mcp_descriptor_must_delegate_to_series_spine',
+      ),
+      legacy_standalone_mcp_servers_retired: readBooleanField(
+        skillMcp,
+        'legacy_standalone_mcp_servers_retired',
+      ),
+      plugin_registry_is_canonical_transport: true,
+    },
+    legacy_implementation_bucket_policy: {
+      surface_kind: 'opl_foundry_agent_legacy_bucket_policy_projection',
+      ordinary_public_frontdoor_allowed: readBooleanField(retirement, 'ordinary_public_frontdoor_allowed'),
+      replacement_frontdoor: readStringField(retirement, 'replacement_frontdoor'),
+      retired_bucket_prefixes: readStringListField(retirement, 'retired_bucket_prefixes'),
+      allowed_retained_read_surfaces: readStringListField(retirement, 'allowed_retained_read_surfaces'),
+    },
+  };
 }
 
 function recordList(value: unknown): Array<Record<string, unknown>> {
@@ -724,6 +866,7 @@ function inspectFamilySkillPackAtRepoRoot(
   const generatedSkillSurface = inspectGeneratedSkillSurface(spec, repoRoot);
   const repoPluginReady =
     repoFound && pluginManifestFound && skillEntryFound && skillEntryValidation.valid;
+  const seriesProjection = buildFoundryAgentSeriesProjection(spec);
 
   return {
     domain_id: spec.domain_id,
@@ -731,6 +874,7 @@ function inspectFamilySkillPackAtRepoRoot(
     label: spec.label,
     plugin_name: spec.plugin_name,
     canonical_plugin_name: spec.canonical_plugin_name,
+    ...seriesProjection,
     plugin_source_path: pluginSourcePath,
     repo_root: repoRoot,
     repo_found: repoFound,

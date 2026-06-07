@@ -499,6 +499,8 @@ test('help no longer advertises retired ask chat shell aliases', () => {
   assert.equal(commands.includes('shell'), false);
   assert.equal(commands.includes('connect skills'), true);
   assert.equal(commands.includes('connect sync-skills'), true);
+  assert.equal(commands.includes('agents foundry status'), true);
+  assert.equal(commands.includes('agents foundry peers'), true);
   assert.equal(commands.includes('skill list'), false);
   assert.equal(commands.includes('skill sync'), false);
   assert.equal(examples.some((entry) => entry.includes('opl ask')), false);
@@ -506,6 +508,7 @@ test('help no longer advertises retired ask chat shell aliases', () => {
   assert.equal(examples.some((entry) => entry.includes('opl shell')), false);
   assert.equal(examples.some((entry) => entry.includes('opl @')), false);
   assert.equal(examples.some((entry) => entry.includes('opl connect sync-skills')), true);
+  assert.equal(examples.some((entry) => entry.includes('opl agents foundry status')), true);
   assert.equal(examples.some((entry) => entry.includes('opl skill sync')), false);
 });
 

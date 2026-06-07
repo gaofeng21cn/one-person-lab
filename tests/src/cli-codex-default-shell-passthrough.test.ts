@@ -108,6 +108,8 @@ test('help text advertises Codex and Connect as default entries without retired 
   assert.equal(commands.some((entry) => entry.command === 'shell'), false);
   assert.equal(commands.some((entry) => entry.command === 'connect skills'), true);
   assert.equal(commands.some((entry) => entry.command === 'connect sync-skills'), true);
+  assert.equal(commands.some((entry) => entry.command === 'agents foundry status'), true);
+  assert.equal(commands.some((entry) => entry.command === 'agents foundry peers'), true);
   assert.equal(commands.some((entry) => entry.command === 'skill list'), false);
   assert.equal(commands.some((entry) => entry.command === 'skill sync'), false);
 });
