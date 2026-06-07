@@ -1,0 +1,349 @@
+import { STANDARD_PROGRESS_DELTA_POLICY } from './progress-delta.ts';
+import { STANDARD_TYPED_BLOCKER_LINEAGE_POLICY } from './typed-blocker.ts';
+import { STANDARD_USER_STAGE_LOG_CONTRACT } from './user-stage-log.ts';
+
+export const FOUNDRY_AGENT_SERIES_POLICY_RELEASE_REF =
+  'contracts/opl-framework/foundry-agent-series-policy-release.json';
+export const FOUNDRY_AGENT_SERIES_POLICY_BUNDLE_FINGERPRINT = 'sha256:5d77102e99e6e49acd88714cd94dcafe0969b8f2a5529928d753002ac3d4619d';
+
+export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
+  surface_kind: 'opl_foundry_agent_series_contract',
+  version: 'foundry-agent-series.v1',
+  owner: 'one-person-lab',
+  product_layer: 'foundry_agent',
+  product_model: 'OPL Framework -> One Person Lab App -> Foundry Agents',
+  standard_agent_requirement:
+    'foundry_agents_share_identity_stage_authority_progress_currentness_closeout_and_app_projection_packets',
+  series_design_profile: {
+    surface_kind: 'opl_foundry_agent_series_design_profile',
+    version: 'foundry-agent-series-design-profile.v1',
+    profile_id: 'opl_foundry_agent_series_design_profile.v1',
+    profile_summary:
+      'All Foundry Agents share the same OPL domain-pack to stage-led execution to gate/receipt to handoff lifecycle; domain inputs, outputs, aliases, and authority functions vary by agent.',
+    shared_lifecycle_pipeline: [
+      'domain_material_intake',
+      'domain_pack_interpretation',
+      'stage_led_agent_execution',
+      'independent_quality_gate_or_owner_review',
+      'owner_receipt_or_typed_blocker_closeout',
+      'artifact_or_deliverable_handoff',
+      'opl_refs_only_projection_and_recovery',
+    ],
+    domain_io_profile: {
+      input_slot: 'domain_materials_or_task_request',
+      output_slot: 'domain_deliverable_or_owner_handoff',
+      input_is_domain_specific: true,
+      output_is_domain_specific: true,
+      shared_runtime_interpretation:
+        'OPL treats input/output as opaque domain refs and projects identity, stage, progress, closeout, evidence, and recovery metadata only.',
+    },
+    stage_pack_sections: [
+      'prompts',
+      'stages',
+      'skills',
+      'tools',
+      'knowledge',
+      'quality_gates',
+    ],
+    shared_closeout_contract: {
+      success_shape: 'domain_owner_receipt_ref',
+      blocked_shape: 'domain_owned_typed_blocker_ref',
+      route_back_shape: 'route_back_or_human_gate_ref',
+      provider_completion_is_closeout: false,
+    },
+    authority_invariants: {
+      opl_can_infer_domain_output: false,
+      opl_can_read_domain_body: false,
+      opl_can_write_domain_truth: false,
+      opl_can_authorize_quality_or_export: false,
+      domain_owns_input_truth_and_output_authority: true,
+    },
+  },
+  workspace_topology_profile: {
+    surface_kind: 'opl_workspace_topology_profile',
+    version: 'workspace-topology-profile.v1',
+    profile_id: 'opl.workspace_topology_profile.v1',
+    topology_model: [
+      'workspace_group',
+      'project_unit',
+      'stage_artifact_unit',
+      'owner_receipt_or_typed_blocker',
+    ],
+    workspace_modes: ['one_off', 'series', 'portfolio'],
+    default_project_stage_outputs_root: 'artifacts/stage_outputs',
+    default_profiles: {
+      one_off: {
+        workspace_mode: 'one_off',
+        project_collection_path: 'deliverables',
+        series_capable_skeleton: true,
+        shared_resource_roots: ['shared/sources', 'shared/memory', 'shared/style_system'],
+        project_stage_outputs_root: 'artifacts/stage_outputs',
+      },
+      rca_series: {
+        workspace_mode: 'series',
+        project_collection_path: 'deliverables',
+        shared_resource_roots: [
+          'shared/sources',
+          'shared/brand',
+          'shared/visual_memory',
+          'shared/style_system',
+          'shared/material_inventory',
+        ],
+        project_stage_outputs_root: 'artifacts/stage_outputs',
+      },
+      mas_portfolio: {
+        workspace_mode: 'portfolio',
+        project_collection_path: 'studies',
+        shared_resource_roots: ['data', 'literature', 'memory', 'shared/sources'],
+        project_stage_outputs_root: 'artifacts/stage_outputs',
+      },
+    },
+    domain_profile_defaults: {
+      mas: 'mas_portfolio',
+      mag: 'one_off',
+      rca: 'rca_series',
+      oma: 'one_off',
+    },
+    default_user_inspection_surface: {
+      ordinary_user_default_surface: 'workspace_local_project_stage_outputs',
+      project_stage_outputs_pattern: '<project-root>/artifacts/stage_outputs/<stage-id>/',
+      runtime_state_is_default_user_surface: false,
+      product_views_are_stage_outputs: false,
+    },
+    runtime_state_boundary: {
+      role: 'provider_backing_provenance_restore_audit',
+      runtime_state_can_be_canonical_project_root: false,
+      runtime_state_can_close_stage: false,
+      runtime_state_can_replace_owner_receipt_or_typed_blocker: false,
+    },
+    authority_boundary: {
+      opl_can_define_topology_contract: true,
+      opl_can_project_workspace_refs: true,
+      opl_can_write_domain_truth: false,
+      opl_can_mutate_artifact_body: false,
+      opl_can_create_owner_receipt: false,
+      opl_can_create_typed_blocker: false,
+      runtime_state_counts_as_user_default_surface: false,
+    },
+    workspace_initialization_policy: {
+      default_workspace_mode: 'one_off',
+      one_off_still_uses_project_collection_path: 'deliverables',
+      infer_series_when_user_requests_multiple_related_deliverables: true,
+      infer_portfolio_when_user_requests_shared_research_workspace_with_multiple_studies: true,
+      upgrading_one_off_to_series_must_not_move_existing_project_roots: true,
+      explicit_workspace_mode_declaration_preferred: true,
+    },
+    example_project_layouts: {
+      one_off: {
+        project_collection_path: 'deliverables',
+        project_root_pattern: 'deliverables/<project-id>',
+        project_stage_outputs_pattern: 'deliverables/<project-id>/artifacts/stage_outputs/<stage-id>/',
+      },
+      rca_series: {
+        shared_roots: [
+          'shared/sources',
+          'shared/brand',
+          'shared/visual_memory',
+          'shared/style_system',
+          'shared/material_inventory',
+        ],
+        project_collection_path: 'deliverables',
+        project_root_pattern: 'deliverables/<deck-id>',
+        project_stage_outputs_pattern: 'deliverables/<deck-id>/artifacts/stage_outputs/<stage-id>/',
+      },
+      mas_portfolio: {
+        shared_roots: ['data', 'literature', 'memory'],
+        project_collection_path: 'studies',
+        project_root_pattern: 'studies/<study-id>',
+        project_stage_outputs_pattern: 'studies/<study-id>/artifacts/stage_outputs/<stage-id>/',
+      },
+    },
+  },
+  contract_version_policy: {
+    current_version: 'foundry-agent-series.v1',
+    domain_contract_ref: 'contracts/foundry_agent_series.json',
+    exact_version_pin_required: true,
+    compatible_version_range: ['foundry-agent-series.v1'],
+    breaking_change_requires_new_version: true,
+    domain_descriptor_must_reference_domain_contract: true,
+  },
+  shared_release_pin_strategy: {
+    owner_release_contract_ref: 'contracts/family-release/shared-owner-release.json',
+    owner_commit_pin_required: true,
+    domain_dependency_pin_required: true,
+    supported_pin_sources: [
+      'pyproject.toml',
+      'uv.lock',
+      'package.json',
+      'package-lock.json',
+    ],
+    consumer_alignment_check: 'family:shared-release',
+    domain_contract_version_pin_does_not_authorize_domain_truth: true,
+  },
+  shared_policy_release: {
+    policy_release_contract_ref: FOUNDRY_AGENT_SERIES_POLICY_RELEASE_REF,
+    policy_bundle_fingerprint: FOUNDRY_AGENT_SERIES_POLICY_BUNDLE_FINGERPRINT,
+    fingerprint_algorithm: 'sha256:stable-json',
+    domain_contract_policy_release_pin_required: true,
+    domain_adapter_must_not_copy_policy_body_as_authority: true,
+    consumer_alignment_check: 'foundry:policy-release',
+  },
+  required_identity_fields: [
+    'domain_id',
+    'foundry_agent_id',
+    'product_layer',
+    'domain_label',
+    'authority_owner',
+    'stage_control_plane_ref',
+  ],
+  required_stage_packets: [
+    'user_stage_log_contract',
+    'progress_delta_policy',
+    'typed_blocker_lineage_policy',
+    'effective_current_context',
+    'owner_receipt_or_typed_blocker_closeout',
+  ],
+  shared_progress_projection_fields: [
+    'progress_delta_classification',
+    'deliverable_progress_delta',
+    'platform_repair_delta',
+    'next_forced_delta',
+  ],
+  domain_adapter_policy: {
+    domain_specific_aliases_only: true,
+    no_parallel_progress_schema: true,
+    no_parallel_blocker_lineage_schema: true,
+    no_domain_runtime_fork: true,
+  },
+  app_projection_policy: {
+    app_consumes_shared_progress_projection_only: true,
+    app_can_read_domain_body: false,
+    app_can_write_domain_truth: false,
+    app_can_claim_quality_or_export: false,
+    display_policy: 'classification_only_no_domain_artifact_body',
+  },
+  authority_boundary: {
+    opl_owns_series_contract: true,
+    domain_owns_truth_quality_artifact_memory_and_receipts: true,
+    app_owns_display_and_user_action_shell: true,
+    generated_surface_can_claim_domain_ready: false,
+  },
+} as const;
+
+export const STANDARD_FOUNDRY_AGENT_GOLDEN_PATH_POLICY = {
+  surface_kind: 'opl_foundry_agent_golden_path_default_surface_budget_policy',
+  version: 'foundry-agent-golden-path.v1',
+  owner: 'one-person-lab',
+  policy_id: 'golden_path_single_default',
+  default_surface_budget_id: 'default_surface_budget',
+  stage_control_plane_ref: 'contracts/stage_control_plane.json',
+  ordinary_default_route_budget: 1,
+  default_route_selector: 'stages[].selected_executor.default_executor',
+  explicit_lane_kinds: [
+    'variant',
+    'variants',
+    'proof',
+    'diagnostic',
+    'cleanup',
+    'long-soak',
+    'long_soak',
+  ],
+  explicit_lane_default_allowed: false,
+  authority_boundary: {
+    guard_can_write_domain_truth: false,
+    guard_can_write_memory_body: false,
+    guard_can_authorize_quality_or_export: false,
+    guard_can_claim_domain_ready: false,
+  },
+} as const;
+
+export const FOUNDRY_AGENT_SERIES_POLICY_BUNDLE = {
+  surface_kind: 'opl_foundry_agent_series_policy_bundle',
+  version: 'foundry-agent-series-policy-bundle.v1',
+  owner: 'one-person-lab',
+  bundle_id: 'opl.progress_first.foundry_agent_series_policy_bundle.v1',
+  series_contract_ref: 'contracts/opl-framework/foundry-agent-series-contract.json',
+  included_policy_surfaces: [
+    {
+      surface_id: 'foundry_agent_series_contract',
+      ref: 'contracts/opl-framework/foundry-agent-series-contract.json',
+      version: STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT.version,
+      domain_pin_ref: 'contracts/foundry_agent_series.json#/shared_policy_release',
+    },
+    {
+      surface_id: 'user_stage_log_contract',
+      ref: 'contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/new_agent_scaffold/user_stage_log_contract',
+      version: STANDARD_USER_STAGE_LOG_CONTRACT.version,
+      required_fields: STANDARD_USER_STAGE_LOG_CONTRACT.required_domain_semantic_fields,
+    },
+    {
+      surface_id: 'progress_delta_policy',
+      ref: 'contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/new_agent_scaffold/progress_delta_policy',
+      version: STANDARD_PROGRESS_DELTA_POLICY.version,
+      required_fields: STANDARD_PROGRESS_DELTA_POLICY.required_fields,
+      classification_values: STANDARD_PROGRESS_DELTA_POLICY.classification_values,
+    },
+    {
+      surface_id: 'typed_blocker_lineage_policy',
+      ref: 'contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/new_agent_scaffold/typed_blocker_lineage_policy',
+      version: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY.version,
+      required_fields: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY.required_fields,
+      repeat_budget: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY.repeat_budget,
+    },
+    {
+      surface_id: 'effective_current_context',
+      ref: 'contracts/opl-framework/family-runtime-attempt-contract.json#/required_projection_fields/effective_current_context',
+      version: 'effective_current_context.v1',
+      required_fields: [
+        'owner_route',
+        'source_fingerprint',
+        'stage_packet',
+        'workspace_or_session_identity',
+        'latest_closeout',
+        'running_attempt',
+        'superseded_lineage',
+      ],
+    },
+    {
+      surface_id: 'app_progress_projection',
+      ref: 'contracts/opl-framework/foundry-agent-series-contract.json#/shared_progress_projection_fields',
+      version: 'foundry-agent-series-app-progress-projection.v1',
+      required_fields: STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT.shared_progress_projection_fields,
+    },
+  ],
+  domain_alias_policy: {
+    aliases_are_domain_specific_only: true,
+    deliverable_delta_aliases: STANDARD_PROGRESS_DELTA_POLICY.deliverable_delta_aliases,
+    platform_delta_aliases: STANDARD_PROGRESS_DELTA_POLICY.platform_delta_aliases,
+  },
+  authority_boundary: {
+    opl_owns_policy_contract: true,
+    domains_own_truth_quality_artifact_memory_and_receipts: true,
+    app_consumes_projection_only: true,
+    policy_release_can_claim_domain_ready: false,
+  },
+} as const;
+
+export const FOUNDRY_AGENT_SERIES_POLICY_RELEASE = {
+  surface_kind: 'opl_foundry_agent_series_policy_release',
+  version: 'foundry-agent-series-policy-release.v1',
+  owner: 'one-person-lab',
+  release_contract_ref: FOUNDRY_AGENT_SERIES_POLICY_RELEASE_REF,
+  series_contract_ref: 'contracts/opl-framework/foundry-agent-series-contract.json',
+  policy_bundle: FOUNDRY_AGENT_SERIES_POLICY_BUNDLE,
+  policy_bundle_fingerprint: FOUNDRY_AGENT_SERIES_POLICY_BUNDLE_FINGERPRINT,
+  fingerprint_algorithm: 'sha256:stable-json',
+  domain_pin_contract_ref: 'contracts/foundry_agent_series.json#/shared_policy_release',
+  domain_pin_requirements: {
+    exact_policy_release_ref_required: true,
+    exact_policy_bundle_fingerprint_required: true,
+    domain_adapter_must_not_copy_policy_body_as_authority: true,
+    policy_body_authority_owner: 'one-person-lab',
+  },
+  authority_boundary: {
+    release_can_claim_domain_ready: false,
+    release_can_write_domain_truth: false,
+    release_can_authorize_quality_or_export: false,
+    release_can_replace_domain_owner_receipt: false,
+  },
+} as const;
