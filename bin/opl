@@ -87,7 +87,7 @@ case "$1" in
   session)
     run_opl "$@"
     ;;
-  help|doctor|install|start|web|mcp-stdio|app|status|workspace|domain|actions|agents|agent-lab|work-order|domain-memory|stages|stage|stage-artifact|index|packages|contract|system|modules|module|engine|service|runtime|family-runtime|executor|skill|quality|framework|substrate|brand-modules|charter|atlas|stagecraft|runway|vault|console|foundry-lab|connect)
+  help|doctor|install|start|web|mcp-stdio|app|status|workspace|domain|actions|agents|agent-lab|work-order|domain-memory|stages|stage|stage-artifact|index|packages|contract|system|modules|module|engine|service|runtime|family-runtime|executor|skill|quality|framework|substrate|brand-modules|charter|atlas|stagecraft|runway|vault|console|foundry-lab|connect|foundry)
     run_opl "$@"
     ;;
   *)

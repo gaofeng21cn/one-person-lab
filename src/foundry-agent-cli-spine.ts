@@ -26,7 +26,10 @@ const FOUNDRY_AGENT_PEERS = [
     agent_id: 'mas',
     domain_id: 'medautoscience',
     label: 'Med Auto Science',
+    brand_cli: 'mas',
+    direct_domain_cli: 'medautosci',
     domain_alias: 'study',
+    work_alias: 'study',
     ordinary_golden_path:
       'study -> stage -> domain owner receipt or typed blocker -> research artifact handoff',
   },
@@ -34,7 +37,10 @@ const FOUNDRY_AGENT_PEERS = [
     agent_id: 'mag',
     domain_id: 'medautogrant',
     label: 'Med Auto Grant',
+    brand_cli: 'mag',
+    direct_domain_cli: 'medautogrant',
     domain_alias: 'grant',
+    work_alias: 'grant',
     ordinary_golden_path:
       'grant -> stage -> domain owner receipt or typed blocker -> grant deliverable handoff',
   },
@@ -42,7 +48,10 @@ const FOUNDRY_AGENT_PEERS = [
     agent_id: 'rca',
     domain_id: 'redcube',
     label: 'RedCube AI',
+    brand_cli: 'rca',
+    direct_domain_cli: 'redcube',
     domain_alias: 'deck',
+    work_alias: 'deck',
     ordinary_golden_path:
       'deck -> stage -> domain owner receipt or typed blocker -> visual deliverable handoff',
   },
@@ -50,11 +59,17 @@ const FOUNDRY_AGENT_PEERS = [
     agent_id: 'oma',
     domain_id: 'oplmetaagent',
     label: 'OPL Meta Agent',
+    brand_cli: 'oma',
+    direct_domain_cli: 'opl agents interfaces --repo-dir <opl-meta-agent-repo>',
     domain_alias: 'agent',
+    work_alias: 'agent',
     ordinary_golden_path:
       'target agent -> stage -> target owner answer -> mechanism or work-order handoff',
+    generated_surface_only: true,
   },
 ] as const;
+
+type FoundryAgentPeer = typeof FOUNDRY_AGENT_PEERS[number];
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -179,6 +194,96 @@ function buildAuthorityBoundary(contract: JsonRecord) {
   };
 }
 
+function buildPeerProjection(peer: FoundryAgentPeer) {
+  const generatedSurfaceOnly = Boolean('generated_surface_only' in peer && peer.generated_surface_only);
+  const foundryFrontdoor = generatedSurfaceOnly
+    ? `opl foundry agents inspect ${peer.agent_id}`
+    : `${peer.brand_cli} foundry`;
+  const compatibilityFrontdoor = generatedSurfaceOnly
+    ? peer.direct_domain_cli
+    : `${peer.direct_domain_cli} foundry`;
+  const foundryOperations = generatedSurfaceOnly
+    ? FOUNDRY_AGENT_OPERATIONS.map((operation) => `opl agents foundry ${operation}`)
+    : FOUNDRY_AGENT_OPERATIONS.map((operation) => `${peer.brand_cli} foundry ${operation}`);
+  const compatibilityOperations = generatedSurfaceOnly
+    ? [peer.direct_domain_cli]
+    : FOUNDRY_AGENT_OPERATIONS.map((operation) => `${peer.direct_domain_cli} foundry ${operation}`);
+
+  return {
+    ...peer,
+    series: 'OPL Foundry Agent',
+    series_id: 'opl_foundry_agent_series.v1',
+    foundry_frontdoor: foundryFrontdoor,
+    compatibility_frontdoor: compatibilityFrontdoor,
+    foundry_operations: foundryOperations,
+    compatibility_operations: compatibilityOperations,
+    executable_direct_cli_frontdoor: generatedSurfaceOnly ? null : compatibilityFrontdoor,
+    generated_surface_only: generatedSurfaceOnly,
+    ordinary_spine: ['workspace', 'work', 'stage', 'run', 'vault', 'handoff', 'connect'].map((object) => ({
+      object,
+      command_pattern: generatedSurfaceOnly
+        ? `opl foundry agents inspect ${peer.agent_id}`
+        : `${peer.direct_domain_cli} ${object} ...`,
+      domain_alias:
+        object === 'work'
+          ? peer.work_alias
+          : object === 'stage'
+            ? 'stage'
+            : null,
+    })),
+    work_object: {
+      canonical_object: 'work',
+      natural_alias: peer.work_alias,
+      alias_rule: `${peer.work_alias} is a domain-specific alias for the Foundry Agent series work object.`,
+    },
+    connect_frontdoors: {
+      install: `opl connect install --module ${peer.domain_id}`,
+      skills: `opl connect skills --domain ${peer.domain_id}`,
+      sync_skills: `opl connect sync-skills --domain ${peer.domain_id}`,
+    },
+    mcp_projection: {
+      descriptor_owner: 'one-person-lab',
+      domain_repo_mcp_role: 'domain_handler_target_or_direct_protocol_adapter_only',
+      mcp_descriptor_must_delegate_to_series_spine: true,
+    },
+  };
+}
+
+function resolvePeer(agentId: string) {
+  const normalized = agentId.trim().toLowerCase();
+  return FOUNDRY_AGENT_PEERS.find((peer) =>
+    peer.agent_id === normalized
+    || peer.domain_id === normalized
+    || peer.domain_alias === normalized
+    || peer.work_alias === normalized
+    || (peer.agent_id === 'oma' && normalized === 'opl-meta-agent')
+    || (peer.agent_id === 'rca' && normalized === 'redcube-ai')
+    || (peer.agent_id === 'mas' && normalized === 'med-autoscience')
+    || (peer.agent_id === 'mag' && normalized === 'med-autogrant')
+  );
+}
+
+function parseAgentInspectArgs(args: string[]) {
+  if (args.length === 1 && args[0] && !args[0].startsWith('--')) {
+    return args[0];
+  }
+  if (args.length === 2 && args[0] === '--agent' && args[1]) {
+    return args[1];
+  }
+  throw new FrameworkContractError(
+    'cli_usage_error',
+    'foundry agents inspect requires one agent id.',
+    {
+      usage: 'opl foundry agents inspect <mas|mag|rca|oma>',
+      examples: [
+        'opl foundry agents inspect mas --json',
+        'opl foundry agents inspect --agent rca --json',
+      ],
+      unexpected_args: args,
+    },
+  );
+}
+
 function assertNoArgs(args: string[], operation: FoundryAgentCliOperation) {
   if (args.length > 0) {
     throw new FrameworkContractError(
@@ -186,6 +291,19 @@ function assertNoArgs(args: string[], operation: FoundryAgentCliOperation) {
       `agents foundry ${operation} does not accept positional arguments.`,
       {
         usage: `opl agents foundry ${operation}`,
+        unexpected_args: args,
+      },
+    );
+  }
+}
+
+function assertNoFoundryAgentArgs(args: string[], usage: string) {
+  if (args.length > 0) {
+    throw new FrameworkContractError(
+      'cli_usage_error',
+      `${usage} does not accept positional arguments.`,
+      {
+        usage,
         unexpected_args: args,
       },
     );
@@ -271,6 +389,59 @@ export function buildFoundryAgentCliSpine(operation: FoundryAgentCliOperation, a
         replacement: readString(retirementPolicy.replacement_frontdoor, 'legacy_implementation_bucket_retirement_policy.replacement_frontdoor'),
         retained_scope: 'diagnostic_or_migration_only',
       })),
+      authority_boundary: buildAuthorityBoundary(contract),
+    },
+  };
+}
+
+export function buildFoundryAgentsList(args: string[]) {
+  assertNoFoundryAgentArgs(args, 'opl foundry agents list');
+  const contract = readFoundryAgentSeriesContract();
+  return {
+    version: 'g2',
+    foundry_agents: {
+      surface_kind: 'opl_foundry_agent_series_agent_index',
+      series_id: 'opl_foundry_agent_series.v1',
+      series_label: readString(
+        readRecord(contract.agent_cli_frontdoor_policy, 'agent_cli_frontdoor_policy').agent_cli_series_label,
+        'agent_cli_frontdoor_policy.agent_cli_series_label',
+      ),
+      canonical_frontdoor: 'opl foundry agents',
+      opl_aggregate_frontdoor: 'opl agents foundry',
+      agents: FOUNDRY_AGENT_PEERS.map(buildPeerProjection),
+      authority_boundary: buildAuthorityBoundary(contract),
+    },
+  };
+}
+
+export function buildFoundryAgentInspect(args: string[]) {
+  const agentId = parseAgentInspectArgs(args);
+  const peer = resolvePeer(agentId);
+  if (!peer) {
+    throw new FrameworkContractError(
+      'cli_usage_error',
+      `Unknown Foundry Agent id: ${agentId}.`,
+      {
+        agent_id: agentId,
+        allowed_agent_ids: FOUNDRY_AGENT_PEERS.map((entry) => entry.agent_id),
+      },
+    );
+  }
+  const contract = readFoundryAgentSeriesContract();
+  return {
+    version: 'g2',
+    foundry_agent: {
+      surface_kind: 'opl_foundry_agent_series_agent_inspect',
+      status: ('generated_surface_only' in peer && peer.generated_surface_only)
+        ? 'generated_surface_only'
+        : 'direct_cli_ready',
+      ...buildPeerProjection(peer),
+      series_contract_ref: FOUNDRY_AGENT_SERIES_CONTRACT_REF,
+      direct_cli_frontdoor_policy: {
+        must_expose_foundry_operations: [...FOUNDRY_AGENT_OPERATIONS],
+        first_screen_must_identify_series: true,
+        old_implementation_buckets_are_diagnostic_only: true,
+      },
       authority_boundary: buildAuthorityBoundary(contract),
     },
   };

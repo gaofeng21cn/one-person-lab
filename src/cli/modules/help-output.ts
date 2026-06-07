@@ -187,6 +187,8 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl vault validate',
         'opl console status',
         'opl foundry-lab inspect',
+        'opl foundry agents list',
+        'opl foundry agents inspect mas',
         'opl agents foundry status',
         'opl agents foundry interfaces',
         'opl agents foundry peers',

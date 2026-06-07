@@ -39,7 +39,9 @@ import {
 } from '../../brand-modules.ts';
 import {
   FOUNDRY_AGENT_OPERATIONS,
+  buildFoundryAgentInspect,
   buildFoundryAgentCliSpine,
+  buildFoundryAgentsList,
 } from '../../foundry-agent-cli-spine.ts';
 import {
   buildBrandModuleObjectView,
@@ -363,6 +365,23 @@ export function buildPublicCommandSpecs(
     },
     ...brandModuleSurfaceSpecs,
     ...foundryAgentCommandSpecs,
+    'foundry agents list': {
+      usage: 'opl foundry agents list',
+      summary: 'List MAS, MAG, RCA, and OMA as one OPL Foundry Agent series with their direct CLI, Skill, MCP, and Connect frontdoors.',
+      examples: ['opl foundry agents list --json'],
+      group: 'foundry',
+      handler: (args) => buildFoundryAgentsList(args),
+    },
+    'foundry agents inspect': {
+      usage: 'opl foundry agents inspect <mas|mag|rca|oma>',
+      summary: 'Inspect one Foundry Agent series member and its direct CLI foundry spine, ordinary work alias, Skill/MCP projection, and authority boundary.',
+      examples: [
+        'opl foundry agents inspect mas --json',
+        'opl foundry agents inspect rca --json',
+      ],
+      group: 'foundry',
+      handler: (args) => buildFoundryAgentInspect(args),
+    },
     'connect modules': buildNoArgSpec(
       {
         usage: 'opl connect modules',

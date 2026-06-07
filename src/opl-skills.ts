@@ -405,6 +405,36 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
   const versionPolicy = readObjectField(contract, 'contract_version_policy');
   const policyRelease = readObjectField(contract, 'shared_policy_release');
   const foundryAgentId = spec.canonical_plugin_name === 'opl-meta-agent' ? 'oma' : spec.canonical_plugin_name;
+  const brandCli = spec.canonical_plugin_name === 'opl-meta-agent' ? 'oma' : spec.canonical_plugin_name;
+  const generatedSurfaceOnly = spec.canonical_plugin_name === 'opl-meta-agent';
+  const directCli = spec.canonical_plugin_name === 'opl-meta-agent'
+    ? 'opl agents interfaces --repo-dir <opl-meta-agent-repo>'
+    : spec.canonical_plugin_name === 'mas'
+      ? 'medautosci'
+      : spec.canonical_plugin_name === 'mag'
+        ? 'medautogrant'
+        : 'redcube';
+  const workAlias = spec.canonical_plugin_name === 'mas'
+    ? 'study'
+    : spec.canonical_plugin_name === 'mag'
+      ? 'grant'
+      : spec.canonical_plugin_name === 'rca'
+        ? 'deck'
+        : 'agent';
+  const ordinaryOperations = readStringListField(frontdoor, 'ordinary_operations');
+  const ordinarySpine = readStringListField(frontdoor, 'ordinary_public_frontdoor_spine');
+  const directCliFoundryFrontdoor = generatedSurfaceOnly
+    ? `opl foundry agents inspect ${foundryAgentId}`
+    : `${brandCli} foundry`;
+  const compatibilityFoundryFrontdoor = generatedSurfaceOnly
+    ? directCli
+    : `${directCli} foundry`;
+  const directCliFoundryOperations = generatedSurfaceOnly
+    ? ordinaryOperations.map((operation) => `opl agents foundry ${operation}`)
+    : ordinaryOperations.map((operation) => `${brandCli} foundry ${operation}`);
+  const compatibilityFoundryOperations = generatedSurfaceOnly
+    ? [directCli]
+    : ordinaryOperations.map((operation) => `${directCli} foundry ${operation}`);
 
   return {
     foundry_agent_series: {
@@ -417,14 +447,29 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
       series_contract_ref: FOUNDRY_AGENT_SERIES_CONTRACT_REF,
       domain_contract_ref: readStringField(versionPolicy, 'domain_contract_ref'),
       policy_release_ref: readStringField(policyRelease, 'policy_release_contract_ref'),
+      brand_cli: brandCli,
+      direct_domain_cli: directCli,
+      direct_cli: generatedSurfaceOnly ? directCli : brandCli,
+      direct_cli_foundry_frontdoor: directCliFoundryFrontdoor,
+      compatibility_foundry_frontdoor: compatibilityFoundryFrontdoor,
+      generated_surface_only: generatedSurfaceOnly,
+      ordinary_golden_path:
+        `${workAlias} -> stage -> domain owner receipt or typed blocker -> handoff`,
     },
     frontdoor_spine: {
       surface_kind: 'opl_foundry_agent_skill_frontdoor_spine_projection',
-      ordinary_public_frontdoor_spine: readStringListField(frontdoor, 'ordinary_public_frontdoor_spine'),
-      ordinary_operations: readStringListField(frontdoor, 'ordinary_operations'),
+      ordinary_public_frontdoor_spine: ordinarySpine,
+      ordinary_operations: ordinaryOperations,
+      direct_cli_foundry_operations: directCliFoundryOperations,
+      compatibility_foundry_operations: compatibilityFoundryOperations,
+      work_alias: workAlias,
+      work_alias_command_pattern: generatedSurfaceOnly
+        ? `opl foundry agents inspect ${foundryAgentId}`
+        : `${directCli} ${workAlias} ...`,
       required_public_surface_derivatives: readStringListField(frontdoor, 'required_public_surface_derivatives'),
       skill_sync_frontdoor: readStringField(skillMcp, 'canonical_skill_sync_frontdoor'),
       skill_inspect_frontdoor: readStringField(skillMcp, 'canonical_skill_connect_frontdoor'),
+      foundry_agent_inspect_frontdoor: `opl foundry agents inspect ${foundryAgentId}`,
       agent_cli_must_use_series_spine: readBooleanField(frontdoor, 'agent_cli_must_use_series_spine'),
       agent_cli_must_not_replicate_top_level_modules: readBooleanField(
         frontdoor,
@@ -438,6 +483,11 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
         skillMcp,
         'mcp_descriptor_must_delegate_to_series_spine',
       ),
+      series_delegate_tool_refs: [
+        generatedSurfaceOnly ? 'opl agents foundry interfaces' : `${brandCli} foundry interfaces`,
+        generatedSurfaceOnly ? 'opl agents foundry status' : `${brandCli} foundry status`,
+        `opl foundry agents inspect ${foundryAgentId}`,
+      ],
       legacy_standalone_mcp_servers_retired: readBooleanField(
         skillMcp,
         'legacy_standalone_mcp_servers_retired',

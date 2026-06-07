@@ -120,6 +120,28 @@ test('bin/opl routes module-owned brand commands into the OPL CLI instead of Cod
   assert.equal(output.opl_charter_status.status, 'valid');
 });
 
+test('bin/opl routes Foundry Agent series commands into the OPL CLI instead of Codex passthrough', () => {
+  const result = spawnSync(
+    path.join(repoRoot, 'bin', 'opl'),
+    ['foundry', 'agents', 'inspect', 'mas', '--json'],
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        OPL_SKIP_SKILL_SYNC: '1',
+      },
+    },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.foundry_agent.surface_kind, 'opl_foundry_agent_series_agent_inspect');
+  assert.equal(output.foundry_agent.agent_id, 'mas');
+  assert.equal(output.foundry_agent.compatibility_frontdoor, 'medautosci foundry');
+});
+
 test('each non-workspace brand module exposes its own executable status validate doctor and interfaces family', () => {
   const operations = ['status', 'inspect', 'interfaces', 'validate', 'doctor'] as const;
 
@@ -275,4 +297,29 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying the nin
       true,
     );
   }
+});
+
+test('OPL Foundry Agent index exposes MAS MAG RCA OMA direct and generated CLI frontdoors', () => {
+  const list = runCli(['foundry', 'agents', 'list']).foundry_agents;
+  assert.deepEqual(
+    list.agents.map((entry: { agent_id: string }) => entry.agent_id),
+    ['mas', 'mag', 'rca', 'oma'],
+  );
+  assert.deepEqual(
+    list.agents.map((entry: { foundry_frontdoor: string }) => entry.foundry_frontdoor),
+    ['mas foundry', 'mag foundry', 'rca foundry', 'opl foundry agents inspect oma'],
+  );
+
+  const mas = runCli(['foundry', 'agents', 'inspect', 'mas']).foundry_agent;
+  assert.equal(mas.status, 'direct_cli_ready');
+  assert.equal(mas.work_object.natural_alias, 'study');
+  assert.equal(mas.compatibility_frontdoor, 'medautosci foundry');
+  assert.equal(mas.mcp_projection.mcp_descriptor_must_delegate_to_series_spine, true);
+
+  const oma = runCli(['foundry', 'agents', 'inspect', 'oma']).foundry_agent;
+  assert.equal(oma.status, 'generated_surface_only');
+  assert.equal(oma.direct_domain_cli, 'opl agents interfaces --repo-dir <opl-meta-agent-repo>');
+  assert.equal(oma.foundry_frontdoor, 'opl foundry agents inspect oma');
+  assert.equal(oma.compatibility_frontdoor, 'opl agents interfaces --repo-dir <opl-meta-agent-repo>');
+  assert.equal(oma.direct_cli_frontdoor_policy.first_screen_must_identify_series, true);
 });
