@@ -97,6 +97,15 @@ export function buildActionCatalog() {
       dry_run_supported: true,
     },
     {
+      action_id: 'workspace_ensure',
+      label: 'Ensure agent workspace',
+      surface: 'opl app action execute',
+      delegated_surface: 'opl workspace ensure',
+      payload_fields: ['agent_id', 'workspace_root_optional', 'workspace_id', 'project_id', 'mode', 'title'],
+      mutates: 'opl_workspace_topology_and_registry',
+      dry_run_supported: true,
+    },
+    {
       action_id: 'provider_scheduler_status',
       label: 'Read Temporal scheduler status',
       surface: 'opl app action execute',

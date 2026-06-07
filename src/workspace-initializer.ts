@@ -9,7 +9,7 @@ import {
   findWorkspaceAgentProfile,
   type WorkspaceAgentProfile,
 } from './workspace-agent-defaults.ts';
-import { bindWorkspace } from './workspace-registry.ts';
+import { bindWorkspace, getActiveWorkspaceBinding } from './workspace-registry.ts';
 
 type WorkspaceModeInput = 'auto' | 'one_off' | 'series' | 'portfolio';
 type WorkspaceProfileId = 'one_off' | 'rca_series' | 'mas_portfolio';
@@ -27,12 +27,23 @@ export type WorkspaceInitializeOptions = {
   force?: boolean;
 };
 
+export type WorkspaceEnsureOptions = WorkspaceInitializeOptions;
+
 type TopologyProfile = {
   workspace_mode: 'one_off' | 'series' | 'portfolio';
   project_collection_path: string;
   series_capable_skeleton?: boolean;
   shared_resource_roots: string[];
   project_stage_outputs_root: string;
+};
+
+type WorkspaceProjectIndexEntry = {
+  project_id: string;
+  project_root: string;
+  stage_outputs_root: string;
+  control_root: string;
+  review_root: string;
+  handoff_root: string;
 };
 
 const WORKSPACE_TOPOLOGY_CONTRACT_REF =
@@ -228,6 +239,119 @@ function assertWritableMetadataPath(filePath: string, force: boolean | undefined
   );
 }
 
+function workspaceProjectEntry(
+  projectId: string,
+  projectRootRef: string,
+  stageOutputsRootRef: string,
+): WorkspaceProjectIndexEntry {
+  return {
+    project_id: projectId,
+    project_root: projectRootRef,
+    stage_outputs_root: stageOutputsRootRef,
+    control_root: `${projectRootRef}/control`,
+    review_root: `${projectRootRef}/review`,
+    handoff_root: `${projectRootRef}/handoff`,
+  };
+}
+
+function readExistingWorkspaceIndex(filePath: string) {
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as Record<string, unknown>;
+    if (parsed.surface_kind !== 'opl_workspace_index' || !Array.isArray(parsed.projects)) {
+      throw new Error('Invalid OPL workspace_index shape.');
+    }
+    return parsed;
+  } catch (error) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Existing workspace_index.json is invalid JSON or has an invalid OPL workspace shape.',
+      {
+        file: filePath,
+        cause: error instanceof Error ? error.message : 'Unknown workspace_index parse failure.',
+      },
+    );
+  }
+}
+
+function assertCompatibleExistingIndex(input: {
+  existingIndex: Record<string, unknown>;
+  agent: WorkspaceAgentProfile;
+  profileId: WorkspaceProfileId;
+  profile: TopologyProfile;
+}) {
+  const existingAgent = isRecord(input.existingIndex.agent) ? input.existingIndex.agent : {};
+  const existingProfile = isRecord(input.existingIndex.workspace_topology_profile)
+    ? input.existingIndex.workspace_topology_profile
+    : {};
+  const blockers = [
+    existingAgent.agent_id === input.agent.agent_id ? null : 'agent_id_mismatch',
+    existingAgent.project_id === input.agent.project_id ? null : 'agent_project_id_mismatch',
+    existingProfile.profile_id === input.profileId ? null : 'profile_id_mismatch',
+    existingProfile.workspace_mode === input.profile.workspace_mode ? null : 'workspace_mode_mismatch',
+    existingProfile.project_collection_path === input.profile.project_collection_path
+      ? null
+      : 'project_collection_path_mismatch',
+    existingProfile.project_stage_outputs_root === input.profile.project_stage_outputs_root
+      ? null
+      : 'project_stage_outputs_root_mismatch',
+  ].filter((entry): entry is string => Boolean(entry));
+
+  if (blockers.length > 0) {
+    throw new FrameworkContractError(
+      'cli_usage_error',
+      'Workspace init cannot append to an existing workspace with a different OPL topology; use another workspace path.',
+      {
+        blockers,
+        agent_id: input.agent.agent_id,
+        profile_id: input.profileId,
+      },
+    );
+  }
+}
+
+function normalizeExistingProjects(projects: unknown) {
+  if (!Array.isArray(projects)) {
+    return [];
+  }
+  return projects
+    .filter(isRecord)
+    .map((project) => ({
+      project_id: String(project.project_id),
+      project_root: String(project.project_root),
+      stage_outputs_root: String(project.stage_outputs_root),
+      control_root: String(project.control_root),
+      review_root: String(project.review_root),
+      handoff_root: String(project.handoff_root),
+    }))
+    .filter((project) => project.project_id.trim().length > 0);
+}
+
+function mergeWorkspaceProjects(
+  existingProjects: WorkspaceProjectIndexEntry[],
+  currentProject: WorkspaceProjectIndexEntry,
+) {
+  const projectIds = new Set<string>();
+  const merged = [...existingProjects, currentProject]
+    .reverse()
+    .filter((project) => {
+      if (projectIds.has(project.project_id)) {
+        return false;
+      }
+      projectIds.add(project.project_id);
+      return true;
+    })
+    .reverse();
+  return {
+    projects: merged,
+    project_was_already_indexed: existingProjects.some((project) => (
+      project.project_id === currentProject.project_id
+    )),
+  };
+}
+
 function toRelative(basePath: string, targetPath: string) {
   return path.relative(basePath, targetPath).split(path.sep).join('/');
 }
@@ -258,11 +382,9 @@ function buildWorkspaceYaml(input: {
   agent: WorkspaceAgentProfile;
   profileId: WorkspaceProfileId;
   profile: TopologyProfile;
-  projectId: string;
-  projectRootRef: string;
-  stageOutputsRootRef: string;
+  projects: WorkspaceProjectIndexEntry[];
 }) {
-  return `${[
+  const lines = [
     'surface_kind: opl_workspace_config',
     'version: workspace-config.v1',
     `workspace_id: ${yamlScalar(input.workspaceId)}`,
@@ -280,9 +402,15 @@ function buildWorkspaceYaml(input: {
     '  shared_resource_roots:',
     ...yamlList(input.profile.shared_resource_roots, '    '),
     'projects:',
-    `  - project_id: ${yamlScalar(input.projectId)}`,
-    `    project_root: ${yamlScalar(input.projectRootRef)}`,
-    `    stage_outputs_root: ${yamlScalar(input.stageOutputsRootRef)}`,
+  ];
+  for (const project of input.projects) {
+    lines.push(
+      `  - project_id: ${yamlScalar(project.project_id)}`,
+      `    project_root: ${yamlScalar(project.project_root)}`,
+      `    stage_outputs_root: ${yamlScalar(project.stage_outputs_root)}`,
+    );
+  }
+  lines.push(
     'authority_boundary:',
     '  opl_can_define_topology_contract: true',
     '  opl_can_project_workspace_refs: true',
@@ -290,48 +418,50 @@ function buildWorkspaceYaml(input: {
     '  opl_can_mutate_artifact_body: false',
     '  opl_can_create_owner_receipt: false',
     '  opl_can_create_typed_blocker: false',
-  ].join('\n')}\n`;
+  );
+  return `${lines.join('\n')}\n`;
 }
 
-function buildInterfaceProjection(agent: WorkspaceAgentProfile, workspacePath: string, projectId: string) {
-  const example = [
-    'opl',
-    'workspace',
-    'init',
-    '--agent',
-    agent.agent_id,
-    '--workspace',
-    workspacePath,
-    '--project-id',
-    projectId,
+function buildInterfaceProjection(
+  agent: WorkspaceAgentProfile,
+  workspacePath: string,
+  projectId: string,
+) {
+  const initExample = [
+    'opl', 'workspace', 'init', '--agent', agent.agent_id, '--workspace', workspacePath, '--project-id', projectId,
+  ].join(' ');
+  const ensureExample = [
+    'opl', 'workspace', 'ensure', '--agent', agent.agent_id, '--project-id', projectId,
   ].join(' ');
   return {
     surface_kind: 'opl_workspace_initialize_interface_projection',
     owner: 'one-person-lab',
-    action_id: 'opl_workspace_initialize',
+    action_id: 'opl_workspace_ensure',
     required_inputs: ['agent_id'],
     optional_inputs: ['workspace_path_or_workspace_root', 'workspace_id', 'project_id', 'mode', 'title', 'dry_run', 'force', 'bind'],
     cli: {
       command: 'opl workspace init',
-      example,
+      ensure_command: 'opl workspace ensure',
+      example: initExample,
+      ensure_example: ensureExample,
     },
     mcp: {
-      tool_name: 'opl_workspace_initialize',
+      tool_name: 'opl_workspace_ensure',
       execution: 'delegate_to_opl_cli',
-      command_contract_id: 'opl_workspace_initialize',
+      command_contract_id: 'opl_workspace_ensure',
       descriptor_only: true,
       public_runtime: false,
     },
     skill: {
-      intent: 'initialize_opl_workspace',
-      command_contract_id: 'opl_workspace_initialize',
-      instruction: 'Call the OPL workspace initializer before running a domain task when no active workspace binding exists.',
+      intent: 'ensure_opl_workspace',
+      command_contract_id: 'opl_workspace_ensure',
+      instruction: 'Call the OPL workspace ensure action before running a MAS/MAG/RCA/OMA task.',
     },
     openai: {
-      tool_name: 'opl_workspace_initialize',
+      tool_name: 'opl_workspace_ensure',
     },
     ai_sdk: {
-      tool_name: 'oplWorkspaceInitialize',
+      tool_name: 'oplWorkspaceEnsure',
     },
   };
 }
@@ -352,40 +482,45 @@ export function buildWorkspaceInitializeInterfaces() {
         mutates_artifact_body: false,
       },
       command_contract: {
-        action_id: 'opl_workspace_initialize',
-        command: 'opl workspace init',
+        action_id: 'opl_workspace_ensure',
+        command: 'opl workspace ensure',
+        initializer_command: 'opl workspace init',
         required_inputs: ['agent_id'],
         optional_inputs: ['workspace_path_or_workspace_root', 'workspace_id', 'project_id', 'mode', 'title', 'dry_run', 'force', 'bind'],
       },
       supported_agents: ['mas', 'mag', 'rca', 'oma'],
       surfaces: {
         cli: {
-          command: 'opl workspace init',
+          command: 'opl workspace ensure',
+          initializer_command: 'opl workspace init',
           usage:
-            'opl workspace init --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio]',
+            'opl workspace ensure --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio]',
         },
         mcp: {
-          tool_name: 'opl_workspace_initialize',
+          tool_name: 'opl_workspace_ensure',
           execution: 'delegate_to_opl_cli',
           descriptor_only: true,
           public_runtime: false,
-          input_schema_ref: 'opl://workspace/initialize/input.schema.json',
+          input_schema_ref: 'opl://workspace/ensure/input.schema.json',
+          delegates_to: 'opl workspace ensure',
+          fallback_initializer: 'opl workspace init',
         },
         skill: {
-          intent: 'initialize_opl_workspace',
-          command_contract_id: 'opl_workspace_initialize',
+          intent: 'ensure_opl_workspace',
+          command_contract_id: 'opl_workspace_ensure',
           instruction:
-            'Use this OPL-owned initializer when a MAS/MAG/RCA/OMA task needs a workspace and no active binding exists.',
+            'Use this OPL-owned ensure action before MAS/MAG/RCA/OMA task execution; it reuses an active workspace binding or initializes the default topology.',
         },
         app: {
-          action_id: 'workspace_initialize',
-          route: 'opl app action execute --action workspace_initialize --payload <json>',
+          action_id: 'workspace_ensure',
+          initializer_action_id: 'workspace_initialize',
+          route: 'opl app action execute --action workspace_ensure --payload <json>',
         },
         openai: {
-          tool_name: 'opl_workspace_initialize',
+          tool_name: 'opl_workspace_ensure',
         },
         ai_sdk: {
-          tool_name: 'oplWorkspaceInitialize',
+          tool_name: 'oplWorkspaceEnsure',
         },
       },
     },
@@ -403,6 +538,7 @@ function buildWorkspaceIndex(input: {
   projectRootRef: string;
   stageOutputsRootRef: string;
   createdAt: string;
+  projects: WorkspaceProjectIndexEntry[];
 }) {
   return {
     surface_kind: 'opl_workspace_index',
@@ -411,6 +547,7 @@ function buildWorkspaceIndex(input: {
     title: input.title,
     workspace_path: input.workspacePath,
     created_at: input.createdAt,
+    updated_at: input.createdAt,
     agent: {
       agent_id: input.agent.agent_id,
       label: input.agent.label,
@@ -428,16 +565,7 @@ function buildWorkspaceIndex(input: {
       project_stage_outputs_root: input.profile.project_stage_outputs_root,
     },
     shared_resource_roots: input.profile.shared_resource_roots,
-    projects: [
-      {
-        project_id: input.projectId,
-        project_root: input.projectRootRef,
-        stage_outputs_root: input.stageOutputsRootRef,
-        control_root: `${input.projectRootRef}/control`,
-        review_root: `${input.projectRootRef}/review`,
-        handoff_root: `${input.projectRootRef}/handoff`,
-      },
-    ],
+    projects: input.projects,
     user_inspection: {
       ordinary_user_default_surface: 'workspace_local_project_stage_outputs',
       default_stage_outputs: input.stageOutputsRootRef,
@@ -486,6 +614,13 @@ export function initializeWorkspace(
   const stageOutputsRootRef = toRelative(workspacePath, stageOutputsRoot);
   const workspaceYamlPath = path.join(workspacePath, 'workspace.yaml');
   const workspaceIndexPath = path.join(workspacePath, 'workspace_index.json');
+  const currentProject = workspaceProjectEntry(projectId, projectRootRef, stageOutputsRootRef);
+  const existingIndex = options.force ? null : readExistingWorkspaceIndex(workspaceIndexPath);
+  if (existingIndex) {
+    assertCompatibleExistingIndex({ existingIndex, agent, profileId, profile });
+  }
+  const existingProjects = normalizeExistingProjects(existingIndex?.projects);
+  const mergedProjects = mergeWorkspaceProjects(existingProjects, currentProject);
   const createdDirectories: string[] = [];
 
   const workspaceIndex = buildWorkspaceIndex({
@@ -499,11 +634,18 @@ export function initializeWorkspace(
     projectRootRef,
     stageOutputsRootRef,
     createdAt,
+    projects: mergedProjects.projects,
   });
+  if (existingIndex && typeof existingIndex.created_at === 'string') {
+    workspaceIndex.created_at = existingIndex.created_at;
+    workspaceIndex.updated_at = createdAt;
+  }
 
   if (!options.dryRun) {
-    assertWritableMetadataPath(workspaceYamlPath, options.force);
-    assertWritableMetadataPath(workspaceIndexPath, options.force);
+    if (!existingIndex) {
+      assertWritableMetadataPath(workspaceYamlPath, options.force);
+      assertWritableMetadataPath(workspaceIndexPath, options.force);
+    }
     ensureDir(workspacePath, createdDirectories);
     for (const sharedRoot of profile.shared_resource_roots) {
       ensureDir(path.join(workspacePath, sharedRoot), createdDirectories);
@@ -526,9 +668,7 @@ export function initializeWorkspace(
         agent,
         profileId,
         profile,
-        projectId,
-        projectRootRef,
-        stageOutputsRootRef,
+        projects: mergedProjects.projects,
       }),
     );
     fs.writeFileSync(workspaceIndexPath, `${JSON.stringify(workspaceIndex, null, 2)}\n`);
@@ -556,6 +696,10 @@ export function initializeWorkspace(
       action: 'init',
       dry_run: options.dryRun === true,
       bind: shouldBind,
+      metadata_action: existingIndex
+        ? mergedProjects.project_was_already_indexed ? 'reused_existing_project' : 'appended_project'
+        : 'created_workspace',
+      project_was_already_indexed: mergedProjects.project_was_already_indexed,
       workspace_path: workspacePath,
       workspace_id: workspaceId,
       workspace_config_path: workspaceYamlPath,
@@ -584,10 +728,92 @@ export function initializeWorkspace(
         project_root: projectRootRef,
         stage_outputs_root: stageOutputsRootRef,
       },
+      indexed_projects: mergedProjects.projects,
       user_inspection: workspaceIndex.user_inspection,
       authority_boundary: workspaceIndex.authority_boundary,
       interface_projection: workspaceIndex.interface_projection,
       binding: bindingPayload?.workspace_catalog.binding ?? null,
+    },
+  };
+}
+
+function loadIndexedProject(indexPath: string, projectId: string) {
+  const workspaceIndex = readExistingWorkspaceIndex(indexPath);
+  const projects = normalizeExistingProjects(workspaceIndex?.projects);
+  return projects.find((project) => project.project_id === projectId) ?? null;
+}
+
+export function ensureWorkspace(
+  contracts: FrameworkContracts,
+  options: WorkspaceEnsureOptions,
+) {
+  const agent = findWorkspaceAgentProfile(options.agentId);
+  const projectId = normalizeRequiredSegment(
+    normalizeOptionalString(options.projectId) ?? agent.default_project_id,
+    'project_id',
+  );
+  const explicitWorkspacePath = normalizeOptionalString(options.workspacePath);
+  const activeBinding = explicitWorkspacePath ? null : getActiveWorkspaceBinding(agent.project_id);
+  const activeWorkspacePath = activeBinding?.workspace_path && fs.existsSync(activeBinding.workspace_path)
+    ? activeBinding.workspace_path
+    : null;
+  const activeWorkspaceIndexPath = activeWorkspacePath
+    ? path.join(activeWorkspacePath, 'workspace_index.json')
+    : null;
+  const indexedProject = activeWorkspaceIndexPath && fs.existsSync(activeWorkspaceIndexPath)
+    ? loadIndexedProject(activeWorkspaceIndexPath, projectId)
+    : null;
+
+  if (activeWorkspacePath && activeWorkspaceIndexPath && indexedProject && !options.force) {
+    return {
+      version: 'g2',
+      contracts_context: {
+        contracts_dir: contracts.contractsDir,
+        contracts_root_source: contracts.contractsRootSource,
+      },
+      workspace_initialization: {
+        surface_kind: 'opl_workspace_initialization',
+        action: 'ensure',
+        ensure_status: 'reused_active_binding',
+        dry_run: options.dryRun === true,
+        bind: true,
+        workspace_path: activeWorkspacePath,
+        workspace_id: path.basename(activeWorkspacePath),
+        workspace_config_path: path.join(activeWorkspacePath, 'workspace.yaml'),
+        workspace_index_path: activeWorkspaceIndexPath,
+        project_root: path.join(activeWorkspacePath, indexedProject.project_root),
+        project_stage_outputs_root: path.join(activeWorkspacePath, indexedProject.stage_outputs_root),
+        created_directories: [],
+        agent: {
+          agent_id: agent.agent_id,
+          label: agent.label,
+          project_id: agent.project_id,
+          project: agent.project,
+          workspace_kind: agent.workspace_kind,
+          project_kind: agent.project_kind,
+        },
+        project: indexedProject,
+        binding: activeBinding,
+        interface_projection: buildInterfaceProjection(agent, activeWorkspacePath, projectId),
+      },
+    };
+  }
+
+  const initialized = initializeWorkspace(contracts, {
+    ...options,
+    agentId: agent.agent_id,
+    projectId,
+    workspacePath: explicitWorkspacePath ?? activeWorkspacePath ?? options.workspacePath,
+    bind: options.bind,
+  });
+  return {
+    ...initialized,
+    workspace_initialization: {
+      ...initialized.workspace_initialization,
+      action: 'ensure',
+      ensure_status: activeWorkspacePath
+        ? 'initialized_missing_project_in_active_binding'
+        : 'initialized_default_workspace',
     },
   };
 }

@@ -491,6 +491,16 @@ export function buildPublicCommandSpecs(
       ],
       group: 'workspace',
     }),
+    'workspace ensure': cloneCommandSpec(commandSpecs['workspace-ensure'], {
+      usage:
+        'opl workspace ensure --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio] [--title <title>] [--dry-run] [--no-bind] [--force]',
+      examples: [
+        'opl workspace ensure --agent rca --project-id deck-001',
+        'opl workspace ensure --agent mas --workspace-id dm-cvd --project-id DM002',
+        'opl workspace ensure --agent mag --workspace-root /Users/gaofeng/workspace --workspace-id nsfc-p2c --project-id grant-001',
+      ],
+      group: 'workspace',
+    }),
     'workspace interfaces': cloneCommandSpec(commandSpecs['workspace interfaces'], {
       usage: 'opl workspace interfaces',
       examples: ['opl workspace interfaces'],

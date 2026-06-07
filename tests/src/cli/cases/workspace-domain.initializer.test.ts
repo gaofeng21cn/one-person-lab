@@ -87,6 +87,60 @@ test('workspace init materializes RCA series topology and binds the workspace', 
   }
 });
 
+test('workspace init appends RCA series deliverables inside one workspace', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-rca-series-state-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-rca-series-root-'));
+
+  try {
+    runCli([
+      'workspace',
+      'init',
+      '--agent',
+      'rca',
+      '--workspace-root',
+      workspaceRoot,
+      '--workspace-id',
+      'visual-theme-a',
+      '--project-id',
+      'deck-001',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const output = runCli([
+      'workspace',
+      'init',
+      '--agent',
+      'rca',
+      '--workspace-root',
+      workspaceRoot,
+      '--workspace-id',
+      'visual-theme-a',
+      '--project-id',
+      'deck-002',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const workspacePath = path.join(workspaceRoot, 'visual-theme-a');
+    assert.equal(output.workspace_initialization.metadata_action, 'appended_project');
+    assert.equal(fs.statSync(path.join(workspacePath, 'deliverables', 'deck-002', 'artifacts', 'stage_outputs')).isDirectory(), true);
+
+    const workspaceIndex = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
+    assert.deepEqual(
+      workspaceIndex.projects.map((entry: { project_id: string }) => entry.project_id),
+      ['deck-001', 'deck-002'],
+    );
+    assert.equal(workspaceIndex.projects[1].stage_outputs_root, 'deliverables/deck-002/artifacts/stage_outputs');
+    const workspaceYaml = fs.readFileSync(path.join(workspacePath, 'workspace.yaml'), 'utf8');
+    assert.match(workspaceYaml, /project_id: deck-001/);
+    assert.match(workspaceYaml, /project_id: deck-002/);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('workspace init materializes MAS portfolio topology with study roots', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-mas-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-mas-root-'));
@@ -138,6 +192,60 @@ test('workspace init materializes MAS portfolio topology with study roots', () =
     });
     const mas = catalog.workspace_catalog.projects.find((entry: { project_id: string }) => entry.project_id === 'medautoscience');
     assert.equal(mas.active_binding.workspace_path, workspacePath);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace init appends MAS portfolio studies without replacing shared roots', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-mas-portfolio-state-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-mas-portfolio-root-'));
+
+  try {
+    runCli([
+      'workspace',
+      'init',
+      '--agent',
+      'mas',
+      '--workspace-root',
+      workspaceRoot,
+      '--workspace-id',
+      'dm-cvd',
+      '--project-id',
+      'DM002',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const output = runCli([
+      'workspace',
+      'init',
+      '--agent',
+      'mas',
+      '--workspace-root',
+      workspaceRoot,
+      '--workspace-id',
+      'dm-cvd',
+      '--project-id',
+      'DM003',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const workspacePath = path.join(workspaceRoot, 'dm-cvd');
+    assert.equal(output.workspace_initialization.metadata_action, 'appended_project');
+    assert.equal(fs.statSync(path.join(workspacePath, 'studies', 'DM003', 'artifacts', 'stage_outputs')).isDirectory(), true);
+    assert.equal(fs.statSync(path.join(workspacePath, 'data')).isDirectory(), true);
+    assert.equal(fs.statSync(path.join(workspacePath, 'literature')).isDirectory(), true);
+    assert.equal(fs.statSync(path.join(workspacePath, 'memory')).isDirectory(), true);
+
+    const workspaceIndex = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
+    assert.deepEqual(
+      workspaceIndex.projects.map((entry: { project_id: string }) => entry.project_id),
+      ['DM002', 'DM003'],
+    );
+    assert.equal(workspaceIndex.projects[1].stage_outputs_root, 'studies/DM003/artifacts/stage_outputs');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -233,6 +341,106 @@ test('workspace init uses configured OPL workspace root when no path is provided
   }
 });
 
+test('workspace ensure initializes once and then reuses the active binding', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-ensure-home-'));
+  const stateRoot = path.join(homeRoot, 'opl-state');
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-ensure-root-'));
+
+  try {
+    runCli(['workspace', 'root', 'set', '--path', workspaceRoot], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const first = runCli([
+      'workspace',
+      'ensure',
+      '--agent',
+      'rca',
+      '--workspace-id',
+      'visual-theme-a',
+      '--project-id',
+      'deck-001',
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const workspacePath = path.join(workspaceRoot, 'visual-theme-a');
+    assert.equal(first.workspace_initialization.action, 'ensure');
+    assert.equal(first.workspace_initialization.ensure_status, 'initialized_default_workspace');
+    assert.equal(fs.statSync(path.join(workspacePath, 'deliverables', 'deck-001', 'artifacts', 'stage_outputs')).isDirectory(), true);
+
+    const second = runCli([
+      'workspace',
+      'ensure',
+      '--agent',
+      'rca',
+      '--project-id',
+      'deck-001',
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    assert.equal(second.workspace_initialization.action, 'ensure');
+    assert.equal(second.workspace_initialization.ensure_status, 'reused_active_binding');
+    assert.equal(second.workspace_initialization.workspace_path, workspacePath);
+    assert.equal(second.workspace_initialization.created_directories.length, 0);
+    assert.equal(second.workspace_initialization.binding.project_id, 'redcube');
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace ensure appends a missing project to an active series workspace', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-ensure-append-state-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-ensure-append-root-'));
+
+  try {
+    runCli([
+      'workspace',
+      'init',
+      '--agent',
+      'rca',
+      '--workspace-root',
+      workspaceRoot,
+      '--workspace-id',
+      'visual-theme-a',
+      '--project-id',
+      'deck-001',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const output = runCli([
+      'workspace',
+      'ensure',
+      '--agent',
+      'rca',
+      '--project-id',
+      'deck-002',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const workspacePath = path.join(workspaceRoot, 'visual-theme-a');
+    assert.equal(output.workspace_initialization.ensure_status, 'initialized_missing_project_in_active_binding');
+    assert.equal(output.workspace_initialization.metadata_action, 'appended_project');
+    assert.equal(fs.statSync(path.join(workspacePath, 'deliverables', 'deck-002', 'artifacts', 'stage_outputs')).isDirectory(), true);
+
+    const workspaceIndex = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
+    assert.deepEqual(
+      workspaceIndex.projects.map((entry: { project_id: string }) => entry.project_id),
+      ['deck-001', 'deck-002'],
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('workspace init dry-run exposes CLI MCP and skill call surfaces without writing files', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-dry-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-dry-root-'));
@@ -262,10 +470,11 @@ test('workspace init dry-run exposes CLI MCP and skill call surfaces without wri
     assert.equal(fs.existsSync(workspacePath), false);
 
     assert.equal(output.workspace_initialization.interface_projection.cli.command, 'opl workspace init');
-    assert.equal(output.workspace_initialization.interface_projection.mcp.tool_name, 'opl_workspace_initialize');
+    assert.equal(output.workspace_initialization.interface_projection.cli.ensure_command, 'opl workspace ensure');
+    assert.equal(output.workspace_initialization.interface_projection.mcp.tool_name, 'opl_workspace_ensure');
     assert.equal(output.workspace_initialization.interface_projection.mcp.descriptor_only, true);
     assert.equal(output.workspace_initialization.interface_projection.mcp.public_runtime, false);
-    assert.equal(output.workspace_initialization.interface_projection.skill.intent, 'initialize_opl_workspace');
+    assert.equal(output.workspace_initialization.interface_projection.skill.intent, 'ensure_opl_workspace');
     assert.deepEqual(
       output.workspace_initialization.interface_projection.required_inputs,
       ['agent_id'],
@@ -289,12 +498,14 @@ test('workspace interfaces exports the OPL-owned initializer surfaces for tools 
   assert.equal(output.workspace_interfaces.boundary.is_domain_family_action_catalog, false);
   assert.equal(output.workspace_interfaces.boundary.writes_opl_workspace_registry, true);
   assert.equal(output.workspace_interfaces.boundary.writes_domain_truth, false);
-  assert.equal(output.workspace_interfaces.command_contract.command, 'opl workspace init');
+  assert.equal(output.workspace_interfaces.command_contract.command, 'opl workspace ensure');
+  assert.equal(output.workspace_interfaces.command_contract.initializer_command, 'opl workspace init');
   assert.deepEqual(output.workspace_interfaces.command_contract.required_inputs, ['agent_id']);
-  assert.equal(output.workspace_interfaces.surfaces.mcp.tool_name, 'opl_workspace_initialize');
+  assert.equal(output.workspace_interfaces.surfaces.mcp.tool_name, 'opl_workspace_ensure');
   assert.equal(output.workspace_interfaces.surfaces.mcp.descriptor_only, true);
   assert.equal(output.workspace_interfaces.surfaces.mcp.public_runtime, false);
-  assert.equal(output.workspace_interfaces.surfaces.skill.intent, 'initialize_opl_workspace');
-  assert.equal(output.workspace_interfaces.surfaces.app.action_id, 'workspace_initialize');
+  assert.equal(output.workspace_interfaces.surfaces.skill.intent, 'ensure_opl_workspace');
+  assert.equal(output.workspace_interfaces.surfaces.app.action_id, 'workspace_ensure');
+  assert.equal(output.workspace_interfaces.surfaces.app.initializer_action_id, 'workspace_initialize');
   assert.deepEqual(output.workspace_interfaces.supported_agents, ['mas', 'mag', 'rca', 'oma']);
 });

@@ -30,7 +30,7 @@ Machine boundary: 仅人读索引；机器可读行为必须使用 contracts、s
 | `shared-runtime-contract.md` | `active_support` | OPL shared runtime owner | OPL 与 domain repo 之间的 shared runtime 边界支撑；机器真相归 contracts/source/runtime evidence。 |
 | `shared-domain-contract.md` | `active_support` | OPL shared domain owner | Domain truth、quality verdict、artifact authority、receipt refs 和 projection 边界支撑。 |
 
-Workspace topology 的机器真相归 `contracts/opl-framework/workspace-topology-profile.schema.json`，可执行物化面归 `opl workspace init`、App `workspace_initialize` 和 `opl workspace interfaces`。本规格索引只记录它属于活跃 runtime / product-boundary 支撑：Stage Native 默认用户检查面是 workspace-local `artifacts/stage_outputs` 与 domain-owned product views；runtime-state 只做 backing/provenance，不是普通用户默认查看面。`opl actions export` 仍只导 domain-owned family action catalog；workspace initialization 是 OPL-owned framework action surface，MCP/Skill/OpenAI/AI SDK 只导 descriptor-only command contract，不恢复 standalone family MCP server。
+Workspace topology 的机器真相归 `contracts/opl-framework/workspace-topology-profile.schema.json`，可执行物化面归 `opl workspace ensure` / `opl workspace init`、App `workspace_ensure` / `workspace_initialize` 和 `opl workspace interfaces`。本规格索引只记录它属于活跃 runtime / product-boundary 支撑：Stage Native 默认用户检查面是 workspace-local `artifacts/stage_outputs` 与 domain-owned product views；runtime-state 只做 backing/provenance，不是普通用户默认查看面。`opl actions export` 仍只导 domain-owned family action catalog；workspace ensure / initialization 是 OPL-owned framework action surface，MCP/Skill/OpenAI/AI SDK 只导 descriptor-only command contract，不恢复 standalone family MCP server。
 
 旧 Product API / ACP / frontdoor 规格不从本目录恢复；历史规格从 [过程历史规格归档](../history/process/specs/) 进入。
 

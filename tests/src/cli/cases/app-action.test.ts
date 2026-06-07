@@ -90,6 +90,7 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'provider_worker_start',
       'provider_worker_restart',
       'workspace_initialize',
+      'workspace_ensure',
     ]) {
       assert.ok(actions.has(actionId), `missing App action: ${actionId}`);
       assert.equal(actions.get(actionId)?.delegated_surface.startsWith('opl '), true);
@@ -108,6 +109,16 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.equal(actions.get('workspace_initialize')?.delegated_surface, 'opl workspace init');
     assert.equal(actions.get('workspace_initialize')?.dry_run_supported, true);
     assert.deepEqual(actions.get('workspace_initialize')?.payload_fields, [
+      'agent_id',
+      'workspace_root_optional',
+      'workspace_id',
+      'project_id',
+      'mode',
+      'title',
+    ]);
+    assert.equal(actions.get('workspace_ensure')?.delegated_surface, 'opl workspace ensure');
+    assert.equal(actions.get('workspace_ensure')?.dry_run_supported, true);
+    assert.deepEqual(actions.get('workspace_ensure')?.payload_fields, [
       'agent_id',
       'workspace_root_optional',
       'workspace_id',
@@ -205,7 +216,7 @@ test('app action execute owns settings, release channel, workspace root, and pro
     assert.equal(workspaceInitialize.delegated_surface, 'opl workspace init');
     assert.equal(workspaceInitialize.result.workspace_initialization.dry_run, true);
     assert.equal(workspaceInitialize.result.workspace_initialization.agent.agent_id, 'rca');
-    assert.equal(workspaceInitialize.result.workspace_initialization.interface_projection.mcp.tool_name, 'opl_workspace_initialize');
+    assert.equal(workspaceInitialize.result.workspace_initialization.interface_projection.mcp.tool_name, 'opl_workspace_ensure');
     assert.equal(workspaceInitialize.result.workspace_initialization.interface_projection.mcp.descriptor_only, true);
 
     const magWorkspace = runCli([
@@ -232,6 +243,27 @@ test('app action execute owns settings, release channel, workspace root, and pro
       fs.statSync(path.join(workspaceRoot, 'nsfc-p2c', 'deliverables', 'grant-001', 'artifacts', 'stage_outputs')).isDirectory(),
       true,
     );
+
+    const magEnsure = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'workspace_ensure',
+      '--payload',
+      JSON.stringify({
+        agent_id: 'mag',
+        project_id: 'grant-001',
+      }),
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+    }).app_action_execution;
+
+    assert.equal(magEnsure.delegated_surface, 'opl workspace ensure');
+    assert.equal(magEnsure.result.workspace_initialization.action, 'ensure');
+    assert.equal(magEnsure.result.workspace_initialization.ensure_status, 'reused_active_binding');
+    assert.equal(magEnsure.result.workspace_initialization.binding.project_id, 'medautogrant');
 
     const provider = runCli([
       'app',

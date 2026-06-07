@@ -27,7 +27,7 @@ import { buildAppStateRuntimeActivityItems } from './app-state-runtime-activity.
 import { buildOplAppOperatorViewModel } from './app-state-view-model.ts';
 import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 import { selectAppStateCurrentOwnerDeltaReadModel } from './app-state-current-owner-delta.ts';
-import { initializeWorkspace } from './workspace-initializer.ts';
+import { ensureWorkspace, initializeWorkspace } from './workspace-initializer.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -577,7 +577,7 @@ function workspaceRootPayload(payload: JsonRecord) {
   return workspaceRoot;
 }
 
-function workspaceInitializePayload(payload: JsonRecord) {
+function workspaceInitializePayload(payload: JsonRecord, actionId = 'workspace_initialize') {
   const agentId = stringPayloadField(payload, 'agent_id')
     ?? stringPayloadField(payload, 'agentId')
     ?? stringPayloadField(payload, 'agent');
@@ -589,8 +589,8 @@ function workspaceInitializePayload(payload: JsonRecord) {
     ?? stringPayloadField(payload, 'root')
     ?? stringPayloadField(payload, 'path');
   if (!agentId) {
-    throw new FrameworkContractError('cli_usage_error', 'workspace_initialize action requires payload.agent_id.', {
-      action_id: 'workspace_initialize',
+    throw new FrameworkContractError('cli_usage_error', `${actionId} action requires payload.agent_id.`, {
+      action_id: actionId,
       required: ['agent_id'],
     });
   }
@@ -833,7 +833,17 @@ async function executeDirectAppAction(
     return {
       delegatedSurface: 'opl workspace init',
       result: initializeWorkspace(contracts, {
-        ...workspaceInitializePayload(options.payload),
+        ...workspaceInitializePayload(options.payload, options.actionId),
+        dryRun: options.dryRun,
+      }),
+    };
+  }
+
+  if (options.actionId === 'workspace_ensure') {
+    return {
+      delegatedSurface: 'opl workspace ensure',
+      result: ensureWorkspace(contracts, {
+        ...workspaceInitializePayload(options.payload, options.actionId),
         dryRun: options.dryRun,
       }),
     };

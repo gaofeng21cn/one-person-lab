@@ -1,4 +1,8 @@
-import { buildWorkspaceInitializeInterfaces, initializeWorkspace } from '../../workspace-initializer.ts';
+import {
+  buildWorkspaceInitializeInterfaces,
+  ensureWorkspace,
+  initializeWorkspace,
+} from '../../workspace-initializer.ts';
 import type { FrameworkContracts } from '../../types.ts';
 import { assertNoArgs, parseWorkspaceInitializeArgs } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
@@ -21,6 +25,32 @@ export function buildWorkspaceInitializeCommandSpecs(
       handler: (args) => {
         const parsed = parseWorkspaceInitializeArgs(args, specs['workspace-init']);
         return initializeWorkspace(getContracts(), {
+          agentId: parsed.agentId,
+          workspacePath: parsed.workspacePath,
+          workspaceRoot: parsed.workspaceRoot,
+          workspaceId: parsed.workspaceId,
+          projectId: parsed.projectId,
+          title: parsed.title,
+          mode: parsed.mode,
+          bind: parsed.bind,
+          dryRun: parsed.dryRun,
+          force: parsed.force,
+        });
+      },
+    },
+    'workspace-ensure': {
+      usage:
+        'opl workspace ensure --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio] [--title <title>] [--dry-run] [--no-bind] [--force]',
+      summary:
+        'Ensure an OPL family agent has an active workspace binding, initializing the standard topology only when needed.',
+      examples: [
+        'opl workspace ensure --agent rca --project-id deck-001',
+        'opl workspace ensure --agent mas --workspace-id dm-cvd --project-id DM002',
+        'opl workspace ensure --agent mag --workspace-root /Users/gaofeng/workspace --workspace-id nsfc-p2c --project-id grant-001',
+      ],
+      handler: (args) => {
+        const parsed = parseWorkspaceInitializeArgs(args, specs['workspace-ensure']);
+        return ensureWorkspace(getContracts(), {
           agentId: parsed.agentId,
           workspacePath: parsed.workspacePath,
           workspaceRoot: parsed.workspaceRoot,

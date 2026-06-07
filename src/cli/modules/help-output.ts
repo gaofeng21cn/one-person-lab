@@ -184,6 +184,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl module exec --module medautoscience -- doctor entry-modes',
         'opl engine install --engine codex',
         'opl workspace projects',
+        'opl workspace ensure --agent rca --project-id deck-001',
         'opl workspace init --agent rca --workspace-id visual-theme-a --project-id deck-001',
         'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai',
         'opl domain launch --project redcube --dry-run',
