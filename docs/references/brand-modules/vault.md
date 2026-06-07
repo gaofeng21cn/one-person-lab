@@ -48,6 +48,11 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 evidenc
 当前 L4 落地入口：
 
 ```text
+opl vault status --json
+opl vault inspect --json
+opl vault interfaces --json
+opl vault validate --json
+opl vault doctor --json
 opl brand-modules inspect --module vault --json
 opl brand-modules validate --json
 opl family-runtime evidence-worklist --detail full --json
@@ -57,7 +62,7 @@ opl index integrity-check --json
 opl index rebuild --json
 ```
 
-未来如需拆出独立 Vault 品牌命令，可在同一 refs-only ledger / action shell 下派生 `opl vault record|verify|list`；当前 L4 结构基线不依赖这组独立子命令。
+`opl vault status|inspect|interfaces|validate|doctor` 是当前 Vault 自有只读品牌 frontdoor；它证明 Vault 有独立可调用 read-model/doctor 入口。`record|verify|list` 这类会写 ledger 的 Vault 操作仍需另行由 refs-only ledger 合同和 owner gate 承接，不能从品牌 frontdoor 自动推出。
 
 理想文档：
 

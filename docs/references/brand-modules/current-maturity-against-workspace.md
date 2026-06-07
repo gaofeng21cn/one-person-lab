@@ -30,21 +30,21 @@ Machine boundary: 本文是人读现状对照。当前完成度、计数、recei
 
 ## 九模块完成度
 
-当前九模块都已达到 `L4_structural_baseline`。这里的 L4 是 `Workspace` 水平的结构完成：品牌文档、机器注册表、CLI governance、contract/policy refs、CLI/App/descriptor/validation/status refs、authority boundary 和 forbidden claims 已经同源落到 `contracts/opl-framework/brand-module-registry.json` 与 `contracts/opl-framework/brand-cli-governance.json`，并由 `opl brand-modules validate --json`、`opl agents modules validate --json` 与 `opl contract validate --json` 守门。
+当前九模块都已达到 `L4_structural_baseline`。这里的 L4 是 `Workspace` 水平的结构完成：品牌文档、机器注册表、CLI governance、module-owned CLI frontdoor、contract/policy refs、CLI/App/descriptor/validation/status refs、authority boundary 和 forbidden claims 已经同源落到 `contracts/opl-framework/brand-module-registry.json` 与 `contracts/opl-framework/brand-cli-governance.json`，并由 `opl <brand-module> status|inspect|interfaces|validate|doctor --json`、`opl brand-modules validate --json`、`opl agents modules validate --json` 与 `opl contract validate --json` 守门。
 
 Workspace 有一个明确碰撞例外：`opl workspace status|inspect --json` 是新增品牌读面；`opl workspace validate|doctor|interfaces --json` 继续保持 workspace operational 语义。
 
 | 模块 | 当前完成度 | 相对 Workspace | 判断 |
 | --- | --- | --- | --- |
-| `OPL Charter` | `L4_structural_baseline` | 达到 Workspace | 已有品牌文档、registry entry、surface-budget/registry refs、统一 `opl brand-modules` CLI、App/descriptor-only projection、validation 和 forbidden authority flags。 |
-| `OPL Atlas` | `L4_structural_baseline` | 达到 Workspace | Domain descriptors、actions、stages、generated interfaces 与 conformance 已折入品牌 registry 和统一 inspection surface。 |
+| `OPL Charter` | `L4_structural_baseline` | 达到 Workspace | 已有品牌文档、registry entry、surface-budget/registry refs、自有 `opl charter status|inspect|interfaces|validate|doctor` frontdoor、App/descriptor-only projection、validation 和 forbidden authority flags。 |
+| `OPL Atlas` | `L4_structural_baseline` | 达到 Workspace | Domain descriptors、actions、stages、generated interfaces 与 conformance 已折入品牌 registry、自有 `opl atlas *` frontdoor 和 aggregate inspection surface。 |
 | `OPL Workspace` | `L4_structural_baseline` | 基线 | 保持 Workspace topology/schema、CLI/App action、validation/doctor、interfaces 和 docs/status foldback。 |
-| `OPL Stagecraft` | `L4_structural_baseline` | 达到 Workspace | StageRun/cognitive kernel/stage manifest/receipt/blocker refs 已折入 registry、CLI、descriptor 和 validation gates。 |
-| `OPL Runway` | `L4_structural_baseline` | 达到 Workspace | Runtime manager、Temporal orchestration refs、worker lifecycle/readiness surface、typed queue、attempt ledger、provider SLO health/repair refs 已折入 registry、CLI、operator projection 和 validation gates。 |
-| `OPL Vault` | `L4_structural_baseline` | 达到 Workspace | Evidence vault、state index、stage artifact runtime、receipt/blocker refs 已折入 registry、CLI、operator projection 和 validation gates。 |
-| `OPL Console` | `L4_structural_baseline` | 达到 Workspace | App state/action、current owner delta、operator projection 与 safe action shell 已作为 Console refs-only module surface 登记。 |
-| `OPL Foundry Lab` | `L4_structural_baseline` | 达到 Workspace | Agent Lab、Foundry Agent series、scaffold/conformance/readiness/default-caller refs 已作为 Lab module surface 登记。 |
-| `OPL Connect` | `L4_structural_baseline` | 达到 Workspace | CLI/Skill/module/package/generated interface/release discipline refs 已作为 Connect descriptor/distribution surface 登记。 |
+| `OPL Stagecraft` | `L4_structural_baseline` | 达到 Workspace | StageRun/cognitive kernel/stage manifest/receipt/blocker refs 已折入 registry、自有 `opl stagecraft *` frontdoor、descriptor 和 validation gates。 |
+| `OPL Runway` | `L4_structural_baseline` | 达到 Workspace | Runtime manager、Temporal orchestration refs、worker lifecycle/readiness surface、typed queue、attempt ledger、provider SLO health/repair refs 已折入 registry、自有 `opl runway *` frontdoor、operator projection 和 validation gates。 |
+| `OPL Vault` | `L4_structural_baseline` | 达到 Workspace | Evidence vault、state index、stage artifact runtime、receipt/blocker refs 已折入 registry、自有 `opl vault *` frontdoor、operator projection 和 validation gates。 |
+| `OPL Console` | `L4_structural_baseline` | 达到 Workspace | App state/action、current owner delta、operator projection 与 safe action shell 已作为 Console refs-only module surface 登记，并有自有 `opl console *` frontdoor。 |
+| `OPL Foundry Lab` | `L4_structural_baseline` | 达到 Workspace | Agent Lab、Foundry Agent series、scaffold/conformance/readiness/default-caller refs 已作为 Lab module surface 登记，并有自有 `opl foundry-lab *` frontdoor。 |
+| `OPL Connect` | `L4_structural_baseline` | 达到 Workspace | CLI/Skill/module/package/generated interface/release discipline refs 已作为 Connect descriptor/distribution surface 登记，并有自有 `opl connect status|inspect|interfaces|validate|doctor` frontdoor。 |
 
 ## L5 规划
 
@@ -71,7 +71,13 @@ opl brand-modules maturity --json
 opl brand-modules validate --json
 opl brand-modules interfaces --json
 opl charter status --json
+opl atlas inspect --json
+opl stagecraft interfaces --json
 opl runway doctor --json
+opl vault validate --json
+opl console status --json
+opl foundry-lab inspect --json
+opl connect interfaces --json
 opl agents modules list --json
 opl agents modules validate --json
 opl contract validate --json

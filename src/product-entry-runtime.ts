@@ -35,7 +35,7 @@ export function buildProductEntryDoctor(validation: ContractValidationSummary) {
       issues: provider.degraded_reason ? [provider.degraded_reason] : [],
       notes: [
         'Codex-default local entry is provided through `opl`, `opl exec`, and `opl resume`.',
-        'Use `opl skill sync` to register the family domain skill packs before default Codex sessions.',
+        'Use `opl connect sync-skills` to register the family domain skill packs before default Codex sessions.',
         'Full OPL readiness uses the configured family runtime provider; non-default executors are explicit stage/request selections with independent receipts.',
       ],
     },

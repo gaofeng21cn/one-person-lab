@@ -346,7 +346,7 @@ exit 0
     assert.equal(Object.hasOwn(output.product_entry, 'hermes'), false);
     assert.match(output.product_entry.notes[0], /opl exec/);
     assert.match(output.product_entry.notes[0], /opl resume/);
-    assert.match(output.product_entry.notes[1], /opl skill sync/);
+    assert.match(output.product_entry.notes[1], /opl connect sync-skills/);
     assert.match(output.product_entry.notes[2], /configured family runtime provider/);
     assert.match(output.product_entry.notes[2], /non-default executors are explicit stage\/request selections/);
     assert.deepEqual(output.product_entry.issues, ['temporal_runtime_not_configured']);
@@ -497,13 +497,16 @@ test('help no longer advertises retired ask chat shell aliases', () => {
   assert.equal(commands.includes('ask'), false);
   assert.equal(commands.includes('chat'), false);
   assert.equal(commands.includes('shell'), false);
-  assert.equal(commands.includes('skill list'), true);
-  assert.equal(commands.includes('skill sync'), true);
+  assert.equal(commands.includes('connect skills'), true);
+  assert.equal(commands.includes('connect sync-skills'), true);
+  assert.equal(commands.includes('skill list'), false);
+  assert.equal(commands.includes('skill sync'), false);
   assert.equal(examples.some((entry) => entry.includes('opl ask')), false);
   assert.equal(examples.some((entry) => entry.includes('opl chat')), false);
   assert.equal(examples.some((entry) => entry.includes('opl shell')), false);
   assert.equal(examples.some((entry) => entry.includes('opl @')), false);
-  assert.equal(examples.some((entry) => entry.includes('opl skill sync')), true);
+  assert.equal(examples.some((entry) => entry.includes('opl connect sync-skills')), true);
+  assert.equal(examples.some((entry) => entry.includes('opl skill sync')), false);
 });
 
 test('session resume returns the OPL-managed Codex resume envelope in non-interactive mode', () => {

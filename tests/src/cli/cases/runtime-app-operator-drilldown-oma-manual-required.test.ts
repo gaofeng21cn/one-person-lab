@@ -42,7 +42,7 @@ test('runtime app-operator-drilldown explains OMA managed install receipt manual
       managedGate.next_safe_action.action_id,
       'review_oplmetaagent_developer_checkout_before_startup_maintenance',
     );
-    assert.equal(managedGate.next_safe_action.command, 'opl modules');
+    assert.equal(managedGate.next_safe_action.command, 'opl connect modules');
     assert.equal(managedGate.next_safe_action.after_manual_resolution_command, 'opl system startup-maintenance');
     assert.equal(managedGate.next_safe_action.can_write_domain_truth, false);
     assert.equal(managedGate.next_safe_action.can_create_owner_receipt, false);

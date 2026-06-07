@@ -26,7 +26,7 @@ App 仓库拆分 closeout 已归档到 [One Person Lab App 仓库拆分 Closeout
 ### `one-person-lab` 主仓
 
 - 定义 `OPL` 的 Codex-default session/runtime、显式 activation、domain agent registry、workspace/session/progress/artifact surface。
-- 提供 `opl install`、`opl system initialize`、`opl module *`、`opl skill *`、`opl packages manifest` 等 CLI-backed 能力。
+- 提供 `opl install`、`opl system initialize`、`opl connect modules`、`opl connect install|update|reinstall|remove|exec`、`opl connect sync-skills`、`opl connect packages manifest` 等 CLI-backed 能力。旧 `opl module *`、`opl skill *`、`opl packages manifest` 仅作为 compatibility deep-link 保留。
 - 管理 `Codex CLI`、MAS/MAG/RCA、推荐 skills、native helper、Packages 与 release discovery；MDS 不作为默认安装模块。
 - 消费 `one-person-lab-app` GitHub Releases 中的 One Person Lab App release artifact，但不构建、不上传、不维护 updater metadata。
 - 为 GUI 提供可消费的机器可读输出；新增安装、修复、状态或更新能力时，先落到 CLI，再由 GUI 调用。

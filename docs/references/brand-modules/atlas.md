@@ -42,6 +42,11 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 domain 
 当前 L4 落地接口：
 
 ```text
+opl atlas status --json
+opl atlas inspect --json
+opl atlas interfaces --json
+opl atlas validate --json
+opl atlas doctor --json
 opl brand-modules inspect --module atlas --json
 opl brand-modules validate --json
 opl agents descriptors --json
@@ -68,6 +73,7 @@ docs/architecture.md
 docs/status.md
 contracts/opl-framework/atlas-catalog.schema.json
 contracts/opl-framework/brand-module-registry.json
+contracts/opl-framework/brand-cli-governance.json
 contracts/opl-framework/domain-pack-compiler-contract.json
 contracts/opl-framework/foundry-agent-series-contract.json
 contracts/opl-framework/standard-domain-agent-skeleton-contract.json
@@ -86,7 +92,7 @@ opl agents conformance --json
 opl contract validate --json
 ```
 
-未来如需拆出独立 Atlas 子命令，可在同一 catalog / generated interface bundle 下派生 `opl atlas list|inspect|surfaces|graph|lifecycle|validate|doctor|status`，但这些命令不是当前 L4 结构基线的机器验收入口。
+`opl atlas status|inspect|interfaces|validate|doctor` 是当前 Atlas 自有只读品牌 frontdoor；它读取 registry / governance / descriptor refs，不执行 catalog action，也不替代 `opl agents descriptors|interfaces|conformance` 的 operational surface。
 
 `Atlas` 的人读文档解释 catalog 设计；机器合同固定 descriptor shape、catalog graph、generated interface bundle、lifecycle state、owner refs 和 conformance 输出。测试只验证 contract / schema / CLI/App 行为，不固定 prose wording。
 
@@ -117,7 +123,7 @@ opl contract validate --json
 L4 structural baseline 成功标准：
 
 - `atlas_catalog`、domain descriptor、generated interface bundle、lifecycle state 和 conformance report 有 schema / contract，并能由 `contract validate` 或等价验证检查。
-- `opl brand-modules inspect --module atlas`、`opl agents descriptors|interfaces|conformance` 与 App descriptors 从同一 catalog / generated interface bundle 派生。
+- `opl atlas status|inspect|interfaces|validate|doctor`、`opl brand-modules inspect --module atlas`、`opl agents descriptors|interfaces|conformance` 与 App descriptors 从同一 catalog / generated interface bundle 派生。
 - MCP、Skill、OpenAI、AI SDK descriptors 只做 delegate，不写 domain truth、不执行 action、不声明 readiness。
 - validation fail-closed：发现 orphan agent、orphan action、orphan stage、ownerless surface、missing lifecycle、descriptor drift、generated bundle drift 或 unsupported default deprecated surface 时失败。
 - MAS/MAG/RCA/OMA 和新 scaffold 能被同一 catalog graph 表达，并保留 domain-owned descriptor source。

@@ -538,7 +538,10 @@ test('fresh-install matrix freezes GUI labels and first-run log contract', () =>
       nightly_workflow: string;
       default_self_hosted_runner_labels: string[];
     };
-    scenarios: Array<{ scenario_id: string }>;
+    scenarios: Array<{
+      scenario_id: string;
+      expected_artifacts?: string[];
+    }>;
     ci_policy: {
       github_actions: string;
       self_hosted_macos: string;
@@ -572,7 +575,12 @@ test('fresh-install matrix freezes GUI labels and first-run log contract', () =>
     'macOS',
     'opl-gui-vm',
   ]);
-  assert.equal(matrix.scenarios.some((entry) => entry.scenario_id === 'clean_vm_release_first_launch'), true);
+  const cleanVmScenario = matrix.scenarios.find(
+    (entry) => entry.scenario_id === 'clean_vm_release_first_launch',
+  );
+  assert.ok(cleanVmScenario);
+  assert.equal(cleanVmScenario.expected_artifacts?.includes('connect modules JSON'), true);
+  assert.equal(cleanVmScenario.expected_artifacts?.includes('modules JSON'), false);
   const [oplGithubActionsPolicy] = matrix.ci_policy.github_actions.split('. ');
   assert.match(oplGithubActionsPolicy, /local CLI fresh-install smoke/);
   assert.doesNotMatch(oplGithubActionsPolicy, /codesign\/notarization/);

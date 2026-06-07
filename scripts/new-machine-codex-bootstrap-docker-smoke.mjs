@@ -23,12 +23,12 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/main
 
 opl help --text >/tmp/opl-help.txt
 opl system initialize --json >/tmp/opl-system.json
-opl skill sync --domain mas --domain rca >/tmp/opl-skill-sync.json
-opl skill list --json >/tmp/opl-skill-list.json
+opl connect sync-skills --domain mas --domain rca >/tmp/opl-connect-sync-skills.json
+opl connect skills --json >/tmp/opl-connect-skills.json
 
 node <<'NODE'
 const fs = require('fs');
-const list = JSON.parse(fs.readFileSync('/tmp/opl-skill-list.json', 'utf8'));
+const list = JSON.parse(fs.readFileSync('/tmp/opl-connect-skills.json', 'utf8'));
 const packs = list.skill_catalog?.packs ?? [];
 const wanted = ['medautoscience', 'redcube'];
 
@@ -42,7 +42,7 @@ for (const id of wanted) {
   }
 }
 
-const sync = JSON.parse(fs.readFileSync('/tmp/opl-skill-sync.json', 'utf8'));
+const sync = JSON.parse(fs.readFileSync('/tmp/opl-connect-sync-skills.json', 'utf8'));
 const synced = (sync.skill_sync?.packs ?? [])
   .filter((entry) => wanted.includes(entry.domain_id) && entry.sync_status === 'synced');
 if (synced.length !== 2) {

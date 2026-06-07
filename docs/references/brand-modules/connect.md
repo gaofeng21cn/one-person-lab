@@ -36,7 +36,7 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 contrac
 | 层面 | 目标 refs |
 | --- | --- |
 | `contract` | domain pack compiler contract、public surface index、generated interface schema、release package manifest。 |
-| `CLI` | `opl agents interfaces`、`opl actions export`、`opl skill sync`、`opl module install`、`opl system startup-maintenance`。 |
+| `CLI` | `opl agents interfaces`、`opl actions export`、`opl connect sync-skills`、`opl connect install`、`opl connect packages manifest`、`opl system startup-maintenance`。 |
 | `App` | App action descriptors、module health、release/update surface、installed agent capability projection。 |
 | `descriptor` | CLI spec、MCP descriptor、skill/plugin manifest、OpenAI tool descriptor、AI SDK tool descriptor、App action descriptor。 |
 | `validation` | descriptor drift check、generated artifact fingerprint check、clean install/upgrade smoke、skill sync verify、module health verify。 |
@@ -49,8 +49,9 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 contrac
 ```text
 opl agents interfaces --family-defaults --json
 opl actions export --domain <id> --json
-opl skill sync --json
-opl module install <agent> --json
+opl connect sync-skills --json
+opl connect install --module <agent> --json
+opl connect packages manifest --json
 opl system startup-maintenance --json
 ```
 

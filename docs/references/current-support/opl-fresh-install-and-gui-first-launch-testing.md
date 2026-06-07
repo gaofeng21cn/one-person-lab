@@ -72,7 +72,7 @@ OPL 侧消费的基础 evidence 字段包括：
 - `~/Library/Logs/One Person Lab/first-run.jsonl`
 - `~/Library/Application Support/OPL/state`
 - `opl system initialize --json`
-- `opl modules --json`
+- `opl connect modules --json`
 - 首启窗口截图
 - macOS unified log 中 One Person Lab 相关片段
 

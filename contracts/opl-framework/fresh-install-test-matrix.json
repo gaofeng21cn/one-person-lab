@@ -170,7 +170,7 @@
       "expected_artifacts": [
         "first-run JSONL log",
         "system initialize JSON",
-        "modules JSON",
+        "connect modules JSON",
         "launch screenshot",
         "macOS unified log excerpt for One Person Lab"
       ]

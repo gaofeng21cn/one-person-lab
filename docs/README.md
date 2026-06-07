@@ -158,7 +158,7 @@ OPL 系列项目开发的主参考是 [OPL 系列项目开发主参考](./active
 
 - 公开角色、活跃边界、默认阅读顺序： [项目概览](./project.md)、[当前状态](./status.md)、[架构](./architecture.md)
 - OPL 自己持有的机器可读产品资源： [合同目录说明](../contracts/README.md)
-- 已收录 domain 的 capability surface：各 domain 仓自己的 repo-owned surface 与 `opl skill sync`
+- 已收录 domain 的 capability surface：各 domain 仓自己的 repo-owned surface 与 `opl connect sync-skills`
 - 活跃 framework 合同：`contracts/opl-framework/*.json`
 - 当前 runtime / product-boundary 规格入口：[规格索引](./specs/README.md)
 - 已退役 gateway/federation 来源语料：[Gateway / Federation 来源归档](./history/compatibility/gateway-federation/README.md)

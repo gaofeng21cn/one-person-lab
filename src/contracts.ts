@@ -8,6 +8,7 @@ import type {
   FrameworkContractsLoadOptions,
   BrandCliGovernanceContract,
   BrandModuleAuthorityBoundary,
+  BrandModuleCliOperation,
   BrandModuleId,
   BrandModuleRegistryContract,
   PublicSurfaceIndexContract,
@@ -687,7 +688,7 @@ function validateBrandCliGovernance(
       filePath,
       BRAND_MODULE_CLI_OPERATIONS,
     );
-    const expectedOperations = moduleId === 'workspace'
+    const expectedOperations: readonly BrandModuleCliOperation[] = moduleId === 'workspace'
       ? (['status', 'inspect'] as const)
       : BRAND_MODULE_CLI_OPERATIONS;
     requireEveryValue(operations, expectedOperations, 'platform_frontdoors.operations', filePath);

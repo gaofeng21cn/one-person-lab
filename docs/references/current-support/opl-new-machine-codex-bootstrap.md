@@ -19,7 +19,7 @@ Source of truth:
 1. 先读取这份指南，再检查当前机器的 macOS/Linux 环境、GitHub 可访问性、Codex CLI/Codex 配置、~/.codex、~/.agents/plugins/marketplace.json、~/plugins、~/.local/bin、OPL 相关 checkout 与已有安装状态。
 2. 安装或刷新 One Person Lab Framework CLI，并验证 `opl help --text`、`opl system initialize --json` 和必要的 runtime readiness。
 3. 安装或打开 One Person Lab App；macOS Apple Silicon 首次安装优先使用最新 Full DMG，命令行路径使用 App 仓库 one-shot installer。
-4. 运行 `opl skill sync`，让 MAS/MAG/RCA 作为 plugin-packaged domain skill entries 可见，让 OPL Meta Agent 作为 OPL-generated skill surface 可见。
+4. 运行 `opl connect sync-skills`，让 MAS/MAG/RCA 作为 plugin-packaged domain skill entries 可见，让 OPL Meta Agent 作为 OPL-generated skill surface 可见。
 5. 安装并验证 OPL Flow，让 Codex 获得用户级 AGENTS.md、TASTE.md、planner/executor/debugger/verifier 角色库和 opl-flow 插件。
 6. 安装并验证 OPL Doc，让 Codex 获得 opl-doc canonical skill、opl-doc-governance 兼容 skill 和 opl-doc-doctor。
 7. 检查推荐 companion skills/tools 的状态；只按 OPL CLI/App/Full payload 的受管路径安装或同步，不手工制造第二真相源。
@@ -37,7 +37,7 @@ Source of truth:
 
 | 层 | Canonical owner | 负责内容 |
 | --- | --- | --- |
-| Framework / runtime | `one-person-lab` | `opl` CLI、初始化、模块发现、runtime/provider/readiness、`opl skill sync`、App 可消费 state/action surface |
+| Framework / runtime | `one-person-lab` | `opl` CLI、初始化、Connect 模块发现、runtime/provider/readiness、`opl connect sync-skills`、App 可消费 state/action surface |
 | Product / first install | `one-person-lab-app` | Desktop App、Full first-install DMG、one-shot App installer、release gates、首启用户路径 |
 | Domain agents | MAS/MAG/RCA/OMA repos + OPL generated surface | domain truth、action/stage semantics、quality/export/artifact authority、domain skill metadata |
 | Codex workflow | `opl-flow` | 用户级 `AGENTS.md`、`TASTE.md`、角色库、subagent contract、Direct/Inline/Durable 工作流 |
@@ -84,7 +84,7 @@ Full DMG 是 clean-machine 产品路径。它包含桌面 App、OPL Framework ru
 
 ```bash
 opl help --text
-opl modules
+opl connect modules
 opl system initialize --json
 ```
 
@@ -93,15 +93,15 @@ opl system initialize --json
 ### 4. 同步 OPL 智能体可见面
 
 ```bash
-opl skill sync
-opl skill list --json
+opl connect sync-skills
+opl connect skills --json
 ```
 
 稳定边界：
 
 - MAS、MAG、RCA 走 plugin-packaged domain skill entries。
 - OPL Meta Agent 走 OPL-generated skill surface。
-- `opl skill sync` 是统一同步入口。
+- `opl connect sync-skills` 是统一同步入口；`opl skill sync` 只保留为 compatibility deep-link。
 - MAS/MAG/RCA 不应同时作为重复裸 skill 出现在 `~/.codex/skills/{mas,mag,rca}`。
 
 ### 5. 安装 OPL Flow
@@ -143,7 +143,7 @@ Codex 报告完成前，至少应给出这些新鲜证据：
 ```bash
 opl help --text
 opl system initialize --json
-opl skill sync
+opl connect sync-skills
 python3 <opl-flow-checkout>/scripts/install_local_plugin.py --verify-only
 python3 <opl-flow-checkout>/scripts/verify.py
 python3 <opl-doc-checkout>/scripts/install_local_plugin.py --verify-only
@@ -164,7 +164,7 @@ npm run new-machine:codex-bootstrap:docker-smoke
 该 smoke 会从 GitHub 重新拉取安装入口，验证：
 
 - OPL CLI 可安装并响应 `opl help --text` / `opl system initialize --json`。
-- MAS 和 RCA 可以作为 managed domain modules 安装，并通过 `opl skill sync --domain mas --domain rca` 注册为 Codex plugin。
+- MAS 和 RCA 可以作为 managed domain modules 安装，并通过 `opl connect sync-skills --domain mas --domain rca` 注册为 Codex plugin。
 - `~/.codex/config.toml` 出现 `mas@mas-local` 与 `rca@rca-local` plugin 配置。
 - 不生成重复的 `~/.codex/skills/{mas,rca}` 裸 skill mirror。
 - `opl-flow` 可在干净 HOME 中安装插件、`AGENTS.md`、`TASTE.md` 和 planner/executor/debugger/verifier 角色库。

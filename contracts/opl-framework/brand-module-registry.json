@@ -658,11 +658,11 @@
         "contracts/opl-framework/fresh-install-test-matrix.json"
       ],
       "cli_surfaces": [
-        "opl skill sync --json",
-        "opl skill list --json",
-        "opl modules --json",
-        "opl module install --module medautoscience --json",
-        "opl packages manifest --json",
+        "opl connect sync-skills --json",
+        "opl connect skills --json",
+        "opl connect modules --json",
+        "opl connect install --module medautoscience --json",
+        "opl connect packages manifest --json",
         "opl brand-modules inspect --module connect --json"
       ],
       "app_surfaces": [
@@ -677,7 +677,7 @@
       ],
       "validation_surfaces": [
         "opl system semantic-hygiene --json",
-        "opl packages manifest --json",
+        "opl connect packages manifest --json",
         "opl brand-modules validate --json",
         "opl contract validate --json"
       ],

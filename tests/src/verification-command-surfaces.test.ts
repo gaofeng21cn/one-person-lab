@@ -791,6 +791,13 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
   assert.match(verifyScript, /smoke\|fast\|regression\|integration\|structure\|structure:strict\|family\|meta\|fresh-install\|artifact\|native\|full\|lint\|line-budget\|line-budget:strict\|typecheck/);
 });
 
+test('new-machine bootstrap smoke uses Connect canonical skill sync surface', () => {
+  const smokeScript = read('scripts/new-machine-codex-bootstrap-docker-smoke.mjs');
+
+  assert.match(smokeScript, /opl connect sync-skills --domain mas --domain rca/);
+  assert.doesNotMatch(smokeScript, /opl skill sync --domain mas --domain rca/);
+});
+
 test('OPL harness pytest cache defaults outside the checkout', () => {
   const pyproject = read('python/opl-harness-shared/pyproject.toml');
 

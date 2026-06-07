@@ -115,7 +115,7 @@ rtk opl workspace interfaces --json
 
 - 默认前门是 `opl`；`opl --help` / `opl help` 展示 OPL Framework 自有命令树，`opl exec` 负责一次性请求，`opl exec --help` 保留 Codex-compatible 执行器帮助边界，`opl resume` 负责续接会话。
 - `opl install` 是当前一键安装入口，负责安装或复用 Codex CLI、Temporal-backed family runtime provider、MAS、MAG、RCA、OPL Meta Agent、推荐 skills 和 App 入口。
-- `opl system` / `opl system initialize` / `opl system startup-maintenance` 管理 Codex CLI、provider profile/readiness、module install/update、skill sync、managed environment freshness、plugin cache freshness、reload prompt 和 local runtime state。
+- `opl system` / `opl system initialize` / `opl system startup-maintenance` 管理 Codex CLI、provider profile/readiness、Connect module install/update、Connect skill sync、managed environment freshness、plugin cache freshness、reload prompt 和 local runtime state。
 - `opl framework readiness --family-defaults --json` 是 family readiness 动态真相入口；它只输出 framework/operator 读面，不授权 domain ready、artifact authority 或 production ready。
 - `opl stages readiness --family-defaults --json` 是 stage readiness family drilldown 入口；单仓诊断继续使用 `opl stages readiness --domain <domain> --json`。
 - `opl runtime app-operator-drilldown --json` 与 `opl runtime app-operator-drilldown --detail full --json` 是 App/operator drilldown 入口。

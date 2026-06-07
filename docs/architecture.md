@@ -73,9 +73,9 @@ OPL 的三层产品认知说明“面向谁”，九个品牌模块说明 Framew
 - `opl`、`opl exec`、`opl resume` 默认继承 `Codex CLI` 执行语义；`opl --help` / `opl help` 展示 OPL Framework 自有命令树，`opl exec --help` 等执行器命令帮助继续保留 Codex-compatible passthrough 边界
 - `opl install` 默认安装或复用 Codex、family runtime provider、MAS/MAG/RCA domain modules 与推荐 companion tools；`--no-online-runtime` 只用于开发/离线 degraded diagnostics
 - 首启 readiness 分为 Core、Domain modules、family runtime provider 三层；Full OPL readiness 要求三层都 ready
-- `opl skill sync` 把 family domain skill pack 注册到 Codex 环境，并按 workspace/worktree 布局自动发现 sibling repo；显式 runtime switch 或 domain contract 调用才进入 activation layer
-- `opl module install` 负责把缺失 domain repo 拉进 OPL-managed modules root，并串起 repo bootstrap、skill sync 与 health check 这条闭环安装线
-- `opl module exec` 负责把自动化 CLI 调用绑定到 OPL module registry 解析出的当前 checkout；domain CLI 从 repo checkout 内启动，避免把用户 PATH 上的旧全局 tool 当作执行真相
+- `opl connect sync-skills` 把 family domain skill pack 注册到 Codex 环境，并按 workspace/worktree 布局自动发现 sibling repo；显式 runtime switch 或 domain contract 调用才进入 activation layer
+- `opl connect install` 负责把缺失 domain repo 拉进 OPL-managed modules root，并串起 repo bootstrap、skill sync 与 health check 这条闭环安装线
+- `opl connect exec` 负责把自动化 CLI 调用绑定到 OPL module registry 解析出的当前 checkout；domain CLI 从 repo checkout 内启动，避免把用户 PATH 上的旧全局 tool 当作执行真相
 - `Codex CLI` 是默认且第一公民的 concrete executor；family runtime provider 负责 stage-attempt durability / wakeup / approval / retry / query transport，具体 executor 仍由 OPL / domain stage 显式选择
 - `OPL Product Entry` 的普通 ask/chat/resume 路径只使用 Codex-default executor；runtime status 不再暴露 Hermes / Gateway diagnostics，显式非默认 executor 只通过独立 receipt / audit surface 进入
 - `MAS`、`MAG`、`RCA` 等 Foundry Agents 继续保持独立，并通过 CLI / 本地程序 / 脚本 / contract 暴露 capability surface；它们以 OPL-compatible package / repo 接入，而不是内嵌一份 OPL runtime

@@ -73,7 +73,8 @@ test('built CLI help exposes current Codex-default command surfaces', () => {
   assert.ok(commands.includes('install'));
   assert.ok(commands.includes('exec'));
   assert.ok(commands.includes('resume'));
-  assert.ok(commands.includes('skill sync'));
+  assert.ok(commands.includes('connect sync-skills'));
+  assert.equal(commands.includes('skill sync'), false);
   assert.equal(commands.includes('ask'), false);
   assert.equal(commands.includes('web'), false);
   assert.equal(commands.some((command) => command.startsWith('service ')), false);

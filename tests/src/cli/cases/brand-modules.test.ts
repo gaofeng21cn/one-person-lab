@@ -104,6 +104,17 @@ test('each non-Workspace OPL platform brand module has its own executable CLI fr
       assert.equal(surface.operation, operation);
       assert.equal(surface.canonical_frontdoor, `opl ${moduleId}`);
       assert.equal(surface.status, operation === 'doctor' ? 'pass' : 'valid');
+      assert.equal(surface.registry_ref, `contracts/opl-framework/brand-module-registry.json#modules.${moduleId}`);
+      assert.equal(surface.governance_ref, `contracts/opl-framework/brand-cli-governance.json#platform_frontdoors.${moduleId}`);
+      assert.equal(Array.isArray(surface.contract_refs) && surface.contract_refs.length > 0, true);
+      assert.equal(Array.isArray(surface.cli_surfaces) && surface.cli_surfaces.length > 0, true);
+      assert.equal(Array.isArray(surface.app_surfaces) && surface.app_surfaces.length > 0, true);
+      assert.equal(Array.isArray(surface.descriptor_surfaces) && surface.descriptor_surfaces.length > 0, true);
+      assert.equal(Array.isArray(surface.validation_surfaces) && surface.validation_surfaces.length > 0, true);
+      assert.equal(
+        surface.checks.every((entry: { status: string }) => entry.status === 'pass'),
+        true,
+      );
       assert.equal(surface.authority_boundary.can_claim_domain_ready, false);
       assert.equal(surface.authority_boundary.can_claim_quality_verdict, false);
       assert.equal(surface.authority_boundary.can_claim_artifact_authority, false);
@@ -124,6 +135,14 @@ test('Workspace keeps existing validate doctor interfaces semantics and adds non
     assert.equal(surface.operation, operation);
     assert.equal(surface.canonical_frontdoor, 'opl workspace');
     assert.equal(surface.status, 'valid');
+    assert.equal(surface.registry_ref, 'contracts/opl-framework/brand-module-registry.json#modules.workspace');
+    assert.equal(surface.governance_ref, 'contracts/opl-framework/brand-cli-governance.json#platform_frontdoors.workspace');
+    assert.equal(Array.isArray(surface.contract_refs) && surface.contract_refs.length > 0, true);
+    assert.equal(Array.isArray(surface.validation_surfaces) && surface.validation_surfaces.length > 0, true);
+    assert.equal(
+      surface.checks.every((entry: { status: string }) => entry.status === 'pass'),
+      true,
+    );
     assert.equal(surface.frontdoor_collision_policy, 'preserve_workspace_operational_validate_doctor_interfaces');
   }
 });

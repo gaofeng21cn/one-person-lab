@@ -116,7 +116,7 @@ function managedInstallUpdateFollowthrough(observedRefs: string[]) {
         ? 'review_oplmetaagent_developer_checkout_before_startup_maintenance'
         : 'run_opl_system_startup_maintenance',
       command: manualRequired
-        ? 'opl modules'
+        ? 'opl connect modules'
         : 'opl system startup-maintenance',
       after_manual_resolution_command: 'opl system startup-maintenance',
       route_owner: 'one-person-lab',

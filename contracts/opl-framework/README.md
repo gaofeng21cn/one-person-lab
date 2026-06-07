@@ -20,7 +20,7 @@ It is repo-tracked because the current framework needs stable machine-readable i
 - domain pack compiler and generated interface read model that compiles admitted domain packs or standard agent repo contracts into OPL-owned CLI / MCP / Skill / product-entry / OpenAI / AI SDK / sidecar / status / workbench / harness generated-surface handoff projections
 - surface-budget governance that keeps new default surfaces limited to launch safety, authority boundary, evidence/replay/audit/route-back, or repeated App/runtime consumption
 - operating-loop adoption governance that maps external Codex work-loop patterns into OPL workstream/thread continuity, goal oracle, heartbeat/steering, artifact-first review, memory refs, receipt, and read-model boundaries without importing an external runtime or authority
-- brand-module governance that keeps Charter, Atlas, Workspace, Stagecraft, Runway, Vault, Console, Foundry Lab, and Connect at the Workspace-level structural baseline through one registry, CLI/read-model projection, validation gate, and false-authority boundary
+- brand-module governance that keeps Charter, Atlas, Workspace, Stagecraft, Runway, Vault, Console, Foundry Lab, and Connect at the Workspace-level structural baseline through the registry, module-owned brand CLI frontdoors, read-model projection, validation gate, and false-authority boundary
 - owner-delta-first readiness projection that lets default App/operator surfaces answer current safe action, waiting owner, required delta / receipt / typed blocker, and readiness blocker before exposing raw refs-only audit counters
 - target architecture contract kernels for current owner delta, stage artifact unit, owner answer, passive evidence vault, ordinary golden path, stop-loss, guardrail tiers, progress truth, wrapper retirement, and default surface budget without moving domain truth into OPL
 - cognitive computation kernel governance that lets each Stage declare generation, reflection, comparative selection, evolution, meta-review, tool affordance boundaries, knowledge, and independent quality-gate strategy refs without turning tools into a workflow script, Route into a small Stage, or domain truth into OPL-owned state
@@ -43,7 +43,7 @@ Start here for the active `OPL Framework / App / Foundry Agents` model:
 - `docs/decisions.md`
 - `contracts/README.md`
 
-Read the linked domain repositories when you need the current repo-owned capability surfaces that `opl skill sync` activates.
+Read the linked domain repositories when you need the current repo-owned capability surfaces that `opl connect sync-skills` activates.
 
 ## Target Architecture Contract Groups
 

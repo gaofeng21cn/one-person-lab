@@ -895,7 +895,7 @@ exit 1
   }
 });
 
-test('removed command aliases fail closed in favor of Codex-default shell and skill sync', () => {
+test('removed command aliases fail closed in favor of Codex-default shell and Connect skill sync', () => {
   for (const retired of retiredCliCommandMatrix) {
     const failure = runCliFailure(retired.args);
     assert.equal(failure.status, 2);
@@ -909,7 +909,7 @@ test('removed command aliases fail closed in favor of Codex-default shell and sk
   }
 });
 
-test('help text advertises Codex as the default entry and lists opl exec without retired aliases', () => {
+test('help text advertises Codex and Connect as default entries without retired aliases', () => {
   const output = runCli(['help']);
   const commands = output.help.commands as Array<{ command: string; summary: string }>;
 
@@ -917,6 +917,8 @@ test('help text advertises Codex as the default entry and lists opl exec without
   assert.equal(commands.some((entry) => entry.command === 'ask'), false);
   assert.equal(commands.some((entry) => entry.command === 'chat'), false);
   assert.equal(commands.some((entry) => entry.command === 'shell'), false);
-  assert.equal(commands.some((entry) => entry.command === 'skill list'), true);
-  assert.equal(commands.some((entry) => entry.command === 'skill sync'), true);
+  assert.equal(commands.some((entry) => entry.command === 'connect skills'), true);
+  assert.equal(commands.some((entry) => entry.command === 'connect sync-skills'), true);
+  assert.equal(commands.some((entry) => entry.command === 'skill list'), false);
+  assert.equal(commands.some((entry) => entry.command === 'skill sync'), false);
 });

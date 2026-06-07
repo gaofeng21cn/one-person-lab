@@ -43,7 +43,7 @@ maybe_sync_family_skills() {
     return
   fi
 
-  invoke_opl skill sync --quiet >/dev/null
+  invoke_opl connect sync-skills --quiet >/dev/null
 }
 
 if [[ "$#" -eq 0 ]]; then

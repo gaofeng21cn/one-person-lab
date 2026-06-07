@@ -79,7 +79,7 @@ export function buildOplGuiFirstRunAutomationContract() {
       '~/Library/Logs/One Person Lab/first-run.jsonl',
       '~/Library/Application Support/OPL/state',
       'opl system initialize --json',
-      'opl modules --json',
+      'opl connect modules --json',
       'launch screenshot',
       'macOS unified log excerpt for One Person Lab',
     ],
@@ -190,7 +190,7 @@ export function buildOplFreshInstallTestMatrix() {
         expected_artifacts: [
           'first-run JSONL log',
           'system initialize JSON',
-          'modules JSON',
+          'connect modules JSON',
           'launch screenshot',
           'macOS unified log excerpt for One Person Lab',
         ],

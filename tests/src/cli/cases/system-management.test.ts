@@ -571,6 +571,14 @@ exit 1
       'opl system reconcile-modules --json',
     ]);
     assert.equal(
+      output.system_initialize.gui_first_run_automation.vm_artifacts.includes('opl connect modules --json'),
+      true,
+    );
+    assert.equal(
+      output.system_initialize.gui_first_run_automation.vm_artifacts.includes('opl modules --json'),
+      false,
+    );
+    assert.equal(
       output.system_initialize.gui_first_run_automation.accessibility_labels.window,
       'opl-first-run-window',
     );
