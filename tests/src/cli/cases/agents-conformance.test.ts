@@ -9,6 +9,7 @@ import {
   writeJson,
   writeProductionAcceptance,
 } from './agents-conformance-fixtures.ts';
+import { assertStageOperatingPrincipleChecksPassed } from './agents-conformance-stage-operating-principles-assertions.ts';
 
 test('agents conformance reports structural readiness separately from production evidence tail', () => {
   const repoDir = buildReadyAgentRepo();
@@ -261,6 +262,7 @@ test('agents conformance reports structural readiness separately from production
     repo.stage_run_canary_evidence_checks.authority_boundary.controlled_canary_claims_live_domain_progress,
     false,
   );
+  assertStageOperatingPrincipleChecksPassed(repo);
   assert.equal(repo.legacy_runtime_residue_guard.status, 'passed');
   assert.equal(repo.legacy_runtime_residue_guard.active_private_generic_residue_count, 0);
   assert.equal(
@@ -357,6 +359,36 @@ test('agents conformance canonicalizes StageRun adoption owner-facing domain ids
   assert.equal(report.reports[0].domain_id, 'redcube_ai');
   assert.equal(adoptionDomain.domain_id, 'redcube-ai');
   assert.equal(adoptionDomain.source_domain_id, 'redcube_ai');
+  assert.equal(adoptionDomain.authority_boundary.can_claim_domain_ready, false);
+});
+
+test('agents conformance keeps StageRun next action on domain owner when non-StageRun conformance is blocked', () => {
+  const repoDir = buildReadyAgentRepo();
+  fs.rmSync(path.join(repoDir, 'contracts', 'workspace_lifecycle_policy.json'));
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+
+  const repo = report.reports[0];
+  const adoptionDomain = report.stage_run_domain_adoption_read_model.domains[0];
+  assert.equal(report.status, 'blocked');
+  assert.equal(repo.workspace_file_lifecycle_checks.status, 'blocked');
+  assert.equal(repo.stage_run_kernel_profile_checks.status, 'passed');
+  assert.equal(repo.stage_run_canary_evidence_checks.status, 'passed');
+  assert.equal(report.stage_run_domain_adoption_read_model.status, 'passed');
+  assert.equal(
+    adoptionDomain.live_stage_run_progress_evidence_status,
+    'required_from_domain_owner',
+  );
+  assert.equal(
+    adoptionDomain.next_required_owner_action,
+    'domain_owner_live_receipt_typed_blocker_no_regression_or_long_soak_ref_required',
+  );
+  assert.equal(adoptionDomain.authority_boundary.can_create_typed_blocker, false);
   assert.equal(adoptionDomain.authority_boundary.can_claim_domain_ready, false);
 });
 

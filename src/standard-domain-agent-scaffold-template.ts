@@ -21,6 +21,7 @@ import {
   WORKSPACE_FILE_LIFECYCLE_POLICY,
 } from './standard-domain-agent-scaffold-constants.ts';
 import { buildStageRunCanaryEvidence } from './standard-domain-agent-scaffold-stage-run-canary.ts';
+import { STAGE_OPERATING_PRINCIPLES_POLICY } from './standard-domain-agent-stage-operating-principles.ts';
 
 export interface ScaffoldFile {
   path: string;
@@ -774,6 +775,15 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
       path: 'contracts/stage_run_canary_evidence.json',
       content: json({
         ...buildStageRunCanaryEvidence(domainId, STARTER_STAGE_ID),
+        marker: SCAFFOLD_MARKER,
+      }),
+    },
+    {
+      path: 'contracts/stage_operating_principles.json',
+      content: json({
+        ...STAGE_OPERATING_PRINCIPLES_POLICY,
+        owner: domainId,
+        domain_id: domainId,
         marker: SCAFFOLD_MARKER,
       }),
     },

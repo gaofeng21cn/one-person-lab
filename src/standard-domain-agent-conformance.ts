@@ -16,6 +16,7 @@ import {
   buildStateIndexKernelAdoptionChecks,
   buildWorkspaceFileLifecycleChecks,
 } from './standard-domain-agent-conformance-adoption.ts';
+import { buildStageOperatingPrincipleChecks } from './standard-domain-agent-stage-operating-principles.ts';
 import { buildEvidenceTailClassification } from './standard-domain-agent-conformance-evidence-tail.ts';
 import { buildGoldenPathDefaultSurfaceBudgetChecks } from './standard-domain-agent-conformance-golden-path.ts';
 import { buildPhysicalMorphologyChecks } from './standard-domain-agent-conformance-physical-morphology.ts';
@@ -346,6 +347,7 @@ function buildRepoConformance(input: RepoInput) {
   const stageArtifactKernelAdoptionChecks = buildStageArtifactKernelAdoptionChecks(repoDir);
   const stageRunKernelProfileChecks = buildStageRunKernelProfileChecks(repoDir);
   const stageRunCanaryEvidenceChecks = buildStageRunCanaryEvidenceChecks(repoDir);
+  const stageOperatingPrincipleChecks = buildStageOperatingPrincipleChecks(repoDir);
   const stateIndexKernelAdoptionChecks = buildStateIndexKernelAdoptionChecks(repoDir);
   const goldenPathDefaultSurfaceBudgetChecks = buildGoldenPathDefaultSurfaceBudgetChecks(repoDir);
   const evidenceTailClassification = buildEvidenceTailClassification(repoDir, domainId, generatedInterfaceChecks);
@@ -362,6 +364,7 @@ function buildRepoConformance(input: RepoInput) {
     ...stageArtifactKernelAdoptionChecks.blockers,
     ...stageRunKernelProfileChecks.blockers,
     ...stageRunCanaryEvidenceChecks.blockers,
+    ...stageOperatingPrincipleChecks.blockers,
     ...stateIndexKernelAdoptionChecks.blockers,
     ...goldenPathDefaultSurfaceBudgetChecks.blockers,
   ]);
@@ -389,6 +392,7 @@ function buildRepoConformance(input: RepoInput) {
     stage_artifact_kernel_adoption_checks: stageArtifactKernelAdoptionChecks,
     stage_run_kernel_profile_checks: stageRunKernelProfileChecks,
     stage_run_canary_evidence_checks: stageRunCanaryEvidenceChecks,
+    stage_operating_principle_checks: stageOperatingPrincipleChecks,
     state_index_kernel_adoption_checks: stateIndexKernelAdoptionChecks,
     golden_path_default_surface_budget_checks: goldenPathDefaultSurfaceBudgetChecks,
     evidence_tail_classification: evidenceTailClassification,
@@ -404,7 +408,11 @@ function countTailItems(report: RepoConformanceReport, status: string) {
 }
 
 function stageRunDomainNextAction(report: RepoConformanceReport) {
-  if (report.status === 'blocked') {
+  if (
+    report.stage_run_kernel_profile_checks.status !== 'passed'
+    || report.stage_run_canary_evidence_checks.status !== 'passed'
+    || report.stage_run_canary_evidence_checks.operator_summary.status !== 'ready'
+  ) {
     return 'repair_stage_run_profile_canary_or_structural_conformance_blockers';
   }
   if (countTailItems(report, 'open') > 0) {
@@ -437,6 +445,20 @@ function buildStageRunDomainAdoptionReadModel(reports: RepoConformanceReport[]) 
       stage_run_canary_operator_status: canary.operator_summary.status,
       stage_run_canary_stage_id: canary.stage_id,
       stage_run_canary_id: canary.canary_id,
+      stage_operating_principles_status: report.stage_operating_principle_checks.status,
+      stage_operating_principles_source:
+        report.stage_operating_principle_checks.policy_source,
+      management_boundary_stage_unit:
+        report.stage_operating_principle_checks.management_boundary.stage_unit,
+      speed_policy_executor_autonomy_inside_stage:
+        report.stage_operating_principle_checks.speed_policy.executor_autonomy_inside_stage,
+      speed_policy_quality_gaps_block_ordinary_progress_by_default:
+        report.stage_operating_principle_checks.speed_policy
+          .quality_gaps_block_ordinary_progress_by_default,
+      stage_operating_default_read_surface_root:
+        report.stage_operating_principle_checks.default_read_surface.root,
+      stage_operating_demoted_default_surfaces:
+        report.stage_operating_principle_checks.demoted_default_surfaces,
       stage_run_ref: canary.stage_run_ref,
       stage_manifest_ref: canary.stage_manifest_ref,
       current_pointer_ref: canary.current_pointer_ref,
