@@ -30,7 +30,9 @@ Machine boundary: 本文是人读现状对照。当前完成度、计数、recei
 
 ## 九模块完成度
 
-当前九模块都已达到 `L4_structural_baseline`。这里的 L4 是 `Workspace` 水平的结构完成：品牌文档、机器注册表、contract/policy refs、CLI/App/descriptor/validation/status refs、authority boundary 和 forbidden claims 已经同源落到 `contracts/opl-framework/brand-module-registry.json`，并由 `opl brand-modules validate --json` 与 `opl contract validate --json` 守门。
+当前九模块都已达到 `L4_structural_baseline`。这里的 L4 是 `Workspace` 水平的结构完成：品牌文档、机器注册表、CLI governance、contract/policy refs、CLI/App/descriptor/validation/status refs、authority boundary 和 forbidden claims 已经同源落到 `contracts/opl-framework/brand-module-registry.json` 与 `contracts/opl-framework/brand-cli-governance.json`，并由 `opl brand-modules validate --json`、`opl agents modules validate --json` 与 `opl contract validate --json` 守门。
+
+Workspace 有一个明确碰撞例外：`opl workspace status|inspect --json` 是新增品牌读面；`opl workspace validate|doctor|interfaces --json` 继续保持 workspace operational 语义。
 
 | 模块 | 当前完成度 | 相对 Workspace | 判断 |
 | --- | --- | --- | --- |
@@ -68,6 +70,10 @@ opl brand-modules inspect --module workspace --json
 opl brand-modules maturity --json
 opl brand-modules validate --json
 opl brand-modules interfaces --json
+opl charter status --json
+opl runway doctor --json
+opl agents modules list --json
+opl agents modules validate --json
 opl contract validate --json
 ```
 

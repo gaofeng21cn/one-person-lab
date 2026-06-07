@@ -1,6 +1,8 @@
 import { FrameworkContractError } from './contracts.ts';
 import type {
+  AgentInternalBrandModuleCliOperation,
   BrandModuleAuthorityBoundary,
+  BrandModuleCliOperation,
   BrandModuleId,
   BrandModuleRegistryContract,
   BrandModuleRegistryEntry,
@@ -8,6 +10,7 @@ import type {
 } from './types.ts';
 
 type BrandModuleCommandArgs = string[];
+type AgentInternalModuleCommandArgs = string[];
 
 const FALSE_AUTHORITY_BOUNDARY: BrandModuleAuthorityBoundary = {
   can_claim_domain_ready: false,
@@ -51,6 +54,10 @@ function brandModuleRegistry(contracts: FrameworkContracts) {
   return contracts.brandModuleRegistry;
 }
 
+function brandCliGovernance(contracts: FrameworkContracts) {
+  return contracts.brandCliGovernance;
+}
+
 function statusDocPaths(entry: BrandModuleRegistryEntry) {
   return entry.status_doc_refs
     .map((ref) => HUMAN_DOC_PATHS[ref])
@@ -77,6 +84,154 @@ function compactModule(entry: BrandModuleRegistryEntry) {
     authority_boundary: entry.authority_boundary,
     forbidden_claims: entry.forbidden_claims,
   };
+}
+
+function findModuleOrThrow(contracts: FrameworkContracts, moduleId: BrandModuleId) {
+  const module = brandModuleRegistry(contracts).modules.find((entry) => entry.module_id === moduleId);
+  if (!module) {
+    throw new FrameworkContractError('contract_shape_invalid', `Unknown brand module: ${moduleId}.`, {
+      module_id: moduleId,
+      contract_ref: 'contracts/opl-framework/brand-module-registry.json',
+    });
+  }
+  return module;
+}
+
+function findFrontdoorOrThrow(contracts: FrameworkContracts, moduleId: BrandModuleId) {
+  const frontdoor = brandCliGovernance(contracts).platform_frontdoors.find((entry) => entry.module_id === moduleId);
+  if (!frontdoor) {
+    throw new FrameworkContractError('contract_shape_invalid', `Missing brand CLI frontdoor: ${moduleId}.`, {
+      module_id: moduleId,
+      contract_ref: 'contracts/opl-framework/brand-cli-governance.json',
+    });
+  }
+  return frontdoor;
+}
+
+function buildModuleCommandChecks(
+  contracts: FrameworkContracts,
+  module: BrandModuleRegistryEntry,
+  operation: BrandModuleCliOperation,
+) {
+  const frontdoor = findFrontdoorOrThrow(contracts, module.module_id);
+  const authorityViolations = Object.entries(module.authority_boundary)
+    .filter(([, value]) => value !== false)
+    .map(([field]) => field);
+  const command = `${frontdoor.command} ${operation} --json`;
+
+  return [
+    {
+      check_id: 'registry_entry_present',
+      status: 'pass',
+      ref: `contracts/opl-framework/brand-module-registry.json#modules.${module.module_id}`,
+    },
+    {
+      check_id: 'frontdoor_operation_declared',
+      status: frontdoor.operations.includes(operation) ? 'pass' : 'fail',
+      command,
+    },
+    {
+      check_id: 'authority_boundary_false',
+      status: authorityViolations.length === 0 ? 'pass' : 'fail',
+      violations: authorityViolations,
+    },
+    {
+      check_id: 'forbidden_claims_present',
+      status: module.forbidden_claims.length > 0 ? 'pass' : 'fail',
+      forbidden_claims: module.forbidden_claims,
+    },
+  ];
+}
+
+function frontdoorCollisionPolicy(moduleId: BrandModuleId) {
+  return moduleId === 'workspace'
+    ? 'preserve_workspace_operational_validate_doctor_interfaces'
+    : 'none';
+}
+
+function buildBrandModuleSurface(
+  contracts: FrameworkContracts,
+  moduleId: BrandModuleId,
+  operation: BrandModuleCliOperation,
+) {
+  const module = findModuleOrThrow(contracts, moduleId);
+  const frontdoor = findFrontdoorOrThrow(contracts, moduleId);
+  const checks = buildModuleCommandChecks(contracts, module, operation);
+  const status = checks.every((entry) => entry.status === 'pass') ? 'valid' : 'invalid';
+
+  return {
+    version: 'g2',
+    brand_module_surface: {
+      surface_kind: `opl_${moduleId.replace(/-/g, '_')}_brand_module_${operation}`,
+      module_id: moduleId,
+      brand_name: module.brand_name,
+      operation,
+      canonical_frontdoor: frontdoor.command,
+      command: `${frontdoor.command} ${operation} --json`,
+      status: operation === 'doctor' ? (status === 'valid' ? 'pass' : 'fail') : status,
+      registry_ref: `contracts/opl-framework/brand-module-registry.json#modules.${moduleId}`,
+      governance_ref: `contracts/opl-framework/brand-cli-governance.json#platform_frontdoors.${moduleId}`,
+      module_doc_ref: module.module_doc_ref,
+      contract_refs: module.contract_refs,
+      cli_surfaces: module.cli_surfaces,
+      app_surfaces: module.app_surfaces,
+      descriptor_surfaces: module.descriptor_surfaces,
+      validation_surfaces: module.validation_surfaces,
+      status_doc_refs: module.status_doc_refs,
+      checks,
+      authority_boundary: module.authority_boundary,
+      forbidden_claims: module.forbidden_claims,
+      frontdoor_collision_policy: frontdoorCollisionPolicy(moduleId),
+      machine_boundary: 'Read-only brand module frontdoor; does not write domain truth, owner receipt, artifact body, quality verdict, typed blocker, or production readiness.',
+    },
+  };
+}
+
+function agentDomainIds(contracts: FrameworkContracts) {
+  return contracts.domains.domains
+    .filter((entry) => entry.independent_domain_agent?.opl_top_level_domain_agent === true)
+    .map((entry) => entry.domain_id);
+}
+
+function findAgentInternalModuleOrThrow(contracts: FrameworkContracts, agentModuleId: string) {
+  const module = brandCliGovernance(contracts).agent_internal_modules.module_spine
+    .find((entry) => entry.agent_module_id === agentModuleId);
+  if (!module) {
+    throw new FrameworkContractError('cli_usage_error', `Unknown agent internal module: ${agentModuleId}.`, {
+      usage: 'opl agents modules inspect --domain <domain_id> --module <agent_module_id>',
+      agent_module_id: agentModuleId,
+      allowed_module_ids: brandCliGovernance(contracts).agent_internal_modules.module_spine.map((entry) => entry.agent_module_id),
+    });
+  }
+  return module;
+}
+
+function parseAgentInternalModuleInspectArgs(args: AgentInternalModuleCommandArgs) {
+  const domainIndex = args.indexOf('--domain');
+  const moduleIndex = args.indexOf('--module');
+  const domainId = domainIndex >= 0 ? args[domainIndex + 1] : undefined;
+  const agentModuleId = moduleIndex >= 0 ? args[moduleIndex + 1] : undefined;
+  const consumed = new Set([domainIndex, domainIndex + 1, moduleIndex, moduleIndex + 1]);
+  const extraArgs = args.filter((_, index) => !consumed.has(index));
+
+  if (
+    domainIndex < 0
+    || moduleIndex < 0
+    || !domainId
+    || !agentModuleId
+    || domainId.startsWith('--')
+    || agentModuleId.startsWith('--')
+    || extraArgs.length > 0
+  ) {
+    throw new FrameworkContractError('cli_usage_error', 'agents modules inspect requires --domain <domain_id> --module <agent_module_id>.', {
+      usage: 'opl agents modules inspect --domain <domain_id> --module <agent_module_id>',
+      examples: ['opl agents modules inspect --domain medautoscience --module agent-runway --json'],
+      required: ['--domain', '--module'],
+      unexpected_args: extraArgs,
+    });
+  }
+
+  return { domainId, agentModuleId };
 }
 
 function buildBrandModulesEnvelope(registry: BrandModuleRegistryContract) {
@@ -226,6 +381,14 @@ export function buildBrandModuleInterfaces(contracts: FrameworkContracts) {
           'opl brand-modules maturity --json',
           'opl brand-modules validate --json',
           'opl brand-modules interfaces --json',
+          ...brandCliGovernance(contracts).platform_frontdoors.flatMap((entry) =>
+            entry.operations.map((operation) => `${entry.command} ${operation} --json`)
+          ),
+          'opl agents modules list --json',
+          'opl agents modules inspect --domain <domain_id> --module <agent_module_id> --json',
+          'opl agents modules interfaces --json',
+          'opl agents modules validate --json',
+          'opl agents modules doctor --json',
         ],
       },
       app: {
@@ -287,6 +450,154 @@ export function buildBrandModuleInterfaces(contracts: FrameworkContracts) {
         'domain_truth_write',
         'owner_receipt_signed_by_opl',
       ],
+    },
+  };
+}
+
+export function buildBrandModuleSurfaceStatus(contracts: FrameworkContracts, moduleId: BrandModuleId) {
+  return buildBrandModuleSurface(contracts, moduleId, 'status');
+}
+
+export function buildBrandModuleSurfaceInspect(contracts: FrameworkContracts, moduleId: BrandModuleId) {
+  return buildBrandModuleSurface(contracts, moduleId, 'inspect');
+}
+
+export function buildBrandModuleSurfaceInterfaces(contracts: FrameworkContracts, moduleId: BrandModuleId) {
+  return buildBrandModuleSurface(contracts, moduleId, 'interfaces');
+}
+
+export function buildBrandModuleSurfaceValidation(contracts: FrameworkContracts, moduleId: BrandModuleId) {
+  return buildBrandModuleSurface(contracts, moduleId, 'validate');
+}
+
+export function buildBrandModuleSurfaceDoctor(contracts: FrameworkContracts, moduleId: BrandModuleId) {
+  return buildBrandModuleSurface(contracts, moduleId, 'doctor');
+}
+
+export function buildAgentInternalBrandModulesList(contracts: FrameworkContracts) {
+  const governance = brandCliGovernance(contracts).agent_internal_modules;
+  const domainIds = agentDomainIds(contracts);
+  return {
+    version: 'g2',
+    agent_internal_modules: {
+      surface_kind: 'opl_agent_internal_brand_module_list',
+      canonical_frontdoor: governance.canonical_frontdoor,
+      domain_ids: domainIds,
+      domain_count: domainIds.length,
+      platform_module_ids: brandModuleRegistry(contracts).modules.map((entry) => entry.module_id),
+      agent_module_ids: governance.module_spine.map((entry) => entry.agent_module_id),
+      module_count_per_domain: governance.module_spine.length,
+      modules: governance.module_spine,
+      authority_boundary: governance.authority_boundary,
+      machine_boundary: 'Read-only domain-agent internal brand-module spine; does not make internal modules OPL platform modules or domain authority surfaces.',
+    },
+  };
+}
+
+export function buildAgentInternalBrandModuleInspect(
+  contracts: FrameworkContracts,
+  args: AgentInternalModuleCommandArgs,
+) {
+  const { domainId, agentModuleId } = parseAgentInternalModuleInspectArgs(args);
+  const domainIds = agentDomainIds(contracts);
+  if (!domainIds.includes(domainId)) {
+    throw new FrameworkContractError('cli_usage_error', `Unknown OPL top-level domain agent: ${domainId}.`, {
+      usage: 'opl agents modules inspect --domain <domain_id> --module <agent_module_id>',
+      domain_id: domainId,
+      allowed_domain_ids: domainIds,
+    });
+  }
+
+  const governance = brandCliGovernance(contracts).agent_internal_modules;
+  const internalModule = findAgentInternalModuleOrThrow(contracts, agentModuleId);
+  const platformModule = findModuleOrThrow(contracts, internalModule.platform_analogue_module_id);
+
+  return {
+    version: 'g2',
+    agent_internal_module: {
+      surface_kind: 'opl_agent_internal_brand_module_inspect',
+      domain_id: domainId,
+      agent_module_id: internalModule.agent_module_id,
+      platform_analogue_module_id: internalModule.platform_analogue_module_id,
+      platform_module_brand_name: platformModule.brand_name,
+      purpose: internalModule.purpose,
+      canonical_frontdoor: governance.canonical_frontdoor,
+      module_frontdoor: `opl agents modules inspect --domain ${domainId} --module ${internalModule.agent_module_id}`,
+      command_pattern: internalModule.command_pattern,
+      registry_ref: `contracts/opl-framework/brand-module-registry.json#modules.${platformModule.module_id}`,
+      governance_ref: `contracts/opl-framework/brand-cli-governance.json#agent_internal_modules.module_spine.${internalModule.agent_module_id}`,
+      authority_boundary: governance.authority_boundary,
+      machine_boundary: 'Read-only internal module projection; domain truth and owner receipts remain in the domain agent repo.',
+    },
+  };
+}
+
+export function buildAgentInternalBrandModuleInterfaces(contracts: FrameworkContracts) {
+  const governance = brandCliGovernance(contracts).agent_internal_modules;
+  return {
+    version: 'g2',
+    agent_internal_module_interfaces: {
+      surface_kind: 'opl_agent_internal_brand_module_interfaces',
+      canonical_frontdoor: governance.canonical_frontdoor,
+      cli: {
+        commands: [
+          'opl agents modules list --json',
+          'opl agents modules inspect --domain <domain_id> --module <agent_module_id> --json',
+          'opl agents modules interfaces --json',
+          'opl agents modules validate --json',
+          'opl agents modules doctor --json',
+        ],
+      },
+      descriptor: {
+        refs: [
+          'contracts/opl-framework/brand-cli-governance.json#agent_internal_modules',
+          'contracts/opl-framework/brand-module-registry.json',
+        ],
+      },
+      module_spine: governance.module_spine,
+      authority_boundary: governance.authority_boundary,
+    },
+  };
+}
+
+export function buildAgentInternalBrandModuleValidation(contracts: FrameworkContracts) {
+  const governance = brandCliGovernance(contracts).agent_internal_modules;
+  const domainIds = agentDomainIds(contracts);
+  const platformModuleIds = new Set(brandModuleRegistry(contracts).modules.map((entry) => entry.module_id));
+  const missingDomainModuleSets = domainIds
+    .filter(() => governance.module_spine.some((entry) => !platformModuleIds.has(entry.platform_analogue_module_id)))
+    .map((domainId) => ({ domain_id: domainId, missing_modules: [] }));
+  const authorityViolations = Object.entries(governance.authority_boundary)
+    .filter(([, value]) => value !== false)
+    .map(([field]) => field);
+  const status = missingDomainModuleSets.length === 0 && authorityViolations.length === 0 ? 'valid' : 'invalid';
+
+  return {
+    version: 'g2',
+    agent_internal_module_validation: {
+      surface_kind: 'opl_agent_internal_brand_module_validation',
+      status,
+      domain_ids: domainIds,
+      module_count_per_domain: governance.module_spine.length,
+      required_operations: governance.required_operations,
+      missing_domain_module_sets: missingDomainModuleSets,
+      authority_boundary_violations: authorityViolations,
+      authority_boundary: governance.authority_boundary,
+    },
+  };
+}
+
+export function buildAgentInternalBrandModuleDoctor(contracts: FrameworkContracts) {
+  const validation = buildAgentInternalBrandModuleValidation(contracts).agent_internal_module_validation;
+  return {
+    version: 'g2',
+    agent_internal_module_doctor: {
+      surface_kind: 'opl_agent_internal_brand_module_doctor',
+      status: validation.status === 'valid' ? 'pass' : 'fail',
+      validation,
+      next_safe_action: validation.status === 'valid'
+        ? null
+        : 'Fix contracts/opl-framework/brand-cli-governance.json before treating agent internal brand modules as complete.',
     },
   };
 }

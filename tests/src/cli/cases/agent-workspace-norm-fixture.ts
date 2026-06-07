@@ -1,4 +1,4 @@
-import type { AgentWorkspaceNormContract, BrandModuleRegistryContract } from '../../../../src/types.ts';
+import type { AgentWorkspaceNormContract, BrandCliGovernanceContract, BrandModuleRegistryContract } from '../../../../src/types.ts';
 
 export const MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT: AgentWorkspaceNormContract = {
   surface_kind: 'opl_agent_workspace_norm_contract',
@@ -253,4 +253,53 @@ export const MINIMAL_BRAND_MODULE_REGISTRY_CONTRACT: BrandModuleRegistryContract
     },
     forbidden_claims: ['domain_ready'],
   })),
+};
+
+export const MINIMAL_BRAND_CLI_GOVERNANCE_CONTRACT: BrandCliGovernanceContract = {
+  version: 'brand-cli-governance.test',
+  scope: 'opl_brand_cli_governance',
+  owner: 'one-person-lab',
+  purpose: 'test fixture',
+  state: 'test_fixture',
+  machine_boundary: 'test fixture',
+  platform_frontdoors: MINIMAL_BRAND_MODULE_IDS.map((moduleId) => ({
+    module_id: moduleId,
+    command: `opl ${moduleId}`,
+    operations: moduleId === 'workspace' ? ['status', 'inspect'] : ['status', 'inspect', 'interfaces', 'validate', 'doctor'],
+  })),
+  agent_internal_modules: {
+    canonical_frontdoor: 'opl agents modules',
+    required_operations: ['list', 'inspect', 'interfaces', 'validate', 'doctor'],
+    module_spine: MINIMAL_BRAND_MODULE_IDS.map((moduleId) => ({
+      agent_module_id: `agent-${moduleId}`,
+      platform_analogue_module_id: moduleId,
+      purpose: 'test fixture',
+      command_pattern: `opl agents modules inspect --domain <domain_id> --module agent-${moduleId}`,
+    })),
+    authority_boundary: {
+      can_claim_domain_ready: false,
+      can_claim_quality_verdict: false,
+      can_claim_artifact_authority: false,
+      can_claim_production_ready: false,
+      can_write_domain_truth: false,
+      can_write_memory_body: false,
+      can_mutate_artifact_body: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_replace_domain_owner: false,
+      can_replace_ai_executor_planning: false,
+    },
+  },
+  legacy_command_ownership: [
+    {
+      command_prefix: 'opl brand-modules',
+      primary_module_id: 'charter',
+      secondary_module_ids: ['atlas', 'workspace', 'stagecraft', 'runway', 'vault', 'console', 'foundry-lab', 'connect'],
+      status: 'test_fixture',
+      migration_target: 'test fixture',
+      command_refs: ['opl brand-modules list --json'],
+      rationale: 'test fixture',
+    },
+  ],
+  drift_guards: ['test fixture'],
 };

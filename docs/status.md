@@ -28,7 +28,7 @@ OPL 顶层设计按九个品牌模块管理：`OPL Charter`、`OPL Atlas`、`OPL
 | `L4 executable baseline` | 具备品牌边界、schema/contract、CLI/App action、validate/doctor、docs foldback 和测试。 |
 | `L5 production operating maturity` | 真实用户路径、跨 agent scaleout、长跑/恢复 evidence、release/install evidence、运维闭环和 owner acceptance 能持续证明。 |
 
-当前以 `OPL Workspace` 作为 `L4 executable baseline`。`OPL Atlas`、`OPL Stagecraft`、`OPL Runway`、`OPL Vault` 为 `L3 structural`；`OPL Charter`、`OPL Console`、`OPL Foundry Lab`、`OPL Connect` 为 `L2 emerging`。当前没有模块声明 `L5`；L5 不能由 docs foldback、conformance pass、verified ledger、provider completion 或 App projection 单独关闭。
+当前九模块都达到 `L4 executable baseline` 的 structural/read-only baseline：`contracts/opl-framework/brand-module-registry.json` 持有品牌 registry，`contracts/opl-framework/brand-cli-governance.json` 持有 module-owned CLI frontdoor 和 `opl agents modules` 内部 branding spine，非 Workspace 模块走 `opl <brand-module> status|inspect|interfaces|validate|doctor --json`，Workspace 只新增 `opl workspace status|inspect --json` 品牌读面，`opl brand-modules validate --json`、`opl agents modules validate --json` 与 `opl contract validate --json` 提供机器守门。当前没有模块声明 `L5`；L5 不能由 docs foldback、CLI governance pass、conformance pass、verified ledger、provider completion 或 App projection 单独关闭。
 
 ## 当前公开角色
 
@@ -97,6 +97,10 @@ rtk opl runtime app-operator-drilldown --json
 rtk opl runtime app-operator-drilldown --detail full --json
 rtk opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json
 rtk opl app state --profile fast --json
+rtk opl brand-modules validate --json
+rtk opl charter status --json
+rtk opl runway doctor --json
+rtk opl agents modules validate --json
 rtk opl agents conformance --family-defaults --json
 rtk opl agents default-callers --family-defaults --json
 rtk opl index doctor --json

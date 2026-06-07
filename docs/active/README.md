@@ -26,7 +26,7 @@ OPL Framework current_owner_delta root
 
 `opl-stage-native-kernel-rollout-plan.md` 是 Stage Native 设计支撑：它只保留 StageRun Kernel、stage manifest、role artifact、owner receipt / typed blocker、owner split、admission 分层和 anti-bloat 约束。当前落地状态、domain canary、App StageRun cockpit 和 compensation retirement tail 只回到 `current-state-vs-ideal-gap.md` 与 live machine surfaces。
 
-`brand-module-l4-rollout-plan.md` 是九个 OPL 品牌模块的 L4 structural baseline rollout 支撑：它只记录 Workspace-level 结构验收门、并行写集、registry/CLI/validation 落地关系和 forbidden claims；当前机器验收归 `contracts/opl-framework/brand-module-registry.json` 与 `opl brand-modules validate --json`。
+`brand-module-l4-rollout-plan.md` 是九个 OPL 品牌模块的 L4 structural baseline rollout 支撑：它只记录 Workspace-level 结构验收门、并行写集、registry/CLI governance/validation 落地关系和 forbidden claims；当前机器验收归 `contracts/opl-framework/brand-module-registry.json`、`contracts/opl-framework/brand-cli-governance.json`、`opl brand-modules validate --json`、非 Workspace 的 `opl <brand-module> status|inspect|interfaces|validate|doctor --json`、Workspace 的 `opl workspace status|inspect --json` 与 `opl agents modules validate --json`。
 
 当前真相仍然先看：
 

@@ -6,6 +6,7 @@ import type { DomainManifestCatalogEntry } from '../../../../src/domain-manifest
 import type { FrameworkContracts } from '../../../../src/types.ts';
 import {
   MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT,
+  MINIMAL_BRAND_CLI_GOVERNANCE_CONTRACT,
   MINIMAL_BRAND_MODULE_REGISTRY_CONTRACT,
 } from './agent-workspace-norm-fixture.ts';
 import {
@@ -113,6 +114,7 @@ const contracts: FrameworkContracts = {
   },
   agentWorkspaceNorm: MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT,
   brandModuleRegistry: MINIMAL_BRAND_MODULE_REGISTRY_CONTRACT,
+  brandCliGovernance: MINIMAL_BRAND_CLI_GOVERNANCE_CONTRACT,
 };
 
 function manifestWithCleanupResidue() {

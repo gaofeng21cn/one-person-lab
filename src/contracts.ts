@@ -6,6 +6,7 @@ import type {
   ContractsRootSource,
   FrameworkContracts,
   FrameworkContractsLoadOptions,
+  BrandCliGovernanceContract,
   BrandModuleAuthorityBoundary,
   BrandModuleId,
   BrandModuleRegistryContract,
@@ -35,6 +36,7 @@ const REQUIRED_CONTRACT_FILE_NAMES = [
   'public-surface-index.json',
   'agent-workspace-norm-contract.json',
   'brand-module-registry.json',
+  'brand-cli-governance.json',
 ] as const;
 
 type NormalizedFrameworkContractsLoadOptions = {
@@ -344,6 +346,22 @@ const BRAND_MODULE_IDS = [
   'connect',
 ] as const satisfies readonly BrandModuleId[];
 
+const BRAND_MODULE_CLI_OPERATIONS = [
+  'status',
+  'inspect',
+  'interfaces',
+  'validate',
+  'doctor',
+] as const;
+
+const AGENT_INTERNAL_BRAND_MODULE_CLI_OPERATIONS = [
+  'list',
+  'inspect',
+  'interfaces',
+  'validate',
+  'doctor',
+] as const;
+
 const BRAND_MODULE_L4_GATES = [
   'brand_doc_ref',
   'registry_entry',
@@ -551,6 +569,270 @@ function validateBrandModuleRegistry(
     maturity_model: maturityModel,
     external_reference_principles: expectNonEmptyStringArray(value.external_reference_principles, 'external_reference_principles', filePath),
     modules,
+  };
+}
+
+function expectAllowedStringArray<T extends string>(
+  value: unknown,
+  field: string,
+  filePath: string,
+  allowed: readonly T[],
+) {
+  const items = expectNonEmptyStringArray(value, field, filePath);
+  const invalid = items.filter((item) => !allowed.includes(item as T));
+  if (invalid.length > 0) {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} contains unknown values.`, {
+      file: filePath,
+      field,
+      invalid,
+      allowed: [...allowed],
+    });
+  }
+  return items as T[];
+}
+
+function expectAllowedPossiblyEmptyStringArray<T extends string>(
+  value: unknown,
+  field: string,
+  filePath: string,
+  allowed: readonly T[],
+) {
+  const items = expectStringArray(value, field, filePath);
+  const invalid = items.filter((item) => !allowed.includes(item as T));
+  if (invalid.length > 0) {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} contains unknown values.`, {
+      file: filePath,
+      field,
+      invalid,
+      allowed: [...allowed],
+    });
+  }
+  return items as T[];
+}
+
+function requireEveryValue<T extends string>(
+  actual: readonly T[],
+  expected: readonly T[],
+  field: string,
+  filePath: string,
+) {
+  const missing = expected.filter((entry) => !actual.includes(entry));
+  if (missing.length > 0) {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} is missing required values.`, {
+      file: filePath,
+      field,
+      missing,
+      expected: [...expected],
+    });
+  }
+}
+
+function validateBrandCliGovernance(
+  filePath: string,
+  value: unknown,
+): BrandCliGovernanceContract {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'brand-cli-governance.json must contain an object root.',
+      { file: filePath },
+    );
+  }
+
+  const platformFrontdoorsRaw = value.platform_frontdoors;
+  const agentInternalRaw = value.agent_internal_modules;
+  const legacyOwnershipRaw = value.legacy_command_ownership;
+  if (!Array.isArray(platformFrontdoorsRaw) || !isRecord(agentInternalRaw) || !Array.isArray(legacyOwnershipRaw)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'brand-cli-governance.json must contain platform_frontdoors, agent_internal_modules, and legacy_command_ownership.',
+      { file: filePath },
+    );
+  }
+
+  const seenPlatformModuleIds = new Set<string>();
+  const platformFrontdoors = platformFrontdoorsRaw.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each platform_frontdoors entry must be an object.', {
+        file: filePath,
+        index,
+      });
+    }
+
+    const moduleId = expectBrandModuleId(entry.module_id, 'platform_frontdoors.module_id', filePath);
+    if (seenPlatformModuleIds.has(moduleId)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each platform frontdoor module id must be unique.', {
+        file: filePath,
+        index,
+        module_id: moduleId,
+      });
+    }
+    seenPlatformModuleIds.add(moduleId);
+
+    const command = expectString(entry.command, 'platform_frontdoors.command', filePath);
+    const expectedCommand = `opl ${moduleId}`;
+    if (command !== expectedCommand) {
+      throw new FrameworkContractError('contract_shape_invalid', 'platform_frontdoors.command must match the module frontdoor.', {
+        file: filePath,
+        index,
+        module_id: moduleId,
+        expected_command: expectedCommand,
+        actual_command: command,
+      });
+    }
+
+    const operations = expectAllowedStringArray(
+      entry.operations,
+      'platform_frontdoors.operations',
+      filePath,
+      BRAND_MODULE_CLI_OPERATIONS,
+    );
+    const expectedOperations = moduleId === 'workspace'
+      ? (['status', 'inspect'] as const)
+      : BRAND_MODULE_CLI_OPERATIONS;
+    requireEveryValue(operations, expectedOperations, 'platform_frontdoors.operations', filePath);
+    const unexpectedOperations = operations.filter((operation) => !expectedOperations.includes(operation));
+    if (unexpectedOperations.length > 0) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'platform_frontdoors.operations contains operations owned by another command surface.',
+        {
+          file: filePath,
+          index,
+          module_id: moduleId,
+          unexpected_operations: unexpectedOperations,
+          expected_operations: [...expectedOperations],
+        },
+      );
+    }
+
+    return {
+      module_id: moduleId,
+      command,
+      operations,
+    };
+  });
+
+  const missingPlatformModuleIds = BRAND_MODULE_IDS.filter((moduleId) => !seenPlatformModuleIds.has(moduleId));
+  if (missingPlatformModuleIds.length > 0 || seenPlatformModuleIds.size !== BRAND_MODULE_IDS.length) {
+    throw new FrameworkContractError('contract_shape_invalid', 'brand-cli-governance.json must cover exactly the nine OPL brand modules.', {
+      file: filePath,
+      expected_module_ids: [...BRAND_MODULE_IDS],
+      missing_module_ids: missingPlatformModuleIds,
+      actual_module_ids: [...seenPlatformModuleIds],
+    });
+  }
+
+  const requiredOperations = expectAllowedStringArray(
+    agentInternalRaw.required_operations,
+    'agent_internal_modules.required_operations',
+    filePath,
+    AGENT_INTERNAL_BRAND_MODULE_CLI_OPERATIONS,
+  );
+  requireEveryValue(
+    requiredOperations,
+    AGENT_INTERNAL_BRAND_MODULE_CLI_OPERATIONS,
+    'agent_internal_modules.required_operations',
+    filePath,
+  );
+
+  const moduleSpineRaw = agentInternalRaw.module_spine;
+  if (!Array.isArray(moduleSpineRaw)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'agent_internal_modules.module_spine must be an array.', {
+      file: filePath,
+      field: 'agent_internal_modules.module_spine',
+    });
+  }
+  const seenAgentModuleIds = new Set<string>();
+  const moduleSpine = moduleSpineRaw.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each agent internal module spine entry must be an object.', {
+        file: filePath,
+        index,
+      });
+    }
+
+    const platformAnalogueModuleId = expectBrandModuleId(
+      entry.platform_analogue_module_id,
+      'agent_internal_modules.module_spine.platform_analogue_module_id',
+      filePath,
+    );
+    const agentModuleId = expectString(entry.agent_module_id, 'agent_internal_modules.module_spine.agent_module_id', filePath);
+    const expectedAgentModuleId = `agent-${platformAnalogueModuleId}`;
+    if (agentModuleId !== expectedAgentModuleId) {
+      throw new FrameworkContractError('contract_shape_invalid', 'agent_module_id must match its platform analogue module.', {
+        file: filePath,
+        index,
+        expected_agent_module_id: expectedAgentModuleId,
+        actual_agent_module_id: agentModuleId,
+      });
+    }
+    if (seenAgentModuleIds.has(agentModuleId)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each agent internal module id must be unique.', {
+        file: filePath,
+        index,
+        agent_module_id: agentModuleId,
+      });
+    }
+    seenAgentModuleIds.add(agentModuleId);
+
+    return {
+      agent_module_id: agentModuleId,
+      platform_analogue_module_id: platformAnalogueModuleId,
+      purpose: expectString(entry.purpose, 'agent_internal_modules.module_spine.purpose', filePath),
+      command_pattern: expectString(entry.command_pattern, 'agent_internal_modules.module_spine.command_pattern', filePath),
+    };
+  });
+
+  const missingAgentModuleIds = BRAND_MODULE_IDS
+    .map((moduleId) => `agent-${moduleId}`)
+    .filter((moduleId) => !seenAgentModuleIds.has(moduleId));
+  if (missingAgentModuleIds.length > 0 || seenAgentModuleIds.size !== BRAND_MODULE_IDS.length) {
+    throw new FrameworkContractError('contract_shape_invalid', 'agent_internal_modules.module_spine must cover exactly one internal module per platform module.', {
+      file: filePath,
+      missing_agent_module_ids: missingAgentModuleIds,
+      actual_agent_module_ids: [...seenAgentModuleIds],
+    });
+  }
+
+  return {
+    version: expectString(value.version, 'version', filePath),
+    scope: expectString(value.scope, 'scope', filePath),
+    owner: expectString(value.owner, 'owner', filePath),
+    purpose: expectString(value.purpose, 'purpose', filePath),
+    state: expectString(value.state, 'state', filePath),
+    machine_boundary: expectString(value.machine_boundary, 'machine_boundary', filePath),
+    platform_frontdoors: platformFrontdoors,
+    agent_internal_modules: {
+      canonical_frontdoor: expectString(agentInternalRaw.canonical_frontdoor, 'agent_internal_modules.canonical_frontdoor', filePath),
+      required_operations: requiredOperations,
+      module_spine: moduleSpine,
+      authority_boundary: validateBrandModuleAuthorityBoundary(filePath, agentInternalRaw.authority_boundary),
+    },
+    legacy_command_ownership: legacyOwnershipRaw.map((entry, index) => {
+      if (!isRecord(entry)) {
+        throw new FrameworkContractError('contract_shape_invalid', 'Each legacy command ownership entry must be an object.', {
+          file: filePath,
+          index,
+        });
+      }
+
+      return {
+        command_prefix: expectString(entry.command_prefix, 'legacy_command_ownership.command_prefix', filePath),
+        primary_module_id: expectBrandModuleId(entry.primary_module_id, 'legacy_command_ownership.primary_module_id', filePath),
+        secondary_module_ids: expectAllowedPossiblyEmptyStringArray(
+          entry.secondary_module_ids,
+          'legacy_command_ownership.secondary_module_ids',
+          filePath,
+          BRAND_MODULE_IDS,
+        ),
+        status: expectString(entry.status, 'legacy_command_ownership.status', filePath),
+        migration_target: expectString(entry.migration_target, 'legacy_command_ownership.migration_target', filePath),
+        command_refs: expectNonEmptyStringArray(entry.command_refs, 'legacy_command_ownership.command_refs', filePath),
+        rationale: expectString(entry.rationale, 'legacy_command_ownership.rationale', filePath),
+      };
+    }),
+    drift_guards: expectNonEmptyStringArray(value.drift_guards, 'drift_guards', filePath),
   };
 }
 
@@ -968,6 +1250,11 @@ const REQUIRED_CONTRACT_FILES = [
     file_name: 'brand-module-registry.json',
     schema_version: (contracts: FrameworkContracts) => contracts.brandModuleRegistry.version,
   },
+  {
+    contract_id: 'brand_cli_governance',
+    file_name: 'brand-cli-governance.json',
+    schema_version: (contracts: FrameworkContracts) => contracts.brandCliGovernance.version,
+  },
 ] as const;
 
 export function validateFrameworkContracts(
@@ -1025,6 +1312,10 @@ export function loadFrameworkContracts(
       brandModuleRegistry: validateBrandModuleRegistry(
         path.join(contractsDir, 'brand-module-registry.json'),
         parseJsonFile(path.join(contractsDir, 'brand-module-registry.json')),
+      ),
+      brandCliGovernance: validateBrandCliGovernance(
+        path.join(contractsDir, 'brand-cli-governance.json'),
+        parseJsonFile(path.join(contractsDir, 'brand-cli-governance.json')),
       ),
     };
   } catch (error) {

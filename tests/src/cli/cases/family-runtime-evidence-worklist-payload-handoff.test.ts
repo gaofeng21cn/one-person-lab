@@ -17,6 +17,7 @@ import {
 } from './owner-payload-workorder-assertions.ts';
 import {
   MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT,
+  MINIMAL_BRAND_CLI_GOVERNANCE_CONTRACT,
   MINIMAL_BRAND_MODULE_REGISTRY_CONTRACT,
 } from './agent-workspace-norm-fixture.ts';
 
@@ -60,6 +61,7 @@ const contracts = {
   },
   agentWorkspaceNorm: MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT,
   brandModuleRegistry: MINIMAL_BRAND_MODULE_REGISTRY_CONTRACT,
+  brandCliGovernance: MINIMAL_BRAND_CLI_GOVERNANCE_CONTRACT,
 } as FrameworkContracts;
 
 async function withIsolatedOplState<T>(

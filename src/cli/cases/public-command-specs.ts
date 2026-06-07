@@ -31,6 +31,16 @@ import {
   buildBrandModuleMaturity,
   buildBrandModulesList,
   buildBrandModuleValidation,
+  buildBrandModuleSurfaceDoctor,
+  buildBrandModuleSurfaceInspect,
+  buildBrandModuleSurfaceInterfaces,
+  buildBrandModuleSurfaceStatus,
+  buildBrandModuleSurfaceValidation,
+  buildAgentInternalBrandModuleDoctor,
+  buildAgentInternalBrandModuleInspect,
+  buildAgentInternalBrandModuleInterfaces,
+  buildAgentInternalBrandModulesList,
+  buildAgentInternalBrandModuleValidation,
 } from '../../brand-modules.ts';
 import { buildAgentReadinessSummary } from '../../agent-readiness.ts';
 import { buildStandardDomainAgentConformanceReport } from '../../standard-domain-agent-conformance.ts';
@@ -82,6 +92,7 @@ import {
 } from '../modules/public-payloads.ts';
 import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, cloneCommandSpec, parseOplEngineArgs, parseOplModuleExecArgs, parseOplModuleArgs, parseResumeArgs, parseTurnkeyInstallArgs, printJson, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
+import type { BrandModuleCliOperation, BrandModuleId } from '../../types.ts';
 
 export function buildPublicCommandSpecs(
   commandSpecs: Record<string, CommandSpec>,
@@ -161,6 +172,44 @@ export function buildPublicCommandSpecs(
   const agentLabCommandSpecs = buildPublicAgentLabCommandSpecs();
   const workOrderCommandSpecs = buildPublicWorkOrderCommandSpecs();
   const runtimeCommandSpecs = buildPublicRuntimeCommandSpecs(commandSpecs);
+  const buildBrandModuleSurfaceSpecs = (
+    moduleId: BrandModuleId,
+    operations: readonly BrandModuleCliOperation[] = ['status', 'inspect', 'interfaces', 'validate', 'doctor'],
+  ): Record<string, CommandSpec> => {
+    const builders = {
+      status: buildBrandModuleSurfaceStatus,
+      inspect: buildBrandModuleSurfaceInspect,
+      interfaces: buildBrandModuleSurfaceInterfaces,
+      validate: buildBrandModuleSurfaceValidation,
+      doctor: buildBrandModuleSurfaceDoctor,
+    } as const;
+    return Object.fromEntries(operations.map((operation) => {
+      const command = `${moduleId} ${operation}`;
+      const spec: CommandSpec = {
+        usage: `opl ${moduleId} ${operation}`,
+        summary: `Read the ${moduleId} brand module ${operation} surface from the canonical registry/governance contracts.`,
+        examples: [`opl ${moduleId} ${operation} --json`],
+        group: moduleId,
+        handler: (args) => {
+          assertNoArgs(args, spec);
+          return builders[operation](getContracts(), moduleId);
+        },
+      };
+      return [command, spec];
+    }));
+  };
+
+  const brandModuleSurfaceSpecs: Record<string, CommandSpec> = {
+    ...buildBrandModuleSurfaceSpecs('charter'),
+    ...buildBrandModuleSurfaceSpecs('atlas'),
+    ...buildBrandModuleSurfaceSpecs('workspace', ['status', 'inspect']),
+    ...buildBrandModuleSurfaceSpecs('stagecraft'),
+    ...buildBrandModuleSurfaceSpecs('runway'),
+    ...buildBrandModuleSurfaceSpecs('vault'),
+    ...buildBrandModuleSurfaceSpecs('console'),
+    ...buildBrandModuleSurfaceSpecs('foundry-lab'),
+    ...buildBrandModuleSurfaceSpecs('connect'),
+  };
 
   const modulesSpec = buildNoArgSpec(
     {
@@ -330,6 +379,54 @@ export function buildPublicCommandSpecs(
       handler: (args) => {
         assertNoArgs(args, publicCommandSpecs['brand-modules interfaces']);
         return buildBrandModuleInterfaces(getContracts());
+      },
+    },
+    ...brandModuleSurfaceSpecs,
+    'agents modules list': {
+      usage: 'opl agents modules list',
+      summary: 'List domain-agent internal brand-module spines without making them OPL platform modules.',
+      examples: ['opl agents modules list --json'],
+      group: 'brand',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['agents modules list']);
+        return buildAgentInternalBrandModulesList(getContracts());
+      },
+    },
+    'agents modules inspect': {
+      usage: 'opl agents modules inspect --domain <domain_id> --module <agent_module_id>',
+      summary: 'Inspect one domain-agent internal brand-module spine from the OPL governance contract.',
+      examples: ['opl agents modules inspect --domain medautoscience --module agent-runway --json'],
+      group: 'brand',
+      handler: (args) => buildAgentInternalBrandModuleInspect(getContracts(), args),
+    },
+    'agents modules interfaces': {
+      usage: 'opl agents modules interfaces',
+      summary: 'Expose CLI and descriptor refs for the agent-owned internal brand-module spine.',
+      examples: ['opl agents modules interfaces --json'],
+      group: 'brand',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['agents modules interfaces']);
+        return buildAgentInternalBrandModuleInterfaces(getContracts());
+      },
+    },
+    'agents modules validate': {
+      usage: 'opl agents modules validate',
+      summary: 'Validate agent-owned internal brand-module spine coverage and false-authority boundaries.',
+      examples: ['opl agents modules validate --json'],
+      group: 'brand',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['agents modules validate']);
+        return buildAgentInternalBrandModuleValidation(getContracts());
+      },
+    },
+    'agents modules doctor': {
+      usage: 'opl agents modules doctor',
+      summary: 'Fail closed if agent-owned internal brand-module spine governance drifts.',
+      examples: ['opl agents modules doctor --json'],
+      group: 'brand',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['agents modules doctor']);
+        return buildAgentInternalBrandModuleDoctor(getContracts());
       },
     },
     ...workOrderCommandSpecs,

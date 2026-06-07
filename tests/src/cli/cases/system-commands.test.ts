@@ -38,6 +38,10 @@ test('public and internal command specs no longer carry removed UI adapter comma
   assert.equal(publicSpecs['web bundle'], undefined);
   assert.equal(publicSpecs['web package'], undefined);
   assert.equal(typeof publicSpecs['module install'].handler, 'function');
+  assert.equal(typeof publicSpecs['connect install'].handler, 'function');
+  assert.equal(typeof publicSpecs['connect sync-skills'].handler, 'function');
+  assert.equal(typeof publicSpecs['connect packages manifest'].handler, 'function');
+  assert.equal(typeof publicSpecs['connect reconcile-modules'].handler, 'function');
   assert.equal(typeof publicSpecs['engine install'].handler, 'function');
   assert.equal(publicSpecs['service install'], undefined);
 });
@@ -175,9 +179,10 @@ test('help excludes retired local web adapter command surface', () => {
   assert.equal(payload.error.details.command, 'web');
 });
 
-test('help advertises initialize and environment management command surfaces', () => {
+test('default help advertises Connect canonical installation surfaces while legacy install commands stay deep-linkable', () => {
   const output = runCli(['help']);
   const commands = output.help.commands.map((entry: { command: string }) => entry.command);
+  const examples = output.help.examples.join('\n');
 
   assert.equal(commands.includes('system initialize'), true);
   assert.equal(commands.includes('engine install'), true);
@@ -190,8 +195,30 @@ test('help advertises initialize and environment management command surfaces', (
   assert.equal(commands.includes('system repair-native-helpers'), true);
   assert.equal(commands.includes('system update-channel'), true);
   assert.equal(commands.includes('system developer-supervisor'), true);
-  assert.equal(commands.includes('modules'), true);
-  assert.equal(commands.includes('module install'), true);
+  assert.equal(commands.includes('connect modules'), true);
+  assert.equal(commands.includes('connect install'), true);
+  assert.equal(commands.includes('connect sync-skills'), true);
+  assert.equal(commands.includes('connect packages manifest'), true);
+  assert.equal(commands.includes('connect reconcile-modules'), true);
+  assert.equal(commands.includes('modules'), false);
+  assert.equal(commands.includes('module install'), false);
+  assert.equal(commands.includes('skill sync'), false);
+  assert.equal(commands.includes('packages manifest'), false);
+  assert.match(examples, /opl connect install --module medautoscience/);
+  assert.match(examples, /opl connect sync-skills/);
+  assert.doesNotMatch(examples, /opl module install --module medautoscience/);
+  assert.doesNotMatch(examples, /opl skill sync/);
+
+  for (const legacyCommand of [
+    'module install',
+    'skill sync',
+    'packages manifest',
+  ]) {
+    const scopedHelp = runCli(['help', ...legacyCommand.split(' ')]);
+    assert.equal(scopedHelp.help.command, legacyCommand);
+    assert.match(scopedHelp.help.summary, /compatibility/i);
+  }
+
   assert.equal(commands.includes('workspace root'), true);
   assert.equal(commands.includes('workspace root set'), true);
   assert.equal(commands.includes('workspace root doctor'), true);

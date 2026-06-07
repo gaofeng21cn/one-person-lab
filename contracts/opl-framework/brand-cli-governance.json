@@ -1,0 +1,163 @@
+{
+  "version": "brand-cli-governance.v1",
+  "scope": "opl_brand_cli_governance",
+  "owner": "One Person Lab",
+  "purpose": "Freeze the thin executable frontdoor families for OPL platform brand modules and agent-owned internal brand-module spines without making them domain authority surfaces.",
+  "state": "active_contract",
+  "machine_boundary": "This contract governs read-only CLI/read-model frontdoors derived from the brand module registry. It does not store domain truth, artifact or memory bodies, quality verdicts, owner receipts, typed blockers, production readiness, or App release truth.",
+  "platform_frontdoors": [
+    {
+      "module_id": "charter",
+      "command": "opl charter",
+      "operations": ["status", "inspect", "interfaces", "validate", "doctor"]
+    },
+    {
+      "module_id": "atlas",
+      "command": "opl atlas",
+      "operations": ["status", "inspect", "interfaces", "validate", "doctor"]
+    },
+    {
+      "module_id": "workspace",
+      "command": "opl workspace",
+      "operations": ["status", "inspect"]
+    },
+    {
+      "module_id": "stagecraft",
+      "command": "opl stagecraft",
+      "operations": ["status", "inspect", "interfaces", "validate", "doctor"]
+    },
+    {
+      "module_id": "runway",
+      "command": "opl runway",
+      "operations": ["status", "inspect", "interfaces", "validate", "doctor"]
+    },
+    {
+      "module_id": "vault",
+      "command": "opl vault",
+      "operations": ["status", "inspect", "interfaces", "validate", "doctor"]
+    },
+    {
+      "module_id": "console",
+      "command": "opl console",
+      "operations": ["status", "inspect", "interfaces", "validate", "doctor"]
+    },
+    {
+      "module_id": "foundry-lab",
+      "command": "opl foundry-lab",
+      "operations": ["status", "inspect", "interfaces", "validate", "doctor"]
+    },
+    {
+      "module_id": "connect",
+      "command": "opl connect",
+      "operations": ["status", "inspect", "interfaces", "validate", "doctor"]
+    }
+  ],
+  "agent_internal_modules": {
+    "canonical_frontdoor": "opl agents modules",
+    "required_operations": ["list", "inspect", "interfaces", "validate", "doctor"],
+    "module_spine": [
+      {
+        "agent_module_id": "agent-charter",
+        "platform_analogue_module_id": "charter",
+        "purpose": "Domain-agent internal Charter spine that maps to the OPL platform charter module without becoming a platform module.",
+        "command_pattern": "opl agents modules inspect --domain <domain_id> --module agent-charter"
+      },
+      {
+        "agent_module_id": "agent-atlas",
+        "platform_analogue_module_id": "atlas",
+        "purpose": "Domain-agent internal Atlas spine that maps to the OPL platform atlas module without becoming a platform module.",
+        "command_pattern": "opl agents modules inspect --domain <domain_id> --module agent-atlas"
+      },
+      {
+        "agent_module_id": "agent-workspace",
+        "platform_analogue_module_id": "workspace",
+        "purpose": "Domain-agent internal Workspace spine that maps to the OPL platform workspace module without becoming a platform module.",
+        "command_pattern": "opl agents modules inspect --domain <domain_id> --module agent-workspace"
+      },
+      {
+        "agent_module_id": "agent-stagecraft",
+        "platform_analogue_module_id": "stagecraft",
+        "purpose": "Domain-agent internal Stagecraft spine that maps to the OPL platform stagecraft module without becoming a platform module.",
+        "command_pattern": "opl agents modules inspect --domain <domain_id> --module agent-stagecraft"
+      },
+      {
+        "agent_module_id": "agent-runway",
+        "platform_analogue_module_id": "runway",
+        "purpose": "Domain-agent internal Runway spine that maps to the OPL platform runway module without becoming a platform module.",
+        "command_pattern": "opl agents modules inspect --domain <domain_id> --module agent-runway"
+      },
+      {
+        "agent_module_id": "agent-vault",
+        "platform_analogue_module_id": "vault",
+        "purpose": "Domain-agent internal Vault spine that maps to the OPL platform vault module without becoming a platform module.",
+        "command_pattern": "opl agents modules inspect --domain <domain_id> --module agent-vault"
+      },
+      {
+        "agent_module_id": "agent-console",
+        "platform_analogue_module_id": "console",
+        "purpose": "Domain-agent internal Console spine that maps to the OPL platform console module without becoming a platform module.",
+        "command_pattern": "opl agents modules inspect --domain <domain_id> --module agent-console"
+      },
+      {
+        "agent_module_id": "agent-foundry-lab",
+        "platform_analogue_module_id": "foundry-lab",
+        "purpose": "Domain-agent internal Foundry Lab spine that maps to the OPL platform foundry-lab module without becoming a platform module.",
+        "command_pattern": "opl agents modules inspect --domain <domain_id> --module agent-foundry-lab"
+      },
+      {
+        "agent_module_id": "agent-connect",
+        "platform_analogue_module_id": "connect",
+        "purpose": "Domain-agent internal Connect spine that maps to the OPL platform connect module without becoming a platform module.",
+        "command_pattern": "opl agents modules inspect --domain <domain_id> --module agent-connect"
+      }
+    ],
+    "authority_boundary": {
+      "can_claim_domain_ready": false,
+      "can_claim_quality_verdict": false,
+      "can_claim_artifact_authority": false,
+      "can_claim_production_ready": false,
+      "can_write_domain_truth": false,
+      "can_write_memory_body": false,
+      "can_mutate_artifact_body": false,
+      "can_sign_owner_receipt": false,
+      "can_create_typed_blocker": false,
+      "can_replace_domain_owner": false,
+      "can_replace_ai_executor_planning": false
+    }
+  },
+  "legacy_command_ownership": [
+    {
+      "command_prefix": "opl brand-modules",
+      "primary_module_id": "charter",
+      "secondary_module_ids": ["atlas", "workspace", "stagecraft", "runway", "vault", "console", "foundry-lab", "connect"],
+      "status": "active_aggregate_registry_frontdoor",
+      "migration_target": "Keep as aggregate registry/read-model while module-owned frontdoors provide per-module status/inspect/validate/doctor.",
+      "command_refs": [
+        "opl brand-modules list --json",
+        "opl brand-modules inspect --module <module_id> --json",
+        "opl brand-modules maturity --json",
+        "opl brand-modules validate --json",
+        "opl brand-modules interfaces --json"
+      ],
+      "rationale": "Aggregate registry remains the low-cost overview; per-module frontdoors prevent a single catch-all surface from hiding module gaps."
+    },
+    {
+      "command_prefix": "opl workspace validate|doctor|interfaces",
+      "primary_module_id": "workspace",
+      "secondary_module_ids": [],
+      "status": "preserved_operational_workspace_frontdoor",
+      "migration_target": "Only opl workspace status|inspect are brand-read surfaces; validate, doctor, and interfaces keep existing workspace operational semantics.",
+      "command_refs": [
+        "opl workspace validate --json",
+        "opl workspace doctor --json",
+        "opl workspace interfaces --json"
+      ],
+      "rationale": "Workspace already owns operational validation and topology lifecycle; brand CLI governance must not replace those semantics."
+    }
+  ],
+  "drift_guards": [
+    "Every platform_frontdoors.module_id must exist in brand-module-registry.json.",
+    "Every platform frontdoor must expose status, inspect, interfaces, validate, and doctor unless an existing operational command collision is explicitly listed in legacy_command_ownership; workspace brand governance only owns status and inspect because validate, doctor, and interfaces keep existing workspace operational semantics.",
+    "Agent internal modules are read-only branding spines under opl agents modules and cannot write domain truth, replace domain owners, or claim production readiness."
+  ]
+}
