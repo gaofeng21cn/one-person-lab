@@ -226,6 +226,7 @@ test('default help advertises Connect canonical installation surfaces while reti
   }
 
   assert.equal(commands.includes('workspace root'), true);
+  assert.equal(commands.includes('workspace'), true);
   assert.equal(commands.includes('workspace root set'), true);
   assert.equal(commands.includes('workspace root doctor'), true);
   assert.equal(commands.includes('workspace init'), true);
@@ -237,6 +238,14 @@ test('default help advertises Connect canonical installation surfaces while reti
   assert.equal(commands.includes('workspace export-map'), true);
   assert.equal(commands.includes('workspace health'), true);
   assert.equal(commands.includes('workspace interfaces'), true);
+
+  const workspaceHelp = runCli(['help', 'workspace']);
+  assert.equal(workspaceHelp.help.command, 'workspace');
+  assert.match(workspaceHelp.help.usage, /workspace .*ensure/);
+  assert.equal(
+    workspaceHelp.help.subcommands.some((entry: { command: string }) => entry.command === 'workspace inspect'),
+    true,
+  );
 });
 
 test('help keeps JSON output available through explicit flag for machine readers', () => {

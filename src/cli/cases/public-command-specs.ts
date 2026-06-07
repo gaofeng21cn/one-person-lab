@@ -637,6 +637,69 @@ export function buildPublicCommandSpecs(
       ],
       group: 'status',
     }),
+    workspace: {
+      usage:
+        'opl workspace projects|list|root|init|ensure|validate|doctor|adopt|upgrade|project archive|export-map|health|inspect|inventory|interfaces|bind|activate|archive [options]',
+      summary:
+        'Manage OPL workspace bindings, standard family-agent workspace initialization, generated inspection refs, and workspace-local project lifecycle projections.',
+      examples: [
+        'opl workspace projects',
+        'opl workspace ensure --agent rca --project-id deck-001',
+        'opl workspace init --agent rca --workspace-id visual-theme-a --project-id deck-001',
+        'opl workspace validate --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace inspect --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace interfaces',
+      ],
+      group: 'workspace',
+      subcommands: [
+        {
+          command: 'workspace projects',
+          usage: 'opl workspace projects',
+          summary: 'List known project workspace bindings from the OPL workspace registry.',
+        },
+        {
+          command: 'workspace init',
+          usage:
+            'opl workspace init --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>]',
+          summary: 'Materialize the standard OPL workspace topology for one family agent.',
+        },
+        {
+          command: 'workspace ensure',
+          usage:
+            'opl workspace ensure --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>]',
+          summary: 'Reuse an active binding or initialize/append the compatible standard workspace topology.',
+        },
+        {
+          command: 'workspace validate',
+          usage: 'opl workspace validate --workspace <path>',
+          summary: 'Fail closed unless the workspace index and generated refs match the OPL workspace norm.',
+        },
+        {
+          command: 'workspace doctor',
+          usage: 'opl workspace doctor --workspace <path>',
+          summary: 'Report workspace topology, generated refs, indexed projects, and blockers without writing.',
+        },
+        {
+          command: 'workspace inspect',
+          usage: 'opl workspace inspect --workspace <path>',
+          summary: 'Read the workspace inspection projection for user and operator checks.',
+        },
+        {
+          command: 'workspace inventory',
+          usage: 'opl workspace inventory --workspace <path>',
+          summary: 'Read the shared resource inventory projection without reading resource bodies.',
+        },
+        {
+          command: 'workspace interfaces',
+          usage: 'opl workspace interfaces',
+          summary: 'Describe CLI/App/MCP/Skill/OpenAI/AI SDK delegates for the workspace protocol.',
+        },
+      ],
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs.workspace);
+        return buildCommandHelp('workspace', publicCommandSpecs.workspace);
+      },
+    },
     'workspace projects': cloneCommandSpec(commandSpecs.projects, {
       usage: 'opl workspace projects',
       examples: ['opl workspace projects'],

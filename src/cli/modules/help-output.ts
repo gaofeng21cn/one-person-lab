@@ -80,6 +80,7 @@ const NON_PASSTHROUGH_COMMAND_PREFIXES = new Set([
   'shell',
   'skill',
   'web',
+  'workspace',
   'work-order',
 ]);
 
