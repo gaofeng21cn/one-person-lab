@@ -60,6 +60,16 @@ function selectedPayloadOwnerFirst(input: {
   evidenceNextSteps: JsonRecord;
 }) {
   const generic = 'domain_repository_or_app_live_operator';
+  const primarySource = stringValue(input.primary.source);
+  if (primarySource === 'workstream_operating_loop') {
+    return concreteOwner(
+      input.primary.owner,
+      input.primary.domain_id,
+      input.evidenceNextSteps.next_owner,
+      input.primary.payload_owner,
+      'one-person-lab',
+    );
+  }
   const selectedPayloadOwner = stringValue(input.nextSafeAction.payload_owner);
   if (selectedPayloadOwner && selectedPayloadOwner !== generic) {
     return canonicalOwnerId(selectedPayloadOwner);
