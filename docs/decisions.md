@@ -17,6 +17,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - Domain-dispatch record route 在 `required_closeout_binding` 和 payload workorder 中暴露 StageRun closeout binding target shape；当 target identity 完整时，typed-blocker payload template 可携带 `owner_delta_result.closeout_binding`。
 - `preflightDomainDispatchEvidencePayload` 接受 `payload.owner_delta_result.closeout_binding` 作为 payload identity source，并与 route target identity / local owner-answer ref identity fail-closed 对比。冲突字段会阻止 refs-only receipt 记录。
 - 这只关闭 binding transport 和 identity validation 缺口；OPL 仍不能生成 domain owner receipt、quality gate receipt、typed blocker、owner-chain ref、no-regression ref，不能声明 domain ready、paper ready、App release ready 或 production ready。
+- 2026-06-07 追加：`quality_gate_receipt` 可以让 `current_owner_delta` 投影为 `domain_owner_answer_recorded`，从而停止继续催同一个默认 owner answer；但它不能被 StageRun cockpit 提升为 closeout owner receipt，也不能设置 `domain_ready_authorized`、`quality_or_export_authorized` 或 execution authorization success。需要关闭 StageRun closeout 时，仍必须有 domain owner receipt 或 typed blocker。
 
 ### 决策：StageRun blocker 按缺口类型选择默认 owner
 
