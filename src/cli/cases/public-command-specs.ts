@@ -224,9 +224,22 @@ export function buildPublicCommandSpecs(
   const packagesManifestSpec = buildNoArgSpec(
     {
       usage: 'opl packages manifest',
-      summary: 'Show the machine-readable OPL Packages manifest for GUI, Docker, native helper, and domain modules.',
+      summary: 'Compatibility surface for `opl connect packages manifest`; shows the machine-readable OPL Packages manifest for GUI, Docker, native helper, and domain modules.',
       examples: ['opl packages manifest'],
       group: 'package',
+      help_surface: 'migration_compatibility',
+    },
+    () => ({
+      version: 'g2',
+      packages_manifest: buildOplPackageManifest(),
+    }),
+  );
+  const connectPackagesManifestSpec = buildNoArgSpec(
+    {
+      usage: 'opl connect packages manifest',
+      summary: 'Show the machine-readable OPL Packages manifest through the canonical Connect frontdoor.',
+      examples: ['opl connect packages manifest --json'],
+      group: 'connect',
     },
     () => ({
       version: 'g2',
@@ -382,6 +395,92 @@ export function buildPublicCommandSpecs(
       },
     },
     ...brandModuleSurfaceSpecs,
+    'connect modules': buildNoArgSpec(
+      {
+        usage: 'opl connect modules',
+        summary: 'List OPL-managed domain modules through the canonical Connect frontdoor.',
+        examples: ['opl connect modules --json'],
+        group: 'connect',
+      },
+      () => buildPublicModulesPayload(buildOplModules()),
+    ),
+    'connect install': {
+      ...buildModuleActionSpec(
+        'install',
+        'opl connect install --module <module_id>',
+        'opl connect install --module medautoscience',
+      ),
+      group: 'connect',
+      summary: 'Install one OPL-managed domain module through the canonical Connect frontdoor.',
+    },
+    'connect update': {
+      ...buildModuleActionSpec(
+        'update',
+        'opl connect update --module <module_id>',
+        'opl connect update --module medautoscience',
+      ),
+      group: 'connect',
+      summary: 'Update one OPL-managed domain module through the canonical Connect frontdoor.',
+    },
+    'connect reinstall': {
+      ...buildModuleActionSpec(
+        'reinstall',
+        'opl connect reinstall --module <module_id>',
+        'opl connect reinstall --module medautoscience',
+      ),
+      group: 'connect',
+      summary: 'Reinstall one OPL-managed domain module through the canonical Connect frontdoor.',
+    },
+    'connect remove': {
+      ...buildModuleActionSpec(
+        'remove',
+        'opl connect remove --module <module_id>',
+        'opl connect remove --module medautoscience',
+      ),
+      group: 'connect',
+      summary: 'Remove one OPL-managed domain module through the canonical Connect frontdoor.',
+    },
+    'connect exec': {
+      usage: 'opl connect exec --module <module_id> -- <domain_cli_args...>',
+      summary: 'Run a domain module CLI through the canonical Connect frontdoor.',
+      examples: [
+        'opl connect exec --module medautoscience -- doctor entry-modes',
+        'opl connect exec --module medautogrant -- --help',
+      ],
+      group: 'connect',
+      handler: (args) => {
+        const parsed = parseOplModuleExecArgs(args, publicCommandSpecs['connect exec']);
+        return buildPublicModuleExecPayload(
+          runOplModuleExec(parsed.moduleId, parsed.args),
+        );
+      },
+    },
+    'connect skills': cloneCommandSpec(commandSpecs['skill-list'], {
+      usage: 'opl connect skills [--domain <domain_id>]',
+      summary: 'Inspect family domain plugin packs through the canonical Connect frontdoor.',
+      examples: [
+        'opl connect skills --json',
+        'opl connect skills --domain medautoscience --json',
+      ],
+      group: 'connect',
+    }),
+    'connect sync-skills': cloneCommandSpec(commandSpecs['skill-sync'], {
+      usage: 'opl connect sync-skills [--domain <domain_id>] [--home <home_path>] [--quiet]',
+      summary: 'Register family domain plugin packs through the canonical Connect frontdoor.',
+      examples: [
+        'opl connect sync-skills --json',
+        'opl connect sync-skills --domain medautoscience --json',
+        'opl connect sync-skills --home /tmp/codex-home --json',
+      ],
+      group: 'connect',
+    }),
+    'connect packages manifest': connectPackagesManifestSpec,
+    'connect reconcile-modules': cloneCommandSpec(systemCommandSpecs['system reconcile-modules'], {
+      usage: 'opl connect reconcile-modules',
+      summary: 'Install missing modules and update clean domain modules through the canonical Connect frontdoor.',
+      examples: ['opl connect reconcile-modules --json'],
+      group: 'connect',
+    }),
     'agents modules list': {
       usage: 'opl agents modules list',
       summary: 'List domain-agent internal brand-module spines without making them OPL platform modules.',
@@ -504,11 +603,15 @@ export function buildPublicCommandSpecs(
     },
     'skill list': cloneCommandSpec(commandSpecs['skill-list'], {
       usage: 'opl skill list [--domain <domain_id>]',
+      summary: 'Compatibility surface for `opl connect skills`; inspect family domain plugin packs.',
       group: 'skill',
+      help_surface: 'migration_compatibility',
     }),
     'skill sync': cloneCommandSpec(commandSpecs['skill-sync'], {
       usage: 'opl skill sync [--domain <domain_id>] [--home <home_path>] [--quiet]',
+      summary: 'Compatibility surface for `opl connect sync-skills`; register family domain plugin packs.',
       group: 'skill',
+      help_surface: 'migration_compatibility',
     }),
     'skill companion status': cloneCommandSpec(commandSpecs['skill-companion-status'], {
       usage: 'opl skill companion status [--home <home_path>] [--superpowers <keep|lite|full>]',
@@ -1131,12 +1234,36 @@ export function buildPublicCommandSpecs(
       group: 'contract',
     }),
     ...systemCommandSpecs,
-    modules: modulesSpec,
-    'module install': moduleInstallSpec,
-    'module update': moduleUpdateSpec,
-    'module reinstall': moduleReinstallSpec,
-    'module remove': moduleRemoveSpec,
-    'module exec': moduleExecSpec,
+    modules: {
+      ...modulesSpec,
+      summary: 'Compatibility surface for `opl connect modules`; list OPL-managed domain modules.',
+      help_surface: 'migration_compatibility',
+    },
+    'module install': {
+      ...moduleInstallSpec,
+      summary: 'Compatibility surface for `opl connect install`; install one OPL-managed domain module.',
+      help_surface: 'migration_compatibility',
+    },
+    'module update': {
+      ...moduleUpdateSpec,
+      summary: 'Compatibility surface for `opl connect update`; update one OPL-managed domain module.',
+      help_surface: 'migration_compatibility',
+    },
+    'module reinstall': {
+      ...moduleReinstallSpec,
+      summary: 'Compatibility surface for `opl connect reinstall`; reinstall one OPL-managed domain module.',
+      help_surface: 'migration_compatibility',
+    },
+    'module remove': {
+      ...moduleRemoveSpec,
+      summary: 'Compatibility surface for `opl connect remove`; remove one OPL-managed domain module.',
+      help_surface: 'migration_compatibility',
+    },
+    'module exec': {
+      ...moduleExecSpec,
+      summary: 'Compatibility surface for `opl connect exec`; run a domain module CLI through OPL-managed module checkout.',
+      help_surface: 'migration_compatibility',
+    },
     'engine install': engineInstallSpec,
     'engine update': engineUpdateSpec,
     'engine reinstall': engineReinstallSpec,

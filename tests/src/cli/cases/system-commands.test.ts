@@ -167,7 +167,7 @@ test('help excludes retired local web adapter command surface', () => {
     false,
   );
   assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'modules'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'connect modules'),
   );
   assert.ok(
     output.help.commands.some((entry: { command: string }) => entry.command === 'domain launch'),

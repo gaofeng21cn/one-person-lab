@@ -8,7 +8,7 @@ type CommandSpec = {
   examples: string[];
   handler: CommandHandler;
   group?: string;
-  help_surface?: 'default' | 'diagnostic_drilldown';
+  help_surface?: 'default' | 'diagnostic_drilldown' | 'migration_compatibility';
   subcommands?: Array<{
     command: string;
     usage: string;

@@ -119,6 +119,7 @@ function resolveCommandSpec(
 function buildRootHelp(commands: Record<string, CommandSpec>) {
   const visibleEntries = Object.entries(commands).filter(([, spec]) => (
     spec.help_surface !== 'diagnostic_drilldown'
+    && spec.help_surface !== 'migration_compatibility'
   ));
   const grouped = visibleEntries.reduce<Record<string, Array<{
     command: string;
@@ -176,6 +177,9 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl console status',
         'opl foundry-lab inspect',
         'opl connect interfaces',
+        'opl connect install --module medautoscience',
+        'opl connect sync-skills',
+        'opl connect packages manifest',
         'opl framework locate',
         'opl framework readiness --family-defaults',
         'opl framework production-closeout',
@@ -186,8 +190,6 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl install --modules mas,mag,rca',
         'opl doctor',
         'opl quality details --root . --format markdown',
-        'opl skill list',
-        'opl skill sync',
         'opl system',
         'opl system initialize',
         'opl system reconcile-modules',
@@ -207,9 +209,6 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl domain-memory migration-plan --domain mas',
         'opl stages list',
         'opl stages readiness --family-defaults',
-        'opl modules',
-        'opl module install --module medautoscience',
-        'opl module exec --module medautoscience -- doctor entry-modes',
         'opl engine install --engine codex',
         'opl workspace projects',
         'opl workspace ensure --agent rca --project-id deck-001',
@@ -256,8 +255,8 @@ function formatHumanRootHelp(payload: ReturnType<typeof buildRootHelp>) {
     '  opl framework readiness --family-defaults',
     '                                 Check the default framework/operator readiness summary',
     '  opl system initialize          Check first-run state and remaining setup actions',
-    '  opl modules                    Inspect managed module health',
-    '  opl skill sync                 Sync family skills into the Codex skill path',
+    '  opl connect modules            Inspect managed module health',
+    '  opl connect sync-skills        Sync family skills into the Codex skill path',
     '  opl stages readiness --family-defaults',
     '                                 Check the default operator/App launch-readiness summary',
     '  opl "your task"                Start from the default Codex runtime',
