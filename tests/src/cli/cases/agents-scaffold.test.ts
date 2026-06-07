@@ -106,7 +106,15 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     true,
   );
   assert.equal(
+    scaffold.required_contract_surfaces.includes('stage_operating_principles'),
+    true,
+  );
+  assert.equal(
     scaffold.required_verification.includes('user_stage_log_semantics_or_typed_blocker'),
+    true,
+  );
+  assert.equal(
+    scaffold.required_verification.includes('stage_operating_principles_declared'),
     true,
   );
   assert.equal(
@@ -135,6 +143,21 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     mechanism_repair_after_repeat_count: 2,
     human_gate_or_stop_loss_after_repeat_count: 3,
   });
+  assert.equal(
+    scaffold.stage_operating_principles_policy.surface_kind,
+    'opl_standard_agent_stage_operating_principles',
+  );
+  assert.equal(
+    scaffold.stage_operating_principles_policy.management_boundary.stage_unit,
+    'coarse_grained_stage_attempt',
+  );
+  assert.equal(scaffold.stage_operating_principles_policy.default_read_surface.root, 'current_owner_delta');
+  assert.equal(scaffold.stage_operating_principles_policy.default_read_surface.raw_worklist_default, false);
+  assert.equal(scaffold.stage_operating_principles_policy.default_read_surface.readiness_default, false);
+  assert.equal(
+    scaffold.stage_operating_principles_policy.speed_policy.quality_gaps_block_ordinary_progress_by_default,
+    false,
+  );
   assert.equal(
     scaffold.foundry_agent_series_contract.surface_kind,
     'opl_foundry_agent_series_contract',
@@ -400,9 +423,11 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
   assert.equal(scaffold.required_contract_surfaces.includes('generated_surface_handoff'), true);
   assert.equal(scaffold.required_contract_surfaces.includes('functional_privatization_audit'), true);
   assert.equal(scaffold.required_contract_surfaces.includes('workspace_lifecycle_policy'), true);
+  assert.equal(scaffold.required_contract_surfaces.includes('stage_operating_principles'), true);
   assert.equal(scaffold.required_contract_surfaces.includes('state_index_kernel_adoption'), true);
   assert.equal(scaffold.required_verification.includes('functional_privatization_audit_no_generic_owner'), true);
   assert.equal(scaffold.required_verification.includes('workspace_file_lifecycle_policy_declared'), true);
+  assert.equal(scaffold.required_verification.includes('stage_operating_principles_declared'), true);
   assert.equal(scaffold.required_verification.includes('state_index_kernel_adoption_declared'), true);
   assert.equal(scaffold.required_verification.includes('generated_surface_handoff_parity'), true);
   assert.equal(
@@ -783,6 +808,15 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       workspaceLifecyclePolicy.authority_boundary.policy_can_claim_domain_ready_or_artifact_authority,
       false,
     );
+    const stageOperatingPrinciples = JSON.parse(
+      fs.readFileSync(path.join(targetDir, 'contracts/stage_operating_principles.json'), 'utf8'),
+    );
+    assert.equal(stageOperatingPrinciples.surface_kind, 'opl_standard_agent_stage_operating_principles');
+    assert.equal(stageOperatingPrinciples.domain_id, 'award-foundry');
+    assert.equal(stageOperatingPrinciples.management_boundary.stage_unit, 'coarse_grained_stage_attempt');
+    assert.equal(stageOperatingPrinciples.default_read_surface.root, 'current_owner_delta');
+    assert.equal(stageOperatingPrinciples.default_read_surface.raw_worklist_default, false);
+    assert.equal(stageOperatingPrinciples.default_read_surface.readiness_default, false);
 
     const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
     assert.equal(validated.mode, 'validate');
@@ -841,7 +875,43 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       'default_codex_cli',
     );
     assert.deepEqual(validated.validation.stage_pack_v2_validation.blockers, []);
+    assert.equal(
+      validated.validation.required_contract_files.includes('contracts/stage_operating_principles.json'),
+      true,
+    );
     assert.deepEqual(validated.validation.blockers, []);
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
+test('agents scaffold validation blocks missing stage operating principles policy', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-scaffold-stage-policy-missing-'));
+  try {
+    runCli([
+      'agents',
+      'scaffold',
+      '--target-dir',
+      targetDir,
+      '--domain-id',
+      'award-foundry',
+      '--domain-label',
+      'Award Foundry',
+    ]);
+    fs.rmSync(path.join(targetDir, 'contracts', 'stage_operating_principles.json'));
+
+    const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
+    assert.equal(validated.mode, 'validate');
+    assert.equal(validated.state, 'validation_blocked');
+    assert.equal(validated.validation.status, 'blocked');
+    assert.equal(
+      validated.validation.missing_contract_files.includes('contracts/stage_operating_principles.json'),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes('missing_contract:contracts/stage_operating_principles.json'),
+      true,
+    );
   } finally {
     fs.rmSync(targetDir, { recursive: true, force: true });
   }

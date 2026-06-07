@@ -27,6 +27,7 @@ import {
   WORKSPACE_FILE_LIFECYCLE_POLICY,
 } from './standard-domain-agent-scaffold-constants.ts';
 import { buildStageRunCanaryEvidence } from './standard-domain-agent-scaffold-stage-run-canary.ts';
+import { STAGE_OPERATING_PRINCIPLES_POLICY } from './standard-domain-agent-stage-operating-principles.ts';
 export {
   buildStandardDomainAgentScaffoldValidation,
   validateStandardDomainAgentScaffold,
@@ -326,6 +327,7 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
       user_stage_log_contract: STANDARD_USER_STAGE_LOG_CONTRACT,
       progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
       typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
+      stage_operating_principles_policy: STAGE_OPERATING_PRINCIPLES_POLICY,
       foundry_agent_series_contract: STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT,
       foundry_agent_series_policy_release: FOUNDRY_AGENT_SERIES_POLICY_RELEASE,
       opl_generated_surfaces: OPL_GENERATED_SURFACES,

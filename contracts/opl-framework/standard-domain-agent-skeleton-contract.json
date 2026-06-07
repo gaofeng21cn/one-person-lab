@@ -109,6 +109,7 @@
       "user_stage_log_contract",
       "progress_delta_policy",
       "typed_blocker_lineage_policy",
+      "stage_operating_principles",
       "quality_or_export_gate_refs",
       "physical_skeleton_follow_through",
       "legacy_retirement_tombstone_proof",
@@ -2013,6 +2014,7 @@
       "functional_privatization_audit_no_generic_owner",
       "workspace_file_lifecycle_policy_declared",
       "stage_artifact_kernel_adoption_declared",
+      "stage_operating_principles_declared",
       "state_index_kernel_adoption_declared"
     ],
     "write_plan": [],

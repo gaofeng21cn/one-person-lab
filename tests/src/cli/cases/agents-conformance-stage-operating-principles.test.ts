@@ -33,7 +33,11 @@ test('agents conformance blocks stage policies that slow ordinary owner-delta pr
     'current_owner',
   ];
   policy.speed_policy.strategy_refs_block_launch_by_default = true;
+  policy.speed_policy.tool_catalog_can_prescribe_workflow_sequence = true;
+  policy.speed_policy.preflight_or_quality_review_can_loop_without_deliverable_delta = true;
   policy.speed_policy.quality_gaps_block_ordinary_progress_by_default = true;
+  policy.speed_policy.safe_action_before_diagnostic_reconcile = false;
+  policy.speed_policy.next_delta_must_be_deliverable_receipt_blocker_or_handoff = false;
   policy.default_read_surface.root = 'raw_worklist';
   policy.demoted_default_surfaces = ['provider_trace'];
   policy.authority_boundary.policy_can_claim_domain_ready = true;
@@ -59,6 +63,22 @@ test('agents conformance blocks stage policies that slow ordinary owner-delta pr
   );
   assert.equal(
     checks.blockers.includes('stage_operating_principles_quality_gaps_must_not_block_ordinary_progress_by_default'),
+    true,
+  );
+  assert.equal(
+    checks.blockers.includes('stage_operating_principles_tool_catalog_must_not_prescribe_workflow_sequence'),
+    true,
+  );
+  assert.equal(
+    checks.blockers.includes('stage_operating_principles_preflight_quality_loop_without_delta_forbidden'),
+    true,
+  );
+  assert.equal(
+    checks.blockers.includes('stage_operating_principles_safe_action_before_diagnostic_reconcile_missing'),
+    true,
+  );
+  assert.equal(
+    checks.blockers.includes('stage_operating_principles_next_delta_shape_guard_missing'),
     true,
   );
   assert.equal(

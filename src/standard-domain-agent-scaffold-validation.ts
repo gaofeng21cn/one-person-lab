@@ -838,6 +838,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     'contracts/artifact_locator_contract.json',
     'contracts/owner_receipt_contract.json',
     'contracts/foundry_agent_series.json',
+    'contracts/stage_operating_principles.json',
     'contracts/functional_privatization_audit.json',
     'contracts/private_functional_surface_policy.json',
     'contracts/workspace_lifecycle_policy.json',
