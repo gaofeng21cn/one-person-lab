@@ -536,7 +536,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 影响：
 
-- One Person Lab App、`opl install`、`opl system initialize`、`opl connect modules`、`opl connect sync-skills` 与 Codex-visible plugin/skill metadata 默认以 OPL-managed modules 为产品运行来源。`opl modules` 与 `opl skill sync` 只作为 compatibility / migration deep-link surface 保留，不作为默认推荐前门。
+- One Person Lab App、`opl install`、`opl system initialize`、`opl connect modules`、`opl connect sync-skills` 与 Codex-visible plugin/skill metadata 默认以 OPL-managed modules 为产品运行来源。旧 `opl modules` 与 `opl skill sync` 已退役并 fail closed 到 Connect 替代入口，不作为机器或用户前门。
 - App 启动维护可以自动检查 managed module 是否 behind、skill/plugin metadata 是否 stale、health check 是否通过，并在 checkout clean 且可 fast-forward 时自动更新、同步和刷新投影；当 Developer Mode source channel 已命中本机开发 checkout 时，启动维护只对该外部 checkout 执行 tracked plugin source sync 与 health check，不做 bootstrap、pull、install、domain plugin installer 或 managed 覆盖。
 - managed checkout 处于 dirty、ahead、diverged、no upstream、health check failed 或需要 Codex App restart/reload 时，启动维护必须停止自动覆盖并展示人工处理状态。
 - developer checkout 只通过显式开发模式、环境变量、workspace registry 或命令行 override 进入当前运行路径；默认 `auto` 配置在 GitHub identity 等于 `auto_enable_github_login`（当前默认 `gaofeng21cn`）且 mode 为 `developer_apply_safe` 时，等价命中 Developer Mode local checkout source channel。App 必须显示当前使用的是 managed checkout 还是 developer checkout。
@@ -842,7 +842,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 影响：
 
-- `opl connect packages manifest` 成为 Packages 坐标的机器可读入口和后续分发目标；`opl packages manifest` 保留为 compatibility deep-link。
+- `opl connect packages manifest` 成为 Packages 坐标的机器可读入口和后续分发目标；旧 `opl packages manifest` 已退役并 fail closed 到 Connect 替代入口。
 - 当前 `opl install`、App 首启协调和环境管理仍以 git checkout 更新到远端最新为正式路径；Packages/GHCR 接入模块安装更新前不得写成当前机制
 - 中央 release manifest / Packages workflow 可以继续维护为机器分发雏形，但各 domain repo 不需要单独恢复用户安装型 GitHub Release
 - WebUI Docker 镜像的发布与用户路径 evidence 归 `one-person-lab-app`；OPL Framework 只保留 App-owned GHCR 坐标 / external reference，不在 framework packages workflow 中构建或发布 WebUI image
@@ -942,7 +942,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - `opl`、`opl exec`、`opl resume` 继续以 `Codex` 语义为默认前门
-- `opl connect sync-skills` 成为 family domain skill pack 的统一同步入口；`opl skill sync` 保留为 compatibility / migration deep-link，默认前门继续保持原生 Codex 语义
+- `opl connect sync-skills` 成为 family domain skill pack 的统一同步入口；旧 `opl skill sync` 已退役并 fail closed 到 Connect 替代入口，默认前门继续保持原生 Codex 语义
 - GUI 壳与 ACP-compatible 外壳都围绕同一套 Codex-default runtime contract 工作
 
 ### 决策：admitted domain 通过 repo-owned capability surface 接入 `OPL`

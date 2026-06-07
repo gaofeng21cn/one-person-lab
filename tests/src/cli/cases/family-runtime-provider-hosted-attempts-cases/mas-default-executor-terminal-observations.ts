@@ -231,3 +231,133 @@ test('family-runtime succeeds a requeued MAS default executor task when its link
     db.close();
   }
 });
+
+test('family-runtime blocks completed MAS readiness attempt that lacks Stage Native owner answer', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    withIsolatedFamilyRuntimeEnv(() => {
+      createQueueTables(db);
+      const dedupeKey = 'mas:dm-cvd:002:default-executor:complete_medical_paper_readiness_surface:terminal-missing-answer';
+      const taskId = 'task-mas-readiness-terminal-missing-answer';
+      const payload = readinessSurfacePayload('readiness-terminal-missing-answer');
+      insertSucceededTask(db, {
+        taskId,
+        domainId: 'medautoscience',
+        taskKind: 'domain_owner/default-executor-dispatch',
+        payload,
+        dedupeKey,
+      });
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(taskId);
+      const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as Parameters<
+        typeof ensureProviderHostedStageAttempt
+      >[1];
+      const attempt = ensureProviderHostedStageAttempt(db, row, payload);
+      assert.ok(attempt);
+
+      syncStageAttemptFromTemporalTerminalObservation(db, completedTemporalObservation({
+        stageAttemptId: attempt.stage_attempt_id,
+        workflowId: attempt.workflow_id,
+        closeoutRefs: ['studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_execution/latest.json'],
+        routeImpact: {
+          action_type: 'complete_medical_paper_readiness_surface',
+          owner_result_status: 'typed_blocker_or_stop_loss',
+        },
+      }));
+      const task = db.prepare(`
+        SELECT status, last_error, dead_letter_reason
+        FROM tasks
+        WHERE task_id = ?
+      `).get(taskId) as { status: string; last_error: string | null; dead_letter_reason: string | null };
+      const [syncedAttempt] = listStageAttemptsForTask(db, taskId);
+      const event = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'stage_attempt_terminal_missing_stage_native_owner_answer_task'
+        LIMIT 1
+      `).get(taskId) as { payload_json: string } | undefined;
+
+      assert.equal(task.status, 'blocked');
+      assert.equal(task.last_error, 'stage_native_owner_answer_missing_after_default_executor_completion');
+      assert.equal(task.dead_letter_reason, 'stage_native_owner_answer_missing_after_default_executor_completion');
+      assert.equal(syncedAttempt.status, 'completed');
+      assert.equal(syncedAttempt.closeout_receipt_status, 'accepted_typed_closeout');
+      assert.ok(event);
+      assert.equal(
+        JSON.parse(event.payload_json).reason,
+        'stage_native_owner_answer_missing_after_default_executor_completion',
+      );
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime succeeds completed MAS readiness attempt with Stage Native owner answer', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    withIsolatedFamilyRuntimeEnv(() => {
+      createQueueTables(db);
+      const dedupeKey = 'mas:dm-cvd:002:default-executor:complete_medical_paper_readiness_surface:terminal-stage-native-answer';
+      const taskId = 'task-mas-readiness-terminal-stage-native-answer';
+      const payload = readinessSurfacePayload('readiness-terminal-stage-native-answer');
+      insertSucceededTask(db, {
+        taskId,
+        domainId: 'medautoscience',
+        taskKind: 'domain_owner/default-executor-dispatch',
+        payload,
+        dedupeKey,
+      });
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(taskId);
+      const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as Parameters<
+        typeof ensureProviderHostedStageAttempt
+      >[1];
+      const attempt = ensureProviderHostedStageAttempt(db, row, payload);
+      assert.ok(attempt);
+
+      syncStageAttemptFromTemporalTerminalObservation(db, completedTemporalObservation({
+        stageAttemptId: attempt.stage_attempt_id,
+        workflowId: attempt.workflow_id,
+        closeoutRefs: [
+          'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_execution/latest.json',
+          'artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json',
+        ],
+        routeImpact: {
+          action_type: 'complete_medical_paper_readiness_surface',
+          stage_native_closeout: {
+            surface_kind: 'medical_paper_readiness_stage_native_closeout',
+            status: 'materialized',
+            stage_id: '08-publication_package_handoff',
+            terminal_outcome_kind: 'typed_blocker',
+            written_ref: 'artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json',
+            closeout_binding: {
+              source_fingerprint: 'readiness-terminal-stage-native-answer',
+              work_unit_fingerprint: 'stage-current-owner-delta::complete_medical_paper_readiness_surface::readiness-terminal-stage-native-answer',
+            },
+          },
+        },
+      }));
+      const task = db.prepare(`
+        SELECT status, last_error, dead_letter_reason
+        FROM tasks
+        WHERE task_id = ?
+      `).get(taskId) as { status: string; last_error: string | null; dead_letter_reason: string | null };
+      const [syncedAttempt] = listStageAttemptsForTask(db, taskId);
+      const event = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'stage_attempt_terminal_completed_task'
+        LIMIT 1
+      `).get(taskId) as { payload_json: string } | undefined;
+
+      assert.equal(task.status, 'succeeded');
+      assert.equal(task.last_error, null);
+      assert.equal(task.dead_letter_reason, null);
+      assert.equal(syncedAttempt.status, 'completed');
+      assert.equal(syncedAttempt.closeout_receipt_status, 'accepted_typed_closeout');
+      assert.ok(event);
+      assert.equal(JSON.parse(event.payload_json).reason, 'temporal_stage_attempt_completed');
+    });
+  } finally {
+    db.close();
+  }
+});

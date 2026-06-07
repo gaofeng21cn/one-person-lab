@@ -459,7 +459,7 @@ exit 0
   }
 });
 
-test('opl skill list discovers the family plugin packs through the configured sibling workspace root', () => {
+test('opl connect skills discovers the family plugin packs through the configured sibling workspace root', () => {
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-list-'));
   const { workspaceRoot, syncLogPath } = createFakeFamilySkillWorkspace(captureDir);
   const stateDir = path.join(captureDir, 'opl-state');
@@ -516,7 +516,7 @@ test('nested worktree repo roots resolve the family workspace root without OPL_F
   );
 });
 
-test('opl skill list discovers OPL-managed module installs without OPL_FAMILY_WORKSPACE_ROOT', () => {
+test('opl connect skills discovers OPL-managed module installs without OPL_FAMILY_WORKSPACE_ROOT', () => {
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-list-managed-'));
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');
@@ -558,7 +558,7 @@ test('opl skill list discovers OPL-managed module installs without OPL_FAMILY_WO
   }
 });
 
-test('opl skill list prefers managed roots over Full runtime module path overrides', () => {
+test('opl connect skills prefers managed roots over Full runtime module path overrides', () => {
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-list-full-runtime-'));
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-full-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');
@@ -592,7 +592,7 @@ test('opl skill list prefers managed roots over Full runtime module path overrid
   }
 });
 
-test('opl skill sync refuses to mirror legacy test skill stubs', () => {
+test('opl connect sync-skills refuses to mirror legacy test skill stubs', () => {
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-sync-invalid-'));
   const { workspaceRoot, syncLogPath } = createFakeFamilySkillWorkspace(captureDir);
   const homeDir = path.join(captureDir, 'home');
@@ -631,7 +631,7 @@ test('opl skill sync refuses to mirror legacy test skill stubs', () => {
   }
 });
 
-test('opl skill sync registers tracked family plugin sources without writing domain repo marketplaces', () => {
+test('opl connect sync-skills registers tracked family plugin sources without writing domain repo marketplaces', () => {
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-sync-'));
   const { workspaceRoot, syncLogPath } = createFakeFamilySkillWorkspace(captureDir);
   const homeDir = path.join(captureDir, 'home');
@@ -748,7 +748,7 @@ test('opl skill sync registers tracked family plugin sources without writing dom
   }
 });
 
-test('opl skill sync follows Developer Mode sibling checkouts over managed module copies', () => {
+test('opl connect sync-skills follows Developer Mode sibling checkouts over managed module copies', () => {
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-sync-devmode-'));
   const { workspaceRoot } = createFakeFamilySkillWorkspace(captureDir);
   const modulesRoot = path.join(captureDir, 'managed-modules');

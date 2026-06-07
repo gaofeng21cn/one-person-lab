@@ -464,6 +464,7 @@ exit 1
         gui_first_run_automation: {
           surface_id: string;
           command_flow: string[];
+          vm_artifacts: string[];
           accessibility_labels: {
             window: string;
             installButton: string;

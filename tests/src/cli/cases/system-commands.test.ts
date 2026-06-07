@@ -37,7 +37,7 @@ test('public and internal command specs no longer carry removed UI adapter comma
   assert.equal(typeof publicSpecs.system.handler, 'function');
   assert.equal(publicSpecs['web bundle'], undefined);
   assert.equal(publicSpecs['web package'], undefined);
-  assert.equal(typeof publicSpecs['module install'].handler, 'function');
+  assert.equal(publicSpecs['module install'], undefined);
   assert.equal(typeof publicSpecs['connect install'].handler, 'function');
   assert.equal(typeof publicSpecs['connect sync-skills'].handler, 'function');
   assert.equal(typeof publicSpecs['connect packages manifest'].handler, 'function');
@@ -179,7 +179,7 @@ test('help excludes retired local web adapter command surface', () => {
   assert.equal(payload.error.details.command, 'web');
 });
 
-test('default help advertises Connect canonical installation surfaces while legacy install commands stay deep-linkable', () => {
+test('default help advertises Connect canonical installation surfaces while retired install commands fail closed', () => {
   const output = runCli(['help']);
   const commands = output.help.commands.map((entry: { command: string }) => entry.command);
   const examples = output.help.examples.join('\n');
@@ -209,14 +209,20 @@ test('default help advertises Connect canonical installation surfaces while lega
   assert.doesNotMatch(examples, /opl module install --module medautoscience/);
   assert.doesNotMatch(examples, /opl skill sync/);
 
-  for (const legacyCommand of [
-    'module install',
-    'skill sync',
-    'packages manifest',
-  ]) {
-    const scopedHelp = runCli(['help', ...legacyCommand.split(' ')]);
-    assert.equal(scopedHelp.help.command, legacyCommand);
-    assert.match(scopedHelp.help.summary, /compatibility/i);
+  for (const [legacyArgs, replacement] of [
+    [['module', 'install'], 'opl connect install'],
+    [['skill', 'sync'], 'opl connect sync-skills'],
+    [['packages', 'manifest'], 'opl connect packages manifest'],
+  ] as const) {
+    const scopedHelp = runCliFailure(['help', ...legacyArgs]);
+    assert.equal(scopedHelp.status, 2);
+    assert.equal(scopedHelp.payload.error.code, 'unknown_command');
+    assert.equal(scopedHelp.payload.error.details.command, legacyArgs.join(' '));
+
+    const retiredExecution = runCliFailure([...legacyArgs]);
+    assert.equal(retiredExecution.status, 2);
+    assert.equal(retiredExecution.payload.error.code, 'cli_usage_error');
+    assert.equal(retiredExecution.payload.error.details.replacement, replacement);
   }
 
   assert.equal(commands.includes('workspace root'), true);

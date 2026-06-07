@@ -135,7 +135,7 @@ export async function main() {
         `Command "${retired.command}" has been retired. Use "${retired.replacement}" instead.`,
         {
           usage: retired.usage,
-          examples: retired.examples,
+          examples: [...retired.examples],
         },
         {
           command: retired.command,

@@ -173,9 +173,9 @@ npm link
 
 ```bash
 opl help --text
-opl modules
-opl module exec --module medautoscience -- doctor entry-modes
-opl skill sync
+opl connect modules
+opl connect exec --module medautoscience -- doctor entry-modes
+opl connect sync-skills
 opl family-runtime status
 opl family-runtime repair
 opl family-runtime provider repair --provider temporal
@@ -191,7 +191,7 @@ opl family-runtime attempt list
 - 命令行入口、安装、初始化、诊断和修复。
 - 显式激活、route 编排、阶段控制、认知计算内核边界、交接、回执、人工确认和恢复。
 - 运行时提供者、类型化队列、阶段尝试记录、运行快照和投影消费。
-- 机器可读合同、模块发现、`opl module exec` 和技能同步。
+- 机器可读合同、模块发现、`opl connect exec` 和 Connect skill 同步。
 
 OPL 采用 AI-first、executor-first、contract-light 的 surface 模型：active 框架叙事统一为 `Minimal Trust Kernel + Stage Strategy Kernel + Readiness + Derived Diagnostic Lenses + Surface Budget + AI Capability Aperture`。Kernel 负责 stage pack 准入和 owner boundary、权限、expected receipt、audit、replay、route-back 证据；prompt/skill/tool-affordance/knowledge/rubric refs 是为了可审计、可复用和可交接的策略与边界引用，不是 OPL launch hard gate。工具目录是 affordance catalog，不是 workflow script：OPL 标准化权限、凭据、可写范围、side effect 和 forbidden authority，executor 在 attempt 内自主决定使用、跳过、组合、替代或追问哪些工具。Readiness 聚合启动和证据缺口，不签发 domain verdict；Diagnostic lenses 解释 blocker、stale assumption、replay gap 或 route-back evidence，但不升级为 runtime planner、proof assistant、workflow compiler 或质量权威。Surface Budget 限制新增 default surface：不满足启动安全、权威边界、证据/replay/audit/route-back 或 App/runtime 反复消费的学习点，只能进入 refs、warning、diagnostic 或 history。AI Capability Aperture 保持专家工作对更强 executor 开放，让 Codex 和后续更强 AI 能力直接受益；质量、publication、fundability、visual 和 export 判断仍回到独立 AI reviewer 或 domain-owner receipt。
 

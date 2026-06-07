@@ -139,10 +139,11 @@ function closeoutPacketFromDefaultExecutorExecution(input: {
     ? ownerResult.stage_native_closeout
     : null;
   const stageNativeOwnerAnswerRef = optionalString(ownerResult.stage_native_owner_answer_ref);
+  const stageNativeWrittenRef = optionalString(stageNativeCloseout?.written_ref);
   const closeoutRefs = [
     input.receiptRef,
     ...(stageNativeOwnerAnswerRef ? [stageNativeOwnerAnswerRef] : []),
-    ...readStringList(stageNativeCloseout?.written_ref),
+    ...(stageNativeWrittenRef ? [stageNativeWrittenRef] : []),
   ];
   const blockedReason = optionalString(ownerResult.blocked_reason)
     ?? optionalString(input.execution.blocked_reason)

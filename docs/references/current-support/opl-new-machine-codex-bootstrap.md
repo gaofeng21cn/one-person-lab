@@ -101,7 +101,7 @@ opl connect skills --json
 
 - MAS、MAG、RCA 走 plugin-packaged domain skill entries。
 - OPL Meta Agent 走 OPL-generated skill surface。
-- `opl connect sync-skills` 是统一同步入口；`opl skill sync` 只保留为 compatibility deep-link。
+- `opl connect sync-skills` 是统一同步入口；旧 `opl skill sync` 已退役并 fail closed 到 Connect 替代入口。
 - MAS/MAG/RCA 不应同时作为重复裸 skill 出现在 `~/.codex/skills/{mas,mag,rca}`。
 
 ### 5. 安装 OPL Flow
