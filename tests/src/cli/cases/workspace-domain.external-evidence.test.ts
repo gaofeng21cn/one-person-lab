@@ -125,6 +125,31 @@ test('agents evidence apply blocks verify without a matching request receipt', (
   }
 });
 
+test('agents evidence apply preserves structured refs as opaque values', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agents-external-evidence-opaque-ref-'));
+  const env = { OPL_STATE_DIR: stateRoot };
+  const structuredRef = "{'writer_state': 'queued', 'user_next': 'repair', 'reason': 'quality'}";
+
+  try {
+    const recorded = runCli([
+      'agents',
+      'evidence',
+      'apply',
+      '--domain',
+      'med-autoscience',
+      '--request-id',
+      'domain_dispatch:medautoscience:sat-current',
+      '--evidence-ref',
+      structuredRef,
+    ], env).external_evidence_apply;
+
+    assert.equal(recorded.status, 'recorded');
+    assert.deepEqual(recorded.receipt.evidence_refs, [structuredRef]);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('agents evidence apply writes external evidence ledger atomically', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agents-external-evidence-atomic-'));
   const env = { OPL_STATE_DIR: stateRoot };

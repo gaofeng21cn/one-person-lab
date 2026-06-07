@@ -110,10 +110,27 @@ function splitList(value: string | null | undefined) {
   if (!value) {
     return [];
   }
+  const trimmed = value.trim();
+  if (looksStructuredOpaqueRef(trimmed)) {
+    return [trimmed];
+  }
   return [...new Set(value
     .split(',')
     .map((entry) => entry.trim())
     .filter(Boolean))];
+}
+
+function looksStructuredOpaqueRef(value: string) {
+  if (!value.includes(',')) {
+    return false;
+  }
+  const first = value[0];
+  const last = value[value.length - 1];
+  return (
+    (first === '{' && last === '}')
+    || (first === '[' && last === ']')
+    || (first === '(' && last === ')')
+  );
 }
 
 function emptyLedger(): ExternalEvidenceLedger {
