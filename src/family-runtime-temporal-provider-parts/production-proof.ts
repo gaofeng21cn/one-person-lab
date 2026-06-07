@@ -21,6 +21,30 @@ import {
 
 const TEMPORAL_PRODUCTION_PROOF_RESULT_RPC_TIMEOUT_MS = 60_000;
 
+type TemporalProductionWorkerLifecycle = {
+  address: string | null;
+  address_source: string;
+  namespace: string;
+  task_queue: string;
+  lifecycle_status: string;
+  server_reachable: boolean | null;
+  worker_ready: boolean | null;
+  managed_worker_pid?: number | null;
+  managed_worker_state_path?: string | null;
+  temporal_service_lifecycle?: Record<string, unknown> | null;
+  blockers: string[];
+  repair_action: Record<string, unknown> & {
+    action_id: string;
+  };
+};
+
+type TemporalProductionUpdateHandle = {
+  executeUpdate(
+    update: typeof stageAttemptOperatorUpdate,
+    options: { args: [Record<string, unknown>] },
+  ): Promise<unknown>;
+};
+
 export function temporalProductionProbeInput(
   suffix: string,
   closeoutPacket: Record<string, unknown> | null,
@@ -62,7 +86,10 @@ export function temporalProductionTypedCloseoutPacket() {
   };
 }
 
-function temporalProductionRuntimeSnapshot(worker: Record<string, any>, address = worker.address) {
+function temporalProductionRuntimeSnapshot(
+  worker: TemporalProductionWorkerLifecycle,
+  address = worker.address,
+) {
   return {
     provider_kind: 'temporal',
     address,
@@ -78,14 +105,14 @@ function temporalProductionRuntimeSnapshot(worker: Record<string, any>, address 
   };
 }
 
-function temporalProductionProofEnvironment(worker: Record<string, any>) {
+function temporalProductionProofEnvironment(worker: TemporalProductionWorkerLifecycle) {
   return worker.address_source === 'managed_local_service_state'
     ? 'local_temporal_service_and_managed_worker'
     : 'external_temporal_service_and_managed_worker';
 }
 
 function blockedTemporalProductionResidencyProof(input: {
-  worker: Record<string, any>;
+  worker: TemporalProductionWorkerLifecycle;
   proofEnvironment: string;
   blockerStatus: string;
   blockerIds: string[];
@@ -107,7 +134,7 @@ function blockedTemporalProductionResidencyProof(input: {
       owner: 'operator',
       required_before: 'production_residency_proof',
       repair_action: repairAction,
-      ...input.errorMessage ? { error_message: input.errorMessage } : {},
+      ...(input.errorMessage ? { error_message: input.errorMessage } : {}),
     },
     blockers: input.blockerIds,
     temporal_worker_lifecycle: input.worker,
@@ -147,9 +174,7 @@ function blockedTemporalProductionResidencyProof(input: {
 
 async function executeTemporalProductionProofUpdates(
   client: Client,
-  handle: {
-    executeUpdate: (...args: any[]) => Promise<unknown>;
-  },
+  handle: TemporalProductionUpdateHandle,
   temporalClientOptions: TemporalClientOptions,
 ) {
   await withTemporalRpcDeadline(client, () => handle.executeUpdate(stageAttemptOperatorUpdate, { args: [{
@@ -177,7 +202,9 @@ async function executeTemporalProductionProofUpdates(
   }] }), temporalClientOptions);
 }
 
-export async function runTemporalProductionResidencyProofForWorker(worker: Record<string, any>) {
+export async function runTemporalProductionResidencyProofForWorker(
+  worker: TemporalProductionWorkerLifecycle,
+) {
   const proofEnvironment = temporalProductionProofEnvironment(worker);
   if (worker.lifecycle_status !== 'ready') {
     const blockers = worker.blockers.length > 0 ? worker.blockers : ['temporal_worker_not_ready'];
