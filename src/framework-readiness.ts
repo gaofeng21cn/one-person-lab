@@ -89,7 +89,7 @@ function diagnosticFailure(sourceId: string, sourceCommand: string, error: unkno
       message: error.message,
       exit_code: error.exitCode,
       details: error.details ?? {},
-      blocking_policy: 'diagnostic_unavailable_blocks_framework_kernel_summary_but_does_not_claim_domain_ready',
+      blocking_policy: 'diagnostic_unavailable_is_drilldown_warning_not_framework_kernel_hard_blocker',
     };
   }
   return {
@@ -100,7 +100,7 @@ function diagnosticFailure(sourceId: string, sourceCommand: string, error: unkno
     message: error instanceof Error ? error.message : String(error),
     exit_code: 1,
     details: {},
-    blocking_policy: 'diagnostic_unavailable_blocks_framework_kernel_summary_but_does_not_claim_domain_ready',
+    blocking_policy: 'diagnostic_unavailable_is_drilldown_warning_not_framework_kernel_hard_blocker',
   };
 }
 
@@ -135,7 +135,7 @@ function buildStageReadinessDiagnostic(
           admitted_stage_count: 0,
           needs_contracts_stage_count: 0,
           blocked_stage_count: 0,
-          hard_blocker_count: 1,
+          hard_blocker_count: 0,
           warning_count: 0,
           diagnostic_failure_count: 1,
         },
@@ -457,7 +457,7 @@ export async function buildFrameworkReadinessSummary(
   });
   const agentHardBlockerCount = numberValue(agentSummary.conformance_blocked_count);
   const hardBlockerCount =
-    agentHardBlockerCount + stageHardBlockerCount + packCompilerBlockerCount + diagnosticFailureCount;
+    agentHardBlockerCount + stageHardBlockerCount + packCompilerBlockerCount;
   const frameworkStatus = frameworkStatusFromAttentionCounts({
     openTailCount,
     operatorActionableAttentionCount: attentionCounts.operatorActionableAttentionCount,

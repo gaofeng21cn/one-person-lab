@@ -14,6 +14,8 @@ import {
   DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
   DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES,
+  DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
+  DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
 } from './default-caller-retirement-guard.ts';
 import {
@@ -565,6 +567,12 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         missing_tombstone_or_provenance_ref_count: missingTombstoneOrProvenanceCount,
         retirement_guard_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
         retirement_guard_mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+        static_retirement_prerequisite_gate_ids: [
+          ...DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
+        ],
+        same_work_unit_live_evidence_scope: {
+          ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
+        },
       },
       default_caller_owner: 'one-person-lab',
       source_commands: {
@@ -586,7 +594,13 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         no_forbidden_write_proof: 'required_before_physical_delete',
         tombstone_or_provenance_ref: 'required_before_physical_delete',
         mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+        static_retirement_prerequisite_gate_ids: [
+          ...DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
+        ],
         retirement_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
+        same_work_unit_live_evidence_scope: {
+          ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
+        },
         physical_delete_authorized: false,
         all_deletion_evidence_requirements_observed: allDeletionEvidenceRequirementsObserved,
         delete_or_keep_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
@@ -733,7 +747,13 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
     retirement_guard_readout: {
       target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
       mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+      static_retirement_prerequisite_gate_ids: [
+        ...DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
+      ],
       non_authorizing_surfaces: [...DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES],
+      same_work_unit_live_evidence_scope: {
+        ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
+      },
       physical_delete_authorized: false,
       refs_only_receipt_can_authorize_physical_delete: false,
       conformance_can_authorize_physical_delete: false,
@@ -768,7 +788,13 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
       retirement_guard_readout: {
         target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
         mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+        static_retirement_prerequisite_gate_ids: [
+          ...DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
+        ],
         non_authorizing_surfaces: [...DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES],
+        same_work_unit_live_evidence_scope: {
+          ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
+        },
         physical_delete_authorized: false,
         refs_only_receipt_can_authorize_physical_delete: false,
         conformance_can_authorize_physical_delete: false,
@@ -798,6 +824,12 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
         missing_no_forbidden_write_proof_count: missingNoForbiddenWriteProofCount,
         missing_tombstone_or_provenance_ref_count: missingTombstoneOrProvenanceRefCount,
         retirement_guard_mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+        static_retirement_prerequisite_gate_ids: [
+          ...DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
+        ],
+        same_work_unit_live_evidence_scope: {
+          ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
+        },
         default_caller_delete_ready: false,
         physical_delete_authorized: false,
         generated_default_caller_readiness_can_authorize_physical_delete: false,
@@ -815,7 +847,13 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
         observed_deletion_evidence_refs_are_refs_only_inputs: true,
         retirement_guard_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
         mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+        static_retirement_prerequisite_gate_ids: [
+          ...DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
+        ],
         non_authorizing_surfaces: [...DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES],
+        same_work_unit_live_evidence_scope: {
+          ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
+        },
         generated_default_caller_readiness_can_authorize_physical_delete: false,
         physical_delete_authorized_by_this_report: false,
         physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],

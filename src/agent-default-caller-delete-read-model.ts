@@ -3,6 +3,8 @@ import {
   DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
   DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES,
+  DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
+  DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
 } from './default-caller-retirement-guard.ts';
 
@@ -103,8 +105,15 @@ function ownerDecisionGateGroup(input: {
   allRequirementsObserved: boolean;
   missingDomainOwnerReceiptOrTypedBlockerCount: number;
 }) {
+  const ownerDecisionStatusValue = ownerDecisionStatus(
+    input.prerequisitesObserved,
+    input.allRequirementsObserved,
+  );
   return {
-    status: ownerDecisionStatus(input.prerequisitesObserved, input.allRequirementsObserved),
+    status: input.allRequirementsObserved
+      ? 'observed'
+      : (input.prerequisitesObserved ? 'missing' : 'waiting_for_structural_prerequisites'),
+    owner_decision_status: ownerDecisionStatusValue,
     gate_id: 'domain_owner_receipt_or_typed_blocker',
     missing_count: input.prerequisitesObserved && !input.allRequirementsObserved
       ? input.missingDomainOwnerReceiptOrTypedBlockerCount
@@ -157,6 +166,9 @@ function compactSurfaceDeletionGate(worklist: JsonRecord) {
       }),
     },
     non_authorizing_surfaces: [...DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES],
+    same_work_unit_live_evidence_scope: {
+      ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
+    },
     ...ownerDecisionReadout(prerequisitesObserved, allRequirementsObserved),
   };
 }
@@ -246,6 +258,12 @@ function repoDeletionGateSummary(
     },
     retirement_guard_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
     mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+    static_retirement_prerequisite_gate_ids: [
+      ...DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
+    ],
+    same_work_unit_live_evidence_scope: {
+      ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
+    },
     ...ownerDecisionReadout(prerequisitesObserved, allRequirementsObserved),
     physical_delete_blocked_by: physicalDeleteBlockedBy,
     not_authorized_claims: notAuthorizedClaims,
@@ -310,6 +328,12 @@ export function buildDefaultCallerPhysicalDeleteAuthorityReadModel(
     retirement_guard_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
     mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
     non_authorizing_surfaces: [...DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES],
+    static_retirement_prerequisite_gate_ids: [
+      ...DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
+    ],
+    same_work_unit_live_evidence_scope: {
+      ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
+    },
     physical_delete_authorized: false,
     default_caller_delete_ready: false,
     generated_default_caller_readiness_can_authorize_physical_delete: false,

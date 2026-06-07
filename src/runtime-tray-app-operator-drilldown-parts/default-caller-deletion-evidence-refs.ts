@@ -18,6 +18,8 @@ import {
   DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
   DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES,
+  DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
+  DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
 } from '../default-caller-retirement-guard.ts';
 
@@ -188,7 +190,13 @@ function compactDeletionEvidenceWorklist(worklist: JsonRecord) {
     retirement_guard: {
       target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
       mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+      static_retirement_prerequisite_gate_ids: [
+        ...DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
+      ],
       non_authorizing_surfaces: [...DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES],
+      same_work_unit_live_evidence_scope: {
+        ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
+      },
       physical_delete_authorized: false,
       refs_only_receipt_can_authorize_physical_delete: false,
     },
@@ -310,8 +318,14 @@ function buildDomainDefaultCallerDeletionRefsFromReadinessReport(
       missing_tombstone_or_provenance_ref_count:
         countMissing('tombstone_or_provenance_ref'),
       mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+      static_retirement_prerequisite_gate_ids: [
+        ...DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
+      ],
       retirement_guard_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
       non_authorizing_surfaces: [...DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES],
+      same_work_unit_live_evidence_scope: {
+        ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
+      },
       physical_delete_authorized: false,
       default_caller_delete_ready: false,
       deletion_evidence_requirements_are_completion_claims: false,
@@ -410,8 +424,14 @@ function buildDomainDefaultCallerDeletionRefs(project: DomainManifestCatalogEntr
       missing_tombstone_or_provenance_ref_count:
         countMissing('tombstone_or_provenance_ref'),
       mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+      static_retirement_prerequisite_gate_ids: [
+        ...DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
+      ],
       retirement_guard_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
       non_authorizing_surfaces: [...DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES],
+      same_work_unit_live_evidence_scope: {
+        ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
+      },
       physical_delete_authorized: false,
       default_caller_delete_ready: false,
       deletion_evidence_requirements_are_completion_claims: false,
@@ -482,8 +502,14 @@ export function buildDefaultCallerDeletionEvidenceRefs(projects: DomainManifestC
       missing_tombstone_or_provenance_ref_count:
         sum('missing_tombstone_or_provenance_ref_count'),
       mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+      static_retirement_prerequisite_gate_ids: [
+        ...DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
+      ],
       retirement_guard_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
       non_authorizing_surfaces: [...DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES],
+      same_work_unit_live_evidence_scope: {
+        ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
+      },
       physical_delete_authorized: false,
       default_caller_delete_ready: false,
       deletion_evidence_requirements_are_completion_claims: false,

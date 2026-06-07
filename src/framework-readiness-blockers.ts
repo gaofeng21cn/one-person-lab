@@ -15,14 +15,6 @@ export function frameworkReadinessBlockers(input: {
       source_command: 'opl agents pack-compiler --json',
     });
   }
-  if (input.diagnosticFailureCount > 0) {
-    blockers.push({
-      blocker_id: 'framework_diagnostic_unavailable',
-      count: input.diagnosticFailureCount,
-      route_ref: '/framework_readiness/diagnostic_failures',
-      source_command: 'see_diagnostic_failure_items',
-    });
-  }
   if (input.stageHardBlockerCount > 0) {
     blockers.push({
       blocker_id: 'stage_readiness_hard_blocker_present',
@@ -33,7 +25,7 @@ export function frameworkReadinessBlockers(input: {
   }
   if (input.agentHardBlockerCount > 0) {
     blockers.push({
-      blocker_id: 'agent_structural_conformance_blocker_present',
+      blocker_id: 'agent_conformance_framework_kernel_blocker_present',
       count: input.agentHardBlockerCount,
       route_ref: '/framework_readiness/agent_conformance_tail',
       source_command: 'opl agents readiness --family-defaults --json',

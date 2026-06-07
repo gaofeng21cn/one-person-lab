@@ -16,9 +16,6 @@ export function assertFrameworkReadinessBlockerAttribution(readiness: any) {
     readiness.pack_compiler.summary.blocked_domain_count > 0
       ? '/framework_readiness/pack_compiler'
       : null,
-    readiness.stages.diagnostic_failures.length > 0
-      ? '/framework_readiness/diagnostic_failures'
-      : null,
     stageHardBlockerCount > 0
       ? '/framework_readiness/stages'
       : null,
@@ -35,7 +32,7 @@ export function assertFrameworkReadinessBlockerAttribution(readiness: any) {
   assert.equal(
     hasBlocker(
       readiness,
-      'agent_structural_conformance_blocker_present',
+      'agent_conformance_framework_kernel_blocker_present',
       agentConformanceBlockedCount,
       '/framework_readiness/agent_conformance_tail',
     ),
@@ -49,6 +46,20 @@ export function assertFrameworkReadinessBlockerAttribution(readiness: any) {
       '/framework_readiness/stages',
     ),
     stageHardBlockerCount > 0,
+  );
+  assert.equal(
+    readiness.attention_first_payload.blockers.some(
+      (blocker: { route_ref?: string }) => blocker.route_ref === '/framework_readiness/diagnostic_failures',
+    ),
+    false,
+  );
+  assert.equal(
+    readiness.attention_first_payload.warnings.some(
+      (warning: { warning_id?: string; drilldown_ref?: string }) =>
+        warning.warning_id === 'framework_diagnostic_unavailable'
+        && warning.drilldown_ref === '/framework_readiness/diagnostic_failures',
+    ),
+    readiness.stages.diagnostic_failures.length > 0,
   );
 }
 

@@ -507,6 +507,12 @@ test('target architecture policy contracts keep progress, guardrail, and wrapper
     owner: string;
     state: string;
     required_before_physical_delete: string[];
+    owner_delete_keep_or_blocker_decision_shapes: string[];
+    same_work_unit_live_evidence_scope: {
+      applies_to: string;
+      blocks_static_no_active_caller_retirement: boolean;
+      static_retirement_prerequisite_gate_ids: string[];
+    };
     forbidden_retirement_shortcuts: string[];
     generated_default_caller_readiness_can_authorize_physical_delete: boolean;
     physical_delete_blocked_by_default: string[];
@@ -519,8 +525,26 @@ test('target architecture policy contracts keep progress, guardrail, and wrapper
   assert.deepEqual(wrapperRetirement.required_before_physical_delete, [
     'replacement_parity_ref',
     'no_active_caller_ref',
-    'domain_owner_receipt_ref_or_typed_blocker_ref',
     'no_forbidden_write_ref',
+    'tombstone_or_provenance_ref',
+  ]);
+  assert.deepEqual(wrapperRetirement.owner_delete_keep_or_blocker_decision_shapes, [
+    'physical_delete_authorization_ref',
+    'keep_as_authority_adapter_ref',
+    'typed_blocker_ref',
+  ]);
+  assert.equal(
+    wrapperRetirement.same_work_unit_live_evidence_scope.applies_to,
+    'current_owner_answer_compensation_chain',
+  );
+  assert.equal(
+    wrapperRetirement.same_work_unit_live_evidence_scope.blocks_static_no_active_caller_retirement,
+    false,
+  );
+  assert.deepEqual(wrapperRetirement.same_work_unit_live_evidence_scope.static_retirement_prerequisite_gate_ids, [
+    'replacement_parity',
+    'no_active_caller_proof',
+    'no_forbidden_write_proof',
     'tombstone_or_provenance_ref',
   ]);
   assert.equal(wrapperRetirement.forbidden_retirement_shortcuts.includes('descriptor_ready_only'), true);
@@ -536,7 +560,6 @@ test('target architecture policy contracts keep progress, guardrail, and wrapper
     'generated_default_caller_readiness_is_not_delete_authority',
     'docs_foldback_is_not_delete_authority',
     'delete_gate_read_model_is_not_delete_authority',
-    'domain_repo_owner_receipt_or_typed_blocker_required_for_delete_authority',
     'physical_delete_requires_domain_owner_delete_keep_or_blocker_decision_after_structural_evidence',
   ]);
   assert.equal(wrapperRetirement.docs_foldback_boundary.docs_foldback_can_authorize_physical_delete, false);

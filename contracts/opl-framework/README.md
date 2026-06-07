@@ -77,7 +77,7 @@ These schema files are the machine-readable OPL target architecture surface. The
 - `golden-path-profile.schema.json`: one ordinary Foundry Agent route plus explicit proof/diagnostic/cleanup/replay/debug variants.
 - `default-surface-budget.schema.json`: default / diagnostic / audit / production / cleanup visibility and promotion gate with false authority flags.
 - `guardrail-tier-policy.json`: launch-hard, runtime-enforced, domain/human, and audit-only guardrail tier boundary.
-- `wrapper-retirement-gate-policy.json`: replacement parity, no-active-caller, owner answer, no-forbidden-write, and tombstone/provenance delete gate.
+- `wrapper-retirement-gate-policy.json`: replacement parity, no-active-caller, no-forbidden-write, and tombstone/provenance static retirement prerequisites, plus the separate domain owner delete/keep/blocker decision shapes.
 
 ### Cognitive Computation Kernel
 

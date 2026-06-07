@@ -3,6 +3,8 @@ import {
   DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
   DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES,
+  DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
+  DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
 } from './default-caller-retirement-guard.ts';
 
@@ -26,7 +28,8 @@ export const DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS = [
 
 export const DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS = [
   'generated_default_caller_readiness_is_not_delete_authority',
-  'domain_repo_owner_receipt_or_typed_blocker_required_for_delete_authority',
+  'docs_foldback_is_not_delete_authority',
+  'delete_gate_read_model_is_not_delete_authority',
   'physical_delete_requires_domain_owner_delete_keep_or_blocker_decision_after_structural_evidence',
 ] as const;
 
@@ -237,6 +240,7 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
       },
       domain_owner_receipt_or_typed_blocker: {
         status: observedDomainReceiptOrBlockerRefs.length > 0 ? 'observed' : 'required_from_domain_owner',
+        accepted_result_shapes: [...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES],
         evidence_refs: observedDomainReceiptOrBlockerRefs,
       },
       no_forbidden_write_proof: {
@@ -273,7 +277,13 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
       retirement_guard: {
         target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
         mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
+        static_retirement_prerequisite_gate_ids: [
+          ...DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
+        ],
         non_authorizing_surfaces: [...DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES],
+        same_work_unit_live_evidence_scope: {
+          ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
+        },
         physical_delete_authorized: false,
         refs_only_receipt_can_authorize_physical_delete: false,
       },

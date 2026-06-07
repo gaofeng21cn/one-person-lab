@@ -115,6 +115,13 @@ export function frameworkAttentionFirstPayload(input: {
           drilldown_ref: '/framework_readiness/stages',
         }]
       : []),
+    ...(input.diagnosticFailureCount > 0
+      ? [{
+          warning_id: 'framework_diagnostic_unavailable',
+          count: input.diagnosticFailureCount,
+          drilldown_ref: '/framework_readiness/diagnostic_failures',
+        }]
+      : []),
     ...(openTailCount > 0
       ? [{
           warning_id: 'framework_evidence_tail_attention',
@@ -227,7 +234,7 @@ export function frameworkAttentionFirstPayload(input: {
       agent_conformance_hard_blocker_count: input.agentHardBlockerCount,
       stage_readiness_hard_blocker_count: input.stageHardBlockerCount,
       pack_compiler_hard_blocker_count: input.packCompilerBlockerCount,
-      diagnostic_hard_blocker_count: input.diagnosticFailureCount,
+      diagnostic_failure_count: input.diagnosticFailureCount,
       warning_count: warnings.length,
       recommendation_count: warnings.length,
       open_tail_count: openTailCount,

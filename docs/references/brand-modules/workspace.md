@@ -66,4 +66,3 @@ contracts/opl-framework/agent-workspace-norm-contract.json
 - 每个 project 都有用户可理解的 display label 和 inspection root。
 - Existing directory adoption 先 dry-run，避免破坏用户文件。
 - Workspace 可以独立检查结构健康，且不依赖 domain truth body。
-

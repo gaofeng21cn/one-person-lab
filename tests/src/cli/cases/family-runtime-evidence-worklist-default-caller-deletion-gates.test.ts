@@ -72,6 +72,20 @@ test('family-runtime evidence-worklist carries default-caller deletion evidence 
     assert.equal(refs.summary.not_authorized_claims.includes('domain_repo_physical_delete_authorization'), true);
     assert.equal(refs.authority_boundary.projection_can_sign_domain_owner_receipt, false);
     assert.equal(refs.authority_boundary.projection_can_authorize_domain_repo_physical_delete, false);
+    assert.deepEqual(refs.summary.static_retirement_prerequisite_gate_ids, [
+      'replacement_parity',
+      'no_active_caller_proof',
+      'no_forbidden_write_proof',
+      'tombstone_or_provenance_ref',
+    ]);
+    assert.equal(
+      refs.summary.same_work_unit_live_evidence_scope.applies_to,
+      'current_owner_answer_compensation_chain',
+    );
+    assert.equal(
+      refs.summary.same_work_unit_live_evidence_scope.blocks_static_no_active_caller_retirement,
+      false,
+    );
 
     const openRequirementCount = refs.summary.open_deletion_evidence_requirement_count;
     const readyWorklistCount = refs.summary.ready_domain_evidence_worklist_count;
@@ -104,6 +118,13 @@ test('family-runtime evidence-worklist carries default-caller deletion evidence 
         can_close_without_domain_or_app_payload: boolean;
         worklist_item_is_completion_claim: boolean;
         not_authorized_claims: string[];
+        retirement_guard: {
+          static_retirement_prerequisite_gate_ids: string[];
+          same_work_unit_live_evidence_scope: {
+            gate_id: string;
+            blocks_static_no_active_caller_retirement: boolean;
+          };
+        };
         evidence_requirement: {
           status: string;
           owner: string;
@@ -130,6 +151,10 @@ test('family-runtime evidence-worklist carries default-caller deletion evidence 
         && item.evidence_requirement.requirement_is_completion_claim === false
         && item.evidence_requirement.not_authorized_claims.includes('domain_ready')
         && item.evidence_requirement.not_authorized_claims.includes('production_ready')
+        && item.retirement_guard.static_retirement_prerequisite_gate_ids.includes('tombstone_or_provenance_ref')
+        && item.retirement_guard.same_work_unit_live_evidence_scope.gate_id === 'same_work_unit_live_evidence'
+        && item.retirement_guard.same_work_unit_live_evidence_scope
+          .blocks_static_no_active_caller_retirement === false
       ),
       true,
     );

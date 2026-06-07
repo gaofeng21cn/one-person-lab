@@ -180,6 +180,29 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
     'tombstone_or_provenance_ref',
   ]);
   assert.equal(defaultCallers.retirement_guard_readout.physical_delete_authorized, false);
+  assert.deepEqual(defaultCallers.retirement_guard_readout.static_retirement_prerequisite_gate_ids, [
+    'replacement_parity',
+    'no_active_caller_proof',
+    'no_forbidden_write_proof',
+    'tombstone_or_provenance_ref',
+  ]);
+  assert.deepEqual(defaultCallers.retirement_guard_readout.same_work_unit_live_evidence_scope, {
+    gate_id: 'same_work_unit_live_evidence',
+    applies_to: 'current_owner_answer_compensation_chain',
+    stage_run_closeout_binding_gate_applies_to: 'current_owner_answer_compensation_chain',
+    blocks_static_no_active_caller_retirement: false,
+    static_retired_surface_classes: [
+      'retired_wrapper',
+      'retired_alias',
+      'retired_facade',
+    ],
+    static_retirement_prerequisite_gate_ids: [
+      'replacement_parity',
+      'no_active_caller_proof',
+      'no_forbidden_write_proof',
+      'tombstone_or_provenance_ref',
+    ],
+  });
   assert.equal(
     defaultCallers.retirement_guard_readout.non_authorizing_surfaces.includes('opl_agents_conformance'),
     true,
@@ -281,6 +304,14 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
     defaultCallers.physical_delete_authority_read_model.mandatory_gate_ids,
     defaultCallers.retirement_guard_mandatory_gate_ids,
   );
+  assert.deepEqual(
+    defaultCallers.physical_delete_authority_read_model.static_retirement_prerequisite_gate_ids,
+    defaultCallers.retirement_guard_readout.static_retirement_prerequisite_gate_ids,
+  );
+  assert.deepEqual(
+    defaultCallers.physical_delete_authority_read_model.same_work_unit_live_evidence_scope,
+    defaultCallers.retirement_guard_readout.same_work_unit_live_evidence_scope,
+  );
   assert.equal(
     defaultCallers.physical_delete_authority_read_model
       .zero_missing_deletion_evidence_is_not_delete_ready,
@@ -337,6 +368,14 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
     false,
   );
   assert.equal(defaultCallers.repo_deletion_gate_summary.length, 1);
+  assert.deepEqual(
+    defaultCallers.repo_deletion_gate_summary[0].static_retirement_prerequisite_gate_ids,
+    defaultCallers.retirement_guard_readout.static_retirement_prerequisite_gate_ids,
+  );
+  assert.deepEqual(
+    defaultCallers.repo_deletion_gate_summary[0].same_work_unit_live_evidence_scope,
+    defaultCallers.retirement_guard_readout.same_work_unit_live_evidence_scope,
+  );
   assert.equal(
     defaultCallers.repo_deletion_gate_summary[0].repo_id,
     defaultCallers.repo_deletion_gate_summary[0].domain_id,
@@ -473,7 +512,9 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
     true,
   );
   assert.equal(
-    report.deletion_gate.physical_delete_blocked_by.includes('domain_repo_owner_receipt_or_typed_blocker_required_for_delete_authority'),
+    report.deletion_gate.physical_delete_blocked_by.includes(
+      'physical_delete_requires_domain_owner_delete_keep_or_blocker_decision_after_structural_evidence',
+    ),
     true,
   );
   assert.equal(report.deletion_gate.deletion_evidence_requirements_are_completion_claims, false);
@@ -496,6 +537,11 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
       retirement_guard: {
         target_classes: string[];
         mandatory_gate_ids: string[];
+        static_retirement_prerequisite_gate_ids: string[];
+        same_work_unit_live_evidence_scope: {
+          gate_id: string;
+          blocks_static_no_active_caller_retirement: boolean;
+        };
         physical_delete_authorized: boolean;
       };
       authority_boundary: { worklist_can_authorize_domain_repo_physical_delete: boolean };
@@ -506,7 +552,9 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
       && worklist.physical_delete_authorization_status === 'not_authorized_by_opl_projection'
       && worklist.generated_default_caller_readiness_can_authorize_physical_delete === false
       && worklist.physical_delete_blocked_by.includes('generated_default_caller_readiness_is_not_delete_authority')
-      && worklist.physical_delete_blocked_by.includes('domain_repo_owner_receipt_or_typed_blocker_required_for_delete_authority')
+      && worklist.physical_delete_blocked_by.includes(
+        'physical_delete_requires_domain_owner_delete_keep_or_blocker_decision_after_structural_evidence',
+      )
       && worklist.not_authorized_claims.includes('default_caller_delete_ready')
       && worklist.not_authorized_claims.includes('domain_repo_physical_delete_authorization')
       && worklist.next_required_owner_action === 'domain_owner_choose_delete_authorize_keep_or_typed_blocker'
@@ -519,6 +567,11 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
       && worklist.retirement_guard.target_classes.includes('legacy_reconcile_compensation_path')
       && worklist.retirement_guard.target_classes.includes('retained_domain_wrapper')
       && worklist.retirement_guard.mandatory_gate_ids.includes('no_active_caller_proof')
+      && worklist.retirement_guard.static_retirement_prerequisite_gate_ids.includes('no_forbidden_write_proof')
+      && worklist.retirement_guard.same_work_unit_live_evidence_scope.gate_id
+        === 'same_work_unit_live_evidence'
+      && worklist.retirement_guard.same_work_unit_live_evidence_scope
+        .blocks_static_no_active_caller_retirement === false
       && worklist.retirement_guard.physical_delete_authorized === false
       && worklist.authority_boundary.worklist_can_authorize_domain_repo_physical_delete === false
     )),
@@ -672,6 +725,10 @@ test('agents default-callers asks domain owner to choose delete keep or blocker 
       domain_owner_receipt_or_typed_blocker_observed: boolean;
       physical_delete_authorized: boolean;
       default_caller_delete_ready: boolean;
+      same_work_unit_live_evidence_scope: {
+        applies_to: string;
+        blocks_static_no_active_caller_retirement: boolean;
+      };
     }) => (
       surface.delete_or_keep_prerequisites_observed === true
       && surface.owner_decision_status === 'owner_decision_required'
@@ -684,6 +741,9 @@ test('agents default-callers asks domain owner to choose delete keep or blocker 
       && surface.domain_owner_receipt_or_typed_blocker_observed === false
       && surface.physical_delete_authorized === false
       && surface.default_caller_delete_ready === false
+      && surface.same_work_unit_live_evidence_scope.applies_to
+        === 'current_owner_answer_compensation_chain'
+      && surface.same_work_unit_live_evidence_scope.blocks_static_no_active_caller_retirement === false
     )),
     true,
   );

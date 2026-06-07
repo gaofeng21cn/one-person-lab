@@ -75,7 +75,7 @@ export function defaultCallerDeletionEvidenceRoutes(
             open_reason:
               'OPL generated/hosted default caller replacement is structurally available, but physical domain private control-plane deletion still requires domain-owned evidence refs.',
             payload_requirement: requirementId === 'domain_owner_receipt_or_typed_blocker'
-              ? 'domain_owner_receipt_ref_or_typed_blocker_ref'
+              ? 'physical_delete_authorization_ref_or_keep_as_authority_adapter_ref_or_typed_blocker_ref'
               : requirementId,
             payload_owner: 'domain_repository_or_app_live_operator',
             route_requires_domain_or_app_payload: true,

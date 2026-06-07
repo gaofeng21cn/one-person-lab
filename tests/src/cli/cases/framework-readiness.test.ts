@@ -73,7 +73,7 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.summary.pack_compiler_hard_blocker_count,
   );
   assert.equal(
-    readiness.attention_first_payload.summary.diagnostic_hard_blocker_count,
+    readiness.attention_first_payload.summary.diagnostic_failure_count,
     readiness.summary.framework_diagnostic_failure_count,
   );
   assert.equal(
@@ -361,6 +361,12 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(
     readiness.attention_first_payload.blockers.length > 0,
     readiness.summary.framework_kernel_hard_blocker_count > 0,
+  );
+  assert.equal(
+    readiness.summary.framework_kernel_hard_blocker_count,
+    readiness.summary.agent_conformance_hard_blocker_count
+      + readiness.summary.stage_readiness_hard_blocker_count
+      + readiness.summary.pack_compiler_hard_blocker_count,
   );
   assertFrameworkReadinessBlockerAttribution(readiness);
   assert.equal(readiness.attention_first_payload.warnings.length > 0, true);

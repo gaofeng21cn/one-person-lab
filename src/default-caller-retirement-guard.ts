@@ -5,6 +5,13 @@ export const DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES = [
   'retained_domain_wrapper',
 ] as const;
 
+export const DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS = [
+  'replacement_parity',
+  'no_active_caller_proof',
+  'no_forbidden_write_proof',
+  'tombstone_or_provenance_ref',
+] as const;
+
 export const DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS = [
   'replacement_parity',
   'no_active_caller_proof',
@@ -12,6 +19,21 @@ export const DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS = [
   'no_forbidden_write_proof',
   'tombstone_or_provenance_ref',
 ] as const;
+
+export const DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE = {
+  gate_id: 'same_work_unit_live_evidence',
+  applies_to: 'current_owner_answer_compensation_chain',
+  stage_run_closeout_binding_gate_applies_to: 'current_owner_answer_compensation_chain',
+  blocks_static_no_active_caller_retirement: false,
+  static_retired_surface_classes: [
+    'retired_wrapper',
+    'retired_alias',
+    'retired_facade',
+  ],
+  static_retirement_prerequisite_gate_ids: [
+    ...DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
+  ],
+} as const;
 
 export const DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES = [
   'opl_agents_conformance',
