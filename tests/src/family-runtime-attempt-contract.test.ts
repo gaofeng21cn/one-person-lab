@@ -636,6 +636,14 @@ test('foundry agent series policy release records a verifiable Progress-First po
     domain_adapter_must_not_copy_policy_body_as_authority: true,
     consumer_alignment_check: 'foundry:policy-release',
   });
+  assert.deepEqual(
+    scaffold.foundry_agent_series_contract.workspace_topology_profile,
+    foundryContract.workspace_topology_profile,
+  );
+  assert.deepEqual(
+    agentPackContract.foundry_agent_series_contract.workspace_topology_profile,
+    foundryContract.workspace_topology_profile,
+  );
   assert.deepEqual(scaffold.foundry_agent_series_policy_release, release);
   assert.deepEqual(agentPackContract.foundry_agent_series_policy_release, release);
   assert.equal(
@@ -781,6 +789,10 @@ test('standard domain-agent scaffold contract forbids domain-owned generic frame
     'platform_repair_delta',
     'next_forced_delta',
   ]);
+  assert.equal(
+    scaffold.foundry_agent_series_contract.workspace_topology_profile.profile_id,
+    'opl.workspace_topology_profile.v1',
+  );
   assert.equal(scaffold.default_runtime_policy.surface_kind, 'opl_standard_agent_default_runtime_policy');
   assert.equal(scaffold.default_runtime_policy.default_runtime_path, 'opl_temporal_hosted_autonomous');
   assert.equal(scaffold.default_runtime_policy.temporal_hosted_autonomy_default_enabled, true);
