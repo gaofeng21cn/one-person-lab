@@ -140,6 +140,122 @@ test('current owner delta topline keeps domain owner when only owner answer bind
   }
 });
 
+test('current owner delta topline folds closed StageRun owner answer into default hard gate', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-owner-delta-topline-closed-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);
+  try {
+    const stageRunId = 'app-stage-run:med-autoscience:paper-closeout-closed';
+    const currentPointerRef = `opl://stage-runs/${encodeURIComponent(stageRunId)}/current`;
+    recordStageRunExecutionAuthorizationReceipts([{
+      stage_run_id: stageRunId,
+      domain_id: 'med-autoscience',
+      stage_id: 'paper_closeout_closed',
+      generation: 0,
+      phase: 'closeout',
+      selected_executor: 'codex_cli',
+      provider_attempt_ref: 'temporal://attempt/sat-owner-delta-topline-closed',
+      stage_attempt_id: 'sat-owner-delta-topline-closed',
+      attempt_lease_ref: 'opl://stage-attempts/sat-owner-delta-topline-closed/leases/task-owner-delta-topline/active',
+      attempt_lease_status: 'active',
+      execution_authorization_decision_ref:
+        'opl://stage-attempts/sat-owner-delta-topline-closed/execution-authorizations/task-owner-delta-topline/wf-owner-delta-topline',
+      workspace_scope_ref: 'workspace:/tmp/mas',
+      artifact_scope_ref: 'stage-packet:owner-delta-topline-closed',
+      source_fingerprint: 'sha256:owner-delta-topline-closed-test',
+      idempotency_key: 'idem-owner-delta-topline-closed',
+      current_pointer_ref: currentPointerRef,
+      stage_manifest_ref: 'opl://stage-manifests/paper_closeout_closed',
+      owner_answer_ref: 'mas://owner-answer/dm003/typed-blocker',
+      owner_answer_kind: 'typed_blocker',
+      owner_answer_stage_run_id: stageRunId,
+      owner_answer_generation: 0,
+      owner_answer_manifest_ref: 'opl://stage-manifests/paper_closeout_closed',
+      owner_answer_current_pointer_ref: currentPointerRef,
+      owner_answer_source_fingerprint: 'sha256:owner-delta-topline-closed-test',
+      owner_answer_idempotency_key: 'idem-owner-delta-topline-closed',
+    }]);
+
+    const topline = module.buildCurrentOwnerDeltaTopline({
+      currentOwnerDeltaReadModel: {
+        surface_kind: 'opl_current_owner_delta_read_model',
+        current_owner_delta: {
+          surface_kind: 'opl_current_owner_delta',
+          delta_id: 'current-owner-delta:med-autoscience:paper-closeout-closed:owner-answer',
+          domain: 'med-autoscience',
+          domain_id: 'med-autoscience',
+          current_owner: 'med-autoscience',
+          owner: 'med-autoscience',
+          stage_ref: 'paper_closeout_closed',
+          stage_id: 'paper_closeout_closed',
+          lineage_ref: 'sat-owner-delta-topline-closed',
+          desired_delta_kind: 'owner_answer',
+          desired_delta_description: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+          payload_requirement: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+          accepted_answer_shape: [
+            'domain_owner_receipt_ref',
+            'quality_gate_receipt_ref',
+            'typed_blocker_ref',
+          ],
+          hard_gate: {
+            state: 'owner_delta_open',
+            human_or_domain_owner_required: true,
+            domain_ready_authorized: false,
+          },
+          source_fingerprint: 'sha256:owner-delta-topline-closed-test',
+          audit_refs: {},
+        },
+        next_safe_action_or_none: {
+          surface_kind: 'opl_current_owner_delta_default_next_action',
+          action_kind: 'current_owner_delta_owner_answer_or_typed_blocker_required',
+          derivation_source: 'current_owner_delta',
+          default_planning_root: 'current_owner_delta',
+          current_owner: 'med-autoscience',
+          owner: 'med-autoscience',
+          next_required_owner: 'med-autoscience',
+          next_required_action: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+          payload_requirement: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+          accepted_answer_shape: [
+            'domain_owner_receipt_ref',
+            'quality_gate_receipt_ref',
+            'typed_blocker_ref',
+          ],
+          route_requires_domain_or_app_payload: true,
+        },
+      },
+    });
+
+    assert.equal(topline.current_owner_delta.latest_owner_answer_ref, 'mas://owner-answer/dm003/typed-blocker');
+    assert.equal(topline.current_owner_delta.latest_owner_answer_kind, 'typed_blocker');
+    assert.equal(topline.current_owner_delta.hard_gate.state, 'domain_owner_answer_recorded');
+    assert.equal(topline.current_owner_delta.hard_gate.human_or_domain_owner_required, false);
+    assert.equal(topline.current_owner_delta.hard_gate.domain_ready_authorized, false);
+    assert.equal(topline.current_owner_delta.hard_gate.quality_or_export_authorized, false);
+    assert.equal(
+      topline.current_owner_delta.stage_run_closeout_binding_ref,
+      '/stage_run_cockpit/execution_authorization/closeout_binding',
+    );
+    assert.equal(topline.current_owner_delta_read_model.current_owner_delta, topline.current_owner_delta);
+    assert.equal(topline.current_owner_delta_read_model.next_safe_action_or_none, null);
+    assert.equal(topline.current_owner_delta_next_action, null);
+    assert.equal(topline.operator_next_action, null);
+    assert.equal(topline.operator_next_action_source, 'stage_run_execution_authorization_closed');
+    assert.equal(topline.stage_run_next_required_owner_action, null);
+    assert.deepEqual(topline.stage_run_next_missing_input_refs, []);
+    assert.deepEqual(topline.operator_next_missing_input_refs, []);
+    assert.equal(topline.stage_run_cockpit_summary.execution_authorized, true);
+    assert.equal(topline.stage_run_cockpit_summary.closeout_binding_blocker_count, 0);
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('current owner delta hard gate ignores generic audit-only open safe-action counts', async () => {
   const module = await import(pathToFileURL(path.join(repoRoot, projectionModulePath)).href);
   const readModel = module.buildCurrentOwnerDeltaReadModel({

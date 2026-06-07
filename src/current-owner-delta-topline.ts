@@ -1,4 +1,8 @@
 import { buildAppStageRunCockpit } from './app-state-stage-run-cockpit.ts';
+import {
+  currentOwnerDeltaWithClosedStageRunAnswer,
+  readModelWithClosedStageRunAnswer,
+} from './current-owner-delta-stage-run-closeout.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -27,8 +31,18 @@ function strings(value: unknown) {
 export function buildCurrentOwnerDeltaTopline(input: {
   currentOwnerDeltaReadModel: unknown;
 }) {
-  const readModel = record(input.currentOwnerDeltaReadModel);
-  const currentOwnerDelta = record(readModel.current_owner_delta);
+  const rawReadModel = record(input.currentOwnerDeltaReadModel);
+  const rawCurrentOwnerDelta = record(rawReadModel.current_owner_delta);
+  const preliminaryStageRunCockpit = buildAppStageRunCockpit(rawCurrentOwnerDelta);
+  const currentOwnerDelta = currentOwnerDeltaWithClosedStageRunAnswer(
+    rawCurrentOwnerDelta,
+    preliminaryStageRunCockpit,
+  );
+  const readModel = readModelWithClosedStageRunAnswer(
+    rawReadModel,
+    currentOwnerDelta,
+    preliminaryStageRunCockpit,
+  );
   const stageRunCockpit = buildAppStageRunCockpit(currentOwnerDelta);
   const operatorAcceptedAnswerShape =
     strings(currentOwnerDelta.accepted_answer_shape).length > 0
