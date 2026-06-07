@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 
 import {
   ensureOplStateDir,
@@ -17,6 +18,7 @@ type CurrentOwnerDeltaReadModelCacheInput = {
 
 type CurrentOwnerDeltaReadModelCacheReadInput = {
   paths?: OplStatePaths;
+  acceptedSourceSurfaces?: string[];
 };
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -75,6 +77,15 @@ function buildCurrentOwnerDeltaReadModelCachePayload(
   };
 }
 
+function cacheFileForSource(paths: OplStatePaths, sourceSurface: string) {
+  if (sourceSurface === 'framework_readiness') {
+    return paths.current_owner_delta_read_model_cache_file;
+  }
+  const parsed = path.parse(paths.current_owner_delta_read_model_cache_file);
+  const safeSource = sourceSurface.replace(/[^A-Za-z0-9_.-]+/g, '_');
+  return path.join(parsed.dir, `${parsed.name}.${safeSource}${parsed.ext}`);
+}
+
 export function writeCurrentOwnerDeltaReadModelProjectionCache(
   input: CurrentOwnerDeltaReadModelCacheInput,
 ) {
@@ -85,7 +96,7 @@ export function writeCurrentOwnerDeltaReadModelProjectionCache(
   try {
     const paths = ensureOplStateDir(input.paths ?? resolveOplStatePaths());
     fs.writeFileSync(
-      paths.current_owner_delta_read_model_cache_file,
+      cacheFileForSource(paths, input.sourceSurface),
       `${JSON.stringify(payload, null, 2)}\n`,
       'utf8',
     );
@@ -108,6 +119,13 @@ export function readCurrentOwnerDeltaReadModelProjectionCache(
       || parsed.version !== 'g1'
       || parsed.surface_kind !== 'opl_current_owner_delta_read_model_projection_cache'
       || !readModelIsUsable(parsed.current_owner_delta_read_model)
+    ) {
+      return null;
+    }
+    if (
+      Array.isArray(input.acceptedSourceSurfaces)
+      && input.acceptedSourceSurfaces.length > 0
+      && !input.acceptedSourceSurfaces.includes(stringValue(parsed.source_surface) ?? '')
     ) {
       return null;
     }

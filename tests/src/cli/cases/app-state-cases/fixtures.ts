@@ -111,7 +111,11 @@ export function writeMasProgressPortalFixture(workspaceRoot: string, profilePath
 
 export function writeCurrentOwnerDeltaProjectionCacheFixture(
   stateDir: string,
-  options: { nextSafeAction?: Record<string, unknown> } = {},
+  options: {
+    nextSafeAction?: Record<string, unknown>;
+    sourceSurface?: string;
+    sourceCommand?: string;
+  } = {},
 ) {
   const readModel = buildCurrentOwnerDeltaReadModel({
     ownerDeltaFirst: {
@@ -152,17 +156,22 @@ export function writeCurrentOwnerDeltaProjectionCacheFixture(
         'opl runtime app-operator-drilldown --detail full --json',
     },
   });
+  const sourceSurface = options.sourceSurface ?? 'family_runtime_evidence_worklist';
+  const sourceCommand = options.sourceCommand
+    ?? 'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --json';
   fs.mkdirSync(stateDir, { recursive: true });
+  const cacheFile = sourceSurface === 'framework_readiness'
+    ? path.join(stateDir, 'current-owner-delta-read-model-cache.json')
+    : path.join(stateDir, `current-owner-delta-read-model-cache.${sourceSurface}.json`);
   fs.writeFileSync(
-    path.join(stateDir, 'current-owner-delta-read-model-cache.json'),
+    cacheFile,
     `${JSON.stringify({
       version: 'g1',
       surface_kind: 'opl_current_owner_delta_read_model_projection_cache',
       cache_policy:
         'non_authoritative_app_fast_projection_cache_from_owner_delta_first_sources',
-      source_surface: 'family_runtime_evidence_worklist',
-      source_command:
-        'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --json',
+      source_surface: sourceSurface,
+      source_command: sourceCommand,
       cached_at: new Date().toISOString(),
       current_owner_delta_read_model: readModel,
       authority_boundary: {

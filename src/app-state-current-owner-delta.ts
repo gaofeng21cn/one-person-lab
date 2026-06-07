@@ -80,6 +80,9 @@ export function selectAppStateCurrentOwnerDeltaReadModel(input: {
   statePaths: OplStatePaths;
 }) {
   return ownerDeltaReadModelFromFullDrilldown(input.fullRuntimeDrilldown)
-    ?? readCurrentOwnerDeltaReadModelProjectionCache({ paths: input.statePaths })
+    ?? readCurrentOwnerDeltaReadModelProjectionCache({
+      paths: input.statePaths,
+      acceptedSourceSurfaces: ['framework_readiness'],
+    })
     ?? ownerDeltaReadModelFromRuntimeActivity(input.runtimeActivityItems);
 }

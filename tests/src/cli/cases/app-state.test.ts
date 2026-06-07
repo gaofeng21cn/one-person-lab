@@ -506,18 +506,18 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
       output.app_state.operator.current_owner_delta_read_model.current_owner_delta,
     );
     assertCurrentOwnerDeltaProjection(output.app_state.operator.current_owner_delta, {
-      currentOwner: 'medautoscience',
-      requiredDelta: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+      currentOwner: 'med-autoscience',
+      requiredDelta: '提交 MAS owner receipt 或 typed blocker。',
     });
     assertCurrentOwnerDeltaReadModel(output.app_state.operator.current_owner_delta_read_model, {
-      currentOwner: 'medautoscience',
-      requiredDelta: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+      currentOwner: 'med-autoscience',
+      requiredDelta: '提交 MAS owner receipt 或 typed blocker。',
       acceptedReturnShapes: [
         'domain_owner_receipt_ref',
-        'quality_gate_receipt_ref',
+        'domain_typed_blocker_ref',
         'typed_blocker_ref',
       ],
-      openSafeActionCount: 0,
+      openSafeActionCount: 1,
       payloadRequiredCount: 0,
       fullDetailRefKeys: [
         'owner_delta_first_ref',
@@ -525,6 +525,10 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
         'app_operator_drilldown_ref',
       ],
     });
+    assert.notEqual(
+      output.app_state.operator.current_owner_delta.stage_id,
+      'domain_owner/default-executor-dispatch',
+    );
     assert.equal(
       output.app_state.operator.workbench.summary_cards.find((entry) => entry.card_id === 'active_projects')?.value,
       1,
@@ -556,6 +560,51 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
   }
 });
 
+test('app state fast ignores non-framework owner-delta cache as default cockpit source', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-stale-cache-home-'));
+  const masRepoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-stale-cache-repo-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-stale-cache-workspace-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const profilePath = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles', 'dm.workspace.toml');
+
+  try {
+    bindMasWorkspaceForAppState({ stateDir, workspaceRoot: masRepoRoot, profilePath });
+    writeMasProgressPortalFixture(workspaceRoot, profilePath);
+    writeCurrentOwnerDeltaProjectionCacheFixture(stateDir);
+    const output = runCli(['app', 'state', '--profile', 'fast'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+      OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+      OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+      PATH: '/usr/bin:/bin',
+    }) as {
+      app_state: {
+        operator: {
+          current_owner_delta: Record<string, any>;
+          current_owner_delta_read_model: Record<string, any>;
+          workbench: {
+            current_owner_delta: Record<string, any>;
+            summary_cards: Array<{ card_id: string; value: number | string }>;
+          };
+        };
+      };
+    };
+
+    assertCurrentOwnerDeltaProjection(output.app_state.operator.current_owner_delta, {
+      currentOwner: 'med-autoscience',
+      requiredDelta: '提交 MAS owner receipt 或 typed blocker。',
+    });
+    assert.equal(
+      output.app_state.operator.workbench.summary_cards.find((entry) => entry.card_id === 'active_projects')?.value,
+      1,
+    );
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(masRepoRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('app state fast folds MAS publication handoff owner answer projection into StageRun cockpit', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-owner-answer-home-'));
   const masRepoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-owner-answer-repo-'));
@@ -568,7 +617,10 @@ test('app state fast folds MAS publication handoff owner answer projection into 
     bindMasWorkspaceForAppState({ stateDir, workspaceRoot: masRepoRoot, profilePath });
     fs.mkdirSync(path.dirname(profilePath), { recursive: true });
     fs.writeFileSync(profilePath, 'workspace_name = "dm-cvd-mortality-risk"\n', 'utf8');
-    writeCurrentOwnerDeltaProjectionCacheFixture(stateDir);
+    writeCurrentOwnerDeltaProjectionCacheFixture(stateDir, {
+      sourceSurface: 'framework_readiness',
+      sourceCommand: 'opl framework readiness --family-defaults --json',
+    });
     writeStageRunAuthorizationLedgerFixture({ stateDir, receipt });
     writeMasPublicationHandoffOwnerAnswerProjectionFixture({
       workspaceRoot,
@@ -651,6 +703,8 @@ test('app state fast prefers legal StageRun closeout owner answer over stale cur
     fs.mkdirSync(path.dirname(profilePath), { recursive: true });
     fs.writeFileSync(profilePath, 'workspace_name = "dm-cvd-mortality-risk"\n', 'utf8');
     writeCurrentOwnerDeltaProjectionCacheFixture(stateDir, {
+      sourceSurface: 'framework_readiness',
+      sourceCommand: 'opl framework readiness --family-defaults --json',
       nextSafeAction: {
         action_id: 'stale-current-owner-delta-attempt',
         action_kind: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
