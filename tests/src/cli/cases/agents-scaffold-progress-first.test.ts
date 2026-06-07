@@ -135,17 +135,44 @@ test('agents scaffold emits canonical workspace topology profile', () => {
     assert.equal(topology.surface_kind, 'opl_workspace_topology_profile');
     assert.equal(topology.version, 'workspace-topology-profile.v1');
     assert.equal(topology.profile_id, 'opl.workspace_topology_profile.v1');
-    assert.deepEqual(topology.allowed_workspace_modes, ['one_off', 'series', 'portfolio']);
-    assert.equal(topology.stage_outputs_root, 'artifacts/stage_outputs');
-    assert.equal(topology.default_workspace.workspace_mode, 'one_off');
-    assert.equal(topology.default_workspace.series_capable, true);
-    assert.equal(topology.default_workspace.project_collection_path, 'deliverables/studies');
-    assert.equal(topology.domain_profiles.mas.workspace_mode, 'portfolio');
-    assert.equal(topology.domain_profiles.mas.project_collection_path, 'studies');
-    assert.equal(topology.domain_profiles.mas.stage_outputs_root, 'artifacts/stage_outputs');
-    assert.equal(topology.domain_profiles.rca.workspace_mode, 'series');
-    assert.equal(topology.domain_profiles.rca.project_collection_path, 'deliverables');
-    assert.equal(topology.domain_profiles.rca.stage_outputs_root, 'artifacts/stage_outputs');
+    assert.deepEqual(topology.topology_model, [
+      'workspace_group',
+      'project_unit',
+      'stage_artifact_unit',
+      'owner_receipt_or_typed_blocker',
+    ]);
+    assert.deepEqual(topology.workspace_modes, ['one_off', 'series', 'portfolio']);
+    assert.equal(topology.default_project_stage_outputs_root, 'artifacts/stage_outputs');
+    assert.equal(topology.default_profiles.one_off.workspace_mode, 'one_off');
+    assert.equal(topology.default_profiles.one_off.series_capable_skeleton, true);
+    assert.equal(topology.default_profiles.one_off.project_collection_path, 'deliverables');
+    assert.equal(topology.default_profiles.one_off.project_stage_outputs_root, 'artifacts/stage_outputs');
+    assert.equal(topology.default_profiles.mas_portfolio.workspace_mode, 'portfolio');
+    assert.equal(topology.default_profiles.mas_portfolio.project_collection_path, 'studies');
+    assert.equal(topology.default_profiles.mas_portfolio.project_stage_outputs_root, 'artifacts/stage_outputs');
+    assert.deepEqual(topology.default_profiles.mas_portfolio.shared_resource_roots, [
+      'data',
+      'literature',
+      'memory',
+      'shared/sources',
+    ]);
+    assert.equal(topology.default_profiles.rca_series.workspace_mode, 'series');
+    assert.equal(topology.default_profiles.rca_series.project_collection_path, 'deliverables');
+    assert.equal(topology.default_profiles.rca_series.project_stage_outputs_root, 'artifacts/stage_outputs');
+    assert.equal(topology.domain_profile_defaults.mas, 'mas_portfolio');
+    assert.equal(topology.domain_profile_defaults.rca, 'rca_series');
+    assert.equal(topology.domain_profile_defaults.mag, 'one_off');
+    assert.equal(topology.domain_profile_defaults.oma, 'one_off');
+    assert.equal(
+      topology.default_user_inspection_surface.project_stage_outputs_pattern,
+      '<project-root>/artifacts/stage_outputs/<stage-id>/',
+    );
+    assert.equal(topology.default_user_inspection_surface.runtime_state_is_default_user_surface, false);
+    assert.equal(topology.runtime_state_boundary.runtime_state_can_close_stage, false);
+    assert.equal(
+      topology.workspace_initialization_policy.upgrading_one_off_to_series_must_not_move_existing_project_roots,
+      true,
+    );
   } finally {
     fs.rmSync(targetDir, { recursive: true, force: true });
   }

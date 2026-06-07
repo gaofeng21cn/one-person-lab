@@ -191,30 +191,55 @@ test('target architecture schema contracts keep owner delta root and audit tail 
 
   const workspaceTopology = schemas['contracts/opl-framework/workspace-topology-profile.schema.json'];
   assert.equal(workspaceTopology.properties.surface_kind.const, 'opl_workspace_topology_profile');
-  assert.equal(workspaceTopology.properties.schema_version.const, 'workspace-topology-profile.v1');
-  assert.deepEqual(workspaceTopology.properties.workspace_mode.enum, ['one_off', 'series', 'portfolio']);
-  assert.equal(workspaceTopology.properties.project_stage_outputs_root.const, 'artifacts/stage_outputs');
-  assert.equal(workspaceTopology.required.includes('workspace_groups'), true);
+  assert.equal(workspaceTopology.properties.version.const, 'workspace-topology-profile.v1');
+  assert.equal(workspaceTopology.properties.profile_id.const, 'opl.workspace_topology_profile.v1');
+  assert.deepEqual(
+    workspaceTopology.properties.workspace_modes.items.enum,
+    ['one_off', 'series', 'portfolio'],
+  );
+  assert.equal(
+    workspaceTopology.properties.default_project_stage_outputs_root.const,
+    'artifacts/stage_outputs',
+  );
+  assert.equal(workspaceTopology.required.includes('default_profiles'), true);
+  assert.equal(workspaceTopology.required.includes('domain_profile_defaults'), true);
   assert.equal(workspaceTopology.required.includes('default_user_inspection_surface'), true);
   assert.equal(workspaceTopology.required.includes('runtime_state_boundary'), true);
   assert.equal(
-    workspaceTopology.properties.default_user_inspection_surface.properties.stage_native_default_path.const,
-    'artifacts/stage_outputs',
+    workspaceTopology.properties.default_user_inspection_surface.properties
+      .project_stage_outputs_pattern.const,
+    '<project-root>/artifacts/stage_outputs/<stage-id>/',
+  );
+  assert.equal(
+    workspaceTopology.$defs.one_off_profile.properties.project_collection_path.const,
+    'deliverables',
+  );
+  assert.equal(
+    workspaceTopology.$defs.one_off_profile.properties.series_capable_skeleton.const,
+    true,
+  );
+  assert.equal(
+    workspaceTopology.$defs.rca_series_profile.properties.project_collection_path.const,
+    'deliverables',
+  );
+  assert.equal(
+    workspaceTopology.$defs.mas_portfolio_profile.properties.project_collection_path.const,
+    'studies',
   );
   assert.equal(
     workspaceTopology.properties.default_user_inspection_surface.properties.runtime_state_is_default_user_surface.const,
     false,
   );
   assert.equal(
-    workspaceTopology.properties.runtime_state_boundary.properties.runtime_state_can_be_canonical_project_root.const,
+    workspaceTopology.$defs.runtime_state_boundary.properties.runtime_state_can_be_canonical_project_root.const,
     false,
   );
   assert.equal(
-    workspaceTopology.properties.runtime_state_boundary.properties.runtime_state_can_close_stage.const,
+    workspaceTopology.$defs.runtime_state_boundary.properties.runtime_state_can_close_stage.const,
     false,
   );
   assert.equal(
-    workspaceTopology.properties.runtime_state_boundary.properties
+    workspaceTopology.$defs.runtime_state_boundary.properties
       .runtime_state_can_replace_owner_receipt_or_typed_blocker.const,
     false,
   );
@@ -235,11 +260,11 @@ test('target architecture schema contracts keep owner delta root and audit tail 
     false,
   );
   assert.equal(
-    workspaceTopology.examples[0].workspace_mode,
+    workspaceTopology.examples[0].default_profiles.mas_portfolio.workspace_mode,
     'portfolio',
   );
   assert.equal(
-    workspaceTopology.examples[1].workspace_mode,
+    workspaceTopology.examples[0].default_profiles.rca_series.workspace_mode,
     'series',
   );
 });

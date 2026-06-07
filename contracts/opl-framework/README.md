@@ -63,7 +63,7 @@ These schema files are the machine-readable OPL target architecture surface. The
 - `stage-typed-blocker.schema.json`: owner-signed typed blocker shape for blocked/deferred StageRun closeout and next safe action.
 - `stage-artifact-unit.schema.json`: physical output, manifest, content hashes, owner answer, current pointer, lineage, and progress truth boundary.
 - `stage-artifact-progress-truth-policy.json`: family-level rule that deliverable progress requires physical output, valid manifest, owner answer, and current pointer.
-- `workspace-topology-profile.schema.json`: Workspace Group -> Project Unit -> Stage Artifact Unit -> Owner Receipt / Typed Blocker profile schema with `workspace_mode=one_off|series|portfolio`, `collection_path`, `shared_resource_roots`, `project_stage_outputs_root=artifacts/stage_outputs`, and runtime-state-as-backing/provenance boundary.
+- `workspace-topology-profile.schema.json`: Workspace Group -> Project Unit -> Stage Artifact Unit -> Owner Receipt / Typed Blocker profile schema with `workspace_modes=one_off|series|portfolio`, default `deliverables/<project-id>`, RCA series `deliverables/<deck-id>`, MAS portfolio `studies/<study-id>`, `project_stage_outputs_root=artifacts/stage_outputs`, and runtime-state-as-provider-backing/provenance boundary.
 
 ### Evidence Vault
 

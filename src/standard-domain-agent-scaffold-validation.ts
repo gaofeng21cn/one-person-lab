@@ -438,19 +438,42 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, enforce
   const workspaceTopologyProfile = isPlainRecord(contract?.workspace_topology_profile)
     ? contract.workspace_topology_profile
     : null;
-  const defaultWorkspace = isPlainRecord(workspaceTopologyProfile?.default_workspace)
-    ? workspaceTopologyProfile.default_workspace
+  const topologyModel = readStringArray(workspaceTopologyProfile?.topology_model);
+  const workspaceModes = readStringArray(workspaceTopologyProfile?.workspace_modes);
+  const defaultProfiles = isPlainRecord(workspaceTopologyProfile?.default_profiles)
+    ? workspaceTopologyProfile.default_profiles
     : null;
-  const domainProfiles = isPlainRecord(workspaceTopologyProfile?.domain_profiles)
-    ? workspaceTopologyProfile.domain_profiles
+  const oneOffWorkspaceProfile = isPlainRecord(defaultProfiles?.one_off)
+    ? defaultProfiles.one_off
     : null;
-  const masWorkspaceProfile = isPlainRecord(domainProfiles?.mas)
-    ? domainProfiles.mas
+  const rcaSeriesWorkspaceProfile = isPlainRecord(defaultProfiles?.rca_series)
+    ? defaultProfiles.rca_series
     : null;
-  const rcaWorkspaceProfile = isPlainRecord(domainProfiles?.rca)
-    ? domainProfiles.rca
+  const masPortfolioWorkspaceProfile = isPlainRecord(defaultProfiles?.mas_portfolio)
+    ? defaultProfiles.mas_portfolio
     : null;
-  const allowedWorkspaceModes = readStringArray(workspaceTopologyProfile?.allowed_workspace_modes);
+  const oneOffSharedResourceRoots = readStringArray(oneOffWorkspaceProfile?.shared_resource_roots);
+  const rcaSharedResourceRoots = readStringArray(rcaSeriesWorkspaceProfile?.shared_resource_roots);
+  const masSharedResourceRoots = readStringArray(masPortfolioWorkspaceProfile?.shared_resource_roots);
+  const domainProfileDefaults = isPlainRecord(workspaceTopologyProfile?.domain_profile_defaults)
+    ? workspaceTopologyProfile.domain_profile_defaults
+    : null;
+  const defaultUserInspectionSurface = isPlainRecord(
+    workspaceTopologyProfile?.default_user_inspection_surface,
+  )
+    ? workspaceTopologyProfile.default_user_inspection_surface
+    : null;
+  const runtimeStateBoundary = isPlainRecord(workspaceTopologyProfile?.runtime_state_boundary)
+    ? workspaceTopologyProfile.runtime_state_boundary
+    : null;
+  const workspaceAuthorityBoundary = isPlainRecord(workspaceTopologyProfile?.authority_boundary)
+    ? workspaceTopologyProfile.authority_boundary
+    : null;
+  const workspaceInitializationPolicy = isPlainRecord(
+    workspaceTopologyProfile?.workspace_initialization_policy,
+  )
+    ? workspaceTopologyProfile.workspace_initialization_policy
+    : null;
   const sharedLifecyclePipeline = readStringArray(seriesDesignProfile?.shared_lifecycle_pipeline);
   const stagePackSections = readStringArray(seriesDesignProfile?.stage_pack_sections);
   const domainIoProfile = isPlainRecord(seriesDesignProfile?.domain_io_profile)
@@ -588,45 +611,131 @@ function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, enforce
     readOptionalString(workspaceTopologyProfile?.profile_id) === 'opl.workspace_topology_profile.v1'
       ? null
       : 'foundry_agent_series_workspace_topology_profile_id_invalid',
-    readOptionalString(workspaceTopologyProfile?.stage_outputs_root) === 'artifacts/stage_outputs'
+    topologyModel.includes('workspace_group')
+      ? null
+      : 'foundry_agent_series_workspace_topology_missing_workspace_group',
+    topologyModel.includes('project_unit')
+      ? null
+      : 'foundry_agent_series_workspace_topology_missing_project_unit',
+    topologyModel.includes('stage_artifact_unit')
+      ? null
+      : 'foundry_agent_series_workspace_topology_missing_stage_artifact_unit',
+    topologyModel.includes('owner_receipt_or_typed_blocker')
+      ? null
+      : 'foundry_agent_series_workspace_topology_missing_owner_answer_unit',
+    readOptionalString(workspaceTopologyProfile?.default_project_stage_outputs_root)
+      === 'artifacts/stage_outputs'
       ? null
       : 'foundry_agent_series_workspace_topology_stage_outputs_root_invalid',
-    readOptionalString(defaultWorkspace?.workspace_mode) === 'one_off'
+    readOptionalString(oneOffWorkspaceProfile?.workspace_mode) === 'one_off'
       ? null
       : 'foundry_agent_series_workspace_topology_default_mode_invalid',
-    defaultWorkspace?.series_capable === true
+    oneOffWorkspaceProfile?.series_capable_skeleton === true
       ? null
       : 'foundry_agent_series_workspace_topology_default_must_be_series_capable',
-    readOptionalString(defaultWorkspace?.project_collection_path) === 'deliverables/studies'
+    readOptionalString(oneOffWorkspaceProfile?.project_collection_path) === 'deliverables'
       ? null
       : 'foundry_agent_series_workspace_topology_default_collection_path_invalid',
-    readOptionalString(masWorkspaceProfile?.workspace_mode) === 'portfolio'
+    readOptionalString(oneOffWorkspaceProfile?.project_stage_outputs_root) === 'artifacts/stage_outputs'
+      ? null
+      : 'foundry_agent_series_workspace_topology_default_stage_outputs_root_invalid',
+    oneOffSharedResourceRoots.includes('shared/sources')
+      ? null
+      : 'foundry_agent_series_workspace_topology_default_shared_sources_missing',
+    readOptionalString(masPortfolioWorkspaceProfile?.workspace_mode) === 'portfolio'
       ? null
       : 'foundry_agent_series_workspace_topology_mas_mode_invalid',
-    readOptionalString(masWorkspaceProfile?.project_collection_path) === 'studies'
+    readOptionalString(masPortfolioWorkspaceProfile?.project_collection_path) === 'studies'
       ? null
       : 'foundry_agent_series_workspace_topology_mas_collection_path_invalid',
-    readOptionalString(masWorkspaceProfile?.stage_outputs_root) === 'artifacts/stage_outputs'
+    readOptionalString(masPortfolioWorkspaceProfile?.project_stage_outputs_root)
+      === 'artifacts/stage_outputs'
       ? null
       : 'foundry_agent_series_workspace_topology_mas_stage_outputs_root_invalid',
-    readOptionalString(rcaWorkspaceProfile?.workspace_mode) === 'series'
+    masSharedResourceRoots.includes('data')
+      ? null
+      : 'foundry_agent_series_workspace_topology_mas_shared_data_missing',
+    masSharedResourceRoots.includes('literature')
+      ? null
+      : 'foundry_agent_series_workspace_topology_mas_shared_literature_missing',
+    masSharedResourceRoots.includes('memory')
+      ? null
+      : 'foundry_agent_series_workspace_topology_mas_shared_memory_missing',
+    readOptionalString(rcaSeriesWorkspaceProfile?.workspace_mode) === 'series'
       ? null
       : 'foundry_agent_series_workspace_topology_rca_mode_invalid',
-    readOptionalString(rcaWorkspaceProfile?.project_collection_path) === 'deliverables'
+    readOptionalString(rcaSeriesWorkspaceProfile?.project_collection_path) === 'deliverables'
       ? null
       : 'foundry_agent_series_workspace_topology_rca_collection_path_invalid',
-    readOptionalString(rcaWorkspaceProfile?.stage_outputs_root) === 'artifacts/stage_outputs'
+    readOptionalString(rcaSeriesWorkspaceProfile?.project_stage_outputs_root)
+      === 'artifacts/stage_outputs'
       ? null
       : 'foundry_agent_series_workspace_topology_rca_stage_outputs_root_invalid',
-    allowedWorkspaceModes.includes('one_off')
+    rcaSharedResourceRoots.includes('shared/brand')
+      ? null
+      : 'foundry_agent_series_workspace_topology_rca_shared_brand_missing',
+    rcaSharedResourceRoots.includes('shared/visual_memory')
+      ? null
+      : 'foundry_agent_series_workspace_topology_rca_visual_memory_missing',
+    workspaceModes.includes('one_off')
       ? null
       : 'foundry_agent_series_workspace_topology_missing_one_off_mode',
-    allowedWorkspaceModes.includes('series')
+    workspaceModes.includes('series')
       ? null
       : 'foundry_agent_series_workspace_topology_missing_series_mode',
-    allowedWorkspaceModes.includes('portfolio')
+    workspaceModes.includes('portfolio')
       ? null
       : 'foundry_agent_series_workspace_topology_missing_portfolio_mode',
+    readOptionalString(domainProfileDefaults?.mas) === 'mas_portfolio'
+      ? null
+      : 'foundry_agent_series_workspace_topology_mas_default_profile_invalid',
+    readOptionalString(domainProfileDefaults?.mag) === 'one_off'
+      ? null
+      : 'foundry_agent_series_workspace_topology_mag_default_profile_invalid',
+    readOptionalString(domainProfileDefaults?.rca) === 'rca_series'
+      ? null
+      : 'foundry_agent_series_workspace_topology_rca_default_profile_invalid',
+    readOptionalString(domainProfileDefaults?.oma) === 'one_off'
+      ? null
+      : 'foundry_agent_series_workspace_topology_oma_default_profile_invalid',
+    readOptionalString(defaultUserInspectionSurface?.ordinary_user_default_surface)
+      === 'workspace_local_project_stage_outputs'
+      ? null
+      : 'foundry_agent_series_workspace_topology_user_surface_invalid',
+    readOptionalString(defaultUserInspectionSurface?.project_stage_outputs_pattern)
+      === '<project-root>/artifacts/stage_outputs/<stage-id>/'
+      ? null
+      : 'foundry_agent_series_workspace_topology_user_stage_output_pattern_invalid',
+    defaultUserInspectionSurface?.runtime_state_is_default_user_surface === false
+      ? null
+      : 'foundry_agent_series_workspace_topology_runtime_state_must_not_be_default_surface',
+    defaultUserInspectionSurface?.product_views_are_stage_outputs === false
+      ? null
+      : 'foundry_agent_series_workspace_topology_product_views_must_not_be_stage_outputs',
+    readOptionalString(runtimeStateBoundary?.role) === 'provider_backing_provenance_restore_audit'
+      ? null
+      : 'foundry_agent_series_workspace_topology_runtime_state_role_invalid',
+    runtimeStateBoundary?.runtime_state_can_be_canonical_project_root === false
+      ? null
+      : 'foundry_agent_series_workspace_topology_runtime_state_project_root_forbidden',
+    runtimeStateBoundary?.runtime_state_can_close_stage === false
+      ? null
+      : 'foundry_agent_series_workspace_topology_runtime_state_closeout_forbidden',
+    runtimeStateBoundary?.runtime_state_can_replace_owner_receipt_or_typed_blocker === false
+      ? null
+      : 'foundry_agent_series_workspace_topology_runtime_state_owner_answer_forbidden',
+    workspaceAuthorityBoundary?.opl_can_write_domain_truth === false
+      ? null
+      : 'foundry_agent_series_workspace_topology_domain_truth_authority_forbidden',
+    workspaceAuthorityBoundary?.opl_can_create_owner_receipt === false
+      ? null
+      : 'foundry_agent_series_workspace_topology_owner_receipt_authority_forbidden',
+    workspaceAuthorityBoundary?.opl_can_create_typed_blocker === false
+      ? null
+      : 'foundry_agent_series_workspace_topology_typed_blocker_authority_forbidden',
+    workspaceInitializationPolicy?.upgrading_one_off_to_series_must_not_move_existing_project_roots === true
+      ? null
+      : 'foundry_agent_series_workspace_topology_one_off_series_upgrade_policy_missing',
     supportedPinSources.includes('pyproject.toml')
       ? null
       : 'foundry_agent_series_missing_python_pin_source',
