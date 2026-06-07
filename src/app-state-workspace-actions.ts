@@ -1,13 +1,15 @@
 import { FrameworkContractError } from './contracts.ts';
 import {
   adoptWorkspace,
-  archiveWorkspaceProject,
   doctorWorkspace,
+  validateWorkspace,
+} from './workspace-diagnostics.ts';
+import {
+  archiveWorkspaceProject,
   exportWorkspaceMap,
   upgradeWorkspace,
-  validateWorkspace,
   workspaceHealth,
-} from './workspace-diagnostics.ts';
+} from './workspace-lifecycle.ts';
 import { ensureWorkspace, initializeWorkspace } from './workspace-initializer.ts';
 import type { FrameworkContracts } from './types.ts';
 
