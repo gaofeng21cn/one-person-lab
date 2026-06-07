@@ -501,6 +501,29 @@ export function buildPublicCommandSpecs(
       ],
       group: 'workspace',
     }),
+    'workspace validate': cloneCommandSpec(commandSpecs['workspace validate'], {
+      usage: 'opl workspace validate --workspace <path>',
+      examples: [
+        'opl workspace validate --workspace /Users/gaofeng/workspace/visual-theme-a',
+      ],
+      group: 'workspace',
+    }),
+    'workspace doctor': cloneCommandSpec(commandSpecs['workspace doctor'], {
+      usage: 'opl workspace doctor --workspace <path>',
+      examples: [
+        'opl workspace doctor --workspace /Users/gaofeng/workspace/visual-theme-a',
+      ],
+      group: 'workspace',
+    }),
+    'workspace adopt': cloneCommandSpec(commandSpecs['workspace adopt'], {
+      usage:
+        'opl workspace adopt --agent <mas|mag|rca|oma> --workspace <path> [--project-id <id>] [--mode auto|one_off|series|portfolio] --dry-run',
+      examples: [
+        'opl workspace adopt --agent rca --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --dry-run',
+        'opl workspace adopt --agent mas --workspace /Users/gaofeng/workspace/dm-cvd --study-id DM002 --dry-run',
+      ],
+      group: 'workspace',
+    }),
     'workspace interfaces': cloneCommandSpec(commandSpecs['workspace interfaces'], {
       usage: 'opl workspace interfaces',
       examples: ['opl workspace interfaces'],

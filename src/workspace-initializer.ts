@@ -6,17 +6,28 @@ import {
   AGENT_WORKSPACE_NORM_CONTRACT_REF,
   buildAgentWorkspaceNormProjection,
 } from './agent-workspace-norm.ts';
-import { STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT } from './standard-domain-agent-scaffold-constants-parts/foundry-series.ts';
 import { readOplWorkspaceRoot } from './system-preferences.ts';
 import type { AgentWorkspaceNormContract, FrameworkContracts } from './types.ts';
+import {
+  buildCanonicalTopology,
+  buildSharedResources,
+  buildWorkspaceDisplayLabels,
+  profileFromTopologyContract,
+  expectedDomainTopologyProfile,
+  selectWorkspaceProfileId,
+  toWorkspaceRelative,
+  WORKSPACE_TOPOLOGY_CONTRACT_REF,
+  workspaceProjectEntry,
+  type TopologyProfile,
+  type WorkspaceModeInput,
+  type WorkspaceProfileId,
+  type WorkspaceProjectIndexEntry,
+} from './workspace-topology.ts';
 import {
   findWorkspaceAgentProfile,
   type WorkspaceAgentProfile,
 } from './workspace-agent-defaults.ts';
 import { bindWorkspace, getActiveWorkspaceBinding } from './workspace-registry.ts';
-
-type WorkspaceModeInput = 'auto' | 'one_off' | 'series' | 'portfolio';
-type WorkspaceProfileId = 'one_off' | 'rca_series' | 'mas_portfolio';
 
 export type WorkspaceInitializeOptions = {
   agentId?: string;
@@ -32,26 +43,6 @@ export type WorkspaceInitializeOptions = {
 };
 
 export type WorkspaceEnsureOptions = WorkspaceInitializeOptions;
-
-type TopologyProfile = {
-  workspace_mode: 'one_off' | 'series' | 'portfolio';
-  project_collection_path: string;
-  series_capable_skeleton?: boolean;
-  shared_resource_roots: string[];
-  project_stage_outputs_root: string;
-};
-
-type WorkspaceProjectIndexEntry = {
-  project_id: string;
-  project_root: string;
-  stage_outputs_root: string;
-  control_root: string;
-  review_root: string;
-  handoff_root: string;
-};
-
-const WORKSPACE_TOPOLOGY_CONTRACT_REF =
-  'contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/new_agent_scaffold/foundry_agent_series_contract/workspace_topology_profile';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -90,105 +81,6 @@ function normalizeMode(value: string | undefined): WorkspaceModeInput {
       allowed_modes: ['auto', 'one_off', 'series', 'portfolio'],
     },
   );
-}
-
-function topologyContract() {
-  const value = STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT.workspace_topology_profile;
-  if (!isRecord(value) || value.surface_kind !== 'opl_workspace_topology_profile') {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Standard Foundry Agent series contract is missing workspace_topology_profile.',
-      { contract_ref: WORKSPACE_TOPOLOGY_CONTRACT_REF },
-    );
-  }
-  return value;
-}
-
-function profileFromContract(profileId: WorkspaceProfileId): TopologyProfile {
-  const contract = topologyContract();
-  const defaultProfiles = contract.default_profiles;
-  if (!isRecord(defaultProfiles)) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Workspace topology profile default_profiles must be an object.',
-      { contract_ref: WORKSPACE_TOPOLOGY_CONTRACT_REF },
-    );
-  }
-  const profile = defaultProfiles[profileId];
-  if (!isRecord(profile)) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Workspace topology profile is missing the requested default profile.',
-      { profile_id: profileId, contract_ref: WORKSPACE_TOPOLOGY_CONTRACT_REF },
-    );
-  }
-  const sharedRoots = profile.shared_resource_roots;
-  if (!Array.isArray(sharedRoots) || !sharedRoots.every((entry) => typeof entry === 'string')) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Workspace topology profile shared_resource_roots must be a string array.',
-      { profile_id: profileId, contract_ref: WORKSPACE_TOPOLOGY_CONTRACT_REF },
-    );
-  }
-  const workspaceMode = profile.workspace_mode;
-  if (workspaceMode !== 'one_off' && workspaceMode !== 'series' && workspaceMode !== 'portfolio') {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Workspace topology profile workspace_mode is invalid.',
-      { profile_id: profileId, workspace_mode: workspaceMode },
-    );
-  }
-  return {
-    workspace_mode: workspaceMode,
-    project_collection_path: String(profile.project_collection_path),
-    series_capable_skeleton: (profile as Record<string, unknown>).series_capable_skeleton === true,
-    shared_resource_roots: sharedRoots,
-    project_stage_outputs_root: String(profile.project_stage_outputs_root),
-  };
-}
-
-function defaultProfileId(agent: WorkspaceAgentProfile): WorkspaceProfileId {
-  const contract = topologyContract();
-  const defaults = contract.domain_profile_defaults;
-  if (!isRecord(defaults)) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Workspace topology profile domain_profile_defaults must be an object.',
-      { contract_ref: WORKSPACE_TOPOLOGY_CONTRACT_REF },
-    );
-  }
-  const profileId = defaults[agent.agent_id];
-  if (profileId === 'one_off' || profileId === 'rca_series' || profileId === 'mas_portfolio') {
-    return profileId;
-  }
-  throw new FrameworkContractError(
-    'contract_shape_invalid',
-    'Workspace topology profile is missing the agent default profile.',
-    { agent_id: agent.agent_id, profile_id: profileId },
-  );
-}
-
-function selectProfileId(agent: WorkspaceAgentProfile, requestedMode: WorkspaceModeInput): WorkspaceProfileId {
-  if (requestedMode === 'auto') {
-    return defaultProfileId(agent);
-  }
-  if (requestedMode === 'one_off') {
-    return 'one_off';
-  }
-  if (requestedMode === 'series') {
-    return 'rca_series';
-  }
-  if (requestedMode === 'portfolio') {
-    if (agent.agent_id !== 'mas') {
-      throw new FrameworkContractError(
-        'cli_usage_error',
-        'workspace init --mode portfolio is reserved for MAS study portfolio workspaces.',
-        { agent_id: agent.agent_id, mode: requestedMode },
-      );
-    }
-    return 'mas_portfolio';
-  }
-  return defaultProfileId(agent);
 }
 
 function resolveWorkspacePath(options: WorkspaceInitializeOptions, agent: WorkspaceAgentProfile) {
@@ -241,21 +133,6 @@ function assertWritableMetadataPath(filePath: string, force: boolean | undefined
     'Workspace init would overwrite an existing OPL workspace metadata file; pass --force to refresh it.',
     { file: filePath },
   );
-}
-
-function workspaceProjectEntry(
-  projectId: string,
-  projectRootRef: string,
-  stageOutputsRootRef: string,
-): WorkspaceProjectIndexEntry {
-  return {
-    project_id: projectId,
-    project_root: projectRootRef,
-    stage_outputs_root: stageOutputsRootRef,
-    control_root: `${projectRootRef}/control`,
-    review_root: `${projectRootRef}/review`,
-    handoff_root: `${projectRootRef}/handoff`,
-  };
 }
 
 function readExistingWorkspaceIndex(filePath: string) {
@@ -354,10 +231,6 @@ function mergeWorkspaceProjects(
       project.project_id === currentProject.project_id
     )),
   };
-}
-
-function toRelative(basePath: string, targetPath: string) {
-  return path.relative(basePath, targetPath).split(path.sep).join('/');
 }
 
 function yamlScalar(value: string | boolean | number | null) {
@@ -496,23 +369,53 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
         cli: {
           command: contracts.agentWorkspaceNorm.default_workspace_precondition.command,
           initializer_command: contracts.agentWorkspaceNorm.explicit_initialization.command,
+          validator_command: 'opl workspace validate',
+          doctor_command: 'opl workspace doctor',
+          adopt_command: 'opl workspace adopt --dry-run',
           usage:
             'opl workspace ensure --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio]',
+        },
+        management_commands: {
+          validate: {
+            command: 'opl workspace validate',
+            role: 'fail_closed_workspace_index_gate',
+            required_inputs: ['workspace_path'],
+          },
+          doctor: {
+            command: 'opl workspace doctor',
+            role: 'read_only_user_and_operator_diagnostics',
+            required_inputs: ['workspace_path'],
+          },
+          adopt: {
+            command: 'opl workspace adopt',
+            role: 'dry_run_existing_directory_adoption_plan',
+            required_inputs: ['agent_id', 'workspace_path', 'dry_run'],
+          },
         },
         mcp: {
           ...contracts.agentWorkspaceNorm.descriptor_delegates.mcp,
           input_schema_ref: 'opl://workspace/ensure/input.schema.json',
           delegates_to: contracts.agentWorkspaceNorm.default_workspace_precondition.command,
           fallback_initializer: contracts.agentWorkspaceNorm.explicit_initialization.command,
+          management_delegates: {
+            validate: 'opl workspace validate',
+            doctor: 'opl workspace doctor',
+            adopt_dry_run: 'opl workspace adopt --dry-run',
+          },
         },
         skill: {
           ...contracts.agentWorkspaceNorm.descriptor_delegates.skill,
           instruction:
             'Use this OPL-owned ensure action before MAS/MAG/RCA/OMA task execution; it reuses an active workspace binding or initializes the default topology.',
+          management_instruction:
+            'Use workspace validate as the fail-closed gate, workspace doctor for user inspection blockers, and workspace adopt --dry-run before adopting an existing directory.',
         },
         app: {
           action_id: contracts.agentWorkspaceNorm.default_workspace_precondition.app_action_id,
           initializer_action_id: contracts.agentWorkspaceNorm.explicit_initialization.app_action_id,
+          validator_action_id: 'workspace_validate',
+          doctor_action_id: 'workspace_doctor',
+          adopt_dry_run_action_id: 'workspace_adopt_dry_run',
           route: 'opl app action execute --action workspace_ensure --payload <json>',
         },
         openai: contracts.agentWorkspaceNorm.descriptor_delegates.openai,
@@ -560,7 +463,10 @@ function buildWorkspaceIndex(input: {
       shared_resource_roots: input.profile.shared_resource_roots,
       project_stage_outputs_root: input.profile.project_stage_outputs_root,
     },
+    canonical_topology: buildCanonicalTopology(input.agent, input.profile),
+    display_labels: buildWorkspaceDisplayLabels(input.agent, input.profile),
     shared_resource_roots: input.profile.shared_resource_roots,
+    shared_resources: buildSharedResources(input.profile),
     projects: input.projects,
     user_inspection: {
       ordinary_user_default_surface: 'workspace_local_project_stage_outputs',
@@ -588,6 +494,12 @@ function buildWorkspaceIndex(input: {
       contract: input.contracts.agentWorkspaceNorm,
       agentId: input.agent.agent_id,
     }),
+    expected_domain_topology_profile: expectedDomainTopologyProfile({
+      contract: input.contracts.agentWorkspaceNorm,
+      agent: input.agent,
+      profileId: input.profileId,
+      profile: input.profile,
+    }),
     interface_projection: buildInterfaceProjection(
       input.contracts.agentWorkspaceNorm,
       input.agent,
@@ -603,8 +515,8 @@ export function initializeWorkspace(
 ) {
   const agent = findWorkspaceAgentProfile(options.agentId);
   const mode = normalizeMode(options.mode);
-  const profileId = selectProfileId(agent, mode);
-  const profile = profileFromContract(profileId);
+  const profileId = selectWorkspaceProfileId(agent, mode, 'workspace init');
+  const profile = profileFromTopologyContract(profileId);
   const workspacePath = resolveWorkspacePath(options, agent);
   const workspaceId = normalizeRequiredSegment(path.basename(workspacePath), 'workspace_id');
   const projectId = normalizeRequiredSegment(
@@ -615,8 +527,8 @@ export function initializeWorkspace(
   const createdAt = new Date().toISOString();
   const projectRoot = path.join(workspacePath, profile.project_collection_path, projectId);
   const stageOutputsRoot = path.join(projectRoot, profile.project_stage_outputs_root);
-  const projectRootRef = toRelative(workspacePath, projectRoot);
-  const stageOutputsRootRef = toRelative(workspacePath, stageOutputsRoot);
+  const projectRootRef = toWorkspaceRelative(workspacePath, projectRoot);
+  const stageOutputsRootRef = toWorkspaceRelative(workspacePath, stageOutputsRoot);
   const workspaceYamlPath = path.join(workspacePath, 'workspace.yaml');
   const workspaceIndexPath = path.join(workspacePath, 'workspace_index.json');
   const currentProject = workspaceProjectEntry(projectId, projectRootRef, stageOutputsRootRef);
@@ -736,6 +648,9 @@ export function initializeWorkspace(
       },
       indexed_projects: mergedProjects.projects,
       workspace_norm: workspaceIndex.workspace_norm,
+      canonical_topology: workspaceIndex.canonical_topology,
+      display_labels: workspaceIndex.display_labels,
+      shared_resources: workspaceIndex.shared_resources,
       user_inspection: workspaceIndex.user_inspection,
       authority_boundary: workspaceIndex.authority_boundary,
       interface_projection: workspaceIndex.interface_projection,

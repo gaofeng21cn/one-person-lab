@@ -91,6 +91,9 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'provider_worker_restart',
       'workspace_initialize',
       'workspace_ensure',
+      'workspace_validate',
+      'workspace_doctor',
+      'workspace_adopt_dry_run',
     ]) {
       assert.ok(actions.has(actionId), `missing App action: ${actionId}`);
       assert.equal(actions.get(actionId)?.delegated_surface.startsWith('opl '), true);
@@ -126,6 +129,15 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'mode',
       'title',
     ]);
+    assert.equal(actions.get('workspace_validate')?.delegated_surface, 'opl workspace validate');
+    assert.equal(actions.get('workspace_validate')?.mutates, 'none_read_only');
+    assert.deepEqual(actions.get('workspace_validate')?.payload_fields, ['workspace_path']);
+    assert.equal(actions.get('workspace_doctor')?.delegated_surface, 'opl workspace doctor');
+    assert.equal(actions.get('workspace_doctor')?.mutates, 'none_read_only');
+    assert.deepEqual(actions.get('workspace_doctor')?.payload_fields, ['workspace_path']);
+    assert.equal(actions.get('workspace_adopt_dry_run')?.delegated_surface, 'opl workspace adopt --dry-run');
+    assert.equal(actions.get('workspace_adopt_dry_run')?.mutates, 'none_read_only');
+    assert.equal(actions.get('workspace_adopt_dry_run')?.dry_run_supported, true);
     assert.deepEqual(actions.get('provider_scheduler_tick')?.payload_fields, ['force', 'limit', 'hydrate']);
     assert.equal(actions.get('provider_scheduler_tick')?.route_requires_domain_or_app_payload, true);
     assert.equal(actions.get('provider_scheduler_tick')?.can_submit_to_safe_action_shell, false);
@@ -274,6 +286,64 @@ test('app action execute owns settings, release channel, workspace root, and pro
       'workspace_ensure',
     );
     assert.equal(magEnsure.result.workspace_initialization.workspace_norm.registry_policy.writes_opl_workspace_registry, true);
+
+    const workspaceValidate = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'workspace_validate',
+      '--payload',
+      JSON.stringify({
+        workspace_path: path.join(workspaceRoot, 'nsfc-p2c'),
+      }),
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+    }).app_action_execution;
+
+    assert.equal(workspaceValidate.delegated_surface, 'opl workspace validate');
+    assert.equal(workspaceValidate.result.workspace_validation.status, 'passed');
+    assert.equal(workspaceValidate.result.workspace_validation.display_labels.project_unit, 'grant_project');
+
+    const workspaceDoctor = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'workspace_doctor',
+      '--payload',
+      JSON.stringify({
+        workspace_path: path.join(workspaceRoot, 'nsfc-p2c'),
+      }),
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+    }).app_action_execution;
+
+    assert.equal(workspaceDoctor.delegated_surface, 'opl workspace doctor');
+    assert.equal(workspaceDoctor.result.workspace_doctor.status, 'passed');
+
+    const workspaceAdopt = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'workspace_adopt_dry_run',
+      '--payload',
+      JSON.stringify({
+        agent_id: 'mas',
+        workspace: path.join(workspaceRoot, 'dm-cvd'),
+        study_id: 'DM002',
+      }),
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+    }).app_action_execution;
+
+    assert.equal(workspaceAdopt.delegated_surface, 'opl workspace adopt --dry-run');
+    assert.equal(workspaceAdopt.result.workspace_adoption.write_allowed, false);
+    assert.equal(workspaceAdopt.result.workspace_adoption.profile.profile_id, 'mas_portfolio');
 
     const provider = runCli([
       'app',

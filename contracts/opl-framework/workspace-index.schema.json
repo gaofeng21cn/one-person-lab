@@ -1,0 +1,375 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/workspace-index.schema.json",
+  "schema_id": "opl.workspace_index.v1",
+  "surface_kind": "opl_workspace_index_schema",
+  "owner": "one-person-lab",
+  "purpose": "Define the workspace-local index materialized by OPL workspace init and ensure for standard domain agents, including canonical topology, display labels, shared resources, project stage output roots, and authority boundaries.",
+  "state": "active_contract",
+  "machine_boundary": "OPL owns the workspace index shape, topology projection, registry-facing refs, user inspection pointers, and authority false flags. Domain agents own domain truth, source/artifact/memory bodies, owner receipts, typed blockers, quality verdicts, export verdicts, and product-specific workspace semantics.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "surface_kind",
+    "version",
+    "workspace_id",
+    "agent",
+    "workspace_topology_profile",
+    "canonical_topology",
+    "display_labels",
+    "shared_resource_roots",
+    "shared_resources",
+    "projects",
+    "user_inspection",
+    "runtime_state_boundary",
+    "authority_boundary",
+    "workspace_norm",
+    "interface_projection"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_workspace_index"
+    },
+    "version": {
+      "const": "workspace-index.v1"
+    },
+    "workspace_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "agent": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "agent_id",
+        "project_id",
+        "workspace_kind",
+        "project_kind"
+      ],
+      "properties": {
+        "agent_id": {
+          "enum": [
+            "mas",
+            "mag",
+            "rca",
+            "oma"
+          ]
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "workspace_kind": {
+          "type": "string"
+        },
+        "project_kind": {
+          "type": "string"
+        }
+      }
+    },
+    "workspace_topology_profile": {
+      "$ref": "#/$defs/workspace_topology_profile_ref"
+    },
+    "canonical_topology": {
+      "$ref": "#/$defs/canonical_topology"
+    },
+    "display_labels": {
+      "$ref": "#/$defs/display_labels"
+    },
+    "shared_resource_roots": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "shared_resources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/shared_resource"
+      }
+    },
+    "projects": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/project"
+      }
+    },
+    "user_inspection": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "ordinary_user_default_surface",
+        "project_stage_outputs_pattern",
+        "runtime_state_is_default_user_surface",
+        "product_views_are_stage_outputs"
+      ],
+      "properties": {
+        "ordinary_user_default_surface": {
+          "const": "workspace_local_project_stage_outputs"
+        },
+        "project_stage_outputs_pattern": {
+          "const": "<project-root>/artifacts/stage_outputs/<stage-id>/"
+        },
+        "runtime_state_is_default_user_surface": {
+          "const": false
+        },
+        "product_views_are_stage_outputs": {
+          "const": false
+        }
+      }
+    },
+    "runtime_state_boundary": {
+      "$ref": "#/$defs/runtime_state_boundary"
+    },
+    "authority_boundary": {
+      "$ref": "#/$defs/authority_boundary"
+    },
+    "workspace_norm": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind",
+        "norm_id",
+        "default_workspace_precondition",
+        "descriptor_delegates"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "opl_agent_workspace_norm_projection"
+        },
+        "norm_id": {
+          "const": "opl.agent_workspace_norm.v1"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "workspace_topology_profile_ref": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "contract_ref",
+        "profile_id",
+        "workspace_mode",
+        "project_collection_path",
+        "shared_resource_roots",
+        "project_stage_outputs_root"
+      ],
+      "properties": {
+        "profile_id": {
+          "enum": [
+            "one_off",
+            "rca_series",
+            "mas_portfolio"
+          ]
+        },
+        "workspace_mode": {
+          "enum": [
+            "one_off",
+            "series",
+            "portfolio"
+          ]
+        },
+        "project_collection_path": {
+          "type": "string"
+        },
+        "project_stage_outputs_root": {
+          "const": "artifacts/stage_outputs"
+        },
+        "shared_resource_roots": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "canonical_topology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workspace_unit",
+        "project_collection_role",
+        "project_collection_path",
+        "project_unit_kind",
+        "stage_artifact_unit",
+        "stage_outputs_root",
+        "owner_answer_unit"
+      ],
+      "properties": {
+        "workspace_unit": {
+          "const": "workspace_group"
+        },
+        "project_collection_role": {
+          "const": "project_units"
+        },
+        "project_collection_path": {
+          "type": "string"
+        },
+        "project_unit_kind": {
+          "type": "string"
+        },
+        "stage_artifact_unit": {
+          "const": "stage_artifact_unit"
+        },
+        "stage_outputs_root": {
+          "const": "artifacts/stage_outputs"
+        },
+        "owner_answer_unit": {
+          "const": "owner_receipt_or_typed_blocker"
+        }
+      }
+    },
+    "display_labels": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workspace",
+        "project_collection",
+        "project_unit",
+        "stage_outputs",
+        "shared_resources"
+      ],
+      "properties": {
+        "workspace": {
+          "type": "string"
+        },
+        "project_collection": {
+          "type": "string"
+        },
+        "project_unit": {
+          "type": "string"
+        },
+        "stage_outputs": {
+          "const": "artifacts/stage_outputs"
+        },
+        "shared_resources": {
+          "const": "shared_resources"
+        }
+      }
+    },
+    "shared_resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "role",
+        "owner",
+        "user_visible",
+        "domain_truth_owner"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "owner": {
+          "enum": [
+            "workspace_group",
+            "opl_framework_projection"
+          ]
+        },
+        "user_visible": {
+          "type": "boolean"
+        },
+        "domain_truth_owner": {
+          "const": "domain_agent"
+        }
+      }
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "project_id",
+        "project_root",
+        "stage_outputs_root",
+        "control_root",
+        "review_root",
+        "handoff_root"
+      ],
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "project_root": {
+          "type": "string"
+        },
+        "stage_outputs_root": {
+          "type": "string"
+        },
+        "control_root": {
+          "type": "string"
+        },
+        "review_root": {
+          "type": "string"
+        },
+        "handoff_root": {
+          "type": "string"
+        }
+      }
+    },
+    "runtime_state_boundary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "role",
+        "runtime_state_can_be_canonical_project_root",
+        "runtime_state_can_close_stage",
+        "runtime_state_can_replace_owner_receipt_or_typed_blocker"
+      ],
+      "properties": {
+        "role": {
+          "const": "provider_backing_provenance_restore_audit"
+        },
+        "runtime_state_can_be_canonical_project_root": {
+          "const": false
+        },
+        "runtime_state_can_close_stage": {
+          "const": false
+        },
+        "runtime_state_can_replace_owner_receipt_or_typed_blocker": {
+          "const": false
+        }
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "opl_can_define_topology_contract",
+        "opl_can_project_workspace_refs",
+        "opl_can_write_domain_truth",
+        "opl_can_mutate_artifact_body",
+        "opl_can_create_owner_receipt",
+        "opl_can_create_typed_blocker",
+        "runtime_state_counts_as_user_default_surface"
+      ],
+      "properties": {
+        "opl_can_define_topology_contract": {
+          "const": true
+        },
+        "opl_can_project_workspace_refs": {
+          "const": true
+        },
+        "opl_can_write_domain_truth": {
+          "const": false
+        },
+        "opl_can_mutate_artifact_body": {
+          "const": false
+        },
+        "opl_can_create_owner_receipt": {
+          "const": false
+        },
+        "opl_can_create_typed_blocker": {
+          "const": false
+        },
+        "runtime_state_counts_as_user_default_surface": {
+          "const": false
+        }
+      }
+    }
+  }
+}

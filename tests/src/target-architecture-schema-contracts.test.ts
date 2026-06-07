@@ -25,6 +25,7 @@ test('target architecture schema contracts keep owner delta root and audit tail 
     'contracts/opl-framework/stop-loss-policy.schema.json',
     'contracts/opl-framework/default-surface-budget.schema.json',
     'contracts/opl-framework/workspace-topology-profile.schema.json',
+    'contracts/opl-framework/workspace-index.schema.json',
   ];
   const schemas = Object.fromEntries(
     schemaPaths.map((schemaPath) => [schemaPath, readJson<Record<string, any>>(schemaPath)]),
@@ -266,5 +267,44 @@ test('target architecture schema contracts keep owner delta root and audit tail 
   assert.equal(
     workspaceTopology.examples[0].default_profiles.rca_series.workspace_mode,
     'series',
+  );
+
+  const workspaceIndex = schemas['contracts/opl-framework/workspace-index.schema.json'];
+  assert.equal(workspaceIndex.properties.surface_kind.const, 'opl_workspace_index');
+  assert.equal(workspaceIndex.properties.version.const, 'workspace-index.v1');
+  assert.equal(workspaceIndex.required.includes('canonical_topology'), true);
+  assert.equal(workspaceIndex.required.includes('display_labels'), true);
+  assert.equal(workspaceIndex.required.includes('shared_resources'), true);
+  assert.equal(
+    workspaceIndex.$defs.canonical_topology.properties.workspace_unit.const,
+    'workspace_group',
+  );
+  assert.equal(
+    workspaceIndex.$defs.canonical_topology.properties.project_collection_role.const,
+    'project_units',
+  );
+  assert.equal(
+    workspaceIndex.$defs.canonical_topology.properties.stage_artifact_unit.const,
+    'stage_artifact_unit',
+  );
+  assert.equal(
+    workspaceIndex.$defs.canonical_topology.properties.owner_answer_unit.const,
+    'owner_receipt_or_typed_blocker',
+  );
+  assert.equal(
+    workspaceIndex.$defs.canonical_topology.properties.stage_outputs_root.const,
+    'artifacts/stage_outputs',
+  );
+  assert.equal(
+    workspaceIndex.$defs.shared_resource.properties.domain_truth_owner.const,
+    'domain_agent',
+  );
+  assert.equal(
+    workspaceIndex.$defs.runtime_state_boundary.properties.runtime_state_can_be_canonical_project_root.const,
+    false,
+  );
+  assert.equal(
+    workspaceIndex.$defs.authority_boundary.properties.opl_can_write_domain_truth.const,
+    false,
   );
 });

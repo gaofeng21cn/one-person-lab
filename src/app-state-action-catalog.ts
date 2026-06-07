@@ -55,6 +55,33 @@ function workspaceActionsFromNorm(contract: AgentWorkspaceNormContract): AppActi
       mutates: 'opl_workspace_topology_and_registry',
       dry_run_supported: true,
     },
+    {
+      action_id: 'workspace_validate',
+      label: 'Validate agent workspace',
+      surface: 'opl app action execute',
+      delegated_surface: 'opl workspace validate',
+      payload_fields: ['workspace_path'],
+      mutates: 'none_read_only',
+      dry_run_supported: false,
+    },
+    {
+      action_id: 'workspace_doctor',
+      label: 'Diagnose agent workspace',
+      surface: 'opl app action execute',
+      delegated_surface: 'opl workspace doctor',
+      payload_fields: ['workspace_path'],
+      mutates: 'none_read_only',
+      dry_run_supported: false,
+    },
+    {
+      action_id: 'workspace_adopt_dry_run',
+      label: 'Plan existing workspace adoption',
+      surface: 'opl app action execute',
+      delegated_surface: 'opl workspace adopt --dry-run',
+      payload_fields: payloadFields,
+      mutates: 'none_read_only',
+      dry_run_supported: true,
+    },
   ];
 }
 

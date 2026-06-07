@@ -8,7 +8,9 @@ import type {
   SessionRuntimeCliInput,
   TurnkeyInstallCliInput,
   UpdateChannelCliInput,
+  WorkspaceAdoptCliInput,
   WorkspaceInitializeCliInput,
+  WorkspaceValidationCliInput,
   WorkspaceRegistryCliInput,
   WorkspaceRootCliInput,
 } from './types.ts';
@@ -83,6 +85,108 @@ function parseWorkspaceInitializeArgs(
         break;
       default:
         throw buildUsageError(`Unknown option for workspace init command: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
+function parseWorkspaceValidationArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): WorkspaceValidationCliInput {
+  const parsed: WorkspaceValidationCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, { token });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, { option: token });
+    }
+
+    switch (token) {
+      case '--workspace':
+      case '--workspace-path':
+        parsed.workspacePath = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for workspace inspection command: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
+function parseWorkspaceAdoptArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): WorkspaceAdoptCliInput {
+  const parsed: WorkspaceAdoptCliInput = { mode: 'auto' };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (token === '--dry-run') {
+      parsed.dryRun = true;
+      continue;
+    }
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, { token });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, { option: token });
+    }
+
+    switch (token) {
+      case '--agent':
+        parsed.agentId = value;
+        break;
+      case '--workspace':
+      case '--workspace-path':
+        parsed.workspacePath = value;
+        break;
+      case '--workspace-root':
+        parsed.workspaceRoot = value;
+        break;
+      case '--workspace-id':
+        parsed.workspaceId = value;
+        break;
+      case '--project-id':
+      case '--deliverable-id':
+      case '--study-id':
+        parsed.projectId = value;
+        break;
+      case '--title':
+        parsed.title = value;
+        break;
+      case '--mode':
+        if (value !== 'auto' && value !== 'one_off' && value !== 'series' && value !== 'portfolio') {
+          throw buildUsageError(
+            'workspace adopt --mode requires auto, one_off, series, or portfolio.',
+            spec,
+            { option: token, value },
+          );
+        }
+        parsed.mode = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for workspace adopt command: ${token}.`, spec, {
           option: token,
         });
     }
@@ -530,7 +634,9 @@ export {
   parseSystemConfigureCodexArgs,
   parseTurnkeyInstallArgs,
   parseUpdateChannelArgs,
+  parseWorkspaceAdoptArgs,
   parseWorkspaceInitializeArgs,
+  parseWorkspaceValidationArgs,
   parseWorkspaceRegistryArgs,
   parseWorkspaceRootArgs,
 };

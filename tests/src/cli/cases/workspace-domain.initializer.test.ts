@@ -4,6 +4,7 @@ import {
   os,
   path,
   runCli,
+  runCliFailure,
   test,
 } from '../helpers.ts';
 
@@ -70,6 +71,32 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     assert.equal(workspaceIndex.agent.agent_id, 'rca');
     assert.equal(workspaceIndex.agent.project_id, 'redcube');
     assert.equal(workspaceIndex.workspace_topology_profile.profile_id, 'rca_series');
+    assert.deepEqual(workspaceIndex.canonical_topology, {
+      workspace_unit: 'workspace_group',
+      project_collection_role: 'project_units',
+      project_collection_path: 'deliverables',
+      project_unit_kind: 'slide_deck',
+      stage_artifact_unit: 'stage_artifact_unit',
+      stage_outputs_root: 'artifacts/stage_outputs',
+      owner_answer_unit: 'owner_receipt_or_typed_blocker',
+    });
+    assert.deepEqual(workspaceIndex.display_labels, {
+      workspace: 'visual_theme_workspace',
+      project_collection: 'deliverables',
+      project_unit: 'slide_deck',
+      stage_outputs: 'artifacts/stage_outputs',
+      shared_resources: 'shared_resources',
+    });
+    assert.deepEqual(
+      workspaceIndex.shared_resources.map((entry: { path: string; role: string }) => [entry.path, entry.role]),
+      [
+        ['shared/sources', 'source_intake'],
+        ['shared/brand', 'brand_assets'],
+        ['shared/visual_memory', 'visual_memory'],
+        ['shared/style_system', 'style_system'],
+        ['shared/material_inventory', 'material_inventory'],
+      ],
+    );
     assert.equal(workspaceIndex.projects[0].project_id, 'deck-001');
     assert.equal(workspaceIndex.projects[0].stage_outputs_root, 'deliverables/deck-001/artifacts/stage_outputs');
     assert.equal(workspaceIndex.user_inspection.default_stage_outputs, 'deliverables/deck-001/artifacts/stage_outputs');
@@ -78,6 +105,8 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.profile, 'rca_series');
     assert.equal(workspaceIndex.workspace_norm.user_inspection.runtime_state_is_default_user_surface, false);
     assert.equal(workspaceIndex.workspace_norm.authority_boundary.opl_can_create_owner_receipt, false);
+    assert.equal(workspaceIndex.expected_domain_topology_profile.profile, 'rca_series');
+    assert.equal(workspaceIndex.expected_domain_topology_profile.project_kind, 'slide_deck');
 
     const catalog = runCli(['workspace', 'list'], {
       OPL_STATE_DIR: stateRoot,
@@ -189,6 +218,31 @@ test('workspace init materializes MAS portfolio topology with study roots', () =
 
     const workspaceIndex = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
     assert.equal(workspaceIndex.workspace_topology_profile.project_collection_path, 'studies');
+    assert.deepEqual(workspaceIndex.canonical_topology, {
+      workspace_unit: 'workspace_group',
+      project_collection_role: 'project_units',
+      project_collection_path: 'studies',
+      project_unit_kind: 'study',
+      stage_artifact_unit: 'stage_artifact_unit',
+      stage_outputs_root: 'artifacts/stage_outputs',
+      owner_answer_unit: 'owner_receipt_or_typed_blocker',
+    });
+    assert.deepEqual(workspaceIndex.display_labels, {
+      workspace: 'medical_research_workspace',
+      project_collection: 'studies',
+      project_unit: 'study',
+      stage_outputs: 'artifacts/stage_outputs',
+      shared_resources: 'shared_resources',
+    });
+    assert.deepEqual(
+      workspaceIndex.shared_resources.map((entry: { path: string; role: string }) => [entry.path, entry.role]),
+      [
+        ['data', 'dataset_root'],
+        ['literature', 'literature_root'],
+        ['memory', 'memory_root'],
+        ['shared/sources', 'source_intake'],
+      ],
+    );
     assert.equal(workspaceIndex.projects[0].stage_outputs_root, 'studies/DM002/artifacts/stage_outputs');
     assert.equal(workspaceIndex.authority_boundary.opl_can_write_domain_truth, false);
 
@@ -524,8 +578,127 @@ test('workspace interfaces exports the OPL-owned initializer surfaces for tools 
   assert.equal(output.workspace_interfaces.surfaces.mcp.tool_name, 'opl_workspace_ensure');
   assert.equal(output.workspace_interfaces.surfaces.mcp.descriptor_only, true);
   assert.equal(output.workspace_interfaces.surfaces.mcp.public_runtime, false);
+  assert.equal(output.workspace_interfaces.surfaces.mcp.management_delegates.validate, 'opl workspace validate');
+  assert.equal(output.workspace_interfaces.surfaces.management_commands.validate.command, 'opl workspace validate');
+  assert.equal(output.workspace_interfaces.surfaces.management_commands.doctor.command, 'opl workspace doctor');
+  assert.equal(output.workspace_interfaces.surfaces.management_commands.adopt.command, 'opl workspace adopt');
   assert.equal(output.workspace_interfaces.surfaces.skill.intent, 'ensure_opl_workspace');
+  assert.match(output.workspace_interfaces.surfaces.skill.management_instruction, /workspace validate/);
   assert.equal(output.workspace_interfaces.surfaces.app.action_id, 'workspace_ensure');
   assert.equal(output.workspace_interfaces.surfaces.app.initializer_action_id, 'workspace_initialize');
+  assert.equal(output.workspace_interfaces.surfaces.app.validator_action_id, 'workspace_validate');
+  assert.equal(output.workspace_interfaces.surfaces.app.doctor_action_id, 'workspace_doctor');
+  assert.equal(output.workspace_interfaces.surfaces.app.adopt_dry_run_action_id, 'workspace_adopt_dry_run');
   assert.deepEqual(output.workspace_interfaces.supported_agents, ['mas', 'mag', 'rca', 'oma']);
+});
+
+test('workspace validate and doctor inspect generated workspace topology semantics', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-validate-state-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-validate-root-'));
+
+  try {
+    runCli([
+      'workspace',
+      'init',
+      '--agent',
+      'rca',
+      '--workspace-root',
+      workspaceRoot,
+      '--workspace-id',
+      'visual-theme-a',
+      '--project-id',
+      'deck-001',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const workspacePath = path.join(workspaceRoot, 'visual-theme-a');
+    const validation = runCli(['workspace', 'validate', '--workspace', workspacePath], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(validation.workspace_validation.status, 'passed');
+    assert.equal(validation.workspace_validation.canonical_topology.project_unit_kind, 'slide_deck');
+    assert.equal(validation.workspace_validation.display_labels.project_collection, 'deliverables');
+    assert.equal(validation.workspace_validation.shared_resources[1].role, 'brand_assets');
+
+    const doctor = runCli(['workspace', 'doctor', '--workspace', workspacePath], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(doctor.workspace_doctor.status, 'passed');
+    assert.deepEqual(doctor.workspace_doctor.blockers, []);
+    assert.equal(doctor.workspace_doctor.indexed_projects[0].project_id, 'deck-001');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace validate fails closed and doctor reports blockers for missing workspace index', () => {
+  const workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-missing-index-'));
+
+  try {
+    const failure = runCliFailure(['workspace', 'validate', '--workspace', workspacePath]);
+    assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+    assert.equal(failure.payload.error.details.blockers[0].code, 'workspace_config_missing');
+    assert.equal(failure.payload.error.details.blockers[1].code, 'workspace_index_missing');
+
+    const doctor = runCli(['workspace', 'doctor', '--workspace', workspacePath]);
+    assert.equal(doctor.workspace_doctor.status, 'blocked');
+    assert.equal(doctor.workspace_doctor.blockers[0].code, 'workspace_config_missing');
+    assert.equal(doctor.workspace_doctor.blockers[1].code, 'workspace_index_missing');
+  } finally {
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+  }
+});
+
+test('workspace adopt dry-run plans OPL topology without writing metadata', () => {
+  const workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-adopt-'));
+
+  try {
+    const output = runCli([
+      'workspace',
+      'adopt',
+      '--agent',
+      'mas',
+      '--workspace',
+      workspacePath,
+      '--study-id',
+      'DM002',
+      '--dry-run',
+    ]);
+
+    assert.equal(output.workspace_adoption.status, 'dry_run_ready');
+    assert.equal(output.workspace_adoption.write_allowed, false);
+    assert.equal(output.workspace_adoption.profile.profile_id, 'mas_portfolio');
+    assert.equal(output.workspace_adoption.canonical_topology.project_collection_path, 'studies');
+    assert.equal(output.workspace_adoption.canonical_topology.project_unit_kind, 'study');
+    assert.equal(output.workspace_adoption.project.stage_outputs_root, 'studies/DM002/artifacts/stage_outputs');
+    assert.equal(output.workspace_adoption.would_create_metadata_files.includes(path.join(workspacePath, 'workspace_index.json')), true);
+    assert.equal(output.workspace_adoption.would_create_directories.includes(path.join(workspacePath, 'studies', 'DM002', 'artifacts', 'stage_outputs')), true);
+    assert.equal(output.workspace_adoption.would_index_projects[0].project_id, 'DM002');
+    assert.equal(fs.existsSync(path.join(workspacePath, 'workspace_index.json')), false);
+  } finally {
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+  }
+});
+
+test('workspace adopt requires dry-run until apply semantics are explicitly added', () => {
+  const workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-adopt-no-dry-'));
+
+  try {
+    const failure = runCliFailure([
+      'workspace',
+      'adopt',
+      '--agent',
+      'rca',
+      '--workspace',
+      workspacePath,
+      '--project-id',
+      'deck-001',
+    ]);
+    assert.equal(failure.payload.error.code, 'cli_usage_error');
+    assert.deepEqual(failure.payload.error.details.required, ['--dry-run']);
+  } finally {
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+  }
 });

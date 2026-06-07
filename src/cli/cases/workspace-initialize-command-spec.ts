@@ -3,8 +3,18 @@ import {
   ensureWorkspace,
   initializeWorkspace,
 } from '../../workspace-initializer.ts';
+import {
+  adoptWorkspace,
+  doctorWorkspace,
+  validateWorkspace,
+} from '../../workspace-diagnostics.ts';
 import type { FrameworkContracts } from '../../types.ts';
-import { assertNoArgs, parseWorkspaceInitializeArgs } from '../modules/support.ts';
+import {
+  assertNoArgs,
+  parseWorkspaceAdoptArgs,
+  parseWorkspaceInitializeArgs,
+  parseWorkspaceValidationArgs,
+} from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 export function buildWorkspaceInitializeCommandSpecs(
@@ -61,6 +71,57 @@ export function buildWorkspaceInitializeCommandSpecs(
           bind: parsed.bind,
           dryRun: parsed.dryRun,
           force: parsed.force,
+        });
+      },
+    },
+    'workspace validate': {
+      usage: 'opl workspace validate --workspace <path>',
+      summary:
+        'Fail closed unless workspace_index.json, topology semantics, user inspection roots, and authority boundaries match the OPL workspace norm.',
+      examples: [
+        'opl workspace validate --workspace /Users/gaofeng/workspace/visual-theme-a',
+      ],
+      handler: (args) => {
+        const parsed = parseWorkspaceValidationArgs(args, specs['workspace validate']);
+        return validateWorkspace(getContracts(), {
+          workspacePath: parsed.workspacePath,
+        });
+      },
+    },
+    'workspace doctor': {
+      usage: 'opl workspace doctor --workspace <path>',
+      summary:
+        'Read an OPL workspace index and report topology, shared resources, indexed projects, and blockers without writing files.',
+      examples: [
+        'opl workspace doctor --workspace /Users/gaofeng/workspace/visual-theme-a',
+      ],
+      handler: (args) => {
+        const parsed = parseWorkspaceValidationArgs(args, specs['workspace doctor']);
+        return doctorWorkspace(getContracts(), {
+          workspacePath: parsed.workspacePath,
+        });
+      },
+    },
+    'workspace adopt': {
+      usage:
+        'opl workspace adopt --agent <mas|mag|rca|oma> --workspace <path> [--project-id <id>] [--mode auto|one_off|series|portfolio] --dry-run',
+      summary:
+        'Plan how an existing directory would be adopted into the OPL workspace topology; dry-run only and does not write files.',
+      examples: [
+        'opl workspace adopt --agent rca --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --dry-run',
+        'opl workspace adopt --agent mas --workspace /Users/gaofeng/workspace/dm-cvd --study-id DM002 --dry-run',
+      ],
+      handler: (args) => {
+        const parsed = parseWorkspaceAdoptArgs(args, specs['workspace adopt']);
+        return adoptWorkspace(getContracts(), {
+          agentId: parsed.agentId,
+          workspacePath: parsed.workspacePath,
+          workspaceRoot: parsed.workspaceRoot,
+          workspaceId: parsed.workspaceId,
+          projectId: parsed.projectId,
+          title: parsed.title,
+          mode: parsed.mode,
+          dryRun: parsed.dryRun,
         });
       },
     },

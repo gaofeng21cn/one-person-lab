@@ -127,6 +127,21 @@ type WorkspaceInitializeCliInput = {
   force?: boolean;
 };
 
+type WorkspaceValidationCliInput = {
+  workspacePath?: string;
+};
+
+type WorkspaceAdoptCliInput = {
+  agentId?: string;
+  workspacePath?: string;
+  workspaceRoot?: string;
+  workspaceId?: string;
+  projectId?: string;
+  title?: string;
+  mode?: 'auto' | 'one_off' | 'series' | 'portfolio';
+  dryRun?: boolean;
+};
+
 type WebCliInput = {
   host?: string;
   port?: number;
@@ -240,6 +255,8 @@ export type {
   UpdateChannelCliInput,
   WebCliInput,
   WorkspaceInitializeCliInput,
+  WorkspaceAdoptCliInput,
+  WorkspaceValidationCliInput,
   WorkspaceRegistryCliInput,
   WorkspaceRootCliInput,
   WorkspaceStatusCliInput,

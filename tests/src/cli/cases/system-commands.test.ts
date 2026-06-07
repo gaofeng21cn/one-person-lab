@@ -196,6 +196,9 @@ test('help advertises initialize and environment management command surfaces', (
   assert.equal(commands.includes('workspace root set'), true);
   assert.equal(commands.includes('workspace root doctor'), true);
   assert.equal(commands.includes('workspace init'), true);
+  assert.equal(commands.includes('workspace validate'), true);
+  assert.equal(commands.includes('workspace doctor'), true);
+  assert.equal(commands.includes('workspace adopt'), true);
   assert.equal(commands.includes('workspace interfaces'), true);
 });
 
