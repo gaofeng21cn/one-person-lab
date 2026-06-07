@@ -31,14 +31,6 @@
       "reason": "reviewed historical runtime completion entry; scheduled structure maintenance continues semantic thinning",
       "intended_boundary": "agent lab completion entry remains stable while subresponsibilities move to focused agent-lab modules",
       "review_after": "2026-09-30"
-    },
-    {
-      "path": "src/family-runtime-stage-attempts.ts",
-      "limit": 1054,
-      "owner": "family-runtime-owner",
-      "reason": "reviewed historical stage-attempt surface; scheduled structure maintenance continues durable attempt primitive thinning",
-      "intended_boundary": "stage attempt public surface stays stable while query, closeout, and provider-specific helpers move to focused modules",
-      "review_after": "2026-09-30"
     }
   ]
 }
