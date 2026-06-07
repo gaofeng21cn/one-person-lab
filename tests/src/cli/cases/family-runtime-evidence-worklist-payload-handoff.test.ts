@@ -7,6 +7,9 @@ import {
 } from '../helpers.ts';
 import { runExternalEvidenceApply } from '../../../../src/external-evidence-ledger.ts';
 import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/family-runtime-evidence-worklist.ts';
+import {
+  recordStageRunExecutionAuthorizationReceipts,
+} from '../../../../src/stage-run-execution-authorization-ledger.ts';
 import type { FrameworkContracts } from '../../../../src/types.ts';
 import {
   assertCurrentOwnerDeltaReadModel,
@@ -52,6 +55,56 @@ const contracts = {
     surfaces: [],
   },
 } as FrameworkContracts;
+
+async function withIsolatedOplState<T>(
+  callback: (stateRoot: string) => T | Promise<T>,
+): Promise<T> {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-payload-handoff-state-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    return await callback(stateRoot);
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+}
+
+function recordPayloadHandoffStageRunAuthorization() {
+  const stageRunId = 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch';
+  const receipt = recordStageRunExecutionAuthorizationReceipts([{
+    stage_run_id: stageRunId,
+    domain_id: 'medautoscience',
+    stage_id: 'domain_owner/default-executor-dispatch',
+    generation: 0,
+    phase: 'launch',
+    selected_executor: 'codex_cli',
+    provider_attempt_ref:
+      'opl runtime action execute --action domain_dispatch:medautoscience:sat_payload_handoff:record --payload \'{"domain_receipt_refs":["<medautoscience-owner-receipt-ref>"],"typed_blocker_refs":[],"no_regression_refs":["<medautoscience-no-regression-ref>"],"owner_chain_refs":["<medautoscience-owner-chain-ref>"],"evidence_refs":[]}\'',
+    stage_attempt_id: 'sat_payload_handoff',
+    attempt_lease_ref:
+      'opl://stage-attempts/sat_payload_handoff/leases/payload-handoff/active',
+    attempt_lease_status: 'active',
+    execution_authorization_decision_ref:
+      'opl://stage-attempts/sat_payload_handoff/execution-authorizations/payload-handoff',
+    workspace_scope_ref:
+      'domain_dispatch:medautoscience:sat_payload_handoff:record',
+    artifact_scope_ref: 'domain_owner/default-executor-dispatch',
+    source_fingerprint:
+      'owner_delta_first:med-autoscience:domain-app-or-live-refs-payload-required-to-record-domain-dispatch-owner-receipt-or-typed-blocker:1:0',
+    idempotency_key:
+      'current-owner-delta:medautoscience:domain-owner-default-executor-dispatch:owner-answer-or-typed-blocker',
+    current_pointer_ref:
+      `opl://stage-runs/${encodeURIComponent(stageRunId)}/current`,
+    stage_manifest_ref:
+      'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch',
+  }]);
+  assert.equal(receipt.status, 'recorded');
+}
 
 type PayloadHandoffWorklist = {
   summary: {
@@ -537,9 +590,10 @@ test('family-runtime evidence-worklist does not expose stale domain-dispatch rou
   assert.equal(worklist.domain_dispatch_evidence_workorder_packet.workorders.length, 0);
   assert.deepEqual(worklist.audit_worklist_next_safe_actions, []);
   assert.deepEqual(worklist.next_safe_actions, []);
-  const countSummary = (worklist.current_owner_delta_read_model as JsonRecord).count_summary as JsonRecord;
+  const countSummary = (worklist.current_owner_delta_read_model as JsonRecord)
+    .owner_delta_audit_tail as JsonRecord;
   assert.equal(
-    countSummary.open_safe_action_count,
+    (countSummary.count_summary as JsonRecord).open_safe_action_count,
     0,
   );
 });
@@ -646,8 +700,10 @@ test('family-runtime evidence-worklist closes domain-dispatch payload workorder 
 });
 
 test('family-runtime evidence-worklist summary next actions carry domain-dispatch payload handoff', async () => {
-  const actionId = 'domain_dispatch:medautoscience:sat_payload_handoff:record';
-  const output = await runFamilyRuntimeEvidenceWorklist(contracts, {
+  await withIsolatedOplState(async () => {
+    recordPayloadHandoffStageRunAuthorization();
+    const actionId = 'domain_dispatch:medautoscience:sat_payload_handoff:record';
+    const output = await runFamilyRuntimeEvidenceWorklist(contracts, {
     familyDefaults: true,
     providerKind: 'temporal',
     executorKind: 'codex_cli',
@@ -869,4 +925,5 @@ test('family-runtime evidence-worklist summary next actions carry domain-dispatc
   );
   assert.equal(action.identity_binding_guidance.authority_boundary.can_generate_domain_owner_receipt, false);
   assert.equal(action.worklist_item_is_completion_claim, false);
+  });
 });
