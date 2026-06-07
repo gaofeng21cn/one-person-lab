@@ -11,10 +11,15 @@ import {
   test,
 } from '../helpers.ts';
 import {
+  createMinimalFamilyWorkspaceRoot,
   familyRuntimeEnv,
   withEvidenceWorklistSurfaces,
 } from './family-runtime-evidence-worklist-helpers.ts';
-import { buildReadyAgentRepo } from './agents-conformance-fixtures.ts';
+import {
+  buildReadyAgentRepo,
+  configureReadyMetaMorphology,
+  retargetReadyRepo,
+} from './agents-conformance-fixtures.ts';
 
 test('family-runtime evidence-worklist uses repo-native default-caller readiness before manifest projection', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-default-caller-repo-native-'));
@@ -165,8 +170,19 @@ test('family-runtime evidence-worklist uses repo-native default-caller readiness
 test('family-runtime evidence-worklist keeps family default-caller deletion scope aligned with OMA', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-default-caller-oma-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const familyWorkspaceRoot = createMinimalFamilyWorkspaceRoot({
+    includeOplMetaAgent: true,
+    buildRepo: (domainId, domainLabel) => {
+      const repoDir = buildReadyAgentRepo();
+      retargetReadyRepo(repoDir, domainId, domainLabel);
+      if (domainId === 'opl-meta-agent') {
+        configureReadyMetaMorphology(repoDir);
+      }
+      return repoDir;
+    },
+  });
   const env = familyRuntimeEnv(stateRoot, fixtureContractsRoot, {
-    OPL_FAMILY_WORKSPACE_ROOT: path.dirname(repoRoot),
+    OPL_FAMILY_WORKSPACE_ROOT: familyWorkspaceRoot,
   });
 
   try {
@@ -175,23 +191,23 @@ test('family-runtime evidence-worklist keeps family default-caller deletion scop
       'default-callers',
       '--family-defaults',
     ], env);
+    assert.equal(defaultCallers.physical_delete_authority_read_model.total_repo_count, 4);
     assert.equal(defaultCallers.deletion_evidence_worklist_count, 32);
     assert.equal(defaultCallers.missing_no_active_caller_proof_count, 0);
+    assert.equal(defaultCallers.missing_domain_owner_receipt_or_typed_blocker_count, 32);
+    assert.equal(defaultCallers.missing_no_forbidden_write_proof_count, 32);
+    assert.equal(defaultCallers.missing_tombstone_or_provenance_ref_count, 32);
     assert.equal(
       defaultCallers.physical_delete_authority_read_model.next_required_owner_action,
-      'domain_owner_choose_delete_authorize_keep_or_typed_blocker',
+      'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
     );
     assert.deepEqual(
       defaultCallers.physical_delete_authority_read_model.accepted_refs_only_result_shapes,
-      [
-        'physical_delete_authorization_ref',
-        'keep_as_authority_adapter_ref',
-        'typed_blocker_ref',
-      ],
+      ['typed_blocker_ref'],
     );
     assert.equal(
       defaultCallers.physical_delete_authority_read_model.owner_decision_required_after_all_refs_observed,
-      true,
+      false,
     );
     assert.equal(defaultCallers.physical_delete_authorized, false);
     assert.equal(defaultCallers.default_caller_delete_ready, false);
@@ -241,5 +257,44 @@ test('family-runtime evidence-worklist keeps family default-caller deletion scop
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('agents default-callers treats family workspace root as an explicit discovery override', () => {
+  const familyWorkspaceRoot = createMinimalFamilyWorkspaceRoot({
+    includeOplMetaAgent: true,
+    buildRepo: (domainId, domainLabel) => {
+      const repoDir = buildReadyAgentRepo();
+      retargetReadyRepo(repoDir, domainId, domainLabel);
+      if (domainId === 'opl-meta-agent') {
+        configureReadyMetaMorphology(repoDir);
+      }
+      return repoDir;
+    },
+  });
+
+  try {
+    const defaultCallers = runCli([
+      'agents',
+      'default-callers',
+      '--family-defaults',
+    ], {
+      OPL_FAMILY_WORKSPACE_ROOT: familyWorkspaceRoot,
+    });
+    assert.equal(defaultCallers.physical_delete_authority_read_model.total_repo_count, 4);
+    assert.deepEqual(
+      defaultCallers.repo_deletion_gate_summary.map((repo: { repo_dir: string }) =>
+        path.dirname(repo.repo_dir)
+      ),
+      [
+        familyWorkspaceRoot,
+        familyWorkspaceRoot,
+        familyWorkspaceRoot,
+        familyWorkspaceRoot,
+      ],
+    );
+  } finally {
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
   }
 });

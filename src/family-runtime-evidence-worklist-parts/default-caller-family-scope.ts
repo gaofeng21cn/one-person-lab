@@ -16,6 +16,11 @@ function hasDefaultCallerProjection(drilldown: JsonRecord) {
   return drilldown.default_caller_deletion_evidence_refs !== undefined;
 }
 
+function hasExplicitEmptyDefaultCallerProjection(drilldown: JsonRecord) {
+  return hasDefaultCallerProjection(drilldown)
+    && recordList(record(drilldown.default_caller_deletion_evidence_refs).domains).length === 0;
+}
+
 function compactDefaultCallerReadinessWorklist(worklist: JsonRecord) {
   const requirementIds = stringList(worklist.requirement_ids);
   const missingRequirementIds = requirementIds.filter((requirementId) =>
@@ -128,6 +133,9 @@ export function familyDefaultCallerSupplementalDomains(
   input: EvidenceWorklistFamilyScopeInput,
   drilldown: JsonRecord,
 ) {
+  if (hasExplicitEmptyDefaultCallerProjection(drilldown)) {
+    return [];
+  }
   const projection = record(drilldown.default_caller_deletion_evidence_refs);
   const projectedDomains = recordList(projection.domains);
   if (projectedDomains.length === 0) {
