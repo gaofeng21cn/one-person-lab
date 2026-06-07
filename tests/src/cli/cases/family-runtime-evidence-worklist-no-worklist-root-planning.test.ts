@@ -313,3 +313,65 @@ test('family-runtime evidence-worklist keeps stage replay guidance out of defaul
     false,
   );
 });
+
+test('family-runtime evidence-worklist keeps current owner delta visible when ordinary worklist is empty', () => {
+  const projection = buildWorklistCurrentOwnerDeltaReadModel({
+    drilldown: {
+      attention_first_payload: {
+        owner_delta_first: {
+          surface_kind: 'opl_owner_delta_first_projection',
+          status: 'owner_delta_required',
+          next_owner: 'med-autoscience',
+          next_required_delta: 'owner_answer_or_typed_blocker_required',
+          required_return_shapes: ['owner_answer_ref', 'typed_blocker_ref'],
+          primary_item: {
+            owner: 'med-autoscience',
+            stage_id: 'domain_route/reconcile-apply',
+          },
+          authority_boundary: {
+            raw_worklist_can_drive_default_planning: false,
+          },
+        },
+      },
+    },
+    openItems: [],
+    nextSafeActions: [],
+    counts: {
+      open_safe_action_payload_required_item_count: 0,
+      open_safe_action_payload_free_item_count: 0,
+    },
+    compactEvidenceEnvelope: {
+      summary: {
+        open_envelope_count: 0,
+        blocked_envelope_count: 1965,
+      },
+    },
+    domainDispatchEvidenceWorkorderSummary: {
+      workorder_count: 0,
+    },
+    stageReplayMissingReceiptWorkorderSummary: {
+      workorder_count: 14,
+    },
+  });
+
+  assert.equal(projection.owner_delta_audit_tail.count_summary.open_safe_action_count, 0);
+  assert.equal(projection.owner_delta_audit_tail.audit_next_safe_action_or_none, null);
+  assert.equal(projection.current_owner_delta.current_owner, 'med-autoscience');
+  assert.equal(
+    projection.default_summary.next_action_kind,
+    'current_owner_delta_owner_answer_or_typed_blocker_required',
+  );
+  assert.equal(
+    projection.next_safe_action_or_none?.derivation_source,
+    'current_owner_delta',
+  );
+  assert.equal(
+    projection.next_safe_action_or_none?.action_kind,
+    'current_owner_delta_owner_answer_or_typed_blocker_required',
+  );
+  assert.equal(projection.next_safe_action_or_none?.owner, 'med-autoscience');
+  assert.equal(projection.next_safe_action_or_none?.route_requires_domain_or_app_payload, true);
+  assert.equal(projection.next_safe_action_or_none?.can_submit_to_safe_action_shell, false);
+  assert.equal(projection.next_safe_action_or_none?.worklist_item_is_completion_claim, false);
+  assert.equal(projection.next_safe_action_or_none?.raw_worklist_can_drive_default_planning, false);
+});
