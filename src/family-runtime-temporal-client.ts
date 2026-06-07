@@ -14,10 +14,10 @@ export type TemporalClientOptions = {
   rpcTimeoutMs?: number;
 };
 
-export const DEFAULT_TEMPORAL_CLIENT_CONNECT_TIMEOUT_MS = 3_000;
-export const DEFAULT_TEMPORAL_CLIENT_RPC_TIMEOUT_MS = 3_000;
+const DEFAULT_TEMPORAL_CLIENT_CONNECT_TIMEOUT_MS = 3_000;
+const DEFAULT_TEMPORAL_CLIENT_RPC_TIMEOUT_MS = 3_000;
 
-export function resolveTemporalClientConnectTimeoutMs() {
+function resolveTemporalClientConnectTimeoutMs() {
   const raw = process.env.OPL_TEMPORAL_CLIENT_CONNECT_TIMEOUT_MS?.trim();
   if (!raw) {
     return DEFAULT_TEMPORAL_CLIENT_CONNECT_TIMEOUT_MS;

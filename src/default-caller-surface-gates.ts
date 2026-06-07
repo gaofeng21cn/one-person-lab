@@ -8,7 +8,7 @@ import {
 
 export type JsonRecord = Record<string, unknown>;
 
-export const DEFAULT_CALLER_TARGET_KINDS = [
+const DEFAULT_CALLER_TARGET_KINDS = [
   'opl_generated_surface',
   'opl_hosted_surface',
   'domain_handler_target',

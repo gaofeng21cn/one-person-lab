@@ -668,33 +668,6 @@ export function buildCurrentOwnerDeltaReadModel(input: {
   };
 }
 
-export function buildIdleCurrentOwnerDeltaReadModel() {
-  return buildCurrentOwnerDeltaReadModel({
-    ownerDeltaFirst: {
-      next_owner: 'one-person-lab',
-      next_required_delta: 'no_opl_operator_actionable_delta_required',
-      required_return_shapes: ['typed_blocker_ref'],
-    },
-    countSummary: {
-      openSafeActionCount: 0,
-      payloadRequiredCount: 0,
-      payloadFreeCount: 0,
-      blockedRefsOnlyCount: 0,
-      evidenceEnvelopeOpenCount: 0,
-      evidenceEnvelopeBlockedCount: 0,
-      domainDispatchWorkorderCount: 0,
-      stageReplayMissingReceiptWorkorderCount: 0,
-    },
-    fullDetailRefs: {
-      framework_readiness_ref: 'opl framework readiness --family-defaults --json',
-      evidence_worklist_ref:
-        'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --json',
-      app_operator_drilldown_ref:
-        'opl runtime app-operator-drilldown --detail full --json',
-    },
-  });
-}
-
 export function buildCurrentOwnerDeltaCacheRefreshRequiredReadModel() {
   return buildCurrentOwnerDeltaReadModel({
     ownerDeltaFirst: {

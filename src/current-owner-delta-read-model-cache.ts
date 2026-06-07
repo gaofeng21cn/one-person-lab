@@ -56,7 +56,7 @@ function cacheAuthorityBoundary() {
   };
 }
 
-export function buildCurrentOwnerDeltaReadModelCachePayload(
+function buildCurrentOwnerDeltaReadModelCachePayload(
   input: CurrentOwnerDeltaReadModelCacheInput,
 ) {
   if (!readModelIsUsable(input.readModel)) {

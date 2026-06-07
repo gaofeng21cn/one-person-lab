@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 
-import { FrameworkContractError } from './contracts.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 
 export type OplAgentMode = 'codex';
@@ -50,43 +49,4 @@ export function readOplRuntimeModes(): OplRuntimeModes {
   } catch {
     return buildDefaultOplRuntimeModes();
   }
-}
-
-export function writeOplRuntimeModes(input: Partial<{
-  interaction_mode: OplAgentMode;
-  execution_mode: OplAgentMode;
-}>): OplRuntimeModes {
-  if (input.interaction_mode !== undefined && !isOplAgentMode(input.interaction_mode)) {
-    throw new FrameworkContractError(
-      'cli_usage_error',
-      'OPL interaction_mode must be codex.',
-      {
-        interaction_mode: input.interaction_mode,
-      },
-      2,
-    );
-  }
-
-  if (input.execution_mode !== undefined && !isOplAgentMode(input.execution_mode)) {
-    throw new FrameworkContractError(
-      'cli_usage_error',
-      'OPL execution_mode must be codex.',
-      {
-        execution_mode: input.execution_mode,
-      },
-      2,
-    );
-  }
-
-  const current = readOplRuntimeModes();
-  const next: OplRuntimeModes = {
-    version: 'g1',
-    interaction_mode: input.interaction_mode ?? current.interaction_mode,
-    execution_mode: input.execution_mode ?? current.execution_mode,
-    updated_at: new Date().toISOString(),
-  };
-
-  const paths = ensureOplStateDir(resolveOplStatePaths());
-  fs.writeFileSync(paths.runtime_modes_file, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
-  return next;
 }

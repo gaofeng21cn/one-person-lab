@@ -448,3 +448,54 @@ test('convergence governance snapshots do not promote gateway federation wording
 
   assert.deepEqual(violations, []);
 });
+
+test('retired internal write and fallback helper exports do not return', () => {
+  const sourceExpectations: Array<[string, RegExp[]]> = [
+    [
+      'src/runtime-modes.ts',
+      [
+        /\bexport\s+function\s+writeOplRuntimeModes\b/,
+        /\bFrameworkContractError\b/,
+      ],
+    ],
+    [
+      'src/current-owner-delta-projection.ts',
+      [
+        /\bbuildIdleCurrentOwnerDeltaReadModel\b/,
+        /\bno_opl_operator_actionable_delta_required\b[\s\S]{0,240}\btyped_blocker_ref\b/,
+      ],
+    ],
+    [
+      'src/current-owner-delta-read-model-cache.ts',
+      [
+        /\bexport\s+function\s+buildCurrentOwnerDeltaReadModelCachePayload\b/,
+      ],
+    ],
+    [
+      'src/family-runtime-temporal-client.ts',
+      [
+        /\bexport\s+const\s+DEFAULT_TEMPORAL_CLIENT_CONNECT_TIMEOUT_MS\b/,
+        /\bexport\s+const\s+DEFAULT_TEMPORAL_CLIENT_RPC_TIMEOUT_MS\b/,
+        /\bexport\s+function\s+resolveTemporalClientConnectTimeoutMs\b/,
+      ],
+    ],
+    [
+      'src/default-caller-surface-gates.ts',
+      [
+        /\bexport\s+const\s+DEFAULT_CALLER_TARGET_KINDS\b/,
+      ],
+    ],
+  ];
+  const violations: string[] = [];
+
+  for (const [relativePath, forbiddenPatterns] of sourceExpectations) {
+    const content = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
+    for (const pattern of forbiddenPatterns) {
+      if (pattern.test(content)) {
+        violations.push(`${relativePath}: ${pattern}`);
+      }
+    }
+  }
+
+  assert.deepEqual(violations, []);
+});
