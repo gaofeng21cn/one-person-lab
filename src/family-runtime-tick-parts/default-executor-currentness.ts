@@ -15,6 +15,10 @@ import {
   defaultExecutorStudyActionIdentity,
   defaultExecutorStudyIdentity,
 } from '../family-runtime-provider-hosted-attempts.ts';
+import {
+  hasMasStageNativeOwnerAnswer,
+  isMasReadinessStageNativeOwnerAction,
+} from '../family-runtime-mas-stage-native-owner-answer.ts';
 
 export const DEFAULT_EXECUTOR_SUPERSEDED_REASON = 'mas_default_executor_superseded_by_current_source';
 
@@ -212,6 +216,26 @@ function completedAcceptedAttemptForTask(db: DatabaseSync, row: FamilyRuntimeTas
   )) ?? null;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function completedCloseoutCanReconcileTask(
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+  attempt: NonNullable<ReturnType<typeof completedAcceptedAttemptForTask>>,
+) {
+  if (!isMasReadinessStageNativeOwnerAction(row, payload)) {
+    return true;
+  }
+  if (hasMasStageNativeOwnerAnswer(attempt.route_impact, payload)) {
+    return true;
+  }
+  return attempt.activity_events.some((event) =>
+    isRecord(event) && hasMasStageNativeOwnerAnswer(event, payload)
+  );
+}
+
 function reconcileCompletedCloseoutDefaultExecutorRow(
   db: DatabaseSync,
   row: FamilyRuntimeTaskRow,
@@ -220,6 +244,9 @@ function reconcileCompletedCloseoutDefaultExecutorRow(
 ) {
   const attempt = completedAcceptedAttemptForTask(db, row);
   if (!attempt) {
+    return false;
+  }
+  if (!completedCloseoutCanReconcileTask(row, payload, attempt)) {
     return false;
   }
   const reconciledAt = new Date().toISOString();

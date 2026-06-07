@@ -74,6 +74,22 @@ function defaultExecutorPayload(sourceFingerprint: string) {
   };
 }
 
+function readinessSurfacePayload(sourceFingerprint: string) {
+  return {
+    ...defaultExecutorPayload(sourceFingerprint),
+    action_type: 'complete_medical_paper_readiness_surface',
+    dispatch_authority: 'consumer_default_executor_dispatch',
+    next_executable_owner: 'MedAutoScience',
+    domain_owner: 'MedAutoScience',
+    work_unit_id: 'complete_medical_paper_readiness_surface',
+    dispatch_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/immutable/complete_medical_paper_readiness_surface/79fb44a18783dfe7438929b6.json',
+    owner_route_currentness_basis: {
+      work_unit_id: 'complete_medical_paper_readiness_surface',
+      work_unit_fingerprint: `stage-current-owner-delta::complete_medical_paper_readiness_surface::${sourceFingerprint}`,
+    },
+  };
+}
+
 function insertDefaultExecutorTask(db: DatabaseSync) {
   const createdAt = '2026-05-25T16:30:00.000Z';
   db.prepare(`
@@ -422,6 +438,104 @@ test('family-runtime tick does not re-admit a MAS default executor task after ac
         reconcileEvents[0].payload.authority_boundary.provider_stage_attempt_started,
         false,
       );
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime tick re-admits MAS readiness owner action when completed closeout lacks current Stage Native answer', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const taskId = 'task-mas-readiness-completed-closeout-missing-stage-native-answer';
+      const createdAt = '2026-06-07T13:55:00.000Z';
+      const payload = readinessSurfacePayload('readiness-closeout-redrive');
+      db.prepare(`
+        INSERT INTO tasks(
+          task_id, domain_id, task_kind, payload_json, dedupe_key, priority, status,
+          attempts, max_attempts, source, requires_approval, approved_at, lease_owner,
+          lease_expires_at, last_error, dead_letter_reason, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        taskId,
+        'medautoscience',
+        'domain_owner/default-executor-dispatch',
+        JSON.stringify(payload),
+        'mas:dm-cvd:002:default-executor:complete_medical_paper_readiness_surface:readiness-closeout-redrive',
+        65,
+        'queued',
+        0,
+        3,
+        'test-domain-export',
+        0,
+        null,
+        null,
+        null,
+        null,
+        null,
+        createdAt,
+        createdAt,
+      );
+      const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as FamilyRuntimeTaskRow;
+      const completedAttempt = ensureProviderHostedStageAttempt(db, row, payload);
+      assert.ok(completedAttempt);
+      ingestStageAttemptCloseout(db, {
+        stageAttemptId: completedAttempt.stage_attempt_id,
+        packet: {
+          surface_kind: 'stage_attempt_closeout_packet',
+          closeout_refs: [
+            'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_execution/latest.json',
+            'artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json',
+          ],
+          consumed_refs: ['dispatch:completed-default-executor'],
+          consumed_memory_refs: [],
+          writeback_receipt_refs: [],
+          rejected_writes: [],
+          next_owner: 'medautoscience',
+          domain_ready_verdict: 'blocked_from_medical_paper_readiness_owner_surface',
+          route_impact: {
+            action_type: 'complete_medical_paper_readiness_surface',
+            owner_result_status: 'typed_blocker_or_stop_loss',
+          },
+        },
+      });
+
+      let dispatchCount = 0;
+      const tick = await runFamilyRuntimeQueueTick<TickDispatch>(db, familyRuntimePaths(), {
+        source: 'test-readiness-closeout-without-stage-native-answer',
+        limit: 2,
+        hydrate: false,
+        taskScope: {
+          domainId: 'medautoscience',
+          taskKind: 'domain_owner/default-executor-dispatch',
+          payloadMatches: [{
+            path: 'study_id',
+            value: '002-dm-china-us-mortality-attribution',
+          }],
+        },
+      }, {
+        enqueueTask: () => ({ accepted: false }),
+        queryTemporalStageAttempt: async () => {
+          throw new Error('completed attempt is terminal and should not require Temporal query');
+        },
+        dispatchTask: (_db, _paths, selectedRow: FamilyRuntimeTaskRow) => {
+          dispatchCount += 1;
+          return { task_id: selectedRow.task_id };
+        },
+      });
+      const task = db.prepare('SELECT status FROM tasks WHERE task_id = ?').get(taskId) as { status: string };
+      const reconcileEvents = listEvents(db).filter((event) =>
+        event.event_type === 'task_default_executor_completed_closeout_reconciled'
+      );
+
+      assert.equal(tick.selected_count, 1);
+      assert.equal(tick.mas_default_executor_completed_closeout_reconciled_count, 0);
+      assert.equal(dispatchCount, 1);
+      assert.equal(task.status, 'queued');
+      assert.equal(reconcileEvents.length, 0);
     });
   } finally {
     db.close();

@@ -42,15 +42,6 @@ function jsonRecord(value: string) {
   }
 }
 
-function jsonList(value: string) {
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
 function stringList(value: unknown) {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
@@ -106,12 +97,9 @@ function answerFingerprints(record: Record<string, unknown>) {
 
 function fingerprintsMatch(answer: Record<string, unknown>, currentPayload: Record<string, unknown>) {
   const answerSet = answerFingerprints(answer);
-  if (answerSet.size === 0) {
-    return true;
-  }
   const currentSet = currentFingerprints(currentPayload);
-  if (currentSet.size === 0) {
-    return true;
+  if (answerSet.size === 0 || currentSet.size === 0) {
+    return answerSet.size === 0 && currentSet.size === 0;
   }
   return [...answerSet].some((entry) => currentSet.has(entry));
 }
@@ -185,9 +173,6 @@ function stageAttemptHasStageNativeAnswer(
   attempt: StageAttemptPayload,
   currentPayload: Record<string, unknown>,
 ) {
-  if (attempt.closeout_refs.some((ref) => isStageNativeOwnerAnswerRef(ref, false))) {
-    return true;
-  }
   if (hasStageNativeAnswerInRecord(attempt.route_impact, currentPayload)) {
     return true;
   }
@@ -222,11 +207,6 @@ export function stageAttemptRowHasMasStageNativeOwnerAnswer(
   row: StageAttemptRow,
   currentPayload: Record<string, unknown>,
 ) {
-  const closeoutRefs = jsonList(row.closeout_refs_json)
-    .filter((entry): entry is string => typeof entry === 'string');
-  if (closeoutRefs.some((ref) => isStageNativeOwnerAnswerRef(ref, false))) {
-    return true;
-  }
   const routeImpact = jsonRecord(row.route_impact_json);
   return hasMasStageNativeOwnerAnswer(routeImpact, currentPayload);
 }

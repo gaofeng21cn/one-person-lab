@@ -257,7 +257,10 @@ test('family-runtime blocks completed MAS readiness attempt that lacks Stage Nat
       syncStageAttemptFromTemporalTerminalObservation(db, completedTemporalObservation({
         stageAttemptId: attempt.stage_attempt_id,
         workflowId: attempt.workflow_id,
-        closeoutRefs: ['studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_execution/latest.json'],
+        closeoutRefs: [
+          'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_execution/latest.json',
+          'artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json',
+        ],
         routeImpact: {
           action_type: 'complete_medical_paper_readiness_surface',
           owner_result_status: 'typed_blocker_or_stop_loss',

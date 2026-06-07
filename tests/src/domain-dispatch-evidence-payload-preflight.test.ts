@@ -629,3 +629,61 @@ test('typed blocker ref content identity mismatch fails closed even when payload
     rmSync(stateRoot, { recursive: true, force: true });
   }
 });
+
+test('local owner answer inspection supports JSON fragments and ignores JSONL history refs', () => {
+  const workspaceRoot = mkdtempSync(join(tmpdir(), 'opl-ref-identity-json-fragment-'));
+  try {
+    const closeoutRef =
+      'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_execution/sat-current.closeout.json#domain_blocker';
+    const historyRef =
+      'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_execution/history.jsonl';
+    const closeoutPath = join(workspaceRoot, closeoutRef.split('#')[0]);
+    const historyPath = join(workspaceRoot, historyRef);
+    mkdirSync(join(closeoutPath, '..'), { recursive: true });
+    writeFileSync(closeoutPath, JSON.stringify({
+      surface_kind: 'mas_default_executor_execution_closeout',
+      stage_attempt_id: 'sat-current',
+      study_id: '002-dm-china-us-mortality-attribution',
+      domain_blocker: {
+        surface_kind: 'mas_domain_typed_blocker',
+        stage_attempt_id: 'sat-current',
+        study_id: '002-dm-china-us-mortality-attribution',
+        reason: 'publication_eval_not_ai_reviewer_owned',
+      },
+    }));
+    writeFileSync(
+      historyPath,
+      [
+        JSON.stringify({ generated_at: '2026-06-07T14:00:00Z', status: 'blocked' }),
+        JSON.stringify({ generated_at: '2026-06-07T14:05:00Z', status: 'blocked' }),
+      ].join('\n'),
+    );
+
+    const preflight = preflightDomainDispatchEvidencePayload(
+      {
+        typed_blocker_refs: [closeoutRef],
+        owner_chain_refs: [historyRef],
+      },
+      {
+        target_identity: {
+          stage_attempt_id: 'sat-current',
+          study_id: '002-dm-china-us-mortality-attribution',
+        },
+        workspace_root: workspaceRoot,
+      },
+    );
+
+    assert.equal(preflight.status, 'ready_to_record');
+    assert.equal(preflight.identity_binding.status, 'matched');
+    assert.deepEqual(preflight.identity_binding.conflict_fields, []);
+    assert.equal(preflight.local_owner_answer_ref_identity.inspected_ref_count, 1);
+    assert.equal(preflight.local_owner_answer_ref_identity.inspected_refs[0].ref, closeoutRef);
+    assert.equal(preflight.local_owner_answer_ref_identity.inspected_refs[0].fragment, 'domain_blocker');
+    assert.equal(
+      preflight.local_owner_answer_ref_identity.inspected_refs[0].identity.stage_attempt_id,
+      'sat-current',
+    );
+  } finally {
+    rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});

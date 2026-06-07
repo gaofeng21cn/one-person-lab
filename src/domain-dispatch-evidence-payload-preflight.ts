@@ -68,8 +68,40 @@ function payloadSourceFingerprint(payload: JsonRecord) {
     ?? stringValue(record(payload.repair_work_unit).source_fingerprint);
 }
 
+function splitLocalRefFragment(ref: string) {
+  const hashIndex = ref.indexOf('#');
+  if (hashIndex < 0) {
+    return { refPath: ref, fragment: null };
+  }
+  return {
+    refPath: ref.slice(0, hashIndex),
+    fragment: ref.slice(hashIndex + 1) || null,
+  };
+}
+
+function fragmentRecord(content: JsonRecord, fragment: string | null) {
+  if (!fragment) {
+    return content;
+  }
+  const normalized = fragment.startsWith('/') ? fragment.slice(1) : fragment;
+  const value = normalized
+    .split('/')
+    .filter((part) => part.length > 0)
+    .reduce<unknown>((current, part) => {
+      if (!isRecord(current)) {
+        return undefined;
+      }
+      return current[decodeURIComponent(part)];
+    }, content);
+  return isRecord(value) ? value : null;
+}
+
 function localJsonRefPath(ref: string, route: JsonRecord) {
   if (/^[a-z][a-z0-9+.-]*:\/\//i.test(ref) || /^[a-z][a-z0-9+.-]*:/i.test(ref)) {
+    return null;
+  }
+  const { refPath, fragment } = splitLocalRefFragment(ref);
+  if (!refPath.toLowerCase().endsWith('.json')) {
     return null;
   }
   const candidateRoots = uniqueList([
@@ -86,30 +118,54 @@ function localJsonRefPath(ref: string, route: JsonRecord) {
       record(route.target_identity).repo_root,
     ].map((value) => stringValue(value)).filter((value): value is string => Boolean(value)),
   ]);
-  if (path.isAbsolute(ref)) {
-    return ref;
+  if (path.isAbsolute(refPath)) {
+    return { ref_path: refPath, fragment };
   }
   for (const root of candidateRoots) {
     const resolvedRoot = path.resolve(root);
-    const resolvedRef = path.resolve(resolvedRoot, ref);
+    const resolvedRef = path.resolve(resolvedRoot, refPath);
     const relative = path.relative(resolvedRoot, resolvedRef);
     if (relative && !relative.startsWith('..') && !path.isAbsolute(relative)) {
-      return resolvedRef;
+      return { ref_path: resolvedRef, fragment };
     }
   }
   return null;
 }
 
 function localJsonRefContent(ref: string, route: JsonRecord) {
-  const refPath = localJsonRefPath(ref, route);
-  if (!refPath || !fs.existsSync(refPath)) {
+  const target = localJsonRefPath(ref, route);
+  if (!target || !fs.existsSync(target.ref_path)) {
     return null;
   }
-  const parsed = JSON.parse(fs.readFileSync(refPath, 'utf8'));
-  return isRecord(parsed) ? { ref, ref_path: refPath, content: parsed } : null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(fs.readFileSync(target.ref_path, 'utf8'));
+  } catch {
+    return null;
+  }
+  const content = isRecord(parsed) ? fragmentRecord(parsed, target.fragment) : null;
+  return content ? { ref, ref_path: target.ref_path, fragment: target.fragment, content } : null;
 }
 
 function identityFromOwnerAnswerContent(content: JsonRecord) {
+  const surfaceKind = stringValue(content.surface_kind);
+  const hasCloseoutBinding = isRecord(content.closeout_binding);
+  const hasOwnerAnswerShape = [
+    'receipt_kind',
+    'domain_blocker',
+    'typed_blocker_ref',
+    'owner_receipt_ref',
+  ].some((field) => content[field] !== undefined);
+  if (
+    !hasCloseoutBinding
+    && !hasOwnerAnswerShape
+    && surfaceKind !== 'stage_attempt_closeout_packet'
+    && surfaceKind !== 'mas_domain_typed_blocker'
+    && surfaceKind !== 'mas_stage_owner_receipt'
+    && surfaceKind !== 'mas_domain_owner_typed_blocker'
+  ) {
+    return {};
+  }
   const closeoutBinding = record(content.closeout_binding);
   return {
     study_id: firstString(content.study_id, closeoutBinding.study_id),
@@ -132,10 +188,16 @@ function identityFromOwnerAnswerContent(content: JsonRecord) {
 function identityFromLocalRefContents(route: JsonRecord, refs: string[]) {
   const sources = refs
     .map((ref) => localJsonRefContent(ref, route))
-    .filter((entry): entry is { ref: string; ref_path: string; content: JsonRecord } => Boolean(entry))
+    .filter((entry): entry is {
+      ref: string;
+      ref_path: string;
+      fragment: string | null;
+      content: JsonRecord;
+    } => Boolean(entry))
     .map((entry) => ({
       ref: entry.ref,
       ref_path: entry.ref_path,
+      fragment: entry.fragment,
       identity: identityFromOwnerAnswerContent(entry.content),
     }));
   const fields = [
@@ -474,6 +536,7 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
       inspected_refs: localOwnerAnswerRefIdentity.sources.map((source) => ({
         ref: source.ref,
         ref_path: source.ref_path,
+        fragment: source.fragment,
         identity: source.identity,
       })),
       payload_identity: localOwnerAnswerRefIdentity.identity,
