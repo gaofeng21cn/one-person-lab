@@ -557,6 +557,7 @@ test('family-runtime evidence-worklist classifies verified external blockers wit
       'full',
     ], familyRuntimeEnv(stateRoot, fixtureContractsRoot, {
       OPL_PROVIDER_PROOF_WINDOW_SECONDS: '86400',
+      OPL_FAMILY_WORKSPACE_ROOT: familyWorkspaceRoot,
     })).family_runtime_evidence_worklist;
 
     assert.equal(after.summary.open_safe_action_item_count, 15);

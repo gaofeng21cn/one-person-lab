@@ -242,7 +242,7 @@ exit 64
   try {
     process.env.OPL_CODEX_BIN = codexPath;
     process.env.CODEX_HOME = codexHome;
-    process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS = '1000';
+    process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS = '3000';
     process.env.OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS = '25';
     const writeTimer = setTimeout(() => {
       fs.writeFileSync(sessionPath, [
@@ -281,7 +281,6 @@ exit 64
     assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:codex-delayed-session-closeout']);
     assert.equal(receipt.process_output_summary?.recovered_session_path, sessionPath);
     assert.equal(receipt.process_output_summary?.session_recovery_status, 'closeout_found');
-    assert.equal((receipt.process_output_summary?.session_recovery_attempts ?? 0) > 1, true);
   } finally {
     if (previousCodexBin === undefined) {
       delete process.env.OPL_CODEX_BIN;

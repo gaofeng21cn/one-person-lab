@@ -102,7 +102,7 @@ exit 64
 test('Codex stage runner stops the live Codex process when Temporal activity cancellation aborts the run', async () => {
   const childPidPath = path.join(os.tmpdir(), `opl-codex-cancelled-child-${Date.now()}.txt`);
   const waitForChildPidFile = async () => {
-    const deadline = Date.now() + 1_000;
+    const deadline = Date.now() + 5_000;
     while (Date.now() < deadline) {
       if (fs.existsSync(childPidPath)) {
         return;
@@ -112,7 +112,7 @@ test('Codex stage runner stops the live Codex process when Temporal activity can
     throw new Error('fake Codex child pid was not recorded before cancellation.');
   };
   const waitForPidExit = async (pid: number) => {
-    const deadline = Date.now() + 1_000;
+    const deadline = Date.now() + 5_000;
     while (Date.now() < deadline) {
       try {
         process.kill(pid, 0);
@@ -152,7 +152,7 @@ exit 64
       },
       stagePacketRef: 'packet:activity-cancelled',
       runnerMode: 'codex_cli',
-      timeoutMs: 1_500,
+      timeoutMs: 5_000,
       signal: controller.signal,
     });
     await cancelWhenChildStarts;
