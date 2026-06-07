@@ -180,6 +180,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/runtime-standard-agent-template-consumption-ledger.test.ts',
   'tests/src/cli/cases/agents-readiness-stage-run-adoption.test.ts',
   'tests/src/cli/cases/agents-conformance.test.ts',
+  'tests/src/cli/cases/agents-conformance-readiness.test.ts',
   'tests/src/cli/cases/agents-conformance-private-surface.test.ts',
   'tests/src/cli/cases/agents-conformance-stage-run-kernel.test.ts',
   'tests/src/cli/cases/agents-conformance-rca-oma-mvp.test.ts',
