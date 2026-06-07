@@ -712,6 +712,13 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
       physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
       not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
     });
+  const ownerDecisionStatus = optionalString(
+    physicalDeleteAuthorityReadModel.owner_decision_status,
+  );
+  const structuralOwnerDecisionMissingCount = Number(
+    physicalDeleteAuthorityReadModel
+      .structural_prerequisites_observed_but_domain_owner_decision_missing_count || 0,
+  );
   return {
     version: 'g1',
     blocked_count: blockedCount,
@@ -735,6 +742,9 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
     default_caller_delete_ready: false,
     physical_delete_authorized: false,
     physical_delete_authorization_status: 'not_authorized_by_opl_projection',
+    owner_decision_status: ownerDecisionStatus,
+    structural_prerequisites_observed_but_domain_owner_decision_missing_count:
+      structuralOwnerDecisionMissingCount,
     physical_delete_authority_read_model: physicalDeleteAuthorityReadModel,
     repo_deletion_gate_summary:
       physicalDeleteAuthorityReadModel.repo_deletion_gate_summary,
@@ -768,6 +778,9 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
       physical_delete_authorized: false,
       generated_default_caller_readiness_can_authorize_physical_delete: false,
       physical_delete_authorization_status: 'not_authorized_by_opl_projection',
+      owner_decision_status: ownerDecisionStatus,
+      structural_prerequisites_observed_but_domain_owner_decision_missing_count:
+        structuralOwnerDecisionMissingCount,
       physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
       physical_delete_authority_read_model: physicalDeleteAuthorityReadModel,
       repo_deletion_gate_summary:
@@ -789,6 +802,9 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
         physical_delete_authorized: false,
         generated_default_caller_readiness_can_authorize_physical_delete: false,
         physical_delete_authorization_status: 'not_authorized_by_opl_projection',
+        owner_decision_status: ownerDecisionStatus,
+        structural_prerequisites_observed_but_domain_owner_decision_missing_count:
+          structuralOwnerDecisionMissingCount,
       },
       migration_gate_policy: {
         opl_generated_default_caller_readiness_is_structural_replacement_evidence: true,

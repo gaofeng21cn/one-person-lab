@@ -582,6 +582,16 @@ test('agents default-callers asks domain owner to choose delete keep or blocker 
   assert.equal(defaultCallers.missing_tombstone_or_provenance_ref_count, 0);
   assert.equal(defaultCallers.default_caller_delete_ready, false);
   assert.equal(defaultCallers.physical_delete_authorized, false);
+  assert.equal(defaultCallers.owner_decision_status, 'owner_decision_required');
+  assert.equal(
+    defaultCallers.structural_prerequisites_observed_but_domain_owner_decision_missing_count,
+    8,
+  );
+  assert.equal(defaultCallers.summary.owner_decision_status, 'owner_decision_required');
+  assert.equal(
+    defaultCallers.summary.structural_prerequisites_observed_but_domain_owner_decision_missing_count,
+    8,
+  );
   assert.equal(
     defaultCallers.physical_delete_authority_read_model
       .all_repos_delete_or_keep_prerequisites_observed,
@@ -605,8 +615,41 @@ test('agents default-callers asks domain owner to choose delete keep or blocker 
     ],
   );
   assert.equal(
+    defaultCallers.physical_delete_authority_read_model.owner_decision_status,
+    'owner_decision_required',
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model
+      .structural_prerequisites_observed_but_domain_owner_decision_missing_count,
+    8,
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.missing_gate_groups
+      .domain_owner_decision.missing_count,
+    8,
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.owner_decision_gate_by_repo[0]
+      .owner_decision_status,
+    'owner_decision_required',
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.owner_decision_gate_by_repo[0]
+      .surface_owner_decision_gates.length,
+    8,
+  );
+  assert.equal(
     defaultCallers.repo_deletion_gate_summary[0].delete_or_keep_prerequisites_observed,
     true,
+  );
+  assert.equal(
+    defaultCallers.repo_deletion_gate_summary[0].owner_decision_status,
+    'owner_decision_required',
+  );
+  assert.equal(
+    defaultCallers.repo_deletion_gate_summary[0].missing_gate_groups.domain_owner_decision
+      .missing_count,
+    8,
   );
   assert.equal(
     defaultCallers.repo_deletion_gate_summary[0].all_deletion_evidence_requirements_observed,
@@ -621,6 +664,8 @@ test('agents default-callers asks domain owner to choose delete keep or blocker 
   assert.equal(
     defaultCallers.repo_deletion_gate_summary[0].surface_deletion_gate_summary.every((surface: {
       delete_or_keep_prerequisites_observed: boolean;
+      owner_decision_status: string;
+      missing_gate_groups: { domain_owner_decision: { status: string } };
       owner_decision_required_after_prerequisites_observed: boolean;
       next_required_owner_action: string;
       accepted_refs_only_result_shapes: string[];
@@ -629,6 +674,8 @@ test('agents default-callers asks domain owner to choose delete keep or blocker 
       default_caller_delete_ready: boolean;
     }) => (
       surface.delete_or_keep_prerequisites_observed === true
+      && surface.owner_decision_status === 'owner_decision_required'
+      && surface.missing_gate_groups.domain_owner_decision.status === 'missing'
       && surface.owner_decision_required_after_prerequisites_observed === true
       && surface.next_required_owner_action === 'domain_owner_choose_delete_authorize_keep_or_typed_blocker'
       && surface.accepted_refs_only_result_shapes.includes('physical_delete_authorization_ref')
