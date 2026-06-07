@@ -13,6 +13,7 @@ import {
   test,
 } from '../helpers.ts';
 import {
+  createMinimalFamilyWorkspaceRoot,
   familyRuntimeEnv,
   insertProviderCapabilityReceipts,
   withEvidenceWorklistSurfaces,
@@ -420,6 +421,7 @@ test('family-runtime evidence-worklist exposes active attempt progress-first sup
 test('family-runtime evidence-worklist classifies verified external blockers without production authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-external-blocker-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const familyWorkspaceRoot = createMinimalFamilyWorkspaceRoot();
   const baseManifests = loadFamilyManifestFixtures();
   const manifests = {
     medautogrant: withEvidenceWorklistSurfaces(
@@ -480,6 +482,7 @@ test('family-runtime evidence-worklist classifies verified external blockers wit
       'full',
     ], familyRuntimeEnv(stateRoot, fixtureContractsRoot, {
       OPL_PROVIDER_PROOF_WINDOW_SECONDS: '86400',
+      OPL_FAMILY_WORKSPACE_ROOT: familyWorkspaceRoot,
     })).family_runtime_evidence_worklist;
 
     const externalRecord = before.worklist_items.find((item: { claim_scope: string }) =>
@@ -522,6 +525,7 @@ test('family-runtime evidence-worklist classifies verified external blockers wit
       'full',
     ], familyRuntimeEnv(stateRoot, fixtureContractsRoot, {
       OPL_PROVIDER_PROOF_WINDOW_SECONDS: '86400',
+      OPL_FAMILY_WORKSPACE_ROOT: familyWorkspaceRoot,
     })).family_runtime_evidence_worklist;
 
     const verifyItems = recordedWorklist.worklist_items.filter((item: { action_kind: string }) =>
@@ -597,6 +601,7 @@ test('family-runtime evidence-worklist classifies verified external blockers wit
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
   }
 });
 

@@ -2,6 +2,8 @@ import { spawnSync } from 'node:child_process';
 
 import {
   assert,
+  fs,
+  os,
   repoRoot,
   path,
   runCli,
@@ -22,6 +24,50 @@ export function familyRuntimeEnv(
     ...extra,
   };
 }
+
+export function createMinimalFamilyWorkspaceRoot(
+  options: {
+    includeOplMetaAgent?: boolean;
+    buildRepo?: (domainId: string, domainLabel: string) => string;
+  } = {},
+) {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-defaults-discovery-'));
+  const descriptors = [
+    { project: 'med-autoscience', domain_id: 'med-autoscience', domain_label: 'MedAutoScience' },
+    { project: 'med-autogrant', domain_id: 'med-autogrant', domain_label: 'MedAutoGrant' },
+    { project: 'redcube-ai', domain_id: 'redcube_ai', domain_label: 'RedCube AI' },
+  ];
+  if (options.includeOplMetaAgent === true) {
+    descriptors.push({
+      project: 'opl-meta-agent',
+      domain_id: 'opl-meta-agent',
+      domain_label: 'OPL Meta Agent',
+    });
+  }
+  for (const descriptor of descriptors) {
+    const repoRoot = options.buildRepo?.(descriptor.domain_id, descriptor.domain_label)
+      ?? path.join(workspaceRoot, descriptor.project);
+    const targetRepoRoot = path.join(workspaceRoot, descriptor.project);
+    if (repoRoot !== targetRepoRoot) {
+      fs.renameSync(repoRoot, targetRepoRoot);
+    }
+    const contractsRoot = path.join(targetRepoRoot, 'contracts');
+    fs.mkdirSync(contractsRoot, { recursive: true });
+    if (!fs.existsSync(path.join(contractsRoot, 'domain_descriptor.json'))) {
+      fs.writeFileSync(
+        path.join(contractsRoot, 'domain_descriptor.json'),
+        `${JSON.stringify({
+          surface_kind: 'family_domain_descriptor',
+          domain_id: descriptor.domain_id,
+          domain_label: descriptor.domain_label,
+        }, null, 2)}\n`,
+        'utf8',
+      );
+    }
+  }
+  return workspaceRoot;
+}
+
 function evidenceWorklistStage(stageId: string, owner: string) {
   return {
     stage_id: stageId,

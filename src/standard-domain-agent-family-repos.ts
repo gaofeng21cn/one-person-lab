@@ -34,10 +34,14 @@ function workspaceCandidatesFrom(seed: string) {
 }
 
 export function defaultFamilyRepoInputs(): StandardDomainAgentRepoInput[] {
+  const configuredWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT?.trim();
   const workspaceRoots = unique([
-    ...(process.env.OPL_FAMILY_WORKSPACE_ROOT ? [process.env.OPL_FAMILY_WORKSPACE_ROOT] : []),
-    ...workspaceCandidatesFrom(process.cwd()),
-    ...workspaceCandidatesFrom(OPL_REPO_ROOT),
+    ...(configuredWorkspaceRoot
+      ? [configuredWorkspaceRoot]
+      : [
+          ...workspaceCandidatesFrom(process.cwd()),
+          ...workspaceCandidatesFrom(OPL_REPO_ROOT),
+        ]),
   ].map((entry) => path.resolve(entry)));
 
   const repos: StandardDomainAgentRepoInput[] = [];
