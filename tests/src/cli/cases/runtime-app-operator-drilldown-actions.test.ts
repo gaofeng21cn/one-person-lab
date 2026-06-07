@@ -493,6 +493,9 @@ test('runtime action execute records and verifies domain dispatch evidence recei
       domain_receipt_refs: ['mas://receipts/domain-dispatch-owner.json'],
       owner_chain_refs: ['mas://owner-chain/domain-dispatch.json'],
       no_regression_refs: ['mas://proof/domain-dispatch-no-regression.json'],
+      owner_delta_result: {
+        closeout_binding: recordRoute.required_closeout_binding.closeout_binding,
+      },
     };
     const successDryRun = runCli([
       'runtime',
