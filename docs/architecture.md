@@ -21,6 +21,24 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 
 `Human / Codex / opl / One Person Lab App -> Codex-default Session Runtime -> OPL Activation Layer / Stage Control Plane / Typed Family Queue -> Domain Capability Surface -> Domain Repository`
 
+## 品牌模块架构
+
+OPL 的三层产品认知说明“面向谁”，九个品牌模块说明 Framework 内部能力如何高内聚、低耦合地演进。品牌模块不是新的 runtime，也不是第二 truth source；它们把已经存在的 contracts、source、CLI/App 行为、read model、runtime ledger、provider receipt 和 docs support 归入稳定 owner boundary。
+
+| 模块 | 架构职责 | 不拥有 |
+| --- | --- | --- |
+| `OPL Charter` | 顶层宪章、命名、ADR/RFC、术语生命周期和品牌组合治理。 | runtime truth、domain truth、release verdict。 |
+| `OPL Atlas` | Agent、capability、surface、owner、dependency 和 lifecycle catalog。 | 执行、receipt 签发、domain verdict。 |
+| `OPL Workspace` | Workspace Group、Project Unit、Stage Artifact Unit、用户检查面和文件生命周期投影。 | domain artifact body、quality/export verdict、owner receipt authority。 |
+| `OPL Stagecraft` | Stage 设计、认知计算、tool affordance、prompt/skill/knowledge/rubric refs、independent quality gate 边界。 | durable provider、queue ownership、domain quality verdict。 |
+| `OPL Runway` | Durable execution、typed queue、attempt、lease、retry/dead-letter、wakeup、human gate 和 runtime blocker。 | domain truth、owner receipt、artifact readiness。 |
+| `OPL Vault` | Evidence、receipt refs、typed blocker refs、artifact lineage、restore/provenance 和 refs-only ledger。 | memory/artifact body、memory accept/reject、domain verdict。 |
+| `OPL Console` | App/operator 工作台、current owner、next action、阻塞、产物投影和 drilldown。 | runtime truth、domain truth、App release verdict。 |
+| `OPL Foundry Lab` | Agent 创建、测试接管、mechanism improvement、canary、promotion、rollback 和 work order。 | MAS/MAG/RCA/OMA 的 domain authority。 |
+| `OPL Connect` | CLI、MCP、OpenAI/AI SDK tools、Skill/plugin、module install、release/install 分发和 drift matrix。 | 语义重新解释、domain-owned handler、release evidence 伪造。 |
+
+模块依赖的默认读法是：`Charter` 固定语言和边界，`Atlas` 提供目录，`Workspace` 提供可检查落点，`Stagecraft` 设计 stage 内专家工作，`Runway` 承接 durable execution，`Vault` 保存 refs-only evidence，`Console` 消费 projection，`Foundry Lab` 产生 agent 改进 work order，`Connect` 把同一合同派生到外部调用和分发面。任何模块的 structural readiness、conformance pass、provider completion、ledger verified 或 App projection 都不能单独升级成 domain ready、quality/export ready、App release ready 或 production ready。
+
 ## 当前产品链路
 
 当前仓库跟踪的产品链路是：

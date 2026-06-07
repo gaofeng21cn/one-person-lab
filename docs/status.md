@@ -8,6 +8,14 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 `contra
 
 Plugin native profile pointer: `contracts/opl-native-profile.json` 只声明 OPL Flow / OPL Doc 插件同步与 drift 检查所需的 repo-native profile；它不是 framework truth、runtime truth、domain truth、artifact authority、owner receipt 或 production-ready 证据。
 
+## 品牌模块成熟度
+
+OPL 顶层设计现在按九个品牌模块管理：`OPL Charter`、`OPL Atlas`、`OPL Workspace`、`OPL Stagecraft`、`OPL Runway`、`OPL Vault`、`OPL Console`、`OPL Foundry Lab` 和 `OPL Connect`。当前完成度的 live truth 仍回 contracts、source、CLI/API、runtime ledger、provider receipt、domain manifests、App release/user-path evidence 和真实 workspace evidence；品牌模块 reference 只提供目标态和对照口径。
+
+成熟度读法固定为五级：`L1 conceptual` 表示主要是理念；`L2 emerging` 表示已有局部 docs/contracts/source；`L3 structural` 表示合同、read model、conformance 或结构边界已经成型；`L4 executable baseline` 表示像 Workspace 一样具备品牌边界、schema/contract、CLI/App action、validate/doctor、docs foldback 和测试；`L5 production operating maturity` 表示真实用户路径、跨 agent scaleout、长跑/恢复 evidence、release/install evidence、运维闭环和 owner acceptance 都能持续证明。
+
+当前以 `OPL Workspace` 作为 `L4 executable baseline`。其他模块的当前读法是：`OPL Atlas`、`OPL Stagecraft`、`OPL Runway`、`OPL Vault` 为 `L3 structural`；`OPL Charter`、`OPL Console`、`OPL Foundry Lab`、`OPL Connect` 为 `L2 emerging`。当前没有模块声明 `L5`；L5 是下一阶段生产运营目标，不是 docs foldback、conformance pass、verified ledger、provider completion 或 App projection 可以单独关闭的状态。
+
 ## 当前公开角色
 
 `OPL` 当前公开认知固定为三层：`OPL Framework -> One Person Lab App -> Foundry Agents`。
