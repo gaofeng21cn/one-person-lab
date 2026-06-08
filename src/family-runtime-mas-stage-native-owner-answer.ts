@@ -239,6 +239,56 @@ export function isMasReadinessStageNativeOwnerAction(
     && optionalString(payload.next_executable_owner)?.toLowerCase() === 'medautoscience';
 }
 
+function sourceRefRecords(payload: Record<string, unknown>) {
+  return Array.isArray(payload.source_refs)
+    ? payload.source_refs.filter((entry): entry is Record<string, unknown> => Boolean(recordValue(entry)))
+    : [];
+}
+
+export function masReadinessPayloadReferencesStageNativeOwnerAnswer(payload: Record<string, unknown>) {
+  const basis = recordValue(payload.owner_route_currentness_basis);
+  const ownerRoute = recordValue(payload.owner_route);
+  const refs = [
+    optionalString(payload.work_unit_fingerprint),
+    optionalString(payload.latest_owner_answer_ref),
+    optionalString(payload.latest_owner_receipt_ref),
+    optionalString(payload.latest_typed_blocker_ref),
+    ...stringList(payload.owner_receipt_refs),
+    ...stringList(payload.typed_blocker_refs),
+    ...refsFrom(basis ?? {}, [
+      'work_unit_fingerprint',
+      'source_ref',
+      'owner_answer_ref',
+      'owner_receipt_ref',
+      'typed_blocker_ref',
+      'latest_owner_answer_ref',
+      'latest_owner_receipt_ref',
+      'latest_typed_blocker_ref',
+    ]),
+    ...refsFrom(ownerRoute ?? {}, [
+      'work_unit_fingerprint',
+      'source_ref',
+      'owner_answer_ref',
+      'owner_receipt_ref',
+      'typed_blocker_ref',
+      'latest_owner_answer_ref',
+      'latest_owner_receipt_ref',
+      'latest_typed_blocker_ref',
+    ]),
+    ...sourceRefRecords(payload).flatMap((record) => {
+      const role = optionalString(record.role) ?? '';
+      if (!/(owner|typed_blocker|receipt|stage|work_unit|current)/.test(role)) {
+        return [];
+      }
+      return [
+        optionalString(record.ref),
+        ...stringList(record.refs),
+      ].filter((entry): entry is string => Boolean(entry));
+    }),
+  ].filter((entry): entry is string => Boolean(entry));
+  return refs.some((ref) => isStageNativeOwnerAnswerRef(ref, true));
+}
+
 export function hasMasStageNativeOwnerAnswer(
   value: Record<string, unknown> | null,
   currentPayload: Record<string, unknown>,

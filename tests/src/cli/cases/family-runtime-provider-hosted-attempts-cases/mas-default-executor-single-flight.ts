@@ -21,6 +21,22 @@ import {
 } from '../../../../../src/family-runtime-stage-attempts.ts';
 import { enqueueTask } from '../../../../../src/family-runtime-enqueue.ts';
 
+function readinessPayloadWithStageNativeAnswer(sourceFingerprint: string) {
+  return {
+    ...defaultExecutorPayload(sourceFingerprint),
+    action_type: 'complete_medical_paper_readiness_surface',
+    dispatch_authority: 'consumer_default_executor_dispatch',
+    next_executable_owner: 'MedAutoScience',
+    domain_owner: 'MedAutoScience',
+    work_unit_id: 'complete_medical_paper_readiness_surface',
+    dispatch_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/immutable/complete_medical_paper_readiness_surface/readiness.json',
+    owner_route_currentness_basis: {
+      work_unit_id: 'complete_medical_paper_readiness_surface',
+      work_unit_fingerprint: 'stage-current-owner-delta::complete_medical_paper_readiness_surface::authoring_runtime_authorization::/tmp/dm-cvd/studies/002-dm-china-us-mortality-attribution/artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json',
+    },
+  };
+}
+
 test('family-runtime does not treat unstarted registered MAS default executor attempt as cross-task live', async () => {
   const db = new DatabaseSync(':memory:');
   try {
@@ -324,6 +340,94 @@ test('family-runtime enqueue preserves a newer MAS default executor dispatch whi
       assert.ok(deferredEvent);
       assert.equal(JSON.parse(deferredEvent.payload_json).candidate_source_fingerprint, 'source-after');
       assert.equal(JSON.parse(deferredEvent.payload_json).stage_attempt_id, runningAttempt.stage_attempt_id);
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime admits current write repair after live readiness attempt has Stage Native typed blocker answer', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const readinessPayload = readinessPayloadWithStageNativeAnswer('readiness-source-with-stage-answer');
+      const writePayload = defaultExecutorPayloadForOwner({
+        sourceFingerprint: 'stage-native-next-action::08-publication_package_handoff::run_quality_repair_batch::artifacts/reports/medical_publication_surface/latest.json',
+        actionType: 'run_quality_repair_batch',
+        nextOwner: 'write',
+        dispatchAuthority: 'quality_repair_batch_writer_handoff',
+        dispatchRef: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/immutable/run_quality_repair_batch/writer-after-readiness-answer.json',
+      });
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-live-readiness-stage-answer',
+        payload: readinessPayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:complete_medical_paper_readiness_surface:live-stage-answer',
+      });
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-writer-after-readiness-stage-answer',
+        payload: writePayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:writer-after-readiness-stage-answer',
+      });
+      db.prepare(`
+        UPDATE tasks
+        SET status = 'running', attempts = 1, lease_owner = 'opl-family-runtime:test',
+          lease_expires_at = ?
+        WHERE task_id = ?
+      `).run(
+        new Date(Date.now() + 60_000).toISOString(),
+        'task-mas-default-live-readiness-stage-answer',
+      );
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(
+        'task-mas-default-writer-after-readiness-stage-answer',
+      );
+      const readinessRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-live-readiness-stage-answer',
+      ) as Parameters<typeof ensureProviderHostedStageAttempt>[1];
+      const writerRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-writer-after-readiness-stage-answer',
+      ) as Parameters<typeof startDefaultExecutorStageAttempt>[2]['row'];
+      const readinessAttempt = ensureProviderHostedStageAttempt(db, readinessRow, readinessPayload);
+      assert.ok(readinessAttempt);
+      db.prepare(`
+        UPDATE stage_attempts
+        SET status = 'running',
+          provider_run_json = json_set(provider_run_json, '$.provider_status', 'running')
+        WHERE stage_attempt_id = ?
+      `).run(readinessAttempt.stage_attempt_id);
+
+      const writerAttempt = ensureProviderHostedStageAttempt(db, writerRow, writePayload);
+      let temporalStartCount = 0;
+      const result = await startDefaultExecutorStageAttempt(db, familyRuntimePaths(), {
+        row: writerRow,
+        payload: writePayload,
+        providerHostedAttempt: writerAttempt,
+        temporalProviderModule: async () => ({
+          startTemporalStageAttemptWorkflow: async () => {
+            temporalStartCount += 1;
+            return { surface_kind: 'temporal_stage_attempt_start_receipt' };
+          },
+        }),
+      });
+      const writerTask = db.prepare('SELECT status, attempts FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-writer-after-readiness-stage-answer',
+      ) as { status: string; attempts: number };
+      const writerAttempts = listStageAttemptsForTask(db, 'task-mas-default-writer-after-readiness-stage-answer');
+      const skipEvent = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_default_executor_live_attempt_skip'
+        LIMIT 1
+      `).get('task-mas-default-writer-after-readiness-stage-answer') as { payload_json: string } | undefined;
+
+      assert.ok(writerAttempt);
+      assert.equal(result.status, 'running');
+      assert.equal(temporalStartCount, 1);
+      assert.equal(writerTask.status, 'running');
+      assert.equal(writerTask.attempts, 1);
+      assert.equal(writerAttempts.length, 1);
+      assert.equal(writerAttempts[0].status, 'running');
+      assert.equal(skipEvent, undefined);
     });
   } finally {
     db.close();

@@ -7,6 +7,10 @@ import {
   isMasOwnerRouteTask,
   masOwnerRouteActionRef,
 } from './family-runtime-mas-domain-route.ts';
+import {
+  isMasReadinessStageNativeOwnerAction,
+  masReadinessPayloadReferencesStageNativeOwnerAnswer,
+} from './family-runtime-mas-stage-native-owner-answer.ts';
 import { MAS_PAPER_AUTONOMY_TASK_KINDS } from './family-runtime-paper-autonomy.ts';
 import { resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
 import {
@@ -27,6 +31,49 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function exportOwnerFingerprint(payload: Record<string, unknown>) {
   const context = isRecord(payload.opl_domain_export_context) ? payload.opl_domain_export_context : null;
   return optionalString(context?.owner_fingerprint);
+}
+
+function nestedRecord(value: Record<string, unknown> | null, path: string[]) {
+  let current: unknown = value;
+  for (const key of path) {
+    if (!isRecord(current)) {
+      return null;
+    }
+    current = current[key];
+  }
+  return isRecord(current) ? current : null;
+}
+
+function masDefaultExecutorCurrentnessBasis(payload: Record<string, unknown>) {
+  return recordList(payload.owner_route_currentness_basis)[0]
+    ?? nestedRecord(payload, ['owner_route', 'currentness_contract', 'basis']);
+}
+
+export function defaultExecutorDispatchRef(payload: Record<string, unknown>) {
+  return optionalString(payload.dispatch_ref)
+    ?? optionalString(payload.immutable_dispatch_ref)
+    ?? optionalString(payload.dispatch_packet_ref)
+    ?? optionalString(payload.dispatch_request_ref)
+    ?? optionalString(recordList(payload.progress_first_closeout_admission)[0]?.immutable_dispatch_packet)
+    ?? optionalString(nestedRecord(payload, ['progress_first_closeout_admission'])?.immutable_dispatch_packet);
+}
+
+export function defaultExecutorSourceFingerprint(payload: Record<string, unknown>) {
+  const ownerRoute = isRecord(payload.owner_route) ? payload.owner_route : null;
+  const basis = masDefaultExecutorCurrentnessBasis(payload);
+  return optionalString(payload.source_fingerprint)
+    ?? optionalString(payload.action_fingerprint)
+    ?? optionalString(payload.repeat_suppression_key)
+    ?? optionalString(ownerRoute?.source_fingerprint)
+    ?? optionalString(ownerRoute?.action_fingerprint)
+    ?? optionalString(basis?.work_unit_fingerprint)
+    ?? optionalString(basis?.truth_epoch)
+    ?? optionalString(basis?.runtime_health_epoch);
+}
+
+function hasDefaultExecutorDispatchIdentity(payload: Record<string, unknown>) {
+  return defaultExecutorDispatchRef(payload) !== null
+    || defaultExecutorSourceFingerprint(payload) !== null;
 }
 
 function recordList(value: unknown) {
@@ -145,6 +192,28 @@ function isCrossTaskLiveDefaultExecutorAttempt(
     );
 }
 
+function liveDefaultExecutorAttemptBlocksCandidate(
+  attempt: ReturnType<typeof listStageAttempts>[number],
+  candidateRow: FamilyRuntimeTaskRow,
+  candidatePayload: Record<string, unknown>,
+) {
+  if (
+    optionalString(candidatePayload.action_type) === 'run_quality_repair_batch'
+    && isMasReadinessStageNativeOwnerAction(
+      {
+        domain_id: attempt.domain_id,
+        task_kind: attempt.stage_id,
+      },
+      attempt.workspace_locator,
+    )
+    && masReadinessPayloadReferencesStageNativeOwnerAnswer(attempt.workspace_locator)
+  ) {
+    return false;
+  }
+  return isSameDefaultExecutorDispatch(attempt.workspace_locator, workspaceLocatorForProviderHostedTask(candidateRow, candidatePayload))
+    || isSameDefaultExecutorStudyStage(attempt.workspace_locator, workspaceLocatorForProviderHostedTask(candidateRow, candidatePayload));
+}
+
 function hasLiveDefaultExecutorLinkedTask(db: DatabaseSync, taskId: string | null) {
   if (!taskId) {
     return false;
@@ -254,7 +323,7 @@ export function isDefaultExecutorDispatchTask(
   const nextOwner = optionalString(payload.next_executable_owner);
   return row.domain_id === 'medautoscience'
     && row.task_kind === DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
-    && optionalString(payload.dispatch_ref) !== null
+    && hasDefaultExecutorDispatchIdentity(payload)
     && isAdmittedDefaultExecutorNextOwner(nextOwner)
     && ['codex_cli_default', 'codex_cli'].includes(optionalString(payload.executor_kind) ?? '');
 }
@@ -274,6 +343,7 @@ export function defaultExecutorDispatchIdentity(
     optionalString(locator.study_id),
     optionalString(locator.action_type),
     optionalString(locator.dispatch_ref),
+    optionalString(locator.domain_source_fingerprint),
   ]);
 }
 
@@ -311,7 +381,7 @@ export function defaultExecutorStudyIdentity(
 }
 
 export function defaultExecutorDomainSourceFingerprint(payload: Record<string, unknown>) {
-  return optionalString(payload.source_fingerprint);
+  return defaultExecutorSourceFingerprint(payload);
 }
 
 export function findLiveDefaultExecutorDispatchAttempt(
@@ -361,6 +431,7 @@ export function findLiveDefaultExecutorStudyAttempt(
     && attempt.stage_id === stageId
     && isCrossTaskLiveDefaultExecutorAttempt(db, attempt, workspaceLocator)
     && isSameDefaultExecutorStudyStage(attempt.workspace_locator, workspaceLocator)
+    && liveDefaultExecutorAttemptBlocksCandidate(attempt, row, payload)
   )) ?? null;
 }
 
@@ -471,6 +542,10 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
     locator.opl_writes_publication_quality = false;
     locator.opl_writes_artifact_gate = false;
     locator.opl_writes_current_package = false;
+    const dispatchRef = defaultExecutorDispatchRef(payload);
+    if (dispatchRef) {
+      locator.dispatch_ref = dispatchRef;
+    }
     const profileWorkspaceRoot = workspaceRootFromProfile(optionalString(payload.profile));
     if (profileWorkspaceRoot) {
       locator.workspace_root = profileWorkspaceRoot;
@@ -555,13 +630,22 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
   if (Array.isArray(payload.source_refs)) {
     locator.source_refs = payload.source_refs.filter(isRecord);
   }
+  for (const key of [
+    'owner_route_currentness_basis',
+    'owner_route',
+    'progress_first_closeout_admission',
+  ]) {
+    if (isRecord(payload[key])) {
+      locator[key] = payload[key];
+    }
+  }
   if (isDefaultExecutorDispatchTask(row, payload)) {
     locator.domain_truth_owner = 'med-autoscience';
     locator.opl_writes_domain_truth = false;
     locator.opl_writes_publication_quality = false;
     locator.opl_writes_artifact_gate = false;
     locator.opl_writes_current_package = false;
-    locator.domain_source_fingerprint = optionalString(payload.source_fingerprint);
+    locator.domain_source_fingerprint = defaultExecutorSourceFingerprint(payload);
   }
   return locator;
 }
@@ -582,8 +666,8 @@ function sourceFingerprintForProviderHostedTask(row: FamilyRuntimeTaskRow, paylo
     return stableId('mas_default_executor_source', [
       row.domain_id,
       row.task_kind,
-      optionalString(payload.dispatch_ref),
-      optionalString(payload.source_fingerprint),
+      defaultExecutorDispatchRef(payload),
+      defaultExecutorSourceFingerprint(payload),
       exportOwnerFingerprint(payload),
       row.dedupe_key,
     ]);
@@ -671,7 +755,7 @@ export function ensureProviderHostedStageAttempt(
     taskId: row.task_id,
     newAttempt: options.newAttempt,
     checkpointRefs: isDefaultExecutorDispatchTask(row, payload)
-      ? uniqueStrings([optionalString(payload.dispatch_ref)])
+      ? uniqueStrings([defaultExecutorDispatchRef(payload)])
       : undefined,
     blockedReason: admissionGate.blocked_reason ?? undefined,
   });
