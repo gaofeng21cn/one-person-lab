@@ -22,9 +22,10 @@ import {
   type FamilyRuntimeTaskStatus,
 } from './family-runtime-store.ts';
 import {
+  defaultExecutorDomainSourceFingerprint,
   findLiveDefaultExecutorDispatchAttempt,
   findLiveDefaultExecutorStudyAttempt,
-  isAdmittedDefaultExecutorNextOwner,
+  isDefaultExecutorDispatchTask,
   refreshDefaultExecutorLiveAttemptTaskLease,
 } from './family-runtime-provider-hosted-attempts.ts';
 import { listStageAttemptsForTask } from './family-runtime-stage-attempts.ts';
@@ -42,7 +43,7 @@ function optionalString(value: unknown) {
 }
 
 function sourceFingerprint(payload: Record<string, unknown>) {
-  return optionalString(payload.source_fingerprint);
+  return defaultExecutorDomainSourceFingerprint(payload);
 }
 
 function exportOwnerFingerprint(payload: Record<string, unknown>) {
@@ -54,12 +55,7 @@ function isDefaultExecutorDispatch(
   row: Pick<FamilyRuntimeTaskRow, 'domain_id' | 'task_kind'>,
   payload: Record<string, unknown>,
 ) {
-  const nextOwner = optionalString(payload.next_executable_owner);
-  return row.domain_id === 'medautoscience'
-    && row.task_kind === DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
-    && optionalString(payload.dispatch_ref) !== null
-    && isAdmittedDefaultExecutorNextOwner(nextOwner)
-    && ['codex_cli_default', 'codex_cli'].includes(optionalString(payload.executor_kind) ?? '');
+  return isDefaultExecutorDispatchTask(row, payload);
 }
 
 function isDefaultExecutorDispatchInput(
