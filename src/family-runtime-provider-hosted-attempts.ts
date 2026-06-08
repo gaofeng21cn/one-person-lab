@@ -45,7 +45,7 @@ function nestedRecord(value: Record<string, unknown> | null, path: string[]) {
 }
 
 function masDefaultExecutorCurrentnessBasis(payload: Record<string, unknown>) {
-  return recordList(payload.owner_route_currentness_basis)[0]
+  return (isRecord(payload.owner_route_currentness_basis) ? payload.owner_route_currentness_basis : null)
     ?? nestedRecord(payload, ['owner_route', 'currentness_contract', 'basis']);
 }
 
@@ -53,9 +53,7 @@ export function defaultExecutorDispatchRef(payload: Record<string, unknown>) {
   return optionalString(payload.dispatch_ref)
     ?? optionalString(payload.immutable_dispatch_ref)
     ?? optionalString(payload.dispatch_packet_ref)
-    ?? optionalString(payload.dispatch_request_ref)
-    ?? optionalString(recordList(payload.progress_first_closeout_admission)[0]?.immutable_dispatch_packet)
-    ?? optionalString(nestedRecord(payload, ['progress_first_closeout_admission'])?.immutable_dispatch_packet);
+    ?? optionalString(payload.dispatch_request_ref);
 }
 
 export function defaultExecutorSourceFingerprint(payload: Record<string, unknown>) {
@@ -74,6 +72,11 @@ export function defaultExecutorSourceFingerprint(payload: Record<string, unknown
 function hasDefaultExecutorDispatchIdentity(payload: Record<string, unknown>) {
   return defaultExecutorDispatchRef(payload) !== null
     || defaultExecutorSourceFingerprint(payload) !== null;
+}
+
+function defaultExecutorDispatchIdentityRef(payload: Record<string, unknown>) {
+  return defaultExecutorDispatchRef(payload)
+    ?? defaultExecutorSourceFingerprint(payload);
 }
 
 function recordList(value: unknown) {
@@ -100,10 +103,12 @@ function isSameDefaultExecutorDispatch(
   left: Record<string, unknown>,
   right: Record<string, unknown>,
 ) {
+  const sameDispatchRef = sameStringField(left, right, 'dispatch_ref');
+  const sameDomainSourceFingerprint = sameStringField(left, right, 'domain_source_fingerprint');
   return sameStringField(left, right, 'workspace_root')
     && sameStringField(left, right, 'study_id')
     && sameStringField(left, right, 'action_type')
-    && sameStringField(left, right, 'dispatch_ref');
+    && (sameDispatchRef || sameDomainSourceFingerprint);
 }
 
 function isSameDefaultExecutorStudyStage(
@@ -317,7 +322,7 @@ export function isAdmittedDefaultExecutorNextOwner(nextOwner: string | null) {
 }
 
 export function isDefaultExecutorDispatchTask(
-  row: FamilyRuntimeTaskRow,
+  row: Pick<FamilyRuntimeTaskRow, 'domain_id' | 'task_kind'>,
   payload: Record<string, unknown>,
 ) {
   const nextOwner = optionalString(payload.next_executable_owner);
@@ -342,8 +347,7 @@ export function defaultExecutorDispatchIdentity(
     optionalString(locator.workspace_root),
     optionalString(locator.study_id),
     optionalString(locator.action_type),
-    optionalString(locator.dispatch_ref),
-    optionalString(locator.domain_source_fingerprint),
+    defaultExecutorDispatchIdentityRef(payload),
   ]);
 }
 
