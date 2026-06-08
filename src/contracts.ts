@@ -16,6 +16,7 @@ import type {
   BrandSystemVisualPatternGroup,
   PublicSurfaceIndexContract,
   StageSelectionVocabularyContract,
+  TargetOperatingArchitectureContract,
   TaskTopologyContract,
   WorkstreamsRegistry,
 } from './types.ts';
@@ -45,6 +46,7 @@ const REQUIRED_CONTRACT_FILE_NAMES = [
   'brand-module-surfaces.json',
   'brand-module-l5-operating-evidence.json',
   'brand-system-profile.json',
+  'target-operating-architecture-contract.json',
 ] as const;
 
 type NormalizedFrameworkContractsLoadOptions = {
@@ -340,6 +342,13 @@ function expectFalseBoolean(value: unknown, field: string, filePath: string) {
     throw new FrameworkContractError('contract_shape_invalid', `${field} must be false.`, { file: filePath, field });
   }
   return false as const;
+}
+
+function expectTrueBoolean(value: unknown, field: string, filePath: string) {
+  if (value !== true) {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} must be true.`, { file: filePath, field });
+  }
+  return true as const;
 }
 
 const BRAND_MODULE_IDS = [
@@ -1145,6 +1154,205 @@ const BRAND_SYSTEM_DEFAULT_STATUS_TERMS = [
   'human gate',
 ] as const;
 
+const TARGET_ARCHITECTURE_DESIGN_PRINCIPLES = [
+  'grip_big_release_small',
+  'current_owner_delta_first',
+  'single_writer_stage_transition_authority',
+  'declarative_domain_pack_generated_surfaces_authority_abi',
+  'passive_evidence_vault',
+  'one_ordinary_golden_path_per_agent',
+  'small_idempotent_reconcilers',
+  'app_console_thin_default_surface',
+  'agent_lab_refs_only_improvement_control_plane',
+] as const;
+
+const TARGET_ARCHITECTURE_RESOURCE_FIELDS = [
+  'apiVersion',
+  'kind',
+  'metadata',
+  'spec',
+  'status',
+  'conditions',
+  'ownerRefs',
+  'finalizers',
+] as const;
+
+const TARGET_ARCHITECTURE_RESOURCE_KINDS = [
+  'Agent',
+  'DomainPack',
+  'WorkspaceGroup',
+  'ProjectUnit',
+  'StageRun',
+  'StageArtifactUnit',
+  'OwnerAnswer',
+  'EvidenceRef',
+  'ReleaseCohort',
+  'ImprovementWorkOrder',
+] as const;
+
+const TARGET_ARCHITECTURE_LANES = [
+  'ordinary',
+  'advisory',
+  'audit',
+  'diagnostic',
+  'cleanup',
+  'production_evidence',
+] as const;
+
+const TARGET_ARCHITECTURE_SMALL_DETAIL_LANES = [
+  'advisory',
+  'audit',
+  'diagnostic',
+  'cleanup',
+  'production_evidence',
+] as const;
+
+const TARGET_ARCHITECTURE_HARD_BLOCKER_CONDITIONS = [
+  'wrong_launch',
+  'authority_violation',
+  'not_recoverable',
+  'not_auditable',
+  'cannot_closeout',
+  'invalid_owner_answer_shape',
+  'irreversible_mutation',
+] as const;
+
+const TARGET_ARCHITECTURE_DERIVED_STAGE_STATE = [
+  'stage_current_pointer',
+  'stage_run_terminal_state',
+  'current_owner_delta',
+] as const;
+
+const TARGET_ARCHITECTURE_ACCEPTED_AUTHORITY_INPUTS = [
+  'transition_intent',
+  'provider_observation',
+  'owner_answer',
+  'typed_blocker',
+  'human_gate_decision',
+  'agent_lab_observation',
+  'evidence_observation',
+] as const;
+
+const TARGET_ARCHITECTURE_FORBIDDEN_DIRECT_WRITERS = [
+  'domain_agent',
+  'runtime_provider',
+  'one_person_lab_app',
+  'agent_lab',
+  'read_model',
+  'evidence_vault',
+  'worklist',
+] as const;
+
+const TARGET_ARCHITECTURE_DOMAIN_PACK_DECLARATIONS = [
+  'stage_graph',
+  'ordinary_golden_path',
+  'prompt_refs',
+  'skill_refs',
+  'tool_affordance_boundary_refs',
+  'knowledge_refs',
+  'quality_gate_refs',
+  'artifact_policy',
+  'memory_policy',
+  'owner_answer_schema',
+  'authority_functions',
+  'fixtures',
+  'tests',
+] as const;
+
+const TARGET_ARCHITECTURE_GENERATED_SURFACES = [
+  'cli',
+  'mcp',
+  'skill_plugin',
+  'product_entry',
+  'openai_tool',
+  'ai_sdk',
+  'status_read_model',
+  'workbench',
+  'functional_harness',
+  'operator_projection',
+] as const;
+
+const TARGET_ARCHITECTURE_AUTHORITY_FUNCTIONS = [
+  'quality_or_export_verdict',
+  'artifact_authority',
+  'memory_accept_reject',
+  'owner_receipt_signer',
+  'typed_blocker_signer',
+  'human_gate_signer',
+] as const;
+
+const TARGET_ARCHITECTURE_RECONCILER_LOOPS = [
+  'admission',
+  'execution_authorization',
+  'provider_attempt',
+  'closeout_binding',
+  'owner_answer_intake',
+  'evidence_verify',
+  'cleanup_finalizer',
+  'release_cohort_verify',
+] as const;
+
+const TARGET_ARCHITECTURE_ATLAS_CATALOGS = [
+  'agents',
+  'domain_packs',
+  'resources',
+  'surfaces',
+  'contracts',
+  'skills',
+  'mcp_tools',
+  'app_pages',
+  'release_channels',
+] as const;
+
+const TARGET_ARCHITECTURE_VAULT_REF_STREAMS = [
+  'evidence_refs',
+  'receipt_refs',
+  'typed_blocker_refs',
+  'trace_refs',
+  'metric_refs',
+  'log_refs',
+  'artifact_lineage_refs',
+] as const;
+
+const TARGET_ARCHITECTURE_APP_DEFAULT_FIELDS = [
+  'task',
+  'stage',
+  'current_owner',
+  'next_action',
+  'running_or_blocked_status',
+  'artifact_or_blocker',
+  'accepted_answer_shape',
+] as const;
+
+const TARGET_ARCHITECTURE_APP_DRILLDOWN_FIELDS = [
+  'provider_trace',
+  'attempt_ledger',
+  'release_diagnostics',
+  'cleanup_inventory',
+  'l5_evidence',
+  'raw_evidence',
+  'route_variant_menu',
+] as const;
+
+const TARGET_ARCHITECTURE_AGENT_LAB_MAY_PRODUCE = [
+  'eval_ref',
+  'root_cause_ref',
+  'candidate_fix_ref',
+  'work_order_ref',
+  'promotion_proposal_ref',
+  'rollback_ref',
+  'reevaluation_ref',
+] as const;
+
+const TARGET_ARCHITECTURE_AGENT_LAB_MUST_NOT_PRODUCE = [
+  'domain_quality_verdict',
+  'artifact_authority',
+  'memory_body',
+  'owner_receipt',
+  'typed_blocker',
+  'production_acceptance',
+] as const;
+
 function validateBrandSystemProfile(
   filePath: string,
   value: unknown,
@@ -1366,6 +1574,370 @@ function validateBrandSystemProfile(
       wording_rules: expectNonEmptyStringArray(receiptBlockerLanguageRaw.wording_rules, 'receipt_blocker_language.wording_rules', filePath),
     },
     authority_boundary: validateBrandModuleAuthorityBoundary(filePath, value.authority_boundary),
+    forbidden_claims: expectNonEmptyStringArray(value.forbidden_claims, 'forbidden_claims', filePath),
+  };
+}
+
+function validateFalseBoundaryRecord(filePath: string, value: unknown, field: string) {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} must be an object.`, {
+      file: filePath,
+      field,
+    });
+  }
+  if (Object.keys(value).length === 0) {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} must contain at least one entry.`, {
+      file: filePath,
+      field,
+    });
+  }
+
+  const boundary: Record<string, false> = {};
+  for (const [key, flag] of Object.entries(value)) {
+    boundary[key] = expectFalseBoolean(flag, `${field}.${key}`, filePath);
+  }
+  return boundary;
+}
+
+function validateTargetOperatingArchitecture(
+  filePath: string,
+  value: unknown,
+): TargetOperatingArchitectureContract {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'target-operating-architecture-contract.json must contain an object root.',
+      { file: filePath },
+    );
+  }
+
+  const resourceModelRaw = value.resource_model;
+  const stageAuthorityRaw = value.stage_transition_authority;
+  const domainPackRaw = value.domain_pack_authority_abi;
+  const surfaceBudgetRaw = value.surface_budget_compiler_policy;
+  const reconcilerRaw = value.reconciler_model;
+  const catalogRaw = value.catalog_and_telemetry;
+  const appConsoleRaw = value.app_console_policy;
+  const agentLabRaw = value.agent_lab_improvement_plane;
+  if (
+    !isRecord(resourceModelRaw)
+    || !isRecord(stageAuthorityRaw)
+    || !isRecord(domainPackRaw)
+    || !isRecord(surfaceBudgetRaw)
+    || !isRecord(reconcilerRaw)
+    || !isRecord(catalogRaw)
+    || !isRecord(appConsoleRaw)
+    || !isRecord(agentLabRaw)
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'target-operating-architecture-contract.json must declare resource, authority, ABI, surface, reconciler, catalog, App, and Agent Lab sections.',
+      { file: filePath },
+    );
+  }
+
+  const designPrinciples = expectNonEmptyStringArray(value.design_principles, 'design_principles', filePath);
+  requireEveryValue(designPrinciples, TARGET_ARCHITECTURE_DESIGN_PRINCIPLES, 'design_principles', filePath);
+
+  const resourceShapeRaw = resourceModelRaw.resource_shape;
+  const resourceKindsRaw = resourceModelRaw.resource_kinds;
+  if (!isRecord(resourceShapeRaw) || !Array.isArray(resourceKindsRaw)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'resource_model must declare resource_shape and resource_kinds.',
+      { file: filePath, field: 'resource_model' },
+    );
+  }
+  const requiredFields = expectNonEmptyStringArray(
+    resourceShapeRaw.required_fields,
+    'resource_model.resource_shape.required_fields',
+    filePath,
+  );
+  requireEveryValue(
+    requiredFields,
+    TARGET_ARCHITECTURE_RESOURCE_FIELDS,
+    'resource_model.resource_shape.required_fields',
+    filePath,
+  );
+  const seenResourceKinds = new Set<string>();
+  const resourceKinds = resourceKindsRaw.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each resource kind must be an object.', {
+        file: filePath,
+        index,
+      });
+    }
+    const kind = expectString(entry.kind, 'resource_model.resource_kinds.kind', filePath);
+    if (!TARGET_ARCHITECTURE_RESOURCE_KINDS.includes(kind as typeof TARGET_ARCHITECTURE_RESOURCE_KINDS[number])) {
+      throw new FrameworkContractError('contract_shape_invalid', 'resource_model.resource_kinds.kind must be a target architecture resource kind.', {
+        file: filePath,
+        index,
+        kind,
+        allowed: [...TARGET_ARCHITECTURE_RESOURCE_KINDS],
+      });
+    }
+    if (seenResourceKinds.has(kind)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each target architecture resource kind must be unique.', {
+        file: filePath,
+        index,
+        kind,
+      });
+    }
+    seenResourceKinds.add(kind);
+    return {
+      kind,
+      owner: expectString(entry.owner, 'resource_model.resource_kinds.owner', filePath),
+      default_lane: expectString(entry.default_lane, 'resource_model.resource_kinds.default_lane', filePath),
+      truth_boundary: expectString(entry.truth_boundary, 'resource_model.resource_kinds.truth_boundary', filePath),
+    };
+  });
+  requireEveryValue(
+    [...seenResourceKinds],
+    TARGET_ARCHITECTURE_RESOURCE_KINDS,
+    'resource_model.resource_kinds.kind',
+    filePath,
+  );
+
+  const derivedState = expectNonEmptyStringArray(
+    stageAuthorityRaw.derived_state,
+    'stage_transition_authority.derived_state',
+    filePath,
+  );
+  requireEveryValue(derivedState, TARGET_ARCHITECTURE_DERIVED_STAGE_STATE, 'stage_transition_authority.derived_state', filePath);
+  const acceptedInputs = expectNonEmptyStringArray(
+    stageAuthorityRaw.accepted_inputs,
+    'stage_transition_authority.accepted_inputs',
+    filePath,
+  );
+  requireEveryValue(acceptedInputs, TARGET_ARCHITECTURE_ACCEPTED_AUTHORITY_INPUTS, 'stage_transition_authority.accepted_inputs', filePath);
+  const forbiddenDirectWriters = expectNonEmptyStringArray(
+    stageAuthorityRaw.forbidden_direct_writers,
+    'stage_transition_authority.forbidden_direct_writers',
+    filePath,
+  );
+  requireEveryValue(
+    forbiddenDirectWriters,
+    TARGET_ARCHITECTURE_FORBIDDEN_DIRECT_WRITERS,
+    'stage_transition_authority.forbidden_direct_writers',
+    filePath,
+  );
+
+  const domainPackMustDeclare = expectNonEmptyStringArray(
+    domainPackRaw.domain_pack_must_declare,
+    'domain_pack_authority_abi.domain_pack_must_declare',
+    filePath,
+  );
+  requireEveryValue(
+    domainPackMustDeclare,
+    TARGET_ARCHITECTURE_DOMAIN_PACK_DECLARATIONS,
+    'domain_pack_authority_abi.domain_pack_must_declare',
+    filePath,
+  );
+  const generatedSurfaces = expectNonEmptyStringArray(
+    domainPackRaw.opl_generated_or_hosted_surfaces,
+    'domain_pack_authority_abi.opl_generated_or_hosted_surfaces',
+    filePath,
+  );
+  requireEveryValue(
+    generatedSurfaces,
+    TARGET_ARCHITECTURE_GENERATED_SURFACES,
+    'domain_pack_authority_abi.opl_generated_or_hosted_surfaces',
+    filePath,
+  );
+  const authorityFunctions = expectNonEmptyStringArray(
+    domainPackRaw.authority_functions,
+    'domain_pack_authority_abi.authority_functions',
+    filePath,
+  );
+  requireEveryValue(
+    authorityFunctions,
+    TARGET_ARCHITECTURE_AUTHORITY_FUNCTIONS,
+    'domain_pack_authority_abi.authority_functions',
+    filePath,
+  );
+
+  const allowedLanes = expectNonEmptyStringArray(
+    surfaceBudgetRaw.allowed_lanes,
+    'surface_budget_compiler_policy.allowed_lanes',
+    filePath,
+  );
+  requireEveryValue(allowedLanes, TARGET_ARCHITECTURE_LANES, 'surface_budget_compiler_policy.allowed_lanes', filePath);
+  const smallDetailLanes = expectNonEmptyStringArray(
+    surfaceBudgetRaw.small_detail_default_lanes,
+    'surface_budget_compiler_policy.small_detail_default_lanes',
+    filePath,
+  );
+  requireEveryValue(
+    smallDetailLanes,
+    TARGET_ARCHITECTURE_SMALL_DETAIL_LANES,
+    'surface_budget_compiler_policy.small_detail_default_lanes',
+    filePath,
+  );
+  const hardBlockerConditions = expectNonEmptyStringArray(
+    surfaceBudgetRaw.hard_blocker_upgrade_conditions,
+    'surface_budget_compiler_policy.hard_blocker_upgrade_conditions',
+    filePath,
+  );
+  requireEveryValue(
+    hardBlockerConditions,
+    TARGET_ARCHITECTURE_HARD_BLOCKER_CONDITIONS,
+    'surface_budget_compiler_policy.hard_blocker_upgrade_conditions',
+    filePath,
+  );
+
+  const reconcilerLoops = expectNonEmptyStringArray(
+    reconcilerRaw.required_loops,
+    'reconciler_model.required_loops',
+    filePath,
+  );
+  requireEveryValue(reconcilerLoops, TARGET_ARCHITECTURE_RECONCILER_LOOPS, 'reconciler_model.required_loops', filePath);
+
+  const atlasCatalogs = expectNonEmptyStringArray(
+    catalogRaw.atlas_catalogs,
+    'catalog_and_telemetry.atlas_catalogs',
+    filePath,
+  );
+  requireEveryValue(atlasCatalogs, TARGET_ARCHITECTURE_ATLAS_CATALOGS, 'catalog_and_telemetry.atlas_catalogs', filePath);
+  const vaultRefStreams = expectNonEmptyStringArray(
+    catalogRaw.vault_ref_streams,
+    'catalog_and_telemetry.vault_ref_streams',
+    filePath,
+  );
+  requireEveryValue(vaultRefStreams, TARGET_ARCHITECTURE_VAULT_REF_STREAMS, 'catalog_and_telemetry.vault_ref_streams', filePath);
+
+  const defaultScreenFields = expectNonEmptyStringArray(
+    appConsoleRaw.default_screen_fields,
+    'app_console_policy.default_screen_fields',
+    filePath,
+  );
+  requireEveryValue(defaultScreenFields, TARGET_ARCHITECTURE_APP_DEFAULT_FIELDS, 'app_console_policy.default_screen_fields', filePath);
+  const drilldownOnlyFields = expectNonEmptyStringArray(
+    appConsoleRaw.drilldown_only_fields,
+    'app_console_policy.drilldown_only_fields',
+    filePath,
+  );
+  requireEveryValue(drilldownOnlyFields, TARGET_ARCHITECTURE_APP_DRILLDOWN_FIELDS, 'app_console_policy.drilldown_only_fields', filePath);
+
+  const agentLabMayProduce = expectNonEmptyStringArray(
+    agentLabRaw.may_produce,
+    'agent_lab_improvement_plane.may_produce',
+    filePath,
+  );
+  requireEveryValue(agentLabMayProduce, TARGET_ARCHITECTURE_AGENT_LAB_MAY_PRODUCE, 'agent_lab_improvement_plane.may_produce', filePath);
+  const agentLabMustNotProduce = expectNonEmptyStringArray(
+    agentLabRaw.must_not_produce,
+    'agent_lab_improvement_plane.must_not_produce',
+    filePath,
+  );
+  requireEveryValue(agentLabMustNotProduce, TARGET_ARCHITECTURE_AGENT_LAB_MUST_NOT_PRODUCE, 'agent_lab_improvement_plane.must_not_produce', filePath);
+
+  return {
+    contract_kind: (() => {
+      const contractKind = expectString(value.contract_kind, 'contract_kind', filePath);
+      if (contractKind !== 'opl_target_operating_architecture_contract.v1') {
+        throw new FrameworkContractError('contract_shape_invalid', 'target-operating-architecture-contract.json must declare the target operating architecture contract kind.', {
+          file: filePath,
+          field: 'contract_kind',
+          actual: contractKind,
+        });
+      }
+      return contractKind;
+    })(),
+    schema_version: (() => {
+      const schemaVersion = expectString(value.schema_version, 'schema_version', filePath);
+      if (schemaVersion !== 'target-operating-architecture.v1') {
+        throw new FrameworkContractError('contract_shape_invalid', 'target-operating-architecture-contract.json must declare schema_version target-operating-architecture.v1.', {
+          file: filePath,
+          field: 'schema_version',
+          actual: schemaVersion,
+        });
+      }
+      return schemaVersion;
+    })(),
+    owner: expectString(value.owner, 'owner', filePath),
+    purpose: expectString(value.purpose, 'purpose', filePath),
+    state: expectString(value.state, 'state', filePath),
+    machine_boundary: expectString(value.machine_boundary, 'machine_boundary', filePath),
+    source_refs: expectNonEmptyStringArray(value.source_refs, 'source_refs', filePath),
+    design_principles: designPrinciples,
+    resource_model: {
+      resource_shape: {
+        required_fields: requiredFields,
+        spec_status_split_required: expectTrueBoolean(
+          resourceShapeRaw.spec_status_split_required,
+          'resource_model.resource_shape.spec_status_split_required',
+          filePath,
+        ),
+        status_can_define_desired_state: expectFalseBoolean(
+          resourceShapeRaw.status_can_define_desired_state,
+          'resource_model.resource_shape.status_can_define_desired_state',
+          filePath,
+        ),
+        conditions_are_status_not_truth: expectTrueBoolean(
+          resourceShapeRaw.conditions_are_status_not_truth,
+          'resource_model.resource_shape.conditions_are_status_not_truth',
+          filePath,
+        ),
+      },
+      resource_kinds: resourceKinds,
+    },
+    stage_transition_authority: {
+      authority_owner: expectString(stageAuthorityRaw.authority_owner, 'stage_transition_authority.authority_owner', filePath),
+      single_writer: expectTrueBoolean(stageAuthorityRaw.single_writer, 'stage_transition_authority.single_writer', filePath),
+      event_log_policy: expectString(stageAuthorityRaw.event_log_policy, 'stage_transition_authority.event_log_policy', filePath),
+      derived_state: derivedState,
+      accepted_inputs: acceptedInputs,
+      forbidden_direct_writers: forbiddenDirectWriters,
+    },
+    domain_pack_authority_abi: {
+      default_agent_shape: expectString(domainPackRaw.default_agent_shape, 'domain_pack_authority_abi.default_agent_shape', filePath),
+      domain_pack_must_declare: domainPackMustDeclare,
+      opl_generated_or_hosted_surfaces: generatedSurfaces,
+      authority_functions: authorityFunctions,
+      private_platform_residue_default_disposition: expectString(
+        domainPackRaw.private_platform_residue_default_disposition,
+        'domain_pack_authority_abi.private_platform_residue_default_disposition',
+        filePath,
+      ),
+    },
+    surface_budget_compiler_policy: {
+      ordinary_path_root: expectString(surfaceBudgetRaw.ordinary_path_root, 'surface_budget_compiler_policy.ordinary_path_root', filePath),
+      allowed_lanes: allowedLanes,
+      small_detail_default_lanes: smallDetailLanes,
+      hard_blocker_upgrade_conditions: hardBlockerConditions,
+      ordinary_path_must_not_be_overridden_by: expectNonEmptyStringArray(
+        surfaceBudgetRaw.ordinary_path_must_not_be_overridden_by,
+        'surface_budget_compiler_policy.ordinary_path_must_not_be_overridden_by',
+        filePath,
+      ),
+    },
+    reconciler_model: {
+      loop_granularity: expectString(reconcilerRaw.loop_granularity, 'reconciler_model.loop_granularity', filePath),
+      required_loops: reconcilerLoops,
+      loop_authority_boundary: validateFalseBoundaryRecord(
+        filePath,
+        reconcilerRaw.loop_authority_boundary,
+        'reconciler_model.loop_authority_boundary',
+      ),
+    },
+    catalog_and_telemetry: {
+      atlas_catalogs: atlasCatalogs,
+      vault_ref_streams: vaultRefStreams,
+      vault_policy: expectString(catalogRaw.vault_policy, 'catalog_and_telemetry.vault_policy', filePath),
+      telemetry_body_policy: expectString(catalogRaw.telemetry_body_policy, 'catalog_and_telemetry.telemetry_body_policy', filePath),
+    },
+    app_console_policy: {
+      default_screen_fields: defaultScreenFields,
+      drilldown_only_fields: drilldownOnlyFields,
+      gui_truth_owner: expectString(appConsoleRaw.gui_truth_owner, 'app_console_policy.gui_truth_owner', filePath),
+      framework_role: expectString(appConsoleRaw.framework_role, 'app_console_policy.framework_role', filePath),
+    },
+    agent_lab_improvement_plane: {
+      role: expectString(agentLabRaw.role, 'agent_lab_improvement_plane.role', filePath),
+      may_produce: agentLabMayProduce,
+      must_not_produce: agentLabMustNotProduce,
+    },
+    authority_boundary: validateFalseBoundaryRecord(filePath, value.authority_boundary, 'authority_boundary'),
     forbidden_claims: expectNonEmptyStringArray(value.forbidden_claims, 'forbidden_claims', filePath),
   };
 }
@@ -1804,6 +2376,11 @@ const REQUIRED_CONTRACT_FILES = [
     file_name: 'brand-system-profile.json',
     schema_version: (contracts: FrameworkContracts) => contracts.brandSystemProfile.version,
   },
+  {
+    contract_id: 'target_operating_architecture',
+    file_name: 'target-operating-architecture-contract.json',
+    schema_version: (contracts: FrameworkContracts) => contracts.targetOperatingArchitecture.schema_version,
+  },
 ] as const;
 
 export function validateFrameworkContracts(
@@ -1877,6 +2454,10 @@ export function loadFrameworkContracts(
       brandSystemProfile: validateBrandSystemProfile(
         path.join(contractsDir, 'brand-system-profile.json'),
         parseJsonFile(path.join(contractsDir, 'brand-system-profile.json')),
+      ),
+      targetOperatingArchitecture: validateTargetOperatingArchitecture(
+        path.join(contractsDir, 'target-operating-architecture-contract.json'),
+        parseJsonFile(path.join(contractsDir, 'target-operating-architecture-contract.json')),
       ),
     };
   } catch (error) {

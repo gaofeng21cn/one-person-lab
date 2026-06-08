@@ -11,6 +11,7 @@ import {
   MINIMAL_BRAND_MODULE_REGISTRY_CONTRACT,
   MINIMAL_BRAND_MODULE_SURFACES_CONTRACT,
   MINIMAL_BRAND_SYSTEM_PROFILE_CONTRACT,
+  MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT,
 } from './agent-workspace-norm-fixture.ts';
 import {
   assert,
@@ -121,6 +122,7 @@ const contracts: FrameworkContracts = {
   brandModuleSurfaces: MINIMAL_BRAND_MODULE_SURFACES_CONTRACT,
   brandModuleL5OperatingEvidence: MINIMAL_BRAND_MODULE_L5_OPERATING_EVIDENCE_CONTRACT,
   brandSystemProfile: MINIMAL_BRAND_SYSTEM_PROFILE_CONTRACT,
+  targetOperatingArchitecture: MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT,
 };
 
 function manifestWithCleanupResidue() {

@@ -227,6 +227,12 @@ test('validateFrameworkContracts returns a stable summary for the required contr
         schema_version: contracts.brandSystemProfile.version,
         status: 'valid',
       },
+      {
+        contract_id: 'target_operating_architecture',
+        file: path.join(contractsDir, 'target-operating-architecture-contract.json'),
+        schema_version: contracts.targetOperatingArchitecture.schema_version,
+        status: 'valid',
+      },
     ],
   });
 });
@@ -306,6 +312,12 @@ test('contract validate returns a stable machine-readable contract summary', () 
           contract_id: 'brand_system_profile',
           file: path.join(contractsDir, 'brand-system-profile.json'),
           schema_version: contracts.brandSystemProfile.version,
+          status: 'valid',
+        },
+        {
+          contract_id: 'target_operating_architecture',
+          file: path.join(contractsDir, 'target-operating-architecture-contract.json'),
+          schema_version: contracts.targetOperatingArchitecture.schema_version,
           status: 'valid',
         },
       ],

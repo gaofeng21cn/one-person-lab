@@ -1,0 +1,325 @@
+{
+  "contract_kind": "opl_target_operating_architecture_contract.v1",
+  "schema_version": "target-operating-architecture.v1",
+  "owner": "one-person-lab",
+  "purpose": "Freeze the ideal OPL family target operating architecture as a small machine-readable contract so top-level redesign stays current_owner_delta-first, resource-oriented, and contract-light.",
+  "state": "active_contract",
+  "machine_boundary": "This contract governs framework target architecture boundaries, resource kinds, default lanes, and false-authority flags. It does not declare domain ready, App release ready, production ready, quality verdicts, artifact authority, memory body authority, or owner receipt authority.",
+  "source_refs": [
+    "human_doc:opl_maintenance_preferences",
+    "human_doc:opl_current_state_vs_ideal_gap",
+    "human_doc:opl_foundry_agent_target_operating_architecture",
+    "human_doc:opl_invariants",
+    "human_doc:opl_decisions",
+    "contracts/opl-framework/surface-budget-policy.json",
+    "contracts/opl-framework/stage-transition-authority-contract.json",
+    "contracts/opl-framework/domain-pack-compiler-contract.json",
+    "contracts/opl-framework/family-product-operator-projection.json",
+    "contracts/opl-framework/brand-module-registry.json",
+    "contracts/opl-framework/brand-module-surfaces.json"
+  ],
+  "design_principles": [
+    "grip_big_release_small",
+    "current_owner_delta_first",
+    "single_writer_stage_transition_authority",
+    "declarative_domain_pack_generated_surfaces_authority_abi",
+    "passive_evidence_vault",
+    "one_ordinary_golden_path_per_agent",
+    "small_idempotent_reconcilers",
+    "app_console_thin_default_surface",
+    "agent_lab_refs_only_improvement_control_plane"
+  ],
+  "resource_model": {
+    "resource_shape": {
+      "required_fields": [
+        "apiVersion",
+        "kind",
+        "metadata",
+        "spec",
+        "status",
+        "conditions",
+        "ownerRefs",
+        "finalizers"
+      ],
+      "spec_status_split_required": true,
+      "status_can_define_desired_state": false,
+      "conditions_are_status_not_truth": true
+    },
+    "resource_kinds": [
+      {
+        "kind": "Agent",
+        "owner": "domain_owner",
+        "default_lane": "ordinary",
+        "truth_boundary": "domain truth, quality/export verdict, owner receipt, typed blocker, and direct skill path stay in the domain repository"
+      },
+      {
+        "kind": "DomainPack",
+        "owner": "domain_owner",
+        "default_lane": "ordinary",
+        "truth_boundary": "declarative stage semantics, prompts, skills, knowledge, artifact policy, memory policy, quality gates, and authority functions"
+      },
+      {
+        "kind": "WorkspaceGroup",
+        "owner": "one-person-lab",
+        "default_lane": "ordinary",
+        "truth_boundary": "canonical workspace topology and project collection shape; aliases and inventory drift stay diagnostic unless launch or closeout would be wrong"
+      },
+      {
+        "kind": "ProjectUnit",
+        "owner": "domain_owner",
+        "default_lane": "ordinary",
+        "truth_boundary": "project/study/deliverable semantic identity stays with the domain owner while OPL projects canonical physical roots"
+      },
+      {
+        "kind": "StageRun",
+        "owner": "one-person-lab",
+        "default_lane": "ordinary",
+        "truth_boundary": "OPL owns runtime spec/status/event-log/read-model and execution authorization; domain owns receipts, blockers, quality, and artifact bodies"
+      },
+      {
+        "kind": "StageArtifactUnit",
+        "owner": "domain_owner",
+        "default_lane": "ordinary",
+        "truth_boundary": "deliverable progress requires physical output, valid manifest, selected artifact pointer, and domain owner answer"
+      },
+      {
+        "kind": "OwnerAnswer",
+        "owner": "domain_or_human_owner",
+        "default_lane": "ordinary",
+        "truth_boundary": "only owner receipt, quality gate receipt, human gate, typed blocker, no-regression, long-soak, route-back, delete authorization, or keep-as-authority-adapter refs can close owner wait"
+      },
+      {
+        "kind": "EvidenceRef",
+        "owner": "one-person-lab",
+        "default_lane": "audit",
+        "truth_boundary": "record everything and plan from nothing until evidence folds into owner delta, hard gate, owner answer, typed blocker, human decision, or route-back"
+      },
+      {
+        "kind": "ReleaseCohort",
+        "owner": "app_release_owner",
+        "default_lane": "production_evidence",
+        "truth_boundary": "App release truth stays with the App repository and release evidence; release diagnostics do not become domain readiness"
+      },
+      {
+        "kind": "ImprovementWorkOrder",
+        "owner": "agent_lab",
+        "default_lane": "advisory",
+        "truth_boundary": "Agent Lab may propose eval, root cause, candidate fix, work order, promotion, rollback, and evidence refs but cannot claim domain verdict or production acceptance"
+      }
+    ]
+  },
+  "stage_transition_authority": {
+    "authority_owner": "one-person-lab",
+    "single_writer": true,
+    "event_log_policy": "append_only_authority_event_log",
+    "derived_state": [
+      "stage_current_pointer",
+      "stage_run_terminal_state",
+      "current_owner_delta"
+    ],
+    "accepted_inputs": [
+      "transition_intent",
+      "provider_observation",
+      "owner_answer",
+      "typed_blocker",
+      "human_gate_decision",
+      "agent_lab_observation",
+      "evidence_observation"
+    ],
+    "forbidden_direct_writers": [
+      "domain_agent",
+      "runtime_provider",
+      "one_person_lab_app",
+      "agent_lab",
+      "read_model",
+      "evidence_vault",
+      "worklist"
+    ]
+  },
+  "domain_pack_authority_abi": {
+    "default_agent_shape": "declarative_domain_pack_plus_opl_generated_hosted_surfaces_plus_standard_authority_functions",
+    "domain_pack_must_declare": [
+      "stage_graph",
+      "ordinary_golden_path",
+      "prompt_refs",
+      "skill_refs",
+      "tool_affordance_boundary_refs",
+      "knowledge_refs",
+      "quality_gate_refs",
+      "artifact_policy",
+      "memory_policy",
+      "owner_answer_schema",
+      "authority_functions",
+      "fixtures",
+      "tests"
+    ],
+    "opl_generated_or_hosted_surfaces": [
+      "cli",
+      "mcp",
+      "skill_plugin",
+      "product_entry",
+      "openai_tool",
+      "ai_sdk",
+      "status_read_model",
+      "workbench",
+      "functional_harness",
+      "operator_projection"
+    ],
+    "authority_functions": [
+      "quality_or_export_verdict",
+      "artifact_authority",
+      "memory_accept_reject",
+      "owner_receipt_signer",
+      "typed_blocker_signer",
+      "human_gate_signer"
+    ],
+    "private_platform_residue_default_disposition": "absorb_to_opl_primitive_or_tombstone_after_owner_decision"
+  },
+  "surface_budget_compiler_policy": {
+    "ordinary_path_root": "current_owner_delta",
+    "allowed_lanes": [
+      "ordinary",
+      "advisory",
+      "audit",
+      "diagnostic",
+      "cleanup",
+      "production_evidence"
+    ],
+    "small_detail_default_lanes": [
+      "advisory",
+      "audit",
+      "diagnostic",
+      "cleanup",
+      "production_evidence"
+    ],
+    "hard_blocker_upgrade_conditions": [
+      "wrong_launch",
+      "authority_violation",
+      "not_recoverable",
+      "not_auditable",
+      "cannot_closeout",
+      "invalid_owner_answer_shape",
+      "irreversible_mutation"
+    ],
+    "ordinary_path_must_not_be_overridden_by": [
+      "raw_worklist",
+      "evidence_ledger",
+      "provider_trace",
+      "route_variant_menu",
+      "private_residue_inventory",
+      "cleanup_delete_gate",
+      "l5_evidence_ledger",
+      "release_diagnostics"
+    ]
+  },
+  "reconciler_model": {
+    "loop_granularity": "small_idempotent_reconcilers",
+    "required_loops": [
+      "admission",
+      "execution_authorization",
+      "provider_attempt",
+      "closeout_binding",
+      "owner_answer_intake",
+      "evidence_verify",
+      "cleanup_finalizer",
+      "release_cohort_verify"
+    ],
+    "loop_authority_boundary": {
+      "reconciler_can_generate_candidates": false,
+      "reconciler_can_evaluate_or_rank_candidates": false,
+      "reconciler_can_complete_stage": false,
+      "reconciler_can_sign_receipts": false,
+      "reconciler_can_create_typed_blocker": false,
+      "reconciler_can_write_domain_truth": false
+    }
+  },
+  "catalog_and_telemetry": {
+    "atlas_catalogs": [
+      "agents",
+      "domain_packs",
+      "resources",
+      "surfaces",
+      "contracts",
+      "skills",
+      "mcp_tools",
+      "app_pages",
+      "release_channels"
+    ],
+    "vault_ref_streams": [
+      "evidence_refs",
+      "receipt_refs",
+      "typed_blocker_refs",
+      "trace_refs",
+      "metric_refs",
+      "log_refs",
+      "artifact_lineage_refs"
+    ],
+    "vault_policy": "record_everything_plan_from_nothing",
+    "telemetry_body_policy": "refs_only_no_artifact_or_memory_body"
+  },
+  "app_console_policy": {
+    "default_screen_fields": [
+      "task",
+      "stage",
+      "current_owner",
+      "next_action",
+      "running_or_blocked_status",
+      "artifact_or_blocker",
+      "accepted_answer_shape"
+    ],
+    "drilldown_only_fields": [
+      "provider_trace",
+      "attempt_ledger",
+      "release_diagnostics",
+      "cleanup_inventory",
+      "l5_evidence",
+      "raw_evidence",
+      "route_variant_menu"
+    ],
+    "gui_truth_owner": "one-person-lab-app",
+    "framework_role": "state_action_projection_producer_only"
+  },
+  "agent_lab_improvement_plane": {
+    "role": "refs_only_improvement_control_plane",
+    "may_produce": [
+      "eval_ref",
+      "root_cause_ref",
+      "candidate_fix_ref",
+      "work_order_ref",
+      "promotion_proposal_ref",
+      "rollback_ref",
+      "reevaluation_ref"
+    ],
+    "must_not_produce": [
+      "domain_quality_verdict",
+      "artifact_authority",
+      "memory_body",
+      "owner_receipt",
+      "typed_blocker",
+      "production_acceptance"
+    ]
+  },
+  "authority_boundary": {
+    "can_claim_domain_ready": false,
+    "can_claim_quality_verdict": false,
+    "can_claim_artifact_authority": false,
+    "can_claim_production_ready": false,
+    "can_write_domain_truth": false,
+    "can_write_memory_body": false,
+    "can_mutate_artifact_body": false,
+    "can_sign_owner_receipt": false,
+    "can_create_typed_blocker": false,
+    "can_replace_domain_owner": false,
+    "can_replace_ai_executor_planning": false,
+    "can_replace_app_release_truth": false
+  },
+  "forbidden_claims": [
+    "contract_validation_is_domain_ready",
+    "docs_foldback_is_production_ready",
+    "provider_completion_is_owner_receipt",
+    "evidence_count_is_progress",
+    "release_diagnostics_are_app_release_truth",
+    "agent_lab_eval_is_domain_verdict",
+    "cleanup_lane_is_physical_delete_authority"
+  ]
+}

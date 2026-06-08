@@ -676,6 +676,79 @@ export interface BrandSystemProfileContract {
   forbidden_claims: string[];
 }
 
+export interface TargetOperatingArchitectureResourceKind {
+  kind: string;
+  owner: string;
+  default_lane: string;
+  truth_boundary: string;
+}
+
+export interface TargetOperatingArchitectureContract {
+  contract_kind: string;
+  schema_version: string;
+  owner: string;
+  purpose: string;
+  state: string;
+  machine_boundary: string;
+  source_refs: string[];
+  design_principles: string[];
+  resource_model: {
+    resource_shape: {
+      required_fields: string[];
+      spec_status_split_required: true;
+      status_can_define_desired_state: false;
+      conditions_are_status_not_truth: true;
+    };
+    resource_kinds: TargetOperatingArchitectureResourceKind[];
+  };
+  stage_transition_authority: {
+    authority_owner: string;
+    single_writer: true;
+    event_log_policy: string;
+    derived_state: string[];
+    accepted_inputs: string[];
+    forbidden_direct_writers: string[];
+  };
+  domain_pack_authority_abi: {
+    default_agent_shape: string;
+    domain_pack_must_declare: string[];
+    opl_generated_or_hosted_surfaces: string[];
+    authority_functions: string[];
+    private_platform_residue_default_disposition: string;
+  };
+  surface_budget_compiler_policy: {
+    ordinary_path_root: string;
+    allowed_lanes: string[];
+    small_detail_default_lanes: string[];
+    hard_blocker_upgrade_conditions: string[];
+    ordinary_path_must_not_be_overridden_by: string[];
+  };
+  reconciler_model: {
+    loop_granularity: string;
+    required_loops: string[];
+    loop_authority_boundary: Record<string, false>;
+  };
+  catalog_and_telemetry: {
+    atlas_catalogs: string[];
+    vault_ref_streams: string[];
+    vault_policy: string;
+    telemetry_body_policy: string;
+  };
+  app_console_policy: {
+    default_screen_fields: string[];
+    drilldown_only_fields: string[];
+    gui_truth_owner: string;
+    framework_role: string;
+  };
+  agent_lab_improvement_plane: {
+    role: string;
+    may_produce: string[];
+    must_not_produce: string[];
+  };
+  authority_boundary: Record<string, false>;
+  forbidden_claims: string[];
+}
+
 export interface WorkstreamsRegistry {
   version: string;
   workstreams: WorkstreamContract[];
@@ -708,6 +781,7 @@ export interface FrameworkContracts {
   brandModuleSurfaces: BrandModuleSurfacesContract;
   brandModuleL5OperatingEvidence: BrandModuleL5OperatingEvidenceContract;
   brandSystemProfile: BrandSystemProfileContract;
+  targetOperatingArchitecture: TargetOperatingArchitectureContract;
 }
 
 export interface ContractValidationEntry {
@@ -722,7 +796,8 @@ export interface ContractValidationEntry {
     | 'brand_cli_governance'
     | 'brand_module_surfaces'
     | 'brand_module_l5_operating_evidence'
-    | 'brand_system_profile';
+    | 'brand_system_profile'
+    | 'target_operating_architecture';
   file: string;
   schema_version: string;
   status: 'valid';

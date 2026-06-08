@@ -439,3 +439,235 @@ test('target architecture schema contracts keep owner delta root and audit tail 
     false,
   );
 });
+
+test('target operating architecture contract freezes resource, authority, lane, and improvement boundaries', () => {
+  const contract = readJson<{
+    contract_kind: string;
+    schema_version: string;
+    design_principles: string[];
+    resource_model: {
+      resource_shape: {
+        required_fields: string[];
+        spec_status_split_required: boolean;
+        status_can_define_desired_state: boolean;
+      };
+      resource_kinds: Array<{ kind: string; owner: string; default_lane: string }>;
+    };
+    stage_transition_authority: {
+      single_writer: boolean;
+      event_log_policy: string;
+      derived_state: string[];
+      forbidden_direct_writers: string[];
+    };
+    domain_pack_authority_abi: {
+      default_agent_shape: string;
+      domain_pack_must_declare: string[];
+      opl_generated_or_hosted_surfaces: string[];
+      authority_functions: string[];
+    };
+    surface_budget_compiler_policy: {
+      ordinary_path_root: string;
+      small_detail_default_lanes: string[];
+      hard_blocker_upgrade_conditions: string[];
+      ordinary_path_must_not_be_overridden_by: string[];
+    };
+    reconciler_model: {
+      required_loops: string[];
+      loop_authority_boundary: Record<string, boolean>;
+    };
+    catalog_and_telemetry: {
+      atlas_catalogs: string[];
+      vault_ref_streams: string[];
+      vault_policy: string;
+      telemetry_body_policy: string;
+    };
+    app_console_policy: {
+      default_screen_fields: string[];
+      drilldown_only_fields: string[];
+      gui_truth_owner: string;
+      framework_role: string;
+    };
+    agent_lab_improvement_plane: {
+      role: string;
+      may_produce: string[];
+      must_not_produce: string[];
+    };
+    authority_boundary: Record<string, boolean>;
+    forbidden_claims: string[];
+  }>('contracts/opl-framework/target-operating-architecture-contract.json');
+
+  assert.equal(contract.contract_kind, 'opl_target_operating_architecture_contract.v1');
+  assert.equal(contract.schema_version, 'target-operating-architecture.v1');
+  for (const principle of [
+    'grip_big_release_small',
+    'current_owner_delta_first',
+    'single_writer_stage_transition_authority',
+    'declarative_domain_pack_generated_surfaces_authority_abi',
+    'passive_evidence_vault',
+    'one_ordinary_golden_path_per_agent',
+    'small_idempotent_reconcilers',
+    'app_console_thin_default_surface',
+    'agent_lab_refs_only_improvement_control_plane',
+  ]) {
+    assert.equal(contract.design_principles.includes(principle), true, principle);
+  }
+
+  assert.deepEqual(contract.resource_model.resource_shape.required_fields, [
+    'apiVersion',
+    'kind',
+    'metadata',
+    'spec',
+    'status',
+    'conditions',
+    'ownerRefs',
+    'finalizers',
+  ]);
+  assert.equal(contract.resource_model.resource_shape.spec_status_split_required, true);
+  assert.equal(contract.resource_model.resource_shape.status_can_define_desired_state, false);
+  assert.deepEqual(contract.resource_model.resource_kinds.map((entry) => entry.kind), [
+    'Agent',
+    'DomainPack',
+    'WorkspaceGroup',
+    'ProjectUnit',
+    'StageRun',
+    'StageArtifactUnit',
+    'OwnerAnswer',
+    'EvidenceRef',
+    'ReleaseCohort',
+    'ImprovementWorkOrder',
+  ]);
+  assert.equal(
+    contract.resource_model.resource_kinds.find((entry) => entry.kind === 'EvidenceRef')?.default_lane,
+    'audit',
+  );
+  assert.equal(
+    contract.resource_model.resource_kinds.find((entry) => entry.kind === 'ReleaseCohort')?.default_lane,
+    'production_evidence',
+  );
+
+  assert.equal(contract.stage_transition_authority.single_writer, true);
+  assert.equal(contract.stage_transition_authority.event_log_policy, 'append_only_authority_event_log');
+  assert.deepEqual(contract.stage_transition_authority.derived_state, [
+    'stage_current_pointer',
+    'stage_run_terminal_state',
+    'current_owner_delta',
+  ]);
+  for (const forbiddenWriter of [
+    'domain_agent',
+    'runtime_provider',
+    'one_person_lab_app',
+    'agent_lab',
+    'read_model',
+    'evidence_vault',
+    'worklist',
+  ]) {
+    assert.equal(contract.stage_transition_authority.forbidden_direct_writers.includes(forbiddenWriter), true);
+  }
+
+  assert.equal(
+    contract.domain_pack_authority_abi.default_agent_shape,
+    'declarative_domain_pack_plus_opl_generated_hosted_surfaces_plus_standard_authority_functions',
+  );
+  for (const requiredDeclaration of [
+    'stage_graph',
+    'ordinary_golden_path',
+    'tool_affordance_boundary_refs',
+    'quality_gate_refs',
+    'owner_answer_schema',
+    'authority_functions',
+  ]) {
+    assert.equal(contract.domain_pack_authority_abi.domain_pack_must_declare.includes(requiredDeclaration), true);
+  }
+  for (const generatedSurface of ['cli', 'mcp', 'product_entry', 'openai_tool', 'ai_sdk', 'workbench']) {
+    assert.equal(contract.domain_pack_authority_abi.opl_generated_or_hosted_surfaces.includes(generatedSurface), true);
+  }
+  for (const authorityFunction of [
+    'quality_or_export_verdict',
+    'artifact_authority',
+    'memory_accept_reject',
+    'owner_receipt_signer',
+    'typed_blocker_signer',
+  ]) {
+    assert.equal(contract.domain_pack_authority_abi.authority_functions.includes(authorityFunction), true);
+  }
+
+  assert.equal(contract.surface_budget_compiler_policy.ordinary_path_root, 'current_owner_delta');
+  assert.deepEqual(contract.surface_budget_compiler_policy.small_detail_default_lanes, [
+    'advisory',
+    'audit',
+    'diagnostic',
+    'cleanup',
+    'production_evidence',
+  ]);
+  assert.equal(contract.surface_budget_compiler_policy.hard_blocker_upgrade_conditions.includes('authority_violation'), true);
+  assert.equal(contract.surface_budget_compiler_policy.hard_blocker_upgrade_conditions.includes('irreversible_mutation'), true);
+  for (const forbiddenOverride of [
+    'raw_worklist',
+    'evidence_ledger',
+    'provider_trace',
+    'route_variant_menu',
+    'cleanup_delete_gate',
+    'release_diagnostics',
+  ]) {
+    assert.equal(
+      contract.surface_budget_compiler_policy.ordinary_path_must_not_be_overridden_by.includes(forbiddenOverride),
+      true,
+      forbiddenOverride,
+    );
+  }
+
+  assert.deepEqual(contract.reconciler_model.required_loops, [
+    'admission',
+    'execution_authorization',
+    'provider_attempt',
+    'closeout_binding',
+    'owner_answer_intake',
+    'evidence_verify',
+    'cleanup_finalizer',
+    'release_cohort_verify',
+  ]);
+  for (const [claim, allowed] of Object.entries(contract.reconciler_model.loop_authority_boundary)) {
+    assert.equal(allowed, false, `reconciler must not claim ${claim}`);
+  }
+
+  assert.equal(contract.catalog_and_telemetry.atlas_catalogs.includes('contracts'), true);
+  assert.equal(contract.catalog_and_telemetry.atlas_catalogs.includes('release_channels'), true);
+  assert.equal(contract.catalog_and_telemetry.vault_ref_streams.includes('artifact_lineage_refs'), true);
+  assert.equal(contract.catalog_and_telemetry.vault_policy, 'record_everything_plan_from_nothing');
+  assert.equal(contract.catalog_and_telemetry.telemetry_body_policy, 'refs_only_no_artifact_or_memory_body');
+
+  assert.deepEqual(contract.app_console_policy.default_screen_fields, [
+    'task',
+    'stage',
+    'current_owner',
+    'next_action',
+    'running_or_blocked_status',
+    'artifact_or_blocker',
+    'accepted_answer_shape',
+  ]);
+  for (const drilldownField of ['provider_trace', 'attempt_ledger', 'release_diagnostics', 'raw_evidence']) {
+    assert.equal(contract.app_console_policy.drilldown_only_fields.includes(drilldownField), true);
+  }
+  assert.equal(contract.app_console_policy.gui_truth_owner, 'one-person-lab-app');
+  assert.equal(contract.app_console_policy.framework_role, 'state_action_projection_producer_only');
+
+  assert.equal(contract.agent_lab_improvement_plane.role, 'refs_only_improvement_control_plane');
+  assert.equal(contract.agent_lab_improvement_plane.may_produce.includes('work_order_ref'), true);
+  assert.equal(contract.agent_lab_improvement_plane.may_produce.includes('promotion_proposal_ref'), true);
+  for (const forbiddenOutput of [
+    'domain_quality_verdict',
+    'artifact_authority',
+    'memory_body',
+    'owner_receipt',
+    'typed_blocker',
+    'production_acceptance',
+  ]) {
+    assert.equal(contract.agent_lab_improvement_plane.must_not_produce.includes(forbiddenOutput), true);
+  }
+
+  for (const [claim, allowed] of Object.entries(contract.authority_boundary)) {
+    assert.equal(allowed, false, `target architecture must not claim ${claim}`);
+  }
+  assert.equal(contract.forbidden_claims.includes('contract_validation_is_domain_ready'), true);
+  assert.equal(contract.forbidden_claims.includes('cleanup_lane_is_physical_delete_authority'), true);
+});
