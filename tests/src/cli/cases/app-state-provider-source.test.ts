@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 
 import { assert, buildManifestCommand, fs, loadFamilyManifestFixtures, os, path, runCli, test } from '../helpers.ts';
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
+import { resolveTemporalWorkerTaskQueue } from '../../../../src/family-runtime-temporal-provider-parts/worker-task-queue.ts';
 
 function buildMasManifestWithManagedTemporalProjection(managedTemporal: Record<string, unknown>) {
   const fixtures = loadFamilyManifestFixtures();
@@ -30,6 +31,7 @@ test('app state fast uses local Temporal lifecycle state without live manifest r
   try {
     assert.equal(typeof child.pid, 'number');
     fs.mkdirSync(runtimeRoot, { recursive: true });
+    const taskQueue = resolveTemporalWorkerTaskQueue({ root: runtimeRoot });
     fs.writeFileSync(path.join(runtimeRoot, 'temporal-service.json'), `${JSON.stringify({
       provider_kind: 'temporal',
       service_kind: 'custom_command',
@@ -44,7 +46,7 @@ test('app state fast uses local Temporal lifecycle state without live manifest r
       pid: child.pid,
       address: '127.0.0.1:7233',
       namespace: 'default',
-      task_queue: 'opl-stage-attempts',
+      task_queue: taskQueue,
       started_at: new Date().toISOString(),
       status: 'ready',
       source_version: 'test-worker-source',
