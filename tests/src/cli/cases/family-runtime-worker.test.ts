@@ -14,6 +14,7 @@ import {
 import {
   resolveTemporalWorkerForegroundPaths,
 } from '../../../../src/family-runtime-temporal-provider.ts';
+import { resolveTemporalWorkerTaskQueue } from '../../../../src/family-runtime-temporal-provider-parts/worker-task-queue.ts';
 import { startTemporalServiceLifecycle } from '../../../../src/family-runtime-temporal-service.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
@@ -561,6 +562,7 @@ test('family-runtime residency proof --production reads managed local Temporal s
   worker.unref();
   try {
     fs.mkdirSync(workerRoot, { recursive: true });
+    const taskQueue = resolveTemporalWorkerTaskQueue({ root: workerRoot });
     fs.writeFileSync(path.join(workerRoot, 'temporal-service.json'), `${JSON.stringify({
       provider_kind: 'temporal',
       service_kind: 'custom_command',
@@ -575,7 +577,7 @@ test('family-runtime residency proof --production reads managed local Temporal s
       pid: worker.pid,
       address,
       namespace: 'default',
-      task_queue: 'opl-stage-attempts',
+      task_queue: taskQueue,
       started_at: new Date().toISOString(),
       status: 'ready',
       source_version: 'git:production-proof-current',
@@ -628,6 +630,7 @@ test('family-runtime temporal provider status uses managed service and worker li
     assert.equal(typeof service.pid, 'number');
     assert.equal(typeof worker.pid, 'number');
     fs.mkdirSync(runtimeRoot, { recursive: true });
+    const taskQueue = resolveTemporalWorkerTaskQueue({ root: runtimeRoot });
     fs.writeFileSync(path.join(runtimeRoot, 'temporal-service.json'), `${JSON.stringify({
       provider_kind: 'temporal',
       service_kind: 'custom_command',
@@ -642,7 +645,7 @@ test('family-runtime temporal provider status uses managed service and worker li
       pid: worker.pid,
       address,
       namespace: 'default',
-      task_queue: 'opl-stage-attempts',
+      task_queue: taskQueue,
       started_at: new Date().toISOString(),
       status: 'ready',
       source_version: 'git:managed-status-current',

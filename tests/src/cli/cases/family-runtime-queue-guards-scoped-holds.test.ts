@@ -176,6 +176,7 @@ PY
   try {
     const env = familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_MAS_DISPATCH: dispatch.dispatchPath,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
     });
     const heldTarget = runCli([
       'family-runtime',
@@ -185,7 +186,7 @@ PY
       '--task-kind',
       'domain_owner/default-executor-dispatch',
       '--payload',
-      '{"study_id":"003-dpcc-primary-care-phenotype-treatment-gap","action_type":"return_to_ai_reviewer_workflow"}',
+      '{"study_id":"003-dpcc-primary-care-phenotype-treatment-gap","action_type":"return_to_ai_reviewer_workflow","source_fingerprint":"sha256:dm003-release-target"}',
       '--dedupe-key',
       'mas:dm003:release-target',
     ], env);
@@ -197,7 +198,7 @@ PY
       '--task-kind',
       'domain_owner/default-executor-dispatch',
       '--payload',
-      '{"study_id":"002-dm-china-us-mortality-attribution","action_type":"return_to_ai_reviewer_workflow"}',
+      '{"study_id":"002-dm-china-us-mortality-attribution","action_type":"return_to_ai_reviewer_workflow","source_fingerprint":"sha256:dm002-release-not-held"}',
       '--dedupe-key',
       'mas:dm002:release-not-held',
     ], env);

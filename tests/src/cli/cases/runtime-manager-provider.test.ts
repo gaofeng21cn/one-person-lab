@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import net from 'node:net';
 
 import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { resolveTemporalWorkerTaskQueue } from '../../../../src/family-runtime-temporal-provider-parts/worker-task-queue.ts';
 
 test('runtime manager reports OPL control plane over provider-backed family runtime', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-state-'));
@@ -273,6 +274,7 @@ esac
     assert.equal(typeof service.pid, 'number');
     assert.equal(typeof worker.pid, 'number');
     fs.mkdirSync(runtimeRoot, { recursive: true });
+    const taskQueue = resolveTemporalWorkerTaskQueue({ root: runtimeRoot });
     fs.writeFileSync(path.join(runtimeRoot, 'temporal-service.json'), `${JSON.stringify({
       provider_kind: 'temporal',
       service_kind: 'custom_command',
@@ -287,7 +289,7 @@ esac
       pid: worker.pid,
       address,
       namespace: 'default',
-      task_queue: 'opl-stage-attempts',
+      task_queue: taskQueue,
       started_at: new Date().toISOString(),
       status: 'ready',
       source_version: 'git:runtime-manager-provider-current',

@@ -13,6 +13,7 @@ import {
   assertCurrentProviderReadiness,
   assertProviderReadinessCurrentness,
 } from '../family-runtime-stage-attempts-temporal-provider-fixtures.ts';
+import { resolveTemporalWorkerTaskQueue } from '../../../../../src/family-runtime-temporal-provider-parts/worker-task-queue.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -42,6 +43,7 @@ test('family-runtime attempt inspect projects current provider readiness separat
     assert.equal(typeof service.pid, 'number');
     assert.equal(typeof worker.pid, 'number');
     fs.mkdirSync(runtimeRoot, { recursive: true });
+    const taskQueue = resolveTemporalWorkerTaskQueue({ root: runtimeRoot });
     fs.writeFileSync(path.join(runtimeRoot, 'temporal-service.json'), `${JSON.stringify({
       provider_kind: 'temporal',
       service_kind: 'custom_command',
@@ -56,7 +58,7 @@ test('family-runtime attempt inspect projects current provider readiness separat
       pid: worker.pid,
       address,
       namespace: 'default',
-      task_queue: 'opl-stage-attempts',
+      task_queue: taskQueue,
       started_at: new Date().toISOString(),
       status: 'ready',
       source_version: 'git:attempt-current-provider',
