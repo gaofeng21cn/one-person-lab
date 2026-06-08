@@ -12,7 +12,7 @@ Date: `2026-06-07`
 
 本文不冻结 receipt id、workorder 数字、attempt id、branch/worktree、provider tick、safe-action record/verify 流水或某轮 closeout 细节。需要当前事实时读取 live 机器面；需要历史过程时读取 `docs/history/**`、runtime ledger、提交历史或对应 repo-local history ledger。
 
-North-star 目标态回到 [OPL 与 Foundry Agents 理想目标态](../references/runtime-substrate/opl-family-agent-ideal-state.md)。顶层 operating model 重设计回到 [OPL Family Ideal Operating Model Redesign](./opl-family-ideal-operating-model-redesign.md)。公开角色、runtime 边界和默认入口回到 `project/status/architecture/invariants/decisions`。文档生命周期规则回到 [文档组合治理](../docs_portfolio_consolidation.md) 和 [文档生命周期政策](../policies/docs-lifecycle-policy.md)。
+North-star 目标态回到 [OPL 与 Foundry Agents 理想目标态](../references/runtime-substrate/opl-family-agent-ideal-state.md)。系统级理想评估、成熟工程经验映射和品牌一致性目标回到 [OPL Family 理想系统评估](../references/runtime-substrate/opl-family-ideal-system-assessment.md)。顶层 operating model 重设计回到 [OPL Family Ideal Operating Model Redesign](./opl-family-ideal-operating-model-redesign.md)。公开角色、runtime 边界和默认入口回到 `project/status/architecture/invariants/decisions`。文档生命周期规则回到 [文档组合治理](../docs_portfolio_consolidation.md) 和 [文档生命周期政策](../policies/docs-lifecycle-policy.md)。
 
 ## 目标态
 
