@@ -1,7 +1,7 @@
 export const FRAMEWORK_READINESS_SOURCE_COMMANDS = {
   semantic_hygiene: 'opl system semantic-hygiene --json',
   agents_readiness: 'opl agents readiness --family-defaults --json',
-  pack_compiler: 'opl agents pack-compiler --json',
+  pack_compiler: 'opl agents pack-compiler --family-defaults --json',
   stages_list: 'opl stages list --json',
   stages_readiness_family: 'opl stages readiness --family-defaults --json',
   stages_readiness_mas: 'opl stages readiness --domain mas --json',

@@ -1,3 +1,5 @@
+import { FRAMEWORK_READINESS_SOURCE_COMMANDS as SOURCE_COMMANDS } from './framework-readiness-source-commands.ts';
+
 type JsonRecord = Record<string, unknown>;
 
 export function frameworkReadinessBlockers(input: {
@@ -12,7 +14,7 @@ export function frameworkReadinessBlockers(input: {
       blocker_id: 'pack_compiler_framework_kernel_blocker_present',
       count: input.packCompilerBlockerCount,
       route_ref: '/framework_readiness/pack_compiler',
-      source_command: 'opl agents pack-compiler --json',
+      source_command: SOURCE_COMMANDS.pack_compiler,
     });
   }
   if (input.stageHardBlockerCount > 0) {

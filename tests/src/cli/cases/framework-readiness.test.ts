@@ -72,6 +72,19 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.attention_first_payload.summary.pack_compiler_hard_blocker_count,
     readiness.summary.pack_compiler_hard_blocker_count,
   );
+  assert.equal(readiness.pack_compiler.source_kind, 'standard_agent_repo_contracts');
+  assert.equal(
+    readiness.pack_compiler.source_command,
+    'opl agents pack-compiler --family-defaults --json',
+  );
+  assert.equal(
+    readiness.summary.pack_compiler_hard_blocker_count,
+    Math.max(
+      readiness.pack_compiler.summary.blocked_domain_count,
+      readiness.pack_compiler.summary.domain_generated_surface_owner_claim_count,
+      readiness.pack_compiler.summary.generated_artifact_drift_detected_count,
+    ),
+  );
   assert.equal(
     readiness.attention_first_payload.summary.diagnostic_failure_count,
     readiness.summary.framework_diagnostic_failure_count,
@@ -610,7 +623,7 @@ test('framework readiness summarizes default control-plane surfaces without auth
     true,
   );
   assert.equal(
-    readiness.source_commands.includes('opl agents pack-compiler --json'),
+    readiness.source_commands.includes('opl agents pack-compiler --family-defaults --json'),
     true,
   );
   assert.equal(

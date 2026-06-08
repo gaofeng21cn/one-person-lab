@@ -247,7 +247,7 @@ export async function buildFrameworkReadinessSummary(
     materializeFamilyTransitions: false,
     useProjectionCacheOnFailure: true,
   }).domain_manifests;
-  const packCompiler = record(buildDomainPackCompilerList(contracts, { domainManifests }).domain_pack_compiler);
+  const packCompiler = record(buildDomainPackCompilerList(contracts, { familyDefaults: true }).domain_pack_compiler);
   const familyStages = record(buildFamilyStagesList(contracts, { domainManifests }).family_stages);
   const familyStageReadiness = record(buildFamilyStageReadinessInspect(
     contracts,
@@ -745,6 +745,7 @@ export async function buildFrameworkReadinessSummary(
       },
       pack_compiler: {
         source_command: SOURCE_COMMANDS.pack_compiler,
+        source_kind: packCompiler.source_kind,
         summary: packSummary,
         authority_boundary: packCompiler.authority_boundary ?? authorityBoundary(),
       },
