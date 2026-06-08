@@ -104,10 +104,10 @@ test('family-runtime tick blocks domain owner rows without source fingerprint be
         dispatchRef:
           'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
       });
-      delete payload.source_fingerprint;
+      const { source_fingerprint: _sourceFingerprint, ...payloadWithoutSourceFingerprint } = payload;
       insertDefaultExecutorTaskWithPayload(db, {
         taskId: 'task-missing-source-fingerprint',
-        payload,
+        payload: payloadWithoutSourceFingerprint,
         dedupeKey: 'mas:dm-cvd:002:default-executor:missing-source-fingerprint',
         createdAt: '2026-05-25T16:30:00.000Z',
         status: 'queued',

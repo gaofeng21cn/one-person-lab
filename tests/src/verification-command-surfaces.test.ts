@@ -571,13 +571,15 @@ test('target architecture policy contracts keep progress, guardrail, and wrapper
     'physical_output_present',
     'valid_manifest',
     'owner_answer_present',
-    'current_pointer_selected',
+    'artifact_attempt_pointer_selected',
   ]);
   assert.equal(progressTruth.single_signal_non_progress_reasons.includes('provider_completion_only'), true);
   assert.equal(progressTruth.single_signal_non_progress_reasons.includes('file_presence_without_owner_answer'), true);
   assert.equal(progressTruth.authority_boundary.provider_completion_counts_as_progress, false);
   assert.equal(progressTruth.authority_boundary.raw_receipt_count_counts_as_progress, false);
   assert.equal(progressTruth.authority_boundary.file_presence_alone_counts_as_progress, false);
+  assert.equal(progressTruth.authority_boundary.artifact_attempt_pointer_can_write_stage_current_pointer, false);
+  assert.equal(progressTruth.authority_boundary.stage_transition_authority_required_for_stage_run_current, true);
 
   const guardrailTier = readJson<{
     contract_kind: string;
@@ -772,10 +774,15 @@ test('stage artifact runtime contract freezes folder truth and CLI boundaries', 
       attempt_root_pattern: string;
       required_attempt_entries: string[];
       current_pointer_role: string;
+      stage_transition_authority_required_for_stage_run_current: boolean;
       derived_index_role: string;
     };
     read_model_semantics: {
       status_source_of_truth: string;
+      stage_artifact_current_is_projection_only: boolean;
+      stage_artifact_current_may_write_stage_current_pointer: boolean;
+      stage_artifact_current_may_write_stage_run_terminal_state: boolean;
+      stage_artifact_current_may_publish_current_owner_delta: boolean;
       status_must_not_depend_on_stale_index: boolean;
       success_requires: string[];
       blocked_requires: string[];
@@ -844,10 +851,18 @@ test('stage artifact runtime contract freezes folder truth and CLI boundaries', 
     'evidence/',
     'receipts/',
   ]);
-  assert.equal(contract.state_root_layout.current_pointer_role, 'refs_only_current_or_canonical_artifact_pointer');
+  assert.equal(
+    contract.state_root_layout.current_pointer_role,
+    'refs_only_artifact_attempt_pointer_not_stage_run_current_pointer',
+  );
+  assert.equal(contract.state_root_layout.stage_transition_authority_required_for_stage_run_current, true);
   assert.equal(contract.state_root_layout.derived_index_role, 'rebuildable_projection_not_primary_truth');
 
   assert.equal(contract.read_model_semantics.status_source_of_truth, 'physical_stage_folder');
+  assert.equal(contract.read_model_semantics.stage_artifact_current_is_projection_only, true);
+  assert.equal(contract.read_model_semantics.stage_artifact_current_may_write_stage_current_pointer, false);
+  assert.equal(contract.read_model_semantics.stage_artifact_current_may_write_stage_run_terminal_state, false);
+  assert.equal(contract.read_model_semantics.stage_artifact_current_may_publish_current_owner_delta, false);
   assert.equal(contract.read_model_semantics.status_must_not_depend_on_stale_index, true);
   assert.deepEqual(contract.read_model_semantics.success_requires, [
     'valid_manifest',
