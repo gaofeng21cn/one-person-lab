@@ -126,6 +126,12 @@ function auditCleanupRoute(action: JsonRecord) {
     || actionKind === 'legacy_cleanup_verify';
 }
 
+function productionEvidenceLaneRoute(action: JsonRecord) {
+  const actionKind = stringValue(action.action_kind) ?? '';
+  return actionKind === 'app_release_user_path_evidence_receipt_record'
+    || actionKind === 'app_release_user_path_evidence_receipt_verify';
+}
+
 function routeIsClosedForDefaultCaller(action: JsonRecord, drilldown: JsonRecord) {
   const routeStatus = stringValue(action.route_status);
   const actionabilityStatus = stringValue(action.default_actionability_status);
@@ -137,6 +143,7 @@ function routeIsClosedForDefaultCaller(action: JsonRecord, drilldown: JsonRecord
     || actionabilityStatus?.startsWith('closed_by_')
     || action.default_actionable === false
     || auditCleanupRoute(action)
+    || productionEvidenceLaneRoute(action)
   ) {
     return true;
   }

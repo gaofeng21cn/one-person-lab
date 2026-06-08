@@ -16,7 +16,7 @@ import { buildManyStageManifest } from './runtime-app-operator-drilldown-summary
 import {
   assertAppReleaseUserPathAttention,
   assertAppReleaseUserPathAttentionCounts,
-  assertAppReleaseUserPathDefaultSafeAction,
+  assertAppReleaseUserPathProductionEvidenceLane,
   assertAppReleaseUserPathNextStep,
   assertAppReleaseUserPathSummary,
 } from './runtime-app-operator-drilldown-summary-app-release-assertions.ts';
@@ -625,7 +625,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       firstMissingEvidence.payload_workorder.typed_blocker_path.accepted,
       true,
     );
-    assertAppReleaseUserPathDefaultSafeAction(summaryDrilldown);
+    assertAppReleaseUserPathProductionEvidenceLane(summaryDrilldown);
     assert.equal(
       summaryDrilldown.attention_first_payload.provider_health.health_status,
       'attention_required',

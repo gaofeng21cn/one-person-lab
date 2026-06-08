@@ -65,38 +65,31 @@ export function assertAppReleaseUserPathAttentionCounts(summaryDrilldown: any) {
   );
 }
 
-export function assertAppReleaseUserPathDefaultSafeAction(summaryDrilldown: any) {
+export function assertAppReleaseUserPathProductionEvidenceLane(summaryDrilldown: any) {
   const nextSafeAction = summaryDrilldown.attention_first_payload.next_safe_action;
-  assert.equal(typeof nextSafeAction.action_id, 'string');
-  assert.equal(nextSafeAction.action_id.length > 0, true);
-  assert.equal(
-    nextSafeAction.action_id,
-    'app_release_user_path_evidence:one_person_lab_app_release_user_path:record',
+  assert.notEqual(
+    nextSafeAction?.action_kind,
+    'app_release_user_path_evidence_receipt_record',
   );
-  assert.equal(nextSafeAction.route_requires_domain_or_app_payload, true);
-  assert.equal(nextSafeAction.action_kind, 'app_release_user_path_evidence_receipt_record');
-  assert.equal(nextSafeAction.payload_owner, 'app_live_operator_or_release_owner');
-  assert.equal(nextSafeAction.can_close_without_domain_or_app_payload, false);
-  assert.equal(nextSafeAction.empty_payload_template_is_success_evidence, false);
+  assert.notEqual(
+    nextSafeAction?.action_kind,
+    'app_release_user_path_evidence_receipt_verify',
+  );
+  const appUserPathStep = summaryDrilldown.attention_first_payload.evidence_next_steps.items.find(
+    (item: { step_kind: string }) => item.step_kind === 'app_release_user_path_evidence',
+  );
+  assert.equal(Boolean(appUserPathStep), true);
+  assert.equal(appUserPathStep.record_action_id, 'app_release_user_path_evidence:one_person_lab_app_release_user_path:record');
+  assert.equal(appUserPathStep.can_submit_record_to_safe_action_shell, true);
+  assert.equal(appUserPathStep.route_requires_domain_or_app_payload, true);
+  assert.equal(appUserPathStep.payload_owner, 'app_live_operator_or_release_owner');
+  assert.equal(appUserPathStep.empty_payload_template_is_success_evidence, false);
   assert.equal(
-    nextSafeAction.payload_template_policy,
+    appUserPathStep.payload_template_policy,
     'template_is_empty_by_design_replace_with_real_app_live_release_or_typed_blocker_refs_before_submit',
   );
-  assert.equal(nextSafeAction.submit_via, 'opl runtime action execute');
   assert.deepEqual(
-    nextSafeAction.submit_args,
-    [
-      'runtime',
-      'action',
-      'execute',
-      '--action',
-      'app_release_user_path_evidence:one_person_lab_app_release_user_path:record',
-      '--payload-file',
-      '<payload.json>',
-    ],
-  );
-  assert.deepEqual(
-    nextSafeAction.copyable_runtime_action_execute_commands.record_with_payload,
+    appUserPathStep.copyable_runtime_action_execute_commands.record_with_payload,
     [
       'runtime',
       'action',
@@ -108,29 +101,29 @@ export function assertAppReleaseUserPathDefaultSafeAction(summaryDrilldown: any)
     ],
   );
   assert.equal(
-    nextSafeAction.payload_workorder.surface_kind,
+    appUserPathStep.payload_workorder.surface_kind,
     'opl_app_release_user_path_evidence_payload_workorder',
   );
   assert.equal(
-    nextSafeAction.payload_workorder.accepted_payload_path_policy,
+    appUserPathStep.payload_workorder.accepted_payload_path_policy,
     'real_app_release_user_path_refs_or_typed_blocker_path_empty_template_blocks',
   );
   assert.equal(
-    nextSafeAction.payload_workorder.accepted_payload_paths
+    appUserPathStep.payload_workorder.accepted_payload_paths
       .app_release_user_path_refs_path.closes_app_release_user_path,
     false,
   );
   assert.equal(
-    nextSafeAction.payload_workorder.accepted_payload_paths
+    appUserPathStep.payload_workorder.accepted_payload_paths
       .typed_blocker_path.success_claimed,
     false,
   );
-  assert.equal(nextSafeAction.payload_workorder.empty_payload_template_is_success_evidence, false);
-  assert.equal(nextSafeAction.payload_workorder.authority_boundary.can_create_owner_receipt, false);
-  assert.equal(nextSafeAction.payload_workorder.authority_boundary.can_generate_typed_blocker, false);
-  assert.equal(nextSafeAction.payload_workorder.authority_boundary.can_claim_release_ready, false);
+  assert.equal(appUserPathStep.payload_workorder.empty_payload_template_is_success_evidence, false);
+  assert.equal(appUserPathStep.payload_workorder.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(appUserPathStep.payload_workorder.authority_boundary.can_generate_typed_blocker, false);
+  assert.equal(appUserPathStep.payload_workorder.authority_boundary.can_claim_release_ready, false);
   assert.deepEqual(
-    nextSafeAction.payload_workorder.long_operator_observation_workorder_commands.start,
+    appUserPathStep.payload_workorder.long_operator_observation_workorder_commands.start,
     [
       'runtime',
       'app-release-evidence',
@@ -145,7 +138,7 @@ export function assertAppReleaseUserPathDefaultSafeAction(summaryDrilldown: any)
     ],
   );
   assert.deepEqual(
-    nextSafeAction.payload_workorder.long_operator_observation_workorder_commands.finish,
+    appUserPathStep.payload_workorder.long_operator_observation_workorder_commands.finish,
     [
       'runtime',
       'app-release-evidence',
@@ -156,7 +149,7 @@ export function assertAppReleaseUserPathDefaultSafeAction(summaryDrilldown: any)
     ],
   );
   assert.deepEqual(
-    nextSafeAction.payload_workorder.long_operator_observation_workorder_commands.event,
+    appUserPathStep.payload_workorder.long_operator_observation_workorder_commands.event,
     [
       'runtime',
       'app-release-evidence',
@@ -171,7 +164,7 @@ export function assertAppReleaseUserPathDefaultSafeAction(summaryDrilldown: any)
     ],
   );
   assert.deepEqual(
-    nextSafeAction.payload_workorder.long_operator_observation_workorder_commands.record_payload,
+    appUserPathStep.payload_workorder.long_operator_observation_workorder_commands.record_payload,
     [
       'runtime',
       'app-release-evidence',
@@ -181,7 +174,7 @@ export function assertAppReleaseUserPathDefaultSafeAction(summaryDrilldown: any)
     ],
   );
   assert.deepEqual(
-    nextSafeAction.payload_workorder.long_operator_observation_workorder_commands.verify_receipt,
+    appUserPathStep.payload_workorder.long_operator_observation_workorder_commands.verify_receipt,
     [
       'runtime',
       'app-release-evidence',
@@ -191,11 +184,11 @@ export function assertAppReleaseUserPathDefaultSafeAction(summaryDrilldown: any)
     ],
   );
   assert.equal(
-    nextSafeAction.payload_workorder.long_operator_observation_workorder_policy,
+    appUserPathStep.payload_workorder.long_operator_observation_workorder_policy,
     'start_event_finish_materializes_local_manifest_event_log_and_payload_only_record_verify_remain_required',
   );
   assert.equal(
-    nextSafeAction.payload_workorder.authority_boundary.can_close_app_release_user_path,
+    appUserPathStep.payload_workorder.authority_boundary.can_close_app_release_user_path,
     false,
   );
 }
