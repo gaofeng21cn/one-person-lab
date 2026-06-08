@@ -65,12 +65,12 @@ const forbiddenPatterns = [
   /CODEX_API_KEY/,
 ];
 
-function run(command: string, args: string[], options: { cwd?: string } = {}) {
+function run(command: string, args: string[], options: { cwd?: string; env?: NodeJS.ProcessEnv } = {}) {
   const result = spawnSync(command, args, {
     cwd: options.cwd ?? repoRoot,
     encoding: 'utf8',
     stdio: 'pipe',
-    env: process.env,
+    env: { ...process.env, ...options.env },
   });
   if (result.status !== 0) {
     throw new Error([
@@ -265,6 +265,7 @@ function buildPdf(source: WhitepaperSource, markdown: string) {
   fs.writeFileSync(tempMarkdownPath, buildPdfMarkdown(source, markdown), 'utf8');
 
   const font = process.env.OPL_WHITEPAPER_PDF_FONT || 'Noto Sans CJK SC';
+  const sourceDateEpoch = String(Math.floor(new Date(`${source.publication_date}T00:00:00Z`).getTime() / 1000));
   run('pandoc', [
     tempMarkdownPath,
     '--standalone',
@@ -281,7 +282,7 @@ function buildPdf(source: WhitepaperSource, markdown: string) {
     '-V', 'linkcolor=OPLTeal',
     '-V', 'urlcolor=OPLTeal',
     '-o', pdfPath,
-  ]);
+  ], { env: { SOURCE_DATE_EPOCH: sourceDateEpoch } });
 }
 
 function renderPdf() {
@@ -354,7 +355,7 @@ function main() {
 
   const verification = {
     status: 'opl_whitepaper_ready',
-    generated_at: new Date().toISOString(),
+    generated_at: `${source.publication_date}T00:00:00.000Z`,
     source: relativeToRepo(sourcePath),
     generated_markdown: relativeToRepo(markdownPath),
     generated_pdf: relativeToRepo(pdfPath),
