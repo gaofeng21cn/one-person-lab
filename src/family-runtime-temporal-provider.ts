@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { WorkflowIdConflictPolicy, WorkflowIdReusePolicy, WorkflowNotFoundError } from '@temporalio/common';
 import { NativeConnection, Worker } from '@temporalio/worker';
 
+import { resolveCodexBinary } from './codex.ts';
 import { FrameworkContractError } from './contracts.ts';
 import { familyRuntimePaths } from './family-runtime-store.ts';
 import * as activities from './family-runtime-temporal-activities.ts';
@@ -118,6 +119,29 @@ type StageAttemptPayload = Parameters<typeof buildTemporalStageAttemptWorkflowIn
   workflow_id: string;
   provider_kind: string;
 };
+
+function temporalWorkerSpawnEnvironment(input: {
+  temporalAddress: string | null;
+}) {
+  const codexBinary = resolveCodexBinary();
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    OPL_TEMPORAL_ADDRESS: input.temporalAddress ?? process.env.OPL_TEMPORAL_ADDRESS,
+    OPL_TEMPORAL_WORKER_STATUS: 'ready',
+  };
+  if (codexBinary) {
+    env.OPL_CODEX_BIN = codexBinary.path;
+  }
+  return {
+    env,
+    projection: {
+      OPL_TEMPORAL_ADDRESS: env.OPL_TEMPORAL_ADDRESS ?? null,
+      OPL_TEMPORAL_WORKER_STATUS: env.OPL_TEMPORAL_WORKER_STATUS ?? null,
+      OPL_CODEX_BIN: env.OPL_CODEX_BIN ?? null,
+      codex_binary_source: codexBinary?.source ?? null,
+    },
+  };
+}
 
 export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths) {
   return inspectTemporalWorkerLifecycleWithDetail(paths, { detail: 'full' });
@@ -588,6 +612,9 @@ export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, i
   }
 
   const { logRefs, fds: logFds } = openTemporalWorkerAppendLogFds(paths);
+  const spawnedWorkerEnvironment = temporalWorkerSpawnEnvironment({
+    temporalAddress: status.address,
+  });
   const child = spawn(
     process.execPath,
     [
@@ -601,11 +628,7 @@ export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, i
       cwd: process.cwd(),
       detached: true,
       stdio: ['ignore', logFds.stdout, logFds.stderr],
-      env: {
-        ...process.env,
-        OPL_TEMPORAL_ADDRESS: status.address ?? process.env.OPL_TEMPORAL_ADDRESS,
-        OPL_TEMPORAL_WORKER_STATUS: 'ready',
-      },
+      env: spawnedWorkerEnvironment.env,
     },
   );
   child.unref();
@@ -635,6 +658,7 @@ export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, i
     surface_kind: 'temporal_worker_lifecycle_start',
     provider_kind: 'temporal',
     start_status: 'started',
+    spawned_worker_environment: spawnedWorkerEnvironment.projection,
     status: await inspectTemporalWorkerLifecycle(paths),
   };
 }

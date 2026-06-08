@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import net from 'node:net';
 import { DatabaseSync } from 'node:sqlite';
 
-import { assert, createFakeLaunchctlFixture, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, createFakeCodexFixture, createFakeLaunchctlFixture, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
 import {
   createFamilyRuntimeQueueTables,
   familyRuntimePaths,
@@ -362,9 +362,10 @@ test('family-runtime provider-worker supervisor installs a KeepAlive resident Te
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-provider-worker-supervisor-home-'));
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-provider-worker-supervisor-state-'));
   const launchctl = createFakeLaunchctlFixture();
+  const codex = createFakeCodexFixture('printf \'{}\\n\'');
   const env = familyRuntimeEnv(stateRoot, {
     HOME: homeRoot,
-    PATH: `${launchctl.fixtureRoot}:/usr/bin:/bin`,
+    PATH: `${codex.fixtureRoot}:${launchctl.fixtureRoot}:/usr/bin:/bin`,
     OPL_TEMPORAL_ADDRESS: '127.0.0.1:7233',
     TEMPORAL_ADDRESS: '',
   });
@@ -411,7 +412,8 @@ test('family-runtime provider-worker supervisor installs a KeepAlive resident Te
     assert.equal(installed.command.join(' '), 'opl family-runtime worker start --provider temporal --foreground');
     assert.equal(installed.environment_variables.OPL_FAMILY_RUNTIME_PROVIDER, 'temporal');
     assert.equal(installed.environment_variables.OPL_STATE_DIR, stateRoot);
-    assert.equal(installed.environment_variables.PATH, `${launchctl.fixtureRoot}:/usr/bin:/bin`);
+    assert.equal(installed.environment_variables.OPL_CODEX_BIN, codex.codexPath);
+    assert.equal(installed.environment_variables.PATH, `${codex.fixtureRoot}:${launchctl.fixtureRoot}:/usr/bin:/bin`);
     assert.equal(installed.health_check_command.join(' '), 'opl family-runtime provider-slo tick --provider temporal');
     assert.equal(installed.legacy_watchdog_cleanup.removed, true);
     assert.equal(fs.existsSync(legacyPlistPath), false);
@@ -426,6 +428,8 @@ test('family-runtime provider-worker supervisor installs a KeepAlive resident Te
     assert.match(plist, /--temporal-worker-foreground/);
     assert.match(plist, /--family-runtime-root/);
     assert.match(plist, /OPL_STATE_DIR/);
+    assert.match(plist, /OPL_CODEX_BIN/);
+    assert.match(plist, new RegExp(codex.codexPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     assert.match(plist, /<key>PATH<\/key>/);
     assert.match(plist, new RegExp(stateRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     assert.doesNotMatch(plist, /StartInterval/);
@@ -456,6 +460,7 @@ test('family-runtime provider-worker supervisor installs a KeepAlive resident Te
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(launchctl.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(codex.fixtureRoot, { recursive: true, force: true });
   }
 });
 

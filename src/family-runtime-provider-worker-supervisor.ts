@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 
+import { resolveCodexBinary } from './codex.ts';
 import { FrameworkContractError } from './contracts.ts';
 import { runTemporalProviderSloTick } from './family-runtime-provider-slo-executor.ts';
 import {
@@ -89,6 +90,10 @@ function plistEnvironmentVariables(paths: RuntimePaths) {
   const pathEnv = process.env.PATH?.trim();
   if (pathEnv) {
     values.PATH = pathEnv;
+  }
+  const codexBinary = resolveCodexBinary();
+  if (codexBinary) {
+    values.OPL_CODEX_BIN = codexBinary.path;
   }
   const temporalAddress = process.env.OPL_TEMPORAL_ADDRESS?.trim() || process.env.TEMPORAL_ADDRESS?.trim();
   if (temporalAddress) {

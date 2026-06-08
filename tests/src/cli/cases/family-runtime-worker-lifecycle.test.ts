@@ -6,6 +6,7 @@ import { TestWorkflowEnvironment } from '@temporalio/testing';
 
 import {
   assert,
+  createFakeCodexFixture,
   fs,
   os,
   path,
@@ -904,6 +905,69 @@ test('Temporal worker stop cleans root-tagged orphan foreground worker from a di
       // The lifecycle under test should have removed the fixture process.
     }
     fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('Temporal worker detached start passes resolved Codex binary to foreground worker env', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-codex-env-'));
+  const workerRoot = path.join(stateRoot, 'family-runtime');
+  const codex = createFakeCodexFixture('printf \'{}\\n\'');
+  const sourceModulePath = path.join(stateRoot, 'family-runtime-temporal-provider.ts');
+  const temporalServer = await createFakeTemporalServer();
+  const previousPath = process.env.PATH;
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  const previousAddress = process.env.OPL_TEMPORAL_ADDRESS;
+  const previousWorkerStatus = process.env.OPL_TEMPORAL_WORKER_STATUS;
+  const previousSourceVersion = process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+  try {
+    fs.mkdirSync(path.dirname(sourceModulePath), { recursive: true });
+    fs.writeFileSync(sourceModulePath, 'export const workerRuntime = 1;\n');
+    process.env.PATH = `${codex.fixtureRoot}:${process.env.PATH ?? ''}`;
+    delete process.env.OPL_CODEX_BIN;
+    process.env.OPL_TEMPORAL_ADDRESS = temporalServer.address;
+    delete process.env.OPL_TEMPORAL_WORKER_STATUS;
+    process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = `worker-runtime:${path.dirname(sourceModulePath)}:${'a'.repeat(64)}`;
+
+    const start = await startTemporalWorkerLifecycle({ root: workerRoot });
+
+    assert.equal(start.start_status, 'started');
+    assert.equal(start.spawned_worker_environment?.OPL_CODEX_BIN, codex.codexPath);
+    assert.equal(start.spawned_worker_environment?.codex_binary_source, 'path');
+    assert.equal(start.spawned_worker_environment?.OPL_TEMPORAL_ADDRESS, temporalServer.address);
+  } finally {
+    if (previousPath === undefined) {
+      delete process.env.PATH;
+    } else {
+      process.env.PATH = previousPath;
+    }
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    if (previousAddress === undefined) {
+      delete process.env.OPL_TEMPORAL_ADDRESS;
+    } else {
+      process.env.OPL_TEMPORAL_ADDRESS = previousAddress;
+    }
+    if (previousWorkerStatus === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_STATUS;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_STATUS = previousWorkerStatus;
+    }
+    if (previousSourceVersion === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = previousSourceVersion;
+    }
+    try {
+      process.kill(JSON.parse(fs.readFileSync(path.join(workerRoot, 'temporal-worker.json'), 'utf8')).pid, 'SIGKILL');
+    } catch {
+      // The lifecycle under test may have exited before cleanup.
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(codex.fixtureRoot, { recursive: true, force: true });
+    await temporalServer.close();
   }
 });
 
