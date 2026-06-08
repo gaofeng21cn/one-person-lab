@@ -5,6 +5,7 @@ import {
   test,
 } from './helpers.ts';
 import { enqueueTask } from '../../../../../src/family-runtime-enqueue.ts';
+import { MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON } from '../../../../../src/family-runtime-mas-stage-native-owner-answer.ts';
 import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
 import { insertEvent } from '../../../../../src/family-runtime-store.ts';
 import { listStageAttemptsForTask } from '../../../../../src/family-runtime-stage-attempts.ts';
@@ -183,6 +184,79 @@ test('family-runtime requeues succeeded MAS readiness owner action missing Stage
     assert.equal(
       JSON.parse(requeueEvent.payload_json).reason,
       'stage_native_owner_answer_missing_after_default_executor_completion',
+    );
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime clears previous missing Stage Native owner blocker when current closeout ref is observed', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    createQueueTables(db);
+    const stageNativeRef = 'studies/002-dm-china-us-mortality-attribution/artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json';
+    const currentSource = `stage-current-owner-delta::complete_medical_paper_readiness_surface::authoring_runtime_authorization::/tmp/dm-cvd/${stageNativeRef}`;
+    const taskId = 'task-mas-default-readiness-resolved-stage-native-answer';
+    const dedupeKey = 'mas:dm-cvd:002:default-executor:complete_medical_paper_readiness_surface:resolved-stage-native-answer';
+    const payload = readinessSurfacePayload(currentSource);
+    insertSucceededTask(db, { taskId, payload, dedupeKey });
+    db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(taskId);
+    const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as Parameters<
+      typeof ensureProviderHostedStageAttempt
+    >[1];
+    const attempt = ensureProviderHostedStageAttempt(db, row, payload);
+    assert.ok(attempt);
+    db.prepare(`
+      UPDATE stage_attempts
+      SET status = 'completed',
+        closeout_receipt_status = 'accepted_typed_closeout',
+        closeout_refs_json = ?,
+        route_impact_json = ?,
+        provider_run_json = json_set(
+          provider_run_json,
+          '$.provider_status', 'completed'
+        )
+      WHERE stage_attempt_id = ?
+    `).run(
+      JSON.stringify([stageNativeRef]),
+      JSON.stringify({ action_type: 'complete_medical_paper_readiness_surface' }),
+      attempt.stage_attempt_id,
+    );
+    db.prepare(`
+      UPDATE tasks
+      SET status = 'blocked',
+        last_error = ?,
+        dead_letter_reason = ?
+      WHERE task_id = ?
+    `).run(MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON, MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON, taskId);
+
+    const result = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload,
+      dedupeKey,
+      source: 'test-domain-export-replay',
+    });
+    const task = db.prepare('SELECT status, last_error, dead_letter_reason FROM tasks WHERE task_id = ?').get(
+      taskId,
+    ) as { status: string; last_error: string | null; dead_letter_reason: string | null };
+    const resolvedEvent = db.prepare(`
+      SELECT payload_json
+      FROM events
+      WHERE task_id = ? AND event_type = 'task_resolved_missing_stage_native_owner_answer'
+      LIMIT 1
+    `).get(taskId) as { payload_json: string } | undefined;
+
+    assert.equal(result.accepted, false);
+    assert.equal(result.idempotent_noop, true);
+    assert.equal(result.task?.status, 'succeeded');
+    assert.equal(task.status, 'succeeded');
+    assert.equal(task.last_error, null);
+    assert.equal(task.dead_letter_reason, null);
+    assert.ok(resolvedEvent);
+    assert.equal(
+      JSON.parse(resolvedEvent.payload_json).reason,
+      'stage_native_owner_answer_observed_after_previous_missing_blocker',
     );
   } finally {
     db.close();

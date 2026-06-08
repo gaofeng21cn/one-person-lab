@@ -295,6 +295,66 @@ test('family-runtime blocks completed MAS readiness attempt that lacks Stage Nat
   }
 });
 
+test('family-runtime succeeds completed MAS readiness attempt when closeout ref matches current Stage Native source', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    withIsolatedFamilyRuntimeEnv(() => {
+      createQueueTables(db);
+      const stageNativeRef = 'studies/002-dm-china-us-mortality-attribution/artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json';
+      const currentSource = `stage-current-owner-delta::complete_medical_paper_readiness_surface::authoring_runtime_authorization::/tmp/dm-cvd/${stageNativeRef}`;
+      const dedupeKey = 'mas:dm-cvd:002:default-executor:complete_medical_paper_readiness_surface:terminal-current-closeout-ref';
+      const taskId = 'task-mas-readiness-terminal-current-closeout-ref';
+      const payload = readinessSurfacePayload(currentSource);
+      insertSucceededTask(db, {
+        taskId,
+        domainId: 'medautoscience',
+        taskKind: 'domain_owner/default-executor-dispatch',
+        payload,
+        dedupeKey,
+      });
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(taskId);
+      const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as Parameters<
+        typeof ensureProviderHostedStageAttempt
+      >[1];
+      const attempt = ensureProviderHostedStageAttempt(db, row, payload);
+      assert.ok(attempt);
+
+      syncStageAttemptFromTemporalTerminalObservation(db, completedTemporalObservation({
+        stageAttemptId: attempt.stage_attempt_id,
+        workflowId: attempt.workflow_id,
+        closeoutRefs: [
+          'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_execution/latest.json',
+          stageNativeRef,
+        ],
+        routeImpact: {
+          action_type: 'complete_medical_paper_readiness_surface',
+          owner_result_status: 'typed_blocker_or_stop_loss',
+        },
+      }));
+      const task = db.prepare(`
+        SELECT status, last_error, dead_letter_reason
+        FROM tasks
+        WHERE task_id = ?
+      `).get(taskId) as { status: string; last_error: string | null; dead_letter_reason: string | null };
+      const [syncedAttempt] = listStageAttemptsForTask(db, taskId);
+      const missingEventCount = db.prepare(`
+        SELECT COUNT(*) AS count
+        FROM events
+        WHERE task_id = ? AND event_type = 'stage_attempt_terminal_missing_stage_native_owner_answer_task'
+      `).get(taskId) as { count: number };
+
+      assert.equal(task.status, 'succeeded');
+      assert.equal(task.last_error, null);
+      assert.equal(task.dead_letter_reason, null);
+      assert.equal(syncedAttempt.status, 'completed');
+      assert.equal(syncedAttempt.closeout_receipt_status, 'accepted_typed_closeout');
+      assert.equal(missingEventCount.count, 0);
+    });
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime succeeds completed MAS readiness attempt with Stage Native owner answer', () => {
   const db = new DatabaseSync(':memory:');
   try {

@@ -12,6 +12,7 @@ Machine boundary: 本文是人读索引。公开产品 truth 继续归 README、
 
 ## 内容
 
+- `whitepaper/`：OPL 面向用户分享的白皮书、PDF 和生成验证记录。
 - `roadmap*`：产品路线。
 - `task-map*`：family 任务版图。
 - `operating-model*`：用户视角运行模型。

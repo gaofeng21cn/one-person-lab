@@ -42,6 +42,14 @@ function jsonRecord(value: string) {
   }
 }
 
+function jsonStringList(value: string) {
+  try {
+    return stringList(JSON.parse(value));
+  } catch {
+    return [];
+  }
+}
+
 function stringList(value: unknown) {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
@@ -70,6 +78,17 @@ function isStageNativeOwnerAnswerRef(ref: string, allowRelative: boolean) {
       ref === RELATIVE_OWNER_RECEIPT_REF
       || ref === RELATIVE_TYPED_BLOCKER_REF
     ));
+}
+
+function stageNativeRefCandidates(ref: string) {
+  const trimmed = ref.trim();
+  const studiesIndex = trimmed.indexOf('studies/');
+  const artifactsIndex = trimmed.indexOf(STAGE_OUTPUTS_FRAGMENT);
+  return [...new Set([
+    trimmed,
+    studiesIndex >= 0 ? trimmed.slice(studiesIndex) : null,
+    artifactsIndex >= 0 ? trimmed.slice(artifactsIndex) : null,
+  ].filter((entry): entry is string => Boolean(entry)))];
 }
 
 function currentFingerprints(payload: Record<string, unknown>) {
@@ -102,6 +121,27 @@ function fingerprintsMatch(answer: Record<string, unknown>, currentPayload: Reco
     return answerSet.size === 0 && currentSet.size === 0;
   }
   return [...answerSet].some((entry) => currentSet.has(entry));
+}
+
+function stageNativeCloseoutRefMatchesCurrentPayload(ref: string, currentPayload: Record<string, unknown>) {
+  if (!isStageNativeOwnerAnswerRef(ref, true)) {
+    return false;
+  }
+  const currentSet = currentFingerprints(currentPayload);
+  if (currentSet.size === 0) {
+    return false;
+  }
+  const refCandidates = stageNativeRefCandidates(ref);
+  return [...currentSet].some((fingerprint) =>
+    refCandidates.some((candidate) => fingerprint.includes(candidate))
+  );
+}
+
+function closeoutRefsHaveCurrentStageNativeOwnerAnswer(
+  refs: string[],
+  currentPayload: Record<string, unknown>,
+) {
+  return refs.some((ref) => stageNativeCloseoutRefMatchesCurrentPayload(ref, currentPayload));
 }
 
 function directStageNativeAnswer(record: Record<string, unknown>, currentPayload: Record<string, unknown>) {
@@ -173,6 +213,9 @@ function stageAttemptHasStageNativeAnswer(
   attempt: StageAttemptPayload,
   currentPayload: Record<string, unknown>,
 ) {
+  if (closeoutRefsHaveCurrentStageNativeOwnerAnswer(attempt.closeout_refs, currentPayload)) {
+    return true;
+  }
   if (hasStageNativeAnswerInRecord(attempt.route_impact, currentPayload)) {
     return true;
   }
@@ -207,8 +250,19 @@ export function stageAttemptRowHasMasStageNativeOwnerAnswer(
   row: StageAttemptRow,
   currentPayload: Record<string, unknown>,
 ) {
+  const closeoutRefs = jsonStringList(row.closeout_refs_json);
+  if (closeoutRefsHaveCurrentStageNativeOwnerAnswer(closeoutRefs, currentPayload)) {
+    return true;
+  }
   const routeImpact = jsonRecord(row.route_impact_json);
   return hasMasStageNativeOwnerAnswer(routeImpact, currentPayload);
+}
+
+export function stageAttemptPayloadHasMasStageNativeOwnerAnswer(
+  attempt: StageAttemptPayload,
+  currentPayload: Record<string, unknown>,
+) {
+  return stageAttemptHasStageNativeAnswer(attempt, currentPayload);
 }
 
 export function defaultExecutorMissingStageNativeOwnerAnswerRedriveDecision(input: {

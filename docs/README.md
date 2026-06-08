@@ -101,6 +101,7 @@ OPL 系列项目开发的主参考是 [OPL 系列项目开发主参考](./active
 仓库首页首先面向潜在用户，必须保持安装优先、可读，并直接说明用户可以开始和交付什么工作。路线图和运行模型在用户知道如何启动后，再解释产品方向。
 
 - [仓库首页](../README.md)
+- [OPL 白皮书](./public/whitepaper/README.md)
 - [路线图](./public/roadmap.md)
 - [任务版图](./public/task-map.md)
 - [运行模型](./public/operating-model.md)

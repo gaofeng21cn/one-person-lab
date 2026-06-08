@@ -5,7 +5,11 @@ import { deadLetterRedriveDecision } from './family-runtime-dead-letter-redrive.
 import { canonicalFamilyRuntimeTaskKind } from './family-runtime-mas-domain-route.ts';
 import { MAS_PAPER_AUTONOMY_TASK_KINDS } from './family-runtime-paper-autonomy.ts';
 import {
+  MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
   defaultExecutorMissingStageNativeOwnerAnswerRedriveDecision,
+  hasMasStageNativeOwnerAnswer,
+  isMasReadinessStageNativeOwnerAction,
+  stageAttemptPayloadHasMasStageNativeOwnerAnswer,
 } from './family-runtime-mas-stage-native-owner-answer.ts';
 import {
   DEFAULT_MAX_ATTEMPTS,
@@ -263,6 +267,66 @@ function transportOnlySucceededDefaultExecutorAdmissionRedriveDecision(
   };
 }
 
+function latestDispatchSucceededPayload(db: DatabaseSync, taskId: string) {
+  const row = db.prepare(`
+    SELECT payload_json
+    FROM events
+    WHERE task_id = ? AND event_type = 'task_dispatch_succeeded'
+    ORDER BY created_at DESC
+    LIMIT 1
+  `).get(taskId) as { payload_json: string } | undefined;
+  if (!row) {
+    return null;
+  }
+  try {
+    return recordValue(JSON.parse(row.payload_json));
+  } catch {
+    return null;
+  }
+}
+
+function defaultExecutorResolvedMissingStageNativeOwnerAnswerDecision(
+  db: DatabaseSync,
+  existing: FamilyRuntimeTaskRow,
+  existingPayload: Record<string, unknown>,
+  nextPayload: Record<string, unknown>,
+  stageAttempts: ReturnType<typeof listStageAttemptsForTask>,
+) {
+  if (
+    existing.status !== 'blocked'
+    || existing.dead_letter_reason !== MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON
+    || !isMasReadinessStageNativeOwnerAction(existing, existingPayload)
+    || !isMasReadinessStageNativeOwnerAction(existing, nextPayload)
+  ) {
+    return null;
+  }
+  const liveAttempt = stageAttempts.find((attempt) => ['queued', 'running', 'checkpointed', 'human_gate'].includes(
+    attempt.status,
+  ));
+  if (liveAttempt) {
+    return null;
+  }
+  const evidenceRecords = [
+    existingPayload,
+    nextPayload,
+    latestDispatchSucceededPayload(db, existing.task_id),
+  ];
+  const answerObserved = evidenceRecords.some((record) => hasMasStageNativeOwnerAnswer(record, nextPayload))
+    || stageAttempts.some((attempt) => stageAttemptPayloadHasMasStageNativeOwnerAnswer(attempt, nextPayload));
+  if (!answerObserved) {
+    return null;
+  }
+  return {
+    reason: 'stage_native_owner_answer_observed_after_previous_missing_blocker',
+    previous_source_fingerprint: sourceFingerprint(existingPayload),
+    next_source_fingerprint: sourceFingerprint(nextPayload),
+    previous_work_unit_fingerprint: optionalString(recordValue(existingPayload.owner_route_currentness_basis)?.work_unit_fingerprint),
+    next_work_unit_fingerprint: optionalString(recordValue(nextPayload.owner_route_currentness_basis)?.work_unit_fingerprint),
+    stage_attempt_ids: stageAttempts.map((attempt) => attempt.stage_attempt_id),
+    stage_attempt_statuses: stageAttempts.map((attempt) => attempt.status),
+  };
+}
+
 function masPaperAutonomyDeadLetterCurrentnessBlock(existing: FamilyRuntimeTaskRow) {
   if (
     existing.domain_id !== 'medautoscience'
@@ -347,6 +411,67 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         nextPayload: payload,
         stageAttempts: existingStageAttempts,
       });
+      const resolvedMissingStageNativeOwnerAnswer = defaultExecutorResolvedMissingStageNativeOwnerAnswerDecision(
+        db,
+        existing,
+        existingPayload,
+        payload,
+        existingStageAttempts,
+      );
+      if (resolvedMissingStageNativeOwnerAnswer) {
+        db.prepare(`
+          UPDATE tasks
+          SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = 'succeeded',
+            source = ?, requires_approval = ?, approved_at = NULL,
+            lease_owner = NULL, lease_expires_at = NULL, last_error = NULL,
+            dead_letter_reason = NULL, updated_at = ?
+          WHERE task_id = ?
+        `).run(
+          input.domainId,
+          taskKind,
+          exportedPayloadJson,
+          input.priority ?? 0,
+          input.source ?? 'opl-cli',
+          requiresApproval ? 1 : 0,
+          createdAt,
+          existing.task_id,
+        );
+        const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
+        insertEvent(db, {
+          taskId: refreshed.task_id,
+          domainId: refreshed.domain_id,
+          eventType: 'task_resolved_missing_stage_native_owner_answer',
+          source: input.source ?? 'opl-cli',
+          payload: {
+            dedupe_key: dedupeKey,
+            previous_status: existing.status,
+            next_status: refreshed.status,
+            cleared_dead_letter_reason: existing.dead_letter_reason,
+            ...resolvedMissingStageNativeOwnerAnswer,
+            authority_boundary: {
+              opl: 'queue_read_model_repair_after_domain_owner_answer_observed_only',
+              domain: 'truth_quality_artifact_gate_owner',
+              domain_truth_mutation: false,
+              publication_quality_mutation: false,
+              artifact_gate_mutation: false,
+              current_package_mutation: false,
+              provider_completion_is_domain_ready: false,
+            },
+          },
+        });
+        insertNotification(db, {
+          taskId: refreshed.task_id,
+          severity: 'info',
+          title: 'Family runtime missing owner answer resolved',
+          body: `${input.domainId}:${taskKind}`,
+          payload: { status: refreshed.status, dedupe_key: dedupeKey },
+        });
+        return {
+          accepted: false,
+          idempotent_noop: true,
+          task: taskToPayload(refreshed),
+        };
+      }
       if (exportedTaskChanged && closeoutRedrive) {
         const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
         db.prepare(`

@@ -18,6 +18,7 @@ import {
 import {
   hasMasStageNativeOwnerAnswer,
   isMasReadinessStageNativeOwnerAction,
+  stageAttemptPayloadHasMasStageNativeOwnerAnswer,
 } from '../family-runtime-mas-stage-native-owner-answer.ts';
 
 export const DEFAULT_EXECUTOR_SUPERSEDED_REASON = 'mas_default_executor_superseded_by_current_source';
@@ -226,6 +227,9 @@ function completedCloseoutCanReconcileTask(
   attempt: NonNullable<ReturnType<typeof completedAcceptedAttemptForTask>>,
 ) {
   if (!isMasReadinessStageNativeOwnerAction(row, payload)) {
+    return true;
+  }
+  if (stageAttemptPayloadHasMasStageNativeOwnerAnswer(attempt, payload)) {
     return true;
   }
   if (hasMasStageNativeOwnerAnswer(attempt.route_impact, payload)) {
