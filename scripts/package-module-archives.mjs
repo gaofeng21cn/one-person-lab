@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   buildOplPackageManifest,
+  buildOplPackageChannelManifest,
   getOplPackageModuleSpecs,
   sha256File,
   writeOplPackageManifest,
@@ -203,7 +204,10 @@ function main() {
 
   const checksumPath = writeChecksumFile(options.outDir, archives);
   const manifestPath = writeOplPackageManifest(path.join(options.outDir, 'opl-release-manifest.json'), manifest);
-  const channelManifestPath = writeOplPackageManifest(path.join(options.outDir, 'opl-channel-manifest.json'), manifest);
+  const channelManifestPath = writeOplPackageManifest(
+    path.join(options.outDir, 'opl-channel-manifest.json'),
+    buildOplPackageChannelManifest(manifest),
+  );
   console.log(JSON.stringify({
     status: 'completed',
     manifest: manifestPath,

@@ -365,6 +365,8 @@ test('package archive builder writes channel manifest checksums git source and r
   const defaultCloneRoot = path.join(path.dirname(outDir), `${path.basename(outDir)}-package-sources`);
   const manifest = JSON.parse(fs.readFileSync(releaseManifestPath, 'utf8'));
   const channelManifest = JSON.parse(fs.readFileSync(channelManifestPath, 'utf8'));
+  const releaseManifestSource = fs.readFileSync(releaseManifestPath, 'utf8');
+  const channelManifestSource = fs.readFileSync(channelManifestPath, 'utf8');
   const checksums = fs.readFileSync(checksumsPath, 'utf8');
   const relativeCloneRootFromOutDir = path.relative(outDir, archiveBuilderResult.clone_root);
 
@@ -373,6 +375,8 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(relativeCloneRootFromOutDir === '' || !relativeCloneRootFromOutDir.startsWith('..'), false);
   assert.equal(path.relative(repoRoot, archiveBuilderResult.clone_root).startsWith('..'), true);
   assert.equal(channelManifest.opl_version, manifest.opl_version);
+  assert.equal(channelManifest.manifest_role, 'opl_release_channel_manifest');
+  assert.notEqual(channelManifestSource, releaseManifestSource);
   assert.equal(channelManifest.packages.codex_default_profile.model_provider, 'gflab');
   assert.equal(channelManifest.packages.codex_default_profile.base_url, 'https://gflabtoken.cn/v1');
   assert.equal(channelManifest.packages.codex_default_profile.base_url_role, 'product_default_provider_endpoint');

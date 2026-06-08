@@ -278,6 +278,14 @@ export function getOplPackageModuleSpecs() {
   return [...MODULE_SPECS];
 }
 
+export function buildOplPackageChannelManifest(manifest: OplPackageManifest) {
+  return {
+    ...manifest,
+    manifest_role: 'opl_release_channel_manifest',
+    manifest_role_reason: 'distinct OCI layer for GHCR package-channel publication',
+  };
+}
+
 export function sha256File(filePath: string) {
   const hash = crypto.createHash('sha256');
   hash.update(fs.readFileSync(filePath));
