@@ -51,6 +51,8 @@ Currentness policy：查看当前 lane 集合时先读 `package.json` 的 `test:
 
 GitHub `Verify` workflow 按 gate 拆开运行 build/typecheck、fast、read-model-gates、regression、integration、fresh-install、native、lint 和本地 structure。`lint-and-structure` job 会先取 `origin/main` compare ref、安装 Sentrux、运行 `./scripts/verify.sh lint`，再运行 `./scripts/verify.sh structure`。默认结构 lane 是 advisory：line budget、Sentrux baseline regression 与 explicit rules findings 都用于 review visibility 和每日治理队列，不阻断普通开发 CI。显式维护检查使用 `line-budget:strict` 或 `structure:strict`，不混入默认 feature verification。`artifact` 与 `full` 是本地 / clean-clone release-style 验证入口，不是当前 Verify workflow 的独立 job。
 
+`read-model-gates` 只放 owner/currentness/provider lifecycle、App/read-model 默认路径、StageRun closeout、workspace topology、domain-pack compiler、agent conformance 等会影响普通执行正确性的大边界。root help 是否列出某个细粒度入口、示例文案是否完整、报告措辞和 display-only discoverability 属于 `meta` / advisory 范围；命令本身 fail-closed、scoped help 可解析、JSON/usage shape 和 contract/API 行为仍可测试，但不应让 root help 展示细节阻断 default-branch hard CI。
+
 `.github/workflows/sentrux-advisory.yml` 是非阻断 advisory signal：它发布 Sentrux 和 OPL quality details sidecar，帮助定位结构变化，但不替代显式 strict 维护入口，也不改变 `.sentrux/rules.toml`、line budget 或 lane registry 的 owner。
 
 更新测试文件时，先运行：

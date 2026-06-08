@@ -759,17 +759,6 @@ test('family stage readiness treats lightweight authoring fields as warnings ins
   }
 });
 
-test('help recommends stage readiness before detailed stage projections', () => {
-  const root = runCli(['help', '--json']);
-
-  assert.equal(root.help.examples.includes('opl stages readiness --family-defaults'), true);
-  assert.equal(root.help.examples.includes('opl stages assumptions --domain mas'), false);
-  assert.equal(root.help.examples.includes('opl stages runtime-budget --domain mas'), false);
-  assert.equal(root.help.examples.includes('opl stages registry --domain mas'), false);
-  assert.equal(root.help.examples.includes('opl stages source-spec --domain mas'), false);
-  assert.equal(root.help.examples.includes('opl stages replay-certification --domain mas'), false);
-});
-
 test('family stage list and proof bundles preserve 18 admitted runtime-enforced projection stages', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-stage-admitted-state-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();

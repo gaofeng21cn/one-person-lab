@@ -22,6 +22,9 @@ import {
   runTemporalWorkerResidentLoop,
 } from '../../../../src/family-runtime-temporal-provider-parts/worker-residency.ts';
 import {
+  stopOrphanTemporalForegroundWorkers,
+} from '../../../../src/family-runtime-temporal-provider-parts/worker-process.ts';
+import {
   inspectTemporalWorkerRuntimeDependencies,
 } from '../../../../src/family-runtime-temporal-provider-parts/worker-dependencies.ts';
 import {
@@ -899,6 +902,54 @@ test('Temporal worker stop cleans root-tagged orphan foreground worker from a di
       process.kill(child.pid!, 'SIGKILL');
     } catch {
       // The lifecycle under test should have removed the fixture process.
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('Temporal worker orphan cleanup is scoped to the requested family runtime root', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-root-scoped-orphan-'));
+  const targetRoot = path.join(stateRoot, 'target-family-runtime');
+  const otherRoot = path.join(stateRoot, 'other-family-runtime');
+  const modulePath = path.resolve('src/family-runtime-temporal-provider.ts');
+  const childArgs = (root: string) => [
+    '-e',
+    'setTimeout(() => {}, 30_000);',
+    '--',
+    '--temporal-worker-foreground',
+    '--family-runtime-root',
+    root,
+    modulePath,
+  ];
+  const target = spawn(process.execPath, childArgs(targetRoot), {
+    detached: true,
+    stdio: 'ignore',
+  });
+  const other = spawn(process.execPath, childArgs(otherRoot), {
+    detached: true,
+    stdio: 'ignore',
+  });
+  target.unref();
+  other.unref();
+  try {
+    assert.equal(typeof target.pid, 'number');
+    assert.equal(typeof other.pid, 'number');
+
+    const stop = await stopOrphanTemporalForegroundWorkers({
+      modulePath,
+      familyRuntimeRoot: targetRoot,
+    });
+
+    assert.deepEqual(stop.orphan_stopped_pids, [target.pid]);
+    assert.throws(() => process.kill(target.pid!, 0));
+    assert.doesNotThrow(() => process.kill(other.pid!, 0));
+  } finally {
+    for (const pid of [target.pid, other.pid]) {
+      try {
+        process.kill(pid!, 'SIGKILL');
+      } catch {
+        // The lifecycle under test should have removed the target process.
+      }
     }
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

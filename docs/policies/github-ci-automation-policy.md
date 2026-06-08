@@ -64,3 +64,11 @@ One Person Lab App 的用户 release、Full first-install、updater metadata 和
 - 本轮取消、修复、提交、push 和远端验证证据。
 
 没有当前故障时，报告应明确写 `no current confirmed default-branch or release failure`，并把历史失败放入 superseded / provenance 语境。
+
+## 抓大放小 CI 分层
+
+默认分支硬 CI 只守会造成错误启动、越权、不可恢复、不可审计、无法 closeout、owner answer shape 不合法、release asset/source truth 不一致或不可逆 mutation 的边界。当前 hard lane 可以覆盖 build/typecheck、核心 smoke、owner/currentness/read-model、provider lifecycle、release asset 校验、安装/首启 smoke 和 repo hygiene。
+
+以下信号默认不得单独阻断普通重构 merge：root help 是否展示某个细粒度入口、文案/示例完整性、结构质量分数、line-budget advisory、Sentrux advisory、raw counter、diagnostic mirror、historical failed run、被后续绿色覆盖的 release attempt、以及只影响报告美观或证据完整度的 supporting detail。它们应进入 `meta`、`structure`、advisory workflow、dated audit 或人工维护 lane。
+
+细粒度信号只有在触发 hard boundary upgrade condition 时才升级为硬门：它导致 CLI/API 无法调用、JSON/contract shape 漂移、owner route 错投、release artifact 错配、安装路径不可用、权限或 secret 边界破坏，或会让 operator 误闭合当前 work unit。升级时必须在失败日志或 follow-up 记录中说明对应的大边界，不得只写“文案不匹配”或“覆盖不完整”。

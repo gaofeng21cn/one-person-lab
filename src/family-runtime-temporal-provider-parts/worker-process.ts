@@ -8,6 +8,15 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function commandMatchesFamilyRuntimeRoot(command: string, familyRuntimeRoot: string) {
+  const escapedRoot = escapeRegExp(familyRuntimeRoot);
+  return new RegExp(`(?:^|\\s)--family-runtime-root(?:=|\\s+)${escapedRoot}(?:\\s|$)`).test(command);
+}
+
 async function waitForProcessExit(pid: number, timeoutMs = WORKER_STOP_GRACE_MS) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -65,6 +74,9 @@ function findTemporalForegroundWorkerPids(input: {
     return [];
   }
   const pids: number[] = [];
+  const scopedRoot = typeof input.familyRuntimeRoot === 'string' && input.familyRuntimeRoot.length > 0
+    ? input.familyRuntimeRoot
+    : null;
   for (const line of output.split('\n')) {
     const trimmed = line.trim();
     const match = /^(\d+)\s+(.+)$/.exec(trimmed);
@@ -78,12 +90,9 @@ function findTemporalForegroundWorkerPids(input: {
       && !exclude.has(pid)
       && command.includes('--temporal-worker-foreground')
       && (
-        command.includes(input.modulePath)
-        || (
-          typeof input.familyRuntimeRoot === 'string'
-          && command.includes('--family-runtime-root')
-          && command.includes(input.familyRuntimeRoot)
-        )
+        scopedRoot
+          ? commandMatchesFamilyRuntimeRoot(command, scopedRoot)
+          : command.includes(input.modulePath)
       )
       && processIsAlive(pid)
     ) {

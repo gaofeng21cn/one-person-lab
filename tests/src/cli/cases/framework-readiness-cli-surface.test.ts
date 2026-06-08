@@ -8,14 +8,7 @@ test('framework readiness rejects non-default invocation to avoid a second truth
   assert.deepEqual(failure.payload.error.details.required, ['--family-defaults']);
 });
 
-test('framework readiness appears in default and command-scoped help', () => {
-  const root = runCli(['help']);
-  const commands = root.help.commands.map((entry: { command: string }) => entry.command);
-  const examples = root.help.examples.join('\n');
-
-  assert.equal(commands.includes('framework readiness'), true);
-  assert.match(examples, /opl framework readiness --family-defaults/);
-
+test('framework readiness exposes command-scoped help', () => {
   const scoped = runCli(['help', 'framework', 'readiness']);
   assert.equal(scoped.help.command, 'framework readiness');
   assert.match(scoped.help.usage, /framework readiness --family-defaults/);

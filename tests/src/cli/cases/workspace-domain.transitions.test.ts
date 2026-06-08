@@ -193,6 +193,59 @@ function withMasFamilyTransitionSurfaces(payload: JsonRecord, overrides: JsonRec
   };
 }
 
+function buildStudyStateMatrixAction(input: {
+  title: string;
+  summary: string;
+  command: string;
+  effect?: 'read_only' | 'mutating';
+}) {
+  return {
+    action_id: 'study_state_matrix',
+    title: input.title,
+    summary: input.summary,
+    owner: 'med-autoscience',
+    effect: input.effect ?? 'read_only',
+    source_command: {
+      command: input.command,
+      surface_kind: 'study_state_matrix',
+    },
+    input_schema_ref: 'contracts/schemas/v1/mas-action.input.schema.json',
+    output_schema_ref: 'contracts/schemas/v1/mas-action.output.schema.json',
+    workspace_locator_fields: ['profile_ref'],
+    human_gate_ids: [],
+    supported_surfaces: {
+      cli: {
+        command: input.command,
+        surface_kind: 'study_state_matrix',
+      },
+      mcp: {
+        command: input.command,
+        surface_kind: 'study_state_matrix',
+        public_runtime: false,
+        descriptor_only: true,
+      },
+      skill: {
+        command: input.command,
+        command_contract_id: 'study_state_matrix',
+        surface_kind: 'study_state_matrix',
+      },
+      product_entry: {
+        action_key: 'study_state_matrix',
+        command: input.command,
+        surface_kind: 'study_state_matrix',
+      },
+      openai: { tool_name: 'study_state_matrix' },
+      ai_sdk: { tool_name: 'study_state_matrix' },
+    },
+    authority_boundary: {
+      runner_owner: 'OPL Framework',
+      domain_transition_owner: 'MedAutoScience',
+      can_write_domain_truth: false,
+      can_execute_domain_action: false,
+    },
+  };
+}
+
 function withRcaVisualTransitionSpec(payload: JsonRecord) {
   return {
     ...payload,
@@ -537,6 +590,7 @@ test('domain manifests materializes descriptor-only MAS transition specs through
   const materializerPath = path.join(materializerRoot, 'materialize-study-state-matrix.js');
   const fixtures = loadFamilyManifestFixtures();
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const command = `${process.execPath} ${shellSingleQuote(materializerPath)}`;
   const manifest = {
     ...withMasFamilyTransitionDescriptor(fixtures.medautoscience),
     family_action_catalog: {
@@ -554,51 +608,11 @@ test('domain manifests materializes descriptor-only MAS transition specs through
       }),
       actions: [
         ...(((fixtures.medautoscience.family_action_catalog as JsonRecord | undefined)?.actions as JsonRecord[] | undefined) ?? []),
-        {
-          action_id: 'study_state_matrix',
+        buildStudyStateMatrixAction({
           title: 'Materialize MAS study state matrix',
           summary: 'Read-only study-state-matrix materialization for OPL transition runner.',
-          owner: 'med-autoscience',
-          effect: 'read_only',
-          source_command: {
-            command: `${process.execPath} ${shellSingleQuote(materializerPath)}`,
-            surface_kind: 'study_state_matrix',
-          },
-          input_schema_ref: 'contracts/schemas/v1/mas-action.input.schema.json',
-          output_schema_ref: 'contracts/schemas/v1/mas-action.output.schema.json',
-          workspace_locator_fields: ['profile_ref'],
-          human_gate_ids: [],
-          supported_surfaces: {
-            cli: {
-              command: `${process.execPath} ${shellSingleQuote(materializerPath)}`,
-              surface_kind: 'study_state_matrix',
-            },
-            mcp: {
-              command: `${process.execPath} ${shellSingleQuote(materializerPath)}`,
-              surface_kind: 'study_state_matrix',
-              public_runtime: false,
-              descriptor_only: true,
-            },
-            skill: {
-              command: `${process.execPath} ${shellSingleQuote(materializerPath)}`,
-              command_contract_id: 'study_state_matrix',
-              surface_kind: 'study_state_matrix',
-            },
-            product_entry: {
-              action_key: 'study_state_matrix',
-              command: `${process.execPath} ${shellSingleQuote(materializerPath)}`,
-              surface_kind: 'study_state_matrix',
-            },
-            openai: { tool_name: 'study_state_matrix' },
-            ai_sdk: { tool_name: 'study_state_matrix' },
-          },
-          authority_boundary: {
-            runner_owner: 'OPL Framework',
-            domain_transition_owner: 'MedAutoScience',
-            can_write_domain_truth: false,
-            can_execute_domain_action: false,
-          },
-        },
+          command,
+        }),
       ],
     },
   };
@@ -685,31 +699,11 @@ test('domain manifests keeps live manifest resolved when transition materializat
         notes: [],
       }),
       actions: [
-        {
-          action_id: 'study_state_matrix',
+        buildStudyStateMatrixAction({
           title: 'Slow MAS study state matrix',
           summary: 'Read-only study-state-matrix materialization that exceeds the OPL projection budget.',
-          owner: 'med-autoscience',
-          effect: 'read_only',
-          source_command: {
-            command,
-            surface_kind: 'study_state_matrix',
-          },
-          input_schema_ref: 'contracts/schemas/v1/mas-action.input.schema.json',
-          output_schema_ref: 'contracts/schemas/v1/mas-action.output.schema.json',
-          supported_surfaces: {
-            cli: {
-              command,
-              surface_kind: 'study_state_matrix',
-            },
-          },
-          authority_boundary: {
-            runner_owner: 'OPL Framework',
-            domain_transition_owner: 'MedAutoScience',
-            can_write_domain_truth: false,
-            can_execute_domain_action: false,
-          },
-        },
+          command,
+        }),
       ],
     },
   };
@@ -765,6 +759,7 @@ test('domain manifests skips MAS transition materialization when study-state-mat
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-transition-materialize-blocked-'));
   const fixtures = loadFamilyManifestFixtures();
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const command = `${process.execPath} -e "process.exit(1)"`;
   const manifest = {
     ...withMasFamilyTransitionDescriptor(fixtures.medautoscience),
     family_action_catalog: {
@@ -782,25 +777,12 @@ test('domain manifests skips MAS transition materialization when study-state-mat
       }),
       actions: [
         ...(((fixtures.medautoscience.family_action_catalog as JsonRecord | undefined)?.actions as JsonRecord[] | undefined) ?? []),
-        {
-          action_id: 'study_state_matrix',
+        buildStudyStateMatrixAction({
           title: 'Unsafe MAS study state matrix',
           summary: 'Non-read-only action must not be executed by OPL materialization.',
-          owner: 'med-autoscience',
           effect: 'mutating',
-          source_command: {
-            command: `${process.execPath} -e "process.exit(1)"`,
-            surface_kind: 'study_state_matrix',
-          },
-          input_schema_ref: 'contracts/schemas/v1/mas-action.input.schema.json',
-          output_schema_ref: 'contracts/schemas/v1/mas-action.output.schema.json',
-          supported_surfaces: {
-            cli: {
-              command: `${process.execPath} -e "process.exit(1)"`,
-              surface_kind: 'study_state_matrix',
-            },
-          },
-        },
+          command,
+        }),
       ],
     },
   };

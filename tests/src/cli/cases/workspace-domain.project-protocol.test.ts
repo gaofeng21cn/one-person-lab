@@ -131,7 +131,7 @@ test('workspace init materializes project unit metadata and stage output require
   }
 });
 
-test('workspace upgrade restores project unit protocol refs without moving roots', () => {
+test('workspace upgrade restores repairable project unit protocol refs without moving roots', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-project-upgrade-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-project-upgrade-root-'));
 
@@ -156,18 +156,19 @@ test('workspace upgrade restores project unit protocol refs without moving roots
     fs.rmSync(path.join(projectRoot, 'project_index.json'));
     fs.rmSync(path.join(projectRoot, 'artifacts', 'exports'), { recursive: true, force: true });
 
-    const blocked = runCli(['workspace', 'doctor', '--workspace', workspacePath], {
+    const repairable = runCli(['workspace', 'doctor', '--workspace', workspacePath], {
       OPL_STATE_DIR: stateRoot,
     });
-    assert.equal(blocked.workspace_doctor.status, 'blocked');
+    assert.equal(repairable.workspace_doctor.status, 'repairable');
+    assert.deepEqual(repairable.workspace_doctor.blockers, []);
     assert.equal(
-      blocked.workspace_doctor.blockers.some((entry: { code: string }) => (
+      repairable.workspace_doctor.repairable_findings.some((entry: { code: string }) => (
         entry.code === 'indexed_project_index_missing'
       )),
       true,
     );
     assert.equal(
-      blocked.workspace_doctor.blockers.some((entry: { code: string }) => (
+      repairable.workspace_doctor.repairable_findings.some((entry: { code: string }) => (
         entry.code === 'indexed_exports_root_missing'
       )),
       true,
@@ -188,7 +189,7 @@ test('workspace upgrade restores project unit protocol refs without moving roots
   }
 });
 
-test('workspace doctor blocks MAS alias drift and invalid stage lifecycle drift', () => {
+test('workspace doctor repairs MAS alias drift and blocks invalid stage lifecycle drift', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-project-drift-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-project-drift-root-'));
 
@@ -219,9 +220,10 @@ test('workspace doctor blocks MAS alias drift and invalid stage lifecycle drift'
     const aliasDrift = runCli(['workspace', 'doctor', '--workspace', workspacePath], {
       OPL_STATE_DIR: stateRoot,
     });
-    assert.equal(aliasDrift.workspace_doctor.status, 'blocked');
+    assert.equal(aliasDrift.workspace_doctor.status, 'repairable');
+    assert.deepEqual(aliasDrift.workspace_doctor.blockers, []);
     assert.equal(
-      aliasDrift.workspace_doctor.blockers.some((entry: { code: string }) => (
+      aliasDrift.workspace_doctor.repairable_findings.some((entry: { code: string }) => (
         entry.code === 'canonical_topology_drift'
       )),
       true,

@@ -117,7 +117,6 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/framework-readiness-stage-replay-guidance.test.ts',
   'tests/src/cli/cases/runtime-manifest-cache-timeout.test.ts',
   'tests/src/cli/cases/framework-readiness-attention-semantics.test.ts',
-  'tests/src/cli/cases/framework-readiness-cli-surface.test.ts',
   'tests/src/cli/cases/framework-readiness-app-release-user-path-ledger.test.ts',
   'tests/src/cli/cases/framework-readiness-oma-managed-install.test.ts',
   'tests/src/cli/cases/framework-readiness-oma-app-live-path.test.ts',
