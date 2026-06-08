@@ -93,6 +93,7 @@ Agent Lab、observability eval 和 mechanism improvement 继续是 refs-only con
 
 ```bash
 rtk opl framework readiness --family-defaults --json
+rtk opl framework operating-maturity --family-defaults --json
 rtk opl stages readiness --family-defaults --json
 rtk opl runtime app-operator-drilldown --json
 rtk opl runtime app-operator-drilldown --detail full --json
@@ -127,6 +128,7 @@ rtk opl workspace project delete --workspace <path> --project-id <id> --dry-run 
 - `opl install` 是当前一键安装入口，负责安装或复用 Codex CLI、Temporal-backed family runtime provider、MAS、MAG、RCA、OPL Meta Agent、推荐 skills 和 App 入口。
 - `opl system` / `opl system initialize` / `opl system startup-maintenance` 管理 Codex CLI、provider profile/readiness、Connect module install/update、Connect skill sync、managed environment freshness、plugin cache freshness、reload prompt 和 local runtime state。
 - `opl framework readiness --family-defaults --json` 是 family readiness 动态真相入口；它只输出 framework/operator 读面，不授权 domain ready、artifact authority 或 production ready。
+- `opl framework operating-maturity --family-defaults --json` 是轻量 maturity gap aggregator，把 domain owner-chain scaleout、Brand module L5、App release/user-path、provider long-soak、private wrapper retirement 和 memory/artifact/lifecycle receipts 汇总为 refs-only 下一步读面；它不跑全量 release/user-path proof，不替 App/domain owner 签 receipt 或 typed blocker，不声明 L5、App release ready、domain ready 或 production ready。
 - `opl stages readiness --family-defaults --json` 是 stage readiness family drilldown 入口；单仓诊断继续使用 `opl stages readiness --domain <domain> --json`。
 - `opl runtime app-operator-drilldown --json` 与 `opl runtime app-operator-drilldown --detail full --json` 是 App/operator drilldown 入口。
 - `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json` 是 runtime safe-action evidence worklist、stage evidence workorder packet、stage replay missing receipt attention packet 与 domain-dispatch evidence workorder packet 入口；cache-derived attention 仍不授权 domain truth、owner receipt、artifact authority 或 production ready。`family-runtime production-closeout` 已退役，不再是 active interface 或兼容 alias。

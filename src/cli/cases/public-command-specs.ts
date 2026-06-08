@@ -1,5 +1,6 @@
 import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
 import { buildOplFrameworkLocator } from '../../opl-framework-locator.ts';
+import { buildFrameworkOperatingMaturityReadout } from '../../framework-operating-maturity.ts';
 import { buildFrameworkReadinessSummary } from '../../framework-readiness.ts';
 import { buildProductionFunctionalCloseout } from '../../production-functional-closeout.ts';
 import { buildOplAppState, parseAppActionExecuteArgs, parseAppStateArgs, runOplAppActionExecute } from '../../app-state.ts';
@@ -224,6 +225,25 @@ export function buildPublicCommandSpecs(
           });
         }
         return buildFrameworkReadinessSummary(getContracts(), { familyDefaults: true });
+      },
+    },
+    'framework operating-maturity': {
+      usage: 'opl framework operating-maturity --family-defaults',
+      summary:
+        'Aggregate domain owner-chain scaleout, L5, App release, provider long-soak, cleanup, and lifecycle evidence gaps without claiming readiness.',
+      examples: ['opl framework operating-maturity --family-defaults --json'],
+      group: 'framework',
+      handler: (args) => {
+        if (args.length !== 1 || args[0] !== '--family-defaults') {
+          throw buildUsageError(
+            'framework operating-maturity requires --family-defaults.',
+            publicCommandSpecs['framework operating-maturity'],
+            {
+              required: ['--family-defaults'],
+            },
+          );
+        }
+        return buildFrameworkOperatingMaturityReadout(getContracts(), { familyDefaults: true });
       },
     },
     'framework production-closeout': {

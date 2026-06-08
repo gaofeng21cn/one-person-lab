@@ -13,3 +13,9 @@ test('framework readiness exposes command-scoped help', () => {
   assert.equal(scoped.help.command, 'framework readiness');
   assert.match(scoped.help.usage, /framework readiness --family-defaults/);
 });
+
+test('framework operating maturity exposes command-scoped help', () => {
+  const scoped = runCli(['help', 'framework', 'operating-maturity']);
+  assert.equal(scoped.help.command, 'framework operating-maturity');
+  assert.match(scoped.help.usage, /framework operating-maturity --family-defaults/);
+});

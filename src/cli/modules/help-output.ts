@@ -218,6 +218,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl install',
         'opl app state --profile fast',
         'opl app action execute --action provider_scheduler_status --dry-run',
+        'opl framework operating-maturity --family-defaults',
         'opl brand-modules list',
         'opl brand-modules maturity',
         'opl brand-modules l5-status',
