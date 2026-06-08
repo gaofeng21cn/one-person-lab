@@ -348,6 +348,26 @@ function providerAdmissionDedupeKey(input: {
     ].join(':');
 }
 
+function validStageTransitionAuthorityBoundary(value: unknown) {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return optionalString(value.producer_kind) === 'runtime_provider'
+    && optionalString(value.intent_kind) === 'provider_observation'
+    && value.stage_transition_authority === 'one-person-lab'
+    && value.intent_can_write_stage_current_pointer === false
+    && value.intent_can_write_stage_run_terminal_state === false
+    && value.intent_can_publish_current_owner_delta === false
+    && value.intent_can_write_domain_truth === false
+    && value.intent_can_create_owner_receipt === false
+    && value.intent_can_create_typed_blocker === false
+    && value.provider_completion_counts_as_stage_transition === false
+    && value.read_model_update_counts_as_stage_transition === false
+    && value.worklist_update_counts_as_stage_transition === false
+    && value.evidence_event_counts_as_stage_transition === false
+    && value.agent_lab_output_counts_as_stage_transition === false;
+}
+
 function currentControlProviderAdmissionInputFrom(
   domainId: FamilyRuntimeDomainId,
   candidate: Record<string, unknown>,
@@ -372,6 +392,9 @@ function currentControlProviderAdmissionInputFrom(
   }
   if (candidate.provider_completion_is_domain_completion === true) {
     return { blocked: { reason: 'current_control_provider_completion_claims_domain_completion', task: candidate } };
+  }
+  if (!validStageTransitionAuthorityBoundary(candidate.stage_transition_authority_boundary)) {
+    return { blocked: { reason: 'current_control_provider_admission_missing_stage_authority_boundary', task: candidate } };
   }
   const workspaceRoot = exportWorkspaceRoot(output);
   const profileName = exportProfileName(output);
@@ -416,6 +439,7 @@ function currentControlProviderAdmissionInputFrom(
         owner_route_current: true,
         provider_attempt_or_lease_required: candidate.provider_attempt_or_lease_required !== false,
         provider_completion_is_domain_completion: false,
+        stage_transition_authority_boundary: candidate.stage_transition_authority_boundary,
         ...(optionalString(candidate.required_output_surface)
           ? { required_output_surface: optionalString(candidate.required_output_surface) }
           : {}),

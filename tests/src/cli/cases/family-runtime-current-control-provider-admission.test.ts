@@ -24,6 +24,25 @@ function writeJsonEmitterScript(scriptPath: string, payload: unknown) {
   );
 }
 
+function providerObservationBoundary() {
+  return {
+    producer_kind: 'runtime_provider',
+    intent_kind: 'provider_observation',
+    stage_transition_authority: 'one-person-lab',
+    intent_can_write_stage_current_pointer: false,
+    intent_can_write_stage_run_terminal_state: false,
+    intent_can_publish_current_owner_delta: false,
+    intent_can_write_domain_truth: false,
+    intent_can_create_owner_receipt: false,
+    intent_can_create_typed_blocker: false,
+    provider_completion_counts_as_stage_transition: false,
+    read_model_update_counts_as_stage_transition: false,
+    worklist_update_counts_as_stage_transition: false,
+    evidence_event_counts_as_stage_transition: false,
+    agent_lab_output_counts_as_stage_transition: false,
+  };
+}
+
 test('family-runtime intake admits MAS current-control provider candidates ahead of stale sidecar default executor tasks', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-admission-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-admission-'));
@@ -78,6 +97,7 @@ test('family-runtime intake admits MAS current-control provider candidates ahead
         owner_route_current: true,
         provider_attempt_or_lease_required: true,
         provider_completion_is_domain_completion: false,
+        stage_transition_authority_boundary: providerObservationBoundary(),
         required_output_surface: 'artifacts/publication_eval/ai_reviewer_responses/*_publication_eval_record.json',
         source_refs: {
           work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
@@ -107,6 +127,7 @@ test('family-runtime intake admits MAS current-control provider candidates ahead
         owner_route_current: true,
         provider_attempt_or_lease_required: true,
         provider_completion_is_domain_completion: false,
+        stage_transition_authority_boundary: providerObservationBoundary(),
         required_output_surface: 'artifacts/publication_eval/ai_reviewer_responses/*_publication_eval_record.json',
       },
     ],
@@ -177,6 +198,10 @@ test('family-runtime intake admits MAS current-control provider candidates ahead
     assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.source_fingerprint, 'sha256:current-dm002');
     assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.next_executable_owner, 'ai_reviewer');
     assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.provider_completion_is_domain_completion, false);
+    assert.equal(
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.stage_transition_authority_boundary.intent_can_publish_current_owner_delta,
+      false,
+    );
     assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.provider_admission_identity.status, 'provider_admission_pending');
     assert.equal(tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.work_unit_fingerprint, 'sha256:current-dm003');
     assert.equal(
@@ -217,6 +242,7 @@ test('family-runtime intake blocks current-control provider candidates that clai
         next_executable_owner: 'ai_reviewer',
         owner_route_current: true,
         provider_completion_is_domain_completion: true,
+        stage_transition_authority_boundary: providerObservationBoundary(),
       },
     ],
   }), 'utf8');
@@ -245,6 +271,89 @@ test('family-runtime intake blocks current-control provider candidates that clai
     assert.equal(
       intake.family_runtime_intake.exports[0].blocked[0].reason,
       'current_control_provider_completion_claims_domain_completion',
+    );
+    assert.equal(queue.family_runtime_queue.tasks.length, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime intake blocks current-control provider candidates without Stage Authority boundary', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-boundary-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-boundary-'));
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  const exportPath = path.join(fixtureRoot, 'export');
+  const currentControlPath = path.join(
+    workspaceRoot,
+    'runtime',
+    'artifacts',
+    'supervision',
+    'opl_current_control_state',
+    'latest.json',
+  );
+  fs.mkdirSync(path.dirname(currentControlPath), { recursive: true });
+  fs.writeFileSync(currentControlPath, JSON.stringify({
+    surface: 'opl_current_control_state',
+    provider_admission_candidates: [
+      {
+        status: 'provider_admission_pending',
+        study_id: '002-dm-china-us-mortality-attribution',
+        quest_id: '002-dm-china-us-mortality-attribution',
+        action_type: 'return_to_ai_reviewer_workflow',
+        work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+        work_unit_fingerprint: 'sha256:current-dm002',
+        action_fingerprint: 'sha256:current-dm002',
+        next_executable_owner: 'ai_reviewer',
+        owner_route_current: true,
+        provider_completion_is_domain_completion: false,
+      },
+      {
+        status: 'provider_admission_pending',
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        action_type: 'return_to_ai_reviewer_workflow',
+        work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+        work_unit_fingerprint: 'sha256:current-dm003',
+        action_fingerprint: 'sha256:current-dm003',
+        next_executable_owner: 'ai_reviewer',
+        owner_route_current: true,
+        provider_completion_is_domain_completion: false,
+        stage_transition_authority_boundary: {
+          ...providerObservationBoundary(),
+          intent_can_publish_current_owner_delta: true,
+        },
+      },
+    ],
+  }), 'utf8');
+  writeJsonEmitterScript(exportPath, {
+    surface_kind: 'mas_family_domain_handler_export',
+    workspace: {
+      workspace_root: workspaceRoot,
+      workspace_exists: true,
+    },
+    pending_family_tasks: [],
+  });
+  const env = familyRuntimeEnv(stateRoot, {
+    OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+  });
+  try {
+    const intake = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+    ], env);
+    const queue = runCli(['family-runtime', 'queue', 'list'], env);
+
+    assert.equal(intake.family_runtime_intake.enqueued_count, 0);
+    assert.equal(intake.family_runtime_intake.blocked_count, 2);
+    assert.deepEqual(
+      intake.family_runtime_intake.exports[0].blocked.map((entry: { reason: string }) => entry.reason),
+      [
+        'current_control_provider_admission_missing_stage_authority_boundary',
+        'current_control_provider_admission_missing_stage_authority_boundary',
+      ],
     );
     assert.equal(queue.family_runtime_queue.tasks.length, 0);
   } finally {
