@@ -20,7 +20,7 @@
     "OPL Stagecraft",
     "MedAutoScience",
     "Foundry Agents",
-    "npm run docs:whitepaper"
+    "生成脚本统一派生"
   ],
   "required_terms_status": "present",
   "tools": {

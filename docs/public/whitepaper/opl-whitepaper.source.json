@@ -120,12 +120,12 @@
       "diagram": {
         "title": "默认运行链路",
         "lines": [
-          "Human / App / CLI",
-          "  -> Codex-default executor",
-          "      -> explicit OPL activation",
-          "          -> provider-backed stage runtime",
-          "              -> selected Foundry Agent",
-          "                  -> domain-owned truth / quality gate / deliverables"
+          "用户 / App / CLI",
+          "  -> Codex CLI 标准执行者",
+          "      -> OPL 显式激活",
+          "          -> provider-backed 阶段运行",
+          "              -> 选定的 Foundry Agent",
+          "                  -> 领域事实 / 质量门 / 交付物"
         ]
       }
     },
@@ -374,9 +374,9 @@
         "OPL 自己的 README 是这份白皮书的主要语气来源：先提出用户为什么需要 One Person Lab，再解释阶段式推进、专业 agent、进度证据和产品分层。白皮书比 README 更完整地交代设计来源和九模块结构，但重心仍然是让用户明白 OPL 为什么存在、为什么必须这样设计。"
       ],
       "bullets": [
-        "更新正文：改 JSON。",
-        "重新生成：运行 `npm run docs:whitepaper`。",
-        "验证分享版：检查 PDF 渲染页和 verification JSON。"
+        "正文更新从内容源开始。",
+        "生成脚本统一派生 Markdown、PDF 和验证记录。",
+        "分享版通过 PDF 渲染页和 verification JSON 检查。"
       ]
     }
   ],

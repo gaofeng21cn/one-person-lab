@@ -397,7 +397,7 @@ function main() {
     'OPL Stagecraft',
     'MedAutoScience',
     'Foundry Agents',
-    'npm run docs:whitepaper',
+    '生成脚本统一派生',
   ];
   const missingTerms = requiredTerms.filter((term) => !text.includes(term));
   if (missingTerms.length > 0) {
