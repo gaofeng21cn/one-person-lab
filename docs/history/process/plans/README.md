@@ -22,6 +22,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 
 | File | Historical role | Current owner |
 | --- | --- | --- |
+| `2026-06-08-opl-mvp-friction-history-compression-closeout.md` | 2026-06-04 OPL Foundry Agent MVP friction audit history compression closeout。 | 当前目标操作架构、primitive、迁移阶段和验收门归 `docs/active/opl-foundry-agent-target-operating-architecture.md`；当前 gap owner 归 active gap plan；closeout 只记录本轮历史长清单压缩、覆盖范围和未声明边界。 |
 | `2026-06-08-opl-gateway-examples-history-compression-ledger.md` | OPL gateway/federation boundary、minimal activation package 与 examples corpus history compression ledger。 | 当前 gateway/federation truth 归核心五件套、active gap plan、docs lifecycle policy、live contracts/source/tests/CLI/read-model 和 `docs/history/compatibility/gateway-federation/README.md`；ledger 只记录本轮 path-stable tombstone 压缩与前三个 gateway history ledger carry-forward 清单收口。 |
 | `2026-06-08-opl-operating-governance-history-compression-ledger.md` | OPL gateway-derived operating governance history compression ledger。 | 当前 operating governance truth 归核心五件套、active gap plan、`docs/references/operating-governance/README.md`、active support docs、live contracts/source/tests/CLI/read-model 和 `docs/history/compatibility/gateway-federation/operating-governance/README.md`；ledger 只记录本轮 path-stable tombstone 压缩，carry-forward 范围已由 `2026-06-08-opl-gateway-examples-history-compression-ledger.md` 收口。 |
 | `2026-06-08-opl-gateway-core-history-compression-ledger.md` | OPL gateway/federation core G1/G2/G3/rollout history compression ledger。 | 当前 gateway/federation truth 归核心五件套、active gap plan、docs lifecycle policy、live contracts/source/tests/CLI/read-model 和 `docs/history/compatibility/gateway-federation/README.md`；ledger 只记录本轮 path-stable tombstone 压缩，carry-forward 范围已由 `2026-06-08-opl-gateway-examples-history-compression-ledger.md` 收口。 |
@@ -82,7 +83,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 | `2026-06-02-opl-series-doc-lifecycle-cleanup-ledger.md` | OPL series docs lifecycle cleanup closeout ledger。 | 当前 truth 归各 repo active truth owner、core docs 和 live code/contracts/tests/read-model；ledger 只记录本轮 active ledger/history foldback、MAS closed record 归档和 App 延后原因。 |
 | `2026-06-03-opl-family-retirement-cleanup-ledger.md` | OPL family legacy / compat / retired surface cleanup snapshot。 | 当前 truth 归各 repo source、contracts、tests、git worktree 和 live read-model；ledger 只记录本轮可落地 OPL structure thinning、跨仓 no-safe-delete 结论和后续 deletion gate。 |
 | `2026-06-03-opl-series-branch-doc-governance-ledger.md` | Automation-2 OPL series branch/worktree and docs-governance tranche ledger。 | 当前 truth 归各 repo active truth owner、core docs 和 live code/contracts/tests/read-model；ledger 只记录本轮 stale branch deletion、active worktree保留理由、active-truth shape 修复、doctor 结果和下一轮覆盖范围。 |
-| `2026-06-04-opl-foundry-agent-mvp-friction-audit.md` | OPL Foundry Agent MVP friction 诊断和 evidence 快照。 | 当前目标操作架构、primitive、迁移阶段和验收门归 `docs/active/opl-foundry-agent-target-operating-architecture.md`；当前 gap owner 归 active gap plan。 |
+| `2026-06-04-opl-foundry-agent-mvp-friction-audit.md` | OPL Foundry Agent MVP friction 诊断和 evidence 快照，2026-06-08 已从逐条 readout / P0-P1 展开 / 实施 lane 长清单压缩为 compact provenance。 | 当前目标操作架构、primitive、迁移阶段和验收门归 `docs/active/opl-foundry-agent-target-operating-architecture.md`；当前 gap owner 归 active gap plan。 |
 
 ## Tombstone Rules
 
