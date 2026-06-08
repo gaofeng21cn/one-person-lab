@@ -38,6 +38,12 @@ import {
   buildAgentInternalBrandModuleValidation,
 } from '../../brand-modules.ts';
 import {
+  buildBrandModuleL5Interfaces,
+  buildBrandModuleL5ModuleStatus,
+  buildBrandModuleL5Status,
+  buildBrandModuleL5Validation,
+} from '../../brand-module-l5-evidence.ts';
+import {
   FOUNDRY_AGENT_OPERATIONS,
   buildFoundryAgentInspect,
   buildFoundryAgentCliSpine,
@@ -211,6 +217,17 @@ export function buildPublicCommandSpecs(
         },
       };
     }
+    const l5StatusCommand = `${moduleId} l5-status`;
+    specs[l5StatusCommand] = {
+      usage: `opl ${moduleId} l5-status`,
+      summary: `Read the ${label} L5 operating-evidence status without converting L4 structure into production maturity.`,
+      examples: [`opl ${moduleId} l5-status --json`],
+      group,
+      handler: (args) => {
+        assertNoArgs(args, specs[l5StatusCommand]);
+        return buildBrandModuleL5ModuleStatus(getContracts(), moduleId);
+      },
+    };
     return specs;
   };
 
@@ -357,6 +374,36 @@ export function buildPublicCommandSpecs(
       handler: (args) => {
         assertNoArgs(args, publicCommandSpecs['brand-modules maturity']);
         return buildBrandModuleMaturity(getContracts());
+      },
+    },
+    'brand-modules l5-status': {
+      usage: 'opl brand-modules l5-status [--module <module_id>]',
+      summary: 'Read the fail-closed L5 operating-evidence matrix without claiming production maturity from structural readiness.',
+      examples: [
+        'opl brand-modules l5-status --json',
+        'opl brand-modules l5-status --module runway --json',
+      ],
+      group: 'brand',
+      handler: (args) => buildBrandModuleL5Status(getContracts(), args),
+    },
+    'brand-modules l5-validate': {
+      usage: 'opl brand-modules l5-validate',
+      summary: 'Validate the L5 evidence matrix shape and false-authority policy without treating open evidence as a contract failure.',
+      examples: ['opl brand-modules l5-validate --json'],
+      group: 'brand',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['brand-modules l5-validate']);
+        return buildBrandModuleL5Validation(getContracts());
+      },
+    },
+    'brand-modules l5-interfaces': {
+      usage: 'opl brand-modules l5-interfaces',
+      summary: 'Expose CLI, App descriptor, validation, and contract refs for the brand-module L5 evidence gate.',
+      examples: ['opl brand-modules l5-interfaces --json'],
+      group: 'brand',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['brand-modules l5-interfaces']);
+        return buildBrandModuleL5Interfaces(getContracts());
       },
     },
     'brand-modules validate': {

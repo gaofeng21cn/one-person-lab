@@ -318,6 +318,67 @@ export type BrandModuleId =
 
 export type BrandModuleMaturityLevel = 'L4_structural_baseline';
 
+export type BrandModuleL5TargetLevel = 'L5_production_operating_maturity';
+
+export type BrandModuleL5EvidenceClassId =
+  | 'live_user_path'
+  | 'cross_agent_scaleout'
+  | 'long_soak_recovery'
+  | 'release_install_evidence'
+  | 'operator_repair_loop'
+  | 'owner_acceptance'
+  | 'no_second_truth_regression';
+
+export type BrandModuleL5EvidenceState = 'open' | 'satisfied' | 'blocked';
+
+export interface BrandModuleL5ClaimPolicy {
+  all_required_evidence_must_be_satisfied: true;
+  docs_foldback_counts_as_l5: false;
+  contract_validation_counts_as_l5: false;
+  provider_completion_counts_as_l5: false;
+  app_projection_counts_as_l5: false;
+  conformance_pass_counts_as_l5: false;
+}
+
+export interface BrandModuleL5EvidenceClass {
+  class_id: BrandModuleL5EvidenceClassId;
+  definition: string;
+  accepted_ref_shapes: string[];
+}
+
+export interface BrandModuleL5EvidenceRequirement {
+  class_id: BrandModuleL5EvidenceClassId;
+  owner: string;
+  current_state: BrandModuleL5EvidenceState;
+  evidence_refs?: string[];
+  blocker_refs?: string[];
+}
+
+export interface BrandModuleL5OperatingEvidenceEntry {
+  module_id: BrandModuleId;
+  brand_name: string;
+  current_level: BrandModuleMaturityLevel;
+  l5_completion_status: 'evidence_required' | 'complete' | 'blocked';
+  l5_can_be_claimed: boolean;
+  immediate_enabling_surfaces: string[];
+  evidence_requirements: BrandModuleL5EvidenceRequirement[];
+  not_claims: string[];
+}
+
+export interface BrandModuleL5OperatingEvidenceContract {
+  version: string;
+  scope: string;
+  owner: string;
+  purpose: string;
+  state: string;
+  machine_boundary: string;
+  baseline_level: BrandModuleMaturityLevel;
+  target_level: BrandModuleL5TargetLevel;
+  l5_claim_policy: BrandModuleL5ClaimPolicy;
+  evidence_classes: BrandModuleL5EvidenceClass[];
+  modules: BrandModuleL5OperatingEvidenceEntry[];
+}
+
 export type BrandModuleCliOperation =
   | 'status'
   | 'inspect'
@@ -523,6 +584,7 @@ export interface FrameworkContracts {
   brandModuleRegistry: BrandModuleRegistryContract;
   brandCliGovernance: BrandCliGovernanceContract;
   brandModuleSurfaces: BrandModuleSurfacesContract;
+  brandModuleL5OperatingEvidence: BrandModuleL5OperatingEvidenceContract;
 }
 
 export interface ContractValidationEntry {
@@ -535,7 +597,8 @@ export interface ContractValidationEntry {
     | 'agent_workspace_norm'
     | 'brand_module_registry'
     | 'brand_cli_governance'
-    | 'brand_module_surfaces';
+    | 'brand_module_surfaces'
+    | 'brand_module_l5_operating_evidence';
   file: string;
   schema_version: string;
   status: 'valid';

@@ -311,8 +311,15 @@ export function buildBrandModuleInspect(contracts: FrameworkContracts, args: Bra
 
 export function buildBrandModuleMaturity(contracts: FrameworkContracts) {
   const registry = brandModuleRegistry(contracts);
+  const l5Evidence = contracts.brandModuleL5OperatingEvidence;
   const belowBaselineModuleIds = registry.modules
     .filter((entry) => entry.maturity_level !== 'L4_structural_baseline')
+    .map((entry) => entry.module_id);
+  const l5ClaimedModuleIds = l5Evidence.modules
+    .filter((entry) => entry.l5_can_be_claimed)
+    .map((entry) => entry.module_id);
+  const l5OpenGapModuleIds = l5Evidence.modules
+    .filter((entry) => !entry.l5_can_be_claimed)
     .map((entry) => entry.module_id);
 
   return {
@@ -324,11 +331,19 @@ export function buildBrandModuleMaturity(contracts: FrameworkContracts) {
       module_count: registry.modules.length,
       l4_structural_baseline_count: registry.modules.length - belowBaselineModuleIds.length,
       below_baseline_module_ids: belowBaselineModuleIds,
+      l5_target_level: l5Evidence.target_level,
+      l5_evidence_contract_ref: 'contracts/opl-framework/brand-module-l5-operating-evidence.json',
+      l5_claimed_count: l5ClaimedModuleIds.length,
+      l5_claimed_module_ids: l5ClaimedModuleIds,
+      l5_open_gap_count: l5OpenGapModuleIds.length,
+      l5_open_gap_module_ids: l5OpenGapModuleIds,
       maturity_model: registry.maturity_model,
       modules: registry.modules.map((entry) => ({
         module_id: entry.module_id,
         brand_name: entry.brand_name,
         maturity_level: entry.maturity_level,
+        l5_completion_status: l5Evidence.modules.find((candidate) => candidate.module_id === entry.module_id)?.l5_completion_status ?? 'evidence_required',
+        l5_can_be_claimed: l5Evidence.modules.find((candidate) => candidate.module_id === entry.module_id)?.l5_can_be_claimed ?? false,
         l4_gate_count: entry.l4_gates.length,
         missing_l4_gates: [],
       })),
@@ -385,8 +400,15 @@ export function buildBrandModuleInterfaces(contracts: FrameworkContracts) {
           'opl brand-modules maturity --json',
           'opl brand-modules validate --json',
           'opl brand-modules interfaces --json',
+          'opl brand-modules l5-status --json',
+          'opl brand-modules l5-status --module <module_id> --json',
+          'opl brand-modules l5-validate --json',
+          'opl brand-modules l5-interfaces --json',
           ...brandCliGovernance(contracts).platform_frontdoors.flatMap((entry) =>
-            entry.operations.map((operation) => `${entry.command} ${operation} --json`)
+            [
+              ...entry.operations.map((operation) => `${entry.command} ${operation} --json`),
+              `${entry.command} l5-status --json`,
+            ]
           ),
           'opl agents modules list --json',
           'opl agents modules inspect --domain <domain_id> --module <agent_module_id> --json',
@@ -415,6 +437,12 @@ export function buildBrandModuleInterfaces(contracts: FrameworkContracts) {
             mutation: false,
             descriptor_only: true,
           },
+          {
+            action_id: 'brand_modules_l5_status',
+            command: 'opl brand-modules l5-status --json',
+            mutation: false,
+            descriptor_only: true,
+          },
         ],
       },
       descriptor: {
@@ -429,11 +457,17 @@ export function buildBrandModuleInterfaces(contracts: FrameworkContracts) {
             ref: 'opl brand-modules interfaces --json',
             execution: 'descriptor_only',
           },
+          {
+            delegate_id: 'brand_modules_l5_evidence',
+            ref: 'contracts/opl-framework/brand-module-l5-operating-evidence.json',
+            execution: 'descriptor_only',
+          },
         ],
       },
       validation: {
         commands: [
           'opl brand-modules validate --json',
+          'opl brand-modules l5-validate --json',
           'opl contract validate --json',
         ],
       },

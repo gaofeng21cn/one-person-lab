@@ -1,6 +1,7 @@
 import type {
   AgentWorkspaceNormContract,
   BrandCliGovernanceContract,
+  BrandModuleL5OperatingEvidenceContract,
   BrandModuleRegistryContract,
   BrandModuleSurfacesContract,
 } from '../../../../src/types.ts';
@@ -224,6 +225,16 @@ const MINIMAL_BRAND_MODULE_GATES = [
   'forbidden_claims',
 ];
 
+const MINIMAL_BRAND_MODULE_L5_EVIDENCE_CLASSES = [
+  'live_user_path',
+  'cross_agent_scaleout',
+  'long_soak_recovery',
+  'release_install_evidence',
+  'operator_repair_loop',
+  'owner_acceptance',
+  'no_second_truth_regression',
+] as const;
+
 export const MINIMAL_BRAND_MODULE_REGISTRY_CONTRACT: BrandModuleRegistryContract = {
   version: 'brand-modules.test',
   scope: 'opl_brand_module_registry',
@@ -391,6 +402,44 @@ export const MINIMAL_BRAND_MODULE_SURFACES_CONTRACT: BrandModuleSurfacesContract
     },
     forbidden_claims: ['domain_ready'],
     notes: 'test fixture',
+  })),
+};
+
+export const MINIMAL_BRAND_MODULE_L5_OPERATING_EVIDENCE_CONTRACT: BrandModuleL5OperatingEvidenceContract = {
+  version: 'brand-module-l5-operating-evidence.test',
+  scope: 'opl_brand_module_l5_operating_evidence',
+  owner: 'one-person-lab',
+  purpose: 'test fixture',
+  state: 'test_fixture',
+  machine_boundary: 'test fixture',
+  baseline_level: 'L4_structural_baseline',
+  target_level: 'L5_production_operating_maturity',
+  l5_claim_policy: {
+    all_required_evidence_must_be_satisfied: true,
+    docs_foldback_counts_as_l5: false,
+    contract_validation_counts_as_l5: false,
+    provider_completion_counts_as_l5: false,
+    app_projection_counts_as_l5: false,
+    conformance_pass_counts_as_l5: false,
+  },
+  evidence_classes: MINIMAL_BRAND_MODULE_L5_EVIDENCE_CLASSES.map((classId) => ({
+    class_id: classId,
+    definition: 'test fixture',
+    accepted_ref_shapes: ['typed_blocker_ref'],
+  })),
+  modules: MINIMAL_BRAND_MODULE_IDS.map((moduleId) => ({
+    module_id: moduleId,
+    brand_name: `OPL ${moduleId}`,
+    current_level: 'L4_structural_baseline',
+    l5_completion_status: 'evidence_required',
+    l5_can_be_claimed: false,
+    immediate_enabling_surfaces: [`${moduleId}_l5_fixture_gate`],
+    evidence_requirements: MINIMAL_BRAND_MODULE_L5_EVIDENCE_CLASSES.map((classId) => ({
+      class_id: classId,
+      owner: 'one-person-lab',
+      current_state: 'open',
+    })),
+    not_claims: ['production_ready'],
   })),
 };
 

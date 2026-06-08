@@ -26,6 +26,7 @@ import {
   type ErrorCode,
 } from './contract-validation.ts';
 import { validateAgentWorkspaceNorm } from './agent-workspace-norm-contract.ts';
+import { validateBrandModuleL5OperatingEvidence } from './brand-module-l5-operating-evidence-contract.ts';
 import { validateDomainsRegistry } from './domain-contracts.ts';
 
 export { FrameworkContractError } from './contract-validation.ts';
@@ -40,6 +41,7 @@ const REQUIRED_CONTRACT_FILE_NAMES = [
   'brand-module-registry.json',
   'brand-cli-governance.json',
   'brand-module-surfaces.json',
+  'brand-module-l5-operating-evidence.json',
 ] as const;
 
 type NormalizedFrameworkContractsLoadOptions = {
@@ -1541,6 +1543,11 @@ const REQUIRED_CONTRACT_FILES = [
     file_name: 'brand-module-surfaces.json',
     schema_version: (contracts: FrameworkContracts) => contracts.brandModuleSurfaces.version,
   },
+  {
+    contract_id: 'brand_module_l5_operating_evidence',
+    file_name: 'brand-module-l5-operating-evidence.json',
+    schema_version: (contracts: FrameworkContracts) => contracts.brandModuleL5OperatingEvidence.version,
+  },
 ] as const;
 
 export function validateFrameworkContracts(
@@ -1606,6 +1613,10 @@ export function loadFrameworkContracts(
       brandModuleSurfaces: validateBrandModuleSurfaces(
         path.join(contractsDir, 'brand-module-surfaces.json'),
         parseJsonFile(path.join(contractsDir, 'brand-module-surfaces.json')),
+      ),
+      brandModuleL5OperatingEvidence: validateBrandModuleL5OperatingEvidence(
+        path.join(contractsDir, 'brand-module-l5-operating-evidence.json'),
+        parseJsonFile(path.join(contractsDir, 'brand-module-l5-operating-evidence.json')),
       ),
     };
   } catch (error) {

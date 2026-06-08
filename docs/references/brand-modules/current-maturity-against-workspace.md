@@ -51,7 +51,7 @@ Machine boundary: 本文是人读现状对照。当前完成度、计数、recei
 
 ## L5 规划
 
-当前没有模块声明 `L5 production operating maturity`。L5 不是再补一层文档，而是把模块变成可持续运营能力：
+当前没有模块声明 `L5 production operating maturity`。本仓已新增 `contracts/opl-framework/brand-module-l5-operating-evidence.json` 和对应 CLI/read-model，把 L5 证据门变成可执行 surface；它只记录每个模块需要关闭的 evidence class、owner route、accepted ref shape 和 false-authority policy。L5 不是再补一层文档，而是把模块变成可持续运营能力：
 
 - `Charter`: 术语、ADR/RFC、authority matrix 和 supersession 机制能持续约束新模块、新 surface 与旧路线退役。
 - `Atlas`: agent / capability / surface / owner catalog 能被 CLI、App、conformance、release 和 operator drilldown 同源消费。
@@ -73,6 +73,10 @@ opl brand-modules inspect --module charter --json
 opl brand-modules maturity --json
 opl brand-modules validate --json
 opl brand-modules interfaces --json
+opl brand-modules l5-status --json
+opl brand-modules l5-status --module runway --json
+opl brand-modules l5-validate --json
+opl brand-modules l5-interfaces --json
 opl contract validate --json
 ```
 
@@ -89,6 +93,20 @@ opl vault status|inspect|interfaces|validate|doctor --json
 opl console status|inspect|interfaces|validate|doctor --json
 opl foundry-lab status|inspect|interfaces|validate|doctor --json
 opl connect status|inspect|interfaces|validate|doctor --json
+```
+
+模块自身 L5 evidence 读面：
+
+```text
+opl charter l5-status --json
+opl atlas l5-status --json
+opl workspace l5-status --json
+opl stagecraft l5-status --json
+opl runway l5-status --json
+opl vault l5-status --json
+opl console l5-status --json
+opl foundry-lab l5-status --json
+opl connect l5-status --json
 ```
 
 对象视图入口示例：
@@ -118,7 +136,8 @@ npm run typecheck
 
 - 九模块进入统一 registry 只能证明目录层存在；模块级 L4 必须以 `brand-module-surfaces.json` 和各自 `opl <module> validate|doctor --json` 为证据。
 - 任何模块 `L4_structural_baseline` 不等于 MAS/MAG/RCA/OMA domain ready。
-- 任何模块的 `L5` 都不能由 docs foldback、conformance pass、provider completion、verified ledger 或 App projection 单独声明。
+- `brand-module-l5-operating-evidence.json`、`opl brand-modules l5-validate --json` 和 `opl <module> l5-status --json` 只能证明 L5 证据矩阵存在、形状有效和当前 open/blocked/satisfied 状态；不能单独声明 L5。
+- 任何模块的 `L5` 都不能由 docs foldback、contract validation、conformance pass、provider completion、verified ledger 或 App projection 单独声明。
 - `Stagecraft L4` 不等于 quality gate 全部真实闭合。
 - `Runway L4` 不等于 production long-soak complete。
 - `Vault L4` 不等于 artifact/memory body authority 已迁给 OPL。

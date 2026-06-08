@@ -7,6 +7,7 @@ import type { FrameworkContracts } from '../../../../src/types.ts';
 import {
   MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT,
   MINIMAL_BRAND_CLI_GOVERNANCE_CONTRACT,
+  MINIMAL_BRAND_MODULE_L5_OPERATING_EVIDENCE_CONTRACT,
   MINIMAL_BRAND_MODULE_REGISTRY_CONTRACT,
   MINIMAL_BRAND_MODULE_SURFACES_CONTRACT,
 } from './agent-workspace-norm-fixture.ts';
@@ -51,6 +52,7 @@ const minimalContracts = {
   brandModuleRegistry: MINIMAL_BRAND_MODULE_REGISTRY_CONTRACT,
   brandCliGovernance: MINIMAL_BRAND_CLI_GOVERNANCE_CONTRACT,
   brandModuleSurfaces: MINIMAL_BRAND_MODULE_SURFACES_CONTRACT,
+  brandModuleL5OperatingEvidence: MINIMAL_BRAND_MODULE_L5_OPERATING_EVIDENCE_CONTRACT,
 } as FrameworkContracts;
 
 function schedulerRoute(action: string, actionKind: string) {

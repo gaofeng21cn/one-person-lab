@@ -28,7 +28,7 @@ OPL 顶层设计按九个品牌模块管理：`OPL Charter`、`OPL Atlas`、`OPL
 | `L4 executable baseline` | 具备品牌边界、schema/contract、CLI/App action、validate/doctor、docs foldback 和测试。 |
 | `L5 production operating maturity` | 真实用户路径、跨 agent scaleout、长跑/恢复 evidence、release/install evidence、运维闭环和 owner acceptance 能持续证明。 |
 
-当前九模块都达到 `L4 executable baseline` 的 structural/read-only baseline：`contracts/opl-framework/brand-module-registry.json` 持有品牌 registry，`contracts/opl-framework/brand-cli-governance.json` 持有 module-owned CLI frontdoor 和 `opl agents modules` 内部 branding spine，非 Workspace 模块走 `opl <brand-module> status|inspect|interfaces|validate|doctor --json`，Workspace 只新增 `opl workspace status|inspect --json` 品牌读面，`opl brand-modules validate --json`、`opl agents modules validate --json` 与 `opl contract validate --json` 提供机器守门。当前没有模块声明 `L5`；L5 不能由 docs foldback、CLI governance pass、conformance pass、verified ledger、provider completion 或 App projection 单独关闭。
+当前九模块都达到 `L4 executable baseline` 的 structural/read-only baseline：`contracts/opl-framework/brand-module-registry.json` 持有品牌 registry，`contracts/opl-framework/brand-cli-governance.json` 持有 module-owned CLI frontdoor 和 `opl agents modules` 内部 branding spine，非 Workspace 模块走 `opl <brand-module> status|inspect|interfaces|validate|doctor --json`，Workspace 只新增 `opl workspace status|inspect --json` 品牌读面，`opl brand-modules validate --json`、`opl agents modules validate --json` 与 `opl contract validate --json` 提供机器守门。L5 evidence gate 已由 `contracts/opl-framework/brand-module-l5-operating-evidence.json`、`opl brand-modules l5-status|l5-validate|l5-interfaces --json` 和 `opl <brand-module> l5-status --json` 落地。当前没有模块声明 `L5`；L5 不能由 docs foldback、contract validation、CLI governance pass、conformance pass、verified ledger、provider completion 或 App projection 单独关闭。
 
 ## 当前公开角色
 
@@ -84,7 +84,7 @@ Agent Lab、observability eval 和 mechanism improvement 继续是 refs-only con
 | `Memory / artifact / lifecycle apply` | 真实 memory retrieval/writeback、accepted/rejected receipt、artifact mutation receipt、package/export lifecycle receipt、cleanup/restore/retention 对账。 | Domain-owned surface 产生真实 receipts；OPL 只 intake / verify / project refs。 |
 | `Provider long-soak` | Temporal service/worker、provider cadence/capability、domain owner-chain dispatch、retry/dead-letter 和 repair loop 在更长窗口内持续满足。 | Long-soak refs、provider state linkage、operator evidence refs 或 typed blocker refs 可重复 record/verify；不外推为 production ready。 |
 | `Private platform retirement` | 已被 OPL primitive、generated surface 或 App product contract 替代的 wrapper、facade、alias、compat test、repo-local scheduler/queue/attempt/workbench/status shell 需要 no-active-caller、replacement parity、owner receipt / typed blocker、no-forbidden-write 和 tombstone/provenance。 | 满足删除门后退役或 tombstone；classification closed、descriptor ready、conformance passed 或 cleanup ledger ready 不能替代物理退役授权。 |
-| `Brand module L5` | 九个品牌模块都还缺完整 L5 运营证据矩阵。 | 各模块用真实用户路径、跨 agent scaleout、long-soak、release/install、owner acceptance 和运营闭环证明；L4/L3 只能作为输入。 |
+| `Brand module L5` | 九个品牌模块的 L5 evidence matrix 和可执行 read/validate surface 已落地；真实 L5 运营证据仍缺。 | 各模块用真实用户路径、跨 agent scaleout、long-soak、release/install、owner acceptance 和运营闭环证明；L4/L3、contract validation、provider completion 和 App projection 只能作为输入。 |
 
 ## Live 真相入口
 

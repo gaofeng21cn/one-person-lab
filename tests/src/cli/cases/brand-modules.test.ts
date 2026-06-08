@@ -21,12 +21,17 @@ test('brand module registry is loaded as a required framework contract', () => {
 
   assert.equal(contracts.brandModuleRegistry.scope, 'opl_brand_module_registry');
   assert.equal(contracts.brandModuleSurfaces.scope, 'opl_brand_module_executable_surfaces');
+  assert.equal(contracts.brandModuleL5OperatingEvidence.scope, 'opl_brand_module_l5_operating_evidence');
   assert.deepEqual(
     contracts.brandModuleRegistry.modules.map((entry) => entry.module_id),
     expectedModuleIds,
   );
   assert.deepEqual(
     contracts.brandModuleSurfaces.modules.map((entry) => entry.module_id),
+    expectedModuleIds,
+  );
+  assert.deepEqual(
+    contracts.brandModuleL5OperatingEvidence.modules.map((entry) => entry.module_id),
     expectedModuleIds,
   );
 });
@@ -74,6 +79,11 @@ test('brand modules maturity and validation are contract-derived', () => {
   assert.equal(maturity.module_count, 9);
   assert.equal(maturity.l4_structural_baseline_count, 9);
   assert.deepEqual(maturity.below_baseline_module_ids, []);
+  assert.equal(maturity.l5_target_level, 'L5_production_operating_maturity');
+  assert.equal(maturity.l5_claimed_count, 0);
+  assert.deepEqual(maturity.l5_claimed_module_ids, []);
+  assert.equal(maturity.l5_open_gap_count, 9);
+  assert.deepEqual(maturity.l5_open_gap_module_ids, expectedModuleIds);
 
   const validation = runCli(['brand-modules', 'validate']).brand_module_validation;
   assert.equal(validation.status, 'valid');
@@ -88,9 +98,14 @@ test('brand modules interfaces expose CLI, app, descriptor, and validation surfa
   assert.equal(interfaces.surface_kind, 'opl_brand_module_interface_bundle');
   assert.equal(interfaces.module_count, 9);
   assert.equal(interfaces.cli.commands.includes('opl brand-modules list --json'), true);
+  assert.equal(interfaces.cli.commands.includes('opl brand-modules l5-status --json'), true);
+  assert.equal(interfaces.cli.commands.includes('opl runway l5-status --json'), true);
   assert.equal(interfaces.app.descriptors.some((entry: { action_id: string }) => entry.action_id === 'brand_modules_list'), true);
+  assert.equal(interfaces.app.descriptors.some((entry: { action_id: string }) => entry.action_id === 'brand_modules_l5_status'), true);
   assert.equal(interfaces.descriptor.delegates.some((entry: { delegate_id: string }) => entry.delegate_id === 'brand_modules_registry'), true);
+  assert.equal(interfaces.descriptor.delegates.some((entry: { delegate_id: string }) => entry.delegate_id === 'brand_modules_l5_evidence'), true);
   assert.equal(interfaces.validation.commands.includes('opl brand-modules validate --json'), true);
+  assert.equal(interfaces.validation.commands.includes('opl brand-modules l5-validate --json'), true);
   assert.equal(interfaces.authority_boundary.can_claim_domain_ready, false);
   assert.equal(interfaces.authority_boundary.can_claim_quality_verdict, false);
   assert.equal(interfaces.authority_boundary.can_claim_artifact_authority, false);
@@ -134,6 +149,69 @@ test('Connect brand module surfaces use canonical Connect commands instead of re
     assert.equal(status.native_cli_family.additional_commands.includes(command), true);
     assert.equal(interfaces.cli.commands.includes(command), true);
   }
+});
+
+test('brand module L5 evidence gate is executable but does not claim production maturity', () => {
+  const status = runCli(['brand-modules', 'l5-status']).brand_module_l5_status;
+
+  assert.equal(status.surface_kind, 'opl_brand_module_l5_status');
+  assert.equal(status.baseline_level, 'L4_structural_baseline');
+  assert.equal(status.target_level, 'L5_production_operating_maturity');
+  assert.equal(status.module_count, 9);
+  assert.equal(status.l5_complete_module_count, 0);
+  assert.deepEqual(status.l5_complete_module_ids, []);
+  assert.deepEqual(status.evidence_required_module_ids, expectedModuleIds);
+  assert.equal(status.l5_claim_policy.contract_validation_counts_as_l5, false);
+  assert.equal(status.evidence_classes.length, 7);
+  assert.equal(status.modules.every((entry: { l5_can_be_claimed: boolean }) => entry.l5_can_be_claimed === false), true);
+});
+
+test('brand module L5 validation passes the matrix shape while keeping readiness open', () => {
+  const validation = runCli(['brand-modules', 'l5-validate']).brand_module_l5_validation;
+
+  assert.equal(validation.status, 'valid');
+  assert.equal(validation.l5_readiness_status, 'evidence_required');
+  assert.equal(validation.validated_module_count, 9);
+  assert.equal(validation.l5_complete_module_count, 0);
+  assert.deepEqual(validation.evidence_required_module_ids, expectedModuleIds);
+  assert.deepEqual(validation.missing_evidence_class_modules, []);
+  assert.deepEqual(validation.false_completion_violations, []);
+  assert.deepEqual(validation.completion_status_violations, []);
+  assert.equal(validation.l5_claim_policy.docs_foldback_counts_as_l5, false);
+  assert.equal(validation.authority_boundary.can_claim_production_ready, false);
+});
+
+test('brand module L5 interfaces expose aggregate and module-owned read surfaces', () => {
+  const interfaces = runCli(['brand-modules', 'l5-interfaces']).brand_module_l5_interfaces;
+
+  assert.equal(interfaces.surface_kind, 'opl_brand_module_l5_interface_bundle');
+  assert.equal(interfaces.cli.commands.includes('opl brand-modules l5-status --json'), true);
+  assert.equal(interfaces.cli.commands.includes('opl brand-modules l5-status --module <module_id> --json'), true);
+  assert.equal(interfaces.cli.commands.includes('opl brand-modules l5-validate --json'), true);
+  assert.equal(interfaces.cli.commands.includes('opl brand-modules l5-interfaces --json'), true);
+  assert.equal(interfaces.cli.commands.includes('opl runway l5-status --json'), true);
+  assert.equal(interfaces.app.descriptors.some((entry: { action_id: string }) => entry.action_id === 'brand_modules_l5_status'), true);
+  assert.equal(interfaces.validation.commands.includes('opl brand-modules l5-validate --json'), true);
+  assert.equal(interfaces.authority_boundary.can_claim_domain_ready, false);
+  assert.equal(interfaces.authority_boundary.can_claim_production_ready, false);
+});
+
+test('module-owned L5 status is readable from the module frontdoor and remains fail-closed', () => {
+  const aggregate = runCli(['brand-modules', 'l5-status', '--module', 'runway']).brand_module_l5_status;
+  const output = runCli(['runway', 'l5-status']);
+  const status = output.opl_runway_l5_status;
+
+  assert.equal(aggregate.module_count, 1);
+  assert.equal(aggregate.modules[0].module_id, 'runway');
+  assert.equal(output.brand_module_l5_status.module_count, 1);
+  assert.equal(status.surface_kind, 'opl_runway_l5_status');
+  assert.equal(status.module_id, 'runway');
+  assert.equal(status.status, 'evidence_required');
+  assert.equal(status.l5_can_be_claimed, false);
+  assert.equal(status.evidence_requirements.length, 7);
+  assert.equal(status.evidence_requirements.some((entry: { class_id: string }) => entry.class_id === 'long_soak_recovery'), true);
+  assert.equal(status.not_claims.includes('production_long_soak_complete'), true);
+  assert.equal(status.authority_boundary.can_claim_production_ready, false);
 });
 
 test('bin/opl routes module-owned brand commands into the OPL CLI instead of Codex passthrough', () => {
