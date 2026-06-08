@@ -117,6 +117,60 @@ const GENERATED_WRAPPER_DESCRIPTOR_SCOPE = [
   },
 ] as const;
 
+const GENERATED_DEFAULT_ENTRY_SURFACE_IDS = [
+  'cli',
+  'mcp',
+  'openai_tool',
+  'ai_sdk',
+  'skill_plugin',
+  'app_action',
+  'status_read_model',
+  'workbench',
+] as const;
+
+const SUPPORTED_DERIVED_SURFACES = [
+  {
+    surface_id: 'cli',
+    descriptor_block: 'cli',
+    source_catalogs: ['family_action_catalog'],
+  },
+  {
+    surface_id: 'mcp',
+    descriptor_block: 'mcp',
+    source_catalogs: ['family_action_catalog'],
+  },
+  {
+    surface_id: 'openai_tool',
+    descriptor_block: 'openai_tool',
+    source_catalogs: ['family_action_catalog'],
+  },
+  {
+    surface_id: 'ai_sdk',
+    descriptor_block: 'ai_sdk',
+    source_catalogs: ['family_action_catalog'],
+  },
+  {
+    surface_id: 'skill_plugin',
+    descriptor_block: 'skill',
+    source_catalogs: ['family_action_catalog'],
+  },
+  {
+    surface_id: 'app_action',
+    descriptor_block: 'product_entry',
+    source_catalogs: ['family_action_catalog'],
+  },
+  {
+    surface_id: 'status_read_model',
+    descriptor_block: 'product_status',
+    source_catalogs: ['family_action_catalog', 'runtime_surfaces'],
+  },
+  {
+    surface_id: 'workbench',
+    descriptor_block: 'workbench',
+    source_catalogs: ['family_stage_control_plane', 'domain_memory_descriptor', 'runtime_surfaces'],
+  },
+] as const;
+
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -136,6 +190,30 @@ function stringList(value: unknown) {
 
 function recordList(value: unknown) {
   return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function buildDefaultEntryPolicy() {
+  return {
+    surface_kind: 'opl_generated_surface_default_entry_policy',
+    version: 'opl-generated-surface-default-entry-policy.v1',
+    owner: 'one-person-lab',
+    status: 'generated_surfaces_are_default_entry_baseline',
+    source_catalogs: ['family_action_catalog', 'family_stage_control_plane'],
+    domain_repo_wrapper_policy: 'handler_target_refs_only_adapter_or_tombstone_candidate',
+    domain_repo_can_own_default_entry: false,
+    default_entry_surface_ids: [...GENERATED_DEFAULT_ENTRY_SURFACE_IDS],
+  };
+}
+
+function buildSupportedDerivedSurfaces() {
+  return SUPPORTED_DERIVED_SURFACES.map((surface) => ({
+    ...surface,
+    owner: 'one-person-lab',
+    default_entry: true,
+    domain_repo_can_own_generated_surface: false,
+    source_catalogs: [...surface.source_catalogs],
+    domain_repo_role: 'handler_target_refs_only_adapter_or_tombstone_candidate',
+  }));
 }
 
 function unique(values: string[]) {
@@ -925,6 +1003,8 @@ export function buildGeneratedInterfaceBundle(
     target_domain_id: optionalString(descriptor.target_domain_id),
     agent_id: optionalString(descriptor.agent_id),
     generated_from: GENERATED_INTERFACE_SOURCE_REFS,
+    default_entry_policy: buildDefaultEntryPolicy(),
+    supported_derived_surfaces: buildSupportedDerivedSurfaces(),
     ...blocks,
     active_caller_cutover_proof: buildActiveCallerCutoverProof(
       descriptor,
@@ -983,6 +1063,8 @@ export function selectGeneratedInterfaceBundleFormat(
     target_domain_id: bundle.target_domain_id,
     agent_id: bundle.agent_id,
     generated_from: bundle.generated_from,
+    default_entry_policy: bundle.default_entry_policy,
+    supported_derived_surfaces: bundle.supported_derived_surfaces,
     [selectedKey]: selectedBlock,
     product_status: bundle.product_status,
     product_session: bundle.product_session,

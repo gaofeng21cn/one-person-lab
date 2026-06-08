@@ -72,7 +72,7 @@
       "mcp",
       "skill",
       "product_entry_manifest",
-      "sidecar_export_dispatch",
+      "domain_handler",
       "status_read_model",
       "workbench_drilldown",
       "functional_harness_cases"
@@ -92,6 +92,121 @@
       "openai",
       "ai-sdk"
     ],
+    "default_entry_policy": {
+      "surface_kind": "opl_generated_surface_default_entry_policy",
+      "version": "opl-generated-surface-default-entry-policy.v1",
+      "owner": "one-person-lab",
+      "status": "generated_surfaces_are_default_entry_baseline",
+      "source_catalogs": [
+        "family_action_catalog",
+        "family_stage_control_plane"
+      ],
+      "domain_repo_wrapper_policy": "handler_target_refs_only_adapter_or_tombstone_candidate",
+      "domain_repo_can_own_default_entry": false,
+      "default_entry_surface_ids": [
+        "cli",
+        "mcp",
+        "openai_tool",
+        "ai_sdk",
+        "skill_plugin",
+        "app_action",
+        "status_read_model",
+        "workbench"
+      ]
+    },
+    "supported_derived_surfaces": [
+      {
+        "surface_id": "cli",
+        "descriptor_block": "cli",
+        "owner": "one-person-lab",
+        "default_entry": true,
+        "source_catalogs": [
+          "family_action_catalog"
+        ],
+        "domain_repo_can_own_generated_surface": false,
+        "domain_repo_role": "handler_target_refs_only_adapter_or_tombstone_candidate"
+      },
+      {
+        "surface_id": "mcp",
+        "descriptor_block": "mcp",
+        "owner": "one-person-lab",
+        "default_entry": true,
+        "source_catalogs": [
+          "family_action_catalog"
+        ],
+        "domain_repo_can_own_generated_surface": false,
+        "domain_repo_role": "handler_target_refs_only_adapter_or_tombstone_candidate"
+      },
+      {
+        "surface_id": "openai_tool",
+        "descriptor_block": "openai_tool",
+        "owner": "one-person-lab",
+        "default_entry": true,
+        "source_catalogs": [
+          "family_action_catalog"
+        ],
+        "domain_repo_can_own_generated_surface": false,
+        "domain_repo_role": "handler_target_refs_only_adapter_or_tombstone_candidate"
+      },
+      {
+        "surface_id": "ai_sdk",
+        "descriptor_block": "ai_sdk",
+        "owner": "one-person-lab",
+        "default_entry": true,
+        "source_catalogs": [
+          "family_action_catalog"
+        ],
+        "domain_repo_can_own_generated_surface": false,
+        "domain_repo_role": "handler_target_refs_only_adapter_or_tombstone_candidate"
+      },
+      {
+        "surface_id": "skill_plugin",
+        "descriptor_block": "skill",
+        "owner": "one-person-lab",
+        "default_entry": true,
+        "source_catalogs": [
+          "family_action_catalog"
+        ],
+        "domain_repo_can_own_generated_surface": false,
+        "domain_repo_role": "handler_target_refs_only_adapter_or_tombstone_candidate"
+      },
+      {
+        "surface_id": "app_action",
+        "descriptor_block": "product_entry",
+        "owner": "one-person-lab",
+        "default_entry": true,
+        "source_catalogs": [
+          "family_action_catalog"
+        ],
+        "domain_repo_can_own_generated_surface": false,
+        "domain_repo_role": "handler_target_refs_only_adapter_or_tombstone_candidate"
+      },
+      {
+        "surface_id": "status_read_model",
+        "descriptor_block": "product_status",
+        "owner": "one-person-lab",
+        "default_entry": true,
+        "source_catalogs": [
+          "family_action_catalog",
+          "runtime_surfaces"
+        ],
+        "domain_repo_can_own_generated_surface": false,
+        "domain_repo_role": "handler_target_refs_only_adapter_or_tombstone_candidate"
+      },
+      {
+        "surface_id": "workbench",
+        "descriptor_block": "workbench",
+        "owner": "one-person-lab",
+        "default_entry": true,
+        "source_catalogs": [
+          "family_stage_control_plane",
+          "domain_memory_descriptor",
+          "runtime_surfaces"
+        ],
+        "domain_repo_can_own_generated_surface": false,
+        "domain_repo_role": "handler_target_refs_only_adapter_or_tombstone_candidate"
+      }
+    ],
     "derived_from": [
       "family_action_catalog",
       "family_stage_control_plane",
@@ -100,7 +215,7 @@
       "functional_privatization_audit",
       "generated_surface_handoff",
       "product_entry_manifest_descriptor",
-      "sidecar_descriptor"
+      "domain_handler_descriptor"
     ],
     "repo_dir_mode": "reads standard contracts/action_catalog.json, contracts/stage_control_plane.json, contracts/generated_surface_handoff.json, contracts/pack_compiler_input.json, contracts/memory_descriptor.json, and contracts/functional_privatization_audit.json without executing target repo private wrappers",
     "descriptor_blocks": [
@@ -110,7 +225,7 @@
       "product_entry",
       "product_status",
       "product_session",
-      "sidecar",
+      "domain_handler",
       "workbench",
       "openai_tool",
       "ai_sdk",
@@ -208,7 +323,7 @@
       "functional_privatization_audit",
       "generated_surface_handoff",
       "product_entry_manifest_descriptor",
-      "sidecar_descriptor"
+      "domain_handler_descriptor"
     ],
     "drift_detection_policy": "aligned when the current generated bundle is produced from resolved compiler inputs, descriptor-only transition refs, or a domain-declared grant transition oracle evidence gate with matrix_oracle_passed status, and any observed manifest fingerprints match the current fingerprints; drift_detected when compiler blockers exist or observed fingerprints differ",
     "authority_boundary": {
@@ -259,7 +374,7 @@
     "generated_surface_handoff_projection",
     "generated_artifact_drift_manifest",
     "descriptor_surface_readiness_projection",
-    "generated_cli_mcp_product_entry_sidecar_status_workbench_harness_metadata",
+    "generated_cli_mcp_openai_ai_sdk_skill_app_status_workbench_harness_metadata",
     "generic_runtime_surface_admission_gate",
     "functional_privatization_blocker_projection"
   ],

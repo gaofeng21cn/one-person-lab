@@ -1,4 +1,5 @@
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
+import { buildReadyAgentRepo, writeJson } from './agents-conformance-fixtures.ts';
 import {
   attachManifestSurface,
   bindFamilyManifests,
@@ -49,6 +50,131 @@ test('generated interfaces command exposes descriptors but blocks cutover withou
   assert.equal('cli' in mcpOnly, false);
   assert.equal('skill' in mcpOnly, false);
   assert.deepEqual(mcpOnly.stage_routes, []);
+});
+
+test('generated interfaces declare generated surfaces as the default entry baseline', () => {
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-default-entry-'));
+  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+
+  bindFamilyManifests(env);
+
+  const bundle = runCli(['agents', 'interfaces', '--domain', 'mas'], env).generated_agent_interfaces;
+
+  assert.deepEqual(bundle.default_entry_policy, {
+    surface_kind: 'opl_generated_surface_default_entry_policy',
+    version: 'opl-generated-surface-default-entry-policy.v1',
+    owner: 'one-person-lab',
+    status: 'generated_surfaces_are_default_entry_baseline',
+    source_catalogs: ['family_action_catalog', 'family_stage_control_plane'],
+    domain_repo_wrapper_policy: 'handler_target_refs_only_adapter_or_tombstone_candidate',
+    domain_repo_can_own_default_entry: false,
+    default_entry_surface_ids: [
+      'cli',
+      'mcp',
+      'openai_tool',
+      'ai_sdk',
+      'skill_plugin',
+      'app_action',
+      'status_read_model',
+      'workbench',
+    ],
+  });
+  assert.deepEqual(
+    bundle.supported_derived_surfaces.map((surface: { surface_id: string }) => surface.surface_id),
+    [
+      'cli',
+      'mcp',
+      'openai_tool',
+      'ai_sdk',
+      'skill_plugin',
+      'app_action',
+      'status_read_model',
+      'workbench',
+    ],
+  );
+  assert.deepEqual(
+    bundle.supported_derived_surfaces.map((surface: { source_catalogs: string[] }) => surface.source_catalogs),
+    [
+      ['family_action_catalog'],
+      ['family_action_catalog'],
+      ['family_action_catalog'],
+      ['family_action_catalog'],
+      ['family_action_catalog'],
+      ['family_action_catalog'],
+      ['family_action_catalog', 'runtime_surfaces'],
+      ['family_stage_control_plane', 'domain_memory_descriptor', 'runtime_surfaces'],
+    ],
+  );
+  assert.equal(
+    bundle.supported_derived_surfaces.every(
+      (surface: { default_entry: boolean; owner: string; domain_repo_can_own_generated_surface: boolean }) =>
+        surface.default_entry === true
+        && surface.owner === 'one-person-lab'
+        && surface.domain_repo_can_own_generated_surface === false,
+    ),
+    true,
+  );
+  assert.equal(
+    bundle.default_entry_policy.default_entry_surface_ids.length,
+    bundle.supported_derived_surfaces.length,
+  );
+  assert.equal(bundle.generated_wrapper_bundle.domain_repo_role_policy, 'domain_handler_target_or_refs_only_adapter');
+});
+
+test('domain pack compiler contract and action catalog schema declare generated default surfaces', () => {
+  const contract = JSON.parse(fs.readFileSync(
+    path.join(repoRoot, 'contracts', 'opl-framework', 'domain-pack-compiler-contract.json'),
+    'utf8',
+  ));
+  const schema = JSON.parse(fs.readFileSync(
+    path.join(repoRoot, 'contracts', 'family-orchestration', 'family-action-catalog.schema.json'),
+    'utf8',
+  ));
+
+  assert.equal(
+    contract.generated_interface_bundle.default_entry_policy.surface_kind,
+    'opl_generated_surface_default_entry_policy',
+  );
+  assert.deepEqual(contract.generated_interface_bundle.default_entry_policy.default_entry_surface_ids, [
+    'cli',
+    'mcp',
+    'openai_tool',
+    'ai_sdk',
+    'skill_plugin',
+    'app_action',
+    'status_read_model',
+    'workbench',
+  ]);
+  assert.deepEqual(
+    contract.generated_interface_bundle.supported_derived_surfaces.map(
+      (surface: { surface_id: string }) => surface.surface_id,
+    ),
+    contract.generated_interface_bundle.default_entry_policy.default_entry_surface_ids,
+  );
+  assert.deepEqual(
+    schema.$defs.action.properties.supported_surfaces.required,
+    ['cli', 'mcp', 'skill', 'product_entry', 'openai', 'ai_sdk'],
+  );
+  assert.equal(schema.$defs.action.properties.supported_surfaces.minProperties, 6);
+});
+
+test('generated interfaces reject action catalogs missing generated default surface slots', () => {
+  const repoDir = buildReadyAgentRepo();
+  const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
+  const actionCatalog = JSON.parse(fs.readFileSync(actionCatalogPath, 'utf8'));
+  delete actionCatalog.actions[0].supported_surfaces.openai;
+  writeJson(actionCatalogPath, actionCatalog);
+
+  const failure = runCliFailure(['agents', 'interfaces', '--repo-dir', repoDir]);
+
+  assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+  assert.equal(
+    failure.payload.error.details.error.includes(
+      'family_action_catalog.actions[0].supported_surfaces.openai',
+    ),
+    true,
+  );
 });
 
 test('generated interfaces family-defaults product-entry format is the App workbench metadata feed', () => {

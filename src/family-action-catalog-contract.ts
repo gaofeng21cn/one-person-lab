@@ -51,6 +51,15 @@ export interface FamilyActionCatalog {
   notes: string[];
 }
 
+const REQUIRED_SUPPORTED_SURFACE_KEYS = [
+  'cli',
+  'mcp',
+  'skill',
+  'product_entry',
+  'openai',
+  'ai_sdk',
+] as const;
+
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -94,6 +103,14 @@ function normalizeSurfaceDescriptor(value: unknown): FamilyActionSurfaceDescript
   };
 }
 
+function requireSupportedSurfaceSlots(value: JsonRecord, field: string) {
+  for (const key of REQUIRED_SUPPORTED_SURFACE_KEYS) {
+    if (!Object.prototype.hasOwnProperty.call(value, key)) {
+      throw new Error(`Missing required supported surface slot: ${field}.supported_surfaces.${key}`);
+    }
+  }
+}
+
 function normalizeFamilyAction(value: unknown, field: string): FamilyActionCatalogAction {
   if (!isRecord(value)) {
     throw new Error(`${field} must be an object.`);
@@ -109,6 +126,7 @@ function normalizeFamilyAction(value: unknown, field: string): FamilyActionCatal
     throw new Error(`${field}.source_command must be an object.`);
   }
   const supportedSurfaces = isRecord(value.supported_surfaces) ? value.supported_surfaces : {};
+  requireSupportedSurfaceSlots(supportedSurfaces, field);
 
   return {
     action_id: requireString(value.action_id, `${field}.action_id`),

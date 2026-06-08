@@ -134,24 +134,33 @@
         "supported_surfaces": {
           "type": "object",
           "additionalProperties": false,
+          "minProperties": 6,
+          "required": [
+            "cli",
+            "mcp",
+            "skill",
+            "product_entry",
+            "openai",
+            "ai_sdk"
+          ],
           "properties": {
             "cli": {
-              "$ref": "#/$defs/surfaceDescriptor"
+              "$ref": "#/$defs/nullableSurfaceDescriptor"
             },
             "mcp": {
-              "$ref": "#/$defs/surfaceDescriptor"
+              "$ref": "#/$defs/nullableSurfaceDescriptor"
             },
             "skill": {
-              "$ref": "#/$defs/surfaceDescriptor"
+              "$ref": "#/$defs/nullableSurfaceDescriptor"
             },
             "product_entry": {
-              "$ref": "#/$defs/surfaceDescriptor"
+              "$ref": "#/$defs/nullableSurfaceDescriptor"
             },
             "openai": {
-              "$ref": "#/$defs/surfaceDescriptor"
+              "$ref": "#/$defs/nullableSurfaceDescriptor"
             },
             "ai_sdk": {
-              "$ref": "#/$defs/surfaceDescriptor"
+              "$ref": "#/$defs/nullableSurfaceDescriptor"
             }
           }
         },
@@ -210,6 +219,16 @@
           "type": "boolean"
         }
       }
+    },
+    "nullableSurfaceDescriptor": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/surfaceDescriptor"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   }
 }
