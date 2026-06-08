@@ -2,7 +2,7 @@
   "version": "brand-module-l5-operating-evidence.v1",
   "scope": "opl_brand_module_l5_operating_evidence",
   "owner": "one-person-lab",
-  "purpose": "Define the L5 operating-evidence matrix for the nine OPL brand modules without converting structural readiness into production maturity.",
+  "purpose": "Define the L5 operating-evidence matrix for the OPL brand modules without converting structural readiness into production maturity.",
   "state": "active_contract",
   "machine_boundary": "This contract records the evidence classes, owner routes, accepted ref shapes, immediate enabling surfaces, and false-completion boundaries required before any OPL brand module can claim L5 production operating maturity. It does not store domain truth, artifact or memory bodies, quality verdicts, owner receipts, typed blockers, App release truth, install success, long-soak results, or production-ready verdicts.",
   "baseline_level": "L4_structural_baseline",
@@ -116,6 +116,24 @@
         { "class_id": "no_second_truth_regression", "owner": "OPL Workspace owner", "current_state": "open" }
       ],
       "not_claims": ["domain_ready", "artifact_authority", "quality_verdict", "production_ready"]
+    },
+    {
+      "module_id": "pack",
+      "brand_name": "OPL Pack",
+      "current_level": "L4_structural_baseline",
+      "l5_completion_status": "evidence_required",
+      "l5_can_be_claimed": false,
+      "immediate_enabling_surfaces": ["pack_domain_pack_conformance_gate", "pack_authority_abi_gate", "pack_generated_surface_drift_gate"],
+      "evidence_requirements": [
+        { "class_id": "live_user_path", "owner": "OPL Pack owner", "current_state": "open" },
+        { "class_id": "cross_agent_scaleout", "owner": "OPL Pack owner", "current_state": "open" },
+        { "class_id": "long_soak_recovery", "owner": "OPL Pack owner", "current_state": "open" },
+        { "class_id": "release_install_evidence", "owner": "OPL Pack owner", "current_state": "open" },
+        { "class_id": "operator_repair_loop", "owner": "OPL Pack owner", "current_state": "open" },
+        { "class_id": "owner_acceptance", "owner": "domain pack owners", "current_state": "open" },
+        { "class_id": "no_second_truth_regression", "owner": "OPL Pack owner", "current_state": "open" }
+      ],
+      "not_claims": ["domain_ready", "quality_verdict", "artifact_authority", "production_ready", "generated_surface_writes_domain_truth"]
     },
     {
       "module_id": "stagecraft",

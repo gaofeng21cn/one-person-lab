@@ -82,6 +82,7 @@ export function buildBrandCommandSpecs(
     ...buildBrandModuleSurfaceSpecs(getContracts, 'charter', 'brand-charter'),
     ...buildBrandModuleSurfaceSpecs(getContracts, 'atlas', 'brand-atlas'),
     ...buildBrandModuleSurfaceSpecs(getContracts, 'workspace', 'workspace', ['status', 'inspect']),
+    ...buildBrandModuleSurfaceSpecs(getContracts, 'pack', 'brand-pack'),
     ...buildBrandModuleSurfaceSpecs(getContracts, 'stagecraft', 'brand-stagecraft'),
     ...buildBrandModuleSurfaceSpecs(getContracts, 'runway', 'brand-runway'),
     ...buildBrandModuleSurfaceSpecs(getContracts, 'vault', 'brand-vault'),
@@ -93,7 +94,7 @@ export function buildBrandCommandSpecs(
   const brandCommandSpecs: Record<string, CommandSpec> = {
     'brand-modules list': {
       usage: 'opl brand-modules list',
-      summary: 'List the nine OPL brand modules and their Workspace-level structural baseline refs.',
+      summary: 'List the OPL brand modules and their Workspace-level structural baseline refs.',
       examples: ['opl brand-modules list --json'],
       group: 'brand',
       handler: (args) => {

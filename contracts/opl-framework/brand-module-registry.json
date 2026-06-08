@@ -2,7 +2,7 @@
   "version": "brand-modules.v1",
   "scope": "opl_brand_module_registry",
   "owner": "One Person Lab",
-  "purpose": "Canonical registry for the nine OPL brand modules and their Workspace-level structural baseline gates.",
+  "purpose": "Canonical registry for the OPL brand modules and their Workspace-level structural baseline gates.",
   "state": "active_contract",
   "machine_boundary": "This registry is a machine-readable structural completion contract for OPL brand modules. It does not store domain truth, artifact or memory bodies, quality verdicts, owner receipts, typed blockers, production readiness, or App release truth.",
   "baseline_module_id": "workspace",
@@ -283,6 +283,91 @@
         "artifact_body_store",
         "owner_receipt_signed_by_opl",
         "production_ready"
+      ]
+    },
+    {
+      "module_id": "pack",
+      "brand_name": "OPL Pack",
+      "owner": "OPL Framework + Foundry Agent owners",
+      "purpose": "Declarative Domain Pack, authority ABI, pack compiler, generated and hosted surfaces, and standard authority function boundaries for OPL-compatible agents.",
+      "state": "active_structural_baseline",
+      "machine_boundary": "Pack defines agent pack shape, generated surface inputs, authority ABI refs, and standard authority function boundaries. It does not execute domain work, write domain truth, sign owner receipts, create typed blockers, or decide quality/export readiness.",
+      "module_doc_ref": "human_doc:opl_brand_module_pack",
+      "contract_refs": [
+        "contracts/opl-framework/brand-module-surfaces.json",
+        "contracts/opl-framework/domain-pack-compiler-contract.json",
+        "contracts/opl-framework/standard-domain-agent-skeleton-contract.json",
+        "contracts/opl-framework/foundry-agent-series-contract.json",
+        "contracts/opl-framework/owner-answer.schema.json"
+      ],
+      "cli_surfaces": [
+        "opl pack status --json",
+        "opl pack inspect --json",
+        "opl pack interfaces --json",
+        "opl pack validate --json",
+        "opl pack doctor --json",
+        "opl agents pack-compiler --json",
+        "opl agents interfaces --family-defaults --json",
+        "opl agents conformance --family-defaults --json"
+      ],
+      "app_surfaces": [
+        "app_action:pack_status",
+        "app_action:pack_inspect",
+        "opl brand-modules interfaces --json#app.descriptors.brand_modules_inspect",
+        "opl app state --profile full --json"
+      ],
+      "descriptor_surfaces": [
+        "opl pack interfaces --json",
+        "contracts/opl-framework/brand-module-surfaces.json#modules.pack",
+        "opl agents interfaces --family-defaults --json#generated_interfaces",
+        "contracts/opl-framework/domain-pack-compiler-contract.json",
+        "contracts/opl-framework/brand-module-registry.json#modules.pack"
+      ],
+      "validation_surfaces": [
+        "opl pack validate --json",
+        "opl pack doctor --json",
+        "opl agents conformance --family-defaults --json",
+        "opl contract validate --json"
+      ],
+      "status_doc_refs": [
+        "human_doc:opl_brand_module_maturity_against_workspace",
+        "human_doc:opl_brand_module_l4_rollout_plan",
+        "human_doc:opl_foundry_agent_target_operating_architecture",
+        "human_doc:opl_status"
+      ],
+      "l4_gates": [
+        "brand_doc_ref",
+        "registry_entry",
+        "contract_or_policy_ref",
+        "cli_surface_ref",
+        "app_or_operator_surface_ref",
+        "descriptor_surface_ref",
+        "validation_surface_ref",
+        "status_or_maturity_doc_ref",
+        "authority_boundary",
+        "forbidden_claims"
+      ],
+      "maturity_level": "L4_structural_baseline",
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "can_claim_production_ready": false,
+        "can_write_domain_truth": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_replace_domain_owner": false,
+        "can_replace_ai_executor_planning": false
+      },
+      "forbidden_claims": [
+        "domain_ready",
+        "quality_verdict",
+        "artifact_authority",
+        "production_ready",
+        "generated_surface_writes_domain_truth",
+        "authority_abi_signs_owner_receipt"
       ]
     },
     {

@@ -346,6 +346,7 @@ const BRAND_MODULE_IDS = [
   'charter',
   'atlas',
   'workspace',
+  'pack',
   'stagecraft',
   'runway',
   'vault',
@@ -616,7 +617,7 @@ function validateBrandModuleRegistry(
 
   const missingModuleIds = BRAND_MODULE_IDS.filter((moduleId) => !seen.has(moduleId));
   if (missingModuleIds.length > 0 || seen.size !== BRAND_MODULE_IDS.length) {
-    throw new FrameworkContractError('contract_shape_invalid', 'brand-module-registry.json must contain exactly the nine OPL brand modules.', {
+    throw new FrameworkContractError('contract_shape_invalid', 'brand-module-registry.json must contain exactly the configured OPL brand modules.', {
       file: filePath,
       expected_module_ids: [...BRAND_MODULE_IDS],
       missing_module_ids: missingModuleIds,
@@ -781,7 +782,7 @@ function validateBrandCliGovernance(
 
   const missingPlatformModuleIds = BRAND_MODULE_IDS.filter((moduleId) => !seenPlatformModuleIds.has(moduleId));
   if (missingPlatformModuleIds.length > 0 || seenPlatformModuleIds.size !== BRAND_MODULE_IDS.length) {
-    throw new FrameworkContractError('contract_shape_invalid', 'brand-cli-governance.json must cover exactly the nine OPL brand modules.', {
+    throw new FrameworkContractError('contract_shape_invalid', 'brand-cli-governance.json must cover exactly the configured OPL brand modules.', {
       file: filePath,
       expected_module_ids: [...BRAND_MODULE_IDS],
       missing_module_ids: missingPlatformModuleIds,
@@ -1100,7 +1101,7 @@ function validateBrandModuleSurfaces(
 
   const missingModuleIds = BRAND_MODULE_IDS.filter((moduleId) => !seen.has(moduleId));
   if (missingModuleIds.length > 0 || seen.size !== BRAND_MODULE_IDS.length) {
-    throw new FrameworkContractError('contract_shape_invalid', 'brand-module-surfaces.json must contain exactly the nine OPL brand modules.', {
+    throw new FrameworkContractError('contract_shape_invalid', 'brand-module-surfaces.json must contain exactly the configured OPL brand modules.', {
       file: filePath,
       expected_module_ids: [...BRAND_MODULE_IDS],
       missing_module_ids: missingModuleIds,

@@ -30,6 +30,7 @@ const BRAND_MODULE_DOC_PATHS: Record<BrandModuleId, string> = {
   charter: 'docs/references/brand-modules/charter.md',
   atlas: 'docs/references/brand-modules/atlas.md',
   workspace: 'docs/references/brand-modules/workspace.md',
+  pack: 'docs/references/brand-modules/pack.md',
   stagecraft: 'docs/references/brand-modules/stagecraft.md',
   runway: 'docs/references/brand-modules/runway.md',
   vault: 'docs/references/brand-modules/vault.md',

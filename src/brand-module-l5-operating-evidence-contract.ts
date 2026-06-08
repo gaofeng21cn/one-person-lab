@@ -16,6 +16,7 @@ const BRAND_MODULE_IDS = [
   'charter',
   'atlas',
   'workspace',
+  'pack',
   'stagecraft',
   'runway',
   'vault',
@@ -464,7 +465,7 @@ export function validateBrandModuleL5OperatingEvidence(
 
   const missingModuleIds = BRAND_MODULE_IDS.filter((moduleId) => !seenModules.has(moduleId));
   if (missingModuleIds.length > 0 || seenModules.size !== BRAND_MODULE_IDS.length) {
-    throw new FrameworkContractError('contract_shape_invalid', 'brand-module-l5-operating-evidence.json must contain exactly the nine OPL brand modules.', {
+    throw new FrameworkContractError('contract_shape_invalid', 'brand-module-l5-operating-evidence.json must contain exactly the configured OPL brand modules.', {
       file: filePath,
       expected_module_ids: [...BRAND_MODULE_IDS],
       missing_module_ids: missingModuleIds,

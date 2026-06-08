@@ -349,6 +349,7 @@ export type BrandModuleId =
   | 'charter'
   | 'atlas'
   | 'workspace'
+  | 'pack'
   | 'stagecraft'
   | 'runway'
   | 'vault'

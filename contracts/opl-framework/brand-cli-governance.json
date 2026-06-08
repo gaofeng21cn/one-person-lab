@@ -22,6 +22,11 @@
       "operations": ["status", "inspect"]
     },
     {
+      "module_id": "pack",
+      "command": "opl pack",
+      "operations": ["status", "inspect", "interfaces", "validate", "doctor"]
+    },
+    {
       "module_id": "stagecraft",
       "command": "opl stagecraft",
       "operations": ["status", "inspect", "interfaces", "validate", "doctor"]
@@ -73,6 +78,12 @@
         "platform_analogue_module_id": "workspace",
         "purpose": "Domain-agent internal Workspace spine that maps to the OPL platform workspace module without becoming a platform module.",
         "command_pattern": "opl agents modules inspect --domain <domain_id> --module agent-workspace"
+      },
+      {
+        "agent_module_id": "agent-pack",
+        "platform_analogue_module_id": "pack",
+        "purpose": "Domain-agent internal Pack spine that maps to the OPL platform pack module without becoming a platform module.",
+        "command_pattern": "opl agents modules inspect --domain <domain_id> --module agent-pack"
       },
       {
         "agent_module_id": "agent-stagecraft",
@@ -129,7 +140,7 @@
     {
       "command_prefix": "opl brand-modules",
       "primary_module_id": "charter",
-      "secondary_module_ids": ["atlas", "workspace", "stagecraft", "runway", "vault", "console", "foundry-lab", "connect"],
+      "secondary_module_ids": ["atlas", "workspace", "pack", "stagecraft", "runway", "vault", "console", "foundry-lab", "connect"],
       "status": "active_aggregate_registry_command_surface",
       "migration_target": "Keep as aggregate registry/read-model while module-owned command surfaces provide per-module status/inspect/validate/doctor.",
       "command_refs": [

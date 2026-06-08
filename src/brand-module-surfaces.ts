@@ -16,6 +16,7 @@ const NATIVE_SUBCOMMANDS = ['status', 'inspect', 'interfaces', 'validate', 'doct
 const BRAND_MODULE_OBJECT_VIEWS: Partial<Record<BrandModuleId, readonly string[]>> = {
   charter: ['authority', 'terms', 'decisions'],
   atlas: ['list', 'surfaces', 'graph', 'lifecycle'],
+  pack: ['domain-packs', 'authority-abi', 'generated-surfaces', 'compiler'],
   stagecraft: ['stages', 'graph', 'receipts', 'blockers'],
   runway: ['queue', 'attempts', 'provider', 'blockers'],
   vault: ['evidence', 'artifacts', 'receipts', 'lineage'],
