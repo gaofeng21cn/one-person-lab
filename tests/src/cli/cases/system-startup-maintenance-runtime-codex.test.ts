@@ -1,0 +1,150 @@
+import { assert, fs, os, path, runCli, shellSingleQuote, test } from '../helpers.ts';
+import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
+
+function writeFakeNpmRuntimeInstaller(fakeNpm: string, logPath: string) {
+  fs.writeFileSync(
+    fakeNpm,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'for arg in "$@"; do',
+      '  if [[ "$arg" == "-g" ]]; then',
+      '    echo "global npm mutation is forbidden in this fixture" >&2',
+      '    exit 23',
+      '  fi',
+      'done',
+      `printf '%s\\n' "$*" >> ${shellSingleQuote(logPath)}`,
+      'if [[ "$1" == "install" && "$2" == "--prefix" ]]; then',
+      '  prefix="$3"',
+      '  vendor_root="$prefix/node_modules/@openai/codex/vendor/aarch64-apple-darwin"',
+      '  mkdir -p "$vendor_root/bin" "$vendor_root/codex-path"',
+      '  printf \'%s\\n\' \'#!/usr/bin/env bash\' \'echo "codex-cli 0.134.0"\' > "$vendor_root/bin/codex"',
+      '  printf \'%s\\n\' \'#!/usr/bin/env bash\' \'echo "rg staged"\' > "$vendor_root/codex-path/rg"',
+      '  chmod +x "$vendor_root/bin/codex" "$vendor_root/codex-path/rg"',
+      '  echo "installed staged @openai/codex@latest"',
+      '  exit 0',
+      'fi',
+      'echo "Unexpected npm command: $*" >&2',
+      'exit 1',
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+}
+
+test('system startup-maintenance applies staged App-owned runtime Codex update without global npm', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-runtime-codex-'));
+  const runtimeBin = path.join(homeRoot, 'runtime', 'current', 'bin');
+  const runtimeCodex = path.join(runtimeBin, 'codex');
+  const runtimeRg = path.join(runtimeBin, 'rg');
+  const fakeBin = path.join(homeRoot, 'fake-bin');
+  const fakeNpm = path.join(fakeBin, 'npm');
+  const npmLog = path.join(homeRoot, 'npm.log');
+  const developerCheckout = path.join(homeRoot, 'developer-module-checkout');
+
+  fs.mkdirSync(runtimeBin, { recursive: true });
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.writeFileSync(runtimeCodex, '#!/usr/bin/env bash\necho "codex-cli 0.130.0"\n', { mode: 0o755 });
+  fs.writeFileSync(runtimeRg, '#!/usr/bin/env bash\necho "rg old"\n', { mode: 0o755 });
+  writeFakeNpmRuntimeInstaller(fakeNpm, npmLog);
+
+  fs.mkdirSync(developerCheckout, { recursive: true });
+  runGitFixtureCommand(developerCheckout, ['init', '--initial-branch', 'main']);
+  fs.writeFileSync(path.join(developerCheckout, 'README.md'), '# Developer checkout\n', 'utf8');
+  runGitFixtureCommand(developerCheckout, ['add', 'README.md']);
+  runGitFixtureCommand(developerCheckout, [
+    '-c',
+    'user.name=OPL Test',
+    '-c',
+    'user.email=opl@example.test',
+    'commit',
+    '-m',
+    'Initial developer checkout',
+  ]);
+
+  try {
+    const output = runCli(['system', 'startup-maintenance'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_MODULES_ROOT: path.join(homeRoot, 'managed-modules'),
+      OPL_CODEX_BIN: runtimeCodex,
+      OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
+      OPL_MODULE_PATH_MEDAUTOSCIENCE: developerCheckout,
+      OPL_MODULE_PATH_MEDAUTOGRANT: developerCheckout,
+      OPL_MODULE_PATH_REDCUBE: developerCheckout,
+      OPL_MODULE_PATH_OPLMETAAGENT: developerCheckout,
+      PATH: `${fakeBin}:/usr/bin:/bin`,
+      ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
+    }) as {
+      system_action: {
+        details: {
+          engine_targets: Array<{
+            target_id: string;
+            status: string;
+            reason: string;
+            action: string | null;
+            result: {
+              strategy: string;
+              note: string | null;
+              command_preview: string[];
+              stdout: string;
+            } | null;
+          }>;
+          engine_summary: {
+            completed_targets_count: number;
+            manual_required_targets_count: number;
+          };
+          refreshed_system_environment: {
+            core_engines: {
+              codex: {
+                version: string | null;
+                latest_version_status: string;
+                runtime_toolchain_updater: {
+                  global_toolchain_mutation_allowed: boolean;
+                  latest_version_status: string;
+                };
+              };
+            };
+          };
+        };
+      };
+    };
+
+    const engineTarget = output.system_action.details.engine_targets[0];
+    assert.equal(engineTarget.target_id, 'codex');
+    assert.equal(engineTarget.status, 'completed');
+    assert.equal(engineTarget.reason, 'codex_cli_latest_outdated');
+    assert.equal(engineTarget.action, 'update');
+    assert.equal(engineTarget.result?.strategy, 'builtin');
+    assert.equal(engineTarget.result?.command_preview.includes('-g'), false);
+    assert.match(engineTarget.result?.command_preview.join(' ') ?? '', /--prefix/);
+    assert.match(engineTarget.result?.note ?? '', /does not modify global Homebrew, npm, or system Codex/);
+    assert.match(engineTarget.result?.stdout ?? '', /opl_runtime_toolchain_update_receipt/);
+    assert.equal(output.system_action.details.engine_summary.completed_targets_count, 1);
+    assert.equal(output.system_action.details.engine_summary.manual_required_targets_count, 0);
+    assert.equal(
+      output.system_action.details.refreshed_system_environment.core_engines.codex.version,
+      'codex-cli 0.134.0',
+    );
+    assert.equal(
+      output.system_action.details.refreshed_system_environment.core_engines.codex.latest_version_status,
+      'current',
+    );
+    assert.equal(
+      output.system_action.details.refreshed_system_environment.core_engines.codex.runtime_toolchain_updater
+        .global_toolchain_mutation_allowed,
+      false,
+    );
+    assert.equal(
+      output.system_action.details.refreshed_system_environment.core_engines.codex.runtime_toolchain_updater
+        .latest_version_status,
+      'current',
+    );
+    assert.doesNotMatch(fs.readFileSync(npmLog, 'utf8'), / -g( |$)/);
+    assert.match(fs.readFileSync(runtimeCodex, 'utf8'), /0\.134\.0/);
+    assert.match(fs.readFileSync(runtimeRg, 'utf8'), /rg staged/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});

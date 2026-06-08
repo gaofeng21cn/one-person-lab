@@ -68,6 +68,7 @@ export async function buildOplEnvironment(contracts: FrameworkContracts) {
           binary_path: codexBinary.binary_path,
           binary_source: codexBinary.binary_source,
           candidates: codexBinary.candidates,
+          runtime_toolchain_updater: codexBinary.runtime_toolchain_updater,
           diagnostics: codexDiagnostics,
           config_path: codexDefaults?.config_path ?? null,
           default_model: codexDefaults?.model ?? null,

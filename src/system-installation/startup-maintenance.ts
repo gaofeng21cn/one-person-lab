@@ -326,6 +326,23 @@ async function maybeRunEngineStartupMaintenance(
       error: null,
     });
   }
+  const runtimeToolchain = codex.runtime_toolchain_updater;
+  const selectedRuntimeCodex =
+    typeof runtimeToolchain.current_binary_path === 'string'
+    && codex.binary_path === runtimeToolchain.current_binary_path;
+  if (
+    !selectedRuntimeCodex
+    && codex.version_status === 'compatible'
+    && runtimeToolchain.latest_version_status === 'current'
+  ) {
+    return buildEngineTarget(environment, {
+      status: 'skipped',
+      reason: 'compatible_system_codex_selected_runtime_toolchain_current',
+      action: null,
+      result: null,
+      error: null,
+    });
+  }
 
   try {
     const result = await runOplEngineAction(contracts, 'update', 'codex');

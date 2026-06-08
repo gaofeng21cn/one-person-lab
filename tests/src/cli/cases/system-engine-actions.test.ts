@@ -11,6 +11,37 @@ import {
 } from '../helpers.ts';
 import { resolveEngineActionSpec } from '../../../../src/system-installation/engine-helpers.ts';
 
+function writeFakeNpmRuntimeInstaller(fakeNpm: string, logPath: string) {
+  fs.writeFileSync(
+    fakeNpm,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'for arg in "$@"; do',
+      '  if [[ "$arg" == "-g" ]]; then',
+      '    echo "global npm mutation is forbidden in this fixture" >&2',
+      '    exit 23',
+      '  fi',
+      'done',
+      `printf '%s\\n' "$*" >> ${shellSingleQuote(logPath)}`,
+      'if [[ "$1" == "install" && "$2" == "--prefix" ]]; then',
+      '  prefix="$3"',
+      '  vendor_root="$prefix/node_modules/@openai/codex/vendor/aarch64-apple-darwin"',
+      '  mkdir -p "$vendor_root/bin" "$vendor_root/codex-path"',
+      '  printf \'%s\\n\' \'#!/usr/bin/env bash\' \'echo "codex-cli 0.134.0"\' > "$vendor_root/bin/codex"',
+      '  printf \'%s\\n\' \'#!/usr/bin/env bash\' \'echo "rg new"\' > "$vendor_root/codex-path/rg"',
+      '  chmod +x "$vendor_root/bin/codex" "$vendor_root/codex-path/rg"',
+      '  echo "installed staged @openai/codex@latest"',
+      '  exit 0',
+      'fi',
+      'echo "Unexpected npm command: $*" >&2',
+      'exit 1',
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+}
+
 test('engine action executes env-overridden install commands and returns a structured action surface', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-engine-action-'));
   const markerPath = path.join(fixtureRoot, 'codex-install.marker');
@@ -74,52 +105,21 @@ exit 1
   }
 });
 
-test('builtin Codex update refreshes selected OPL runtime binary from npm latest vendor payload', () => {
+test('builtin Codex update stages and atomically applies selected OPL runtime binary without global npm', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-engine-runtime-update-'));
   const runtimeHome = path.join(fixtureRoot, 'runtime', 'current');
   const runtimeBin = path.join(runtimeHome, 'bin');
-  const globalRoot = path.join(fixtureRoot, 'global-node-modules');
   const fakeBin = path.join(fixtureRoot, 'fake-bin');
-  const packageVendorRoot = path.join(globalRoot, '@openai', 'codex', 'vendor', 'aarch64-apple-darwin');
   const runtimeCodex = path.join(runtimeBin, 'codex');
   const runtimeRg = path.join(runtimeBin, 'rg');
   const fakeNpm = path.join(fakeBin, 'npm');
+  const npmLog = path.join(fixtureRoot, 'npm.log');
 
-  fs.mkdirSync(path.join(packageVendorRoot, 'bin'), { recursive: true });
-  fs.mkdirSync(path.join(packageVendorRoot, 'codex-path'), { recursive: true });
   fs.mkdirSync(runtimeBin, { recursive: true });
   fs.mkdirSync(fakeBin, { recursive: true });
   fs.writeFileSync(runtimeCodex, '#!/usr/bin/env bash\necho "codex-cli 0.130.0"\n', { mode: 0o755 });
   fs.writeFileSync(runtimeRg, '#!/usr/bin/env bash\necho "rg old"\n', { mode: 0o755 });
-  fs.writeFileSync(
-    path.join(packageVendorRoot, 'bin', 'codex'),
-    '#!/usr/bin/env bash\necho "codex-cli 0.134.0"\n',
-    { mode: 0o755 },
-  );
-  fs.writeFileSync(
-    path.join(packageVendorRoot, 'codex-path', 'rg'),
-    '#!/usr/bin/env bash\necho "rg new"\n',
-    { mode: 0o755 },
-  );
-  fs.writeFileSync(
-    fakeNpm,
-    [
-      '#!/usr/bin/env bash',
-      'set -euo pipefail',
-      'if [[ "$1" == "root" && "$2" == "-g" ]]; then',
-      `  echo ${shellSingleQuote(globalRoot)}`,
-      '  exit 0',
-      'fi',
-      'if [[ "$1" == "install" && "$2" == "-g" && "$3" == "@openai/codex@latest" ]]; then',
-      '  echo "installed @openai/codex@latest"',
-      '  exit 0',
-      'fi',
-      'echo "Unexpected npm command: $*" >&2',
-      'exit 1',
-      '',
-    ].join('\n'),
-    { mode: 0o755 },
-  );
+  writeFakeNpmRuntimeInstaller(fakeNpm, npmLog);
 
   try {
     const output = runCli(
@@ -134,12 +134,19 @@ test('builtin Codex update refreshes selected OPL runtime binary from npm latest
     ) as {
       engine_action: {
         status: string;
+        command_preview: string[];
+        note: string | null;
+        stdout: string;
         system: {
           core_engines: {
             codex: {
               version: string | null;
               latest_version_status: string;
               update_available: boolean;
+              runtime_toolchain_updater: {
+                global_toolchain_mutation_allowed: boolean;
+                latest_version_status: string;
+              };
             };
           };
         };
@@ -147,9 +154,22 @@ test('builtin Codex update refreshes selected OPL runtime binary from npm latest
     };
 
     assert.equal(output.engine_action.status, 'completed');
+    assert.equal(output.engine_action.command_preview.includes('-g'), false);
+    assert.match(output.engine_action.command_preview.join(' '), /--prefix/);
+    assert.match(output.engine_action.note ?? '', /does not modify global Homebrew, npm, or system Codex/);
     assert.equal(output.engine_action.system.core_engines.codex.version, 'codex-cli 0.134.0');
     assert.equal(output.engine_action.system.core_engines.codex.latest_version_status, 'current');
     assert.equal(output.engine_action.system.core_engines.codex.update_available, false);
+    assert.equal(
+      output.engine_action.system.core_engines.codex.runtime_toolchain_updater.global_toolchain_mutation_allowed,
+      false,
+    );
+    assert.equal(
+      output.engine_action.system.core_engines.codex.runtime_toolchain_updater.latest_version_status,
+      'current',
+    );
+    assert.match(output.engine_action.stdout, /opl_runtime_toolchain_update_receipt/);
+    assert.doesNotMatch(fs.readFileSync(npmLog, 'utf8'), / -g( |$)/);
     assert.match(fs.readFileSync(runtimeCodex, 'utf8'), /0\.134\.0/);
     assert.match(fs.readFileSync(runtimeRg, 'utf8'), /rg new/);
   } finally {
@@ -184,7 +204,9 @@ test('builtin Codex install command bounds npm registry fetches', () => {
   const command = install.command_preview.join(' ');
 
   assert.equal(install.strategy, 'builtin');
-  assert.match(command, /npm install -g @openai\/codex@latest/);
+  assert.match(command, /npm install --prefix .* @openai\/codex@latest/);
+  assert.doesNotMatch(command, / install -g /);
+  assert.match(install.note ?? '', /does not modify global Homebrew, npm, or system Codex/);
   assert.match(command, /--fetch-retries=3/);
   assert.match(command, /--fetch-retry-mintimeout=2000/);
   assert.match(command, /--fetch-retry-maxtimeout=20000/);

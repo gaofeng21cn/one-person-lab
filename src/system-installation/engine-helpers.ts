@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 import { resolveCodexBinary } from '../codex.ts';
@@ -17,6 +18,7 @@ import {
 const DEFAULT_MINIMUM_CODEX_CLI_VERSION = '0.125.0';
 const CODEX_MACOS_ARM64_TARGET = 'aarch64-apple-darwin';
 const DEFAULT_CODEX_LATEST_TIMEOUT_MS = 5000;
+const CODEX_RUNTIME_UPDATER_VERSION = 'opl-runtime-toolchain-updater.v1';
 
 type ParsedCliVersion = {
   version: string;
@@ -38,6 +40,14 @@ type LatestCodexCliVersionSnapshot = {
   latest_version_status: 'current' | 'outdated' | 'unknown' | 'missing';
 };
 
+type RuntimeToolchainPaths = {
+  runtime_root: string;
+  current_root: string;
+  current_bin_dir: string;
+  current_codex_path: string;
+  staging_root: string;
+};
+
 function resolveMinimumCodexCliVersion() {
   return normalizeOptionalString(process.env.OPL_MIN_CODEX_CLI_VERSION)
     ?? DEFAULT_MINIMUM_CODEX_CLI_VERSION;
@@ -48,6 +58,44 @@ function resolveCodexLatestTimeoutMs() {
   return Number.isFinite(parsed) && parsed > 0
     ? Math.floor(parsed)
     : DEFAULT_CODEX_LATEST_TIMEOUT_MS;
+}
+
+function resolveHomeDir() {
+  return normalizeOptionalString(process.env.HOME) ?? os.homedir();
+}
+
+function runtimeRootFromCodexPath(binaryPath: string | null | undefined) {
+  if (!binaryPath) {
+    return null;
+  }
+  const normalized = path.resolve(binaryPath);
+  const suffix = path.join('current', 'bin', 'codex');
+  return normalized.endsWith(`${path.sep}${suffix}`)
+    ? normalized.slice(0, -(suffix.length + 1))
+    : null;
+}
+
+function resolveOplRuntimeToolchainPaths(): RuntimeToolchainPaths {
+  const explicitRuntimeRoot = normalizeOptionalString(process.env.OPL_RUNTIME_ROOT);
+  const selectedRuntimeRoot = runtimeRootFromCodexPath(resolveCodexBinary()?.path);
+  const runtimeRoot = path.resolve(
+    explicitRuntimeRoot
+      ?? selectedRuntimeRoot
+      ?? path.join(resolveHomeDir(), 'Library', 'Application Support', 'OPL', 'runtime'),
+  );
+  const currentRoot = path.join(runtimeRoot, 'current');
+  const currentBinDir = path.join(currentRoot, 'bin');
+  const stagingRoot = path.resolve(
+    normalizeOptionalString(process.env.OPL_RUNTIME_TOOLCHAIN_STAGE_ROOT)
+      ?? path.join(runtimeRoot, 'staged', 'codex-cli'),
+  );
+  return {
+    runtime_root: runtimeRoot,
+    current_root: currentRoot,
+    current_bin_dir: currentBinDir,
+    current_codex_path: path.join(currentBinDir, 'codex'),
+    staging_root: stagingRoot,
+  };
 }
 
 function parseCliVersion(output: string | null | undefined): ParsedCliVersion | null {
@@ -140,6 +188,48 @@ function resolveVersionStatus(rawVersion: string | null, minimumVersion: string)
     version_status: compareCliVersions(parsedVersion, parsedMinimum) >= 0
       ? 'compatible' as const
       : 'outdated' as const,
+  };
+}
+
+function inspectRuntimeCodexToolchain(
+  minimumVersion: string,
+  latestVersion: string | null,
+) {
+  const paths = resolveOplRuntimeToolchainPaths();
+  const binaryExists = fs.existsSync(paths.current_codex_path)
+    && fs.statSync(paths.current_codex_path).isFile();
+  const versionResult = binaryExists
+    ? runCommand(paths.current_codex_path, ['--version'])
+    : null;
+  const version = versionResult && versionResult.exitCode === 0
+    ? normalizeOptionalString(normalizeOutput(versionResult.stdout, versionResult.stderr))
+    : null;
+  const currentPolicy = resolveVersionStatus(version, minimumVersion);
+  const latestPolicy = resolveLatestVersionStatus(currentPolicy.parsed_version, latestVersion);
+
+  return {
+    surface_kind: 'opl_runtime_toolchain_updater',
+    updater_version: CODEX_RUNTIME_UPDATER_VERSION,
+    owner: 'opl_app_runtime',
+    target_toolchain: 'codex_cli',
+    update_strategy: 'app_owned_stage_verify_atomic_apply',
+    apply_trigger: 'opl engine install/update/reinstall --engine codex or opl system startup-maintenance',
+    global_toolchain_mutation_allowed: false,
+    system_tool_priority: 'prefer_compatible_system_codex_from_env_or_path',
+    managed_payloads: ['codex_cli', 'codex_path_rg'],
+    runtime_root: paths.runtime_root,
+    current_root: paths.current_root,
+    current_binary_path: paths.current_codex_path,
+    staging_root: paths.staging_root,
+    current_binary_installed: binaryExists,
+    current_version: version,
+    current_parsed_version: currentPolicy.parsed_version,
+    current_version_status: binaryExists ? currentPolicy.version_status : 'missing',
+    latest_version: latestPolicy.latest_version,
+    latest_version_status: binaryExists ? latestPolicy.latest_version_status : 'missing',
+    update_available: binaryExists
+      ? latestPolicy.latest_version_status === 'outdated'
+      : Boolean(latestVersion),
   };
 }
 
@@ -275,6 +365,7 @@ export function resolveCodexVersion(options: { skipLatestLookup?: boolean } = {}
       candidates: [],
       issues: ['codex_cli_missing'],
       diagnostics: [],
+      runtime_toolchain_updater: inspectRuntimeCodexToolchain(minimumVersion, null),
     };
   }
 
@@ -315,6 +406,7 @@ export function resolveCodexVersion(options: { skipLatestLookup?: boolean } = {}
     candidates,
     issues: blockingIssues,
     diagnostics,
+    runtime_toolchain_updater: inspectRuntimeCodexToolchain(minimumVersion, latestVersion),
   };
 }
 
@@ -335,17 +427,14 @@ function resolveBuiltinEngineActionCommand(
   engineId: OplEngineId,
   action: OplEngineAction,
 ) {
+  if (engineId !== 'codex') {
+    return null;
+  }
   switch (action) {
     case 'install':
     case 'update':
     case 'reinstall':
-      return [
-        'npm install -g @openai/codex@latest --force',
-        '--fetch-retries=3',
-        '--fetch-retry-mintimeout=2000',
-        '--fetch-retry-maxtimeout=20000',
-        '--fetch-timeout=60000',
-      ].join(' ');
+      return null;
     case 'remove':
       return 'npm uninstall -g @openai/codex';
   }
@@ -355,13 +444,11 @@ function findExistingFile(candidates: string[]) {
   return candidates.find((candidate) => fs.existsSync(candidate) && fs.statSync(candidate).isFile()) ?? null;
 }
 
-function findInstalledCodexPackageRoot() {
-  const result = runCommand('npm', ['root', '-g']);
-  if (result.exitCode !== 0) {
-    return null;
-  }
-  const globalRoot = normalizeOptionalString(normalizeOutput(result.stdout, result.stderr));
-  return globalRoot ? path.join(globalRoot, '@openai', 'codex') : null;
+function findInstalledCodexPackageRoot(prefixRoot: string) {
+  const packageRoot = path.join(prefixRoot, 'node_modules', '@openai', 'codex');
+  return fs.existsSync(packageRoot) && fs.statSync(packageRoot).isDirectory()
+    ? packageRoot
+    : null;
 }
 
 function findInstalledCodexVendorBinaries(packageRoot: string) {
@@ -402,72 +489,162 @@ function copyExecutable(source: string, destination: string) {
   fs.chmodSync(destination, 0o755);
 }
 
-function updateSelectedOplRuntimeCodexBinary() {
-  const binary = resolveCodexBinary();
-  if (!binary) {
+function buildCodexRuntimeNpmInstallArgs(prefixRoot: string) {
+  return [
+    'install',
+    '--prefix',
+    prefixRoot,
+    '@openai/codex@latest',
+    '--force',
+    '--include=optional',
+    '--ignore-scripts=false',
+    '--fetch-retries=3',
+    '--fetch-retry-mintimeout=2000',
+    '--fetch-retry-maxtimeout=20000',
+    '--fetch-timeout=60000',
+  ];
+}
+
+function makeRuntimeStageAttemptRoot(paths: RuntimeToolchainPaths) {
+  fs.mkdirSync(paths.staging_root, { recursive: true });
+  const attemptRoot = path.join(paths.staging_root, `download-${Date.now()}-${process.pid}`);
+  fs.rmSync(attemptRoot, { recursive: true, force: true });
+  fs.mkdirSync(attemptRoot, { recursive: true });
+  return attemptRoot;
+}
+
+function verifyCodexExecutable(binaryPath: string) {
+  const versionResult = runCommand(binaryPath, ['--version']);
+  const version = versionResult.exitCode === 0
+    ? normalizeOptionalString(normalizeOutput(versionResult.stdout, versionResult.stderr))
+    : null;
+  const parsed = parseCliVersion(version);
+  return {
+    verified: Boolean(parsed),
+    version,
+    parsed_version: parsed?.version ?? null,
+    exit_code: versionResult.exitCode,
+    stderr: versionResult.stderr,
+  };
+}
+
+function applyCodexVendorToRuntime(
+  vendor: ReturnType<typeof findInstalledCodexVendorBinaries>,
+  paths: RuntimeToolchainPaths,
+  packageRoot: string,
+) {
+  fs.mkdirSync(paths.current_bin_dir, { recursive: true });
+
+  const tmpCodex = path.join(paths.current_bin_dir, `.codex-${process.pid}-${Date.now()}.tmp`);
+  copyExecutable(vendor.codex!, tmpCodex);
+  const verification = verifyCodexExecutable(tmpCodex);
+  if (!verification.verified) {
+    fs.rmSync(tmpCodex, { force: true });
     return {
-      refreshed_runtime_binary: false,
-      runtime_binary_path: null,
-      reason: 'codex_binary_not_found',
-    };
-  }
-  if (!isOplRuntimeCodexBinary(binary.path)) {
-    return {
-      refreshed_runtime_binary: false,
-      runtime_binary_path: binary.path,
+      applied: false,
+      runtime_binary_path: paths.current_codex_path,
+      codex_package_root: packageRoot,
+      reason: 'staged_codex_binary_failed_version_verification',
+      verification,
     };
   }
 
-  const packageRoot = findInstalledCodexPackageRoot();
+  fs.renameSync(tmpCodex, paths.current_codex_path);
+  let rgPath: string | null = null;
+  if (vendor.rg) {
+    const targetRg = path.join(paths.current_bin_dir, 'rg');
+    const tmpRg = path.join(paths.current_bin_dir, `.rg-${process.pid}-${Date.now()}.tmp`);
+    copyExecutable(vendor.rg, tmpRg);
+    fs.renameSync(tmpRg, targetRg);
+    rgPath = targetRg;
+  }
+
+  return {
+    applied: true,
+    runtime_binary_path: paths.current_codex_path,
+    runtime_rg_path: rgPath,
+    codex_package_root: packageRoot,
+    copied_codex_source: vendor.codex,
+    copied_rg_source: vendor.rg,
+    verification,
+  };
+}
+
+function applyStagedCodexRuntimePayload(stageAttemptRoot: string, paths: RuntimeToolchainPaths) {
+  const packageRoot = findInstalledCodexPackageRoot(stageAttemptRoot);
   if (!packageRoot) {
     return {
-      refreshed_runtime_binary: false,
-      runtime_binary_path: binary.path,
-      reason: 'codex_package_root_not_found',
+      applied: false,
+      runtime_binary_path: paths.current_codex_path,
+      reason: 'codex_package_root_not_found_in_runtime_stage',
+      stage_attempt_root: stageAttemptRoot,
     };
   }
-
   const vendor = findInstalledCodexVendorBinaries(packageRoot);
   if (!vendor.codex) {
     return {
-      refreshed_runtime_binary: false,
-      runtime_binary_path: binary.path,
+      applied: false,
+      runtime_binary_path: paths.current_codex_path,
       codex_package_root: packageRoot,
       reason: 'codex_vendor_binary_not_found',
     };
   }
 
-  const runtimeBinDir = path.dirname(binary.path);
-  copyExecutable(vendor.codex, binary.path);
-  if (vendor.rg) {
-    copyExecutable(vendor.rg, path.join(runtimeBinDir, 'rg'));
-  }
-
-  return {
-    refreshed_runtime_binary: true,
-    runtime_binary_path: binary.path,
-    codex_package_root: packageRoot,
-    copied_codex_source: vendor.codex,
-    copied_rg_source: vendor.rg,
-  };
+  return applyCodexVendorToRuntime(vendor, paths, packageRoot);
 }
 
-function runBuiltinCodexInstallOrUpdate(command: string, cwd?: string) {
-  const installResult = runShellCommand(command, cwd);
+function runBuiltinCodexRuntimeInstallOrUpdate(cwd?: string) {
+  const paths = resolveOplRuntimeToolchainPaths();
+  const stageAttemptRoot = makeRuntimeStageAttemptRoot(paths);
+  const installArgs = buildCodexRuntimeNpmInstallArgs(stageAttemptRoot);
+  const installResult = runCommand('npm', installArgs, cwd);
   if (installResult.exitCode !== 0) {
     return installResult;
   }
 
-  const runtimeRefresh = updateSelectedOplRuntimeCodexBinary();
+  const runtimeApply = applyStagedCodexRuntimePayload(stageAttemptRoot, paths);
+  if (!runtimeApply.applied) {
+    return {
+      exitCode: 1,
+      stdout: installResult.stdout,
+      stderr: normalizeOutput(
+        installResult.stderr,
+        JSON.stringify({ opl_runtime_codex_update: runtimeApply }),
+      ),
+    };
+  }
+
   return {
     ...installResult,
     stdout: normalizeOutput(
       installResult.stdout,
       [
         installResult.stderr,
-        JSON.stringify({ opl_runtime_codex_refresh: runtimeRefresh }),
+        JSON.stringify({
+          opl_runtime_codex_update: {
+            surface_kind: 'opl_runtime_toolchain_update_receipt',
+            updater_version: CODEX_RUNTIME_UPDATER_VERSION,
+            owner: 'opl_app_runtime',
+            target_toolchain: 'codex_cli',
+            update_strategy: 'app_owned_stage_verify_atomic_apply',
+            global_toolchain_mutation_allowed: false,
+            system_tool_priority: 'prefer_compatible_system_codex_from_env_or_path',
+            stage_attempt_root: stageAttemptRoot,
+            ...runtimeApply,
+          },
+        }),
       ].filter(Boolean).join('\n'),
     ),
+  };
+}
+
+function buildBuiltinCodexRuntimeActionSpec(): OplShellActionSpec {
+  const paths = resolveOplRuntimeToolchainPaths();
+  return {
+    strategy: 'builtin',
+    command_preview: ['npm', ...buildCodexRuntimeNpmInstallArgs(path.join(paths.staging_root, '<attempt>'))],
+    note: 'Uses the OPL App-owned runtime/toolchain stage and atomically applies current/bin/codex; it does not modify global Homebrew, npm, or system Codex installations.',
+    executable: (cwd?: string) => runBuiltinCodexRuntimeInstallOrUpdate(cwd),
   };
 }
 
@@ -501,9 +678,7 @@ function resolveShellActionSpec(
       strategy: 'builtin',
       command_preview: [getShellBinary(), '-lc', builtinCommand],
       note: null,
-      executable: (cwd?: string) => builtinCommand.includes('@openai/codex@latest')
-        ? runBuiltinCodexInstallOrUpdate(builtinCommand, cwd)
-        : runShellCommand(builtinCommand, cwd),
+      executable: (cwd?: string) => runShellCommand(builtinCommand, cwd),
     };
   }
 
@@ -520,6 +695,13 @@ export function resolveEngineActionSpec(
   action: OplEngineAction,
 ): OplShellActionSpec {
   const envOverride = process.env[buildEngineActionEnvKey(engineId, action)];
+  if (
+    engineId === 'codex'
+    && !normalizeOptionalString(envOverride)
+    && (action === 'install' || action === 'update' || action === 'reinstall')
+  ) {
+    return buildBuiltinCodexRuntimeActionSpec();
+  }
   const builtinCommand = resolveBuiltinEngineActionCommand(engineId, action);
   const manualNote =
     `No built-in ${engineId} ${action} command is configured. Set ${buildEngineActionEnvKey(engineId, action)} to enable it.`;

@@ -5,6 +5,19 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-06-08
+
+### 决策：App-owned Codex runtime updater 不修改全局 Homebrew / npm / system Codex
+
+原因：Full first-install 和普通 App startup-maintenance 需要能更新 App 自己携带的 `runtime/current/bin/codex`，但用户机器上的 Homebrew、全局 npm 和系统 PATH Codex 是用户级工具链，不应被 OPL 自动安装流程改写。此前把 Codex update 表达成 `npm install -g @openai/codex@latest` 会把 App runtime 修复和全局工具链 mutation 混在一起，增加权限、污染和回滚风险。
+
+影响：
+
+- `opl engine install|update|reinstall --engine codex` 与 `opl system startup-maintenance` 使用 App-owned staging root 拉取 `@openai/codex@latest`，验证 staged `codex --version` 后原子替换 `runtime/current/bin/codex`，并同步 App runtime 内的 `rg` payload。
+- `core_engines.codex.runtime_toolchain_updater` 是机器可读的 updater/readiness surface，必须暴露 runtime root、current binary、staging root、version status、latest status 和 `global_toolchain_mutation_allowed=false`。
+- 若 PATH / env 已选到兼容 system Codex，且 App runtime toolchain 已 current，startup-maintenance 可以 skipped；这不授权 OPL 修改 Homebrew、全局 npm package 或用户系统 Codex。
+- 该 updater 只修 App/OPL runtime concrete executor payload，不声明 domain ready、production ready、App release ready、Temporal provider ready、MAS/MAG/RCA quality verdict 或 artifact authority。
+
 ## 2026-06-07
 
 ### 决策：采用 OPL 九个品牌模块作为长期顶层 taxonomy
