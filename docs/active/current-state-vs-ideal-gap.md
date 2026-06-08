@@ -14,6 +14,8 @@ Date: `2026-06-08`
 
 North-star 目标态回到 [OPL 与 Foundry Agents 理想目标态](../references/runtime-substrate/opl-family-agent-ideal-state.md)。系统级理想评估、成熟工程经验映射和品牌一致性目标回到 [OPL Family 理想系统评估](../references/runtime-substrate/opl-family-ideal-system-assessment.md)。顶层 operating model 重设计回到 [OPL Family Ideal Operating Model Redesign](./opl-family-ideal-operating-model-redesign.md)。公开角色、runtime 边界和默认入口回到 `project/status/architecture/invariants/decisions`。文档生命周期规则回到 [文档组合治理](../docs_portfolio_consolidation.md) 和 [文档生命周期政策](../policies/docs-lifecycle-policy.md)。
 
+当前 ideal top-level redesign 的 active owner 口径是：`TASTE.md` 固化长期维护 taste，`docs/decisions.md` 记录仍有效决策，`contracts/opl-framework/surface-budget-policy.json` 冻结机器预算，本文维护当前 owner、gap、gate、next action 和完成口径。支撑文档只能提供目标态、评估标准或证据解释，不能维护第二 active backlog、第二 ordinary route 或第二 truth。
+
 ## 目标态
 
 OPL family 的目标形态固定为 `OPL Framework -> One Person Lab App -> Foundry Agents`。
@@ -55,8 +57,8 @@ current_owner_delta outer loop
 
 2026-06-08 以后，workspace topology v2 暴露出的后续风险按 `抓大放小` 扩展为全 family 审计原则：
 
-- `抓大`: 硬守 owner、authority、stage lifecycle、workspace topology、selected executor、single ordinary route、launch / execution / closeout admission、domain answer shape、App release verdict、physical delete authority 和 no-second-truth。缺这些会走歪、越权、误闭合或不可审计，必须 fail closed。
-- `放小`: prompt / skill / tool / knowledge / rubric refs 完整性、path alias、generated projection mirror、worklist raw counter、diagnostic proof、route variant、receipt accounting、wrapper lineage、L5 evidence matrix item 和 release cohort detail，默认不能抢占 ordinary path。它们只在造成错误启动、越权、不可恢复、不可审计、无法 closeout 或不可逆 mutation 时升级为 hard blocker。
+- `抓大`: 硬守 owner、authority、stage lifecycle、workspace topology、selected executor、single ordinary route、launch / execution / closeout admission、accepted owner answer shape、App release verdict、physical delete authority 和 no-second-truth。缺这些会走歪、越权、误闭合或不可审计，必须 fail closed。
+- `放小`: prompt / skill / tool / knowledge / rubric refs 完整性、path alias、generated projection mirror、workspace fleet/detail drift、worklist raw counter、diagnostic proof、route variant、receipt accounting、wrapper lineage、L5 evidence matrix item、provider ops detail 和 release cohort diagnostic，默认不能抢占 ordinary path。它们只在造成错误启动、越权、不可恢复、不可审计、无法 closeout、owner answer shape 不合法或不可逆 mutation 时升级为 hard blocker。
 - `默认判断`: 新增 surface / gate 先问它是否保护大边界，再问它是否让普通 owner delta 更短。如果答案只是不确定性更少、报告更全或证明更漂亮，默认下沉为 advisory / audit / diagnostic / cleanup / production evidence lane。
 
 当前三条线的分工固定为：
@@ -209,6 +211,7 @@ Unified owner-delta 仍按 live 机器面读取，不从本页继承旧 counters
 | foldback item | current owner | gate | next action |
 | --- | --- | --- | --- |
 | `docs_foldback` | OPL docs governance | `current-state-vs-ideal-gap.md` 是唯一 active owner；`opl-family-ideal-operating-model-redesign.md` 只保留 `active_reference` 评估口径；support docs 不维护独立 backlog、dated counter、branch/worktree closeout 或执行顺序。 | 后续 docs-only lane 只把 current owner / current state / gate / next action 折回本文；dated proof、coverage tranche、receipt 流水和 closeout 进入 `docs/history/**`、runtime ledger、提交历史或 domain-owned provenance。 |
+| `ideal_top_level_redesign_owner` | OPL docs governance + OPL Framework | `TASTE.md` 持有长期 taste，`docs/decisions.md` 持有决策口径，`surface-budget-policy.json` 持有机器预算，本文持有 active owner / gap / next action。抓大守 owner、authority、stage、workspace、executor、single ordinary route、admission、App release、delete 和 no-second-truth；放小把 advisory / audit / diagnostic / cleanup / production evidence 留在显式 lane。 | 后续 redesign、support doc 或 contract 只能折回这些 owner 面；新增 surface 先回答 protected boundary、default lane、upgrade/demotion condition 和 accepted answer shape，不能让 diagnostic、cleanup 或 production evidence tail 抢占 `current_owner_delta`。 |
 | `stage_transition_authority_docs_foldback` | OPL Framework | Stage Transition Authority 已作为目标态 foldback 进入 active/support docs：它是 OPL-owned generic primitive，多模块可提议、单 authority 裁决，Stage current pointer / StageRun terminal state / `current_owner_delta` 从 append-only authority event log 派生。 | 后续若落机器合同或源码，只能把 docs 语义转成 OPL-owned primitive；不把 docs foldback、provider observation、transition intent、App projection 或 conformance pass 写成 domain ready、production ready、App release ready 或 owner receipt authority。 |
 | `domain_wrapper_delete_gate` | OPL cleanup gate + domain owners | `contracts/opl-framework/wrapper-retirement-gate-policy.json` 要求 replacement parity、no-active-caller、domain owner receipt 或 typed blocker、no-forbidden-write、tombstone/provenance；docs foldback、delete-gate read-model、conformance pass、tests pass、default-caller readiness 和 refs-only observed 都不是 physical delete authority。 | 逐 surface 由 domain owner 提供 cleanup receipt、typed blocker、no-regression ref 或 explicit physical delete owner receipt；OPL 只记录 refs、投影 false authority flags 和 no-resurrection guard，不物理删除 domain wrapper。 |
 | `real_owner_delta_tail` | MAS/MAG/RCA/OMA domain owners + OPL runtime | 功能面 callable / StageRun / conformance / refs-only transport / strict identity preflight / StageRun cockpit closeout binding 已收口；live domain progression evidence 仍必须来自 domain-owned owner receipt、typed blocker、human gate、quality/export/review receipt 或 no-regression ref。 | OPL 继续把 provider attempt / active lease / execution authorization decision / closeout binding 作为 refs-only ledger 和 cockpit 投影，不替 domain 创建 receipt、typed blocker 或 readiness claim。MAS/domain owner 后续处理 paper readiness surface 并给出 owner receipt、typed blocker、human gate、quality gate receipt 或 route-back evidence；MAG/RCA/OMA 下一步分别提供真实 grant / visual / target-agent owner evidence，不用 OPL docs、provider lane 或 refs-only ledger 替代。 |
