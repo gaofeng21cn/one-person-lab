@@ -452,6 +452,13 @@ function findInstalledCodexPackageRoot(prefixRoot: string) {
 }
 
 function findInstalledCodexVendorBinaries(packageRoot: string) {
+  const scopedPackageRoot = path.dirname(packageRoot);
+  const siblingPlatformVendorRoot = path.join(
+    scopedPackageRoot,
+    'codex-darwin-arm64',
+    'vendor',
+    CODEX_MACOS_ARM64_TARGET,
+  );
   const platformVendorRoot = path.join(
     packageRoot,
     'node_modules',
@@ -463,12 +470,15 @@ function findInstalledCodexVendorBinaries(packageRoot: string) {
   const localVendorRoot = path.join(packageRoot, 'vendor', CODEX_MACOS_ARM64_TARGET);
   return {
     codex: findExistingFile([
+      path.join(siblingPlatformVendorRoot, 'bin', 'codex'),
       path.join(platformVendorRoot, 'bin', 'codex'),
       path.join(localVendorRoot, 'bin', 'codex'),
+      path.join(siblingPlatformVendorRoot, 'codex', 'codex'),
       path.join(platformVendorRoot, 'codex', 'codex'),
       path.join(localVendorRoot, 'codex', 'codex'),
     ]),
     rg: findExistingFile([
+      path.join(siblingPlatformVendorRoot, 'codex-path', 'rg'),
       path.join(platformVendorRoot, 'codex-path', 'rg'),
       path.join(localVendorRoot, 'codex-path', 'rg'),
     ]),

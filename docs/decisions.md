@@ -14,6 +14,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - `opl engine install|update|reinstall --engine codex` 与 `opl system startup-maintenance` 使用 App-owned staging root 拉取 `@openai/codex@latest`，验证 staged `codex --version` 后原子替换 `runtime/current/bin/codex`，并同步 App runtime 内的 `rg` payload。
+- staged npm install 的平台二进制 source of truth 是 npm 物化后的 package layout；当前 `@openai/codex` macOS arm64 payload 位于 sibling optional package `node_modules/@openai/codex-darwin-arm64/vendor/aarch64-apple-darwin/`，不能只查 `@openai/codex` package 内部 vendor 目录。
 - `core_engines.codex.runtime_toolchain_updater` 是机器可读的 updater/readiness surface，必须暴露 runtime root、current binary、staging root、version status、latest status 和 `global_toolchain_mutation_allowed=false`。
 - 若 PATH / env 已选到兼容 system Codex，且 App runtime toolchain 已 current，startup-maintenance 可以 skipped；这不授权 OPL 修改 Homebrew、全局 npm package 或用户系统 Codex。
 - 该 updater 只修 App/OPL runtime concrete executor payload，不声明 domain ready、production ready、App release ready、Temporal provider ready、MAS/MAG/RCA quality verdict 或 artifact authority。

@@ -16,7 +16,9 @@ function writeFakeNpmRuntimeInstaller(fakeNpm: string, logPath: string) {
       `printf '%s\\n' "$*" >> ${shellSingleQuote(logPath)}`,
       'if [[ "$1" == "install" && "$2" == "--prefix" ]]; then',
       '  prefix="$3"',
-      '  vendor_root="$prefix/node_modules/@openai/codex/vendor/aarch64-apple-darwin"',
+      '  package_root="$prefix/node_modules/@openai/codex"',
+      '  vendor_root="$prefix/node_modules/@openai/codex-darwin-arm64/vendor/aarch64-apple-darwin"',
+      '  mkdir -p "$package_root"',
       '  mkdir -p "$vendor_root/bin" "$vendor_root/codex-path"',
       '  printf \'%s\\n\' \'#!/usr/bin/env bash\' \'echo "codex-cli 0.134.0"\' > "$vendor_root/bin/codex"',
       '  printf \'%s\\n\' \'#!/usr/bin/env bash\' \'echo "rg staged"\' > "$vendor_root/codex-path/rg"',
@@ -121,6 +123,7 @@ test('system startup-maintenance applies staged App-owned runtime Codex update w
     assert.match(engineTarget.result?.command_preview.join(' ') ?? '', /--prefix/);
     assert.match(engineTarget.result?.note ?? '', /does not modify global Homebrew, npm, or system Codex/);
     assert.match(engineTarget.result?.stdout ?? '', /opl_runtime_toolchain_update_receipt/);
+    assert.match(engineTarget.result?.stdout ?? '', /codex-darwin-arm64/);
     assert.equal(output.system_action.details.engine_summary.completed_targets_count, 1);
     assert.equal(output.system_action.details.engine_summary.manual_required_targets_count, 0);
     assert.equal(

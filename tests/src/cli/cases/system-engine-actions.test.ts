@@ -26,7 +26,9 @@ function writeFakeNpmRuntimeInstaller(fakeNpm: string, logPath: string) {
       `printf '%s\\n' "$*" >> ${shellSingleQuote(logPath)}`,
       'if [[ "$1" == "install" && "$2" == "--prefix" ]]; then',
       '  prefix="$3"',
-      '  vendor_root="$prefix/node_modules/@openai/codex/vendor/aarch64-apple-darwin"',
+      '  package_root="$prefix/node_modules/@openai/codex"',
+      '  vendor_root="$prefix/node_modules/@openai/codex-darwin-arm64/vendor/aarch64-apple-darwin"',
+      '  mkdir -p "$package_root"',
       '  mkdir -p "$vendor_root/bin" "$vendor_root/codex-path"',
       '  printf \'%s\\n\' \'#!/usr/bin/env bash\' \'echo "codex-cli 0.134.0"\' > "$vendor_root/bin/codex"',
       '  printf \'%s\\n\' \'#!/usr/bin/env bash\' \'echo "rg new"\' > "$vendor_root/codex-path/rg"',
@@ -169,6 +171,7 @@ test('builtin Codex update stages and atomically applies selected OPL runtime bi
       'current',
     );
     assert.match(output.engine_action.stdout, /opl_runtime_toolchain_update_receipt/);
+    assert.match(output.engine_action.stdout, /codex-darwin-arm64/);
     assert.doesNotMatch(fs.readFileSync(npmLog, 'utf8'), / -g( |$)/);
     assert.match(fs.readFileSync(runtimeCodex, 'utf8'), /0\.134\.0/);
     assert.match(fs.readFileSync(runtimeRg, 'utf8'), /rg new/);
