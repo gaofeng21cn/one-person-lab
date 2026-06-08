@@ -86,6 +86,9 @@ import {
   buildTemporalWorkerMutationGuard,
 } from './family-runtime-temporal-provider-parts/worker-source-guard.ts';
 import {
+  resolveTemporalWorkerTaskQueue,
+} from './family-runtime-temporal-provider-parts/worker-task-queue.ts';
+import {
   buildTemporalStageAttemptWorkerOptions,
   resolveTemporalWorkflowModulePath,
 } from './family-runtime-temporal-provider-parts/workflow-bundle.ts';
@@ -122,11 +125,13 @@ type StageAttemptPayload = Parameters<typeof buildTemporalStageAttemptWorkflowIn
 
 function temporalWorkerSpawnEnvironment(input: {
   temporalAddress: string | null;
+  taskQueue: string;
 }) {
   const codexBinary = resolveCodexBinary();
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     OPL_TEMPORAL_ADDRESS: input.temporalAddress ?? process.env.OPL_TEMPORAL_ADDRESS,
+    OPL_TEMPORAL_TASK_QUEUE: input.taskQueue,
     OPL_TEMPORAL_WORKER_STATUS: 'ready',
   };
   if (codexBinary) {
@@ -136,6 +141,7 @@ function temporalWorkerSpawnEnvironment(input: {
     env,
     projection: {
       OPL_TEMPORAL_ADDRESS: env.OPL_TEMPORAL_ADDRESS ?? null,
+      OPL_TEMPORAL_TASK_QUEUE: env.OPL_TEMPORAL_TASK_QUEUE ?? null,
       OPL_TEMPORAL_WORKER_STATUS: env.OPL_TEMPORAL_WORKER_STATUS ?? null,
       OPL_CODEX_BIN: env.OPL_CODEX_BIN ?? null,
       codex_binary_source: codexBinary?.source ?? null,
@@ -158,7 +164,7 @@ export async function inspectTemporalWorkerLifecycleWithDetail(
   const service = await inspectTemporalServiceLifecycle(paths);
   const { address, addressSource } = resolveTemporalAddressForPaths(paths);
   const namespace = resolveTemporalNamespace();
-  const taskQueue = resolveTemporalTaskQueue();
+  const taskQueue = resolveTemporalWorkerTaskQueue(paths);
   const state = readTemporalWorkerState(paths);
   const stateMatchesConfig =
     state?.address === address
@@ -179,7 +185,7 @@ export async function inspectTemporalWorkerLifecycleWithDetail(
   const workerMutationGuard = buildTemporalWorkerMutationGuard({ moduleUrl: import.meta.url, paths });
   const workerReady = Boolean(serverReachable && dependencyHealth.status === 'ready' && (pidAlive || envWorkerReady));
   const visibilityReadiness = serverReachable
-    ? await inspectTemporalStageAttemptVisibilityReadiness(paths)
+    ? await inspectTemporalStageAttemptVisibilityReadiness(paths, { taskQueue })
     : null;
   const readiness = buildTemporalWorkerReadiness({
     address,
@@ -502,6 +508,7 @@ export async function runTemporalWorkerForeground(paths: TemporalWorkerPaths) {
     );
   }
   const sourceVersion = currentWorkerSourceVersion(import.meta.url);
+  const taskQueue = resolveTemporalWorkerTaskQueue(paths);
   const built = await buildTemporalStageAttemptWorkerOptions({
     paths,
     workflowsPath: resolveTemporalWorkflowModulePath(import.meta.url),
@@ -513,7 +520,7 @@ export async function runTemporalWorkerForeground(paths: TemporalWorkerPaths) {
     pid: process.pid,
     address,
     namespace: resolveTemporalNamespace(),
-    taskQueue: resolveTemporalTaskQueue(),
+    taskQueue,
     sourceVersion,
     workflowBundlePath: built.workflow_bundle.code_path,
     workflowBundleVersion: built.workflow_bundle.workflow_bundle_version,
@@ -612,8 +619,10 @@ export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, i
   }
 
   const { logRefs, fds: logFds } = openTemporalWorkerAppendLogFds(paths);
+  const taskQueue = resolveTemporalWorkerTaskQueue(paths);
   const spawnedWorkerEnvironment = temporalWorkerSpawnEnvironment({
     temporalAddress: status.address,
+    taskQueue,
   });
   const child = spawn(
     process.execPath,
@@ -645,7 +654,7 @@ export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, i
     pid: child.pid ?? 0,
     address: status.address ?? requireTemporalAddress(),
     namespace: status.namespace,
-    task_queue: status.task_queue,
+    task_queue: taskQueue,
     started_at: new Date().toISOString(),
     status: 'ready',
     source_version: sourceVersion,

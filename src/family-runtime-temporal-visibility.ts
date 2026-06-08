@@ -353,15 +353,19 @@ async function listTemporalCustomSearchAttributes(connection: Connection, namesp
   return normalizeCustomAttributes(result.customAttributes ?? {});
 }
 
-export async function inspectTemporalStageAttemptVisibilityReadiness(paths?: TemporalWorkerPaths) {
+export async function inspectTemporalStageAttemptVisibilityReadiness(
+  paths?: TemporalWorkerPaths,
+  input: { taskQueue?: string | null } = {},
+) {
   const resolved = resolveTemporalAddressForPaths(paths);
   const namespace = resolveTemporalNamespace();
+  const taskQueue = input.taskQueue ?? resolveTemporalTaskQueue();
   if (!resolved.address) {
     return buildTemporalStageAttemptVisibilityReadiness({
       address: null,
       addressSource: resolved.addressSource,
       namespace,
-      taskQueue: resolveTemporalTaskQueue(),
+      taskQueue,
     });
   }
   try {
@@ -370,7 +374,7 @@ export async function inspectTemporalStageAttemptVisibilityReadiness(paths?: Tem
         address: resolved.address,
         addressSource: resolved.addressSource,
         namespace,
-        taskQueue: resolveTemporalTaskQueue(),
+        taskQueue,
         observedCustomAttributes: await listTemporalCustomSearchAttributes(connection, namespace),
       }), {
         paths,
@@ -382,7 +386,7 @@ export async function inspectTemporalStageAttemptVisibilityReadiness(paths?: Tem
       address: resolved.address,
       addressSource: resolved.addressSource,
       namespace,
-      taskQueue: resolveTemporalTaskQueue(),
+      taskQueue,
       inspectionError: error instanceof Error ? error.message : String(error),
     });
   }

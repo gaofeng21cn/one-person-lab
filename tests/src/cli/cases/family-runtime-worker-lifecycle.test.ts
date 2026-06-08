@@ -13,6 +13,9 @@ import {
   test,
 } from '../helpers.ts';
 import {
+  DEFAULT_TEMPORAL_TASK_QUEUE,
+} from '../../../../src/family-runtime-temporal.ts';
+import {
   buildTemporalStageAttemptWorkerOptionsForTest,
   buildTemporalWorkerReadiness,
   inspectTemporalWorkerLifecycle,
@@ -31,6 +34,10 @@ import {
 import {
   buildTemporalWorkerMutationGuard,
 } from '../../../../src/family-runtime-temporal-provider-parts/worker-source-guard.ts';
+import {
+  resolveTemporalWorkerTaskQueue,
+  resolveTemporalWorkerTaskQueueDetail,
+} from '../../../../src/family-runtime-temporal-provider-parts/worker-task-queue.ts';
 import {
   currentWorkerSourceVersion,
   workerSourceVersionDiagnostic,
@@ -248,6 +255,58 @@ test('Temporal worker mutation guard blocks developer checkout against default s
     }
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(devRoot, { recursive: true, force: true });
+  }
+});
+
+test('Temporal worker task queue isolates non-default roots unless explicitly configured', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-worker-task-queue-home-'));
+  const tempStateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-worker-task-queue-state-'));
+  const previousHome = process.env.HOME;
+  const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  try {
+    process.env.HOME = homeRoot;
+    delete process.env.OPL_TEMPORAL_TASK_QUEUE;
+    delete process.env.OPL_STATE_DIR;
+
+    const sharedRoot = path.join(homeRoot, 'Library', 'Application Support', 'OPL', 'state', 'family-runtime');
+    const isolatedRoot = path.join(tempStateRoot, 'family-runtime');
+
+    const shared = resolveTemporalWorkerTaskQueueDetail({ root: sharedRoot });
+    const isolated = resolveTemporalWorkerTaskQueueDetail({ root: isolatedRoot });
+
+    assert.equal(shared.task_queue, DEFAULT_TEMPORAL_TASK_QUEUE);
+    assert.equal(shared.task_queue_source, 'default_shared_state_root');
+    assert.equal(shared.uses_default_shared_state_root, true);
+    assert.notEqual(isolated.task_queue, DEFAULT_TEMPORAL_TASK_QUEUE);
+    assert.match(isolated.task_queue, /^opl-stage-attempts-isolated-[a-f0-9]{12}$/);
+    assert.equal(isolated.task_queue_source, 'isolated_worker_root');
+    assert.equal(isolated.uses_default_shared_state_root, false);
+    assert.equal(resolveTemporalWorkerTaskQueue({ root: isolatedRoot }), isolated.task_queue);
+
+    process.env.OPL_TEMPORAL_TASK_QUEUE = 'opl-explicit-worker-queue';
+    const explicit = resolveTemporalWorkerTaskQueueDetail({ root: isolatedRoot });
+    assert.equal(explicit.task_queue, 'opl-explicit-worker-queue');
+    assert.equal(explicit.task_queue_source, 'explicit_env');
+    assert.equal(explicit.uses_default_shared_state_root, false);
+  } finally {
+    if (previousHome === undefined) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = previousHome;
+    }
+    if (previousTaskQueue === undefined) {
+      delete process.env.OPL_TEMPORAL_TASK_QUEUE;
+    } else {
+      process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
+    }
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(tempStateRoot, { recursive: true, force: true });
   }
 });
 
@@ -917,6 +976,7 @@ test('Temporal worker detached start passes resolved Codex binary to foreground 
   const previousPath = process.env.PATH;
   const previousCodexBin = process.env.OPL_CODEX_BIN;
   const previousAddress = process.env.OPL_TEMPORAL_ADDRESS;
+  const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
   const previousWorkerStatus = process.env.OPL_TEMPORAL_WORKER_STATUS;
   const previousSourceVersion = process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
   try {
@@ -925,15 +985,21 @@ test('Temporal worker detached start passes resolved Codex binary to foreground 
     process.env.PATH = `${codex.fixtureRoot}:${process.env.PATH ?? ''}`;
     delete process.env.OPL_CODEX_BIN;
     process.env.OPL_TEMPORAL_ADDRESS = temporalServer.address;
+    delete process.env.OPL_TEMPORAL_TASK_QUEUE;
     delete process.env.OPL_TEMPORAL_WORKER_STATUS;
     process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = `worker-runtime:${path.dirname(sourceModulePath)}:${'a'.repeat(64)}`;
 
     const start = await startTemporalWorkerLifecycle({ root: workerRoot });
+    const workerState = JSON.parse(fs.readFileSync(path.join(workerRoot, 'temporal-worker.json'), 'utf8'));
+    const expectedTaskQueue = resolveTemporalWorkerTaskQueue({ root: workerRoot });
 
     assert.equal(start.start_status, 'started');
     assert.equal(start.spawned_worker_environment?.OPL_CODEX_BIN, codex.codexPath);
     assert.equal(start.spawned_worker_environment?.codex_binary_source, 'path');
     assert.equal(start.spawned_worker_environment?.OPL_TEMPORAL_ADDRESS, temporalServer.address);
+    assert.equal(start.spawned_worker_environment?.OPL_TEMPORAL_TASK_QUEUE, expectedTaskQueue);
+    assert.notEqual(expectedTaskQueue, DEFAULT_TEMPORAL_TASK_QUEUE);
+    assert.equal(workerState.task_queue, expectedTaskQueue);
   } finally {
     if (previousPath === undefined) {
       delete process.env.PATH;
@@ -949,6 +1015,11 @@ test('Temporal worker detached start passes resolved Codex binary to foreground 
       delete process.env.OPL_TEMPORAL_ADDRESS;
     } else {
       process.env.OPL_TEMPORAL_ADDRESS = previousAddress;
+    }
+    if (previousTaskQueue === undefined) {
+      delete process.env.OPL_TEMPORAL_TASK_QUEUE;
+    } else {
+      process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
     }
     if (previousWorkerStatus === undefined) {
       delete process.env.OPL_TEMPORAL_WORKER_STATUS;

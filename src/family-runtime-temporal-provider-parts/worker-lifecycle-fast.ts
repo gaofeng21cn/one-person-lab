@@ -1,6 +1,5 @@
 import {
   resolveTemporalNamespace,
-  resolveTemporalTaskQueue,
 } from '../family-runtime-temporal.ts';
 import {
   buildTemporalWorkerReadiness,
@@ -22,12 +21,15 @@ import {
 import {
   buildTemporalWorkerMutationGuard,
 } from './worker-source-guard.ts';
+import {
+  resolveTemporalWorkerTaskQueue,
+} from './worker-task-queue.ts';
 
 export function inspectTemporalWorkerLifecycleFast(paths: TemporalWorkerPaths) {
   const resolved = resolveTemporalAddressForPaths(paths);
   const { address, addressSource, serviceState } = resolved;
   const namespace = resolveTemporalNamespace();
-  const taskQueue = resolveTemporalTaskQueue();
+  const taskQueue = resolveTemporalWorkerTaskQueue(paths);
   const state = readTemporalWorkerState(paths);
   const stateMatchesConfig =
     state !== null

@@ -7,9 +7,11 @@ import { bundleWorkflowCode, type WorkerOptions } from '@temporalio/worker';
 
 import {
   resolveTemporalNamespace,
-  resolveTemporalTaskQueue,
 } from '../family-runtime-temporal.ts';
 import type { TemporalWorkerPaths } from '../family-runtime-temporal-client.ts';
+import {
+  resolveTemporalWorkerTaskQueue,
+} from './worker-task-queue.ts';
 
 export type TemporalWorkflowBundleManifest = {
   provider_kind: 'temporal';
@@ -73,7 +75,7 @@ async function materializeTemporalWorkflowBundle(input: {
     workflow_bundle_source_version: input.sourceVersion,
     workflows_path: input.workflowsPath,
     namespace: resolveTemporalNamespace(),
-    task_queue: resolveTemporalTaskQueue(),
+    task_queue: resolveTemporalWorkerTaskQueue(input.paths),
     generated_at: new Date().toISOString(),
   };
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
@@ -94,7 +96,7 @@ export async function buildTemporalStageAttemptWorkerOptions(input: {
   return {
     worker_options: {
       namespace: resolveTemporalNamespace(),
-      taskQueue: resolveTemporalTaskQueue(),
+      taskQueue: workflowBundle.task_queue,
       activities: input.activities,
       workflowBundle: {
         codePath: workflowBundle.code_path,

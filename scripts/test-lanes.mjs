@@ -49,6 +49,8 @@ const fastTestFiles = [
   'tests/src/state-index-kernel-contract.test.ts',
   'tests/src/stage-run-kernel-contract.test.ts',
   'tests/src/stage-run-transition-authority-read-model.test.ts',
+  'tests/src/stage-transition-authority-contract.test.ts',
+  'tests/src/stage-transition-authority.test.ts',
   'tests/src/family-runtime-state-index.test.ts',
   'tests/src/family-runtime-attempt-contract.test.ts',
   'tests/src/family-runtime-current-control-state.test.ts',
