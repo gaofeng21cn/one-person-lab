@@ -13,13 +13,18 @@
       "evidence/",
       "receipts/"
     ],
-    "current_pointer_role": "refs_only_current_or_canonical_artifact_pointer",
+    "current_pointer_role": "refs_only_artifact_attempt_pointer_not_stage_run_current_pointer",
+    "stage_transition_authority_required_for_stage_run_current": true,
     "derived_index_role": "rebuildable_projection_not_primary_truth",
     "lineage_root": "lineage/events.jsonl and lineage/graph.json",
     "retention_root": "retention/attempts/<stage_id>/<attempt_id>"
   },
   "read_model_semantics": {
     "status_source_of_truth": "physical_stage_folder",
+    "stage_artifact_current_is_projection_only": true,
+    "stage_artifact_current_may_write_stage_current_pointer": false,
+    "stage_artifact_current_may_write_stage_run_terminal_state": false,
+    "stage_artifact_current_may_publish_current_owner_delta": false,
     "status_must_not_depend_on_stale_index": true,
     "success_requires": [
       "valid_manifest",

@@ -75,6 +75,12 @@ export type StageStatus = {
 export const AUTHORITY_BOUNDARY = {
   owner: 'one-person-lab',
   source_of_truth: 'physical_stage_folder_contract',
+  projection_role: 'stage_artifact_projection_only',
+  current_pointer_role: 'artifact_attempt_pointer_not_stage_run_current_pointer',
+  can_write_stage_current_pointer: false,
+  can_write_stage_run_terminal_state: false,
+  can_publish_current_owner_delta: false,
+  stage_transition_authority_required_for_stage_run_current: true,
   opl_can_issue_owner_receipt: false,
   opl_can_issue_rca_owner_receipt: false,
   opl_can_write_domain_truth: false,

@@ -15,6 +15,7 @@ type JsonRecord = Record<string, unknown>;
 
 export const PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON = 'progress_first_owner_delta_required';
 const DEFAULT_ANTI_SPIN_REPEAT_THRESHOLD = 2;
+const MISSING_SOURCE_FINGERPRINT_REASON = 'progress_first_source_fingerprint_required';
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -384,6 +385,45 @@ function buildStopLossState(lineage: JsonRecord) {
   };
 }
 
+function buildMissingSourceFingerprintLineage(input: {
+  candidate: FamilyRuntimeTaskRow;
+  candidatePayload: JsonRecord;
+  lineage: ReturnType<typeof lineageFieldsFromPayload>;
+}) {
+  return {
+    surface_kind: 'opl_progress_first_anti_spin_lineage',
+    packet_version: 'progress-first-anti-spin.v1',
+    reason: MISSING_SOURCE_FINGERPRINT_REASON,
+    threshold: 0,
+    repeat_count: 0,
+    lineage_key: {
+      domain_id: input.lineage.domain_id,
+      task_kind: input.lineage.task_kind,
+      study_id: input.lineage.study_id,
+      action_type: input.lineage.action_type,
+      source_fingerprint: null,
+    },
+    candidate_task_id: input.candidate.task_id,
+    recent_attempt_refs: [],
+    typed_blocker_refs: [],
+    blocker_families: [],
+    last_progress_delta_classification: null,
+    last_deliverable_delta: 'unknown_missing_source_fingerprint',
+    next_forced_delta: 'source_fingerprint_or_fresh_owner_delta_required',
+    required_owner:
+      stringValue(input.candidatePayload.next_owner)
+      ?? stringValue(input.candidatePayload.domain_owner)
+      ?? stringValue(input.candidatePayload.next_executable_owner)
+      ?? input.lineage.domain_id,
+    allowed_next_evidence: [
+      'source_fingerprint',
+      'owner_payload_ref_with_source_fingerprint',
+      'domain_typed_blocker_ref',
+      'human_stop_or_override_ref',
+    ],
+  };
+}
+
 function buildStopLossPolicy(lineage: JsonRecord) {
   return {
     surface_kind: 'opl_stop_loss_policy',
@@ -444,7 +484,15 @@ function evaluateProgressFirstAntiSpinGate(
   }
   const lineage = lineageFieldsFromPayload(row, payload);
   if (!lineage.source_fingerprint) {
-    return { status: 'allowed' as const, blocked_reason: null, lineage: null, bypass_reason: 'missing_source_fingerprint' };
+    return {
+      status: 'blocked' as const,
+      blocked_reason: MISSING_SOURCE_FINGERPRINT_REASON,
+      lineage: buildMissingSourceFingerprintLineage({
+        candidate: row,
+        candidatePayload: payload,
+        lineage,
+      }),
+    };
   }
   const attempts = listStageAttempts(db).filter((attempt) => {
     if (attempt.task_id === row.task_id) {

@@ -138,6 +138,21 @@ test('stage artifact open and commit materialize latest and current from verifie
     assert.equal(committed.status.summary.success_stage_count, 1);
     assert.ok(committed.current_pointer.current.current_stage);
     assert.equal(committed.current_pointer.current.current_stage.status, 'success');
+    assert.equal(
+      committed.current_pointer.current.projection_role,
+      'stage_artifact_current_projection_only',
+    );
+    assert.equal(
+      committed.current_pointer.current.current_pointer_role,
+      'artifact_attempt_pointer_not_stage_run_current_pointer',
+    );
+    assert.equal(
+      committed.current_pointer.current.stage_transition_authority_required_for_stage_run_current,
+      true,
+    );
+    assert.equal(committed.authority_boundary.can_write_stage_current_pointer, false);
+    assert.equal(committed.authority_boundary.can_write_stage_run_terminal_state, false);
+    assert.equal(committed.authority_boundary.can_publish_current_owner_delta, false);
   });
 });
 

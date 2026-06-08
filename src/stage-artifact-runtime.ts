@@ -294,6 +294,8 @@ function writeCurrentPointer(locator: StageArtifactLocator, status: ReturnType<t
   const currentFile = path.join(status.deliverable_root, 'current.json');
   const payload = {
     surface_kind: 'opl_stage_artifact_runtime_current',
+    projection_role: 'stage_artifact_current_projection_only',
+    current_pointer_role: 'artifact_attempt_pointer_not_stage_run_current_pointer',
     updated_at: new Date().toISOString(),
     locator,
     current_stage: currentStage
@@ -306,6 +308,7 @@ function writeCurrentPointer(locator: StageArtifactLocator, status: ReturnType<t
       : null,
     stage_count: status.summary.stage_count,
     success_stage_count: status.summary.success_stage_count,
+    stage_transition_authority_required_for_stage_run_current: true,
     authority_boundary: AUTHORITY_BOUNDARY,
   };
   writeJsonFile(currentFile, payload);

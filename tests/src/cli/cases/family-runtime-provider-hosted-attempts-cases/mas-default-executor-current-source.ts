@@ -91,6 +91,83 @@ test('family-runtime tick selects the current MAS default executor source and sk
   }
 });
 
+test('family-runtime tick blocks domain owner rows without source fingerprint before provider dispatch', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const payload = defaultExecutorPayloadForOwner({
+        sourceFingerprint: 'sha256:will-be-removed',
+        actionType: 'return_to_ai_reviewer_workflow',
+        nextOwner: 'ai_reviewer',
+        dispatchAuthority: 'ai_reviewer_record_production_handoff',
+        dispatchRef:
+          'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
+      });
+      delete payload.source_fingerprint;
+      insertDefaultExecutorTaskWithPayload(db, {
+        taskId: 'task-missing-source-fingerprint',
+        payload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:missing-source-fingerprint',
+        createdAt: '2026-05-25T16:30:00.000Z',
+        status: 'queued',
+      });
+
+      let dispatchCount = 0;
+      const tick = await runFamilyRuntimeQueueTick(db, familyRuntimePaths(), {
+        source: 'test-missing-source-fingerprint-progress-first',
+        limit: 2,
+        hydrate: false,
+        taskScope: {
+          domainId: 'medautoscience',
+          taskKind: 'domain_owner/default-executor-dispatch',
+          payloadMatches: [
+            {
+              path: 'study_id',
+              value: '002-dm-china-us-mortality-attribution',
+            },
+          ],
+        },
+      }, {
+        enqueueTask: () => ({ accepted: false }),
+        dispatchTask: (_db, _paths, row: FamilyRuntimeTaskRow) => {
+          dispatchCount += 1;
+          return { task_id: row.task_id };
+        },
+      });
+      const blockedTask = db.prepare(`
+        SELECT status, last_error, dead_letter_reason
+        FROM tasks
+        WHERE task_id = ?
+      `).get('task-missing-source-fingerprint') as {
+        status: string;
+        last_error: string | null;
+        dead_letter_reason: string | null;
+      };
+      const event = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_progress_first_anti_spin_blocked'
+        LIMIT 1
+      `).get('task-missing-source-fingerprint') as { payload_json: string } | undefined;
+
+      assert.equal(tick.selected_count, 0);
+      assert.equal(dispatchCount, 0);
+      assert.equal(tick.progress_first_anti_spin_blocked_count, 1);
+      assert.equal(blockedTask.status, 'blocked');
+      assert.equal(blockedTask.last_error, 'progress_first_owner_delta_required');
+      assert.equal(blockedTask.dead_letter_reason, 'progress_first_owner_delta_required');
+      assert.ok(event);
+      const eventPayload = JSON.parse(event.payload_json);
+      assert.equal(eventPayload.lineage.reason, 'progress_first_source_fingerprint_required');
+      assert.equal(eventPayload.lineage.next_forced_delta, 'source_fingerprint_or_fresh_owner_delta_required');
+      assert.equal(eventPayload.authority_boundary.provider_stage_attempt_started, false);
+    });
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime tick does not select newer MAS default executor row while same dispatch has a live running attempt with expired lease', async () => {
   const db = new DatabaseSync(':memory:');
   try {

@@ -8,14 +8,14 @@
     "physical_output_present",
     "valid_manifest",
     "owner_answer_present",
-    "current_pointer_selected"
+    "artifact_attempt_pointer_selected"
   ],
   "counts_as_deliverable_progress_when_all_required_signals_true": true,
   "single_signal_non_progress_reasons": [
     "provider_completion_only",
     "receipt_verified_without_matching_manifest",
     "file_presence_without_owner_answer",
-    "historical_attempt_not_selected_by_current_pointer",
+    "historical_attempt_not_selected_by_artifact_attempt_pointer",
     "raw_evidence_envelope_only"
   ],
   "projection_surfaces": [
@@ -37,5 +37,8 @@
     "provider_completion_counts_as_progress": false,
     "raw_receipt_count_counts_as_progress": false,
     "file_presence_alone_counts_as_progress": false
+    ,
+    "artifact_attempt_pointer_can_write_stage_current_pointer": false,
+    "stage_transition_authority_required_for_stage_run_current": true
   }
 }
