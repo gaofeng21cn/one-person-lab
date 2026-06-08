@@ -81,7 +81,7 @@ exit 1
     assert.equal(output.app_state.operator.default_read_surface_policy.profile, 'fast');
     assert.equal(
       output.app_state.operator.default_read_surface_policy.default_operator_payload,
-      'current_owner_delta',
+      'ordinary_cockpit',
     );
     assert.equal(
       'compatibility_operator_payload' in output.app_state.operator.default_read_surface_policy,
@@ -114,14 +114,11 @@ exit 1
     assert.deepEqual(
       output.app_state.operator.default_read_surface_policy.first_screen_answers,
       [
-        'current_owner_delta',
-        'next_safe_action_or_none',
+        'purpose',
+        'task',
         'current_owner',
-        'required_delta',
-        'accepted_return_shapes',
-        'readiness_false_flags',
-        'hard_gate',
-        'latest_owner_answer_ref',
+        'next_action',
+        'artifact_or_blocker',
       ],
     );
     assert.equal(
@@ -131,9 +128,42 @@ exit 1
     assert.deepEqual(
       output.app_state.operator.default_read_surface_policy.diagnostic_only_answers,
       [
+        'current_owner_delta',
+        'current_owner_delta_read_model',
         'count_summary',
         'audit_next_safe_action_or_none',
         'full_detail_refs',
+        'provider',
+        'ledger',
+        'worklist',
+        'mcp_tool_catalog',
+        'raw_receipts',
+        'release_evidence',
+      ],
+    );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.ordinary_cockpit.display_payload_policy,
+      'purpose_task_current_owner_next_action_artifact_or_blocker_only',
+    );
+    assert.deepEqual(
+      output.app_state.operator.default_read_surface_policy.ordinary_cockpit.display_payload_fields,
+      [
+        'purpose',
+        'task',
+        'current_owner',
+        'next_action',
+        'artifact_or_blocker',
+      ],
+    );
+    assert.deepEqual(
+      output.app_state.operator.default_read_surface_policy.ordinary_cockpit.developer_full_drilldown_only,
+      [
+        'provider',
+        'ledger',
+        'worklist',
+        'mcp_tool_catalog',
+        'raw_receipts',
+        'release_evidence',
       ],
     );
     assert.equal(
@@ -187,6 +217,47 @@ exit 1
       output.app_state.operator.default_read_surface_policy,
       output.app_state.operator.workbench.default_read_surface_policy,
     );
+    assert.deepEqual(
+      output.app_state.operator.ordinary_cockpit,
+      output.app_state.operator.workbench.ordinary_cockpit,
+    );
+    assert.deepEqual(
+      Object.keys(output.app_state.operator.ordinary_cockpit.display_payload),
+      [
+        'purpose',
+        'task',
+        'current_owner',
+        'next_action',
+        'artifact_or_blocker',
+      ],
+    );
+    assert.equal(
+      output.app_state.operator.ordinary_cockpit.display_payload.current_owner,
+      output.app_state.operator.current_owner_delta.current_owner,
+    );
+    assert.equal(
+      output.app_state.operator.ordinary_cockpit.display_payload.next_action.owner,
+      output.app_state.operator.operator_next_action_owner,
+    );
+    assert.equal(
+      output.app_state.operator.ordinary_cockpit.display_payload.artifact_or_blocker.content_policy,
+      'refs_only_no_artifact_or_receipt_body',
+    );
+    const ordinaryCockpitPayload = JSON.stringify(output.app_state.operator.ordinary_cockpit.display_payload);
+    for (const developerOnlyTerm of [
+      'provider',
+      'ledger',
+      'worklist',
+      'mcp',
+      'raw_receipt',
+      'release_evidence',
+    ]) {
+      assert.equal(
+        ordinaryCockpitPayload.includes(developerOnlyTerm),
+        false,
+        `ordinary cockpit display payload must not expose ${developerOnlyTerm}`,
+      );
+    }
     assert.deepEqual(
       output.app_state.operator.current_owner_delta,
       output.app_state.operator.workbench.current_owner_delta,
@@ -463,9 +534,16 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     }) as {
       app_state: {
         operator: {
+          ordinary_cockpit: {
+            display_payload: Record<string, any>;
+          };
+          operator_next_action_owner: string | null;
           current_owner_delta: Record<string, any>;
           current_owner_delta_read_model: Record<string, any>;
           workbench: {
+            ordinary_cockpit: {
+              display_payload: Record<string, any>;
+            };
             current_owner_delta: Record<string, any>;
             current_owner_delta_read_model: Record<string, any>;
             summary_cards: Array<{ card_id: string; value: number | string }>;
@@ -500,6 +578,36 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     assert.deepEqual(
       output.app_state.operator.current_owner_delta,
       output.app_state.operator.workbench.current_owner_delta,
+    );
+    assert.deepEqual(
+      output.app_state.operator.ordinary_cockpit,
+      output.app_state.operator.workbench.ordinary_cockpit,
+    );
+    assert.deepEqual(
+      Object.keys(output.app_state.operator.ordinary_cockpit.display_payload),
+      [
+        'purpose',
+        'task',
+        'current_owner',
+        'next_action',
+        'artifact_or_blocker',
+      ],
+    );
+    assert.equal(
+      output.app_state.operator.ordinary_cockpit.display_payload.task.task_ref,
+      'medautoscience:study:003-dpcc-primary-care-phenotype-treatment-gap',
+    );
+    assert.equal(
+      output.app_state.operator.ordinary_cockpit.display_payload.current_owner,
+      'med-autoscience',
+    );
+    assert.equal(
+      output.app_state.operator.ordinary_cockpit.display_payload.next_action.owner,
+      output.app_state.operator.operator_next_action_owner,
+    );
+    assert.equal(
+      JSON.stringify(output.app_state.operator.ordinary_cockpit.display_payload).includes('worklist'),
+      false,
     );
     assert.deepEqual(
       output.app_state.operator.current_owner_delta,

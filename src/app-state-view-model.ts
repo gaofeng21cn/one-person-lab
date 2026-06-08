@@ -29,6 +29,23 @@ const FORBIDDEN_FAST_PROFILE_FIELDS = [
   'route_variant_menu',
 ] as const;
 
+const ORDINARY_COCKPIT_DISPLAY_FIELDS = [
+  'purpose',
+  'task',
+  'current_owner',
+  'next_action',
+  'artifact_or_blocker',
+] as const;
+
+const ORDINARY_COCKPIT_DEVELOPER_FULL_ONLY = [
+  'provider',
+  'ledger',
+  'worklist',
+  'mcp_tool_catalog',
+  'raw_receipts',
+  'release_evidence',
+] as const;
+
 function asRecord(value: unknown): JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value) ? value as JsonRecord : {};
 }
@@ -429,12 +446,121 @@ function buildDynamicVerticalMap(input: OplAppOperatorViewModelInput) {
   };
 }
 
+function ownerKey(value: string | null) {
+  return value?.toLowerCase().replace(/[^a-z0-9]+/g, '') ?? '';
+}
+
+function selectOrdinaryCockpitTaskFallback(
+  currentOwner: string,
+  runtimeActivityItems: ReadonlyArray<JsonRecord>,
+) {
+  const currentOwnerKey = ownerKey(currentOwner);
+  const matching = runtimeActivityItems.filter((item) => {
+    const itemOwnerKey = ownerKey(asString(item.domain_owner));
+    const itemProjectKey = ownerKey(asString(item.project_id));
+    return currentOwnerKey.length > 0
+      && (itemOwnerKey === currentOwnerKey || itemProjectKey === currentOwnerKey);
+  });
+  return matching.find((item) => asString(item.lane) === 'attention')
+    ?? matching.find((item) => asString(item.lane) === 'running')
+    ?? matching[0]
+    ?? null;
+}
+
+function buildOrdinaryCockpit(
+  currentOwnerDeltaTopline: JsonRecord,
+  input: OplAppOperatorViewModelInput,
+) {
+  const currentOwnerDelta = asRecord(currentOwnerDeltaTopline.current_owner_delta);
+  const nextAction = asRecord(currentOwnerDeltaTopline.operator_next_action);
+  const hardGate = asRecord(currentOwnerDelta.hard_gate);
+  const auditRefs = asRecord(currentOwnerDelta.audit_refs);
+  const currentOwner = asString(currentOwnerDelta.current_owner)
+    ?? asString(currentOwnerDelta.owner)
+    ?? 'one-person-lab';
+  const taskFallback = selectOrdinaryCockpitTaskFallback(currentOwner, input.runtimeActivityItems);
+  const taskRef = asString(currentOwnerDelta.task_or_study_ref)
+    ?? asString(currentOwnerDelta.stage_ref)
+    ?? asString(currentOwnerDelta.stage_id)
+    ?? asString(taskFallback?.item_id)
+    ?? asString(taskFallback?.study_id)
+    ?? 'opl-current-owner-delta';
+  const latestOwnerAnswerRef = asString(currentOwnerDelta.latest_owner_answer_ref)
+    ?? asString(hardGate.owner_answer_ref)
+    ?? asString(currentOwnerDelta.latest_typed_blocker_ref);
+  const artifactScopeRef = asString(auditRefs.artifact_scope_ref)
+    ?? asString(currentOwnerDelta.artifact_scope_ref);
+  const blockerRef = asString(currentOwnerDelta.latest_typed_blocker_ref)
+    ?? asString(hardGate.typed_blocker_ref);
+  const actionOwner = asString(currentOwnerDeltaTopline.operator_next_action_owner)
+    ?? asString(nextAction.next_required_owner)
+    ?? currentOwner;
+  const actionKind = asString(currentOwnerDeltaTopline.operator_next_action_kind)
+    ?? asString(nextAction.action_kind)
+    ?? 'owner_delta_followthrough_required';
+  const actionSummary = actionOwner === 'one-person-lab'
+    ? 'Continue the current stage handoff.'
+    : (asString(currentOwnerDelta.desired_delta_description)
+        ?? 'Return an owner receipt, typed blocker, or current stage artifact.');
+
+  return {
+    surface_kind: 'opl_app_ordinary_cockpit',
+    schema_version: 'ordinary-cockpit.v1',
+    display_payload_policy: 'purpose_task_current_owner_next_action_artifact_or_blocker_only',
+    display_payload_fields: [...ORDINARY_COCKPIT_DISPLAY_FIELDS],
+    developer_full_drilldown_only: [...ORDINARY_COCKPIT_DEVELOPER_FULL_ONLY],
+    display_payload: {
+      purpose: {
+        purpose_id: 'continue_current_stage',
+        label: 'Continue current stage',
+        source_ref: 'app_state.operator.current_owner_delta',
+      },
+      task: {
+        task_ref: taskRef,
+        stage_ref: asString(currentOwnerDelta.stage_ref) ?? asString(currentOwnerDelta.stage_id),
+        domain_id: asString(currentOwnerDelta.domain_id) ?? asString(currentOwnerDelta.domain),
+        title: asString(taskFallback?.title),
+        status_label: asString(taskFallback?.status_label),
+      },
+      current_owner: currentOwner,
+      next_action: {
+        owner: actionOwner,
+        action_kind: actionKind,
+        summary: actionSummary,
+        source_ref: 'app_state.operator.current_owner_delta',
+      },
+      artifact_or_blocker: {
+        status: blockerRef
+          ? 'blocker_available'
+          : latestOwnerAnswerRef || artifactScopeRef
+            ? 'artifact_or_receipt_available'
+            : 'awaiting_owner_answer',
+        artifact_ref: artifactScopeRef,
+        owner_answer_ref: latestOwnerAnswerRef,
+        blocker_ref: blockerRef,
+        expected_shape: 'owner_receipt_or_typed_blocker_or_stage_artifact_ref',
+        content_policy: 'refs_only_no_artifact_or_receipt_body',
+      },
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_read_artifact_body: false,
+      can_read_memory_body: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_authorize_quality_verdict: false,
+      can_claim_app_release_ready: false,
+      can_claim_production_ready: false,
+    },
+  };
+}
+
 function buildDefaultReadSurfacePolicy(input: OplAppOperatorViewModelInput) {
   return {
     surface_kind: 'opl_app_default_read_surface_policy',
     schema_version: 'default-read-surface-policy.v1',
     profile: input.profile,
-    default_operator_payload: 'current_owner_delta',
+    default_operator_payload: 'ordinary_cockpit',
     normal_state_surface: 'opl app state --profile fast --json',
     full_state_surface: 'opl app state --profile full --json',
     full_runtime_drilldown_surface: 'opl runtime app-operator-drilldown --detail full --json',
@@ -442,20 +568,21 @@ function buildDefaultReadSurfacePolicy(input: OplAppOperatorViewModelInput) {
     runtime_tray_projection_policy: 'current_owner_delta_first_runtime_tray_worklist_audit_tail_drilldown',
     worklist_projection_policy: 'secondary_drilldown_never_default_planning_root',
     first_screen_answers: [
-      'current_owner_delta',
-      'next_safe_action_or_none',
-      'current_owner',
-      'required_delta',
-      'accepted_return_shapes',
-      'readiness_false_flags',
-      'hard_gate',
-      'latest_owner_answer_ref',
+      ...ORDINARY_COCKPIT_DISPLAY_FIELDS,
     ],
     diagnostic_only_answers: [
+      'current_owner_delta',
+      'current_owner_delta_read_model',
       'count_summary',
       'audit_next_safe_action_or_none',
       'full_detail_refs',
+      ...ORDINARY_COCKPIT_DEVELOPER_FULL_ONLY,
     ],
+    ordinary_cockpit: {
+      display_payload_policy: 'purpose_task_current_owner_next_action_artifact_or_blocker_only',
+      display_payload_fields: [...ORDINARY_COCKPIT_DISPLAY_FIELDS],
+      developer_full_drilldown_only: [...ORDINARY_COCKPIT_DEVELOPER_FULL_ONLY],
+    },
     fast_profile_excludes: [
       ...FORBIDDEN_FAST_PROFILE_FIELDS,
     ],
@@ -487,6 +614,7 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
     currentOwnerDeltaReadModel,
   });
   const defaultReadSurfacePolicy = buildDefaultReadSurfacePolicy(input);
+  const ordinaryCockpit = buildOrdinaryCockpit(currentOwnerDeltaTopline, input);
   const lazyRefs = [
     {
       ref_id: 'full_app_state_refresh',
@@ -510,10 +638,12 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
     },
     full_detail_surface: 'opl runtime app-operator-drilldown --detail full --json',
     default_read_surface_policy: defaultReadSurfacePolicy,
+    ordinary_cockpit: ordinaryCockpit,
     ...currentOwnerDeltaTopline,
     workbench: {
       view_model_schema: 'opl_app_operator_workbench.v1',
       default_read_surface_policy: defaultReadSurfacePolicy,
+      ordinary_cockpit: ordinaryCockpit,
       ...currentOwnerDeltaTopline,
       summary_cards: buildSummaryCards(input),
       sections: buildSections(input),
