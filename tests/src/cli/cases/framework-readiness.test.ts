@@ -65,6 +65,22 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.summary.agent_conformance_hard_blocker_count,
   );
   assert.equal(
+    readiness.attention_first_payload.summary.generated_default_entry_source_of_work_blocked_count,
+    readiness.summary.generated_default_entry_source_of_work_blocked_count,
+  );
+  assert.equal(
+    readiness.agent_conformance_tail.generated_default_entry_source_of_work_status,
+    readiness.agent_conformance_tail.generated_default_entry_source_of_work.status,
+  );
+  assert.equal(
+    readiness.agent_conformance_tail.generated_default_entry_source_of_work.domain_repo_can_own_default_entry,
+    false,
+  );
+  assert.equal(
+    readiness.agent_conformance_tail.generated_default_entry_source_of_work.descriptor_pass_can_claim_domain_ready,
+    false,
+  );
+  assert.equal(
     readiness.attention_first_payload.summary.stage_readiness_hard_blocker_count,
     readiness.summary.stage_readiness_hard_blocker_count,
   );

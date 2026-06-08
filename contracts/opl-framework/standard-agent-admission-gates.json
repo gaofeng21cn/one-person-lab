@@ -227,6 +227,7 @@
     "opl_can_claim_production_ready": false,
     "scaffold_signal_can_admit_domain": false,
     "generated_surface_can_admit_domain": false,
+    "descriptor_pass_can_claim_domain_ready": false,
     "conformance_pass_can_claim_production_ready": false,
     "file_presence_counts_as_stage_complete": false,
     "provider_completion_counts_as_stage_complete": false,

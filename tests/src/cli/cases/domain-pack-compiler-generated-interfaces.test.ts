@@ -154,7 +154,138 @@ test('generated interfaces declare generated surfaces as the default entry basel
   assert.equal(bundle.product_entry.descriptors[0].source_of_work.source_action_id, 'study_packet');
   assert.equal(bundle.openai_tool.descriptors[0].source_of_work.source_action_id, 'study_packet');
   assert.equal(bundle.ai_sdk.descriptors[0].source_of_work.source_action_id, 'study_packet');
+  assert.equal(bundle.product_status.source_of_work_lineage.status, 'ready_from_family_action_catalog');
+  assert.equal(bundle.product_status.default_source_of_work.source_action_id, 'study_packet');
+  assert.equal(
+    bundle.product_status.source_of_work_consumption_policy,
+    'status_read_model_consumes_generated_surface_lineage_without_claiming_domain_ready',
+  );
+  assert.equal(bundle.workbench.source_of_work_lineage.status, 'ready_from_family_action_catalog');
+  assert.equal(bundle.workbench.default_source_of_work.source_action_id, 'study_packet');
+  assert.equal(
+    bundle.workbench.source_of_work_consumption_policy,
+    'workbench_consumes_generated_surface_lineage_and_stage_routes_without_claiming_domain_ready',
+  );
   assert.equal(bundle.generated_wrapper_bundle.domain_repo_role_policy, 'domain_handler_target_or_refs_only_adapter');
+});
+
+test('generated default entry release gate prevents wrapper surface resurrection', () => {
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-no-resurrection-'));
+  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+
+  bindFamilyManifests(env);
+
+  const bundle = runCli(['agents', 'interfaces', '--domain', 'mas'], env).generated_agent_interfaces;
+  const contract = JSON.parse(fs.readFileSync(
+    path.join(repoRoot, 'contracts', 'opl-framework', 'domain-pack-compiler-contract.json'),
+    'utf8',
+  ));
+  const admissionGates = JSON.parse(fs.readFileSync(
+    path.join(repoRoot, 'contracts', 'opl-framework', 'standard-agent-admission-gates.json'),
+    'utf8',
+  ));
+
+  const expectedSurfaceIds = [
+    'cli',
+    'mcp',
+    'openai_tool',
+    'ai_sdk',
+    'skill_plugin',
+    'app_action',
+    'status_read_model',
+    'workbench',
+  ];
+
+  assert.deepEqual(
+    contract.generated_interface_bundle.generated_default_entry_no_resurrection_gate
+      .required_default_entry_surface_ids,
+    expectedSurfaceIds,
+  );
+  assert.equal(contract.generated_interface_bundle.generated_default_entry_no_resurrection_gate.release_gate, true);
+  assert.equal(
+    contract.generated_interface_bundle.generated_default_entry_no_resurrection_gate
+      .domain_repo_can_own_default_entry,
+    false,
+  );
+  assert.equal(
+    contract.generated_interface_bundle.generated_default_entry_no_resurrection_gate
+      .descriptor_pass_can_claim_domain_ready,
+    false,
+  );
+  assert.equal(
+    contract.generated_interface_bundle.generated_default_entry_no_resurrection_gate
+      .handwritten_default_tool_surface_allowed,
+    false,
+  );
+  assert.equal(
+    contract.generated_interface_bundle.generated_default_entry_no_resurrection_gate
+      .domain_local_wrapper_can_be_default_entry,
+    false,
+  );
+  assert.deepEqual(
+    bundle.generated_default_entry_no_resurrection_gate.required_default_entry_surface_ids,
+    expectedSurfaceIds,
+  );
+  assert.equal(
+    bundle.generated_default_entry_no_resurrection_gate.default_entry_policy_ref,
+    'generated_agent_interfaces.default_entry_policy',
+  );
+  assert.equal(bundle.generated_default_entry_no_resurrection_gate.release_gate, true);
+  assert.equal(bundle.generated_default_entry_no_resurrection_gate.gate_status, 'pass');
+  assert.equal(bundle.generated_default_entry_no_resurrection_gate.domain_repo_can_own_default_entry, false);
+  assert.equal(bundle.generated_default_entry_no_resurrection_gate.descriptor_pass_can_claim_domain_ready, false);
+  assert.equal(bundle.generated_default_entry_no_resurrection_gate.handwritten_default_tool_surface_allowed, false);
+  assert.equal(bundle.generated_default_entry_no_resurrection_gate.domain_local_wrapper_can_be_default_entry, false);
+  assert.equal(
+    bundle.generated_default_entry_no_resurrection_gate.required_lineage_policy,
+    'each_default_entry_surface_carries_source_of_work_lineage',
+  );
+  assert.deepEqual(
+    bundle.generated_default_entry_no_resurrection_gate.blocked_resurrection_surface_classes,
+    [
+      'domain_local_wrapper',
+      'domain_local_frontdoor',
+      'handwritten_default_tool_surface',
+      'repo_local_status_shell',
+      'repo_local_workbench_shell',
+    ],
+  );
+  assert.deepEqual(
+    bundle.generated_default_entry_no_resurrection_gate.authority_boundary,
+    {
+      gate_can_claim_domain_ready: false,
+      gate_can_claim_production_ready: false,
+      gate_can_write_domain_truth: false,
+      gate_can_authorize_quality_or_export: false,
+    },
+  );
+  assert.deepEqual(
+    bundle.generated_default_entry_no_resurrection_gate.default_entry_surface_lineage.map(
+      (surface: { surface_id: string }) => surface.surface_id,
+    ),
+    expectedSurfaceIds,
+  );
+  for (const surface of bundle.generated_default_entry_no_resurrection_gate.default_entry_surface_lineage) {
+    assert.equal(surface.owner, 'one-person-lab');
+    assert.equal(surface.default_entry, true);
+    assert.equal(surface.domain_repo_can_own_default_entry, false);
+    assert.equal(surface.domain_repo_can_own_generated_surface, false);
+    assert.equal(surface.descriptor_pass_can_claim_domain_ready, false);
+    assert.equal(surface.source_of_work_lineage.source_action_ids.includes('study_packet'), true);
+    assert.equal(
+      surface.source_of_work_lineage.derived_surface_policy,
+      'derive_cli_mcp_openai_ai_sdk_skill_app_status_workbench_from_single_catalog',
+    );
+    assert.equal(
+      surface.source_of_work_lineage.domain_repo_wrapper_policy,
+      'handler_target_refs_only_adapter_or_tombstone_candidate',
+    );
+  }
+  assert.equal(
+    admissionGates.false_authority_boundary.descriptor_pass_can_claim_domain_ready,
+    false,
+  );
 });
 
 test('domain pack compiler contract and action catalog schema declare generated default surfaces', () => {

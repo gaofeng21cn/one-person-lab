@@ -5,6 +5,7 @@ import {
 } from '../family-action-catalog.ts';
 import type {
   FamilyActionCatalog,
+  FamilyActionCatalogAction,
   FamilyActionExportFormat,
 } from '../family-action-catalog-contract.ts';
 import type { FamilyStageControlPlane } from '../family-stage-control-plane-contract.ts';
@@ -240,6 +241,80 @@ function buildSourceOfWorkLineage(catalog: FamilyActionCatalog | null, stageCont
   };
 }
 
+function buildGeneratedDefaultEntryNoResurrectionGate(
+  catalog: FamilyActionCatalog | null,
+  stageControlPlane: FamilyStageControlPlane | null,
+) {
+  const sourceActionIds = catalog?.actions
+    .map((action) => action.source_of_work?.source_action_id ?? action.action_id)
+    ?? [];
+  const actionCatalogRefs = unique(
+    catalog?.actions.map((action) =>
+      action.source_of_work?.source_catalog_ref ?? `family_action_catalog:${catalog.catalog_id}`
+    ) ?? [],
+  );
+  const stageCatalogRefs = unique(
+    catalog?.actions
+      .map((action) => action.source_of_work?.stage_catalog_ref ?? null)
+      .filter((entry): entry is string => Boolean(entry)) ?? [],
+  );
+  const stageCatalogRef =
+    stageCatalogRefs[0]
+    ?? (stageControlPlane ? `family_stage_control_plane:${stageControlPlane.plane_id}` : null);
+  const lineageReady = Boolean(catalog && sourceActionIds.length > 0 && stageCatalogRef);
+
+  return {
+    surface_kind: 'opl_generated_default_entry_no_resurrection_gate',
+    version: 'opl-generated-default-entry-no-resurrection-gate.v1',
+    owner: 'one-person-lab',
+    release_gate: true,
+    gate_status: lineageReady ? 'pass' : 'blocked_missing_source_of_work_lineage',
+    default_entry_policy_ref: 'generated_agent_interfaces.default_entry_policy',
+    source_of_work_lineage_ref: 'generated_agent_interfaces.source_of_work_lineage',
+    required_default_entry_surface_ids: [...GENERATED_DEFAULT_ENTRY_SURFACE_IDS],
+    required_lineage_policy: 'each_default_entry_surface_carries_source_of_work_lineage',
+    domain_repo_wrapper_policy: 'handler_target_refs_only_adapter_or_tombstone_candidate',
+    domain_repo_can_own_default_entry: false,
+    descriptor_pass_can_claim_domain_ready: false,
+    handwritten_default_tool_surface_allowed: false,
+    domain_local_wrapper_can_be_default_entry: false,
+    blocked_resurrection_surface_classes: [
+      'domain_local_wrapper',
+      'domain_local_frontdoor',
+      'handwritten_default_tool_surface',
+      'repo_local_status_shell',
+      'repo_local_workbench_shell',
+    ],
+    source_catalogs: ['family_action_catalog', 'family_stage_control_plane'],
+    action_catalog_refs: actionCatalogRefs,
+    stage_catalog_ref: stageCatalogRef,
+    default_entry_surface_lineage: SUPPORTED_DERIVED_SURFACES.map((surface) => ({
+      surface_id: surface.surface_id,
+      descriptor_block: surface.descriptor_block,
+      owner: 'one-person-lab',
+      default_entry: true,
+      domain_repo_can_own_default_entry: false,
+      domain_repo_can_own_generated_surface: false,
+      descriptor_pass_can_claim_domain_ready: false,
+      source_catalogs: [...surface.source_catalogs],
+      source_of_work_lineage: {
+        source_catalog: 'family_action_catalog',
+        source_catalog_refs: actionCatalogRefs,
+        source_action_ids: sourceActionIds,
+        stage_catalog_ref: stageCatalogRef,
+        derived_surface_policy: 'derive_cli_mcp_openai_ai_sdk_skill_app_status_workbench_from_single_catalog',
+        domain_repo_wrapper_policy: 'handler_target_refs_only_adapter_or_tombstone_candidate',
+      },
+    })),
+    authority_boundary: {
+      gate_can_claim_domain_ready: false,
+      gate_can_claim_production_ready: false,
+      gate_can_write_domain_truth: false,
+      gate_can_authorize_quality_or_export: false,
+    },
+  };
+}
+
 function unique(values: string[]) {
   return [...new Set(values.filter(Boolean))];
 }
@@ -303,6 +378,29 @@ function buildStageRoutes(stageControlPlane: FamilyStageControlPlane | null) {
 
 function buildProductEntryDescriptors(catalog: FamilyActionCatalog) {
   return catalog.actions.map((action) => projectFamilyAction(action).product_entry);
+}
+
+function firstActionForStageControlPlane(
+  catalog: FamilyActionCatalog | null,
+  stageControlPlane: FamilyStageControlPlane | null,
+): FamilyActionCatalogAction | null {
+  if (!catalog) {
+    return null;
+  }
+  const allowedActionIds = new Set(
+    stageControlPlane?.stages.flatMap((stage) => stage.allowed_action_refs) ?? [],
+  );
+  return catalog.actions.find((action) => allowedActionIds.has(action.action_id))
+    ?? catalog.actions[0]
+    ?? null;
+}
+
+function defaultSourceOfWork(
+  catalog: FamilyActionCatalog | null,
+  stageControlPlane: FamilyStageControlPlane | null,
+) {
+  const action = firstActionForStageControlPlane(catalog, stageControlPlane);
+  return action ? projectFamilyAction(action).product_entry.source_of_work : null;
 }
 
 function buildProductStatusDescriptors(catalog: FamilyActionCatalog | null) {
@@ -770,12 +868,20 @@ function buildDomainHandlerDescriptorBlock(catalog: FamilyActionCatalog | null, 
   };
 }
 
-function buildWorkbenchDescriptorBlock(stageControlPlane: FamilyStageControlPlane | null, descriptor: JsonRecord) {
+function buildWorkbenchDescriptorBlock(
+  catalog: FamilyActionCatalog | null,
+  stageControlPlane: FamilyStageControlPlane | null,
+  descriptor: JsonRecord,
+) {
   return {
     surface_kind: 'opl_hosted_workbench_descriptor',
     owner: 'one-person-lab',
     status: stageControlPlane ? 'ready_from_stage_control_plane' : 'blocked_missing_family_stage_control_plane',
     descriptor_source_surfaces: ['family_stage_control_plane', 'domain_memory_descriptor', 'runtime_surfaces'],
+    source_of_work_lineage: buildSourceOfWorkLineage(catalog, stageControlPlane),
+    default_source_of_work: defaultSourceOfWork(catalog, stageControlPlane),
+    source_of_work_consumption_policy:
+      'workbench_consumes_generated_surface_lineage_and_stage_routes_without_claiming_domain_ready',
     handoff_surface: handoffSurfaceFor(descriptor, 'workbench_drilldown'),
     stage_routes: buildStageRoutes(stageControlPlane),
     authority_boundary: {
@@ -992,6 +1098,10 @@ export function buildGeneratedInterfaceBundle(
     owner: 'one-person-lab',
     status: catalog ? 'ready_from_family_action_catalog' : 'blocked_missing_family_action_catalog',
     descriptor_source_surfaces: ['family_action_catalog', 'runtime_surfaces'],
+    source_of_work_lineage: buildSourceOfWorkLineage(catalog, stageControlPlane),
+    default_source_of_work: defaultSourceOfWork(catalog, stageControlPlane),
+    source_of_work_consumption_policy:
+      'status_read_model_consumes_generated_surface_lineage_without_claiming_domain_ready',
     descriptors: buildProductStatusDescriptors(catalog),
     authority_boundary: {
       product_status_can_write_domain_truth: false,
@@ -1001,7 +1111,11 @@ export function buildGeneratedInterfaceBundle(
   };
   const productSession = buildProductSessionDescriptorFromDescriptor(descriptor, stageControlPlane);
   const domainHandler = buildDomainHandlerDescriptorBlock(catalog, descriptor);
-  const workbench = buildWorkbenchDescriptorBlock(stageControlPlane, descriptor);
+  const workbench = buildWorkbenchDescriptorBlock(catalog, stageControlPlane, descriptor);
+  const generatedDefaultEntryNoResurrectionGate = buildGeneratedDefaultEntryNoResurrectionGate(
+    catalog,
+    stageControlPlane,
+  );
   const wrapperBlocks = {
     ...blocks,
     product_status: productStatus,
@@ -1025,6 +1139,7 @@ export function buildGeneratedInterfaceBundle(
     default_entry_policy: buildDefaultEntryPolicy(),
     supported_derived_surfaces: buildSupportedDerivedSurfaces(),
     source_of_work_lineage: buildSourceOfWorkLineage(catalog, stageControlPlane),
+    generated_default_entry_no_resurrection_gate: generatedDefaultEntryNoResurrectionGate,
     ...blocks,
     active_caller_cutover_proof: buildActiveCallerCutoverProof(
       descriptor,
@@ -1085,6 +1200,8 @@ export function selectGeneratedInterfaceBundleFormat(
     generated_from: bundle.generated_from,
     default_entry_policy: bundle.default_entry_policy,
     supported_derived_surfaces: bundle.supported_derived_surfaces,
+    source_of_work_lineage: bundle.source_of_work_lineage,
+    generated_default_entry_no_resurrection_gate: bundle.generated_default_entry_no_resurrection_gate,
     [selectedKey]: selectedBlock,
     product_status: bundle.product_status,
     product_session: bundle.product_session,

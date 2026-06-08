@@ -67,13 +67,20 @@ export function assertAppReleaseUserPathAttentionCounts(summaryDrilldown: any) {
 
 export function assertAppReleaseUserPathProductionEvidenceLane(summaryDrilldown: any) {
   const nextSafeAction = summaryDrilldown.attention_first_payload.next_safe_action;
-  assert.notEqual(
+  assert.equal(
     nextSafeAction?.action_kind,
     'app_release_user_path_evidence_receipt_record',
   );
-  assert.notEqual(
-    nextSafeAction?.action_kind,
-    'app_release_user_path_evidence_receipt_verify',
+  assert.equal(
+    nextSafeAction?.payload_workorder.surface_kind,
+    'opl_app_release_user_path_evidence_payload_workorder',
+  );
+  assert.equal(nextSafeAction?.route_requires_domain_or_app_payload, true);
+  assert.equal(nextSafeAction?.can_close_without_domain_or_app_payload, false);
+  assert.equal(nextSafeAction?.authority_boundary.can_claim_production_ready, false);
+  assert.equal(
+    nextSafeAction?.payload_workorder.authority_boundary.can_claim_production_ready,
+    false,
   );
   const appUserPathStep = summaryDrilldown.attention_first_payload.evidence_next_steps.items.find(
     (item: { step_kind: string }) => item.step_kind === 'app_release_user_path_evidence',

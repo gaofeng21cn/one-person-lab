@@ -137,6 +137,47 @@
         "lineage_can_claim_production_ready": false
       }
     },
+    "generated_default_entry_no_resurrection_gate": {
+      "surface_kind": "opl_generated_default_entry_no_resurrection_gate",
+      "version": "opl-generated-default-entry-no-resurrection-gate.v1",
+      "owner": "one-person-lab",
+      "release_gate": true,
+      "gate_status_values": [
+        "pass",
+        "blocked_missing_source_of_work_lineage"
+      ],
+      "default_entry_policy_ref": "generated_agent_interfaces.default_entry_policy",
+      "source_of_work_lineage_ref": "generated_agent_interfaces.source_of_work_lineage",
+      "required_default_entry_surface_ids": [
+        "cli",
+        "mcp",
+        "openai_tool",
+        "ai_sdk",
+        "skill_plugin",
+        "app_action",
+        "status_read_model",
+        "workbench"
+      ],
+      "required_lineage_policy": "each_default_entry_surface_carries_source_of_work_lineage",
+      "domain_repo_wrapper_policy": "handler_target_refs_only_adapter_or_tombstone_candidate",
+      "domain_repo_can_own_default_entry": false,
+      "descriptor_pass_can_claim_domain_ready": false,
+      "handwritten_default_tool_surface_allowed": false,
+      "domain_local_wrapper_can_be_default_entry": false,
+      "blocked_resurrection_surface_classes": [
+        "domain_local_wrapper",
+        "domain_local_frontdoor",
+        "handwritten_default_tool_surface",
+        "repo_local_status_shell",
+        "repo_local_workbench_shell"
+      ],
+      "authority_boundary": {
+        "gate_can_claim_domain_ready": false,
+        "gate_can_claim_production_ready": false,
+        "gate_can_write_domain_truth": false,
+        "gate_can_authorize_quality_or_export": false
+      }
+    },
     "supported_derived_surfaces": [
       {
         "surface_id": "cli",

@@ -27,6 +27,9 @@ import {
   buildAgentPlatformSurfaceOwnershipReport,
 } from '../../agent-platform-surface-ownership.ts';
 import {
+  buildPrivatePlatformResidueOwnerDecisionLedgerCommand,
+} from '../../private-platform-residue-owner-decisions.ts';
+import {
   buildBrandModuleInspect,
   buildBrandModuleInterfaces,
   buildBrandModuleMaturity,
@@ -1152,10 +1155,21 @@ export function buildPublicCommandSpecs(
       group: 'domain',
       handler: (args) => buildAgentDefaultCallerReadinessReport(args),
     },
+    'agents residue-decisions': {
+      usage: 'opl agents residue-decisions [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]',
+      summary:
+        'Project the refs-only owner-decision ledger for private platform residue without writing domain truth or authorizing physical deletion.',
+      examples: [
+        'opl agents residue-decisions --family-defaults',
+        'opl agents residue-decisions --agent mas=/path/to/med-autoscience',
+      ],
+      group: 'domain',
+      handler: (args) => buildPrivatePlatformResidueOwnerDecisionLedgerCommand(args),
+    },
     'agents conformance': {
       usage: 'opl agents conformance [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]',
       summary:
-        'Report structural conformance for standard OPL agents across scaffold, pack compiler, generated interface, and private-surface gates.',
+        'Report structural conformance and live family probe status for standard OPL agents without claiming domain or production readiness.',
       examples: [
         'opl agents conformance',
         'opl agents conformance --repo-dir /path/to/med-autoscience --repo-dir /path/to/redcube-ai',

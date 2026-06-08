@@ -356,6 +356,106 @@ test('agents conformance reports structural readiness separately from production
   assert.equal(repo.evidence_tail_classification.tail_items[0].authority_boundary.conformance_report_can_claim_domain_ready, false);
 });
 
+test('agents conformance exposes a live family probe over generated interfaces, action catalog, stage plane, and admission gates', () => {
+  const repoDir = buildReadyAgentRepo();
+  const payload = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]);
+  const report = payload.standard_domain_agent_conformance;
+  const probe = report.family_live_conformance_probe;
+  const domain = probe.domains[0];
+
+  assert.equal(payload.family_live_conformance_probe_status, 'passed');
+  assert.equal(payload.family_live_conformance_probe_blocked_domain_count, 0);
+  assert.equal(report.family_live_conformance_probe_status, 'passed');
+  assert.equal(report.summary.family_live_conformance_probe_status, 'passed');
+  assert.equal(probe.surface_kind, 'opl_family_live_conformance_probe');
+  assert.equal(probe.status, 'passed');
+  assert.equal(probe.total_domain_count, 1);
+  assert.equal(probe.passed_domain_count, 1);
+  assert.equal(probe.blocked_domain_count, 0);
+
+  assert.equal(domain.surface_kind, 'opl_family_live_conformance_probe_domain');
+  assert.equal(domain.domain_id, 'sample-brief-agent');
+  assert.equal(domain.status, 'passed');
+  assert.equal(domain.live_inputs.generated_interfaces.status, 'passed');
+  assert.equal(domain.live_inputs.generated_interfaces.generated_interfaces_status, 'ready');
+  assert.equal(domain.live_inputs.action_catalog.status, 'passed');
+  assert.equal(domain.live_inputs.action_catalog.action_count > 0, true);
+  assert.equal(domain.live_inputs.stage_plane.status, 'passed');
+  assert.equal(domain.live_inputs.stage_plane.stage_count > 0, true);
+  assert.equal(
+    domain.standard_admission_gate_contract.version,
+    'standard-agent-admission-gates.v1',
+  );
+  assert.equal(domain.blocked_gate_count, 0);
+  assert.equal(
+    domain.gate_results.some((gate: { gate_id: string; status: string }) =>
+      gate.gate_id === 'generated_surface_default_entry' && gate.status === 'passed'
+    ),
+    true,
+  );
+  assert.equal(
+    domain.gate_results.some((gate: { gate_id: string; status: string }) =>
+      gate.gate_id === 'standard_pack_abi' && gate.status === 'passed'
+    ),
+    true,
+  );
+  assert.equal(domain.false_authority_boundary.domain_ready_authorized, false);
+  assert.equal(domain.false_authority_boundary.production_ready_authorized, false);
+  assert.equal(domain.false_authority_boundary.conformance_probe_can_admit_domain, false);
+  assert.equal(domain.false_authority_boundary.conformance_probe_can_write_domain_truth, false);
+  assert.equal(domain.false_authority_boundary.conformance_probe_can_create_owner_receipt, false);
+  assert.equal(domain.false_authority_boundary.conformance_probe_can_create_typed_blocker, false);
+  assert.equal(probe.false_authority_boundary.domain_ready_authorized, false);
+  assert.equal(probe.false_authority_boundary.production_ready_authorized, false);
+  assert.equal(Object.hasOwn(probe, 'domain_ready'), false);
+  assert.equal(Object.hasOwn(probe, 'production_ready'), false);
+  assert.equal(Object.hasOwn(domain, 'domain_ready'), false);
+  assert.equal(Object.hasOwn(domain, 'production_ready'), false);
+});
+
+test('agents conformance live family probe blocks admission gates when a domain stage plane is missing', () => {
+  const repoDir = buildReadyAgentRepo();
+  fs.rmSync(path.join(repoDir, 'contracts', 'stage_control_plane.json'));
+
+  const payload = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]);
+  const probe = payload.standard_domain_agent_conformance.family_live_conformance_probe;
+  const domain = probe.domains[0];
+  const generatedSurfaceGate = domain.gate_results.find((gate: { gate_id: string }) =>
+    gate.gate_id === 'generated_surface_default_entry'
+  );
+  const packAbiGate = domain.gate_results.find((gate: { gate_id: string }) =>
+    gate.gate_id === 'standard_pack_abi'
+  );
+
+  assert.equal(payload.family_live_conformance_probe_status, 'blocked');
+  assert.equal(probe.status, 'blocked');
+  assert.equal(probe.blocked_domain_count, 1);
+  assert.equal(domain.status, 'blocked');
+  assert.equal(domain.live_inputs.stage_plane.status, 'blocked');
+  assert.equal(
+    domain.live_inputs.stage_plane.blockers.includes('stage_plane_missing'),
+    true,
+  );
+  assert.equal(generatedSurfaceGate.status, 'blocked');
+  assert.equal(
+    generatedSurfaceGate.blockers.some((blocker: string) => blocker.includes('stage_plane_missing')),
+    true,
+  );
+  assert.equal(packAbiGate.status, 'blocked');
+  assert.equal(domain.false_authority_boundary.domain_ready_authorized, false);
+  assert.equal(domain.false_authority_boundary.production_ready_authorized, false);
+});
+
 test('agents platform-surfaces projects RCA guarded action catalog as action metadata shell only', () => {
   const repoDir = buildReadyAgentRepo();
   retargetReadyRepo(repoDir, 'redcube-ai', 'RedCube AI');

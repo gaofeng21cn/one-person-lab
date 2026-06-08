@@ -241,6 +241,8 @@ export async function buildFrameworkReadinessSummary(
   const semanticHygiene = buildOplFrameworkSemanticHygieneAudit(contracts);
   const agentReadinessDiagnostic = buildAgentReadinessDiagnostic();
   const agentReadiness = agentReadinessDiagnostic.readiness;
+  const generatedDefaultEntrySourceOfWork =
+    record(record(agentReadiness).generated_default_entry_source_of_work);
   const domainManifests = buildDomainManifestCatalog(contracts, {
     manifestCommandTimeoutMs: FRAMEWORK_READINESS_MANIFEST_COMMAND_TIMEOUT_MS,
     manifestCommandTimeoutPolicy: 'fixed',
@@ -456,6 +458,8 @@ export async function buildFrameworkReadinessSummary(
     openSafeActionPayloadFreeCount: openSafeActionPayload.openSafeActionPayloadFreeCount,
   });
   const agentHardBlockerCount = numberValue(agentSummary.conformance_blocked_count);
+  const generatedDefaultEntrySourceOfWorkBlockedCount =
+    numberValue(generatedDefaultEntrySourceOfWork.blocked_domain_count);
   const hardBlockerCount =
     agentHardBlockerCount + stageHardBlockerCount + packCompilerBlockerCount;
   const frameworkStatus = frameworkStatusFromAttentionCounts({
@@ -483,6 +487,7 @@ export async function buildFrameworkReadinessSummary(
     ),
     hardBlockerCount,
     agentHardBlockerCount,
+    generatedDefaultEntrySourceOfWorkBlockedCount,
     stageHardBlockerCount,
     packCompilerBlockerCount,
     diagnosticFailureCount,
@@ -567,6 +572,8 @@ export async function buildFrameworkReadinessSummary(
         control_plane_available: true,
         framework_kernel_hard_blocker_count: hardBlockerCount,
         agent_conformance_hard_blocker_count: agentHardBlockerCount,
+        generated_default_entry_source_of_work_blocked_count:
+          generatedDefaultEntrySourceOfWorkBlockedCount,
         stage_readiness_hard_blocker_count: stageHardBlockerCount,
         pack_compiler_hard_blocker_count: packCompilerBlockerCount,
         framework_diagnostic_failure_count: diagnosticFailureCount,
@@ -733,6 +740,11 @@ export async function buildFrameworkReadinessSummary(
         agent_readiness_production_evidence_tail_open_count: agentStructuralEvidenceTailCount,
         agent_readiness_production_evidence_tail_closed_count: agentProductionEvidenceTailClosedCount,
         agent_readiness_production_evidence_tail_policy: agentSummary.agent_readiness_production_evidence_tail_policy ?? null,
+        generated_default_entry_source_of_work_status:
+          generatedDefaultEntrySourceOfWork.status ?? null,
+        generated_default_entry_source_of_work_blocked_count:
+          generatedDefaultEntrySourceOfWorkBlockedCount,
+        generated_default_entry_source_of_work: generatedDefaultEntrySourceOfWork,
         stage_run_domain_adoption_status: agentSummary.stage_run_domain_adoption_status ?? null,
         stage_run_domain_adoption_domain_count: agentSummary.stage_run_domain_adoption_domain_count ?? null,
         stage_run_controlled_canary_evidence_scope: agentSummary.stage_run_controlled_canary_evidence_scope ?? null,

@@ -56,6 +56,7 @@ test('agents readiness aggregates structural gates and production evidence tail 
   assert.equal(readiness.summary.conformance_blocked_count, 0);
   assert.equal(readiness.summary.pack_compiler_blocked_domain_count, 0);
   assert.equal(readiness.summary.generated_interface_blocked_count, 0);
+  assert.equal(readiness.summary.generated_default_entry_source_of_work_blocked_count, 0);
   assert.equal(readiness.summary.domain_generated_surface_owner_claim_count, 0);
   assert.equal(readiness.summary.platform_surface_ownership_blocked_count, 0);
   assert.equal(readiness.summary.explicit_forbidden_platform_owner_claim_count, 0);
@@ -84,6 +85,25 @@ test('agents readiness aggregates structural gates and production evidence tail 
     readiness.gates.generated_interfaces.policy,
     'generated_descriptors_route_to_domain_handler_targets_without_claiming_domain_truth',
   );
+  assert.equal(readiness.gates.generated_default_entry_source_of_work.status, 'passed');
+  assert.equal(
+    readiness.gates.generated_default_entry_source_of_work.policy,
+    'cli_mcp_openai_ai_sdk_skill_app_status_workbench_are_generated_from_one_action_stage_lineage',
+  );
+  assert.equal(readiness.generated_default_entry_source_of_work.status, 'passed');
+  assert.equal(readiness.generated_default_entry_source_of_work.blocked_domain_count, 0);
+  assert.deepEqual(readiness.generated_default_entry_source_of_work.required_default_entry_surface_ids, [
+    'cli',
+    'mcp',
+    'openai_tool',
+    'ai_sdk',
+    'skill_plugin',
+    'app_action',
+    'status_read_model',
+    'workbench',
+  ]);
+  assert.equal(readiness.generated_default_entry_source_of_work.domain_repo_can_own_default_entry, false);
+  assert.equal(readiness.generated_default_entry_source_of_work.descriptor_pass_can_claim_domain_ready, false);
   assert.equal(readiness.gates.platform_surface_ownership.status, 'passed');
   assert.equal(
     readiness.gates.platform_surface_ownership.policy,

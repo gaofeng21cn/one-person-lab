@@ -128,8 +128,8 @@ function auditCleanupRoute(action: JsonRecord) {
 
 function productionEvidenceLaneRoute(action: JsonRecord) {
   const actionKind = stringValue(action.action_kind) ?? '';
-  return actionKind === 'app_release_user_path_evidence_receipt_record'
-    || actionKind === 'app_release_user_path_evidence_receipt_verify';
+  return actionKind === 'legacy_production_evidence_receipt_record'
+    || actionKind === 'legacy_production_evidence_receipt_verify';
 }
 
 function routeIsClosedForDefaultCaller(action: JsonRecord, drilldown: JsonRecord) {
@@ -192,9 +192,11 @@ function actionPriority(action: JsonRecord) {
   if (actionKind === 'app_release_user_path_evidence_receipt_verify') {
     return 0;
   }
-  if (actionKind === 'app_release_user_path_evidence_receipt_record'
-    || actionKind === 'oma_production_consumption_receipt_record') {
+  if (actionKind === 'app_release_user_path_evidence_receipt_record') {
     return 1;
+  }
+  if (actionKind === 'oma_production_consumption_receipt_record') {
+    return 3;
   }
   if (actionKind === 'provider_worker_start'
     || actionKind === 'provider_worker_restart') {

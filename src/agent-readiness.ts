@@ -154,6 +154,12 @@ export function buildAgentReadinessSummary(args: string[], contracts?: Framework
   const generatedInterfaceBlockedCount = reports.filter((report) =>
     stringValue(record(report.generated_interface_checks).status) === 'blocked'
   ).length;
+  const generatedDefaultEntrySourceOfWorkBlockedCount = reports.filter((report) =>
+    stringValue(record(record(report.generated_interface_checks).default_entry_source_of_work_gate).status) === 'blocked'
+  ).length;
+  const generatedDefaultEntrySourceOfWorkPassedCount = reports.filter((report) =>
+    stringValue(record(record(report.generated_interface_checks).default_entry_source_of_work_gate).status) === 'passed'
+  ).length;
   const platformSurfaceBlockedCount = reports.filter((report) =>
     stringValue(record(report.platform_surface_ownership_checks).status) === 'blocked'
   ).length;
@@ -217,6 +223,7 @@ export function buildAgentReadinessSummary(args: string[], contracts?: Framework
         platform_surface_ownership_blocked_count: platformSurfaceBlockedCount,
         explicit_forbidden_platform_owner_claim_count: explicitForbiddenOwnerClaimCount,
         generated_interface_blocked_count: generatedInterfaceBlockedCount,
+        generated_default_entry_source_of_work_blocked_count: generatedDefaultEntrySourceOfWorkBlockedCount,
         agent_readiness_production_evidence_tail_count: tailCount,
         agent_readiness_production_evidence_tail_policy:
           'reported_separately_not_a_structural_pass_condition',
@@ -251,6 +258,13 @@ export function buildAgentReadinessSummary(args: string[], contracts?: Framework
           generatedInterfaceBlockedCount,
           'generated_descriptors_route_to_domain_handler_targets_without_claiming_domain_truth',
         ),
+        generated_default_entry_source_of_work: gate(
+          'generated_default_entry_source_of_work',
+          'opl agents interfaces --family-defaults --json',
+          generatedDefaultEntrySourceOfWorkPassedCount,
+          generatedDefaultEntrySourceOfWorkBlockedCount,
+          'cli_mcp_openai_ai_sdk_skill_app_status_workbench_are_generated_from_one_action_stage_lineage',
+        ),
         platform_surface_ownership: gate(
           'platform_surface_ownership',
           'opl agents platform-surfaces --family-defaults --json',
@@ -267,6 +281,35 @@ export function buildAgentReadinessSummary(args: string[], contracts?: Framework
         ),
       },
       stage_run_domain_adoption_read_model: stageRunDomainAdoptionReadModel,
+      generated_default_entry_source_of_work: {
+        surface_kind: 'opl_generated_default_entry_source_of_work_readiness',
+        owner: 'one-person-lab',
+        status: generatedDefaultEntrySourceOfWorkBlockedCount === 0 ? 'passed' : 'blocked',
+        source_command: 'opl agents interfaces --family-defaults --json',
+        passed_domain_count: generatedDefaultEntrySourceOfWorkPassedCount,
+        blocked_domain_count: generatedDefaultEntrySourceOfWorkBlockedCount,
+        required_default_entry_surface_ids: [
+          'cli',
+          'mcp',
+          'openai_tool',
+          'ai_sdk',
+          'skill_plugin',
+          'app_action',
+          'status_read_model',
+          'workbench',
+        ],
+        derived_surface_policy:
+          'derive_cli_mcp_openai_ai_sdk_skill_app_status_workbench_from_single_catalog',
+        domain_repo_wrapper_policy: 'handler_target_refs_only_adapter_or_tombstone_candidate',
+        domain_repo_can_own_default_entry: false,
+        descriptor_pass_can_claim_domain_ready: false,
+        authority_boundary: {
+          can_write_domain_truth: false,
+          can_claim_domain_ready: false,
+          can_claim_production_ready: false,
+          generated_default_entry_is_domain_authority: false,
+        },
+      },
       production_evidence_tail_ledger: productionEvidenceTailLedger,
       conformance_report: conformance,
       authority_boundary: {

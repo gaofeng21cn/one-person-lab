@@ -1,0 +1,87 @@
+{
+  "surface_kind": "opl_private_platform_residue_owner_decisions_contract",
+  "version": "private-platform-residue-owner-decisions.v1",
+  "owner": "one-person-lab",
+  "state": "active_contract",
+  "contract_ref": "contracts/opl-framework/private-platform-residue-owner-decisions.json",
+  "purpose": "Freeze the refs-only owner-decision ledger for MAS, MAG, RCA, OMA, and future standard-agent private platform residue such as schedulers, queues, session stores, workbenches, status shells, domain wrappers, runtime watches, and agent-lab materializers.",
+  "command": "opl agents residue-decisions [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]",
+  "source_surfaces": [
+    "contracts/opl-framework/standard-agent-admission-gates.json",
+    "contracts/opl-framework/agent-platform-surface-ownership-contract.json",
+    "contracts/opl-framework/functional-privatization-audit-envelope-contract.json",
+    "opl agents default-callers"
+  ],
+  "residue_target_kinds": [
+    "scheduler",
+    "queue",
+    "session_store",
+    "workbench",
+    "status_shell",
+    "domain_wrapper",
+    "runtime_watch",
+    "agent_lab_materializer"
+  ],
+  "allowed_owner_decisions": [
+    "retain_authority_function",
+    "raise_to_opl_primitive",
+    "no_active_caller_delete_gate",
+    "tombstone_gate",
+    "typed_blocker_gate"
+  ],
+  "source_cleanup_disposition_mapping": {
+    "retain_authority_function": "retain_authority_function",
+    "absorb_opl_primitive": "raise_to_opl_primitive",
+    "no_active_caller_delete": "no_active_caller_delete_gate",
+    "tombstone": "tombstone_gate",
+    "owner_typed_blocker": "typed_blocker_gate"
+  },
+  "required_item_fields": [
+    "decision_id",
+    "repo_id",
+    "domain_id",
+    "module_id",
+    "residue_kind",
+    "owner_decision",
+    "source_cleanup_disposition",
+    "owner_receipt_refs",
+    "typed_blocker_refs",
+    "physical_delete_authorized",
+    "physical_delete_authorization_status"
+  ],
+  "owner_decision_ref_policy": {
+    "owner_decision_refs_are_required_before_physical_delete_authorization": true,
+    "accepted_owner_decision_ref_fields": [
+      "owner_receipt_refs",
+      "domain_owner_receipt_refs",
+      "typed_blocker_refs",
+      "physical_delete_authorization_refs"
+    ],
+    "physical_delete_authorized_must_be_false_when_owner_receipt_and_typed_blocker_refs_are_missing": true,
+    "typed_blocker_ref_counts_as_owner_answer_but_not_delete_authorization": true,
+    "default_ledger_authorizes_domain_repo_physical_delete": false
+  },
+  "default_lane_policy": {
+    "lane_id": "private_platform_cleanup_lane",
+    "default_operator_lane": "audit_cleanup_lane",
+    "ordinary_owner_delta_can_be_driven_by_private_residue_inventory": false,
+    "raw_private_residue_inventory_can_drive_default_planning": false
+  },
+  "authority_boundary": {
+    "ledger_can_write_domain_truth": false,
+    "ledger_can_write_memory_body": false,
+    "ledger_can_sign_domain_owner_receipt": false,
+    "ledger_can_create_typed_blocker": false,
+    "ledger_can_authorize_quality_or_export": false,
+    "ledger_can_mutate_domain_artifacts": false,
+    "ledger_can_authorize_domain_repo_physical_delete": false,
+    "ledger_can_claim_domain_ready": false,
+    "ledger_can_claim_production_ready": false
+  },
+  "non_readiness_statement": {
+    "this_contract_claims_domain_ready": false,
+    "this_contract_claims_production_ready": false,
+    "this_contract_claims_private_residue_deleted": false,
+    "this_contract_replaces_domain_owner_decision": false
+  }
+}

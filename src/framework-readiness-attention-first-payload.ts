@@ -29,6 +29,7 @@ export function frameworkAttentionFirstPayload(input: {
   semanticHygieneContractFloor: JsonRecord;
   hardBlockerCount: number;
   agentHardBlockerCount: number;
+  generatedDefaultEntrySourceOfWorkBlockedCount: number;
   stageHardBlockerCount: number;
   packCompilerBlockerCount: number;
   diagnosticFailureCount: number;
@@ -232,6 +233,8 @@ export function frameworkAttentionFirstPayload(input: {
     summary: {
       hard_blocker_count: input.hardBlockerCount,
       agent_conformance_hard_blocker_count: input.agentHardBlockerCount,
+      generated_default_entry_source_of_work_blocked_count:
+        input.generatedDefaultEntrySourceOfWorkBlockedCount,
       stage_readiness_hard_blocker_count: input.stageHardBlockerCount,
       pack_compiler_hard_blocker_count: input.packCompilerBlockerCount,
       diagnostic_failure_count: input.diagnosticFailureCount,

@@ -7,7 +7,6 @@ import {
   buildAgentWorkspaceNormProjection,
 } from './agent-workspace-norm.ts';
 import { buildAgentPlatformSurfaceOwnershipForRepo } from './agent-platform-surface-ownership.ts';
-import { buildGeneratedAgentInterfaces } from './domain-pack-compiler.ts';
 import { buildFunctionalPrivatizationAudit } from './functional-privatization-audit.ts';
 import { buildPrivatePlatformResidueDeletionGate } from './private-platform-residue-deletion-gate.ts';
 import {
@@ -23,6 +22,8 @@ import {
 } from './standard-domain-agent-conformance-adoption.ts';
 import { buildStageOperatingPrincipleChecks } from './standard-domain-agent-stage-operating-principles.ts';
 import { buildEvidenceTailClassification } from './standard-domain-agent-conformance-evidence-tail.ts';
+import { buildFamilyAgentLiveConformanceProbe } from './family-agent-conformance-probe.ts';
+import { buildGeneratedInterfaceCheck } from './standard-domain-agent-conformance-generated-interfaces.ts';
 import { buildGoldenPathDefaultSurfaceBudgetChecks } from './standard-domain-agent-conformance-golden-path.ts';
 import { buildPhysicalMorphologyChecks } from './standard-domain-agent-conformance-physical-morphology.ts';
 import { buildStageRunDomainAdoptionReadModel } from './standard-domain-agent-conformance-stage-run-adoption.ts';
@@ -122,67 +123,6 @@ function parseConformanceArgs(args: string[]): RepoInput[] {
     requested_agent_id: repo.requested_agent_id,
     repo_dir: path.resolve(repo.repo_dir),
   }));
-}
-
-function buildGeneratedInterfaceCheck(repoDir: string) {
-  try {
-    const result = buildGeneratedAgentInterfaces({} as FrameworkContracts, ['--repo-dir', repoDir]);
-    const bundle = result.generated_agent_interfaces;
-    const wrapperBundle = isRecord(bundle.generated_wrapper_bundle) ? bundle.generated_wrapper_bundle : null;
-    const targetProof = isRecord(bundle.active_caller_target_proof) ? bundle.active_caller_target_proof : null;
-    const cutoverProof = isRecord(bundle.active_caller_cutover_proof) ? bundle.active_caller_cutover_proof : null;
-    const blockers = [
-      optionalString(bundle.status) === 'ready'
-        ? null
-        : `generated_interfaces_status_not_ready:${optionalString(bundle.status) ?? 'missing'}`,
-      optionalString(bundle.owner) === 'one-person-lab'
-        ? null
-        : `generated_interfaces_owner_not_opl:${optionalString(bundle.owner) ?? 'missing'}`,
-      bundle.domain_repo_can_own_generated_surface === false
-        ? null
-        : 'generated_interfaces_domain_repo_can_own_generated_surface_must_be_false',
-      optionalString(wrapperBundle?.status) === 'ready'
-        ? null
-        : `generated_wrapper_bundle_status_not_ready:${optionalString(wrapperBundle?.status) ?? 'missing'}`,
-      optionalString(targetProof?.status) === 'ready'
-        ? null
-        : `active_caller_target_proof_status_not_ready:${optionalString(targetProof?.status) ?? 'missing'}`,
-      optionalString(cutoverProof?.status) === 'cutover_to_opl_generated_or_domain_handler_targets'
-        ? null
-        : `active_caller_cutover_proof_status_not_ready:${optionalString(cutoverProof?.status) ?? 'missing'}`,
-    ].filter((entry): entry is string => Boolean(entry));
-    return {
-      status: blockers.length === 0 ? 'passed' : 'blocked',
-      generated_interfaces_status: optionalString(bundle.status),
-      generated_surface_owner: optionalString(bundle.generated_surface_owner),
-      domain_repo_can_own_generated_surface: bundle.domain_repo_can_own_generated_surface,
-      generated_wrapper_bundle_status: optionalString(wrapperBundle?.status),
-      active_caller_target_proof_status: optionalString(targetProof?.status),
-      active_caller_cutover_proof_status: optionalString(cutoverProof?.status),
-      claims_live_soak_complete: cutoverProof?.claims_live_soak_complete === true,
-      claims_domain_ready: cutoverProof?.claims_domain_ready === true,
-      blocker_reasons: Array.isArray(bundle.blocker_reasons)
-        ? bundle.blocker_reasons.filter((entry): entry is string => typeof entry === 'string')
-        : [],
-      blockers,
-    };
-  } catch (error) {
-    const code = error instanceof FrameworkContractError ? error.code : 'generated_interfaces_error';
-    return {
-      status: 'blocked',
-      generated_interfaces_status: 'error',
-      generated_surface_owner: null,
-      domain_repo_can_own_generated_surface: null,
-      generated_wrapper_bundle_status: null,
-      active_caller_target_proof_status: null,
-      active_caller_cutover_proof_status: null,
-      claims_live_soak_complete: false,
-      claims_domain_ready: false,
-      blocker_reasons: [],
-      blockers: [`generated_interfaces_error:${code}`],
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
 }
 
 function buildPackCompilerChecks(repoDir: string) {
@@ -437,11 +377,15 @@ export function buildStandardDomainAgentConformanceReport(
     typeof liveStageRunProgressEvidenceWorklist.open_domain_count === 'number'
       ? liveStageRunProgressEvidenceWorklist.open_domain_count
       : 0;
+  const familyLiveConformanceProbe = buildFamilyAgentLiveConformanceProbe(reports, contracts);
   return {
     version: 'g2',
     passed_count: passedCount,
     blocked_count: blockedCount,
     structural_conformance_status: structuralConformanceStatus,
+    family_live_conformance_probe_status: familyLiveConformanceProbe.status,
+    family_live_conformance_probe_blocked_domain_count:
+      familyLiveConformanceProbe.blocked_domain_count,
     production_evidence_tail_count: productionEvidenceTailCount,
     production_evidence_tail_policy: 'reported_separately_not_a_structural_pass_condition',
     live_stage_run_progress_evidence_status:
@@ -459,6 +403,9 @@ export function buildStandardDomainAgentConformanceReport(
       passed_count: passedCount,
       blocked_count: blockedCount,
       structural_conformance_status: structuralConformanceStatus,
+      family_live_conformance_probe_status: familyLiveConformanceProbe.status,
+      family_live_conformance_probe_blocked_domain_count:
+        familyLiveConformanceProbe.blocked_domain_count,
       production_evidence_tail_count: productionEvidenceTailCount,
       production_evidence_tail_policy: 'reported_separately_not_a_structural_pass_condition',
       live_stage_run_progress_evidence_status:
@@ -485,13 +432,18 @@ export function buildStandardDomainAgentConformanceReport(
         stage_run_domain_adoption_domain_count: stageRunDomainAdoptionReadModel.domain_count,
         stage_run_controlled_canary_evidence_scope:
           stageRunDomainAdoptionReadModel.controlled_canary_evidence_scope,
+        family_live_conformance_probe_status: familyLiveConformanceProbe.status,
+        family_live_conformance_probe_blocked_domain_count:
+          familyLiveConformanceProbe.blocked_domain_count,
       },
+      family_live_conformance_probe: familyLiveConformanceProbe,
       reports,
       authority_boundary: {
         opl_can_write_domain_truth: false,
         opl_can_write_memory_body: false,
         opl_can_authorize_quality_or_export: false,
         conformance_report_can_claim_domain_ready: false,
+        conformance_report_can_claim_production_ready: false,
       },
     },
   };
