@@ -90,6 +90,7 @@ const fastTestFiles = [
   'tests/src/family-product-operator-projection.test.ts',
   'tests/src/quality-details.test.ts',
   'tests/src/cli/cases/brand-modules.test.ts',
+  'tests/src/cli/cases/framework-operating-maturity.test.ts',
   'tests/src/cli/cases/runtime-brand-module-l5-evidence-ledger.test.ts',
 ];
 
