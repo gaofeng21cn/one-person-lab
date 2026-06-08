@@ -54,7 +54,7 @@
     {
       "id": "origin",
       "title": "这套设计从哪里来",
-      "lead": "OPL 的九个模块来自长周期知识工作的真实摩擦：一次性回答需要延伸为持续交付，自动化脚本需要连接专家判断，界面可见性需要连接质量完成。",
+      "lead": "OPL 的当前品牌模块来自长周期知识工作的真实摩擦：一次性回答需要延伸为持续交付，自动化脚本需要连接专家判断，界面可见性需要连接质量完成。",
       "paragraphs": [
         "第一层来源，是 OPL 自己要服务的任务：论文、基金、汇报、专利、报奖、学位论文、审稿和修回。这些任务都有明确交付物，也都有大量中间判断。它们要求 AI 能做专业工作，同时要求系统能说清楚当前阶段、材料来源、文件位置、质量门、阻塞原因和下一步。",
         "第二层来源，是 MAS、MAG、RCA 等 Foundry Agents 的真实实践。医学研究需要证据包、稿件、发表质量门；基金写作需要方向判断、申请书结构、模拟评审和修订；视觉交付需要故事线、渲染、审阅和导出。不同领域的内容不同，但它们都需要同一类运行外围：阶段、工作空间、回执、阻塞、产物 lineage、状态投影和恢复机制。",
@@ -191,9 +191,9 @@
       ]
     },
     {
-      "id": "nine-modules",
-      "title": "九个品牌模块：从上到下的设计骨架",
-      "lead": "九个模块是 OPL Framework 的能力分区。它们把顶层理念落实到真实运行：先建立语言和边界，再组织目录和工作空间，再设计阶段、长跑执行、证据回执、用户控制台、智能体工坊和外部连接。",
+      "id": "brand-modules",
+      "title": "当前十个品牌模块：从上到下的设计骨架",
+      "lead": "当前十个模块是 OPL Framework 的能力分区。它们把顶层理念落实到真实运行：先建立语言和边界，再组织目录和工作空间，再定义 domain pack 和 authority ABI，再设计阶段、长跑执行、证据回执、用户控制台、智能体工坊和外部连接。",
       "cards": [
         {
           "title": "OPL Charter",
@@ -220,6 +220,15 @@
           "bullets": [
             "默认模型是 Workspace Group -> Project Unit -> Stage Artifact Unit。",
             "真实完成绑定清单、回执和当前指针。"
+          ]
+        },
+        {
+          "title": "OPL Pack",
+          "kicker": "Domain Pack 与 authority ABI",
+          "body": "Pack 定义 Foundry Agent 如何声明自己的 domain pack、stage/action refs、authority functions、generated surface 输入和 pack compiler 对齐状态。它回答一个领域智能体怎样被 OPL 标准化接入，同时不让 OPL 接管领域 handler、owner receipt 或质量裁决。",
+          "bullets": [
+            "固定 domain pack、authority ABI 和 generated surface 输入。",
+            "让标准智能体更容易生成、验证、分发和维护。"
           ]
         },
         {
@@ -371,7 +380,7 @@
         "内容源是 `docs/public/whitepaper/opl-whitepaper.source.json`。Markdown、PDF 和 verification JSON 都从这一份 JSON 派生。这样做可以避免同一份白皮书在网页、PDF 和仓库文本中出现多套不一致的正文。",
         "PDF 使用 Pandoc + XeLaTeX 生成，字体采用本机可用的 Noto Sans CJK SC。生成脚本会渲染 PDF 页面、抽取文本、检查关键内容、记录页数和工具链路径，方便后续维护者确认产物仍可分享。",
         "外部白皮书风格参考了经典项目的做法：白皮书先建立定位和信念，再解释系统模型；同时保留当前性边界，把历史、愿景和已经验证的 production-ready 声明分开表达。",
-        "OPL 自己的 README 是这份白皮书的主要语气来源：先提出用户为什么需要 One Person Lab，再解释阶段式推进、专业 agent、进度证据和产品分层。白皮书比 README 更完整地交代设计来源和九模块结构，但重心仍然是让用户明白 OPL 为什么存在、为什么必须这样设计。"
+        "OPL 自己的 README 是这份白皮书的主要语气来源：先提出用户为什么需要 One Person Lab，再解释阶段式推进、专业 agent、进度证据和产品分层。白皮书比 README 更完整地交代设计来源和品牌模块结构，但重心仍然是让用户明白 OPL 为什么存在、为什么必须这样设计。"
       ],
       "bullets": [
         "正文更新从内容源开始。",

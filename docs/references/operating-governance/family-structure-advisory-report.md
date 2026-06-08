@@ -111,9 +111,9 @@ mechanical_residue:
 public_surface_risk:
 
 - `contracts/opl-framework/standard-domain-agent-skeleton-contract.json`
+- `contracts/opl-framework/brand-module-surfaces.json`
 - `contracts/family-orchestration/family-product-entry-manifest-v2.schema.json`
 - `contracts/opl-framework/workspace-index.schema.json`
-- `contracts/opl-framework/brand-module-surfaces.json`
 - `contracts/family-orchestration/family-stage-proof-bundle.schema.json`
 - `contracts/opl-framework/agent-lab-contract.json`
 

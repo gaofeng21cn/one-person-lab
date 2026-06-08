@@ -26,7 +26,7 @@ OPL Framework current_owner_delta root
 
 `opl-stage-native-kernel-rollout-plan.md` 是 Stage Native 设计支撑：它只保留 StageRun Kernel、stage manifest、role artifact、owner receipt / typed blocker、owner split、admission 分层和 anti-bloat 约束。当前落地状态、domain canary、App StageRun cockpit 和 compensation retirement tail 只回到 `current-state-vs-ideal-gap.md` 与 live machine surfaces。
 
-`brand-module-l4-rollout-plan.md` 是九个 OPL 品牌模块的 L4 structural baseline rollout 支撑：它只记录 Workspace-level 结构验收门、并行写集、registry/CLI governance/validation 落地关系和 forbidden claims；当前机器验收归 `contracts/opl-framework/brand-module-registry.json`、`contracts/opl-framework/brand-cli-governance.json`、`opl brand-modules validate --json`、非 Workspace 的 `opl <brand-module> status|inspect|interfaces|validate|doctor --json`、Workspace 的 `opl workspace status|inspect --json` 与 `opl agents modules validate --json`。
+`brand-module-l4-rollout-plan.md` 是当前 OPL 品牌模块的 L4 structural baseline rollout 支撑：它只记录 Workspace-level 结构验收门、并行写集、registry/CLI governance/validation 落地关系和 forbidden claims；当前机器验收归 `contracts/opl-framework/brand-module-registry.json`、`contracts/opl-framework/brand-cli-governance.json`、`opl brand-modules validate --json`、非 Workspace 的 `opl <brand-module> status|inspect|interfaces|validate|doctor --json`、Workspace 的 `opl workspace status|inspect --json` 与 `opl agents modules validate --json`。
 
 当前真相仍然先看：
 
@@ -46,7 +46,7 @@ OPL Framework current_owner_delta root
 - `opl-family-ideal-operating-model-redesign.md`：active_support 标准；提供 `目的反推必要性，MVP 检查阻碍性` 的统一 operating model 和三类审计结论。
 - `opl-foundry-agent-target-operating-architecture.md`：active_support 目标架构；解释 Foundry Agent / OPL primitive、stage artifact、owner delta、passive evidence 和 App cockpit 的长期结构。
 - `opl-stage-native-kernel-rollout-plan.md`：active_support；记录 OPL family Stage Native Kernel 的 owner split、对象模型、admission 分层、conformance shape 和 forbidden claims；不能维护当前执行路线、落地清单或 live readiness。
-- `brand-module-l4-rollout-plan.md`：active_support；记录九个品牌模块达到 Workspace 结构基线的验收矩阵、并行落地线、机器验证入口和 forbidden claims；不能声明 domain ready、App release ready 或 production ready。
+- `brand-module-l4-rollout-plan.md`：active_support；记录当前品牌模块达到 Workspace 结构基线的验收矩阵、并行落地线、机器验证入口和 forbidden claims；不能声明 domain ready、App release ready 或 production ready。
 - `current-development-lines.md`：active_support 路线支撑；只把当前开发线路映射到唯一 active owner，不维护独立路线图或冻结 live counters。
 - `production-framework-closure-gap-matrix.md`：active_support 差距矩阵；只解释 production closure 证据门如何被唯一 active owner 消费，不维护 dated proof ledger。
 - `opl-family-purpose-first-current-design-audit.md`：active_support 审计来源；保留目的优先审计结论，不替代 active gap owner、domain active plan 或 live machine truth。

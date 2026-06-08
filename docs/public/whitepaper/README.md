@@ -5,7 +5,7 @@ Purpose: `public_whitepaper_artifact_index`
 State: `active_public_support`
 Machine boundary: 本目录是用户可读白皮书与派生产物入口。内容源由 `opl-whitepaper.source.json` 持有；Markdown、PDF 和 verification JSON 都是生成物。当前产品 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、App release/user-path evidence 和真实 workspace evidence。
 
-本目录承接面向用户分享的 `One Person Lab` 白皮书。它解释 OPL 的定位、设计哲学、九个品牌模块、Foundry Agents，以及为什么 OPL 能把高价值知识工作组织成可恢复、可审计、可交付的智能体运行体验。
+本目录承接面向用户分享的 `One Person Lab` 白皮书。它解释 OPL 的定位、设计哲学、当前品牌模块、Foundry Agents，以及为什么 OPL 能把高价值知识工作组织成可恢复、可审计、可交付的智能体运行体验。
 
 ## 生成物
 

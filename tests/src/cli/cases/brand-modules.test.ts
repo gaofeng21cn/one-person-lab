@@ -6,6 +6,7 @@ const expectedModuleIds = [
   'charter',
   'atlas',
   'workspace',
+  'pack',
   'stagecraft',
   'runway',
   'vault',
@@ -37,7 +38,7 @@ test('brand module registry is loaded as a required framework contract', () => {
   );
 });
 
-test('brand system profile freezes product grammar and language against the nine module baseline', () => {
+test('brand system profile freezes product grammar and language against the brand module baseline', () => {
   const contracts = loadFrameworkContracts(repoRoot);
   const profile = contracts.brandSystemProfile;
   const validation = loadFrameworkContracts(repoRoot);
@@ -92,7 +93,7 @@ test('brand system profile freezes product grammar and language against the nine
   );
 });
 
-test('brand modules list exposes all nine modules at the Workspace structural baseline', () => {
+test('brand modules list exposes all current modules at the Workspace structural baseline', () => {
   const output = runCli(['brand-modules', 'list']);
 
   assert.equal(output.version, 'g2');
@@ -132,18 +133,18 @@ test('brand modules inspect returns one module with refs-only authority flags', 
 test('brand modules maturity and validation are contract-derived', () => {
   const maturity = runCli(['brand-modules', 'maturity']).brand_module_maturity;
   assert.equal(maturity.baseline_module_id, 'workspace');
-  assert.equal(maturity.module_count, 9);
-  assert.equal(maturity.l4_structural_baseline_count, 9);
+  assert.equal(maturity.module_count, 10);
+  assert.equal(maturity.l4_structural_baseline_count, 10);
   assert.deepEqual(maturity.below_baseline_module_ids, []);
   assert.equal(maturity.l5_target_level, 'L5_production_operating_maturity');
   assert.equal(maturity.l5_claimed_count, 0);
   assert.deepEqual(maturity.l5_claimed_module_ids, []);
-  assert.equal(maturity.l5_open_gap_count, 9);
+  assert.equal(maturity.l5_open_gap_count, 10);
   assert.deepEqual(maturity.l5_open_gap_module_ids, expectedModuleIds);
 
   const validation = runCli(['brand-modules', 'validate']).brand_module_validation;
   assert.equal(validation.status, 'valid');
-  assert.equal(validation.validated_module_count, 9);
+  assert.equal(validation.validated_module_count, 10);
   assert.deepEqual(validation.missing_l4_gate_modules, []);
   assert.deepEqual(validation.authority_boundary_violations, []);
 });
@@ -152,7 +153,7 @@ test('brand modules interfaces expose CLI, app, descriptor, and validation surfa
   const interfaces = runCli(['brand-modules', 'interfaces']).brand_module_interfaces;
 
   assert.equal(interfaces.surface_kind, 'opl_brand_module_interface_bundle');
-  assert.equal(interfaces.module_count, 9);
+  assert.equal(interfaces.module_count, 10);
   assert.equal(interfaces.cli.commands.includes('opl brand-modules list --json'), true);
   assert.equal(interfaces.cli.commands.includes('opl brand-modules l5-status --json'), true);
   assert.equal(interfaces.cli.commands.includes('opl runway l5-status --json'), true);
@@ -213,7 +214,7 @@ test('brand module L5 evidence gate is executable but does not claim production 
   assert.equal(status.surface_kind, 'opl_brand_module_l5_status');
   assert.equal(status.baseline_level, 'L4_structural_baseline');
   assert.equal(status.target_level, 'L5_production_operating_maturity');
-  assert.equal(status.module_count, 9);
+  assert.equal(status.module_count, 10);
   assert.equal(status.l5_complete_module_count, 0);
   assert.deepEqual(status.l5_complete_module_ids, []);
   assert.deepEqual(status.evidence_required_module_ids, expectedModuleIds);
@@ -227,7 +228,7 @@ test('brand module L5 validation passes the matrix shape while keeping readiness
 
   assert.equal(validation.status, 'valid');
   assert.equal(validation.l5_readiness_status, 'evidence_required');
-  assert.equal(validation.validated_module_count, 9);
+  assert.equal(validation.validated_module_count, 10);
   assert.equal(validation.l5_complete_module_count, 0);
   assert.deepEqual(validation.evidence_required_module_ids, expectedModuleIds);
   assert.deepEqual(validation.missing_evidence_class_modules, []);
@@ -407,7 +408,7 @@ test('agent-owned internal modules expose the same branding spine without becomi
   assert.deepEqual(list.platform_module_ids, expectedModuleIds);
   assert.deepEqual(list.agent_module_ids, expectedModuleIds.map((moduleId) => `agent-${moduleId}`));
   assert.equal(list.domain_count, 3);
-  assert.equal(list.module_count_per_domain, 9);
+  assert.equal(list.module_count_per_domain, 10);
   assert.equal(list.canonical_command_surface, 'opl agents modules');
   assert.equal(list.authority_boundary.can_write_domain_truth, false);
   assert.equal(list.authority_boundary.can_replace_domain_owner, false);
@@ -447,7 +448,7 @@ test('agent-owned internal modules expose the same branding spine without becomi
   assert.equal(doctor.status, 'pass');
 });
 
-test('Foundry Agent series exposes a shared CLI spine instead of copying the nine OPL modules into each agent', () => {
+test('Foundry Agent series exposes a shared CLI spine instead of copying OPL brand modules into each agent', () => {
   for (const operation of ['status', 'inspect', 'interfaces', 'validate', 'doctor', 'peers']) {
     const output = runCli(['agents', 'foundry', operation]).foundry_agent_cli_spine;
 

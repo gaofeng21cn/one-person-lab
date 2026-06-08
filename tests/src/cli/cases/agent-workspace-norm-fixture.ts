@@ -320,6 +320,7 @@ const MINIMAL_BRAND_MODULE_IDS = [
   'charter',
   'atlas',
   'workspace',
+  'pack',
   'stagecraft',
   'runway',
   'vault',

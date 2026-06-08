@@ -63,13 +63,14 @@ One Person Lab 对外应保持三层产品认知：
 | `One Person Lab App` | 人用工作台：选任务、看进度、处理阻塞、取交付物。 | Cockpit，不持有 runtime truth、domain truth、quality verdict 或 release 之外的领域权威。 |
 | `Foundry Agents` | 可直接完成医学论文、基金、视觉交付和 agent 构建的领域智能体。 | Domain pack + authority functions；持有领域 truth、quality/export verdict、artifact/memory authority。 |
 
-九个品牌模块应作为 OPL Framework 的 bounded contexts，而不是另一个产品层级：
+当前品牌模块应作为 OPL Framework 的 bounded contexts，而不是另一个产品层级：
 
 | 模块 | 理想职责 | 主要品牌/维护价值 |
 | --- | --- | --- |
 | `Charter` | 命名、术语、ADR/RFC、原则、brand architecture。 | 防止概念漂移，让用户和维护者用同一语言。 |
 | `Atlas` | Agent/capability/surface/owner catalog。 | 让能力可发现，避免孤儿 surface。 |
 | `Workspace` | Project Unit、Stage Artifact Unit、文件生命周期和用户检查面。 | 用户知道文件在哪里，Agent 知道输出如何交接。 |
+| `Pack` | Domain Pack、authority ABI、pack compiler、generated/hosted surfaces。 | 让 domain agent 用标准声明和最小 authority function 接入，不复制私有平台。 |
 | `Stagecraft` | stage pack、prompt/skill/knowledge/rubric/quality gate。 | 把 AI-first 专家工作设计成可审计的 stage。 |
 | `Runway` | durable execution、attempt、lease、retry、dead-letter、human gate。 | 长跑可靠性和恢复。 |
 | `Vault` | refs-only evidence、receipt、typed blocker、lineage、restore/provenance。 | 证据可追踪，但不抢 domain authority。 |
@@ -289,7 +290,7 @@ MCP / OpenAI tool / CLI / App action 需要从同一 action catalog 派生，避
 
 理想实现顺序不是“先把所有底层都做完”，而是围绕使用路径和维护路径同时收敛：
 
-1. `landed_structural_gate`：冻结 One Person Lab 品牌系统。`brand-system-profile.json` 已把产品层级、九模块语言、Agent 命名、App 状态语言、visual/status pattern group 和 receipt/blocker 文案变成 required framework contract；后续还需要真实 UI token、icon/card/status pattern 和 public surface 逐项消费。
+1. `landed_structural_gate`：冻结 One Person Lab 品牌系统。`brand-system-profile.json` 已把产品层级、品牌模块语言、Agent 命名、App 状态语言、visual/status pattern group 和 receipt/blocker 文案变成 required framework contract；后续还需要真实 UI token、icon/card/status pattern 和 public surface 逐项消费。
 2. `landed_structural_gate`：冻结 standard Agent Pack ABI。标准 skeleton contract、scaffold、stage pack v2、pack compiler input projection 和 conformance gate 已要求 `agent/`、`contracts/`、`runtime/authority_functions/`、stage/quality/receipt/tool boundary 的必填 shape；这不等于 L5 或 production ready。
 3. `in_progress_scaleout_gate`：把 MAS/MAG/RCA/OMA 都压成同一 golden path。结构上已经有 standard pack、domain handler target、generated/default caller、conformance 和 private residue gate；仍需要真实 MAS/MAG/RCA/OMA owner receipt、typed blocker、human gate、review/export/no-regression evidence 反复跑通。
 4. `landed_structural_gate`：把 generated surfaces 变成默认。CLI、MCP、OpenAI/AI SDK tool、Skill/plugin、App action、status read model 和 workbench 已由 domain pack compiler 的 `default_entry_policy` / `supported_derived_surfaces` 从同一 action/stage catalog 派生。

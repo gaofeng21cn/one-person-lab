@@ -28,13 +28,13 @@ Machine boundary: 本文是人读现状对照。当前完成度、计数、recei
 - 机器边界清楚：runtime-state 只做 provider backing/provenance，不替代 stage folder、owner receipt 或 typed blocker。
 - 多 surface 同源：CLI/App/descriptor delegates 绑定到同一 command contract。
 
-## 九模块完成度
+## 当前十模块完成度
 
 严格按 Workspace 级模块完成度口径，`L4 baseline` 要求模块自己有可执行 surface：对象模型、schema/contract、模块级 CLI family、App/read-model、validate、doctor、interfaces、测试和状态文档。当前实现分两层：
 
-- `contracts/opl-framework/brand-module-registry.json` 与 `opl brand-modules ...` 是九模块目录和成熟度总览。
+- `contracts/opl-framework/brand-module-registry.json` 与 `opl brand-modules ...` 是当前品牌模块目录和成熟度总览。
 - `contracts/opl-framework/brand-module-surfaces.json` 与 `opl <module> status|inspect|interfaces|validate|doctor --json` 是每个模块自身的 L4 executable surface。
-- `contracts/opl-framework/brand-system-profile.json` 是跨九模块的品牌系统冻结基线，负责三层产品认知、九模块 product grammar、Foundry Agent 命名、App 状态语言、design-token/icon/card/status pattern、receipt/blocker 文案规则和 false-authority boundary。
+- `contracts/opl-framework/brand-system-profile.json` 是跨品牌模块的品牌系统冻结基线，负责三层产品认知、品牌模块 product grammar、Foundry Agent 命名、App 状态语言、design-token/icon/card/status pattern、receipt/blocker 文案规则和 false-authority boundary。
 
 因此，当前不再以 `brand-modules inspect` 作为模块完成的唯一依据；每个模块都必须能通过自己的 `validate` / `doctor` 输出验收。
 
@@ -43,6 +43,7 @@ Machine boundary: 本文是人读现状对照。当前完成度、计数、recei
 | `OPL Charter` | `L4_structural_baseline` | 达到 Workspace 结构基线 | 已有 `brand-module-surfaces.json#modules.charter`、`opl charter status|inspect|interfaces|validate|doctor --json`，并补 `authority|terms|decisions` 对象视图；证明 Charter governance surface 可独立读、验、诊断。 |
 | `OPL Atlas` | `L4_structural_baseline` | 达到 Workspace 结构基线 | 已有 `brand-module-surfaces.json#modules.atlas`、`opl atlas status|inspect|interfaces|validate|doctor --json`，并补 `list|surfaces|graph|lifecycle` 对象视图；底层 descriptors/actions/stages/conformance 仍作为 Atlas 输入 refs。 |
 | `OPL Workspace` | `L4_structural_baseline` | 基线 | 保持 Workspace topology/schema、`workspace ensure/init/validate/doctor/adopt/interfaces`、App action、tests 和 docs/status foldback；新增 `opl workspace status|inspect --json` 作为品牌模块 status/inspect read-model，不覆盖原有 workspace validate/doctor/interfaces。 |
+| `OPL Pack` | `L4_structural_baseline` | 达到 Workspace 结构基线 | 已有 `brand-module-surfaces.json#modules.pack`、`opl pack status|inspect|interfaces|validate|doctor --json`，并补 `domain-packs|authority-abi|generated-surfaces|compiler` 对象视图；Pack 只定义 domain pack / authority ABI / generated-surface input 和 compiler read-model，不替 domain owner 生成 handler、owner receipt、typed blocker 或 quality verdict。 |
 | `OPL Stagecraft` | `L4_structural_baseline` | 达到 Workspace 结构基线 | 已有 `brand-module-surfaces.json#modules.stagecraft`、`opl stagecraft status|inspect|interfaces|validate|doctor --json`，并补 `stages|graph|receipts|blockers` 对象视图；StageRun/cognitive kernel/receipt/blocker refs 保持 refs-only。 |
 | `OPL Runway` | `L4_structural_baseline` | 达到 Workspace 结构基线 | 已有 `brand-module-surfaces.json#modules.runway`、`opl runway status|inspect|interfaces|validate|doctor --json`，并补 `queue|attempts|provider|blockers` 对象视图；Temporal/provider/worker lifecycle/readiness、SLO repair 和 attempt refs 仍不等于 production long-soak 或 domain ready。 |
 | `OPL Vault` | `L4_structural_baseline` | 达到 Workspace 结构基线 | 已有 `brand-module-surfaces.json#modules.vault`、`opl vault status|inspect|interfaces|validate|doctor --json`，并补 `evidence|artifacts|receipts|lineage` 对象视图；Vault 只持有 refs-only evidence/lineage/read-model，不读取 body。 |
@@ -57,6 +58,7 @@ Machine boundary: 本文是人读现状对照。当前完成度、计数、recei
 - `Charter`: 术语、ADR/RFC、authority matrix 和 supersession 机制能持续约束新模块、新 surface 与旧路线退役。
 - `Atlas`: agent / capability / surface / owner catalog 能被 CLI、App、conformance、release 和 operator drilldown 同源消费。
 - `Workspace`: 真实 MAS/MAG/RCA/OMA 用户项目能长期通过 workspace ensure/adopt/validate/doctor/upgrade/export-map 跑通，并留下 owner acceptance 或 typed blocker。
+- `Pack`: domain pack / authority ABI / generated-surface input / pack compiler drift gate 能在 MAS/MAG/RCA/OMA 和新 Foundry Agents 中长期生成、验证、修复并获得 domain owner acceptance。
 - `Stagecraft`: 多个真实 domain stage 持续产出独立 quality gate、owner receipt、typed blocker 或 route-back evidence。
 - `Runway`: Temporal-backed durable orchestration、Runway worker lifecycle/readiness surface、部署 substrate、queue、lease、retry/dead-letter、human gate 和 recovery 在长窗口内稳定承接真实 owner chain。
 - `Vault`: memory/artifact/lifecycle/restore/no-regression receipts 在多个 domain 中形成 body-free、可验证、可回放的运营 ledger。
@@ -91,6 +93,7 @@ opl charter status|inspect|interfaces|validate|doctor --json
 opl atlas status|inspect|interfaces|validate|doctor --json
 opl workspace status|inspect --json
 opl workspace interfaces --json
+opl pack status|inspect|interfaces|validate|doctor --json
 opl stagecraft status|inspect|interfaces|validate|doctor --json
 opl runway status|inspect|interfaces|validate|doctor --json
 opl vault status|inspect|interfaces|validate|doctor --json
@@ -105,6 +108,7 @@ opl connect status|inspect|interfaces|validate|doctor --json
 opl charter l5-status --json
 opl atlas l5-status --json
 opl workspace l5-status --json
+opl pack l5-status --json
 opl stagecraft l5-status --json
 opl runway l5-status --json
 opl vault l5-status --json
@@ -130,6 +134,8 @@ opl charter authority --json
 opl charter terms --json
 opl atlas graph --json
 opl atlas lifecycle --json
+opl pack domain-packs --json
+opl pack authority-abi --json
 opl stagecraft receipts --json
 opl runway queue --json
 opl vault evidence --json
@@ -148,7 +154,7 @@ npm run typecheck
 
 ## Forbidden Claims
 
-- 九模块进入统一 registry 只能证明目录层存在；模块级 L4 必须以 `brand-module-surfaces.json` 和各自 `opl <module> validate|doctor --json` 为证据。
+- 品牌模块进入统一 registry 只能证明目录层存在；模块级 L4 必须以 `brand-module-surfaces.json` 和各自 `opl <module> validate|doctor --json` 为证据。
 - `brand-system-profile.json` 只冻结品牌系统语言、命名和视觉/status pattern；不能把产品 grammar 一致性写成 L5、App release ready、domain ready、quality verdict、artifact authority、owner receipt 或 typed blocker。
 - 任何模块 `L4_structural_baseline` 不等于 MAS/MAG/RCA/OMA domain ready。
 - `brand-module-l5-operating-evidence.json`、`opl brand-modules l5-validate --json`、`opl <module> l5-status --json` 和 `opl runtime brand-module-l5-evidence verify --json` 只能证明 L5 证据矩阵存在、形状有效、refs transport 可记录/验证和当前 open/blocked/satisfied 状态；不能单独声明 L5。

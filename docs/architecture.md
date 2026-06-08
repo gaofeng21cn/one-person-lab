@@ -25,13 +25,14 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 
 ## 品牌模块架构
 
-OPL 的三层产品认知说明“面向谁”，九个品牌模块说明 Framework 内部能力如何高内聚、低耦合地演进。品牌模块不是新的 runtime，也不是第二 truth source；它们把已经存在的 contracts、source、CLI/App 行为、read model、runtime ledger、provider receipt 和 docs support 归入稳定 owner boundary。
+OPL 的三层产品认知说明“面向谁”，当前十个品牌模块说明 Framework 内部能力如何高内聚、低耦合地演进。品牌模块不是新的 runtime，也不是第二 truth source；它们把已经存在的 contracts、source、CLI/App 行为、read model、runtime ledger、provider receipt 和 docs support 归入稳定 owner boundary。
 
 | 模块 | 主聚合面 | 主要消费 | 明确不拥有 |
 | --- | --- | --- | --- |
 | `OPL Charter` | 顶层宪章、命名、ADR/RFC、术语生命周期和品牌组合治理。 | 核心五件套、决策、authority matrix、品牌模块 registry。 | runtime truth、domain truth、release verdict。 |
 | `OPL Atlas` | Agent、capability、surface、owner、dependency 和 lifecycle catalog。 | domain descriptors、module registry、surface metadata、conformance refs。 | 执行、receipt 签发、domain verdict。 |
 | `OPL Workspace` | Workspace Group、Project Unit、Stage Artifact Unit、用户检查面和文件生命周期投影。 | workspace contracts、domain workspace locator、stage artifact refs。 | domain artifact body、quality/export verdict、owner receipt authority。 |
+| `OPL Pack` | Declarative Domain Pack、authority ABI、pack compiler、generated/hosted surfaces 和 standard authority functions。 | standard domain-agent skeleton、domain pack compiler、generated interface bundle、conformance refs。 | domain handler implementation、owner receipt、typed blocker、quality verdict。 |
 | `OPL Stagecraft` | Stage 设计、认知计算、tool affordance、prompt/skill/knowledge/rubric refs 和 independent quality gate 边界。 | Foundry Agent stage packs、prompt/skill/knowledge refs、quality gate refs。 | durable provider、queue ownership、domain quality verdict。 |
 | `OPL Runway` | Durable execution、typed queue、attempt、lease、retry/dead-letter、wakeup、human gate 和 runtime blocker。 | stage pack launch request、provider profile、domain owner route refs。 | domain truth、owner receipt、artifact readiness。 |
 | `OPL Vault` | Evidence、receipt refs、typed blocker refs、artifact lineage、restore/provenance 和 refs-only ledger。 | domain-owned receipt/blocker refs、provider refs、no-regression refs。 | memory/artifact body、memory accept/reject、domain verdict。 |
@@ -39,7 +40,7 @@ OPL 的三层产品认知说明“面向谁”，九个品牌模块说明 Framew
 | `OPL Foundry Lab` | Agent 创建、测试接管、mechanism improvement、canary、promotion、rollback 和 work order。 | Agent descriptors、attempt evidence、domain-owned eval/proof refs。 | MAS/MAG/RCA/OMA 的 domain authority。 |
 | `OPL Connect` | CLI、MCP、OpenAI/AI SDK tools、Skill/plugin、module install、release/install 分发和 drift matrix。 | public surface index、module registry、skill/plugin metadata、release/install contracts。 | 语义重新解释、domain-owned handler、release evidence 伪造。 |
 
-模块依赖的默认读法是：`Charter` 固定语言和边界，`Atlas` 提供目录，`Workspace` 提供可检查落点，`Stagecraft` 设计 stage 内专家工作，`Runway` 承接 durable execution，`Vault` 保存 refs-only evidence，`Console` 消费 projection，`Foundry Lab` 产生 agent 改进 work order，`Connect` 把同一合同派生到外部调用和分发面。任何模块的 structural readiness、conformance pass、provider completion、ledger verified 或 App projection 都不能单独升级成 domain ready、quality/export ready、App release ready 或 production ready。
+模块依赖的默认读法是：`Charter` 固定语言和边界，`Atlas` 提供目录，`Workspace` 提供可检查落点，`Pack` 固定 domain pack / authority ABI / generated-surface 输入，`Stagecraft` 设计 stage 内专家工作，`Runway` 承接 durable execution，`Vault` 保存 refs-only evidence，`Console` 消费 projection，`Foundry Lab` 产生 agent 改进 work order，`Connect` 把同一合同派生到外部调用和分发面。任何模块的 structural readiness、conformance pass、provider completion、ledger verified 或 App projection 都不能单独升级成 domain ready、quality/export ready、App release ready 或 production ready。
 
 ## 当前产品链路
 
