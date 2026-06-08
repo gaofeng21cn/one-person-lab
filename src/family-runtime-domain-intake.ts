@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 import { getActiveWorkspaceBinding } from './workspace-registry.ts';
@@ -247,6 +248,270 @@ function domainDispatchEvidencePayloadFrom(item: Record<string, unknown>) {
     : {};
 }
 
+function exportProfileRef(output: Record<string, unknown>) {
+  const profile = isRecord(output.profile) ? output.profile : null;
+  return optionalString(profile?.profile_ref);
+}
+
+function exportProfileName(output: Record<string, unknown>) {
+  const profile = isRecord(output.profile) ? output.profile : null;
+  return optionalString(profile?.profile_name);
+}
+
+function exportWorkspaceRoot(output: Record<string, unknown>) {
+  const workspace = isRecord(output.workspace) ? output.workspace : null;
+  return optionalString(workspace?.workspace_root);
+}
+
+function currentControlStatePath(output: Record<string, unknown>) {
+  const workspaceRoot = exportWorkspaceRoot(output);
+  if (!workspaceRoot) {
+    return null;
+  }
+  return path.join(
+    workspaceRoot,
+    'runtime',
+    'artifacts',
+    'supervision',
+    'opl_current_control_state',
+    'latest.json',
+  );
+}
+
+function readJsonRecord(filePath: string) {
+  try {
+    const payload = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
+    return isRecord(payload) ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
+function workspaceRelativeRef(value: string | null, workspaceRoot: string | null) {
+  if (!value || !workspaceRoot || !path.isAbsolute(value)) {
+    return value;
+  }
+  const relative = path.relative(workspaceRoot, value);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
+    return value;
+  }
+  return relative.split(path.sep).join('/');
+}
+
+function providerAdmissionSourceRefs(input: {
+  candidate: Record<string, unknown>;
+  currentControlRef: string;
+  workspaceRoot: string | null;
+  dispatchRef: string | null;
+}) {
+  const refs: Array<Record<string, unknown>> = [{
+    role: 'mas_opl_current_control_state',
+    ref: workspaceRelativeRef(input.currentControlRef, input.workspaceRoot),
+    exists: true,
+  }];
+  const executionRef = optionalString(input.candidate.execution_ref);
+  if (executionRef) {
+    refs.push({
+      role: 'mas_default_executor_execution',
+      ref: workspaceRelativeRef(executionRef, input.workspaceRoot),
+      exists: true,
+    });
+  }
+  if (input.dispatchRef) {
+    refs.push({
+      role: 'mas_default_executor_dispatch',
+      ref: input.dispatchRef,
+      exists: true,
+    });
+  }
+  return refs;
+}
+
+function providerAdmissionDedupeKey(input: {
+  candidate: Record<string, unknown>;
+  profileName: string | null;
+  studyId: string;
+  actionType: string;
+  dispatchAuthority: string;
+  sourceFingerprint: string;
+}) {
+  return optionalString(input.candidate.idempotency_key)
+    ?? optionalString(input.candidate.dedupe_key)
+    ?? [
+      'mas',
+      input.profileName ?? 'current-control',
+      input.studyId,
+      'default-executor',
+      input.actionType,
+      input.dispatchAuthority,
+      input.sourceFingerprint,
+    ].join(':');
+}
+
+function currentControlProviderAdmissionInputFrom(
+  domainId: FamilyRuntimeDomainId,
+  candidate: Record<string, unknown>,
+  output: Record<string, unknown>,
+  exportContext: DomainExportCommand,
+  currentControlRef: string,
+): { input?: EnqueueInput; blocked?: { reason: string; task: unknown } } {
+  if (domainId !== 'medautoscience') {
+    return { blocked: { reason: 'unsupported_current_control_provider_admission_domain', task: candidate } };
+  }
+  if (optionalString(candidate.status) !== 'provider_admission_pending' || candidate.owner_route_current !== true) {
+    return {};
+  }
+  const studyId = optionalString(candidate.study_id);
+  const actionType = optionalString(candidate.action_type);
+  const workUnitId = optionalString(candidate.work_unit_id);
+  const workUnitFingerprint = optionalString(candidate.work_unit_fingerprint)
+    ?? optionalString(candidate.action_fingerprint);
+  const nextOwner = optionalString(candidate.next_executable_owner);
+  if (!studyId || !actionType || !workUnitId || !workUnitFingerprint || !nextOwner) {
+    return { blocked: { reason: 'invalid_current_control_provider_admission_candidate', task: candidate } };
+  }
+  if (candidate.provider_completion_is_domain_completion === true) {
+    return { blocked: { reason: 'current_control_provider_completion_claims_domain_completion', task: candidate } };
+  }
+  const workspaceRoot = exportWorkspaceRoot(output);
+  const profileName = exportProfileName(output);
+  const profileRef = exportProfileRef(output);
+  const dispatchAuthority = optionalString(candidate.dispatch_authority)
+    ?? 'consumer_default_executor_dispatch';
+  const dispatchPath = optionalString(candidate.dispatch_path);
+  const dispatchRef = optionalString(candidate.dispatch_ref)
+    ?? workspaceRelativeRef(dispatchPath, workspaceRoot);
+  const sourceFingerprint = optionalString(candidate.source_fingerprint)
+    ?? optionalString(candidate.action_fingerprint)
+    ?? workUnitFingerprint;
+  const sourceRefs = providerAdmissionSourceRefs({
+    candidate,
+    currentControlRef,
+    workspaceRoot,
+    dispatchRef,
+  });
+  const currentnessBasis = isRecord(candidate.currentness_basis) ? candidate.currentness_basis : null;
+  return {
+    input: {
+      domainId,
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: {
+        ...(profileRef ? { profile: profileRef } : {}),
+        ...(profileName ? { profile_name: profileName } : {}),
+        ...(workspaceRoot ? { workspace_root: workspaceRoot } : {}),
+        study_id: studyId,
+        quest_id: optionalString(candidate.quest_id) ?? studyId,
+        action_type: actionType,
+        work_unit_id: workUnitId,
+        work_unit_fingerprint: workUnitFingerprint,
+        action_fingerprint: optionalString(candidate.action_fingerprint) ?? workUnitFingerprint,
+        source_fingerprint: sourceFingerprint,
+        dispatch_authority: dispatchAuthority,
+        executor_kind: optionalString(candidate.executor_kind) ?? 'codex_cli_default',
+        ...(dispatchRef ? { dispatch_ref: dispatchRef } : {}),
+        ...(dispatchPath ? { dispatch_path: dispatchPath } : {}),
+        ...(optionalString(candidate.execution_ref) ? { execution_ref: optionalString(candidate.execution_ref) } : {}),
+        authority_boundary: 'mas_default_executor_dispatch_request_only',
+        next_executable_owner: nextOwner,
+        owner_route_current: true,
+        provider_attempt_or_lease_required: candidate.provider_attempt_or_lease_required !== false,
+        provider_completion_is_domain_completion: false,
+        ...(optionalString(candidate.required_output_surface)
+          ? { required_output_surface: optionalString(candidate.required_output_surface) }
+          : {}),
+        ...(currentnessBasis ? { owner_route_currentness_basis: currentnessBasis } : {}),
+        source_refs: sourceRefs,
+        ...(isRecord(candidate.source_refs) ? { provider_admission_source_refs: candidate.source_refs } : {}),
+        provider_admission_identity: candidate,
+        opl_domain_export_context: {
+          command_source: exportContext.source,
+          owner_fingerprint: exportContext.owner_fingerprint,
+          command_cwd: exportContext.cwd,
+        },
+      },
+      dedupeKey: providerAdmissionDedupeKey({
+        candidate,
+        profileName,
+        studyId,
+        actionType,
+        dispatchAuthority,
+        sourceFingerprint,
+      }),
+      priority: Number.isInteger(candidate.priority) ? candidate.priority as number : 95,
+      source: 'opl-current-control-provider-admission',
+      requiresApproval: false,
+    },
+  };
+}
+
+function currentControlProviderAdmissionInputs(
+  domainId: FamilyRuntimeDomainId,
+  output: Record<string, unknown>,
+  exportContext: DomainExportCommand,
+) {
+  const currentControlRef = currentControlStatePath(output);
+  if (!currentControlRef || !fs.existsSync(currentControlRef)) {
+    return { inputs: [], blocked: [] };
+  }
+  const currentControl = readJsonRecord(currentControlRef);
+  if (!currentControl) {
+    return {
+      inputs: [],
+      blocked: [{ reason: 'invalid_current_control_state', task: { ref: currentControlRef } }],
+    };
+  }
+  const candidates = Array.isArray(currentControl.provider_admission_candidates)
+    ? currentControl.provider_admission_candidates
+    : [];
+  const inputs: EnqueueInput[] = [];
+  const blocked: Array<{ reason: string; task: unknown }> = [];
+  for (const candidate of candidates) {
+    if (!isRecord(candidate)) {
+      blocked.push({ reason: 'invalid_current_control_provider_admission_candidate', task: candidate });
+      continue;
+    }
+    const result = currentControlProviderAdmissionInputFrom(
+      domainId,
+      candidate,
+      output,
+      exportContext,
+      currentControlRef,
+    );
+    if (result.input) {
+      inputs.push(result.input);
+    } else if (result.blocked) {
+      blocked.push(result.blocked);
+    }
+  }
+  return { inputs, blocked };
+}
+
+function currentControlAdmissionStudyIds(inputs: EnqueueInput[]) {
+  return new Set(inputs
+    .map((input) => optionalString(input.payload.study_id))
+    .filter((studyId): studyId is string => Boolean(studyId)));
+}
+
+function suppressStaleDefaultExecutorInputs(inputs: EnqueueInput[], currentAdmissionInputs: EnqueueInput[]) {
+  const currentStudyIds = currentControlAdmissionStudyIds(currentAdmissionInputs);
+  if (currentStudyIds.size === 0) {
+    return { inputs, suppressed_count: 0 };
+  }
+  const retained = inputs.filter((input) => {
+    const studyId = optionalString(input.payload.study_id);
+    return !(
+      input.domainId === 'medautoscience'
+      && input.taskKind === 'domain_owner/default-executor-dispatch'
+      && studyId !== null
+      && currentStudyIds.has(studyId)
+    );
+  });
+  return {
+    inputs: retained,
+    suppressed_count: inputs.length - retained.length,
+  };
+}
+
 function pendingTaskInputFrom(
   domainId: FamilyRuntimeDomainId,
   item: Record<string, unknown>,
@@ -419,13 +684,16 @@ function exportedTaskInputs(
   taskScope?: FamilyRuntimeTaskScope,
 ) {
   const pending = toPendingTaskInputs(domainId, output, source, exportContext);
+  const currentControl = currentControlProviderAdmissionInputs(domainId, output, exportContext);
+  const pendingAfterCurrentControl = suppressStaleDefaultExecutorInputs(pending.inputs, currentControl.inputs);
   const transitions = transitionTaskInputsFromMatrix(domainId, output, source);
-  const exportedInputs = [...pending.inputs, ...transitions.inputs];
+  const exportedInputs = [...currentControl.inputs, ...pendingAfterCurrentControl.inputs, ...transitions.inputs];
   const inputs = exportedInputs.filter((taskInput) => inputMatchesTaskScope(taskInput, taskScope));
   return {
     inputs,
-    blocked: [...pending.blocked, ...transitions.blocked],
+    blocked: [...currentControl.blocked, ...pending.blocked, ...transitions.blocked],
     filtered_count: exportedInputs.length - inputs.length,
+    suppressed_count: pendingAfterCurrentControl.suppressed_count,
   };
 }
 
@@ -448,6 +716,7 @@ export function hydrateDomainTasks(
   let idempotentNoopCount = 0;
   let blockedCount = 0;
   let filteredCount = 0;
+  let suppressedCount = 0;
   for (const domainId of domains) {
     const command = exportCommandForDomain(domainId, paths, input.domainProfiles);
     if (!command) {
@@ -475,9 +744,16 @@ export function hydrateDomainTasks(
       continue;
     }
     const output = parseDispatchOutput(stdout);
-    const { inputs, blocked, filtered_count } = exportedTaskInputs(domainId, output, input.source, command, input.taskScope);
+    const { inputs, blocked, filtered_count, suppressed_count } = exportedTaskInputs(
+      domainId,
+      output,
+      input.source,
+      command,
+      input.taskScope,
+    );
     blockedCount += blocked.length;
     filteredCount += filtered_count;
+    suppressedCount += suppressed_count;
     const acceptedTasks = [];
     for (const taskInput of inputs) {
       const resultPayload = enqueueTask(db, taskInput);
@@ -500,6 +776,7 @@ export function hydrateDomainTasks(
       ...(result.recovery ? { domain_handler_recovery: result.recovery } : {}),
       exported_count: inputs.length + blocked.length,
       filtered_count,
+      suppressed_count,
       enqueued_count: acceptedTasks.filter((task) => task.accepted).length,
       requeued_count: acceptedTasks.filter((task) => task.requeued_from_terminal).length,
       idempotent_noop_count: acceptedTasks.filter((task) => task.idempotent_noop).length,
@@ -516,6 +793,7 @@ export function hydrateDomainTasks(
       idempotent_noop_count: idempotentNoopCount,
       blocked_count: blockedCount,
       filtered_count: filteredCount,
+      suppressed_count: suppressedCount,
       task_scope: input.taskScope ?? null,
     },
   });
@@ -527,6 +805,7 @@ export function hydrateDomainTasks(
     idempotent_noop_count: idempotentNoopCount,
     blocked_count: blockedCount,
     filtered_count: filteredCount,
+    suppressed_count: suppressedCount,
     exports,
   };
 }

@@ -7,6 +7,19 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-06-08
 
+### 决策：MAS current-control provider admission 优先于 sidecar pending task
+
+原因：DM002/DM003 论文线重启时，MAS 已在 workspace-level `runtime/artifacts/supervision/opl_current_control_state/latest.json` 写出当前 `provider_admission_candidates[]`，其中包含唯一当前可执行的 `return_to_ai_reviewer_workflow` work unit、fingerprint、dispatch path 和 owner-route currentness；但 OPL `family-runtime hydrate` 只消费 `domain-handler export.pending_family_tasks[]` 时，会让旧 `run_quality_repair_batch` sidecar task 继续入队，当前 AI reviewer admission 无法进入 OPL queue / attempt。
+
+影响：
+
+- `family-runtime hydrate` 读取 MAS domain-handler export 后，必须用 export 的 `workspace.workspace_root` 定位 `runtime/artifacts/supervision/opl_current_control_state/latest.json`，只消费其中 `status=provider_admission_pending` 且 `owner_route_current=true` 的 `provider_admission_candidates[]`。
+- 这些 candidate 只能映射为 `medautoscience` 的 `domain_owner/default-executor-dispatch` queue input，payload 必须携带 `study_id`、`quest_id`、`action_type`、`work_unit_id`、`work_unit_fingerprint`、`action_fingerprint`、`source_fingerprint`、`dispatch_ref/path`、`next_executable_owner`、`required_output_surface`、`provider_admission_identity` 和 `authority_boundary=mas_default_executor_dispatch_request_only`。
+- 同一 study 已有 current-control provider admission 时，hydrate 必须抑制 sidecar export 中同 study 的 stale `domain_owner/default-executor-dispatch` pending task；domain route、transition、paper autonomy 等其他 task kind 不受该抑制影响。
+- MAS current-control candidate 不得把 provider completion 声明为 domain completion；OPL 入队时固定 `provider_completion_is_domain_completion=false`，若 candidate 自称 `provider_completion_is_domain_completion=true`，hydrate 必须 fail closed 并记录 `current_control_provider_completion_claims_domain_completion`。
+- 该规则只把 MAS canonical current work unit 送入 OPL typed queue / provider attempt；OPL 仍不写 MAS truth、不生成 publication verdict、不更新 artifact gate、不声明 paper ready 或 domain ready。
+- hydrate 输出记录 `suppressed_count`，让 operator 能区分“当前 work unit 入队”与“旧 sidecar residue 被压下”，避免再把 stale selector/materializer 结果误读成下一步。
+
 ### 决策：默认治理采用抓大放小，细粒度完整性不得反向成为 ordinary 卡点
 
 原因：workspace topology v2 的后续复盘暴露出一个可扩展到全 OPL family 的设计风险：为了防止走歪而持续增加规则、profile、projection、receipt、fleet report、L5 evidence、cleanup gate 和 release gate，最终可能让普通 owner delta 先被平台证明、诊断、镜像一致性、计数或 delete accounting 卡住。OPL 需要把“大边界”和“小细节”分层治理：大边界保证不越权、不误闭合、不制造第二真相源；小细节必须服务推进，不能抢占默认路径。

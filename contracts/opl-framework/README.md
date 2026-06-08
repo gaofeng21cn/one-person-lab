@@ -16,6 +16,7 @@ It is repo-tracked because the current framework needs stable machine-readable i
 - domain-neutral transition table runner and matrix evaluation
 - stage graph / route-as-transition runtime support for complex domain agents where route is a domain transition recommendation and stage attempt lifecycle remains OPL-owned
 - stage graph / owner-route hydration / reconciliation / attempt-ledger boundaries for complex domain agents, where stage is the OPL attempt unit and route is a domain-owner semantic rather than a small stage
+- single-writer Stage transition authority boundaries, where many modules may submit transition intents or observations but only OPL folds them into Stage current pointer, StageRun terminal state, and `current_owner_delta`
 - functional agent runtime harness coverage for queue, typed closeout, refs-only memory writeback, human gate, retry, dead-letter, and repair transitions
 - domain pack compiler and generated interface read model that compiles admitted domain packs or standard agent repo contracts into OPL-owned CLI / MCP / Skill / product-entry / OpenAI / AI SDK / sidecar / status / workbench / harness generated-surface handoff projections
 - standard domain-agent admission gates that keep candidate identity, domain truth owner, generated default entry, standard pack ABI, stage artifact contract, execution model, authority boundary, owner receipt, typed blocker, and human gate false-authority requirements machine-readable without admitting any specific domain or claiming readiness
@@ -59,6 +60,8 @@ These schema files are the machine-readable OPL target architecture surface. The
 ### Stage Artifact Unit
 
 - `stage-run-kernel-contract.json`: refs-only StageRun spec/status/event-log/read-model substrate, observed_generation, retry budget, hold scope, execution authorization, closeout receipt binding, and domain adoption boundary.
+- `stage-transition-authority-contract.json`: single-writer Stage transition authority contract for append-only transition events, accepted intent kinds, producer boundaries, and stale-generation / provider-only / read-model-only fail-closed semantics.
+- `stage-transition-intent.schema.json`: refs-only transition intent envelope for domain owner answers, typed blockers, human-gate decisions, provider observations, read-model/worklist observations, Agent Lab observations, and evidence observations.
 - `stage-manifest.schema.json`: Stage Folder manifest shape for required roles, produced role artifacts, input/output refs, receipt/blocker refs, content hashes, current pointer, lineage, and authority boundary.
 - `role-artifact-ref.schema.json`: refs-only semantic role artifact pointer with content hash and lineage; role is the interface, not file name.
 - `stage-owner-receipt.schema.json`: owner-signed stage receipt shape consumed by OPL for success or route handoff, including optional StageRun / manifest / current-pointer / source-fingerprint binding refs, without granting OPL receipt authority.
@@ -116,6 +119,8 @@ These schema files are the machine-readable OPL target architecture surface. The
 - `family-runtime-online-substrate-contract.json`
 - `family-runtime-attempt-contract.json`
 - `stage-run-kernel-contract.json`
+- `stage-transition-authority-contract.json`
+- `stage-transition-intent.schema.json`
 - `stage-manifest.schema.json`
 - `role-artifact-ref.schema.json`
 - `stage-owner-receipt.schema.json`

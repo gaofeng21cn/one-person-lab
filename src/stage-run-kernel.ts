@@ -231,6 +231,10 @@ function currentPointerMatches(input: JsonRecord) {
     && pointer.current === true;
 }
 
+function currentPointerBindingIsValid(input: JsonRecord) {
+  return input.current_pointer === undefined || currentPointerMatches(input);
+}
+
 function hasSafeAuthorityBoundary(input: JsonRecord) {
   const boundary = recordField(input.authority_boundary);
   if (!boundary) {
@@ -524,6 +528,30 @@ export function evaluateStageRunExecutionAuthorization(input: JsonRecord): Stage
   };
 }
 
+function producerRole(event: StageRunEvent) {
+  return optionalRef(event.producer_role) ?? optionalRef(event.producer_kind);
+}
+
+function stageTransitionAuthorityCanAdvance(event: StageRunEvent) {
+  if (!currentPointerBindingIsValid(event)) {
+    return false;
+  }
+  const producer = producerRole(event);
+  switch (event.event_kind) {
+    case 'owner_receipt_observed':
+    case 'typed_blocker_observed':
+      return producer === null || producer === 'domain_owner';
+    case 'human_decision_required':
+      return producer === null || producer === 'domain_owner' || producer === 'human_operator';
+    default:
+      return true;
+  }
+}
+
+function isLifecycleNeutralEvent(event: StageRunEvent) {
+  return event.event_kind === 'artifact_ref_observed' || event.event_kind === 'hold_projected';
+}
+
 function statusAfterEvent(event: StageRunEvent): StageRunStatus {
   switch (event.event_kind) {
     case 'stage_run_declared':
@@ -558,6 +586,20 @@ function statusAfterEvent(event: StageRunEvent): StageRunStatus {
   }
 }
 
+function statusAfterEvents(events: StageRunEvent[]): StageRunStatus {
+  let status: StageRunStatus = 'declared';
+  for (const event of events) {
+    if (isLifecycleNeutralEvent(event)) {
+      continue;
+    }
+    if (!stageTransitionAuthorityCanAdvance(event)) {
+      continue;
+    }
+    status = statusAfterEvent(event);
+  }
+  return status;
+}
+
 function collectProjection(stageRunId: string, events: StageRunEvent[]): StageRunProjection {
   const observedGeneration = Math.max(...events.map((event) => event.generation));
   const currentEvents = events
@@ -573,9 +615,11 @@ function collectProjection(stageRunId: string, events: StageRunEvent[]): StageRu
   const consumedRefs = currentEvents.flatMap((event) => refs(event.input_refs));
   const artifactRefs = currentEvents.map((event) => optionalRef(event.artifact_ref)).filter((entry): entry is string => Boolean(entry));
   const ownerReceiptRefs = currentEvents
+    .filter((event) => event.event_kind === 'owner_receipt_observed' && stageTransitionAuthorityCanAdvance(event))
     .map((event) => optionalRef(event.owner_receipt_ref))
     .filter((entry): entry is string => Boolean(entry));
   const typedBlockerRefs = currentEvents
+    .filter((event) => event.event_kind === 'typed_blocker_observed' && stageTransitionAuthorityCanAdvance(event))
     .map((event) => optionalRef(event.typed_blocker_ref))
     .filter((entry): entry is string => Boolean(entry));
   const providerAttemptRefs = currentEvents
@@ -585,7 +629,7 @@ function collectProjection(stageRunId: string, events: StageRunEvent[]): StageRu
 
   return {
     stage_run_id: stageRunId,
-    status: statusAfterEvent(lastEvent),
+    status: statusAfterEvents(currentEvents),
     observed_generation: observedGeneration,
     spec_ref: currentEvents.map((event) => optionalRef(event.spec_ref)).find((entry): entry is string => Boolean(entry)) ?? null,
     consumed_refs: [...new Set([...consumedRefs, ...artifactRefs])],

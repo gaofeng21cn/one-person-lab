@@ -14,6 +14,7 @@
     "./family-runtime-lifecycle-index": "./dist/family-runtime-lifecycle-index.js",
     "./generic-substrate-projection": "./dist/generic-substrate-projection.js",
     "./family-transition-runner": "./dist/family-transition-runner.js",
+    "./stage-transition-authority": "./dist/stage-transition-authority.js",
     "./family-shared-release": "./dist/family-shared-release.js",
     "./family-domain-catalog": "./dist/family-domain-catalog.js",
     "./family-entry-contracts": "./dist/family-entry-contracts.js",

@@ -24,6 +24,7 @@ Domain Intent
   -> Stage Goal + Context + Authority Boundary + Available Affordances + Quality Gate
   -> Cognitive Computation Kernel in selected Codex executor
   -> Stage Attempt Runtime
+  -> Stage Transition Authority
   -> Stage Artifact Unit
   -> Independent Gate / Owner Answer
   -> current_owner_delta
@@ -50,14 +51,15 @@ Domain Intent
 | [OpenAI Agents SDK tracing](https://openai.github.io/openai-agents-python/tracing/) | trace 记录 LLM、tool、handoff、guardrail 等运行事件，用于 debug / monitor。 | OPL trace/evidence 是 audit plane，不是默认 planner；trace 必须折叠成 owner delta 才能影响 next action。 |
 | [LangGraph persistence](https://docs.langchain.com/oss/python/langgraph/persistence) | checkpoint 支撑 human-in-the-loop、time travel、fault-tolerant execution。 | OPL checkpoint / attempt ledger 服务 resume 和审计；默认进度仍看 stage artifact + owner answer。 |
 | [Kubernetes controllers](https://kubernetes.io/docs/concepts/architecture/controller/) 与 [spec/status](https://kubernetes.io/docs/concepts/overview/working-with-objects/kubernetes-objects/) | controller 比较 desired state 和 current state；spec 与 status 分离。 | `stage pack/current_owner_delta` 是 desired；attempt/provider/receipt/worklist 是 status。status 不能生成新的 domain goal。 |
-| [Temporal docs](https://docs.temporal.io/) | durable execution 把 workflow history、retry、timeout、worker、task queue 放到底座。 | OPL 长跑底座归 Temporal-backed provider；domain repo 不再持有 scheduler、daemon、attempt loop 或 generic queue。 |
+| [Temporal docs](https://docs.temporal.io/) | durable execution 把 workflow history、retry、timeout、worker、task queue、signal/query/update 等 message passing 放到底座。 | OPL 长跑底座归 Temporal-backed provider；provider observation 只能进入 authority event log 或 attempt ledger，domain repo 不再持有 scheduler、daemon、attempt loop 或 generic queue。 |
+| Event sourcing / append-only stream | current state 从不可变事件流派生；修正通过追加事件表达。 | Stage Transition Authority 从 OPL append-only authority event log 派生 Stage current pointer、StageRun terminal state 和 `current_owner_delta`；模块、App、provider 和 projection 只能提交输入，不能直接写 current。 |
 | [Backstage Software Templates](https://backstage.io/docs/features/software-templates) 与 [Golden Paths](https://backstage.io/docs/golden-path/create-app/) | 平台用模板和 golden path 给用户一个默认可成功路径。 | 每个 Foundry Agent 只有一个 ordinary golden path；variants/proof/debug/cleanup 走显式 lane。 |
 | [CNCF Platform Engineering Maturity Model](https://tag-app-delivery.cncf.io/fr/whitepapers/platform-eng-maturity-model/) | 平台成熟度靠 self-service、paved road、feedback loop，而不是工具堆叠。 | OPL 应作为 thinnest viable agent platform，给 domain pack 自助接入和默认路径反馈，而不是把所有 evidence 暴露给用户。 |
 | [Google SRE Eliminating Toil](https://sre.google/sre-book/eliminating-toil/) | manual/repetitive/automatable/tactical/no enduring value/O(n) 工作是 toil。 | receipt-only、read-model reconcile-only、stale route redrive-only、typed-blocker accounting-only 是平台 toil，必须 stop-loss 或设计掉。 |
 | [OpenTelemetry signals](https://opentelemetry.io/docs/concepts/signals/) | traces、metrics、logs 等信号分层，用于理解系统。 | OPL 默认只给 broad owner signal；trace/log/metric/raw refs 全部进 drilldown。 |
 | [DORA continuous delivery capability](https://dora.dev/capabilities/continuous-delivery/) | 高质量快速反馈应对所有团队成员可见。 | Foundry Agent 默认反馈必须是用户能理解的 next owner / artifact delta / blocker，而不是内部计数。 |
 
-这些经验共同给出一个判断：OPL 的理想形态应像平台工程的 golden path + Kubernetes 的 controller + Temporal 的 durable execution + SRE 的 toil 消除 + agent handoff/guardrail/tracing 的分层组合；但 OPL 的领域智能继续由 Codex executor、domain pack 和独立 gate 承担。Stage 内的工具目录只应表达可用能力和安全边界，不应变成约束 executor 的工具流程。
+这些经验共同给出一个判断：OPL 的理想形态应像平台工程的 golden path + Kubernetes 的 controller + Temporal 的 durable execution / message passing + event sourcing append-only stream + SRE 的 toil 消除 + agent handoff/guardrail/tracing 的分层组合；但 OPL 的领域智能继续由 Codex executor、domain pack 和独立 gate 承担。Stage 内的工具目录只应表达可用能力和安全边界，不应变成约束 executor 的工具流程。
 
 ## Combined Design Evaluation
 
@@ -170,7 +172,7 @@ Unified target
 
 ## Greenfield Target
 
-如果从零设计，OPL family 应拆成 7 个稳定 primitive。
+如果从零设计，OPL family 应拆成 8 个稳定 primitive。
 
 ### 1. Agent Product Pack
 
@@ -270,7 +272,23 @@ actual queue / provider / attempt / artifact / owner-answer / typed-blocker stat
 
 它不从 raw evidence tail 合成新 work，不把 blocked envelope 数量变成 action，不把 receipt 增长写成 progress。
 
-### 5. Stage Artifact Unit
+### 5. Stage Transition Authority
+
+Stage Transition Authority 是 OPL-owned generic primitive，承接多模块输入、单 authority 裁决：
+
+```text
+transition_intent / owner_answer / typed_blocker / human_gate / provider_observation
+  -> append-only authority event log
+  -> stage_current_pointer
+  -> stage_run_terminal_state
+  -> current_owner_delta
+```
+
+MAS/MAG/RCA/OMA、Agent Lab、human gate、provider 和 App 都可以提交结构化输入，但只能提交输入。它们不能直接写 current pointer、terminal state、default next action 或 owner delta。OPL authority event log 是 transition currentness 的唯一派生源；read model、StageRun cockpit、`stage_progress_log`、provider trace、evidence worklist 和 App projection 只能消费派生状态或提交 observation。
+
+这条边界保留 domain authority：domain owner 继续签 owner receipt、quality/export/review verdict、human gate receipt 或 typed blocker；OPL 只裁决 generic transition currentness，不解释医学、基金、视觉或 target-agent patch 的领域语义。
+
+### 6. Stage Artifact Unit
 
 每个 stage attempt 必须落成一个可重建单元：
 
@@ -292,7 +310,7 @@ progress = physical output + valid manifest + owner answer + current pointer
 
 没有 owner answer 的文件是 orphan artifact；有 receipt 但文件/hash 不匹配是 broken artifact；历史 attempt 不被 current pointer 选中就只是 provenance。
 
-### 6. Evidence Vault
+### 7. Evidence Vault
 
 Evidence Vault 是 passive audit store：
 
@@ -308,7 +326,7 @@ Evidence Vault 是 passive audit store：
 
 Vault 的原则是 `record everything, plan from nothing`。只有当 evidence 被 fold 成 `current_owner_delta`、hard gate、owner answer 或 typed blocker，它才影响默认路径。
 
-### 7. App Cockpit
+### 8. App Cockpit
 
 App 是 cockpit，不是 ledger browser。默认视图只展示：
 
@@ -337,6 +355,7 @@ User chooses MAS/MAG/RCA/OMA purpose
   -> Cognitive Computation Kernel runs inside selected executor
   -> Codex produces stage artifact unit
   -> independent gate/domain owner returns owner_answer
+  -> Stage Transition Authority appends owner_answer event and derives current pointer / terminal state
   -> controller updates next current_owner_delta
 ```
 
@@ -358,6 +377,7 @@ same lineage repeats receipt-only/platform-repair/read-model-reconcile
   -> increment stop_loss counter
   -> freeze default launch
   -> accept only fresh owner delta or stable typed blocker
+  -> append stop-loss decision as authority event
   -> move old attempts to audit lineage
 ```
 
@@ -582,6 +602,7 @@ domain-agent-repo/
 | `stage_artifact_progress_truth` | progress 必须同时具备 output、manifest、owner answer、current pointer。 |
 | `golden_path_single_default` | 每个 agent ordinary route 只有一个；variants 显式选择。 |
 | `audit_plane_passive` | Evidence Vault 写入不改变 delivery state，除非 fold 成 owner answer / hard gate / owner delta。 |
+| `stage_transition_authority` | 多模块只能提交 transition intent / owner answer / typed blocker / human gate / provider observation；Stage current pointer、StageRun terminal state 和 `current_owner_delta` 只能从 OPL append-only authority event log 派生。 |
 | `route_not_stage_strategy` | Route reconciler 只 hydrate/reconcile owner route；候选生成、评估排序、stage completion、receipt signing 和 typed blocker creation 只能发生在 stage attempt / independent gate / domain owner 边界内。 |
 | `audit_tail_cannot_plan` | raw evidence、replay packet、receipt ledger、typed blocker group 和 private residue inventory 只能作为 audit/detail refs；未折叠为 current owner delta / owner answer / typed blocker / hard gate 前不能生成默认计划。 |
 | `guardrail_tier_policy` | launch-hard、runtime-enforced、domain/human gate、audit-only 分级稳定。 |
