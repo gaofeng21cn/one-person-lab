@@ -6,9 +6,12 @@ import {
 } from './workspace-diagnostics.ts';
 import {
   archiveWorkspaceProject,
+  deleteWorkspaceProject,
   exportWorkspaceMap,
   inspectWorkspace,
   upgradeWorkspace,
+  updateWorkspaceProjectLifecycle,
+  workspaceFleetReport,
   workspaceHealth,
   workspaceInventory,
   workspaceReport,
@@ -93,6 +96,13 @@ function workspaceProjectLifecyclePayload(payload: JsonRecord, actionId: string)
     workspacePath,
     projectId,
     reason: stringPayloadField(payload, 'reason') ?? undefined,
+    supersededByProjectId: stringPayloadField(payload, 'superseded_by_project_id')
+      ?? stringPayloadField(payload, 'supersededByProjectId')
+      ?? stringPayloadField(payload, 'superseded_by')
+      ?? undefined,
+    ownerReceiptRef: stringPayloadField(payload, 'owner_receipt_ref')
+      ?? stringPayloadField(payload, 'ownerReceiptRef')
+      ?? undefined,
   };
 }
 
@@ -181,6 +191,48 @@ export function executeWorkspaceAppAction(
     };
   }
 
+  if (options.actionId === 'workspace_project_lifecycle') {
+    const status = stringPayloadField(options.payload, 'status');
+    return {
+      delegatedSurface: 'opl workspace project lifecycle',
+      result: updateWorkspaceProjectLifecycle(contracts, {
+        ...workspaceProjectLifecyclePayload(options.payload, options.actionId),
+        status: status as 'active' | 'paused' | 'archived' | 'superseded' | 'locked' | undefined,
+        apply: options.dryRun !== true,
+        dryRun: options.dryRun === true,
+      }),
+    };
+  }
+
+  const lifecycleActionStatuses: Record<string, 'active' | 'paused' | 'locked' | 'superseded'> = {
+    workspace_project_pause: 'paused',
+    workspace_project_resume: 'active',
+    workspace_project_lock: 'locked',
+    workspace_project_supersede: 'superseded',
+  };
+  if (Object.hasOwn(lifecycleActionStatuses, options.actionId)) {
+    return {
+      delegatedSurface: 'opl workspace project lifecycle',
+      result: updateWorkspaceProjectLifecycle(contracts, {
+        ...workspaceProjectLifecyclePayload(options.payload, options.actionId),
+        status: lifecycleActionStatuses[options.actionId],
+        apply: options.dryRun !== true,
+        dryRun: options.dryRun === true,
+      }),
+    };
+  }
+
+  if (options.actionId === 'workspace_project_delete') {
+    return {
+      delegatedSurface: 'opl workspace project delete',
+      result: deleteWorkspaceProject(contracts, {
+        ...workspaceProjectLifecyclePayload(options.payload, options.actionId),
+        apply: options.dryRun !== true,
+        dryRun: options.dryRun === true,
+      }),
+    };
+  }
+
   if (options.actionId === 'workspace_export_map') {
     return {
       delegatedSurface: 'opl workspace export-map',
@@ -223,6 +275,13 @@ export function executeWorkspaceAppAction(
       result: workspaceReport(contracts, {
         workspacePath: workspacePathPayload(options.payload, options.actionId),
       }),
+    };
+  }
+
+  if (options.actionId === 'workspace_fleet_report') {
+    return {
+      delegatedSurface: 'opl workspace fleet report',
+      result: workspaceFleetReport(contracts),
     };
   }
 

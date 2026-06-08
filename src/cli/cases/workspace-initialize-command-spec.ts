@@ -10,9 +10,12 @@ import {
 } from '../../workspace-diagnostics.ts';
 import {
   archiveWorkspaceProject,
+  deleteWorkspaceProject,
   exportWorkspaceMap,
   inspectWorkspace,
   upgradeWorkspace,
+  updateWorkspaceProjectLifecycle,
+  workspaceFleetReport,
   workspaceHealth,
   workspaceInventory,
   workspaceReport,
@@ -171,6 +174,57 @@ export function buildWorkspaceInitializeCommandSpecs(
           dryRun: parsed.dryRun,
           apply: parsed.apply,
         });
+      },
+    },
+    'workspace project lifecycle': {
+      usage:
+        'opl workspace project lifecycle --workspace <path> --project-id <id> --status active|paused|locked|superseded|archived [--reason <text>] [--superseded-by-project-id <id>] [--dry-run|--apply]',
+      summary:
+        'Apply one indexed workspace project lifecycle transition without deleting files, moving project roots, archiving registry bindings, or writing domain truth.',
+      examples: [
+        'opl workspace project lifecycle --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --status paused --reason waiting-for-review --apply',
+        'opl workspace project lifecycle --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --status active --apply',
+        'opl workspace project lifecycle --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --status superseded --superseded-by-project-id deck-002 --dry-run',
+      ],
+      handler: (args) => {
+        const parsed = parseWorkspaceLifecycleArgs(args, specs['workspace project lifecycle']);
+        return updateWorkspaceProjectLifecycle(getContracts(), {
+          workspacePath: parsed.workspacePath,
+          projectId: parsed.projectId,
+          status: parsed.status,
+          reason: parsed.reason,
+          supersededByProjectId: parsed.supersededByProjectId,
+          dryRun: parsed.dryRun,
+          apply: parsed.apply,
+        });
+      },
+    },
+    'workspace project delete': {
+      usage: 'opl workspace project delete --workspace <path> --project-id <id> [--owner-receipt-ref <ref>] [--dry-run|--apply]',
+      summary:
+        'Return the safe-delete gate for an indexed workspace project; OPL never performs the physical delete or writes domain truth.',
+      examples: [
+        'opl workspace project delete --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --dry-run',
+      ],
+      handler: (args) => {
+        const parsed = parseWorkspaceLifecycleArgs(args, specs['workspace project delete']);
+        return deleteWorkspaceProject(getContracts(), {
+          workspacePath: parsed.workspacePath,
+          projectId: parsed.projectId,
+          ownerReceiptRef: parsed.ownerReceiptRef,
+          dryRun: parsed.dryRun,
+          apply: parsed.apply,
+        });
+      },
+    },
+    'workspace fleet report': {
+      usage: 'opl workspace fleet report',
+      summary:
+        'Read the registry-backed fleet report across bound OPL workspaces without executing direct-entry or manifest commands.',
+      examples: ['opl workspace fleet report'],
+      handler: (args) => {
+        assertNoArgs(args, specs['workspace fleet report']);
+        return workspaceFleetReport(getContracts());
       },
     },
     'workspace export-map': {

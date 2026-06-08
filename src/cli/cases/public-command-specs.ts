@@ -751,7 +751,7 @@ export function buildPublicCommandSpecs(
     }),
     workspace: {
       usage:
-        'opl workspace projects|list|root|init|ensure|validate|doctor|adopt|upgrade|project archive|export-map|health|inspect|inventory|report|interfaces|bind|activate|archive [options]',
+        'opl workspace projects|list|fleet report|root|init|ensure|validate|doctor|adopt|upgrade|project lifecycle|project archive|project delete|export-map|health|inspect|inventory|report|interfaces|bind|activate|archive [options]',
       summary:
         'Manage OPL workspace bindings, standard family-agent workspace initialization, generated inspection refs, and workspace-local project lifecycle projections.',
       examples: [
@@ -760,6 +760,7 @@ export function buildPublicCommandSpecs(
         'opl workspace init --agent rca --workspace-id visual-theme-a --project-id deck-001',
         'opl workspace validate --workspace /Users/gaofeng/workspace/visual-theme-a',
         'opl workspace report --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace fleet report',
         'opl workspace inspect --workspace /Users/gaofeng/workspace/visual-theme-a',
         'opl workspace interfaces',
       ],
@@ -769,6 +770,11 @@ export function buildPublicCommandSpecs(
           command: 'workspace projects',
           usage: 'opl workspace projects',
           summary: 'List known project workspace bindings from the OPL workspace registry.',
+        },
+        {
+          command: 'workspace fleet report',
+          usage: 'opl workspace fleet report',
+          summary: 'Read registry-wide workspace fleet status without executing direct-entry or manifest commands.',
         },
         {
           command: 'workspace init',
@@ -899,6 +905,27 @@ export function buildPublicCommandSpecs(
       examples: [
         'opl workspace project archive --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --apply',
       ],
+      group: 'workspace',
+    }),
+    'workspace project lifecycle': cloneCommandSpec(commandSpecs['workspace project lifecycle'], {
+      usage:
+        'opl workspace project lifecycle --workspace <path> --project-id <id> --status active|paused|locked|superseded|archived [--reason <text>] [--superseded-by-project-id <id>] [--dry-run|--apply]',
+      examples: [
+        'opl workspace project lifecycle --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --status paused --apply',
+        'opl workspace project lifecycle --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --status active --apply',
+      ],
+      group: 'workspace',
+    }),
+    'workspace project delete': cloneCommandSpec(commandSpecs['workspace project delete'], {
+      usage: 'opl workspace project delete --workspace <path> --project-id <id> [--owner-receipt-ref <ref>] [--dry-run|--apply]',
+      examples: [
+        'opl workspace project delete --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --dry-run',
+      ],
+      group: 'workspace',
+    }),
+    'workspace fleet report': cloneCommandSpec(commandSpecs['workspace fleet report'], {
+      usage: 'opl workspace fleet report',
+      examples: ['opl workspace fleet report'],
       group: 'workspace',
     }),
     'workspace export-map': cloneCommandSpec(commandSpecs['workspace export-map'], {

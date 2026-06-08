@@ -151,6 +151,75 @@ test('workspace registry hydrates derived RCA manifest commands for legacy locat
   }
 });
 
+test('workspace fleet report audits bound workspaces without executing direct-entry commands', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-fleet-state-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-fleet-root-'));
+
+  try {
+    runCli([
+      'workspace',
+      'init',
+      '--agent',
+      'rca',
+      '--workspace-root',
+      workspaceRoot,
+      '--workspace-id',
+      'visual-theme-a',
+      '--project-id',
+      'deck-001',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const workspacePath = path.join(workspaceRoot, 'visual-theme-a');
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautogrant',
+      '--path',
+      workspaceRoot,
+      '--entry-command',
+      'sh -c "touch should-not-run"',
+      '--manifest-command',
+      'sh -c "touch manifest-should-not-run"',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const fleet = runCli(['workspace', 'fleet', 'report'], {
+      OPL_STATE_DIR: stateRoot,
+    }).workspace_fleet_report;
+    assert.equal(fleet.surface_kind, 'opl_workspace_fleet_report');
+    assert.equal(fleet.summary.ready_bindings_count, 1);
+    assert.equal(fleet.summary.blocked_bindings_count, 1);
+    assert.equal(fleet.authority_boundary.fleet_report_executes_direct_entry, false);
+    assert.equal(fleet.authority_boundary.fleet_report_executes_manifest_command, false);
+    const ready = fleet.bindings.find((entry: { workspace_path: string }) => entry.workspace_path === workspacePath);
+    assert.equal(ready.fleet_status, 'ready');
+    assert.equal(ready.doctor_status, 'passed');
+    assert.equal(ready.current_project.project_id, 'deck-001');
+    assert.equal(ready.project_lifecycle_counts.active, 1);
+    const blocked = fleet.bindings.find((entry: { workspace_path: string }) => entry.workspace_path === workspaceRoot);
+    assert.equal(blocked.fleet_status, 'blocked');
+    assert.equal(blocked.blockers.some((entry: { code: string }) => entry.code === 'workspace_index_missing'), true);
+    assert.equal(fs.existsSync(path.join(workspaceRoot, 'should-not-run')), false);
+    assert.equal(fs.existsSync(path.join(workspaceRoot, 'manifest-should-not-run')), false);
+    assert.equal(
+      fleet.unbound_projects.some((entry: { project_id: string }) => entry.project_id === 'opl-meta-agent'),
+      true,
+    );
+
+    const list = runCli(['workspace', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    }).workspace_catalog;
+    assert.equal(Object.hasOwn(list, 'bindings'), true);
+    assert.equal(Object.hasOwn(list, 'workspace_fleet_report'), false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('domain manifests resolves real family manifest fixtures while workspace list stays registry-only', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-state-'));
   const fixtures = loadFamilyManifestFixtures();

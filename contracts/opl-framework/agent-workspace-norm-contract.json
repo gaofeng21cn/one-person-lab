@@ -259,6 +259,50 @@
     "binding_owner": "one-person-lab",
     "domain_repo_can_write_opl_registry": false
   },
+  "workspace_management_surfaces": {
+    "fleet_report": {
+      "command": "opl workspace fleet report",
+      "app_action_id": "workspace_fleet_report",
+      "role": "registry_backed_read_only_workspace_fleet_report",
+      "executes_direct_entry_or_manifest_command": false,
+      "writes_domain_truth": false
+    },
+    "project_lifecycle": {
+      "command": "opl workspace project lifecycle",
+      "app_action_ids": [
+        "workspace_project_lifecycle",
+        "workspace_project_pause",
+        "workspace_project_resume",
+        "workspace_project_lock",
+        "workspace_project_supersede"
+      ],
+      "statuses": [
+        "active",
+        "paused",
+        "archived",
+        "superseded",
+        "locked"
+      ],
+      "moves_project_roots": false,
+      "deletes_files": false,
+      "archives_registry_binding": false,
+      "writes_domain_truth": false
+    },
+    "project_delete_gate": {
+      "command": "opl workspace project delete",
+      "app_action_id": "workspace_project_delete",
+      "physical_delete_applied_by_opl": false,
+      "requires_domain_owner_receipt_ref": true,
+      "writes_domain_truth": false
+    },
+    "shared_resource_provenance": {
+      "manifest_file": "opl_resource_manifest.json",
+      "records_refs_only": true,
+      "preserved_by_workspace_upgrade": true,
+      "resource_body_storage_allowed": false,
+      "inventory_projection_file": "workspace_resource_inventory.json"
+    }
+  },
   "runtime_state_boundary": {
     "role": "provider_backing_provenance_restore_audit",
     "runtime_state_can_be_canonical_project_root": false,

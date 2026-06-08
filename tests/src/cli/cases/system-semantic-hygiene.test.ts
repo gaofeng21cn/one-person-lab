@@ -286,5 +286,10 @@ test('help advertises the semantic hygiene system command', () => {
   const output = runCli(['help']);
   const commands = output.help.commands.map((entry: { command: string }) => entry.command);
 
-  assert.equal(commands.includes('system semantic-hygiene'), true);
+  assert.equal(commands.includes('system semantic-hygiene'), false);
+  assert.equal(
+    output.help.diagnostic_command_groups.some((entry: { group_id: string }) => entry.group_id === 'system'),
+    true,
+  );
+  assert.equal(runCli(['help', 'system', 'semantic-hygiene']).help.command, 'system semantic-hygiene');
 });

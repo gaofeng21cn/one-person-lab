@@ -743,6 +743,65 @@
         }
       }
     },
+    "shared_resource_record": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "resource_id",
+        "body_ref"
+      ],
+      "properties": {
+        "resource_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "material_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "checksum": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "provenance_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reuse_scope": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "staleness": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "recorded_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "body_ref": {
+          "const": null
+        }
+      }
+    },
     "project": {
       "type": "object",
       "additionalProperties": true,

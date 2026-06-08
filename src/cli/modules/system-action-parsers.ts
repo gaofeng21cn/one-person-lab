@@ -245,8 +245,31 @@ function parseWorkspaceLifecycleArgs(
       case '--study-id':
         parsed.projectId = value;
         break;
+      case '--status':
+        if (
+          value !== 'active'
+          && value !== 'paused'
+          && value !== 'archived'
+          && value !== 'superseded'
+          && value !== 'locked'
+        ) {
+          throw buildUsageError(
+            'Workspace lifecycle --status requires active, paused, archived, superseded, or locked.',
+            spec,
+            { option: token, value },
+          );
+        }
+        parsed.status = value;
+        break;
       case '--reason':
         parsed.reason = value;
+        break;
+      case '--superseded-by':
+      case '--superseded-by-project-id':
+        parsed.supersededByProjectId = value;
+        break;
+      case '--owner-receipt-ref':
+        parsed.ownerReceiptRef = value;
         break;
       default:
         throw buildUsageError(`Unknown option for workspace lifecycle command: ${token}.`, spec, {

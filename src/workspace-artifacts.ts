@@ -67,6 +67,18 @@ type WorkspaceArtifactContext = {
   updatedAt: string;
 };
 
+export type SharedResourceRecord = {
+  resource_id: string;
+  source_ref: string | null;
+  material_ref: string | null;
+  checksum: string | null;
+  provenance_ref: string | null;
+  reuse_scope: string | null;
+  staleness: string | null;
+  recorded_at: string | null;
+  body_ref: null;
+};
+
 export function stageOutputsIndexRef(stageOutputsRootRef: string) {
   return `${stageOutputsRootRef}/${STAGE_OUTPUTS_INDEX_BASENAME}`;
 }
@@ -199,6 +211,7 @@ export function buildSharedResourceManifest(input: {
   agent: WorkspaceAgentProfile;
   resource: WorkspaceSharedResourceEntry;
   updatedAt: string;
+  existingRecords?: SharedResourceRecord[];
 }) {
   return {
     surface_kind: 'opl_shared_resource_manifest',
@@ -224,6 +237,7 @@ export function buildSharedResourceManifest(input: {
       may_record_staleness: true,
       body_storage_allowed: false,
     },
+    resources: input.existingRecords ?? [],
     updated_at: input.updatedAt,
   };
 }
@@ -577,7 +591,9 @@ export function buildWorkspaceInspection(input: WorkspaceArtifactContext) {
   };
 }
 
-export function buildWorkspaceResourceInventory(input: WorkspaceArtifactContext) {
+export function buildWorkspaceResourceInventory(input: WorkspaceArtifactContext & {
+  resourceRecordsByPath?: Record<string, SharedResourceRecord[]>;
+}) {
   const resources = buildSharedResources(input.profile);
   return {
     surface_kind: 'opl_workspace_resource_inventory',
@@ -597,6 +613,12 @@ export function buildWorkspaceResourceInventory(input: WorkspaceArtifactContext)
       checksum_policy: 'resource_entry_may_record_checksum_when_known',
       reuse_scope: input.profile.workspace_mode === 'portfolio' ? 'workspace_group' : 'workspace_group_or_project_series',
       staleness_policy: 'domain_agent_or_owner_updates_staleness',
+      resource_record_count: (
+        input.resourceRecordsByPath?.[resource.path]
+        ?? readExistingSharedResourceRecords(path.join(input.workspacePath, resource.manifest_ref))
+      ).length,
+      resource_records: input.resourceRecordsByPath?.[resource.path]
+        ?? readExistingSharedResourceRecords(path.join(input.workspacePath, resource.manifest_ref)),
     })),
     authority_boundary: {
       inventory_is_index_only: true,
@@ -607,6 +629,44 @@ export function buildWorkspaceResourceInventory(input: WorkspaceArtifactContext)
     },
     updated_at: input.updatedAt,
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function normalizeSharedResourceRecord(value: unknown): SharedResourceRecord | null {
+  if (!isRecord(value) || typeof value.resource_id !== 'string' || !value.resource_id.trim()) {
+    return null;
+  }
+  return {
+    resource_id: value.resource_id,
+    source_ref: typeof value.source_ref === 'string' ? value.source_ref : null,
+    material_ref: typeof value.material_ref === 'string' ? value.material_ref : null,
+    checksum: typeof value.checksum === 'string' ? value.checksum : null,
+    provenance_ref: typeof value.provenance_ref === 'string' ? value.provenance_ref : null,
+    reuse_scope: typeof value.reuse_scope === 'string' ? value.reuse_scope : null,
+    staleness: typeof value.staleness === 'string' ? value.staleness : null,
+    recorded_at: typeof value.recorded_at === 'string' ? value.recorded_at : null,
+    body_ref: null,
+  };
+}
+
+export function readExistingSharedResourceRecords(manifestPath: string) {
+  if (!fs.existsSync(manifestPath) || !fs.statSync(manifestPath).isFile()) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as unknown;
+    if (!isRecord(parsed) || !Array.isArray(parsed.resources)) {
+      return [];
+    }
+    return parsed.resources
+      .map(normalizeSharedResourceRecord)
+      .filter((entry): entry is SharedResourceRecord => Boolean(entry));
+  } catch {
+    return [];
+  }
 }
 
 function projectLifecycleCounts(projects: WorkspaceProjectIndexEntry[]) {
@@ -739,13 +799,17 @@ export function materializeWorkspaceGeneratedArtifacts(input: WorkspaceArtifactC
   ensureDirectory(path.join(input.workspacePath, OPL_GENERATED_PROJECTIONS_ROOT), []);
   ensureDirectory(path.join(input.workspacePath, OPL_GENERATED_REPORTS_ROOT), []);
   const sharedResources = buildSharedResources(input.profile);
+  const resourceRecordsByPath: Record<string, SharedResourceRecord[]> = {};
   for (const resource of sharedResources) {
     const manifestPath = path.join(input.workspacePath, sharedResourceManifestRef(resource.path));
+    const existingRecords = readExistingSharedResourceRecords(manifestPath);
+    resourceRecordsByPath[resource.path] = existingRecords;
     writeJsonArtifact(manifestPath, buildSharedResourceManifest({
       workspaceId: input.workspaceId,
       agent: input.agent,
       resource,
       updatedAt: input.updatedAt,
+      existingRecords,
     }));
     writtenFiles.push(manifestPath);
   }
@@ -802,7 +866,10 @@ export function materializeWorkspaceGeneratedArtifacts(input: WorkspaceArtifactC
     [
       GENERATED_WORKSPACE_RESOURCE_INVENTORY_REF,
       WORKSPACE_RESOURCE_INVENTORY_REF,
-      buildWorkspaceResourceInventory(input),
+      buildWorkspaceResourceInventory({
+        ...input,
+        resourceRecordsByPath,
+      }),
     ],
     [GENERATED_WORKSPACE_REPORT_REF, WORKSPACE_REPORT_REF, buildWorkspaceReport(input)],
   ] as const;

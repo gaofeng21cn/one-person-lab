@@ -23,6 +23,7 @@ import {
   normalizeWorkspaceProjectEntry,
   PROJECT_CONFIG_BASENAME,
   PROJECT_INDEX_BASENAME,
+  readExistingSharedResourceRecords,
   sharedResourceManifestRef,
   stageOutputsIndexRef,
   WORKSPACE_HEALTH_REF,
@@ -79,7 +80,10 @@ export type WorkspaceAdoptOptions = {
 export type WorkspaceLifecycleOptions = {
   workspacePath?: string;
   projectId?: string;
+  status?: 'active' | 'paused' | 'archived' | 'superseded' | 'locked';
   reason?: string;
+  supersededByProjectId?: string;
+  ownerReceiptRef?: string;
   dryRun?: boolean;
   apply?: boolean;
 };
@@ -456,11 +460,13 @@ function validateIndexSemantics(input: {
         addBlocker(blockers, 'shared_resource_manifest_missing', { path: manifestRef });
       } else {
         const actual = readJsonRecord(manifestPath);
+        const existingRecords = readExistingSharedResourceRecords(manifestPath);
         const expected = buildSharedResourceManifest({
           workspaceId: indexWorkspaceId(input.index, input.workspacePath),
           agent,
           resource,
           updatedAt: indexUpdatedAt(input.index),
+          existingRecords,
         });
         if (!actual || !sameJson(actual, expected)) {
           addBlocker(blockers, 'shared_resource_manifest_drift', {

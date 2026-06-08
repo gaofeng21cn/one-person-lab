@@ -904,14 +904,18 @@ test('workspace interfaces exports the OPL-owned initializer surfaces for tools 
   assert.equal(output.workspace_interfaces.surfaces.management_commands.adopt.command, 'opl workspace adopt');
   assert.equal(output.workspace_interfaces.surfaces.management_commands.upgrade.command, 'opl workspace upgrade');
   assert.equal(output.workspace_interfaces.surfaces.management_commands.project_archive.command, 'opl workspace project archive');
+  assert.equal(output.workspace_interfaces.surfaces.management_commands.project_lifecycle.command, 'opl workspace project lifecycle');
+  assert.equal(output.workspace_interfaces.surfaces.management_commands.project_delete.command, 'opl workspace project delete');
+  assert.equal(output.workspace_interfaces.surfaces.management_commands.fleet_report.command, 'opl workspace fleet report');
   assert.equal(output.workspace_interfaces.surfaces.management_commands.export_map.command, 'opl workspace export-map');
   assert.equal(output.workspace_interfaces.surfaces.management_commands.inspect.command, 'opl workspace inspect');
   assert.equal(output.workspace_interfaces.surfaces.management_commands.inventory.command, 'opl workspace inventory');
   assert.equal(output.workspace_interfaces.surfaces.management_commands.health.command, 'opl workspace health');
   assert.equal(output.workspace_interfaces.surfaces.management_commands.report.command, 'opl workspace report');
   assert.equal(output.workspace_interfaces.surfaces.cli.report_command, 'opl workspace report');
+  assert.equal(output.workspace_interfaces.surfaces.cli.fleet_report_command, 'opl workspace fleet report');
   assert.equal(output.workspace_interfaces.surfaces.skill.intent, 'ensure_opl_workspace');
-  assert.match(output.workspace_interfaces.surfaces.skill.management_instruction, /workspace report/);
+  assert.match(output.workspace_interfaces.surfaces.skill.management_instruction, /workspace fleet report/);
   assert.equal(output.workspace_interfaces.surfaces.app.action_id, 'workspace_ensure');
   assert.equal(output.workspace_interfaces.surfaces.app.initializer_action_id, 'workspace_initialize');
   assert.equal(output.workspace_interfaces.surfaces.app.validator_action_id, 'workspace_validate');
@@ -920,11 +924,18 @@ test('workspace interfaces exports the OPL-owned initializer surfaces for tools 
   assert.equal(output.workspace_interfaces.surfaces.app.adopt_apply_action_id, 'workspace_adopt_apply');
   assert.equal(output.workspace_interfaces.surfaces.app.upgrade_action_id, 'workspace_upgrade');
   assert.equal(output.workspace_interfaces.surfaces.app.project_archive_action_id, 'workspace_project_archive');
+  assert.equal(output.workspace_interfaces.surfaces.app.project_lifecycle_action_id, 'workspace_project_lifecycle');
+  assert.equal(output.workspace_interfaces.surfaces.app.project_pause_action_id, 'workspace_project_pause');
+  assert.equal(output.workspace_interfaces.surfaces.app.project_resume_action_id, 'workspace_project_resume');
+  assert.equal(output.workspace_interfaces.surfaces.app.project_lock_action_id, 'workspace_project_lock');
+  assert.equal(output.workspace_interfaces.surfaces.app.project_supersede_action_id, 'workspace_project_supersede');
+  assert.equal(output.workspace_interfaces.surfaces.app.project_delete_action_id, 'workspace_project_delete');
   assert.equal(output.workspace_interfaces.surfaces.app.export_map_action_id, 'workspace_export_map');
   assert.equal(output.workspace_interfaces.surfaces.app.inspect_action_id, 'workspace_inspect');
   assert.equal(output.workspace_interfaces.surfaces.app.inventory_action_id, 'workspace_inventory');
   assert.equal(output.workspace_interfaces.surfaces.app.health_action_id, 'workspace_health');
   assert.equal(output.workspace_interfaces.surfaces.app.report_action_id, 'workspace_report');
+  assert.equal(output.workspace_interfaces.surfaces.app.fleet_report_action_id, 'workspace_fleet_report');
   assert.deepEqual(output.workspace_interfaces.supported_agents, ['mas', 'mag', 'rca', 'oma']);
 });
 
@@ -1045,6 +1056,222 @@ test('workspace project archive marks project lifecycle without deleting files o
     assert.equal(health.archived_project_count, 1);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace project lifecycle supports pause restore lock supersede and delete safe gate', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-project-lifecycle-state-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-project-lifecycle-root-'));
+
+  try {
+    runCli([
+      'workspace',
+      'init',
+      '--agent',
+      'rca',
+      '--workspace-root',
+      workspaceRoot,
+      '--workspace-id',
+      'visual-theme-a',
+      '--project-id',
+      'deck-001',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    runCli([
+      'workspace',
+      'ensure',
+      '--agent',
+      'rca',
+      '--workspace-root',
+      workspaceRoot,
+      '--workspace-id',
+      'visual-theme-a',
+      '--project-id',
+      'deck-002',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const workspacePath = path.join(workspaceRoot, 'visual-theme-a');
+
+    const pause = runCli([
+      'workspace',
+      'project',
+      'lifecycle',
+      '--workspace',
+      workspacePath,
+      '--project-id',
+      'deck-001',
+      '--status',
+      'paused',
+      '--reason',
+      'waiting-for-review',
+      '--apply',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(pause.workspace_project_lifecycle.status, 'applied');
+    assert.equal(pause.workspace_project_lifecycle.lifecycle.status, 'paused');
+    assert.equal(pause.workspace_project_pause.lifecycle.pause_reason, 'waiting-for-review');
+    assert.equal(pause.workspace_project_pause.authority_boundary.pause_deletes_files, false);
+
+    let report = runCli(['workspace', 'report', '--workspace', workspacePath], {
+      OPL_STATE_DIR: stateRoot,
+    }).workspace_report;
+    assert.equal(report.current_project.project_id, 'deck-002');
+    let health = runCli(['workspace', 'health', '--workspace', workspacePath], {
+      OPL_STATE_DIR: stateRoot,
+    }).workspace_health;
+    assert.deepEqual(health.project_lifecycle_counts, {
+      active: 1,
+      paused: 1,
+      archived: 0,
+      superseded: 0,
+      locked: 0,
+    });
+
+    const restore = runCli([
+      'workspace',
+      'project',
+      'lifecycle',
+      '--workspace',
+      workspacePath,
+      '--project-id',
+      'deck-001',
+      '--status',
+      'active',
+      '--apply',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(restore.workspace_project_restore.lifecycle.status, 'active');
+    assert.equal(restore.workspace_project_restore.lifecycle.pause_reason, null);
+
+    const lock = runCli([
+      'workspace',
+      'project',
+      'lifecycle',
+      '--workspace',
+      workspacePath,
+      '--project-id',
+      'deck-001',
+      '--status',
+      'locked',
+      '--reason',
+      'owner-review',
+      '--apply',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(lock.workspace_project_lock.lifecycle.status, 'locked');
+    assert.equal(lock.workspace_project_lock.lifecycle.lock_reason, 'owner-review');
+
+    const supersedeDryRun = runCli([
+      'workspace',
+      'project',
+      'lifecycle',
+      '--workspace',
+      workspacePath,
+      '--project-id',
+      'deck-001',
+      '--status',
+      'superseded',
+      '--superseded-by-project-id',
+      'deck-002',
+      '--dry-run',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(supersedeDryRun.workspace_project_supersede.status, 'dry_run_ready');
+    assert.equal(
+      readJsonFile(path.join(workspacePath, 'workspace_index.json')).projects[0].lifecycle.status,
+      'locked',
+    );
+
+    const deleteGate = runCli([
+      'workspace',
+      'project',
+      'delete',
+      '--workspace',
+      workspacePath,
+      '--project-id',
+      'deck-001',
+      '--apply',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(deleteGate.workspace_project_delete.status, 'blocked_owner_receipt_required');
+    assert.equal(deleteGate.workspace_project_delete.physical_delete_applied, false);
+    assert.equal(deleteGate.workspace_project_delete.authority_boundary.opl_can_perform_physical_delete, false);
+    assert.equal(fs.statSync(path.join(workspacePath, 'projects', 'deck-001')).isDirectory(), true);
+
+    report = runCli(['workspace', 'report', '--workspace', workspacePath], {
+      OPL_STATE_DIR: stateRoot,
+    }).workspace_report;
+    assert.equal(report.current_project.project_id, 'deck-002');
+    health = runCli(['workspace', 'health', '--workspace', workspacePath], {
+      OPL_STATE_DIR: stateRoot,
+    }).workspace_health;
+    assert.deepEqual(health.project_lifecycle_counts, {
+      active: 1,
+      paused: 0,
+      archived: 0,
+      superseded: 0,
+      locked: 1,
+    });
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace upgrade preserves shared resource provenance records and exposes them in inventory', () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-resource-provenance-root-'));
+
+  try {
+    runCli([
+      'workspace',
+      'init',
+      '--agent',
+      'rca',
+      '--workspace-root',
+      workspaceRoot,
+      '--workspace-id',
+      'visual-theme-a',
+      '--project-id',
+      'deck-001',
+    ]);
+    const workspacePath = path.join(workspaceRoot, 'visual-theme-a');
+    const manifestPath = path.join(workspacePath, 'shared', 'sources', 'opl_resource_manifest.json');
+    const manifest = readJsonFile(manifestPath);
+    manifest.resources = [
+      {
+        resource_id: 'source-001',
+        source_ref: 'shared/sources/source-001.pdf',
+        material_ref: 'human_doc:source-001',
+        checksum: 'sha256:abc',
+        provenance_ref: 'receipt:source-001',
+        reuse_scope: 'workspace_group_or_project_series',
+        staleness: 'fresh',
+        recorded_at: '2026-06-08T00:00:00.000Z',
+        body_ref: 'should_be_normalized_to_null',
+      },
+    ];
+    fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+    runCli(['workspace', 'upgrade', '--workspace', workspacePath, '--apply']);
+    const upgradedManifest = readJsonFile(manifestPath);
+    assert.equal(upgradedManifest.resources[0].resource_id, 'source-001');
+    assert.equal(upgradedManifest.resources[0].body_ref, null);
+
+    const inventory = runCli(['workspace', 'inventory', '--workspace', workspacePath]).workspace_resource_inventory;
+    const sourceRoot = inventory.resources.find((entry: { path: string }) => entry.path === 'shared/sources');
+    assert.equal(sourceRoot.resource_record_count, 1);
+    assert.equal(sourceRoot.resource_records[0].provenance_ref, 'receipt:source-001');
+    assert.equal(sourceRoot.resource_records[0].body_ref, null);
+    assert.equal(runCli(['workspace', 'doctor', '--workspace', workspacePath]).workspace_doctor.status, 'passed');
+  } finally {
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });

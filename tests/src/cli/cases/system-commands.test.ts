@@ -253,6 +253,9 @@ test('default help advertises Connect canonical installation surfaces while reti
   assert.equal(commands.includes('workspace adopt'), true);
   assert.equal(commands.includes('workspace upgrade'), true);
   assert.equal(commands.includes('workspace project archive'), true);
+  assert.equal(commands.includes('workspace project lifecycle'), true);
+  assert.equal(commands.includes('workspace project delete'), true);
+  assert.equal(commands.includes('workspace fleet report'), true);
   assert.equal(commands.includes('workspace export-map'), true);
   assert.equal(commands.includes('workspace health'), true);
   assert.equal(commands.includes('workspace interfaces'), true);
@@ -262,6 +265,10 @@ test('default help advertises Connect canonical installation surfaces while reti
   assert.match(workspaceHelp.help.usage, /workspace .*ensure/);
   assert.equal(
     workspaceHelp.help.subcommands.some((entry: { command: string }) => entry.command === 'workspace inspect'),
+    true,
+  );
+  assert.equal(
+    workspaceHelp.help.subcommands.some((entry: { command: string }) => entry.command === 'workspace fleet report'),
     true,
   );
 

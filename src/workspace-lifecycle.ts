@@ -21,8 +21,10 @@ import {
   WORKSPACE_RESOURCE_INVENTORY_REF,
   writeJsonArtifact,
 } from './workspace-artifacts.ts';
+import { buildWorkspaceCatalog, type WorkspaceBinding } from './workspace-registry.ts';
 import {
   type TopologyProfile,
+  type WorkspaceLifecycleStatus,
   type WorkspaceProfileId,
   type WorkspaceProjectIndexEntry,
 } from './workspace-topology.ts';
@@ -244,6 +246,17 @@ function readValidatedWorkspaceIndex(workspacePathInput: string | undefined) {
   };
 }
 
+function projectByIdOrThrow(projects: WorkspaceProjectIndexEntry[], projectId: string, command: string) {
+  const existingProject = projects.find((project) => project.project_id === projectId);
+  if (!existingProject) {
+    throw new FrameworkContractError('contract_shape_invalid', `${command} requires an indexed project.`, {
+      project_id: projectId,
+      indexed_project_ids: projects.map((project) => project.project_id),
+    });
+  }
+  return existingProject;
+}
+
 function writeWorkspaceMetadata(input: {
   contracts: FrameworkContracts;
   workspacePath: string;
@@ -309,6 +322,272 @@ function writeWorkspaceMetadata(input: {
     nextIndex,
     workspaceYamlPath,
     writtenGeneratedFiles,
+  };
+}
+
+function lifecycleSurfaceKey(status: WorkspaceLifecycleStatus) {
+  const actionNameByStatus: Record<WorkspaceLifecycleStatus, string> = {
+    active: 'restore',
+    paused: 'pause',
+    archived: 'archive',
+    superseded: 'supersede',
+    locked: 'lock',
+  };
+  return `workspace_project_${actionNameByStatus[status]}`;
+}
+
+function lifecycleActionAuthorityBoundary(action: WorkspaceLifecycleStatus) {
+  const actionNameByStatus: Record<WorkspaceLifecycleStatus, string> = {
+    active: 'restore',
+    paused: 'pause',
+    archived: 'archive',
+    superseded: 'supersede',
+    locked: 'lock',
+  };
+  const actionName = actionNameByStatus[action];
+  return {
+    lifecycle_deletes_files: false,
+    lifecycle_moves_project_roots: false,
+    lifecycle_archives_registry_binding: false,
+    lifecycle_writes_domain_truth: false,
+    lifecycle_creates_owner_receipt: false,
+    lifecycle_creates_typed_blocker: false,
+    [`${actionName}_deletes_files`]: false,
+    [`${actionName}_moves_project_roots`]: false,
+    [`${actionName}_archives_registry_binding`]: false,
+    [`${actionName}_writes_domain_truth`]: false,
+  };
+}
+
+function transitionProjectLifecycle(input: {
+  project: WorkspaceProjectIndexEntry;
+  status: WorkspaceLifecycleStatus;
+  updatedAt: string;
+  reason: string | null;
+  supersededByProjectId: string | null;
+}) {
+  const lifecycle = {
+    ...input.project.lifecycle,
+    status: input.status,
+  };
+  if (input.status === 'active') {
+    return {
+      ...lifecycle,
+      status: 'active' as const,
+      archived_at: null,
+      archive_reason: null,
+      paused_at: null,
+      pause_reason: null,
+      superseded_at: null,
+      superseded_by_project_id: null,
+      locked_at: null,
+      lock_reason: null,
+      retention_policy: 'keep_until_explicit_archive' as const,
+      safe_delete_gate: 'domain_owner_receipt_required' as const,
+    };
+  }
+  if (input.status === 'paused') {
+    return {
+      ...lifecycle,
+      status: 'paused' as const,
+      paused_at: input.updatedAt,
+      pause_reason: input.reason,
+    };
+  }
+  if (input.status === 'locked') {
+    return {
+      ...lifecycle,
+      status: 'locked' as const,
+      locked_at: input.updatedAt,
+      lock_reason: input.reason,
+    };
+  }
+  if (input.status === 'superseded') {
+    return {
+      ...lifecycle,
+      status: 'superseded' as const,
+      superseded_at: input.updatedAt,
+      superseded_by_project_id: input.supersededByProjectId,
+      retention_policy: 'keep_until_explicit_delete_receipt' as const,
+    };
+  }
+  return {
+    ...lifecycle,
+    status: 'archived' as const,
+    archived_at: input.updatedAt,
+    archive_reason: input.reason,
+    retention_policy: 'keep_until_explicit_delete_receipt' as const,
+  };
+}
+
+export function updateWorkspaceProjectLifecycle(
+  contracts: FrameworkContracts,
+  options: WorkspaceLifecycleOptions,
+) {
+  const context = readValidatedWorkspaceIndex(options.workspacePath);
+  const projectId = normalizeOptionalString(options.projectId);
+  if (!projectId) {
+    throw new FrameworkContractError('cli_usage_error', 'workspace project lifecycle requires --project-id.', {
+      required: ['--project-id'],
+    });
+  }
+  const status = options.status;
+  if (!status) {
+    throw new FrameworkContractError('cli_usage_error', 'workspace project lifecycle requires --status.', {
+      required: ['--status'],
+    });
+  }
+  const existingProject = projectByIdOrThrow(context.projects, projectId, 'workspace project lifecycle');
+  const currentStatus = existingProject.lifecycle.status;
+  const supersededByProjectId = normalizeOptionalString(options.supersededByProjectId);
+  if (status === 'superseded') {
+    if (!supersededByProjectId) {
+      throw new FrameworkContractError('cli_usage_error', 'workspace project lifecycle --status superseded requires --superseded-by-project-id.', {
+        required: ['--superseded-by-project-id'],
+      });
+    }
+    if (supersededByProjectId === projectId) {
+      throw new FrameworkContractError('cli_usage_error', 'A workspace project cannot supersede itself.', {
+        project_id: projectId,
+        superseded_by_project_id: supersededByProjectId,
+      });
+    }
+    projectByIdOrThrow(context.projects, supersededByProjectId, 'workspace project lifecycle superseded');
+  }
+  if (status === 'active' && currentStatus !== 'paused' && currentStatus !== 'locked') {
+    throw new FrameworkContractError('cli_usage_error', 'workspace project lifecycle can restore active only from paused or locked.', {
+      project_id: projectId,
+      current_status: currentStatus,
+      allowed_current_statuses: ['paused', 'locked'],
+    });
+  }
+  if ((currentStatus === 'archived' || currentStatus === 'superseded') && status !== currentStatus) {
+    throw new FrameworkContractError('cli_usage_error', 'Archived or superseded workspace projects are terminal without an explicit owner restore path.', {
+      project_id: projectId,
+      current_status: currentStatus,
+      requested_status: status,
+    });
+  }
+  const apply = options.apply === true && options.dryRun !== true;
+  const updatedAt = new Date().toISOString();
+  const reason = normalizeOptionalString(options.reason);
+  const projects = context.projects.map((project) => (
+    project.project_id === projectId
+      ? {
+          ...project,
+          lifecycle: transitionProjectLifecycle({
+            project,
+            status,
+            updatedAt,
+            reason,
+            supersededByProjectId,
+          }),
+        }
+      : project
+  ));
+  const written = apply
+    ? writeWorkspaceMetadata({
+        contracts,
+        workspacePath: context.workspacePath,
+        workspaceIndexPath: context.workspaceIndexPath,
+        existingIndex: context.index,
+        agent: context.agent,
+        profile: context.profile,
+        profileId: context.profileId,
+        projects,
+        updatedAt,
+        profileEvent: 'project_lifecycle_updated',
+      })
+    : null;
+  const lifecycle = projects.find((project) => project.project_id === projectId)?.lifecycle;
+  const authorityBoundary = lifecycleActionAuthorityBoundary(status);
+
+  return {
+    version: 'g2',
+    contracts_context: {
+      contracts_dir: contracts.contractsDir,
+      contracts_root_source: contracts.contractsRootSource,
+    },
+    workspace_project_lifecycle: {
+      surface_kind: 'opl_workspace_project_lifecycle',
+      action: status,
+      status: apply ? 'applied' : 'dry_run_ready',
+      dry_run: !apply,
+      write_allowed: apply,
+      workspace_path: context.workspacePath,
+      workspace_index_path: context.workspaceIndexPath,
+      project_id: projectId,
+      project_root: existingProject.project_root,
+      previous_lifecycle: existingProject.lifecycle,
+      lifecycle,
+      written_generated_files: written?.writtenGeneratedFiles ?? [],
+      authority_boundary: authorityBoundary,
+    },
+    [lifecycleSurfaceKey(status)]: {
+      surface_kind: `opl_${lifecycleSurfaceKey(status)}`,
+      status: apply ? 'applied' : 'dry_run_ready',
+      dry_run: !apply,
+      write_allowed: apply,
+      workspace_path: context.workspacePath,
+      workspace_index_path: context.workspaceIndexPath,
+      project_id: projectId,
+      project_root: existingProject.project_root,
+      lifecycle,
+      written_generated_files: written?.writtenGeneratedFiles ?? [],
+      authority_boundary: authorityBoundary,
+    },
+  };
+}
+
+export function deleteWorkspaceProject(
+  contracts: FrameworkContracts,
+  options: WorkspaceLifecycleOptions,
+) {
+  const context = readValidatedWorkspaceIndex(options.workspacePath);
+  const projectId = normalizeOptionalString(options.projectId);
+  if (!projectId) {
+    throw new FrameworkContractError('cli_usage_error', 'workspace project delete requires --project-id.', {
+      required: ['--project-id'],
+    });
+  }
+  const existingProject = projectByIdOrThrow(context.projects, projectId, 'workspace project delete');
+  const ownerReceiptRef = normalizeOptionalString(options.ownerReceiptRef);
+  const applyRequested = options.apply === true && options.dryRun !== true;
+  const deletionAllowed = Boolean(ownerReceiptRef);
+  return {
+    version: 'g2',
+    contracts_context: {
+      contracts_dir: contracts.contractsDir,
+      contracts_root_source: contracts.contractsRootSource,
+    },
+    workspace_project_delete: {
+      surface_kind: 'opl_workspace_project_delete',
+      status: applyRequested && !deletionAllowed ? 'blocked_owner_receipt_required' : 'dry_run_ready',
+      dry_run: true,
+      write_allowed: false,
+      workspace_path: context.workspacePath,
+      workspace_index_path: context.workspaceIndexPath,
+      project_id: projectId,
+      project_root: existingProject.project_root,
+      owner_receipt_ref: ownerReceiptRef,
+      blockers: deletionAllowed
+        ? []
+        : [
+            {
+              code: 'domain_owner_receipt_required',
+              message: 'Physical workspace project delete requires a domain owner receipt ref and remains non-applied by OPL.',
+            },
+          ],
+      physical_delete_applied: false,
+      authority_boundary: {
+        delete_deletes_files: false,
+        delete_moves_project_roots: false,
+        delete_archives_registry_binding: false,
+        delete_writes_domain_truth: false,
+        delete_requires_domain_owner_receipt: true,
+        opl_can_perform_physical_delete: false,
+      },
+    },
   };
 }
 
@@ -405,74 +684,10 @@ export function archiveWorkspaceProject(
   contracts: FrameworkContracts,
   options: WorkspaceLifecycleOptions,
 ) {
-  const context = readValidatedWorkspaceIndex(options.workspacePath);
-  const projectId = normalizeOptionalString(options.projectId);
-  if (!projectId) {
-    throw new FrameworkContractError('cli_usage_error', 'workspace project archive requires --project-id.', {
-      required: ['--project-id'],
-    });
-  }
-  const existingProject = context.projects.find((project) => project.project_id === projectId);
-  if (!existingProject) {
-    throw new FrameworkContractError('contract_shape_invalid', 'workspace project archive requires an indexed project.', {
-      project_id: projectId,
-      indexed_project_ids: context.projects.map((project) => project.project_id),
-    });
-  }
-  const apply = options.apply === true && options.dryRun !== true;
-  const updatedAt = new Date().toISOString();
-  const projects = context.projects.map((project) => (
-    project.project_id === projectId
-      ? {
-          ...project,
-          lifecycle: {
-            ...project.lifecycle,
-            status: 'archived' as const,
-            archived_at: updatedAt,
-            archive_reason: normalizeOptionalString(options.reason),
-          },
-        }
-      : project
-  ));
-  const written = apply
-    ? writeWorkspaceMetadata({
-        contracts,
-        workspacePath: context.workspacePath,
-        workspaceIndexPath: context.workspaceIndexPath,
-        existingIndex: context.index,
-        agent: context.agent,
-        profile: context.profile,
-        profileId: context.profileId,
-        projects,
-        updatedAt,
-        profileEvent: 'project_lifecycle_updated',
-      })
-    : null;
-
-  return {
-    version: 'g2',
-    contracts_context: {
-      contracts_dir: contracts.contractsDir,
-      contracts_root_source: contracts.contractsRootSource,
-    },
-    workspace_project_archive: {
-      surface_kind: 'opl_workspace_project_archive',
-      status: apply ? 'applied' : 'dry_run_ready',
-      dry_run: !apply,
-      write_allowed: apply,
-      workspace_path: context.workspacePath,
-      workspace_index_path: context.workspaceIndexPath,
-      project_id: projectId,
-      project_root: existingProject.project_root,
-      lifecycle: projects.find((project) => project.project_id === projectId)?.lifecycle,
-      written_generated_files: written?.writtenGeneratedFiles ?? [],
-      authority_boundary: {
-        archive_deletes_files: false,
-        archive_archives_registry_binding: false,
-        archive_writes_domain_truth: false,
-      },
-    },
-  };
+  return updateWorkspaceProjectLifecycle(contracts, {
+    ...options,
+    status: 'archived',
+  });
 }
 
 export function exportWorkspaceMap(
@@ -601,5 +816,134 @@ export function workspaceReport(
       updatedAt,
       blockers: doctor.blockers,
     }),
+  };
+}
+
+function fleetEntryForBinding(
+  contracts: FrameworkContracts,
+  binding: WorkspaceBinding,
+) {
+  const workspacePath = binding.workspace_path;
+  const reportCommand = `opl workspace report --workspace ${JSON.stringify(workspacePath)}`;
+  const base = {
+    binding_id: binding.binding_id,
+    project_id: binding.project_id,
+    project: binding.project,
+    registry_status: binding.status,
+    workspace_path: workspacePath,
+    workspace_report_command: reportCommand,
+    workspace_report_ref: path.join(workspacePath, WORKSPACE_REPORT_REF),
+    direct_entry_configured: Boolean(binding.direct_entry.command || binding.direct_entry.url),
+    manifest_command_configured: Boolean(binding.direct_entry.manifest_command),
+  };
+  if (binding.status === 'archived') {
+    return {
+      ...base,
+      fleet_status: 'archived_binding',
+      doctor_status: null,
+      blockers: [],
+      current_project: null,
+      project_lifecycle_counts: null,
+      authority_boundary: {
+        fleet_report_is_projection_only: true,
+        fleet_report_executes_direct_entry: false,
+        fleet_report_executes_manifest_command: false,
+        fleet_report_writes_domain_truth: false,
+      },
+    };
+  }
+  const doctor = doctorWorkspace(contracts, { workspacePath }).workspace_doctor;
+  if (doctor.status !== 'passed') {
+    return {
+      ...base,
+      fleet_status: 'blocked',
+      doctor_status: doctor.status,
+      blockers: doctor.blockers,
+      current_project: null,
+      project_lifecycle_counts: null,
+      authority_boundary: {
+        fleet_report_is_projection_only: true,
+        fleet_report_executes_direct_entry: false,
+        fleet_report_executes_manifest_command: false,
+        fleet_report_writes_domain_truth: false,
+      },
+    };
+  }
+  const report = workspaceReport(contracts, { workspacePath }).workspace_report;
+  return {
+    ...base,
+    fleet_status: 'ready',
+    doctor_status: doctor.status,
+    blockers: [],
+    current_project: report.current_project,
+    project_lifecycle_counts: buildWorkspaceHealth({
+      workspaceId: report.workspace_id,
+      title: report.title,
+      workspacePath,
+      agent: findWorkspaceAgentProfile(report.agent.agent_id),
+      profile: {
+        workspace_mode: report.topology.workspace_mode,
+        project_collection_path: report.topology.project_collection_path,
+        shared_resource_roots: (doctor.profile?.shared_resource_roots ?? []) as string[],
+        project_stage_outputs_root: report.topology.project_stage_outputs_root,
+      },
+      projects: doctor.indexed_projects,
+      createdAt: doctor.checked_at,
+      updatedAt: doctor.checked_at,
+    }).project_lifecycle_counts,
+    authority_boundary: {
+      fleet_report_is_projection_only: true,
+      fleet_report_executes_direct_entry: false,
+      fleet_report_executes_manifest_command: false,
+      fleet_report_writes_domain_truth: false,
+    },
+  };
+}
+
+export function workspaceFleetReport(contracts: FrameworkContracts) {
+  const catalog = buildWorkspaceCatalog(contracts).workspace_catalog;
+  const bindings = catalog.bindings as WorkspaceBinding[];
+  const entries = bindings.map((binding) => fleetEntryForBinding(contracts, binding));
+  const unboundProjects = catalog.projects
+    .filter((project: { active_binding: unknown }) => project.active_binding === null)
+    .map((project: { project_id: string; project: string }) => ({
+      project_id: project.project_id,
+      project: project.project,
+      fleet_status: 'not_bound',
+      workspace_path: null,
+      workspace_report_command: null,
+      workspace_report_ref: null,
+      blockers: [],
+    }));
+
+  return {
+    version: 'g2',
+    contracts_context: {
+      contracts_dir: contracts.contractsDir,
+      contracts_root_source: contracts.contractsRootSource,
+    },
+    workspace_fleet_report: {
+      surface_kind: 'opl_workspace_fleet_report',
+      status: entries.some((entry) => entry.fleet_status === 'blocked') ? 'blocked' : 'ok',
+      checked_at: new Date().toISOString(),
+      registry_summary: catalog.summary,
+      summary: {
+        bindings_count: entries.length,
+        ready_bindings_count: entries.filter((entry) => entry.fleet_status === 'ready').length,
+        blocked_bindings_count: entries.filter((entry) => entry.fleet_status === 'blocked').length,
+        archived_bindings_count: entries.filter((entry) => entry.fleet_status === 'archived_binding').length,
+        unbound_projects_count: unboundProjects.length,
+      },
+      bindings: entries,
+      unbound_projects: unboundProjects,
+      authority_boundary: {
+        fleet_report_is_projection_only: true,
+        fleet_report_executes_direct_entry: false,
+        fleet_report_executes_manifest_command: false,
+        fleet_report_writes_domain_truth: false,
+        fleet_report_claims_domain_ready: false,
+        fleet_report_claims_stage_complete: false,
+      },
+    },
   };
 }

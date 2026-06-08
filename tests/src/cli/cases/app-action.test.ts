@@ -97,11 +97,18 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'workspace_adopt_apply',
       'workspace_upgrade',
       'workspace_project_archive',
+      'workspace_project_lifecycle',
+      'workspace_project_pause',
+      'workspace_project_resume',
+      'workspace_project_lock',
+      'workspace_project_supersede',
+      'workspace_project_delete',
       'workspace_export_map',
       'workspace_inspect',
       'workspace_inventory',
       'workspace_health',
       'workspace_report',
+      'workspace_fleet_report',
     ]) {
       assert.ok(actions.has(actionId), `missing App action: ${actionId}`);
       assert.equal(actions.get(actionId)?.delegated_surface.startsWith('opl '), true);
@@ -152,6 +159,20 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.equal(actions.get('workspace_upgrade')?.mutates, 'opl_workspace_topology_projection');
     assert.equal(actions.get('workspace_project_archive')?.delegated_surface, 'opl workspace project archive');
     assert.equal(actions.get('workspace_project_archive')?.mutates, 'opl_workspace_project_lifecycle_projection');
+    assert.equal(actions.get('workspace_project_lifecycle')?.delegated_surface, 'opl workspace project lifecycle');
+    assert.deepEqual(actions.get('workspace_project_lifecycle')?.payload_fields, [
+      'workspace_path',
+      'project_id',
+      'status',
+      'reason',
+      'superseded_by_project_id',
+    ]);
+    assert.equal(actions.get('workspace_project_pause')?.delegated_surface, 'opl workspace project lifecycle');
+    assert.equal(actions.get('workspace_project_resume')?.delegated_surface, 'opl workspace project lifecycle');
+    assert.equal(actions.get('workspace_project_lock')?.delegated_surface, 'opl workspace project lifecycle');
+    assert.equal(actions.get('workspace_project_supersede')?.delegated_surface, 'opl workspace project lifecycle');
+    assert.equal(actions.get('workspace_project_delete')?.delegated_surface, 'opl workspace project delete');
+    assert.equal(actions.get('workspace_project_delete')?.mutates, 'none_read_only');
     assert.equal(actions.get('workspace_export_map')?.delegated_surface, 'opl workspace export-map');
     assert.equal(actions.get('workspace_export_map')?.mutates, 'none_read_only');
     assert.equal(actions.get('workspace_inspect')?.delegated_surface, 'opl workspace inspect');
@@ -165,6 +186,9 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.equal(actions.get('workspace_report')?.delegated_surface, 'opl workspace report');
     assert.equal(actions.get('workspace_report')?.mutates, 'none_read_only');
     assert.deepEqual(actions.get('workspace_report')?.payload_fields, ['workspace_path']);
+    assert.equal(actions.get('workspace_fleet_report')?.delegated_surface, 'opl workspace fleet report');
+    assert.equal(actions.get('workspace_fleet_report')?.mutates, 'none_read_only');
+    assert.deepEqual(actions.get('workspace_fleet_report')?.payload_fields, []);
     assert.deepEqual(actions.get('provider_scheduler_tick')?.payload_fields, ['force', 'limit', 'hydrate', 'profile']);
     assert.equal(actions.get('provider_scheduler_tick')?.route_requires_domain_or_app_payload, true);
     assert.equal(actions.get('provider_scheduler_tick')?.can_submit_to_safe_action_shell, false);
@@ -430,6 +454,64 @@ test('app action execute owns settings, release channel, workspace root, and pro
     assert.equal(workspaceProjectArchive.delegated_surface, 'opl workspace project archive');
     assert.equal(workspaceProjectArchive.result.workspace_project_archive.lifecycle.status, 'archived');
 
+    const magProjectPause = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'workspace_project_pause',
+      '--payload',
+      JSON.stringify({
+        workspace_path: path.join(workspaceRoot, 'nsfc-p2c'),
+        project_id: 'grant-001',
+        reason: 'waiting-for-user',
+      }),
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+    }).app_action_execution;
+
+    assert.equal(magProjectPause.delegated_surface, 'opl workspace project lifecycle');
+    assert.equal(magProjectPause.result.workspace_project_pause.lifecycle.status, 'paused');
+    assert.equal(magProjectPause.result.workspace_project_pause.lifecycle.pause_reason, 'waiting-for-user');
+
+    const magProjectResume = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'workspace_project_resume',
+      '--payload',
+      JSON.stringify({
+        workspace_path: path.join(workspaceRoot, 'nsfc-p2c'),
+        project_id: 'grant-001',
+      }),
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+    }).app_action_execution;
+
+    assert.equal(magProjectResume.result.workspace_project_restore.lifecycle.status, 'active');
+
+    const deleteGate = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'workspace_project_delete',
+      '--payload',
+      JSON.stringify({
+        workspace_path: path.join(workspaceRoot, 'nsfc-p2c'),
+        project_id: 'grant-001',
+      }),
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+    }).app_action_execution;
+
+    assert.equal(deleteGate.delegated_surface, 'opl workspace project delete');
+    assert.equal(deleteGate.result.workspace_project_delete.status, 'blocked_owner_receipt_required');
+
     const workspaceMap = runCli([
       'app',
       'action',
@@ -520,6 +602,20 @@ test('app action execute owns settings, release channel, workspace root, and pro
     assert.equal(workspaceReportAction.delegated_surface, 'opl workspace report');
     assert.equal(workspaceReportAction.result.workspace_report.surface_kind, 'opl_workspace_report');
     assert.equal(workspaceReportAction.result.workspace_report.current_project.project_id, 'deck-001');
+
+    const workspaceFleetReport = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'workspace_fleet_report',
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+    }).app_action_execution;
+
+    assert.equal(workspaceFleetReport.delegated_surface, 'opl workspace fleet report');
+    assert.equal(workspaceFleetReport.result.workspace_fleet_report.summary.ready_bindings_count >= 1, true);
 
     const provider = runCli([
       'app',

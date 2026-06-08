@@ -133,7 +133,10 @@ type WorkspaceValidationCliInput = {
 
 type WorkspaceLifecycleCliInput = WorkspaceValidationCliInput & {
   projectId?: string;
+  status?: 'active' | 'paused' | 'archived' | 'superseded' | 'locked';
   reason?: string;
+  supersededByProjectId?: string;
+  ownerReceiptRef?: string;
   dryRun?: boolean;
   apply?: boolean;
 };
