@@ -1,11 +1,9 @@
 import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
-import { buildOplPackageManifest } from '../../package-distribution.ts';
 import { buildOplFrameworkLocator } from '../../opl-framework-locator.ts';
 import { buildFrameworkReadinessSummary } from '../../framework-readiness.ts';
 import { buildProductionFunctionalCloseout } from '../../production-functional-closeout.ts';
 import { buildOplAppState, parseAppActionExecuteArgs, parseAppStateArgs, runOplAppActionExecute } from '../../app-state.ts';
 import { runOplEngineAction } from '../../system-installation/engine-actions.ts';
-import { buildOplModules, runOplModuleAction, runOplModuleExec } from '../../system-installation/modules.ts';
 import { runOplTurnkeyInstall } from '../../system-installation/turnkey.ts';
 import {
   buildFamilyActionExport,
@@ -29,35 +27,6 @@ import {
 import {
   buildPrivatePlatformResidueOwnerDecisionLedgerCommand,
 } from '../../private-platform-residue-owner-decisions.ts';
-import {
-  buildBrandModuleInspect,
-  buildBrandModuleInterfaces,
-  buildBrandModuleMaturity,
-  buildBrandModulesList,
-  buildBrandModuleValidation,
-  buildAgentInternalBrandModuleDoctor,
-  buildAgentInternalBrandModuleInspect,
-  buildAgentInternalBrandModuleInterfaces,
-  buildAgentInternalBrandModulesList,
-  buildAgentInternalBrandModuleValidation,
-} from '../../brand-modules.ts';
-import {
-  buildBrandModuleL5Interfaces,
-  buildBrandModuleL5ModuleStatus,
-  buildBrandModuleL5Status,
-  buildBrandModuleL5Validation,
-} from '../../brand-module-l5-evidence.ts';
-import {
-  FOUNDRY_AGENT_OPERATIONS,
-  buildFoundryAgentInspect,
-  buildFoundryAgentCliSpine,
-  buildFoundryAgentsList,
-} from '../../foundry-agent-cli-spine.ts';
-import {
-  buildBrandModuleObjectView,
-  buildBrandModuleSurfaceCommand,
-  listBrandModuleObjectViewCommands,
-} from '../../brand-module-surfaces.ts';
 import { buildAgentReadinessSummary } from '../../agent-readiness.ts';
 import { buildStandardDomainAgentConformanceReport } from '../../standard-domain-agent-conformance.ts';
 import { agentsEvidenceApplySpec } from './agent-evidence-command-spec.ts';
@@ -72,23 +41,6 @@ import {
   buildFamilyDomainMemoryMigrationPlan,
 } from '../../family-domain-memory.ts';
 import {
-  buildFamilyStageAssumptionsInspect,
-  buildFamilyStageCohortLoopInspect,
-  buildFamilyStageGraphInspect,
-  buildFamilyStagePackRegistryInspect,
-  buildFamilyStagePackSourceSpecInspect,
-  buildFamilyStageProofBundleInspect,
-  buildFamilyStageReadinessInspect,
-  buildFamilyStageReplayCertificationInspect,
-  buildFamilyStageRuntimeBudgetInspect,
-  buildFamilyStageInspect,
-  buildFamilyStagesList,
-} from '../../family-stage-control-plane.ts';
-import {
-  familyStageDiagnosticLensCommands,
-  requireFamilyStageDerivedLens,
-} from '../../family-stage-derived-lenses.ts';
-import {
   buildGenericSubstrateProjectionInspect,
   buildGenericSubstrateProjectionList,
   buildGenericSubstrateWorkbench,
@@ -101,51 +53,20 @@ import { buildPublicWorkOrderCommandSpecs } from './work-order-public-command-sp
 import { buildPublicRuntimeCommandSpecs } from './runtime-public-command-specs.ts';
 import {
   buildPublicEngineActionPayload,
-  buildPublicModuleActionPayload,
-  buildPublicModuleExecPayload,
-  buildPublicModulesPayload,
   buildPublicTurnkeyInstallPayload,
 } from '../modules/public-payloads.ts';
-import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, cloneCommandSpec, parseOplEngineArgs, parseOplModuleExecArgs, parseOplModuleArgs, parseResumeArgs, parseTurnkeyInstallArgs, printJson, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, cloneCommandSpec, parseOplEngineArgs, parseResumeArgs, parseTurnkeyInstallArgs, printJson, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
-import type { BrandModuleId } from '../../types.ts';
+import { buildBrandCommandSpecs } from './public-command-specs-parts/brand.ts';
+import { buildConnectCommandSpecs } from './public-command-specs-parts/connect.ts';
+import { buildFoundryCommandSpecs } from './public-command-specs-parts/foundry.ts';
+import { buildStageCommandSpecs, validateStageDerivedLensCommandSpecs } from './public-command-specs-parts/stages.ts';
+import { buildWorkspaceCommandSpecs } from './public-command-specs-parts/workspace.ts';
 
 export function buildPublicCommandSpecs(
   commandSpecs: Record<string, CommandSpec>,
   getContracts: () => FrameworkContracts,
 ): Record<string, CommandSpec> {
-  const buildNoArgSpec = (
-    base: Omit<CommandSpec, 'handler'>,
-    handler: () => unknown | Promise<unknown>,
-  ): CommandSpec => {
-    const spec: CommandSpec = {
-      ...base,
-      handler: (args) => {
-        assertNoArgs(args, spec);
-        return handler();
-      },
-    };
-    return spec;
-  };
-
-  const buildModuleActionSpec = (
-    action: 'install' | 'update' | 'reinstall' | 'remove',
-    usage: string,
-    example: string,
-  ): CommandSpec => {
-    const spec: CommandSpec = {
-      usage,
-      summary: `${action[0].toUpperCase()}${action.slice(1)} one OPL-managed domain module.`,
-      examples: [example],
-      group: 'module',
-      handler: (args) =>
-        buildPublicModuleActionPayload(
-          runOplModuleAction(action, parseOplModuleArgs(args, spec).moduleId!),
-        ),
-    };
-    return spec;
-  };
-
   const buildEngineActionSpec = (
     action: 'install' | 'update' | 'reinstall' | 'remove',
     usage: string,
@@ -188,91 +109,11 @@ export function buildPublicCommandSpecs(
   const agentLabCommandSpecs = buildPublicAgentLabCommandSpecs();
   const workOrderCommandSpecs = buildPublicWorkOrderCommandSpecs();
   const runtimeCommandSpecs = buildPublicRuntimeCommandSpecs(commandSpecs);
-  const buildBrandModuleSurfaceSpecs = (
-    moduleId: BrandModuleId,
-    group: string,
-    subcommands: ReadonlyArray<'status' | 'inspect' | 'interfaces' | 'validate' | 'doctor'> = ['status', 'inspect', 'interfaces', 'validate', 'doctor'],
-  ): Record<string, CommandSpec> => {
-    const label = `OPL ${moduleId}`;
-    const specs: Record<string, CommandSpec> = {};
-    for (const subcommand of subcommands) {
-      const command = `${moduleId} ${subcommand}`;
-      specs[command] = {
-        usage: `opl ${moduleId} ${subcommand}`,
-        summary: `Read the ${label} module-owned ${subcommand} surface instead of relying on the aggregate brand registry.`,
-        examples: [`opl ${moduleId} ${subcommand} --json`],
-        group,
-        handler: (args) => {
-          assertNoArgs(args, specs[command]);
-          return buildBrandModuleSurfaceCommand(getContracts(), moduleId, subcommand);
-        },
-      };
-    }
-    for (const viewId of listBrandModuleObjectViewCommands(moduleId)) {
-      const command = `${moduleId} ${viewId}`;
-      specs[command] = {
-        usage: `opl ${moduleId} ${viewId}`,
-        summary: `Read the ${label} ${viewId} object-model view from the module-owned surface contract.`,
-        examples: [`opl ${moduleId} ${viewId} --json`],
-        group,
-        handler: (args) => {
-          assertNoArgs(args, specs[command]);
-          return buildBrandModuleObjectView(getContracts(), moduleId, viewId);
-        },
-      };
-    }
-    const l5StatusCommand = `${moduleId} l5-status`;
-    specs[l5StatusCommand] = {
-      usage: `opl ${moduleId} l5-status`,
-      summary: `Read the ${label} L5 operating-evidence status without converting L4 structure into production maturity.`,
-      examples: [`opl ${moduleId} l5-status --json`],
-      group,
-      handler: (args) => {
-        assertNoArgs(args, specs[l5StatusCommand]);
-        return buildBrandModuleL5ModuleStatus(getContracts(), moduleId);
-      },
-    };
-    return specs;
-  };
-
-  const brandModuleSurfaceSpecs = {
-    ...buildBrandModuleSurfaceSpecs('charter', 'brand-charter'),
-    ...buildBrandModuleSurfaceSpecs('atlas', 'brand-atlas'),
-    ...buildBrandModuleSurfaceSpecs('workspace', 'workspace', ['status', 'inspect']),
-    ...buildBrandModuleSurfaceSpecs('stagecraft', 'brand-stagecraft'),
-    ...buildBrandModuleSurfaceSpecs('runway', 'brand-runway'),
-    ...buildBrandModuleSurfaceSpecs('vault', 'brand-vault'),
-    ...buildBrandModuleSurfaceSpecs('console', 'brand-console'),
-    ...buildBrandModuleSurfaceSpecs('foundry-lab', 'brand-foundry-lab'),
-    ...buildBrandModuleSurfaceSpecs('connect', 'brand-connect'),
-  };
-
-  const foundryAgentCommandSpecs: Record<string, CommandSpec> = Object.fromEntries(
-    FOUNDRY_AGENT_OPERATIONS.map((operation) => {
-      const command = `agents foundry ${operation}`;
-      const spec: CommandSpec = {
-        usage: `opl ${command}`,
-        summary: `Read the Foundry Agent series ${operation} spine for OPL-generated agent CLIs, skills, MCP descriptors, and App action projections.`,
-        examples: [`opl ${command} --json`],
-        group: 'foundry',
-        handler: (args) => buildFoundryAgentCliSpine(operation, args),
-      };
-      return [command, spec];
-    }),
-  );
-
-  const connectPackagesManifestSpec = buildNoArgSpec(
-    {
-      usage: 'opl connect packages manifest',
-      summary: 'Show the machine-readable OPL Packages manifest through the canonical Connect command surface.',
-      examples: ['opl connect packages manifest --json'],
-      group: 'connect',
-    },
-    () => ({
-      version: 'g2',
-      packages_manifest: buildOplPackageManifest(),
-    }),
-  );
+  const brandCommandSpecs = buildBrandCommandSpecs(getContracts);
+  const connectCommandSpecs = buildConnectCommandSpecs(commandSpecs, systemCommandSpecs);
+  const foundryCommandSpecs = buildFoundryCommandSpecs();
+  const stageCommandSpecs = buildStageCommandSpecs(getContracts);
+  const workspaceCommandSpecs = buildWorkspaceCommandSpecs(commandSpecs);
 
   const engineInstallSpec = buildEngineActionSpec(
     'install',
@@ -353,237 +194,9 @@ export function buildPublicCommandSpecs(
       group: 'app',
       handler: (args) => runOplAppActionExecute(getContracts(), parseAppActionExecuteArgs(args)),
     },
-    'brand-modules list': {
-      usage: 'opl brand-modules list',
-      summary: 'List the nine OPL brand modules and their Workspace-level structural baseline refs.',
-      examples: ['opl brand-modules list --json'],
-      group: 'brand',
-      handler: (args) => {
-        assertNoArgs(args, publicCommandSpecs['brand-modules list']);
-        return buildBrandModulesList(getContracts());
-      },
-    },
-    'brand-modules inspect': {
-      usage: 'opl brand-modules inspect --module <module_id>',
-      summary: 'Inspect one OPL brand module with contract, CLI, App, descriptor, validation, status, and authority-boundary refs.',
-      examples: ['opl brand-modules inspect --module workspace --json'],
-      group: 'brand',
-      handler: (args) => buildBrandModuleInspect(getContracts(), args),
-    },
-    'brand-modules maturity': {
-      usage: 'opl brand-modules maturity',
-      summary: 'Read the Workspace-baseline maturity matrix for all OPL brand modules.',
-      examples: ['opl brand-modules maturity --json'],
-      group: 'brand',
-      handler: (args) => {
-        assertNoArgs(args, publicCommandSpecs['brand-modules maturity']);
-        return buildBrandModuleMaturity(getContracts());
-      },
-    },
-    'brand-modules l5-status': {
-      usage: 'opl brand-modules l5-status [--module <module_id>]',
-      summary: 'Read the fail-closed L5 operating-evidence matrix without claiming production maturity from structural readiness.',
-      examples: [
-        'opl brand-modules l5-status --json',
-        'opl brand-modules l5-status --module runway --json',
-      ],
-      group: 'brand',
-      handler: (args) => buildBrandModuleL5Status(getContracts(), args),
-    },
-    'brand-modules l5-validate': {
-      usage: 'opl brand-modules l5-validate',
-      summary: 'Validate the L5 evidence matrix shape and false-authority policy without treating open evidence as a contract failure.',
-      examples: ['opl brand-modules l5-validate --json'],
-      group: 'brand',
-      handler: (args) => {
-        assertNoArgs(args, publicCommandSpecs['brand-modules l5-validate']);
-        return buildBrandModuleL5Validation(getContracts());
-      },
-    },
-    'brand-modules l5-interfaces': {
-      usage: 'opl brand-modules l5-interfaces',
-      summary: 'Expose CLI, App descriptor, validation, and contract refs for the brand-module L5 evidence gate.',
-      examples: ['opl brand-modules l5-interfaces --json'],
-      group: 'brand',
-      handler: (args) => {
-        assertNoArgs(args, publicCommandSpecs['brand-modules l5-interfaces']);
-        return buildBrandModuleL5Interfaces(getContracts());
-      },
-    },
-    'brand-modules validate': {
-      usage: 'opl brand-modules validate',
-      summary: 'Validate OPL brand module L4 gates and false-authority boundaries from the registry contract.',
-      examples: ['opl brand-modules validate --json'],
-      group: 'brand',
-      handler: (args) => {
-        assertNoArgs(args, publicCommandSpecs['brand-modules validate']);
-        return buildBrandModuleValidation(getContracts());
-      },
-    },
-    'brand-modules interfaces': {
-      usage: 'opl brand-modules interfaces',
-      summary: 'Expose descriptor-only CLI, App, validation, and registry surfaces for the OPL brand module bundle.',
-      examples: ['opl brand-modules interfaces --json'],
-      group: 'brand',
-      handler: (args) => {
-        assertNoArgs(args, publicCommandSpecs['brand-modules interfaces']);
-        return buildBrandModuleInterfaces(getContracts());
-      },
-    },
-    ...brandModuleSurfaceSpecs,
-    ...foundryAgentCommandSpecs,
-    'foundry agents list': {
-      usage: 'opl foundry agents list',
-      summary: 'List MAS, MAG, RCA, and OMA as one OPL Foundry Agent series with their direct CLI, Skill, MCP, and Connect command surfaces.',
-      examples: ['opl foundry agents list --json'],
-      group: 'foundry',
-      handler: (args) => buildFoundryAgentsList(args),
-    },
-    'foundry agents inspect': {
-      usage: 'opl foundry agents inspect <mas|mag|rca|oma>',
-      summary: 'Inspect one Foundry Agent series member and its direct CLI foundry spine, ordinary work alias, Skill/MCP projection, and authority boundary.',
-      examples: [
-        'opl foundry agents inspect mas --json',
-        'opl foundry agents inspect rca --json',
-      ],
-      group: 'foundry',
-      handler: (args) => buildFoundryAgentInspect(args),
-    },
-    'connect modules': buildNoArgSpec(
-      {
-        usage: 'opl connect modules',
-        summary: 'List OPL-managed domain modules through the canonical Connect command surface.',
-        examples: ['opl connect modules --json'],
-        group: 'connect',
-      },
-      () => buildPublicModulesPayload(buildOplModules()),
-    ),
-    'connect install': {
-      ...buildModuleActionSpec(
-        'install',
-        'opl connect install --module <module_id>',
-        'opl connect install --module medautoscience',
-      ),
-      group: 'connect',
-      summary: 'Install one OPL-managed domain module through the canonical Connect command surface.',
-    },
-    'connect update': {
-      ...buildModuleActionSpec(
-        'update',
-        'opl connect update --module <module_id>',
-        'opl connect update --module medautoscience',
-      ),
-      group: 'connect',
-      summary: 'Update one OPL-managed domain module through the canonical Connect command surface.',
-    },
-    'connect reinstall': {
-      ...buildModuleActionSpec(
-        'reinstall',
-        'opl connect reinstall --module <module_id>',
-        'opl connect reinstall --module medautoscience',
-      ),
-      group: 'connect',
-      summary: 'Reinstall one OPL-managed domain module through the canonical Connect command surface.',
-    },
-    'connect remove': {
-      ...buildModuleActionSpec(
-        'remove',
-        'opl connect remove --module <module_id>',
-        'opl connect remove --module medautoscience',
-      ),
-      group: 'connect',
-      summary: 'Remove one OPL-managed domain module through the canonical Connect command surface.',
-    },
-    'connect exec': {
-      usage: 'opl connect exec --module <module_id> -- <domain_cli_args...>',
-      summary: 'Run a domain module CLI through the canonical Connect command surface.',
-      examples: [
-        'opl connect exec --module medautoscience -- doctor entry-modes',
-        'opl connect exec --module medautogrant -- --help',
-      ],
-      group: 'connect',
-      handler: (args) => {
-        const parsed = parseOplModuleExecArgs(args, publicCommandSpecs['connect exec']);
-        return buildPublicModuleExecPayload(
-          runOplModuleExec(parsed.moduleId, parsed.args),
-        );
-      },
-    },
-    'connect skills': cloneCommandSpec(commandSpecs['skill-list'], {
-      usage: 'opl connect skills [--domain <domain_id>]',
-      summary: 'Inspect family domain plugin packs through the canonical Connect command surface.',
-      examples: [
-        'opl connect skills --json',
-        'opl connect skills --domain medautoscience --json',
-      ],
-      group: 'connect',
-      help_surface: 'default',
-    }),
-    'connect sync-skills': cloneCommandSpec(commandSpecs['skill-sync'], {
-      usage: 'opl connect sync-skills [--domain <domain_id>] [--home <home_path>] [--quiet]',
-      summary: 'Register family domain plugin packs through the canonical Connect command surface.',
-      examples: [
-        'opl connect sync-skills --json',
-        'opl connect sync-skills --domain medautoscience --json',
-        'opl connect sync-skills --home /tmp/codex-home --json',
-      ],
-      group: 'connect',
-      help_surface: 'default',
-    }),
-    'connect packages manifest': connectPackagesManifestSpec,
-    'connect reconcile-modules': cloneCommandSpec(systemCommandSpecs['system reconcile-modules'], {
-      usage: 'opl connect reconcile-modules',
-      summary: 'Install missing modules and update clean domain modules through the canonical Connect command surface.',
-      examples: ['opl connect reconcile-modules --json'],
-      group: 'connect',
-    }),
-    'agents modules list': {
-      usage: 'opl agents modules list',
-      summary: 'List domain-agent internal brand-module spines without making them OPL platform modules.',
-      examples: ['opl agents modules list --json'],
-      group: 'brand',
-      handler: (args) => {
-        assertNoArgs(args, publicCommandSpecs['agents modules list']);
-        return buildAgentInternalBrandModulesList(getContracts());
-      },
-    },
-    'agents modules inspect': {
-      usage: 'opl agents modules inspect --domain <domain_id> --module <agent_module_id>',
-      summary: 'Inspect one domain-agent internal brand-module spine from the OPL governance contract.',
-      examples: ['opl agents modules inspect --domain medautoscience --module agent-runway --json'],
-      group: 'brand',
-      handler: (args) => buildAgentInternalBrandModuleInspect(getContracts(), args),
-    },
-    'agents modules interfaces': {
-      usage: 'opl agents modules interfaces',
-      summary: 'Expose CLI and descriptor refs for the agent-owned internal brand-module spine.',
-      examples: ['opl agents modules interfaces --json'],
-      group: 'brand',
-      handler: (args) => {
-        assertNoArgs(args, publicCommandSpecs['agents modules interfaces']);
-        return buildAgentInternalBrandModuleInterfaces(getContracts());
-      },
-    },
-    'agents modules validate': {
-      usage: 'opl agents modules validate',
-      summary: 'Validate agent-owned internal brand-module spine coverage and false-authority boundaries.',
-      examples: ['opl agents modules validate --json'],
-      group: 'brand',
-      handler: (args) => {
-        assertNoArgs(args, publicCommandSpecs['agents modules validate']);
-        return buildAgentInternalBrandModuleValidation(getContracts());
-      },
-    },
-    'agents modules doctor': {
-      usage: 'opl agents modules doctor',
-      summary: 'Fail closed if agent-owned internal brand-module spine governance drifts.',
-      examples: ['opl agents modules doctor --json'],
-      group: 'brand',
-      handler: (args) => {
-        assertNoArgs(args, publicCommandSpecs['agents modules doctor']);
-        return buildAgentInternalBrandModuleDoctor(getContracts());
-      },
-    },
+    ...brandCommandSpecs,
+    ...foundryCommandSpecs,
+    ...connectCommandSpecs,
     ...workOrderCommandSpecs,
     'framework locate': {
       usage: 'opl framework locate',
@@ -753,244 +366,7 @@ export function buildPublicCommandSpecs(
       ],
       group: 'status',
     }),
-    workspace: {
-      usage:
-        'opl workspace projects|list|fleet report|root|init|ensure|validate|doctor|adopt|upgrade|project lifecycle|project archive|project delete|export-map|health|inspect|inventory|report|interfaces|bind|activate|archive [options]',
-      summary:
-        'Manage OPL workspace bindings, standard family-agent workspace initialization, generated inspection refs, and workspace-local project lifecycle projections.',
-      examples: [
-        'opl workspace projects',
-        'opl workspace ensure --agent rca --project-id deck-001',
-        'opl workspace init --agent rca --workspace-id visual-theme-a --project-id deck-001',
-        'opl workspace validate --workspace /Users/gaofeng/workspace/visual-theme-a',
-        'opl workspace report --workspace /Users/gaofeng/workspace/visual-theme-a',
-        'opl workspace fleet report',
-        'opl workspace inspect --workspace /Users/gaofeng/workspace/visual-theme-a',
-        'opl workspace interfaces',
-      ],
-      group: 'workspace',
-      subcommands: [
-        {
-          command: 'workspace projects',
-          usage: 'opl workspace projects',
-          summary: 'List known project workspace bindings from the OPL workspace registry.',
-        },
-        {
-          command: 'workspace fleet report',
-          usage: 'opl workspace fleet report',
-          summary: 'Read registry-wide workspace fleet status without executing direct-entry or manifest commands.',
-        },
-        {
-          command: 'workspace init',
-          usage:
-            'opl workspace init --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>]',
-          summary: 'Materialize the standard OPL workspace topology for one family agent.',
-        },
-        {
-          command: 'workspace ensure',
-          usage:
-            'opl workspace ensure --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>]',
-          summary: 'Reuse an active binding or initialize/append the compatible standard workspace topology.',
-        },
-        {
-          command: 'workspace validate',
-          usage: 'opl workspace validate --workspace <path>',
-          summary: 'Fail closed unless the workspace index and generated refs match the OPL workspace norm.',
-        },
-        {
-          command: 'workspace doctor',
-          usage: 'opl workspace doctor --workspace <path>',
-          summary: 'Report workspace topology, generated refs, indexed projects, and blockers without writing.',
-        },
-        {
-          command: 'workspace inspect',
-          usage: 'opl workspace inspect --workspace <path>',
-          summary: 'Read the workspace inspection projection for user and operator checks.',
-        },
-        {
-          command: 'workspace inventory',
-          usage: 'opl workspace inventory --workspace <path>',
-          summary: 'Read the shared resource inventory projection without reading resource bodies.',
-        },
-        {
-          command: 'workspace report',
-          usage: 'opl workspace report --workspace <path>',
-          summary: 'Read the user-first workspace report with current project, stage refs, lifecycle counts, and blockers.',
-        },
-        {
-          command: 'workspace interfaces',
-          usage: 'opl workspace interfaces',
-          summary: 'Describe CLI/App/MCP/Skill/OpenAI/AI SDK delegates for the workspace protocol.',
-        },
-      ],
-      handler: (args) => {
-        assertNoArgs(args, publicCommandSpecs.workspace);
-        return buildCommandHelp('workspace', publicCommandSpecs.workspace);
-      },
-    },
-    'workspace projects': cloneCommandSpec(commandSpecs.projects, {
-      usage: 'opl workspace projects',
-      examples: ['opl workspace projects'],
-      group: 'workspace',
-    }),
-    'workspace list': cloneCommandSpec(commandSpecs['workspace list'], {
-      usage: 'opl workspace list',
-      examples: ['opl workspace list'],
-      group: 'workspace',
-    }),
-    'workspace root': cloneCommandSpec(commandSpecs['workspace root'], {
-      usage: 'opl workspace root',
-      examples: ['opl workspace root'],
-      group: 'workspace',
-    }),
-    'workspace root set': cloneCommandSpec(commandSpecs['workspace root set'], {
-      usage: 'opl workspace root set --path <workspace_root>',
-      examples: ['opl workspace root set --path /Users/gaofeng/workspace'],
-      group: 'workspace',
-    }),
-    'workspace root doctor': cloneCommandSpec(commandSpecs['workspace root doctor'], {
-      usage: 'opl workspace root doctor',
-      examples: ['opl workspace root doctor'],
-      group: 'workspace',
-    }),
-    'workspace init': cloneCommandSpec(commandSpecs['workspace-init'], {
-      usage:
-        'opl workspace init --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio] [--title <title>] [--dry-run] [--no-bind] [--force]',
-      examples: [
-        'opl workspace init --agent rca --workspace-id visual-theme-a --project-id deck-001',
-        'opl workspace init --agent rca --workspace-root /Users/gaofeng/workspace --workspace-id visual-theme-a --project-id deck-001',
-        'opl workspace init --agent mas --workspace-root /Users/gaofeng/workspace --workspace-id dm-cvd --project-id DM002',
-        'opl workspace init --agent oma --workspace /Users/gaofeng/workspace/agent-foundry --dry-run',
-      ],
-      group: 'workspace',
-    }),
-    'workspace ensure': cloneCommandSpec(commandSpecs['workspace-ensure'], {
-      usage:
-        'opl workspace ensure --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio] [--title <title>] [--dry-run] [--no-bind] [--force]',
-      examples: [
-        'opl workspace ensure --agent rca --project-id deck-001',
-        'opl workspace ensure --agent mas --workspace-id dm-cvd --project-id DM002',
-        'opl workspace ensure --agent mag --workspace-root /Users/gaofeng/workspace --workspace-id nsfc-p2c --project-id grant-001',
-      ],
-      group: 'workspace',
-    }),
-    'workspace validate': cloneCommandSpec(commandSpecs['workspace validate'], {
-      usage: 'opl workspace validate --workspace <path>',
-      examples: [
-        'opl workspace validate --workspace /Users/gaofeng/workspace/visual-theme-a',
-      ],
-      group: 'workspace',
-    }),
-    'workspace doctor': cloneCommandSpec(commandSpecs['workspace doctor'], {
-      usage: 'opl workspace doctor --workspace <path>',
-      examples: [
-        'opl workspace doctor --workspace /Users/gaofeng/workspace/visual-theme-a',
-      ],
-      group: 'workspace',
-    }),
-    'workspace adopt': cloneCommandSpec(commandSpecs['workspace adopt'], {
-      usage:
-        'opl workspace adopt --agent <mas|mag|rca|oma> --workspace <path> [--project-id <id>] [--mode auto|one_off|series|portfolio] [--dry-run|--apply]',
-      examples: [
-        'opl workspace adopt --agent rca --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --dry-run',
-        'opl workspace adopt --agent mas --workspace /Users/gaofeng/workspace/dm-cvd --study-id DM002 --apply',
-      ],
-      group: 'workspace',
-    }),
-    'workspace upgrade': cloneCommandSpec(commandSpecs['workspace upgrade'], {
-      usage: 'opl workspace upgrade --workspace <path> [--dry-run|--apply]',
-      examples: [
-        'opl workspace upgrade --workspace /Users/gaofeng/workspace/visual-theme-a --apply',
-      ],
-      group: 'workspace',
-    }),
-    'workspace project archive': cloneCommandSpec(commandSpecs['workspace project archive'], {
-      usage: 'opl workspace project archive --workspace <path> --project-id <id> [--reason <text>] [--dry-run|--apply]',
-      examples: [
-        'opl workspace project archive --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --apply',
-      ],
-      group: 'workspace',
-    }),
-    'workspace project lifecycle': cloneCommandSpec(commandSpecs['workspace project lifecycle'], {
-      usage:
-        'opl workspace project lifecycle --workspace <path> --project-id <id> --status active|paused|locked|superseded|archived [--reason <text>] [--superseded-by-project-id <id>] [--dry-run|--apply]',
-      examples: [
-        'opl workspace project lifecycle --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --status paused --apply',
-        'opl workspace project lifecycle --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --status active --apply',
-      ],
-      group: 'workspace',
-    }),
-    'workspace project delete': cloneCommandSpec(commandSpecs['workspace project delete'], {
-      usage: 'opl workspace project delete --workspace <path> --project-id <id> [--owner-receipt-ref <ref>] [--dry-run|--apply]',
-      examples: [
-        'opl workspace project delete --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --dry-run',
-      ],
-      group: 'workspace',
-    }),
-    'workspace fleet report': cloneCommandSpec(commandSpecs['workspace fleet report'], {
-      usage: 'opl workspace fleet report',
-      examples: ['opl workspace fleet report'],
-      group: 'workspace',
-    }),
-    'workspace export-map': cloneCommandSpec(commandSpecs['workspace export-map'], {
-      usage: 'opl workspace export-map --workspace <path>',
-      examples: [
-        'opl workspace export-map --workspace /Users/gaofeng/workspace/visual-theme-a',
-      ],
-      group: 'workspace',
-    }),
-    'workspace health': cloneCommandSpec(commandSpecs['workspace health'], {
-      usage: 'opl workspace health --workspace <path>',
-      examples: [
-        'opl workspace health --workspace /Users/gaofeng/workspace/visual-theme-a',
-      ],
-      group: 'workspace',
-    }),
-    'workspace inspect': cloneCommandSpec(commandSpecs['workspace inspect'], {
-      usage: 'opl workspace inspect --workspace <path>',
-      examples: [
-        'opl workspace inspect --workspace /Users/gaofeng/workspace/visual-theme-a',
-      ],
-      group: 'workspace',
-    }),
-    'workspace inventory': cloneCommandSpec(commandSpecs['workspace inventory'], {
-      usage: 'opl workspace inventory --workspace <path>',
-      examples: [
-        'opl workspace inventory --workspace /Users/gaofeng/workspace/visual-theme-a',
-      ],
-      group: 'workspace',
-    }),
-    'workspace report': cloneCommandSpec(commandSpecs['workspace report'], {
-      usage: 'opl workspace report --workspace <path>',
-      examples: [
-        'opl workspace report --workspace /Users/gaofeng/workspace/visual-theme-a',
-      ],
-      group: 'workspace',
-    }),
-    'workspace interfaces': cloneCommandSpec(commandSpecs['workspace interfaces'], {
-      usage: 'opl workspace interfaces',
-      examples: ['opl workspace interfaces'],
-      group: 'workspace',
-    }),
-    'workspace bind': cloneCommandSpec(commandSpecs['workspace-bind'], {
-      usage:
-        'opl workspace bind --project <project_id> --path <workspace_path> [--label <label>] [--entry-command <command>] [--manifest-command <command>] [--entry-url <url>] [--workspace-root <dir>] [--profile <file>] [--input <file>]',
-      examples: [
-        'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai',
-        'opl workspace bind --project medautoscience --path /Users/gaofeng/workspace/med-autoscience --profile /Users/gaofeng/workspace/med-autoscience/profiles/local.toml',
-      ],
-      group: 'workspace',
-    }),
-    'workspace activate': cloneCommandSpec(commandSpecs['workspace-activate'], {
-      usage: 'opl workspace activate --project <project_id> --path <workspace_path>',
-      examples: ['opl workspace activate --project redcube --path /Users/gaofeng/workspace/redcube-ai'],
-      group: 'workspace',
-    }),
-    'workspace archive': cloneCommandSpec(commandSpecs['workspace-archive'], {
-      usage: 'opl workspace archive --project <project_id> --path <workspace_path>',
-      examples: ['opl workspace archive --project redcube --path /Users/gaofeng/workspace/redcube-ai'],
-      group: 'workspace',
-    }),
+    ...workspaceCommandSpecs,
     'domain manifests': cloneCommandSpec(commandSpecs['domain manifests'], {
       usage: 'opl domain manifests',
       examples: ['opl domain manifests'],
@@ -1240,94 +616,7 @@ export function buildPublicCommandSpecs(
       group: 'domain',
       handler: (args) => buildFamilyDomainMemoryMigrationPlan(getContracts(), args),
     },
-    'stages list': {
-      usage: 'opl stages list',
-      summary: 'List family stage control-plane descriptors resolved from bound domain-owned manifests.',
-      examples: ['opl stages list'],
-      group: 'domain',
-      handler: (args) => {
-        assertNoArgs(args, publicCommandSpecs['stages list']);
-        return buildFamilyStagesList(getContracts());
-      },
-    },
-    'stages inspect': {
-      usage: 'opl stages inspect --domain <domain> --stage <stage_id>',
-      summary: 'Inspect one domain-owned family stage descriptor and its authority boundary.',
-      examples: ['opl stages inspect --domain medautoscience --stage manuscript_authoring'],
-      group: 'domain',
-      handler: (args) => buildFamilyStageInspect(getContracts(), args),
-    },
-    'stages readiness': {
-      usage: 'opl stages readiness (--family-defaults | --domain <domain>) [--detail summary|full]',
-      summary: 'Summarize the default operator/App launch-readiness view from admission, proof, assumptions, cohort, replay, and advisory budget/validity refs without issuing a domain verdict.',
-      examples: ['opl stages readiness --family-defaults', 'opl stages readiness --domain mas'],
-      group: 'domain',
-      handler: (args) => buildFamilyStageReadinessInspect(getContracts(), args),
-    },
-    'stages proof-bundle': {
-      usage: 'opl stages proof-bundle --domain <domain>',
-      summary: 'Diagnostic drilldown for proof-bundle obligations folded into stages readiness; not the default operator path.',
-      examples: ['opl stages proof-bundle --domain mas'],
-      group: 'domain',
-      help_surface: 'diagnostic_drilldown',
-      handler: (args) => buildFamilyStageProofBundleInspect(getContracts(), args),
-    },
-    'stages graph': {
-      usage: 'opl stages graph --domain <domain>',
-      summary: 'Diagnostic drilldown for one domain stage pack graph, including admission, edges, guarantee modes, and integrity digest; not the default operator path.',
-      examples: ['opl stages graph --domain mas'],
-      group: 'domain',
-      help_surface: 'diagnostic_drilldown',
-      handler: (args) => buildFamilyStageGraphInspect(getContracts(), args),
-    },
-    'stages assumptions': {
-      usage: 'opl stages assumptions --domain <domain>',
-      summary: 'Diagnostic drilldown for runtime assumption lifecycle refs folded into stages readiness; not the default operator path.',
-      examples: ['opl stages assumptions --domain mas'],
-      group: 'domain',
-      help_surface: 'diagnostic_drilldown',
-      handler: (args) => buildFamilyStageAssumptionsInspect(getContracts(), args),
-    },
-    'stages cohort-loop': {
-      usage: 'opl stages cohort-loop --domain <domain>',
-      summary: 'Diagnostic drilldown for cohort query, trigger, and monitor/metric refs folded into stages readiness; not the default operator path.',
-      examples: ['opl stages cohort-loop --domain mas'],
-      group: 'domain',
-      help_surface: 'diagnostic_drilldown',
-      handler: (args) => buildFamilyStageCohortLoopInspect(getContracts(), args),
-    },
-    'stages runtime-budget': {
-      usage: 'opl stages runtime-budget --domain <domain>',
-      summary: 'Diagnostic drilldown for refs-only runtime boundary and monitor coverage folded into stages readiness/proof; not a standalone domain-ready verdict.',
-      examples: ['opl stages runtime-budget --domain mas'],
-      group: 'domain',
-      help_surface: 'diagnostic_drilldown',
-      handler: (args) => buildFamilyStageRuntimeBudgetInspect(getContracts(), args),
-    },
-    'stages registry': {
-      usage: 'opl stages registry --domain <domain> [--library-status <candidate|admitted|reused|deprecated|superseded>] [--promotion-ref <ref>] [--deprecation-ref <ref>] [--supersession-ref <ref>] [--superseded-by-stage-pack-ref <ref>] [--reused-by-ref <ref>] [--previous-stage-pack-hash <hash>] [--migration-policy <continue_old_hash|migrate_to_new_hash|blocked_human_gate>] [--migration-policy-ref <ref>]',
-      summary: 'Diagnostic drilldown for reusable stage-pack registry lifecycle, integrity hash, and migration blockers; not the default operator path.',
-      examples: ['opl stages registry --domain mas --library-status deprecated --deprecation-ref human_gate:mas-pack-retire'],
-      group: 'domain',
-      help_surface: 'diagnostic_drilldown',
-      handler: (args) => buildFamilyStagePackRegistryInspect(getContracts(), args),
-    },
-    'stages source-spec': {
-      usage: 'opl stages source-spec --domain <domain> [--library-status <candidate|admitted|reused|deprecated|superseded>] [--promotion-ref <ref>] [--deprecation-ref <ref>] [--supersession-ref <ref>] [--superseded-by-stage-pack-ref <ref>] [--reused-by-ref <ref>] [--append-only-event-log-ref <ref>] [--attempt-ledger-ref <ref>] [--recorded-runtime-event-ref <ref>] [--closeout-receipt-ref <ref>]',
-      summary: 'Diagnostic drilldown for a body-free stage-pack source/spec bundle from control-plane, proof, graph, registry, replay, assumption, and cohort refs; not the default operator path.',
-      examples: ['opl stages source-spec --domain mas --recorded-runtime-event-ref runtime_event:mas.stage_1'],
-      group: 'domain',
-      help_surface: 'diagnostic_drilldown',
-      handler: (args) => buildFamilyStagePackSourceSpecInspect(getContracts(), args),
-    },
-    'stages replay-certification': {
-      usage: 'opl stages replay-certification --domain <domain> [--append-only-event-log-ref <ref>] [--attempt-ledger-ref <ref>] [--recorded-runtime-event-ref <ref>] [--closeout-receipt-ref <ref>]',
-      summary: 'Diagnostic drilldown for replay readiness from proof-bundle obligations and recorded append-only event / receipt refs.',
-      examples: ['opl stages replay-certification --domain mas --append-only-event-log-ref opl://events/mas --attempt-ledger-ref opl://attempts/mas'],
-      group: 'domain',
-      help_surface: 'diagnostic_drilldown',
-      handler: (args) => buildFamilyStageReplayCertificationInspect(getContracts(), args),
-    },
+    ...stageCommandSpecs,
     'contract validate': cloneCommandSpec(commandSpecs['validate-contracts'], {
       usage: 'opl contract validate',
       examples: ['opl contract validate'],
@@ -1435,16 +724,7 @@ export function buildPublicCommandSpecs(
     ...runtimeCommandSpecs,
   };
 
-  const registeredDerivedLensCommands = new Set(familyStageDiagnosticLensCommands());
-  for (const [command, spec] of Object.entries(publicCommandSpecs)) {
-    if (
-      command.startsWith('stages ')
-      && spec.help_surface === 'diagnostic_drilldown'
-      && registeredDerivedLensCommands.has(command)
-    ) {
-      requireFamilyStageDerivedLens(command);
-    }
-  }
+  validateStageDerivedLensCommandSpecs(publicCommandSpecs);
 
   return publicCommandSpecs;
 }
