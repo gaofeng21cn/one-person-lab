@@ -2,6 +2,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -58,6 +59,7 @@ const verificationPath = path.join(whitepaperDir, 'opl-whitepaper-verification.j
 const tempDir = path.join(repoRoot, 'tmp', 'pdfs', 'opl-whitepaper');
 const tempMarkdownPath = path.join(tempDir, 'opl-whitepaper.pandoc.md');
 const tempHeaderPath = path.join(tempDir, 'opl-whitepaper-header.tex');
+const candidatePdfPath = path.join(tempDir, 'opl-whitepaper.candidate.pdf');
 
 const forbiddenPatterns = [
   /sk-[A-Za-z0-9_-]+/,
@@ -199,6 +201,10 @@ function stripRepositoryMetadata(markdown: string) {
     .join('\n');
 }
 
+function normalizePdfInlineCode(markdown: string) {
+  return markdown.replace(/`([^`\n]+)`/g, '$1');
+}
+
 function buildPdfMarkdown(source: WhitepaperSource, markdown: string) {
   const cover = [
     '\\begin{titlepage}',
@@ -223,7 +229,7 @@ function buildPdfMarkdown(source: WhitepaperSource, markdown: string) {
     '\\newpage',
     '',
   ].join('\n');
-  const body = stripRepositoryMetadata(markdown)
+  const body = normalizePdfInlineCode(stripRepositoryMetadata(markdown))
     .replace(/^# .+\n\n> .+\n\n/, '')
     .replace(/^## /gm, '# ')
     .replace(/^### /gm, '## ');
@@ -259,7 +265,7 @@ function buildHeader() {
 `;
 }
 
-function buildPdf(source: WhitepaperSource, markdown: string) {
+function buildPdf(source: WhitepaperSource, markdown: string, outputPath: string) {
   fs.mkdirSync(tempDir, { recursive: true });
   fs.writeFileSync(tempHeaderPath, buildHeader(), 'utf8');
   fs.writeFileSync(tempMarkdownPath, buildPdfMarkdown(source, markdown), 'utf8');
@@ -281,21 +287,24 @@ function buildPdf(source: WhitepaperSource, markdown: string) {
     '-V', 'colorlinks=true',
     '-V', 'linkcolor=OPLTeal',
     '-V', 'urlcolor=OPLTeal',
-    '-o', pdfPath,
+    '-o', outputPath,
   ], { env: { SOURCE_DATE_EPOCH: sourceDateEpoch } });
 }
 
-function renderPdf() {
-  const renderDir = path.join(tempDir, 'rendered');
+function renderPdfToDir(pdfFile: string, renderDir: string) {
   fs.rmSync(renderDir, { recursive: true, force: true });
   fs.mkdirSync(renderDir, { recursive: true });
-  run('pdftoppm', ['-png', '-r', '120', pdfPath, path.join(renderDir, 'page')]);
+  run('pdftoppm', ['-png', '-r', '120', pdfFile, path.join(renderDir, 'page')]);
   const pages = fs.readdirSync(renderDir).filter((name) => name.endsWith('.png')).sort();
   return { renderDir, pages };
 }
 
-function parsePdfInfo() {
-  const result = run('pdfinfo', [pdfPath]);
+function renderPdf() {
+  return renderPdfToDir(pdfPath, path.join(tempDir, 'rendered'));
+}
+
+function parsePdfInfo(pdfFile: string) {
+  const result = run('pdfinfo', [pdfFile]);
   const pages = Number(result.stdout.match(/^Pages:\s+(\d+)/m)?.[1] ?? 0);
   const size = result.stdout.match(/^Page size:\s+([\d.]+)\s+x\s+([\d.]+)\s+pts/m);
   return {
@@ -308,9 +317,53 @@ function parsePdfInfo() {
   };
 }
 
-function extractPdfText() {
-  const result = run('pdftotext', [pdfPath, '-']);
+function extractPdfText(pdfFile: string) {
+  const result = run('pdftotext', [pdfFile, '-']);
   return result.stdout;
+}
+
+function fileSha1(filePath: string) {
+  return crypto.createHash('sha1').update(fs.readFileSync(filePath)).digest('hex');
+}
+
+function arePdfContentsEquivalent(existingPdfPath: string, newPdfPath: string) {
+  const existingInfo = parsePdfInfo(existingPdfPath);
+  const newInfo = parsePdfInfo(newPdfPath);
+  if (
+    existingInfo.pages !== newInfo.pages ||
+    existingInfo.page_size_pts.width !== newInfo.page_size_pts.width ||
+    existingInfo.page_size_pts.height !== newInfo.page_size_pts.height
+  ) {
+    return false;
+  }
+
+  if (extractPdfText(existingPdfPath) !== extractPdfText(newPdfPath)) return false;
+
+  const existingRender = renderPdfToDir(existingPdfPath, path.join(tempDir, 'compare-existing'));
+  const newRender = renderPdfToDir(newPdfPath, path.join(tempDir, 'compare-candidate'));
+  if (existingRender.pages.length !== newRender.pages.length) return false;
+  return existingRender.pages.every((pageName, index) => {
+    const newPageName = newRender.pages[index];
+    if (!newPageName) return false;
+    return (
+      fileSha1(path.join(existingRender.renderDir, pageName)) ===
+      fileSha1(path.join(newRender.renderDir, newPageName))
+    );
+  });
+}
+
+function installPdfCandidate(previousMarkdown: string | null, markdown: string) {
+  if (
+    previousMarkdown === markdown &&
+    fs.existsSync(pdfPath) &&
+    arePdfContentsEquivalent(pdfPath, candidatePdfPath)
+  ) {
+    fs.rmSync(candidatePdfPath, { force: true });
+    return 'preserved_existing_equivalent_pdf';
+  }
+  fs.copyFileSync(candidatePdfPath, pdfPath);
+  fs.rmSync(candidatePdfPath, { force: true });
+  return 'updated_pdf';
 }
 
 function relativeToRepo(filePath: string) {
@@ -327,18 +380,20 @@ function main() {
   const markdown = buildMarkdown(source);
   scanTextForSecrets(JSON.stringify(source));
   scanTextForSecrets(markdown);
+  const previousMarkdown = fs.existsSync(markdownPath) ? fs.readFileSync(markdownPath, 'utf8') : null;
   fs.writeFileSync(markdownPath, markdown, 'utf8');
-  buildPdf(source, markdown);
+  buildPdf(source, markdown, candidatePdfPath);
+  const pdf_write_status = installPdfCandidate(previousMarkdown, markdown);
 
   const render = renderPdf();
-  const info = parsePdfInfo();
+  const info = parsePdfInfo(pdfPath);
   if (info.pages < 8) {
     throw new Error(`Expected whitepaper PDF to have at least 8 pages, got ${info.pages}.`);
   }
   if (info.page_size_pts.height <= info.page_size_pts.width) {
     throw new Error(`Expected portrait PDF, got ${info.page_size_pts.width}x${info.page_size_pts.height} pts.`);
   }
-  const text = extractPdfText();
+  const text = extractPdfText(pdfPath);
   const requiredTerms = [
     'One Person Lab 白皮书',
     'OPL Framework',
@@ -359,6 +414,7 @@ function main() {
     source: relativeToRepo(sourcePath),
     generated_markdown: relativeToRepo(markdownPath),
     generated_pdf: relativeToRepo(pdfPath),
+    pdf_write_status,
     temp_markdown: relativeToRepo(tempMarkdownPath),
     rendered_dir: relativeToRepo(render.renderDir),
     rendered_pages: render.pages.length,
