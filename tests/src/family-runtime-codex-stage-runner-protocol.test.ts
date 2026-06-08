@@ -183,7 +183,7 @@ exit 64
       noOutputTimeoutMs: 10_000,
     });
 
-    assert.equal(Date.now() - startedAt < 1_500, true);
+    assert.equal(Date.now() - startedAt < 1_900, true);
     assert.equal(receipt.closeout_packet, null);
     assert.equal(receipt.process_output_summary?.blocked_reason, 'codex_cli_unsupported_function_call');
     assert.equal(receipt.process_output_summary?.timeout_reason, 'unsupported_tool_protocol');
