@@ -39,6 +39,47 @@ function assertAppReleaseUserPathPayloadWorkorder(workorder: JsonRecord) {
   assert.equal(workorder.required_return_shapes.includes('typed_blocker_ref'), true);
 }
 
+function assertOmaProductionConsumptionPayloadWorkorder(workorder: JsonRecord) {
+  assert.equal(
+    workorder.surface_kind,
+    'opl_oma_production_consumption_payload_workorder',
+  );
+  assert.equal(
+    workorder.accepted_payload_path_policy,
+    'real_long_soak_refs_or_typed_blocker_path_empty_template_blocks',
+  );
+  assert.deepEqual(workorder.payload_template, {
+    long_soak_refs: [],
+    typed_blocker_refs: [],
+    operator_evidence_refs: [],
+  });
+  assert.deepEqual(workorder.long_soak_observation_workorder_commands.record_payload, [
+    'runtime',
+    'oma-production-consumption',
+    'record',
+    '--payload-file',
+    '<payload.json>',
+  ]);
+  assert.equal(workorder.empty_payload_template_is_success_evidence, false);
+  assert.equal(workorder.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(workorder.authority_boundary.can_claim_production_ready, false);
+  assert.equal(workorder.authority_boundary.can_promote_default_agent_without_gate, false);
+  assert.equal(workorder.required_operator_payload_refs.includes('typed_blocker_refs'), true);
+  assert.equal(workorder.required_return_shapes.includes('typed_blocker_ref'), true);
+}
+
+function assertSelectedSafeActionPayloadWorkorder(workorder: JsonRecord) {
+  if (workorder.surface_kind === 'opl_app_release_user_path_evidence_payload_workorder') {
+    assertAppReleaseUserPathPayloadWorkorder(workorder);
+    return;
+  }
+  if (workorder.surface_kind === 'opl_oma_production_consumption_payload_workorder') {
+    assertOmaProductionConsumptionPayloadWorkorder(workorder);
+    return;
+  }
+  assert.fail(`Unexpected selected safe action payload workorder: ${String(workorder.surface_kind)}`);
+}
+
 export function assertFrameworkOwnerPayloadAttention(readiness: JsonRecord) {
   assert.equal(
     readiness.attention_first_payload.owner_payload_group_attention_policy,
@@ -380,10 +421,10 @@ export function assertOwnerDeltaFirstReadinessProjection(readiness: JsonRecord) 
       ownerDeltaHandoffSummary.payload_contract_source,
       'owner_delta_first_selected_safe_action',
     );
-    assertAppReleaseUserPathPayloadWorkorder(ownerDeltaHandoffWorkorder);
+    assertSelectedSafeActionPayloadWorkorder(ownerDeltaHandoffWorkorder);
     assert.deepEqual(
       ownerDeltaHandoffSummary.accepted_payload_paths,
-      ownerDeltaHandoffWorkorder.accepted_payload_paths,
+      ownerDeltaHandoffWorkorder.accepted_payload_paths ?? {},
     );
   }
   assert.equal(ownerDeltaHandoffSummary.empty_payload_template_is_success_evidence, false);
