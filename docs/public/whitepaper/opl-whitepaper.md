@@ -1,5 +1,10 @@
 # One Person Lab 白皮书
 
+Owner: `One Person Lab`
+Purpose: `public_whitepaper`
+State: `active_public`
+Machine boundary: 本文是人读公开白皮书，说明 OPL 品牌、产品定位和 Foundry Agents 运行模型。机器真相继续归 `contracts/`、source、tests、CLI/read-model、runtime ledger、provider receipt、domain-owned manifests、App release evidence 和 repo-local active owner docs。
+
 > 让复杂知识工作从一次问答走向持续交付
 
 发布日期：2026-06-08
