@@ -33,6 +33,7 @@ const PACK_COMPILER_MANIFEST_COMMAND_TIMEOUT_MS = 120_000;
 
 type DomainPackCompilerOptions = {
   domainManifests?: DomainManifestCatalog;
+  familyDefaults?: boolean;
 };
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -69,12 +70,47 @@ function normalizeDomainSelection(value: string) {
     redcube: 'redcube',
     'redcube-ai': 'redcube',
     redcube_ai: 'redcube',
+    oma: 'opl-meta-agent',
+    oplmetaagent: 'opl-meta-agent',
+    'opl-meta-agent': 'opl-meta-agent',
+    opl_meta_agent: 'opl-meta-agent',
   };
   return aliases[key] ?? key;
 }
 
+function domainSelectionMatches(candidate: JsonRecord, domain: string) {
+  const normalizedDomain = normalizeDomainSelection(domain);
+  const candidateValues = [
+    optionalString(candidate.project_id),
+    optionalString(candidate.project),
+    optionalString(candidate.target_domain_id),
+    optionalString(candidate.agent_id),
+    optionalString(candidate.requested_agent_id),
+  ].filter((value): value is string => Boolean(value));
+  return candidateValues.some((value) =>
+    value === domain
+    || value === normalizedDomain
+    || normalizeDomainSelection(value) === normalizedDomain
+  );
+}
+
+export function parsePackCompilerArgs(args: string[]) {
+  let familyDefaults = false;
+  for (const token of args) {
+    if (token === '--family-defaults') {
+      familyDefaults = true;
+      continue;
+    }
+    throw new FrameworkContractError('cli_usage_error', `Unknown pack compiler option: ${token}.`, {
+      usage: 'opl agents pack-compiler [--family-defaults]',
+    });
+  }
+  return { familyDefaults };
+}
+
 function parseInspectArgs(args: string[]) {
   let domain = '';
+  let familyDefaults = false;
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
     if (token === '--domain' && args[index + 1]) {
@@ -82,8 +118,12 @@ function parseInspectArgs(args: string[]) {
       index += 1;
       continue;
     }
+    if (token === '--family-defaults') {
+      familyDefaults = true;
+      continue;
+    }
     throw new FrameworkContractError('cli_usage_error', `Unknown pack compiler option: ${token}.`, {
-      usage: 'opl agents pack-compiler inspect --domain <domain>',
+      usage: 'opl agents pack-compiler inspect [--family-defaults] --domain <domain>',
     });
   }
   if (!domain) {
@@ -91,7 +131,7 @@ function parseInspectArgs(args: string[]) {
       required: ['--domain'],
     });
   }
-  return { domain };
+  return { domain, familyDefaults };
 }
 
 function parseInterfaceArgs(args: string[]) {
@@ -600,6 +640,92 @@ function buildRepoContractDescriptor(repoDirInput: string) {
   };
 }
 
+function repoContractEntryProjection(descriptor: JsonRecord) {
+  const productEntry = isRecord(descriptor.product_entry_manifest_descriptor)
+    ? descriptor.product_entry_manifest_descriptor
+    : null;
+  return {
+    status: statusOf(productEntry) === 'resolved_from_repo_contracts' ? 'resolved' : 'missing',
+    source_kind: 'standard_agent_repo_contracts',
+    source_refs: stringList(productEntry?.source_refs),
+  };
+}
+
+function repoContractRuntimeSurfacesProjection(descriptor: JsonRecord) {
+  const generatedSurfaceHandoff = isRecord(descriptor.generated_surface_handoff_contract)
+    ? descriptor.generated_surface_handoff_contract
+    : null;
+  return {
+    cli: {
+      status: statusOf(descriptor.family_action_catalog) === 'resolved' ? 'resolved' : 'missing',
+      source_ref: 'contracts/action_catalog.json',
+    },
+    product_entry: {
+      status: statusOf(descriptor.product_entry_manifest_descriptor) === 'resolved_from_repo_contracts'
+        ? 'resolved'
+        : 'missing',
+      source_ref: 'contracts/action_catalog.json',
+    },
+    product_session: {
+      status: isRecord(descriptor.session_continuity_contract)
+        || statusOf(descriptor.family_stage_control_plane) === 'resolved'
+        ? 'resolved'
+        : 'missing',
+      source_ref: 'contracts/pack_compiler_input.json',
+    },
+    status_read_model: {
+      status: statusOf(descriptor.domain_memory_descriptor) === 'resolved' ? 'resolved' : 'missing',
+      source_ref: 'contracts/memory_descriptor.json',
+    },
+    workbench: {
+      status: statusOf(descriptor.family_stage_control_plane) === 'resolved' ? 'resolved' : 'missing',
+      source_ref: 'contracts/stage_control_plane.json',
+    },
+    generated_surface_handoff: {
+      status: generatedSurfaceHandoff ? 'resolved' : 'missing',
+      source_ref: 'contracts/generated_surface_handoff.json',
+    },
+  };
+}
+
+function repoContractTransitionProjection(descriptor: JsonRecord) {
+  const stageControlPlane = isRecord(descriptor.family_stage_control_plane)
+    ? descriptor.family_stage_control_plane
+    : null;
+  const rawDescriptor = isRecord(stageControlPlane?.raw_descriptor)
+    ? stageControlPlane.raw_descriptor
+    : null;
+  const stages = Array.isArray(rawDescriptor?.stages) ? rawDescriptor.stages : [];
+  return {
+    status: statusOf(stageControlPlane) === 'resolved' ? 'descriptor_only' : 'missing',
+    source_kind: 'standard_agent_repo_contracts',
+    source_ref: 'contracts/stage_control_plane.json',
+    transition_count: stages.length,
+    authority_boundary: {
+      transition_projection_can_claim_domain_ready: false,
+      transition_projection_can_authorize_quality_or_export: false,
+      opl_can_write_domain_truth: false,
+    },
+  };
+}
+
+function repoContractDescriptorForPackCompiler(
+  repoProjection: ReturnType<typeof buildRepoContractDescriptor>,
+  requestedAgentId: string | null,
+) {
+  const descriptor = repoProjection.descriptor as JsonRecord;
+  return {
+    ...descriptor,
+    requested_agent_id: requestedAgentId ?? optionalString(descriptor.agent_id) ?? optionalString(descriptor.project_id),
+    repo_dir: repoProjection.repoDir,
+    source_kind: 'standard_agent_repo_contracts',
+    manifest_status: repoProjection.status === 'ready' ? 'resolved' : 'repo_contracts_blocked',
+    entry: repoContractEntryProjection(descriptor),
+    runtime_surfaces: repoContractRuntimeSurfacesProjection(descriptor),
+    family_transition: repoContractTransitionProjection(descriptor),
+  };
+}
+
 function repoGeneratedSurfaceHandoffFromDescriptor(descriptor: JsonRecord) {
   const current = isRecord(descriptor.generated_surface_handoff_contract)
     ? descriptor.generated_surface_handoff_contract
@@ -657,6 +783,9 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
   return {
     surface_kind: 'opl_domain_pack_compiler_projection',
     compiler_version: 'opl-domain-pack-compiler.v1',
+    source_kind: optionalString(descriptor.source_kind) ?? 'admitted_domain_manifest',
+    requested_agent_id: optionalString(descriptor.requested_agent_id),
+    repo_dir: optionalString(descriptor.repo_dir),
     project_id: optionalString(descriptor.project_id),
     project: optionalString(descriptor.project),
     target_domain_id: optionalString(descriptor.target_domain_id),
@@ -711,6 +840,26 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
 }
 
 function buildCompilerDomains(contracts: FrameworkContracts, options: DomainPackCompilerOptions = {}) {
+  if (options.familyDefaults) {
+    const repos = defaultFamilyRepoInputs();
+    if (repos.length === 0) {
+      throw new FrameworkContractError('cli_usage_error', 'pack compiler family-defaults could not discover family agent repos.', {
+        usage: 'opl agents pack-compiler --family-defaults',
+        default_repo_directories: DEFAULT_FAMILY_REPOS.map((repo) => repo.directory),
+        env_override: 'OPL_FAMILY_WORKSPACE_ROOT',
+      });
+    }
+    return repos.map((repo) =>
+      buildPackCompilerProjection(
+        descriptorWithRepoContractInputs(
+          repoContractDescriptorForPackCompiler(
+            buildRepoContractDescriptor(repo.repo_dir),
+            repo.requested_agent_id,
+          ),
+        ),
+      )
+    );
+  }
   const descriptorList = buildFamilyAgentDescriptorList(contracts, {
     domainManifests: options.domainManifests,
     manifestCommandTimeoutMs: PACK_COMPILER_MANIFEST_COMMAND_TIMEOUT_MS,
@@ -732,6 +881,10 @@ export function buildDomainPackCompilerList(
     domain_pack_compiler: {
       surface_kind: 'opl_domain_pack_compiler_index',
       owner: 'one-person-lab',
+      source_kind: options.familyDefaults ? 'standard_agent_repo_contracts' : 'admitted_domain_manifests',
+      source_command: options.familyDefaults
+        ? 'opl agents pack-compiler --family-defaults'
+        : 'opl agents pack-compiler',
       summary: {
         total_domain_count: domains.length,
         ready_domain_count: domains.filter((domain) => domain.compiler_status === 'ready').length,
@@ -775,17 +928,13 @@ export function buildDomainPackCompilerInspect(
   args: string[],
   options: DomainPackCompilerOptions = {},
 ) {
-  const { domain } = parseInspectArgs(args);
-  const normalized = normalizeDomainSelection(domain);
-  const domains = buildCompilerDomains(contracts, options);
-  const selected = domains.find((candidate) =>
-    candidate.project_id === normalized
-    || candidate.project === normalized
-    || candidate.target_domain_id === domain
-    || candidate.target_domain_id === normalized
-    || candidate.agent_id === domain
-    || candidate.agent_id === normalized
-  );
+  const parsed = parseInspectArgs(args);
+  const domain = parsed.domain;
+  const domains = buildCompilerDomains(contracts, {
+    ...options,
+    familyDefaults: options.familyDefaults ?? parsed.familyDefaults,
+  });
+  const selected = domains.find((candidate) => domainSelectionMatches(candidate as JsonRecord, domain));
   if (!selected) {
     throw new FrameworkContractError('cli_usage_error', `Unknown pack compiler domain: ${domain}.`, {
       domain,
@@ -874,15 +1023,7 @@ export function buildGeneratedAgentInterfaces(contracts: FrameworkContracts, arg
   }
 
   const domains = buildCompilerDomains(contracts);
-  const normalized = normalizeDomainSelection(domain);
-  const selected = domains.find((candidate) =>
-    candidate.project_id === normalized
-    || candidate.project === normalized
-    || candidate.target_domain_id === domain
-    || candidate.target_domain_id === normalized
-    || candidate.agent_id === domain
-    || candidate.agent_id === normalized
-  );
+  const selected = domains.find((candidate) => domainSelectionMatches(candidate as JsonRecord, domain));
   if (!selected) {
     throw new FrameworkContractError('cli_usage_error', `Unknown generated interface domain: ${domain}.`, {
       domain,

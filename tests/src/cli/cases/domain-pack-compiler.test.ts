@@ -8,6 +8,7 @@ import {
 import {
   attachManifestSurface,
   bindFamilyManifests,
+  createFamilyDefaultContractWorkspace,
   withPackCompilerReadySurfaces,
 } from './domain-pack-compiler-fixtures.ts';
 
@@ -124,6 +125,46 @@ test('domain pack compiler index keeps generated surfaces ready, aligned, and OP
     }
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('domain pack compiler family-defaults consumes standard repo contracts without manifest drift confusion', () => {
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-family-defaults-'));
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
+  const env = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+  };
+
+  try {
+    const list = runCli(['agents', 'pack-compiler', '--family-defaults'], env).domain_pack_compiler;
+    assert.equal(list.source_kind, 'standard_agent_repo_contracts');
+    assert.equal(list.summary.total_domain_count, 4);
+    assert.equal(list.summary.ready_domain_count, 4);
+    assert.equal(list.summary.blocked_domain_count, 0);
+    assert.equal(list.summary.generated_artifact_drift_detected_count, 0);
+
+    const mas = runCli(
+      ['agents', 'pack-compiler', 'inspect', '--family-defaults', '--domain', 'mas'],
+      env,
+    ).domain_pack_compiler;
+    assert.equal(mas.source_kind, 'standard_agent_repo_contracts');
+    assert.equal(mas.requested_agent_id, 'mas');
+    assert.equal(mas.compiler_status, 'ready');
+    assert.deepEqual(mas.blocker_reasons, []);
+    assert.equal(mas.generated_surface_handoff.generated_surface_ready_count, 8);
+    assert.equal(mas.generated_interface_bundle.product_entry.status, 'ready');
+    assert.equal(mas.generated_interface_bundle.product_status.status, 'ready_from_family_action_catalog');
+    assert.equal(mas.generated_interface_bundle.product_session.status, 'ready_from_session_continuity_or_stage_control_plane');
+    assert.equal(mas.generated_interface_bundle.workbench.status, 'ready_from_stage_control_plane');
+    assert.equal(mas.generated_interface_bundle.source_contract_consumption.status, 'ready');
+    assert.equal(mas.authority_boundary.opl_can_write_domain_truth, false);
+    assert.equal(mas.authority_boundary.opl_can_authorize_quality_or_export, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });
 

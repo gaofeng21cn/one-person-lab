@@ -20,6 +20,7 @@ import {
   buildGeneratedAgentInterfaces,
   buildDomainPackCompilerInspect,
   buildDomainPackCompilerList,
+  parsePackCompilerArgs,
 } from '../../domain-pack-compiler.ts';
 import {
   buildAgentDefaultCallerReadinessReport,
@@ -1099,19 +1100,21 @@ export function buildPublicCommandSpecs(
       handler: (args) => buildFamilyAgentDescriptorInspect(getContracts(), args),
     },
     'agents pack-compiler': {
-      usage: 'opl agents pack-compiler',
-      summary: 'List OPL-owned generated-surface handoff projections compiled from admitted domain packs.',
-      examples: ['opl agents pack-compiler'],
+      usage: 'opl agents pack-compiler [--family-defaults]',
+      summary: 'List OPL-owned generated-surface handoff projections compiled from admitted manifests or default standard agent repo contracts.',
+      examples: ['opl agents pack-compiler', 'opl agents pack-compiler --family-defaults'],
       group: 'domain',
       handler: (args) => {
-        assertNoArgs(args, publicCommandSpecs['agents pack-compiler']);
-        return buildDomainPackCompilerList(getContracts());
+        return buildDomainPackCompilerList(getContracts(), parsePackCompilerArgs(args));
       },
     },
     'agents pack-compiler inspect': {
-      usage: 'opl agents pack-compiler inspect --domain <domain>',
+      usage: 'opl agents pack-compiler inspect [--family-defaults] --domain <domain>',
       summary: 'Inspect one OPL-owned generated-surface handoff projection without moving domain authority into OPL.',
-      examples: ['opl agents pack-compiler inspect --domain mas'],
+      examples: [
+        'opl agents pack-compiler inspect --domain mas',
+        'opl agents pack-compiler inspect --family-defaults --domain mas',
+      ],
       group: 'domain',
       handler: (args) => buildDomainPackCompilerInspect(getContracts(), args),
     },

@@ -5,11 +5,32 @@
   "scope": "framework-owned read model that compiles admitted domain packs into generated-surface handoff projections",
   "contract_version": "opl-domain-pack-compiler.v1",
   "cli_surfaces": [
-    "opl agents pack-compiler",
-    "opl agents pack-compiler inspect --domain <domain>",
+    "opl agents pack-compiler [--family-defaults]",
+    "opl agents pack-compiler inspect [--family-defaults] --domain <domain>",
     "opl agents interfaces (--family-defaults | --domain <domain> | --repo-dir <path>) [--format <cli|mcp|skill|product-entry|openai|ai-sdk>]",
     "opl agents conformance [--repo-dir <path> ...] [--agent <id>=<path> ...]"
   ],
+  "pack_compiler_source_modes": {
+    "admitted_domain_manifest_mode": {
+      "command": "opl agents pack-compiler",
+      "source_kind": "admitted_domain_manifests",
+      "purpose": "diagnose admitted manifest discovery, descriptor surfaces, generated handoff readiness, and drift for the framework registry"
+    },
+    "family_default_repo_contract_mode": {
+      "command": "opl agents pack-compiler --family-defaults",
+      "source_kind": "standard_agent_repo_contracts",
+      "purpose": "compile default sibling standard-agent repo contracts through the same generated-surface projection used by App/workbench metadata feeds",
+      "repo_discovery": "OPL_FAMILY_WORKSPACE_ROOT or default workspace candidates containing med-autoscience, med-autogrant, redcube-ai, and opl-meta-agent contract packs",
+      "authority_boundary": {
+        "can_claim_domain_ready": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_artifact_authority": false,
+        "opl_can_write_domain_truth": false,
+        "opl_can_write_memory_body": false,
+        "opl_can_authorize_quality_or_export": false
+      }
+    }
+  },
   "input_surfaces": [
     "family_agent_descriptor.entry",
     "family_agent_descriptor.family_action_catalog",
@@ -129,6 +150,17 @@
     "surface_kind": "opl_generated_agent_interfaces_family_report",
     "owner": "one-person-lab",
     "command": "opl agents interfaces --family-defaults",
+    "app_workbench_metadata_command": "opl agents interfaces --family-defaults --format product-entry",
+    "app_workbench_required_blocks": [
+      "product_entry",
+      "product_status",
+      "product_session",
+      "domain_handler",
+      "workbench",
+      "stage_routes",
+      "source_contract_consumption",
+      "authority_boundary"
+    ],
     "status_values": [
       "ready",
       "blocked"

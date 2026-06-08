@@ -11,6 +11,16 @@ import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpe
 
 export type JsonRecord = Record<string, unknown>;
 
+type FamilyDefaultContractRepoSpec = {
+  repoDirectory: string;
+  agentId: string;
+  targetDomainId: string;
+  owner: string;
+  actionId: string;
+  stageId: string;
+  memoryRefId: string;
+};
+
 export function attachManifestSurface(payload: JsonRecord, field: string, value: JsonRecord) {
   if (payload.product_entry_manifest && typeof payload.product_entry_manifest === 'object') {
     return {
@@ -302,6 +312,171 @@ function withFunctionalAudit(payload: JsonRecord, targetDomainId: string, owner:
       },
     ],
   });
+}
+
+function writeJson(filePath: string, value: JsonRecord) {
+  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function generatedSurfaceHandoff(targetDomainId: string) {
+  return {
+    surface_kind: 'opl_generated_surface_handoff',
+    schema_version: 1,
+    domain_id: targetDomainId,
+    generated_surface_owner: 'one-person-lab',
+    domain_repo_can_own_generated_surface: false,
+    generated_surfaces: [
+      'cli',
+      'mcp',
+      'skill',
+      'product_entry_manifest',
+      'domain_handler',
+      'status_read_model',
+      'workbench_drilldown',
+      'functional_harness_cases',
+    ].map((surfaceId) => ({
+      surface_id: surfaceId,
+      owner: 'one-person-lab',
+      status: 'descriptor_source_available',
+    })),
+    handoff_surfaces: [
+      {
+        surface_id: 'cli',
+        current_paths: ['runtime/authority_functions/command.ts'],
+        current_role: 'domain_handler_target',
+        target_role: 'domain_handler_target',
+      },
+      {
+        surface_id: 'mcp',
+        current_paths: ['runtime/authority_functions/tool.ts'],
+        current_role: 'domain_handler_target',
+        target_role: 'domain_handler_target',
+      },
+      {
+        surface_id: 'skill',
+        current_paths: ['agent/skills/domain.md'],
+        current_role: 'declarative_pack',
+        target_role: 'opl_generated_skill_surface',
+      },
+      {
+        surface_id: 'product_entry_manifest',
+        current_paths: ['agent/product-entry.json'],
+        current_role: 'declarative_pack',
+        target_role: 'opl_generated_product_entry_surface',
+      },
+      {
+        surface_id: 'domain_handler',
+        current_paths: ['runtime/authority_functions/domain-handler.ts'],
+        current_role: 'domain_handler_target',
+        target_role: 'domain_handler_target',
+      },
+      {
+        surface_id: 'status_read_model',
+        current_paths: ['agent/status.json'],
+        current_role: 'refs_only_domain_adapter_target',
+        target_role: 'opl_generated_status_read_model_surface',
+      },
+      {
+        surface_id: 'workbench_drilldown',
+        current_paths: ['agent/workbench.json'],
+        current_role: 'refs_only_domain_adapter_target',
+        target_role: 'opl_hosted_workbench_shell_consuming_domain_refs',
+      },
+      {
+        surface_id: 'functional_harness_cases',
+        current_paths: ['agent/quality_gates/harness.md'],
+        current_role: 'declarative_pack',
+        target_role: 'opl_generated_functional_harness_cases',
+      },
+    ],
+  };
+}
+
+function writeFamilyDefaultContractRepo(workspaceRoot: string, spec: FamilyDefaultContractRepoSpec) {
+  const repoDir = path.join(workspaceRoot, spec.repoDirectory);
+  const contractsDir = path.join(repoDir, 'contracts');
+  fs.mkdirSync(contractsDir, { recursive: true });
+  const manifest = withPackCompilerReadySurfaces({}, {
+    agentId: spec.agentId,
+    targetDomainId: spec.targetDomainId,
+    owner: spec.owner,
+    actionId: spec.actionId,
+    stageId: spec.stageId,
+    memoryRefId: spec.memoryRefId,
+  }) as JsonRecord;
+
+  writeJson(path.join(contractsDir, 'domain_descriptor.json'), {
+    surface_kind: 'domain_agent_descriptor',
+    schema_version: 1,
+    domain_id: spec.targetDomainId,
+    domain_label: spec.owner,
+    generated_surface_owner: 'one-person-lab',
+    domain_repo_can_own_generated_surface: false,
+    authority_boundary: {
+      opl_can_write_domain_truth: false,
+      opl_can_write_memory_body: false,
+      opl_can_authorize_quality_or_export: false,
+    },
+  });
+  writeJson(path.join(contractsDir, 'action_catalog.json'), manifest.family_action_catalog as JsonRecord);
+  writeJson(path.join(contractsDir, 'stage_control_plane.json'), manifest.family_stage_control_plane as JsonRecord);
+  writeJson(path.join(contractsDir, 'memory_descriptor.json'), manifest.domain_memory_descriptor as JsonRecord);
+  writeJson(path.join(contractsDir, 'functional_privatization_audit.json'), manifest.functional_privatization_audit as JsonRecord);
+  writeJson(path.join(contractsDir, 'generated_surface_handoff.json'), generatedSurfaceHandoff(spec.targetDomainId));
+  writeJson(path.join(contractsDir, 'pack_compiler_input.json'), {
+    surface_kind: 'opl_domain_pack_compiler_input',
+    domain_id: spec.targetDomainId,
+    domain_repo_runtime_role: 'domain_handler_target_and_authority_functions',
+    generated_surface_owner: 'one-person-lab',
+    domain_repo_can_own_generated_surface: false,
+  });
+  return repoDir;
+}
+
+export function createFamilyDefaultContractWorkspace() {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-default-contracts-'));
+  const specs: FamilyDefaultContractRepoSpec[] = [
+    {
+      repoDirectory: 'med-autoscience',
+      agentId: 'mas',
+      targetDomainId: 'med-autoscience',
+      owner: 'MedAutoScience',
+      actionId: 'study_packet',
+      stageId: 'study_stage',
+      memoryRefId: 'mas_publication_route_memory',
+    },
+    {
+      repoDirectory: 'med-autogrant',
+      agentId: 'mag',
+      targetDomainId: 'med-autogrant',
+      owner: 'MedAutoGrant',
+      actionId: 'grant_packet',
+      stageId: 'grant_stage',
+      memoryRefId: 'mag_grant_strategy_memory',
+    },
+    {
+      repoDirectory: 'redcube-ai',
+      agentId: 'rca',
+      targetDomainId: 'redcube_ai',
+      owner: 'RedCubeAI',
+      actionId: 'visual_packet',
+      stageId: 'visual_stage',
+      memoryRefId: 'rca_visual_pattern_memory',
+    },
+    {
+      repoDirectory: 'opl-meta-agent',
+      agentId: 'opl-meta-agent',
+      targetDomainId: 'opl-meta-agent',
+      owner: 'OPLMetaAgent',
+      actionId: 'agent_packet',
+      stageId: 'agent_stage',
+      memoryRefId: 'oma_agent_improvement_memory',
+    },
+  ];
+  for (const spec of specs) {
+    writeFamilyDefaultContractRepo(workspaceRoot, spec);
+  }
+  return workspaceRoot;
 }
 
 function withGrantOraclePackCompilerReadySurfaces(payload: JsonRecord, options: {

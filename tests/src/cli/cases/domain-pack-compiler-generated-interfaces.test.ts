@@ -2,6 +2,7 @@ import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loa
 import {
   attachManifestSurface,
   bindFamilyManifests,
+  createFamilyDefaultContractWorkspace,
   withPackCompilerReadySurfaces,
 } from './domain-pack-compiler-fixtures.ts';
 
@@ -48,6 +49,51 @@ test('generated interfaces command exposes descriptors but blocks cutover withou
   assert.equal('cli' in mcpOnly, false);
   assert.equal('skill' in mcpOnly, false);
   assert.deepEqual(mcpOnly.stage_routes, []);
+});
+
+test('generated interfaces family-defaults product-entry format is the App workbench metadata feed', () => {
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-family-feed-'));
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
+  const env = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+  };
+
+  try {
+    const feed = runCli(
+      ['agents', 'interfaces', '--family-defaults', '--format', 'product-entry'],
+      env,
+    ).generated_agent_interfaces;
+    assert.equal(feed.surface_kind, 'opl_generated_agent_interfaces_family_report');
+    assert.equal(feed.status, 'ready');
+    assert.equal(feed.selected_format, 'product-entry');
+    assert.deepEqual(feed.summary, {
+      total_domain_count: 4,
+      ready_domain_count: 4,
+      blocked_domain_count: 0,
+    });
+    assert.equal(feed.authority_boundary.report_can_claim_domain_ready, false);
+
+    for (const report of feed.reports) {
+      const bundle = report.generated_agent_interfaces;
+      assert.equal(bundle.status, 'ready');
+      assert.equal(bundle.selected_format, 'product-entry');
+      assert.equal(bundle.product_entry.status, 'ready');
+      assert.equal(bundle.product_status.status, 'ready_from_family_action_catalog');
+      assert.equal(bundle.product_session.status, 'ready_from_session_continuity_or_stage_control_plane');
+      assert.equal(bundle.domain_handler.status, 'ready');
+      assert.equal(bundle.workbench.status, 'ready_from_stage_control_plane');
+      assert.equal(bundle.stage_routes.length > 0, true);
+      assert.equal(bundle.source_contract_consumption.status, 'ready');
+      assert.equal(bundle.authority_boundary.generated_interface_can_write_domain_truth, false);
+      assert.equal(bundle.authority_boundary.generated_interface_can_authorize_quality_or_export, false);
+    }
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
 });
 
 test('generated interfaces domain mode consumes generated handoff from active repo contracts', () => {
