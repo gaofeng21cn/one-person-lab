@@ -171,6 +171,15 @@
           ]
         },
         {
+          "title": "抓大放小",
+          "kicker": "守住大边界，释放 ordinary progress",
+          "body": "OPL 把 owner、authority、阶段生命周期、工作空间拓扑、执行者选择、默认推进路径、启动/执行/收口准入、负责人回执形态和不可逆权限视为大边界，缺失时必须 fail closed；把提示词、技能、工具、知识、rubric、诊断证据、计数和 L5 证据细项放进 advisory、audit、cleanup 或 production evidence lane，避免细节反向卡住普通推进。",
+          "bullets": [
+            "抓大保证系统不越权、不误闭合、不制造第二真相源。",
+            "放小让任务先形成可审阅、可接力、可验证的下一步结果。"
+          ]
+        },
+        {
           "title": "Owner boundary",
           "kicker": "每个判断都有责任方",
           "body": "Framework、App 和 Foundry Agents 各有自己的权威边界。OPL 管通用运行外围，领域智能体管领域事实，App 管用户界面和发布证据。清楚的责任边界是长期可维护的前提。",
@@ -193,7 +202,7 @@
     {
       "id": "brand-modules",
       "title": "当前十个品牌模块：从上到下的设计骨架",
-      "lead": "当前十个模块是 OPL Framework 的能力分区。它们把顶层理念落实到真实运行：先建立语言和边界，再组织目录和工作空间，再定义 domain pack 和 authority ABI，再设计阶段、长跑执行、证据回执、用户控制台、智能体工坊和外部连接。",
+      "lead": "当前十个模块是 OPL Framework 的能力分区，而不是模块数量上限。只有新的 bounded context 能说清 owner、purpose、machine boundary、authority false flags 和 L4/L5 口径，才会进入 taxonomy。当前结构把顶层理念落实到真实运行：先建立语言和边界，再组织目录和工作空间，再定义 domain pack 和 authority ABI，再设计阶段、长跑执行、证据回执、用户控制台、智能体工坊和外部连接。",
       "cards": [
         {
           "title": "OPL Charter",
