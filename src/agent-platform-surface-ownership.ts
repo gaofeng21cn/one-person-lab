@@ -9,6 +9,8 @@ import {
   DEFAULT_FAMILY_REPOS,
 } from './standard-domain-agent-family-repos.ts';
 import { buildDefaultCallerPhysicalDeleteAuthorityReadModel } from './agent-default-caller-delete-read-model.ts';
+import { buildFunctionalPrivatizationAudit } from './functional-privatization-audit.ts';
+import { buildPrivatePlatformResidueDeletionGate } from './private-platform-residue-deletion-gate.ts';
 import {
   DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES,
   DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
@@ -475,6 +477,15 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
   const resolvedRepoDir = path.resolve(repoDir);
   const domainId = normalizeDomainSelection(readDomainId(resolvedRepoDir, requestedAgentId ?? null));
   const platformSurfaceOwnership = buildAgentPlatformSurfaceOwnershipForRepo(resolvedRepoDir, requestedAgentId);
+  const functionalAudit = readJsonFile(resolvedRepoDir, 'contracts/functional_privatization_audit.json');
+  const normalizedFunctionalAudit = buildFunctionalPrivatizationAudit(isRecord(functionalAudit.payload)
+    ? {
+        target_domain_id: domainId,
+        functional_privatization_audit: functionalAudit.payload,
+      }
+    : null);
+  const privatePlatformResidueDeletionGate =
+    buildPrivatePlatformResidueDeletionGate(normalizedFunctionalAudit.modules);
   try {
     const bundle = generatedInterfaceBundleForRepo(resolvedRepoDir);
     const cutoverProof = isRecord(bundle.active_caller_cutover_proof) ? bundle.active_caller_cutover_proof : {};
@@ -585,6 +596,7 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
       active_caller_cutover_proof_status: optionalString(cutoverProof.status),
       surface_gates: surfaceGates,
       deletion_evidence_worklists: deletionEvidenceWorklists,
+      private_platform_residue_deletion_gate: privatePlatformResidueDeletionGate,
       blockers,
       deletion_gate: {
         replacement_parity: replacementReady ? 'ready' : 'blocked',
@@ -652,6 +664,7 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         `generated_default_caller_projection_error:${error instanceof FrameworkContractError ? error.code : 'unknown'}`,
       ],
       error: error instanceof Error ? error.message : String(error),
+      private_platform_residue_deletion_gate: privatePlatformResidueDeletionGate,
       deletion_gate: {
         replacement_parity: 'blocked',
         active_caller_cutover: 'blocked',

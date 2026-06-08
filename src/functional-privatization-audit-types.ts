@@ -2,6 +2,10 @@ import type {
   FunctionalPrivatizationAuditEnvelope,
   FunctionalSourcePurityTailReadModel,
 } from './functional-privatization-envelope.ts';
+import type {
+  DefaultCallerPrivatePlatformCleanupDisposition,
+  DefaultCallerPrivatePlatformResidueTargetKind,
+} from './default-caller-retirement-guard.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -53,6 +57,11 @@ export type FunctionalPrivatizationAuditItem = {
   semantic_equivalence_evidence_refs: string[];
   semantic_equivalence_typed_blocker_refs: string[];
   semantic_equivalence_no_regression_refs: string[];
+  private_platform_residue_gate: {
+    residue_kind: DefaultCallerPrivatePlatformResidueTargetKind;
+    disposition: DefaultCallerPrivatePlatformCleanupDisposition;
+    bridge_exit_gate: JsonRecord | null;
+  } | null;
   bridge_exit_gate: JsonRecord | null;
   forbidden_generic_owner_flags: JsonRecord;
 };

@@ -748,3 +748,101 @@ test('agents default-callers asks domain owner to choose delete keep or blocker 
     true,
   );
 });
+
+test('agents default-callers separates ordinary default lane from private residue cleanup gate', () => {
+  const repoDir = buildReadyAgentRepo();
+  const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
+  const functionalAudit = JSON.parse(fs.readFileSync(functionalAuditPath, 'utf8'));
+  const bridgeExitGate = {
+    no_active_caller_refs: ['no-active-caller:sample/private-platform-residue'],
+    no_forbidden_write_refs: ['no-forbidden-write:sample/private-platform-residue'],
+    tombstone_refs: ['tombstone:sample/private-platform-residue'],
+    physical_delete_authorized: false,
+    authority_boundary: {
+      can_authorize_domain_repo_physical_delete: false,
+    },
+  };
+  functionalAudit.modules.push(
+    {
+      module_id: 'sample_brief_legacy_scheduler',
+      classification: 'generic_scheduler_or_daemon',
+      owner: 'SampleBriefAgent',
+      code_paths: ['runtime/legacy-scheduler.ts'],
+      active_callers: [],
+      active_caller_status: 'no_active_caller_observed_after_opl_runway_cutover',
+      migration_action: 'delete_after_no_active_caller_gate',
+      private_platform_residue_gate: {
+        residue_kind: 'scheduler',
+        disposition: 'no_active_caller_delete',
+        bridge_exit_gate: bridgeExitGate,
+      },
+    },
+    {
+      module_id: 'sample_brief_status_shell',
+      classification: 'generic_status_workbench_shell',
+      owner: 'SampleBriefAgent',
+      code_paths: ['runtime/status-shell.ts'],
+      active_callers: ['domain owner status review'],
+      active_caller_status: 'owner_typed_blocker_required_before_status_shell_cleanup',
+      migration_action: 'return_owner_typed_blocker_or_keep_authority_ref',
+      private_platform_residue_gate: {
+        residue_kind: 'status_shell',
+        disposition: 'owner_typed_blocker',
+        bridge_exit_gate: {
+          ...bridgeExitGate,
+          typed_blocker_refs: ['typed-blocker:sample/status-shell-owner-needed'],
+        },
+      },
+    },
+  );
+  writeJson(functionalAuditPath, functionalAudit);
+
+  const defaultCallers = runCli([
+    'agents',
+    'default-callers',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).agent_default_caller_readiness;
+
+  const readModel = defaultCallers.physical_delete_authority_read_model;
+  assert.equal(readModel.default_ordinary_lane.lane_id, 'default_ordinary_lane');
+  assert.equal(readModel.default_ordinary_lane.includes_private_platform_cleanup_gate, false);
+  assert.equal(readModel.default_ordinary_lane.physical_delete_authorized, false);
+  assert.equal(readModel.private_platform_cleanup_lane.lane_id, 'private_platform_cleanup_lane');
+  assert.equal(readModel.private_platform_cleanup_lane.physical_delete_authorized, false);
+  assert.deepEqual(readModel.private_platform_cleanup_lane.allowed_dispositions, [
+    'retain_authority_function',
+    'absorb_opl_primitive',
+    'no_active_caller_delete',
+    'tombstone',
+    'owner_typed_blocker',
+  ]);
+  assert.deepEqual(readModel.private_platform_cleanup_lane.residue_target_kinds, [
+    'scheduler',
+    'queue',
+    'session_store',
+    'workbench',
+    'status_shell',
+    'domain_wrapper',
+    'runtime_watch',
+    'agent_lab_materializer',
+  ]);
+  assert.equal(
+    readModel.private_platform_cleanup_lane.residue_gate_summary.no_active_caller_delete,
+    1,
+  );
+  assert.equal(
+    readModel.private_platform_cleanup_lane.residue_gate_summary.owner_typed_blocker,
+    1,
+  );
+  assert.equal(
+    readModel.private_platform_cleanup_lane.next_required_owner_action,
+    'domain_owner_choose_delete_authorize_keep_or_typed_blocker',
+  );
+  assert.equal(defaultCallers.repo_deletion_gate_summary[0].cleanup_lane.lane_id, 'private_platform_cleanup_lane');
+  assert.equal(defaultCallers.repo_deletion_gate_summary[0].cleanup_lane.physical_delete_authorized, false);
+  assert.equal(defaultCallers.repo_deletion_gate_summary[0].cleanup_lane.residue_gate_summary.no_active_caller_delete, 1);
+  assert.equal(defaultCallers.repo_deletion_gate_summary[0].cleanup_lane.residue_gate_summary.owner_typed_blocker, 1);
+  assert.equal(defaultCallers.repo_deletion_gate_summary[0].ordinary_lane.lane_id, 'default_ordinary_lane');
+  assert.equal(defaultCallers.repo_deletion_gate_summary[0].ordinary_lane.physical_delete_authorized, false);
+});

@@ -4,6 +4,7 @@ import {
   buildFunctionalSourcePurityTailReadModel,
   FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT,
 } from './functional-privatization-envelope.ts';
+import { privatePlatformResidueGateFromRecord } from './private-platform-residue-deletion-gate.ts';
 import type {
   FunctionalEvidenceGateProjection,
   FunctionalExternalEvidenceRequestPack,
@@ -606,6 +607,7 @@ function itemFromRecord(
       ...stringList(record.no_forbidden_write_refs),
       ...stringList(record.no_forbidden_write_evidence_refs),
     ]),
+    private_platform_residue_gate: privatePlatformResidueGateFromRecord(record),
     bridge_exit_gate: isRecord(record.bridge_exit_gate) ? record.bridge_exit_gate : null,
     forbidden_generic_owner_flags: isRecord(record.forbidden_generic_owner_flags)
       ? record.forbidden_generic_owner_flags

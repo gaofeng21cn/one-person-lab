@@ -1,12 +1,17 @@
 import {
+  DEFAULT_CALLER_DEFAULT_ORDINARY_LANE_ID,
   DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES,
   DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
+  DEFAULT_CALLER_PRIVATE_PLATFORM_CLEANUP_ALLOWED_DISPOSITIONS,
+  DEFAULT_CALLER_PRIVATE_PLATFORM_CLEANUP_LANE_ID,
+  DEFAULT_CALLER_PRIVATE_PLATFORM_RESIDUE_TARGET_KINDS,
   DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES,
   DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
   DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
 } from './default-caller-retirement-guard.ts';
+import { buildPrivatePlatformResidueDeletionGate } from './private-platform-residue-deletion-gate.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -127,6 +132,86 @@ function ownerDecisionGateGroup(input: {
   };
 }
 
+function emptyPrivatePlatformCleanupLane() {
+  return buildPrivatePlatformResidueDeletionGate([]);
+}
+
+function cleanupLaneFromReport(report: JsonRecord) {
+  const lane = record(report.private_platform_residue_deletion_gate);
+  return optionalString(lane.lane_id) === DEFAULT_CALLER_PRIVATE_PLATFORM_CLEANUP_LANE_ID
+    ? lane
+    : emptyPrivatePlatformCleanupLane();
+}
+
+function ordinaryLaneReadout(input: {
+  deletionEvidenceWorklistCount: number;
+  prerequisitesObserved: boolean;
+  allRequirementsObserved: boolean;
+}) {
+  return {
+    lane_id: DEFAULT_CALLER_DEFAULT_ORDINARY_LANE_ID,
+    surface_kind: 'opl_default_caller_ordinary_lane_read_model',
+    includes_private_platform_cleanup_gate: false,
+    deletion_evidence_worklist_count: input.deletionEvidenceWorklistCount,
+    delete_or_keep_prerequisites_observed: input.prerequisitesObserved,
+    all_deletion_evidence_requirements_observed: input.allRequirementsObserved,
+    next_required_owner_action: input.prerequisitesObserved
+      ? DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION
+      : 'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
+    accepted_refs_only_result_shapes: input.prerequisitesObserved
+      ? [...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES]
+      : ['typed_blocker_ref'],
+    default_caller_delete_ready: false,
+    physical_delete_authorized: false,
+    ordinary_lane_can_authorize_private_platform_residue_cleanup: false,
+  };
+}
+
+function mergePrivatePlatformCleanupLanes(lanes: JsonRecord[]) {
+  const dispositionSummary = Object.fromEntries(
+    DEFAULT_CALLER_PRIVATE_PLATFORM_CLEANUP_ALLOWED_DISPOSITIONS.map((disposition) => [
+      disposition,
+      lanes.reduce((total, lane) => (
+        total + numberValue(record(lane.residue_gate_summary)[disposition])
+      ), 0),
+    ]),
+  );
+  const byResidueKind = Object.fromEntries(
+    DEFAULT_CALLER_PRIVATE_PLATFORM_RESIDUE_TARGET_KINDS.map((kind) => [
+      kind,
+      lanes.flatMap((lane) => recordList(record(lane.by_residue_kind)[kind])),
+    ]),
+  );
+  const residueGateCount = Object.values(dispositionSummary).reduce(
+    (total, count) => total + (typeof count === 'number' ? count : 0),
+    0,
+  );
+  return {
+    surface_kind: 'opl_private_platform_residue_deletion_gate',
+    lane_id: DEFAULT_CALLER_PRIVATE_PLATFORM_CLEANUP_LANE_ID,
+    status: residueGateCount > 0 ? 'classified' : 'empty',
+    residue_gate_count: residueGateCount,
+    allowed_dispositions: [...DEFAULT_CALLER_PRIVATE_PLATFORM_CLEANUP_ALLOWED_DISPOSITIONS],
+    residue_target_kinds: [...DEFAULT_CALLER_PRIVATE_PLATFORM_RESIDUE_TARGET_KINDS],
+    disposition_summary: dispositionSummary,
+    residue_gate_summary: dispositionSummary,
+    by_residue_kind: byResidueKind,
+    next_required_owner_action: DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
+    accepted_refs_only_result_shapes: [...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES],
+    physical_delete_authorized: false,
+    default_caller_delete_ready: false,
+    cleanup_lane_can_authorize_physical_delete: false,
+    physical_delete_authorization_status: 'not_authorized_by_opl_projection',
+    authority_boundary: {
+      cleanup_lane_can_delete_domain_repo_files: false,
+      cleanup_lane_can_write_domain_truth: false,
+      cleanup_lane_can_sign_domain_owner_receipt: false,
+      cleanup_lane_can_authorize_quality_or_export: false,
+      cleanup_lane_can_authorize_domain_repo_physical_delete: false,
+    },
+  };
+}
+
 function compactSurfaceDeletionGate(worklist: JsonRecord) {
   const prerequisitesObserved = statusIsObserved(worklist.replacement_parity)
     && statusIsObserved(worklist.active_caller_cutover)
@@ -208,6 +293,12 @@ function repoDeletionGateSummary(
     missingTombstoneOrProvenanceRefCount,
   });
   const surfaceDeletionGateSummary = worklists.map(compactSurfaceDeletionGate);
+  const cleanupLane = cleanupLaneFromReport(report);
+  const ordinaryLane = ordinaryLaneReadout({
+    deletionEvidenceWorklistCount: worklists.length,
+    prerequisitesObserved,
+    allRequirementsObserved,
+  });
   const structuralPrerequisitesObservedButDomainOwnerDecisionMissingCount =
     surfaceDeletionGateSummary.reduce((total, surface) => (
       total + surface.structural_prerequisites_observed_but_domain_owner_decision_missing_count
@@ -268,6 +359,8 @@ function repoDeletionGateSummary(
     physical_delete_blocked_by: physicalDeleteBlockedBy,
     not_authorized_claims: notAuthorizedClaims,
     needs_drilldown_for_surface_refs: worklists.length > 0,
+    ordinary_lane: ordinaryLane,
+    cleanup_lane: cleanupLane,
     surface_owner_decision_gates: surfaceDeletionGateSummary,
     surface_deletion_gate_summary: surfaceDeletionGateSummary,
   };
@@ -306,6 +399,14 @@ export function buildDefaultCallerPhysicalDeleteAuthorityReadModel(
     (total, repo) =>
       total + repo.structural_prerequisites_observed_but_domain_owner_decision_missing_count,
     0,
+  );
+  const ordinaryLane = ordinaryLaneReadout({
+    deletionEvidenceWorklistCount,
+    prerequisitesObserved: allReposHaveDeleteOrKeepPrerequisites,
+    allRequirementsObserved: allReposAllDeletionEvidenceRequirementsObserved,
+  });
+  const privatePlatformCleanupLane = mergePrivatePlatformCleanupLanes(
+    repoSummaries.map((repo) => record(repo.cleanup_lane)),
   );
   return {
     surface_kind: 'opl_default_caller_physical_delete_authority_read_model',
@@ -365,6 +466,8 @@ export function buildDefaultCallerPhysicalDeleteAuthorityReadModel(
     physical_delete_blocked_by: policy.physical_delete_blocked_by,
     not_authorized_claims: policy.not_authorized_claims,
     needs_drilldown_for_surface_refs: deletionEvidenceWorklistCount > 0,
+    default_ordinary_lane: ordinaryLane,
+    private_platform_cleanup_lane: privatePlatformCleanupLane,
     owner_decision_gate_by_repo: repoSummaries,
     repo_deletion_gate_summary: repoSummaries,
     authority_boundary: {

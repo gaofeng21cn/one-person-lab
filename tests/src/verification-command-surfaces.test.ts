@@ -513,6 +513,26 @@ test('target architecture policy contracts keep progress, guardrail, and wrapper
       blocks_static_no_active_caller_retirement: boolean;
       static_retirement_prerequisite_gate_ids: string[];
     };
+    lane_separation: {
+      default_ordinary_lane: {
+        lane_id: string;
+        includes_private_platform_cleanup_gate: boolean;
+        can_authorize_private_platform_residue_cleanup: boolean;
+      };
+      private_platform_cleanup_lane: {
+        lane_id: string;
+        physical_delete_authorized: boolean;
+        cleanup_lane_can_authorize_physical_delete: boolean;
+      };
+    };
+    private_platform_residue_deletion_gate: {
+      applies_to_agents: string[];
+      classification_source_field: string;
+      residue_target_kinds: string[];
+      allowed_dispositions: string[];
+      physical_delete_authorized_by_opl: boolean;
+      required_owner_decision_shapes: string[];
+    };
     forbidden_retirement_shortcuts: string[];
     generated_default_caller_readiness_can_authorize_physical_delete: boolean;
     physical_delete_blocked_by_default: string[];
@@ -546,6 +566,65 @@ test('target architecture policy contracts keep progress, guardrail, and wrapper
     'no_active_caller_proof',
     'no_forbidden_write_proof',
     'tombstone_or_provenance_ref',
+  ]);
+  assert.equal(wrapperRetirement.lane_separation.default_ordinary_lane.lane_id, 'default_ordinary_lane');
+  assert.equal(
+    wrapperRetirement.lane_separation.default_ordinary_lane.includes_private_platform_cleanup_gate,
+    false,
+  );
+  assert.equal(
+    wrapperRetirement.lane_separation.default_ordinary_lane
+      .can_authorize_private_platform_residue_cleanup,
+    false,
+  );
+  assert.equal(
+    wrapperRetirement.lane_separation.private_platform_cleanup_lane.lane_id,
+    'private_platform_cleanup_lane',
+  );
+  assert.equal(
+    wrapperRetirement.lane_separation.private_platform_cleanup_lane.physical_delete_authorized,
+    false,
+  );
+  assert.equal(
+    wrapperRetirement.lane_separation.private_platform_cleanup_lane
+      .cleanup_lane_can_authorize_physical_delete,
+    false,
+  );
+  assert.deepEqual(wrapperRetirement.private_platform_residue_deletion_gate.applies_to_agents, [
+    'med-autoscience',
+    'med-autogrant',
+    'redcube-ai',
+    'opl-meta-agent',
+  ]);
+  assert.equal(
+    wrapperRetirement.private_platform_residue_deletion_gate.classification_source_field,
+    'functional_privatization_audit.modules[].private_platform_residue_gate',
+  );
+  assert.deepEqual(wrapperRetirement.private_platform_residue_deletion_gate.residue_target_kinds, [
+    'scheduler',
+    'queue',
+    'session_store',
+    'workbench',
+    'status_shell',
+    'domain_wrapper',
+    'runtime_watch',
+    'agent_lab_materializer',
+  ]);
+  assert.deepEqual(wrapperRetirement.private_platform_residue_deletion_gate.allowed_dispositions, [
+    'retain_authority_function',
+    'absorb_opl_primitive',
+    'no_active_caller_delete',
+    'tombstone',
+    'owner_typed_blocker',
+  ]);
+  assert.equal(
+    wrapperRetirement.private_platform_residue_deletion_gate.physical_delete_authorized_by_opl,
+    false,
+  );
+  assert.deepEqual(wrapperRetirement.private_platform_residue_deletion_gate.required_owner_decision_shapes, [
+    'physical_delete_authorization_ref',
+    'keep_as_authority_adapter_ref',
+    'typed_blocker_ref',
   ]);
   assert.equal(wrapperRetirement.forbidden_retirement_shortcuts.includes('descriptor_ready_only'), true);
   assert.equal(

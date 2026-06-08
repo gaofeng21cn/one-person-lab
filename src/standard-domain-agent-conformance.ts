@@ -9,6 +9,7 @@ import {
 import { buildAgentPlatformSurfaceOwnershipForRepo } from './agent-platform-surface-ownership.ts';
 import { buildGeneratedAgentInterfaces } from './domain-pack-compiler.ts';
 import { buildFunctionalPrivatizationAudit } from './functional-privatization-audit.ts';
+import { buildPrivatePlatformResidueDeletionGate } from './private-platform-residue-deletion-gate.ts';
 import {
   defaultFamilyRepoInputs,
   DEFAULT_FAMILY_REPOS,
@@ -248,6 +249,8 @@ function buildPrivateSurfaceChecks(repoDir: string) {
       }
     : null);
   const normalizedSummary = normalizedAudit.summary;
+  const privatePlatformResidueDeletionGate =
+    buildPrivatePlatformResidueDeletionGate(normalizedAudit.modules);
   const activePathScanStates = collectFieldValues(payload, 'active_path_scan_state')
     .map((entry) => ({
       path: entry.path,
@@ -279,6 +282,7 @@ function buildPrivateSurfaceChecks(repoDir: string) {
     default_watchlist_count: normalizedSummary.default_watchlist_count,
     private_platform_residue_inventory_count: normalizedSummary.private_platform_residue_inventory_count,
     private_platform_residue_module_ids: normalizedSummary.private_platform_residue_module_ids,
+    private_platform_residue_deletion_gate: privatePlatformResidueDeletionGate,
     source_purity_tail_read_model: normalizedAudit.source_purity_tail_read_model,
     active_path_scan_states: activePathScanStates,
     blockers,

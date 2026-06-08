@@ -32,6 +32,57 @@
       "tombstone_or_provenance_ref"
     ]
   },
+  "lane_separation": {
+    "default_ordinary_lane": {
+      "lane_id": "default_ordinary_lane",
+      "purpose": "Default generated caller readiness and owner-decision evidence for ordinary operator readout.",
+      "includes_private_platform_cleanup_gate": false,
+      "can_authorize_private_platform_residue_cleanup": false,
+      "physical_delete_authorized": false
+    },
+    "private_platform_cleanup_lane": {
+      "lane_id": "private_platform_cleanup_lane",
+      "purpose": "Audit-only delete gate classification for repo-local private platform residue.",
+      "feeds_default_ordinary_lane": false,
+      "cleanup_lane_can_authorize_physical_delete": false,
+      "physical_delete_authorized": false
+    }
+  },
+  "private_platform_residue_deletion_gate": {
+    "applies_to_agents": [
+      "med-autoscience",
+      "med-autogrant",
+      "redcube-ai",
+      "opl-meta-agent"
+    ],
+    "classification_source_field": "functional_privatization_audit.modules[].private_platform_residue_gate",
+    "residue_target_kinds": [
+      "scheduler",
+      "queue",
+      "session_store",
+      "workbench",
+      "status_shell",
+      "domain_wrapper",
+      "runtime_watch",
+      "agent_lab_materializer"
+    ],
+    "allowed_dispositions": [
+      "retain_authority_function",
+      "absorb_opl_primitive",
+      "no_active_caller_delete",
+      "tombstone",
+      "owner_typed_blocker"
+    ],
+    "required_owner_decision_shapes": [
+      "physical_delete_authorization_ref",
+      "keep_as_authority_adapter_ref",
+      "typed_blocker_ref"
+    ],
+    "physical_delete_authorized_by_opl": false,
+    "default_caller_delete_ready": false,
+    "classification_counts_as_domain_ready": false,
+    "classification_counts_as_production_ready": false
+  },
   "retirement_target_classes": [
     "legacy_reconcile_compensation_path",
     "legacy_materialize_compensation_path",

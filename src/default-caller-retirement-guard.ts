@@ -51,3 +51,33 @@ export const DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES = [
   'keep_as_authority_adapter_ref',
   'typed_blocker_ref',
 ] as const;
+
+export const DEFAULT_CALLER_DEFAULT_ORDINARY_LANE_ID = 'default_ordinary_lane' as const;
+
+export const DEFAULT_CALLER_PRIVATE_PLATFORM_CLEANUP_LANE_ID =
+  'private_platform_cleanup_lane' as const;
+
+export const DEFAULT_CALLER_PRIVATE_PLATFORM_RESIDUE_TARGET_KINDS = [
+  'scheduler',
+  'queue',
+  'session_store',
+  'workbench',
+  'status_shell',
+  'domain_wrapper',
+  'runtime_watch',
+  'agent_lab_materializer',
+] as const;
+
+export const DEFAULT_CALLER_PRIVATE_PLATFORM_CLEANUP_ALLOWED_DISPOSITIONS = [
+  'retain_authority_function',
+  'absorb_opl_primitive',
+  'no_active_caller_delete',
+  'tombstone',
+  'owner_typed_blocker',
+] as const;
+
+export type DefaultCallerPrivatePlatformResidueTargetKind =
+  typeof DEFAULT_CALLER_PRIVATE_PLATFORM_RESIDUE_TARGET_KINDS[number];
+
+export type DefaultCallerPrivatePlatformCleanupDisposition =
+  typeof DEFAULT_CALLER_PRIVATE_PLATFORM_CLEANUP_ALLOWED_DISPOSITIONS[number];
