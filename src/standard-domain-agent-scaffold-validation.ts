@@ -860,7 +860,9 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
   const stageRefValidation = validateStageRefs(repoDir, stageControlPlane, stagePackV2Required);
   const userStageLogValidation = validateUserStageLogContracts(stageControlPlane);
   const foundryAgentSeriesValidation = validateFoundryAgentSeriesContract(foundryAgentSeries, stagePackV2Required);
-  const stagePackV2Validation = validateStagePackV2(stageControlPlane, packCompilerInput, stagePackV2Required);
+  const stagePackV2Validation = validateStagePackV2(stageControlPlane, packCompilerInput, stagePackV2Required, {
+    repoDir,
+  });
   const authorityViolations = [
     authority.opl_can_write_domain_truth === false ? null : 'opl_can_write_domain_truth_must_be_false',
     authority.opl_can_write_memory_body === false ? null : 'opl_can_write_memory_body_must_be_false',

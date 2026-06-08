@@ -19,6 +19,9 @@ import {
   DEFAULT_FAMILY_REPOS,
 } from './standard-domain-agent-family-repos.ts';
 import {
+  STANDARD_AGENT_PACK_ABI,
+} from './standard-domain-agent-scaffold-constants.ts';
+import {
   buildGeneratedInterfaceBundle,
   GENERATED_INTERFACE_SOURCE_REFS,
   GENERATED_SURFACES,
@@ -55,6 +58,12 @@ function stringList(value: unknown) {
 
 function recordList(value: unknown) {
   return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function recordPathList(value: unknown) {
+  return recordList(value)
+    .map((entry) => optionalString(entry.path))
+    .filter((entry): entry is string => Boolean(entry));
 }
 
 function normalizeDomainSelection(value: string) {
@@ -270,6 +279,38 @@ function genericResidueBlocked(summary: JsonRecord) {
     || numberField(summary, 'retire_tombstone_count') > 0
     || numberField(summary, 'active_private_generic_residue_count') > 0
     || numberField(summary, 'blocker_count') > 0;
+}
+
+function buildStandardAgentPackAbiProjection(packCompilerInput: JsonRecord | null) {
+  const declaration = isRecord(packCompilerInput?.standard_agent_pack_abi)
+    ? packCompilerInput.standard_agent_pack_abi
+    : null;
+  const requiredRepoLayoutPaths = recordPathList(STANDARD_AGENT_PACK_ABI.required_repo_layout);
+  const declaredRepoLayoutPaths = recordPathList(declaration?.required_repo_layout);
+  const missingRepoLayoutPaths = requiredRepoLayoutPaths.filter((pathRef) =>
+    !declaredRepoLayoutPaths.includes(pathRef)
+  );
+  const findings = [
+    declaration ? null : 'standard_agent_pack_abi_missing',
+    optionalString(declaration?.version) === STANDARD_AGENT_PACK_ABI.version
+      ? null
+      : 'standard_agent_pack_abi_version_invalid',
+    ...missingRepoLayoutPaths.map((pathRef) => `standard_agent_pack_abi_missing_repo_layout:${pathRef}`),
+  ].filter((entry): entry is string => Boolean(entry));
+  return {
+    surface_kind: STANDARD_AGENT_PACK_ABI.surface_kind,
+    version: STANDARD_AGENT_PACK_ABI.version,
+    owner: STANDARD_AGENT_PACK_ABI.owner,
+    status: findings.length === 0 ? 'passed' : 'advisory_missing',
+    required_repo_layout_paths: requiredRepoLayoutPaths,
+    declared_repo_layout_paths: declaredRepoLayoutPaths,
+    missing_repo_layout_paths: missingRepoLayoutPaths,
+    required_stage_pack_shape: STANDARD_AGENT_PACK_ABI.required_stage_pack_shape,
+    l4_entry_gate: STANDARD_AGENT_PACK_ABI.l4_entry_gate,
+    l5_entry_gate: STANDARD_AGENT_PACK_ABI.l5_entry_gate,
+    authority_boundary: STANDARD_AGENT_PACK_ABI.authority_boundary,
+    advisory_findings: findings,
+  };
 }
 
 function stableJson(value: unknown): string {
@@ -770,6 +811,9 @@ function surfaceProjection(descriptor: JsonRecord, surface: typeof GENERATED_SUR
 
 function buildPackCompilerProjection(descriptor: JsonRecord) {
   const summary = functionalAuditSummary(descriptor);
+  const packCompilerInput = isRecord(descriptor.pack_compiler_input_contract)
+    ? descriptor.pack_compiler_input_contract
+    : null;
   const generatedSurfaces = GENERATED_SURFACES.map((surface) => surfaceProjection(descriptor, surface));
   const missingRequired = generatedSurfaces.flatMap((surface) => surface.missing_descriptor_surfaces);
   const blockerReasons = [
@@ -810,6 +854,7 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
         skill_catalog_status: statusOf(descriptor.skill_catalog),
       },
       minimal_authority_function_refs: minimalAuthorityFunctionRefs(descriptor),
+      standard_agent_pack_abi: buildStandardAgentPackAbiProjection(packCompilerInput),
       functional_privatization_summary: summary,
     },
     generated_surface_handoff: {

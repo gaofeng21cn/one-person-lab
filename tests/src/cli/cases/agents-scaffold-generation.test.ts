@@ -196,6 +196,8 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       stage_graph_source_ref: 'contracts/stage_control_plane.json',
       quality_gate_source_ref: 'agent/quality_gates/domain_acceptance.md',
       executor_policy_source_ref: 'contracts/stage_control_plane.json#/stages/0/selected_executor',
+      owner_receipt_schema_source_ref: 'contracts/owner_receipt_contract.json',
+      authority_functions_source_ref: 'runtime/authority_functions/README.md',
       functional_privatization_audit_source_ref: 'contracts/functional_privatization_audit.json',
       generated_surface_handoff_source_ref: 'contracts/generated_surface_handoff.json',
     });
@@ -204,6 +206,11 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       required: true,
       enforcement_ref: 'contracts/stage_control_plane.json#stage_pack_conformance_version',
     });
+    assert.equal(packCompilerInput.standard_agent_pack_abi.version, 'standard-agent-pack-abi.v1');
+    assert.deepEqual(
+      packCompilerInput.standard_agent_pack_abi.required_repo_layout.map((entry: { path: string }) => entry.path),
+      ['agent/', 'contracts/', 'runtime/authority_functions/'],
+    );
     assert.deepEqual(packCompilerInput.required_domain_pack_paths, [
       'agent/prompts/domain_intake.md',
       'agent/stages/domain_intake.md',
@@ -439,6 +446,15 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(
       validated.validation.stage_pack_v2_validation.stage_statuses[0].executor_binding_ref,
       'default_codex_cli',
+    );
+    assert.equal(validated.validation.stage_pack_v2_validation.standard_agent_pack_abi.status, 'passed');
+    assert.equal(
+      validated.validation.stage_pack_v2_validation.stage_statuses[0].l4_entry_gate_status,
+      'declared',
+    );
+    assert.equal(
+      validated.validation.stage_pack_v2_validation.stage_statuses[0].l5_entry_gate_status,
+      'declared',
     );
     assert.deepEqual(validated.validation.stage_pack_v2_validation.blockers, []);
     assert.equal(

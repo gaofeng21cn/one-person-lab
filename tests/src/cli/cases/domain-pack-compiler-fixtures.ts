@@ -7,6 +7,7 @@ import {
   repoRoot,
   runCli,
 } from '../helpers.ts';
+import { STANDARD_AGENT_PACK_ABI } from '../../../../src/standard-domain-agent-scaffold-constants.ts';
 import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 export type JsonRecord = Record<string, unknown>;
@@ -395,6 +396,8 @@ function generatedSurfaceHandoff(targetDomainId: string) {
 function writeFamilyDefaultContractRepo(workspaceRoot: string, spec: FamilyDefaultContractRepoSpec) {
   const repoDir = path.join(workspaceRoot, spec.repoDirectory);
   const contractsDir = path.join(repoDir, 'contracts');
+  fs.mkdirSync(path.join(repoDir, 'agent'), { recursive: true });
+  fs.mkdirSync(path.join(repoDir, 'runtime', 'authority_functions'), { recursive: true });
   fs.mkdirSync(contractsDir, { recursive: true });
   const manifest = withPackCompilerReadySurfaces({}, {
     agentId: spec.agentId,
@@ -429,6 +432,7 @@ function writeFamilyDefaultContractRepo(workspaceRoot: string, spec: FamilyDefau
     domain_repo_runtime_role: 'domain_handler_target_and_authority_functions',
     generated_surface_owner: 'one-person-lab',
     domain_repo_can_own_generated_surface: false,
+    standard_agent_pack_abi: STANDARD_AGENT_PACK_ABI,
   });
   return repoDir;
 }

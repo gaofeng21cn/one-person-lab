@@ -160,6 +160,20 @@ test('domain pack compiler family-defaults consumes standard repo contracts with
     assert.equal(mas.generated_interface_bundle.product_session.status, 'ready_from_session_continuity_or_stage_control_plane');
     assert.equal(mas.generated_interface_bundle.workbench.status, 'ready_from_stage_control_plane');
     assert.equal(mas.generated_interface_bundle.source_contract_consumption.status, 'ready');
+    assert.equal(mas.pack_compiler_input_projection.standard_agent_pack_abi.status, 'passed');
+    assert.deepEqual(mas.pack_compiler_input_projection.standard_agent_pack_abi.required_repo_layout_paths, [
+      'agent/',
+      'contracts/',
+      'runtime/authority_functions/',
+    ]);
+    assert.equal(
+      mas.pack_compiler_input_projection.standard_agent_pack_abi.l4_entry_gate.entry_level,
+      'L4_structural_baseline',
+    );
+    assert.equal(
+      mas.pack_compiler_input_projection.standard_agent_pack_abi.l5_entry_gate.conformance_pass_counts_as_l5,
+      false,
+    );
     assert.equal(mas.authority_boundary.opl_can_write_domain_truth, false);
     assert.equal(mas.authority_boundary.opl_can_authorize_quality_or_export, false);
   } finally {

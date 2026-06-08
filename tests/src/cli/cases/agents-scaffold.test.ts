@@ -337,6 +337,8 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     'stage_graph_source_ref',
     'quality_gate_source_ref',
     'executor_policy_source_ref',
+    'owner_receipt_schema_source_ref',
+    'authority_functions_source_ref',
     'functional_privatization_audit_source_ref',
     'generated_surface_handoff_source_ref',
   ]);
