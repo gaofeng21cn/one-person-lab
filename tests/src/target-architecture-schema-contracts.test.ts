@@ -322,7 +322,45 @@ test('target architecture schema contracts keep owner delta root and audit tail 
   );
   assert.deepEqual(
     workspaceIndex.$defs.project.properties.lifecycle.properties.status.enum,
-    ['active', 'archived'],
+    ['active', 'paused', 'archived', 'superseded', 'locked'],
+  );
+  assert.equal(
+    workspaceIndex.$defs.project.properties.lifecycle.properties.safe_delete_gate.const,
+    'domain_owner_receipt_required',
+  );
+  assert.deepEqual(
+    workspaceIndex.$defs.project.properties.lifecycle.properties.retention_policy.enum,
+    ['keep_until_explicit_archive', 'keep_until_explicit_delete_receipt'],
+  );
+  assert.equal(workspaceIndex.required.includes('profile_binding'), true);
+  assert.equal(workspaceIndex.required.includes('topology_events'), true);
+  assert.equal(
+    workspaceIndex.$defs.profile_binding.properties.profile_version.const,
+    'workspace-topology-profile.v2',
+  );
+  assert.equal(
+    workspaceIndex.$defs.profile_binding.properties.profile_fingerprint.const,
+    'opl-workspace-topology-profile-v2-projects-stage-outputs',
+  );
+  assert.equal(
+    workspaceIndex.$defs.profile_binding.properties.profile_contract_ref.const,
+    'contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/new_agent_scaffold/foundry_agent_series_contract/workspace_topology_profile',
+  );
+  assert.equal(
+    workspaceIndex.$defs.profile_binding.properties.migration_history.items.properties.project_roots_moved.const,
+    false,
+  );
+  assert.deepEqual(
+    workspaceIndex.$defs.topology_event.properties.event.enum,
+    ['initialized', 'ensured', 'adopted', 'upgraded', 'project_appended', 'project_lifecycle_updated'],
+  );
+  assert.equal(
+    workspaceIndex.$defs.topology_event.properties.project_collection_path.const,
+    'projects',
+  );
+  assert.equal(
+    workspaceIndex.$defs.topology_event.properties.project_roots_moved.const,
+    false,
   );
   assert.equal(
     workspaceIndex.$defs.generated_refs.properties.workspace_inspection_ref.const,
@@ -331,6 +369,30 @@ test('target architecture schema contracts keep owner delta root and audit tail 
   assert.equal(
     workspaceIndex.$defs.generated_refs.properties.workspace_resource_inventory_ref.const,
     'workspace_resource_inventory.json',
+  );
+  assert.equal(
+    workspaceIndex.$defs.generated_refs.properties.workspace_report_ref.const,
+    'workspace_report.json',
+  );
+  assert.equal(
+    workspaceIndex.$defs.generated_refs.properties.canonical_generated_root.const,
+    'control/opl',
+  );
+  assert.equal(
+    workspaceIndex.$defs.generated_refs.properties.canonical_projection_root.const,
+    'control/opl/projections',
+  );
+  assert.equal(
+    workspaceIndex.$defs.generated_refs.properties.canonical_report_root.const,
+    'control/opl/reports',
+  );
+  assert.equal(
+    workspaceIndex.$defs.generated_refs.properties.canonical_workspace_report_ref.const,
+    'control/opl/reports/workspace_report.json',
+  );
+  assert.deepEqual(
+    workspaceIndex.$defs.generated_refs.properties.root_mirror_refs.prefixItems.map((entry: { const: string }) => entry.const),
+    ['workspace_map.json', 'workspace_health.json', 'workspace_inspection.json', 'workspace_resource_inventory.json', 'workspace_report.json'],
   );
   assert.equal(
     workspaceIndex.$defs.generated_refs.properties.stage_outputs_index_basename.const,

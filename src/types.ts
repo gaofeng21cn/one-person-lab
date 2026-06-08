@@ -265,8 +265,12 @@ export interface AgentWorkspaceNormContract {
     project_stage_outputs_pattern: string;
     workspace_index_file: string;
     workspace_config_file: string;
+    canonical_generated_root: string;
+    canonical_projection_root: string;
+    canonical_report_root: string;
     workspace_inspection_file: string;
     workspace_resource_inventory_file: string;
+    workspace_report_file: string;
     stage_outputs_index_file: string;
     current_stage_pointer_file: string;
     canonical_user_inspection_roots: string[];
@@ -296,11 +300,32 @@ export interface AgentWorkspaceNormContract {
     runtime_state_counts_as_user_default_surface: boolean;
     conformance_pass_counts_as_domain_ready: boolean;
   };
+  workspace_governance_policy: {
+    workspace_norm_projection_must_equal_contract_projection: boolean;
+    profile_binding_required: boolean;
+    profile_version: string;
+    profile_fingerprint: string;
+    topology_events_required: boolean;
+    canonical_generated_projection_root: string;
+    root_projection_files_are_compatibility_mirrors: boolean;
+    workspace_report_is_default_user_summary: boolean;
+    generated_projection_currentness_is_structural_gate: boolean;
+  };
+  domain_workspace_lifecycle_policy: {
+    policy_ref: string;
+    domain_repo_can_own_generic_workspace_lifecycle: boolean;
+    domain_repo_must_declare_locator_not_lifecycle: boolean;
+    opl_owns_lifecycle_projection: boolean;
+    physical_delete_requires_domain_owner_receipt: boolean;
+  };
   conformance_policy: {
     family_conformance_must_report_workspace_norm: boolean;
+    workspace_norm_maturity_level: string;
     workspace_norm_pass_is_structural_only: boolean;
+    workspace_norm_pass_can_claim_production_ready: boolean;
     workspace_norm_pass_can_claim_domain_ready: boolean;
     workspace_norm_pass_can_claim_artifact_or_quality_ready: boolean;
+    l5_evidence_required: string[];
     blocked_reasons: string[];
   };
 }

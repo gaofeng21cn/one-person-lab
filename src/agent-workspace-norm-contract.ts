@@ -411,8 +411,12 @@ function validateAgentWorkspaceNormSemantics(
   assertExactString(inspection.project_stage_outputs_pattern, '<project-root>/artifacts/stage_outputs/<stage-id>/', 'user_inspection.project_stage_outputs_pattern', filePath);
   assertExactString(inspection.workspace_index_file, 'workspace_index.json', 'user_inspection.workspace_index_file', filePath);
   assertExactString(inspection.workspace_config_file, 'workspace.yaml', 'user_inspection.workspace_config_file', filePath);
+  assertExactString(inspection.canonical_generated_root, 'control/opl', 'user_inspection.canonical_generated_root', filePath);
+  assertExactString(inspection.canonical_projection_root, 'control/opl/projections', 'user_inspection.canonical_projection_root', filePath);
+  assertExactString(inspection.canonical_report_root, 'control/opl/reports', 'user_inspection.canonical_report_root', filePath);
   assertExactString(inspection.workspace_inspection_file, 'workspace_inspection.json', 'user_inspection.workspace_inspection_file', filePath);
   assertExactString(inspection.workspace_resource_inventory_file, 'workspace_resource_inventory.json', 'user_inspection.workspace_resource_inventory_file', filePath);
+  assertExactString(inspection.workspace_report_file, 'workspace_report.json', 'user_inspection.workspace_report_file', filePath);
   assertExactString(inspection.stage_outputs_index_file, 'stage_outputs_index.json', 'user_inspection.stage_outputs_index_file', filePath);
   assertExactString(inspection.current_stage_pointer_file, 'current_stage.json', 'user_inspection.current_stage_pointer_file', filePath);
   assertExactStringArray(
@@ -455,20 +459,50 @@ function validateAgentWorkspaceNormSemantics(
   assertExactBoolean(authority.runtime_state_counts_as_user_default_surface, false, 'authority_boundary.runtime_state_counts_as_user_default_surface', filePath);
   assertExactBoolean(authority.conformance_pass_counts_as_domain_ready, false, 'authority_boundary.conformance_pass_counts_as_domain_ready', filePath);
 
+  const governance = contract.workspace_governance_policy;
+  assertExactBoolean(governance.workspace_norm_projection_must_equal_contract_projection, true, 'workspace_governance_policy.workspace_norm_projection_must_equal_contract_projection', filePath);
+  assertExactBoolean(governance.profile_binding_required, true, 'workspace_governance_policy.profile_binding_required', filePath);
+  assertExactString(governance.profile_version, 'workspace-topology-profile.v2', 'workspace_governance_policy.profile_version', filePath);
+  assertExactString(governance.profile_fingerprint, 'opl-workspace-topology-profile-v2-projects-stage-outputs', 'workspace_governance_policy.profile_fingerprint', filePath);
+  assertExactBoolean(governance.topology_events_required, true, 'workspace_governance_policy.topology_events_required', filePath);
+  assertExactString(governance.canonical_generated_projection_root, 'control/opl/projections', 'workspace_governance_policy.canonical_generated_projection_root', filePath);
+  assertExactBoolean(governance.root_projection_files_are_compatibility_mirrors, true, 'workspace_governance_policy.root_projection_files_are_compatibility_mirrors', filePath);
+  assertExactBoolean(governance.workspace_report_is_default_user_summary, true, 'workspace_governance_policy.workspace_report_is_default_user_summary', filePath);
+  assertExactBoolean(governance.generated_projection_currentness_is_structural_gate, true, 'workspace_governance_policy.generated_projection_currentness_is_structural_gate', filePath);
+
+  const lifecycle = contract.domain_workspace_lifecycle_policy;
+  assertExactString(lifecycle.policy_ref, 'contracts/opl-framework/workspace-index.schema.json#/$defs/project/lifecycle', 'domain_workspace_lifecycle_policy.policy_ref', filePath);
+  assertExactBoolean(lifecycle.domain_repo_can_own_generic_workspace_lifecycle, false, 'domain_workspace_lifecycle_policy.domain_repo_can_own_generic_workspace_lifecycle', filePath);
+  assertExactBoolean(lifecycle.domain_repo_must_declare_locator_not_lifecycle, true, 'domain_workspace_lifecycle_policy.domain_repo_must_declare_locator_not_lifecycle', filePath);
+  assertExactBoolean(lifecycle.opl_owns_lifecycle_projection, true, 'domain_workspace_lifecycle_policy.opl_owns_lifecycle_projection', filePath);
+  assertExactBoolean(lifecycle.physical_delete_requires_domain_owner_receipt, true, 'domain_workspace_lifecycle_policy.physical_delete_requires_domain_owner_receipt', filePath);
+
   const conformance = contract.conformance_policy;
   assertExactBoolean(conformance.family_conformance_must_report_workspace_norm, true, 'conformance_policy.family_conformance_must_report_workspace_norm', filePath);
+  assertExactString(conformance.workspace_norm_maturity_level, 'L4_structural_baseline', 'conformance_policy.workspace_norm_maturity_level', filePath);
   assertExactBoolean(conformance.workspace_norm_pass_is_structural_only, true, 'conformance_policy.workspace_norm_pass_is_structural_only', filePath);
+  assertExactBoolean(conformance.workspace_norm_pass_can_claim_production_ready, false, 'conformance_policy.workspace_norm_pass_can_claim_production_ready', filePath);
   assertExactBoolean(conformance.workspace_norm_pass_can_claim_domain_ready, false, 'conformance_policy.workspace_norm_pass_can_claim_domain_ready', filePath);
   assertExactBoolean(conformance.workspace_norm_pass_can_claim_artifact_or_quality_ready, false, 'conformance_policy.workspace_norm_pass_can_claim_artifact_or_quality_ready', filePath);
+  assertExactStringArray(
+    conformance.l5_evidence_required,
+    ['long_soak', 'release', 'user_path', 'owner_acceptance'],
+    'conformance_policy.l5_evidence_required',
+    filePath,
+  );
   assertExactStringArray(
     conformance.blocked_reasons,
     [
       'agent_workspace_norm_missing',
+      'workspace_norm_projection_drift',
       'workspace_ensure_not_default_precondition',
       'workspace_ensure_descriptor_delegate_drift',
       'workspace_user_inspection_surface_drift',
       'workspace_runtime_state_boundary_drift',
       'workspace_authority_boundary_overclaim',
+      'workspace_profile_binding_drift',
+      'workspace_generated_projection_currentness_drift',
+      'domain_generic_workspace_lifecycle_residue',
     ],
     'conformance_policy.blocked_reasons',
     filePath,
@@ -490,6 +524,8 @@ export function validateAgentWorkspaceNorm(
   const registryPolicy = requireSection(root, 'registry_policy', filePath);
   const runtimeStateBoundary = requireSection(root, 'runtime_state_boundary', filePath);
   const authorityBoundary = requireSection(root, 'authority_boundary', filePath);
+  const workspaceGovernancePolicy = requireSection(root, 'workspace_governance_policy', filePath);
+  const domainWorkspaceLifecyclePolicy = requireSection(root, 'domain_workspace_lifecycle_policy', filePath);
   const conformancePolicy = requireSection(root, 'conformance_policy', filePath);
 
   const contract: AgentWorkspaceNormContract = {
@@ -552,8 +588,12 @@ export function validateAgentWorkspaceNorm(
       project_stage_outputs_pattern: stringField(userInspection, 'project_stage_outputs_pattern', filePath),
       workspace_index_file: stringField(userInspection, 'workspace_index_file', filePath),
       workspace_config_file: stringField(userInspection, 'workspace_config_file', filePath),
+      canonical_generated_root: stringField(userInspection, 'canonical_generated_root', filePath),
+      canonical_projection_root: stringField(userInspection, 'canonical_projection_root', filePath),
+      canonical_report_root: stringField(userInspection, 'canonical_report_root', filePath),
       workspace_inspection_file: stringField(userInspection, 'workspace_inspection_file', filePath),
       workspace_resource_inventory_file: stringField(userInspection, 'workspace_resource_inventory_file', filePath),
+      workspace_report_file: stringField(userInspection, 'workspace_report_file', filePath),
       stage_outputs_index_file: stringField(userInspection, 'stage_outputs_index_file', filePath),
       current_stage_pointer_file: stringField(userInspection, 'current_stage_pointer_file', filePath),
       canonical_user_inspection_roots: stringArrayField(userInspection, 'canonical_user_inspection_roots', filePath),
@@ -603,15 +643,75 @@ export function validateAgentWorkspaceNorm(
         filePath,
       ),
     },
+    workspace_governance_policy: {
+      workspace_norm_projection_must_equal_contract_projection: booleanField(
+        workspaceGovernancePolicy,
+        'workspace_norm_projection_must_equal_contract_projection',
+        filePath,
+      ),
+      profile_binding_required: booleanField(workspaceGovernancePolicy, 'profile_binding_required', filePath),
+      profile_version: stringField(workspaceGovernancePolicy, 'profile_version', filePath),
+      profile_fingerprint: stringField(workspaceGovernancePolicy, 'profile_fingerprint', filePath),
+      topology_events_required: booleanField(workspaceGovernancePolicy, 'topology_events_required', filePath),
+      canonical_generated_projection_root: stringField(
+        workspaceGovernancePolicy,
+        'canonical_generated_projection_root',
+        filePath,
+      ),
+      root_projection_files_are_compatibility_mirrors: booleanField(
+        workspaceGovernancePolicy,
+        'root_projection_files_are_compatibility_mirrors',
+        filePath,
+      ),
+      workspace_report_is_default_user_summary: booleanField(
+        workspaceGovernancePolicy,
+        'workspace_report_is_default_user_summary',
+        filePath,
+      ),
+      generated_projection_currentness_is_structural_gate: booleanField(
+        workspaceGovernancePolicy,
+        'generated_projection_currentness_is_structural_gate',
+        filePath,
+      ),
+    },
+    domain_workspace_lifecycle_policy: {
+      policy_ref: stringField(domainWorkspaceLifecyclePolicy, 'policy_ref', filePath),
+      domain_repo_can_own_generic_workspace_lifecycle: booleanField(
+        domainWorkspaceLifecyclePolicy,
+        'domain_repo_can_own_generic_workspace_lifecycle',
+        filePath,
+      ),
+      domain_repo_must_declare_locator_not_lifecycle: booleanField(
+        domainWorkspaceLifecyclePolicy,
+        'domain_repo_must_declare_locator_not_lifecycle',
+        filePath,
+      ),
+      opl_owns_lifecycle_projection: booleanField(
+        domainWorkspaceLifecyclePolicy,
+        'opl_owns_lifecycle_projection',
+        filePath,
+      ),
+      physical_delete_requires_domain_owner_receipt: booleanField(
+        domainWorkspaceLifecyclePolicy,
+        'physical_delete_requires_domain_owner_receipt',
+        filePath,
+      ),
+    },
     conformance_policy: {
       family_conformance_must_report_workspace_norm: booleanField(
         conformancePolicy,
         'family_conformance_must_report_workspace_norm',
         filePath,
       ),
+      workspace_norm_maturity_level: stringField(conformancePolicy, 'workspace_norm_maturity_level', filePath),
       workspace_norm_pass_is_structural_only: booleanField(
         conformancePolicy,
         'workspace_norm_pass_is_structural_only',
+        filePath,
+      ),
+      workspace_norm_pass_can_claim_production_ready: booleanField(
+        conformancePolicy,
+        'workspace_norm_pass_can_claim_production_ready',
         filePath,
       ),
       workspace_norm_pass_can_claim_domain_ready: booleanField(
@@ -624,6 +724,7 @@ export function validateAgentWorkspaceNorm(
         'workspace_norm_pass_can_claim_artifact_or_quality_ready',
         filePath,
       ),
+      l5_evidence_required: stringArrayField(conformancePolicy, 'l5_evidence_required', filePath),
       blocked_reasons: stringArrayField(conformancePolicy, 'blocked_reasons', filePath),
     },
   };

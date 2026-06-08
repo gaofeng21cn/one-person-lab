@@ -16,6 +16,24 @@ export type TopologyProfile = {
   project_stage_outputs_root: string;
 };
 
+export type WorkspaceLifecycleStatus = 'active' | 'paused' | 'archived' | 'superseded' | 'locked';
+
+export type WorkspaceProfileBinding = {
+  profile_id: WorkspaceProfileId;
+  profile_version: string;
+  profile_contract_ref: string;
+  profile_fingerprint: string;
+  applied_at: string;
+  applied_by: 'opl_workspace_init' | 'opl_workspace_ensure' | 'opl_workspace_adopt' | 'opl_workspace_upgrade';
+  migration_history: Array<{
+    event: 'initialized' | 'ensured' | 'adopted' | 'upgraded' | 'project_appended' | 'project_lifecycle_updated';
+    profile_version: string;
+    applied_at: string;
+    project_roots_moved: false;
+    note: string;
+  }>;
+};
+
 export type WorkspaceProjectIndexEntry = {
   project_id: string;
   project_root: string;
@@ -38,9 +56,17 @@ export type WorkspaceProjectIndexEntry = {
     domain_alias_is_canonical: false;
   };
   lifecycle: {
-    status: 'active' | 'archived';
+    status: WorkspaceLifecycleStatus;
     archived_at: string | null;
     archive_reason: string | null;
+    paused_at: string | null;
+    pause_reason: string | null;
+    superseded_at: string | null;
+    superseded_by_project_id: string | null;
+    locked_at: string | null;
+    lock_reason: string | null;
+    retention_policy: 'keep_until_explicit_archive' | 'keep_until_explicit_delete_receipt';
+    safe_delete_gate: 'domain_owner_receipt_required';
   };
 };
 
@@ -73,6 +99,11 @@ export type WorkspaceSharedResourceEntry = {
 
 export const WORKSPACE_TOPOLOGY_CONTRACT_REF =
   'contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/new_agent_scaffold/foundry_agent_series_contract/workspace_topology_profile';
+export const WORKSPACE_PROFILE_VERSION = 'workspace-topology-profile.v2';
+export const WORKSPACE_PROFILE_FINGERPRINT = 'opl-workspace-topology-profile-v2-projects-stage-outputs';
+export const OPL_GENERATED_ROOT = 'control/opl';
+export const OPL_GENERATED_PROJECTIONS_ROOT = `${OPL_GENERATED_ROOT}/projections`;
+export const OPL_GENERATED_REPORTS_ROOT = `${OPL_GENERATED_ROOT}/reports`;
 
 const SHARED_RESOURCE_ROLES: Record<string, string> = {
   data: 'dataset_root',
@@ -230,7 +261,51 @@ export function workspaceProjectEntry(
       status: 'active',
       archived_at: null,
       archive_reason: null,
+      paused_at: null,
+      pause_reason: null,
+      superseded_at: null,
+      superseded_by_project_id: null,
+      locked_at: null,
+      lock_reason: null,
+      retention_policy: 'keep_until_explicit_archive',
+      safe_delete_gate: 'domain_owner_receipt_required',
     },
+  };
+}
+
+export function buildWorkspaceProfileBinding(input: {
+  profileId: WorkspaceProfileId;
+  appliedAt: string;
+  appliedBy: WorkspaceProfileBinding['applied_by'];
+  event: WorkspaceProfileBinding['migration_history'][number]['event'];
+  existingBinding?: Partial<WorkspaceProfileBinding> | null;
+  note: string;
+}): WorkspaceProfileBinding {
+  const existingHistory = Array.isArray(input.existingBinding?.migration_history)
+    ? input.existingBinding.migration_history.filter((entry): entry is WorkspaceProfileBinding['migration_history'][number] => (
+        Boolean(entry)
+        && typeof entry.event === 'string'
+        && typeof entry.profile_version === 'string'
+        && typeof entry.applied_at === 'string'
+      ))
+    : [];
+  return {
+    profile_id: input.profileId,
+    profile_version: WORKSPACE_PROFILE_VERSION,
+    profile_contract_ref: WORKSPACE_TOPOLOGY_CONTRACT_REF,
+    profile_fingerprint: WORKSPACE_PROFILE_FINGERPRINT,
+    applied_at: input.appliedAt,
+    applied_by: input.appliedBy,
+    migration_history: [
+      ...existingHistory,
+      {
+        event: input.event,
+        profile_version: WORKSPACE_PROFILE_VERSION,
+        applied_at: input.appliedAt,
+        project_roots_moved: false,
+        note: input.note,
+      },
+    ],
   };
 }
 

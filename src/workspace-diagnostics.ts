@@ -2,16 +2,24 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from './contracts.ts';
+import { buildAgentWorkspaceNormProjection } from './agent-workspace-norm.ts';
 import type { FrameworkContracts } from './types.ts';
 import { initializeWorkspace } from './workspace-initializer.ts';
 import {
   buildProjectIndex,
   buildSharedResourceManifest,
   buildStageOutputsManifest,
+  buildWorkspaceHealth,
   buildWorkspaceInspection,
   buildWorkspaceMap,
+  buildWorkspaceReport,
   buildWorkspaceResourceInventory,
   currentStagePointerRef,
+  GENERATED_WORKSPACE_HEALTH_REF,
+  GENERATED_WORKSPACE_INSPECTION_REF,
+  GENERATED_WORKSPACE_MAP_REF,
+  GENERATED_WORKSPACE_REPORT_REF,
+  GENERATED_WORKSPACE_RESOURCE_INVENTORY_REF,
   normalizeWorkspaceProjectEntry,
   PROJECT_CONFIG_BASENAME,
   PROJECT_INDEX_BASENAME,
@@ -20,7 +28,9 @@ import {
   WORKSPACE_HEALTH_REF,
   WORKSPACE_INSPECTION_REF,
   WORKSPACE_MAP_REF,
+  WORKSPACE_REPORT_REF,
   WORKSPACE_RESOURCE_INVENTORY_REF,
+  WORKSPACE_PROJECT_LIFECYCLE_STATUSES,
 } from './workspace-artifacts.ts';
 import {
   validateCurrentStagePointerShape,
@@ -31,6 +41,8 @@ import {
   buildSharedResources,
   buildWorkspaceDisplayLabels,
   expectedDomainTopologyProfile,
+  WORKSPACE_PROFILE_FINGERPRINT,
+  WORKSPACE_PROFILE_VERSION,
   profileFromTopologyContract,
   selectWorkspaceProfileId,
   toWorkspaceRelative,
@@ -116,10 +128,19 @@ const BLOCKER_MESSAGES: Record<string, string> = {
   workspace_map_missing: 'workspace_map.json is missing.',
   workspace_map_drift: 'workspace_map.json does not match the OPL projection.',
   workspace_health_missing: 'workspace_health.json is missing.',
+  workspace_health_drift: 'workspace_health.json does not match the OPL projection.',
   workspace_inspection_missing: 'workspace_inspection.json is missing.',
   workspace_inspection_drift: 'workspace_inspection.json does not match the OPL projection.',
   workspace_resource_inventory_missing: 'workspace_resource_inventory.json is missing.',
   workspace_resource_inventory_drift: 'workspace_resource_inventory.json does not match the OPL projection.',
+  workspace_report_missing: 'workspace_report.json is missing.',
+  workspace_report_drift: 'workspace_report.json does not match the OPL projection.',
+  canonical_generated_projection_missing: 'A canonical control/opl generated projection is missing.',
+  canonical_generated_projection_drift: 'A canonical control/opl generated projection does not match its root mirror projection.',
+  profile_binding_missing: 'workspace_index.json is missing profile binding metadata.',
+  profile_binding_drift: 'workspace profile binding metadata is stale or does not match the current protocol.',
+  topology_events_missing: 'workspace_index.json is missing topology event history.',
+  workspace_norm_projection_drift: 'workspace_norm projection does not match the executable norm projection.',
   generated_refs_missing: 'workspace_index.json is missing generated_refs.',
   interface_projection_missing: 'workspace_index.json is missing interface_projection.',
   authority_boundary_overclaim: 'authority_boundary grants authority that OPL must not hold.',
@@ -292,20 +313,44 @@ function indexCreatedAt(index: Record<string, unknown>, fallback: string) {
 }
 
 function normalizeWorkspaceLifecycle(value: unknown): {
-  status: 'active' | 'archived';
+  status: typeof WORKSPACE_PROJECT_LIFECYCLE_STATUSES[number];
   archived_at: string | null;
   archive_reason: string | null;
+  paused_at: string | null;
+  pause_reason: string | null;
+  superseded_at: string | null;
+  superseded_by_project_id: string | null;
+  locked_at: string | null;
+  lock_reason: string | null;
+  retention_policy: 'keep_until_explicit_archive' | 'keep_until_explicit_delete_receipt';
+  safe_delete_gate: 'domain_owner_receipt_required';
 } {
   const lifecycle = isRecord(value) ? value : {};
-  const status: 'active' | 'archived' = lifecycle.status === 'archived' ? 'archived' : 'active';
+  const status = WORKSPACE_PROJECT_LIFECYCLE_STATUSES.includes(
+    lifecycle.status as typeof WORKSPACE_PROJECT_LIFECYCLE_STATUSES[number],
+  )
+    ? lifecycle.status as typeof WORKSPACE_PROJECT_LIFECYCLE_STATUSES[number]
+    : 'active';
   return {
     status,
-    archived_at: status === 'archived' && typeof lifecycle.archived_at === 'string'
+    archived_at: typeof lifecycle.archived_at === 'string'
       ? lifecycle.archived_at
       : null,
-    archive_reason: status === 'archived' && typeof lifecycle.archive_reason === 'string'
+    archive_reason: typeof lifecycle.archive_reason === 'string'
       ? lifecycle.archive_reason
       : null,
+    paused_at: typeof lifecycle.paused_at === 'string' ? lifecycle.paused_at : null,
+    pause_reason: typeof lifecycle.pause_reason === 'string' ? lifecycle.pause_reason : null,
+    superseded_at: typeof lifecycle.superseded_at === 'string' ? lifecycle.superseded_at : null,
+    superseded_by_project_id: typeof lifecycle.superseded_by_project_id === 'string'
+      ? lifecycle.superseded_by_project_id
+      : null,
+    locked_at: typeof lifecycle.locked_at === 'string' ? lifecycle.locked_at : null,
+    lock_reason: typeof lifecycle.lock_reason === 'string' ? lifecycle.lock_reason : null,
+    retention_policy: lifecycle.retention_policy === 'keep_until_explicit_delete_receipt'
+      ? 'keep_until_explicit_delete_receipt'
+      : 'keep_until_explicit_archive',
+    safe_delete_gate: 'domain_owner_receipt_required',
   };
 }
 
@@ -438,13 +483,41 @@ function validateIndexSemantics(input: {
     addBlocker(blockers, 'workspace_norm_missing');
   } else {
     const norm = input.index.workspace_norm;
-    const expectedNorm = {
-      norm_id: input.contracts.agentWorkspaceNorm.norm_id,
-      version: input.contracts.agentWorkspaceNorm.version,
-    };
+    const expectedNorm = buildAgentWorkspaceNormProjection({
+      contract: input.contracts.agentWorkspaceNorm,
+      agentId: agent?.agent_id ?? null,
+    });
     if (norm.norm_id !== expectedNorm.norm_id || norm.version !== expectedNorm.version) {
-      addBlocker(blockers, 'workspace_norm_drift', { expected: expectedNorm });
+      addBlocker(blockers, 'workspace_norm_drift', {
+        expected: {
+          norm_id: expectedNorm.norm_id,
+          version: expectedNorm.version,
+        },
+      });
     }
+    if (!sameJson(norm, expectedNorm)) {
+      addBlocker(blockers, 'workspace_norm_projection_drift', { expected: expectedNorm });
+    }
+  }
+
+  if (!isRecord(input.index.profile_binding)) {
+    addBlocker(blockers, 'profile_binding_missing');
+  } else if (
+    input.index.profile_binding.profile_version !== WORKSPACE_PROFILE_VERSION
+    || input.index.profile_binding.profile_fingerprint !== WORKSPACE_PROFILE_FINGERPRINT
+    || input.index.profile_binding.profile_contract_ref !== WORKSPACE_TOPOLOGY_CONTRACT_REF
+    || !Array.isArray(input.index.profile_binding.migration_history)
+  ) {
+    addBlocker(blockers, 'profile_binding_drift', {
+      expected: {
+        profile_version: WORKSPACE_PROFILE_VERSION,
+        profile_fingerprint: WORKSPACE_PROFILE_FINGERPRINT,
+        profile_contract_ref: WORKSPACE_TOPOLOGY_CONTRACT_REF,
+      },
+    });
+  }
+  if (!Array.isArray(input.index.topology_events) || input.index.topology_events.length === 0) {
+    addBlocker(blockers, 'topology_events_missing');
   }
 
   const projects = Array.isArray(input.index.projects) ? input.index.projects : [];
@@ -607,6 +680,29 @@ function validateIndexSemantics(input: {
       createdAt: indexCreatedAt(input.index, now),
       updatedAt: now,
     };
+    const generatedProjectionPairs: Array<[string, string]> = [
+      [GENERATED_WORKSPACE_MAP_REF, WORKSPACE_MAP_REF],
+      [GENERATED_WORKSPACE_HEALTH_REF, WORKSPACE_HEALTH_REF],
+      [GENERATED_WORKSPACE_INSPECTION_REF, WORKSPACE_INSPECTION_REF],
+      [GENERATED_WORKSPACE_RESOURCE_INVENTORY_REF, WORKSPACE_RESOURCE_INVENTORY_REF],
+      [GENERATED_WORKSPACE_REPORT_REF, WORKSPACE_REPORT_REF],
+    ];
+    for (const [canonicalRef, mirrorRef] of generatedProjectionPairs) {
+      const canonicalPath = path.join(input.workspacePath, canonicalRef);
+      const mirrorPath = path.join(input.workspacePath, mirrorRef);
+      if (!fs.existsSync(canonicalPath) || !fs.statSync(canonicalPath).isFile()) {
+        addBlocker(blockers, 'canonical_generated_projection_missing', { path: canonicalRef });
+      } else if (fs.existsSync(mirrorPath) && fs.statSync(mirrorPath).isFile()) {
+        const canonicalPayload = readJsonRecord(canonicalPath);
+        const mirrorPayload = readJsonRecord(mirrorPath);
+        if (!canonicalPayload || !mirrorPayload || !sameJson(canonicalPayload, mirrorPayload)) {
+          addBlocker(blockers, 'canonical_generated_projection_drift', {
+            canonical_path: canonicalRef,
+            root_mirror_path: mirrorRef,
+          });
+        }
+      }
+    }
     const mapPath = path.join(input.workspacePath, WORKSPACE_MAP_REF);
     if (!fs.existsSync(mapPath) || !fs.statSync(mapPath).isFile()) {
       addBlocker(blockers, 'workspace_map_missing', { path: WORKSPACE_MAP_REF });
@@ -620,6 +716,12 @@ function validateIndexSemantics(input: {
     const healthPath = path.join(input.workspacePath, WORKSPACE_HEALTH_REF);
     if (!fs.existsSync(healthPath) || !fs.statSync(healthPath).isFile()) {
       addBlocker(blockers, 'workspace_health_missing', { path: WORKSPACE_HEALTH_REF });
+    } else {
+      const actualHealth = readJsonRecord(healthPath);
+      const expectedHealth = buildWorkspaceHealth(context);
+      if (!actualHealth || !sameJson(actualHealth, expectedHealth)) {
+        addBlocker(blockers, 'workspace_health_drift', { path: WORKSPACE_HEALTH_REF });
+      }
     }
     const inspectionPath = path.join(input.workspacePath, WORKSPACE_INSPECTION_REF);
     if (!fs.existsSync(inspectionPath) || !fs.statSync(inspectionPath).isFile()) {
@@ -641,6 +743,16 @@ function validateIndexSemantics(input: {
         addBlocker(blockers, 'workspace_resource_inventory_drift', {
           path: WORKSPACE_RESOURCE_INVENTORY_REF,
         });
+      }
+    }
+    const reportPath = path.join(input.workspacePath, WORKSPACE_REPORT_REF);
+    if (!fs.existsSync(reportPath) || !fs.statSync(reportPath).isFile()) {
+      addBlocker(blockers, 'workspace_report_missing', { path: WORKSPACE_REPORT_REF });
+    } else {
+      const actualReport = readJsonRecord(reportPath);
+      const expectedReport = buildWorkspaceReport(context);
+      if (!actualReport || !sameJson(actualReport, expectedReport)) {
+        addBlocker(blockers, 'workspace_report_drift', { path: WORKSPACE_REPORT_REF });
       }
     }
   }
@@ -781,6 +893,9 @@ function buildDoctorPayload(
         : null,
       indexed_projects: context?.indexedProjects ?? [],
       user_inspection: context?.index.user_inspection ?? null,
+      profile_binding: context?.index.profile_binding ?? null,
+      topology_events: context?.index.topology_events ?? null,
+      generated_refs: context?.index.generated_refs ?? null,
       authority_boundary: context?.index.authority_boundary ?? null,
       runtime_state_boundary: context?.index.runtime_state_boundary ?? null,
     },

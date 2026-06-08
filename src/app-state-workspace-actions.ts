@@ -11,6 +11,7 @@ import {
   upgradeWorkspace,
   workspaceHealth,
   workspaceInventory,
+  workspaceReport,
 } from './workspace-lifecycle.ts';
 import { ensureWorkspace, initializeWorkspace } from './workspace-initializer.ts';
 import type { FrameworkContracts } from './types.ts';
@@ -211,6 +212,15 @@ export function executeWorkspaceAppAction(
     return {
       delegatedSurface: 'opl workspace health',
       result: workspaceHealth(contracts, {
+        workspacePath: workspacePathPayload(options.payload, options.actionId),
+      }),
+    };
+  }
+
+  if (options.actionId === 'workspace_report') {
+    return {
+      delegatedSurface: 'opl workspace report',
+      result: workspaceReport(contracts, {
         workspacePath: workspacePathPayload(options.payload, options.actionId),
       }),
     };

@@ -11,16 +11,23 @@ import type { AgentWorkspaceNormContract, FrameworkContracts } from './types.ts'
 import {
   buildWorkspaceLifecycle,
   CURRENT_STAGE_POINTER_BASENAME,
+  GENERATED_WORKSPACE_HEALTH_REF,
+  GENERATED_WORKSPACE_INSPECTION_REF,
+  GENERATED_WORKSPACE_MAP_REF,
+  GENERATED_WORKSPACE_REPORT_REF,
+  GENERATED_WORKSPACE_RESOURCE_INVENTORY_REF,
   materializeWorkspaceGeneratedArtifacts,
   normalizeWorkspaceProjectEntry,
   WORKSPACE_HEALTH_REF,
   WORKSPACE_INSPECTION_REF,
   WORKSPACE_MAP_REF,
+  WORKSPACE_REPORT_REF,
   WORKSPACE_RESOURCE_INVENTORY_REF,
   STAGE_OUTPUTS_INDEX_BASENAME,
 } from './workspace-artifacts.ts';
 import {
   buildCanonicalTopology,
+  buildWorkspaceProfileBinding,
   buildSharedResources,
   buildWorkspaceDisplayLabels,
   profileFromTopologyContract,
@@ -29,6 +36,8 @@ import {
   toWorkspaceRelative,
   WORKSPACE_TOPOLOGY_CONTRACT_REF,
   workspaceProjectEntry,
+  OPL_GENERATED_PROJECTIONS_ROOT,
+  OPL_GENERATED_REPORTS_ROOT,
   type TopologyProfile,
   type WorkspaceModeInput,
   type WorkspaceProfileId,
@@ -392,6 +401,7 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
           inspect_command: 'opl workspace inspect',
           inventory_command: 'opl workspace inventory',
           health_command: 'opl workspace health',
+          report_command: 'opl workspace report',
           usage:
             'opl workspace ensure --agent <mas|mag|rca|oma> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio]',
         },
@@ -441,6 +451,11 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
             role: 'read_only_structure_health_projection',
             required_inputs: ['workspace_path'],
           },
+          report: {
+            command: 'opl workspace report',
+            role: 'read_only_user_first_workspace_report',
+            required_inputs: ['workspace_path'],
+          },
         },
         mcp: {
           ...contracts.agentWorkspaceNorm.descriptor_delegates.mcp,
@@ -458,6 +473,7 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
             inspect: 'opl workspace inspect',
             inventory: 'opl workspace inventory',
             health: 'opl workspace health',
+            report: 'opl workspace report',
           },
         },
         skill: {
@@ -465,7 +481,7 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
           instruction:
             'Use this OPL-owned ensure action before MAS/MAG/RCA/OMA task execution; it reuses an active workspace binding or initializes the default topology.',
           management_instruction:
-            'Use workspace validate as the fail-closed gate, workspace doctor for user inspection blockers, workspace adopt --dry-run before --apply, workspace upgrade --apply to refresh OPL projections, workspace project archive --apply to mark projects archived without deleting files, and export-map/inspect/inventory/health for user inspection.',
+            'Use workspace validate as the fail-closed gate, workspace doctor for blockers, workspace report for the user-first current-project view, workspace adopt --dry-run before --apply, workspace upgrade --apply to refresh OPL projections, workspace project archive --apply to mark projects archived without deleting files, and export-map/inspect/inventory/health for audit inspection.',
         },
         app: {
           action_id: contracts.agentWorkspaceNorm.default_workspace_precondition.app_action_id,
@@ -480,6 +496,7 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
           inspect_action_id: 'workspace_inspect',
           inventory_action_id: 'workspace_inventory',
           health_action_id: 'workspace_health',
+          report_action_id: 'workspace_report',
           route: 'opl app action execute --action workspace_ensure --payload <json>',
         },
         openai: contracts.agentWorkspaceNorm.descriptor_delegates.openai,
@@ -503,7 +520,14 @@ export function buildWorkspaceIndex(input: {
   createdAt: string;
   updatedAt: string;
   projects: WorkspaceProjectIndexEntry[];
+  existingIndex?: Record<string, unknown> | null;
+  profileAppliedBy?: 'opl_workspace_init' | 'opl_workspace_ensure' | 'opl_workspace_adopt' | 'opl_workspace_upgrade';
+  profileEvent?: 'initialized' | 'ensured' | 'adopted' | 'upgraded' | 'project_appended' | 'project_lifecycle_updated';
 }) {
+  const existingProfileBinding = isRecord(input.existingIndex?.profile_binding)
+    ? input.existingIndex.profile_binding
+    : null;
+  const profileEvent = input.profileEvent ?? (input.existingIndex ? 'ensured' : 'initialized');
   return {
     surface_kind: 'opl_workspace_index',
     version: 'workspace-index.v1',
@@ -513,6 +537,30 @@ export function buildWorkspaceIndex(input: {
     created_at: input.createdAt,
     updated_at: input.updatedAt,
     workspace_lifecycle: buildWorkspaceLifecycle({}),
+    profile_binding: buildWorkspaceProfileBinding({
+      profileId: input.profileId,
+      appliedAt: input.updatedAt,
+      appliedBy: input.profileAppliedBy ?? 'opl_workspace_init',
+      event: profileEvent,
+      existingBinding: existingProfileBinding,
+      note: profileEvent === 'project_appended'
+        ? 'Workspace topology refreshed while appending a project; existing project roots were not moved.'
+        : 'Workspace topology projection refreshed; project roots were not moved.',
+    }),
+    topology_events: [
+      ...(Array.isArray(input.existingIndex?.topology_events)
+        ? input.existingIndex.topology_events.filter(isRecord)
+        : []),
+      {
+        event: profileEvent,
+        at: input.updatedAt,
+        profile_id: input.profileId,
+        workspace_mode: input.profile.workspace_mode,
+        project_collection_path: input.profile.project_collection_path,
+        project_roots_moved: false,
+        triggered_by: input.profileAppliedBy ?? 'opl_workspace_init',
+      },
+    ],
     generated_refs: {
       workspace_config_ref: 'workspace.yaml',
       workspace_index_ref: 'workspace_index.json',
@@ -520,6 +568,22 @@ export function buildWorkspaceIndex(input: {
       workspace_health_ref: WORKSPACE_HEALTH_REF,
       workspace_inspection_ref: WORKSPACE_INSPECTION_REF,
       workspace_resource_inventory_ref: WORKSPACE_RESOURCE_INVENTORY_REF,
+      workspace_report_ref: WORKSPACE_REPORT_REF,
+      canonical_generated_root: 'control/opl',
+      canonical_projection_root: OPL_GENERATED_PROJECTIONS_ROOT,
+      canonical_report_root: OPL_GENERATED_REPORTS_ROOT,
+      canonical_workspace_map_ref: GENERATED_WORKSPACE_MAP_REF,
+      canonical_workspace_health_ref: GENERATED_WORKSPACE_HEALTH_REF,
+      canonical_workspace_inspection_ref: GENERATED_WORKSPACE_INSPECTION_REF,
+      canonical_workspace_resource_inventory_ref: GENERATED_WORKSPACE_RESOURCE_INVENTORY_REF,
+      canonical_workspace_report_ref: GENERATED_WORKSPACE_REPORT_REF,
+      root_mirror_refs: [
+        WORKSPACE_MAP_REF,
+        WORKSPACE_HEALTH_REF,
+        WORKSPACE_INSPECTION_REF,
+        WORKSPACE_RESOURCE_INVENTORY_REF,
+        WORKSPACE_REPORT_REF,
+      ],
       project_config_basename: 'project.yaml',
       project_index_basename: 'project_index.json',
       shared_resource_manifest_basename: 'opl_resource_manifest.json',
@@ -553,6 +617,7 @@ export function buildWorkspaceIndex(input: {
       default_stage_outputs: input.stageOutputsRootRef,
       workspace_inspection_ref: WORKSPACE_INSPECTION_REF,
       workspace_resource_inventory_ref: WORKSPACE_RESOURCE_INVENTORY_REF,
+      workspace_report_ref: WORKSPACE_REPORT_REF,
       default_stage_outputs_index_ref: `${input.stageOutputsRootRef}/${STAGE_OUTPUTS_INDEX_BASENAME}`,
       default_current_stage_pointer_ref: `${input.stageOutputsRootRef}/${CURRENT_STAGE_POINTER_BASENAME}`,
       project_stage_outputs_pattern: '<project-root>/artifacts/stage_outputs/<stage-id>/',
@@ -639,6 +704,11 @@ export function initializeWorkspace(
     createdAt,
     updatedAt,
     projects: mergedProjects.projects,
+    existingIndex,
+    profileAppliedBy: 'opl_workspace_init',
+    profileEvent: existingIndex
+      ? mergedProjects.project_was_already_indexed ? 'ensured' : 'project_appended'
+      : 'initialized',
   });
   if (existingIndex && typeof existingIndex.created_at === 'string') {
     workspaceIndex.created_at = existingIndex.created_at;
@@ -726,6 +796,7 @@ export function initializeWorkspace(
       workspace_health_path: path.join(workspacePath, WORKSPACE_HEALTH_REF),
       workspace_inspection_path: path.join(workspacePath, WORKSPACE_INSPECTION_REF),
       workspace_resource_inventory_path: path.join(workspacePath, WORKSPACE_RESOURCE_INVENTORY_REF),
+      workspace_report_path: path.join(workspacePath, WORKSPACE_REPORT_REF),
       project_root: projectRoot,
       project_stage_outputs_root: stageOutputsRoot,
       created_directories: createdDirectories,
@@ -755,6 +826,8 @@ export function initializeWorkspace(
       },
       indexed_projects: mergedProjects.projects,
       generated_refs: workspaceIndex.generated_refs,
+      profile_binding: workspaceIndex.profile_binding,
+      topology_events: workspaceIndex.topology_events,
       workspace_norm: workspaceIndex.workspace_norm,
       canonical_topology: workspaceIndex.canonical_topology,
       display_labels: workspaceIndex.display_labels,
@@ -822,6 +895,9 @@ export function ensureWorkspace(
       createdAt: typeof refreshedIndex?.created_at === 'string' ? refreshedIndex.created_at : updatedAt,
       updatedAt,
       projects,
+      existingIndex: refreshedIndex,
+      profileAppliedBy: 'opl_workspace_ensure',
+      profileEvent: 'ensured',
     });
     if (typeof refreshedIndex?.created_at === 'string') {
       refreshedWorkspaceIndex.created_at = refreshedIndex.created_at;
@@ -908,6 +984,8 @@ export function ensureWorkspace(
         project: refreshedProject,
         indexed_projects: projects,
         generated_refs: refreshedWorkspaceIndex.generated_refs,
+        profile_binding: refreshedWorkspaceIndex.profile_binding,
+        topology_events: refreshedWorkspaceIndex.topology_events,
         user_inspection: refreshedWorkspaceIndex.user_inspection,
         binding: activeBinding,
         workspace_norm: refreshedWorkspaceIndex.workspace_norm,

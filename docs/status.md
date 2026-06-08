@@ -69,7 +69,7 @@ Agent Lab、observability eval 和 mechanism improvement 继续是 refs-only con
 | App/operator | 默认 owner-delta-first；App 只启动、观察、介入和展示，不驱动外围长跑任务。 |
 | Foundry Agent structure | MAS/MAG/RCA/OMA 通过 contracts / descriptors / conformance 暴露标准 pack、stage、quality gate、authority function 和 direct/generated skill path。 |
 | StageRun / owner answer | OPL 可签发 provider attempt、active lease、execution authorization decision 和 closeout binding refs；合法 closeout 仍必须来自 domain owner receipt、quality gate receipt、typed blocker、human gate 或 route-back evidence。 |
-| Workspace / State Index | OPL 维护 workspace topology、workspace inspection、resource inventory、Stage Artifact Unit、stage outputs index/current pointer 和 refs-only SQLite sidecar；新 workspace 的 Project Unit 默认物理集合是 `projects/<project-id>`，MAS `studies` 与 RCA/MAG/OMA `deliverables` 只作为 display / legacy alias；完成状态继续由 stage folder、manifest validity、owner receipt / typed blocker、current pointer 和 lineage 推导。 |
+| Workspace / State Index | OPL 维护 workspace topology、workspace inspection、resource inventory、workspace report、Stage Artifact Unit、stage outputs index/current pointer 和 refs-only SQLite sidecar；workspace governance v2 把 canonical generated roots 固定到 `control/opl/projections` 与 `control/opl/reports`，根层 `workspace_*.json` 只作兼容 mirror；新 workspace 的 Project Unit 默认物理集合是 `projects/<project-id>`，MAS `studies` 与 RCA/MAG/OMA `deliverables` 只作为 display / legacy alias；完成状态继续由 stage folder、manifest validity、owner receipt / typed blocker、current pointer 和 lineage 推导。 |
 | External evidence | OPL 可记录/验证 body-free refs-only receipts；verified ledger 只证明 refs transport 与 preflight 可用，不关闭 domain verdict 或 production evidence。 |
 
 ## 未闭合项
@@ -85,6 +85,7 @@ Agent Lab、observability eval 和 mechanism improvement 继续是 refs-only con
 | `Provider long-soak` | Temporal service/worker、provider cadence/capability、domain owner-chain dispatch、retry/dead-letter 和 repair loop 在更长窗口内持续满足。 | Long-soak refs、provider state linkage、operator evidence refs 或 typed blocker refs 可重复 record/verify；不外推为 production ready。 |
 | `Private platform retirement` | 已被 OPL primitive、generated surface 或 App product contract 替代的 wrapper、facade、alias、compat test、repo-local scheduler/queue/attempt/workbench/status shell 需要 no-active-caller、replacement parity、owner receipt / typed blocker、no-forbidden-write 和 tombstone/provenance。 | 满足删除门后退役或 tombstone；classification closed、descriptor ready、conformance passed 或 cleanup ledger ready 不能替代物理退役授权。 |
 | `Brand module L5` | 九个品牌模块的 L5 evidence matrix 和可执行 read/validate surface 已落地；真实 L5 运营证据仍缺。 | 各模块用真实用户路径、跨 agent scaleout、long-soak、release/install、owner acceptance 和运营闭环证明；L4/L3、contract validation、provider completion 和 App projection 只能作为输入。 |
+| `Workspace governance L5` | v2 已建立 profile binding、profile fingerprint、migration history、topology events、canonical generated projections/reports、root mirror 兼容、workspace report 用户检查面、workspace_norm 全量 projection drift gate 和 active/paused/archived/superseded/locked lifecycle。 | 当前只声明 `L4_structural_baseline`：合同、初始化/ensure/upgrade/adopt 物化、validate/doctor drift gate 和用户检查面可用。L5 仍需真实 App user path、跨 MAS/MAG/RCA/OMA scaleout、长跑迁移/恢复证据、release/install evidence 与 owner acceptance，不能由 workspace_norm pass 或 generated projection currentness 单独关闭。 |
 
 ## Live 真相入口
 
@@ -107,6 +108,7 @@ rtk opl index doctor --json
 rtk opl workspace interfaces --json
 rtk opl workspace inspect --workspace <path> --json
 rtk opl workspace inventory --workspace <path> --json
+rtk opl workspace health --workspace <path> --json
 ```
 
 默认阅读顺序是 owner-delta-first：先从 `current_owner_delta` 看等待哪个 owner、需要什么 deliverable delta / receipt / typed blocker，以及该等待是否阻断 readiness。OPL provider / transport safe action 只有在没有 current owner delta 时才可成为默认下一步。raw refs-only counters、provider worker / redrive / scheduler route、evidence envelope、stage replay packet、typed blocker group、private residue inventory 和历史 receipt 计数都只作 drilldown。

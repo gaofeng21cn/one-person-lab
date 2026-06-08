@@ -3,7 +3,11 @@ import path from 'node:path';
 
 import {
   buildSharedResources,
+  OPL_GENERATED_PROJECTIONS_ROOT,
+  OPL_GENERATED_REPORTS_ROOT,
+  OPL_GENERATED_ROOT,
   type TopologyProfile,
+  type WorkspaceLifecycleStatus,
   type WorkspaceProjectIndexEntry,
   type WorkspaceSharedResourceEntry,
 } from './workspace-topology.ts';
@@ -13,6 +17,12 @@ export const WORKSPACE_MAP_REF = 'workspace_map.json';
 export const WORKSPACE_HEALTH_REF = 'workspace_health.json';
 export const WORKSPACE_INSPECTION_REF = 'workspace_inspection.json';
 export const WORKSPACE_RESOURCE_INVENTORY_REF = 'workspace_resource_inventory.json';
+export const WORKSPACE_REPORT_REF = 'workspace_report.json';
+export const GENERATED_WORKSPACE_MAP_REF = `${OPL_GENERATED_PROJECTIONS_ROOT}/${WORKSPACE_MAP_REF}`;
+export const GENERATED_WORKSPACE_HEALTH_REF = `${OPL_GENERATED_PROJECTIONS_ROOT}/${WORKSPACE_HEALTH_REF}`;
+export const GENERATED_WORKSPACE_INSPECTION_REF = `${OPL_GENERATED_PROJECTIONS_ROOT}/${WORKSPACE_INSPECTION_REF}`;
+export const GENERATED_WORKSPACE_RESOURCE_INVENTORY_REF = `${OPL_GENERATED_PROJECTIONS_ROOT}/${WORKSPACE_RESOURCE_INVENTORY_REF}`;
+export const GENERATED_WORKSPACE_REPORT_REF = `${OPL_GENERATED_REPORTS_ROOT}/${WORKSPACE_REPORT_REF}`;
 export const PROJECT_CONFIG_BASENAME = 'project.yaml';
 export const PROJECT_INDEX_BASENAME = 'project_index.json';
 export const SHARED_RESOURCE_MANIFEST_BASENAME = 'opl_resource_manifest.json';
@@ -36,6 +46,14 @@ export const STAGE_LIFECYCLE_STATUSES = [
   'blocked',
   'superseded',
   'archived',
+] as const;
+
+export const WORKSPACE_PROJECT_LIFECYCLE_STATUSES = [
+  'active',
+  'paused',
+  'archived',
+  'superseded',
+  'locked',
 ] as const;
 
 type WorkspaceArtifactContext = {
@@ -82,7 +100,11 @@ export function normalizeWorkspaceProjectEntry(project: Partial<WorkspaceProject
   const lifecycle = project.lifecycle && typeof project.lifecycle === 'object'
     ? project.lifecycle
     : null;
-  const status = lifecycle?.status === 'archived' ? 'archived' : 'active';
+  const status = WORKSPACE_PROJECT_LIFECYCLE_STATUSES.includes(
+    lifecycle?.status as typeof WORKSPACE_PROJECT_LIFECYCLE_STATUSES[number],
+  )
+    ? lifecycle?.status as typeof WORKSPACE_PROJECT_LIFECYCLE_STATUSES[number]
+    : 'active';
   return {
     project_id: String(project.project_id ?? ''),
     project_root: projectRoot,
@@ -116,25 +138,59 @@ export function normalizeWorkspaceProjectEntry(project: Partial<WorkspaceProject
     },
     lifecycle: {
       status,
-      archived_at: status === 'archived' && typeof lifecycle?.archived_at === 'string'
+      archived_at: typeof lifecycle?.archived_at === 'string'
         ? lifecycle.archived_at
         : null,
-      archive_reason: status === 'archived' && typeof lifecycle?.archive_reason === 'string'
+      archive_reason: typeof lifecycle?.archive_reason === 'string'
         ? lifecycle.archive_reason
         : null,
+      paused_at: typeof lifecycle?.paused_at === 'string' ? lifecycle.paused_at : null,
+      pause_reason: typeof lifecycle?.pause_reason === 'string' ? lifecycle.pause_reason : null,
+      superseded_at: typeof lifecycle?.superseded_at === 'string' ? lifecycle.superseded_at : null,
+      superseded_by_project_id: typeof lifecycle?.superseded_by_project_id === 'string'
+        ? lifecycle.superseded_by_project_id
+        : null,
+      locked_at: typeof lifecycle?.locked_at === 'string' ? lifecycle.locked_at : null,
+      lock_reason: typeof lifecycle?.lock_reason === 'string' ? lifecycle.lock_reason : null,
+      retention_policy: lifecycle?.retention_policy === 'keep_until_explicit_delete_receipt'
+        ? 'keep_until_explicit_delete_receipt'
+        : 'keep_until_explicit_archive',
+      safe_delete_gate: 'domain_owner_receipt_required',
     },
   } satisfies WorkspaceProjectIndexEntry;
 }
 
+export type WorkspaceLifecycleProjection = {
+  status: WorkspaceLifecycleStatus;
+  archived_at: string | null;
+  archive_reason: string | null;
+  paused_at: string | null;
+  pause_reason: string | null;
+  superseded_at: string | null;
+  superseded_by_project_id: string | null;
+  locked_at: string | null;
+  lock_reason: string | null;
+  retention_policy: 'keep_until_explicit_archive' | 'keep_until_explicit_delete_receipt';
+  safe_delete_gate: 'domain_owner_receipt_required';
+};
+
 export function buildWorkspaceLifecycle(input: {
-  status?: 'active' | 'archived';
+  status?: WorkspaceLifecycleStatus;
   archivedAt?: string | null;
   archiveReason?: string | null;
-}) {
+}): WorkspaceLifecycleProjection {
   return {
     status: input.status ?? 'active',
     archived_at: input.archivedAt ?? null,
     archive_reason: input.archiveReason ?? null,
+    paused_at: null,
+    pause_reason: null,
+    superseded_at: null,
+    superseded_by_project_id: null,
+    locked_at: null,
+    lock_reason: null,
+    retention_policy: 'keep_until_explicit_archive',
+    safe_delete_gate: 'domain_owner_receipt_required',
   };
 }
 
@@ -553,10 +609,20 @@ export function buildWorkspaceResourceInventory(input: WorkspaceArtifactContext)
   };
 }
 
+function projectLifecycleCounts(projects: WorkspaceProjectIndexEntry[]) {
+  return Object.fromEntries(
+    WORKSPACE_PROJECT_LIFECYCLE_STATUSES.map((status) => [
+      status,
+      projects.filter((project) => project.lifecycle.status === status).length,
+    ]),
+  );
+}
+
 export function buildWorkspaceHealth(input: WorkspaceArtifactContext & {
   blockers?: Array<{ code: string; message: string; details?: Record<string, unknown> }>;
 }) {
   const blockers = input.blockers ?? [];
+  const lifecycleCounts = projectLifecycleCounts(input.projects);
   return {
     surface_kind: 'opl_workspace_health',
     version: 'workspace-health.v1',
@@ -567,14 +633,89 @@ export function buildWorkspaceHealth(input: WorkspaceArtifactContext & {
     blocker_count: blockers.length,
     blockers,
     project_count: input.projects.length,
-    active_project_count: input.projects.filter((project) => project.lifecycle.status === 'active').length,
-    archived_project_count: input.projects.filter((project) => project.lifecycle.status === 'archived').length,
+    project_lifecycle_counts: lifecycleCounts,
+    active_project_count: lifecycleCounts.active,
+    archived_project_count: lifecycleCounts.archived,
     shared_resource_count: input.profile.shared_resource_roots.length,
     readiness_boundary: {
       health_is_structure_only: true,
       health_does_not_claim_domain_ready: true,
       health_does_not_claim_stage_complete: true,
     },
+  };
+}
+
+export function buildWorkspaceReport(input: WorkspaceArtifactContext & {
+  blockers?: Array<{ code: string; message: string; details?: Record<string, unknown> }>;
+}) {
+  const activeProjects = input.projects.filter((project) => project.lifecycle.status === 'active');
+  const currentProject = activeProjects[activeProjects.length - 1] ?? input.projects[input.projects.length - 1] ?? null;
+  return {
+    surface_kind: 'opl_workspace_report',
+    version: 'workspace-report.v1',
+    workspace_id: input.workspaceId,
+    title: input.title,
+    workspace_path: input.workspacePath,
+    agent: {
+      agent_id: input.agent.agent_id,
+      project_id: input.agent.project_id,
+      workspace_kind: input.agent.workspace_kind,
+      project_kind: input.agent.project_kind,
+    },
+    topology: {
+      workspace_mode: input.profile.workspace_mode,
+      project_collection_path: input.profile.project_collection_path,
+      project_stage_outputs_root: input.profile.project_stage_outputs_root,
+      user_stage_folder_pattern: '<project-root>/artifacts/stage_outputs/<stage-id>/',
+    },
+    current_project: currentProject
+      ? {
+          project_id: currentProject.project_id,
+          lifecycle: currentProject.lifecycle,
+          project_root: currentProject.project_root,
+          stage_outputs_root: currentProject.stage_outputs_root,
+          current_stage_pointer_ref: currentStagePointerRef(currentProject.stage_outputs_root),
+          next_user_check: currentStagePointerRef(currentProject.stage_outputs_root),
+        }
+      : null,
+    projects: input.projects.map((project) => ({
+      project_id: project.project_id,
+      lifecycle: project.lifecycle,
+      project_root: project.project_root,
+      stage_outputs_root: project.stage_outputs_root,
+      stage_outputs_index_ref: stageOutputsIndexRef(project.stage_outputs_root),
+      current_stage_pointer_ref: currentStagePointerRef(project.stage_outputs_root),
+    })),
+    shared_resources: buildSharedResources(input.profile).map((resource) => ({
+      path: resource.path,
+      role: resource.role,
+      manifest_ref: resource.manifest_ref,
+      reuse_scope: input.profile.workspace_mode === 'portfolio' ? 'workspace_group' : 'workspace_group_or_project_series',
+    })),
+    projection_refs: {
+      canonical_generated_root: OPL_GENERATED_ROOT,
+      workspace_map_ref: GENERATED_WORKSPACE_MAP_REF,
+      workspace_health_ref: GENERATED_WORKSPACE_HEALTH_REF,
+      workspace_inspection_ref: GENERATED_WORKSPACE_INSPECTION_REF,
+      workspace_resource_inventory_ref: GENERATED_WORKSPACE_RESOURCE_INVENTORY_REF,
+      workspace_report_ref: GENERATED_WORKSPACE_REPORT_REF,
+      root_mirror_refs: [
+        WORKSPACE_MAP_REF,
+        WORKSPACE_HEALTH_REF,
+        WORKSPACE_INSPECTION_REF,
+        WORKSPACE_RESOURCE_INVENTORY_REF,
+        WORKSPACE_REPORT_REF,
+      ],
+    },
+    blockers: input.blockers ?? [],
+    authority_boundary: {
+      report_is_projection_only: true,
+      report_can_claim_stage_complete: false,
+      report_can_replace_owner_receipt: false,
+      report_can_replace_typed_blocker: false,
+      opl_can_write_domain_truth: false,
+    },
+    updated_at: input.updatedAt,
   };
 }
 
@@ -595,6 +736,8 @@ function writeJsonArtifactIfMissing(filePath: string, payload: unknown) {
 
 export function materializeWorkspaceGeneratedArtifacts(input: WorkspaceArtifactContext) {
   const writtenFiles: string[] = [];
+  ensureDirectory(path.join(input.workspacePath, OPL_GENERATED_PROJECTIONS_ROOT), []);
+  ensureDirectory(path.join(input.workspacePath, OPL_GENERATED_REPORTS_ROOT), []);
   const sharedResources = buildSharedResources(input.profile);
   for (const resource of sharedResources) {
     const manifestPath = path.join(input.workspacePath, sharedResourceManifestRef(resource.path));
@@ -652,13 +795,24 @@ export function materializeWorkspaceGeneratedArtifacts(input: WorkspaceArtifactC
       writtenFiles.push(currentStagePointerPath);
     }
   }
-  writeJsonArtifact(path.join(input.workspacePath, WORKSPACE_MAP_REF), buildWorkspaceMap(input));
-  writtenFiles.push(path.join(input.workspacePath, WORKSPACE_MAP_REF));
-  writeJsonArtifact(path.join(input.workspacePath, WORKSPACE_HEALTH_REF), buildWorkspaceHealth(input));
-  writtenFiles.push(path.join(input.workspacePath, WORKSPACE_HEALTH_REF));
-  writeJsonArtifact(path.join(input.workspacePath, WORKSPACE_INSPECTION_REF), buildWorkspaceInspection(input));
-  writtenFiles.push(path.join(input.workspacePath, WORKSPACE_INSPECTION_REF));
-  writeJsonArtifact(path.join(input.workspacePath, WORKSPACE_RESOURCE_INVENTORY_REF), buildWorkspaceResourceInventory(input));
-  writtenFiles.push(path.join(input.workspacePath, WORKSPACE_RESOURCE_INVENTORY_REF));
+  const generatedArtifacts = [
+    [GENERATED_WORKSPACE_MAP_REF, WORKSPACE_MAP_REF, buildWorkspaceMap(input)],
+    [GENERATED_WORKSPACE_HEALTH_REF, WORKSPACE_HEALTH_REF, buildWorkspaceHealth(input)],
+    [GENERATED_WORKSPACE_INSPECTION_REF, WORKSPACE_INSPECTION_REF, buildWorkspaceInspection(input)],
+    [
+      GENERATED_WORKSPACE_RESOURCE_INVENTORY_REF,
+      WORKSPACE_RESOURCE_INVENTORY_REF,
+      buildWorkspaceResourceInventory(input),
+    ],
+    [GENERATED_WORKSPACE_REPORT_REF, WORKSPACE_REPORT_REF, buildWorkspaceReport(input)],
+  ] as const;
+  for (const [canonicalRef, mirrorRef, payload] of generatedArtifacts) {
+    const canonicalPath = path.join(input.workspacePath, canonicalRef);
+    writeJsonArtifact(canonicalPath, payload);
+    writtenFiles.push(canonicalPath);
+    const mirrorPath = path.join(input.workspacePath, mirrorRef);
+    writeJsonArtifact(mirrorPath, payload);
+    writtenFiles.push(mirrorPath);
+  }
   return writtenFiles;
 }

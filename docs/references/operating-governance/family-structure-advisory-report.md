@@ -210,10 +210,10 @@ public_surface_risk:
 
 - `contracts/opl-framework/standard-domain-agent-skeleton-contract.json`
 - `contracts/family-orchestration/family-product-entry-manifest-v2.schema.json`
+- `contracts/opl-framework/workspace-index.schema.json`
 - `contracts/opl-framework/brand-module-surfaces.json`
 - `contracts/family-orchestration/family-stage-proof-bundle.schema.json`
 - `contracts/opl-framework/agent-lab-contract.json`
-- `contracts/opl-framework/workspace-index.schema.json`
 
 Interpretation: OPL framework source/test shape is currently clean under the scanner. Public-surface risk is generated contract and large machine-readable schema pressure, not a source split task; the Workspace Protocol expansion makes `workspace-index.schema.json` part of that review queue. Future source growth should keep the same family style: thin entries, named source modules, case-family tests and strict line-budget ratchet only in explicit maintenance.
 

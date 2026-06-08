@@ -101,6 +101,7 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'workspace_inspect',
       'workspace_inventory',
       'workspace_health',
+      'workspace_report',
     ]) {
       assert.ok(actions.has(actionId), `missing App action: ${actionId}`);
       assert.equal(actions.get(actionId)?.delegated_surface.startsWith('opl '), true);
@@ -161,6 +162,9 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.deepEqual(actions.get('workspace_inventory')?.payload_fields, ['workspace_path']);
     assert.equal(actions.get('workspace_health')?.delegated_surface, 'opl workspace health');
     assert.equal(actions.get('workspace_health')?.mutates, 'none_read_only');
+    assert.equal(actions.get('workspace_report')?.delegated_surface, 'opl workspace report');
+    assert.equal(actions.get('workspace_report')?.mutates, 'none_read_only');
+    assert.deepEqual(actions.get('workspace_report')?.payload_fields, ['workspace_path']);
     assert.deepEqual(actions.get('provider_scheduler_tick')?.payload_fields, ['force', 'limit', 'hydrate']);
     assert.equal(actions.get('provider_scheduler_tick')?.route_requires_domain_or_app_payload, true);
     assert.equal(actions.get('provider_scheduler_tick')?.can_submit_to_safe_action_shell, false);
@@ -497,6 +501,25 @@ test('app action execute owns settings, release channel, workspace root, and pro
 
     assert.equal(workspaceHealthAction.delegated_surface, 'opl workspace health');
     assert.equal(workspaceHealthAction.result.workspace_health.status, 'passed');
+
+    const workspaceReportAction = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'workspace_report',
+      '--payload',
+      JSON.stringify({
+        workspace_path: path.join(workspaceRoot, 'visual-theme-a'),
+      }),
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+    }).app_action_execution;
+
+    assert.equal(workspaceReportAction.delegated_surface, 'opl workspace report');
+    assert.equal(workspaceReportAction.result.workspace_report.surface_kind, 'opl_workspace_report');
+    assert.equal(workspaceReportAction.result.workspace_report.current_project.project_id, 'deck-001');
 
     const provider = runCli([
       'app',

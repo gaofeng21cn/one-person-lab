@@ -15,6 +15,7 @@ import {
   upgradeWorkspace,
   workspaceHealth,
   workspaceInventory,
+  workspaceReport,
 } from '../../workspace-lifecycle.ts';
 import { buildBrandModuleSurfaceInspect } from '../../brand-module-surfaces.ts';
 import type { FrameworkContracts } from '../../types.ts';
@@ -227,6 +228,20 @@ export function buildWorkspaceInitializeCommandSpecs(
       handler: (args) => {
         const parsed = parseWorkspaceValidationArgs(args, specs['workspace inventory']);
         return workspaceInventory(getContracts(), {
+          workspacePath: parsed.workspacePath,
+        });
+      },
+    },
+    'workspace report': {
+      usage: 'opl workspace report --workspace <path>',
+      summary:
+        'Return a user-first workspace report with current project, Stage Native refs, shared resources, lifecycle counts, and blockers.',
+      examples: [
+        'opl workspace report --workspace /Users/gaofeng/workspace/visual-theme-a',
+      ],
+      handler: (args) => {
+        const parsed = parseWorkspaceValidationArgs(args, specs['workspace report']);
+        return workspaceReport(getContracts(), {
           workspacePath: parsed.workspacePath,
         });
       },

@@ -20,6 +20,8 @@
     "shared_resource_roots",
     "shared_resources",
     "generated_refs",
+    "profile_binding",
+    "topology_events",
     "projects",
     "user_inspection",
     "runtime_state_boundary",
@@ -91,6 +93,16 @@
     "generated_refs": {
       "$ref": "#/$defs/generated_refs"
     },
+    "profile_binding": {
+      "$ref": "#/$defs/profile_binding"
+    },
+    "topology_events": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/topology_event"
+      }
+    },
     "projects": {
       "type": "array",
       "minItems": 1,
@@ -105,6 +117,7 @@
         "ordinary_user_default_surface",
         "workspace_inspection_ref",
         "workspace_resource_inventory_ref",
+        "workspace_report_ref",
         "default_stage_outputs_index_ref",
         "default_current_stage_pointer_ref",
         "project_stage_outputs_pattern",
@@ -120,6 +133,9 @@
         },
         "workspace_resource_inventory_ref": {
           "const": "workspace_resource_inventory.json"
+        },
+        "workspace_report_ref": {
+          "const": "workspace_report.json"
         },
         "default_stage_outputs_index_ref": {
           "type": "string"
@@ -215,6 +231,147 @@
           "items": {
             "type": "string"
           }
+        }
+      }
+    },
+    "profile_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile_id",
+        "profile_version",
+        "profile_contract_ref",
+        "profile_fingerprint",
+        "applied_at",
+        "applied_by",
+        "migration_history"
+      ],
+      "properties": {
+        "profile_id": {
+          "enum": [
+            "one_off",
+            "rca_series",
+            "mas_portfolio"
+          ]
+        },
+        "profile_version": {
+          "const": "workspace-topology-profile.v2"
+        },
+        "profile_contract_ref": {
+          "const": "contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/new_agent_scaffold/foundry_agent_series_contract/workspace_topology_profile"
+        },
+        "profile_fingerprint": {
+          "const": "opl-workspace-topology-profile-v2-projects-stage-outputs"
+        },
+        "applied_at": {
+          "type": "string",
+          "minLength": 1
+        },
+        "applied_by": {
+          "enum": [
+            "opl_workspace_init",
+            "opl_workspace_ensure",
+            "opl_workspace_adopt",
+            "opl_workspace_upgrade"
+          ]
+        },
+        "migration_history": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "event",
+              "profile_version",
+              "applied_at",
+              "project_roots_moved",
+              "note"
+            ],
+            "properties": {
+              "event": {
+                "enum": [
+                  "initialized",
+                  "ensured",
+                  "adopted",
+                  "upgraded",
+                  "project_appended",
+                  "project_lifecycle_updated"
+                ]
+              },
+              "profile_version": {
+                "const": "workspace-topology-profile.v2"
+              },
+              "applied_at": {
+                "type": "string",
+                "minLength": 1
+              },
+              "project_roots_moved": {
+                "const": false
+              },
+              "note": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "topology_event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event",
+        "at",
+        "profile_id",
+        "workspace_mode",
+        "project_collection_path",
+        "project_roots_moved",
+        "triggered_by"
+      ],
+      "properties": {
+        "event": {
+          "enum": [
+            "initialized",
+            "ensured",
+            "adopted",
+            "upgraded",
+            "project_appended",
+            "project_lifecycle_updated"
+          ]
+        },
+        "at": {
+          "type": "string",
+          "minLength": 1
+        },
+        "profile_id": {
+          "enum": [
+            "one_off",
+            "rca_series",
+            "mas_portfolio"
+          ]
+        },
+        "workspace_mode": {
+          "enum": [
+            "one_off",
+            "series",
+            "portfolio"
+          ]
+        },
+        "project_collection_path": {
+          "const": "projects"
+        },
+        "project_roots_moved": {
+          "const": false
+        },
+        "triggered_by": {
+          "enum": [
+            "opl_workspace_init",
+            "opl_workspace_ensure",
+            "opl_workspace_adopt",
+            "opl_workspace_upgrade"
+          ]
         }
       }
     },
@@ -663,13 +820,24 @@
           "required": [
             "status",
             "archived_at",
-            "archive_reason"
+            "archive_reason",
+            "paused_at",
+            "pause_reason",
+            "superseded_at",
+            "superseded_by_project_id",
+            "locked_at",
+            "lock_reason",
+            "retention_policy",
+            "safe_delete_gate"
           ],
           "properties": {
             "status": {
               "enum": [
                 "active",
-                "archived"
+                "paused",
+                "archived",
+                "superseded",
+                "locked"
               ]
             },
             "archived_at": {
@@ -683,6 +851,51 @@
                 "string",
                 "null"
               ]
+            },
+            "paused_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "pause_reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "superseded_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "superseded_by_project_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "locked_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "lock_reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retention_policy": {
+              "enum": [
+                "keep_until_explicit_archive",
+                "keep_until_explicit_delete_receipt"
+              ]
+            },
+            "safe_delete_gate": {
+              "const": "domain_owner_receipt_required"
             }
           }
         }
@@ -718,6 +931,16 @@
         "workspace_health_ref",
         "workspace_inspection_ref",
         "workspace_resource_inventory_ref",
+        "workspace_report_ref",
+        "canonical_generated_root",
+        "canonical_projection_root",
+        "canonical_report_root",
+        "canonical_workspace_map_ref",
+        "canonical_workspace_health_ref",
+        "canonical_workspace_inspection_ref",
+        "canonical_workspace_resource_inventory_ref",
+        "canonical_workspace_report_ref",
+        "root_mirror_refs",
         "project_config_basename",
         "project_index_basename",
         "shared_resource_manifest_basename",
@@ -743,6 +966,55 @@
         },
         "workspace_resource_inventory_ref": {
           "const": "workspace_resource_inventory.json"
+        },
+        "workspace_report_ref": {
+          "const": "workspace_report.json"
+        },
+        "canonical_generated_root": {
+          "const": "control/opl"
+        },
+        "canonical_projection_root": {
+          "const": "control/opl/projections"
+        },
+        "canonical_report_root": {
+          "const": "control/opl/reports"
+        },
+        "canonical_workspace_map_ref": {
+          "const": "control/opl/projections/workspace_map.json"
+        },
+        "canonical_workspace_health_ref": {
+          "const": "control/opl/projections/workspace_health.json"
+        },
+        "canonical_workspace_inspection_ref": {
+          "const": "control/opl/projections/workspace_inspection.json"
+        },
+        "canonical_workspace_resource_inventory_ref": {
+          "const": "control/opl/projections/workspace_resource_inventory.json"
+        },
+        "canonical_workspace_report_ref": {
+          "const": "control/opl/reports/workspace_report.json"
+        },
+        "root_mirror_refs": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "workspace_map.json"
+            },
+            {
+              "const": "workspace_health.json"
+            },
+            {
+              "const": "workspace_inspection.json"
+            },
+            {
+              "const": "workspace_resource_inventory.json"
+            },
+            {
+              "const": "workspace_report.json"
+            }
+          ],
+          "minItems": 5,
+          "maxItems": 5
         },
         "project_config_basename": {
           "const": "project.yaml"

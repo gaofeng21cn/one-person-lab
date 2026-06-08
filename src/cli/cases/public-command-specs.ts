@@ -749,7 +749,7 @@ export function buildPublicCommandSpecs(
     }),
     workspace: {
       usage:
-        'opl workspace projects|list|root|init|ensure|validate|doctor|adopt|upgrade|project archive|export-map|health|inspect|inventory|interfaces|bind|activate|archive [options]',
+        'opl workspace projects|list|root|init|ensure|validate|doctor|adopt|upgrade|project archive|export-map|health|inspect|inventory|report|interfaces|bind|activate|archive [options]',
       summary:
         'Manage OPL workspace bindings, standard family-agent workspace initialization, generated inspection refs, and workspace-local project lifecycle projections.',
       examples: [
@@ -757,6 +757,7 @@ export function buildPublicCommandSpecs(
         'opl workspace ensure --agent rca --project-id deck-001',
         'opl workspace init --agent rca --workspace-id visual-theme-a --project-id deck-001',
         'opl workspace validate --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace report --workspace /Users/gaofeng/workspace/visual-theme-a',
         'opl workspace inspect --workspace /Users/gaofeng/workspace/visual-theme-a',
         'opl workspace interfaces',
       ],
@@ -798,6 +799,11 @@ export function buildPublicCommandSpecs(
           command: 'workspace inventory',
           usage: 'opl workspace inventory --workspace <path>',
           summary: 'Read the shared resource inventory projection without reading resource bodies.',
+        },
+        {
+          command: 'workspace report',
+          usage: 'opl workspace report --workspace <path>',
+          summary: 'Read the user-first workspace report with current project, stage refs, lifecycle counts, and blockers.',
         },
         {
           command: 'workspace interfaces',
@@ -918,6 +924,13 @@ export function buildPublicCommandSpecs(
       usage: 'opl workspace inventory --workspace <path>',
       examples: [
         'opl workspace inventory --workspace /Users/gaofeng/workspace/visual-theme-a',
+      ],
+      group: 'workspace',
+    }),
+    'workspace report': cloneCommandSpec(commandSpecs['workspace report'], {
+      usage: 'opl workspace report --workspace <path>',
+      examples: [
+        'opl workspace report --workspace /Users/gaofeng/workspace/visual-theme-a',
       ],
       group: 'workspace',
     }),

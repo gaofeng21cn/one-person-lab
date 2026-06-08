@@ -145,6 +145,15 @@ function workspaceActionsFromNorm(contract: AgentWorkspaceNormContract): AppActi
       mutates: 'none_read_only',
       dry_run_supported: false,
     },
+    {
+      action_id: 'workspace_report',
+      label: 'Read workspace report',
+      surface: 'opl app action execute',
+      delegated_surface: 'opl workspace report',
+      payload_fields: ['workspace_path'],
+      mutates: 'none_read_only',
+      dry_run_supported: false,
+    },
   ];
 }
 

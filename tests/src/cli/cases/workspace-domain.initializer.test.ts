@@ -71,6 +71,24 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     assert.equal(workspaceIndex.agent.agent_id, 'rca');
     assert.equal(workspaceIndex.agent.project_id, 'redcube');
     assert.equal(workspaceIndex.workspace_topology_profile.profile_id, 'rca_series');
+    assert.equal(workspaceIndex.profile_binding.profile_id, 'rca_series');
+    assert.equal(workspaceIndex.profile_binding.profile_version, 'workspace-topology-profile.v2');
+    assert.equal(workspaceIndex.profile_binding.profile_fingerprint, 'opl-workspace-topology-profile-v2-projects-stage-outputs');
+    assert.equal(workspaceIndex.profile_binding.applied_by, 'opl_workspace_init');
+    assert.deepEqual(
+      workspaceIndex.profile_binding.migration_history.map((entry: { event: string; project_roots_moved: boolean }) => ({
+        event: entry.event,
+        project_roots_moved: entry.project_roots_moved,
+      })),
+      [{ event: 'initialized', project_roots_moved: false }],
+    );
+    assert.deepEqual(
+      workspaceIndex.topology_events.map((entry: { event: string; project_roots_moved: boolean }) => ({
+        event: entry.event,
+        project_roots_moved: entry.project_roots_moved,
+      })),
+      [{ event: 'initialized', project_roots_moved: false }],
+    );
     assert.deepEqual(workspaceIndex.canonical_topology, {
       workspace_unit: 'workspace_group',
       project_collection_role: 'project_units',
@@ -112,11 +130,31 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     assert.equal(workspaceIndex.generated_refs.workspace_health_ref, 'workspace_health.json');
     assert.equal(workspaceIndex.generated_refs.workspace_inspection_ref, 'workspace_inspection.json');
     assert.equal(workspaceIndex.generated_refs.workspace_resource_inventory_ref, 'workspace_resource_inventory.json');
+    assert.equal(workspaceIndex.generated_refs.workspace_report_ref, 'workspace_report.json');
+    assert.equal(workspaceIndex.generated_refs.canonical_generated_root, 'control/opl');
+    assert.equal(workspaceIndex.generated_refs.canonical_projection_root, 'control/opl/projections');
+    assert.equal(workspaceIndex.generated_refs.canonical_report_root, 'control/opl/reports');
+    assert.equal(workspaceIndex.generated_refs.canonical_workspace_map_ref, 'control/opl/projections/workspace_map.json');
+    assert.equal(workspaceIndex.generated_refs.canonical_workspace_health_ref, 'control/opl/projections/workspace_health.json');
+    assert.equal(workspaceIndex.generated_refs.canonical_workspace_inspection_ref, 'control/opl/projections/workspace_inspection.json');
+    assert.equal(
+      workspaceIndex.generated_refs.canonical_workspace_resource_inventory_ref,
+      'control/opl/projections/workspace_resource_inventory.json',
+    );
+    assert.equal(workspaceIndex.generated_refs.canonical_workspace_report_ref, 'control/opl/reports/workspace_report.json');
+    assert.deepEqual(workspaceIndex.generated_refs.root_mirror_refs, [
+      'workspace_map.json',
+      'workspace_health.json',
+      'workspace_inspection.json',
+      'workspace_resource_inventory.json',
+      'workspace_report.json',
+    ]);
     assert.equal(workspaceIndex.generated_refs.stage_outputs_index_basename, 'stage_outputs_index.json');
     assert.equal(workspaceIndex.generated_refs.current_stage_pointer_basename, 'current_stage.json');
     assert.equal(workspaceIndex.user_inspection.default_stage_outputs, 'projects/deck-001/artifacts/stage_outputs');
     assert.equal(workspaceIndex.user_inspection.workspace_inspection_ref, 'workspace_inspection.json');
     assert.equal(workspaceIndex.user_inspection.workspace_resource_inventory_ref, 'workspace_resource_inventory.json');
+    assert.equal(workspaceIndex.user_inspection.workspace_report_ref, 'workspace_report.json');
     assert.equal(
       workspaceIndex.user_inspection.default_stage_outputs_index_ref,
       'projects/deck-001/artifacts/stage_outputs/stage_outputs_index.json',
@@ -213,6 +251,10 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     assert.equal(currentStagePointer.empty_state, 'no_stage_opened_yet');
     assert.equal(currentStagePointer.authority_boundary.pointer_can_replace_owner_receipt, false);
     const workspaceMap = readJsonFile(path.join(workspacePath, 'workspace_map.json'));
+    assert.deepEqual(
+      readJsonFile(path.join(workspacePath, 'control', 'opl', 'projections', 'workspace_map.json')),
+      workspaceMap,
+    );
     assert.equal(workspaceMap.surface_kind, 'opl_workspace_map');
     assert.equal(workspaceMap.projects[0].project_id, 'deck-001');
     assert.equal(
@@ -224,9 +266,24 @@ test('workspace init materializes RCA series topology and binds the workspace', 
       'projects/deck-001/artifacts/stage_outputs/<stage-id>/receipts',
     );
     const workspaceHealth = readJsonFile(path.join(workspacePath, 'workspace_health.json'));
+    assert.deepEqual(
+      readJsonFile(path.join(workspacePath, 'control', 'opl', 'projections', 'workspace_health.json')),
+      workspaceHealth,
+    );
     assert.equal(workspaceHealth.surface_kind, 'opl_workspace_health');
     assert.equal(workspaceHealth.status, 'passed');
+    assert.deepEqual(workspaceHealth.project_lifecycle_counts, {
+      active: 1,
+      paused: 0,
+      archived: 0,
+      superseded: 0,
+      locked: 0,
+    });
     const workspaceInspection = readJsonFile(path.join(workspacePath, 'workspace_inspection.json'));
+    assert.deepEqual(
+      readJsonFile(path.join(workspacePath, 'control', 'opl', 'projections', 'workspace_inspection.json')),
+      workspaceInspection,
+    );
     assert.equal(workspaceInspection.surface_kind, 'opl_workspace_inspection');
     assert.equal(workspaceInspection.current_project_id, 'deck-001');
     assert.equal(
@@ -235,9 +292,29 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     );
     assert.equal(workspaceInspection.authority_boundary.inspection_can_claim_stage_complete, false);
     const workspaceResourceInventory = readJsonFile(path.join(workspacePath, 'workspace_resource_inventory.json'));
+    assert.deepEqual(
+      readJsonFile(path.join(workspacePath, 'control', 'opl', 'projections', 'workspace_resource_inventory.json')),
+      workspaceResourceInventory,
+    );
     assert.equal(workspaceResourceInventory.surface_kind, 'opl_workspace_resource_inventory');
     assert.equal(workspaceResourceInventory.resources[0].provenance_policy, 'manifest_records_source_refs_not_resource_body');
     assert.equal(workspaceResourceInventory.authority_boundary.inventory_can_store_resource_body, false);
+    const workspaceReport = readJsonFile(path.join(workspacePath, 'workspace_report.json'));
+    assert.deepEqual(
+      readJsonFile(path.join(workspacePath, 'control', 'opl', 'reports', 'workspace_report.json')),
+      workspaceReport,
+    );
+    assert.equal(workspaceReport.surface_kind, 'opl_workspace_report');
+    assert.equal(workspaceReport.current_project.project_id, 'deck-001');
+    assert.equal(workspaceReport.current_project.next_user_check, 'projects/deck-001/artifacts/stage_outputs/current_stage.json');
+    assert.equal(workspaceReport.projection_refs.workspace_report_ref, 'control/opl/reports/workspace_report.json');
+    assert.deepEqual(workspaceReport.projection_refs.root_mirror_refs, [
+      'workspace_map.json',
+      'workspace_health.json',
+      'workspace_inspection.json',
+      'workspace_resource_inventory.json',
+      'workspace_report.json',
+    ]);
     const inspect = runCli(['workspace', 'inspect', '--workspace', workspacePath], {
       OPL_STATE_DIR: stateRoot,
     });
@@ -248,6 +325,11 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     });
     assert.equal(inventory.workspace_resource_inventory.surface_kind, 'opl_workspace_resource_inventory');
     assert.equal(inventory.workspace_resource_inventory.resources.length, 5);
+    const report = runCli(['workspace', 'report', '--workspace', workspacePath], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(report.workspace_report.surface_kind, 'opl_workspace_report');
+    assert.equal(report.workspace_report.current_project.project_id, 'deck-001');
 
     const catalog = runCli(['workspace', 'list'], {
       OPL_STATE_DIR: stateRoot,
@@ -606,6 +688,21 @@ test('workspace ensure initializes once and then reuses the active binding', () 
     assert.equal(second.workspace_initialization.workspace_path, workspacePath);
     assert.equal(second.workspace_initialization.created_directories.length, 0);
     assert.equal(second.workspace_initialization.binding.project_id, 'redcube');
+    assert.equal(second.workspace_initialization.profile_binding.applied_by, 'opl_workspace_ensure');
+    assert.deepEqual(
+      second.workspace_initialization.profile_binding.migration_history.map((entry: { event: string }) => entry.event),
+      ['initialized', 'ensured'],
+    );
+    assert.deepEqual(
+      second.workspace_initialization.topology_events.map((entry: { event: string; triggered_by: string }) => ({
+        event: entry.event,
+        triggered_by: entry.triggered_by,
+      })),
+      [
+        { event: 'initialized', triggered_by: 'opl_workspace_init' },
+        { event: 'ensured', triggered_by: 'opl_workspace_ensure' },
+      ],
+    );
     assert.equal(second.workspace_initialization.workspace_norm.default_workspace_precondition.default_entry_for_agents, true);
     assert.equal(second.workspace_initialization.workspace_norm.descriptor_delegates.mcp.descriptor_only, true);
   } finally {
@@ -655,6 +752,12 @@ test('workspace ensure appends a missing project to an active series workspace',
       workspaceIndex.projects.map((entry: { project_id: string }) => entry.project_id),
       ['deck-001', 'deck-002'],
     );
+    assert.deepEqual(
+      workspaceIndex.profile_binding.migration_history.map((entry: { event: string }) => entry.event),
+      ['initialized', 'project_appended'],
+    );
+    assert.equal(workspaceIndex.topology_events[1].event, 'project_appended');
+    assert.equal(workspaceIndex.topology_events[1].project_roots_moved, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -805,8 +908,10 @@ test('workspace interfaces exports the OPL-owned initializer surfaces for tools 
   assert.equal(output.workspace_interfaces.surfaces.management_commands.inspect.command, 'opl workspace inspect');
   assert.equal(output.workspace_interfaces.surfaces.management_commands.inventory.command, 'opl workspace inventory');
   assert.equal(output.workspace_interfaces.surfaces.management_commands.health.command, 'opl workspace health');
+  assert.equal(output.workspace_interfaces.surfaces.management_commands.report.command, 'opl workspace report');
+  assert.equal(output.workspace_interfaces.surfaces.cli.report_command, 'opl workspace report');
   assert.equal(output.workspace_interfaces.surfaces.skill.intent, 'ensure_opl_workspace');
-  assert.match(output.workspace_interfaces.surfaces.skill.management_instruction, /workspace validate/);
+  assert.match(output.workspace_interfaces.surfaces.skill.management_instruction, /workspace report/);
   assert.equal(output.workspace_interfaces.surfaces.app.action_id, 'workspace_ensure');
   assert.equal(output.workspace_interfaces.surfaces.app.initializer_action_id, 'workspace_initialize');
   assert.equal(output.workspace_interfaces.surfaces.app.validator_action_id, 'workspace_validate');
@@ -819,6 +924,7 @@ test('workspace interfaces exports the OPL-owned initializer surfaces for tools 
   assert.equal(output.workspace_interfaces.surfaces.app.inspect_action_id, 'workspace_inspect');
   assert.equal(output.workspace_interfaces.surfaces.app.inventory_action_id, 'workspace_inventory');
   assert.equal(output.workspace_interfaces.surfaces.app.health_action_id, 'workspace_health');
+  assert.equal(output.workspace_interfaces.surfaces.app.report_action_id, 'workspace_report');
   assert.deepEqual(output.workspace_interfaces.supported_agents, ['mas', 'mag', 'rca', 'oma']);
 });
 
@@ -909,8 +1015,18 @@ test('workspace project archive marks project lifecycle without deleting files o
     assert.equal(output.workspace_project_archive.status, 'applied');
     assert.equal(output.workspace_project_archive.lifecycle.status, 'archived');
     assert.equal(output.workspace_project_archive.lifecycle.archive_reason, 'superseded');
+    assert.equal(output.workspace_project_archive.lifecycle.paused_at, null);
+    assert.equal(output.workspace_project_archive.lifecycle.superseded_at, null);
+    assert.equal(output.workspace_project_archive.lifecycle.locked_at, null);
+    assert.equal(output.workspace_project_archive.lifecycle.safe_delete_gate, 'domain_owner_receipt_required');
     assert.equal(output.workspace_project_archive.authority_boundary.archive_deletes_files, false);
     assert.equal(fs.statSync(path.join(workspacePath, 'projects', 'DM002')).isDirectory(), true);
+    const workspaceIndex = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
+    assert.deepEqual(
+      workspaceIndex.profile_binding.migration_history.map((entry: { event: string }) => entry.event),
+      ['initialized', 'project_lifecycle_updated'],
+    );
+    assert.equal(workspaceIndex.topology_events[1].event, 'project_lifecycle_updated');
     const workspaceMap = runCli(['workspace', 'export-map', '--workspace', workspacePath], {
       OPL_STATE_DIR: stateRoot,
     }).workspace_map;
@@ -919,6 +1035,13 @@ test('workspace project archive marks project lifecycle without deleting files o
       OPL_STATE_DIR: stateRoot,
     }).workspace_health;
     assert.equal(health.status, 'passed');
+    assert.deepEqual(health.project_lifecycle_counts, {
+      active: 0,
+      paused: 0,
+      archived: 1,
+      superseded: 0,
+      locked: 0,
+    });
     assert.equal(health.archived_project_count, 1);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

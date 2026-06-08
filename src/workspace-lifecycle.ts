@@ -8,13 +8,16 @@ import {
   buildWorkspaceHealth,
   buildWorkspaceInspection,
   buildWorkspaceMap,
+  buildWorkspaceReport,
   buildWorkspaceResourceInventory,
   ensureDirectory,
   materializeWorkspaceGeneratedArtifacts,
   normalizeWorkspaceProjectEntry,
+  WORKSPACE_PROJECT_LIFECYCLE_STATUSES,
   WORKSPACE_HEALTH_REF,
   WORKSPACE_INSPECTION_REF,
   WORKSPACE_MAP_REF,
+  WORKSPACE_REPORT_REF,
   WORKSPACE_RESOURCE_INVENTORY_REF,
   writeJsonArtifact,
 } from './workspace-artifacts.ts';
@@ -144,20 +147,44 @@ function indexCreatedAt(index: Record<string, unknown>, fallback: string) {
 }
 
 function normalizeWorkspaceLifecycle(value: unknown): {
-  status: 'active' | 'archived';
+  status: typeof WORKSPACE_PROJECT_LIFECYCLE_STATUSES[number];
   archived_at: string | null;
   archive_reason: string | null;
+  paused_at: string | null;
+  pause_reason: string | null;
+  superseded_at: string | null;
+  superseded_by_project_id: string | null;
+  locked_at: string | null;
+  lock_reason: string | null;
+  retention_policy: 'keep_until_explicit_archive' | 'keep_until_explicit_delete_receipt';
+  safe_delete_gate: 'domain_owner_receipt_required';
 } {
   const lifecycle = isRecord(value) ? value : {};
-  const status: 'active' | 'archived' = lifecycle.status === 'archived' ? 'archived' : 'active';
+  const status = WORKSPACE_PROJECT_LIFECYCLE_STATUSES.includes(
+    lifecycle.status as typeof WORKSPACE_PROJECT_LIFECYCLE_STATUSES[number],
+  )
+    ? lifecycle.status as typeof WORKSPACE_PROJECT_LIFECYCLE_STATUSES[number]
+    : 'active';
   return {
     status,
-    archived_at: status === 'archived' && typeof lifecycle.archived_at === 'string'
+    archived_at: typeof lifecycle.archived_at === 'string'
       ? lifecycle.archived_at
       : null,
-    archive_reason: status === 'archived' && typeof lifecycle.archive_reason === 'string'
+    archive_reason: typeof lifecycle.archive_reason === 'string'
       ? lifecycle.archive_reason
       : null,
+    paused_at: typeof lifecycle.paused_at === 'string' ? lifecycle.paused_at : null,
+    pause_reason: typeof lifecycle.pause_reason === 'string' ? lifecycle.pause_reason : null,
+    superseded_at: typeof lifecycle.superseded_at === 'string' ? lifecycle.superseded_at : null,
+    superseded_by_project_id: typeof lifecycle.superseded_by_project_id === 'string'
+      ? lifecycle.superseded_by_project_id
+      : null,
+    locked_at: typeof lifecycle.locked_at === 'string' ? lifecycle.locked_at : null,
+    lock_reason: typeof lifecycle.lock_reason === 'string' ? lifecycle.lock_reason : null,
+    retention_policy: lifecycle.retention_policy === 'keep_until_explicit_delete_receipt'
+      ? 'keep_until_explicit_delete_receipt'
+      : 'keep_until_explicit_archive',
+    safe_delete_gate: 'domain_owner_receipt_required',
   };
 }
 
@@ -227,6 +254,7 @@ function writeWorkspaceMetadata(input: {
   profileId: WorkspaceProfileId;
   projects: WorkspaceProjectIndexEntry[];
   updatedAt: string;
+  profileEvent?: 'upgraded' | 'project_lifecycle_updated';
 }) {
   const workspaceId = indexWorkspaceId(input.existingIndex, input.workspacePath);
   const title = indexTitle(input.existingIndex);
@@ -246,6 +274,9 @@ function writeWorkspaceMetadata(input: {
     createdAt,
     updatedAt: input.updatedAt,
     projects: input.projects,
+    existingIndex: input.existingIndex,
+    profileAppliedBy: 'opl_workspace_upgrade',
+    profileEvent: input.profileEvent ?? 'upgraded',
   });
   nextIndex.workspace_lifecycle = normalizeWorkspaceLifecycle(input.existingIndex.workspace_lifecycle);
   const workspaceYamlPath = path.join(input.workspacePath, 'workspace.yaml');
@@ -357,6 +388,7 @@ export function upgradeWorkspace(
       workspace_health_path: path.join(context.workspacePath, WORKSPACE_HEALTH_REF),
       workspace_inspection_path: path.join(context.workspacePath, WORKSPACE_INSPECTION_REF),
       workspace_resource_inventory_path: path.join(context.workspacePath, WORKSPACE_RESOURCE_INVENTORY_REF),
+      workspace_report_path: path.join(context.workspacePath, WORKSPACE_REPORT_REF),
       would_or_did_create_directories: createdDirectories,
       written_generated_files: written?.writtenGeneratedFiles ?? [],
       blockers_after_apply: doctor?.blockers ?? [],
@@ -394,6 +426,7 @@ export function archiveWorkspaceProject(
       ? {
           ...project,
           lifecycle: {
+            ...project.lifecycle,
             status: 'archived' as const,
             archived_at: updatedAt,
             archive_reason: normalizeOptionalString(options.reason),
@@ -412,6 +445,7 @@ export function archiveWorkspaceProject(
         profileId: context.profileId,
         projects,
         updatedAt,
+        profileEvent: 'project_lifecycle_updated',
       })
     : null;
 
@@ -539,6 +573,33 @@ export function workspaceInventory(
       projects: context.projects,
       createdAt: indexCreatedAt(context.index, updatedAt),
       updatedAt,
+    }),
+  };
+}
+
+export function workspaceReport(
+  contracts: FrameworkContracts,
+  options: WorkspaceValidationOptions,
+) {
+  const context = readValidatedWorkspaceIndex(options.workspacePath);
+  const doctor = doctorWorkspace(contracts, options).workspace_doctor;
+  const updatedAt = doctor.checked_at;
+  return {
+    version: 'g2',
+    contracts_context: {
+      contracts_dir: contracts.contractsDir,
+      contracts_root_source: contracts.contractsRootSource,
+    },
+    workspace_report: buildWorkspaceReport({
+      workspaceId: indexWorkspaceId(context.index, context.workspacePath),
+      title: indexTitle(context.index),
+      workspacePath: context.workspacePath,
+      agent: context.agent,
+      profile: context.profile,
+      projects: context.projects,
+      createdAt: indexCreatedAt(context.index, updatedAt),
+      updatedAt,
+      blockers: doctor.blockers,
     }),
   };
 }

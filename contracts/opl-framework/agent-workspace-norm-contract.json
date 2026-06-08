@@ -234,8 +234,12 @@
     "project_stage_outputs_pattern": "<project-root>/artifacts/stage_outputs/<stage-id>/",
     "workspace_index_file": "workspace_index.json",
     "workspace_config_file": "workspace.yaml",
+    "canonical_generated_root": "control/opl",
+    "canonical_projection_root": "control/opl/projections",
+    "canonical_report_root": "control/opl/reports",
     "workspace_inspection_file": "workspace_inspection.json",
     "workspace_resource_inventory_file": "workspace_resource_inventory.json",
+    "workspace_report_file": "workspace_report.json",
     "stage_outputs_index_file": "stage_outputs_index.json",
     "current_stage_pointer_file": "current_stage.json",
     "canonical_user_inspection_roots": [
@@ -273,18 +277,48 @@
     "runtime_state_counts_as_user_default_surface": false,
     "conformance_pass_counts_as_domain_ready": false
   },
+  "workspace_governance_policy": {
+    "workspace_norm_projection_must_equal_contract_projection": true,
+    "profile_binding_required": true,
+    "profile_version": "workspace-topology-profile.v2",
+    "profile_fingerprint": "opl-workspace-topology-profile-v2-projects-stage-outputs",
+    "topology_events_required": true,
+    "canonical_generated_projection_root": "control/opl/projections",
+    "root_projection_files_are_compatibility_mirrors": true,
+    "workspace_report_is_default_user_summary": true,
+    "generated_projection_currentness_is_structural_gate": true
+  },
+  "domain_workspace_lifecycle_policy": {
+    "policy_ref": "contracts/opl-framework/workspace-index.schema.json#/$defs/project/lifecycle",
+    "domain_repo_can_own_generic_workspace_lifecycle": false,
+    "domain_repo_must_declare_locator_not_lifecycle": true,
+    "opl_owns_lifecycle_projection": true,
+    "physical_delete_requires_domain_owner_receipt": true
+  },
   "conformance_policy": {
     "family_conformance_must_report_workspace_norm": true,
+    "workspace_norm_maturity_level": "L4_structural_baseline",
     "workspace_norm_pass_is_structural_only": true,
+    "workspace_norm_pass_can_claim_production_ready": false,
     "workspace_norm_pass_can_claim_domain_ready": false,
     "workspace_norm_pass_can_claim_artifact_or_quality_ready": false,
+    "l5_evidence_required": [
+      "long_soak",
+      "release",
+      "user_path",
+      "owner_acceptance"
+    ],
     "blocked_reasons": [
       "agent_workspace_norm_missing",
+      "workspace_norm_projection_drift",
       "workspace_ensure_not_default_precondition",
       "workspace_ensure_descriptor_delegate_drift",
       "workspace_user_inspection_surface_drift",
       "workspace_runtime_state_boundary_drift",
-      "workspace_authority_boundary_overclaim"
+      "workspace_authority_boundary_overclaim",
+      "workspace_profile_binding_drift",
+      "workspace_generated_projection_currentness_drift",
+      "domain_generic_workspace_lifecycle_residue"
     ]
   }
 }
