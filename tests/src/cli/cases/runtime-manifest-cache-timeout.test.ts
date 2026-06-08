@@ -11,11 +11,13 @@ import {
 } from '../helpers.ts';
 import { buildFrameworkReadinessSummary } from '../../../../src/framework-readiness.ts';
 import { buildRuntimeTraySnapshot } from '../../../../src/runtime-tray-snapshot.ts';
+import { createFamilyDefaultContractWorkspace } from './domain-pack-compiler-fixtures.ts';
 import { buildManyStageManifest } from './runtime-app-operator-drilldown-summary-fixtures.ts';
 
 test('framework readiness keeps domain manifest live refresh bounded and uses projection cache on slow manifests', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-readiness-cache-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
   const manifest = buildManyStageManifest(2);
   const manifestPath = path.join(stateRoot, 'manifest.json');
   const invocationPath = path.join(stateRoot, 'manifest-invocations.log');
@@ -53,8 +55,10 @@ test('framework readiness keeps domain manifest live refresh bounded and uses pr
 
     const previousStateDir = process.env.OPL_STATE_DIR;
     const previousContractsDir = process.env.OPL_CONTRACTS_DIR;
+    const previousFamilyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
     process.env.OPL_STATE_DIR = stateRoot;
     process.env.OPL_CONTRACTS_DIR = fixtureContractsRoot;
+    process.env.OPL_FAMILY_WORKSPACE_ROOT = workspaceRoot;
     try {
       const readiness = (await buildFrameworkReadinessSummary(loadFrameworkContracts(), {
         familyDefaults: true,
@@ -70,10 +74,12 @@ test('framework readiness keeps domain manifest live refresh bounded and uses pr
     } finally {
       restoreEnvVar('OPL_STATE_DIR', previousStateDir);
       restoreEnvVar('OPL_CONTRACTS_DIR', previousContractsDir);
+      restoreEnvVar('OPL_FAMILY_WORKSPACE_ROOT', previousFamilyWorkspaceRoot);
     }
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });
 

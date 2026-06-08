@@ -1,5 +1,6 @@
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 import {
@@ -23,7 +24,7 @@ export {
 };
 export type { CodexExecEvent } from './codex-exec-events.ts';
 
-export type CodexBinarySource = 'env' | 'path';
+export type CodexBinarySource = 'env' | 'path' | 'runtime';
 
 export interface CodexBinaryInfo {
   path: string;
@@ -116,6 +117,28 @@ function resolveCodexFromPath(): CodexBinaryInfo | null {
   return null;
 }
 
+function resolveHomeDir() {
+  return process.env.HOME?.trim() || process.env.USERPROFILE?.trim() || os.homedir();
+}
+
+function resolveRuntimeCodexPath() {
+  const runtimeRoot = process.env.OPL_RUNTIME_ROOT?.trim()
+    || path.join(resolveHomeDir(), 'Library', 'Application Support', 'OPL', 'runtime');
+  return path.join(runtimeRoot, 'current', 'bin', 'codex');
+}
+
+function resolveCodexFromRuntime(): CodexBinaryInfo | null {
+  const candidate = resolveRuntimeCodexPath();
+  if (!isExecutableCandidate(candidate)) {
+    return null;
+  }
+
+  return {
+    path: candidate,
+    source: 'runtime',
+  };
+}
+
 export function resolveCodexBinary(): CodexBinaryInfo | null {
   const envCandidate = process.env.OPL_CODEX_BIN?.trim();
 
@@ -137,7 +160,7 @@ export function resolveCodexBinary(): CodexBinaryInfo | null {
     };
   }
 
-  return resolveCodexFromPath();
+  return resolveCodexFromPath() ?? resolveCodexFromRuntime();
 }
 
 function quoteTomlString(value: string) {

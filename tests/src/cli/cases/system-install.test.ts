@@ -615,6 +615,80 @@ test('system initialize blocks launch when compatible Codex CLI lacks configured
   }
 });
 
+test('system initialize accepts App-managed runtime Codex when PATH has no Codex CLI', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-runtime-codex-home-'));
+  const runtimeRoot = path.join(homeRoot, 'runtime');
+  const runtimeBin = path.join(runtimeRoot, 'current', 'bin');
+  const runtimeCodex = path.join(runtimeBin, 'codex');
+  const codexConfigFixture = createCodexConfigFixture({
+    model: 'gpt-5.5',
+    reasoningEffort: 'xhigh',
+    baseUrl: 'https://codex-provider.example.test/v1',
+    apiKey: 'codex-provider-key',
+  });
+
+  fs.mkdirSync(runtimeBin, { recursive: true });
+  fs.writeFileSync(runtimeCodex, '#!/usr/bin/env bash\necho "codex-cli 0.137.0"\n', { mode: 0o755 });
+
+  try {
+    const output = runCli(['system', 'initialize'], {
+      HOME: homeRoot,
+      CODEX_HOME: codexConfigFixture.codexHome,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_RUNTIME_ROOT: runtimeRoot,
+      OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+      OPL_FAMILY_RUNTIME_PROVIDER: '',
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+      PATH: '/usr/bin:/bin',
+    }) as {
+      system_initialize: {
+        setup_flow: {
+          ready_to_launch: boolean;
+          blocking_items: string[];
+        };
+        core_engines: {
+          codex: {
+            installed: boolean;
+            binary_path: string | null;
+            binary_source: string | null;
+            health_status: string;
+            issues: string[];
+            runtime_toolchain_updater: {
+              current_binary_installed: boolean;
+              current_binary_path: string;
+              current_version_status: string;
+            };
+          };
+        };
+      };
+    };
+
+    assert.equal(output.system_initialize.setup_flow.ready_to_launch, true);
+    assert.equal(output.system_initialize.setup_flow.blocking_items.includes('codex'), false);
+    assert.equal(output.system_initialize.core_engines.codex.installed, true);
+    assert.equal(output.system_initialize.core_engines.codex.binary_path, runtimeCodex);
+    assert.equal(output.system_initialize.core_engines.codex.binary_source, 'runtime');
+    assert.equal(output.system_initialize.core_engines.codex.health_status, 'ready');
+    assert.deepEqual(output.system_initialize.core_engines.codex.issues, []);
+    assert.equal(
+      output.system_initialize.core_engines.codex.runtime_toolchain_updater.current_binary_path,
+      runtimeCodex,
+    );
+    assert.equal(
+      output.system_initialize.core_engines.codex.runtime_toolchain_updater.current_binary_installed,
+      true,
+    );
+    assert.equal(
+      output.system_initialize.core_engines.codex.runtime_toolchain_updater.current_version_status,
+      'compatible',
+    );
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
+  }
+});
+
 test('install command points WebUI users to the AionUI shell instead of a local Product API service', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-webui-note-home-'));
 
