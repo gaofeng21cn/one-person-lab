@@ -23,7 +23,7 @@ Machine boundary: 本文是人读 coverage / compression ledger。当前 family 
 | Governance inputs | `AGENTS.md`、`TASTE.md`、OPL Doc skill、`docs/docs_portfolio_consolidation.md`、`docs/active/current-state-vs-ideal-gap.md`。 |
 | Support references | `docs/references/operating-governance/README.md`、`docs/references/operating-governance/family-structure-advisory-report.md`。 |
 | Machine source / tests | `scripts/family-structure-advisory.mjs`、`package.json` `family:structure-advisory`、`tests/src/family-structure-advisory.test.ts`。 |
-| Fresh generated output | `npm run --silent family:structure-advisory -- --format=json` from `2026-06-08T09:06:42Z` in the isolated OPL worktree. |
+| Fresh generated output | `npm run --silent family:structure-advisory -- --format=json` from `2026-06-08T09:10:19Z` in the root OPL checkout after fast-forward revalidation. |
 | History index | `docs/history/process/plans/README.md` for support-refresh ledger discovery and current owner pointer. |
 
 ## Coverage Result
@@ -32,6 +32,7 @@ Machine boundary: 本文是人读 coverage / compression ledger。当前 family 
 - The support report keeps `one-person-lab` detailed `public_surface_risk` entries because the focused test guards this list against generated single-repo output.
 - The support report no longer carries long 2026-06-06 / 2026-06-07 landing-evidence and verification-command chronology as current reference body.
 - Current structure advisory readout is explicitly advisory-only: no mechanical residue or missing verify entry exists in the eleven-repo scan, but source-shape queues now exist again for `one-person-lab`、`med-autoscience` and `med-autogrant`.
+- Root revalidation after the first push observed MAS drift from 33 to 34 `needs_design_pass` items, adding `src/med_autoscience/controllers/study_progress_parts/progress_first_monitoring/summary.py`; the support report now records the root-checkout fresh readout rather than the earlier isolated-worktree count.
 - Remaining source-shape work is routed to owner-boundary review in the owning repo lanes; this OPL docs tranche does not authorize physical deletion, forced shards, domain ready claims or production ready claims.
 
 ## Retired / Guarded Stale Readings
@@ -39,7 +40,7 @@ Machine boundary: 本文是人读 coverage / compression ledger。当前 family 
 | Stale reading | Current handling |
 | --- | --- |
 | `one-person-lab` has no source-shape queue | Retired; fresh scan now reports 16 OPL `needs_design_pass` items. |
-| `med-autoscience` residual queue is only 21 near-budget semantic part files | Retired; fresh scan reports 33 MAS `needs_design_pass` items including over-1000 source/test files. |
+| `med-autoscience` residual queue is only 21 near-budget semantic part files | Retired; fresh root-checkout scan reports 34 MAS `needs_design_pass` items including over-1000 source/test files and progress-first monitoring residue. |
 | `med-autogrant` has no source-shape queue | Retired; fresh scan now reports `src/med_autogrant/opl_standard_pack.py`. |
 | Historical landing commit lists as current structure truth | Compressed into this history ledger; current reference points to fresh generated output and owner-boundary disposition. |
 | Advisory finding as fail-closed blocker or production/domain readiness claim | Guarded by support report reading rules and machine `advisory_only=true` output. |

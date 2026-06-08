@@ -21,12 +21,12 @@ Fresh command:
 npm run --silent family:structure-advisory -- --format=json
 ```
 
-Fresh eleven-repo local summary from `2026-06-08T09:06:42Z`:
+Fresh eleven-repo local summary from `2026-06-08T09:10:19Z` after root checkout revalidation:
 
 | Repo | needs_design_pass | mechanical_residue | public_surface_risk | missing_verify_entry |
 | --- | ---: | ---: | ---: | --- |
 | `one-person-lab` | 16 | 0 | 6 | `false` |
-| `med-autoscience` | 33 | 0 | 5 | `false` |
+| `med-autoscience` | 34 | 0 | 5 | `false` |
 | `med-autogrant` | 1 | 0 | 5 | `false` |
 | `redcube-ai` | 0 | 0 | 9 | `false` |
 | `opl-meta-agent` | 0 | 0 | 1 | `false` |
@@ -68,7 +68,7 @@ Support repos can be lighter but should still be recognizable: `one-person-lab` 
 | Repo | Current structure finding | Action |
 | --- | --- | --- |
 | `one-person-lab` | Fresh scan now reports 16 `needs_design_pass` source/test files and 6 public-surface risks. No mechanical residue and no missing verify entry. | Treat as OPL-owned natural source-boundary queue. Prioritize `contracts.ts` / public command specs / workspace diagnostics / domain-pack compiler / runtime enqueue / workspace lifecycle when their owner surfaces are next touched; do not turn this support snapshot into a blocking backlog. |
-| `med-autoscience` | Fresh scan reports 33 `needs_design_pass` items and 5 public-surface risks. No mechanical residue and no missing verify entry. | MAS remains the highest residual source-shape advisory queue. Handle only from MAS owner lanes with fresh repo state, especially domain action materializer, owner-route handoff/reconcile, domain health diagnostic, study progress projection and dispatch surfaces. |
+| `med-autoscience` | Fresh scan reports 34 `needs_design_pass` items and 5 public-surface risks. No mechanical residue and no missing verify entry. | MAS remains the highest residual source-shape advisory queue. Handle only from MAS owner lanes with fresh repo state, especially domain action materializer, owner-route handoff/reconcile, domain health diagnostic, study progress / progress-first projection and dispatch surfaces. |
 | `med-autogrant` | Fresh scan reports one source-shape item, `src/med_autogrant/opl_standard_pack.py`, plus 5 public-surface risks. | Treat as MAG owner-boundary review for standard-pack extraction and generated schema/contract modularity; no OPL-side physical edit is authorized by this snapshot. |
 | `redcube-ai` | Fresh scan has no source-shape finding; public-surface risk remains in generated/public contracts and two shared buckets. | Continue generated/public-surface modularity and shared-bucket ownership review from RCA lanes; no source split is currently implied. |
 | `opl-meta-agent` | Fresh scan has no source-shape finding; public-surface risk remains in `contracts/stage_control_plane.json`. | Keep source/parts direction; contract modularity remains generator/source concern. |
@@ -121,7 +121,7 @@ Interpretation: OPL framework source/test shape has fresh source-boundary adviso
 
 ### med-autoscience
 
-Fresh scan reports 33 `needs_design_pass` items and 5 `public_surface_risk` items. Exact current paths must be read from fresh `family:structure-advisory` JSON before a MAS owner lane writes source or docs.
+Fresh scan reports 34 `needs_design_pass` items and 5 `public_surface_risk` items. Exact current paths must be read from fresh `family:structure-advisory` JSON before a MAS owner lane writes source or docs.
 
 ## External Calibration
 
