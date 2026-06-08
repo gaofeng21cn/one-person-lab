@@ -1,4 +1,5 @@
 import { FrameworkContractError } from './contracts.ts';
+import { listBrandModuleL5EvidenceReceipts } from './brand-module-l5-evidence-ledger.ts';
 import type {
   BrandModuleAuthorityBoundary,
   BrandModuleId,
@@ -92,10 +93,25 @@ function completeModuleIds(contracts: FrameworkContracts) {
     .map((entry) => entry.module_id);
 }
 
-function compactModule(entry: BrandModuleL5OperatingEvidenceEntry) {
+type BrandModuleL5EvidenceLedgerReceiptProjection = {
+  module_id: BrandModuleId;
+  evidence_class_id: BrandModuleL5EvidenceClassId;
+  receipt_status: string;
+};
+
+function compactModule(
+  entry: BrandModuleL5OperatingEvidenceEntry,
+  ledgerReceipts: BrandModuleL5EvidenceLedgerReceiptProjection[],
+) {
   const satisfied_requirement_count = entry.evidence_requirements
     .filter((requirement) => requirement.current_state === 'satisfied')
     .length;
+  const moduleLedgerReceipts = ledgerReceipts.filter((receipt) =>
+    receipt.module_id === entry.module_id
+  );
+  const verifiedModuleLedgerReceipts = moduleLedgerReceipts.filter((receipt) =>
+    receipt.receipt_status === 'verified'
+  );
   return {
     module_id: entry.module_id,
     brand_name: entry.brand_name,
@@ -112,6 +128,17 @@ function compactModule(entry: BrandModuleL5OperatingEvidenceEntry) {
     blocked_requirement_count: entry.evidence_requirements
       .filter((requirement) => requirement.current_state === 'blocked')
       .length,
+    evidence_ledger: {
+      receipt_count: moduleLedgerReceipts.length,
+      verified_receipt_count: verifiedModuleLedgerReceipts.length,
+      observed_evidence_class_ids: unique(
+        moduleLedgerReceipts.map((receipt) => receipt.evidence_class_id),
+      ),
+      verified_evidence_class_ids: unique(
+        verifiedModuleLedgerReceipts.map((receipt) => receipt.evidence_class_id),
+      ),
+      l5_claim_status: 'ledger_refs_only_not_l5_claimed',
+    },
     immediate_enabling_surfaces: entry.immediate_enabling_surfaces,
     evidence_requirements: entry.evidence_requirements,
     not_claims: entry.not_claims,
@@ -125,6 +152,7 @@ function statusEnvelope(
   const contract = l5Contract(contracts);
   const allCompleteModuleIds = completeModuleIds(contracts);
   const allEvidenceRequiredModuleIds = evidenceRequiredModuleIds(contracts);
+  const evidenceLedger = listBrandModuleL5EvidenceReceipts(contracts);
   return {
     surface_kind: 'opl_brand_module_l5_status',
     version: contract.version,
@@ -141,11 +169,18 @@ function statusEnvelope(
     l5_complete_module_ids: allCompleteModuleIds,
     evidence_required_module_count: allEvidenceRequiredModuleIds.length,
     evidence_required_module_ids: allEvidenceRequiredModuleIds,
+    evidence_ledger: {
+      surface_kind: evidenceLedger.surface_kind,
+      receipt_count: evidenceLedger.receipt_count,
+      verified_receipt_count: evidenceLedger.verified_receipt_count,
+      ledger_file: evidenceLedger.ledger_file,
+      l5_claim_status: evidenceLedger.l5_claim_status,
+    },
     immediate_enabling_surface_count: modules.reduce(
       (count, entry) => count + entry.immediate_enabling_surfaces.length,
       0,
     ),
-    modules: modules.map(compactModule),
+    modules: modules.map((entry) => compactModule(entry, evidenceLedger.receipts)),
     not_claims: unique(modules.flatMap((entry) => entry.not_claims)),
     authority_boundary: FALSE_AUTHORITY_BOUNDARY,
     machine_boundary: contract.machine_boundary,
@@ -255,6 +290,9 @@ export function buildBrandModuleL5Interfaces(contracts: FrameworkContracts) {
           'opl brand-modules l5-status --module <module_id> --json',
           'opl brand-modules l5-validate --json',
           'opl brand-modules l5-interfaces --json',
+          'opl runtime brand-module-l5-evidence record --payload <json> --json',
+          'opl runtime brand-module-l5-evidence verify --receipt-ref <ref> --json',
+          'opl runtime brand-module-l5-evidence list --module <module_id> --json',
           ...contract.modules.map((entry) => `opl ${entry.module_id} l5-status --json`),
         ],
       },
@@ -272,6 +310,12 @@ export function buildBrandModuleL5Interfaces(contracts: FrameworkContracts) {
             mutation: false,
             descriptor_only: true,
           },
+          {
+            action_id: 'brand_modules_l5_evidence_record',
+            command: 'opl runtime brand-module-l5-evidence record --payload <json> --json',
+            mutation: true,
+            descriptor_only: true,
+          },
         ],
       },
       descriptor: {
@@ -283,6 +327,7 @@ export function buildBrandModuleL5Interfaces(contracts: FrameworkContracts) {
       validation: {
         commands: [
           'opl brand-modules l5-validate --json',
+          'opl runtime brand-module-l5-evidence verify --receipt-ref <ref> --json',
           'opl contract validate --json',
         ],
       },

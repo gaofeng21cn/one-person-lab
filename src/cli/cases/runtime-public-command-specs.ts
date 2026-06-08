@@ -58,6 +58,34 @@ export function buildPublicRuntimeCommandSpecs(
         examples: ['opl runtime app-release-evidence list --json'],
         group: 'runtime',
       }),
+    'runtime brand-module-l5-evidence record':
+      cloneCommandSpec(commandSpecs['runtime brand-module-l5-evidence record'], {
+        usage:
+          'opl runtime brand-module-l5-evidence record (--payload <json>|--payload-file <path>)',
+        examples: [
+          'opl runtime brand-module-l5-evidence record --payload \'{"module_id":"runway","evidence_class_id":"long_soak_recovery","evidence_refs":["long-soak:runway/demo"]}\'',
+          'opl runtime brand-module-l5-evidence record --payload-file payload.json',
+        ],
+        group: 'runtime',
+      }),
+    'runtime brand-module-l5-evidence verify':
+      cloneCommandSpec(commandSpecs['runtime brand-module-l5-evidence verify'], {
+        usage: 'opl runtime brand-module-l5-evidence verify [--receipt-ref <ref>]',
+        examples: [
+          'opl runtime brand-module-l5-evidence verify --receipt-ref opl://brand-module-l5-evidence/runway/long_soak_recovery/demo',
+        ],
+        group: 'runtime',
+      }),
+    'runtime brand-module-l5-evidence list':
+      cloneCommandSpec(commandSpecs['runtime brand-module-l5-evidence list'], {
+        usage:
+          'opl runtime brand-module-l5-evidence list [--module <module_id>] [--class <evidence_class_id>]',
+        examples: [
+          'opl runtime brand-module-l5-evidence list --json',
+          'opl runtime brand-module-l5-evidence list --module runway --class long_soak_recovery --json',
+        ],
+        group: 'runtime',
+      }),
     'runtime app-release-evidence long-operator start':
       cloneCommandSpec(commandSpecs['runtime app-release-evidence long-operator start'], {
         usage:

@@ -18,6 +18,7 @@ export type OplStatePaths = {
   oma_production_consumption_ledger_file: string;
   app_release_user_path_evidence_ledger_file: string;
   codex_app_runtime_evidence_ledger_file: string;
+  brand_module_l5_evidence_ledger_file: string;
   standard_agent_template_consumption_ledger_file: string;
   domain_owner_payload_summary_ledger_file: string;
   mag_manifest_sustained_consumption_ledger_file: string;
@@ -66,6 +67,10 @@ export function resolveOplStatePaths(): OplStatePaths {
     codex_app_runtime_evidence_ledger_file: path.join(
       stateDir,
       'codex-app-runtime-evidence-ledger.json',
+    ),
+    brand_module_l5_evidence_ledger_file: path.join(
+      stateDir,
+      'brand-module-l5-evidence-ledger.json',
     ),
     standard_agent_template_consumption_ledger_file: path.join(
       stateDir,

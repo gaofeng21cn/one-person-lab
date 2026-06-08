@@ -184,6 +184,72 @@ export const retiredCliCommandMatrix: Array<{
     command: ['mcp', 'stdio'].join('-'),
     errorCode: 'unknown_command',
   },
+  {
+    args: ['modules'],
+    command: 'opl modules',
+    errorCode: 'cli_usage_error',
+    replacements: [/opl connect modules/],
+  },
+  {
+    args: ['packages', 'manifest'],
+    command: 'opl packages manifest',
+    errorCode: 'cli_usage_error',
+    replacements: [/opl connect packages manifest/],
+  },
+  {
+    args: ['skill', 'list'],
+    command: 'opl skill list',
+    errorCode: 'cli_usage_error',
+    replacements: [/opl connect skills/],
+  },
+  {
+    args: ['skill', 'sync'],
+    command: 'opl skill sync',
+    errorCode: 'cli_usage_error',
+    replacements: [/opl connect sync-skills/],
+  },
+  {
+    args: ['module', 'install'],
+    command: 'opl module install',
+    errorCode: 'cli_usage_error',
+    replacements: [/opl connect install/],
+  },
+  {
+    args: ['module', 'update'],
+    command: 'opl module update',
+    errorCode: 'cli_usage_error',
+    replacements: [/opl connect update/],
+  },
+  {
+    args: ['module', 'reinstall'],
+    command: 'opl module reinstall',
+    errorCode: 'cli_usage_error',
+    replacements: [/opl connect reinstall/],
+  },
+  {
+    args: ['module', 'remove'],
+    command: 'opl module remove',
+    errorCode: 'cli_usage_error',
+    replacements: [/opl connect remove/],
+  },
+  {
+    args: ['module', 'exec'],
+    command: 'opl module exec',
+    errorCode: 'cli_usage_error',
+    replacements: [/opl connect exec/],
+  },
+  {
+    args: ['module', 'sync'],
+    command: 'opl module sync',
+    errorCode: 'cli_usage_error',
+    replacements: [/opl connect reconcile-modules/],
+  },
+  {
+    args: ['module', 'reconcile'],
+    command: 'opl module reconcile',
+    errorCode: 'cli_usage_error',
+    replacements: [/opl connect reconcile-modules/],
+  },
 ];
 
 export function createFakeFamilySkillWorkspace(captureDir: string) {

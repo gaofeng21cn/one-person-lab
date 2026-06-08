@@ -400,6 +400,16 @@ export interface BrandModuleL5OperatingEvidenceContract {
   baseline_level: BrandModuleMaturityLevel;
   target_level: BrandModuleL5TargetLevel;
   l5_claim_policy: BrandModuleL5ClaimPolicy;
+  evidence_ledger_surfaces: {
+    record_command: string;
+    verify_command: string;
+    list_command: string;
+    ledger_file_name: string;
+    refs_only: true;
+    can_claim_l5_complete: false;
+    can_create_owner_receipt: false;
+    can_create_typed_blocker: false;
+  };
   evidence_classes: BrandModuleL5EvidenceClass[];
   modules: BrandModuleL5OperatingEvidenceEntry[];
 }

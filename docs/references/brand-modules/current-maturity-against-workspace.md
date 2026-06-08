@@ -51,7 +51,7 @@ Machine boundary: 本文是人读现状对照。当前完成度、计数、recei
 
 ## L5 规划
 
-当前没有模块声明 `L5 production operating maturity`。本仓已新增 `contracts/opl-framework/brand-module-l5-operating-evidence.json` 和对应 CLI/read-model，把 L5 证据门变成可执行 surface；它只记录每个模块需要关闭的 evidence class、owner route、accepted ref shape 和 false-authority policy。L5 不是再补一层文档，而是把模块变成可持续运营能力：
+当前没有模块声明 `L5 production operating maturity`。本仓已新增 `contracts/opl-framework/brand-module-l5-operating-evidence.json`、对应 CLI/read-model 和 `opl runtime brand-module-l5-evidence record|verify|list --json` refs-only ledger，把 L5 证据门变成可执行 surface；它只记录每个模块需要关闭的 evidence class、owner route、accepted ref shape、ledger command refs 和 false-authority policy。L5 不是再补一层文档，而是把模块变成可持续运营能力：
 
 - `Charter`: 术语、ADR/RFC、authority matrix 和 supersession 机制能持续约束新模块、新 surface 与旧路线退役。
 - `Atlas`: agent / capability / surface / owner catalog 能被 CLI、App、conformance、release 和 operator drilldown 同源消费。
@@ -77,6 +77,9 @@ opl brand-modules l5-status --json
 opl brand-modules l5-status --module runway --json
 opl brand-modules l5-validate --json
 opl brand-modules l5-interfaces --json
+opl runtime brand-module-l5-evidence record --payload '{"module_id":"runway","evidence_class_id":"long_soak_recovery","evidence_refs":["long-soak:runway/demo"]}' --json
+opl runtime brand-module-l5-evidence verify --receipt-ref <receipt_ref> --json
+opl runtime brand-module-l5-evidence list --module runway --class long_soak_recovery --json
 opl contract validate --json
 ```
 
@@ -109,6 +112,8 @@ opl foundry-lab l5-status --json
 opl connect l5-status --json
 ```
 
+`runtime brand-module-l5-evidence` 是 evidence intake/read-model，不是 completion command。它只把外部真实用户路径、long-soak、release/install、owner acceptance、no-regression 或 typed blocker refs 记录到本地 OPL state ledger，再让 `l5-status` 显示 observed / verified counts；它不能创建 owner receipt / typed blocker，不能写 domain truth，不能把 verified receipt 升级成 L5。
+
 对象视图入口示例：
 
 ```text
@@ -136,7 +141,7 @@ npm run typecheck
 
 - 九模块进入统一 registry 只能证明目录层存在；模块级 L4 必须以 `brand-module-surfaces.json` 和各自 `opl <module> validate|doctor --json` 为证据。
 - 任何模块 `L4_structural_baseline` 不等于 MAS/MAG/RCA/OMA domain ready。
-- `brand-module-l5-operating-evidence.json`、`opl brand-modules l5-validate --json` 和 `opl <module> l5-status --json` 只能证明 L5 证据矩阵存在、形状有效和当前 open/blocked/satisfied 状态；不能单独声明 L5。
+- `brand-module-l5-operating-evidence.json`、`opl brand-modules l5-validate --json`、`opl <module> l5-status --json` 和 `opl runtime brand-module-l5-evidence verify --json` 只能证明 L5 证据矩阵存在、形状有效、refs transport 可记录/验证和当前 open/blocked/satisfied 状态；不能单独声明 L5。
 - 任何模块的 `L5` 都不能由 docs foldback、contract validation、conformance pass、provider completion、verified ledger 或 App projection 单独声明。
 - `Stagecraft L4` 不等于 quality gate 全部真实闭合。
 - `Runway L4` 不等于 production long-soak complete。

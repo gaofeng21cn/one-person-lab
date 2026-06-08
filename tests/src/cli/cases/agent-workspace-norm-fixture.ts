@@ -458,6 +458,16 @@ export const MINIMAL_BRAND_MODULE_L5_OPERATING_EVIDENCE_CONTRACT: BrandModuleL5O
     app_projection_counts_as_l5: false,
     conformance_pass_counts_as_l5: false,
   },
+  evidence_ledger_surfaces: {
+    record_command: 'opl runtime brand-module-l5-evidence record',
+    verify_command: 'opl runtime brand-module-l5-evidence verify',
+    list_command: 'opl runtime brand-module-l5-evidence list',
+    ledger_file_name: 'brand-module-l5-evidence-ledger.json',
+    refs_only: true,
+    can_claim_l5_complete: false,
+    can_create_owner_receipt: false,
+    can_create_typed_blocker: false,
+  },
   evidence_classes: MINIMAL_BRAND_MODULE_L5_EVIDENCE_CLASSES.map((classId) => ({
     class_id: classId,
     definition: 'test fixture',

@@ -27,6 +27,9 @@ import { explainDomainBoundary, selectDomainAgentEntry } from '../../resolver.ts
 import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog } from '../../workspace-registry.ts';
 import type { FrameworkContracts } from '../../types.ts';
 import { buildRuntimeAppReleaseEvidenceCommandSpecs } from './runtime-app-release-evidence-command-spec.ts';
+import {
+  buildRuntimeBrandModuleL5EvidenceCommandSpecs,
+} from './runtime-brand-module-l5-evidence-command-spec.ts';
 import { buildRuntimeCodexAppRuntimeEvidenceCommandSpecs } from './runtime-codex-app-runtime-evidence-command-spec.ts';
 import { buildRuntimeDomainOwnerPayloadSummaryCommandSpecs } from './runtime-domain-owner-payload-summary-command-spec.ts';
 import {
@@ -358,6 +361,7 @@ export function buildInternalCommandSpecs(
       },
     },
     ...buildRuntimeAppReleaseEvidenceCommandSpecs(),
+    ...buildRuntimeBrandModuleL5EvidenceCommandSpecs(getContracts),
     ...buildRuntimeCodexAppRuntimeEvidenceCommandSpecs(),
     ...buildRuntimeStandardAgentTemplateConsumptionCommandSpecs(),
     ...buildRuntimeDomainOwnerPayloadSummaryCommandSpecs(),

@@ -57,6 +57,10 @@ test('OPL state paths default to the current state dir and ignore old UI adapter
       paths.codex_app_runtime_evidence_ledger_file,
       path.join(expectedStateDir, 'codex-app-runtime-evidence-ledger.json'),
     );
+    assert.equal(
+      paths.brand_module_l5_evidence_ledger_file,
+      path.join(expectedStateDir, 'brand-module-l5-evidence-ledger.json'),
+    );
 
     fs.mkdirSync(path.join(baseDir, 'local-ui-adapter'), { recursive: true });
     assert.equal(resolveOplStatePaths().state_dir, expectedStateDir);

@@ -135,10 +135,16 @@ export function validateBrandModuleL5OperatingEvidence(
   const evidenceClassesRaw = value.evidence_classes;
   const modulesRaw = value.modules;
   const claimPolicyRaw = value.l5_claim_policy;
-  if (!Array.isArray(evidenceClassesRaw) || !Array.isArray(modulesRaw) || !isRecord(claimPolicyRaw)) {
+  const evidenceLedgerSurfacesRaw = value.evidence_ledger_surfaces;
+  if (
+    !Array.isArray(evidenceClassesRaw)
+    || !Array.isArray(modulesRaw)
+    || !isRecord(claimPolicyRaw)
+    || !isRecord(evidenceLedgerSurfacesRaw)
+  ) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'brand-module-l5-operating-evidence.json must contain l5_claim_policy, evidence_classes, and modules.',
+      'brand-module-l5-operating-evidence.json must contain l5_claim_policy, evidence_ledger_surfaces, evidence_classes, and modules.',
       { file: filePath },
     );
   }
@@ -199,6 +205,72 @@ export function validateBrandModuleL5OperatingEvidence(
       filePath,
     ),
   };
+
+  const evidenceLedgerSurfaces = {
+    record_command: expectString(
+      evidenceLedgerSurfacesRaw.record_command,
+      'evidence_ledger_surfaces.record_command',
+      filePath,
+    ),
+    verify_command: expectString(
+      evidenceLedgerSurfacesRaw.verify_command,
+      'evidence_ledger_surfaces.verify_command',
+      filePath,
+    ),
+    list_command: expectString(
+      evidenceLedgerSurfacesRaw.list_command,
+      'evidence_ledger_surfaces.list_command',
+      filePath,
+    ),
+    ledger_file_name: expectString(
+      evidenceLedgerSurfacesRaw.ledger_file_name,
+      'evidence_ledger_surfaces.ledger_file_name',
+      filePath,
+    ),
+    refs_only: (() => {
+      const field = 'evidence_ledger_surfaces.refs_only';
+      const actual = expectBoolean(evidenceLedgerSurfacesRaw.refs_only, field, filePath);
+      if (actual !== true) {
+        throw new FrameworkContractError('contract_shape_invalid', `${field} must be true.`, {
+          file: filePath,
+          field,
+        });
+      }
+      return true as const;
+    })(),
+    can_claim_l5_complete: expectFalseBoolean(
+      evidenceLedgerSurfacesRaw.can_claim_l5_complete,
+      'evidence_ledger_surfaces.can_claim_l5_complete',
+      filePath,
+    ),
+    can_create_owner_receipt: expectFalseBoolean(
+      evidenceLedgerSurfacesRaw.can_create_owner_receipt,
+      'evidence_ledger_surfaces.can_create_owner_receipt',
+      filePath,
+    ),
+    can_create_typed_blocker: expectFalseBoolean(
+      evidenceLedgerSurfacesRaw.can_create_typed_blocker,
+      'evidence_ledger_surfaces.can_create_typed_blocker',
+      filePath,
+    ),
+  };
+  const expectedLedgerCommands = {
+    record_command: 'opl runtime brand-module-l5-evidence record',
+    verify_command: 'opl runtime brand-module-l5-evidence verify',
+    list_command: 'opl runtime brand-module-l5-evidence list',
+    ledger_file_name: 'brand-module-l5-evidence-ledger.json',
+  };
+  for (const [field, expected] of Object.entries(expectedLedgerCommands)) {
+    const actual = evidenceLedgerSurfaces[field as keyof typeof expectedLedgerCommands];
+    if (actual !== expected) {
+      throw new FrameworkContractError('contract_shape_invalid', `evidence_ledger_surfaces.${field} must use the canonical L5 evidence ledger surface.`, {
+        file: filePath,
+        field: `evidence_ledger_surfaces.${field}`,
+        expected,
+        actual,
+      });
+    }
+  }
 
   const seenEvidenceClasses = new Set<string>();
   const evidenceClasses = evidenceClassesRaw.map((entry, index) => {
@@ -410,6 +482,7 @@ export function validateBrandModuleL5OperatingEvidence(
     baseline_level: 'L4_structural_baseline',
     target_level: 'L5_production_operating_maturity',
     l5_claim_policy: l5ClaimPolicy,
+    evidence_ledger_surfaces: evidenceLedgerSurfaces,
     evidence_classes: evidenceClasses,
     modules,
   };

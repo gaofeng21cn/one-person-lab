@@ -189,9 +189,18 @@ test('brand module L5 interfaces expose aggregate and module-owned read surfaces
   assert.equal(interfaces.cli.commands.includes('opl brand-modules l5-status --module <module_id> --json'), true);
   assert.equal(interfaces.cli.commands.includes('opl brand-modules l5-validate --json'), true);
   assert.equal(interfaces.cli.commands.includes('opl brand-modules l5-interfaces --json'), true);
+  assert.equal(interfaces.cli.commands.includes('opl runtime brand-module-l5-evidence record --payload <json> --json'), true);
+  assert.equal(interfaces.cli.commands.includes('opl runtime brand-module-l5-evidence verify --receipt-ref <ref> --json'), true);
+  assert.equal(interfaces.cli.commands.includes('opl runtime brand-module-l5-evidence list --module <module_id> --json'), true);
   assert.equal(interfaces.cli.commands.includes('opl runway l5-status --json'), true);
   assert.equal(interfaces.app.descriptors.some((entry: { action_id: string }) => entry.action_id === 'brand_modules_l5_status'), true);
+  const evidenceRecord = interfaces.app.descriptors.find(
+    (entry: { action_id: string }) => entry.action_id === 'brand_modules_l5_evidence_record',
+  );
+  assert.equal(evidenceRecord.command, 'opl runtime brand-module-l5-evidence record --payload <json> --json');
+  assert.equal(evidenceRecord.mutation, true);
   assert.equal(interfaces.validation.commands.includes('opl brand-modules l5-validate --json'), true);
+  assert.equal(interfaces.validation.commands.includes('opl runtime brand-module-l5-evidence verify --receipt-ref <ref> --json'), true);
   assert.equal(interfaces.authority_boundary.can_claim_domain_ready, false);
   assert.equal(interfaces.authority_boundary.can_claim_production_ready, false);
 });
