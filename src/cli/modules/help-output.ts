@@ -7,6 +7,21 @@ const CODEX_COMMAND_HELP_PASSTHROUGH = new Set([
   'resume',
 ]);
 
+const ROOT_HELP_DIAGNOSTIC_GROUPS = new Set([
+  'contract',
+  'domain',
+  'engine',
+  'framework',
+  'module',
+  'package',
+  'quality',
+  'runtime',
+  'session',
+  'skill',
+  'status',
+  'system',
+]);
+
 function looksLikeNaturalLanguage(command: string, args: string[]) {
   if (args.length > 0) {
     return true;
@@ -131,7 +146,20 @@ function resolveCommandSpec(
 function buildRootHelp(commands: Record<string, CommandSpec>) {
   const visibleEntries = Object.entries(commands).filter(([, spec]) => (
     spec.help_surface !== 'diagnostic_drilldown'
+    && spec.help_surface !== 'migration_compatibility'
+    && !ROOT_HELP_DIAGNOSTIC_GROUPS.has(spec.group ?? 'top_level')
   ));
+  const diagnosticGroups = Object.entries(commands)
+    .filter(([, spec]) => (
+      spec.help_surface === 'diagnostic_drilldown'
+      || spec.help_surface === 'migration_compatibility'
+      || ROOT_HELP_DIAGNOSTIC_GROUPS.has(spec.group ?? 'top_level')
+    ))
+    .reduce<Record<string, number>>((acc, [, spec]) => {
+      const groupId = spec.group ?? 'top_level';
+      acc[groupId] = (acc[groupId] ?? 0) + 1;
+      return acc;
+    }, {});
   const grouped = visibleEntries.reduce<Record<string, Array<{
     command: string;
     usage: string;
@@ -166,6 +194,15 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         summary: COMMAND_GROUP_SUMMARIES[group_id] ?? '',
         commands: entries,
       })),
+      diagnostic_command_groups: Object.entries(diagnosticGroups)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([group_id, command_count]) => ({
+          group_id,
+          command_count,
+          summary: COMMAND_GROUP_SUMMARIES[group_id] ?? '',
+          help_command: `opl help ${group_id}`,
+          ordinary_frontdoor: false,
+        })),
       commands: visibleEntries.map(([command, spec]) => ({
         command,
         usage: spec.usage,
@@ -199,53 +236,17 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl connect install --module medautoscience',
         'opl connect sync-skills',
         'opl connect packages manifest',
-        'opl framework locate',
-        'opl framework readiness --family-defaults',
-        'opl framework production-closeout',
-        'opl family-runtime status',
-        'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli',
-        'opl family-runtime repair',
-        'opl family-runtime provider repair --provider temporal',
         'opl install --modules mas,mag,rca',
         'opl doctor',
-        'opl quality details --root . --format markdown',
         'opl connect skills',
         'opl connect sync-skills',
-        'opl system',
-        'opl system initialize',
-        'opl system reconcile-modules',
-        'opl actions list',
-        'opl agents list',
-        'opl agents legacy-cleanup apply --domain mas --mode dry-run',
-        'opl agents scaffold',
-        'opl agents descriptors',
-        'opl agents descriptor --domain mas',
-        'opl agents readiness --family-defaults',
-        'opl agents pack-compiler',
-        'opl agents pack-compiler inspect --domain mas',
-        'opl agents interfaces --family-defaults',
-        'opl agents platform-surfaces --family-defaults',
-        'opl agents default-callers --family-defaults',
-        'opl domain-memory list',
-        'opl domain-memory migration-plan --domain mas',
-        'opl stages list',
-        'opl stages readiness --family-defaults',
-        'opl engine install --engine codex',
         'opl workspace projects',
         'opl workspace ensure --agent rca --project-id deck-001',
         'opl workspace init --agent rca --workspace-id visual-theme-a --project-id deck-001',
         'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai',
-        'opl domain launch --project redcube --dry-run',
-        'opl contract handoff-envelope "Prepare a defense-ready slide deck." --preferred-family ppt_deck',
-        'opl status workspace --path /Users/gaofeng/workspace/redcube-ai',
-        'opl status runtime --limit 10',
-        'opl status dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
         'opl "Plan a medical grant proposal revision loop."',
         'opl exec "Plan a medical grant proposal revision loop."',
         'opl resume --last',
-        'opl contract validate',
-        'opl domain select-entry --intent presentation_delivery --target deliverable --goal "Prepare a defense-ready slide deck."',
-        'opl domain explain-boundary --intent create --target deliverable --goal "Prepare a xiaohongshu campaign pack." --preferred-family xiaohongshu',
       ],
     },
   };
@@ -273,13 +274,14 @@ function formatHumanRootHelp(payload: ReturnType<typeof buildRootHelp>) {
     '',
     'Fast start:',
     '  opl install                    Install the default Codex engine, modules, Codex skills, and the One Person Lab App',
-    '  opl framework readiness --family-defaults',
-    '                                 Check the default framework/operator readiness summary',
-    '  opl system initialize          Check first-run state and remaining setup actions',
+    '  opl workspace status           Check the OPL Workspace module surface',
+    '  opl stagecraft status          Check the OPL Stagecraft module surface',
+    '  opl runway doctor              Check the OPL Runway runtime substrate surface',
+    '  opl vault status               Check the OPL Vault evidence module surface',
+    '  opl console status             Check the OPL Console operator module surface',
+    '  opl foundry agents list        List the OPL Foundry Agent series members',
     '  opl connect modules            Inspect managed module health',
     '  opl connect sync-skills         Sync family skills into the Codex skill path',
-    '  opl stages readiness --family-defaults',
-    '                                 Check the default operator/App launch-readiness summary',
     '  opl "your task"                Start from the default Codex runtime',
     '',
     'Common commands:',
@@ -294,6 +296,14 @@ function formatHumanRootHelp(payload: ReturnType<typeof buildRootHelp>) {
   }
 
   lines.push('', 'Machine-readable output:', '  opl help --json', '  opl help <command> --json');
+  if (payload.help.diagnostic_command_groups.length > 0) {
+    lines.push(
+      '',
+      'Diagnostic/internal namespaces:',
+      `  ${payload.help.diagnostic_command_groups.map((group) => group.group_id).join(', ')}`,
+      '  Use opl help <namespace> when maintaining or debugging implementation surfaces.',
+    );
+  }
 
   return `${lines.join('\n')}\n`;
 }

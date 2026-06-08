@@ -527,6 +527,10 @@ test('help no longer advertises retired ask chat shell aliases', () => {
   assert.equal(commands.includes('agents foundry peers'), true);
   assert.equal(commands.includes('skill list'), false);
   assert.equal(commands.includes('skill sync'), false);
+  const diagnostics = output.help.diagnostic_command_groups as Array<{ group_id: string }>;
+  for (const groupId of ['domain', 'engine', 'runtime', 'session', 'skill', 'status', 'system']) {
+    assert.equal(diagnostics.some((entry) => entry.group_id === groupId), true, groupId);
+  }
   assert.equal(examples.some((entry) => entry.includes('opl ask')), false);
   assert.equal(examples.some((entry) => entry.includes('opl chat')), false);
   assert.equal(examples.some((entry) => entry.includes('opl shell')), false);

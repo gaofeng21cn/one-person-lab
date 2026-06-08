@@ -208,6 +208,31 @@ function buildPeerProjection(peer: FoundryAgentPeer) {
   const compatibilityOperations = generatedSurfaceOnly
     ? [peer.direct_domain_cli]
     : FOUNDRY_AGENT_OPERATIONS.map((operation) => `${peer.direct_domain_cli} foundry ${operation}`);
+  const cliSmoke = generatedSurfaceOnly
+    ? {
+        executable_brand_cli_frontdoor: null,
+        executable_compatibility_frontdoor: null,
+        status_json_command: `opl foundry agents inspect ${peer.agent_id} --json`,
+        compatibility_status_json_command: peer.direct_domain_cli,
+        json_flag_aliases: ['--json'],
+        help_smoke_commands: [
+          `opl foundry agents inspect ${peer.agent_id} --json`,
+          'opl agents foundry status --json',
+        ],
+      }
+    : {
+        executable_brand_cli_frontdoor: foundryFrontdoor,
+        executable_compatibility_frontdoor: compatibilityFrontdoor,
+        status_json_command: `${peer.brand_cli} foundry status --json`,
+        compatibility_status_json_command: `${peer.direct_domain_cli} foundry status --json`,
+        legacy_format_json_command: `${peer.direct_domain_cli} foundry status --format json`,
+        json_flag_aliases: ['--json', '--format json'],
+        help_smoke_commands: [
+          `${peer.brand_cli} --help`,
+          `${peer.brand_cli} foundry status --json`,
+          `${peer.direct_domain_cli} foundry status --json`,
+        ],
+      };
 
   return {
     ...peer,
@@ -219,6 +244,7 @@ function buildPeerProjection(peer: FoundryAgentPeer) {
     compatibility_operations: compatibilityOperations,
     executable_direct_cli_frontdoor: generatedSurfaceOnly ? null : compatibilityFrontdoor,
     generated_surface_only: generatedSurfaceOnly,
+    cli_smoke: cliSmoke,
     ordinary_spine: ['workspace', 'work', 'stage', 'run', 'vault', 'handoff', 'connect'].map((object) => ({
       object,
       command_pattern: generatedSurfaceOnly

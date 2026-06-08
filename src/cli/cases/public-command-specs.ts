@@ -513,6 +513,7 @@ export function buildPublicCommandSpecs(
         'opl connect skills --domain medautoscience --json',
       ],
       group: 'connect',
+      help_surface: 'default',
     }),
     'connect sync-skills': cloneCommandSpec(commandSpecs['skill-sync'], {
       usage: 'opl connect sync-skills [--domain <domain_id>] [--home <home_path>] [--quiet]',
@@ -523,6 +524,7 @@ export function buildPublicCommandSpecs(
         'opl connect sync-skills --home /tmp/codex-home --json',
       ],
       group: 'connect',
+      help_surface: 'default',
     }),
     'connect packages manifest': connectPackagesManifestSpec,
     'connect reconcile-modules': cloneCommandSpec(systemCommandSpecs['system reconcile-modules'], {

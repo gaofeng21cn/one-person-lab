@@ -628,13 +628,18 @@ test('help returns command discovery and runnable examples', () => {
   assert.equal(output.help.command, null);
   assert.equal(output.help.usage, 'opl [command ...|request...] [args]');
   assert.ok(
-    ['contract workstreams', 'contract workstream', 'contract domains', 'contract domain', 'contract surfaces', 'contract surface', 'domain select-entry', 'domain explain-boundary', 'runtime manager', 'runtime index'].every((command) =>
+    ['charter status', 'atlas inspect', 'stagecraft interfaces', 'runway doctor', 'vault validate', 'console status', 'foundry-lab inspect', 'connect sync-skills', 'agents foundry status'].every((command) =>
       output.help.commands.some((entry: { command: string }) => entry.command === command),
     ),
   );
-  assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'contract validate'),
-  );
+  assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'contract validate'), false);
+  const diagnosticGroups = output.help.diagnostic_command_groups as Array<{ group_id: string; help_command: string }>;
+  for (const groupId of ['contract', 'domain', 'runtime', 'session']) {
+    assert.ok(
+      diagnosticGroups.some((entry) => entry.group_id === groupId && entry.help_command === `opl help ${groupId}`),
+      groupId,
+    );
+  }
   assert.equal(
     ['service install', 'service status', 'service open'].some((command) =>
       output.help.commands.some((entry: { command: string }) => entry.command === command),
@@ -645,22 +650,11 @@ test('help returns command discovery and runnable examples', () => {
     output.help.commands.some((entry: { command: string }) => entry.command === 'product entry bootstrap'),
     false,
   );
-  assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'system'),
-  );
-  assert.ok(
-    output.help.commands.some(
-      (entry: { command: string; examples: string[] }) =>
-        entry.command === 'contract validate'
-        && entry.examples.includes('opl contract validate'),
-    ),
-  );
-  assert.ok(output.help.examples.includes('opl contract handoff-envelope "Prepare a defense-ready slide deck." --preferred-family ppt_deck'));
-  assert.ok(
-    output.help.examples.includes(
-      'opl domain explain-boundary --intent create --target deliverable --goal "Prepare a xiaohongshu campaign pack." --preferred-family xiaohongshu',
-    ),
-  );
+  assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'system'), false);
+  const contractHelp = runCli(['help', 'contract', 'validate']);
+  assert.equal(contractHelp.help.command, 'contract validate');
+  assert.ok(contractHelp.help.examples.includes('opl contract validate'));
+  assert.equal(runCli(['help', 'domain', 'explain-boundary']).help.command, 'domain explain-boundary');
   const commandText = JSON.stringify(output.help.commands);
   assert.match(commandText, /--executor\b/);
   assert.ok(
@@ -675,35 +669,23 @@ test('help returns command discovery and runnable examples', () => {
     ),
   );
   assert.ok(
-    output.help.commands.some(
-      (entry: { command: string; usage: string; examples: string[]; summary: string }) =>
-        entry.command === 'executor doctor'
-        && /--executor <codex_cli\|hermes_agent\|claude_code\|antigravity_cli>/.test(entry.usage)
-        && entry.examples.some((example) => example.includes('--executor hermes_agent'))
-        && entry.examples.some((example) => example.includes('--executor claude_code'))
-        && entry.examples.some((example) => example.includes('--executor antigravity_cli')),
-    ),
+    diagnosticGroups.some((entry) => entry.group_id === 'runtime'),
   );
-  assert.ok(
-    output.help.commands.some(
-      (entry: { command: string; usage: string; examples: string[]; summary: string }) =>
-        entry.command === 'executor run'
-        && entry.usage === 'opl executor run --request <request.json>',
-    ),
+  const executorDoctorHelp = runCli(['help', 'executor', 'doctor']);
+  assert.match(executorDoctorHelp.help.usage, /--executor <codex_cli\|hermes_agent\|claude_code\|antigravity_cli>/);
+  const executorRunHelp = runCli(['help', 'executor', 'run']);
+  assert.equal(
+    executorRunHelp.help.usage,
+    'opl executor run --request <request.json>',
   );
   assert.doesNotMatch(commandText, /<codex\|hermes>/);
   assert.doesNotMatch(commandText, /hermes-cron/);
   assert.doesNotMatch(commandText, /Compatibility alias/);
-  assert.ok(
-    output.help.commands.some(
-      (entry: { command: string; usage: string; examples: string[]; summary: string }) =>
-        entry.command === 'session resume'
-        && entry.usage === 'opl session resume <session_id>'
-        && entry.examples.every((example) => !example.includes('--executor'))
-        && entry.examples.every((example) => !example.includes('hermes'))
-        && /OPL-managed session/.test(entry.summary),
-    ),
-  );
+  const sessionResumeHelp = runCli(['help', 'session', 'resume']);
+  assert.equal(sessionResumeHelp.help.usage, 'opl session resume <session_id>');
+  assert.equal(sessionResumeHelp.help.examples.every((example: string) => !example.includes('--executor')), true);
+  assert.equal(sessionResumeHelp.help.examples.every((example: string) => !example.includes('hermes')), true);
+  assert.match(sessionResumeHelp.help.summary, /OPL-managed session/);
 });
 
 test('root --help returns the same machine-readable help payload', () => {
@@ -714,7 +696,11 @@ test('root --help returns the same machine-readable help payload', () => {
   assert.equal(output.help.command, null);
   assert.equal(output.help.usage, 'opl [command ...|request...] [args]');
   assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'contract domain'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'charter status'),
+  );
+  assert.equal(
+    output.help.diagnostic_command_groups.some((entry: { group_id: string }) => entry.group_id === 'contract'),
+    true,
   );
 });
 

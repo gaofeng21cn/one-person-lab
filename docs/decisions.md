@@ -40,9 +40,11 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - `opl agents foundry status|inspect|interfaces|validate|doctor|peers` 成为 Foundry Agent series 的普通 CLI frontdoor，表达 `workspace -> work -> stage -> run -> vault -> handoff -> connect` 的同源执行链。
+- MAS/MAG/RCA 的品牌 CLI 别名必须是真实可执行入口：`mas foundry ...`、`mag foundry ...`、`rca foundry ...`。长域名入口 `medautosci`、`medautogrant`、`redcube` 作为 compatibility frontdoor 保留，但不能替代品牌入口。
+- Agent CLI 的机器输出统一接受 `--json`；历史 `--format json` 可以保留为兼容别名。OPL 聚合面 `opl foundry agents list|inspect` 必须投影 `cli_smoke`，把品牌入口、兼容入口和 JSON flag alias 写成可测试字段。
 - `contracts/opl-framework/foundry-agent-series-contract.json` 固定 `agent_cli_frontdoor_policy`、`skill_mcp_surface_policy` 和 `legacy_implementation_bucket_retirement_policy`；新 scaffold 生成的 `contracts/foundry_agent_series.json` 必须继承这些字段。
 - `opl connect skills` / `opl connect sync-skills` 输出同一 series contract 派生的 `foundry_agent_series`、`frontdoor_spine`、`mcp_projection` 和旧桶退役策略，Skill/MCP 不再另起一套解释。
-- 旧 `skill`、`module/modules`、`packages`、`engine` 等实现桶作为普通入口已退役并 fail closed 到 Connect；`runtime`、`family-runtime`、`index`、`stage-artifact` 等只能作为诊断、迁移或内部治理读面，不构成 Foundry Agent 用户 frontdoor。
+- 旧 `skill`、`module/modules`、`packages`、`engine` 等实现桶作为普通入口已退役并 fail closed 到 Connect；`runtime`、`family-runtime`、`index`、`stage-artifact`、`domain`、`system`、`status`、`session` 等只能作为诊断、迁移或内部治理下钻，不进入 root help 的普通 frontdoor。
 - 该 series spine 只声明 CLI/Skill/MCP/App action 的同源暴露面，不写 domain truth、不生成 owner receipt / typed blocker、不声明 domain ready、quality/export ready、artifact ready 或 production ready。
 
 ## 2026-06-06

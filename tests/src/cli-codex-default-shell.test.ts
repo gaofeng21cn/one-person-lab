@@ -243,7 +243,8 @@ exit 0
       });
 
       assert.match(result.stdout, /One Person Lab \(OPL\)/);
-      assert.match(result.stdout, /family-runtime/);
+      assert.match(result.stdout, /Diagnostic\/internal namespaces:/);
+      assert.match(result.stdout, /runtime/);
       assert.doesNotMatch(result.stdout, /SHOULD NOT RUN CODEX/);
       assert.equal(result.stderr, '');
       assert.equal(fs.existsSync(capturePath), false);
@@ -966,4 +967,9 @@ test('help text advertises Codex and Connect as default entries without retired 
   assert.equal(commands.some((entry) => entry.command === 'agents foundry peers'), true);
   assert.equal(commands.some((entry) => entry.command === 'skill list'), false);
   assert.equal(commands.some((entry) => entry.command === 'skill sync'), false);
+
+  const diagnostics = output.help.diagnostic_command_groups as Array<{ group_id: string }>;
+  for (const groupId of ['domain', 'engine', 'runtime', 'session', 'skill', 'status', 'system']) {
+    assert.equal(diagnostics.some((entry) => entry.group_id === groupId), true, groupId);
+  }
 });

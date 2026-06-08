@@ -158,12 +158,13 @@ test('help excludes retired local web adapter command surface', () => {
   const output = runCli(['help']);
 
   assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'web'), false);
-  assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'system'),
+  assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'system'), false);
+  assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'system initialize'), false);
+  assert.equal(
+    output.help.diagnostic_command_groups.some((entry: { group_id: string }) => entry.group_id === 'system'),
+    true,
   );
-  assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'system initialize'),
-  );
+  assert.equal(runCli(['help', 'system', 'initialize']).help.command, 'system initialize');
   assert.equal(
     output.help.commands.some((entry: { command: string }) => entry.command === 'service install'),
     false,
@@ -171,9 +172,8 @@ test('help excludes retired local web adapter command surface', () => {
   assert.ok(
     output.help.commands.some((entry: { command: string }) => entry.command === 'connect modules'),
   );
-  assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'domain launch'),
-  );
+  assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'domain launch'), false);
+  assert.equal(runCli(['help', 'domain', 'launch']).help.command, 'domain launch');
 
   const { status, payload } = runCliFailure(['web', '--help']);
   assert.equal(status, 2);
@@ -186,17 +186,26 @@ test('default help advertises Connect canonical installation surfaces while reti
   const commands = output.help.commands.map((entry: { command: string }) => entry.command);
   const examples = output.help.examples.join('\n');
 
-  assert.equal(commands.includes('system initialize'), true);
-  assert.equal(commands.includes('engine install'), true);
-  assert.equal(commands.includes('system repair'), true);
+  assert.equal(commands.includes('system initialize'), false);
+  assert.equal(commands.includes('engine install'), false);
+  assert.equal(commands.includes('system repair'), false);
   assert.equal(commands.includes('system reinstall-support'), false);
-  assert.equal(commands.includes('system update'), true);
-  assert.equal(commands.includes('system startup-maintenance'), true);
-  assert.equal(commands.includes('system reconcile-modules'), true);
-  assert.equal(commands.includes('system configure-codex'), true);
-  assert.equal(commands.includes('system repair-native-helpers'), true);
-  assert.equal(commands.includes('system update-channel'), true);
-  assert.equal(commands.includes('system developer-supervisor'), true);
+  assert.equal(commands.includes('system update'), false);
+  assert.equal(commands.includes('system startup-maintenance'), false);
+  assert.equal(commands.includes('system reconcile-modules'), false);
+  assert.equal(commands.includes('system configure-codex'), false);
+  assert.equal(commands.includes('system repair-native-helpers'), false);
+  assert.equal(commands.includes('system update-channel'), false);
+  assert.equal(commands.includes('system developer-supervisor'), false);
+  for (const groupId of ['system', 'engine']) {
+    assert.equal(
+      output.help.diagnostic_command_groups.some((entry: { group_id: string }) => entry.group_id === groupId),
+      true,
+      groupId,
+    );
+  }
+  assert.equal(runCli(['help', 'system', 'initialize']).help.command, 'system initialize');
+  assert.equal(runCli(['help', 'engine', 'install']).help.command, 'engine install');
   assert.equal(commands.includes('connect modules'), true);
   assert.equal(commands.includes('connect install'), true);
   assert.equal(commands.includes('connect sync-skills'), true);
@@ -290,9 +299,13 @@ test('help supports explicit text output for human readers', () => {
   assert.match(root.stdout, /Fast start:/);
   assert.match(root.stdout, /opl install/);
   assert.match(root.stdout, /opl connect modules/);
-  assert.match(root.stdout, /opl stages readiness --family-defaults/);
+  assert.match(root.stdout, /opl stagecraft status/);
+  assert.doesNotMatch(root.stdout, /opl stages readiness --family-defaults/);
   assert.doesNotMatch(root.stdout, /opl modules\s+Inspect managed module health/);
   assert.doesNotMatch(root.stdout, /capacity-budget/);
+
+  const stageReadiness = runCliRaw(['help', 'stages', 'readiness', '--text']);
+  assert.match(stageReadiness.stdout, /opl stages readiness/);
   assert.doesNotMatch(root.stdout, /domain-validity/);
 
   const scoped = runCliRaw(['help', 'install', '--text']);
@@ -315,8 +328,10 @@ test('default help surface recommends stages readiness and hides diagnostic stag
     'isolation',
   ];
 
-  assert.equal(commands.includes('stages readiness'), true);
-  assert.match(examples, /opl stages readiness --family-defaults/);
+  assert.equal(commands.includes('stages readiness'), false);
+  assert.equal(commands.includes('stagecraft status'), true);
+  assert.equal(runCli(['help', 'stages', 'readiness']).help.command, 'stages readiness');
+  assert.doesNotMatch(examples, /opl stages readiness --family-defaults/);
   for (const forbidden of forbiddenDefaultEntrypoints) {
     assert.doesNotMatch(examples, new RegExp(forbidden));
     assert.equal(commands.includes(`stages ${forbidden}`), false);

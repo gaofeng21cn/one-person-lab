@@ -433,17 +433,49 @@ test('OPL Foundry Agent index exposes MAS MAG RCA OMA direct and generated CLI f
     list.agents.map((entry: { foundry_frontdoor: string }) => entry.foundry_frontdoor),
     ['mas foundry', 'mag foundry', 'rca foundry', 'opl foundry agents inspect oma'],
   );
+  assert.deepEqual(
+    list.agents.map((entry: { cli_smoke: { executable_brand_cli_frontdoor: string | null } }) =>
+      entry.cli_smoke.executable_brand_cli_frontdoor
+    ),
+    ['mas foundry', 'mag foundry', 'rca foundry', null],
+  );
+  assert.deepEqual(
+    list.agents.map((entry: { cli_smoke: { json_flag_aliases: string[] } }) =>
+      entry.cli_smoke.json_flag_aliases
+    ),
+    [
+      ['--json', '--format json'],
+      ['--json', '--format json'],
+      ['--json', '--format json'],
+      ['--json'],
+    ],
+  );
 
   const mas = runCli(['foundry', 'agents', 'inspect', 'mas']).foundry_agent;
   assert.equal(mas.status, 'direct_cli_ready');
   assert.equal(mas.work_object.natural_alias, 'study');
+  assert.equal(mas.cli_smoke.executable_brand_cli_frontdoor, 'mas foundry');
+  assert.equal(mas.cli_smoke.status_json_command, 'mas foundry status --json');
   assert.equal(mas.compatibility_frontdoor, 'medautosci foundry');
   assert.equal(mas.mcp_projection.mcp_descriptor_must_delegate_to_series_spine, true);
+
+  const mag = runCli(['foundry', 'agents', 'inspect', 'mag']).foundry_agent;
+  assert.equal(mag.status, 'direct_cli_ready');
+  assert.equal(mag.cli_smoke.executable_brand_cli_frontdoor, 'mag foundry');
+  assert.equal(mag.cli_smoke.status_json_command, 'mag foundry status --json');
+  assert.equal(mag.cli_smoke.compatibility_status_json_command, 'medautogrant foundry status --json');
+
+  const rca = runCli(['foundry', 'agents', 'inspect', 'rca']).foundry_agent;
+  assert.equal(rca.status, 'direct_cli_ready');
+  assert.equal(rca.cli_smoke.executable_brand_cli_frontdoor, 'rca foundry');
+  assert.equal(rca.cli_smoke.status_json_command, 'rca foundry status --json');
+  assert.equal(rca.cli_smoke.compatibility_status_json_command, 'redcube foundry status --json');
 
   const oma = runCli(['foundry', 'agents', 'inspect', 'oma']).foundry_agent;
   assert.equal(oma.status, 'generated_surface_only');
   assert.equal(oma.direct_domain_cli, 'opl agents interfaces --repo-dir <opl-meta-agent-repo>');
   assert.equal(oma.foundry_frontdoor, 'opl foundry agents inspect oma');
   assert.equal(oma.compatibility_frontdoor, 'opl agents interfaces --repo-dir <opl-meta-agent-repo>');
+  assert.equal(oma.cli_smoke.executable_brand_cli_frontdoor, null);
   assert.equal(oma.direct_cli_frontdoor_policy.first_screen_must_identify_series, true);
 });
