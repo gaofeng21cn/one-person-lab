@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 
 import { FrameworkContractError } from './contracts.ts';
+import type { FamilyRuntimeDomainProfiles } from './family-runtime-command.ts';
 import type { FamilyRuntimeDomainId, TemporalStageAttemptSignalKind } from './family-runtime-types.ts';
 import {
   CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
@@ -187,6 +188,7 @@ export type TemporalSchedulerTickWorkflowInput = {
   force?: boolean;
   limit?: number;
   hydrate?: boolean;
+  domain_profiles?: FamilyRuntimeDomainProfiles;
 };
 
 export type TemporalSchedulerTickWorkflowState = {

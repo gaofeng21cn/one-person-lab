@@ -63,7 +63,11 @@ export type FamilyRuntimeCommandInput =
     taskScope?: FamilyRuntimeTaskScope;
     domainProfiles?: FamilyRuntimeDomainProfiles;
   }
-  | { mode: 'scheduler_status' | 'scheduler_install' | 'scheduler_remove' | 'scheduler_trigger'; providerKind?: FamilyRuntimeProviderKind }
+  | {
+    mode: 'scheduler_status' | 'scheduler_install' | 'scheduler_remove' | 'scheduler_trigger';
+    providerKind?: FamilyRuntimeProviderKind;
+    domainProfiles?: FamilyRuntimeDomainProfiles;
+  }
   | {
     mode: 'evidence_worklist';
     input: {

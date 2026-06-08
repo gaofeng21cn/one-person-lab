@@ -165,7 +165,7 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.equal(actions.get('workspace_report')?.delegated_surface, 'opl workspace report');
     assert.equal(actions.get('workspace_report')?.mutates, 'none_read_only');
     assert.deepEqual(actions.get('workspace_report')?.payload_fields, ['workspace_path']);
-    assert.deepEqual(actions.get('provider_scheduler_tick')?.payload_fields, ['force', 'limit', 'hydrate']);
+    assert.deepEqual(actions.get('provider_scheduler_tick')?.payload_fields, ['force', 'limit', 'hydrate', 'profile']);
     assert.equal(actions.get('provider_scheduler_tick')?.route_requires_domain_or_app_payload, true);
     assert.equal(actions.get('provider_scheduler_tick')?.can_submit_to_safe_action_shell, false);
   } finally {
@@ -631,7 +631,7 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
       '--action',
       'provider_scheduler_tick',
       '--payload',
-      '{"force":true,"limit":3,"hydrate":false}',
+      '{"force":true,"limit":3,"hydrate":false,"profile":"/tmp/dm-cvd.local.toml"}',
       '--dry-run',
     ], env).app_action_execution;
 
@@ -647,6 +647,8 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
       '--force',
       '--limit',
       '3',
+      '--profile',
+      '/tmp/dm-cvd.local.toml',
       '--no-hydrate',
     ]);
 

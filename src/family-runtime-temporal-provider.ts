@@ -101,6 +101,7 @@ export {
   queryTemporalStageAttemptWorkflow,
 } from './family-runtime-temporal-provider-parts/attempt-query.ts';
 export {
+  buildTemporalSchedulerTickWorkflowArgs,
   buildTemporalSchedulerHealthProjection,
   ensureTemporalSchedulerCadence,
   inspectTemporalSchedulerCadence,

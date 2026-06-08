@@ -157,3 +157,55 @@ test('family-runtime scheduler tick immediately picks up MAS default-executor pe
     db.close();
   }
 });
+
+test('family-runtime scheduler tick passes MAS profile into domain hydration before dispatch', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const profilePath = '/tmp/dm-cvd.scheduler-profile.toml';
+      let observedDomainProfiles: unknown = null;
+      let queueTickCalls = 0;
+
+      const tick = await runSchedulerTick(
+        db,
+        familyRuntimePaths(),
+        {
+          providerKind: 'temporal',
+          limit: 1,
+          hydrate: true,
+          domainProfiles: {
+            medautoscience: profilePath,
+          },
+        },
+        (_source, _limit, _hydrate, _taskScope, domainProfiles) => {
+          queueTickCalls += 1;
+          observedDomainProfiles = domainProfiles;
+          return {
+            selected_count: 1,
+            dispatches: [{ task_id: 'task-profile-dispatch', dispatch_status: 'admitted' }],
+            hydration: {
+              enqueued_count: 1,
+              requeued_count: 0,
+              idempotent_noop_count: 0,
+              filtered_count: 0,
+            },
+          };
+        },
+        {
+          inspectProvidersWithLifecycle: async () => readyProviderLifecycle() as any,
+          runProviderSloTick: async () => skippedProviderSloTick() as any,
+        },
+      );
+
+      assert.equal(queueTickCalls, 1);
+      assert.deepEqual(observedDomainProfiles, { medautoscience: profilePath });
+      assert.ok(tick.progress_first_ready_owner_action_pickup_slo);
+      assert.equal(tick.progress_first_ready_owner_action_pickup_slo.slo_status, 'satisfied');
+      assert.equal(tick.queue_tick.selected_count, 1);
+      assert.equal(tick.queue_tick.dispatches.length, 1);
+    });
+  } finally {
+    db.close();
+  }
+});

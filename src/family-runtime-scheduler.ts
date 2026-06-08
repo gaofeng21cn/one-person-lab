@@ -11,7 +11,7 @@ import {
 } from './family-runtime-provider-liveness-blocker.ts';
 import { runTemporalProviderSloTick } from './family-runtime-provider-slo-executor.ts';
 import type { FamilyRuntimeProviderKind } from './family-runtime-types.ts';
-import type { FamilyRuntimeTaskScope } from './family-runtime-command.ts';
+import type { FamilyRuntimeDomainProfiles, FamilyRuntimeTaskScope } from './family-runtime-command.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import {
   familyRuntimePaths,
@@ -205,6 +205,7 @@ export async function runTemporalSchedulerCadenceCommand(
   input: {
     mode: 'scheduler_status' | 'scheduler_install' | 'scheduler_remove' | 'scheduler_trigger';
     providerKind?: FamilyRuntimeProviderKind;
+    domainProfiles?: FamilyRuntimeDomainProfiles;
   },
 ) {
   const providerKind = resolveFamilyRuntimeProviderKind(input.providerKind);
@@ -247,7 +248,7 @@ export async function runTemporalSchedulerCadenceCommand(
   }
   const temporal = await temporalProviderModule();
   const action = input.mode === 'scheduler_install'
-    ? await temporal.ensureTemporalSchedulerCadence(paths)
+    ? await temporal.ensureTemporalSchedulerCadence(paths, { domainProfiles: input.domainProfiles })
     : input.mode === 'scheduler_remove'
       ? await temporal.removeTemporalSchedulerCadence(paths)
       : input.mode === 'scheduler_trigger'
@@ -402,6 +403,7 @@ export async function runSchedulerTick(
       hydrate: input.hydrate ?? true,
       limit: input.limit ?? 10,
       task_scope: input.taskScope ?? null,
+      domain_profiles: input.domainProfiles ?? null,
       provider_slo_receipt_status: providerSlo.provider_slo_execution_receipt.receipt_status,
       provider_slo_skip_reason: providerSloSkipReason(providerSlo),
       queue_selected_count: queueTick.selected_count,

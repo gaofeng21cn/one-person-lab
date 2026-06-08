@@ -5,6 +5,7 @@ import {
   SCHEDULER_TICK_WORKFLOW_NAME,
   SCHEDULER_TICK_WORKFLOW_RUN_TIMEOUT,
 } from '../family-runtime-temporal.ts';
+import type { FamilyRuntimeDomainProfiles } from '../family-runtime-command.ts';
 import {
   type TemporalWorkerPaths,
   withTemporalClient,
@@ -26,6 +27,28 @@ function temporalAddressForScheduler(paths: TemporalWorkerPaths) {
 
 function temporalSchedulerClientOptions(paths: TemporalWorkerPaths) {
   return { addressOverride: temporalAddressForScheduler(paths) };
+}
+
+function domainProfilesForScheduler(input?: FamilyRuntimeDomainProfiles): FamilyRuntimeDomainProfiles | undefined {
+  const medautoscienceProfile = input?.medautoscience?.trim()
+    || process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE?.trim();
+  return medautoscienceProfile ? { medautoscience: medautoscienceProfile } : undefined;
+}
+
+export function buildTemporalSchedulerTickWorkflowArgs(input: {
+  limit?: number;
+  hydrate?: boolean;
+  domainProfiles?: FamilyRuntimeDomainProfiles;
+} = {}) {
+  const domainProfiles = domainProfilesForScheduler(input.domainProfiles);
+  return {
+    provider_kind: 'temporal' as const,
+    tick_source: 'temporal-schedule',
+    force: false,
+    limit: input.limit ?? 10,
+    hydrate: input.hydrate ?? true,
+    ...(domainProfiles ? { domain_profiles: domainProfiles } : {}),
+  };
 }
 
 export function buildTemporalSchedulerHealthProjection(input: {
@@ -87,11 +110,13 @@ export async function ensureTemporalSchedulerCadence(paths: TemporalWorkerPaths,
   intervalMs?: number;
   limit?: number;
   hydrate?: boolean;
+  domainProfiles?: FamilyRuntimeDomainProfiles;
 } = {}) {
   const intervalMs = input.intervalMs ?? 5 * 60 * 1000;
   const scheduleId = 'opl-family-runtime-provider-scheduler';
   const workflowId = 'opl-family-runtime-provider-scheduler-tick';
   return withTemporalClient(async (client) => {
+    const workflowArgs = buildTemporalSchedulerTickWorkflowArgs(input);
     const options = {
       scheduleId,
       spec: {
@@ -104,13 +129,7 @@ export async function ensureTemporalSchedulerCadence(paths: TemporalWorkerPaths,
         taskQueue: resolveTemporalTaskQueue(),
         workflowRunTimeout: SCHEDULER_TICK_WORKFLOW_RUN_TIMEOUT,
         workflowExecutionTimeout: SCHEDULER_TICK_WORKFLOW_RUN_TIMEOUT,
-        args: [{
-          provider_kind: 'temporal',
-          tick_source: 'temporal-schedule',
-          force: false,
-          limit: input.limit ?? 10,
-          hydrate: input.hydrate ?? true,
-        }],
+        args: [workflowArgs],
       },
       policies: {
         overlap: ScheduleOverlapPolicy.SKIP,
@@ -138,6 +157,7 @@ export async function ensureTemporalSchedulerCadence(paths: TemporalWorkerPaths,
         interval_ms: intervalMs,
         workflow_id: workflowId,
         task_queue: resolveTemporalTaskQueue(),
+        domain_profiles: workflowArgs.domain_profiles ?? null,
       };
     } catch (error) {
       if (error instanceof ScheduleAlreadyRunning) {
@@ -159,6 +179,7 @@ export async function ensureTemporalSchedulerCadence(paths: TemporalWorkerPaths,
           interval_ms: intervalMs,
           workflow_id: workflowId,
           task_queue: resolveTemporalTaskQueue(),
+          domain_profiles: workflowArgs.domain_profiles ?? null,
         };
       }
       throw error;

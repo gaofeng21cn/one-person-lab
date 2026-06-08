@@ -64,6 +64,19 @@ function setDomainProfile(
   profiles[targetDomain] = profile;
 }
 
+export function parseDomainProfileOption(
+  profiles: FamilyRuntimeDomainProfiles,
+  domainId: FamilyRuntimeDomainId | undefined,
+  token: string,
+  value: string | undefined,
+) {
+  if (token !== '--profile' || !value) {
+    return false;
+  }
+  setDomainProfile(profiles, domainId, value);
+  return true;
+}
+
 export function parseQueueArgs(rest: string[]): FamilyRuntimeCommandInput | undefined {
   if (rest[0] === 'list') {
     const taskScope: FamilyRuntimeTaskScope = {};
@@ -269,8 +282,7 @@ export function parseTickArgs(rest: string[]): FamilyRuntimeCommandInput {
       hydrate = true;
     } else if (parseTaskScopeOption(taskScope, token, value)) {
       index += 1;
-    } else if (token === '--profile' && value) {
-      setDomainProfile(domainProfiles, taskScope.domainId, value);
+    } else if (parseDomainProfileOption(domainProfiles, taskScope.domainId, token, value)) {
       index += 1;
     } else if (token === '--source' && value) {
       source = value;
@@ -312,8 +324,7 @@ export function parseIntakeArgs(rest: string[]): FamilyRuntimeCommandInput {
       index += 1;
     } else if (parseTaskScopeOption(taskScope, token, value)) {
       index += 1;
-    } else if (token === '--profile' && value) {
-      setDomainProfile(domainProfiles, domainId ?? taskScope.domainId, value);
+    } else if (parseDomainProfileOption(domainProfiles, domainId ?? taskScope.domainId, token, value)) {
       index += 1;
     } else if (token === '--source' && value) {
       source = value;

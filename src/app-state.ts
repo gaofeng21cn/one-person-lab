@@ -655,6 +655,10 @@ function schedulerTickArgs(payload: JsonRecord) {
   if (limit !== null) {
     args.push('--limit', String(limit));
   }
+  const profile = stringPayloadField(payload, 'profile');
+  if (profile) {
+    args.push('--profile', profile);
+  }
   if (payload.hydrate === false) {
     args.push('--no-hydrate');
   }

@@ -244,6 +244,7 @@ export async function schedulerTickActivity(input: {
   force?: boolean;
   limit?: number;
   hydrate?: boolean;
+  domain_profiles?: import('./family-runtime-command.ts').FamilyRuntimeDomainProfiles;
 }) {
   heartbeat({
     provider_kind: input.provider_kind,
@@ -261,6 +262,7 @@ export async function schedulerTickActivity(input: {
         force: input.force,
         limit: input.limit,
         hydrate: input.hydrate,
+        domainProfiles: input.domain_profiles,
       },
       (source, limit, hydrate, taskScope, domainProfiles, queueTickOptions) => runSchedulerQueueTick(
         db,

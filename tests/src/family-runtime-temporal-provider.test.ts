@@ -30,6 +30,7 @@ import {
 import {
   buildTemporalStageAttemptWorkflowInputForTest,
   buildTemporalSchedulerHealthProjection,
+  buildTemporalSchedulerTickWorkflowArgs,
   buildTemporalStageAttemptReplayGateForTest,
   buildTemporalWorkerReadiness,
   resolveTemporalWorkerReadinessStatus,
@@ -556,6 +557,40 @@ test('Temporal scheduler health projection requires cadence install when missing
     'opl family-runtime scheduler install --provider temporal',
   );
   assert.equal(missing.authority_boundary.can_write_domain_truth, false);
+});
+
+test('Temporal scheduler cadence snapshots MAS profile into tick workflow args', () => {
+  const previousProfile = process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE;
+  try {
+    delete process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE;
+    const explicit = buildTemporalSchedulerTickWorkflowArgs({
+      limit: 7,
+      hydrate: true,
+      domainProfiles: {
+        medautoscience: '/tmp/dm-cvd.local.toml',
+      },
+    });
+    assert.deepEqual(explicit, {
+      provider_kind: 'temporal',
+      tick_source: 'temporal-schedule',
+      force: false,
+      limit: 7,
+      hydrate: true,
+      domain_profiles: {
+        medautoscience: '/tmp/dm-cvd.local.toml',
+      },
+    });
+
+    process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE = '/tmp/env-dm-cvd.local.toml';
+    const envBacked = buildTemporalSchedulerTickWorkflowArgs({ limit: 3 });
+    assert.equal(envBacked.domain_profiles?.medautoscience, '/tmp/env-dm-cvd.local.toml');
+  } finally {
+    if (previousProfile === undefined) {
+      delete process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE;
+    } else {
+      process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE = previousProfile;
+    }
+  }
 });
 
 test('Temporal scheduler health projection keeps historical overlap skips informational after recovery', () => {
