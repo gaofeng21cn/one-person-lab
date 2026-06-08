@@ -289,13 +289,13 @@ MCP / OpenAI tool / CLI / App action 需要从同一 action catalog 派生，避
 
 理想实现顺序不是“先把所有底层都做完”，而是围绕使用路径和维护路径同时收敛：
 
-1. 冻结 One Person Lab 品牌系统：产品层级、九模块语言、Agent 命名、App 状态语言、design token、icon/card/status pattern。
-2. 冻结 standard Agent Pack ABI：`agent/`、`contracts/`、`runtime/authority_functions/`、stage/quality/receipt/tool boundary 的必填 shape。
-3. 把 MAS/MAG/RCA/OMA 都压成同一 golden path：每个 Agent 一个 ordinary route，一个 App cockpit card，一个 direct/hosted parity surface。
-4. 把 generated surfaces 变成默认：CLI/MCP/OpenAI tool/Skill/App/status/workbench 从同一 catalog 派生。
-5. 把 private platform residue 逐项进删除门：no-active-caller、replacement parity、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance。
-6. 把 L5 证据矩阵运行起来：真实 user path、release/install cohort、long-soak、owner-chain scaleout、operator repair、owner acceptance。
-7. 只在 evidence 表明普通路径仍慢或不清楚时新增 surface；否则优先 demote、merge 或 retire。
+1. `landed_structural_gate`：冻结 One Person Lab 品牌系统。`brand-system-profile.json` 已把产品层级、九模块语言、Agent 命名、App 状态语言、visual/status pattern group 和 receipt/blocker 文案变成 required framework contract；后续还需要真实 UI token、icon/card/status pattern 和 public surface 逐项消费。
+2. `landed_structural_gate`：冻结 standard Agent Pack ABI。标准 skeleton contract、scaffold、stage pack v2、pack compiler input projection 和 conformance gate 已要求 `agent/`、`contracts/`、`runtime/authority_functions/`、stage/quality/receipt/tool boundary 的必填 shape；这不等于 L5 或 production ready。
+3. `in_progress_scaleout_gate`：把 MAS/MAG/RCA/OMA 都压成同一 golden path。结构上已经有 standard pack、domain handler target、generated/default caller、conformance 和 private residue gate；仍需要真实 MAS/MAG/RCA/OMA owner receipt、typed blocker、human gate、review/export/no-regression evidence 反复跑通。
+4. `landed_structural_gate`：把 generated surfaces 变成默认。CLI、MCP、OpenAI/AI SDK tool、Skill/plugin、App action、status read model 和 workbench 已由 domain pack compiler 的 `default_entry_policy` / `supported_derived_surfaces` 从同一 action/stage catalog 派生。
+5. `landed_cleanup_gate`：把 private platform residue 逐项进删除门。`wrapper-retirement-gate-policy.json` 和 `private_platform_residue_gate` 已按 scheduler、queue、session store、workbench、status shell、domain wrapper、runtimeWatch、agent-lab materializer 分类，并要求 no-active-caller、replacement parity、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance；它不授权 OPL 物理删除。
+6. `remaining_evidence_gate`：把 L5 证据矩阵运行起来。真实 user path、release/install cohort、long-soak、owner-chain scaleout、operator repair、owner acceptance 仍是后续证据尾项。
+7. `ongoing_governance`：只在 evidence 表明普通路径仍慢或不清楚时新增 surface；否则优先 demote、merge 或 retire。
 
 ## 不应继续强化的方向
 

@@ -6,8 +6,8 @@
   "state": "active_contract",
   "machine_boundary": "This profile is a machine-readable brand-system baseline. It governs naming, language, pattern refs, and false-authority claims only; it does not store domain truth, artifact bodies, memory bodies, GUI release truth, quality verdicts, owner receipts, typed blockers, runtime readiness, or production readiness.",
   "source_refs": [
-    "docs/references/runtime-substrate/opl-family-ideal-system-assessment.md#ideal-product-brand-structure",
-    "docs/references/brand-modules/README.md",
+    "human_doc:opl_family_ideal_system_assessment",
+    "human_doc:opl_brand_modules_reference",
     "contracts/opl-framework/brand-module-registry.json",
     "contracts/opl-framework/brand-module-surfaces.json",
     "contracts/opl-framework/foundry-agent-series-contract.json",

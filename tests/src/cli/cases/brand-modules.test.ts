@@ -87,7 +87,7 @@ test('brand system profile freezes product grammar and language against the nine
   assert.equal(profile.authority_boundary.can_sign_owner_receipt, false);
   assert.equal(profile.authority_boundary.can_create_typed_blocker, false);
   assert.equal(
-    validation.brandSystemProfile.source_refs.includes('docs/references/brand-modules/README.md'),
+    validation.brandSystemProfile.source_refs.includes('human_doc:opl_brand_modules_reference'),
     true,
   );
 });
