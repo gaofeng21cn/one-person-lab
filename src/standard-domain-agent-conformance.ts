@@ -427,6 +427,12 @@ export function buildStandardDomainAgentConformanceReport(
   );
   const structuralConformanceStatus = blockedCount === 0 ? 'passed' : 'blocked';
   const stageRunDomainAdoptionReadModel = buildStageRunDomainAdoptionReadModel(reports);
+  const liveStageRunProgressEvidenceWorklist =
+    stageRunDomainAdoptionReadModel.live_stage_run_progress_evidence_worklist;
+  const liveStageRunProgressEvidenceOpenDomainCount =
+    typeof liveStageRunProgressEvidenceWorklist.open_domain_count === 'number'
+      ? liveStageRunProgressEvidenceWorklist.open_domain_count
+      : 0;
   return {
     version: 'g2',
     passed_count: passedCount,
@@ -434,6 +440,12 @@ export function buildStandardDomainAgentConformanceReport(
     structural_conformance_status: structuralConformanceStatus,
     production_evidence_tail_count: productionEvidenceTailCount,
     production_evidence_tail_policy: 'reported_separately_not_a_structural_pass_condition',
+    live_stage_run_progress_evidence_status:
+      stageRunDomainAdoptionReadModel.live_stage_run_progress_evidence_status,
+    live_stage_run_progress_evidence_open_domain_count:
+      liveStageRunProgressEvidenceOpenDomainCount,
+    live_stage_run_progress_evidence_policy:
+      stageRunDomainAdoptionReadModel.live_stage_run_progress_evidence_policy,
     stage_run_domain_adoption_read_model: stageRunDomainAdoptionReadModel,
     standard_domain_agent_conformance: {
       surface_kind: 'opl_standard_domain_agent_conformance_report',
@@ -445,6 +457,12 @@ export function buildStandardDomainAgentConformanceReport(
       structural_conformance_status: structuralConformanceStatus,
       production_evidence_tail_count: productionEvidenceTailCount,
       production_evidence_tail_policy: 'reported_separately_not_a_structural_pass_condition',
+      live_stage_run_progress_evidence_status:
+        stageRunDomainAdoptionReadModel.live_stage_run_progress_evidence_status,
+      live_stage_run_progress_evidence_open_domain_count:
+        liveStageRunProgressEvidenceOpenDomainCount,
+      live_stage_run_progress_evidence_policy:
+        stageRunDomainAdoptionReadModel.live_stage_run_progress_evidence_policy,
       stage_run_domain_adoption_read_model: stageRunDomainAdoptionReadModel,
       summary: {
         total_repo_count: reports.length,
@@ -453,6 +471,12 @@ export function buildStandardDomainAgentConformanceReport(
         structural_conformance_status: structuralConformanceStatus,
         production_evidence_tail_count: productionEvidenceTailCount,
         production_evidence_tail_policy: 'reported_separately_not_a_structural_pass_condition',
+        live_stage_run_progress_evidence_status:
+          stageRunDomainAdoptionReadModel.live_stage_run_progress_evidence_status,
+        live_stage_run_progress_evidence_open_domain_count:
+          liveStageRunProgressEvidenceOpenDomainCount,
+        live_stage_run_progress_evidence_policy:
+          stageRunDomainAdoptionReadModel.live_stage_run_progress_evidence_policy,
         stage_run_domain_adoption_status: stageRunDomainAdoptionReadModel.status,
         stage_run_domain_adoption_domain_count: stageRunDomainAdoptionReadModel.domain_count,
         stage_run_controlled_canary_evidence_scope:

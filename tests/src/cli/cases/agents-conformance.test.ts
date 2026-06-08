@@ -96,8 +96,39 @@ test('agents conformance reports structural readiness separately from production
     conformancePayload.production_evidence_tail_policy,
     'reported_separately_not_a_structural_pass_condition',
   );
+  assert.equal(
+    conformancePayload.live_stage_run_progress_evidence_status,
+    'required_from_domain_owner',
+  );
+  assert.equal(conformancePayload.live_stage_run_progress_evidence_open_domain_count, 1);
+  assert.equal(
+    conformancePayload.live_stage_run_progress_evidence_policy,
+    'controlled_canary_and_structural_conformance_do_not_close_live_domain_progress_evidence',
+  );
   const adoptionReadModel = conformancePayload.stage_run_domain_adoption_read_model;
   assert.deepEqual(adoptionReadModel, report.stage_run_domain_adoption_read_model);
+  assert.equal(
+    conformancePayload.live_stage_run_progress_evidence_status,
+    adoptionReadModel.live_stage_run_progress_evidence_status,
+  );
+  assert.equal(
+    conformancePayload.live_stage_run_progress_evidence_open_domain_count,
+    adoptionReadModel.live_stage_run_progress_evidence_worklist.open_domain_count,
+  );
+  assert.equal(
+    conformancePayload.live_stage_run_progress_evidence_policy,
+    adoptionReadModel.live_stage_run_progress_evidence_policy,
+  );
+  assert.equal(
+    report.live_stage_run_progress_evidence_status,
+    adoptionReadModel.live_stage_run_progress_evidence_status,
+  );
+  assert.equal(report.live_stage_run_progress_evidence_open_domain_count, 1);
+  assert.equal(
+    report.summary.live_stage_run_progress_evidence_status,
+    adoptionReadModel.live_stage_run_progress_evidence_status,
+  );
+  assert.equal(report.summary.live_stage_run_progress_evidence_open_domain_count, 1);
   assert.equal(adoptionReadModel.surface_kind, 'opl_stage_run_domain_adoption_read_model');
   assert.equal(adoptionReadModel.status, 'passed');
   assert.equal(adoptionReadModel.domain_count, 1);
@@ -410,6 +441,16 @@ test('agents conformance keeps StageRun next action on domain owner when non-Sta
   const repo = report.reports[0];
   const adoptionDomain = report.stage_run_domain_adoption_read_model.domains[0];
   assert.equal(report.status, 'blocked');
+  assert.equal(report.passed_count, 0);
+  assert.equal(report.blocked_count, 1);
+  assert.equal(report.structural_conformance_status, 'blocked');
+  assert.equal(report.live_stage_run_progress_evidence_status, 'required_from_domain_owner');
+  assert.equal(report.live_stage_run_progress_evidence_open_domain_count, 1);
+  assert.equal(
+    report.summary.live_stage_run_progress_evidence_status,
+    'required_from_domain_owner',
+  );
+  assert.equal(report.summary.live_stage_run_progress_evidence_open_domain_count, 1);
   assert.equal(repo.workspace_file_lifecycle_checks.status, 'blocked');
   assert.equal(repo.stage_run_kernel_profile_checks.status, 'passed');
   assert.equal(repo.stage_run_canary_evidence_checks.status, 'passed');
