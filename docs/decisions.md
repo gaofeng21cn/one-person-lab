@@ -7,6 +7,19 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-06-08
 
+### 决策：默认治理采用抓大放小，细粒度完整性不得反向成为 ordinary 卡点
+
+原因：workspace topology v2 的后续复盘暴露出一个可扩展到全 OPL family 的设计风险：为了防止走歪而持续增加规则、profile、projection、receipt、fleet report、L5 evidence、cleanup gate 和 release gate，最终可能让普通 owner delta 先被平台证明、诊断、镜像一致性、计数或 delete accounting 卡住。OPL 需要把“大边界”和“小细节”分层治理：大边界保证不越权、不误闭合、不制造第二真相源；小细节必须服务推进，不能抢占默认路径。
+
+影响：
+
+- `抓大` 的 hard boundary 固定为 owner、authority、stage lifecycle、workspace topology、selected executor、single ordinary route、launch / execution / closeout admission、accepted owner answer shape、App release verdict、physical delete authority 和 no-second-truth。缺这些会导致错误启动、越权、不可审计、不可恢复、误闭合或不可逆 mutation，必须 fail closed。
+- `放小` 的默认降级对象包括 prompt / skill / tool / knowledge / rubric refs 完整性、path alias、generated projection mirror、workspace fleet/detail drift、worklist raw counter、diagnostic proof、route variant、receipt accounting、wrapper lineage、L5 evidence matrix item、provider ops detail 和 release cohort diagnostic。它们默认进入 advisory、audit、diagnostic、cleanup 或 production evidence lane。
+- 小细节只有在造成错误启动、越权、不可恢复、不可审计、无法 closeout、owner answer shape 不合法或不可逆 mutation 时，才允许升级为 hard blocker；只让报告更全、证明更漂亮或不确定性更少，不构成 ordinary blocker。
+- ordinary App/CLI/operator path 继续以 `current_owner_delta` 为唯一 planning root。raw worklist、evidence ledger、provider trace、route variant menu、private residue inventory、cleanup delete gate、L5 evidence ledger 和 release diagnostics 不得覆盖当前 domain / App / human / provider owner answer。
+- 新增 surface / gate / contract / read model 必须先声明 default lane、hard-blocker upgrade condition、demotion condition、protected boundary 和 accepted answer shape；答不出这些问题时，只能作为 diagnostic/reference 起步。
+- 该决策不减少 launch safety、authority boundary、receipt binding、forbidden-write、domain owner receipt、typed blocker、quality gate、release gate 或 physical delete gate 的要求；它只防止这些要求的支撑细节反向成为普通进展卡点。
+
 ### 决策：App-owned Codex runtime updater 不修改全局 Homebrew / npm / system Codex
 
 原因：Full first-install 和普通 App startup-maintenance 需要能更新 App 自己携带的 `runtime/current/bin/codex`，但用户机器上的 Homebrew、全局 npm 和系统 PATH Codex 是用户级工具链，不应被 OPL 自动安装流程改写。此前把 Codex update 表达成 `npm install -g @openai/codex@latest` 会把 App runtime 修复和全局工具链 mutation 混在一起，增加权限、污染和回滚风险。

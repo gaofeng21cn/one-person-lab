@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `family_ideal_state_gap_plan`
 State: `active_plan`
 Machine boundary: 本文是人读 gap / completion map。机器真相继续归 `contracts/`、源码、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、真实 workspace 与 App evidence。
-Date: `2026-06-07`
+Date: `2026-06-08`
 
 ## 读法
 
@@ -51,6 +51,12 @@ current_owner_delta outer loop
 - `目的反推必要性`: 只有能推动 owner delta、保护 authority boundary、支撑 durable execution / replay / audit、或减少 App/operator 决策成本的 surface，才有资格进入默认面。
 - `MVP 检查阻碍性`: 凡是让普通尝试先陷入 receipt-only、read-model reconcile、platform repair、stale-route redrive、diagnostic proof、evidence accounting、route variant 或 wrapper lineage 的 surface，都应下沉为 audit/detail、显式 lane，或进入 retire gate。
 - `统一判断`: 更符合预期不是“更多证据、更全 worklist、更厚合同”，而是默认路径更短、当前 owner 更明确、accepted answer shape 更清楚、artifact / receipt / typed blocker 更可接力、domain verdict 更稳定地回到 domain owner。
+
+2026-06-08 以后，workspace topology v2 暴露出的后续风险按 `抓大放小` 扩展为全 family 审计原则：
+
+- `抓大`: 硬守 owner、authority、stage lifecycle、workspace topology、selected executor、single ordinary route、launch / execution / closeout admission、domain answer shape、App release verdict、physical delete authority 和 no-second-truth。缺这些会走歪、越权、误闭合或不可审计，必须 fail closed。
+- `放小`: prompt / skill / tool / knowledge / rubric refs 完整性、path alias、generated projection mirror、worklist raw counter、diagnostic proof、route variant、receipt accounting、wrapper lineage、L5 evidence matrix item 和 release cohort detail，默认不能抢占 ordinary path。它们只在造成错误启动、越权、不可恢复、不可审计、无法 closeout 或不可逆 mutation 时升级为 hard blocker。
+- `默认判断`: 新增 surface / gate 先问它是否保护大边界，再问它是否让普通 owner delta 更短。如果答案只是不确定性更少、报告更全或证明更漂亮，默认下沉为 advisory / audit / diagnostic / cleanup / production evidence lane。
 
 当前三条线的分工固定为：
 
@@ -152,6 +158,7 @@ Unified owner-delta 仍按 live 机器面读取，不从本页继承旧 counters
 | `wrapper_retirement` | retained wrapper / adapter / script 只能保留到 no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance gate 关闭。 |
 | `app_cockpit` | App 默认展示 purpose、task/stage、next owner、accepted answer shape、artifact/blocker 和 release/user-path facts；full drilldown 只做诊断。 |
 | `stage_native_kernel` | StageRun Kernel 默认面只回答 current owner delta、缺什么 role/receipt/blocker 和下一 owner；launch/closeout blockers 与 advisory/audit/drilldown 分层，避免把新 Kernel 变成更厚 admission、worklist 或 read-model 补偿链。Execution authorization、attempt lease 和 closeout receipt binding 是 launch-hard / closeout-binding gate；缺失时生成 OPL-owned execution authorization blocker，owner=`one-person-lab`，并明确它不是 domain typed blocker、不会改 domain truth、不会替 domain owner 签 receipt。 |
+| `grip_big_release_small` | 大边界 fail closed，小细节默认下沉。任何 surface 如果只提高解释、审计、计数、展示或静态完整性，但不能直接防止走歪、越权、误闭合、不可恢复、不可审计或不可逆 mutation，就不能成为 ordinary default blocker。 |
 
 本页的 gap 只能标成三类：
 
@@ -160,6 +167,23 @@ Unified owner-delta 仍按 live 机器面读取，不从本页继承旧 counters
 - `needs_retirement`: surface 已被 OPL generated/hosted surface、App contract 或 domain authority function 替代，应走删除或 tombstone。
 
 不得用 `tests passed`、`conformance passed`、`open_worklist=0`、`verified ledger`、`doctor clean` 或 `docs updated` 单独关闭这些 gap。
+
+## 抓大放小风险审计
+
+这组风险从 workspace v2 的物理根 / alias / generated projection 治理问题扩展到 OPL Framework、App 和 MAS/MAG/RCA/OMA。目标不是减少约束，而是让约束只卡住真正会走歪的地方。
+
+| risk surface | 风险 | 当前分类 | 优化口径 |
+| --- | --- | --- | --- |
+| `workspace_governance_detail` | profile binding、topology event、root mirror、fleet report 和 resource inventory 继续加细后，可能把 workspace 管理本身变成用户推进 stage 的前置卡点。 | `needs_demotion` for ordinary path / `meets_target` for L4 governance | Project Unit、Stage Artifact Unit、owner receipt / typed blocker 和 default `projects/<project-id>` 是大边界；alias、mirror、inventory、fleet drift 和 resource provenance 只进 validate/doctor/report，不能阻断 ordinary domain owner delta，除非它会导致错误 project、越权写入、无法 closeout 或不可恢复。 |
+| `stage_admission_bloat` | StageRun Kernel / conformance 继续把 strategy refs、tool refs、quality hints 和 controlled canary 扩成 launch hard gate，会牺牲 executor 自主性。 | `needs_demotion` for advisory refs | Launch 只卡 identity、owner、scope、executor binding、authority、required role slot、receipt/blocker shape、forbidden write 和 replay/audit lineage；strategy completeness、reviewer note、rubric detail 和 optional knowledge 缺失默认 advisory / route-back。 |
+| `read_model_worklist_root` | raw worklist、open counter、typed-blocker group、evidence ledger 或 provider repair lane 重新成为 planning root，会把用户带回平台修复循环。 | `meets_target` with no-resurrection watch | `current_owner_delta` 是唯一 ordinary planning root；worklist/raw refs 只支持 full detail、audit 和 queue diagnosis。open worklist 为 0 不等于完成；raw worklist 非 0 也不自动成为普通下一步。 |
+| `domain_adoption_contract_depth` | 标准 agent pack、stage operating principles、series profile、controlled canary 和 L5 evidence matrix 过细后，可能替代真实 domain owner evidence。 | `needs_live_owner_evidence` | Structural conformance 只保证不走歪；domain progression 仍只由 owner receipt、quality/export/review receipt、human gate、typed blocker、no-regression ref 或 long-soak ref 关闭。 |
+| `cleanup_delete_gate` | wrapper / facade / alias / helper 清理门如果进入 ordinary progress，会让交付线被 delete accounting 抢占。 | `needs_retirement` but explicit lane only | Cleanup lane 保留 replacement parity、no-active-caller、owner decision、no-forbidden-write 和 tombstone/provenance；只有显式进入 cleanup lane 或 domain owner 给出 physical delete authorization / keep / typed blocker 时执行。 |
+| `app_release_evidence_detail` | App release cohort、Homebrew checksum、clean-VM、operator bundle 和 updater detail 过多后，可能污染 App 普通 cockpit 或 domain readiness。 | `needs_release_user_path_evidence` | Release gate 归 App release owner；ordinary cockpit 只显示 release owner blocker/receipt 和 user-path fact，不把 release diagnostics 推成 domain / framework next action。 |
+| `agent_lab_improvement_loop` | Agent Lab 的 eval、root cause、variant、promotion 和 rollback refs 如果升格为 domain verdict，会制造第二质量权威。 | `needs_demotion` unless owner work order accepted | Agent Lab 只产出 improvement candidate、work order、acceptance evidence 或 typed blocker；domain owner 仍决定 artifact、quality/export/review verdict 和 production acceptance。 |
+| `provider_long_soak_ops` | Temporal worker、SLO、supervisor、retry/dead-letter 和 production proof 可能重新抢占 domain owner answer。 | `production evidence lane` | Provider liveness 缺 provider attempt / lease / authorization 时可以成为 OPL runtime blocker；只缺 domain owner answer 时，provider ops 退到 full detail / production evidence。 |
+
+新增或复审任何 surface 时，必须显式回答五个问题：它保护哪个大边界、默认 lane 是什么、什么条件升级为 hard blocker、什么条件降为 advisory / audit、accepted owner answer shape 是什么。答不出时，默认不能进入 ordinary path。
 
 ## 功能 / 结构差距
 
