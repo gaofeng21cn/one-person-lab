@@ -26,6 +26,32 @@ App / operator workbench 的默认 GUI 消费面是 `opl_app_state.v1`，由 `op
 
 App 运行状态页的 stage log 来源是 OPL `stage_attempt_workbench.stage_progress_log` 和 `runtime_visualization_projection`，不是 Temporal Web UI 的页面结构。Temporal Web UI 只作为 `temporal_webui_ref` operator/debug link 展开，用于定位 workflow history、run id、namespace 和 Search Attributes；App 首屏、full drilldown、action routing 和用户语义状态继续以 OPL semantic projection 为准。
 
+## App Console 收薄目标
+
+`OPL Console` 在产品层只表示 App/operator cockpit，不是 ledger browser、runtime owner 或 domain owner。普通用户和 operator 默认页应从同一 compact root 读取：
+
+```text
+opl app state
+  -> current_owner_delta
+  -> stage / artifact / blocker summary
+  -> allowed App action
+  -> explicit drilldown ref
+```
+
+因此，App Console 目标态按下面规则维护：
+
+| 面 | 默认页允许 | 只进 full drilldown / diagnostic |
+| --- | --- | --- |
+| 当前任务 | task / agent / stage / owner / accepted answer shape。 | raw route variants、full worklist、typed blocker group、provider trace。 |
+| 当前产物 | stage artifact unit 的 current pointer、manifest validity、owner answer / typed blocker refs。 | artifact gallery internals、historical attempts、orphan/broken artifact drilldown。 |
+| 当前行动 | `opl app action execute` 暴露的 owner-aware action；action payload 必须保持 App-facing envelope。 | provider redrive、worker repair、safe-action evidence record、legacy cleanup。 |
+| 当前证据 | hard gate、owner receipt ref、typed blocker ref、human gate ref、no-regression ref。 | Atlas / Vault telemetry、replay packet、long-soak refs、receipt counters、cleanup provenance。 |
+| Agent Lab | improvement candidate、risk route、work-order status、target owner receipt / typed blocker ref。 | suite internals、variant comparison detail、promotion ledger body、worktree lifecycle trace。 |
+
+App Console 不选择 executor/backend，不拼接 domain truth，不读取 artifact/memory body，不把 full drilldown counter 写成完成状态。非默认 executor、provider repair、Agent Lab promotion、Developer Mode 和 cleanup route 都必须是显式 operator/developer surface；普通用户路径保持 `Codex CLI` concrete executor + Foundry Agent task entry。
+
+App Console 与 `OPL Atlas` / `OPL Vault` 的关系也固定：Atlas/Vault 负责收集和索引 refs-only telemetry；Console 只消费 fold 后的 owner delta、hard gate、artifact/blocker summary 和 drilldown locator。telemetry 增长、ledger verified、provider completion、scorecard pass 或 full detail visible 不能被 Console 升级成 domain ready、artifact ready、App release ready 或 production ready。
+
 ## 内容
 
 | 文件 | 生命周期状态 | 当前 owner | 阅读规则 |

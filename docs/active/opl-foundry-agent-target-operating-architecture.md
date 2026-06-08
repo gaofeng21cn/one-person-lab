@@ -579,14 +579,18 @@ domain-agent-repo/
 
 | Phase | 当前读法 |
 | --- | --- |
-| Design target | 目标架构已冻结为 `current_owner_delta + Cognitive Computation Kernel + Stage Artifact Unit + Passive Evidence Vault + App Cockpit`。 |
+| Design target | 目标架构已冻结为 `OPL resource model + current_owner_delta + Cognitive Computation Kernel + Stage Artifact Unit + Passive Evidence Vault + App Cockpit + Agent Lab improvement control plane`。 |
 | Owner delta contract | 所有默认 read surface 应从同一 `current_owner_delta` 派生；raw worklist 不能覆盖 owner delta。 |
 | Audit-plane passivity | raw evidence、stage replay、typed blocker group 和 private residue 只能在 fold 成 owner answer / typed blocker / hard gate / owner delta 后影响默认路径。 |
 | Cognitive kernel | Stage pack 只声明 prompt / skill / tool affordance / knowledge / rubric / quality gate refs；工具目录不能变成 workflow script。 |
 | Progress truth | Stage attempt progress 从 artifact unit + owner answer + current pointer 推导。 |
 | Golden path | MAS/MAG/RCA/OMA 每个 agent 只有一个 ordinary route；proof/diagnostic/cleanup/long-soak/variant 显式 lane 化。 |
-| Wrapper retirement | Domain repo retained surface 逐项按删除门处理；OPL descriptor ready、conformance pass 或 test pass 不授权跨仓删除。 |
-| Agent Lab loop | Agent Lab / OMA 只产出 improvement candidate、work order、mechanism proposal 或 typed blocker；target owner 关闭真实 owner receipt。 |
+| Generated surface / Domain Pack | Declarative Domain Pack 和 authority ABI 是新 Agent 默认形态；OPL pack compiler / generated interface bundle 可以生成 CLI/MCP/Skill/product-entry/OpenAI/AI SDK/status/workbench surface，但 generated ready 只能证明结构归位，不证明 domain ready。 |
+| Surface budget compiler policy | 新 default surface 先按 `contracts/opl-framework/default-surface-budget.schema.json` 和 `surface-budget-policy.json` 分类；debug、history、telemetry、cleanup、proof lane 和 long-soak 只能作为 explicit lane，不能抢 ordinary path。 |
+| Small reconcilers | Route、artifact、owner-delta、Atlas/Vault telemetry 和 App Console reconciler 都只做 desired/current 对齐与 refs-only 投影；Stage current pointer、terminal state 和 `current_owner_delta` 仍归 Stage Transition Authority。 |
+| App Console thinning | App 默认页只消费 `opl app state`、`current_owner_delta`、artifact/blocker summary 和 allowed action；full worklist、provider trace、ledger browser、route variants、private residue 和 replay packet 只在 explicit drilldown。 |
+| Agent Lab loop | Agent Lab / OMA 只产出 improvement candidate、work order、mechanism proposal、risk gate、target owner receipt / typed blocker ref 或 follow-up；target owner 关闭真实 owner receipt。 |
+| Wrapper retirement | Domain repo retained surface 逐项按删除门处理；OPL descriptor ready、conformance pass、generated surface visible 或 test pass 不授权跨仓删除。 |
 
 ## Acceptance Gate Categories
 

@@ -44,6 +44,21 @@ OPL stage_control_graph
           -> MAS owner receipt / typed blocker / route-back ref
 ```
 
+这组 runtime 对象也应按 OPL resource model 读成一条可维护链：
+
+```text
+workspace/project
+  -> stage
+  -> stage_run / attempt
+  -> route transition event
+  -> stage artifact unit
+  -> owner answer / typed blocker / human gate
+  -> current_owner_delta
+  -> App Console action / Agent Lab follow-up
+```
+
+`workspace/project` 只定义 stage artifact 的用户检查根和生命周期投影；`stage_run / attempt` 只定义 OPL runtime envelope；`route transition event` 是 Stage Transition Authority 的输入；`stage artifact unit` 只证明 physical output、manifest、hash、lineage 和 owner answer refs；`current_owner_delta` 是 App/CLI/operator 默认根。App Console、Agent Lab、Atlas / Vault telemetry 和 evidence worklist 都是这条链的 consumer 或 observation producer，不能成为第二 transition authority。
+
 核心对象：
 
 | 对象 | Owner | 语义 |
@@ -55,6 +70,20 @@ OPL stage_control_graph
 | `authority_function` | Domain repo | 写 domain truth、artifact body、quality verdict、owner receipt 或 typed blocker 的最小程序面。 |
 | `receipt/event ledger` | OPL for refs, domain for authority | OPL 保存 refs-only attempt/event/transport receipt；domain 签 owner receipt 和 verdict/blocker。 |
 | `stage_transition_authority` | OPL runtime | generic primitive；读取多模块提交的 transition intent / owner answer / typed blocker / human gate / provider observation，并把 append-only authority event log 派生为唯一 stage current pointer、StageRun terminal state 和 `current_owner_delta`。 |
+
+## Resource Reconciler Boundary
+
+OPL 可以有多个小 reconciler，但它们都必须是 derived surface，不是 authority：
+
+| reconciler | 允许职责 | 禁止职责 |
+| --- | --- | --- |
+| `route_reconciler` | 把 domain owner route refs hydrate 成 typed queue item、stage attempt request、conflict envelope 或 operator projection，并对齐 desired route 与 actual attempt / provider / receipt / human-gate / dead-letter state。 | 执行 route、生成候选、创建 owner receipt、签 typed blocker、关闭 stage 或声明 domain ready。 |
+| `stage_artifact_reconciler` | 从 Stage Folder、manifest、content hash、lineage、owner receipt / typed blocker 和 artifact current pointer 重建 artifact progress。 | 把目录存在、file presence、provider completion 或 gallery projection 写成 stage complete。 |
+| `owner_delta_reconciler` | 从 Stage Transition Authority 派生状态和合法 owner answer shape 生成 compact `current_owner_delta`。 | 从 raw evidence tail、typed blocker group、worklist counter 或 App projection 合成默认 next action。 |
+| `atlas_vault_reconciler` | 把 route graph、evidence、receipt、trace、replay、long-soak、cleanup 和 no-regression refs 收进 Atlas / Vault telemetry。 | 让 telemetry count 直接改变 current pointer、terminal state、quality verdict 或 delivery progress。 |
+| `app_console_reconciler` | 把 `current_owner_delta`、hard gate、artifact/blocker refs 和 allowed actions 投影成 App Console / operator action。 | 让 GUI shell、full drilldown 或 operator override 写 domain truth、owner receipt、stage terminal state 或 App release verdict。 |
+
+这些 reconciler 的共同迁移门是：先证明 replacement parity、active caller cutover、no-forbidden-write 和 owner receipt / typed blocker 或 stable blocker，再收薄或删除旧 domain-local scheduler、status shell、workbench wrapper、route menu、sidecar 和 read-model accounting path。当前迁移顺序和 open tail 仍归 `docs/active/current-state-vs-ideal-gap.md`。
 
 ## Stage Transition Authority
 

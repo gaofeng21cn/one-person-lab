@@ -13,6 +13,17 @@ Machine boundary: 人读索引。硬约束仍以核心五件套、contracts、sc
 - [关键决策](../decisions.md)
 - [文档组合治理](../docs_portfolio_consolidation.md)
 
+## 入口政策读法
+
+runtime / product 文档入口新增或上提 surface 时，先按下面顺序归位：
+
+1. 是否改变 stage currentness、owner delta、terminal state 或 closeout truth：若是，必须回到 Stage Transition Authority、Stage Folder / manifest / owner receipt / typed blocker 和核心五件套；普通文档、App、Agent Lab、read-model projection 或 telemetry 不能直接持有。
+2. 是否属于 standard OPL Agent 形态：Domain repo 默认只保留 declarative Domain Pack、authority ABI、domain handler / native helper 和 direct skill path；CLI/MCP/App/status/workbench/default-caller shell 应由 OPL generated/hosted surface 或 App product contract 承担。
+3. 是否应该进入默认 surface：先过 surface budget。只有影响 launch safety、authority boundary、evidence / replay / audit / route-back，或被 App / runtime 反复消费的能力，才允许进入普通 help、默认 docs 入口或 App Console 默认页。
+4. 是否只是 telemetry / diagnostic / history / cleanup：默认进入 Atlas / Vault refs、full drilldown、diagnostic lane、cleanup lane 或 history/tombstone，不生成默认 next action。
+
+当前 active gap owner 仍是 [OPL Family 当前状态与理想目标差距](../active/current-state-vs-ideal-gap.md)。本目录只冻结长期政策和迁移门，不维护 live counter、执行顺序或 closeout ledger。
+
 ## 内容
 
 | 文件 | 生命周期状态 | 当前 owner | 阅读规则 |
