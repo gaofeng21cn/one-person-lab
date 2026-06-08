@@ -18,6 +18,7 @@ It is repo-tracked because the current framework needs stable machine-readable i
 - stage graph / owner-route hydration / reconciliation / attempt-ledger boundaries for complex domain agents, where stage is the OPL attempt unit and route is a domain-owner semantic rather than a small stage
 - functional agent runtime harness coverage for queue, typed closeout, refs-only memory writeback, human gate, retry, dead-letter, and repair transitions
 - domain pack compiler and generated interface read model that compiles admitted domain packs or standard agent repo contracts into OPL-owned CLI / MCP / Skill / product-entry / OpenAI / AI SDK / sidecar / status / workbench / harness generated-surface handoff projections
+- standard domain-agent admission gates that keep candidate identity, domain truth owner, generated default entry, standard pack ABI, stage artifact contract, execution model, authority boundary, owner receipt, typed blocker, and human gate false-authority requirements machine-readable without admitting any specific domain or claiming readiness
 - surface-budget governance that keeps new default surfaces limited to launch safety, authority boundary, evidence/replay/audit/route-back, or repeated App/runtime consumption
 - operating-loop adoption governance that maps external Codex work-loop patterns into OPL workstream/thread continuity, goal oracle, heartbeat/steering, artifact-first review, memory refs, receipt, and read-model boundaries without importing an external runtime or authority
 - brand-module governance that keeps Charter, Atlas, Workspace, Stagecraft, Runway, Vault, Console, Foundry Lab, and Connect at the Workspace-level structural baseline through one registry, one frontdoor governance contract, one module-surface contract, native per-module CLI/read-model families, validation/doctor gates, and false-authority boundary
@@ -93,6 +94,7 @@ These schema files are the machine-readable OPL target architecture surface. The
 - `contracts/family-orchestration/family-stage-proof-bundle.schema.json`, `contracts/family-orchestration/family-stage-graph-projection.schema.json`, and `contracts/family-orchestration/family-stage-integrity-metadata.schema.json` are companion contracts for stage-pack proof, graph, integrity, citation-support, evidence-handoff, data-access, and human-checkpoint metadata. They belong to family orchestration because MAS/MAG/RCA publish domain projections or adapters into them while keeping domain truth and verdict authority in their own repositories.
 - `family-executor-adapter-defaults.json` remains useful as a shared executor contract.
 - retired gateway, federation, routed-action, onboarding, acceptance, governance, and example corpora live outside this active contract root.
+- `standard-agent-admission-gates.json` is the machine-readable admission gate contract for candidate standard OPL domain agents. It requires all admission package gates before formal catalog inclusion and keeps scaffold, generated surface, conformance, provider completion, file presence, owner receipt, typed blocker, human gate, domain-ready, and production-ready false-authority flags explicit.
 
 ## File Inventory
 
@@ -151,6 +153,7 @@ These schema files are the machine-readable OPL target architecture surface. The
 - `operating-loop-adoption-policy.json`
 - `public-surface-index.json`
 - `task-topology.json`
+- `standard-agent-admission-gates.json`
 
 ## Reading Rule
 
@@ -161,3 +164,4 @@ These schema files are the machine-readable OPL target architecture surface. The
 - Foundry Agents should declare and adapt to these framework contracts instead of vendoring or forking their own OPL runtime truth
 - treat One Person Lab App as a projection consumer and workbench surface, not as a runtime provider or domain authority
 - treat `open_worklist=0`, selected cohorts, verified typed blockers, provider SLO, conformance, descriptor readiness, and refs-only ledger receipts as bounded operator evidence, not as domain ready, App release ready, artifact authority, physical delete authorization, or production ready
+- treat standard-agent admission gates as formal inclusion requirements for future candidate domain agents, not as evidence that any current or candidate domain is domain ready or production ready

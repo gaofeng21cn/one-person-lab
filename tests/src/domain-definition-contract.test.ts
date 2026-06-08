@@ -8,6 +8,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const domainsPath = path.join(repoRoot, 'contracts', 'opl-framework', 'domains.json');
 const publicSurfaceIndexPath = path.join(repoRoot, 'contracts', 'opl-framework', 'public-surface-index.json');
+const standardAgentAdmissionGatesPath = path.join(
+  repoRoot,
+  'contracts',
+  'opl-framework',
+  'standard-agent-admission-gates.json',
+);
 const retiredBoundaryTermsField = ['legacy', 'boundary', 'terms'].join('_');
 
 type DomainDefinition = {
@@ -59,6 +65,33 @@ function readPublicSurfaceIndex() {
       refs: Array<{ ref_kind: string; ref: string }>;
       notes: string[];
     }>;
+  };
+}
+
+function readStandardAgentAdmissionGates() {
+  return JSON.parse(fs.readFileSync(standardAgentAdmissionGatesPath, 'utf8')) as {
+    surface_kind: string;
+    version: string;
+    admission_policy: {
+      applies_to: string;
+      formal_domain_admission_requires_all_gates: boolean;
+      conformance_or_scaffold_signal_can_claim_domain_ready: boolean;
+      production_readiness_claim_allowed: boolean;
+      human_spec_ref: string;
+    };
+    standard_agent_admission_package: {
+      required_gate_ids: string[];
+      gates: Array<{
+        gate_id: string;
+        requirement_kind: string;
+        required_for_formal_admission: boolean;
+        required_evidence_refs: string[];
+        required_declarations?: string[];
+        forbidden_claims: string[];
+      }>;
+    };
+    false_authority_boundary: Record<string, boolean>;
+    non_readiness_statement: Record<string, unknown>;
   };
 }
 
@@ -226,4 +259,74 @@ test('public-surface-index publishes the OPL Framework locator as the agent depe
     locator.notes.some((note) => note.includes('OPL-compatible agents locate their external OPL Framework runtime dependency')),
     true,
   );
+});
+
+test('standard agent admission gates freeze required package boundaries without granting readiness authority', () => {
+  const gates = readStandardAgentAdmissionGates();
+
+  assert.equal(gates.surface_kind, 'opl_standard_agent_admission_gates');
+  assert.equal(gates.version, 'standard-agent-admission-gates.v1');
+  assert.equal(gates.admission_policy.applies_to, 'candidate_standard_opl_domain_agent');
+  assert.equal(gates.admission_policy.formal_domain_admission_requires_all_gates, true);
+  assert.equal(gates.admission_policy.conformance_or_scaffold_signal_can_claim_domain_ready, false);
+  assert.equal(gates.admission_policy.production_readiness_claim_allowed, false);
+  assert.deepEqual(gates.standard_agent_admission_package.required_gate_ids, [
+    'identity',
+    'domain_truth_owner',
+    'generated_surface_default_entry',
+    'standard_pack_abi',
+    'stage_artifact_contract',
+    'execution_model',
+    'authority_boundary',
+    'owner_receipt_boundary',
+    'typed_blocker_boundary',
+    'human_gate_false_authority',
+  ]);
+  assert.equal(
+    gates.standard_agent_admission_package.gates.length,
+    gates.standard_agent_admission_package.required_gate_ids.length,
+  );
+
+  for (const gateId of gates.standard_agent_admission_package.required_gate_ids) {
+    const gate = gates.standard_agent_admission_package.gates.find((entry) => entry.gate_id === gateId);
+    assert.ok(gate, `${gateId} gate must exist`);
+    assert.equal(gate.required_for_formal_admission, true);
+    assert.equal(gate.required_evidence_refs.length > 0, true);
+    assert.equal(gate.forbidden_claims.includes('domain_ready'), true);
+    assert.equal(gate.forbidden_claims.includes('production_ready'), true);
+  }
+
+  const generated = gates.standard_agent_admission_package.gates.find(
+    (entry) => entry.gate_id === 'generated_surface_default_entry',
+  );
+  assert.ok(generated?.required_evidence_refs.includes(
+    'contracts/opl-framework/domain-pack-compiler-contract.json',
+  ));
+  assert.ok(generated?.required_evidence_refs.includes(
+    'contracts/family-orchestration/family-action-catalog.schema.json',
+  ));
+  assert.ok(generated?.required_declarations?.includes('source_of_work_lineage'));
+
+  const falseAuthority = gates.false_authority_boundary;
+  assert.equal(falseAuthority.opl_can_claim_domain_ready, false);
+  assert.equal(falseAuthority.opl_can_claim_production_ready, false);
+  assert.equal(falseAuthority.scaffold_signal_can_admit_domain, false);
+  assert.equal(falseAuthority.generated_surface_can_admit_domain, false);
+  assert.equal(falseAuthority.opl_can_create_owner_receipt, false);
+  assert.equal(falseAuthority.opl_can_create_typed_blocker, false);
+  assert.equal(falseAuthority.human_gate_can_replace_owner_receipt, false);
+  assert.equal(gates.non_readiness_statement.this_contract_admits_any_domain, false);
+  assert.equal(gates.non_readiness_statement.this_contract_claims_production_ready, false);
+});
+
+test('standard agent admission gates use semantic human-doc refs instead of prose paths', () => {
+  const gates = readStandardAgentAdmissionGates();
+  const rawContract = fs.readFileSync(standardAgentAdmissionGatesPath, 'utf8');
+  const pinnedHumanDocPathPattern =
+    /\b(?:README(?:\.zh-CN)?\.md|AGENTS\.md|docs\/[A-Za-z0-9_./-]+\.md(?:#[A-Za-z0-9_-]+)?|contracts\/[A-Za-z0-9_./-]+\.md)\b/g;
+
+  assert.equal(gates.admission_policy.human_spec_ref, 'human_doc:opl_domain_onboarding_contract');
+  assert.deepEqual(rawContract.match(pinnedHumanDocPathPattern) ?? [], []);
+  assert.match(rawContract, /human_doc:opl_domain_onboarding_contract/);
+  assert.match(rawContract, /human_doc:opl_runtime_naming_and_boundary_contract/);
 });

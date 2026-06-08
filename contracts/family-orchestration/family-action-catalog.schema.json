@@ -109,6 +109,9 @@
         "source_command": {
           "$ref": "#/$defs/sourceCommand"
         },
+        "source_of_work": {
+          "$ref": "#/$defs/sourceOfWork"
+        },
         "input_schema_ref": {
           "type": "string",
           "minLength": 1
@@ -185,6 +188,40 @@
         "surface_kind": {
           "type": "string",
           "minLength": 1
+        }
+      }
+    },
+    "sourceOfWork": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_catalog",
+        "source_catalog_ref",
+        "source_action_id",
+        "stage_catalog_ref",
+        "derived_surface_policy"
+      ],
+      "properties": {
+        "source_catalog": {
+          "const": "family_action_catalog"
+        },
+        "source_catalog_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_action_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage_catalog_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "derived_surface_policy": {
+          "const": "derive_cli_mcp_openai_ai_sdk_skill_app_status_workbench_from_single_catalog"
+        },
+        "domain_repo_wrapper_policy": {
+          "const": "handler_target_refs_only_adapter_or_tombstone_candidate"
         }
       }
     },

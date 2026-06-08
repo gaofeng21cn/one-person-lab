@@ -18,6 +18,15 @@ export interface FamilyActionSurfaceDescriptor {
   descriptor_only?: boolean;
 }
 
+export interface FamilyActionSourceOfWork {
+  source_catalog: 'family_action_catalog';
+  source_catalog_ref: string;
+  source_action_id: string;
+  stage_catalog_ref: string;
+  derived_surface_policy: 'derive_cli_mcp_openai_ai_sdk_skill_app_status_workbench_from_single_catalog';
+  domain_repo_wrapper_policy?: 'handler_target_refs_only_adapter_or_tombstone_candidate';
+}
+
 export interface FamilyActionCatalogAction {
   action_id: string;
   title: string;
@@ -25,6 +34,7 @@ export interface FamilyActionCatalogAction {
   owner: string;
   effect: FamilyActionEffect;
   source_command: FamilyActionSourceCommand;
+  source_of_work?: FamilyActionSourceOfWork;
   input_schema_ref: string;
   output_schema_ref: string;
   workspace_locator_fields: string[];
@@ -111,7 +121,48 @@ function requireSupportedSurfaceSlots(value: JsonRecord, field: string) {
   }
 }
 
-function normalizeFamilyAction(value: unknown, field: string): FamilyActionCatalogAction {
+function normalizeSourceOfWork(
+  value: unknown,
+  actionId: string,
+  catalogId: string | null,
+  field: string,
+): FamilyActionSourceOfWork {
+  const fallback = {
+    source_catalog: 'family_action_catalog' as const,
+    source_catalog_ref: catalogId ? `family_action_catalog:${catalogId}` : 'family_action_catalog',
+    source_action_id: actionId,
+    stage_catalog_ref: 'family_stage_control_plane',
+    derived_surface_policy: 'derive_cli_mcp_openai_ai_sdk_skill_app_status_workbench_from_single_catalog' as const,
+    domain_repo_wrapper_policy: 'handler_target_refs_only_adapter_or_tombstone_candidate' as const,
+  };
+  if (!isRecord(value)) {
+    return fallback;
+  }
+  const sourceCatalog = optionalString(value.source_catalog) ?? fallback.source_catalog;
+  if (sourceCatalog !== 'family_action_catalog') {
+    throw new Error(`${field}.source_of_work.source_catalog must be family_action_catalog.`);
+  }
+  const derivedSurfacePolicy = optionalString(value.derived_surface_policy)
+    ?? fallback.derived_surface_policy;
+  if (derivedSurfacePolicy !== fallback.derived_surface_policy) {
+    throw new Error(`${field}.source_of_work.derived_surface_policy must be ${fallback.derived_surface_policy}.`);
+  }
+  const wrapperPolicy = optionalString(value.domain_repo_wrapper_policy)
+    ?? fallback.domain_repo_wrapper_policy;
+  if (wrapperPolicy !== fallback.domain_repo_wrapper_policy) {
+    throw new Error(`${field}.source_of_work.domain_repo_wrapper_policy must be ${fallback.domain_repo_wrapper_policy}.`);
+  }
+  return {
+    source_catalog: 'family_action_catalog',
+    source_catalog_ref: requireString(value.source_catalog_ref, `${field}.source_of_work.source_catalog_ref`),
+    source_action_id: requireString(value.source_action_id, `${field}.source_of_work.source_action_id`),
+    stage_catalog_ref: requireString(value.stage_catalog_ref, `${field}.source_of_work.stage_catalog_ref`),
+    derived_surface_policy: fallback.derived_surface_policy,
+    domain_repo_wrapper_policy: fallback.domain_repo_wrapper_policy,
+  };
+}
+
+function normalizeFamilyAction(value: unknown, field: string, catalogId: string | null): FamilyActionCatalogAction {
   if (!isRecord(value)) {
     throw new Error(`${field} must be an object.`);
   }
@@ -128,8 +179,10 @@ function normalizeFamilyAction(value: unknown, field: string): FamilyActionCatal
   const supportedSurfaces = isRecord(value.supported_surfaces) ? value.supported_surfaces : {};
   requireSupportedSurfaceSlots(supportedSurfaces, field);
 
+  const actionId = requireString(value.action_id, `${field}.action_id`);
+
   return {
-    action_id: requireString(value.action_id, `${field}.action_id`),
+    action_id: actionId,
     title: requireString(value.title, `${field}.title`),
     summary: requireString(value.summary, `${field}.summary`),
     owner: requireString(value.owner, `${field}.owner`),
@@ -138,6 +191,7 @@ function normalizeFamilyAction(value: unknown, field: string): FamilyActionCatal
       command: requireString(sourceCommand.command, `${field}.source_command.command`),
       surface_kind: requireString(sourceCommand.surface_kind, `${field}.source_command.surface_kind`),
     },
+    source_of_work: normalizeSourceOfWork(value.source_of_work, actionId, catalogId, field),
     input_schema_ref: requireString(value.input_schema_ref, `${field}.input_schema_ref`),
     output_schema_ref: requireString(value.output_schema_ref, `${field}.output_schema_ref`),
     workspace_locator_fields: readStringList(value.workspace_locator_fields),
@@ -172,8 +226,9 @@ export function normalizeFamilyActionCatalog(value: unknown, field = 'family_act
   }
 
   const seen = new Set<string>();
+  const catalogId = requireString(value.catalog_id, `${field}.catalog_id`);
   const actions = value.actions.map((entry, index) => {
-    const action = normalizeFamilyAction(entry, `${field}.actions[${index}]`);
+    const action = normalizeFamilyAction(entry, `${field}.actions[${index}]`, catalogId);
     if (seen.has(action.action_id)) {
       throw new Error(`${field}.actions contains duplicate action_id: ${action.action_id}`);
     }
@@ -184,7 +239,7 @@ export function normalizeFamilyActionCatalog(value: unknown, field = 'family_act
   return {
     surface_kind: 'family_action_catalog',
     version: 'family-action-catalog.v1',
-    catalog_id: requireString(value.catalog_id, `${field}.catalog_id`),
+    catalog_id: catalogId,
     target_domain_id: requireString(value.target_domain_id, `${field}.target_domain_id`),
     owner: requireString(value.owner, `${field}.owner`),
     authority_boundary: isRecord(value.authority_boundary) ? value.authority_boundary : {},

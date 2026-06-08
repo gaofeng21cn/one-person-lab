@@ -119,6 +119,41 @@ test('generated interfaces declare generated surfaces as the default entry basel
     bundle.default_entry_policy.default_entry_surface_ids.length,
     bundle.supported_derived_surfaces.length,
   );
+  assert.deepEqual(bundle.source_of_work_lineage, {
+    surface_kind: 'opl_generated_surface_source_of_work_lineage',
+    version: 'opl-generated-surface-source-of-work-lineage.v1',
+    owner: 'one-person-lab',
+    status: 'ready_from_family_action_catalog',
+    source_catalogs: ['family_action_catalog', 'family_stage_control_plane'],
+    action_catalog_ref: 'family_action_catalog:med_autoscience_action_catalog',
+    stage_catalog_ref: 'family_stage_control_plane:med_autoscience_stage_plane',
+    action_ids: ['study_packet'],
+    derived_surface_ids: [
+      'cli',
+      'mcp',
+      'openai_tool',
+      'ai_sdk',
+      'skill_plugin',
+      'app_action',
+      'status_read_model',
+      'workbench',
+    ],
+    derived_surface_policy: 'derive_cli_mcp_openai_ai_sdk_skill_app_status_workbench_from_single_catalog',
+    domain_repo_wrapper_policy: 'handler_target_refs_only_adapter_or_tombstone_candidate',
+    authority_boundary: {
+      lineage_can_write_domain_truth: false,
+      lineage_can_replace_domain_handler: false,
+      lineage_can_authorize_quality_or_export: false,
+      lineage_can_claim_domain_ready: false,
+      lineage_can_claim_production_ready: false,
+    },
+  });
+  assert.equal(bundle.cli.descriptors[0].source_of_work.source_action_id, 'study_packet');
+  assert.equal(bundle.mcp.descriptors[0].source_of_work.source_action_id, 'study_packet');
+  assert.equal(bundle.skill.descriptors[0].source_of_work.source_action_id, 'study_packet');
+  assert.equal(bundle.product_entry.descriptors[0].source_of_work.source_action_id, 'study_packet');
+  assert.equal(bundle.openai_tool.descriptors[0].source_of_work.source_action_id, 'study_packet');
+  assert.equal(bundle.ai_sdk.descriptors[0].source_of_work.source_action_id, 'study_packet');
   assert.equal(bundle.generated_wrapper_bundle.domain_repo_role_policy, 'domain_handler_target_or_refs_only_adapter');
 });
 
@@ -152,9 +187,23 @@ test('domain pack compiler contract and action catalog schema declare generated 
     ),
     contract.generated_interface_bundle.default_entry_policy.default_entry_surface_ids,
   );
+  assert.equal(
+    contract.generated_interface_bundle.source_of_work_lineage.derived_surface_policy,
+    'derive_cli_mcp_openai_ai_sdk_skill_app_status_workbench_from_single_catalog',
+  );
+  assert.equal(
+    contract.generated_interface_bundle.source_of_work_lineage.authority_boundary
+      .lineage_can_claim_domain_ready,
+    false,
+  );
   assert.deepEqual(
     schema.$defs.action.properties.supported_surfaces.required,
     ['cli', 'mcp', 'skill', 'product_entry', 'openai', 'ai_sdk'],
+  );
+  assert.deepEqual(schema.$defs.action.properties.source_of_work.$ref, '#/$defs/sourceOfWork');
+  assert.equal(
+    schema.$defs.sourceOfWork.properties.derived_surface_policy.const,
+    'derive_cli_mcp_openai_ai_sdk_skill_app_status_workbench_from_single_catalog',
   );
   assert.equal(schema.$defs.action.properties.supported_surfaces.minProperties, 6);
 });

@@ -75,6 +75,9 @@
         "append_only_event_log_ref_count",
         "attempt_ledger_ref_count",
         "codex_attempt_trace_ref_count",
+        "stage_manifest_ref_count",
+        "current_pointer_ref_count",
+        "owner_answer_binding_ref_count",
         "blocker_count"
       ],
       "properties": {
@@ -86,6 +89,9 @@
         "append_only_event_log_ref_count": { "type": "integer", "minimum": 0 },
         "attempt_ledger_ref_count": { "type": "integer", "minimum": 0 },
         "codex_attempt_trace_ref_count": { "type": "integer", "minimum": 0 },
+        "stage_manifest_ref_count": { "type": "integer", "minimum": 0 },
+        "current_pointer_ref_count": { "type": "integer", "minimum": 0 },
+        "owner_answer_binding_ref_count": { "type": "integer", "minimum": 0 },
         "blocker_count": { "type": "integer", "minimum": 0 }
       }
     },
@@ -281,6 +287,9 @@
             "stage_pack_not_admitted",
             "append_only_event_log_ref_missing",
             "attempt_ledger_ref_missing",
+            "stage_manifest_ref_missing",
+            "current_pointer_ref_missing",
+            "owner_answer_binding_ref_missing",
             "runtime_event_ref_missing",
             "expected_receipt_ref_missing"
           ]
@@ -305,6 +314,9 @@
             "repair_stage_pack_admission",
             "record_append_only_event_log_ref",
             "record_attempt_ledger_ref",
+            "record_stage_manifest_ref",
+            "record_current_pointer_ref",
+            "record_owner_answer_binding_ref",
             "record_runtime_event_ref",
             "record_expected_receipt_ref"
           ]
@@ -360,6 +372,9 @@
         "append_only_event_log_ref_count": 1,
         "attempt_ledger_ref_count": 1,
         "codex_attempt_trace_ref_count": 0,
+        "stage_manifest_ref_count": 1,
+        "current_pointer_ref_count": 1,
+        "owner_answer_binding_ref_count": 1,
         "blocker_count": 0
       },
       "stage_results": [

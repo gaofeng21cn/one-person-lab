@@ -1,0 +1,250 @@
+{
+  "surface_kind": "opl_standard_agent_admission_gates",
+  "version": "standard-agent-admission-gates.v1",
+  "owner": "one-person-lab",
+  "state": "active_contract",
+  "purpose": "Freeze the minimum machine-readable admission gates for candidate standard OPL domain agents.",
+  "machine_boundary": "Framework-owned admission gate shape and false-authority flags only. This contract does not admit any specific domain, claim domain readiness, claim production readiness, create owner receipts, create typed blockers, write domain truth, or replace domain/human review authority.",
+  "admission_policy": {
+    "applies_to": "candidate_standard_opl_domain_agent",
+    "formal_domain_admission_requires_all_gates": true,
+    "candidate_backlog_or_direction_signal_can_admit_domain": false,
+    "conformance_or_scaffold_signal_can_claim_domain_ready": false,
+    "production_readiness_claim_allowed": false,
+    "admitted_domain_catalog_source_ref": "contracts/opl-framework/domains.json",
+    "human_spec_ref": "human_doc:opl_domain_onboarding_contract"
+  },
+  "standard_agent_admission_package": {
+    "package_kind": "standard_opl_domain_agent_admission_package",
+    "required_gate_ids": [
+      "identity",
+      "domain_truth_owner",
+      "generated_surface_default_entry",
+      "standard_pack_abi",
+      "stage_artifact_contract",
+      "execution_model",
+      "authority_boundary",
+      "owner_receipt_boundary",
+      "typed_blocker_boundary",
+      "human_gate_false_authority"
+    ],
+    "gates": [
+      {
+        "gate_id": "identity",
+        "requirement_kind": "identity",
+        "required_for_formal_admission": true,
+        "summary": "The candidate declares a stable domain id, label, project, independent domain-agent identity, owned workstreams, and product-layer role before catalog admission.",
+        "required_evidence_refs": [
+          "candidate_domain_repo:domain_identity_contract",
+          "candidate_domain_repo:public_domain_agent_entry_doc",
+          "contracts/opl-framework/domains.json",
+          "contracts/opl-framework/workstreams.json"
+        ],
+        "forbidden_claims": [
+          "domain_ready",
+          "production_ready"
+        ]
+      },
+      {
+        "gate_id": "domain_truth_owner",
+        "requirement_kind": "domain_truth_owner",
+        "required_for_formal_admission": true,
+        "summary": "The candidate declares which runtime, delivery, audit, review, artifact, memory, quality, and user-visible progress truths remain domain-owned.",
+        "required_evidence_refs": [
+          "candidate_domain_repo:truth_ownership_contract",
+          "candidate_domain_repo:authority_boundary_contract",
+          "contracts/opl-framework/domains.json#domain_truth_owner"
+        ],
+        "forbidden_claims": [
+          "domain_ready",
+          "production_ready",
+          "opl_owns_domain_truth"
+        ]
+      },
+      {
+        "gate_id": "generated_surface_default_entry",
+        "requirement_kind": "generated_surface_default_entry",
+        "required_for_formal_admission": true,
+        "summary": "The candidate exposes an OPL-generated or OPL-hosted default entry projection from one action/stage source-of-work lineage and routes to the public domain-agent entry without bypassing the domain harness/controller boundary.",
+        "required_evidence_refs": [
+          "candidate_domain_repo:domain_pack_compiler_input",
+          "candidate_domain_repo:generated_interface_bundle",
+          "candidate_domain_repo:default_entry_descriptor",
+          "contracts/opl-framework/domain-pack-compiler-contract.json",
+          "contracts/family-orchestration/family-action-catalog.schema.json",
+          "contracts/opl-framework/standard-domain-agent-skeleton-contract.json"
+        ],
+        "required_declarations": [
+          "family_action_catalog",
+          "family_stage_control_plane",
+          "source_of_work_lineage",
+          "domain_handler_target_or_refs_only_adapter"
+        ],
+        "forbidden_claims": [
+          "domain_ready",
+          "production_ready",
+          "generated_surface_is_domain_authority"
+        ]
+      },
+      {
+        "gate_id": "standard_pack_abi",
+        "requirement_kind": "standard_pack_abi",
+        "required_for_formal_admission": true,
+        "summary": "The candidate provides the standard semantic pack ABI consumed by OPL descriptors, generated surfaces, action catalog, stage control plane, skill catalog, and conformance read models.",
+        "required_evidence_refs": [
+          "candidate_domain_repo:agent_pack_root_agent_slash",
+          "candidate_domain_repo:action_catalog_contract",
+          "candidate_domain_repo:stage_control_plane_contract",
+          "candidate_domain_repo:skill_catalog_contract",
+          "contracts/opl-framework/domain-pack-compiler-contract.json",
+          "contracts/opl-framework/functional-privatization-audit-envelope-contract.json"
+        ],
+        "forbidden_claims": [
+          "domain_ready",
+          "production_ready",
+          "abi_presence_is_live_progress"
+        ]
+      },
+      {
+        "gate_id": "stage_artifact_contract",
+        "requirement_kind": "stage_artifact_contract",
+        "required_for_formal_admission": true,
+        "summary": "The candidate declares stage folders, required output roles, manifests, role artifact refs, owner receipt refs, typed blocker refs, current pointers, lineage, repair classification, retention, and restore policy.",
+        "required_evidence_refs": [
+          "candidate_domain_repo:stage_artifact_contract",
+          "candidate_domain_repo:stage_run_kernel_profile",
+          "candidate_domain_repo:stage_run_canary_evidence",
+          "contracts/opl-framework/stage-manifest.schema.json",
+          "contracts/opl-framework/role-artifact-ref.schema.json",
+          "contracts/opl-framework/stage-owner-receipt.schema.json",
+          "contracts/opl-framework/stage-typed-blocker.schema.json",
+          "contracts/opl-framework/stage-artifact-unit.schema.json",
+          "contracts/opl-framework/stage-artifact-progress-truth-policy.json"
+        ],
+        "forbidden_claims": [
+          "domain_ready",
+          "production_ready",
+          "file_presence_counts_as_stage_complete",
+          "provider_completion_counts_as_stage_complete"
+        ]
+      },
+      {
+        "gate_id": "execution_model",
+        "requirement_kind": "execution_model",
+        "required_for_formal_admission": true,
+        "summary": "The candidate aligns with Codex CLI first-class execution, autonomous mode, provider-backed stage runtime where durable orchestration is needed, explicit adapter boundaries for non-default executors, and no fixed-code-first primary workflow.",
+        "required_evidence_refs": [
+          "candidate_domain_repo:execution_model_contract",
+          "candidate_domain_repo:formal_entry_matrix",
+          "contracts/opl-framework/family-executor-adapter-defaults.json",
+          "human_doc:opl_runtime_naming_and_boundary_contract"
+        ],
+        "forbidden_claims": [
+          "domain_ready",
+          "production_ready",
+          "fixed_code_first_primary_workflow"
+        ]
+      },
+      {
+        "gate_id": "authority_boundary",
+        "requirement_kind": "authority_boundary",
+        "required_for_formal_admission": true,
+        "summary": "The candidate proves OPL only owns framework selection, projection, generated-surface handoff, StageRun substrate, and refs-only read models while domain truth and verdict authority remain domain-owned.",
+        "required_evidence_refs": [
+          "candidate_domain_repo:authority_boundary_contract",
+          "candidate_domain_repo:review_surface_contract",
+          "contracts/opl-framework/domains.json#runtime_dependency_boundary",
+          "contracts/opl-framework/guardrail-tier-policy.json",
+          "contracts/opl-framework/default-surface-budget.schema.json"
+        ],
+        "forbidden_claims": [
+          "domain_ready",
+          "production_ready",
+          "opl_can_write_domain_truth",
+          "opl_can_claim_quality_verdict"
+        ]
+      },
+      {
+        "gate_id": "owner_receipt_boundary",
+        "requirement_kind": "owner_receipt_boundary",
+        "required_for_formal_admission": true,
+        "summary": "The candidate declares owner receipt kinds, producer authority, consumed artifacts, accepted delta, next owner or next stage, current pointer binding, and source fingerprint binding.",
+        "required_evidence_refs": [
+          "candidate_domain_repo:owner_receipt_contract",
+          "candidate_domain_repo:stage_closeout_contract",
+          "contracts/opl-framework/stage-owner-receipt.schema.json",
+          "contracts/opl-framework/owner-answer.schema.json"
+        ],
+        "forbidden_claims": [
+          "domain_ready",
+          "production_ready",
+          "opl_can_create_owner_receipt",
+          "provider_completion_counts_as_owner_receipt"
+        ]
+      },
+      {
+        "gate_id": "typed_blocker_boundary",
+        "requirement_kind": "typed_blocker_boundary",
+        "required_for_formal_admission": true,
+        "summary": "The candidate declares typed blocker families, missing or failed evidence refs, next safe action, escalation owner, lineage, repeat budget, and route-back semantics.",
+        "required_evidence_refs": [
+          "candidate_domain_repo:typed_blocker_contract",
+          "candidate_domain_repo:blocker_lineage_policy",
+          "contracts/opl-framework/stage-typed-blocker.schema.json",
+          "contracts/opl-framework/owner-answer.schema.json",
+          "contracts/opl-framework/stop-loss-policy.schema.json"
+        ],
+        "forbidden_claims": [
+          "domain_ready",
+          "production_ready",
+          "opl_can_create_typed_blocker",
+          "blocker_counts_as_stage_success"
+        ]
+      },
+      {
+        "gate_id": "human_gate_false_authority",
+        "requirement_kind": "human_gate_false_authority",
+        "required_for_formal_admission": true,
+        "summary": "The candidate declares human review or legal/publish gates as explicit owner/human decisions without letting a human gate replace owner receipts, write domain truth, claim domain readiness, or claim production readiness.",
+        "required_evidence_refs": [
+          "candidate_domain_repo:human_gate_contract",
+          "candidate_domain_repo:review_surface_contract",
+          "candidate_domain_repo:decision_receipt_contract",
+          "contracts/opl-framework/guardrail-tier-policy.json"
+        ],
+        "forbidden_claims": [
+          "domain_ready",
+          "production_ready",
+          "human_gate_can_replace_owner_receipt",
+          "human_gate_can_write_domain_truth"
+        ]
+      }
+    ]
+  },
+  "false_authority_boundary": {
+    "opl_can_write_domain_truth": false,
+    "opl_can_claim_domain_ready": false,
+    "opl_can_claim_production_ready": false,
+    "scaffold_signal_can_admit_domain": false,
+    "generated_surface_can_admit_domain": false,
+    "conformance_pass_can_claim_production_ready": false,
+    "file_presence_counts_as_stage_complete": false,
+    "provider_completion_counts_as_stage_complete": false,
+    "opl_can_create_owner_receipt": false,
+    "opl_can_create_typed_blocker": false,
+    "human_gate_can_replace_owner_receipt": false,
+    "human_gate_can_write_domain_truth": false,
+    "human_gate_can_claim_domain_ready": false
+  },
+  "non_readiness_statement": {
+    "this_contract_admits_any_domain": false,
+    "this_contract_claims_existing_domain_ready": false,
+    "this_contract_claims_production_ready": false,
+    "formal_admission_source_of_truth": [
+      "contracts/opl-framework/domains.json",
+      "contracts/opl-framework/workstreams.json",
+      "contracts/opl-framework/task-topology.json",
+      "candidate_domain_repo:admission_package_evidence"
+    ]
+  }
+}

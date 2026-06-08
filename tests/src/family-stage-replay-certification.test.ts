@@ -201,6 +201,9 @@ test('stage replay certification passes with append-only log, attempt ledger, ru
     append_only_event_log_refs: ['event-log:mas/stages'],
     attempt_ledger_refs: ['attempt-ledger:opl/mas'],
     codex_attempt_trace_refs: ['codex-attempt-trace-ref:mas/publication-review'],
+    stage_manifest_refs: ['stage-manifest:publication_review'],
+    current_pointer_refs: ['current-pointer:publication_review'],
+    owner_answer_binding_refs: ['owner-answer-binding:publication_review'],
     recorded_runtime_event_refs: ['runtime_event:publication_review.gate_recorded'],
     closeout_receipt_refs: ['mas:publication_review_receipt', 'owner_receipt:publication_review', 'human_gate:publication_quality_gate'],
   });
@@ -212,6 +215,9 @@ test('stage replay certification passes with append-only log, attempt ledger, ru
   assert.equal(certification.summary.missing_runtime_event_ref_count, 0);
   assert.equal(certification.summary.missing_receipt_ref_count, 0);
   assert.equal(certification.summary.codex_attempt_trace_ref_count, 1);
+  assert.equal(certification.summary.stage_manifest_ref_count, 1);
+  assert.equal(certification.summary.current_pointer_ref_count, 1);
+  assert.equal(certification.summary.owner_answer_binding_ref_count, 1);
   assert.equal(certification.authority_boundary.replay_reads_append_only_log_refs_only, true);
   assert.equal(certification.authority_boundary.can_requery_ai, false);
   assert.equal(certification.authority_boundary.can_requery_human, false);
@@ -239,6 +245,7 @@ test('stage replay certification consumes plane and stage-contract replay eviden
   plane.replay_evidence_refs = [
     { ref_kind: 'append_only_event_log_ref', ref: 'event-log:mas/stages' },
     { role: 'codex_attempt_trace_ref', ref: 'codex-attempt-trace-ref:mas/publication-review' },
+    { ref_kind: 'stage_manifest_ref', ref: 'stage-manifest:publication_review' },
   ];
   const reviewStage = plane.stages.find((stage) => stage.stage_id === 'publication_review');
   assert.ok(reviewStage?.stage_contract);
@@ -247,6 +254,8 @@ test('stage replay certification consumes plane and stage-contract replay eviden
     { ref_kind: 'closeout_receipt_ref', ref: 'mas:publication_review_receipt' },
     { ref_kind: 'owner_receipt_ref', ref: 'owner_receipt:publication_review' },
     { role: 'replay_receipt_ref', ref_kind: 'receipt_ref', ref: 'human_gate:publication_quality_gate' },
+    { ref_kind: 'current_pointer_ref', ref: 'current-pointer:publication_review' },
+    { role: 'closeout_binding_ref', ref: 'owner-answer-binding:publication_review' },
     { ref_kind: 'receipt_ref', ref: 'unclassified:receipt' },
   ];
 
@@ -254,6 +263,9 @@ test('stage replay certification consumes plane and stage-contract replay eviden
   assert.deepEqual(evidence, {
     append_only_event_log_refs: ['event-log:mas/stages'],
     attempt_ledger_refs: ['codex-attempt-trace-ref:mas/publication-review'],
+    stage_manifest_refs: ['stage-manifest:publication_review'],
+    current_pointer_refs: ['current-pointer:publication_review'],
+    owner_answer_binding_refs: ['owner-answer-binding:publication_review'],
     recorded_runtime_event_refs: ['runtime_event:publication_review.gate_recorded'],
     closeout_receipt_refs: [
       'mas:publication_review_receipt',
@@ -274,6 +286,9 @@ test('stage replay certification blocks missing runtime event refs with minimal 
   const certification = buildFamilyStageReplayCertification(proofBundle(), {
     append_only_event_log_refs: ['event-log:mas/stages'],
     attempt_ledger_refs: ['attempt-ledger:opl/mas'],
+    stage_manifest_refs: ['stage-manifest:publication_review'],
+    current_pointer_refs: ['current-pointer:publication_review'],
+    owner_answer_binding_refs: ['owner-answer-binding:publication_review'],
     closeout_receipt_refs: ['mas:publication_review_receipt', 'owner_receipt:publication_review', 'human_gate:publication_quality_gate'],
   });
 
@@ -289,6 +304,9 @@ test('stage replay certification blocks missing expected receipt refs with minim
   const certification = buildFamilyStageReplayCertification(proofBundle(), {
     append_only_event_log_refs: ['event-log:mas/stages'],
     attempt_ledger_refs: ['attempt-ledger:opl/mas'],
+    stage_manifest_refs: ['stage-manifest:publication_review'],
+    current_pointer_refs: ['current-pointer:publication_review'],
+    owner_answer_binding_refs: ['owner-answer-binding:publication_review'],
     recorded_runtime_event_refs: ['runtime_event:publication_review.gate_recorded'],
     closeout_receipt_refs: ['mas:publication_review_receipt'],
   });
@@ -338,6 +356,9 @@ test('stage replay certification refuses non-admitted stage packs and missing re
       closeout_refs: ['mas:publication_review_receipt', 'owner_receipt:publication_review'],
       runtime_event_refs: ['runtime_event:publication_review.gate_recorded'],
       receipt_refs: ['human_gate:publication_quality_gate'],
+      stage_manifest_ref: 'stage-manifest:publication_review',
+      current_pointer_ref: 'current-pointer:publication_review',
+      closeout_binding_ref: 'owner-answer-binding:publication_review',
     },
   });
 
@@ -373,6 +394,9 @@ test('stage replay certification schema freezes replay-only non-authority bounda
   assert.equal(authorityProperties.can_write_domain_truth.const, false);
   assert.equal(authorityProperties.can_authorize_quality_verdict.const, false);
   assert.equal((summary.required as string[]).includes('codex_attempt_trace_ref_count'), true);
+  assert.equal((summary.required as string[]).includes('stage_manifest_ref_count'), true);
+  assert.equal((summary.required as string[]).includes('current_pointer_ref_count'), true);
+  assert.equal((summary.required as string[]).includes('owner_answer_binding_ref_count'), true);
   assert.equal((stageResult.required as string[]).includes('missing_receipt_workorders'), true);
   assert.equal(missingReceiptWorkorderProperties.surface_kind.const, 'opl_stage_replay_missing_receipt_workorder');
   assert.deepEqual(missingReceiptWorkorderProperties.missing_ref_kind.enum, [
@@ -387,4 +411,27 @@ test('stage replay certification schema freezes replay-only non-authority bounda
   assert.equal(workorderAuthority.can_create_owner_receipt.const, false);
   assert.equal(workorderAuthority.can_authorize_quality_or_export.const, false);
   assert.equal(exampleAuthority.can_requery_external_system, false);
+});
+
+test('stage replay certification blocks missing manifest, current pointer, and owner answer binding refs', () => {
+  const certification = buildFamilyStageReplayCertification(proofBundle(), {
+    append_only_event_log_refs: ['event-log:mas/stages'],
+    attempt_ledger_refs: ['attempt-ledger:opl/mas'],
+    recorded_runtime_event_refs: ['runtime_event:publication_review.gate_recorded'],
+    closeout_receipt_refs: [
+      'mas:publication_review_receipt',
+      'owner_receipt:publication_review',
+      'human_gate:publication_quality_gate',
+    ],
+  });
+
+  assert.equal(certification.replay_status, 'blocked');
+  assert.equal(certification.summary.stage_manifest_ref_count, 0);
+  assert.equal(certification.summary.current_pointer_ref_count, 0);
+  assert.equal(certification.summary.owner_answer_binding_ref_count, 0);
+  assert.ok(certification.blockers.some((entry) => entry.blocker_id === 'stage_manifest_ref_missing'));
+  assert.ok(certification.blockers.some((entry) => entry.blocker_id === 'current_pointer_ref_missing'));
+  assert.ok(certification.blockers.some((entry) => entry.blocker_id === 'owner_answer_binding_ref_missing'));
+  assert.equal(certification.authority_boundary.can_accept_or_reject_owner_receipt, false);
+  assert.equal(certification.authority_boundary.can_authorize_domain_ready, false);
 });

@@ -59,6 +59,17 @@ function surfaceKind(action: FamilyActionCatalogAction, surface: FamilyActionSur
   return optionalString(surface?.surface_kind) ?? action.source_command.surface_kind;
 }
 
+function sourceOfWork(action: FamilyActionCatalogAction) {
+  return action.source_of_work ?? {
+    source_catalog: 'family_action_catalog' as const,
+    source_catalog_ref: 'family_action_catalog',
+    source_action_id: action.action_id,
+    stage_catalog_ref: 'family_stage_control_plane',
+    derived_surface_policy: 'derive_cli_mcp_openai_ai_sdk_skill_app_status_workbench_from_single_catalog' as const,
+    domain_repo_wrapper_policy: 'handler_target_refs_only_adapter_or_tombstone_candidate' as const,
+  };
+}
+
 export function projectFamilyAction(action: FamilyActionCatalogAction) {
   const cliSurface = action.supported_surfaces.cli;
   const mcpSurface = action.supported_surfaces.mcp;
@@ -68,6 +79,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
   const aiSdkSurface = action.supported_surfaces.ai_sdk;
   const command = surfaceCommand(action, cliSurface);
   const kind = surfaceKind(action, cliSurface);
+  const lineage = sourceOfWork(action);
 
   return {
     operator_loop_action: {
@@ -84,6 +96,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       effect: action.effect,
       input_schema_ref: action.input_schema_ref,
       output_schema_ref: action.output_schema_ref,
+      source_of_work: lineage,
     },
     mcp: {
       name: optionalString(mcpSurface?.tool_name) ?? action.action_id,
@@ -94,6 +107,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       output_schema_ref: action.output_schema_ref,
       public_runtime: mcpSurface?.public_runtime !== false,
       descriptor_only: mcpSurface?.descriptor_only === true,
+      source_of_work: lineage,
     },
     skill: {
       command_contract_id: optionalString(skillSurface?.command_contract_id) ?? action.action_id,
@@ -103,6 +117,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       summary: action.summary,
       required_fields: action.workspace_locator_fields,
       effect: action.effect,
+      source_of_work: lineage,
     },
     product_entry: {
       action_key: optionalString(productEntrySurface?.action_key) ?? action.action_id,
@@ -110,6 +125,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       surface_kind: surfaceKind(action, productEntrySurface),
       summary: action.summary,
       requires: action.workspace_locator_fields,
+      source_of_work: lineage,
     },
     openai: {
       type: 'function',
@@ -122,6 +138,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
           schema_ref: action.input_schema_ref,
         },
       },
+      source_of_work: lineage,
     },
     ai_sdk: {
       name: optionalString(aiSdkSurface?.tool_name) ?? action.action_id,
@@ -129,6 +146,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       inputSchemaRef: action.input_schema_ref,
       outputSchemaRef: action.output_schema_ref,
       command,
+      source_of_work: lineage,
     },
   };
 }
@@ -200,6 +218,30 @@ export function buildFamilyActionCatalogParity(
   const issues: string[] = [];
   for (const action of catalog.actions) {
     const projections = projectFamilyAction(action);
+    const lineage = sourceOfWork(action);
+    if (lineage.source_catalog !== 'family_action_catalog') {
+      issues.push(`${action.action_id}: source-of-work must originate in family_action_catalog`);
+    }
+    if (lineage.source_action_id !== action.action_id) {
+      issues.push(`${action.action_id}: source-of-work action id diverges from action catalog`);
+    }
+    if (
+      lineage.derived_surface_policy
+      !== 'derive_cli_mcp_openai_ai_sdk_skill_app_status_workbench_from_single_catalog'
+    ) {
+      issues.push(`${action.action_id}: source-of-work derived surface policy is not canonical`);
+    }
+    const projectedLineages = [
+      projections.cli.source_of_work,
+      projections.mcp.source_of_work,
+      projections.skill.source_of_work,
+      projections.product_entry.source_of_work,
+      projections.openai.source_of_work,
+      projections.ai_sdk.source_of_work,
+    ];
+    if (!projectedLineages.every((lineage) => lineage.source_action_id === action.action_id)) {
+      issues.push(`${action.action_id}: generated surface lineage diverges from source action`);
+    }
     if (projections.cli.command !== action.source_command.command) {
       issues.push(`${action.action_id}: cli command diverges from source command`);
     }

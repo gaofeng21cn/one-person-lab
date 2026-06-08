@@ -14,6 +14,9 @@ export interface FamilyStageReplayEvidence {
   append_only_event_log_refs?: string[];
   attempt_ledger_refs?: string[];
   codex_attempt_trace_refs?: string[];
+  stage_manifest_refs?: string[];
+  current_pointer_refs?: string[];
+  owner_answer_binding_refs?: string[];
   recorded_runtime_event_refs?: string[];
   closeout_receipt_refs?: string[];
   closeout_packet?: JsonRecord | null;
@@ -25,6 +28,9 @@ export interface FamilyStageReplayBlocker {
     | 'stage_pack_not_admitted'
     | 'append_only_event_log_ref_missing'
     | 'attempt_ledger_ref_missing'
+    | 'stage_manifest_ref_missing'
+    | 'current_pointer_ref_missing'
+    | 'owner_answer_binding_ref_missing'
     | 'runtime_event_ref_missing'
     | 'expected_receipt_ref_missing';
   stage_id: string | null;
@@ -38,6 +44,9 @@ export interface FamilyStageReplayBlocker {
     | 'repair_stage_pack_admission'
     | 'record_append_only_event_log_ref'
     | 'record_attempt_ledger_ref'
+    | 'record_stage_manifest_ref'
+    | 'record_current_pointer_ref'
+    | 'record_owner_answer_binding_ref'
     | 'record_runtime_event_ref'
     | 'record_expected_receipt_ref';
   payload_workorder?: FamilyStageReplayMissingReceiptWorkorder;
@@ -113,6 +122,9 @@ export interface FamilyStageReplayCertification {
     append_only_event_log_ref_count: number;
     attempt_ledger_ref_count: number;
     codex_attempt_trace_ref_count: number;
+    stage_manifest_ref_count: number;
+    current_pointer_ref_count: number;
+    owner_answer_binding_ref_count: number;
     blocker_count: number;
   };
   stage_results: FamilyStageReplayCertificationStage[];
@@ -145,6 +157,9 @@ function uniq(values: string[]) {
 type FamilyStageReplayEvidenceBucket =
   | 'append_only_event_log_refs'
   | 'attempt_ledger_refs'
+  | 'stage_manifest_refs'
+  | 'current_pointer_refs'
+  | 'owner_answer_binding_refs'
   | 'recorded_runtime_event_refs'
   | 'closeout_receipt_refs';
 
@@ -158,6 +173,14 @@ const REPLAY_EVIDENCE_BUCKET_BY_ROLE: Record<string, FamilyStageReplayEvidenceBu
   codex_attempt_trace_ref: 'attempt_ledger_refs',
   codex_attempt_trace_refs: 'attempt_ledger_refs',
   agent_lab_codex_attempt_trace_ref: 'attempt_ledger_refs',
+  stage_manifest_ref: 'stage_manifest_refs',
+  stage_manifest_refs: 'stage_manifest_refs',
+  current_pointer_ref: 'current_pointer_refs',
+  current_pointer_refs: 'current_pointer_refs',
+  owner_answer_binding_ref: 'owner_answer_binding_refs',
+  owner_answer_binding_refs: 'owner_answer_binding_refs',
+  closeout_binding_ref: 'owner_answer_binding_refs',
+  closeout_binding_refs: 'owner_answer_binding_refs',
   recorded_runtime_event_ref: 'recorded_runtime_event_refs',
   recorded_runtime_event_refs: 'recorded_runtime_event_refs',
   runtime_event_ref: 'recorded_runtime_event_refs',
@@ -175,6 +198,10 @@ const REPLAY_EVIDENCE_BUCKET_BY_REF_KIND: Record<string, FamilyStageReplayEviden
   event_log_ref: 'append_only_event_log_refs',
   attempt_ledger_ref: 'attempt_ledger_refs',
   codex_attempt_trace_ref: 'attempt_ledger_refs',
+  stage_manifest_ref: 'stage_manifest_refs',
+  current_pointer_ref: 'current_pointer_refs',
+  owner_answer_binding_ref: 'owner_answer_binding_refs',
+  closeout_binding_ref: 'owner_answer_binding_refs',
   runtime_event_ref: 'recorded_runtime_event_refs',
   recorded_runtime_event_ref: 'recorded_runtime_event_refs',
   closeout_receipt_ref: 'closeout_receipt_refs',
@@ -205,11 +232,17 @@ export function buildFamilyStageReplayEvidenceFromControlPlane(
     FamilyStageReplayEvidence,
     | 'append_only_event_log_refs'
     | 'attempt_ledger_refs'
+    | 'stage_manifest_refs'
+    | 'current_pointer_refs'
+    | 'owner_answer_binding_refs'
     | 'recorded_runtime_event_refs'
     | 'closeout_receipt_refs'
   >> = {
     append_only_event_log_refs: [],
     attempt_ledger_refs: [],
+    stage_manifest_refs: [],
+    current_pointer_refs: [],
+    owner_answer_binding_refs: [],
     recorded_runtime_event_refs: [],
     closeout_receipt_refs: [],
   };
@@ -227,6 +260,9 @@ export function buildFamilyStageReplayEvidenceFromControlPlane(
   return {
     append_only_event_log_refs: uniq(evidence.append_only_event_log_refs),
     attempt_ledger_refs: uniq(evidence.attempt_ledger_refs),
+    stage_manifest_refs: uniq(evidence.stage_manifest_refs),
+    current_pointer_refs: uniq(evidence.current_pointer_refs),
+    owner_answer_binding_refs: uniq(evidence.owner_answer_binding_refs),
     recorded_runtime_event_refs: uniq(evidence.recorded_runtime_event_refs),
     closeout_receipt_refs: uniq(evidence.closeout_receipt_refs),
   };
@@ -257,6 +293,38 @@ function runtimeEventRefsFromPacket(packet: JsonRecord | null | undefined) {
     ...readStringList(packet.recorded_runtime_event_refs),
     ...(typeof packet.runtime_event_ref === 'string' ? [packet.runtime_event_ref] : []),
     ...(typeof packet.replay_event_ref === 'string' ? [packet.replay_event_ref] : []),
+  ]);
+}
+
+function stageManifestRefsFromPacket(packet: JsonRecord | null | undefined) {
+  if (!packet) {
+    return [];
+  }
+  return uniq([
+    ...readStringList(packet.stage_manifest_refs),
+    ...(typeof packet.stage_manifest_ref === 'string' ? [packet.stage_manifest_ref] : []),
+  ]);
+}
+
+function currentPointerRefsFromPacket(packet: JsonRecord | null | undefined) {
+  if (!packet) {
+    return [];
+  }
+  return uniq([
+    ...readStringList(packet.current_pointer_refs),
+    ...(typeof packet.current_pointer_ref === 'string' ? [packet.current_pointer_ref] : []),
+  ]);
+}
+
+function ownerAnswerBindingRefsFromPacket(packet: JsonRecord | null | undefined) {
+  if (!packet) {
+    return [];
+  }
+  return uniq([
+    ...readStringList(packet.owner_answer_binding_refs),
+    ...readStringList(packet.closeout_binding_refs),
+    ...(typeof packet.owner_answer_binding_ref === 'string' ? [packet.owner_answer_binding_ref] : []),
+    ...(typeof packet.closeout_binding_ref === 'string' ? [packet.closeout_binding_ref] : []),
   ]);
 }
 
@@ -370,6 +438,18 @@ export function buildFamilyStageReplayCertification(
   const appendOnlyEventLogRefs = evidence.append_only_event_log_refs ?? [];
   const attemptLedgerRefs = evidence.attempt_ledger_refs ?? [];
   const codexAttemptTraceRefs = evidence.codex_attempt_trace_refs ?? [];
+  const stageManifestRefs = uniq([
+    ...(evidence.stage_manifest_refs ?? []),
+    ...stageManifestRefsFromPacket(evidence.closeout_packet ?? null),
+  ]);
+  const currentPointerRefs = uniq([
+    ...(evidence.current_pointer_refs ?? []),
+    ...currentPointerRefsFromPacket(evidence.closeout_packet ?? null),
+  ]);
+  const ownerAnswerBindingRefs = uniq([
+    ...(evidence.owner_answer_binding_refs ?? []),
+    ...ownerAnswerBindingRefsFromPacket(evidence.closeout_packet ?? null),
+  ]);
   const recordedRuntimeEventRefs = uniq([
     ...(evidence.recorded_runtime_event_refs ?? []),
     ...runtimeEventRefsFromPacket(evidence.closeout_packet ?? null),
@@ -432,6 +512,27 @@ export function buildFamilyStageReplayCertification(
       'replay certification requires at least one attempt ledger ref',
     ));
   }
+  if (stageManifestRefs.length === 0) {
+    blockers.push(blocker(
+      'stage_manifest_ref_missing',
+      'record_stage_manifest_ref',
+      'replay certification requires at least one stage manifest ref',
+    ));
+  }
+  if (currentPointerRefs.length === 0) {
+    blockers.push(blocker(
+      'current_pointer_ref_missing',
+      'record_current_pointer_ref',
+      'replay certification requires at least one current pointer ref',
+    ));
+  }
+  if (ownerAnswerBindingRefs.length === 0) {
+    blockers.push(blocker(
+      'owner_answer_binding_ref_missing',
+      'record_owner_answer_binding_ref',
+      'replay certification requires at least one owner answer or closeout binding ref',
+    ));
+  }
   for (const stage of stageResults) {
     for (const ref of stage.missing_runtime_event_refs) {
       blockers.push(blocker(
@@ -470,6 +571,9 @@ export function buildFamilyStageReplayCertification(
       append_only_event_log_ref_count: appendOnlyEventLogRefs.length,
       attempt_ledger_ref_count: attemptLedgerRefs.length,
       codex_attempt_trace_ref_count: codexAttemptTraceRefs.length,
+      stage_manifest_ref_count: stageManifestRefs.length,
+      current_pointer_ref_count: currentPointerRefs.length,
+      owner_answer_binding_ref_count: ownerAnswerBindingRefs.length,
       blocker_count: blockers.length,
     },
     stage_results: stageResults,

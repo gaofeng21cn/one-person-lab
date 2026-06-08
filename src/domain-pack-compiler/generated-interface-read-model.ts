@@ -1,5 +1,6 @@
 import {
   buildFamilyActionCatalogParity,
+  projectFamilyAction,
   projectFamilyActionCatalog,
 } from '../family-action-catalog.ts';
 import type {
@@ -216,6 +217,29 @@ function buildSupportedDerivedSurfaces() {
   }));
 }
 
+function buildSourceOfWorkLineage(catalog: FamilyActionCatalog | null, stageControlPlane: FamilyStageControlPlane | null) {
+  return {
+    surface_kind: 'opl_generated_surface_source_of_work_lineage',
+    version: 'opl-generated-surface-source-of-work-lineage.v1',
+    owner: 'one-person-lab',
+    status: catalog ? 'ready_from_family_action_catalog' : 'blocked_missing_family_action_catalog',
+    source_catalogs: ['family_action_catalog', 'family_stage_control_plane'],
+    action_catalog_ref: catalog ? `family_action_catalog:${catalog.catalog_id}` : null,
+    stage_catalog_ref: stageControlPlane ? `family_stage_control_plane:${stageControlPlane.plane_id}` : null,
+    action_ids: catalog?.actions.map((action) => action.action_id) ?? [],
+    derived_surface_ids: [...GENERATED_DEFAULT_ENTRY_SURFACE_IDS],
+    derived_surface_policy: 'derive_cli_mcp_openai_ai_sdk_skill_app_status_workbench_from_single_catalog',
+    domain_repo_wrapper_policy: 'handler_target_refs_only_adapter_or_tombstone_candidate',
+    authority_boundary: {
+      lineage_can_write_domain_truth: false,
+      lineage_can_replace_domain_handler: false,
+      lineage_can_authorize_quality_or_export: false,
+      lineage_can_claim_domain_ready: false,
+      lineage_can_claim_production_ready: false,
+    },
+  };
+}
+
 function unique(values: string[]) {
   return [...new Set(values.filter(Boolean))];
 }
@@ -278,14 +302,7 @@ function buildStageRoutes(stageControlPlane: FamilyStageControlPlane | null) {
 }
 
 function buildProductEntryDescriptors(catalog: FamilyActionCatalog) {
-  return catalog.actions.map((action) => ({
-    action_key: action.supported_surfaces.product_entry?.action_key ?? action.action_id,
-    command: action.supported_surfaces.product_entry?.command ?? action.source_command.command,
-    surface_kind: action.supported_surfaces.product_entry?.surface_kind ?? action.source_command.surface_kind,
-    summary: action.summary,
-    requires: action.workspace_locator_fields,
-    effect: action.effect,
-  }));
+  return catalog.actions.map((action) => projectFamilyAction(action).product_entry);
 }
 
 function buildProductStatusDescriptors(catalog: FamilyActionCatalog | null) {
@@ -313,6 +330,7 @@ function buildProductStatusDescriptors(catalog: FamilyActionCatalog | null) {
       summary: action.summary,
       effect: action.effect,
       source_descriptor: 'family_action_catalog.supported_surfaces.product_entry',
+      source_of_work: projectFamilyAction(action).product_entry.source_of_work,
     }));
 }
 
@@ -337,6 +355,7 @@ function buildDomainHandlerDescriptors(catalog: FamilyActionCatalog | null) {
       summary: action.summary,
       effect: action.effect,
       authority_boundary: action.authority_boundary ?? null,
+      source_of_work: projectFamilyAction(action).product_entry.source_of_work,
     }));
 }
 
@@ -1005,6 +1024,7 @@ export function buildGeneratedInterfaceBundle(
     generated_from: GENERATED_INTERFACE_SOURCE_REFS,
     default_entry_policy: buildDefaultEntryPolicy(),
     supported_derived_surfaces: buildSupportedDerivedSurfaces(),
+    source_of_work_lineage: buildSourceOfWorkLineage(catalog, stageControlPlane),
     ...blocks,
     active_caller_cutover_proof: buildActiveCallerCutoverProof(
       descriptor,

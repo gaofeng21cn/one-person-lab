@@ -119,6 +119,24 @@
         "workbench"
       ]
     },
+    "source_of_work_lineage": {
+      "surface_kind": "opl_generated_surface_source_of_work_lineage",
+      "version": "opl-generated-surface-source-of-work-lineage.v1",
+      "owner": "one-person-lab",
+      "source_catalogs": [
+        "family_action_catalog",
+        "family_stage_control_plane"
+      ],
+      "derived_surface_policy": "derive_cli_mcp_openai_ai_sdk_skill_app_status_workbench_from_single_catalog",
+      "domain_repo_wrapper_policy": "handler_target_refs_only_adapter_or_tombstone_candidate",
+      "authority_boundary": {
+        "lineage_can_write_domain_truth": false,
+        "lineage_can_replace_domain_handler": false,
+        "lineage_can_authorize_quality_or_export": false,
+        "lineage_can_claim_domain_ready": false,
+        "lineage_can_claim_production_ready": false
+      }
+    },
     "supported_derived_surfaces": [
       {
         "surface_id": "cli",
