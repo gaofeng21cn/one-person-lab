@@ -338,6 +338,11 @@ test('app action execute owns settings, release channel, workspace root, and pro
     );
     assert.equal(magEnsure.result.workspace_initialization.workspace_norm.registry_policy.writes_opl_workspace_registry, true);
 
+    const magHealthPath = path.join(workspaceRoot, 'nsfc-p2c', 'workspace_health.json');
+    const magHealth = JSON.parse(fs.readFileSync(magHealthPath, 'utf8'));
+    magHealth.status = 'blocked';
+    fs.writeFileSync(magHealthPath, `${JSON.stringify(magHealth, null, 2)}\n`);
+
     const workspaceValidate = runCli([
       'app',
       'action',
@@ -354,7 +359,13 @@ test('app action execute owns settings, release channel, workspace root, and pro
     }).app_action_execution;
 
     assert.equal(workspaceValidate.delegated_surface, 'opl workspace validate');
-    assert.equal(workspaceValidate.result.workspace_validation.status, 'passed');
+    assert.equal(workspaceValidate.result.workspace_validation.status, 'passed_with_repairable_findings');
+    assert.equal(
+      workspaceValidate.result.workspace_validation.repairable_findings.some(
+        (entry: { code: string }) => entry.code === 'workspace_health_drift',
+      ),
+      true,
+    );
     assert.equal(workspaceValidate.result.workspace_validation.display_labels.project_unit, 'grant_project');
 
     const workspaceDoctor = runCli([
@@ -373,7 +384,14 @@ test('app action execute owns settings, release channel, workspace root, and pro
     }).app_action_execution;
 
     assert.equal(workspaceDoctor.delegated_surface, 'opl workspace doctor');
-    assert.equal(workspaceDoctor.result.workspace_doctor.status, 'passed');
+    assert.equal(workspaceDoctor.result.workspace_doctor.status, 'repairable');
+    assert.deepEqual(workspaceDoctor.result.workspace_doctor.blockers, []);
+    assert.equal(
+      workspaceDoctor.result.workspace_doctor.repairable_findings.some(
+        (entry: { code: string }) => entry.code === 'workspace_health_drift',
+      ),
+      true,
+    );
 
     const workspaceAdopt = runCli([
       'app',
@@ -603,6 +621,10 @@ test('app action execute owns settings, release channel, workspace root, and pro
     assert.equal(workspaceReportAction.result.workspace_report.surface_kind, 'opl_workspace_report');
     assert.equal(workspaceReportAction.result.workspace_report.current_project.project_id, 'deck-001');
 
+    const refreshedMagHealth = JSON.parse(fs.readFileSync(magHealthPath, 'utf8'));
+    refreshedMagHealth.status = 'blocked';
+    fs.writeFileSync(magHealthPath, `${JSON.stringify(refreshedMagHealth, null, 2)}\n`);
+
     const workspaceFleetReport = runCli([
       'app',
       'action',
@@ -615,7 +637,9 @@ test('app action execute owns settings, release channel, workspace root, and pro
     }).app_action_execution;
 
     assert.equal(workspaceFleetReport.delegated_surface, 'opl workspace fleet report');
-    assert.equal(workspaceFleetReport.result.workspace_fleet_report.summary.ready_bindings_count >= 1, true);
+    assert.equal(workspaceFleetReport.result.workspace_fleet_report.status, 'repairable');
+    assert.equal(workspaceFleetReport.result.workspace_fleet_report.summary.repairable_bindings_count >= 1, true);
+    assert.equal(workspaceFleetReport.result.workspace_fleet_report.summary.blocked_bindings_count, 0);
 
     const provider = runCli([
       'app',

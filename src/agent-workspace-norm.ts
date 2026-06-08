@@ -34,6 +34,8 @@ export function buildAgentWorkspaceNormProjection(input: WorkspaceNormProjection
     registry_policy: input.contract.registry_policy,
     runtime_state_boundary: input.contract.runtime_state_boundary,
     authority_boundary: input.contract.authority_boundary,
+    workspace_governance_policy: input.contract.workspace_governance_policy,
+    workspace_diagnostic_policy: input.contract.workspace_diagnostic_policy,
     conformance_policy: input.contract.conformance_policy,
   };
 }

@@ -309,7 +309,22 @@ export interface AgentWorkspaceNormContract {
     canonical_generated_projection_root: string;
     root_projection_files_are_compatibility_mirrors: boolean;
     workspace_report_is_default_user_summary: boolean;
-    generated_projection_currentness_is_structural_gate: boolean;
+    generated_projection_currentness_is_repairable_structural_finding: boolean;
+    generated_projection_currentness_blocks_default_execution: boolean;
+  };
+  workspace_diagnostic_policy: {
+    surface_kind: string;
+    policy_id: string;
+    default_execution_blocks_on: string;
+    hard_blocker_rule: string;
+    repairable_rule: string;
+    advisory_rule: string;
+    auto_repair_command_template: string;
+    repairable_findings_block_default_execution: boolean;
+    advisory_warnings_block_default_execution: boolean;
+    hard_blocker_codes: string[];
+    repairable_finding_codes: string[];
+    advisory_warning_codes: string[];
   };
   domain_workspace_lifecycle_policy: {
     policy_ref: string;

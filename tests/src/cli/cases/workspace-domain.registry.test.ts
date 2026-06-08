@@ -171,6 +171,10 @@ test('workspace fleet report audits bound workspaces without executing direct-en
       OPL_STATE_DIR: stateRoot,
     });
     const workspacePath = path.join(workspaceRoot, 'visual-theme-a');
+    const healthPath = path.join(workspacePath, 'workspace_health.json');
+    const health = JSON.parse(fs.readFileSync(healthPath, 'utf8'));
+    health.status = 'blocked';
+    fs.writeFileSync(healthPath, `${JSON.stringify(health, null, 2)}\n`);
     runCli([
       'workspace',
       'bind',
@@ -190,13 +194,20 @@ test('workspace fleet report audits bound workspaces without executing direct-en
       OPL_STATE_DIR: stateRoot,
     }).workspace_fleet_report;
     assert.equal(fleet.surface_kind, 'opl_workspace_fleet_report');
-    assert.equal(fleet.summary.ready_bindings_count, 1);
+    assert.equal(fleet.status, 'blocked');
+    assert.equal(fleet.summary.ready_bindings_count, 0);
+    assert.equal(fleet.summary.repairable_bindings_count, 1);
     assert.equal(fleet.summary.blocked_bindings_count, 1);
     assert.equal(fleet.authority_boundary.fleet_report_executes_direct_entry, false);
     assert.equal(fleet.authority_boundary.fleet_report_executes_manifest_command, false);
     const ready = fleet.bindings.find((entry: { workspace_path: string }) => entry.workspace_path === workspacePath);
-    assert.equal(ready.fleet_status, 'ready');
-    assert.equal(ready.doctor_status, 'passed');
+    assert.equal(ready.fleet_status, 'repairable');
+    assert.equal(ready.doctor_status, 'repairable');
+    assert.deepEqual(ready.blockers, []);
+    assert.equal(
+      ready.repairable_findings.some((entry: { code: string }) => entry.code === 'workspace_health_drift'),
+      true,
+    );
     assert.equal(ready.current_project.project_id, 'deck-001');
     assert.equal(ready.project_lifecycle_counts.active, 1);
     const blocked = fleet.bindings.find((entry: { workspace_path: string }) => entry.workspace_path === workspaceRoot);

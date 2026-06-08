@@ -124,6 +124,8 @@ function fingerprintsMatch(answer: Record<string, unknown>, currentPayload: Reco
 }
 
 function stageNativeCloseoutRefMatchesCurrentPayload(ref: string, currentPayload: Record<string, unknown>) {
+  // Scoped to MAS default-executor owner-answer currentness repair only.
+  // StageRun closeout admission still requires the separate idempotency-bound owner receipt / typed blocker gate.
   if (!isStageNativeOwnerAnswerRef(ref, true)) {
     return false;
   }

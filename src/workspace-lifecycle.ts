@@ -3,7 +3,12 @@ import path from 'node:path';
 
 import { FrameworkContractError } from './contracts.ts';
 import type { FrameworkContracts } from './types.ts';
-import { doctorWorkspace, type WorkspaceLifecycleOptions, type WorkspaceValidationOptions } from './workspace-diagnostics.ts';
+import {
+  doctorWorkspace,
+  type WorkspaceDiagnosticFinding,
+  type WorkspaceLifecycleOptions,
+  type WorkspaceValidationOptions,
+} from './workspace-diagnostics.ts';
 import {
   buildWorkspaceHealth,
   buildWorkspaceInspection,
@@ -44,6 +49,37 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function normalizeOptionalString(value: string | undefined | null) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+}
+
+function doctorFindingsForArtifacts(doctor: {
+  blockers: WorkspaceDiagnosticFinding[];
+  findings: WorkspaceDiagnosticFinding[];
+  repairable_findings: WorkspaceDiagnosticFinding[];
+  advisory_warnings: WorkspaceDiagnosticFinding[];
+}) {
+  return {
+    blockers: doctor.blockers,
+    findings: doctor.findings,
+    repairableFindings: doctor.repairable_findings,
+    advisoryWarnings: doctor.advisory_warnings,
+  };
+}
+
+function fleetStatusForDoctor(doctor: {
+  blockers: WorkspaceDiagnosticFinding[];
+  repairable_findings: WorkspaceDiagnosticFinding[];
+  advisory_warnings: WorkspaceDiagnosticFinding[];
+}) {
+  if (doctor.blockers.length > 0) {
+    return 'blocked';
+  }
+  if (doctor.repairable_findings.length > 0) {
+    return 'repairable';
+  }
+  if (doctor.advisory_warnings.length > 0) {
+    return 'warning';
+  }
+  return 'ready';
 }
 
 function readWorkspaceIndex(indexPath: string) {
@@ -649,6 +685,9 @@ export function upgradeWorkspace(
   const doctor = apply
     ? doctorWorkspace(contracts, { workspacePath: context.workspacePath }).workspace_doctor
     : null;
+  const hardBlockersAfterApply = doctor?.blockers ?? [];
+  const repairableFindingsAfterApply = doctor?.repairable_findings ?? [];
+  const advisoryWarningsAfterApply = doctor?.advisory_warnings ?? [];
 
   return {
     version: 'g2',
@@ -658,7 +697,15 @@ export function upgradeWorkspace(
     },
     workspace_upgrade: {
       surface_kind: 'opl_workspace_upgrade',
-      status: apply ? (doctor?.status === 'passed' ? 'applied' : 'applied_with_blockers') : 'dry_run_ready',
+      status: apply
+        ? hardBlockersAfterApply.length > 0
+          ? 'applied_with_blockers'
+          : repairableFindingsAfterApply.length > 0
+            ? 'applied_with_repairable_findings'
+            : advisoryWarningsAfterApply.length > 0
+              ? 'applied_with_warnings'
+              : 'applied'
+        : 'dry_run_ready',
       dry_run: !apply,
       write_allowed: apply,
       workspace_path: context.workspacePath,
@@ -670,7 +717,9 @@ export function upgradeWorkspace(
       workspace_report_path: path.join(context.workspacePath, WORKSPACE_REPORT_REF),
       would_or_did_create_directories: createdDirectories,
       written_generated_files: written?.writtenGeneratedFiles ?? [],
-      blockers_after_apply: doctor?.blockers ?? [],
+      blockers_after_apply: hardBlockersAfterApply,
+      repairable_findings_after_apply: repairableFindingsAfterApply,
+      advisory_warnings_after_apply: advisoryWarningsAfterApply,
       authority_boundary: {
         upgrade_moves_project_roots: false,
         upgrade_writes_domain_truth: false,
@@ -737,7 +786,7 @@ export function workspaceHealth(
       projects: context.projects,
       createdAt: indexCreatedAt(context.index, updatedAt),
       updatedAt,
-      blockers: doctor.blockers,
+      ...doctorFindingsForArtifacts(doctor),
     }),
   };
 }
@@ -814,7 +863,7 @@ export function workspaceReport(
       projects: context.projects,
       createdAt: indexCreatedAt(context.index, updatedAt),
       updatedAt,
-      blockers: doctor.blockers,
+      ...doctorFindingsForArtifacts(doctor),
     }),
   };
 }
@@ -853,12 +902,16 @@ function fleetEntryForBinding(
     };
   }
   const doctor = doctorWorkspace(contracts, { workspacePath }).workspace_doctor;
-  if (doctor.status !== 'passed') {
+  const fleetStatus = fleetStatusForDoctor(doctor);
+  if (fleetStatus === 'blocked') {
     return {
       ...base,
       fleet_status: 'blocked',
       doctor_status: doctor.status,
       blockers: doctor.blockers,
+      hard_blockers: doctor.hard_blockers,
+      repairable_findings: doctor.repairable_findings,
+      advisory_warnings: doctor.advisory_warnings,
       current_project: null,
       project_lifecycle_counts: null,
       authority_boundary: {
@@ -872,9 +925,12 @@ function fleetEntryForBinding(
   const report = workspaceReport(contracts, { workspacePath }).workspace_report;
   return {
     ...base,
-    fleet_status: 'ready',
+    fleet_status: fleetStatus,
     doctor_status: doctor.status,
-    blockers: [],
+    blockers: doctor.blockers,
+    hard_blockers: doctor.hard_blockers,
+    repairable_findings: doctor.repairable_findings,
+    advisory_warnings: doctor.advisory_warnings,
     current_project: report.current_project,
     project_lifecycle_counts: buildWorkspaceHealth({
       workspaceId: report.workspace_id,
@@ -924,12 +980,20 @@ export function workspaceFleetReport(contracts: FrameworkContracts) {
     },
     workspace_fleet_report: {
       surface_kind: 'opl_workspace_fleet_report',
-      status: entries.some((entry) => entry.fleet_status === 'blocked') ? 'blocked' : 'ok',
+      status: entries.some((entry) => entry.fleet_status === 'blocked')
+        ? 'blocked'
+        : entries.some((entry) => entry.fleet_status === 'repairable')
+          ? 'repairable'
+          : entries.some((entry) => entry.fleet_status === 'warning')
+            ? 'warning'
+            : 'ok',
       checked_at: new Date().toISOString(),
       registry_summary: catalog.summary,
       summary: {
         bindings_count: entries.length,
         ready_bindings_count: entries.filter((entry) => entry.fleet_status === 'ready').length,
+        repairable_bindings_count: entries.filter((entry) => entry.fleet_status === 'repairable').length,
+        warning_bindings_count: entries.filter((entry) => entry.fleet_status === 'warning').length,
         blocked_bindings_count: entries.filter((entry) => entry.fleet_status === 'blocked').length,
         archived_bindings_count: entries.filter((entry) => entry.fleet_status === 'archived_binding').length,
         unbound_projects_count: unboundProjects.length,

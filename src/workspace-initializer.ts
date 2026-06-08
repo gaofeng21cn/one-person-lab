@@ -411,7 +411,7 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
         management_commands: {
           validate: {
             command: 'opl workspace validate',
-            role: 'fail_closed_workspace_index_gate',
+            role: 'hard_blockers_only_workspace_gate',
             required_inputs: ['workspace_path'],
           },
           doctor: {
@@ -502,7 +502,7 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
           instruction:
             'Use this OPL-owned ensure action before MAS/MAG/RCA/OMA task execution; it reuses an active workspace binding or initializes the default topology.',
           management_instruction:
-            'Use workspace validate as the fail-closed gate, workspace doctor for blockers, workspace report for the user-first current-project view, workspace fleet report for registry-wide workspace inspection, workspace adopt --dry-run before --apply, workspace upgrade --apply to refresh OPL projections, workspace project lifecycle --apply to pause/resume/lock/supersede/archive without deleting files, workspace project delete --dry-run to check the owner receipt safe-delete gate, and export-map/inspect/inventory/health for audit inspection.',
+            'Use workspace validate as the hard-blockers-only gate, workspace doctor for hard/repairable/advisory diagnostics, workspace report for the user-first current-project view, workspace fleet report for registry-wide workspace inspection, workspace adopt --dry-run before --apply, workspace upgrade --apply to auto-repair OPL projections, workspace project lifecycle --apply to pause/resume/lock/supersede/archive without deleting files, workspace project delete --dry-run to check the owner receipt safe-delete gate, and export-map/inspect/inventory/health for audit inspection.',
         },
         app: {
           action_id: contracts.agentWorkspaceNorm.default_workspace_precondition.app_action_id,

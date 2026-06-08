@@ -680,18 +680,34 @@ function projectLifecycleCounts(projects: WorkspaceProjectIndexEntry[]) {
 
 export function buildWorkspaceHealth(input: WorkspaceArtifactContext & {
   blockers?: Array<{ code: string; message: string; details?: Record<string, unknown> }>;
+  findings?: Array<{ code: string; message: string; details?: Record<string, unknown> }>;
+  repairableFindings?: Array<{ code: string; message: string; details?: Record<string, unknown> }>;
+  advisoryWarnings?: Array<{ code: string; message: string; details?: Record<string, unknown> }>;
 }) {
   const blockers = input.blockers ?? [];
+  const findings = input.findings ?? blockers;
+  const repairableFindings = input.repairableFindings ?? [];
+  const advisoryWarnings = input.advisoryWarnings ?? [];
   const lifecycleCounts = projectLifecycleCounts(input.projects);
   return {
     surface_kind: 'opl_workspace_health',
     version: 'workspace-health.v1',
     workspace_id: input.workspaceId,
     agent_id: input.agent.agent_id,
-    status: blockers.length === 0 ? 'passed' : 'blocked',
+    status: blockers.length > 0
+      ? 'blocked'
+      : repairableFindings.length > 0
+        ? 'repairable'
+        : advisoryWarnings.length > 0
+          ? 'warning'
+          : 'passed',
     checked_at: input.updatedAt,
+    finding_count: findings.length,
     blocker_count: blockers.length,
     blockers,
+    hard_blockers: blockers,
+    repairable_findings: repairableFindings,
+    advisory_warnings: advisoryWarnings,
     project_count: input.projects.length,
     project_lifecycle_counts: lifecycleCounts,
     active_project_count: lifecycleCounts.active,
@@ -707,9 +723,16 @@ export function buildWorkspaceHealth(input: WorkspaceArtifactContext & {
 
 export function buildWorkspaceReport(input: WorkspaceArtifactContext & {
   blockers?: Array<{ code: string; message: string; details?: Record<string, unknown> }>;
+  findings?: Array<{ code: string; message: string; details?: Record<string, unknown> }>;
+  repairableFindings?: Array<{ code: string; message: string; details?: Record<string, unknown> }>;
+  advisoryWarnings?: Array<{ code: string; message: string; details?: Record<string, unknown> }>;
 }) {
   const activeProjects = input.projects.filter((project) => project.lifecycle.status === 'active');
   const currentProject = activeProjects[activeProjects.length - 1] ?? input.projects[input.projects.length - 1] ?? null;
+  const blockers = input.blockers ?? [];
+  const findings = input.findings ?? blockers;
+  const repairableFindings = input.repairableFindings ?? [];
+  const advisoryWarnings = input.advisoryWarnings ?? [];
   return {
     surface_kind: 'opl_workspace_report',
     version: 'workspace-report.v1',
@@ -767,7 +790,11 @@ export function buildWorkspaceReport(input: WorkspaceArtifactContext & {
         WORKSPACE_REPORT_REF,
       ],
     },
-    blockers: input.blockers ?? [],
+    finding_count: findings.length,
+    blockers,
+    hard_blockers: blockers,
+    repairable_findings: repairableFindings,
+    advisory_warnings: advisoryWarnings,
     authority_boundary: {
       report_is_projection_only: true,
       report_can_claim_stage_complete: false,

@@ -65,6 +65,17 @@ export type WorkspaceValidationOptions = {
 
 export type WorkspaceDoctorOptions = WorkspaceValidationOptions;
 
+export type WorkspaceDiagnosticSeverity = 'hard_blocker' | 'repairable' | 'advisory';
+
+export type WorkspaceDiagnosticFinding = {
+  code: string;
+  message: string;
+  severity: WorkspaceDiagnosticSeverity;
+  default_blocks_execution: boolean;
+  details?: Record<string, unknown>;
+  repair_command?: string;
+};
+
 export type WorkspaceAdoptOptions = {
   agentId?: string;
   workspacePath?: string;
@@ -152,6 +163,132 @@ const BLOCKER_MESSAGES: Record<string, string> = {
   workspace_norm_missing: 'workspace_index.json is missing workspace_norm projection.',
   workspace_norm_drift: 'workspace_norm projection does not match the executable norm contract.',
 };
+
+const REPAIRABLE_DIAGNOSTIC_CODES = new Set([
+  'workspace_config_missing',
+  'canonical_topology_missing',
+  'canonical_topology_drift',
+  'display_labels_missing',
+  'display_labels_drift',
+  'shared_resources_missing',
+  'shared_resources_drift',
+  'shared_resource_root_missing',
+  'shared_resource_manifest_missing',
+  'shared_resource_manifest_drift',
+  'generated_refs_missing',
+  'workspace_norm_missing',
+  'workspace_norm_drift',
+  'workspace_norm_projection_drift',
+  'profile_binding_missing',
+  'profile_binding_drift',
+  'topology_events_missing',
+  'indexed_project_config_missing',
+  'indexed_project_index_missing',
+  'indexed_project_index_drift',
+  'indexed_inputs_root_missing',
+  'indexed_exports_root_missing',
+  'indexed_packages_root_missing',
+  'indexed_archive_root_missing',
+  'indexed_stage_outputs_root_missing',
+  'indexed_stage_outputs_manifest_missing',
+  'indexed_stage_outputs_manifest_drift',
+  'indexed_stage_outputs_index_missing',
+  'indexed_current_stage_pointer_missing',
+  'indexed_control_root_missing',
+  'indexed_review_root_missing',
+  'indexed_handoff_root_missing',
+  'workspace_map_missing',
+  'workspace_map_drift',
+  'workspace_health_missing',
+  'workspace_health_drift',
+  'workspace_inspection_missing',
+  'workspace_inspection_drift',
+  'workspace_resource_inventory_missing',
+  'workspace_resource_inventory_drift',
+  'workspace_report_missing',
+  'workspace_report_drift',
+  'canonical_generated_projection_missing',
+  'canonical_generated_projection_drift',
+  'interface_projection_missing',
+]);
+
+const ADVISORY_DIAGNOSTIC_CODES = new Set<string>();
+
+const DEFAULT_WORKSPACE_DIAGNOSTIC_POLICY = {
+  policy_id: 'opl.workspace_diagnostics.contract_light.v1',
+  surface_kind: 'opl_workspace_diagnostic_policy',
+  default_execution_blocks_on: 'hard_blockers_only',
+  hard_blocker_rule:
+    'Only missing/invalid workspace identity, unsafe project shape, authority overclaim, runtime-state overclaim, and closeout-sensitive stage pointer/index shape drift stop default execution.',
+  repairable_rule:
+    'Generated metadata, profile binding, topology events, shared manifests, directory skeletons, root mirrors, reports, and missing stage projections are repairable through workspace upgrade.',
+  advisory_rule:
+    'Advisory warnings are operator hints only and never block default execution.',
+  auto_repair_command_template: 'opl workspace upgrade --workspace <path> --apply',
+  repairable_findings_block_default_execution: false,
+  advisory_warnings_block_default_execution: false,
+  hard_blocker_codes: [
+    'workspace_path_required',
+    'workspace_root_missing',
+    'workspace_root_not_directory',
+    'workspace_index_missing',
+    'workspace_index_invalid_json',
+    'workspace_index_shape_invalid',
+    'agent_metadata_missing',
+    'workspace_topology_profile_missing',
+    'domain_topology_profile_drift',
+    'project_collection_missing',
+    'indexed_projects_missing',
+    'indexed_project_shape_invalid',
+    'indexed_project_root_missing',
+    'indexed_stage_outputs_index_drift',
+    'indexed_current_stage_pointer_drift',
+    'authority_boundary_overclaim',
+    'runtime_state_boundary_overclaim',
+  ],
+  repairable_finding_codes: [...REPAIRABLE_DIAGNOSTIC_CODES],
+  advisory_warning_codes: [...ADVISORY_DIAGNOSTIC_CODES],
+};
+
+function workspaceDiagnosticPolicy(contracts: FrameworkContracts) {
+  return contracts.agentWorkspaceNorm.workspace_diagnostic_policy ?? DEFAULT_WORKSPACE_DIAGNOSTIC_POLICY;
+}
+
+function classifyDiagnostic(
+  policy: typeof DEFAULT_WORKSPACE_DIAGNOSTIC_POLICY,
+  code: string,
+): WorkspaceDiagnosticSeverity {
+  if (policy.repairable_finding_codes.includes(code)) {
+    return 'repairable';
+  }
+  if (policy.advisory_warning_codes.includes(code)) {
+    return 'advisory';
+  }
+  return 'hard_blocker';
+}
+
+function repairCommand(workspacePath: string | null, severity: WorkspaceDiagnosticSeverity) {
+  return severity === 'repairable' && workspacePath
+    ? `opl workspace upgrade --workspace ${JSON.stringify(workspacePath)} --apply`
+    : undefined;
+}
+
+function materializeFindings(
+  policy: typeof DEFAULT_WORKSPACE_DIAGNOSTIC_POLICY,
+  workspacePath: string | null,
+  findings: Array<{ code: string; message: string; details?: Record<string, unknown> }>,
+): WorkspaceDiagnosticFinding[] {
+  return findings.map((finding) => {
+    const severity = classifyDiagnostic(policy, finding.code);
+    const command = repairCommand(workspacePath, severity);
+    return {
+      ...finding,
+      severity,
+      default_blocks_execution: severity === 'hard_blocker',
+      ...(command ? { repair_command: command } : {}),
+    };
+  });
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -854,7 +991,7 @@ function buildDoctorPayload(
   contracts: FrameworkContracts,
   workspacePath: string | null,
   workspaceIndexPath: string | null,
-  blockers: Array<{ code: string; message: string; details?: Record<string, unknown> }>,
+  findingsInput: Array<{ code: string; message: string; details?: Record<string, unknown> }>,
   context: {
     index: Record<string, unknown>;
     agent: WorkspaceAgentProfile | null;
@@ -863,6 +1000,11 @@ function buildDoctorPayload(
     indexedProjects: WorkspaceProjectIndexEntry[];
   } | null,
 ) {
+  const diagnosticPolicy = workspaceDiagnosticPolicy(contracts);
+  const findings = materializeFindings(diagnosticPolicy, workspacePath, findingsInput);
+  const hardBlockers = findings.filter((finding) => finding.severity === 'hard_blocker');
+  const repairableFindings = findings.filter((finding) => finding.severity === 'repairable');
+  const advisoryWarnings = findings.filter((finding) => finding.severity === 'advisory');
   return {
     version: 'g2',
     contracts_context: {
@@ -871,11 +1013,26 @@ function buildDoctorPayload(
     },
     workspace_doctor: {
       surface_kind: 'opl_workspace_doctor',
-      status: blockers.length === 0 ? 'passed' : 'blocked',
+      status: hardBlockers.length > 0
+        ? 'blocked'
+        : repairableFindings.length > 0
+          ? 'repairable'
+          : advisoryWarnings.length > 0
+            ? 'warning'
+            : 'passed',
       workspace_path: workspacePath,
       workspace_index_path: workspaceIndexPath,
       checked_at: new Date().toISOString(),
-      blockers,
+      diagnostic_policy: diagnosticPolicy,
+      finding_count: findings.length,
+      hard_blocker_count: hardBlockers.length,
+      repairable_finding_count: repairableFindings.length,
+      advisory_warning_count: advisoryWarnings.length,
+      findings,
+      blockers: hardBlockers,
+      hard_blockers: hardBlockers,
+      repairable_findings: repairableFindings,
+      advisory_warnings: advisoryWarnings,
       canonical_topology: context?.index.canonical_topology ?? null,
       display_labels: context?.index.display_labels ?? null,
       shared_resources: context?.index.shared_resources ?? null,
@@ -914,7 +1071,7 @@ export function validateWorkspace(
 ) {
   const payload = doctorWorkspace(contracts, options);
   const doctor = payload.workspace_doctor;
-  if (doctor.status !== 'passed') {
+  if (doctor.blockers.length > 0) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
       'Workspace validation failed.',
@@ -922,6 +1079,10 @@ export function validateWorkspace(
         workspace_path: doctor.workspace_path,
         workspace_index_path: doctor.workspace_index_path,
         blockers: doctor.blockers,
+        repairable_findings: doctor.repairable_findings,
+        advisory_warnings: doctor.advisory_warnings,
+        findings: doctor.findings,
+        diagnostic_policy: doctor.diagnostic_policy,
       },
     );
   }
@@ -929,10 +1090,23 @@ export function validateWorkspace(
     ...payload,
     workspace_validation: {
       surface_kind: 'opl_workspace_validation',
-      status: 'passed',
+      status: doctor.repairable_findings.length > 0
+        ? 'passed_with_repairable_findings'
+        : doctor.advisory_warnings.length > 0
+          ? 'passed_with_warnings'
+          : 'passed',
       workspace_path: doctor.workspace_path,
       workspace_index_path: doctor.workspace_index_path,
       checked_at: doctor.checked_at,
+      diagnostic_policy: doctor.diagnostic_policy,
+      finding_count: doctor.finding_count,
+      hard_blocker_count: doctor.hard_blocker_count,
+      repairable_finding_count: doctor.repairable_finding_count,
+      advisory_warning_count: doctor.advisory_warning_count,
+      blockers: doctor.blockers,
+      hard_blockers: doctor.hard_blockers,
+      repairable_findings: doctor.repairable_findings,
+      advisory_warnings: doctor.advisory_warnings,
       canonical_topology: doctor.canonical_topology,
       display_labels: doctor.display_labels,
       shared_resources: doctor.shared_resources,

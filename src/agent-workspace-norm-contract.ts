@@ -468,7 +468,117 @@ function validateAgentWorkspaceNormSemantics(
   assertExactString(governance.canonical_generated_projection_root, 'control/opl/projections', 'workspace_governance_policy.canonical_generated_projection_root', filePath);
   assertExactBoolean(governance.root_projection_files_are_compatibility_mirrors, true, 'workspace_governance_policy.root_projection_files_are_compatibility_mirrors', filePath);
   assertExactBoolean(governance.workspace_report_is_default_user_summary, true, 'workspace_governance_policy.workspace_report_is_default_user_summary', filePath);
-  assertExactBoolean(governance.generated_projection_currentness_is_structural_gate, true, 'workspace_governance_policy.generated_projection_currentness_is_structural_gate', filePath);
+  assertExactBoolean(
+    governance.generated_projection_currentness_is_repairable_structural_finding,
+    true,
+    'workspace_governance_policy.generated_projection_currentness_is_repairable_structural_finding',
+    filePath,
+  );
+  assertExactBoolean(
+    governance.generated_projection_currentness_blocks_default_execution,
+    false,
+    'workspace_governance_policy.generated_projection_currentness_blocks_default_execution',
+    filePath,
+  );
+
+  const diagnosticPolicy = contract.workspace_diagnostic_policy;
+  assertExactString(diagnosticPolicy.surface_kind, 'opl_workspace_diagnostic_policy', 'workspace_diagnostic_policy.surface_kind', filePath);
+  assertExactString(diagnosticPolicy.policy_id, 'opl.workspace_diagnostics.contract_light.v1', 'workspace_diagnostic_policy.policy_id', filePath);
+  assertExactString(diagnosticPolicy.default_execution_blocks_on, 'hard_blockers_only', 'workspace_diagnostic_policy.default_execution_blocks_on', filePath);
+  assertExactBoolean(
+    diagnosticPolicy.repairable_findings_block_default_execution,
+    false,
+    'workspace_diagnostic_policy.repairable_findings_block_default_execution',
+    filePath,
+  );
+  assertExactBoolean(
+    diagnosticPolicy.advisory_warnings_block_default_execution,
+    false,
+    'workspace_diagnostic_policy.advisory_warnings_block_default_execution',
+    filePath,
+  );
+  assertExactStringArray(
+    diagnosticPolicy.hard_blocker_codes,
+    [
+      'workspace_path_required',
+      'workspace_root_missing',
+      'workspace_root_not_directory',
+      'workspace_index_missing',
+      'workspace_index_invalid_json',
+      'workspace_index_shape_invalid',
+      'agent_metadata_missing',
+      'workspace_topology_profile_missing',
+      'domain_topology_profile_drift',
+      'project_collection_missing',
+      'indexed_projects_missing',
+      'indexed_project_shape_invalid',
+      'indexed_project_root_missing',
+      'indexed_stage_outputs_index_drift',
+      'indexed_current_stage_pointer_drift',
+      'authority_boundary_overclaim',
+      'runtime_state_boundary_overclaim',
+    ],
+    'workspace_diagnostic_policy.hard_blocker_codes',
+    filePath,
+  );
+  assertExactStringArray(
+    diagnosticPolicy.repairable_finding_codes,
+    [
+      'workspace_config_missing',
+      'canonical_topology_missing',
+      'canonical_topology_drift',
+      'display_labels_missing',
+      'display_labels_drift',
+      'shared_resources_missing',
+      'shared_resources_drift',
+      'shared_resource_root_missing',
+      'shared_resource_manifest_missing',
+      'shared_resource_manifest_drift',
+      'generated_refs_missing',
+      'workspace_norm_missing',
+      'workspace_norm_drift',
+      'workspace_norm_projection_drift',
+      'profile_binding_missing',
+      'profile_binding_drift',
+      'topology_events_missing',
+      'indexed_project_config_missing',
+      'indexed_project_index_missing',
+      'indexed_project_index_drift',
+      'indexed_inputs_root_missing',
+      'indexed_exports_root_missing',
+      'indexed_packages_root_missing',
+      'indexed_archive_root_missing',
+      'indexed_stage_outputs_root_missing',
+      'indexed_stage_outputs_manifest_missing',
+      'indexed_stage_outputs_manifest_drift',
+      'indexed_stage_outputs_index_missing',
+      'indexed_current_stage_pointer_missing',
+      'indexed_control_root_missing',
+      'indexed_review_root_missing',
+      'indexed_handoff_root_missing',
+      'workspace_map_missing',
+      'workspace_map_drift',
+      'workspace_health_missing',
+      'workspace_health_drift',
+      'workspace_inspection_missing',
+      'workspace_inspection_drift',
+      'workspace_resource_inventory_missing',
+      'workspace_resource_inventory_drift',
+      'workspace_report_missing',
+      'workspace_report_drift',
+      'canonical_generated_projection_missing',
+      'canonical_generated_projection_drift',
+      'interface_projection_missing',
+    ],
+    'workspace_diagnostic_policy.repairable_finding_codes',
+    filePath,
+  );
+  assertExactStringArray(
+    diagnosticPolicy.advisory_warning_codes,
+    [],
+    'workspace_diagnostic_policy.advisory_warning_codes',
+    filePath,
+  );
 
   const lifecycle = contract.domain_workspace_lifecycle_policy;
   assertExactString(lifecycle.policy_ref, 'contracts/opl-framework/workspace-index.schema.json#/$defs/project/lifecycle', 'domain_workspace_lifecycle_policy.policy_ref', filePath);
@@ -500,8 +610,6 @@ function validateAgentWorkspaceNormSemantics(
       'workspace_user_inspection_surface_drift',
       'workspace_runtime_state_boundary_drift',
       'workspace_authority_boundary_overclaim',
-      'workspace_profile_binding_drift',
-      'workspace_generated_projection_currentness_drift',
       'domain_generic_workspace_lifecycle_residue',
     ],
     'conformance_policy.blocked_reasons',
@@ -525,6 +633,7 @@ export function validateAgentWorkspaceNorm(
   const runtimeStateBoundary = requireSection(root, 'runtime_state_boundary', filePath);
   const authorityBoundary = requireSection(root, 'authority_boundary', filePath);
   const workspaceGovernancePolicy = requireSection(root, 'workspace_governance_policy', filePath);
+  const workspaceDiagnosticPolicy = requireSection(root, 'workspace_diagnostic_policy', filePath);
   const domainWorkspaceLifecyclePolicy = requireSection(root, 'domain_workspace_lifecycle_policy', filePath);
   const conformancePolicy = requireSection(root, 'conformance_policy', filePath);
 
@@ -668,11 +777,38 @@ export function validateAgentWorkspaceNorm(
         'workspace_report_is_default_user_summary',
         filePath,
       ),
-      generated_projection_currentness_is_structural_gate: booleanField(
+      generated_projection_currentness_is_repairable_structural_finding: booleanField(
         workspaceGovernancePolicy,
-        'generated_projection_currentness_is_structural_gate',
+        'generated_projection_currentness_is_repairable_structural_finding',
         filePath,
       ),
+      generated_projection_currentness_blocks_default_execution: booleanField(
+        workspaceGovernancePolicy,
+        'generated_projection_currentness_blocks_default_execution',
+        filePath,
+      ),
+    },
+    workspace_diagnostic_policy: {
+      surface_kind: stringField(workspaceDiagnosticPolicy, 'surface_kind', filePath),
+      policy_id: stringField(workspaceDiagnosticPolicy, 'policy_id', filePath),
+      default_execution_blocks_on: stringField(workspaceDiagnosticPolicy, 'default_execution_blocks_on', filePath),
+      hard_blocker_rule: stringField(workspaceDiagnosticPolicy, 'hard_blocker_rule', filePath),
+      repairable_rule: stringField(workspaceDiagnosticPolicy, 'repairable_rule', filePath),
+      advisory_rule: stringField(workspaceDiagnosticPolicy, 'advisory_rule', filePath),
+      auto_repair_command_template: stringField(workspaceDiagnosticPolicy, 'auto_repair_command_template', filePath),
+      repairable_findings_block_default_execution: booleanField(
+        workspaceDiagnosticPolicy,
+        'repairable_findings_block_default_execution',
+        filePath,
+      ),
+      advisory_warnings_block_default_execution: booleanField(
+        workspaceDiagnosticPolicy,
+        'advisory_warnings_block_default_execution',
+        filePath,
+      ),
+      hard_blocker_codes: stringArrayField(workspaceDiagnosticPolicy, 'hard_blocker_codes', filePath),
+      repairable_finding_codes: stringArrayField(workspaceDiagnosticPolicy, 'repairable_finding_codes', filePath),
+      advisory_warning_codes: stringArrayField(workspaceDiagnosticPolicy, 'advisory_warning_codes', filePath),
     },
     domain_workspace_lifecycle_policy: {
       policy_ref: stringField(domainWorkspaceLifecyclePolicy, 'policy_ref', filePath),

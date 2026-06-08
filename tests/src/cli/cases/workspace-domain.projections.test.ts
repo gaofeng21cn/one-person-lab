@@ -137,22 +137,26 @@ test('workspace validate and doctor inspect generated workspace topology semanti
       'stage_outputs',
       'current_stage.json',
     ));
-    const blocked = runCli(['workspace', 'doctor', '--workspace', workspacePath], {
+    const repairable = runCli(['workspace', 'doctor', '--workspace', workspacePath], {
       OPL_STATE_DIR: stateRoot,
     });
-    assert.equal(blocked.workspace_doctor.status, 'blocked');
+    assert.equal(repairable.workspace_doctor.status, 'repairable');
+    assert.deepEqual(repairable.workspace_doctor.blockers, []);
     assert.equal(
-      blocked.workspace_doctor.blockers.some((entry: { code: string }) => (
+      repairable.workspace_doctor.repairable_findings.some((entry: { code: string }) => (
         entry.code === 'indexed_stage_outputs_manifest_missing'
       )),
       true,
     );
     assert.equal(
-      blocked.workspace_doctor.blockers.some((entry: { code: string }) => (
+      repairable.workspace_doctor.repairable_findings.some((entry: { code: string }) => (
         entry.code === 'indexed_current_stage_pointer_missing'
       )),
       true,
     );
+    assert.equal(runCli(['workspace', 'validate', '--workspace', workspacePath], {
+      OPL_STATE_DIR: stateRoot,
+    }).workspace_validation.status, 'passed_with_repairable_findings');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -331,7 +335,7 @@ test('workspace doctor blocks invalid current pointer refs', () => {
   }
 });
 
-test('workspace doctor blocks stale profile, norm, and generated projection currentness', () => {
+test('workspace doctor classifies stale profile, norm, and generated projection currentness as repairable', () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-currentness-root-'));
 
   try {
@@ -352,14 +356,21 @@ test('workspace doctor blocks stale profile, norm, and generated projection curr
 
     fs.rmSync(path.join(workspacePath, 'control', 'opl', 'projections', 'workspace_map.json'));
     let doctor = runCli(['workspace', 'doctor', '--workspace', workspacePath]).workspace_doctor;
-    assert.equal(doctor.status, 'blocked');
+    assert.equal(doctor.status, 'repairable');
+    assert.deepEqual(doctor.blockers, []);
     assert.equal(
-      doctor.blockers.some((entry: { code: string; details?: { path?: string } }) => (
+      doctor.repairable_findings.some((entry: { code: string; details?: { path?: string }; repair_command?: string }) => (
         entry.code === 'canonical_generated_projection_missing'
         && entry.details?.path === 'control/opl/projections/workspace_map.json'
+        && entry.repair_command?.includes('opl workspace upgrade --workspace')
       )),
       true,
     );
+    const validation = runCli(['workspace', 'validate', '--workspace', workspacePath]).workspace_validation;
+    assert.equal(validation.status, 'passed_with_repairable_findings');
+    assert.equal(validation.repairable_findings.some((entry: { code: string }) => (
+      entry.code === 'canonical_generated_projection_missing'
+    )), true);
     runCli(['workspace', 'upgrade', '--workspace', workspacePath, '--apply']);
     assert.equal(runCli(['workspace', 'doctor', '--workspace', workspacePath]).workspace_doctor.status, 'passed');
 
@@ -369,7 +380,7 @@ test('workspace doctor blocks stale profile, norm, and generated projection curr
     fs.writeFileSync(canonicalMapPath, `${JSON.stringify(canonicalMap, null, 2)}\n`);
     doctor = runCli(['workspace', 'doctor', '--workspace', workspacePath]).workspace_doctor;
     assert.equal(
-      doctor.blockers.some((entry: { code: string; details?: { canonical_path?: string } }) => (
+      doctor.repairable_findings.some((entry: { code: string; details?: { canonical_path?: string } }) => (
         entry.code === 'canonical_generated_projection_drift'
         && entry.details?.canonical_path === 'control/opl/projections/workspace_map.json'
       )),
@@ -383,7 +394,7 @@ test('workspace doctor blocks stale profile, norm, and generated projection curr
     fs.writeFileSync(healthPath, `${JSON.stringify(health, null, 2)}\n`);
     doctor = runCli(['workspace', 'doctor', '--workspace', workspacePath]).workspace_doctor;
     assert.equal(
-      doctor.blockers.some((entry: { code: string }) => entry.code === 'workspace_health_drift'),
+      doctor.repairable_findings.some((entry: { code: string }) => entry.code === 'workspace_health_drift'),
       true,
     );
     runCli(['workspace', 'upgrade', '--workspace', workspacePath, '--apply']);
@@ -394,7 +405,7 @@ test('workspace doctor blocks stale profile, norm, and generated projection curr
     fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);
     doctor = runCli(['workspace', 'doctor', '--workspace', workspacePath]).workspace_doctor;
     assert.equal(
-      doctor.blockers.some((entry: { code: string }) => entry.code === 'workspace_report_drift'),
+      doctor.repairable_findings.some((entry: { code: string }) => entry.code === 'workspace_report_drift'),
       true,
     );
     runCli(['workspace', 'upgrade', '--workspace', workspacePath, '--apply']);
@@ -405,7 +416,7 @@ test('workspace doctor blocks stale profile, norm, and generated projection curr
     fs.writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
     doctor = runCli(['workspace', 'doctor', '--workspace', workspacePath]).workspace_doctor;
     assert.equal(
-      doctor.blockers.some((entry: { code: string }) => entry.code === 'profile_binding_drift'),
+      doctor.repairable_findings.some((entry: { code: string }) => entry.code === 'profile_binding_drift'),
       true,
     );
     runCli(['workspace', 'upgrade', '--workspace', workspacePath, '--apply']);
@@ -415,7 +426,7 @@ test('workspace doctor blocks stale profile, norm, and generated projection curr
     fs.writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
     doctor = runCli(['workspace', 'doctor', '--workspace', workspacePath]).workspace_doctor;
     assert.equal(
-      doctor.blockers.some((entry: { code: string }) => entry.code === 'workspace_norm_projection_drift'),
+      doctor.repairable_findings.some((entry: { code: string }) => entry.code === 'workspace_norm_projection_drift'),
       true,
     );
   } finally {
