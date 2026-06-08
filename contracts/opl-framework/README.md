@@ -43,7 +43,7 @@ Start here for the active `OPL Framework / App / Foundry Agents` model:
 - `docs/decisions.md`
 - `contracts/README.md`
 
-Read the linked domain repositories when you need the current repo-owned capability surfaces that `opl skill sync` activates.
+Read the linked domain repositories when you need the current repo-owned capability surfaces that `opl connect sync-skills` activates.
 
 ## Target Architecture Contract Groups
 
