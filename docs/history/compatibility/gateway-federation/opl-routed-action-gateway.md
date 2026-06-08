@@ -2,339 +2,68 @@
 
 Owner: `One Person Lab`
 Purpose: `legacy_routed_action_gateway_provenance`
-State: `history_only`
-Machine boundary: 本文只保存 gateway-first routed-action planning contract 的历史冻结件。当前机器真相继续归 active contracts、source、CLI/API 行为、runtime ledger、provider receipts、domain-owned manifests / receipts 与 App/workbench projection；本文不得作为 active mutation entry、launcher、compatibility interface、machine contract 或 test oracle。
+State: `history_only_compressed`
+Machine boundary: 本文只保存 gateway-first routed-action planning contract 的历史冻结件。当前机器真相继续归 active contracts、source、CLI/API 行为、runtime ledger、provider receipts、domain-owned manifests / receipts 与 App/workbench projection；本文不得作为 active mutation entry、launcher、compatibility interface、machine contract、test oracle 或旧 alias/facade 保留依据。
 
-> 历史说明（`2026-04-24`）：这份文档保留的是 gateway-first 阶段 planning-only 的 routed-action 冻结件。当前 `OPL` 不再把它当作默认 runtime/activation 合同。
-> 当前入口真相：活跃工作从 `Codex-default session/runtime -> explicit OPL activation -> selected domain agent entry` 进入。下文 `OPL Gateway`、`domain_gateway` 或 `domain harness` 都是旧兼容词汇，不是 `MAS`、`MAG`、`RCA` 当前对外第一主语。
+## 当前读法
 
-## 目的
+这份文档曾在 2026-04 gateway-first 阶段冻结 `G3 Routed Action Gateway`：`route_request`、`build_handoff_payload` 和 `audit_routing_decision` 只停留在 planning contract 层，唯一成功目标是 `domain_gateway`，并禁止 direct harness bypass。
 
-这份文档冻结 `OPL Gateway` 当前 planning-only 的 routed-action contract。
+当前 OPL action/routing 主线已经转为 stage-led framework、explicit activation、provider-backed stage runtime、owner-delta read model、domain-agent entry、authority functions 与 App/workbench projection。旧 `G3 / routed-action / domain_gateway handoff` 语义只保留为历史 provenance，不再定义 active mutation entry、launcher 或 machine contract。
 
-它定义的是：`OPL` 如何在控制权进入 admitted domain gateway 之前，对顶层 action request 做分类、构建 handoff payload，并记录 routing trace。
-当前这一层只停留在 planning-contract 层。本轮不授予 runtime launch、mutation entry 或 workspace write。
-文档里的 machine-readable 示例继续沿用现有 `g3` schema version。
+## Single Source of Truth
 
-目标是把顶层路由做成显式、可审计、可安全执行的合同。
+当前同类语义的有效 owner 是：
 
-## 当前依赖基线
+- 当前项目 truth：`README.md`、`docs/project.md`、`docs/status.md`、`docs/architecture.md`、`docs/invariants.md`、`docs/decisions.md`
+- active progress / gaps / next owner baton：`docs/active/current-state-vs-ideal-gap.md`
+- current action/routing truth：`contracts/`、`src/`、repo-native tests、CLI/API payload、runtime ledger、provider receipts、domain manifests / receipts、App/workbench projection
+- docs lifecycle policy：`docs/docs_portfolio_consolidation.md`、`docs/policies/docs-lifecycle-policy.md`
+- 本路线历史入口：`docs/history/compatibility/gateway-federation/README.md`
 
-这份合同建立在下面这些东西之上：
+本文故意不复制这些 owner 的当前事实。
 
-- [OPL Federation Contract](./opl-federation-contract.md)
-- [OPL Gateway 契约面](./opl-read-only-discovery-gateway.md)
-- [OPL Framework Contracts](../../../../contracts/opl-framework/README.md)
+## 历史覆盖
 
-这些 gateway-discovery surface 构成 routed-action planning 的冻结依赖基线。
+原长文覆盖过这些 `G3` 历史语义：
 
-## 核心承诺
+| 历史 section | 当时用途 | 当前读法 |
+| --- | --- | --- |
+| `route_request` | 按 workstream/domain/family preference 产生旧 routing decision。 | 当前 routing/action truth 必须从 active source、contracts、tests、CLI/read-model 和 domain owner surfaces 证明。 |
+| `build_handoff_payload` | 从 routed decision 构建旧 domain_gateway handoff payload。 | 当前 activation/stage handoff 归 active framework runtime、domain entry、authority functions 与 receipts。 |
+| `audit_routing_decision` | 在进入 domain gateway 前记录 routing trace。 | 当前 audit/projection 归 active runtime/read-model/ledger；历史 trace shape 不再是 active schema。 |
+| refusal / unknown-domain / ambiguous-task | 显式表达旧 gateway routing 的非成功状态。 | 可作为 fail-closed 设计 provenance，但不能复活旧 API 或 fallback。 |
+| hard boundary | 禁止绕过 domain gateway 直达 harness、禁止 OPL 接管 canonical truth。 | 当前 equivalent boundary 已由 active invariants/docs/contracts/source/domain owner gates 表达。 |
+| planning contract completion | 当时用 planning-level contract 与 no-bypass wording 作为完成门。 | 不证明当前 runtime readiness、domain readiness、production readiness 或 App readiness。 |
 
-在当前 planning-level contract 里，Agent 应当能够：
+## 已退役机器面
 
-- 向 `OPL` 提交顶层 action request
-- 拿到显式 routing decision
-- 为目标 `domain_gateway` 构建稳定 handoff payload
-- 在请求进入 domain gateway 之前写下可审计的 routing trace
+原文包含长 JSON response 示例和 former artifact 路径。重要退役读法：
 
-但它仍然**不能**：
+- `routed-actions.schema.json`、`handoff.schema.json` 等旧 schema 引用在本文只保留 historical context；是否存在 active 替代面必须从当前 `contracts/`、source 和 tests 证明。
+- 旧 `route_request`、`build_handoff_payload`、`audit_routing_decision` operation names 不构成当前 CLI/API contract。
+- `entry_surface=domain_gateway`、`decision_status=routed/refused/unknown_domain/ambiguous_task` 等字段只作 gateway-first archaeology。
+- 旧 no-bypass wording 有设计价值，但当前 enforcement 不能靠本文证明。
 
-- 绕过 domain gateway
-- 直达 domain harness
-- 把 canonical truth ownership 上收给 `OPL`
+## No-Resurrection Rules
 
-唯一允许的成功 handoff 目标只能是 `domain_gateway`。这条 no-bypass 规则是硬边界，不是偏好建议。
+不得用本文：
 
-## 必需操作
+- 重建 gateway-first routed-action API 或 launcher；
+- 为旧 routed-action operation names 添加 compatibility CLI/API；
+- 把历史 JSON 示例当成 active fixtures、schema oracle 或 fallback route；
+- 声明 runtime readiness、domain readiness、production readiness、artifact authority、quality verdict、owner receipt、typed blocker 或 App release readiness；
+- 绕过当前 stage runtime、domain entry 和 authority functions，恢复旧 gateway-first mutation path。
 
-最小 routed-action planning-level contract 必须暴露这些操作：
+若未来迁移确实需要历史 routed-action 思路，必须先映射到当前 owner surface，并从 active machine truth 证明；不得把旧 operation 名称复活成兼容层。
 
-- `route_request`
-- `build_handoff_payload`
-- `audit_routing_decision`
-
-## 操作定义
-
-### `route_request`
-
-目的：
-
-- 按 workstream 语义分类顶层 action request，并确定下一层正式入口面
-
-必需输入：
+## 历史证据
 
-- `request_id`
-- `request_kind`
-- `intent`
-- `target`
-- `goal`
-- 可选 `materials`
-- 可选 `constraints`
-- 可选 `preferred_family`
-- 可选 `preferred_profile`
-
-路由顺序：
-
-1. 先按 `workstream semantics` 路由
-2. 再按 `domain ownership` 路由
-3. 最后按 `family / profile preference` 路由
+保留本路径是因为 product/history 索引和同目录 history-only 文件仍链接到这里。详细 operation definitions、JSON examples、failure handling、hard boundary 和 planning completion checklist 已在 2026-06-08 主动压缩；需要考古时读取压缩前 git history。
 
-建议 routed 响应：
-
-```json
-{
-  "version": "g3",
-  "operation": "route_request",
-  "payload": {
-    "status": "routed",
-    "request_id": "opl-2026-04-05-010",
-    "request_kind": "create",
-    "workstream_id": "presentation_ops",
-    "domain_id": "redcube",
-    "entry_surface": "domain_gateway",
-    "recommended_family": "ppt_deck",
-    "preferred_profile": "defense_deck",
-    "confidence": "high",
-    "reason": "The goal is a formal defense-ready presentation deliverable.",
-    "routing_evidence": [
-      "presentation_delivery intent",
-      "ppt_deck directly maps to presentation_ops",
-      "presentation_ops is owned by redcube"
-    ]
-  }
-}
-```
-
-特殊规则：
-
-- `ppt_deck` 直接映射 `presentation_ops`
-- `xiaohongshu` 仍可能路由到 `redcube`
-- 但除非顶层语义真的匹配 presentation material，否则不能自动标成 `presentation_ops`
-
-### `build_handoff_payload`
-
-目的：
-
-- 构建从 `OPL` 传给目标 domain gateway 的稳定 payload
-
-必需规则：
-
-- 只有在 `route_request` 返回 `status = routed` 后，这个操作才允许执行
-- 输出当时要求符合 former artifact `contracts/opl-framework/handoff.schema.json`；该文件未保留为当前 active contract。
-- 唯一允许的成功目标只能是 `domain_gateway`；这个操作当前只处于 planning 层，不得启动 domain runtime
-
-建议响应：
-
-```json
-{
-  "version": "g3",
-  "operation": "build_handoff_payload",
-  "payload": {
-    "route_status": "routed",
-    "handoff": {
-      "request_id": "opl-2026-04-05-010",
-      "workstream_id": "presentation_ops",
-      "domain_id": "redcube",
-      "request_kind": "create",
-      "target_kind": "deliverable",
-      "goal": "Produce a defense-ready lecture deck from the supplied research materials.",
-      "materials": [
-        {
-          "kind": "paper",
-          "ref": "workspace://refs/paper-01"
-        }
-      ],
-      "constraints": [
-        "audience=committee"
-      ],
-      "preferred_family": "ppt_deck",
-      "preferred_profile": "defense_deck",
-      "review_expectation": [
-        "human_review",
-        "publish_gate"
-      ]
-    }
-  }
-}
-```
-
-### `audit_routing_decision`
-
-目的：
-
-- 在请求进入 domain gateway 之前，把顶层 routing decision 及其 evidence 记录下来
-
-必需字段：
-
-- `request_id`
-- `decision_status`
-- `request_summary`
-- `request_kind`
-- `resolved_workstream_id` 或 `candidate_workstreams`
-- `resolved_domain_id` 或 `candidate_domains`
-- `reason`
-- `routing_evidence`
-- `timestamp`
-
-建议响应：
-
-```json
-{
-  "version": "g3",
-  "operation": "audit_routing_decision",
-  "payload": {
-    "request_id": "opl-2026-04-05-010",
-    "decision_status": "routed",
-    "request_summary": "Create a defense-ready slide deck from the supplied research materials.",
-    "request_kind": "create",
-    "resolved_workstream_id": "presentation_ops",
-    "resolved_domain_id": "redcube",
-    "reason": "The requested output is a formal presentation deliverable.",
-    "routing_evidence": [
-      "presentation_delivery intent",
-      "ppt_deck mapping",
-      "redcube ownership"
-    ],
-    "timestamp": "2026-04-05T05:50:00Z"
-  }
-}
-```
-
-## 处理规则
-
-### refusal
-
-当请求本身违反顶层边界时，应返回 refusal，例如：
-
-- 要求 `OPL` 绕过 domain gateway 直接调用 harness
-- 要求 `OPL` 在路由未建立前先 mutation domain-private truth
-- 顶层 action shape 本身不受支持
-
-建议 refusal 响应：
-
-```json
-{
-  "version": "g3",
-  "operation": "route_request",
-  "payload": {
-    "status": "refused",
-    "request_id": "opl-2026-04-05-011",
-    "reason_code": "direct_harness_bypass",
-    "reason": "OPL must route into a domain gateway and may not target a domain harness directly."
-  }
-}
-```
-
-### unknown-domain
-
-当顶层语义已经足够清楚到可以命名一个 candidate workstream，但当前没有任何已注册 domain 正式拥有这个 candidate workstream 时，应返回 `unknown_domain`。
-
-建议响应：
-
-```json
-{
-  "version": "g3",
-  "operation": "route_request",
-  "payload": {
-    "status": "unknown_domain",
-    "request_id": "opl-2026-04-05-012",
-    "workstream_id": "candidate_ops",
-    "reason": "The candidate workstream semantics are recognizable, but no registered domain gateway currently owns this candidate workstream."
-  }
-}
-```
-
-### ambiguous-task
-
-当顶层还无法安全分类该请求时，应返回 `ambiguous_task`。
-
-必需规则：
-
-- 不要凭空发明 workstream
-- 不要凭空发明 domain owner
-- 不要提前构建 handoff payload
-
-建议响应：
-
-```json
-{
-  "version": "g3",
-  "operation": "route_request",
-  "payload": {
-    "status": "ambiguous_task",
-    "request_id": "opl-2026-04-05-013",
-    "candidate_workstreams": [
-      "research_ops",
-      "presentation_ops"
-    ],
-    "candidate_domains": [
-      "medautoscience",
-      "redcube"
-    ],
-    "reason": "The request mixes research packaging and presentation delivery semantics without enough information to route safely.",
-    "required_clarification": [
-      "Is the primary goal a formal research deliverable or a presentation deliverable?",
-      "If visual delivery is primary, should the family be ppt_deck or another RedCube family?"
-    ]
-  }
-}
-```
-
-## 硬边界
-
-这一层只把路由交给 domain gateway。
-
-成功顶层路由之后，允许的下一层正式入口是：
-
-```text
-OPL Gateway -> Domain Gateway
-```
-
-domain harness 路径继续留在这份合同之外：
-
-```text
-OPL Gateway -> Domain Harness OS
-```
-
-## Source-Of-Truth 规则
-
-在当前 planning 层，`OPL` 持有：
-
-- routing decision
-- handoff payload
-- 顶层 audit trace
-
-在当前 planning 层，domain gateway 持有：
-
-- domain-private runtime state
-- domain canonical truth
-- domain-internal replay history
-
-## Machine-Readable Contract
-
-这一层的 machine-readable schema 位于：
-
-- former artifact `contracts/opl-framework/routed-actions.schema.json`（未保留为当前 active contract）
-
-在当前基线上，这份 schema 继续停留在 planning dependency 层。
-
-显式非成功路由状态的 canonical routed-safety examples 位于：
-
-- [OPL Routed-Safety Example Corpus](./examples-corpora/opl-routed-safety-example-corpus.md)
-
-## Planning Contract 完成定义
-
-只有满足下面条件，这份 planning-only routed-action contract 才算完成：
-
-- `route_request`、`build_handoff_payload`、`audit_routing_decision` 被冻结成稳定的 planning-level 操作
-- refusal / unknown-domain / ambiguous-task handling 被显式写清
-- routed output 不再依赖 prose-only interpretation
-- 唯一允许的成功 handoff 目标仍只能是 `domain_gateway`
-- 这份 no-bypass 合同仍然禁止绕过 domain gateway
-- schema 仍只是 planning dependency，而不是 launcher
-
-下面这些情况说明这份 planning-only routed-action contract 还需要继续补齐：
-
-- 路由仍然只靠自由 prose 解释
-- 顶层 gateway 在未注册 ownership 的情况下自行发明 owner
-- 顶层 gateway 绕过 domain gateway 直达 harness
+压缩后角色：
+
+- 旧文件角色：gateway-first G3 routed-action planning contract
+- 压缩后角色：path-stable tombstone 与 provenance pointer
+- active replacement owner：current core docs、active gap plan、machine contracts/source/tests/CLI/runtime/App surfaces
+- 保留入站链接：product historical-source index、gateway/federation examples、operating-governance tombstones

@@ -32,10 +32,8 @@ Single Source of Truth：
 
 后续同类写入范围：
 
-- `docs/history/compatibility/gateway-federation/opl-gateway-rollout.md`
-- `docs/history/compatibility/gateway-federation/opl-federation-contract.md`
-- `docs/history/compatibility/gateway-federation/opl-read-only-discovery-gateway.md`
-- `docs/history/compatibility/gateway-federation/opl-routed-action-gateway.md`
+- `docs/history/compatibility/gateway-federation/gateway-federation.md`
+- `docs/history/compatibility/gateway-federation/opl-minimal-admitted-domain-federation-activation-package.md`
 - `docs/history/compatibility/gateway-federation/examples-corpora/*.md`
 - `docs/history/compatibility/gateway-federation/operating-governance/*.md`
 

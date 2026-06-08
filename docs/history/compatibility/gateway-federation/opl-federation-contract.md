@@ -2,304 +2,68 @@
 
 Owner: `One Person Lab`
 Purpose: `legacy_federation_contract_provenance`
-State: `history_only`
-Machine boundary: 本文只保存 gateway-first `G1` federation contract 的历史冻结件。当前机器真相继续归 active contracts、source、CLI/API 行为、runtime ledger、provider receipts、domain-owned manifests / receipts 与 App/workbench projection；本文不得作为 active contract、compatibility interface、runtime route owner 或 test oracle。
+State: `history_only_compressed`
+Machine boundary: 本文只保存 gateway-first `G1` federation contract 的历史冻结件。当前机器真相继续归 active contracts、source、CLI/API 行为、runtime ledger、provider receipts、domain-owned manifests / receipts 与 App/workbench projection；本文不得作为 active contract、compatibility interface、runtime route owner、test oracle 或旧 alias/facade 保留依据。
 
-> 历史说明（`2026-04-24`）：这份文档保留的是 gateway-first 阶段的旧冻结件。当前 `OPL` 主线已经收口为 `Codex-default session/runtime + explicit activation layer + family skill sync/discovery`。不要把这份文件当成默认实现依据；当前真相请回到 [项目概览](../../../project.md)、[当前状态](../../../status.md)、[架构](../../../architecture.md)、[关键决策](../../../decisions.md) 与 [合同目录说明](../../../../contracts/README.md)。
+## 当前读法
 
-## 目的
+这份文档曾在 2026-04 gateway-first 阶段冻结 `G1 Federation Contract`：workstream registry、domain registry、routing vocabulary 与 OPL 到 domain gateway 的 handoff payload。它当时的目标是先冻结顶层控制语言，再推进 read-only discovery 和 routed-action planning。
 
-这份文档冻结 `OPL Gateway` 的 `G1` 契约。
+当前 OPL 主线已经转为 stage-led framework、显式 OPL activation、Codex CLI first-class executor、Temporal-backed provider、typed queue / stage runtime、selected domain-agent entry、domain-owned authority functions 与 App/workbench projection。旧 `G1 / federation / domain_gateway / handoff` 词汇只保留为历史 provenance，不再定义 active contract 或 runtime route。
 
-它的目标是在 `OPL` 变成真实 routed gateway 之前，先把最小机器可读合同定义清楚。
+## Single Source of Truth
 
-这仍然是 contract-first 阶段。
-它不意味着顶层 gateway runtime 已经实现完成。
+当前同类语义的有效 owner 是：
 
-## G1 范围
+- 当前项目 truth：`README.md`、`docs/project.md`、`docs/status.md`、`docs/architecture.md`、`docs/invariants.md`、`docs/decisions.md`
+- active progress / gaps / next owner baton：`docs/active/current-state-vs-ideal-gap.md`
+- docs lifecycle policy：`docs/docs_portfolio_consolidation.md`、`docs/policies/docs-lifecycle-policy.md`
+- 机器真相：`contracts/`、`src/`、repo-native tests、CLI/API payload、runtime ledger、provider receipts、domain manifests / receipts、App/workbench projection
+- 本路线历史入口：`docs/history/compatibility/gateway-federation/README.md`
 
-只有下面四部分都冻结，`G1` 才算完成：
+本文故意不复制这些 owner 的当前事实。
 
-- workstream registry
-- domain registry
-- routing vocabulary
-- `OPL` 到各 domain gateway 的稳定 handoff payload
+## 历史覆盖
 
-目标不是完整执行栈。
-目标是先把顶层控制语言冻结下来，让后续实现不需要再重造一轮概念。
+原长文覆盖过这些 `G1` 历史语义：
 
-## 未来的 Canonical Registry 文件
+| 历史 section | 当时用途 | 当前读法 |
+| --- | --- | --- |
+| workstream registry | 把 `research_ops`、`presentation_ops` 等 workstream 映射到当时的 domain gateway。 | 当前 agent/domain catalog、generated interfaces 与 active docs/contracts 持有真实入口语义。 |
+| domain registry | 描述 `MedAutoScience`、`RedCube AI` 等 domain gateway / harness surface。 | 当前 MAS/MAG/RCA/OMA 是 Foundry Agent / domain repo；公开身份不再由 gateway/harness 术语定义。 |
+| routing vocabulary | 冻结 `intent_id`、`workstream_id`、`request_kind`、`entry_mode` 等旧路由词汇。 | 当前路由、stage、action catalog 和 owner-delta 语义归 active contracts/source/CLI/read-model。 |
+| handoff payload | 描述 OPL 到 domain gateway 的旧 handoff schema。 | 当前 handoff / activation / stage runtime 归 stage-led framework、domain entry、authority functions 与 runtime receipts。 |
+| routing rules | 规定先按 workstream，再按 domain ownership，再按 family/profile preference 选择入口。 | 只作历史设计 provenance；当前 routing truth 必须从 live CLI/API/read-model 和 source 证明。 |
+| G1 completion definition | 当时用 registry/schema/prose 对齐作为 G1 完成门。 | 历史完成门不能声明当前 framework readiness、domain readiness 或 production readiness。 |
 
-理想的机器可读表面是：
+## 已退役机器面
 
-- `opl/workstreams.json`
-- `opl/domains.json`
-- `opl/routing-vocabulary.json`
-- `opl/handoff.schema.json`
+原文包含长 JSON 示例和 former artifact 路径。重要退役读法：
 
-这些路径表达的是契约意图。
-后面它们可以落在 docs site、registry package 或 gateway repo 中，但契约形状应尽量保持稳定。
+- `contracts/opl-framework/routing-vocabulary.json` 是 former artifact reference，不是当前 active required contract。
+- `contracts/opl-framework/handoff.schema.json` 是 former artifact reference，不是当前 active required contract。
+- `gateway_surface`、`harness_surface`、`domain_gateway`、`entry_mode=domain_gateway` 等字段名只在本 history tree 保留 provenance。
+- 旧 `G1` registry shape 不能作为 current package schema、agent descriptor、App action metadata 或 runtime route contract。
 
-当前仓库内的 materialization 见 [OPL Framework Contracts](../../../../contracts/opl-framework/README.md)。
+## No-Resurrection Rules
 
-当前仓库中的落地位置：
+不得用本文：
 
-- [`../contracts/opl-framework/workstreams.json`](../../../../contracts/opl-framework/workstreams.json)
-- [`../contracts/opl-framework/domains.json`](../../../../contracts/opl-framework/domains.json)
-- former artifact `contracts/opl-framework/routing-vocabulary.json`（未保留为当前 active contract）
-- former artifact `contracts/opl-framework/handoff.schema.json`（未保留为当前 active contract）
+- 重建 gateway-first federation registry、routing vocabulary 或 handoff schema；
+- 为已退役 gateway/federation surface 添加 compatibility alias、wrapper、facade 或 test；
+- 把 MAS/MAG/RCA/OMA 的当前身份降回 `domain gateway / domain harness`；
+- 声明 runtime readiness、domain readiness、production readiness、artifact authority、quality verdict、owner receipt、typed blocker 或 App release readiness；
+- 绕过当前 framework/runtime/domain owner surface，恢复旧 gateway-first handoff path。
 
-## Workstream Registry
+若未来迁移确实需要历史设计里的某个想法，必须先把它映射到当前 owner surface，并从 active machine truth 证明；不得把旧 surface 名称复活成兼容层。
 
-每个 workstream entry 应定义：
+## 历史证据
 
-- `workstream_id`
-- `label`
-- `status`
-- `description`
-- `domain_id`
-- `entry_mode`
-- `primary_families`
-- `top_level_intents`
-- `notes`
+保留本路径是因为 product/history 索引和同目录 history-only 文件仍链接到这里。详细 registry payload、routing vocabulary、handoff payload 和 G1 completion checklist 已在 2026-06-08 主动压缩；需要考古时读取压缩前 git history。
 
-### 建议结构
+压缩后角色：
 
-```json
-{
-  "version": "g1",
-  "workstreams": [
-    {
-      "workstream_id": "research_ops",
-      "label": "Research Foundry",
-      "status": "active",
-      "description": "Formal research work from data governance to manuscript and submission delivery.",
-      "domain_id": "medautoscience",
-      "entry_mode": "domain_gateway",
-      "primary_families": [],
-      "top_level_intents": [
-        "research_progression",
-        "submission_delivery",
-        "data_asset_governance"
-      ],
-      "notes": "Maps directly to MedAutoScience."
-    },
-    {
-      "workstream_id": "presentation_ops",
-      "label": "Presentation Foundry",
-      "status": "emerging",
-      "description": "Formal lecture, report, and defense material delivery.",
-      "domain_id": "redcube",
-      "entry_mode": "domain_gateway",
-      "primary_families": [
-        "ppt_deck"
-      ],
-      "top_level_intents": [
-        "presentation_delivery",
-        "lecture_materials",
-        "defense_materials"
-      ],
-      "notes": "ppt_deck maps directly; xiaohongshu does not automatically equal Presentation Foundry."
-    }
-  ]
-}
-```
-
-## Domain Registry
-
-每个 domain entry 应定义：
-
-- `domain_id`
-- `label`
-- `project`
-- `role`
-- `gateway_surface`
-- `harness_surface`
-- `standalone_allowed`
-- `owned_workstreams`
-- `non_opl_families`
-- `canonical_truth_owner`
-
-### 建议结构
-
-```json
-{
-  "version": "g1",
-  "domains": [
-    {
-      "domain_id": "medautoscience",
-      "label": "MedAutoScience",
-      "project": "med-autoscience",
-      "role": "research_ops_gateway",
-      "gateway_surface": "Research Foundry Gateway",
-      "harness_surface": "Medical Research Domain Harness OS",
-      "standalone_allowed": true,
-      "owned_workstreams": [
-        "research_ops"
-      ],
-      "non_opl_families": [],
-      "canonical_truth_owner": [
-        "research_runs",
-        "study_deliveries",
-        "data_asset_mutations"
-      ]
-    },
-    {
-      "domain_id": "redcube",
-      "label": "RedCube AI",
-      "project": "redcube-ai",
-      "role": "visual_deliverable_gateway",
-      "gateway_surface": "Visual Deliverable Gateway",
-      "harness_surface": "Visual Deliverable Domain Harness OS",
-      "standalone_allowed": true,
-      "owned_workstreams": [
-        "presentation_ops"
-      ],
-      "non_opl_families": [
-        "xiaohongshu"
-      ],
-      "canonical_truth_owner": [
-        "deliverable_runs",
-        "review_state",
-        "artifact_truth"
-      ]
-    }
-  ]
-}
-```
-
-## Routing Vocabulary
-
-`OPL Gateway` 不应该只靠模糊产品名路由。
-它应该使用共享 vocabulary。
-
-### 必需词汇组
-
-- `intent_id`
-- `workstream_id`
-- `domain_id`
-- `request_kind`
-- `target_kind`
-- `delivery_kind`
-- `review_kind`
-- `entry_mode`
-
-### 建议词汇
-
-```json
-{
-  "version": "g1",
-  "request_kind": [
-    "discover",
-    "plan",
-    "create",
-    "review",
-    "rerun",
-    "publish"
-  ],
-  "target_kind": [
-    "workspace",
-    "study",
-    "deliverable",
-    "topic",
-    "publication"
-  ],
-  "delivery_kind": [
-    "research_delivery",
-    "presentation_delivery",
-    "social_visual_delivery"
-  ],
-  "review_kind": [
-    "human_review",
-    "baseline_review",
-    "publish_gate",
-    "quality_regression"
-  ],
-  "entry_mode": [
-    "docs_only",
-    "read_only_gateway",
-    "routed_action_gateway",
-    "domain_gateway"
-  ]
-}
-```
-
-## Handoff Payload
-
-当 `OPL` 开始把请求路由到某个 domain 时，handoff payload 必须显式且可审计。
-
-### 必需字段
-
-- `request_id`
-- `workstream_id`
-- `domain_id`
-- `request_kind`
-- `target_kind`
-- `goal`
-- `materials`
-- `constraints`
-- `preferred_family`
-- `preferred_profile`
-- `review_expectation`
-
-### 建议 payload
-
-```json
-{
-  "request_id": "opl-2026-04-05-001",
-  "workstream_id": "presentation_ops",
-  "domain_id": "redcube",
-  "request_kind": "create",
-  "target_kind": "deliverable",
-  "goal": "Produce a defense-ready lecture deck from the supplied research materials.",
-  "materials": [
-    {
-      "kind": "paper",
-      "ref": "workspace://refs/paper-01"
-    },
-    {
-      "kind": "brief",
-      "ref": "workspace://briefs/defense-brief"
-    }
-  ],
-  "constraints": [
-    "audience=committee",
-    "max_length=20_slides"
-  ],
-  "preferred_family": "ppt_deck",
-  "preferred_profile": "defense_deck",
-  "review_expectation": [
-    "human_review",
-    "publish_gate"
-  ]
-}
-```
-
-## Routing 规则
-
-顶层 router 应遵守：
-
-- 先按 `workstream semantics` 路由
-- 再按 `domain ownership` 路由
-- 最后按 `family / profile preference` 路由
-- 永远不要绕过 domain gateway 直达 domain harness
-
-特殊规则：
-
-- `xiaohongshu` 可以路由到 `RedCube AI`
-- 但除非顶层语义真的匹配，否则不能自动标成 `presentation_ops`
-
-## G1 完成定义
-
-只有满足下面条件，`G1` 才算完成：
-
-- registry 字段被冻结
-- routing vocabulary 被冻结
-- handoff payload 被冻结
-- 后续实现可以直接消费这些契约，而不必重定义概念
-
-下面这些情况说明 `G1` 还没完成：
-
-- domain ownership 仍不清楚
-- 顶层词汇和 domain 词汇仍冲突
-- router 仍然依赖 prose-only 解读
+- 旧文件角色：gateway-first G1 federation contract
+- 压缩后角色：path-stable tombstone 与 provenance pointer
+- active replacement owner：当前核心文档、active gap plan、machine contracts/source/tests/CLI/runtime/App surfaces
+- 保留入站链接：product historical-source index、gateway/federation examples、operating-governance tombstones
