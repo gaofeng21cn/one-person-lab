@@ -151,3 +151,134 @@ test('system startup-maintenance applies staged App-owned runtime Codex update w
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
+
+test('system startup-maintenance installs missing App-owned runtime Codex on clean machines', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-missing-runtime-codex-'));
+  const runtimeBin = path.join(homeRoot, 'runtime', 'current', 'bin');
+  const runtimeCodex = path.join(runtimeBin, 'codex');
+  const runtimeRg = path.join(runtimeBin, 'rg');
+  const fakeBin = path.join(homeRoot, 'fake-bin');
+  const fakeNpm = path.join(fakeBin, 'npm');
+  const npmLog = path.join(homeRoot, 'npm.log');
+  const developerCheckout = path.join(homeRoot, 'developer-module-checkout');
+
+  fs.mkdirSync(fakeBin, { recursive: true });
+  writeFakeNpmRuntimeInstaller(fakeNpm, npmLog);
+
+  fs.mkdirSync(developerCheckout, { recursive: true });
+  runGitFixtureCommand(developerCheckout, ['init', '--initial-branch', 'main']);
+  fs.writeFileSync(path.join(developerCheckout, 'README.md'), '# Developer checkout\n', 'utf8');
+  runGitFixtureCommand(developerCheckout, ['add', 'README.md']);
+  runGitFixtureCommand(developerCheckout, [
+    '-c',
+    'user.name=OPL Test',
+    '-c',
+    'user.email=opl@example.test',
+    'commit',
+    '-m',
+    'Initial developer checkout',
+  ]);
+
+  try {
+    const output = runCli(['system', 'startup-maintenance'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_MODULES_ROOT: path.join(homeRoot, 'managed-modules'),
+      OPL_RUNTIME_ROOT: path.join(homeRoot, 'runtime'),
+      OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
+      OPL_MODULE_PATH_MEDAUTOSCIENCE: developerCheckout,
+      OPL_MODULE_PATH_MEDAUTOGRANT: developerCheckout,
+      OPL_MODULE_PATH_REDCUBE: developerCheckout,
+      OPL_MODULE_PATH_OPLMETAAGENT: developerCheckout,
+      PATH: `${fakeBin}:/usr/bin:/bin`,
+      ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
+    }) as {
+      system_action: {
+        details: {
+          engine_targets: Array<{
+            target_id: string;
+            status: string;
+            reason: string;
+            action: string | null;
+            version_status_before: string;
+            latest_version_status_before: string;
+            result: {
+              strategy: string;
+              note: string | null;
+              command_preview: string[];
+              stdout: string;
+            } | null;
+          }>;
+          engine_summary: {
+            completed_targets_count: number;
+            manual_required_targets_count: number;
+          };
+          refreshed_system_environment: {
+            core_engines: {
+              codex: {
+                installed: boolean;
+                version: string | null;
+                version_status: string;
+                latest_version_status: string;
+                runtime_toolchain_updater: {
+                  global_toolchain_mutation_allowed: boolean;
+                  current_binary_installed: boolean;
+                  latest_version_status: string;
+                };
+              };
+            };
+          };
+        };
+      };
+    };
+
+    const engineTarget = output.system_action.details.engine_targets[0];
+    assert.equal(engineTarget.target_id, 'codex');
+    assert.equal(engineTarget.status, 'completed');
+    assert.equal(engineTarget.reason, 'codex_cli_missing');
+    assert.equal(engineTarget.action, 'install');
+    assert.equal(engineTarget.version_status_before, 'missing');
+    assert.equal(engineTarget.latest_version_status_before, 'missing');
+    assert.equal(engineTarget.result?.strategy, 'builtin');
+    assert.equal(engineTarget.result?.command_preview.includes('-g'), false);
+    assert.match(engineTarget.result?.command_preview.join(' ') ?? '', /--prefix/);
+    assert.match(engineTarget.result?.note ?? '', /does not modify global Homebrew, npm, or system Codex/);
+    assert.match(engineTarget.result?.stdout ?? '', /opl_runtime_toolchain_update_receipt/);
+    assert.equal(output.system_action.details.engine_summary.completed_targets_count, 1);
+    assert.equal(output.system_action.details.engine_summary.manual_required_targets_count, 0);
+    assert.equal(output.system_action.details.refreshed_system_environment.core_engines.codex.installed, true);
+    assert.equal(
+      output.system_action.details.refreshed_system_environment.core_engines.codex.version,
+      'codex-cli 0.134.0',
+    );
+    assert.equal(
+      output.system_action.details.refreshed_system_environment.core_engines.codex.version_status,
+      'compatible',
+    );
+    assert.equal(
+      output.system_action.details.refreshed_system_environment.core_engines.codex.latest_version_status,
+      'current',
+    );
+    assert.equal(
+      output.system_action.details.refreshed_system_environment.core_engines.codex.runtime_toolchain_updater
+        .global_toolchain_mutation_allowed,
+      false,
+    );
+    assert.equal(
+      output.system_action.details.refreshed_system_environment.core_engines.codex.runtime_toolchain_updater
+        .current_binary_installed,
+      true,
+    );
+    assert.equal(
+      output.system_action.details.refreshed_system_environment.core_engines.codex.runtime_toolchain_updater
+        .latest_version_status,
+      'current',
+    );
+    assert.doesNotMatch(fs.readFileSync(npmLog, 'utf8'), / -g( |$)/);
+    assert.match(fs.readFileSync(runtimeCodex, 'utf8'), /0\.134\.0/);
+    assert.match(fs.readFileSync(runtimeRg, 'utf8'), /rg staged/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});

@@ -29,7 +29,7 @@ type StartupMaintenanceEngineTarget = {
   target_id: 'codex';
   status: 'completed' | 'skipped' | 'manual_required';
   reason: string;
-  action: 'update' | null;
+  action: 'install' | 'update' | null;
   version_status_before: string;
   latest_version_status_before: string;
   update_available_before: boolean;
@@ -309,13 +309,24 @@ async function maybeRunEngineStartupMaintenance(
 ): Promise<StartupMaintenanceEngineTarget> {
   const codex = environment.core_engines.codex;
   if (!codex.installed) {
-    return buildEngineTarget(environment, {
-      status: 'skipped',
-      reason: 'codex_cli_missing',
-      action: null,
-      result: null,
-      error: null,
-    });
+    try {
+      const result = await runOplEngineAction(contracts, 'install', 'codex');
+      return buildEngineTarget(environment, {
+        status: result.engine_action.status === 'manual_required' ? 'manual_required' : 'completed',
+        reason: 'codex_cli_missing',
+        action: 'install',
+        result: result.engine_action as Record<string, unknown>,
+        error: null,
+      });
+    } catch (error) {
+      return buildEngineTarget(environment, {
+        status: 'manual_required',
+        reason: 'codex_cli_missing_failed',
+        action: 'install',
+        result: null,
+        error: normalizeError(error),
+      });
+    }
   }
   if (!codex.update_available) {
     return buildEngineTarget(environment, {
