@@ -36,13 +36,13 @@ Single Source of Truth：
 
 本轮没有逐段治理同目录下其他 gateway/federation tombstone 文件，也没有改变 active docs、contracts、source、tests、CLI/read-model 或 App/workbench surface。
 
-后续同类写入范围：
+后续同类写入范围已由 `2026-06-08-opl-gateway-examples-history-compression-ledger.md` 覆盖：
 
 - `docs/history/compatibility/gateway-federation/gateway-federation.md`
 - `docs/history/compatibility/gateway-federation/opl-minimal-admitted-domain-federation-activation-package.md`
 - `docs/history/compatibility/gateway-federation/examples-corpora/*.md`
 
-下一轮需要按同一规则判断是否继续压缩原路径、合并到目录 README，或在无入站链接且无独立 provenance 价值时删除。
+本 ledger 不再携带未覆盖 gateway history 文件清单。下一轮应从 whole-docs portfolio ledger 或新的 SSOT lane 选择写入范围，而不是重放这份已覆盖列表。
 
 ## 验证口径
 

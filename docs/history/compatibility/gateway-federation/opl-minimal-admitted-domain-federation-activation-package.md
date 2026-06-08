@@ -1,84 +1,44 @@
-# OPL Minimal admitted-domain federation activation package
+# OPL Minimal Admitted-Domain Federation Activation Package
 
 Owner: `One Person Lab`
-Purpose: `legacy_minimal_admitted_domain_activation_package_provenance`
+Purpose: `legacy_minimal_admitted_domain_activation_package_tombstone`
 State: `history_only`
-Machine boundary: 本文只保存旧 admitted-domain federation activation package 的历史记录。当前机器真相继续归 active contracts、source、CLI/API 行为、runtime ledger、provider receipts、domain-owned manifests / receipts 与 App/workbench projection；本文不得作为 active activation package、domain admission authority、runtime owner、compatibility interface 或 readiness gate。
+Machine boundary: 本文只保存旧 admitted-domain federation activation package 的历史记录。当前机器真相继续归 active contracts、source、CLI/API 行为、runtime ledger、provider receipts、domain-owned manifests / receipts 与 App/workbench projection；本文不得作为 active activation package、domain admission authority、runtime owner、compatibility interface、test oracle、readiness gate、alias、facade 或 wrapper 保留依据。
 
-## 目的
+## 当前读法
 
-这份 reference-grade package 历史上用来冻结在先前 `Phase 1 exit activation package` 之后、当时最小且诚实的 follow-on。
+这份 package 是 2026-04 gateway-first 阶段的一次 historical freeze。它当时只表示部分 admitted domain surface 足以支撑更强的 federation wording；它没有激活 runtime，没有把 OPL 提升成 domain/runtime owner，也没有建立当前可执行 workflow。
 
-它在 `2026-04-08` 当时被判定可以激活，是因为当时的 repo-tracked 四仓同步面显示：至少两个 admitted domain surface 稳定到足以支撑更强的顶层 federation 表达：
+当前 OPL 已转为 stage-led framework。domain admission、domain action、runtime authorization、owner receipt、typed blocker 和 App projection 都必须由当前 contracts/source/tests/CLI/read-model 与 domain-owned truth 判断。
 
-- `research_ops` -> `MedAutoScience`
-- `presentation_ops` -> `RedCube AI`
+## 历史保留内容
 
-这份 package **不会**激活 runtime。
-它**不会**把 `OPL` 提升成 runtime owner。
-它也**只**适用于已 admitted domain。
+当时保留的最小事实是：
 
-曾经规划过的 machine-readable 工件 `contracts/opl-framework/minimal-admitted-domain-federation-activation-package.json` 未保留为当前 active contract；本文只作为历史 activation package 记录。
+- `research_ops` 与 `presentation_ops` 曾被用来说明 admitted-domain federation wording；
+- 该 package 只承载 docs/contracts/tests 级别的历史表达；
+- `Grant Foundry`、`Review Ops`、`Thesis Ops` 等当时未被该 package admission；
+- 曾设想的 `contracts/opl-framework/minimal-admitted-domain-federation-activation-package.json` 不再是 active contract。
 
-## 为什么门槛当时满足
+这些内容只帮助追溯旧设计为什么出现，不构成今天的 domain admission、runtime launch、owner readiness 或 product release 依据。
 
-前序的 `Phase 1 exit activation package` 当时仍 blocked 在 external readiness。
-这份历史 freeze 继续保留为 repo-tracked truth。
+## 退役面
 
-当时的重评估只改变了一件事：
+以下历史面已退役：
 
-- `MedAutoScience` 已把 repo-side `integration harness activation baseline` absorb 到 `main`
-- `RedCube AI` 已把 repo-side `source intake + shared source truth baseline` absorb 到 `main`
+- minimal federation activation package 作为 active domain admission gate；
+- gateway-first follow-on route 或 handoff target；
+- package-driven runtime phase、run launch、workspace write、managed web runtime 或 shared execution core；
+- candidate domain admission 兼容声明；
+- 为旧 activation package 存在的 alias、facade、wrapper、compatibility-only test 或 route fallback。
 
-因此，这两条 admitted domain surface 当时被视为已稳定到足以支撑此前已预冻结的最小 stronger federation wording。
+## 当前 SSOT
 
-## 这份 Package 实际激活了什么
+- 当前 admitted domain 与 family role：核心五件套、`docs/active/current-state-vs-ideal-gap.md`、domain manifests / contracts / tests / CLI read-model。
+- docs lifecycle truth：`docs/docs_portfolio_consolidation.md` 与 `docs/policies/docs-lifecycle-policy.md`。
+- 机器 truth：`contracts/`、source、tests、CLI/read-model、runtime ledger、provider receipts、domain-owned manifests / receipts 与 App/workbench projection。
+- 历史入口：`docs/history/compatibility/gateway-federation/README.md`。
 
-它在当时只激活最小的 contract-first federation follow-on：
+## No-Resurrection Rule
 
-- 只针对已 admitted domain 收紧顶层 federation wording
-- 把当时两条已 admitted domain surface 显式写成更强 federation 表达的依据
-- 保持 `OPL` 的 formal entry 仍然是当前本地 `TypeScript CLI`-first / framework contract surface
-
-换句话说，这是一份 docs+contracts+tests activation package，不是 runtime package。
-
-## 当时激活的 Admitted Domain Surface
-
-当时被激活进这份 package 的 admitted domain surface 只有两条：
-
-1. `research_ops` -> `MedAutoScience`
-2. `presentation_ops` -> `RedCube AI`
-
-这**不**代表每个 family、每个下游 deliverable 都已经完全成熟。
-它只表示：顶层 admitted domain surface 已经稳定到足以支撑更强的 federation 表达。
-
-## 明确不被纳入的对象
-
-这份 package **不会**改变 candidate domain 的 blocked truth：
-
-- `Grant Foundry -> Med Auto Grant` 仍然只是 signal-only / domain-direction evidence
-- `Review Ops` 仍是 blocked 于 onboarding 之下的 under-definition bundle
-- `Thesis Ops` 仍是 blocked 于 onboarding 之下的 under-definition bundle
-
-因此，这份 package **不会** admission `Grant Ops`、`Review Ops` 或 `Thesis Ops`。
-
-## 继续保持的硬边界
-
-当时的 activation 显式保持这些硬边界：
-
-- 不实现 routed-action runtime
-- 不新增 mutation entry
-- 不新增 run launch
-- 不新增 workspace write
-- 不实现 shared execution core
-- 不实现 managed web runtime
-- 不把 `OPL` 提升成 runtime owner
-
-任何未来 successful handoff 仍然只能 targeting `domain_gateway`，并继续遵守不得直达 harness 的 no-bypass 规则。
-
-## 历史冻结状态
-
-在当时的 repo-tracked freeze 下，最小的 stronger-federation follow-on **已被历史冻结为激活**。
-
-但它**不会**制造一个更大的 runtime phase。
-它只记录：此前的 `Phase 1 exit activation package`，当时已被 `Minimal admitted-domain federation activation package` 这份仅面向已 admitted domain 的最小激活包诚实接续。
+本文只能作为旧 activation package provenance。不得从本文恢复 gateway-first package、domain admission alias、compatibility route、runtime owner claim、readiness gate 或 current workflow entry。
