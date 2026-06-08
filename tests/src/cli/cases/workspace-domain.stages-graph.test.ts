@@ -225,6 +225,21 @@ function buildAdmittedStagePlane(
             ref: `attempt-ledger:opl/${targetDomainId}`,
             role: 'attempt_ledger_ref',
           },
+          {
+            ref_kind: 'stage_manifest_ref',
+            ref: `stage-manifest:${targetDomainId}/stages`,
+            role: 'stage_manifest_ref',
+          },
+          {
+            ref_kind: 'current_pointer_ref',
+            ref: `current-pointer:${targetDomainId}/stages`,
+            role: 'current_pointer_ref',
+          },
+          {
+            ref_kind: 'owner_answer_binding_ref',
+            ref: `owner-answer-binding:${targetDomainId}/stages`,
+            role: 'owner_answer_binding_ref',
+          },
         ]
       : [],
     stages: Array.from({ length: 6 }, (_entry, index) => {

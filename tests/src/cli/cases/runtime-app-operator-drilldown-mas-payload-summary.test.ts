@@ -11,6 +11,7 @@ import {
   runCliFailure,
   test,
 } from '../helpers.ts';
+import { createFamilyWorkspaceFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 function withMasContractOnlyPayloadSurface(manifest: Record<string, unknown>) {
   return {
@@ -418,11 +419,14 @@ test('runtime action execute records MAS owner payload summaries into a refs-onl
 
 test('runtime App drilldown exposes MAS paper-line owner payloads only from explicit canary closeout', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mas-paper-line-payload-summary-'));
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { omaRepoDir, workspaceRoot } = createFamilyWorkspaceFixture(fixtureRoot);
   const masManifest = withMasCanaryCloseoutPayloads(loadFamilyManifestFixtures().medautoscience);
   const env = {
     OPL_STATE_DIR: stateRoot,
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+    OPL_META_AGENT_REPO_DIR: omaRepoDir,
   };
   runCli([
     'workspace',

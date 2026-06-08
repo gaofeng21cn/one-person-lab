@@ -12,7 +12,10 @@ import {
   test,
 } from '../helpers.ts';
 import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/family-runtime-evidence-worklist.ts';
-import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
+import {
+  createFamilyWorkspaceFixture,
+  createOmaContractFixture,
+} from './runtime-app-operator-drilldown-helpers.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -477,11 +480,19 @@ test('family-runtime evidence-worklist uses manifest projection cache for replay
 
 test('direct family-runtime evidence-worklist matches framework readiness replay attention', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-framework-match-'));
+  const familyWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-framework-family-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { omaRepoDir, workspaceRoot } = createFamilyWorkspaceFixture(familyWorkspaceRoot);
   const manifest = withReplayMissingHumanGateManifest(
     loadFamilyManifestFixtures().medautoscience as JsonRecord,
     'med-autoscience',
   );
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+    OPL_META_AGENT_REPO_DIR: omaRepoDir,
+  };
 
   try {
     runCli([
@@ -493,15 +504,9 @@ test('direct family-runtime evidence-worklist matches framework readiness replay
       repoRoot,
       '--manifest-command',
       buildManifestCommand(manifest),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
+    ], env);
 
-    const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    }).framework_readiness;
+    const readiness = runCli(['framework', 'readiness', '--family-defaults'], env).framework_readiness;
     const directWorklist = runCli([
       'family-runtime',
       'evidence-worklist',
@@ -512,10 +517,7 @@ test('direct family-runtime evidence-worklist matches framework readiness replay
       'codex_cli',
       '--detail',
       'full',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    }).family_runtime_evidence_worklist;
+    ], env).family_runtime_evidence_worklist;
 
     assert.equal(
       directWorklist.stage_replay_missing_receipt_workorder_packet.summary.workorder_count,
@@ -540,6 +542,7 @@ test('direct family-runtime evidence-worklist matches framework readiness replay
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });

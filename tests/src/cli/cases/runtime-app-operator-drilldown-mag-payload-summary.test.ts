@@ -11,6 +11,7 @@ import {
   runCliFailure,
   test,
 } from '../helpers.ts';
+import { createFamilyWorkspaceFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 function withMagOwnerPayloadResponse(manifest: Record<string, unknown>) {
   const sustainedConsumptionFollowthroughWorkorder = {
@@ -239,11 +240,14 @@ function withMagCountOnlyScaleoutSnapshot(manifest: Record<string, unknown>) {
 
 test('runtime App drilldown consumes MAG owner payload response as refs-only owner and stage guidance', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mag-payload-summary-'));
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { omaRepoDir, workspaceRoot } = createFamilyWorkspaceFixture(fixtureRoot);
   const magManifest = withMagOwnerPayloadResponse(loadFamilyManifestFixtures().medautogrant);
   const env = {
     OPL_STATE_DIR: stateRoot,
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+    OPL_META_AGENT_REPO_DIR: omaRepoDir,
   };
   runCli([
     'workspace',

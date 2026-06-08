@@ -11,6 +11,7 @@ import {
   runCliFailure,
   test,
 } from '../helpers.ts';
+import { createFamilyWorkspaceFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 function withRcaPayloadSummaries(manifest: Record<string, unknown>) {
   return {
@@ -157,11 +158,14 @@ function withRcaPayloadSummaries(manifest: Record<string, unknown>) {
 
 test('runtime App drilldown exposes RCA owner payload summaries as refs-only guidance', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-rca-payload-summary-'));
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { omaRepoDir, workspaceRoot } = createFamilyWorkspaceFixture(fixtureRoot);
   const rcaManifest = withRcaPayloadSummaries(loadFamilyManifestFixtures().redcube);
   const env = {
     OPL_STATE_DIR: stateRoot,
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+    OPL_META_AGENT_REPO_DIR: omaRepoDir,
   };
   runCli([
     'workspace',
@@ -314,7 +318,8 @@ test('runtime App drilldown exposes RCA owner payload summaries as refs-only gui
 
 test('runtime App drilldown blocks RCA legacy payload field alias resurrection', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-rca-payload-alias-'));
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { omaRepoDir, workspaceRoot } = createFamilyWorkspaceFixture(fixtureRoot);
   const rcaManifest = withRcaPayloadSummaries(loadFamilyManifestFixtures().redcube);
   const productionRefs = (
     rcaManifest.operator_evidence_readiness_projection as Record<string, Record<string, unknown>>
@@ -326,6 +331,8 @@ test('runtime App drilldown blocks RCA legacy payload field alias resurrection',
   const env = {
     OPL_STATE_DIR: stateRoot,
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+    OPL_META_AGENT_REPO_DIR: omaRepoDir,
   };
   runCli([
     'workspace',

@@ -7,6 +7,7 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
+import { createFamilyWorkspaceFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 const directFixPayload = {
   target_repo_id: 'one-person-lab',
@@ -468,12 +469,17 @@ test('runtime app-operator-drilldown counts live Developer Mode owner acceptance
 
 test('framework readiness consumes Developer Mode live closeout evidence without ready claims', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-devmode-live-closeout-state-'));
+  const familyWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-devmode-live-closeout-family-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { omaRepoDir, workspaceRoot } = createFamilyWorkspaceFixture(familyWorkspaceRoot);
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+    OPL_META_AGENT_REPO_DIR: omaRepoDir,
+  };
   try {
-    const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    }).framework_readiness;
+    const readiness = runCli(['framework', 'readiness', '--family-defaults'], env).framework_readiness;
     const evidence = readiness.attention_first_payload.developer_mode_live_closeout_evidence;
     assert.equal(
       evidence.surface_kind,
@@ -528,10 +534,7 @@ test('framework readiness consumes Developer Mode live closeout evidence without
 
     recordAndVerifyDeveloperModeCloseout(stateRoot, directFixPayload);
     recordAndVerifyDeveloperModeCloseout(stateRoot, forkPrPayload);
-    const verifiedReadiness = runCli(['framework', 'readiness', '--family-defaults'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    }).framework_readiness;
+    const verifiedReadiness = runCli(['framework', 'readiness', '--family-defaults'], env).framework_readiness;
     assert.equal(
       verifiedReadiness.attention_first_payload
         .developer_mode_live_closeout_evidence.attention_count,
@@ -557,6 +560,7 @@ test('framework readiness consumes Developer Mode live closeout evidence without
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });

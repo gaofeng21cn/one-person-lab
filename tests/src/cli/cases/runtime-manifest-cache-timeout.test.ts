@@ -18,6 +18,7 @@ test('framework readiness keeps domain manifest live refresh bounded and uses pr
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-readiness-cache-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const workspaceRoot = createFamilyDefaultContractWorkspace();
+  const omaRepoDir = path.join(workspaceRoot, 'opl-meta-agent');
   const manifest = buildManyStageManifest(2);
   const manifestPath = path.join(stateRoot, 'manifest.json');
   const invocationPath = path.join(stateRoot, 'manifest-invocations.log');
@@ -56,9 +57,11 @@ test('framework readiness keeps domain manifest live refresh bounded and uses pr
     const previousStateDir = process.env.OPL_STATE_DIR;
     const previousContractsDir = process.env.OPL_CONTRACTS_DIR;
     const previousFamilyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
+    const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
     process.env.OPL_STATE_DIR = stateRoot;
     process.env.OPL_CONTRACTS_DIR = fixtureContractsRoot;
     process.env.OPL_FAMILY_WORKSPACE_ROOT = workspaceRoot;
+    process.env.OPL_META_AGENT_REPO_DIR = omaRepoDir;
     try {
       const readiness = (await buildFrameworkReadinessSummary(loadFrameworkContracts(), {
         familyDefaults: true,
@@ -75,6 +78,7 @@ test('framework readiness keeps domain manifest live refresh bounded and uses pr
       restoreEnvVar('OPL_STATE_DIR', previousStateDir);
       restoreEnvVar('OPL_CONTRACTS_DIR', previousContractsDir);
       restoreEnvVar('OPL_FAMILY_WORKSPACE_ROOT', previousFamilyWorkspaceRoot);
+      restoreEnvVar('OPL_META_AGENT_REPO_DIR', previousOmaRepoDir);
     }
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

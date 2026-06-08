@@ -90,6 +90,9 @@ function replayEvidenceWithCliRefs(
       ...(repeated['attempt-ledger-ref'] ?? []),
     ]),
     codex_attempt_trace_refs: declaredEvidence.codex_attempt_trace_refs,
+    stage_manifest_refs: declaredEvidence.stage_manifest_refs,
+    current_pointer_refs: declaredEvidence.current_pointer_refs,
+    owner_answer_binding_refs: declaredEvidence.owner_answer_binding_refs,
     recorded_runtime_event_refs: uniqueStringValues([
       ...(declaredEvidence.recorded_runtime_event_refs ?? []),
       ...(repeated['recorded-runtime-event-ref'] ?? []),
