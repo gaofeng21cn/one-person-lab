@@ -22,6 +22,7 @@ test('brand module registry is loaded as a required framework contract', () => {
   assert.equal(contracts.brandModuleRegistry.scope, 'opl_brand_module_registry');
   assert.equal(contracts.brandModuleSurfaces.scope, 'opl_brand_module_executable_surfaces');
   assert.equal(contracts.brandModuleL5OperatingEvidence.scope, 'opl_brand_module_l5_operating_evidence');
+  assert.equal(contracts.brandSystemProfile.scope, 'opl_brand_system_freeze_profile');
   assert.deepEqual(
     contracts.brandModuleRegistry.modules.map((entry) => entry.module_id),
     expectedModuleIds,
@@ -33,6 +34,61 @@ test('brand module registry is loaded as a required framework contract', () => {
   assert.deepEqual(
     contracts.brandModuleL5OperatingEvidence.modules.map((entry) => entry.module_id),
     expectedModuleIds,
+  );
+});
+
+test('brand system profile freezes product grammar and language against the nine module baseline', () => {
+  const contracts = loadFrameworkContracts(repoRoot);
+  const profile = contracts.brandSystemProfile;
+  const validation = loadFrameworkContracts(repoRoot);
+
+  assert.equal(profile.version, 'brand-system-profile.v1');
+  assert.deepEqual(
+    profile.product_cognition_layers.map((entry) => entry.layer_id),
+    ['opl_framework', 'one_person_lab_app', 'foundry_agents'],
+  );
+  assert.deepEqual(profile.brand_module_product_grammar.module_ids, expectedModuleIds);
+  assert.deepEqual(
+    profile.brand_module_product_grammar.module_role_refs.map((entry) => entry.module_id),
+    expectedModuleIds,
+  );
+  for (const moduleRef of profile.brand_module_product_grammar.module_role_refs) {
+    assert.equal(
+      contracts.brandModuleRegistry.modules.some((entry) => entry.module_id === moduleRef.module_id),
+      true,
+    );
+    assert.equal(
+      contracts.brandModuleSurfaces.modules.some((entry) => entry.module_id === moduleRef.module_id),
+      true,
+    );
+    assert.equal(moduleRef.registry_ref, `contracts/opl-framework/brand-module-registry.json#modules.${moduleRef.module_id}`);
+    assert.equal(moduleRef.surface_contract_ref, `contracts/opl-framework/brand-module-surfaces.json#modules.${moduleRef.module_id}`);
+  }
+  assert.equal(profile.agent_naming.family_label, 'One Person Lab Foundry Agent');
+  assert.deepEqual(profile.agent_naming.required_agent_ids, ['mas', 'mag', 'rca', 'oma']);
+  assert.deepEqual(profile.app_status_language.default_terms, [
+    'current owner',
+    'next action',
+    'artifact',
+    'receipt',
+    'typed blocker',
+    'human gate',
+  ]);
+  assert.equal(profile.app_status_language.diagnostic_only_terms.includes('ledger'), true);
+  assert.equal(profile.app_status_language.diagnostic_only_terms.includes('provider'), true);
+  assert.deepEqual(
+    profile.visual_system.pattern_groups.map((entry) => entry.group_id),
+    ['design_tokens', 'icons', 'cards', 'status_patterns'],
+  );
+  assert.equal(profile.receipt_blocker_language.success_shape, 'domain_owner_receipt_ref');
+  assert.equal(profile.receipt_blocker_language.blocked_shape, 'domain_owned_typed_blocker_ref');
+  assert.equal(profile.authority_boundary.can_claim_domain_ready, false);
+  assert.equal(profile.authority_boundary.can_claim_production_ready, false);
+  assert.equal(profile.authority_boundary.can_sign_owner_receipt, false);
+  assert.equal(profile.authority_boundary.can_create_typed_blocker, false);
+  assert.equal(
+    validation.brandSystemProfile.source_refs.includes('docs/references/brand-modules/README.md'),
+    true,
   );
 });
 

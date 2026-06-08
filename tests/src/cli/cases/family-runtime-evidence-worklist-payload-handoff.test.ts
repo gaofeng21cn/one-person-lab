@@ -21,6 +21,7 @@ import {
   MINIMAL_BRAND_MODULE_L5_OPERATING_EVIDENCE_CONTRACT,
   MINIMAL_BRAND_MODULE_REGISTRY_CONTRACT,
   MINIMAL_BRAND_MODULE_SURFACES_CONTRACT,
+  MINIMAL_BRAND_SYSTEM_PROFILE_CONTRACT,
 } from './agent-workspace-norm-fixture.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -66,6 +67,7 @@ const contracts = {
   brandCliGovernance: MINIMAL_BRAND_CLI_GOVERNANCE_CONTRACT,
   brandModuleSurfaces: MINIMAL_BRAND_MODULE_SURFACES_CONTRACT,
   brandModuleL5OperatingEvidence: MINIMAL_BRAND_MODULE_L5_OPERATING_EVIDENCE_CONTRACT,
+  brandSystemProfile: MINIMAL_BRAND_SYSTEM_PROFILE_CONTRACT,
 } as FrameworkContracts;
 
 async function withIsolatedOplState<T>(

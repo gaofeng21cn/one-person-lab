@@ -589,6 +589,77 @@ export interface BrandModuleSurfacesContract {
   modules: BrandModuleSurfaceContractEntry[];
 }
 
+export interface BrandSystemProductCognitionLayer {
+  layer_id: 'opl_framework' | 'one_person_lab_app' | 'foundry_agents';
+  product_name: string;
+  user_understanding: string;
+  maintainer_understanding: string;
+  owner: string;
+  authority_boundary: string[];
+}
+
+export interface BrandSystemModuleRoleRef {
+  module_id: BrandModuleId;
+  product_grammar_role: string;
+  registry_ref: string;
+  surface_contract_ref: string;
+}
+
+export interface BrandSystemAgentNaming {
+  family_label: string;
+  public_name_policy: string;
+  machine_id_policy: string;
+  required_agent_ids: string[];
+  foundry_series_contract_ref: string;
+}
+
+export interface BrandSystemAppStatusLanguage {
+  default_terms: string[];
+  diagnostic_only_terms: string[];
+  forbidden_default_terms: string[];
+  default_state_ref: string;
+  full_detail_policy_ref: string;
+}
+
+export interface BrandSystemVisualPatternGroup {
+  group_id: 'design_tokens' | 'icons' | 'cards' | 'status_patterns';
+  purpose: string;
+  required_patterns: string[];
+}
+
+export interface BrandSystemReceiptBlockerLanguage {
+  success_shape: string;
+  blocked_shape: string;
+  route_back_shape: string;
+  owner_answer_schema_ref: string;
+  owner_receipt_schema_ref: string;
+  typed_blocker_schema_ref: string;
+  wording_rules: string[];
+}
+
+export interface BrandSystemProfileContract {
+  version: string;
+  scope: string;
+  owner: string;
+  purpose: string;
+  state: string;
+  machine_boundary: string;
+  source_refs: string[];
+  product_cognition_layers: BrandSystemProductCognitionLayer[];
+  brand_module_product_grammar: {
+    module_ids: BrandModuleId[];
+    module_role_refs: BrandSystemModuleRoleRef[];
+  };
+  agent_naming: BrandSystemAgentNaming;
+  app_status_language: BrandSystemAppStatusLanguage;
+  visual_system: {
+    pattern_groups: BrandSystemVisualPatternGroup[];
+  };
+  receipt_blocker_language: BrandSystemReceiptBlockerLanguage;
+  authority_boundary: BrandModuleAuthorityBoundary;
+  forbidden_claims: string[];
+}
+
 export interface WorkstreamsRegistry {
   version: string;
   workstreams: WorkstreamContract[];
@@ -620,6 +691,7 @@ export interface FrameworkContracts {
   brandCliGovernance: BrandCliGovernanceContract;
   brandModuleSurfaces: BrandModuleSurfacesContract;
   brandModuleL5OperatingEvidence: BrandModuleL5OperatingEvidenceContract;
+  brandSystemProfile: BrandSystemProfileContract;
 }
 
 export interface ContractValidationEntry {
@@ -633,7 +705,8 @@ export interface ContractValidationEntry {
     | 'brand_module_registry'
     | 'brand_cli_governance'
     | 'brand_module_surfaces'
-    | 'brand_module_l5_operating_evidence';
+    | 'brand_module_l5_operating_evidence'
+    | 'brand_system_profile';
   file: string;
   schema_version: string;
   status: 'valid';

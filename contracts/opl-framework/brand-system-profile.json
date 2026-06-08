@@ -1,0 +1,258 @@
+{
+  "version": "brand-system-profile.v1",
+  "scope": "opl_brand_system_freeze_profile",
+  "owner": "One Person Lab",
+  "purpose": "Freeze the One Person Lab brand system baseline across product cognition, module product grammar, Foundry Agent naming, App status language, visual patterns, and receipt/blocker wording.",
+  "state": "active_contract",
+  "machine_boundary": "This profile is a machine-readable brand-system baseline. It governs naming, language, pattern refs, and false-authority claims only; it does not store domain truth, artifact bodies, memory bodies, GUI release truth, quality verdicts, owner receipts, typed blockers, runtime readiness, or production readiness.",
+  "source_refs": [
+    "docs/references/runtime-substrate/opl-family-ideal-system-assessment.md#ideal-product-brand-structure",
+    "docs/references/brand-modules/README.md",
+    "contracts/opl-framework/brand-module-registry.json",
+    "contracts/opl-framework/brand-module-surfaces.json",
+    "contracts/opl-framework/foundry-agent-series-contract.json",
+    "contracts/opl-framework/family-product-operator-projection.json",
+    "contracts/opl-framework/owner-answer.schema.json",
+    "contracts/opl-framework/stage-owner-receipt.schema.json",
+    "contracts/opl-framework/stage-typed-blocker.schema.json"
+  ],
+  "product_cognition_layers": [
+    {
+      "layer_id": "opl_framework",
+      "product_name": "OPL Framework",
+      "user_understanding": "The foundation that makes agents creatable, runnable, recoverable, and auditable.",
+      "maintainer_understanding": "Agent platform, runtime, contracts, pack compiler, generated surfaces, Vault, Runway, and Console projection producer.",
+      "owner": "one-person-lab",
+      "authority_boundary": [
+        "owns_framework_runtime_contracts",
+        "owns_generated_surface_contracts",
+        "does_not_own_domain_truth",
+        "does_not_own_gui_release_truth"
+      ]
+    },
+    {
+      "layer_id": "one_person_lab_app",
+      "product_name": "One Person Lab App",
+      "user_understanding": "The cockpit for choosing work, seeing progress, resolving blockers, and opening deliverables.",
+      "maintainer_understanding": "GUI product surface that consumes OPL state/action projections; release truth and user-path evidence stay with the App owner.",
+      "owner": "one-person-lab-app",
+      "authority_boundary": [
+        "owns_gui_product_truth",
+        "owns_app_release_user_path_evidence",
+        "does_not_own_runtime_truth",
+        "does_not_own_domain_truth"
+      ]
+    },
+    {
+      "layer_id": "foundry_agents",
+      "product_name": "Foundry Agents",
+      "user_understanding": "Domain agents that complete medical papers, grants, visual deliverables, and agent-building work.",
+      "maintainer_understanding": "Domain packs plus authority functions; each domain owns truth, artifact authority, quality/export verdicts, receipts, and blockers.",
+      "owner": "domain-agent repositories",
+      "authority_boundary": [
+        "owns_domain_truth",
+        "owns_artifact_and_memory_authority",
+        "owns_quality_or_export_verdict",
+        "owns_owner_receipt_and_typed_blocker_creation"
+      ]
+    }
+  ],
+  "brand_module_product_grammar": {
+    "module_ids": [
+      "charter",
+      "atlas",
+      "workspace",
+      "stagecraft",
+      "runway",
+      "vault",
+      "console",
+      "foundry-lab",
+      "connect"
+    ],
+    "module_role_refs": [
+      {
+        "module_id": "charter",
+        "product_grammar_role": "language, naming, authority boundaries, ADR/RFC lifecycle, and brand architecture",
+        "registry_ref": "contracts/opl-framework/brand-module-registry.json#modules.charter",
+        "surface_contract_ref": "contracts/opl-framework/brand-module-surfaces.json#modules.charter"
+      },
+      {
+        "module_id": "atlas",
+        "product_grammar_role": "agent, capability, surface, owner, dependency, and lifecycle catalog",
+        "registry_ref": "contracts/opl-framework/brand-module-registry.json#modules.atlas",
+        "surface_contract_ref": "contracts/opl-framework/brand-module-surfaces.json#modules.atlas"
+      },
+      {
+        "module_id": "workspace",
+        "product_grammar_role": "project unit, stage artifact unit, shared resource, handoff, and inspectable file topology",
+        "registry_ref": "contracts/opl-framework/brand-module-registry.json#modules.workspace",
+        "surface_contract_ref": "contracts/opl-framework/brand-module-surfaces.json#modules.workspace"
+      },
+      {
+        "module_id": "stagecraft",
+        "product_grammar_role": "stage pack, prompt, skill, knowledge, rubric, quality gate, and handoff design",
+        "registry_ref": "contracts/opl-framework/brand-module-registry.json#modules.stagecraft",
+        "surface_contract_ref": "contracts/opl-framework/brand-module-surfaces.json#modules.stagecraft"
+      },
+      {
+        "module_id": "runway",
+        "product_grammar_role": "durable execution, attempt, lease, retry, dead-letter, wakeup, and human gate",
+        "registry_ref": "contracts/opl-framework/brand-module-registry.json#modules.runway",
+        "surface_contract_ref": "contracts/opl-framework/brand-module-surfaces.json#modules.runway"
+      },
+      {
+        "module_id": "vault",
+        "product_grammar_role": "refs-only evidence, receipt, typed blocker, lineage, restore, and provenance",
+        "registry_ref": "contracts/opl-framework/brand-module-registry.json#modules.vault",
+        "surface_contract_ref": "contracts/opl-framework/brand-module-surfaces.json#modules.vault"
+      },
+      {
+        "module_id": "console",
+        "product_grammar_role": "App/operator cockpit, current owner, next action, blocker, artifact, and drilldown",
+        "registry_ref": "contracts/opl-framework/brand-module-registry.json#modules.console",
+        "surface_contract_ref": "contracts/opl-framework/brand-module-surfaces.json#modules.console"
+      },
+      {
+        "module_id": "foundry-lab",
+        "product_grammar_role": "agent creation, test takeover, mechanism improvement, canary, promotion, and rollback",
+        "registry_ref": "contracts/opl-framework/brand-module-registry.json#modules.foundry-lab",
+        "surface_contract_ref": "contracts/opl-framework/brand-module-surfaces.json#modules.foundry-lab"
+      },
+      {
+        "module_id": "connect",
+        "product_grammar_role": "CLI, MCP, OpenAI/AI SDK tool, Skill/plugin, install, release, and distribution projection",
+        "registry_ref": "contracts/opl-framework/brand-module-registry.json#modules.connect",
+        "surface_contract_ref": "contracts/opl-framework/brand-module-surfaces.json#modules.connect"
+      }
+    ]
+  },
+  "agent_naming": {
+    "family_label": "One Person Lab Foundry Agent",
+    "public_name_policy": "Public names use domain brands while preserving the Foundry Agent family label in developer/operator surfaces.",
+    "machine_id_policy": "Machine ids remain stable lowercase agent ids and domain ids; public labels must not become machine truth.",
+    "required_agent_ids": [
+      "mas",
+      "mag",
+      "rca",
+      "oma"
+    ],
+    "foundry_series_contract_ref": "contracts/opl-framework/foundry-agent-series-contract.json"
+  },
+  "app_status_language": {
+    "default_terms": [
+      "current owner",
+      "next action",
+      "artifact",
+      "receipt",
+      "typed blocker",
+      "human gate"
+    ],
+    "diagnostic_only_terms": [
+      "ledger",
+      "trace",
+      "provider",
+      "worklist",
+      "sidecar",
+      "full drilldown",
+      "replay"
+    ],
+    "forbidden_default_terms": [
+      "domain ready",
+      "quality verdict",
+      "production ready",
+      "App release ready",
+      "owner accepted",
+      "provider completion equals receipt"
+    ],
+    "default_state_ref": "contracts/opl-framework/family-product-operator-projection.json#/app_runtime_boundary/default_read_surface_policy",
+    "full_detail_policy_ref": "contracts/opl-framework/family-product-operator-projection.json#/app_runtime_boundary/full_runtime_drilldown_exception"
+  },
+  "visual_system": {
+    "pattern_groups": [
+      {
+        "group_id": "design_tokens",
+        "purpose": "Keep product surfaces visually consistent across Framework, App, and Foundry Agent projections.",
+        "required_patterns": [
+          "semantic_color_tokens",
+          "spacing_and_density_tokens",
+          "typography_scale_tokens",
+          "focus_and_interaction_tokens"
+        ]
+      },
+      {
+        "group_id": "icons",
+        "purpose": "Represent brand modules, agents, actions, blockers, receipts, and artifacts with stable symbolic categories.",
+        "required_patterns": [
+          "module_icon_family",
+          "foundry_agent_icon_shape",
+          "artifact_icon",
+          "receipt_icon",
+          "typed_blocker_icon",
+          "human_gate_icon"
+        ]
+      },
+      {
+        "group_id": "cards",
+        "purpose": "Keep user-facing task, agent, artifact, receipt, and blocker cards scannable and authority-aware.",
+        "required_patterns": [
+          "agent_card",
+          "current_owner_card",
+          "artifact_card",
+          "receipt_card",
+          "typed_blocker_card",
+          "human_gate_card"
+        ]
+      },
+      {
+        "group_id": "status_patterns",
+        "purpose": "Separate ready, waiting, blocked, review, diagnostic, and evidence-required states without overclaiming readiness.",
+        "required_patterns": [
+          "current_owner_status",
+          "next_action_status",
+          "artifact_available_status",
+          "receipt_recorded_status",
+          "typed_blocker_required_status",
+          "evidence_required_status"
+        ]
+      }
+    ]
+  },
+  "receipt_blocker_language": {
+    "success_shape": "domain_owner_receipt_ref",
+    "blocked_shape": "domain_owned_typed_blocker_ref",
+    "route_back_shape": "route_back_or_human_gate_ref",
+    "owner_answer_schema_ref": "contracts/opl-framework/owner-answer.schema.json",
+    "owner_receipt_schema_ref": "contracts/opl-framework/stage-owner-receipt.schema.json",
+    "typed_blocker_schema_ref": "contracts/opl-framework/stage-typed-blocker.schema.json",
+    "wording_rules": [
+      "Say receipt only when a domain or human owner-signed receipt ref exists.",
+      "Say typed blocker only when an owner-signed blocker ref names the required owner and next safe action.",
+      "Say human gate when the next action requires owner or human input.",
+      "Do not turn provider completion, file presence, verified ledger refs, or contract validation into owner acceptance.",
+      "Do not let OPL Framework, Console, Vault, or Connect claim domain quality, artifact authority, or production readiness."
+    ]
+  },
+  "authority_boundary": {
+    "can_claim_domain_ready": false,
+    "can_claim_quality_verdict": false,
+    "can_claim_artifact_authority": false,
+    "can_claim_production_ready": false,
+    "can_write_domain_truth": false,
+    "can_write_memory_body": false,
+    "can_mutate_artifact_body": false,
+    "can_sign_owner_receipt": false,
+    "can_create_typed_blocker": false,
+    "can_replace_domain_owner": false,
+    "can_replace_ai_executor_planning": false
+  },
+  "forbidden_claims": [
+    "brand_system_profile_claims_l5",
+    "brand_system_profile_claims_domain_ready",
+    "brand_system_profile_claims_quality_verdict",
+    "brand_system_profile_claims_artifact_authority",
+    "brand_system_profile_claims_app_release_ready",
+    "brand_system_profile_claims_owner_receipt_creation",
+    "brand_system_profile_claims_typed_blocker_creation",
+    "provider_completion_counts_as_receipt"
+  ]
+}

@@ -4,6 +4,7 @@ import type {
   BrandModuleL5OperatingEvidenceContract,
   BrandModuleRegistryContract,
   BrandModuleSurfacesContract,
+  BrandSystemProfileContract,
 } from '../../../../src/types.ts';
 
 export const MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT: AgentWorkspaceNormContract = {
@@ -487,6 +488,119 @@ export const MINIMAL_BRAND_MODULE_L5_OPERATING_EVIDENCE_CONTRACT: BrandModuleL5O
     })),
     not_claims: ['production_ready'],
   })),
+};
+
+export const MINIMAL_BRAND_SYSTEM_PROFILE_CONTRACT: BrandSystemProfileContract = {
+  version: 'brand-system-profile.test',
+  scope: 'opl_brand_system_freeze_profile',
+  owner: 'one-person-lab',
+  purpose: 'test fixture',
+  state: 'test_fixture',
+  machine_boundary: 'test fixture',
+  source_refs: ['contracts/opl-framework/brand-system-profile.json'],
+  product_cognition_layers: [
+    {
+      layer_id: 'opl_framework',
+      product_name: 'OPL Framework',
+      user_understanding: 'test fixture',
+      maintainer_understanding: 'test fixture',
+      owner: 'one-person-lab',
+      authority_boundary: ['test fixture'],
+    },
+    {
+      layer_id: 'one_person_lab_app',
+      product_name: 'One Person Lab App',
+      user_understanding: 'test fixture',
+      maintainer_understanding: 'test fixture',
+      owner: 'one-person-lab-app',
+      authority_boundary: ['test fixture'],
+    },
+    {
+      layer_id: 'foundry_agents',
+      product_name: 'Foundry Agents',
+      user_understanding: 'test fixture',
+      maintainer_understanding: 'test fixture',
+      owner: 'domain-agent repositories',
+      authority_boundary: ['test fixture'],
+    },
+  ],
+  brand_module_product_grammar: {
+    module_ids: [...MINIMAL_BRAND_MODULE_IDS],
+    module_role_refs: MINIMAL_BRAND_MODULE_IDS.map((moduleId) => ({
+      module_id: moduleId,
+      product_grammar_role: 'test fixture',
+      registry_ref: `contracts/opl-framework/brand-module-registry.json#modules.${moduleId}`,
+      surface_contract_ref: `contracts/opl-framework/brand-module-surfaces.json#modules.${moduleId}`,
+    })),
+  },
+  agent_naming: {
+    family_label: 'One Person Lab Foundry Agent',
+    public_name_policy: 'test fixture',
+    machine_id_policy: 'test fixture',
+    required_agent_ids: ['mas', 'mag', 'rca', 'oma'],
+    foundry_series_contract_ref: 'contracts/opl-framework/foundry-agent-series-contract.json',
+  },
+  app_status_language: {
+    default_terms: [
+      'current owner',
+      'next action',
+      'artifact',
+      'receipt',
+      'typed blocker',
+      'human gate',
+    ],
+    diagnostic_only_terms: ['ledger', 'provider'],
+    forbidden_default_terms: ['domain ready'],
+    default_state_ref: 'contracts/opl-framework/family-product-operator-projection.json',
+    full_detail_policy_ref: 'contracts/opl-framework/family-product-operator-projection.json',
+  },
+  visual_system: {
+    pattern_groups: [
+      {
+        group_id: 'design_tokens',
+        purpose: 'test fixture',
+        required_patterns: ['semantic_color_tokens'],
+      },
+      {
+        group_id: 'icons',
+        purpose: 'test fixture',
+        required_patterns: ['module_icon_family'],
+      },
+      {
+        group_id: 'cards',
+        purpose: 'test fixture',
+        required_patterns: ['agent_card'],
+      },
+      {
+        group_id: 'status_patterns',
+        purpose: 'test fixture',
+        required_patterns: ['current_owner_status'],
+      },
+    ],
+  },
+  receipt_blocker_language: {
+    success_shape: 'domain_owner_receipt_ref',
+    blocked_shape: 'domain_owned_typed_blocker_ref',
+    route_back_shape: 'route_back_or_human_gate_ref',
+    owner_answer_schema_ref: 'contracts/opl-framework/owner-answer.schema.json',
+    owner_receipt_schema_ref: 'contracts/opl-framework/stage-owner-receipt.schema.json',
+    typed_blocker_schema_ref: 'contracts/opl-framework/stage-typed-blocker.schema.json',
+    wording_rules: ['test fixture'],
+  },
+  authority_boundary: {
+    can_claim_domain_ready: false,
+    can_claim_quality_verdict: false,
+    can_claim_artifact_authority: false,
+    can_claim_production_ready: false,
+    can_write_domain_truth: false,
+    can_write_memory_body: false,
+    can_mutate_artifact_body: false,
+    can_sign_owner_receipt: false,
+    can_create_typed_blocker: false,
+    can_replace_domain_owner: false,
+    can_replace_ai_executor_planning: false,
+  },
+  forbidden_claims: ['domain_ready'],
 };
 
 export const MINIMAL_BRAND_CLI_GOVERNANCE_CONTRACT: BrandCliGovernanceContract = {

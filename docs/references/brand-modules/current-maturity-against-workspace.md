@@ -34,6 +34,7 @@ Machine boundary: 本文是人读现状对照。当前完成度、计数、recei
 
 - `contracts/opl-framework/brand-module-registry.json` 与 `opl brand-modules ...` 是九模块目录和成熟度总览。
 - `contracts/opl-framework/brand-module-surfaces.json` 与 `opl <module> status|inspect|interfaces|validate|doctor --json` 是每个模块自身的 L4 executable surface。
+- `contracts/opl-framework/brand-system-profile.json` 是跨九模块的品牌系统冻结基线，负责三层产品认知、九模块 product grammar、Foundry Agent 命名、App 状态语言、design-token/icon/card/status pattern、receipt/blocker 文案规则和 false-authority boundary。
 
 因此，当前不再以 `brand-modules inspect` 作为模块完成的唯一依据；每个模块都必须能通过自己的 `validate` / `doctor` 输出验收。
 
@@ -114,6 +115,14 @@ opl connect l5-status --json
 
 `runtime brand-module-l5-evidence` 是 evidence intake/read-model，不是 completion command。它只把外部真实用户路径、long-soak、release/install、owner acceptance、no-regression 或 typed blocker refs 记录到本地 OPL state ledger，再让 `l5-status` 显示 observed / verified counts；它不能创建 owner receipt / typed blocker，不能写 domain truth，不能把 verified receipt 升级成 L5。
 
+品牌系统冻结基线验收入口：
+
+```text
+contracts/opl-framework/brand-system-profile.json
+opl contract validate --json
+node --experimental-strip-types --test tests/src/cli/cases/brand-modules.test.ts
+```
+
 对象视图入口示例：
 
 ```text
@@ -140,6 +149,7 @@ npm run typecheck
 ## Forbidden Claims
 
 - 九模块进入统一 registry 只能证明目录层存在；模块级 L4 必须以 `brand-module-surfaces.json` 和各自 `opl <module> validate|doctor --json` 为证据。
+- `brand-system-profile.json` 只冻结品牌系统语言、命名和视觉/status pattern；不能把产品 grammar 一致性写成 L5、App release ready、domain ready、quality verdict、artifact authority、owner receipt 或 typed blocker。
 - 任何模块 `L4_structural_baseline` 不等于 MAS/MAG/RCA/OMA domain ready。
 - `brand-module-l5-operating-evidence.json`、`opl brand-modules l5-validate --json`、`opl <module> l5-status --json` 和 `opl runtime brand-module-l5-evidence verify --json` 只能证明 L5 证据矩阵存在、形状有效、refs transport 可记录/验证和当前 open/blocked/satisfied 状态；不能单独声明 L5。
 - 任何模块的 `L5` 都不能由 docs foldback、contract validation、conformance pass、provider completion、verified ledger 或 App projection 单独声明。

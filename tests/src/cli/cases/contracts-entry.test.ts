@@ -221,6 +221,12 @@ test('validateFrameworkContracts returns a stable summary for the required contr
         schema_version: contracts.brandModuleL5OperatingEvidence.version,
         status: 'valid',
       },
+      {
+        contract_id: 'brand_system_profile',
+        file: path.join(contractsDir, 'brand-system-profile.json'),
+        schema_version: contracts.brandSystemProfile.version,
+        status: 'valid',
+      },
     ],
   });
 });
@@ -294,6 +300,12 @@ test('contract validate returns a stable machine-readable contract summary', () 
           contract_id: 'brand_module_l5_operating_evidence',
           file: path.join(contractsDir, 'brand-module-l5-operating-evidence.json'),
           schema_version: contracts.brandModuleL5OperatingEvidence.version,
+          status: 'valid',
+        },
+        {
+          contract_id: 'brand_system_profile',
+          file: path.join(contractsDir, 'brand-system-profile.json'),
+          schema_version: contracts.brandSystemProfile.version,
           status: 'valid',
         },
       ],
