@@ -748,12 +748,11 @@
         "opl connect skills --json",
         "opl connect modules --json",
         "opl connect install --module medautoscience --json",
-        "opl connect packages manifest --json",
-        "opl skill sync --json",
-        "opl skill list --json",
-        "opl modules --json",
-        "opl module install --module medautoscience --json",
-        "opl packages manifest --json"
+        "opl connect update --module medautoscience --json",
+        "opl connect reinstall --module medautoscience --json",
+        "opl connect remove --module medautoscience --json",
+        "opl connect exec --module medautoscience -- doctor entry-modes",
+        "opl connect packages manifest --json"
       ],
       "app_surfaces": [
         "app_action:connect_status",
@@ -774,7 +773,7 @@
         "opl connect doctor --json",
         "opl system semantic-hygiene --json",
         "opl connect packages manifest --json",
-        "opl packages manifest --json",
+        "opl connect reconcile-modules --json",
         "opl contract validate --json"
       ],
       "status_doc_refs": [

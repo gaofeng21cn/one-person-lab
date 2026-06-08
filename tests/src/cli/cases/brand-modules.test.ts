@@ -99,6 +99,43 @@ test('brand modules interfaces expose CLI, app, descriptor, and validation surfa
   assert.equal(interfaces.authority_boundary.can_sign_owner_receipt, false);
 });
 
+test('Connect brand module surfaces use canonical Connect commands instead of retired implementation buckets', () => {
+  const inspect = runCli(['brand-modules', 'inspect', '--module', 'connect']).brand_module;
+  const status = runCli(['connect', 'status']).opl_connect_status;
+  const interfaces = runCli(['connect', 'interfaces']).opl_connect_interfaces;
+  const forbiddenCommands = [
+    'opl skill sync --json',
+    'opl skill list --json',
+    'opl modules --json',
+    'opl module install --module medautoscience --json',
+    'opl packages manifest --json',
+  ];
+
+  assert.equal(inspect.module_id, 'connect');
+  assert.equal(inspect.cli_surfaces.includes('opl connect update --module medautoscience --json'), true);
+  assert.equal(inspect.cli_surfaces.includes('opl connect reinstall --module medautoscience --json'), true);
+  assert.equal(inspect.cli_surfaces.includes('opl connect remove --module medautoscience --json'), true);
+  assert.equal(inspect.cli_surfaces.includes('opl connect exec --module medautoscience -- doctor entry-modes'), true);
+  assert.equal(inspect.validation_surfaces.includes('opl connect reconcile-modules --json'), true);
+
+  for (const command of forbiddenCommands) {
+    assert.equal(inspect.cli_surfaces.includes(command), false);
+    assert.equal(status.native_cli_family.additional_commands.includes(command), false);
+    assert.equal(interfaces.cli.commands.includes(command), false);
+  }
+
+  for (const command of [
+    'opl connect skills --json',
+    'opl connect sync-skills --json',
+    'opl connect modules --json',
+    'opl connect packages manifest --json',
+    'opl connect reconcile-modules --json',
+  ]) {
+    assert.equal(status.native_cli_family.additional_commands.includes(command), true);
+    assert.equal(interfaces.cli.commands.includes(command), true);
+  }
+});
+
 test('bin/opl routes module-owned brand commands into the OPL CLI instead of Codex passthrough', () => {
   const result = spawnSync(
     path.join(repoRoot, 'bin', 'opl'),

@@ -288,6 +288,22 @@ export function buildPublicCommandSpecs(
         const helpTarget = args.join(' ');
         const helpSpec = publicCommandSpecs[helpTarget];
         if (!helpSpec) {
+          const prefixMatches = Object.entries(publicCommandSpecs)
+            .filter(([command]) => command.startsWith(`${helpTarget} `));
+          if (prefixMatches.length > 0) {
+            return buildCommandHelp(helpTarget, {
+              usage: `opl ${helpTarget} <command>`,
+              summary: `Show commands under the ${helpTarget} namespace.`,
+              examples: prefixMatches.slice(0, 5).map(([command]) => `opl ${command} --json`),
+              group: helpTarget,
+              handler: () => null,
+              subcommands: prefixMatches.map(([command, spec]) => ({
+                command,
+                usage: spec.usage,
+                summary: spec.summary,
+              })),
+            });
+          }
           throw new FrameworkContractError('unknown_command', `Unknown command: ${helpTarget}.`, {
             command: helpTarget,
             commands: Object.keys(publicCommandSpecs),

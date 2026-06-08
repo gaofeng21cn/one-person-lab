@@ -213,6 +213,8 @@ test('default help advertises Connect canonical installation surfaces while reti
   assert.match(examples, /opl connect sync-skills/);
   assert.match(examples, /opl agents foundry status/);
   assert.match(examples, /opl agents foundry peers/);
+  assert.doesNotMatch(examples, /opl modules/);
+  assert.doesNotMatch(examples, /opl packages manifest/);
   assert.doesNotMatch(examples, /opl module install --module medautoscience/);
   assert.doesNotMatch(examples, /opl skill sync/);
 
@@ -253,6 +255,24 @@ test('default help advertises Connect canonical installation surfaces while reti
     workspaceHelp.help.subcommands.some((entry: { command: string }) => entry.command === 'workspace inspect'),
     true,
   );
+
+  const connectHelp = runCli(['help', 'connect']);
+  const connectSubcommands = connectHelp.help.subcommands.map((entry: { command: string }) => entry.command);
+  assert.equal(connectHelp.help.command, 'connect');
+  assert.equal(connectHelp.help.usage, 'opl connect <command>');
+  for (const command of [
+    'connect status',
+    'connect modules',
+    'connect install',
+    'connect sync-skills',
+    'connect packages manifest',
+    'connect reconcile-modules',
+  ]) {
+    assert.equal(connectSubcommands.includes(command), true);
+  }
+  assert.equal(connectSubcommands.includes('modules'), false);
+  assert.equal(connectSubcommands.includes('skill sync'), false);
+  assert.equal(connectSubcommands.includes('packages manifest'), false);
 });
 
 test('help keeps JSON output available through explicit flag for machine readers', () => {
@@ -269,7 +289,9 @@ test('help supports explicit text output for human readers', () => {
   assert.match(root.stdout, /One Person Lab \(OPL\)/);
   assert.match(root.stdout, /Fast start:/);
   assert.match(root.stdout, /opl install/);
+  assert.match(root.stdout, /opl connect modules/);
   assert.match(root.stdout, /opl stages readiness --family-defaults/);
+  assert.doesNotMatch(root.stdout, /opl modules\s+Inspect managed module health/);
   assert.doesNotMatch(root.stdout, /capacity-budget/);
   assert.doesNotMatch(root.stdout, /domain-validity/);
 

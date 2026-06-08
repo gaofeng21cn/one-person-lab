@@ -48,7 +48,7 @@ Workspace 级 L4 的 Connect 对象模型必须把 semantic authority 与 transp
 | --- | --- |
 | `schema / contract` | `contracts/opl-framework/public-surface-index.json`、`contracts/opl-framework/domain-pack-compiler-contract.json`、`contracts/opl-framework/codex-default-profile.json`、`contracts/opl-framework/native-helper-contract.json`、`contracts/opl-framework/fresh-install-test-matrix.json`。 |
 | `CLI family` | `opl connect status --json`、`opl connect inspect --json`、`opl connect interfaces --json`、`opl connect validate --json`、`opl connect doctor --json`。 |
-| `current delegate CLI` | `opl skill sync --json`、`opl skill list --json`、`opl modules --json`、`opl module install --module medautoscience --json`、`opl packages manifest --json`、`opl agents interfaces --family-defaults --json`、`opl actions export --domain medautoscience --format openai --json`、`opl actions export --domain medautoscience --format ai-sdk --json`、`opl brand-modules inspect --module connect --json`。 |
+| `current delegate CLI` | `opl connect skills --json`、`opl connect sync-skills --json`、`opl connect modules --json`、`opl connect install --module medautoscience --json`、`opl connect exec --module medautoscience -- doctor entry-modes`、`opl connect packages manifest --json`、`opl agents interfaces --family-defaults --json`、`opl actions export --domain medautoscience --format openai --json`、`opl actions export --domain medautoscience --format ai-sdk --json`、`opl brand-modules inspect --module connect --json`。 |
 | `App action / read-model` | App action descriptors、module health、release/update surface、installed agent capability projection；`connect_read_model` 必须把 semantic source、generated descriptor、transport install 和 release evidence 分开。 |
 | `descriptor` | CLI spec、MCP descriptor、skill/plugin manifest、OpenAI tool descriptor、AI SDK tool descriptor、App action descriptor、source/generated fingerprint manifest。 |
 | `validation / doctor` | `opl connect validate --json` 检查 descriptor drift、fingerprint、module install contract、fresh-install matrix 和 false authority；`opl connect doctor --json` 区分 transport failure 与 semantic drift。 |
@@ -78,7 +78,6 @@ opl connect sync-skills --json
 opl connect install --module <agent> --json
 opl connect packages manifest --json
 opl system startup-maintenance --json
-opl packages manifest --json
 opl brand-modules inspect --module connect --json
 ```
 
@@ -121,7 +120,7 @@ contracts/opl-framework/public-surface-index.json
 
 ## L4 structural baseline 成功标准
 
-- `opl connect status|inspect|interfaces|validate|doctor` 与 `opl skill/module/package/actions/agents` delegate 从同一 public surface / domain pack / install contracts 派生。
+- `opl connect status|inspect|interfaces|validate|doctor` 与 `opl connect skills|sync-skills|modules|install|packages`、actions、agents delegate 从同一 public surface / domain pack / install contracts 派生。
 - Connect 有自己的 read-model、interface bundle、generated drift manifest、validate gate 和 doctor report，不只依赖 `brand-module-registry` 说明。
 - CLI/MCP/Skill/OpenAI/AI SDK/App action 语义一致，且 source/generated fingerprint drift 能被机器发现。
 - Clean install / upgrade / skill sync / module health 有明确 evidence，但 evidence 按 transport/install、semantic surface consistency、domain owner readiness 分层。

@@ -1348,10 +1348,11 @@
           "opl connect packages --json",
           "opl connect channels --json",
           "opl connect drift --json",
-          "opl skill sync --json",
-          "opl skill list --json",
-          "opl modules --json",
-          "opl packages manifest --json"
+          "opl connect skills --json",
+          "opl connect sync-skills --json",
+          "opl connect modules --json",
+          "opl connect packages manifest --json",
+          "opl connect reconcile-modules --json"
         ]
       },
       "app_read_model": {

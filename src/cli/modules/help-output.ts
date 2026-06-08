@@ -273,7 +273,7 @@ function formatHumanRootHelp(payload: ReturnType<typeof buildRootHelp>) {
     '  opl framework readiness --family-defaults',
     '                                 Check the default framework/operator readiness summary',
     '  opl system initialize          Check first-run state and remaining setup actions',
-    '  opl modules                    Inspect managed module health',
+    '  opl connect modules            Inspect managed module health',
     '  opl connect sync-skills         Sync family skills into the Codex skill path',
     '  opl stages readiness --family-defaults',
     '                                 Check the default operator/App launch-readiness summary',
