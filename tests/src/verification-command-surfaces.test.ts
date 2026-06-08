@@ -293,6 +293,17 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
         allowed_consumers: string[];
       };
     };
+    grip_big_release_small_review: {
+      review_id: string;
+      required_questions: string[];
+      big_boundaries_fail_closed: string[];
+      small_detail_default_lanes: string[];
+      small_detail_examples: string[];
+      hard_blocker_upgrade_conditions: string[];
+      ordinary_path_root: string;
+      ordinary_path_must_not_be_overridden_by: string[];
+      accepted_owner_answer_shapes: string[];
+    };
     authority_boundary: Record<string, boolean>;
   }>('contracts/opl-framework/surface-budget-policy.json');
 
@@ -438,6 +449,106 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
   }
   assert.equal(policy.promotion_gate.repeated_app_runtime_consumption_requires.minimum_distinct_consumers, 2);
   assert.equal(policy.promotion_gate.repeated_app_runtime_consumption_requires.allowed_consumers.includes('app'), true);
+
+  assert.equal(policy.grip_big_release_small_review.review_id, 'grip_big_release_small.v1');
+  assert.deepEqual(policy.grip_big_release_small_review.required_questions, [
+    'which_big_boundary_is_protected',
+    'what_is_the_default_lane',
+    'when_may_it_upgrade_to_hard_blocker',
+    'when_must_it_demote_to_advisory_audit_diagnostic_cleanup_or_production_lane',
+    'what_accepted_owner_answer_shape_closes_it',
+  ]);
+  for (const boundary of [
+    'owner_boundary',
+    'authority_boundary',
+    'stage_lifecycle',
+    'workspace_topology',
+    'selected_executor_binding',
+    'single_ordinary_route',
+    'launch_admission',
+    'execution_authorization',
+    'closeout_admission',
+    'accepted_owner_answer_shape',
+    'app_release_verdict',
+    'physical_delete_authority',
+    'no_second_truth',
+  ]) {
+    assert.equal(
+      policy.grip_big_release_small_review.big_boundaries_fail_closed.includes(boundary),
+      true,
+      `${boundary} must remain a fail-closed big boundary`,
+    );
+  }
+  assert.deepEqual(policy.grip_big_release_small_review.small_detail_default_lanes, [
+    'advisory',
+    'audit',
+    'diagnostic',
+    'cleanup',
+    'production_evidence',
+  ]);
+  for (const smallDetail of [
+    'generated_projection_mirror',
+    'workspace_fleet_or_inventory_drift',
+    'worklist_raw_counter',
+    'diagnostic_proof',
+    'route_variant',
+    'receipt_accounting',
+    'wrapper_lineage',
+    'l5_evidence_matrix_item',
+    'provider_ops_detail',
+    'release_cohort_diagnostic',
+  ]) {
+    assert.equal(
+      policy.grip_big_release_small_review.small_detail_examples.includes(smallDetail),
+      true,
+      `${smallDetail} must stay classified as small detail by default`,
+    );
+  }
+  assert.deepEqual(policy.grip_big_release_small_review.hard_blocker_upgrade_conditions, [
+    'wrong_launch',
+    'authority_violation',
+    'not_recoverable',
+    'not_auditable',
+    'cannot_closeout',
+    'invalid_owner_answer_shape',
+    'irreversible_mutation',
+  ]);
+  assert.equal(policy.grip_big_release_small_review.ordinary_path_root, 'current_owner_delta');
+  for (const forbiddenOverride of [
+    'raw_worklist',
+    'evidence_ledger',
+    'provider_trace',
+    'route_variant_menu',
+    'private_residue_inventory',
+    'cleanup_delete_gate',
+    'l5_evidence_ledger',
+    'release_diagnostics',
+  ]) {
+    assert.equal(
+      policy.grip_big_release_small_review.ordinary_path_must_not_be_overridden_by.includes(
+        forbiddenOverride,
+      ),
+      true,
+      `${forbiddenOverride} must not override current_owner_delta ordinary planning`,
+    );
+  }
+  for (const ownerAnswerShape of [
+    'owner_receipt_ref',
+    'quality_gate_receipt_ref',
+    'human_gate_ref',
+    'typed_blocker_ref',
+    'no_regression_ref',
+    'long_soak_ref',
+    'route_back_ref',
+    'physical_delete_authorization_ref',
+    'keep_as_authority_adapter_ref',
+  ]) {
+    assert.equal(
+      policy.grip_big_release_small_review.accepted_owner_answer_shapes.includes(ownerAnswerShape),
+      true,
+      `${ownerAnswerShape} must remain an accepted owner answer shape`,
+    );
+  }
 
   for (const [claim, allowed] of Object.entries(policy.authority_boundary)) {
     assert.equal(allowed, false, `${claim} must remain false in OPL surface budget policy`);

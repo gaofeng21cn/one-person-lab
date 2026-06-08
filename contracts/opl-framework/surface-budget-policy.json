@@ -86,6 +86,84 @@
     "paper_or_framework_learning_point_only",
     "single_consumer_diagnostic_only"
   ],
+  "grip_big_release_small_review": {
+    "review_id": "grip_big_release_small.v1",
+    "purpose": "Prevent governance detail from becoming the ordinary owner-delta blocker unless it protects a hard boundary.",
+    "required_questions": [
+      "which_big_boundary_is_protected",
+      "what_is_the_default_lane",
+      "when_may_it_upgrade_to_hard_blocker",
+      "when_must_it_demote_to_advisory_audit_diagnostic_cleanup_or_production_lane",
+      "what_accepted_owner_answer_shape_closes_it"
+    ],
+    "big_boundaries_fail_closed": [
+      "owner_boundary",
+      "authority_boundary",
+      "stage_lifecycle",
+      "workspace_topology",
+      "selected_executor_binding",
+      "single_ordinary_route",
+      "launch_admission",
+      "execution_authorization",
+      "closeout_admission",
+      "accepted_owner_answer_shape",
+      "app_release_verdict",
+      "physical_delete_authority",
+      "no_second_truth"
+    ],
+    "small_detail_default_lanes": [
+      "advisory",
+      "audit",
+      "diagnostic",
+      "cleanup",
+      "production_evidence"
+    ],
+    "small_detail_examples": [
+      "prompt_skill_tool_knowledge_rubric_ref_completeness",
+      "path_alias",
+      "generated_projection_mirror",
+      "workspace_fleet_or_inventory_drift",
+      "worklist_raw_counter",
+      "diagnostic_proof",
+      "route_variant",
+      "receipt_accounting",
+      "wrapper_lineage",
+      "l5_evidence_matrix_item",
+      "provider_ops_detail",
+      "release_cohort_diagnostic"
+    ],
+    "hard_blocker_upgrade_conditions": [
+      "wrong_launch",
+      "authority_violation",
+      "not_recoverable",
+      "not_auditable",
+      "cannot_closeout",
+      "invalid_owner_answer_shape",
+      "irreversible_mutation"
+    ],
+    "ordinary_path_root": "current_owner_delta",
+    "ordinary_path_must_not_be_overridden_by": [
+      "raw_worklist",
+      "evidence_ledger",
+      "provider_trace",
+      "route_variant_menu",
+      "private_residue_inventory",
+      "cleanup_delete_gate",
+      "l5_evidence_ledger",
+      "release_diagnostics"
+    ],
+    "accepted_owner_answer_shapes": [
+      "owner_receipt_ref",
+      "quality_gate_receipt_ref",
+      "human_gate_ref",
+      "typed_blocker_ref",
+      "no_regression_ref",
+      "long_soak_ref",
+      "route_back_ref",
+      "physical_delete_authorization_ref",
+      "keep_as_authority_adapter_ref"
+    ]
+  },
   "default_doc_entry_budget": {
     "stage_default_commands": [
       "opl stages readiness --family-defaults"
