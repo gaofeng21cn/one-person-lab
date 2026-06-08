@@ -388,6 +388,57 @@ test('StageRun launch admission treats missing strategy refs as advisory instead
   assert.equal(report.default_blocked, false);
 });
 
+test('StageRun closeout admission keeps advisory route-back refs out of closeout hard blockers', async () => {
+  const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);
+  const report = module.evaluateStageRunAdmission({
+    phase: 'closeout',
+    stage_run_id: 'stage-run-1',
+    domain_id: 'mas',
+    stage_id: 'ai_reviewer_publication_eval_rebuild',
+    generation: 1,
+    current_pointer: {
+      stage_run_id: 'stage-run-1',
+      generation: 1,
+      current: true,
+    },
+    manifest_valid: true,
+    required_role_artifacts: ['ai_reviewer_record'],
+    produced_role_artifacts: ['ai_reviewer_record'],
+    content_hashes: ['sha256:abc'],
+    lineage_refs: ['opl://lineage/stage-run-1'],
+    owner_receipt_refs: ['mas://owner-receipt/stage-run-1'],
+    typed_blocker_refs: [],
+    missing_strategy_refs: [
+      'prompt_refs',
+      'skill_refs',
+      'tool_affordance_refs',
+      'knowledge_refs',
+      'rubric_refs',
+      'controlled_canary_evidence_refs',
+    ],
+    route_back_missing_refs: ['quality_gap_receipt_ref'],
+    audit_drilldown_refs: ['opl://audit/stage-run-1'],
+  });
+
+  assert.equal(report.status, 'passed_with_advisory');
+  assert.deepEqual(report.launch_blockers, []);
+  assert.deepEqual(report.closeout_blockers, []);
+  assert.deepEqual(report.forbidden_authority_flags, []);
+  assert.deepEqual(report.advisory_warnings, [
+    'strategy_ref_missing:prompt_refs',
+    'strategy_ref_missing:skill_refs',
+    'strategy_ref_missing:tool_affordance_refs',
+    'strategy_ref_missing:knowledge_refs',
+    'strategy_ref_missing:rubric_refs',
+    'strategy_ref_missing:controlled_canary_evidence_refs',
+  ]);
+  assert.deepEqual(report.route_back_recommendations, [
+    'route_back_missing:quality_gap_receipt_ref',
+  ]);
+  assert.deepEqual(report.audit_drilldown_refs, ['opl://audit/stage-run-1']);
+  assert.equal(report.default_blocked, false);
+});
+
 test('StageRun closeout admission rejects provider completion without owner receipt or typed blocker', async () => {
   const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);
   const report = module.evaluateStageRunAdmission({
@@ -535,6 +586,16 @@ test('StageRun execution authorization binds closeout receipt to current manifes
     current_pointer_ref: 'opl://current-pointers/stage-run-exec-auth:g2',
     closeout_receipt_source_fingerprint: 'sha256:source-2',
     closeout_receipt_idempotency_key: 'stage-run-exec-auth:g2',
+    missing_strategy_refs: [
+      'prompt_refs',
+      'skill_refs',
+      'tool_affordance_refs',
+      'knowledge_refs',
+      'rubric_refs',
+      'controlled_canary_evidence_refs',
+    ],
+    route_back_missing_refs: ['quality_gap_receipt_ref'],
+    audit_drilldown_refs: ['opl://audit/stage-run-exec-auth'],
   });
 
   assert.equal(report.status, 'authorized');
