@@ -2,142 +2,67 @@
 
 Owner: `One Person Lab`
 Purpose: `legacy_surface_review_matrix_provenance`
-State: `history_only`
-Machine boundary: 本文只保存旧 surface review matrix 的人读 provenance。当前仓库没有发布 `surface-review-matrix.json` 机器可读合同；当前机器真相继续归 active contracts、source、CLI/API 行为、runtime ledger、provider receipts 与 domain-owned manifests / receipts。本文不得作为 approval engine、publish controller、release engine、test oracle 或 compatibility interface。
+State: `history_only_compressed`
+Machine boundary: 本文只保存旧 surface review matrix 的人读 provenance。当前仓库没有发布 `surface-review-matrix.json` 机器可读合同；当前机器真相继续归 active contracts、source、CLI/API 行为、runtime ledger、provider receipts 与 domain-owned manifests / receipts。本文不得作为 approval engine、publish controller、release engine、test oracle、compatibility interface 或旧 alias/facade 保留依据。
 
-## 目的
+## 当前读法
 
-这份文档保留历史 OPL public / contract / supporting surfaces 的 legacy-derived review matrix 词汇。
+这份文档曾保存历史 OPL public / contract / supporting surfaces 的 derived review matrix 词汇，用于说明 human-review obligation、acceptance coverage、companion surfaces 与 publishability-stage boundary。它的作用是 historical reviewability，不是 approval engine、publish controller、release engine 或第二真相源。
 
-它的作用是：把 human-review obligation、acceptance coverage、配套 review surface，以及 publishability-stage boundary 集中暴露出来，同时不把这张 matrix 升格成 approval engine、publish controller、release engine 或第二真相源。
+当前 review / publishability / release authority 已归 active source/contracts/tests/CLI/read-model、domain-owned manifests / receipts、runtime ledger、provider receipts 和 App/workbench projection。旧 surface review matrix 只保留为历史 provenance，并由 stale-compat negative guard 测试确保它不会被写成 active machine-readable contract。
 
-当前 OPL topology 是 stage-led、以 Agent executor 为最小执行单位。仍包含 gateway 词汇的 surface id 是来自已归档 corpus 的历史/reviewability 标签，不是 active compatibility interface。
+## Single Source of Truth
 
-## 当前机器边界
+当前同类语义的有效 owner 是：
 
-当前不存在 `contracts/opl-framework/surface-review-matrix.json`。当前机器可读行为必须使用 active contracts、source、CLI/API 行为、runtime ledger 和 domain-owned manifest。
+- 当前项目 truth：`README.md`、`docs/project.md`、`docs/status.md`、`docs/architecture.md`、`docs/invariants.md`、`docs/decisions.md`
+- active progress / gaps / next owner baton：`docs/active/current-state-vs-ideal-gap.md`
+- current review/publishability truth：domain-owned manifests / receipts、active contracts/source/tests/CLI/read-model、runtime ledger、provider receipts 和 App/workbench projection
+- docs lifecycle policy：`docs/docs_portfolio_consolidation.md`、`docs/policies/docs-lifecycle-policy.md`
+- 本路线历史入口：`docs/history/compatibility/gateway-federation/operating-governance/README.md`
 
-## 非目标
+本文故意不复制这些 owner 的当前事实。
 
-这个 review matrix 不负责：
+## 历史覆盖
 
-- 批准发布
-- 自动化 review 决策
-- 替代 governing contracts、docs 或 acceptance gates
-- 把 domain-owned review 或 publication authority 上收给 `OPL`
-- 授权 `OPL` 直接执行 direct publish、direct release、direct export、direct submission、direct posting 或 direct harness access
+原长文覆盖过这些 historical reviewability 语义：
 
-## Shared-Foundation Ownership Boundary
+| 历史 field / group | 当时用途 | 当前读法 |
+| --- | --- | --- |
+| `human_review_required` | 标记历史 surface 成为 public material 前是否需要 human review。 | 只作历史 reviewability 标签；不能创建 active approval gate。 |
+| `required_acceptance_gates` | 引用旧 acceptance gates。 | 旧 acceptance gate 已压缩为 history tombstone，不能作为 active gate。 |
+| `required_companion_surfaces` | 指向已索引 support/governing surfaces。 | 只作 historical discoverability。 |
+| `cross_domain_wording_check` | 表达旧 wording review 模式。 | 当前 wording owner 归 core docs 与 docs lifecycle policy。 |
+| `publishability_stage` | 描述 documentation-readiness stage。 | 不等于 publishability truth、approval status、release status 或 workflow state。 |
 
-这张 review matrix 只位于 shared-foundation 的 reviewability 层。
-`OPL` 可以在这里索引 human-review 义务与 companion-surface 关系，但 domain review truth、publication truth，以及最终的 continue/stop/reframe authority 仍然留在人类与 domain-owned surface 手中。
-因此，这张 matrix 能服务于 discoverability 与 acceptance alignment，而不会升级成 approval control plane 或共享 truth store。
-更完整的 ownership split 可参考 [OPL Family 开发主参考](../../../../active/opl-family-development-reference.md)。
-当前 topology 以[项目概览](../../../../project.md)、[当前状态](../../../../status.md)、[架构](../../../../architecture.md)和 [OPL stage-led agent framework roadmap](../../../../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md) 为准。
+## 已退役机器面
 
-## Review 字段
+重要退役读法：
 
-每个 entry 都保持 derived/reference-only，只携带：
+- 当前不存在 `contracts/opl-framework/surface-review-matrix.json`。
+- 本文不发布 active machine-readable artifact。
+- 旧 `required_acceptance_gates` 不构成 current approval gate。
+- 旧 `publishability_stage` 不构成 current publish/release workflow state。
 
-- `surface_id`
-- `owner_scope`
-- `surface_role`
-- `human_review_required`
-- `required_acceptance_gates`
-- `required_companion_surfaces`
-- `cross_domain_wording_check`
-- `publishability_stage`
-- `governing_refs`
+## No-Resurrection Rules
 
-## Cross-Domain Wording Check 模式
+不得用本文：
 
-- `shared_gate_required` — 这个 surface 直接纳入共享 `cross_domain_wording_consistency` gate。
-- `local_review_required` — 这个 surface 仍然需要 cross-domain wording review，但该检查通过本地 governing/companion review 承担，而不是直接列进共享 gate 文件列表。
+- 重建 `surface-review-matrix.json` 或任何兼容合同；
+- 为旧 review matrix fields 添加 compatibility alias、wrapper、facade、CLI/API 或 test oracle；
+- 把 OPL 写成 approval engine、publish controller、release engine、domain review truth owner 或 publication authority；
+- 声明 runtime readiness、domain readiness、production readiness、artifact authority、quality verdict、owner receipt、typed blocker 或 App release readiness；
+- 绕过当前 domain review/publish authority 和 active read-model，恢复旧 matrix-driven approval path。
 
-## Publishability Stage 取值
+若未来迁移确实需要历史 reviewability 思路，必须先映射到当前 owner surface，并从 active machine truth 证明；不得把旧 matrix 名称复活成兼容层。
 
-这些取值只描述 documentation-readiness stage，不是 workflow state。
+## 历史证据
 
-- `top_level_positioning_aligned`
-- `contract_boundary_aligned`
-- `supporting_reference_aligned`
-- `acceptance_reference_aligned`
+保留本路径是因为 operating-governance archive、examples-corpora、surface lifecycle/authority tombstones 和 stale-compat-retirement guard 测试仍引用它。详细 review fields、coverage list、mapping refs 和 completion checklist 已在 2026-06-08 主动压缩；需要考古时读取压缩前 git history。
 
-## 当前 Coverage
+压缩后角色：
 
-### Top-level public-entry surfaces
-
-- `opl_public_readme`
-- `opl_roadmap`
-- `opl_gateway_rollout`
-- `opl_task_map`
-
-### Shared-foundation boundary surfaces
-
-- `opl_operating_model`
-- `opl_shared_foundation`
-- `opl_shared_foundation_ownership`
-
-### Governing contract surfaces
-
-- `opl_federation_contract`
-- `opl_gateway_contract_hub`
-- `opl_read_only_discovery_gateway`
-- `opl_routed_action_gateway`
-- `opl_domain_onboarding_contract`
-- `opl_phase_1_exit_activation_package`
-- `opl_minimal_admitted_domain_federation_activation_package`
-- `opl_governance_audit_operating_surface`
-- `opl_publish_promotion_operating_surface`
-
-### Supporting review / discoverability surfaces
-
-- `opl_candidate_domain_backlog`
-- `opl_gateway_example_corpus`
-- `opl_routed_safety_example_corpus`
-- `opl_operating_example_corpus`
-- `opl_operating_record_catalog`
-- `opl_surface_lifecycle_map`
-- `opl_surface_authority_matrix`
-- `opl_public_surface_index_doc`
-- `opl_gateway_acceptance_spec`
-
-## 配套 Review / Mapping Surfaces
-
-- [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.md)
-- [OPL Surface Authority Matrix](./opl-surface-authority-matrix.md)
-- [OPL Public Surface Index](../../../../product/opl-public-surface-index.md)
-
-## 阅读规则
-
-这张 matrix 必须被理解成 **derived review-boundary index**，而不是 approval contract 或 publication contract。
-
-已归档示例里的 `human_review_required` 只是在告诉 reviewer：这个历史 surface 当时要被当成 public material 之前，是否需要显式 human review。
-`required_acceptance_gates` 只引用已经冻结的 acceptance gate。
-`required_companion_surfaces` 只指向已经被索引的 supporting 或 governing surface。
-`publishability_stage` 只保留历史 alignment 词汇；当前 publishability 必须由 active contracts 与 domain-owned gates 管理。
-如果被覆盖的 surface 是 `opl_operating_model`、`opl_shared_foundation` 或 `opl_shared_foundation_ownership`，那么这些 review coverage 也仍然只是 reference-only，不会把它们升级成 approval layer、publish controller，或 domain-truth owner。
-如果被覆盖的 surface 是 [OPL Phase 1 Exit Activation Package](../../../process/domain-admission/opl-phase-1-exit-activation-package.md) 或 [OPL Minimal admitted-domain federation activation package](../opl-minimal-admitted-domain-federation-activation-package.md)，那么这些 review coverage 也仍然只是 reference-only；它们不会创造 runtime authority、candidate admission，或把 `OPL` 提升成 runtime owner。
-如果被覆盖的 surface 是 `opl_task_map`，那么其中仍在定义中的 workstream 也只保持语义候选身份，不会因为被纳入 review coverage 就自动变成正式收录 domain 或 routed target。
-如果被覆盖的 surface 是 `opl_candidate_domain_backlog`，那么它也只是一张位于 onboarding gate 之下的 blocker index，不会把 candidate workstream 升格成 domain，也不会批准 onboarding 或创造 routed readiness。
-这些字段都不会把 domain review 或 publication authority 上收给 `OPL`。
-
-## 上位依据
-
-- [OPL Framework Contracts](../../../../../contracts/opl-framework/README.md)
-- [OPL Gateway Acceptance Test Spec](../opl-gateway-acceptance-test-spec.md)
-- [OPL Public Surface Index](../../../../product/opl-public-surface-index.md)
-- [OPL Candidate Domain Backlog](../../../../references/domain-admission/opl-candidate-domain-backlog.md)
-- [OPL Federation Contract](../opl-federation-contract.md)
-- [OPL Gateway 落地路线](../opl-gateway-rollout.md)
-- [OPL 任务版图](../../../../public/task-map.md)
-
-## 完成定义
-
-只有当下面这些条件都成立时，review matrix 才算合格：
-
-- 它覆盖当前 human review 与 publishability inspection 所需的全部已冻结 OPL public / shared-foundation boundary / contract / supporting surface
-- 已归档的 `required_acceptance_gate` 与 `required_companion_surface` 只作为 reviewability reference
-- 每个 `governing_ref` 都能解析到存在的本地工件
-- 它保持 derived、reference-only、non-executing
-- 它不会升级成 approval engine、publish controller、release engine 或第二真相源
+- 旧文件角色：gateway-derived surface review matrix
+- 压缩后角色：path-stable tombstone、provenance pointer 与 negative-guard scan target
+- active replacement owner：current core docs、active gap plan、machine contracts/source/tests/CLI/runtime/App surfaces 和 domain-owned refs
+- 保留入站链接：operating-governance archive、examples-corpora、surface lifecycle/authority tombstones、stale-compat negative guard

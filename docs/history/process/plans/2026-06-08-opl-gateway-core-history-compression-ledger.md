@@ -41,7 +41,6 @@ Single Source of Truth：
 - `docs/history/compatibility/gateway-federation/gateway-federation.md`
 - `docs/history/compatibility/gateway-federation/opl-minimal-admitted-domain-federation-activation-package.md`
 - `docs/history/compatibility/gateway-federation/examples-corpora/*.md`
-- `docs/history/compatibility/gateway-federation/operating-governance/*.md`
 
 下一轮需要按同一规则判断是否继续压缩原路径、合并到目录 README，或在无入站链接且无独立 provenance 价值时删除。
 

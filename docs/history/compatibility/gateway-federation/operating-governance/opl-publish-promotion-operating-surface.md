@@ -2,359 +2,68 @@
 
 Owner: `One Person Lab`
 Purpose: `legacy_publish_promotion_operating_surface_provenance`
-State: `history_only`
-Machine boundary: 本文只保存旧 gateway-derived publish / promotion operating surface 的人读 provenance。当前机器真相继续归 active contracts、schemas、source、CLI/API 行为、runtime ledger、provider receipts、domain-owned manifests / receipts、生成产物或语义化 `human_doc:*` id；本文不得作为 active operating contract、publish runtime、promotion authority、test oracle 或 compatibility interface。
+State: `history_only_compressed`
+Machine boundary: 本文只保存旧 gateway-derived publish / promotion operating surface 的人读 provenance。当前机器真相继续归 active contracts、schemas、source、CLI/API 行为、runtime ledger、provider receipts、domain-owned manifests / receipts、生成产物或语义化 `human_doc:*` id；本文不得作为 active operating contract、publish runtime、promotion authority、test oracle、compatibility interface 或旧 alias/facade 保留依据。
 
-## 目的
+## 当前读法
 
-这份文档历史上冻结 `OPL` 顶层最小化的 publish / promotion operating surface。
+这份文档曾在 gateway-derived operating governance 阶段定义 `publish_outcome_index`、`promotion_candidate_signal` 和 `promotion_surface_index` 三类顶层 record。它当时的目标是让 OPL 在 domain-owned publish / release / export / submission outcome 已经存在之后，索引 outcome 与 promotion readiness，而不持有 publish truth。
 
-它的目标是定义：在 domain-owned publish gate 与 domain-owned release / export / submission outcome 已经存在之后，`OPL` 在顶层还能合法索引哪些 publish / promotion record。
+当前 OPL publish / promotion 相关语义已经归 domain-owned artifact/quality/export/review/publication authority、active contracts/source/CLI/read-model、runtime ledger、provider receipts 和 App/workbench projection。旧 gateway-derived publish/promotion record kind 只保留为历史 provenance，不再定义 active publish runtime、promotion authority 或 machine contract。
 
-目标不是顶层 publish runtime。
-目标是一个薄的顶层 operating layer：只索引 publish outcome、promotion candidate 与 public-surface reference，而 publish truth 仍然留在 domain system 内部。
-本文中的 legacy `gateway` wording 只是来自已归档 surface id 与 example corpus 的 provenance vocabulary，不是 active compatibility interface。当前 topology 是 stage-led、以 Agent executor 为最小执行单位。
+## Single Source of Truth
 
-## 与前置 Gateway 层的关系
+当前同类语义的有效 owner 是：
 
-这层 operating surface 最初建立在以下已归档历史层之上：
+- 当前项目 truth：`README.md`、`docs/project.md`、`docs/status.md`、`docs/architecture.md`、`docs/invariants.md`、`docs/decisions.md`
+- active progress / gaps / next owner baton：`docs/active/current-state-vs-ideal-gap.md`
+- current publish/promotion authority truth：domain-owned manifests / receipts、active contracts/source/tests/CLI/read-model、runtime ledger、provider receipts 和 App/workbench projection
+- docs lifecycle policy：`docs/docs_portfolio_consolidation.md`、`docs/policies/docs-lifecycle-policy.md`
+- 本路线历史入口：`docs/history/compatibility/gateway-federation/operating-governance/README.md`
 
-- [OPL Federation Contract](../opl-federation-contract.md)
-- [OPL Gateway 契约面](../opl-read-only-discovery-gateway.md)
-- [OPL Routed Action Gateway](../opl-routed-action-gateway.md)
-- [OPL Domain Onboarding Contract](../../../../specs/opl-domain-onboarding-contract.md)
-- [OPL Gateway Acceptance Test Spec](../opl-gateway-acceptance-test-spec.md)
-- [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
-- 当前机器可读合同目录：[`../../contracts/opl-framework/README.md`](../../../../../contracts/opl-framework/README.md)
+本文故意不复制这些 owner 的当前事实。
 
-这些层只作为 provenance input。当前 topology 与 owner boundary 仍以核心五件套、当前 contracts、source、CLI/API 行为、runtime ledger、domain-owned manifest 和 stage-led framework roadmap 为准。
+## 历史覆盖
 
-## 与 P5.M1 的边界
+原长文覆盖过这些历史 record kind 与边界：
 
-`P5.M1` 里的 `publish_readiness_signal` 截止在这个问题：
+| 历史 surface | 当时用途 | 当前读法 |
+| --- | --- | --- |
+| `publish_outcome_index` | 索引 domain-owned publish / release / export / submission outcome。 | 只作历史 index 语义；不等于 canonical publish/release/export/submission record。 |
+| `promotion_candidate_signal` | 表达 indexed outcome 是否具备进入 promotion gate 的条件。 | 只作历史 readiness signal；不等于 promotion truth、announcement 或 distribution。 |
+| `promotion_surface_index` | 索引 outcome 关联的 public surface 和缺失 approval。 | 只作历史 reference layer；不持有 public-channel posting truth。 |
+| `domain_truth_refs` | 让顶层 publish/promotion record 回指 domain-owned truth。 | 当前 equivalent boundary 必须从 domain-owned refs/receipts 和 active read-model 证明。 |
+| post-publish boundary | 限定 P5.M2 只在 domain-owned outcome 存在后生效。 | 当前 publish/export/submission authority 仍由 domain owner 持有。 |
 
-- 一个顶层请求是否看起来已经具备进入 domain-owned publish gate 的条件？
+## 已退役机器面
 
-这份 `P5.M2` 文档只在 domain-owned publish / release / export / submission outcome 已经存在之后才开始生效。
+原文包含最小 record envelope、长 JSON 示例、surface 形态和完成定义。重要退役读法：
 
-一句话说：
+- 本文不发布 active machine-readable artifact。
+- 旧 record shape 不是当前 schema oracle、runtime envelope 或 test fixture owner。
+- `publish_outcome_index` 不等于 publish truth。
+- `promotion_candidate_signal` 不等于 promotion truth。
+- `public_refs` 只是 reference，不等于 OPL 对 public channel 或 artifact 的 ownership。
 
-- `P5.M1` = domain-owned publish truth 形成之前的 readiness
-- `P5.M2` = domain-owned publish truth 形成之后的顶层索引与 promotion signal
+## No-Resurrection Rules
 
-## 核心承诺
+不得用本文：
 
-在这一层，`OPL` 只允许拥有**顶层 publish-outcome index、promotion-candidate signal 与 promotion-surface index**。
+- 重建 gateway-derived publish/promotion operating contract；
+- 为旧 record kind 添加 compatibility alias、wrapper、facade、CLI/API 或 test oracle；
+- 把 OPL 写成 domain publish truth、release/export/submission truth、artifact truth、public-channel posting truth 或 promotion authority owner；
+- 声明 runtime readiness、domain readiness、production readiness、artifact authority、quality verdict、owner receipt、typed blocker 或 App release readiness；
+- 绕过当前 domain owner surface 和 active read-model，恢复旧 gateway-derived publish/promotion layer。
 
-它不允许：
+若未来迁移确实需要历史 record 思路，必须先映射到当前 owner surface，并从 active machine truth 证明；不得把旧 record kind 复活成兼容层。
 
-- 成为 domain publish truth 的 owner
-- 成为 domain release / export / submission truth 的 owner
-- 成为 domain public-channel posting truth 的 owner
-- 直接执行 publish、submit、export、release 或 promote
-- 绕过 domain-owned capability entry 直接控制 harness execution
+## 历史证据
 
-一句话说：
+保留本路径是因为 operating-governance archive、examples-corpora 和 historical matrix 文件仍链接到这里。详细 record shapes、JSON examples、post-publish boundary、surface 形态和 completion checklist 已在 2026-06-08 主动压缩；需要考古时读取压缩前 git history。
 
-- `OPL` 只拥有**顶层 publish / promotion index 与 signal**
-- 各 domain 继续拥有**publish truth、release truth、export truth、submission truth、artifact truth 与 public-channel posting truth**
+压缩后角色：
 
-## 非目标
-
-这层 operating surface 不负责：
-
-- 直接执行 domain publish 或 promotion 操作
-- 存储某个 domain 的 canonical publish truth
-- 用顶层副本替代 domain 的 release / export / submission record
-- 变成所有 publish flow 的统一 public-runtime entry
-- 把 domain-owned capability entry 降格成实现细节
-
-## 允许的顶层 Record Kind
-
-最小顶层 operating surface 只允许记录下面几类对象：
-
-### 1. `publish_outcome_index`
-
-目的：
-
-- 为 domain-owned publish / release / export / submission outcome 记录一个顶层 index entry
-- 暴露稳定引用或 public reference，但不宣称自己拥有 outcome truth
-
-它只是对 domain-owned outcome 的索引。
-它不是 canonical publish、release、export 或 submission record 本身。
-
-### 2. `promotion_candidate_signal`
-
-目的：
-
-- 记录一个 domain-owned outcome 是否看起来已经具备进入 domain-owned 或 human-owned promotion gate 的条件
-- 暴露的是顶层 promotion-readiness signal，而不是 promotion truth
-
-它只是 readiness signal。
-它不代表已经 promoted、announced、distributed，也不代表已经正式出现在 public surface 上。
-
-### 3. `promotion_surface_index`
-
-目的：
-
-- 暴露一个顶层请求或一个 indexed outcome 关联哪些 public surface
-- 说明 promotion 卡在哪个 surface，或者还缺哪个 human approval
-
-它仍然只是 index / reference layer，而不是 public-channel posting truth 的复制。
-
-## Source-Of-Truth 规则
-
-### 这一层里 OPL 可以拥有的东西
-
-`OPL` 可以拥有：
-
-- 顶层 publish-outcome index
-- 顶层 promotion-candidate signal
-- 顶层 promotion-surface index
-
-### 必须继续留在 Domain 里的东西
-
-下面这些必须继续作为 domain-owned canonical truth：
-
-- publish gate truth
-- publish execution truth
-- release result
-- export result
-- submission result
-- artifact truth
-- public-channel posting truth
-- domain-private performance / metrics truth
-- 已 publish / promoted artifact 的 revision history
-
-`OPL` 可以通过稳定 pointer 引用这些 truth。
-但不能悄悄把它们吸收到顶层真相里。
-
-## 最小 Operating Record Shape
-
-最小 machine-readable envelope 应包含：
-
-- `version`
-- `record_kind`
-- `record_id`
-- `request_id`
-- `workstream_id`
-- `domain_id`
-- `summary`
-- `status`
-- `evidence_refs`
-- `domain_truth_refs`
-- `recorded_at`
-
-不同 `record_kind` 可以再带各自的 kind-specific field，但整个 envelope 必须保持顶层、协调型，而不是 publish runtime state container。
-
-## 必需边界语义
-
-### `domain_truth_refs` 必须存在
-
-每条顶层 publish / promotion record 都必须回指 domain-owned truth。
-
-这样才能防止外界把 `OPL` 误读成 publish 或 promotion state 的 canonical owner。
-
-### `publish_outcome_index` 不等于 publish truth
-
-`publish_outcome_index` 只能索引 domain-owned `publish`、`release`、`export` 或 `submission` outcome。
-
-它不能被当成：
-
-- canonical publish record
-- canonical release record
-- canonical export record
-- canonical submission record
-
-### Promotion record 也必须建立在已索引的 domain-owned outcome 之上
-
-`promotion_candidate_signal` 与 `promotion_surface_index` 只能建立在 domain-owned 的 publish / release / export / submission outcome 之上。
-
-它们不能被用来描述 pre-publish intention。
-
-### `promotion_candidate_signal` 不等于 promotion truth
-
-`promotion_candidate_signal` 只能表达：某个 indexed outcome 是否看起来已经具备进入 promotion gate 的条件。
-
-它不能被当成：
-
-- public posting event
-- announcement event
-- distribution result
-- 已经完成 promotion 的证明
-
-### 后续动作使用当前 domain-owned capability entry
-
-如果后续还需要执行 publish 或 promotion action，`OPL` 必须 route 到相关 domain owner 暴露的当前 domain-owned capability entry。
-
-这一层可以索引 outcome 或 target surface。
-但不能直接 submit、export、release 或 post。
-
-### `public_refs` 只是 reference，不等于顶层 ownership
-
-顶层 record 可以携带 public reference，例如 URL 或稳定 surface ref。
-
-这些 reference 仍然只是 index layer。
-它们不把对应 publish / promotion truth 的 ownership 转移给 `OPL`。
-
-## 示例 Record Shape
-
-已冻结 publish / promotion record 的 canonical machine-readable example 也同步落在 [OPL Operating Example Corpus](../examples-corpora/opl-operating-example-corpus.md) 与其链接的 JSON 文件中。
-全部已冻结 operating record kind 的跨层 reference map 也同步落在 [OPL Operating Record Catalog](../examples-corpora/opl-operating-record-catalog.md)。
-下面这些 inline shape 仍然是本 governing surface 的 prose-side illustration。
-
-### 示例：`publish_outcome_index`
-
-```json
-{
-  "version": "p5.m2",
-  "record_kind": "publish_outcome_index",
-  "record_id": "opl-publish-2026-04-05-001",
-  "request_id": "opl-2026-04-05-020",
-  "workstream_id": "research_ops",
-  "domain_id": "medautoscience",
-  "summary": "Indexed the domain-owned manuscript submission outcome at the top level.",
-  "status": "recorded",
-  "evidence_refs": [
-    "publish_gate=complete",
-    "submission_package=sealed"
-  ],
-  "domain_truth_refs": [
-    {
-      "domain_id": "medautoscience",
-      "ref_kind": "submission_record",
-      "ref": "medautoscience://submissions/study-002"
-    }
-  ],
-  "recorded_at": "2026-04-05T07:10:00Z",
-  "publish_outcome_index": {
-    "outcome_kind": "submitted",
-    "public_refs": []
-  }
-}
-```
-
-### 示例：`promotion_candidate_signal`
-
-```json
-{
-  "version": "p5.m2",
-  "record_kind": "promotion_candidate_signal",
-  "record_id": "opl-promo-2026-04-05-001",
-  "request_id": "opl-2026-04-05-021",
-  "workstream_id": "presentation_ops",
-  "domain_id": "redcube",
-  "summary": "The released deck appears ready to enter the domain-owned promotion gate.",
-  "status": "ready_for_next_gate",
-  "evidence_refs": [
-    "release_record=complete",
-    "human_review=complete"
-  ],
-  "domain_truth_refs": [
-    {
-      "domain_id": "redcube",
-      "ref_kind": "release_record",
-      "ref": "redcube://releases/deck-002"
-    },
-    {
-      "domain_id": "redcube",
-      "ref_kind": "artifact_record",
-      "ref": "redcube://artifacts/deck-002"
-    }
-  ],
-  "recorded_at": "2026-04-05T07:11:00Z",
-  "promotion_candidate_signal": {
-    "promotion_readiness": "ready_for_promotion_gate",
-    "target_surfaces": [
-      "project_landing",
-      "announcement_post"
-    ]
-  }
-}
-```
-
-### 示例：`promotion_surface_index`
-
-```json
-{
-  "version": "p5.m2",
-  "record_kind": "promotion_surface_index",
-  "record_id": "opl-surface-2026-04-05-001",
-  "request_id": "opl-2026-04-05-021",
-  "workstream_id": "presentation_ops",
-  "domain_id": "redcube",
-  "summary": "Indexed the public surfaces and blockers for promoting the released deck.",
-  "status": "needs_human_review",
-  "evidence_refs": [
-    "landing_page=ready",
-    "announcement_copy=pending"
-  ],
-  "domain_truth_refs": [
-    {
-      "domain_id": "redcube",
-      "ref_kind": "release_record",
-      "ref": "redcube://releases/deck-002"
-    },
-    {
-      "domain_id": "redcube",
-      "ref_kind": "public_channel_record",
-      "ref": "redcube://channels/project-landing/deck-002"
-    }
-  ],
-  "recorded_at": "2026-04-05T07:12:00Z",
-  "promotion_surface_index": {
-    "target_surfaces": [
-      "project_landing",
-      "announcement_post"
-    ],
-    "required_human_approval": true,
-    "blocking_surface": "announcement_post",
-    "public_refs": [
-      {
-        "surface_id": "project_landing",
-        "ref": "https://example.org/decks/deck-002"
-      }
-    ]
-  }
-}
-```
-
-## Surface 形态
-
-第一版顶层 publish / promotion surface 可以体现为：
-
-- docs-side operating reference
-- CLI-side operating query
-- MCP-side operating record
-
-与前几层一样，真正重要的是 contract，而不是 transport。
-
-## 硬性禁止项
-
-不要把这一层写成或做成：
-
-- `OPL owns publish truth`
-- `OPL owns promotion truth`
-- `OPL executes publish or promotion`
-- `OPL is the unified publish runtime entry`
-- `OPL manages all public posting directly`
-- 把 domain-owned capability entry 降格成实现细节
-
-也不要新增这些操作：
-
-- 直接向外部 venue 提交
-- 直接 export 或 release
-- 直接向 public channel 发帖
-- 直接修改 domain publish state
-- 直接修改 domain artifact truth
-- 直接调用 harness executor
-
-## 完成定义
-
-只有当下面这些条件都成立时，这层 operating surface 才算冻结完成：
-
-- 允许的顶层 record kind 已显式定义
-- domain-owned truth 边界已显式定义
-- machine-readable schema 与公开 wording 保持一致
-- 没有任何顶层字段会被误读成 canonical publish 或 promotion truth ownership
-- no-bypass 语义仍然完整
+- 旧文件角色：gateway-derived publish / promotion operating surface
+- 压缩后角色：path-stable tombstone 与 provenance pointer
+- active replacement owner：domain-owned authority refs、current core docs、active gap plan、machine contracts/source/tests/CLI/runtime/App surfaces
+- 保留入站链接：operating-governance archive、examples-corpora、surface lifecycle/authority/review tombstones

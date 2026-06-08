@@ -2,123 +2,67 @@
 
 Owner: `One Person Lab`
 Purpose: `legacy_surface_authority_matrix_provenance`
-State: `history_only`
-Machine boundary: 本文只保存旧 surface authority matrix 的人读 provenance。当前仓库没有发布 `surface-authority-matrix.json` 机器可读合同；当前机器真相继续归 active contracts、source、CLI/API 行为、runtime ledger、provider receipts 与 domain-owned manifests / receipts。本文不得作为 authorization engine、runtime control plane、truth surface、test oracle 或 compatibility interface。
+State: `history_only_compressed`
+Machine boundary: 本文只保存旧 surface authority matrix 的人读 provenance。当前仓库没有发布 `surface-authority-matrix.json` 机器可读合同；当前机器真相继续归 active contracts、source、CLI/API 行为、runtime ledger、provider receipts 与 domain-owned manifests / receipts。本文不得作为 authorization engine、runtime control plane、truth surface、test oracle、compatibility interface 或旧 alias/facade 保留依据。
 
-## 目的
+## 当前读法
 
-这份文档保留历史 OPL surface stack 的 legacy-derived authority matrix 词汇。
+这份文档曾保存历史 OPL surface stack 的 derived authority matrix 词汇，用于集中说明 routing、execution、truth、review 与 publication ownership boundary。它的作用是 reviewability，不是 authorization engine、runtime control plane 或第二真相源。
 
-它的作用是：把 routing、execution、truth、review 与 publication ownership boundary 集中暴露出来，同时不把这张 matrix 升格成 authorization engine、runtime control plane 或第二真相源。
+当前 authority split 已归 active core docs、active contracts/source/CLI/read-model、runtime ledger、domain-owned manifests / receipts 和 App/workbench projection。旧 surface authority matrix 只保留为历史 provenance，并由 stale-compat negative guard 测试确保它不会被写成 active machine-readable contract。
 
-当前 OPL topology 是 stage-led、以 Agent executor 为最小执行单位。仍包含 `gateway` 或 `domain_gateway` 的 surface id 是来自已归档 compatibility corpus 的历史/reviewability 标签。请只按 legacy-derived vocabulary 阅读，不要理解成 active compatibility interface。
+## Single Source of Truth
 
-## 当前机器边界
+当前同类语义的有效 owner 是：
 
-当前不存在 `contracts/opl-framework/surface-authority-matrix.json`。当前机器可读行为必须使用 active contracts、source、CLI/API 行为、runtime ledger 和 domain-owned manifest。
+- 当前项目 truth：`README.md`、`docs/project.md`、`docs/status.md`、`docs/architecture.md`、`docs/invariants.md`、`docs/decisions.md`
+- active progress / gaps / next owner baton：`docs/active/current-state-vs-ideal-gap.md`
+- current authority truth：active contracts/source/tests/CLI/read-model、runtime ledger、provider receipts、domain-owned manifests / receipts 和 App/workbench projection
+- docs lifecycle policy：`docs/docs_portfolio_consolidation.md`、`docs/policies/docs-lifecycle-policy.md`
+- 本路线历史入口：`docs/history/compatibility/gateway-federation/operating-governance/README.md`
 
-## 非目标
+本文故意不复制这些 owner 的当前事实。
 
-这个 authority matrix 不负责：
+## 历史覆盖
 
-- 授权动作执行
-- 替代 governing contracts 或 schemas
-- 把 domain-owned execution、truth、review 或 publication authority 上收给 `OPL`
-- 把 domain public-entry surface 写成 OPL 的内部模块
+原长文覆盖过这些 historical authority review 语义：
 
-## Shared-Foundation Ownership Boundary
+| 历史 field / group | 当时用途 | 当前读法 |
+| --- | --- | --- |
+| `surface_id` / `owner_scope` / `surface_role` | 标记历史 surface 与 owner scope。 | 只作 history/reviewability 标签；不能定义 active owner。 |
+| `route_authority` / `execution_authority` | 描述旧 route/execution authority split。 | 当前 authority 必须从 active contracts/source/read-model/domain refs 证明。 |
+| `truth_authority` / `review_authority` / `publication_authority` | 防止 OPL 接管 domain truth/review/publication。 | 当前 equivalent boundary 归 active docs/contracts/domain owner gates。 |
+| `allowed_follow_on_surface` | 表达旧 follow-on route surface。 | 只保留 provenance，不定义 active compatibility value。 |
+| linked domain public-entry surfaces | 说明 domain-local entry 仍归 domain owner。 | 当前 MAS/MAG/RCA/OMA 身份不再由 `public_gateway` 术语定义。 |
 
-这张 authority matrix 只位于 shared-foundation 的 boundary-language 层。
-`OPL` 在这里拥有的是命名 route、execution、truth、review 与 publication 分工的顶层词汇；但底层 authority 仍然留在 domain-owned capability entry、domain harness 与 `OPL` 之外的人类 / private surface 中。
-因此，这张 matrix 只是供 ownership review 使用的 inspectable reference surface，而不是 runtime control plane 或共享 truth store。
-更完整的 ownership split 可参考 [OPL Family 开发主参考](../../../../active/opl-family-development-reference.md)。
-当前 topology 以[项目概览](../../../../project.md)、[当前状态](../../../../status.md)、[架构](../../../../architecture.md)和 [OPL stage-led agent framework roadmap](../../../../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md) 为准。
+## 已退役机器面
 
-## Authority 字段
+重要退役读法：
 
-每个 entry 都保持 derived/reference-only，只携带：
+- 当前不存在 `contracts/opl-framework/surface-authority-matrix.json`。
+- 本文不发布 active machine-readable artifact。
+- 旧 `gateway`、`domain_gateway`、`public_gateway` surface id 只保留 history/reviewability 标签。
+- 旧 authority fields 不构成当前 schema、authorization engine、runtime control plane 或 test oracle。
 
-- `surface_id`
-- `owner_scope`
-- `surface_role`
-- `route_authority`
-- `execution_authority`
-- `truth_authority`
-- `review_authority`
-- `publication_authority`
-- `allowed_follow_on_surface`
-- `forbidden_actions`
-- `governing_refs`
+## No-Resurrection Rules
 
-## 当前 Coverage
+不得用本文：
 
-### Shared-foundation boundary surfaces
+- 重建 `surface-authority-matrix.json` 或任何兼容合同；
+- 为旧 authority matrix fields 添加 compatibility alias、wrapper、facade、CLI/API 或 test oracle；
+- 把 OPL 写成 domain execution、truth、review、publication、artifact、quality verdict 或 owner receipt authority；
+- 声明 runtime readiness、domain readiness、production readiness、artifact authority、quality verdict、owner receipt、typed blocker 或 App release readiness；
+- 绕过当前 active authority boundary，恢复旧 matrix-driven authorization path。
 
-- `opl_operating_model`
-- `opl_shared_foundation`
-- `opl_shared_foundation_ownership`
+若未来迁移确实需要历史 authority review 思路，必须先映射到当前 owner surface，并从 active machine truth 证明；不得把旧 matrix 名称复活成兼容层。
 
-### OPL contract / operating / supporting surfaces
+## 历史证据
 
-- `opl_gateway_contract_hub`
-- `opl_read_only_discovery_gateway`
-- `opl_routed_action_gateway`
-- `opl_domain_onboarding_contract`
-- `opl_phase_1_exit_activation_package`
-- `opl_minimal_admitted_domain_federation_activation_package`
-- `opl_candidate_domain_backlog`
-- `opl_governance_audit_operating_surface`
-- `opl_publish_promotion_operating_surface`
-- `opl_gateway_example_corpus`
-- `opl_routed_safety_example_corpus`
-- `opl_operating_example_corpus`
-- `opl_operating_record_catalog`
-- `opl_surface_lifecycle_map`
-- `opl_public_surface_index_doc`
-- `opl_gateway_acceptance_spec`
+保留本路径是因为 operating-governance archive、examples-corpora、surface lifecycle/review tombstones 和 stale-compat-retirement guard 测试仍引用它。详细 authority field list、coverage list、mapping refs 和 completion checklist 已在 2026-06-08 主动压缩；需要考古时读取压缩前 git history。
 
-### Linked domain public-entry surfaces
+压缩后角色：
 
-- `medautogrant_public_gateway`
-- `medautoscience_public_gateway`
-- `redcube_public_gateway`
-
-## 阅读规则
-
-这张 matrix 必须被理解成 **derived authority split**，而不是 execution contract 或 authorization contract。
-
-当 `owner_scope = opl` 时，这张 matrix 可以暴露 routing、indexing、discoverability 或 acceptance 责任，但 execution authority 与 domain truth/review/publication authority 仍留在 `OPL` 之外。
-如果某个 surface 是 `opl_operating_model`、`opl_shared_foundation` 或 `opl_shared_foundation_ownership`，那么其中全部 authority 字段也都只能表达 boundary 约束，而不会把 canonical truth、mutation、review truth 或 publication truth 上收到 `OPL`。
-如果某个 surface 是 [OPL Phase 1 Exit Activation Package](../../../process/domain-admission/opl-phase-1-exit-activation-package.md) 或 [OPL Minimal admitted-domain federation activation package](../opl-minimal-admitted-domain-federation-activation-package.md)，那么其中全部 authority 字段也同样只能保持 `none`；这些 package 不会 admission candidate domain、不会授权 handoff bypass，也不会把 `OPL` 提升成 runtime owner。
-当 `owner_scope = domain` 时，对应 entry 只是在标记：domain-local routing 与 harness execution 从哪个 domain-owned capability entry 开始。
-Legacy 示例仍可能出现 `domain_gateway`，但新增 active surface 必须命名当前 domain-owned capability entry，不能继续把这个值保留成 compatibility interface。
-如果某个 surface 是 `opl_candidate_domain_backlog`，那么所有 authority 字段都仍然只能是 `none`；这份 backlog 不会给未来 domain 预分配 authority。
-
-## 配套 Mapping Surfaces
-
-- [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.md)
-- [OPL Surface Review Matrix](./opl-surface-review-matrix.md)
-
-## 上位依据
-
-- [OPL Federation Contract](../opl-federation-contract.md)
-- [OPL Gateway 契约面](../opl-read-only-discovery-gateway.md)
-- [OPL Routed Action Gateway](../opl-routed-action-gateway.md)
-- [OPL Domain Onboarding Contract](../../../../specs/opl-domain-onboarding-contract.md)
-- [OPL Candidate Domain Backlog](../../../../references/domain-admission/opl-candidate-domain-backlog.md)
-- [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
-- [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
-- [OPL Public Surface Index](../../../../product/opl-public-surface-index.md)
-- [OPL Gateway Acceptance Test Spec](../opl-gateway-acceptance-test-spec.md)
-- [OPL Framework Contracts](../../../../../contracts/opl-framework/README.md)
-
-## 完成定义
-
-只有当下面这些条件都成立时，authority matrix 才算合格：
-
-- 它覆盖当前 authority review 所需的已冻结 OPL shared-foundation / historical gateway / operating / supporting surface，加上 linked domain public-entry surface
-- 每个 `governing_ref` 都能解析到本地存在的工件
-- `OPL` surface 从不宣称 domain execution authority、canonical-truth authority、review-truth authority 或 publication-truth authority
-- linked domain public-entry surface 仍保持 domain-owned，不会塌缩成 OPL 内部模块
-- 它能与 lifecycle map、surface review matrix 一起被发现，但不会升级成 approval surface 或 execution surface
-- 它保持 derived、reference-only、non-executing
+- 旧文件角色：gateway-derived surface authority matrix
+- 压缩后角色：path-stable tombstone、provenance pointer 与 negative-guard scan target
+- active replacement owner：current core docs、active gap plan、machine contracts/source/tests/CLI/runtime/App surfaces 和 domain-owned refs
+- 保留入站链接：operating-governance archive、examples-corpora、surface lifecycle/review tombstones、stale-compat negative guard
