@@ -84,6 +84,7 @@
 
 ## 并行开发与工作树
 
+- 根 checkout 默认固定在 `main`；除非用户明确要求临时检查分支状态，否则不要在共享根 checkout 切到非 `main` 分支。非 `main` 开发、验证、CI 修复和并行 lane 都应通过独立 worktree 承载。
 - 大改动、长链路工作、并行多 AI 开发，默认先从最新 `main` 开独立 worktree，再在 worktree 内实现和验证。
 - 共享根 checkout 只用于轻量阅读、评审、吸收验证后提交、push 和清理，不应长期承担重型实现。
 - 对互不冲突、写集可隔离、source of truth 清楚的任务，默认优先用 subagent 并行开多个 worktree 推进，以提高落地效率；完善后由主会话核查 diff、验证、吸收回 `main` 并清理 worktree / branch / thread。
