@@ -11,14 +11,14 @@ import {
 } from '../helpers.ts';
 import { buildFrameworkReadinessSummary } from '../../../../src/framework-readiness.ts';
 import { buildRuntimeTraySnapshot } from '../../../../src/runtime-tray-snapshot.ts';
-import { createFamilyDefaultContractWorkspace } from './domain-pack-compiler-fixtures.ts';
 import { buildManyStageManifest } from './runtime-app-operator-drilldown-summary-fixtures.ts';
+import { createFamilyWorkspaceFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 test('framework readiness keeps domain manifest live refresh bounded and uses projection cache on slow manifests', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-readiness-cache-state-'));
+  const familyWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-readiness-cache-family-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const workspaceRoot = createFamilyDefaultContractWorkspace();
-  const omaRepoDir = path.join(workspaceRoot, 'opl-meta-agent');
+  const { omaRepoDir, workspaceRoot } = createFamilyWorkspaceFixture(familyWorkspaceRoot);
   const manifest = buildManyStageManifest(2);
   const manifestPath = path.join(stateRoot, 'manifest.json');
   const invocationPath = path.join(stateRoot, 'manifest-invocations.log');
@@ -82,6 +82,7 @@ test('framework readiness keeps domain manifest live refresh bounded and uses pr
     }
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }

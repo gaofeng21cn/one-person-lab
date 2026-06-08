@@ -16,6 +16,18 @@ Machine boundary: 本文是人读维护政策。机器真相继续归 GitHub Act
 
 同一分支、同一 workflow 已被后续绿色 run 覆盖的失败，必须标记为 `superseded_historical`。已经删除 release/tag 或已经迁出 owner 的历史 release run，不得继续作为当前 release failure 上报。
 
+## 根因分类
+
+CI 失败不默认等同于产品代码回归。巡检读取 run/job/step log、workflow 文件、repo-native 验证入口和近期提交后，必须把当前故障至少分到以下一类：
+
+- `code_or_test_regression`：当前源码、测试或 release 行为违反仍生效的 contract；
+- `ci_contract_stale`：源码行为、repo topology、release owner、workflow scope 或机器 contract 已更新，但 CI 断言、preflight 分类、workflow 条件、advisory 硬门或旧入口检查仍停在旧口径；
+- `environment_or_runner`：runner、secret、registry、外部 provider、容量或权限导致失败；
+- `release_registry_publish`：包体或 release artifact 已生成，但 registry manifest、tap、release asset publish 等外部发布面失败；
+- `superseded_historical`：同分支同 workflow 或当前 release owner 已有后续绿色覆盖。
+
+判定为 `ci_contract_stale` 时，优先修 CI contract，而不是把当前源码回滚到旧测试期望。可修范围包括 workflow、测试断言、preflight 分类、advisory/default-demotion、fixture source-of-truth 和政策文档。修复必须保留或补充 focused 验证，证明新 CI 口径与当前 source of truth、owner 决策、release owner 或 repo topology 一致；不得用放宽 gate 掩盖真实产品回归。
+
 ## 清理动作边界
 
 无人值守自动化可以执行以下低风险清理：
@@ -23,6 +35,7 @@ Machine boundary: 本文是人读维护政策。机器真相继续归 GitHub Act
 - 取消未开始执行 step 的 queued scheduled smoke run；
 - 在 repo workflow 中加入 concurrency / cancel-in-progress，避免 scheduled smoke backlog 堆积；
 - 在当前 release owner repo 中修复 release / warmup / first-install workflow 的可验证失败；
+- 修复已确认过时的 CI contract、测试期望、preflight 分类或 advisory gate，并用 repo-native focused 验证证明当前行为正确；
 - 更新 automation memory、repo docs 和 workflow 分类口径。
 
 自动化默认不执行以下动作：
