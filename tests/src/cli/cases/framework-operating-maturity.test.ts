@@ -31,7 +31,7 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
     true,
   );
 
-  assert.equal(maturity.summary.brand_module_l5_evidence_required_module_count, 9);
+  assert.equal(maturity.summary.brand_module_l5_evidence_required_module_count, 10);
   assert.equal(maturity.brand_module_l5.status, 'evidence_required');
   assert.equal(maturity.brand_module_l5.l5_complete_module_count, 0);
   assert.equal(maturity.brand_module_l5.evidence_ledger.verified_receipt_count, 0);

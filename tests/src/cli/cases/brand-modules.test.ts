@@ -281,24 +281,29 @@ test('module-owned L5 status is readable from the module command surface and rem
 });
 
 test('bin/opl routes module-owned brand commands into the OPL CLI instead of Codex passthrough', () => {
-  const result = spawnSync(
-    path.join(repoRoot, 'bin', 'opl'),
-    ['charter', 'status', '--json'],
-    {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        NODE_NO_WARNINGS: '1',
-        OPL_SKIP_SKILL_SYNC: '1',
+  for (const [moduleId, surfaceKind] of [
+    ['charter', 'opl_charter_brand_module_status'],
+    ['pack', 'opl_pack_brand_module_status'],
+  ] as const) {
+    const result = spawnSync(
+      path.join(repoRoot, 'bin', 'opl'),
+      [moduleId, 'status', '--json'],
+      {
+        cwd: repoRoot,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          NODE_NO_WARNINGS: '1',
+          OPL_SKIP_SKILL_SYNC: '1',
+        },
       },
-    },
-  );
+    );
 
-  assert.equal(result.status, 0, result.stderr);
-  const output = JSON.parse(result.stdout);
-  assert.equal(output.brand_module_surface.surface_kind, 'opl_charter_brand_module_status');
-  assert.equal(output.opl_charter_status.status, 'valid');
+    assert.equal(result.status, 0, result.stderr);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.brand_module_surface.surface_kind, surfaceKind);
+    assert.equal(output[`opl_${moduleId.replaceAll('-', '_')}_status`].status, 'valid');
+  }
 });
 
 test('bin/opl routes Foundry Agent series commands into the OPL CLI instead of Codex passthrough', () => {
