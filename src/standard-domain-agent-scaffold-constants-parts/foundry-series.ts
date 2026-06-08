@@ -167,7 +167,7 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
     surface_kind: 'opl_framework_brand_taxonomy_agent_cli_policy',
     version: 'framework-brand-taxonomy-agent-cli.v1',
     taxonomy_ref: 'contracts/opl-framework/brand-module-registry.json',
-    taxonomy_scope: 'opl_framework_top_level_public_frontdoor',
+    taxonomy_scope: 'opl_framework_top_level_public_command_surface',
     top_level_modules: [
       'charter',
       'atlas',
@@ -179,17 +179,17 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
       'foundry-lab',
       'connect',
     ],
-    agent_cli_public_frontdoor_role: 'foundry_agent_series_spine',
+    agent_cli_public_command_surface_role: 'foundry_agent_series_spine',
     opl_nine_modules_are_framework_taxonomy: true,
     agent_cli_can_reference_framework_taxonomy: true,
     agent_cli_must_use_series_spine: true,
     agent_cli_must_not_replicate_top_level_modules_as_series_spine: true,
   },
-  agent_cli_frontdoor_policy: {
-    surface_kind: 'opl_foundry_agent_series_cli_frontdoor_policy',
-    version: 'foundry-agent-cli-frontdoor.v1',
-    policy_id: 'foundry_agent_series_spine_public_frontdoor',
-    canonical_opl_frontdoor: 'opl agents foundry',
+  agent_cli_command_surface_policy: {
+    surface_kind: 'opl_foundry_agent_series_cli_command_surface_policy',
+    version: 'foundry-agent-cli-command-surface.v1',
+    policy_id: 'foundry_agent_series_spine_public_command_surface',
+    canonical_opl_command_surface: 'opl agents foundry',
     agent_cli_series_label: 'OPL Foundry Agent',
     ordinary_operations: [
       'status',
@@ -199,7 +199,7 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
       'doctor',
       'peers',
     ],
-    ordinary_public_frontdoor_spine: [
+    ordinary_public_command_surface_spine: [
       'workspace',
       'work',
       'stage',
@@ -220,8 +220,8 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
   legacy_implementation_bucket_retirement_policy: {
     surface_kind: 'opl_foundry_agent_legacy_implementation_bucket_retirement_policy',
     version: 'foundry-agent-legacy-bucket-retirement.v1',
-    ordinary_public_frontdoor_allowed: false,
-    replacement_frontdoor: 'opl agents foundry',
+    ordinary_public_command_surface_allowed: false,
+    replacement_command_surface: 'opl agents foundry',
     retired_bucket_prefixes: [
       'runtime',
       'family-runtime',
@@ -241,15 +241,15 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
       'internal_contract_validation',
     ],
     retired_buckets_cannot_claim_series_identity: true,
-    retired_buckets_cannot_replace_connect_skill_mcp_frontdoor: true,
+    retired_buckets_cannot_replace_connect_skill_mcp_command_surface: true,
   },
   skill_mcp_surface_policy: {
     surface_kind: 'opl_foundry_agent_skill_mcp_surface_policy',
     version: 'foundry-agent-skill-mcp-surface.v1',
     skill_pack_must_delegate_to_series_spine: true,
     mcp_descriptor_must_delegate_to_series_spine: true,
-    canonical_skill_connect_frontdoor: 'opl connect skills',
-    canonical_skill_sync_frontdoor: 'opl connect sync-skills',
+    canonical_skill_connect_command_surface: 'opl connect skills',
+    canonical_skill_sync_command_surface: 'opl connect sync-skills',
     canonical_mcp_projection_ref: 'skill_catalog.packs[].mcp_projection',
     legacy_skill_command_retired: true,
     legacy_standalone_mcp_servers_retired: true,

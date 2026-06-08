@@ -153,7 +153,7 @@ function moduleEnvelope(surface: BrandModuleSurfaceContractEntry) {
   };
 }
 
-function moduleFrontdoorEnvelope(
+function moduleCommandSurfaceEnvelope(
   surface: BrandModuleSurfaceContractEntry,
   command: BrandModuleSurfaceCommand,
   status: 'valid' | 'invalid',
@@ -162,10 +162,10 @@ function moduleFrontdoorEnvelope(
     surface_kind: `opl_${surface.module_id.replace(/-/g, '_')}_brand_module_${command}`,
     module_id: surface.module_id,
     operation: command,
-    canonical_frontdoor: `opl ${surface.module_id}`,
+    canonical_command_surface: `opl ${surface.module_id}`,
     status: command === 'doctor' && status === 'valid' ? 'pass' : status,
     contract_ref: `contracts/opl-framework/brand-module-surfaces.json#modules.${surface.module_id}`,
-    frontdoor_collision_policy: surface.module_id === 'workspace'
+    command_surface_collision_policy: surface.module_id === 'workspace'
       ? 'preserve_workspace_operational_validate_doctor_interfaces'
       : 'module_owned_surface',
     authority_boundary: surface.authority_boundary,
@@ -191,7 +191,7 @@ export function buildBrandModuleSurfaceStatus(
   const { surface, registry, checks, status } = buildModuleSurface(contracts, moduleId);
   return {
     version: 'g2',
-    brand_module_surface: moduleFrontdoorEnvelope(surface, 'status', status),
+    brand_module_surface: moduleCommandSurfaceEnvelope(surface, 'status', status),
     [`${surface.surface_kind_prefix}_status`]: {
       surface_kind: `${surface.surface_kind_prefix}_status`,
       ...moduleEnvelope(surface),
@@ -219,7 +219,7 @@ export function buildBrandModuleSurfaceInspect(
   const { surface, registry, checks, status } = buildModuleSurface(contracts, moduleId);
   return {
     version: 'g2',
-    brand_module_surface: moduleFrontdoorEnvelope(surface, 'inspect', status),
+    brand_module_surface: moduleCommandSurfaceEnvelope(surface, 'inspect', status),
     [`${surface.surface_kind_prefix}_inspect`]: {
       surface_kind: `${surface.surface_kind_prefix}_inspect`,
       ...moduleEnvelope(surface),
@@ -254,7 +254,7 @@ export function buildBrandModuleSurfaceInterfaces(
   const { surface, checks, status } = buildModuleSurface(contracts, moduleId);
   return {
     version: 'g2',
-    brand_module_surface: moduleFrontdoorEnvelope(surface, 'interfaces', status),
+    brand_module_surface: moduleCommandSurfaceEnvelope(surface, 'interfaces', status),
     [`${surface.surface_kind_prefix}_interfaces`]: {
       surface_kind: `${surface.surface_kind_prefix}_interfaces`,
       ...moduleEnvelope(surface),
@@ -285,7 +285,7 @@ export function buildBrandModuleSurfaceValidation(
   const { surface, checks, status } = buildModuleSurface(contracts, moduleId);
   return {
     version: 'g2',
-    brand_module_surface: moduleFrontdoorEnvelope(surface, 'validate', status),
+    brand_module_surface: moduleCommandSurfaceEnvelope(surface, 'validate', status),
     [`${surface.surface_kind_prefix}_validation`]: {
       surface_kind: `${surface.surface_kind_prefix}_validation`,
       ...moduleEnvelope(surface),
@@ -306,7 +306,7 @@ export function buildBrandModuleSurfaceDoctor(
   const { surface, checks, status } = buildModuleSurface(contracts, moduleId);
   return {
     version: 'g2',
-    brand_module_surface: moduleFrontdoorEnvelope(surface, 'doctor', status),
+    brand_module_surface: moduleCommandSurfaceEnvelope(surface, 'doctor', status),
     [`${surface.surface_kind_prefix}_doctor`]: {
       surface_kind: `${surface.surface_kind_prefix}_doctor`,
       ...moduleEnvelope(surface),
@@ -394,7 +394,7 @@ export function buildAgentInternalBrandModuleList(contracts: FrameworkContracts)
     version: 'g2',
     agent_internal_modules: {
       surface_kind: 'opl_agent_internal_brand_module_list',
-      canonical_frontdoor: 'opl agents modules',
+      canonical_command_surface: 'opl agents modules',
       platform_module_ids: moduleIds,
       agent_module_ids: moduleIds.map((moduleId) => `agent-${moduleId}`),
       domain_count: contracts.domains.domains.length,
@@ -414,8 +414,8 @@ export function buildAgentInternalBrandModuleInspect(contracts: FrameworkContrac
       domain_id: domainId,
       agent_module_id: agentModuleId,
       platform_analogue_module_id: platformModuleId,
-      canonical_frontdoor: 'opl agents modules',
-      module_frontdoor: `opl agents modules inspect --domain ${domainId} --module ${agentModuleId}`,
+      canonical_command_surface: 'opl agents modules',
+      module_command_surface: `opl agents modules inspect --domain ${domainId} --module ${agentModuleId}`,
       source_contract_ref: `contracts/opl-framework/brand-module-surfaces.json#modules.${platformModuleId}`,
       authority_boundary: agentInternalAuthorityBoundary(contracts),
     },
@@ -427,7 +427,7 @@ export function buildAgentInternalBrandModuleInterfaces(contracts: FrameworkCont
     version: 'g2',
     agent_internal_module_interfaces: {
       surface_kind: 'opl_agent_internal_brand_module_interfaces',
-      canonical_frontdoor: 'opl agents modules',
+      canonical_command_surface: 'opl agents modules',
       commands: [
         'opl agents modules list --json',
         'opl agents modules inspect --domain <domain_id> --module <agent-module-id> --json',
@@ -449,7 +449,7 @@ export function buildAgentInternalBrandModuleValidation(contracts: FrameworkCont
     agent_internal_module_validation: {
       surface_kind: 'opl_agent_internal_brand_module_validation',
       status: 'valid',
-      canonical_frontdoor: 'opl agents modules',
+      canonical_command_surface: 'opl agents modules',
       domain_count: contracts.domains.domains.length,
       expected_agent_module_ids: expectedAgentModuleIds,
       missing_domain_module_sets: [],
@@ -464,7 +464,7 @@ export function buildAgentInternalBrandModuleDoctor(contracts: FrameworkContract
     agent_internal_module_doctor: {
       surface_kind: 'opl_agent_internal_brand_module_doctor',
       status: 'pass',
-      canonical_frontdoor: 'opl agents modules',
+      canonical_command_surface: 'opl agents modules',
       checked_domain_count: contracts.domains.domains.length,
       checked_module_count_per_domain: platformModuleIds(contracts).length,
       missing_domain_module_sets: [],

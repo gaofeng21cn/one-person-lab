@@ -44,7 +44,7 @@ type InspectFamilySkillPack = {
   plugin_name: string;
   canonical_plugin_name: string;
   foundry_agent_series: Record<string, unknown>;
-  frontdoor_spine: Record<string, unknown>;
+  command_surface_spine: Record<string, unknown>;
   mcp_projection: Record<string, unknown>;
   legacy_implementation_bucket_policy: Record<string, unknown>;
   plugin_source_path: string;
@@ -399,7 +399,7 @@ function readBooleanField(source: Record<string, unknown>, field: string) {
 
 function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
   const contract = readFoundryAgentSeriesContract();
-  const frontdoor = readObjectField(contract, 'agent_cli_frontdoor_policy');
+  const commandSurface = readObjectField(contract, 'agent_cli_command_surface_policy');
   const skillMcp = readObjectField(contract, 'skill_mcp_surface_policy');
   const retirement = readObjectField(contract, 'legacy_implementation_bucket_retirement_policy');
   const versionPolicy = readObjectField(contract, 'contract_version_policy');
@@ -421,12 +421,12 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
       : spec.canonical_plugin_name === 'rca'
         ? 'deck'
         : 'agent';
-  const ordinaryOperations = readStringListField(frontdoor, 'ordinary_operations');
-  const ordinarySpine = readStringListField(frontdoor, 'ordinary_public_frontdoor_spine');
-  const directCliFoundryFrontdoor = generatedSurfaceOnly
+  const ordinaryOperations = readStringListField(commandSurface, 'ordinary_operations');
+  const ordinarySpine = readStringListField(commandSurface, 'ordinary_public_command_surface_spine');
+  const directCliFoundryCommandSurface = generatedSurfaceOnly
     ? `opl foundry agents inspect ${foundryAgentId}`
     : `${brandCli} foundry`;
-  const compatibilityFoundryFrontdoor = generatedSurfaceOnly
+  const compatibilityFoundryCommandSurface = generatedSurfaceOnly
     ? directCli
     : `${directCli} foundry`;
   const directCliFoundryOperations = generatedSurfaceOnly
@@ -439,10 +439,10 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
   return {
     foundry_agent_series: {
       series_id: 'opl_foundry_agent_series.v1',
-      series_label: readStringField(frontdoor, 'agent_cli_series_label'),
+      series_label: readStringField(commandSurface, 'agent_cli_series_label'),
       foundry_agent_id: foundryAgentId,
       domain_id: spec.domain_id,
-      canonical_frontdoor: readStringField(frontdoor, 'canonical_opl_frontdoor'),
+      canonical_command_surface: readStringField(commandSurface, 'canonical_opl_command_surface'),
       product_model: readStringField(contract, 'product_model'),
       series_contract_ref: FOUNDRY_AGENT_SERIES_CONTRACT_REF,
       domain_contract_ref: readStringField(versionPolicy, 'domain_contract_ref'),
@@ -450,15 +450,15 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
       brand_cli: brandCli,
       direct_domain_cli: directCli,
       direct_cli: generatedSurfaceOnly ? directCli : brandCli,
-      direct_cli_foundry_frontdoor: directCliFoundryFrontdoor,
-      compatibility_foundry_frontdoor: compatibilityFoundryFrontdoor,
+      direct_cli_foundry_command_surface: directCliFoundryCommandSurface,
+      compatibility_foundry_command_surface: compatibilityFoundryCommandSurface,
       generated_surface_only: generatedSurfaceOnly,
       ordinary_golden_path:
         `${workAlias} -> stage -> domain owner receipt or typed blocker -> handoff`,
     },
-    frontdoor_spine: {
-      surface_kind: 'opl_foundry_agent_skill_frontdoor_spine_projection',
-      ordinary_public_frontdoor_spine: ordinarySpine,
+    command_surface_spine: {
+      surface_kind: 'opl_foundry_agent_skill_command_surface_spine_projection',
+      ordinary_public_command_surface_spine: ordinarySpine,
       ordinary_operations: ordinaryOperations,
       direct_cli_foundry_operations: directCliFoundryOperations,
       compatibility_foundry_operations: compatibilityFoundryOperations,
@@ -466,13 +466,13 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
       work_alias_command_pattern: generatedSurfaceOnly
         ? `opl foundry agents inspect ${foundryAgentId}`
         : `${directCli} ${workAlias} ...`,
-      required_public_surface_derivatives: readStringListField(frontdoor, 'required_public_surface_derivatives'),
-      skill_sync_frontdoor: readStringField(skillMcp, 'canonical_skill_sync_frontdoor'),
-      skill_inspect_frontdoor: readStringField(skillMcp, 'canonical_skill_connect_frontdoor'),
-      foundry_agent_inspect_frontdoor: `opl foundry agents inspect ${foundryAgentId}`,
-      agent_cli_must_use_series_spine: readBooleanField(frontdoor, 'agent_cli_must_use_series_spine'),
+      required_public_surface_derivatives: readStringListField(commandSurface, 'required_public_surface_derivatives'),
+      skill_sync_command_surface: readStringField(skillMcp, 'canonical_skill_sync_command_surface'),
+      skill_inspect_command_surface: readStringField(skillMcp, 'canonical_skill_connect_command_surface'),
+      foundry_agent_inspect_command_surface: `opl foundry agents inspect ${foundryAgentId}`,
+      agent_cli_must_use_series_spine: readBooleanField(commandSurface, 'agent_cli_must_use_series_spine'),
       agent_cli_must_not_replicate_top_level_modules: readBooleanField(
-        frontdoor,
+        commandSurface,
         'agent_cli_must_not_replicate_top_level_modules',
       ),
     },
@@ -496,8 +496,8 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
     },
     legacy_implementation_bucket_policy: {
       surface_kind: 'opl_foundry_agent_legacy_bucket_policy_projection',
-      ordinary_public_frontdoor_allowed: readBooleanField(retirement, 'ordinary_public_frontdoor_allowed'),
-      replacement_frontdoor: readStringField(retirement, 'replacement_frontdoor'),
+      ordinary_public_command_surface_allowed: readBooleanField(retirement, 'ordinary_public_command_surface_allowed'),
+      replacement_command_surface: readStringField(retirement, 'replacement_command_surface'),
       retired_bucket_prefixes: readStringListField(retirement, 'retired_bucket_prefixes'),
       allowed_retained_read_surfaces: readStringListField(retirement, 'allowed_retained_read_surfaces'),
     },

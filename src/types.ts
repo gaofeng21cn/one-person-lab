@@ -494,7 +494,7 @@ export interface BrandModuleRegistryContract {
   modules: BrandModuleRegistryEntry[];
 }
 
-export interface BrandCliPlatformFrontdoor {
+export interface BrandCliPlatformCommandSurface {
   module_id: BrandModuleId;
   command: string;
   operations: BrandModuleCliOperation[];
@@ -524,9 +524,9 @@ export interface BrandCliGovernanceContract {
   purpose: string;
   state: string;
   machine_boundary: string;
-  platform_frontdoors: BrandCliPlatformFrontdoor[];
+  platform_command_surfaces: BrandCliPlatformCommandSurface[];
   agent_internal_modules: {
-    canonical_frontdoor: string;
+    canonical_command_surface: string;
     required_operations: AgentInternalBrandModuleCliOperation[];
     module_spine: AgentInternalBrandModuleSpineEntry[];
     authority_boundary: BrandModuleAuthorityBoundary;

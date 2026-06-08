@@ -201,7 +201,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
           command_count,
           summary: COMMAND_GROUP_SUMMARIES[group_id] ?? '',
           help_command: `opl help ${group_id}`,
-          ordinary_frontdoor: false,
+          ordinary_command_surface: false,
         })),
       commands: visibleEntries.map(([command, spec]) => ({
         command,

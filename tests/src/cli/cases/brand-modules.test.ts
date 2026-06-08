@@ -261,7 +261,7 @@ test('brand module L5 interfaces expose aggregate and module-owned read surfaces
   assert.equal(interfaces.authority_boundary.can_claim_production_ready, false);
 });
 
-test('module-owned L5 status is readable from the module frontdoor and remains fail-closed', () => {
+test('module-owned L5 status is readable from the module command surface and remains fail-closed', () => {
   const aggregate = runCli(['brand-modules', 'l5-status', '--module', 'runway']).brand_module_l5_status;
   const output = runCli(['runway', 'l5-status']);
   const status = output.opl_runway_l5_status;
@@ -319,7 +319,7 @@ test('bin/opl routes Foundry Agent series commands into the OPL CLI instead of C
   const output = JSON.parse(result.stdout);
   assert.equal(output.foundry_agent.surface_kind, 'opl_foundry_agent_series_agent_inspect');
   assert.equal(output.foundry_agent.agent_id, 'mas');
-  assert.equal(output.foundry_agent.compatibility_frontdoor, 'medautosci foundry');
+  assert.equal(output.foundry_agent.compatibility_command_surface, 'medautosci foundry');
 });
 
 test('each non-workspace brand module exposes its own executable status validate doctor and interfaces family', () => {
@@ -335,7 +335,7 @@ test('each non-workspace brand module exposes its own executable status validate
       assert.equal(surface.surface_kind, `${surfaceKindPrefix}_brand_module_${operation}`);
       assert.equal(surface.module_id, moduleId);
       assert.equal(surface.operation, operation);
-      assert.equal(surface.canonical_frontdoor, `opl ${moduleId}`);
+      assert.equal(surface.canonical_command_surface, `opl ${moduleId}`);
       assert.equal(surface.status, operation === 'doctor' ? 'pass' : 'valid');
       assert.equal(surface.authority_boundary.can_claim_domain_ready, false);
       assert.equal(surface.authority_boundary.can_claim_quality_verdict, false);
@@ -388,9 +388,9 @@ test('workspace keeps its existing validate doctor and interfaces implementation
   const interfaces = runCli(['workspace', 'interfaces']).workspace_interfaces;
 
   assert.equal(statusOutput.brand_module_surface.surface_kind, 'opl_workspace_brand_module_status');
-  assert.equal(statusOutput.brand_module_surface.frontdoor_collision_policy, 'preserve_workspace_operational_validate_doctor_interfaces');
+  assert.equal(statusOutput.brand_module_surface.command_surface_collision_policy, 'preserve_workspace_operational_validate_doctor_interfaces');
   assert.equal(inspectOutput.brand_module_surface.surface_kind, 'opl_workspace_brand_module_inspect');
-  assert.equal(inspectOutput.brand_module_surface.frontdoor_collision_policy, 'preserve_workspace_operational_validate_doctor_interfaces');
+  assert.equal(inspectOutput.brand_module_surface.command_surface_collision_policy, 'preserve_workspace_operational_validate_doctor_interfaces');
   assert.equal(status.module_id, 'workspace');
   assert.equal(inspect.module_id, 'workspace');
   assert.equal(status.status, 'valid');
@@ -408,7 +408,7 @@ test('agent-owned internal modules expose the same branding spine without becomi
   assert.deepEqual(list.agent_module_ids, expectedModuleIds.map((moduleId) => `agent-${moduleId}`));
   assert.equal(list.domain_count, 3);
   assert.equal(list.module_count_per_domain, 9);
-  assert.equal(list.canonical_frontdoor, 'opl agents modules');
+  assert.equal(list.canonical_command_surface, 'opl agents modules');
   assert.equal(list.authority_boundary.can_write_domain_truth, false);
   assert.equal(list.authority_boundary.can_replace_domain_owner, false);
 
@@ -426,8 +426,8 @@ test('agent-owned internal modules expose the same branding spine without becomi
   assert.equal(inspect.domain_id, 'medautoscience');
   assert.equal(inspect.agent_module_id, 'agent-runway');
   assert.equal(inspect.platform_analogue_module_id, 'runway');
-  assert.equal(inspect.canonical_frontdoor, 'opl agents modules');
-  assert.equal(inspect.module_frontdoor, 'opl agents modules inspect --domain medautoscience --module agent-runway');
+  assert.equal(inspect.canonical_command_surface, 'opl agents modules');
+  assert.equal(inspect.module_command_surface, 'opl agents modules inspect --domain medautoscience --module agent-runway');
   assert.equal(inspect.authority_boundary.can_write_domain_truth, false);
   assert.equal(inspect.authority_boundary.can_claim_production_ready, false);
 
@@ -454,11 +454,14 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying the nin
     assert.equal(output.series_id, 'opl_foundry_agent_series.v1');
     assert.equal(output.series_label, 'OPL Foundry Agent');
     assert.equal(output.operation, operation);
-    assert.equal(output.canonical_frontdoor, 'opl agents foundry');
+    assert.equal(output.canonical_command_surface, 'opl agents foundry');
     assert.equal(output.status, operation === 'doctor' ? 'pass' : 'valid');
-    assert.equal(output.frontdoor_policy.agent_cli_uses_foundry_series_spine, true);
-    assert.equal(output.frontdoor_policy.agent_cli_does_not_replicate_opl_nine_brand_modules, true);
-    assert.equal(output.frontdoor_policy.old_implementation_buckets_are_not_ordinary_frontdoors, true);
+    assert.equal(output.command_surface_policy.agent_cli_uses_foundry_series_spine, true);
+    assert.equal(output.command_surface_policy.agent_cli_does_not_replicate_opl_nine_brand_modules, true);
+    assert.equal(output.command_surface_policy.old_implementation_buckets_are_not_ordinary_command_surfaces, true);
+    assert.equal('canonical_frontdoor' in output, false);
+    assert.equal('frontdoor_policy' in output, false);
+    assert.equal('ordinary_frontdoor' in output, false);
     assert.deepEqual(
       output.spine.map((entry: { object: string }) => entry.object),
       ['workspace', 'work', 'stage', 'run', 'vault', 'handoff', 'connect'],
@@ -479,19 +482,19 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying the nin
   }
 });
 
-test('OPL Foundry Agent index exposes MAS MAG RCA OMA direct and generated CLI frontdoors', () => {
+test('OPL Foundry Agent index exposes MAS MAG RCA OMA direct and generated CLI command surfaces', () => {
   const list = runCli(['foundry', 'agents', 'list']).foundry_agents;
   assert.deepEqual(
     list.agents.map((entry: { agent_id: string }) => entry.agent_id),
     ['mas', 'mag', 'rca', 'oma'],
   );
   assert.deepEqual(
-    list.agents.map((entry: { foundry_frontdoor: string }) => entry.foundry_frontdoor),
+    list.agents.map((entry: { foundry_command_surface: string }) => entry.foundry_command_surface),
     ['mas foundry', 'mag foundry', 'rca foundry', 'opl foundry agents inspect oma'],
   );
   assert.deepEqual(
-    list.agents.map((entry: { cli_smoke: { executable_brand_cli_frontdoor: string | null } }) =>
-      entry.cli_smoke.executable_brand_cli_frontdoor
+    list.agents.map((entry: { cli_smoke: { executable_brand_cli_command_surface: string | null } }) =>
+      entry.cli_smoke.executable_brand_cli_command_surface
     ),
     ['mas foundry', 'mag foundry', 'rca foundry', null],
   );
@@ -510,28 +513,31 @@ test('OPL Foundry Agent index exposes MAS MAG RCA OMA direct and generated CLI f
   const mas = runCli(['foundry', 'agents', 'inspect', 'mas']).foundry_agent;
   assert.equal(mas.status, 'direct_cli_ready');
   assert.equal(mas.work_object.natural_alias, 'study');
-  assert.equal(mas.cli_smoke.executable_brand_cli_frontdoor, 'mas foundry');
+  assert.equal(mas.cli_smoke.executable_brand_cli_command_surface, 'mas foundry');
+  assert.equal('foundry_frontdoor' in mas, false);
+  assert.equal('compatibility_frontdoor' in mas, false);
+  assert.equal('executable_brand_cli_frontdoor' in mas.cli_smoke, false);
   assert.equal(mas.cli_smoke.status_json_command, 'mas foundry status --json');
-  assert.equal(mas.compatibility_frontdoor, 'medautosci foundry');
+  assert.equal(mas.compatibility_command_surface, 'medautosci foundry');
   assert.equal(mas.mcp_projection.mcp_descriptor_must_delegate_to_series_spine, true);
 
   const mag = runCli(['foundry', 'agents', 'inspect', 'mag']).foundry_agent;
   assert.equal(mag.status, 'direct_cli_ready');
-  assert.equal(mag.cli_smoke.executable_brand_cli_frontdoor, 'mag foundry');
+  assert.equal(mag.cli_smoke.executable_brand_cli_command_surface, 'mag foundry');
   assert.equal(mag.cli_smoke.status_json_command, 'mag foundry status --json');
   assert.equal(mag.cli_smoke.compatibility_status_json_command, 'medautogrant foundry status --json');
 
   const rca = runCli(['foundry', 'agents', 'inspect', 'rca']).foundry_agent;
   assert.equal(rca.status, 'direct_cli_ready');
-  assert.equal(rca.cli_smoke.executable_brand_cli_frontdoor, 'rca foundry');
+  assert.equal(rca.cli_smoke.executable_brand_cli_command_surface, 'rca foundry');
   assert.equal(rca.cli_smoke.status_json_command, 'rca foundry status --json');
   assert.equal(rca.cli_smoke.compatibility_status_json_command, 'redcube foundry status --json');
 
   const oma = runCli(['foundry', 'agents', 'inspect', 'oma']).foundry_agent;
   assert.equal(oma.status, 'generated_surface_only');
   assert.equal(oma.direct_domain_cli, 'opl agents interfaces --repo-dir <opl-meta-agent-repo>');
-  assert.equal(oma.foundry_frontdoor, 'opl foundry agents inspect oma');
-  assert.equal(oma.compatibility_frontdoor, 'opl agents interfaces --repo-dir <opl-meta-agent-repo>');
-  assert.equal(oma.cli_smoke.executable_brand_cli_frontdoor, null);
-  assert.equal(oma.direct_cli_frontdoor_policy.first_screen_must_identify_series, true);
+  assert.equal(oma.foundry_command_surface, 'opl foundry agents inspect oma');
+  assert.equal(oma.compatibility_command_surface, 'opl agents interfaces --repo-dir <opl-meta-agent-repo>');
+  assert.equal(oma.cli_smoke.executable_brand_cli_command_surface, null);
+  assert.equal(oma.direct_cli_command_surface_policy.first_screen_must_identify_series, true);
 });

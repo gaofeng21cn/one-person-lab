@@ -80,7 +80,7 @@ opl agents default-callers --family-defaults --json
 opl work-order execute --work-order <file> --json
 ```
 
-Foundry Agent series 的普通 CLI spine 是 `workspace / work / stage / run / vault / handoff / connect`。九个 OPL brand module 继续作为 framework taxonomy；`runtime`、`family-runtime`、`index`、`stage-artifact`、`skill/module/packages/engine` 等旧实现桶不再作为 Foundry Agent 用户 frontdoor。
+Foundry Agent series 的普通 CLI spine 是 `workspace / work / stage / run / vault / handoff / connect`。九个 OPL brand module 继续作为 framework taxonomy；`runtime`、`family-runtime`、`index`、`stage-artifact`、`skill/module/packages/engine` 等旧实现桶不再作为 Foundry Agent 用户 command surface。
 
 理想文档：
 

@@ -35,6 +35,7 @@ Machine boundary: 本目录是人读过程历史索引。机器真相继续归 `
 
 近期归档：
 
+- [2026-06-08 OPL frontdoor machine field retirement closeout](./plans/2026-06-08-opl-frontdoor-machine-field-retirement-closeout.md)：记录 active `frontdoor` 机器字段迁移为 `command_surface` contract/source/test payload，并用 focused tests 阻止旧 key 作为兼容面复活；当前机器真相仍回 contracts、source、tests 和 CLI/read-model。
 - [2026-06-08 OPL public whitepaper and command surface docs closeout](./plans/2026-06-08-opl-public-whitepaper-command-surface-closeout.md)：记录公开白皮书 lifecycle header 补齐，以及 active/current 文档中当前命令面从旧 Gateway/frontdoor route 词汇中分离；当前命令面机器真相仍回 contracts、source、tests 和 CLI/read-model。
 - [2026-06-07 OPL family retirement cleanup closeout](./plans/2026-06-07-opl-family-retirement-cleanup-closeout.md)：记录 App release-boundary docs-prose oracle 和 Homebrew tap PR compatibility 两条已落地退役线；当前 App release truth 回到 App repo contracts、workflows、validators、release-boundary tests 和真实 release evidence。
 - [2026-06-07 OPL broader docs portfolio SSOT closeout](./plans/2026-06-07-opl-broader-docs-portfolio-ssot-closeout.md)：记录 root `README*`、`docs/*.md` 与 `docs/**/*.md` 的 broader portfolio currentness / stale-surface routing 覆盖；当前 docs lifecycle 回到 `docs/docs_portfolio_consolidation.md`，唯一 active truth 回到 `docs/active/current-state-vs-ideal-gap.md`。

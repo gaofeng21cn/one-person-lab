@@ -705,29 +705,29 @@ function validateBrandCliGovernance(
     );
   }
 
-  const platformFrontdoorsRaw = value.platform_frontdoors;
+  const platformCommandSurfacesRaw = value.platform_command_surfaces;
   const agentInternalRaw = value.agent_internal_modules;
   const legacyOwnershipRaw = value.legacy_command_ownership;
-  if (!Array.isArray(platformFrontdoorsRaw) || !isRecord(agentInternalRaw) || !Array.isArray(legacyOwnershipRaw)) {
+  if (!Array.isArray(platformCommandSurfacesRaw) || !isRecord(agentInternalRaw) || !Array.isArray(legacyOwnershipRaw)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'brand-cli-governance.json must contain platform_frontdoors, agent_internal_modules, and legacy_command_ownership.',
+      'brand-cli-governance.json must contain platform_command_surfaces, agent_internal_modules, and legacy_command_ownership.',
       { file: filePath },
     );
   }
 
   const seenPlatformModuleIds = new Set<string>();
-  const platformFrontdoors = platformFrontdoorsRaw.map((entry, index) => {
+  const platformCommandSurfaces = platformCommandSurfacesRaw.map((entry, index) => {
     if (!isRecord(entry)) {
-      throw new FrameworkContractError('contract_shape_invalid', 'Each platform_frontdoors entry must be an object.', {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each platform_command_surfaces entry must be an object.', {
         file: filePath,
         index,
       });
     }
 
-    const moduleId = expectBrandModuleId(entry.module_id, 'platform_frontdoors.module_id', filePath);
+    const moduleId = expectBrandModuleId(entry.module_id, 'platform_command_surfaces.module_id', filePath);
     if (seenPlatformModuleIds.has(moduleId)) {
-      throw new FrameworkContractError('contract_shape_invalid', 'Each platform frontdoor module id must be unique.', {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each platform command surface module id must be unique.', {
         file: filePath,
         index,
         module_id: moduleId,
@@ -735,10 +735,10 @@ function validateBrandCliGovernance(
     }
     seenPlatformModuleIds.add(moduleId);
 
-    const command = expectString(entry.command, 'platform_frontdoors.command', filePath);
+    const command = expectString(entry.command, 'platform_command_surfaces.command', filePath);
     const expectedCommand = `opl ${moduleId}`;
     if (command !== expectedCommand) {
-      throw new FrameworkContractError('contract_shape_invalid', 'platform_frontdoors.command must match the module frontdoor.', {
+      throw new FrameworkContractError('contract_shape_invalid', 'platform_command_surfaces.command must match the module command surface.', {
         file: filePath,
         index,
         module_id: moduleId,
@@ -749,19 +749,19 @@ function validateBrandCliGovernance(
 
     const operations = expectAllowedStringArray(
       entry.operations,
-      'platform_frontdoors.operations',
+      'platform_command_surfaces.operations',
       filePath,
       BRAND_MODULE_CLI_OPERATIONS,
     );
     const expectedOperations: readonly BrandModuleCliOperation[] = moduleId === 'workspace'
       ? WORKSPACE_BRAND_MODULE_CLI_OPERATIONS
       : BRAND_MODULE_CLI_OPERATIONS;
-    requireEveryValue(operations, expectedOperations, 'platform_frontdoors.operations', filePath);
+    requireEveryValue(operations, expectedOperations, 'platform_command_surfaces.operations', filePath);
     const unexpectedOperations = operations.filter((operation) => !expectedOperations.includes(operation));
     if (unexpectedOperations.length > 0) {
       throw new FrameworkContractError(
         'contract_shape_invalid',
-        'platform_frontdoors.operations contains operations owned by another command surface.',
+        'platform_command_surfaces.operations contains operations owned by another command surface.',
         {
           file: filePath,
           index,
@@ -868,9 +868,9 @@ function validateBrandCliGovernance(
     purpose: expectString(value.purpose, 'purpose', filePath),
     state: expectString(value.state, 'state', filePath),
     machine_boundary: expectString(value.machine_boundary, 'machine_boundary', filePath),
-    platform_frontdoors: platformFrontdoors,
+    platform_command_surfaces: platformCommandSurfaces,
     agent_internal_modules: {
-      canonical_frontdoor: expectString(agentInternalRaw.canonical_frontdoor, 'agent_internal_modules.canonical_frontdoor', filePath),
+      canonical_command_surface: expectString(agentInternalRaw.canonical_command_surface, 'agent_internal_modules.canonical_command_surface', filePath),
       required_operations: requiredOperations,
       module_spine: moduleSpine,
       authority_boundary: validateBrandModuleAuthorityBoundary(filePath, agentInternalRaw.authority_boundary),

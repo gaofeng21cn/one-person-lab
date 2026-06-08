@@ -2,10 +2,10 @@
   "version": "brand-cli-governance.v1",
   "scope": "opl_brand_cli_governance",
   "owner": "One Person Lab",
-  "purpose": "Freeze the thin executable frontdoor families for OPL platform brand modules and agent-owned internal brand-module spines without making them domain authority surfaces.",
+  "purpose": "Freeze the thin executable command surface families for OPL platform brand modules and agent-owned internal brand-module spines without making them domain authority surfaces.",
   "state": "active_contract",
-  "machine_boundary": "This contract governs read-only CLI/read-model frontdoors derived from the brand module registry. It does not store domain truth, artifact or memory bodies, quality verdicts, owner receipts, typed blockers, production readiness, or App release truth.",
-  "platform_frontdoors": [
+  "machine_boundary": "This contract governs read-only CLI/read-model command surfaces derived from the brand module registry. It does not store domain truth, artifact or memory bodies, quality verdicts, owner receipts, typed blockers, production readiness, or App release truth.",
+  "platform_command_surfaces": [
     {
       "module_id": "charter",
       "command": "opl charter",
@@ -53,7 +53,7 @@
     }
   ],
   "agent_internal_modules": {
-    "canonical_frontdoor": "opl agents modules",
+    "canonical_command_surface": "opl agents modules",
     "required_operations": ["list", "inspect", "interfaces", "validate", "doctor"],
     "module_spine": [
       {
@@ -130,8 +130,8 @@
       "command_prefix": "opl brand-modules",
       "primary_module_id": "charter",
       "secondary_module_ids": ["atlas", "workspace", "stagecraft", "runway", "vault", "console", "foundry-lab", "connect"],
-      "status": "active_aggregate_registry_frontdoor",
-      "migration_target": "Keep as aggregate registry/read-model while module-owned frontdoors provide per-module status/inspect/validate/doctor.",
+      "status": "active_aggregate_registry_command_surface",
+      "migration_target": "Keep as aggregate registry/read-model while module-owned command surfaces provide per-module status/inspect/validate/doctor.",
       "command_refs": [
         "opl brand-modules list --json",
         "opl brand-modules inspect --module <module_id> --json",
@@ -139,13 +139,13 @@
         "opl brand-modules validate --json",
         "opl brand-modules interfaces --json"
       ],
-      "rationale": "Aggregate registry remains the low-cost overview; per-module frontdoors prevent a single catch-all surface from hiding module gaps."
+      "rationale": "Aggregate registry remains the low-cost overview; per-module command surfaces prevent a single catch-all surface from hiding module gaps."
     },
     {
       "command_prefix": "opl workspace validate|doctor|interfaces",
       "primary_module_id": "workspace",
       "secondary_module_ids": [],
-      "status": "preserved_operational_workspace_frontdoor",
+      "status": "preserved_operational_workspace_command_surface",
       "migration_target": "Only opl workspace status|inspect are brand-read surfaces; validate, doctor, and interfaces keep existing workspace operational semantics.",
       "command_refs": [
         "opl workspace validate --json",
@@ -156,8 +156,8 @@
     }
   ],
   "drift_guards": [
-    "Every platform_frontdoors.module_id must exist in brand-module-registry.json.",
-    "Every platform frontdoor must expose status, inspect, interfaces, validate, and doctor unless an existing operational command collision is explicitly listed in legacy_command_ownership; workspace brand governance only owns status and inspect because validate, doctor, and interfaces keep existing workspace operational semantics.",
+    "Every platform_command_surfaces.module_id must exist in brand-module-registry.json.",
+    "Every platform command surface must expose status, inspect, interfaces, validate, and doctor unless an existing operational command collision is explicitly listed in legacy_command_ownership; workspace brand governance only owns status and inspect because validate, doctor, and interfaces keep existing workspace operational semantics.",
     "Agent internal modules are read-only branding spines under opl agents modules and cannot write domain truth, replace domain owners, or claim production readiness."
   ]
 }

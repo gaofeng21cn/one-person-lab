@@ -196,10 +196,10 @@ function buildAuthorityBoundary(contract: JsonRecord) {
 
 function buildPeerProjection(peer: FoundryAgentPeer) {
   const generatedSurfaceOnly = Boolean('generated_surface_only' in peer && peer.generated_surface_only);
-  const foundryFrontdoor = generatedSurfaceOnly
+  const foundryCommandSurface = generatedSurfaceOnly
     ? `opl foundry agents inspect ${peer.agent_id}`
     : `${peer.brand_cli} foundry`;
-  const compatibilityFrontdoor = generatedSurfaceOnly
+  const compatibilityCommandSurface = generatedSurfaceOnly
     ? peer.direct_domain_cli
     : `${peer.direct_domain_cli} foundry`;
   const foundryOperations = generatedSurfaceOnly
@@ -210,8 +210,8 @@ function buildPeerProjection(peer: FoundryAgentPeer) {
     : FOUNDRY_AGENT_OPERATIONS.map((operation) => `${peer.direct_domain_cli} foundry ${operation}`);
   const cliSmoke = generatedSurfaceOnly
     ? {
-        executable_brand_cli_frontdoor: null,
-        executable_compatibility_frontdoor: null,
+        executable_brand_cli_command_surface: null,
+        executable_compatibility_command_surface: null,
         status_json_command: `opl foundry agents inspect ${peer.agent_id} --json`,
         compatibility_status_json_command: peer.direct_domain_cli,
         json_flag_aliases: ['--json'],
@@ -221,8 +221,8 @@ function buildPeerProjection(peer: FoundryAgentPeer) {
         ],
       }
     : {
-        executable_brand_cli_frontdoor: foundryFrontdoor,
-        executable_compatibility_frontdoor: compatibilityFrontdoor,
+        executable_brand_cli_command_surface: foundryCommandSurface,
+        executable_compatibility_command_surface: compatibilityCommandSurface,
         status_json_command: `${peer.brand_cli} foundry status --json`,
         compatibility_status_json_command: `${peer.direct_domain_cli} foundry status --json`,
         legacy_format_json_command: `${peer.direct_domain_cli} foundry status --format json`,
@@ -238,11 +238,11 @@ function buildPeerProjection(peer: FoundryAgentPeer) {
     ...peer,
     series: 'OPL Foundry Agent',
     series_id: 'opl_foundry_agent_series.v1',
-    foundry_frontdoor: foundryFrontdoor,
-    compatibility_frontdoor: compatibilityFrontdoor,
+    foundry_command_surface: foundryCommandSurface,
+    compatibility_command_surface: compatibilityCommandSurface,
     foundry_operations: foundryOperations,
     compatibility_operations: compatibilityOperations,
-    executable_direct_cli_frontdoor: generatedSurfaceOnly ? null : compatibilityFrontdoor,
+    executable_direct_cli_command_surface: generatedSurfaceOnly ? null : compatibilityCommandSurface,
     generated_surface_only: generatedSurfaceOnly,
     cli_smoke: cliSmoke,
     ordinary_spine: ['workspace', 'work', 'stage', 'run', 'vault', 'handoff', 'connect'].map((object) => ({
@@ -262,7 +262,7 @@ function buildPeerProjection(peer: FoundryAgentPeer) {
       natural_alias: peer.work_alias,
       alias_rule: `${peer.work_alias} is a domain-specific alias for the Foundry Agent series work object.`,
     },
-    connect_frontdoors: {
+    connect_command_surfaces: {
       install: `opl connect install --module ${peer.domain_id}`,
       skills: `opl connect skills --domain ${peer.domain_id}`,
       sync_skills: `opl connect sync-skills --domain ${peer.domain_id}`,
@@ -339,23 +339,23 @@ function assertNoFoundryAgentArgs(args: string[], usage: string) {
 export function buildFoundryAgentCliSpine(operation: FoundryAgentCliOperation, args: string[]) {
   assertNoArgs(args, operation);
   const contract = readFoundryAgentSeriesContract();
-  const frontdoorPolicy = readRecord(contract.agent_cli_frontdoor_policy, 'agent_cli_frontdoor_policy');
+  const commandSurfacePolicy = readRecord(contract.agent_cli_command_surface_policy, 'agent_cli_command_surface_policy');
   const skillMcpPolicy = readRecord(contract.skill_mcp_surface_policy, 'skill_mcp_surface_policy');
   const retirementPolicy = readRecord(
     contract.legacy_implementation_bucket_retirement_policy,
     'legacy_implementation_bucket_retirement_policy',
   );
   const ordinarySpine = readStringList(
-    frontdoorPolicy.ordinary_public_frontdoor_spine,
-    'agent_cli_frontdoor_policy.ordinary_public_frontdoor_spine',
+    commandSurfacePolicy.ordinary_public_command_surface_spine,
+    'agent_cli_command_surface_policy.ordinary_public_command_surface_spine',
   );
   const operations = readStringList(
-    frontdoorPolicy.ordinary_operations,
-    'agent_cli_frontdoor_policy.ordinary_operations',
+    commandSurfacePolicy.ordinary_operations,
+    'agent_cli_command_surface_policy.ordinary_operations',
   );
-  const canonicalFrontdoor = readString(
-    frontdoorPolicy.canonical_opl_frontdoor,
-    'agent_cli_frontdoor_policy.canonical_opl_frontdoor',
+  const canonicalCommandSurface = readString(
+    commandSurfacePolicy.canonical_opl_command_surface,
+    'agent_cli_command_surface_policy.canonical_opl_command_surface',
   );
 
   return {
@@ -365,10 +365,10 @@ export function buildFoundryAgentCliSpine(operation: FoundryAgentCliOperation, a
       operation,
       status: operation === 'doctor' ? 'pass' : 'valid',
       series_id: 'opl_foundry_agent_series.v1',
-      series_label: readString(frontdoorPolicy.agent_cli_series_label, 'agent_cli_frontdoor_policy.agent_cli_series_label'),
+      series_label: readString(commandSurfacePolicy.agent_cli_series_label, 'agent_cli_command_surface_policy.agent_cli_series_label'),
       product_model: readString(contract.product_model, 'product_model'),
-      canonical_frontdoor: canonicalFrontdoor,
-      ordinary_frontdoor: true,
+      canonical_command_surface: canonicalCommandSurface,
+      ordinary_command_surface: true,
       operations,
       refs: buildSeriesRefs(contract),
       series_identity: {
@@ -379,21 +379,21 @@ export function buildFoundryAgentCliSpine(operation: FoundryAgentCliOperation, a
       spine: ordinarySpine.map((object) => ({
         object,
         command_pattern: `<agent> ${object} ...`,
-        purpose_ref: `${FOUNDRY_AGENT_SERIES_CONTRACT_REF}#/agent_cli_frontdoor_policy/ordinary_public_frontdoor_spine/${object}`,
+        purpose_ref: `${FOUNDRY_AGENT_SERIES_CONTRACT_REF}#/agent_cli_command_surface_policy/ordinary_public_command_surface_spine/${object}`,
       })),
       peers: FOUNDRY_AGENT_PEERS.map((entry) => ({ ...entry })),
-      frontdoor_policy: {
-        policy_id: readString(frontdoorPolicy.policy_id, 'agent_cli_frontdoor_policy.policy_id'),
+      command_surface_policy: {
+        policy_id: readString(commandSurfacePolicy.policy_id, 'agent_cli_command_surface_policy.policy_id'),
         agent_cli_uses_foundry_series_spine: readBoolean(
-          frontdoorPolicy.agent_cli_must_use_series_spine,
-          'agent_cli_frontdoor_policy.agent_cli_must_use_series_spine',
+          commandSurfacePolicy.agent_cli_must_use_series_spine,
+          'agent_cli_command_surface_policy.agent_cli_must_use_series_spine',
         ),
         agent_cli_does_not_replicate_opl_nine_brand_modules: readBoolean(
-          frontdoorPolicy.agent_cli_must_not_replicate_top_level_modules,
-          'agent_cli_frontdoor_policy.agent_cli_must_not_replicate_top_level_modules',
+          commandSurfacePolicy.agent_cli_must_not_replicate_top_level_modules,
+          'agent_cli_command_surface_policy.agent_cli_must_not_replicate_top_level_modules',
         ),
-        old_implementation_buckets_are_not_ordinary_frontdoors:
-          readBoolean(retirementPolicy.ordinary_public_frontdoor_allowed, 'legacy_implementation_bucket_retirement_policy.ordinary_public_frontdoor_allowed') === false,
+        old_implementation_buckets_are_not_ordinary_command_surfaces:
+          readBoolean(retirementPolicy.ordinary_public_command_surface_allowed, 'legacy_implementation_bucket_retirement_policy.ordinary_public_command_surface_allowed') === false,
       },
       mcp_and_skill_policy: {
         skill_pack_must_delegate_to_series_spine: readBoolean(
@@ -412,7 +412,7 @@ export function buildFoundryAgentCliSpine(operation: FoundryAgentCliOperation, a
         'legacy_implementation_bucket_retirement_policy.retired_bucket_prefixes',
       ).map((bucket) => ({
         bucket,
-        replacement: readString(retirementPolicy.replacement_frontdoor, 'legacy_implementation_bucket_retirement_policy.replacement_frontdoor'),
+        replacement: readString(retirementPolicy.replacement_command_surface, 'legacy_implementation_bucket_retirement_policy.replacement_command_surface'),
         retained_scope: 'diagnostic_or_migration_only',
       })),
       authority_boundary: buildAuthorityBoundary(contract),
@@ -429,11 +429,11 @@ export function buildFoundryAgentsList(args: string[]) {
       surface_kind: 'opl_foundry_agent_series_agent_index',
       series_id: 'opl_foundry_agent_series.v1',
       series_label: readString(
-        readRecord(contract.agent_cli_frontdoor_policy, 'agent_cli_frontdoor_policy').agent_cli_series_label,
-        'agent_cli_frontdoor_policy.agent_cli_series_label',
+        readRecord(contract.agent_cli_command_surface_policy, 'agent_cli_command_surface_policy').agent_cli_series_label,
+        'agent_cli_command_surface_policy.agent_cli_series_label',
       ),
-      canonical_frontdoor: 'opl foundry agents',
-      opl_aggregate_frontdoor: 'opl agents foundry',
+      canonical_command_surface: 'opl foundry agents',
+      opl_aggregate_command_surface: 'opl agents foundry',
       agents: FOUNDRY_AGENT_PEERS.map(buildPeerProjection),
       authority_boundary: buildAuthorityBoundary(contract),
     },
@@ -463,7 +463,7 @@ export function buildFoundryAgentInspect(args: string[]) {
         : 'direct_cli_ready',
       ...buildPeerProjection(peer),
       series_contract_ref: FOUNDRY_AGENT_SERIES_CONTRACT_REF,
-      direct_cli_frontdoor_policy: {
+      direct_cli_command_surface_policy: {
         must_expose_foundry_operations: [...FOUNDRY_AGENT_OPERATIONS],
         first_screen_must_identify_series: true,
         old_implementation_buckets_are_diagnostic_only: true,

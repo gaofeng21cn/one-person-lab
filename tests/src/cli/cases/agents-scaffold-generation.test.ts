@@ -73,7 +73,7 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(foundryAgentSeries.surface_kind, 'opl_foundry_agent_series_contract');
     assert.equal(foundryAgentSeries.version, 'foundry-agent-series.v1');
     assert.equal(
-      foundryAgentSeries.framework_brand_taxonomy_policy.agent_cli_public_frontdoor_role,
+      foundryAgentSeries.framework_brand_taxonomy_policy.agent_cli_public_command_surface_role,
       'foundry_agent_series_spine',
     );
     assert.deepEqual(foundryAgentSeries.framework_brand_taxonomy_policy.top_level_modules, [
@@ -92,10 +92,10 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       true,
     );
     assert.equal(
-      foundryAgentSeries.agent_cli_frontdoor_policy.policy_id,
-      'foundry_agent_series_spine_public_frontdoor',
+      foundryAgentSeries.agent_cli_command_surface_policy.policy_id,
+      'foundry_agent_series_spine_public_command_surface',
     );
-    assert.deepEqual(foundryAgentSeries.agent_cli_frontdoor_policy.ordinary_public_frontdoor_spine, [
+    assert.deepEqual(foundryAgentSeries.agent_cli_command_surface_policy.ordinary_public_command_surface_spine, [
       'workspace',
       'work',
       'stage',
@@ -104,14 +104,14 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       'handoff',
       'connect',
     ]);
-    assert.deepEqual(foundryAgentSeries.agent_cli_frontdoor_policy.required_public_surface_derivatives, [
+    assert.deepEqual(foundryAgentSeries.agent_cli_command_surface_policy.required_public_surface_derivatives, [
       'cli',
       'skill',
       'mcp',
       'app_action',
     ]);
     assert.equal(
-      foundryAgentSeries.legacy_implementation_bucket_retirement_policy.ordinary_public_frontdoor_allowed,
+      foundryAgentSeries.legacy_implementation_bucket_retirement_policy.ordinary_public_command_surface_allowed,
       false,
     );
     assert.ok(
@@ -126,7 +126,7 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       true,
     );
     assert.equal(
-      foundryAgentSeries.skill_mcp_surface_policy.canonical_skill_sync_frontdoor,
+      foundryAgentSeries.skill_mcp_surface_policy.canonical_skill_sync_command_surface,
       'opl connect sync-skills',
     );
     assert.equal(

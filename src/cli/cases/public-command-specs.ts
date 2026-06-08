@@ -261,7 +261,7 @@ export function buildPublicCommandSpecs(
   const connectPackagesManifestSpec = buildNoArgSpec(
     {
       usage: 'opl connect packages manifest',
-      summary: 'Show the machine-readable OPL Packages manifest through the canonical Connect frontdoor.',
+      summary: 'Show the machine-readable OPL Packages manifest through the canonical Connect command surface.',
       examples: ['opl connect packages manifest --json'],
       group: 'connect',
     },
@@ -431,7 +431,7 @@ export function buildPublicCommandSpecs(
     ...foundryAgentCommandSpecs,
     'foundry agents list': {
       usage: 'opl foundry agents list',
-      summary: 'List MAS, MAG, RCA, and OMA as one OPL Foundry Agent series with their direct CLI, Skill, MCP, and Connect frontdoors.',
+      summary: 'List MAS, MAG, RCA, and OMA as one OPL Foundry Agent series with their direct CLI, Skill, MCP, and Connect command surfaces.',
       examples: ['opl foundry agents list --json'],
       group: 'foundry',
       handler: (args) => buildFoundryAgentsList(args),
@@ -449,7 +449,7 @@ export function buildPublicCommandSpecs(
     'connect modules': buildNoArgSpec(
       {
         usage: 'opl connect modules',
-        summary: 'List OPL-managed domain modules through the canonical Connect frontdoor.',
+        summary: 'List OPL-managed domain modules through the canonical Connect command surface.',
         examples: ['opl connect modules --json'],
         group: 'connect',
       },
@@ -462,7 +462,7 @@ export function buildPublicCommandSpecs(
         'opl connect install --module medautoscience',
       ),
       group: 'connect',
-      summary: 'Install one OPL-managed domain module through the canonical Connect frontdoor.',
+      summary: 'Install one OPL-managed domain module through the canonical Connect command surface.',
     },
     'connect update': {
       ...buildModuleActionSpec(
@@ -471,7 +471,7 @@ export function buildPublicCommandSpecs(
         'opl connect update --module medautoscience',
       ),
       group: 'connect',
-      summary: 'Update one OPL-managed domain module through the canonical Connect frontdoor.',
+      summary: 'Update one OPL-managed domain module through the canonical Connect command surface.',
     },
     'connect reinstall': {
       ...buildModuleActionSpec(
@@ -480,7 +480,7 @@ export function buildPublicCommandSpecs(
         'opl connect reinstall --module medautoscience',
       ),
       group: 'connect',
-      summary: 'Reinstall one OPL-managed domain module through the canonical Connect frontdoor.',
+      summary: 'Reinstall one OPL-managed domain module through the canonical Connect command surface.',
     },
     'connect remove': {
       ...buildModuleActionSpec(
@@ -489,11 +489,11 @@ export function buildPublicCommandSpecs(
         'opl connect remove --module medautoscience',
       ),
       group: 'connect',
-      summary: 'Remove one OPL-managed domain module through the canonical Connect frontdoor.',
+      summary: 'Remove one OPL-managed domain module through the canonical Connect command surface.',
     },
     'connect exec': {
       usage: 'opl connect exec --module <module_id> -- <domain_cli_args...>',
-      summary: 'Run a domain module CLI through the canonical Connect frontdoor.',
+      summary: 'Run a domain module CLI through the canonical Connect command surface.',
       examples: [
         'opl connect exec --module medautoscience -- doctor entry-modes',
         'opl connect exec --module medautogrant -- --help',
@@ -508,7 +508,7 @@ export function buildPublicCommandSpecs(
     },
     'connect skills': cloneCommandSpec(commandSpecs['skill-list'], {
       usage: 'opl connect skills [--domain <domain_id>]',
-      summary: 'Inspect family domain plugin packs through the canonical Connect frontdoor.',
+      summary: 'Inspect family domain plugin packs through the canonical Connect command surface.',
       examples: [
         'opl connect skills --json',
         'opl connect skills --domain medautoscience --json',
@@ -518,7 +518,7 @@ export function buildPublicCommandSpecs(
     }),
     'connect sync-skills': cloneCommandSpec(commandSpecs['skill-sync'], {
       usage: 'opl connect sync-skills [--domain <domain_id>] [--home <home_path>] [--quiet]',
-      summary: 'Register family domain plugin packs through the canonical Connect frontdoor.',
+      summary: 'Register family domain plugin packs through the canonical Connect command surface.',
       examples: [
         'opl connect sync-skills --json',
         'opl connect sync-skills --domain medautoscience --json',
@@ -530,7 +530,7 @@ export function buildPublicCommandSpecs(
     'connect packages manifest': connectPackagesManifestSpec,
     'connect reconcile-modules': cloneCommandSpec(systemCommandSpecs['system reconcile-modules'], {
       usage: 'opl connect reconcile-modules',
-      summary: 'Install missing modules and update clean domain modules through the canonical Connect frontdoor.',
+      summary: 'Install missing modules and update clean domain modules through the canonical Connect command surface.',
       examples: ['opl connect reconcile-modules --json'],
       group: 'connect',
     }),

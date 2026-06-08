@@ -689,13 +689,13 @@ export const MINIMAL_BRAND_CLI_GOVERNANCE_CONTRACT: BrandCliGovernanceContract =
   purpose: 'test fixture',
   state: 'test_fixture',
   machine_boundary: 'test fixture',
-  platform_frontdoors: MINIMAL_BRAND_MODULE_IDS.map((moduleId) => ({
+  platform_command_surfaces: MINIMAL_BRAND_MODULE_IDS.map((moduleId) => ({
     module_id: moduleId,
     command: `opl ${moduleId}`,
     operations: moduleId === 'workspace' ? ['status', 'inspect'] : ['status', 'inspect', 'interfaces', 'validate', 'doctor'],
   })),
   agent_internal_modules: {
-    canonical_frontdoor: 'opl agents modules',
+    canonical_command_surface: 'opl agents modules',
     required_operations: ['list', 'inspect', 'interfaces', 'validate', 'doctor'],
     module_spine: MINIMAL_BRAND_MODULE_IDS.map((moduleId) => ({
       agent_module_id: `agent-${moduleId}`,
