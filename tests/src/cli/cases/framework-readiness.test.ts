@@ -705,6 +705,43 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.evidence_tails.agent_structural_evidence_tail.open_item_count > 0,
     true,
   );
+  assert.equal(
+    readiness.evidence_tails.agent_structural_evidence_tail.blocking_policy,
+    'operator_attention_only_not_domain_or_production_ready',
+  );
+  assert.equal(
+    readiness.agent_conformance_tail.agent_readiness_production_evidence_tail_policy,
+    'reported_separately_not_a_structural_pass_condition',
+  );
+  assert.equal(
+    readiness.current_owner_delta.default_planning_root,
+    'current_owner_delta',
+  );
+  assert.equal(
+    readiness.current_owner_delta_read_model.default_next_action_derivation_policy,
+    'derive_default_next_action_only_from_current_owner_delta',
+  );
+  assert.equal(
+    readiness.current_owner_delta_read_model.next_safe_action_or_none.derivation_source,
+    'current_owner_delta',
+  );
+  assert.equal(
+    readiness.current_owner_delta_read_model.next_safe_action_or_none.action_kind
+      .includes('production_evidence_tail'),
+    false,
+  );
+  assert.equal(
+    readiness.current_owner_delta.authority_boundary.audit_tail_can_drive_default_planning,
+    false,
+  );
+  assert.equal(
+    readiness.current_owner_delta.authority_boundary.can_claim_domain_ready,
+    false,
+  );
+  assert.equal(
+    readiness.current_owner_delta.authority_boundary.can_claim_production_ready,
+    false,
+  );
   assert.equal(Object.hasOwn(readiness.agent_conformance_tail, 'production_or_domain_ready'), false);
   assert.equal(
     readiness.app_operator_production_tail.app_operator_production_evidence_tail_open_item_count,
