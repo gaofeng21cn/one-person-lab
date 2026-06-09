@@ -26,6 +26,21 @@ export type TypedStageCloseoutPacket = {
   authority_boundary: JsonRecord;
 };
 
+function readCloseoutRefs(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((entry) => {
+      const direct = optionalString(entry);
+      if (direct) {
+        return direct;
+      }
+      return isRecord(entry) ? optionalString(entry.ref) : null;
+    })
+    .filter((entry): entry is string => Boolean(entry));
+}
+
 export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageCloseoutPacket {
   if (!isRecord(value)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Stage closeout packet must be a JSON object.', {
@@ -53,7 +68,7 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
   }
 
   const closeoutRefs = [
-    ...readStringList(value.closeout_refs),
+    ...readCloseoutRefs(value.closeout_refs),
     optionalString(value.closeout_ref),
     optionalString(value.receipt_ref),
     optionalString(value.packet_ref),
