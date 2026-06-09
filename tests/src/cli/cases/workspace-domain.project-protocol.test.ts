@@ -119,7 +119,14 @@ test('workspace init materializes project unit metadata and stage output require
       'current_stage.json',
     ));
     assert.equal(currentStagePointer.surface_kind, 'opl_current_stage_pointer');
+    assert.equal(
+      currentStagePointer.authority_boundary.pointer_role,
+      'workspace_stage_artifact_projection_not_stage_run_current_pointer',
+    );
     assert.equal(currentStagePointer.authority_boundary.pointer_can_claim_stage_complete, false);
+    assert.equal(currentStagePointer.authority_boundary.pointer_can_write_stage_run_current_pointer, false);
+    assert.equal(currentStagePointer.authority_boundary.pointer_can_write_stage_run_terminal_state, false);
+    assert.equal(currentStagePointer.authority_boundary.pointer_can_publish_current_owner_delta, false);
 
     const validation = runCli(['workspace', 'validate', '--workspace', workspacePath], {
       OPL_STATE_DIR: stateRoot,
@@ -246,6 +253,7 @@ test('workspace doctor repairs MAS alias drift and blocks invalid stage lifecycl
       stage_id: 'draft',
       status: 'success',
     };
+    currentPointer.authority_boundary.pointer_can_write_stage_run_current_pointer = true;
     fs.writeFileSync(currentPointerPath, `${JSON.stringify(currentPointer, null, 2)}\n`);
 
     const stageDrift = runCli(['workspace', 'doctor', '--workspace', workspacePath], {
@@ -256,6 +264,13 @@ test('workspace doctor repairs MAS alias drift and blocks invalid stage lifecycl
       stageDrift.workspace_doctor.blockers.some((entry: { code: string }) => (
         entry.code === 'indexed_current_stage_pointer_drift'
       )),
+      true,
+    );
+    const pointerDrift = stageDrift.workspace_doctor.blockers.find(
+      (entry: { code: string }) => entry.code === 'indexed_current_stage_pointer_drift',
+    );
+    assert.equal(
+      pointerDrift.details.drift_fields.includes('pointer_can_write_stage_run_current_pointer'),
       true,
     );
   } finally {

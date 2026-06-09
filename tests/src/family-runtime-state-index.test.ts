@@ -243,6 +243,31 @@ test('opl index rebuild projects medautoscience Stage Folder refs with normalize
     assert.equal(tableCount(artifactDb, 'stage_current_pointers'), 1);
     assert.equal(tableCount(readModelDb, 'owner_route_index'), 1);
 
+    const currentPointerRow = tableValue<{ payload_ref_json: string }>(
+      artifactDb,
+      'SELECT payload_ref_json FROM stage_current_pointers',
+    );
+    const currentPointerPayload = JSON.parse(currentPointerRow.payload_ref_json);
+    assert.equal(
+      currentPointerPayload.pointer_role,
+      'artifact_attempt_pointer_not_stage_run_current_pointer',
+    );
+    assert.equal(currentPointerPayload.stage_run_current_pointer, false);
+    assert.equal(currentPointerPayload.stage_run_terminal_state, false);
+    assert.equal(currentPointerPayload.current_owner_delta, false);
+    const ownerRouteRow = tableValue<{ route_json_ref: string }>(
+      readModelDb,
+      'SELECT route_json_ref FROM owner_route_index',
+    );
+    const ownerRoutePayload = JSON.parse(ownerRouteRow.route_json_ref);
+    assert.equal(
+      ownerRoutePayload.pointer_role,
+      'artifact_attempt_pointer_not_stage_run_current_pointer',
+    );
+    assert.equal(ownerRoutePayload.stage_run_current_pointer, false);
+    assert.equal(ownerRoutePayload.stage_run_terminal_state, false);
+    assert.equal(ownerRoutePayload.current_owner_delta, false);
+
     const manifestRow = tableValue<{ domain_id: string; stage_id: string; receipt_ref: string }>(
       artifactDb,
       'SELECT domain_id, stage_id, receipt_ref FROM manifest_index',

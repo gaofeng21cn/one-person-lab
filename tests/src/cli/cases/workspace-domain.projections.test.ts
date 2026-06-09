@@ -319,6 +319,7 @@ test('workspace doctor blocks invalid current pointer refs', () => {
     );
     const pointer = readJsonFile(pointerPath);
     pointer.latest_owner_receipt_ref = { invalid: true };
+    pointer.authority_boundary.pointer_can_publish_current_owner_delta = true;
     fs.writeFileSync(pointerPath, `${JSON.stringify(pointer, null, 2)}\n`);
 
     const doctor = runCli(['workspace', 'doctor', '--workspace', workspacePath]);
@@ -327,6 +328,7 @@ test('workspace doctor blocks invalid current pointer refs', () => {
       doctor.workspace_doctor.blockers.some((entry: { code: string; details?: { drift_fields?: string[] } }) => (
         entry.code === 'indexed_current_stage_pointer_drift'
         && entry.details?.drift_fields?.includes('latest_owner_receipt_ref')
+        && entry.details?.drift_fields?.includes('pointer_can_publish_current_owner_delta')
       )),
       true,
     );

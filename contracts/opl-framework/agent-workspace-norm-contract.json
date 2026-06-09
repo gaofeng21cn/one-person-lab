@@ -98,6 +98,10 @@
       "stage_folder_unit": "stage_artifact_unit",
       "stage_outputs_index_file": "stage_outputs_index.json",
       "current_stage_pointer_file": "current_stage.json",
+      "current_stage_pointer_role": "workspace_stage_artifact_projection_not_stage_run_current_pointer",
+      "current_stage_pointer_can_write_stage_run_current_pointer": false,
+      "current_stage_pointer_can_write_stage_run_terminal_state": false,
+      "current_stage_pointer_can_publish_current_owner_delta": false,
       "stage_lifecycle_model": [
         "open",
         "active",

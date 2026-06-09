@@ -337,6 +337,10 @@ function insertStageArtifactRows(db: DatabaseSync, rows: StageFolderProjection[]
           topic_id: row.topic_id,
           deliverable_id: row.deliverable_id,
           status: text(row.manifest.terminal_status, 'in_progress'),
+          pointer_role: 'artifact_attempt_pointer_not_stage_run_current_pointer',
+          stage_run_current_pointer: false,
+          stage_run_terminal_state: false,
+          current_owner_delta: false,
         }),
       );
       currentPointerRows += 1;
@@ -695,6 +699,10 @@ function insertStageArtifactReadModelRows(db: DatabaseSync, rows: StageFolderPro
         latest_attempt_id: fallbackLatest.latest_attempt_id,
         stage_id: fallbackLatest.stage_id,
         attempt_id: fallbackLatest.attempt_id,
+        pointer_role: 'artifact_attempt_pointer_not_stage_run_current_pointer',
+        stage_run_current_pointer: false,
+        stage_run_terminal_state: false,
+        current_owner_delta: false,
       }),
     );
     routeRows += 1;

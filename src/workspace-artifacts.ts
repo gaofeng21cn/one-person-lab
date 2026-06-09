@@ -344,7 +344,11 @@ export function buildCurrentStagePointer(input: {
     empty_state: 'no_stage_opened_yet',
     authority_boundary: {
       pointer_is_projection_only: true,
+      pointer_role: 'workspace_stage_artifact_projection_not_stage_run_current_pointer',
       pointer_can_claim_stage_complete: false,
+      pointer_can_write_stage_run_current_pointer: false,
+      pointer_can_write_stage_run_terminal_state: false,
+      pointer_can_publish_current_owner_delta: false,
       pointer_can_replace_owner_receipt: false,
       pointer_can_replace_typed_blocker: false,
       opl_can_write_domain_truth: false,

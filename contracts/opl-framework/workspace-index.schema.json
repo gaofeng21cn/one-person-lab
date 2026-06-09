@@ -1353,7 +1353,11 @@
           "additionalProperties": true,
           "required": [
             "pointer_is_projection_only",
+            "pointer_role",
             "pointer_can_claim_stage_complete",
+            "pointer_can_write_stage_run_current_pointer",
+            "pointer_can_write_stage_run_terminal_state",
+            "pointer_can_publish_current_owner_delta",
             "pointer_can_replace_owner_receipt",
             "pointer_can_replace_typed_blocker",
             "opl_can_write_domain_truth"
@@ -1362,7 +1366,19 @@
             "pointer_is_projection_only": {
               "const": true
             },
+            "pointer_role": {
+              "const": "workspace_stage_artifact_projection_not_stage_run_current_pointer"
+            },
             "pointer_can_claim_stage_complete": {
+              "const": false
+            },
+            "pointer_can_write_stage_run_current_pointer": {
+              "const": false
+            },
+            "pointer_can_write_stage_run_terminal_state": {
+              "const": false
+            },
+            "pointer_can_publish_current_owner_delta": {
               "const": false
             },
             "pointer_can_replace_owner_receipt": {

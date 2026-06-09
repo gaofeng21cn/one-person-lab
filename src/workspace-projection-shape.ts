@@ -111,7 +111,19 @@ export function validateCurrentStagePointerShape(input: {
     input.actual.stage_outputs_root === input.project.stage_outputs_root ? null : 'stage_outputs_root',
     sameJson(input.actual.lifecycle_model, STAGE_LIFECYCLE_STATUSES) ? null : 'lifecycle_model',
     authority.pointer_is_projection_only === true ? null : 'pointer_is_projection_only',
+    authority.pointer_role === 'workspace_stage_artifact_projection_not_stage_run_current_pointer'
+      ? null
+      : 'pointer_role',
     authority.pointer_can_claim_stage_complete === false ? null : 'pointer_can_claim_stage_complete',
+    authority.pointer_can_write_stage_run_current_pointer === false
+      ? null
+      : 'pointer_can_write_stage_run_current_pointer',
+    authority.pointer_can_write_stage_run_terminal_state === false
+      ? null
+      : 'pointer_can_write_stage_run_terminal_state',
+    authority.pointer_can_publish_current_owner_delta === false
+      ? null
+      : 'pointer_can_publish_current_owner_delta',
     authority.pointer_can_replace_owner_receipt === false ? null : 'pointer_can_replace_owner_receipt',
     authority.pointer_can_replace_typed_blocker === false ? null : 'pointer_can_replace_typed_blocker',
     authority.opl_can_write_domain_truth === false ? null : 'opl_can_write_domain_truth',

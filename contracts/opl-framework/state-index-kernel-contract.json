@@ -113,6 +113,10 @@
       "read-model.sqlite/operator_tasks"
     ],
     "payload_policy": "refs_hashes_and_bounded_locator_json_only",
+    "stage_current_pointers_role": "artifact_attempt_pointer_cache_not_stage_run_current_pointer",
+    "stage_current_pointers_can_write_stage_run_current_pointer": false,
+    "stage_current_pointers_can_write_stage_run_terminal_state": false,
+    "stage_current_pointers_can_publish_current_owner_delta": false,
     "body_access": false,
     "domain_authority_created": false
   },

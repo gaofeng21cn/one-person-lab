@@ -447,6 +447,25 @@ test('target architecture schema contracts keep owner delta root and audit tail 
     false,
   );
   assert.equal(
+    workspaceIndex.$defs.current_stage_pointer.properties.authority_boundary.properties.pointer_role.const,
+    'workspace_stage_artifact_projection_not_stage_run_current_pointer',
+  );
+  assert.equal(
+    workspaceIndex.$defs.current_stage_pointer.properties.authority_boundary.properties
+      .pointer_can_write_stage_run_current_pointer.const,
+    false,
+  );
+  assert.equal(
+    workspaceIndex.$defs.current_stage_pointer.properties.authority_boundary.properties
+      .pointer_can_write_stage_run_terminal_state.const,
+    false,
+  );
+  assert.equal(
+    workspaceIndex.$defs.current_stage_pointer.properties.authority_boundary.properties
+      .pointer_can_publish_current_owner_delta.const,
+    false,
+  );
+  assert.equal(
     workspaceIndex.$defs.workspace_inspection.properties.surface_kind.const,
     'opl_workspace_inspection',
   );
