@@ -647,12 +647,14 @@ test('target operating architecture contract freezes resource, authority, lane, 
   assert.equal(contract.surface_budget_compiler_policy.hard_blocker_upgrade_conditions.includes('irreversible_mutation'), true);
   assert.deepEqual(contract.surface_budget_compiler_policy.accepted_owner_answer_shapes, [
     'owner_receipt_ref',
+    'domain_owner_receipt_ref',
     'quality_gate_receipt_ref',
     'human_gate_ref',
     'typed_blocker_ref',
     'no_regression_ref',
     'long_soak_ref',
     'route_back_ref',
+    'route_back_evidence_ref',
     'physical_delete_authorization_ref',
     'keep_as_authority_adapter_ref',
   ]);

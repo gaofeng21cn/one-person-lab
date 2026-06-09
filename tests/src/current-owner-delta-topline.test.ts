@@ -472,6 +472,20 @@ test('current owner delta hard gate requires domain owner when answer shape is o
 
   assert.equal(readModel.current_owner_delta.current_owner, 'med-autoscience');
   assert.equal(readModel.current_owner_delta.stage_id, 'paper_autonomy/guarded-apply');
+  assert.deepEqual(readModel.current_owner_delta.accepted_answer_shape, [
+    'domain_owner_receipt_ref',
+    'quality_gate_receipt_ref',
+    'typed_blocker_ref',
+    'human_gate_ref',
+    'route_back_evidence_ref',
+  ]);
+  assert.deepEqual(readModel.next_safe_action_or_none.accepted_answer_shape, [
+    'domain_owner_receipt_ref',
+    'quality_gate_receipt_ref',
+    'typed_blocker_ref',
+    'human_gate_ref',
+    'route_back_evidence_ref',
+  ]);
   assert.equal(readModel.current_owner_delta.latest_owner_answer_ref, null);
   assert.equal(readModel.current_owner_delta.hard_gate.state, 'owner_delta_open');
   assert.equal(readModel.current_owner_delta.hard_gate.human_or_domain_owner_required, true);

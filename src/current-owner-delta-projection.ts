@@ -4,6 +4,17 @@ import { currentOwnerDeltaWithClosedStageRunAnswer } from './current-owner-delta
 
 type JsonRecord = Record<string, unknown>;
 
+const GUARDED_APPLY_STAGE_ID = 'paper_autonomy/guarded-apply';
+const GUARDED_APPLY_DESIRED_DELTA =
+  'domain_owner_receipt_quality_gate_or_typed_blocker_required';
+const GUARDED_APPLY_ACCEPTED_ANSWER_SHAPES = [
+  'domain_owner_receipt_ref',
+  'quality_gate_receipt_ref',
+  'typed_blocker_ref',
+  'human_gate_ref',
+  'route_back_evidence_ref',
+];
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -67,10 +78,41 @@ function acceptedReturnShapes(...values: unknown[]) {
   return shapes.length > 0 ? shapes : ['typed_blocker_ref'];
 }
 
+function guardedApplyAcceptedAnswerShapes(input: {
+  stageId: string | null;
+  desiredDelta: string | null;
+  shapes: string[];
+}) {
+  if (
+    input.stageId !== GUARDED_APPLY_STAGE_ID
+    || input.desiredDelta !== GUARDED_APPLY_DESIRED_DELTA
+  ) {
+    return input.shapes;
+  }
+  return uniqueStringList([
+    ...input.shapes,
+    ...GUARDED_APPLY_ACCEPTED_ANSWER_SHAPES,
+  ]);
+}
+
 function ownerDeltaAcceptedReturnShapes(ownerDeltaFirst: JsonRecord, handoff: JsonRecord) {
   const primaryItem = record(ownerDeltaFirst.primary_item);
   const selectedSafeAction = record(ownerDeltaFirst.selected_safe_action);
-  return acceptedReturnShapes(
+  const stageId = firstString(
+    primaryItem.stage_id,
+    selectedSafeAction.stage_id,
+    ownerDeltaFirst.stage_id,
+    handoff.stage_id,
+  );
+  const desiredDelta = firstString(
+    ownerDeltaFirst.next_required_delta,
+    ownerDeltaFirst.desired_delta_description,
+    ownerDeltaFirst.payload_requirement,
+    handoff.next_required_delta,
+    handoff.desired_delta_description,
+    handoff.payload_requirement,
+  );
+  const shapes = acceptedReturnShapes(
     handoff.required_return_shapes,
     handoff.accepted_answer_shape,
     handoff.required_refs_any_of,
@@ -84,6 +126,11 @@ function ownerDeltaAcceptedReturnShapes(ownerDeltaFirst: JsonRecord, handoff: Js
     selectedSafeAction.accepted_answer_shape,
     selectedSafeAction.required_refs_any_of,
   );
+  return guardedApplyAcceptedAnswerShapes({
+    stageId,
+    desiredDelta,
+    shapes,
+  });
 }
 
 function payloadWorkorderReturnShapes(workorder: JsonRecord) {
@@ -411,7 +458,11 @@ export function buildDefaultNextActionFromCurrentOwnerDelta(
   if (desiredDeltaKind === 'none' && hardGateState === 'none') {
     return null;
   }
-  const acceptedAnswerShape = stringList(delta.accepted_answer_shape);
+  const acceptedAnswerShape = guardedApplyAcceptedAnswerShapes({
+    stageId: firstString(delta.stage_id, delta.stage_ref),
+    desiredDelta: firstString(delta.payload_requirement, delta.desired_delta_description),
+    shapes: stringList(delta.accepted_answer_shape),
+  });
   const deltaId = stringValue(delta.delta_id) ?? 'current-owner-delta';
   const owner = stringValue(delta.current_owner) ?? 'one-person-lab';
   const providerLivenessRequired = hardGate.provider_liveness_required === true;
@@ -502,6 +553,11 @@ function buildCurrentOwnerDeltaProjection(input: {
     ?? foldedOwnerDeltaRef(input.ownerDeltaFirst, 'domain_id')
     ?? currentOwner;
   const stageRef = stageRefFrom(input.compactAction, input.ownerDeltaFirst);
+  const acceptedReturnShapes = guardedApplyAcceptedAnswerShapes({
+    stageId: stageRef,
+    desiredDelta: requiredDelta,
+    shapes: input.acceptedReturnShapes,
+  });
   const auditRefs = {
     ...input.fullDetailRefs,
     owner_delta_first_ref:
@@ -529,7 +585,7 @@ function buildCurrentOwnerDeltaProjection(input: {
   const ownerAnswerRecorded = latestOwnerAnswerRef !== null;
   const ownerAnswerRequired = ownerAnswerOrTypedBlockerRequired({
     desiredDeltaKind: desiredDeltaKind(requiredDelta),
-    acceptedAnswerShape: input.acceptedReturnShapes,
+    acceptedAnswerShape: acceptedReturnShapes,
   });
   const hardGate = {
     state:
@@ -600,8 +656,8 @@ function buildCurrentOwnerDeltaProjection(input: {
     payload_requirement: requiredDelta,
     current_owner: currentOwner,
     owner: currentOwner,
-    accepted_answer_shape: input.acceptedReturnShapes,
-    required_return_shapes: input.acceptedReturnShapes,
+    accepted_answer_shape: acceptedReturnShapes,
+    required_return_shapes: acceptedReturnShapes,
     hard_gate: hardGate,
     advisory_warnings: [
       ...(input.countSummary.domain_dispatch_workorder_count > 0
