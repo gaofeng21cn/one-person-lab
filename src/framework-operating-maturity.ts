@@ -10,6 +10,7 @@ import {
   stringValue,
 } from './framework-readiness-values.ts';
 import { buildAppReleaseUserPathEvidence } from './runtime-tray-app-operator-drilldown-parts/app-release-user-path.ts';
+import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 import { buildStandardDomainAgentConformanceReport } from './standard-domain-agent-conformance.ts';
 import type { FrameworkContracts } from './types.ts';
 
@@ -60,6 +61,59 @@ function appReleaseUserPathMaturity() {
   };
 }
 
+function appOperatorDrilldownMaturity(drilldown: Record<string, unknown>) {
+  const summary = record(drilldown.summary);
+  const evidenceAfterContract = record(
+    record(drilldown.attention_first_payload).evidence_after_contract,
+  );
+  const lifecycleEvidence = record(evidenceAfterContract.memory_artifact_lifecycle_evidence);
+  const providerLongEvidenceReady =
+    booleanValue(summary.provider_slo_cadence_window_long_evidence_ready) === true;
+  const providerObservedReceiptCount =
+    numberValue(summary.provider_slo_cadence_window_observed_receipt_count);
+  const providerMissingReceiptCount =
+    numberValue(summary.provider_slo_cadence_window_missing_receipt_count);
+  const providerBlockedRepairReceiptCount =
+    numberValue(summary.provider_slo_cadence_window_blocked_repair_receipt_count);
+  const providerOpenCount = providerLongEvidenceReady ? 0 : 1;
+  const lifecycleObservedRefCount = numberValue(lifecycleEvidence.observed_ref_count);
+  const lifecycleReconcileIssueCount =
+    numberValue(lifecycleEvidence.lifecycle_reconcile_missing_ref_count)
+    + numberValue(lifecycleEvidence.lifecycle_reconcile_extra_ref_count)
+    + numberValue(lifecycleEvidence.lifecycle_reconcile_stale_ref_count);
+  const lifecycleOpenCount = lifecycleReconcileIssueCount > 0
+    ? lifecycleReconcileIssueCount
+    : lifecycleObservedRefCount > 0
+      ? 0
+      : 1;
+
+  return {
+    provider: {
+      openEvidenceCount: providerOpenCount,
+      status: providerOpenCount > 0
+        ? 'evidence_required'
+        : 'evidence_recorded_not_production_ready_claim',
+      longEvidenceReady: providerLongEvidenceReady,
+      cadenceWindowStatus: stringValue(summary.provider_slo_cadence_window_status),
+      observedReceiptCount: providerObservedReceiptCount,
+      expectedReceiptCount:
+        numberValue(summary.provider_slo_cadence_window_expected_receipt_count),
+      missingReceiptCount: providerMissingReceiptCount,
+      blockedRepairReceiptCount: providerBlockedRepairReceiptCount,
+      capabilityStatus: stringValue(summary.provider_slo_capability_status),
+    },
+    lifecycle: {
+      evidence: lifecycleEvidence,
+      openEvidenceCount: lifecycleOpenCount,
+      status: lifecycleOpenCount > 0
+        ? 'evidence_required'
+        : 'evidence_recorded_not_artifact_or_memory_ready_claim',
+      observedRefCount: lifecycleObservedRefCount,
+      reconcileIssueCount: lifecycleReconcileIssueCount,
+    },
+  };
+}
+
 function nextOwnerActions() {
   return [
     {
@@ -101,7 +155,7 @@ function nextOwnerActions() {
   ];
 }
 
-export function buildFrameworkOperatingMaturityReadout(
+export async function buildFrameworkOperatingMaturityReadout(
   contracts: FrameworkContracts,
   args: OperatingMaturityArgs,
 ) {
@@ -127,10 +181,18 @@ export function buildFrameworkOperatingMaturityReadout(
     buildBrandModuleL5Status(contracts).brand_module_l5_status,
   );
   const defaultCallers = buildAgentDefaultCallerReadinessReport(['--family-defaults']);
+  const runtimeSnapshot = await buildRuntimeTraySnapshot(contracts, {
+    appOperatorDrilldownDetailLevel: 'summary',
+    providerKind: 'temporal',
+  });
+  const appOperatorDrilldown = record(
+    record(runtimeSnapshot.runtime_tray_snapshot).app_operator_drilldown,
+  );
   const appReleaseUserPath = appReleaseUserPathMaturity();
+  const drilldownMaturity = appOperatorDrilldownMaturity(appOperatorDrilldown);
   const physicalDeleteAuthority = record(defaultCallers.physical_delete_authority_read_model);
-  const providerOpenCount = 0;
-  const lifecycleOpenCount = 0;
+  const providerOpenCount = drilldownMaturity.provider.openEvidenceCount;
+  const lifecycleOpenCount = drilldownMaturity.lifecycle.openEvidenceCount;
   const cleanupEvidenceWorklistCount = numberValue(defaultCallers.deletion_evidence_worklist_count);
   const cleanupOpenDecisionCount = numberValue(
     physicalDeleteAuthority.structural_prerequisites_observed_but_domain_owner_decision_missing_count,
@@ -168,9 +230,9 @@ export function buildFrameworkOperatingMaturityReadout(
         brand_module_l5_verified_receipt_count:
           numberValue(record(brandModuleL5.evidence_ledger).verified_receipt_count),
         app_release_user_path_open_count: appReleaseOpenCount,
-        provider_long_soak_open_count: null,
+        provider_long_soak_open_count: providerOpenCount,
         cleanup_retirement_open_decision_count: cleanupOpenDecisionCount,
-        memory_artifact_lifecycle_open_count: null,
+        memory_artifact_lifecycle_open_count: lifecycleOpenCount,
         ready_claim_authorized: false,
       },
       domain_owner_chain_scaleout: {
@@ -227,8 +289,16 @@ export function buildFrameworkOperatingMaturityReadout(
       },
       provider_long_soak: {
         source_command: SOURCE_COMMANDS.app_operator_drilldown,
-        status: providerOpenCount > 0 ? 'evidence_required' : 'evidence_required',
-        open_evidence_count: null,
+        status: drilldownMaturity.provider.status,
+        open_evidence_count: providerOpenCount,
+        cadence_window_status: drilldownMaturity.provider.cadenceWindowStatus,
+        long_evidence_ready: drilldownMaturity.provider.longEvidenceReady,
+        expected_receipt_count: drilldownMaturity.provider.expectedReceiptCount,
+        observed_receipt_count: drilldownMaturity.provider.observedReceiptCount,
+        missing_receipt_count: drilldownMaturity.provider.missingReceiptCount,
+        blocked_repair_receipt_count:
+          drilldownMaturity.provider.blockedRepairReceiptCount,
+        capability_status: drilldownMaturity.provider.capabilityStatus,
         accepted_refs_only_result_shapes: [
           'long_soak_ref',
           'recovery_ref',
@@ -264,8 +334,25 @@ export function buildFrameworkOperatingMaturityReadout(
       },
       memory_artifact_lifecycle: {
         source_command: SOURCE_COMMANDS.app_operator_drilldown,
-        status: 'evidence_required',
-        open_evidence_count: null,
+        status: drilldownMaturity.lifecycle.status,
+        open_evidence_count: lifecycleOpenCount,
+        lifecycle_evidence_status:
+          stringValue(drilldownMaturity.lifecycle.evidence.status),
+        observed_ref_count: drilldownMaturity.lifecycle.observedRefCount,
+        reconcile_issue_count: drilldownMaturity.lifecycle.reconcileIssueCount,
+        lifecycle_reconcile_missing_ref_count:
+          numberValue(drilldownMaturity.lifecycle.evidence.lifecycle_reconcile_missing_ref_count),
+        lifecycle_reconcile_extra_ref_count:
+          numberValue(drilldownMaturity.lifecycle.evidence.lifecycle_reconcile_extra_ref_count),
+        lifecycle_reconcile_stale_ref_count:
+          numberValue(drilldownMaturity.lifecycle.evidence.lifecycle_reconcile_stale_ref_count),
+        lifecycle_apply_handoff_attempt_count:
+          numberValue(drilldownMaturity.lifecycle.evidence.lifecycle_apply_handoff_attempt_count),
+        lifecycle_apply_handoff_blocked_decision_count:
+          numberValue(drilldownMaturity.lifecycle.evidence.lifecycle_apply_handoff_blocked_decision_count),
+        lifecycle_apply_handoff_safe_decision_count:
+          numberValue(drilldownMaturity.lifecycle.evidence.lifecycle_apply_handoff_safe_decision_count),
+        lifecycle_blockers_count_as_missing_evidence: false,
         accepted_refs_only_result_shapes: [
           'memory_receipt_ref',
           'artifact_mutation_receipt_ref',

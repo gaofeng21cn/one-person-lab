@@ -233,7 +233,7 @@ export function buildPublicCommandSpecs(
         'Aggregate domain owner-chain scaleout, L5, App release, provider long-soak, cleanup, and lifecycle evidence gaps without claiming readiness.',
       examples: ['opl framework operating-maturity --family-defaults --json'],
       group: 'framework',
-      handler: (args) => {
+      handler: async (args) => {
         if (args.length !== 1 || args[0] !== '--family-defaults') {
           throw buildUsageError(
             'framework operating-maturity requires --family-defaults.',
@@ -243,7 +243,7 @@ export function buildPublicCommandSpecs(
             },
           );
         }
-        return buildFrameworkOperatingMaturityReadout(getContracts(), { familyDefaults: true });
+        return await buildFrameworkOperatingMaturityReadout(getContracts(), { familyDefaults: true });
       },
     },
     'framework production-closeout': {
