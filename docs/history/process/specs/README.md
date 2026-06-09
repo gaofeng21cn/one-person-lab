@@ -18,16 +18,15 @@ Machine boundary: 本目录只保留人读历史 design-spec provenance。机器
 - [Domain-Agent Admission Contract](../../../specs/opl-domain-onboarding-contract.md)
 - [OPL stage-led agent framework roadmap](../../../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md)
 
-## Historical Specs
+## Historical Spec Themes
 
-| File | Historical role | Current owner |
+| Theme | Covered history body | Current owner / readout |
 | --- | --- | --- |
-| `2026-04-02-bilingual-homepage-and-core-docs-design.md` | 早期公开 README / public docs 双语化设计记录。 | 当前 public surface 以 root `README*`、`docs/README.md`、`docs/public/` 和核心五件套为准。 |
-| `2026-04-06-med-auto-grant-top-level-design.md` | MAG 独立仓拆分前的顶层设计迁移说明。 | MAG domain truth 归 `med-autogrant` 独立仓；OPL 只保留 domain admission / projection / framework refs。 |
-| `2026-04-07-unified-harness-engineering-substrate-design.md` | UHS / Gateway / Domain Harness OS 早期命名分层设计。 | 当前分层归核心五件套、runtime naming boundary、domain onboarding 与 active roadmap。 |
-| `2026-04-12-opl-frontdoor-and-family-entry-design.md` | frontdoor / Hermes handoff / lightweight entry 早期设计。 | 当前入口归 `opl` / Codex-default runtime / activation layer / provider-backed stage runtime / App projection。 |
-| `2026-04-20-opl-product-api-and-domain-agent-boundary-design.md` | Product API 资源模型与 domain-agent 边界形成过程。 | 当前 product/runtime/domain 边界归核心五件套、active docs、runtime/support specs 和 contracts。 |
-| `2026-04-21-opl-acp-native-runtime-and-shell-projection-design.md` | ACP-native session runtime 与 shell projection 形成过程。 | 当前 session/runtime/App/shell 边界归 core docs、runtime naming boundary、App repo contracts 和 live read-model。 |
+| Public docs and README surface formation | 2026-04 bilingual homepage / core docs design. | Current public surface belongs to root `README*`, `docs/README.md`, `docs/public/` and the core five docs. Historical bilingual rollout wording is provenance only. |
+| Domain admission and MAG pre-split design | 2026-04 MAG top-level design before independent repo split. | MAG domain truth belongs to the `med-autogrant` repo. OPL keeps only domain admission, projection, framework refs and cross-repo owner boundaries. |
+| Runtime, product and shell boundary formation | UHS / Gateway / Domain Harness OS design, frontdoor / Hermes handoff design, Product API / domain-agent boundary design and ACP-native runtime / shell projection design. | Current runtime/product/domain/App boundaries return to the core five docs, active docs, `docs/runtime/`, `docs/product/`, active specs, contracts/source/tests and live read-model. Gateway, frontdoor, Product API, ACP, Domain Harness OS, Hermes and GUI shell wording stays historical design context unless current machine surfaces re-authorize it. |
+
+This index does not maintain a file-by-file current-owner table. Exact historical spec files remain in this directory for provenance and searchability; use the original file or git history only when the compact theme row is insufficient. If an old design decision is still current, fold it into the current owner doc, active support doc or machine-readable contract first.
 
 ## Tombstone Rules
 
