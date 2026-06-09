@@ -113,4 +113,4 @@ Dated coverage entries that previously lived in this active support document hav
 
 Current docs-governance truth remains in `docs/docs_portfolio_consolidation.md`, `docs/active/current-state-vs-ideal-gap.md`, the core five docs, and live contracts/source/CLI/read-model output. This file now keeps only the current development-document portfolio map, role assignment rules, retirement rules, and the pointer to historical coverage provenance.
 
-Do not append future tranche logs here. New dated docs-governance coverage ledgers belong in `docs/history/process/plans/` or the relevant repo-local history ledger, with only durable conclusions folded back into active owner docs.
+Do not append future tranche logs here. New docs-governance records must be compact topic-level provenance, not dated ledger chains for frozen inventory, doctor transcripts, branch/worktree state or command output. Durable conclusions fold back into active owner docs, contracts/source/tests/read-model or the relevant repo-local process index; historical detail stays in git history.
