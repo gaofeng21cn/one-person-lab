@@ -74,6 +74,35 @@ function defaultExecutorPayload(sourceFingerprint: string) {
   };
 }
 
+function currentControlAdmissionPayload(input: {
+  sourceFingerprint: string;
+  truthEpoch: string;
+  runtimeHealthEpoch: string;
+  sourceEvalId: string;
+}) {
+  const workUnitFingerprint = input.sourceFingerprint;
+  return {
+    ...defaultExecutorPayload(input.sourceFingerprint),
+    action_type: 'return_to_ai_reviewer_workflow',
+    dispatch_authority: 'ai_reviewer_record_production_handoff',
+    next_executable_owner: 'ai_reviewer',
+    work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+    work_unit_fingerprint: workUnitFingerprint,
+    action_fingerprint: workUnitFingerprint,
+    provider_admission_identity: {
+      status: 'provider_admission_pending',
+      action_fingerprint: workUnitFingerprint,
+    },
+    owner_route_currentness_basis: {
+      work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+      work_unit_fingerprint: workUnitFingerprint,
+      truth_epoch: input.truthEpoch,
+      runtime_health_epoch: input.runtimeHealthEpoch,
+      source_eval_id: input.sourceEvalId,
+    },
+  };
+}
+
 function readinessSurfacePayload(sourceFingerprint: string) {
   return {
     ...defaultExecutorPayload(sourceFingerprint),
@@ -438,6 +467,117 @@ test('family-runtime tick does not re-admit a MAS default executor task after ac
         reconcileEvents[0].payload.authority_boundary.provider_stage_attempt_started,
         false,
       );
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime tick does not reconcile old completed closeout over fresh MAS current-control admission', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const taskId = 'task-mas-current-control-fresh-after-old-closeout';
+      const createdAt = '2026-06-08T16:55:00.000Z';
+      const stalePayload = currentControlAdmissionPayload({
+        sourceFingerprint: 'sha256:stable-current-control-work-unit',
+        truthEpoch: 'truth-event-000029-old',
+        runtimeHealthEpoch: 'runtime-health-event-006474-old',
+        sourceEvalId: 'publication-eval::old',
+      });
+      const freshPayload = currentControlAdmissionPayload({
+        sourceFingerprint: 'sha256:stable-current-control-work-unit',
+        truthEpoch: 'truth-event-000030-fresh',
+        runtimeHealthEpoch: 'runtime-health-event-006488-fresh',
+        sourceEvalId: 'publication-eval::fresh',
+      });
+      db.prepare(`
+        INSERT INTO tasks(
+          task_id, domain_id, task_kind, payload_json, dedupe_key, priority, status,
+          attempts, max_attempts, source, requires_approval, approved_at, lease_owner,
+          lease_expires_at, last_error, dead_letter_reason, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        taskId,
+        'medautoscience',
+        'domain_owner/default-executor-dispatch',
+        JSON.stringify(stalePayload),
+        'mas:dm-cvd:002:default-executor:return_to_ai_reviewer_workflow:fresh-after-old-closeout',
+        95,
+        'queued',
+        0,
+        3,
+        'opl-current-control-provider-admission',
+        0,
+        null,
+        null,
+        null,
+        null,
+        null,
+        createdAt,
+        createdAt,
+      );
+      const staleRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as FamilyRuntimeTaskRow;
+      const completedAttempt = ensureProviderHostedStageAttempt(db, staleRow, stalePayload);
+      assert.ok(completedAttempt);
+      ingestStageAttemptCloseout(db, {
+        stageAttemptId: completedAttempt.stage_attempt_id,
+        packet: {
+          surface_kind: 'stage_attempt_closeout_packet',
+          closeout_refs: ['closeout:old-current-control'],
+          consumed_refs: ['dispatch:old-current-control'],
+          consumed_memory_refs: [],
+          writeback_receipt_refs: ['receipt:old-current-control'],
+          rejected_writes: [],
+          next_owner: 'ai_reviewer',
+          domain_ready_verdict: 'read_from_mas_publication_or_gate_surface',
+          route_impact: {
+            decision: 'domain_owner_refs_ready',
+          },
+        },
+      });
+      db.prepare(`
+        UPDATE tasks
+        SET payload_json = ?, status = 'queued', attempts = 0, lease_owner = NULL,
+          lease_expires_at = NULL, last_error = NULL, dead_letter_reason = NULL
+        WHERE task_id = ?
+      `).run(JSON.stringify(freshPayload), taskId);
+
+      let dispatchCount = 0;
+      const tick = await runFamilyRuntimeQueueTick<TickDispatch>(db, familyRuntimePaths(), {
+        source: 'test-current-control-fresh-after-old-closeout',
+        limit: 2,
+        hydrate: false,
+        taskScope: {
+          domainId: 'medautoscience',
+          taskKind: 'domain_owner/default-executor-dispatch',
+          payloadMatches: [{
+            path: 'study_id',
+            value: '002-dm-china-us-mortality-attribution',
+          }],
+        },
+      }, {
+        enqueueTask: () => ({ accepted: false }),
+        queryTemporalStageAttempt: async () => {
+          throw new Error('old completed closeout should not require Temporal query');
+        },
+        dispatchTask: (_db, _paths, selectedRow: FamilyRuntimeTaskRow) => {
+          dispatchCount += 1;
+          return { task_id: selectedRow.task_id };
+        },
+      });
+      const task = db.prepare('SELECT status FROM tasks WHERE task_id = ?').get(taskId) as { status: string };
+      const reconcileEvents = listEvents(db).filter((event) =>
+        event.event_type === 'task_default_executor_completed_closeout_reconciled'
+      );
+
+      assert.equal(tick.selected_count, 1);
+      assert.equal(tick.mas_default_executor_completed_closeout_reconciled_count, 0);
+      assert.equal(dispatchCount, 1);
+      assert.equal(task.status, 'queued');
+      assert.equal(reconcileEvents.length, 0);
     });
   } finally {
     db.close();

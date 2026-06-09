@@ -368,6 +368,183 @@ function validStageTransitionAuthorityBoundary(value: unknown) {
     && value.agent_lab_output_counts_as_stage_transition === false;
 }
 
+function providerObservationBoundaryFromCurrentControl() {
+  return {
+    producer_kind: 'runtime_provider',
+    intent_kind: 'provider_observation',
+    stage_transition_authority: 'one-person-lab',
+    intent_can_write_stage_current_pointer: false,
+    intent_can_write_stage_run_terminal_state: false,
+    intent_can_publish_current_owner_delta: false,
+    intent_can_write_domain_truth: false,
+    intent_can_create_owner_receipt: false,
+    intent_can_create_typed_blocker: false,
+    provider_completion_counts_as_stage_transition: false,
+    read_model_update_counts_as_stage_transition: false,
+    worklist_update_counts_as_stage_transition: false,
+    evidence_event_counts_as_stage_transition: false,
+    agent_lab_output_counts_as_stage_transition: false,
+  };
+}
+
+function currentControlCurrentnessBasis(input: {
+  currentControl: Record<string, unknown>;
+  action: Record<string, unknown>;
+  ownerRoute: Record<string, unknown> | null;
+  workUnitId: string;
+  workUnitFingerprint: string;
+}) {
+  const contract = isRecord(input.ownerRoute?.currentness_contract)
+    ? input.ownerRoute.currentness_contract
+    : null;
+  const basis = isRecord(contract?.basis) ? contract.basis : {};
+  const digestBasis = isRecord(input.ownerRoute?.currentness_digest_basis)
+    ? input.ownerRoute.currentness_digest_basis
+    : null;
+  return {
+    schema_version: input.currentControl.schema_version ?? null,
+    surface: optionalString(input.currentControl.surface),
+    generated_at: optionalString(input.currentControl.generated_at),
+    work_unit_id: optionalString(basis.work_unit_id) ?? input.workUnitId,
+    work_unit_fingerprint: optionalString(basis.work_unit_fingerprint) ?? input.workUnitFingerprint,
+    truth_epoch: optionalString(input.ownerRoute?.truth_epoch) ?? optionalString(basis.truth_epoch),
+    runtime_health_epoch:
+      optionalString(input.ownerRoute?.runtime_health_epoch) ?? optionalString(basis.runtime_health_epoch),
+    source_eval_id: optionalString(basis.source_eval_id),
+    ...(digestBasis ? { currentness_digest_basis: digestBasis } : {}),
+  };
+}
+
+function currentControlProviderAdmissionCandidateFromActionQueueItem(
+  currentControl: Record<string, unknown>,
+  action: Record<string, unknown>,
+) {
+  const handoff = isRecord(action.handoff_packet) ? action.handoff_packet : {};
+  const ownerRoute = isRecord(handoff.owner_route)
+    ? handoff.owner_route
+    : isRecord(action.owner_route)
+      ? action.owner_route
+      : null;
+  const protocol = isRecord(ownerRoute?.owner_route_attempt_protocol)
+    ? ownerRoute.owner_route_attempt_protocol
+    : null;
+  const authorityBoundary = isRecord(protocol?.authority_boundary) ? protocol.authority_boundary : null;
+  const completionBoundary = isRecord(protocol?.completion_boundary) ? protocol.completion_boundary : null;
+  const runtimeCompletionGuard = isRecord(protocol?.runtime_completion_guard)
+    ? protocol.runtime_completion_guard
+    : null;
+  const oplOwns = Array.isArray(authorityBoundary?.opl_owns)
+    ? authorityBoundary.opl_owns
+    : [];
+  if (
+    protocol?.dispatchable !== true
+    || !oplOwns.includes('queue')
+    || !oplOwns.includes('attempt')
+    || completionBoundary?.provider_completion_is_domain_ready !== false
+    || runtimeCompletionGuard?.provider_completion_is_domain_completion !== false
+  ) {
+    return null;
+  }
+  const studyId = optionalString(action.study_id) ?? optionalString(handoff.study_id) ?? optionalString(ownerRoute?.study_id);
+  const actionType = optionalString(action.action_type) ?? optionalString(handoff.action_type);
+  const workUnitId = optionalString(action.controller_work_unit_id)
+    ?? optionalString(action.executable_work_unit)
+    ?? optionalString(action.next_work_unit)
+    ?? optionalString(isRecord(ownerRoute?.currentness_contract)
+      && isRecord(ownerRoute.currentness_contract.basis)
+      ? ownerRoute.currentness_contract.basis.work_unit_id
+      : null);
+  const workUnitFingerprint = optionalString(action.work_unit_fingerprint)
+    ?? optionalString(ownerRoute?.work_unit_fingerprint)
+    ?? optionalString(isRecord(ownerRoute?.currentness_contract)
+      && isRecord(ownerRoute.currentness_contract.basis)
+      ? ownerRoute.currentness_contract.basis.work_unit_fingerprint
+      : null)
+    ?? optionalString(action.action_fingerprint);
+  const nextOwner = optionalString(handoff.next_executable_owner)
+    ?? optionalString(handoff.owner)
+    ?? optionalString(action.owner)
+    ?? optionalString(action.recommended_owner)
+    ?? optionalString(ownerRoute?.next_owner);
+  if (!studyId || !actionType || !workUnitId || !workUnitFingerprint || !nextOwner) {
+    return null;
+  }
+  const actionFingerprint = optionalString(action.action_fingerprint) ?? workUnitFingerprint;
+  const sourceFingerprint = optionalString(action.source_fingerprint)
+    ?? optionalString(ownerRoute?.source_fingerprint)
+    ?? actionFingerprint;
+  return {
+    ...action,
+    status: 'provider_admission_pending',
+    owner_route_current: true,
+    study_id: studyId,
+    quest_id: optionalString(handoff.quest_id) ?? optionalString(ownerRoute?.quest_id) ?? studyId,
+    action_type: actionType,
+    work_unit_id: workUnitId,
+    work_unit_fingerprint: workUnitFingerprint,
+    action_fingerprint: actionFingerprint,
+    source_fingerprint: sourceFingerprint,
+    dispatch_authority: optionalString(action.dispatch_authority) ?? 'opl_current_control_state_handoff',
+    next_executable_owner: nextOwner,
+    provider_attempt_or_lease_required: true,
+    provider_completion_is_domain_completion: false,
+    stage_transition_authority_boundary: providerObservationBoundaryFromCurrentControl(),
+    required_output_surface: optionalString(action.required_output_surface),
+    idempotency_key: optionalString(handoff.idempotency_key) ?? optionalString(ownerRoute?.idempotency_key),
+    currentness_basis: currentControlCurrentnessBasis({
+      currentControl,
+      action,
+      ownerRoute,
+      workUnitId,
+      workUnitFingerprint,
+    }),
+    provider_admission_schema_source: 'action_queue',
+  };
+}
+
+function nestedCurrentControlActionItems(currentControl: Record<string, unknown>) {
+  const items: unknown[] = [];
+  if (Array.isArray(currentControl.action_queue)) {
+    items.push(...currentControl.action_queue);
+  }
+  const studies = currentControl.studies;
+  const studyRecords = Array.isArray(studies)
+    ? studies
+    : isRecord(studies)
+      ? Object.values(studies)
+      : [];
+  for (const study of studyRecords) {
+    if (!isRecord(study)) {
+      continue;
+    }
+    if (Array.isArray(study.action_queue)) {
+      items.push(...study.action_queue);
+    }
+    if (Array.isArray(study.provider_admission_candidates)) {
+      items.push(...study.provider_admission_candidates);
+    }
+  }
+  return items;
+}
+
+function currentControlProviderAdmissionCandidates(currentControl: Record<string, unknown>) {
+  const rootCandidates = Array.isArray(currentControl.provider_admission_candidates)
+    ? currentControl.provider_admission_candidates
+    : [];
+  if (rootCandidates.length > 0) {
+    return rootCandidates;
+  }
+  return nestedCurrentControlActionItems(currentControl).map((item) => {
+    if (!isRecord(item)) {
+      return item;
+    }
+    if (optionalString(item.status) === 'provider_admission_pending') {
+      return item;
+    }
+    return currentControlProviderAdmissionCandidateFromActionQueueItem(currentControl, item) ?? item;
+  });
+}
+
 function currentControlProviderAdmissionInputFrom(
   domainId: FamilyRuntimeDomainId,
   candidate: Record<string, unknown>,
@@ -440,6 +617,9 @@ function currentControlProviderAdmissionInputFrom(
         provider_attempt_or_lease_required: candidate.provider_attempt_or_lease_required !== false,
         provider_completion_is_domain_completion: false,
         stage_transition_authority_boundary: candidate.stage_transition_authority_boundary,
+        ...(optionalString(candidate.provider_admission_schema_source)
+          ? { provider_admission_schema_source: optionalString(candidate.provider_admission_schema_source) }
+          : {}),
         ...(optionalString(candidate.required_output_surface)
           ? { required_output_surface: optionalString(candidate.required_output_surface) }
           : {}),
@@ -484,9 +664,7 @@ function currentControlProviderAdmissionInputs(
       blocked: [{ reason: 'invalid_current_control_state', task: { ref: currentControlRef } }],
     };
   }
-  const candidates = Array.isArray(currentControl.provider_admission_candidates)
-    ? currentControl.provider_admission_candidates
-    : [];
+  const candidates = currentControlProviderAdmissionCandidates(currentControl);
   const inputs: EnqueueInput[] = [];
   const blocked: Array<{ reason: string; task: unknown }> = [];
   for (const candidate of candidates) {

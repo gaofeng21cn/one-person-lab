@@ -20,6 +20,10 @@ import {
   isMasReadinessStageNativeOwnerAction,
   stageAttemptPayloadHasMasStageNativeOwnerAnswer,
 } from '../family-runtime-mas-stage-native-owner-answer.ts';
+import {
+  providerAdmissionCurrentnessIdentity,
+  sameProviderAdmissionCurrentnessIdentity,
+} from '../family-runtime-mas-current-control-admission-currentness.ts';
 
 export const DEFAULT_EXECUTOR_SUPERSEDED_REASON = 'mas_default_executor_superseded_by_current_source';
 
@@ -226,6 +230,17 @@ function completedCloseoutCanReconcileTask(
   payload: Record<string, unknown>,
   attempt: NonNullable<ReturnType<typeof completedAcceptedAttemptForTask>>,
 ) {
+  const payloadIdentity = providerAdmissionCurrentnessIdentity(payload);
+  if (payloadIdentity) {
+    const attemptIdentity = providerAdmissionCurrentnessIdentity(
+      attempt.workspace_locator,
+      { requirePendingStatus: false },
+    );
+    return Boolean(
+      attemptIdentity
+      && sameProviderAdmissionCurrentnessIdentity(attemptIdentity, payloadIdentity),
+    );
+  }
   if (!isMasReadinessStageNativeOwnerAction(row, payload)) {
     return true;
   }

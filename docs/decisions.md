@@ -167,6 +167,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - tick 返回 `mas_default_executor_completed_closeout_reconciled_count`，让 operator 区分“终端 closeout 已吸收重复 queued residue”和“仍有真实 ready owner action”。
 - 该行为只治理 OPL queue / attempt ledger currentness，不写 MAS truth、不生成 owner receipt、不创建 typed blocker、不声明 domain ready、publication ready、artifact ready 或 package/current manuscript 已刷新。
 
+### 决策：MAS current-control handoff admission 可从 nested action queue 归一化
+
+原因：MAS current-control surface 已从 root `provider_admission_candidates[]` 演进出 `opl_current_control_state_handoff`，其当前 provider admission 候选可能位于 root `action_queue[]` 或 per-study `action_queue[]`，并通过 `handoff_packet.owner_route.owner_route_attempt_protocol` 声明 OPL 只拥有 queue / attempt / retry / dead-letter / provider liveness。若 OPL 只读取 root candidates，会把当前 MAS owner route 静默投影成无任务，导致 terminal provider admission 或旧 sidecar task 残留继续遮蔽 fresh owner delta。
+
+- `family-runtime hydrate/intake` 继续优先消费 root `provider_admission_candidates[]`；当 root candidates 缺失时，允许从 `action_queue[]` 和 per-study `action_queue[]` 归一化 provider admission candidate。
+- nested handoff 只有在 owner-route attempt protocol 明确 `opl_owns` 包含 queue / attempt、`provider_completion_is_domain_ready=false` 且 runtime completion guard 声明 `provider_completion_is_domain_completion=false` 时才能入队；否则不得把普通 action queue 项当成 provider admission。
+- 归一化 payload 必须保留 MAS currentness basis，包括 `generated_at`、`work_unit_id`、`work_unit_fingerprint`、`truth_epoch`、`runtime_health_epoch`、可用 digest 和 source fingerprint；OPL 只把这些字段作为 queue/attempt currentness identity 使用。
+- 同一 dedupe / study / work unit 已存在 `succeeded` MAS default-executor admission 时，完全相同 currentness identity 必须保持幂等；若 MAS 以新的 generation、fingerprint、truth/runtime epoch 或 digest 导出 fresh admission，OPL 可以把 terminal row 重新置为 queued 以启动新的 provider transport。
+- 该规则只治理 OPL queue / attempt / provider transport rehydrate，不写 MAS study truth、不生成 MAS owner receipt 或 typed blocker、不刷新 publication eval / artifact gate / paper package，也不把 provider completion 解释为 domain completion。
+
 ### 决策：App state 的 MAS activity 不能把 active_run_id 单独算作实际运行
 
 原因：DM002/DM003 Progress-first 监督暴露出 `active_run_id`、queued/escalated 状态或质量修复队列本身不足以证明论文线正在产生实质进展。Operator 读面如果把这些信号直接归入 active projects，会再次掩盖 provider/worker liveness、owner delta admission 或 typed blocker 的真实状态。
