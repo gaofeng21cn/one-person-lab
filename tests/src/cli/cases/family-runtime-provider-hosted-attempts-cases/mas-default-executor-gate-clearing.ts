@@ -33,7 +33,7 @@ test('family-runtime derives MAS default executor stage packet from dispatch pat
   try {
     withIsolatedFamilyRuntimeEnv(() => {
       createQueueTables(db);
-      const payload = {
+      const payload: Record<string, unknown> = {
         ...gateClearingDefaultExecutorPayload('source-gate-clearing-dispatch-path'),
         workspace_root: workspaceRoot,
         dispatch_path: `${workspaceRoot}/${dispatchRef}`,
@@ -126,6 +126,56 @@ test('family-runtime admits MAS gate-clearing default executor dispatch as Codex
       assert.equal(attempt.workspace_locator.action_type, 'run_gate_clearing_batch');
       assert.deepEqual(attempt.checkpoint_refs, [payload.dispatch_ref]);
       assert.equal(attempts.length, 1);
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime admits a new MAS gate-clearing work unit after stale attempt is superseded', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    withIsolatedFamilyRuntimeEnv(() => {
+      createQueueTables(db);
+      const stalePayload = gateClearingDefaultExecutorPayload('source-gate-clearing-stale');
+      const currentPayload = gateClearingDefaultExecutorPayload('source-gate-clearing-current');
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-gate-clearing-source-advance',
+        payload: stalePayload,
+        dedupeKey: 'mas:dm-cvd:003:default-executor:run_gate_clearing_batch:source-advance',
+      });
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(
+        'task-mas-default-gate-clearing-source-advance',
+      );
+      const staleRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-gate-clearing-source-advance',
+      ) as Parameters<typeof ensureProviderHostedStageAttempt>[1];
+      const staleAttempt = ensureProviderHostedStageAttempt(db, staleRow, stalePayload);
+      assert.ok(staleAttempt);
+      db.prepare(`
+        UPDATE stage_attempts
+        SET status = 'blocked',
+          blocked_reason = 'mas_default_executor_superseded_by_current_source',
+          provider_run_json = json_set(provider_run_json, '$.provider_status', 'blocked')
+        WHERE stage_attempt_id = ?
+      `).run(
+        staleAttempt.stage_attempt_id,
+      );
+      db.prepare("UPDATE tasks SET payload_json = ? WHERE task_id = ?").run(
+        JSON.stringify(currentPayload),
+        'task-mas-default-gate-clearing-source-advance',
+      );
+      const currentRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-gate-clearing-source-advance',
+      ) as Parameters<typeof ensureProviderHostedStageAttempt>[1];
+      const currentAttempt = ensureProviderHostedStageAttempt(db, currentRow, currentPayload);
+      const attempts = listStageAttemptsForTask(db, 'task-mas-default-gate-clearing-source-advance');
+
+      assert.ok(currentAttempt);
+      assert.notEqual(currentAttempt.stage_attempt_id, staleAttempt.stage_attempt_id);
+      assert.equal(currentAttempt.workspace_locator.domain_source_fingerprint, 'source-gate-clearing-current');
+      assert.equal(staleAttempt.workspace_locator.domain_source_fingerprint, 'source-gate-clearing-stale');
+      assert.equal(attempts.length, 2);
     });
   } finally {
     db.close();

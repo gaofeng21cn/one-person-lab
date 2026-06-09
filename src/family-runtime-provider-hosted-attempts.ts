@@ -167,6 +167,7 @@ const DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES = new Set(['queued', 'running', 'ch
 const DEFAULT_EXECUTOR_CROSS_TASK_STARTED_ATTEMPT_STATUSES = new Set(['running', 'checkpointed', 'human_gate']);
 const DEFAULT_EXECUTOR_CROSS_TASK_LIVE_TASK_STATUSES = new Set(['queued', 'running', 'retry_waiting', 'succeeded']);
 const DEFAULT_EXECUTOR_TERMINAL_PROVIDER_STATUSES = new Set(['completed', 'failed', 'blocked', 'timed_out']);
+const DEFAULT_EXECUTOR_SUPERSEDED_REASON = 'mas_default_executor_superseded_by_current_source';
 const DEFAULT_EXECUTOR_TASK_LEASE_MS = 5 * 60 * 1000;
 
 function hasActiveDefaultExecutorTaskLease(db: DatabaseSync, taskId: string | null) {
@@ -215,6 +216,9 @@ function liveDefaultExecutorAttemptBlocksCandidate(
   candidateRow: FamilyRuntimeTaskRow,
   candidatePayload: Record<string, unknown>,
 ) {
+  if (attempt.blocked_reason === DEFAULT_EXECUTOR_SUPERSEDED_REASON) {
+    return false;
+  }
   if (
     optionalString(candidatePayload.action_type) === 'run_quality_repair_batch'
     && isMasReadinessStageNativeOwnerAction(
@@ -228,8 +232,9 @@ function liveDefaultExecutorAttemptBlocksCandidate(
   ) {
     return false;
   }
-  return isSameDefaultExecutorDispatch(attempt.workspace_locator, workspaceLocatorForProviderHostedTask(candidateRow, candidatePayload))
-    || isSameDefaultExecutorStudyStage(attempt.workspace_locator, workspaceLocatorForProviderHostedTask(candidateRow, candidatePayload));
+  const candidateLocator = workspaceLocatorForProviderHostedTask(candidateRow, candidatePayload);
+  return isSameDefaultExecutorDispatch(attempt.workspace_locator, candidateLocator)
+    || isSameDefaultExecutorStudyStage(attempt.workspace_locator, candidateLocator);
 }
 
 function hasLiveDefaultExecutorLinkedTask(db: DatabaseSync, taskId: string | null) {
@@ -748,7 +753,9 @@ export function ensureProviderHostedStageAttempt(
   const stageId = stageIdForProviderHostedTask(row, payload);
   const workspaceLocator = workspaceLocatorForProviderHostedTask(row, payload);
   if (!options.newAttempt && isDefaultExecutorDispatchTask(row, payload) && existingAttempts.some((attempt) => (
-    attempt.provider_kind === providerKind && DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES.has(attempt.status)
+    attempt.provider_kind === providerKind
+      && DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES.has(attempt.status)
+      && attempt.blocked_reason !== DEFAULT_EXECUTOR_SUPERSEDED_REASON
   ))) {
     return null;
   }
