@@ -158,6 +158,28 @@ function currentControlActionQueueItem(input: {
   };
 }
 
+function writeDefaultExecutorDispatchPacket(workspaceRoot: string, studyId: string, actionType: string) {
+  const ref = [
+    'studies',
+    studyId,
+    'artifacts',
+    'supervision',
+    'consumer',
+    'default_executor_dispatches',
+    `${actionType}.json`,
+  ].join('/');
+  const packetPath = path.join(workspaceRoot, ref);
+  fs.mkdirSync(path.dirname(packetPath), { recursive: true });
+  fs.writeFileSync(packetPath, JSON.stringify({
+    surface_kind: 'mas_default_executor_dispatch_request',
+    study_id: studyId,
+    quest_id: studyId,
+    action_type: actionType,
+    profile: 'dm-cvd',
+  }), 'utf8');
+  return ref;
+}
+
 function currentControlAdmissionPayload(
   sourceFingerprint: string,
   generation: string,
@@ -506,6 +528,16 @@ test('family-runtime intake admits MAS current-control handoff action_queue prov
     'opl_current_control_state',
     'latest.json',
   );
+  const dm002DispatchRef = writeDefaultExecutorDispatchPacket(
+    workspaceRoot,
+    '002-dm-china-us-mortality-attribution',
+    'return_to_ai_reviewer_workflow',
+  );
+  const dm003DispatchRef = writeDefaultExecutorDispatchPacket(
+    workspaceRoot,
+    '003-dpcc-primary-care-phenotype-treatment-gap',
+    'return_to_ai_reviewer_workflow',
+  );
   fs.mkdirSync(path.dirname(currentControlPath), { recursive: true });
   fs.writeFileSync(currentControlPath, JSON.stringify({
     surface: 'opl_current_control_state_handoff',
@@ -574,6 +606,10 @@ test('family-runtime intake admits MAS current-control handoff action_queue prov
     assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].source, 'opl-current-control-provider-admission');
     assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.provider_admission_schema_source, 'action_queue');
     assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.source_fingerprint, 'truth-snapshot::dm002-handoff');
+    assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.dispatch_ref, dm002DispatchRef);
+    assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.stage_packet_ref, dm002DispatchRef);
+    assert.deepEqual(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.checkpoint_refs, [dm002DispatchRef]);
+    assert.deepEqual(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.stage_packet_refs, [dm002DispatchRef]);
     assert.equal(
       tasksByStudy['002-dm-china-us-mortality-attribution'].payload.owner_route_currentness_basis.truth_epoch,
       'truth-event-000040',
@@ -583,6 +619,72 @@ test('family-runtime intake admits MAS current-control handoff action_queue prov
       false,
     );
     assert.equal(tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.work_unit_fingerprint, 'sha256:handoff-dm003');
+    assert.equal(tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.dispatch_ref, dm003DispatchRef);
+    assert.equal(tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.stage_packet_ref, dm003DispatchRef);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime intake blocks current-control action_queue provider candidates without a stage packet ref', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-action-queue-missing-packet-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-action-queue-missing-packet-'));
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  const exportPath = path.join(fixtureRoot, 'export');
+  const currentControlPath = path.join(
+    workspaceRoot,
+    'runtime',
+    'artifacts',
+    'supervision',
+    'opl_current_control_state',
+    'latest.json',
+  );
+  fs.mkdirSync(path.dirname(currentControlPath), { recursive: true });
+  fs.writeFileSync(currentControlPath, JSON.stringify({
+    surface: 'opl_current_control_state_handoff',
+    schema_version: 1,
+    generated_at: '2026-06-08T15:37:31+00:00',
+    action_queue: [
+      currentControlActionQueueItem({
+        studyId: '002-dm-china-us-mortality-attribution',
+        actionType: 'return_to_ai_reviewer_workflow',
+        workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+        workUnitFingerprint: 'sha256:handoff-dm002',
+        sourceFingerprint: 'truth-snapshot::dm002-handoff',
+        truthEpoch: 'truth-event-000040',
+        runtimeHealthEpoch: 'runtime-health-event-006692',
+      }),
+    ],
+  }), 'utf8');
+  writeJsonEmitterScript(exportPath, {
+    surface_kind: 'mas_family_domain_handler_export',
+    workspace: {
+      workspace_root: workspaceRoot,
+      workspace_exists: true,
+    },
+    pending_family_tasks: [],
+  });
+  const env = familyRuntimeEnv(stateRoot, {
+    OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+  });
+  try {
+    const intake = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+    ], env);
+    const queue = runCli(['family-runtime', 'queue', 'list'], env);
+
+    assert.equal(intake.family_runtime_intake.enqueued_count, 0);
+    assert.equal(intake.family_runtime_intake.blocked_count, 1);
+    assert.equal(intake.family_runtime_intake.exports[0].exported_count, 1);
+    assert.equal(
+      intake.family_runtime_intake.exports[0].blocked[0].reason,
+      'current_control_provider_admission_stage_packet_ref_missing',
+    );
+    assert.equal(queue.family_runtime_queue.tasks.length, 0);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

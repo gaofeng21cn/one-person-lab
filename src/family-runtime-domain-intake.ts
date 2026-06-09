@@ -315,6 +315,27 @@ function currentControlStagePacketRefs(input: {
   ]);
 }
 
+function defaultExecutorDispatchRefByConvention(input: {
+  workspaceRoot: string | null;
+  studyId: string;
+  actionType: string;
+}) {
+  if (!input.workspaceRoot) {
+    return null;
+  }
+  const ref = [
+    'studies',
+    input.studyId,
+    'artifacts',
+    'supervision',
+    'consumer',
+    'default_executor_dispatches',
+    `${input.actionType}.json`,
+  ].join('/');
+  const filePath = path.join(input.workspaceRoot, ref);
+  return fs.existsSync(filePath) ? ref : null;
+}
+
 function providerAdmissionSourceRefs(input: {
   candidate: Record<string, unknown>;
   currentControlRef: string;
@@ -597,13 +618,22 @@ function currentControlProviderAdmissionInputFrom(
     ?? 'consumer_default_executor_dispatch';
   const dispatchPath = optionalString(candidate.dispatch_path);
   const dispatchRef = optionalString(candidate.dispatch_ref)
-    ?? workspaceRelativeRef(dispatchPath, workspaceRoot);
+    ?? workspaceRelativeRef(dispatchPath, workspaceRoot)
+    ?? defaultExecutorDispatchRefByConvention({ workspaceRoot, studyId, actionType });
   const stagePacketRefs = currentControlStagePacketRefs({
     candidate,
     workspaceRoot,
     dispatchRef,
   });
   const stagePacketRef = stagePacketRefs[0] ?? null;
+  if (!stagePacketRef && (optionalString(candidate.executor_kind) ?? 'codex_cli_default') === 'codex_cli_default') {
+    return {
+      blocked: {
+        reason: 'current_control_provider_admission_stage_packet_ref_missing',
+        task: candidate,
+      },
+    };
+  }
   const sourceFingerprint = optionalString(candidate.source_fingerprint)
     ?? optionalString(candidate.action_fingerprint)
     ?? workUnitFingerprint;
