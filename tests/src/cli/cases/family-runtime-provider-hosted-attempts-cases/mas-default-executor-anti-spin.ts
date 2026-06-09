@@ -65,6 +65,9 @@ function closeAttemptWithoutDeliverableDelta(
     sourceFingerprint: string;
     blockerFamily: string;
     createdAt: string;
+    progressDeltaClassification?: string;
+    blockedReason?: string;
+    platformRepairDeltaCount?: number;
   },
 ) {
   const payload = defaultExecutorPayload(input.sourceFingerprint);
@@ -99,17 +102,18 @@ function closeAttemptWithoutDeliverableDelta(
           blocker_family: input.blockerFamily,
           required_owner: 'med-autoscience',
         }],
-        progress_delta_classification: 'platform_repair',
+        progress_delta_classification: input.progressDeltaClassification ?? 'platform_repair',
         deliverable_progress_delta: {
           delta_count: 0,
           delta_refs: [],
         },
         platform_repair_delta: {
-          delta_count: 1,
+          delta_count: input.platformRepairDeltaCount ?? 1,
           delta_refs: [`platform-repair:${input.taskId}`],
         },
         next_forced_delta: 'domain_deliverable_or_owner_receipt_delta_required',
       },
+      blocked_reason: input.blockedReason,
     },
   });
 }
@@ -180,6 +184,20 @@ test('family-runtime tick blocks repeated same-source MAS default executor dispa
       assert.equal(eventPayload.lineage.next_forced_delta, 'domain_deliverable_or_owner_receipt_delta_required');
       assert.equal(eventPayload.stop_loss_state.status, 'frozen');
       assert.equal(eventPayload.stop_loss_state.lineage_repeat_count, 2);
+      assert.equal(eventPayload.stop_loss_state.platform_repair_only_repeat_count, 2);
+      assert.equal(eventPayload.stop_loss_state.receipt_only_repeat_count, 0);
+      assert.equal(eventPayload.stop_loss_state.read_model_reconcile_repeat_count, 0);
+      assert.equal(eventPayload.stop_loss_state.stale_route_repeat_count, 0);
+      assert.deepEqual(
+        eventPayload.lineage.repeat_breakdown,
+        {
+          receipt_only_repeat_count: 0,
+          read_model_reconcile_repeat_count: 0,
+          platform_repair_only_repeat_count: 2,
+          stale_route_repeat_count: 0,
+          unclassified_no_delta_repeat_count: 0,
+        },
+      );
       assert.equal(eventPayload.stop_loss_state.fresh_owner_delta_required_to_resume, true);
       assert.equal(eventPayload.stop_loss_policy.freeze_state, 'frozen');
       assert.equal(eventPayload.stop_loss_policy.authority_boundary.opl_can_freeze_default_launch, true);
@@ -188,6 +206,106 @@ test('family-runtime tick blocks repeated same-source MAS default executor dispa
       assert.equal(eventPayload.authority_boundary.can_create_owner_receipt, false);
       assert.equal(eventPayload.authority_boundary.can_create_typed_blocker, false);
       assert.equal(eventPayload.authority_boundary.can_claim_domain_ready, false);
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime anti-spin stop-loss classifies receipt, read-model, stale-route, and platform-only repeats', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      closeAttemptWithoutDeliverableDelta(db, {
+        taskId: 'task-mas-default-anti-spin-receipt-only',
+        sourceFingerprint: 'source-spin-classified',
+        blockerFamily: 'receipt_only_accounting',
+        progressDeltaClassification: 'receipt_only',
+        platformRepairDeltaCount: 0,
+        createdAt: '2026-06-02T02:00:00.000Z',
+      });
+      closeAttemptWithoutDeliverableDelta(db, {
+        taskId: 'task-mas-default-anti-spin-read-model-only',
+        sourceFingerprint: 'source-spin-classified',
+        blockerFamily: 'read_model_reconcile',
+        progressDeltaClassification: 'read_model_reconcile',
+        blockedReason: 'read_model_reconcile_only',
+        platformRepairDeltaCount: 0,
+        createdAt: '2026-06-02T02:10:00.000Z',
+      });
+      closeAttemptWithoutDeliverableDelta(db, {
+        taskId: 'task-mas-default-anti-spin-stale-route-only',
+        sourceFingerprint: 'source-spin-classified',
+        blockerFamily: 'stale_route_redrive',
+        progressDeltaClassification: 'stale_route_redrive',
+        blockedReason: 'stale_route_redrive_only',
+        platformRepairDeltaCount: 0,
+        createdAt: '2026-06-02T02:20:00.000Z',
+      });
+      closeAttemptWithoutDeliverableDelta(db, {
+        taskId: 'task-mas-default-anti-spin-platform-only',
+        sourceFingerprint: 'source-spin-classified',
+        blockerFamily: 'platform_repair',
+        progressDeltaClassification: 'platform_repair',
+        platformRepairDeltaCount: 1,
+        createdAt: '2026-06-02T02:30:00.000Z',
+      });
+      insertQueuedDefaultExecutorTask(db, {
+        taskId: 'task-mas-default-anti-spin-classified-candidate',
+        payload: defaultExecutorPayload('source-spin-classified'),
+        dedupeKey: 'mas:dm-cvd:002:default-executor:anti-spin:classified-candidate',
+        createdAt: '2026-06-02T02:40:00.000Z',
+      });
+
+      const tick = await runFamilyRuntimeQueueTick(db, familyRuntimePaths(), {
+        source: 'test-progress-first-anti-spin-classified',
+        limit: 10,
+        hydrate: false,
+      }, {
+        enqueueTask,
+        dispatchTask: (_db, _paths, row) => ({ task_id: row.task_id, status: 'selected' }),
+      });
+      const event = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_progress_first_anti_spin_blocked'
+        LIMIT 1
+      `).get('task-mas-default-anti-spin-classified-candidate') as { payload_json: string } | undefined;
+      const eventPayload = event ? JSON.parse(event.payload_json) : null;
+
+      assert.equal(tick.progress_first_anti_spin_blocked_count, 1);
+      assert.ok(eventPayload);
+      assert.deepEqual(eventPayload.lineage.repeat_breakdown, {
+        receipt_only_repeat_count: 1,
+        read_model_reconcile_repeat_count: 1,
+        platform_repair_only_repeat_count: 1,
+        stale_route_repeat_count: 1,
+        unclassified_no_delta_repeat_count: 0,
+      });
+      assert.equal(eventPayload.stop_loss_state.lineage_repeat_count, 4);
+      assert.equal(eventPayload.stop_loss_state.receipt_only_repeat_count, 1);
+      assert.equal(eventPayload.stop_loss_state.read_model_reconcile_repeat_count, 1);
+      assert.equal(eventPayload.stop_loss_state.platform_repair_only_repeat_count, 1);
+      assert.equal(eventPayload.stop_loss_state.stale_route_repeat_count, 1);
+      assert.deepEqual(
+        eventPayload.stop_loss_state.no_progress_attempt_classification.map(
+          (item: { classification: string }) => item.classification,
+        ),
+        [
+          'platform_repair_only',
+          'stale_route_redrive_only',
+          'read_model_reconcile_only',
+          'receipt_only',
+        ],
+      );
+      assert.equal(eventPayload.stop_loss_state.fresh_owner_delta_required_to_resume, true);
+      assert.deepEqual(eventPayload.stop_loss_state.release_conditions, [
+        'fresh_owner_delta',
+        'stable_typed_blocker',
+        'human_decision',
+        'provider_hard_gate_clearance',
+      ]);
     });
   } finally {
     db.close();

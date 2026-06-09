@@ -67,6 +67,8 @@ current_owner_delta outer loop
 
 2026-06-09 follow-through 已把 `Ordinary Progress Spine + Audit Sidecar` 从规划落到机器读面：`current-owner-delta.schema.json` 现在要求 `ordinary_progress_spine`、`progress_delta_receipt`、`artifact_tier_policy` 和 `audit_sidecar_policy`；`current_owner_delta_read_model`、App `ordinary_cockpit` 与 `default_read_surface_policy` 同步投影这些字段，并显式标注 `raw_worklist`、`raw_evidence`、blocked refs-only residue 和 audit sidecar 不能生成默认 next action。`surface-budget-policy.json` 把 `ProgressDeltaReceipt` 钉成 T0 轻量接力记录，不能授权 stage complete、publication/package ready、artifact/memory mutation 或 production ready；`target-operating-architecture-contract.json.surface_budget_compiler_policy` 同步镜像 ordinary progress spine、artifact tiers、ProgressDeltaReceipt forbidden claims 和 audit sidecar passive gate，`verification-command-surfaces` drift guard 会阻止 target architecture 与 surface budget 分叉。focused contract / App / owner-delta tests 已守住该边界。这关闭的是“普通默认路径被 audit sidecar 抢占”的结构缺口，不是 MAS owner receipt、quality gate receipt、typed blocker、App release ready、Brand L5 或 production ready。
 
+2026-06-09 追加 follow-through：Progress-First anti-spin gate 已把重复无交付尝试拆成 `receipt_only`、`read_model_reconcile_only`、`stale_route_redrive_only`、`platform_repair_only` 和 `no_deliverable_delta`，并在 lineage 与 `current_owner_delta.stop_loss_state` 中暴露分类计数。普通路径因此能区分“真的产生 deliverable delta”与“只在 closeout receipt、read-model reconcile、stale route redrive 或平台修补里转圈”，重复空转会要求 fresh owner delta、稳定 typed blocker、human decision 或 provider hard-gate clearance 后再恢复。
+
 当前三条线的分工固定为：
 
 - `outer_owner_delta`: `current_owner_delta` 是 App/CLI/operator 默认 root；worklist、replay、typed-blocker group、provider trace 和 private residue 只能作为 audit / full-detail。

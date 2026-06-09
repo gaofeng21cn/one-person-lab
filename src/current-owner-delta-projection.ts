@@ -227,8 +227,11 @@ function defaultStopLossState() {
     status: 'not_triggered',
     lineage_repeat_count: 0,
     receipt_only_repeat_count: 0,
+    read_model_reconcile_repeat_count: 0,
     platform_repair_only_repeat_count: 0,
     stale_route_repeat_count: 0,
+    unclassified_no_delta_repeat_count: 0,
+    no_progress_attempt_classification: [],
     fresh_owner_delta_required_to_resume: false,
   };
 }
@@ -244,8 +247,16 @@ function compactStopLossState(...values: unknown[]) {
     status: stringValue(folded.status) ?? 'not_triggered',
     lineage_repeat_count: numberValue(folded.lineage_repeat_count),
     receipt_only_repeat_count: numberValue(folded.receipt_only_repeat_count),
+    read_model_reconcile_repeat_count:
+      numberValue(folded.read_model_reconcile_repeat_count),
     platform_repair_only_repeat_count: numberValue(folded.platform_repair_only_repeat_count),
     stale_route_repeat_count: numberValue(folded.stale_route_repeat_count),
+    unclassified_no_delta_repeat_count:
+      numberValue(folded.unclassified_no_delta_repeat_count),
+    no_progress_attempt_classification:
+      Array.isArray(folded.no_progress_attempt_classification)
+        ? folded.no_progress_attempt_classification
+        : [],
     fresh_owner_delta_required_to_resume:
       folded.fresh_owner_delta_required_to_resume === true,
     release_conditions: stringList(folded.release_conditions),

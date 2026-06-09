@@ -117,6 +117,97 @@ function progressDeltaClassification(value: JsonRecord) {
     ?? stringValue(record(value.route_impact).progress_delta_classification);
 }
 
+function lowerText(value: unknown) {
+  return stringValue(value)?.toLowerCase() ?? null;
+}
+
+function attemptHasOnlyReceiptEvidence(value: JsonRecord) {
+  const classification = lowerText(progressDeltaClassification(value));
+  const blockedReason = lowerText(value.blocked_reason);
+  const closeoutRefs = refsFrom(value, ['closeout_refs', 'receipt_refs', 'consumed_refs']);
+  return classification === 'receipt_only'
+    || classification === 'receipt_accounting'
+    || classification === 'refs_only_accounting'
+    || blockedReason?.includes('receipt') === true
+    || (
+      closeoutRefs.length > 0
+      && deltaCount(value.platform_repair_delta) === 0
+      && typedBlockerRefs(value).length === 0
+    );
+}
+
+function attemptHasReadModelOnlyEvidence(value: JsonRecord) {
+  const classification = lowerText(progressDeltaClassification(value));
+  const blockedReason = lowerText(value.blocked_reason);
+  return classification === 'read_model_reconcile'
+    || classification === 'read_model_refresh'
+    || classification === 'projection_reconcile'
+    || blockedReason?.includes('read_model') === true
+    || blockedReason?.includes('currentness') === true
+    || blockedReason?.includes('projection') === true;
+}
+
+function attemptHasStaleRouteRedriveEvidence(value: JsonRecord) {
+  const classification = lowerText(progressDeltaClassification(value));
+  const blockedReason = lowerText(value.blocked_reason);
+  return classification === 'stale_route_redrive'
+    || classification === 'superseded_route_redrive'
+    || blockedReason?.includes('stale') === true
+    || blockedReason?.includes('superseded') === true
+    || blockedReason?.includes('redrive') === true;
+}
+
+function attemptHasPlatformRepairOnlyEvidence(value: JsonRecord) {
+  const classification = lowerText(progressDeltaClassification(value));
+  return classification === 'platform_repair'
+    || classification === 'platform_repair_delta'
+    || deltaCount(value.platform_repair_delta) > 0
+    || deltaCount(record(value.route_impact).platform_repair_delta) > 0
+    || deltaCount(record(value.user_stage_log).platform_repair_delta) > 0;
+}
+
+function classifyNoProgressAttempt(attempt: ReturnType<typeof listStageAttempts>[number]) {
+  const evidence = attemptEvidence(attempt);
+  if (attemptHasStaleRouteRedriveEvidence(evidence)) {
+    return 'stale_route_redrive_only';
+  }
+  if (attemptHasReadModelOnlyEvidence(evidence)) {
+    return 'read_model_reconcile_only';
+  }
+  if (attemptHasOnlyReceiptEvidence(evidence)) {
+    return 'receipt_only';
+  }
+  if (attemptHasPlatformRepairOnlyEvidence(evidence)) {
+    return 'platform_repair_only';
+  }
+  return 'no_deliverable_delta';
+}
+
+function noProgressAttemptCounts(attempts: ReturnType<typeof listStageAttempts>) {
+  const counts = {
+    receipt_only_repeat_count: 0,
+    read_model_reconcile_repeat_count: 0,
+    platform_repair_only_repeat_count: 0,
+    stale_route_repeat_count: 0,
+    unclassified_no_delta_repeat_count: 0,
+  };
+  for (const attempt of attempts) {
+    const classification = classifyNoProgressAttempt(attempt);
+    if (classification === 'receipt_only') {
+      counts.receipt_only_repeat_count += 1;
+    } else if (classification === 'read_model_reconcile_only') {
+      counts.read_model_reconcile_repeat_count += 1;
+    } else if (classification === 'platform_repair_only') {
+      counts.platform_repair_only_repeat_count += 1;
+    } else if (classification === 'stale_route_redrive_only') {
+      counts.stale_route_repeat_count += 1;
+    } else {
+      counts.unclassified_no_delta_repeat_count += 1;
+    }
+  }
+  return counts;
+}
+
 function hasDeliverableDelta(value: JsonRecord) {
   const routeImpact = record(value.route_impact);
   const classification = progressDeltaClassification(value);
@@ -330,6 +421,7 @@ function buildLineagePacket(input: {
   const noDeltaAttempts = input.attempts.filter(isNoDeliverableSpinAttempt).sort(compareAttemptUpdatedAtDesc);
   const latest = noDeltaAttempts[0] ?? null;
   const blockerFamilies = uniqueStrings(noDeltaAttempts.flatMap((attempt) => typedBlockerFamilies(attemptEvidence(attempt))));
+  const repeatBreakdown = noProgressAttemptCounts(noDeltaAttempts);
   return {
     surface_kind: 'opl_progress_first_anti_spin_lineage',
     packet_version: 'progress-first-anti-spin.v1',
@@ -345,6 +437,13 @@ function buildLineagePacket(input: {
     },
     candidate_task_id: input.candidate.task_id,
     recent_attempt_refs: noDeltaAttempts.map((attempt) => `/stage_attempt_workbench/attempts/${attempt.stage_attempt_id}`),
+    repeat_breakdown: repeatBreakdown,
+    repeated_attempt_classifications: noDeltaAttempts.map((attempt) => ({
+      stage_attempt_id: attempt.stage_attempt_id,
+      classification: classifyNoProgressAttempt(attempt),
+      progress_delta_classification: progressDeltaClassification(attemptEvidence(attempt)),
+      blocked_reason: attempt.blocked_reason,
+    })),
     typed_blocker_refs: uniqueStrings(noDeltaAttempts.flatMap((attempt) => typedBlockerRefs(attemptEvidence(attempt)))),
     blocker_families: blockerFamilies,
     last_progress_delta_classification: latest ? progressDeltaClassification(attemptEvidence(latest)) : null,
@@ -367,13 +466,20 @@ function buildLineagePacket(input: {
 }
 
 function buildStopLossState(lineage: JsonRecord) {
+  const repeatBreakdown = record(lineage.repeat_breakdown);
   return {
     surface_kind: 'opl_current_owner_delta_stop_loss_state',
     status: 'frozen',
     lineage_repeat_count: numberValue(lineage.repeat_count),
-    receipt_only_repeat_count: 0,
-    platform_repair_only_repeat_count: numberValue(lineage.repeat_count),
-    stale_route_repeat_count: 0,
+    receipt_only_repeat_count: numberValue(repeatBreakdown.receipt_only_repeat_count),
+    read_model_reconcile_repeat_count:
+      numberValue(repeatBreakdown.read_model_reconcile_repeat_count),
+    platform_repair_only_repeat_count:
+      numberValue(repeatBreakdown.platform_repair_only_repeat_count),
+    stale_route_repeat_count: numberValue(repeatBreakdown.stale_route_repeat_count),
+    unclassified_no_delta_repeat_count:
+      numberValue(repeatBreakdown.unclassified_no_delta_repeat_count),
+    no_progress_attempt_classification: recordList(lineage.repeated_attempt_classifications),
     fresh_owner_delta_required_to_resume: true,
     release_conditions: [
       'fresh_owner_delta',
