@@ -75,12 +75,19 @@ test('agents conformance reports structural readiness separately from production
   assert.equal(report.passed_count, 1);
   assert.equal(report.blocked_count, 0);
   assert.equal(report.structural_conformance_status, 'passed');
+  assert.equal(report.structural_contract_status, 'passed');
+  assert.equal(report.ordinary_path_guard_status, 'passed');
+  assert.equal(report.live_domain_progress_status, 'required_from_domain_owner');
+  assert.equal(report.live_domain_progress_status, report.live_stage_run_progress_evidence_status);
   assert.equal(report.production_evidence_tail_count, 2);
   assert.equal(report.production_evidence_tail_policy, 'reported_separately_not_a_structural_pass_condition');
   assert.equal(report.summary.total_repo_count, 1);
   assert.equal(report.summary.passed_count, 1);
   assert.equal(report.summary.blocked_count, 0);
   assert.equal(report.summary.structural_conformance_status, 'passed');
+  assert.equal(report.summary.structural_contract_status, 'passed');
+  assert.equal(report.summary.ordinary_path_guard_status, 'passed');
+  assert.equal(report.summary.live_domain_progress_status, 'required_from_domain_owner');
   assert.equal(report.summary.production_evidence_tail_count, 2);
   assert.equal(conformancePayload.passed_count, report.passed_count);
   assert.equal(conformancePayload.blocked_count, report.blocked_count);
@@ -88,6 +95,9 @@ test('agents conformance reports structural readiness separately from production
     conformancePayload.structural_conformance_status,
     report.structural_conformance_status,
   );
+  assert.equal(conformancePayload.structural_contract_status, report.structural_contract_status);
+  assert.equal(conformancePayload.ordinary_path_guard_status, report.ordinary_path_guard_status);
+  assert.equal(conformancePayload.live_domain_progress_status, report.live_domain_progress_status);
   assert.equal(
     conformancePayload.production_evidence_tail_count,
     report.production_evidence_tail_count,
@@ -544,6 +554,12 @@ test('agents conformance keeps StageRun next action on domain owner when non-Sta
   assert.equal(report.passed_count, 0);
   assert.equal(report.blocked_count, 1);
   assert.equal(report.structural_conformance_status, 'blocked');
+  assert.equal(report.structural_contract_status, 'blocked');
+  assert.equal(report.ordinary_path_guard_status, 'passed');
+  assert.equal(report.live_domain_progress_status, 'required_from_domain_owner');
+  assert.equal(report.summary.structural_contract_status, 'blocked');
+  assert.equal(report.summary.ordinary_path_guard_status, 'passed');
+  assert.equal(report.summary.live_domain_progress_status, 'required_from_domain_owner');
   assert.equal(report.live_stage_run_progress_evidence_status, 'required_from_domain_owner');
   assert.equal(report.live_stage_run_progress_evidence_open_domain_count, 1);
   assert.equal(
@@ -565,6 +581,37 @@ test('agents conformance keeps StageRun next action on domain owner when non-Sta
   );
   assert.equal(adoptionDomain.authority_boundary.can_create_typed_blocker, false);
   assert.equal(adoptionDomain.authority_boundary.can_claim_domain_ready, false);
+});
+
+test('agents conformance marks live domain progress blocked when StageRun ordinary guard is blocked', () => {
+  const repoDir = buildReadyAgentRepo();
+  fs.rmSync(path.join(repoDir, 'contracts', 'stage_run_kernel_profile.json'));
+
+  const payload = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]);
+  const report = payload.standard_domain_agent_conformance;
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(report.structural_conformance_status, 'blocked');
+  assert.equal(report.structural_contract_status, 'blocked');
+  assert.equal(report.ordinary_path_guard_status, 'blocked');
+  assert.equal(report.live_domain_progress_status, 'blocked');
+  assert.equal(report.summary.structural_contract_status, 'blocked');
+  assert.equal(report.summary.ordinary_path_guard_status, 'blocked');
+  assert.equal(report.summary.live_domain_progress_status, 'blocked');
+  assert.equal(payload.structural_contract_status, 'blocked');
+  assert.equal(payload.ordinary_path_guard_status, 'blocked');
+  assert.equal(payload.live_domain_progress_status, 'blocked');
+  assert.equal(report.stage_run_domain_adoption_read_model.status, 'blocked');
+  assert.equal(report.reports[0].stage_run_kernel_profile_checks.status, 'blocked');
+  assert.equal(
+    report.reports[0].blockers.includes('stage_run_kernel_profile_missing'),
+    true,
+  );
 });
 
 test('agents conformance reads domain-owned production acceptance evidence without claiming domain ready', () => {

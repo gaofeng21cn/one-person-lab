@@ -371,6 +371,11 @@ export function buildStandardDomainAgentConformanceReport(
   );
   const structuralConformanceStatus = blockedCount === 0 ? 'passed' : 'blocked';
   const stageRunDomainAdoptionReadModel = buildStageRunDomainAdoptionReadModel(reports);
+  const structuralContractStatus = structuralConformanceStatus;
+  const ordinaryPathGuardStatus = stageRunDomainAdoptionReadModel.status;
+  const liveDomainProgressStatus = ordinaryPathGuardStatus === 'passed'
+    ? stageRunDomainAdoptionReadModel.live_stage_run_progress_evidence_status
+    : 'blocked';
   const liveStageRunProgressEvidenceWorklist =
     stageRunDomainAdoptionReadModel.live_stage_run_progress_evidence_worklist;
   const liveStageRunProgressEvidenceOpenDomainCount =
@@ -383,6 +388,9 @@ export function buildStandardDomainAgentConformanceReport(
     passed_count: passedCount,
     blocked_count: blockedCount,
     structural_conformance_status: structuralConformanceStatus,
+    structural_contract_status: structuralContractStatus,
+    ordinary_path_guard_status: ordinaryPathGuardStatus,
+    live_domain_progress_status: liveDomainProgressStatus,
     family_live_conformance_probe_status: familyLiveConformanceProbe.status,
     family_live_conformance_probe_blocked_domain_count:
       familyLiveConformanceProbe.blocked_domain_count,
@@ -403,6 +411,9 @@ export function buildStandardDomainAgentConformanceReport(
       passed_count: passedCount,
       blocked_count: blockedCount,
       structural_conformance_status: structuralConformanceStatus,
+      structural_contract_status: structuralContractStatus,
+      ordinary_path_guard_status: ordinaryPathGuardStatus,
+      live_domain_progress_status: liveDomainProgressStatus,
       family_live_conformance_probe_status: familyLiveConformanceProbe.status,
       family_live_conformance_probe_blocked_domain_count:
         familyLiveConformanceProbe.blocked_domain_count,
@@ -420,6 +431,9 @@ export function buildStandardDomainAgentConformanceReport(
         passed_count: passedCount,
         blocked_count: blockedCount,
         structural_conformance_status: structuralConformanceStatus,
+        structural_contract_status: structuralContractStatus,
+        ordinary_path_guard_status: ordinaryPathGuardStatus,
+        live_domain_progress_status: liveDomainProgressStatus,
         production_evidence_tail_count: productionEvidenceTailCount,
         production_evidence_tail_policy: 'reported_separately_not_a_structural_pass_condition',
         live_stage_run_progress_evidence_status:
