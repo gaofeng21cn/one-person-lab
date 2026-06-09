@@ -35,6 +35,7 @@ Machine boundary: 本目录是人读过程历史索引。机器真相继续归 `
 
 近期归档：
 
+- [2026-06-09 OPL Doc series MAS ledger compression closeout](./plans/2026-06-09-opl-doc-series-mas-ledger-compression-closeout.md)：记录 prior MAS conflict boundary 解除后，MAS dated coverage part-ledger 压缩为单一 provenance index、status lifecycle header 修正、docs-only 验证边界和剩余 OPL series scope；当前机器真相仍回 MAS active owner docs、contracts、source、tests、CLI/read-model、runtime ledger 和 owner receipts。
 - [2026-06-09 OPL Doc series six-repo docs tranche](./plans/2026-06-09-opl-doc-series-six-repo-docs-tranche.md)：记录本轮 clean sibling repo process/history 长清单压缩、SSOT 决策、MAS conflict-safe 写入边界、remaining scope 和下一轮写入范围；当前机器真相仍回各 repo active owner docs、contracts、source、tests、CLI/read-model、runtime ledger 和 repo-local provenance。
 - [2026-06-08 OPL frontdoor machine field retirement closeout](./plans/2026-06-08-opl-frontdoor-machine-field-retirement-closeout.md)：记录 active `frontdoor` 机器字段迁移为 `command_surface` contract/source/test payload，并用 focused tests 阻止旧 key 作为兼容面复活；当前机器真相仍回 contracts、source、tests 和 CLI/read-model。
 - [2026-06-08 OPL public whitepaper and command surface docs closeout](./plans/2026-06-08-opl-public-whitepaper-command-surface-closeout.md)：记录公开白皮书 lifecycle header 补齐，以及 active/current 文档中当前命令面从旧 Gateway/frontdoor route 词汇中分离；当前命令面机器真相仍回 contracts、source、tests 和 CLI/read-model。
