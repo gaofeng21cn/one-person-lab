@@ -196,15 +196,16 @@ function buildAuthorityBoundary(contract: JsonRecord) {
 
 function buildPeerProjection(peer: FoundryAgentPeer) {
   const generatedSurfaceOnly = Boolean('generated_surface_only' in peer && peer.generated_surface_only);
+  const executableFoundryCli = peer.agent_id === 'mas' ? peer.direct_domain_cli : peer.brand_cli;
   const foundryCommandSurface = generatedSurfaceOnly
     ? `opl foundry agents inspect ${peer.agent_id}`
-    : `${peer.brand_cli} foundry`;
+    : `${executableFoundryCli} foundry`;
   const compatibilityCommandSurface = generatedSurfaceOnly
     ? peer.direct_domain_cli
     : `${peer.direct_domain_cli} foundry`;
   const foundryOperations = generatedSurfaceOnly
     ? FOUNDRY_AGENT_OPERATIONS.map((operation) => `opl agents foundry ${operation}`)
-    : FOUNDRY_AGENT_OPERATIONS.map((operation) => `${peer.brand_cli} foundry ${operation}`);
+    : FOUNDRY_AGENT_OPERATIONS.map((operation) => `${executableFoundryCli} foundry ${operation}`);
   const compatibilityOperations = generatedSurfaceOnly
     ? [peer.direct_domain_cli]
     : FOUNDRY_AGENT_OPERATIONS.map((operation) => `${peer.direct_domain_cli} foundry ${operation}`);
@@ -223,13 +224,13 @@ function buildPeerProjection(peer: FoundryAgentPeer) {
     : {
         executable_brand_cli_command_surface: foundryCommandSurface,
         executable_compatibility_command_surface: compatibilityCommandSurface,
-        status_json_command: `${peer.brand_cli} foundry status --json`,
+        status_json_command: `${executableFoundryCli} foundry status --json`,
         compatibility_status_json_command: `${peer.direct_domain_cli} foundry status --json`,
         legacy_format_json_command: `${peer.direct_domain_cli} foundry status --format json`,
         json_flag_aliases: ['--json', '--format json'],
         help_smoke_commands: [
-          `${peer.brand_cli} --help`,
-          `${peer.brand_cli} foundry status --json`,
+          `${executableFoundryCli} --help`,
+          `${executableFoundryCli} foundry status --json`,
           `${peer.direct_domain_cli} foundry status --json`,
         ],
       };

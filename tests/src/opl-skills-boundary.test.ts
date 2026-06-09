@@ -27,8 +27,13 @@ test('OPL system skill sync catalog excludes MAS/MDS project-local stage skills'
       assert.equal(pack.foundry_agent_series.generated_surface_only, true);
       assert.equal(pack.foundry_agent_series.direct_cli_foundry_command_surface, 'opl foundry agents inspect oma');
       assert.equal(pack.foundry_agent_series.compatibility_foundry_command_surface, 'opl agents interfaces --repo-dir <opl-meta-agent-repo>');
+    } else if (pack.canonical_plugin_name === 'mas') {
+      assert.equal(pack.foundry_agent_series.brand_cli, 'mas');
+      assert.equal(pack.foundry_agent_series.direct_cli, 'medautosci');
+      assert.equal(pack.foundry_agent_series.direct_cli_foundry_command_surface, 'medautosci foundry');
+      assert.equal(pack.foundry_agent_series.compatibility_foundry_command_surface, 'medautosci foundry');
     } else {
-      assert.match(String(pack.foundry_agent_series.direct_cli_foundry_command_surface), /^(mas|mag|rca) foundry$/);
+      assert.match(String(pack.foundry_agent_series.direct_cli_foundry_command_surface), /^(mag|rca) foundry$/);
       assert.equal(pack.foundry_agent_series.direct_cli, pack.foundry_agent_series.brand_cli);
     }
     assert.equal(pack.command_surface_spine.skill_sync_command_surface, 'opl connect sync-skills');
@@ -40,13 +45,13 @@ test('OPL system skill sync catalog excludes MAS/MDS project-local stage skills'
     assert.equal(pack.mcp_projection.mcp_descriptor_must_delegate_to_series_spine, true);
     assert.equal(
       seriesDelegateToolRefs.includes(
-        generatedOnly ? 'opl agents foundry interfaces' : `${pack.foundry_agent_series.brand_cli} foundry interfaces`,
+        generatedOnly ? 'opl agents foundry interfaces' : `${pack.foundry_agent_series.direct_cli} foundry interfaces`,
       ),
       true,
     );
     assert.equal(
       seriesDelegateToolRefs.includes(
-        generatedOnly ? 'opl agents foundry status' : `${pack.foundry_agent_series.brand_cli} foundry status`,
+        generatedOnly ? 'opl agents foundry status' : `${pack.foundry_agent_series.direct_cli} foundry status`,
       ),
       true,
     );

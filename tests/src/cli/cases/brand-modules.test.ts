@@ -566,13 +566,13 @@ test('OPL Foundry Agent index exposes MAS MAG RCA OMA direct and generated CLI c
   );
   assert.deepEqual(
     list.agents.map((entry: { foundry_command_surface: string }) => entry.foundry_command_surface),
-    ['mas foundry', 'mag foundry', 'rca foundry', 'opl foundry agents inspect oma'],
+    ['medautosci foundry', 'mag foundry', 'rca foundry', 'opl foundry agents inspect oma'],
   );
   assert.deepEqual(
     list.agents.map((entry: { cli_smoke: { executable_brand_cli_command_surface: string | null } }) =>
       entry.cli_smoke.executable_brand_cli_command_surface
     ),
-    ['mas foundry', 'mag foundry', 'rca foundry', null],
+    ['medautosci foundry', 'mag foundry', 'rca foundry', null],
   );
   assert.deepEqual(
     list.agents.map((entry: { cli_smoke: { json_flag_aliases: string[] } }) =>
@@ -589,11 +589,12 @@ test('OPL Foundry Agent index exposes MAS MAG RCA OMA direct and generated CLI c
   const mas = runCli(['foundry', 'agents', 'inspect', 'mas']).foundry_agent;
   assert.equal(mas.status, 'direct_cli_ready');
   assert.equal(mas.work_object.natural_alias, 'study');
-  assert.equal(mas.cli_smoke.executable_brand_cli_command_surface, 'mas foundry');
+  assert.equal(mas.brand_cli, 'mas');
+  assert.equal(mas.cli_smoke.executable_brand_cli_command_surface, 'medautosci foundry');
   assert.equal('foundry_frontdoor' in mas, false);
   assert.equal('compatibility_frontdoor' in mas, false);
   assert.equal('executable_brand_cli_frontdoor' in mas.cli_smoke, false);
-  assert.equal(mas.cli_smoke.status_json_command, 'mas foundry status --json');
+  assert.equal(mas.cli_smoke.status_json_command, 'medautosci foundry status --json');
   assert.equal(mas.compatibility_command_surface, 'medautosci foundry');
   assert.equal(mas.mcp_projection.mcp_descriptor_must_delegate_to_series_spine, true);
 

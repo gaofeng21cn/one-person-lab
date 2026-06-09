@@ -407,6 +407,9 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
   const foundryAgentId = spec.canonical_plugin_name === 'opl-meta-agent' ? 'oma' : spec.canonical_plugin_name;
   const brandCli = spec.canonical_plugin_name === 'opl-meta-agent' ? 'oma' : spec.canonical_plugin_name;
   const generatedSurfaceOnly = spec.canonical_plugin_name === 'opl-meta-agent';
+  const executableFoundryCli = spec.canonical_plugin_name === 'mas'
+    ? 'medautosci'
+    : brandCli;
   const directCli = spec.canonical_plugin_name === 'opl-meta-agent'
     ? 'opl agents interfaces --repo-dir <opl-meta-agent-repo>'
     : spec.canonical_plugin_name === 'mas'
@@ -425,13 +428,13 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
   const ordinarySpine = readStringListField(commandSurface, 'ordinary_public_command_surface_spine');
   const directCliFoundryCommandSurface = generatedSurfaceOnly
     ? `opl foundry agents inspect ${foundryAgentId}`
-    : `${brandCli} foundry`;
+    : `${executableFoundryCli} foundry`;
   const compatibilityFoundryCommandSurface = generatedSurfaceOnly
     ? directCli
     : `${directCli} foundry`;
   const directCliFoundryOperations = generatedSurfaceOnly
     ? ordinaryOperations.map((operation) => `opl agents foundry ${operation}`)
-    : ordinaryOperations.map((operation) => `${brandCli} foundry ${operation}`);
+    : ordinaryOperations.map((operation) => `${executableFoundryCli} foundry ${operation}`);
   const compatibilityFoundryOperations = generatedSurfaceOnly
     ? [directCli]
     : ordinaryOperations.map((operation) => `${directCli} foundry ${operation}`);
@@ -449,7 +452,7 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
       policy_release_ref: readStringField(policyRelease, 'policy_release_contract_ref'),
       brand_cli: brandCli,
       direct_domain_cli: directCli,
-      direct_cli: generatedSurfaceOnly ? directCli : brandCli,
+      direct_cli: generatedSurfaceOnly ? directCli : executableFoundryCli,
       direct_cli_foundry_command_surface: directCliFoundryCommandSurface,
       compatibility_foundry_command_surface: compatibilityFoundryCommandSurface,
       generated_surface_only: generatedSurfaceOnly,
@@ -484,8 +487,8 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
         'mcp_descriptor_must_delegate_to_series_spine',
       ),
       series_delegate_tool_refs: [
-        generatedSurfaceOnly ? 'opl agents foundry interfaces' : `${brandCli} foundry interfaces`,
-        generatedSurfaceOnly ? 'opl agents foundry status' : `${brandCli} foundry status`,
+        generatedSurfaceOnly ? 'opl agents foundry interfaces' : `${executableFoundryCli} foundry interfaces`,
+        generatedSurfaceOnly ? 'opl agents foundry status' : `${executableFoundryCli} foundry status`,
         `opl foundry agents inspect ${foundryAgentId}`,
       ],
       legacy_standalone_mcp_servers_retired: readBooleanField(
