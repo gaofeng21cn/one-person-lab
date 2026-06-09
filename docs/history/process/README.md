@@ -36,7 +36,7 @@ Machine boundary: 本目录是人读过程历史索引。机器真相继续归 `
 ## 近期归档主题
 
 顶层索引只保留主题级 provenance，避免恢复逐日 closeout 长清单。
-完整逐文件历史索引继续维护在 [Plans](./plans/README.md)。
+历史计划子目录索引也只保留主题级读法；文件级细节保留在原历史正文和 git history，不再维护逐文件 current-owner 长表。
 
 | Theme | Compressed read | Current owner |
 | --- | --- | --- |
