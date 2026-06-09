@@ -131,6 +131,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/framework-readiness-oma-production-consumption-ledger.test.ts',
   'tests/src/cli/cases/family-runtime-managed-state.test.ts',
   'tests/src/framework-readiness-owner-delta-handoff-summary.test.ts',
+  'tests/src/cli/cases/workspace-domain.initializer-rca-series.test.ts',
   'tests/src/cli/cases/workspace-domain.initializer.test.ts',
   'tests/src/cli/cases/workspace-domain.projections.test.ts',
   'tests/src/cli/cases/workspace-domain.project-protocol.test.ts',
