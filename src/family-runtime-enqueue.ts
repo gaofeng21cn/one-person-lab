@@ -41,6 +41,7 @@ const MAS_PAPER_AUTONOMY_STALE_DEAD_LETTER_MARKERS = [
   'controller_route_work_unit_unsupported',
 ] as const;
 const OPERATOR_RETIRED_STALE_RESIDUE_PREFIX = 'operator_retired_stale_runtime_residue:';
+const DEFAULT_EXECUTOR_SUPERSEDED_REASON = 'mas_default_executor_superseded_by_current_source';
 const TERMINAL_STAGE_ATTEMPT_STATUSES = new Set(['blocked', 'completed', 'dead_lettered', 'failed']);
 
 function optionalString(value: unknown) {
@@ -436,6 +437,29 @@ function operatorRetiredStaleResidueBlock(existing: FamilyRuntimeTaskRow) {
   };
 }
 
+function defaultExecutorSupersededCurrentControlAdmissionRedriveDecision(
+  existing: FamilyRuntimeTaskRow,
+  nextPayload: Record<string, unknown>,
+) {
+  if (
+    existing.domain_id !== 'medautoscience'
+    || existing.task_kind !== DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
+    || existing.status !== 'blocked'
+    || existing.dead_letter_reason !== DEFAULT_EXECUTOR_SUPERSEDED_REASON
+  ) {
+    return null;
+  }
+  const nextIdentity = providerAdmissionCurrentnessIdentity(nextPayload);
+  if (!nextIdentity) {
+    return null;
+  }
+  return {
+    reason: 'mas_current_control_provider_admission_after_superseded_blocker',
+    next_currentness_identity: nextIdentity,
+    next_source_fingerprint: nextIdentity.source_fingerprint,
+  };
+}
+
 export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
   const createdAt = nowIso();
   const dedupeKey = input.dedupeKey?.trim() || null;
@@ -504,6 +528,10 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           payload,
           existingStageAttempts,
         )
+        : null;
+      const supersededCurrentControlAdmissionRedrive = isDefaultExecutorDispatch(existing, existingPayload)
+        && isDefaultExecutorDispatchInput(input.domainId, taskKind, payload)
+        ? defaultExecutorSupersededCurrentControlAdmissionRedriveDecision(existing, payload)
         : null;
       if (resolvedMissingStageNativeOwnerAnswer) {
         db.prepare(`
@@ -837,6 +865,64 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           taskId: refreshed.task_id,
           severity: 'info',
           title: 'Family runtime task requeued from MAS current-control terminal attempt',
+          body: `${input.domainId}:${taskKind}`,
+          payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
+        });
+        return {
+          accepted: true,
+          requeued_from_terminal: true,
+          idempotent_noop: false,
+          task: taskToPayload(refreshed),
+        };
+      }
+      if (supersededCurrentControlAdmissionRedrive) {
+        const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
+        db.prepare(`
+          UPDATE tasks
+          SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
+            attempts = 0, source = ?, requires_approval = ?, approved_at = NULL,
+            lease_owner = NULL, lease_expires_at = NULL, last_error = ?,
+            dead_letter_reason = NULL, updated_at = ?
+          WHERE task_id = ?
+        `).run(
+          input.domainId,
+          taskKind,
+          exportedPayloadJson,
+          input.priority ?? 0,
+          nextStatus,
+          input.source ?? 'opl-cli',
+          requiresApproval ? 1 : 0,
+          initialLastError,
+          createdAt,
+          existing.task_id,
+        );
+        const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
+        insertEvent(db, {
+          taskId: refreshed.task_id,
+          domainId: refreshed.domain_id,
+          eventType: 'task_requeued_from_mas_current_control_provider_admission',
+          source: input.source ?? 'opl-cli',
+          payload: {
+            dedupe_key: dedupeKey,
+            previous_status: existing.status,
+            next_status: nextStatus,
+            active_hold_id: activeHold?.hold_id ?? null,
+            ...supersededCurrentControlAdmissionRedrive,
+            authority_boundary: {
+              opl: 'queue_attempt_provider_transport_rehydrate_from_mas_current_control_only',
+              domain: 'truth_quality_artifact_gate_owner',
+              domain_truth_mutation: false,
+              publication_quality_mutation: false,
+              artifact_gate_mutation: false,
+              current_package_mutation: false,
+              provider_completion_is_domain_ready: false,
+            },
+          },
+        });
+        insertNotification(db, {
+          taskId: refreshed.task_id,
+          severity: 'info',
+          title: 'Family runtime task requeued from MAS current-control supersession',
           body: `${input.domainId}:${taskKind}`,
           payload: { status: nextStatus, dedupe_key: dedupeKey, active_hold_id: activeHold?.hold_id ?? null },
         });

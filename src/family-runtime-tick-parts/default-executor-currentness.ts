@@ -31,7 +31,10 @@ type DefaultExecutorCurrentTask = {
   task_id: string;
   source_fingerprint: string | null;
   created_at: string;
+  currentness_rank: number;
 };
+
+const CURRENT_CONTROL_ADMISSION_CURRENT_STATUSES = new Set(['queued', 'retry_waiting', 'running', 'waiting_approval']);
 
 export function payloadFromTask(row: FamilyRuntimeTaskRow) {
   return JSON.parse(row.payload_json) as Record<string, unknown>;
@@ -47,6 +50,43 @@ export function isNewerTask(
   return left.task_id > right.task_id;
 }
 
+function currentnessRankForDefaultExecutorTask(
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+) {
+  if (
+    CURRENT_CONTROL_ADMISSION_CURRENT_STATUSES.has(row.status)
+    && providerAdmissionCurrentnessIdentity(payload)
+  ) {
+    return 1;
+  }
+  return 0;
+}
+
+function currentTaskFromRow(
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+): DefaultExecutorCurrentTask {
+  return {
+    task_id: row.task_id,
+    source_fingerprint: defaultExecutorDomainSourceFingerprint(payload),
+    created_at: row.created_at,
+    currentness_rank: currentnessRankForDefaultExecutorTask(row, payload),
+  };
+}
+
+function isPreferredCurrentTask(
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+  current: DefaultExecutorCurrentTask,
+) {
+  const currentnessRank = currentnessRankForDefaultExecutorTask(row, payload);
+  if (currentnessRank !== current.currentness_rank) {
+    return currentnessRank > current.currentness_rank;
+  }
+  return isNewerTask(row, current);
+}
+
 export function currentDefaultExecutorTasksByDispatch(rows: FamilyRuntimeTaskRow[]) {
   const currentByIdentity = new Map<string, DefaultExecutorCurrentTask>();
   for (const row of rows) {
@@ -56,12 +96,8 @@ export function currentDefaultExecutorTasksByDispatch(rows: FamilyRuntimeTaskRow
       continue;
     }
     const current = currentByIdentity.get(identity);
-    if (!current || isNewerTask(row, current)) {
-      currentByIdentity.set(identity, {
-        task_id: row.task_id,
-        source_fingerprint: defaultExecutorDomainSourceFingerprint(payload),
-        created_at: row.created_at,
-      });
+    if (!current || isPreferredCurrentTask(row, payload, current)) {
+      currentByIdentity.set(identity, currentTaskFromRow(row, payload));
     }
   }
   return currentByIdentity;
@@ -76,12 +112,8 @@ export function currentDefaultExecutorTasksByStudyAction(rows: FamilyRuntimeTask
       continue;
     }
     const current = currentByIdentity.get(identity);
-    if (!current || isNewerTask(row, current)) {
-      currentByIdentity.set(identity, {
-        task_id: row.task_id,
-        source_fingerprint: defaultExecutorDomainSourceFingerprint(payload),
-        created_at: row.created_at,
-      });
+    if (!current || isPreferredCurrentTask(row, payload, current)) {
+      currentByIdentity.set(identity, currentTaskFromRow(row, payload));
     }
   }
   return currentByIdentity;
@@ -346,11 +378,8 @@ export function dropSameStudyDefaultExecutorRows(
       selectedIds.add(row.task_id);
       continue;
     }
-    if (isNewerTask(row, {
-      task_id: selected.task_id,
-      source_fingerprint: defaultExecutorDomainSourceFingerprint(payloadFromTask(selected)),
-      created_at: selected.created_at,
-    })) {
+    const selectedPayload = payloadFromTask(selected);
+    if (isPreferredCurrentTask(row, payload, currentTaskFromRow(selected, selectedPayload))) {
       selectedIds.delete(selected.task_id);
       selectedIds.add(row.task_id);
       selectedByStudy.set(studyIdentity, row);
