@@ -21,6 +21,18 @@ export function assertCurrentOwnerDeltaReadModel(
   assert.equal(readModel.compatibility_alias_policy, undefined);
   assert.equal(readModel.default_summary.summary_kind, 'owner_delta_only');
   assert.equal(readModel.default_summary.default_path_root, 'current_owner_delta');
+  assert.equal(
+    readModel.projection_policy,
+    'current_owner_delta_is_the_only_default_operator_payload_raw_refs_require_explicit_full_detail',
+  );
+  assert.equal(
+    readModel.default_next_action_derivation_policy,
+    'derive_default_next_action_only_from_current_owner_delta',
+  );
+  assert.equal(readModel.default_summary.ordinary_progress_spine_ref, '/current_owner_delta/ordinary_progress_spine');
+  assert.equal(readModel.default_summary.progress_delta_receipt_ref, '/current_owner_delta/progress_delta_receipt');
+  assert.equal(readModel.default_summary.artifact_tier_policy_ref, '/current_owner_delta/artifact_tier_policy');
+  assert.equal(readModel.default_summary.audit_sidecar_policy_ref, '/current_owner_delta/audit_sidecar_policy');
   assert.equal(readModel.default_summary.audit_counts_are_first_screen, false);
   assert.equal(
     readModel.default_summary.count_summary_path,
@@ -51,6 +63,7 @@ export function assertCurrentOwnerDeltaReadModel(
   const auditTail = readModel.owner_delta_audit_tail;
   assert.equal(auditTail.surface_kind, 'opl_current_owner_delta_audit_tail');
   assert.equal(auditTail.audit_counts_are_first_screen, false);
+  assert.deepEqual(auditTail.audit_sidecar_policy, readModel.audit_sidecar_policy);
 
   const readinessFalseFlags = auditTail.readiness_false_flags;
   assert.equal(typeof readinessFalseFlags, 'object');
@@ -355,6 +368,70 @@ export function assertCurrentOwnerDeltaProjection(
     'current_owner_delta',
   );
   assert.equal(
+    currentOwnerDelta.ordinary_progress_spine.surface_kind,
+    'opl_ordinary_progress_spine_policy',
+  );
+  assert.equal(
+    currentOwnerDelta.ordinary_progress_spine.default_planning_root,
+    'current_owner_delta',
+  );
+  assert.equal(
+    currentOwnerDelta.ordinary_progress_spine.default_next_action_derives_from,
+    'current_owner_delta',
+  );
+  for (const forbiddenRoot of [
+    'raw_worklist',
+    'raw_evidence',
+    'evidence_ledger',
+    'provider_trace',
+    'replay_packet',
+    'typed_blocker_group',
+    'private_residue_inventory',
+    'audit_sidecar',
+  ]) {
+    assert.equal(
+      currentOwnerDelta.ordinary_progress_spine.default_next_action_must_not_derive_from.includes(forbiddenRoot),
+      true,
+    );
+  }
+  assert.equal(currentOwnerDelta.ordinary_progress_spine.raw_worklist_can_generate_default_next_action, false);
+  assert.equal(currentOwnerDelta.ordinary_progress_spine.evidence_sidecar_can_generate_default_next_action, false);
+  assert.equal(
+    currentOwnerDelta.progress_delta_receipt.surface_kind,
+    'opl_progress_delta_receipt_policy',
+  );
+  assert.equal(
+    currentOwnerDelta.progress_delta_receipt.stage_transition_requires_owner_receipt_or_typed_blocker,
+    true,
+  );
+  assert.equal(currentOwnerDelta.progress_delta_receipt.cannot_authorize.includes('stage_complete'), true);
+  assert.equal(currentOwnerDelta.progress_delta_receipt.cannot_authorize.includes('production_ready'), true);
+  assert.equal(
+    currentOwnerDelta.artifact_tier_policy.surface_kind,
+    'opl_artifact_tier_policy',
+  );
+  assert.equal(
+    currentOwnerDelta.artifact_tier_policy.tiers.T0_progress_delta.cannot_claim_stage_complete,
+    true,
+  );
+  assert.equal(
+    currentOwnerDelta.audit_sidecar_policy.surface_kind,
+    'opl_audit_sidecar_policy',
+  );
+  assert.equal(
+    currentOwnerDelta.audit_sidecar_policy.default_planning_role,
+    'never_default_planning_root_until_folded_into_current_owner_delta',
+  );
+  assert.equal(currentOwnerDelta.audit_sidecar_policy.raw_worklist_can_generate_default_next_action, false);
+  assert.equal(currentOwnerDelta.audit_sidecar_policy.raw_evidence_can_generate_default_next_action, false);
+  assert.equal(currentOwnerDelta.audit_sidecar_policy.evidence_ledger_can_generate_default_next_action, false);
+  assert.equal(currentOwnerDelta.audit_sidecar_policy.provider_trace_can_generate_default_next_action, false);
+  assert.equal(currentOwnerDelta.audit_sidecar_policy.replay_packet_can_generate_default_next_action, false);
+  assert.equal(currentOwnerDelta.audit_sidecar_policy.typed_blocker_group_can_generate_default_next_action, false);
+  assert.equal(currentOwnerDelta.audit_sidecar_policy.private_residue_inventory_can_generate_default_next_action, false);
+  assert.equal(currentOwnerDelta.audit_sidecar_policy.blocked_refs_only_can_generate_default_next_action, false);
+  assert.equal(currentOwnerDelta.audit_sidecar_policy.audit_next_safe_action_can_generate_default_next_action, false);
+  assert.equal(
     currentOwnerDelta.audit_tail_policy,
     'raw_worklist_raw_evidence_replay_typed_blocker_group_private_residue_are_passive_until_folded',
   );
@@ -420,6 +497,7 @@ export function assertCurrentOwnerDeltaProjection(
     false,
   );
   assert.equal(currentOwnerDelta.authority_boundary.audit_tail_can_drive_default_planning, false);
+  assert.equal(currentOwnerDelta.authority_boundary.blocked_refs_only_can_drive_default_planning, false);
   assert.equal(typeof currentOwnerDelta.cognitive_kernel_boundary, 'object');
   assert.equal(
     currentOwnerDelta.cognitive_kernel_boundary.envelope_semantics,

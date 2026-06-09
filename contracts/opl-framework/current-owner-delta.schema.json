@@ -14,6 +14,10 @@
     "schema_version",
     "projection_policy",
     "default_planning_root",
+    "ordinary_progress_spine",
+    "progress_delta_receipt",
+    "artifact_tier_policy",
+    "audit_sidecar_policy",
     "audit_tail_policy",
     "evidence_vault_policy",
     "delta_id",
@@ -46,6 +50,130 @@
     },
     "evidence_vault_policy": {
       "const": "record_everything_plan_from_nothing"
+    },
+    "ordinary_progress_spine": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind",
+        "default_planning_root",
+        "default_next_action_derives_from",
+        "required_operator_answers",
+        "raw_worklist_can_generate_default_next_action",
+        "evidence_sidecar_can_generate_default_next_action"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "opl_ordinary_progress_spine_policy"
+        },
+        "default_planning_root": {
+          "const": "current_owner_delta"
+        },
+        "default_next_action_derives_from": {
+          "const": "current_owner_delta"
+        },
+        "required_operator_answers": {
+          "type": "array",
+          "contains": {
+            "const": "accepted_answer_shape"
+          }
+        },
+        "raw_worklist_can_generate_default_next_action": {
+          "const": false
+        },
+        "evidence_sidecar_can_generate_default_next_action": {
+          "const": false
+        }
+      }
+    },
+    "progress_delta_receipt": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind",
+        "ordinary_receipt_kind",
+        "ordinary_delta_classes",
+        "required_refs",
+        "cannot_authorize",
+        "stage_transition_requires_owner_receipt_or_typed_blocker"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "opl_progress_delta_receipt_policy"
+        },
+        "ordinary_receipt_kind": {
+          "const": "ProgressDeltaReceipt"
+        },
+        "ordinary_delta_classes": {
+          "type": "array",
+          "contains": {
+            "const": "platform_repair_delta"
+          }
+        },
+        "required_refs": {
+          "type": "array",
+          "contains": {
+            "const": "changed_surfaces"
+          }
+        },
+        "cannot_authorize": {
+          "type": "array",
+          "contains": {
+            "const": "production_ready"
+          }
+        },
+        "stage_transition_requires_owner_receipt_or_typed_blocker": {
+          "const": true
+        }
+      }
+    },
+    "artifact_tier_policy": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind",
+        "default_ordinary_tier",
+        "tiers"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "opl_artifact_tier_policy"
+        },
+        "default_ordinary_tier": {
+          "const": "T0_progress_delta"
+        }
+      }
+    },
+    "audit_sidecar_policy": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind",
+        "role",
+        "default_planning_role",
+        "blocked_refs_only_can_generate_default_next_action",
+        "hard_gate_upgrade_conditions"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "opl_audit_sidecar_policy"
+        },
+        "role": {
+          "const": "passive_evidence_vault_and_drilldown"
+        },
+        "default_planning_role": {
+          "const": "never_default_planning_root_until_folded_into_current_owner_delta"
+        },
+        "blocked_refs_only_can_generate_default_next_action": {
+          "const": false
+        },
+        "hard_gate_upgrade_conditions": {
+          "type": "array",
+          "contains": {
+            "const": "publication_export_release_production_ready_or_l5_claim"
+          }
+        }
+      }
     },
     "delta_id": {
       "type": "string",

@@ -472,6 +472,7 @@ function buildOrdinaryCockpit(
   input: OplAppOperatorViewModelInput,
 ) {
   const currentOwnerDelta = asRecord(currentOwnerDeltaTopline.current_owner_delta);
+  const currentOwnerDeltaReadModel = asRecord(currentOwnerDeltaTopline.current_owner_delta_read_model);
   const nextAction = asRecord(currentOwnerDeltaTopline.operator_next_action);
   const hardGate = asRecord(currentOwnerDelta.hard_gate);
   const auditRefs = asRecord(currentOwnerDelta.audit_refs);
@@ -507,6 +508,10 @@ function buildOrdinaryCockpit(
     surface_kind: 'opl_app_ordinary_cockpit',
     schema_version: 'ordinary-cockpit.v1',
     display_payload_policy: 'purpose_task_current_owner_next_action_artifact_or_blocker_only',
+    ordinary_progress_spine: asRecord(currentOwnerDelta.ordinary_progress_spine),
+    progress_delta_receipt: asRecord(currentOwnerDelta.progress_delta_receipt),
+    artifact_tier_policy: asRecord(currentOwnerDelta.artifact_tier_policy),
+    audit_sidecar_policy: asRecord(currentOwnerDelta.audit_sidecar_policy),
     display_payload_fields: [...ORDINARY_COCKPIT_DISPLAY_FIELDS],
     developer_full_drilldown_only: [...ORDINARY_COCKPIT_DEVELOPER_FULL_ONLY],
     display_payload: {
@@ -543,6 +548,11 @@ function buildOrdinaryCockpit(
       },
     },
     authority_boundary: {
+      default_next_action_derives_from: asString(
+        currentOwnerDeltaReadModel.default_next_action_derivation_policy,
+      ) ?? 'derive_default_next_action_only_from_current_owner_delta',
+      default_planning_root: asString(currentOwnerDelta.default_planning_root)
+        ?? 'current_owner_delta',
       can_write_domain_truth: false,
       can_read_artifact_body: false,
       can_read_memory_body: false,
@@ -556,11 +566,17 @@ function buildOrdinaryCockpit(
 }
 
 function buildDefaultReadSurfacePolicy(input: OplAppOperatorViewModelInput) {
+  const currentOwnerDeltaReadModel = asRecord(input.currentOwnerDeltaReadModel);
   return {
     surface_kind: 'opl_app_default_read_surface_policy',
     schema_version: 'default-read-surface-policy.v1',
     profile: input.profile,
     default_operator_payload: 'ordinary_cockpit',
+    default_planning_root: 'current_owner_delta',
+    ordinary_progress_spine: asRecord(currentOwnerDeltaReadModel.ordinary_progress_spine),
+    progress_delta_receipt: asRecord(currentOwnerDeltaReadModel.progress_delta_receipt),
+    artifact_tier_policy: asRecord(currentOwnerDeltaReadModel.artifact_tier_policy),
+    audit_sidecar_policy: asRecord(currentOwnerDeltaReadModel.audit_sidecar_policy),
     normal_state_surface: 'opl app state --profile fast --json',
     full_state_surface: 'opl app state --profile full --json',
     full_runtime_drilldown_surface: 'opl runtime app-operator-drilldown --detail full --json',
@@ -580,6 +596,10 @@ function buildDefaultReadSurfacePolicy(input: OplAppOperatorViewModelInput) {
     ],
     ordinary_cockpit: {
       display_payload_policy: 'purpose_task_current_owner_next_action_artifact_or_blocker_only',
+      ordinary_progress_spine_ref: 'app_state.operator.ordinary_cockpit.ordinary_progress_spine',
+      progress_delta_receipt_ref: 'app_state.operator.ordinary_cockpit.progress_delta_receipt',
+      artifact_tier_policy_ref: 'app_state.operator.ordinary_cockpit.artifact_tier_policy',
+      audit_sidecar_policy_ref: 'app_state.operator.ordinary_cockpit.audit_sidecar_policy',
       display_payload_fields: [...ORDINARY_COCKPIT_DISPLAY_FIELDS],
       developer_full_drilldown_only: [...ORDINARY_COCKPIT_DEVELOPER_FULL_ONLY],
     },
@@ -601,6 +621,9 @@ function buildDefaultReadSurfacePolicy(input: OplAppOperatorViewModelInput) {
       can_authorize_quality_verdict: false,
       can_claim_app_release_ready: false,
       can_claim_production_ready: false,
+      raw_worklist_can_generate_default_next_action: false,
+      raw_evidence_can_generate_default_next_action: false,
+      audit_sidecar_can_generate_default_next_action: false,
     },
   };
 }

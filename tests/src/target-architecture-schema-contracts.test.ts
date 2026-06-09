@@ -59,6 +59,30 @@ test('target architecture schema contracts keep owner delta root and audit tail 
     ownerDelta.properties.evidence_vault_policy.const,
     'record_everything_plan_from_nothing',
   );
+  assert.equal(
+    ownerDelta.properties.ordinary_progress_spine.properties.default_planning_root.const,
+    'current_owner_delta',
+  );
+  assert.equal(
+    ownerDelta.properties.ordinary_progress_spine.properties.default_next_action_derives_from.const,
+    'current_owner_delta',
+  );
+  assert.equal(
+    ownerDelta.properties.progress_delta_receipt.properties.ordinary_receipt_kind.const,
+    'ProgressDeltaReceipt',
+  );
+  assert.equal(
+    ownerDelta.properties.progress_delta_receipt.properties.stage_transition_requires_owner_receipt_or_typed_blocker.const,
+    true,
+  );
+  assert.equal(
+    ownerDelta.properties.artifact_tier_policy.properties.default_ordinary_tier.const,
+    'T0_progress_delta',
+  );
+  assert.equal(
+    ownerDelta.properties.audit_sidecar_policy.properties.blocked_refs_only_can_generate_default_next_action.const,
+    false,
+  );
   assert.equal(ownerDelta.properties.audit_refs.type, 'object');
   assert.equal(ownerDelta.$defs.authority_boundary.properties.audit_tail_can_drive_default_planning.const, false);
   assert.equal(ownerDelta.$defs.authority_boundary.properties.raw_worklist_can_drive_default_planning.const, false);

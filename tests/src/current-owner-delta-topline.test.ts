@@ -284,6 +284,46 @@ test('current owner delta hard gate ignores generic audit-only open safe-action 
   });
 
   assert.equal(readModel.default_summary.default_path_root, 'current_owner_delta');
+  assert.equal(
+    readModel.default_summary.ordinary_progress_spine_ref,
+    '/current_owner_delta/ordinary_progress_spine',
+  );
+  assert.equal(
+    readModel.default_summary.progress_delta_receipt_ref,
+    '/current_owner_delta/progress_delta_receipt',
+  );
+  assert.equal(
+    readModel.current_owner_delta.ordinary_progress_spine.default_planning_root,
+    'current_owner_delta',
+  );
+  assert.equal(
+    readModel.current_owner_delta.ordinary_progress_spine.default_next_action_derives_from,
+    'current_owner_delta',
+  );
+  assert.equal(
+    readModel.current_owner_delta.progress_delta_receipt.ordinary_receipt_kind,
+    'ProgressDeltaReceipt',
+  );
+  assert.equal(
+    readModel.current_owner_delta.progress_delta_receipt.stage_transition_requires_owner_receipt_or_typed_blocker,
+    true,
+  );
+  assert.equal(
+    readModel.current_owner_delta.progress_delta_receipt.cannot_authorize.includes('production_ready'),
+    true,
+  );
+  assert.equal(
+    readModel.current_owner_delta.artifact_tier_policy.default_ordinary_tier,
+    'T0_progress_delta',
+  );
+  assert.equal(
+    readModel.current_owner_delta.audit_sidecar_policy.blocked_refs_only_can_generate_default_next_action,
+    false,
+  );
+  assert.equal(
+    readModel.current_owner_delta.authority_boundary.blocked_refs_only_can_drive_default_planning,
+    false,
+  );
   assert.equal(readModel.current_owner_delta.desired_delta_kind, 'none');
   assert.equal(readModel.current_owner_delta.hard_gate.state, 'none');
   assert.equal(readModel.current_owner_delta.hard_gate.human_or_domain_owner_required, false);
@@ -292,6 +332,72 @@ test('current owner delta hard gate ignores generic audit-only open safe-action 
   assert.equal(
     readModel.owner_delta_audit_tail.audit_next_safe_action_or_none.action_kind,
     'legacy_cleanup_apply',
+  );
+});
+
+test('current owner delta keeps blocked refs-only residue as audit sidecar only', async () => {
+  const module = await import(pathToFileURL(path.join(repoRoot, projectionModulePath)).href);
+  const readModel = module.buildCurrentOwnerDeltaReadModel({
+    ownerDeltaFirst: {
+      next_owner: 'one-person-lab',
+      next_required_delta: 'no_opl_operator_actionable_delta_required',
+      required_return_shapes: ['typed_blocker_ref'],
+    },
+    nextSafeAction: {
+      action_id: 'private-residue:mas:blocked-refs-only',
+      action_kind: 'private_residue_refs_only_attention',
+      owner: 'one-person-lab',
+      ref: 'opl audit private-residue --domain medautoscience --detail full',
+      route_requires_domain_or_app_payload: false,
+    },
+    countSummary: {
+      openSafeActionCount: 0,
+      payloadRequiredCount: 0,
+      payloadFreeCount: 0,
+      blockedRefsOnlyCount: 3,
+      evidenceEnvelopeOpenCount: 0,
+      evidenceEnvelopeBlockedCount: 3,
+      domainDispatchWorkorderCount: 0,
+      stageReplayMissingReceiptWorkorderCount: 0,
+    },
+  });
+
+  assert.equal(readModel.default_summary.default_path_root, 'current_owner_delta');
+  assert.equal(
+    readModel.default_next_action_derivation_policy,
+    'derive_default_next_action_only_from_current_owner_delta',
+  );
+  assert.equal(
+    readModel.current_owner_delta.ordinary_progress_spine.default_next_action_derives_from,
+    'current_owner_delta',
+  );
+  assert.equal(
+    readModel.current_owner_delta.ordinary_progress_spine.default_next_action_must_not_derive_from
+      .includes('audit_sidecar'),
+    true,
+  );
+  assert.equal(readModel.current_owner_delta.desired_delta_kind, 'none');
+  assert.equal(readModel.current_owner_delta.hard_gate.state, 'none');
+  assert.equal(readModel.current_owner_delta.hard_gate.human_or_domain_owner_required, false);
+  assert.equal(readModel.current_owner_delta.hard_gate.audit_sidecar_blocked_refs_only_count, 3);
+  assert.equal(readModel.current_owner_delta.hard_gate.audit_sidecar_hard_gate_upgrade_required, false);
+  assert.equal(
+    readModel.current_owner_delta.authority_boundary.blocked_refs_only_can_drive_default_planning,
+    false,
+  );
+  assert.equal(
+    readModel.current_owner_delta.audit_sidecar_policy.blocked_refs_only_can_generate_default_next_action,
+    false,
+  );
+  assert.equal(
+    readModel.current_owner_delta.audit_sidecar_policy.audit_next_safe_action_can_generate_default_next_action,
+    false,
+  );
+  assert.equal(readModel.next_safe_action_or_none, null);
+  assert.equal(readModel.owner_delta_audit_tail.count_summary.blocked_refs_only_count, 3);
+  assert.equal(
+    readModel.owner_delta_audit_tail.audit_next_safe_action_or_none.action_kind,
+    'private_residue_refs_only_attention',
   );
 });
 

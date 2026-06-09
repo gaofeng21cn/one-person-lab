@@ -260,6 +260,133 @@ function foldedOwnerDeltaRef(ownerDeltaFirst: JsonRecord, key: string) {
   );
 }
 
+function ordinaryProgressSpinePolicy() {
+  return {
+    surface_kind: 'opl_ordinary_progress_spine_policy',
+    spine_id: 'ordinary_progress_spine',
+    default_planning_root: 'current_owner_delta',
+    default_next_action_derives_from: 'current_owner_delta',
+    default_next_action_must_not_derive_from: [
+      'raw_worklist',
+      'raw_evidence',
+      'evidence_ledger',
+      'provider_trace',
+      'replay_packet',
+      'typed_blocker_group',
+      'private_residue_inventory',
+      'audit_sidecar',
+    ],
+    required_operator_answers: [
+      'current_owner',
+      'desired_delta_description',
+      'accepted_answer_shape',
+      'hard_gate',
+      'next_owner_or_stage',
+    ],
+    raw_worklist_can_generate_default_next_action: false,
+    evidence_sidecar_can_generate_default_next_action: false,
+  };
+}
+
+function progressDeltaReceiptPolicy() {
+  return {
+    surface_kind: 'opl_progress_delta_receipt_policy',
+    receipt_id: 'progress_delta_receipt',
+    ordinary_receipt_kind: 'ProgressDeltaReceipt',
+    ordinary_delta_classes: [
+      'paper_progress_delta',
+      'deliverable_progress_delta',
+      'platform_repair_delta',
+      'advisory_delta',
+    ],
+    typed_blocker_class: 'typed_blocker',
+    human_gate_class: 'human_gate',
+    required_refs: [
+      'changed_surfaces',
+      'produced_refs',
+      'consumed_refs',
+      'next_owner',
+      'next_required_delta',
+    ],
+    cannot_authorize: [
+      'stage_complete',
+      'publication_ready',
+      'package_ready',
+      'artifact_mutation',
+      'memory_accept_reject',
+      'production_ready',
+    ],
+    stage_transition_requires_owner_receipt_or_typed_blocker: true,
+  };
+}
+
+function artifactTierPolicy() {
+  return {
+    surface_kind: 'opl_artifact_tier_policy',
+    policy_id: 'artifact_tier_policy',
+    default_ordinary_tier: 'T0_progress_delta',
+    tiers: {
+      T0_progress_delta: {
+        applies_to: [
+          'ordinary_writing',
+          'analysis_delta',
+          'evidence_organization',
+          'review_revision',
+          'platform_repair',
+        ],
+        requires: ['ProgressDeltaReceipt', 'changed_surfaces', 'minimal_refs', 'next_owner_or_blocker'],
+        cannot_claim_stage_complete: true,
+        cannot_claim_publication_or_package_ready: true,
+      },
+      T1_stage_transition: {
+        requires: ['stage_manifest', 'role_artifacts', 'OwnerReceipt_or_TypedBlocker', 'current_pointer_or_StageRun_binding'],
+        cannot_claim_domain_or_production_ready: true,
+      },
+      T2_delivery_artifact: {
+        requires: ['package_manifest', 'authority_receipt', 'independent_review_or_human_gate', 'restore_or_retention_refs'],
+      },
+      T3_production_evidence: {
+        requires: ['refs_only_ledger', 'operator_evidence', 'owner_acceptance', 'no_regression_refs'],
+        enters_ordinary_next_action_only_when_current_owner_delta_requires_it: true,
+      },
+    },
+  };
+}
+
+function auditSidecarPolicy(input: {
+  auditRefs: JsonRecord;
+  countSummary: ReturnType<typeof buildCompactCountSummary>;
+  compactAction: ReturnType<typeof compactNextSafeAction>;
+}) {
+  return {
+    surface_kind: 'opl_audit_sidecar_policy',
+    sidecar_id: 'audit_sidecar_policy',
+    role: 'passive_evidence_vault_and_drilldown',
+    default_planning_role: 'never_default_planning_root_until_folded_into_current_owner_delta',
+    raw_worklist_can_generate_default_next_action: false,
+    raw_evidence_can_generate_default_next_action: false,
+    evidence_ledger_can_generate_default_next_action: false,
+    provider_trace_can_generate_default_next_action: false,
+    replay_packet_can_generate_default_next_action: false,
+    typed_blocker_group_can_generate_default_next_action: false,
+    private_residue_inventory_can_generate_default_next_action: false,
+    blocked_refs_only_can_generate_default_next_action: false,
+    audit_next_safe_action_can_generate_default_next_action: false,
+    hard_gate_upgrade_conditions: [
+      'invalid_owner_scope_executor_or_authority_boundary',
+      'execution_authorization_or_forbidden_write_guard_missing',
+      'accepted_answer_shape_invalid_or_unbound',
+      'domain_truth_artifact_memory_package_submission_release_or_delete_write',
+      'publication_export_release_production_ready_or_l5_claim',
+      'human_safety_or_compliance_gate_open',
+      'current_pointer_manifest_hash_or_restore_proof_unrecoverable',
+    ],
+    audit_refs: input.auditRefs,
+    audit_counts: input.countSummary,
+    audit_next_safe_action_or_none: input.compactAction,
+  };
+}
+
 export function buildDefaultNextActionFromCurrentOwnerDelta(
   currentOwnerDelta: unknown,
 ): JsonRecord | null {
@@ -375,6 +502,11 @@ function buildCurrentOwnerDeltaProjection(input: {
     input.compactAction?.route_requires_domain_or_app_payload === true;
   const explicitOwnerDeltaOpen = requiredDelta !== 'no_opl_operator_actionable_delta_required';
   const blockedRefsOnly = input.countSummary.blocked_refs_only_count > 0;
+  const auditSidecar = auditSidecarPolicy({
+    auditRefs,
+    countSummary: input.countSummary,
+    compactAction: input.compactAction,
+  });
   const latestOwnerAnswerRef = firstString(
     stringValue(input.handoff.latest_owner_answer_ref),
     stringValue(record(input.ownerDeltaFirst.primary_item).latest_owner_answer_ref),
@@ -390,21 +522,22 @@ function buildCurrentOwnerDeltaProjection(input: {
         ? 'domain_owner_answer_recorded'
         : explicitOwnerDeltaOpen
         ? 'owner_delta_open'
-        : blockedRefsOnly
-          ? 'domain_or_human_owner_blocked_refs_only'
-          : 'none',
+        : 'none',
     provider_liveness_required: false,
     human_or_domain_owner_required:
       ownerAnswerRecorded
         ? false
         : selectedActionRequiresDomainOrAppPayload
-        || (explicitOwnerDeltaOpen && input.countSummary.payload_required_count > 0)
-        || blockedRefsOnly,
+        || (explicitOwnerDeltaOpen && input.countSummary.payload_required_count > 0),
     source: 'owner_delta_controller',
     owner_answer_ref: latestOwnerAnswerRef,
     owner_answer_kind: latestOwnerAnswerKind,
     domain_ready_authorized: false,
     quality_or_export_authorized: false,
+    audit_sidecar_blocked_refs_only_count: blockedRefsOnly
+      ? input.countSummary.blocked_refs_only_count
+      : 0,
+    audit_sidecar_hard_gate_upgrade_required: false,
   };
 
   return {
@@ -412,6 +545,10 @@ function buildCurrentOwnerDeltaProjection(input: {
     schema_version: 'current-owner-delta.v1',
     projection_policy: 'default_owner_delta_root_audit_tail_passive',
     default_planning_root: 'current_owner_delta',
+    ordinary_progress_spine: ordinaryProgressSpinePolicy(),
+    progress_delta_receipt: progressDeltaReceiptPolicy(),
+    artifact_tier_policy: artifactTierPolicy(),
+    audit_sidecar_policy: auditSidecar,
     audit_tail_policy:
       'raw_worklist_raw_evidence_replay_typed_blocker_group_private_residue_are_passive_until_folded',
     evidence_vault_policy: 'record_everything_plan_from_nothing',
@@ -499,6 +636,7 @@ function buildCurrentOwnerDeltaProjection(input: {
       private_residue_inventory_can_drive_default_planning: false,
       audit_tail_can_drive_default_planning: false,
       evidence_vault_event_is_progress_claim: false,
+      blocked_refs_only_can_drive_default_planning: false,
     },
   };
 }
@@ -661,6 +799,10 @@ export function buildCurrentOwnerDeltaReadModel(input: {
   const defaultSummary = {
     summary_kind: 'owner_delta_only',
     default_path_root: 'current_owner_delta',
+    ordinary_progress_spine_ref: '/current_owner_delta/ordinary_progress_spine',
+    progress_delta_receipt_ref: '/current_owner_delta/progress_delta_receipt',
+    artifact_tier_policy_ref: '/current_owner_delta/artifact_tier_policy',
+    audit_sidecar_policy_ref: '/current_owner_delta/audit_sidecar_policy',
     current_owner: currentOwnerDelta.current_owner,
     desired_delta_kind: currentOwnerDelta.desired_delta_kind,
     desired_delta_description: currentOwnerDelta.desired_delta_description,
@@ -680,6 +822,10 @@ export function buildCurrentOwnerDeltaReadModel(input: {
       'current_owner_delta_is_the_only_default_operator_payload_raw_refs_require_explicit_full_detail',
     default_next_action_derivation_policy:
       'derive_default_next_action_only_from_current_owner_delta',
+    ordinary_progress_spine: currentOwnerDelta.ordinary_progress_spine,
+    progress_delta_receipt: currentOwnerDelta.progress_delta_receipt,
+    artifact_tier_policy: currentOwnerDelta.artifact_tier_policy,
+    audit_sidecar_policy: currentOwnerDelta.audit_sidecar_policy,
     current_owner: currentOwner,
     required_delta: requiredDelta,
     accepted_return_shapes: acceptedShapes,
@@ -692,6 +838,7 @@ export function buildCurrentOwnerDeltaReadModel(input: {
       audit_next_safe_action_or_none: compactAction,
       readiness_false_flags: falseFlags(handoff),
       count_summary: auditCountSummary,
+      audit_sidecar_policy: currentOwnerDelta.audit_sidecar_policy,
       full_detail_refs: fullDetailRefs,
     },
   };

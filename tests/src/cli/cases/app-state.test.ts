@@ -84,6 +84,10 @@ exit 1
       'ordinary_cockpit',
     );
     assert.equal(
+      output.app_state.operator.default_read_surface_policy.default_planning_root,
+      'current_owner_delta',
+    );
+    assert.equal(
       'compatibility_operator_payload' in output.app_state.operator.default_read_surface_policy,
       false,
     );
@@ -155,6 +159,22 @@ exit 1
         'artifact_or_blocker',
       ],
     );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.ordinary_cockpit.ordinary_progress_spine_ref,
+      'app_state.operator.ordinary_cockpit.ordinary_progress_spine',
+    );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.ordinary_cockpit.progress_delta_receipt_ref,
+      'app_state.operator.ordinary_cockpit.progress_delta_receipt',
+    );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.ordinary_cockpit.artifact_tier_policy_ref,
+      'app_state.operator.ordinary_cockpit.artifact_tier_policy',
+    );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.ordinary_cockpit.audit_sidecar_policy_ref,
+      'app_state.operator.ordinary_cockpit.audit_sidecar_policy',
+    );
     assert.deepEqual(
       output.app_state.operator.default_read_surface_policy.ordinary_cockpit.developer_full_drilldown_only,
       [
@@ -212,6 +232,47 @@ exit 1
     assert.equal(output.app_state.operator.default_read_surface_policy.authority_boundary.can_create_owner_receipt, false);
     assert.equal(output.app_state.operator.default_read_surface_policy.authority_boundary.can_claim_app_release_ready, false);
     assert.equal(output.app_state.operator.default_read_surface_policy.authority_boundary.can_claim_production_ready, false);
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.authority_boundary
+        .raw_worklist_can_generate_default_next_action,
+      false,
+    );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.authority_boundary
+        .raw_evidence_can_generate_default_next_action,
+      false,
+    );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.authority_boundary
+        .audit_sidecar_can_generate_default_next_action,
+      false,
+    );
+    assert.deepEqual(
+      output.app_state.operator.default_read_surface_policy.ordinary_progress_spine,
+      output.app_state.operator.current_owner_delta_read_model.ordinary_progress_spine,
+    );
+    assert.deepEqual(
+      output.app_state.operator.default_read_surface_policy.progress_delta_receipt,
+      output.app_state.operator.current_owner_delta_read_model.progress_delta_receipt,
+    );
+    assert.deepEqual(
+      output.app_state.operator.default_read_surface_policy.artifact_tier_policy,
+      output.app_state.operator.current_owner_delta_read_model.artifact_tier_policy,
+    );
+    assert.deepEqual(
+      output.app_state.operator.default_read_surface_policy.audit_sidecar_policy,
+      output.app_state.operator.current_owner_delta_read_model.audit_sidecar_policy,
+    );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.ordinary_progress_spine
+        .default_next_action_derives_from,
+      'current_owner_delta',
+    );
+    assert.equal(
+      output.app_state.operator.default_read_surface_policy.audit_sidecar_policy
+        .blocked_refs_only_can_generate_default_next_action,
+      false,
+    );
     assert.equal(output.app_state.operator.workbench.view_model_schema, 'opl_app_operator_workbench.v1');
     assert.deepEqual(
       output.app_state.operator.default_read_surface_policy,
@@ -220,6 +281,30 @@ exit 1
     assert.deepEqual(
       output.app_state.operator.ordinary_cockpit,
       output.app_state.operator.workbench.ordinary_cockpit,
+    );
+    assert.deepEqual(
+      output.app_state.operator.ordinary_cockpit.ordinary_progress_spine,
+      output.app_state.operator.current_owner_delta.ordinary_progress_spine,
+    );
+    assert.deepEqual(
+      output.app_state.operator.ordinary_cockpit.progress_delta_receipt,
+      output.app_state.operator.current_owner_delta.progress_delta_receipt,
+    );
+    assert.deepEqual(
+      output.app_state.operator.ordinary_cockpit.artifact_tier_policy,
+      output.app_state.operator.current_owner_delta.artifact_tier_policy,
+    );
+    assert.deepEqual(
+      output.app_state.operator.ordinary_cockpit.audit_sidecar_policy,
+      output.app_state.operator.current_owner_delta.audit_sidecar_policy,
+    );
+    assert.equal(
+      output.app_state.operator.ordinary_cockpit.authority_boundary.default_next_action_derives_from,
+      'derive_default_next_action_only_from_current_owner_delta',
+    );
+    assert.equal(
+      output.app_state.operator.ordinary_cockpit.authority_boundary.default_planning_root,
+      'current_owner_delta',
     );
     assert.deepEqual(
       Object.keys(output.app_state.operator.ordinary_cockpit.display_payload),

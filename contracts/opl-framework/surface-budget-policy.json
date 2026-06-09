@@ -38,6 +38,12 @@
         "full_detail_policy": "explicit_full_detail_or_lazy_diagnostic_only",
         "raw_refs_policy": "raw_refs_require_explicit_full_detail",
         "first_screen_answer_policy": "owner_delta_action_artifact_or_blocker_only",
+        "ordinary_progress_fields": [
+          "ordinary_progress_spine",
+          "progress_delta_receipt",
+          "artifact_tier_policy",
+          "audit_sidecar_policy"
+        ],
         "diagnostic_only_answers": [
           "count_summary",
           "audit_next_safe_action_or_none",
@@ -142,6 +148,28 @@
       "irreversible_mutation"
     ],
     "ordinary_path_root": "current_owner_delta",
+    "ordinary_progress_spine": {
+      "default_planning_root": "current_owner_delta",
+      "default_next_action_derives_from": "current_owner_delta",
+      "lightweight_receipt": "ProgressDeltaReceipt",
+      "lightweight_receipt_tier": "T0_progress_delta",
+      "audit_sidecar_role": "passive_evidence_vault_and_drilldown"
+    },
+    "artifact_tiers": [
+      "T0_progress_delta",
+      "T1_stage_transition",
+      "T2_delivery_artifact",
+      "T3_production_evidence"
+    ],
+    "progress_delta_receipt_cannot_authorize": [
+      "stage_complete",
+      "publication_ready",
+      "package_ready",
+      "artifact_mutation",
+      "memory_accept_reject",
+      "production_ready"
+    ],
+    "audit_sidecar_must_not_generate_default_next_action": true,
     "ordinary_path_must_not_be_overridden_by": [
       "raw_worklist",
       "evidence_ledger",

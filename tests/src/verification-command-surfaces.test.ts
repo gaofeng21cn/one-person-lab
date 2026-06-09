@@ -30,10 +30,29 @@ const GRIP_BIG_RELEASE_SMALL_COMPILER_MIRROR_FIELDS = [
 
 type GripBigReleaseSmallMirrorField = typeof GRIP_BIG_RELEASE_SMALL_COMPILER_MIRROR_FIELDS[number];
 
-type GripBigReleaseSmallReview = Record<GripBigReleaseSmallMirrorField, string | string[]>;
+type GripBigReleaseSmallReview = Record<GripBigReleaseSmallMirrorField, string | string[]> & {
+  review_id: string;
+  required_questions: string[];
+  big_boundaries_fail_closed: string[];
+  small_detail_examples: string[];
+  ordinary_progress_spine: {
+    default_planning_root: string;
+    default_next_action_derives_from: string;
+    lightweight_receipt: string;
+    lightweight_receipt_tier: string;
+    audit_sidecar_role: string;
+  };
+  artifact_tiers: string[];
+  progress_delta_receipt_cannot_authorize: string[];
+  audit_sidecar_must_not_generate_default_next_action: boolean;
+};
 
 type SurfaceBudgetCompilerPolicy = Record<GripBigReleaseSmallMirrorField, string | string[]> & {
   allowed_lanes: string[];
+  ordinary_progress_spine: GripBigReleaseSmallReview['ordinary_progress_spine'];
+  artifact_tiers: string[];
+  progress_delta_receipt_cannot_authorize: string[];
+  audit_sidecar_must_not_generate_default_next_action: boolean;
 };
 
 function collectSurfaceBudgetCompilerPolicyDrift(
@@ -49,6 +68,16 @@ function collectSurfaceBudgetCompilerPolicyDrift(
   const expectedAllowedLanes = ['ordinary', ...review.small_detail_default_lanes];
   if (!isDeepStrictEqual(compilerPolicy.allowed_lanes, expectedAllowedLanes)) {
     driftFields.push('surface_budget_compiler_policy.allowed_lanes');
+  }
+  for (const field of [
+    'ordinary_progress_spine',
+    'artifact_tiers',
+    'progress_delta_receipt_cannot_authorize',
+    'audit_sidecar_must_not_generate_default_next_action',
+  ] as const) {
+    if (!isDeepStrictEqual(compilerPolicy[field], review[field])) {
+      driftFields.push(`surface_budget_compiler_policy.${field}`);
+    }
   }
   return driftFields;
 }
@@ -327,17 +356,7 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
         allowed_consumers: string[];
       };
     };
-    grip_big_release_small_review: {
-      review_id: string;
-      required_questions: string[];
-      big_boundaries_fail_closed: string[];
-      small_detail_default_lanes: string[];
-      small_detail_examples: string[];
-      hard_blocker_upgrade_conditions: string[];
-      ordinary_path_root: string;
-      ordinary_path_must_not_be_overridden_by: string[];
-      accepted_owner_answer_shapes: string[];
-    };
+    grip_big_release_small_review: GripBigReleaseSmallReview;
     authority_boundary: Record<string, boolean>;
   }>('contracts/opl-framework/surface-budget-policy.json');
 
@@ -548,6 +567,51 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
     'irreversible_mutation',
   ]);
   assert.equal(policy.grip_big_release_small_review.ordinary_path_root, 'current_owner_delta');
+  assert.equal(
+    policy.grip_big_release_small_review.ordinary_progress_spine.default_planning_root,
+    'current_owner_delta',
+  );
+  assert.equal(
+    policy.grip_big_release_small_review.ordinary_progress_spine.default_next_action_derives_from,
+    'current_owner_delta',
+  );
+  assert.equal(
+    policy.grip_big_release_small_review.ordinary_progress_spine.lightweight_receipt,
+    'ProgressDeltaReceipt',
+  );
+  assert.equal(
+    policy.grip_big_release_small_review.ordinary_progress_spine.lightweight_receipt_tier,
+    'T0_progress_delta',
+  );
+  assert.equal(
+    policy.grip_big_release_small_review.ordinary_progress_spine.audit_sidecar_role,
+    'passive_evidence_vault_and_drilldown',
+  );
+  assert.deepEqual(policy.grip_big_release_small_review.artifact_tiers, [
+    'T0_progress_delta',
+    'T1_stage_transition',
+    'T2_delivery_artifact',
+    'T3_production_evidence',
+  ]);
+  for (const forbiddenClaim of [
+    'stage_complete',
+    'publication_ready',
+    'artifact_mutation',
+    'memory_accept_reject',
+    'production_ready',
+  ]) {
+    assert.equal(
+      policy.grip_big_release_small_review.progress_delta_receipt_cannot_authorize.includes(
+        forbiddenClaim,
+      ),
+      true,
+      `ProgressDeltaReceipt must not authorize ${forbiddenClaim}`,
+    );
+  }
+  assert.equal(
+    policy.grip_big_release_small_review.audit_sidecar_must_not_generate_default_next_action,
+    true,
+  );
   for (const forbiddenOverride of [
     'raw_worklist',
     'evidence_ledger',
@@ -621,6 +685,13 @@ test('surface budget compiler consistency guard catches ordinary path and small-
   driftedCompilerPolicy.ordinary_path_must_not_be_overridden_by = ['raw_worklist'];
   driftedCompilerPolicy.accepted_owner_answer_shapes = ['typed_blocker_ref'];
   driftedCompilerPolicy.allowed_lanes = ['ordinary', 'advisory', 'audit', 'diagnostic'];
+  driftedCompilerPolicy.ordinary_progress_spine = {
+    ...driftedCompilerPolicy.ordinary_progress_spine,
+    lightweight_receipt: 'OwnerReceipt',
+  };
+  driftedCompilerPolicy.artifact_tiers = ['T1_stage_transition'];
+  driftedCompilerPolicy.progress_delta_receipt_cannot_authorize = ['stage_complete'];
+  driftedCompilerPolicy.audit_sidecar_must_not_generate_default_next_action = false;
 
   assert.deepEqual(
     collectSurfaceBudgetCompilerPolicyDrift(
@@ -634,6 +705,10 @@ test('surface budget compiler consistency guard catches ordinary path and small-
       'surface_budget_compiler_policy.ordinary_path_must_not_be_overridden_by',
       'surface_budget_compiler_policy.accepted_owner_answer_shapes',
       'surface_budget_compiler_policy.allowed_lanes',
+      'surface_budget_compiler_policy.ordinary_progress_spine',
+      'surface_budget_compiler_policy.artifact_tiers',
+      'surface_budget_compiler_policy.progress_delta_receipt_cannot_authorize',
+      'surface_budget_compiler_policy.audit_sidecar_must_not_generate_default_next_action',
     ],
   );
 });
