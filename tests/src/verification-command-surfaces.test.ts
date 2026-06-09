@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -17,6 +18,38 @@ function read(relativePath: string) {
 
 function readJson<T>(relativePath: string): T {
   return JSON.parse(read(relativePath)) as T;
+}
+
+const GRIP_BIG_RELEASE_SMALL_COMPILER_MIRROR_FIELDS = [
+  'ordinary_path_root',
+  'small_detail_default_lanes',
+  'hard_blocker_upgrade_conditions',
+  'ordinary_path_must_not_be_overridden_by',
+] as const;
+
+type GripBigReleaseSmallMirrorField = typeof GRIP_BIG_RELEASE_SMALL_COMPILER_MIRROR_FIELDS[number];
+
+type GripBigReleaseSmallReview = Record<GripBigReleaseSmallMirrorField, string | string[]>;
+
+type SurfaceBudgetCompilerPolicy = Record<GripBigReleaseSmallMirrorField, string | string[]> & {
+  allowed_lanes: string[];
+};
+
+function collectSurfaceBudgetCompilerPolicyDrift(
+  review: GripBigReleaseSmallReview,
+  compilerPolicy: SurfaceBudgetCompilerPolicy,
+): string[] {
+  const driftFields: string[] = [];
+  for (const field of GRIP_BIG_RELEASE_SMALL_COMPILER_MIRROR_FIELDS) {
+    if (!isDeepStrictEqual(compilerPolicy[field], review[field])) {
+      driftFields.push(`surface_budget_compiler_policy.${field}`);
+    }
+  }
+  const expectedAllowedLanes = ['ordinary', ...review.small_detail_default_lanes];
+  if (!isDeepStrictEqual(compilerPolicy.allowed_lanes, expectedAllowedLanes)) {
+    driftFields.push('surface_budget_compiler_policy.allowed_lanes');
+  }
+  return driftFields;
 }
 
 function listJsonFiles(relativeDir: string): string[] {
@@ -553,6 +586,53 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
   for (const [claim, allowed] of Object.entries(policy.authority_boundary)) {
     assert.equal(allowed, false, `${claim} must remain false in OPL surface budget policy`);
   }
+});
+
+test('surface budget compiler policy mirrors grip-big-release-small review guardrails', () => {
+  const policy = readJson<{
+    grip_big_release_small_review: GripBigReleaseSmallReview;
+  }>('contracts/opl-framework/surface-budget-policy.json');
+  const targetArchitecture = readJson<{
+    surface_budget_compiler_policy: SurfaceBudgetCompilerPolicy;
+  }>('contracts/opl-framework/target-operating-architecture-contract.json');
+
+  assert.deepEqual(
+    collectSurfaceBudgetCompilerPolicyDrift(
+      policy.grip_big_release_small_review,
+      targetArchitecture.surface_budget_compiler_policy,
+    ),
+    [],
+  );
+});
+
+test('surface budget compiler consistency guard catches ordinary path and small-detail drift', () => {
+  const policy = readJson<{
+    grip_big_release_small_review: GripBigReleaseSmallReview;
+  }>('contracts/opl-framework/surface-budget-policy.json');
+  const targetArchitecture = readJson<{
+    surface_budget_compiler_policy: SurfaceBudgetCompilerPolicy;
+  }>('contracts/opl-framework/target-operating-architecture-contract.json');
+  const driftedCompilerPolicy = structuredClone(targetArchitecture.surface_budget_compiler_policy);
+
+  driftedCompilerPolicy.ordinary_path_root = 'raw_worklist';
+  driftedCompilerPolicy.small_detail_default_lanes = ['advisory', 'audit', 'diagnostic'];
+  driftedCompilerPolicy.hard_blocker_upgrade_conditions = ['authority_violation'];
+  driftedCompilerPolicy.ordinary_path_must_not_be_overridden_by = ['raw_worklist'];
+  driftedCompilerPolicy.allowed_lanes = ['ordinary', 'advisory', 'audit', 'diagnostic'];
+
+  assert.deepEqual(
+    collectSurfaceBudgetCompilerPolicyDrift(
+      policy.grip_big_release_small_review,
+      driftedCompilerPolicy,
+    ),
+    [
+      'surface_budget_compiler_policy.ordinary_path_root',
+      'surface_budget_compiler_policy.small_detail_default_lanes',
+      'surface_budget_compiler_policy.hard_blocker_upgrade_conditions',
+      'surface_budget_compiler_policy.ordinary_path_must_not_be_overridden_by',
+      'surface_budget_compiler_policy.allowed_lanes',
+    ],
+  );
 });
 
 test('target architecture policy contracts keep progress, guardrail, and wrapper retirement gates machine-readable', () => {
