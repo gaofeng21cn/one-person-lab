@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
 import { assert, loadFrameworkContracts, path, repoRoot, runCli, test } from '../helpers.ts';
+import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/family-runtime-evidence-worklist.ts';
 
 const expectedModuleIds = [
   'charter',
@@ -147,6 +148,75 @@ test('brand modules maturity and validation are contract-derived', () => {
   assert.equal(validation.validated_module_count, 10);
   assert.deepEqual(validation.missing_l4_gate_modules, []);
   assert.deepEqual(validation.authority_boundary_violations, []);
+});
+
+test('pack brand module contract shape does not fail-close family evidence worklist', async () => {
+  const contracts = loadFrameworkContracts(repoRoot);
+  const output = await runFamilyRuntimeEvidenceWorklist(contracts, {
+    familyDefaults: true,
+    providerKind: 'temporal',
+    executorKind: 'codex_cli',
+    detailLevel: 'full',
+    runtimeSnapshot: {
+      runtime_tray_snapshot: {
+        runtime_health: {
+          provider_kind: 'temporal',
+        },
+        app_operator_drilldown: {
+          app_execution_bridge: {
+            safe_action_routes: [],
+          },
+          operator_action_routing_refs: {
+            refs: [],
+          },
+          domain_evidence_request_refs: {
+            external_receipts: [],
+            evidence_gate_receipts: [],
+          },
+          domain_dispatch_evidence: {
+            attempts: [],
+          },
+          default_caller_deletion_evidence_refs: {
+            domains: [],
+          },
+          evidence_envelope: {
+            surface_kind: 'opl_evidence_envelope_projection',
+            model_version: 'evidence_envelope.v1',
+            projection_policy: 'fixture_refs_only_projection',
+            source_refs: ['/fixture/evidence_envelope'],
+            summary: {
+              envelope_count: 0,
+              open_envelope_count: 0,
+              closed_envelope_count: 0,
+              blocked_envelope_count: 0,
+              superseded_envelope_count: 0,
+              owner_count: 0,
+              owners: [],
+            },
+            authority_boundary: {
+              refs_only: true,
+              can_authorize_domain_ready: false,
+              can_claim_production_ready: false,
+            },
+          },
+        },
+      },
+    } as never,
+    stageReadiness: {
+      domains: [],
+    },
+  });
+  const worklist = output.family_runtime_evidence_worklist;
+  const packL5 = runCli(['brand-modules', 'l5-status', '--module', 'pack']).brand_module_l5_status;
+
+  assert.equal(worklist.surface_kind, 'opl_family_runtime_evidence_worklist');
+  assert.equal(worklist.family_defaults, true);
+  assert.equal(worklist.summary.zero_open_worklist_is_domain_ready, false);
+  assert.equal(worklist.summary.zero_open_worklist_is_production_ready, false);
+  assert.equal(packL5.modules[0].module_id, 'pack');
+  assert.equal(packL5.modules[0].current_level, 'L4_structural_baseline');
+  assert.equal(packL5.modules[0].l5_completion_status, 'evidence_required');
+  assert.equal(packL5.modules[0].l5_can_be_claimed, false);
 });
 
 test('brand modules interfaces expose CLI, app, descriptor, and validation surfaces without mutation authority', () => {
