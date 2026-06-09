@@ -135,7 +135,7 @@ export function assertCurrentOwnerDeltaToplineNextAction(surface: JsonRecord) {
           stage_run_closeout_binding_policy:
             'domain_owner_answer_must_bind_stage_run_manifest_current_pointer_source_fingerprint_and_idempotency',
         }
-      : (stageRunAction ?? ownerDeltaNextAction);
+      : ownerDeltaNextAction;
   assert.deepEqual(
     surface.operator_next_action,
     expectedNextAction,
@@ -169,43 +169,36 @@ export function assertCurrentOwnerDeltaToplineNextAction(surface: JsonRecord) {
     assert.deepEqual(surface.stage_run_next_required_owner_action, stageRunAction);
     assert.equal(
       surface.operator_next_action_source,
-      ownerAnswerMissing ? 'current_owner_delta' : 'stage_run_execution_authorization',
+      ownerAnswerMissing || ownerDeltaNextAction ? 'current_owner_delta' : null,
     );
-    if (!ownerAnswerMissing) {
-      assert.deepEqual(surface.operator_next_action, stageRunAction);
-    }
-    assert.equal(
-      surface.operator_next_owner,
-      ownerAnswerMissing ? surface.operator_current_owner_delta_owner : 'one-person-lab',
-    );
+    assert.equal(surface.operator_next_owner, surface.operator_current_owner_delta_owner);
     assert.equal(
       surface.operator_next_required_action,
-      ownerAnswerMissing
+      ownerAnswerMissing || ownerDeltaNextAction
         ? (ownerDeltaNextAction?.next_required_action ?? ownerDeltaNextAction?.action_kind)
-        : 'record_opl_provider_attempt_lease_authorization_and_closeout_receipt_binding_refs',
+        : null,
     );
     assert.equal(
       surface.operator_payload_requirement,
-      ownerAnswerMissing
-        ? surface.current_owner_delta.payload_requirement
-        : 'opl_execution_authorization_and_closeout_binding_refs_required',
+      surface.current_owner_delta.payload_requirement,
     );
     assert.deepEqual(
       surface.operator_accepted_answer_shape,
-      stageRunAction.accepted_answer_shape,
+      ownerDeltaNextAction?.accepted_answer_shape ?? surface.current_owner_delta.accepted_answer_shape,
     );
     assert.equal(
       boundary.derivation_source,
-      ownerAnswerMissing ? 'current_owner_delta' : 'stage_run_execution_authorization',
+      ownerAnswerMissing || ownerDeltaNextAction ? 'current_owner_delta' : null,
     );
     assert.equal(
       boundary.default_planning_root,
-      ownerAnswerMissing
-        ? 'current_owner_delta'
-        : 'stage_run_execution_authorization_or_closeout_binding',
+      ownerAnswerMissing || ownerDeltaNextAction ? 'current_owner_delta' : null,
     );
-    assert.equal(boundary.route_requires_opl_runtime_refs, !ownerAnswerMissing);
-    assert.equal(boundary.route_requires_domain_or_app_payload, ownerAnswerMissing);
+    assert.equal(boundary.route_requires_opl_runtime_refs, false);
+    assert.equal(
+      boundary.route_requires_domain_or_app_payload,
+      ownerDeltaNextAction?.route_requires_domain_or_app_payload === true,
+    );
     assert.equal(
       surface.stage_run_cockpit_summary.next_required_action,
       ownerAnswerMissing
@@ -241,7 +234,10 @@ export function assertCurrentOwnerDeltaToplineNextAction(surface: JsonRecord) {
         'domain_owner_answer_must_bind_stage_run_manifest_current_pointer_source_fingerprint_and_idempotency',
       );
     } else {
-      assert.deepEqual(surface.operator_next_missing_input_refs, stageRunAction.missing_input_refs);
+      assert.deepEqual(
+        surface.operator_next_missing_input_refs,
+        expectedNextAction?.missing_input_refs ?? [],
+      );
     }
     assert.deepEqual(surface.stage_run_next_missing_input_refs, stageRunAction.missing_input_refs);
     assert.deepEqual(

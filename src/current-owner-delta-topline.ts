@@ -50,9 +50,6 @@ export function buildCurrentOwnerDeltaTopline(input: {
       : strings(currentOwnerDelta.required_return_shapes);
   const operatorNextAction = optionalRecord(readModel.next_safe_action_or_none);
   const stageRunNextAction = optionalRecord(stageRunCockpit.next_required_owner_action);
-  const stageRunAuthorizationBlocksDefault =
-    text(stageRunNextAction?.derivation_source) === 'stage_run_execution_authorization'
-    && text(stageRunNextAction?.next_required_owner) === 'one-person-lab';
   const stageRunOwnerAnswerBindingMissing =
     text(stageRunNextAction?.derivation_source) === 'stage_run_execution_authorization'
     && stageRunNextAction?.owner_answer_missing_before_opl_closeout_binding === true;
@@ -66,9 +63,7 @@ export function buildCurrentOwnerDeltaTopline(input: {
     && stageRunCloseoutBindingBlockers.length === 0
     && text(record(stageRunExecutionAuthorization.closeout_binding).owner_answer_ref) !== null;
   const effectiveOperatorNextAction =
-    stageRunAuthorizationBlocksDefault
-      ? stageRunNextAction
-      : stageRunOwnerAnswerBindingClosed
+    stageRunOwnerAnswerBindingClosed
         ? null
       : stageRunOwnerAnswerBindingMissing && operatorNextAction
         ? {
@@ -105,9 +100,7 @@ export function buildCurrentOwnerDeltaTopline(input: {
     operator_payload_requirement: operatorPayloadRequirement,
     operator_accepted_answer_shape: effectiveAcceptedAnswerShape,
     operator_next_action: effectiveOperatorNextAction,
-    operator_next_action_source: stageRunAuthorizationBlocksDefault
-      ? 'stage_run_execution_authorization'
-      : stageRunOwnerAnswerBindingClosed
+    operator_next_action_source: stageRunOwnerAnswerBindingClosed
         ? 'stage_run_execution_authorization_closed'
       : text(operatorNextAction?.derivation_source),
     current_owner_delta_next_action: operatorNextAction,

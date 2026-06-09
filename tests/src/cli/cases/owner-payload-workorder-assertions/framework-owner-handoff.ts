@@ -2,6 +2,7 @@ import { assert } from '../../helpers.ts';
 import {
   assertCurrentOwnerDeltaProjection,
   assertCurrentOwnerDeltaReadModel,
+  assertCurrentOwnerDeltaToplineNextAction,
 } from './current-owner-delta.ts';
 import { assertOwnerPayloadWorkorderProjection } from './owner-payload-workorder.ts';
 
@@ -288,14 +289,22 @@ export function assertOwnerDeltaFirstReadinessProjection(readiness: JsonRecord) 
     ],
   });
   assert.equal(readiness.operator_current_owner_delta_owner, readiness.current_owner_delta.current_owner);
-  assert.equal(readiness.operator_next_owner, 'one-person-lab');
+  assertCurrentOwnerDeltaToplineNextAction(readiness);
+  const currentOwnerDeltaNextAction = readiness.current_owner_delta_read_model.next_safe_action_or_none;
+  assert.equal(readiness.operator_next_owner, readiness.current_owner_delta.current_owner);
   assert.equal(
     readiness.operator_next_required_action,
-    'record_opl_provider_attempt_lease_authorization_and_closeout_receipt_binding_refs',
+    currentOwnerDeltaNextAction?.next_required_action
+      ?? currentOwnerDeltaNextAction?.action_kind
+      ?? null,
+  );
+  assert.deepEqual(
+    readiness.operator_next_missing_input_refs,
+    currentOwnerDeltaNextAction?.missing_input_refs ?? [],
   );
   assert.equal(
     readiness.operator_next_missing_input_refs.includes('provider_attempt_ref'),
-    true,
+    false,
   );
   assert.equal(
     readiness.stage_run_cockpit_summary.next_required_action,
@@ -314,16 +323,11 @@ export function assertOwnerDeltaFirstReadinessProjection(readiness: JsonRecord) 
   );
   assert.equal(
     readiness.operator_payload_requirement,
-    'opl_execution_authorization_and_closeout_binding_refs_required',
+    readiness.current_owner_delta.payload_requirement,
   );
   assert.deepEqual(
     readiness.operator_accepted_answer_shape,
-    [
-      'provider_attempt_ref',
-      'attempt_lease_ref',
-      'execution_authorization_decision_ref',
-      'owner_answer_binding_ref',
-    ],
+    readiness.current_owner_delta.accepted_answer_shape,
   );
   assert.equal(readiness.stage_run_cockpit_summary.refs_only, true);
   assert.equal(
