@@ -2,6 +2,11 @@
 
 > 让复杂知识工作从一次问答走向持续交付
 
+Owner: `One Person Lab`
+Purpose: `public_user_facing_whitepaper`
+State: `active_public_support`
+Machine boundary: Human-readable whitepaper. Machine truth remains in contracts, source, CLI/API behavior, runtime ledger, provider receipts, domain-owned manifests, App release evidence, and real workspace evidence.
+
 发布日期：2026-06-08
 
 适用对象：希望理解 OPL 品牌、产品定位、设计逻辑和 Foundry Agents 运行方式的用户、合作者、早期采用者和技术决策者。
