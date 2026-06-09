@@ -41,16 +41,39 @@ Exact retired text remains available through git history of the deleted files. T
 - Latest follow-up evidence is folded into repo-local history/provenance owners instead of new OPL dated ledgers: RCA `a03ee655` compresses Hermes and plans history indexes, and MAG `fcb3b31` compresses product handoff history body governance. These commits are docs-history governance evidence, not functional completion, production readiness, default-caller closure or physical delete authorization.
 - The global OPL Doc `/goal` remains active. This rollup closes only the stale ledger-chain shape in OPL main history.
 
+## Fresh Intake 2026-06-09
+
+This intake updates the rollup itself instead of creating another dated ledger
+file. It records the current six-repo docs-governance gate after fresh
+`git fetch`, root checkout status, repo-local coverage owners, and OPL Doc
+doctor risk-map reads.
+
+| Repo | Fresh root state | OPL Doc shape | Coverage read |
+| --- | --- | --- | --- |
+| `one-person-lab` @ `78690ebc` | `main...origin/main`, clean, no extra root worktree | `finding_count=0`; active owner `docs/active/current-state-vs-ideal-gap.md` | OPL main history rollup and process index are compressed; OPL itself still carries only theme-level future governance, so new work must choose one semantic SSOT lane rather than replaying old paragraph ledgers. |
+| `one-person-lab-app` @ `d65afe9` | `main...origin/main`, clean | `finding_count=0`; active owner `docs/active/app-ideal-state-gap-plan.md` | App process ledger carries no generic unreviewed docs-governance theme; open scope is App implementation, release/install, GUI, or evidence-tail work when live App truth changes. |
+| `med-autoscience` @ `ec5deee8` | root `main...origin/main`, clean; concurrent currentness / owner-route worktrees exist | `finding_count=0`; active owner `docs/active/mas-ideal-state-gap-plan.md` | MAS part ledgers are compressed. This intake treats MAS docs/source/test mutation as `no_safe_semantic_split` unless a new docs-only body, live-truth foldback need, or concrete stale surface with replacement-owner and no-active-caller proof is isolated from the active currentness lanes. |
+| `med-autogrant` @ `16e15b3` | `main...origin/main`, clean | `finding_count=0`; active owner `docs/active/mag-ideal-state-cross-repo-gap-plan.md` | MAG coverage ledger routes active/support specs and thin support bodies through current owners. Reopen only for a precise SSOT conflict, triggered spec/history body issue, or physical-delete candidate with owner evidence. |
+| `redcube-ai` @ `aa207faa` | `main...origin/main`, clean | `finding_count=0`; active owner `docs/active/rca-ideal-state-gap-plan.md` | RCA process index covers tracked human docs and retained support indexes for this tranche. Remaining work is functional/evidence-tail or concrete source/contract/test retirement lanes, not history-log expansion. |
+| `opl-meta-agent` @ `19425df` | `main...origin/main`, clean | `finding_count=0`; active owner `docs/active/opl-meta-agent-ideal-state-gap-plan.md` | OMA process index covers its tracked human-doc inventory; remaining work is registry/App consumption, real patch-loop, reviewer evidence, target-agent handoff, and script-to-pack reductions under active owners. |
+
+This intake does not close the parent `/goal`: doctor clean and compressed
+ledgers are not proof of complete six-repo paragraph coverage. It does close
+the safe write decision for this turn: no App/MAG/RCA/OMA docs rewrite is
+needed from the current ledgers, and MAS is intentionally excluded from this
+write set because the active concurrent worktrees overlap currentness and
+owner-route semantics.
+
 ## Current Carry-Forward
 
 | Repo | Current carry-forward |
 | --- | --- |
-| `one-person-lab` | Continue paragraph-level portfolio governance by specific semantic theme. Current process-ledger chain is compressed; future lanes should target concrete active/support/runtime/product/source/delivery/reference/history themes and fold durable conclusions into current owners. |
-| `one-person-lab-app` | No generic unreviewed docs backlog is carried from the deleted chain. Open work remains release/install/GUI implementation and evidence-tail work under App owners when live App truth changes. |
-| `med-autoscience` | Dated coverage part ledgers are already compressed in MAS. Current root checkout has concurrent control-plane/test work outside this docs-governance write set; reopen MAS docs only through a fresh docs-only lane for new docs, live-truth foldback, or concrete stale source/test/workflow/package/CLI/API retirement candidates with replacement-owner and no-active-caller proof. |
-| `med-autogrant` | Product handoff history body governance is compressed in MAG `fcb3b31`. Remaining work is private inventory detail refresh, concrete source/test/workflow/package retirement candidates and production/default-caller evidence tails. Specs/history body governance reopens only when fresh scan finds a current conflict or uncompressed current rule. |
-| `redcube-ai` | Hermes and plans history index governance is compressed in RCA `a03ee655`. Remaining work is private inventory detail refresh, generated/default caller thinning evidence tails, production-like no-regression, Temporal visual-stage long soak and concrete source/contract/test retirement lanes. History body governance reopens only when fresh scan finds a current conflict or uncompressed current rule. |
-| `opl-meta-agent` | Registry/App live consumption, additional target cohorts, real source patch-loop, independent reviewer direct evidence, standard target-agent handoff convergence and actual script-to-pack source reductions remain owner/evidence tails. |
+| `one-person-lab` | Continue by one concrete semantic SSOT lane at a time. Candidate lanes are active/support/runtime/product/source/delivery/reference/history themes that still risk stale current-truth duplication or old surface resurrection. Fold durable conclusions into current owners; keep process detail here or in git history only at topic level. |
+| `one-person-lab-app` | No generic unreviewed docs backlog is carried from the App process ledger. Open work remains release/install/GUI implementation and evidence-tail work under App owners when live App truth changes. |
+| `med-autoscience` | Dated coverage part ledgers are compressed. Because active currentness and owner-route worktrees exist, MAS is `no_safe_semantic_split` for this docs-governance turn; reopen MAS only through an isolated docs-only lane for new docs, live-truth foldback, or a concrete stale source/test/workflow/package/CLI/API retirement candidate with replacement-owner and no-active-caller proof. |
+| `med-autogrant` | Specs/history body governance and product handoff history are compressed in current MAG ledgers. Remaining work is private inventory detail refresh, precise source/test/workflow/package retirement candidates and production/default-caller evidence tails. Reopen docs only on a fresh current conflict, uncompressed current rule, or physical-delete candidate. |
+| `redcube-ai` | Process/history governance is compressed in current RCA indexes. Remaining work is private inventory refresh, generated/default caller thinning evidence tails, production-like no-regression, Temporal visual-stage long soak and concrete source/contract/test retirement lanes. Reopen history bodies only when fresh scan finds a current conflict or uncompressed current rule. |
+| `opl-meta-agent` | Registry/App live consumption, additional target cohorts, real source patch-loop, independent reviewer direct evidence, standard target-agent handoff convergence and actual script-to-pack source reductions remain owner/evidence tails. Do not reopen `external-suite` / external work-order as stale vocabulary without replacement machine truth. |
 
 ## Future Record Policy
 
