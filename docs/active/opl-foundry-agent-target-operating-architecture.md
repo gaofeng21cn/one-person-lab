@@ -146,6 +146,38 @@ Unified target
 
 符合预期的 OPL 默认形态是：普通 operator 不需要理解 worklist、route menu、provider trace、receipt count、private residue 或 wrapper lineage，也能看清当前谁欠什么、接受什么返回形状、有没有 hard gate、下一步是否能执行。Domain owner 继续用自己的 receipt / blocker / quality gate 关闭真实工作；OPL 只负责把这件事启动、记录、恢复、投影和审计清楚。
 
+### Ordinary Progress Spine and Audit Sidecar
+
+2026-06-09 以后，本目标架构增加一条更明确的分层约束：ordinary progress spine 和 audit sidecar 必须分开维护。
+
+```text
+ordinary_progress_spine
+  current_owner_delta
+  -> stage goal
+  -> executor concrete delta
+  -> ProgressDeltaReceipt / OwnerReceipt / TypedBlocker
+  -> next current_owner_delta
+
+audit_sidecar
+  trace / refs / lineage / replay / restore / readiness inventory / long-soak / cleanup / production evidence
+  -> drilldown / verification / recovery / delivery gate support
+```
+
+`ProgressDeltaReceipt` 是 ordinary step 的轻量接力记录，只证明 changed surfaces、produced refs、consumed refs、delta classification、next owner 和 next required delta。它不是 owner receipt、quality gate receipt、artifact mutation receipt、release receipt 或 production evidence receipt。
+
+Stage Artifact Unit 按四层读取：
+
+| Tier | 目标 | 进入默认路径的条件 |
+| --- | --- | --- |
+| `T0_progress_delta` | 让 ordinary executor 的写作、分析、证据整理、review 修订或平台修复可接力。 | 当前 owner delta 需要该变化；用 ProgressDeltaReceipt 表达。 |
+| `T1_stage_transition` | 关闭或阻塞一个 Stage。 | required role artifacts、manifest、OwnerReceipt / TypedBlocker、current pointer 和 closeout binding 成立。 |
+| `T2_delivery_artifact` | 交付 package、export、publication、submission 或 release。 | 对应 domain / App owner authority receipt、independent review 或 human gate 成立。 |
+| `T3_production_evidence` | L5、long-soak、restore proof、cleanup、release cohort 和 no-regression。 | 显式 production evidence lane；只有当前 owner delta 或不可逆操作要求时升级。 |
+
+Audit sidecar 的升级条件必须显式写出。缺 prompt / skill / tool / knowledge / rubric refs、trace 不全、readiness inventory 未补齐、worklist counter 不一致、restore proof 未跑、long-soak 未闭合、cleanup ledger 未完成或 L5 evidence 不足，默认只形成 advisory / diagnostic / production evidence gap。只有它们实际破坏 owner、authority、execution authorization、closeout binding、accepted answer shape、不可逆 mutation、publication / release / physical delete claim、human gate 或恢复审计能力时，才进入 hard blocker。
+
+DeepScientist / 旧 MDS 的流畅经验只能在这一层被吸收为 `single ordinary loop` 和 `few default gates`。它们不得重新成为 MAS 默认 backend、quality owner、artifact authority、OPL provider 或 Foundry Agent 顶层入口。
+
 ### Audit Standard
 
 后续审计按下面标准判定“更符合预期”。

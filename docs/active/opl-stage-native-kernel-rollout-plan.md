@@ -38,6 +38,17 @@ StageRun 只表达最小 runtime 状态
 
 StageRun 是最小状态壳，不是第二 controller。OPL 可以回答 StageRun 是否 running、blocked、terminalizing、accepted、superseded，以及当前 owner 欠什么 accepted answer shape；OPL 不能回答论文是否 publication ready、grant 是否 fundable、visual artifact 是否合格、agent patch 是否应进入目标 repo。
 
+2026-06-09 以后，Stage Artifact Unit 还必须按 ordinary progress spine / audit sidecar 分层读取。Stage folder 仍是核心事实面，但不是每个普通 step 都要以 full delivery artifact closeout 运行。
+
+| 层级 | Stage Native 读法 | 默认权限 |
+| --- | --- | --- |
+| `T0_progress_delta` | 普通 step 写 `ProgressDeltaReceipt`，记录 changed surfaces、produced refs、consumed refs、next owner 和 next required delta。 | 可驱动下一 ordinary owner delta；不能关闭 Stage。 |
+| `T1_stage_transition` | stage folder 的 `stage_manifest + role artifacts + owner receipt / typed blocker + current pointer / closeout binding` 成立。 | 可关闭或阻塞 Stage。 |
+| `T2_delivery_artifact` | publication / export / submission / release package 带 domain/App authority receipt、independent review 或 human gate。 | 可进入交付 gate；不能声明 production maturity。 |
+| `T3_production_evidence` | restore proof、long-soak、cleanup、release cohort、L5 evidence、no-regression refs。 | 只进入 explicit evidence lane；不抢占 ordinary current owner delta。 |
+
+因此，StageRun Kernel 需要支持轻量 progress delta 与重型 transition / delivery proof 共存：ordinary path 先要求可接力 delta，transition path 再要求 manifest / receipt / blocker，audit sidecar 持续收集 lineage / replay / restore / long-soak refs。不能把 sidecar 完整性倒灌成普通 launch hard gate。
+
 ## Owner Split
 
 | 层 | OPL 基座负责 | Domain agent 负责 |

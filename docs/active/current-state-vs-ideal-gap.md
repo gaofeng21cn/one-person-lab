@@ -12,7 +12,7 @@ Date: `2026-06-09`
 
 本文不冻结 receipt id、workorder 数字、attempt id、branch/worktree、provider tick、safe-action record/verify 流水或某轮 closeout 细节。需要当前事实时读取 live 机器面；需要历史过程时读取 `docs/history/**`、runtime ledger、提交历史或对应 repo-local history ledger。
 
-North-star 目标态回到 [OPL 与 Foundry Agents 理想目标态](../references/runtime-substrate/opl-family-agent-ideal-state.md)。系统级理想评估、成熟工程经验映射和品牌一致性目标回到 [OPL Family 理想系统评估](../references/runtime-substrate/opl-family-ideal-system-assessment.md)。顶层 operating model 重设计回到 [OPL Family Ideal Operating Model Redesign](./opl-family-ideal-operating-model-redesign.md)。公开角色、runtime 边界和默认入口回到 `project/status/architecture/invariants/decisions`。文档生命周期规则回到 [文档组合治理](../docs_portfolio_consolidation.md) 和 [文档生命周期政策](../policies/docs-lifecycle-policy.md)。
+North-star 目标态回到 [OPL 与 Foundry Agents 理想目标态](../references/runtime-substrate/opl-family-agent-ideal-state.md)。系统级理想评估、成熟工程经验映射和品牌一致性目标回到 [OPL Family 理想系统评估](../references/runtime-substrate/opl-family-ideal-system-assessment.md)。顶层 operating model 重设计回到 [OPL Family Ideal Operating Model Redesign](./opl-family-ideal-operating-model-redesign.md)。普通推进主干、审计旁路、artifact tiering、readiness JIT、MDS / DeepScientist smoothness learning 与 P0-P5 完整治理规划回到 [Ordinary Progress Spine 与 Audit Sidecar 完整规划](./ordinary-progress-spine-and-audit-sidecar-plan.md)。公开角色、runtime 边界和默认入口回到 `project/status/architecture/invariants/decisions`。文档生命周期规则回到 [文档组合治理](../docs_portfolio_consolidation.md) 和 [文档生命周期政策](../policies/docs-lifecycle-policy.md)。
 
 当前 ideal top-level redesign 的 active owner 口径是：`TASTE.md` 固化长期维护 taste，`docs/decisions.md` 记录仍有效决策，`contracts/opl-framework/surface-budget-policy.json` 冻结机器预算，`contracts/opl-framework/target-operating-architecture-contract.json` 镜像目标态 compiler policy，本文维护当前 owner、gap、gate、next action 和完成口径。支撑文档只能提供目标态、评估标准或证据解释，不能维护第二 active backlog、第二 ordinary route 或第二 truth。
 
@@ -62,6 +62,8 @@ current_owner_delta outer loop
 - `默认判断`: 新增 surface / gate 先问它是否保护大边界，再问它是否让普通 owner delta 更短。如果答案只是不确定性更少、报告更全或证明更漂亮，默认下沉为 advisory / audit / diagnostic / cleanup / production evidence lane。
 
 2026-06-09 follow-through 已把该原则从 prose 再钉到跨合同 guard：`tests/src/verification-command-surfaces.test.ts` 要求 `target-operating-architecture-contract.json.surface_budget_compiler_policy` 与 `surface-budget-policy.json.grip_big_release_small_review` 在 ordinary root、small-detail lanes、hard-blocker upgrade conditions、forbidden overrides、accepted owner answer shapes 和 allowed lanes 上保持一致，避免 target-architecture compiler policy 漂移回第二 default route 或 prose-only 规则。
+
+2026-06-09 顶层规划更新：MAS/OPL 卡住的根因进一步收敛为“审计/证据/receipt/currentness 支撑面进入普通推进默认路径”。完整方案固定为 `Ordinary Progress Spine + Audit Sidecar`：ordinary path 只从 `current_owner_delta -> stage goal -> concrete delta -> ProgressDeltaReceipt / OwnerReceipt / TypedBlocker -> next current_owner_delta` 推进；lineage、trace、restore、readiness inventory、long-soak、cleanup、release cohort、L5 evidence 和 full replay 默认进入 passive sidecar。DeepScientist / 旧 MDS 的可吸收经验是单循环、少默认门、持续产出，不是恢复旧 backend 或降低 MAS 医学审计。当前 active gap 的读法因此更严格：凡不能让当前 owner 更快产生 deliverable delta、owner answer、typed blocker、human gate 或 route-back 的 surface，默认不得抢占 ordinary path；只有安全、authority、execution authorization、closeout binding、不可逆 mutation、delivery/publication/release/physical delete 或 human/compliance gate 才能升级为 hard blocker。
 
 当前三条线的分工固定为：
 
