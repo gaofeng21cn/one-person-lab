@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `status`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
-更新时间：`2026-06-08`
+更新时间：`2026-06-09`
 
 Plugin native profile pointer: `contracts/opl-native-profile.json` 只声明 OPL Flow / OPL Doc 插件同步与 drift 检查所需的 repo-native profile；它不是 framework truth、runtime truth、domain truth、artifact authority、owner receipt 或 production-ready 证据。
 
@@ -73,6 +73,8 @@ Agent Lab、observability eval 和 mechanism improvement 继续是 refs-only con
 | StageRun / owner answer | OPL 可签发 provider attempt、active lease、execution authorization decision 和 closeout binding refs；合法 closeout 仍必须来自 domain owner receipt、quality gate receipt、typed blocker、human gate 或 route-back evidence。 |
 | Workspace / State Index | OPL 维护 workspace topology、workspace inspection、resource inventory、workspace report、workspace fleet report、Project lifecycle runtime、delete safe gate、Stage Artifact Unit、stage outputs index/current pointer 和 refs-only SQLite sidecar；workspace governance v2/v3 把 canonical generated roots 固定到 `control/opl/projections` 与 `control/opl/reports`，根层 `workspace_*.json` 只作兼容 mirror；新 workspace 的 Project Unit 默认物理集合是 `projects/<project-id>`，MAS `studies` 与 RCA/MAG/OMA `deliverables` 只作为 display / legacy alias；完成状态继续由 stage folder、manifest validity、owner receipt / typed blocker、current pointer 和 lineage 推导。 |
 | External evidence | OPL 可记录/验证 body-free refs-only receipts；`runtime brand-module-l5-evidence` 同样只记录品牌模块 L5 evidence refs。verified ledger 只证明 refs transport 与 preflight 可用，不关闭 domain verdict、L5 completion 或 production evidence。 |
+
+2026-06-09 foldback：本轮跨仓推进已把 MAS Stage Native next-action admission、MAG/RCA/OMA owner-chain canary evidence 和 App release evidence cohort readout 吸收回各自 `main` 并推送。OPL live readout 仍按 `framework_control_plane_available_with_hard_blockers` 读取：`current_owner_delta.current_owner=med-autoscience`，缺的是 domain-owned owner answer 与 StageRun closeout binding refs，accepted answer shape 仍是 `domain_owner_receipt_ref`、`quality_gate_receipt_ref` 或 `typed_blocker_ref`。`opl agents conformance --family-defaults --json` 当前顶层为 `3 passed / 1 blocked`，但 StageRun domain adoption read-model 的 profile / controlled canary 仍是 `4/4 passed`；这个 blocked 状态不能被 repo-local canary commit、controlled fixture、suite pass 或 refs-only ledger 自动关闭。`opl framework operating-maturity --family-defaults --json` 仍是 `evidence_required` / `L4_executable_baseline -> L5_production_operating_maturity`，真实 L5、App release-ready、domain ready 和 production ready 均未授权声明。
 
 ## 未闭合项
 
