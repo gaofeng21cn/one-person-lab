@@ -7,7 +7,7 @@ Machine boundary: 本文只记录 OPL Doc series 中 MAS docs-governance 后续 
 
 ## Scope
 
-本轮延续 `2026-06-09-opl-doc-series-six-repo-docs-tranche.md`。上一轮 MAS 因 root checkout 存在同写集 unresolved conflict 未写入；fresh state 显示 MAS 已变为 clean `main`，仅线性 ahead `origin/main` 一个 runtime/currentness 提交，`origin/main` 是本地 `HEAD` 祖先，因此可以在隔离 worktree 中推进 MAS docs-only governance，并在验证后随同本轮 docs commit 线性推送。
+本轮延续 `2026-06-09-opl-doc-series-six-repo-docs-process-closeout.md`。上一轮 MAS 因 root checkout 存在同写集 unresolved conflict 未写入；fresh state 显示 MAS 已变为 clean `main`，仅线性 ahead `origin/main` 一个 runtime/currentness 提交，`origin/main` 是本地 `HEAD` 祖先，因此可以在隔离 worktree 中推进 MAS docs-only governance，并在验证后随同本轮 docs commit 线性推送。
 
 本轮语义主题是 MAS dated docs-portfolio coverage ledger 历史增量压缩。目标不是重审 MAS 全部 runtime truth，也不是声明 MAS paper-line、domain readiness、production readiness 或 physical delete 完成。
 

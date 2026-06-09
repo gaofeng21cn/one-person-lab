@@ -21,16 +21,14 @@ Machine boundary: 本文是人读 OPL Doc / source-contract-test tranche closeou
 | Human support docs | `contracts/README.md`, `contracts/opl-framework/README*`, `docs/references/brand-modules/connect.md`, `docs/references/brand-modules/foundry-lab.md` | Support docs point readers to the new machine field names without becoming machine truth. |
 | Retired route vocabulary provenance | `docs/history/**` and negative guards | Old route terms remain only as history, tombstone, provenance or no-resurrection guard material. |
 
-## Coverage Snapshot
+## Coverage Summary
 
-| Scope | Result |
+| Theme | Current coverage |
 | --- | --- |
-| Reviewed markdown inventory before adding this closeout | Root `README*` + `docs/**/*.md` = 233; `docs/**/*.md` = 231; non-history docs = 97; history docs = 134. |
-| Edited contracts | `contracts/opl-framework/brand-cli-governance.json`, `contracts/opl-framework/foundry-agent-series-contract.json`, `contracts/opl-framework/standard-domain-agent-skeleton-contract.json`, `contracts/README.md`, `contracts/opl-framework/README.md`, `contracts/opl-framework/README.zh-CN.md`. |
-| Edited source/read-models | `src/types.ts`, `src/contracts.ts`, `src/brand-modules.ts`, `src/brand-module-surfaces.ts`, `src/foundry-agent-cli-spine.ts`, `src/opl-skills.ts`, `src/standard-domain-agent-scaffold-constants-parts/foundry-series.ts`, `src/cli/cases/public-command-specs.ts`, `src/cli/modules/help-output.ts`. |
-| Edited tests | `tests/src/cli/cases/brand-modules.test.ts`, `tests/src/opl-skills-boundary.test.ts`, `tests/src/cli-codex-default-shell.test.ts`, `tests/src/cli/cases/agents-scaffold-generation.test.ts`, `tests/src/cli/cases/agent-workspace-norm-fixture.ts`. |
-| Edited support docs | `docs/references/brand-modules/connect.md`, `docs/references/brand-modules/foundry-lab.md`. |
-| Intentionally not edited | `docs/history/**` legacy/provenance content and active negative-guard prose that explicitly says old `frontdoor` wording is history, tombstone, diagnostic or no-resurrection context. |
+| Semantic peer set | Root `README*`, `docs/**/*.md`, active machine contracts, source/read-models, focused tests and directly affected support docs were reviewed for active `frontdoor` machine-field vocabulary. Detailed path lists stay recoverable from this commit's git diff and verification output. |
+| Contract/source/test migration | Brand CLI governance, Foundry Agent series, generated skeleton, CLI/read-model payloads, skill catalog, scaffold constants and focused no-resurrection tests moved to `command_surface` vocabulary. Current machine truth remains in contracts, source and tests. |
+| Support docs | Affected support docs point readers to command-surface vocabulary without becoming machine truth. |
+| History/provenance boundary | `docs/history/**` legacy/provenance content and active negative-guard prose that explicitly says old `frontdoor` wording is history, tombstone, diagnostic or no-resurrection context was intentionally left as provenance. |
 
 ## Edit Decision
 

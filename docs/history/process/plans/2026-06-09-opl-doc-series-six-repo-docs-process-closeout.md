@@ -1,15 +1,15 @@
-# OPL Doc Series Six-Repo Docs Tranche
+# OPL Doc Series Six-Repo Docs Process Closeout
 
 Owner: `One Person Lab`
-Purpose: `opl_doc_series_six_repo_docs_tranche_coverage`
+Purpose: `opl_doc_series_six_repo_docs_process_closeout`
 State: `history_provenance`
-Machine boundary: 本文只记录一次 OPL Doc series docs-governance tranche 的覆盖范围、SSOT 决策、未覆盖清单和下一轮写入范围。当前机器真相继续归各 repo 的 contracts、source、tests、CLI/read-model、runtime ledger、provider receipt、domain-owned manifests、App evidence、owner receipts、typed blockers 和 repo-local active truth owner；本文不得作为 readiness claim、owner receipt、typed blocker、quality/export verdict、artifact authority、physical delete authorization 或 compatibility surface。
+Machine boundary: 本文只记录一次 OPL Doc series docs-governance process closeout 的覆盖范围、SSOT 决策、未覆盖清单和下一轮写入范围。当前机器真相继续归各 repo 的 contracts、source、tests、CLI/read-model、runtime ledger、provider receipt、domain-owned manifests、App evidence、owner receipts、typed blockers 和 repo-local active truth owner；本文不得作为 readiness claim、owner receipt、typed blocker、quality/export verdict、artifact authority、physical delete authorization 或 compatibility surface。
 
 ## 本轮目标
 
 使用 OPL Doc 治理 OPL series 六仓 `README*`、`docs/*.md` 和 `docs/**/*.md` 的文档生命周期。方法是按语义主题先确定 Single Source of Truth，再做内容级合并、历史增量长清单压缩，并在有 replacement owner / no-active-caller / no-forbidden-write / tombstone evidence 时直接退役过时模块、接口、测试、workflow 和入口，不保留兼容面。
 
-本轮不是全局完成声明。它是一个 verified tranche：压缩 clean sibling repos 的 process coverage ledger，并留下六仓 coverage / carry-forward ledger。
+本轮不是全局完成声明。它是一个 verified process closeout：压缩 clean sibling repos 的 process coverage ledger，并留下六仓 coverage / carry-forward ledger。
 
 ## Fresh Inventory
 

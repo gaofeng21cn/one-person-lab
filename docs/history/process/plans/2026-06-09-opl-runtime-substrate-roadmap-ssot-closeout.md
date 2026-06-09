@@ -3,7 +3,7 @@
 Owner: `One Person Lab`
 Purpose: `runtime_substrate_docs_governance_closeout`
 State: `history_provenance`
-Machine boundary: 本文只记录 2026-06-09 OPL Doc runtime-substrate 语义治理 tranche。当前 runtime truth 归 `contracts/`、source/tests、CLI/read-model、runtime ledger、provider receipts、domain-owned owner refs 和核心五件套；本文不是 active plan、readiness oracle、provider proof、domain owner receipt 或 production-ready 证据。
+Machine boundary: 本文只记录 2026-06-09 OPL Doc runtime-substrate 语义治理 closeout。当前 runtime truth 归 `contracts/`、source/tests、CLI/read-model、runtime ledger、provider receipts、domain-owned owner refs 和核心五件套；本文不是 active plan、readiness oracle、provider proof、domain owner receipt 或 production-ready 证据。
 
 ## SSOT decision
 
