@@ -107,6 +107,60 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
     assert.equal(maturity.baseline_level, 'L4_executable_baseline');
     assert.equal(maturity.target_level, 'L5_production_operating_maturity');
 
+    assert.equal(
+      maturity.current_owner_delta_bridge.surface_kind,
+      'opl_operating_maturity_current_owner_delta_bridge',
+    );
+    assert.equal(maturity.current_owner_delta_bridge.default_planning_root, 'current_owner_delta');
+    assert.equal(
+      maturity.summary.current_owner,
+      maturity.current_owner_delta_bridge.current_owner,
+    );
+    assert.equal(
+      maturity.summary.current_owner_stage_id,
+      maturity.current_owner_delta_bridge.stage_id,
+    );
+    assert.equal(typeof maturity.current_owner_delta_bridge.current_owner, 'string');
+    assert.equal(maturity.current_owner_delta_bridge.current_owner.length > 0, true);
+    assert.equal(typeof maturity.current_owner_delta_bridge.desired_delta_description, 'string');
+    assert.equal(maturity.current_owner_delta_bridge.desired_delta_description.length > 0, true);
+    assert.equal(maturity.current_owner_delta_bridge.accepted_answer_shape.length > 0, true);
+    assert.equal(
+      maturity.current_owner_delta_bridge.accepted_answer_shape
+        .includes('typed_blocker_ref'),
+      true,
+    );
+    assert.equal(typeof maturity.current_owner_delta_bridge.hard_gate.state, 'string');
+    assert.equal(
+      maturity.current_owner_delta_bridge.hard_gate.domain_ready_authorized,
+      false,
+    );
+    assert.equal(
+      maturity.summary.current_owner_delta_owner_answer_missing,
+      maturity.current_owner_delta_bridge.owner_answer_missing,
+    );
+    assert.equal(
+      maturity.summary.current_owner_delta_owner_answer_still_required,
+      maturity.current_owner_delta_bridge.owner_answer_still_required,
+    );
+    assert.equal(maturity.current_owner_delta_bridge.evidence_lanes_are_audit_sidecar, true);
+    assert.equal(
+      maturity.current_owner_delta_bridge.evidence_lanes_can_generate_default_next_action,
+      false,
+    );
+    assert.equal(
+      maturity.current_owner_delta_bridge.authority_boundary.bridge_is_projection_only,
+      true,
+    );
+    assert.equal(
+      maturity.current_owner_delta_bridge.authority_boundary.can_sign_owner_receipt,
+      false,
+    );
+    assert.equal(
+      maturity.current_owner_delta_bridge.authority_boundary.can_create_typed_blocker,
+      false,
+    );
+
     assert.equal(maturity.summary.domain_owner_chain_open_domain_count, 4);
     assert.deepEqual(maturity.domain_owner_chain_scaleout.accepted_refs_only_result_shapes, [
       'domain_owner_receipt_ref',

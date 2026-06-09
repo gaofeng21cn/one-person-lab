@@ -155,6 +155,76 @@ function nextOwnerActions() {
   ];
 }
 
+function currentOwnerDeltaBridge(appOperatorDrilldown: Record<string, unknown>) {
+  const attentionFirstPayload = record(appOperatorDrilldown.attention_first_payload);
+  const currentOwnerDelta = record(attentionFirstPayload.current_owner_delta);
+  const currentOwnerDeltaReadModel = record(attentionFirstPayload.current_owner_delta_read_model);
+  const nextSafeAction = record(currentOwnerDeltaReadModel.next_safe_action_or_none);
+  const hardGate = record(currentOwnerDelta.hard_gate);
+  const ownerAnswerRef =
+    stringValue(currentOwnerDelta.latest_owner_answer_ref)
+    ?? stringValue(hardGate.owner_answer_ref);
+
+  return {
+    surface_kind: 'opl_operating_maturity_current_owner_delta_bridge',
+    source_command: 'opl framework readiness --family-defaults --json',
+    source_read_model_ref:
+      '/framework_readiness/attention_first_payload/current_owner_delta',
+    default_planning_root:
+      stringValue(currentOwnerDelta.default_planning_root) ?? 'current_owner_delta',
+    current_owner: stringValue(currentOwnerDelta.current_owner),
+    domain_id: stringValue(currentOwnerDelta.domain_id),
+    stage_id: stringValue(currentOwnerDelta.stage_id),
+    lineage_ref: stringValue(currentOwnerDelta.lineage_ref),
+    desired_delta_kind: stringValue(currentOwnerDelta.desired_delta_kind),
+    desired_delta_description:
+      stringValue(currentOwnerDelta.desired_delta_description),
+    payload_requirement: stringValue(currentOwnerDelta.payload_requirement),
+    accepted_answer_shape: stringListValue(currentOwnerDelta.accepted_answer_shape),
+    required_return_shapes: stringListValue(currentOwnerDelta.required_return_shapes),
+    hard_gate: {
+      state: stringValue(hardGate.state),
+      human_or_domain_owner_required:
+        hardGate.human_or_domain_owner_required === true,
+      provider_liveness_required:
+        hardGate.provider_liveness_required === true,
+      owner_answer_ref: ownerAnswerRef,
+      owner_answer_kind:
+        stringValue(currentOwnerDelta.latest_owner_answer_kind)
+        ?? stringValue(hardGate.owner_answer_kind),
+      domain_ready_authorized: hardGate.domain_ready_authorized === true,
+      quality_or_export_authorized: hardGate.quality_or_export_authorized === true,
+      audit_sidecar_hard_gate_upgrade_required:
+        hardGate.audit_sidecar_hard_gate_upgrade_required === true,
+    },
+    latest_owner_answer_ref: ownerAnswerRef,
+    latest_owner_answer_kind: stringValue(currentOwnerDelta.latest_owner_answer_kind),
+    next_safe_action_or_none: Object.keys(nextSafeAction).length > 0
+      ? nextSafeAction
+      : null,
+    owner_answer_missing:
+      ownerAnswerRef === null
+      && stringListValue(currentOwnerDelta.accepted_answer_shape).length > 0,
+    owner_answer_still_required:
+      ownerAnswerRef === null
+      && hardGate.human_or_domain_owner_required === true,
+    evidence_lanes_are_audit_sidecar: true,
+    evidence_lanes_can_generate_default_next_action: false,
+    required_owner_answer_shapes:
+      stringListValue(currentOwnerDelta.accepted_answer_shape),
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_claim_domain_ready: false,
+      can_claim_app_release_ready: false,
+      can_claim_l5: false,
+      can_claim_production_ready: false,
+      bridge_is_projection_only: true,
+    },
+  };
+}
+
 export async function buildFrameworkOperatingMaturityReadout(
   contracts: FrameworkContracts,
   args: OperatingMaturityArgs,
@@ -188,6 +258,7 @@ export async function buildFrameworkOperatingMaturityReadout(
   const appOperatorDrilldown = record(
     record(runtimeSnapshot.runtime_tray_snapshot).app_operator_drilldown,
   );
+  const ownerDeltaBridge = currentOwnerDeltaBridge(appOperatorDrilldown);
   const appReleaseUserPath = appReleaseUserPathMaturity();
   const drilldownMaturity = appOperatorDrilldownMaturity(appOperatorDrilldown);
   const physicalDeleteAuthority = record(defaultCallers.physical_delete_authority_read_model);
@@ -225,6 +296,12 @@ export async function buildFrameworkOperatingMaturityReadout(
         app_operator_drilldown: SOURCE_COMMANDS.app_operator_drilldown,
       },
       summary: {
+        current_owner: ownerDeltaBridge.current_owner,
+        current_owner_stage_id: ownerDeltaBridge.stage_id,
+        current_owner_delta_owner_answer_missing:
+          ownerDeltaBridge.owner_answer_missing,
+        current_owner_delta_owner_answer_still_required:
+          ownerDeltaBridge.owner_answer_still_required,
         domain_owner_chain_open_domain_count: domainOpenCount,
         brand_module_l5_evidence_required_module_count: l5RequiredModuleCount,
         brand_module_l5_verified_receipt_count:
@@ -235,6 +312,7 @@ export async function buildFrameworkOperatingMaturityReadout(
         memory_artifact_lifecycle_open_count: lifecycleOpenCount,
         ready_claim_authorized: false,
       },
+      current_owner_delta_bridge: ownerDeltaBridge,
       domain_owner_chain_scaleout: {
         source_command: 'opl agents conformance --family-defaults --json',
         status: stringValue(domainOwnerChain.status) ?? 'required_from_domain_owner',
