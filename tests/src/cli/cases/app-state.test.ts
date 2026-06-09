@@ -638,6 +638,7 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
           };
           operator_next_action_owner: string | null;
           current_owner_delta: Record<string, any>;
+          current_owner_delta_next_action: Record<string, any> | null;
           current_owner_delta_read_model: Record<string, any>;
           workbench: {
             ordinary_cockpit: {
