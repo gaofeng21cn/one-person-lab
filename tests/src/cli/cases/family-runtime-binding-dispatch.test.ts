@@ -205,3 +205,29 @@ process.exit(64);
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('family-runtime hydrate without MAS profile or binding fails closed', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-no-profile-'));
+  try {
+    const tick = runCli([
+      'family-runtime',
+      'tick',
+      '--source',
+      'no-profile-binding',
+      '--hydrate',
+      '--domain',
+      'medautoscience',
+    ], familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE: '',
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: '',
+    }));
+
+    assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 0);
+    assert.equal(tick.family_runtime_tick.hydration.exports.length, 1);
+    assert.equal(tick.family_runtime_tick.hydration.exports[0].domain_id, 'medautoscience');
+    assert.equal(tick.family_runtime_tick.hydration.exports[0].status, 'skipped');
+    assert.equal(tick.family_runtime_tick.hydration.exports[0].reason, 'export_command_not_configured');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});

@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -589,6 +591,129 @@ test('Temporal scheduler cadence snapshots MAS profile into tick workflow args',
       delete process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE;
     } else {
       process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE = previousProfile;
+    }
+  }
+});
+
+test('Temporal scheduler cadence snapshots MAS profile from active workspace binding', () => {
+  const previousProfile = process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE;
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scheduler-binding-profile-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scheduler-binding-workspace-'));
+  const profilePath = path.join(stateRoot, 'dm-cvd.local.toml');
+  try {
+    delete process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE;
+    process.env.OPL_STATE_DIR = stateRoot;
+    fs.mkdirSync(path.join(workspaceRoot, 'scripts'), { recursive: true });
+    fs.writeFileSync(path.join(workspaceRoot, 'scripts', 'run-python-clean.sh'), '#!/usr/bin/env bash\nexec python "$@"\n', { mode: 0o755 });
+    fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
+    fs.writeFileSync(path.join(stateRoot, 'workspace-registry.json'), `${JSON.stringify({
+      version: 'g2',
+      bindings: [
+        {
+          binding_id: 'binding-mas-dm-cvd',
+          project_id: 'medautoscience',
+          project: 'med-autoscience',
+          workspace_path: workspaceRoot,
+          label: 'DM-CVD workspace',
+          status: 'active',
+          direct_entry: {
+            command: null,
+            manifest_command: null,
+            url: null,
+            workspace_locator: {
+              surface_kind: 'med_autoscience_workspace_profile',
+              workspace_root: workspaceRoot,
+              profile_ref: profilePath,
+              input_path: null,
+            },
+          },
+          created_at: '2026-06-09T00:00:00.000Z',
+          updated_at: '2026-06-09T00:00:00.000Z',
+          archived_at: null,
+        },
+      ],
+    }, null, 2)}\n`);
+
+    const workflowArgs = buildTemporalSchedulerTickWorkflowArgs({ limit: 5 });
+
+    assert.equal(workflowArgs.domain_profiles?.medautoscience, profilePath);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    if (previousProfile === undefined) {
+      delete process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE;
+    } else {
+      process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE = previousProfile;
+    }
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+  }
+});
+
+test('Temporal scheduler cadence keeps CLI and env MAS profile precedence over active binding', () => {
+  const previousProfile = process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE;
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scheduler-profile-precedence-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scheduler-profile-precedence-workspace-'));
+  const bindingProfilePath = path.join(stateRoot, 'binding.local.toml');
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE = '/tmp/env-dm-cvd.local.toml';
+    fs.mkdirSync(path.join(workspaceRoot, 'scripts'), { recursive: true });
+    fs.writeFileSync(path.join(workspaceRoot, 'scripts', 'run-python-clean.sh'), '#!/usr/bin/env bash\nexec python "$@"\n', { mode: 0o755 });
+    fs.writeFileSync(bindingProfilePath, '[workspace]\nname = "binding"\n', 'utf8');
+    fs.writeFileSync(path.join(stateRoot, 'workspace-registry.json'), `${JSON.stringify({
+      version: 'g2',
+      bindings: [
+        {
+          binding_id: 'binding-mas-profile-precedence',
+          project_id: 'medautoscience',
+          project: 'med-autoscience',
+          workspace_path: workspaceRoot,
+          label: 'Binding profile should not win over env or CLI',
+          status: 'active',
+          direct_entry: {
+            command: null,
+            manifest_command: null,
+            url: null,
+            workspace_locator: {
+              surface_kind: 'med_autoscience_workspace_profile',
+              workspace_root: workspaceRoot,
+              profile_ref: bindingProfilePath,
+              input_path: null,
+            },
+          },
+          created_at: '2026-06-09T00:00:00.000Z',
+          updated_at: '2026-06-09T00:00:00.000Z',
+          archived_at: null,
+        },
+      ],
+    }, null, 2)}\n`);
+
+    const envBacked = buildTemporalSchedulerTickWorkflowArgs({ limit: 3 });
+    const cliBacked = buildTemporalSchedulerTickWorkflowArgs({
+      limit: 3,
+      domainProfiles: { medautoscience: '/tmp/cli-dm-cvd.local.toml' },
+    });
+
+    assert.equal(envBacked.domain_profiles?.medautoscience, '/tmp/env-dm-cvd.local.toml');
+    assert.equal(cliBacked.domain_profiles?.medautoscience, '/tmp/cli-dm-cvd.local.toml');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    if (previousProfile === undefined) {
+      delete process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE;
+    } else {
+      process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE = previousProfile;
+    }
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
     }
   }
 });

@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-import { getActiveWorkspaceBinding } from './workspace-registry.ts';
 import {
   FAMILY_RUNTIME_DOMAIN_IDS,
   type EnqueueInput,
@@ -21,6 +20,10 @@ import {
 } from './family-runtime-domain-handler-process.ts';
 import { resolveOplModuleExecCommand } from './system-installation/modules.ts';
 import { payloadMatchesTaskScope } from './family-runtime-task-scope.ts';
+import {
+  activeMedautoscienceWorkspaceProfile,
+  resolveExplicitMedautoscienceDomainProfile,
+} from './family-runtime-medautoscience-profile.ts';
 
 type DomainExportCommand = {
   argv: string[];
@@ -64,8 +67,7 @@ function exportCommandForDomain(
     };
   }
   if (domainId === 'medautoscience') {
-    const profile = domainProfiles?.medautoscience?.trim()
-      || process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE?.trim();
+    const profile = resolveExplicitMedautoscienceDomainProfile(domainProfiles);
     if (profile) {
       const command = resolveOplModuleExecCommand('medautoscience', [
         'domain-handler',
@@ -91,12 +93,9 @@ function exportCommandForDomain(
       };
     }
 
-    const binding = getActiveWorkspaceBinding('medautoscience');
-    const workspaceLocator = binding?.direct_entry.workspace_locator;
-    const profileRef = workspaceLocator?.surface_kind === 'med_autoscience_workspace_profile'
-      ? workspaceLocator.profile_ref
-      : null;
-    if (binding && profileRef) {
+    const workspaceProfile = activeMedautoscienceWorkspaceProfile();
+    if (workspaceProfile) {
+      const { binding, profileRef } = workspaceProfile;
       return {
         argv: [
           'uv',
