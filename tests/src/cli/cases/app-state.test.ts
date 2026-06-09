@@ -322,7 +322,8 @@ exit 1
     );
     assert.equal(
       output.app_state.operator.ordinary_cockpit.display_payload.next_action.owner,
-      output.app_state.operator.operator_next_action_owner,
+      output.app_state.operator.current_owner_delta_next_action?.owner
+        ?? output.app_state.operator.current_owner_delta.current_owner,
     );
     assert.equal(
       output.app_state.operator.ordinary_cockpit.display_payload.artifact_or_blocker.content_policy,
@@ -443,13 +444,26 @@ exit 1
       output.app_state.operator.current_owner_delta.desired_delta_description,
       'refresh_current_owner_delta_read_model_required',
     );
-    assert.equal(output.app_state.operator.operator_next_action_kind, 'stage_run_execution_authorization_or_closeout_binding_required');
+    assert.equal(output.app_state.operator.operator_next_action_kind, 'current_owner_delta_followthrough_required');
     assert.equal(output.app_state.operator.operator_next_action_owner, 'one-person-lab');
-    assert.equal(output.app_state.operator.operator_next_action_source, 'stage_run_execution_authorization');
-    assert.equal(output.app_state.operator.operator_next_action_authority_boundary.route_requires_opl_runtime_refs, true);
+    assert.equal(output.app_state.operator.operator_next_action_source, 'current_owner_delta');
+    assert.equal(output.app_state.operator.operator_next_action_authority_boundary.route_requires_opl_runtime_refs, false);
     assert.equal(output.app_state.operator.operator_next_action_authority_boundary.route_requires_domain_or_app_payload, false);
     assert.equal(output.app_state.operator.operator_next_action_authority_boundary.can_write_domain_truth, false);
     assert.equal(output.app_state.operator.operator_next_action_authority_boundary.can_create_owner_receipt, false);
+    assert.equal(
+      output.app_state.operator.stage_run_next_required_owner_action.action_kind,
+      'stage_run_execution_authorization_or_closeout_binding_required',
+    );
+    assert.equal(
+      output.app_state.operator.stage_run_next_required_owner_action.next_required_owner,
+      'one-person-lab',
+    );
+    assert.equal(
+      output.app_state.operator.stage_run_execution_authorization_next_action_authority_boundary
+        .route_requires_opl_runtime_refs,
+      true,
+    );
     assert.equal(output.app_state.operator.stage_run_cockpit.launch_admission.default_blocked, false);
     assert.deepEqual(output.app_state.operator.stage_run_cockpit.launch_admission.launch_blockers, []);
     assert.equal(
@@ -688,7 +702,8 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     );
     assert.equal(
       output.app_state.operator.ordinary_cockpit.display_payload.next_action.owner,
-      output.app_state.operator.operator_next_action_owner,
+      output.app_state.operator.current_owner_delta_next_action?.owner
+        ?? output.app_state.operator.current_owner_delta.current_owner,
     );
     assert.equal(
       JSON.stringify(output.app_state.operator.ordinary_cockpit.display_payload).includes('worklist'),

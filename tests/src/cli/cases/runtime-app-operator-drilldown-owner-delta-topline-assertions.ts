@@ -21,7 +21,14 @@ export function assertOwnerDeltaTopline(drilldown: any) {
     drilldown.operator_next_action_source === 'stage_run_execution_authorization_closed';
   const expectedProviderBindingAction =
     'record_opl_provider_attempt_lease_authorization_and_closeout_receipt_binding_refs';
-  const expectedCurrentOwner =
+  const currentOwnerDeltaNextAction =
+    drilldown.current_owner_delta_read_model.next_safe_action_or_none ?? {};
+  const expectedOperatorOwner =
+    currentOwnerDeltaNextAction.next_required_owner
+      ?? currentOwnerDeltaNextAction.current_owner
+      ?? currentOwnerDeltaNextAction.owner
+      ?? drilldown.current_owner_delta.current_owner;
+  const expectedStageRunOwner =
     ownerAnswerMissing || stageRunClosed
       ? drilldown.current_owner_delta.current_owner
       : 'one-person-lab';
@@ -29,7 +36,7 @@ export function assertOwnerDeltaTopline(drilldown: any) {
   assert.equal(drilldown.stage_run_cockpit_summary.refs_only, true);
   assert.equal(
     drilldown.stage_run_cockpit_summary.current_owner,
-    expectedCurrentOwner,
+    expectedStageRunOwner,
   );
   assert.equal(
     drilldown.stage_run_cockpit_summary.current_owner_delta_owner,
@@ -38,15 +45,15 @@ export function assertOwnerDeltaTopline(drilldown: any) {
   assert.equal(drilldown.operator_current_owner_delta_owner, drilldown.current_owner_delta.current_owner);
   assert.equal(
     drilldown.operator_next_owner,
-    expectedCurrentOwner,
+    expectedOperatorOwner,
   );
   assert.equal(
     drilldown.operator_next_required_action,
-    ownerAnswerMissing
-      ? drilldown.current_owner_delta_read_model.next_safe_action_or_none.next_required_action
-      : stageRunClosed
+    stageRunClosed
         ? null
-        : expectedProviderBindingAction,
+        : currentOwnerDeltaNextAction.next_required_action
+          ?? currentOwnerDeltaNextAction.action_kind
+          ?? null,
   );
   assert.equal(
     drilldown.stage_run_cockpit_summary.next_required_action,
@@ -75,22 +82,13 @@ export function assertOwnerDeltaTopline(drilldown: any) {
   assert.equal(drilldown.operator_required_delta, drilldown.current_owner_delta.desired_delta_description);
   assert.equal(
     drilldown.operator_payload_requirement,
-    ownerAnswerMissing
-      ? drilldown.current_owner_delta.payload_requirement
-      : stageRunClosed
-        ? drilldown.current_owner_delta.payload_requirement
-        : 'opl_execution_authorization_and_closeout_binding_refs_required',
+    currentOwnerDeltaNextAction.payload_requirement
+      ?? drilldown.current_owner_delta.payload_requirement,
   );
   assert.deepEqual(
     drilldown.operator_accepted_answer_shape,
-    ownerAnswerMissing || stageRunClosed
-      ? drilldown.current_owner_delta.accepted_answer_shape
-      : [
-          'provider_attempt_ref',
-          'attempt_lease_ref',
-          'execution_authorization_decision_ref',
-          'owner_answer_binding_ref',
-        ],
+    currentOwnerDeltaNextAction.accepted_answer_shape
+      ?? drilldown.current_owner_delta.accepted_answer_shape,
   );
   assertCurrentOwnerDeltaToplineNextAction(drilldown);
   assert.equal(drilldown.authority_boundary.can_write_domain_truth, false);
