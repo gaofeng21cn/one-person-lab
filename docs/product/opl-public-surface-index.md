@@ -68,13 +68,10 @@ Machine boundary: 本文是人读 public surface 索引。机器可读 surface t
 
 早期 gateway-first 阶段只作为历史来源材料保留：
 
-- [Gateway 联邦](../history/compatibility/gateway-federation/gateway-federation.md)
-- [OPL 联邦合同](../history/compatibility/gateway-federation/opl-federation-contract.md)
-- [OPL Routed Action Gateway](../history/compatibility/gateway-federation/opl-routed-action-gateway.md)
-- [OPL Gateway 契约面](../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.md)
+- [Gateway / Federation 来源归档](../history/compatibility/gateway-federation/README.md)
 
 这些 surface 不能再作为今天 `OPL` 的活跃实现、测试或机器可读合同输入。
-本轮清理已经把 Hermes legacy provider / Gateway cron / frontdoor-local-manager / compatibility alias 从 active provider 与默认路径中移除。历史 provenance、fixture 或负向 guard 可保留旧名，但必须明确为退役证据，不能再作为 provider fallback 或 readiness 路径。
+历史 provenance、fixture 或负向 guard 可保留旧名，但必须明确为退役证据，不能再作为 provider fallback、readiness 路径、compatibility alias、facade、wrapper 或 active product surface 入口。
 
 ## 参考级配套材料
 
