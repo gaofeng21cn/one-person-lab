@@ -343,6 +343,25 @@ test('family-runtime intake admits MAS current-control provider candidates ahead
           'default_executor_dispatches',
           'return_to_ai_reviewer_workflow.json',
         ),
+        stage_packet_ref: path.join(
+          workspaceRoot,
+          'studies',
+          '003-dpcc-primary-care-phenotype-treatment-gap',
+          'artifacts',
+          'stage_packets',
+          'return_to_ai_reviewer_workflow.stage-packet.json',
+        ),
+        checkpoint_refs: [
+          path.join(
+            workspaceRoot,
+            'studies',
+            '003-dpcc-primary-care-phenotype-treatment-gap',
+            'artifacts',
+            'stage_packets',
+            'checkpoints',
+            'ai-reviewer-current.json',
+          ),
+        ],
         next_executable_owner: 'ai_reviewer',
         owner_route_current: true,
         provider_attempt_or_lease_required: true,
@@ -419,11 +438,51 @@ test('family-runtime intake admits MAS current-control provider candidates ahead
     assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.next_executable_owner, 'ai_reviewer');
     assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.provider_completion_is_domain_completion, false);
     assert.equal(
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.dispatch_ref,
+      'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
+    );
+    assert.equal(
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.stage_packet_ref,
+      'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
+    );
+    assert.deepEqual(
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.checkpoint_refs,
+      [
+        'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
+      ],
+    );
+    assert.deepEqual(
+      tasksByStudy['002-dm-china-us-mortality-attribution'].payload.stage_packet_refs,
+      [
+        'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
+      ],
+    );
+    assert.equal(
       tasksByStudy['002-dm-china-us-mortality-attribution'].payload.stage_transition_authority_boundary.intent_can_publish_current_owner_delta,
       false,
     );
     assert.equal(tasksByStudy['002-dm-china-us-mortality-attribution'].payload.provider_admission_identity.status, 'provider_admission_pending');
     assert.equal(tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.work_unit_fingerprint, 'sha256:current-dm003');
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.stage_packet_ref,
+      'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/stage_packets/return_to_ai_reviewer_workflow.stage-packet.json',
+    );
+    assert.deepEqual(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.stage_packet_refs,
+      [
+        'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/stage_packets/return_to_ai_reviewer_workflow.stage-packet.json',
+        'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/stage_packets/checkpoints/ai-reviewer-current.json',
+        'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
+      ],
+    );
+    assert.deepEqual(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.checkpoint_refs,
+      [
+        'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/stage_packets/return_to_ai_reviewer_workflow.stage-packet.json',
+        'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/stage_packets/checkpoints/ai-reviewer-current.json',
+        'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json',
+      ],
+    );
     assert.equal(
       tasks.some((task: { payload: { action_type?: string } }) => task.payload.action_type === 'run_quality_repair_batch'),
       false,

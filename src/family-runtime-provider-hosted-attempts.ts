@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
+import path from 'node:path';
 
 import type { FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import { insertEvent, nowIso, stableId } from './family-runtime-store.ts';
@@ -53,7 +54,19 @@ export function defaultExecutorDispatchRef(payload: Record<string, unknown>) {
   return optionalString(payload.dispatch_ref)
     ?? optionalString(payload.immutable_dispatch_ref)
     ?? optionalString(payload.dispatch_packet_ref)
-    ?? optionalString(payload.dispatch_request_ref);
+    ?? optionalString(payload.dispatch_request_ref)
+    ?? relativeDispatchRefFromPath(payload);
+}
+
+function defaultExecutorStagePacketRefs(payload: Record<string, unknown>) {
+  const workspaceRoot = optionalString(payload.workspace_root)
+    ?? workspaceRootFromProfile(optionalString(payload.profile));
+  return uniqueStrings([
+    workspaceRelativeRef(optionalString(payload.stage_packet_ref), workspaceRoot),
+    ...stringList(payload.stage_packet_refs).map((ref) => workspaceRelativeRef(ref, workspaceRoot)),
+    ...stringList(payload.checkpoint_refs).map((ref) => workspaceRelativeRef(ref, workspaceRoot)),
+    defaultExecutorDispatchRef(payload),
+  ]);
 }
 
 export function defaultExecutorSourceFingerprint(payload: Record<string, unknown>) {
@@ -238,6 +251,30 @@ function workspaceRootFromProfile(profile: string | null) {
   const marker = '/ops/medautoscience/profiles/';
   const index = profile.indexOf(marker);
   return index >= 0 ? profile.slice(0, index) : null;
+}
+
+function relativeDispatchRefFromPath(payload: Record<string, unknown>) {
+  const dispatchPath = optionalString(payload.dispatch_path);
+  if (!dispatchPath) {
+    return null;
+  }
+  const workspaceRoot = optionalString(payload.workspace_root)
+    ?? workspaceRootFromProfile(optionalString(payload.profile));
+  if (!workspaceRoot) {
+    return null;
+  }
+  return workspaceRelativeRef(dispatchPath, workspaceRoot);
+}
+
+function workspaceRelativeRef(value: string | null, workspaceRoot: string | null) {
+  if (!value || !workspaceRoot || !path.isAbsolute(value)) {
+    return value;
+  }
+  const relative = path.relative(workspaceRoot, value);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
+    return value;
+  }
+  return relative.split(path.sep).join('/');
 }
 
 function recordStringRefs(value: Record<string, unknown> | null, singularKeys: string[], listKeys: string[]) {
@@ -550,6 +587,11 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
     if (dispatchRef) {
       locator.dispatch_ref = dispatchRef;
     }
+    const stagePacketRefs = defaultExecutorStagePacketRefs(payload);
+    if (stagePacketRefs.length > 0) {
+      locator.stage_packet_ref = stagePacketRefs[0];
+      locator.stage_packet_refs = stagePacketRefs;
+    }
     const profileWorkspaceRoot = workspaceRootFromProfile(optionalString(payload.profile));
     if (profileWorkspaceRoot) {
       locator.workspace_root = profileWorkspaceRoot;
@@ -570,8 +612,10 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
     'action_type',
     'dispatch_authority',
     'dispatch_ref',
+    'stage_packet_ref',
     'next_executable_owner',
     'workspace_root',
+    'dispatch_path',
     'runtime_root',
     'artifact_root',
     'input_path',
@@ -759,7 +803,7 @@ export function ensureProviderHostedStageAttempt(
     taskId: row.task_id,
     newAttempt: options.newAttempt,
     checkpointRefs: isDefaultExecutorDispatchTask(row, payload)
-      ? uniqueStrings([defaultExecutorDispatchRef(payload)])
+      ? defaultExecutorStagePacketRefs(payload)
       : undefined,
     blockedReason: admissionGate.blocked_reason ?? undefined,
   });

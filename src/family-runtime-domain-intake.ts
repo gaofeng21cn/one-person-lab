@@ -207,6 +207,10 @@ function stringList(value: unknown) {
     : [];
 }
 
+function uniqueStrings(values: Array<string | null>) {
+  return [...new Set(values.filter((entry): entry is string => Boolean(entry)))];
+}
+
 function explicitRefFromRecord(value: unknown) {
   if (!isRecord(value)) {
     return null;
@@ -296,6 +300,19 @@ function workspaceRelativeRef(value: string | null, workspaceRoot: string | null
     return value;
   }
   return relative.split(path.sep).join('/');
+}
+
+function currentControlStagePacketRefs(input: {
+  candidate: Record<string, unknown>;
+  workspaceRoot: string | null;
+  dispatchRef: string | null;
+}) {
+  return uniqueStrings([
+    workspaceRelativeRef(optionalString(input.candidate.stage_packet_ref), input.workspaceRoot),
+    ...stringList(input.candidate.stage_packet_refs).map((ref) => workspaceRelativeRef(ref, input.workspaceRoot)),
+    ...stringList(input.candidate.checkpoint_refs).map((ref) => workspaceRelativeRef(ref, input.workspaceRoot)),
+    input.dispatchRef,
+  ]);
 }
 
 function providerAdmissionSourceRefs(input: {
@@ -581,6 +598,12 @@ function currentControlProviderAdmissionInputFrom(
   const dispatchPath = optionalString(candidate.dispatch_path);
   const dispatchRef = optionalString(candidate.dispatch_ref)
     ?? workspaceRelativeRef(dispatchPath, workspaceRoot);
+  const stagePacketRefs = currentControlStagePacketRefs({
+    candidate,
+    workspaceRoot,
+    dispatchRef,
+  });
+  const stagePacketRef = stagePacketRefs[0] ?? null;
   const sourceFingerprint = optionalString(candidate.source_fingerprint)
     ?? optionalString(candidate.action_fingerprint)
     ?? workUnitFingerprint;
@@ -609,6 +632,9 @@ function currentControlProviderAdmissionInputFrom(
         dispatch_authority: dispatchAuthority,
         executor_kind: optionalString(candidate.executor_kind) ?? 'codex_cli_default',
         ...(dispatchRef ? { dispatch_ref: dispatchRef } : {}),
+        ...(stagePacketRef ? { stage_packet_ref: stagePacketRef } : {}),
+        ...(stagePacketRefs.length > 0 ? { checkpoint_refs: stagePacketRefs } : {}),
+        ...(stagePacketRefs.length > 0 ? { stage_packet_refs: stagePacketRefs } : {}),
         ...(dispatchPath ? { dispatch_path: dispatchPath } : {}),
         ...(optionalString(candidate.execution_ref) ? { execution_ref: optionalString(candidate.execution_ref) } : {}),
         authority_boundary: 'mas_default_executor_dispatch_request_only',

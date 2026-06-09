@@ -26,6 +26,79 @@ function gateClearingDefaultExecutorPayload(sourceFingerprint: string) {
   };
 }
 
+test('family-runtime derives MAS default executor stage packet from dispatch path when dispatch ref is absent', () => {
+  const db = new DatabaseSync(':memory:');
+  const workspaceRoot = '/tmp/dm-cvd-current-control';
+  const dispatchRef = 'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/run_gate_clearing_batch.json';
+  try {
+    withIsolatedFamilyRuntimeEnv(() => {
+      createQueueTables(db);
+      const payload = {
+        ...gateClearingDefaultExecutorPayload('source-gate-clearing-dispatch-path'),
+        workspace_root: workspaceRoot,
+        dispatch_path: `${workspaceRoot}/${dispatchRef}`,
+      };
+      delete payload.dispatch_ref;
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-gate-clearing-dispatch-path',
+        payload,
+        dedupeKey: 'mas:dm-cvd:003:default-executor:run_gate_clearing_batch:dispatch-path',
+      });
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(
+        'task-mas-default-gate-clearing-dispatch-path',
+      );
+      const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-gate-clearing-dispatch-path',
+      ) as Parameters<typeof ensureProviderHostedStageAttempt>[1];
+      const attempt = ensureProviderHostedStageAttempt(db, row, payload);
+
+      assert.ok(attempt);
+      assert.deepEqual(attempt.checkpoint_refs, [dispatchRef]);
+      assert.equal(attempt.workspace_locator.dispatch_ref, dispatchRef);
+      assert.equal(attempt.workspace_locator.dispatch_path, `${workspaceRoot}/${dispatchRef}`);
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime preserves MAS default executor explicit stage packet refs on stage attempt', () => {
+  const db = new DatabaseSync(':memory:');
+  const stagePacketRef = 'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/stage_packets/run_gate_clearing_batch.stage-packet.json';
+  const checkpointRef = 'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/stage_packets/checkpoints/gate-clearing-current.json';
+  const dispatchRef = 'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/run_gate_clearing_batch.json';
+  try {
+    withIsolatedFamilyRuntimeEnv(() => {
+      createQueueTables(db);
+      const payload = {
+        ...gateClearingDefaultExecutorPayload('source-gate-clearing-explicit-stage-packet'),
+        stage_packet_ref: stagePacketRef,
+        checkpoint_refs: [checkpointRef],
+      };
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-gate-clearing-explicit-stage-packet',
+        payload,
+        dedupeKey: 'mas:dm-cvd:003:default-executor:run_gate_clearing_batch:explicit-stage-packet',
+      });
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(
+        'task-mas-default-gate-clearing-explicit-stage-packet',
+      );
+      const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-gate-clearing-explicit-stage-packet',
+      ) as Parameters<typeof ensureProviderHostedStageAttempt>[1];
+      const attempt = ensureProviderHostedStageAttempt(db, row, payload);
+
+      assert.ok(attempt);
+      assert.deepEqual(attempt.checkpoint_refs, [stagePacketRef, checkpointRef, dispatchRef]);
+      assert.equal(attempt.workspace_locator.stage_packet_ref, stagePacketRef);
+      assert.deepEqual(attempt.workspace_locator.stage_packet_refs, [stagePacketRef, checkpointRef, dispatchRef]);
+      assert.equal(attempt.workspace_locator.dispatch_ref, dispatchRef);
+    });
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime admits MAS gate-clearing default executor dispatch as Codex stage attempt', () => {
   const db = new DatabaseSync(':memory:');
   try {
