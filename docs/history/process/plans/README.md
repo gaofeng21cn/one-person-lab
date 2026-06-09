@@ -22,6 +22,7 @@ Machine boundary: 本目录只保留人读 implementation-plan / closeout proven
 
 | File | Historical role | Current owner |
 | --- | --- | --- |
+| `2026-06-09-opl-doc-series-six-repo-docs-tranche.md` | OPL Doc series six-repo docs-governance tranche coverage ledger。 | 当前 truth 归各 repo active truth owner、core docs、live code/contracts/tests/read-model 与 repo-local process/provenance indexes；ledger 只记录本轮 clean sibling repo history/process 压缩、MAS conflict boundary、remaining scope 和下一轮写入范围。 |
 | `2026-06-09-opl-product-history-index-ssot-closeout.md` | OPL active product public surface index history-entry thinning closeout。 | 当前 product surface truth 归 core docs、`docs/product/README.md`、contracts/source/CLI/read-model、runtime ledger/provider receipts 和 App/workbench projection；retired gateway/federation history truth 归 `docs/history/compatibility/gateway-federation/README.md`。 |
 | `2026-06-08-opl-purpose-first-history-compression-closeout.md` | 2026-06-03 OPL family purpose-first design audit history compression closeout。 | 当前 purpose-first 稳定审计标准归 `docs/active/opl-family-purpose-first-current-design-audit.md`；当前 gap owner 归 active gap plan；production closure 证据门归 `docs/active/production-framework-closure-gap-matrix.md`；closeout 只记录本轮历史长清单压缩、覆盖范围和未声明边界。 |
 | `2026-06-08-opl-mvp-friction-history-compression-closeout.md` | 2026-06-04 OPL Foundry Agent MVP friction audit history compression closeout。 | 当前目标操作架构、primitive、迁移阶段和验收门归 `docs/active/opl-foundry-agent-target-operating-architecture.md`；当前 gap owner 归 active gap plan；closeout 只记录本轮历史长清单压缩、覆盖范围和未声明边界。 |
