@@ -1217,6 +1217,18 @@ const TARGET_ARCHITECTURE_HARD_BLOCKER_CONDITIONS = [
   'irreversible_mutation',
 ] as const;
 
+const TARGET_ARCHITECTURE_ACCEPTED_OWNER_ANSWER_SHAPES = [
+  'owner_receipt_ref',
+  'quality_gate_receipt_ref',
+  'human_gate_ref',
+  'typed_blocker_ref',
+  'no_regression_ref',
+  'long_soak_ref',
+  'route_back_ref',
+  'physical_delete_authorization_ref',
+  'keep_as_authority_adapter_ref',
+] as const;
+
 const TARGET_ARCHITECTURE_DERIVED_STAGE_STATE = [
   'stage_current_pointer',
   'stage_run_terminal_state',
@@ -1784,6 +1796,17 @@ function validateTargetOperatingArchitecture(
     'surface_budget_compiler_policy.hard_blocker_upgrade_conditions',
     filePath,
   );
+  const acceptedOwnerAnswerShapes = expectNonEmptyStringArray(
+    surfaceBudgetRaw.accepted_owner_answer_shapes,
+    'surface_budget_compiler_policy.accepted_owner_answer_shapes',
+    filePath,
+  );
+  requireEveryValue(
+    acceptedOwnerAnswerShapes,
+    TARGET_ARCHITECTURE_ACCEPTED_OWNER_ANSWER_SHAPES,
+    'surface_budget_compiler_policy.accepted_owner_answer_shapes',
+    filePath,
+  );
 
   const reconcilerLoops = expectNonEmptyStringArray(
     reconcilerRaw.required_loops,
@@ -1910,6 +1933,7 @@ function validateTargetOperatingArchitecture(
         'surface_budget_compiler_policy.ordinary_path_must_not_be_overridden_by',
         filePath,
       ),
+      accepted_owner_answer_shapes: acceptedOwnerAnswerShapes,
     },
     reconciler_model: {
       loop_granularity: expectString(reconcilerRaw.loop_granularity, 'reconciler_model.loop_granularity', filePath),

@@ -25,6 +25,7 @@ const GRIP_BIG_RELEASE_SMALL_COMPILER_MIRROR_FIELDS = [
   'small_detail_default_lanes',
   'hard_blocker_upgrade_conditions',
   'ordinary_path_must_not_be_overridden_by',
+  'accepted_owner_answer_shapes',
 ] as const;
 
 type GripBigReleaseSmallMirrorField = typeof GRIP_BIG_RELEASE_SMALL_COMPILER_MIRROR_FIELDS[number];
@@ -618,6 +619,7 @@ test('surface budget compiler consistency guard catches ordinary path and small-
   driftedCompilerPolicy.small_detail_default_lanes = ['advisory', 'audit', 'diagnostic'];
   driftedCompilerPolicy.hard_blocker_upgrade_conditions = ['authority_violation'];
   driftedCompilerPolicy.ordinary_path_must_not_be_overridden_by = ['raw_worklist'];
+  driftedCompilerPolicy.accepted_owner_answer_shapes = ['typed_blocker_ref'];
   driftedCompilerPolicy.allowed_lanes = ['ordinary', 'advisory', 'audit', 'diagnostic'];
 
   assert.deepEqual(
@@ -630,6 +632,7 @@ test('surface budget compiler consistency guard catches ordinary path and small-
       'surface_budget_compiler_policy.small_detail_default_lanes',
       'surface_budget_compiler_policy.hard_blocker_upgrade_conditions',
       'surface_budget_compiler_policy.ordinary_path_must_not_be_overridden_by',
+      'surface_budget_compiler_policy.accepted_owner_answer_shapes',
       'surface_budget_compiler_policy.allowed_lanes',
     ],
   );

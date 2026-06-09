@@ -133,6 +133,17 @@ export const MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT: TargetOperatingArch
       'l5_evidence_ledger',
       'release_diagnostics',
     ],
+    accepted_owner_answer_shapes: [
+      'owner_receipt_ref',
+      'quality_gate_receipt_ref',
+      'human_gate_ref',
+      'typed_blocker_ref',
+      'no_regression_ref',
+      'long_soak_ref',
+      'route_back_ref',
+      'physical_delete_authorization_ref',
+      'keep_as_authority_adapter_ref',
+    ],
   },
   reconciler_model: {
     loop_granularity: 'small_idempotent_reconcilers',

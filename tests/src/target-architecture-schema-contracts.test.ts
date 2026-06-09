@@ -470,6 +470,7 @@ test('target operating architecture contract freezes resource, authority, lane, 
       small_detail_default_lanes: string[];
       hard_blocker_upgrade_conditions: string[];
       ordinary_path_must_not_be_overridden_by: string[];
+      accepted_owner_answer_shapes: string[];
     };
     reconciler_model: {
       required_loops: string[];
@@ -601,6 +602,17 @@ test('target operating architecture contract freezes resource, authority, lane, 
   ]);
   assert.equal(contract.surface_budget_compiler_policy.hard_blocker_upgrade_conditions.includes('authority_violation'), true);
   assert.equal(contract.surface_budget_compiler_policy.hard_blocker_upgrade_conditions.includes('irreversible_mutation'), true);
+  assert.deepEqual(contract.surface_budget_compiler_policy.accepted_owner_answer_shapes, [
+    'owner_receipt_ref',
+    'quality_gate_receipt_ref',
+    'human_gate_ref',
+    'typed_blocker_ref',
+    'no_regression_ref',
+    'long_soak_ref',
+    'route_back_ref',
+    'physical_delete_authorization_ref',
+    'keep_as_authority_adapter_ref',
+  ]);
   for (const forbiddenOverride of [
     'raw_worklist',
     'evidence_ledger',
