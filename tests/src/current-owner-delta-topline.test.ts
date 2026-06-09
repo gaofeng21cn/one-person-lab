@@ -335,6 +335,49 @@ test('current owner delta hard gate ignores generic audit-only open safe-action 
   );
 });
 
+test('current owner delta hard gate requires domain owner when answer shape is owner receipt or blocker', async () => {
+  const module = await import(pathToFileURL(path.join(repoRoot, projectionModulePath)).href);
+  const readModel = module.buildCurrentOwnerDeltaReadModel({
+    ownerDeltaFirst: {
+      next_owner: 'med-autoscience',
+      domain_id: 'medautoscience',
+      next_required_delta: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+      required_return_shapes: [
+        'domain_owner_receipt_ref',
+        'quality_gate_receipt_ref',
+        'typed_blocker_ref',
+      ],
+      primary_item: {
+        stage_id: 'paper_autonomy/guarded-apply',
+        stage_attempt_id: 'sat-owner-answer-missing',
+      },
+    },
+    countSummary: {
+      openSafeActionCount: 0,
+      payloadRequiredCount: 0,
+      payloadFreeCount: 0,
+      blockedRefsOnlyCount: 0,
+      evidenceEnvelopeOpenCount: 0,
+      evidenceEnvelopeBlockedCount: 0,
+      domainDispatchWorkorderCount: 0,
+      stageReplayMissingReceiptWorkorderCount: 0,
+    },
+  });
+
+  assert.equal(readModel.current_owner_delta.current_owner, 'med-autoscience');
+  assert.equal(readModel.current_owner_delta.stage_id, 'paper_autonomy/guarded-apply');
+  assert.equal(readModel.current_owner_delta.latest_owner_answer_ref, null);
+  assert.equal(readModel.current_owner_delta.hard_gate.state, 'owner_delta_open');
+  assert.equal(readModel.current_owner_delta.hard_gate.human_or_domain_owner_required, true);
+  assert.equal(
+    readModel.next_safe_action_or_none.action_kind,
+    'current_owner_delta_owner_answer_or_typed_blocker_required',
+  );
+  assert.equal(readModel.next_safe_action_or_none.route_requires_domain_or_app_payload, true);
+  assert.equal(readModel.next_safe_action_or_none.can_create_owner_receipt, false);
+  assert.equal(readModel.next_safe_action_or_none.can_claim_domain_ready, false);
+});
+
 test('current owner delta keeps blocked refs-only residue as audit sidecar only', async () => {
   const module = await import(pathToFileURL(path.join(repoRoot, projectionModulePath)).href);
   const readModel = module.buildCurrentOwnerDeltaReadModel({

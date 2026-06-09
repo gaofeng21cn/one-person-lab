@@ -527,6 +527,10 @@ function buildCurrentOwnerDeltaProjection(input: {
     stringValue(record(input.ownerDeltaFirst.primary_item).latest_owner_answer_kind),
   );
   const ownerAnswerRecorded = latestOwnerAnswerRef !== null;
+  const ownerAnswerRequired = ownerAnswerOrTypedBlockerRequired({
+    desiredDeltaKind: desiredDeltaKind(requiredDelta),
+    acceptedAnswerShape: input.acceptedReturnShapes,
+  });
   const hardGate = {
     state:
       ownerAnswerRecorded
@@ -539,6 +543,7 @@ function buildCurrentOwnerDeltaProjection(input: {
       ownerAnswerRecorded
         ? false
         : selectedActionRequiresDomainOrAppPayload
+        || ownerAnswerRequired
         || (explicitOwnerDeltaOpen && input.countSummary.payload_required_count > 0),
     source: 'owner_delta_controller',
     owner_answer_ref: latestOwnerAnswerRef,
