@@ -41,7 +41,6 @@ const BRAND_MODULE_DOC_PATHS: Record<BrandModuleId, string> = {
 
 const HUMAN_DOC_PATHS: Record<string, string> = {
   'human_doc:opl_brand_module_maturity_against_workspace': 'docs/references/brand-modules/current-maturity-against-workspace.md',
-  'human_doc:opl_brand_module_l4_rollout_plan': 'docs/active/brand-module-l4-rollout-plan.md',
   'human_doc:opl_status': 'docs/status.md',
   'human_doc:opl_architecture': 'docs/architecture.md',
   'human_doc:opl_stage_native_kernel_rollout_plan': 'docs/active/opl-stage-native-kernel-rollout-plan.md',

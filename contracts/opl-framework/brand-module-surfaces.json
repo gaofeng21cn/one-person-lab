@@ -147,7 +147,6 @@
           "opl charter validate --json",
           "opl charter doctor --json",
           "human_doc:opl_brand_module_maturity_against_workspace",
-          "human_doc:opl_brand_module_l4_rollout_plan",
           "human_doc:opl_status"
         ],
         "not_claims": [
@@ -308,7 +307,6 @@
           "opl atlas validate --json",
           "opl atlas doctor --json",
           "human_doc:opl_brand_module_maturity_against_workspace",
-          "human_doc:opl_brand_module_l4_rollout_plan",
           "human_doc:opl_status"
         ],
         "not_claims": [
@@ -466,7 +464,6 @@
           "opl workspace validate --json",
           "opl workspace doctor --json",
           "human_doc:opl_brand_module_maturity_against_workspace",
-          "human_doc:opl_brand_module_l4_rollout_plan",
           "human_doc:opl_architecture",
           "human_doc:opl_status"
         ],
@@ -627,7 +624,6 @@
           "opl pack validate --json",
           "opl pack doctor --json",
           "human_doc:opl_brand_module_maturity_against_workspace",
-          "human_doc:opl_brand_module_l4_rollout_plan",
           "human_doc:opl_foundry_agent_target_operating_architecture",
           "human_doc:opl_status"
         ],
@@ -790,7 +786,6 @@
           "opl stagecraft validate --json",
           "opl stagecraft doctor --json",
           "human_doc:opl_brand_module_maturity_against_workspace",
-          "human_doc:opl_brand_module_l4_rollout_plan",
           "human_doc:opl_stage_native_kernel_rollout_plan",
           "human_doc:opl_status"
         ],
@@ -952,7 +947,6 @@
           "opl runway validate --json",
           "opl runway doctor --json",
           "human_doc:opl_brand_module_maturity_against_workspace",
-          "human_doc:opl_brand_module_l4_rollout_plan",
           "human_doc:opl_runtime_index",
           "human_doc:opl_status"
         ],
@@ -1115,7 +1109,6 @@
           "opl vault validate --json",
           "opl vault doctor --json",
           "human_doc:opl_brand_module_maturity_against_workspace",
-          "human_doc:opl_brand_module_l4_rollout_plan",
           "human_doc:opl_delivery_index",
           "human_doc:opl_status"
         ],
@@ -1276,7 +1269,6 @@
           "opl console validate --json",
           "opl console doctor --json",
           "human_doc:opl_brand_module_maturity_against_workspace",
-          "human_doc:opl_brand_module_l4_rollout_plan",
           "human_doc:opl_public_surface_index",
           "human_doc:opl_status"
         ],
@@ -1438,7 +1430,6 @@
           "opl foundry-lab validate --json",
           "opl foundry-lab doctor --json",
           "human_doc:opl_brand_module_maturity_against_workspace",
-          "human_doc:opl_brand_module_l4_rollout_plan",
           "human_doc:opl_foundry_agent_target_operating_architecture",
           "human_doc:opl_status"
         ],
@@ -1603,7 +1594,6 @@
           "opl connect validate --json",
           "opl connect doctor --json",
           "human_doc:opl_brand_module_maturity_against_workspace",
-          "human_doc:opl_brand_module_l4_rollout_plan",
           "human_doc:opl_public_surface_index",
           "human_doc:opl_status"
         ],
