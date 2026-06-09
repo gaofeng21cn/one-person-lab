@@ -18,12 +18,13 @@ Machine boundary: 本目录只保存已吸收到当前 owner surface 的 shared-
 | 当前公开运行模型 | [OPL 运行模型](../../../public/operating-model.md) |
 | 文档组合生命周期和下一批治理范围 | [OPL 开发文档组合整理](../../../active/development-document-portfolio.md) |
 
-归档文件：
+归档主题：
 
-| 文件 | 历史角色 | 当前 owner |
+| 历史主题组 | 覆盖内容 | 当前 owner / 读法 |
 | --- | --- | --- |
-| [共享基础结构](./shared-foundation.md) | 记录早期 shared foundation 五层 framing、Auto-only / future HITL 分层和 MAS/MAG/RCA surface 形成语境。 | active gap plan、ideal-state reference、shared runtime/domain specs。 |
-| [共享基础结构归属](./shared-foundation-ownership.md) | 记录早期 OPL top-level index / domain truth / human-private workspace owner split。 | shared runtime/domain specs、runtime naming boundary、domain-owned manifests/receipts。 |
+| Shared foundation framing and ownership split | 早期 shared foundation 五层 framing、Auto-only / future HITL 分层、MAS/MAG/RCA surface 形成语境、OPL top-level index / domain truth / human-private workspace owner split。 | 当前 shared primitive 上收、runtime/domain 边界和 owner split 回 active gap plan、ideal-state reference、shared runtime/domain specs、runtime naming boundary、domain-owned manifests/receipts 和 live read-model。 |
+
+本索引不再维护逐文件 current-owner 表。Exact historical files remain in this directory for provenance and searchability; read the original file or git history only when the compact theme row is insufficient. Still-current owner-split rules must be folded into the current owner doc, active spec, contract, source or test before this directory is cited.
 
 读取规则：
 
