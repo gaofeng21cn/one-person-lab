@@ -811,33 +811,15 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 状态：已被 2026-05-10 的 Temporal-backed provider 决策 supersede。保留本段只作为已退役 Hermes-first 回滚背景和迁移期实现口径，不作为当前默认 topology、安装纪律或 readiness 目标。
 
-原因：最新核实显示，过去的问题不在于 Hermes 没有价值，而在于 OPL/MAS 只把它用成了 `every 5m` cron carrier。真正需要的是 24h 在线产品能力：常驻 gateway、cron/webhook wakeup、session store、delivery/notification、approval transport、memory/profile isolation。这个能力应由上游 `Hermes-Agent` 承担，`OPL` 在其上持有 typed family queue、跨仓 dispatch/control plane、Runtime Manager 和 Full App 包装；`MAS`、`MAG`、`RCA` 继续持有 domain truth、质量判断和 artifact/package/publication gate。
+压缩读法：本历史决策只保留当时的判断来源：OPL 曾把 24h online product capability 寄托在上游 `Hermes-Agent`，并据此写过默认安装、Gateway、cron/webhook wakeup、Full package payload、system initialize readiness 和 hybrid provider adapter 口径。当前 SSOT 已回到 2026-05-10 Temporal-backed provider 决策、核心五件套、runtime 命名边界和 family runtime online substrate contract。
 
-影响：
-
-- 历史上 `opl install` 曾计划默认安装/复用 `Codex CLI`、Hermes online runtime、默认 domain modules、推荐 skills、`officecli` CLI 与 GUI；当前目标口径已改为 Temporal-backed family runtime，Temporal 是生产必需 substrate；Hermes online runtime / Gateway 只保留为历史 provenance、参考材料、诊断语料或负向 guard，`hermes_agent` executor adapter 仍是显式非默认 backend。
-- 历史上 `Hermes-Agent` 曾被写成 Full OPL family readiness 的 required online substrate；当前 Full OPL readiness 应按已配置 family runtime provider ready 判断，不能再把 Hermes 写成目标必需项。
-- `Codex CLI` 仍是默认且第一公民的具体执行器；Hermes online substrate 不自动替换 domain-selected executor，也不成为 MAS/MAG/RCA truth owner。
-- `antigravity_cli` 若出现在历史或实验配置中，只能按 explicit non-default stage adapter 读取；缺少 `executor_binding_ref`、experimental/non-default label、required capabilities 或 receipt requirements 时不能启动。
-- 历史计划新增过 `opl family-runtime` typed queue / bridge：队列位于 `${OPL_STATE_DIR}/family-runtime/queue.sqlite`，并曾让 Hermes cron/webhook 唤醒 OPL tick；当前唤醒/托管路径不再保留 Hermes cron/webhook 兼容接口。
-- 历史计划中 `opl family-runtime intake` 与 `opl family-runtime tick --hydrate` 会先读取 domain sidecar export 的 `pending_family_tasks[]`，按 dedupe key 入队，再在同一 tick 中派发已入队任务；该 hydrate 语义已保留，Hermes cron 注册脚本语义已退役。
-- 历史计划中 Full 首次安装包曾要求携带 Hermes payload、profile seed、CLI shim、LaunchAgent install/repair scripts、版本 manifest 与 checksum；当前 Full 包应携带已配置 family runtime provider 所需 payload，Temporal provider 落地后由 provider manifest/checksum 表达 readiness。
-- 历史计划中 `opl system initialize` 和 App 首启曾显示 Core ready、Domain modules ready、Hermes online runtime ready 三层状态；当前应显示 Core、Domain modules、family runtime provider readiness，不能把 Hermes 写成目标默认层。
-- 历史上“Hybrid optional Hermes provider adapter”的文档口径只保留为 archive/decision history，不再作为当前安装、provider fallback 或 readiness 行为。
+当前处置：Temporal-backed provider 是 production online runtime 的必需 substrate；`Codex CLI` 是默认且第一公民 executor；`hermes_agent`、`claude_code`、`antigravity_cli` 只能作为显式非默认 executor adapter/backend。旧 Hermes online runtime、Gateway、provider/readiness、cron/webhook bridge、Full package Hermes payload 和 hybrid provider compatibility 只保留为 history / provenance / diagnostic / negative guard，不恢复为安装路径、readiness 目标、default executor、provider fallback、compatibility interface 或 current worklist。历史 `intake` / `hydrate` 中仍有效的 typed queue 语义已由 OPL/Temporal provider owned path 承接。
 
 ### 历史决策：Hermes 从默认安装依赖降为显式 hosted/runtime adapter
 
 状态：先被 2026-05-08 已退役 Hermes-first online substrate 决策取代，又被 2026-05-10 Temporal-backed provider 决策 supersede。保留本段用于解释 2026-05-08 早期误判和回滚背景，不作为当前实现口径。
 
-原因：当时 `OPL` 的默认运行时、会话语义和 domain readiness 被临时收敛到 `Codex-default + MAS/MAG/RCA domain entries`。继续把 Hermes 写进 `opl install` 默认路径、首启 baseline 或 mandatory runtime substrate，会把尚未完整接入的 hosted/online-management 能力误读成 OPL 默认依赖。
-
-历史影响：
-
-- `opl install` 一度默认只安装/复用 `Codex CLI`、默认 domain modules、推荐 skills、`officecli` CLI 与 GUI。
-- 旧 hosted/runtime/provider adapter 口径一度被保留；该口径已经进入历史，不作为当前兼容接口。
-- `hermes_agent` executor adapter/backend 另按 canonical 显式非默认接口处理。
-- `opl system initialize`、App 首启与 README 一度把 Hermes 缺失视为非阻塞 online-management 状态。
-- Full 首次安装包一度不携带 Hermes adapter payload。
+压缩读法：本段只解释 2026-05-08 前后曾出现的中间回滚语境：OPL 一度把默认运行时收敛到 `Codex CLI + domain entries`，并把 Hermes hosted / online-management 作为非阻塞或显式 adapter 语境读取。当前安装、首启、Full package 和 readiness 口径不从本段继承；它们回到 Temporal-backed provider 决策、App release owner 和 live install/readiness contracts。`hermes_agent` 继续只按 canonical 显式非默认 executor adapter/backend 读取。
 
 ### 决策：引入 Family Action Catalog 作为 action metadata 单一声明面
 
@@ -921,15 +903,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 状态：先被 2026-05-08 的 Hermes-first online substrate 决策取代，又被 2026-05-10 的 Temporal-backed production runtime 决策 supersede。当前 Full OPL readiness 要求 Temporal-backed family runtime provider ready；本段只保留迁移背景。
 
-原因：当时新用户首屏优先目标是尽快进入 `OPL` 的核心工作与已准入 domain 工作；迁移期曾把 Hermes online-management gateway 视为渐进就绪项，但 gateway system service 的加载状态不应被写成底层 runtime 未就绪式首屏 blocker。当前该口径已被 Temporal-backed family runtime provider 取代；`hermes_agent` 属于当前 canonical executor backend set，并且只能作为显式非默认 executor adapter/backend 使用。
-
-影响：
-
-- 历史上 `opl install` 不再默认安装 Hermes，但仍允许显式 Hermes provider adapter 安装或复用；该口径现已 superseded，不作为当前安装行为。
-- Hermes online-management gateway 是由 Hermes installer/gateway command 管理的系统服务；OPL 负责触发安装/启动、检查 readiness 并报告状态，不接管 gateway service lifecycle 实现。
-- `opl system initialize`、App 首启与公开 README 文案必须区分 core/domain readiness 与 online-management readiness。
-- 当 Codex CLI 与已准入 domain modules ready 时，首屏可以进入通用工作、医学研究、基金写作或汇报/PPT 工作；Hermes gateway 未 loaded 只展示为 online-management pending / starting / needs attention。
-- 只有 Codex CLI 不可用、当前命中版本不兼容、必需 domain 模块无法安装/检测，或其他核心依赖无法自动修复时，才写成首屏 blocker。
+压缩读法：本段只保留首启 readiness 分层的历史来源。迁移期曾把 Hermes online-management gateway 当作非阻塞渐进就绪项；当前该层已经被 family runtime provider readiness 取代。`opl install`、`opl system initialize`、App 首启和公开 README 的当前读法是 Core、Domain modules、Temporal-backed family runtime provider 和 App release/user-path evidence 分层；不得把 Hermes gateway、online-management pending 或 provider adapter 写回当前安装行为、首屏层级、readiness blocker 或 compatibility surface。`hermes_agent` 只作为显式非默认 executor adapter/backend 保留。
 
 ## 2026-04-27
 
