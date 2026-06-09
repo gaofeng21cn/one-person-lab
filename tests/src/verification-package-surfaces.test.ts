@@ -21,6 +21,15 @@ test('new-machine bootstrap smoke uses Connect canonical skill sync surface', ()
   assert.doesNotMatch(smokeScript, /opl skill sync --domain mas --domain rca/);
 });
 
+test('new-machine bootstrap smoke uses Foundry Agent command surface fields', () => {
+  const smokeScript = read('scripts/new-machine-codex-bootstrap-docker-smoke.mjs');
+
+  assert.match(smokeScript, /foundry_agent_series\?\.canonical_command_surface/);
+  assert.match(smokeScript, /Foundry Agent series command surface/);
+  assert.doesNotMatch(smokeScript, /canonical_frontdoor/);
+  assert.doesNotMatch(smokeScript, /Foundry Agent series frontdoor/);
+});
+
 test('OPL harness pytest cache defaults outside the checkout', () => {
   const pyproject = read('python/opl-harness-shared/pyproject.toml');
 
