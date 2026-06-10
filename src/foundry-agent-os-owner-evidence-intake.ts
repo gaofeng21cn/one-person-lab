@@ -4,7 +4,13 @@ import path from 'node:path';
 import { listBrandModuleL5EvidenceReceipts } from './brand-module-l5-evidence-ledger.ts';
 import { listCodexAppRuntimeEvidenceReceipts } from './codex-app-runtime-evidence-ledger.ts';
 import { listDomainOwnerPayloadSummaryReceipts } from './domain-owner-payload-summary-ledger.ts';
-import { recordList, stringValue } from './framework-readiness-values.ts';
+import {
+  booleanValue,
+  numberValue,
+  record,
+  recordList,
+  stringValue,
+} from './framework-readiness-values.ts';
 import type { FrameworkContracts } from './types.ts';
 
 type RefCounts = {
@@ -442,6 +448,87 @@ function providerLongSoakProjection(): OwnerEvidenceProjection {
   };
 }
 
+function privatePlatformRetirementProjection(
+  physicalDeleteAuthority: Record<string, unknown>,
+): OwnerEvidenceProjection {
+  const prerequisitesObserved =
+    booleanValue(physicalDeleteAuthority.all_repos_delete_or_keep_prerequisites_observed) === true
+    && booleanValue(physicalDeleteAuthority.all_repos_all_deletion_evidence_requirements_observed) === true;
+  const ownerDecisionObserved =
+    stringValue(physicalDeleteAuthority.owner_decision_status)
+      === 'owner_decision_observed_refs_only_not_delete_authorized';
+  const observedRefCount = prerequisitesObserved
+    ? numberValue(physicalDeleteAuthority.deletion_evidence_worklist_count)
+    : 0;
+  const observedReceiptRefs = prerequisitesObserved
+    ? unique([
+      `refs-only-read-model:agents-default-callers/deletion-evidence-worklist:${observedRefCount}`,
+      ownerDecisionObserved
+        ? 'refs-only-read-model:agents-default-callers/owner-decision-observed-not-delete-authorized'
+        : '',
+    ])
+    : [];
+  const counts = {
+    ...emptyCounts(),
+    evidence_ref_count: observedReceiptRefs.length,
+  };
+  const status = observedStatus({
+    recordedReceiptCount: 0,
+    verifiedReceiptCount: observedReceiptRefs.length,
+    counts,
+  });
+  return {
+    lane: 'private_platform_retirement',
+    ...status,
+    recorded_receipt_count: 0,
+    verified_receipt_count: observedReceiptRefs.length,
+    observed_receipt_refs: observedReceiptRefs,
+    observed_ref_counts: counts,
+    evidence_route: 'opl agents default-callers --family-defaults --json',
+  };
+}
+
+function memoryArtifactLifecycleProjection(
+  lifecycleEvidence: Record<string, unknown>,
+): OwnerEvidenceProjection {
+  const latestHandoff = record(lifecycleEvidence.latest_lifecycle_apply_handoff);
+  const typedBlockerRefs = stringList(latestHandoff.typed_blocker_refs);
+  const handoffRefs = stringList(latestHandoff.handoff_refs);
+  const candidateRefs = stringList(latestHandoff.candidate_refs);
+  const receiptRef = stringValue(latestHandoff.receipt_ref);
+  const observedRefCount = numberValue(lifecycleEvidence.observed_ref_count);
+  const observedReceiptRefs = unique([
+    ...(receiptRef ? [receiptRef] : []),
+    ...typedBlockerRefs,
+    ...handoffRefs,
+    ...candidateRefs,
+    observedRefCount > 0
+      ? `refs-only-read-model:app-operator-drilldown/memory-artifact-lifecycle:${observedRefCount}`
+      : '',
+  ]);
+  const counts = {
+    ...emptyCounts(),
+    typed_blocker_ref_count: typedBlockerRefs.length,
+    evidence_ref_count:
+      observedReceiptRefs.length
+      - typedBlockerRefs.length,
+  };
+  const status = observedStatus({
+    recordedReceiptCount: 0,
+    verifiedReceiptCount: observedReceiptRefs.length,
+    counts,
+  });
+  return {
+    lane: 'memory_artifact_lifecycle_apply',
+    ...status,
+    recorded_receipt_count: 0,
+    verified_receipt_count: observedReceiptRefs.length,
+    observed_receipt_refs: observedReceiptRefs,
+    observed_ref_counts: counts,
+    evidence_route: 'opl runtime app-operator-drilldown --json',
+  };
+}
+
 function emptyProjection(lane: string, evidenceRoute: string): OwnerEvidenceProjection {
   const status = observedStatus({
     recordedReceiptCount: 0,
@@ -463,6 +550,8 @@ export function buildFoundryAgentOsOwnerEvidenceIntake(input: {
   contracts: FrameworkContracts;
   appReleaseEvidence: Record<string, unknown>;
   domainOwnerChain?: Record<string, unknown>;
+  physicalDeleteAuthority?: Record<string, unknown>;
+  lifecycleEvidence?: Record<string, unknown>;
 }) {
   const laneEvidence = [
     domainOwnerChainProjection({
@@ -471,8 +560,8 @@ export function buildFoundryAgentOsOwnerEvidenceIntake(input: {
     brandModuleL5Projection(input.contracts),
     appReleaseProjection(input.appReleaseEvidence),
     providerLongSoakProjection(),
-    emptyProjection('private_platform_retirement', 'opl agents default-callers --family-defaults --json'),
-    emptyProjection('memory_artifact_lifecycle_apply', 'opl runtime app-operator-drilldown --json'),
+    privatePlatformRetirementProjection(record(input.physicalDeleteAuthority)),
+    memoryArtifactLifecycleProjection(record(input.lifecycleEvidence)),
   ];
   return {
     surface_kind: 'foundry_agent_os_owner_evidence_intake',

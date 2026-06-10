@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
-import { assert, fs, os, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
+import { buildFoundryAgentOsOwnerEvidenceIntake } from '../../../../src/foundry-agent-os-owner-evidence-intake.ts';
+import { assert, contractsDir, fs, loadFrameworkContracts, os, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
 import { createFamilyDefaultContractWorkspace } from './domain-pack-compiler-fixtures.ts';
 
 function recordAppReleaseUserPathEvidence(
@@ -86,6 +87,88 @@ db.close();`,
   });
   assert.equal(result.status, 0, result.stderr);
 }
+
+test('owner evidence intake projects private-platform and lifecycle read-model refs without authority claims', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-owner-evidence-intake-state-'));
+  const originalStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    const intake = buildFoundryAgentOsOwnerEvidenceIntake({
+      contracts: loadFrameworkContracts({ contractsDir }),
+      appReleaseEvidence: {},
+      physicalDeleteAuthority: {
+        owner_decision_status: 'owner_decision_observed_refs_only_not_delete_authorized',
+        all_repos_delete_or_keep_prerequisites_observed: true,
+        all_repos_all_deletion_evidence_requirements_observed: true,
+        deletion_evidence_worklist_count: 32,
+      },
+      lifecycleEvidence: {
+        observed_ref_count: 3,
+        latest_lifecycle_apply_handoff: {
+          handoff_refs: [
+            'mas-artifact-lifecycle-handoff:medautoscience:physical-thinning:demo',
+          ],
+          candidate_refs: [
+            'mas-artifact-lifecycle-candidate:medautoscience:projection-thinning:demo',
+          ],
+          typed_blocker_refs: [
+            'mas-artifact-lifecycle-typed-blocker:medautoscience:canonical-regeneration-required:demo',
+          ],
+          receipt_ref: null,
+          writes_performed: false,
+          authority_boundary: {
+            can_write_memory_body: false,
+            can_mutate_artifact_body: false,
+            can_claim_production_ready: false,
+          },
+        },
+      },
+    });
+
+    const privatePlatformLane = intake.lane_evidence.find(
+      (entry: { lane: string }) => entry.lane === 'private_platform_retirement',
+    );
+    assert.ok(privatePlatformLane);
+    assert.equal(privatePlatformLane.status, 'owner_evidence_observed_not_ready_claim');
+    assert.deepEqual(privatePlatformLane.observed_ref_shapes, ['evidence_ref']);
+    assert.equal(privatePlatformLane.verified_receipt_count, 2);
+    assert.equal(
+      privatePlatformLane.observed_receipt_refs.includes(
+        'refs-only-read-model:agents-default-callers/owner-decision-observed-not-delete-authorized',
+      ),
+      true,
+    );
+
+    const lifecycleLane = intake.lane_evidence.find(
+      (entry: { lane: string }) => entry.lane === 'memory_artifact_lifecycle_apply',
+    );
+    assert.ok(lifecycleLane);
+    assert.equal(lifecycleLane.status, 'owner_evidence_observed_not_ready_claim');
+    assert.deepEqual(lifecycleLane.observed_ref_shapes, [
+      'typed_blocker_ref',
+      'evidence_ref',
+    ]);
+    assert.equal(lifecycleLane.observed_ref_counts.typed_blocker_ref_count, 1);
+    assert.equal(lifecycleLane.observed_ref_counts.evidence_ref_count, 3);
+    assert.equal(
+      lifecycleLane.observed_receipt_refs.includes(
+        'refs-only-read-model:app-operator-drilldown/memory-artifact-lifecycle:3',
+      ),
+      true,
+    );
+
+    assert.equal(intake.authority_boundary.can_sign_owner_receipt, false);
+    assert.equal(intake.authority_boundary.can_create_typed_blocker, false);
+    assert.equal(intake.authority_boundary.can_claim_production_ready, false);
+  } finally {
+    if (originalStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = originalStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
 
 test('framework operating maturity aggregates scaleout and L5 gaps without ready claims', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-operating-maturity-state-'));

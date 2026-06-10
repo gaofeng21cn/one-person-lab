@@ -1046,7 +1046,7 @@ test('family-runtime enqueue treats concurrent dedupe-key insert as idempotent n
           const normalizedSql = sql.replace(/\s+/g, ' ').trim();
           if (normalizedSql === 'SELECT * FROM tasks WHERE dedupe_key = ?') {
             return {
-              get(...args: unknown[]) {
+              get(...args: Parameters<typeof statement.get>) {
                 selectCount += 1;
                 if (selectCount === 1) {
                   return undefined;
@@ -1057,7 +1057,7 @@ test('family-runtime enqueue treats concurrent dedupe-key insert as idempotent n
           }
           if (normalizedSql.startsWith('INSERT INTO tasks(')) {
             return {
-              run(...args: unknown[]) {
+              run(...args: Parameters<typeof statement.run>) {
                 if (!insertedConcurrentTask) {
                   insertedConcurrentTask = true;
                   insertSucceededTask(db, {

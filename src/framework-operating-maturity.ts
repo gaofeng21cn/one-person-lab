@@ -544,6 +544,11 @@ export async function buildFrameworkOperatingMaturityReadout(
     contracts,
     appReleaseEvidence: appReleaseUserPath.evidence,
     domainOwnerChain,
+    physicalDeleteAuthority: record(defaultCallers.physical_delete_authority_read_model),
+    lifecycleEvidence: record(
+      record(record(appOperatorDrilldown.attention_first_payload).evidence_after_contract)
+        .memory_artifact_lifecycle_evidence,
+    ),
   });
   const drilldownMaturity = appOperatorDrilldownMaturity(appOperatorDrilldown);
   const physicalDeleteAuthority = record(defaultCallers.physical_delete_authority_read_model);
