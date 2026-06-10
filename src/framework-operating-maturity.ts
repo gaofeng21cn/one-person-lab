@@ -543,6 +543,7 @@ export async function buildFrameworkOperatingMaturityReadout(
   const ownerEvidenceIntake = buildFoundryAgentOsOwnerEvidenceIntake({
     contracts,
     appReleaseEvidence: appReleaseUserPath.evidence,
+    domainOwnerChain,
   });
   const drilldownMaturity = appOperatorDrilldownMaturity(appOperatorDrilldown);
   const physicalDeleteAuthority = record(defaultCallers.physical_delete_authority_read_model);

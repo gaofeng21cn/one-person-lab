@@ -164,7 +164,10 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
       maturity.owner_evidence_intake.surface_kind,
       'foundry_agent_os_owner_evidence_intake',
     );
-    assert.equal(maturity.owner_evidence_intake.status, 'owner_evidence_required');
+    assert.equal(
+      maturity.owner_evidence_intake.status,
+      'owner_evidence_observed_not_ready_claim',
+    );
     assert.equal(maturity.owner_evidence_intake.lane_evidence.length, 6);
     assert.equal(
       maturity.owner_evidence_intake.authority_boundary.can_sign_owner_receipt,
@@ -203,9 +206,28 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
         { domain_id: 'med-autoscience', owner_route_status: 'owner_evidence_required' },
         { domain_id: 'med-autogrant', owner_route_status: 'owner_evidence_required' },
         { domain_id: 'redcube-ai', owner_route_status: 'owner_evidence_required' },
-        { domain_id: 'opl-meta-agent', owner_route_status: 'owner_evidence_required' },
+        {
+          domain_id: 'opl-meta-agent',
+          owner_route_status: 'owner_evidence_observed_not_ready_claim',
+        },
       ],
     );
+    const omaRoute = maturity.domain_owner_chain_scaleout.domain_owner_evidence_routes.find(
+      (entry: { domain_id: string }) => entry.domain_id === 'opl-meta-agent',
+    );
+    assert.deepEqual(omaRoute.observed_ref_shapes, [
+      'no_regression_ref',
+      'owner_chain_ref',
+      'typed_blocker_ref',
+    ]);
+    assert.equal(
+      omaRoute.observed_receipt_refs.includes(
+        'repo-tracked-contract:contracts/target_agent_owner_chain_evidence.json',
+      ),
+      true,
+    );
+    assert.equal(omaRoute.authority_boundary.can_sign_owner_receipt, false);
+    assert.equal(omaRoute.authority_boundary.can_create_typed_blocker, false);
     assert.equal(
       maturity.domain_owner_chain_scaleout.domain_owner_evidence_routes.every(
         (entry: {
@@ -316,7 +338,7 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.summary
         .observed_owner_evidence_lane_count,
-      0,
+      1,
     );
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.authority_boundary.can_claim_production_ready,
@@ -336,7 +358,7 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
       [
         {
           work_order_id: 'w7-domain-owner-chain-scaleout',
-          blocker_state: 'owner_route_evidence_missing',
+          blocker_state: 'owner_route_refs_observed_not_production_claim',
         },
         {
           work_order_id: 'w7-brand-module-l5-operating-maturity',
@@ -488,9 +510,15 @@ test('framework operating maturity projects owner evidence ledger refs without r
       (entry: { lane: string }) => entry.lane === 'domain_owner_chain_scaleout',
     );
     assert.equal(domainLane.status, 'owner_evidence_observed_not_ready_claim');
-    assert.equal(domainLane.verified_receipt_count, 1);
-    assert.deepEqual(domainLane.observed_ref_shapes, ['typed_blocker_ref']);
-    assert.equal(domainLane.observed_ref_counts.typed_blocker_ref_count, 1);
+    assert.equal(domainLane.verified_receipt_count, 2);
+    assert.deepEqual(domainLane.observed_ref_shapes, [
+      'no_regression_ref',
+      'owner_chain_ref',
+      'typed_blocker_ref',
+    ]);
+    assert.equal(domainLane.observed_ref_counts.typed_blocker_ref_count, 2);
+    assert.equal(domainLane.observed_ref_counts.no_regression_ref_count, 1);
+    assert.equal(domainLane.observed_ref_counts.owner_chain_ref_count, 1);
     assert.deepEqual(
       domainLane.observed_domains.map((
         entry: { domain_id: string; status: string; observed_ref_shapes: string[] },
@@ -504,6 +532,15 @@ test('framework operating maturity projects owner evidence ledger refs without r
           domain_id: 'med-autogrant',
           status: 'owner_evidence_observed_not_ready_claim',
           observed_ref_shapes: ['typed_blocker_ref'],
+        },
+        {
+          domain_id: 'opl-meta-agent',
+          status: 'owner_evidence_observed_not_ready_claim',
+          observed_ref_shapes: [
+            'no_regression_ref',
+            'owner_chain_ref',
+            'typed_blocker_ref',
+          ],
         },
       ],
     );
@@ -520,7 +557,10 @@ test('framework operating maturity projects owner evidence ledger refs without r
           owner_route_status: 'owner_evidence_observed_not_ready_claim',
         },
         { domain_id: 'redcube-ai', owner_route_status: 'owner_evidence_required' },
-        { domain_id: 'opl-meta-agent', owner_route_status: 'owner_evidence_required' },
+        {
+          domain_id: 'opl-meta-agent',
+          owner_route_status: 'owner_evidence_observed_not_ready_claim',
+        },
       ],
     );
     const magRoute = domainRoutes.find(
@@ -529,6 +569,24 @@ test('framework operating maturity projects owner evidence ledger refs without r
     assert.deepEqual(magRoute.observed_ref_shapes, ['typed_blocker_ref']);
     assert.equal(magRoute.observed_receipt_refs[0], domainOwnerRecord.receipt_refs[0]);
     assert.equal(magRoute.observed_ref_counts.typed_blocker_ref_count, 1);
+    const omaRoute = domainRoutes.find(
+      (entry: { domain_id: string }) => entry.domain_id === 'opl-meta-agent',
+    );
+    assert.deepEqual(omaRoute.observed_ref_shapes, [
+      'no_regression_ref',
+      'owner_chain_ref',
+      'typed_blocker_ref',
+    ]);
+    assert.equal(omaRoute.observed_ref_counts.typed_blocker_ref_count, 1);
+    assert.equal(omaRoute.observed_ref_counts.no_regression_ref_count, 1);
+    assert.equal(omaRoute.authority_boundary.can_sign_owner_receipt, false);
+    assert.equal(omaRoute.authority_boundary.can_create_typed_blocker, false);
+    assert.equal(
+      omaRoute.observed_receipt_refs.includes(
+        'repo-tracked-contract:contracts/target_agent_owner_chain_evidence.json',
+      ),
+      true,
+    );
 
     const brandLane = maturity.owner_evidence_intake.lane_evidence.find(
       (entry: { lane: string }) => entry.lane === 'brand_module_l5_operating_maturity',
@@ -550,7 +608,11 @@ test('framework operating maturity projects owner evidence ledger refs without r
       domainWorkOrder.observed_owner_evidence_status,
       'owner_evidence_observed_not_ready_claim',
     );
-    assert.deepEqual(domainWorkOrder.observed_ref_shapes, ['typed_blocker_ref']);
+    assert.deepEqual(domainWorkOrder.observed_ref_shapes, [
+      'no_regression_ref',
+      'owner_chain_ref',
+      'typed_blocker_ref',
+    ]);
     assert.equal(
       domainWorkOrder.observed_receipt_refs[0],
       domainOwnerRecord.receipt_refs[0],

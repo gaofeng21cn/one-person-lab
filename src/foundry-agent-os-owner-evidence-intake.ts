@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 import { listBrandModuleL5EvidenceReceipts } from './brand-module-l5-evidence-ledger.ts';
 import { listCodexAppRuntimeEvidenceReceipts } from './codex-app-runtime-evidence-ledger.ts';
 import { listDomainOwnerPayloadSummaryReceipts } from './domain-owner-payload-summary-ledger.ts';
@@ -37,6 +40,8 @@ type OwnerEvidenceProjection = {
   evidence_route: string;
 };
 
+type ObservedDomainEvidence = NonNullable<OwnerEvidenceProjection['observed_domains']>[number];
+
 function domainKey(value: unknown) {
   const raw = typeof value === 'string' ? value : '';
   const compact = raw.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -68,6 +73,12 @@ function stringList(value: unknown) {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
     : [];
+}
+
+function recordValue(value: unknown) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
 }
 
 function refShapes(counts: RefCounts) {
@@ -105,17 +116,130 @@ function observedStatus(input: {
   };
 }
 
-function domainOwnerChainProjection(): OwnerEvidenceProjection {
+function observedDomainStatus(input: ObservedDomainEvidence) {
+  return observedStatus({
+    recordedReceiptCount: input.recorded_receipt_count,
+    verifiedReceiptCount: input.verified_receipt_count,
+    counts: input.observed_ref_counts,
+  }).status;
+}
+
+function addDomainEvidence(
+  current: Record<string, ObservedDomainEvidence>,
+  input: {
+    domainId: string;
+    receiptRefs: string[];
+    counts: Partial<RefCounts>;
+    recordedReceiptCount?: number;
+    verifiedReceiptCount?: number;
+  },
+) {
+  const key = domainKey(input.domainId);
+  const entry = current[key] ?? {
+    domain_id: input.domainId,
+    recorded_receipt_count: 0,
+    verified_receipt_count: 0,
+    observed_receipt_refs: [],
+    observed_ref_counts: emptyCounts(),
+    observed_ref_shapes: [],
+    status: 'owner_evidence_required',
+  };
+  entry.recorded_receipt_count += input.recordedReceiptCount ?? 0;
+  entry.verified_receipt_count += input.verifiedReceiptCount ?? 0;
+  entry.observed_receipt_refs = unique([
+    ...entry.observed_receipt_refs,
+    ...input.receiptRefs,
+  ]);
+  entry.observed_ref_counts = {
+    ...entry.observed_ref_counts,
+    domain_owner_receipt_ref_count:
+      entry.observed_ref_counts.domain_owner_receipt_ref_count
+      + (input.counts.domain_owner_receipt_ref_count ?? 0),
+    domain_receipt_ref_count:
+      entry.observed_ref_counts.domain_receipt_ref_count
+      + (input.counts.domain_receipt_ref_count ?? 0),
+    no_regression_ref_count:
+      entry.observed_ref_counts.no_regression_ref_count
+      + (input.counts.no_regression_ref_count ?? 0),
+    owner_chain_ref_count:
+      entry.observed_ref_counts.owner_chain_ref_count
+      + (input.counts.owner_chain_ref_count ?? 0),
+    monitor_freshness_ref_count:
+      entry.observed_ref_counts.monitor_freshness_ref_count
+      + (input.counts.monitor_freshness_ref_count ?? 0),
+    runtime_event_ref_count:
+      entry.observed_ref_counts.runtime_event_ref_count
+      + (input.counts.runtime_event_ref_count ?? 0),
+    typed_blocker_ref_count:
+      entry.observed_ref_counts.typed_blocker_ref_count
+      + (input.counts.typed_blocker_ref_count ?? 0),
+    evidence_ref_count:
+      entry.observed_ref_counts.evidence_ref_count
+      + (input.counts.evidence_ref_count ?? 0),
+    owner_acceptance_ref_count:
+      entry.observed_ref_counts.owner_acceptance_ref_count
+      + (input.counts.owner_acceptance_ref_count ?? 0),
+  };
+  entry.observed_ref_shapes = refShapes(entry.observed_ref_counts);
+  entry.status = observedDomainStatus(entry);
+  current[key] = entry;
+}
+
+function omaRepoTrackedEvidence(
+  domains: Record<string, unknown>[],
+): ObservedDomainEvidence | null {
+  const omaDomain = domains.find((domain) =>
+    domainKey(stringValue(domain.domain_id)) === 'oplmetaagent'
+  );
+  const repoDir = stringValue(omaDomain?.repo_dir);
+  if (!repoDir) {
+    return null;
+  }
+  const evidencePath = path.join(repoDir, 'contracts', 'target_agent_owner_chain_evidence.json');
+  try {
+    const evidence = recordValue(JSON.parse(fs.readFileSync(evidencePath, 'utf8')));
+    const blockerClosure = recordValue(evidence.stage_replay_human_gate_blocker_closure);
+    const typedBlockerRefs = stringList(blockerClosure.typed_blocker_refs);
+    const noRegressionRefs = stringList(blockerClosure.no_regression_refs);
+    if (typedBlockerRefs.length === 0 && noRegressionRefs.length === 0) {
+      return null;
+    }
+    const counts = {
+      ...emptyCounts(),
+      typed_blocker_ref_count: typedBlockerRefs.length,
+      no_regression_ref_count: noRegressionRefs.length,
+      owner_chain_ref_count: 1,
+    };
+    const observedReceiptRefs = unique([
+      `repo-tracked-contract:${path.relative(repoDir, evidencePath)}`,
+      ...typedBlockerRefs,
+      ...noRegressionRefs,
+    ]);
+    const verifiedSourceCount = 1;
+    const status = observedStatus({
+      recordedReceiptCount: 0,
+      verifiedReceiptCount: verifiedSourceCount,
+      counts,
+    });
+    return {
+      domain_id: stringValue(evidence.domain_id) ?? 'opl-meta-agent',
+      recorded_receipt_count: 0,
+      verified_receipt_count: verifiedSourceCount,
+      observed_receipt_refs: observedReceiptRefs,
+      observed_ref_counts: counts,
+      observed_ref_shapes: status.observed_ref_shapes,
+      status: status.status,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function domainOwnerChainProjection(input: {
+  domains: Record<string, unknown>[];
+}): OwnerEvidenceProjection {
   const receipts = listDomainOwnerPayloadSummaryReceipts();
-  const observedDomains = receipts.reduce<Record<string, {
-    domain_id: string;
-    recorded_receipt_count: number;
-    verified_receipt_count: number;
-    observed_receipt_refs: string[];
-    observed_ref_counts: RefCounts;
-    observed_ref_shapes: string[];
-    status: string;
-  }>>((current, receipt) => {
+  const observedDomains = receipts.reduce<Record<string, ObservedDomainEvidence>>((current, receipt) => {
     const domainId = stringValue(receipt.target_identity.domain_id)
       ?? stringValue(receipt.target_identity.target_domain_id)
       ?? stringValue(receipt.target_identity.project)
@@ -169,6 +293,15 @@ function domainOwnerChainProjection(): OwnerEvidenceProjection {
     current[key] = entry;
     return current;
   }, {});
+  const omaEvidence = omaRepoTrackedEvidence(input.domains);
+  if (omaEvidence) {
+    addDomainEvidence(observedDomains, {
+      domainId: omaEvidence.domain_id,
+      receiptRefs: omaEvidence.observed_receipt_refs,
+      counts: omaEvidence.observed_ref_counts,
+      verifiedReceiptCount: omaEvidence.verified_receipt_count,
+    });
+  }
   const counts = receipts.reduce((current, receipt) => ({
     ...current,
     domain_owner_receipt_ref_count:
@@ -186,20 +319,33 @@ function domainOwnerChainProjection(): OwnerEvidenceProjection {
     typed_blocker_ref_count:
       current.typed_blocker_ref_count + receipt.typed_blocker_refs.length,
   }), emptyCounts());
+  if (omaEvidence) {
+    counts.no_regression_ref_count += omaEvidence.observed_ref_counts.no_regression_ref_count;
+    counts.owner_chain_ref_count += omaEvidence.observed_ref_counts.owner_chain_ref_count;
+    counts.typed_blocker_ref_count += omaEvidence.observed_ref_counts.typed_blocker_ref_count;
+  }
   const status = observedStatus({
     recordedReceiptCount: receipts.filter((receipt) => receipt.receipt_status === 'recorded').length,
-    verifiedReceiptCount: receipts.filter((receipt) => receipt.receipt_status === 'verified').length,
+    verifiedReceiptCount:
+      receipts.filter((receipt) => receipt.receipt_status === 'verified').length
+      + (omaEvidence?.verified_receipt_count ?? 0),
     counts,
   });
   return {
     lane: 'domain_owner_chain_scaleout',
     ...status,
     recorded_receipt_count: receipts.filter((receipt) => receipt.receipt_status === 'recorded').length,
-    verified_receipt_count: receipts.filter((receipt) => receipt.receipt_status === 'verified').length,
-    observed_receipt_refs: receipts.map((receipt) => receipt.receipt_ref),
+    verified_receipt_count:
+      receipts.filter((receipt) => receipt.receipt_status === 'verified').length
+      + (omaEvidence?.verified_receipt_count ?? 0),
+    observed_receipt_refs: unique([
+      ...receipts.map((receipt) => receipt.receipt_ref),
+      ...(omaEvidence?.observed_receipt_refs ?? []),
+    ]),
     observed_ref_counts: counts,
     observed_domains: Object.values(observedDomains),
-    evidence_route: 'opl runtime domain-owner-payload-summary list --json',
+    evidence_route:
+      'opl runtime domain-owner-payload-summary list --json + OMA contracts/target_agent_owner_chain_evidence.json',
   };
 }
 
@@ -316,9 +462,12 @@ function emptyProjection(lane: string, evidenceRoute: string): OwnerEvidenceProj
 export function buildFoundryAgentOsOwnerEvidenceIntake(input: {
   contracts: FrameworkContracts;
   appReleaseEvidence: Record<string, unknown>;
+  domainOwnerChain?: Record<string, unknown>;
 }) {
   const laneEvidence = [
-    domainOwnerChainProjection(),
+    domainOwnerChainProjection({
+      domains: recordList(input.domainOwnerChain?.domains),
+    }),
     brandModuleL5Projection(input.contracts),
     appReleaseProjection(input.appReleaseEvidence),
     providerLongSoakProjection(),
