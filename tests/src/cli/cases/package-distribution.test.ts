@@ -105,7 +105,7 @@ test('packages manifest exposes active package-channel coordinates for module in
   assert.equal(output.packages_manifest.module_install_update_source, 'package_channel');
   assert.equal(
     output.packages_manifest.package_consumption_status,
-    'stable_app_release_consumes_package_channel',
+    'ordinary_app_users_consume_managed_ghcr_agent_package_channel',
   );
   assert.equal(output.packages_manifest.developer_module_source_override.env, 'OPL_MODULE_SOURCE_MODE=git_checkout');
   assert.equal(output.packages_manifest.developer_module_source_override.scope, 'developer_mode_checkout');
@@ -118,7 +118,7 @@ test('packages manifest exposes active package-channel coordinates for module in
     'retain_latest_n_versions_and_declared_rollbacks',
   );
   assert.equal(output.packages_manifest.release_automation.cleanup.retain_versions, 3);
-  assert.equal(output.packages_manifest.release_automation.status, 'active_stable_package_channel');
+  assert.equal(output.packages_manifest.release_automation.status, 'active_managed_ghcr_agent_package_channel');
   assert.equal(output.packages_manifest.release_automation.package_lifecycle_status, 'active_release_channel');
   assert.equal(output.packages_manifest.release_automation.workflow_trigger_policy, 'release_gate_workflow_call_or_manual_dispatch');
   assert.equal(output.packages_manifest.release_automation.remote_publish_status, 'release_gate_or_manual_dispatch_publishes_ghcr_packages');
@@ -385,7 +385,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.release_automation.rollback.previous_version, '26.4.30');
   assert.equal(manifest.release_automation.cleanup.retain_versions, 4);
   assert.ok(manifest.release_automation.cleanup.protected_tags.includes('latest'));
-  assert.equal(manifest.release_automation.status, 'active_stable_package_channel');
+  assert.equal(manifest.release_automation.status, 'active_managed_ghcr_agent_package_channel');
   assert.equal(manifest.release_automation.package_lifecycle_status, 'active_release_channel');
   assert.equal(manifest.release_automation.workflow_trigger_policy, 'release_gate_workflow_call_or_manual_dispatch');
   assert.equal(manifest.release_automation.remote_publish_status, 'release_gate_or_manual_dispatch_publishes_ghcr_packages');

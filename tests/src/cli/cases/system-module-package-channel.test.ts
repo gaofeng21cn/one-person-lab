@@ -249,6 +249,72 @@ test('managed module install and update consume the package channel by default',
   }
 });
 
+test('managed package channel defaults to the latest GHCR manifest independent of App release version', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-package-latest-home-'));
+  const modulesRoot = path.join(homeRoot, 'managed-modules');
+  const channel = writePackageChannelFixture({
+    root: path.join(homeRoot, 'channel-latest'),
+    moduleId: 'medautoscience',
+    repoName: 'med-autoscience',
+    version: '26.6.11-nightly',
+    sourceHeadSha: 'package-channel-latest-sha',
+    sourceFiles: {
+      'plugins/mas/.codex-plugin/plugin.json': JSON.stringify({ name: 'mas', skills: './skills/' }, null, 2),
+      'plugins/mas/skills/mas/SKILL.md': [
+        '---',
+        'name: mas',
+        'description: MAS latest package channel fixture.',
+        '---',
+        '',
+        '# MAS Latest',
+        '',
+      ].join('\n'),
+    },
+  });
+
+  try {
+    const install = runCli(['connect', 'install', '--module', 'medautoscience'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_MODULES_ROOT: modulesRoot,
+      OPL_PACKAGES_OWNER: 'owner',
+      OPL_RELEASE_VERSION: '26.6.3',
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      PATH: `${channel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+    }) as {
+      module_action: {
+        module: {
+          git: { head_sha: string | null } | null;
+          source_policy: {
+            effective_install_update_source: string;
+            configured_by: string;
+            package_channel_auto_update: boolean;
+          };
+        };
+        turnkey: {
+          skill_sync: { status: string; domain_id: string | null };
+          health_check: { status: string; result: { package_channel?: boolean } };
+        };
+      };
+    };
+
+    assert.equal(install.module_action.module.git?.head_sha, 'package-channel-latest-sha');
+    assert.equal(install.module_action.module.source_policy.effective_install_update_source, 'package_channel');
+    assert.equal(install.module_action.module.source_policy.configured_by, 'agent_latest_package_channel');
+    assert.equal(install.module_action.module.source_policy.package_channel_auto_update, true);
+    assert.equal(install.module_action.turnkey.skill_sync.status, 'completed');
+    assert.equal(install.module_action.turnkey.skill_sync.domain_id, 'medautoscience');
+    assert.equal(install.module_action.turnkey.health_check.status, 'completed');
+    assert.equal(install.module_action.turnkey.health_check.result.package_channel, true);
+
+    const curlLog = fs.readFileSync(channel.curlLogPath, 'utf8');
+    assert.match(curlLog, /one-person-lab-manifest\/manifests\/latest/);
+    assert.doesNotMatch(curlLog, /one-person-lab-manifest\/manifests\/26\.6\.3/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('module-specific git checkout override bypasses the package channel', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-git-override-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');

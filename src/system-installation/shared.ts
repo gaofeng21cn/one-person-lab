@@ -136,7 +136,7 @@ export type GitRepoSnapshot = {
 export type ModuleSourcePolicy = {
   effective_install_update_source: 'package_channel' | 'git_checkout' | 'full_runtime';
   configured_by:
-    | 'stable_default'
+    | 'agent_latest_package_channel'
     | 'developer_mode'
     | 'env_source_mode'
     | 'module_path_override'

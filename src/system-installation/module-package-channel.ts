@@ -4,7 +4,6 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../contracts.ts';
-import { getOplReleaseVersion } from '../opl-release.ts';
 import { PACKAGED_MODULE_MARKER_FILE } from '../packaged-module-marker.ts';
 import {
   type DomainModuleSpec,
@@ -56,10 +55,9 @@ function resolvePackageOwner() {
   return normalizeOptionalString(process.env.OPL_PACKAGES_OWNER) ?? 'gaofeng21cn';
 }
 
-function resolvePackageVersion() {
+function resolvePackageChannelTag() {
   return normalizeOptionalString(process.env.OPL_PACKAGE_CHANNEL_VERSION)
-    ?? normalizeOptionalString(process.env.OPL_RELEASE_VERSION)
-    ?? getOplReleaseVersion();
+    ?? 'latest';
 }
 
 function parseImageRef(raw: string): OciImageRef {
@@ -88,7 +86,7 @@ function resolveChannelManifestRef() {
     return parseImageRef(explicit);
   }
   const owner = resolvePackageOwner();
-  const tag = normalizeOptionalString(process.env.OPL_PACKAGE_CHANNEL_TAG) ?? resolvePackageVersion();
+  const tag = normalizeOptionalString(process.env.OPL_PACKAGE_CHANNEL_TAG) ?? resolvePackageChannelTag();
   return parseImageRef(`ghcr.io/${owner}/one-person-lab-manifest:${tag}`);
 }
 

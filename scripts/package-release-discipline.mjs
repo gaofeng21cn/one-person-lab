@@ -49,11 +49,11 @@ const PACKAGE_RELEASE_CALLER_WORKFLOW_PATH = '.github/workflows/release-package-
 const PACKAGE_DAILY_WORKFLOW_PATH = '.github/workflows/daily-package-channel.yml';
 
 function validateModule(moduleId, entry, failures) {
-  assertCondition(entry.current_install_update_source === 'package_channel', `${moduleId}: current source must be package_channel for stable package-channel installs`, failures);
+  assertCondition(entry.current_install_update_source === 'package_channel', `${moduleId}: current source must be package_channel for managed GHCR agent package installs`, failures);
   assertCondition(entry.package_consumption_status === 'consumed_by_package_channel_installs', `${moduleId}: package consumption status drifted`, failures);
   assertCondition(entry.package_channel_status === 'active_release_channel', `${moduleId}: module package channel must be active`, failures);
   assertCondition(entry.package_lifecycle_status === 'active_release_channel', `${moduleId}: module package lifecycle must be active`, failures);
-  assertCondition(typeof entry.package_lifecycle_reason === 'string' && entry.package_lifecycle_reason.includes('GHCR channel manifest'), `${moduleId}: module package lifecycle reason must point to GHCR channel manifest`, failures);
+  assertCondition(typeof entry.package_lifecycle_reason === 'string' && entry.package_lifecycle_reason.includes('GHCR agent package channel'), `${moduleId}: module package lifecycle reason must point to the GHCR agent package channel`, failures);
   assertCondition(entry.remote_publish_status === 'published_to_ghcr_by_packages_workflow', `${moduleId}: remote publish status must claim workflow GHCR publication`, failures);
   assertCondition(entry.developer_git_checkout_override?.repo_url, `${moduleId}: missing developer git checkout override`, failures);
   assertCondition(entry.release_discipline?.package_channel_status === 'active_release_channel', `${moduleId}: release discipline must mark package channel active`, failures);
@@ -91,11 +91,11 @@ function validateManifest(manifest) {
   const automation = manifest.release_automation;
 
   assertCondition(manifest.module_install_update_source === 'package_channel', 'module install/update source must be package_channel', failures);
-  assertCondition(manifest.package_consumption_status === 'stable_app_release_consumes_package_channel', 'package consumption status drifted', failures);
+  assertCondition(manifest.package_consumption_status === 'ordinary_app_users_consume_managed_ghcr_agent_package_channel', 'package consumption status drifted', failures);
   assertCondition(manifest.developer_module_source_override?.env === 'OPL_MODULE_SOURCE_MODE=git_checkout', 'developer git checkout override must be explicit', failures);
   assertCondition(manifest.developer_module_source_override?.scope === 'developer_mode_checkout', 'developer git checkout override must be represented as Developer Mode checkout scope', failures);
   assertCondition(manifest.developer_module_source_override?.app_setting_surface === 'Developer Mode', 'developer checkout override must point to Developer Mode App settings surface', failures);
-  assertCondition(automation?.status === 'active_stable_package_channel', 'release automation must be active stable package channel', failures);
+  assertCondition(automation?.status === 'active_managed_ghcr_agent_package_channel', 'release automation must be active managed GHCR agent package channel', failures);
   assertCondition(automation?.package_lifecycle_status === 'active_release_channel', 'release automation must record active release channel lifecycle', failures);
   assertCondition(automation?.workflow_trigger_policy === PACKAGE_WORKFLOW_TRIGGER_POLICY, 'package workflow must be release-gated via workflow_call while keeping manual dispatch repair', failures);
   assertCondition(automation?.remote_publish_status === PACKAGE_REMOTE_PUBLISH_STATUS, 'package workflow must publish GHCR packages from release gate or manual dispatch', failures);

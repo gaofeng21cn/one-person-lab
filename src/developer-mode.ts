@@ -441,7 +441,7 @@ function resolveDeveloperCapabilities(input: {
     : developerCapability(
       disabled ? 'disabled' : 'limited',
       'managed_package_channel',
-      disabled ? 'developer_mode_disabled' : 'stable_default',
+      disabled ? 'developer_mode_disabled' : 'agent_latest_package_channel',
       'Module source remains on the managed package channel unless Developer Mode explicitly selects developer_apply_safe.',
     );
 
