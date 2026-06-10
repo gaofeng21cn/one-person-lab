@@ -749,6 +749,74 @@ function currentControlAdmissionStudyIds(inputs: EnqueueInput[]) {
     .filter((studyId): studyId is string => Boolean(studyId)));
 }
 
+function payloadString(input: EnqueueInput, key: string) {
+  return optionalString(input.payload[key]);
+}
+
+function samePayloadString(left: EnqueueInput, right: EnqueueInput, key: string) {
+  const leftValue = payloadString(left, key);
+  const rightValue = payloadString(right, key);
+  return Boolean(leftValue && rightValue && leftValue === rightValue);
+}
+
+function sameDefaultExecutorOwnerAction(left: EnqueueInput, right: EnqueueInput) {
+  if (
+    left.domainId !== 'medautoscience'
+    || right.domainId !== 'medautoscience'
+    || left.taskKind !== 'domain_owner/default-executor-dispatch'
+    || right.taskKind !== 'domain_owner/default-executor-dispatch'
+  ) {
+    return false;
+  }
+  if (
+    !samePayloadString(left, right, 'study_id')
+    || !samePayloadString(left, right, 'action_type')
+    || !samePayloadString(left, right, 'work_unit_id')
+  ) {
+    return false;
+  }
+  return samePayloadString(left, right, 'source_fingerprint')
+    || samePayloadString(left, right, 'work_unit_fingerprint')
+    || samePayloadString(left, right, 'action_fingerprint');
+}
+
+function executableOwnerFromPendingTask(input: EnqueueInput) {
+  return payloadString(input, 'next_executable_owner')
+    ?? payloadString(input, 'domain_owner')
+    ?? payloadString(input, 'owner')
+    ?? payloadString(input, 'dispatch_owner');
+}
+
+function reconcileCurrentControlExecutableOwners(
+  currentInputs: EnqueueInput[],
+  pendingInputs: EnqueueInput[],
+) {
+  return currentInputs.map((input) => {
+    const pending = pendingInputs.find((candidate) => sameDefaultExecutorOwnerAction(input, candidate));
+    const executableOwner = pending ? executableOwnerFromPendingTask(pending) : null;
+    if (!executableOwner || executableOwner === payloadString(input, 'next_executable_owner')) {
+      return input;
+    }
+    const providerAdmissionIdentity = isRecord(input.payload.provider_admission_identity)
+      ? {
+          ...input.payload.provider_admission_identity,
+          next_executable_owner: executableOwner,
+          executable_owner_source: 'domain_handler_current_owner_action',
+        }
+      : input.payload.provider_admission_identity;
+    return {
+      ...input,
+      payload: {
+        ...input.payload,
+        next_executable_owner: executableOwner,
+        domain_owner: payloadString(pending, 'domain_owner') ?? executableOwner,
+        executable_owner_source: 'domain_handler_current_owner_action',
+        provider_admission_identity: providerAdmissionIdentity,
+      },
+    };
+  });
+}
+
 function suppressStaleDefaultExecutorInputs(inputs: EnqueueInput[], currentAdmissionInputs: EnqueueInput[]) {
   const currentStudyIds = currentControlAdmissionStudyIds(currentAdmissionInputs);
   if (currentStudyIds.size === 0) {
@@ -941,14 +1009,18 @@ function exportedTaskInputs(
   taskScope?: FamilyRuntimeTaskScope,
 ) {
   const pending = toPendingTaskInputs(domainId, output, source, exportContext);
-  const currentControl = currentControlProviderAdmissionInputs(domainId, output, exportContext);
-  const pendingAfterCurrentControl = suppressStaleDefaultExecutorInputs(pending.inputs, currentControl.inputs);
+  const currentControlRaw = currentControlProviderAdmissionInputs(domainId, output, exportContext);
+  const currentControlInputs = reconcileCurrentControlExecutableOwners(
+    currentControlRaw.inputs,
+    pending.inputs,
+  );
+  const pendingAfterCurrentControl = suppressStaleDefaultExecutorInputs(pending.inputs, currentControlInputs);
   const transitions = transitionTaskInputsFromMatrix(domainId, output, source);
-  const exportedInputs = [...currentControl.inputs, ...pendingAfterCurrentControl.inputs, ...transitions.inputs];
+  const exportedInputs = [...currentControlInputs, ...pendingAfterCurrentControl.inputs, ...transitions.inputs];
   const inputs = exportedInputs.filter((taskInput) => inputMatchesTaskScope(taskInput, taskScope));
   return {
     inputs,
-    blocked: [...currentControl.blocked, ...pending.blocked, ...transitions.blocked],
+    blocked: [...currentControlRaw.blocked, ...pending.blocked, ...transitions.blocked],
     filtered_count: exportedInputs.length - inputs.length,
     suppressed_count: pendingAfterCurrentControl.suppressed_count,
   };

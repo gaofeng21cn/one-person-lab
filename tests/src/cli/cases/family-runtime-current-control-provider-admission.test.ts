@@ -627,6 +627,130 @@ test('family-runtime intake admits MAS current-control handoff action_queue prov
   }
 });
 
+test('family-runtime intake reconciles current-control display owner to executable domain owner', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-owner-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-owner-'));
+  const workspaceRoot = path.join(fixtureRoot, 'workspace');
+  const exportPath = path.join(fixtureRoot, 'export');
+  const currentControlPath = path.join(
+    workspaceRoot,
+    'runtime',
+    'artifacts',
+    'supervision',
+    'opl_current_control_state',
+    'latest.json',
+  );
+  const studyId = '003-dpcc-primary-care-phenotype-treatment-gap';
+  const actionType = 'run_gate_clearing_batch';
+  const workUnitId = 'dpcc_publication_gate_replay_after_current_ai_reviewer_record';
+  const workUnitFingerprint = [
+    'study-progress-current-owner-ticket',
+    studyId,
+    workUnitId,
+    actionType,
+  ].join('::');
+  const dispatchRef = writeDefaultExecutorDispatchPacket(workspaceRoot, studyId, actionType);
+  fs.mkdirSync(path.dirname(currentControlPath), { recursive: true });
+  fs.writeFileSync(currentControlPath, JSON.stringify({
+    surface: 'opl_current_control_state_handoff',
+    schema_version: 1,
+    generated_at: '2026-06-10T07:30:00+00:00',
+    provider_admission_candidates: [
+      {
+        status: 'provider_admission_pending',
+        study_id: studyId,
+        quest_id: studyId,
+        action_type: actionType,
+        work_unit_id: workUnitId,
+        work_unit_fingerprint: workUnitFingerprint,
+        action_fingerprint: workUnitFingerprint,
+        source_fingerprint: workUnitFingerprint,
+        dispatch_authority: 'consumer_default_executor_dispatch',
+        dispatch_path: path.join(workspaceRoot, dispatchRef),
+        next_executable_owner: 'finalize',
+        owner_route_current: true,
+        provider_attempt_or_lease_required: true,
+        provider_completion_is_domain_completion: false,
+        stage_transition_authority_boundary: providerObservationBoundary(),
+      },
+    ],
+  }), 'utf8');
+  writeJsonEmitterScript(exportPath, {
+    surface_kind: 'mas_family_domain_handler_export',
+    workspace: {
+      workspace_root: workspaceRoot,
+      workspace_exists: true,
+    },
+    pending_family_tasks: [
+      {
+        domain_id: 'medautoscience',
+        task_kind: 'domain_owner/default-executor-dispatch',
+        study_id: studyId,
+        quest_id: studyId,
+        action_type: actionType,
+        domain_owner: 'gate_clearing_batch',
+        work_unit_id: workUnitId,
+        work_unit_fingerprint: workUnitFingerprint,
+        source_fingerprint: workUnitFingerprint,
+        priority: 65,
+        source: 'mas-domain-handler-export',
+        dedupe_key: `mas:dm-cvd:${studyId}:default-executor:${actionType}:current`,
+        payload: {
+          profile: 'dm-cvd',
+          study_id: studyId,
+          quest_id: studyId,
+          action_type: actionType,
+          work_unit_id: workUnitId,
+          work_unit_fingerprint: workUnitFingerprint,
+          source_fingerprint: workUnitFingerprint,
+          dispatch_authority: 'consumer_default_executor_dispatch',
+          dispatch_ref: dispatchRef,
+          executor_kind: 'codex_cli_default',
+          next_executable_owner: 'gate_clearing_batch',
+          domain_owner: 'gate_clearing_batch',
+          authority_boundary: 'mas_default_executor_dispatch_request_only',
+        },
+      },
+    ],
+  });
+  const env = familyRuntimeEnv(stateRoot, {
+    OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+  });
+  try {
+    const intake = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+      '--study',
+      studyId,
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+    ], env);
+    const queue = runCli([
+      'family-runtime',
+      'queue',
+      'list',
+      '--study',
+      studyId,
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+    ], env);
+    const task = queue.family_runtime_queue.tasks[0];
+
+    assert.equal(intake.family_runtime_intake.enqueued_count, 1);
+    assert.equal(intake.family_runtime_intake.exports[0].suppressed_count, 1);
+    assert.equal(task.payload.next_executable_owner, 'gate_clearing_batch');
+    assert.equal(task.payload.domain_owner, 'gate_clearing_batch');
+    assert.equal(task.payload.executable_owner_source, 'domain_handler_current_owner_action');
+    assert.equal(task.payload.provider_admission_identity.next_executable_owner, 'gate_clearing_batch');
+    assert.equal(task.payload.provider_admission_identity.executable_owner_source, 'domain_handler_current_owner_action');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime intake blocks current-control action_queue provider candidates without a stage packet ref', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-action-queue-missing-packet-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-current-control-action-queue-missing-packet-'));

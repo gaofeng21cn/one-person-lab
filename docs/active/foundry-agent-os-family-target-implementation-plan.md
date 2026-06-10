@@ -45,6 +45,29 @@ OPL Agent OS
 
 默认从 `W0` 开始；只有当两条 work order 的写集、source of truth、验证命令和禁止范围完全分离时，才并行开 worktree。`W0-W6` 关闭的是 structural / functional landing，`W7` 才能进入 production evidence；不能用前者替代后者。
 
+## Supervisory acceptance gate
+
+本节吸收原先独立的 OPL / MAS supervisory acceptance 目标。它不再作为第二条 active line 维护，也不再单独追 MAS owner-answer 生成；它是 `W0`、`W2`、`W6` 和 `W7` 的共同验收细目。
+
+验收目标固定为：OPL 只承载和验收，不替 domain 裁决。每个相关 work order 在声称完成前都必须证明：
+
+- `current_owner_delta` 仍是 ordinary planning root；App / Console / conformance / maturity 读面不能从 raw worklist、queued provider candidate、evidence count、provider completion 或 audit tail 生成默认 next action。
+- StageRun identity、stage manifest、current pointer、source fingerprint、idempotency、provider attempt、active lease、execution authorization decision 和 closeout binding 必须指向同一个合法 owner answer 或 OPL runtime blocker。
+- OPL / Vault / Console / Runway / Pack / Capability Registry 不能签 `owner_receipt`、不能创建 domain `typed_blocker`、不能写 domain truth、不能授权 quality / export / publication verdict。
+- refs-only Vault 只能记录、校验和投影 domain-owned refs；只有 domain owner 把 refs fold 成 owner delta、owner answer、hard gate、route-back、human gate 或 typed blocker 后，才影响默认下一步。
+- 如果 MAS/MAG/RCA/OMA 同一 work unit 同时暴露 typed blocker 与 action queue / provider candidate / replay candidate，OPL 必须 fail closed 或投影为 owner/currentness conflict；不能把 queued candidate 当成已授权 execution，也不能用旧 blocker、study-level decision 或 stale lineage 关闭当前 delta。
+
+对应 work order 的落点是：
+
+| Work order | acceptance gate focus |
+| --- | --- |
+| `W0-cross-agent-conformance-readout` | conformance 必须暴露 default read root、false-authority flags、domain-kernel authority owner 和 live evidence still-required 状态；conformance pass 不能关闭 domain progress。 |
+| `W2-current-owner-delta-default-root` | Console / App 默认读面只显示 owner、delta、accepted answer shape、hard gate、artifact/blocker 和 drilldown refs；raw worklist 与 evidence lane 只进 drilldown。 |
+| `W6-app-cockpit-consumption` | App cockpit 不能把 OPL ledger verified、provider completed、queue empty、descriptor ready 或 L5 evidence count 显示成 domain ready / release ready / production ready。 |
+| `W7-production-evidence-soak` | 只有真实 owner receipt、typed blocker、human gate、quality/export/review receipt、long-soak、release/install 和 owner acceptance refs 能关闭 production evidence；OPL 只 intake / verify / project。 |
+
+后续如果某条会话只负责这类 acceptance 工作，应把它命名为 `Foundry Agent OS acceptance gate`，并把产出折回本文、`current-state-vs-ideal-gap.md` 或相应机器合同；不要再新增独立规划文档、独立 `/goal` 主线或 MAS source-repair backlog。
+
 ## 模块映射
 
 | 能力 | OPL 主模块 | 支撑模块 | 默认 lane | 不能声明 |
