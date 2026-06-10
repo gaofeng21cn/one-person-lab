@@ -19,6 +19,7 @@
 - 第一优先级：保持 `Codex CLI first-class executor -> explicit OPL activation -> provider-backed stage runtime / typed queue when durable orchestration is needed -> selected domain agent entry` 这条当前主链路；domain app skill 的 direct path 仍是一等入口，其他 executor 只通过显式 adapter 进入。
 - 第二优先级：把 shared modules / contracts / indexes 的共享边界放在 domain 仓之上，同时保留 domain-owned truth。
 - 第三优先级：保证 public docs、machine-readable contracts、reference docs 与 active domain agent 状态同步，不制造第二真相源。
+- 面向本仓的方案、重构、优化、代码改动、配置改动和文档改动，必须在方案说明、执行说明和最终汇报中标明涉及的 OPL 品牌模块；若涉及多个模块，应分别列出主模块、协同模块和不触碰范围。当前品牌模块集合以 `contracts/opl-framework/brand-module-registry.json`、`docs/references/brand-modules/`、核心五件套和 fresh `opl brand-modules * --json` 输出为准；本规则只约束表达透明度，不把当前模块数量冻结为上限。若实际需要新增、合并、拆分或退役模块，必须说明必要性、目标 owner、machine boundary、验证口径和文档 / contract foldback。
 - OPL family 以理想目标态为最高优先级：OPL 是完整智能体开发/运行框架，MAS/MAG/RCA 是标准化 OPL Agent。当前 domain 仓内已经存在的私有 scheduler、runner、session store、lifecycle、workbench、sidecar/status/product wrapper 等实现，只能作为迁移输入，不能反过来定义长期架构。
 - 标准 OPL Agent 默认是 `Declarative Domain Pack + OPL generated/hosted surfaces + minimal authority functions`；私有功能面是例外，必须写清接口、active caller、不能上收原因、receipt/blocker/ref 输出边界和退役门。
 - 开发文档先设理想态，再找差距；差距不是妥协清单。为了理想态，可以做革命式重构并完全抛弃旧模块、旧接口、旧测试、旧目录和旧文案，不以兼容为理由保留历史污染面。
