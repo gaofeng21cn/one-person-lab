@@ -1167,6 +1167,7 @@ const TARGET_ARCHITECTURE_DESIGN_PRINCIPLES = [
   'small_idempotent_reconcilers',
   'app_console_thin_default_surface',
   'agent_lab_refs_only_improvement_control_plane',
+  'runway_control_loop_runtime_module',
 ] as const;
 
 const TARGET_ARCHITECTURE_RESOURCE_FIELDS = [
@@ -1183,6 +1184,8 @@ const TARGET_ARCHITECTURE_RESOURCE_FIELDS = [
 const TARGET_ARCHITECTURE_RESOURCE_KINDS = [
   'Agent',
   'DomainPack',
+  'RunwayControlLoop',
+  'ProgressReconciler',
   'WorkspaceGroup',
   'ProjectUnit',
   'StageRun',
@@ -1236,6 +1239,8 @@ const TARGET_ARCHITECTURE_DERIVED_STAGE_STATE = [
   'stage_current_pointer',
   'stage_run_terminal_state',
   'current_owner_delta',
+  'runway_control_loop_status',
+  'progress_reconciler_projection',
 ] as const;
 
 const TARGET_ARCHITECTURE_ACCEPTED_AUTHORITY_INPUTS = [
@@ -1246,6 +1251,10 @@ const TARGET_ARCHITECTURE_ACCEPTED_AUTHORITY_INPUTS = [
   'human_gate_decision',
   'agent_lab_observation',
   'evidence_observation',
+  'runtime_intent',
+  'progress_reconciler_observation',
+  'handoff_gate_decision',
+  'recovery_repair_observation',
 ] as const;
 
 const TARGET_ARCHITECTURE_FORBIDDEN_DIRECT_WRITERS = [
@@ -1256,6 +1265,10 @@ const TARGET_ARCHITECTURE_FORBIDDEN_DIRECT_WRITERS = [
   'read_model',
   'evidence_vault',
   'worklist',
+  'runway_control_loop',
+  'progress_reconciler',
+  'worker_supervisor',
+  'temporal_workflow_history',
 ] as const;
 
 const TARGET_ARCHITECTURE_DOMAIN_PACK_DECLARATIONS = [
@@ -1297,6 +1310,10 @@ const TARGET_ARCHITECTURE_AUTHORITY_FUNCTIONS = [
 ] as const;
 
 const TARGET_ARCHITECTURE_RECONCILER_LOOPS = [
+  'runtime_intent_admission',
+  'progress_reconciliation',
+  'handoff_gate',
+  'recovery_repair',
   'admission',
   'execution_authorization',
   'provider_attempt',
@@ -1631,6 +1648,9 @@ function validateTargetOperatingArchitecture(
   const domainPackRaw = value.domain_pack_authority_abi;
   const surfaceBudgetRaw = value.surface_budget_compiler_policy;
   const reconcilerRaw = value.reconciler_model;
+  const reconcilerSubstratePolicyRaw = isRecord(reconcilerRaw)
+    ? reconcilerRaw.substrate_policy
+    : undefined;
   const catalogRaw = value.catalog_and_telemetry;
   const appConsoleRaw = value.app_console_policy;
   const agentLabRaw = value.agent_lab_improvement_plane;
@@ -1640,6 +1660,7 @@ function validateTargetOperatingArchitecture(
     || !isRecord(domainPackRaw)
     || !isRecord(surfaceBudgetRaw)
     || !isRecord(reconcilerRaw)
+    || !isRecord(reconcilerSubstratePolicyRaw)
     || !isRecord(catalogRaw)
     || !isRecord(appConsoleRaw)
     || !isRecord(agentLabRaw)
@@ -1946,6 +1967,28 @@ function validateTargetOperatingArchitecture(
         reconcilerRaw.loop_authority_boundary,
         'reconciler_model.loop_authority_boundary',
       ),
+      substrate_policy: {
+        temporal_role: expectString(
+          reconcilerSubstratePolicyRaw.temporal_role,
+          'reconciler_model.substrate_policy.temporal_role',
+          filePath,
+        ),
+        worker_supervisor_role: expectString(
+          reconcilerSubstratePolicyRaw.worker_supervisor_role,
+          'reconciler_model.substrate_policy.worker_supervisor_role',
+          filePath,
+        ),
+        progress_reconciler_role: expectString(
+          reconcilerSubstratePolicyRaw.progress_reconciler_role,
+          'reconciler_model.substrate_policy.progress_reconciler_role',
+          filePath,
+        ),
+        false_authority_boundary: expectString(
+          reconcilerSubstratePolicyRaw.false_authority_boundary,
+          'reconciler_model.substrate_policy.false_authority_boundary',
+          filePath,
+        ),
+      },
     },
     catalog_and_telemetry: {
       atlas_catalogs: atlasCatalogs,

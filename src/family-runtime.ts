@@ -68,6 +68,7 @@ import { buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-
 import { buildFamilyStageLaunchAdmissionGate } from './family-stage-control-plane.ts';
 import { runFamilyRuntimeEvidenceWorklistCommand } from './family-runtime-evidence-worklist-command.ts';
 import { runFamilyRuntimeStageArtifactCommand } from './family-runtime-stage-artifact-command.ts';
+import { buildFamilyRuntimeControlLoopStatus } from './family-runtime-control-loop.ts';
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
@@ -360,6 +361,12 @@ export async function runFamilyRuntime(args: string[]): Promise<Record<string, u
         family_runtime_provider_slo_tick: await runTemporalProviderSloTick(db, paths, {
           force: parsed.force,
         }),
+      };
+    }
+    if (parsed.mode === 'control_loop_status') {
+      return {
+        version: 'g2',
+        family_runtime_control_loop: await buildFamilyRuntimeControlLoopStatus(db, paths, parsed.providerKind),
       };
     }
     if (parsed.mode === 'provider_worker_supervisor') {

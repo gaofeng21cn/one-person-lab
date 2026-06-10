@@ -49,6 +49,7 @@ export type FamilyRuntimeCommandInput =
   }
   | { mode: 'residency_proof'; providerKind?: FamilyRuntimeProviderKind; live?: boolean; production?: boolean }
   | { mode: 'provider_slo_tick'; providerKind?: FamilyRuntimeProviderKind; force?: boolean }
+  | { mode: 'control_loop_status'; providerKind?: FamilyRuntimeProviderKind }
   | {
     mode: 'provider_worker_supervisor';
     action: 'status' | 'install' | 'remove' | 'trigger';

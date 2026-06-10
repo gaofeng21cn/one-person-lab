@@ -843,11 +843,15 @@
       "module_doc_ref": "human_doc:opl_brand_module_runway",
       "object_model": {
         "primary_objects": [
+          "runtime_intent",
+          "admission_queue",
+          "progress_reconciler",
+          "control_loop",
+          "handoff_gate",
+          "recovery_repair",
           "runtime_provider",
-          "queue_item",
           "stage_attempt",
           "attempt_lease",
-          "runtime_blocker",
           "slo_tick"
         ],
         "canonical_contract_refs": [
@@ -855,11 +859,15 @@
           "contracts/opl-framework/family-runtime-attempt-contract.json",
           "contracts/opl-framework/family-runtime-online-substrate-contract.json",
           "contracts/opl-framework/stage-route-scheduler-contract.json",
-          "contracts/opl-framework/managed-runtime-three-layer-contract.json"
+          "contracts/opl-framework/managed-runtime-three-layer-contract.json",
+          "contracts/opl-framework/target-operating-architecture-contract.json"
         ],
         "read_model_refs": [
           "opl runway status --json",
-          "opl runway inspect --json"
+          "opl runway inspect --json",
+          "opl runway readiness --json",
+          "opl runway reconcile --json",
+          "opl runway control-loop status --json"
         ]
       },
       "native_cli_family": {
@@ -875,7 +883,13 @@
           "opl runway blockers --json",
           "opl family-runtime status --json",
           "opl family-runtime queue list --json",
-          "opl family-runtime attempt list --json"
+          "opl family-runtime attempt list --json",
+          "opl runway readiness --json",
+          "opl runway reconcile --json",
+          "opl runway control-loop status --json",
+          "opl runway handoff-gates --json",
+          "opl runway recovery-repair --json",
+          "opl family-runtime control-loop status --provider temporal --json"
         ]
       },
       "app_read_model": {
@@ -897,11 +911,32 @@
             "command": "opl runway doctor --json",
             "mutation": false,
             "descriptor_only": true
+          },
+          {
+            "action_id": "runway_readiness",
+            "command": "opl runway readiness --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "runway_reconcile",
+            "command": "opl runway reconcile --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "runway_control_loop_status",
+            "command": "opl runway control-loop status --json",
+            "mutation": false,
+            "descriptor_only": true
           }
         ],
         "projection_refs": [
           "opl runtime app-operator-drilldown --detail full --json",
-          "opl app state --profile full --json"
+          "opl app state --profile full --json",
+          "app_projection:runway_control_loop_status",
+          "app_projection:runway_readiness",
+          "app_projection:runway_reconcile"
         ]
       },
       "descriptor_surface": {
@@ -914,14 +949,19 @@
           "opl runway interfaces --json",
           "contracts/opl-framework/runtime-manager-contract.json",
           "contracts/opl-framework/family-runtime-attempt-contract.json",
-          "contracts/opl-framework/brand-module-registry.json#modules.runway"
+          "contracts/opl-framework/brand-module-registry.json#modules.runway",
+          "contracts/opl-framework/target-operating-architecture-contract.json#resource_model.resource_kinds.RunwayControlLoop",
+          "contracts/opl-framework/target-operating-architecture-contract.json#resource_model.resource_kinds.ProgressReconciler"
         ]
       },
       "validation": {
         "commands": [
           "opl runway validate --json",
           "opl runway doctor --json",
-          "opl contract validate --json"
+          "opl contract validate --json",
+          "opl runway readiness --json",
+          "opl runway reconcile --json",
+          "opl runway control-loop status --json"
         ],
         "checks": [
           "module_surface_contract",
@@ -930,11 +970,17 @@
           "descriptor_surface",
           "validation_surface",
           "false_authority_boundary",
-          "forbidden_claims"
+          "forbidden_claims",
+          "control_loop_readiness_surface",
+          "progress_reconciler_surface",
+          "handoff_gate_surface",
+          "recovery_repair_surface"
         ],
         "required_refs": [
           "contracts/opl-framework/brand-module-surfaces.json#modules.runway",
-          "contracts/opl-framework/brand-module-registry.json#modules.runway"
+          "contracts/opl-framework/brand-module-registry.json#modules.runway",
+          "contracts/opl-framework/target-operating-architecture-contract.json#resource_model.resource_kinds.RunwayControlLoop",
+          "contracts/opl-framework/target-operating-architecture-contract.json#resource_model.resource_kinds.ProgressReconciler"
         ]
       },
       "doctor": {
@@ -945,14 +991,20 @@
           "app_descriptor_present",
           "validation_commands_present",
           "authority_boundary_false",
-          "forbidden_claims_present"
+          "forbidden_claims_present",
+          "control_loop_readiness_present",
+          "progress_reconciler_present",
+          "false_semantic_authority_boundary"
         ],
         "fail_closed_on": [
           "missing_surface_contract",
           "missing_registry_entry",
           "missing_native_cli_command",
           "authority_boundary_violation",
-          "forbidden_claim_missing"
+          "forbidden_claim_missing",
+          "missing_control_loop_readiness_surface",
+          "missing_progress_reconciler_surface",
+          "semantic_authority_overclaim"
         ]
       },
       "status": {
@@ -963,14 +1015,21 @@
           "opl runway doctor --json",
           "human_doc:opl_brand_module_maturity_against_workspace",
           "human_doc:opl_runtime_index",
-          "human_doc:opl_status"
+          "human_doc:opl_status",
+          "opl runway readiness --json",
+          "opl runway reconcile --json",
+          "opl runway control-loop status --json"
         ],
         "not_claims": [
           "domain_owner_closeout_generated_by_opl",
           "domain_ready",
           "quality_verdict",
           "production_long_soak_complete",
-          "artifact_authority"
+          "artifact_authority",
+          "runway_writes_domain_truth",
+          "runway_signs_owner_receipt",
+          "runway_creates_typed_blocker",
+          "provider_completion_is_semantic_progress"
         ]
       },
       "authority_boundary": {
@@ -991,9 +1050,13 @@
         "domain_ready",
         "quality_verdict",
         "production_long_soak_complete",
-        "artifact_authority"
+        "artifact_authority",
+        "runway_writes_domain_truth",
+        "runway_signs_owner_receipt",
+        "runway_creates_typed_blocker",
+        "provider_completion_is_semantic_progress"
       ],
-      "notes": "Runway owns durable runtime transport, queue, attempt, lease, provider, and runtime blocker surfaces; it does not convert provider completion into domain readiness."
+      "notes": "Runway owns the control-loop runtime module: runtime intent admission, queue/readiness reconciliation, provider attempt orchestration refs, handoff gates, and recovery repair. Temporal is durable substrate, worker supervision is process liveness, and the Progress Reconciler is the semantic/execution loop projection; Runway does not write domain truth, sign owner receipts, create typed blockers, or convert provider completion into domain readiness."
     },
     {
       "module_id": "vault",

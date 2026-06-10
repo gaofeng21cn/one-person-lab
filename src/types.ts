@@ -728,6 +728,12 @@ export interface TargetOperatingArchitectureContract {
     loop_granularity: string;
     required_loops: string[];
     loop_authority_boundary: Record<string, false>;
+    substrate_policy?: {
+      temporal_role: string;
+      worker_supervisor_role: string;
+      progress_reconciler_role: string;
+      false_authority_boundary: string;
+    };
   };
   catalog_and_telemetry: {
     atlas_catalogs: string[];

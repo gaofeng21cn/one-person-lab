@@ -164,6 +164,7 @@ export const MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT: TargetOperatingArch
     'small_idempotent_reconcilers',
     'app_console_thin_default_surface',
     'agent_lab_refs_only_improvement_control_plane',
+    'runway_control_loop_runtime_module',
   ],
   resource_model: {
     resource_shape: {
@@ -183,13 +184,21 @@ export const MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT: TargetOperatingArch
       { kind: 'EvidenceRef', owner: 'one-person-lab', default_lane: 'audit', truth_boundary: 'test fixture' },
       { kind: 'ReleaseCohort', owner: 'app_release_owner', default_lane: 'production_evidence', truth_boundary: 'test fixture' },
       { kind: 'ImprovementWorkOrder', owner: 'agent_lab', default_lane: 'advisory', truth_boundary: 'test fixture' },
+      { kind: 'RunwayControlLoop', owner: 'one-person-lab', default_lane: 'ordinary', truth_boundary: 'test fixture' },
+      { kind: 'ProgressReconciler', owner: 'one-person-lab', default_lane: 'ordinary', truth_boundary: 'test fixture' },
     ],
   },
   stage_transition_authority: {
     authority_owner: 'one-person-lab',
     single_writer: true,
     event_log_policy: 'append_only_authority_event_log',
-    derived_state: ['stage_current_pointer', 'stage_run_terminal_state', 'current_owner_delta'],
+    derived_state: [
+      'stage_current_pointer',
+      'stage_run_terminal_state',
+      'current_owner_delta',
+      'runway_control_loop_status',
+      'progress_reconciler_projection',
+    ],
     accepted_inputs: [
       'transition_intent',
       'provider_observation',
@@ -198,6 +207,10 @@ export const MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT: TargetOperatingArch
       'human_gate_decision',
       'agent_lab_observation',
       'evidence_observation',
+      'runtime_intent',
+      'progress_reconciler_observation',
+      'handoff_gate_decision',
+      'recovery_repair_observation',
     ],
     forbidden_direct_writers: [
       'domain_agent',
@@ -207,6 +220,10 @@ export const MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT: TargetOperatingArch
       'read_model',
       'evidence_vault',
       'worklist',
+      'runway_control_loop',
+      'progress_reconciler',
+      'worker_supervisor',
+      'temporal_workflow_history',
     ],
   },
   domain_pack_authority_abi: {
@@ -286,8 +303,12 @@ export const MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT: TargetOperatingArch
     ],
   },
   reconciler_model: {
-    loop_granularity: 'small_idempotent_reconcilers',
+    loop_granularity: 'small_idempotent_reconcilers_with_runway_control_loop_runtime',
     required_loops: [
+      'recovery_repair',
+      'handoff_gate',
+      'progress_reconciliation',
+      'runtime_intent_admission',
       'admission',
       'execution_authorization',
       'provider_attempt',
@@ -304,6 +325,12 @@ export const MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT: TargetOperatingArch
       reconciler_can_sign_receipts: false,
       reconciler_can_create_typed_blocker: false,
       reconciler_can_write_domain_truth: false,
+    },
+    substrate_policy: {
+      temporal_role: 'durable_workflow_history_activity_heartbeat_visibility_and_retry_substrate_only',
+      worker_supervisor_role: 'process_liveness_restart_and_host_health_only',
+      progress_reconciler_role: 'semantic_execution_loop_desired_current_reconciliation_and_next_owner_projection',
+      false_authority_boundary: 'no_domain_truth_no_owner_receipt_no_typed_blocker_no_quality_verdict_no_artifact_or_memory_body',
     },
   },
   catalog_and_telemetry: {

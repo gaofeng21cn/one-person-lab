@@ -518,6 +518,12 @@ test('target operating architecture contract freezes resource, authority, lane, 
     reconciler_model: {
       required_loops: string[];
       loop_authority_boundary: Record<string, boolean>;
+      substrate_policy: {
+        temporal_role: string;
+        worker_supervisor_role: string;
+        progress_reconciler_role: string;
+        false_authority_boundary: string;
+      };
     };
     catalog_and_telemetry: {
       atlas_catalogs: string[];
@@ -552,6 +558,7 @@ test('target operating architecture contract freezes resource, authority, lane, 
     'small_idempotent_reconcilers',
     'app_console_thin_default_surface',
     'agent_lab_refs_only_improvement_control_plane',
+    'runway_control_loop_runtime_module',
   ]) {
     assert.equal(contract.design_principles.includes(principle), true, principle);
   }
@@ -579,6 +586,8 @@ test('target operating architecture contract freezes resource, authority, lane, 
     'EvidenceRef',
     'ReleaseCohort',
     'ImprovementWorkOrder',
+    'RunwayControlLoop',
+    'ProgressReconciler',
   ]);
   assert.equal(
     contract.resource_model.resource_kinds.find((entry) => entry.kind === 'EvidenceRef')?.default_lane,
@@ -595,6 +604,8 @@ test('target operating architecture contract freezes resource, authority, lane, 
     'stage_current_pointer',
     'stage_run_terminal_state',
     'current_owner_delta',
+    'runway_control_loop_status',
+    'progress_reconciler_projection',
   ]);
   for (const forbiddenWriter of [
     'domain_agent',
@@ -604,6 +615,10 @@ test('target operating architecture contract freezes resource, authority, lane, 
     'read_model',
     'evidence_vault',
     'worklist',
+    'runway_control_loop',
+    'progress_reconciler',
+    'worker_supervisor',
+    'temporal_workflow_history',
   ]) {
     assert.equal(contract.stage_transition_authority.forbidden_direct_writers.includes(forbiddenWriter), true);
   }
@@ -674,6 +689,10 @@ test('target operating architecture contract freezes resource, authority, lane, 
   }
 
   assert.deepEqual(contract.reconciler_model.required_loops, [
+    'recovery_repair',
+    'handoff_gate',
+    'progress_reconciliation',
+    'runtime_intent_admission',
     'admission',
     'execution_authorization',
     'provider_attempt',
@@ -686,6 +705,18 @@ test('target operating architecture contract freezes resource, authority, lane, 
   for (const [claim, allowed] of Object.entries(contract.reconciler_model.loop_authority_boundary)) {
     assert.equal(allowed, false, `reconciler must not claim ${claim}`);
   }
+  assert.equal(
+    contract.reconciler_model.substrate_policy.temporal_role,
+    'durable_workflow_history_activity_heartbeat_visibility_and_retry_substrate_only',
+  );
+  assert.equal(
+    contract.reconciler_model.substrate_policy.worker_supervisor_role,
+    'process_liveness_restart_and_host_health_only',
+  );
+  assert.equal(
+    contract.reconciler_model.substrate_policy.progress_reconciler_role,
+    'semantic_execution_loop_desired_current_reconciliation_and_next_owner_projection',
+  );
 
   assert.equal(contract.catalog_and_telemetry.atlas_catalogs.includes('contracts'), true);
   assert.equal(contract.catalog_and_telemetry.atlas_catalogs.includes('release_channels'), true);

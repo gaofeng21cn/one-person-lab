@@ -74,6 +74,31 @@ export function parseProviderSloTickArgs(rest: string[]): FamilyRuntimeCommandIn
   return { mode: 'provider_slo_tick', providerKind, force };
 }
 
+export function parseControlLoopStatusArgs(rest: string[]): FamilyRuntimeCommandInput {
+  const action = rest[0];
+  if (action !== 'status') {
+    throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime control-loop action: ${action}.`, {
+      action,
+      usage: 'opl family-runtime control-loop status --provider temporal',
+    });
+  }
+  let providerKind: FamilyRuntimeProviderKind | undefined;
+  for (let index = 1; index < rest.length; index += 1) {
+    const token = rest[index];
+    const value = rest[index + 1];
+    if (token === '--provider' && value) {
+      providerKind = assertProviderKind(value);
+      index += 1;
+    } else {
+      throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime control-loop option: ${token}.`, {
+        option: token,
+        usage: 'opl family-runtime control-loop status --provider temporal',
+      });
+    }
+  }
+  return { mode: 'control_loop_status', providerKind };
+}
+
 export function parseProviderWorkerSupervisorArgs(rest: string[]): FamilyRuntimeCommandInput {
   const action = rest[1];
   if (action !== 'status' && action !== 'install' && action !== 'remove' && action !== 'trigger') {

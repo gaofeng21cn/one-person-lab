@@ -27,6 +27,7 @@ import {
   runPackOsMasDisplaySmokeCommand,
   runPackOsValidateCommand,
 } from '../../../pack-os.ts';
+import { runFamilyRuntime } from '../../../family-runtime.ts';
 import type { BrandModuleId, FrameworkContracts } from '../../../types.ts';
 import { assertNoArgs } from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
@@ -135,6 +136,16 @@ export function buildBrandCommandSpecs(
       ],
       group: 'brand-pack',
       handler: runPackOsMasDisplaySmokeCommand,
+    },
+    'runway control-loop status': {
+      usage: 'opl runway control-loop status',
+      summary: 'Read the Runway control-loop runtime status while keeping Temporal, worker supervisor, scheduler cadence, and Progress Reconciler authority separate.',
+      examples: ['opl runway control-loop status --json'],
+      group: 'brand-runway',
+      handler: (args) => {
+        assertNoArgs(args, brandCommandSpecs['runway control-loop status']);
+        return runFamilyRuntime(['control-loop', 'status', '--provider', 'temporal']);
+      },
     },
     'brand-modules list': {
       usage: 'opl brand-modules list',

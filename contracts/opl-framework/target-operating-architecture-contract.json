@@ -27,7 +27,8 @@
     "one_ordinary_golden_path_per_agent",
     "small_idempotent_reconcilers",
     "app_console_thin_default_surface",
-    "agent_lab_refs_only_improvement_control_plane"
+    "agent_lab_refs_only_improvement_control_plane",
+    "runway_control_loop_runtime_module"
   ],
   "resource_model": {
     "resource_shape": {
@@ -105,6 +106,18 @@
         "owner": "agent_lab",
         "default_lane": "advisory",
         "truth_boundary": "Agent Lab may propose eval, root cause, candidate fix, work order, promotion, rollback, and evidence refs but cannot claim domain verdict or production acceptance"
+      },
+      {
+        "kind": "RunwayControlLoop",
+        "owner": "one-person-lab",
+        "default_lane": "ordinary",
+        "truth_boundary": "Runway owns runtime intent admission, admission queue readiness, handoff gates, recovery repair, provider-backed orchestration refs, and control-loop status. Temporal is the durable substrate and worker supervisor is process liveness; domain truth, owner receipts, typed blockers, artifact authority, memory body, and quality verdicts stay outside OPL."
+      },
+      {
+        "kind": "ProgressReconciler",
+        "owner": "one-person-lab",
+        "default_lane": "ordinary",
+        "truth_boundary": "Progress Reconciler owns desired/current execution reconciliation and semantic progress projection from accepted owner/domain refs. It may request or route work but cannot write domain truth, sign receipts, create typed blockers, evaluate quality, or treat provider completion as semantic closeout."
       }
     ]
   },
@@ -115,7 +128,9 @@
     "derived_state": [
       "stage_current_pointer",
       "stage_run_terminal_state",
-      "current_owner_delta"
+      "current_owner_delta",
+      "runway_control_loop_status",
+      "progress_reconciler_projection"
     ],
     "accepted_inputs": [
       "transition_intent",
@@ -124,7 +139,11 @@
       "typed_blocker",
       "human_gate_decision",
       "agent_lab_observation",
-      "evidence_observation"
+      "evidence_observation",
+      "runtime_intent",
+      "progress_reconciler_observation",
+      "handoff_gate_decision",
+      "recovery_repair_observation"
     ],
     "forbidden_direct_writers": [
       "domain_agent",
@@ -133,7 +152,11 @@
       "agent_lab",
       "read_model",
       "evidence_vault",
-      "worklist"
+      "worklist",
+      "runway_control_loop",
+      "progress_reconciler",
+      "worker_supervisor",
+      "temporal_workflow_history"
     ]
   },
   "domain_pack_authority_abi": {
@@ -248,8 +271,12 @@
     ]
   },
   "reconciler_model": {
-    "loop_granularity": "small_idempotent_reconcilers",
+    "loop_granularity": "small_idempotent_reconcilers_with_runway_control_loop_runtime",
     "required_loops": [
+      "recovery_repair",
+      "handoff_gate",
+      "progress_reconciliation",
+      "runtime_intent_admission",
       "admission",
       "execution_authorization",
       "provider_attempt",
@@ -266,6 +293,12 @@
       "reconciler_can_sign_receipts": false,
       "reconciler_can_create_typed_blocker": false,
       "reconciler_can_write_domain_truth": false
+    },
+    "substrate_policy": {
+      "temporal_role": "durable_workflow_history_activity_heartbeat_visibility_and_retry_substrate_only",
+      "worker_supervisor_role": "process_liveness_restart_and_host_health_only",
+      "progress_reconciler_role": "semantic_execution_loop_desired_current_reconciliation_and_next_owner_projection",
+      "false_authority_boundary": "no_domain_truth_no_owner_receipt_no_typed_blocker_no_quality_verdict_no_artifact_or_memory_body"
     }
   },
   "catalog_and_telemetry": {
@@ -355,6 +388,10 @@
     "evidence_count_is_progress",
     "release_diagnostics_are_app_release_truth",
     "agent_lab_eval_is_domain_verdict",
-    "cleanup_lane_is_physical_delete_authority"
+    "cleanup_lane_is_physical_delete_authority",
+    "runway_control_loop_writes_domain_truth",
+    "progress_reconciler_signs_owner_receipt",
+    "worker_supervisor_is_semantic_loop",
+    "temporal_history_is_domain_closeout"
   ]
 }

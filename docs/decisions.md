@@ -7,6 +7,20 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-06-09
 
+### 决策：Runway 采用 control-loop runtime 目标态，但不扩大 domain authority
+
+原因：OPL 长跑任务需要比定时 tick 和 provider 状态投影更清晰的控制面。Temporal 能提供 durable execution history、task queue、signal/query、retry/timeout、timer 和 replay，但它不保证 worker process 永久在线，也不判断 domain 目标是否完成。worker supervisor 只能保 worker liveness；scheduler 只能制造 hydrate/tick/reconcile/repair 机会；真正决定下一步的是把 desired owner route 与 current queue/attempt/provider/gate/receipt refs 对账的 Progress Reconciler。
+
+影响：
+
+- Runway 的目标态固定为 control-loop runtime：`desired state -> current state -> Progress Reconciler -> exactly one next safe action -> provider/owner/gate observation -> append-only refs/read-model`。
+- Temporal 是 production online durable substrate，不是 worker supervisor、domain truth owner、receipt signer、quality verdict 或 L5 evidence closer。
+- Worker supervisor / deployment substrate 只负责 worker process 启动、保活、重启、扩缩容和 health check；worker healthy 不等于 Temporal workflow healthy、stage complete、domain ready 或 production ready。
+- Scheduler / cadence surface 只负责提供 reconcile 机会和 cadence refs；scheduler ticked 不等于 worker liveness、domain progress、owner answer 或 safe redrive。
+- Progress Reconciler 负责比较 desired/current，输出唯一下一 safe action、owner/human gate wait、provider repair、dead-letter redrive 或 OPL runtime blocker；候选动作冲突时必须按 current owner delta、StageRun identity、source fingerprint、lease、execution authorization、closeout binding 和 accepted answer shape fail closed。
+- Reconciler、handoff、human gate 和 provider observation 只能传 refs、typed blocker requirement、owner answer shape、repair command 或 runtime observation；不得创建 domain owner receipt、domain typed blocker、quality verdict、artifact/memory truth、domain ready、App release ready、production ready 或 L5 证据闭合结论。
+- 这是 Runway `L4 executable baseline` 到 L5 的结构前置能力，不是 `production ready` 或 `L5 production operating maturity`。L5 仍需真实长跑/恢复、跨 agent scaleout、operator repair loop、release/install 和 owner acceptance evidence。
+
 ### 决策：普通推进主干与审计证据旁路分层治理
 
 原因：MAS / OPL 最近的卡住现象集中在普通推进路径被 closeout、currentness、receipt accounting、read-model reconcile、StageRun binding、restore proof、readiness inventory、refs-only ledger 和 cleanup / production evidence 尾项拖住。RCA、DeepScientist 和旧 MDS 的顺滑体感说明默认控制面必须短；但这不代表恢复旧 backend 或降低 domain authority，而是要把审计证明从普通推进主干中分离出来。
