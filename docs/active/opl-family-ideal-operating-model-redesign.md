@@ -8,7 +8,9 @@ Date: `2026-06-10`
 
 ## 读法
 
-本文按 `目的反推必要性，MVP 检查阻碍性` 重新评估 OPL 相关 repo 的实际情况，并给出理想目标态设计。它已经不是 active backlog owner；只保留评估口径、分类标准和目标操作架构说明。它不声明 production ready、domain ready、App release ready、artifact authority ready 或 physical delete 授权。
+本文按 `目的反推必要性，MVP 检查阻碍性` 重新评估 OPL 相关 repo 的实际情况，并给出理想目标态设计。它是 north-star / 验收标准，不是 active backlog owner；只保留评估口径、分类标准和目标操作架构说明。它不声明 production ready、domain ready、App release ready、artifact authority ready 或 physical delete 授权。
+
+本文中的 lane、plane、primitive 和 support index 都只能作为验收标签或审计口径使用。需要记录当前 gap、执行 owner、下一步 baton、完成口径或 live evidence intake 时，必须折回 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md) 或核心五件套；不能在本文维护第二 active backlog、第二 ordinary route、第二 owner queue 或第二 truth source。
 
 2026-06-10 refresh：本文进一步把 MAS/OPL 的理想形态重设为 `multi-plane operating system`。核心判断是：更丝滑的 MAS 推进不来自更多默认 worklist、更多 proof 或更厚 preflight，而来自一个 ordinary progress contract 加上彼此分离的 durable runtime、artifact、evidence、decision、observability 和 improvement 平面。所有外部成熟工程经验只作为 pattern source；它们不能成为 OPL 第二 runtime、MAS 第二 truth、第二 selector 或第二 active backlog。
 
@@ -209,7 +211,7 @@ OPL 对 MAS 的进一步优化重点不是再补 MAS 私有推进器，而是把
 
 ## Redesign Support Index
 
-本节只保留理想 operating model 对 backlog lane 的设计含义。当前状态、下一步 owner、证据缺口和 closeout 口径回到 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)，避免本文成为第二份 active plan。
+本节只保留理想 operating model 对 active owner baton 的设计含义。当前状态、下一步 owner、证据缺口和 closeout 口径回到 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)，避免本文成为第二份 active plan。表内 `Lane` 是验收标准标签，不是本文件维护的待办队列。
 
 | Lane | Target reading | Acceptance standard |
 | --- | --- | --- |
@@ -250,4 +252,4 @@ OPL 对 MAS 的进一步优化重点不是再补 MAS 私有推进器，而是把
 
 ## Baton Boundary
 
-下一步执行顺序不在本文维护。需要行动时读取 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md) 的 `Redesign Backlog 状态`、`测试 / 证据差距` 和 `下一轮 Agent prompt`，再 fresh 读取 live contracts/source/CLI/read-model。本文只提供评估口径：每个新发现的 surface 先分类为 `meets_target`、`needs_demotion` 或 `needs_retirement`。
+下一步执行顺序不在本文维护。需要行动时读取 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md) 的 `Operating Model Foldback 状态`、`测试 / 证据差距` 和 `下一轮 Agent prompt`，再 fresh 读取 live contracts/source/CLI/read-model。本文只提供评估口径：每个新发现的 surface 先分类为 `meets_target`、`needs_demotion` 或 `needs_retirement`；需要落地或关闭时回到 active gap owner 记录 owner、source of truth、accepted answer shape 和验证命令。

@@ -82,6 +82,16 @@ test('stage artifact status derives success only from manifest, required outputs
     assert.equal(status.authority_boundary.opl_can_write_rca_visual_truth, false);
     assert.equal(status.authority_boundary.opl_can_write_rca_review_export_verdict, false);
     assert.equal(status.authority_boundary.opl_can_write_domain_artifact_body, false);
+    assert.equal(status.authority_boundary.can_publish_current_owner_delta, false);
+    assert.equal(status.authority_boundary.can_close_owner_answer, false);
+    assert.equal(status.authority_boundary.can_close_human_gate, false);
+    assert.equal(status.authority_boundary.can_close_typed_blocker, false);
+    assert.equal(status.authority_boundary.can_declare_domain_ready, false);
+    assert.deepEqual(status.authority_boundary.output_authority, [
+      'artifact_projection',
+      'progress_projection',
+      'evidence_projection',
+    ]);
   });
 });
 
@@ -153,6 +163,15 @@ test('stage artifact open and commit materialize latest and current from verifie
     assert.equal(committed.authority_boundary.can_write_stage_current_pointer, false);
     assert.equal(committed.authority_boundary.can_write_stage_run_terminal_state, false);
     assert.equal(committed.authority_boundary.can_publish_current_owner_delta, false);
+    assert.equal(committed.authority_boundary.can_close_owner_answer, false);
+    assert.equal(committed.authority_boundary.can_close_human_gate, false);
+    assert.equal(committed.authority_boundary.can_close_typed_blocker, false);
+    assert.equal(committed.authority_boundary.can_declare_domain_ready, false);
+    assert.deepEqual(committed.current_pointer.current.authority_boundary.output_authority, [
+      'artifact_projection',
+      'progress_projection',
+      'evidence_projection',
+    ]);
   });
 });
 

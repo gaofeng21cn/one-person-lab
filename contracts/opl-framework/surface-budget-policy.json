@@ -170,6 +170,24 @@
       "production_ready"
     ],
     "audit_sidecar_must_not_generate_default_next_action": true,
+    "surface_plane_binding_required": true,
+    "default_surface_requires_plane_ref": true,
+    "ordinary_surface_allowed_planes": [
+      "ordinary_progress_plane",
+      "durable_runway_plane",
+      "authority_decision_plane",
+      "reconciler_plane",
+      "app_cockpit_plane"
+    ],
+    "non_authority_surface_forbidden_outputs": [
+      "domain_owner_answer",
+      "domain_typed_blocker",
+      "quality_or_export_verdict",
+      "artifact_body_mutation",
+      "memory_body_mutation",
+      "domain_ready_declaration",
+      "production_ready_declaration"
+    ],
     "ordinary_path_must_not_be_overridden_by": [
       "raw_worklist",
       "evidence_ledger",

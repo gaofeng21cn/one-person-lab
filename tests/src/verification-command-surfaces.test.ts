@@ -5,6 +5,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
+import { loadFrameworkContracts } from '../../src/contracts.ts';
+import { buildBrandCommandSpecs } from '../../src/cli/cases/public-command-specs-parts/brand.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -26,6 +28,8 @@ const GRIP_BIG_RELEASE_SMALL_COMPILER_MIRROR_FIELDS = [
   'hard_blocker_upgrade_conditions',
   'ordinary_path_must_not_be_overridden_by',
   'accepted_owner_answer_shapes',
+  'ordinary_surface_allowed_planes',
+  'non_authority_surface_forbidden_outputs',
 ] as const;
 
 type GripBigReleaseSmallMirrorField = typeof GRIP_BIG_RELEASE_SMALL_COMPILER_MIRROR_FIELDS[number];
@@ -45,6 +49,8 @@ type GripBigReleaseSmallReview = Record<GripBigReleaseSmallMirrorField, string |
   artifact_tiers: string[];
   progress_delta_receipt_cannot_authorize: string[];
   audit_sidecar_must_not_generate_default_next_action: boolean;
+  surface_plane_binding_required: boolean;
+  default_surface_requires_plane_ref: boolean;
 };
 
 type SurfaceBudgetCompilerPolicy = Record<GripBigReleaseSmallMirrorField, string | string[]> & {
@@ -53,6 +59,8 @@ type SurfaceBudgetCompilerPolicy = Record<GripBigReleaseSmallMirrorField, string
   artifact_tiers: string[];
   progress_delta_receipt_cannot_authorize: string[];
   audit_sidecar_must_not_generate_default_next_action: boolean;
+  surface_plane_binding_required: boolean;
+  default_surface_requires_plane_ref: boolean;
 };
 
 function collectSurfaceBudgetCompilerPolicyDrift(
@@ -74,6 +82,8 @@ function collectSurfaceBudgetCompilerPolicyDrift(
     'artifact_tiers',
     'progress_delta_receipt_cannot_authorize',
     'audit_sidecar_must_not_generate_default_next_action',
+    'surface_plane_binding_required',
+    'default_surface_requires_plane_ref',
   ] as const) {
     if (!isDeepStrictEqual(compilerPolicy[field], review[field])) {
       driftFields.push(`surface_budget_compiler_policy.${field}`);
@@ -672,6 +682,85 @@ test('surface budget compiler policy mirrors grip-big-release-small review guard
   );
 });
 
+test('brand module operating-model projection command exposes multi-plane surfaces as read models only', async () => {
+  const contracts = loadFrameworkContracts({ searchFrom: repoRoot, source: 'api' });
+  const specs = buildBrandCommandSpecs(() => contracts);
+  const spec = specs['brand-modules operating-model-projections'];
+
+  assert.ok(spec, 'brand-modules operating-model-projections command must be registered');
+  assert.equal(spec.group, 'brand');
+  assert.equal(spec.usage, 'opl brand-modules operating-model-projections');
+  assert.equal(spec.examples.includes('opl brand-modules operating-model-projections --json'), true);
+
+  const output = await spec.handler([]);
+  const projection = (output as {
+    version: string;
+    brand_operating_model_projections: {
+      surface_kind: string;
+      projection_role: string;
+      model_ref: string;
+      plane_model_id: string;
+      source_refs: string[];
+      surfaces: Array<{
+        surface_id: string;
+        module_id: string;
+        plane_id: string;
+        surface_kind: string;
+        authority_boundary: Record<string, boolean>;
+        resource_kind_refs: string[];
+      }>;
+      projection_authority_boundary: Record<string, boolean>;
+    };
+  }).brand_operating_model_projections;
+
+  assert.equal(projection.surface_kind, 'opl_multi_plane_operating_model_projection_index');
+  assert.equal(projection.projection_role, 'projection_read_model_only');
+  assert.equal(projection.model_ref, 'target_operating_architecture.multi_plane_operating_system');
+  assert.equal(
+    projection.plane_model_id,
+    contracts.targetOperatingArchitecture.multi_plane_operating_system.plane_model_id,
+  );
+  assert.deepEqual(
+    projection.surfaces.map((entry) => entry.plane_id),
+    contracts.targetOperatingArchitecture.multi_plane_operating_system.planes.map((entry) => entry.plane_id),
+  );
+  assert.equal(
+    projection.source_refs.includes('contracts/opl-framework/target-operating-architecture-contract.json'),
+    true,
+  );
+  assert.equal(projection.source_refs.includes('human_doc:opl_family_ideal_operating_model_redesign'), true);
+
+  for (const planeId of ['durable_runway_plane', 'app_cockpit_plane', 'evidence_telemetry_plane']) {
+    const surface = projection.surfaces.find((entry) => entry.plane_id === planeId);
+    assert.ok(surface, `${planeId} projection surface must be present`);
+    assert.equal(surface.surface_kind, 'projection_read_model');
+    assert.equal(surface.authority_boundary.can_generate_owner_answer, false);
+    assert.equal(surface.authority_boundary.can_claim_quality_verdict, false);
+    assert.equal(surface.authority_boundary.can_create_typed_blocker, false);
+    assert.equal(surface.authority_boundary.can_claim_production_ready, false);
+    assert.equal(surface.authority_boundary.can_claim_domain_ready, false);
+  }
+
+  assert.equal(
+    projection.surfaces.find((entry) => entry.plane_id === 'durable_runway_plane')?.resource_kind_refs.includes('RunwayControlLoop'),
+    true,
+  );
+  assert.equal(
+    projection.surfaces.find((entry) => entry.plane_id === 'app_cockpit_plane')?.resource_kind_refs.includes('ProgressReconciler'),
+    true,
+  );
+  assert.equal(
+    projection.surfaces.find((entry) => entry.plane_id === 'evidence_telemetry_plane')?.resource_kind_refs.includes('EvidenceRef'),
+    true,
+  );
+
+  assert.equal(projection.projection_authority_boundary.can_generate_owner_answer, false);
+  assert.equal(projection.projection_authority_boundary.can_claim_quality_verdict, false);
+  assert.equal(projection.projection_authority_boundary.can_create_typed_blocker, false);
+  assert.equal(projection.projection_authority_boundary.can_claim_production_ready, false);
+  assert.equal(projection.projection_authority_boundary.can_claim_domain_ready, false);
+});
+
 test('surface budget compiler consistency guard catches ordinary path and small-detail drift', () => {
   const policy = readJson<{
     grip_big_release_small_review: GripBigReleaseSmallReview;
@@ -694,6 +783,10 @@ test('surface budget compiler consistency guard catches ordinary path and small-
   driftedCompilerPolicy.artifact_tiers = ['T1_stage_transition'];
   driftedCompilerPolicy.progress_delta_receipt_cannot_authorize = ['stage_complete'];
   driftedCompilerPolicy.audit_sidecar_must_not_generate_default_next_action = false;
+  driftedCompilerPolicy.surface_plane_binding_required = false;
+  driftedCompilerPolicy.default_surface_requires_plane_ref = false;
+  driftedCompilerPolicy.ordinary_surface_allowed_planes = ['ordinary_progress_plane'];
+  driftedCompilerPolicy.non_authority_surface_forbidden_outputs = ['domain_owner_answer'];
 
   assert.deepEqual(
     collectSurfaceBudgetCompilerPolicyDrift(
@@ -706,11 +799,15 @@ test('surface budget compiler consistency guard catches ordinary path and small-
       'surface_budget_compiler_policy.hard_blocker_upgrade_conditions',
       'surface_budget_compiler_policy.ordinary_path_must_not_be_overridden_by',
       'surface_budget_compiler_policy.accepted_owner_answer_shapes',
+      'surface_budget_compiler_policy.ordinary_surface_allowed_planes',
+      'surface_budget_compiler_policy.non_authority_surface_forbidden_outputs',
       'surface_budget_compiler_policy.allowed_lanes',
       'surface_budget_compiler_policy.ordinary_progress_spine',
       'surface_budget_compiler_policy.artifact_tiers',
       'surface_budget_compiler_policy.progress_delta_receipt_cannot_authorize',
       'surface_budget_compiler_policy.audit_sidecar_must_not_generate_default_next_action',
+      'surface_budget_compiler_policy.surface_plane_binding_required',
+      'surface_budget_compiler_policy.default_surface_requires_plane_ref',
     ],
   );
 });

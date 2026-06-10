@@ -700,6 +700,16 @@ export interface TargetOperatingArchitectureResourceKind {
   truth_boundary: string;
 }
 
+export interface TargetOperatingArchitecturePlane {
+  plane_id: string;
+  owner_modules: BrandModuleId[];
+  default_lane: string;
+  inputs: string[];
+  outputs: string[];
+  forbidden_claims: string[];
+  ordinary_path_eligible: boolean;
+}
+
 export interface TargetOperatingArchitectureContract {
   contract_kind: string;
   schema_version: string;
@@ -735,11 +745,31 @@ export interface TargetOperatingArchitectureContract {
   };
   surface_budget_compiler_policy: {
     ordinary_path_root: string;
+    ordinary_progress_spine?: {
+      default_planning_root: string;
+      default_next_action_derives_from: string;
+      lightweight_receipt: string;
+      lightweight_receipt_tier: string;
+      audit_sidecar_role: string;
+    };
+    artifact_tiers?: string[];
+    progress_delta_receipt_cannot_authorize?: string[];
+    audit_sidecar_must_not_generate_default_next_action?: boolean;
+    surface_plane_binding_required: true;
+    default_surface_requires_plane_ref: true;
+    ordinary_surface_allowed_planes: string[];
+    non_authority_surface_forbidden_outputs: string[];
     allowed_lanes: string[];
     small_detail_default_lanes: string[];
     hard_blocker_upgrade_conditions: string[];
     ordinary_path_must_not_be_overridden_by: string[];
     accepted_owner_answer_shapes: string[];
+  };
+  multi_plane_operating_system: {
+    plane_model_id: string;
+    default_ordinary_route: string;
+    planes: TargetOperatingArchitecturePlane[];
+    cross_plane_authority_boundary: Record<string, false>;
   };
   reconciler_model: {
     loop_granularity: string;

@@ -224,6 +224,24 @@
       "production_ready"
     ],
     "audit_sidecar_must_not_generate_default_next_action": true,
+    "surface_plane_binding_required": true,
+    "default_surface_requires_plane_ref": true,
+    "ordinary_surface_allowed_planes": [
+      "ordinary_progress_plane",
+      "durable_runway_plane",
+      "authority_decision_plane",
+      "reconciler_plane",
+      "app_cockpit_plane"
+    ],
+    "non_authority_surface_forbidden_outputs": [
+      "domain_owner_answer",
+      "domain_typed_blocker",
+      "quality_or_export_verdict",
+      "artifact_body_mutation",
+      "memory_body_mutation",
+      "domain_ready_declaration",
+      "production_ready_declaration"
+    ],
     "allowed_lanes": [
       "ordinary",
       "advisory",
@@ -271,6 +289,281 @@
       "physical_delete_authorization_ref",
       "keep_as_authority_adapter_ref"
     ]
+  },
+  "multi_plane_operating_system": {
+    "plane_model_id": "opl_family_multi_plane_operating_system.v1",
+    "default_ordinary_route": "current_owner_delta",
+    "planes": [
+      {
+        "plane_id": "purpose_pack_plane",
+        "owner_modules": [
+          "charter",
+          "pack",
+          "atlas"
+        ],
+        "default_lane": "ordinary",
+        "inputs": [
+          "domain_purpose",
+          "stage_graph",
+          "ordinary_golden_path",
+          "authority_function_refs"
+        ],
+        "outputs": [
+          "domain_pack_contract",
+          "stage_manifest_template",
+          "authority_abi_refs"
+        ],
+        "forbidden_claims": [
+          "domain_ready_declaration",
+          "quality_or_export_verdict",
+          "owner_receipt_signature",
+          "typed_blocker_signature",
+          "domain_truth_write"
+        ],
+        "ordinary_path_eligible": true
+      },
+      {
+        "plane_id": "ordinary_progress_plane",
+        "owner_modules": [
+          "console",
+          "stagecraft",
+          "runway"
+        ],
+        "default_lane": "ordinary",
+        "inputs": [
+          "stage_goal",
+          "accepted_owner_answer_ref",
+          "hard_gate_state",
+          "latest_stage_transition_event"
+        ],
+        "outputs": [
+          "current_owner_delta",
+          "default_next_action",
+          "accepted_answer_shape",
+          "progress_delta_receipt"
+        ],
+        "forbidden_claims": [
+          "domain_ready_declaration",
+          "quality_or_export_verdict",
+          "owner_receipt_signature",
+          "typed_blocker_signature",
+          "raw_worklist_planning_root"
+        ],
+        "ordinary_path_eligible": true
+      },
+      {
+        "plane_id": "stage_artifact_plane",
+        "owner_modules": [
+          "stagecraft",
+          "vault",
+          "workspace"
+        ],
+        "default_lane": "ordinary",
+        "inputs": [
+          "physical_output_ref",
+          "stage_manifest_ref",
+          "selected_artifact_pointer_ref",
+          "owner_answer_ref"
+        ],
+        "outputs": [
+          "stage_artifact_unit_projection",
+          "role_artifact_refs",
+          "artifact_lineage_refs",
+          "manifest_validity_projection"
+        ],
+        "forbidden_claims": [
+          "domain_ready_declaration",
+          "quality_or_export_verdict",
+          "owner_receipt_signature",
+          "typed_blocker_signature",
+          "current_owner_delta_write",
+          "artifact_body_mutation"
+        ],
+        "ordinary_path_eligible": false
+      },
+      {
+        "plane_id": "durable_runway_plane",
+        "owner_modules": [
+          "runway",
+          "stagecraft",
+          "vault"
+        ],
+        "default_lane": "ordinary",
+        "inputs": [
+          "runtime_intent",
+          "admitted_stage_attempt",
+          "provider_profile",
+          "human_gate_ref"
+        ],
+        "outputs": [
+          "attempt_lease_ref",
+          "provider_observation",
+          "retry_or_dead_letter_ref",
+          "closeout_binding_refs"
+        ],
+        "forbidden_claims": [
+          "domain_ready_declaration",
+          "quality_or_export_verdict",
+          "owner_receipt_signature",
+          "typed_blocker_signature",
+          "provider_completion_is_domain_completion"
+        ],
+        "ordinary_path_eligible": true
+      },
+      {
+        "plane_id": "authority_decision_plane",
+        "owner_modules": [
+          "stagecraft",
+          "console",
+          "runway"
+        ],
+        "default_lane": "ordinary",
+        "inputs": [
+          "owner_answer",
+          "typed_blocker",
+          "human_gate_decision",
+          "quality_gate_receipt_ref"
+        ],
+        "outputs": [
+          "accepted_owner_answer_ref",
+          "accepted_typed_blocker_ref",
+          "human_gate_ref",
+          "route_back_ref"
+        ],
+        "forbidden_claims": [
+          "domain_ready_declaration",
+          "quality_or_export_verdict",
+          "owner_receipt_signature",
+          "typed_blocker_signature",
+          "opl_generated_owner_answer"
+        ],
+        "ordinary_path_eligible": true
+      },
+      {
+        "plane_id": "evidence_telemetry_plane",
+        "owner_modules": [
+          "vault",
+          "atlas",
+          "runway"
+        ],
+        "default_lane": "audit",
+        "inputs": [
+          "evidence_refs",
+          "receipt_refs",
+          "typed_blocker_refs",
+          "trace_refs"
+        ],
+        "outputs": [
+          "refs_only_evidence_stream",
+          "lineage_projection",
+          "audit_drilldown_refs",
+          "telemetry_ref_summary"
+        ],
+        "forbidden_claims": [
+          "domain_ready_declaration",
+          "quality_or_export_verdict",
+          "owner_receipt_signature",
+          "typed_blocker_signature",
+          "evidence_count_is_progress"
+        ],
+        "ordinary_path_eligible": false
+      },
+      {
+        "plane_id": "reconciler_plane",
+        "owner_modules": [
+          "runway",
+          "console",
+          "stagecraft"
+        ],
+        "default_lane": "ordinary",
+        "inputs": [
+          "desired_owner_delta",
+          "observed_attempt_refs",
+          "provider_observation_refs",
+          "accepted_owner_answer_refs"
+        ],
+        "outputs": [
+          "exactly_one_safe_action",
+          "owner_or_gate_wait",
+          "opl_repair_blocker",
+          "route_back_ref"
+        ],
+        "forbidden_claims": [
+          "domain_ready_declaration",
+          "quality_or_export_verdict",
+          "owner_receipt_signature",
+          "typed_blocker_signature",
+          "domain_goal_generation"
+        ],
+        "ordinary_path_eligible": true
+      },
+      {
+        "plane_id": "app_cockpit_plane",
+        "owner_modules": [
+          "console",
+          "connect",
+          "runway"
+        ],
+        "default_lane": "ordinary",
+        "inputs": [
+          "current_owner_delta",
+          "stage_run_cockpit",
+          "operator_action_descriptor",
+          "release_diagnostic_ref"
+        ],
+        "outputs": [
+          "ordinary_cockpit_projection",
+          "operator_action_projection",
+          "full_detail_drilldown_ref",
+          "app_surface_descriptor"
+        ],
+        "forbidden_claims": [
+          "domain_ready_declaration",
+          "quality_or_export_verdict",
+          "owner_receipt_signature",
+          "typed_blocker_signature",
+          "app_release_ready_declaration"
+        ],
+        "ordinary_path_eligible": true
+      },
+      {
+        "plane_id": "improvement_plane",
+        "owner_modules": [
+          "foundry-lab",
+          "atlas",
+          "pack"
+        ],
+        "default_lane": "advisory",
+        "inputs": [
+          "eval_ref",
+          "root_cause_ref",
+          "candidate_fix_ref",
+          "owner_acceptance_ref"
+        ],
+        "outputs": [
+          "work_order_ref",
+          "promotion_proposal_ref",
+          "rollback_ref",
+          "reevaluation_ref"
+        ],
+        "forbidden_claims": [
+          "domain_ready_declaration",
+          "quality_or_export_verdict",
+          "owner_receipt_signature",
+          "typed_blocker_signature",
+          "production_acceptance"
+        ],
+        "ordinary_path_eligible": false
+      }
+    ],
+    "cross_plane_authority_boundary": {
+      "plane_projection_can_write_domain_truth": false,
+      "plane_projection_can_sign_owner_receipt": false,
+      "plane_projection_can_create_typed_blocker": false,
+      "plane_projection_can_claim_quality_or_export_verdict": false,
+      "plane_projection_can_claim_domain_ready": false,
+      "plane_projection_can_claim_production_ready": false
+    }
   },
   "reconciler_model": {
     "loop_granularity": "small_idempotent_reconcilers_with_runway_control_loop_runtime",

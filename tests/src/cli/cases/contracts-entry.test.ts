@@ -379,6 +379,33 @@ test('agent workspace norm contract is fail-closed during load and validation', 
   }
 });
 
+test('target operating architecture contract requires the multi-plane operating model', () => {
+  const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
+    const contractPath = path.join(contractsRoot, 'target-operating-architecture-contract.json');
+    const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
+    delete contract.multi_plane_operating_system;
+    fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`);
+  });
+
+  try {
+    assert.throws(
+      () => loadFrameworkContracts({
+        contractsDir: fixtureContractsRoot,
+        source: 'api',
+      }),
+      (error: unknown) => {
+        assert.ok(error instanceof FrameworkContractError);
+        assert.equal(error.code, 'contract_shape_invalid');
+        assert.equal(error.details?.field, 'multi_plane_operating_system');
+        assert.equal(error.details?.file, path.join(fixtureContractsRoot, 'target-operating-architecture-contract.json'));
+        return true;
+      },
+    );
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('doctor reports a Codex-default ready local entry without Hermes compatibility diagnostics', () => {
   const { fixtureRoot: codexFixtureRoot, codexPath } = createFakeCodexFixture(`
 echo "unused"

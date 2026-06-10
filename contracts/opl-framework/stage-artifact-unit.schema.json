@@ -154,7 +154,13 @@
         "opl_can_write_domain_truth",
         "opl_can_mutate_artifact_body",
         "opl_can_authorize_quality_or_export",
-        "provider_completion_counts_as_progress"
+        "provider_completion_counts_as_progress",
+        "output_authority",
+        "can_publish_current_owner_delta",
+        "can_close_owner_answer",
+        "can_close_human_gate",
+        "can_close_typed_blocker",
+        "can_declare_domain_ready"
       ],
       "properties": {
         "opl_can_create_domain_owner_receipt": {
@@ -170,6 +176,44 @@
           "const": false
         },
         "provider_completion_counts_as_progress": {
+          "const": false
+        },
+        "output_authority": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "artifact_projection"
+            },
+            {
+              "const": "progress_projection"
+            },
+            {
+              "const": "evidence_projection"
+            }
+          ],
+          "items": {
+            "enum": [
+              "artifact_projection",
+              "progress_projection",
+              "evidence_projection"
+            ]
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "can_publish_current_owner_delta": {
+          "const": false
+        },
+        "can_close_owner_answer": {
+          "const": false
+        },
+        "can_close_human_gate": {
+          "const": false
+        },
+        "can_close_typed_blocker": {
+          "const": false
+        },
+        "can_declare_domain_ready": {
           "const": false
         }
       }

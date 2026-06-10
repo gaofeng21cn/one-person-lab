@@ -623,6 +623,24 @@ test('target operating architecture contract freezes resource, authority, lane, 
       hard_blocker_upgrade_conditions: string[];
       ordinary_path_must_not_be_overridden_by: string[];
       accepted_owner_answer_shapes: string[];
+      surface_plane_binding_required: boolean;
+      default_surface_requires_plane_ref: boolean;
+      ordinary_surface_allowed_planes: string[];
+      non_authority_surface_forbidden_outputs: string[];
+    };
+    multi_plane_operating_system: {
+      plane_model_id: string;
+      default_ordinary_route: string;
+      planes: Array<{
+        plane_id: string;
+        owner_modules: string[];
+        default_lane: string;
+        inputs: string[];
+        outputs: string[];
+        forbidden_claims: string[];
+        ordinary_path_eligible: boolean;
+      }>;
+      cross_plane_authority_boundary: Record<string, boolean>;
     };
     reconciler_model: {
       required_loops: string[];
@@ -789,6 +807,24 @@ test('target operating architecture contract freezes resource, authority, lane, 
   }
 
   assert.equal(contract.surface_budget_compiler_policy.ordinary_path_root, 'current_owner_delta');
+  assert.equal(contract.surface_budget_compiler_policy.surface_plane_binding_required, true);
+  assert.equal(contract.surface_budget_compiler_policy.default_surface_requires_plane_ref, true);
+  assert.deepEqual(contract.surface_budget_compiler_policy.ordinary_surface_allowed_planes, [
+    'ordinary_progress_plane',
+    'durable_runway_plane',
+    'authority_decision_plane',
+    'reconciler_plane',
+    'app_cockpit_plane',
+  ]);
+  assert.deepEqual(contract.surface_budget_compiler_policy.non_authority_surface_forbidden_outputs, [
+    'domain_owner_answer',
+    'domain_typed_blocker',
+    'quality_or_export_verdict',
+    'artifact_body_mutation',
+    'memory_body_mutation',
+    'domain_ready_declaration',
+    'production_ready_declaration',
+  ]);
   assert.deepEqual(contract.surface_budget_compiler_policy.small_detail_default_lanes, [
     'advisory',
     'audit',
@@ -824,6 +860,70 @@ test('target operating architecture contract freezes resource, authority, lane, 
       true,
       forbiddenOverride,
     );
+  }
+
+  assert.equal(
+    contract.multi_plane_operating_system.plane_model_id,
+    'opl_family_multi_plane_operating_system.v1',
+  );
+  assert.equal(contract.multi_plane_operating_system.default_ordinary_route, 'current_owner_delta');
+  const planesById = new Map(
+    contract.multi_plane_operating_system.planes.map((plane) => [plane.plane_id, plane]),
+  );
+  assert.deepEqual([...planesById.keys()], [
+    'purpose_pack_plane',
+    'ordinary_progress_plane',
+    'stage_artifact_plane',
+    'durable_runway_plane',
+    'authority_decision_plane',
+    'evidence_telemetry_plane',
+    'reconciler_plane',
+    'app_cockpit_plane',
+    'improvement_plane',
+  ]);
+  for (const plane of planesById.values()) {
+    assert.notEqual(plane.owner_modules.length, 0, `${plane.plane_id} must declare owner modules`);
+    assert.notEqual(plane.inputs.length, 0, `${plane.plane_id} must declare inputs`);
+    assert.notEqual(plane.outputs.length, 0, `${plane.plane_id} must declare outputs`);
+    for (const forbiddenOutput of [
+      'domain_ready_declaration',
+      'quality_or_export_verdict',
+      'owner_receipt_signature',
+      'typed_blocker_signature',
+    ]) {
+      assert.equal(
+        plane.forbidden_claims.includes(forbiddenOutput),
+        true,
+        `${plane.plane_id} must reject ${forbiddenOutput}`,
+      );
+    }
+  }
+  assert.equal(
+    planesById.get('ordinary_progress_plane')?.outputs.includes('current_owner_delta'),
+    true,
+  );
+  assert.equal(planesById.get('stage_artifact_plane')?.default_lane, 'ordinary');
+  assert.equal(planesById.get('stage_artifact_plane')?.ordinary_path_eligible, false);
+  assert.equal(
+    planesById.get('stage_artifact_plane')?.outputs.includes('stage_artifact_unit_projection'),
+    true,
+  );
+  assert.equal(
+    planesById.get('stage_artifact_plane')?.forbidden_claims.includes('current_owner_delta_write'),
+    true,
+  );
+  assert.equal(planesById.get('durable_runway_plane')?.owner_modules.includes('runway'), true);
+  assert.equal(
+    planesById.get('durable_runway_plane')?.forbidden_claims.includes('provider_completion_is_domain_completion'),
+    true,
+  );
+  assert.equal(planesById.get('authority_decision_plane')?.outputs.includes('accepted_owner_answer_ref'), true);
+  assert.equal(planesById.get('evidence_telemetry_plane')?.default_lane, 'audit');
+  assert.equal(planesById.get('reconciler_plane')?.outputs.includes('exactly_one_safe_action'), true);
+  assert.equal(planesById.get('app_cockpit_plane')?.owner_modules.includes('console'), true);
+  assert.equal(planesById.get('improvement_plane')?.default_lane, 'advisory');
+  for (const [claim, allowed] of Object.entries(contract.multi_plane_operating_system.cross_plane_authority_boundary)) {
+    assert.equal(allowed, false, `multi-plane model must not claim ${claim}`);
   }
 
   assert.deepEqual(contract.reconciler_model.required_loops, [

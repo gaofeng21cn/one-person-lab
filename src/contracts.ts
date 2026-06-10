@@ -1205,6 +1205,43 @@ const TARGET_ARCHITECTURE_LANES = [
   'production_evidence',
 ] as const;
 
+const TARGET_ARCHITECTURE_PLANES = [
+  'purpose_pack_plane',
+  'ordinary_progress_plane',
+  'stage_artifact_plane',
+  'durable_runway_plane',
+  'authority_decision_plane',
+  'evidence_telemetry_plane',
+  'reconciler_plane',
+  'app_cockpit_plane',
+  'improvement_plane',
+] as const;
+
+const TARGET_ARCHITECTURE_ORDINARY_SURFACE_PLANES = [
+  'ordinary_progress_plane',
+  'durable_runway_plane',
+  'authority_decision_plane',
+  'reconciler_plane',
+  'app_cockpit_plane',
+] as const;
+
+const TARGET_ARCHITECTURE_NON_AUTHORITY_FORBIDDEN_OUTPUTS = [
+  'domain_owner_answer',
+  'domain_typed_blocker',
+  'quality_or_export_verdict',
+  'artifact_body_mutation',
+  'memory_body_mutation',
+  'domain_ready_declaration',
+  'production_ready_declaration',
+] as const;
+
+const TARGET_ARCHITECTURE_PLANE_FORBIDDEN_CLAIMS = [
+  'domain_ready_declaration',
+  'quality_or_export_verdict',
+  'owner_receipt_signature',
+  'typed_blocker_signature',
+] as const;
+
 const TARGET_ARCHITECTURE_SMALL_DETAIL_LANES = [
   'advisory',
   'audit',
@@ -1928,6 +1965,143 @@ function validateFoundryAgentOsStandard(filePath: string, value: unknown) {
   };
 }
 
+function validateTargetOperatingArchitectureMultiPlaneModel(
+  filePath: string,
+  value: unknown,
+): TargetOperatingArchitectureContract['multi_plane_operating_system'] {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'target-operating-architecture-contract.json must declare multi_plane_operating_system.',
+      { file: filePath, field: 'multi_plane_operating_system' },
+    );
+  }
+
+  const planeModelId = expectString(value.plane_model_id, 'multi_plane_operating_system.plane_model_id', filePath);
+  if (planeModelId !== 'opl_family_multi_plane_operating_system.v1') {
+    throw new FrameworkContractError('contract_shape_invalid', 'multi_plane_operating_system.plane_model_id must stay on the OPL family multi-plane model.', {
+      file: filePath,
+      field: 'multi_plane_operating_system.plane_model_id',
+      actual: planeModelId,
+    });
+  }
+
+  const defaultOrdinaryRoute = expectString(
+    value.default_ordinary_route,
+    'multi_plane_operating_system.default_ordinary_route',
+    filePath,
+  );
+  if (defaultOrdinaryRoute !== 'current_owner_delta') {
+    throw new FrameworkContractError('contract_shape_invalid', 'multi_plane_operating_system.default_ordinary_route must remain current_owner_delta.', {
+      file: filePath,
+      field: 'multi_plane_operating_system.default_ordinary_route',
+      actual: defaultOrdinaryRoute,
+    });
+  }
+
+  const planesRaw = value.planes;
+  if (!Array.isArray(planesRaw)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'multi_plane_operating_system.planes must be an array.', {
+      file: filePath,
+      field: 'multi_plane_operating_system.planes',
+    });
+  }
+
+  const seenPlanes = new Set<string>();
+  const planes = planesRaw.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each multi-plane operating model plane must be an object.', {
+        file: filePath,
+        field: 'multi_plane_operating_system.planes',
+        index,
+      });
+    }
+    const planeId = expectString(entry.plane_id, 'multi_plane_operating_system.planes.plane_id', filePath);
+    if (!(TARGET_ARCHITECTURE_PLANES as readonly string[]).includes(planeId)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'multi_plane_operating_system.planes.plane_id must be a known OPL operating plane.', {
+        file: filePath,
+        field: 'multi_plane_operating_system.planes.plane_id',
+        index,
+        actual: planeId,
+        allowed: [...TARGET_ARCHITECTURE_PLANES],
+      });
+    }
+    if (seenPlanes.has(planeId)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each OPL operating plane must be unique.', {
+        file: filePath,
+        field: 'multi_plane_operating_system.planes',
+        index,
+        plane_id: planeId,
+      });
+    }
+    seenPlanes.add(planeId);
+
+    const defaultLane = expectString(entry.default_lane, 'multi_plane_operating_system.planes.default_lane', filePath);
+    if (!(TARGET_ARCHITECTURE_LANES as readonly string[]).includes(defaultLane)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'multi_plane_operating_system.planes.default_lane must be a known target architecture lane.', {
+        file: filePath,
+        field: 'multi_plane_operating_system.planes.default_lane',
+        index,
+        actual: defaultLane,
+        allowed: [...TARGET_ARCHITECTURE_LANES],
+      });
+    }
+
+    const forbiddenClaims = expectNonEmptyStringArray(
+      entry.forbidden_claims,
+      'multi_plane_operating_system.planes.forbidden_claims',
+      filePath,
+    );
+    for (const requiredForbiddenClaim of TARGET_ARCHITECTURE_PLANE_FORBIDDEN_CLAIMS) {
+      if (!forbiddenClaims.includes(requiredForbiddenClaim)) {
+        throw new FrameworkContractError('contract_shape_invalid', 'Each OPL operating plane must preserve the false-authority forbidden claims.', {
+          file: filePath,
+          field: 'multi_plane_operating_system.planes.forbidden_claims',
+          index,
+          plane_id: planeId,
+          missing: requiredForbiddenClaim,
+        });
+      }
+    }
+
+    return {
+      plane_id: planeId,
+      owner_modules: expectBrandModuleIdArray(
+        entry.owner_modules,
+        'multi_plane_operating_system.planes.owner_modules',
+        filePath,
+      ),
+      default_lane: defaultLane,
+      inputs: expectNonEmptyStringArray(entry.inputs, 'multi_plane_operating_system.planes.inputs', filePath),
+      outputs: expectNonEmptyStringArray(entry.outputs, 'multi_plane_operating_system.planes.outputs', filePath),
+      forbidden_claims: forbiddenClaims,
+      ordinary_path_eligible: expectBoolean(
+        entry.ordinary_path_eligible,
+        'multi_plane_operating_system.planes.ordinary_path_eligible',
+        filePath,
+      ),
+    };
+  });
+
+  requireEveryValue(
+    [...seenPlanes],
+    TARGET_ARCHITECTURE_PLANES,
+    'multi_plane_operating_system.planes.plane_id',
+    filePath,
+  );
+
+  return {
+    plane_model_id: planeModelId,
+    default_ordinary_route: defaultOrdinaryRoute,
+    planes,
+    cross_plane_authority_boundary: validateFalseBoundaryRecord(
+      filePath,
+      value.cross_plane_authority_boundary,
+      'multi_plane_operating_system.cross_plane_authority_boundary',
+    ),
+  };
+}
+
 function validateTargetOperatingArchitecture(
   filePath: string,
   value: unknown,
@@ -1952,6 +2126,7 @@ function validateTargetOperatingArchitecture(
   const appConsoleRaw = value.app_console_policy;
   const agentLabRaw = value.agent_lab_improvement_plane;
   const foundryAgentOsStandardRaw = value.foundry_agent_os_standard;
+  const multiPlaneRaw = value.multi_plane_operating_system;
   if (
     !isRecord(resourceModelRaw)
     || !isRecord(stageAuthorityRaw)
@@ -1963,11 +2138,12 @@ function validateTargetOperatingArchitecture(
     || !isRecord(appConsoleRaw)
     || !isRecord(agentLabRaw)
     || !isRecord(foundryAgentOsStandardRaw)
+    || !isRecord(multiPlaneRaw)
   ) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'target-operating-architecture-contract.json must declare resource, authority, ABI, surface, reconciler, catalog, App, Agent Lab, and Foundry Agent OS sections.',
-      { file: filePath },
+      'target-operating-architecture-contract.json must declare resource, authority, ABI, surface, multi-plane, reconciler, catalog, App, Agent Lab, and Foundry Agent OS sections.',
+      { file: filePath, field: !isRecord(multiPlaneRaw) ? 'multi_plane_operating_system' : undefined },
     );
   }
 
@@ -2130,6 +2306,31 @@ function validateTargetOperatingArchitecture(
     'surface_budget_compiler_policy.accepted_owner_answer_shapes',
     filePath,
   );
+  const ordinarySurfaceAllowedPlanes = expectAllowedStringArray(
+    surfaceBudgetRaw.ordinary_surface_allowed_planes,
+    'surface_budget_compiler_policy.ordinary_surface_allowed_planes',
+    filePath,
+    TARGET_ARCHITECTURE_PLANES,
+  );
+  requireEveryValue(
+    ordinarySurfaceAllowedPlanes,
+    TARGET_ARCHITECTURE_ORDINARY_SURFACE_PLANES,
+    'surface_budget_compiler_policy.ordinary_surface_allowed_planes',
+    filePath,
+  );
+  const nonAuthoritySurfaceForbiddenOutputs = expectAllowedStringArray(
+    surfaceBudgetRaw.non_authority_surface_forbidden_outputs,
+    'surface_budget_compiler_policy.non_authority_surface_forbidden_outputs',
+    filePath,
+    TARGET_ARCHITECTURE_NON_AUTHORITY_FORBIDDEN_OUTPUTS,
+  );
+  requireEveryValue(
+    nonAuthoritySurfaceForbiddenOutputs,
+    TARGET_ARCHITECTURE_NON_AUTHORITY_FORBIDDEN_OUTPUTS,
+    'surface_budget_compiler_policy.non_authority_surface_forbidden_outputs',
+    filePath,
+  );
+  const multiPlaneOperatingSystem = validateTargetOperatingArchitectureMultiPlaneModel(filePath, multiPlaneRaw);
 
   const reconcilerLoops = expectNonEmptyStringArray(
     reconcilerRaw.required_loops,
@@ -2248,6 +2449,62 @@ function validateTargetOperatingArchitecture(
     },
     surface_budget_compiler_policy: {
       ordinary_path_root: expectString(surfaceBudgetRaw.ordinary_path_root, 'surface_budget_compiler_policy.ordinary_path_root', filePath),
+      ordinary_progress_spine: isRecord(surfaceBudgetRaw.ordinary_progress_spine)
+        ? {
+            default_planning_root: expectString(
+              surfaceBudgetRaw.ordinary_progress_spine.default_planning_root,
+              'surface_budget_compiler_policy.ordinary_progress_spine.default_planning_root',
+              filePath,
+            ),
+            default_next_action_derives_from: expectString(
+              surfaceBudgetRaw.ordinary_progress_spine.default_next_action_derives_from,
+              'surface_budget_compiler_policy.ordinary_progress_spine.default_next_action_derives_from',
+              filePath,
+            ),
+            lightweight_receipt: expectString(
+              surfaceBudgetRaw.ordinary_progress_spine.lightweight_receipt,
+              'surface_budget_compiler_policy.ordinary_progress_spine.lightweight_receipt',
+              filePath,
+            ),
+            lightweight_receipt_tier: expectString(
+              surfaceBudgetRaw.ordinary_progress_spine.lightweight_receipt_tier,
+              'surface_budget_compiler_policy.ordinary_progress_spine.lightweight_receipt_tier',
+              filePath,
+            ),
+            audit_sidecar_role: expectString(
+              surfaceBudgetRaw.ordinary_progress_spine.audit_sidecar_role,
+              'surface_budget_compiler_policy.ordinary_progress_spine.audit_sidecar_role',
+              filePath,
+            ),
+          }
+        : undefined,
+      artifact_tiers: expectNonEmptyStringArray(
+        surfaceBudgetRaw.artifact_tiers,
+        'surface_budget_compiler_policy.artifact_tiers',
+        filePath,
+      ),
+      progress_delta_receipt_cannot_authorize: expectNonEmptyStringArray(
+        surfaceBudgetRaw.progress_delta_receipt_cannot_authorize,
+        'surface_budget_compiler_policy.progress_delta_receipt_cannot_authorize',
+        filePath,
+      ),
+      audit_sidecar_must_not_generate_default_next_action: expectTrueBoolean(
+        surfaceBudgetRaw.audit_sidecar_must_not_generate_default_next_action,
+        'surface_budget_compiler_policy.audit_sidecar_must_not_generate_default_next_action',
+        filePath,
+      ),
+      surface_plane_binding_required: expectTrueBoolean(
+        surfaceBudgetRaw.surface_plane_binding_required,
+        'surface_budget_compiler_policy.surface_plane_binding_required',
+        filePath,
+      ),
+      default_surface_requires_plane_ref: expectTrueBoolean(
+        surfaceBudgetRaw.default_surface_requires_plane_ref,
+        'surface_budget_compiler_policy.default_surface_requires_plane_ref',
+        filePath,
+      ),
+      ordinary_surface_allowed_planes: ordinarySurfaceAllowedPlanes,
+      non_authority_surface_forbidden_outputs: nonAuthoritySurfaceForbiddenOutputs,
       allowed_lanes: allowedLanes,
       small_detail_default_lanes: smallDetailLanes,
       hard_blocker_upgrade_conditions: hardBlockerConditions,
@@ -2258,6 +2515,7 @@ function validateTargetOperatingArchitecture(
       ),
       accepted_owner_answer_shapes: acceptedOwnerAnswerShapes,
     },
+    multi_plane_operating_system: multiPlaneOperatingSystem,
     reconciler_model: {
       loop_granularity: expectString(reconcilerRaw.loop_granularity, 'reconciler_model.loop_granularity', filePath),
       required_loops: reconcilerLoops,

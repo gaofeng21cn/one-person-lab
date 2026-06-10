@@ -7,6 +7,18 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-06-10
 
+### 决策：ideal operating model 作为 north-star，active baton 回当前差距文档
+
+原因：`docs/active/opl-family-ideal-operating-model-redesign.md` 需要沉淀 multi-plane operating model、外部成熟工程映射和 OPL 基座优化验收标准，但如果它继续维护 lane 状态、下一步或 dated checklist，会与 `docs/active/current-state-vs-ideal-gap.md` 形成第二 active backlog。OPL family 当前执行需要单一 active baton、单一 ordinary route 和单一 owner evidence intake。
+
+影响：
+
+- `opl-family-ideal-operating-model-redesign.md` 固定为 `active_reference`：只表达 north-star、评估标准、plane / primitive 分类和 acceptance standard，不维护第二 owner queue、第二 ordinary route、第二 truth source 或 worktree closeout。
+- `current-state-vs-ideal-gap.md` 继续是唯一 active owner：multi-plane operating model、OPL 基座优化、Runway / Console / Vault false-authority、`current_owner_delta` single ordinary route、证据缺口、next action 和完成口径都折回该文档。
+- Ordinary App/CLI/operator route 固定为 fresh `current_owner_delta`。Runway 只承接 durable execution / repair / reconcile，Console 只承接 owner-action projection，Vault 只承接 refs-only evidence / telemetry / audit packet；它们都不能生成 domain owner answer、domain typed blocker、quality/export/review verdict、artifact authority、App release verdict、Brand L5、physical delete authorization 或 ready declaration。
+- OPL 基座优化只推进 generated/hosted surfaces、durable Runway、Stage Artifact Unit、passive Vault、Console owner-action producer、Foundry Lab work-order loop 和 human/domain owner decision gate；domain repo 私有 scheduler、queue、dashboard、status shell、generic wrapper 或 selector 只能作为迁移输入、diagnostic/support surface 或 retirement candidate。
+- 后续 docs foldback 只能关闭 `hygiene_only_supporting_active_gap` 或支撑具体 owner-evidence work order；不能用 docs updated、plane health、provider completion、verified refs-only ledger、conformance pass 或 App projection 声明 domain ready、App release ready、Brand L5 或 production ready。
+
 ### 决策：MAS Agent OS 方案提升为 family-level Foundry Agent OS 标准
 
 原因：MAS 的目标态已经明确为 `OPL Agent OS + MAS Declarative Medical Research Pack + MAS Minimal Authority Kernel + Scientific Capability Registry`。这不是 MAS 单仓特例，而是 MAS/MAG/RCA/OMA 都需要的标准 OPL Agent 形态：OPL 上收通用 runtime、StageRun、Pack compiler、generated/hosted surfaces、Console、Vault、Runway 和 conformance；domain 仓只保留无法声明化的最小 authority kernel。
