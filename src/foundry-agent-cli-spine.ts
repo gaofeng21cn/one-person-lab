@@ -28,6 +28,7 @@ const FOUNDRY_AGENT_PEERS = [
     label: 'Med Auto Science',
     brand_cli: 'mas',
     direct_domain_cli: 'medautosci',
+    codex_executable_cli: 'medautosci',
     domain_alias: 'study',
     work_alias: 'study',
     ordinary_golden_path:
@@ -39,6 +40,7 @@ const FOUNDRY_AGENT_PEERS = [
     label: 'Med Auto Grant',
     brand_cli: 'mag',
     direct_domain_cli: 'medautogrant',
+    codex_executable_cli: '<med-autogrant-repo>/scripts/run-python-clean.sh -m med_autogrant.cli',
     domain_alias: 'grant',
     work_alias: 'grant',
     ordinary_golden_path:
@@ -50,6 +52,7 @@ const FOUNDRY_AGENT_PEERS = [
     label: 'RedCube AI',
     brand_cli: 'rca',
     direct_domain_cli: 'redcube',
+    codex_executable_cli: 'npm run --prefix <redcube-ai-repo> redcube --',
     domain_alias: 'deck',
     work_alias: 'deck',
     ordinary_golden_path:
@@ -61,6 +64,7 @@ const FOUNDRY_AGENT_PEERS = [
     label: 'OPL Meta Agent',
     brand_cli: 'oma',
     direct_domain_cli: 'opl agents interfaces --repo-dir <opl-meta-agent-repo>',
+    codex_executable_cli: 'opl foundry agents inspect oma',
     domain_alias: 'agent',
     work_alias: 'agent',
     ordinary_golden_path:
@@ -196,16 +200,18 @@ function buildAuthorityBoundary(contract: JsonRecord) {
 
 function buildPeerProjection(peer: FoundryAgentPeer) {
   const generatedSurfaceOnly = Boolean('generated_surface_only' in peer && peer.generated_surface_only);
-  const executableFoundryCli = peer.agent_id === 'mas' ? peer.direct_domain_cli : peer.brand_cli;
+  const domainFoundryCli = peer.direct_domain_cli;
+  const codexExecutableCli = 'codex_executable_cli' in peer ? peer.codex_executable_cli : peer.direct_domain_cli;
+  const brandCliPathSafe = false;
   const foundryCommandSurface = generatedSurfaceOnly
     ? `opl foundry agents inspect ${peer.agent_id}`
-    : `${executableFoundryCli} foundry`;
+    : `${domainFoundryCli} foundry`;
   const compatibilityCommandSurface = generatedSurfaceOnly
     ? peer.direct_domain_cli
     : `${peer.direct_domain_cli} foundry`;
   const foundryOperations = generatedSurfaceOnly
     ? FOUNDRY_AGENT_OPERATIONS.map((operation) => `opl agents foundry ${operation}`)
-    : FOUNDRY_AGENT_OPERATIONS.map((operation) => `${executableFoundryCli} foundry ${operation}`);
+    : FOUNDRY_AGENT_OPERATIONS.map((operation) => `${domainFoundryCli} foundry ${operation}`);
   const compatibilityOperations = generatedSurfaceOnly
     ? [peer.direct_domain_cli]
     : FOUNDRY_AGENT_OPERATIONS.map((operation) => `${peer.direct_domain_cli} foundry ${operation}`);
@@ -222,15 +228,16 @@ function buildPeerProjection(peer: FoundryAgentPeer) {
         ],
       }
     : {
-        executable_brand_cli_command_surface: foundryCommandSurface,
+        executable_brand_cli_command_surface: brandCliPathSafe ? `${peer.brand_cli} foundry` : null,
+        executable_direct_cli_command_surface: `${codexExecutableCli} foundry`,
         executable_compatibility_command_surface: compatibilityCommandSurface,
-        status_json_command: `${executableFoundryCli} foundry status --json`,
+        status_json_command: `${codexExecutableCli} foundry status --json`,
         compatibility_status_json_command: `${peer.direct_domain_cli} foundry status --json`,
         legacy_format_json_command: `${peer.direct_domain_cli} foundry status --format json`,
         json_flag_aliases: ['--json', '--format json'],
         help_smoke_commands: [
-          `${executableFoundryCli} --help`,
-          `${executableFoundryCli} foundry status --json`,
+          `${codexExecutableCli} --help`,
+          `${codexExecutableCli} foundry status --json`,
           `${peer.direct_domain_cli} foundry status --json`,
         ],
       };
@@ -243,7 +250,8 @@ function buildPeerProjection(peer: FoundryAgentPeer) {
     compatibility_command_surface: compatibilityCommandSurface,
     foundry_operations: foundryOperations,
     compatibility_operations: compatibilityOperations,
-    executable_direct_cli_command_surface: generatedSurfaceOnly ? null : compatibilityCommandSurface,
+    executable_direct_cli_command_surface: generatedSurfaceOnly ? null : `${codexExecutableCli} foundry`,
+    brand_cli_path_safe_executable: generatedSurfaceOnly ? false : brandCliPathSafe,
     generated_surface_only: generatedSurfaceOnly,
     cli_smoke: cliSmoke,
     ordinary_spine: ['workspace', 'work', 'stage', 'run', 'vault', 'handoff', 'connect'].map((object) => ({
@@ -461,7 +469,7 @@ export function buildFoundryAgentInspect(args: string[]) {
       surface_kind: 'opl_foundry_agent_series_agent_inspect',
       status: ('generated_surface_only' in peer && peer.generated_surface_only)
         ? 'generated_surface_only'
-        : 'direct_cli_ready',
+        : 'direct_domain_surface_ready',
       ...buildPeerProjection(peer),
       series_contract_ref: FOUNDRY_AGENT_SERIES_CONTRACT_REF,
       direct_cli_command_surface_policy: {

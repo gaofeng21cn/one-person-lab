@@ -31,10 +31,26 @@ test('OPL system skill sync catalog excludes MAS/MDS project-local stage skills'
       assert.equal(pack.foundry_agent_series.brand_cli, 'mas');
       assert.equal(pack.foundry_agent_series.direct_cli, 'medautosci');
       assert.equal(pack.foundry_agent_series.direct_cli_foundry_command_surface, 'medautosci foundry');
+      assert.equal(pack.foundry_agent_series.codex_executable_foundry_command_surface, 'medautosci foundry');
       assert.equal(pack.foundry_agent_series.compatibility_foundry_command_surface, 'medautosci foundry');
+    } else if (pack.canonical_plugin_name === 'mag') {
+      assert.equal(pack.foundry_agent_series.brand_cli, 'mag');
+      assert.equal(pack.foundry_agent_series.direct_cli, 'medautogrant');
+      assert.equal(pack.foundry_agent_series.direct_cli_foundry_command_surface, 'medautogrant foundry');
+      assert.equal(
+        pack.foundry_agent_series.codex_executable_foundry_command_surface,
+        '<med-autogrant-repo>/scripts/run-python-clean.sh -m med_autogrant.cli foundry',
+      );
+    } else if (pack.canonical_plugin_name === 'rca') {
+      assert.equal(pack.foundry_agent_series.brand_cli, 'rca');
+      assert.equal(pack.foundry_agent_series.direct_cli, 'redcube');
+      assert.equal(pack.foundry_agent_series.direct_cli_foundry_command_surface, 'redcube foundry');
+      assert.equal(
+        pack.foundry_agent_series.codex_executable_foundry_command_surface,
+        'npm run --prefix <redcube-ai-repo> redcube -- foundry',
+      );
     } else {
-      assert.match(String(pack.foundry_agent_series.direct_cli_foundry_command_surface), /^(mag|rca) foundry$/);
-      assert.equal(pack.foundry_agent_series.direct_cli, pack.foundry_agent_series.brand_cli);
+      assert.fail(`unexpected plugin: ${pack.canonical_plugin_name}`);
     }
     assert.equal(pack.command_surface_spine.skill_sync_command_surface, 'opl connect sync-skills');
     assert.equal('frontdoor_spine' in pack, false);

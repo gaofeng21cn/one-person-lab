@@ -566,13 +566,13 @@ test('OPL Foundry Agent index exposes MAS MAG RCA OMA direct and generated CLI c
   );
   assert.deepEqual(
     list.agents.map((entry: { foundry_command_surface: string }) => entry.foundry_command_surface),
-    ['medautosci foundry', 'mag foundry', 'rca foundry', 'opl foundry agents inspect oma'],
+    ['medautosci foundry', 'medautogrant foundry', 'redcube foundry', 'opl foundry agents inspect oma'],
   );
   assert.deepEqual(
     list.agents.map((entry: { cli_smoke: { executable_brand_cli_command_surface: string | null } }) =>
       entry.cli_smoke.executable_brand_cli_command_surface
     ),
-    ['medautosci foundry', 'mag foundry', 'rca foundry', null],
+    [null, null, null, null],
   );
   assert.deepEqual(
     list.agents.map((entry: { cli_smoke: { json_flag_aliases: string[] } }) =>
@@ -587,10 +587,11 @@ test('OPL Foundry Agent index exposes MAS MAG RCA OMA direct and generated CLI c
   );
 
   const mas = runCli(['foundry', 'agents', 'inspect', 'mas']).foundry_agent;
-  assert.equal(mas.status, 'direct_cli_ready');
+  assert.equal(mas.status, 'direct_domain_surface_ready');
   assert.equal(mas.work_object.natural_alias, 'study');
   assert.equal(mas.brand_cli, 'mas');
-  assert.equal(mas.cli_smoke.executable_brand_cli_command_surface, 'medautosci foundry');
+  assert.equal(mas.cli_smoke.executable_brand_cli_command_surface, null);
+  assert.equal(mas.cli_smoke.executable_direct_cli_command_surface, 'medautosci foundry');
   assert.equal('foundry_frontdoor' in mas, false);
   assert.equal('compatibility_frontdoor' in mas, false);
   assert.equal('executable_brand_cli_frontdoor' in mas.cli_smoke, false);
@@ -599,15 +600,33 @@ test('OPL Foundry Agent index exposes MAS MAG RCA OMA direct and generated CLI c
   assert.equal(mas.mcp_projection.mcp_descriptor_must_delegate_to_series_spine, true);
 
   const mag = runCli(['foundry', 'agents', 'inspect', 'mag']).foundry_agent;
-  assert.equal(mag.status, 'direct_cli_ready');
-  assert.equal(mag.cli_smoke.executable_brand_cli_command_surface, 'mag foundry');
-  assert.equal(mag.cli_smoke.status_json_command, 'mag foundry status --json');
+  assert.equal(mag.status, 'direct_domain_surface_ready');
+  assert.equal(mag.brand_cli, 'mag');
+  assert.equal(mag.foundry_command_surface, 'medautogrant foundry');
+  assert.equal(mag.cli_smoke.executable_brand_cli_command_surface, null);
+  assert.equal(
+    mag.cli_smoke.executable_direct_cli_command_surface,
+    '<med-autogrant-repo>/scripts/run-python-clean.sh -m med_autogrant.cli foundry',
+  );
+  assert.equal(
+    mag.cli_smoke.status_json_command,
+    '<med-autogrant-repo>/scripts/run-python-clean.sh -m med_autogrant.cli foundry status --json',
+  );
   assert.equal(mag.cli_smoke.compatibility_status_json_command, 'medautogrant foundry status --json');
 
   const rca = runCli(['foundry', 'agents', 'inspect', 'rca']).foundry_agent;
-  assert.equal(rca.status, 'direct_cli_ready');
-  assert.equal(rca.cli_smoke.executable_brand_cli_command_surface, 'rca foundry');
-  assert.equal(rca.cli_smoke.status_json_command, 'rca foundry status --json');
+  assert.equal(rca.status, 'direct_domain_surface_ready');
+  assert.equal(rca.brand_cli, 'rca');
+  assert.equal(rca.foundry_command_surface, 'redcube foundry');
+  assert.equal(rca.cli_smoke.executable_brand_cli_command_surface, null);
+  assert.equal(
+    rca.cli_smoke.executable_direct_cli_command_surface,
+    'npm run --prefix <redcube-ai-repo> redcube -- foundry',
+  );
+  assert.equal(
+    rca.cli_smoke.status_json_command,
+    'npm run --prefix <redcube-ai-repo> redcube -- foundry status --json',
+  );
   assert.equal(rca.cli_smoke.compatibility_status_json_command, 'redcube foundry status --json');
 
   const oma = runCli(['foundry', 'agents', 'inspect', 'oma']).foundry_agent;
