@@ -171,6 +171,177 @@
     }
   },
   "$defs": {
+    "domain_pack_external_learning_ref": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "capability_ref",
+        "source_family",
+        "work_unit_ref"
+      ],
+      "properties": {
+        "capability_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_family": {
+          "type": "string",
+          "minLength": 1
+        },
+        "work_unit_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "binding_kind": {
+          "enum": [
+            "optional",
+            "route_required"
+          ]
+        },
+        "surface_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "capability_registry_readout": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind",
+        "schema_version",
+        "owner_modules",
+        "default_behavior",
+        "resolver_abi_ref",
+        "source_families",
+        "summary",
+        "domain_pack_external_learning_refs",
+        "resolutions",
+        "domain_local_selector_created",
+        "always_on_sidecar_created",
+        "default_preflight_created",
+        "second_active_backlog_created",
+        "authority_boundary"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "opl_capability_registry_readout"
+        },
+        "schema_version": {
+          "const": "capability-registry-resolver.v1"
+        },
+        "owner_modules": {
+          "const": [
+            "atlas",
+            "pack",
+            "stagecraft"
+          ]
+        },
+        "default_behavior": {
+          "const": "current_owner_delta_bound_jit_or_fail_open"
+        },
+        "resolver_abi_ref": {
+          "const": "contracts/opl-framework/capability-registry-resolver.schema.json"
+        },
+        "source_families": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "summary": {
+          "$ref": "#/$defs/resolution_summary"
+        },
+        "domain_pack_external_learning_refs": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "consumed_count",
+            "resolved_count",
+            "fail_open_count",
+            "blocker_candidate_count",
+            "source_families"
+          ],
+          "properties": {
+            "consumed_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "resolved_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "fail_open_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "blocker_candidate_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "source_families": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "resolutions": {
+          "type": "array",
+          "items": {
+            "$ref": "#"
+          }
+        },
+        "domain_local_selector_created": {
+          "const": false
+        },
+        "always_on_sidecar_created": {
+          "const": false
+        },
+        "default_preflight_created": {
+          "const": false
+        },
+        "second_active_backlog_created": {
+          "const": false
+        },
+        "authority_boundary": {
+          "$ref": "#/$defs/authority_boundary"
+        }
+      }
+    },
+    "resolution_summary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "requested_count",
+        "resolved_count",
+        "fail_open_count",
+        "blocker_candidate_count"
+      ],
+      "properties": {
+        "requested_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "resolved_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fail_open_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocker_candidate_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
     "typed_blocker_candidate": {
       "type": "object",
       "additionalProperties": true,

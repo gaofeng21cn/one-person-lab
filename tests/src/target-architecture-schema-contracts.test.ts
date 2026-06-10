@@ -171,6 +171,41 @@ test('target architecture schema contracts keep owner delta root and audit tail 
     capabilityResolver.$defs.typed_blocker_candidate.properties.may_create_domain_typed_blocker.const,
     false,
   );
+  assert.deepEqual(capabilityResolver.$defs.domain_pack_external_learning_ref.required, [
+    'capability_ref',
+    'source_family',
+    'work_unit_ref',
+  ]);
+  assert.equal(
+    capabilityResolver.$defs.domain_pack_external_learning_ref.properties.binding_kind.enum.includes('optional'),
+    true,
+  );
+  assert.equal(
+    capabilityResolver.$defs.domain_pack_external_learning_ref.properties.binding_kind.enum.includes('route_required'),
+    true,
+  );
+  assert.equal(
+    capabilityResolver.$defs.capability_registry_readout.properties.surface_kind.const,
+    'opl_capability_registry_readout',
+  );
+  assert.equal(
+    capabilityResolver.$defs.capability_registry_readout.properties.default_behavior.const,
+    'current_owner_delta_bound_jit_or_fail_open',
+  );
+  assert.equal(
+    capabilityResolver.$defs.capability_registry_readout.properties.domain_pack_external_learning_refs.required.includes(
+      'fail_open_count',
+    ),
+    true,
+  );
+  assert.equal(
+    capabilityResolver.$defs.capability_registry_readout.properties.domain_local_selector_created.const,
+    false,
+  );
+  assert.equal(
+    capabilityResolver.$defs.capability_registry_readout.properties.always_on_sidecar_created.const,
+    false,
+  );
   assert.equal(
     capabilityResolver.$defs.authority_boundary.properties.can_execute_capability.const,
     false,

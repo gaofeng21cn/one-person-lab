@@ -56,12 +56,22 @@ export interface CurrentOwnerDeltaCapabilityBinding {
   required_capability_refs?: CurrentOwnerDeltaCapabilityRequirement[];
 }
 
+export interface DomainPackExternalLearningCapabilityRef {
+  capability_ref: string;
+  source_family: CapabilityRegistrySourceFamily;
+  work_unit_ref: string;
+  binding_kind?: CapabilityBindingKind;
+  surface_ref?: string | null;
+}
+
 export interface CapabilityResolutionRequest {
   registry: CapabilityRegistryCatalog;
   currentOwnerDelta: CurrentOwnerDeltaCapabilityBinding;
   capabilityRef: string;
   workUnitRef: string;
   bindingKind?: CapabilityBindingKind;
+  declaredSourceFamily?: CapabilityRegistrySourceFamily | null;
+  declaredSurfaceRef?: string | null;
 }
 
 export interface CapabilityRegistryAuthorityBoundary {
@@ -126,6 +136,7 @@ export interface CapabilityRegistryReadoutRequest {
     workUnitRef: string;
     bindingKind?: CapabilityBindingKind;
   }>;
+  domainPackExternalLearningRefs?: DomainPackExternalLearningCapabilityRef[];
 }
 
 export interface CapabilityRegistryReadout {
@@ -140,6 +151,13 @@ export interface CapabilityRegistryReadout {
     resolved_count: number;
     fail_open_count: number;
     blocker_candidate_count: number;
+  };
+  domain_pack_external_learning_refs: {
+    consumed_count: number;
+    resolved_count: number;
+    fail_open_count: number;
+    blocker_candidate_count: number;
+    source_families: string[];
   };
   resolutions: CapabilityRegistryResolution[];
   domain_local_selector_created: false;
@@ -211,6 +229,21 @@ function isCurrentOwnerDeltaBound(delta: CurrentOwnerDeltaCapabilityBinding, wor
     && (!delta.work_unit_ref || delta.work_unit_ref === workUnitRef);
 }
 
+function uniqSorted(values: Array<string | null | undefined>) {
+  return [...new Set(values.filter((entry): entry is string => Boolean(entry && entry.length > 0)))].sort();
+}
+
+function resolutionCounts(resolutions: CapabilityRegistryResolution[]) {
+  return {
+    requested_count: resolutions.length,
+    resolved_count: resolutions.filter((entry) => entry.resolution_status === 'resolved').length,
+    fail_open_count: resolutions.filter((entry) => entry.resolution_status === 'fail_open').length,
+    blocker_candidate_count: resolutions.filter((entry) =>
+      entry.resolution_status === 'route_required_blocker_candidate'
+    ).length,
+  };
+}
+
 function blockerCandidate(input: {
   capabilityRef: string;
   currentOwnerDelta: CurrentOwnerDeltaCapabilityBinding;
@@ -269,8 +302,8 @@ export function resolveCapabilityForCurrentDelta(
       action,
       capability_found: Boolean(found),
       capability_ref: request.capabilityRef,
-      source_family: found?.source_family ?? null,
-      surface_ref: found?.surface_ref ?? null,
+      source_family: found?.source_family ?? request.declaredSourceFamily ?? null,
+      surface_ref: found?.surface_ref ?? request.declaredSurfaceRef ?? null,
     },
     route_required_policy: {
       is_route_required: Boolean(routeRequirement),
@@ -295,7 +328,7 @@ export function resolveCapabilityForCurrentDelta(
 export function buildCapabilityRegistryReadout(
   request: CapabilityRegistryReadoutRequest,
 ): CapabilityRegistryReadout {
-  const resolutions = request.requestedCapabilities.map((entry) =>
+  const requestedResolutions = request.requestedCapabilities.map((entry) =>
     resolveCapabilityForCurrentDelta({
       registry: request.registry,
       currentOwnerDelta: request.currentOwnerDelta,
@@ -304,6 +337,23 @@ export function buildCapabilityRegistryReadout(
       bindingKind: entry.bindingKind,
     })
   );
+  const domainPackExternalLearningResolutions = (request.domainPackExternalLearningRefs ?? []).map((entry) =>
+    resolveCapabilityForCurrentDelta({
+      registry: request.registry,
+      currentOwnerDelta: request.currentOwnerDelta,
+      capabilityRef: entry.capability_ref,
+      workUnitRef: entry.work_unit_ref,
+      bindingKind: entry.binding_kind,
+      declaredSourceFamily: entry.source_family,
+      declaredSurfaceRef: entry.surface_ref,
+    })
+  );
+  const resolutions = [
+    ...requestedResolutions,
+    ...domainPackExternalLearningResolutions,
+  ];
+  const summary = resolutionCounts(resolutions);
+  const externalLearningSummary = resolutionCounts(domainPackExternalLearningResolutions);
 
   return {
     surface_kind: 'opl_capability_registry_readout',
@@ -311,18 +361,17 @@ export function buildCapabilityRegistryReadout(
     owner_modules: ['atlas', 'pack', 'stagecraft'],
     default_behavior: 'current_owner_delta_bound_jit_or_fail_open',
     resolver_abi_ref: 'contracts/opl-framework/capability-registry-resolver.schema.json',
-    source_families: [...new Set(
-      request.registry.capabilities
-        .map((entry) => entry.source_family)
-        .filter((entry) => entry.length > 0),
-    )].sort(),
-    summary: {
-      requested_count: resolutions.length,
-      resolved_count: resolutions.filter((entry) => entry.resolution_status === 'resolved').length,
-      fail_open_count: resolutions.filter((entry) => entry.resolution_status === 'fail_open').length,
-      blocker_candidate_count: resolutions.filter((entry) =>
-        entry.resolution_status === 'route_required_blocker_candidate'
-      ).length,
+    source_families: uniqSorted([
+      ...request.registry.capabilities.map((entry) => entry.source_family),
+      ...domainPackExternalLearningResolutions.map((entry) => entry.selection.source_family),
+    ]),
+    summary,
+    domain_pack_external_learning_refs: {
+      consumed_count: externalLearningSummary.requested_count,
+      resolved_count: externalLearningSummary.resolved_count,
+      fail_open_count: externalLearningSummary.fail_open_count,
+      blocker_candidate_count: externalLearningSummary.blocker_candidate_count,
+      source_families: uniqSorted(domainPackExternalLearningResolutions.map((entry) => entry.selection.source_family)),
     },
     resolutions,
     domain_local_selector_created: false,

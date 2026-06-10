@@ -155,3 +155,109 @@ test('capability registry resolver readout preserves external-learning refs as c
   assert.equal(readout.authority_boundary.can_sign_owner_receipt, false);
   assert.equal(readout.authority_boundary.can_create_domain_typed_blocker, false);
 });
+
+test('capability registry resolver readout consumes domain-pack external-learning refs without creating domain authority', () => {
+  const readout = buildCapabilityRegistryReadout({
+    registry,
+    currentOwnerDelta,
+    requestedCapabilities: [],
+    domainPackExternalLearningRefs: [
+      {
+        capability_ref: 'capability:light-literature-prioritization',
+        source_family: 'light',
+        work_unit_ref: 'opl://stage-runs/mas/source-readiness',
+        binding_kind: 'optional',
+      },
+      {
+        capability_ref: 'capability:co-scientist-claim-support',
+        source_family: 'co_scientist',
+        work_unit_ref: 'opl://stage-runs/mas/source-readiness',
+        binding_kind: 'optional',
+      },
+      {
+        capability_ref: 'capability:evo-ablation-hypothesis',
+        source_family: 'evo',
+        work_unit_ref: 'opl://stage-runs/mas/source-readiness',
+        binding_kind: 'optional',
+      },
+      {
+        capability_ref: 'capability:ars-claim-support',
+        source_family: 'ars',
+        work_unit_ref: 'opl://stage-runs/mas/source-readiness',
+        binding_kind: 'optional',
+      },
+      {
+        capability_ref: 'capability:autosci-source-discovery',
+        source_family: 'autosci',
+        work_unit_ref: 'opl://stage-runs/mas/source-readiness',
+        binding_kind: 'optional',
+      },
+      {
+        capability_ref: 'capability:ark-micro-canary',
+        source_family: 'ark',
+        work_unit_ref: 'opl://stage-runs/mas/source-readiness',
+        binding_kind: 'optional',
+      },
+      {
+        capability_ref: 'capability:source-readiness-route',
+        source_family: 'opl_native',
+        work_unit_ref: 'opl://stage-runs/mas/source-readiness',
+        binding_kind: 'route_required',
+      },
+    ],
+  });
+
+  assert.equal(readout.summary.requested_count, 7);
+  assert.equal(readout.summary.resolved_count, 2);
+  assert.equal(readout.summary.fail_open_count, 4);
+  assert.equal(readout.summary.blocker_candidate_count, 1);
+  assert.deepEqual(readout.source_families, [
+    'ark',
+    'ars',
+    'autosci',
+    'co_scientist',
+    'evo',
+    'light',
+    'opl_native',
+  ]);
+  assert.deepEqual(readout.domain_pack_external_learning_refs, {
+    consumed_count: 7,
+    resolved_count: 2,
+    fail_open_count: 4,
+    blocker_candidate_count: 1,
+    source_families: [
+      'ark',
+      'ars',
+      'autosci',
+      'co_scientist',
+      'evo',
+      'light',
+      'opl_native',
+    ],
+  });
+
+  const evoResolution = readout.resolutions.find((entry) =>
+    entry.capability_ref === 'capability:evo-ablation-hypothesis'
+  );
+  assert.ok(evoResolution);
+  assert.equal(evoResolution.resolution_status, 'fail_open');
+  assert.equal(evoResolution.selection.action, 'advisory_or_audit');
+  assert.equal(evoResolution.selection.source_family, 'evo');
+  assert.equal(evoResolution.blocker_candidate, null);
+
+  const routeResolution = readout.resolutions.find((entry) =>
+    entry.capability_ref === 'capability:source-readiness-route'
+  );
+  assert.ok(routeResolution);
+  assert.equal(routeResolution.resolution_status, 'route_required_blocker_candidate');
+  assert.equal(routeResolution.route_required_policy.hard_boundary, 'source_data_evidence');
+  assert.equal(routeResolution.blocker_candidate?.may_create_domain_typed_blocker, false);
+
+  assert.equal(readout.domain_local_selector_created, false);
+  assert.equal(readout.always_on_sidecar_created, false);
+  assert.equal(readout.default_preflight_created, false);
+  assert.equal(readout.second_active_backlog_created, false);
+  assert.equal(readout.authority_boundary.can_execute_capability, false);
+  assert.equal(readout.authority_boundary.can_create_domain_typed_blocker, false);
+  assert.equal(readout.authority_boundary.can_claim_quality_or_export_verdict, false);
+});
