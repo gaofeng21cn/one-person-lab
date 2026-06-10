@@ -20,6 +20,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `brand-module-registry.json`、`brand-module-surfaces.json` 和 `brand-module-l5-operating-evidence.json` 同步补充 Pack compile parity、`current_owner_delta` default read、capability fail-open、domain-authority false boundary 和 cross-agent adoption 证据类。
 - Cross-agent conformance 必须证明 default read root 是 `current_owner_delta`，OPL generated / hosted surfaces 不写 domain truth，Vault / Console / Runway / Pack 不签 owner receipt、不创建 typed blocker、不授权 quality/export verdict，conformance pass 不等于 domain ready。
 - 当前完整实施规划入口是 `docs/active/foundry-agent-os-family-target-implementation-plan.md`；当前 active gap、执行顺序和完成口径仍回 `docs/active/current-state-vs-ideal-gap.md`，避免产生第二 active backlog。
+- 2026-06-10 follow-through：`generated_direct_parity`、Capability Registry resolver ABI 和 `foundry_agent_os_production_evidence_gate` 已落为机器读面。它们分别关闭 generated/direct parity proof、current-delta-bound fail-open resolver 和 W7 intake / non-closing guard 的第一版；仍不能替代真实 owner receipt、typed blocker、human gate、reviewer/quality/export receipt、long-soak、release/install 或 owner acceptance evidence。
 - 本决策不声明 MAS/MAG/RCA/OMA 已 domain ready，不声明 App release ready、Brand L5 或 production ready；后续必须由 domain-owned owner receipt、typed blocker、quality/export/review receipt、human gate、no-regression ref 或真实 L5 operating evidence 关闭。
 
 ## 2026-06-09
