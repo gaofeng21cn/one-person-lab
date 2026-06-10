@@ -125,3 +125,29 @@ test('agents conformance exposes Foundry Agent OS family standard without author
     assert.equal(domain.false_authority_flags.capability_registry_can_sign_owner_receipt, false);
   }
 });
+
+test('Foundry Agent OS canonicalizes OPL Meta Agent as OMA without renaming domain truth', () => {
+  const omaRepo = buildReadyAgentRepo();
+  retargetReadyRepo(omaRepo, 'opl-meta-agent', 'OPL Meta Agent');
+  configureReadyMetaMorphology(omaRepo);
+
+  const payload = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `opl-meta-agent=${omaRepo}`,
+  ]);
+  const foundry = payload.standard_domain_agent_conformance.foundry_agent_os_conformance;
+  const oma = foundry.domains[0];
+
+  assert.equal(foundry.status, 'blocked');
+  assert.deepEqual(foundry.missing_domain_agent_ids, ['mas', 'mag', 'rca']);
+  assert.deepEqual(foundry.observed_domain_agent_ids, ['oma']);
+  assert.equal(oma.domain_id, 'opl-meta-agent');
+  assert.equal(oma.requested_agent_id, 'opl-meta-agent');
+  assert.equal(oma.canonical_agent_id, 'oma');
+  assert.equal(
+    oma.blockers.includes('domain_not_in_foundry_agent_os_standard:opl-meta-agent'),
+    false,
+  );
+});

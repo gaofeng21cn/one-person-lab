@@ -68,7 +68,11 @@ test('agents conformance keeps OMA at work-order proposal materializer boundary'
   assert.deepEqual(goldenPath.explicit_non_default_lane_stage_ids, []);
   assert.equal(alignment.status, 'passed');
   assert.equal(alignment.agent_alignment, 'oma_work_order_proposal_materializer_boundary');
-  assert.deepEqual(alignment.allowed_boundary_stage_ids, ['intent-intake', 'stage-decomposition']);
+  assert.deepEqual(alignment.allowed_boundary_stage_ids, [
+    'intent-intake',
+    'stage-decomposition',
+    'target-agent-takeover',
+  ]);
   assert.equal(
     alignment.target_owner_receipt_policy,
     'target_owner_receipts_or_typed_blockers_only_no_oma_receipt_signing',

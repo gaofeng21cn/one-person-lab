@@ -6,10 +6,28 @@ function statusFromBlockers(blockers: string[]) {
   return blockers.length === 0 ? 'passed' : 'blocked';
 }
 
+function canonicalFoundryAgentId(report: RepoConformanceReport) {
+  const rawId = report.requested_agent_id ?? report.domain_id;
+  const normalized = rawId.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const aliases: Record<string, string> = {
+    mas: 'mas',
+    medautoscience: 'mas',
+    mag: 'mag',
+    medautogrant: 'mag',
+    rca: 'rca',
+    redcube: 'rca',
+    redcubeai: 'rca',
+    oma: 'oma',
+    oplmetaagent: 'oma',
+  };
+  return aliases[normalized] ?? rawId;
+}
+
 function buildFoundryAgentOsDomainConformance(
   report: RepoConformanceReport,
   expectedAgents: string[],
 ) {
+  const canonicalAgentId = canonicalFoundryAgentId(report);
   const defaultEntrySourceOfWorkGate = report.generated_interface_checks.default_entry_source_of_work_gate;
   const stageDefaultReadSurface = report.stage_operating_principle_checks.default_read_surface;
   const capabilityRegistryBlockers = [
@@ -96,7 +114,7 @@ function buildFoundryAgentOsDomainConformance(
       : 'golden_path_guard_can_write_domain_truth_must_be_false',
   ].filter((entry): entry is string => Boolean(entry));
   const blockers = unique([
-    expectedAgents.includes(report.requested_agent_id ?? report.domain_id)
+    expectedAgents.includes(canonicalAgentId)
       ? null
       : `domain_not_in_foundry_agent_os_standard:${report.requested_agent_id ?? report.domain_id}`,
     ...defaultReadRootBlockers,
@@ -108,6 +126,7 @@ function buildFoundryAgentOsDomainConformance(
   return {
     domain_id: report.domain_id,
     requested_agent_id: report.requested_agent_id,
+    canonical_agent_id: canonicalAgentId,
     status: statusFromBlockers(blockers),
     default_read_root: stageDefaultReadSurface.root,
     raw_worklist_generates_default_next_action: stageDefaultReadSurface.raw_worklist_default !== false,
@@ -143,7 +162,7 @@ export function buildFoundryAgentOsConformance(
     buildFoundryAgentOsDomainConformance(report, expectedAgents)
   );
   const reportedAgentIds = domainReports
-    .map((report) => report.requested_agent_id ?? report.domain_id)
+    .map((report) => report.canonical_agent_id)
     .filter((agentId): agentId is string => typeof agentId === 'string');
   const missingAgents = expectedAgents.filter((agentId) => !reportedAgentIds.includes(agentId));
   const missingClaimBlockers = [

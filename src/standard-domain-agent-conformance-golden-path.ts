@@ -32,7 +32,7 @@ const OMA_ALLOWED_BOUNDARY_STAGES = [
   'agent-skeleton-build',
   'eval-suite-build',
   'baseline-run',
-  'external-agent-takeover',
+  'target-agent-takeover',
   'optimizer-iteration',
   'baseline-delivery',
   'trajectory-learning-intake',
