@@ -348,6 +348,28 @@
         "ai_sdk"
       ],
       "accepted_answer_shape_policy": "generated_surface_and_direct_domain_handler_share_action_output_schema_or_receipt_contract",
+      "accepted_answer_shape_roundtrip": {
+        "required": true,
+        "per_action_fields": [
+          "action_id",
+          "domain_id",
+          "owner",
+          "direct_target_command",
+          "direct_target_surface_kind",
+          "direct_accepted_answer_shape_ref",
+          "generated_accepted_answer_shape_refs",
+          "roundtrip_status"
+        ],
+        "generated_surface_refs": [
+          "cli",
+          "mcp",
+          "skill",
+          "product_entry",
+          "openai_tool",
+          "ai_sdk"
+        ],
+        "aligned_status": "accepted_answer_shape_aligned"
+      },
       "authority_boundary": {
         "parity_proof_can_write_domain_truth": false,
         "parity_proof_can_sign_owner_receipt": false,

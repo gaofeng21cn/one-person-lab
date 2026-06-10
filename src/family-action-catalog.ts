@@ -117,6 +117,8 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       summary: action.summary,
       required_fields: action.workspace_locator_fields,
       effect: action.effect,
+      output_schema_ref: action.output_schema_ref,
+      accepted_answer_shape_ref: action.output_schema_ref,
       source_of_work: lineage,
     },
     product_entry: {
@@ -125,6 +127,8 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       surface_kind: surfaceKind(action, productEntrySurface),
       summary: action.summary,
       requires: action.workspace_locator_fields,
+      output_schema_ref: action.output_schema_ref,
+      accepted_answer_shape_ref: action.output_schema_ref,
       source_of_work: lineage,
     },
     openai: {
@@ -138,6 +142,8 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
           schema_ref: action.input_schema_ref,
         },
       },
+      output_schema_ref: action.output_schema_ref,
+      accepted_answer_shape_ref: action.output_schema_ref,
       source_of_work: lineage,
     },
     ai_sdk: {

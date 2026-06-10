@@ -339,6 +339,31 @@ test('domain pack compiler contract and action catalog schema declare generated 
     false,
   );
   assert.deepEqual(
+    contract.generated_interface_bundle.generated_direct_parity.accepted_answer_shape_roundtrip,
+    {
+      required: true,
+      per_action_fields: [
+        'action_id',
+        'domain_id',
+        'owner',
+        'direct_target_command',
+        'direct_target_surface_kind',
+        'direct_accepted_answer_shape_ref',
+        'generated_accepted_answer_shape_refs',
+        'roundtrip_status',
+      ],
+      generated_surface_refs: [
+        'cli',
+        'mcp',
+        'skill',
+        'product_entry',
+        'openai_tool',
+        'ai_sdk',
+      ],
+      aligned_status: 'accepted_answer_shape_aligned',
+    },
+  );
+  assert.deepEqual(
     schema.$defs.action.properties.supported_surfaces.required,
     ['cli', 'mcp', 'skill', 'product_entry', 'openai', 'ai_sdk'],
   );
@@ -406,6 +431,106 @@ test('generated interfaces family-defaults product-entry format is the App workb
       assert.equal(bundle.source_contract_consumption.status, 'ready');
       assert.equal(bundle.authority_boundary.generated_interface_can_write_domain_truth, false);
       assert.equal(bundle.authority_boundary.generated_interface_can_authorize_quality_or_export, false);
+    }
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('generated interfaces family-defaults prove four-domain direct generated accepted answer shape roundtrip', () => {
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-roundtrip-scaleout-'));
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
+  const env = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+  };
+
+  try {
+    const report = runCli(
+      ['agents', 'interfaces', '--family-defaults'],
+      env,
+    ).generated_agent_interfaces;
+    assert.equal(report.surface_kind, 'opl_generated_agent_interfaces_family_report');
+    assert.equal(report.status, 'ready');
+    assert.deepEqual(report.summary, {
+      total_domain_count: 4,
+      ready_domain_count: 4,
+      blocked_domain_count: 0,
+    });
+
+    const expected = new Map([
+      ['mas', { domain: 'med-autoscience', action: 'study_packet', owner: 'MedAutoScience' }],
+      ['mag', { domain: 'med-autogrant', action: 'grant_packet', owner: 'MedAutoGrant' }],
+      ['rca', { domain: 'redcube_ai', action: 'visual_packet', owner: 'RedCubeAI' }],
+      ['opl-meta-agent', { domain: 'opl-meta-agent', action: 'agent_packet', owner: 'OPLMetaAgent' }],
+    ]);
+
+    assert.deepEqual(
+      report.reports.map((entry: { requested_agent_id: string }) => entry.requested_agent_id).sort(),
+      [...expected.keys()].sort(),
+    );
+
+    for (const entry of report.reports) {
+      const expectedDomain = expected.get(entry.requested_agent_id);
+      assert.ok(expectedDomain, `unexpected generated interface report ${entry.requested_agent_id}`);
+
+      const bundle = entry.generated_agent_interfaces;
+      const parity = bundle.generated_direct_parity;
+      assert.equal(bundle.status, 'ready');
+      assert.equal(bundle.selected_format, 'all');
+      assert.equal(bundle.target_domain_id, expectedDomain.domain);
+      assert.equal(parity.status, 'aligned');
+      assert.equal(parity.domain_id, expectedDomain.domain);
+      assert.deepEqual(parity.checked_action_ids, [expectedDomain.action]);
+      assert.deepEqual(parity.checked_surface_ids, [
+        'cli',
+        'mcp',
+        'skill',
+        'product_entry',
+        'openai_tool',
+        'ai_sdk',
+      ]);
+      assert.equal(parity.issue_count, 0);
+      assert.equal(
+        parity.accepted_answer_shape_policy,
+        'generated_surface_and_direct_domain_handler_share_action_output_schema_or_receipt_contract',
+      );
+      assert.deepEqual(parity.accepted_answer_shape_roundtrip, [
+        {
+          action_id: expectedDomain.action,
+          domain_id: expectedDomain.domain,
+          owner: expectedDomain.owner,
+          direct_target_command: `${expectedDomain.owner} ${expectedDomain.action}`,
+          direct_target_surface_kind: 'domain_cli',
+          direct_accepted_answer_shape_ref: 'contracts/output.schema.json',
+          generated_accepted_answer_shape_refs: {
+            cli: 'contracts/output.schema.json',
+            mcp: 'contracts/output.schema.json',
+            skill: 'contracts/output.schema.json',
+            product_entry: 'contracts/output.schema.json',
+            openai_tool: 'contracts/output.schema.json',
+            ai_sdk: 'contracts/output.schema.json',
+          },
+          roundtrip_status: 'accepted_answer_shape_aligned',
+        },
+      ]);
+      assert.deepEqual(parity.authority_boundary, {
+        parity_proof_can_write_domain_truth: false,
+        parity_proof_can_sign_owner_receipt: false,
+        parity_proof_can_create_typed_blocker: false,
+        parity_proof_can_authorize_quality_or_export: false,
+        parity_proof_can_mutate_artifacts: false,
+        parity_proof_can_claim_domain_ready: false,
+        parity_proof_can_claim_production_ready: false,
+      });
+      assert.equal(bundle.authority_boundary.generated_interface_can_write_domain_truth, false);
+      assert.equal(bundle.authority_boundary.generated_interface_can_write_memory_body, false);
+      assert.equal(bundle.authority_boundary.generated_interface_can_authorize_quality_or_export, false);
+      assert.equal(bundle.authority_boundary.generated_interface_can_mutate_artifacts, false);
+      assert.equal(bundle.authority_boundary.provider_completion_is_domain_ready, false);
     }
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

@@ -21,6 +21,10 @@ const GENERATED_DESCRIPTOR_SURFACES: GeneratedSurfaceId[] = [
   'ai_sdk',
 ];
 
+function optionalString(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
 function sourceActionId(action: FamilyActionCatalogAction) {
   return action.source_of_work?.source_action_id ?? action.action_id;
 }
@@ -38,6 +42,10 @@ function descriptorActionId(surface: GeneratedSurfaceId, value: unknown) {
       ? (record.function as Record<string, unknown>).name
       : record.name;
     return typeof name === 'string' && name.trim() ? name.trim() : null;
+  }
+  if (surface === 'skill') {
+    const id = record.command_contract_id ?? record.action_id;
+    return typeof id === 'string' && id.trim() ? id.trim() : null;
   }
   const id = surface === 'product_entry'
     ? record.action_key
@@ -66,12 +74,17 @@ function expectedDescriptorId(surface: GeneratedSurfaceId, action: FamilyActionC
 }
 
 function outputSchemaRefMatches(action: FamilyActionCatalogAction, value: unknown) {
+  return descriptorAcceptedAnswerShapeRef(value) === action.output_schema_ref;
+}
+
+function descriptorAcceptedAnswerShapeRef(value: unknown) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return true;
+    return null;
   }
   const record = value as Record<string, unknown>;
-  const outputSchemaRef = record.output_schema_ref ?? record.outputSchemaRef;
-  return outputSchemaRef === undefined || outputSchemaRef === action.output_schema_ref;
+  return optionalString(record.accepted_answer_shape_ref)
+    ?? optionalString(record.output_schema_ref)
+    ?? optionalString(record.outputSchemaRef);
 }
 
 function descriptorLineageMatches(action: FamilyActionCatalogAction, value: unknown) {
@@ -113,8 +126,17 @@ export function buildGeneratedDirectParityProof(
   }
 
   const issues: string[] = [];
+  const acceptedAnswerShapeRoundtrip: Record<string, unknown>[] = [];
   const actionParity = catalog.actions.map((action) => {
     const expectedSourceActionId = sourceActionId(action);
+    const generatedAcceptedAnswerShapeRefs: Record<GeneratedSurfaceId, string | null> = {
+      cli: null,
+      mcp: null,
+      skill: null,
+      product_entry: null,
+      openai_tool: null,
+      ai_sdk: null,
+    };
     const surfaceParity = GENERATED_DESCRIPTOR_SURFACES.map((surface) => {
       const block = blocks[surface];
       const descriptors = block
@@ -125,6 +147,7 @@ export function buildGeneratedDirectParityProof(
         : [];
       const expectedId = expectedDescriptorId(surface, action);
       const descriptor = descriptors.find((entry) => descriptorActionId(surface, entry) === expectedId);
+      generatedAcceptedAnswerShapeRefs[surface] = descriptorAcceptedAnswerShapeRef(descriptor);
       const missing = descriptor ? null : `${action.action_id}:${surface}: missing generated descriptor`;
       const lineageDrift = descriptor && !descriptorLineageMatches(action, descriptor)
         ? `${action.action_id}:${surface}: source-of-work lineage diverges from action catalog`
@@ -145,6 +168,19 @@ export function buildGeneratedDirectParityProof(
         output_schema_ref: action.output_schema_ref,
         accepted_answer_shape_ref: action.output_schema_ref,
       };
+    });
+    const roundtripAligned = GENERATED_DESCRIPTOR_SURFACES.every(
+      (surface) => generatedAcceptedAnswerShapeRefs[surface] === action.output_schema_ref,
+    );
+    acceptedAnswerShapeRoundtrip.push({
+      action_id: action.action_id,
+      domain_id: catalog.target_domain_id,
+      owner: action.owner,
+      direct_target_command: action.source_command.command,
+      direct_target_surface_kind: action.source_command.surface_kind,
+      direct_accepted_answer_shape_ref: action.output_schema_ref,
+      generated_accepted_answer_shape_refs: generatedAcceptedAnswerShapeRefs,
+      roundtrip_status: roundtripAligned ? 'accepted_answer_shape_aligned' : 'accepted_answer_shape_drift_detected',
     });
     return {
       action_id: action.action_id,
@@ -167,6 +203,7 @@ export function buildGeneratedDirectParityProof(
     surface_kind: 'opl_generated_direct_parity_proof',
     version: 'opl-generated-direct-parity-proof.v1',
     owner: 'one-person-lab',
+    domain_id: catalog.target_domain_id,
     status: issues.length === 0 ? 'aligned' : 'blocked_or_drift_detected',
     source_catalogs: ['family_action_catalog', 'generated_interface_bundle', 'active_caller_target_proof'],
     checked_action_ids: catalog.actions.map((action) => action.action_id),
@@ -176,6 +213,7 @@ export function buildGeneratedDirectParityProof(
     issue_count: issues.length,
     issues,
     action_parity: actionParity,
+    accepted_answer_shape_roundtrip: acceptedAnswerShapeRoundtrip,
     accepted_answer_shape_policy:
       'generated_surface_and_direct_domain_handler_share_action_output_schema_or_receipt_contract',
     authority_boundary: parityAuthorityBoundary(),

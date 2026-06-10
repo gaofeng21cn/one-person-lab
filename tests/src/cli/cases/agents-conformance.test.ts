@@ -240,6 +240,31 @@ test('agents conformance reports structural readiness separately from production
   assert.deepEqual(repo.platform_surface_ownership_checks.explicit_forbidden_owner_claims, []);
   assert.equal(repo.platform_surface_ownership_checks.authority_boundary.report_can_claim_production_ready, false);
   assert.equal(repo.generated_interface_checks.generated_interfaces_status, 'ready');
+  assert.equal(repo.generated_interface_checks.generated_direct_parity_status, 'aligned');
+  assert.equal(
+    repo.generated_interface_checks.generated_direct_parity_authority_boundary.can_write_domain_truth,
+    false,
+  );
+  assert.equal(
+    repo.generated_interface_checks.generated_direct_parity_authority_boundary.can_sign_owner_receipt,
+    false,
+  );
+  assert.equal(
+    repo.generated_interface_checks.generated_direct_parity_authority_boundary.can_create_typed_blocker,
+    false,
+  );
+  assert.equal(
+    repo.generated_interface_checks.generated_direct_parity_authority_boundary.can_claim_domain_ready,
+    false,
+  );
+  assert.equal(
+    repo.generated_interface_checks.generated_direct_parity_authority_boundary.can_claim_production_ready,
+    false,
+  );
+  assert.deepEqual(
+    repo.generated_interface_checks.generated_direct_roundtrip_action_ids,
+    ['draft_brief'],
+  );
   assert.equal(repo.generated_interface_checks.generated_wrapper_bundle_status, 'ready');
   assert.equal(repo.generated_interface_checks.active_caller_target_proof_status, 'ready');
   assert.equal(
