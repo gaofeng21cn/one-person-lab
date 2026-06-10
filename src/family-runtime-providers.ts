@@ -401,7 +401,7 @@ export function ensureFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind, mod
 export async function ensureFamilyRuntimeProviderWithLifecycle(
   kind: FamilyRuntimeProviderKind,
   mode: 'install' | 'repair',
-  paths: Pick<ReturnType<typeof familyRuntimePaths>, 'root'>,
+  paths: ReturnType<typeof familyRuntimePaths>,
 ) {
   if (kind !== 'temporal') {
     return ensureFamilyRuntimeProvider(kind, mode);

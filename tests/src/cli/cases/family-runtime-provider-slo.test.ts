@@ -89,6 +89,8 @@ function temporalProviderWorkerRepairReceipt(
     after: status === 'executed' ? temporalWorkerStatus('ready') : null,
     stop: null,
     start: null,
+    restart_guard: null,
+    blocker_ids: [],
     error: null,
     can_execute_domain_repair: false,
     authority_boundary: {

@@ -10,6 +10,7 @@ import {
   temporalProviderSloExecutionReceipt,
 } from './family-runtime-provider-proof-receipts.ts';
 import {
+  createFamilyRuntimeQueueTables,
   insertEvent,
   listEvents,
   type familyRuntimePaths,
@@ -101,6 +102,7 @@ export async function runTemporalProviderSloTick(
     workerRepairDeps?: TemporalWorkerRepairDeps;
   } = {},
 ) {
+  createFamilyRuntimeQueueTables(db);
   const providerWorkerRepairReceipt = await maybeRepairTemporalWorkerForProviderSlo(
     paths,
     input.workerRepairDeps,

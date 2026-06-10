@@ -247,6 +247,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 仍有效的实现细节以机器面为准：current-control admission 在 `family-runtime-domain-intake` / `family-runtime-mas-current-control-admission-currentness`；anti-spin、completed closeout、superseded source 和 waiting-approval reconcile 在 `family-runtime-tick` 及 parts；provider readiness currentness 和 compact timeline 在 `family-runtime-stage-attempt-provider-readiness-currentness` / `family-runtime-stage-attempt-monitoring`；operator summary 在 `family-runtime-evidence-worklist`；Temporal worker lifecycle / scheduler / SLO guard 在 provider lifecycle source、tests 和 CLI read-model。
 - 本段压缩 2026-05-30 到 2026-06-09 的 Progress-First queue/currentness 实现增量；历史细节见 `docs/history/process/plans/2026-06-09-opl-decisions-progress-first-currentness-compression-closeout.md` 和 git history。
 
+### 决策：source-stale worker restart 必须有 explicit supervisor 和 no-active-attempt proof
+
+原因：OPL source fast-forward 后，旧 worker 被投影为 `worker_source_stale` 是正确的 fail-closed currentness 保护。旧 repair 路径只要看到 stale worker 和 `restart_temporal_worker` action 就 stop/start，缺少 active stage attempt 与 explicit developer-supervisor gate，可能在 running / checkpointed / human-gate attempt 期间杀掉 worker，并把 provider lifecycle repair 误当成普通恢复动作。
+
+影响：
+
+- `provider-slo tick` 与 `provider repair` 在 `worker_source_stale` 时必须先产出 `temporal_worker_source_stale_restart_guard`。只有 `worker_mutation_guard.mutation_guard_status=allowed_explicit_developer_supervisor`、Temporal service reachable、stage attempt ledger readable、且 active attempt count 为 0 时，才允许执行 stop/start。
+- Active attempt 状态固定为 `queued`、`running`、`checkpointed`、`human_gate`，与 queue hold、provider-hosted default executor 和 stage attempt control 已有 live attempt 语义一致。
+- 任一 gate 不满足时，worker repair receipt 返回 `repair_status=blocked` 和 `blocker_ids`，不得调用 `stopTemporalWorkerLifecycle` 或 `startTemporalWorkerLifecycle`。`stage_attempt_ledger_unavailable` 也必须 fail closed，不能假设无 active attempt。
+- 该策略只修 OPL provider worker liveness；它不消费 domain queue，不写 MAS/MAG/RCA truth，不生成 owner receipt / typed blocker / quality verdict，也不把 provider restart 计为 domain progress。
+
 ### 决策：Foundry Agent series 需要统一 canonical design profile
 
 原因：MAS、MAG、RCA 和 OPL Meta Agent 都已经按标准 OPL Agent 接入，但如果每个 domain 把 `series_design_profile` 写成自己的 input/output taxonomy，机器验证只能看到“各自都像 OPL”，看不出它们是一套同源设计。series-level profile 应该表达所有 Foundry Agent 共同的不可变设计逻辑，领域差异应留在 domain-owned profile、stage/action contract 和 authority refs 中。
