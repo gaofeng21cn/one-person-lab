@@ -25,15 +25,19 @@ function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 function sourceActionId(action: FamilyActionCatalogAction) {
   return action.source_of_work?.source_action_id ?? action.action_id;
 }
 
 function descriptorActionId(surface: GeneratedSurfaceId, value: unknown) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+  if (!isRecord(value)) {
     return null;
   }
-  const record = value as Record<string, unknown>;
+  const record = value;
   if (surface === 'mcp' || surface === 'openai_tool' || surface === 'ai_sdk') {
     const name = surface === 'openai_tool'
       && record.function
@@ -78,25 +82,37 @@ function outputSchemaRefMatches(action: FamilyActionCatalogAction, value: unknow
 }
 
 function descriptorAcceptedAnswerShapeRef(value: unknown) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+  if (!isRecord(value)) {
     return null;
   }
-  const record = value as Record<string, unknown>;
+  const record = value;
   return optionalString(record.accepted_answer_shape_ref)
     ?? optionalString(record.output_schema_ref)
     ?? optionalString(record.outputSchemaRef);
 }
 
 function descriptorLineageMatches(action: FamilyActionCatalogAction, value: unknown) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+  if (!isRecord(value)) {
     return false;
   }
-  const record = value as Record<string, unknown>;
+  const record = value;
   const lineage = record.source_of_work;
-  if (!lineage || typeof lineage !== 'object' || Array.isArray(lineage)) {
+  if (!isRecord(lineage)) {
     return false;
   }
-  return (lineage as Record<string, unknown>).source_action_id === sourceActionId(action);
+  return lineage.source_action_id === sourceActionId(action);
+}
+
+function findDescriptorForAction(
+  surface: GeneratedSurfaceId,
+  action: FamilyActionCatalogAction,
+  descriptors: unknown[],
+) {
+  const expectedId = expectedDescriptorId(surface, action);
+  const candidates = descriptors.filter((entry) => descriptorActionId(surface, entry) === expectedId);
+  return candidates.find((entry) => descriptorLineageMatches(action, entry))
+    ?? candidates.find((entry) => descriptorAcceptedAnswerShapeRef(entry) === action.output_schema_ref)
+    ?? candidates[0];
 }
 
 export function buildGeneratedDirectParityProof(
@@ -145,8 +161,7 @@ export function buildGeneratedDirectParityProof(
         && Array.isArray((block as Record<string, unknown>).descriptors)
         ? (block as Record<string, unknown>).descriptors as unknown[]
         : [];
-      const expectedId = expectedDescriptorId(surface, action);
-      const descriptor = descriptors.find((entry) => descriptorActionId(surface, entry) === expectedId);
+      const descriptor = findDescriptorForAction(surface, action, descriptors);
       generatedAcceptedAnswerShapeRefs[surface] = descriptorAcceptedAnswerShapeRef(descriptor);
       const missing = descriptor ? null : `${action.action_id}:${surface}: missing generated descriptor`;
       const lineageDrift = descriptor && !descriptorLineageMatches(action, descriptor)

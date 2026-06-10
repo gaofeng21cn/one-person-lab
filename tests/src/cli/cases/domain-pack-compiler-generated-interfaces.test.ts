@@ -640,6 +640,187 @@ test('generated interfaces domain mode consumes generated handoff from active re
   assert.equal(cliTarget.bridge_exit_gate, null);
 });
 
+test('generated direct parity disambiguates multi-action MCP descriptors by source lineage', () => {
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-mcp-lineage-'));
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interface-mcp-lineage-repo-'));
+  fs.mkdirSync(path.join(targetDir, 'contracts'), { recursive: true });
+  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+  const fixtures = loadFamilyManifestFixtures();
+  const manifest = withPackCompilerReadySurfaces(fixtures.medautoscience, {
+    agentId: 'mas',
+    targetDomainId: 'med-autoscience',
+    owner: 'MedAutoScience',
+    actionId: 'study_packet',
+    stageId: 'study_stage',
+    memoryRefId: 'mas_publication_route_memory',
+  });
+  const manifestRecord = manifest as Record<string, unknown>;
+  const manifestSurface = typeof manifestRecord.product_entry_manifest === 'object'
+    && manifestRecord.product_entry_manifest !== null
+    && !Array.isArray(manifestRecord.product_entry_manifest)
+    ? manifestRecord.product_entry_manifest as Record<string, unknown>
+    : manifestRecord;
+  const catalog = manifestSurface.family_action_catalog as {
+    catalog_id: string;
+    actions: Array<{
+      action_id: string;
+      title: string;
+      summary: string;
+      source_command: { command: string; surface_kind: string };
+      source_of_work: Record<string, string>;
+      input_schema_ref: string;
+      output_schema_ref: string;
+      supported_surfaces: {
+        cli: { command: string; surface_kind: string };
+        mcp: { tool_name: string; surface_kind: string };
+        skill: { command_contract_id: string; surface_kind: string };
+        product_entry: { action_key: string; command: string; surface_kind: string };
+        openai: { tool_name: string };
+        ai_sdk: { tool_name: string };
+      };
+    }>;
+  };
+  const firstAction = catalog.actions[0];
+  catalog.actions.push({
+    ...firstAction,
+    action_id: 'study_packet_route',
+    title: 'study_packet_route',
+    summary: 'Route the study packet through the same public MCP tool.',
+    source_command: {
+      command: 'MedAutoScience study_packet_route',
+      surface_kind: 'domain_cli',
+    },
+    source_of_work: {
+      source_catalog: 'family_action_catalog',
+      source_catalog_ref: `family_action_catalog:${catalog.catalog_id}`,
+      source_action_id: 'study_packet_route',
+      stage_catalog_ref: 'family_stage_control_plane',
+      derived_surface_policy: 'derive_cli_mcp_openai_ai_sdk_skill_app_status_workbench_from_single_catalog',
+      domain_repo_wrapper_policy: 'handler_target_refs_only_adapter_or_tombstone_candidate',
+    },
+    input_schema_ref: 'contracts/route-input.schema.json',
+    output_schema_ref: 'contracts/route-output.schema.json',
+    supported_surfaces: {
+      cli: {
+        command: 'MedAutoScience study_packet_route',
+        surface_kind: 'domain_cli',
+      },
+      mcp: {
+        tool_name: firstAction.supported_surfaces.mcp.tool_name,
+        surface_kind: 'domain_mcp',
+      },
+      skill: {
+        command_contract_id: 'study_packet_route',
+        surface_kind: 'domain_skill',
+      },
+      product_entry: {
+        action_key: 'study_packet_route',
+        command: 'MedAutoScience product study_packet_route',
+        surface_kind: 'domain_product_entry',
+      },
+      openai: { tool_name: 'study_packet_route' },
+      ai_sdk: { tool_name: 'study_packet_route' },
+    },
+  });
+  fs.writeFileSync(
+    path.join(targetDir, 'contracts', 'domain_descriptor.json'),
+    `${JSON.stringify({
+      surface_kind: 'domain_agent_descriptor',
+      schema_version: 1,
+      domain_id: 'med-autoscience',
+      domain_label: 'MedAutoScience',
+      generated_surface_owner: 'one-person-lab',
+      domain_repo_can_own_generated_surface: false,
+      authority_boundary: {
+        opl_can_write_domain_truth: false,
+        opl_can_write_memory_body: false,
+        opl_can_authorize_quality_or_export: false,
+      },
+    })}\n`,
+  );
+  fs.writeFileSync(
+    path.join(targetDir, 'contracts', 'action_catalog.json'),
+    `${JSON.stringify(catalog)}\n`,
+  );
+  fs.writeFileSync(
+    path.join(targetDir, 'contracts', 'stage_control_plane.json'),
+    `${JSON.stringify(manifestSurface.family_stage_control_plane)}\n`,
+  );
+  fs.writeFileSync(
+    path.join(targetDir, 'contracts', 'memory_descriptor.json'),
+    `${JSON.stringify(manifestSurface.domain_memory_descriptor)}\n`,
+  );
+  fs.writeFileSync(
+    path.join(targetDir, 'contracts', 'functional_privatization_audit.json'),
+    `${JSON.stringify(manifestSurface.functional_privatization_audit)}\n`,
+  );
+  fs.writeFileSync(
+    path.join(targetDir, 'contracts', 'generated_surface_handoff.json'),
+    `${JSON.stringify({
+      surface_kind: 'opl_generated_surface_handoff',
+      schema_version: 1,
+      domain_id: 'med-autoscience',
+      generated_surface_owner: 'one-person-lab',
+      domain_repo_can_own_generated_surface: false,
+      generated_surfaces: [
+        { surface_id: 'cli', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'mcp', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'skill', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'product_entry_manifest', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'domain_handler', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'status_read_model', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'workbench_drilldown', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'functional_harness_cases', owner: 'one-person-lab', status: 'descriptor_source_available' },
+      ],
+      handoff_surfaces: [
+        {
+          surface_id: 'cli',
+          current_paths: ['runtime/authority_functions/verdict.ts'],
+          current_role: 'domain_authority_active',
+          target_role: 'domain_handler_target',
+        },
+        {
+          surface_id: 'mcp',
+          current_paths: ['runtime/authority_functions/tool.ts'],
+          current_role: 'domain_handler_target',
+          target_role: 'domain_handler_target',
+        },
+      ],
+    })}\n`,
+  );
+
+  const bundle = runCli(['agents', 'interfaces', '--repo-dir', targetDir], env).generated_agent_interfaces;
+  const routeParity = bundle.generated_direct_parity.action_parity.find(
+    (entry: { action_id: string }) => entry.action_id === 'study_packet_route',
+  );
+  const routeMcpParity = routeParity.generated_surfaces.find(
+    (surface: { surface_id: string }) => surface.surface_id === 'mcp',
+  );
+
+  assert.equal(bundle.generated_direct_parity.status, 'aligned');
+  assert.equal(bundle.generated_direct_parity.issue_count, 0);
+  assert.deepEqual(bundle.generated_direct_parity.checked_action_ids, [
+    'study_packet',
+    'study_packet_route',
+  ]);
+  assert.equal(routeParity.status, 'aligned');
+  assert.deepEqual(routeMcpParity, {
+    surface_id: 'mcp',
+    status: 'aligned',
+    source_action_id: 'study_packet_route',
+    generated_descriptor_id: firstAction.supported_surfaces.mcp.tool_name,
+    output_schema_ref: 'contracts/route-output.schema.json',
+    accepted_answer_shape_ref: 'contracts/route-output.schema.json',
+  });
+  assert.deepEqual(
+    bundle.generated_direct_parity.accepted_answer_shape_roundtrip.find(
+      (entry: { action_id: string }) => entry.action_id === 'study_packet_route',
+    ).generated_accepted_answer_shape_refs.mcp,
+    'contracts/route-output.schema.json',
+  );
+});
+
 test('generated interfaces keep active caller cutover blocked while repo-local migration bridges remain', () => {
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-bridge-blocked-'));
