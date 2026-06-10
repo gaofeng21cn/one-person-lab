@@ -215,6 +215,53 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
     assert.equal(maturity.memory_artifact_lifecycle.reconcile_issue_count, 0);
     assert.equal(maturity.memory_artifact_lifecycle.lifecycle_apply_handoff_blocked_decision_count, 0);
     assert.equal(maturity.memory_artifact_lifecycle.opl_stores_body_or_verdict, false);
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.surface_kind,
+      'foundry_agent_os_production_evidence_gate',
+    );
+    assert.equal(maturity.foundry_agent_os_production_evidence_gate.status, 'evidence_required');
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.w7_status,
+      'production_evidence_not_closed_by_opl',
+    );
+    assert.deepEqual(
+      maturity.foundry_agent_os_production_evidence_gate.required_closing_ref_shapes,
+      [
+        'domain_owner_receipt_ref',
+        'typed_blocker_ref',
+        'human_gate_ref',
+        'quality_or_export_receipt_ref',
+        'reviewer_receipt_ref',
+        'long_soak_ref',
+        'release_evidence_ref',
+        'install_evidence_ref',
+        'owner_acceptance_ref',
+      ],
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.non_closing_inputs.includes('conformance_pass'),
+      true,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.non_closing_inputs.includes('provider_completion'),
+      true,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.non_closing_inputs.includes('app_projection'),
+      true,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.summary.closed_by_opl,
+      false,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.summary.production_ready_claim_authorized,
+      false,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.authority_boundary.can_claim_production_ready,
+      false,
+    );
 
     assert.deepEqual(maturity.next_owner_actions.map((entry: { lane: string }) => entry.lane), [
       'domain_owner_chain_scaleout',
@@ -292,6 +339,19 @@ test('framework operating maturity consumes verified App release user-path evide
       'app-release-cohort:26.5.28-draft.20260527235839',
     );
     assert.equal(maturity.app_release_user_path.release_ready_authorized, false);
+    const appReleaseGateLane = maturity.foundry_agent_os_production_evidence_gate.lane_statuses.find(
+      (entry: { lane: string }) => entry.lane === 'app_release_user_path',
+    );
+    assert.equal(appReleaseGateLane.open_count, 0);
+    assert.equal(appReleaseGateLane.status, 'refs_observed_not_production_ready_claim');
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.summary.production_ready_claim_authorized,
+      false,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.authority_boundary.can_claim_app_release_ready,
+      false,
+    );
     assert.equal(maturity.authority_boundary.can_claim_app_release_ready, false);
     assert.equal(maturity.authority_boundary.can_claim_production_ready, false);
     assert.equal(maturity.not_claims.includes('app_release_ready'), true);
@@ -324,6 +384,19 @@ test('framework operating maturity surfaces refs-only provider and lifecycle cou
     assert.equal(maturity.provider_long_soak.long_evidence_ready, true);
     assert.equal(maturity.provider_long_soak.observed_receipt_count, 7);
     assert.equal(maturity.provider_long_soak.provider_completion_counts_as_production_ready, false);
+    const providerGateLane = maturity.foundry_agent_os_production_evidence_gate.lane_statuses.find(
+      (entry: { lane: string }) => entry.lane === 'provider_long_soak',
+    );
+    assert.equal(providerGateLane.open_count, 0);
+    assert.equal(providerGateLane.status, 'refs_observed_not_production_ready_claim');
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.non_closing_inputs.includes('verified_refs_only_ledger'),
+      true,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.summary.closed_by_opl,
+      false,
+    );
     assert.equal(maturity.summary.memory_artifact_lifecycle_open_count, 1);
     assert.equal(maturity.memory_artifact_lifecycle.open_evidence_count, 1);
     assert.equal(maturity.memory_artifact_lifecycle.observed_ref_count, 0);

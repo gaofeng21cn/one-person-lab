@@ -155,6 +155,127 @@ function nextOwnerActions() {
   ];
 }
 
+function foundryAgentOsProductionEvidenceGate(input: {
+  domainOpenCount: number;
+  l5RequiredModuleCount: number;
+  appReleaseOpenCount: number;
+  providerOpenCount: number;
+  lifecycleOpenCount: number;
+}) {
+  const laneStatuses = [
+    {
+      lane: 'domain_owner_chain_scaleout',
+      open_count: input.domainOpenCount,
+      accepted_closing_ref_shapes: [
+        'domain_owner_receipt_ref',
+        'typed_blocker_ref',
+        'human_gate_ref',
+        'quality_or_export_receipt_ref',
+        'reviewer_receipt_ref',
+        'no_regression_ref',
+      ],
+    },
+    {
+      lane: 'brand_module_l5_operating_maturity',
+      open_count: input.l5RequiredModuleCount,
+      accepted_closing_ref_shapes: [
+        'live_user_path_ref',
+        'cross_agent_scaleout_ref',
+        'owner_acceptance_ref',
+        'typed_blocker_ref',
+      ],
+    },
+    {
+      lane: 'app_release_user_path',
+      open_count: input.appReleaseOpenCount,
+      accepted_closing_ref_shapes: [
+        'release_evidence_ref',
+        'install_evidence_ref',
+        'release_owner_receipt_ref',
+        'release_owner_typed_blocker_ref',
+      ],
+    },
+    {
+      lane: 'provider_long_soak',
+      open_count: input.providerOpenCount,
+      accepted_closing_ref_shapes: [
+        'long_soak_ref',
+        'recovery_ref',
+        'dead_letter_ref',
+        'provider_blocker_ref',
+      ],
+    },
+    {
+      lane: 'memory_artifact_lifecycle_apply',
+      open_count: input.lifecycleOpenCount,
+      accepted_closing_ref_shapes: [
+        'memory_receipt_ref',
+        'artifact_mutation_receipt_ref',
+        'package_export_lifecycle_receipt_ref',
+        'typed_blocker_ref',
+      ],
+    },
+  ];
+  const openLaneCount = laneStatuses.filter((lane) => lane.open_count > 0).length;
+  return {
+    surface_kind: 'foundry_agent_os_production_evidence_gate',
+    owner: 'one-person-lab',
+    status: openLaneCount > 0
+      ? 'evidence_required'
+      : 'evidence_intake_ready_not_production_ready_claim',
+    w7_status: 'production_evidence_not_closed_by_opl',
+    source_commands: [
+      'opl agents conformance --family-defaults --json',
+      'opl brand-modules l5-status --json',
+      SOURCE_COMMANDS.app_operator_drilldown,
+    ],
+    required_closing_ref_shapes: [
+      'domain_owner_receipt_ref',
+      'typed_blocker_ref',
+      'human_gate_ref',
+      'quality_or_export_receipt_ref',
+      'reviewer_receipt_ref',
+      'long_soak_ref',
+      'release_evidence_ref',
+      'install_evidence_ref',
+      'owner_acceptance_ref',
+    ],
+    non_closing_inputs: [
+      'conformance_pass',
+      'docs_foldback',
+      'contract_validation',
+      'generated_descriptor_ready',
+      'provider_completion',
+      'app_projection',
+      'verified_refs_only_ledger',
+      'zero_worklist_count',
+    ],
+    lane_statuses: laneStatuses.map((lane) => ({
+      ...lane,
+      status: lane.open_count > 0
+        ? 'evidence_required'
+        : 'refs_observed_not_production_ready_claim',
+    })),
+    summary: {
+      open_lane_count: openLaneCount,
+      closed_by_opl: false,
+      production_ready_claim_authorized: false,
+      requires_owner_acceptance: true,
+    },
+    authority_boundary: {
+      gate_is_intake_and_projection_only: true,
+      can_write_domain_truth: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_authorize_quality_or_export: false,
+      can_claim_domain_ready: false,
+      can_claim_app_release_ready: false,
+      can_claim_l5: false,
+      can_claim_production_ready: false,
+    },
+  };
+}
+
 function currentOwnerDeltaBridge(appOperatorDrilldown: Record<string, unknown>) {
   const attentionFirstPayload = record(appOperatorDrilldown.attention_first_payload);
   const currentOwnerDelta = record(attentionFirstPayload.current_owner_delta);
@@ -279,6 +400,13 @@ export async function buildFrameworkOperatingMaturityReadout(
     cleanupOpenDecisionCount,
     lifecycleOpenCount,
   ];
+  const productionEvidenceGate = foundryAgentOsProductionEvidenceGate({
+    domainOpenCount,
+    l5RequiredModuleCount,
+    appReleaseOpenCount,
+    providerOpenCount,
+    lifecycleOpenCount,
+  });
 
   return {
     version: 'g2',
@@ -313,6 +441,7 @@ export async function buildFrameworkOperatingMaturityReadout(
         ready_claim_authorized: false,
       },
       current_owner_delta_bridge: ownerDeltaBridge,
+      foundry_agent_os_production_evidence_gate: productionEvidenceGate,
       domain_owner_chain_scaleout: {
         source_command: 'opl agents conformance --family-defaults --json',
         status: stringValue(domainOwnerChain.status) ?? 'required_from_domain_owner',
