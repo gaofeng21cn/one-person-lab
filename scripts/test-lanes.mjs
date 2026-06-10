@@ -79,6 +79,8 @@ const fastTestFiles = [
   'tests/src/family-stage-replay-certification.test.ts',
   'tests/src/research-evidence-pack.test.ts',
   'tests/src/research-hypothesis-portfolio.test.ts',
+  'tests/src/pack-os.test.ts',
+  'tests/src/cli/cases/pack-os-command-surface.test.ts',
   'tests/src/cli/cases/runtime-research-evidence-pack-read-model.test.ts',
   'tests/src/cli/cases/runtime-research-hypothesis-portfolio-read-model.test.ts',
   'tests/src/family-stage-pack-registry.test.ts',

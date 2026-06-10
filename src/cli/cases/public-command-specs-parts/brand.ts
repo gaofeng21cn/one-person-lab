@@ -21,6 +21,11 @@ import {
   buildBrandModuleSurfaceCommand,
   listBrandModuleObjectViewCommands,
 } from '../../../brand-module-surfaces.ts';
+import {
+  runPackOsInspectCommand,
+  runPackOsLockCommand,
+  runPackOsValidateCommand,
+} from '../../../pack-os.ts';
 import type { BrandModuleId, FrameworkContracts } from '../../../types.ts';
 import { assertNoArgs } from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
@@ -92,6 +97,34 @@ export function buildBrandCommandSpecs(
   };
 
   const brandCommandSpecs: Record<string, CommandSpec> = {
+    'pack os inspect': {
+      usage: 'opl pack os inspect --descriptor <path>',
+      summary: 'Inspect a generic capability-pack descriptor through OPL Pack OS without claiming domain authority.',
+      examples: [
+        'opl pack os inspect --descriptor display_pack.json --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackOsInspectCommand,
+    },
+    'pack os lock': {
+      usage: 'opl pack os lock --descriptor <path> [--output <path>]',
+      summary: 'Resolve a generic capability-pack descriptor into a refs-only Pack OS lock.',
+      examples: [
+        'opl pack os lock --descriptor display_pack.json --json',
+        'opl pack os lock --descriptor display_pack.json --output build/pack-lock.json --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackOsLockCommand,
+    },
+    'pack os validate': {
+      usage: 'opl pack os validate --descriptor <path>',
+      summary: 'Validate the generic Pack OS descriptor boundary and false-authority flags.',
+      examples: [
+        'opl pack os validate --descriptor display_pack.json --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackOsValidateCommand,
+    },
     'brand-modules list': {
       usage: 'opl brand-modules list',
       summary: 'List the OPL brand modules and their Workspace-level structural baseline refs.',

@@ -1,0 +1,528 @@
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+
+import { FrameworkContractError, isRecord } from './contract-validation.ts';
+
+type JsonRecord = Record<string, unknown>;
+
+const ALLOWED_PACK_KINDS = new Set([
+  'display_pack',
+  'domain_pack',
+  'deck_pack',
+  'report_pack',
+  'app_ui_pack',
+  'generic_capability_pack',
+]);
+
+const ALLOWED_RESOURCE_ROLES = new Set([
+  'descriptor',
+  'template',
+  'schema',
+  'renderer',
+  'style_tokens',
+  'qc_profile',
+  'golden',
+  'exemplar_ref',
+  'receipt_ref',
+  'artifact_ref',
+]);
+
+const ALLOWED_LIFECYCLE_STATES = new Set([
+  'declared',
+  'resolved',
+  'locked',
+  'cached',
+  'artifact_refs_observed',
+  'review_receipts_observed',
+  'handoff_ready',
+  'retained',
+  'restored',
+  'retired',
+]);
+
+const REQUIRED_AUTHORITY_FALSE_FLAGS = [
+  'can_write_domain_truth',
+  'can_mutate_artifact_body',
+  'can_sign_domain_owner_receipt',
+  'can_authorize_quality_verdict',
+  'can_authorize_publication_readiness',
+  'can_authorize_grant_readiness',
+  'can_authorize_visual_export_readiness',
+  'can_authorize_app_release_readiness',
+  'provider_completion_is_pack_quality_ready',
+] as const;
+
+function usage(message: string, details: JsonRecord = {}) {
+  return new FrameworkContractError('cli_usage_error', message, details);
+}
+
+function shape(message: string, details: JsonRecord = {}) {
+  return new FrameworkContractError('contract_shape_invalid', message, details);
+}
+
+function readJsonFile(filePath: string): JsonRecord {
+  let raw: string;
+  try {
+    raw = fs.readFileSync(filePath, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new FrameworkContractError('contract_file_missing', `Pack descriptor is missing: ${filePath}.`, {
+        descriptor: filePath,
+      });
+    }
+    throw error;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    throw new FrameworkContractError('contract_json_invalid', `Pack descriptor contains invalid JSON: ${filePath}.`, {
+      descriptor: filePath,
+      cause: error instanceof Error ? error.message : 'JSON parse failed',
+    });
+  }
+
+  if (!isRecord(parsed)) {
+    throw shape('Pack descriptor root must be a JSON object.', { descriptor: filePath });
+  }
+
+  return parsed;
+}
+
+function requireString(record: JsonRecord, field: string, context: string) {
+  const value = record[field];
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw shape(`${context}.${field} must be a non-empty string.`, { field: `${context}.${field}` });
+  }
+  return value.trim();
+}
+
+function requireRecord(record: JsonRecord, field: string, context: string) {
+  const value = record[field];
+  if (!isRecord(value)) {
+    throw shape(`${context}.${field} must be a JSON object.`, { field: `${context}.${field}` });
+  }
+  return value;
+}
+
+function requireArray(record: JsonRecord, field: string, context: string) {
+  const value = record[field];
+  if (!Array.isArray(value)) {
+    throw shape(`${context}.${field} must be an array.`, { field: `${context}.${field}` });
+  }
+  return value;
+}
+
+function requireStringArray(record: JsonRecord, field: string, context: string) {
+  return requireArray(record, field, context).map((entry, index) => {
+    if (typeof entry !== 'string' || entry.trim().length === 0) {
+      throw shape(`${context}.${field}[] must contain only strings.`, {
+        field: `${context}.${field}[${index}]`,
+      });
+    }
+    return entry.trim();
+  });
+}
+
+function normalizeSchemaVersion(descriptor: JsonRecord) {
+  if (descriptor.schema_version === undefined) {
+    return 1;
+  }
+  if (descriptor.schema_version !== 1) {
+    throw shape('pack_descriptor.schema_version must be 1.', {
+      field: 'pack_descriptor.schema_version',
+      actual: descriptor.schema_version,
+    });
+  }
+  return 1;
+}
+
+function sha256File(filePath: string) {
+  const hash = crypto.createHash('sha256');
+  hash.update(fs.readFileSync(filePath));
+  return hash.digest('hex');
+}
+
+function normalizeRelativeRef(ref: string) {
+  if (path.isAbsolute(ref)) {
+    throw shape('Pack resource refs must be relative paths or logical refs, not absolute paths.', { ref });
+  }
+  const normalized = path.normalize(ref);
+  if (normalized === '..' || normalized.startsWith(`..${path.sep}`)) {
+    throw shape('Pack resource refs must not escape the descriptor directory.', { ref });
+  }
+  return normalized.replaceAll(path.sep, '/');
+}
+
+function fileStateForRef(descriptorDir: string, ref: string) {
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(ref) || /^[a-z][a-z0-9+.-]*:/i.test(ref)) {
+    return {
+      ref_kind: 'external_ref',
+      status: 'external_ref',
+      sha256: null,
+    };
+  }
+
+  const normalizedRef = normalizeRelativeRef(ref);
+  const absolutePath = path.resolve(descriptorDir, normalizedRef);
+  if (!absolutePath.startsWith(`${descriptorDir}${path.sep}`) && absolutePath !== descriptorDir) {
+    throw shape('Pack resource refs must resolve inside the descriptor directory.', { ref });
+  }
+
+  if (!fs.existsSync(absolutePath)) {
+    return {
+      ref_kind: 'local_file',
+      status: 'missing',
+      sha256: null,
+    };
+  }
+
+  const stats = fs.statSync(absolutePath);
+  if (!stats.isFile()) {
+    throw shape('Pack resource refs that resolve locally must point to files.', { ref });
+  }
+
+  return {
+    ref_kind: 'local_file',
+    status: 'present',
+    sha256: sha256File(absolutePath),
+  };
+}
+
+function normalizeCapabilities(descriptor: JsonRecord) {
+  return requireArray(descriptor, 'capabilities', 'pack_descriptor').map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw shape('pack_descriptor.capabilities[] must be JSON objects.', { index });
+    }
+    return {
+      capability_id: requireString(entry, 'capability_id', `pack_descriptor.capabilities[${index}]`),
+      capability_kind: requireString(entry, 'capability_kind', `pack_descriptor.capabilities[${index}]`),
+      entrypoint_ref: requireString(entry, 'entrypoint_ref', `pack_descriptor.capabilities[${index}]`),
+      input_contract_ref: requireString(entry, 'input_contract_ref', `pack_descriptor.capabilities[${index}]`),
+      output_contract_ref: requireString(entry, 'output_contract_ref', `pack_descriptor.capabilities[${index}]`),
+    };
+  });
+}
+
+function normalizeResources(descriptor: JsonRecord, descriptorDir: string) {
+  return requireArray(descriptor, 'resources', 'pack_descriptor').map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw shape('pack_descriptor.resources[] must be JSON objects.', { index });
+    }
+    const resourceId = requireString(entry, 'resource_id', `pack_descriptor.resources[${index}]`);
+    const role = requireString(entry, 'role', `pack_descriptor.resources[${index}]`);
+    if (!ALLOWED_RESOURCE_ROLES.has(role)) {
+      throw shape('pack_descriptor.resources[].role is not allowed.', {
+        resource_id: resourceId,
+        role,
+        allowed: [...ALLOWED_RESOURCE_ROLES],
+      });
+    }
+    const ref = requireString(entry, 'ref', `pack_descriptor.resources[${index}]`);
+    const fileState = fileStateForRef(descriptorDir, ref);
+    return {
+      resource_id: resourceId,
+      role,
+      ref,
+      ...fileState,
+    };
+  });
+}
+
+function normalizeArtifactLifecycle(descriptor: JsonRecord) {
+  const lifecycle = requireRecord(descriptor, 'artifact_lifecycle', 'pack_descriptor');
+  const states = requireArray(lifecycle, 'states', 'pack_descriptor.artifact_lifecycle').map((entry, index) => {
+    if (typeof entry !== 'string' || entry.length === 0) {
+      throw shape('pack_descriptor.artifact_lifecycle.states[] must be non-empty strings.', { index });
+    }
+    if (!ALLOWED_LIFECYCLE_STATES.has(entry)) {
+      throw shape('pack_descriptor.artifact_lifecycle.states[] contains an unknown state.', {
+        state: entry,
+        allowed: [...ALLOWED_LIFECYCLE_STATES],
+      });
+    }
+    return entry;
+  });
+  const currentState = requireString(lifecycle, 'current_state', 'pack_descriptor.artifact_lifecycle');
+  if (!ALLOWED_LIFECYCLE_STATES.has(currentState) || !states.includes(currentState)) {
+    throw shape('pack_descriptor.artifact_lifecycle.current_state must be one of the declared allowed states.', {
+      current_state: currentState,
+      states,
+    });
+  }
+  const retention = requireRecord(lifecycle, 'retention', 'pack_descriptor.artifact_lifecycle');
+  return {
+    states,
+    current_state: currentState,
+    artifact_locator_refs: requireStringArray(lifecycle, 'artifact_locator_refs', 'pack_descriptor.artifact_lifecycle'),
+    retention: {
+      policy_ref: requireString(retention, 'policy_ref', 'pack_descriptor.artifact_lifecycle.retention'),
+      restore_proof_required: retention.restore_proof_required === true,
+    },
+  };
+}
+
+function normalizeReviewTransport(descriptor: JsonRecord) {
+  const review = requireRecord(descriptor, 'review_transport', 'pack_descriptor');
+  if (review.receipt_transport_only !== true) {
+    throw shape('pack_descriptor.review_transport.receipt_transport_only must be true.', {
+      field: 'pack_descriptor.review_transport.receipt_transport_only',
+    });
+  }
+  return {
+    receipt_refs: requireStringArray(review, 'receipt_refs', 'pack_descriptor.review_transport'),
+    reviewer_adapter_refs: requireStringArray(review, 'reviewer_adapter_refs', 'pack_descriptor.review_transport'),
+    receipt_transport_only: true,
+    quality_verdict_owner: requireString(review, 'quality_verdict_owner', 'pack_descriptor.review_transport'),
+  };
+}
+
+function normalizeAuthorityBoundary(descriptor: JsonRecord) {
+  const authority = requireRecord(descriptor, 'authority_boundary', 'pack_descriptor');
+  for (const field of REQUIRED_AUTHORITY_FALSE_FLAGS) {
+    if (authority[field] !== false) {
+      throw shape(`pack_descriptor.authority_boundary.${field} must be false.`, { field });
+    }
+  }
+  return Object.fromEntries(
+    Object.entries(authority).map(([key, value]) => [key, value === true ? true : value === false ? false : value]),
+  );
+}
+
+function normalizeProvenance(descriptor: JsonRecord) {
+  const provenance = requireRecord(descriptor, 'provenance', 'pack_descriptor');
+  return {
+    source_ref: requireString(provenance, 'source_ref', 'pack_descriptor.provenance'),
+    license_ref: requireString(provenance, 'license_ref', 'pack_descriptor.provenance'),
+    release_ref: requireString(provenance, 'release_ref', 'pack_descriptor.provenance'),
+    descriptor_created_by: requireString(provenance, 'descriptor_created_by', 'pack_descriptor.provenance'),
+  };
+}
+
+function parseDescriptorArgs(args: string[], usageText: string) {
+  let descriptor: string | null = null;
+  let output: string | null = null;
+  const remaining = [...args];
+  while (remaining.length > 0) {
+    const token = remaining.shift()!;
+    if (token === '--descriptor') {
+      descriptor = remaining.shift() ?? null;
+      if (!descriptor) {
+        throw usage(`${usageText} requires a value after --descriptor.`, { required: ['--descriptor <path>'] });
+      }
+      continue;
+    }
+    if (token === '--output') {
+      output = remaining.shift() ?? null;
+      if (!output) {
+        throw usage(`${usageText} requires a value after --output.`, { required: ['--output <path>'] });
+      }
+      continue;
+    }
+    throw usage(`Unknown pack os option: ${token}.`, { token, usage: usageText });
+  }
+
+  if (!descriptor) {
+    throw usage(`${usageText} requires --descriptor <path>.`, { required: ['--descriptor <path>'] });
+  }
+
+  return { descriptor, output };
+}
+
+export function loadGenericPackDescriptor(descriptorPath: string) {
+  const resolvedPath = path.resolve(descriptorPath);
+  const descriptorDir = path.dirname(resolvedPath);
+  const payload = readJsonFile(resolvedPath);
+
+  const packId = requireString(payload, 'pack_id', 'pack_descriptor');
+  const version = requireString(payload, 'version', 'pack_descriptor');
+  const packKind = requireString(payload, 'pack_kind', 'pack_descriptor');
+  if (!ALLOWED_PACK_KINDS.has(packKind)) {
+    throw shape('pack_descriptor.pack_kind is not allowed.', {
+      pack_kind: packKind,
+      allowed: [...ALLOWED_PACK_KINDS],
+    });
+  }
+
+  const normalized = {
+    schema_version: normalizeSchemaVersion(payload),
+    pack_id: packId,
+    version,
+    pack_kind: packKind,
+    owner: requireString(payload, 'owner', 'pack_descriptor'),
+    capabilities: normalizeCapabilities(payload),
+    resources: normalizeResources(payload, descriptorDir),
+    artifact_lifecycle: normalizeArtifactLifecycle(payload),
+    review_transport: normalizeReviewTransport(payload),
+    authority_boundary: normalizeAuthorityBoundary(payload),
+    provenance: normalizeProvenance(payload),
+  };
+
+  return {
+    descriptor_path: resolvedPath,
+    descriptor_sha256: sha256File(resolvedPath),
+    descriptor: normalized,
+  };
+}
+
+export function buildPackOsInspection(descriptorPath: string) {
+  const loaded = loadGenericPackDescriptor(descriptorPath);
+  const missingResources = loaded.descriptor.resources.filter((entry) => entry.status === 'missing');
+  return {
+    version: 'g2',
+    pack_os: {
+      surface_kind: 'opl_pack_os_inspection',
+      contract_ref: 'contracts/opl-framework/pack-os-contract.json',
+      descriptor_path: loaded.descriptor_path,
+      descriptor_sha256: loaded.descriptor_sha256,
+      pack_id: loaded.descriptor.pack_id,
+      pack_kind: loaded.descriptor.pack_kind,
+      pack_version: loaded.descriptor.version,
+      owner: loaded.descriptor.owner,
+      status: missingResources.length === 0 ? 'resolved' : 'resolved_with_missing_refs',
+      missing_resource_count: missingResources.length,
+      authority_boundary: loaded.descriptor.authority_boundary,
+      forbidden_claims: [
+        'pack_lock_is_domain_ready',
+        'review_receipt_transport_is_quality_verdict',
+        'artifact_locator_ref_is_artifact_authority',
+        'provider_completion_is_pack_quality_ready',
+      ],
+    },
+    descriptor: loaded.descriptor,
+  };
+}
+
+export function buildPackOsLock(descriptorPath: string) {
+  const loaded = loadGenericPackDescriptor(descriptorPath);
+  const presentResourceCount = loaded.descriptor.resources.filter((entry) => entry.status === 'present').length;
+  const missingResourceCount = loaded.descriptor.resources.filter((entry) => entry.status === 'missing').length;
+  return {
+    version: 'g2',
+    pack_lock: {
+      surface_kind: 'opl_generic_pack_lock',
+      lock_id: `opl-pack-lock:${loaded.descriptor.pack_id}@${loaded.descriptor.version}`,
+      pack_id: loaded.descriptor.pack_id,
+      version: loaded.descriptor.version,
+      pack_kind: loaded.descriptor.pack_kind,
+      owner: loaded.descriptor.owner,
+      descriptor_ref: loaded.descriptor_path,
+      descriptor_sha256: loaded.descriptor_sha256,
+      resolver: {
+        resolver_owner: 'one-person-lab',
+        resolver_role: 'generic_pack_descriptor_to_refs_only_lock',
+        install_status: 'descriptor_resolved',
+        runtime_isolation_status: 'declared_by_pack_os_not_executed_by_lock',
+        cache_status: presentResourceCount > 0 ? 'hashes_recorded_for_present_local_files' : 'no_local_files_hashed',
+      },
+      resolved_resources: loaded.descriptor.resources,
+      artifact_lifecycle: loaded.descriptor.artifact_lifecycle,
+      review_transport: loaded.descriptor.review_transport,
+      authority_boundary: loaded.descriptor.authority_boundary,
+      provenance: loaded.descriptor.provenance,
+      summary: {
+        capability_count: loaded.descriptor.capabilities.length,
+        resource_count: loaded.descriptor.resources.length,
+        present_resource_count: presentResourceCount,
+        missing_resource_count: missingResourceCount,
+        receipt_ref_count: loaded.descriptor.review_transport.receipt_refs.length,
+        artifact_locator_ref_count: loaded.descriptor.artifact_lifecycle.artifact_locator_refs.length,
+      },
+      not_claims: [
+        'domain_ready',
+        'quality_verdict',
+        'artifact_authority',
+        'publication_ready',
+        'grant_ready',
+        'visual_export_ready',
+        'app_release_ready',
+        'production_ready',
+      ],
+    },
+  };
+}
+
+export function buildPackOsValidation(descriptorPath: string) {
+  const lock = buildPackOsLock(descriptorPath).pack_lock;
+  const checks = [
+    {
+      check_id: 'descriptor_loaded',
+      status: 'pass',
+      ref: lock.descriptor_ref,
+    },
+    {
+      check_id: 'required_authority_false_flags',
+      status: 'pass',
+      fields: REQUIRED_AUTHORITY_FALSE_FLAGS,
+    },
+    {
+      check_id: 'resources_hashed_or_refs_only',
+      status: 'pass',
+      present_resource_count: lock.summary.present_resource_count,
+      missing_resource_count: lock.summary.missing_resource_count,
+    },
+    {
+      check_id: 'review_transport_is_refs_only',
+      status: lock.review_transport.receipt_transport_only ? 'pass' : 'fail',
+      receipt_transport_only: lock.review_transport.receipt_transport_only,
+    },
+  ];
+  const status = checks.every((entry) => entry.status === 'pass') ? 'valid' : 'invalid';
+  if (status !== 'valid') {
+    throw shape('Pack OS descriptor failed validation.', { checks });
+  }
+  return {
+    version: 'g2',
+    pack_os_validation: {
+      surface_kind: 'opl_pack_os_validation',
+      contract_ref: 'contracts/opl-framework/pack-os-contract.json',
+      status,
+      pack_id: lock.pack_id,
+      pack_kind: lock.pack_kind,
+      checks,
+      authority_boundary: lock.authority_boundary,
+      not_claims: lock.not_claims,
+    },
+  };
+}
+
+export function runPackOsInspectCommand(args: string[]) {
+  const parsed = parseDescriptorArgs(args, 'opl pack os inspect --descriptor <path>');
+  if (parsed.output) {
+    throw usage('opl pack os inspect does not accept --output; use pack os lock for lock materialization.', {
+      output: parsed.output,
+    });
+  }
+  return buildPackOsInspection(parsed.descriptor);
+}
+
+export function runPackOsValidateCommand(args: string[]) {
+  const parsed = parseDescriptorArgs(args, 'opl pack os validate --descriptor <path>');
+  if (parsed.output) {
+    throw usage('opl pack os validate does not accept --output; use pack os lock for lock materialization.', {
+      output: parsed.output,
+    });
+  }
+  return buildPackOsValidation(parsed.descriptor);
+}
+
+export function runPackOsLockCommand(args: string[]) {
+  const parsed = parseDescriptorArgs(args, 'opl pack os lock --descriptor <path> [--output <path>]');
+  const payload = buildPackOsLock(parsed.descriptor);
+  if (!parsed.output) {
+    return payload;
+  }
+  const outputPath = path.resolve(parsed.output);
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, `${JSON.stringify(payload.pack_lock, null, 2)}\n`);
+  return {
+    ...payload,
+    pack_lock_output: {
+      path: outputPath,
+      sha256: sha256File(outputPath),
+      status: 'written',
+    },
+  };
+}

@@ -13,6 +13,7 @@ import type {
   BrandModuleRegistryContract,
   BrandModuleSurfacesContract,
   BrandSystemProfileContract,
+  PackOsContract,
   BrandSystemVisualPatternGroup,
   PublicSurfaceIndexContract,
   StageSelectionVocabularyContract,
@@ -31,6 +32,7 @@ import {
 import { validateAgentWorkspaceNorm } from './agent-workspace-norm-contract.ts';
 import { validateBrandModuleL5OperatingEvidence } from './brand-module-l5-operating-evidence-contract.ts';
 import { validateDomainsRegistry } from './domain-contracts.ts';
+import { validatePackOsContract } from './pack-os-contract.ts';
 
 export { FrameworkContractError } from './contract-validation.ts';
 
@@ -47,6 +49,7 @@ const REQUIRED_CONTRACT_FILE_NAMES = [
   'brand-module-l5-operating-evidence.json',
   'brand-system-profile.json',
   'target-operating-architecture-contract.json',
+  'pack-os-contract.json',
 ] as const;
 
 type NormalizedFrameworkContractsLoadOptions = {
@@ -2405,6 +2408,11 @@ const REQUIRED_CONTRACT_FILES = [
     file_name: 'target-operating-architecture-contract.json',
     schema_version: (contracts: FrameworkContracts) => contracts.targetOperatingArchitecture.schema_version,
   },
+  {
+    contract_id: 'pack_os',
+    file_name: 'pack-os-contract.json',
+    schema_version: (contracts: FrameworkContracts) => String(contracts.packOs.schema_version),
+  },
 ] as const;
 
 export function validateFrameworkContracts(
@@ -2482,6 +2490,10 @@ export function loadFrameworkContracts(
       targetOperatingArchitecture: validateTargetOperatingArchitecture(
         path.join(contractsDir, 'target-operating-architecture-contract.json'),
         parseJsonFile(path.join(contractsDir, 'target-operating-architecture-contract.json')),
+      ),
+      packOs: validatePackOsContract(
+        path.join(contractsDir, 'pack-os-contract.json'),
+        parseJsonFile(path.join(contractsDir, 'pack-os-contract.json')),
       ),
     };
   } catch (error) {
