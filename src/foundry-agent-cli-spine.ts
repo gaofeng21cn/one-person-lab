@@ -201,7 +201,7 @@ function buildAuthorityBoundary(contract: JsonRecord) {
 function buildPeerProjection(peer: FoundryAgentPeer) {
   const generatedSurfaceOnly = Boolean('generated_surface_only' in peer && peer.generated_surface_only);
   const domainFoundryCli = peer.direct_domain_cli;
-  const codexExecutableCli = 'codex_executable_cli' in peer ? peer.codex_executable_cli : peer.direct_domain_cli;
+  const codexExecutableCli = peer.codex_executable_cli;
   const brandCliPathSafe = false;
   const foundryCommandSurface = generatedSurfaceOnly
     ? `opl foundry agents inspect ${peer.agent_id}`
