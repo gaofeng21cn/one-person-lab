@@ -488,6 +488,147 @@ test('family-runtime tick skips stale blocked transport auto-redrive when MAS cu
   }
 });
 
+test('family-runtime tick auto-redrives blocked MAS current-control admission over newer terminal short-fingerprint residue', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const currentPayload = {
+        ...defaultExecutorPayloadForOwner({
+          sourceFingerprint: 'study-progress-current-owner-ticket::003-dpcc-primary-care-phenotype-treatment-gap::dpcc_publication_gate_replay_after_current_ai_reviewer_record::run_gate_clearing_batch',
+          actionType: 'run_gate_clearing_batch',
+          nextOwner: 'ai_reviewer',
+          dispatchAuthority: 'consumer_default_executor_dispatch',
+          dispatchRef:
+            'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/immutable/run_gate_clearing_batch/current.json',
+        }),
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+        work_unit_fingerprint:
+          'study-progress-current-owner-ticket::003-dpcc-primary-care-phenotype-treatment-gap::dpcc_publication_gate_replay_after_current_ai_reviewer_record::run_gate_clearing_batch',
+        action_fingerprint:
+          'study-progress-current-owner-ticket::003-dpcc-primary-care-phenotype-treatment-gap::dpcc_publication_gate_replay_after_current_ai_reviewer_record::run_gate_clearing_batch',
+        stage_packet_ref:
+          'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/stage_packets/run_gate_clearing_batch.current.json',
+        owner_route_currentness_basis: {
+          generated_at: '2026-06-10T02:00:00Z',
+          work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+          work_unit_fingerprint:
+            'study-progress-current-owner-ticket::003-dpcc-primary-care-phenotype-treatment-gap::dpcc_publication_gate_replay_after_current_ai_reviewer_record::run_gate_clearing_batch',
+          truth_epoch: '2026-06-10T02:00:00Z',
+          runtime_health_epoch: '2026-06-10T02:00:00Z',
+          source_eval_id: 'publication_eval:latest',
+        },
+        provider_admission_identity: {
+          status: 'provider_admission_pending',
+          provider_admission_schema_source: 'opl_current_control_state/latest.json',
+          action_fingerprint:
+            'study-progress-current-owner-ticket::003-dpcc-primary-care-phenotype-treatment-gap::dpcc_publication_gate_replay_after_current_ai_reviewer_record::run_gate_clearing_batch',
+        },
+      };
+      const residuePayload = {
+        ...defaultExecutorPayloadForOwner({
+          sourceFingerprint: '3d19168a1fbd2f72',
+          actionType: 'run_gate_clearing_batch',
+          nextOwner: 'ai_reviewer',
+          dispatchAuthority: 'consumer_default_executor_dispatch',
+          dispatchRef:
+            'studies/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/supervision/consumer/default_executor_dispatches/immutable/run_gate_clearing_batch/terminal-residue.json',
+        }),
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        quest_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        work_unit_id: 'dpcc_publication_gate_replay_after_current_ai_reviewer_record',
+      };
+      insertDefaultExecutorTaskWithPayload(db, {
+        taskId: 'task-mas-current-control-blocked-admission',
+        payload: currentPayload,
+        dedupeKey:
+          'study-progress-current-owner-ticket::003-dpcc-primary-care-phenotype-treatment-gap::dpcc_publication_gate_replay_after_current_ai_reviewer_record::run_gate_clearing_batch',
+        createdAt: '2026-06-10T02:00:00.000Z',
+        status: 'blocked',
+        attempts: 1,
+      });
+      db.prepare(`
+        UPDATE tasks
+        SET last_error = 'default executor dispatch has no launchable Temporal Codex stage attempt.',
+          dead_letter_reason = 'temporal_stage_attempt_not_completed'
+        WHERE task_id = ?
+      `).run('task-mas-current-control-blocked-admission');
+      insertDefaultExecutorTaskWithPayload(db, {
+        taskId: 'task-mas-terminal-short-fingerprint-residue',
+        payload: residuePayload,
+        dedupeKey: 'mas:dm-cvd:003:default-executor:run_gate_clearing_batch:3d19168a1fbd2f72',
+        createdAt: '2026-06-10T02:05:00.000Z',
+        status: 'succeeded',
+        attempts: 1,
+      });
+
+      let dispatchCount = 0;
+      const tick = await runFamilyRuntimeQueueTick(db, familyRuntimePaths(), {
+        source: 'test-current-control-blocked-admission-auto-redrive',
+        limit: 2,
+        hydrate: false,
+        taskScope: {
+          domainId: 'medautoscience',
+          taskKind: 'domain_owner/default-executor-dispatch',
+          payloadMatches: [
+            {
+              path: 'study_id',
+              value: '003-dpcc-primary-care-phenotype-treatment-gap',
+            },
+          ],
+        },
+      }, {
+        enqueueTask: () => ({ accepted: false }),
+        dispatchTask: (_db, _paths, row: FamilyRuntimeTaskRow) => {
+          dispatchCount += 1;
+          return { task_id: row.task_id };
+        },
+      });
+      const redrivenTask = db.prepare(`
+        SELECT status, last_error, dead_letter_reason
+        FROM tasks
+        WHERE task_id = ?
+      `).get('task-mas-current-control-blocked-admission') as {
+        status: string;
+        last_error: string | null;
+        dead_letter_reason: string | null;
+      };
+      const attempts = db.prepare(`
+        SELECT status, blocked_reason
+        FROM stage_attempts
+        WHERE task_id = ?
+        ORDER BY created_at ASC
+      `).all('task-mas-current-control-blocked-admission') as Array<{
+        status: string;
+        blocked_reason: string | null;
+      }>;
+      const staleSkipEventCount = db.prepare(`
+        SELECT COUNT(*) AS count
+        FROM events
+        WHERE task_id = ?
+          AND event_type = 'task_default_executor_stale_auto_redrive_skip'
+      `).get('task-mas-current-control-blocked-admission') as { count: number };
+
+      assert.equal(tick.mas_default_executor_auto_redriven_count, 1);
+      assert.equal(tick.mas_default_executor_auto_redrive_stale_skipped_count, 0);
+      assert.equal(tick.selected_count, 1);
+      assert.equal(dispatchCount, 1);
+      assert.equal(tick.dispatches[0].task_id, 'task-mas-current-control-blocked-admission');
+      assert.equal(redrivenTask.status, 'queued');
+      assert.equal(redrivenTask.last_error, null);
+      assert.equal(redrivenTask.dead_letter_reason, null);
+      assert.equal(attempts.length, 1);
+      assert.equal(attempts[0].status, 'queued');
+      assert.equal(attempts[0].blocked_reason, null);
+      assert.equal(staleSkipEventCount.count, 0);
+    });
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime tick does not select newer MAS default executor row while same dispatch has a live running attempt with expired lease', async () => {
   const db = new DatabaseSync(':memory:');
   try {

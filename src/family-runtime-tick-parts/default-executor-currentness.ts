@@ -34,7 +34,13 @@ type DefaultExecutorCurrentTask = {
   currentness_rank: number;
 };
 
-const CURRENT_CONTROL_ADMISSION_CURRENT_STATUSES = new Set(['queued', 'retry_waiting', 'running', 'waiting_approval']);
+const CURRENT_CONTROL_ADMISSION_CURRENT_STATUSES = new Set([
+  'queued',
+  'retry_waiting',
+  'running',
+  'waiting_approval',
+  'blocked',
+]);
 
 export function payloadFromTask(row: FamilyRuntimeTaskRow) {
   return JSON.parse(row.payload_json) as Record<string, unknown>;
