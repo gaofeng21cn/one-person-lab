@@ -793,7 +793,10 @@ function reconcileCurrentControlExecutableOwners(
 ) {
   return currentInputs.map((input) => {
     const pending = pendingInputs.find((candidate) => sameDefaultExecutorOwnerAction(input, candidate));
-    const executableOwner = pending ? executableOwnerFromPendingTask(pending) : null;
+    if (!pending) {
+      return input;
+    }
+    const executableOwner = executableOwnerFromPendingTask(pending);
     if (!executableOwner || executableOwner === payloadString(input, 'next_executable_owner')) {
       return input;
     }
