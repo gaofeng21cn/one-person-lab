@@ -26,6 +26,7 @@ test('target architecture schema contracts keep owner delta root and audit tail 
     'contracts/opl-framework/default-surface-budget.schema.json',
     'contracts/opl-framework/workspace-topology-profile.schema.json',
     'contracts/opl-framework/workspace-index.schema.json',
+    'contracts/opl-framework/capability-registry-resolver.schema.json',
   ];
   const schemas = Object.fromEntries(
     schemaPaths.map((schemaPath) => [schemaPath, readJson<Record<string, any>>(schemaPath)]),
@@ -133,6 +134,79 @@ test('target architecture schema contracts keep owner delta root and audit tail 
     false,
   );
   assert.equal(evidenceVault.$defs.authority_boundary.properties.opl_can_write_domain_truth.const, false);
+
+  const capabilityResolver = schemas['contracts/opl-framework/capability-registry-resolver.schema.json'];
+  assert.equal(capabilityResolver.properties.surface_kind.const, 'opl_capability_registry_resolution');
+  assert.equal(capabilityResolver.properties.schema_version.const, 'capability-registry-resolver.v1');
+  assert.equal(capabilityResolver.properties.resolver_policy.const, 'current_delta_bound_jit_or_fail_open');
+  assert.deepEqual(capabilityResolver.properties.resolution_status.enum, [
+    'resolved',
+    'fail_open',
+    'route_required_blocker_candidate',
+  ]);
+  assert.deepEqual(capabilityResolver.properties.selection.properties.action.enum, [
+    'select_capability_ref',
+    'advisory_or_audit',
+    'route_required_blocker_candidate',
+  ]);
+  assert.deepEqual(capabilityResolver.properties.route_required_policy.properties.hard_boundary.enum, [
+    'source_data_evidence',
+    'owner_route_identity',
+    'forbidden_write',
+    'irreversible_mutation',
+    'reviewer_publication_hard_gate',
+    null,
+  ]);
+  assert.equal(
+    capabilityResolver.properties.route_required_policy.properties.policy.enum.includes(
+      'route_required_current_owner_delta_hard_boundary_missing_ref',
+    ),
+    true,
+  );
+  assert.equal(
+    capabilityResolver.$defs.typed_blocker_candidate.properties.candidate_kind.const,
+    'typed_blocker_candidate',
+  );
+  assert.equal(
+    capabilityResolver.$defs.typed_blocker_candidate.properties.may_create_domain_typed_blocker.const,
+    false,
+  );
+  assert.equal(
+    capabilityResolver.$defs.authority_boundary.properties.can_execute_capability.const,
+    false,
+  );
+  assert.equal(
+    capabilityResolver.$defs.authority_boundary.properties.can_write_domain_truth.const,
+    false,
+  );
+  assert.equal(
+    capabilityResolver.$defs.authority_boundary.properties.can_sign_owner_receipt.const,
+    false,
+  );
+  assert.equal(
+    capabilityResolver.$defs.authority_boundary.properties.can_create_domain_typed_blocker.const,
+    false,
+  );
+  assert.equal(
+    capabilityResolver.$defs.authority_boundary.properties.can_claim_quality_or_export_verdict.const,
+    false,
+  );
+  assert.equal(
+    capabilityResolver.$defs.authority_boundary.properties.can_create_domain_local_selector.const,
+    false,
+  );
+  assert.equal(
+    capabilityResolver.$defs.authority_boundary.properties.can_create_always_on_sidecar.const,
+    false,
+  );
+  assert.equal(
+    capabilityResolver.$defs.authority_boundary.properties.can_create_default_preflight.const,
+    false,
+  );
+  assert.equal(
+    capabilityResolver.$defs.authority_boundary.properties.can_create_second_active_backlog.const,
+    false,
+  );
 
   const goldenPath = schemas['contracts/opl-framework/golden-path-profile.schema.json'];
   assert.equal(goldenPath.properties.default_surface_policy.properties.ordinary_route_count.const, 1);
@@ -559,7 +633,11 @@ test('target operating architecture contract freezes resource, authority, lane, 
       capability_registry_boundary: {
         owner_modules: string[];
         default_behavior: string;
+        resolver_abi_ref: string;
+        selector_helper_ref: string;
         fail_open_policy: string;
+        optional_ref_missing_default: string;
+        route_required_ref_missing: string;
         must_not_create: string[];
       };
       cross_agent_conformance_required_claims: string[];
@@ -796,6 +874,22 @@ test('target operating architecture contract freezes resource, authority, lane, 
   assert.equal(
     contract.foundry_agent_os_standard.capability_registry_boundary.default_behavior,
     'current_owner_delta_bound_jit_or_fail_open',
+  );
+  assert.equal(
+    contract.foundry_agent_os_standard.capability_registry_boundary.resolver_abi_ref,
+    'contracts/opl-framework/capability-registry-resolver.schema.json',
+  );
+  assert.equal(
+    contract.foundry_agent_os_standard.capability_registry_boundary.selector_helper_ref,
+    'src/capability-registry-resolver.ts',
+  );
+  assert.equal(
+    contract.foundry_agent_os_standard.capability_registry_boundary.optional_ref_missing_default,
+    'advisory_or_audit',
+  );
+  assert.equal(
+    contract.foundry_agent_os_standard.capability_registry_boundary.route_required_ref_missing,
+    'typed_blocker_candidate_only_from_current_owner_delta_hard_boundary',
   );
   for (const forbiddenCreation of ['domain authority verdict', 'owner receipt', 'typed blocker']) {
     assert.equal(

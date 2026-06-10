@@ -62,8 +62,16 @@ test('agents conformance exposes Foundry Agent OS family standard without author
     'advisory_or_audit',
   );
   assert.equal(
+    foundry.capability_registry_boundary.resolver_abi_ref,
+    'contracts/opl-framework/capability-registry-resolver.schema.json',
+  );
+  assert.equal(
+    foundry.capability_registry_boundary.selector_helper_ref,
+    'src/capability-registry-resolver.ts',
+  );
+  assert.equal(
     foundry.capability_registry_boundary.route_required_ref_missing,
-    'typed_blocker_only_from_current_owner_delta_hard_boundary',
+    'typed_blocker_candidate_only_from_current_owner_delta_hard_boundary',
   );
   assert.equal(
     foundry.capability_registry_boundary.must_not_create.includes('owner receipt'),
@@ -117,4 +125,3 @@ test('agents conformance exposes Foundry Agent OS family standard without author
     assert.equal(domain.false_authority_flags.capability_registry_can_sign_owner_receipt, false);
   }
 });
-

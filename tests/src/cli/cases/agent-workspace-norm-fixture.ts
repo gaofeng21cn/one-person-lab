@@ -421,7 +421,11 @@ export const MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT: TargetOperatingArch
     capability_registry_boundary: {
       owner_modules: ['atlas', 'pack', 'stagecraft'],
       default_behavior: 'current_owner_delta_bound_jit_or_fail_open',
+      resolver_abi_ref: 'contracts/opl-framework/capability-registry-resolver.schema.json',
+      selector_helper_ref: 'src/capability-registry-resolver.ts',
       fail_open_policy: 'test fixture',
+      optional_ref_missing_default: 'advisory_or_audit',
+      route_required_ref_missing: 'typed_blocker_candidate_only_from_current_owner_delta_hard_boundary',
       must_not_create: ['domain authority verdict', 'owner receipt', 'typed blocker'],
     },
     cross_agent_conformance_required_claims: [

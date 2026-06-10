@@ -774,7 +774,11 @@ export interface TargetOperatingArchitectureContract {
     capability_registry_boundary: {
       owner_modules: BrandModuleId[];
       default_behavior: string;
+      resolver_abi_ref: string;
+      selector_helper_ref: string;
       fail_open_policy: string;
+      optional_ref_missing_default: string;
+      route_required_ref_missing: string;
       must_not_create: string[];
     };
     cross_agent_conformance_required_claims: string[];

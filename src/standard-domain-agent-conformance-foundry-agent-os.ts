@@ -177,10 +177,12 @@ export function buildFoundryAgentOsConformance(
     capability_registry_boundary: {
       owner_modules: standard.capability_registry_boundary.owner_modules,
       default_behavior: standard.capability_registry_boundary.default_behavior,
+      resolver_abi_ref: standard.capability_registry_boundary.resolver_abi_ref,
+      selector_helper_ref: standard.capability_registry_boundary.selector_helper_ref,
       fail_open_policy: standard.capability_registry_boundary.fail_open_policy,
       must_not_create: standard.capability_registry_boundary.must_not_create,
-      optional_ref_missing_default: 'advisory_or_audit',
-      route_required_ref_missing: 'typed_blocker_only_from_current_owner_delta_hard_boundary',
+      optional_ref_missing_default: standard.capability_registry_boundary.optional_ref_missing_default,
+      route_required_ref_missing: standard.capability_registry_boundary.route_required_ref_missing,
     },
     domains: domainReports,
     authority_boundary: {

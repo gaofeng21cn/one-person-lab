@@ -1,0 +1,247 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/capability-registry-resolver.schema.json",
+  "schema_id": "opl.capability_registry_resolver.v1",
+  "surface_kind": "opl_capability_registry_resolver_schema",
+  "owner": "one-person-lab",
+  "purpose": "Define the W3 current-owner-delta-bound Capability Registry resolver ABI and readout boundary for Atlas, Pack, and Stagecraft.",
+  "state": "active_contract",
+  "machine_boundary": "OPL resolves capability refs and emits advisory readouts or typed blocker candidates only. Domain owners retain capability execution, domain truth, owner receipt, typed blocker, and quality/export authority.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "resolver_policy",
+    "capability_ref",
+    "work_unit_ref",
+    "resolution_status",
+    "current_owner_delta_binding",
+    "selection",
+    "route_required_policy",
+    "blocker_candidate",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_capability_registry_resolution"
+    },
+    "schema_version": {
+      "const": "capability-registry-resolver.v1"
+    },
+    "resolver_policy": {
+      "const": "current_delta_bound_jit_or_fail_open"
+    },
+    "capability_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "work_unit_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "resolution_status": {
+      "enum": [
+        "resolved",
+        "fail_open",
+        "route_required_blocker_candidate"
+      ]
+    },
+    "current_owner_delta_binding": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "bound",
+        "default_planning_root",
+        "current_owner_delta_ref",
+        "domain_id",
+        "current_owner"
+      ],
+      "properties": {
+        "bound": {
+          "type": "boolean"
+        },
+        "default_planning_root": {
+          "enum": [
+            "current_owner_delta",
+            "missing"
+          ]
+        },
+        "current_owner_delta_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "domain_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "current_owner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "action",
+        "capability_found",
+        "capability_ref",
+        "source_family",
+        "surface_ref"
+      ],
+      "properties": {
+        "action": {
+          "enum": [
+            "select_capability_ref",
+            "advisory_or_audit",
+            "route_required_blocker_candidate"
+          ]
+        },
+        "capability_found": {
+          "type": "boolean"
+        },
+        "capability_ref": {
+          "type": "string"
+        },
+        "source_family": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "surface_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "route_required_policy": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "is_route_required",
+        "hard_boundary",
+        "policy"
+      ],
+      "properties": {
+        "is_route_required": {
+          "type": "boolean"
+        },
+        "hard_boundary": {
+          "enum": [
+            "source_data_evidence",
+            "owner_route_identity",
+            "forbidden_write",
+            "irreversible_mutation",
+            "reviewer_publication_hard_gate",
+            null
+          ]
+        },
+        "policy": {
+          "enum": [
+            "optional_missing_fail_open",
+            "route_required_current_owner_delta_hard_boundary_missing_ref",
+            "capability_ref_resolved"
+          ]
+        }
+      }
+    },
+    "blocker_candidate": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/typed_blocker_candidate"
+        }
+      ]
+    },
+    "authority_boundary": {
+      "$ref": "#/$defs/authority_boundary"
+    }
+  },
+  "$defs": {
+    "typed_blocker_candidate": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "candidate_kind",
+        "blocker_policy",
+        "missing_capability_ref",
+        "current_owner_delta_ref",
+        "work_unit_ref",
+        "route_back_owner",
+        "may_create_domain_typed_blocker",
+        "repair_action"
+      ],
+      "properties": {
+        "candidate_kind": {
+          "const": "typed_blocker_candidate"
+        },
+        "blocker_policy": {
+          "const": "route_required_current_owner_delta_hard_boundary_missing_ref"
+        },
+        "may_create_domain_typed_blocker": {
+          "const": false
+        },
+        "repair_action": {
+          "const": "domain_or_gate_owner_must_supply_capability_ref_or_signed_typed_blocker"
+        }
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "can_execute_capability",
+        "can_write_domain_truth",
+        "can_sign_owner_receipt",
+        "can_create_domain_typed_blocker",
+        "can_claim_quality_or_export_verdict",
+        "can_create_domain_local_selector",
+        "can_create_always_on_sidecar",
+        "can_create_default_preflight",
+        "can_create_second_active_backlog"
+      ],
+      "properties": {
+        "can_execute_capability": {
+          "const": false
+        },
+        "can_write_domain_truth": {
+          "const": false
+        },
+        "can_sign_owner_receipt": {
+          "const": false
+        },
+        "can_create_domain_typed_blocker": {
+          "const": false
+        },
+        "can_claim_quality_or_export_verdict": {
+          "const": false
+        },
+        "can_create_domain_local_selector": {
+          "const": false
+        },
+        "can_create_always_on_sidecar": {
+          "const": false
+        },
+        "can_create_default_preflight": {
+          "const": false
+        },
+        "can_create_second_active_backlog": {
+          "const": false
+        }
+      }
+    }
+  }
+}

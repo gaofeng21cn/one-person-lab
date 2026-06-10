@@ -1804,6 +1804,54 @@ function validateFoundryAgentOsStandard(filePath: string, value: unknown) {
       actual: defaultBehavior,
     });
   }
+  const resolverAbiRef = expectString(
+    capabilityRegistryRaw.resolver_abi_ref,
+    'foundry_agent_os_standard.capability_registry_boundary.resolver_abi_ref',
+    filePath,
+  );
+  if (resolverAbiRef !== 'contracts/opl-framework/capability-registry-resolver.schema.json') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard capability registry resolver ABI ref must point to the W3 machine contract.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.capability_registry_boundary.resolver_abi_ref',
+      actual: resolverAbiRef,
+    });
+  }
+  const selectorHelperRef = expectString(
+    capabilityRegistryRaw.selector_helper_ref,
+    'foundry_agent_os_standard.capability_registry_boundary.selector_helper_ref',
+    filePath,
+  );
+  if (selectorHelperRef !== 'src/capability-registry-resolver.ts') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard capability registry selector helper ref must point to the W3 resolver helper.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.capability_registry_boundary.selector_helper_ref',
+      actual: selectorHelperRef,
+    });
+  }
+  const optionalRefMissingDefault = expectString(
+    capabilityRegistryRaw.optional_ref_missing_default,
+    'foundry_agent_os_standard.capability_registry_boundary.optional_ref_missing_default',
+    filePath,
+  );
+  if (optionalRefMissingDefault !== 'advisory_or_audit') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard optional capability refs must fail open into advisory/audit.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.capability_registry_boundary.optional_ref_missing_default',
+      actual: optionalRefMissingDefault,
+    });
+  }
+  const routeRequiredRefMissing = expectString(
+    capabilityRegistryRaw.route_required_ref_missing,
+    'foundry_agent_os_standard.capability_registry_boundary.route_required_ref_missing',
+    filePath,
+  );
+  if (routeRequiredRefMissing !== 'typed_blocker_candidate_only_from_current_owner_delta_hard_boundary') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard route-required missing refs must only produce blocker candidates from current_owner_delta hard boundaries.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.capability_registry_boundary.route_required_ref_missing',
+      actual: routeRequiredRefMissing,
+    });
+  }
   const mustNotCreate = expectNonEmptyStringArray(
     capabilityRegistryRaw.must_not_create,
     'foundry_agent_os_standard.capability_registry_boundary.must_not_create',
@@ -1854,11 +1902,15 @@ function validateFoundryAgentOsStandard(filePath: string, value: unknown) {
     capability_registry_boundary: {
       owner_modules: ownerModules,
       default_behavior: defaultBehavior,
+      resolver_abi_ref: resolverAbiRef,
+      selector_helper_ref: selectorHelperRef,
       fail_open_policy: expectString(
         capabilityRegistryRaw.fail_open_policy,
         'foundry_agent_os_standard.capability_registry_boundary.fail_open_policy',
         filePath,
       ),
+      optional_ref_missing_default: optionalRefMissingDefault,
+      route_required_ref_missing: routeRequiredRefMissing,
       must_not_create: mustNotCreate,
     },
     cross_agent_conformance_required_claims: conformanceClaims,
