@@ -19,6 +19,10 @@ export const MINIMAL_PACK_OS_CONTRACT: PackOsContract = {
   source_module: 'src/pack-os.ts',
   cli_surfaces: {
     inspect: 'opl pack os inspect --descriptor <path>',
+    install: 'opl pack os install --descriptor <path> --registry <path> [--cache-root <dir>]',
+    registry: 'opl pack os registry --registry <path>',
+    cache: 'opl pack os cache --descriptor <path> --cache-root <dir>',
+    distribute: 'opl pack os distribute --descriptor <path> --output <path> [--cache-root <dir>]',
     lock: 'opl pack os lock --descriptor <path>',
     validate: 'opl pack os validate --descriptor <path>',
     mas_display_smoke: 'opl pack os mas-display-smoke --contract <path>',
@@ -58,6 +62,16 @@ export const MINIMAL_PACK_OS_CONTRACT: PackOsContract = {
       'artifact_ref',
     ],
     relationship_to_domain_packs: 'test fixture',
+  },
+  registry_cache_distribution_contract: {
+    registry_surface_kind: 'opl_pack_os_registry',
+    install_receipt_surface_kind: 'opl_pack_os_install_receipt',
+    cache_manifest_surface_kind: 'opl_pack_os_cache_manifest',
+    distribution_manifest_surface_kind: 'opl_pack_os_distribution_manifest',
+    distribution_bundle_surface_kind: 'opl_pack_os_distribution_bundle',
+    cache_layout: 'sha256/<sha256>',
+    registry_rule: 'test fixture',
+    distribution_rule: 'test fixture',
   },
   lock_contract: {
     surface_kind: 'opl_generic_pack_lock',

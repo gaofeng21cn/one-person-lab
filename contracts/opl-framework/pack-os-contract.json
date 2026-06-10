@@ -2,12 +2,16 @@
   "schema_version": 1,
   "contract_id": "opl-pack-os-contract.v1",
   "owner": "One Person Lab",
-  "purpose": "Generic Pack OS lifecycle contract for capability-pack descriptor intake, lock projection, artifact lifecycle refs, and review receipt transport.",
+  "purpose": "Generic Pack OS lifecycle contract for capability-pack descriptor intake, registry install, content-addressed cache, refs-only distribution, lock projection, artifact lifecycle refs, and review receipt transport.",
   "state": "active_l4_structural_baseline",
-  "machine_boundary": "This contract covers OPL-owned pack descriptor transport, resolver/lock projection, content hash refs, artifact locator refs, lifecycle state refs, and reviewer receipt refs. It does not authorize domain truth, artifact body mutation, owner receipt signing, quality verdicts, publication readiness, grant readiness, visual export readiness, App release readiness, or production maturity.",
+  "machine_boundary": "This contract covers OPL-owned pack descriptor transport, registry install records, content-addressed cache records for present local resources, refs-only distribution manifests, resolver/lock projection, content hash refs, artifact locator refs, lifecycle state refs, and reviewer receipt refs. It does not authorize domain truth, artifact body mutation, owner receipt signing, quality verdicts, publication readiness, grant readiness, visual export readiness, App release readiness, or production maturity.",
   "source_module": "src/pack-os.ts",
   "cli_surfaces": {
     "inspect": "opl pack os inspect --descriptor <path>",
+    "install": "opl pack os install --descriptor <path> --registry <path> [--cache-root <dir>]",
+    "registry": "opl pack os registry --registry <path>",
+    "cache": "opl pack os cache --descriptor <path> --cache-root <dir>",
+    "distribute": "opl pack os distribute --descriptor <path> --output <path> [--cache-root <dir>]",
     "lock": "opl pack os lock --descriptor <path>",
     "validate": "opl pack os validate --descriptor <path>",
     "mas_display_smoke": "opl pack os mas-display-smoke --contract <path>"
@@ -46,7 +50,17 @@
       "receipt_ref",
       "artifact_ref"
     ],
-    "relationship_to_domain_packs": "Declarative Domain Pack and generated surfaces remain OPL Pack module responsibilities. Generic Pack OS adds install/resolve/lock/lifecycle transport for capability packs and can transport domain-declared refs without becoming the domain authority."
+    "relationship_to_domain_packs": "Declarative Domain Pack and generated surfaces remain OPL Pack module responsibilities. Generic Pack OS adds install/registry/cache/distribution/resolve/lock/lifecycle transport for capability packs and can transport domain-declared refs without becoming the domain authority."
+  },
+  "registry_cache_distribution_contract": {
+    "registry_surface_kind": "opl_pack_os_registry",
+    "install_receipt_surface_kind": "opl_pack_os_install_receipt",
+    "cache_manifest_surface_kind": "opl_pack_os_cache_manifest",
+    "distribution_manifest_surface_kind": "opl_pack_os_distribution_manifest",
+    "distribution_bundle_surface_kind": "opl_pack_os_distribution_bundle",
+    "cache_layout": "sha256/<sha256>",
+    "registry_rule": "Registry entries are keyed by pack_id@version and store descriptor refs, descriptor hashes, lock ids, resource counts, cache refs, and false-authority boundaries. They do not store domain truth or artifact bodies.",
+    "distribution_rule": "Distribution bundles contain pack locks, cache manifests, registry-entry shape, authority boundaries, and not_claims. They are refs-only manifests and do not become quality, publication, export, App release, or production readiness evidence."
   },
   "lock_contract": {
     "surface_kind": "opl_generic_pack_lock",

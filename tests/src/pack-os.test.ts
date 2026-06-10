@@ -6,8 +6,12 @@ import test from 'node:test';
 
 import {
   buildMasDisplayPackV2PackOsSmoke,
+  buildPackOsCache,
+  buildPackOsDistribution,
   buildPackOsInspection,
+  buildPackOsInstall,
   buildPackOsLock,
+  buildPackOsRegistry,
   buildPackOsValidation,
 } from '../../src/pack-os.ts';
 
@@ -238,6 +242,73 @@ test('Pack OS builds refs-only locks with hashes and false-authority boundaries'
     const validation = buildPackOsValidation(descriptorPath).pack_os_validation;
     assert.equal(validation.status, 'valid');
     assert.equal(validation.checks.every((entry) => entry.status === 'pass'), true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('Pack OS installs descriptors into registry and content-addressed cache without claiming domain authority', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-os-install-'));
+  try {
+    const descriptorPath = writeDescriptor(root);
+    const registryPath = path.join(root, 'registry', 'pack-registry.json');
+    const cacheRoot = path.join(root, 'cache');
+
+    const install = buildPackOsInstall(descriptorPath, registryPath, cacheRoot).pack_os_install;
+    assert.equal(install.surface_kind, 'opl_pack_os_install_receipt');
+    assert.equal(install.status, 'installed');
+    assert.equal(install.registry_entry.registry_key, 'mas.display.example@1.2.3');
+    assert.equal(install.registry_entry.pack_kind, 'display_pack');
+    assert.equal(install.registry_entry.authority_boundary.can_authorize_quality_verdict, false);
+    assert.equal(install.cache_manifest.summary.cached_resource_count, 2);
+    assert.equal(install.cache_manifest.summary.skipped_resource_count, 1);
+    assert.equal(install.not_claims.includes('quality_verdict'), true);
+    assert.equal(install.not_claims.includes('artifact_authority'), true);
+
+    const firstCacheRef = install.cache_manifest.cached_resources[0].cache_ref;
+    assert.match(firstCacheRef, /^sha256\/[0-9a-f]{64}$/);
+    assert.equal(fs.existsSync(path.join(cacheRoot, firstCacheRef)), true);
+
+    const registry = buildPackOsRegistry(registryPath).pack_os_registry;
+    assert.equal(registry.surface_kind, 'opl_pack_os_registry');
+    assert.equal(registry.status, 'available');
+    assert.equal(registry.entries.length, 1);
+    assert.equal(registry.entries[0].registry_key, 'mas.display.example@1.2.3');
+    assert.equal(registry.entries[0].descriptor_sha256, install.registry_entry.descriptor_sha256);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('Pack OS cache and distribution materialize refs-only manifests for pack assets', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-os-distribute-'));
+  try {
+    const descriptorPath = writeDescriptor(root);
+    const cacheRoot = path.join(root, 'cache');
+    const outputPath = path.join(root, 'dist', 'pack-distribution.json');
+
+    const cache = buildPackOsCache(descriptorPath, cacheRoot).pack_os_cache;
+    assert.equal(cache.surface_kind, 'opl_pack_os_cache_manifest');
+    assert.equal(cache.status, 'cached');
+    assert.equal(cache.summary.cached_resource_count, 2);
+    assert.equal(cache.summary.skipped_resource_count, 1);
+    assert.equal(cache.cached_resources.every((entry) => entry.status === 'cached'), true);
+    assert.equal(cache.skipped_resources[0].status, 'external_ref');
+
+    const distribution = buildPackOsDistribution(descriptorPath, outputPath, cacheRoot).pack_os_distribution;
+    assert.equal(distribution.surface_kind, 'opl_pack_os_distribution_manifest');
+    assert.equal(distribution.status, 'written');
+    assert.equal(distribution.output.path, outputPath);
+    assert.match(distribution.output.sha256, /^[0-9a-f]{64}$/);
+    assert.equal(distribution.bundle.pack_lock.lock_id, 'opl-pack-lock:mas.display.example@1.2.3');
+    assert.equal(distribution.bundle.cache_manifest.summary.cached_resource_count, 2);
+    assert.equal(distribution.bundle.not_claims.includes('publication_ready'), true);
+
+    const written = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
+    assert.equal(written.surface_kind, 'opl_pack_os_distribution_bundle');
+    assert.equal(written.pack_lock.lock_id, 'opl-pack-lock:mas.display.example@1.2.3');
+    assert.equal(written.cache_manifest.summary.cached_resource_count, 2);
+    assert.equal(written.authority_boundary.can_mutate_artifact_body, false);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

@@ -215,6 +215,75 @@ test('pack os CLI inspects validates and writes refs-only locks', () => {
   }
 });
 
+test('pack os CLI installs lists caches and distributes generic packs', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-os-cli-install-'));
+  try {
+    const descriptorPath = writeDescriptor(root);
+    const registryPath = path.join(root, 'registry', 'pack-registry.json');
+    const cacheRoot = path.join(root, 'cache');
+    const outputPath = path.join(root, 'dist', 'pack-distribution.json');
+
+    const install = runCli([
+      'pack',
+      'os',
+      'install',
+      '--descriptor',
+      descriptorPath,
+      '--registry',
+      registryPath,
+      '--cache-root',
+      cacheRoot,
+    ]).pack_os_install;
+    assert.equal(install.surface_kind, 'opl_pack_os_install_receipt');
+    assert.equal(install.status, 'installed');
+    assert.equal(install.registry_entry.registry_key, 'mas.display.cli@2.0.0');
+    assert.equal(install.cache_manifest.summary.cached_resource_count, 2);
+    assert.equal(install.registry_entry.authority_boundary.can_write_domain_truth, false);
+
+    const registry = runCli(['pack', 'os', 'registry', '--registry', registryPath]).pack_os_registry;
+    assert.equal(registry.surface_kind, 'opl_pack_os_registry');
+    assert.equal(registry.status, 'available');
+    assert.equal(registry.entries.length, 1);
+    assert.equal(registry.entries[0].registry_key, 'mas.display.cli@2.0.0');
+
+    const cache = runCli([
+      'pack',
+      'os',
+      'cache',
+      '--descriptor',
+      descriptorPath,
+      '--cache-root',
+      cacheRoot,
+    ]).pack_os_cache;
+    assert.equal(cache.surface_kind, 'opl_pack_os_cache_manifest');
+    assert.equal(cache.summary.cached_resource_count, 2);
+    assert.equal(cache.cached_resources.every((entry: { cache_ref: string }) => /^sha256\//.test(entry.cache_ref)), true);
+
+    const distribution = runCli([
+      'pack',
+      'os',
+      'distribute',
+      '--descriptor',
+      descriptorPath,
+      '--output',
+      outputPath,
+      '--cache-root',
+      cacheRoot,
+    ]).pack_os_distribution;
+    assert.equal(distribution.surface_kind, 'opl_pack_os_distribution_manifest');
+    assert.equal(distribution.status, 'written');
+    assert.equal(distribution.bundle.pack_lock.lock_id, 'opl-pack-lock:mas.display.cli@2.0.0');
+    assert.equal(distribution.bundle.cache_manifest.summary.cached_resource_count, 2);
+    assert.equal(distribution.bundle.not_claims.includes('quality_verdict'), true);
+
+    const written = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
+    assert.equal(written.surface_kind, 'opl_pack_os_distribution_bundle');
+    assert.equal(written.authority_boundary.can_authorize_publication_readiness, false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('pack os CLI consumes MAS Display Pack v2 contract as refs-only smoke', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-os-cli-mas-display-'));
   try {
@@ -278,6 +347,10 @@ test('pack os commands are discoverable under OPL Pack help and do not restore p
   assert.equal(help.help.command, 'pack os');
   const subcommands = help.help.subcommands.map((entry: { command: string }) => entry.command);
   assert.equal(subcommands.includes('pack os inspect'), true);
+  assert.equal(subcommands.includes('pack os install'), true);
+  assert.equal(subcommands.includes('pack os registry'), true);
+  assert.equal(subcommands.includes('pack os cache'), true);
+  assert.equal(subcommands.includes('pack os distribute'), true);
   assert.equal(subcommands.includes('pack os lock'), true);
   assert.equal(subcommands.includes('pack os validate'), true);
   assert.equal(subcommands.includes('pack os mas-display-smoke'), true);

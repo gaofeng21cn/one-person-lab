@@ -355,6 +355,113 @@ function parseDescriptorArgs(args: string[], usageText: string) {
   return { descriptor, output };
 }
 
+function requireCliValue(option: string, remaining: string[], usageText: string) {
+  const value = remaining.shift() ?? null;
+  if (!value) {
+    throw usage(`${usageText} requires a value after ${option}.`, { required: [`${option} <path>`] });
+  }
+  return value;
+}
+
+function parseInstallArgs(args: string[], usageText: string) {
+  let descriptor: string | null = null;
+  let registry: string | null = null;
+  let cacheRoot: string | null = null;
+  const remaining = [...args];
+  while (remaining.length > 0) {
+    const token = remaining.shift()!;
+    if (token === '--descriptor') {
+      descriptor = requireCliValue(token, remaining, usageText);
+      continue;
+    }
+    if (token === '--registry') {
+      registry = requireCliValue(token, remaining, usageText);
+      continue;
+    }
+    if (token === '--cache-root') {
+      cacheRoot = requireCliValue(token, remaining, usageText);
+      continue;
+    }
+    throw usage(`Unknown pack os option: ${token}.`, { token, usage: usageText });
+  }
+  if (!descriptor || !registry) {
+    throw usage(`${usageText} requires --descriptor <path> and --registry <path>.`, {
+      required: ['--descriptor <path>', '--registry <path>'],
+    });
+  }
+  return { descriptor, registry, cacheRoot };
+}
+
+function parseRegistryArgs(args: string[], usageText: string) {
+  let registry: string | null = null;
+  const remaining = [...args];
+  while (remaining.length > 0) {
+    const token = remaining.shift()!;
+    if (token === '--registry') {
+      registry = requireCliValue(token, remaining, usageText);
+      continue;
+    }
+    throw usage(`Unknown pack os option: ${token}.`, { token, usage: usageText });
+  }
+  if (!registry) {
+    throw usage(`${usageText} requires --registry <path>.`, { required: ['--registry <path>'] });
+  }
+  return { registry };
+}
+
+function parseCacheArgs(args: string[], usageText: string) {
+  let descriptor: string | null = null;
+  let cacheRoot: string | null = null;
+  const remaining = [...args];
+  while (remaining.length > 0) {
+    const token = remaining.shift()!;
+    if (token === '--descriptor') {
+      descriptor = requireCliValue(token, remaining, usageText);
+      continue;
+    }
+    if (token === '--cache-root') {
+      cacheRoot = requireCliValue(token, remaining, usageText);
+      continue;
+    }
+    throw usage(`Unknown pack os option: ${token}.`, { token, usage: usageText });
+  }
+  if (!descriptor || !cacheRoot) {
+    throw usage(`${usageText} requires --descriptor <path> and --cache-root <dir>.`, {
+      required: ['--descriptor <path>', '--cache-root <dir>'],
+    });
+  }
+  return { descriptor, cacheRoot };
+}
+
+function parseDistributionArgs(args: string[], usageText: string) {
+  let descriptor: string | null = null;
+  let output: string | null = null;
+  let cacheRoot: string | null = null;
+  const remaining = [...args];
+  while (remaining.length > 0) {
+    const token = remaining.shift()!;
+    if (token === '--descriptor') {
+      descriptor = requireCliValue(token, remaining, usageText);
+      continue;
+    }
+    if (token === '--output') {
+      output = requireCliValue(token, remaining, usageText);
+      continue;
+    }
+    if (token === '--cache-root') {
+      cacheRoot = requireCliValue(token, remaining, usageText);
+      continue;
+    }
+    throw usage(`Unknown pack os option: ${token}.`, { token, usage: usageText });
+  }
+  if (!descriptor || !output) {
+    throw usage(`${usageText} requires --descriptor <path> and --output <path>.`, {
+      required: ['--descriptor <path>', '--output <path>'],
+    });
+  }
+  return { descriptor, output, cacheRoot };
+}
+
 function parseContractArgs(args: string[], usageText: string) {
   let contract: string | null = null;
   let output: string | null = null;
@@ -383,6 +490,16 @@ function parseContractArgs(args: string[], usageText: string) {
   }
 
   return { contract, output };
+}
+
+function writeJsonFile(outputPath: string, payload: unknown) {
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, `${JSON.stringify(payload, null, 2)}\n`);
+  return {
+    path: outputPath,
+    sha256: sha256File(outputPath),
+    status: 'written',
+  };
 }
 
 function buildMasDisplayPackV2Descriptor(contractPath: string) {
@@ -768,8 +885,265 @@ function buildPackOsLockFromLoaded(loaded: ReturnType<typeof loadGenericPackDesc
   };
 }
 
+function descriptorResourcePath(descriptorPath: string, ref: string) {
+  const descriptorDir = path.dirname(path.resolve(descriptorPath));
+  const normalizedRef = normalizeRelativeRef(ref);
+  const absolutePath = path.resolve(descriptorDir, normalizedRef);
+  if (!absolutePath.startsWith(`${descriptorDir}${path.sep}`) && absolutePath !== descriptorDir) {
+    throw shape('Pack resource refs must resolve inside the descriptor directory.', { ref });
+  }
+  return absolutePath;
+}
+
+function registryKey(packId: string, version: string) {
+  return `${packId}@${version}`;
+}
+
+function packOsNotClaims() {
+  return [
+    'domain_ready',
+    'quality_verdict',
+    'artifact_authority',
+    'publication_ready',
+    'grant_ready',
+    'visual_export_ready',
+    'app_release_ready',
+    'production_ready',
+  ];
+}
+
+function buildRegistryEntry(lock: ReturnType<typeof buildPackOsLockFromLoaded>['pack_lock']) {
+  return {
+    registry_key: registryKey(lock.pack_id, lock.version),
+    pack_id: lock.pack_id,
+    version: lock.version,
+    pack_kind: lock.pack_kind,
+    owner: lock.owner,
+    descriptor_ref: lock.descriptor_ref,
+    descriptor_sha256: lock.descriptor_sha256,
+    lock_id: lock.lock_id,
+    install_status: 'installed',
+    installed_at: 'recorded_by_opl_pack_os',
+    resource_count: lock.summary.resource_count,
+    present_resource_count: lock.summary.present_resource_count,
+    receipt_ref_count: lock.summary.receipt_ref_count,
+    artifact_locator_ref_count: lock.summary.artifact_locator_ref_count,
+    authority_boundary: lock.authority_boundary,
+    not_claims: lock.not_claims,
+  };
+}
+
+function emptyPackOsRegistry(registryPath: string) {
+  return {
+    schema_version: 1,
+    surface_kind: 'opl_pack_os_registry',
+    registry_owner: 'one-person-lab',
+    registry_path: registryPath,
+    entries: [] as JsonRecord[],
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_mutate_artifact_body: false,
+      can_sign_domain_owner_receipt: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_publication_readiness: false,
+      can_authorize_grant_readiness: false,
+      can_authorize_visual_export_readiness: false,
+      can_authorize_app_release_readiness: false,
+      provider_completion_is_pack_quality_ready: false,
+    },
+    not_claims: packOsNotClaims(),
+  };
+}
+
+function loadPackOsRegistryRecord(registryPath: string) {
+  const resolvedPath = path.resolve(registryPath);
+  if (!fs.existsSync(resolvedPath)) {
+    return emptyPackOsRegistry(resolvedPath);
+  }
+  const payload = readJsonFile(resolvedPath);
+  if (payload.surface_kind !== 'opl_pack_os_registry') {
+    throw shape('Pack OS registry surface_kind must be opl_pack_os_registry.', {
+      registry: resolvedPath,
+      surface_kind: payload.surface_kind,
+    });
+  }
+  if (!Array.isArray(payload.entries)) {
+    throw shape('Pack OS registry entries must be an array.', { registry: resolvedPath });
+  }
+  return {
+    ...emptyPackOsRegistry(resolvedPath),
+    ...payload,
+    registry_path: resolvedPath,
+    entries: payload.entries,
+  };
+}
+
+function writePackOsRegistry(registryPath: string, registry: ReturnType<typeof emptyPackOsRegistry>) {
+  const resolvedPath = path.resolve(registryPath);
+  writeJsonFile(resolvedPath, registry);
+  return resolvedPath;
+}
+
+function buildPackOsCacheFromLoaded(
+  loaded: ReturnType<typeof loadGenericPackDescriptor>,
+  cacheRoot: string,
+) {
+  const resolvedCacheRoot = path.resolve(cacheRoot);
+  fs.mkdirSync(path.join(resolvedCacheRoot, 'sha256'), { recursive: true });
+  const cachedResources = [];
+  const skippedResources = [];
+  for (const resource of loaded.descriptor.resources) {
+    if (resource.ref_kind !== 'local_file' || resource.status !== 'present' || typeof resource.sha256 !== 'string') {
+      skippedResources.push({
+        resource_id: resource.resource_id,
+        role: resource.role,
+        ref: resource.ref,
+        status: resource.status,
+        ref_kind: resource.ref_kind,
+        reason: resource.ref_kind === 'external_ref' ? 'external_ref_not_cached' : 'missing_local_file_not_cached',
+      });
+      continue;
+    }
+    const sourcePath = descriptorResourcePath(loaded.descriptor_path, resource.ref);
+    const cacheRef = `sha256/${resource.sha256}`;
+    const cachePath = path.join(resolvedCacheRoot, cacheRef);
+    fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+    if (!fs.existsSync(cachePath)) {
+      fs.copyFileSync(sourcePath, cachePath);
+    }
+    cachedResources.push({
+      resource_id: resource.resource_id,
+      role: resource.role,
+      ref: resource.ref,
+      source_path: sourcePath,
+      sha256: resource.sha256,
+      cache_ref: cacheRef,
+      cache_path: cachePath,
+      status: 'cached',
+    });
+  }
+
+  return {
+    surface_kind: 'opl_pack_os_cache_manifest',
+    contract_ref: 'contracts/opl-framework/pack-os-contract.json',
+    cache_owner: 'one-person-lab',
+    pack_id: loaded.descriptor.pack_id,
+    version: loaded.descriptor.version,
+    pack_kind: loaded.descriptor.pack_kind,
+    descriptor_ref: loaded.descriptor_path,
+    descriptor_sha256: loaded.descriptor_sha256,
+    cache_root: resolvedCacheRoot,
+    status: cachedResources.length > 0 ? 'cached' : 'refs_only_no_local_files_cached',
+    cached_resources: cachedResources,
+    skipped_resources: skippedResources,
+    summary: {
+      cached_resource_count: cachedResources.length,
+      skipped_resource_count: skippedResources.length,
+      resource_count: loaded.descriptor.resources.length,
+    },
+    authority_boundary: loaded.descriptor.authority_boundary,
+    not_claims: packOsNotClaims(),
+  };
+}
+
 export function buildPackOsLock(descriptorPath: string) {
   return buildPackOsLockFromLoaded(loadGenericPackDescriptor(descriptorPath));
+}
+
+export function buildPackOsCache(descriptorPath: string, cacheRoot: string) {
+  const loaded = loadGenericPackDescriptor(descriptorPath);
+  return {
+    version: 'g2',
+    pack_os_cache: buildPackOsCacheFromLoaded(loaded, cacheRoot),
+  };
+}
+
+export function buildPackOsRegistry(registryPath: string) {
+  const registry = loadPackOsRegistryRecord(registryPath);
+  return {
+    version: 'g2',
+    pack_os_registry: {
+      ...registry,
+      status: registry.entries.length > 0 ? 'available' : 'empty',
+      summary: {
+        entry_count: registry.entries.length,
+      },
+    },
+  };
+}
+
+export function buildPackOsInstall(descriptorPath: string, registryPath: string, cacheRoot?: string | null) {
+  const loaded = loadGenericPackDescriptor(descriptorPath);
+  const lock = buildPackOsLockFromLoaded(loaded).pack_lock;
+  const resolvedRegistryPath = path.resolve(registryPath);
+  const resolvedCacheRoot = path.resolve(cacheRoot ?? path.join(path.dirname(resolvedRegistryPath), 'pack-cache'));
+  const cacheManifest = buildPackOsCacheFromLoaded(loaded, resolvedCacheRoot);
+  const registry = loadPackOsRegistryRecord(resolvedRegistryPath);
+  const entry = {
+    ...buildRegistryEntry(lock),
+    cache_root: resolvedCacheRoot,
+    cache_status: cacheManifest.status,
+    cached_resource_count: cacheManifest.summary.cached_resource_count,
+  };
+  const nextEntries = [
+    ...registry.entries.filter((candidate) => {
+      if (!isRecord(candidate)) {
+        return false;
+      }
+      return candidate.registry_key !== entry.registry_key;
+    }),
+    entry,
+  ];
+  const nextRegistry = {
+    ...registry,
+    entries: nextEntries,
+  };
+  const registryOutputPath = writePackOsRegistry(resolvedRegistryPath, nextRegistry);
+  return {
+    version: 'g2',
+    pack_os_install: {
+      surface_kind: 'opl_pack_os_install_receipt',
+      contract_ref: 'contracts/opl-framework/pack-os-contract.json',
+      status: 'installed',
+      registry_path: registryOutputPath,
+      registry_entry: entry,
+      cache_manifest: cacheManifest,
+      pack_lock: lock,
+      authority_boundary: lock.authority_boundary,
+      not_claims: lock.not_claims,
+    },
+  };
+}
+
+export function buildPackOsDistribution(descriptorPath: string, outputPath: string, cacheRoot?: string | null) {
+  const loaded = loadGenericPackDescriptor(descriptorPath);
+  const lock = buildPackOsLockFromLoaded(loaded).pack_lock;
+  const resolvedOutputPath = path.resolve(outputPath);
+  const resolvedCacheRoot = path.resolve(cacheRoot ?? path.join(path.dirname(resolvedOutputPath), 'pack-cache'));
+  const cacheManifest = buildPackOsCacheFromLoaded(loaded, resolvedCacheRoot);
+  const bundle = {
+    surface_kind: 'opl_pack_os_distribution_bundle',
+    contract_ref: 'contracts/opl-framework/pack-os-contract.json',
+    bundle_role: 'refs_only_pack_distribution_manifest',
+    pack_lock: lock,
+    cache_manifest: cacheManifest,
+    registry_entry: buildRegistryEntry(lock),
+    authority_boundary: lock.authority_boundary,
+    not_claims: lock.not_claims,
+  };
+  const output = writeJsonFile(resolvedOutputPath, bundle);
+  return {
+    version: 'g2',
+    pack_os_distribution: {
+      surface_kind: 'opl_pack_os_distribution_manifest',
+      contract_ref: 'contracts/opl-framework/pack-os-contract.json',
+      status: 'written',
+      output,
+      bundle,
+      authority_boundary: lock.authority_boundary,
+      not_claims: lock.not_claims,
+    },
+  };
 }
 
 export function buildPackOsValidation(descriptorPath: string) {
@@ -824,6 +1198,32 @@ export function runPackOsInspectCommand(args: string[]) {
     });
   }
   return buildPackOsInspection(parsed.descriptor);
+}
+
+export function runPackOsInstallCommand(args: string[]) {
+  const parsed = parseInstallArgs(
+    args,
+    'opl pack os install --descriptor <path> --registry <path> [--cache-root <dir>]',
+  );
+  return buildPackOsInstall(parsed.descriptor, parsed.registry, parsed.cacheRoot);
+}
+
+export function runPackOsRegistryCommand(args: string[]) {
+  const parsed = parseRegistryArgs(args, 'opl pack os registry --registry <path>');
+  return buildPackOsRegistry(parsed.registry);
+}
+
+export function runPackOsCacheCommand(args: string[]) {
+  const parsed = parseCacheArgs(args, 'opl pack os cache --descriptor <path> --cache-root <dir>');
+  return buildPackOsCache(parsed.descriptor, parsed.cacheRoot);
+}
+
+export function runPackOsDistributeCommand(args: string[]) {
+  const parsed = parseDistributionArgs(
+    args,
+    'opl pack os distribute --descriptor <path> --output <path> [--cache-root <dir>]',
+  );
+  return buildPackOsDistribution(parsed.descriptor, parsed.output, parsed.cacheRoot);
 }
 
 export function runPackOsValidateCommand(args: string[]) {

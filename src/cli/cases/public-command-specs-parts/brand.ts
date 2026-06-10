@@ -32,9 +32,13 @@ import {
   openQueueDb,
 } from '../../../family-runtime-store.ts';
 import {
+  runPackOsCacheCommand,
+  runPackOsDistributeCommand,
+  runPackOsInstallCommand,
   runPackOsInspectCommand,
   runPackOsLockCommand,
   runPackOsMasDisplaySmokeCommand,
+  runPackOsRegistryCommand,
   runPackOsValidateCommand,
 } from '../../../pack-os.ts';
 import { runFamilyRuntime } from '../../../family-runtime.ts';
@@ -150,6 +154,44 @@ export function buildBrandCommandSpecs(
       ],
       group: 'brand-pack',
       handler: runPackOsInspectCommand,
+    },
+    'pack os install': {
+      usage: 'opl pack os install --descriptor <path> --registry <path> [--cache-root <dir>]',
+      summary: 'Install a generic capability-pack descriptor into the OPL refs-only Pack OS registry and cache.',
+      examples: [
+        'opl pack os install --descriptor display_pack.json --registry build/pack-registry.json --json',
+        'opl pack os install --descriptor display_pack.json --registry build/pack-registry.json --cache-root build/pack-cache --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackOsInstallCommand,
+    },
+    'pack os registry': {
+      usage: 'opl pack os registry --registry <path>',
+      summary: 'Read an OPL Pack OS registry without claiming pack quality or domain readiness.',
+      examples: [
+        'opl pack os registry --registry build/pack-registry.json --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackOsRegistryCommand,
+    },
+    'pack os cache': {
+      usage: 'opl pack os cache --descriptor <path> --cache-root <dir>',
+      summary: 'Materialize present local pack resources into an OPL content-addressed cache.',
+      examples: [
+        'opl pack os cache --descriptor display_pack.json --cache-root build/pack-cache --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackOsCacheCommand,
+    },
+    'pack os distribute': {
+      usage: 'opl pack os distribute --descriptor <path> --output <path> [--cache-root <dir>]',
+      summary: 'Write a refs-only Pack OS distribution bundle manifest for a generic capability pack.',
+      examples: [
+        'opl pack os distribute --descriptor display_pack.json --output build/pack-distribution.json --json',
+        'opl pack os distribute --descriptor display_pack.json --output build/pack-distribution.json --cache-root build/pack-cache --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackOsDistributeCommand,
     },
     'pack os lock': {
       usage: 'opl pack os lock --descriptor <path> [--output <path>]',

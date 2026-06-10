@@ -187,6 +187,30 @@ function exactStringArray(value: unknown, expected: readonly string[], field: st
 function validateCliSurfaces(section: Record<string, unknown>, filePath: string) {
   return {
     inspect: expectExactString(section.inspect, 'opl pack os inspect --descriptor <path>', 'cli_surfaces.inspect', filePath),
+    install: expectExactString(
+      section.install,
+      'opl pack os install --descriptor <path> --registry <path> [--cache-root <dir>]',
+      'cli_surfaces.install',
+      filePath,
+    ),
+    registry: expectExactString(
+      section.registry,
+      'opl pack os registry --registry <path>',
+      'cli_surfaces.registry',
+      filePath,
+    ),
+    cache: expectExactString(
+      section.cache,
+      'opl pack os cache --descriptor <path> --cache-root <dir>',
+      'cli_surfaces.cache',
+      filePath,
+    ),
+    distribute: expectExactString(
+      section.distribute,
+      'opl pack os distribute --descriptor <path> --output <path> [--cache-root <dir>]',
+      'cli_surfaces.distribute',
+      filePath,
+    ),
     lock: expectExactString(section.lock, 'opl pack os lock --descriptor <path>', 'cli_surfaces.lock', filePath),
     validate: expectExactString(section.validate, 'opl pack os validate --descriptor <path>', 'cli_surfaces.validate', filePath),
     mas_display_smoke: expectExactString(
@@ -261,6 +285,57 @@ function validateLockContract(section: Record<string, unknown>, filePath: string
     lock_projection_rule: expectString(
       section.lock_projection_rule,
       'lock_contract.lock_projection_rule',
+      filePath,
+    ),
+  };
+}
+
+function validateRegistryCacheDistributionContract(section: Record<string, unknown>, filePath: string) {
+  return {
+    registry_surface_kind: expectExactString(
+      section.registry_surface_kind,
+      'opl_pack_os_registry',
+      'registry_cache_distribution_contract.registry_surface_kind',
+      filePath,
+    ),
+    install_receipt_surface_kind: expectExactString(
+      section.install_receipt_surface_kind,
+      'opl_pack_os_install_receipt',
+      'registry_cache_distribution_contract.install_receipt_surface_kind',
+      filePath,
+    ),
+    cache_manifest_surface_kind: expectExactString(
+      section.cache_manifest_surface_kind,
+      'opl_pack_os_cache_manifest',
+      'registry_cache_distribution_contract.cache_manifest_surface_kind',
+      filePath,
+    ),
+    distribution_manifest_surface_kind: expectExactString(
+      section.distribution_manifest_surface_kind,
+      'opl_pack_os_distribution_manifest',
+      'registry_cache_distribution_contract.distribution_manifest_surface_kind',
+      filePath,
+    ),
+    distribution_bundle_surface_kind: expectExactString(
+      section.distribution_bundle_surface_kind,
+      'opl_pack_os_distribution_bundle',
+      'registry_cache_distribution_contract.distribution_bundle_surface_kind',
+      filePath,
+    ),
+    cache_layout: expectExactString(
+      section.cache_layout,
+      'sha256/<sha256>',
+      'registry_cache_distribution_contract.cache_layout',
+      filePath,
+    ),
+    registry_rule: expectString(
+      section.registry_rule,
+      'registry_cache_distribution_contract.registry_rule',
+      filePath,
+    ),
+    distribution_rule: expectString(
+      section.distribution_rule,
+      'registry_cache_distribution_contract.distribution_rule',
       filePath,
     ),
   };
@@ -448,6 +523,10 @@ export function validatePackOsContract(filePath: string, value: unknown): PackOs
     source_module: expectExactString(root.source_module, 'src/pack-os.ts', 'source_module', filePath),
     cli_surfaces: validateCliSurfaces(requireSection(root, 'cli_surfaces', filePath), filePath),
     descriptor_contract: validateDescriptorContract(requireSection(root, 'descriptor_contract', filePath), filePath),
+    registry_cache_distribution_contract: validateRegistryCacheDistributionContract(
+      requireSection(root, 'registry_cache_distribution_contract', filePath),
+      filePath,
+    ),
     lock_contract: validateLockContract(requireSection(root, 'lock_contract', filePath), filePath),
     lifecycle_model: validateLifecycleModel(requireSection(root, 'lifecycle_model', filePath), filePath),
     authority_boundary: validateAuthorityBoundary(requireSection(root, 'authority_boundary', filePath), filePath),

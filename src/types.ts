@@ -796,6 +796,10 @@ export interface PackOsContract {
   source_module: string;
   cli_surfaces: {
     inspect: string;
+    install: string;
+    registry: string;
+    cache: string;
+    distribute: string;
     lock: string;
     validate: string;
     mas_display_smoke: string;
@@ -806,6 +810,16 @@ export interface PackOsContract {
     allowed_pack_kinds: string[];
     resource_roles: string[];
     relationship_to_domain_packs: string;
+  };
+  registry_cache_distribution_contract: {
+    registry_surface_kind: string;
+    install_receipt_surface_kind: string;
+    cache_manifest_surface_kind: string;
+    distribution_manifest_surface_kind: string;
+    distribution_bundle_surface_kind: string;
+    cache_layout: string;
+    registry_rule: string;
+    distribution_rule: string;
   };
   lock_contract: {
     surface_kind: string;
