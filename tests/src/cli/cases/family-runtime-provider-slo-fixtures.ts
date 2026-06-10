@@ -11,7 +11,17 @@ export type TemporalWorkerStatusKind =
   | 'worker_dependency_unavailable'
   | 'ready';
 
-export function temporalWorkerStatus(status: TemporalWorkerStatusKind) {
+export function temporalWorkerStatus(
+  status: TemporalWorkerStatusKind,
+  input: {
+    mutationGuardStatus?: string;
+    mutationGuardAllowed?: boolean;
+    serverReachable?: boolean;
+  } = {},
+) {
+  const serverReachable = input.serverReachable ?? true;
+  const mutationGuardStatus = input.mutationGuardStatus ?? 'allowed';
+  const mutationGuardAllowed = input.mutationGuardAllowed ?? true;
   const visibilityReadiness = buildTemporalStageAttemptVisibilityReadiness({
     namespace: 'default',
     observedCustomAttributes: {
@@ -35,7 +45,7 @@ export function temporalWorkerStatus(status: TemporalWorkerStatusKind) {
     inspection_detail: 'full',
     readiness_status: status,
     worker_ready: status === 'ready',
-    server_reachable: true,
+    server_reachable: serverReachable,
     address: '127.0.0.1:7233',
     address_source: 'managed_local_service_state',
     namespace: 'default',
@@ -81,13 +91,13 @@ export function temporalWorkerStatus(status: TemporalWorkerStatusKind) {
       provider_kind: 'temporal',
       service_status: 'running',
       address: '127.0.0.1:7233',
-      server_reachable: true,
+      server_reachable: serverReachable,
     },
     visibility_readiness: visibilityReadiness,
     worker_mutation_guard: {
       surface_kind: 'temporal_worker_mutation_guard',
-      mutation_guard_status: 'allowed',
-      allowed: true,
+      mutation_guard_status: mutationGuardStatus,
+      allowed: mutationGuardAllowed,
       state_dir_explicit: true,
       explicit_developer_override: false,
     },
