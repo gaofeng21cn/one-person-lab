@@ -36,6 +36,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - Progress Reconciler 负责比较 desired/current，输出唯一下一 safe action、owner/human gate wait、provider repair、dead-letter redrive 或 OPL runtime blocker；候选动作冲突时必须按 current owner delta、StageRun identity、source fingerprint、lease、execution authorization、closeout binding 和 accepted answer shape fail closed。
 - Reconciler、handoff、human gate 和 provider observation 只能传 refs、typed blocker requirement、owner answer shape、repair command 或 runtime observation；不得创建 domain owner receipt、domain typed blocker、quality verdict、artifact/memory truth、domain ready、App release ready、production ready 或 L5 证据闭合结论。
 - 这是 Runway `L4 executable baseline` 到 L5 的结构前置能力，不是 `production ready` 或 `L5 production operating maturity`。L5 仍需真实长跑/恢复、跨 agent scaleout、operator repair loop、release/install 和 owner acceptance evidence。
+- 2026-06-10 follow-through：Runway L4 可执行读面固定为 `opl runway readiness|reconcile|handoff-gates|recovery-repair|control-loop status --json` 加 `status|inspect|interfaces|validate|doctor` 基线；contract foldback 必须把这些 surface 写成 provider readiness、desired/current reconcile、handoff gate、repair plan、唯一下一 safe action 和 false-authority flags。Temporal 未配置、service down、worker not ready 或 scheduler missing 统一读作 `provider_not_ready` / OPL repair action；不得写成 domain ready、owner receipt、typed blocker、quality verdict、artifact ready、production ready 或 Runway L5 long-soak closure。
 
 ### 决策：普通推进主干与审计证据旁路分层治理
 

@@ -888,7 +888,9 @@
           "opl runway inspect --json",
           "opl runway readiness --json",
           "opl runway reconcile --json",
-          "opl runway control-loop status --json"
+          "opl runway control-loop status --json",
+          "opl runway handoff-gates --json",
+          "opl runway recovery-repair --json"
         ]
       },
       "native_cli_family": {
@@ -950,6 +952,18 @@
             "command": "opl runway control-loop status --json",
             "mutation": false,
             "descriptor_only": true
+          },
+          {
+            "action_id": "runway_handoff_gates",
+            "command": "opl runway handoff-gates --json",
+            "mutation": false,
+            "descriptor_only": true
+          },
+          {
+            "action_id": "runway_recovery_repair",
+            "command": "opl runway recovery-repair --json",
+            "mutation": false,
+            "descriptor_only": true
           }
         ],
         "projection_refs": [
@@ -957,7 +971,9 @@
           "opl app state --profile full --json",
           "app_projection:runway_control_loop_status",
           "app_projection:runway_readiness",
-          "app_projection:runway_reconcile"
+          "app_projection:runway_reconcile",
+          "app_projection:runway_handoff_gates",
+          "app_projection:runway_recovery_repair"
         ]
       },
       "descriptor_surface": {
@@ -982,7 +998,9 @@
           "opl contract validate --json",
           "opl runway readiness --json",
           "opl runway reconcile --json",
-          "opl runway control-loop status --json"
+          "opl runway control-loop status --json",
+          "opl runway handoff-gates --json",
+          "opl runway recovery-repair --json"
         ],
         "checks": [
           "module_surface_contract",
@@ -1015,6 +1033,7 @@
           "forbidden_claims_present",
           "control_loop_readiness_present",
           "progress_reconciler_present",
+          "provider_not_ready_repair_boundary_present",
           "false_semantic_authority_boundary"
         ],
         "fail_closed_on": [
@@ -1025,6 +1044,8 @@
           "forbidden_claim_missing",
           "missing_control_loop_readiness_surface",
           "missing_progress_reconciler_surface",
+          "provider_not_ready_claimed_as_domain_ready",
+          "repair_action_claimed_as_l5_evidence",
           "semantic_authority_overclaim"
         ]
       },
@@ -1039,7 +1060,9 @@
           "human_doc:opl_status",
           "opl runway readiness --json",
           "opl runway reconcile --json",
-          "opl runway control-loop status --json"
+          "opl runway control-loop status --json",
+          "opl runway handoff-gates --json",
+          "opl runway recovery-repair --json"
         ],
         "not_claims": [
           "domain_owner_closeout_generated_by_opl",
@@ -1052,7 +1075,10 @@
           "runway_creates_typed_blocker",
           "provider_completion_is_semantic_progress",
           "runtime_provider_signs_owner_answer",
-          "provider_completion_is_domain_completion"
+          "provider_completion_is_domain_completion",
+          "provider_not_ready_is_domain_ready",
+          "repair_action_is_l5_evidence",
+          "no_open_runtime_blocker_is_l5_closure"
         ]
       },
       "authority_boundary": {
@@ -1079,9 +1105,12 @@
         "runway_creates_typed_blocker",
         "provider_completion_is_semantic_progress",
         "runtime_provider_signs_owner_answer",
-        "provider_completion_is_domain_completion"
+        "provider_completion_is_domain_completion",
+        "provider_not_ready_is_domain_ready",
+        "repair_action_is_l5_evidence",
+        "no_open_runtime_blocker_is_l5_closure"
       ],
-      "notes": "Runway owns the control-loop runtime module: runtime intent admission, queue/readiness reconciliation, provider attempt orchestration refs, handoff gates, and recovery repair. Temporal is durable substrate, worker supervision is process liveness, and the Progress Reconciler is the semantic/execution loop projection; Runway does not write domain truth, sign owner receipts, create typed blockers, or convert provider completion into domain readiness."
+      "notes": "Runway owns the control-loop runtime module: runtime intent admission, queue/readiness reconciliation, provider attempt orchestration refs, handoff gates, and recovery repair. The executable read surfaces are status/inspect/interfaces/validate/doctor plus readiness/reconcile/handoff-gates/recovery-repair/control-loop status. Temporal not configured, service down, worker not ready, or scheduler missing is provider_not_ready/OPL repair action, not domain readiness. Temporal is durable substrate, worker supervision is process liveness, and the Progress Reconciler is the semantic/execution loop projection; Runway does not write domain truth, sign owner receipts, create typed blockers, convert provider completion into domain readiness, or close L5 production long-soak."
     },
     {
       "module_id": "vault",
