@@ -44,29 +44,34 @@ OPL Agent OS
 | `W6-app-cockpit-consumption` | OPL + App | Console/App projection contracts | App cockpit first screen 只显示 owner、delta、accepted answer shape、hard gate、typed blocker 和 drilldown refs。 | App contract tests、manual screenshot when App changed |
 | `W7-production-evidence-soak` | OPL + domain owners | runtime evidence contracts、real owner receipts | 用真实 owner receipt、typed blocker、human gate、long-soak、release/install 和 owner acceptance 关闭 production evidence。 | repo-native soak、owner acceptance refs |
 
-默认从 `W0` 开始；只有当两条 work order 的写集、source of truth、验证命令和禁止范围完全分离时，才并行开 worktree。`W0-W6` 关闭的是 structural / functional landing，`W7` 才能进入 production evidence；不能用前者替代后者。
+当前已经完成 `W0` 机器读面、`W4` domain kernel manifest 和 `W6` App cockpit contract 的第一轮结构落地；`W3` 的 external-learning foldback 已固定为 Capability Registry 口径。后续从 `W1`、`W3` 的 resolver/ABI 实现、`W5` parity scaleout 和 `W7` production evidence soak 继续推进。只有当两条 work order 的写集、source of truth、验证命令和禁止范围完全分离时，才并行开 worktree。`W0-W6` 关闭的是 structural / functional landing，`W7` 才能进入 production evidence；不能用前者替代后者。
 
-## 当前执行 Baton
+## 当前落地主入口
 
-当前下一条执行 baton 是 `W0-cross-agent-conformance-readout`。它的目标不是继续扩写规划，也不是追 MAS owner answer，而是把 `foundry_agent_os_standard` 变成 `opl agents conformance --family-defaults --json` 可稳定消费、可测试、可审计的读面。
+当前后续开发仍从本文开工，但不要重开 `W0`。`W0-cross-agent-conformance-readout` 已落为 `opl_foundry_agent_os_conformance` 读面：它把 `foundry_agent_os_standard` 变成 `opl agents conformance --family-defaults --json` 可稳定消费、可测试、可审计的结构字段。
 
-`W0` 的 source of truth 固定为：
+后续 source of truth 固定为：
 
 - 本文与 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。
 - `contracts/opl-framework/target-operating-architecture-contract.json#foundry_agent_os_standard`。
 - `contracts/opl-framework/brand-module-registry.json`、`brand-module-surfaces.json`、`brand-module-l5-operating-evidence.json`。
 - live `opl framework readiness --family-defaults --json`、`opl agents conformance --family-defaults --json`、`opl brand-modules l5-status --json`。
+- MAS/MAG/RCA/OMA 各自 `contracts/foundry-agent-os-domain-kernel-manifest.json`。
+- App `contracts/app-runtime-bridge.json`、`contracts/app-gui-product-contract.json` 和 fast-state fixture。
 
-`W0` 当前必须处理的 live 起点是：framework readiness 仍有 owner-delta hard blocker，当前 owner 仍指向 `med-autoscience`；cross-agent conformance 当前是 `3 passed / 1 blocked`，blocked agent 是 `opl-meta-agent`，需要先审计 `oma_boundary_unexpected_stage:target-agent-takeover` 是否属于 Foundry Agent OS 读面缺口、OMA target-delta 缺口、stage boundary drift，还是应被归入 domain-owned live evidence tail。
+已落地的结构面：
 
-`W0` 的最小完成门：
+- `W0`：`opl agents conformance --family-defaults --json` 暴露 `foundry_agent_os_conformance`，包含 pattern、required claims、capability registry fail-open policy、per-domain default read root、generated surface/source-of-work status、domain authority kernel status 和 false-authority flags。
+- `W4`：MAS/MAG/RCA/OMA 均新增 `contracts/foundry-agent-os-domain-kernel-manifest.json` 与 focused tests，声明 retained authority kernel、OPL upcollect surfaces、owner receipt / typed blocker signer 和 non-claims。
+- `W6`：App contract/fixture/validator 固定 first screen / ordinary cockpit 只从 `current_owner_delta` 派生 default next action，raw worklist / raw evidence / provider trace / release evidence 只进入 drilldown。
+- External-learning：后续优化折回 `W3/W4/W7`，不再在 MAS 或其他 domain 仓另建 selector、第二 active backlog、always-on sidecar 或默认 preflight。
 
-- conformance JSON 暴露 `foundry_agent_os_standard` 或等价 structured readout，至少包含 per-agent default read root、target delta present、generated surface owner/status、false-authority flags、domain-kernel authority owner、live evidence still-required / blocked reason。
-- OPL 读面明确 `conformance pass != domain ready`、`generated surface owner = one-person-lab` 不等于 domain authority transfer、`current_owner_delta` 仍是 ordinary planning root。
-- OMA blocker 有明确分类：修复 conformance projection、修复 OMA target delta、记录 domain-owned blocker，或证明它是 active evidence tail；不能用 suite pass、controlled canary 或 docs foldback 伪关闭。
-- 更新 focused tests / contracts / docs 中必要的机器边界；不新增第二 active backlog，不新增 App autonomous lane，不生成 MAS owner receipt、typed blocker、quality gate receipt 或 closeout binding payload。
+后续最小完成门：
 
-建议为 `W0` 使用独立执行对话或独立 worktree。该对话只能承载这一条 work order，完成后把 diff、验证、live readout 和残余 blocker 折回本文或 `current-state-vs-ideal-gap.md`；对话本身不是长期计划 owner。
+- `W1/W5` 必须证明 generated descriptor bundle 与 direct target 返回同一 accepted answer shape，且 generated/hosted surface 不写 domain truth、不签 receipt、不创建 typed blocker。
+- `W3` 必须把 Capability Registry resolver/selector 绑定 current owner delta；optional capability ref fail open，route-required hard-boundary 缺失才升级为 domain/gate-owned blocker。
+- `W7` 必须用真实 owner receipt、typed blocker、human gate、reviewer/quality/export receipt、long-soak、release/install 或 owner acceptance refs 关闭 production evidence；conformance pass、App projection、provider completion、verified ledger 和 docs foldback 都不能替代它。
+- 若后续 live `opl agents conformance --family-defaults --json` 仍出现 OMA 或其他 domain blocked，必须分类为 conformance projection、domain target delta、stage boundary drift 或 domain-owned live evidence tail；不能用 suite pass、controlled canary 或 docs foldback 伪关闭。
 
 ## Supervisory acceptance gate
 
