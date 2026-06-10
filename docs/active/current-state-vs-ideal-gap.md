@@ -200,13 +200,9 @@ Workspace Protocol 的当前 active 口径只保留结构边界：`Workspace Gro
 
 ## 下一轮 Agent prompt
 
-- Write scope: OPL family active truth owner、core docs、runtime/App read-model
-  边界、stale wrapper/facade/alias direct-retirement 证据，以及本轮 coverage
-  ledger 的未覆盖与保留项。
-- Non-goals: 不声明 domain ready、App release ready、production ready；不把
-  OPL refs-only evidence、provider completion、descriptor ready、suite pass 或 docs
-  doctor pass 写成 domain verdict；不新增 compatibility alias、facade、wrapper 或
-  Markdown wording tests。
+- Primary lane: `W0-cross-agent-conformance-readout`，来源是 [Foundry Agent OS Family Target Implementation Plan](./foundry-agent-os-family-target-implementation-plan.md) 的 `当前执行 Baton`。本轮目标是把 `foundry_agent_os_standard` 从目标合同变成 `opl agents conformance --family-defaults --json` 可稳定消费、可测试、可审计的读面。
+- Write scope: OPL contracts / conformance source / focused tests / 必要 docs foldback。默认 primary repo 是 `one-person-lab`；MAS/MAG/RCA/OMA 只读，除非 W0 证明必须修某个 domain target delta 且先明确 source owner、consumer owner、写集和验证。
+- Non-goals: 不改 App GUI、release、install、first-run、user path、interactive logic 或 App-owned product contract；不修 MAS provider admission / currentness 源头；不生成 MAS owner receipt、typed blocker、quality gate receipt 或 closeout binding payload；不声明 domain ready、App release ready、Brand L5 或 production ready；不新增第二 active backlog、compatibility alias、facade、wrapper 或 Markdown wording tests。
 - Live truth inputs: 先重读 live source、contracts、tests、CLI/read-model、
   runtime ledger、provider receipt、domain-owned manifest、App evidence、git
   worktree/branch/PR state 和下列 OPL readouts，不从本文继承旧 counters：
@@ -214,56 +210,23 @@ Workspace Protocol 的当前 active 口径只保留结构边界：`Workspace Gro
    ```bash
    rtk opl framework readiness --family-defaults --json
    # read payload under .framework_readiness
-   rtk opl runtime app-operator-drilldown --json
-   # read payload under .app_operator_drilldown
-   rtk opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json
-   # read payload under .family_runtime_evidence_worklist
-   rtk opl app state --profile fast --json
-   # read payload under .app_state.operator
    rtk opl agents conformance --family-defaults --json
    # read payload under .standard_domain_agent_conformance; domain reports live in .standard_domain_agent_conformance.reports[]
-   rtk opl agents default-callers --family-defaults --json
-   # read top-level default-caller payload directly
+   rtk opl brand-modules l5-status --json
+   # read L5 as evidence_required input only
    ```
 
-- Parallel execution discipline: 为提高效率，凡任务互不冲突、写集可隔离、
-  source of truth 清楚，且不会阻断当前 critical path，优先用 subagent +
-  独立 worktree 并行推进审计、实现、验证或 docs foldback lane；subagent
-  prompt 首行必须写清任务、cwd、权限、source of truth 和停止条件。主会话必须核查
-  diff、live evidence、验证输出和残余风险，完善后立刻吸收回 main 并清理
-  worktree / branch / thread；不能把 subagent 完成报告当作 owner receipt、
-  domain verdict、delete authority 或最终验收。
-  若 lane 只负责 active docs foldback，必须先确认 main checkout 状态、`.worktrees/`
-  ignore 状态、既有并发 worktree/branch 和本轮 source-of-truth readouts；只允许在
-  指定写集内产出可审查 diff。已有并发 worktree 一律视为外部 owner lane，除非用户
-  明确授权，不得吸收、清理、覆盖或把其状态并入本轮完成口径。
+- Execution discipline: 建议独立执行对话或独立 worktree 承载 W0；该对话只做一个 work order，完成后把 diff、验证、live readout 和残余 blocker 折回本文或 Foundry plan。已有并发 worktree / dirty 文件一律按外部 owner lane 处理，除非用户明确授权，不得吸收、清理或覆盖。
 
 - Required actions:
-  1. 若有 OPL 可执行 safe action，优先推进 owner-delta：domain / human / App /
-     provider owner 必须给出 deliverable delta、owner receipt、typed blocker、
-     quality gate receipt、no-regression ref 或 long-soak ref。
-  2. 若当前工作是 domain stage artifact materialization，先证明 refs-only、manifest、owner receipt、bounded source refs、domain authority index record 和 nonterminal closeout 语义；然后再回到 paper / grant / visual / agent owner-route gate，不能把 stage folder closure 写成终局 ready。
-  3. 若当前工作是 StageRun Kernel / conformance / App cockpit surface，先保持 launch admission、execution authorization、closeout admission 与 owner-answer / closeout binding 分层：strategy refs 缺失只进 advisory / route-back；identity、owner、scope、executor、authority、required role slot、receipt/blocker shape、forbidden write 或 replay/audit lineage 缺口阻断 launch；provider attempt、attempt lease、execution authorization decision、workspace/artifact scope、source fingerprint、idempotency 缺口阻断 execution authorization；role artifact、manifest、owner receipt / typed blocker、current pointer、hash、generation 或 lineage 缺口阻断 closeout；owner receipt 或 typed blocker answer 必须绑定 StageRun、stage manifest、current pointer、source fingerprint 和 idempotency key。若 StageRun cockpit 的 blocker 仍缺 provider attempt / lease / execution authorization decision，默认 `current_owner_delta` topline 指向 owner=`one-person-lab` 的 OPL runtime blocker；若这些 refs 已存在而只缺 owner-answer / closeout binding refs，默认 next owner 必须回到 domain owner，不能让 OPL 替 domain 创建 receipt、typed blocker 或 readiness claim。
-  4. 若没有 OPL safe action，只能把 blocked refs-only attention 写成等待 owner
-     或 typed blocker，不写成完成。
-  5. 若发现 default-caller deletion / cleanup / wrapper-retirement gate 进入普通 progress worklist，先下沉为 cleanup lane / full-detail audit；只有用户显式进入 cleanup lane 或 domain owner 提供 physical delete receipt / typed blocker 时才作为执行目标。
-  6. 若发现 active source 或 active docs 重新保留旧 wrapper、facade、alias、
-     compat path 或 retired entry/runtime vocabulary，按 direct
-     retirement 处理：迁移 caller，删除旧面，必要 provenance 归 history/tombstone。
-  7. 若本轮只做 docs 治理，更新 active truth、coverage ledger、未覆盖清单、
-     保留理由和下一轮写入范围；不要新增 Markdown 措辞测试。
-  8. 每个新发现的优化项必须按 `meets_target` / `needs_demotion` /
-     `needs_retirement` 分类；不能只写“继续完善”或“增加证据”。
-- Verification commands: docs-only 最小验证为 `rtk git diff --check`、
-  `rtk rg -n '^(<<<<<<<|=======|>>>>>>>)' docs`、targeted stale wording scan 和 docs
-  inventory sanity；触及 source/contract/runtime/App 行为时按下方 owner repo 验证入口追加。
-- Completion gate: 本轮 tranche 只能在已审范围、已改文档、归档/tombstone/删除文档、
-  未覆盖文档、剩余 stale/retire 候选和下一轮写入范围都写入 ledger，且 main checkout
-  完成最小充分验证后关闭；不得关闭全局 `/goal`，除非 6 仓 README* 与
-  `docs/**/*.md` 已逐段覆盖且剩余 gap 全部关闭或进入下一轮 prompt。
-- Foldback target: 当前结论折回本文、核心五件套和对应 support docs；dated proof、
-  coverage tranche、worktree/branch closeout、receipt 流水和 superseded 计划进入
-  `docs/history/**`、runtime ledger、提交历史或 domain-owned receipt/provenance。
+  1. Fresh read `target-operating-architecture-contract.json#foundry_agent_os_standard`、brand module registry / surfaces / L5 evidence contract、conformance source 和 focused tests。
+  2. 审计当前 conformance JSON 中 `foundry_agent_os_standard`、default read root、target delta present、generated-surface owner/status、false-authority flags、domain-kernel authority owner 和 live evidence still-required 是否已经可查询；缺字段时优先补 OPL readout / tests。
+  3. 审计当前 `opl-meta-agent` blocker `oma_boundary_unexpected_stage:target-agent-takeover`：分类为 conformance projection bug、OMA target-delta 缺口、stage boundary drift、domain-owned live evidence tail 或 real blocker；不得用 suite pass、controlled canary、docs foldback 或 refs-only ledger 伪关闭。
+  4. 若 W0 只需 OPL 写入，保持 domain repos read-only；若必须写 domain target delta，先停止并记录 active gap anchor、owner、写集、source of truth 和验证命令。
+  5. 更新 focused tests / contracts / docs 中必要的机器边界，确保 conformance pass、generated surface ready、verified refs-only receipt、provider completion 和 L4/L5 counter 都不能声明 domain ready。
+- Verification commands: W0 最小验证为 `rtk npm run typecheck`、`rtk npm run test:fast`、`rtk npm run test:meta`；若只做 docs baton 更新，最小验证为 `rtk git diff --check` 和 `rtk rg -n '^(<<<<<<<|=======|>>>>>>>)' docs/active docs/status.md docs/decisions.md`。
+- Completion gate: 只能归类为 `foundry_conformance_readout_landed`、`w0_blocker_classified`、`real_external_blocker` 或 `hygiene_only_supporting_active_gap`；不得关闭全局目标，也不得用 W0-W6 structural landing 代替 W7 production evidence。
+- Foldback target: W0 结论折回本文、Foundry plan、必要 contracts/tests 和 runtime/conformance readout；dated proof、worktree/branch closeout 和 receipt 流水进入 runtime ledger、提交历史或 domain-owned provenance。
 
 ## Forbidden Claims
 

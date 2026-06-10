@@ -45,6 +45,28 @@ OPL Agent OS
 
 默认从 `W0` 开始；只有当两条 work order 的写集、source of truth、验证命令和禁止范围完全分离时，才并行开 worktree。`W0-W6` 关闭的是 structural / functional landing，`W7` 才能进入 production evidence；不能用前者替代后者。
 
+## 当前执行 Baton
+
+当前下一条执行 baton 是 `W0-cross-agent-conformance-readout`。它的目标不是继续扩写规划，也不是追 MAS owner answer，而是把 `foundry_agent_os_standard` 变成 `opl agents conformance --family-defaults --json` 可稳定消费、可测试、可审计的读面。
+
+`W0` 的 source of truth 固定为：
+
+- 本文与 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md)。
+- `contracts/opl-framework/target-operating-architecture-contract.json#foundry_agent_os_standard`。
+- `contracts/opl-framework/brand-module-registry.json`、`brand-module-surfaces.json`、`brand-module-l5-operating-evidence.json`。
+- live `opl framework readiness --family-defaults --json`、`opl agents conformance --family-defaults --json`、`opl brand-modules l5-status --json`。
+
+`W0` 当前必须处理的 live 起点是：framework readiness 仍有 owner-delta hard blocker，当前 owner 仍指向 `med-autoscience`；cross-agent conformance 当前是 `3 passed / 1 blocked`，blocked agent 是 `opl-meta-agent`，需要先审计 `oma_boundary_unexpected_stage:target-agent-takeover` 是否属于 Foundry Agent OS 读面缺口、OMA target-delta 缺口、stage boundary drift，还是应被归入 domain-owned live evidence tail。
+
+`W0` 的最小完成门：
+
+- conformance JSON 暴露 `foundry_agent_os_standard` 或等价 structured readout，至少包含 per-agent default read root、target delta present、generated surface owner/status、false-authority flags、domain-kernel authority owner、live evidence still-required / blocked reason。
+- OPL 读面明确 `conformance pass != domain ready`、`generated surface owner = one-person-lab` 不等于 domain authority transfer、`current_owner_delta` 仍是 ordinary planning root。
+- OMA blocker 有明确分类：修复 conformance projection、修复 OMA target delta、记录 domain-owned blocker，或证明它是 active evidence tail；不能用 suite pass、controlled canary 或 docs foldback 伪关闭。
+- 更新 focused tests / contracts / docs 中必要的机器边界；不新增第二 active backlog，不新增 App autonomous lane，不生成 MAS owner receipt、typed blocker、quality gate receipt 或 closeout binding payload。
+
+建议为 `W0` 使用独立执行对话或独立 worktree。该对话只能承载这一条 work order，完成后把 diff、验证、live readout 和残余 blocker 折回本文或 `current-state-vs-ideal-gap.md`；对话本身不是长期计划 owner。
+
 ## Supervisory acceptance gate
 
 本节吸收原先独立的 OPL / MAS supervisory acceptance 目标。它不再作为第二条 active line 维护，也不再单独追 MAS owner-answer 生成；它是 `W0`、`W2`、`W6` 和 `W7` 的共同验收细目。
