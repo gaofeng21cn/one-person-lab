@@ -323,25 +323,70 @@ test('brand module L5 evidence gate is executable but does not claim production 
     );
     assert.equal(
       status.modules.every((entry: {
+        module_id: string;
+        evidence_required: boolean;
+        l5_can_be_claimed: boolean;
+        l5_completion_status: string;
         owner_evidence_routes: Array<{
+          module_id: string;
+          class_id: string;
           owner: string;
           owner_route_status: string;
+          blocker_state: string;
           next_owner_action: string;
           accepted_ref_shapes: string[];
-          authority_boundary: { route_can_claim_l5: boolean };
+          existing_evidence_refs: string[];
+          existing_blocker_refs: string[];
+          observed_receipt_count: number;
+          verified_receipt_count: number;
+          l5_claim_status: string;
+          non_closing_inputs: string[];
+          authority_boundary: {
+            route_is_refs_only: boolean;
+            route_can_claim_l5: boolean;
+            route_can_claim_production_ready: boolean;
+            route_can_create_owner_receipt: boolean;
+            route_can_create_typed_blocker: boolean;
+          };
         }>;
       }) =>
-        entry.owner_evidence_routes.length === status.evidence_classes.length
+        entry.evidence_required === true
+        && entry.l5_can_be_claimed === false
+        && entry.l5_completion_status === 'evidence_required'
+        && entry.owner_evidence_routes.length === status.evidence_classes.length
         && entry.owner_evidence_routes.every((route) =>
-          route.owner.length > 0
+          route.module_id === entry.module_id
+          && route.class_id.length > 0
+          && route.owner.length > 0
           && route.owner_route_status === 'owner_evidence_required'
+          && route.blocker_state === 'owner_route_evidence_missing'
           && route.next_owner_action === 'record_owner_evidence_ref_or_typed_blocker_for_l5_requirement'
+          && Array.isArray(route.existing_evidence_refs)
+          && Array.isArray(route.existing_blocker_refs)
+          && route.observed_receipt_count === 0
+          && route.verified_receipt_count === 0
+          && route.l5_claim_status === 'owner_evidence_required'
           && route.accepted_ref_shapes.includes('typed_blocker_ref')
+          && route.accepted_ref_shapes.some((shape) => shape !== 'typed_blocker_ref')
+          && route.non_closing_inputs.includes('contract_validation')
+          && route.non_closing_inputs.includes('docs_foldback')
+          && route.non_closing_inputs.includes('conformance_pass')
+          && route.non_closing_inputs.includes('provider_completion')
+          && route.non_closing_inputs.includes('app_projection')
+          && route.non_closing_inputs.includes('verified_refs_only_ledger')
+          && route.authority_boundary.route_is_refs_only === true
           && route.authority_boundary.route_can_claim_l5 === false
+          && route.authority_boundary.route_can_claim_production_ready === false
+          && route.authority_boundary.route_can_create_owner_receipt === false
+          && route.authority_boundary.route_can_create_typed_blocker === false
         )
       ),
       true,
     );
+    assert.equal(status.owner_route_work_order_policy.work_orders_close_l5, false);
+    assert.equal(status.owner_route_work_order_policy.work_orders_can_claim_production_ready, false);
+    assert.equal(status.not_claims.includes('production_ready'), true);
+    assert.equal(status.authority_boundary.can_claim_production_ready, false);
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
   }
