@@ -542,6 +542,31 @@ test('target operating architecture contract freezes resource, authority, lane, 
       may_produce: string[];
       must_not_produce: string[];
     };
+    foundry_agent_os_standard: {
+      pattern_id: string;
+      source_pattern_ref: string;
+      target_shape: string;
+      applies_to_domain_agents: string[];
+      domain_pack_examples: Record<string, string>;
+      domain_authority_kernel_examples: Record<string, string[]>;
+      opl_module_mapping: Array<{
+        target_capability: string;
+        primary_module: string;
+        supporting_modules: string[];
+        ordinary_lane: string;
+        authority_boundary: string;
+      }>;
+      capability_registry_boundary: {
+        owner_modules: string[];
+        default_behavior: string;
+        fail_open_policy: string;
+        must_not_create: string[];
+      };
+      cross_agent_conformance_required_claims: string[];
+      implementation_lane_refs: string[];
+      authority_boundary: Record<string, boolean>;
+      forbidden_claims: string[];
+    };
     authority_boundary: Record<string, boolean>;
     forbidden_claims: string[];
   }>('contracts/opl-framework/target-operating-architecture-contract.json');
@@ -751,6 +776,80 @@ test('target operating architecture contract freezes resource, authority, lane, 
     'production_acceptance',
   ]) {
     assert.equal(contract.agent_lab_improvement_plane.must_not_produce.includes(forbiddenOutput), true);
+  }
+
+  assert.equal(contract.foundry_agent_os_standard.pattern_id, 'foundry_agent_os_standard.v1');
+  assert.equal(
+    contract.foundry_agent_os_standard.target_shape,
+    'OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry',
+  );
+  assert.deepEqual(contract.foundry_agent_os_standard.applies_to_domain_agents, ['mas', 'mag', 'rca', 'oma']);
+  assert.equal(contract.foundry_agent_os_standard.domain_pack_examples.mas, 'Medical Research Pack');
+  assert.equal(
+    contract.foundry_agent_os_standard.domain_authority_kernel_examples.mag.includes('fundability quality/export verdict'),
+    true,
+  );
+  assert.deepEqual(
+    contract.foundry_agent_os_standard.capability_registry_boundary.owner_modules,
+    ['atlas', 'pack', 'stagecraft'],
+  );
+  assert.equal(
+    contract.foundry_agent_os_standard.capability_registry_boundary.default_behavior,
+    'current_owner_delta_bound_jit_or_fail_open',
+  );
+  for (const forbiddenCreation of ['domain authority verdict', 'owner receipt', 'typed blocker']) {
+    assert.equal(
+      contract.foundry_agent_os_standard.capability_registry_boundary.must_not_create.includes(forbiddenCreation),
+      true,
+    );
+  }
+  for (const requiredCapability of [
+    'pack_compiler_generated_surfaces',
+    'domain_capability_registry',
+    'current_owner_delta_default_read_root',
+    'stage_run_durable_execution',
+    'refs_only_evidence_and_lineage',
+  ]) {
+    assert.equal(
+      contract.foundry_agent_os_standard.opl_module_mapping.some((entry) =>
+        entry.target_capability === requiredCapability
+      ),
+      true,
+      requiredCapability,
+    );
+  }
+  for (const requiredClaim of [
+    'default_read_root_is_current_owner_delta',
+    'domain_authority_false_flags_on_opl_modules',
+    'generated_surfaces_do_not_write_domain_truth',
+    'conformance_pass_does_not_claim_domain_ready',
+    'vault_console_runway_do_not_sign_owner_answer',
+    'capability_registry_fails_open_unless_current_delta_requires_ref',
+  ]) {
+    assert.equal(
+      contract.foundry_agent_os_standard.cross_agent_conformance_required_claims.includes(requiredClaim),
+      true,
+      requiredClaim,
+    );
+  }
+  for (const [claim, allowed] of Object.entries(contract.foundry_agent_os_standard.authority_boundary)) {
+    assert.equal(allowed, false, `foundry agent OS standard must not claim ${claim}`);
+  }
+  for (const forbiddenClaim of [
+    'agent_os_contract_is_domain_ready',
+    'capability_registry_owns_domain_authority',
+    'pack_compile_is_quality_verdict',
+    'generated_surface_writes_domain_truth',
+    'current_owner_delta_projection_signs_owner_answer',
+    'vault_ref_is_owner_receipt_authority',
+    'runway_provider_completion_is_domain_completion',
+    'console_view_is_app_release_ready',
+  ]) {
+    assert.equal(
+      contract.foundry_agent_os_standard.forbidden_claims.includes(forbiddenClaim),
+      true,
+      forbiddenClaim,
+    );
   }
 
   for (const [claim, allowed] of Object.entries(contract.authority_boundary)) {

@@ -554,6 +554,10 @@ test('nested worktree repo roots resolve the family workspace root without OPL_F
     '/tmp/workspace',
   );
   assert.equal(
+    resolveFamilyWorkspaceRootFromRepoRoot('/tmp/workspace/.worktrees/codex-family-agent-os-target'),
+    '/tmp/workspace',
+  );
+  assert.equal(
     resolveFamilyWorkspaceRootFromRepoRoot('/tmp/workspace/one-person-lab'),
     '/tmp/workspace',
   );

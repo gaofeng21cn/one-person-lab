@@ -368,7 +368,12 @@ export type BrandModuleL5EvidenceClassId =
   | 'release_install_evidence'
   | 'operator_repair_loop'
   | 'owner_acceptance'
-  | 'no_second_truth_regression';
+  | 'no_second_truth_regression'
+  | 'pack_compile_parity'
+  | 'current_owner_delta_default_read'
+  | 'capability_fail_open_boundary'
+  | 'domain_authority_false_boundary'
+  | 'cross_agent_foundry_agent_os_adoption';
 
 export type BrandModuleL5EvidenceState = 'open' | 'satisfied' | 'blocked';
 
@@ -751,6 +756,31 @@ export interface TargetOperatingArchitectureContract {
     role: string;
     may_produce: string[];
     must_not_produce: string[];
+  };
+  foundry_agent_os_standard: {
+    pattern_id: string;
+    source_pattern_ref: string;
+    target_shape: string;
+    applies_to_domain_agents: string[];
+    domain_pack_examples: Record<string, string>;
+    domain_authority_kernel_examples: Record<string, string[]>;
+    opl_module_mapping: Array<{
+      target_capability: string;
+      primary_module: BrandModuleId;
+      supporting_modules: BrandModuleId[];
+      ordinary_lane: string;
+      authority_boundary: string;
+    }>;
+    capability_registry_boundary: {
+      owner_modules: BrandModuleId[];
+      default_behavior: string;
+      fail_open_policy: string;
+      must_not_create: string[];
+    };
+    cross_agent_conformance_required_claims: string[];
+    implementation_lane_refs: string[];
+    authority_boundary: Record<string, false>;
+    forbidden_claims: string[];
   };
   authority_boundary: Record<string, false>;
   forbidden_claims: string[];

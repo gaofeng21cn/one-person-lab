@@ -5,6 +5,22 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-06-10
+
+### 决策：MAS Agent OS 方案提升为 family-level Foundry Agent OS 标准
+
+原因：MAS 的目标态已经明确为 `OPL Agent OS + MAS Declarative Medical Research Pack + MAS Minimal Authority Kernel + Scientific Capability Registry`。这不是 MAS 单仓特例，而是 MAS/MAG/RCA/OMA 都需要的标准 OPL Agent 形态：OPL 上收通用 runtime、StageRun、Pack compiler、generated/hosted surfaces、Console、Vault、Runway 和 conformance；domain 仓只保留无法声明化的最小 authority kernel。
+
+影响：
+
+- `contracts/opl-framework/target-operating-architecture-contract.json#foundry_agent_os_standard` 成为 family-level target contract，目标形态固定为 `OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry`。
+- `MAS`、`MAG`、`RCA` 和 `OMA` 都必须提供 target delta：哪些 generic substrate 上收到 OPL，哪些保留为 domain authority kernel。
+- `Domain Capability Registry` 不是第 11 个品牌模块；它由 `OPL Atlas` 持 catalog、`OPL Pack` 持 ABI、`OPL Stagecraft` 持 use policy。默认行为是 `current_owner_delta_bound_jit_or_fail_open`，只有当前 owner delta route-required ref 缺失且影响 source/data/evidence、owner-route identity、forbidden write、irreversible mutation 或 hard reviewer/publication gate 时才升级 blocker。
+- `brand-module-registry.json`、`brand-module-surfaces.json` 和 `brand-module-l5-operating-evidence.json` 同步补充 Pack compile parity、`current_owner_delta` default read、capability fail-open、domain-authority false boundary 和 cross-agent adoption 证据类。
+- Cross-agent conformance 必须证明 default read root 是 `current_owner_delta`，OPL generated / hosted surfaces 不写 domain truth，Vault / Console / Runway / Pack 不签 owner receipt、不创建 typed blocker、不授权 quality/export verdict，conformance pass 不等于 domain ready。
+- 当前完整实施规划入口是 `docs/active/foundry-agent-os-family-target-implementation-plan.md`；当前 active gap、执行顺序和完成口径仍回 `docs/active/current-state-vs-ideal-gap.md`，避免产生第二 active backlog。
+- 本决策不声明 MAS/MAG/RCA/OMA 已 domain ready，不声明 App release ready、Brand L5 或 production ready；后续必须由 domain-owned owner receipt、typed blocker、quality/export/review receipt、human gate、no-regression ref 或真实 L5 operating evidence 关闭。
+
 ## 2026-06-09
 
 ### 决策：Runway 采用 control-loop runtime 目标态，但不扩大 domain authority

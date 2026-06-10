@@ -113,7 +113,7 @@
       "module_id": "atlas",
       "brand_name": "OPL Atlas",
       "owner": "OPL Framework",
-      "purpose": "Catalog for agents, capabilities, domain descriptors, public surfaces, owners, dependencies, and lifecycle states.",
+      "purpose": "Catalog for agents, domain capability registry entries, domain descriptors, public surfaces, owners, dependencies, and lifecycle states.",
       "state": "active_structural_baseline",
       "machine_boundary": "Atlas indexes and relates descriptors and refs. It does not execute actions, mutate artifacts, or decide domain quality.",
       "module_doc_ref": "human_doc:opl_brand_module_atlas",
@@ -123,7 +123,8 @@
         "contracts/opl-framework/workstreams.json",
         "contracts/opl-framework/public-surface-index.json",
         "contracts/opl-framework/domain-pack-compiler-contract.json",
-        "contracts/opl-framework/standard-domain-agent-skeleton-contract.json"
+        "contracts/opl-framework/standard-domain-agent-skeleton-contract.json",
+        "contracts/opl-framework/target-operating-architecture-contract.json"
       ],
       "cli_surfaces": [
         "opl atlas status --json",
@@ -190,7 +191,9 @@
         "catalog_executes_actions",
         "quality_verdict",
         "artifact_authority",
-        "production_ready"
+        "production_ready",
+        "capability_registry_executes_actions",
+        "capability_registry_owns_domain_authority"
       ]
     },
     {
@@ -286,7 +289,7 @@
       "module_id": "pack",
       "brand_name": "OPL Pack",
       "owner": "OPL Framework + Foundry Agent owners",
-      "purpose": "Declarative Domain Pack, authority ABI, pack compiler, generated and hosted surfaces, and standard authority function boundaries for OPL-compatible agents.",
+      "purpose": "Declarative Domain Pack, domain capability registry ABI, authority ABI, pack compiler, generated and hosted surfaces, and standard authority function boundaries for OPL-compatible agents.",
       "state": "active_structural_baseline",
       "machine_boundary": "Pack defines agent pack shape, generated surface inputs, authority ABI refs, and standard authority function boundaries. It does not execute domain work, write domain truth, sign owner receipts, create typed blockers, or decide quality/export readiness.",
       "module_doc_ref": "human_doc:opl_brand_module_pack",
@@ -295,7 +298,8 @@
         "contracts/opl-framework/domain-pack-compiler-contract.json",
         "contracts/opl-framework/standard-domain-agent-skeleton-contract.json",
         "contracts/opl-framework/foundry-agent-series-contract.json",
-        "contracts/opl-framework/owner-answer.schema.json"
+        "contracts/opl-framework/owner-answer.schema.json",
+        "contracts/opl-framework/target-operating-architecture-contract.json"
       ],
       "cli_surfaces": [
         "opl pack status --json",
@@ -363,14 +367,16 @@
         "artifact_authority",
         "production_ready",
         "generated_surface_writes_domain_truth",
-        "authority_abi_signs_owner_receipt"
+        "authority_abi_signs_owner_receipt",
+        "domain_capability_registry_owns_domain_authority",
+        "pack_compile_is_quality_verdict"
       ]
     },
     {
       "module_id": "stagecraft",
       "brand_name": "OPL Stagecraft",
       "owner": "OPL Framework + Foundry Agent",
-      "purpose": "Stage design, cognitive computation, tool affordance, quality gate shape, owner handoff, and StageRun kernel contract.",
+      "purpose": "Stage design, cognitive computation, capability use policy, tool affordance, quality gate shape, owner handoff, and StageRun kernel contract.",
       "state": "active_structural_baseline",
       "machine_boundary": "Stagecraft defines stage strategy and stage contracts. It does not run durable attempts or issue domain quality/export verdicts.",
       "module_doc_ref": "human_doc:opl_brand_module_stagecraft",
@@ -380,7 +386,8 @@
         "contracts/opl-framework/stage-run-kernel-contract.json",
         "contracts/opl-framework/stage-manifest.schema.json",
         "contracts/opl-framework/stage-owner-receipt.schema.json",
-        "contracts/opl-framework/stage-typed-blocker.schema.json"
+        "contracts/opl-framework/stage-typed-blocker.schema.json",
+        "contracts/opl-framework/target-operating-architecture-contract.json"
       ],
       "cli_surfaces": [
         "opl stagecraft status --json",
@@ -449,7 +456,9 @@
         "domain_ready",
         "artifact_authority",
         "durable_runtime_owner",
-        "production_ready"
+        "production_ready",
+        "capability_use_policy_is_quality_verdict",
+        "capability_registry_missing_optional_ref_blocks_stage"
       ]
     },
     {
@@ -554,7 +563,9 @@
         "runway_writes_domain_truth",
         "runway_signs_owner_receipt",
         "runway_creates_typed_blocker",
-        "provider_completion_is_semantic_progress"
+        "provider_completion_is_semantic_progress",
+        "runtime_provider_signs_owner_answer",
+        "provider_completion_is_domain_completion"
       ]
     },
     {
@@ -572,7 +583,8 @@
         "contracts/opl-framework/stage-artifact-runtime-contract.json",
         "contracts/opl-framework/role-artifact-ref.schema.json",
         "contracts/opl-framework/stage-owner-receipt.schema.json",
-        "contracts/opl-framework/stage-typed-blocker.schema.json"
+        "contracts/opl-framework/stage-typed-blocker.schema.json",
+        "contracts/opl-framework/target-operating-architecture-contract.json"
       ],
       "cli_surfaces": [
         "opl vault status --json",
@@ -641,14 +653,16 @@
         "memory_body_store",
         "owner_receipt_signed_by_opl",
         "quality_verdict",
-        "production_ready"
+        "production_ready",
+        "receipt_ref_is_owner_receipt_authority",
+        "vault_ref_store_is_memory_body"
       ]
     },
     {
       "module_id": "console",
       "brand_name": "OPL Console",
       "owner": "One Person Lab App",
-      "purpose": "App/operator cockpit for current owner, next action, blockers, workspace actions, evidence drilldown, and user-facing inspection.",
+      "purpose": "App/operator cockpit for current_owner_delta default read root, current owner, next action, blockers, workspace actions, evidence drilldown, and user-facing inspection.",
       "state": "active_structural_baseline",
       "machine_boundary": "Console consumes OPL and domain projections through App state/action descriptors. It does not own GUI release truth inside this repo, runtime provider truth, or domain truth.",
       "module_doc_ref": "human_doc:opl_brand_module_console",
@@ -657,7 +671,8 @@
         "contracts/opl-framework/family-product-operator-projection.json",
         "contracts/opl-framework/current-owner-delta.schema.json",
         "contracts/opl-framework/public-surface-index.json",
-        "contracts/opl-framework/agent-platform-surface-ownership-contract.json"
+        "contracts/opl-framework/agent-platform-surface-ownership-contract.json",
+        "contracts/opl-framework/target-operating-architecture-contract.json"
       ],
       "cli_surfaces": [
         "opl console status --json",
@@ -728,7 +743,9 @@
         "domain_ready",
         "quality_verdict",
         "runtime_provider_truth_owner",
-        "production_ready"
+        "production_ready",
+        "current_owner_delta_view_signs_owner_answer",
+        "console_projection_is_domain_truth"
       ]
     },
     {

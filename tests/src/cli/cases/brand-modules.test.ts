@@ -290,7 +290,19 @@ test('brand module L5 evidence gate is executable but does not claim production 
   assert.deepEqual(status.l5_complete_module_ids, []);
   assert.deepEqual(status.evidence_required_module_ids, expectedModuleIds);
   assert.equal(status.l5_claim_policy.contract_validation_counts_as_l5, false);
-  assert.equal(status.evidence_classes.length, 7);
+  assert.equal(status.evidence_classes.length, 12);
+  assert.equal(
+    status.evidence_classes.some((entry: { class_id: string }) =>
+      entry.class_id === 'capability_fail_open_boundary'
+    ),
+    true,
+  );
+  assert.equal(
+    status.evidence_classes.some((entry: { class_id: string }) =>
+      entry.class_id === 'cross_agent_foundry_agent_os_adoption'
+    ),
+    true,
+  );
   assert.equal(status.modules.every((entry: { l5_can_be_claimed: boolean }) => entry.l5_can_be_claimed === false), true);
 });
 
@@ -345,9 +357,11 @@ test('module-owned L5 status is readable from the module command surface and rem
   assert.equal(status.module_id, 'runway');
   assert.equal(status.status, 'evidence_required');
   assert.equal(status.l5_can_be_claimed, false);
-  assert.equal(status.evidence_requirements.length, 7);
+  assert.equal(status.evidence_requirements.length, 12);
   assert.equal(status.evidence_requirements.some((entry: { class_id: string }) => entry.class_id === 'long_soak_recovery'), true);
+  assert.equal(status.evidence_requirements.some((entry: { class_id: string }) => entry.class_id === 'domain_authority_false_boundary'), true);
   assert.equal(status.not_claims.includes('production_long_soak_complete'), true);
+  assert.equal(status.not_claims.includes('provider_completion_is_domain_completion'), true);
   assert.equal(status.authority_boundary.can_claim_production_ready, false);
 });
 

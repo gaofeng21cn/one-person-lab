@@ -33,6 +33,11 @@ const BRAND_MODULE_L5_EVIDENCE_CLASSES = [
   'operator_repair_loop',
   'owner_acceptance',
   'no_second_truth_regression',
+  'pack_compile_parity',
+  'current_owner_delta_default_read',
+  'capability_fail_open_boundary',
+  'domain_authority_false_boundary',
+  'cross_agent_foundry_agent_os_adoption',
 ] as const satisfies readonly BrandModuleL5EvidenceClassId[];
 
 const BRAND_MODULE_L5_EVIDENCE_STATES = [

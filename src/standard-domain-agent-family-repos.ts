@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveFamilyWorkspaceRootFromRepoRoot } from './family-workspace-root.ts';
 
 interface StandardDomainAgentRepoInput {
   requested_agent_id: string | null;
@@ -22,11 +23,12 @@ function unique<T>(items: T[]): T[] {
 }
 
 function workspaceCandidatesFrom(seed: string) {
-  const candidates = [seed, path.dirname(seed)];
-  let current = path.resolve(seed);
+  const resolvedSeed = path.resolve(seed);
+  const candidates = [resolvedSeed, path.dirname(resolvedSeed), resolveFamilyWorkspaceRootFromRepoRoot(resolvedSeed)];
+  let current = resolvedSeed;
   while (current !== path.dirname(current)) {
     if (path.basename(current) === '.worktrees') {
-      candidates.push(path.dirname(path.dirname(current)));
+      candidates.push(resolveFamilyWorkspaceRootFromRepoRoot(seed));
     }
     current = path.dirname(current);
   }

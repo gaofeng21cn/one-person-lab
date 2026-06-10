@@ -1,6 +1,14 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+const FAMILY_REPO_DIRECTORIES = [
+  'one-person-lab',
+  'med-autoscience',
+  'med-autogrant',
+  'redcube-ai',
+  'opl-meta-agent',
+] as const;
+
 export type ResolveFamilyWorkspaceRootOptions = {
   repoRootHint?: string;
 };
@@ -19,13 +27,20 @@ function resolveRepoRootPath(options: ResolveFamilyWorkspaceRootOptions = {}) {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 }
 
+function isFamilyRepoDirectoryName(directoryName: string) {
+  return FAMILY_REPO_DIRECTORIES.includes(directoryName as typeof FAMILY_REPO_DIRECTORIES[number]);
+}
+
 export function resolveFamilyWorkspaceRootFromRepoRoot(repoRoot: string) {
   let current = path.resolve(repoRoot);
 
   while (true) {
     const baseName = path.basename(current);
     if (baseName === '.worktrees' || baseName === 'worktrees') {
-      return path.dirname(path.dirname(current));
+      const parent = path.dirname(current);
+      return isFamilyRepoDirectoryName(path.basename(parent))
+        ? path.dirname(parent)
+        : parent;
     }
 
     const parent = path.dirname(current);

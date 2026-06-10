@@ -1385,6 +1385,54 @@ const TARGET_ARCHITECTURE_AGENT_LAB_MUST_NOT_PRODUCE = [
   'production_acceptance',
 ] as const;
 
+const TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_AGENTS = [
+  'mas',
+  'mag',
+  'rca',
+  'oma',
+] as const;
+
+const TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_CAPABILITY_REGISTRY_MODULES = [
+  'atlas',
+  'pack',
+  'stagecraft',
+] as const satisfies readonly BrandModuleId[];
+
+const TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_CONFORMANCE_CLAIMS = [
+  'default_read_root_is_current_owner_delta',
+  'domain_authority_false_flags_on_opl_modules',
+  'generated_surfaces_do_not_write_domain_truth',
+  'conformance_pass_does_not_claim_domain_ready',
+  'vault_console_runway_do_not_sign_owner_answer',
+  'capability_registry_fails_open_unless_current_delta_requires_ref',
+] as const;
+
+const TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_FORBIDDEN_CLAIMS = [
+  'agent_os_contract_is_domain_ready',
+  'capability_registry_owns_domain_authority',
+  'pack_compile_is_quality_verdict',
+  'generated_surface_writes_domain_truth',
+  'current_owner_delta_projection_signs_owner_answer',
+  'vault_ref_is_owner_receipt_authority',
+  'runway_provider_completion_is_domain_completion',
+  'console_view_is_app_release_ready',
+] as const;
+
+function expectBrandModuleIdArray(value: unknown, field: string, filePath: string) {
+  const ids = expectNonEmptyStringArray(value, field, filePath);
+  for (const id of ids) {
+    if (!(BRAND_MODULE_IDS as readonly string[]).includes(id)) {
+      throw new FrameworkContractError('contract_shape_invalid', `${field} contains unknown OPL brand module ids.`, {
+        file: filePath,
+        field,
+        actual: id,
+        allowed: [...BRAND_MODULE_IDS],
+      });
+    }
+  }
+  return ids as BrandModuleId[];
+}
+
 function validateBrandSystemProfile(
   filePath: string,
   value: unknown,
@@ -1631,6 +1679,203 @@ function validateFalseBoundaryRecord(filePath: string, value: unknown, field: st
   return boundary;
 }
 
+function validateFoundryAgentOsStandard(filePath: string, value: unknown) {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard must be an object.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard',
+    });
+  }
+
+  const patternId = expectString(value.pattern_id, 'foundry_agent_os_standard.pattern_id', filePath);
+  if (patternId !== 'foundry_agent_os_standard.v1') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.pattern_id must be foundry_agent_os_standard.v1.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.pattern_id',
+      actual: patternId,
+    });
+  }
+
+  const targetShape = expectString(value.target_shape, 'foundry_agent_os_standard.target_shape', filePath);
+  if (targetShape !== 'OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.target_shape must preserve the family target shape.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.target_shape',
+      actual: targetShape,
+    });
+  }
+
+  const appliesToDomainAgents = expectNonEmptyStringArray(
+    value.applies_to_domain_agents,
+    'foundry_agent_os_standard.applies_to_domain_agents',
+    filePath,
+  );
+  requireEveryValue(
+    appliesToDomainAgents,
+    TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_AGENTS,
+    'foundry_agent_os_standard.applies_to_domain_agents',
+    filePath,
+  );
+
+  const domainPackExamplesRaw = value.domain_pack_examples;
+  const domainAuthorityKernelExamplesRaw = value.domain_authority_kernel_examples;
+  const capabilityRegistryRaw = value.capability_registry_boundary;
+  if (!isRecord(domainPackExamplesRaw) || !isRecord(domainAuthorityKernelExamplesRaw) || !isRecord(capabilityRegistryRaw)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'foundry_agent_os_standard must declare domain pack examples, authority kernel examples, and capability registry boundary.',
+      { file: filePath, field: 'foundry_agent_os_standard' },
+    );
+  }
+
+  const domainPackExamples: Record<string, string> = {};
+  const domainAuthorityKernelExamples: Record<string, string[]> = {};
+  for (const agentId of TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_AGENTS) {
+    domainPackExamples[agentId] = expectString(
+      domainPackExamplesRaw[agentId],
+      `foundry_agent_os_standard.domain_pack_examples.${agentId}`,
+      filePath,
+    );
+    domainAuthorityKernelExamples[agentId] = expectNonEmptyStringArray(
+      domainAuthorityKernelExamplesRaw[agentId],
+      `foundry_agent_os_standard.domain_authority_kernel_examples.${agentId}`,
+      filePath,
+    );
+  }
+
+  const mappingRaw = value.opl_module_mapping;
+  if (!Array.isArray(mappingRaw)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.opl_module_mapping must be an array.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.opl_module_mapping',
+    });
+  }
+  const mapping = mappingRaw.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each foundry agent OS module mapping entry must be an object.', {
+        file: filePath,
+        index,
+      });
+    }
+    return {
+      target_capability: expectString(entry.target_capability, 'foundry_agent_os_standard.opl_module_mapping.target_capability', filePath),
+      primary_module: expectBrandModuleId(entry.primary_module, 'foundry_agent_os_standard.opl_module_mapping.primary_module', filePath),
+      supporting_modules: expectBrandModuleIdArray(entry.supporting_modules, 'foundry_agent_os_standard.opl_module_mapping.supporting_modules', filePath),
+      ordinary_lane: expectString(entry.ordinary_lane, 'foundry_agent_os_standard.opl_module_mapping.ordinary_lane', filePath),
+      authority_boundary: expectString(entry.authority_boundary, 'foundry_agent_os_standard.opl_module_mapping.authority_boundary', filePath),
+    };
+  });
+  for (const requiredCapability of [
+    'pack_compiler_generated_surfaces',
+    'domain_capability_registry',
+    'current_owner_delta_default_read_root',
+    'stage_run_durable_execution',
+    'refs_only_evidence_and_lineage',
+  ]) {
+    if (!mapping.some((entry) => entry.target_capability === requiredCapability)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.opl_module_mapping is missing a required target capability.', {
+        file: filePath,
+        field: 'foundry_agent_os_standard.opl_module_mapping',
+        missing_capability: requiredCapability,
+      });
+    }
+  }
+
+  const ownerModules = expectBrandModuleIdArray(
+    capabilityRegistryRaw.owner_modules,
+    'foundry_agent_os_standard.capability_registry_boundary.owner_modules',
+    filePath,
+  );
+  requireEveryValue(
+    ownerModules,
+    TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_CAPABILITY_REGISTRY_MODULES,
+    'foundry_agent_os_standard.capability_registry_boundary.owner_modules',
+    filePath,
+  );
+  const defaultBehavior = expectString(
+    capabilityRegistryRaw.default_behavior,
+    'foundry_agent_os_standard.capability_registry_boundary.default_behavior',
+    filePath,
+  );
+  if (defaultBehavior !== 'current_owner_delta_bound_jit_or_fail_open') {
+    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard capability registry default behavior must stay current-owner-delta-bound and fail-open.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.capability_registry_boundary.default_behavior',
+      actual: defaultBehavior,
+    });
+  }
+  const mustNotCreate = expectNonEmptyStringArray(
+    capabilityRegistryRaw.must_not_create,
+    'foundry_agent_os_standard.capability_registry_boundary.must_not_create',
+    filePath,
+  );
+  for (const forbiddenRegistryCreation of ['domain authority verdict', 'owner receipt', 'typed blocker']) {
+    if (!mustNotCreate.includes(forbiddenRegistryCreation)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard capability registry boundary is missing a forbidden creation rule.', {
+        file: filePath,
+        field: 'foundry_agent_os_standard.capability_registry_boundary.must_not_create',
+        missing: forbiddenRegistryCreation,
+      });
+    }
+  }
+
+  const conformanceClaims = expectNonEmptyStringArray(
+    value.cross_agent_conformance_required_claims,
+    'foundry_agent_os_standard.cross_agent_conformance_required_claims',
+    filePath,
+  );
+  requireEveryValue(
+    conformanceClaims,
+    TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_CONFORMANCE_CLAIMS,
+    'foundry_agent_os_standard.cross_agent_conformance_required_claims',
+    filePath,
+  );
+
+  const forbiddenClaims = expectNonEmptyStringArray(
+    value.forbidden_claims,
+    'foundry_agent_os_standard.forbidden_claims',
+    filePath,
+  );
+  requireEveryValue(
+    forbiddenClaims,
+    TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_FORBIDDEN_CLAIMS,
+    'foundry_agent_os_standard.forbidden_claims',
+    filePath,
+  );
+
+  return {
+    pattern_id: patternId,
+    source_pattern_ref: expectString(value.source_pattern_ref, 'foundry_agent_os_standard.source_pattern_ref', filePath),
+    target_shape: targetShape,
+    applies_to_domain_agents: appliesToDomainAgents,
+    domain_pack_examples: domainPackExamples,
+    domain_authority_kernel_examples: domainAuthorityKernelExamples,
+    opl_module_mapping: mapping,
+    capability_registry_boundary: {
+      owner_modules: ownerModules,
+      default_behavior: defaultBehavior,
+      fail_open_policy: expectString(
+        capabilityRegistryRaw.fail_open_policy,
+        'foundry_agent_os_standard.capability_registry_boundary.fail_open_policy',
+        filePath,
+      ),
+      must_not_create: mustNotCreate,
+    },
+    cross_agent_conformance_required_claims: conformanceClaims,
+    implementation_lane_refs: expectNonEmptyStringArray(
+      value.implementation_lane_refs,
+      'foundry_agent_os_standard.implementation_lane_refs',
+      filePath,
+    ),
+    authority_boundary: validateFalseBoundaryRecord(
+      filePath,
+      value.authority_boundary,
+      'foundry_agent_os_standard.authority_boundary',
+    ),
+    forbidden_claims: forbiddenClaims,
+  };
+}
+
 function validateTargetOperatingArchitecture(
   filePath: string,
   value: unknown,
@@ -1654,6 +1899,7 @@ function validateTargetOperatingArchitecture(
   const catalogRaw = value.catalog_and_telemetry;
   const appConsoleRaw = value.app_console_policy;
   const agentLabRaw = value.agent_lab_improvement_plane;
+  const foundryAgentOsStandardRaw = value.foundry_agent_os_standard;
   if (
     !isRecord(resourceModelRaw)
     || !isRecord(stageAuthorityRaw)
@@ -1664,10 +1910,11 @@ function validateTargetOperatingArchitecture(
     || !isRecord(catalogRaw)
     || !isRecord(appConsoleRaw)
     || !isRecord(agentLabRaw)
+    || !isRecord(foundryAgentOsStandardRaw)
   ) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'target-operating-architecture-contract.json must declare resource, authority, ABI, surface, reconciler, catalog, App, and Agent Lab sections.',
+      'target-operating-architecture-contract.json must declare resource, authority, ABI, surface, reconciler, catalog, App, Agent Lab, and Foundry Agent OS sections.',
       { file: filePath },
     );
   }
@@ -2007,6 +2254,10 @@ function validateTargetOperatingArchitecture(
       may_produce: agentLabMayProduce,
       must_not_produce: agentLabMustNotProduce,
     },
+    foundry_agent_os_standard: validateFoundryAgentOsStandard(
+      filePath,
+      foundryAgentOsStandardRaw,
+    ),
     authority_boundary: validateFalseBoundaryRecord(filePath, value.authority_boundary, 'authority_boundary'),
     forbidden_claims: expectNonEmptyStringArray(value.forbidden_claims, 'forbidden_claims', filePath),
   };

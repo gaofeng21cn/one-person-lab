@@ -16,7 +16,9 @@
     "contracts/opl-framework/domain-pack-compiler-contract.json",
     "contracts/opl-framework/family-product-operator-projection.json",
     "contracts/opl-framework/brand-module-registry.json",
-    "contracts/opl-framework/brand-module-surfaces.json"
+    "contracts/opl-framework/brand-module-surfaces.json",
+    "human_doc:mas_opl_agent_os_target_operating_architecture",
+    "human_doc:foundry_agent_os_family_target_implementation_plan"
   ],
   "design_principles": [
     "grip_big_release_small",
@@ -393,5 +395,176 @@
     "progress_reconciler_signs_owner_receipt",
     "worker_supervisor_is_semantic_loop",
     "temporal_history_is_domain_closeout"
-  ]
+  ],
+  "foundry_agent_os_standard": {
+    "pattern_id": "foundry_agent_os_standard.v1",
+    "source_pattern_ref": "human_doc:mas_opl_agent_os_target_operating_architecture",
+    "target_shape": "OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry",
+    "applies_to_domain_agents": [
+      "mas",
+      "mag",
+      "rca",
+      "oma"
+    ],
+    "domain_pack_examples": {
+      "mas": "Medical Research Pack",
+      "mag": "Grant Pack",
+      "rca": "Visual Deliverable Pack",
+      "oma": "Agent-Building Pack"
+    },
+    "domain_authority_kernel_examples": {
+      "mas": [
+        "medical research truth",
+        "publication quality verdict",
+        "paper artifact authority",
+        "medical memory accept/reject",
+        "owner receipt signer",
+        "typed blocker signer"
+      ],
+      "mag": [
+        "grant truth",
+        "fundability quality/export verdict",
+        "package authority",
+        "grant strategy memory accept/reject",
+        "owner receipt signer",
+        "typed blocker signer"
+      ],
+      "rca": [
+        "visual truth",
+        "layout review/export verdict",
+        "visual artifact mutation authority",
+        "visual memory accept/reject",
+        "owner receipt signer",
+        "typed blocker signer"
+      ],
+      "oma": [
+        "agent-building semantics",
+        "developer work-order materialization",
+        "mechanism proposal materialization",
+        "target-agent no-forbidden-write proof",
+        "target-agent typed blocker signer"
+      ]
+    },
+    "opl_module_mapping": [
+      {
+        "target_capability": "pack_compiler_generated_surfaces",
+        "primary_module": "pack",
+        "supporting_modules": [
+          "atlas",
+          "connect",
+          "console"
+        ],
+        "ordinary_lane": "ordinary",
+        "authority_boundary": "Generated and hosted surfaces may expose calls, descriptors, and read models; they cannot write domain truth, sign receipts, create typed blockers, or claim quality/export verdicts."
+      },
+      {
+        "target_capability": "domain_capability_registry",
+        "primary_module": "atlas",
+        "supporting_modules": [
+          "pack",
+          "stagecraft"
+        ],
+        "ordinary_lane": "advisory",
+        "authority_boundary": "The registry catalogs callable capability refs and use-policy hints; missing non-route-required entries fail open into advisory/audit unless current owner delta would violate source, owner identity, forbidden write, irreversible mutation, or hard reviewer/publication gate."
+      },
+      {
+        "target_capability": "current_owner_delta_default_read_root",
+        "primary_module": "console",
+        "supporting_modules": [
+          "runway",
+          "vault",
+          "stagecraft"
+        ],
+        "ordinary_lane": "ordinary",
+        "authority_boundary": "Console and read models project the current owner, next required delta, accepted answer shape, and hard gates; they cannot sign owner answers or replace domain owner judgment."
+      },
+      {
+        "target_capability": "stage_run_durable_execution",
+        "primary_module": "runway",
+        "supporting_modules": [
+          "stagecraft",
+          "vault"
+        ],
+        "ordinary_lane": "ordinary",
+        "authority_boundary": "Runway owns attempt, lease, execution authorization, retry, dead-letter, and provider state; provider completion cannot become domain completion."
+      },
+      {
+        "target_capability": "refs_only_evidence_and_lineage",
+        "primary_module": "vault",
+        "supporting_modules": [
+          "console",
+          "runway"
+        ],
+        "ordinary_lane": "audit",
+        "authority_boundary": "Vault records refs-only evidence, receipt refs, blocker refs, and lineage; it does not store artifact or memory bodies and cannot convert refs into owner authority."
+      },
+      {
+        "target_capability": "agent_improvement_and_target_delta",
+        "primary_module": "foundry-lab",
+        "supporting_modules": [
+          "atlas",
+          "pack",
+          "connect"
+        ],
+        "ordinary_lane": "advisory",
+        "authority_boundary": "Foundry Lab and OMA may produce work orders, candidate fixes, and promotion proposals; target domain owner acceptance remains external to OPL."
+      }
+    ],
+    "capability_registry_boundary": {
+      "owner_modules": [
+        "atlas",
+        "pack",
+        "stagecraft"
+      ],
+      "default_behavior": "current_owner_delta_bound_jit_or_fail_open",
+      "fail_open_policy": "A missing optional capability ref becomes advisory/audit. It becomes a typed blocker only when the active current_owner_delta explicitly needs the ref to protect source/data/evidence, owner-route identity, forbidden write, irreversible mutation, or reviewer/publication hard gate.",
+      "must_not_create": [
+        "default memory scan",
+        "default meta-review",
+        "default tournament",
+        "default prefetch blocking mainline",
+        "default always-on sidecar",
+        "domain authority verdict",
+        "owner receipt",
+        "typed blocker"
+      ]
+    },
+    "cross_agent_conformance_required_claims": [
+      "default_read_root_is_current_owner_delta",
+      "domain_authority_false_flags_on_opl_modules",
+      "generated_surfaces_do_not_write_domain_truth",
+      "conformance_pass_does_not_claim_domain_ready",
+      "vault_console_runway_do_not_sign_owner_answer",
+      "capability_registry_fails_open_unless_current_delta_requires_ref"
+    ],
+    "implementation_lane_refs": [
+      "human_doc:foundry_agent_os_family_target_implementation_plan",
+      "contracts/opl-framework/brand-module-registry.json",
+      "contracts/opl-framework/brand-module-surfaces.json",
+      "contracts/opl-framework/brand-module-l5-operating-evidence.json"
+    ],
+    "authority_boundary": {
+      "can_claim_domain_ready": false,
+      "can_claim_quality_verdict": false,
+      "can_claim_artifact_authority": false,
+      "can_claim_production_ready": false,
+      "can_write_domain_truth": false,
+      "can_write_memory_body": false,
+      "can_mutate_artifact_body": false,
+      "can_sign_owner_receipt": false,
+      "can_create_typed_blocker": false,
+      "can_replace_domain_owner": false,
+      "can_replace_ai_executor_planning": false
+    },
+    "forbidden_claims": [
+      "agent_os_contract_is_domain_ready",
+      "capability_registry_owns_domain_authority",
+      "pack_compile_is_quality_verdict",
+      "generated_surface_writes_domain_truth",
+      "current_owner_delta_projection_signs_owner_answer",
+      "vault_ref_is_owner_receipt_authority",
+      "runway_provider_completion_is_domain_completion",
+      "console_view_is_app_release_ready"
+    ]
+  }
 }

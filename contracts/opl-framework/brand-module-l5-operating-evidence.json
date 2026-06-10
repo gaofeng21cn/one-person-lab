@@ -29,37 +29,115 @@
     {
       "class_id": "live_user_path",
       "definition": "A real user or operator can exercise the module through its ordinary path and inspect the accepted result shape.",
-      "accepted_ref_shapes": ["user_path_evidence_ref", "operator_evidence_ref", "typed_blocker_ref"]
+      "accepted_ref_shapes": [
+        "user_path_evidence_ref",
+        "operator_evidence_ref",
+        "typed_blocker_ref"
+      ]
     },
     {
       "class_id": "cross_agent_scaleout",
       "definition": "The module works across MAS, MAG, RCA, and OMA or records a per-agent owner blocker.",
-      "accepted_ref_shapes": ["scaleout_receipt_ref", "per_agent_receipt_ref", "typed_blocker_ref"]
+      "accepted_ref_shapes": [
+        "scaleout_receipt_ref",
+        "per_agent_receipt_ref",
+        "typed_blocker_ref"
+      ]
     },
     {
       "class_id": "long_soak_recovery",
       "definition": "Longer-window operation, retry/dead-letter, restore, or recovery evidence is recorded and replayable.",
-      "accepted_ref_shapes": ["long_soak_ref", "recovery_ref", "dead_letter_ref", "typed_blocker_ref"]
+      "accepted_ref_shapes": [
+        "long_soak_ref",
+        "recovery_ref",
+        "dead_letter_ref",
+        "typed_blocker_ref"
+      ]
     },
     {
       "class_id": "release_install_evidence",
       "definition": "Release, install, descriptor, package, or distribution evidence is tied to the same semantic source.",
-      "accepted_ref_shapes": ["release_evidence_ref", "install_evidence_ref", "descriptor_drift_ref", "typed_blocker_ref"]
+      "accepted_ref_shapes": [
+        "release_evidence_ref",
+        "install_evidence_ref",
+        "descriptor_drift_ref",
+        "typed_blocker_ref"
+      ]
     },
     {
       "class_id": "operator_repair_loop",
       "definition": "The operator can see the current owner, accepted answer shape, repair action, and evidence closure route.",
-      "accepted_ref_shapes": ["repair_loop_ref", "current_owner_delta_ref", "safe_action_ref", "typed_blocker_ref"]
+      "accepted_ref_shapes": [
+        "repair_loop_ref",
+        "current_owner_delta_ref",
+        "safe_action_ref",
+        "typed_blocker_ref"
+      ]
     },
     {
       "class_id": "owner_acceptance",
       "definition": "The responsible module, domain, App, or release owner accepts the outcome or records a typed blocker.",
-      "accepted_ref_shapes": ["owner_acceptance_ref", "owner_receipt_ref", "typed_blocker_ref", "human_gate_ref"]
+      "accepted_ref_shapes": [
+        "owner_acceptance_ref",
+        "owner_receipt_ref",
+        "typed_blocker_ref",
+        "human_gate_ref"
+      ]
     },
     {
       "class_id": "no_second_truth_regression",
       "definition": "Tests, contracts, or scans prevent retired aliases, compatibility wrappers, false authority, or second truth sources from returning.",
-      "accepted_ref_shapes": ["no_resurrection_guard_ref", "negative_guard_ref", "source_scan_ref", "typed_blocker_ref"]
+      "accepted_ref_shapes": [
+        "no_resurrection_guard_ref",
+        "negative_guard_ref",
+        "source_scan_ref",
+        "typed_blocker_ref"
+      ]
+    },
+    {
+      "class_id": "pack_compile_parity",
+      "definition": "Generated/hosted surfaces, pack locks, and direct domain entries produce equivalent callable/ref boundaries without giving OPL domain authority.",
+      "accepted_ref_shapes": [
+        "pack_compile_parity_ref",
+        "generated_surface_parity_ref",
+        "typed_blocker_ref"
+      ]
+    },
+    {
+      "class_id": "current_owner_delta_default_read",
+      "definition": "The ordinary CLI/App/operator read root is current_owner_delta, with raw worklist, evidence, replay, provider trace, and L5 ledgers kept as drilldown.",
+      "accepted_ref_shapes": [
+        "current_owner_delta_ref",
+        "operator_default_read_ref",
+        "typed_blocker_ref"
+      ]
+    },
+    {
+      "class_id": "capability_fail_open_boundary",
+      "definition": "Optional capability registry refs remain advisory/audit and fail open unless the active owner delta needs them for source, owner identity, forbidden write, irreversible mutation, or hard reviewer/publication gates.",
+      "accepted_ref_shapes": [
+        "capability_fail_open_ref",
+        "route_required_capability_ref",
+        "typed_blocker_ref"
+      ]
+    },
+    {
+      "class_id": "domain_authority_false_boundary",
+      "definition": "OPL modules, Vault, Console, Runway, Pack, and capability registry projections all prove false authority flags for domain truth, artifact authority, memory body, owner receipt, typed blocker, and quality/export verdicts.",
+      "accepted_ref_shapes": [
+        "false_authority_guard_ref",
+        "negative_guard_ref",
+        "typed_blocker_ref"
+      ]
+    },
+    {
+      "class_id": "cross_agent_foundry_agent_os_adoption",
+      "definition": "MAS, MAG, RCA, and OMA adopt the same Foundry Agent OS target shape or record per-agent owner blockers.",
+      "accepted_ref_shapes": [
+        "cross_agent_adoption_ref",
+        "per_agent_target_delta_ref",
+        "typed_blocker_ref"
+      ]
     }
   ],
   "modules": [
@@ -69,17 +147,79 @@
       "current_level": "L4_structural_baseline",
       "l5_completion_status": "evidence_required",
       "l5_can_be_claimed": false,
-      "immediate_enabling_surfaces": ["charter_authority_matrix_gate", "charter_term_lifecycle_gate", "charter_adr_rfc_supersession_gate"],
-      "evidence_requirements": [
-        { "class_id": "live_user_path", "owner": "OPL Framework docs governance", "current_state": "open" },
-        { "class_id": "cross_agent_scaleout", "owner": "OPL Framework docs governance", "current_state": "open" },
-        { "class_id": "long_soak_recovery", "owner": "OPL Framework docs governance", "current_state": "open" },
-        { "class_id": "release_install_evidence", "owner": "OPL Framework docs governance", "current_state": "open" },
-        { "class_id": "operator_repair_loop", "owner": "OPL Framework docs governance", "current_state": "open" },
-        { "class_id": "owner_acceptance", "owner": "OPL Framework owner", "current_state": "open" },
-        { "class_id": "no_second_truth_regression", "owner": "OPL Framework docs governance", "current_state": "open" }
+      "immediate_enabling_surfaces": [
+        "charter_authority_matrix_gate",
+        "charter_term_lifecycle_gate",
+        "charter_adr_rfc_supersession_gate"
       ],
-      "not_claims": ["domain_ready", "app_release_ready", "production_ready", "owner_receipt_signed_by_opl"]
+      "evidence_requirements": [
+        {
+          "class_id": "live_user_path",
+          "owner": "OPL Framework docs governance",
+          "current_state": "open"
+        },
+        {
+          "class_id": "cross_agent_scaleout",
+          "owner": "OPL Framework docs governance",
+          "current_state": "open"
+        },
+        {
+          "class_id": "long_soak_recovery",
+          "owner": "OPL Framework docs governance",
+          "current_state": "open"
+        },
+        {
+          "class_id": "release_install_evidence",
+          "owner": "OPL Framework docs governance",
+          "current_state": "open"
+        },
+        {
+          "class_id": "operator_repair_loop",
+          "owner": "OPL Framework docs governance",
+          "current_state": "open"
+        },
+        {
+          "class_id": "owner_acceptance",
+          "owner": "OPL Framework owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "no_second_truth_regression",
+          "owner": "OPL Framework docs governance",
+          "current_state": "open"
+        },
+        {
+          "class_id": "pack_compile_parity",
+          "owner": "OPL Charter owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "current_owner_delta_default_read",
+          "owner": "OPL Charter owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "capability_fail_open_boundary",
+          "owner": "OPL Framework owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "domain_authority_false_boundary",
+          "owner": "OPL Charter owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "cross_agent_foundry_agent_os_adoption",
+          "owner": "OPL Charter owner",
+          "current_state": "open"
+        }
+      ],
+      "not_claims": [
+        "domain_ready",
+        "app_release_ready",
+        "production_ready",
+        "owner_receipt_signed_by_opl"
+      ]
     },
     {
       "module_id": "atlas",
@@ -87,17 +227,82 @@
       "current_level": "L4_structural_baseline",
       "l5_completion_status": "evidence_required",
       "l5_can_be_claimed": false,
-      "immediate_enabling_surfaces": ["atlas_catalog_graph_gate", "atlas_lifecycle_drift_gate", "atlas_owner_catalog_gate"],
-      "evidence_requirements": [
-        { "class_id": "live_user_path", "owner": "OPL Framework catalog owner", "current_state": "open" },
-        { "class_id": "cross_agent_scaleout", "owner": "OPL Framework catalog owner", "current_state": "open" },
-        { "class_id": "long_soak_recovery", "owner": "OPL Framework catalog owner", "current_state": "open" },
-        { "class_id": "release_install_evidence", "owner": "OPL Framework catalog owner", "current_state": "open" },
-        { "class_id": "operator_repair_loop", "owner": "OPL Framework catalog owner", "current_state": "open" },
-        { "class_id": "owner_acceptance", "owner": "OPL Framework owner", "current_state": "open" },
-        { "class_id": "no_second_truth_regression", "owner": "OPL Framework catalog owner", "current_state": "open" }
+      "immediate_enabling_surfaces": [
+        "atlas_catalog_graph_gate",
+        "atlas_lifecycle_drift_gate",
+        "atlas_owner_catalog_gate",
+        "atlas_capability_registry_fail_open_gate"
       ],
-      "not_claims": ["domain_ready", "catalog_executes_actions", "quality_verdict", "production_ready"]
+      "evidence_requirements": [
+        {
+          "class_id": "live_user_path",
+          "owner": "OPL Framework catalog owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "cross_agent_scaleout",
+          "owner": "OPL Framework catalog owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "long_soak_recovery",
+          "owner": "OPL Framework catalog owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "release_install_evidence",
+          "owner": "OPL Framework catalog owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "operator_repair_loop",
+          "owner": "OPL Framework catalog owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "owner_acceptance",
+          "owner": "OPL Framework owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "no_second_truth_regression",
+          "owner": "OPL Framework catalog owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "pack_compile_parity",
+          "owner": "OPL Atlas owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "current_owner_delta_default_read",
+          "owner": "OPL Atlas owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "capability_fail_open_boundary",
+          "owner": "OPL Atlas owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "domain_authority_false_boundary",
+          "owner": "OPL Atlas owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "cross_agent_foundry_agent_os_adoption",
+          "owner": "OPL Atlas owner",
+          "current_state": "open"
+        }
+      ],
+      "not_claims": [
+        "domain_ready",
+        "catalog_executes_actions",
+        "quality_verdict",
+        "production_ready",
+        "capability_registry_executes_actions",
+        "capability_registry_owns_domain_authority"
+      ]
     },
     {
       "module_id": "workspace",
@@ -105,17 +310,79 @@
       "current_level": "L4_structural_baseline",
       "l5_completion_status": "evidence_required",
       "l5_can_be_claimed": false,
-      "immediate_enabling_surfaces": ["workspace_cross_agent_smoke_gate", "workspace_adopt_validate_doctor_gate", "workspace_owner_acceptance_ref_gate"],
-      "evidence_requirements": [
-        { "class_id": "live_user_path", "owner": "OPL Workspace owner", "current_state": "open" },
-        { "class_id": "cross_agent_scaleout", "owner": "OPL Workspace owner", "current_state": "open" },
-        { "class_id": "long_soak_recovery", "owner": "OPL Workspace owner", "current_state": "open" },
-        { "class_id": "release_install_evidence", "owner": "OPL Workspace owner", "current_state": "open" },
-        { "class_id": "operator_repair_loop", "owner": "OPL Workspace owner", "current_state": "open" },
-        { "class_id": "owner_acceptance", "owner": "domain workspace owners", "current_state": "open" },
-        { "class_id": "no_second_truth_regression", "owner": "OPL Workspace owner", "current_state": "open" }
+      "immediate_enabling_surfaces": [
+        "workspace_cross_agent_smoke_gate",
+        "workspace_adopt_validate_doctor_gate",
+        "workspace_owner_acceptance_ref_gate"
       ],
-      "not_claims": ["domain_ready", "artifact_authority", "quality_verdict", "production_ready"]
+      "evidence_requirements": [
+        {
+          "class_id": "live_user_path",
+          "owner": "OPL Workspace owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "cross_agent_scaleout",
+          "owner": "OPL Workspace owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "long_soak_recovery",
+          "owner": "OPL Workspace owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "release_install_evidence",
+          "owner": "OPL Workspace owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "operator_repair_loop",
+          "owner": "OPL Workspace owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "owner_acceptance",
+          "owner": "domain workspace owners",
+          "current_state": "open"
+        },
+        {
+          "class_id": "no_second_truth_regression",
+          "owner": "OPL Workspace owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "pack_compile_parity",
+          "owner": "OPL Workspace owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "current_owner_delta_default_read",
+          "owner": "OPL Workspace owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "capability_fail_open_boundary",
+          "owner": "OPL Framework owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "domain_authority_false_boundary",
+          "owner": "OPL Workspace owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "cross_agent_foundry_agent_os_adoption",
+          "owner": "OPL Workspace owner",
+          "current_state": "open"
+        }
+      ],
+      "not_claims": [
+        "domain_ready",
+        "artifact_authority",
+        "quality_verdict",
+        "production_ready"
+      ]
     },
     {
       "module_id": "pack",
@@ -123,17 +390,84 @@
       "current_level": "L4_structural_baseline",
       "l5_completion_status": "evidence_required",
       "l5_can_be_claimed": false,
-      "immediate_enabling_surfaces": ["pack_domain_pack_conformance_gate", "pack_authority_abi_gate", "pack_generated_surface_drift_gate"],
-      "evidence_requirements": [
-        { "class_id": "live_user_path", "owner": "OPL Pack owner", "current_state": "open" },
-        { "class_id": "cross_agent_scaleout", "owner": "OPL Pack owner", "current_state": "open" },
-        { "class_id": "long_soak_recovery", "owner": "OPL Pack owner", "current_state": "open" },
-        { "class_id": "release_install_evidence", "owner": "OPL Pack owner", "current_state": "open" },
-        { "class_id": "operator_repair_loop", "owner": "OPL Pack owner", "current_state": "open" },
-        { "class_id": "owner_acceptance", "owner": "domain pack owners", "current_state": "open" },
-        { "class_id": "no_second_truth_regression", "owner": "OPL Pack owner", "current_state": "open" }
+      "immediate_enabling_surfaces": [
+        "pack_domain_pack_conformance_gate",
+        "pack_authority_abi_gate",
+        "pack_generated_surface_drift_gate",
+        "pack_compile_parity_gate",
+        "pack_capability_registry_abi_gate"
       ],
-      "not_claims": ["domain_ready", "quality_verdict", "artifact_authority", "production_ready", "generated_surface_writes_domain_truth"]
+      "evidence_requirements": [
+        {
+          "class_id": "live_user_path",
+          "owner": "OPL Pack owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "cross_agent_scaleout",
+          "owner": "OPL Pack owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "long_soak_recovery",
+          "owner": "OPL Pack owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "release_install_evidence",
+          "owner": "OPL Pack owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "operator_repair_loop",
+          "owner": "OPL Pack owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "owner_acceptance",
+          "owner": "domain pack owners",
+          "current_state": "open"
+        },
+        {
+          "class_id": "no_second_truth_regression",
+          "owner": "OPL Pack owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "pack_compile_parity",
+          "owner": "OPL Pack owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "current_owner_delta_default_read",
+          "owner": "OPL Pack owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "capability_fail_open_boundary",
+          "owner": "OPL Pack owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "domain_authority_false_boundary",
+          "owner": "OPL Pack owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "cross_agent_foundry_agent_os_adoption",
+          "owner": "OPL Pack owner + domain pack owners",
+          "current_state": "open"
+        }
+      ],
+      "not_claims": [
+        "domain_ready",
+        "quality_verdict",
+        "artifact_authority",
+        "production_ready",
+        "generated_surface_writes_domain_truth",
+        "pack_compile_is_quality_verdict",
+        "domain_capability_registry_owns_domain_authority"
+      ]
     },
     {
       "module_id": "stagecraft",
@@ -141,17 +475,82 @@
       "current_level": "L4_structural_baseline",
       "l5_completion_status": "evidence_required",
       "l5_can_be_claimed": false,
-      "immediate_enabling_surfaces": ["stagecraft_stage_gate_receipt_matrix", "stagecraft_quality_gate_ref_gate", "stagecraft_route_back_gate"],
-      "evidence_requirements": [
-        { "class_id": "live_user_path", "owner": "OPL Stagecraft owner", "current_state": "open" },
-        { "class_id": "cross_agent_scaleout", "owner": "OPL Stagecraft owner", "current_state": "open" },
-        { "class_id": "long_soak_recovery", "owner": "OPL Stagecraft owner", "current_state": "open" },
-        { "class_id": "release_install_evidence", "owner": "OPL Stagecraft owner", "current_state": "open" },
-        { "class_id": "operator_repair_loop", "owner": "OPL Stagecraft owner", "current_state": "open" },
-        { "class_id": "owner_acceptance", "owner": "domain stage owners", "current_state": "open" },
-        { "class_id": "no_second_truth_regression", "owner": "OPL Stagecraft owner", "current_state": "open" }
+      "immediate_enabling_surfaces": [
+        "stagecraft_stage_gate_receipt_matrix",
+        "stagecraft_quality_gate_ref_gate",
+        "stagecraft_route_back_gate",
+        "stagecraft_capability_use_policy_fail_open_gate"
       ],
-      "not_claims": ["quality_gate_closed", "domain_ready", "artifact_ready", "production_ready"]
+      "evidence_requirements": [
+        {
+          "class_id": "live_user_path",
+          "owner": "OPL Stagecraft owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "cross_agent_scaleout",
+          "owner": "OPL Stagecraft owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "long_soak_recovery",
+          "owner": "OPL Stagecraft owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "release_install_evidence",
+          "owner": "OPL Stagecraft owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "operator_repair_loop",
+          "owner": "OPL Stagecraft owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "owner_acceptance",
+          "owner": "domain stage owners",
+          "current_state": "open"
+        },
+        {
+          "class_id": "no_second_truth_regression",
+          "owner": "OPL Stagecraft owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "pack_compile_parity",
+          "owner": "OPL Stagecraft owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "current_owner_delta_default_read",
+          "owner": "OPL Stagecraft owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "capability_fail_open_boundary",
+          "owner": "OPL Stagecraft owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "domain_authority_false_boundary",
+          "owner": "OPL Stagecraft owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "cross_agent_foundry_agent_os_adoption",
+          "owner": "OPL Stagecraft owner",
+          "current_state": "open"
+        }
+      ],
+      "not_claims": [
+        "quality_gate_closed",
+        "domain_ready",
+        "artifact_ready",
+        "production_ready",
+        "capability_use_policy_is_quality_verdict",
+        "capability_registry_missing_optional_ref_blocks_stage"
+      ]
     },
     {
       "module_id": "runway",
@@ -159,17 +558,81 @@
       "current_level": "L4_structural_baseline",
       "l5_completion_status": "evidence_required",
       "l5_can_be_claimed": false,
-      "immediate_enabling_surfaces": ["runway_long_soak_harness", "runway_worker_supervisor_gate", "runway_retry_dead_letter_recovery_gate"],
-      "evidence_requirements": [
-        { "class_id": "live_user_path", "owner": "OPL Runway owner", "current_state": "open" },
-        { "class_id": "cross_agent_scaleout", "owner": "OPL Runway owner", "current_state": "open" },
-        { "class_id": "long_soak_recovery", "owner": "OPL Runway owner", "current_state": "open" },
-        { "class_id": "release_install_evidence", "owner": "OPL Runway owner", "current_state": "open" },
-        { "class_id": "operator_repair_loop", "owner": "OPL Runway owner", "current_state": "open" },
-        { "class_id": "owner_acceptance", "owner": "runtime and domain owners", "current_state": "open" },
-        { "class_id": "no_second_truth_regression", "owner": "OPL Runway owner", "current_state": "open" }
+      "immediate_enabling_surfaces": [
+        "runway_long_soak_harness",
+        "runway_worker_supervisor_gate",
+        "runway_retry_dead_letter_recovery_gate"
       ],
-      "not_claims": ["production_long_soak_complete", "domain_ready", "quality_verdict", "artifact_authority"]
+      "evidence_requirements": [
+        {
+          "class_id": "live_user_path",
+          "owner": "OPL Runway owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "cross_agent_scaleout",
+          "owner": "OPL Runway owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "long_soak_recovery",
+          "owner": "OPL Runway owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "release_install_evidence",
+          "owner": "OPL Runway owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "operator_repair_loop",
+          "owner": "OPL Runway owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "owner_acceptance",
+          "owner": "runtime and domain owners",
+          "current_state": "open"
+        },
+        {
+          "class_id": "no_second_truth_regression",
+          "owner": "OPL Runway owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "pack_compile_parity",
+          "owner": "OPL Runway owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "current_owner_delta_default_read",
+          "owner": "OPL Runway owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "capability_fail_open_boundary",
+          "owner": "OPL Framework owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "domain_authority_false_boundary",
+          "owner": "OPL Runway owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "cross_agent_foundry_agent_os_adoption",
+          "owner": "OPL Runway owner",
+          "current_state": "open"
+        }
+      ],
+      "not_claims": [
+        "production_long_soak_complete",
+        "domain_ready",
+        "quality_verdict",
+        "artifact_authority",
+        "runtime_provider_signs_owner_answer",
+        "provider_completion_is_domain_completion"
+      ]
     },
     {
       "module_id": "vault",
@@ -177,17 +640,81 @@
       "current_level": "L4_structural_baseline",
       "l5_completion_status": "evidence_required",
       "l5_can_be_claimed": false,
-      "immediate_enabling_surfaces": ["vault_restore_replay_gate", "vault_no_regression_gate", "vault_lineage_retention_gate"],
-      "evidence_requirements": [
-        { "class_id": "live_user_path", "owner": "OPL Vault owner", "current_state": "open" },
-        { "class_id": "cross_agent_scaleout", "owner": "OPL Vault owner", "current_state": "open" },
-        { "class_id": "long_soak_recovery", "owner": "OPL Vault owner", "current_state": "open" },
-        { "class_id": "release_install_evidence", "owner": "OPL Vault owner", "current_state": "open" },
-        { "class_id": "operator_repair_loop", "owner": "OPL Vault owner", "current_state": "open" },
-        { "class_id": "owner_acceptance", "owner": "domain artifact and memory owners", "current_state": "open" },
-        { "class_id": "no_second_truth_regression", "owner": "OPL Vault owner", "current_state": "open" }
+      "immediate_enabling_surfaces": [
+        "vault_restore_replay_gate",
+        "vault_no_regression_gate",
+        "vault_lineage_retention_gate"
       ],
-      "not_claims": ["artifact_body_store", "memory_body_store", "quality_verdict", "production_ready"]
+      "evidence_requirements": [
+        {
+          "class_id": "live_user_path",
+          "owner": "OPL Vault owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "cross_agent_scaleout",
+          "owner": "OPL Vault owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "long_soak_recovery",
+          "owner": "OPL Vault owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "release_install_evidence",
+          "owner": "OPL Vault owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "operator_repair_loop",
+          "owner": "OPL Vault owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "owner_acceptance",
+          "owner": "domain artifact and memory owners",
+          "current_state": "open"
+        },
+        {
+          "class_id": "no_second_truth_regression",
+          "owner": "OPL Vault owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "pack_compile_parity",
+          "owner": "OPL Vault owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "current_owner_delta_default_read",
+          "owner": "OPL Vault owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "capability_fail_open_boundary",
+          "owner": "OPL Framework owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "domain_authority_false_boundary",
+          "owner": "OPL Vault owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "cross_agent_foundry_agent_os_adoption",
+          "owner": "OPL Vault owner",
+          "current_state": "open"
+        }
+      ],
+      "not_claims": [
+        "artifact_body_store",
+        "memory_body_store",
+        "quality_verdict",
+        "production_ready",
+        "receipt_ref_is_owner_receipt_authority",
+        "vault_ref_store_is_memory_body"
+      ]
     },
     {
       "module_id": "console",
@@ -195,17 +722,82 @@
       "current_level": "L4_structural_baseline",
       "l5_completion_status": "evidence_required",
       "l5_can_be_claimed": false,
-      "immediate_enabling_surfaces": ["console_framework_state_action_envelope", "console_user_path_evidence_envelope", "console_operator_repair_loop_gate"],
-      "evidence_requirements": [
-        { "class_id": "live_user_path", "owner": "One Person Lab App owner", "current_state": "open" },
-        { "class_id": "cross_agent_scaleout", "owner": "One Person Lab App owner", "current_state": "open" },
-        { "class_id": "long_soak_recovery", "owner": "OPL Console owner", "current_state": "open" },
-        { "class_id": "release_install_evidence", "owner": "One Person Lab App release owner", "current_state": "open" },
-        { "class_id": "operator_repair_loop", "owner": "OPL Console owner", "current_state": "open" },
-        { "class_id": "owner_acceptance", "owner": "App release owner", "current_state": "open" },
-        { "class_id": "no_second_truth_regression", "owner": "OPL Console owner", "current_state": "open" }
+      "immediate_enabling_surfaces": [
+        "console_framework_state_action_envelope",
+        "console_user_path_evidence_envelope",
+        "console_operator_repair_loop_gate",
+        "console_current_owner_delta_default_read_gate"
       ],
-      "not_claims": ["app_release_ready", "domain_ready", "production_ready", "quality_verdict"]
+      "evidence_requirements": [
+        {
+          "class_id": "live_user_path",
+          "owner": "One Person Lab App owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "cross_agent_scaleout",
+          "owner": "One Person Lab App owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "long_soak_recovery",
+          "owner": "OPL Console owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "release_install_evidence",
+          "owner": "One Person Lab App release owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "operator_repair_loop",
+          "owner": "OPL Console owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "owner_acceptance",
+          "owner": "App release owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "no_second_truth_regression",
+          "owner": "OPL Console owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "pack_compile_parity",
+          "owner": "OPL Console owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "current_owner_delta_default_read",
+          "owner": "OPL Console owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "capability_fail_open_boundary",
+          "owner": "OPL Framework owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "domain_authority_false_boundary",
+          "owner": "OPL Console owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "cross_agent_foundry_agent_os_adoption",
+          "owner": "OPL Console owner",
+          "current_state": "open"
+        }
+      ],
+      "not_claims": [
+        "app_release_ready",
+        "domain_ready",
+        "production_ready",
+        "quality_verdict",
+        "current_owner_delta_view_signs_owner_answer",
+        "console_projection_is_domain_truth"
+      ]
     },
     {
       "module_id": "foundry-lab",
@@ -213,17 +805,79 @@
       "current_level": "L4_structural_baseline",
       "l5_completion_status": "evidence_required",
       "l5_can_be_claimed": false,
-      "immediate_enabling_surfaces": ["foundry_lab_canary_promotion_envelope", "foundry_lab_rollback_gate", "foundry_lab_owner_acceptance_ref_gate"],
-      "evidence_requirements": [
-        { "class_id": "live_user_path", "owner": "OPL Foundry Lab owner", "current_state": "open" },
-        { "class_id": "cross_agent_scaleout", "owner": "OPL Foundry Lab owner", "current_state": "open" },
-        { "class_id": "long_soak_recovery", "owner": "OPL Foundry Lab owner", "current_state": "open" },
-        { "class_id": "release_install_evidence", "owner": "OPL Foundry Lab owner", "current_state": "open" },
-        { "class_id": "operator_repair_loop", "owner": "OPL Foundry Lab owner", "current_state": "open" },
-        { "class_id": "owner_acceptance", "owner": "target agent owners", "current_state": "open" },
-        { "class_id": "no_second_truth_regression", "owner": "OPL Foundry Lab owner", "current_state": "open" }
+      "immediate_enabling_surfaces": [
+        "foundry_lab_canary_promotion_envelope",
+        "foundry_lab_rollback_gate",
+        "foundry_lab_owner_acceptance_ref_gate"
       ],
-      "not_claims": ["target_domain_owner_acceptance", "quality_verdict", "production_ready", "domain_truth_write"]
+      "evidence_requirements": [
+        {
+          "class_id": "live_user_path",
+          "owner": "OPL Foundry Lab owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "cross_agent_scaleout",
+          "owner": "OPL Foundry Lab owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "long_soak_recovery",
+          "owner": "OPL Foundry Lab owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "release_install_evidence",
+          "owner": "OPL Foundry Lab owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "operator_repair_loop",
+          "owner": "OPL Foundry Lab owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "owner_acceptance",
+          "owner": "target agent owners",
+          "current_state": "open"
+        },
+        {
+          "class_id": "no_second_truth_regression",
+          "owner": "OPL Foundry Lab owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "pack_compile_parity",
+          "owner": "OPL Foundry Lab owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "current_owner_delta_default_read",
+          "owner": "OPL Foundry Lab owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "capability_fail_open_boundary",
+          "owner": "OPL Framework owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "domain_authority_false_boundary",
+          "owner": "OPL Foundry Lab owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "cross_agent_foundry_agent_os_adoption",
+          "owner": "OPL Foundry Lab owner",
+          "current_state": "open"
+        }
+      ],
+      "not_claims": [
+        "target_domain_owner_acceptance",
+        "quality_verdict",
+        "production_ready",
+        "domain_truth_write"
+      ]
     },
     {
       "module_id": "connect",
@@ -231,17 +885,79 @@
       "current_level": "L4_structural_baseline",
       "l5_completion_status": "evidence_required",
       "l5_can_be_claimed": false,
-      "immediate_enabling_surfaces": ["connect_descriptor_drift_matrix", "connect_release_install_matrix", "connect_semantic_transport_split_gate"],
-      "evidence_requirements": [
-        { "class_id": "live_user_path", "owner": "OPL Connect owner", "current_state": "open" },
-        { "class_id": "cross_agent_scaleout", "owner": "OPL Connect owner", "current_state": "open" },
-        { "class_id": "long_soak_recovery", "owner": "OPL Connect owner", "current_state": "open" },
-        { "class_id": "release_install_evidence", "owner": "OPL Connect and App release owners", "current_state": "open" },
-        { "class_id": "operator_repair_loop", "owner": "OPL Connect owner", "current_state": "open" },
-        { "class_id": "owner_acceptance", "owner": "install and release owners", "current_state": "open" },
-        { "class_id": "no_second_truth_regression", "owner": "OPL Connect owner", "current_state": "open" }
+      "immediate_enabling_surfaces": [
+        "connect_descriptor_drift_matrix",
+        "connect_release_install_matrix",
+        "connect_semantic_transport_split_gate"
       ],
-      "not_claims": ["all_install_channels_complete", "app_release_ready", "domain_ready", "production_ready"]
+      "evidence_requirements": [
+        {
+          "class_id": "live_user_path",
+          "owner": "OPL Connect owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "cross_agent_scaleout",
+          "owner": "OPL Connect owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "long_soak_recovery",
+          "owner": "OPL Connect owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "release_install_evidence",
+          "owner": "OPL Connect and App release owners",
+          "current_state": "open"
+        },
+        {
+          "class_id": "operator_repair_loop",
+          "owner": "OPL Connect owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "owner_acceptance",
+          "owner": "install and release owners",
+          "current_state": "open"
+        },
+        {
+          "class_id": "no_second_truth_regression",
+          "owner": "OPL Connect owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "pack_compile_parity",
+          "owner": "OPL Connect owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "current_owner_delta_default_read",
+          "owner": "OPL Connect owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "capability_fail_open_boundary",
+          "owner": "OPL Framework owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "domain_authority_false_boundary",
+          "owner": "OPL Connect owner",
+          "current_state": "open"
+        },
+        {
+          "class_id": "cross_agent_foundry_agent_os_adoption",
+          "owner": "OPL Connect owner",
+          "current_state": "open"
+        }
+      ],
+      "not_claims": [
+        "all_install_channels_complete",
+        "app_release_ready",
+        "domain_ready",
+        "production_ready"
+      ]
     }
   ]
 }

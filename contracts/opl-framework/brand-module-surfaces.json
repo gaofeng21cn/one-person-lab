@@ -192,14 +192,17 @@
           "surface_descriptor",
           "catalog_graph",
           "lifecycle_state",
-          "generated_interface_bundle"
+          "generated_interface_bundle",
+          "domain_capability_registry_entry",
+          "capability_use_policy_ref"
         ],
         "canonical_contract_refs": [
           "contracts/opl-framework/domains.json",
           "contracts/opl-framework/workstreams.json",
           "contracts/opl-framework/public-surface-index.json",
           "contracts/opl-framework/domain-pack-compiler-contract.json",
-          "contracts/opl-framework/standard-domain-agent-skeleton-contract.json"
+          "contracts/opl-framework/standard-domain-agent-skeleton-contract.json",
+          "contracts/opl-framework/target-operating-architecture-contract.json"
         ],
         "read_model_refs": [
           "opl atlas status --json",
@@ -314,7 +317,9 @@
           "catalog_executes_actions",
           "quality_verdict",
           "artifact_authority",
-          "production_ready"
+          "production_ready",
+          "capability_registry_executes_actions",
+          "capability_registry_owns_domain_authority"
         ]
       },
       "authority_boundary": {
@@ -335,9 +340,11 @@
         "catalog_executes_actions",
         "quality_verdict",
         "artifact_authority",
-        "production_ready"
+        "production_ready",
+        "capability_registry_executes_actions",
+        "capability_registry_owns_domain_authority"
       ],
-      "notes": "Atlas owns refs-only catalog, descriptor, graph, lifecycle, and generated interface read models; it does not execute cataloged actions."
+      "notes": "Atlas owns refs-only catalogs for agents, descriptors, graphs, lifecycle, generated interfaces, and domain capability registry metadata; it does not execute cataloged actions or own domain authority."
     },
     {
       "module_id": "workspace",
@@ -513,14 +520,17 @@
           "authority_abi",
           "generated_surface_bundle",
           "standard_authority_function",
-          "pack_compiler_result"
+          "pack_compiler_result",
+          "domain_capability_registry_abi",
+          "pack_compile_parity_ref"
         ],
         "canonical_contract_refs": [
           "contracts/opl-framework/pack-os-contract.json",
           "contracts/opl-framework/domain-pack-compiler-contract.json",
           "contracts/opl-framework/standard-domain-agent-skeleton-contract.json",
           "contracts/opl-framework/foundry-agent-series-contract.json",
-          "contracts/opl-framework/owner-answer.schema.json"
+          "contracts/opl-framework/owner-answer.schema.json",
+          "contracts/opl-framework/target-operating-architecture-contract.json"
         ],
         "read_model_refs": [
           "opl pack status --json",
@@ -648,7 +658,9 @@
           "review_receipt_transport_is_quality_verdict",
           "production_ready",
           "generated_surface_writes_domain_truth",
-          "authority_abi_signs_owner_receipt"
+          "authority_abi_signs_owner_receipt",
+          "domain_capability_registry_owns_domain_authority",
+          "pack_compile_is_quality_verdict"
         ]
       },
       "authority_boundary": {
@@ -670,9 +682,11 @@
         "artifact_authority",
         "production_ready",
         "generated_surface_writes_domain_truth",
-        "authority_abi_signs_owner_receipt"
+        "authority_abi_signs_owner_receipt",
+        "domain_capability_registry_owns_domain_authority",
+        "pack_compile_is_quality_verdict"
       ],
-      "notes": "Pack owns declarative Domain Pack shape, authority ABI refs, pack compiler output, and generated surface boundary; it does not own domain truth, artifact body, owner receipt, typed blocker, or quality/export verdict authority."
+      "notes": "Pack owns declarative Domain Pack shape, domain capability registry ABI, authority ABI refs, pack compiler output, and generated surface boundary; it does not own domain truth, artifact body, owner receipt, typed blocker, or quality/export verdict authority."
     },
     {
       "module_id": "stagecraft",
@@ -688,14 +702,17 @@
           "role_artifact_ref",
           "owner_receipt",
           "typed_blocker",
-          "cognitive_strategy"
+          "cognitive_strategy",
+          "capability_use_policy",
+          "current_delta_required_capability_ref"
         ],
         "canonical_contract_refs": [
           "contracts/opl-framework/cognitive-computation-kernel.json",
           "contracts/opl-framework/stage-run-kernel-contract.json",
           "contracts/opl-framework/stage-manifest.schema.json",
           "contracts/opl-framework/stage-owner-receipt.schema.json",
-          "contracts/opl-framework/stage-typed-blocker.schema.json"
+          "contracts/opl-framework/stage-typed-blocker.schema.json",
+          "contracts/opl-framework/target-operating-architecture-contract.json"
         ],
         "read_model_refs": [
           "opl stagecraft status --json",
@@ -809,7 +826,9 @@
           "domain_ready",
           "artifact_authority",
           "durable_runtime_owner",
-          "production_ready"
+          "production_ready",
+          "capability_use_policy_is_quality_verdict",
+          "capability_registry_missing_optional_ref_blocks_stage"
         ]
       },
       "authority_boundary": {
@@ -830,9 +849,11 @@
         "domain_ready",
         "artifact_authority",
         "durable_runtime_owner",
-        "production_ready"
+        "production_ready",
+        "capability_use_policy_is_quality_verdict",
+        "capability_registry_missing_optional_ref_blocks_stage"
       ],
-      "notes": "Stagecraft owns stage grammar, StageRun shape, role artifact interfaces, and receipt/blocker binding surfaces; it does not sign domain receipts."
+      "notes": "Stagecraft owns stage grammar, capability use policy, StageRun shape, role artifact interfaces, and receipt/blocker binding surfaces; it does not sign domain receipts or turn optional capability refs into launch hard gates."
     },
     {
       "module_id": "runway",
@@ -1029,7 +1050,9 @@
           "runway_writes_domain_truth",
           "runway_signs_owner_receipt",
           "runway_creates_typed_blocker",
-          "provider_completion_is_semantic_progress"
+          "provider_completion_is_semantic_progress",
+          "runtime_provider_signs_owner_answer",
+          "provider_completion_is_domain_completion"
         ]
       },
       "authority_boundary": {
@@ -1054,7 +1077,9 @@
         "runway_writes_domain_truth",
         "runway_signs_owner_receipt",
         "runway_creates_typed_blocker",
-        "provider_completion_is_semantic_progress"
+        "provider_completion_is_semantic_progress",
+        "runtime_provider_signs_owner_answer",
+        "provider_completion_is_domain_completion"
       ],
       "notes": "Runway owns the control-loop runtime module: runtime intent admission, queue/readiness reconciliation, provider attempt orchestration refs, handoff gates, and recovery repair. Temporal is durable substrate, worker supervision is process liveness, and the Progress Reconciler is the semantic/execution loop projection; Runway does not write domain truth, sign owner receipts, create typed blockers, or convert provider completion into domain readiness."
     },
@@ -1080,7 +1105,8 @@
           "contracts/opl-framework/stage-artifact-runtime-contract.json",
           "contracts/opl-framework/role-artifact-ref.schema.json",
           "contracts/opl-framework/stage-owner-receipt.schema.json",
-          "contracts/opl-framework/stage-typed-blocker.schema.json"
+          "contracts/opl-framework/stage-typed-blocker.schema.json",
+          "contracts/opl-framework/target-operating-architecture-contract.json"
         ],
         "read_model_refs": [
           "opl vault status --json",
@@ -1195,7 +1221,9 @@
           "memory_body_store",
           "owner_receipt_signed_by_opl",
           "quality_verdict",
-          "production_ready"
+          "production_ready",
+          "receipt_ref_is_owner_receipt_authority",
+          "vault_ref_store_is_memory_body"
         ]
       },
       "authority_boundary": {
@@ -1216,9 +1244,11 @@
         "memory_body_store",
         "owner_receipt_signed_by_opl",
         "quality_verdict",
-        "production_ready"
+        "production_ready",
+        "receipt_ref_is_owner_receipt_authority",
+        "vault_ref_store_is_memory_body"
       ],
-      "notes": "Vault owns refs-only evidence, receipt, blocker, lineage, restore, and index audit surfaces; it does not store artifact or memory bodies."
+      "notes": "Vault owns refs-only evidence, receipt refs, blocker refs, lineage, restore, and index audit surfaces; it does not store artifact or memory bodies and does not turn refs into owner authority."
     },
     {
       "module_id": "console",
@@ -1233,13 +1263,16 @@
           "safe_action",
           "operator_drilldown",
           "current_owner_delta",
-          "evidence_next_step"
+          "evidence_next_step",
+          "current_owner_delta_default_read_root",
+          "accepted_owner_answer_shape"
         ],
         "canonical_contract_refs": [
           "contracts/opl-framework/family-product-operator-projection.json",
           "contracts/opl-framework/current-owner-delta.schema.json",
           "contracts/opl-framework/public-surface-index.json",
-          "contracts/opl-framework/agent-platform-surface-ownership-contract.json"
+          "contracts/opl-framework/agent-platform-surface-ownership-contract.json",
+          "contracts/opl-framework/target-operating-architecture-contract.json"
         ],
         "read_model_refs": [
           "opl console status --json",
@@ -1355,7 +1388,9 @@
           "domain_ready",
           "quality_verdict",
           "runtime_provider_truth_owner",
-          "production_ready"
+          "production_ready",
+          "current_owner_delta_view_signs_owner_answer",
+          "console_projection_is_domain_truth"
         ]
       },
       "authority_boundary": {
@@ -1376,9 +1411,11 @@
         "domain_ready",
         "quality_verdict",
         "runtime_provider_truth_owner",
-        "production_ready"
+        "production_ready",
+        "current_owner_delta_view_signs_owner_answer",
+        "console_projection_is_domain_truth"
       ],
-      "notes": "Console owns OPL-produced App/operator read models and safe action descriptors; App release truth remains in the App repository."
+      "notes": "Console owns OPL-produced current_owner_delta default read models, App/operator projections, and safe action descriptors; it does not sign owner answers, own domain truth, or hold App release truth."
     },
     {
       "module_id": "foundry-lab",
