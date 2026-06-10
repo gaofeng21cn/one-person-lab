@@ -406,7 +406,7 @@ function buildAgentInternalBrandModuleList(contracts: FrameworkContracts) {
   };
 }
 
-export function buildAgentInternalBrandModuleInspect(contracts: FrameworkContracts, args: string[]) {
+function buildAgentInternalBrandModuleInspect(contracts: FrameworkContracts, args: string[]) {
   const { domainId, agentModuleId, platformModuleId } = parseAgentInternalModuleInspectArgs(contracts, args);
   return {
     version: 'g2',
@@ -423,7 +423,7 @@ export function buildAgentInternalBrandModuleInspect(contracts: FrameworkContrac
   };
 }
 
-export function buildAgentInternalBrandModuleInterfaces(contracts: FrameworkContracts) {
+function buildAgentInternalBrandModuleInterfaces(contracts: FrameworkContracts) {
   return {
     version: 'g2',
     agent_internal_module_interfaces: {
@@ -443,7 +443,7 @@ export function buildAgentInternalBrandModuleInterfaces(contracts: FrameworkCont
   };
 }
 
-export function buildAgentInternalBrandModuleValidation(contracts: FrameworkContracts) {
+function buildAgentInternalBrandModuleValidation(contracts: FrameworkContracts) {
   const expectedAgentModuleIds = agentModuleIds(contracts);
   return {
     version: 'g2',
@@ -459,7 +459,7 @@ export function buildAgentInternalBrandModuleValidation(contracts: FrameworkCont
   };
 }
 
-export function buildAgentInternalBrandModuleDoctor(contracts: FrameworkContracts) {
+function buildAgentInternalBrandModuleDoctor(contracts: FrameworkContracts) {
   return {
     version: 'g2',
     agent_internal_module_doctor: {
