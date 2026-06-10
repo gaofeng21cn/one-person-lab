@@ -281,63 +281,70 @@ test('Connect brand module surfaces use canonical Connect commands instead of re
 });
 
 test('brand module L5 evidence gate is executable but does not claim production maturity', () => {
-  const status = runCli(['brand-modules', 'l5-status']).brand_module_l5_status;
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-brand-l5-status-state-'));
+  const env = { OPL_STATE_DIR: stateDir };
 
-  assert.equal(status.surface_kind, 'opl_brand_module_l5_status');
-  assert.equal(status.baseline_level, 'L4_structural_baseline');
-  assert.equal(status.target_level, 'L5_production_operating_maturity');
-  assert.equal(status.module_count, 10);
-  assert.equal(status.l5_complete_module_count, 0);
-  assert.deepEqual(status.l5_complete_module_ids, []);
-  assert.deepEqual(status.evidence_required_module_ids, expectedModuleIds);
-  assert.equal(status.l5_claim_policy.contract_validation_counts_as_l5, false);
-  assert.equal(status.evidence_classes.length, 12);
-  assert.equal(
-    status.evidence_classes.some((entry: { class_id: string }) =>
-      entry.class_id === 'capability_fail_open_boundary'
-    ),
-    true,
-  );
-  assert.equal(
-    status.evidence_classes.some((entry: { class_id: string }) =>
-      entry.class_id === 'cross_agent_foundry_agent_os_adoption'
-    ),
-    true,
-  );
-  assert.equal(status.modules.every((entry: { l5_can_be_claimed: boolean }) => entry.l5_can_be_claimed === false), true);
-  assert.equal(status.owner_route_work_order_policy.surface_kind, 'opl_brand_module_l5_owner_route_work_order_policy');
-  assert.equal(status.owner_route_work_order_policy.work_orders_close_l5, false);
-  assert.equal(status.owner_route_work_order_policy.work_orders_can_create_owner_receipt, false);
-  assert.equal(status.owner_route_work_order_policy.work_orders_can_create_typed_blocker, false);
-  assert.equal(
-    status.owner_route_work_order_policy.accepted_route_ref_shapes.includes('owner_acceptance_ref'),
-    true,
-  );
-  assert.equal(
-    status.owner_route_work_order_policy.accepted_route_ref_shapes.includes('typed_blocker_ref'),
-    true,
-  );
-  assert.equal(
-    status.modules.every((entry: {
-      owner_evidence_routes: Array<{
-        owner: string;
-        owner_route_status: string;
-        next_owner_action: string;
-        accepted_ref_shapes: string[];
-        authority_boundary: { route_can_claim_l5: boolean };
-      }>;
-    }) =>
-      entry.owner_evidence_routes.length === status.evidence_classes.length
-      && entry.owner_evidence_routes.every((route) =>
-        route.owner.length > 0
-        && route.owner_route_status === 'owner_evidence_required'
-        && route.next_owner_action === 'record_owner_evidence_ref_or_typed_blocker_for_l5_requirement'
-        && route.accepted_ref_shapes.includes('typed_blocker_ref')
-        && route.authority_boundary.route_can_claim_l5 === false
-      )
-    ),
-    true,
-  );
+  try {
+    const status = runCli(['brand-modules', 'l5-status'], env).brand_module_l5_status;
+
+    assert.equal(status.surface_kind, 'opl_brand_module_l5_status');
+    assert.equal(status.baseline_level, 'L4_structural_baseline');
+    assert.equal(status.target_level, 'L5_production_operating_maturity');
+    assert.equal(status.module_count, 10);
+    assert.equal(status.l5_complete_module_count, 0);
+    assert.deepEqual(status.l5_complete_module_ids, []);
+    assert.deepEqual(status.evidence_required_module_ids, expectedModuleIds);
+    assert.equal(status.l5_claim_policy.contract_validation_counts_as_l5, false);
+    assert.equal(status.evidence_classes.length, 12);
+    assert.equal(
+      status.evidence_classes.some((entry: { class_id: string }) =>
+        entry.class_id === 'capability_fail_open_boundary'
+      ),
+      true,
+    );
+    assert.equal(
+      status.evidence_classes.some((entry: { class_id: string }) =>
+        entry.class_id === 'cross_agent_foundry_agent_os_adoption'
+      ),
+      true,
+    );
+    assert.equal(status.modules.every((entry: { l5_can_be_claimed: boolean }) => entry.l5_can_be_claimed === false), true);
+    assert.equal(status.owner_route_work_order_policy.surface_kind, 'opl_brand_module_l5_owner_route_work_order_policy');
+    assert.equal(status.owner_route_work_order_policy.work_orders_close_l5, false);
+    assert.equal(status.owner_route_work_order_policy.work_orders_can_create_owner_receipt, false);
+    assert.equal(status.owner_route_work_order_policy.work_orders_can_create_typed_blocker, false);
+    assert.equal(
+      status.owner_route_work_order_policy.accepted_route_ref_shapes.includes('owner_acceptance_ref'),
+      true,
+    );
+    assert.equal(
+      status.owner_route_work_order_policy.accepted_route_ref_shapes.includes('typed_blocker_ref'),
+      true,
+    );
+    assert.equal(
+      status.modules.every((entry: {
+        owner_evidence_routes: Array<{
+          owner: string;
+          owner_route_status: string;
+          next_owner_action: string;
+          accepted_ref_shapes: string[];
+          authority_boundary: { route_can_claim_l5: boolean };
+        }>;
+      }) =>
+        entry.owner_evidence_routes.length === status.evidence_classes.length
+        && entry.owner_evidence_routes.every((route) =>
+          route.owner.length > 0
+          && route.owner_route_status === 'owner_evidence_required'
+          && route.next_owner_action === 'record_owner_evidence_ref_or_typed_blocker_for_l5_requirement'
+          && route.accepted_ref_shapes.includes('typed_blocker_ref')
+          && route.authority_boundary.route_can_claim_l5 === false
+        )
+      ),
+      true,
+    );
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
 });
 
 test('brand module L5 validation passes the matrix shape while keeping readiness open', () => {
@@ -380,48 +387,55 @@ test('brand module L5 interfaces expose aggregate and module-owned read surfaces
 });
 
 test('module-owned L5 status is readable from the module command surface and remains fail-closed', () => {
-  const aggregate = runCli(['brand-modules', 'l5-status', '--module', 'runway']).brand_module_l5_status;
-  const output = runCli(['runway', 'l5-status']);
-  const status = output.opl_runway_l5_status;
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runway-l5-status-state-'));
+  const env = { OPL_STATE_DIR: stateDir };
 
-  assert.equal(aggregate.module_count, 1);
-  assert.equal(aggregate.modules[0].module_id, 'runway');
-  assert.equal(output.brand_module_l5_status.module_count, 1);
-  assert.equal(status.surface_kind, 'opl_runway_l5_status');
-  assert.equal(status.module_id, 'runway');
-  assert.equal(status.status, 'evidence_required');
-  assert.equal(status.l5_can_be_claimed, false);
-  assert.equal(status.evidence_requirements.length, 12);
-  assert.equal(status.owner_evidence_routes.length, 12);
-  assert.equal(
-    status.owner_evidence_routes.some((entry: {
-      class_id: string;
-      owner: string;
-      accepted_ref_shapes: string[];
-    }) =>
-      entry.class_id === 'owner_acceptance'
-      && entry.owner === 'runtime and domain owners'
-      && entry.accepted_ref_shapes.includes('human_gate_ref')
-    ),
-    true,
-  );
-  assert.equal(
-    status.owner_evidence_routes.some((entry: {
-      class_id: string;
-      accepted_ref_shapes: string[];
-      blocker_state: string;
-    }) =>
-      entry.class_id === 'long_soak_recovery'
-      && entry.accepted_ref_shapes.includes('long_soak_ref')
-      && entry.blocker_state === 'owner_route_evidence_missing'
-    ),
-    true,
-  );
-  assert.equal(status.evidence_requirements.some((entry: { class_id: string }) => entry.class_id === 'long_soak_recovery'), true);
-  assert.equal(status.evidence_requirements.some((entry: { class_id: string }) => entry.class_id === 'domain_authority_false_boundary'), true);
-  assert.equal(status.not_claims.includes('production_long_soak_complete'), true);
-  assert.equal(status.not_claims.includes('provider_completion_is_domain_completion'), true);
-  assert.equal(status.authority_boundary.can_claim_production_ready, false);
+  try {
+    const aggregate = runCli(['brand-modules', 'l5-status', '--module', 'runway'], env).brand_module_l5_status;
+    const output = runCli(['runway', 'l5-status'], env);
+    const status = output.opl_runway_l5_status;
+
+    assert.equal(aggregate.module_count, 1);
+    assert.equal(aggregate.modules[0].module_id, 'runway');
+    assert.equal(output.brand_module_l5_status.module_count, 1);
+    assert.equal(status.surface_kind, 'opl_runway_l5_status');
+    assert.equal(status.module_id, 'runway');
+    assert.equal(status.status, 'evidence_required');
+    assert.equal(status.l5_can_be_claimed, false);
+    assert.equal(status.evidence_requirements.length, 12);
+    assert.equal(status.owner_evidence_routes.length, 12);
+    assert.equal(
+      status.owner_evidence_routes.some((entry: {
+        class_id: string;
+        owner: string;
+        accepted_ref_shapes: string[];
+      }) =>
+        entry.class_id === 'owner_acceptance'
+        && entry.owner === 'runtime and domain owners'
+        && entry.accepted_ref_shapes.includes('human_gate_ref')
+      ),
+      true,
+    );
+    assert.equal(
+      status.owner_evidence_routes.some((entry: {
+        class_id: string;
+        accepted_ref_shapes: string[];
+        blocker_state: string;
+      }) =>
+        entry.class_id === 'long_soak_recovery'
+        && entry.accepted_ref_shapes.includes('long_soak_ref')
+        && entry.blocker_state === 'owner_route_evidence_missing'
+      ),
+      true,
+    );
+    assert.equal(status.evidence_requirements.some((entry: { class_id: string }) => entry.class_id === 'long_soak_recovery'), true);
+    assert.equal(status.evidence_requirements.some((entry: { class_id: string }) => entry.class_id === 'domain_authority_false_boundary'), true);
+    assert.equal(status.not_claims.includes('production_long_soak_complete'), true);
+    assert.equal(status.not_claims.includes('provider_completion_is_domain_completion'), true);
+    assert.equal(status.authority_boundary.can_claim_production_ready, false);
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
 });
 
 test('Runway status and interfaces expose control-loop command objects without semantic authority', () => {

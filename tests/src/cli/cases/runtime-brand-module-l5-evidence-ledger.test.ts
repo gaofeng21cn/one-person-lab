@@ -81,6 +81,24 @@ test('runtime brand-module L5 evidence ledger records and verifies refs without 
     assert.equal(runway.evidence_ledger.receipt_count, 1);
     assert.deepEqual(runway.evidence_ledger.verified_evidence_class_ids, ['long_soak_recovery']);
     assert.equal(runway.l5_can_be_claimed, false);
+    assert.equal(runway.open_requirement_count, 12);
+    const route = runway.owner_evidence_routes.find((entry: { class_id: string }) =>
+      entry.class_id === 'long_soak_recovery'
+    );
+    assert.equal(route.owner_route_status, 'owner_evidence_observed_not_l5_claimed');
+    assert.equal(route.blocker_state, 'owner_route_refs_observed_not_l5_claim');
+    assert.equal(route.observed_receipt_count, 1);
+    assert.equal(route.verified_receipt_count, 1);
+    assert.deepEqual(route.observed_ref_shapes, [
+      'ledger_receipt_ref',
+      'evidence_ref',
+      'owner_acceptance_ref',
+    ]);
+    assert.equal(route.observed_receipt_refs.includes(record.receipt_ref), true);
+    assert.equal(route.observed_evidence_refs.includes('long-soak:runway/demo'), true);
+    assert.equal(route.observed_evidence_refs.includes('owner-acceptance:runway/demo'), true);
+    assert.equal(route.l5_claim_status, 'ledger_refs_observed_not_l5_claimed');
+    assert.equal(route.authority_boundary.route_can_claim_l5, false);
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
   }
