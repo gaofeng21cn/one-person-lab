@@ -33,9 +33,25 @@ export type FamilyRuntimeControlledApplyContract = {
 };
 
 const CONTRACT_IDS: Partial<Record<FamilyRuntimeDomainId, string>> = {
+  medautoscience: 'opl_temporal_controlled_mas_owner_answer_apply_contract',
   medautogrant: 'opl_temporal_controlled_stage_attempt_apply_contract',
   redcube: 'opl_temporal_controlled_visual_stage_attempt_apply_contract',
 };
+
+const DEFAULT_ALLOWED_RETURN_SHAPES = [
+  'domain_owner_receipt_ref',
+  'typed_blocker_ref',
+  'no_regression_evidence_ref',
+];
+
+const MAS_ALLOWED_RETURN_SHAPES = [
+  'domain_owner_receipt_ref',
+  'quality_gate_receipt_ref',
+  'typed_blocker_ref',
+  'human_gate_ref',
+  'route_back_evidence_ref',
+  'no_regression_evidence_ref',
+];
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -77,10 +93,20 @@ export function buildFamilyRuntimeControlledApplyContract(input: {
   const contractId = optionalString(request?.contract_id)
     ?? CONTRACT_IDS[input.domainId]
     ?? 'opl_temporal_controlled_domain_stage_attempt_apply_contract';
+  const allowedReturnShapes = input.domainId === 'medautoscience'
+    ? MAS_ALLOWED_RETURN_SHAPES
+    : DEFAULT_ALLOWED_RETURN_SHAPES;
   const ownerReceiptRefs = [
     ...stringListFrom(request?.owner_receipt_refs),
     ...stringListFrom(request?.domain_receipt_refs),
     ...stringListFrom(request?.receipt_refs),
+    ...stringListFrom(request?.quality_gate_receipt_refs),
+    ...stringListFrom(request?.human_gate_refs),
+    ...stringListFrom(request?.route_back_evidence_refs),
+    ...(optionalString(request?.domain_owner_receipt_ref) ? [optionalString(request?.domain_owner_receipt_ref)!] : []),
+    ...(optionalString(request?.quality_gate_receipt_ref) ? [optionalString(request?.quality_gate_receipt_ref)!] : []),
+    ...(optionalString(request?.human_gate_ref) ? [optionalString(request?.human_gate_ref)!] : []),
+    ...(optionalString(request?.route_back_evidence_ref) ? [optionalString(request?.route_back_evidence_ref)!] : []),
   ];
   const noRegressionEvidenceRefs = [
     ...stringListFrom(request?.no_regression_evidence_refs),
@@ -100,7 +126,7 @@ export function buildFamilyRuntimeControlledApplyContract(input: {
             blocker_kind: 'domain_owner_gate',
             blocker_id: `${contractId}:domain_receipt_or_no_regression_evidence_required`,
             required_owner: input.domainId,
-            required_return_shapes: ['domain_owner_receipt_ref', 'typed_blocker', 'no_regression_evidence_ref'],
+            required_return_shapes: allowedReturnShapes,
           },
         ];
   const applyStatus: FamilyRuntimeControlledApplyContract['apply_status'] =
@@ -134,7 +160,7 @@ export function buildFamilyRuntimeControlledApplyContract(input: {
     authority_boundary: {
       opl: 'attempt_contract_receipt_projection_only',
       domain: 'stage_apply_truth_artifact_quality_owner',
-      allowed_return_shapes: ['domain_owner_receipt_ref', 'typed_blocker', 'no_regression_evidence_ref'],
+      allowed_return_shapes: allowedReturnShapes,
       forbidden_opl_actions: [
         'write_domain_truth',
         'write_domain_artifact',

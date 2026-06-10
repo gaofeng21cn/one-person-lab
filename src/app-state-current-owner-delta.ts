@@ -5,6 +5,8 @@ import {
   buildCurrentOwnerDeltaReadModel,
 } from './current-owner-delta-projection.ts';
 
+const APP_CURRENT_OWNER_DELTA_CACHE_MAX_AGE_MS = 5 * 60 * 1000;
+
 type JsonRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -83,6 +85,7 @@ export function selectAppStateCurrentOwnerDeltaReadModel(input: {
     ?? readCurrentOwnerDeltaReadModelProjectionCache({
       paths: input.statePaths,
       acceptedSourceSurfaces: ['framework_readiness'],
+      maxAgeMs: APP_CURRENT_OWNER_DELTA_CACHE_MAX_AGE_MS,
     })
     ?? ownerDeltaReadModelFromRuntimeActivity(input.runtimeActivityItems);
 }

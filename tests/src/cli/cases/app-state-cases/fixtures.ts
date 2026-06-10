@@ -177,6 +177,13 @@ export function writeCurrentOwnerDeltaProjectionCacheFixture(
       source_surface: sourceSurface,
       source_command: sourceCommand,
       cached_at: new Date().toISOString(),
+      currentness_identity: {
+        delta_id: readModel.current_owner_delta.delta_id,
+        domain_id: readModel.current_owner_delta.domain_id,
+        current_owner: readModel.current_owner_delta.current_owner,
+        stage_id: readModel.current_owner_delta.stage_id,
+        source_fingerprint: readModel.current_owner_delta.source_fingerprint,
+      },
       current_owner_delta_read_model: readModel,
       authority_boundary: {
         cache_is_domain_truth: false,

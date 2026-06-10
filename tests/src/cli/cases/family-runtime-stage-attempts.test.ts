@@ -882,9 +882,29 @@ test('family-runtime lifecycle guarded apply separates OPL ledger apply from dom
   }
 });
 
-test('family-runtime controlled apply contract returns MAG/RCA domain receipt requirements without domain writes', () => {
+test('family-runtime controlled apply contract returns MAS/MAG/RCA domain receipt requirements without domain writes', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-controlled-apply-'));
   try {
+    const mas = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'finalize-and-publication-handoff',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      JSON.stringify({
+        workspace_root: '/tmp/mas',
+        controlled_apply_request: {
+          action_kind: 'paper_autonomy/guarded-apply',
+        },
+      }),
+      '--source-fingerprint',
+      'sha256:mas-controlled-apply',
+    ], familyRuntimeEnv(stateRoot));
     const mag = runCli([
       'family-runtime',
       'attempt',
@@ -928,6 +948,12 @@ test('family-runtime controlled apply contract returns MAG/RCA domain receipt re
       'sha256:rca-controlled-apply',
     ], familyRuntimeEnv(stateRoot));
 
+    const masQuery = runCli([
+      'family-runtime',
+      'attempt',
+      'query',
+      mas.family_runtime_stage_attempt.attempt.stage_attempt_id,
+    ], familyRuntimeEnv(stateRoot));
     const magQuery = runCli([
       'family-runtime',
       'attempt',
@@ -940,9 +966,32 @@ test('family-runtime controlled apply contract returns MAG/RCA domain receipt re
       'query',
       rca.family_runtime_stage_attempt.attempt.stage_attempt_id,
     ], familyRuntimeEnv(stateRoot));
+    const masContract = masQuery.family_runtime_stage_attempt_query.stage_attempt_query.controlled_apply_contract;
     const magContract = magQuery.family_runtime_stage_attempt_query.stage_attempt_query.controlled_apply_contract;
     const rcaContract = rcaQuery.family_runtime_stage_attempt_query.stage_attempt_query.controlled_apply_contract;
 
+    assert.equal(masContract.surface_kind, 'family_runtime_controlled_apply_contract');
+    assert.equal(masContract.contract_id, 'opl_temporal_controlled_mas_owner_answer_apply_contract');
+    assert.equal(masContract.apply_status, 'blocked_domain_receipt_required');
+    assert.deepEqual(masContract.authority_boundary.allowed_return_shapes, [
+      'domain_owner_receipt_ref',
+      'quality_gate_receipt_ref',
+      'typed_blocker_ref',
+      'human_gate_ref',
+      'route_back_evidence_ref',
+      'no_regression_evidence_ref',
+    ]);
+    assert.deepEqual(masContract.typed_blockers[0].required_return_shapes, [
+      'domain_owner_receipt_ref',
+      'quality_gate_receipt_ref',
+      'typed_blocker_ref',
+      'human_gate_ref',
+      'route_back_evidence_ref',
+      'no_regression_evidence_ref',
+    ]);
+    assert.equal(masContract.no_forbidden_write_proof.opl_writes_domain_truth, false);
+    assert.equal(masContract.no_forbidden_write_proof.opl_writes_domain_artifact, false);
+    assert.equal(masContract.no_forbidden_write_proof.opl_writes_domain_memory_body, false);
     assert.equal(magContract.surface_kind, 'family_runtime_controlled_apply_contract');
     assert.equal(magContract.contract_id, 'opl_temporal_controlled_stage_attempt_apply_contract');
     assert.equal(magContract.contract_open, true);

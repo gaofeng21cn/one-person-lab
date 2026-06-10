@@ -139,6 +139,18 @@ test('family product operator projection pins OPL as App state/action producer o
     'explicit_full_detail_or_lazy_diagnostic_only',
   );
   assert.equal(boundary.default_read_surface_policy.raw_refs_policy, 'raw_refs_require_explicit_full_detail');
+  const cacheCurrentness = boundary.default_read_surface_policy.projection_cache_currentness_policy;
+  assert.equal(cacheCurrentness.cache_surface_kind, 'opl_current_owner_delta_read_model_projection_cache');
+  assert.equal(cacheCurrentness.ordinary_read_requires_currentness_identity, true);
+  assert.ok(cacheCurrentness.currentness_identity_fields.includes('source_fingerprint'));
+  assert.ok(cacheCurrentness.currentness_identity_fields.includes('truth_epoch'));
+  assert.deepEqual(cacheCurrentness.accepted_source_surfaces, ['framework_readiness']);
+  assert.equal(cacheCurrentness.stale_cache_result, 'cache_miss_return_null');
+  assert.equal(cacheCurrentness.legacy_cache_without_currentness_identity_result, 'cache_miss_return_null');
+  assert.equal(cacheCurrentness.stale_projection_allowed_role, 'explicit_drilldown_or_audit_only');
+  assert.ok(cacheCurrentness.ordinary_fresh_sources.includes('current_execution_envelope'));
+  assert.ok(cacheCurrentness.ordinary_fresh_sources.includes('current_owner_delta'));
+  assert.equal(cacheCurrentness.cache_can_generate_default_next_action_when_stale, false);
   assert.equal(boundary.default_read_surface_policy.full_detail_auto_poll, false);
   assert.equal(boundary.default_read_surface_policy.shell_must_not_derive_layout_from_raw_runtime_projection, true);
   assert.equal(boundary.default_read_surface_policy.shell_must_not_use_full_drilldown_as_normal_state, true);

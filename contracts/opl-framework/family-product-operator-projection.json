@@ -72,6 +72,30 @@
       ],
       "full_detail_policy": "explicit_full_detail_or_lazy_diagnostic_only",
       "raw_refs_policy": "raw_refs_require_explicit_full_detail",
+      "projection_cache_currentness_policy": {
+        "cache_surface_kind": "opl_current_owner_delta_read_model_projection_cache",
+        "cache_role": "non_authoritative_fast_projection_cache_only",
+        "ordinary_read_requires_currentness_identity": true,
+        "currentness_identity_fields": [
+          "source_fingerprint",
+          "work_unit_fingerprint",
+          "truth_epoch",
+          "runtime_health_epoch",
+          "source_eval_id"
+        ],
+        "accepted_source_surfaces": [
+          "framework_readiness"
+        ],
+        "stale_cache_result": "cache_miss_return_null",
+        "legacy_cache_without_currentness_identity_result": "cache_miss_return_null",
+        "stale_projection_allowed_role": "explicit_drilldown_or_audit_only",
+        "ordinary_fresh_sources": [
+          "current_execution_envelope",
+          "current_owner_delta",
+          "owner_route_currentness_basis"
+        ],
+        "cache_can_generate_default_next_action_when_stale": false
+      },
       "full_detail_auto_poll": false,
       "shell_must_not_derive_layout_from_raw_runtime_projection": true,
       "shell_must_not_use_full_drilldown_as_normal_state": true
