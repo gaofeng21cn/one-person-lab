@@ -34,6 +34,7 @@ const fastTestFiles = [
   'tests/src/verification-command-surfaces.test.ts',
   'tests/src/verification-package-surfaces.test.ts',
   'tests/src/target-architecture-schema-contracts.test.ts',
+  'tests/src/capability-registry-resolver.test.ts',
   'tests/src/cognitive-computation-kernel-contract.test.ts',
   'tests/src/verification-test-governance.test.ts',
   'tests/src/line-budget.test.ts',
