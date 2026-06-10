@@ -185,7 +185,7 @@ function buildModuleSurface(
   return { surface, registry, checks, status };
 }
 
-export function buildBrandModuleSurfaceStatus(
+function buildBrandModuleSurfaceStatus(
   contracts: FrameworkContracts,
   moduleId: BrandModuleId,
 ) {
@@ -248,7 +248,7 @@ export function buildBrandModuleSurfaceInspect(
   };
 }
 
-export function buildBrandModuleSurfaceInterfaces(
+function buildBrandModuleSurfaceInterfaces(
   contracts: FrameworkContracts,
   moduleId: BrandModuleId,
 ) {
@@ -279,7 +279,7 @@ export function buildBrandModuleSurfaceInterfaces(
   };
 }
 
-export function buildBrandModuleSurfaceValidation(
+function buildBrandModuleSurfaceValidation(
   contracts: FrameworkContracts,
   moduleId: BrandModuleId,
 ) {
@@ -300,7 +300,7 @@ export function buildBrandModuleSurfaceValidation(
   };
 }
 
-export function buildBrandModuleSurfaceDoctor(
+function buildBrandModuleSurfaceDoctor(
   contracts: FrameworkContracts,
   moduleId: BrandModuleId,
 ) {
@@ -389,7 +389,7 @@ function parseAgentInternalModuleInspectArgs(contracts: FrameworkContracts, args
   return { domainId, agentModuleId, platformModuleId };
 }
 
-export function buildAgentInternalBrandModuleList(contracts: FrameworkContracts) {
+function buildAgentInternalBrandModuleList(contracts: FrameworkContracts) {
   const moduleIds = platformModuleIds(contracts);
   return {
     version: 'g2',
