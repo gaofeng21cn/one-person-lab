@@ -26,7 +26,7 @@ OPL Framework current_owner_delta root
 
 `foundry-agent-os-family-target-implementation-plan.md` 是 active_support family-level 目标实施规划：把 MAS 的 Agent OS 方案抽象为 `OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry`，并说明十个品牌模块、Capability Registry、MAS/MAG/RCA/OMA target delta 和 cross-agent conformance gate 如何落地。它不维护第二 active backlog；当前执行顺序仍回 `current-state-vs-ideal-gap.md`。
 
-`opl-family-ideal-operating-model-redesign.md` 是 active_support 标准：后续审计只按 `meets_target`、`needs_demotion`、`needs_retirement` 判断。`opl-foundry-agent-target-operating-architecture.md` 是该标准的目标架构支撑。路线图、production closure matrix、purpose-first audit 和 private-platform inventory 都必须折回唯一 active owner，不再像平行计划一样追加 long list 或 dated proof。
+`opl-family-ideal-operating-model-redesign.md` 是 active_support 标准：后续审计只按 `meets_target`、`needs_demotion`、`needs_retirement` 判断。2026-06-10 refresh 把 MAS/OPL 理想态重设为 `multi-plane operating system`：ordinary progress、durable runtime、Stage Artifact Unit、authority decision、telemetry、reconciler、App cockpit 和 improvement 平面分离；这只提供设计标准和外部成熟模式吸收分类，不维护第二 active backlog。`opl-foundry-agent-target-operating-architecture.md` 是该标准的目标架构支撑。路线图、production closure matrix、purpose-first audit 和 private-platform inventory 都必须折回唯一 active owner，不再像平行计划一样追加 long list 或 dated proof。
 
 `opl-stage-native-kernel-rollout-plan.md` 是 Stage Native 设计支撑：它只保留 StageRun Kernel、stage manifest、role artifact、owner receipt / typed blocker、owner split、admission 分层和 anti-bloat 约束。当前落地状态、domain canary、App StageRun cockpit 和 compensation retirement tail 只回到 `current-state-vs-ideal-gap.md` 与 live machine surfaces。
 
@@ -49,7 +49,7 @@ OPL 品牌模块的 L4 rollout 计划已退出 active path：当前十模块 `L4
 - `current-state-vs-ideal-gap.md`：唯一 active owner；维护当前目标、完成进度、功能/结构差距、测试/证据差距、下一轮 baton 和验证入口；承接 Stage Native Kernel rollout 的当前落地状态和仍未闭合的 App/domain canary/cleanup tail。
 - `ordinary-progress-spine-and-audit-sidecar-plan.md`：active_support 完整治理规划；定义 ordinary progress spine、audit sidecar、artifact tiering、readiness JIT、MDS / DeepScientist smoothness learning、OPL 基座优化和 P0-P5 验收门；不声明 implementation landed。
 - `foundry-agent-os-family-target-implementation-plan.md`：active_support 目标实施规划；把 MAS Agent OS 方案提升为 family-level Foundry Agent OS pattern，固定 OPL / domain 分权、Capability Registry 边界、cross-agent target delta 和后续实施 lanes；不声明 domain ready、Brand L5 或 production ready。
-- `opl-family-ideal-operating-model-redesign.md`：active_support 标准；提供 `目的反推必要性，MVP 检查阻碍性` 的统一 operating model 和三类审计结论。
+- `opl-family-ideal-operating-model-redesign.md`：active_support 标准；提供 `目的反推必要性，MVP 检查阻碍性` 的统一 operating model、`multi-plane operating system` 顶层重设、外部成熟工程经验吸收分类和三类审计结论。
 - `opl-foundry-agent-target-operating-architecture.md`：active_support 目标架构；解释 Foundry Agent / OPL primitive、stage artifact、owner delta、passive evidence 和 App cockpit 的长期结构。
 - `opl-stage-native-kernel-rollout-plan.md`：active_support；记录 OPL family Stage Native Kernel 的 owner split、对象模型、admission 分层、conformance shape 和 forbidden claims；不能维护当前执行路线、落地清单或 live readiness。
 - `current-development-lines.md`：active_support 路线支撑；只把当前开发线路映射到唯一 active owner，不维护独立路线图或冻结 live counters。

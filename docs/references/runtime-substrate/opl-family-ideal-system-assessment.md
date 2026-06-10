@@ -4,6 +4,7 @@ Owner: `One Person Lab`
 Purpose: `opl_family_ideal_system_assessment`
 State: `support_reference`
 Machine boundary: 本文是人读 north-star 评估和设计参考。当前事实、gap、计数、receipt、release verdict、domain ready、production ready 继续归 `docs/active/current-state-vs-ideal-gap.md`、核心五件套、contracts、source、CLI/API、runtime ledger、provider receipt、domain-owned manifests、App release/user-path evidence 和真实 workspace evidence。
+Date: `2026-06-10`
 
 ## 读法
 
@@ -35,23 +36,30 @@ Declarative Domain Pack
 
 每个 Agent 只保留领域语义、prompt/skill/knowledge/quality gate、领域 truth、artifact/memory authority、owner receipt 和少量无法声明化的 authority functions。通用 scheduler、queue、attempt ledger、workspace lifecycle、artifact lifecycle、memory locator、operator projection、App workbench、CLI/MCP/status wrapper 和 release/install transport 都应由 OPL Framework 或 App 承接。
 
+2026-06-10 的顶层重设把这套 north-star 进一步压成 `multi-plane operating system`：普通推进、durable runtime、stage artifact、domain decision、evidence telemetry、reconciler、App cockpit 和 agent improvement 彼此分离。默认路径只看 `current_owner_delta` 和 `Stage Artifact Unit`；其他平面只提供 refs、safe action、human/owner gate、repair action 或 drilldown。
+
 ## 外部成熟经验映射
 
 OPL 应吸收成熟工程原则，不引入外部系统作为第二 runtime truth。
 
-| 成熟经验 | 可吸收原则 | OPL 目标态映射 |
-| --- | --- | --- |
-| CNCF platform engineering maturity model / platform as product | 平台要按产品经营，提供 self-service、golden path、反馈循环和可扩展治理。 | OPL 是面向 Foundry Agent 和普通用户的 agent platform；模块、CLI、App、skill、install 都从同一合同派生。 |
-| Backstage Software Catalog / Software Templates | catalog 统一 owner/metadata/discovery，templates 生成标准组件和最佳实践脚手架。 | `OPL Atlas` 管 agent/capability/surface catalog；`Foundry Lab` 和 pack compiler 生成标准 domain-agent skeleton。 |
-| Kubernetes controller / operator pattern | desired state 与 observed state 分离，controller reconcile current drift，不把 status 当业务目标。 | `current_owner_delta` / stage pack 是 desired；attempt/provider/worklist 是 observed；OPL 只 reconcile，不生成 domain verdict。 |
-| Temporal durable execution | durable execution、task queue、retry、timer、signal/query/history 交给专门 substrate。 | `OPL Runway` 持有 Temporal-backed provider、attempt、lease、retry/dead-letter、human gate 和 recovery。 |
-| OpenAI Agents SDK | tools、handoffs、guardrails、tracing 是分层 primitive，handoff 和 guardrail 需要显式结构。 | stage handoff、tool affordance boundary、quality gate、trace/audit 分层；trace 只进 Vault/diagnostic，不成为默认 plan root。 |
-| MCP | tool/resource/prompt 通过机器可读能力暴露，权限可按 tool/capability 分离。 | `OPL Connect` 从 action/stage metadata 派生 CLI、MCP、OpenAI/AI SDK tool、Skill/plugin；权限和 forbidden authority 写入 tool boundary。 |
-| OpenTelemetry | traces、metrics、logs、baggage 是观测信号，不是业务真相。 | provider trace、ledger、replay、evidence envelope 进入 `OPL Vault`；默认 App/CLI 只显示 next owner、accepted answer shape 和 blocker。 |
-| DORA metrics | 交付度量要同时看速度和稳定性，避免只看活动量。 | OPL L5 不看 worklist 数字，而看 agent lead time、owner-answer latency、blocked recovery time、release/user-path pass、change failure。 |
-| Design systems / design tokens | 品牌和 UI 决策要有统一 token、组件、语言和迁移规则。 | One Person Lab 需要品牌系统：命名、视觉 token、图标、状态语言、产品层级、agent cards、receipt/blocker 文案统一。 |
+| 成熟经验 | 可吸收原则 | OPL 目标态映射 | 吸收分类 |
+| --- | --- | --- | --- |
+| CNCF platform engineering maturity model / platform as product | 平台要按产品经营，提供 self-service、golden path、反馈循环和可扩展治理。 | OPL 是面向 Foundry Agent 和普通用户的 agent platform；模块、CLI、App、skill、install 都从同一合同派生。 | `adopt_template` |
+| Backstage Software Catalog / Software Templates | catalog 统一 owner/metadata/discovery，templates 生成标准组件和最佳实践脚手架。 | `OPL Atlas` 管 agent/capability/surface catalog；`Foundry Lab` 和 pack compiler 生成标准 domain-agent skeleton。 | `adopt_template` |
+| Kubernetes controller / operator pattern | desired state 与 observed state 分离，controller reconcile current drift，不把 status 当业务目标。 | `current_owner_delta` / stage pack 是 desired；attempt/provider/worklist 是 observed；`Runway Progress Reconciler` 只输出 safe action、owner/gate wait 或 OPL repair blocker。 | `adopt_contract` |
+| Temporal durable execution | durable execution、task queue、retry、timer、signal/query/update、workflow history 交给专门 substrate。 | `OPL Runway` 持有 Temporal-backed provider、attempt、lease、retry/dead-letter、human gate、recovery 和 provider refs；domain repo 不保 generic scheduler。 | `adopt_contract` |
+| Dagster assets / asset checks | asset、materialization、dependency、check、freshness 分开建模。 | `Stage Artifact Unit` 按 asset unit 读取：manifest、hash、upstream refs、current pointer、artifact check refs 与 owner receipt 分离。 | `adopt_template` |
+| OpenAI Agents SDK | handoffs、guardrails、tracing 是分层 primitive，handoff 和 guardrail 需要显式结构。 | stage handoff、tool affordance boundary、quality gate、trace/audit 分层；trace 只进 Vault/diagnostic，不成为默认 plan root。 | `adopt_template` |
+| LangGraph durable / HITL agents | checkpoint、thread state、pause/resume、human approve/edit/reject/respond 支撑长任务。 | OPL human gate 与 StageRun resume 使用显式 owner decision shape；checkpoint 只做 Runway/Vault refs。 | `adopt_template` |
+| MCP | tool/resource/prompt 通过机器可读能力暴露，权限可按 tool/capability 分离。 | `OPL Connect` 从 action/stage metadata 派生 CLI、MCP、OpenAI/AI SDK tool、Skill/plugin；权限和 forbidden authority 写入 tool boundary。 | `adopt_template` |
+| OpenTelemetry | traces、metrics、logs、baggage 是观测信号，不是业务真相。 | provider trace、ledger、replay、evidence envelope 进入 `OPL Vault`；默认 App/CLI 只显示 next owner、accepted answer shape 和 blocker。 | `adopt_template` |
+| MLflow / DVC | run、params、metrics、artifact refs、dataset lineage、stage deps/outs 支撑可复现研究。 | MAS source / analysis / manuscript provenance 记录到 refs-only lineage；真实 source truth、publication verdict 和 owner answer 仍归 MAS。 | `adopt_template` |
+| DORA metrics | 交付度量要同时看速度和稳定性，避免只看活动量。 | OPL L5 不看 worklist 数字，而看 agent lead time、owner-answer latency、blocked recovery time、release/user-path pass、change failure。 | `adopt_template` |
+| Design systems / design tokens | 品牌和 UI 决策要有统一 token、组件、语言和迁移规则。 | One Person Lab 需要品牌系统：命名、视觉 token、图标、状态语言、产品层级、agent cards、receipt/blocker 文案统一。 | `adopt_template` |
 
-参考来源：CNCF [Platform Engineering Maturity Model](https://www.cncf.io/blog/2023/11/20/announcing-the-platform-engineering-maturity-model/)、Backstage [Software Catalog](https://backstage.io/docs/features/software-catalog/) 与 [Software Templates](https://backstage.io/docs/features/software-templates)、Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) 与 [Controllers](https://kubernetes.io/docs/concepts/architecture/controller/)、Temporal [Durable Execution](https://temporal.io/home)、OpenAI [Agents SDK](https://platform.openai.com/docs/guides/agents-sdk/) 与 [Guardrails](https://openai.github.io/openai-agents-python/guardrails/)、MCP [Tools](https://modelcontextprotocol.io/specification/draft/server/tools) 与 [Authorization](https://modelcontextprotocol.io/docs/tutorials/security/authorization)、OpenTelemetry [Signals](https://opentelemetry.io/docs/concepts/signals/)、DORA [software delivery metrics](https://dora.dev/guides/dora-metrics/)、Atlassian [Design tokens](https://atlassian.design/foundations/tokens/) 和 Carbon [Themes/tokens](https://v10.carbondesignsystem.com/guidelines/themes/overview/)。
+参考来源：CNCF [Platform Engineering Maturity Model](https://www.cncf.io/blog/2023/11/20/announcing-the-platform-engineering-maturity-model/)、Backstage [Software Catalog](https://backstage.io/docs/features/software-catalog/) 与 [Software Templates](https://backstage.io/docs/features/software-templates)、Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) 与 [Controllers](https://kubernetes.io/docs/concepts/architecture/controller/)、Temporal [Durable Execution](https://docs.temporal.io/temporal)、[Event History](https://docs.temporal.io/encyclopedia/event-history/) 与 [Workflow message passing](https://docs.temporal.io/encyclopedia/workflow-message-passing)、Dagster [Assets](https://docs.dagster.io/api/dagster/assets) 与 [Asset checks](https://docs.dagster.io/api/dagster/asset-checks)、LangGraph [Overview](https://docs.langchain.com/oss/python/langgraph/overview) 与 [Persistence](https://docs.langchain.com/oss/python/langgraph/persistence)、OpenAI Agents SDK [Handoffs](https://openai.github.io/openai-agents-python/handoffs/)、[Guardrails](https://openai.github.io/openai-agents-python/guardrails/) 与 [Tracing](https://openai.github.io/openai-agents-python/tracing/)、MCP [Tools](https://modelcontextprotocol.io/specification/draft/server/tools) 与 [Authorization](https://modelcontextprotocol.io/docs/tutorials/security/authorization)、OpenTelemetry [Signals](https://opentelemetry.io/docs/concepts/signals/) 与 [Semantic conventions](https://opentelemetry.io/docs/concepts/semantic-conventions/)、MLflow [Tracking](https://mlflow.org/docs/latest/ml/tracking/) 与 [Dataset Tracking](https://mlflow.org/docs/latest/ml/dataset/)、DVC [dvc.yaml](https://doc.dvc.org/user-guide/project-structure/dvcyaml-files)、DORA [software delivery metrics](https://dora.dev/guides/dora-metrics/)、Atlassian [Design tokens](https://atlassian.design/foundations/tokens/) 和 Carbon [Themes/tokens](https://v10.carbondesignsystem.com/guidelines/themes/overview/)。
+
+所有外部经验都按 contract-first 处理：`adopt_contract` 只能落到 OPL/MAS 自己的 schema、read model、owner surface 或 generated surface；`adopt_template` 只能变成 stage pack、App cockpit、Vault/Console drilldown 或 operating metric 的模板。任何外部 runtime、selector、scheduler、always-on sidecar、memory truth、quality verdict 或 popularity-based route 都默认 `watch_only` 或 `reject`。
 
 ## 理想产品与品牌结构
 
@@ -88,7 +96,7 @@ One Person Lab 对外应保持三层产品认知：
 
 ## OPL 基座目标态
 
-理想 OPL 基座由 8 个 primitive 组成：
+理想 OPL 基座由 9 个 primitive 组成：
 
 | Primitive | 做什么 | 不做什么 |
 | --- | --- | --- |
@@ -100,6 +108,7 @@ One Person Lab 对外应保持三层产品认知：
 | `passive-evidence-vault` | 保存 refs-only evidence、trace、replay、typed blocker group、long-soak、cleanup provenance。 | 不作为默认 planning root。 |
 | `app-state-action-producer` | 产出 App fast/full state、safe action shell、operator handoff payload。 | 不持有 GUI release verdict 之外的 product truth。 |
 | `agent-lab-improvement-loop` | 组织 eval refs、root cause、candidate fix、promotion/canary/rollback evidence。 | 不接管目标 agent 的 owner receipt 或 domain truth。 |
+| `human-owner-decision-gate` | approval/edit/reject/respond、quality reviewer、release owner、physical delete owner 和 route-back decision。 | 不用隐式默认、provider completion 或 old blocker 代替 owner decision。 |
 
 基座维护原则：
 
@@ -137,6 +146,20 @@ Research question / study
   -> publication package handoff
   -> owner receipt / typed blocker
 ```
+
+理想 MAS/OPL 层面应把当前最容易卡住的推进面拆成：
+
+| MAS/OPL plane | 长期 owner | 理想职责 |
+| --- | --- | --- |
+| `study_truth` | MAS | study.yaml、source policy、current_execution_envelope、医学 source/currentness。 |
+| `research_stage_pack` | MAS declares, OPL Pack compiles | analysis、manuscript、review、revision、publication handoff 的 stage/prompt/skill/knowledge/quality refs。 |
+| `stage_attempt_runtime` | OPL Runway | provider-backed attempt、lease、retry/dead-letter、human gate、closeout binding。 |
+| `research_artifact_unit` | OPL Workspace shell + MAS artifact authority | analysis output、manuscript draft、review packet、revision delta、package handoff manifest。 |
+| `publication_quality_gate` | MAS | independent AI reviewer、publication criteria、quality gate receipt 或 typed blocker。 |
+| `owner_answer_bridge` | MAS owner answer, OPL projection | MAS owner receipt / typed blocker / human gate / route-back evidence 绑定当前 StageRun identity、source fingerprint 和 idempotency。 |
+| `research_provenance` | OPL Vault refs-only + MAS source truth | MLflow/DVC-like run/dataset/artifact refs、source fingerprint、review lineage；只做可追踪，不授权 ready。 |
+
+这让 MAS 像 RCA 一样顺滑的关键不是“没有 blocker”，而是 blocker 只来自真实 owner decision、quality gate、human gate 或不可恢复的 source/currentness hard boundary；平台 repair、provider proof、read-model reconcile、evidence accounting 和 stale route redrive 不再抢默认推进面。
 
 ### MAG
 

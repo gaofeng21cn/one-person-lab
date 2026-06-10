@@ -4,11 +4,13 @@ Owner: `One Person Lab`
 Purpose: `opl_family_ideal_operating_model_redesign`
 State: `active_reference`
 Machine boundary: 本文是人读顶层重设计与审计标准。机器真相继续归各 repo 的 contracts、source、tests、CLI/read-model、runtime ledger、provider receipt、domain-owned manifest、owner receipt、typed blocker、release artifact 和真实 workspace/App evidence。
-Date: `2026-06-06`
+Date: `2026-06-10`
 
 ## 读法
 
 本文按 `目的反推必要性，MVP 检查阻碍性` 重新评估 OPL 相关 repo 的实际情况，并给出理想目标态设计。它已经不是 active backlog owner；只保留评估口径、分类标准和目标操作架构说明。它不声明 production ready、domain ready、App release ready、artifact authority ready 或 physical delete 授权。
+
+2026-06-10 refresh：本文进一步把 MAS/OPL 的理想形态重设为 `multi-plane operating system`。核心判断是：更丝滑的 MAS 推进不来自更多默认 worklist、更多 proof 或更厚 preflight，而来自一个 ordinary progress contract 加上彼此分离的 durable runtime、artifact、evidence、decision、observability 和 improvement 平面。所有外部成熟工程经验只作为 pattern source；它们不能成为 OPL 第二 runtime、MAS 第二 truth、第二 selector 或第二 active backlog。
 
 评估范围：
 
@@ -45,6 +47,21 @@ OPL base optimization
   generated/hosted surfaces + durable runtime + passive audit + App cockpit
 ```
 
+更理想的 MAS/OPL 顶层读法是：
+
+```text
+User purpose
+  -> Ordinary Progress Contract
+  -> Stage Artifact Unit
+  -> Domain Authority Kernel
+  -> next current_owner_delta
+
+supporting planes:
+  Pack / Stagecraft / Runway / Vault / Console / Foundry Lab / Connect
+```
+
+这意味着 OPL 只把普通路径做短、把恢复路径做稳、把证据路径做清楚；MAS 只把医学研究 owner answer、publication quality、artifact authority、typed blocker 和 human gate 做准。OPL 不能替 MAS 写 owner receipt，MAS 也不再保留 generic scheduler、queue、attempt loop、status shell 或第二 workbench。
+
 后续最重要的优化不是继续补 core primitive，而是执行三种动作：
 
 - `meets_target`: 默认路径更短，owner 更清楚，artifact / receipt / blocker 更可接力。
@@ -55,17 +72,17 @@ OPL base optimization
 
 本轮只吸收成熟工程原则，不引入外部 runtime truth。
 
-| 外部经验 | OPL 吸收原则 | 重设计影响 |
-| --- | --- | --- |
-| [Anthropic agent engineering](https://www.anthropic.com/engineering/building-effective-agents) | 从简单、可组合 pattern 开始，只在必要时增加复杂度。 | OPL ordinary path 必须短；multi-agent、proof、diagnostic、long-soak 和 replay 只做 explicit lane。 |
-| [OpenAI Agents SDK](https://developers.openai.com/api/docs/guides/agents) / [guardrails](https://openai.github.io/openai-agents-python/guardrails/) / [tracing](https://openai.github.io/openai-agents-js/guides/tracing) | handoff 显式结构化；guardrail 按 boundary 分层；trace 用于 debug/monitor。 | `owner_answer` / `current_owner_delta` 才能驱动默认路径；trace/evidence 进入 audit plane，fold 后才影响 planning。 |
-| [Kubernetes controller / deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) | desired/current 分离，controller 只 reconcile。 | `current_owner_delta` 和 stage pack 是 desired；attempt/provider/worklist 是 status，status 不生成 domain goal。 |
-| [Temporal durable execution](https://docs.temporal.io/) | workflow history、task queue、timer、retry/timeout、signal/query 和 replay 由 Temporal durable substrate 承担；worker process/service liveness 由 OPL Runway 和部署 substrate 承担。 | OPL 持有 provider readiness、worker lifecycle、queue、attempt 和 repair surface；domain repo 不保 generic daemon、scheduler、attempt loop。 |
-| [Backstage golden paths](https://backstage.io/docs/golden-path/create-app/) | 平台给用户一条 paved road，而不是暴露所有内部路径。 | 每个 Foundry Agent 只有一个 ordinary route；variant/proof/debug/cleanup 显式进入。 |
-| [CNCF platform engineering maturity model](https://www.cncf.io/blog/2023/11/20/announcing-the-platform-engineering-maturity-model/) | 平台成熟度靠 self-service、paved road、feedback loop。 | OPL 是 thinnest viable agent platform；domain pack 自助接入，App 默认只显示 owner delta。 |
-| [Google SRE toil](https://sre.google/sre-book/eliminating-toil/) | 可自动化、重复、战术性、无持久价值的工作要消除。 | receipt-only、reconcile-only、stale redrive-only、count accounting-only 要 stop-loss 或下沉。 |
-| [OpenTelemetry signals](https://opentelemetry.io/docs/concepts/signals/) | traces、metrics、logs 是分层信号，不是业务目标。 | provider trace、replay、raw ledger 是 observability；默认 planning 看 owner delta。 |
-| [DORA continuous delivery metrics](https://dora.dev/guides/dora-metrics/) | 快速、高质量反馈必须对团队可见。 | App/CLI 反馈必须是 next owner、accepted answer shape、artifact delta 或 blocker，而不是内部计数。 |
+| 外部经验 | 分类 | OPL/MAS-native 吸收 | 禁止升级 |
+| --- | --- | --- | --- |
+| [Kubernetes controller / operator](https://kubernetes.io/docs/concepts/architecture/controller/) | `adopt_contract` | `current_owner_delta` / stage pack 是 desired state；attempt、provider、worklist、evidence 是 observed state；`Runway Progress Reconciler` 只输出唯一下一 safe action、owner/gate wait 或 OPL runtime blocker。 | Reconciler 不生成 MAS goal、owner receipt、typed blocker 或 quality verdict；observed status 不成为 domain truth。 |
+| [Temporal durable execution](https://docs.temporal.io/temporal) / [Event History](https://docs.temporal.io/encyclopedia/event-history/) / [Signals, Queries, Updates](https://docs.temporal.io/encyclopedia/workflow-message-passing) | `adopt_contract` | `Runway` 持有 durable execution substrate、workflow history refs、task queue、retry/dead-letter、signal/query/update、human-gate transport 和 recovery repair。 | Temporal history、worker health、provider completion 和 repair success 不关闭 MAS stage、publication ready、domain ready 或 L5。 |
+| [Dagster software-defined assets](https://docs.dagster.io/api/dagster/assets) / [asset checks](https://docs.dagster.io/api/dagster/asset-checks) | `adopt_template` | `Stage Artifact Unit` 成为可接力资产单元：artifact key、upstream refs、materialization receipt、owner、check refs、freshness / current pointer 分开。 | Asset check 只能影响 artifact / quality gate lane；OPL 不把 check pass 写成 domain verdict。 |
+| [OpenTelemetry signals](https://opentelemetry.io/docs/concepts/signals/) / [semantic conventions](https://opentelemetry.io/docs/concepts/semantic-conventions/) | `adopt_template` | `Vault` 与 `Console` 使用统一 telemetry vocabulary：trace、metric、log、baggage、resource、stage_attempt、owner_delta、artifact_unit、domain_ref。 | Telemetry 只做 observability、debug、L5 drilldown；trace/metric/log 不生成默认 next action。 |
+| [LangGraph durable/stateful agents](https://docs.langchain.com/oss/python/langgraph/overview), [persistence](https://docs.langchain.com/oss/python/langgraph/persistence), [human-in-the-loop](https://docs.langchain.com/oss/python/langchain/human-in-the-loop) | `adopt_template` | 只吸收 checkpoint、pause/resume、human approval/edit/reject/respond、thread state 和 HITL policy shape，用于 OPL human gate 与 StageRun resume 设计。 | 不引入 LangGraph runtime；checkpoint / memory 不成为 MAS truth 或 App default plan root。 |
+| [MLflow Tracking](https://mlflow.org/docs/latest/ml/tracking/) / [Dataset Tracking](https://mlflow.org/docs/latest/ml/dataset/) 与 [DVC dvc.yaml](https://doc.dvc.org/user-guide/project-structure/dvcyaml-files) | `adopt_template` | run metadata、params、metrics、artifact refs、dataset lineage、fingerprint、stage deps/outs 进入 MAS research provenance 和 Vault refs-only lineage。 | MLflow/DVC run 成功不等于 paper progress；dataset lineage 不替代 MAS source truth 或 reviewer/publication gate。 |
+| [OpenAI Agents SDK handoffs](https://openai.github.io/openai-agents-python/handoffs/), [guardrails](https://openai.github.io/openai-agents-python/guardrails/) 与 [tracing](https://openai.github.io/openai-agents-python/tracing/) | `adopt_template` | handoff、guardrail、trace 的分层词汇进入 Stagecraft / Console / Vault；handoff payload 必须绑定 owner answer shape。 | Handoff 不是 owner receipt；guardrail pass 不是 quality verdict；trace 不是 progress truth。 |
+| [Backstage golden paths](https://backstage.io/docs/golden-path/create-app/) / platform engineering | `adopt_template` | OPL App 只给每个 Foundry Agent 一条 ordinary route；variants、proof、debug、cleanup、release/soak 都显式进入 developer/detail lane。 | 不把平台 catalog 或 template 变成第二 workflow engine。 |
+| [Google SRE toil](https://sre.google/sre-book/eliminating-toil/) / DORA feedback metrics | `adopt_template` | receipt-only、reconcile-only、stale-redrive-only、count-accounting-only 进入 anti-spin / stop-loss；L5 看 lead time、owner-answer latency、blocked recovery、release/user-path pass。 | 活动量、counter、open worklist 和 verified ledger 不作为完成证明。 |
 
 这些原则合在一起给出一个架构判断：OPL 应像 `platform golden path + durable controller + passive observability`，而不是把 agent runtime 做成工作流脚本、ledger browser 或多 backend launcher。
 
@@ -84,9 +101,27 @@ OPL base optimization
 
 ## Ideal Top-Level Redesign
 
+### 0. Multi-Plane Operating System
+
+理想 OPL/MAS 不应把所有状态塞进一个默认状态机。应把推进系统拆成九个平面，每个平面有单一 owner、单一输入和明确 forbidden claims：
+
+| Plane | OPL 主模块 | 输入 | 输出 | 不拥有 |
+| --- | --- | --- | --- | --- |
+| `purpose_pack_plane` | `Pack` + `Stagecraft` | Domain Declarative Pack、stage goal、prompt/skill/knowledge/tool refs、quality gate refs。 | 可启动 stage pack、accepted answer shape、tool affordance boundary。 | domain truth、review verdict、artifact body。 |
+| `ordinary_progress_plane` | `Console` + `Stagecraft` | fresh `current_owner_delta`、current stage goal、owner answer requirement。 | default next owner、required delta、accepted answer shape、hard gate。 | raw worklist planning、provider trace planning。 |
+| `stage_artifact_plane` | `Workspace` | stage output refs、manifest、hash、lineage、role artifact。 | `Stage Artifact Unit`、current pointer、handoff-ready refs。 | artifact quality verdict、publication/export approval。 |
+| `durable_runway_plane` | `Runway` | admitted stage attempt、provider profile、human gate refs、owner route refs。 | attempt lease、provider observation、retry/dead-letter、repair action、closeout binding refs。 | owner receipt、typed blocker、domain completion。 |
+| `authority_decision_plane` | domain kernel + human gate | artifact unit、review refs、source fingerprint、currentness identity。 | owner receipt、quality gate receipt、typed blocker、human gate receipt、route-back evidence。 | generic runtime repair、provider liveness。 |
+| `evidence_telemetry_plane` | `Vault` | trace、metric、log、receipt refs、provenance, lineage。 | refs-only evidence index、L5 drilldown、audit packet。 | default next action、body storage、quality verdict。 |
+| `reconciler_plane` | `Runway` + `Console` | desired owner delta、observed attempt/provider/receipt/gate refs。 | exactly one safe action、owner/gate wait、OPL repair blocker。 | domain goal generation、artifact mutation。 |
+| `app_cockpit_plane` | `Console` + App | current owner delta projection、artifact/blocker refs、safe actions。 | Start / Continue / Review / Open artifact。 | GUI release verdict之外的 product truth、domain truth。 |
+| `improvement_plane` | `Foundry Lab` + `OMA` | eval refs、failure evidence、owner feedback、no-regression refs。 | developer work order、mechanism patch proposal、typed blocker。 | target-agent acceptance、promotion authority。 |
+
+这九个平面的关系固定为：ordinary progress plane 是默认用户路径；durable runway plane 只保证执行可恢复；stage artifact plane 保证结果可接力；authority decision plane 才能关闭领域进度；evidence telemetry plane 只提供可追踪性；improvement plane 只产出可审核 work order。
+
 ### 1. OPL Framework Base
 
-OPL 基座应收敛成 8 个稳定 primitive：
+OPL 基座应收敛成 9 个稳定 primitive：
 
 ```text
 owner-delta-controller
@@ -97,6 +132,7 @@ generated-surface-host
 passive-evidence-vault
 app-state-action-producer
 agent-lab-improvement-loop
+human-owner-decision-gate
 ```
 
 | Primitive | 持有职责 | 不持有 |
@@ -109,6 +145,7 @@ agent-lab-improvement-loop
 | `passive-evidence-vault` | raw evidence、trace、replay、typed blocker group、long-soak、cleanup provenance。 | default planning root。 |
 | `app-state-action-producer` | App fast/full state、safe action shell、operator payload handoff。 | GUI product release authority 或 domain truth。 |
 | `agent-lab-improvement-loop` | eval refs、root cause、work-order candidate、risk-tier promotion evidence。 | target owner receipt、domain truth、memory/artifact body。 |
+| `human-owner-decision-gate` | approval/edit/reject/respond、quality reviewer handoff、release owner decision、physical delete owner decision。 | 隐式批准、silent fallback、provider-completion-to-domain-ready。 |
 
 基座优化方向：
 
@@ -148,6 +185,21 @@ docs/tests
 | RCA | image-first artifact/review/export delta or RCA typed blocker | visual truth、review/export verdict、artifact/visual memory authority、native helper implementation。 | session/runtimeWatch/domain_action_adapter wrapper、HTML/native PPTX route variant 默认化、identity alias authority。 |
 | OMA | target-agent candidate/work-order/mechanism delta or typed blocker | agent-building semantics、work-order policy、candidate/proposal authority。 | second Agent Lab、promotion gate owner、worktree lifecycle owner、registry/App shell、script runner growth。 |
 
+MAS 的理想普通路径还需要单独强调：
+
+```text
+Medical Research Pack
+  -> Study / source truth envelope
+  -> Analysis Stage Artifact Unit
+  -> Manuscript Stage Artifact Unit
+  -> Independent AI reviewer / publication quality gate
+  -> Revision / package handoff
+  -> MAS owner receipt / typed blocker / human gate
+  -> next current_owner_delta
+```
+
+OPL 对 MAS 的进一步优化重点不是再补 MAS 私有推进器，而是把 `current_execution_envelope`、`current_owner_delta`、StageRun closeout binding、Stage Artifact Unit、source fingerprint、publication quality gate 和 owner answer bridge 做成单一可接力路径。MAS 仍保留医学 source policy、publication quality、paper artifact authority、reviewer verdict、memory accept/reject、owner receipt 和 typed blocker；generic queue、daemon、dashboard、artifact lifecycle shell、source transport、App cockpit 和 evidence telemetry 上收到 OPL。
+
 ### 4. Support Repos
 
 `opl-aion-shell` 和 `opl-doc` 不进入 Foundry Agent core truth set。
@@ -161,6 +213,7 @@ docs/tests
 
 | Lane | Target reading | Acceptance standard |
 | --- | --- | --- |
+| `multi_plane_os_split` | 默认推进、durable runtime、artifact、authority decision、telemetry、reconciler、App cockpit 和 improvement 平面分离。 | ordinary path 只从 `current_owner_delta` 推进；其他平面只能提供 refs、safe action、owner gate 或 audit drilldown。 |
 | `summary_de_noise` | OPL default summaries owner-delta-only，raw counts 只作 diagnostic-only。 | ordinary summary 不以 worklist/replay/blocked envelope count 作为 next-action root。 |
 | `current_owner_delta_cutover` | 默认命名和 payload root 都说 `current_owner_delta`，`current_owner_delta_read_model` 只承载显式 audit/full-detail refs。 | `compact_*` 只在 history / negative guard 中出现，不能成为 default planning root 或 active compatibility alias。 |
 | `domain_wrapper_delete_gate` | retained wrapper 逐项 delete/tombstone；delete-auth false / safe-to-delete false guard 防止 premature physical delete。 | no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance machine-readable。 |
@@ -173,15 +226,17 @@ docs/tests
 
 每次评估按下面问题给结论：
 
-1. `default_path`: 普通路径是否从 `current_owner_delta` 开始。
-2. `progress_truth`: 是否只有 artifact + manifest + owner answer + current pointer 算 progress。
-3. `mvp_friction`: 是否减少 receipt/reconcile/proof/status 循环。
-4. `authority_boundary`: 是否保持 domain verdict 和 artifact authority 在 domain repo。
-5. `surface_budget`: 新 surface 是否真有 default 资格。
-6. `golden_path`: 每个 agent 是否只有一个 ordinary route。
-7. `wrapper_retirement`: 被替代 wrapper 是否进入删除门。
-8. `app_cockpit`: App 是否是 cockpit，而不是 ledger browser。
-9. `evidence_vault`: evidence 是否 passive，不能直接 plan。
+1. `multi_plane_split`: 新设计是否把 progress、runtime、artifact、decision、telemetry、App 和 improvement 平面分清。
+2. `default_path`: 普通路径是否从 `current_owner_delta` 开始。
+3. `progress_truth`: 是否只有 artifact + manifest + owner answer + current pointer 算 progress。
+4. `mvp_friction`: 是否减少 receipt/reconcile/proof/status 循环。
+5. `authority_boundary`: 是否保持 domain verdict 和 artifact authority 在 domain repo。
+6. `surface_budget`: 新 surface 是否真有 default 资格。
+7. `golden_path`: 每个 agent 是否只有一个 ordinary route。
+8. `wrapper_retirement`: 被替代 wrapper 是否进入删除门。
+9. `app_cockpit`: App 是否是 cockpit，而不是 ledger browser。
+10. `evidence_vault`: evidence 是否 passive，不能直接 plan。
+11. `human_owner_gate`: human / domain owner decision 是否显式产出 receipt、typed blocker、human gate 或 route-back evidence。
 
 输出只允许三类：`meets_target`、`needs_demotion`、`needs_retirement`。
 
