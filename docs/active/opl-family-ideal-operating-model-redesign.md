@@ -250,6 +250,8 @@ OPL 对 MAS 的进一步优化重点不是再补 MAS 私有推进器，而是把
 
 并行 lane 完善后必须及时吸收回 `main`，并清理对应 worktree、branch、thread 与临时状态。已有并发 worktree / branch 默认视为外部 owner lane，除非用户明确授权，不得吸收、清理、覆盖或把其状态并入本轮完成口径。subagent 完成报告不能替代 owner receipt、domain verdict、delete authority、App release readiness、production readiness 或最终验收。
 
+W7 owner-evidence docs foldback 只能记录 `operating-maturity`、Brand L5 和 operating-model projection 的 fresh 判断：owner-route work order 是 refs-only 投影和字段/guard，不是 closing authority。当前 owner answer 仍回 `med-autoscience` owner receipt / typed blocker；Brand L5、App release/user-path、provider long-soak、cleanup 和 memory/artifact/lifecycle evidence 都按各自 owner lane 关闭，不能由本文或 OPL 投影生成 ready claim。
+
 ## Baton Boundary
 
-下一步执行顺序不在本文维护。需要行动时读取 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md) 的 `Operating Model Foldback 状态`、`测试 / 证据差距` 和 `下一轮 Agent prompt`，再 fresh 读取 live contracts/source/CLI/read-model。本文只提供评估口径：每个新发现的 surface 先分类为 `meets_target`、`needs_demotion` 或 `needs_retirement`；需要落地或关闭时回到 active gap owner 记录 owner、source of truth、accepted answer shape 和验证命令。
+下一步执行顺序不在本文维护。需要行动时读取 [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md) 的 `Operating Model Foldback 状态`、`测试 / 证据差距` 和 `下一轮 Agent prompt`，再 fresh 读取 live contracts/source/CLI/read-model。本文只提供评估口径：每个新发现的 surface 先分类为 `meets_target`、`needs_demotion` 或 `needs_retirement`；需要落地或关闭时回到 active gap owner 记录 owner、source of truth、accepted answer shape 和验证命令。本文不得维护 W7 owner-route queue、Brand L5 backlog、App release/user-path backlog、provider long-soak backlog 或 dated worktree closeout。
