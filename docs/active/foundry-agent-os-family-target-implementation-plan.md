@@ -66,14 +66,14 @@ OPL Agent OS
 - `W3`：`contracts/opl-framework/capability-registry-resolver.schema.json` 与 `src/capability-registry-resolver.ts` 固定 current-delta-bound resolver ABI；optional capability ref 缺失 fail open，只有 current owner delta route-required hard-boundary 缺失才输出 typed blocker candidate，且 OPL 仍不能创建 domain typed blocker。
 - `W4`：MAS/MAG/RCA/OMA 均新增 `contracts/foundry-agent-os-domain-kernel-manifest.json` 与 focused tests，声明 retained authority kernel、OPL upcollect surfaces、owner receipt / typed blocker signer 和 non-claims。
 - `W6`：App contract/fixture/validator 固定 first screen / ordinary cockpit 只从 `current_owner_delta` 派生 default next action，raw worklist / raw evidence / provider trace / release evidence 只进入 drilldown。
-- `W7`：`opl framework operating-maturity --family-defaults --json` 暴露 `foundry_agent_os_production_evidence_gate.owner_route_work_orders` 与 `domain_owner_chain_scaleout.domain_owner_evidence_routes`，逐项列出 MAS/MAG/RCA/OMA、Brand L5、App release、provider long-soak、private-platform retirement、memory/artifact lifecycle 的 owner、accepted ref shapes、blocker state、next owner action 与 non-closing inputs；它只证明 intake / work-order projection / false-authority guard，不声明 production evidence closed。
+- `W7`：`opl framework operating-maturity --family-defaults --json` 暴露 `owner_evidence_intake`、`foundry_agent_os_production_evidence_gate.owner_route_work_orders` 与 `domain_owner_chain_scaleout.domain_owner_evidence_routes`。`owner_evidence_intake` 读取既有 refs-only ledgers：`runtime domain-owner-payload-summary list`、`runtime brand-module-l5-evidence list`、`runtime app-release-evidence list` 和 `runtime codex-app-runtime-evidence list`，把 MAS/MAG/RCA/OMA、Brand L5、App release 和 provider long-soak 的 observed receipt refs / ref shapes / per-domain status 回投到 W7 work orders。它只证明 intake / work-order projection / false-authority guard，不声明 production evidence closed。
 - External-learning：后续优化折回 `W3/W4/W7`，不再在 MAS 或其他 domain 仓另建 selector、第二 active backlog、always-on sidecar 或默认 preflight。
 
 后续最小完成门：
 
 - `W1/W5` 的 MAS/MAG/RCA/OMA generated/direct accepted-answer-shape roundtrip 已进入机器读面；后续不再补第二套 parity 计划，而是把任何 drift 当作 `generated_direct_parity` regression 修复。
 - `W3` 已把 domain pack external-learning refs 接入 current-delta-bound resolver readout；后续只扩展可消费 refs 与 route-required hard-boundary policy，继续保持 optional fail-open 和 domain-owned typed blocker 晋级边界。
-- `W7` 后续必须用真实 owner receipt、typed blocker、human gate、reviewer/quality/export receipt、long-soak、release/install、private-platform owner decision 或 owner acceptance refs 关闭 production evidence；当前 work-order/readout、conformance pass、App projection、provider completion、verified ledger 和 docs foldback 都不能替代它。
+- `W7` 后续必须用真实 owner receipt、typed blocker、human gate、reviewer/quality/export receipt、long-soak、release/install、private-platform owner decision 或 owner acceptance refs 关闭 production evidence；当前 `owner_evidence_intake`、work-order/readout、conformance pass、App projection、provider completion、verified ledger 和 docs foldback 都不能替代它。
 - 若后续 live `opl agents conformance --family-defaults --json` 仍出现 OMA 或其他 domain blocked，必须分类为 conformance projection、domain target delta、stage boundary drift 或 domain-owned live evidence tail；不能用 suite pass、controlled canary 或 docs foldback 伪关闭。
 
 ## Supervisory acceptance gate
@@ -277,6 +277,14 @@ OPL 后续不能把 domain target delta 当成“OPL 已接管完成”。接收
 | `app-cockpit` | Console/App projection contracts | current owner delta + hard gate refs | snapshot / schema tests、manual screenshot when App touched | first screen 不被 L5/audit/evidence tail 淹没。 |
 | `production-conformance` | runtime evidence / soak contracts | real owner receipt / typed blocker / human gate / App consumption | repo-native soak reports、owner acceptance refs | 只用真实 evidence 关闭 production claim，不用 conformance pass 代替。 |
 | `owner-evidence` | MAS/MAG/RCA/OMA/App/brand owner repos + OPL refs-only intake | current owner delta、owner-route work orders、domain/App/brand owner evidence | domain/App repo-native verification、OPL live readout、owner receipt / typed blocker / human gate / release / long-soak refs | 每个 work order 由对应 owner 给出真实 closing ref 或 typed blocker；OPL 只 intake / verify / project。 |
+
+当前 `owner-evidence` 的 OPL 主入口是：
+
+```bash
+rtk opl framework operating-maturity --family-defaults --json
+```
+
+阅读顺序是 `framework_operating_maturity.owner_evidence_intake` -> `foundry_agent_os_production_evidence_gate.owner_route_work_orders` -> `domain_owner_chain_scaleout.domain_owner_evidence_routes`。`owner_evidence_intake` 会显示每条 lane 的 `observed_receipt_refs`、`observed_ref_shapes`、`observed_ref_counts` 和 domain owner-chain 的 per-domain `observed_domains`；对应 work order 只把 `blocker_state` 从 `owner_route_evidence_missing` 调整为 `owner_route_refs_observed_not_production_claim`。无论 observed refs 是否存在，`closed_by_opl=false`、`production_ready_claim_authorized=false` 和 false-authority flags 都必须保持不变。
 
 ## 验收门
 

@@ -1,6 +1,7 @@
 import { buildAgentDefaultCallerReadinessReport } from './agent-platform-surface-ownership.ts';
 import { buildBrandModuleL5Status } from './brand-module-l5-evidence.ts';
 import { FrameworkContractError } from './contracts.ts';
+import { buildFoundryAgentOsOwnerEvidenceIntake } from './foundry-agent-os-owner-evidence-intake.ts';
 import { FRAMEWORK_READINESS_SOURCE_COMMANDS as SOURCE_COMMANDS } from './framework-readiness-source-commands.ts';
 import {
   booleanValue,
@@ -180,8 +181,12 @@ function ownerRouteWorkOrders(
     open_count: number;
     accepted_closing_ref_shapes: string[];
   }>,
+  ownerEvidenceIntake: Record<string, unknown>,
 ) {
   const laneStatusById = new Map(laneStatuses.map((lane) => [lane.lane, lane]));
+  const laneEvidenceById = new Map(
+    recordList(ownerEvidenceIntake.lane_evidence).map((entry) => [stringValue(entry.lane), entry]),
+  );
   const workOrderIds: Record<string, string> = {
     domain_owner_chain_scaleout: 'w7-domain-owner-chain-scaleout',
     brand_module_l5_operating_maturity: 'w7-brand-module-l5-operating-maturity',
@@ -193,14 +198,30 @@ function ownerRouteWorkOrders(
 
   return nextOwnerActions().map((action) => {
     const lane = laneStatusById.get(action.lane);
+    const observed = laneEvidenceById.get(action.lane);
+    const observedReceiptRefs = stringListValue(observed?.observed_receipt_refs);
+    const observedRefShapes = stringListValue(observed?.observed_ref_shapes);
+    const ownerEvidenceObserved =
+      stringValue(observed?.status) === 'owner_evidence_observed_not_ready_claim'
+      || observedReceiptRefs.length > 0
+      || observedRefShapes.length > 0;
     return {
       work_order_id: workOrderIds[action.lane] ?? `w7-${action.lane.replace(/_/g, '-')}`,
       lane: action.lane,
       owner: action.owner,
       status: 'open',
-      blocker_state: 'owner_route_evidence_missing',
+      blocker_state: ownerEvidenceObserved
+        ? 'owner_route_refs_observed_not_production_claim'
+        : 'owner_route_evidence_missing',
       open_count: lane?.open_count ?? 1,
       next_owner_action: action.required_delta,
+      observed_owner_evidence_status:
+        stringValue(observed?.status) ?? 'owner_evidence_required',
+      observed_receipt_refs: observedReceiptRefs,
+      observed_ref_shapes: observedRefShapes,
+      observed_ref_counts: record(observed?.observed_ref_counts),
+      owner_evidence_route:
+        stringValue(observed?.evidence_route) ?? action.source_command,
       accepted_ref_shapes: unique([
         ...(lane?.accepted_closing_ref_shapes ?? []),
         'typed_blocker_ref',
@@ -229,6 +250,7 @@ function foundryAgentOsProductionEvidenceGate(input: {
   providerOpenCount: number;
   cleanupOpenDecisionCount: number;
   lifecycleOpenCount: number;
+  ownerEvidenceIntake: Record<string, unknown>;
 }) {
   const laneStatuses = [
     {
@@ -295,7 +317,7 @@ function foundryAgentOsProductionEvidenceGate(input: {
       ],
     },
   ];
-  const workOrders = ownerRouteWorkOrders(laneStatuses);
+  const workOrders = ownerRouteWorkOrders(laneStatuses, input.ownerEvidenceIntake);
   const openLaneCount = laneStatuses.filter((lane) => lane.open_count > 0).length;
   return {
     surface_kind: 'foundry_agent_os_production_evidence_gate',
@@ -332,6 +354,11 @@ function foundryAgentOsProductionEvidenceGate(input: {
     ],
     lane_statuses: laneStatuses.map((lane) => ({
       ...lane,
+      observed_owner_evidence_status:
+        stringValue(
+          recordList(input.ownerEvidenceIntake.lane_evidence)
+            .find((entry) => stringValue(entry.lane) === lane.lane)?.status,
+        ) ?? 'owner_evidence_required',
       status: lane.open_count > 0
         ? 'evidence_required'
         : 'refs_observed_not_production_ready_claim',
@@ -341,6 +368,9 @@ function foundryAgentOsProductionEvidenceGate(input: {
       open_lane_count: openLaneCount,
       owner_route_work_order_count: workOrders.length,
       open_owner_route_work_order_count: workOrders.filter((entry) => entry.status === 'open').length,
+      observed_owner_evidence_lane_count: workOrders.filter((entry) =>
+        entry.observed_owner_evidence_status === 'owner_evidence_observed_not_ready_claim'
+      ).length,
       closed_by_opl: false,
       production_ready_claim_authorized: false,
       requires_owner_acceptance: true,
@@ -359,12 +389,39 @@ function foundryAgentOsProductionEvidenceGate(input: {
   };
 }
 
-function domainOwnerEvidenceRoutes(domainOwnerChain: Record<string, unknown>) {
+function domainKey(value: unknown) {
+  const raw = typeof value === 'string' ? value : '';
+  const compact = raw.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const aliases: Record<string, string> = {
+    redcubeai: 'redcube',
+  };
+  return aliases[compact] ?? compact;
+}
+
+function domainOwnerEvidenceRoutes(
+  domainOwnerChain: Record<string, unknown>,
+  ownerEvidenceIntake: Record<string, unknown>,
+) {
+  const observedDomainById = new Map(
+    recordList(
+      recordList(ownerEvidenceIntake.lane_evidence)
+        .find((entry) => stringValue(entry.lane) === 'domain_owner_chain_scaleout')
+        ?.observed_domains,
+    ).map((entry) => [domainKey(stringValue(entry.domain_id)), entry]),
+  );
   return recordList(domainOwnerChain.domains).map((domain) => ({
     domain_id: stringValue(domain.domain_id),
     requested_agent_id: stringValue(domain.requested_agent_id),
     repo_dir: stringValue(domain.repo_dir),
-    owner_route_status: 'owner_evidence_required',
+    owner_route_status:
+      stringValue(observedDomainById.get(domainKey(domain.domain_id))?.status)
+      ?? 'owner_evidence_required',
+    observed_receipt_refs:
+      stringListValue(observedDomainById.get(domainKey(domain.domain_id))?.observed_receipt_refs),
+    observed_ref_shapes:
+      stringListValue(observedDomainById.get(domainKey(domain.domain_id))?.observed_ref_shapes),
+    observed_ref_counts:
+      record(observedDomainById.get(domainKey(domain.domain_id))?.observed_ref_counts),
     next_owner_action: 'domain_owner_record_live_owner_receipt_typed_blocker_human_gate_quality_export_no_regression_or_long_soak_ref',
     accepted_ref_shapes: stringListValue(domain.accepted_refs_only_result_shapes),
     conformance_can_close_production: false,
@@ -483,6 +540,10 @@ export async function buildFrameworkOperatingMaturityReadout(
   );
   const ownerDeltaBridge = currentOwnerDeltaBridge(appOperatorDrilldown);
   const appReleaseUserPath = appReleaseUserPathMaturity();
+  const ownerEvidenceIntake = buildFoundryAgentOsOwnerEvidenceIntake({
+    contracts,
+    appReleaseEvidence: appReleaseUserPath.evidence,
+  });
   const drilldownMaturity = appOperatorDrilldownMaturity(appOperatorDrilldown);
   const physicalDeleteAuthority = record(defaultCallers.physical_delete_authority_read_model);
   const providerOpenCount = drilldownMaturity.provider.openEvidenceCount;
@@ -509,6 +570,7 @@ export async function buildFrameworkOperatingMaturityReadout(
     providerOpenCount,
     cleanupOpenDecisionCount,
     lifecycleOpenCount,
+    ownerEvidenceIntake,
   });
 
   return {
@@ -544,6 +606,7 @@ export async function buildFrameworkOperatingMaturityReadout(
         ready_claim_authorized: false,
       },
       current_owner_delta_bridge: ownerDeltaBridge,
+      owner_evidence_intake: ownerEvidenceIntake,
       foundry_agent_os_production_evidence_gate: productionEvidenceGate,
       domain_owner_chain_scaleout: {
         source_command: 'opl agents conformance --family-defaults --json',
@@ -553,7 +616,8 @@ export async function buildFrameworkOperatingMaturityReadout(
         accepted_refs_only_result_shapes:
           stringListValue(domainOwnerChain.accepted_refs_only_result_shapes),
         domains: recordList(domainOwnerChain.domains),
-        domain_owner_evidence_routes: domainOwnerEvidenceRoutes(domainOwnerChain),
+        domain_owner_evidence_routes:
+          domainOwnerEvidenceRoutes(domainOwnerChain, ownerEvidenceIntake),
         authority_boundary: record(domainOwnerChain.authority_boundary),
       },
       brand_module_l5: {
