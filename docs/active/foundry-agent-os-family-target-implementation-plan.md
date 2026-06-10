@@ -29,6 +29,7 @@ OPL Agent OS
 2. 再读本文，确认 Foundry Agent OS 的目标 ABI、lane、写集和验收门。
 3. 需要改某个 domain 时，再读对应仓的 target delta：MAS `docs/runtime/designs/mas_opl_agent_os_target_operating_architecture.md`，MAG/RCA/OMA `docs/active/foundry-agent-os-target-delta.md`。
 4. 开工时只选下面一个 work order 或一组写集不相交的 work orders；不要先新增第二规划文档、第二 active backlog 或第二 capability registry。
+5. 外部学习后续优化只折回本文的 `W3-capability-registry-fail-open`、`W4-domain-kernel-manifest` 和 `W7-production-evidence-soak`：OPL 负责 current-delta-bound capability resolver / selector，domain 仓只声明可消费 refs、authority 边界和 owner receipt / typed blocker 晋级门；不要在 MAS 或其他 domain 仓另建 external-learning selector/backlog。
 
 第一条应落地的 work order 是 `W0-cross-agent-conformance-readout`，目标是把本轮目标合同变成可查询、可测试的 OPL 读面：
 
@@ -37,7 +38,7 @@ OPL Agent OS
 | `W0-cross-agent-conformance-readout` | OPL | `contracts/opl-framework/*`、conformance source、focused tests | `opl agents conformance --family-defaults --json` 暴露 `foundry_agent_os_standard`：per-agent default read root、target delta present、false-authority flags、generated-surface status、domain-kernel authority owner。 | `npm run typecheck`、`npm run test:fast`、`npm run test:meta` |
 | `W1-pack-abi-generated-surface` | OPL + one domain canary | Pack compiler、generated interface bundle、descriptor tests | Domain Pack 可生成 CLI/MCP/Skill/App/status/workbench descriptor；generated surface 不写 domain truth。 | contract tests、interface snapshot、direct/generated parity fixture |
 | `W2-current-owner-delta-default-root` | OPL + App read-model | Console/read-model/App cockpit contracts | 默认 operator/App 首屏只从 `current_owner_delta` 生成 next action；raw worklist/evidence 只能 drilldown。 | read-model tests、App fast-state fixture |
-| `W3-capability-registry-fail-open` | OPL | Atlas/Pack/Stagecraft capability registry ABI | optional capability ref 缺失 fail open；route-required hard-boundary 缺失才 typed blocker。 | schema tests、fail-open/fail-blocker tests |
+| `W3-capability-registry-fail-open` | OPL | Atlas/Pack/Stagecraft capability registry ABI | optional capability ref 缺失 fail open；route-required hard-boundary 缺失才 typed blocker；external-learning / Light / Co-Scientist / Evo 等能力由 current-delta-bound resolver 选择，不由 domain 私有 selector 再造。 | schema tests、fail-open/fail-blocker tests |
 | `W4-domain-kernel-manifest` | MAS/MAG/RCA/OMA | domain manifest/policy/docs/tests | 每仓声明 retained authority kernel、OPL upcollect surfaces、owner receipt / typed blocker signer。 | domain focused contract tests、docs diff check |
 | `W5-generated-parity-scaleout` | OPL + MAS/MAG/RCA/OMA | generated descriptors、domain action catalogs | direct path 与 OPL-hosted path 返回同一 accepted answer shape。 | cross-agent conformance、direct/generated parity tests |
 | `W6-app-cockpit-consumption` | OPL + App | Console/App projection contracts | App cockpit first screen 只显示 owner、delta、accepted answer shape、hard gate、typed blocker 和 drilldown refs。 | App contract tests、manual screenshot when App changed |
@@ -111,6 +112,8 @@ OPL Agent OS
 - `Stagecraft` 负责 use policy：stage 内何时可用、何时只是 advisory、何时 route-required。
 
 默认行为固定为 `current_owner_delta_bound_jit_or_fail_open`。只有当前 owner delta 明确需要某个 ref 来保护 source/data/evidence、owner-route identity、forbidden write、irreversible mutation、reviewer/publication hard gate 时，缺失才升级为 typed blocker。其余缺口进入 advisory / audit，不阻断主线，也不要求默认 memory scan、meta-review、tournament、blocking prefetch 或 always-on sidecar。
+
+外部学习 intake 的后续优化也走同一条线：Co-Scientist、Light、EvoScientist、ARS、AutoSci / OmegaWiki、ARK、ARIS、PaperSpine、PaperOrchestra 和 Open Auto Research 不能各自形成 domain-local scheduler、selector、sidecar pipeline 或 active backlog。OPL `W3` 只提供 capability catalog / ABI / use policy / resolver；domain pack 声明哪些 capability refs 适用于哪些 stage / owner delta；domain authority kernel 决定哪些 refs 可被消费、哪些 refs 只能作为 advisory，以及哪些 refs 需要 owner receipt、typed blocker、reviewer receipt 或 human gate 后才能计入真实进度。
 
 ## Cross-Agent Delta
 
@@ -286,6 +289,7 @@ OPL 后续不能把 domain target delta 当成“OPL 已接管完成”。接收
 - OPL / Vault / Console / Runway / Pack / Capability Registry 不得签 owner receipt、创建 domain typed blocker、写 domain truth 或授权 quality/export verdict。
 - Provider completion、queue completion、descriptor ready、App projection、verified ledger、zero worklist、lineage present 都不能声明 domain completion。
 - New capability / external-learning intake 必须绑定 current work unit，并默认 fail open。
+- New capability / external-learning intake 不得在 domain 仓新增第二 selector、第二 active backlog、always-on sidecar 或默认 preflight；selector / resolver 归 OPL Capability Registry，domain 仓只声明 refs 消费与 authority 晋级边界。
 - App / Console first screen 不能从 audit tail 或 raw worklist 生成 next action。
 
 ## 下一步具体工作
@@ -295,6 +299,7 @@ OPL 后续不能把 domain target delta 当成“OPL 已接管完成”。接收
 3. `RCA`：把 managed DAG、attempt runner、review/repair transport、artifact lifecycle、operator projection 收束为 Visual Pack + Visual Authority Kernel。
 4. `OMA`：把 agent-building pack、developer work order、mechanism proposal、promotion/canary/rollback 与 OPL Agent Lab 分权写成 target delta，并避免第二套 Framework。
 5. OPL：推进 Pack compiler/generated surface ABI 和 capability registry 的机器 manifest，不新增第 11 品牌模块，不增加普通路径摩擦。
+6. External-learning：不再单列 MAS 优化计划；先在 OPL `W3` 落 current-delta-bound capability resolver / fail-open policy，再由 MAS `W4` 声明 ARS claim-support、AutoSci source discovery、ARK micro-canary 等 refs 的 domain consumption / owner receipt 晋级边界，最后进入 `W7` 真实 owner receipt canary。
 
 ## 禁止声明
 
