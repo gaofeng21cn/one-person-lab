@@ -141,16 +141,18 @@ export function validateBrandModuleL5OperatingEvidence(
   const evidenceClassesRaw = value.evidence_classes;
   const modulesRaw = value.modules;
   const claimPolicyRaw = value.l5_claim_policy;
+  const ownerRouteWorkOrderPolicyRaw = value.owner_route_work_order_policy;
   const evidenceLedgerSurfacesRaw = value.evidence_ledger_surfaces;
   if (
     !Array.isArray(evidenceClassesRaw)
     || !Array.isArray(modulesRaw)
     || !isRecord(claimPolicyRaw)
+    || !isRecord(ownerRouteWorkOrderPolicyRaw)
     || !isRecord(evidenceLedgerSurfacesRaw)
   ) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'brand-module-l5-operating-evidence.json must contain l5_claim_policy, evidence_ledger_surfaces, evidence_classes, and modules.',
+      'brand-module-l5-operating-evidence.json must contain l5_claim_policy, owner_route_work_order_policy, evidence_ledger_surfaces, evidence_classes, and modules.',
       { file: filePath },
     );
   }
@@ -211,6 +213,92 @@ export function validateBrandModuleL5OperatingEvidence(
       filePath,
     ),
   };
+
+  const ownerRouteWorkOrderPolicy = {
+    surface_kind: expectString(
+      ownerRouteWorkOrderPolicyRaw.surface_kind,
+      'owner_route_work_order_policy.surface_kind',
+      filePath,
+    ),
+    work_orders_are_refs_only: (() => {
+      const field = 'owner_route_work_order_policy.work_orders_are_refs_only';
+      const actual = expectBoolean(ownerRouteWorkOrderPolicyRaw.work_orders_are_refs_only, field, filePath);
+      if (actual !== true) {
+        throw new FrameworkContractError('contract_shape_invalid', `${field} must be true.`, {
+          file: filePath,
+          field,
+        });
+      }
+      return true as const;
+    })(),
+    work_orders_close_l5: expectFalseBoolean(
+      ownerRouteWorkOrderPolicyRaw.work_orders_close_l5,
+      'owner_route_work_order_policy.work_orders_close_l5',
+      filePath,
+    ),
+    work_orders_can_create_owner_receipt: expectFalseBoolean(
+      ownerRouteWorkOrderPolicyRaw.work_orders_can_create_owner_receipt,
+      'owner_route_work_order_policy.work_orders_can_create_owner_receipt',
+      filePath,
+    ),
+    work_orders_can_create_typed_blocker: expectFalseBoolean(
+      ownerRouteWorkOrderPolicyRaw.work_orders_can_create_typed_blocker,
+      'owner_route_work_order_policy.work_orders_can_create_typed_blocker',
+      filePath,
+    ),
+    work_orders_can_claim_production_ready: expectFalseBoolean(
+      ownerRouteWorkOrderPolicyRaw.work_orders_can_claim_production_ready,
+      'owner_route_work_order_policy.work_orders_can_claim_production_ready',
+      filePath,
+    ),
+    accepted_route_ref_shapes: expectNonEmptyStringArray(
+      ownerRouteWorkOrderPolicyRaw.accepted_route_ref_shapes,
+      'owner_route_work_order_policy.accepted_route_ref_shapes',
+      filePath,
+    ),
+    non_closing_inputs: expectNonEmptyStringArray(
+      ownerRouteWorkOrderPolicyRaw.non_closing_inputs,
+      'owner_route_work_order_policy.non_closing_inputs',
+      filePath,
+    ),
+  };
+  if (ownerRouteWorkOrderPolicy.surface_kind !== 'opl_brand_module_l5_owner_route_work_order_policy') {
+    throw new FrameworkContractError('contract_shape_invalid', 'owner_route_work_order_policy.surface_kind must be canonical.', {
+      file: filePath,
+      field: 'owner_route_work_order_policy.surface_kind',
+      actual: ownerRouteWorkOrderPolicy.surface_kind,
+    });
+  }
+  for (const requiredRefShape of [
+    'owner_acceptance_ref',
+    'owner_receipt_ref',
+    'typed_blocker_ref',
+    'human_gate_ref',
+  ]) {
+    if (!ownerRouteWorkOrderPolicy.accepted_route_ref_shapes.includes(requiredRefShape)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'owner_route_work_order_policy.accepted_route_ref_shapes must include owner acceptance, owner receipt, typed blocker, and human gate refs.', {
+        file: filePath,
+        field: 'owner_route_work_order_policy.accepted_route_ref_shapes',
+        missing_ref_shape: requiredRefShape,
+      });
+    }
+  }
+  for (const nonClosingInput of [
+    'contract_validation',
+    'docs_foldback',
+    'conformance_pass',
+    'provider_completion',
+    'app_projection',
+    'verified_refs_only_ledger',
+  ]) {
+    if (!ownerRouteWorkOrderPolicy.non_closing_inputs.includes(nonClosingInput)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'owner_route_work_order_policy.non_closing_inputs must include all false-closing inputs.', {
+        file: filePath,
+        field: 'owner_route_work_order_policy.non_closing_inputs',
+        missing_input: nonClosingInput,
+      });
+    }
+  }
 
   const evidenceLedgerSurfaces = {
     record_command: expectString(
@@ -488,6 +576,10 @@ export function validateBrandModuleL5OperatingEvidence(
     baseline_level: 'L4_structural_baseline',
     target_level: 'L5_production_operating_maturity',
     l5_claim_policy: l5ClaimPolicy,
+    owner_route_work_order_policy: {
+      ...ownerRouteWorkOrderPolicy,
+      surface_kind: 'opl_brand_module_l5_owner_route_work_order_policy',
+    },
     evidence_ledger_surfaces: evidenceLedgerSurfaces,
     evidence_classes: evidenceClasses,
     modules,

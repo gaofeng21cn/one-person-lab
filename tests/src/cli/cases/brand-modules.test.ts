@@ -305,6 +305,39 @@ test('brand module L5 evidence gate is executable but does not claim production 
     true,
   );
   assert.equal(status.modules.every((entry: { l5_can_be_claimed: boolean }) => entry.l5_can_be_claimed === false), true);
+  assert.equal(status.owner_route_work_order_policy.surface_kind, 'opl_brand_module_l5_owner_route_work_order_policy');
+  assert.equal(status.owner_route_work_order_policy.work_orders_close_l5, false);
+  assert.equal(status.owner_route_work_order_policy.work_orders_can_create_owner_receipt, false);
+  assert.equal(status.owner_route_work_order_policy.work_orders_can_create_typed_blocker, false);
+  assert.equal(
+    status.owner_route_work_order_policy.accepted_route_ref_shapes.includes('owner_acceptance_ref'),
+    true,
+  );
+  assert.equal(
+    status.owner_route_work_order_policy.accepted_route_ref_shapes.includes('typed_blocker_ref'),
+    true,
+  );
+  assert.equal(
+    status.modules.every((entry: {
+      owner_evidence_routes: Array<{
+        owner: string;
+        owner_route_status: string;
+        next_owner_action: string;
+        accepted_ref_shapes: string[];
+        authority_boundary: { route_can_claim_l5: boolean };
+      }>;
+    }) =>
+      entry.owner_evidence_routes.length === status.evidence_classes.length
+      && entry.owner_evidence_routes.every((route) =>
+        route.owner.length > 0
+        && route.owner_route_status === 'owner_evidence_required'
+        && route.next_owner_action === 'record_owner_evidence_ref_or_typed_blocker_for_l5_requirement'
+        && route.accepted_ref_shapes.includes('typed_blocker_ref')
+        && route.authority_boundary.route_can_claim_l5 === false
+      )
+    ),
+    true,
+  );
 });
 
 test('brand module L5 validation passes the matrix shape while keeping readiness open', () => {
@@ -359,6 +392,31 @@ test('module-owned L5 status is readable from the module command surface and rem
   assert.equal(status.status, 'evidence_required');
   assert.equal(status.l5_can_be_claimed, false);
   assert.equal(status.evidence_requirements.length, 12);
+  assert.equal(status.owner_evidence_routes.length, 12);
+  assert.equal(
+    status.owner_evidence_routes.some((entry: {
+      class_id: string;
+      owner: string;
+      accepted_ref_shapes: string[];
+    }) =>
+      entry.class_id === 'owner_acceptance'
+      && entry.owner === 'runtime and domain owners'
+      && entry.accepted_ref_shapes.includes('human_gate_ref')
+    ),
+    true,
+  );
+  assert.equal(
+    status.owner_evidence_routes.some((entry: {
+      class_id: string;
+      accepted_ref_shapes: string[];
+      blocker_state: string;
+    }) =>
+      entry.class_id === 'long_soak_recovery'
+      && entry.accepted_ref_shapes.includes('long_soak_ref')
+      && entry.blocker_state === 'owner_route_evidence_missing'
+    ),
+    true,
+  );
   assert.equal(status.evidence_requirements.some((entry: { class_id: string }) => entry.class_id === 'long_soak_recovery'), true);
   assert.equal(status.evidence_requirements.some((entry: { class_id: string }) => entry.class_id === 'domain_authority_false_boundary'), true);
   assert.equal(status.not_claims.includes('production_long_soak_complete'), true);

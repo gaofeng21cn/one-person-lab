@@ -178,11 +178,52 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
       ),
       true,
     );
+    assert.deepEqual(
+      maturity.domain_owner_chain_scaleout.domain_owner_evidence_routes.map(
+        (entry: { domain_id: string; owner_route_status: string }) => ({
+          domain_id: entry.domain_id,
+          owner_route_status: entry.owner_route_status,
+        }),
+      ),
+      [
+        { domain_id: 'med-autoscience', owner_route_status: 'owner_evidence_required' },
+        { domain_id: 'med-autogrant', owner_route_status: 'owner_evidence_required' },
+        { domain_id: 'redcube-ai', owner_route_status: 'owner_evidence_required' },
+        { domain_id: 'opl-meta-agent', owner_route_status: 'owner_evidence_required' },
+      ],
+    );
+    assert.equal(
+      maturity.domain_owner_chain_scaleout.domain_owner_evidence_routes.every(
+        (entry: {
+          accepted_ref_shapes: string[];
+          next_owner_action: string;
+          conformance_can_close_production: boolean;
+          authority_boundary: { can_sign_owner_receipt: boolean; can_create_typed_blocker: boolean };
+        }) =>
+          entry.accepted_ref_shapes.includes('domain_owner_receipt_ref')
+          && entry.accepted_ref_shapes.includes('typed_blocker_ref')
+          && entry.accepted_ref_shapes.includes('human_gate_ref')
+          && entry.next_owner_action === 'domain_owner_record_live_owner_receipt_typed_blocker_human_gate_quality_export_no_regression_or_long_soak_ref'
+          && entry.conformance_can_close_production === false
+          && entry.authority_boundary.can_sign_owner_receipt === false
+          && entry.authority_boundary.can_create_typed_blocker === false,
+      ),
+      true,
+    );
 
     assert.equal(maturity.summary.brand_module_l5_evidence_required_module_count, 10);
     assert.equal(maturity.brand_module_l5.status, 'evidence_required');
     assert.equal(maturity.brand_module_l5.l5_complete_module_count, 0);
     assert.equal(maturity.brand_module_l5.evidence_ledger.verified_receipt_count, 0);
+    assert.equal(
+      maturity.brand_module_l5.owner_route_work_order_policy.work_orders_close_l5,
+      false,
+    );
+    assert.equal(
+      maturity.brand_module_l5.owner_route_work_order_policy.accepted_route_ref_shapes
+        .includes('owner_acceptance_ref'),
+      true,
+    );
 
     assert.equal(maturity.summary.cleanup_retirement_open_decision_count, 0);
     assert.equal(
@@ -261,6 +302,63 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
     assert.equal(
       maturity.foundry_agent_os_production_evidence_gate.authority_boundary.can_claim_production_ready,
       false,
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.owner_route_work_orders.length,
+      6,
+    );
+    assert.deepEqual(
+      maturity.foundry_agent_os_production_evidence_gate.owner_route_work_orders.map(
+        (entry: { work_order_id: string; blocker_state: string }) => ({
+          work_order_id: entry.work_order_id,
+          blocker_state: entry.blocker_state,
+        }),
+      ),
+      [
+        {
+          work_order_id: 'w7-domain-owner-chain-scaleout',
+          blocker_state: 'owner_route_evidence_missing',
+        },
+        {
+          work_order_id: 'w7-brand-module-l5-operating-maturity',
+          blocker_state: 'owner_route_evidence_missing',
+        },
+        {
+          work_order_id: 'w7-app-release-user-path',
+          blocker_state: 'owner_route_evidence_missing',
+        },
+        {
+          work_order_id: 'w7-provider-long-soak',
+          blocker_state: 'owner_route_evidence_missing',
+        },
+        {
+          work_order_id: 'w7-private-platform-retirement',
+          blocker_state: 'owner_route_evidence_missing',
+        },
+        {
+          work_order_id: 'w7-memory-artifact-lifecycle-apply',
+          blocker_state: 'owner_route_evidence_missing',
+        },
+      ],
+    );
+    assert.equal(
+      maturity.foundry_agent_os_production_evidence_gate.owner_route_work_orders.every(
+        (entry: {
+          status: string;
+          next_owner_action: string;
+          accepted_ref_shapes: string[];
+          non_closing_inputs: string[];
+          authority_boundary: { work_order_can_close_production: boolean; can_claim_l5: boolean };
+        }) =>
+          entry.status === 'open'
+          && entry.next_owner_action.length > 0
+          && entry.accepted_ref_shapes.includes('typed_blocker_ref')
+          && entry.non_closing_inputs.includes('conformance_pass')
+          && entry.non_closing_inputs.includes('app_projection')
+          && entry.authority_boundary.work_order_can_close_production === false
+          && entry.authority_boundary.can_claim_l5 === false,
+      ),
+      true,
     );
 
     assert.deepEqual(maturity.next_owner_actions.map((entry: { lane: string }) => entry.lane), [

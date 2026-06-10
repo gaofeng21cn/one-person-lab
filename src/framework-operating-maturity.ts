@@ -43,6 +43,10 @@ function stringListValue(value: unknown) {
     : [];
 }
 
+function unique(items: string[]) {
+  return [...new Set(items.filter((item) => item.trim().length > 0))];
+}
+
 function appReleaseUserPathMaturity() {
   const evidence = record(buildAppReleaseUserPathEvidence({}));
   const productionUserPathReady = evidence.production_user_path_ready === true;
@@ -155,6 +159,69 @@ function nextOwnerActions() {
   ];
 }
 
+function ownerRouteWorkOrderAuthorityBoundary() {
+  return {
+    work_order_is_refs_only: true,
+    work_order_can_close_production: false,
+    can_claim_domain_ready: false,
+    can_claim_app_release_ready: false,
+    can_claim_l5: false,
+    can_claim_production_ready: false,
+    can_write_domain_truth: false,
+    can_sign_owner_receipt: false,
+    can_create_typed_blocker: false,
+    can_authorize_quality_or_export: false,
+  };
+}
+
+function ownerRouteWorkOrders(
+  laneStatuses: Array<{
+    lane: string;
+    open_count: number;
+    accepted_closing_ref_shapes: string[];
+  }>,
+) {
+  const laneStatusById = new Map(laneStatuses.map((lane) => [lane.lane, lane]));
+  const workOrderIds: Record<string, string> = {
+    domain_owner_chain_scaleout: 'w7-domain-owner-chain-scaleout',
+    brand_module_l5_operating_maturity: 'w7-brand-module-l5-operating-maturity',
+    app_release_user_path: 'w7-app-release-user-path',
+    provider_long_soak: 'w7-provider-long-soak',
+    private_platform_retirement: 'w7-private-platform-retirement',
+    memory_artifact_lifecycle_apply: 'w7-memory-artifact-lifecycle-apply',
+  };
+
+  return nextOwnerActions().map((action) => {
+    const lane = laneStatusById.get(action.lane);
+    return {
+      work_order_id: workOrderIds[action.lane] ?? `w7-${action.lane.replace(/_/g, '-')}`,
+      lane: action.lane,
+      owner: action.owner,
+      status: 'open',
+      blocker_state: 'owner_route_evidence_missing',
+      open_count: lane?.open_count ?? 1,
+      next_owner_action: action.required_delta,
+      accepted_ref_shapes: unique([
+        ...(lane?.accepted_closing_ref_shapes ?? []),
+        'typed_blocker_ref',
+        'owner_acceptance_ref',
+      ]),
+      source_command: action.source_command,
+      non_closing_inputs: [
+        'conformance_pass',
+        'docs_foldback',
+        'contract_validation',
+        'generated_descriptor_ready',
+        'provider_completion',
+        'app_projection',
+        'verified_refs_only_ledger',
+        'zero_worklist_count',
+      ],
+      authority_boundary: ownerRouteWorkOrderAuthorityBoundary(),
+    };
+  });
+}
+
 function foundryAgentOsProductionEvidenceGate(input: {
   domainOpenCount: number;
   l5RequiredModuleCount: number;
@@ -193,6 +260,7 @@ function foundryAgentOsProductionEvidenceGate(input: {
         'install_evidence_ref',
         'release_owner_receipt_ref',
         'release_owner_typed_blocker_ref',
+        'typed_blocker_ref',
       ],
     },
     {
@@ -203,6 +271,7 @@ function foundryAgentOsProductionEvidenceGate(input: {
         'recovery_ref',
         'dead_letter_ref',
         'provider_blocker_ref',
+        'typed_blocker_ref',
       ],
     },
     {
@@ -216,6 +285,7 @@ function foundryAgentOsProductionEvidenceGate(input: {
       ],
     },
   ];
+  const workOrders = ownerRouteWorkOrders(laneStatuses);
   const openLaneCount = laneStatuses.filter((lane) => lane.open_count > 0).length;
   return {
     surface_kind: 'foundry_agent_os_production_evidence_gate',
@@ -256,8 +326,11 @@ function foundryAgentOsProductionEvidenceGate(input: {
         ? 'evidence_required'
         : 'refs_observed_not_production_ready_claim',
     })),
+    owner_route_work_orders: workOrders,
     summary: {
       open_lane_count: openLaneCount,
+      owner_route_work_order_count: workOrders.length,
+      open_owner_route_work_order_count: workOrders.filter((entry) => entry.status === 'open').length,
       closed_by_opl: false,
       production_ready_claim_authorized: false,
       requires_owner_acceptance: true,
@@ -274,6 +347,25 @@ function foundryAgentOsProductionEvidenceGate(input: {
       can_claim_production_ready: false,
     },
   };
+}
+
+function domainOwnerEvidenceRoutes(domainOwnerChain: Record<string, unknown>) {
+  return recordList(domainOwnerChain.domains).map((domain) => ({
+    domain_id: stringValue(domain.domain_id),
+    requested_agent_id: stringValue(domain.requested_agent_id),
+    repo_dir: stringValue(domain.repo_dir),
+    owner_route_status: 'owner_evidence_required',
+    next_owner_action: 'domain_owner_record_live_owner_receipt_typed_blocker_human_gate_quality_export_no_regression_or_long_soak_ref',
+    accepted_ref_shapes: stringListValue(domain.accepted_refs_only_result_shapes),
+    conformance_can_close_production: false,
+    authority_boundary: {
+      route_is_refs_only: true,
+      route_can_claim_domain_ready: false,
+      route_can_claim_production_ready: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+    },
+  }));
 }
 
 function currentOwnerDeltaBridge(appOperatorDrilldown: Record<string, unknown>) {
@@ -450,6 +542,7 @@ export async function buildFrameworkOperatingMaturityReadout(
         accepted_refs_only_result_shapes:
           stringListValue(domainOwnerChain.accepted_refs_only_result_shapes),
         domains: recordList(domainOwnerChain.domains),
+        domain_owner_evidence_routes: domainOwnerEvidenceRoutes(domainOwnerChain),
         authority_boundary: record(domainOwnerChain.authority_boundary),
       },
       brand_module_l5: {

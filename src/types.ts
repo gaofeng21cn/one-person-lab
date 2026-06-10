@@ -386,6 +386,17 @@ export interface BrandModuleL5ClaimPolicy {
   conformance_pass_counts_as_l5: false;
 }
 
+export interface BrandModuleL5OwnerRouteWorkOrderPolicy {
+  surface_kind: 'opl_brand_module_l5_owner_route_work_order_policy';
+  work_orders_are_refs_only: true;
+  work_orders_close_l5: false;
+  work_orders_can_create_owner_receipt: false;
+  work_orders_can_create_typed_blocker: false;
+  work_orders_can_claim_production_ready: false;
+  accepted_route_ref_shapes: string[];
+  non_closing_inputs: string[];
+}
+
 export interface BrandModuleL5EvidenceClass {
   class_id: BrandModuleL5EvidenceClassId;
   definition: string;
@@ -421,6 +432,7 @@ export interface BrandModuleL5OperatingEvidenceContract {
   baseline_level: BrandModuleMaturityLevel;
   target_level: BrandModuleL5TargetLevel;
   l5_claim_policy: BrandModuleL5ClaimPolicy;
+  owner_route_work_order_policy: BrandModuleL5OwnerRouteWorkOrderPolicy;
   evidence_ledger_surfaces: {
     record_command: string;
     verify_command: string;

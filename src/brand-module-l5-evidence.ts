@@ -5,6 +5,7 @@ import type {
   BrandModuleId,
   BrandModuleL5EvidenceClassId,
   BrandModuleL5OperatingEvidenceEntry,
+  BrandModuleL5OperatingEvidenceContract,
   FrameworkContracts,
 } from './types.ts';
 
@@ -93,6 +94,72 @@ function completeModuleIds(contracts: FrameworkContracts) {
     .map((entry) => entry.module_id);
 }
 
+function routeStatusForRequirement(currentState: string) {
+  if (currentState === 'satisfied') {
+    return 'owner_evidence_recorded_not_l5_claimed';
+  }
+  if (currentState === 'blocked') {
+    return 'owner_typed_blocker_recorded';
+  }
+  return 'owner_evidence_required';
+}
+
+function blockerStateForRequirement(currentState: string) {
+  if (currentState === 'satisfied') {
+    return 'refs_observed_not_l5_claim';
+  }
+  if (currentState === 'blocked') {
+    return 'typed_blocker_recorded';
+  }
+  return 'owner_route_evidence_missing';
+}
+
+function nextOwnerActionForRequirement(currentState: string) {
+  if (currentState === 'satisfied') {
+    return 'keep_verified_refs_and_wait_for_all_requirements';
+  }
+  if (currentState === 'blocked') {
+    return 'resolve_typed_blocker_or_record_owner_acceptance_ref';
+  }
+  return 'record_owner_evidence_ref_or_typed_blocker_for_l5_requirement';
+}
+
+function evidenceClassAcceptedRefShapes(
+  contract: BrandModuleL5OperatingEvidenceContract,
+  classId: BrandModuleL5EvidenceClassId,
+) {
+  const evidenceClass = contract.evidence_classes.find((entry) => entry.class_id === classId);
+  return evidenceClass?.accepted_ref_shapes ?? [];
+}
+
+function ownerEvidenceRoutes(
+  contract: BrandModuleL5OperatingEvidenceContract,
+  entry: BrandModuleL5OperatingEvidenceEntry,
+) {
+  return entry.evidence_requirements.map((requirement) => ({
+    module_id: entry.module_id,
+    class_id: requirement.class_id,
+    owner: requirement.owner,
+    owner_route_status: routeStatusForRequirement(requirement.current_state),
+    blocker_state: blockerStateForRequirement(requirement.current_state),
+    next_owner_action: nextOwnerActionForRequirement(requirement.current_state),
+    accepted_ref_shapes: unique([
+      ...evidenceClassAcceptedRefShapes(contract, requirement.class_id),
+      ...contract.owner_route_work_order_policy.accepted_route_ref_shapes,
+    ]),
+    existing_evidence_refs: requirement.evidence_refs ?? [],
+    existing_blocker_refs: requirement.blocker_refs ?? [],
+    non_closing_inputs: contract.owner_route_work_order_policy.non_closing_inputs,
+    authority_boundary: {
+      route_is_refs_only: true,
+      route_can_claim_l5: false,
+      route_can_claim_production_ready: false,
+      route_can_create_owner_receipt: false,
+      route_can_create_typed_blocker: false,
+    },
+  }));
+}
+
 type BrandModuleL5EvidenceLedgerReceiptProjection = {
   module_id: BrandModuleId;
   evidence_class_id: BrandModuleL5EvidenceClassId;
@@ -100,6 +167,7 @@ type BrandModuleL5EvidenceLedgerReceiptProjection = {
 };
 
 function compactModule(
+  contract: BrandModuleL5OperatingEvidenceContract,
   entry: BrandModuleL5OperatingEvidenceEntry,
   ledgerReceipts: BrandModuleL5EvidenceLedgerReceiptProjection[],
 ) {
@@ -141,6 +209,7 @@ function compactModule(
     },
     immediate_enabling_surfaces: entry.immediate_enabling_surfaces,
     evidence_requirements: entry.evidence_requirements,
+    owner_evidence_routes: ownerEvidenceRoutes(contract, entry),
     not_claims: entry.not_claims,
   };
 }
@@ -162,6 +231,7 @@ function statusEnvelope(
     target_level: contract.target_level,
     l5_evidence_contract_ref: L5_EVIDENCE_CONTRACT_REF,
     l5_claim_policy: contract.l5_claim_policy,
+    owner_route_work_order_policy: contract.owner_route_work_order_policy,
     evidence_classes: contract.evidence_classes,
     all_module_count: contract.modules.length,
     module_count: modules.length,
@@ -180,7 +250,7 @@ function statusEnvelope(
       (count, entry) => count + entry.immediate_enabling_surfaces.length,
       0,
     ),
-    modules: modules.map((entry) => compactModule(entry, evidenceLedger.receipts)),
+    modules: modules.map((entry) => compactModule(contract, entry, evidenceLedger.receipts)),
     not_claims: unique(modules.flatMap((entry) => entry.not_claims)),
     authority_boundary: FALSE_AUTHORITY_BOUNDARY,
     machine_boundary: contract.machine_boundary,
@@ -367,8 +437,10 @@ export function buildBrandModuleL5ModuleStatus(
       target_level: 'L5_production_operating_maturity',
       l5_can_be_claimed: module.l5_can_be_claimed,
       l5_evidence_contract_ref: `${L5_EVIDENCE_CONTRACT_REF}#modules.${module.module_id}`,
+      owner_route_work_order_policy: l5Contract(contracts).owner_route_work_order_policy,
       evidence_requirement_count: module.evidence_requirements.length,
       evidence_requirements: module.evidence_requirements,
+      owner_evidence_routes: ownerEvidenceRoutes(l5Contract(contracts), module),
       immediate_enabling_surfaces: module.immediate_enabling_surfaces,
       not_claims: module.not_claims,
       authority_boundary: FALSE_AUTHORITY_BOUNDARY,
