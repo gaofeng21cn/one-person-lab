@@ -40,6 +40,16 @@ test('generated interfaces command exposes descriptors but blocks cutover withou
   assert.equal(bundle.product_entry.descriptors[0].action_key, 'study_packet');
   assert.equal(bundle.openai_tool.descriptors[0].function.name, 'study_packet');
   assert.equal(bundle.ai_sdk.descriptors[0].name, 'study_packet');
+  assert.equal(bundle.generated_direct_parity.surface_kind, 'opl_generated_direct_parity_proof');
+  assert.equal(bundle.generated_direct_parity.status, 'blocked_or_drift_detected');
+  assert.equal(
+    bundle.generated_direct_parity.issues.includes('active caller target proof is not ready'),
+    true,
+  );
+  assert.equal(bundle.generated_direct_parity.authority_boundary.parity_proof_can_write_domain_truth, false);
+  assert.equal(bundle.generated_direct_parity.authority_boundary.parity_proof_can_sign_owner_receipt, false);
+  assert.equal(bundle.generated_direct_parity.authority_boundary.parity_proof_can_create_typed_blocker, false);
+  assert.equal(bundle.generated_direct_parity.authority_boundary.parity_proof_can_claim_domain_ready, false);
   assert.equal(bundle.authority_boundary.generated_interface_can_write_memory_body, false);
   assert.equal(bundle.authority_boundary.generated_interface_can_mutate_artifacts, false);
 
@@ -49,6 +59,7 @@ test('generated interfaces command exposes descriptors but blocks cutover withou
   assert.equal(mcpOnly.mcp.descriptors[0].name, 'study_packet');
   assert.equal('cli' in mcpOnly, false);
   assert.equal('skill' in mcpOnly, false);
+  assert.equal(mcpOnly.generated_direct_parity.checked_surface_ids.includes('mcp'), true);
   assert.deepEqual(mcpOnly.stage_routes, []);
 });
 
@@ -462,6 +473,32 @@ test('generated interfaces domain mode consumes generated handoff from active re
   assert.equal(bundle.active_caller_target_proof.status, 'ready');
   assert.equal(bundle.active_caller_target_proof.blocked_target_count, 0);
   assert.equal(bundle.active_caller_cutover_proof.status, 'cutover_to_opl_generated_or_domain_handler_targets');
+  assert.equal(bundle.generated_direct_parity.status, 'aligned');
+  assert.deepEqual(bundle.generated_direct_parity.checked_action_ids, ['study_packet']);
+  assert.deepEqual(bundle.generated_direct_parity.checked_surface_ids, [
+    'cli',
+    'mcp',
+    'skill',
+    'product_entry',
+    'openai_tool',
+    'ai_sdk',
+  ]);
+  assert.equal(bundle.generated_direct_parity.issue_count, 0);
+  assert.equal(
+    bundle.generated_direct_parity.accepted_answer_shape_policy,
+    'generated_surface_and_direct_domain_handler_share_action_output_schema_or_receipt_contract',
+  );
+  assert.equal(
+    bundle.generated_direct_parity.action_parity[0].accepted_answer_shape_ref,
+    'contracts/output.schema.json',
+  );
+  assert.equal(
+    bundle.generated_direct_parity.action_parity[0].generated_surfaces.every(
+      (surface: { status: string; source_action_id: string }) =>
+        surface.status === 'aligned' && surface.source_action_id === 'study_packet',
+    ),
+    true,
+  );
   assert.equal(bundle.generated_wrapper_bundle.status, 'ready');
   const cliTarget = bundle.active_caller_target_proof.surface_targets.find(
     (target: { surface_id: string }) => target.surface_id === 'cli',

@@ -8,6 +8,7 @@ import type {
   FamilyActionCatalogAction,
   FamilyActionExportFormat,
 } from '../family-action-catalog-contract.ts';
+import { buildGeneratedDirectParityProof } from './generated-interface-parity.ts';
 import type { FamilyStageControlPlane } from '../family-stage-control-plane-contract.ts';
 import { buildToolAffordanceBoundaryRoute } from './stage-route-tool-affordance.ts';
 
@@ -1123,6 +1124,7 @@ export function buildGeneratedInterfaceBundle(
     domain_handler: domainHandler,
     workbench,
   };
+  const generatedDirectParity = buildGeneratedDirectParityProof(catalog, blocks, activeCallerTargetProof);
 
   return {
     surface_kind: 'opl_generated_agent_interface_bundle',
@@ -1158,6 +1160,7 @@ export function buildGeneratedInterfaceBundle(
       ? buildStageRoutes(stageControlPlane)
       : [],
     parity: catalog ? buildFamilyActionCatalogParity(catalog) : null,
+    generated_direct_parity: generatedDirectParity,
     authority_boundary: {
       generated_interface_can_write_domain_truth: false,
       generated_interface_can_write_memory_body: false,
@@ -1212,6 +1215,7 @@ export function selectGeneratedInterfaceBundleFormat(
     active_caller_target_proof: bundle.active_caller_target_proof,
     stage_routes: selectedFormat === 'product-entry' ? bundle.stage_routes : [],
     parity: bundle.parity,
+    generated_direct_parity: bundle.generated_direct_parity,
     authority_boundary: bundle.authority_boundary,
     source_contract_consumption: bundle.source_contract_consumption,
   };

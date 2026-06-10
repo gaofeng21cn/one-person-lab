@@ -294,6 +294,7 @@
       "openai_tool",
       "ai_sdk",
       "active_caller_target_proof",
+      "generated_direct_parity",
       "source_contract_consumption"
     ],
     "authority_boundary": {
@@ -322,6 +323,39 @@
         "opl_can_mutate_artifacts": false,
         "domain_handler_target_allowed": true,
         "refs_only_domain_adapter_target_allowed": true
+      }
+    },
+    "generated_direct_parity": {
+      "surface_kind": "opl_generated_direct_parity_proof",
+      "version": "opl-generated-direct-parity-proof.v1",
+      "owner": "one-person-lab",
+      "source_catalogs": [
+        "family_action_catalog",
+        "generated_interface_bundle",
+        "active_caller_target_proof"
+      ],
+      "status_values": [
+        "aligned",
+        "blocked_missing_family_action_catalog",
+        "blocked_or_drift_detected"
+      ],
+      "checked_surface_ids": [
+        "cli",
+        "mcp",
+        "skill",
+        "product_entry",
+        "openai_tool",
+        "ai_sdk"
+      ],
+      "accepted_answer_shape_policy": "generated_surface_and_direct_domain_handler_share_action_output_schema_or_receipt_contract",
+      "authority_boundary": {
+        "parity_proof_can_write_domain_truth": false,
+        "parity_proof_can_sign_owner_receipt": false,
+        "parity_proof_can_create_typed_blocker": false,
+        "parity_proof_can_authorize_quality_or_export": false,
+        "parity_proof_can_mutate_artifacts": false,
+        "parity_proof_can_claim_domain_ready": false,
+        "parity_proof_can_claim_production_ready": false
       }
     }
   },
