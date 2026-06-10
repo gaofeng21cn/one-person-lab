@@ -157,6 +157,7 @@ const DEFAULT_EXECUTOR_NEXT_OWNERS = new Set([
   'gate_clearing_batch',
   'medautoscience',
   'publication_gate_owner',
+  'finalize',
 ]);
 const DEFAULT_EXECUTOR_NEXT_OWNER_ALIASES = new Map([
   ['mas', 'medautoscience'],

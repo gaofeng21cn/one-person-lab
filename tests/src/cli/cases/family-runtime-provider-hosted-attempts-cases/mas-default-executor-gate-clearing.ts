@@ -132,6 +132,42 @@ test('family-runtime admits MAS gate-clearing default executor dispatch as Codex
   }
 });
 
+test('family-runtime admits finalize-owned MAS gate-clearing default executor dispatch as Codex stage attempt', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    withIsolatedFamilyRuntimeEnv(() => {
+      createQueueTables(db);
+      const payload = {
+        ...gateClearingDefaultExecutorPayload('source-gate-clearing-finalize-owner'),
+        next_executable_owner: 'finalize',
+      };
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-gate-clearing-finalize-owner',
+        payload,
+        dedupeKey: 'mas:dm-cvd:003:default-executor:run_gate_clearing_batch:finalize-owner',
+      });
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(
+        'task-mas-default-gate-clearing-finalize-owner',
+      );
+      const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-gate-clearing-finalize-owner',
+      ) as Parameters<typeof ensureProviderHostedStageAttempt>[1];
+      const attempt = ensureProviderHostedStageAttempt(db, row, payload);
+      const attempts = listStageAttemptsForTask(db, 'task-mas-default-gate-clearing-finalize-owner');
+
+      assert.ok(attempt);
+      assert.equal(attempt.executor_kind, 'codex_cli');
+      assert.equal(attempt.stage_id, 'domain_owner/default-executor-dispatch');
+      assert.equal(attempt.workspace_locator.next_executable_owner, 'finalize');
+      assert.equal(attempt.workspace_locator.action_type, 'run_gate_clearing_batch');
+      assert.deepEqual(attempt.checkpoint_refs, [payload.dispatch_ref]);
+      assert.equal(attempts.length, 1);
+    });
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime admits a new MAS gate-clearing work unit after stale attempt is superseded', () => {
   const db = new DatabaseSync(':memory:');
   try {
