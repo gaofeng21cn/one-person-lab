@@ -230,6 +230,7 @@ export interface NormalizedFamilyTransitionProjection {
 
 export type DomainManifestStatus =
   | 'not_bound'
+  | 'workspace_missing'
   | 'manifest_not_configured'
   | 'command_failed'
   | 'command_timeout'

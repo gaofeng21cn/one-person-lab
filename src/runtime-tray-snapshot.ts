@@ -853,6 +853,8 @@ export async function buildRuntimeTraySnapshot(
           'runtime_tray_reads_may_use_stale_projection_cache_when_live_domain_manifest_refresh_fails',
         summary: {
           cache_used_count: domainManifests.summary.projection_cache_used_count ?? 0,
+          stale_binding_count: domainManifests.summary.stale_binding_count ?? 0,
+          stale_binding_project_ids: domainManifests.summary.stale_binding_project_ids ?? [],
           live_failed_project_ids: domainManifests.summary.live_failed_project_ids ?? [],
         },
         projects: domainManifests.projects

@@ -108,6 +108,14 @@ function stageReadinessSummary(readiness: JsonRecord) {
   return record(readiness.summary);
 }
 
+function isStaleWorkspaceBindingStageDiagnostic(error: unknown) {
+  if (!(error instanceof FrameworkContractError)) {
+    return false;
+  }
+  return error.code === 'missing_family_stage_control_plane'
+    && record(error.details).manifest_status === 'workspace_missing';
+}
+
 function buildStageReadinessDiagnostic(
   contracts: FrameworkContracts,
   domain: 'mas' | 'mag' | 'rca',
@@ -124,6 +132,37 @@ function buildStageReadinessDiagnostic(
       failure: null,
     };
   } catch (error) {
+    if (isStaleWorkspaceBindingStageDiagnostic(error)) {
+      const diagnostic = diagnosticFailure(`stages_readiness_${domain}`, sourceCommand, error);
+      return {
+        readiness: {
+          surface_kind: 'opl_family_stage_readiness_diagnostic_unavailable',
+          detail_level: 'summary',
+          status: 'stale_workspace_binding_attention',
+          summary: {
+            stage_count: 0,
+            admitted_stage_count: 0,
+            needs_contracts_stage_count: 0,
+            blocked_stage_count: 0,
+            hard_blocker_count: 0,
+            warning_count: 1,
+            diagnostic_failure_count: 0,
+          },
+          stale_workspace_binding_attention: diagnostic,
+          authority_boundary: {
+            can_execute_stage: false,
+            can_write_domain_truth: false,
+            can_authorize_domain_ready: false,
+            can_authorize_quality_verdict: false,
+            can_mutate_artifact_body: false,
+            can_claim_domain_ready: false,
+            can_claim_artifact_authority: false,
+            can_claim_production_ready: false,
+          },
+        },
+        failure: null,
+      };
+    }
     const failure = diagnosticFailure(`stages_readiness_${domain}`, sourceCommand, error);
     return {
       readiness: {
@@ -614,6 +653,12 @@ export async function buildFrameworkReadinessSummary(
         runtime_manager_mas_route_support_action_ref_count: runtimeManagerRouteSupportActionRefs.length,
         domain_manifest_projection_cache_used_count:
           numberValue(domainManifests.summary.projection_cache_used_count),
+        domain_manifest_stale_binding_count:
+          numberValue(domainManifests.summary.stale_binding_count),
+        domain_manifest_stale_binding_project_ids:
+          Array.isArray(domainManifests.summary.stale_binding_project_ids)
+            ? domainManifests.summary.stale_binding_project_ids
+            : [],
         domain_manifest_live_failed_project_ids:
           Array.isArray(domainManifests.summary.live_failed_project_ids)
             ? domainManifests.summary.live_failed_project_ids

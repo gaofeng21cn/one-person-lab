@@ -381,6 +381,8 @@ test('legacy cleanup gate emits executable OPL lifecycle apply plan without doma
     summary: {
       total_projects_count: 1,
       active_bindings_count: 1,
+      stale_binding_count: 0,
+      stale_binding_project_ids: [],
       manifest_configured_count: 1,
       resolved_count: 1,
       failed_count: 0,
@@ -447,6 +449,8 @@ test('MAS current standard-agent evidence closes cleanup ledger without resurrec
     summary: {
       total_projects_count: 1,
       active_bindings_count: 1,
+      stale_binding_count: 0,
+      stale_binding_project_ids: [],
       manifest_configured_count: 1,
       resolved_count: 1,
       failed_count: 0,
@@ -589,6 +593,8 @@ test('agents legacy-cleanup apply records controlled cleanup receipts from the s
     summary: {
       total_projects_count: 1,
       active_bindings_count: 1,
+      stale_binding_count: 0,
+      stale_binding_project_ids: [],
       manifest_configured_count: 1,
       resolved_count: 1,
       failed_count: 0,
@@ -694,6 +700,8 @@ test('agents legacy-cleanup apply blocks a non-ready skeleton cleanup plan', () 
     summary: {
       total_projects_count: 1,
       active_bindings_count: 1,
+      stale_binding_count: 0,
+      stale_binding_project_ids: [],
       manifest_configured_count: 1,
       resolved_count: 1,
       failed_count: 0,

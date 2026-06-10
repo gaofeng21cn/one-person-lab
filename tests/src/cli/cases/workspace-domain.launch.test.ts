@@ -293,6 +293,49 @@ test('domain manifests reports invalid json when a bound manifest command is mal
   }
 });
 
+test('domain manifests reports stale workspace bindings separately from live manifest command failures', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-stale-binding-state-'));
+  const workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-stale-binding-workspace-'));
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'redcube',
+      '--path',
+      workspacePath,
+      '--manifest-command',
+      buildManifestCommand(loadFamilyManifestFixtures().redcube),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+
+    const manifestOutput = runCli(['domain', 'manifests'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const redcube = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) =>
+      entry.project_id === 'redcube'
+    );
+
+    assert.equal(manifestOutput.domain_manifests.summary.stale_binding_count, 1);
+    assert.deepEqual(manifestOutput.domain_manifests.summary.stale_binding_project_ids, ['redcube']);
+    assert.equal(manifestOutput.domain_manifests.summary.failed_count, 0);
+    assert.deepEqual(manifestOutput.domain_manifests.summary.live_failed_project_ids, []);
+    assert.equal(redcube.status, 'workspace_missing');
+    assert.equal(redcube.workspace_path, workspacePath);
+    assert.equal(redcube.error.code, 'workspace_missing');
+    assert.equal(redcube.error.message, 'Active workspace binding path does not exist.');
+    assert.equal(redcube.error.stdout, null);
+    assert.equal(redcube.error.stderr, null);
+    assert.equal(redcube.error.timeout_ms, null);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+  }
+});
+
 test('domain manifests times out stalled manifest commands fail-closed', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-timeout-state-'));
 

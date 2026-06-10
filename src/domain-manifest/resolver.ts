@@ -14,7 +14,12 @@ import { normalizeManifest } from './normalizers.ts';
 import { isRecord } from './shared-utils.ts';
 import type { DomainManifestCatalogEntry } from './types.ts';
 
-type DomainManifestErrorCode = 'command_failed' | 'command_timeout' | 'invalid_json' | 'invalid_manifest';
+type DomainManifestErrorCode =
+  | 'workspace_missing'
+  | 'command_failed'
+  | 'command_timeout'
+  | 'invalid_json'
+  | 'invalid_manifest';
 type JsonRecord = Record<string, unknown>;
 export type ManifestCommandTimeoutPolicy = 'env_or_default' | 'fixed';
 const DEFAULT_TRANSITION_MATERIALIZATION_TIMEOUT_MS = 1_000;
@@ -177,6 +182,24 @@ export function resolveBindingManifest(
       status: 'manifest_not_configured',
       manifest: null,
       error: null,
+    };
+  }
+  if (!fs.existsSync(binding.workspace_path)) {
+    return {
+      project_id: projectId,
+      project,
+      binding_id: binding.binding_id,
+      workspace_path: binding.workspace_path,
+      manifest_command: manifestCommand,
+      status: 'workspace_missing',
+      manifest: null,
+      error: {
+        code: 'workspace_missing',
+        message: 'Active workspace binding path does not exist.',
+        stdout: null,
+        stderr: null,
+        timeout_ms: null,
+      },
     };
   }
 
