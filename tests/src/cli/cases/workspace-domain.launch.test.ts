@@ -336,6 +336,45 @@ test('domain manifests reports stale workspace bindings separately from live man
   }
 });
 
+test('domain manifests reports missing manifest commands as binding configuration attention', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-config-attention-state-'));
+  const workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-config-attention-workspace-'));
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautogrant',
+      '--path',
+      workspacePath,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const manifestOutput = runCli(['domain', 'manifests'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const medautogrant = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) =>
+      entry.project_id === 'medautogrant'
+    );
+
+    assert.equal(manifestOutput.domain_manifests.summary.manifest_not_configured_count, 1);
+    assert.deepEqual(
+      manifestOutput.domain_manifests.summary.manifest_not_configured_project_ids,
+      ['medautogrant'],
+    );
+    assert.equal(manifestOutput.domain_manifests.summary.failed_count, 0);
+    assert.deepEqual(manifestOutput.domain_manifests.summary.live_failed_project_ids, []);
+    assert.equal(medautogrant.status, 'manifest_not_configured');
+    assert.equal(medautogrant.manifest_command, null);
+    assert.equal(medautogrant.error, null);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+  }
+});
+
 test('domain manifests times out stalled manifest commands fail-closed', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-timeout-state-'));
 

@@ -855,6 +855,9 @@ export async function buildRuntimeTraySnapshot(
           cache_used_count: domainManifests.summary.projection_cache_used_count ?? 0,
           stale_binding_count: domainManifests.summary.stale_binding_count ?? 0,
           stale_binding_project_ids: domainManifests.summary.stale_binding_project_ids ?? [],
+          manifest_not_configured_count: domainManifests.summary.manifest_not_configured_count ?? 0,
+          manifest_not_configured_project_ids:
+            domainManifests.summary.manifest_not_configured_project_ids ?? [],
           live_failed_project_ids: domainManifests.summary.live_failed_project_ids ?? [],
         },
         projects: domainManifests.projects

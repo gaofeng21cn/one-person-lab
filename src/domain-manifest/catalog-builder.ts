@@ -15,6 +15,8 @@ export type DomainManifestCatalog = {
     active_bindings_count: number;
     stale_binding_count: number;
     stale_binding_project_ids: string[];
+    manifest_not_configured_count: number;
+    manifest_not_configured_project_ids: string[];
     manifest_configured_count: number;
     resolved_count: number;
     failed_count: number;
@@ -76,6 +78,9 @@ export function buildDomainManifestCatalog(
   const staleBindingProjectIds = liveProjects
     .filter((entry) => entry.status === 'workspace_missing')
     .map((entry) => entry.project_id);
+  const manifestNotConfiguredProjectIds = liveProjects
+    .filter((entry) => entry.status === 'manifest_not_configured')
+    .map((entry) => entry.project_id);
 
   return {
     version: 'g2',
@@ -89,6 +94,8 @@ export function buildDomainManifestCatalog(
         active_bindings_count: projects.filter((entry) => entry.binding_id !== null).length,
         stale_binding_count: staleBindingProjectIds.length,
         stale_binding_project_ids: staleBindingProjectIds,
+        manifest_not_configured_count: manifestNotConfiguredProjectIds.length,
+        manifest_not_configured_project_ids: manifestNotConfiguredProjectIds,
         manifest_configured_count: projects.filter((entry) => entry.manifest_command !== null).length,
         resolved_count: projects.filter((entry) => entry.status === 'resolved').length,
         failed_count: liveProjects.filter((entry) =>

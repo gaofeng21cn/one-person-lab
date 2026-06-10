@@ -108,12 +108,16 @@ function stageReadinessSummary(readiness: JsonRecord) {
   return record(readiness.summary);
 }
 
-function isStaleWorkspaceBindingStageDiagnostic(error: unknown) {
+function isDomainManifestConfigAttentionStageDiagnostic(error: unknown) {
   if (!(error instanceof FrameworkContractError)) {
     return false;
   }
-  return error.code === 'missing_family_stage_control_plane'
-    && record(error.details).manifest_status === 'workspace_missing';
+  if (error.code !== 'missing_family_stage_control_plane') {
+    return false;
+  }
+  const manifestStatus = record(error.details).manifest_status;
+  return manifestStatus === 'workspace_missing'
+    || manifestStatus === 'manifest_not_configured';
 }
 
 function buildStageReadinessDiagnostic(
@@ -132,13 +136,16 @@ function buildStageReadinessDiagnostic(
       failure: null,
     };
   } catch (error) {
-    if (isStaleWorkspaceBindingStageDiagnostic(error)) {
+    if (isDomainManifestConfigAttentionStageDiagnostic(error)) {
       const diagnostic = diagnosticFailure(`stages_readiness_${domain}`, sourceCommand, error);
+      const manifestStatus = record(diagnostic.details).manifest_status;
       return {
         readiness: {
           surface_kind: 'opl_family_stage_readiness_diagnostic_unavailable',
           detail_level: 'summary',
-          status: 'stale_workspace_binding_attention',
+          status: manifestStatus === 'workspace_missing'
+            ? 'stale_workspace_binding_attention'
+            : 'domain_manifest_config_attention',
           summary: {
             stage_count: 0,
             admitted_stage_count: 0,
@@ -148,7 +155,7 @@ function buildStageReadinessDiagnostic(
             warning_count: 1,
             diagnostic_failure_count: 0,
           },
-          stale_workspace_binding_attention: diagnostic,
+          domain_manifest_config_attention: diagnostic,
           authority_boundary: {
             can_execute_stage: false,
             can_write_domain_truth: false,
@@ -658,6 +665,12 @@ export async function buildFrameworkReadinessSummary(
         domain_manifest_stale_binding_project_ids:
           Array.isArray(domainManifests.summary.stale_binding_project_ids)
             ? domainManifests.summary.stale_binding_project_ids
+            : [],
+        domain_manifest_not_configured_count:
+          numberValue(domainManifests.summary.manifest_not_configured_count),
+        domain_manifest_not_configured_project_ids:
+          Array.isArray(domainManifests.summary.manifest_not_configured_project_ids)
+            ? domainManifests.summary.manifest_not_configured_project_ids
             : [],
         domain_manifest_live_failed_project_ids:
           Array.isArray(domainManifests.summary.live_failed_project_ids)
