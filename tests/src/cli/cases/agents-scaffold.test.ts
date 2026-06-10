@@ -130,6 +130,14 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     'token_usage',
     'cost',
   ]);
+  assert.equal(
+    scaffold.user_stage_log_contract.incomplete_semantics_policy,
+    'emit_missing_domain_fields_without_opl_domain_inference',
+  );
+  assert.equal(
+    scaffold.user_stage_log_contract.accounting_policy,
+    'OPL projects duration/token/cost status, source refs, and explicit missing reasons; duration may use provider or attempt wall-clock fallback for user readability while duration_telemetry_status stays missing until usage telemetry exists',
+  );
   assert.equal(scaffold.user_stage_log_contract.authority_boundary.opl_can_infer_domain_semantics, false);
   assert.deepEqual(scaffold.progress_delta_policy.required_fields, [
     'progress_delta_classification',

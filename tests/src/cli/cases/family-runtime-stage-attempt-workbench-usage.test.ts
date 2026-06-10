@@ -119,7 +119,7 @@ test('runtime snapshot projects stage attempt usage pressure into workbench grou
     assert.equal(workbench.summary.stage_progress_log.surface_kind, 'opl_stage_progress_log_summary');
     assert.equal(workbench.summary.stage_progress_log.attempt_count, 2);
     assert.equal(workbench.summary.stage_progress_log.duration_observed_attempt_count, 1);
-    assert.equal(workbench.summary.stage_progress_log.user_duration_observed_attempt_count, 1);
+    assert.equal(workbench.summary.stage_progress_log.user_duration_observed_attempt_count, 2);
     assert.equal(workbench.summary.stage_progress_log.user_duration_fallback_attempt_count, 1);
     assert.equal(workbench.summary.stage_progress_log.missing_usage_telemetry_attempt_count, 1);
     assert.equal(workbench.summary.stage_progress_log.temporal_attempt_count, 0);
@@ -147,8 +147,14 @@ test('runtime snapshot projects stage attempt usage pressure into workbench grou
     assert.equal(historyEntry.cost.status, 'missing');
     assert.equal(historyEntry.observability_status, 'missing');
     assert.deepEqual(historyEntry.missing_observability_fields, ['token_usage', 'cost']);
+    assert.equal(historyEntry.duration.status, 'observed');
+    assert.equal(historyEntry.duration.duration_telemetry_status, 'observed');
+    assert.equal(historyEntry.duration.telemetry_fallback_used, false);
     assert.equal(deadLetterHistoryEntry.observability_status, 'missing');
-    assert.deepEqual(deadLetterHistoryEntry.missing_observability_fields, ['duration', 'token_usage', 'cost']);
+    assert.deepEqual(deadLetterHistoryEntry.missing_observability_fields, ['token_usage', 'cost']);
+    assert.equal(deadLetterHistoryEntry.duration.status, 'observed');
+    assert.equal(deadLetterHistoryEntry.duration.duration_telemetry_status, 'missing');
+    assert.equal(deadLetterHistoryEntry.duration.telemetry_fallback_used, true);
     assert.equal(historyEntry.outcome, 'completed_with_domain_gate_pending');
     assert.deepEqual(historyEntry.remaining_blockers, ['MAS owner receipt still owns domain-ready status.']);
     assert.equal(historyEntry.usage_refs.includes('usage:analysis'), true);

@@ -260,9 +260,10 @@ function durationForUserStageLog(input: StageProgressLogInput, durationMsObserve
         ? 'stage_attempt_created_updated_at_fallback'
         : null;
   return {
-    status: telemetryObserved ? 'observed' : 'missing',
+    status: durationMs !== null ? 'observed' : 'missing',
     duration_ms: durationMs,
     duration_source: durationSource,
+    usage_projection_ref: `/stage_attempt_workbench/attempts/${input.stageAttemptId}/usage_projection`,
     duration_telemetry_status: telemetryObserved ? 'observed' : 'missing',
     telemetry_fallback_used: durationMsObserved === null && durationMs !== null,
     missing_duration_reason: telemetryObserved ? null : 'no_stage_attempt_duration_telemetry_observed',
@@ -278,6 +279,7 @@ function tokenUsageForUserStageLog(input: StageProgressLogInput) {
     output_tokens: observed ? numberValue(usage.token.output_tokens_observed) : null,
     total_tokens: observed ? numberValue(usage.token.total_tokens_observed) : null,
     observed_count: Number(usage.token.observed_count),
+    usage_projection_ref: `/stage_attempt_workbench/attempts/${input.stageAttemptId}/usage_projection`,
     source_refs: usage.token.source_refs,
     missing_token_usage_reason: observed ? null : 'no_stage_attempt_token_usage_telemetry_observed',
   };
@@ -290,6 +292,7 @@ function costForUserStageLog(input: StageProgressLogInput) {
     status: statusFromObservedCount(Number(usage.cost.observed_count)),
     estimated_cost_usd: observed ? numberValue(usage.cost.estimated_cost_usd_observed) : null,
     observed_count: Number(usage.cost.observed_count),
+    usage_projection_ref: `/stage_attempt_workbench/attempts/${input.stageAttemptId}/usage_projection`,
     source_refs: usage.cost.source_refs,
     missing_cost_reason: observed ? null : 'no_stage_attempt_cost_telemetry_observed',
   };
@@ -301,7 +304,7 @@ function observabilityForUserStageLog(
   cost: ReturnType<typeof costForUserStageLog>,
 ) {
   const missingFields = [
-    duration.duration_telemetry_status === 'missing' ? 'duration' : null,
+    duration.status === 'missing' ? 'duration' : null,
     tokens.status === 'missing' ? 'token_usage' : null,
     cost.status === 'missing' ? 'cost' : null,
   ].filter((field): field is string => Boolean(field));
@@ -375,6 +378,21 @@ const PROGRESS_DELTA_CLASSIFICATIONS = new Set([
   'human_gate',
   'stop_loss',
 ]);
+
+const REQUIRED_DOMAIN_STAGE_LOG_FIELDS = [
+  'stage_name',
+  'problem_summary',
+  'stage_goal',
+  'progress_delta_classification',
+  'deliverable_progress_delta',
+  'platform_repair_delta',
+  'next_forced_delta',
+  'stage_work_done',
+  'changed_stage_surfaces',
+  'outcome',
+  'remaining_blockers',
+  'evidence_refs',
+] as const;
 
 function normalizedProgressDeltaClassification(value: string | null) {
   if (!value) {
@@ -472,6 +490,67 @@ function domainStageSummary(input: StageProgressLogInput) {
   ]);
 }
 
+function hasDomainStageLogField(summary: JsonRecord, field: typeof REQUIRED_DOMAIN_STAGE_LOG_FIELDS[number]) {
+  switch (field) {
+    case 'stage_name':
+      return Boolean(semanticText(summary, ['stage_name', 'stage_label', 'name']));
+    case 'problem_summary':
+      return Boolean(semanticText(summary, ['problem_summary', 'problem', 'issue_summary']));
+    case 'stage_goal':
+      return Boolean(semanticText(summary, ['stage_goal', 'goal', 'intended_work']));
+    case 'progress_delta_classification':
+      return Boolean(semanticText(summary, ['progress_delta_classification']));
+    case 'deliverable_progress_delta':
+      return semanticRecord(summary, [
+        'deliverable_progress_delta',
+        'paper_progress_delta',
+        'paper_work_progress',
+        'grant_work_progress',
+        'visual_deliverable_progress',
+        'target_agent_substantive_delta',
+      ]) !== null;
+    case 'platform_repair_delta':
+      return semanticRecord(summary, [
+        'platform_repair_delta',
+        'platform_evidence_progress',
+        'platform_interface_repair_delta',
+      ]) !== null;
+    case 'next_forced_delta':
+      return Boolean(semanticText(summary, ['next_forced_delta']));
+    case 'stage_work_done':
+      return semanticList(summary, [
+        'stage_work_done',
+        'deliverable_work_done',
+        'work_done_summary',
+        'work_done',
+        'actual_work',
+        'changed_content_summary',
+      ]).length > 0;
+    case 'changed_stage_surfaces':
+      return semanticList(summary, [
+        'changed_stage_surfaces',
+        'changed_deliverable_surfaces',
+        'changed_surfaces',
+        'artifact_surfaces',
+      ]).length > 0;
+    case 'outcome':
+      return Boolean(semanticText(summary, ['outcome', 'stage_outcome']));
+    case 'remaining_blockers':
+      return Array.isArray(summary.remaining_blockers)
+        || Array.isArray(summary.blockers)
+        || Array.isArray(summary.remaining_issues);
+    case 'evidence_refs':
+      return semanticList(summary, ['evidence_refs', 'supporting_refs']).length > 0;
+  }
+}
+
+function missingDomainStageLogFields(summary: JsonRecord | null) {
+  if (!summary) {
+    return [...REQUIRED_DOMAIN_STAGE_LOG_FIELDS];
+  }
+  return REQUIRED_DOMAIN_STAGE_LOG_FIELDS.filter((field) => !hasDomainStageLogField(summary, field));
+}
+
 function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: number | null) {
   const semanticSummary = domainStageSummary(input);
   const semanticSource = semanticSummary
@@ -487,6 +566,7 @@ function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: num
   const duration = durationForUserStageLog(input, durationMsObserved);
   const tokens = tokenUsageForUserStageLog(input);
   const cost = costForUserStageLog(input);
+  const missingDomainFields = missingDomainStageLogFields(semanticSummary);
   const stageName = semanticText(semanticSummary, ['stage_name', 'stage_label', 'name'])
     ?? `${input.domainId}/${input.stageId}`;
   const problemSummary = semanticText(semanticSummary, ['problem_summary', 'problem', 'issue_summary']);
@@ -582,23 +662,16 @@ function buildUserStageLog(input: StageProgressLogInput, durationMsObserved: num
             'evidence_refs',
           ],
         }
-        : null
+        : missingDomainFields.length > 0
+          ? {
+            reason: 'domain_closeout_provided_incomplete_user_stage_log',
+            missing_domain_fields: missingDomainFields,
+            required_domain_fields: [...REQUIRED_DOMAIN_STAGE_LOG_FIELDS],
+          }
+          : null
     ) : {
       reason: 'domain_closeout_did_not_provide_user_stage_log',
-      required_domain_fields: [
-        'stage_name',
-        'problem_summary',
-        'stage_goal',
-        'progress_delta_classification',
-        'deliverable_progress_delta',
-        'platform_repair_delta',
-        'next_forced_delta',
-        'stage_work_done',
-        'changed_stage_surfaces',
-        'outcome',
-        'remaining_blockers',
-        'evidence_refs',
-      ],
+      required_domain_fields: [...REQUIRED_DOMAIN_STAGE_LOG_FIELDS],
     },
     authority_boundary: userStageLogAuthorityBoundary(),
   };

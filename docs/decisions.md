@@ -320,9 +320,9 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 影响：
 
-- `stage_progress_log.user_stage_log` 是 OPL 投影面；OPL 负责 attempt ledger、duration、token、cost、closeout refs、receipt refs 和 missing/null 语义，不生成领域解释。
-- 标准 domain agent scaffold / admission contract 现在要求 `user_stage_log_contract`，并要求每个 stage closeout 提供 `stage_name`、`problem_summary`、`stage_goal`、`stage_work_done`、`changed_stage_surfaces`、`outcome`、`remaining_blockers` 和 `evidence_refs`，或给出 typed blocker。
-- `token_usage` / `cost` 缺失时只能显式保留为 observed-missing/null，不允许填 0 或事后猜测。
+- `stage_progress_log.user_stage_log` 是 OPL 投影面；OPL 负责 attempt ledger、duration、token、cost、usage refs、closeout refs、receipt refs 和 missing/null 语义，不生成领域解释。`duration` 可以用 provider start/end 或 attempt created/updated 作为用户可读 fallback，但 `duration_telemetry_status` 仍必须保留真实 telemetry 是否缺失。
+- 标准 domain agent scaffold / admission contract 现在要求 `user_stage_log_contract`，并要求每个 stage closeout 提供 `stage_name`、`problem_summary`、`stage_goal`、`progress_delta_classification`、`deliverable_progress_delta`、`platform_repair_delta`、`next_forced_delta`、`stage_work_done`、`changed_stage_surfaces`、`outcome`、`remaining_blockers` 和 `evidence_refs`，或给出 typed blocker。
+- `token_usage` / `cost` 缺失时只能显式保留为 observed-missing/null，不允许填 0 或事后猜测；domain 给了不完整人话摘要时，OPL 必须暴露 `missing_domain_fields`，不能把半截摘要当成完整 stage log。
 - MAG、RCA、OMA 这类 Foundry Agent 需要在各自 stage plane 中声明同一合同，并由各自 owner 提供 grant-facing、visual-facing 或 agent-building-facing 的人话摘要。OPL admission / App / Agent Lab 只消费该摘要和 refs，不写 domain truth、不读 artifact body、不授权质量或 export ready。
 
 ### 决策：嵌套 runtime help 是只读命令发现面

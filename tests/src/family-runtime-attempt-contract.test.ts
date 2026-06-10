@@ -277,6 +277,14 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
   ]);
   assert.equal(userStageLog.progress_delta_policy.platform_only_is_not_deliverable_progress, true);
   assert.equal(userStageLog.semantic_missing_policy, 'emit_missing_domain_semantic_summary_without_inventing_domain_work');
+  assert.equal(
+    userStageLog.semantic_incomplete_policy,
+    'emit_domain_closeout_provided_incomplete_user_stage_log_with_missing_domain_fields',
+  );
+  assert.equal(
+    userStageLog.accounting_policy,
+    'OPL must project duration/token/cost status, source refs, and explicit missing reasons from the stage attempt ledger; duration may use provider or attempt wall-clock fallback for user readability while duration_telemetry_status stays missing until usage telemetry exists',
+  );
   assert.equal(userStageLog.token_policy, 'observed_or_explicit_missing_null_no_zero_fill');
   assert.equal(userStageLog.authority_boundary.can_infer_domain_semantics, false);
   assert.equal(stageProgressLog.temporal_visibility_contract.surface_kind, 'temporal_stage_attempt_visibility');

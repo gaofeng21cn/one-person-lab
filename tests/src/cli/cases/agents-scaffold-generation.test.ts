@@ -318,6 +318,14 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       true,
     );
     assert.equal(
+      stageControlPlane.stages[0].stage_contract.user_stage_log_contract.incomplete_semantics_policy,
+      'emit_missing_domain_fields_without_opl_domain_inference',
+    );
+    assert.equal(
+      stageControlPlane.stages[0].stage_contract.user_stage_log_contract.accounting_policy,
+      'OPL projects duration/token/cost status, source refs, and explicit missing reasons; duration may use provider or attempt wall-clock fallback for user readability while duration_telemetry_status stays missing until usage telemetry exists',
+    );
+    assert.equal(
       stageControlPlane.stages[0].stage_contract.progress_delta_policy.platform_only_is_not_deliverable_progress,
       true,
     );

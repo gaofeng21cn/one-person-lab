@@ -387,15 +387,108 @@ db.close();`;
     ]);
     assert.equal(userStageLog.duration.duration_ms, 600000);
     assert.equal(userStageLog.duration.duration_source, 'stage_attempt_created_updated_at_fallback');
+    assert.equal(userStageLog.duration.status, 'observed');
+    assert.equal(userStageLog.duration.duration_telemetry_status, 'missing');
     assert.equal(userStageLog.duration.telemetry_fallback_used, true);
+    assert.equal(
+      userStageLog.duration.missing_duration_reason,
+      'no_stage_attempt_duration_telemetry_observed',
+    );
     assert.equal(userStageLog.observability_status, 'missing');
-    assert.deepEqual(userStageLog.missing_observability_fields, ['duration', 'token_usage', 'cost']);
+    assert.deepEqual(userStageLog.missing_observability_fields, ['token_usage', 'cost']);
     assert.equal(userStageLog.token_usage.status, 'missing');
     assert.equal(userStageLog.token_usage.total_tokens, null);
+    assert.equal(
+      userStageLog.token_usage.usage_projection_ref,
+      `/stage_attempt_workbench/attempts/${attemptId}/usage_projection`,
+    );
+    assert.equal(
+      userStageLog.cost.usage_projection_ref,
+      `/stage_attempt_workbench/attempts/${attemptId}/usage_projection`,
+    );
     assert.equal(
       userStageLog.semantic_gap.reason,
       'domain_closeout_did_not_provide_user_stage_log',
     );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime stage progress log reports incomplete domain human summaries without inventing semantics', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-log-incomplete-summary-'));
+  try {
+    const attemptId = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'paper-repair',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas"}',
+      '--task',
+      'task-incomplete-stage-log',
+      '--source-fingerprint',
+      'sha256:incomplete-stage-log',
+    ], familyRuntimeEnv(stateRoot)).family_runtime_stage_attempt.attempt.stage_attempt_id;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      attemptId,
+      '--closeout-packet',
+      JSON.stringify({
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: ['receipt:mas-incomplete-stage-log'],
+        user_stage_log: {
+          stage_name: 'DM003 write repair',
+          problem_summary: 'The paper still had unresolved publishability blockers.',
+          stage_goal: 'Repair manuscript prose and hand back a typed owner answer.',
+          stage_work_done: ['Revised discussion wording and limitation framing.'],
+          changed_stage_surfaces: ['manuscript draft'],
+          outcome: 'partial_write_repair_observed',
+          remaining_blockers: ['Publication gate must re-check the repair.'],
+          evidence_refs: ['receipt:mas-incomplete-stage-log'],
+        },
+      }),
+    ], familyRuntimeEnv(stateRoot));
+
+    const userStageLog = runCli(['family-runtime', 'attempt', 'query', attemptId], familyRuntimeEnv(stateRoot))
+      .family_runtime_stage_attempt_query.stage_attempt_query.stage_progress_log.user_stage_log;
+
+    assert.equal(userStageLog.semantic_status, 'provided_by_domain');
+    assert.equal(userStageLog.semantic_source, 'latest_closeout');
+    assert.equal(userStageLog.stage_name, 'DM003 write repair');
+    assert.equal(userStageLog.progress_delta_classification, 'typed_blocker');
+    assert.equal(
+      userStageLog.semantic_gap.reason,
+      'domain_closeout_provided_incomplete_user_stage_log',
+    );
+    assert.deepEqual(userStageLog.semantic_gap.missing_domain_fields, [
+      'progress_delta_classification',
+      'deliverable_progress_delta',
+      'platform_repair_delta',
+      'next_forced_delta',
+    ]);
+    assert.deepEqual(userStageLog.semantic_gap.required_domain_fields, [
+      'stage_name',
+      'problem_summary',
+      'stage_goal',
+      'progress_delta_classification',
+      'deliverable_progress_delta',
+      'platform_repair_delta',
+      'next_forced_delta',
+      'stage_work_done',
+      'changed_stage_surfaces',
+      'outcome',
+      'remaining_blockers',
+      'evidence_refs',
+    ]);
+    assert.equal(userStageLog.authority_boundary.can_infer_domain_semantics, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

@@ -355,6 +355,7 @@
       "surface_kind": "opl_user_stage_log",
       "projection_policy": "opl_time_usage_refs_plus_domain_provided_human_semantics_no_domain_inference",
       "purpose": "user-facing stage progress summary for stage, problem, domain deliverable work, duration, token usage, cost, outcome, blockers, and evidence refs",
+      "accounting_policy": "OPL must project duration/token/cost status, source refs, and explicit missing reasons from the stage attempt ledger; duration may use provider or attempt wall-clock fallback for user readability while duration_telemetry_status stays missing until usage telemetry exists",
       "domain_semantic_sources": [
         "typed_closeout_packet.user_stage_log",
         "typed_closeout_packet.stage_log_summary",
@@ -451,6 +452,7 @@
         }
       },
       "semantic_missing_policy": "emit_missing_domain_semantic_summary_without_inventing_domain_work",
+      "semantic_incomplete_policy": "emit_domain_closeout_provided_incomplete_user_stage_log_with_missing_domain_fields",
       "duration_policy": "prefer_usage_projection_duration_then_provider_started_completed_at_then_stage_attempt_created_updated_at_fallback",
       "token_policy": "observed_or_explicit_missing_null_no_zero_fill",
       "authority_boundary": {

@@ -465,7 +465,9 @@
           "token_usage",
           "cost"
         ],
+        "accounting_policy": "OPL projects duration/token/cost status, source refs, and explicit missing reasons; duration may use provider or attempt wall-clock fallback for user readability while duration_telemetry_status stays missing until usage telemetry exists",
         "missing_semantics_policy": "typed_blocker_or_missing_domain_semantic_summary_no_opl_inference",
+        "incomplete_semantics_policy": "emit_missing_domain_fields_without_opl_domain_inference",
         "token_policy": "observed_or_explicit_missing_null_no_zero_fill",
         "authority_boundary": {
           "opl_can_infer_domain_semantics": false,
@@ -1184,7 +1186,9 @@
         "token_usage",
         "cost"
       ],
+      "accounting_policy": "OPL projects duration/token/cost status, source refs, and explicit missing reasons; duration may use provider or attempt wall-clock fallback for user readability while duration_telemetry_status stays missing until usage telemetry exists",
       "missing_semantics_policy": "typed_blocker_or_missing_domain_semantic_summary_no_opl_inference",
+      "incomplete_semantics_policy": "emit_missing_domain_fields_without_opl_domain_inference",
       "token_policy": "observed_or_explicit_missing_null_no_zero_fill",
       "authority_boundary": {
         "opl_can_infer_domain_semantics": false,
