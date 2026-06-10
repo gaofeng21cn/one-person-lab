@@ -287,13 +287,49 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
       ),
       [
         { domain_id: 'med-autoscience', owner_route_status: 'owner_evidence_required' },
-        { domain_id: 'med-autogrant', owner_route_status: 'owner_evidence_required' },
-        { domain_id: 'redcube-ai', owner_route_status: 'owner_evidence_required' },
+        {
+          domain_id: 'med-autogrant',
+          owner_route_status: 'owner_evidence_observed_not_ready_claim',
+        },
+        {
+          domain_id: 'redcube-ai',
+          owner_route_status: 'owner_evidence_observed_not_ready_claim',
+        },
         {
           domain_id: 'opl-meta-agent',
           owner_route_status: 'owner_evidence_observed_not_ready_claim',
         },
       ],
+    );
+    const magRoute = maturity.domain_owner_chain_scaleout.domain_owner_evidence_routes.find(
+      (entry: { domain_id: string }) => entry.domain_id === 'med-autogrant',
+    );
+    assert.deepEqual(magRoute.observed_ref_shapes, [
+      'domain_owner_receipt_ref',
+      'owner_chain_ref',
+      'typed_blocker_ref',
+    ]);
+    assert.equal(
+      magRoute.observed_receipt_refs.includes(
+        'repo-tracked-contract:contracts/production_acceptance/mag-production-acceptance.json',
+      ),
+      true,
+    );
+    const rcaRoute = maturity.domain_owner_chain_scaleout.domain_owner_evidence_routes.find(
+      (entry: { domain_id: string }) => entry.domain_id === 'redcube-ai',
+    );
+    assert.deepEqual(rcaRoute.observed_ref_shapes, [
+      'domain_owner_receipt_ref',
+      'domain_receipt_ref',
+      'no_regression_ref',
+      'owner_chain_ref',
+      'typed_blocker_ref',
+    ]);
+    assert.equal(
+      rcaRoute.observed_receipt_refs.includes(
+        'repo-tracked-contract:contracts/owner_chain_live_progress_evidence.json',
+      ),
+      true,
     );
     const omaRoute = maturity.domain_owner_chain_scaleout.domain_owner_evidence_routes.find(
       (entry: { domain_id: string }) => entry.domain_id === 'opl-meta-agent',
@@ -617,15 +653,17 @@ test('framework operating maturity projects owner evidence ledger refs without r
       (entry: { lane: string }) => entry.lane === 'domain_owner_chain_scaleout',
     );
     assert.equal(domainLane.status, 'owner_evidence_observed_not_ready_claim');
-    assert.equal(domainLane.verified_receipt_count, 2);
+    assert.equal(domainLane.verified_receipt_count, 4);
     assert.deepEqual(domainLane.observed_ref_shapes, [
+      'domain_owner_receipt_ref',
+      'domain_receipt_ref',
       'no_regression_ref',
       'owner_chain_ref',
       'typed_blocker_ref',
     ]);
-    assert.equal(domainLane.observed_ref_counts.typed_blocker_ref_count, 2);
-    assert.equal(domainLane.observed_ref_counts.no_regression_ref_count, 1);
-    assert.equal(domainLane.observed_ref_counts.owner_chain_ref_count, 1);
+    assert.equal(domainLane.observed_ref_counts.typed_blocker_ref_count, 4);
+    assert.equal(domainLane.observed_ref_counts.no_regression_ref_count, 2);
+    assert.equal(domainLane.observed_ref_counts.owner_chain_ref_count, 3);
     assert.deepEqual(
       domainLane.observed_domains.map((
         entry: { domain_id: string; status: string; observed_ref_shapes: string[] },
@@ -638,7 +676,22 @@ test('framework operating maturity projects owner evidence ledger refs without r
         {
           domain_id: 'med-autogrant',
           status: 'owner_evidence_observed_not_ready_claim',
-          observed_ref_shapes: ['typed_blocker_ref'],
+          observed_ref_shapes: [
+            'domain_owner_receipt_ref',
+            'owner_chain_ref',
+            'typed_blocker_ref',
+          ],
+        },
+        {
+          domain_id: 'redcube-ai',
+          status: 'owner_evidence_observed_not_ready_claim',
+          observed_ref_shapes: [
+            'domain_owner_receipt_ref',
+            'domain_receipt_ref',
+            'no_regression_ref',
+            'owner_chain_ref',
+            'typed_blocker_ref',
+          ],
         },
         {
           domain_id: 'opl-meta-agent',
@@ -663,7 +716,10 @@ test('framework operating maturity projects owner evidence ledger refs without r
           domain_id: 'med-autogrant',
           owner_route_status: 'owner_evidence_observed_not_ready_claim',
         },
-        { domain_id: 'redcube-ai', owner_route_status: 'owner_evidence_required' },
+        {
+          domain_id: 'redcube-ai',
+          owner_route_status: 'owner_evidence_observed_not_ready_claim',
+        },
         {
           domain_id: 'opl-meta-agent',
           owner_route_status: 'owner_evidence_observed_not_ready_claim',
@@ -673,9 +729,39 @@ test('framework operating maturity projects owner evidence ledger refs without r
     const magRoute = domainRoutes.find(
       (entry: { domain_id: string }) => entry.domain_id === 'med-autogrant',
     );
-    assert.deepEqual(magRoute.observed_ref_shapes, ['typed_blocker_ref']);
-    assert.equal(magRoute.observed_receipt_refs[0], domainOwnerRecord.receipt_refs[0]);
-    assert.equal(magRoute.observed_ref_counts.typed_blocker_ref_count, 1);
+    assert.deepEqual(magRoute.observed_ref_shapes, [
+      'domain_owner_receipt_ref',
+      'owner_chain_ref',
+      'typed_blocker_ref',
+    ]);
+    assert.equal(
+      magRoute.observed_receipt_refs.includes(domainOwnerRecord.receipt_refs[0]),
+      true,
+    );
+    assert.equal(
+      magRoute.observed_receipt_refs.includes(
+        'repo-tracked-contract:contracts/production_acceptance/mag-production-acceptance.json',
+      ),
+      true,
+    );
+    assert.equal(magRoute.observed_ref_counts.typed_blocker_ref_count, 2);
+    const rcaRoute = domainRoutes.find(
+      (entry: { domain_id: string }) => entry.domain_id === 'redcube-ai',
+    );
+    assert.deepEqual(rcaRoute.observed_ref_shapes, [
+      'domain_owner_receipt_ref',
+      'domain_receipt_ref',
+      'no_regression_ref',
+      'owner_chain_ref',
+      'typed_blocker_ref',
+    ]);
+    assert.equal(
+      rcaRoute.observed_receipt_refs.includes(
+        'repo-tracked-contract:contracts/owner_chain_live_progress_evidence.json',
+      ),
+      true,
+    );
+    assert.equal(rcaRoute.observed_ref_counts.typed_blocker_ref_count, 1);
     const omaRoute = domainRoutes.find(
       (entry: { domain_id: string }) => entry.domain_id === 'opl-meta-agent',
     );
@@ -716,13 +802,27 @@ test('framework operating maturity projects owner evidence ledger refs without r
       'owner_evidence_observed_not_ready_claim',
     );
     assert.deepEqual(domainWorkOrder.observed_ref_shapes, [
+      'domain_owner_receipt_ref',
+      'domain_receipt_ref',
       'no_regression_ref',
       'owner_chain_ref',
       'typed_blocker_ref',
     ]);
     assert.equal(
-      domainWorkOrder.observed_receipt_refs[0],
-      domainOwnerRecord.receipt_refs[0],
+      domainWorkOrder.observed_receipt_refs.includes(domainOwnerRecord.receipt_refs[0]),
+      true,
+    );
+    assert.equal(
+      domainWorkOrder.observed_receipt_refs.includes(
+        'repo-tracked-contract:contracts/production_acceptance/mag-production-acceptance.json',
+      ),
+      true,
+    );
+    assert.equal(
+      domainWorkOrder.observed_receipt_refs.includes(
+        'repo-tracked-contract:contracts/owner_chain_live_progress_evidence.json',
+      ),
+      true,
     );
     assert.equal(
       domainWorkOrder.authority_boundary.can_sign_owner_receipt,

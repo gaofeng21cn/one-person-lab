@@ -316,7 +316,79 @@ function withFunctionalAudit(payload: JsonRecord, targetDomainId: string, owner:
 }
 
 function writeJson(filePath: string, value: JsonRecord) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function writeMagProductionAcceptanceFixture(contractsDir: string) {
+  writeJson(path.join(contractsDir, 'production_acceptance', 'mag-production-acceptance.json'), {
+    surface_kind: 'mag_production_acceptance_evidence.v1',
+    domain_id: 'med-autogrant',
+    refs: {
+      grant_owner_receipt_refs: [
+        'receipt:mag/production-live-acceptance/fixture',
+      ],
+      owner_receipt_refs: [
+        'receipt:mag/production-live-acceptance/fixture',
+      ],
+      acceptance_receipt_refs: [
+        'receipt-projection:mag/production-live-acceptance-owner-receipt/fixture',
+      ],
+      typed_blocker_refs: [
+        'typed-blocker:mag/production-live-acceptance/followup-required',
+      ],
+    },
+    closure_evidence: {
+      owner_receipt_ref: 'receipt:mag/production-live-acceptance/fixture',
+      required_return_shapes: [
+        'domain_owner_receipt_ref',
+        'typed_blocker_ref',
+        'no_regression_evidence_ref',
+      ],
+    },
+    external_evidence_receipt_ledger: {
+      ledger_ref: 'contracts/external_evidence/mag-evidence-receipt-ledger.json',
+    },
+    grant_receipt_chain: {
+      production_like_grant_receipt_chain_present: true,
+      chain_status: 'closed_by_mag_domain_owner_live_acceptance_receipt_scaleout',
+    },
+    authority_boundary: {
+      opl_can_authorize_grant_domain_ready: false,
+      provider_completion_equals_domain_ready: false,
+    },
+  });
+}
+
+function writeRcaOwnerChainEvidenceFixture(contractsDir: string) {
+  writeJson(path.join(contractsDir, 'owner_chain_live_progress_evidence.json'), {
+    surface_kind: 'rca_owner_chain_live_progress_evidence',
+    domain_id: 'redcube-ai',
+    live_visual_owner_chain_canary: {
+      observed_owner_receipt_refs: [
+        'rca-owner-receipt:review-export:ppt_deck:visual_director_review:fixture',
+      ],
+      observed_review_export_receipt_refs: [
+        'rca-review-export:ppt_deck:visual_director_review:fixture',
+      ],
+      observed_typed_blocker_refs: [],
+    },
+    rca_owned_owner_action_canary: {
+      observed_owner_receipt_ref:
+        'rca-owner-receipt:visual-stage:owner-chain-canary-domain-owner-fixture',
+      observed_no_regression_evidence_ref:
+        'rca-no-regression:visual-stage:owner-chain-canary-no-regression-fixture',
+      observed_typed_blocker_ref:
+        'rca-typed-blocker:workspace_receipt_proof_missing_required_refs:fixture',
+    },
+    false_authority_flags: {
+      declares_domain_ready: false,
+      declares_production_ready: false,
+      writes_visual_truth: false,
+      writes_artifact_body: false,
+      writes_memory_body: false,
+    },
+  });
 }
 
 function generatedSurfaceHandoff(targetDomainId: string) {
@@ -434,6 +506,12 @@ function writeFamilyDefaultContractRepo(workspaceRoot: string, spec: FamilyDefau
     domain_repo_can_own_generated_surface: false,
     standard_agent_pack_abi: STANDARD_AGENT_PACK_ABI,
   });
+  if (spec.targetDomainId === 'med-autogrant') {
+    writeMagProductionAcceptanceFixture(contractsDir);
+  }
+  if (spec.targetDomainId === 'redcube_ai') {
+    writeRcaOwnerChainEvidenceFixture(contractsDir);
+  }
   if (spec.targetDomainId === 'opl-meta-agent') {
     writeJson(path.join(contractsDir, 'target_agent_owner_chain_evidence.json'), {
       surface_kind: 'opl_meta_agent_target_agent_owner_chain_evidence',
