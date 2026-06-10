@@ -71,9 +71,9 @@ OPL Agent OS
 
 后续最小完成门：
 
-- `W1/W5` 后续必须 scale out 到 MAS/MAG/RCA/OMA 的真实 direct/generated path roundtrip，而不是只停留在 generated descriptor fixture。
-- `W3` 后续必须把 domain pack 中的 external-learning refs 逐步接入 resolver readout，同时继续保持 optional fail-open 和 domain-owned typed blocker 晋级边界。
-- `W7` 后续必须用真实 owner receipt、typed blocker、human gate、reviewer/quality/export receipt、long-soak、release/install 或 owner acceptance refs 关闭 production evidence；当前 work-order/readout、conformance pass、App projection、provider completion、verified ledger 和 docs foldback 都不能替代它。
+- `W1/W5` 的 MAS/MAG/RCA/OMA generated/direct accepted-answer-shape roundtrip 已进入机器读面；后续不再补第二套 parity 计划，而是把任何 drift 当作 `generated_direct_parity` regression 修复。
+- `W3` 已把 domain pack external-learning refs 接入 current-delta-bound resolver readout；后续只扩展可消费 refs 与 route-required hard-boundary policy，继续保持 optional fail-open 和 domain-owned typed blocker 晋级边界。
+- `W7` 后续必须用真实 owner receipt、typed blocker、human gate、reviewer/quality/export receipt、long-soak、release/install、private-platform owner decision 或 owner acceptance refs 关闭 production evidence；当前 work-order/readout、conformance pass、App projection、provider completion、verified ledger 和 docs foldback 都不能替代它。
 - 若后续 live `opl agents conformance --family-defaults --json` 仍出现 OMA 或其他 domain blocked，必须分类为 conformance projection、domain target delta、stage boundary drift 或 domain-owned live evidence tail；不能用 suite pass、controlled canary 或 docs foldback 伪关闭。
 
 ## Supervisory acceptance gate
@@ -260,11 +260,11 @@ MAG/RCA/OMA 本轮已经增加各自 target delta 文档；MAS 使用 `docs/runt
 | Default read root | 是否明确 `current_owner_delta` 是默认读根，raw worklist / provider completion / evidence count 只做 drilldown。 |
 | 禁止声明 | 是否明确 target delta 不等于 domain ready、production ready、App release ready、owner acceptance 或 physical delete authority。 |
 
-OPL 后续不能把 domain target delta 当成“OPL 已接管完成”。接收 delta 只关闭 family-level target clarity；生产可用性仍要靠 generated parity、owner receipt roundtrip、no-forbidden-write、App/operator consumption、long-soak 和 owner acceptance。
+OPL 后续不能把 domain target delta 当成“OPL 已接管完成”。接收 delta 只关闭 family-level target clarity；当前 generated parity、no-forbidden-write guard、App/operator consumption 和 owner-route work-order projection 已有机器读面，生产可用性仍要靠 domain/App/brand owner 的 owner receipt roundtrip、typed blocker、human gate、reviewer/quality/export receipt、long-soak、release/install、private-platform owner decision 和 owner acceptance。
 
 ## 并行落地地图
 
-下面是后续可并行推进的工作线。每条 lane 都应有 disjoint write set、source of truth、验证命令、停止条件和禁止范围。
+下面是后续可并行推进的工作线。前七条已作为机器面落地并进入 regression/maintenance 读法；真正的未闭合开发入口从 `owner-evidence` 开始。每条 lane 都应有 disjoint write set、source of truth、验证命令、停止条件和禁止范围。
 
 | Lane | 写集 | Source of truth | 验证 | 停止条件 |
 | --- | --- | --- | --- | --- |
@@ -276,6 +276,7 @@ OPL 后续不能把 domain target delta 当成“OPL 已接管完成”。接收
 | `generated-surface-parity` | generated CLI/MCP/App/status descriptors | domain action catalog / stage control | interface generation tests、direct-hosted parity tests | generated surface 与 direct target 返回同一 accepted answer shape。 |
 | `app-cockpit` | Console/App projection contracts | current owner delta + hard gate refs | snapshot / schema tests、manual screenshot when App touched | first screen 不被 L5/audit/evidence tail 淹没。 |
 | `production-conformance` | runtime evidence / soak contracts | real owner receipt / typed blocker / human gate / App consumption | repo-native soak reports、owner acceptance refs | 只用真实 evidence 关闭 production claim，不用 conformance pass 代替。 |
+| `owner-evidence` | MAS/MAG/RCA/OMA/App/brand owner repos + OPL refs-only intake | current owner delta、owner-route work orders、domain/App/brand owner evidence | domain/App repo-native verification、OPL live readout、owner receipt / typed blocker / human gate / release / long-soak refs | 每个 work order 由对应 owner 给出真实 closing ref 或 typed blocker；OPL 只 intake / verify / project。 |
 
 ## 验收门
 
@@ -302,12 +303,14 @@ OPL 后续不能把 domain target delta 当成“OPL 已接管完成”。接收
 
 ## 下一步具体工作
 
-1. `MAS`：继续把私有 runtime / workbench / readiness / publication gate 收薄成 Medical Research Pack + authority kernel，优先跑真实 paper owner receipt / typed blocker 路径。
-2. `MAG`：把 product-entry、sidecar、grouped CLI/API、projection builder、workspace/source/package shell 分拆为 OPL-generated surface vs Grant Authority Kernel。
-3. `RCA`：把 managed DAG、attempt runner、review/repair transport、artifact lifecycle、operator projection 收束为 Visual Pack + Visual Authority Kernel。
-4. `OMA`：把 agent-building pack、developer work order、mechanism proposal、promotion/canary/rollback 与 OPL Agent Lab 分权写成 target delta，并避免第二套 Framework。
-5. OPL：推进 Pack compiler/generated surface ABI 和 capability registry 的机器 manifest，不新增第 11 品牌模块，不增加普通路径摩擦。
-6. External-learning：不再单列 MAS 优化计划；先在 OPL `W3` 落 current-delta-bound capability resolver / fail-open policy，再由 MAS `W4` 声明 ARS claim-support、AutoSci source discovery、ARK micro-canary 等 refs 的 domain consumption / owner receipt 晋级边界，最后进入 `W7` 真实 owner receipt canary。
+1. `MAS`：在当前 owner delta 下给出真实 paper owner receipt、quality gate receipt、typed blocker、human gate 或 route-back evidence；external-learning refs 只能在被 MAS authority kernel 消费并生成 owner evidence 后计入真实进度。
+2. `MAG`：用真实 grant stage 返回 grant owner receipt、typed blocker、human gate、quality/export receipt 或 no-regression evidence；OPL generated surface parity 只作为入口一致性 guard。
+3. `RCA`：用真实 visual stage 返回 visual owner receipt、review/export receipt、typed blocker、human gate 或 no-regression evidence；同名 MCP descriptor 允许存在，但必须继续通过 source lineage / accepted answer shape disambiguation。
+4. `OMA`：用真实 target-agent work order 返回 developer work-order receipt、target-agent typed blocker、promotion/canary receipt 或 no-regression evidence；不得让 OMA 重新形成第二套 Framework。
+5. `One Person Lab App`：由 App release owner 给出 release-ready / production-user-path verdict、release typed blocker 或 install/release evidence refs；OPL maturity 只消费这些 refs，不替 App 发布结论。
+6. `Brand module owners`：逐模块补真实 L5 evidence，包括 live user path、cross-agent scaleout、long-soak/recovery、operator repair loop、release/install、owner acceptance 和 no-second-truth regression evidence。
+7. `Private platform retirement owners`：对 retained wrapper / facade / alias / helper 给出 `physical_delete_authorization_ref`、`keep_as_authority_adapter_ref` 或 `typed_blocker_ref`；OPL 只投影 work order，不代签物理删除授权。
+8. `OPL Framework`：维护 W0/W1/W3/W5/W6/W7 机器读面和 regression tests；新增 external-learning / capability refs 时只改 current-delta-bound resolver、fail-open policy 或 owner-route work-order policy，不新建 domain-local selector、always-on sidecar 或第二 active backlog。
 
 ## 禁止声明
 

@@ -118,7 +118,7 @@ Workspace Protocol 的当前 active 口径只保留结构边界：`Workspace Gro
 | --- | --- | --- |
 | `framework_default_path` | `current_owner_delta`、Ordinary Progress Spine、Audit Sidecar、ProgressDeltaReceipt、StageRun cockpit、workspace L4 projection、standard agent conformance 和 operating-maturity read model 已进入同源机器面。 | 这些只证明 framework control plane 和 operator read surface 可用；不能声明 domain ready、App release ready、Brand L5 或 production ready。 |
 | `pack_os_transport` | `contracts/opl-framework/pack-os-contract.json`、`src/pack-os.ts`、`brand-module-surfaces.json#modules.pack` 和 `opl pack os inspect|install|registry|cache|distribute|lock|validate --json` 已把 OPL Pack OS 落为通用 refs-only pack descriptor / install registry / content-addressed cache / distribution bundle / lock / lifecycle / review receipt transport surface。 | 该完成口径关闭 capability pack descriptor intake、install/registry、present-local-file cache、refs-only distribution、lock projection、artifact lifecycle refs 和 review receipt refs transport 缺口；不能声明 domain truth、artifact body authority、owner receipt authority、quality/export/review verdict、publication ready、App release ready、Brand L5 或 production ready。 |
-| `foundry_agent_os_family_target` | `meets_target_for_w0_w1_w3_w4_w5_w6_structural_landing` / `needs_w7_live_production_evidence_and_scaleout_followthrough`。`target-operating-architecture-contract.json#foundry_agent_os_standard` 已把 MAS 方案抽象成 family-level target；`opl agents conformance` 已暴露 `foundry_agent_os_conformance`；`opl agents interfaces` 已暴露 `generated_direct_parity`；Capability Registry resolver ABI 已落到 `capability-registry-resolver.schema.json` / `src/capability-registry-resolver.ts`；MAS/MAG/RCA/OMA 已有 domain kernel manifest；App contract 已固定 `current_owner_delta` ordinary cockpit；`framework operating-maturity` 已暴露 `foundry_agent_os_production_evidence_gate`。External-learning 后续优化已折回 `W3/W4/W7`，不再作为 MAS 私有 selector 或第二 active backlog。 | 当前关闭的是 W0/W1/W3/W4/W5/W6 structural / functional landing，以及 W7 intake / non-closing guard。真实 production evidence 仍要由 owner receipt、typed blocker、human gate、reviewer/quality/export receipt、long-soak、release/install 或 owner acceptance refs 关闭；external-learning refs 只有被 domain owner 消费并产出 owner receipt / typed blocker / reviewer receipt / human gate 后才能计入真实进度。 |
+| `foundry_agent_os_family_target` | `meets_target_for_w0_w1_w3_w4_w5_w6_structural_landing` / `needs_w7_live_production_evidence_and_owner_acceptance`。`target-operating-architecture-contract.json#foundry_agent_os_standard` 已把 MAS 方案抽象成 family-level target；`opl agents conformance` 已暴露 `foundry_agent_os_conformance`；`opl agents interfaces` 已暴露 MAS/MAG/RCA/OMA `generated_direct_parity`；Capability Registry resolver ABI 已落到 `capability-registry-resolver.schema.json` / `src/capability-registry-resolver.ts` 并消费 domain pack external-learning refs；MAS/MAG/RCA/OMA 已有 domain kernel manifest；App contract 已固定 `current_owner_delta` ordinary cockpit；`framework operating-maturity` 已暴露 `foundry_agent_os_production_evidence_gate.owner_route_work_orders`、domain owner evidence routes 和 private-platform retirement work order。External-learning 后续优化已折回 `W3/W4/W7`，不再作为 MAS 私有 selector 或第二 active backlog。 | 当前关闭的是 W0/W1/W3/W4/W5/W6 structural / functional landing，以及 W7 intake / owner-route work-order projection / non-closing guard。真实 production evidence 仍要由 owner receipt、typed blocker、human gate、reviewer/quality/export receipt、long-soak、release/install、private-platform owner decision 或 owner acceptance refs 关闭；external-learning refs 只有被 domain owner 消费并产出 owner receipt / typed blocker / reviewer receipt / human gate 后才能计入真实进度。 |
 | `domain_owner_progression` | MAS/MAG/RCA/OMA 的标准接入、generated/hosted surface、controlled evidence shape、owner-answer accepted shape、false-authority boundary 和 `foundry-agent-os-domain-kernel-manifest.json` 已能被 OPL 读取。 | 真实 MAS paper、MAG grant、RCA visual 和 OMA target-agent progress 仍需 domain-owned owner receipt、quality/export/review receipt、typed blocker、human gate、route-back evidence 或 no-regression ref。 |
 | `cleanup_and_retirement` | Wrapper / facade / alias / helper 删除门已收敛到 cleanup lane，default-caller / physical-delete read model 只投影 refs-only owner-decision shape。 | 没有 domain owner physical delete authorization、keep decision 或 typed blocker ref 时，OPL 不物理删除 retained surface，也不保留 compatibility facade。 |
 | `docs_lifecycle` | 本页持有唯一 active owner；core docs、active support、reference、history 和 docs portfolio 的职责已经分层。 | active docs 仍需持续防止 dated proof、receipt 流水、branch/worktree closeout 和 long checklist 回流；本轮 coverage 与未覆盖项继续进入下一轮 prompt。 |
@@ -200,9 +200,9 @@ Workspace Protocol 的当前 active 口径只保留结构边界：`Workspace Gro
 
 ## 下一轮 Agent prompt
 
-- Primary lane: `W0-cross-agent-conformance-readout`，来源是 [Foundry Agent OS Family Target Implementation Plan](./foundry-agent-os-family-target-implementation-plan.md) 的 `当前执行 Baton`。本轮目标是把 `foundry_agent_os_standard` 从目标合同变成 `opl agents conformance --family-defaults --json` 可稳定消费、可测试、可审计的读面。
-- Write scope: OPL contracts / conformance source / focused tests / 必要 docs foldback。默认 primary repo 是 `one-person-lab`；MAS/MAG/RCA/OMA 只读，除非 W0 证明必须修某个 domain target delta 且先明确 source owner、consumer owner、写集和验证。
-- Non-goals: 不改 App GUI、release、install、first-run、user path、interactive logic 或 App-owned product contract；不修 MAS provider admission / currentness 源头；不生成 MAS owner receipt、typed blocker、quality gate receipt 或 closeout binding payload；不声明 domain ready、App release ready、Brand L5 或 production ready；不新增第二 active backlog、compatibility alias、facade、wrapper 或 Markdown wording tests。
+- Primary lane: `W7-owner-evidence-and-production-tail`，来源是 [Foundry Agent OS Family Target Implementation Plan](./foundry-agent-os-family-target-implementation-plan.md) 的 `owner-evidence` lane。本轮目标不是再证明 W0/W1/W3/W5/W6 结构面，而是逐项消费 `framework operating-maturity` 的 owner-route work orders，推动 domain/App/brand owner 给出真实 closing ref 或 typed blocker。
+- Write scope: 默认 OPL 只改 refs-only intake / projection / regression guard / 必要 docs foldback；MAS/MAG/RCA/OMA/App/brand 仓只有在对应 owner evidence 的 source of truth、写集、验证命令和禁止范围明确时才写。不要在 MAS 或其他 domain 仓新增 external-learning selector、第二 active backlog、always-on sidecar 或默认 preflight。
+- Non-goals: 不让 OPL 生成 MAS/MAG/RCA/OMA owner receipt、typed blocker、quality/export/review receipt、human gate、App release verdict、Brand L5 verdict、physical delete authorization 或 production-ready claim；不把 conformance pass、generated parity、verified refs-only ledger、provider completion、App projection 或 docs foldback 写成理想生产态完成。
 - Live truth inputs: 先重读 live source、contracts、tests、CLI/read-model、
   runtime ledger、provider receipt、domain-owned manifest、App evidence、git
   worktree/branch/PR state 和下列 OPL readouts，不从本文继承旧 counters：
@@ -212,21 +212,25 @@ Workspace Protocol 的当前 active 口径只保留结构边界：`Workspace Gro
    # read payload under .framework_readiness
    rtk opl agents conformance --family-defaults --json
    # read payload under .standard_domain_agent_conformance; domain reports live in .standard_domain_agent_conformance.reports[]
+   rtk opl agents interfaces --family-defaults --json
+   # read generated_direct_parity as regression guard only
+   rtk opl framework operating-maturity --family-defaults --json
+   # read foundry_agent_os_production_evidence_gate.owner_route_work_orders
    rtk opl brand-modules l5-status --json
    # read L5 as evidence_required input only
    ```
 
-- Execution discipline: 建议独立执行对话或独立 worktree 承载 W0；该对话只做一个 work order，完成后把 diff、验证、live readout 和残余 blocker 折回本文或 Foundry plan。已有并发 worktree / dirty 文件一律按外部 owner lane 处理，除非用户明确授权，不得吸收、清理或覆盖。
+- Execution discipline: 每次只选一个 owner-route work order 或一组写集完全不相交的 work orders。能安全并行时为 MAS/MAG/RCA/OMA/App/brand owner evidence 分 worktree / subagent；主会话必须复核 diff、验证、吸收、push 和清理。已有并发 worktree / dirty 文件一律按外部 owner lane 处理，除非用户明确授权，不得吸收、清理或覆盖。
 
 - Required actions:
-  1. Fresh read `target-operating-architecture-contract.json#foundry_agent_os_standard`、brand module registry / surfaces / L5 evidence contract、conformance source 和 focused tests。
-  2. 审计当前 conformance JSON 中 `foundry_agent_os_standard`、default read root、target delta present、generated-surface owner/status、false-authority flags、domain-kernel authority owner 和 live evidence still-required 是否已经可查询；缺字段时优先补 OPL readout / tests。
-  3. 审计当前 `opl-meta-agent` blocker `oma_boundary_unexpected_stage:target-agent-takeover`：分类为 conformance projection bug、OMA target-delta 缺口、stage boundary drift、domain-owned live evidence tail 或 real blocker；不得用 suite pass、controlled canary、docs foldback 或 refs-only ledger 伪关闭。
-  4. 若 W0 只需 OPL 写入，保持 domain repos read-only；若必须写 domain target delta，先停止并记录 active gap anchor、owner、写集、source of truth 和验证命令。
+  1. Fresh read `foundry_agent_os_production_evidence_gate.owner_route_work_orders`、`domain_owner_chain_scaleout.domain_owner_evidence_routes`、Brand L5 evidence-required modules、App release/user-path evidence 和 private-platform retirement work orders。
+  2. 对每个 open work order 标注 `owner_repo`、`accepted_ref_shapes`、`closing_ref_source`、`typed_blocker_source`、`forbidden_opl_claims` 和 `verification_command`。
+  3. 先处理能由真实 owner 立即给出 receipt / blocker / human gate / release / long-soak / private delete decision 的 work order；不能处理的写成 owner-needed typed work order，不用 OPL 文档代签。
+  4. 若只需 OPL readout/regression guard，保持 domain repos read-only；若必须写 domain/App/brand 仓，先确认 source owner、consumer owner、写集和 repo-native 验证。
   5. 更新 focused tests / contracts / docs 中必要的机器边界，确保 conformance pass、generated surface ready、verified refs-only receipt、provider completion 和 L4/L5 counter 都不能声明 domain ready。
-- Verification commands: W0 最小验证为 `rtk npm run typecheck`、`rtk npm run test:fast`、`rtk npm run test:meta`；若只做 docs baton 更新，最小验证为 `rtk git diff --check` 和 `rtk rg -n '^(<<<<<<<|=======|>>>>>>>)' docs/active docs/status.md docs/decisions.md`。
-- Completion gate: 只能归类为 `foundry_conformance_readout_landed`、`w0_blocker_classified`、`real_external_blocker` 或 `hygiene_only_supporting_active_gap`；不得关闭全局目标，也不得用 W0-W6 structural landing 代替 W7 production evidence。
-- Foldback target: W0 结论折回本文、Foundry plan、必要 contracts/tests 和 runtime/conformance readout；dated proof、worktree/branch closeout 和 receipt 流水进入 runtime ledger、提交历史或 domain-owned provenance。
+- Verification commands: OPL readout/regression lane 最小验证为 `rtk npm run typecheck`、`rtk npm run test:fast`、`rtk npm run test:meta`；domain/App/brand owner evidence lane 还必须跑对应 repo-native verification；若只做 docs baton 更新，最小验证为 `rtk git diff --check` 和 `rtk rg -n '^(<<<<<<<|=======|>>>>>>>)' docs/active docs/status.md docs/decisions.md`。
+- Completion gate: 只能归类为 `owner_evidence_recorded`、`owner_typed_blocker_recorded`、`owner_needed_work_order_projected`、`real_external_blocker` 或 `hygiene_only_supporting_active_gap`；不得关闭全局理想生产态，也不得用 W0-W6 structural landing 代替 W7 production evidence。
+- Foldback target: W7/owner-evidence 结论折回本文、Foundry plan、必要 contracts/tests 和 runtime/conformance readout；dated proof、worktree/branch closeout 和 receipt 流水进入 runtime ledger、提交历史或 domain-owned provenance。
 
 ## Forbidden Claims
 
