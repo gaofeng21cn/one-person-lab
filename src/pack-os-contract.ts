@@ -189,6 +189,12 @@ function validateCliSurfaces(section: Record<string, unknown>, filePath: string)
     inspect: expectExactString(section.inspect, 'opl pack os inspect --descriptor <path>', 'cli_surfaces.inspect', filePath),
     lock: expectExactString(section.lock, 'opl pack os lock --descriptor <path>', 'cli_surfaces.lock', filePath),
     validate: expectExactString(section.validate, 'opl pack os validate --descriptor <path>', 'cli_surfaces.validate', filePath),
+    mas_display_smoke: expectExactString(
+      section.mas_display_smoke,
+      'opl pack os mas-display-smoke --contract <path>',
+      'cli_surfaces.mas_display_smoke',
+      filePath,
+    ),
   };
 }
 
@@ -385,6 +391,18 @@ function validateDomainHandoff(section: Record<string, unknown>, filePath: strin
         masDisplayPack.domain_authority_owner,
         'MedAutoScience',
         'domain_handoff.mas_display_pack_v2.domain_authority_owner',
+        filePath,
+      ),
+      consumer_smoke_surface: expectExactString(
+        masDisplayPack.consumer_smoke_surface,
+        'opl pack os mas-display-smoke --contract <path>',
+        'domain_handoff.mas_display_pack_v2.consumer_smoke_surface',
+        filePath,
+      ),
+      audit_surface: expectExactString(
+        masDisplayPack.audit_surface,
+        'opl_pack_os_mas_display_pack_v2_audit',
+        'domain_handoff.mas_display_pack_v2.audit_surface',
         filePath,
       ),
       forbidden_claim: expectString(

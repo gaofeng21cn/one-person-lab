@@ -77,6 +77,116 @@ function writeDescriptor(root: string, overrides: Record<string, unknown> = {}) 
   return descriptorPath;
 }
 
+function writeMasDisplayPackV2Contract(root: string, overrides: Record<string, unknown> = {}) {
+  const contract = {
+    schema_version: 2,
+    contract_id: 'display-pack-contract.v2',
+    owner: 'MedAutoScience',
+    purpose: 'MAS Display Pack v2 contract fixture',
+    machine_boundary: 'MAS owns display truth; OPL consumes refs only.',
+    source_module: 'src/med_autoscience/display_pack_v2_contract.py',
+    pack_descriptor: {
+      surface_kind: 'display_pack_v2_pack_descriptor',
+      native_manifest: 'display_pack.toml',
+      required_fields: [
+        'pack_id',
+        'version',
+        'display_api_version',
+        'source',
+        'owner',
+        'license',
+        'templates',
+        'style_profiles',
+        'qc_profiles',
+        'ai_policy',
+        'goldens',
+        'exemplars',
+        'provenance',
+        'opl_handoff',
+      ],
+    },
+    template_descriptor: {
+      surface_kind: 'display_pack_v2_template_descriptor',
+      native_manifest: 'templates/<template_id>/template.toml',
+      required_fields: [
+        'template_id',
+        'full_template_id',
+        'kind',
+        'display_name',
+        'paper_family_ids',
+        'audit_family',
+        'renderer_family',
+        'input_schema_ref',
+        'qc_profile_ref',
+        'style_profile_ref',
+        'required_exports',
+        'execution_mode',
+        'entrypoint',
+        'paper_proven',
+        'golden_case_paths',
+        'exemplar_refs',
+      ],
+      allowed_kinds: ['evidence_figure', 'illustration_shell', 'table_shell'],
+      allowed_execution_modes: ['python_plugin', 'subprocess'],
+      authority_boundary: 'Template descriptors do not authorize publication readiness.',
+    },
+    quality_surfaces: {
+      publication_figure_quality_contract_ref: 'contracts/publication_figure_quality_contract.json',
+      display_pack_lock_surface: 'paper/build/display_pack_lock.json',
+      paper_quality_refs: [
+        'paper/figure_intent.json',
+        'paper/figure_spec.json',
+        'paper/figure_style_reference_bundle.json',
+        'paper/figure_visual_audit_receipt.json',
+        'paper/figure_polish_lifecycle.json',
+        'paper/ai_illustration_receipt.json',
+      ],
+      boundary: 'display_pack_lock.json preserves refs and hashes but does not become a publication verdict.',
+    },
+    authority_boundaries: {
+      mas_pack_descriptor_authority: true,
+      mas_publication_quality_authority: true,
+      mas_owns_opl_generic_pack_os: false,
+      opl_can_write_mas_publication_truth: false,
+      display_pack_lock_can_authorize_publication_readiness: false,
+      pack_descriptor_can_mutate_study_truth: false,
+      ai_illustration_can_carry_scientific_claim: false,
+    },
+    opl_handoff: {
+      surface_kind: 'display_pack_v2_opl_pack_os_handoff',
+      status: 'handoff_tail',
+      tail_status: 'not_landed_gap',
+      target_owner: 'OPL Pack OS',
+      target_capabilities: [
+        'generic_pack_install',
+        'generic_pack_registry',
+        'generic_pack_version_resolution',
+        'generic_pack_lock_projection',
+        'generic_pack_submission_handoff',
+        'generic_pack_asset_inventory',
+      ],
+      mas_current_capabilities: [
+        'display_pack_toml_loader',
+        'template_toml_loader',
+        'display_pack_lock_refs',
+        'publication_figure_quality_refs',
+        'submission_manifest_ref_preservation',
+      ],
+      handoff_rule: 'MAS exposes refs and boundaries for OPL to consume later.',
+      forbidden_claims: [
+        'MAS owns generic OPL Pack OS',
+        'Display Pack v2 contract closes the OPL generic pack substrate',
+        'OPL tail is landed inside this repository',
+      ],
+    },
+    ...overrides,
+  };
+
+  const contractPath = path.join(root, 'display-pack-contract.v2.json');
+  fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`);
+  return contractPath;
+}
+
 test('pack os CLI inspects validates and writes refs-only locks', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-os-cli-'));
   try {
@@ -100,6 +210,38 @@ test('pack os CLI inspects validates and writes refs-only locks', () => {
     const written = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
     assert.equal(written.lock_id, 'opl-pack-lock:mas.display.cli@2.0.0');
     assert.equal(written.authority_boundary.can_authorize_quality_verdict, false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('pack os CLI consumes MAS Display Pack v2 contract as refs-only smoke', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-os-cli-mas-display-'));
+  try {
+    const contractPath = writeMasDisplayPackV2Contract(root);
+    const outputPath = path.join(root, 'build', 'mas-display-lock.json');
+    const smoke = runCli([
+      'pack',
+      'os',
+      'mas-display-smoke',
+      '--contract',
+      contractPath,
+      '--output',
+      outputPath,
+    ]);
+
+    assert.equal(smoke.pack_os_display_pack_v2_smoke.status, 'pass');
+    assert.equal(smoke.pack_os_display_pack_v2_smoke.domain_authority_owner, 'MedAutoScience');
+    assert.equal(smoke.pack_os_display_pack_v2_smoke.pack_lock.summary.artifact_locator_ref_count, 7);
+    assert.equal(
+      smoke.pack_os_display_pack_v2_smoke.pack_lock.authority_boundary.can_authorize_publication_readiness,
+      false,
+    );
+    assert.equal(smoke.pack_lock_output.status, 'written');
+    const written = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
+    assert.equal(written.lock_id, 'opl-pack-lock:mas.display-pack.v2@2.0.0');
+    assert.equal(written.review_transport.quality_verdict_owner, 'MedAutoScience');
+    assert.equal(written.not_claims.includes('quality_verdict'), true);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -138,6 +280,7 @@ test('pack os commands are discoverable under OPL Pack help and do not restore p
   assert.equal(subcommands.includes('pack os inspect'), true);
   assert.equal(subcommands.includes('pack os lock'), true);
   assert.equal(subcommands.includes('pack os validate'), true);
+  assert.equal(subcommands.includes('pack os mas-display-smoke'), true);
 
   const rootHelp = runCli(['help']);
   assert.equal(

@@ -762,6 +762,7 @@ export interface PackOsContract {
     inspect: string;
     lock: string;
     validate: string;
+    mas_display_smoke: string;
   };
   descriptor_contract: {
     surface_kind: string;
@@ -802,6 +803,8 @@ export interface PackOsContract {
       source_contract_ref: string;
       transport_role: string;
       domain_authority_owner: string;
+      consumer_smoke_surface: string;
+      audit_surface: string;
       forbidden_claim: string;
     };
     future_family_packs: string[];

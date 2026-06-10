@@ -21,6 +21,7 @@ export const MINIMAL_PACK_OS_CONTRACT: PackOsContract = {
     inspect: 'opl pack os inspect --descriptor <path>',
     lock: 'opl pack os lock --descriptor <path>',
     validate: 'opl pack os validate --descriptor <path>',
+    mas_display_smoke: 'opl pack os mas-display-smoke --contract <path>',
   },
   descriptor_contract: {
     surface_kind: 'opl_generic_capability_pack_descriptor',
@@ -118,6 +119,8 @@ export const MINIMAL_PACK_OS_CONTRACT: PackOsContract = {
       source_contract_ref: 'med-autoscience:contracts/display-pack-contract.v2.json',
       transport_role: 'test fixture',
       domain_authority_owner: 'MedAutoScience',
+      consumer_smoke_surface: 'opl pack os mas-display-smoke --contract <path>',
+      audit_surface: 'opl_pack_os_mas_display_pack_v2_audit',
       forbidden_claim: 'test fixture',
     },
     future_family_packs: ['test fixture'],

@@ -24,6 +24,7 @@ import {
 import {
   runPackOsInspectCommand,
   runPackOsLockCommand,
+  runPackOsMasDisplaySmokeCommand,
   runPackOsValidateCommand,
 } from '../../../pack-os.ts';
 import type { BrandModuleId, FrameworkContracts } from '../../../types.ts';
@@ -124,6 +125,16 @@ export function buildBrandCommandSpecs(
       ],
       group: 'brand-pack',
       handler: runPackOsValidateCommand,
+    },
+    'pack os mas-display-smoke': {
+      usage: 'opl pack os mas-display-smoke --contract <path> [--output <path>]',
+      summary: 'Consume a MAS Display Pack v2 contract into a refs-only Pack OS lock and audit smoke.',
+      examples: [
+        'opl pack os mas-display-smoke --contract contracts/display-pack-contract.v2.json --json',
+        'opl pack os mas-display-smoke --contract contracts/display-pack-contract.v2.json --output build/pack-lock.json --json',
+      ],
+      group: 'brand-pack',
+      handler: runPackOsMasDisplaySmokeCommand,
     },
     'brand-modules list': {
       usage: 'opl brand-modules list',

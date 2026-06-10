@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 
 import {
+  buildMasDisplayPackV2PackOsSmoke,
   buildPackOsInspection,
   buildPackOsLock,
   buildPackOsValidation,
@@ -87,6 +88,123 @@ function writeDescriptor(root: string, overrides: Record<string, unknown> = {}) 
   return descriptorPath;
 }
 
+function writeMasDisplayPackV2Contract(root: string, overrides: Record<string, unknown> = {}) {
+  const contract = {
+    schema_version: 2,
+    contract_id: 'display-pack-contract.v2',
+    owner: 'MedAutoScience',
+    purpose: 'Machine-readable Display Pack v2 descriptor boundary for MAS medical display packs.',
+    machine_boundary: 'MAS owns display pack truth; OPL Pack OS may only consume refs.',
+    source_module: 'src/med_autoscience/display_pack_v2_contract.py',
+    pack_descriptor: {
+      surface_kind: 'display_pack_v2_pack_descriptor',
+      native_manifest: 'display_pack.toml',
+      required_fields: [
+        'pack_id',
+        'version',
+        'display_api_version',
+        'source',
+        'owner',
+        'license',
+        'templates',
+        'style_profiles',
+        'qc_profiles',
+        'ai_policy',
+        'goldens',
+        'exemplars',
+        'provenance',
+        'opl_handoff',
+      ],
+    },
+    template_descriptor: {
+      surface_kind: 'display_pack_v2_template_descriptor',
+      native_manifest: 'templates/<template_id>/template.toml',
+      required_fields: [
+        'template_id',
+        'full_template_id',
+        'kind',
+        'display_name',
+        'paper_family_ids',
+        'audit_family',
+        'renderer_family',
+        'input_schema_ref',
+        'qc_profile_ref',
+        'style_profile_ref',
+        'required_exports',
+        'execution_mode',
+        'entrypoint',
+        'paper_proven',
+        'golden_case_paths',
+        'exemplar_refs',
+      ],
+      allowed_kinds: ['evidence_figure', 'illustration_shell', 'table_shell'],
+      allowed_execution_modes: ['python_plugin', 'subprocess'],
+      authority_boundary: 'Template descriptors do not authorize publication readiness.',
+    },
+    quality_surfaces: {
+      publication_figure_quality_contract_ref: 'contracts/publication_figure_quality_contract.json',
+      display_pack_lock_surface: 'paper/build/display_pack_lock.json',
+      paper_quality_refs: [
+        'paper/figure_intent.json',
+        'paper/figure_spec.json',
+        'paper/figure_style_reference_bundle.json',
+        'paper/figure_visual_audit_receipt.json',
+        'paper/figure_polish_lifecycle.json',
+        'paper/ai_illustration_receipt.json',
+      ],
+      boundary: 'display_pack_lock.json preserves refs and hashes but does not become a publication verdict.',
+    },
+    authority_boundaries: {
+      mas_pack_descriptor_authority: true,
+      mas_publication_quality_authority: true,
+      mas_owns_opl_generic_pack_os: false,
+      opl_can_write_mas_publication_truth: false,
+      display_pack_lock_can_authorize_publication_readiness: false,
+      pack_descriptor_can_mutate_study_truth: false,
+      ai_illustration_can_carry_scientific_claim: false,
+    },
+    opl_handoff: {
+      surface_kind: 'display_pack_v2_opl_pack_os_handoff',
+      status: 'handoff_tail',
+      tail_status: 'not_landed_gap',
+      target_owner: 'OPL Pack OS',
+      target_capabilities: [
+        'generic_pack_install',
+        'generic_pack_registry',
+        'generic_pack_version_resolution',
+        'generic_pack_lock_projection',
+        'generic_pack_submission_handoff',
+        'generic_pack_asset_inventory',
+      ],
+      mas_current_capabilities: [
+        'display_pack_toml_loader',
+        'template_toml_loader',
+        'display_pack_lock_refs',
+        'publication_figure_quality_refs',
+        'submission_manifest_ref_preservation',
+      ],
+      handoff_rule: 'MAS exposes refs and boundaries for OPL to consume later.',
+      forbidden_claims: [
+        'MAS owns generic OPL Pack OS',
+        'Display Pack v2 contract closes the OPL generic pack substrate',
+        'OPL tail is landed inside this repository',
+      ],
+    },
+    verification: {
+      focused_tests: ['tests/test_display_pack_v2_contract.py'],
+      required_commands_when_changed: [
+        'scripts/run-pytest-clean.sh tests/test_display_pack_v2_contract.py -q',
+        'git diff --check',
+      ],
+    },
+    ...overrides,
+  };
+
+  const contractPath = path.join(root, 'display-pack-contract.v2.json');
+  fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`);
+  return contractPath;
+}
+
 test('Pack OS builds refs-only locks with hashes and false-authority boundaries', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-os-'));
   try {
@@ -120,6 +238,70 @@ test('Pack OS builds refs-only locks with hashes and false-authority boundaries'
     const validation = buildPackOsValidation(descriptorPath).pack_os_validation;
     assert.equal(validation.status, 'valid');
     assert.equal(validation.checks.every((entry) => entry.status === 'pass'), true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('Pack OS consumes MAS Display Pack v2 contract into refs-only lock and audit smoke', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-os-mas-display-'));
+  try {
+    const contractPath = writeMasDisplayPackV2Contract(root);
+
+    const smoke = buildMasDisplayPackV2PackOsSmoke(contractPath).pack_os_display_pack_v2_smoke;
+    assert.equal(smoke.surface_kind, 'opl_pack_os_mas_display_pack_v2_smoke');
+    assert.equal(smoke.status, 'pass');
+    assert.equal(smoke.source_contract_ref, 'med-autoscience:contracts/display-pack-contract.v2.json');
+    assert.equal(smoke.source_contract_id, 'display-pack-contract.v2');
+    assert.equal(smoke.domain_authority_owner, 'MedAutoScience');
+
+    const lock = smoke.pack_lock;
+    assert.equal(lock.surface_kind, 'opl_generic_pack_lock');
+    assert.equal(lock.lock_id, 'opl-pack-lock:mas.display-pack.v2@2.0.0');
+    assert.equal(lock.pack_kind, 'display_pack');
+    assert.equal(lock.owner, 'MedAutoScience');
+    assert.equal(lock.summary.artifact_locator_ref_count, 7);
+    assert.equal(lock.review_transport.quality_verdict_owner, 'MedAutoScience');
+    assert.deepEqual(lock.review_transport.receipt_refs, [
+      'paper/figure_visual_audit_receipt.json',
+      'paper/ai_illustration_receipt.json',
+    ]);
+    assert.equal(lock.authority_boundary.can_write_domain_truth, false);
+    assert.equal(lock.authority_boundary.can_authorize_publication_readiness, false);
+    assert.equal(lock.not_claims.includes('quality_verdict'), true);
+    assert.equal(lock.not_claims.includes('publication_ready'), true);
+
+    assert.equal(smoke.audit.status, 'pass');
+    assert.equal(smoke.audit.checks.every((entry) => entry.status === 'pass'), true);
+    assert.deepEqual(smoke.audit.forbidden_claims, [
+      'OPL owns MAS publication quality',
+      'OPL mutates MAS display artifacts',
+      'OPL pack lock authorizes MAS publication readiness',
+    ]);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('Pack OS rejects MAS Display Pack v2 contracts that grant OPL MAS authority', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-os-mas-display-invalid-'));
+  try {
+    const contractPath = writeMasDisplayPackV2Contract(root, {
+      authority_boundaries: {
+        mas_pack_descriptor_authority: true,
+        mas_publication_quality_authority: true,
+        mas_owns_opl_generic_pack_os: false,
+        opl_can_write_mas_publication_truth: true,
+        display_pack_lock_can_authorize_publication_readiness: false,
+        pack_descriptor_can_mutate_study_truth: false,
+        ai_illustration_can_carry_scientific_claim: false,
+      },
+    });
+
+    assert.throws(
+      () => buildMasDisplayPackV2PackOsSmoke(contractPath),
+      /authority_boundaries.opl_can_write_mas_publication_truth must be false/,
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

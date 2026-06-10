@@ -53,6 +53,8 @@ const REQUIRED_AUTHORITY_FALSE_FLAGS = [
   'provider_completion_is_pack_quality_ready',
 ] as const;
 
+const MAS_DISPLAY_PACK_V2_SOURCE_CONTRACT_REF = 'med-autoscience:contracts/display-pack-contract.v2.json';
+
 function usage(message: string, details: JsonRecord = {}) {
   return new FrameworkContractError('cli_usage_error', message, details);
 }
@@ -301,6 +303,28 @@ function normalizeProvenance(descriptor: JsonRecord) {
   };
 }
 
+function optionalStringArray(record: JsonRecord, field: string, context: string) {
+  if (record[field] === undefined) {
+    return [];
+  }
+  return requireStringArray(record, field, context);
+}
+
+function expectExactString(record: JsonRecord, field: string, expected: string, context: string) {
+  const actual = requireString(record, field, context);
+  if (actual !== expected) {
+    throw shape(`${context}.${field} must be ${expected}.`, { field: `${context}.${field}`, expected, actual });
+  }
+  return actual;
+}
+
+function expectFalse(record: JsonRecord, field: string, context: string) {
+  if (record[field] !== false) {
+    throw shape(`${context}.${field} must be false.`, { field: `${context}.${field}` });
+  }
+  return false;
+}
+
 function parseDescriptorArgs(args: string[], usageText: string) {
   let descriptor: string | null = null;
   let output: string | null = null;
@@ -331,11 +355,247 @@ function parseDescriptorArgs(args: string[], usageText: string) {
   return { descriptor, output };
 }
 
-export function loadGenericPackDescriptor(descriptorPath: string) {
-  const resolvedPath = path.resolve(descriptorPath);
-  const descriptorDir = path.dirname(resolvedPath);
-  const payload = readJsonFile(resolvedPath);
+function parseContractArgs(args: string[], usageText: string) {
+  let contract: string | null = null;
+  let output: string | null = null;
+  const remaining = [...args];
+  while (remaining.length > 0) {
+    const token = remaining.shift()!;
+    if (token === '--contract') {
+      contract = remaining.shift() ?? null;
+      if (!contract) {
+        throw usage(`${usageText} requires a value after --contract.`, { required: ['--contract <path>'] });
+      }
+      continue;
+    }
+    if (token === '--output') {
+      output = remaining.shift() ?? null;
+      if (!output) {
+        throw usage(`${usageText} requires a value after --output.`, { required: ['--output <path>'] });
+      }
+      continue;
+    }
+    throw usage(`Unknown pack os option: ${token}.`, { token, usage: usageText });
+  }
 
+  if (!contract) {
+    throw usage(`${usageText} requires --contract <path>.`, { required: ['--contract <path>'] });
+  }
+
+  return { contract, output };
+}
+
+function buildMasDisplayPackV2Descriptor(contractPath: string) {
+  const resolvedPath = path.resolve(contractPath);
+  const contract = readJsonFile(resolvedPath);
+  expectExactString(contract, 'contract_id', 'display-pack-contract.v2', 'display_pack_contract');
+  if (contract.schema_version !== 2) {
+    throw shape('display_pack_contract.schema_version must be 2.', {
+      field: 'display_pack_contract.schema_version',
+      actual: contract.schema_version,
+    });
+  }
+
+  const packDescriptor = requireRecord(contract, 'pack_descriptor', 'display_pack_contract');
+  expectExactString(
+    packDescriptor,
+    'surface_kind',
+    'display_pack_v2_pack_descriptor',
+    'display_pack_contract.pack_descriptor',
+  );
+  const templateDescriptor = requireRecord(contract, 'template_descriptor', 'display_pack_contract');
+  const qualitySurfaces = requireRecord(contract, 'quality_surfaces', 'display_pack_contract');
+  const authorityBoundaries = requireRecord(contract, 'authority_boundaries', 'display_pack_contract');
+  const oplHandoff = requireRecord(contract, 'opl_handoff', 'display_pack_contract');
+  expectExactString(
+    oplHandoff,
+    'surface_kind',
+    'display_pack_v2_opl_pack_os_handoff',
+    'display_pack_contract.opl_handoff',
+  );
+  expectExactString(oplHandoff, 'target_owner', 'OPL Pack OS', 'display_pack_contract.opl_handoff');
+
+  if (authorityBoundaries.mas_pack_descriptor_authority !== true) {
+    throw shape('display_pack_contract.authority_boundaries.mas_pack_descriptor_authority must be true.', {
+      field: 'display_pack_contract.authority_boundaries.mas_pack_descriptor_authority',
+    });
+  }
+  if (authorityBoundaries.mas_publication_quality_authority !== true) {
+    throw shape('display_pack_contract.authority_boundaries.mas_publication_quality_authority must be true.', {
+      field: 'display_pack_contract.authority_boundaries.mas_publication_quality_authority',
+    });
+  }
+  expectFalse(authorityBoundaries, 'mas_owns_opl_generic_pack_os', 'display_pack_contract.authority_boundaries');
+  expectFalse(authorityBoundaries, 'opl_can_write_mas_publication_truth', 'display_pack_contract.authority_boundaries');
+  expectFalse(
+    authorityBoundaries,
+    'display_pack_lock_can_authorize_publication_readiness',
+    'display_pack_contract.authority_boundaries',
+  );
+  expectFalse(authorityBoundaries, 'pack_descriptor_can_mutate_study_truth', 'display_pack_contract.authority_boundaries');
+  expectFalse(
+    authorityBoundaries,
+    'ai_illustration_can_carry_scientific_claim',
+    'display_pack_contract.authority_boundaries',
+  );
+
+  const displayPackLockSurface = requireString(
+    qualitySurfaces,
+    'display_pack_lock_surface',
+    'display_pack_contract.quality_surfaces',
+  );
+  const paperQualityRefs = requireStringArray(
+    qualitySurfaces,
+    'paper_quality_refs',
+    'display_pack_contract.quality_surfaces',
+  );
+  const targetCapabilities = requireStringArray(
+    oplHandoff,
+    'target_capabilities',
+    'display_pack_contract.opl_handoff',
+  );
+  const masCurrentCapabilities = requireStringArray(
+    oplHandoff,
+    'mas_current_capabilities',
+    'display_pack_contract.opl_handoff',
+  );
+  const requiredPackFields = requireStringArray(
+    packDescriptor,
+    'required_fields',
+    'display_pack_contract.pack_descriptor',
+  );
+  const requiredTemplateFields = requireStringArray(
+    templateDescriptor,
+    'required_fields',
+    'display_pack_contract.template_descriptor',
+  );
+  const allowedTemplateKinds = optionalStringArray(
+    templateDescriptor,
+    'allowed_kinds',
+    'display_pack_contract.template_descriptor',
+  );
+  const allowedExecutionModes = optionalStringArray(
+    templateDescriptor,
+    'allowed_execution_modes',
+    'display_pack_contract.template_descriptor',
+  );
+  const forbiddenClaims = requireStringArray(
+    oplHandoff,
+    'forbidden_claims',
+    'display_pack_contract.opl_handoff',
+  );
+
+  return {
+    schema_version: 1,
+    pack_id: 'mas.display-pack.v2',
+    version: `${contract.schema_version}.0.0`,
+    pack_kind: 'display_pack',
+    owner: requireString(contract, 'owner', 'display_pack_contract'),
+    capabilities: [
+      {
+        capability_id: 'mas_display_pack_v2_contract_consumption',
+        capability_kind: 'display_pack_contract_ref_transport',
+        entrypoint_ref:
+          typeof packDescriptor.native_manifest === 'string' ? packDescriptor.native_manifest : 'display_pack.toml',
+        input_contract_ref: MAS_DISPLAY_PACK_V2_SOURCE_CONTRACT_REF,
+        output_contract_ref: displayPackLockSurface,
+      },
+      {
+        capability_id: 'mas_display_pack_v2_template_contract_refs',
+        capability_kind: 'display_template_descriptor_ref_transport',
+        entrypoint_ref:
+          typeof templateDescriptor.native_manifest === 'string'
+            ? templateDescriptor.native_manifest
+            : 'templates/<template_id>/template.toml',
+        input_contract_ref: MAS_DISPLAY_PACK_V2_SOURCE_CONTRACT_REF,
+        output_contract_ref: displayPackLockSurface,
+      },
+    ],
+    resources: [
+      {
+        resource_id: 'mas.display_pack_v2.contract',
+        role: 'descriptor',
+        ref: MAS_DISPLAY_PACK_V2_SOURCE_CONTRACT_REF,
+      },
+      ...requiredPackFields.map((field) => ({
+        resource_id: `mas.display_pack_v2.pack_field.${field}`,
+        role: 'descriptor',
+        ref: `${MAS_DISPLAY_PACK_V2_SOURCE_CONTRACT_REF}#/pack_descriptor/required_fields/${field}`,
+      })),
+      ...requiredTemplateFields.map((field) => ({
+        resource_id: `mas.display_pack_v2.template_field.${field}`,
+        role: 'descriptor',
+        ref: `${MAS_DISPLAY_PACK_V2_SOURCE_CONTRACT_REF}#/template_descriptor/required_fields/${field}`,
+      })),
+      ...allowedTemplateKinds.map((kind) => ({
+        resource_id: `mas.display_pack_v2.template_kind.${kind}`,
+        role: 'descriptor',
+        ref: `${MAS_DISPLAY_PACK_V2_SOURCE_CONTRACT_REF}#/template_descriptor/allowed_kinds/${kind}`,
+      })),
+      ...allowedExecutionModes.map((mode) => ({
+        resource_id: `mas.display_pack_v2.execution_mode.${mode}`,
+        role: 'descriptor',
+        ref: `${MAS_DISPLAY_PACK_V2_SOURCE_CONTRACT_REF}#/template_descriptor/allowed_execution_modes/${mode}`,
+      })),
+      ...paperQualityRefs.map((ref) => ({
+        resource_id: `mas.display_pack_v2.quality_ref.${ref.replace(/[^a-zA-Z0-9]+/g, '_')}`,
+        role: ref.includes('receipt') ? 'receipt_ref' : 'artifact_ref',
+        ref,
+      })),
+      ...targetCapabilities.map((capability) => ({
+        resource_id: `mas.display_pack_v2.opl_target.${capability}`,
+        role: 'artifact_ref',
+        ref: `${MAS_DISPLAY_PACK_V2_SOURCE_CONTRACT_REF}#/opl_handoff/target_capabilities/${capability}`,
+      })),
+      ...masCurrentCapabilities.map((capability) => ({
+        resource_id: `mas.display_pack_v2.mas_current.${capability}`,
+        role: 'artifact_ref',
+        ref: `${MAS_DISPLAY_PACK_V2_SOURCE_CONTRACT_REF}#/opl_handoff/mas_current_capabilities/${capability}`,
+      })),
+    ],
+    artifact_lifecycle: {
+      states: ['declared', 'resolved', 'locked', 'artifact_refs_observed', 'review_receipts_observed', 'handoff_ready'],
+      current_state: 'resolved',
+      artifact_locator_refs: [
+        displayPackLockSurface,
+        ...paperQualityRefs,
+      ],
+      retention: {
+        policy_ref: 'policy:refs-only-mas-display-pack-v2-lock',
+        restore_proof_required: true,
+      },
+    },
+    review_transport: {
+      receipt_refs: paperQualityRefs.filter((ref) => ref.includes('receipt')),
+      reviewer_adapter_refs: ['mas:display-pack-v2-contract-validator'],
+      receipt_transport_only: true,
+      quality_verdict_owner: requireString(contract, 'owner', 'display_pack_contract'),
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_mutate_artifact_body: false,
+      can_sign_domain_owner_receipt: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_publication_readiness: false,
+      can_authorize_grant_readiness: false,
+      can_authorize_visual_export_readiness: false,
+      can_authorize_app_release_readiness: false,
+      provider_completion_is_pack_quality_ready: false,
+    },
+    provenance: {
+      source_ref: MAS_DISPLAY_PACK_V2_SOURCE_CONTRACT_REF,
+      license_ref: requireString(contract, 'owner', 'display_pack_contract'),
+      release_ref: requireString(contract, 'contract_id', 'display_pack_contract'),
+      descriptor_created_by: 'one-person-lab:pack-os:mas-display-v2-consumer',
+      mas_contract_path: resolvedPath,
+      mas_contract_sha256: sha256File(resolvedPath),
+      mas_opl_handoff_tail_status: requireString(oplHandoff, 'tail_status', 'display_pack_contract.opl_handoff'),
+      mas_opl_handoff_forbidden_claims: forbiddenClaims,
+    },
+  };
+}
+
+function normalizeGenericPackDescriptor(payload: JsonRecord, descriptorDir: string) {
   const packId = requireString(payload, 'pack_id', 'pack_descriptor');
   const version = requireString(payload, 'version', 'pack_descriptor');
   const packKind = requireString(payload, 'pack_kind', 'pack_descriptor');
@@ -359,11 +619,76 @@ export function loadGenericPackDescriptor(descriptorPath: string) {
     authority_boundary: normalizeAuthorityBoundary(payload),
     provenance: normalizeProvenance(payload),
   };
+  return normalized;
+}
 
+export function loadGenericPackDescriptor(descriptorPath: string) {
+  const resolvedPath = path.resolve(descriptorPath);
+  const payload = readJsonFile(resolvedPath);
   return {
     descriptor_path: resolvedPath,
     descriptor_sha256: sha256File(resolvedPath),
-    descriptor: normalized,
+    descriptor: normalizeGenericPackDescriptor(payload, path.dirname(resolvedPath)),
+  };
+}
+
+function loadGenericPackDescriptorFromRecord(descriptorPath: string, payload: JsonRecord, descriptorSha256: string) {
+  const resolvedPath = path.resolve(descriptorPath);
+  return {
+    descriptor_path: resolvedPath,
+    descriptor_sha256: descriptorSha256,
+    descriptor: normalizeGenericPackDescriptor(payload, path.dirname(resolvedPath)),
+  };
+}
+
+export function buildMasDisplayPackV2PackOsSmoke(contractPath: string) {
+  const descriptor = buildMasDisplayPackV2Descriptor(contractPath);
+  const loaded = loadGenericPackDescriptorFromRecord(contractPath, descriptor, sha256File(contractPath));
+  const lock = buildPackOsLockFromLoaded(loaded).pack_lock;
+  const checks = [
+    {
+      check_id: 'mas_display_pack_v2_contract_loaded',
+      status: 'pass',
+      ref: lock.provenance.source_ref,
+    },
+    {
+      check_id: 'mas_authority_boundary_preserved',
+      status: 'pass',
+      owner: lock.review_transport.quality_verdict_owner,
+    },
+    {
+      check_id: 'refs_only_lock_projected',
+      status: 'pass',
+      artifact_locator_ref_count: lock.summary.artifact_locator_ref_count,
+      receipt_ref_count: lock.summary.receipt_ref_count,
+    },
+    {
+      check_id: 'no_mas_authority_claimed',
+      status: 'pass',
+      not_claims: lock.not_claims,
+    },
+  ];
+  return {
+    version: 'g2',
+    pack_os_display_pack_v2_smoke: {
+      surface_kind: 'opl_pack_os_mas_display_pack_v2_smoke',
+      contract_ref: 'contracts/opl-framework/pack-os-contract.json',
+      source_contract_ref: MAS_DISPLAY_PACK_V2_SOURCE_CONTRACT_REF,
+      source_contract_id: 'display-pack-contract.v2',
+      domain_authority_owner: lock.owner,
+      status: 'pass',
+      pack_lock: lock,
+      audit: {
+        surface_kind: 'opl_pack_os_mas_display_pack_v2_audit',
+        status: 'pass',
+        checks,
+        forbidden_claims: [
+          'OPL owns MAS publication quality',
+          'OPL mutates MAS display artifacts',
+          'OPL pack lock authorizes MAS publication readiness',
+        ],
+      },
+    },
   };
 }
 
@@ -395,8 +720,7 @@ export function buildPackOsInspection(descriptorPath: string) {
   };
 }
 
-export function buildPackOsLock(descriptorPath: string) {
-  const loaded = loadGenericPackDescriptor(descriptorPath);
+function buildPackOsLockFromLoaded(loaded: ReturnType<typeof loadGenericPackDescriptor>) {
   const presentResourceCount = loaded.descriptor.resources.filter((entry) => entry.status === 'present').length;
   const missingResourceCount = loaded.descriptor.resources.filter((entry) => entry.status === 'missing').length;
   return {
@@ -442,6 +766,10 @@ export function buildPackOsLock(descriptorPath: string) {
       ],
     },
   };
+}
+
+export function buildPackOsLock(descriptorPath: string) {
+  return buildPackOsLockFromLoaded(loadGenericPackDescriptor(descriptorPath));
 }
 
 export function buildPackOsValidation(descriptorPath: string) {
@@ -506,6 +834,25 @@ export function runPackOsValidateCommand(args: string[]) {
     });
   }
   return buildPackOsValidation(parsed.descriptor);
+}
+
+export function runPackOsMasDisplaySmokeCommand(args: string[]) {
+  const parsed = parseContractArgs(args, 'opl pack os mas-display-smoke --contract <path> [--output <path>]');
+  const payload = buildMasDisplayPackV2PackOsSmoke(parsed.contract);
+  if (!parsed.output) {
+    return payload;
+  }
+  const outputPath = path.resolve(parsed.output);
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, `${JSON.stringify(payload.pack_os_display_pack_v2_smoke.pack_lock, null, 2)}\n`);
+  return {
+    ...payload,
+    pack_lock_output: {
+      path: outputPath,
+      sha256: sha256File(outputPath),
+      status: 'written',
+    },
+  };
 }
 
 export function runPackOsLockCommand(args: string[]) {
